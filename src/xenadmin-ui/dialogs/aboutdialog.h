@@ -1,0 +1,71 @@
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#ifndef ABOUTDIALOG_H
+#define ABOUTDIALOG_H
+
+#include <QDialog>
+#include <QLabel>
+#include <QPushButton>
+#include <QTextBrowser>
+
+class XenLib;
+
+class AboutDialog : public QDialog
+{
+    Q_OBJECT
+
+public:
+    explicit AboutDialog(XenLib* xenLib = nullptr, QWidget* parent = nullptr);
+
+private slots:
+    void onPoolsReceived(const QVariantList& pools);
+    void onHostsReceived(const QVariantList& hosts);
+    void onVirtualMachinesReceived(const QVariantList& vms);
+
+private:
+    void setupUI();
+    QString getVersionInfo() const;
+    QString getSystemInfo() const;
+    void requestConnectionInfo();
+    void updateConnectionInfo();
+
+    XenLib* m_xenLib;
+    QLabel* m_logoLabel;
+    QLabel* m_titleLabel;
+    QLabel* m_versionLabel;
+    QTextBrowser* m_infoText;
+    QPushButton* m_okButton;
+
+    // Cache async results
+    QVariantList m_pools;
+    QVariantList m_hosts;
+    QVariantList m_vms;
+    int m_pendingRequests;
+};
+
+#endif // ABOUTDIALOG_H

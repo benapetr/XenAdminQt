@@ -1,0 +1,179 @@
+# Qt-specific files
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.moc
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.qmlc
+*.jsc
+Makefile*
+*build-*
+*.qm
+.qmake.cache
+.qmake.stash
+
+# Qt Creator
+*.autosave
+
+# QtCreator local machine specific files for imported projects
+*creator.user*
+
+# Build directories
+build/
+build-*/
+debug/
+release/
+bin/
+lib/
+*-build-*
+cmake-build-*/
+
+# Generated files
+Makefile
+Makefile.*
+object_script.*.Release
+object_script.*.Debug
+*_plugin_import.cpp
+/.qmake.cache
+/.qmake.stash
+*.pro.user.*
+
+# C++ compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+*.ko
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Kernel Module Compile Results
+*.mod*
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf
+
+# IDE files
+.vscode/
+.vs/
+*.vcxproj*
+*.sln
+*.suo
+*.ncb
+*.aps
+*.positions
+*.user
+.idea/
+*.iml
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+*~
+
+# Backup files
+*.bak
+*.swp
+*.swo
+*~
+
+# Log files
+*.log
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Package files
+*.tar.gz
+*.zip
+*.rar
+*.7z
+
+# Generated documentation
+doc/html/
+doc/latex/
+*.aux
+*.idx
+*.log
+*.toc
+
+# Custom build artifacts
+xenadmin-qt
+libxenlib.a
+libxenlib.so*
+
+# Test results
+test-results/
+*.gcov
+*.gcda
+*.gcno
+
+# CMake
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+
+# Conan
+conanfile.txt.backup
+conanbuildinfo.*
+conaninfo.txt
+
+# Local configuration
+config.pri
+local.pri
+
+# Test configuration (contains passwords)
+test/test-config.json
+src/testconn/test-config.json

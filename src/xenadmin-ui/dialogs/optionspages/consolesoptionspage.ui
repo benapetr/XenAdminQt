@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ConsolesOptionsPage</class>
+ <widget class="QWidget" name="ConsolesOptionsPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>480</width>
+    <height>500</height>
+   </rect>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QLabel, QCheckBox {
+    color: black;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="label1">
+     <property name="text">
+      <string>Configure console settings for XenAdmin Console.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="ClipboardCheckBox">
+     <property name="text">
+      <string>Enable clipboard and printer redirection</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="ShortcutsGroupBox">
+     <property name="title">
+      <string>Keyboard Shortcuts</string>
+     </property>
+     <layout class="QFormLayout" name="formLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="FullscreenHeader">
+        <property name="text">
+         <string>Fullscreen:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="KeyComboListBox"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="DockUndockLabel">
+        <property name="text">
+         <string>Dock/Undock:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="DockKeyComboBox"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="UncaptureLabel">
+        <property name="text">
+         <string>Uncapture keyboard and mouse:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="UncaptureKeyComboBox"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="ConsoleGroupBox">
+     <property name="title">
+      <string>Console Scaling</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QCheckBox" name="PreserveUndockedScaleCheckBox">
+        <property name="text">
+         <string>Preserve scale when console is undocked</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="PreserveVNCConsoleScalingCheckBox">
+        <property name="text">
+         <string>Preserve scale when switching back to VNC console</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="RDPGroupBox">
+     <property name="title">
+      <string>Windows Remote Desktop</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="QCheckBox" name="AutoSwitchCheckBox">
+        <property name="text">
+         <string>Automatically switch to RDP when available</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="SoundCheckBox">
+        <property name="text">
+         <string>Receive sound from RDP console</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="WindowsKeyCheckBox">
+        <property name="text">
+         <string>Send Windows key combinations to RDP console</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="ConnectToServerConsoleCheckBox">
+        <property name="text">
+         <string>Connect to server console (requires admin rights)</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

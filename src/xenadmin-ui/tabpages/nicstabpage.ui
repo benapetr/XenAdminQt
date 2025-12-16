@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>NICsTabPage</class>
+ <widget class="QWidget" name="NICsTabPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="descriptionLabel">
+     <property name="text">
+      <string>Physical network interfaces (NICs) on this server</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTableWidget" name="nicsTable">
+     <property name="selectionMode">
+      <enum>QAbstractItemView::SingleSelection</enum>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+     <property name="sortingEnabled">
+      <bool>true</bool>
+     </property>
+     <column>
+      <property name="text">
+       <string>NIC</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>MAC Address</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Link Status</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Speed</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Duplex</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Vendor</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Device</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Bus Path</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>FCoE Capable</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>SR-IOV</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="buttonLayout">
+     <item>
+      <widget class="QPushButton" name="createBondButton">
+       <property name="text">
+        <string>Create Bond...</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="deleteBondButton">
+       <property name="text">
+        <string>Delete Bond</string>
+       </property>
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="rescanButton">
+       <property name="text">
+        <string>Rescan</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

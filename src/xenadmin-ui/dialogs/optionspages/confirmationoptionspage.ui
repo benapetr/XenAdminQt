@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ConfirmationOptionsPage</class>
+ <widget class="QWidget" name="ConfirmationOptionsPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>480</width>
+    <height>400</height>
+   </rect>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QLabel, QCheckBox {
+    color: black;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="sectionHeaderLabel1">
+     <property name="text">
+      <string>Dismissing Notifications</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    font-weight: bold;
+    border-bottom: 1px solid silver;
+    padding-bottom: 2px;
+}</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="labelBlurb">
+     <property name="text">
+      <string>XenAdmin Console will ask you to confirm when you dismiss notifications. Select the checkboxes below to prevent these confirmations from being shown.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="checkBoxDontConfirmDismissAlerts">
+     <property name="text">
+      <string>Do not confirm dismissal of Alerts</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="checkBoxDontConfirmDismissUpdates">
+     <property name="text">
+      <string>Do not confirm dismissal of Updates</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="checkBoxDontConfirmDismissEvents">
+     <property name="text">
+      <string>Do not confirm dismissal of Events</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer_1">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Fixed</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QLabel" name="sectionHeaderLabel2">
+     <property name="text">
+      <string>Import/Export Warnings</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel {
+    font-weight: bold;
+    border-bottom: 1px solid silver;
+    padding-bottom: 2px;
+}</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label1">
+     <property name="text">
+      <string>XenAdmin Console will warn you about potential problems when importing or exporting virtual appliances. Select the checkbox below to prevent these warnings from being shown.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="checkBoxIgnoreOvfWarnings">
+     <property name="text">
+      <string>Ignore OVF validation warnings</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer_2">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

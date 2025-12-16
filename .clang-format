@@ -1,0 +1,60 @@
+BasedOnStyle: Microsoft
+
+# Bracing and spacing to match the provided sample
+BreakBeforeBraces: Custom       # Enable explicit brace-wrapping controls
+BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: true   # put if/for/while braces on their own line
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: false            # keep "} catch" on one line
+  BeforeElse: false             # keep "} else" on one line
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+SpaceBeforeParens: ControlStatements
+
+# Indentation and tabs
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+
+# Namespaces are indented
+NamespaceIndentation: All
+
+# Access specifiers inside classes
+AccessModifierOffset: -4        # public:/private: align to class indent
+
+# Keep everything multi-line (no single-line short bodies)
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+
+# Pointer/reference alignment similar to typical VS style
+PointerAlignment: Left          # int* p
+ReferenceAlignment: Left        # int& r
+
+# Keep wrapping conservative to avoid unexpected reflow on long lines
+ColumnLimit: 0                  # disable line reflow
+
+# Switch/case indentation (common VS convention keeps case at switch level)
+IndentCaseLabels: false
+
+# Misc spacing and alignment
+SpaceAfterCStyleCast: true
+SpaceBeforeAssignmentOperators: true
+SpacesInParentheses: false
+SpaceInEmptyParentheses: false
+Cpp11BracedListStyle: true
+AlignAfterOpenBracket: Align
+AlignOperands: true
+
+# Includes
+SortIncludes: false             # preserve existing order
+IncludeBlocks: Preserve

@@ -1,0 +1,133 @@
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#ifndef COMMAND_H
+#define COMMAND_H
+
+#include <QObject>
+#include <QString>
+#include <QStringList>
+#include <QTreeWidgetItem>
+
+class MainWindow;
+class XenLib;
+
+/**
+ * @brief Base class for all XenAdmin commands
+ *
+ * This class follows the same pattern as the original C# XenAdmin Command class.
+ * Each operation (VM start/stop, host operations, SR operations) should inherit
+ * from this class and implement the specific logic.
+ */
+class Command : public QObject
+{
+    Q_OBJECT
+
+public:
+    /**
+     * @brief Construct a command with a main window reference
+     */
+    explicit Command(MainWindow* mainWindow, QObject* parent = nullptr);
+
+    /**
+     * @brief Construct a command with selection context
+     */
+    Command(MainWindow* mainWindow, const QStringList& selection, QObject* parent = nullptr);
+
+    virtual ~Command() = default;
+
+    /**
+     * @brief Check if this command can run with current selection
+     */
+    virtual bool canRun() const = 0;
+
+    /**
+     * @brief Execute the command
+     */
+    virtual void run() = 0;
+
+    /**
+     * @brief Get the menu text for this command
+     */
+    virtual QString menuText() const = 0;
+
+    /**
+     * @brief Get the current selection
+     */
+    QStringList getSelection() const
+    {
+        return m_selection;
+    }
+
+    /**
+     * @brief Set the selection context
+     */
+    void setSelection(const QStringList& selection)
+    {
+        m_selection = selection;
+    }
+
+protected:
+    /**
+     * @brief Get the main window interface
+     */
+    MainWindow* mainWindow() const
+    {
+        return m_mainWindow;
+    }
+
+    /**
+     * @brief Get XenLib instance
+     */
+    XenLib* xenLib() const;
+
+    /**
+     * @brief Get the currently selected tree item
+     */
+    QTreeWidgetItem* getSelectedItem() const;
+
+    /**
+     * @brief Get the object reference from selection
+     */
+    QString getSelectedObjectRef() const;
+
+    /**
+     * @brief Get the object name from selection
+     */
+    QString getSelectedObjectName() const;
+
+    /**
+     * @brief Get the object type from selection
+     */
+    QString getSelectedObjectType() const;
+
+private:
+    MainWindow* m_mainWindow;
+    QStringList m_selection;
+};
+
+#endif // COMMAND_H

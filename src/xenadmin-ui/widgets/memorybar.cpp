@@ -1,0 +1,254 @@
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "memorybar.h"
+#include <QPainter>
+#include <QPainterPath>
+#include <QLinearGradient>
+#include <QToolTip>
+#include <QMouseEvent>
+#include <QDebug>
+
+MemoryBar::MemoryBar(QWidget* parent)
+    : QWidget(parent), m_totalMemory(0)
+{
+    setMouseTracking(true);
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+}
+
+void MemoryBar::setTotalMemory(qint64 totalBytes)
+{
+    m_totalMemory = totalBytes;
+    update();
+}
+
+void MemoryBar::clearSegments()
+{
+    m_segments.clear();
+    update();
+}
+
+void MemoryBar::addSegment(const QString& name, qint64 bytes, const QColor& color, const QString& tooltip)
+{
+    m_segments.append(Segment(name, bytes, color, tooltip));
+    update();
+}
+
+QSize MemoryBar::sizeHint() const
+{
+    return QSize(600, BAR_HEIGHT);
+}
+
+QSize MemoryBar::minimumSizeHint() const
+{
+    return QSize(200, BAR_HEIGHT);
+}
+
+void MemoryBar::paintEvent(QPaintEvent* event)
+{
+    Q_UNUSED(event);
+
+    if (m_totalMemory <= 0)
+        return;
+
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    QRect barArea = rect().adjusted(2, 2, -2, -2);
+
+    // Draw grid
+    drawGrid(painter, barArea);
+
+    // Calculate bytes per pixel
+    double bytesPerPixel = static_cast<double>(m_totalMemory) / static_cast<double>(barArea.width());
+
+    // Draw segments
+    double left = barArea.left();
+    for (const Segment& segment : m_segments)
+    {
+        if (segment.bytes <= 0)
+            continue;
+
+        double width = segment.bytes / bytesPerPixel;
+        QRect segmentRect(static_cast<int>(left), barArea.top(),
+                          static_cast<int>(left + width) - static_cast<int>(left),
+                          barArea.height());
+
+        QString text = segment.name + "\n" + formatMemorySize(segment.bytes);
+        drawSegment(painter, barArea, segmentRect, segment.color, text);
+
+        left += width;
+    }
+
+    // Draw free space
+    if (left < barArea.right())
+    {
+        QRect freeRect(static_cast<int>(left), barArea.top(),
+                       barArea.right() - static_cast<int>(left), barArea.height());
+        drawSegment(painter, barArea, freeRect, QColor(0, 0, 0), "");
+    }
+}
+
+void MemoryBar::drawSegment(QPainter& painter, const QRect& barArea, const QRect& segmentRect,
+                            const QColor& color, const QString& text)
+{
+    if (segmentRect.width() <= 0)
+        return;
+
+    // Save state
+    painter.save();
+
+    // Set clipping region
+    painter.setClipRect(segmentRect);
+
+    // Create rounded rectangle path
+    QPainterPath path;
+    path.addRoundedRect(barArea, RADIUS, RADIUS);
+
+    // Draw gradient background
+    QLinearGradient gradient(barArea.topLeft(), barArea.bottomLeft());
+    gradient.setColorAt(0, color);
+    gradient.setColorAt(1, color.lighter(120));
+    painter.fillPath(path, gradient);
+
+    // Draw text if there's enough space
+    if (!text.isEmpty() && segmentRect.width() > 40)
+    {
+        painter.setPen(Qt::white);
+        QFont font = painter.font();
+        font.setPointSize(8);
+        painter.setFont(font);
+
+        QRect textRect = segmentRect.adjusted(TEXT_PAD, 0, -TEXT_PAD, 0);
+        painter.drawText(textRect, Qt::AlignCenter, text);
+    }
+
+    // Draw subtle highlight on top half
+    QRect highlightRect = barArea;
+    highlightRect.setHeight(barArea.height() / 2);
+    QPainterPath highlightPath;
+    highlightPath.addRoundedRect(highlightRect, RADIUS, RADIUS);
+    QLinearGradient highlightGradient(highlightRect.topLeft(), highlightRect.bottomLeft());
+    highlightGradient.setColorAt(0, QColor(255, 255, 255, 60));
+    highlightGradient.setColorAt(1, QColor(255, 255, 255, 15));
+    painter.fillPath(highlightPath, highlightGradient);
+
+    // Restore state
+    painter.restore();
+}
+
+void MemoryBar::drawGrid(QPainter& painter, const QRect& barArea)
+{
+    // Draw grid lines at GB intervals if the bar is wide enough
+    if (m_totalMemory <= 0 || barArea.width() < 100)
+        return;
+
+    const qint64 GB = 1024LL * 1024LL * 1024LL;
+    double bytesPerPixel = static_cast<double>(m_totalMemory) / static_cast<double>(barArea.width());
+
+    painter.save();
+    painter.setPen(QPen(QColor(100, 100, 100), 1, Qt::DotLine));
+
+    for (qint64 i = GB; i < m_totalMemory; i += GB)
+    {
+        int x = barArea.left() + static_cast<int>(i / bytesPerPixel);
+        if (x > barArea.left() && x < barArea.right())
+        {
+            painter.drawLine(x, barArea.top(), x, barArea.bottom());
+        }
+    }
+
+    painter.restore();
+}
+
+void MemoryBar::mouseMoveEvent(QMouseEvent* event)
+{
+    if (m_totalMemory <= 0)
+        return;
+
+    QRect barArea = rect().adjusted(2, 2, -2, -2);
+    double bytesPerPixel = static_cast<double>(m_totalMemory) / static_cast<double>(barArea.width());
+
+    double left = barArea.left();
+    for (const Segment& segment : m_segments)
+    {
+        if (segment.bytes <= 0)
+            continue;
+
+        double width = segment.bytes / bytesPerPixel;
+        QRect segmentRect(static_cast<int>(left), barArea.top(),
+                          static_cast<int>(left + width) - static_cast<int>(left),
+                          barArea.height());
+
+        if (segmentRect.contains(event->pos()))
+        {
+            QString tooltip = segment.tooltip.isEmpty()
+                                  ? (segment.name + "\n" + formatMemorySize(segment.bytes))
+                                  : segment.tooltip;
+            QToolTip::showText(event->globalPosition().toPoint(), tooltip, this);
+            return;
+        }
+
+        left += width;
+    }
+
+    QToolTip::hideText();
+    QWidget::mouseMoveEvent(event);
+}
+
+bool MemoryBar::event(QEvent* event)
+{
+    if (event->type() == QEvent::ToolTip)
+    {
+        return true; // We handle tooltips ourselves
+    }
+    return QWidget::event(event);
+}
+
+QString MemoryBar::formatMemorySize(qint64 bytes) const
+{
+    const qint64 KB = 1024;
+    const qint64 MB = KB * 1024;
+    const qint64 GB = MB * 1024;
+
+    if (bytes >= GB)
+    {
+        double gb = bytes / static_cast<double>(GB);
+        return QString("%1 GB").arg(gb, 0, 'f', 2);
+    } else if (bytes >= MB)
+    {
+        double mb = bytes / static_cast<double>(MB);
+        return QString("%1 MB").arg(mb, 0, 'f', 0);
+    } else if (bytes >= KB)
+    {
+        double kb = bytes / static_cast<double>(KB);
+        return QString("%1 KB").arg(kb, 0, 'f', 0);
+    } else
+    {
+        return QString("%1 B").arg(bytes);
+    }
+}

@@ -1,0 +1,352 @@
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#ifndef MAINWINDOW_H
+#define MAINWINDOW_H
+
+#include <QMainWindow>
+#include <QList>
+#include <QMap>
+
+QT_BEGIN_NAMESPACE
+namespace Ui
+{
+    class MainWindow;
+}
+class QTreeWidgetItem;
+class QTreeWidget;
+class QProgressDialog;
+QT_END_NAMESPACE
+
+QT_FORWARD_DECLARE_CLASS(XenLib)
+QT_FORWARD_DECLARE_CLASS(DebugWindow)
+QT_FORWARD_DECLARE_CLASS(AsyncOperation)
+class BaseTabPage;
+class PlaceholderWidget;
+class SettingsManager;
+class TitleBar;
+class ConnectionProfile;
+class HistoryPage;
+class ConsolePanel;
+class CvmConsolePanel;
+class QDockWidget;
+class QAction;
+class QProgressBar;
+class QLabel;
+class QToolButton;
+class NavigationHistory;
+class Command;
+class NavigationPane;
+
+class MainWindow : public QMainWindow
+{
+    Q_OBJECT
+
+public:
+    MainWindow(QWidget* parent = nullptr);
+    ~MainWindow();
+
+    // Public interface for Command classes
+    XenLib* xenLib() const
+    {
+        return m_xenLib;
+    }
+
+    // Console panel access for snapshot screenshots (C#: Program.MainWindow.ConsolePanel)
+    ConsolePanel* consolePanel() const
+    {
+        return m_consolePanel;
+    }
+
+    QTreeWidget* getServerTreeWidget() const;
+    void showStatusMessage(const QString& message, int timeout = 0);
+    void refreshServerTree();
+
+    // Navigation support for history (matches C# MainWindow methods called by History)
+    void selectObjectInTree(const QString& objectRef, const QString& objectType);
+    void setCurrentTab(const QString& tabName);
+
+    // Update navigation button states (called by NavigationHistory)
+    void updateHistoryButtons(bool canGoBack, bool canGoForward);
+
+private slots:
+    void connectToServer();
+    void disconnectFromServer();
+    void showAbout();
+    void showDebugWindow();
+    void showOptions();
+    void showImportWizard();
+    void showExportWizard();
+    void showNewNetworkWizard();
+    void showNewStorageRepositoryWizard();
+
+    // Console operations (Reference: C# MainWindow.cs line 2051)
+    void sendCADToConsole();
+
+    void onConnectionStateChanged(bool connected);
+    void onCachePopulated();
+    void onAuthenticationFailed(const QString& hostname, int port, const QString& username, const QString& errorMessage);
+    void onTreeItemSelected();
+    void showTreeContextMenu(const QPoint& position);
+    void onTabChanged(int index);
+
+    // Search functionality
+    void onSearchTextChanged(const QString& text);
+    void focusSearch();
+
+    // NavigationPane events (matches C# MainWindow.navigationPane_* handlers)
+    void onNavigationModeChanged(int mode);
+    void onNotificationsSubModeChanged(int subMode);
+    void onNavigationPaneTreeViewSelectionChanged();
+    void onNavigationPaneTreeNodeClicked();
+    void onNavigationPaneTreeNodeRightClicked();
+
+    // Cache update handler for refreshing selected object
+    void onCacheObjectChanged(const QString& objectType, const QString& objectRef);
+
+    // SearchTabPage handlers (matches C# SearchPage double-click navigation)
+    void onSearchTabPageObjectSelected(const QString& objectType, const QString& objectRef);
+
+    // Operation progress tracking (matches C# History_CollectionChanged pattern)
+    void onNewOperation(AsyncOperation* operation);
+    void onOperationProgressChanged(int percent);
+    void onOperationCompleted();
+
+    // Toolbar navigation (matches C# MainWindow)
+    void onBackButton();
+    void onForwardButton();
+
+    // Toolbar VM operation buttons (matches C# VM command execution)
+    void onStartVMButton();
+    void onShutDownButton();
+    void onRebootButton();
+    void onResumeButton();
+    void onSuspendButton();
+    void onPauseButton();
+    void onUnpauseButton();
+    void onForceShutdownButton();
+    void onForceRebootButton();
+
+    // Toolbar Host operation buttons
+    void onPowerOnHostButton();
+
+    // Toolbar Container operation buttons
+    void onStartContainerButton();
+    void onStopContainerButton();
+    void onRestartContainerButton();
+    void onPauseContainerButton();
+    void onResumeContainerButton();
+
+    // Menu action slots (Server menu)
+    void onReconnectHost();
+    void onDisconnectHost();
+    void onConnectAllHosts();
+    void onDisconnectAllHosts();
+    void onRestartToolstack();
+    void onReconnectAs();
+    void onMaintenanceMode();
+    void onServerProperties();
+
+    // Menu action slots (Pool menu)
+    void onNewPool();
+    void onDeletePool();
+    void onHAConfigure();
+    void onHADisable();
+    void onPoolProperties();
+    void onJoinPool();
+    void onEjectFromPool();
+
+    // Menu action slots (VM menu)
+    void onNewVM();
+    void onStartShutdownVM();
+    void onCopyVM();
+    void onMoveVM();
+    void onInstallTools();
+    void onUninstallVM();
+    void onVMProperties();
+    void onTakeSnapshot();
+    void onConvertToTemplate();
+    void onExportVM();
+
+    // Menu action slots (Template menu)
+    void onNewVMFromTemplate();
+    void onInstantVM();
+    void onExportTemplate();
+    void onDuplicateTemplate();
+    void onDeleteTemplate();
+    void onTemplateProperties();
+
+    // Menu action slots (Storage menu)
+    void onAddVirtualDisk();
+    void onAttachVirtualDisk();
+    void onDetachSR();
+    void onReattachSR();
+    void onForgetSR();
+    void onDestroySR();
+    void onRepairSR();
+    void onSetDefaultSR();
+    void onNewSR();
+    void onStorageProperties();
+
+    // Menu action slots (Network menu)
+    void onNewNetwork();
+
+private:
+    void updateActions();
+    void initializeToolbar();                                        // Initialize toolbar buttons matching C# MainWindow.Designer.cs
+    void updateToolbarsAndMenus();                                   // Update both toolbar buttons and menu items from Commands (matches C# UpdateToolbars pattern)
+    void disableAllOperationButtons();                               // Disable all VM/Host/Container operation buttons
+    void disableAllOperationMenus();                                 // Disable all VM/Host operation menu items
+    void updateContainerToolbarButtons(const QString& containerRef); // Enable/disable Container buttons
+
+    // Helper methods for toolbar button handlers
+    QString getSelectedObjectRef() const;
+    QString getSelectedObjectName() const;
+
+    void populateServerTree();
+    void populatePools(QTreeWidgetItem* poolsItem);
+    void populateHosts(QTreeWidgetItem* hostsItem);
+    void populateVMs(QTreeWidgetItem* vmsItem, QTreeWidgetItem* templatesItem);
+    void populateStorage(QTreeWidgetItem* storageItem);
+
+    // Search functionality
+    void filterTreeItems(QTreeWidgetItem* item, const QString& searchText);
+    bool itemMatchesSearch(QTreeWidgetItem* item, const QString& searchText);
+
+    // Tab management - new system
+    void showObjectTabs(const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
+    void showSearchPage(class GroupingTag* groupingTag);
+    void clearTabs();
+    void updateTabPages(const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
+    void updatePlaceholderVisibility();
+
+    // Get correct tab order for object type (C# GetNewTabPages equivalent)
+    QList<BaseTabPage*> getNewTabPages(const QString& objectType) const;
+
+    // Settings management
+    void saveSettings();
+    void loadSettings();
+    void restoreConnections();
+    void saveConnections();
+
+    // Connection attempt context
+    struct ConnectionContext
+    {
+        QProgressDialog* progressDialog;
+        QString hostname;
+        bool saveProfile;
+        ConnectionProfile* profile;
+        QMetaObject::Connection* successConn;
+        QMetaObject::Connection* errorConn;
+        QMetaObject::Connection* authFailedConn;
+    };
+
+    // Connection handlers
+    void handleConnectionSuccess(ConnectionContext* context, bool connected);
+    void handleConnectionError(ConnectionContext* context, const QString& error);
+    void handleInitialAuthFailed(ConnectionContext* context);
+    void handleRetryAuthFailed(ConnectionContext* context);
+    void cleanupConnectionContext(ConnectionContext* context);
+
+protected:
+    void closeEvent(QCloseEvent* event) override;
+
+    Ui::MainWindow* ui;
+
+    // Xen library
+    XenLib* m_xenLib;
+
+    // Debug window
+    DebugWindow* m_debugWindow;
+
+    // Title bar widget
+    TitleBar* m_titleBar;
+
+    // Console panels (matches C# MainWindow fields)
+    ConsolePanel* m_consolePanel;       // For VM/Host consoles
+    CvmConsolePanel* m_cvmConsolePanel; // For CVM consoles (XCP-ng)
+
+    // Navigation pane (matches C# MainWindow.navigationPane)
+    NavigationPane* m_navigationPane;
+
+    // Tab pages
+    QList<BaseTabPage*> m_tabPages;
+
+    // Search tab page (special handling for grouping tags)
+    class SearchTabPage* m_searchTabPage;
+
+    // Placeholder widget
+    PlaceholderWidget* m_placeholderWidget;
+
+    // Status
+    bool m_connected;
+
+    // Command map (matches C# CommandToolStripMenuItem pattern)
+    QMap<QString, class Command*> m_commands;
+    void initializeCommands();
+    void connectMenuActions();
+    void updateMenuItems();
+
+    // History dock
+    QDockWidget* m_historyDock;
+    HistoryPage* m_historyPage;
+    QAction* m_toggleHistoryAction;
+
+    // Toolbar (matches C# ToolStrip)
+    QToolBar* m_toolBar;
+    QToolButton* m_backButton;    // QToolButton for dropdown menu support
+    QToolButton* m_forwardButton; // QToolButton for dropdown menu support
+
+    // Navigation history (matches C# History static class)
+    NavigationHistory* m_navigationHistory;
+
+    // Status bar progress (matches C# MainWindow.statusProgressBar)
+    QProgressBar* m_statusProgressBar;
+    QLabel* m_statusLabel;
+    AsyncOperation* m_statusBarAction; // Currently tracked action in status bar
+
+    // Tree items for async population
+    QTreeWidgetItem* m_poolsTreeItem;
+    QTreeWidgetItem* m_hostsTreeItem;
+    QTreeWidgetItem* m_vmsTreeItem;
+    QTreeWidgetItem* m_templatesTreeItem;
+    QTreeWidgetItem* m_storageTreeItem;
+
+    // Object detail context for async loading
+    QString m_currentObjectType;
+    QString m_currentObjectRef;
+    QString m_currentObjectText;
+    QIcon m_currentObjectIcon;
+
+    // Selection deduplication - prevent multiple API calls for same selection
+    QString m_lastSelectedRef;
+
+    // Tab memory - remember last selected tab per object (maps objectRef -> tab title)
+    QHash<QString, QString> m_selectedTabs;
+};
+
+#endif // MAINWINDOW_H

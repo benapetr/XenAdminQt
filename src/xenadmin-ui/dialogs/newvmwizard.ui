@@ -1,0 +1,709 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>NewVMWizard</class>
+ <widget class="QWizard" name="NewVMWizard">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>New Virtual Machine Wizard</string>
+  </property>
+  <property name="modal">
+   <bool>true</bool>
+  </property>
+  <widget class="QWizardPage" name="pageTemplate">
+   <property name="title">
+    <string>Template</string>
+   </property>
+   <property name="subTitle">
+    <string>Select a virtual machine template.</string>
+   </property>
+   <layout class="QVBoxLayout" name="templatePageLayout">
+    <item>
+      <widget class="QLabel" name="templateIntroLabel">
+       <property name="text">
+        <string>Choose a template as the basis for the new VM. Use the search box to quickly filter by name.</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="templateSearchLayout">
+      <item>
+       <widget class="QLabel" name="templateSearchLabel">
+        <property name="text">
+         <string>&amp;Filter:</string>
+        </property>
+        <property name="buddy">
+         <cstring>templateSearchEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="templateSearchEdit">
+        <property name="placeholderText">
+         <string>Filter templates by name or type</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QTreeWidget" name="templateTree">
+      <column>
+       <property name="text">
+        <string>Template</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Type</string>
+       </property>
+      </column>
+      <property name="rootIsDecorated">
+       <bool>false</bool>
+      </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="copyBiosStringsCheckBox">
+      <property name="text">
+       <string>Copy BIOS strings from an existing VM</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="templateDescriptionGroup">
+      <property name="title">
+       <string>Template description</string>
+      </property>
+      <layout class="QVBoxLayout" name="templateDescriptionLayout">
+       <item>
+        <widget class="QLabel" name="templateDescriptionLabel">
+         <property name="text">
+          <string>Select a template above to view its description.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageName">
+   <property name="title">
+    <string>Name</string>
+   </property>
+   <property name="subTitle">
+    <string>Specify the VM name and optional description.</string>
+   </property>
+   <layout class="QVBoxLayout" name="namePageLayout">
+    <item>
+     <widget class="QLabel" name="nameIntroLabel">
+      <property name="text">
+       <string>This name is shown throughout the XenCenter interface.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QFormLayout" name="nameFormLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="vmNameLabel">
+        <property name="text">
+         <string>&amp;Name:</string>
+        </property>
+        <property name="buddy">
+         <cstring>vmNameEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="vmNameEdit">
+        <property name="placeholderText">
+         <string>Enter a descriptive name</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="vmDescriptionLabel">
+        <property name="text">
+         <string>&amp;Description:</string>
+        </property>
+        <property name="buddy">
+         <cstring>vmDescriptionEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QPlainTextEdit" name="vmDescriptionEdit">
+        <property name="placeholderText">
+         <string>Optional notes about the workload</string>
+        </property>
+        <property name="maximumBlockCount">
+         <number>0</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageInstallation">
+   <property name="title">
+    <string>Installation Media</string>
+   </property>
+   <property name="subTitle">
+    <string>Choose how you will install the operating system.</string>
+   </property>
+   <layout class="QVBoxLayout" name="installationPageLayout">
+    <item>
+     <widget class="QGroupBox" name="installSourceGroup">
+      <property name="title">
+       <string>Installation source</string>
+      </property>
+      <layout class="QGridLayout" name="installSourceLayout">
+       <item row="0" column="0" colspan="2">
+        <widget class="QRadioButton" name="isoRadioButton">
+         <property name="text">
+          <string>Install from ISO library or physical DVD drive</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QComboBox" name="isoComboBox">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QPushButton" name="attachIsoButton">
+         <property name="text">
+          <string>Attach ISO library…</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="QRadioButton" name="urlRadioButton">
+         <property name="text">
+          <string>Install from network share or HTTP/FTP URL</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="2">
+        <widget class="QLineEdit" name="urlLineEdit">
+         <property name="placeholderText">
+          <string>e.g. http://server/path/to/install/files</string>
+         </property>
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="bootLayout">
+      <item>
+       <widget class="QGroupBox" name="pvBootGroup">
+        <property name="title">
+         <string>PV boot parameters</string>
+        </property>
+        <layout class="QVBoxLayout" name="pvBootLayout">
+         <item>
+          <widget class="QPlainTextEdit" name="pvBootArgsEdit">
+           <property name="placeholderText">
+            <string>Kernel arguments (if required by the template)</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="bootModeGroup">
+        <property name="title">
+         <string>Boot mode</string>
+        </property>
+        <layout class="QVBoxLayout" name="bootModeLayout">
+         <item>
+          <widget class="QComboBox" name="bootModeComboBox"/>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="assignVtpmCheckBox">
+           <property name="text">
+            <string>Assign virtual TPM (if required)</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageHomeServer">
+   <property name="title">
+    <string>Home Server</string>
+   </property>
+   <property name="subTitle">
+    <string>Choose where the VM will run.</string>
+   </property>
+   <layout class="QVBoxLayout" name="homeServerLayout">
+    <item>
+     <widget class="QLabel" name="homeServerIntroLabel">
+      <property name="text">
+       <string>Select a home server to ensure affinity, or allow XenServer to choose automatically.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QRadioButton" name="autoHomeServerRadio">
+      <property name="text">
+       <string>Automatically select the best server</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QRadioButton" name="specificHomeServerRadio">
+      <property name="text">
+       <string>Use this server:</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QListWidget" name="homeServerList">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="copyBiosStringsFromAffinityCheckBox">
+      <property name="text">
+       <string>Copy BIOS strings from the selected VM</string>
+      </property>
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageCpuMemory">
+   <property name="title">
+    <string>CPU and Memory</string>
+   </property>
+   <property name="subTitle">
+    <string>Configure initial resource allocations.</string>
+   </property>
+   <layout class="QVBoxLayout" name="cpuMemLayout">
+    <item>
+     <widget class="QGroupBox" name="cpuGroupBox">
+      <property name="title">
+       <string>Virtual CPUs</string>
+      </property>
+      <layout class="QGridLayout" name="cpuLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="vcpusMaxLabel">
+         <property name="text">
+          <string>Maximum vCPUs:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QSpinBox" name="vcpusMaxSpin">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>128</number>
+         </property>
+         <property name="value">
+          <number>1</number>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="vcpusStartupLabel">
+         <property name="text">
+          <string>vCPUs at startup:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QSpinBox" name="vcpusStartupSpin">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>128</number>
+         </property>
+         <property name="value">
+          <number>1</number>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="coresPerSocketLabel">
+         <property name="text">
+          <string>Cores per socket:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QComboBox" name="coresPerSocketCombo"/>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="memoryGroupBox">
+      <property name="title">
+       <string>Memory (MiB)</string>
+      </property>
+      <layout class="QGridLayout" name="memoryLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="memoryStaticMaxLabel">
+         <property name="text">
+          <string>Static max:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QSpinBox" name="memoryStaticMaxSpin">
+         <property name="minimum">
+          <number>128</number>
+         </property>
+         <property name="maximum">
+          <number>1048576</number>
+         </property>
+         <property name="value">
+          <number>1024</number>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="memoryDynamicMaxLabel">
+         <property name="text">
+          <string>Dynamic max:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QSpinBox" name="memoryDynamicMaxSpin">
+         <property name="minimum">
+          <number>128</number>
+         </property>
+         <property name="maximum">
+          <number>1048576</number>
+         </property>
+         <property name="value">
+          <number>1024</number>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="memoryDynamicMinLabel">
+         <property name="text">
+          <string>Dynamic min:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QSpinBox" name="memoryDynamicMinSpin">
+         <property name="minimum">
+          <number>128</number>
+         </property>
+         <property name="maximum">
+          <number>1048576</number>
+         </property>
+         <property name="value">
+          <number>1024</number>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageStorage">
+   <property name="title">
+    <string>Storage</string>
+   </property>
+   <property name="subTitle">
+    <string>Provision disks and select the destination SR.</string>
+   </property>
+   <layout class="QVBoxLayout" name="storageLayout">
+    <item>
+     <widget class="QTableWidget" name="diskTable">
+      <column>
+       <property name="text">
+        <string>Disk</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Size</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>SR</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Mode</string>
+       </property>
+      </column>
+      <property name="selectionBehavior">
+       <enum>QAbstractItemView::SelectRows</enum>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::SingleSelection</enum>
+      </property>
+      <property name="editTriggers">
+       <set>QAbstractItemView::NoEditTriggers</set>
+      </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="diskButtonLayout">
+      <item>
+       <widget class="QPushButton" name="addDiskButton">
+        <property name="text">
+         <string>Add...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="editDiskButton">
+        <property name="text">
+         <string>Edit...</string>
+        </property>
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="removeDiskButton">
+        <property name="text">
+         <string>Remove</string>
+        </property>
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="diskButtonsSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="storageOptionsGroup">
+      <property name="title">
+       <string>Storage options</string>
+      </property>
+      <layout class="QGridLayout" name="storageOptionsLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="defaultSrLabel">
+         <property name="text">
+          <string>Default SR:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QComboBox" name="defaultSrCombo"/>
+       </item>
+       <item row="1" column="0" colspan="2">
+        <widget class="QCheckBox" name="fullCopyCheckBox">
+         <property name="text">
+          <string>Make a full copy of the selected template disks</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2">
+        <widget class="QCheckBox" name="thinProvisionCheckBox">
+         <property name="text">
+          <string>Use thin provisioning where possible</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageNetworking">
+   <property name="title">
+    <string>Networking</string>
+   </property>
+   <property name="subTitle">
+    <string>Configure virtual network interfaces.</string>
+   </property>
+   <layout class="QVBoxLayout" name="networkLayout">
+    <item>
+     <widget class="QTableWidget" name="networkTable">
+      <column>
+       <property name="text">
+        <string>Device</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Network</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>MAC</string>
+       </property>
+      </column>
+      <property name="selectionBehavior">
+       <enum>QAbstractItemView::SelectRows</enum>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::SingleSelection</enum>
+      </property>
+      <property name="editTriggers">
+       <set>QAbstractItemView::NoEditTriggers</set>
+      </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="networkButtonsLayout">
+      <item>
+       <widget class="QPushButton" name="addNetworkButton">
+        <property name="text">
+         <string>Add NIC...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="removeNetworkButton">
+        <property name="text">
+         <string>Remove</string>
+        </property>
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="networkButtonsSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="autoGenerateMacCheckBox">
+      <property name="text">
+       <string>Automatically generate MAC addresses</string>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageFinish">
+   <property name="title">
+    <string>Finish</string>
+   </property>
+   <property name="subTitle">
+    <string>Review the configuration summary.</string>
+   </property>
+   <layout class="QVBoxLayout" name="finishLayout">
+    <item>
+     <widget class="QTextBrowser" name="summaryTextBrowser">
+      <property name="openLinks">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="finishOptionsGroup">
+      <property name="title">
+       <string>After creation</string>
+      </property>
+      <layout class="QVBoxLayout" name="finishOptionsLayout">
+       <item>
+        <widget class="QCheckBox" name="startImmediatelyCheckBox">
+         <property name="text">
+          <string>Start the new VM automatically</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="createShortcutCheckBox">
+         <property name="text">
+          <string>Create shortcut in inventory</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

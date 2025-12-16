@@ -1,0 +1,463 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>VNCTabView</class>
+ <widget class="QWidget" name="VNCTabView">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>VNC Tab View</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <!-- Top gradient panel with controls -->
+    <widget class="QFrame" name="gradientPanel">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QFrame#gradientPanel {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #4a90d9, stop:1 #2a6099);
+    border: none;
+}
+QLabel {
+    color: white;
+    font-weight: bold;
+}
+QPushButton {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    padding: 4px 12px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+QPushButton:pressed {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+QPushButton:disabled {
+    background-color: rgba(128, 128, 128, 0.2);
+    color: rgba(255, 255, 255, 0.5);
+}</string>
+     </property>
+     <layout class="QHBoxLayout" name="topBarLayout">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <property name="leftMargin">
+       <number>8</number>
+      </property>
+      <property name="topMargin">
+       <number>4</number>
+      </property>
+      <property name="rightMargin">
+       <number>8</number>
+      </property>
+      <property name="bottomMargin">
+       <number>4</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="hostLabel">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Host: hostname</string>
+        </property>
+        <property name="textFormat">
+         <enum>Qt::PlainText</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer1">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <!-- CD/DVD ISO Controls (C#: multipleDvdIsoList1 in tableLayoutPanel2) -->
+      <item>
+       <widget class="QLabel" name="cdDriveLabel">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>DVD Drive:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="cdDriveComboBox">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="toolTip">
+         <string>Select CD/DVD drive</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="cdIsoComboBox">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>200</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="toolTip">
+         <string>Select ISO image</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="cdEjectButton">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Eject</string>
+        </property>
+        <property name="toolTip">
+         <string>Eject CD/DVD</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="cdNewDriveLabel">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>&lt;a href=&quot;#&quot;&gt;New CD/DVD drive...&lt;/a&gt;</string>
+        </property>
+        <property name="textFormat">
+         <enum>Qt::RichText</enum>
+        </property>
+        <property name="openExternalLinks">
+         <bool>false</bool>
+        </property>
+        <property name="toolTip">
+         <string>Create a new virtual CD/DVD drive</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="sshButton">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Open SSH Console...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="toggleConsoleButton">
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Switch to Remote Desktop</string>
+        </property>
+        <property name="toolTip">
+         <string>Toggle between VNC and RDP console</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <!-- Power state / GPU warning panel -->
+    <widget class="QFrame" name="warningPanel">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>30</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>30</height>
+      </size>
+     </property>
+     <property name="visible">
+      <bool>false</bool>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QFrame#warningPanel {
+    background-color: #fff8dc;
+    border-bottom: 1px solid #ddd;
+}</string>
+     </property>
+     <layout class="QHBoxLayout" name="warningLayout">
+      <property name="spacing">
+       <number>4</number>
+      </property>
+      <property name="leftMargin">
+       <number>8</number>
+      </property>
+      <property name="topMargin">
+       <number>4</number>
+      </property>
+      <property name="rightMargin">
+       <number>8</number>
+      </property>
+      <property name="bottomMargin">
+       <number>4</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="powerStateLabel">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="gpuWarningLabel">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <!-- Content panel - XSVNCScreen goes here (C#: contentPanel - centered) -->
+    <widget class="QWidget" name="contentPanel" native="true">
+     <property name="styleSheet">
+      <string notr="true">QWidget#contentPanel {
+    background-color: black;
+}</string>
+     </property>
+     <layout class="QVBoxLayout" name="contentPanelLayout">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <!-- VNC screen widget will be added here programmatically and centered -->
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <!-- Bottom toolbar with controls -->
+    <widget class="QFrame" name="bottomToolbar">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>36</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>36</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QFrame#bottomToolbar {
+    background-color: #f0f0f0;
+    border-top: 1px solid #ccc;
+}</string>
+     </property>
+     <layout class="QHBoxLayout" name="bottomToolbarLayout">
+      <property name="spacing">
+       <number>6</number>
+      </property>
+      <property name="leftMargin">
+       <number>8</number>
+      </property>
+      <property name="topMargin">
+       <number>4</number>
+      </property>
+      <property name="rightMargin">
+       <number>8</number>
+      </property>
+      <property name="bottomMargin">
+       <number>4</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="rdpWarningIcon">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16</width>
+          <height>16</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>ℹ️</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="rdpWarningLabel">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>RDP version warning</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer3">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="sendCADButton">
+        <property name="text">
+         <string>Send Ctrl+Alt+Del</string>
+        </property>
+        <property name="toolTip">
+         <string>Send Ctrl+Alt+Delete to the virtual machine</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="scaleCheckBox">
+        <property name="text">
+         <string>Scale to fit</string>
+        </property>
+        <property name="toolTip">
+         <string>Scale the console to fit the window</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="dockButton">
+        <property name="minimumSize">
+         <size>
+          <width>32</width>
+          <height>24</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>32</width>
+          <height>24</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>⇱</string>
+        </property>
+        <property name="toolTip">
+         <string>Undock console to separate window</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="fullscreenButton">
+        <property name="text">
+         <string>Fullscreen</string>
+        </property>
+        <property name="toolTip">
+         <string>View console in fullscreen mode</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <connections/>
+</ui>

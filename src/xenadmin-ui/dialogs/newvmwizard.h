@@ -1,0 +1,165 @@
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#ifndef NEWVMWIZARD_H
+#define NEWVMWIZARD_H
+
+#include <QWizard>
+#include <QVector>
+#include <QMap>
+#include <QVariant>
+
+class QWizardPage;
+class XenLib;
+class QTreeWidgetItem;
+class WizardNavigationPane;
+namespace Ui
+{
+class NewVMWizard;
+}
+
+class NewVMWizard : public QWizard
+{
+    Q_OBJECT
+
+public:
+    // Wizard page IDs
+    enum Page
+    {
+        Page_Template = 0,
+        Page_Name,
+        Page_InstallationMedia,
+        Page_HomeServer,
+        Page_CpuMemory,
+        Page_Storage,
+        Page_Network,
+        Page_Finish
+    };
+
+    explicit NewVMWizard(XenLib* xenLib, QWidget* parent = nullptr);
+    ~NewVMWizard() override;
+
+protected:
+    void initializePage(int id) override;
+    bool validateCurrentPage() override;
+    void accept() override;
+
+private slots:
+    void onCurrentIdChanged(int id);
+
+private:
+    void setupUiPages();
+    void createVirtualMachine();
+    void loadTemplates();
+    void filterTemplates(const QString& filterText);
+    void handleTemplateSelectionChanged();
+    void loadTemplateDevices();
+    void loadHosts();
+    void loadStorageRepositories();
+    void loadNetworks();
+    void updateDiskTable();
+    void updateNetworkTable();
+    void updateSummaryPage();
+    void updateHomeServerControls(bool enableSelection);
+    void updateIsoControls();
+    void applyDefaultSRToDisks(const QString& srRef);
+    void updateNavigationSelection();
+
+    struct TemplateInfo
+    {
+        QString ref;
+        QString name;
+        QString type;
+        QString description;
+        QTreeWidgetItem* item = nullptr;
+    };
+
+    struct HostInfo
+    {
+        QString ref;
+        QString name;
+        QString hostname;
+    };
+
+    struct StorageRepositoryInfo
+    {
+        QString ref;
+        QString name;
+        QString type;
+    };
+
+    struct NetworkInfo
+    {
+        QString ref;
+        QString name;
+    };
+
+    // Store wizard data
+    XenLib* m_xenLib;
+    Ui::NewVMWizard* ui;
+
+    QString m_selectedTemplate;
+    QString m_vmName;
+    QString m_vmDescription;
+    QString m_selectedHost;
+    int m_vcpuCount;
+    long m_memorySize;
+    QVariantMap m_selectedTemplateRecord;
+
+    bool m_assignVtpm = false;
+    QString m_installUrl;
+    QString m_selectedIso;
+    QString m_bootMode;
+    WizardNavigationPane* m_navigationPane = nullptr;
+
+    // Storage configuration: list of (VDI ref, SR ref, size, device)
+    struct DiskConfig
+    {
+        QString vdiRef;   // Source VDI from template (if copying)
+        QString srRef;    // Target SR
+        qint64 sizeBytes; // Disk size in bytes
+        QString device;   // Device name (e.g., "0", "1", etc.)
+        bool bootable;    // Is this disk bootable?
+    };
+    QList<DiskConfig> m_disks;
+
+    // Network configuration: list of (network ref, device, MAC)
+    struct NetworkConfig
+    {
+        QString networkRef; // Network to connect to
+        QString device;     // Device index (e.g., "0", "1", etc.)
+        QString mac;        // MAC address (empty = auto-generate)
+    };
+    QList<NetworkConfig> m_networks;
+
+    QVector<TemplateInfo> m_templateItems;
+    QVector<HostInfo> m_hosts;
+    QVector<StorageRepositoryInfo> m_storageRepositories;
+    QVector<NetworkInfo> m_availableNetworks;
+};
+
+#endif // NEWVMWIZARD_H

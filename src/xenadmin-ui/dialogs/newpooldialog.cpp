@@ -1,0 +1,392 @@
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "newpooldialog.h"
+#include "ui_newpooldialog.h"
+#include "connectdialog.h"
+#include "operationprogressdialog.h"
+#include "../mainwindow.h"
+
+#include <xenlib.h>
+#include <xen/connection.h>
+#include <xen/session.h>
+#include <xen/host.h>
+#include <xen/actions/pool/createpoolaction.h>
+#include <collections/connectionsmanager.h>
+#include <xencache.h>
+#include <xen/xenapi/xenapi_Pool.h>
+
+#include <QMessageBox>
+#include <QPushButton>
+#include <QTimer>
+#include <QDebug>
+
+/**
+ * @brief NewPoolDialog constructor
+ *
+ * Port of C# NewPoolDialog constructor
+ * - Populates coordinator combobox with standalone servers
+ * - Populates supporter list with checkboxes
+ * - Sets up validation logic
+ */
+NewPoolDialog::NewPoolDialog(QWidget* parent)
+    : QDialog(parent), ui(new Ui::NewPoolDialog)
+{
+    ui->setupUi(this);
+
+    // Set Create button text
+    QPushButton* createBtn = ui->buttonBox->button(QDialogButtonBox::Ok);
+    if (createBtn)
+    {
+        createBtn->setText(tr("Create Pool"));
+        createBtn->setEnabled(false);
+    }
+
+    // Connect signals
+    connect(ui->comboBoxCoordinator, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &NewPoolDialog::onCoordinatorChanged);
+    connect(ui->listWidgetServers, &QListWidget::itemChanged,
+            this, &NewPoolDialog::onServerItemChanged);
+    connect(ui->lineEditName, &QLineEdit::textChanged,
+            this, &NewPoolDialog::onPoolNameChanged);
+    connect(ui->buttonAddServer, &QPushButton::clicked,
+            this, &NewPoolDialog::onAddServerClicked);
+    connect(ui->buttonBox->button(QDialogButtonBox::Ok), &QPushButton::clicked,
+            this, &NewPoolDialog::onCreateClicked);
+
+    // Populate connections from ConnectionsManager
+    populateConnections();
+    updateCreateButton();
+}
+
+NewPoolDialog::~NewPoolDialog()
+{
+    delete ui;
+}
+
+/**
+ * @brief Populate coordinator combobox and server list with connected standalone servers
+ *
+ * Port of C# getAllCurrentConnections() and addConnectionsToComboBox()
+ * Only includes connections that:
+ * - Are connected
+ * - Are standalone (not already part of a pool)
+ */
+void NewPoolDialog::populateConnections()
+{
+    ConnectionsManager* connMgr = ConnectionsManager::instance();
+    if (!connMgr)
+    {
+        qWarning() << "NewPoolDialog: No ConnectionsManager available";
+        return;
+    }
+
+    // Get all connected connections
+    QList<XenConnection*> allConnections = connMgr->getConnectedConnections();
+
+    // Filter to standalone servers only
+    m_connections.clear();
+    for (XenConnection* conn : allConnections)
+    {
+        if (conn && isStandaloneConnection(conn))
+        {
+            m_connections.append(conn);
+        }
+    }
+
+    // Populate coordinator combobox
+    ui->comboBoxCoordinator->clear();
+    for (XenConnection* conn : m_connections)
+    {
+        QString displayName = conn->getHostname();
+
+        // Try to get host name from cache
+        XenCache* cache = conn->getCache();
+        if (cache)
+        {
+            QList<QVariantMap> hosts = cache->getAll("host");
+            if (!hosts.isEmpty())
+            {
+                QString hostName = hosts.first().value("name_label").toString();
+                if (!hostName.isEmpty())
+                {
+                    displayName = hostName;
+                }
+            }
+        }
+
+        ui->comboBoxCoordinator->addItem(displayName, QVariant::fromValue(reinterpret_cast<quintptr>(conn)));
+    }
+
+    updateServerList();
+}
+
+/**
+ * @brief Update server list based on selected coordinator
+ *
+ * Port of C# addConnectionsToListBox()
+ * Shows checkboxes for servers that can be supporters
+ * Excludes the currently selected coordinator
+ */
+void NewPoolDialog::updateServerList()
+{
+    ui->listWidgetServers->clear();
+
+    XenConnection* coordinator = getCoordinatorConnection();
+
+    for (XenConnection* conn : m_connections)
+    {
+        // Don't show coordinator in supporter list
+        if (conn == coordinator)
+        {
+            continue;
+        }
+
+        QString displayName = conn->getHostname();
+
+        // Try to get host name from cache
+        XenCache* cache = conn->getCache();
+        if (cache)
+        {
+            QList<QVariantMap> hosts = cache->getAll("host");
+            if (!hosts.isEmpty())
+            {
+                QString hostName = hosts.first().value("name_label").toString();
+                if (!hostName.isEmpty())
+                {
+                    displayName = hostName;
+                }
+            }
+        }
+
+        QListWidgetItem* item = new QListWidgetItem(displayName);
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(Qt::Unchecked);
+        item->setData(Qt::UserRole, QVariant::fromValue(reinterpret_cast<quintptr>(conn)));
+        ui->listWidgetServers->addItem(item);
+    }
+}
+
+/**
+ * @brief Check if a connection is to a standalone server (not in a pool)
+ *
+ * Port of C# CanBeCoordinator property from ConnectionWrapperWithMoreStuff
+ * A server is standalone if:
+ * - The pool has only one host (the coordinator)
+ * - Pool.master == the only host in the pool
+ */
+bool NewPoolDialog::isStandaloneConnection(XenConnection* connection) const
+{
+    if (!connection || !connection->isConnected())
+    {
+        return false;
+    }
+
+    XenCache* cache = connection->getCache();
+    if (!cache)
+    {
+        return false;
+    }
+
+    // Check if pool has only one host
+    QList<QVariantMap> hosts = cache->getAll("host");
+    if (hosts.size() != 1)
+    {
+        return false; // Multi-host pool - not standalone
+    }
+
+    // It's a standalone server with one host
+    return true;
+}
+
+XenConnection* NewPoolDialog::getCoordinatorConnection() const
+{
+    int index = ui->comboBoxCoordinator->currentIndex();
+    if (index < 0)
+    {
+        return nullptr;
+    }
+
+    quintptr ptr = ui->comboBoxCoordinator->itemData(index).value<quintptr>();
+    return reinterpret_cast<XenConnection*>(ptr);
+}
+
+QList<XenConnection*> NewPoolDialog::getSupporterConnections() const
+{
+    QList<XenConnection*> supporters;
+
+    for (int i = 0; i < ui->listWidgetServers->count(); ++i)
+    {
+        QListWidgetItem* item = ui->listWidgetServers->item(i);
+        if (item && item->checkState() == Qt::Checked)
+        {
+            quintptr ptr = item->data(Qt::UserRole).value<quintptr>();
+            XenConnection* conn = reinterpret_cast<XenConnection*>(ptr);
+            if (conn)
+            {
+                supporters.append(conn);
+            }
+        }
+    }
+
+    return supporters;
+}
+
+void NewPoolDialog::onCoordinatorChanged(int index)
+{
+    Q_UNUSED(index);
+    updateServerList();
+    updateCreateButton();
+}
+
+void NewPoolDialog::onServerItemChanged(QListWidgetItem* item)
+{
+    Q_UNUSED(item);
+    updateCreateButton();
+}
+
+void NewPoolDialog::onPoolNameChanged(const QString& text)
+{
+    Q_UNUSED(text);
+    updateCreateButton();
+}
+
+void NewPoolDialog::onAddServerClicked()
+{
+    // Open connect dialog to add new server
+    ConnectDialog dialog(this);
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        // After successful connection, refresh the list
+        // The new connection will be added through ConnectionsManager signals
+        // For now, we just repopulate after a short delay
+        QTimer::singleShot(1000, this, &NewPoolDialog::populateConnections);
+    }
+}
+
+/**
+ * @brief Update Create button enabled state based on validation
+ *
+ * Port of C# updateButtons() and validToClose property
+ * Create is enabled when:
+ * - Pool name is not empty
+ * - A coordinator is selected
+ * - (Optional: supporters selected, but not required)
+ */
+void NewPoolDialog::updateCreateButton()
+{
+    QPushButton* createBtn = ui->buttonBox->button(QDialogButtonBox::Ok);
+    if (!createBtn)
+        return;
+
+    QString poolName = ui->lineEditName->text().trimmed();
+    XenConnection* coordinator = getCoordinatorConnection();
+
+    QString statusText;
+    bool canCreate = true;
+
+    if (poolName.isEmpty())
+    {
+        statusText = tr("Please enter a pool name.");
+        canCreate = false;
+    } else if (!coordinator)
+    {
+        statusText = tr("Please select a coordinator server.");
+        canCreate = false;
+    }
+
+    ui->labelStatus->setText(statusText);
+    createBtn->setEnabled(canCreate);
+}
+
+void NewPoolDialog::onCreateClicked()
+{
+    createPool();
+}
+
+/**
+ * @brief Create the pool with selected coordinator and supporters
+ *
+ * Port of C# createPool() from NewPoolDialog.cs
+ * Uses CreatePoolAction to handle the async pool creation with progress tracking.
+ */
+void NewPoolDialog::createPool()
+{
+    QString poolName = ui->lineEditName->text().trimmed();
+    QString poolDescription = ui->lineEditDescription->text().trimmed();
+    XenConnection* coordinatorConn = getCoordinatorConnection();
+    QList<XenConnection*> supporterConns = getSupporterConnections();
+
+    if (!coordinatorConn)
+    {
+        QMessageBox::warning(this, tr("Error"), tr("No coordinator selected."));
+        return;
+    }
+
+    XenSession* coordinatorSession = coordinatorConn->getSession();
+    if (!coordinatorSession || !coordinatorSession->isLoggedIn())
+    {
+        QMessageBox::warning(this, tr("Error"), tr("Coordinator is not connected."));
+        return;
+    }
+
+    qDebug() << "Creating pool:" << poolName << "with coordinator:" << coordinatorConn->getHostname();
+    qDebug() << "Supporters:" << supporterConns.size();
+
+    // Create the action using the existing CreatePoolAction class
+    // Note: Host* parameters are nullptr - the action doesn't use them in current implementation
+    QList<Host*> emptyHostList; // Placeholder - action uses connections directly
+
+    CreatePoolAction* action = new CreatePoolAction(
+        coordinatorConn,
+        nullptr, // coordinator Host* - not used in current implementation
+        supporterConns,
+        emptyHostList, // member Host* list - not used in current implementation
+        poolName,
+        poolDescription,
+        this);
+
+    // Show progress dialog and run the action
+    OperationProgressDialog progressDialog(action, this);
+    progressDialog.setWindowTitle(tr("Creating Pool"));
+
+    // Connect completion signals
+    connect(action, &CreatePoolAction::completed, this, [this, poolName]() {
+        QMessageBox::information(this, tr("Success"),
+                                 tr("Pool '%1' created successfully.").arg(poolName));
+        accept();
+    });
+
+    connect(action, &CreatePoolAction::failed, this, [this](const QString& error) {
+        QMessageBox::critical(this, tr("Error"),
+                              tr("Failed to create pool: %1").arg(error));
+    });
+
+    // Start the action - progress dialog handles display
+    action->runAsync();
+    progressDialog.exec();
+}

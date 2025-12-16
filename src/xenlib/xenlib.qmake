@@ -1,0 +1,28 @@
+TEMPLATE = lib
+CONFIG += qt warn_on c++17 staticlib
+QT += core network xml
+TARGET = xenlib
+DEFINES += XENLIB_LIBRARY
+
+# Source files
+SOURCES += \
+    xenlib.cpp \
+    xen/connection.cpp \
+    xen/session.cpp \
+    xen/api.cpp \
+    utils/encryption.cpp \
+    utils/xmlresolver.cpp
+
+# Header files
+HEADERS += \
+    xenlib.h \
+    xenlib_global.h \
+    xen/connection.h \
+    xen/session.h \
+    xen/api.h \
+    utils/encryption.h \
+    utils/xmlresolver.h
+
+# Installation
+target.path = $$[QT_INSTALL_LIBS]
+INSTALLS += target

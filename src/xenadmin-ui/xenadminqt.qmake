@@ -1,0 +1,35 @@
+TEMPLATE = app
+CONFIG += qt warn_on c++17
+QT += widgets network xml
+TARGET = xenadmin-qt
+
+# Source files
+SOURCES += \
+    main.cpp \
+    mainwindow.cpp \
+    dialogs/connectdialog.cpp \
+    widgets/vmlistwidget.cpp \
+    widgets/hostlistwidget.cpp
+
+# Header files
+HEADERS += \
+    mainwindow.h \
+    dialogs/connectdialog.h \
+    widgets/vmlistwidget.h \
+    widgets/hostlistwidget.h
+
+# UI files
+FORMS += \
+    mainwindow.ui \
+    dialogs/connectdialog.ui
+
+# Resources
+RESOURCES += resources.qrc
+
+# Link with xenlib
+INCLUDEPATH += ../xenlib
+LIBS += -L../xenlib -lxenlib
+
+# Installation
+target.path = $$[QT_INSTALL_BINS]
+INSTALLS += target

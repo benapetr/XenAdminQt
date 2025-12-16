@@ -1,0 +1,94 @@
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "vdieditsizelocationcommand.h"
+#include "../../mainwindow.h"
+#include "../../dialogs/vdipropertiesdialog.h"
+#include "xenlib.h"
+#include "xencache.h"
+
+VdiEditSizeLocationCommand::VdiEditSizeLocationCommand(MainWindow* mainWindow, QObject* parent)
+    : Command(mainWindow, parent)
+{
+}
+
+bool VdiEditSizeLocationCommand::canRun() const
+{
+    // Can edit VDI properties if a VDI is selected
+    if (!isVDISelected())
+        return false;
+
+    QString vdiRef = getSelectedVDIRef();
+    if (vdiRef.isEmpty())
+        return false;
+
+    if (!mainWindow()->xenLib())
+        return false;
+
+    XenCache* cache = mainWindow()->xenLib()->getCache();
+    if (!cache)
+        return false;
+
+    // Check if VDI exists in cache
+    QVariantMap vdiData = cache->resolve("vdi", vdiRef);
+    return !vdiData.isEmpty();
+}
+
+void VdiEditSizeLocationCommand::run()
+{
+    QString vdiRef = getSelectedVDIRef();
+    if (vdiRef.isEmpty())
+        return;
+
+    XenLib* xenLib = mainWindow()->xenLib();
+    if (!xenLib)
+        return;
+
+    // Open VDI properties dialog
+    // The dialog handles size editing, name/description editing
+    // For location changes, user can use "Move Virtual Disk" command
+    VdiPropertiesDialog* dialog = new VdiPropertiesDialog(xenLib, vdiRef, mainWindow());
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
+}
+
+QString VdiEditSizeLocationCommand::menuText() const
+{
+    return "Properties...";
+}
+
+bool VdiEditSizeLocationCommand::isVDISelected() const
+{
+    return getSelectedObjectType() == "vdi";
+}
+
+QString VdiEditSizeLocationCommand::getSelectedVDIRef() const
+{
+    if (!isVDISelected())
+        return QString();
+    return getSelectedObjectRef();
+}

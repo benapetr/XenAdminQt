@@ -1,0 +1,1194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>800</width>
+    <height>600</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>XenAdmin Qt</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="margin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QSplitter" name="centralSplitter">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <widget class="NavigationPane" name="navigationPane" native="true">
+       <property name="minimumSize">
+        <size>
+         <width>250</width>
+         <height>0</height>
+        </size>
+       </property>
+      </widget>
+      <widget class="QTabWidget" name="mainTabWidget">
+       <property name="currentIndex">
+        <number>-1</number>
+       </property>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>&amp;File</string>
+    </property>
+    <addaction name="connectAction"/>
+    <addaction name="disconnectAction"/>
+    <addaction name="separator"/>
+    <addaction name="importAction"/>
+    <addaction name="exportAction"/>
+    <addaction name="separator"/>
+    <addaction name="exitAction"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>&amp;View</string>
+    </property>
+    <addaction name="debugWindowAction"/>
+   </widget>
+   <widget class="QMenu" name="menuPool">
+    <property name="title">
+     <string>&amp;Pool</string>
+    </property>
+    <addaction name="AddPoolToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="addServerToolStripMenuItem"/>
+    <addaction name="removeServerToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <widget class="QMenu" name="menuHighAvailability">
+     <property name="title">
+      <string>High Availability</string>
+     </property>
+     <addaction name="toolStripMenuItemHaConfigure"/>
+     <addaction name="toolStripMenuItemHaDisable"/>
+    </widget>
+    <addaction name="menuHighAvailability"/>
+    <addaction name="separator"/>
+    <addaction name="deleteToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="PoolPropertiesToolStripMenuItem"/>
+   </widget>
+   <widget class="QMenu" name="menuServer">
+    <property name="title">
+     <string>&amp;Server</string>
+    </property>
+    <addaction name="addServerAction"/>
+    <addaction name="separator"/>
+    <addaction name="rebootAction"/>
+    <addaction name="powerOnHostAction"/>
+    <addaction name="shutDownAction"/>
+    <addaction name="restartToolstackAction"/>
+    <addaction name="separator"/>
+    <widget class="QMenu" name="connectDisconnectToolStripMenuItem">
+     <property name="title">
+      <string>Connect/Disconnect</string>
+     </property>
+     <addaction name="ReconnectToolStripMenuItem1"/>
+     <addaction name="DisconnectToolStripMenuItem"/>
+     <addaction name="reconnectAsToolStripMenuItem"/>
+     <addaction name="separator"/>
+     <addaction name="connectAllToolStripMenuItem"/>
+     <addaction name="disconnectAllToolStripMenuItem"/>
+    </widget>
+    <addaction name="connectDisconnectToolStripMenuItem"/>
+    <addaction name="addServerToPoolMenuItem"/>
+    <addaction name="menuItemRemoveFromPool"/>
+    <addaction name="separator"/>
+    <addaction name="maintenanceModeToolStripMenuItem1"/>
+    <addaction name="separator"/>
+    <addaction name="ServerPropertiesToolStripMenuItem"/>
+   </widget>
+   <widget class="QMenu" name="menuVM">
+    <property name="title">
+     <string>&amp;VM</string>
+    </property>
+    <addaction name="newVmAction"/>
+    <addaction name="startShutdownToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="copyVMtoSharedStorageMenuItem"/>
+    <addaction name="MoveVMToolStripMenuItem"/>
+    <addaction name="snapshotToolStripMenuItem"/>
+    <addaction name="convertToTemplateToolStripMenuItem"/>
+    <addaction name="exportToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="installToolsToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="uninstallToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="VMPropertiesToolStripMenuItem"/>
+   </widget>
+   <widget class="QMenu" name="menuStorage">
+    <property name="title">
+     <string>&amp;Storage</string>
+    </property>
+    <addaction name="newStorageRepositoryAction"/>
+    <addaction name="separator"/>
+    <addaction name="RepairStorageToolStripMenuItem"/>
+    <addaction name="DefaultSRToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <widget class="QMenu" name="menuVirtualDisks">
+     <property name="title">
+      <string>Virtual Disks</string>
+     </property>
+     <addaction name="addVirtualDiskToolStripMenuItem"/>
+     <addaction name="attachVirtualDiskToolStripMenuItem"/>
+    </widget>
+    <addaction name="menuVirtualDisks"/>
+    <addaction name="separator"/>
+    <addaction name="DetachStorageToolStripMenuItem"/>
+    <addaction name="ReattachStorageRepositoryToolStripMenuItem"/>
+    <addaction name="ForgetStorageRepositoryToolStripMenuItem"/>
+    <addaction name="DestroyStorageRepositoryToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="SRPropertiesToolStripMenuItem"/>
+   </widget>
+   <widget class="QMenu" name="menuTemplates">
+    <property name="title">
+     <string>&amp;Templates</string>
+    </property>
+    <addaction name="CreateVmFromTemplateToolStripMenuItem"/>
+    <addaction name="newVMFromTemplateToolStripMenuItem"/>
+    <addaction name="InstantVmToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="exportTemplateToolStripMenuItem"/>
+    <addaction name="duplicateTemplateToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="uninstallTemplateToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="templatePropertiesToolStripMenuItem"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>&amp;Help</string>
+    </property>
+    <addaction name="aboutAction"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>&amp;Tools</string>
+    </property>
+    <addaction name="optionsAction"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuView"/>
+   <addaction name="menuPool"/>
+   <addaction name="menuServer"/>
+   <addaction name="menuVM"/>
+   <addaction name="menuStorage"/>
+   <addaction name="menuTemplates"/>
+   <addaction name="menuTools"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QToolBar" name="mainToolBar">
+   <property name="windowTitle">
+    <string>Main Toolbar</string>
+   </property>
+   <property name="movable">
+    <bool>false</bool>
+   </property>
+   <property name="iconSize">
+    <size>
+     <width>24</width>
+     <height>24</height>
+    </size>
+   </property>
+   <property name="toolButtonStyle">
+    <enum>Qt::ToolButtonTextBesideIcon</enum>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="addServerAction"/>
+   <addaction name="separator"/>
+   <addaction name="addPoolAction"/>
+   <addaction name="newStorageAction"/>
+   <addaction name="newVmAction"/>
+   <addaction name="separator"/>
+   <addaction name="shutDownAction"/>
+   <addaction name="powerOnHostAction"/>
+   <addaction name="startVMAction"/>
+   <addaction name="rebootAction"/>
+   <addaction name="resumeAction"/>
+   <addaction name="suspendAction"/>
+   <addaction name="pauseAction"/>
+   <addaction name="unpauseAction"/>
+   <addaction name="forceShutdownAction"/>
+   <addaction name="forceRebootAction"/>
+  </widget>
+  <action name="addServerAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/add_server.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Add New Server</string>
+   </property>
+   <property name="toolTip">
+    <string>Add New Server</string>
+   </property>
+  </action>
+  <action name="addPoolAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/pool_new.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>New Pool</string>
+   </property>
+   <property name="toolTip">
+    <string>New Pool</string>
+   </property>
+  </action>
+  <action name="newStorageAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/new_storage.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>New Storage</string>
+   </property>
+   <property name="toolTip">
+    <string>New Storage</string>
+   </property>
+  </action>
+  <action name="newVmAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/new_vm.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>New VM</string>
+   </property>
+   <property name="toolTip">
+    <string>New VM</string>
+   </property>
+  </action>
+  <action name="shutDownAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/shutdown.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Shut Down</string>
+   </property>
+   <property name="toolTip">
+    <string>Shut Down</string>
+   </property>
+  </action>
+  <action name="powerOnHostAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/power_on.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Power On</string>
+   </property>
+   <property name="toolTip">
+    <string>Power On Host</string>
+   </property>
+  </action>
+  <action name="startVMAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/start_vm.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Start</string>
+   </property>
+   <property name="toolTip">
+    <string>Start</string>
+   </property>
+  </action>
+  <action name="rebootAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/reboot.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Reboot</string>
+   </property>
+   <property name="toolTip">
+    <string>Reboot</string>
+   </property>
+  </action>
+  <action name="resumeAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/resume.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Resume</string>
+   </property>
+   <property name="toolTip">
+    <string>Resume</string>
+   </property>
+  </action>
+  <action name="suspendAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/suspend.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Suspend</string>
+   </property>
+   <property name="toolTip">
+    <string>Suspend</string>
+   </property>
+  </action>
+  <action name="pauseAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/pause.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Pause</string>
+   </property>
+   <property name="toolTip">
+    <string>Pause</string>
+   </property>
+  </action>
+  <action name="unpauseAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/unpause.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Unpause</string>
+   </property>
+   <property name="toolTip">
+    <string>Unpause</string>
+   </property>
+  </action>
+  <action name="forceShutdownAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/force_shutdown.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Force Shut Down</string>
+   </property>
+   <property name="toolTip">
+    <string>Force Shut Down</string>
+   </property>
+  </action>
+  <action name="forceRebootAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/force_reboot.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Force Reboot</string>
+   </property>
+   <property name="toolTip">
+    <string>Force Reboot</string>
+   </property>
+  </action>
+  <!-- Old connect/disconnect actions below -->
+  <action name="connectAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/connect-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Connect...</string>
+   </property>
+   <property name="statusTip">
+    <string>Connect to Xen server</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="disconnectAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/disconnect-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Disconnect</string>
+   </property>
+   <property name="statusTip">
+    <string>Disconnect from Xen server</string>
+   </property>
+  </action>
+  <action name="exitAction">
+   <property name="text">
+    <string>E&amp;xit</string>
+   </property>
+   <property name="statusTip">
+    <string>Exit XenAdmin Qt</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="aboutAction">
+   <property name="text">
+    <string>&amp;About</string>
+   </property>
+   <property name="statusTip">
+    <string>Show the application's About box</string>
+   </property>
+  </action>
+  <action name="optionsAction">
+   <property name="text">
+    <string>&amp;Options...</string>
+   </property>
+   <property name="statusTip">
+    <string>Configure XenAdmin options</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+K</string>
+   </property>
+  </action>
+  <action name="debugWindowAction">
+   <property name="text">
+    <string>&amp;Debug Console...</string>
+   </property>
+   <property name="statusTip">
+    <string>Show debug console window</string>
+   </property>
+   <property name="shortcut">
+    <string>F12</string>
+   </property>
+  </action>
+  <action name="importAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/vm-import-32.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Import VM...</string>
+   </property>
+   <property name="statusTip">
+    <string>Import virtual machine from file</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
+   </property>
+  </action>
+  <action name="exportAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/export-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Export VM...</string>
+   </property>
+   <property name="statusTip">
+    <string>Export virtual machine to file</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="newNetworkAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/network-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;New Network...</string>
+   </property>
+   <property name="statusTip">
+    <string>Create a new network</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+N</string>
+   </property>
+  </action>
+  <action name="newStorageRepositoryAction">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/storage-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;New Storage Repository...</string>
+   </property>
+   <property name="statusTip">
+    <string>Create a new storage repository</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+S</string>
+   </property>
+  </action>
+  <!-- Server Menu Actions (C#: HostMenuItem) -->
+  <action name="restartToolstackAction">
+   <property name="text">
+    <string>Restart Toolstac&amp;k</string>
+   </property>
+   <property name="statusTip">
+    <string>Restart the host toolstack</string>
+   </property>
+  </action>
+  <action name="ReconnectToolStripMenuItem1">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/connect-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Reconnect</string>
+   </property>
+   <property name="statusTip">
+    <string>Reconnect to server</string>
+   </property>
+  </action>
+  <action name="DisconnectToolStripMenuItem">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/disconnect-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Disconnect</string>
+   </property>
+   <property name="statusTip">
+    <string>Disconnect from server</string>
+   </property>
+  </action>
+  <action name="reconnectAsToolStripMenuItem">
+   <property name="text">
+    <string>Reconnect &amp;As...</string>
+   </property>
+   <property name="statusTip">
+    <string>Reconnect with different credentials</string>
+   </property>
+  </action>
+  <action name="connectAllToolStripMenuItem">
+   <property name="text">
+    <string>Connect &amp;All</string>
+   </property>
+   <property name="statusTip">
+    <string>Connect to all servers</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+C</string>
+   </property>
+  </action>
+  <action name="disconnectAllToolStripMenuItem">
+   <property name="text">
+    <string>Disconnect A&amp;ll</string>
+   </property>
+   <property name="statusTip">
+    <string>Disconnect from all servers</string>
+   </property>
+  </action>
+  <action name="addServerToPoolMenuItem">
+   <property name="text">
+    <string>Add to &amp;Pool...</string>
+   </property>
+   <property name="statusTip">
+    <string>Add this server to a pool</string>
+   </property>
+  </action>
+  <action name="menuItemRemoveFromPool">
+   <property name="text">
+    <string>&amp;Remove from Pool</string>
+   </property>
+   <property name="statusTip">
+    <string>Remove this server from its pool</string>
+   </property>
+  </action>
+  <action name="maintenanceModeToolStripMenuItem1">
+   <property name="text">
+    <string>&amp;Maintenance Mode</string>
+   </property>
+   <property name="statusTip">
+    <string>Enter or exit maintenance mode</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="ServerPropertiesToolStripMenuItem">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/edit-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>P&amp;roperties</string>
+   </property>
+   <property name="statusTip">
+    <string>View and edit server properties</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Return</string>
+   </property>
+  </action>
+  <!-- Pool Menu Actions (C#: poolToolStripMenuItem) -->
+  <action name="AddPoolToolStripMenuItem">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/pool_new.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;New Pool...</string>
+   </property>
+   <property name="statusTip">
+    <string>Create a new resource pool</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+P</string>
+   </property>
+  </action>
+  <action name="addServerToolStripMenuItem">
+   <property name="text">
+    <string>Add &amp;Server...</string>
+   </property>
+   <property name="statusTip">
+    <string>Add a server to this pool</string>
+   </property>
+  </action>
+  <action name="removeServerToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Remove Server</string>
+   </property>
+   <property name="statusTip">
+    <string>Remove a server from this pool</string>
+   </property>
+  </action>
+  <action name="highAvailabilityToolStripMenuItem">
+   <property name="text">
+    <string>High Availability</string>
+   </property>
+  </action>
+  <action name="toolStripMenuItemHaConfigure">
+   <property name="text">
+    <string>&amp;Configure HA...</string>
+   </property>
+   <property name="statusTip">
+    <string>Configure High Availability for this pool</string>
+   </property>
+  </action>
+  <action name="toolStripMenuItemHaDisable">
+   <property name="text">
+    <string>&amp;Disable HA</string>
+   </property>
+   <property name="statusTip">
+    <string>Disable High Availability for this pool</string>
+   </property>
+  </action>
+  <action name="deleteToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Delete Pool</string>
+   </property>
+   <property name="statusTip">
+    <string>Delete this pool</string>
+   </property>
+  </action>
+  <action name="PoolPropertiesToolStripMenuItem">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/edit-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>P&amp;roperties</string>
+   </property>
+   <property name="statusTip">
+    <string>View and edit pool properties</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Return</string>
+   </property>
+  </action>
+  <!-- VM Menu Actions (C#: VMToolStripMenuItem) -->
+  <action name="startShutdownToolStripMenuItem">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/start_vm.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>S&amp;tart</string>
+   </property>
+   <property name="statusTip">
+    <string>Start, shut down, resume, or pause VM</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+B</string>
+   </property>
+  </action>
+  <action name="copyVMtoSharedStorageMenuItem">
+   <property name="text">
+    <string>&amp;Copy VM...</string>
+   </property>
+   <property name="statusTip">
+    <string>Copy VM to shared storage</string>
+   </property>
+  </action>
+  <action name="MoveVMToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Move VM...</string>
+   </property>
+   <property name="statusTip">
+    <string>Move VM to another storage repository</string>
+   </property>
+  </action>
+  <action name="snapshotToolStripMenuItem">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/snapshot-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Snapshot...</string>
+   </property>
+   <property name="statusTip">
+    <string>Take a snapshot of this VM</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="convertToTemplateToolStripMenuItem">
+   <property name="text">
+    <string>Con&amp;vert to Template</string>
+   </property>
+   <property name="statusTip">
+    <string>Convert this VM to a template</string>
+   </property>
+  </action>
+  <action name="exportToolStripMenuItem">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/export-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Export...</string>
+   </property>
+   <property name="statusTip">
+    <string>Export VM to file</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="installToolsToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Install Guest Tools</string>
+   </property>
+   <property name="statusTip">
+    <string>Install XenServer Tools in this VM</string>
+   </property>
+  </action>
+  <action name="uninstallToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Uninstall VM</string>
+   </property>
+   <property name="statusTip">
+    <string>Uninstall this VM</string>
+   </property>
+  </action>
+  <action name="VMPropertiesToolStripMenuItem">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/edit-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>P&amp;roperties</string>
+   </property>
+   <property name="statusTip">
+    <string>View and edit VM properties</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Return</string>
+   </property>
+  </action>
+  <!-- Storage Menu Actions (C#: StorageToolStripMenuItem) -->
+  <action name="RepairStorageToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Repair...</string>
+   </property>
+   <property name="statusTip">
+    <string>Repair storage repository</string>
+   </property>
+  </action>
+  <action name="DefaultSRToolStripMenuItem">
+   <property name="text">
+    <string>Set as &amp;Default SR</string>
+   </property>
+   <property name="statusTip">
+    <string>Set this storage repository as the pool default</string>
+   </property>
+  </action>
+  <action name="virtualDisksToolStripMenuItem">
+   <property name="text">
+    <string>Virtual Disks</string>
+   </property>
+  </action>
+  <action name="addVirtualDiskToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Add Virtual Disk...</string>
+   </property>
+   <property name="statusTip">
+    <string>Create a new virtual disk</string>
+   </property>
+  </action>
+  <action name="attachVirtualDiskToolStripMenuItem">
+   <property name="text">
+    <string>A&amp;ttach Virtual Disk...</string>
+   </property>
+   <property name="statusTip">
+    <string>Attach an existing virtual disk</string>
+   </property>
+  </action>
+  <action name="DetachStorageToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Detach...</string>
+   </property>
+   <property name="statusTip">
+    <string>Detach this storage repository</string>
+   </property>
+  </action>
+  <action name="ReattachStorageRepositoryToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Reattach...</string>
+   </property>
+   <property name="statusTip">
+    <string>Reattach this storage repository</string>
+   </property>
+  </action>
+  <action name="ForgetStorageRepositoryToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Forget...</string>
+   </property>
+   <property name="statusTip">
+    <string>Forget this storage repository</string>
+   </property>
+  </action>
+  <action name="DestroyStorageRepositoryToolStripMenuItem">
+   <property name="text">
+    <string>Destro&amp;y...</string>
+   </property>
+   <property name="statusTip">
+    <string>Destroy this storage repository</string>
+   </property>
+  </action>
+  <action name="SRPropertiesToolStripMenuItem">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/edit-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>P&amp;roperties</string>
+   </property>
+   <property name="statusTip">
+    <string>View and edit storage repository properties</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Return</string>
+   </property>
+  </action>
+  <!-- Templates Menu Actions (C#: templatesToolStripMenuItem) -->
+  <action name="CreateVmFromTemplateToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Create VM from Template...</string>
+   </property>
+   <property name="statusTip">
+    <string>Create a new VM based on this template</string>
+   </property>
+  </action>
+  <action name="newVMFromTemplateToolStripMenuItem">
+   <property name="text">
+    <string>&amp;New VM from Template...</string>
+   </property>
+   <property name="statusTip">
+    <string>Create a new VM from this template</string>
+   </property>
+  </action>
+  <action name="InstantVmToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Instant VM from Template</string>
+   </property>
+   <property name="statusTip">
+    <string>Create and start a VM from this template instantly</string>
+   </property>
+  </action>
+  <action name="exportTemplateToolStripMenuItem">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/export-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Export...</string>
+   </property>
+   <property name="statusTip">
+    <string>Export template to file</string>
+   </property>
+  </action>
+  <action name="duplicateTemplateToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Duplicate Template...</string>
+   </property>
+   <property name="statusTip">
+    <string>Create a copy of this template</string>
+   </property>
+  </action>
+  <action name="uninstallTemplateToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Uninstall Template</string>
+   </property>
+   <property name="statusTip">
+    <string>Uninstall this template</string>
+   </property>
+  </action>
+  <action name="templatePropertiesToolStripMenuItem">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/icons/edit-16.png</normaloff>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>P&amp;roperties</string>
+   </property>
+   <property name="statusTip">
+    <string>View and edit template properties</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Return</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>connectAction</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>connectToServer()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>disconnectAction</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>disconnectFromServer()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>exitAction</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>aboutAction</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>showAbout()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>serverTreeWidget</sender>
+   <signal>itemSelectionChanged()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>onTreeItemSelected()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>125</x>
+     <y>334</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>debugWindowAction</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>showDebugWindow()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>importAction</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>showImportWizard()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>exportAction</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>showExportWizard()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>newNetworkAction</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>showNewNetworkWizard()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>optionsAction</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>showOptions()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <customwidgets>
+  <customwidget>
+   <class>NavigationPane</class>
+   <extends>QWidget</extends>
+   <header>widgets/navigationpane.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <slots>
+  <slot>connectToServer()</slot>
+  <slot>disconnectFromServer()</slot>
+  <slot>showAbout()</slot>
+  <slot>showDebugWindow()</slot>
+  <slot>onTreeItemSelected()</slot>
+  <slot>showImportWizard()</slot>
+  <slot>showExportWizard()</slot>
+  <slot>showNewNetworkWizard()</slot>
+  <slot>showNewStorageRepositoryWizard()</slot>
+  <slot>showOptions()</slot>
+ </slots>
+</ui>

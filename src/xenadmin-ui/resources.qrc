@@ -1,0 +1,103 @@
+<RCC>
+    <qresource prefix="/icons">
+        <!-- Application and UI icons -->
+        <file alias="app.ico">images/AppIcon.ico</file>
+        
+        <!-- Navigation icons (24x24 for toolbar) -->
+        <file alias="back.png">images/001_Back_h32bit_24.png</file>
+        <file alias="forward.png">images/001_Forward_h32bit_24.png</file>
+        
+        <!-- Toolbar management icons (16x16) -->
+        <file alias="add_server.png">images/000_TreeConnected_h32bit_16.png</file>
+        <file alias="pool_new.png">images/000_PoolNew_h32bit_16.png</file>
+        <file alias="new_storage.png">images/000_NewStorage_h32bit_16.png</file>
+        <file alias="new_vm.png">images/000_CreateVM_h32bit_32.png</file>
+        
+        <!-- VM operation icons (16x16) -->
+        <file alias="start_vm.png">images/000_StartVM_h32bit_16.png</file>
+        <file alias="shutdown.png">images/001_ShutDown_h32bit_16.png</file>
+        <file alias="reboot.png">images/001_Reboot_h32bit_16.png</file>
+        <file alias="resume.png">images/000_Resumed_h32bit_16.png</file>
+        <file alias="suspend.png">images/000_SuspendVM_h32bit_16.png</file>
+        <file alias="pause.png">images/000_paused_h32bit_16.png</file>
+        <file alias="unpause.png">images/000_Resumed_h32bit_16.png</file>
+        <file alias="force_shutdown.png">images/001_ForceShutDown_h32bit_16.png</file>
+        <file alias="force_reboot.png">images/001_ForceReboot_h32bit_16.png</file>
+        
+        <!-- Host operation icons (16x16) -->
+        <file alias="power_on.png">images/001_PowerOn_h32bit_16.png</file>
+        
+        <!-- Docker container icons (placeholders - using VM icons for now) -->
+        <file alias="container_start.png">images/000_StartVM_h32bit_16.png</file>
+        <file alias="container_stop.png">images/001_ShutDown_h32bit_16.png</file>
+        <file alias="container_restart.png">images/001_Reboot_h32bit_16.png</file>
+        <file alias="container_pause.png">images/000_paused_h32bit_16.png</file>
+        <file alias="container_resume.png">images/000_Resumed_h32bit_16.png</file>
+        
+        <!-- Storage related icons -->
+        <file alias="storage-16.png">images/000_NewStorage_h32bit_16.png</file>
+        <file alias="storage-32.png">images/000_NewStorage_h32bit_32.png</file>
+        
+        <!-- Network related icons -->
+        <file alias="network-16.png">images/000_Network_h32bit_16.png</file>
+        <file alias="network-32.png">images/000_NewNetwork_h32bit_32.png</file>
+        
+        <!-- VM related icons -->
+        <file alias="vm-create-32.png">images/000_CreateVM_h32bit_32.png</file>
+        <file alias="vm-import-32.png">images/000_ImportVM_h32bit_32.png</file>
+        
+        <!-- Connection related icons -->
+        <file alias="connect-16.png">images/000_TreeConnected_h32bit_16.png</file>
+        <file alias="disconnect-16.png">images/000_ServerDisconnected_h32bit_16.png</file>
+        
+        <!-- Export/Import related icons -->
+        <file alias="export-16.png">images/000_ExportVirtualAppliance_h32bit_16.png</file>
+        <file alias="export-32.png">images/000_ExportVirtualAppliance_h32bit_32.png</file>
+        <file alias="export-messages-16.png">images/000_ExportMessages_h32bit_16.png</file>
+        
+        <!-- Options dialog icons -->
+        <file alias="padlock.png">images/padlock.png</file>
+        <file alias="performance_graph_16.png">images/001_PerformanceGraph_h32bit_16.png</file>
+        <file alias="grapharea.png">images/grapharea.png</file>
+        <file alias="graphline.png">images/graphline.png</file>
+        <file alias="tick_16.png">images/tick_16.png</file>
+        <file alias="console_16.png">images/console_16.png</file>
+        <file alias="save_16.png">images/save_16.png</file>
+        <file alias="network_16.png">images/network_16.png</file>
+    </qresource>
+    
+    <qresource prefix="/tree-icons">
+        <!-- Tree view object type icons (16x16) -->
+        <!-- VM state icons -->
+        <file alias="vm_generic.png">images/000_VM_h32bit_16.png</file>
+        <file alias="vm_running.png">images/000_StartVM_h32bit_16.png</file>
+        <file alias="vm_stopped.png">images/000_StoppedVM_h32bit_16.png</file>
+        <file alias="vm_suspended.png">images/000_SuspendVM_h32bit_16.png</file>
+        <file alias="vm_paused.png">images/000_paused_h32bit_16.png</file>
+        <file alias="vm_starting.png">images/000_VMStarting_h32bit_16.png</file>
+        
+        <!-- Template icons -->
+        <file alias="template.png">images/000_VMTemplate_h32bit_16.png</file>
+        <file alias="template_user.png">images/000_UserTemplate_h32bit_16.png</file>
+        <file alias="template_disabled.png">images/000_TemplateDisabled_h32bit_16.png</file>
+        
+        <!-- Snapshot icons -->
+        <file alias="snapshot.png">images/000_VMSnapShotDiskOnly_h32bit_16.png</file>
+        
+        <!-- Host icons -->
+        <file alias="host.png">images/000_TreeConnected_h32bit_16.png</file>
+        <file alias="host_disconnected.png">images/000_ServerDisconnected_h32bit_16.png</file>
+        <file alias="host_maintenance.png">images/000_ServerMaintenance_h32bit_16.png</file>
+        
+        <!-- Pool icons -->
+        <file alias="pool.png">images/000_Pool_h32bit_16.png</file>
+        <file alias="pool_connected.png">images/000_PoolConnected_h32bit_16.png</file>
+        
+        <!-- Storage icons -->
+        <file alias="storage.png">images/000_Storage_h32bit_16.png</file>
+        <file alias="storage_new.png">images/000_NewStorage_h32bit_16.png</file>
+        
+        <!-- Network icons -->
+        <file alias="network.png">images/000_Network_h32bit_16.png</file>
+    </qresource>
+</RCC>
