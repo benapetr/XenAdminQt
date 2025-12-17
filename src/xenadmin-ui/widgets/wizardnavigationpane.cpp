@@ -31,66 +31,64 @@
 #include <QListWidget>
 #include <QSignalBlocker>
 
-WizardNavigationPane::WizardNavigationPane(QWidget* parent)
-    : QWidget(parent),
-      ui(new Ui::WizardNavigationPane)
+WizardNavigationPane::WizardNavigationPane(QWidget* parent) : QWidget(parent), ui(new Ui::WizardNavigationPane)
 {
-    ui->setupUi(this);
-    ui->stepsList->setSelectionMode(QAbstractItemView::SingleSelection);
-    ui->stepsList->setFocusPolicy(Qt::NoFocus);
-    ui->stepsList->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    ui->stepsList->viewport()->setAttribute(Qt::WA_TransparentForMouseEvents);
-    ui->stepsList->setAttribute(Qt::WA_TransparentForMouseEvents);
-    ui->stepsList->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    ui->stepsList->setFrameShape(QFrame::NoFrame);
-    ui->stepsList->setSpacing(2);
+    this->ui->setupUi(this);
+    this->ui->stepsList->setSelectionMode(QAbstractItemView::SingleSelection);
+    this->ui->stepsList->setFocusPolicy(Qt::NoFocus);
+    this->ui->stepsList->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    this->ui->stepsList->viewport()->setAttribute(Qt::WA_TransparentForMouseEvents);
+    this->ui->stepsList->setAttribute(Qt::WA_TransparentForMouseEvents);
+    this->ui->stepsList->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    this->ui->stepsList->setFrameShape(QFrame::NoFrame);
+    this->ui->stepsList->setSpacing(2);
 
-    ui->brandIcon->setVisible(false);
+    this->setBranding(tr("XCP-ng"));
 
-    setMinimumWidth(180);
+    this->setMinimumWidth(180);
 }
 
 WizardNavigationPane::~WizardNavigationPane()
 {
-    delete ui;
+    delete this->ui;
 }
 
 void WizardNavigationPane::setSteps(const QVector<Step>& steps)
 {
-    m_steps = steps;
-    ui->stepsList->clear();
+    this->m_steps = steps;
+    this->ui->stepsList->clear();
 
     for (const Step& step : steps)
     {
         auto* item = new QListWidgetItem(step.icon, step.title);
         item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-        ui->stepsList->addItem(item);
+        this->ui->stepsList->addItem(item);
     }
 
     if (!steps.isEmpty())
-        ui->stepsList->setCurrentRow(0);
+        this->ui->stepsList->setCurrentRow(0);
 }
 
 void WizardNavigationPane::setCurrentStep(int index)
 {
-    if (index < 0 || index >= ui->stepsList->count())
+    if (index < 0 || index >= this->ui->stepsList->count())
         return;
 
-    QSignalBlocker blocker(ui->stepsList);
-    ui->stepsList->setCurrentRow(index);
+    QSignalBlocker blocker(this->ui->stepsList);
+    this->ui->stepsList->setCurrentRow(index);
 }
 
 void WizardNavigationPane::setBranding(const QString& text, const QPixmap& pixmap)
 {
-    ui->brandLabel->setText(text);
+    this->ui->brandLabel->setText(text);
     if (!pixmap.isNull())
     {
-        ui->brandIcon->setPixmap(pixmap);
-        ui->brandIcon->setVisible(true);
+        this->ui->brandIcon->setPixmap(pixmap);
+        this->ui->brandIcon->setVisible(true);
     }
     else
     {
-        ui->brandIcon->clear();
-        ui->brandIcon->setVisible(false);
+        this->ui->brandIcon->clear();
+        this->ui->brandIcon->setVisible(false);
     }
 }

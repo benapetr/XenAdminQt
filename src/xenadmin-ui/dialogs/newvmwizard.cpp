@@ -173,8 +173,7 @@ void NewVMWizard::setupUiPages()
         {tr("Finish"), QIcon()},
     };
     this->m_navigationPane->setSteps(steps);
-    this->m_navigationPane->setBranding(tr("XCP-ng"));
-    setSideWidget(this->m_navigationPane);
+    this->setSideWidget(this->m_navigationPane);
 }
 
 void NewVMWizard::loadTemplates()

@@ -83,34 +83,33 @@ void NewSRCommand::showNewSRWizard()
 {
     qDebug() << "NewSRCommand: Opening New Storage Repository Wizard";
 
+    // Match C# NewSRCommand::RunCore logic:
+    // - Show wizard with current connection
+    // - Wizard handles all SR creation/reattachment internally
+    // - If accepted, SR was successfully created (wizard shows progress dialog)
+    // - If rejected, user cancelled
+
     NewSRWizard wizard(mainWindow());
 
     if (wizard.exec() == QDialog::Accepted)
     {
         qDebug() << "NewSRCommand: New Storage Repository Wizard completed successfully";
-
-        // Get the wizard results
-        SRType srType = wizard.getSelectedSRType();
-        QString srName = wizard.getSRName();
-        QString srDescription = wizard.getSRDescription();
-
-        qDebug() << "NewSRCommand: Creating SR -"
-                 << "Type:" << static_cast<int>(srType)
-                 << "Name:" << srName
-                 << "Description:" << srDescription;
-
-        // TODO: Implement actual SR creation using XenAPI
-        QMessageBox::information(mainWindow(), tr("Storage Repository Created"),
-                                 tr("Storage Repository '%1' has been created successfully.\n\n"
-                                    "Note: This is a demonstration. Actual XenAPI integration "
-                                    "will be implemented in the next phase.")
-                                     .arg(srName));
-
+        
+        // SR creation/reattachment was handled by wizard's accept() method
+        // No additional action needed here - wizard already:
+        // 1. Created Host object from pool coordinator
+        // 2. Instantiated SrCreateAction or SrReattachAction
+        // 3. Showed OperationProgressDialog
+        // 4. Displayed success/error message
+        
         if (mainWindow())
         {
-            qDebug() << "NewSRCommand: SR creation completed";
+            // Refresh the tree view to show new SR
+            mainWindow()->refreshServerTree();
+            qDebug() << "NewSRCommand: SR operation completed, refreshing main window";
         }
-    } else
+    }
+    else
     {
         qDebug() << "NewSRCommand: New Storage Repository Wizard cancelled";
     }

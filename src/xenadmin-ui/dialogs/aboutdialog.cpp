@@ -33,42 +33,38 @@
 #include <QSysInfo>
 #include <QDateTime>
 
-AboutDialog::AboutDialog(XenLib* xenLib, QWidget* parent)
-    : QDialog(parent), m_xenLib(xenLib), m_pendingRequests(0)
+AboutDialog::AboutDialog(XenLib* xenLib, QWidget* parent) : QDialog(parent), m_xenLib(xenLib), m_pendingRequests(0)
 {
-    setupUI();
+    this->setupUI();
 
     // Connect async signals if we have a valid XenLib instance
-    if (m_xenLib && m_xenLib->isConnected())
+    if (this->m_xenLib && this->m_xenLib->isConnected())
     {
-        connect(m_xenLib, &XenLib::poolsReceived,
-                this, &AboutDialog::onPoolsReceived);
-        connect(m_xenLib, &XenLib::hostsReceived,
-                this, &AboutDialog::onHostsReceived);
-        connect(m_xenLib, &XenLib::virtualMachinesReceived,
-                this, &AboutDialog::onVirtualMachinesReceived);
+        connect(this->m_xenLib, &XenLib::poolsReceived, this, &AboutDialog::onPoolsReceived);
+        connect(this->m_xenLib, &XenLib::hostsReceived, this, &AboutDialog::onHostsReceived);
+        connect(this->m_xenLib, &XenLib::virtualMachinesReceived, this, &AboutDialog::onVirtualMachinesReceived);
 
         // Request data asynchronously
-        requestConnectionInfo();
+        this->requestConnectionInfo();
     }
 }
 
 void AboutDialog::setupUI()
 {
-    setWindowTitle("About XenAdmin Qt");
-    setMinimumSize(500, 400);
-    resize(550, 450);
+    this->setWindowTitle("About XenAdmin Qt");
+    this->setMinimumSize(500, 400);
+    this->resize(550, 450);
 
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
 
     // Title and version
-    m_titleLabel = new QLabel("<h2>XenAdmin Qt</h2>", this);
-    m_titleLabel->setAlignment(Qt::AlignCenter);
-    mainLayout->addWidget(m_titleLabel);
+    this->m_titleLabel = new QLabel("<h2>XenAdmin Qt</h2>", this);
+    this->m_titleLabel->setAlignment(Qt::AlignCenter);
+    mainLayout->addWidget(this->m_titleLabel);
 
-    m_versionLabel = new QLabel(getVersionInfo(), this);
-    m_versionLabel->setAlignment(Qt::AlignCenter);
-    mainLayout->addWidget(m_versionLabel);
+    this->m_versionLabel = new QLabel(this->getVersionInfo(), this);
+    this->m_versionLabel->setAlignment(Qt::AlignCenter);
+    mainLayout->addWidget(this->m_versionLabel);
 
     // Separator
     QFrame* line = new QFrame(this);
@@ -77,9 +73,9 @@ void AboutDialog::setupUI()
     mainLayout->addWidget(line);
 
     // Information text browser
-    m_infoText = new QTextBrowser(this);
-    m_infoText->setOpenExternalLinks(false);
-    m_infoText->setReadOnly(true);
+    this->m_infoText = new QTextBrowser(this);
+    this->m_infoText->setOpenExternalLinks(false);
+    this->m_infoText->setReadOnly(true);
 
     QString infoHtml = QString(
                            "<h3>System Information</h3>"
@@ -91,18 +87,18 @@ void AboutDialog::setupUI()
                            "<p>Based on XenCenter/XenAdmin by Cloud Software Group, Inc.</p>"
                            "<h3>License</h3>"
                            "<p>This software is open source and distributed under the BSD license.</p>")
-                           .arg(getSystemInfo());
+                           .arg(this->getSystemInfo());
 
-    m_infoText->setHtml(infoHtml);
-    mainLayout->addWidget(m_infoText);
+    this->m_infoText->setHtml(infoHtml);
+    mainLayout->addWidget(this->m_infoText);
 
     // OK button
     QHBoxLayout* buttonLayout = new QHBoxLayout();
     buttonLayout->addStretch();
-    m_okButton = new QPushButton("OK", this);
-    m_okButton->setDefault(true);
-    connect(m_okButton, &QPushButton::clicked, this, &QDialog::accept);
-    buttonLayout->addWidget(m_okButton);
+    this->m_okButton = new QPushButton("OK", this);
+    this->m_okButton->setDefault(true);
+    connect(this->m_okButton, &QPushButton::clicked, this, &QDialog::accept);
+    buttonLayout->addWidget(this->m_okButton);
     mainLayout->addLayout(buttonLayout);
 }
 
@@ -125,49 +121,49 @@ QString AboutDialog::getSystemInfo() const
 
 void AboutDialog::requestConnectionInfo()
 {
-    if (!m_xenLib || !m_xenLib->isConnected())
+    if (!this->m_xenLib || !this->m_xenLib->isConnected())
     {
-        updateConnectionInfo();
+        this->updateConnectionInfo();
         return;
     }
 
     // Request data asynchronously - will arrive via signals
-    m_pendingRequests = 3;
-    m_xenLib->requestPools();
-    m_xenLib->requestHosts();
-    m_xenLib->requestVirtualMachines();
+    this->m_pendingRequests = 3;
+    this->m_xenLib->requestPools();
+    this->m_xenLib->requestHosts();
+    this->m_xenLib->requestVirtualMachines();
 }
 
 void AboutDialog::onPoolsReceived(const QVariantList& pools)
 {
-    m_pools = pools;
-    m_pendingRequests--;
+    this->m_pools = pools;
+    this->m_pendingRequests--;
 
-    if (m_pendingRequests == 0)
+    if (this->m_pendingRequests == 0)
     {
-        updateConnectionInfo();
+        this->updateConnectionInfo();
     }
 }
 
 void AboutDialog::onHostsReceived(const QVariantList& hosts)
 {
-    m_hosts = hosts;
-    m_pendingRequests--;
+    this->m_hosts = hosts;
+    this->m_pendingRequests--;
 
-    if (m_pendingRequests == 0)
+    if (this->m_pendingRequests == 0)
     {
-        updateConnectionInfo();
+        this->updateConnectionInfo();
     }
 }
 
 void AboutDialog::onVirtualMachinesReceived(const QVariantList& vms)
 {
-    m_vms = vms;
-    m_pendingRequests--;
+    this->m_vms = vms;
+    this->m_pendingRequests--;
 
-    if (m_pendingRequests == 0)
+    if (this->m_pendingRequests == 0)
     {
-        updateConnectionInfo();
+        this->updateConnectionInfo();
     }
 }
 
@@ -175,18 +171,18 @@ void AboutDialog::updateConnectionInfo()
 {
     QString info;
 
-    if (!m_xenLib || !m_xenLib->isConnected())
+    if (!this->m_xenLib || !this->m_xenLib->isConnected())
     {
         info = "<p><i>Not connected to any XenServer</i></p>";
     } else
     {
-        QString connInfo = m_xenLib->getConnectionInfo();
+        QString connInfo = this->m_xenLib->getConnectionInfo();
         info += QString("<p><b>Connected to:</b> %1</p>").arg(connInfo);
 
         // Get pool information if available
-        if (!m_pools.isEmpty())
+        if (!this->m_pools.isEmpty())
         {
-            QVariantMap pool = m_pools.first().toMap();
+            QVariantMap pool = this->m_pools.first().toMap();
             QString poolName = pool.value("name_label", "Unnamed Pool").toString();
             QString poolUuid = pool.value("uuid", "Unknown").toString();
 
@@ -195,15 +191,15 @@ void AboutDialog::updateConnectionInfo()
         }
 
         // Get host information
-        if (!m_hosts.isEmpty())
+        if (!this->m_hosts.isEmpty())
         {
-            info += QString("<p><b>Number of Hosts:</b> %1</p>").arg(m_hosts.size());
+            info += QString("<p><b>Number of Hosts:</b> %1</p>").arg(this->m_hosts.size());
         }
 
         // Get VM count
-        if (!m_vms.isEmpty())
+        if (!this->m_vms.isEmpty())
         {
-            info += QString("<p><b>Number of VMs:</b> %1</p>").arg(m_vms.size());
+            info += QString("<p><b>Number of VMs:</b> %1</p>").arg(this->m_vms.size());
         }
     }
 
@@ -218,7 +214,7 @@ void AboutDialog::updateConnectionInfo()
                            "<p>Based on XenCenter/XenAdmin by Cloud Software Group, Inc.</p>"
                            "<h3>License</h3>"
                            "<p>This software is open source and distributed under the BSD license.</p>")
-                           .arg(getSystemInfo(), info);
+                           .arg(this->getSystemInfo(), info);
 
-    m_infoText->setHtml(infoHtml);
+    this->m_infoText->setHtml(infoHtml);
 }

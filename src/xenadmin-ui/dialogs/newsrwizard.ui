@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>NewSRWizard</class>
+ <widget class="QWizard" name="NewSRWizard">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>820</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>New Storage Repository Wizard</string>
+  </property>
+  <property name="modal">
+   <bool>true</bool>
+  </property>
+  <widget class="QWizardPage" name="pageType">
+   <property name="title">
+    <string>Storage Repository Type</string>
+   </property>
+   <property name="subTitle">
+    <string>Select the type of storage repository to create</string>
+   </property>
+   <layout class="QVBoxLayout" name="typePageLayout">
+    <item>
+     <widget class="QLabel" name="typeInstructionLabel">
+      <property name="text">
+       <string>Choose the type of storage repository you want to create:</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QVBoxLayout" name="typeRadioLayout">
+      <item><widget class="QRadioButton" name="nfsRadio"><property name="text"><string>NFS VHD</string></property><property name="checked"><bool>true</bool></property></widget></item>
+      <item><widget class="QRadioButton" name="iscsiRadio"><property name="text"><string>Software iSCSI</string></property></widget></item>
+      <item><widget class="QRadioButton" name="localStorageRadio"><property name="text"><string>Local Storage</string></property></widget></item>
+      <item><widget class="QRadioButton" name="cifsRadio"><property name="text"><string>CIFS</string></property></widget></item>
+      <item><widget class="QRadioButton" name="hbaRadio"><property name="text"><string>Hardware HBA</string></property></widget></item>
+      <item><widget class="QRadioButton" name="fcoeRadio"><property name="text"><string>FCoE</string></property></widget></item>
+      <item><widget class="QRadioButton" name="nfsIsoRadio"><property name="text"><string>NFS ISO Library</string></property></widget></item>
+      <item><widget class="QRadioButton" name="cifsIsoRadio"><property name="text"><string>CIFS ISO Library</string></property></widget></item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QLabel" name="typeDescriptionLabel">
+      <property name="text">
+       <string>Description:</string>
+      </property>
+      <property name="font">
+       <font>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTextEdit" name="typeDescriptionText">
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+      <property name="maximumHeight">
+       <number>120</number>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <spacer name="typePageSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageName">
+   <property name="title">
+    <string>Storage Repository Name and Description</string>
+   </property>
+   <property name="subTitle">
+    <string>Specify a name and description for the new storage repository</string>
+   </property>
+   <layout class="QVBoxLayout" name="namePageLayout">
+    <item>
+     <layout class="QFormLayout" name="nameFormLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="nameLabel">
+        <property name="text">
+         <string>&amp;Name:</string>
+        </property>
+        <property name="buddy">
+         <cstring>nameLineEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="nameLineEdit">
+        <property name="maxLength">
+         <number>255</number>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="descriptionLabel">
+        <property name="text">
+         <string>&amp;Description:</string>
+        </property>
+        <property name="buddy">
+         <cstring>descriptionTextEdit</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QTextEdit" name="descriptionTextEdit">
+        <property name="maximumHeight">
+         <number>120</number>
+        </property>
+        <property name="placeholderText">
+         <string>Optional description for the storage repository</string>
+        </property>
+      </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <spacer name="namePageSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageConfiguration">
+   <property name="title">
+    <string>Storage Repository Configuration</string>
+   </property>
+   <property name="subTitle">
+    <string>Configure the connection settings for your storage repository</string>
+   </property>
+   <layout class="QVBoxLayout" name="configPageLayout">
+    <item>
+     <widget class="QGroupBox" name="networkConfigGroup">
+      <property name="title">
+       <string>Network Storage Configuration</string>
+      </property>
+      <layout class="QFormLayout" name="networkLayout">
+       <item row="0" column="0"><widget class="QLabel" name="serverLabel"><property name="text"><string>Server:</string></property></widget></item>
+       <item row="0" column="1"><widget class="QLineEdit" name="serverLineEdit"><property name="placeholderText"><string>e.g., 192.168.1.100 or nfs.example.com</string></property></widget></item>
+       <item row="1" column="0"><widget class="QLabel" name="serverPathLabel"><property name="text"><string>Server Path:</string></property></widget></item>
+       <item row="1" column="1"><widget class="QLineEdit" name="serverPathLineEdit"><property name="placeholderText"><string>e.g., /exports/xen-storage</string></property></widget></item>
+       <item row="2" column="0"><widget class="QLabel" name="portLabel"><property name="text"><string>Port:</string></property></widget></item>
+       <item row="2" column="1"><widget class="QSpinBox" name="portSpinBox"><property name="minimum"><number>1</number></property><property name="maximum"><number>65535</number></property><property name="value"><number>2049</number></property></widget></item>
+       <item row="3" column="0"><widget class="QLabel" name="usernameLabel"><property name="text"><string>Username:</string></property></widget></item>
+       <item row="3" column="1"><widget class="QLineEdit" name="usernameLineEdit"><property name="placeholderText"><string>Username for authentication (optional for NFS)</string></property></widget></item>
+       <item row="4" column="0"><widget class="QLabel" name="passwordLabel"><property name="text"><string>Password:</string></property></widget></item>
+       <item row="4" column="1"><widget class="QLineEdit" name="passwordLineEdit"><property name="echoMode"><enum>QLineEdit::Password</enum></property><property name="placeholderText"><string>Password for authentication (optional for NFS)</string></property></widget></item>
+       <item row="5" column="1"><widget class="QPushButton" name="testConnectionButton"><property name="text"><string>Test Connection</string></property></widget></item>
+       <item row="6" column="0"><widget class="QLabel" name="statusLabel"><property name="text"><string>Status:</string></property></widget></item>
+       <item row="6" column="1"><widget class="QLabel" name="connectionStatusLabel"><property name="text"><string/></property></widget></item>
+       <item row="7" column="1"><widget class="QRadioButton" name="createNewSRRadio"><property name="text"><string>Create new SR</string></property><property name="checked"><bool>true</bool></property></widget></item>
+       <item row="8" column="1"><widget class="QRadioButton" name="reattachExistingSRRadio"><property name="text"><string>Reattach existing SR</string></property><property name="enabled"><bool>false</bool></property></widget></item>
+       <item row="9" column="0"><widget class="QLabel" name="existingSRsLabel"><property name="text"><string>Existing SRs:</string></property><property name="visible"><bool>false</bool></property></widget></item>
+       <item row="9" column="1"><widget class="QListWidget" name="existingSRsList"><property name="maximumHeight"><number>120</number></property><property name="visible"><bool>false</bool></property></widget></item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="iscsiConfigGroup">
+      <property name="title">
+       <string>iSCSI Configuration</string>
+      </property>
+      <layout class="QFormLayout" name="iscsiLayout">
+       <item row="0" column="0"><widget class="QLabel" name="targetLabel"><property name="text"><string>Target:</string></property></widget></item>
+       <item row="0" column="1">
+        <layout class="QHBoxLayout" name="targetLayout">
+         <item><widget class="QLineEdit" name="iscsiTargetLineEdit"><property name="placeholderText"><string>e.g., 192.168.1.100:3260</string></property></widget></item>
+         <item><widget class="QPushButton" name="scanISCSIButton"><property name="text"><string>Scan Target</string></property></widget></item>
+        </layout>
+       </item>
+       <item row="1" column="0"><widget class="QLabel" name="iscsiIqnLabel"><property name="text"><string>Target IQN:</string></property></widget></item>
+       <item row="1" column="1"><widget class="QComboBox" name="iscsiIqnComboBox"><property name="enabled"><bool>false</bool></property><item><property name="text"><string>Click 'Scan Target' to discover IQNs</string></property></item></widget></item>
+       <item row="2" column="0"><widget class="QLabel" name="iscsiLunLabel"><property name="text"><string>LUN:</string></property></widget></item>
+       <item row="2" column="1"><widget class="QComboBox" name="iscsiLunComboBox"><property name="enabled"><bool>false</bool></property><item><property name="text"><string>Select an IQN first</string></property></item></widget></item>
+       <item row="3" column="1"><widget class="QCheckBox" name="iscsiChapCheckBox"><property name="text"><string>Use CHAP authentication</string></property></widget></item>
+       <item row="4" column="0"><widget class="QLabel" name="chapUsernameLabel"><property name="text"><string>CHAP Username:</string></property></widget></item>
+       <item row="4" column="1"><widget class="QLineEdit" name="iscsiChapUsernameLineEdit"><property name="enabled"><bool>false</bool></property></widget></item>
+       <item row="5" column="0"><widget class="QLabel" name="chapPasswordLabel"><property name="text"><string>CHAP Password:</string></property></widget></item>
+       <item row="5" column="1"><widget class="QLineEdit" name="iscsiChapPasswordLineEdit"><property name="enabled"><bool>false</bool></property><property name="echoMode"><enum>QLineEdit::Password</enum></property></widget></item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="localConfigGroup">
+      <property name="title">
+       <string>Local Storage Configuration</string>
+      </property>
+      <layout class="QFormLayout" name="localLayout">
+       <item row="0" column="0"><widget class="QLabel" name="deviceLabel"><property name="text"><string>Device/Path:</string></property></widget></item>
+       <item row="0" column="1">
+        <layout class="QHBoxLayout" name="localPathLayout">
+         <item><widget class="QLineEdit" name="localPathLineEdit"><property name="placeholderText"><string>e.g., /dev/sdb1 or /mnt/storage</string></property></widget></item>
+         <item><widget class="QPushButton" name="browseButton"><property name="text"><string>Browse...</string></property></widget></item>
+        </layout>
+       </item>
+       <item row="1" column="0"><widget class="QLabel" name="filesystemLabel"><property name="text"><string>Filesystem:</string></property></widget></item>
+       <item row="1" column="1"><widget class="QComboBox" name="filesystemComboBox">
+         <item><property name="text"><string>ext3</string></property></item>
+         <item><property name="text"><string>ext4</string></property></item>
+         <item><property name="text"><string>xfs</string></property></item>
+         <item><property name="text"><string>lvm</string></property></item>
+        </widget></item>
+       <item row="2" column="0"><widget class="QLabel" name="availableSpaceLabel"><property name="text"><string>Available Space:</string></property></widget></item>
+       <item row="2" column="1"><widget class="QLabel" name="diskSpaceLabel"><property name="text"><string>Available space will be shown after selecting a device</string></property></widget></item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="fibreConfigGroup">
+      <property name="title">
+       <string>Fibre Channel Configuration</string>
+      </property>
+      <layout class="QVBoxLayout" name="fibreLayout">
+       <item><widget class="QLabel" name="fibreInfoLabel"><property name="text"><string>Click 'Scan for Devices' to discover Fibre Channel storage devices.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+       <item><widget class="QPushButton" name="scanFibreButton"><property name="text"><string>Scan for Devices</string></property></widget></item>
+       <item><widget class="QLabel" name="fibreStatusLabel"><property name="text"><string/></property><property name="visible"><bool>false</bool></property></widget></item>
+       <item><widget class="QListWidget" name="fibreDevicesList"><property name="selectionMode"><enum>QAbstractItemView::MultiSelection</enum></property><property name="minimumHeight"><number>200</number></property></widget></item>
+       <item>
+        <layout class="QHBoxLayout" name="fibreButtonLayout">
+         <item><widget class="QPushButton" name="selectAllFibreButton"><property name="text"><string>Select All</string></property><property name="enabled"><bool>false</bool></property></widget></item>
+         <item><widget class="QPushButton" name="clearAllFibreButton"><property name="text"><string>Clear All</string></property><property name="enabled"><bool>false</bool></property></widget></item>
+         <item><spacer name="fibreButtonSpacer"><property name="orientation"><enum>Qt::Horizontal</enum></property><property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property></spacer></item>
+        </layout>
+       </item>
+       <item><widget class="QLabel" name="fibreNoteLabel"><property name="text"><string>&lt;i&gt;Note: One SR will be created for each selected device.&lt;/i&gt;</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <spacer name="configPageSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageSummary">
+   <property name="title">
+    <string>Storage Repository Summary</string>
+   </property>
+   <property name="subTitle">
+    <string>Review the storage repository configuration and create it</string>
+   </property>
+   <layout class="QVBoxLayout" name="summaryPageLayout">
+    <item><widget class="QLabel" name="summaryTitleLabel"><property name="text"><string>Storage Repository Configuration Summary:</string></property><property name="font"><font><weight>75</weight><bold>true</bold></font></property></widget></item>
+    <item><widget class="QTextEdit" name="summaryTextEdit"><property name="readOnly"><bool>true</bool></property><property name="maximumHeight"><number>220</number></property></widget></item>
+    <item><widget class="QLabel" name="progressLabel"><property name="text"><string>Creation Progress:</string></property><property name="font"><font><weight>75</weight><bold>true</bold></font></property></widget></item>
+    <item><widget class="QProgressBar" name="creationProgressBar"><property name="visible"><bool>false</bool></property></widget></item>
+    <item><widget class="QLabel" name="creationStatusLabel"><property name="text"><string/></property></widget></item>
+    <item><spacer name="summaryPageSpacer"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property></spacer></item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -377,6 +377,7 @@ FORMS += \
     dialogs/movevirtualdiskdialog.ui \
     dialogs/optionsdialog.ui \
     dialogs/newvmwizard.ui \
+    dialogs/newsrwizard.ui \
     dialogs/verticallytabbeddialog.ui \
     settingspanels/generaleditpage.ui \
     settingspanels/hostautostarteditpage.ui \
