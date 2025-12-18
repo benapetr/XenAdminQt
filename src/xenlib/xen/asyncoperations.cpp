@@ -54,17 +54,17 @@ struct AsyncOpState
 
 class XenAsyncOperations::Private
 {
-public:
-    XenSession* session = nullptr;
-    XenRpcAPI* api = nullptr;
-    QHash<QString, AsyncOpState*> operations;
-    QTimer* globalStatusTimer = nullptr;
+    public:
+        XenSession* session = nullptr;
+        XenRpcAPI* api = nullptr;
+        QHash<QString, AsyncOpState*> operations;
+        QTimer* globalStatusTimer = nullptr;
 
-    // Configuration
-    int connectionTimeout = 300000; // 5 minutes for long operations
-    int maxRetries = 3;
-    int retryDelay = 1000;         // 1 second
-    int statusPollInterval = 1000; // 1 second - poll frequently for responsive UI
+        // Configuration
+        int connectionTimeout = 300000; // 5 minutes for long operations
+        int maxRetries = 3;
+        int retryDelay = 1000;         // 1 second
+        int statusPollInterval = 1000; // 1 second - poll frequently for responsive UI
 };
 
 XenAsyncOperations::XenAsyncOperations(XenSession* session, QObject* parent)

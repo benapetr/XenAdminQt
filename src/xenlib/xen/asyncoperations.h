@@ -40,37 +40,37 @@ class XenSession;
 class XENLIB_EXPORT XenAsyncOperations : public QObject
 {
     Q_OBJECT
-public:
-    explicit XenAsyncOperations(XenSession* session, QObject* parent = nullptr);
-    ~XenAsyncOperations();
+    public:
+        explicit XenAsyncOperations(XenSession* session, QObject* parent = nullptr);
+        ~XenAsyncOperations();
 
-    // Async operation management
-    QString startAsyncOperation(const QString& method, const QVariantList& params);
-    bool cancelOperation(const QString& operationId);
-    double getOperationProgress(const QString& operationId);
-    QString getOperationStatus(const QString& operationId);
+        // Async operation management
+        QString startAsyncOperation(const QString& method, const QVariantList& params);
+        bool cancelOperation(const QString& operationId);
+        double getOperationProgress(const QString& operationId);
+        QString getOperationStatus(const QString& operationId);
 
-    // Network management
-    void setConnectionTimeout(int timeoutMs);
-    void setMaxRetries(int retries);
-    void setRetryDelay(int delayMs);
+        // Network management
+        void setConnectionTimeout(int timeoutMs);
+        void setMaxRetries(int retries);
+        void setRetryDelay(int delayMs);
 
-signals:
-    void operationStarted(const QString& operationId, const QString& method);
-    void operationProgress(const QString& operationId, double progress, const QString& status);
-    void operationCompleted(const QString& operationId, const QVariant& result);
-    void operationFailed(const QString& operationId, const QString& error);
-    void operationCancelled(const QString& operationId);
+    signals:
+        void operationStarted(const QString& operationId, const QString& method);
+        void operationProgress(const QString& operationId, double progress, const QString& status);
+        void operationCompleted(const QString& operationId, const QVariant& result);
+        void operationFailed(const QString& operationId, const QString& error);
+        void operationCancelled(const QString& operationId);
 
-private slots:
-    void pollOperationStatus();
+    private slots:
+        void pollOperationStatus();
 
-private:
-    class Private;
-    Private* d;
+    private:
+        class Private;
+        Private* d;
 
-    QString generateOperationId();
-    QVariant parseTaskResult(const QString& jsonResult);
+        QString generateOperationId();
+        QVariant parseTaskResult(const QString& jsonResult);
 };
 
 #endif // XEN_ASYNCOPERATIONS_H

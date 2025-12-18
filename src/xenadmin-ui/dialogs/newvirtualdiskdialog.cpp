@@ -43,14 +43,10 @@ NewVirtualDiskDialog::NewVirtualDiskDialog(XenLib* xenLib, const QString& vmRef,
     this->m_vmData = this->m_xenLib->getCache()->resolve("vm", this->m_vmRef);
 
     // Connect signals
-    connect(this->ui->srListWidget, &QListWidget::currentRowChanged,
-            this, &NewVirtualDiskDialog::onSRChanged);
-    connect(this->ui->sizeSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &NewVirtualDiskDialog::onSizeChanged);
-    connect(this->ui->rescanButton, &QPushButton::clicked,
-            this, &NewVirtualDiskDialog::onRescanClicked);
-    connect(this->ui->addButton, &QPushButton::clicked,
-            this, &NewVirtualDiskDialog::validateAndAccept);
+    connect(this->ui->srListWidget, &QListWidget::currentRowChanged, this, &NewVirtualDiskDialog::onSRChanged);
+    connect(this->ui->sizeSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &NewVirtualDiskDialog::onSizeChanged);
+    connect(this->ui->rescanButton, &QPushButton::clicked, this, &NewVirtualDiskDialog::onRescanClicked);
+    connect(this->ui->addButton, &QPushButton::clicked, this, &NewVirtualDiskDialog::validateAndAccept);
 
     // Populate SR list widget
     this->populateSRList();
@@ -373,8 +369,7 @@ void NewVirtualDiskDialog::validateAndAccept()
     QString name = this->getVDIName();
     if (name.isEmpty())
     {
-        QMessageBox::warning(this, "Validation Error",
-                             "Please enter a name for the virtual disk.");
+        QMessageBox::warning(this, "Validation Error", "Please enter a name for the virtual disk.");
         this->ui->nameLineEdit->setFocus();
         return;
     }
@@ -382,8 +377,7 @@ void NewVirtualDiskDialog::validateAndAccept()
     // Validate SR selection
     if (this->ui->srListWidget->currentRow() < 0)
     {
-        QMessageBox::warning(this, "Validation Error",
-                             "Please select a storage repository.");
+        QMessageBox::warning(this, "Validation Error", "Please select a storage repository.");
         return;
     }
 
@@ -391,16 +385,14 @@ void NewVirtualDiskDialog::validateAndAccept()
     qint64 size = this->getSize();
     if (size < (10 * 1024 * 1024))
     {
-        QMessageBox::warning(this, "Validation Error",
-                             "Minimum disk size is 10 MB.");
+        QMessageBox::warning(this, "Validation Error", "Minimum disk size is 10 MB.");
         return;
     }
 
     const qint64 MAX_VDI_SIZE = 2LL * 1024 * 1024 * 1024 * 1024;
     if (size > MAX_VDI_SIZE)
     {
-        QMessageBox::warning(this, "Validation Error",
-                             "Maximum disk size is 2 TB.");
+        QMessageBox::warning(this, "Validation Error", "Maximum disk size is 2 TB.");
         return;
     }
 

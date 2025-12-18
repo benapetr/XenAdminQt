@@ -53,13 +53,12 @@
  * - Populates supporter list with checkboxes
  * - Sets up validation logic
  */
-NewPoolDialog::NewPoolDialog(QWidget* parent)
-    : QDialog(parent), ui(new Ui::NewPoolDialog)
+NewPoolDialog::NewPoolDialog(QWidget* parent) : QDialog(parent), ui(new Ui::NewPoolDialog)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
     // Set Create button text
-    QPushButton* createBtn = ui->buttonBox->button(QDialogButtonBox::Ok);
+    QPushButton* createBtn = this->ui->buttonBox->button(QDialogButtonBox::Ok);
     if (createBtn)
     {
         createBtn->setText(tr("Create Pool"));
@@ -67,25 +66,20 @@ NewPoolDialog::NewPoolDialog(QWidget* parent)
     }
 
     // Connect signals
-    connect(ui->comboBoxCoordinator, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &NewPoolDialog::onCoordinatorChanged);
-    connect(ui->listWidgetServers, &QListWidget::itemChanged,
-            this, &NewPoolDialog::onServerItemChanged);
-    connect(ui->lineEditName, &QLineEdit::textChanged,
-            this, &NewPoolDialog::onPoolNameChanged);
-    connect(ui->buttonAddServer, &QPushButton::clicked,
-            this, &NewPoolDialog::onAddServerClicked);
-    connect(ui->buttonBox->button(QDialogButtonBox::Ok), &QPushButton::clicked,
-            this, &NewPoolDialog::onCreateClicked);
+    this->connect(this->ui->comboBoxCoordinator, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NewPoolDialog::onCoordinatorChanged);
+    this->connect(this->ui->listWidgetServers, &QListWidget::itemChanged, this, &NewPoolDialog::onServerItemChanged);
+    this->connect(this->ui->lineEditName, &QLineEdit::textChanged, this, &NewPoolDialog::onPoolNameChanged);
+    this->connect(this->ui->buttonAddServer, &QPushButton::clicked, this, &NewPoolDialog::onAddServerClicked);
+    this->connect(this->ui->buttonBox->button(QDialogButtonBox::Ok), &QPushButton::clicked, this, &NewPoolDialog::onCreateClicked);
 
     // Populate connections from ConnectionsManager
-    populateConnections();
-    updateCreateButton();
+    this->populateConnections();
+    this->updateCreateButton();
 }
 
 NewPoolDialog::~NewPoolDialog()
 {
-    delete ui;
+    delete this->ui;
 }
 
 /**
@@ -109,18 +103,18 @@ void NewPoolDialog::populateConnections()
     QList<XenConnection*> allConnections = connMgr->getConnectedConnections();
 
     // Filter to standalone servers only
-    m_connections.clear();
+    this->m_connections.clear();
     for (XenConnection* conn : allConnections)
     {
-        if (conn && isStandaloneConnection(conn))
+        if (conn && this->isStandaloneConnection(conn))
         {
-            m_connections.append(conn);
+            this->m_connections.append(conn);
         }
     }
 
     // Populate coordinator combobox
-    ui->comboBoxCoordinator->clear();
-    for (XenConnection* conn : m_connections)
+    this->ui->comboBoxCoordinator->clear();
+    for (XenConnection* conn : this->m_connections)
     {
         QString displayName = conn->getHostname();
 
@@ -139,10 +133,10 @@ void NewPoolDialog::populateConnections()
             }
         }
 
-        ui->comboBoxCoordinator->addItem(displayName, QVariant::fromValue(reinterpret_cast<quintptr>(conn)));
+        this->ui->comboBoxCoordinator->addItem(displayName, QVariant::fromValue(reinterpret_cast<quintptr>(conn)));
     }
 
-    updateServerList();
+    this->updateServerList();
 }
 
 /**
@@ -154,11 +148,11 @@ void NewPoolDialog::populateConnections()
  */
 void NewPoolDialog::updateServerList()
 {
-    ui->listWidgetServers->clear();
+    this->ui->listWidgetServers->clear();
 
-    XenConnection* coordinator = getCoordinatorConnection();
+    XenConnection* coordinator = this->getCoordinatorConnection();
 
-    for (XenConnection* conn : m_connections)
+    for (XenConnection* conn : this->m_connections)
     {
         // Don't show coordinator in supporter list
         if (conn == coordinator)
@@ -187,7 +181,7 @@ void NewPoolDialog::updateServerList()
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
         item->setCheckState(Qt::Unchecked);
         item->setData(Qt::UserRole, QVariant::fromValue(reinterpret_cast<quintptr>(conn)));
-        ui->listWidgetServers->addItem(item);
+        this->ui->listWidgetServers->addItem(item);
     }
 }
 
@@ -225,13 +219,13 @@ bool NewPoolDialog::isStandaloneConnection(XenConnection* connection) const
 
 XenConnection* NewPoolDialog::getCoordinatorConnection() const
 {
-    int index = ui->comboBoxCoordinator->currentIndex();
+    int index = this->ui->comboBoxCoordinator->currentIndex();
     if (index < 0)
     {
         return nullptr;
     }
 
-    quintptr ptr = ui->comboBoxCoordinator->itemData(index).value<quintptr>();
+    quintptr ptr = this->ui->comboBoxCoordinator->itemData(index).value<quintptr>();
     return reinterpret_cast<XenConnection*>(ptr);
 }
 
@@ -239,9 +233,9 @@ QList<XenConnection*> NewPoolDialog::getSupporterConnections() const
 {
     QList<XenConnection*> supporters;
 
-    for (int i = 0; i < ui->listWidgetServers->count(); ++i)
+    for (int i = 0; i < this->ui->listWidgetServers->count(); ++i)
     {
-        QListWidgetItem* item = ui->listWidgetServers->item(i);
+        QListWidgetItem* item = this->ui->listWidgetServers->item(i);
         if (item && item->checkState() == Qt::Checked)
         {
             quintptr ptr = item->data(Qt::UserRole).value<quintptr>();
@@ -259,20 +253,20 @@ QList<XenConnection*> NewPoolDialog::getSupporterConnections() const
 void NewPoolDialog::onCoordinatorChanged(int index)
 {
     Q_UNUSED(index);
-    updateServerList();
-    updateCreateButton();
+    this->updateServerList();
+    this->updateCreateButton();
 }
 
 void NewPoolDialog::onServerItemChanged(QListWidgetItem* item)
 {
     Q_UNUSED(item);
-    updateCreateButton();
+    this->updateCreateButton();
 }
 
 void NewPoolDialog::onPoolNameChanged(const QString& text)
 {
     Q_UNUSED(text);
-    updateCreateButton();
+    this->updateCreateButton();
 }
 
 void NewPoolDialog::onAddServerClicked()
@@ -299,12 +293,12 @@ void NewPoolDialog::onAddServerClicked()
  */
 void NewPoolDialog::updateCreateButton()
 {
-    QPushButton* createBtn = ui->buttonBox->button(QDialogButtonBox::Ok);
+    QPushButton* createBtn = this->ui->buttonBox->button(QDialogButtonBox::Ok);
     if (!createBtn)
         return;
 
-    QString poolName = ui->lineEditName->text().trimmed();
-    XenConnection* coordinator = getCoordinatorConnection();
+    QString poolName = this->ui->lineEditName->text().trimmed();
+    XenConnection* coordinator = this->getCoordinatorConnection();
 
     QString statusText;
     bool canCreate = true;
@@ -319,13 +313,13 @@ void NewPoolDialog::updateCreateButton()
         canCreate = false;
     }
 
-    ui->labelStatus->setText(statusText);
+    this->ui->labelStatus->setText(statusText);
     createBtn->setEnabled(canCreate);
 }
 
 void NewPoolDialog::onCreateClicked()
 {
-    createPool();
+    this->createPool();
 }
 
 /**
@@ -336,10 +330,10 @@ void NewPoolDialog::onCreateClicked()
  */
 void NewPoolDialog::createPool()
 {
-    QString poolName = ui->lineEditName->text().trimmed();
-    QString poolDescription = ui->lineEditDescription->text().trimmed();
-    XenConnection* coordinatorConn = getCoordinatorConnection();
-    QList<XenConnection*> supporterConns = getSupporterConnections();
+    QString poolName = this->ui->lineEditName->text().trimmed();
+    QString poolDescription = this->ui->lineEditDescription->text().trimmed();
+    XenConnection* coordinatorConn = this->getCoordinatorConnection();
+    QList<XenConnection*> supporterConns = this->getSupporterConnections();
 
     if (!coordinatorConn)
     {
@@ -375,15 +369,14 @@ void NewPoolDialog::createPool()
     progressDialog.setWindowTitle(tr("Creating Pool"));
 
     // Connect completion signals
-    connect(action, &CreatePoolAction::completed, this, [this, poolName]() {
-        QMessageBox::information(this, tr("Success"),
-                                 tr("Pool '%1' created successfully.").arg(poolName));
-        accept();
+    this->connect(action, &CreatePoolAction::completed, this, [this, poolName]()
+    {
+        QMessageBox::information(this, tr("Success"), tr("Pool '%1' created successfully.").arg(poolName));
+        this->accept();
     });
 
-    connect(action, &CreatePoolAction::failed, this, [this](const QString& error) {
-        QMessageBox::critical(this, tr("Error"),
-                              tr("Failed to create pool: %1").arg(error));
+    this->connect(action, &CreatePoolAction::failed, this, [this](const QString& error) {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to create pool: %1").arg(error));
     });
 
     // Start the action - progress dialog handles display

@@ -156,82 +156,82 @@ AsyncOperation* BootOptionsEditPage::saveSettings()
     // Return inline AsyncOperation for boot order changes
     class BootOptionsOperation : public AsyncOperation
     {
-    public:
-        BootOptionsOperation(XenConnection* conn,
-                             const QString& vmRef,
-                             bool autoBoot,
-                             const QString& bootOrder,
-                             const QString& pvArgs,
-                             bool isHVM,
-                             QObject* parent)
-            : AsyncOperation(conn, tr("Change Boot Options"),
-                             tr("Changing boot configuration..."), parent),
-              m_vmRef(vmRef), m_autoBoot(autoBoot), m_bootOrder(bootOrder), m_pvArgs(pvArgs), m_isHVM(isHVM)
-        {}
+        public:
+            BootOptionsOperation(XenConnection* conn,
+                                 const QString& vmRef,
+                                 bool autoBoot,
+                                 const QString& bootOrder,
+                                 const QString& pvArgs,
+                                 bool isHVM,
+                                 QObject* parent)
+                : AsyncOperation(conn, tr("Change Boot Options"),
+                                 tr("Changing boot configuration..."), parent),
+                  m_vmRef(vmRef), m_autoBoot(autoBoot), m_bootOrder(bootOrder), m_pvArgs(pvArgs), m_isHVM(isHVM)
+            {}
 
-    protected:
-        void run() override
-        {
-            XenRpcAPI api(connection()->getSession());
-
-            setPercentComplete(10);
-
-            // Set auto-boot (via other_config.auto_poweron)
-            QVariantList getConfigParams;
-            getConfigParams << connection()->getSessionId() << m_vmRef;
-            QByteArray getConfigRequest = api.buildJsonRpcCall("VM.get_other_config", getConfigParams);
-            QByteArray getConfigResponse = connection()->sendRequest(getConfigRequest);
-            QVariantMap otherConfig = api.parseJsonRpcResponse(getConfigResponse).toMap();
-
-            otherConfig["auto_poweron"] = m_autoBoot ? "true" : "false";
-
-            QVariantList setConfigParams;
-            setConfigParams << connection()->getSessionId() << m_vmRef << otherConfig;
-            QByteArray setConfigRequest = api.buildJsonRpcCall("VM.set_other_config", setConfigParams);
-            connection()->sendRequest(setConfigRequest);
-
-            setPercentComplete(40);
-
-            if (m_isHVM)
+        protected:
+            void run() override
             {
-                // Set boot order (via HVM_boot_params.order)
-                QVariantList getBootParams;
-                getBootParams << connection()->getSessionId() << m_vmRef;
-                QByteArray getBootRequest = api.buildJsonRpcCall("VM.get_HVM_boot_params", getBootParams);
-                QByteArray getBootResponse = connection()->sendRequest(getBootRequest);
-                QVariantMap hvmBootParams = api.parseJsonRpcResponse(getBootResponse).toMap();
+                XenRpcAPI api(connection()->getSession());
 
-                hvmBootParams["order"] = m_bootOrder.toLower();
+                setPercentComplete(10);
 
-                QVariantList setBootParams;
-                setBootParams << connection()->getSessionId() << m_vmRef << hvmBootParams;
-                QByteArray setBootRequest = api.buildJsonRpcCall("VM.set_HVM_boot_params", setBootParams);
-                connection()->sendRequest(setBootRequest);
-            } else
-            {
-                // Set PV args
-                QVariantList setPVParams;
-                setPVParams << connection()->getSessionId() << m_vmRef << m_pvArgs;
-                QByteArray setPVRequest = api.buildJsonRpcCall("VM.set_PV_args", setPVParams);
-                connection()->sendRequest(setPVRequest);
+                // Set auto-boot (via other_config.auto_poweron)
+                QVariantList getConfigParams;
+                getConfigParams << connection()->getSessionId() << m_vmRef;
+                QByteArray getConfigRequest = api.buildJsonRpcCall("VM.get_other_config", getConfigParams);
+                QByteArray getConfigResponse = connection()->sendRequest(getConfigRequest);
+                QVariantMap otherConfig = api.parseJsonRpcResponse(getConfigResponse).toMap();
+
+                otherConfig["auto_poweron"] = m_autoBoot ? "true" : "false";
+
+                QVariantList setConfigParams;
+                setConfigParams << connection()->getSessionId() << m_vmRef << otherConfig;
+                QByteArray setConfigRequest = api.buildJsonRpcCall("VM.set_other_config", setConfigParams);
+                connection()->sendRequest(setConfigRequest);
+
+                setPercentComplete(40);
+
+                if (m_isHVM)
+                {
+                    // Set boot order (via HVM_boot_params.order)
+                    QVariantList getBootParams;
+                    getBootParams << connection()->getSessionId() << m_vmRef;
+                    QByteArray getBootRequest = api.buildJsonRpcCall("VM.get_HVM_boot_params", getBootParams);
+                    QByteArray getBootResponse = connection()->sendRequest(getBootRequest);
+                    QVariantMap hvmBootParams = api.parseJsonRpcResponse(getBootResponse).toMap();
+
+                    hvmBootParams["order"] = m_bootOrder.toLower();
+
+                    QVariantList setBootParams;
+                    setBootParams << connection()->getSessionId() << m_vmRef << hvmBootParams;
+                    QByteArray setBootRequest = api.buildJsonRpcCall("VM.set_HVM_boot_params", setBootParams);
+                    connection()->sendRequest(setBootRequest);
+                } else
+                {
+                    // Set PV args
+                    QVariantList setPVParams;
+                    setPVParams << connection()->getSessionId() << m_vmRef << m_pvArgs;
+                    QByteArray setPVRequest = api.buildJsonRpcCall("VM.set_PV_args", setPVParams);
+                    connection()->sendRequest(setPVRequest);
+                }
+
+                setPercentComplete(100);
             }
 
-            setPercentComplete(100);
-        }
-
-    private:
-        QString m_vmRef;
-        bool m_autoBoot;
-        QString m_bootOrder;
-        QString m_pvArgs;
-        bool m_isHVM;
+        private:
+            QString m_vmRef;
+            bool m_autoBoot;
+            QString m_bootOrder;
+            QString m_pvArgs;
+            bool m_isHVM;
     };
 
-    return new BootOptionsOperation(m_connection, m_vmRef,
-                                    ui->checkBoxAutoBoot->isChecked(),
+    return new BootOptionsOperation(this->m_connection, this->m_vmRef,
+                                    this->ui->checkBoxAutoBoot->isChecked(),
                                     getBootOrder(),
-                                    ui->lineEditOsParams->text(),
-                                    isHVM(), this);
+                                    this->ui->lineEditOsParams->text(),
+                                    isHVM(), nullptr);
 }
 
 bool BootOptionsEditPage::isValidToSave() const

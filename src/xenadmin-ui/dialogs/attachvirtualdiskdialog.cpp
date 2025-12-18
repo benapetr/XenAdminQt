@@ -47,10 +47,8 @@ AttachVirtualDiskDialog::AttachVirtualDiskDialog(XenLib* xenLib, const QString& 
     this->ui->vdiTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     // Connect signals
-    connect(this->ui->srComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &AttachVirtualDiskDialog::onSRFilterChanged);
-    connect(this->ui->vdiTable, &QTableWidget::itemSelectionChanged,
-            this, &AttachVirtualDiskDialog::onVDISelectionChanged);
+    connect(this->ui->srComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AttachVirtualDiskDialog::onSRFilterChanged);
+    connect(this->ui->vdiTable, &QTableWidget::itemSelectionChanged, this, &AttachVirtualDiskDialog::onVDISelectionChanged);
 
     // Find next available device position
     int nextDevice = this->findNextAvailableDevice();

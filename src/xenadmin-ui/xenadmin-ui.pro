@@ -43,6 +43,8 @@ SOURCES += \
     dialogs/verticallytabbeddialog.cpp \
     settingspanels/generaleditpage.cpp \
     settingspanels/hostautostarteditpage.cpp \
+    settingspanels/hostmultipathpage.cpp \
+    settingspanels/hostpoweroneditpage.cpp \
     settingspanels/logdestinationeditpage.cpp \
     settingspanels/cpumemoryeditpage.cpp \
     settingspanels/bootoptionseditpage.cpp \
@@ -221,6 +223,8 @@ HEADERS += \
     settingspanels/ieditpage.h \
     settingspanels/generaleditpage.h \
     settingspanels/hostautostarteditpage.h \
+    settingspanels/hostmultipathpage.h \
+    settingspanels/hostpoweroneditpage.h \
     settingspanels/logdestinationeditpage.h \
     settingspanels/cpumemoryeditpage.h \
     settingspanels/bootoptionseditpage.h \
@@ -381,6 +385,8 @@ FORMS += \
     dialogs/verticallytabbeddialog.ui \
     settingspanels/generaleditpage.ui \
     settingspanels/hostautostarteditpage.ui \
+    settingspanels/hostmultipathpage.ui \
+    settingspanels/hostpoweroneditpage.ui \
     settingspanels/logdestinationeditpage.ui \
     settingspanels/cpumemoryeditpage.ui \
     settingspanels/bootoptionseditpage.ui \

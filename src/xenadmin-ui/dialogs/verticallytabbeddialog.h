@@ -70,104 +70,103 @@ class VerticallyTabbedDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection to the XenServer
-     * @param objectRef OpaqueRef of object being edited
-     * @param objectType Type string ("vm", "host", "pool", "sr", etc.)
-     * @param parent Parent widget
-     *
-     * C# equivalent: Constructor that takes IXenObject
-     */
-    explicit VerticallyTabbedDialog(XenConnection* connection,
-                                    const QString& objectRef,
-                                    const QString& objectType,
-                                    QWidget* parent = nullptr);
-    ~VerticallyTabbedDialog();
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection to the XenServer
+         * @param objectRef OpaqueRef of object being edited
+         * @param objectType Type string ("vm", "host", "pool", "sr", etc.)
+         * @param parent Parent widget
+         *
+         * C# equivalent: Constructor that takes IXenObject
+         */
+        explicit VerticallyTabbedDialog(XenConnection* connection,
+                                        const QString& objectRef,
+                                        const QString& objectType,
+                                        QWidget* parent = nullptr);
+        ~VerticallyTabbedDialog();
 
-protected:
-    /**
-     * @brief Build the page list - override in subclasses
-     *
-     * C# equivalent: Build() method
-     */
-    virtual void build() = 0;
+    protected:
+        /**
+         * @brief Build the page list - override in subclasses
+         *
+         * C# equivalent: Build() method
+         */
+        virtual void build() = 0;
 
-    /**
-     * @brief Add a page to the dialog
-     * @param page IEditPage instance (takes ownership)
-     *
-     * C# equivalent: ShowTab(IEditPage) method
-     */
-    void showTab(IEditPage* page);
+        /**
+         * @brief Add a page to the dialog
+         * @param page IEditPage instance (takes ownership)
+         *
+         * C# equivalent: ShowTab(IEditPage) method
+         */
+        void showTab(IEditPage* page);
 
-    /**
-     * @brief Select a specific page
-     * @param page IEditPage to select
-     */
-    void selectPage(IEditPage* page);
+        /**
+         * @brief Select a specific page
+         * @param page IEditPage to select
+         */
+        void selectPage(IEditPage* page);
 
-    // Accessors for subclasses
-    XenConnection* connection() const
-    {
-        return m_connection;
-    }
-    QString objectRef() const
-    {
-        return m_objectRef;
-    }
-    QString objectType() const
-    {
-        return m_objectType;
-    }
-    QVariantMap objectDataBefore() const
-    {
-        return m_objectDataBefore;
-    }
-    QVariantMap objectDataCopy() const
-    {
-        return m_objectDataCopy;
-    }
+        // Accessors for subclasses
+        XenConnection* connection() const
+        {
+            return m_connection;
+        }
+        QString objectRef() const
+        {
+            return m_objectRef;
+        }
+        QString objectType() const
+        {
+            return m_objectType;
+        }
+        QVariantMap objectDataBefore() const
+        {
+            return m_objectDataBefore;
+        }
+        QVariantMap objectDataCopy() const
+        {
+            return m_objectDataCopy;
+        }
 
-    /**
-     * @brief Override accept to implement save logic with Actions
-     *
-     * C# equivalent: btnOK_Click()
-     */
-    void accept() override;
+        /**
+         * @brief Override accept to implement save logic with Actions
+         *
+         * C# equivalent: btnOK_Click()
+         */
+        void accept() override;
 
-    /**
-     * @brief Override reject to cleanup
-     */
-    void reject() override;
+        /**
+         * @brief Override reject to cleanup
+         */
+        void reject() override;
 
-    /**
-     * @brief Override closeEvent to cleanup pages
-     */
-    void closeEvent(QCloseEvent* event) override;
+        /**
+         * @brief Override closeEvent to cleanup pages
+         */
+        void closeEvent(QCloseEvent* event) override;
 
-protected:
-    // Allow subclasses to access UI and page list
-    Ui::VerticallyTabbedDialog* ui;
-    QList<IEditPage*> m_pages;
+    protected:
+        // Allow subclasses to access UI and page list
+        Ui::VerticallyTabbedDialog* ui;
+        QList<IEditPage*> m_pages;
 
-private slots:
-    void onVerticalTabsCurrentChanged(int index);
-    void onMultipleOperationCompleted();
+    private slots:
+        void onVerticalTabsCurrentChanged(int index);
+        void onApplyClicked();
 
-private:
-    void loadObjectData();
-    QList<AsyncOperation*> collectActions();
-    void applySimpleChanges();
+    private:
+        void loadObjectData();
+        QList<AsyncOperation*> collectActions();
+        void applySimpleChanges();
+        bool performSave(bool closeOnSuccess);
 
-    XenConnection* m_connection;
-    QString m_objectRef;
-    QString m_objectType;
-    QVariantMap m_objectDataBefore; // Original data (read-only)
-    QVariantMap m_objectDataCopy;   // Clone being edited
-
-    MultipleOperation* m_multiOp; // Tracks running save operation
+        XenConnection* m_connection;
+        QString m_objectRef;
+        QString m_objectType;
+        QVariantMap m_objectDataBefore; // Original data (read-only)
+        QVariantMap m_objectDataCopy;   // Clone being edited
 };
 
 #endif // VERTICALLYTABBEDDIALOG_H

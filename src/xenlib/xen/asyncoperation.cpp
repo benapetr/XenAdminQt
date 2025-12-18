@@ -517,9 +517,9 @@ void AsyncOperation::runOnWorkerThread()
             qDebug() << "[AsyncOperation] Session created successfully";
         }
 
-        qDebug() << "[AsyncOperation] Calling run() for:" << m_title;
+        qDebug() << "[AsyncOperation] Calling run() for:" << this->m_title;
         this->run();
-        qDebug() << "[AsyncOperation] run() completed for:" << m_title;
+        qDebug() << "[AsyncOperation] run() completed for:" << this->m_title;
 
         QMutexLocker locker(&this->m_mutex);
         if (this->m_state == Running)
@@ -604,7 +604,7 @@ void AsyncOperation::runSync(XenSession* session)
         this->auditLogFailure(QString::fromLocal8Bit(e.what()));
     }
 
-    locker.relock();
+    //locker.relock();
     this->m_endTime = QDateTime::currentDateTime();
     locker.unlock();
 

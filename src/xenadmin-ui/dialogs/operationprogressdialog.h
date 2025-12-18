@@ -86,7 +86,7 @@ public:
      */
     void setShowTryAgainMessage(bool show)
     {
-        m_showTryAgainMessage = show;
+        this->m_showTryAgainMessage = show;
     }
 
     /**
@@ -94,7 +94,7 @@ public:
      */
     void setShowException(bool show)
     {
-        m_showException = show;
+        this->m_showException = show;
     }
 
     /**
@@ -107,7 +107,7 @@ public:
      */
     AsyncOperation* operation() const
     {
-        return m_operation;
+        return this->m_operation;
     }
 
 signals:

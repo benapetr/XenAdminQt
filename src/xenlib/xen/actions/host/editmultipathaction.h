@@ -25,30 +25,51 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HOSTPROPERTIESDIALOG_H
-#define HOSTPROPERTIESDIALOG_H
+#ifndef EDITMULTIPATHACTION_H
+#define EDITMULTIPATHACTION_H
 
-#include "verticallytabbeddialog.h"
+#include "../../asyncoperation.h"
+
+class Host;
 
 /**
- * @brief Host Properties Dialog
+ * @brief EditMultipathAction - Enable/disable multipath on a host
  *
- * Extends VerticallyTabbedDialog to provide property editing for XenServer hosts.
- * Displays tabs for General, Log Destination, Power-On, Autostart, and other host-specific settings.
+ * Qt equivalent of C# XenModel.Actions.EditMultipathAction
+ * (xenadmin/XenModel/Actions/Host/EditMultipathAction.cs)
  *
- * Matches C# XenAdmin.Dialogs.PropertiesDialog behavior for Host objects.
+ * Changes the multipath setting on a host. This involves:
+ * 1. Unplugging all currently attached PBDs
+ * 2. Setting host.multipathing (XenServer 6.0+) or host.other_config["multipathing"]
+ * 3. Setting host.other_config["multipath-handle"] to "dmp" if enabling
+ * 4. Re-plugging all PBDs
+ *
+ * The host should be in maintenance mode before running this action to ensure
+ * VMs are migrated before storage changes.
  */
-class HostPropertiesDialog : public VerticallyTabbedDialog
+class XENLIB_EXPORT EditMultipathAction : public AsyncOperation
 {
     Q_OBJECT
 
     public:
-        explicit HostPropertiesDialog(XenConnection* connection,
-                                      const QString& hostRef,
-                                      QWidget* parent = nullptr);
+        /**
+         * @brief Enable or disable multipath on a host
+         * @param host Host object to configure
+         * @param enableMultipath true to enable, false to disable
+         * @param parent Parent object
+         */
+        explicit EditMultipathAction(Host* host,
+                                    bool enableMultipath,
+                                    QObject* parent = nullptr);
 
     protected:
-        void build() override;
+        void run() override;
+
+    private:
+        Host* m_host;
+        bool m_enableMultipath;
+        
+        static const char* DEFAULT_MULTIPATH_HANDLE;
 };
 
-#endif // HOSTPROPERTIESDIALOG_H
+#endif // EDITMULTIPATHACTION_H
