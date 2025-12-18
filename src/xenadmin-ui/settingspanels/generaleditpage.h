@@ -66,57 +66,58 @@ class GeneralEditPage : public IEditPage
 {
     Q_OBJECT
 
-public:
-    explicit GeneralEditPage(QWidget* parent = nullptr);
-    ~GeneralEditPage();
+    public:
+        explicit GeneralEditPage(QWidget* parent = nullptr);
+        ~GeneralEditPage();
 
-    // IVerticalTab interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
+        // IVerticalTab interface
+        QString text() const override;
+        QString subText() const override;
+        QIcon image() const override;
 
-    // IEditPage interface
-    void setXenObjects(const QString& objectRef,
-                       const QString& objectType,
-                       const QVariantMap& objectDataBefore,
-                       const QVariantMap& objectDataCopy) override;
+        // IEditPage interface
+        void setXenObjects(const QString& objectRef,
+                           const QString& objectType,
+                           const QVariantMap& objectDataBefore,
+                           const QVariantMap& objectDataCopy) override;
 
-    AsyncOperation* saveSettings() override;
-    bool isValidToSave() const override;
-    void showLocalValidationMessages() override;
-    void hideLocalValidationMessages() override;
-    void cleanup() override;
-    bool hasChanged() const override;
+        AsyncOperation* saveSettings() override;
+        bool isValidToSave() const override;
+        void showLocalValidationMessages() override;
+        void hideLocalValidationMessages() override;
+        void cleanup() override;
+        bool hasChanged() const override;
+        QVariantMap getModifiedObjectData() const override;
 
-private slots:
-    void onNameChanged();
-    void onDescriptionChanged();
-    void onFolderChanged();
-    void onTagsChanged();
-    void onIQNChanged();
+    private slots:
+        void onNameChanged();
+        void onDescriptionChanged();
+        void onFolderChanged();
+        void onTagsChanged();
+        void onIQNChanged();
 
-private:
-    void repopulate();
-    QStringList parseTagsFromText() const;
-    bool nameChanged() const;
-    bool descriptionChanged() const;
-    bool folderChanged() const;
-    bool tagsChanged() const;
-    bool iqnChanged() const;
+    private:
+        void repopulate();
+        QStringList parseTagsFromText() const;
+        bool nameChanged() const;
+        bool descriptionChanged() const;
+        bool folderChanged() const;
+        bool tagsChanged() const;
+        bool iqnChanged() const;
 
-    Ui::GeneralEditPage* ui;
+        Ui::GeneralEditPage* ui;
 
-    QString m_objectRef;
-    QString m_objectType;
-    QVariantMap m_objectDataBefore;
-    QVariantMap m_objectDataCopy;
+        QString m_objectRef;
+        QString m_objectType;
+        QVariantMap m_objectDataBefore;
+        QVariantMap m_objectDataCopy;
 
-    // Original values for change tracking
-    QString m_originalName;
-    QString m_originalDescription;
-    QString m_originalFolder;
-    QStringList m_originalTags;
-    QString m_originalIQN;
+        // Original values for change tracking
+        QString m_originalName;
+        QString m_originalDescription;
+        QString m_originalFolder;
+        QStringList m_originalTags;
+        QString m_originalIQN;
 };
 
 #endif // GENERALEDITPAGE_H

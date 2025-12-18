@@ -313,6 +313,23 @@ public:
      */
     virtual bool hasChanged() const = 0;
 
+    /**
+     * @brief Get the modified object data copy after saveSettings() is called
+     * @return QVariantMap with modifications made by the page
+     *
+     * This allows the dialog to retrieve changes made by the page to its local
+     * m_objectDataCopy so they can be applied via applySimpleChanges().
+     *
+     * Called by VerticallyTabbedDialog::collectActions() after saveSettings().
+     *
+     * Default implementation returns empty map (no simple changes to apply).
+     * Override in pages that modify objectDataCopy directly (like GeneralEditPage).
+     */
+    virtual QVariantMap getModifiedObjectData() const
+    {
+        return QVariantMap(); // Default: no simple changes
+    }
+
 signals:
     /**
      * @brief Emitted when page finishes building/populating

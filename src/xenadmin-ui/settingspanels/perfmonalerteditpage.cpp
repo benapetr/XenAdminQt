@@ -35,12 +35,12 @@
 PerfmonAlertEditPage::PerfmonAlertEditPage(QWidget* parent)
     : IEditPage(parent), ui(new Ui::PerfmonAlertEditPage)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 }
 
 PerfmonAlertEditPage::~PerfmonAlertEditPage()
 {
-    delete ui;
+    delete this->ui;
 }
 
 QString PerfmonAlertEditPage::text() const
@@ -52,14 +52,14 @@ QString PerfmonAlertEditPage::subText() const
 {
     QStringList alerts;
 
-    if (ui->groupBoxCPU->isChecked())
+    if (this->ui->groupBoxCPU->isChecked())
     {
-        alerts << tr("CPU: %1%%").arg(ui->spinBoxCPUThreshold->value());
+        alerts << tr("CPU: %1%%").arg(this->ui->spinBoxCPUThreshold->value());
     }
 
-    if (ui->groupBoxMemory->isChecked())
+    if (this->ui->groupBoxMemory->isChecked())
     {
-        alerts << tr("Memory: %1 MB").arg(ui->spinBoxMemoryThreshold->value());
+        alerts << tr("Memory: %1 MB").arg(this->ui->spinBoxMemoryThreshold->value());
     }
 
     if (alerts.isEmpty())
@@ -80,51 +80,51 @@ void PerfmonAlertEditPage::setXenObjects(const QString& objectRef,
                                          const QVariantMap& objectDataBefore,
                                          const QVariantMap& objectDataCopy)
 {
-    m_objectRef = objectRef;
-    m_objectType = objectType;
-    m_objectDataBefore = objectDataBefore;
-    m_objectDataCopy = objectDataCopy;
+    this->m_objectRef = objectRef;
+    this->m_objectType = objectType;
+    this->m_objectDataBefore = objectDataBefore;
+    this->m_objectDataCopy = objectDataCopy;
 
     QVariantMap otherConfig = objectDataBefore.value("other_config").toMap();
 
     // Load CPU alert configuration
-    m_origCPUAlert = getAlertConfig(otherConfig, "perfmon_cpu");
-    ui->groupBoxCPU->setChecked(m_origCPUAlert.enabled);
-    ui->spinBoxCPUThreshold->setValue(m_origCPUAlert.threshold * 100); // Convert fraction to percentage
-    ui->spinBoxCPUDuration->setValue(m_origCPUAlert.duration / 60);    // Convert seconds to minutes
+    this->m_origCPUAlert = this->getAlertConfig(otherConfig, "perfmon_cpu");
+    this->ui->groupBoxCPU->setChecked(this->m_origCPUAlert.enabled);
+    this->ui->spinBoxCPUThreshold->setValue(this->m_origCPUAlert.threshold * 100); // Convert fraction to percentage
+    this->ui->spinBoxCPUDuration->setValue(this->m_origCPUAlert.duration / 60);    // Convert seconds to minutes
 
     // Load memory alert configuration
-    m_origMemoryAlert = getAlertConfig(otherConfig, "perfmon_memory_free");
-    ui->groupBoxMemory->setChecked(m_origMemoryAlert.enabled);
-    ui->spinBoxMemoryThreshold->setValue(m_origMemoryAlert.threshold / 1024); // Convert KiB to MB
-    ui->spinBoxMemoryDuration->setValue(m_origMemoryAlert.duration / 60);     // Convert seconds to minutes
+    this->m_origMemoryAlert = this->getAlertConfig(otherConfig, "perfmon_memory_free");
+    this->ui->groupBoxMemory->setChecked(this->m_origMemoryAlert.enabled);
+    this->ui->spinBoxMemoryThreshold->setValue(this->m_origMemoryAlert.threshold / 1024); // Convert KiB to MB
+    this->ui->spinBoxMemoryDuration->setValue(this->m_origMemoryAlert.duration / 60);     // Convert seconds to minutes
 }
 
 AsyncOperation* PerfmonAlertEditPage::saveSettings()
 {
-    if (!hasChanged())
+    if (!this->hasChanged())
     {
         return nullptr;
     }
 
     // Update objectDataCopy with new alert configurations
-    QVariantMap otherConfig = m_objectDataCopy.value("other_config").toMap();
+    QVariantMap otherConfig = this->m_objectDataCopy.value("other_config").toMap();
 
     // CPU alert
     AlertConfig cpuAlert;
-    cpuAlert.enabled = ui->groupBoxCPU->isChecked();
-    cpuAlert.threshold = ui->spinBoxCPUThreshold->value() / 100.0; // Convert percentage to fraction
-    cpuAlert.duration = ui->spinBoxCPUDuration->value() * 60;      // Convert minutes to seconds
-    setAlertConfig(otherConfig, "perfmon_cpu", cpuAlert);
+    cpuAlert.enabled = this->ui->groupBoxCPU->isChecked();
+    cpuAlert.threshold = this->ui->spinBoxCPUThreshold->value() / 100.0; // Convert percentage to fraction
+    cpuAlert.duration = this->ui->spinBoxCPUDuration->value() * 60;      // Convert minutes to seconds
+    this->setAlertConfig(otherConfig, "perfmon_cpu", cpuAlert);
 
     // Memory alert
     AlertConfig memoryAlert;
-    memoryAlert.enabled = ui->groupBoxMemory->isChecked();
-    memoryAlert.threshold = ui->spinBoxMemoryThreshold->value() * 1024; // Convert MB to KiB
-    memoryAlert.duration = ui->spinBoxMemoryDuration->value() * 60;     // Convert minutes to seconds
-    setAlertConfig(otherConfig, "perfmon_memory_free", memoryAlert);
+    memoryAlert.enabled = this->ui->groupBoxMemory->isChecked();
+    memoryAlert.threshold = this->ui->spinBoxMemoryThreshold->value() * 1024; // Convert MB to KiB
+    memoryAlert.duration = this->ui->spinBoxMemoryDuration->value() * 60;     // Convert minutes to seconds
+    this->setAlertConfig(otherConfig, "perfmon_memory_free", memoryAlert);
 
-    m_objectDataCopy["other_config"] = otherConfig;
+    this->m_objectDataCopy["other_config"] = otherConfig;
 
     // Return inline AsyncOperation
     class PerfmonAlertOperation : public AsyncOperation
@@ -164,7 +164,7 @@ AsyncOperation* PerfmonAlertEditPage::saveSettings()
         QVariantMap m_otherConfig;
     };
 
-    return new PerfmonAlertOperation(m_connection, m_objectRef, m_objectType, otherConfig, this);
+    return new PerfmonAlertOperation(this->m_connection, this->m_objectRef, this->m_objectType, otherConfig, nullptr);
 }
 
 bool PerfmonAlertEditPage::isValidToSave() const
@@ -191,26 +191,26 @@ bool PerfmonAlertEditPage::hasChanged() const
 {
     // Check CPU alert
     AlertConfig currentCPU;
-    currentCPU.enabled = ui->groupBoxCPU->isChecked();
-    currentCPU.threshold = ui->spinBoxCPUThreshold->value() / 100.0;
-    currentCPU.duration = ui->spinBoxCPUDuration->value() * 60;
+    currentCPU.enabled = this->ui->groupBoxCPU->isChecked();
+    currentCPU.threshold = this->ui->spinBoxCPUThreshold->value() / 100.0;
+    currentCPU.duration = this->ui->spinBoxCPUDuration->value() * 60;
 
-    if (currentCPU.enabled != m_origCPUAlert.enabled ||
-        qAbs(currentCPU.threshold - m_origCPUAlert.threshold) > 0.01 ||
-        currentCPU.duration != m_origCPUAlert.duration)
+    if (currentCPU.enabled != this->m_origCPUAlert.enabled ||
+        qAbs(currentCPU.threshold - this->m_origCPUAlert.threshold) > 0.01 ||
+        currentCPU.duration != this->m_origCPUAlert.duration)
     {
         return true;
     }
 
     // Check memory alert
     AlertConfig currentMemory;
-    currentMemory.enabled = ui->groupBoxMemory->isChecked();
-    currentMemory.threshold = ui->spinBoxMemoryThreshold->value() * 1024;
-    currentMemory.duration = ui->spinBoxMemoryDuration->value() * 60;
+    currentMemory.enabled = this->ui->groupBoxMemory->isChecked();
+    currentMemory.threshold = this->ui->spinBoxMemoryThreshold->value() * 1024;
+    currentMemory.duration = this->ui->spinBoxMemoryDuration->value() * 60;
 
-    if (currentMemory.enabled != m_origMemoryAlert.enabled ||
-        qAbs(currentMemory.threshold - m_origMemoryAlert.threshold) > 0.01 ||
-        currentMemory.duration != m_origMemoryAlert.duration)
+    if (currentMemory.enabled != this->m_origMemoryAlert.enabled ||
+        qAbs(currentMemory.threshold - this->m_origMemoryAlert.threshold) > 0.01 ||
+        currentMemory.duration != this->m_origMemoryAlert.duration)
     {
         return true;
     }

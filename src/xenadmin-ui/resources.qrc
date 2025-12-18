@@ -64,6 +64,12 @@
         <file alias="console_16.png">images/console_16.png</file>
         <file alias="save_16.png">images/save_16.png</file>
         <file alias="network_16.png">images/network_16.png</file>
+        
+        <!-- Edit page icons -->
+        <file alias="edit_16.png">images/edit_16.png</file>
+        <file alias="log_destination_16.png">images/log_destination_16.png</file>
+        <file alias="enable_power_control_16.png">images/000_EnablePowerControl_h32bit_16.png</file>
+        <file alias="storage.png">images/000_Storage_h32bit_16.png</file>
     </qresource>
     
     <qresource prefix="/tree-icons">

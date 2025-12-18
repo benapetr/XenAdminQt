@@ -38,18 +38,18 @@
 CustomFieldsDisplayPage::CustomFieldsDisplayPage(QWidget* parent)
     : IEditPage(parent), ui(new Ui::CustomFieldsDisplayPage)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
-    ui->tableWidgetFields->setColumnWidth(0, 150);
-    ui->tableWidgetFields->setColumnWidth(1, 250);
-    ui->tableWidgetFields->setColumnWidth(2, 80);
+    this->ui->tableWidgetFields->setColumnWidth(0, 150);
+    this->ui->tableWidgetFields->setColumnWidth(1, 250);
+    this->ui->tableWidgetFields->setColumnWidth(2, 80);
 
-    connect(ui->buttonAdd, &QPushButton::clicked, this, &CustomFieldsDisplayPage::onAddFieldClicked);
+    this->connect(this->ui->buttonAdd, &QPushButton::clicked, this, &CustomFieldsDisplayPage::onAddFieldClicked);
 }
 
 CustomFieldsDisplayPage::~CustomFieldsDisplayPage()
 {
-    delete ui;
+    delete this->ui;
 }
 
 QString CustomFieldsDisplayPage::text() const
@@ -59,7 +59,7 @@ QString CustomFieldsDisplayPage::text() const
 
 QString CustomFieldsDisplayPage::subText() const
 {
-    QMap<QString, QString> fields = getCurrentFields();
+    QMap<QString, QString> fields = this->getCurrentFields();
     if (fields.isEmpty())
     {
         return tr("None");
@@ -92,40 +92,40 @@ void CustomFieldsDisplayPage::setXenObjects(const QString& objectRef,
                                             const QVariantMap& objectDataBefore,
                                             const QVariantMap& objectDataCopy)
 {
-    m_objectRef = objectRef;
-    m_objectType = objectType;
-    m_objectDataBefore = objectDataBefore;
-    m_objectDataCopy = objectDataCopy;
+    this->m_objectRef = objectRef;
+    this->m_objectType = objectType;
+    this->m_objectDataBefore = objectDataBefore;
+    this->m_objectDataCopy = objectDataCopy;
 
     // Extract custom fields from other_config
     // Custom fields are stored with "XenCenter.CustomFields." prefix
     QVariantMap otherConfig = objectDataBefore.value("other_config").toMap();
-    m_origCustomFields.clear();
+    this->m_origCustomFields.clear();
 
     for (auto it = otherConfig.constBegin(); it != otherConfig.constEnd(); ++it)
     {
         if (it.key().startsWith("XenCenter.CustomFields."))
         {
             QString fieldName = it.key().mid(23); // Remove "XenCenter.CustomFields." prefix
-            m_origCustomFields[fieldName] = it.value().toString();
+            this->m_origCustomFields[fieldName] = it.value().toString();
         }
     }
 
-    populateFields();
+    this->populateFields();
 }
 
 AsyncOperation* CustomFieldsDisplayPage::saveSettings()
 {
-    if (!hasChanged())
+    if (!this->hasChanged())
     {
         return nullptr;
     }
 
     // Get current fields from table
-    QMap<QString, QString> currentFields = getCurrentFields();
+    QMap<QString, QString> currentFields = this->getCurrentFields();
 
     // Update objectDataCopy with new custom fields
-    QVariantMap otherConfig = m_objectDataCopy.value("other_config").toMap();
+    QVariantMap otherConfig = this->m_objectDataCopy.value("other_config").toMap();
 
     // Remove old custom fields
     QStringList keysToRemove;
@@ -148,7 +148,7 @@ AsyncOperation* CustomFieldsDisplayPage::saveSettings()
         otherConfig[key] = it.value();
     }
 
-    m_objectDataCopy["other_config"] = otherConfig;
+    this->m_objectDataCopy["other_config"] = otherConfig;
 
     // Return inline AsyncOperation
     class CustomFieldsOperation : public AsyncOperation
@@ -188,8 +188,8 @@ AsyncOperation* CustomFieldsDisplayPage::saveSettings()
         QVariantMap m_otherConfig;
     };
 
-    QString objectType = m_objectDataBefore.value("class", "VM").toString();
-    return new CustomFieldsOperation(m_connection, m_objectRef, objectType, otherConfig, this);
+    QString objectType = this->m_objectDataBefore.value("class", "VM").toString();
+    return new CustomFieldsOperation(this->m_connection, this->m_objectRef, objectType, otherConfig, this);
 }
 
 bool CustomFieldsDisplayPage::isValidToSave() const
@@ -214,17 +214,17 @@ void CustomFieldsDisplayPage::cleanup()
 
 bool CustomFieldsDisplayPage::hasChanged() const
 {
-    QMap<QString, QString> currentFields = getCurrentFields();
+    QMap<QString, QString> currentFields = this->getCurrentFields();
 
-    if (currentFields.size() != m_origCustomFields.size())
+    if (currentFields.size() != this->m_origCustomFields.size())
     {
         return true;
     }
 
     for (auto it = currentFields.constBegin(); it != currentFields.constEnd(); ++it)
     {
-        if (!m_origCustomFields.contains(it.key()) ||
-            m_origCustomFields[it.key()] != it.value())
+        if (!this->m_origCustomFields.contains(it.key()) ||
+            this->m_origCustomFields[it.key()] != it.value())
         {
             return true;
         }
@@ -241,21 +241,21 @@ void CustomFieldsDisplayPage::onAddFieldClicked()
                                               "", &ok);
     if (ok && !fieldName.isEmpty())
     {
-        int row = ui->tableWidgetFields->rowCount();
-        ui->tableWidgetFields->insertRow(row);
+        int row = this->ui->tableWidgetFields->rowCount();
+        this->ui->tableWidgetFields->insertRow(row);
 
         // Field name
         QTableWidgetItem* nameItem = new QTableWidgetItem(fieldName);
-        ui->tableWidgetFields->setItem(row, 0, nameItem);
+        this->ui->tableWidgetFields->setItem(row, 0, nameItem);
 
         // Value
         QTableWidgetItem* valueItem = new QTableWidgetItem("");
-        ui->tableWidgetFields->setItem(row, 1, valueItem);
+        this->ui->tableWidgetFields->setItem(row, 1, valueItem);
 
         // Delete button
         QPushButton* deleteBtn = new QPushButton(tr("Delete"));
-        connect(deleteBtn, &QPushButton::clicked, this, &CustomFieldsDisplayPage::onDeleteFieldClicked);
-        ui->tableWidgetFields->setCellWidget(row, 2, deleteBtn);
+        this->connect(deleteBtn, &QPushButton::clicked, this, &CustomFieldsDisplayPage::onDeleteFieldClicked);
+        this->ui->tableWidgetFields->setCellWidget(row, 2, deleteBtn);
     }
 }
 
@@ -264,11 +264,11 @@ void CustomFieldsDisplayPage::onDeleteFieldClicked()
     QPushButton* button = qobject_cast<QPushButton*>(sender());
     if (button)
     {
-        for (int row = 0; row < ui->tableWidgetFields->rowCount(); ++row)
+        for (int row = 0; row < this->ui->tableWidgetFields->rowCount(); ++row)
         {
-            if (ui->tableWidgetFields->cellWidget(row, 2) == button)
+            if (this->ui->tableWidgetFields->cellWidget(row, 2) == button)
             {
-                ui->tableWidgetFields->removeRow(row);
+                this->ui->tableWidgetFields->removeRow(row);
                 break;
             }
         }
@@ -277,25 +277,25 @@ void CustomFieldsDisplayPage::onDeleteFieldClicked()
 
 void CustomFieldsDisplayPage::populateFields()
 {
-    ui->tableWidgetFields->setRowCount(0);
+    this->ui->tableWidgetFields->setRowCount(0);
 
-    for (auto it = m_origCustomFields.constBegin(); it != m_origCustomFields.constEnd(); ++it)
+    for (auto it = this->m_origCustomFields.constBegin(); it != this->m_origCustomFields.constEnd(); ++it)
     {
-        int row = ui->tableWidgetFields->rowCount();
-        ui->tableWidgetFields->insertRow(row);
+        int row = this->ui->tableWidgetFields->rowCount();
+        this->ui->tableWidgetFields->insertRow(row);
 
         // Field name
         QTableWidgetItem* nameItem = new QTableWidgetItem(it.key());
-        ui->tableWidgetFields->setItem(row, 0, nameItem);
+        this->ui->tableWidgetFields->setItem(row, 0, nameItem);
 
         // Value
         QTableWidgetItem* valueItem = new QTableWidgetItem(it.value());
-        ui->tableWidgetFields->setItem(row, 1, valueItem);
+        this->ui->tableWidgetFields->setItem(row, 1, valueItem);
 
         // Delete button
         QPushButton* deleteBtn = new QPushButton(tr("Delete"));
-        connect(deleteBtn, &QPushButton::clicked, this, &CustomFieldsDisplayPage::onDeleteFieldClicked);
-        ui->tableWidgetFields->setCellWidget(row, 2, deleteBtn);
+        this->connect(deleteBtn, &QPushButton::clicked, this, &CustomFieldsDisplayPage::onDeleteFieldClicked);
+        this->ui->tableWidgetFields->setCellWidget(row, 2, deleteBtn);
     }
 }
 
@@ -303,10 +303,10 @@ QMap<QString, QString> CustomFieldsDisplayPage::getCurrentFields() const
 {
     QMap<QString, QString> fields;
 
-    for (int row = 0; row < ui->tableWidgetFields->rowCount(); ++row)
+    for (int row = 0; row < this->ui->tableWidgetFields->rowCount(); ++row)
     {
-        QTableWidgetItem* nameItem = ui->tableWidgetFields->item(row, 0);
-        QTableWidgetItem* valueItem = ui->tableWidgetFields->item(row, 1);
+        QTableWidgetItem* nameItem = this->ui->tableWidgetFields->item(row, 0);
+        QTableWidgetItem* valueItem = this->ui->tableWidgetFields->item(row, 1);
 
         if (nameItem && valueItem)
         {

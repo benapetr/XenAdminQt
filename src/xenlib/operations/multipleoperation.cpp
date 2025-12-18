@@ -41,13 +41,27 @@ MultipleOperation::MultipleOperation(XenConnection* connection,
 {
     // Note: suppressHistory is not currently used in AsyncOperation
     Q_UNUSED(suppressHistory);
-    registerEvents();
+    
+    // Take ownership of all sub-operations
+    // This ensures they are destroyed when MultipleOperation is destroyed
+    for (AsyncOperation* subOp : this->m_subOperations)
+    {
+        if (subOp)
+        {
+            subOp->setParent(this);
+        }
+    }
+    
+    this->registerEvents();
     connect(this, &AsyncOperation::completed, this, &MultipleOperation::onCompleted);
 }
 
 MultipleOperation::~MultipleOperation()
 {
-    deregisterEvents();
+    // Qt automatically disconnects signals when objects are destroyed
+    // No need to manually deregister - in fact, doing so can cause crashes
+    // if sub-operations have already been deleted
+    // deregisterEvents();
 }
 
 void MultipleOperation::registerEvents()
@@ -63,9 +77,16 @@ void MultipleOperation::registerEvents()
 
 void MultipleOperation::deregisterEvents()
 {
-    for (AsyncOperation* subOp : m_subOperations)
+    // Qt automatically disconnects signals when sender or receiver is destroyed
+    // We only need to explicitly disconnect if objects are still alive
+    // Use try-catch to handle any potential issues during disconnection
+    for (AsyncOperation* subOp : this->m_subOperations)
     {
-        disconnect(subOp, nullptr, this, nullptr);
+        if (subOp)
+        {
+            // Qt will handle already-destroyed objects gracefully
+            QObject::disconnect(subOp, nullptr, this, nullptr);
+        }
     }
 }
 
@@ -83,13 +104,13 @@ void MultipleOperation::onSubOperationChanged()
 
 void MultipleOperation::run()
 {
-    setPercentComplete(0);
+    this->setPercentComplete(0);
     QStringList exceptions;
 
-    runSubOperations(exceptions);
+    this->runSubOperations(exceptions);
 
-    setPercentComplete(100);
-    setDescription(m_endDescription);
+    this->setPercentComplete(100);
+    this->setDescription(this->m_endDescription);
 
     // Handle multiple exceptions
     if (exceptions.size() > 1)
@@ -98,15 +119,15 @@ void MultipleOperation::run()
         {
             qWarning() << "MultipleOperation: Exception:" << e;
         }
-        setError(tr("Some errors were encountered during the operation"));
+        this->setError(tr("Some errors were encountered during the operation"));
     } else if (exceptions.size() == 1)
     {
         // Single exception - already set in runSubOperations
     }
 
-    if (isCancelled())
+    if (this->isCancelled())
     {
-        setError(tr("Operation cancelled"));
+        this->setError(tr("Operation cancelled"));
     }
 }
 

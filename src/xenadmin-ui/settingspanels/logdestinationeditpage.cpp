@@ -38,30 +38,30 @@
 LogDestinationEditPage::LogDestinationEditPage(QWidget* parent)
     : IEditPage(parent), ui(new Ui::LogDestinationEditPage), m_validToSave(true)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
     // Hostname/IP validation regex (matches C# pattern)
     // From C#: @"^[a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?)*$"
-    m_hostnameRegex.setPattern("^[a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?)*$");
+    this->m_hostnameRegex.setPattern("^[a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?)*$");
 
     // Connect signals
-    connect(ui->checkBoxRemote, &QCheckBox::toggled, this, &LogDestinationEditPage::onCheckBoxRemoteToggled);
-    connect(ui->lineEditServer, &QLineEdit::textChanged, this, &LogDestinationEditPage::onServerTextChanged);
+    this->connect(this->ui->checkBoxRemote, &QCheckBox::toggled, this, &LogDestinationEditPage::onCheckBoxRemoteToggled);
+    this->connect(this->ui->lineEditServer, &QLineEdit::textChanged, this, &LogDestinationEditPage::onServerTextChanged);
 
     // Install event filter to detect focus
-    ui->lineEditServer->installEventFilter(this);
+    this->ui->lineEditServer->installEventFilter(this);
 }
 
 LogDestinationEditPage::~LogDestinationEditPage()
 {
-    delete ui;
+    delete this->ui;
 }
 
 bool LogDestinationEditPage::eventFilter(QObject* obj, QEvent* event)
 {
-    if (obj == ui->lineEditServer && event->type() == QEvent::FocusIn)
+    if (obj == this->ui->lineEditServer && event->type() == QEvent::FocusIn)
     {
-        onServerEditFocused();
+        this->onServerEditFocused();
     }
     return IEditPage::eventFilter(obj, event);
 }
@@ -73,9 +73,9 @@ QString LogDestinationEditPage::text() const
 
 QString LogDestinationEditPage::subText() const
 {
-    if (ui->checkBoxRemote->isChecked())
+    if (this->ui->checkBoxRemote->isChecked())
     {
-        QString server = remoteServer();
+        QString server = this->remoteServer();
         if (!server.isEmpty())
         {
             return tr("Local and Remote: %1").arg(server);
@@ -87,8 +87,8 @@ QString LogDestinationEditPage::subText() const
 
 QIcon LogDestinationEditPage::image() const
 {
-    // TODO: Use proper icon
-    return QIcon(":/icons/log_16.png");
+    // Matches C# Images.StaticImages.log_destination_16
+    return QIcon(":/icons/log_destination_16.png");
 }
 
 void LogDestinationEditPage::setXenObjects(const QString& objectRef,
@@ -99,40 +99,40 @@ void LogDestinationEditPage::setXenObjects(const QString& objectRef,
     Q_UNUSED(objectDataBefore);
     Q_UNUSED(objectType);
 
-    m_hostRef = objectRef;
-    m_objectDataCopy = objectDataCopy; // Store copy for modification
+    this->m_hostRef = objectRef;
+    this->m_objectDataCopy = objectDataCopy; // Store copy for modification
 
-    repopulate();
+    this->repopulate();
 }
 
 void LogDestinationEditPage::repopulate()
 {
     // Block signals while populating
-    ui->checkBoxRemote->blockSignals(true);
-    ui->lineEditServer->blockSignals(true);
+    this->ui->checkBoxRemote->blockSignals(true);
+    this->ui->lineEditServer->blockSignals(true);
 
     // Get syslog destination from host.logging["syslog_destination"]
     // C# equivalent: _host.GetSysLogDestination()
-    QVariantMap logging = m_objectDataCopy.value("logging").toMap();
-    m_originalLocation = logging.value("syslog_destination").toString();
+    QVariantMap logging = this->m_objectDataCopy.value("logging").toMap();
+    this->m_originalLocation = logging.value("syslog_destination").toString();
 
     // If there's a destination, enable checkbox and show it
-    ui->checkBoxRemote->setChecked(!m_originalLocation.isEmpty());
-    ui->lineEditServer->setText(m_originalLocation);
+    this->ui->checkBoxRemote->setChecked(!this->m_originalLocation.isEmpty());
+    this->ui->lineEditServer->setText(this->m_originalLocation);
 
     // Enable/disable server field based on checkbox
-    ui->lineEditServer->setEnabled(ui->checkBoxRemote->isChecked());
+    this->ui->lineEditServer->setEnabled(this->ui->checkBoxRemote->isChecked());
 
     // Unblock signals
-    ui->checkBoxRemote->blockSignals(false);
-    ui->lineEditServer->blockSignals(false);
+    this->ui->checkBoxRemote->blockSignals(false);
+    this->ui->lineEditServer->blockSignals(false);
 
-    revalidate();
+    this->revalidate();
 }
 
 QString LogDestinationEditPage::remoteServer() const
 {
-    return ui->lineEditServer->text().trimmed();
+    return this->ui->lineEditServer->text().trimmed();
 }
 
 void LogDestinationEditPage::revalidate()
@@ -141,36 +141,36 @@ void LogDestinationEditPage::revalidate()
     // _validToSave = !checkBoxRemote.Checked ||
     //                !string.IsNullOrEmpty(RemoteServer) && regex.IsMatch(RemoteServer);
 
-    if (!ui->checkBoxRemote->isChecked())
+    if (!this->ui->checkBoxRemote->isChecked())
     {
-        m_validToSave = true; // If not sending to remote, always valid
+        this->m_validToSave = true; // If not sending to remote, always valid
     } else
     {
-        QString server = remoteServer();
-        m_validToSave = !server.isEmpty() && m_hostnameRegex.match(server).hasMatch();
+        QString server = this->remoteServer();
+        this->m_validToSave = !server.isEmpty() && this->m_hostnameRegex.match(server).hasMatch();
     }
 }
 
 AsyncOperation* LogDestinationEditPage::saveSettings()
 {
-    if (!m_connection || m_hostRef.isEmpty() || !hasChanged())
+    if (!this->m_connection || this->m_hostRef.isEmpty() || !this->hasChanged())
     {
         return nullptr;
     }
 
     // Step 1: Modify objectDataCopy (similar to C# _host.SetSysLogDestination)
     // This modifies host.logging["syslog_destination"]
-    QVariantMap logging = m_objectDataCopy.value("logging").toMap();
+    QVariantMap logging = this->m_objectDataCopy.value("logging").toMap();
 
-    if (ui->checkBoxRemote->isChecked())
+    if (this->ui->checkBoxRemote->isChecked())
     {
-        logging["syslog_destination"] = remoteServer();
+        logging["syslog_destination"] = this->remoteServer();
     } else
     {
         logging.remove("syslog_destination"); // null = remove
     }
 
-    m_objectDataCopy["logging"] = logging;
+    this->m_objectDataCopy["logging"] = logging;
 
     // Step 2: Return AsyncOperation that calls Host.syslog_reconfigure
     // C# equivalent: new DelegatedAsyncAction(..., delegate { Host.syslog_reconfigure(...) })
@@ -229,22 +229,22 @@ AsyncOperation* LogDestinationEditPage::saveSettings()
         QString m_hostRef;
     };
 
-    return new SyslogReconfigureOperation(m_connection, m_hostRef, this);
+    return new SyslogReconfigureOperation(this->m_connection, this->m_hostRef, this);
 }
 
 bool LogDestinationEditPage::isValidToSave() const
 {
-    return m_validToSave;
+    return this->m_validToSave;
 }
 
 void LogDestinationEditPage::showLocalValidationMessages()
 {
-    if (!m_validToSave && ui->checkBoxRemote->isChecked())
+    if (!this->m_validToSave && this->ui->checkBoxRemote->isChecked())
     {
         // Show tooltip on server field
-        QToolTip::showText(ui->lineEditServer->mapToGlobal(QPoint(0, ui->lineEditServer->height())),
+        QToolTip::showText(this->ui->lineEditServer->mapToGlobal(QPoint(0, this->ui->lineEditServer->height())),
                            tr("Please enter a valid hostname or IP address"),
-                           ui->lineEditServer);
+                           this->ui->lineEditServer);
     }
 }
 
@@ -265,33 +265,33 @@ bool LogDestinationEditPage::hasChanged() const
     //     return _origLocation != RemoteServer;
     // return !string.IsNullOrWhiteSpace(_origLocation);
 
-    if (ui->checkBoxRemote->isChecked())
+    if (this->ui->checkBoxRemote->isChecked())
     {
-        return m_originalLocation != remoteServer();
+        return this->m_originalLocation != this->remoteServer();
     }
 
     // If checkbox unchecked but there was an original location, it changed
-    return !m_originalLocation.isEmpty();
+    return !this->m_originalLocation.isEmpty();
 }
 
 void LogDestinationEditPage::onCheckBoxRemoteToggled(bool checked)
 {
-    ui->lineEditServer->setEnabled(checked);
-    revalidate();
+    this->ui->lineEditServer->setEnabled(checked);
+    this->revalidate();
 }
 
 void LogDestinationEditPage::onServerTextChanged(const QString& text)
 {
     Q_UNUSED(text);
-    revalidate();
+    this->revalidate();
 }
 
 void LogDestinationEditPage::onServerEditFocused()
 {
     // When user focuses on server field, auto-enable the checkbox
     // C# equivalent: ServerTextBox_Enter
-    if (!ui->checkBoxRemote->isChecked())
+    if (!this->ui->checkBoxRemote->isChecked())
     {
-        ui->checkBoxRemote->setChecked(true);
+        this->ui->checkBoxRemote->setChecked(true);
     }
 }

@@ -36,14 +36,12 @@
 #include "../settingspanels/vmadvancededitpage.h"
 #include "../settingspanels/vmenlightenmenteditpage.h"
 
-VMPropertiesDialog::VMPropertiesDialog(XenConnection* connection,
-                                       const QString& vmRef,
-                                       QWidget* parent)
+VMPropertiesDialog::VMPropertiesDialog(XenConnection* connection, const QString& vmRef, QWidget* parent)
     : VerticallyTabbedDialog(connection, vmRef, "vm", parent)
 {
-    setWindowTitle(tr("VM Properties"));
-    resize(700, 550);
-    build();
+    this->setWindowTitle(tr("VM Properties"));
+    this->resize(700, 550);
+    this->build();
 }
 
 void VMPropertiesDialog::build()
@@ -54,35 +52,35 @@ void VMPropertiesDialog::build()
     bool isHVM = vmData.value("HVM_boot_policy", "").toString() != "";
 
     // General tab (name, description, folder, tags, IQN)
-    showTab(new GeneralEditPage());
+    this->showTab(new GeneralEditPage());
 
     // CPU and Memory tab
-    showTab(new CpuMemoryEditPage());
+    this->showTab(new CpuMemoryEditPage());
 
     // Boot Options tab
-    showTab(new BootOptionsEditPage());
+    this->showTab(new BootOptionsEditPage());
 
     // High Availability tab
-    showTab(new VMHAEditPage());
+    this->showTab(new VMHAEditPage());
 
     // Custom Fields tab (not shown for templates in some contexts)
     if (!isTemplate)
     {
-        showTab(new CustomFieldsDisplayPage());
+        this->showTab(new CustomFieldsDisplayPage());
     }
 
     // Performance Alerts tab
-    showTab(new PerfmonAlertEditPage());
+    this->showTab(new PerfmonAlertEditPage());
 
     // Home Server tab - only if WLB not enabled
     // TODO: Check Helpers.WlbEnabledAndConfigured() when available
     // For now, always show it
-    showTab(new HomeServerEditPage());
+    this->showTab(new HomeServerEditPage());
 
     // Advanced tab - only for HVM VMs
     if (isHVM)
     {
-        showTab(new VMAdvancedEditPage());
+        this->showTab(new VMAdvancedEditPage());
     }
 
     // Enlightenment tab - only for VMs that can be enlightened
@@ -90,7 +88,7 @@ void VMPropertiesDialog::build()
     // For now, show for HVM VMs as a simplified check
     if (isHVM && !isTemplate)
     {
-        showTab(new VMEnlightenmentEditPage());
+        this->showTab(new VMEnlightenmentEditPage());
     }
 
     // TODO: Add remaining conditional VM tabs from C# XenAdmin.Dialogs.PropertiesDialog:

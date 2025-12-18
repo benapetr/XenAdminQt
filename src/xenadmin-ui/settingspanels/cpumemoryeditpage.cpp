@@ -214,9 +214,9 @@ AsyncOperation* CpuMemoryEditPage::saveSettings()
     };
 
     QString powerState = m_objectDataBefore.value("power_state", "").toString();
-    return new ChangeVCPUSettingsOperation(m_connection, m_vmRef,
+    return new ChangeVCPUSettingsOperation(this->m_connection, this->m_vmRef,
                                            newVCPUsMax, newVCPUsAtStartup,
-                                           powerState, this);
+                                           powerState, nullptr);
 }
 
 bool CpuMemoryEditPage::isValidToSave() const

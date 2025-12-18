@@ -33,27 +33,26 @@
 #include <QIcon>
 #include <QDebug>
 
-GeneralEditPage::GeneralEditPage(QWidget* parent)
-    : IEditPage(parent), ui(new Ui::GeneralEditPage)
+GeneralEditPage::GeneralEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::GeneralEditPage)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
     // Connect change signals for change tracking
-    connect(ui->txtName, &QLineEdit::textChanged, this, &GeneralEditPage::onNameChanged);
-    connect(ui->txtDescription, &QPlainTextEdit::textChanged, this, &GeneralEditPage::onDescriptionChanged);
-    connect(ui->cmbFolder, &QComboBox::currentTextChanged, this, &GeneralEditPage::onFolderChanged);
-    connect(ui->txtTags, &QPlainTextEdit::textChanged, this, &GeneralEditPage::onTagsChanged);
-    connect(ui->txtIQN, &QLineEdit::textChanged, this, &GeneralEditPage::onIQNChanged);
+    this->connect(this->ui->txtName, &QLineEdit::textChanged, this, &GeneralEditPage::onNameChanged);
+    this->connect(this->ui->txtDescription, &QPlainTextEdit::textChanged, this, &GeneralEditPage::onDescriptionChanged);
+    this->connect(this->ui->cmbFolder, &QComboBox::currentTextChanged, this, &GeneralEditPage::onFolderChanged);
+    this->connect(this->ui->txtTags, &QPlainTextEdit::textChanged, this, &GeneralEditPage::onTagsChanged);
+    this->connect(this->ui->txtIQN, &QLineEdit::textChanged, this, &GeneralEditPage::onIQNChanged);
 
     // Hide IQN fields by default (only shown for hosts)
-    ui->lblIQN->setVisible(false);
-    ui->txtIQN->setVisible(false);
-    ui->lblIQNHint->setVisible(false);
+    this->ui->lblIQN->setVisible(false);
+    this->ui->txtIQN->setVisible(false);
+    this->ui->lblIQNHint->setVisible(false);
 }
 
 GeneralEditPage::~GeneralEditPage()
 {
-    delete ui;
+    delete this->ui;
 }
 
 QString GeneralEditPage::text() const
@@ -68,6 +67,7 @@ QString GeneralEditPage::subText() const
 
 QIcon GeneralEditPage::image() const
 {
+    // Matches C# Images.StaticImages.edit_16
     return QIcon(":/icons/edit_16.png");
 }
 
@@ -76,12 +76,12 @@ void GeneralEditPage::setXenObjects(const QString& objectRef,
                                     const QVariantMap& objectDataBefore,
                                     const QVariantMap& objectDataCopy)
 {
-    m_objectRef = objectRef;
-    m_objectType = objectType;
-    m_objectDataBefore = objectDataBefore;
-    m_objectDataCopy = objectDataCopy;
+    this->m_objectRef = objectRef;
+    this->m_objectType = objectType;
+    this->m_objectDataBefore = objectDataBefore;
+    this->m_objectDataCopy = objectDataCopy;
 
-    repopulate();
+    this->repopulate();
 
     emit populated();
 }
@@ -89,79 +89,79 @@ void GeneralEditPage::setXenObjects(const QString& objectRef,
 void GeneralEditPage::repopulate()
 {
     // Block signals while populating to avoid triggering change tracking
-    ui->txtName->blockSignals(true);
-    ui->txtDescription->blockSignals(true);
-    ui->cmbFolder->blockSignals(true);
-    ui->txtTags->blockSignals(true);
-    ui->txtIQN->blockSignals(true);
+    this->ui->txtName->blockSignals(true);
+    this->ui->txtDescription->blockSignals(true);
+    this->ui->cmbFolder->blockSignals(true);
+    this->ui->txtTags->blockSignals(true);
+    this->ui->txtIQN->blockSignals(true);
 
     // Populate name
-    m_originalName = m_objectDataCopy.value("name_label").toString();
-    ui->txtName->setText(m_originalName);
+    this->m_originalName = this->m_objectDataCopy.value("name_label").toString();
+    this->ui->txtName->setText(this->m_originalName);
 
     // Populate description
-    m_originalDescription = m_objectDataCopy.value("name_description").toString();
-    ui->txtDescription->setPlainText(m_originalDescription);
+    this->m_originalDescription = this->m_objectDataCopy.value("name_description").toString();
+    this->ui->txtDescription->setPlainText(this->m_originalDescription);
 
     // Populate folder from other_config
-    QVariantMap otherConfig = m_objectDataCopy.value("other_config").toMap();
-    m_originalFolder = otherConfig.value("folder").toString();
-    ui->cmbFolder->setEditText(m_originalFolder);
+    QVariantMap otherConfig = this->m_objectDataCopy.value("other_config").toMap();
+    this->m_originalFolder = otherConfig.value("folder").toString();
+    this->ui->cmbFolder->setEditText(this->m_originalFolder);
 
     // TODO: Populate folder dropdown with available folders from cache
 
     // Populate tags
-    QVariantList tagsVariant = m_objectDataCopy.value("tags").toList();
-    m_originalTags.clear();
+    QVariantList tagsVariant = this->m_objectDataCopy.value("tags").toList();
+    this->m_originalTags.clear();
     for (const QVariant& tag : tagsVariant)
     {
-        m_originalTags.append(tag.toString());
+        this->m_originalTags.append(tag.toString());
     }
-    m_originalTags.sort();
-    ui->txtTags->setPlainText(m_originalTags.join(", "));
+    this->m_originalTags.sort();
+    this->ui->txtTags->setPlainText(this->m_originalTags.join(", "));
 
     // Show/hide IQN fields for hosts
-    if (m_objectType == "host")
+    if (this->m_objectType == "host")
     {
-        ui->lblIQN->setVisible(true);
-        ui->txtIQN->setVisible(true);
-        ui->lblIQNHint->setVisible(true);
+        this->ui->lblIQN->setVisible(true);
+        this->ui->txtIQN->setVisible(true);
+        this->ui->lblIQNHint->setVisible(true);
 
         // Get IQN from other_config
-        m_originalIQN = otherConfig.value("iscsi_iqn").toString();
-        ui->txtIQN->setText(m_originalIQN);
+        this->m_originalIQN = otherConfig.value("iscsi_iqn").toString();
+        this->ui->txtIQN->setText(this->m_originalIQN);
     } else
     {
-        ui->lblIQN->setVisible(false);
-        ui->txtIQN->setVisible(false);
-        ui->lblIQNHint->setVisible(false);
-        m_originalIQN.clear();
+        this->ui->lblIQN->setVisible(false);
+        this->ui->txtIQN->setVisible(false);
+        this->ui->lblIQNHint->setVisible(false);
+        this->m_originalIQN.clear();
     }
 
     // Update title based on object type
-    if (m_objectType == "vm")
+    if (this->m_objectType == "vm")
     {
-        ui->labelTitle->setText(tr("Enter a meaningful name and description for this virtual machine"));
-    } else if (m_objectType == "host")
+        this->ui->labelTitle->setText(tr("Enter a meaningful name and description for this virtual machine"));
+    } else if (this->m_objectType == "host")
     {
-        ui->labelTitle->setText(tr("Enter a meaningful name and description for this server"));
-    } else if (m_objectType == "pool")
+        this->ui->labelTitle->setText(tr("Enter a meaningful name and description for this server"));
+    } else if (this->m_objectType == "pool")
     {
-        ui->labelTitle->setText(tr("Enter a meaningful name and description for this pool"));
-    } else if (m_objectType == "sr")
+        this->ui->labelTitle->setText(tr("Enter a meaningful name and description for this pool"));
+    } else if (this->m_objectType == "sr")
     {
-        ui->labelTitle->setText(tr("Enter a meaningful name and description for this storage repository"));
+        this->ui->labelTitle->setText(tr("Enter a meaningful name and description for this storage repository"));
     } else
     {
-        ui->labelTitle->setText(tr("Enter a meaningful name and description"));
+        this->ui->labelTitle->setText(tr("Enter a meaningful name and description"));
     }
 
     // Unblock signals
-    ui->txtName->blockSignals(false);
-    ui->txtDescription->blockSignals(false);
-    ui->cmbFolder->blockSignals(false);
-    ui->txtTags->blockSignals(false);
-    ui->txtIQN->blockSignals(false);
+    this->ui->txtName->blockSignals(false);
+    this->ui->txtDescription->blockSignals(false);
+    this->ui->cmbFolder->blockSignals(false);
+    this->ui->txtTags->blockSignals(false);
+    this->ui->txtIQN->blockSignals(false);
 }
 
 AsyncOperation* GeneralEditPage::saveSettings()
@@ -173,25 +173,25 @@ AsyncOperation* GeneralEditPage::saveSettings()
     // Step 1: Apply simple changes to objectDataCopy
     // These will be persisted by VerticallyTabbedDialog.applySimpleChanges()
 
-    if (nameChanged())
+    if (this->nameChanged())
     {
-        m_objectDataCopy["name_label"] = ui->txtName->text();
-        qDebug() << "GeneralEditPage: Name changed to" << ui->txtName->text();
+        this->m_objectDataCopy["name_label"] = this->ui->txtName->text();
+        qDebug() << "GeneralEditPage: Name changed to" << this->ui->txtName->text();
     }
 
-    if (descriptionChanged())
+    if (this->descriptionChanged())
     {
-        m_objectDataCopy["name_description"] = ui->txtDescription->toPlainText();
+        this->m_objectDataCopy["name_description"] = this->ui->txtDescription->toPlainText();
         qDebug() << "GeneralEditPage: Description changed";
     }
 
-    if (iqnChanged() && m_objectType == "host")
+    if (this->iqnChanged() && this->m_objectType == "host")
     {
         // IQN is stored in other_config["iscsi_iqn"]
-        QVariantMap otherConfig = m_objectDataCopy.value("other_config").toMap();
-        otherConfig["iscsi_iqn"] = ui->txtIQN->text();
-        m_objectDataCopy["other_config"] = otherConfig;
-        qDebug() << "GeneralEditPage: IQN changed to" << ui->txtIQN->text();
+        QVariantMap otherConfig = this->m_objectDataCopy.value("other_config").toMap();
+        otherConfig["iscsi_iqn"] = this->ui->txtIQN->text();
+        this->m_objectDataCopy["other_config"] = otherConfig;
+        qDebug() << "GeneralEditPage: IQN changed to" << this->ui->txtIQN->text();
     }
 
     // Step 2: Return action for complex operations (folder, tags)
@@ -200,26 +200,23 @@ AsyncOperation* GeneralEditPage::saveSettings()
     //       return new GeneralEditPageAction(xenObjectOrig, xenObjectCopy,
     //                                        folderEditor.Path, tagsEditor.Tags, true);
 
-    if (folderChanged() || tagsChanged())
+    if (this->folderChanged() || this->tagsChanged())
     {
-        QString newFolder = ui->cmbFolder->currentText().trimmed();
-        QStringList newTags = parseTagsFromText();
+        QString newFolder = this->ui->cmbFolder->currentText().trimmed();
+        QStringList newTags = this->parseTagsFromText();
 
         qDebug() << "GeneralEditPage: Creating GeneralEditPageAction - folder:" << newFolder
                  << "tags:" << newTags;
 
-        // TODO: Get connection from parent dialog
-        // For now, return nullptr - full implementation needs connection reference
-        // return new GeneralEditPageAction(
-        //     connection,
-        //     m_objectRef,
-        //     m_objectType,
-        //     m_originalFolder,
-        //     newFolder,
-        //     m_originalTags,
-        //     newTags,
-        //     true
-        // );
+        return new GeneralEditPageAction(
+             this->m_connection,
+             this->m_objectRef,
+             this->m_objectType,
+             this->m_originalFolder,
+             newFolder,
+             this->m_originalTags,
+             newTags,
+             true);
     }
 
     return nullptr;
@@ -228,15 +225,15 @@ AsyncOperation* GeneralEditPage::saveSettings()
 bool GeneralEditPage::isValidToSave() const
 {
     // Name is required
-    if (ui->txtName->text().trimmed().isEmpty())
+    if (this->ui->txtName->text().trimmed().isEmpty())
     {
         return false;
     }
 
     // IQN validation for hosts
-    if (m_objectType == "host" && ui->lblIQN->isVisible())
+    if (this->m_objectType == "host" && this->ui->lblIQN->isVisible())
     {
-        QString iqn = ui->txtIQN->text().trimmed();
+        QString iqn = this->ui->txtIQN->text().trimmed();
         if (!iqn.isEmpty())
         {
             // Basic IQN format validation: must start with "iqn." or "eui." or "naa."
@@ -252,19 +249,19 @@ bool GeneralEditPage::isValidToSave() const
 
 void GeneralEditPage::showLocalValidationMessages()
 {
-    if (ui->txtName->text().trimmed().isEmpty())
+    if (this->ui->txtName->text().trimmed().isEmpty())
     {
-        ui->txtName->setFocus();
-        ui->txtName->setStyleSheet("border: 1px solid red;");
+        this->ui->txtName->setFocus();
+        this->ui->txtName->setStyleSheet("border: 1px solid red;");
         // TODO: Show balloon tooltip with error message
     }
 
-    if (m_objectType == "host" && ui->lblIQN->isVisible())
+    if (this->m_objectType == "host" && this->ui->lblIQN->isVisible())
     {
-        QString iqn = ui->txtIQN->text().trimmed();
+        QString iqn = this->ui->txtIQN->text().trimmed();
         if (!iqn.isEmpty() && !iqn.startsWith("iqn.") && !iqn.startsWith("eui.") && !iqn.startsWith("naa."))
         {
-            ui->txtIQN->setStyleSheet("border: 1px solid red;");
+            this->ui->txtIQN->setStyleSheet("border: 1px solid red;");
             // TODO: Show balloon tooltip with error message
         }
     }
@@ -272,30 +269,30 @@ void GeneralEditPage::showLocalValidationMessages()
 
 void GeneralEditPage::hideLocalValidationMessages()
 {
-    ui->txtName->setStyleSheet("");
-    ui->txtIQN->setStyleSheet("");
+    this->ui->txtName->setStyleSheet("");
+    this->ui->txtIQN->setStyleSheet("");
     // TODO: Hide balloon tooltips
 }
 
 void GeneralEditPage::cleanup()
 {
     // Disconnect signals, cleanup resources
-    disconnect(ui->txtName, nullptr, this, nullptr);
-    disconnect(ui->txtDescription, nullptr, this, nullptr);
-    disconnect(ui->cmbFolder, nullptr, this, nullptr);
-    disconnect(ui->txtTags, nullptr, this, nullptr);
-    disconnect(ui->txtIQN, nullptr, this, nullptr);
+    this->disconnect(this->ui->txtName, nullptr, this, nullptr);
+    this->disconnect(this->ui->txtDescription, nullptr, this, nullptr);
+    this->disconnect(this->ui->cmbFolder, nullptr, this, nullptr);
+    this->disconnect(this->ui->txtTags, nullptr, this, nullptr);
+    this->disconnect(this->ui->txtIQN, nullptr, this, nullptr);
 }
 
 bool GeneralEditPage::hasChanged() const
 {
-    return nameChanged() || descriptionChanged() || folderChanged() ||
-           tagsChanged() || iqnChanged();
+    return this->nameChanged() || this->descriptionChanged() || this->folderChanged() ||
+           this->tagsChanged() || this->iqnChanged();
 }
 
 void GeneralEditPage::onNameChanged()
 {
-    hideLocalValidationMessages();
+    this->hideLocalValidationMessages();
 }
 
 void GeneralEditPage::onDescriptionChanged()
@@ -315,12 +312,12 @@ void GeneralEditPage::onTagsChanged()
 
 void GeneralEditPage::onIQNChanged()
 {
-    hideLocalValidationMessages();
+    this->hideLocalValidationMessages();
 }
 
 QStringList GeneralEditPage::parseTagsFromText() const
 {
-    QString tagsText = ui->txtTags->toPlainText();
+    QString tagsText = this->ui->txtTags->toPlainText();
     QStringList tags;
 
     // Split by comma and trim each tag
@@ -340,30 +337,35 @@ QStringList GeneralEditPage::parseTagsFromText() const
 
 bool GeneralEditPage::nameChanged() const
 {
-    return ui->txtName->text() != m_originalName;
+    return this->ui->txtName->text() != this->m_originalName;
 }
 
 bool GeneralEditPage::descriptionChanged() const
 {
-    return ui->txtDescription->toPlainText() != m_originalDescription;
+    return this->ui->txtDescription->toPlainText() != this->m_originalDescription;
 }
 
 bool GeneralEditPage::folderChanged() const
 {
-    return ui->cmbFolder->currentText().trimmed() != m_originalFolder;
+    return this->ui->cmbFolder->currentText().trimmed() != this->m_originalFolder;
 }
 
 bool GeneralEditPage::tagsChanged() const
 {
-    QStringList currentTags = parseTagsFromText();
-    return currentTags != m_originalTags;
+    QStringList currentTags = this->parseTagsFromText();
+    return currentTags != this->m_originalTags;
 }
 
 bool GeneralEditPage::iqnChanged() const
 {
-    if (m_objectType != "host" || !ui->lblIQN->isVisible())
+    if (this->m_objectType != "host" || !this->ui->lblIQN->isVisible())
     {
         return false;
     }
-    return ui->txtIQN->text() != m_originalIQN;
+    return this->ui->txtIQN->text() != this->m_originalIQN;
+}
+
+QVariantMap GeneralEditPage::getModifiedObjectData() const
+{
+    return this->m_objectDataCopy;
 }

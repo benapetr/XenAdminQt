@@ -29,19 +29,17 @@
 #include "ui_hostautostarteditpage.h"
 #include "../../xenlib/xen/actions/host/changehostautostartaction.h"
 #include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xencache.h"
 #include <QIcon>
 
-HostAutostartEditPage::HostAutostartEditPage(QWidget* parent)
-    : IEditPage(parent) // Changed from QWidget to IEditPage
-      ,
-      ui(new Ui::HostAutostartEditPage), m_originalAutostartEnabled(false)
+HostAutostartEditPage::HostAutostartEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::HostAutostartEditPage), m_originalAutostartEnabled(false)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 }
 
 HostAutostartEditPage::~HostAutostartEditPage()
 {
-    delete ui;
+    delete this->ui;
 }
 
 QString HostAutostartEditPage::text() const
@@ -51,13 +49,13 @@ QString HostAutostartEditPage::text() const
 
 QString HostAutostartEditPage::subText() const
 {
-    return getAutostartEnabled() ? tr("Enabled") : tr("Disabled");
+    return this->getAutostartEnabled() ? tr("Enabled") : tr("Disabled");
 }
 
 QIcon HostAutostartEditPage::image() const
 {
-    // TODO: Use proper icon
-    return QIcon(":/icons/power_16.png");
+    // Matches C# Properties.Resources._000_EnablePowerControl_h32bit_16
+    return QIcon(":/icons/enable_power_control_16.png");
 }
 
 void HostAutostartEditPage::setXenObjects(const QString& objectRef,
@@ -68,17 +66,17 @@ void HostAutostartEditPage::setXenObjects(const QString& objectRef,
     Q_UNUSED(objectDataBefore);
     Q_UNUSED(objectDataCopy);
 
-    m_hostRef = objectRef;
-    m_hostType = objectType;
+    this->m_hostRef = objectRef;
+    this->m_hostType = objectType;
 
     // m_connection is set by VerticallyTabbedDialog before calling this
 
-    repopulate();
+    this->repopulate();
 }
 
 void HostAutostartEditPage::repopulate()
 {
-    if (!m_connection || m_hostRef.isEmpty())
+    if (!this->m_connection || this->m_hostRef.isEmpty())
     {
         return;
     }
@@ -86,31 +84,58 @@ void HostAutostartEditPage::repopulate()
     // Get autostart enabled state from pool's other_config
     // In C#: host.GetVmAutostartEnabled() -> pool.GetVmAutostartEnabled()
     // This reads pool.other_config["auto_poweron"]
+    
+    this->m_originalAutostartEnabled = false; // Default to false
+    
+    XenCache* cache = this->m_connection->getCache();
+    if (cache)
+    {
+        // Get the pool for this host
+        // In C#: Pool p = Helpers.GetPoolOfOne(Connection);
+        QVariantMap hostData = cache->resolve("host", this->m_hostRef);
+        if (!hostData.isEmpty())
+        {
+            // Get pool reference from host
+            QStringList poolRefs = cache->getAllRefs("pool");
+            if (!poolRefs.isEmpty())
+            {
+                // Typically there's only one pool
+                QString poolRef = poolRefs.first();
+                QVariantMap poolData = cache->resolve("pool", poolRef);
+                
+                if (!poolData.isEmpty())
+                {
+                    // Read pool.other_config["auto_poweron"]
+                    // In C#: string auto_poweron = Get(other_config, "auto_poweron");
+                    QVariantMap otherConfig = poolData.value("other_config").toMap();
+                    QString autoPoweron = otherConfig.value("auto_poweron").toString();
+                    
+                    this->m_originalAutostartEnabled = (autoPoweron == "true");
+                }
+            }
+        }
+    }
 
-    // For now, we'll read from the objectDataCopy which should have pool info
-    // TODO: Query pool.other_config["auto_poweron"] properly
-    m_originalAutostartEnabled = false; // Default to false
-
-    ui->checkBoxEnableAutostart->setChecked(m_originalAutostartEnabled);
+    this->ui->checkBoxEnableAutostart->setChecked(this->m_originalAutostartEnabled);
 }
 
 bool HostAutostartEditPage::getAutostartEnabled() const
 {
-    return ui->checkBoxEnableAutostart->isChecked();
+    return this->ui->checkBoxEnableAutostart->isChecked();
 }
 
 AsyncOperation* HostAutostartEditPage::saveSettings()
 {
-    if (!hasChanged())
+    if (!this->hasChanged())
     {
         return nullptr;
     }
 
     // Create action to change autostart setting
     return new ChangeHostAutostartAction(
-        m_connection,
-        m_hostRef,
-        ui->checkBoxEnableAutostart->isChecked(),
+        this->m_connection,
+        this->m_hostRef,
+        this->ui->checkBoxEnableAutostart->isChecked(),
         true // suppressHistory
     );
 }
@@ -138,5 +163,5 @@ void HostAutostartEditPage::cleanup()
 
 bool HostAutostartEditPage::hasChanged() const
 {
-    return ui->checkBoxEnableAutostart->isChecked() != m_originalAutostartEnabled;
+    return this->ui->checkBoxEnableAutostart->isChecked() != this->m_originalAutostartEnabled;
 }

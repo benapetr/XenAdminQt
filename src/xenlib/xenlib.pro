@@ -75,6 +75,8 @@ SOURCES += \
     xen/actions/host/evacuatehostaction.cpp \
     xen/actions/host/destroyhostaction.cpp \
     xen/actions/host/changehostautostartaction.cpp \
+    xen/actions/host/editmultipathaction.cpp \
+    xen/actions/host/savepoweronsettingsaction.cpp \
     xen/actions/vdi/creatediskaction.cpp \
     xen/actions/vdi/detachvirtualdiskaction.cpp \
     xen/actions/vdi/destroydiskaction.cpp \
@@ -196,6 +198,8 @@ HEADERS += \
     xen/actions/sr/destroysraction.h \
     xen/actions/host/destroyhostaction.h \
     xen/actions/host/changehostautostartaction.h \
+    xen/actions/host/editmultipathaction.h \
+    xen/actions/host/savepoweronsettingsaction.h \
     xen/actions/vdi/creatediskaction.h \
     xen/actions/vdi/detachvirtualdiskaction.h \
     xen/actions/vdi/destroydiskaction.h \
