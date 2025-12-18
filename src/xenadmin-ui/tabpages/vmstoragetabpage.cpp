@@ -25,8 +25,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "storagetabpage.h"
-#include "ui_storagetabpage.h"
+#include "vmstoragetabpage.h"
+#include "ui_vmstoragetabpage.h"
 #include "xenlib.h"
 #include "xencache.h"
 #include "xen/api.h"
@@ -40,24 +40,19 @@
 #include "xen/actions/vdi/detachvirtualdiskaction.h"
 #include "xen/actions/vdi/destroydiskaction.h"
 #include "xen/actions/vbd/vbdcreateandplugaction.h"
-#include "xen/actions/sr/srrefreshaction.h"
 #include "xen/actions/delegatedasyncoperation.h"
 #include "dialogs/newvirtualdiskdialog.h"
 #include "dialogs/attachvirtualdiskdialog.h"
 #include "dialogs/vdipropertiesdialog.h"
 #include "dialogs/operationprogressdialog.h"
-#include "dialogs/movevirtualdiskdialog.h"
 #include "../operations/operationmanager.h"
 #include <QTableWidgetItem>
 #include <QDebug>
 #include <QMessageBox>
-#include <QHash>
 #include <QMenu>
 #include <QAction>
-#include <QTimer>
 
-StorageTabPage::StorageTabPage(QWidget* parent)
-    : BaseTabPage(parent), ui(new Ui::StorageTabPage)
+VMStorageTabPage::VMStorageTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::VMStorageTabPage)
 {
     this->ui->setupUi(this);
     this->ui->storageTable->horizontalHeader()->setStretchLastSection(true);
@@ -66,42 +61,24 @@ StorageTabPage::StorageTabPage(QWidget* parent)
     this->ui->storageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     // Connect CD/DVD drive signals
-    connect(this->ui->driveComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &StorageTabPage::onDriveComboBoxChanged);
-    connect(this->ui->isoComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &StorageTabPage::onIsoComboBoxChanged);
-    connect(this->ui->ejectButton, &QPushButton::clicked,
-            this, &StorageTabPage::onEjectButtonClicked);
-    connect(this->ui->noDrivesLabel, &QLabel::linkActivated,
-            this, &StorageTabPage::onNewCDDriveLinkClicked);
+    connect(this->ui->driveComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &VMStorageTabPage::onDriveComboBoxChanged);
+    connect(this->ui->isoComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &VMStorageTabPage::onIsoComboBoxChanged);
+    connect(this->ui->ejectButton, &QPushButton::clicked, this, &VMStorageTabPage::onEjectButtonClicked);
+    connect(this->ui->noDrivesLabel, &QLabel::linkActivated, this, &VMStorageTabPage::onNewCDDriveLinkClicked);
 
     // Connect storage table signals
-    connect(this->ui->storageTable, &QTableWidget::customContextMenuRequested,
-            this, &StorageTabPage::onStorageTableCustomContextMenuRequested);
-    connect(this->ui->storageTable, &QTableWidget::itemSelectionChanged,
-            this, &StorageTabPage::onStorageTableSelectionChanged);
-    connect(this->ui->storageTable, &QTableWidget::doubleClicked,
-            this, &StorageTabPage::onStorageTableDoubleClicked);
+    connect(this->ui->storageTable, &QTableWidget::customContextMenuRequested, this, &VMStorageTabPage::onStorageTableCustomContextMenuRequested);
+    connect(this->ui->storageTable, &QTableWidget::itemSelectionChanged, this, &VMStorageTabPage::onStorageTableSelectionChanged);
+    connect(this->ui->storageTable, &QTableWidget::doubleClicked, this, &VMStorageTabPage::onStorageTableDoubleClicked);
 
     // Connect button signals
-    connect(this->ui->addButton, &QPushButton::clicked,
-            this, &StorageTabPage::onAddButtonClicked);
-    connect(this->ui->attachButton, &QPushButton::clicked,
-            this, &StorageTabPage::onAttachButtonClicked);
-    connect(this->ui->rescanButton, &QPushButton::clicked,
-            this, &StorageTabPage::onRescanButtonClicked);
-    connect(this->ui->activateButton, &QPushButton::clicked,
-            this, &StorageTabPage::onActivateButtonClicked);
-    connect(this->ui->deactivateButton, &QPushButton::clicked,
-            this, &StorageTabPage::onDeactivateButtonClicked);
-    connect(this->ui->moveButton, &QPushButton::clicked,
-            this, &StorageTabPage::onMoveButtonClicked);
-    connect(this->ui->detachButton, &QPushButton::clicked,
-            this, &StorageTabPage::onDetachButtonClicked);
-    connect(this->ui->deleteButton, &QPushButton::clicked,
-            this, &StorageTabPage::onDeleteButtonClicked);
-    connect(this->ui->editButton, &QPushButton::clicked,
-            this, &StorageTabPage::onEditButtonClicked);
+    connect(this->ui->addButton, &QPushButton::clicked, this, &VMStorageTabPage::onAddButtonClicked);
+    connect(this->ui->attachButton, &QPushButton::clicked, this, &VMStorageTabPage::onAttachButtonClicked);
+    connect(this->ui->activateButton, &QPushButton::clicked, this, &VMStorageTabPage::onActivateButtonClicked);
+    connect(this->ui->deactivateButton, &QPushButton::clicked, this, &VMStorageTabPage::onDeactivateButtonClicked);
+    connect(this->ui->detachButton, &QPushButton::clicked, this, &VMStorageTabPage::onDetachButtonClicked);
+    connect(this->ui->deleteButton, &QPushButton::clicked, this, &VMStorageTabPage::onDeleteButtonClicked);
+    connect(this->ui->editButton, &QPushButton::clicked, this, &VMStorageTabPage::onEditButtonClicked);
 
     // Initially hide CD/DVD section
     this->ui->cdDvdGroupBox->setVisible(false);
@@ -110,26 +87,23 @@ StorageTabPage::StorageTabPage(QWidget* parent)
     this->updateStorageButtons();
 }
 
-StorageTabPage::~StorageTabPage()
+VMStorageTabPage::~VMStorageTabPage()
 {
     delete this->ui;
 }
 
-bool StorageTabPage::isApplicableForObjectType(const QString& objectType) const
+bool VMStorageTabPage::isApplicableForObjectType(const QString& objectType) const
 {
-    // Storage tab is applicable to VMs and SRs
-    // For VMs: shows virtual disks attached to the VM (VMStoragePage in C#)
-    // For SRs: shows all VDIs in the storage repository (SrStoragePage in C#)
-    // Note: Hosts and Pools use PhysicalStoragePage in C# (not yet implemented in Qt)
-    return objectType == "vm" || objectType == "sr";
+    // VM storage tab is only applicable to VMs (matches C# VMStoragePage)
+    return objectType == "vm";
 }
 
-void StorageTabPage::setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void VMStorageTabPage::setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
 {
     // Disconnect previous object updates
     if (this->m_xenLib)
     {
-        disconnect(this->m_xenLib, &XenLib::objectDataReceived, this, &StorageTabPage::onObjectDataReceived);
+        disconnect(this->m_xenLib, &XenLib::objectDataReceived, this, &VMStorageTabPage::onObjectDataReceived);
     }
 
     // Call base implementation
@@ -138,11 +112,11 @@ void StorageTabPage::setXenObject(const QString& objectType, const QString& obje
     // Connect to object updates for real-time CD/DVD changes
     if (this->m_xenLib && objectType == "vm")
     {
-        connect(this->m_xenLib, &XenLib::objectDataReceived, this, &StorageTabPage::onObjectDataReceived);
+        connect(this->m_xenLib, &XenLib::objectDataReceived, this, &VMStorageTabPage::onObjectDataReceived);
     }
 }
 
-void StorageTabPage::onObjectDataReceived(QString type, QString ref, QVariantMap data)
+void VMStorageTabPage::onObjectDataReceived(QString type, QString ref, QVariantMap data)
 {
     // Check if this update is for our VM
     if (type == "vm" && ref == this->m_objectRef)
@@ -161,36 +135,25 @@ void StorageTabPage::onObjectDataReceived(QString type, QString ref, QVariantMap
     }
 }
 
-void StorageTabPage::refreshContent()
+void VMStorageTabPage::refreshContent()
 {
     this->ui->storageTable->setRowCount(0);
 
-    if (this->m_objectData.isEmpty())
+    if (this->m_objectData.isEmpty() || this->m_objectType != "vm")
     {
         this->ui->cdDvdGroupBox->setVisible(false);
         this->updateStorageButtons();
         return;
     }
 
-    if (this->m_objectType == "vm")
-    {
-        this->populateVMStorage();
-        this->refreshCDDVDDrives();
-    } else if (this->m_objectType == "host")
-    {
-        this->ui->cdDvdGroupBox->setVisible(false);
-        this->populateHostStorage();
-    } else if (this->m_objectType == "sr")
-    {
-        this->ui->cdDvdGroupBox->setVisible(false);
-        this->populateSRStorage();
-    }
+    this->populateVMStorage();
+    this->refreshCDDVDDrives();
 
     // Update button states after populating table
     this->updateStorageButtons();
 }
 
-void StorageTabPage::populateVMStorage()
+void VMStorageTabPage::populateVMStorage()
 {
     this->ui->titleLabel->setText("Virtual Disks");
 
@@ -315,192 +278,7 @@ void StorageTabPage::populateVMStorage()
     }
 }
 
-void StorageTabPage::populateHostStorage()
-{
-    this->ui->titleLabel->setText("Storage Repositories");
-
-    if (!this->m_xenLib || this->m_objectRef.isEmpty())
-    {
-        return;
-    }
-
-    // Get host record to find PBDs
-    QVariantMap hostData = this->m_xenLib->getCache()->resolve("host", this->m_objectRef);
-    QVariantList pbdRefs = hostData.value("PBDs", QVariantList()).toList();
-
-    // Get all SRs and filter by this host's PBDs
-    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->getAll("sr");
-
-    for (const QVariantMap& srData : allSRs)
-    {
-        QString srRef = srData.value("ref", "").toString();
-
-        // Check if this SR has a PBD on this host
-        QVariantList srPBDs = srData.value("PBDs", QVariantList()).toList();
-        bool hasHostPBD = false;
-        bool isPlugged = false;
-
-        for (const QVariant& pbdVar : srPBDs)
-        {
-            QString pbdRef = pbdVar.toString();
-            if (pbdRefs.contains(pbdRef))
-            {
-                hasHostPBD = true;
-
-                // Get PBD record to check if plugged
-                QVariantMap pbdData = this->m_xenLib->getCache()->resolve("pbd", pbdRef);
-                isPlugged = pbdData.value("currently_attached", false).toBool();
-                break;
-            }
-        }
-
-        if (!hasHostPBD)
-        {
-            continue;
-        }
-
-        QString name = srData.value("name_label", "Unknown").toString();
-        QString type = srData.value("type", "").toString();
-        QString description = srData.value("name_description", "").toString();
-
-        // Calculate total and used space
-        qint64 physicalSize = srData.value("physical_size", 0).toLongLong();
-        qint64 physicalUtilisation = srData.value("physical_utilisation", 0).toLongLong();
-
-        QString totalSpace = "N/A";
-        QString usedSpace = "N/A";
-
-        if (physicalSize > 0)
-        {
-            double totalGB = physicalSize / (1024.0 * 1024.0 * 1024.0);
-            double usedGB = physicalUtilisation / (1024.0 * 1024.0 * 1024.0);
-            totalSpace = QString::number(totalGB, 'f', 2) + " GB";
-            usedSpace = QString::number(usedGB, 'f', 2) + " GB (" +
-                        QString::number((usedGB / totalGB) * 100.0, 'f', 1) + "%)";
-        }
-
-        // Add row to table
-        int row = this->ui->storageTable->rowCount();
-        this->ui->storageTable->insertRow(row);
-
-        // Store SR ref for context menu
-        QTableWidgetItem* nameItem = new QTableWidgetItem(name);
-        nameItem->setData(Qt::UserRole, srRef);
-        this->ui->storageTable->setItem(row, 0, nameItem);
-
-        this->ui->storageTable->setItem(row, 1, new QTableWidgetItem(type));
-        this->ui->storageTable->setItem(row, 2, new QTableWidgetItem(totalSpace));
-        this->ui->storageTable->setItem(row, 3, new QTableWidgetItem(usedSpace));
-        this->ui->storageTable->setItem(row, 4, new QTableWidgetItem(isPlugged ? "Connected" : "Disconnected"));
-    }
-}
-
-void StorageTabPage::populateSRStorage()
-{
-    // Show VDIs in the SR (matching C# SrStoragePage)
-    // C# Reference: SrStoragePage.cs BuildList() and RefreshDataGridView()
-    this->ui->titleLabel->setText("Virtual Disks");
-
-    if (!this->m_xenLib || this->m_objectRef.isEmpty())
-    {
-        return;
-    }
-
-    // Get all VDIs in this SR
-    QVariantList vdiRefs = this->m_objectData.value("VDIs").toList();
-
-    // Set table columns for SR view (different from VM view)
-    // Columns: Name, Description, Size, VM (which VMs use this), CBT status
-    this->ui->storageTable->setColumnCount(5);
-    this->ui->storageTable->setHorizontalHeaderLabels(
-        QStringList() << "Name" << "Description" << "Size" << "VM" << "CBT");
-
-    for (const QVariant& vdiRefVar : vdiRefs)
-    {
-        QString vdiRef = vdiRefVar.toString();
-        QVariantMap vdiRecord = this->m_xenLib->getCache()->resolve("vdi", vdiRef);
-
-        if (vdiRecord.isEmpty())
-            continue;
-
-        // Filter out snapshots and intermediate storage motion snapshots
-        // C# checks: vdi.Show() && !vdi.IsAnIntermediateStorageMotionSnapshot()
-        bool isSnapshot = vdiRecord.value("is_a_snapshot", false).toBool();
-        if (isSnapshot)
-            continue;
-
-        // Check for intermediate storage motion snapshot
-        // These have sm_config["base_mirror"] set
-        QVariantMap smConfig = vdiRecord.value("sm_config").toMap();
-        if (smConfig.contains("base_mirror"))
-            continue;
-
-        // Get VDI information
-        QString vdiName = vdiRecord.value("name_label", "").toString();
-        QString vdiDescription = vdiRecord.value("name_description", "").toString();
-
-        // Get size in human-readable format
-        qint64 virtualSize = vdiRecord.value("virtual_size", 0).toLongLong();
-        QString size = "N/A";
-        if (virtualSize > 0)
-        {
-            double sizeGB = virtualSize / (1024.0 * 1024.0 * 1024.0);
-            size = QString::number(sizeGB, 'f', 2) + " GB";
-        }
-
-        // Find which VMs are using this VDI
-        // C# shows VM names that have VBDs attached to this VDI
-        QStringList vmNames;
-        QVariantList vbdRefs = vdiRecord.value("VBDs").toList();
-        for (const QVariant& vbdRefVar : vbdRefs)
-        {
-            QString vbdRef = vbdRefVar.toString();
-            QVariantMap vbdData = this->m_xenLib->getCache()->resolve("vbd", vbdRef);
-
-            if (vbdData.isEmpty())
-                continue;
-
-            QString vmRef = vbdData.value("VM").toString();
-            QVariantMap vmData = this->m_xenLib->getCache()->resolve("vm", vmRef);
-
-            if (!vmData.isEmpty())
-            {
-                QString vmName = vmData.value("name_label", "Unknown").toString();
-                if (!vmNames.contains(vmName))
-                    vmNames.append(vmName);
-            }
-        }
-
-        QString vmString = vmNames.isEmpty() ? "-" : vmNames.join(", ");
-
-        // Get CBT (Changed Block Tracking) status
-        // C# checks vdi.cbt_enabled
-        bool cbtEnabled = vdiRecord.value("cbt_enabled", false).toBool();
-        QString cbtStatus = cbtEnabled ? "Enabled" : "-";
-
-        // Add row to table
-        int row = this->ui->storageTable->rowCount();
-        this->ui->storageTable->insertRow(row);
-
-        // Store VDI ref for context menu
-        QTableWidgetItem* nameItem = new QTableWidgetItem(vdiName);
-        nameItem->setData(Qt::UserRole, vdiRef);
-        this->ui->storageTable->setItem(row, 0, nameItem);
-
-        this->ui->storageTable->setItem(row, 1, new QTableWidgetItem(vdiDescription));
-        this->ui->storageTable->setItem(row, 2, new QTableWidgetItem(size));
-        this->ui->storageTable->setItem(row, 3, new QTableWidgetItem(vmString));
-        this->ui->storageTable->setItem(row, 4, new QTableWidgetItem(cbtStatus));
-    }
-
-    // Resize columns to content
-    for (int i = 0; i < this->ui->storageTable->columnCount(); ++i)
-    {
-        this->ui->storageTable->resizeColumnToContents(i);
-    }
-}
-
-void StorageTabPage::refreshCDDVDDrives()
+void VMStorageTabPage::refreshCDDVDDrives()
 {
     // Clear previous data
     this->m_vbdRefs.clear();
@@ -560,7 +338,7 @@ void StorageTabPage::refreshCDDVDDrives()
     }
 }
 
-void StorageTabPage::updateCDDVDVisibility()
+void VMStorageTabPage::updateCDDVDVisibility()
 {
     int driveCount = this->ui->driveComboBox->count();
 
@@ -581,7 +359,7 @@ void StorageTabPage::updateCDDVDVisibility()
     this->ui->noDrivesLabel->setVisible(driveCount == 0);
 }
 
-void StorageTabPage::refreshISOList()
+void VMStorageTabPage::refreshISOList()
 {
     this->ui->isoComboBox->clear();
 
@@ -693,7 +471,7 @@ void StorageTabPage::refreshISOList()
     }
 }
 
-void StorageTabPage::onDriveComboBoxChanged(int index)
+void VMStorageTabPage::onDriveComboBoxChanged(int index)
 {
     if (index < 0)
     {
@@ -705,7 +483,7 @@ void StorageTabPage::onDriveComboBoxChanged(int index)
     this->refreshISOList();
 }
 
-void StorageTabPage::onIsoComboBoxChanged(int index)
+void VMStorageTabPage::onIsoComboBoxChanged(int index)
 {
     return;
     if (index < 0 || !this->m_xenLib)
@@ -768,13 +546,13 @@ void StorageTabPage::onIsoComboBoxChanged(int index)
     action->runAsync();
 }
 
-void StorageTabPage::onEjectButtonClicked()
+void VMStorageTabPage::onEjectButtonClicked()
 {
     // Set to [Empty]
     this->ui->isoComboBox->setCurrentIndex(0);
 }
 
-void StorageTabPage::onNewCDDriveLinkClicked(const QString& link)
+void VMStorageTabPage::onNewCDDriveLinkClicked(const QString& link)
 {
     Q_UNUSED(link);
 
@@ -872,81 +650,12 @@ void StorageTabPage::onNewCDDriveLinkClicked(const QString& link)
 
 // Storage table button and context menu implementation
 
-void StorageTabPage::updateStorageButtons()
+void VMStorageTabPage::updateStorageButtons()
 {
     // Different button visibility for VM vs SR view
     // C# Reference: SrStoragePage.cs RefreshButtons() lines 400-445
 
-    if (this->m_objectType == "sr")
-    {
-        // SR View: Show Rescan, Move, Add, Edit, Delete
-        // Hide VM-specific buttons: Attach, Activate, Deactivate, Detach
-        this->ui->attachButton->setVisible(false);
-        this->ui->activateButton->setVisible(false);
-        this->ui->deactivateButton->setVisible(false);
-        this->ui->detachButton->setVisible(false);
-
-        this->ui->rescanButton->setVisible(true);
-        this->ui->moveButton->setVisible(true);
-        this->ui->addButton->setVisible(true);
-        this->ui->editButton->setVisible(true);
-        this->ui->deleteButton->setVisible(true);
-
-        // Get selected VDI
-        QString vdiRef = getSelectedVDIRef();
-        bool hasSelection = !vdiRef.isEmpty();
-
-        // Check SR state (matches C# RefreshButtons logic lines 415-444)
-        // SR.Locked is indicated by empty allowed_operations
-        QVariantList srAllowedOps = this->m_objectData.value("allowed_operations", QVariantList()).toList();
-        bool srLocked = srAllowedOps.isEmpty();
-
-        // SR.IsDetached() - check if any PBD is currently_attached
-        bool srDetached = true;
-        QVariantList pbdRefs = this->m_objectData.value("PBDs", QVariantList()).toList();
-        if (!pbdRefs.isEmpty() && this->m_xenLib)
-        {
-            for (const QVariant& pbdVar : pbdRefs)
-            {
-                QString pbdRef = pbdVar.toString();
-                QVariantMap pbdData = this->m_xenLib->getCache()->resolve("pbd", pbdRef);
-                if (pbdData.value("currently_attached", false).toBool())
-                {
-                    srDetached = false;
-                    break;
-                }
-            }
-        }
-
-        // TODO: Check if SR is currently being scanned (HelpersGUI.BeingScanned)
-
-        // Rescan button - disabled if SR is locked, detached, or being scanned
-        this->ui->rescanButton->setEnabled(!srLocked && !srDetached);
-
-        // Add button - enabled if SR is not locked
-        this->ui->addButton->setEnabled(!srLocked);
-
-        // Move button - enabled for selected VDI
-        this->ui->moveButton->setEnabled(hasSelection);
-
-        // Edit button - enabled for single VDI selection (non-snapshot, non-locked)
-        if (hasSelection && this->m_xenLib)
-        {
-            QVariantMap vdiData = this->m_xenLib->getCache()->resolve("vdi", vdiRef);
-            bool isSnapshot = vdiData.value("is_a_snapshot", false).toBool();
-            QVariantList vdiAllowedOps = vdiData.value("allowed_operations", QVariantList()).toList();
-            bool vdiLocked = vdiAllowedOps.isEmpty();
-
-            this->ui->editButton->setEnabled(!isSnapshot && !vdiLocked && !srLocked);
-        } else
-        {
-            this->ui->editButton->setEnabled(false);
-        }
-
-        // Delete button - enabled for selected VDI (SR not locked)
-        // C# allows deletion even if VBDs exist (with confirmation)
-        this->ui->deleteButton->setEnabled(hasSelection && !srLocked);
-    } else if (this->m_objectType == "vm")
+    if (this->m_objectType == "vm")
     {
         // VM View: Show VM-specific buttons
         // Hide SR-specific buttons: Rescan, Move
@@ -1018,22 +727,22 @@ void StorageTabPage::updateStorageButtons()
 
         // Properties/Edit: Enabled for single selection
         this->ui->editButton->setEnabled(hasSelection && hasVDI && !isLocked);
-    } else
-    {
-        // Host or other view - hide all buttons
-        this->ui->addButton->setVisible(false);
-        this->ui->attachButton->setVisible(false);
-        this->ui->rescanButton->setVisible(false);
-        this->ui->activateButton->setVisible(false);
-        this->ui->deactivateButton->setVisible(false);
-        this->ui->moveButton->setVisible(false);
-        this->ui->detachButton->setVisible(false);
-        this->ui->deleteButton->setVisible(false);
-        this->ui->editButton->setVisible(false);
+        return;
     }
+
+    // Non-VM fallback - hide controls defensively
+    this->ui->addButton->setVisible(false);
+    this->ui->attachButton->setVisible(false);
+    this->ui->rescanButton->setVisible(false);
+    this->ui->activateButton->setVisible(false);
+    this->ui->deactivateButton->setVisible(false);
+    this->ui->moveButton->setVisible(false);
+    this->ui->detachButton->setVisible(false);
+    this->ui->deleteButton->setVisible(false);
+    this->ui->editButton->setVisible(false);
 }
 
-QString StorageTabPage::getSelectedVBDRef() const
+QString VMStorageTabPage::getSelectedVBDRef() const
 {
     QList<QTableWidgetItem*> selectedItems = this->ui->storageTable->selectedItems();
     if (selectedItems.isEmpty())
@@ -1047,7 +756,7 @@ QString StorageTabPage::getSelectedVBDRef() const
     return QString();
 }
 
-QString StorageTabPage::getSelectedVDIRef() const
+QString VMStorageTabPage::getSelectedVDIRef() const
 {
     QList<QTableWidgetItem*> selectedItems = this->ui->storageTable->selectedItems();
     if (selectedItems.isEmpty())
@@ -1058,23 +767,16 @@ QString StorageTabPage::getSelectedVDIRef() const
     if (!item)
         return QString();
 
-    // For SR view, VDI ref is in Qt::UserRole
-    // For VM view, VDI ref is in Qt::UserRole + 1 (UserRole has VBD ref)
-    if (this->m_objectType == "sr")
-    {
-        return item->data(Qt::UserRole).toString();
-    } else
-    {
-        return item->data(Qt::UserRole + 1).toString();
-    }
+    // VM view stores the VDI ref in Qt::UserRole + 1 (Qt::UserRole stores VBD ref)
+    return item->data(Qt::UserRole + 1).toString();
 }
 
-void StorageTabPage::onStorageTableSelectionChanged()
+void VMStorageTabPage::onStorageTableSelectionChanged()
 {
     this->updateStorageButtons();
 }
 
-void StorageTabPage::onStorageTableDoubleClicked(const QModelIndex& index)
+void VMStorageTabPage::onStorageTableDoubleClicked(const QModelIndex& index)
 {
     Q_UNUSED(index);
 
@@ -1084,101 +786,56 @@ void StorageTabPage::onStorageTableDoubleClicked(const QModelIndex& index)
     }
 }
 
-void StorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& pos)
+void VMStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& pos)
 {
     QMenu contextMenu(this);
 
     // Build context menu based on object type and button visibility
     // C# Reference: SrStoragePage.cs contextMenuStrip_Opening() lines 379-399
 
-    if (this->m_objectType == "sr")
-    {
-        // SR View: Rescan, Add, Move, Delete, Properties
-        if (this->ui->rescanButton->isVisible())
-        {
-            QAction* rescanAction = contextMenu.addAction("Rescan");
-            rescanAction->setEnabled(this->ui->rescanButton->isEnabled());
-            connect(rescanAction, &QAction::triggered, this, &StorageTabPage::onRescanButtonClicked);
-        }
-
-        if (this->ui->addButton->isVisible())
-        {
-            QAction* addAction = contextMenu.addAction("Add Virtual Disk...");
-            addAction->setEnabled(this->ui->addButton->isEnabled());
-            connect(addAction, &QAction::triggered, this, &StorageTabPage::onAddButtonClicked);
-        }
-
-        if (this->ui->moveButton->isVisible())
-        {
-            QAction* moveAction = contextMenu.addAction("Move Virtual Disk...");
-            moveAction->setEnabled(this->ui->moveButton->isEnabled());
-            connect(moveAction, &QAction::triggered, this, &StorageTabPage::onMoveButtonClicked);
-        }
-
-        if (this->ui->deleteButton->isVisible())
-        {
-            QAction* deleteAction = contextMenu.addAction("Delete Virtual Disk...");
-            deleteAction->setEnabled(this->ui->deleteButton->isEnabled());
-            connect(deleteAction, &QAction::triggered, this, &StorageTabPage::onDeleteButtonClicked);
-        }
-
-        // Separator before Properties
-        if (this->ui->editButton->isVisible() &&
-            (this->ui->rescanButton->isVisible() || this->ui->addButton->isVisible() ||
-             this->ui->moveButton->isVisible() || this->ui->deleteButton->isVisible()))
-        {
-            contextMenu.addSeparator();
-        }
-
-        if (this->ui->editButton->isVisible())
-        {
-            QAction* editAction = contextMenu.addAction("Properties...");
-            editAction->setEnabled(this->ui->editButton->isEnabled());
-            connect(editAction, &QAction::triggered, this, &StorageTabPage::onEditButtonClicked);
-        }
-    } else if (this->m_objectType == "vm")
+    if (this->m_objectType == "vm")
     {
         // VM View: Add, Attach, Activate/Deactivate, Detach, Delete, Properties
         if (this->ui->addButton->isVisible())
         {
             QAction* addAction = contextMenu.addAction("Add Virtual Disk...");
             addAction->setEnabled(this->ui->addButton->isEnabled());
-            connect(addAction, &QAction::triggered, this, &StorageTabPage::onAddButtonClicked);
+            connect(addAction, &QAction::triggered, this, &VMStorageTabPage::onAddButtonClicked);
         }
 
         if (this->ui->attachButton->isVisible())
         {
             QAction* attachAction = contextMenu.addAction("Attach Virtual Disk...");
             attachAction->setEnabled(this->ui->attachButton->isEnabled());
-            connect(attachAction, &QAction::triggered, this, &StorageTabPage::onAttachButtonClicked);
+            connect(attachAction, &QAction::triggered, this, &VMStorageTabPage::onAttachButtonClicked);
         }
 
         if (this->ui->activateButton->isVisible())
         {
             QAction* activateAction = contextMenu.addAction("Activate");
             activateAction->setEnabled(this->ui->activateButton->isEnabled());
-            connect(activateAction, &QAction::triggered, this, &StorageTabPage::onActivateButtonClicked);
+            connect(activateAction, &QAction::triggered, this, &VMStorageTabPage::onActivateButtonClicked);
         }
 
         if (this->ui->deactivateButton->isVisible())
         {
             QAction* deactivateAction = contextMenu.addAction("Deactivate");
             deactivateAction->setEnabled(this->ui->deactivateButton->isEnabled());
-            connect(deactivateAction, &QAction::triggered, this, &StorageTabPage::onDeactivateButtonClicked);
+            connect(deactivateAction, &QAction::triggered, this, &VMStorageTabPage::onDeactivateButtonClicked);
         }
 
         if (this->ui->detachButton->isVisible())
         {
             QAction* detachAction = contextMenu.addAction("Detach Virtual Disk");
             detachAction->setEnabled(this->ui->detachButton->isEnabled());
-            connect(detachAction, &QAction::triggered, this, &StorageTabPage::onDetachButtonClicked);
+            connect(detachAction, &QAction::triggered, this, &VMStorageTabPage::onDetachButtonClicked);
         }
 
         if (this->ui->deleteButton->isVisible())
         {
             QAction* deleteAction = contextMenu.addAction("Delete Virtual Disk...");
             deleteAction->setEnabled(this->ui->deleteButton->isEnabled());
-            connect(deleteAction, &QAction::triggered, this, &StorageTabPage::onDeleteButtonClicked);
+            connect(deleteAction, &QAction::triggered, this, &VMStorageTabPage::onDeleteButtonClicked);
         }
 
         contextMenu.addSeparator();
@@ -1187,15 +844,18 @@ void StorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& pos)
         {
             QAction* editAction = contextMenu.addAction("Properties...");
             editAction->setEnabled(this->ui->editButton->isEnabled());
-            connect(editAction, &QAction::triggered, this, &StorageTabPage::onEditButtonClicked);
+            connect(editAction, &QAction::triggered, this, &VMStorageTabPage::onEditButtonClicked);
         }
+    } else
+    {
+        return;
     }
 
     // Show context menu at the requested position
     contextMenu.exec(this->ui->storageTable->mapToGlobal(pos));
 }
 
-void StorageTabPage::onAddButtonClicked()
+void VMStorageTabPage::onAddButtonClicked()
 {
     if (!this->m_xenLib || this->m_objectRef.isEmpty())
         return;
@@ -1307,7 +967,7 @@ void StorageTabPage::onAddButtonClicked()
         this->m_xenLib->requestObjectData("vm", this->m_objectRef);
 }
 
-void StorageTabPage::onAttachButtonClicked()
+void VMStorageTabPage::onAttachButtonClicked()
 {
     if (!this->m_xenLib || this->m_objectRef.isEmpty())
         return;
@@ -1394,7 +1054,7 @@ void StorageTabPage::onAttachButtonClicked()
         this->m_xenLib->requestObjectData("vm", this->m_objectRef);
 }
 
-void StorageTabPage::onActivateButtonClicked()
+void VMStorageTabPage::onActivateButtonClicked()
 {
     QString vbdRef = getSelectedVBDRef();
     if (vbdRef.isEmpty() || !this->m_xenLib)
@@ -1448,7 +1108,7 @@ void StorageTabPage::onActivateButtonClicked()
     delete dialog;
 }
 
-void StorageTabPage::onDeactivateButtonClicked()
+void VMStorageTabPage::onDeactivateButtonClicked()
 {
     QString vbdRef = getSelectedVBDRef();
     if (vbdRef.isEmpty() || !this->m_xenLib)
@@ -1502,7 +1162,7 @@ void StorageTabPage::onDeactivateButtonClicked()
     delete dialog;
 }
 
-void StorageTabPage::onDetachButtonClicked()
+void VMStorageTabPage::onDetachButtonClicked()
 {
     QString vbdRef = getSelectedVBDRef();
     QString vdiRef = getSelectedVDIRef();
@@ -1545,7 +1205,7 @@ void StorageTabPage::onDetachButtonClicked()
     delete dialog;
 }
 
-void StorageTabPage::onDeleteButtonClicked()
+void VMStorageTabPage::onDeleteButtonClicked()
 {
     QString vbdRef = getSelectedVBDRef();
     QString vdiRef = getSelectedVDIRef();
@@ -1611,7 +1271,7 @@ void StorageTabPage::onDeleteButtonClicked()
     delete dialog;
 }
 
-void StorageTabPage::onEditButtonClicked()
+void VMStorageTabPage::onEditButtonClicked()
 {
     QString vdiRef = getSelectedVDIRef();
     if (vdiRef.isEmpty() || !this->m_xenLib)
@@ -1688,62 +1348,4 @@ void StorageTabPage::onEditButtonClicked()
     // Refresh to show updated properties
     if (this->m_xenLib)
         this->m_xenLib->requestObjectData("vm", this->m_objectRef);
-}
-
-void StorageTabPage::onRescanButtonClicked()
-{
-    // Rescan SR for new/changed VDIs
-    // C# Reference: SrStoragePage.cs Rescan() lines 449-453
-    // Creates SrRefreshAction and runs it async
-
-    if (!this->m_xenLib || this->m_objectRef.isEmpty() || this->m_objectType != "sr")
-        return;
-
-    // Create and run SR refresh action
-    // This calls SR.scan() API and shows in Operations/History
-    SrRefreshAction* action = new SrRefreshAction(
-        this->m_xenLib->getConnection(),
-        this->m_objectRef);
-
-    // Register with OperationManager for tracking
-    OperationManager* opManager = OperationManager::instance();
-    opManager->registerOperation(action);
-
-    // Run async
-    action->runAsync();
-
-    // Refresh SR data after a short delay to pick up changes
-    QTimer::singleShot(2000, this, [this]() {
-        if (this->m_xenLib && !this->m_objectRef.isEmpty())
-        {
-            this->m_xenLib->requestObjectData("sr", this->m_objectRef);
-        }
-    });
-}
-
-void StorageTabPage::onMoveButtonClicked()
-{
-    // Move VDI to another SR
-    // C# Reference: SrStoragePage.cs lines 413-414
-    // buttonMove.Command = MoveVirtualDiskDialog.MoveMigrateCommand()
-
-    QString vdiRef = getSelectedVDIRef();
-    if (vdiRef.isEmpty() || !this->m_xenLib)
-        return;
-
-    // Open Move Virtual Disk dialog
-    MoveVirtualDiskDialog dialog(this->m_xenLib, vdiRef, this);
-    dialog.exec();
-
-    // Refresh SR data to show updated VDI list
-    if (dialog.result() == QDialog::Accepted)
-    {
-        // Refresh after a delay to allow the move operation to start
-        QTimer::singleShot(1000, this, [this]() {
-            if (this->m_xenLib && !this->m_objectRef.isEmpty())
-            {
-                this->m_xenLib->requestObjectData("sr", this->m_objectRef);
-            }
-        });
-    }
 }

@@ -59,6 +59,9 @@
 #include "storage/repairsrcommand.h"
 #include "storage/detachsrcommand.h"
 #include "storage/setdefaultsrcommand.h"
+#include "storage/reattachsrcommand.h"
+#include "storage/forgetsrcommand.h"
+#include "storage/destroysrcommand.h"
 #include "storage/storagepropertiescommand.h"
 #include "template/deletetemplatecommand.h"
 #include "template/exporttemplatecommand.h"
@@ -112,7 +115,7 @@ QMenu* ContextMenuBuilder::buildContextMenu(QTreeWidgetItem* item, QWidget* pare
     {
         // C# pattern: disconnected servers show Connect, Forget Password, Remove menu items
         this->buildDisconnectedHostContextMenu(menu, item);
-    } else if (objectType == "storage")
+    } else if (objectType == "sr")
     {
         this->buildSRContextMenu(menu, item);
     } else if (objectType == "pool")
@@ -311,9 +314,8 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QTreeWidgetItem* item
 
 void ContextMenuBuilder::buildSRContextMenu(QMenu* menu, QTreeWidgetItem* item)
 {
-    Q_UNUSED(item)
+    Q_UNUSED(item);
 
-    // Storage repository operations
     RepairSRCommand* repairCmd = new RepairSRCommand(this->m_mainWindow, this);
     this->addCommand(menu, repairCmd);
 
@@ -325,12 +327,14 @@ void ContextMenuBuilder::buildSRContextMenu(QMenu* menu, QTreeWidgetItem* item)
     DetachSRCommand* detachCmd = new DetachSRCommand(this->m_mainWindow, this);
     this->addCommand(menu, detachCmd);
 
-    this->addSeparator(menu);
+    ReattachSRCommand* reattachCmd = new ReattachSRCommand(this->m_mainWindow, this);
+    this->addCommand(menu, reattachCmd);
 
-    // TODO: Add more SR operations (reattach, forget, destroy)
-    menu->addAction("Reattach");
-    menu->addAction("Forget");
-    menu->addAction("Destroy");
+    ForgetSRCommand* forgetCmd = new ForgetSRCommand(this->m_mainWindow, this);
+    this->addCommand(menu, forgetCmd);
+
+    DestroySRCommand* destroyCmd = new DestroySRCommand(this->m_mainWindow, this);
+    this->addCommand(menu, destroyCmd);
 
     this->addSeparator(menu);
 

@@ -50,9 +50,13 @@ class DetachSRCommand : public Command
             return "Detach SR";
         }
 
-    protected:
+        void setTargetSR(const QString& srRef);
         bool canRun() const override;
         void run() override;
+
+    private:
+        QString currentSR() const;
+        QString m_overrideSRRef;
 };
 
 #endif // DETACHSRCOMMAND_H

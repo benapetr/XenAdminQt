@@ -39,6 +39,11 @@ StoragePropertiesCommand::StoragePropertiesCommand(MainWindow* mainWindow, QObje
 {
 }
 
+void StoragePropertiesCommand::setTargetSR(const QString& srRef)
+{
+    this->m_overrideSRRef = srRef;
+}
+
 bool StoragePropertiesCommand::canRun() const
 {
     QString srRef = getSelectedSRRef();
@@ -70,6 +75,9 @@ QString StoragePropertiesCommand::menuText() const
 
 QString StoragePropertiesCommand::getSelectedSRRef() const
 {
+    if (!this->m_overrideSRRef.isEmpty())
+        return this->m_overrideSRRef;
+
     QString objectType = getSelectedObjectType();
     if (objectType != "sr")
         return QString();
