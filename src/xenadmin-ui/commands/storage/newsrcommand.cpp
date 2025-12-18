@@ -26,9 +26,13 @@
  */
 
 #include "newsrcommand.h"
+#include <QDebug>
 #include "../../mainwindow.h"
+#include <QDebug>
 #include "../../dialogs/newsrwizard.h"
+#include <QDebug>
 #include "xenlib.h"
+#include <QDebug>
 #include <QtWidgets>
 
 NewSRCommand::NewSRCommand(MainWindow* mainWindow, QObject* parent)

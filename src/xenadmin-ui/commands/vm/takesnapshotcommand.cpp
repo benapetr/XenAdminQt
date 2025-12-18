@@ -26,15 +26,25 @@
  */
 
 #include "takesnapshotcommand.h"
+#include <QDebug>
 #include "../../mainwindow.h"
+#include <QDebug>
 #include "../../operations/operationmanager.h"
+#include <QDebug>
 #include "../../dialogs/vmsnapshotdialog.h"
+#include <QDebug>
 #include "../../ConsoleView/ConsolePanel.h"
+#include <QDebug>
 #include "xenlib.h"
+#include <QDebug>
 #include "xencache.h"
+#include <QDebug>
 #include "xen/api.h"
+#include <QDebug>
 #include "xen/connection.h"
+#include <QDebug>
 #include "xen/actions/vm/vmsnapshotcreateaction.h"
+#include <QDebug>
 #include <QtWidgets>
 
 TakeSnapshotCommand::TakeSnapshotCommand(QObject* parent)

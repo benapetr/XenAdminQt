@@ -2502,7 +2502,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
     // IMPORTANT: parseJsonRpcResponse() should have unwrapped Status/Value,
     // but in case it returned the full map, extract just the Value part
     QVariant responseData = parsedResponse;
-    if (parsedResponse.typeId() == QVariant::Map)
+    if (parsedResponse.type() == QVariant::Map)
     {
         QVariantMap responseMap = parsedResponse.toMap();
         // qDebug() << "XenLib::onConnectionApiResponse - Response map has" << responseMap.size() << "keys";
@@ -2515,7 +2515,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
             // qDebug() << "XenLib::onConnectionApiResponse - Extracting Value from wrapped response";
             responseData = responseMap.value("Value");
             // qDebug() << "XenLib::onConnectionApiResponse - After extraction, responseData type:" << responseData.typeName();
-            if (responseData.typeId() == QVariant::Map)
+            if (responseData.type() == QVariant::Map)
             {
                 QVariantMap extractedMap = responseData.toMap();
                 // qDebug() << "XenLib::onConnectionApiResponse - Extracted map has" << extractedMap.size() << "keys";
@@ -2659,7 +2659,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
 
         QVariantMap eventBatch;
 
-        if (responseData.typeId() == QVariant::Map)
+        if (responseData.type() == QVariant::Map)
         {
             eventBatch = responseData.toMap();
         } else
@@ -2711,7 +2711,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
             // For "add" and "mod" operations, add to cache
             if (operation == "add" || operation == "mod")
             {
-                if (snapshot.isValid() && snapshot.typeId() == QVariant::Map)
+                if (snapshot.isValid() && snapshot.type() == QVariant::Map)
                 {
                     QVariantMap objectData = snapshot.toMap();
                     objectData["ref"] = objectRef; // Ensure legacy ref key is available
@@ -2804,14 +2804,14 @@ QString XenLib::populateCache()
         {
             QVariant parsed = this->d->api->parseJsonRpcResponse(roleResponse);
             QVariant roleData = parsed;
-            if (parsed.typeId() == QVariant::Map)
+            if (parsed.type() == QVariant::Map)
             {
                 QVariantMap map = parsed.toMap();
                 if (map.contains("Value"))
                     roleData = map.value("Value");
             }
 
-            if (roleData.typeId() == QVariant::Map)
+            if (roleData.type() == QVariant::Map)
             {
                 QVariantMap roles = roleData.toMap();
                 for (auto it = roles.constBegin(); it != roles.constEnd(); ++it)
@@ -2870,7 +2870,7 @@ QString XenLib::populateCache()
 
     // Extract responseData (unwrap Status/Value if needed)
     QVariant responseData = parsedResponse;
-    if (parsedResponse.typeId() == QVariant::Map)
+    if (parsedResponse.type() == QVariant::Map)
     {
         QVariantMap responseMap = parsedResponse.toMap();
         if (responseMap.contains("Value"))
@@ -2879,7 +2879,7 @@ QString XenLib::populateCache()
         }
     }
 
-    if (responseData.typeId() != QVariant::Map)
+    if (responseData.type() != QVariant::Map)
     {
         qWarning() << "XenLib::populateCache - Event.from response is not a map, type:" << responseData.typeName();
         return QString();
@@ -2937,7 +2937,7 @@ QString XenLib::populateCache()
         // For "add" and "mod" operations, add to cache
         if (operation == "add" || operation == "mod")
         {
-            if (snapshot.isValid() && snapshot.typeId() == QVariant::Map)
+            if (snapshot.isValid() && snapshot.type() == QVariant::Map)
             {
                 QVariantMap objectData = snapshot.toMap();
                 objectData["ref"] = objectRef;
@@ -2975,14 +2975,14 @@ QString XenLib::populateCache()
         {
             QVariant parsed = this->d->api->parseJsonRpcResponse(consoleResponse);
             QVariant responseData = parsed;
-            if (parsed.typeId() == QVariant::Map)
+            if (parsed.type() == QVariant::Map)
             {
                 QVariantMap map = parsed.toMap();
                 if (map.contains("Value"))
                     responseData = map.value("Value");
             }
 
-            if (responseData.typeId() == QVariant::Map)
+            if (responseData.type() == QVariant::Map)
             {
                 QVariantMap consolesMap = responseData.toMap();
                 for (auto it = consolesMap.constBegin(); it != consolesMap.constEnd(); ++it)

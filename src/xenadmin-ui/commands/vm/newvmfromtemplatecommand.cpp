@@ -26,8 +26,11 @@
  */
 
 #include "newvmfromtemplatecommand.h"
+#include <QDebug>
 #include "../../mainwindow.h"
+#include <QDebug>
 #include "newvmcommand.h"
+#include <QDebug>
 #include <QtWidgets>
 
 NewVMFromTemplateCommand::NewVMFromTemplateCommand(QObject* parent)

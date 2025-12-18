@@ -26,9 +26,13 @@
  */
 
 #include "poolpropertiescommand.h"
+#include <QDebug>
 #include "../../dialogs/poolpropertiesdialog.h"
+#include <QDebug>
 #include "../../mainwindow.h"
+#include <QDebug>
 #include "xenlib.h"
+#include <QDebug>
 #include <QMessageBox>
 
 PoolPropertiesCommand::PoolPropertiesCommand(MainWindow* mainWindow, QObject* parent)

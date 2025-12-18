@@ -28,6 +28,7 @@
 #include "api.h"
 #include "session.h"
 #include "jsonrpcclient.h"
+#include <QDebug>
 
 class XenRpcAPI::Private
 {

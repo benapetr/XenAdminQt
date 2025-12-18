@@ -133,8 +133,9 @@ void NotificationsView::updateEntries(NavigationPane::NotificationsSubMode mode,
     itemData.unreadEntries = entries;
     item->setData(NotificationsSubModeRole, QVariant::fromValue(itemData));
 
-    // Force repaint
-    ui->subModeList->update(ui->subModeList->indexFromItem(item));
+    // Force repaint - Qt5 compatibility: indexFromItem is protected in Qt5
+    // Use row() to get index instead
+    ui->subModeList->update(ui->subModeList->model()->index(ui->subModeList->row(item), 0));
 }
 
 int NotificationsView::getTotalEntries() const

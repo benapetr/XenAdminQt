@@ -26,8 +26,11 @@
  */
 
 #include "operationmanager.h"
+#include <QDebug>
 #include "../actions/meddlingactionmanager.h"
+#include <QDebug>
 #include "../actions/meddlingaction.h"
+#include <QDebug>
 #include <QCoreApplication>
 #include <QUuid>
 #include <utility>

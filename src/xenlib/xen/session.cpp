@@ -282,7 +282,7 @@ bool XenSession::Private::parseLoginResponse(const QByteArray& response, QString
     }
 
     // Session ID is returned as a string directly
-    if (result.typeId() == QVariant::String)
+    if (result.type() == QVariant::String)
     {
         sessionId = result.toString();
         // qDebug() << "XenSession: Got session ID:" << sessionId;

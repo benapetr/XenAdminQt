@@ -55,9 +55,9 @@ uint GroupingTag::hashCode() const
     // C# equivalent: GroupingTag.GetHashCode()
     // Use group's hash code
     // For QVariant, we need to convert to a hashable type
-    if (m_group.typeId() == QMetaType::QString)
+    if (m_group.type() == QVariant::String)
         return qHash(m_group.toString());
-    else if (m_group.typeId() == QMetaType::Int)
+    else if (m_group.type() == QVariant::Int)
         return qHash(m_group.toInt());
     else
         return qHash(m_group.toString()); // Fallback to string representation

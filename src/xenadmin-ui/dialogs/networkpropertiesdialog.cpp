@@ -27,6 +27,7 @@
 
 #include "networkpropertiesdialog.h"
 #include "xenlib.h"
+#include <QDebug>
 #include <QMessageBox>
 #include <QHBoxLayout>
 

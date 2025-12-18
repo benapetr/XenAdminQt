@@ -39,10 +39,20 @@ namespace Ui
 }
 QT_END_NAMESPACE
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+// Qt5 requires actual includes for QtCharts classes, not forward declarations
+#include <QtCharts/QChartView>
+#include <QtCharts/QLineSeries>
+#include <QtCharts/QChart>
+#include <QtCharts/QValueAxis>
+
+QT_CHARTS_USE_NAMESPACE
+#else
 QT_FORWARD_DECLARE_CLASS(QChartView)
 QT_FORWARD_DECLARE_CLASS(QLineSeries)
 QT_FORWARD_DECLARE_CLASS(QChart)
 QT_FORWARD_DECLARE_CLASS(QValueAxis)
+#endif
 
 class PerformanceTabPage : public BaseTabPage
 {

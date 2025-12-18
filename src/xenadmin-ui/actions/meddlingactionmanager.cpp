@@ -26,7 +26,9 @@
  */
 
 #include "meddlingactionmanager.h"
+#include <QDebug>
 #include "meddlingaction.h"
+#include <QDebug>
 #include <xen/connection.h>
 #include <xen/session.h>
 #include <xen/api.h>

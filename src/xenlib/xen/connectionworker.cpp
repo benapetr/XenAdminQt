@@ -179,7 +179,7 @@ namespace Xen
 
         // Connect certificate validation with DIRECT connection to avoid queued signals after cleanup
         // This is critical because SSL errors can arrive after socket deletion if using queued connection
-        connect(this->m_socket, &QSslSocket::sslErrors, this, &ConnectionWorker::handleSslErrors, Qt::DirectConnection);
+        connect(this->m_socket, QOverload<const QList<QSslError>&>::of(&QSslSocket::sslErrors), this, &ConnectionWorker::handleSslErrors, Qt::DirectConnection);
 
         // qDebug() << "ConnectionWorker: Certificate manager allowSelfSigned =" << this->m_certManager->getAllowSelfSigned();
 

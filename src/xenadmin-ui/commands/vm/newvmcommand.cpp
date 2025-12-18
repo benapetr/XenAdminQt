@@ -26,8 +26,11 @@
  */
 
 #include "newvmcommand.h"
+#include <QDebug>
 #include "../../mainwindow.h"
+#include <QDebug>
 #include "../../dialogs/newvmwizard.h"
+#include <QDebug>
 #include <QtWidgets>
 
 NewVMCommand::NewVMCommand(QObject* parent)

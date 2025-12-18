@@ -26,6 +26,7 @@
  */
 
 #include "operationprogressdialog.h"
+#include <QDebug>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QStyle>

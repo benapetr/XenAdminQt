@@ -26,15 +26,25 @@
  */
 
 #include "navigationview.h"
+#include <QDebug>
 #include "ui_navigationview.h"
+#include <QDebug>
 #include "../iconmanager.h"
+#include <QDebug>
 #include "../../xenlib/xenlib.h"
+#include <QDebug>
 #include "../../xenlib/collections/connectionsmanager.h"
+#include <QDebug>
 #include "../../xenlib/xen/connection.h"
+#include <QDebug>
 #include "../../xenlib/xencache.h"
+#include <QDebug>
 #include "../../xenlib/vmhelpers.h"
+#include <QDebug>
 #include "../../xenlib/groupingtag.h"
+#include <QDebug>
 #include "../../xenlib/grouping.h"
+#include <QDebug>
 #include <algorithm>
 
 /**
