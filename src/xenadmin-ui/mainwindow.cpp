@@ -32,7 +32,8 @@
 #include "dialogs/aboutdialog.h"
 #include "dialogs/optionsdialog.h"
 #include "tabpages/generaltabpage.h"
-#include "tabpages/storagetabpage.h"
+#include "tabpages/vmstoragetabpage.h"
+#include "tabpages/physicalstoragetabpage.h"
 #include "tabpages/networktabpage.h"
 #include "tabpages/nicstabpage.h"
 #include "tabpages/consoletabpage.h"
@@ -332,12 +333,12 @@ MainWindow::MainWindow(QWidget* parent)
 
     // Initialize tab pages (without parent - they will be parented to QTabWidget when added)
     // Order matches C# MainWindow.Designer.cs lines 326-345
-    // Note: We don't implement all C# tabs yet (Home, Ballooning, PhysicalStorage, HA, WLB, AD, GPU, Search, Docker, USB)
+    // Note: We don't implement all C# tabs yet (Home, Ballooning, HA, WLB, AD, GPU, Docker, USB)
     this->m_tabPages.append(new GeneralTabPage()); // C#: TabPageGeneral
     // Ballooning - not implemented yet
     // Console tabs are added below after initialization
-    this->m_tabPages.append(new StorageTabPage()); // C#: TabPageStorage (for VMs), TabPageSR (for SRs)
-    // PhysicalStorage - not implemented yet (for Hosts/Pools)
+    this->m_tabPages.append(new VMStorageTabPage()); // C#: TabPageStorage (for VMs), TabPageSR (for SRs)
+    this->m_tabPages.append(new PhysicalStorageTabPage()); // C#: TabPagePhysicalStorage (for Hosts/Pools)
     this->m_tabPages.append(new NetworkTabPage());     // C#: TabPageNetwork (name changed to "Networking")
     this->m_tabPages.append(new NICsTabPage());        // C#: TabPageNICs
     this->m_tabPages.append(new PerformanceTabPage()); // C#: TabPagePerformance

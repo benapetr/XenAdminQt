@@ -25,40 +25,49 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef STORAGETABPAGE_H
-#define STORAGETABPAGE_H
+#ifndef PHYSICALSTORAGETABPAGE_H
+#define PHYSICALSTORAGETABPAGE_H
 
 #include "basetabpage.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui
 {
-    class StorageTabPage;
+    class PhysicalStorageTabPage;
 }
 QT_END_NAMESPACE
 
 /**
- * Storage tab page showing storage-related information.
- * For VMs: Shows attached virtual disks and their properties.
- * For Hosts: Shows available storage repositories.
- * For SRs: Shows detailed storage repository information and VDIs.
+ * Physical Storage tab page showing storage repositories for Hosts and Pools.
+ * 
+ * C# Equivalent: PhysicalStoragePage
+ * 
+ * This tab shows all storage repositories (SRs) visible to a host or pool,
+ * with columns for name, description, type, shared status, usage, size, and virtual allocation.
+ * 
+ * Buttons:
+ * - New SR: Create a new storage repository
+ * - Reclaim Freed Space (Trim): Reclaim space from thin-provisioned storage
+ * - Properties: Open SR properties dialog
  */
-class StorageTabPage : public BaseTabPage
+class PhysicalStorageTabPage : public BaseTabPage
 {
     Q_OBJECT
 
 public:
-    explicit StorageTabPage(QWidget* parent = nullptr);
-    ~StorageTabPage();
+    explicit PhysicalStorageTabPage(QWidget* parent = nullptr);
+    ~PhysicalStorageTabPage();
 
     QString tabTitle() const override
     {
         return "Storage";
     }
+    
     QString helpID() const override
     {
         return "TabPageStorage";
     }
+    
     bool isApplicableForObjectType(const QString& objectType) const override;
 
     void setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
@@ -67,44 +76,20 @@ protected:
     void refreshContent() override;
 
 private slots:
-    void onDriveComboBoxChanged(int index);
-    void onIsoComboBoxChanged(int index);
-    void onEjectButtonClicked();
-    void onNewCDDriveLinkClicked(const QString& link);
-    void onObjectDataReceived(QString type, QString ref, QVariantMap data);
-
-    // Storage table actions
-    void onAddButtonClicked();
-    void onAttachButtonClicked();
-    void onRescanButtonClicked();
-    void onActivateButtonClicked();
-    void onDeactivateButtonClicked();
-    void onMoveButtonClicked();
-    void onDetachButtonClicked();
-    void onDeleteButtonClicked();
-    void onEditButtonClicked();
+    void onNewSRButtonClicked();
+    void onTrimButtonClicked();
+    void onPropertiesButtonClicked();
     void onStorageTableCustomContextMenuRequested(const QPoint& pos);
     void onStorageTableSelectionChanged();
     void onStorageTableDoubleClicked(const QModelIndex& index);
 
 private:
-    Ui::StorageTabPage* ui;
+    Ui::PhysicalStorageTabPage* ui;
 
-    void populateVMStorage();
     void populateHostStorage();
-    void populateSRStorage();
-
-    // CD/DVD drive management
-    void refreshCDDVDDrives();
-    void refreshISOList();
-    void updateCDDVDVisibility();
-    QStringList m_vbdRefs;   // References to CD/DVD VBDs
-    QString m_currentVBDRef; // Currently selected VBD
-
-    // Storage table button management
-    void updateStorageButtons();
-    QString getSelectedVBDRef() const;
-    QString getSelectedVDIRef() const;
+    void populatePoolStorage();
+    void updateButtonStates();
+    QString getSelectedSRRef() const;
 };
 
-#endif // STORAGETABPAGE_H
+#endif // PHYSICALSTORAGETABPAGE_H

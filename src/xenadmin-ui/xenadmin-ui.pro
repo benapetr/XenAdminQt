@@ -7,6 +7,7 @@ TARGET = xenadmin-qt
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
+    tabpages/vmstoragetabpage.cpp \
     titlebar.cpp \
     placeholderwidget.cpp \
     settingsmanager.cpp \
@@ -151,7 +152,7 @@ SOURCES += \
     commands/network/destroybondcommand.cpp \
     tabpages/basetabpage.cpp \
     tabpages/generaltabpage.cpp \
-    tabpages/storagetabpage.cpp \
+    tabpages/physicalstoragetabpage.cpp \
     tabpages/networktabpage.cpp \
     tabpages/nicstabpage.cpp \
     tabpages/consoletabpage.cpp \
@@ -186,6 +187,7 @@ SOURCES += \
 HEADERS += \
     globals.h \
     mainwindow.h \
+    tabpages/vmstoragetabpage.h \
     titlebar.h \
     placeholderwidget.h \
     settingsmanager.h \
@@ -332,7 +334,7 @@ HEADERS += \
     commands/network/destroybondcommand.h \
     tabpages/basetabpage.h \
     tabpages/generaltabpage.h \
-    tabpages/storagetabpage.h \
+    tabpages/physicalstoragetabpage.h \
     tabpages/networktabpage.h \
     tabpages/nicstabpage.h \
     tabpages/consoletabpage.h \
@@ -403,7 +405,7 @@ FORMS += \
     dialogs/optionspages/saveandrestoreoptionspage.ui \
     dialogs/optionspages/connectionoptionspage.ui \
     tabpages/generaltabpage.ui \
-    tabpages/storagetabpage.ui \
+    tabpages/physicalstoragetabpage.ui \
     tabpages/networktabpage.ui \
     tabpages/nicstabpage.ui \
     tabpages/consoletabpage.ui \
@@ -411,6 +413,7 @@ FORMS += \
     tabpages/snapshotstabpage.ui \
     tabpages/performancetabpage.ui \
     tabpages/memorytabpage.ui \
+    tabpages/vmstoragetabpage.ui \
     widgets/navigationpane.ui \
     widgets/navigationview.ui \
     widgets/notificationsview.ui \
