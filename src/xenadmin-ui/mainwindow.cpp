@@ -1385,9 +1385,15 @@ void MainWindow::onTabChanged(int index)
 
 void MainWindow::showTreeContextMenu(const QPoint& position)
 {
-    QTreeWidgetItem* item = getServerTreeWidget()->itemAt(position);
+    QTreeWidget* tree = this->getServerTreeWidget();
+    if (!tree)
+        return;
+
+    QTreeWidgetItem* item = tree->itemAt(position);
     if (!item)
         return;
+
+    tree->setCurrentItem(item);
 
     // Use ContextMenuBuilder to create the appropriate menu
     ContextMenuBuilder builder(this);

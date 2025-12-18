@@ -32,6 +32,7 @@
 #include "../mainwindow.h"
 #include "../commands/storage/newsrcommand.h"
 #include "../commands/storage/trimsrcommand.h"
+#include "../commands/storage/detachsrcommand.h"
 #include "../commands/storage/storagepropertiescommand.h"
 #include <QTableWidgetItem>
 #include <QMenu>
@@ -537,6 +538,17 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
         trimAction->setEnabled(trimCmd.canRun());
         connect(trimAction, &QAction::triggered, this, [mainWindow, srRef]() {
             TrimSRCommand cmd(mainWindow);
+            cmd.setTargetSR(srRef);
+            if (cmd.canRun())
+                cmd.run();
+        });
+
+        DetachSRCommand detachCmd(mainWindow);
+        detachCmd.setTargetSR(srRef);
+        QAction* detachAction = menu.addAction(tr("Detach Storage Repository"));
+        detachAction->setEnabled(detachCmd.canRun());
+        connect(detachAction, &QAction::triggered, this, [mainWindow, srRef]() {
+            DetachSRCommand cmd(mainWindow);
             cmd.setTargetSR(srRef);
             if (cmd.canRun())
                 cmd.run();

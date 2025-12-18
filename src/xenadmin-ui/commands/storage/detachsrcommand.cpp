@@ -39,14 +39,14 @@ DetachSRCommand::DetachSRCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
+void DetachSRCommand::setTargetSR(const QString& srRef)
+{
+    this->m_overrideSRRef = srRef;
+}
+
 bool DetachSRCommand::canRun() const
 {
-    if (this->getSelectedObjectType() != "sr")
-    {
-        return false;
-    }
-
-    QString srRef = this->getSelectedObjectRef();
+    QString srRef = this->currentSR();
     if (srRef.isEmpty())
     {
         return false;
@@ -118,13 +118,13 @@ bool DetachSRCommand::canRun() const
 
 void DetachSRCommand::run()
 {
-    if (!this->canRun())
+    QString srRef = this->currentSR();
+    if (srRef.isEmpty())
     {
         qWarning() << "DetachSRCommand: Cannot run";
         return;
     }
 
-    QString srRef = this->getSelectedObjectRef();
     XenCache* cache = this->mainWindow()->xenLib()->getCache();
     QVariantMap srData = cache->resolve("sr", srRef);
     QString srName = srData.value("name_label").toString();
@@ -182,4 +182,19 @@ void DetachSRCommand::run()
 
     // Run action asynchronously
     action->runAsync();
+}
+
+QString DetachSRCommand::currentSR() const
+{
+    if (!this->m_overrideSRRef.isEmpty())
+    {
+        return this->m_overrideSRRef;
+    }
+
+    if (this->getSelectedObjectType() != "sr")
+    {
+        return QString();
+    }
+
+    return this->getSelectedObjectRef();
 }
