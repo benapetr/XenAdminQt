@@ -36,25 +36,26 @@ class VM;
 class SR;
 class Host;
 
-/// <summary>
-/// VMCopyAction copies a VM to a specified SR with a new name.
-/// This creates a full copy of the VM on the target storage.
-/// Matches C# XenModel/Actions/VM/VMCopyAction.cs
-/// </summary>
+/**
+ * @brief VMCopyAction copies a VM to a specified SR with a new name.
+ *
+ * This creates a full copy of the VM on the target storage.
+ * Matches C# XenModel/Actions/VM/VMCopyAction.cs
+ */
 class VMCopyAction : public AsyncOperation
 {
     Q_OBJECT
 
 public:
-    /// <summary>
-    /// Constructor for VM copy action
-    /// </summary>
-    /// <param name="connection">XenServer connection</param>
-    /// <param name="vm">VM to copy</param>
-    /// <param name="host">Host to place the copy on (can be nullptr)</param>
-    /// <param name="sr">SR to copy VM to</param>
-    /// <param name="nameLabel">Name for the copied VM</param>
-    /// <param name="description">Description for the copied VM</param>
+    /**
+     * @brief Constructor for VM copy action
+     * @param connection XenServer connection
+     * @param vm VM to copy
+     * @param host Host to place the copy on (can be nullptr)
+     * @param sr SR to copy VM to
+     * @param nameLabel Name for the copied VM
+     * @param description Description for the copied VM
+     */
     VMCopyAction(XenConnection* connection,
                  VM* vm,
                  Host* host,

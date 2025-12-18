@@ -38,29 +38,30 @@ class XenConnection;
 class VM;
 class SR;
 
-/// <summary>
-/// EnableHAAction enables High Availability on a pool.
-/// Matches C# XenModel/Actions/Pool/EnableHAAction.cs
-///
-/// Note: This is a simplified version. The C# implementation includes:
-/// - VM restart priority configuration (VMStartupOptions)
-/// - Complex error handling for VDI_NOT_AVAILABLE
-/// These features are partially implemented.
-/// </summary>
+/**
+ * @brief EnableHAAction enables High Availability on a pool.
+ *
+ * Matches C# XenModel/Actions/Pool/EnableHAAction.cs
+ *
+ * Note: This is a simplified version. The C# implementation includes:
+ * - VM restart priority configuration (VMStartupOptions)
+ * - Complex error handling for VDI_NOT_AVAILABLE
+ * These features are partially implemented.
+ */
 class EnableHAAction : public AsyncOperation
 {
     Q_OBJECT
 
 public:
-    /// <summary>
-    /// Constructor for enabling HA
-    /// </summary>
-    /// <param name="connection">Connection to the pool</param>
-    /// <param name="poolRef">Pool opaque reference</param>
-    /// <param name="heartbeatSRRefs">List of SR refs to use for heartbeat</param>
-    /// <param name="failuresToTolerate">Number of host failures to tolerate (0-3 typically)</param>
-    /// <param name="vmStartupOptions">Optional map of VM ref -> startup options (priority, order, delay)</param>
-    /// <param name="parent">Parent QObject</param>
+    /**
+     * @brief Constructor for enabling HA
+     * @param connection Connection to the pool
+     * @param poolRef Pool opaque reference
+     * @param heartbeatSRRefs List of SR refs to use for heartbeat
+     * @param failuresToTolerate Number of host failures to tolerate (0-3 typically)
+     * @param vmStartupOptions Optional map of VM ref -> startup options (priority, order, delay)
+     * @param parent Parent QObject
+     */
     EnableHAAction(XenConnection* connection,
                    const QString& poolRef,
                    const QStringList& heartbeatSRRefs,

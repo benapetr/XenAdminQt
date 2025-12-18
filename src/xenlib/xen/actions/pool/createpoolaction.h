@@ -35,49 +35,51 @@
 class XenConnection;
 class Host;
 
-/// <summary>
-/// CreatePoolAction creates a new pool from a coordinator and optional member hosts.
-/// Matches C# XenModel/Actions/Pool/CreatePoolAction.cs
-///
-/// Note: This is a simplified version. The C# implementation includes:
-/// - License compatibility checks and relicensing for all members
-/// - Active Directory configuration synchronization
-/// - Non-shared SR cleanup on coordinator
-/// These features are deferred for initial implementation.
-/// </summary>
+/**
+ * @brief CreatePoolAction creates a new pool from a coordinator and optional member hosts.
+ *
+ * Matches C# XenModel/Actions/Pool/CreatePoolAction.cs
+ *
+ * Note: This is a simplified version. The C# implementation includes:
+ * - License compatibility checks and relicensing for all members
+ * - Active Directory configuration synchronization
+ * - Non-shared SR cleanup on coordinator
+ * These features are deferred for initial implementation.
+ */
+
 class CreatePoolAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /// <summary>
-    /// Constructor for creating pool
-    /// </summary>
-    /// <param name="coordinatorConnection">Connection to host that will be coordinator</param>
-    /// <param name="coordinator">Host object that will be pool coordinator</param>
-    /// <param name="memberConnections">Connections to hosts that will join as members</param>
-    /// <param name="members">Host objects that will join as members</param>
-    /// <param name="name">Name for the new pool</param>
-    /// <param name="description">Description for the new pool</param>
-    /// <param name="parent">Parent QObject</param>
-    CreatePoolAction(XenConnection* coordinatorConnection,
-                     Host* coordinator,
-                     const QList<XenConnection*>& memberConnections,
-                     const QList<Host*>& members,
-                     const QString& name,
-                     const QString& description,
-                     QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor for creating pool
+         * @param coordinatorConnection Connection to host that will be coordinator
+         * @param coordinator Host object that will be pool coordinator
+         * @param memberConnections Connections to hosts that will join as members
+         * @param members Host objects that will join as members
+         * @param name Name for the new pool
+         * @param description Description for the new pool
+         * @param parent Parent QObject
+         */
+        CreatePoolAction(XenConnection* coordinatorConnection,
+                        Host* coordinator,
+                        const QList<XenConnection*>& memberConnections,
+                        const QList<Host*>& members,
+                        const QString& name,
+                        const QString& description,
+                        QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    XenConnection* m_coordinatorConnection;
-    Host* m_coordinator;
-    QList<XenConnection*> m_memberConnections;
-    QList<Host*> m_members;
-    QString m_name;
-    QString m_description;
+    private:
+        XenConnection* m_coordinatorConnection;
+        Host* m_coordinator;
+        QList<XenConnection*> m_memberConnections;
+        QList<Host*> m_members;
+        QString m_name;
+        QString m_description;
 };
 
 #endif // CREATEPOOLACTION_H

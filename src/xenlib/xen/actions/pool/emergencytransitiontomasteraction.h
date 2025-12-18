@@ -33,25 +33,22 @@
 
 class XenConnection;
 
-/// <summary>
-/// EmergencyTransitionToMasterAction promotes a slave to master in emergency situations.
-/// Matches C# usage of Pool.emergency_transition_to_master (no dedicated action class in C#)
+/// @brief EmergencyTransitionToMasterAction promotes a slave to master in emergency situations.
+/// 
+/// Matches C# usage of Pool.emergency_transition_to_master (no dedicated action class in C#).
 ///
 /// This operation is used when the current pool coordinator is unavailable and a slave
 /// needs to be promoted. It's a synchronous operation (no task polling).
 ///
 /// IMPORTANT: This must be executed from a slave host's connection, not the pool coordinator.
-/// </summary>
 class EmergencyTransitionToMasterAction : public AsyncOperation
 {
     Q_OBJECT
 
 public:
-    /// <summary>
-    /// Constructor for emergency coordinator transition
-    /// </summary>
-    /// <param name="slaveConnection">Connection to the slave host being promoted</param>
-    /// <param name="parent">Parent QObject</param>
+    /// @brief Constructor for emergency coordinator transition
+    /// @param slaveConnection Connection to the slave host being promoted
+    /// @param parent Parent QObject
     EmergencyTransitionToMasterAction(XenConnection* slaveConnection,
                                       QObject* parent = nullptr);
 

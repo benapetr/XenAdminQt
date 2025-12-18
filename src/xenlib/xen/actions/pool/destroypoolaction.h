@@ -33,33 +33,28 @@
 
 class XenConnection;
 
-/// <summary>
-/// DestroyPoolAction destroys a pool by clearing its name.
-/// Matches C# XenModel/Actions/Pool/DestroyPoolAction.cs
-///
-/// This can only be done when the pool has only one host (the coordinator).
-/// It effectively converts the pool back into a standalone host.
-/// </summary>
+/**
+ * @brief DestroyPoolAction destroys a pool by clearing its name.
+ *
+ * Matches C# XenModel/Actions/Pool/DestroyPoolAction.cs
+ *
+ * This can only be done when the pool has only one host (the coordinator).
+ * It effectively converts the pool back into a standalone host.
+ */
 class DestroyPoolAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /// <summary>
-    /// Constructor for destroying pool
-    /// </summary>
-    /// <param name="connection">Connection to the pool</param>
-    /// <param name="poolRef">Pool reference to destroy</param>
-    /// <param name="parent">Parent QObject</param>
-    DestroyPoolAction(XenConnection* connection,
-                      const QString& poolRef,
-                      QObject* parent = nullptr);
+    public:
+        DestroyPoolAction(XenConnection* connection,
+                        const QString& poolRef,
+                        QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_poolRef;
+    private:
+        QString m_poolRef;
 };
 
 #endif // DESTROYPOOLACTION_H

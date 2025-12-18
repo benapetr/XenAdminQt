@@ -33,23 +33,24 @@
 
 class XenConnection;
 
-/// <summary>
-/// DisableHAAction disables High Availability on a pool.
-/// Matches C# XenModel/Actions/Pool/DisableHAAction.cs
-///
-/// Simple wrapper around Pool.async_disable_ha.
-/// </summary>
+/**
+ * @brief DisableHAAction disables High Availability on a pool.
+ *
+ * Matches C# XenModel/Actions/Pool/DisableHAAction.cs
+ *
+ * Simple wrapper around Pool.async_disable_ha.
+ */
 class DisableHAAction : public AsyncOperation
 {
     Q_OBJECT
 
 public:
-    /// <summary>
-    /// Constructor for disabling HA
-    /// </summary>
-    /// <param name="connection">Connection to the pool</param>
-    /// <param name="poolRef">Pool opaque reference</param>
-    /// <param name="parent">Parent QObject</param>
+    /**
+     * @brief Constructor for disabling HA
+     * @param connection Connection to the pool
+     * @param poolRef Pool opaque reference
+     * @param parent Parent QObject
+     */
     DisableHAAction(XenConnection* connection,
                     const QString& poolRef,
                     QObject* parent = nullptr);

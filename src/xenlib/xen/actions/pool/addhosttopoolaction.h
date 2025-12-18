@@ -35,40 +35,42 @@ class XenConnection;
 class Host;
 class Pool;
 
-/// <summary>
-/// AddHostToPoolAction adds a standalone host to an existing pool.
-/// Matches C# XenModel/Actions/Pool/AddHostToPoolAction.cs
-///
-/// Note: This is a simplified version. The C# implementation includes:
-/// - License compatibility checks and relicensing
-/// - Active Directory configuration synchronization
-/// - Non-shared SR cleanup
-/// These features are deferred for initial implementation.
-/// </summary>
+/**
+ * @brief AddHostToPoolAction adds a standalone host to an existing pool.
+ *
+ * Matches C# XenModel/Actions/Pool/AddHostToPoolAction.cs
+ *
+ * Note: This is a simplified version. The C# implementation includes:
+ * - License compatibility checks and relicensing
+ * - Active Directory configuration synchronization
+ * - Non-shared SR cleanup
+ * These features are deferred for initial implementation.
+ */
+
 class AddHostToPoolAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /// <summary>
-    /// Constructor for adding host to pool
-    /// </summary>
-    /// <param name="poolConnection">Connection to the pool to join</param>
-    /// <param name="hostConnection">Connection to the host being joined</param>
-    /// <param name="joiningHost">Host object being joined to pool</param>
-    /// <param name="parent">Parent QObject</param>
-    AddHostToPoolAction(XenConnection* poolConnection,
-                        XenConnection* hostConnection,
-                        Host* joiningHost,
-                        QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor for adding host to pool
+         * @param poolConnection Connection to the pool to join
+         * @param hostConnection Connection to the host being joined
+         * @param joiningHost Host object being joined to pool
+         * @param parent Parent QObject
+         */
+        AddHostToPoolAction(XenConnection* poolConnection,
+                            XenConnection* hostConnection,
+                            Host* joiningHost,
+                            QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    XenConnection* m_poolConnection;
-    XenConnection* m_hostConnection;
-    Host* m_joiningHost;
+    private:
+        XenConnection* m_poolConnection;
+        XenConnection* m_hostConnection;
+        Host* m_joiningHost;
 };
 
 #endif // ADDHOSTTOPOOLACTION_H

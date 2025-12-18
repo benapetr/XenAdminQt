@@ -33,36 +33,38 @@
 
 class XenConnection;
 
-/// <summary>
-/// DesignateNewMasterAction performs an orderly handover of coordinator role.
-/// Matches C# usage of Pool.async_designate_new_master (used inline in EvacuateHostAction)
-///
-/// This operation transfers the pool coordinator role to a new host in an orderly fashion.
-/// Unlike emergency_transition_to_master, this is used during planned operations like
-/// host maintenance or load balancing.
-///
-/// The operation is asynchronous and returns a task to poll.
-/// </summary>
+/**
+ * @brief DesignateNewMasterAction performs an orderly handover of coordinator role.
+ *
+ * Matches C# usage of Pool.async_designate_new_master (used inline in EvacuateHostAction)
+ *
+ * This operation transfers the pool coordinator role to a new host in an orderly fashion.
+ * Unlike emergency_transition_to_master, this is used during planned operations like
+ * host maintenance or load balancing.
+ *
+ * The operation is asynchronous and returns a task to poll.
+ */
+
 class DesignateNewMasterAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /// <summary>
-    /// Constructor for designating new coordinator
-    /// </summary>
-    /// <param name="connection">Connection to the current pool coordinator</param>
-    /// <param name="newMasterRef">Host reference of the new coordinator</param>
-    /// <param name="parent">Parent QObject</param>
-    DesignateNewMasterAction(XenConnection* connection,
-                             const QString& newMasterRef,
-                             QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor for designating new coordinator
+         * @param connection Connection to the current pool coordinator
+         * @param newMasterRef Host reference of the new coordinator
+         * @param parent Parent QObject
+         */
+        DesignateNewMasterAction(XenConnection* connection,
+                                const QString& newMasterRef,
+                                QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_newMasterRef;
+    private:
+        QString m_newMasterRef;
 };
 
 #endif // DESIGNATENEWMASTERACTION_H

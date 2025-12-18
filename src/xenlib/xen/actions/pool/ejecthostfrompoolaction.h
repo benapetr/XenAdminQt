@@ -35,24 +35,25 @@ class XenConnection;
 class Host;
 class Pool;
 
-/// <summary>
-/// EjectHostFromPoolAction removes a host from a pool.
-/// Matches C# XenModel/Actions/Pool/EjectHostFromPoolAction.cs
-///
-/// The host must not have any running VMs and must not be the pool coordinator.
-/// </summary>
+/**
+ * @brief EjectHostFromPoolAction removes a host from a pool.
+ *
+ * Matches C# XenModel/Actions/Pool/EjectHostFromPoolAction.cs
+ *
+ * The host must not have any running VMs and must not be the pool coordinator.
+ */
 class EjectHostFromPoolAction : public AsyncOperation
 {
     Q_OBJECT
 
 public:
-    /// <summary>
-    /// Constructor for ejecting host from pool
-    /// </summary>
-    /// <param name="connection">Connection to the pool</param>
-    /// <param name="pool">Pool object</param>
-    /// <param name="hostToEject">Host object to eject from pool</param>
-    /// <param name="parent">Parent QObject</param>
+    /**
+     * @brief Constructor for ejecting host from pool
+     * @param connection Connection to the pool
+     * @param pool Pool object
+     * @param hostToEject Host object to eject from pool
+     * @param parent Parent QObject
+     */
     EjectHostFromPoolAction(XenConnection* connection,
                             Pool* pool,
                             Host* hostToEject,
