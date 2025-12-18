@@ -25,80 +25,59 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VMSTORAGETABPAGE_H
-#define VMSTORAGETABPAGE_H
+#ifndef SRSTORAGETABPAGE_H
+#define SRSTORAGETABPAGE_H
 
 #include "basetabpage.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui
 {
-    class VMStorageTabPage;
+    class SrStorageTabPage;
 }
 QT_END_NAMESPACE
 
-/**
- * VM storage tab showing virtual disks attached to VMs along with CD/DVD management.
- * C# Equivalent: VMStoragePage
- */
-class VMStorageTabPage : public BaseTabPage
+class SrStorageTabPage : public BaseTabPage
 {
     Q_OBJECT
 
 public:
-    explicit VMStorageTabPage(QWidget* parent = nullptr);
-    ~VMStorageTabPage();
+    explicit SrStorageTabPage(QWidget* parent = nullptr);
+    ~SrStorageTabPage();
 
     QString tabTitle() const override
     {
-        // Tab caption shown as "Storage" in original XenCenter client
         return "Storage";
     }
+
     QString helpID() const override
     {
         return "TabPageStorage";
     }
-    bool isApplicableForObjectType(const QString& objectType) const override;
 
+    bool isApplicableForObjectType(const QString& objectType) const override;
     void setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
 
 protected:
     void refreshContent() override;
 
 private slots:
-    void onDriveComboBoxChanged(int index);
-    void onIsoComboBoxChanged(int index);
-    void onEjectButtonClicked();
-    void onNewCDDriveLinkClicked(const QString& link);
-    void onObjectDataReceived(QString type, QString ref, QVariantMap data);
-
-    // Storage table actions
+    void onRescanButtonClicked();
     void onAddButtonClicked();
-    void onAttachButtonClicked();
-    void onActivateButtonClicked();
-    void onDeactivateButtonClicked();
-    void onDetachButtonClicked();
+    void onMoveButtonClicked();
     void onDeleteButtonClicked();
     void onEditButtonClicked();
-    void onStorageTableCustomContextMenuRequested(const QPoint& pos);
     void onStorageTableSelectionChanged();
     void onStorageTableDoubleClicked(const QModelIndex& index);
+    void onStorageTableCustomContextMenuRequested(const QPoint& pos);
 
 private:
-    Ui::VMStorageTabPage* ui;
-
-    void populateVMStorage();
-    // CD/DVD drive management
-    void refreshCDDVDDrives();
-    void refreshISOList();
-    void updateCDDVDVisibility();
-    QStringList m_vbdRefs;   // References to CD/DVD VBDs
-    QString m_currentVBDRef; // Currently selected VBD
-
-    // Storage table button management
-    void updateStorageButtons();
-    QString getSelectedVBDRef() const;
+    void populateSRStorage();
     QString getSelectedVDIRef() const;
+    void updateButtonStates();
+    void requestSrRefresh(int delayMs = 0);
+
+    Ui::SrStorageTabPage* ui;
 };
 
-#endif // VMSTORAGETABPAGE_H
+#endif // SRSTORAGETABPAGE_H

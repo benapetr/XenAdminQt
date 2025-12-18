@@ -34,8 +34,7 @@
 #include <QMessageBox>
 #include <algorithm>
 
-PhysicalStorageTabPage::PhysicalStorageTabPage(QWidget* parent)
-    : BaseTabPage(parent), ui(new Ui::PhysicalStorageTabPage)
+PhysicalStorageTabPage::PhysicalStorageTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::PhysicalStorageTabPage)
 {
     this->ui->setupUi(this);
     this->ui->storageTable->horizontalHeader()->setStretchLastSection(true);
@@ -44,20 +43,14 @@ PhysicalStorageTabPage::PhysicalStorageTabPage(QWidget* parent)
     this->ui->storageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     // Connect button signals
-    connect(this->ui->newSRButton, &QPushButton::clicked,
-            this, &PhysicalStorageTabPage::onNewSRButtonClicked);
-    connect(this->ui->trimButton, &QPushButton::clicked,
-            this, &PhysicalStorageTabPage::onTrimButtonClicked);
-    connect(this->ui->propertiesButton, &QPushButton::clicked,
-            this, &PhysicalStorageTabPage::onPropertiesButtonClicked);
+    connect(this->ui->newSRButton, &QPushButton::clicked, this, &PhysicalStorageTabPage::onNewSRButtonClicked);
+    connect(this->ui->trimButton, &QPushButton::clicked, this, &PhysicalStorageTabPage::onTrimButtonClicked);
+    connect(this->ui->propertiesButton, &QPushButton::clicked, this, &PhysicalStorageTabPage::onPropertiesButtonClicked);
 
     // Connect table signals
-    connect(this->ui->storageTable, &QTableWidget::customContextMenuRequested,
-            this, &PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested);
-    connect(this->ui->storageTable, &QTableWidget::itemSelectionChanged,
-            this, &PhysicalStorageTabPage::onStorageTableSelectionChanged);
-    connect(this->ui->storageTable, &QTableWidget::doubleClicked,
-            this, &PhysicalStorageTabPage::onStorageTableDoubleClicked);
+    connect(this->ui->storageTable, &QTableWidget::customContextMenuRequested, this, &PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested);
+    connect(this->ui->storageTable, &QTableWidget::itemSelectionChanged, this, &PhysicalStorageTabPage::onStorageTableSelectionChanged);
+    connect(this->ui->storageTable, &QTableWidget::doubleClicked, this, &PhysicalStorageTabPage::onStorageTableDoubleClicked);
 
     // Update button states
     this->updateButtonStates();

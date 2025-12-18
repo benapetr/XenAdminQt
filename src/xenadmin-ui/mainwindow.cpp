@@ -33,6 +33,7 @@
 #include "dialogs/optionsdialog.h"
 #include "tabpages/generaltabpage.h"
 #include "tabpages/vmstoragetabpage.h"
+#include "tabpages/srstoragetabpage.h"
 #include "tabpages/physicalstoragetabpage.h"
 #include "tabpages/networktabpage.h"
 #include "tabpages/nicstabpage.h"
@@ -337,7 +338,8 @@ MainWindow::MainWindow(QWidget* parent)
     this->m_tabPages.append(new GeneralTabPage()); // C#: TabPageGeneral
     // Ballooning - not implemented yet
     // Console tabs are added below after initialization
-    this->m_tabPages.append(new VMStorageTabPage()); // C#: TabPageStorage (for VMs), TabPageSR (for SRs)
+    this->m_tabPages.append(new VMStorageTabPage()); // C#: TabPageStorage (Virtual Disks for VMs)
+    this->m_tabPages.append(new SrStorageTabPage()); // C#: TabPageSR (for SRs)
     this->m_tabPages.append(new PhysicalStorageTabPage()); // C#: TabPagePhysicalStorage (for Hosts/Pools)
     this->m_tabPages.append(new NetworkTabPage());     // C#: TabPageNetwork (name changed to "Networking")
     this->m_tabPages.append(new NICsTabPage());        // C#: TabPageNICs
@@ -965,7 +967,9 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType, const 
     // Get tab pointers from m_tabPages
     BaseTabPage* generalTab = nullptr;
     BaseTabPage* memoryTab = nullptr;
-    BaseTabPage* storageTab = nullptr;
+    BaseTabPage* vmStorageTab = nullptr;
+    BaseTabPage* srStorageTab = nullptr;
+    BaseTabPage* physicalStorageTab = nullptr;
     BaseTabPage* networkTab = nullptr;
     BaseTabPage* nicsTab = nullptr;
     BaseTabPage* performanceTab = nullptr;
@@ -977,13 +981,18 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType, const 
 
     for (BaseTabPage* tab : m_tabPages)
     {
+        if (qobject_cast<VMStorageTabPage*>(tab))
+            vmStorageTab = tab;
+        else if (qobject_cast<SrStorageTabPage*>(tab))
+            srStorageTab = tab;
+        else if (qobject_cast<PhysicalStorageTabPage*>(tab))
+            physicalStorageTab = tab;
+
         QString title = tab->tabTitle();
         if (title == "General")
             generalTab = tab;
         else if (title == "Memory")
             memoryTab = tab;
-        else if (title == "Storage")
-            storageTab = tab;
         else if (title == "Networking")
             networkTab = tab;
         else if (title == "NICs")
@@ -1010,8 +1019,8 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType, const 
             newTabs.append(generalTab);
         if (memoryTab)
             newTabs.append(memoryTab);
-        if (storageTab)
-            newTabs.append(storageTab);
+        if (physicalStorageTab)
+            newTabs.append(physicalStorageTab);
         if (networkTab)
             newTabs.append(networkTab);
         if (nicsTab)
@@ -1030,8 +1039,8 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType, const 
             newTabs.append(generalTab);
         if (memoryTab)
             newTabs.append(memoryTab);
-        if (storageTab)
-            newTabs.append(storageTab);
+        if (vmStorageTab)
+            newTabs.append(vmStorageTab);
         if (networkTab)
             newTabs.append(networkTab);
         if (snapshotsTab)
@@ -1050,8 +1059,8 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType, const 
             newTabs.append(generalTab);
         if (memoryTab)
             newTabs.append(memoryTab);
-        if (storageTab)
-            newTabs.append(storageTab);
+        if (physicalStorageTab)
+            newTabs.append(physicalStorageTab);
         if (networkTab)
             newTabs.append(networkTab);
         if (performanceTab)
@@ -1063,8 +1072,8 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType, const 
     {
         if (generalTab)
             newTabs.append(generalTab);
-        if (storageTab)
-            newTabs.append(storageTab);
+        if (srStorageTab)
+            newTabs.append(srStorageTab);
         // CVM Console only shown if SR has driver domain
         // C# Reference: xenadmin/XenAdmin/MainWindow.cs line 1376
         if (cvmConsoleTab && this->m_xenLib && this->m_xenLib->srHasDriverDomain(objectRef))

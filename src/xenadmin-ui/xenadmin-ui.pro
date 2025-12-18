@@ -153,6 +153,7 @@ SOURCES += \
     tabpages/basetabpage.cpp \
     tabpages/generaltabpage.cpp \
     tabpages/physicalstoragetabpage.cpp \
+    tabpages/srstoragetabpage.cpp \
     tabpages/networktabpage.cpp \
     tabpages/nicstabpage.cpp \
     tabpages/consoletabpage.cpp \
@@ -335,6 +336,7 @@ HEADERS += \
     tabpages/basetabpage.h \
     tabpages/generaltabpage.h \
     tabpages/physicalstoragetabpage.h \
+    tabpages/srstoragetabpage.h \
     tabpages/networktabpage.h \
     tabpages/nicstabpage.h \
     tabpages/consoletabpage.h \
@@ -406,6 +408,7 @@ FORMS += \
     dialogs/optionspages/connectionoptionspage.ui \
     tabpages/generaltabpage.ui \
     tabpages/physicalstoragetabpage.ui \
+    tabpages/srstoragetabpage.ui \
     tabpages/networktabpage.ui \
     tabpages/nicstabpage.ui \
     tabpages/consoletabpage.ui \
