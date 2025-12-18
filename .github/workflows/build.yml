@@ -74,6 +74,7 @@ jobs:
           target: desktop
           arch: ${{ matrix.qt_arch }}
           modules: qtcharts
+          install-deps: false
           cache: true
       - name: Show qmake version
         run: qmake -v
