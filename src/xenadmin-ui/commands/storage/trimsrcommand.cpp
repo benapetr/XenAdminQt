@@ -40,6 +40,11 @@ TrimSRCommand::TrimSRCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
+void TrimSRCommand::setTargetSR(const QString& srRef)
+{
+    this->m_overrideSRRef = srRef;
+}
+
 bool TrimSRCommand::canRun() const
 {
     QString srRef = this->getSelectedSRRef();
@@ -130,6 +135,9 @@ QString TrimSRCommand::menuText() const
 
 QString TrimSRCommand::getSelectedSRRef() const
 {
+    if (!this->m_overrideSRRef.isEmpty())
+        return this->m_overrideSRRef;
+
     QString objectType = this->getSelectedObjectType();
     if (objectType != "sr")
         return QString();

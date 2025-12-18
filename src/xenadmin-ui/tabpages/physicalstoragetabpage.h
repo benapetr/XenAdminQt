@@ -30,6 +30,8 @@
 
 #include "basetabpage.h"
 
+class MainWindow;
+
 QT_BEGIN_NAMESPACE
 namespace Ui
 {
@@ -90,6 +92,7 @@ private:
     void populatePoolStorage();
     void updateButtonStates();
     QString getSelectedSRRef() const;
+    MainWindow* getMainWindow() const;
 };
 
 #endif // PHYSICALSTORAGETABPAGE_H

@@ -59,6 +59,12 @@ class TrimSRCommand : public Command
         void run() override;
         QString menuText() const override;
 
+        /**
+         * @brief Explicitly set the SR this command should operate on
+         * @param srRef SR opaque reference
+         */
+        void setTargetSR(const QString& srRef);
+
     private:
         /**
          * @brief Get selected SR reference
@@ -92,6 +98,8 @@ class TrimSRCommand : public Command
          * @return SR name
          */
         QString getSRName(const QVariantMap& srData) const;
+
+        QString m_overrideSRRef;
 };
 
 #endif // TRIMSRCOMMAND_H

@@ -29,7 +29,12 @@
 #include "ui_physicalstoragetabpage.h"
 #include "xenlib.h"
 #include "xencache.h"
+#include "../mainwindow.h"
+#include "../commands/storage/newsrcommand.h"
+#include "../commands/storage/trimsrcommand.h"
+#include "../commands/storage/storagepropertiescommand.h"
 #include <QTableWidgetItem>
+#include <QMenu>
 #include <QDebug>
 #include <QMessageBox>
 #include <algorithm>
@@ -390,15 +395,34 @@ void PhysicalStorageTabPage::populatePoolStorage()
 
 void PhysicalStorageTabPage::updateButtonStates()
 {
-    // Enable/disable buttons based on selection
-    bool hasSRSelected = !this->getSelectedSRRef().isEmpty();
+    MainWindow* mainWindow = this->getMainWindow();
+    QString selectedSrRef = this->getSelectedSRRef();
 
-    // New SR is always enabled
-    this->ui->newSRButton->setEnabled(true);
+    if (mainWindow)
+    {
+        NewSRCommand newSrCmd(mainWindow);
+        this->ui->newSRButton->setEnabled(newSrCmd.canRun());
+    } else
+    {
+        this->ui->newSRButton->setEnabled(false);
+    }
 
-    // Trim and Properties require a selected SR
-    this->ui->trimButton->setEnabled(hasSRSelected);
-    this->ui->propertiesButton->setEnabled(hasSRSelected);
+    bool canTrim = false;
+    bool canShowProperties = false;
+
+    if (mainWindow && !selectedSrRef.isEmpty())
+    {
+        TrimSRCommand trimCmd(mainWindow);
+        trimCmd.setTargetSR(selectedSrRef);
+        canTrim = trimCmd.canRun();
+
+        StoragePropertiesCommand propsCmd(mainWindow);
+        propsCmd.setTargetSR(selectedSrRef);
+        canShowProperties = propsCmd.canRun();
+    }
+
+    this->ui->trimButton->setEnabled(canTrim);
+    this->ui->propertiesButton->setEnabled(canShowProperties);
 }
 
 QString PhysicalStorageTabPage::getSelectedSRRef() const
@@ -416,45 +440,121 @@ QString PhysicalStorageTabPage::getSelectedSRRef() const
     return iconItem->data(Qt::UserRole).toString();
 }
 
+MainWindow* PhysicalStorageTabPage::getMainWindow() const
+{
+    return qobject_cast<MainWindow*>(this->window());
+}
+
 void PhysicalStorageTabPage::onNewSRButtonClicked()
 {
-    // C# Reference: PhysicalStoragePage constructor line 66
-    // newSRButton.Command = new NewSRCommand();
-    // In Qt, buttons should emit signals that MainWindow handles
-    // For now just show info - MainWindow will connect this later
-    QMessageBox::information(this, tr("New SR"),
-                           tr("New SR wizard should be triggered by MainWindow"));
+    MainWindow* mainWindow = this->getMainWindow();
+    if (!mainWindow)
+        return;
+
+    NewSRCommand command(mainWindow);
+    if (!command.canRun())
+    {
+        QMessageBox::warning(this, tr("Cannot Create Storage Repository"),
+                             tr("Storage repository creation is not available right now."));
+        return;
+    }
+
+    command.run();
 }
 
 void PhysicalStorageTabPage::onTrimButtonClicked()
 {
-    // C# Reference: PhysicalStoragePage constructor line 65
-    // trimButton.Command = new TrimSRCommand();
     QString srRef = this->getSelectedSRRef();
     if (srRef.isEmpty())
         return;
 
-    QMessageBox::information(this, tr("Trim SR"),
-                           tr("Trim SR command should be triggered by MainWindow for: ") + srRef);
+    MainWindow* mainWindow = this->getMainWindow();
+    if (!mainWindow)
+        return;
+
+    TrimSRCommand command(mainWindow);
+    command.setTargetSR(srRef);
+
+    if (!command.canRun())
+    {
+        QMessageBox::warning(this, tr("Cannot Trim Storage Repository"),
+                             tr("The selected storage repository cannot be trimmed at this time."));
+        return;
+    }
+
+    command.run();
 }
 
 void PhysicalStorageTabPage::onPropertiesButtonClicked()
 {
-    // C# Reference: PhysicalStoragePage.buttonProperties_Click line 370
     QString srRef = this->getSelectedSRRef();
     if (srRef.isEmpty())
         return;
 
-    QMessageBox::information(this, tr("SR Properties"),
-                           tr("Properties dialog should be triggered by MainWindow for: ") + srRef);
+    MainWindow* mainWindow = this->getMainWindow();
+    if (!mainWindow)
+        return;
+
+    StoragePropertiesCommand command(mainWindow);
+    command.setTargetSR(srRef);
+
+    if (!command.canRun())
+        return;
+
+    command.run();
 }
 
 void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& pos)
 {
-    // C# Reference: PhysicalStoragePage.contextMenuStrip_Opening line 126
-    // Context menu should be handled by MainWindow
-    // For now just ignore it
-    Q_UNUSED(pos);
+    MainWindow* mainWindow = this->getMainWindow();
+    if (!mainWindow)
+        return;
+
+    int row = this->ui->storageTable->rowAt(pos.y());
+    if (row >= 0)
+    {
+        this->ui->storageTable->setCurrentCell(row, 0);
+    }
+
+    QString srRef = this->getSelectedSRRef();
+
+    QMenu menu(this);
+
+    NewSRCommand newCmd(mainWindow);
+    QAction* newAction = menu.addAction(tr("New Storage Repository..."));
+    newAction->setEnabled(newCmd.canRun());
+    connect(newAction, &QAction::triggered, this, [mainWindow]() {
+        NewSRCommand cmd(mainWindow);
+        if (cmd.canRun())
+            cmd.run();
+    });
+
+    if (!srRef.isEmpty())
+    {
+        TrimSRCommand trimCmd(mainWindow);
+        trimCmd.setTargetSR(srRef);
+        QAction* trimAction = menu.addAction(tr("Reclaim Freed Space..."));
+        trimAction->setEnabled(trimCmd.canRun());
+        connect(trimAction, &QAction::triggered, this, [mainWindow, srRef]() {
+            TrimSRCommand cmd(mainWindow);
+            cmd.setTargetSR(srRef);
+            if (cmd.canRun())
+                cmd.run();
+        });
+
+        StoragePropertiesCommand propsCmd(mainWindow);
+        propsCmd.setTargetSR(srRef);
+        QAction* propsAction = menu.addAction(tr("Properties..."));
+        propsAction->setEnabled(propsCmd.canRun());
+        connect(propsAction, &QAction::triggered, this, [mainWindow, srRef]() {
+            StoragePropertiesCommand cmd(mainWindow);
+            cmd.setTargetSR(srRef);
+            if (cmd.canRun())
+                cmd.run();
+        });
+    }
+
+    menu.exec(this->ui->storageTable->mapToGlobal(pos));
 }
 
 void PhysicalStorageTabPage::onStorageTableSelectionChanged()
