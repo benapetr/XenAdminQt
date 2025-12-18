@@ -218,8 +218,11 @@ bool RdpClient::initializeFreeRDP()
     _rdpInstance->PostDisconnect = rdp_post_disconnect;
 
     // Set update callbacks
-    _rdpContext->update->DesktopResize = rdp_desktop_resize;
-
+#if defined(FREERDP_VERSION_MAJOR) && (FREERDP_VERSION_MAJOR >= 3)
+    _rdpContext->update->DesktopResize = rdp_desktop_resize;      // freerdp* version
+#else
+    _rdpContext->update->DesktopResize = rdp_desktop_resize_ctx;  // rdpContext* wrapper
+#endif
     qDebug() << "RdpClient: FreeRDP initialized successfully";
     return true;
 #endif // HAVE_FREERDP
