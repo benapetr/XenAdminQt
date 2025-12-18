@@ -951,7 +951,7 @@ void MainWindow::clearTabs()
 
 // C# Equivalent: GetNewTabPages() - builds list of tabs based on object type
 // C# Reference: xenadmin/XenAdmin/MainWindow.cs lines 1293-1393
-QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType) const
+QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) const
 {
     QList<BaseTabPage*> newTabs;
 
@@ -1056,17 +1056,19 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType) const
         if (performanceTab)
             newTabs.append(performanceTab);
     }
-    // SR tab order: General, Storage, Performance
+    // SR tab order: General, Storage, CVM Console (if applicable), Search
+    // C# Reference: xenadmin/XenAdmin/MainWindow.cs lines 1324, 1333, 1376, 1391
     else if (isSR)
     {
         if (generalTab)
             newTabs.append(generalTab);
         if (storageTab)
             newTabs.append(storageTab);
-        if (cvmConsoleTab)
+        // CVM Console only shown if SR has driver domain
+        // C# Reference: xenadmin/XenAdmin/MainWindow.cs line 1376
+        if (cvmConsoleTab && this->m_xenLib && this->m_xenLib->srHasDriverDomain(objectRef))
             newTabs.append(cvmConsoleTab);
-        if (performanceTab)
-            newTabs.append(performanceTab);
+        // Note: Performance tab is NOT shown for SR in C#
     }
     // Network tab order: General, Network
     else if (isNetwork)
@@ -1098,7 +1100,7 @@ void MainWindow::updateTabPages(const QString& objectType, const QString& object
 {
     // Get the correct tabs in order for this object type
     // C# Reference: xenadmin/XenAdmin/MainWindow.cs line 1432 (ChangeToNewTabs)
-    QList<BaseTabPage*> newTabs = getNewTabPages(objectType);
+    QList<BaseTabPage*> newTabs = this->getNewTabPages(objectType, objectRef, objectData);
 
     // Get the last selected tab for this object (before adding tabs)
     // C# Reference: MainWindow.cs line 1434 - GetLastSelectedPage(SelectionManager.Selection.First)

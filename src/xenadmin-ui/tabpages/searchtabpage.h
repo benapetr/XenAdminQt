@@ -81,7 +81,7 @@ public:
     void setXenObject(const QString& type, const QString& ref, const QVariantMap& data) override;
     QString tabTitle() const override
     {
-        return tr("Search Results");
+        return tr("Search");
     }
 
     /**
@@ -278,8 +278,20 @@ private:
      */
     bool shouldHideObject(const QString& objectType, const QVariantMap& objectData) const;
 
+    /**
+     * @brief Create a default search showing all objects of a given type
+     * @param objectType The type of objects to show ("vm", "host", "sr", etc.)
+     *
+     * Creates a simple TypePropertyQuery-based search that shows all objects
+     * of the specified type. This provides useful search results even when
+     * not clicking on grouping tags.
+     */
+    void createDefaultSearchForType(const QString& objectType);
+
     Search* m_search;            // The search definition (owns pointer)
     QTableWidget* m_tableWidget; // Table view displaying results with columns
+    QString m_currentObjectType; // Currently selected object type
+    QString m_currentObjectRef;  // Currently selected object ref
 };
 
 #endif // SEARCHTABPAGE_H

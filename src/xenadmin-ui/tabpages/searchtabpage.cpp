@@ -163,18 +163,83 @@ void SearchTabPage::setSearch(Search* search)
 
 bool SearchTabPage::isApplicableForObjectType(const QString& type) const
 {
-    // SearchTabPage is used for grouping tags, not individual objects
-    // It's shown when no specific object is selected
+    // SearchTabPage is shown for all object types as the last tab
+    // Reference: MainWindow.cs BuildTabList() - newTabs.Add(TabPageSearch) is always added at the end
     Q_UNUSED(type);
-    return false;
+    return true;
 }
 
 void SearchTabPage::setXenObject(const QString& type, const QString& ref, const QVariantMap& data)
 {
-    // SearchTabPage doesn't display individual objects
-    Q_UNUSED(type);
-    Q_UNUSED(ref);
+    // C# Reference: MainWindow.cs lines 1716-1810
+    // When Search tab is shown for a specific object (not in SearchMode),
+    // we need to create a Search that shows all objects of the same type/group
+    
     Q_UNUSED(data);
+    
+    // Store the current object
+    this->m_currentObjectType = type;
+    this->m_currentObjectRef = ref;
+    
+    if (!this->m_xenLib || !this->m_xenLib->getCache())
+    {
+        qDebug() << "SearchTabPage::setXenObject - No XenLib or cache available";
+        return;
+    }
+    
+    // Check if we need to create a new search
+    // We need a new search if:
+    // 1. No search exists yet, OR
+    // 2. The object type has changed (switching from VM to Host, etc.)
+    bool needNewSearch = false;
+    
+    if (!this->m_search)
+    {
+        needNewSearch = true;
+    }
+    else
+    {
+        // Check if this search was created by clicking a grouping tag
+        // Those searches have meaningful names like "Windows Virtual Machines"
+        // Our auto-generated searches have names like "All Virtual Machines"
+        QString searchName = this->m_search->getName();
+        
+        // Check if the search scope matches the current object type
+        // If we're viewing a VM but search is for hosts, we need a new search
+        Query* query = this->m_search->getQuery();
+        if (query)
+        {
+            QueryFilter* filter = query->getQueryFilter();
+            // Check if the filter is a TypePropertyQuery for a different type
+            if (filter)
+            {
+                // For now, we'll recreate search if switching between object types
+                // A more sophisticated check would inspect the filter's target type
+                // For simplicity, track the last type we created a search for
+                static QString lastAutoSearchType;
+                
+                // If search name starts with "All ", it's our auto-generated search
+                if (searchName.startsWith("All ") && lastAutoSearchType != type)
+                {
+                    needNewSearch = true;
+                    lastAutoSearchType = type;
+                }
+            }
+        }
+    }
+    
+    if (needNewSearch)
+    {
+        // Create a simple default search showing all objects of this type
+        // This provides useful functionality even without full grouping context
+        // C# would create a search based on the root node grouping here (lines 1790-1805)
+        this->createDefaultSearchForType(type);
+    }
+    
+    if (this->m_search)
+    {
+        this->buildList();
+    }
 }
 
 // C# Equivalent: QueryPanel.BuildList() + listUpdateManager_Update()
@@ -1015,5 +1080,50 @@ void SearchTabPage::onItemSelectionChanged()
 void SearchTabPage::onXenLibObjectsChanged()
 {
     // Rebuild list when objects change in cache
-    buildList();
+    this->buildList();
+}
+
+void SearchTabPage::createDefaultSearchForType(const QString& objectType)
+{
+    // Create a simple search that shows all objects of the given type
+    // C# equivalent would use Search.SearchForNonVappGroup with a TypeGrouping
+    // C# Reference: MainWindow.cs lines 1790-1805 (Infrastructure View default search)
+    
+    // Map object type to display name
+    QString displayName;
+    if (objectType == "vm")
+        displayName = tr("All Virtual Machines");
+    else if (objectType == "host")
+        displayName = tr("All Servers");
+    else if (objectType == "sr")
+        displayName = tr("All Storage");
+    else if (objectType == "network")
+        displayName = tr("All Networks");
+    else if (objectType == "pool")
+        displayName = tr("All Pools");
+    else
+        displayName = tr("All %1 Objects").arg(objectType);
+    
+    // Create query scope - all objects except folders
+    QueryScope* scope = new QueryScope(ObjectTypes::AllExcFolders);
+    
+    // Create filter for this object type
+    // TypePropertyQuery matches objects with _type == objectType
+    QueryFilter* filter = new TypePropertyQuery(objectType);
+    
+    // Create query combining scope and filter
+    Query* query = new Query(scope, filter);
+    
+    // Create search with no grouping (flat list)
+    // Columns: null (use default columns)
+    // Sorting: null (use default sorting)
+    // C# equivalent: new Search(query, null, displayName, "", false)
+    Search* search = new Search(query, nullptr, displayName, "", false);
+    
+    // Replace existing search (if any)
+    if (this->m_search)
+    {
+        delete this->m_search;
+    }
+    this->m_search = search;
 }

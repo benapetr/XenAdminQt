@@ -715,6 +715,52 @@ bool XenLib::isSRDriverDomain(const QString& vmRef, QString* outSRRef)
     return false;
 }
 
+bool XenLib::srHasDriverDomain(const QString& srRef, QString* outVMRef)
+{
+    // C# Equivalent: XenModel/XenAPI-Extensions/SR.cs lines 289-305 (HasDriverDomain method)
+    // Checks if this SR has a driver domain VM by looking through all its PBDs
+    // for the "storage_driver_domain" key in other_config
+    
+    if (srRef.isEmpty() || srRef == "OpaqueRef:NULL")
+        return false;
+    
+    QVariantMap srData = this->getCachedObjectData("sr", srRef);
+    if (srData.isEmpty())
+        return false;
+    
+    // Get all PBDs for this SR
+    QVariantList pbdRefs = srData.value("PBDs").toList();
+    
+    for (const QVariant& pbdRefVar : pbdRefs)
+    {
+        QString pbdRef = pbdRefVar.toString();
+        if (pbdRef.isEmpty() || pbdRef == "OpaqueRef:NULL")
+            continue;
+        
+        QVariantMap pbdData = this->getCachedObjectData("pbd", pbdRef);
+        if (pbdData.isEmpty())
+            continue;
+        
+        // Check if this PBD has a storage_driver_domain in other_config
+        QVariantMap otherConfig = pbdData.value("other_config").toMap();
+        QString vmRef = otherConfig.value("storage_driver_domain").toString();
+        
+        if (!vmRef.isEmpty() && vmRef != "OpaqueRef:NULL")
+        {
+            // Verify the VM exists and is not dom0
+            QVariantMap vmData = this->getCachedObjectData("vm", vmRef);
+            if (!vmData.isEmpty() && !this->isControlDomainZero(vmRef))
+            {
+                if (outVMRef)
+                    *outVMRef = vmRef;
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
 bool XenLib::isHVM(const QString& vmRef)
 {
     // HVM VMs have non-empty HVM_boot_policy

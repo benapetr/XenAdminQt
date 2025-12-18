@@ -245,7 +245,7 @@ private:
     void updatePlaceholderVisibility();
 
     // Get correct tab order for object type (C# GetNewTabPages equivalent)
-    QList<BaseTabPage*> getNewTabPages(const QString& objectType) const;
+    QList<BaseTabPage*> getNewTabPages(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) const;
 
     // Settings management
     void saveSettings();

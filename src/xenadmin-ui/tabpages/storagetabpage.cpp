@@ -117,8 +117,11 @@ StorageTabPage::~StorageTabPage()
 
 bool StorageTabPage::isApplicableForObjectType(const QString& objectType) const
 {
-    // Storage tab is applicable to VMs, Hosts, and SRs
-    return objectType == "vm" || objectType == "host" || objectType == "sr";
+    // Storage tab is applicable to VMs and SRs
+    // For VMs: shows virtual disks attached to the VM (VMStoragePage in C#)
+    // For SRs: shows all VDIs in the storage repository (SrStoragePage in C#)
+    // Note: Hosts and Pools use PhysicalStoragePage in C# (not yet implemented in Qt)
+    return objectType == "vm" || objectType == "sr";
 }
 
 void StorageTabPage::setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)

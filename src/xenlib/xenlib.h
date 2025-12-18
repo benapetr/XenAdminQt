@@ -112,6 +112,7 @@ public:
     QVariantMap getGuestMetrics(const QString& vmRef);
     bool isControlDomainZero(const QString& vmRef, QString* outHostRef = nullptr);
     bool isSRDriverDomain(const QString& vmRef, QString* outSRRef = nullptr);
+    bool srHasDriverDomain(const QString& srRef, QString* outVMRef = nullptr);
     bool isHVM(const QString& vmRef);
     bool hasRDP(const QString& vmRef);
     bool isRDPEnabled(const QString& vmRef);
