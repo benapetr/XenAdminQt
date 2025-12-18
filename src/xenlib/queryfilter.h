@@ -36,41 +36,45 @@
 // Forward declaration
 class XenLib;
 
-/// <summary>
-/// Base class for query filters that match objects based on properties
-///
-/// C# equivalent: xenadmin/XenModel/XenSearch/QueryTypes.cs - abstract class QueryFilter
-///
-/// NOTE: This is a simplified initial implementation.
-/// C# has many filter types (StringPropertyQuery, BoolPropertyQuery, DatePropertyQuery, etc.)
-/// For the overview panel, we only need NullQuery (no filtering).
-/// More filter types can be added later as needed.
-/// </summary>
+/**
+ * @brief Base class for query filters that match objects based on properties
+ *
+ * C# equivalent: xenadmin/XenModel/XenSearch/QueryTypes.cs - abstract class QueryFilter
+ *
+ * NOTE: This is a simplified initial implementation.
+ * C# has many filter types (StringPropertyQuery, BoolPropertyQuery, DatePropertyQuery, etc.)
+ * For the overview panel, we only need NullQuery (no filtering).
+ * More filter types can be added later as needed.
+ */
 class QueryFilter
 {
 public:
     virtual ~QueryFilter()
     {}
 
-    /// <summary>
-    /// Check if an object matches this filter
-    ///
-    /// C# equivalent: Match(IXenObject o)
-    /// </summary>
-    /// <param name="objectData">The object data</param>
-    /// <param name="objectType">The object type</param>
-    /// <param name="xenLib">XenLib instance for resolving references</param>
-    /// <returns>true if match, false if no match, null if indeterminate</returns>
+    /**
+     * @brief Check if an object matches this filter
+     *
+     * C# equivalent: Match(IXenObject o)
+     *
+     * @param objectData The object data
+     * @param objectType The object type
+     * @param xenLib XenLib instance for resolving references
+     * @return QVariant true if match, false if no match, or invalid/Null if indeterminate
+     */
     virtual QVariant match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const = 0;
 
-    /// <summary>
-    /// Equality comparison
-    /// </summary>
+    /**
+     * @brief Equality comparison
+     * @param other Other QueryFilter to compare
+     * @return true if equal
+     */
     virtual bool equals(const QueryFilter* other) const = 0;
 
-    /// <summary>
-    /// Hash code for use in QHash
-    /// </summary>
+    /**
+     * @brief Hash code for use in QHash
+     * @return 32-bit hash value
+     */
     virtual uint hashCode() const = 0;
 };
 
@@ -80,65 +84,79 @@ inline uint qHash(const QueryFilter& filter)
     return filter.hashCode();
 }
 
-/// <summary>
-/// A null filter that matches all objects (no filtering)
-/// This is used when clicking top-level grouping tags like "Servers" or "Templates"
-///
-/// C# equivalent: DummyQuery in QueryTypes.cs (but DummyQuery returns null, NullQuery returns true)
-/// Actually closer to the implicit "no filter" behavior in C# Search
-/// </summary>
+/**
+ * @brief A null filter that matches all objects (no filtering)
+ *
+ * This is used when clicking top-level grouping tags like "Servers" or "Templates"
+ *
+ * C# equivalent: DummyQuery in QueryTypes.cs (but DummyQuery returns null, NullQuery returns true)
+ * Actually closer to the implicit "no filter" behavior in C# Search
+ */
 class NullQuery : public QueryFilter
 {
 public:
     NullQuery()
     {}
 
-    /// <summary>
-    /// Always returns true (matches all objects)
-    /// </summary>
+    /**
+     * @brief Always returns true (matches all objects)
+     * @return QVariant true
+     */
     QVariant match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const override;
 
+    /**
+     * @brief Equality comparison
+     * @param other Other QueryFilter
+     * @return true if other is also a NullQuery
+     */
     bool equals(const QueryFilter* other) const override;
 
+    /**
+     * @brief Hash code for use in QHash
+     * @return 32-bit hash value
+     */
     uint hashCode() const override;
 };
 
-/// <summary>
-/// Filter that matches objects by their type (e.g., "host", "vm", "sr")
-/// Used when clicking type grouping tags to show only objects of that type
-///
-/// C# equivalent: EnumPropertyQuery<ObjectTypes> with property=PropertyNames.type
-/// </summary>
+/**
+ * @brief Filter that matches objects by their type (e.g., "host", "vm", "sr")
+ *
+ * Used when clicking type grouping tags to show only objects of that type
+ *
+ * C# equivalent: EnumPropertyQuery<ObjectTypes> with property=PropertyNames.type
+ */
 class TypePropertyQuery : public QueryFilter
 {
 public:
-    /// <summary>
-    /// Constructor
-    /// </summary>
-    /// <param name="objectType">The object type to match (e.g., "host", "vm", "sr")</param>
-    /// <param name="equals">If true, match objects that equal this type. If false, match objects that don't equal this type.</param>
+    /**
+     * @brief Constructor
+     * @param objectType The object type to match (e.g., "host", "vm", "sr")
+     * @param equals If true, match objects that equal this type. If false, match objects that don't equal this type.
+     */
     TypePropertyQuery(const QString& objectType, bool equals = true);
 
-    /// <summary>
-    /// Check if an object matches this type filter
-    /// </summary>
+    /**
+     * @brief Check if an object matches this type filter
+     */
     QVariant match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const override;
 
     bool equals(const QueryFilter* other) const override;
 
     uint hashCode() const override;
 
-    /// <summary>
-    /// Get the object type being filtered
-    /// </summary>
+    /**
+     * @brief Get the object type being filtered
+     * @return Object type string
+     */
     QString getObjectType() const
     {
         return m_objectType;
     }
 
-    /// <summary>
-    /// Get whether we're matching equals (true) or not-equals (false)
-    /// </summary>
+    /**
+     * @brief Get whether we're matching equals (true) or not-equals (false)
+     * @return true if equals comparison, false if not-equals
+     */
     bool getEquals() const
     {
         return m_equals;

@@ -33,7 +33,7 @@
 #include <QString>
 #include <QVariantMap>
 #include <QPointer>
-#include "connection.h" // Need complete type for QPointer
+#include "connection.h"
 
 /**
  * @brief Base class for all XenAPI objects (Pool, Host, VM, SR, etc.)

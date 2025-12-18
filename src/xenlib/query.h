@@ -38,71 +38,78 @@
 // Forward declaration
 class XenLib;
 
-/// <summary>
-/// A query combining a scope (which object types) and a filter (which properties to match)
-///
-/// C# equivalent: xenadmin/XenModel/XenSearch/Query.cs
-/// </summary>
+/**
+ * @brief A query combining a scope (which object types) and a filter (which properties to match)
+ *
+ * C# equivalent: xenadmin/XenModel/XenSearch/Query.cs
+ */
 class Query
 {
 public:
-    /// <summary>
-    /// Constructor with scope and optional filter
-    ///
-    /// C# equivalent: Query(QueryScope scope, QueryFilter filter)
-    /// </summary>
-    /// <param name="scope">The query scope (which object types to include). If null, defaults to AllExcFolders</param>
-    /// <param name="filter">The query filter (which properties to match). Can be null for no filtering</param>
+    /**
+     * @brief Constructor with scope and optional filter
+     *
+     * C# equivalent: Query(QueryScope scope, QueryFilter filter)
+     *
+     * @param scope The query scope (which object types to include). If null, defaults to AllExcFolders
+     * @param filter The query filter (which properties to match). Can be null for no filtering
+     */
     Query(QueryScope* scope, QueryFilter* filter = nullptr);
 
     ~Query();
 
-    /// <summary>
-    /// Get the query scope
-    ///
-    /// C# equivalent: QueryScope property
-    /// </summary>
+    /**
+     * @brief Get the query scope
+     *
+     * C# equivalent: QueryScope property
+     * @return Pointer to the QueryScope owned by this Query
+     */
     QueryScope* getQueryScope() const
     {
         return m_scope;
     }
 
-    /// <summary>
-    /// Get the query filter (may be null)
-    ///
-    /// C# equivalent: QueryFilter property
-    /// </summary>
+    /**
+     * @brief Get the query filter (may be null)
+     *
+     * C# equivalent: QueryFilter property
+     * @return Pointer to the QueryFilter or nullptr
+     */
     QueryFilter* getQueryFilter() const
     {
         return m_filter;
     }
 
-    /// <summary>
-    /// Check if an object matches this query
-    /// An object matches if:
-    ///  1. Its type is in the scope
-    ///  2. The filter matches (or there is no filter)
-    ///
-    /// C# equivalent: Match(IXenObject o)
-    /// </summary>
-    /// <param name="objectData">The object data</param>
-    /// <param name="objectType">The object type</param>
-    /// <param name="xenLib">XenLib instance for resolving references</param>
-    /// <returns>true if object matches query, false otherwise</returns>
+    /**
+     * @brief Check if an object matches this query
+     *
+     * An object matches if:
+     *  1. Its type is in the scope
+     *  2. The filter matches (or there is no filter)
+     *
+     * C# equivalent: Match(IXenObject o)
+     * @param objectData The object data
+     * @param objectType The object type
+     * @param xenLib XenLib instance for resolving references
+     * @return true if object matches query, false otherwise
+     */
     bool match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const;
 
-    /// <summary>
-    /// Equality comparison
-    ///
-    /// C# equivalent: Equals(object obj)
-    /// </summary>
+    /**
+     * @brief Equality comparison
+     *
+     * C# equivalent: Equals(object obj)
+     * @param other Other Query to compare
+     * @return true if equal
+     */
     bool equals(const Query* other) const;
 
-    /// <summary>
-    /// Hash code for use in QHash
-    ///
-    /// C# equivalent: GetHashCode()
-    /// </summary>
+    /**
+     * @brief Hash code for use in QHash
+     *
+     * C# equivalent: GetHashCode()
+     * @return 32-bit hash value
+     */
     uint hashCode() const;
 
 private:

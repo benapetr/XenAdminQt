@@ -38,158 +38,197 @@
 // Forward declaration
 class XenConnection;
 
-/// <summary>
-/// A search definition combining a query (what to match) with a grouping (how to organize results)
-///
-/// C# equivalent: xenadmin/XenModel/XenSearch/Search.cs
-///
-/// NOTE: This is a simplified initial implementation for the overview panel.
-/// C# has additional features like columns, sorting, folder navigator, persistence, etc.
-/// These can be added later as needed.
-/// </summary>
+/**
+ * @brief A search definition combining a query (what to match) with a grouping (how to organize results)
+ *
+ * C# equivalent: xenadmin/XenModel/XenSearch/Search.cs
+ *
+ * NOTE: This is a simplified initial implementation for the overview panel.
+ * C# has additional features like columns, sorting, folder navigator, persistence, etc.
+ * These can be added later as needed.
+ */
 class Search
 {
-public:
-    /// <summary>
-    /// Constructor with query, grouping, and name
-    ///
-    /// C# equivalent: Search(Query query, Grouping grouping, string name, string uuid, bool defaultSearch)
-    /// </summary>
-    /// <param name="query">The query (what objects to match). Takes ownership.</param>
-    /// <param name="grouping">The grouping (how to organize results). Takes ownership.</param>
-    /// <param name="name">The search name</param>
-    /// <param name="uuid">Optional UUID for saved searches</param>
-    /// <param name="defaultSearch">True if this is a built-in default search</param>
-    Search(Query* query, Grouping* grouping, const QString& name,
-           const QString& uuid = QString(), bool defaultSearch = false);
+    public:
+        /**
+         * @brief Constructor with query, grouping, and name
+         *
+         * C# equivalent: Search(Query query, Grouping grouping, string name, string uuid, bool defaultSearch)
+         *
+         * @param query The query (what objects to match). Takes ownership.
+         * @param grouping The grouping (how to organize results). Takes ownership.
+         * @param name The search name
+         * @param uuid Optional UUID for saved searches
+         * @param defaultSearch True if this is a built-in default search
+         */
+        Search(Query* query, Grouping* grouping, const QString& name,
+            const QString& uuid = QString(), bool defaultSearch = false);
 
-    ~Search();
+        ~Search();
 
-    /// <summary>
-    /// Get the query
-    /// C# equivalent: Query property
-    /// </summary>
-    Query* getQuery() const
-    {
-        return m_query;
-    }
+        /**
+         * @brief Get the query
+         *
+         * C# equivalent: Query property
+         * @return Pointer to the Query instance owned by this Search
+         */
+        Query* getQuery() const
+        {
+            return m_query;
+        }
 
-    /// <summary>
-    /// Get the grouping
-    /// C# equivalent: Grouping property
-    /// </summary>
-    Grouping* getGrouping() const
-    {
-        return m_grouping;
-    }
+        /**
+         * @brief Get the grouping
+         *
+         * C# equivalent: Grouping property
+         * @return Pointer to the Grouping instance owned by this Search
+         */
+        Grouping* getGrouping() const
+        {
+            return m_grouping;
+        }
 
-    /// <summary>
-    /// Get the effective grouping (used internally)
-    /// Different from Grouping when folder navigator is shown
-    ///
-    /// C# equivalent: EffectiveGrouping property
-    /// </summary>
-    Grouping* getEffectiveGrouping() const;
+        /**
+         * @brief Get the effective grouping (used internally)
+         *
+         * Different from Grouping when folder navigator is shown
+         * C# equivalent: EffectiveGrouping property
+         * @return Pointer to the effective Grouping instance
+         */
+        Grouping* getEffectiveGrouping() const;
 
-    /// <summary>
-    /// Get the search name
-    /// C# equivalent: Name property
-    /// </summary>
-    QString getName() const
-    {
-        return m_name;
-    }
+        /**
+         * @brief Get the search name
+         *
+         * C# equivalent: Name property
+         * @return Name of the search
+         */
+        QString getName() const
+        {
+            return m_name;
+        }
 
-    /// <summary>
-    /// Set the search name
-    /// </summary>
-    void setName(const QString& name)
-    {
-        m_name = name;
-    }
+        /**
+         * @brief Set the search name
+         * @param name New search name
+         */
+        void setName(const QString& name)
+        {
+            m_name = name;
+        }
 
-    /// <summary>
-    /// Get the search UUID (may be empty)
-    /// C# equivalent: UUID property
-    /// </summary>
-    QString getUUID() const
-    {
-        return m_uuid;
-    }
+        /**
+         * @brief Get the search UUID (may be empty)
+         *
+         * C# equivalent: UUID property
+         * @return UUID string (may be empty)
+         */
+        QString getUUID() const
+        {
+            return m_uuid;
+        }
 
-    /// <summary>
-    /// Check if this is a default search
-    /// C# equivalent: DefaultSearch property
-    /// </summary>
-    bool isDefaultSearch() const
-    {
-        return m_defaultSearch;
-    }
+        /**
+         * @brief Check if this is a default search
+         *
+         * C# equivalent: DefaultSearch property
+         * @return True if this is a built-in default search
+         */
+        bool isDefaultSearch() const
+        {
+            return m_defaultSearch;
+        }
 
-    /// <summary>
-    /// Get/Set the connection this search is associated with
-    /// C# equivalent: Connection property
-    /// </summary>
-    XenConnection* getConnection() const
-    {
-        return m_connection;
-    }
-    void setConnection(XenConnection* connection)
-    {
-        m_connection = connection;
-    }
+        /**
+         * @brief Get the connection this search is associated with
+         *
+         * C# equivalent: Connection property
+         * @return Pointer to associated XenConnection or nullptr if none
+         */
+        XenConnection* getConnection() const
+        {
+            return m_connection;
+        }
 
-    /// <summary>
-    /// Get/Set the number of items matched by this search
-    /// C# equivalent: Items property
-    /// </summary>
-    int getItems() const
-    {
-        return m_items;
-    }
-    void setItems(int items)
-    {
-        m_items = items;
-    }
+        /**
+         * @brief Set the connection this search is associated with
+         * @param connection Pointer to XenConnection (not owned)
+         */
+        void setConnection(XenConnection* connection)
+        {
+            m_connection = connection;
+        }
 
-    /// <summary>
-    /// Create a search for a non-vApp grouping tag
-    /// This is the key method for overview panel - creates searches when clicking
-    /// grouping nodes like "Servers", "Templates", etc.
-    ///
-    /// C# equivalent: SearchForNonVappGroup(Grouping grouping, object parent, object v)
-    /// Line 647 in Search.cs
-    /// </summary>
-    /// <param name="grouping">The grouping algorithm</param>
-    /// <param name="parent">Parent group value (may be null)</param>
-    /// <param name="group">The group value</param>
-    /// <returns>New Search instance configured for the group</returns>
-    static Search* searchForNonVappGroup(Grouping* grouping, const QVariant& parent, const QVariant& group);
+        /**
+         * @brief Get the number of items matched by this search
+         *
+         * C# equivalent: Items property
+         * @return Number of matched items
+         */
+        int getItems() const
+        {
+            return m_items;
+        }
 
-    /// <summary>
-    /// Create a search for a folder grouping tag
-    ///
-    /// C# equivalent: SearchForFolderGroup(Grouping grouping, object parent, object v)
-    /// Line 641 in Search.cs
-    /// </summary>
-    static Search* searchForFolderGroup(Grouping* grouping, const QVariant& parent, const QVariant& group);
+        /**
+         * @brief Set the number of items matched by this search
+         * @param items Number of matched items
+         */
+        void setItems(int items)
+        {
+            m_items = items;
+        }
 
-    /// <summary>
-    /// Create a search for a vApp grouping tag
-    ///
-    /// C# equivalent: SearchForVappGroup(Grouping grouping, object parent, object v)
-    /// Line 652 in Search.cs
-    /// </summary>
-    static Search* searchForVappGroup(Grouping* grouping, const QVariant& parent, const QVariant& group);
+        /**
+         * @brief Create a search for a non-vApp grouping tag
+         *
+         * This is the key method for overview panel - creates searches when clicking
+         * grouping nodes like "Servers", "Templates", etc.
+         *
+         * C# equivalent: SearchForNonVappGroup(Grouping grouping, object parent, object v)
+         * Line 647 in Search.cs
+         *
+         * @param grouping The grouping algorithm
+         * @param parent Parent group value (may be null)
+         * @param group The group value
+         * @return New Search instance configured for the group
+         */
+        static Search* searchForNonVappGroup(Grouping* grouping, const QVariant& parent, const QVariant& group);
 
-private:
-    Query* m_query;              // The query (what to match) - owned
-    Grouping* m_grouping;        // The grouping (how to organize) - owned
-    QString m_name;              // Search name
-    QString m_uuid;              // UUID for saved searches
-    bool m_defaultSearch;        // True if built-in default search
-    XenConnection* m_connection; // Associated connection (not owned)
-    int m_items;                 // Number of items matched
+        /**
+         * @brief Create a search for a folder grouping tag
+         *
+         * C# equivalent: SearchForFolderGroup(Grouping grouping, object parent, object v)
+         * Line 641 in Search.cs
+         *
+         * @param grouping The grouping algorithm
+         * @param parent Parent group value (may be null)
+         * @param group The group value
+         * @return New Search instance configured for the group
+         */
+        static Search* searchForFolderGroup(Grouping* grouping, const QVariant& parent, const QVariant& group);
+
+        /**
+         * @brief Create a search for a vApp grouping tag
+         *
+         * C# equivalent: SearchForVappGroup(Grouping grouping, object parent, object v)
+         * Line 652 in Search.cs
+         *
+         * @param grouping The grouping algorithm
+         * @param parent Parent group value (may be null)
+         * @param group The group value
+         * @return New Search instance configured for the vApp group
+         */
+        static Search* searchForVappGroup(Grouping* grouping, const QVariant& parent, const QVariant& group);
+
+    private:
+        Query* m_query;              // The query (what to match) - owned
+        Grouping* m_grouping;        // The grouping (how to organize) - owned
+        QString m_name;              // Search name
+        QString m_uuid;              // UUID for saved searches
+        bool m_defaultSearch;        // True if built-in default search
+        XenConnection* m_connection; // Associated connection (not owned)
+        int m_items;                 // Number of items matched
 };
 
 #endif // SEARCH_H

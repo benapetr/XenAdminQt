@@ -33,13 +33,14 @@
 #include <QString>
 #include <QVariantMap>
 
-/// <summary>
-/// Object types that can be searched
-/// Flags enum matching C# XenAdmin.XenSearch.ObjectTypes
-///
-/// C# equivalent: xenadmin/XenModel/XenSearch/Common.cs lines 54-74
-/// Note: Order determines tree order in Folder View (CA-28418)
-/// </summary>
+/**
+ * @brief Object types that can be searched
+ *
+ * Flags enum matching C# XenAdmin.XenSearch.ObjectTypes
+ *
+ * C# equivalent: xenadmin/XenModel/XenSearch/Common.cs lines 54-74
+ * Note: Order determines tree order in Folder View (CA-28418)
+ */
 enum class ObjectTypes
 {
     None = 0,
@@ -102,113 +103,142 @@ inline bool operator!=(ObjectTypes a, int b)
 // Forward declaration
 class XenLib;
 
-/// <summary>
-/// Defines the scope of a search query - which object types to include
-///
-/// C# equivalent: xenadmin/XenModel/XenSearch/QueryScope.cs
-/// </summary>
+/**
+ * @brief Defines the scope of a search query - which object types to include
+ *
+ * C# equivalent: xenadmin/XenModel/XenSearch/QueryScope.cs
+ */
 class QueryScope
 {
-public:
-    /// <summary>
-    /// Constructor with object types
-    /// C# equivalent: QueryScope(ObjectTypes types)
-    /// </summary>
-    explicit QueryScope(ObjectTypes types);
+    public:
+        /**
+         * @brief Constructor with object types
+         * @param types ObjectTypes bitmask specifying included types
+         * C# equivalent: QueryScope(ObjectTypes types)
+         */
+        explicit QueryScope(ObjectTypes types);
 
-    /// <summary>
-    /// Get the object types included in this scope
-    /// C# equivalent: ObjectTypes property
-    /// </summary>
-    ObjectTypes getObjectTypes() const
-    {
-        return m_types;
-    }
+        /**
+         * @brief Get the object types included in this scope
+         * @return ObjectTypes bitmask
+         * C# equivalent: ObjectTypes property
+         */
+        ObjectTypes getObjectTypes() const
+        {
+            return m_types;
+        }
 
-    /// <summary>
-    /// Check if this scope wants a specific object
-    /// C# equivalent: WantType(IXenObject o)
-    /// </summary>
-    /// <param name="objectData">The object data</param>
-    /// <param name="objectType">The object type string ("vm", "host", etc.)</param>
-    /// <param name="xenLib">XenLib instance for resolving references</param>
-    bool wantType(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib = nullptr) const;
+        /**
+         * @brief Check if this scope wants a specific object
+         *
+         * C# equivalent: WantType(IXenObject o)
+         *
+         * @param objectData The object data
+         * @param objectType The object type string ("vm", "host", etc.)
+         * @param xenLib XenLib instance for resolving references (optional)
+         * @return true if the object matches the scope
+         */
+        bool wantType(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib = nullptr) const;
 
-    /// <summary>
-    /// Check if this scope wants a specific type
-    /// Want type t: or if t is a bitwise OR, want *all* types in t
-    /// I.e., the types "this" includes are a superset of t
-    ///
-    /// C# equivalent: WantType(ObjectTypes t)
-    /// </summary>
-    bool wantType(ObjectTypes t) const;
+        /**
+         * @brief Check if this scope wants a specific type
+         *
+         * Want type t: or if t is a bitwise OR, want *all* types in t
+         * I.e., the types "this" includes are a superset of t
+         *
+         * C# equivalent: WantType(ObjectTypes t)
+         * @param t ObjectTypes to check
+         * @return true if this scope includes all types in t
+         */
+        bool wantType(ObjectTypes t) const;
 
-    /// <summary>
-    /// Check if this scope wants all types in another scope
-    /// C# equivalent: WantType(QueryScope q)
-    /// </summary>
-    bool wantType(const QueryScope* q) const;
+        /**
+         * @brief Check if this scope wants all types in another scope
+         * @param q Other QueryScope to compare
+         * C# equivalent: WantType(QueryScope q)
+         * @return true if this scope includes all types in q
+         */
+        bool wantType(const QueryScope* q) const;
 
-    /// <summary>
-    /// Check if this scope is a subset of given types
-    /// The types "this" includes are a subset of t
-    ///
-    /// C# equivalent: WantSubsetOf(ObjectTypes t)
-    /// </summary>
-    bool wantSubsetOf(ObjectTypes t) const;
+        /**
+         * @brief Check if this scope is a subset of given types
+         * The types "this" includes are a subset of t
+         *
+         * C# equivalent: WantSubsetOf(ObjectTypes t)
+         * @param t ObjectTypes to compare against
+         * @return true if this scope is a subset of t
+         */
+        bool wantSubsetOf(ObjectTypes t) const;
 
-    /// <summary>
-    /// Check if this scope is a subset of another scope
-    /// C# equivalent: WantSubsetOf(QueryScope q)
-    /// </summary>
-    bool wantSubsetOf(const QueryScope* q) const;
+        /**
+         * @brief Check if this scope is a subset of another scope
+         * C# equivalent: WantSubsetOf(QueryScope q)
+         * @param q Other QueryScope to compare
+         * @return true if this scope is a subset of q
+         */
+        bool wantSubsetOf(const QueryScope* q) const;
 
-    /// <summary>
-    /// Check if this scope wants any of the types in t
-    /// I.e., the types "this" includes overlap with t
-    ///
-    /// C# equivalent: WantAnyOf(ObjectTypes t)
-    /// </summary>
-    bool wantAnyOf(ObjectTypes t) const;
+        /**
+         * @brief Check if this scope wants any of the types in t
+         * I.e., the types "this" includes overlap with t
+         *
+         * C# equivalent: WantAnyOf(ObjectTypes t)
+         * @param t ObjectTypes to test for overlap
+         * @return true if any types overlap
+         */
+        bool wantAnyOf(ObjectTypes t) const;
 
-    /// <summary>
-    /// Check if this scope wants any of the types in another scope
-    /// C# equivalent: WantAnyOf(QueryScope q)
-    /// </summary>
-    bool wantAnyOf(const QueryScope* q) const;
+        /**
+         * @brief Check if this scope wants any of the types in another scope
+         * C# equivalent: WantAnyOf(QueryScope q)
+         * @param q Other QueryScope to test for overlap
+         * @return true if any types overlap
+         */
+        bool wantAnyOf(const QueryScope* q) const;
 
-    /// <summary>
-    /// Check if this scope exactly equals given types
-    /// C# equivalent: Equals(ObjectTypes t)
-    /// </summary>
-    bool equals(ObjectTypes t) const;
+        /**
+         * @brief Check if this scope exactly equals given types
+         * C# equivalent: Equals(ObjectTypes t)
+         * @param t ObjectTypes to compare
+         * @return true if exactly equal
+         */
+        bool equals(ObjectTypes t) const;
 
-    /// <summary>
-    /// Check if this scope exactly equals another scope
-    /// C# equivalent: Equals(QueryScope q)
-    /// </summary>
-    bool equals(const QueryScope* q) const;
+        /**
+         * @brief Check if this scope exactly equals another scope
+         * C# equivalent: Equals(QueryScope q)
+         * @param q Other QueryScope to compare
+         * @return true if exactly equal
+         */
+        bool equals(const QueryScope* q) const;
 
-    /// <summary>
-    /// Equality operator
-    /// </summary>
-    bool operator==(const QueryScope& other) const;
+        /**
+         * @brief Equality operator
+         */
+        bool operator==(const QueryScope& other) const;
 
-    /// <summary>
-    /// Hash code for use in QHash
-    /// C# equivalent: GetHashCode()
-    /// </summary>
-    uint hashCode() const;
+        /**
+         * @brief Hash code for use in QHash
+         * C# equivalent: GetHashCode()
+         * @return 32-bit hash value
+         */
+        uint hashCode() const;
 
-private:
-    /// <summary>
-    /// Get the ObjectTypes enum value for a given object
-    /// C# equivalent: ObjectTypeOf(IXenObject o)
-    /// Uses PropertyAccessors.Get(PropertyNames.type)
-    /// </summary>
-    ObjectTypes objectTypeOf(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const;
+    private:
+        /**
+         * @brief Get the ObjectTypes enum value for a given object
+         *
+         * C# equivalent: ObjectTypeOf(IXenObject o)
+         * Uses PropertyAccessors.Get(PropertyNames.type)
+         *
+         * @param objectData The object data map
+         * @param objectType The object type string (may be empty)
+         * @param xenLib XenLib instance for resolving references
+         * @return ObjectTypes enum value for the object
+         */
+        ObjectTypes objectTypeOf(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const;
 
-    ObjectTypes m_types; // The object types included in this scope
+        ObjectTypes m_types; // The object types included in this scope
 };
 
 // Hash function for QHash support

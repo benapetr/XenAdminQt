@@ -36,57 +36,62 @@
 // Forward declarations
 class Grouping;
 
-/// <summary>
-/// Represents a grouping node in the tree (e.g., "Servers", "Templates", "Types")
-/// Stores the grouping algorithm, optional parent, and the group value
-///
-/// C# equivalent: xenadmin/XenAdmin/GroupingTag.cs
-/// </summary>
+/**
+ * @brief Represents a grouping node in the tree (e.g., "Servers", "Templates", "Types")
+ *
+ * Stores the grouping algorithm, optional parent, and the group value
+ *
+ * C# equivalent: xenadmin/XenAdmin/GroupingTag.cs
+ */
 class GroupingTag
 {
 public:
-    /// <summary>
-    /// Constructor
-    /// </summary>
-    /// <param name="grouping">The grouping algorithm (must not be null)</param>
-    /// <param name="parent">Parent group (may be null for top-level)</param>
-    /// <param name="group">The group value (must not be null)</param>
+    /**
+     * @brief Constructor
+     * @param grouping The grouping algorithm (must not be null)
+     * @param parent Parent group (may be null for top-level)
+     * @param group The group value (must not be null)
+     */
     GroupingTag(Grouping* grouping, const QVariant& parent, const QVariant& group);
 
     ~GroupingTag();
 
-    /// <summary>
-    /// Get the grouping algorithm
-    /// </summary>
+    /**
+     * @brief Get the grouping algorithm
+     * @return Pointer to Grouping
+     */
     Grouping* getGrouping() const
     {
         return m_grouping;
     }
 
-    /// <summary>
-    /// Get the parent group (may be null)
-    /// </summary>
+    /**
+     * @brief Get the parent group (may be null)
+     * @return Parent group value
+     */
     QVariant getParent() const
     {
         return m_parent;
     }
 
-    /// <summary>
-    /// Get the group value
-    /// </summary>
+    /**
+     * @brief Get the group value
+     * @return Group value
+     */
     QVariant getGroup() const
     {
         return m_group;
     }
 
-    /// <summary>
-    /// Equality comparison (two GroupingTags are equal if grouping and group are equal)
-    /// </summary>
+    /**
+     * @brief Equality comparison (two GroupingTags are equal if grouping and group are equal)
+     */
     bool operator==(const GroupingTag& other) const;
 
-    /// <summary>
-    /// Hash code for use in QHash
-    /// </summary>
+    /**
+     * @brief Hash code for use in QHash
+     * @return 32-bit hash value
+     */
     uint hashCode() const;
 
 private:

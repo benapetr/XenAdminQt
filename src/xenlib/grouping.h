@@ -38,83 +38,93 @@
 // Forward declarations
 class XenLib;
 
-/// <summary>
-/// Base class for all grouping algorithms
-/// Defines how objects are grouped in tree/search views
-///
-/// C# equivalent: xenadmin/XenModel/XenSearch/GroupingTypes.cs - class Grouping
-/// </summary>
+/**
+ * @brief Base class for all grouping algorithms
+ *
+ * Defines how objects are grouped in tree/search views
+ *
+ * C# equivalent: xenadmin/XenModel/XenSearch/GroupingTypes.cs - class Grouping
+ */
 class Grouping
 {
 public:
-    /// <summary>
-    /// Constructor with optional subgrouping
-    /// </summary>
-    /// <param name="subgrouping">Sub-grouping to apply within this grouping (may be null)</param>
+    /**
+     * @brief Constructor with optional subgrouping
+     * @param subgrouping Sub-grouping to apply within this grouping (may be null)
+     */
     explicit Grouping(Grouping* subgrouping = nullptr);
 
     virtual ~Grouping();
 
-    /// <summary>
-    /// Get the name of this grouping (e.g., "Type", "Pool", "Folder")
-    /// </summary>
+    /**
+     * @brief Get the name of this grouping (e.g., "Type", "Pool", "Folder")
+     * @return Grouping name
+     */
     virtual QString getGroupingName() const = 0;
 
-    /// <summary>
-    /// Get the display name for a specific group value
-    /// </summary>
-    /// <param name="group">The group value</param>
-    /// <returns>Human-readable name for the group</returns>
+    /**
+     * @brief Get the display name for a specific group value
+     * @param group The group value
+     * @return Human-readable name for the group
+     */
     virtual QString getGroupName(const QVariant& group) const;
 
-    /// <summary>
-    /// Get the icon for a specific group value
-    /// </summary>
-    /// <param name="group">The group value</param>
-    /// <returns>Icon to display for the group</returns>
+    /**
+     * @brief Get the icon for a specific group value
+     * @param group The group value
+     * @return Icon to display for the group
+     */
     virtual QIcon getGroupIcon(const QVariant& group) const;
 
-    /// <summary>
-    /// Get the group value for a given object
-    /// </summary>
-    /// <param name="objectData">The object data (VM, host, etc.)</param>
-    /// <param name="objectType">The object type ("vm", "host", etc.)</param>
-    /// <returns>The group value, or null if object doesn't belong to any group</returns>
+    /**
+     * @brief Get the group value for a given object
+     * @param objectData The object data (VM, host, etc.)
+     * @param objectType The object type ("vm", "host", etc.)
+     * @return The group value, or an invalid QVariant if object doesn't belong to any group
+     */
     virtual QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const = 0;
 
-    /// <summary>
-    /// Check if object should appear as a group node itself (not just a member)
-    /// For example, folders appear as group nodes
-    /// </summary>
+    /**
+     * @brief Check if object should appear as a group node itself (not just a member)
+     *
+     * For example, folders appear as group nodes
+     * @param objectData The object data
+     * @param objectType The object type
+     * @return true if the object should be shown as a group node
+     */
     virtual bool belongsAsGroupNotMember(const QVariantMap& objectData, const QString& objectType) const;
 
-    /// <summary>
-    /// Get the subgrouping for a specific group value
-    /// Used when drilling down in the tree (e.g., Type → Pool → Host)
-    /// </summary>
-    /// <param name="group">The group value</param>
-    /// <returns>Subgrouping to apply, or null if no further grouping</returns>
+    /**
+     * @brief Get the subgrouping for a specific group value
+     *
+     * Used when drilling down in the tree (e.g., Type → Pool → Host)
+     * @param group The group value
+     * @return Subgrouping to apply, or nullptr if no further grouping
+     */
     virtual Grouping* getSubgrouping(const QVariant& group) const;
 
-    /// <summary>
-    /// Get a QueryFilter that matches objects in this group
-    /// Used when clicking a group node to show only objects in that group
-    ///
-    /// C# equivalent: Grouping.GetSubquery(object parent, object val)
-    /// </summary>
-    /// <param name="parent">Parent group value (may be null)</param>
-    /// <param name="group">The group value to filter by</param>
-    /// <returns>QueryFilter that matches objects in this group, or null if no filtering needed</returns>
+    /**
+     * @brief Get a QueryFilter that matches objects in this group
+     *
+     * Used when clicking a group node to show only objects in that group
+     * C# equivalent: Grouping.GetSubquery(object parent, object val)
+     * @param parent Parent group value (may be null)
+     * @param group The group value to filter by
+     * @return QueryFilter that matches objects in this group, or nullptr if no filtering needed
+     */
     virtual class QueryFilter* getSubquery(const QVariant& parent, const QVariant& group) const;
 
-    /// <summary>
-    /// Equality comparison for groupings
-    /// </summary>
+    /**
+     * @brief Equality comparison for groupings
+     * @param other Other grouping to compare
+     * @return true if equal
+     */
     virtual bool equals(const Grouping* other) const = 0;
 
-    /// <summary>
-    /// Get subgrouping pointer
-    /// </summary>
+    /**
+     * @brief Get subgrouping pointer
+     * @return Pointer to subgrouping or nullptr
+     */
     Grouping* subgrouping() const
     {
         return m_subgrouping;
@@ -124,12 +134,12 @@ protected:
     Grouping* m_subgrouping; // Optional nested grouping
 };
 
-/// <summary>
-/// Grouping by object type (VM, Host, SR, Network, etc.)
-///
-/// C# equivalent: PropertyGrouping&lt;ObjectTypes&gt; in GroupingTypes.cs
-/// Maps to C# property PropertyNames.type
-/// </summary>
+/**
+ * @brief Grouping by object type (VM, Host, SR, Network, etc.)
+ *
+ * C# equivalent: PropertyGrouping<ObjectTypes> in GroupingTypes.cs
+ * Maps to C# property PropertyNames.type
+ */
 class TypeGrouping : public Grouping
 {
 public:
@@ -143,12 +153,12 @@ public:
     bool equals(const Grouping* other) const override;
 };
 
-/// <summary>
-/// Grouping by pool membership
-///
-/// C# equivalent: PropertyGrouping&lt;Pool&gt; in GroupingTypes.cs
-/// Maps to C# property PropertyNames.pool
-/// </summary>
+/**
+ * @brief Grouping by pool membership
+ *
+ * C# equivalent: PropertyGrouping<Pool> in GroupingTypes.cs
+ * Maps to C# property PropertyNames.pool
+ */
 class PoolGrouping : public Grouping
 {
 public:
@@ -169,12 +179,12 @@ private:
     XenLib* m_xenLib = nullptr;
 };
 
-/// <summary>
-/// Grouping by host membership
-///
-/// C# equivalent: PropertyGrouping&lt;Host&gt; in GroupingTypes.cs
-/// Maps to C# property PropertyNames.host
-/// </summary>
+/**
+ * @brief Grouping by host membership
+ *
+ * C# equivalent: PropertyGrouping<Host> in GroupingTypes.cs
+ * Maps to C# property PropertyNames.host
+ */
 class HostGrouping : public Grouping
 {
 public:
