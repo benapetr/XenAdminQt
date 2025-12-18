@@ -32,6 +32,8 @@
 #include <QtCore/QString>
 #include <QtCore/QVariant>
 
+//! TODO rewrite all docs to Doxygen format from that XML format
+
 // Forward declarations
 class XenSession;
 
@@ -52,24 +54,24 @@ namespace XenAPI
         // VM lifecycle operations
 
         /**
-         * @brief Start the specified VM. This function can only be called when the VM is in the Halted state.
+         * @brief Start the specified VM. Only valid when VM is Halted.
          *
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
-         * @param start_paused Instantiate VM in paused state if set to true.
-         * @param force Attempt to force the VM to start. If false, VM may fail pre-boot safety checks
+         * @param vm The opaque_ref of the given VM
+         * @param start_paused Instantiate VM in paused state if true
+         * @param force Attempt to force the VM to start; if false the VM may fail pre-boot checks
          */
         static void start(XenSession* session, const QString& vm, bool start_paused, bool force);
 
         /**
-         * @brief Start the specified VM asynchronously. Returns a task reference for tracking.
+         * @brief Start the specified VM asynchronously; returns a task ref.
          *
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
-         * @param start_paused Instantiate VM in paused state if set to true.
-         * @param force Attempt to force the VM to start. If false, VM may fail pre-boot safety checks
+         * @param vm The opaque_ref of the given VM
+         * @param start_paused Instantiate VM in paused state if true
+         * @param force Attempt to force the VM to start
          * @return Task ref for async operation
          */
         static QString async_start(XenSession* session, const QString& vm, bool start_paused, bool force);
@@ -79,102 +81,90 @@ namespace XenAPI
          *
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param host The Host on which to start the VM
-         * @param start_paused Instantiate VM in paused state if set to true.
-         * @param force Attempt to force the VM to start. If false, VM may fail pre-boot safety checks
+         * @param start_paused Instantiate VM in paused state if true
+         * @param force Attempt to force the VM to start
          */
         static void start_on(XenSession* session, const QString& vm, const QString& host, bool start_paused, bool force);
 
         /**
-         * @brief Start the specified VM on a particular host asynchronously. Returns a task ref.
-         *
-         * First published in XenServer 4.0.
+         * @brief Start the specified VM on a particular host asynchronously; returns a task ref.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param host The Host on which to start the VM
-         * @param start_paused Instantiate VM in paused state if set to true.
-         * @param force Attempt to force the VM to start. If false, VM may fail pre-boot safety checks
+         * @param start_paused Instantiate VM in paused state if true
+         * @param force Attempt to force the VM to start
          * @return Task ref for async operation
          */
         static QString async_start_on(XenSession* session, const QString& vm, const QString& host, bool start_paused, bool force);
 
         /**
          * @brief Resume the specified VM. Only valid when VM is Suspended.
-         *
-         * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
-         * @param start_paused Resume VM in paused state if set to true.
-         * @param force Attempt to force the VM to resume. If false, VM may fail pre-resume safety checks
+         * @param vm The opaque_ref of the given VM
+         * @param start_paused Resume VM in paused state if true
+         * @param force Attempt to force the VM to resume
          */
         static void resume(XenSession* session, const QString& vm, bool start_paused, bool force);
 
         /**
-         * @brief Resume the specified VM asynchronously. Returns a task ref.
-         *
-         * First published in XenServer 4.0.
+         * @brief Resume the specified VM asynchronously; returns a task ref.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
-         * @param start_paused Resume VM in paused state if set to true.
-         * @param force Attempt to force the VM to resume. If false, VM may fail pre-resume safety checks
+         * @param vm The opaque_ref of the given VM
+         * @param start_paused Resume VM in paused state if true
+         * @param force Attempt to force the VM to resume
          * @return Task ref for async operation
          */
         static QString async_resume(XenSession* session, const QString& vm, bool start_paused, bool force);
 
         /**
          * @brief Resume the specified VM on a particular host. Only valid when VM is Suspended.
-         *
-         * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param host The Host on which to resume the VM
-         * @param start_paused Resume VM in paused state if set to true.
-         * @param force Attempt to force the VM to resume. If false, VM may fail pre-resume safety checks
+         * @param start_paused Resume VM in paused state if true
+         * @param force Attempt to force the VM to resume
          */
         static void resume_on(XenSession* session, const QString& vm, const QString& host, bool start_paused, bool force);
 
         /**
-         * @brief Resume the specified VM on a particular host asynchronously. Returns task ref.
-         *
-         * First published in XenServer 4.0.
+         * @brief Resume the specified VM on a particular host asynchronously; returns a task ref.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param host The Host on which to resume the VM
-         * @param start_paused Resume VM in paused state if set to true.
-         * @param force Attempt to force the VM to resume. If false, VM may fail pre-resume safety checks
+         * @param start_paused Resume VM in paused state if true
+         * @param force Attempt to force the VM to resume
          * @return Task ref for async operation
          */
         static QString async_resume_on(XenSession* session, const QString& vm, const QString& host, bool start_paused, bool force);
 
         /**
-         * @brief Attempts to clean shutdown the VM; falls back to hard shutdown if needed.
-         *
-         * First published in XenServer 4.0.
+         * @brief Attempt a clean shutdown of a VM; fall back to hard shutdown on failure.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          */
         static void clean_shutdown(XenSession* session, const QString& vm);
 
         /**
-         * @brief Asynchronous clean shutdown; returns task ref.
+         * @brief Asynchronous clean shutdown; returns a task ref.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @return Task ref for async operation
          */
         static QString async_clean_shutdown(XenSession* session, const QString& vm);
 
         /**
-         * @brief Stop executing the specified VM without attempting a clean shutdown (hard shutdown).
+         * @brief Perform a hard shutdown (stop without clean shutdown).
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          */
         static void hard_shutdown(XenSession* session, const QString& vm);
 
         /**
-         * @brief Asynchronous hard shutdown; returns task ref.
+         * @brief Asynchronous hard shutdown; returns a task ref.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @return Task ref for async operation
          */
         static QString async_hard_shutdown(XenSession* session, const QString& vm);
@@ -182,74 +172,76 @@ namespace XenAPI
         /**
          * @brief Suspend the specified VM to disk. Only valid when VM is Running.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          */
         static void suspend(XenSession* session, const QString& vm);
 
         /**
-         * @brief Asynchronous suspend; returns task ref.
+         * @brief Asynchronous suspend; returns a task ref.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @return Task ref for async operation
          */
         static QString async_suspend(XenSession* session, const QString& vm);
 
         /**
-         * @brief Attempts to clean reboot a VM; falls back to hard reboot if needed.
+         * @brief Attempt a clean reboot of a VM; fall back to hard reboot on failure.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          */
         static void clean_reboot(XenSession* session, const QString& vm);
 
         /**
-         * @brief Asynchronous clean reboot; returns task ref.
+         * @brief Asynchronous clean reboot; returns a task ref.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @return Task ref for async operation
          */
         static QString async_clean_reboot(XenSession* session, const QString& vm);
 
         /**
-         * @brief Stop executing the specified VM without attempting a clean reboot and immediately restart the VM.
+         * @brief Hard reboot the VM (immediate stop and restart).
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          */
         static void hard_reboot(XenSession* session, const QString& vm);
 
         /**
-         * @brief Asynchronous hard reboot; returns task ref.
+         * @brief Asynchronous hard reboot; returns a task ref.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @return Task ref for async operation
          */
         static QString async_hard_reboot(XenSession* session, const QString& vm);
 
         /**
          * @brief Pause the specified VM. This can only be called when the specified VM is in the Running state.
+         * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          */
         static void pause(XenSession* session, const QString& vm);
 
         /**
-         * @brief Asynchronous pause; returns task ref.
+         * @brief Asynchronous pause; returns a task ref.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @return Task ref for async operation
          */
         static QString async_pause(XenSession* session, const QString& vm);
 
         /**
          * @brief Resume the specified VM. This can only be called when the specified VM is in the Paused state.
+         * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          */
         static void unpause(XenSession* session, const QString& vm);
 
         /**
-         * @brief Asynchronous unpause; returns task ref.
+         * @brief Asynchronous unpause; returns a task ref.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @return Task ref for async operation
          */
         static QString async_unpause(XenSession* session, const QString& vm);
@@ -285,7 +277,7 @@ namespace XenAPI
          * @brief Get the list of allowed VBD device numbers
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @return List of allowed device numbers as QVariant (QStringList)
          */
         static QVariant get_allowed_VBD_devices(XenSession* session, const QString& vm);
@@ -294,7 +286,7 @@ namespace XenAPI
          * @brief Get the full record for a VM
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @return VM record as QVariantMap
          */
         static QVariantMap get_record(XenSession* session, const QString& vm);
@@ -311,7 +303,7 @@ namespace XenAPI
          * @brief Set the suspend VDI for a suspended VM
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param value The new value for suspend_VDI
          */
         static void set_suspend_VDI(XenSession* session, const QString& vm, const QString& value);
@@ -320,7 +312,7 @@ namespace XenAPI
          * @brief Migrate a VM to another Host (async)
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param host The target host
          * @param options Extra configuration operations (live migration, etc.)
          * @return Task ref for async operation
@@ -331,7 +323,7 @@ namespace XenAPI
          * @brief Clone a VM (async)
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param new_name The name of the cloned VM
          * @return Task ref for async operation
          */
@@ -341,7 +333,7 @@ namespace XenAPI
          * @brief Copy a VM to an SR (async)
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param new_name The name of the copied VM
          * @param sr The SR to copy the VM to
          * @return Task ref for async operation
@@ -352,7 +344,7 @@ namespace XenAPI
          * @brief Provision a VM (async)
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @return Task ref for async operation
          */
         static QString async_provision(XenSession* session, const QString& vm);
@@ -361,7 +353,7 @@ namespace XenAPI
          * @brief Destroy a VM
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          */
         static void destroy(XenSession* session, const QString& vm);
 
@@ -369,7 +361,7 @@ namespace XenAPI
          * @brief Set the is_a_template field
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param value New value for is_a_template
          */
         static void set_is_a_template(XenSession* session, const QString& vm, bool value);
@@ -378,7 +370,7 @@ namespace XenAPI
          * @brief Set the name_label field
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param value New value for name_label
          */
         static void set_name_label(XenSession* session, const QString& vm, const QString& value);
@@ -387,7 +379,7 @@ namespace XenAPI
          * @brief Set the name_description field
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param value New value for name_description
          */
         static void set_name_description(XenSession* session, const QString& vm, const QString& value);
@@ -395,101 +387,95 @@ namespace XenAPI
         // Snapshot operations
 
         /**
-         * @brief Snapshot the specified VM, creating a new VM record. Uses SR capabilities (e.g. CoW).
+         * @brief Snapshot the specified VM asynchronously, creating a new VM record.
          *
+         * Snapshot exploits SR capabilities (e.g., Copy-on-Write).
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param new_name The name of the snapshotted VM
-         * @return Task ref for async operation (result is ref of the newly created VM)
+         * @return Task ref for async operation (ref of the newly created VM)
          */
-        static QString snapshot(XenSession* session, const QString& vm, const QString& new_name);
+        static QString async_snapshot(XenSession* session, const QString& vm, const QString& new_name);
 
         /**
-         * @brief Snapshot with quiesce, creating a new VM record.
-         *
-         * First published in XenServer 4.0.
+         * @brief Snapshot the VM with quiesce asynchronously; returns new VM ref.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param new_name The name of the snapshotted VM
-         * @return Task ref for async operation (result is ref of the newly created VM)
+         * @return Task ref for async operation (ref of the newly created VM)
          */
-        static QString snapshot_with_quiesce(XenSession* session, const QString& vm, const QString& new_name);
+        static QString async_snapshot_with_quiesce(XenSession* session, const QString& vm, const QString& new_name);
 
         /**
-         * @brief Checkpoint the specified VM, creating a new VM and saving memory image.
-         *
-         * First published in XenServer 4.0.
+         * @brief Checkpoint the specified VM asynchronously (includes memory image).
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param new_name The name of the checkpointed VM
-         * @return Task ref for async operation (result is ref of the newly created VM)
+         * @return Task ref for async operation (ref of the newly created VM)
          */
-        static QString checkpoint(XenSession* session, const QString& vm, const QString& new_name);
+        static QString async_checkpoint(XenSession* session, const QString& vm, const QString& new_name);
 
         /**
-         * @brief Revert the specified VM to a previous snapshot state.
-         *
-         * First published in XenServer 4.0.
+         * @brief Revert the specified VM to a previous snapshot asynchronously.
          * @param session The session
          * @param snapshot The opaque_ref of the snapshot
          * @return Task ref for async operation
          */
-        static QString revert_to_snapshot(XenSession* session, const QString& snapshot);
+        static QString async_revert(XenSession* session, const QString& snapshot);
+
+        // Memory configuration
 
         /**
          * @brief Set the memory limits of the VM.
          *
          * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param static_min New value for memory_static_min (bytes)
          * @param static_max New value for memory_static_max (bytes)
          * @param dynamic_min New value for memory_dynamic_min (bytes)
          * @param dynamic_max New value for memory_dynamic_max (bytes)
          */
-        static void set_memory_limits(XenSession* session, const QString& vm, const qlonglong static_min, const qlonglong static_max, const qlonglong dynamic_min, const qlonglong dynamic_max);
+        static void set_memory_limits(XenSession* session, const QString& vm,
+                                      qint64 static_min, qint64 static_max,
+                                      qint64 dynamic_min, qint64 dynamic_max);
 
         /**
-         * @brief Set the dynamic memory range for a running VM.
-         *
-         * First published in XenServer 4.0.
+         * @brief Set the dynamic memory range (for running VMs).
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param dynamic_min New value for memory_dynamic_min (bytes)
          * @param dynamic_max New value for memory_dynamic_max (bytes)
          */
-        static void set_dynamic_memory_range(XenSession* session, const QString& vm, const qlonglong dynamic_min, const qlonglong dynamic_max);
+        static void set_memory_dynamic_range(XenSession* session, const QString& vm,
+                                             qint64 dynamic_min, qint64 dynamic_max);
+
+        // VCPU configuration
 
         /**
          * @brief Set the maximum number of VCPUs for a halted VM.
-         *
-         * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param value New value for VCPUs_max
          */
-        static void set_VCPUs_max(XenSession* session, const QString& vm, int value);
+        static void set_VCPUs_max(XenSession* session, const QString& vm, qint64 value);
 
         /**
          * @brief Set the number of VCPUs at startup for a halted VM.
-         *
-         * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param value New value for VCPUs_at_startup
          */
-        static void set_VCPUs_at_startup(XenSession* session, const QString& vm, int value);
+        static void set_VCPUs_at_startup(XenSession* session, const QString& vm, qint64 value);
 
         /**
          * @brief Set the number of VCPUs for a running VM (hotplug).
-         *
-         * First published in XenServer 4.0.
          * @param session The session
-         * @param vm The opaque_ref of the given vm
+         * @param vm The opaque_ref of the given VM
          * @param nvcpu The number of VCPUs
          */
-        static void set_VCPUs_number_live(XenSession* session, const QString& vm, int nvcpu);
+        static void set_VCPUs_number_live(XenSession* session, const QString& vm, qint64 nvcpu);
 
         /**
          * @brief Migrate VM asynchronously (cross-pool)
