@@ -29,6 +29,7 @@
 #include "../session.h"
 #include "../connection.h"
 #include "../api.h"
+#include <QDebug>
 #include <stdexcept>
 
 namespace XenAPI

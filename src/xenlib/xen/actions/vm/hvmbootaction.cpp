@@ -29,6 +29,7 @@
 #include "../../connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
+#include <QDebug>
 #include <stdexcept>
 
 HVMBootAction::HVMBootAction(XenConnection* connection, const QString& vmRef, QObject* parent)

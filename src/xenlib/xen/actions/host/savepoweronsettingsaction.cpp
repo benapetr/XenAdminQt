@@ -138,7 +138,7 @@ void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const Pow
     QByteArray response = conn->sendRequest(request);
     
     QVariant result = api.parseJsonRpcResponse(response);
-    if (result.typeId() == QMetaType::QVariantMap) {
+    if (result.type() == QVariant::Map) {
         QVariantMap resultMap = result.toMap();
         if (resultMap.value("Status").toString() != "Success") {
             QString error = resultMap.value("ErrorDescription").toStringList().join(": ");
@@ -166,7 +166,7 @@ QString SavePowerOnSettingsAction::createSecret(const QString& value)
     QByteArray response = conn->sendRequest(request);
     
     QVariant result = api.parseJsonRpcResponse(response);
-    if (result.typeId() == QMetaType::QVariantMap) {
+    if (result.type() == QVariant::Map) {
         QVariantMap resultMap = result.toMap();
         if (resultMap.value("Status").toString() == "Success") {
             QString secretRef = resultMap.value("Value").toString();
@@ -180,7 +180,7 @@ QString SavePowerOnSettingsAction::createSecret(const QString& value)
             response = conn->sendRequest(request);
             
             result = api.parseJsonRpcResponse(response);
-            if (result.typeId() == QMetaType::QVariantMap) {
+            if (result.type() == QVariant::Map) {
                 resultMap = result.toMap();
                 if (resultMap.value("Status").toString() == "Success") {
                     return resultMap.value("Value").toString();

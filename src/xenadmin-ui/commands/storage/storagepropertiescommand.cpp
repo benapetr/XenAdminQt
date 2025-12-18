@@ -26,9 +26,13 @@
  */
 
 #include "storagepropertiescommand.h"
+#include <QDebug>
 #include "../../mainwindow.h"
+#include <QDebug>
 #include "../../dialogs/storagepropertiesdialog.h"
+#include <QDebug>
 #include "xenlib.h"
+#include <QDebug>
 
 StoragePropertiesCommand::StoragePropertiesCommand(MainWindow* mainWindow, QObject* parent)
     : Command(mainWindow, parent)

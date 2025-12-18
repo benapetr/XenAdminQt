@@ -37,6 +37,7 @@
 #include <QMutex>
 #include <QImage>
 #include <QThread>
+#include <QSet>
 
 // Forward declarations for FreeRDP types (to avoid including headers here)
 typedef struct rdp_context rdpContext;

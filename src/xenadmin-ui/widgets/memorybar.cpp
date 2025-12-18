@@ -209,7 +209,8 @@ void MemoryBar::mouseMoveEvent(QMouseEvent* event)
             QString tooltip = segment.tooltip.isEmpty()
                                   ? (segment.name + "\n" + formatMemorySize(segment.bytes))
                                   : segment.tooltip;
-            QToolTip::showText(event->globalPosition().toPoint(), tooltip, this);
+            // Qt5 compatibility: use globalPos() instead of globalPosition()
+            QToolTip::showText(event->globalPos(), tooltip, this);
             return;
         }
 

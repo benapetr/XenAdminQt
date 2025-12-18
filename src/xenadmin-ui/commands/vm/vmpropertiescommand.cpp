@@ -26,9 +26,13 @@
  */
 
 #include "vmpropertiescommand.h"
+#include <QDebug>
 #include "../../mainwindow.h"
+#include <QDebug>
 #include "../../dialogs/vmpropertiesdialog.h"
+#include <QDebug>
 #include "xenlib.h"
+#include <QDebug>
 #include <QtWidgets>
 
 VMPropertiesCommand::VMPropertiesCommand(QObject* parent)

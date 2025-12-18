@@ -26,8 +26,11 @@
  */
 
 #include "newnetworkcommand.h"
+#include <QDebug>
 #include "../../mainwindow.h"
+#include <QDebug>
 #include "../../dialogs/newnetworkwizard.h"
+#include <QDebug>
 #include <QtWidgets>
 
 NewNetworkCommand::NewNetworkCommand(MainWindow* mainWindow, QObject* parent)

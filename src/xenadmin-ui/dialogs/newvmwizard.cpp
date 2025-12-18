@@ -26,18 +26,30 @@
  */
 
 #include "newvmwizard.h"
+#include <QDebug>
 #include "ui_newvmwizard.h"
+#include <QDebug>
 
 #include "xenlib.h"
+#include <QDebug>
 #include "xencache.h"
+#include <QDebug>
 #include "xen/connection.h"
+#include <QDebug>
 #include "xen/api.h"
+#include <QDebug>
 #include "xen/vm.h"
+#include <QDebug>
 #include "xen/xenapi/VBD.h"
+#include <QDebug>
 #include "xen/actions/vm/vmstartaction.h"
+#include <QDebug>
 #include "xen/actions/vbd/vbdcreateandplugaction.h"
+#include <QDebug>
 #include "../operations/operationmanager.h"
+#include <QDebug>
 #include "../widgets/wizardnavigationpane.h"
+#include <QDebug>
 
 #include <QtWidgets>
 #include <QHeaderView>

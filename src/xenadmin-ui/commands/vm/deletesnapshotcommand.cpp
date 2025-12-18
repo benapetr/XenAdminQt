@@ -26,12 +26,19 @@
  */
 
 #include "deletesnapshotcommand.h"
+#include <QDebug>
 #include "../../mainwindow.h"
+#include <QDebug>
 #include "../../operations/operationmanager.h"
+#include <QDebug>
 #include "xenlib.h"
+#include <QDebug>
 #include "xencache.h"
+#include <QDebug>
 #include "xen/connection.h"
+#include <QDebug>
 #include "xen/actions/vm/vmsnapshotdeleteaction.h"
+#include <QDebug>
 #include <QtWidgets>
 
 DeleteSnapshotCommand::DeleteSnapshotCommand(QObject* parent)

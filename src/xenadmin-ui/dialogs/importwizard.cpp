@@ -26,6 +26,7 @@
  */
 
 #include "importwizard.h"
+#include <QDebug>
 #include <QtWidgets>
 
 ImportWizard::ImportWizard(QWidget* parent)

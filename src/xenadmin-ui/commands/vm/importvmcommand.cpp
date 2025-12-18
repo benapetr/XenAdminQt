@@ -26,8 +26,11 @@
  */
 
 #include "importvmcommand.h"
+#include <QDebug>
 #include "../../mainwindow.h"
+#include <QDebug>
 #include "../../dialogs/importwizard.h"
+#include <QDebug>
 #include <QtWidgets>
 
 ImportVMCommand::ImportVMCommand(QObject* parent)

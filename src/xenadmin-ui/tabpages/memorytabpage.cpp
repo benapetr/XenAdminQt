@@ -30,6 +30,7 @@
 #include "xenlib.h"
 #include "xencache.h"
 #include "../dialogs/ballooningdialog.h"
+#include <cmath>
 #include <QDebug>
 #include <QGroupBox>
 #include <QFormLayout>

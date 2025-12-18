@@ -222,7 +222,7 @@ void XenHeartbeat::getServerTime()
     // Parse server time (XenAPI returns an ISO 8601 string; older servers may return a Unix timestamp)
     qDebug() << "Heartbeat: raw server time value"
              << serverTimeVar
-             << "type" << serverTimeVar.metaType().name();
+             << "type" << serverTimeVar.typeName();
 
     QDateTime serverTime;
     bool parsed = false;

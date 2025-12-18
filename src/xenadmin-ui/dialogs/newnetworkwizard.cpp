@@ -26,6 +26,7 @@
  */
 
 #include "newnetworkwizard.h"
+#include <QDebug>
 #include <QtWidgets>
 
 NewNetworkWizard::NewNetworkWizard(QWidget* parent)
