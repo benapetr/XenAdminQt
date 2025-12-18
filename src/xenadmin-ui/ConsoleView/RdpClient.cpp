@@ -169,7 +169,7 @@ RdpClient::~RdpClient()
     }
 }
 
-#if defined(FREERDP_VERSION_MAJOR) && (FREERDP_VERSION_MAJOR < 3)
+#if !defined(FREERDP_VERSION_MAJOR) || (FREERDP_VERSION_MAJOR < 3)
 // Wrapper for FreeRDP 2.x where DesktopResize expects rdpContext*
 static BOOL rdp_desktop_resize_ctx(rdpContext* context)
 {
