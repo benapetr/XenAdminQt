@@ -62,6 +62,20 @@ public:
 
     void registerOperation(AsyncOperation* operation);
 
+    /**
+     * Remove a record from the operation history.
+     * C# Equivalent: ConnectionsManager.History.Remove()
+     * @param record The record to remove
+     */
+    void removeRecord(OperationRecord* record);
+
+    /**
+     * Remove multiple records from the operation history.
+     * C# Equivalent: ConnectionsManager.History.RemoveAll()
+     * @param records The records to remove
+     */
+    void removeRecords(const QList<OperationRecord*>& records);
+
     // Cleanup for shutdown - removes UUIDs from all task.other_config
     void prepareAllOperationsForRestart();
 

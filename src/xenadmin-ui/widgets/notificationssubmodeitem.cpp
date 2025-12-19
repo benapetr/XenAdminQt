@@ -28,13 +28,11 @@
 #include "notificationssubmodeitem.h"
 #include <QApplication>
 
-NotificationsSubModeItemDelegate::NotificationsSubModeItemDelegate(QObject* parent)
-    : QStyledItemDelegate(parent)
+NotificationsSubModeItemDelegate::NotificationsSubModeItemDelegate(QObject* parent) : QStyledItemDelegate(parent)
 {
 }
 
-void NotificationsSubModeItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
-                                             const QModelIndex& index) const
+void NotificationsSubModeItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     // Get item data
     QVariant data = index.data(NotificationsSubModeRole);
@@ -106,28 +104,28 @@ QString NotificationsSubModeItemData::getText() const
     // Matches C# Messages.NOTIFICATIONS_SUBMODE_* strings
     switch (subMode)
     {
-    case NavigationPane::Alerts:
-        if (unreadEntries == 0)
-            return QObject::tr("Alerts");
-        else
-            return QObject::tr("Alerts (%1)").arg(unreadEntries);
+        case NavigationPane::Alerts:
+            if (unreadEntries == 0)
+                return QObject::tr("Alerts");
+            else
+                return QObject::tr("Alerts (%1)").arg(unreadEntries);
 
-    case NavigationPane::Events:
-        if (unreadEntries == 0)
-            return QObject::tr("Events");
-        else if (unreadEntries == 1)
-            return QObject::tr("Events (1 error)");
-        else
-            return QObject::tr("Events (%1 errors)").arg(unreadEntries);
+        case NavigationPane::Events:
+            if (unreadEntries == 0)
+                return QObject::tr("Events");
+            else if (unreadEntries == 1)
+                return QObject::tr("Events (1 error)");
+            else
+                return QObject::tr("Events (%1 errors)").arg(unreadEntries);
 
-    case NavigationPane::Updates:
-        if (unreadEntries == 0)
-            return QObject::tr("Updates");
-        else
-            return QObject::tr("Updates (%1)").arg(unreadEntries);
+        case NavigationPane::Updates:
+            if (unreadEntries == 0)
+                return QObject::tr("Updates");
+            else
+                return QObject::tr("Updates (%1)").arg(unreadEntries);
 
-    default:
-        return QString();
+        default:
+            return QString();
     }
 }
 

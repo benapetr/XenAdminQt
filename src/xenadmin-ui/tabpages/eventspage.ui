@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>EventsPage</class>
+ <widget class="QWidget" name="EventsPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Events</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QToolBar" name="toolBar">
+     <property name="movable">
+      <bool>false</bool>
+     </property>
+     <property name="floatable">
+      <bool>false</bool>
+     </property>
+     <addaction name="actionFilterStatus"/>
+     <addaction name="actionFilterLocation"/>
+     <addaction name="actionFilterDates"/>
+     <addaction name="separator"/>
+     <addaction name="actionDismiss"/>
+     <addaction name="actionDismissSelected"/>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTableWidget" name="eventsTable">
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
+     </property>
+     <property name="alternatingRowColors">
+      <bool>true</bool>
+     </property>
+     <property name="selectionMode">
+      <enum>QAbstractItemView::ExtendedSelection</enum>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+     <property name="sortingEnabled">
+      <bool>true</bool>
+     </property>
+     <attribute name="horizontalHeaderStretchLastSection">
+      <bool>false</bool>
+     </attribute>
+     <column>
+      <property name="text">
+       <string/>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Status</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Message</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Location</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Date</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Actions</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+  </layout>
+  <action name="actionFilterStatus">
+   <property name="text">
+    <string>Filter by Status</string>
+   </property>
+  </action>
+  <action name="actionFilterLocation">
+   <property name="text">
+    <string>Filter by Location</string>
+   </property>
+  </action>
+  <action name="actionFilterDates">
+   <property name="text">
+    <string>Filter by Dates</string>
+   </property>
+  </action>
+  <action name="actionDismiss">
+   <property name="text">
+    <string>Dismiss All</string>
+   </property>
+  </action>
+  <action name="actionDismissSelected">
+   <property name="text">
+    <string>Dismiss Selected</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

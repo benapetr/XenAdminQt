@@ -40,6 +40,7 @@ namespace Ui
 class QTreeWidgetItem;
 class QTreeWidget;
 class QProgressDialog;
+class QVBoxLayout;
 QT_END_NAMESPACE
 
 QT_FORWARD_DECLARE_CLASS(XenLib)
@@ -127,6 +128,10 @@ private slots:
 
     // Cache update handler for refreshing selected object
     void onCacheObjectChanged(const QString& objectType, const QString& objectRef);
+
+    // XenAPI Message handlers for alert system (matches C# MainWindow.cs line 993 - MessageCollectionChanged)
+    void onMessageReceived(const QString& messageRef, const QVariantMap& messageData);
+    void onMessageRemoved(const QString& messageRef);
 
     // SearchTabPage handlers (matches C# SearchPage double-click navigation)
     void onSearchTabPageObjectSelected(const QString& objectType, const QString& objectRef);
@@ -295,6 +300,14 @@ protected:
 
     // Tab pages
     QList<BaseTabPage*> m_tabPages;
+
+    // Notification pages (matches C# _notificationPages)
+    // C# Reference: xenadmin/XenAdmin/MainWindow.cs line 107
+    QList<class NotificationsBasePage*> m_notificationPages;
+
+    // Tab container (for notification pages and tabs)
+    QWidget* m_tabContainer;
+    QVBoxLayout* m_tabContainerLayout;
 
     // Search tab page (special handling for grouping tags)
     class SearchTabPage* m_searchTabPage;

@@ -44,6 +44,10 @@
 #include "tabpages/bootoptionstab.h"
 #include "tabpages/memorytabpage.h"
 #include "tabpages/searchtabpage.h"
+#include "tabpages/alertsummarypage.h"
+#include "tabpages/eventspage.h"
+#include "alerts/alertmanager.h"
+#include "alerts/messagealert.h"
 #include "ConsoleView/ConsolePanel.h"
 #include "placeholderwidget.h"
 #include "settingsmanager.h"
@@ -173,6 +177,7 @@ MainWindow::MainWindow(QWidget* parent)
       m_connected(false),
       m_historyDock(nullptr), m_historyPage(nullptr), m_toggleHistoryAction(nullptr),
       m_navigationHistory(nullptr),
+      m_tabContainer(nullptr), m_tabContainerLayout(nullptr),
       m_poolsTreeItem(nullptr), m_hostsTreeItem(nullptr), m_vmsTreeItem(nullptr), m_storageTreeItem(nullptr),
       m_currentObjectType(""), m_currentObjectRef("")
 {
@@ -204,6 +209,10 @@ MainWindow::MainWindow(QWidget* parent)
 
     // Insert the container back into the splitter at the same position
     splitter->insertWidget(tabWidgetIndex, tabContainer);
+    
+    // Store the tab container for later use with notification pages
+    m_tabContainer = tabContainer;
+    m_tabContainerLayout = containerLayout;
 
     // History/events dock
     m_historyPage = new HistoryPage(this);
@@ -271,6 +280,11 @@ MainWindow::MainWindow(QWidget* parent)
         connect(this->m_xenLib, &XenLib::taskModified, rehydrationMgr, &MeddlingActionManager::handleTaskUpdated);
         connect(this->m_xenLib, &XenLib::taskDeleted, rehydrationMgr, &MeddlingActionManager::handleTaskRemoved);
     }
+
+    // Connect XenAPI message signals to AlertManager for alert system
+    // C# Reference: MainWindow.cs line 703 - connection.Cache.RegisterCollectionChanged<Message>
+    connect(this->m_xenLib, &XenLib::messageReceived, this, &MainWindow::onMessageReceived);
+    connect(this->m_xenLib, &XenLib::messageRemoved, this, &MainWindow::onMessageRemoved);
 
     // Get NavigationPane from UI (matches C# MainWindow.navigationPane)
     m_navigationPane = ui->navigationPane;
@@ -374,6 +388,26 @@ MainWindow::MainWindow(QWidget* parent)
 
     // Connect SearchTabPage objectSelected signal to navigate to that object
     connect(searchTab, &SearchTabPage::objectSelected, this, &MainWindow::onSearchTabPageObjectSelected);
+
+    // Initialize notification pages (matches C# _notificationPages initialization)
+    // C# Reference: xenadmin/XenAdmin/MainWindow.Designer.cs lines 304-306
+    // In C#: splitContainer1.Panel2.Controls.Add(this.alertPage);
+    // These pages are shown in the same area as tabs (Panel2 of the main splitter)
+    AlertSummaryPage* alertPage = new AlertSummaryPage(this);
+    alertPage->setXenLib(this->m_xenLib);
+    this->m_notificationPages.append(alertPage);
+
+    EventsPage* eventsPage = new EventsPage(this);
+    eventsPage->setXenLib(this->m_xenLib);
+    this->m_notificationPages.append(eventsPage);
+
+    // Add notification pages to the tab container (same area as tabs)
+    // They will be shown/hidden based on notifications sub-mode selection
+    // In C#, all pages are added to Panel2 and visibility is controlled
+    this->m_tabContainerLayout->addWidget(alertPage);
+    this->m_tabContainerLayout->addWidget(eventsPage);
+    alertPage->hide();
+    eventsPage->hide();
 
     // Create placeholder widget
     this->m_placeholderWidget = new PlaceholderWidget();
@@ -1588,75 +1622,126 @@ void MainWindow::focusSearch()
 
 void MainWindow::onNavigationModeChanged(int mode)
 {
-    // Matches C# MainWindow.navigationPane_NavigationModeChanged (line 2570)
+    // C# Reference: MainWindow.navigationPane_NavigationModeChanged line 2570
     // Handle navigation mode changes (Infrastructure/Objects/Organization/Searches/Notifications)
     NavigationPane::NavigationMode navMode = static_cast<NavigationPane::NavigationMode>(mode);
 
     if (navMode == NavigationPane::Notifications)
     {
         // Hide main tabs when in notifications mode
-        ui->mainTabWidget->setVisible(false);
-        // TODO: Show notification pages when implemented
+        // C# Reference: line 2572
+        this->ui->mainTabWidget->setVisible(false);
+        
+        // Auto-select Alerts sub-mode when entering Notifications mode
+        // This ensures something is displayed instead of showing empty area
+        this->m_navigationPane->switchToNotificationsView(NavigationPane::Alerts);
+        
+        // Notification pages are shown via onNotificationsSubModeChanged
     } else
     {
         // Remember if tab control was hidden before restore
-        bool tabControlWasVisible = ui->mainTabWidget->isVisible();
+        bool tabControlWasVisible = this->ui->mainTabWidget->isVisible();
 
         // Restore main tabs
-        ui->mainTabWidget->setVisible(true);
+        // C# Reference: line 2577
+        this->ui->mainTabWidget->setVisible(true);
 
-        // TODO: Hide notification pages when implemented
-        // foreach (var page in _notificationPages) { if (page.Visible) page.HidePage(); }
+        // Hide all notification pages when switching away from Notifications mode
+        // C# Reference: foreach (var page in _notificationPages) line 2579
+        for (NotificationsBasePage* page : this->m_notificationPages)
+        {
+            if (page->isVisible())
+            {
+                page->hidePage();
+            }
+        }
 
         // Force tab refresh when switching back from Notification view
         // Some tabs ignore updates when not visible (e.g., Snapshots, HA)
+        // C# Reference: line 2585
         if (!tabControlWasVisible)
         {
-            onTabChanged(ui->mainTabWidget->currentIndex());
+            this->onTabChanged(this->ui->mainTabWidget->currentIndex());
         }
     }
 
     // Update search for new mode (matches C# ViewSettingsChanged line 1981)
-    m_navigationPane->updateSearch();
+    this->m_navigationPane->updateSearch();
 
     // TODO: SetFiltersLabel() - update filters indicator in title bar
     // TODO: UpdateViewMenu(mode) - show/hide menu items based on mode
 
     // Update tree view for new mode
-    refreshServerTree();
+    this->refreshServerTree();
 }
 
 void MainWindow::onNotificationsSubModeChanged(int subMode)
 {
-    // Matches C# MainWindow.navigationPane_NotificationsSubModeChanged
-    // Handle notifications sub-mode changes (Alerts/Events)
-
-    // For now, just log the change - full implementation would show different views
-    switch (subMode)
+    // C# Reference: MainWindow.navigationPane_NotificationsSubModeChanged line 2551
+    // Show the correct notification page based on sub-mode selection
+    
+    NavigationPane::NotificationsSubMode mode = static_cast<NavigationPane::NotificationsSubMode>(subMode);
+    
+    // Show the page matching this sub-mode, hide all others
+    // C# Reference: foreach (var page in _notificationPages)
+    for (NotificationsBasePage* page : this->m_notificationPages)
     {
-    case NavigationPane::Alerts:
-        qDebug() << "Switched to Alerts view";
-        // TODO: Show alerts list/view in main content area
-        break;
-
-    case NavigationPane::Events:
-        qDebug() << "Switched to Events view";
-        // TODO: Show events list/view in main content area
-        break;
-
-    case NavigationPane::Updates:
-        qDebug() << "Switched to Updates view";
-        // TODO: Show updates list/view in main content area
-        break;
-
-    default:
-        qDebug() << "Unknown notification sub-mode:" << subMode;
-        break;
+        if (page->notificationsSubMode() == mode)
+        {
+            page->showPage(); // C# ShowPage()
+        }
+        else if (page->isVisible())
+        {
+            page->hidePage(); // C# HidePage()
+        }
     }
+
+    // Hide tab control when showing notification pages
+    // C# Reference: line 2565
+    this->ui->mainTabWidget->setVisible(false);
+
+    // Update title label and icon for notification pages
+    // C# Reference: TitleLabel.Text = submodeItem.Text; line 2567
+    // C# Reference: TitleIcon.Image = submodeItem.Image; line 2568
+    QString title;
+    QIcon icon;
+    
+    switch (mode)
+    {
+        case NavigationPane::Alerts:
+            title = tr("Alerts");
+            icon = QIcon(":/icons/alert.png"); // TODO: Use correct alert icon
+            break;
+        case NavigationPane::Events:
+            title = tr("Events");
+            icon = QIcon(":/icons/events.png"); // TODO: Use correct events icon
+            break;
+        case NavigationPane::Updates:
+            title = tr("Updates");
+            icon = QIcon(":/icons/updates.png"); // TODO: Use correct updates icon
+            break;
+    }
+    
+    // Update the title bar with notification sub-mode info
+    if (this->m_titleBar)
+    {
+        this->m_titleBar->setTitle(title);
+        this->m_titleBar->setIcon(icon);
+    }
+
+    // TODO: Update filters label in title bar
+    // C# SetFiltersLabel();
+    
+    qDebug() << "Switched to notifications sub-mode:" << subMode;
 }
 
 void MainWindow::onNavigationPaneTreeViewSelectionChanged()
 {
+    // Ignore tree view selection changes when in Notifications mode
+    // The title should show the notification sub-mode (Alerts/Events), not tree selection
+    if (this->m_navigationPane && this->m_navigationPane->currentMode() == NavigationPane::Notifications)
+        return;
+    
     // Forward to existing tree selection handler
     onTreeItemSelected();
 }
@@ -1664,6 +1749,10 @@ void MainWindow::onNavigationPaneTreeViewSelectionChanged()
 void MainWindow::onNavigationPaneTreeNodeClicked()
 {
     // Matches C# MainWindow.navigationPane_TreeNodeClicked
+    // Ignore tree node clicks when in Notifications mode
+    if (this->m_navigationPane && this->m_navigationPane->currentMode() == NavigationPane::Notifications)
+        return;
+    
     // Handle tree node clicks
     onTreeItemSelected();
 }
@@ -1846,6 +1935,27 @@ void MainWindow::onCacheObjectChanged(const QString& objectType, const QString& 
             }
         }
     }
+}
+
+void MainWindow::onMessageReceived(const QString& messageRef, const QVariantMap& messageData)
+{
+    // C# Reference: MainWindow.cs line 1000 - Alert.AddAlert(MessageAlert.ParseMessage(m))
+    // Create alert from XenAPI message and add to AlertManager
+    
+    // Use factory method to create appropriate alert type
+    Alert* alert = MessageAlert::parseMessage(m_xenLib->getConnection(), messageData);
+    if (alert)
+    {
+        AlertManager::instance()->addAlert(alert);
+    }
+}
+
+void MainWindow::onMessageRemoved(const QString& messageRef)
+{
+    // C# Reference: MainWindow.cs line 1013 - MessageAlert.RemoveAlert(m)
+    // Remove alert when XenAPI message is deleted
+    
+    MessageAlert::removeAlert(messageRef);
 }
 
 // Connection handler implementations

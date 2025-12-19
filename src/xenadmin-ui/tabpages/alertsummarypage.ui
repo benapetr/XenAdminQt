@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AlertSummaryPage</class>
+ <widget class="QWidget" name="AlertSummaryPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Alerts</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QToolBar" name="toolBar">
+     <property name="movable">
+      <bool>false</bool>
+     </property>
+     <property name="floatable">
+      <bool>false</bool>
+     </property>
+     <addaction name="actionFilterSeverity"/>
+     <addaction name="actionFilterServer"/>
+     <addaction name="actionFilterDates"/>
+     <addaction name="separator"/>
+     <addaction name="actionRefresh"/>
+     <addaction name="separator"/>
+     <addaction name="actionExportAll"/>
+     <addaction name="actionDismiss"/>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTableWidget" name="alertsTable">
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
+     </property>
+     <property name="alternatingRowColors">
+      <bool>true</bool>
+     </property>
+     <property name="selectionMode">
+      <enum>QAbstractItemView::ExtendedSelection</enum>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+     <property name="sortingEnabled">
+      <bool>true</bool>
+     </property>
+     <attribute name="horizontalHeaderStretchLastSection">
+      <bool>false</bool>
+     </attribute>
+     <column>
+      <property name="text">
+       <string/>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Severity</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Message</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Location</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Date</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Actions</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="cappingLabel">
+     <property name="text">
+      <string>Note: Only showing the most recent 1000 alerts</string>
+     </property>
+     <property name="margin">
+      <number>5</number>
+     </property>
+    </widget>
+   </item>
+  </layout>
+  <action name="actionFilterSeverity">
+   <property name="text">
+    <string>Filter by Severity</string>
+   </property>
+  </action>
+  <action name="actionFilterServer">
+   <property name="text">
+    <string>Filter by Server</string>
+   </property>
+  </action>
+  <action name="actionFilterDates">
+   <property name="text">
+    <string>Filter by Dates</string>
+   </property>
+  </action>
+  <action name="actionRefresh">
+   <property name="text">
+    <string>Refresh</string>
+   </property>
+  </action>
+  <action name="actionExportAll">
+   <property name="text">
+    <string>Export All</string>
+   </property>
+  </action>
+  <action name="actionDismiss">
+   <property name="text">
+    <string>Dismiss All</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

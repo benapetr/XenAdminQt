@@ -62,6 +62,9 @@ SOURCES += \
     dialogs/optionspages/saveandrestoreoptionspage.cpp \
     dialogs/optionspages/connectionoptionspage.cpp \
     operations/operationmanager.cpp \
+    alerts/alert.cpp \
+    alerts/alertmanager.cpp \
+    alerts/messagealert.cpp \
     actions/meddlingaction.cpp \
     actions/meddlingactionmanager.cpp \
     commands/command.cpp \
@@ -163,6 +166,9 @@ SOURCES += \
     tabpages/bootoptionstab.cpp \
     tabpages/memorytabpage.cpp \
     tabpages/searchtabpage.cpp \
+    tabpages/notificationsbasepage.cpp \
+    tabpages/alertsummarypage.cpp \
+    tabpages/eventspage.cpp \
     widgets/historypage.cpp \
     widgets/qvncclient.cpp \
     widgets/memorybar.cpp \
@@ -245,6 +251,9 @@ HEADERS += \
     dialogs/optionspages/saveandrestoreoptionspage.h \
     dialogs/optionspages/connectionoptionspage.h \
     operations/operationmanager.h \
+    alerts/alert.h \
+    alerts/alertmanager.h \
+    alerts/messagealert.h \
     actions/meddlingaction.h \
     actions/meddlingactionmanager.h \
     commands/command.h \
@@ -346,6 +355,9 @@ HEADERS += \
     tabpages/bootoptionstab.h \
     tabpages/memorytabpage.h \
     tabpages/searchtabpage.h \
+    tabpages/notificationsbasepage.h \
+    tabpages/alertsummarypage.h \
+    tabpages/eventspage.h \
     widgets/historypage.h \
     widgets/qvncclient.h \
     widgets/memorybar.h \
@@ -417,6 +429,8 @@ FORMS += \
     tabpages/performancetabpage.ui \
     tabpages/memorytabpage.ui \
     tabpages/vmstoragetabpage.ui \
+    tabpages/alertsummarypage.ui \
+    tabpages/eventspage.ui \
     widgets/navigationpane.ui \
     widgets/navigationview.ui \
     widgets/notificationsview.ui \

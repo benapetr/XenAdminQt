@@ -3083,6 +3083,32 @@ void XenLib::onEventReceived(const QVariantMap& eventData)
     // Normalize class name to match our cache naming
     QString cacheType = eventClass.toLower();
 
+    // Special handling for XenAPI Messages - create alerts
+    // C# Reference: MainWindow.cs line 993 - MessageCollectionChanged()
+    if (cacheType == "message")
+    {
+        if (operation == "add" || operation == "mod")
+        {
+            // Get message snapshot
+            QVariantMap snapshot = eventData.value("snapshot").toMap();
+            if (!snapshot.isEmpty())
+            {
+                snapshot["ref"] = ref;
+                snapshot["opaqueRef"] = ref;
+                
+                // TODO: Check if message should be shown as alert
+                // C# checks: !m.ShowOnGraphs() && !m.IsSquelched()
+                // For now, create alert for all messages
+                emit this->messageReceived(ref, snapshot);
+            }
+        }
+        else if (operation == "del")
+        {
+            // Message was dismissed/deleted
+            emit this->messageRemoved(ref);
+        }
+    }
+
     if (operation == "del")
     {
         // Remove object from cache

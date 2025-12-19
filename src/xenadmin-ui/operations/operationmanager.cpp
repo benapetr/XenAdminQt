@@ -190,6 +190,35 @@ void OperationManager::updateRecordError(OperationRecord* record, const QString&
     emit recordUpdated(record);
 }
 
+void OperationManager::removeRecord(OperationRecord* record)
+{
+    // C# Equivalent: ConnectionsManager.History.Remove()
+    if (!record)
+        return;
+
+    // Remove from lookup
+    if (record->operation)
+        this->m_lookup.remove(record->operation);
+
+    // Remove from list
+    this->m_records.removeOne(record);
+
+    // Emit signal before deleting
+    emit recordRemoved(record);
+
+    // Delete the record
+    delete record;
+}
+
+void OperationManager::removeRecords(const QList<OperationRecord*>& records)
+{
+    // C# Equivalent: ConnectionsManager.History.RemoveAll()
+    for (auto* record : records)
+    {
+        this->removeRecord(record);
+    }
+}
+
 // Cleanup for shutdown - removes UUIDs from all task.other_config
 // Matches C# MainWindow.OnClosing() calling PrepareForEventReloadAfterRestart()
 void OperationManager::prepareAllOperationsForRestart()

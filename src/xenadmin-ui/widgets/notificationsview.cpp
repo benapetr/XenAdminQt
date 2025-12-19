@@ -109,7 +109,13 @@ void NotificationsView::selectNotificationsSubMode(NavigationPane::Notifications
 {
     QListWidgetItem* item = getItemForSubMode(subMode);
     if (item)
+    {
         ui->subModeList->setCurrentItem(item);
+        
+        // Emit signal manually since setCurrentItem doesn't trigger itemClicked
+        // This ensures the MainWindow receives the notification when switching programmatically
+        emit notificationsSubModeChanged(subMode);
+    }
 }
 
 void NotificationsView::updateEntries(NavigationPane::NotificationsSubMode mode, int entries)

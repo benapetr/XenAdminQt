@@ -214,6 +214,10 @@ signals:
     void taskModified(XenConnection* connection, const QString& taskRef, const QVariantMap& taskData);
     void taskDeleted(XenConnection* connection, const QString& taskRef);
 
+    // XenAPI Message signals (for alert system integration)
+    void messageReceived(const QString& messageRef, const QVariantMap& messageData);
+    void messageRemoved(const QString& messageRef);
+
     // Cache population complete (emitted after EventPoller's initial cache load)
     void cachePopulated();
 
