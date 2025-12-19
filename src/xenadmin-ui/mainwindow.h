@@ -122,7 +122,6 @@ private slots:
     void onNavigationModeChanged(int mode);
     void onNotificationsSubModeChanged(int subMode);
     void onNavigationPaneTreeViewSelectionChanged();
-    void onNavigationPaneTreeNodeClicked();
     void onNavigationPaneTreeNodeRightClicked();
 
     // Cache update handler for refreshing selected object

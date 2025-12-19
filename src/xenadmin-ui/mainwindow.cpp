@@ -275,8 +275,6 @@ MainWindow::MainWindow(QWidget* parent)
             this, &MainWindow::onNotificationsSubModeChanged);
     connect(m_navigationPane, &NavigationPane::treeViewSelectionChanged,
             this, &MainWindow::onNavigationPaneTreeViewSelectionChanged);
-    connect(m_navigationPane, &NavigationPane::treeNodeClicked,
-            this, &MainWindow::onNavigationPaneTreeNodeClicked);
     connect(m_navigationPane, &NavigationPane::treeNodeRightClicked,
             this, &MainWindow::onNavigationPaneTreeNodeRightClicked);
 
@@ -1722,17 +1720,6 @@ void MainWindow::onNavigationPaneTreeViewSelectionChanged()
         return;
     
     // Forward to existing tree selection handler
-    onTreeItemSelected();
-}
-
-void MainWindow::onNavigationPaneTreeNodeClicked()
-{
-    // Matches C# MainWindow.navigationPane_TreeNodeClicked
-    // Ignore tree node clicks when in Notifications mode
-    if (this->m_navigationPane && this->m_navigationPane->currentMode() == NavigationPane::Notifications)
-        return;
-    
-    // Handle tree node clicks
     onTreeItemSelected();
 }
 
