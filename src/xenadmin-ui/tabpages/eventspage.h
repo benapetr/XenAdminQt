@@ -153,6 +153,11 @@ private:
      */
     void toggleExpandedState(int row);
 
+    QString buildRecordTitle(OperationManager::OperationRecord* record) const;
+    QString buildRecordDescription(OperationManager::OperationRecord* record) const;
+    QString buildRecordDetails(OperationManager::OperationRecord* record) const;
+    QString formatElapsedTime(OperationManager::OperationRecord* record) const;
+
     // Slots for OperationManager events
     void onOperationAdded(OperationManager::OperationRecord* record);
     void onOperationUpdated(OperationManager::OperationRecord* record);

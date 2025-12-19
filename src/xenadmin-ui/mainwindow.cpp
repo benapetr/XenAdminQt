@@ -146,7 +146,6 @@
 #include "commands/network/newnetworkcommand.h"
 #include "commands/network/networkpropertiescommand.h"
 
-#include "widgets/historypage.h"
 #include "actions/meddlingactionmanager.h"
 #include <QApplication>
 #include <QMessageBox>
@@ -175,7 +174,6 @@ MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), ui(new Ui::MainWindow), m_xenLib(nullptr), m_debugWindow(nullptr), m_titleBar(nullptr),
       m_consolePanel(nullptr), m_cvmConsolePanel(nullptr), m_navigationPane(nullptr),
       m_connected(false),
-      m_historyDock(nullptr), m_historyPage(nullptr), m_toggleHistoryAction(nullptr),
       m_navigationHistory(nullptr),
       m_tabContainer(nullptr), m_tabContainerLayout(nullptr),
       m_poolsTreeItem(nullptr), m_hostsTreeItem(nullptr), m_vmsTreeItem(nullptr), m_storageTreeItem(nullptr),
@@ -213,25 +211,6 @@ MainWindow::MainWindow(QWidget* parent)
     // Store the tab container for later use with notification pages
     m_tabContainer = tabContainer;
     m_tabContainerLayout = containerLayout;
-
-    // History/events dock
-    m_historyPage = new HistoryPage(this);
-    m_historyDock = new QDockWidget(tr("Events"), this);
-    m_historyDock->setObjectName(QStringLiteral("eventsDock"));
-    m_historyDock->setWidget(m_historyPage);
-    addDockWidget(Qt::BottomDockWidgetArea, m_historyDock);
-    m_historyDock->setVisible(true); // Show by default to display running operations
-
-    m_toggleHistoryAction = new QAction(tr("Show Events"), this);
-    m_toggleHistoryAction->setCheckable(true);
-    m_toggleHistoryAction->setChecked(true); // Initially checked since visible
-    connect(m_toggleHistoryAction, &QAction::toggled, this, [this](bool visible)
-    {
-        if (m_historyDock)
-            m_historyDock->setVisible(visible);
-    });
-    connect(m_historyDock, &QDockWidget::visibilityChanged, m_toggleHistoryAction, &QAction::setChecked);
-    ui->menuView->addAction(m_toggleHistoryAction);
 
     // Status bar widgets (matches C# MainWindow.statusProgressBar and statusLabel)
     m_statusLabel = new QLabel(this);

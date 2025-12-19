@@ -65,6 +65,9 @@ SOURCES += \
     alerts/alert.cpp \
     alerts/alertmanager.cpp \
     alerts/messagealert.cpp \
+    alerts/alarmmessagealert.cpp \
+    alerts/policyalert.cpp \
+    alerts/certificatealert.cpp \
     actions/meddlingaction.cpp \
     actions/meddlingactionmanager.cpp \
     commands/command.cpp \
@@ -169,7 +172,6 @@ SOURCES += \
     tabpages/notificationsbasepage.cpp \
     tabpages/alertsummarypage.cpp \
     tabpages/eventspage.cpp \
-    widgets/historypage.cpp \
     widgets/qvncclient.cpp \
     widgets/memorybar.cpp \
     widgets/progressbardelegate.cpp \
@@ -254,6 +256,9 @@ HEADERS += \
     alerts/alert.h \
     alerts/alertmanager.h \
     alerts/messagealert.h \
+    alerts/alarmmessagealert.h \
+    alerts/policyalert.h \
+    alerts/certificatealert.h \
     actions/meddlingaction.h \
     actions/meddlingactionmanager.h \
     commands/command.h \
@@ -358,7 +363,6 @@ HEADERS += \
     tabpages/notificationsbasepage.h \
     tabpages/alertsummarypage.h \
     tabpages/eventspage.h \
-    widgets/historypage.h \
     widgets/qvncclient.h \
     widgets/memorybar.h \
     widgets/progressbardelegate.h \

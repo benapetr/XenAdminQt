@@ -43,6 +43,7 @@
 #include <QDateEdit>
 #include <QLabel>
 #include <QTime>
+#include <QStringList>
 
 // Register OperationRecord pointer as a metatype so it can be used in QVariant
 Q_DECLARE_METATYPE(OperationManager::OperationRecord*)
@@ -60,6 +61,8 @@ EventsPage::EventsPage(QWidget* parent)
     // Setup table appearance
     this->ui->eventsTable->horizontalHeader()->setStretchLastSection(false);
     this->ui->eventsTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch); // Message column
+    this->ui->eventsTable->setWordWrap(true);
+    this->ui->eventsTable->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
     // Connect toolbar actions
     connect(this->ui->actionFilterStatus, &QAction::triggered,
@@ -240,10 +243,10 @@ void EventsPage::createRecordRow(OperationManager::OperationRecord* record)
     this->ui->eventsTable->setItem(row, 1, statusItem);
 
     // Column 2: Message/Title
-    QTableWidgetItem* messageItem = new QTableWidgetItem(record->title);
+    QString title = this->buildRecordTitle(record);
+    QTableWidgetItem* messageItem = new QTableWidgetItem(title);
     messageItem->setData(Qt::UserRole, QVariant::fromValue(record));
-    if (!record->description.isEmpty())
-        messageItem->setToolTip(record->description);
+    messageItem->setToolTip(this->buildRecordDetails(record));
     this->ui->eventsTable->setItem(row, 2, messageItem);
 
     // Column 3: Location (connection name)
@@ -322,9 +325,12 @@ void EventsPage::updateRecordRow(OperationManager::OperationRecord* record)
     QTableWidgetItem* messageItem = this->ui->eventsTable->item(row, 2);
     if (messageItem)
     {
-        messageItem->setText(record->title);
-        if (!record->description.isEmpty())
-            messageItem->setToolTip(record->description);
+        bool isExpanded = this->m_expandedRows.contains(row);
+        if (isExpanded)
+            messageItem->setText(this->buildRecordDetails(record));
+        else
+            messageItem->setText(this->buildRecordTitle(record));
+        messageItem->setToolTip(this->buildRecordDetails(record));
     }
 }
 
@@ -391,13 +397,93 @@ void EventsPage::toggleExpandedState(int row)
         // Expand: show full details
         // C# Reference: HistoryPage line 317 - expanderCell.Value = Images.StaticImages.expanded_triangle
         this->m_expandedRows.insert(row);
-        QString details = record->description;
-        if (details.isEmpty())
-            details = record->title;
-        messageItem->setText(details);
+        messageItem->setText(this->buildRecordDetails(record));
         QIcon expandedIcon(":/icons/expanded_triangle.png");
         expanderItem->setIcon(expandedIcon);
     }
+}
+
+QString EventsPage::buildRecordTitle(OperationManager::OperationRecord* record) const
+{
+    if (!record)
+        return QString();
+
+    if (!record->title.isEmpty())
+        return record->title;
+
+    if (!record->description.isEmpty())
+        return record->description;
+
+    // Fall back to connection hostname if available
+    if (record->operation && record->operation->connection())
+        return record->operation->connection()->getHostname();
+
+    return tr("Operation");
+}
+
+QString EventsPage::buildRecordDescription(OperationManager::OperationRecord* record) const
+{
+    if (!record)
+        return QString();
+
+    if (!record->errorMessage.isEmpty())
+        return record->errorMessage;
+
+    return record->description;
+}
+
+QString EventsPage::formatElapsedTime(OperationManager::OperationRecord* record) const
+{
+    if (!record || !record->started.isValid())
+        return QString();
+
+    QDateTime end = record->finished.isValid() ? record->finished : QDateTime::currentDateTime();
+    if (end < record->started)
+        end = record->started;
+
+    qint64 seconds = record->started.secsTo(end);
+    if (seconds <= 0)
+        return QString();
+
+    qint64 days = seconds / 86400;
+    seconds %= 86400;
+    qint64 hours = seconds / 3600;
+    seconds %= 3600;
+    qint64 minutes = seconds / 60;
+    seconds %= 60;
+
+    QStringList parts;
+    if (days > 0)
+        parts << tr("%1d").arg(days);
+    if (hours > 0)
+        parts << tr("%1h").arg(hours);
+    if (minutes > 0)
+        parts << tr("%1m").arg(minutes);
+    if (seconds > 0 || parts.isEmpty())
+        parts << tr("%1s").arg(seconds);
+
+    return tr("Time: %1").arg(parts.join(" "));
+}
+
+QString EventsPage::buildRecordDetails(OperationManager::OperationRecord* record) const
+{
+    if (!record)
+        return QString();
+
+    QStringList lines;
+    QString title = this->buildRecordTitle(record);
+    if (!title.isEmpty())
+        lines << title;
+
+    QString description = this->buildRecordDescription(record);
+    if (!description.isEmpty())
+        lines << description;
+
+    QString timeInfo = this->formatElapsedTime(record);
+    if (!timeInfo.isEmpty())
+        lines << timeInfo;
+
+    return lines.join("\n");
 }
 
 // Slots

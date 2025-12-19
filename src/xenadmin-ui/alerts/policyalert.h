@@ -25,37 +25,53 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HISTORYPAGE_H
-#define HISTORYPAGE_H
+#ifndef POLICYALERT_H
+#define POLICYALERT_H
 
-#include <QWidget>
-#include <QHash>
+#include "messagealert.h"
 
-#include "../operations/operationmanager.h"
+/**
+ * Alert types for VMSS (VM Snapshot Schedule) policy messages
+ * C# Reference: XenAdmin/Alerts/Types/PolicyAlert.cs enum PolicyAlertType
+ */
+enum class PolicyAlertType
+{
+    Error = 1,  // Snapshot failed
+    Warn = 3,   // Warning conditions
+    Info = 5    // Snapshot succeeded
+};
 
-class QTreeWidget;
-class QTreeWidgetItem;
-
-class HistoryPage : public QWidget
+/**
+ * Specialized alert for VMSS snapshot schedule messages.
+ * Handles:
+ * - VMSS_SNAPSHOT_FAILED
+ * - VMSS_SNAPSHOT_SUCCEEDED
+ * - VMSS_SNAPSHOT_MISSED_EVENT
+ * - VMSS_XAPI_LOGON_FAILURE
+ * - VMSS_LICENSE_ERROR
+ * - VMSS_SNAPSHOT_LOCK_FAILED
+ * 
+ * C# Reference: XenAdmin/Alerts/Types/PolicyAlert.cs
+ */
+class PolicyAlert : public MessageAlert
 {
     Q_OBJECT
 
 public:
-    explicit HistoryPage(QWidget* parent = nullptr);
-    ~HistoryPage() override = default;
+    explicit PolicyAlert(XenConnection* connection, const QVariantMap& messageData);
 
-private slots:
-    void onRecordAdded(OperationManager::OperationRecord* record);
-    void onRecordUpdated(OperationManager::OperationRecord* record);
-    void onRecordRemoved(OperationManager::OperationRecord* record);
+    // Override alert properties
+    QString title() const override;
+    QString description() const override;
 
 private:
-    void updateItem(OperationManager::OperationRecord* record, QTreeWidgetItem* item);
-    QString statusText(OperationManager::OperationRecord* record) const;
-    QString detailText(OperationManager::OperationRecord* record) const;
-
-    QTreeWidget* m_tree;
-    QHash<OperationManager::OperationRecord*, QTreeWidgetItem*> m_items;
+    void parsePolicyMessage();
+    PolicyAlertType policyTypeFromPriority(int priority) const;
+    
+    PolicyAlertType m_policyType;
+    QString m_title;
+    QString m_description;
+    QString m_policyName;
 };
 
-#endif // HISTORYPAGE_H
+#endif // POLICYALERT_H

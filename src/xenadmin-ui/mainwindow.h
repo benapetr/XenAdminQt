@@ -51,7 +51,6 @@ class PlaceholderWidget;
 class SettingsManager;
 class TitleBar;
 class ConnectionProfile;
-class HistoryPage;
 class ConsolePanel;
 class CvmConsolePanel;
 class QDockWidget;
@@ -323,11 +322,6 @@ protected:
     void initializeCommands();
     void connectMenuActions();
     void updateMenuItems();
-
-    // History dock
-    QDockWidget* m_historyDock;
-    HistoryPage* m_historyPage;
-    QAction* m_toggleHistoryAction;
 
     // Toolbar (matches C# ToolStrip)
     QToolBar* m_toolBar;
