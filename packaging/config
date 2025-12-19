@@ -1,0 +1,13 @@
+#!/bin/bash
+################################################################################
+# config.sh - Shared configuration for XenAdmin Qt packaging scripts
+################################################################################
+
+# Application metadata
+APP_NAME="xenadmin-qt"
+APP_VERSION="0.1.0"
+MAINTAINER="Petr Bena <petr@bena.rocks>"
+DESCRIPTION="XenServer/XCP-ng management UI"
+
+# Icon path (relative to project root)
+APP_ICON_PATH="src/xenadmin-ui/images/AppIcon.ico"
