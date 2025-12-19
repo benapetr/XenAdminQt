@@ -2030,6 +2030,8 @@ void MainWindow::initializeToolbar()
     // Get toolbar from UI file (matches C# ToolStrip in MainWindow.Designer.cs)
     m_toolBar = ui->mainToolBar;
 
+    QAction* firstToolbarAction = m_toolBar->actions().isEmpty() ? nullptr : m_toolBar->actions().first();
+
     // Add Back button with dropdown at the beginning (C# backButton - ToolStripSplitButton)
     m_backButton = new QToolButton(this);
     m_backButton->setIcon(QIcon(":/icons/back.png"));
@@ -2046,7 +2048,7 @@ void MainWindow::initializeToolbar()
             m_navigationHistory->populateBackDropDown(backMenu);
         }
     });
-    m_toolBar->insertWidget(m_toolBar->actions().first(), m_backButton);
+    m_toolBar->insertWidget(firstToolbarAction, m_backButton);
 
     // Add Forward button with dropdown (C# forwardButton - ToolStripSplitButton)
     m_forwardButton = new QToolButton(this);
@@ -2064,7 +2066,7 @@ void MainWindow::initializeToolbar()
             m_navigationHistory->populateForwardDropDown(forwardMenu);
         }
     });
-    m_toolBar->insertWidget(m_toolBar->actions().first(), m_forwardButton);
+    m_toolBar->insertWidget(firstToolbarAction, m_forwardButton);
 
     // Add separator after navigation buttons
     m_toolBar->insertSeparator(m_toolBar->actions().first());
