@@ -93,6 +93,7 @@ TEMP_DIR=$(mktemp -d -t xenadmin-dmg-XXXXXX)
 trap "rm -rf $TEMP_DIR" EXIT
 
 echo "Step 1: Building application..."
+mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
 # Run qmake to generate Makefiles
@@ -103,41 +104,82 @@ $QMAKE_CMD xenadminqt.pro -o "$BUILD_DIR/Makefile"
 cd "$BUILD_DIR"
 
 # Clean and build
-make clean || true
+#make clean || true
 make -j$NCPUS
 
-if [ ! -f "$BUILD_DIR/xenadmin-ui/xenadmin-qt" ]; then
-    echo "Error: Build failed - xenadmin-qt binary not found"
+BUILT_APP_BUNDLE="$BUILD_DIR/xenadmin-ui/xenadmin-qt.app"
+BUILT_BINARY="$BUILD_DIR/xenadmin-ui/xenadmin-qt"
+
+if [ -d "$BUILT_APP_BUNDLE" ]; then
+    BUILT_EXECUTABLE="$BUILT_APP_BUNDLE/Contents/MacOS/xenadmin-qt"
+    if [ ! -f "$BUILT_EXECUTABLE" ]; then
+        echo "Error: Build failed - xenadmin-qt app bundle is missing executable"
+        exit 1
+    fi
+elif [ -f "$BUILT_BINARY" ]; then
+    BUILT_EXECUTABLE="$BUILT_BINARY"
+else
+    echo "Error: Build failed - xenadmin-qt binary/app bundle not found"
     exit 1
 fi
 
 echo ""
 echo "Step 2: Creating application bundle..."
 
-# Create app bundle structure
+# Create app bundle structure or copy an existing bundle
 BUNDLE_DIR="$TEMP_DIR/$APP_BUNDLE"
-mkdir -p "$BUNDLE_DIR/Contents/MacOS"
-mkdir -p "$BUNDLE_DIR/Contents/Resources"
-mkdir -p "$BUNDLE_DIR/Contents/Frameworks"
+if [ -d "$BUILT_APP_BUNDLE" ]; then
+    ditto "$BUILT_APP_BUNDLE" "$BUNDLE_DIR"
+else
+    mkdir -p "$BUNDLE_DIR/Contents/MacOS"
+    mkdir -p "$BUNDLE_DIR/Contents/Resources"
+    mkdir -p "$BUNDLE_DIR/Contents/Frameworks"
+    cp "$BUILT_EXECUTABLE" "$BUNDLE_DIR/Contents/MacOS/"
+fi
 
-# Copy binary
-cp "$BUILD_DIR/xenadmin-ui/xenadmin-qt" "$BUNDLE_DIR/Contents/MacOS/"
 chmod 755 "$BUNDLE_DIR/Contents/MacOS/xenadmin-qt"
-if [ -f "$PROJECT_ROOT/$APP_ICON_PATH" ]; then
+ICON_SOURCE="$PROJECT_ROOT/packaging/xenadmin.png"
+if [ -f "$ICON_SOURCE" ]; then
     if command -v sips &> /dev/null && command -v iconutil &> /dev/null; then
         ICONSET="$TEMP_DIR/AppIcon.iconset"
         mkdir -p "$ICONSET"
         # Extract and resize icon to different sizes for .icns
-        sips -z 16 16     "$PROJECT_ROOT/$APP_ICON_PATH" --out "$ICONSET/icon_16x16.png" 2>/dev/null || true
-        sips -z 32 32     "$PROJECT_ROOT/$APP_ICON_PATH" --out "$ICONSET/icon_16x16@2x.png" 2>/dev/null || true
-        sips -z 32 32     "$PROJECT_ROOT/$APP_ICON_PATH" --out "$ICONSET/icon_32x32.png" 2>/dev/null || true
-        sips -z 64 64     "$PROJECT_ROOT/$APP_ICON_PATH" --out "$ICONSET/icon_32x32@2x.png" 2>/dev/null || true
-        sips -z 128 128   "$PROJECT_ROOT/$APP_ICON_PATH" --out "$ICONSET/icon_128x128.png" 2>/dev/null || true
-        sips -z 256 256   "$PROJECT_ROOT/$APP_ICON_PATH" --out "$ICONSET/icon_128x128@2x.png" 2>/dev/null || true
-        sips -z 256 256   "$PROJECT_ROOT/$APP_ICON_PATH" --out "$ICONSET/icon_256x256.png" 2>/dev/null || true
-        sips -z 512 512   "$PROJECT_ROOT/$APP_ICON_PATH" --out "$ICONSET/icon_256x256@2x.png" 2>/dev/null || true
-        sips -z 512 512   "$PROJECT_ROOT/$APP_ICON_PATH" --out "$ICONSET/icon_512x512.png" 2>/dev/null || true
-        iconutil -c icns "$ICONSET" -o "$BUNDLE_DIR/Contents/Resources/xenadmin.icns"
+        sips -z 16 16     "$ICON_SOURCE" --out "$ICONSET/icon_16x16.png" 2>/dev/null || true
+        sips -z 32 32     "$ICON_SOURCE" --out "$ICONSET/icon_16x16@2x.png" 2>/dev/null || true
+        sips -z 32 32     "$ICON_SOURCE" --out "$ICONSET/icon_32x32.png" 2>/dev/null || true
+        sips -z 64 64     "$ICON_SOURCE" --out "$ICONSET/icon_32x32@2x.png" 2>/dev/null || true
+        sips -z 128 128   "$ICON_SOURCE" --out "$ICONSET/icon_128x128.png" 2>/dev/null || true
+        sips -z 256 256   "$ICON_SOURCE" --out "$ICONSET/icon_128x128@2x.png" 2>/dev/null || true
+        sips -z 256 256   "$ICON_SOURCE" --out "$ICONSET/icon_256x256.png" 2>/dev/null || true
+        sips -z 512 512   "$ICON_SOURCE" --out "$ICONSET/icon_256x256@2x.png" 2>/dev/null || true
+        sips -z 512 512   "$ICON_SOURCE" --out "$ICONSET/icon_512x512.png" 2>/dev/null || true
+        sips -z 1024 1024 "$ICON_SOURCE" --out "$ICONSET/icon_512x512@2x.png" 2>/dev/null || true
+        REQUIRED_ICONS=(
+            "icon_16x16.png"
+            "icon_16x16@2x.png"
+            "icon_32x32.png"
+            "icon_32x32@2x.png"
+            "icon_128x128.png"
+            "icon_128x128@2x.png"
+            "icon_256x256.png"
+            "icon_256x256@2x.png"
+            "icon_512x512.png"
+            "icon_512x512@2x.png"
+        )
+        MISSING_ICON=0
+        for icon in "${REQUIRED_ICONS[@]}"; do
+            if [ ! -f "$ICONSET/$icon" ]; then
+                MISSING_ICON=1
+                break
+            fi
+        done
+        if [ "$MISSING_ICON" -eq 0 ]; then
+            if ! iconutil -c icns "$ICONSET" -o "$BUNDLE_DIR/Contents/Resources/xenadmin.icns"; then
+                echo "Warning: iconutil failed to generate ICNS. Continuing without custom icon."
+            fi
+        else
+            echo "Warning: iconset is incomplete. Continuing without custom icon."
+        fi
     else
         echo "Warning: sips or iconutil not found. Icon will not be included."
     fi
@@ -222,39 +264,8 @@ hdiutil create -srcfolder "$DMG_STAGING" \
     -size ${DMG_SIZE}m \
     "$TEMP_DMG"
 
-# Mount the temporary DMG
-MOUNT_DIR=$(hdiutil attach -readwrite -noverify -noautoopen "$TEMP_DMG" | \
-    grep -E '^/dev/' | sed 1q | awk '{print $3}')
-
-# Wait for mount
-sleep 2
-
 echo ""
-echo "Step 6: Customizing DMG appearance..."
-
-# Set DMG window properties using AppleScript
-osascript <<EOF
-tell application "Finder"
-    tell disk "$APP_NAME"
-        open
-        set current view of container window to icon view
-        set toolbar visible of container window to false
-        set statusbar visible of container window to false
-        set the bounds of container window to {100, 100, 700, 500}
-        set viewOptions to the icon view options of container window
-        set arrangement of viewOptions to not arranged
-        set icon size of viewOptions to 128
-        set position of item "$APP_BUNDLE" of container window to {150, 200}
-        set position of item "Applications" of container window to {450, 200}
-        update without registering applications
-        delay 2
-    end tell
-end tell
-EOF
-
-# Unmount the temporary DMG
-hdiutil detach "$MOUNT_DIR" || true
-sleep 2
+echo "Step 6: Creating final DMG..."
 
 # Convert to compressed read-only DMG
 OUTPUT_DIR="$PROJECT_ROOT/packaging/output"
