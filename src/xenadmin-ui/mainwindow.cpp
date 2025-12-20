@@ -2037,6 +2037,10 @@ void MainWindow::onNewOperation(AsyncOperation* operation)
             this, &MainWindow::onOperationProgressChanged);
     connect(operation, &AsyncOperation::completed,
             this, &MainWindow::onOperationCompleted);
+    connect(operation, &AsyncOperation::failed,
+            this, &MainWindow::onOperationFailed);
+    connect(operation, &AsyncOperation::cancelled,
+            this, &MainWindow::onOperationCancelled);
 
     // Show initial status
     m_statusLabel->setText(operation->title());
@@ -2063,35 +2067,70 @@ void MainWindow::onOperationProgressChanged(int percent)
 void MainWindow::onOperationCompleted()
 {
     AsyncOperation* operation = qobject_cast<AsyncOperation*>(sender());
+    finalizeOperation(operation, AsyncOperation::Completed);
+}
+
+void MainWindow::onOperationFailed(const QString& error)
+{
+    Q_UNUSED(error);
+    AsyncOperation* operation = qobject_cast<AsyncOperation*>(sender());
+    finalizeOperation(operation, AsyncOperation::Failed);
+}
+
+void MainWindow::onOperationCancelled()
+{
+    AsyncOperation* operation = qobject_cast<AsyncOperation*>(sender());
+    finalizeOperation(operation, AsyncOperation::Cancelled);
+}
+
+void MainWindow::finalizeOperation(AsyncOperation* operation, AsyncOperation::OperationState state, const QString& errorMessage)
+{
     if (!operation)
         return;
 
-    // Disconnect from this operation's signals
+    // Disconnect signals
     disconnect(operation, &AsyncOperation::progressChanged,
                this, &MainWindow::onOperationProgressChanged);
     disconnect(operation, &AsyncOperation::completed,
                this, &MainWindow::onOperationCompleted);
+    disconnect(operation, &AsyncOperation::failed,
+               this, &MainWindow::onOperationFailed);
+    disconnect(operation, &AsyncOperation::cancelled,
+               this, &MainWindow::onOperationCancelled);
 
-    // Hide progress bar
-    m_statusProgressBar->setVisible(false);
+    // Only update status bar if this is the tracked action
+    if (m_statusBarAction == operation)
+    {
+        m_statusProgressBar->setVisible(false);
 
-    // Show completion message
-    if (!operation->isFailed())
-    {
-        m_statusLabel->setText(QString("%1 completed successfully").arg(operation->title()));
-        ui->statusbar->showMessage(QString("%1 completed successfully").arg(operation->title()), 5000);
-    } else
-    {
-        m_statusLabel->setText(QString("%1 failed").arg(operation->title()));
-        ui->statusbar->showMessage(QString("%1 failed: %2").arg(operation->title(), operation->errorMessage()), 10000);
+        QString title = operation->title();
+        switch (state)
+        {
+        case AsyncOperation::Completed:
+            m_statusLabel->setText(QString("%1 completed successfully").arg(title));
+            ui->statusbar->showMessage(QString("%1 completed successfully").arg(title), 5000);
+            break;
+        case AsyncOperation::Failed:
+        {
+            QString errorText = !errorMessage.isEmpty() ? errorMessage : operation->errorMessage();
+            if (errorText.isEmpty())
+                errorText = tr("Unknown error");
+            m_statusLabel->setText(QString("%1 failed").arg(title));
+            ui->statusbar->showMessage(QString("%1 failed: %2").arg(title, errorText), 10000);
+            break;
+        }
+        case AsyncOperation::Cancelled:
+            m_statusLabel->setText(QString("%1 cancelled").arg(title));
+            ui->statusbar->showMessage(QString("%1 was cancelled").arg(title), 5000);
+            break;
+        default:
+            break;
+        }
+
+        m_statusBarAction = nullptr;
     }
 
-    // Clear the tracked action
-    if (m_statusBarAction == operation)
-        m_statusBarAction = nullptr;
-
-    // Refresh tree to show updated VM state (matches C# UpdateToolbars)
-    // Request fresh data from server which will trigger tree rebuild
+    // Refresh tree data after action completes (success/failure/cancel)
     if (m_connected && m_xenLib)
     {
         m_xenLib->requestVirtualMachines();

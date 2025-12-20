@@ -32,6 +32,8 @@
 #include <QList>
 #include <QMap>
 
+#include "xen/asyncoperation.h"
+
 QT_BEGIN_NAMESPACE
 namespace Ui
 {
@@ -138,6 +140,9 @@ private slots:
     void onNewOperation(AsyncOperation* operation);
     void onOperationProgressChanged(int percent);
     void onOperationCompleted();
+    void onOperationFailed(const QString& error);
+    void onOperationCancelled();
+    void finalizeOperation(AsyncOperation* operation, AsyncOperation::OperationState state, const QString& errorMessage = QString());
 
     // Toolbar navigation (matches C# MainWindow)
     void onBackButton();
