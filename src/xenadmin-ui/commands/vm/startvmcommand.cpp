@@ -63,8 +63,16 @@ void StartVMCommand::run()
     QString vmRef = this->getSelectedVMRef();
     QString vmName = this->getSelectedVMName();
 
-    if (vmRef.isEmpty() || vmName.isEmpty())
+    if (vmRef.isEmpty())
         return;
+
+    runForVm(vmRef, vmName);
+}
+
+bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
+{
+    if (vmRef.isEmpty())
+        return false;
 
     // Get XenConnection from XenLib
     XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
@@ -72,7 +80,15 @@ void StartVMCommand::run()
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
                              "Not connected to XenServer");
-        return;
+        return false;
+    }
+
+    // Determine name if not provided
+    QString displayName = vmName;
+    if (displayName.isEmpty())
+    {
+        QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+        displayName = vmData.value("name_label").toString();
     }
 
     // Create VM object (lightweight wrapper)
@@ -93,6 +109,7 @@ void StartVMCommand::run()
     // Run action asynchronously (matches C# pattern - no modal dialog)
     // Progress shown in status bar via OperationManager signals
     action->runAsync();
+    return true;
 }
 
 QString StartVMCommand::menuText() const

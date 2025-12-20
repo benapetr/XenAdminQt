@@ -62,16 +62,33 @@ void ResumeVMCommand::run()
     QString vmRef = this->getSelectedVMRef();
     QString vmName = this->getSelectedVMName();
 
-    if (vmRef.isEmpty() || vmName.isEmpty())
+    if (vmRef.isEmpty())
         return;
 
-    // Show confirmation dialog
-    int ret = QMessageBox::question(this->mainWindow(), "Resume VM",
-                                    QString("Are you sure you want to resume VM '%1'?").arg(vmName),
-                                    QMessageBox::Yes | QMessageBox::No);
+    runForVm(vmRef, vmName, true);
+}
 
-    if (ret != QMessageBox::Yes)
-        return;
+bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool promptUser)
+{
+    if (vmRef.isEmpty())
+        return false;
+
+    QString displayName = vmName;
+    if (displayName.isEmpty())
+    {
+        QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+        displayName = vmData.value("name_label").toString();
+    }
+
+    if (promptUser)
+    {
+        int ret = QMessageBox::question(this->mainWindow(), tr("Resume VM"),
+                                        tr("Are you sure you want to resume VM '%1'?").arg(displayName),
+                                        QMessageBox::Yes | QMessageBox::No);
+
+        if (ret != QMessageBox::Yes)
+            return false;
+    }
 
     // Get XenConnection from XenLib
     XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
@@ -79,7 +96,7 @@ void ResumeVMCommand::run()
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
                              "Not connected to XenServer");
-        return;
+        return false;
     }
 
     // Create VM object (lightweight wrapper)
@@ -101,6 +118,7 @@ void ResumeVMCommand::run()
 
     // Run action asynchronously
     action->runAsync();
+    return true;
 }
 
 QString ResumeVMCommand::menuText() const

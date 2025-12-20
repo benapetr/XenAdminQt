@@ -42,6 +42,15 @@ public:
     void run() override;
     QString menuText() const override;
 
+    /**
+     * @brief Run the command for a specific VM reference.
+     * Matches C# StartVMCommand.Run() overloads used by console power controls.
+     * @param vmRef XenAPI opaque ref of the VM to start.
+     * @param vmName Optional name (used for prompts/logging); if empty it will be looked up.
+     * @return true if the action was scheduled.
+     */
+    bool runForVm(const QString& vmRef, const QString& vmName = QString());
+
 private:
     QString getSelectedVMRef() const;
     QString getSelectedVMName() const;

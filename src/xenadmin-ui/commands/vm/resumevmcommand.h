@@ -42,6 +42,14 @@ public:
     void run() override;
     QString menuText() const override;
 
+    /**
+     * @brief Run the command for a specific suspended VM.
+     * @param vmRef VM opaque ref.
+     * @param vmName Optional display name.
+     * @return true if action scheduled.
+     */
+    bool runForVm(const QString& vmRef, const QString& vmName = QString(), bool promptUser = false);
+
 private:
     QString getSelectedVMRef() const;
     QString getSelectedVMName() const;

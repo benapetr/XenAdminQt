@@ -36,6 +36,9 @@
 #include "xen/vm.h"
 #include "xen/actions/vm/vmstartaction.h"
 #include "xen/actions/vm/vmresumeaction.h"
+#include "../commands/vm/startvmcommand.h"
+#include "../commands/vm/resumevmcommand.h"
+#include "../mainwindow.h"
 #include <QDebug>
 #include <QMessageBox>
 #include <QVBoxLayout>
@@ -926,21 +929,12 @@ void VNCTabView::onPowerStateLabelClicked()
             this->ui->powerStateLabel->setEnabled(false);
             disablePowerStateLabel(tr("Starting VM..."));
 
-            // Create VM object and start action (matches C# new StartVMCommand(...).Run())
-            VM* vm = new VM(conn, this->_vmRef);
-            VMStartAction* action = new VMStartAction(vm, nullptr, nullptr, this);
-
-            connect(action, &AsyncOperation::completed, this, [action]() {
-                action->deleteLater();
-            });
-
-            connect(action, &AsyncOperation::failed, this, [action, this](const QString& error) {
-                QMessageBox::warning(this, tr("Start Failed"),
-                                     tr("Failed to start VM: %1").arg(error));
-                action->deleteLater();
-            });
-
-            action->runAsync();
+            MainWindow* mainWin = qobject_cast<MainWindow*>(this->window());
+            StartVMCommand startCmd(mainWin);
+            if (!startCmd.runForVm(this->_vmRef))
+            {
+                enablePowerStateLabel(tr("Failed to start VM"));
+            }
         }
     } else if (powerState == "Suspended")
     {
@@ -966,21 +960,12 @@ void VNCTabView::onPowerStateLabelClicked()
             this->ui->powerStateLabel->setEnabled(false);
             disablePowerStateLabel(tr("Resuming VM..."));
 
-            // Create VM object and resume action (matches C# new ResumeVMCommand(...).Run())
-            VM* vm = new VM(conn, this->_vmRef);
-            VMResumeAction* action = new VMResumeAction(vm, nullptr, nullptr, this);
-
-            connect(action, &AsyncOperation::completed, this, [action]() {
-                action->deleteLater();
-            });
-
-            connect(action, &AsyncOperation::failed, this, [action, this](const QString& error) {
-                QMessageBox::warning(this, tr("Resume Failed"),
-                                     tr("Failed to resume VM: %1").arg(error));
-                action->deleteLater();
-            });
-
-            action->runAsync();
+            MainWindow* mainWin = qobject_cast<MainWindow*>(this->window());
+            ResumeVMCommand resumeCmd(mainWin);
+            if (!resumeCmd.runForVm(this->_vmRef))
+            {
+                enablePowerStateLabel(tr("Failed to resume VM"));
+            }
         }
     } else if (powerState == "Paused")
     {
