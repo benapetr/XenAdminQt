@@ -30,6 +30,8 @@ SOURCES += \
     xen/eventpoller.cpp \
     xen/certificatemanager.cpp \
     xen/heartbeat.cpp \
+    xen/failure.cpp \
+    xen/friendlyerrornames.cpp \
     xen/asyncoperation.cpp \
     xen/xenobject.cpp \
     xen/pool.cpp \
@@ -160,6 +162,8 @@ HEADERS += \
     xen/eventpoller.h \
     xen/certificatemanager.h \
     xen/heartbeat.h \
+    xen/failure.h \
+    xen/friendlyerrornames.h \
     xen/asyncoperation.h \
     xen/xenobject.h \
     xen/pool.h \

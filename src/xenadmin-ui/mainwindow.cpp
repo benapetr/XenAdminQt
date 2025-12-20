@@ -2115,8 +2115,10 @@ void MainWindow::finalizeOperation(AsyncOperation* operation, AsyncOperation::Op
             QString errorText = !errorMessage.isEmpty() ? errorMessage : operation->errorMessage();
             if (errorText.isEmpty())
                 errorText = tr("Unknown error");
+            QString shortError = operation->shortErrorMessage();
+            QString statusErrorText = shortError.isEmpty() ? errorText : shortError;
             m_statusLabel->setText(QString("%1 failed").arg(title));
-            ui->statusbar->showMessage(QString("%1 failed: %2").arg(title, errorText), 10000);
+            ui->statusbar->showMessage(QString("%1 failed: %2").arg(title, statusErrorText), 10000);
             break;
         }
         case AsyncOperation::Cancelled:

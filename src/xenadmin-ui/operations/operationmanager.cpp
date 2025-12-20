@@ -187,6 +187,10 @@ void OperationManager::updateRecordError(OperationRecord* record, const QString&
         return;
 
     record->errorMessage = error;
+    if (record->operation)
+        record->shortErrorMessage = record->operation->shortErrorMessage();
+    else
+        record->shortErrorMessage.clear();
     emit recordUpdated(record);
 }
 

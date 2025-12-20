@@ -26,15 +26,19 @@
  */
 
 #include "startvmcommand.h"
+#include "vmoperationhelpers.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include "xenlib.h"
 #include "xen/connection.h"
 #include "xen/vm.h"
 #include "xen/actions/vm/vmstartaction.h"
+#include "xen/failure.h"
 #include "xencache.h"
 #include <QMessageBox>
 #include <QTimer>
+#include <QMetaObject>
+#include <QPointer>
 
 StartVMCommand::StartVMCommand(MainWindow* mainWindow, QObject* parent)
     : Command(mainWindow, parent)
@@ -94,8 +98,33 @@ bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
     // Create VM object (lightweight wrapper)
     VM* vm = new VM(conn, vmRef);
 
-    // Create VMStartAction (parent is MainWindow to prevent premature deletion)
-    VMStartAction* action = new VMStartAction(vm, nullptr, nullptr, this->mainWindow());
+    // Create VMStartAction with diagnosis callbacks (matches C# pattern)
+    // NOTE: The callbacks are called by the action when failures occur
+    QPointer<MainWindow> mainWindow = this->mainWindow();
+
+    VMStartAction* action = new VMStartAction(
+        vm,
+        nullptr,  // WarningDialogHAInvalidConfig callback (TODO: implement if needed)
+        [conn, vmRef, displayName, mainWindow](VMStartAbstractAction* abstractAction, const Failure& failure) {
+            Q_UNUSED(abstractAction)
+            if (!mainWindow)
+                return;
+
+            Failure failureCopy = failure;
+            QMetaObject::invokeMethod(mainWindow, [mainWindow, conn, vmRef, displayName, failureCopy]() {
+                if (!mainWindow)
+                    return;
+                XenLib* lib = mainWindow->xenLib();
+                if (!lib)
+                    return;
+                VMOperationHelpers::startDiagnosisForm(lib,
+                                                       conn, vmRef, displayName,
+                                                       true,
+                                                       failureCopy,
+                                                       mainWindow);
+            }, Qt::QueuedConnection);
+        },
+        this->mainWindow());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
     OperationManager::instance()->registerOperation(action);

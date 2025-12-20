@@ -28,10 +28,72 @@
 #include "xenapi_VM.h"
 #include "../session.h"
 #include "../api.h"
+#include "../failure.h"
 #include <QtCore/QVariantList>
+#include <QtCore/QStringList>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 namespace XenAPI
 {
+    namespace
+    {
+        void maybeThrowFailureFromResponse(const QByteArray& response)
+        {
+            QJsonParseError parseError;
+            QJsonDocument doc = QJsonDocument::fromJson(response, &parseError);
+            if (parseError.error != QJsonParseError::NoError || !doc.isObject())
+                return;
+
+            QJsonObject root = doc.object();
+
+            auto throwFromArray = [](const QJsonArray& array) {
+                QStringList errors;
+                for (const QJsonValue& val : array)
+                    errors << val.toString();
+                if (!errors.isEmpty())
+                    throw Failure(errors);
+            };
+
+            if (root.contains("result"))
+            {
+                QJsonValue resultVal = root.value("result");
+                if (resultVal.isObject())
+                {
+                    QJsonObject resultObj = resultVal.toObject();
+                    if (resultObj.value("Status").toString() == "Failure")
+                    {
+                        QJsonValue errorDesc = resultObj.value("ErrorDescription");
+                        if (errorDesc.isArray())
+                            throwFromArray(errorDesc.toArray());
+                    }
+                }
+            }
+
+            if (root.contains("error"))
+            {
+                QJsonObject errorObj = root.value("error").toObject();
+                QStringList errors;
+                QString message = errorObj.value("message").toString();
+                if (!message.isEmpty())
+                    errors << message;
+                QJsonValue dataVal = errorObj.value("data");
+                if (dataVal.isArray())
+                {
+                    for (const QJsonValue& val : dataVal.toArray())
+                        errors << val.toVariant().toString();
+                } else if (dataVal.isString())
+                {
+                    QString dataStr = dataVal.toString();
+                    if (!dataStr.isEmpty())
+                        errors << dataStr;
+                }
+                if (!errors.isEmpty())
+                    throw Failure(errors);
+            }
+        }
+    }
 
     // VM.start - Synchronous
     void VM::start(XenSession* session, const QString& vm, bool start_paused, bool force)
@@ -445,7 +507,10 @@ namespace XenAPI
         QByteArray response = session->sendApiRequest(request);
         QVariant result = api.parseJsonRpcResponse(response);
 
-        // Will throw exception if assertion fails
+        if (result.isNull())
+        {
+            maybeThrowFailureFromResponse(response);
+        }
     }
 
     // VM.assert_can_migrate

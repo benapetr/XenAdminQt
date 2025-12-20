@@ -25,37 +25,41 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VMSTARTACTION_H
-#define VMSTARTACTION_H
+#ifndef FRIENDLYERRORNAMES_H
+#define FRIENDLYERRORNAMES_H
 
-#include "vmstartabstractaction.h"
+#include "../xenlib_global.h"
+#include <QString>
+#include <QMap>
 
-class VM;
-
-/**
- * @brief Start a VM (VM.async_start)
+/*!
+ * \brief XenAPI Friendly Error Names
  *
- * Qt port of C# VMStartAction. Starts a halted VM.
+ * Provides friendly error messages for XenAPI error codes.
+ * Matches xenadmin/XenModel/XenAPI/FriendlyErrorNames.Designer.cs pattern.
+ *
+ * Error messages are extracted from xenadmin/XenModel/XenAPI/FriendlyErrorNames.resx
+ * and compiled into a static lookup table.
  */
-class XENLIB_EXPORT VMStartAction : public VMStartAbstractAction
+class XENLIB_EXPORT FriendlyErrorNames
 {
-    Q_OBJECT
-
     public:
-        explicit VMStartAction(VM* vm,
-                               WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
-                               StartDiagnosisForm startDiagnosisForm,
-                               QObject* parent = nullptr);
+        /*!
+        * \brief Get friendly error message for error code
+        * \param errorCode XenAPI error code (e.g., "NO_HOSTS_AVAILABLE")
+        * \return Friendly error message, or empty string if not found
+        */
+        static QString getString(const QString& errorCode);
 
-        bool isStart() const override
-        {
-            return true;
-        }
-        VMStartAbstractAction* clone() override;
+    private:
+        // Private constructor - this is a static-only class
+        FriendlyErrorNames() = delete;
 
-    protected:
-        void run() override;
-        void doAction(int start, int end) override;
+        // Initialize the error code lookup table
+        static QMap<QString, QString> initializeErrorMap();
+
+        // Static error code lookup table
+        static const QMap<QString, QString>& getErrorMap();
 };
 
-#endif // VMSTARTACTION_H
+#endif // FRIENDLYERRORNAMES_H

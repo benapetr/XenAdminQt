@@ -127,18 +127,50 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
             }
         }
 
+        auto invokeDiagnosis = [this]() {
+            if (!m_startDiagnosisForm)
+                return;
+
+            QStringList description = this->errorDetails();
+            if (description.isEmpty())
+            {
+                QString message = this->errorMessage();
+                if (!message.isEmpty())
+                    description << message;
+            }
+            if (description.isEmpty())
+                description << QStringLiteral("UNKNOWN_ERROR");
+
+            Failure failure(description);
+            m_startDiagnosisForm(this, failure);
+        };
+
         // Perform the actual start/resume operation
         doAction(start, end);
+
+        if (this->isFailed())
+            invokeDiagnosis();
+    } catch (const Failure& failure)
+    {
+        if (m_startDiagnosisForm)
+            m_startDiagnosisForm(this, failure);
+        throw;
     } catch (const std::exception& e)
     {
         QString error = QString::fromLocal8Bit(e.what());
-
-        // Call diagnosis form if provided
         if (m_startDiagnosisForm)
         {
-            m_startDiagnosisForm(this, error);
+            QStringList description = this->errorDetails();
+            if (description.isEmpty())
+            {
+                if (!error.isEmpty())
+                    description << error;
+                else
+                    description << QStringLiteral("UNKNOWN_ERROR");
+            }
+            Failure failure(description);
+            m_startDiagnosisForm(this, failure);
         }
-
         throw; // Re-throw to let AsyncOperation handle it
     }
 }

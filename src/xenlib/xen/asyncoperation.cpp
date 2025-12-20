@@ -33,6 +33,7 @@
 #include "host.h"
 #include "vm.h"
 #include "sr.h"
+#include "failure.h"
 #include "../xenlib.h"
 #include <QtCore/QDebug>
 #include <QtCore/QMutexLocker>
@@ -166,6 +167,12 @@ QString AsyncOperation::errorMessage() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_errorMessage;
+}
+
+QString AsyncOperation::shortErrorMessage() const
+{
+    QMutexLocker locker(&this->m_mutex);
+    return this->m_shortErrorMessage;
 }
 
 QStringList AsyncOperation::errorDetails() const
@@ -668,8 +675,24 @@ void AsyncOperation::setState(OperationState newState)
 
 void AsyncOperation::setError(const QString& message, const QStringList& details)
 {
+    QString resolvedMessage = message;
+    QString resolvedShort;
+
+    if (!details.isEmpty())
+    {
+        Failure failure(details);
+        QString friendly = failure.message();
+        if (!friendly.isEmpty())
+            resolvedMessage = friendly;
+        resolvedShort = failure.shortMessage();
+    }
+
+    if (resolvedMessage.isEmpty())
+        resolvedMessage = message;
+
     QMutexLocker locker(&this->m_mutex);
-    this->m_errorMessage = message;
+    this->m_errorMessage = resolvedMessage;
+    this->m_shortErrorMessage = resolvedShort;
     this->m_errorDetails = details;
 
     // Mark the action as failed when an error is set
@@ -684,6 +707,7 @@ void AsyncOperation::clearError()
 {
     QMutexLocker locker(&this->m_mutex);
     this->m_errorMessage.clear();
+    this->m_shortErrorMessage.clear();
     this->m_errorDetails.clear();
 }
 

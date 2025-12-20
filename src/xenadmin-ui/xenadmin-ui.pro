@@ -17,6 +17,7 @@ SOURCES += \
     dialogs/debugwindow.cpp \
     dialogs/aboutdialog.cpp \
     dialogs/ballooningdialog.cpp \
+    dialogs/commanderrordialog.cpp \
     dialogs/newvmwizard.cpp \
     dialogs/importwizard.cpp \
     dialogs/exportwizard.cpp \
@@ -93,6 +94,7 @@ SOURCES += \
     commands/vm/restartvmcommand.cpp \
     commands/vm/suspendvmcommand.cpp \
     commands/vm/resumevmcommand.cpp \
+    commands/vm/vmoperationhelpers.cpp \
     commands/vm/pausevmcommand.cpp \
     commands/vm/unpausevmcommand.cpp \
     commands/vm/forceshutdownvmcommand.cpp \
@@ -206,6 +208,7 @@ HEADERS += \
     dialogs/debugwindow.h \
     dialogs/aboutdialog.h \
     dialogs/ballooningdialog.h \
+    dialogs/commanderrordialog.h \
     dialogs/newvmwizard.h \
     dialogs/importwizard.h \
     dialogs/exportwizard.h \
@@ -284,6 +287,7 @@ HEADERS += \
     commands/vm/restartvmcommand.h \
     commands/vm/suspendvmcommand.h \
     commands/vm/resumevmcommand.h \
+    commands/vm/vmoperationhelpers.h \
     commands/vm/pausevmcommand.h \
     commands/vm/unpausevmcommand.h \
     commands/vm/forceshutdownvmcommand.h \
@@ -390,6 +394,7 @@ FORMS += \
     dialogs/connectdialog.ui \
     dialogs/debugwindow.ui \
     dialogs/ballooningdialog.ui \
+    dialogs/commanderrordialog.ui \
     dialogs/newpooldialog.ui \
     dialogs/bondpropertiesdialog.ui \
     dialogs/networkingpropertiesdialog.ui \

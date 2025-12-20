@@ -94,6 +94,7 @@ public:
 
     // Error handling
     QString errorMessage() const;
+    QString shortErrorMessage() const;
     QStringList errorDetails() const;
     bool hasError() const;
 
@@ -228,6 +229,7 @@ private:
     int m_percentComplete;
     OperationState m_state;
     QString m_errorMessage;
+    QString m_shortErrorMessage;
     QStringList m_errorDetails;
     bool m_canCancel;
     QString m_result;

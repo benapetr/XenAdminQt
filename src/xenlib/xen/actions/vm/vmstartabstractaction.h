@@ -29,6 +29,7 @@
 #define VMSTARTABSTRACTACTION_H
 
 #include "../../asyncoperation.h"
+#include "../../failure.h"
 #include <functional>
 
 class VM;
@@ -46,53 +47,53 @@ class XENLIB_EXPORT VMStartAbstractAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    // Callback types matching C# delegates
-    using WarningDialogHAInvalidConfig = std::function<void(VM*, bool)>;
-    using StartDiagnosisForm = std::function<void(VMStartAbstractAction*, const QString&)>;
+    public:
+        // Callback types matching C# delegates
+        using WarningDialogHAInvalidConfig = std::function<void(VM*, bool)>;
+        using StartDiagnosisForm = std::function<void(VMStartAbstractAction*, const Failure&)>;
 
-    virtual ~VMStartAbstractAction();
+        virtual ~VMStartAbstractAction();
 
-    /**
-     * @brief Check if this is a "start" action (vs "resume")
-     */
-    virtual bool isStart() const = 0;
+        /**
+         * @brief Check if this is a "start" action (vs "resume")
+         */
+        virtual bool isStart() const = 0;
 
-    /**
-     * @brief Clone this action for retry purposes
-     */
-    virtual VMStartAbstractAction* clone() = 0;
+        /**
+         * @brief Clone this action for retry purposes
+         */
+        virtual VMStartAbstractAction* clone() = 0;
 
-protected:
-    explicit VMStartAbstractAction(VM* vm,
-                                   const QString& title,
-                                   WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
-                                   StartDiagnosisForm startDiagnosisForm,
-                                   QObject* parent = nullptr);
+    protected:
+        explicit VMStartAbstractAction(VM* vm,
+                                       const QString& title,
+                                       WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
+                                       StartDiagnosisForm startDiagnosisForm,
+                                       QObject* parent = nullptr);
 
-    /**
-     * @brief Perform the actual start/resume operation
-     * @param start Progress start percentage (0-100)
-     * @param end Progress end percentage (0-100)
-     */
-    virtual void doAction(int start, int end) = 0;
+        /**
+         * @brief Perform the actual start/resume operation
+         * @param start Progress start percentage (0-100)
+         * @param end Progress end percentage (0-100)
+         */
+        virtual void doAction(int start, int end) = 0;
 
-    /**
-     * @brief Start or resume VM with HA protection checks
-     *
-     * Matches C# StartOrResumeVmWithHa. Checks VM agility if HA is enabled
-     * and VM is protected, warns user if inconsistent state detected.
-     */
-    void startOrResumeVmWithHa(int start, int end);
+        /**
+         * @brief Start or resume VM with HA protection checks
+         *
+         * Matches C# StartOrResumeVmWithHa. Checks VM agility if HA is enabled
+         * and VM is protected, warns user if inconsistent state detected.
+         */
+        void startOrResumeVmWithHa(int start, int end);
 
-    /**
-     * @brief Add common API methods to role check list
-     */
-    void addCommonAPIMethodsToRoleCheck();
+        /**
+         * @brief Add common API methods to role check list
+         */
+        void addCommonAPIMethodsToRoleCheck();
 
-protected:
-    WarningDialogHAInvalidConfig m_warningDialogHAInvalidConfig;
-    StartDiagnosisForm m_startDiagnosisForm;
+    protected:
+        WarningDialogHAInvalidConfig m_warningDialogHAInvalidConfig;
+        StartDiagnosisForm m_startDiagnosisForm;
 };
 
 #endif // VMSTARTABSTRACTACTION_H

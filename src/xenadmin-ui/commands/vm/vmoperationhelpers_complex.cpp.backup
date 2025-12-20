@@ -1,0 +1,276 @@
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "vmoperationhelpers.h"
+#include "../../dialogs/commanderrordialog.h"
+#include "xen/connection.h"
+#include "xen/session.h"
+#include "xen/failure.h"
+#include "xen/xenapi/xenapi_VM.h"
+#include "xen/xenapi/xenapi_Host.h"
+#include "xen/xenapi/xenapi_Pool.h"
+#include "xencache.h"
+#include "xenlib.h"
+#include <QThread>
+#include <QMessageBox>
+#include <QMetaObject>
+#include <QCoreApplication>
+#include <QDebug>
+#include <QVariantMap>
+#include <QVariantList>
+
+using namespace XenAPI;
+
+// Helper to execute diagnosis on background thread
+class DiagnosisWorker : public QObject
+{
+    Q_OBJECT
+
+public:
+    DiagnosisWorker(XenConnection* connection,
+                    const QString& vmRef,
+                    const QString& vmName,
+                    bool isStart,
+                    QWidget* parent)
+        : QObject(nullptr)
+        , m_connection(connection)
+        , m_vmRef(vmRef)
+        , m_vmName(vmName)
+        , m_isStart(isStart)
+        , m_parent(parent)
+    {
+    }
+
+    void run()
+    {
+        QString title = tr("Error Starting VM");
+        QString text = tr("The VM '%1' could not be started. The following servers cannot run this VM:").arg(this->m_vmName);
+
+        // Get session from connection
+        XenSession* session = this->m_connection->session();
+        if (!session || !session->isLoggedIn())
+        {
+            qWarning() << "DiagnosisWorker: Session is not valid";
+            this->finished();
+            return;
+        }
+
+        // Get all hosts from cache
+        XenCache* cache = XenLib::instance()->getCache();
+        if (!cache)
+        {
+            qWarning() << "DiagnosisWorker: XenCache is not available";
+            this->finished();
+            return;
+        }
+
+        QMap<QString, QPair<QString, QString>> reasons;  // host name -> (icon path, reason)
+
+        // Get all host refs from pool
+        QVariantList hostRefs = cache->getAllOfType("host");
+
+        for (const QVariant& hostRefVar : hostRefs)
+        {
+            QString hostRef = hostRefVar.toString();
+            QVariantMap hostData = cache->resolve("host", hostRef);
+            QString hostName = hostData.value("name_label", "Unknown Host").toString();
+
+            QString reason;
+
+            try
+            {
+                // Call VM.assert_can_boot_here - will throw Failure if cannot boot
+                VM::assert_can_boot_here(session, this->m_vmRef, hostRef);
+                
+                // If we get here, the VM CAN boot on this host - don't add to error list
+                continue;
+            }
+            catch (const Failure& failure)
+            {
+                // VM cannot boot here - get friendly error message
+                reason = failure.message();
+            }
+            catch (const std::exception& e)
+            {
+                qWarning() << "Error calling assert_can_boot_here on host" << hostName << ":" << e.what();
+                reason = tr("Unknown error checking this server");
+            }
+
+            // Add to reasons map with host icon
+            QString iconPath = ":/images/tree_host.png";  // TODO: Get correct icon based on host status
+            reasons.insert(hostName, qMakePair(iconPath, reason));
+        }
+
+        // Show dialog on main thread
+        QMetaObject::invokeMethod(this, "showDialog", Qt::QueuedConnection,
+                                  Q_ARG(QString, title),
+                                  Q_ARG(QString, text),
+                                  Q_ARG(QMap<QString, QPair<QString, QString>>, reasons));
+    }
+
+signals:
+    void finished();
+
+private slots:
+    void showDialog(const QString& title, const QString& text,
+                    const QMap<QString, QPair<QString, QString>>& reasons)
+    {
+        CommandErrorDialog dialog(title, text, reasons,
+                                  CommandErrorDialog::DialogMode::Close,
+                                  this->m_parent);
+        dialog.exec();
+        emit this->finished();
+    }
+
+private:
+    XenConnection* m_connection;
+    QString m_vmRef;
+    QString m_vmName;
+    bool m_isStart;
+    QWidget* m_parent;
+};
+
+// Static method implementations
+
+void VMOperationHelpers::startDiagnosisForm(XenConnection* connection,
+                                            const QString& vmRef,
+                                            const QString& vmName,
+                                            bool isStart,
+                                            QWidget* parent)
+{
+    if (!connection || !connection->isConnected())
+    {
+        qWarning() << "VMOperationHelpers::startDiagnosisForm: Connection is not valid";
+        return;
+    }
+
+    // Create worker and thread
+    QThread* thread = new QThread();
+    DiagnosisWorker* worker = new DiagnosisWorker(connection, vmRef, vmName, isStart, parent);
+    
+    worker->moveToThread(thread);
+
+    // Connect signals
+    QObject::connect(thread, &QThread::started, worker, &DiagnosisWorker::run);
+    QObject::connect(worker, &DiagnosisWorker::finished, thread, &QThread::quit);
+    QObject::connect(worker, &DiagnosisWorker::finished, worker, &DiagnosisWorker::deleteLater);
+    QObject::connect(thread, &QThread::finished, thread, &QThread::deleteLater);
+
+    // Start thread
+    thread->start();
+}
+
+void VMOperationHelpers::startDiagnosisForm(XenConnection* connection,
+                                            const QString& vmRef,
+                                            const QString& vmName,
+                                            bool isStart,
+                                            const Failure& failure,
+                                            QWidget* parent)
+{
+    QString errorCode = failure.errorCode();
+
+    if (errorCode == Failure::NO_HOSTS_AVAILABLE)
+    {
+        // Show a dialog displaying why the VM couldn't be started on each host
+        startDiagnosisForm(connection, vmRef, vmName, isStart, parent);
+    }
+    else if (errorCode == Failure::HA_OPERATION_WOULD_BREAK_FAILOVER_PLAN)
+    {
+        // The action was blocked by HA because it would reduce the number of tolerable server failures.
+        // With the user's consent, we'll reduce the number of configured failures to tolerate and try again.
+        
+        XenCache* cache = XenLib::instance()->getCache();
+        if (!cache)
+        {
+            qWarning() << "VMOperationHelpers: XenCache is not available";
+            return;
+        }
+
+        // Get pool from cache
+        QVariantList poolRefs = cache->getAllOfType("pool");
+        if (poolRefs.isEmpty())
+        {
+            qWarning() << "VMOperationHelpers: No pool found for VM" << vmName;
+            return;
+        }
+
+        QString poolRef = poolRefs.first().toString();
+        QVariantMap poolData = cache->resolve("pool", poolRef);
+        QString poolName = poolData.value("name_label", "Pool").toString();
+
+        qint64 ntol = poolData.value("ha_host_failures_to_tolerate", 0).toLongLong();
+        qint64 planExistsFor = poolData.value("ha_plan_exists_for", 0).toLongLong();
+        qint64 newNtol = qMin(planExistsFor - 1, ntol - 1);
+
+        if (newNtol <= 0)
+        {
+            // We would need to basically turn HA off to start this VM
+            QString msg = tr("This operation cannot be performed because it would invalidate the "
+                           "High Availability (HA) protection on this pool. "
+                           "The operation would require reducing the number of server failures to tolerate to 0, "
+                           "which would disable HA protection.\n\n"
+                           "Pool: %1\n"
+                           "VM: %2").arg(poolName, vmName);
+
+            QMessageBox::warning(parent, tr("High Availability"), msg);
+        }
+        else
+        {
+            // Show 'reduce ntol?' dialog
+            QString msg = tr("This operation cannot be performed because it would invalidate the "
+                           "High Availability (HA) protection on this pool. "
+                           "The pool is currently configured to tolerate %1 server failure(s), "
+                           "but this operation would require reducing that to %2.\n\n"
+                           "Pool: %3\n"
+                           "VM: %4\n\n"
+                           "Would you like to reduce the number of tolerated failures and continue?")
+                           .arg(ntol)
+                           .arg(newNtol)
+                           .arg(poolName, vmName);
+
+            QMessageBox msgBox(parent);
+            msgBox.setWindowTitle(tr("High Availability"));
+            msgBox.setText(msg);
+            msgBox.setIcon(QMessageBox::Warning);
+            msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+            msgBox.setDefaultButton(QMessageBox::No);
+
+            if (msgBox.exec() == QMessageBox::Yes)
+            {
+                // TODO: Implement HA ntol reduction and VM start retry
+                // This requires:
+                // 1. Call Pool.set_ha_host_failures_to_tolerate(session, poolRef, newNtol)
+                // 2. Retry the VM start action
+                // For now, just show a message
+                QMessageBox::information(parent, tr("High Availability"),
+                                       tr("HA configuration change and VM start retry not yet implemented."));
+            }
+        }
+    }
+}
+
+#include "vmoperationhelpers.moc"

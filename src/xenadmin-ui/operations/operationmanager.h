@@ -49,6 +49,7 @@ public:
         QString title;
         QString description;
         QString errorMessage;
+        QString shortErrorMessage;
         int progress = 0;
         AsyncOperation::OperationState state = AsyncOperation::NotStarted;
         QDateTime started;
