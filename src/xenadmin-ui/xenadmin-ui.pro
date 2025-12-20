@@ -192,6 +192,7 @@ SOURCES += \
     ConsoleView/VNCTabView.cpp \
     ConsoleView/VNCView.cpp \
     ConsoleView/ConsolePanel.cpp \
+    widgets/isodropdownbox.cpp \
     navigation/navigationhistory.cpp
 
 # Header files
@@ -229,6 +230,7 @@ HEADERS += \
     dialogs/vmsnapshotdialog.h \
     dialogs/vdipropertiesdialog.h \
     dialogs/attachvirtualdiskdialog.h \
+    widgets/isodropdownbox.h \
     dialogs/newvirtualdiskdialog.h \
     dialogs/movevirtualdiskdialog.h \
     dialogs/migratevirtualdiskdialog.h \

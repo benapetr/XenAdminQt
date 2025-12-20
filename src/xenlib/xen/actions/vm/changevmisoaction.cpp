@@ -29,6 +29,7 @@
 #include "../../connection.h"
 #include "../../session.h"
 #include "../../api.h"
+#include "../../xenapi/VBD.h"
 #include <QDebug>
 
 ChangeVMISOAction::ChangeVMISOAction(XenConnection* connection,
@@ -99,34 +100,20 @@ void ChangeVMISOAction::run()
     {
         setDescription("Ejecting current ISO...");
 
-        params.clear();
-        params << session->getSessionId() << m_vbdRef;
-
-        // Use async eject
-        QByteArray jsonRequest = api.buildJsonRpcCall("VBD.async_eject", params);
-        response = session->sendApiRequest(jsonRequest);
-
-        if (response.isEmpty())
+        QString taskRefStr;
+        try
+        {
+            taskRefStr = XenAPI::VBD::async_eject(session, m_vbdRef);
+        }
+        catch (const std::exception&)
         {
             setError("Failed to eject ISO");
             return;
         }
 
-        QVariant taskRef = api.parseJsonRpcResponse(response);
-        QString taskRefStr = taskRef.toString();
-
-        if (taskRefStr.isEmpty())
-        {
-            setError("Failed to get task reference for eject");
-            return;
-        }
-
         setRelatedTaskRef(taskRefStr);
-
-        // Poll task from 0% to 50% if we're going to insert after
         pollToCompletion(taskRefStr, 0, m_vdiRef.isEmpty() ? 100 : 50);
 
-        // Check if task succeeded
         if (hasError())
             return;
     }
@@ -136,34 +123,20 @@ void ChangeVMISOAction::run()
     {
         setDescription("Inserting ISO...");
 
-        params.clear();
-        params << session->getSessionId() << m_vbdRef << m_vdiRef;
-
-        // Use async insert
-        QByteArray jsonRequest = api.buildJsonRpcCall("VBD.async_insert", params);
-        response = session->sendApiRequest(jsonRequest);
-
-        if (response.isEmpty())
+        QString taskRefStr;
+        try
+        {
+            taskRefStr = XenAPI::VBD::async_insert(session, m_vbdRef, m_vdiRef);
+        }
+        catch (const std::exception&)
         {
             setError("Failed to insert ISO");
             return;
         }
 
-        QVariant taskRef = api.parseJsonRpcResponse(response);
-        QString taskRefStr = taskRef.toString();
-
-        if (taskRefStr.isEmpty())
-        {
-            setError("Failed to get task reference for insert");
-            return;
-        }
-
         setRelatedTaskRef(taskRefStr);
-
-        // Poll task from 50% (or 0% if we didn't eject) to 100%
         pollToCompletion(taskRefStr, m_isEmpty ? 0 : 50, 100);
 
-        // Check if task succeeded
         if (hasError())
             return;
 

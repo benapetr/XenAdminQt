@@ -76,6 +76,7 @@ void VbdCreateAndPlugAction::run()
         }
 
         qDebug() << "[VbdCreateAndPlugAction] VBD created successfully:" << vbdRef;
+        setResult(vbdRef);
         setPercentComplete(40);
 
         // Step 2: For PV VMs with empty VBDs (CD drives), we're done

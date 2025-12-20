@@ -31,6 +31,7 @@
 #include "ui_VNCTabView.h"
 #include "XSVNCScreen.h"
 #include "xenlib.h"
+#include "../widgets/isodropdownbox.h"
 #include "xencache.h"
 #include "xen/connection.h"
 #include "xen/vm.h"
@@ -2173,42 +2174,18 @@ void VNCTabView::refreshIsoList()
     bool isEmpty = vbdData.value("empty", true).toBool();
     QString currentVdiRef = vbdData.value("VDI").toString();
 
-    // Clear and populate ISO list
-    ui->cdIsoComboBox->clear();
+    IsoDropDownBox* isoBox = qobject_cast<IsoDropDownBox*>(ui->cdIsoComboBox);
+    if (!isoBox)
+        return;
 
-    // Add <empty> option
-    ui->cdIsoComboBox->addItem(tr("<empty>"), QString());
+    isoBox->setXenLib(_xenLib);
+    isoBox->setVMRef(_vmRef);
+    isoBox->refresh();
 
-    // Get all VDIs from cache (filter for ISOs)
-    QList<QVariantMap> allVdis = _xenLib->getCache()->getAll("vdi");
-
-    int selectedIndex = 0;
-    for (const QVariantMap& vdi : allVdis)
-    {
-        QString vdiRef = vdi.value("ref").toString();
-        QString nameLabel = vdi.value("name_label").toString();
-        bool isISO = vdi.value("is_a_snapshot", false).toBool() == false &&
-                     vdi.value("type", "").toString() == "User";
-
-        // Check if this VDI is on a suitable SR (ISO library)
-        QString srRef = vdi.value("SR").toString();
-        QVariantMap srData = _xenLib->getCachedObjectData("sr", srRef);
-        QString contentType = srData.value("content_type").toString();
-
-        if (contentType == "iso" && !nameLabel.isEmpty())
-        {
-            ui->cdIsoComboBox->addItem(nameLabel, vdiRef);
-
-            // Check if this is the currently mounted ISO
-            if (!isEmpty && vdiRef == currentVdiRef)
-            {
-                selectedIndex = ui->cdIsoComboBox->count() - 1;
-            }
-        }
-    }
-
-    // Set current selection
-    ui->cdIsoComboBox->setCurrentIndex(selectedIndex);
+    if (!isEmpty && !currentVdiRef.isEmpty())
+        isoBox->setSelectedVdiRef(currentVdiRef);
+    else
+        isoBox->setSelectedVdiRef(QString());
 }
 
 void VNCTabView::onCdDriveChanged(int index)

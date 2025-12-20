@@ -29,6 +29,7 @@
 #define VMSTORAGETABPAGE_H
 
 #include "basetabpage.h"
+#include <QSet>
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -45,60 +46,77 @@ class VMStorageTabPage : public BaseTabPage
 {
     Q_OBJECT
 
-public:
-    explicit VMStorageTabPage(QWidget* parent = nullptr);
-    ~VMStorageTabPage();
+    public:
+        explicit VMStorageTabPage(QWidget* parent = nullptr);
+        ~VMStorageTabPage();
 
-    QString tabTitle() const override
-    {
-        // Tab caption shown as "Storage" in original XenCenter client
-        return "Storage";
-    }
-    QString helpID() const override
-    {
-        return "TabPageStorage";
-    }
-    bool isApplicableForObjectType(const QString& objectType) const override;
+        QString tabTitle() const override
+        {
+            // Tab caption shown as "Storage" in original XenCenter client
+            return "Storage";
+        }
+        QString helpID() const override
+        {
+            return "TabPageStorage";
+        }
+        bool isApplicableForObjectType(const QString& objectType) const override;
 
-    void setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
+        void setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
 
-protected:
-    void refreshContent() override;
+    protected:
+        void refreshContent() override;
+        bool eventFilter(QObject* watched, QEvent* event) override;
 
-private slots:
-    void onDriveComboBoxChanged(int index);
-    void onIsoComboBoxChanged(int index);
-    void onEjectButtonClicked();
-    void onNewCDDriveLinkClicked(const QString& link);
-    void onObjectDataReceived(QString type, QString ref, QVariantMap data);
+    private slots:
+        void onDriveComboBoxChanged(int index);
+        void onIsoComboBoxChanged(int index);
+        void onEjectButtonClicked();
+        void onNewCDDriveLinkClicked(const QString& link);
+        void onObjectDataReceived(QString type, QString ref, QVariantMap data);
 
-    // Storage table actions
-    void onAddButtonClicked();
-    void onAttachButtonClicked();
-    void onActivateButtonClicked();
-    void onDeactivateButtonClicked();
-    void onDetachButtonClicked();
-    void onDeleteButtonClicked();
-    void onEditButtonClicked();
-    void onStorageTableCustomContextMenuRequested(const QPoint& pos);
-    void onStorageTableSelectionChanged();
-    void onStorageTableDoubleClicked(const QModelIndex& index);
+        // Storage table actions
+        void onAddButtonClicked();
+        void onAttachButtonClicked();
+        void onActivateButtonClicked();
+        void onDeactivateButtonClicked();
+        void onMoveButtonClicked();
+        void onDetachButtonClicked();
+        void onDeleteButtonClicked();
+        void onEditButtonClicked();
+        void onStorageTableCustomContextMenuRequested(const QPoint& pos);
+        void onStorageTableSelectionChanged();
+        void onStorageTableDoubleClicked(const QModelIndex& index);
 
-private:
-    Ui::VMStorageTabPage* ui;
+    private:
+        Ui::VMStorageTabPage* ui;
 
-    void populateVMStorage();
-    // CD/DVD drive management
-    void refreshCDDVDDrives();
-    void refreshISOList();
-    void updateCDDVDVisibility();
-    QStringList m_vbdRefs;   // References to CD/DVD VBDs
-    QString m_currentVBDRef; // Currently selected VBD
+        void populateVMStorage();
+        // CD/DVD drive management
+        void refreshCDDVDDrives();
+        void refreshISOList();
+        void updateCDDVDVisibility();
+        QStringList m_vbdRefs;   // References to CD/DVD VBDs
+        QString m_currentVBDRef; // Currently selected VBD
 
-    // Storage table button management
-    void updateStorageButtons();
-    QString getSelectedVBDRef() const;
-    QString getSelectedVDIRef() const;
+        // Storage table button management
+        void updateStorageButtons();
+        QString getSelectedVBDRef() const;
+        QString getSelectedVDIRef() const;
+        QStringList getSelectedVBDRefs() const;
+        QStringList getSelectedVDIRefs() const;
+
+        bool canActivateVBD(const QVariantMap& vbdData,
+                            const QVariantMap& vdiData,
+                            const QVariantMap& vmData) const;
+        bool canDeactivateVBD(const QVariantMap& vbdData,
+                              const QVariantMap& vdiData,
+                              const QVariantMap& vmData) const;
+        void runVbdPlugOperations(const QStringList& vbdRefs, bool plug);
+        void runDetachOperations(const QStringList& vdiRefs);
+        void runDeleteOperations(const QStringList& vdiRefs);
+
+        QSet<QString> m_storageVbdRefs;
+        QSet<QString> m_storageVdiRefs;
 };
 
 #endif // VMSTORAGETABPAGE_H

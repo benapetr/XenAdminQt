@@ -29,7 +29,9 @@
 #include "ui_srstoragetabpage.h"
 #include "xenlib.h"
 #include "xencache.h"
+#include "xen/connection.h"
 #include "xen/api.h"
+#include "xen/xenapi/VDI.h"
 #include "dialogs/movevirtualdiskdialog.h"
 #include "dialogs/vdipropertiesdialog.h"
 #include "dialogs/operationprogressdialog.h"
@@ -41,6 +43,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QTimer>
+#include <stdexcept>
 
 SrStorageTabPage::SrStorageTabPage(QWidget* parent)
     : BaseTabPage(parent), ui(new Ui::SrStorageTabPage)
@@ -348,36 +351,52 @@ void SrStorageTabPage::onEditButtonClicked()
         return;
     }
 
-    XenRpcAPI* api = this->m_xenLib->getAPI();
-    if (!api)
-    {
+    XenConnection* connection = this->m_xenLib->getConnection();
+    if (!connection || !connection->getSession())
         return;
-    }
 
     bool hasErrors = false;
     QVariantMap vdiData = this->m_xenLib->getCache()->resolve("vdi", vdiRef);
 
     QString newName = dialog.getVdiName();
     QString oldName = vdiData.value("name_label", "").toString();
-    if (newName != oldName && !api->setVDINameLabel(vdiRef, newName))
+    if (newName != oldName)
     {
-        QMessageBox::warning(this, tr("Warning"), tr("Failed to update virtual disk name."));
-        hasErrors = true;
+        try
+        {
+            XenAPI::VDI::set_name_label(connection->getSession(), vdiRef, newName);
+        }
+        catch (const std::exception&)
+        {
+            QMessageBox::warning(this, tr("Warning"), tr("Failed to update virtual disk name."));
+            hasErrors = true;
+        }
     }
 
     QString newDescription = dialog.getVdiDescription();
     QString oldDescription = vdiData.value("name_description", "").toString();
-    if (newDescription != oldDescription && !api->setVDINameDescription(vdiRef, newDescription))
+    if (newDescription != oldDescription)
     {
-        QMessageBox::warning(this, tr("Warning"), tr("Failed to update virtual disk description."));
-        hasErrors = true;
+        try
+        {
+            XenAPI::VDI::set_name_description(connection->getSession(), vdiRef, newDescription);
+        }
+        catch (const std::exception&)
+        {
+            QMessageBox::warning(this, tr("Warning"), tr("Failed to update virtual disk description."));
+            hasErrors = true;
+        }
     }
 
     qint64 newSize = dialog.getNewSize();
     qint64 oldSize = vdiData.value("virtual_size", 0).toLongLong();
     if (newSize > oldSize + (10 * 1024 * 1024))
     {
-        if (!api->resizeVDI(vdiRef, newSize))
+        try
+        {
+            XenAPI::VDI::resize(connection->getSession(), vdiRef, newSize);
+        }
+        catch (const std::exception&)
         {
             QMessageBox::warning(this, tr("Warning"), tr("Failed to resize virtual disk."));
             hasErrors = true;

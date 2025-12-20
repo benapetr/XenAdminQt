@@ -31,7 +31,6 @@
 
 namespace XenAPI
 {
-
     QVariantMap PBD::get_record(XenSession* session, const QString& pbd)
     {
         if (!session || !session->isLoggedIn())

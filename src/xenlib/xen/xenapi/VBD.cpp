@@ -35,7 +35,6 @@
 
 namespace XenAPI
 {
-
     // VBD.create - Create a new VBD
     QString VBD::create(XenSession* session, const QVariantMap& vbdRecord)
     {
@@ -96,6 +95,36 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
+    // VBD.async_eject - Asynchronous eject
+    QString VBD::async_eject(XenSession* session, const QString& vbd)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vbd;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("Async.VBD.eject", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+    }
+
+    // VBD.async_insert - Asynchronous insert
+    QString VBD::async_insert(XenSession* session, const QString& vbd, const QString& vdi)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vbd << vdi;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("Async.VBD.insert", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+    }
+
     // VBD.plug - Synchronous plug
     void VBD::plug(XenSession* session, const QString& vbd)
     {
@@ -137,6 +166,36 @@ namespace XenAPI
 
         XenRpcAPI api(session);
         QByteArray request = api.buildJsonRpcCall("VBD.destroy", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response); // Check for errors
+    }
+
+    // VBD.eject - Synchronous eject
+    void VBD::eject(XenSession* session, const QString& vbd)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vbd;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VBD.eject", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response); // Check for errors
+    }
+
+    // VBD.insert - Synchronous insert
+    void VBD::insert(XenSession* session, const QString& vbd, const QString& vdi)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vbd << vdi;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VBD.insert", params);
         QByteArray response = session->sendApiRequest(request);
         api.parseJsonRpcResponse(response); // Check for errors
     }

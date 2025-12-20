@@ -143,7 +143,7 @@ QPushButton:disabled {
        </widget>
       </item>
       <item>
-       <widget class="QComboBox" name="cdIsoComboBox">
+       <widget class="IsoDropDownBox" name="cdIsoComboBox">
         <property name="visible">
          <bool>false</bool>
         </property>
@@ -457,7 +457,14 @@ QPushButton:disabled {
      </layout>
     </widget>
    </item>
-  </layout>
- </widget>
+ </layout>
+</widget>
+ <customwidgets>
+  <customwidget>
+   <class>IsoDropDownBox</class>
+   <extends>QComboBox</extends>
+   <header>widgets/isodropdownbox.h</header>
+  </customwidget>
+ </customwidgets>
  <connections/>
 </ui>

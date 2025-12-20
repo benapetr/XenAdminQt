@@ -54,9 +54,13 @@ namespace XenAPI
         static QString async_plug(XenSession* session, const QString& vbd);
         static QString async_unplug(XenSession* session, const QString& vbd);
         static QString async_destroy(XenSession* session, const QString& vbd);
+        static QString async_eject(XenSession* session, const QString& vbd);
+        static QString async_insert(XenSession* session, const QString& vbd, const QString& vdi);
         static void plug(XenSession* session, const QString& vbd);
         static void unplug(XenSession* session, const QString& vbd);
         static void destroy(XenSession* session, const QString& vbd);
+        static void eject(XenSession* session, const QString& vbd);
+        static void insert(XenSession* session, const QString& vbd, const QString& vdi);
 
         // VBD query operations
         static QVariantList get_allowed_operations(XenSession* session, const QString& vbd);

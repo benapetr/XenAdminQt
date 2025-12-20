@@ -88,7 +88,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QComboBox" name="isoComboBox">
+          <widget class="IsoDropDownBox" name="isoComboBox">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -129,7 +129,7 @@
       <bool>true</bool>
      </property>
      <property name="selectionMode">
-      <enum>QAbstractItemView::SingleSelection</enum>
+      <enum>QAbstractItemView::ExtendedSelection</enum>
      </property>
      <property name="selectionBehavior">
       <enum>QAbstractItemView::SelectRows</enum>
@@ -155,6 +155,11 @@
      <column>
       <property name="text">
        <string>SR</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>SR Volume</string>
       </property>
      </column>
      <column>
@@ -266,6 +271,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>IsoDropDownBox</class>
+   <extends>QComboBox</extends>
+   <header>widgets/isodropdownbox.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -35,7 +35,6 @@
 #include <QVariantList>
 #include <QStringList>
 
-class XenAPI;
 class XenConnection;
 class XenSession;
 

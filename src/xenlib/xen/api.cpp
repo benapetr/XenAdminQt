@@ -32,13 +32,12 @@
 
 class XenRpcAPI::Private
 {
-public:
-    XenSession* session = nullptr;
-    int nextRequestId = 1; // Request ID counter for JSON-RPC
+    public:
+        XenSession* session = nullptr;
+        int nextRequestId = 1; // Request ID counter for JSON-RPC
 };
 
-XenRpcAPI::XenRpcAPI(XenSession* session, QObject* parent)
-    : QObject(parent), d(new Private)
+XenRpcAPI::XenRpcAPI(XenSession* session, QObject* parent) : QObject(parent), d(new Private)
 {
     this->d->session = session;
 }
@@ -695,90 +694,6 @@ bool XenRpcAPI::setVBDBootable(const QString& vbdRef, bool bootable)
     return true;
 }
 
-bool XenRpcAPI::ejectVBD(const QString& vbdRef)
-{
-    if (!this->d->session || !this->d->session->isLoggedIn())
-    {
-        emit this->apiCallFailed("ejectVBD", "Not authenticated");
-        return false;
-    }
-
-    if (vbdRef.isEmpty())
-    {
-        emit this->apiCallFailed("ejectVBD", "Invalid VBD reference");
-        return false;
-    }
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-    params.append(vbdRef);
-
-    qDebug() << "XenAPI::ejectVBD: Ejecting VBD" << vbdRef;
-
-    QByteArray jsonRpcRequest = this->buildJsonRpcCall("VBD.eject", params);
-    QByteArray responseData = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
-
-    if (responseData.isEmpty())
-    {
-        QString error = "Failed to communicate with server: " + this->d->session->getLastError();
-        emit this->apiCallFailed("ejectVBD", error);
-        return false;
-    }
-
-    QVariant response = this->parseJsonRpcResponse(responseData);
-    if (response.isNull())
-    {
-        emit this->apiCallFailed("ejectVBD", "Server returned an error");
-        return false;
-    }
-
-    emit this->apiCallCompleted("ejectVBD", response);
-    qDebug() << "XenAPI::ejectVBD: Successfully ejected VBD";
-    return true;
-}
-
-bool XenRpcAPI::insertVBD(const QString& vbdRef, const QString& vdiRef)
-{
-    if (!this->d->session || !this->d->session->isLoggedIn())
-    {
-        emit this->apiCallFailed("insertVBD", "Not authenticated");
-        return false;
-    }
-
-    if (vbdRef.isEmpty() || vdiRef.isEmpty())
-    {
-        emit this->apiCallFailed("insertVBD", "Invalid VBD or VDI reference");
-        return false;
-    }
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-    params.append(vbdRef);
-    params.append(vdiRef);
-
-    qDebug() << "XenAPI::insertVBD: Inserting VDI" << vdiRef << "into VBD" << vbdRef;
-
-    QByteArray jsonRpcRequest = this->buildJsonRpcCall("VBD.insert", params);
-    QByteArray responseData = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
-
-    if (responseData.isEmpty())
-    {
-        QString error = "Failed to communicate with server: " + this->d->session->getLastError();
-        emit this->apiCallFailed("insertVBD", error);
-        return false;
-    }
-
-    QVariant response = this->parseJsonRpcResponse(responseData);
-    if (response.isNull())
-    {
-        emit this->apiCallFailed("insertVBD", "Server returned an error");
-        return false;
-    }
-
-    emit this->apiCallCompleted("insertVBD", response);
-    qDebug() << "XenAPI::insertVBD: Successfully inserted VDI";
-    return true;
-}
 
 // VDI (Virtual Disk Image) Operations
 
@@ -1213,137 +1128,6 @@ bool XenRpcAPI::destroyVDI(const QString& vdiRef)
     return true;
 }
 
-bool XenRpcAPI::resizeVDI(const QString& vdiRef, qint64 newSize)
-{
-    if (!this->d->session || !this->d->session->isLoggedIn())
-    {
-        emit this->apiCallFailed("resizeVDI", "Not authenticated");
-        return false;
-    }
-
-    if (vdiRef.isEmpty())
-    {
-        emit this->apiCallFailed("resizeVDI", "Invalid VDI reference");
-        return false;
-    }
-
-    if (newSize <= 0)
-    {
-        emit this->apiCallFailed("resizeVDI", "Invalid size");
-        return false;
-    }
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-    params.append(vdiRef);
-    params.append(QString::number(newSize));
-
-    qDebug() << "XenAPI::resizeVDI: Resizing VDI" << vdiRef << "to" << newSize << "bytes";
-
-    QByteArray jsonRpcRequest = this->buildJsonRpcCall("VDI.resize", params);
-    QByteArray responseData = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
-
-    if (responseData.isEmpty())
-    {
-        emit this->apiCallFailed("resizeVDI", "Failed to communicate with server: " + this->d->session->getLastError());
-        return false;
-    }
-
-    QVariant response = this->parseJsonRpcResponse(responseData);
-    if (response.isNull())
-    {
-        emit this->apiCallFailed("resizeVDI", "Server returned an error");
-        return false;
-    }
-
-    emit this->apiCallCompleted("resizeVDI", response);
-    qDebug() << "XenAPI::resizeVDI: Successfully resized VDI to" << newSize << "bytes";
-    return true;
-}
-
-bool XenRpcAPI::setVDINameLabel(const QString& vdiRef, const QString& name)
-{
-    if (!this->d->session)
-    {
-        qWarning() << "XenAPI::setVDINameLabel: No session";
-        emit this->apiCallFailed("setVDINameLabel", "No session");
-        return false;
-    }
-
-    if (vdiRef.isEmpty())
-    {
-        qWarning() << "XenAPI::setVDINameLabel: Invalid VDI reference";
-        emit this->apiCallFailed("setVDINameLabel", "Invalid VDI reference");
-        return false;
-    }
-
-    QVariantList params;
-    params << this->d->session->getSessionId() << vdiRef << name;
-
-    QByteArray jsonRpcRequest = buildJsonRpcCall("VDI.set_name_label", params);
-    QByteArray responseData = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
-
-    if (responseData.isEmpty())
-    {
-        qWarning() << "XenAPI::setVDINameLabel: Failed to communicate with server";
-        emit this->apiCallFailed("setVDINameLabel", "Failed to communicate with server: " + this->d->session->getLastError());
-        return false;
-    }
-
-    QVariant response = parseJsonRpcResponse(responseData);
-    if (response.isNull())
-    {
-        qWarning() << "XenAPI::setVDINameLabel: Server returned an error";
-        emit this->apiCallFailed("setVDINameLabel", "Server returned an error");
-        return false;
-    }
-
-    emit this->apiCallCompleted("setVDINameLabel", response);
-    qDebug() << "XenAPI::setVDINameLabel: Successfully set name for VDI" << vdiRef;
-    return true;
-}
-
-bool XenRpcAPI::setVDINameDescription(const QString& vdiRef, const QString& description)
-{
-    if (!this->d->session)
-    {
-        qWarning() << "XenAPI::setVDINameDescription: No session";
-        emit this->apiCallFailed("setVDINameDescription", "No session");
-        return false;
-    }
-
-    if (vdiRef.isEmpty())
-    {
-        qWarning() << "XenAPI::setVDINameDescription: Invalid VDI reference";
-        emit this->apiCallFailed("setVDINameDescription", "Invalid VDI reference");
-        return false;
-    }
-
-    QVariantList params;
-    params << this->d->session->getSessionId() << vdiRef << description;
-
-    QByteArray jsonRpcRequest = buildJsonRpcCall("VDI.set_name_description", params);
-    QByteArray responseData = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
-
-    if (responseData.isEmpty())
-    {
-        qWarning() << "XenAPI::setVDINameDescription: Failed to communicate with server";
-        emit this->apiCallFailed("setVDINameDescription", "Failed to communicate with server: " + this->d->session->getLastError());
-        return false;
-    }
-
-    QVariant response = parseJsonRpcResponse(responseData);
-    if (response.isNull())
-    {
-        qWarning() << "XenAPI::setVDINameDescription: Server returned an error";
-        emit this->apiCallFailed("setVDINameDescription", "Server returned an error");
-        return false;
-    }
-
-    emit this->apiCallCompleted("setVDINameDescription", response);
-    qDebug() << "XenAPI::setVDINameDescription: Successfully set description for VDI" << vdiRef;
-    return true;
-}
 
 // VIF (Virtual Network Interface) Operations
 

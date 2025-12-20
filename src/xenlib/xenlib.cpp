@@ -29,6 +29,8 @@
 #include "xen/connection.h"
 #include "xen/session.h"
 #include "xen/api.h"
+#include "xen/xenapi/VBD.h"
+#include "xen/xenapi/VDI.h"
 #include "xen/asyncoperations.h"
 #include "xen/certificatemanager.h"
 #include "xen/eventpoller.h"
@@ -42,6 +44,7 @@
 #include <QtCore/QMetaObject>
 #include <QtCore/QRegularExpression>
 #include <initializer_list>
+#include <exception>
 
 // Helper for timestamped debug output
 static QString timestamp()
@@ -1241,7 +1244,17 @@ bool XenLib::resizeVDI(const QString& vdiRef, qint64 newSize)
         return false;
     }
 
-    return this->d->api->resizeVDI(vdiRef, newSize);
+    try
+    {
+        XenAPI::VDI::resize(this->d->session, vdiRef, newSize);
+    }
+    catch (const std::exception&)
+    {
+        this->setError("Failed to resize VDI");
+        return false;
+    }
+
+    return true;
 }
 
 bool XenLib::changeVMISO(const QString& vmRef, const QString& vbdRef, const QString& vdiRef)
@@ -1269,16 +1282,30 @@ bool XenLib::changeVMISO(const QString& vmRef, const QString& vbdRef, const QStr
     // Step 1: Eject current disc if not empty
     if (!isEmpty)
     {
-        if (!this->d->api->ejectVBD(vbdRef))
+        try
         {
-            return false; // Eject failed
+            XenAPI::VBD::eject(this->d->session, vbdRef);
+        }
+        catch (const std::exception&)
+        {
+            this->setError("Failed to eject ISO");
+            return false;
         }
     }
 
     // Step 2: Insert new disc if provided
     if (!vdiRef.isEmpty())
     {
-        return this->d->api->insertVBD(vbdRef, vdiRef);
+        try
+        {
+            XenAPI::VBD::insert(this->d->session, vbdRef, vdiRef);
+        }
+        catch (const std::exception&)
+        {
+            this->setError("Failed to insert ISO");
+            return false;
+        }
+        return true;
     }
 
     return true; // Successfully ejected (and nothing to insert)

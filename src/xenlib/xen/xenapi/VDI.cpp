@@ -91,7 +91,7 @@ namespace XenAPI
         params << session->getSessionId() << vdi << sr;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VDI.async_copy", params);
+        QByteArray request = api.buildJsonRpcCall("Async.VDI.copy", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
@@ -106,7 +106,7 @@ namespace XenAPI
         params << session->getSessionId() << vdi << sr << options;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VDI.async_pool_migrate", params);
+        QByteArray request = api.buildJsonRpcCall("Async.VDI.pool_migrate", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
@@ -268,7 +268,7 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi << QString::number(size);
+        params << session->getSessionId() << vdi << size;
 
         XenRpcAPI api(session);
         QByteArray request = api.buildJsonRpcCall("VDI.resize", params);
@@ -283,7 +283,7 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi << QString::number(size);
+        params << session->getSessionId() << vdi << size;
 
         XenRpcAPI api(session);
         QByteArray request = api.buildJsonRpcCall("VDI.resize_online", params);

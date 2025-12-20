@@ -74,8 +74,6 @@ public:
     QVariantList getVMVBDs(const QString& vmRef);
     QVariant getVBDRecord(const QString& vbdRef);
     bool setVBDBootable(const QString& vbdRef, bool bootable);
-    bool ejectVBD(const QString& vbdRef);
-    bool insertVBD(const QString& vbdRef, const QString& vdiRef);
     QString createVBD(const QString& vmRef, const QString& vdiRef, const QString& userdevice, bool bootable, const QString& mode = "RW", const QString& type = "Disk");
     bool destroyVBD(const QString& vbdRef);
     bool plugVBD(const QString& vbdRef);
@@ -85,9 +83,6 @@ public:
     QVariant getVDIRecord(const QString& vdiRef);
     QString createVDI(const QString& srRef, const QString& name, const QString& description, qint64 size);
     bool destroyVDI(const QString& vdiRef);
-    bool resizeVDI(const QString& vdiRef, qint64 newSize);
-    bool setVDINameLabel(const QString& vdiRef, const QString& name);
-    bool setVDINameDescription(const QString& vdiRef, const QString& description);
     QVariantList getISOList();
 
     // VIF (Virtual Network Interface) operations
