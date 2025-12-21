@@ -1156,73 +1156,6 @@ QVariantList XenLib::getVMVBDs(const QString& vmRef)
     return this->d->api->getVMVBDs(vmRef);
 }
 
-QString XenLib::createVDI(const QString& srRef, const QString& name, const QString& description, qint64 sizeBytes)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    if (srRef.isEmpty())
-    {
-        this->setError("Invalid SR reference");
-        return QString();
-    }
-
-    return this->d->api->createVDI(srRef, name, description, sizeBytes);
-}
-
-bool XenLib::destroyVDI(const QString& vdiRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vdiRef.isEmpty())
-    {
-        this->setError("Invalid VDI reference");
-        return false;
-    }
-
-    return this->d->api->destroyVDI(vdiRef);
-}
-
-bool XenLib::resizeVDI(const QString& vdiRef, qint64 newSize)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vdiRef.isEmpty())
-    {
-        this->setError("Invalid VDI reference");
-        return false;
-    }
-
-    if (newSize <= 0)
-    {
-        this->setError("Invalid VDI size");
-        return false;
-    }
-
-    try
-    {
-        XenAPI::VDI::resize(this->d->session, vdiRef, newSize);
-    }
-    catch (const std::exception&)
-    {
-        this->setError("Failed to resize VDI");
-        return false;
-    }
-
-    return true;
-}
-
 bool XenLib::changeVMISO(const QString& vmRef, const QString& vbdRef, const QString& vdiRef)
 {
     // Reference: XenAdmin/Actions/VM/ChangeVMISOAction.cs
@@ -1377,57 +1310,6 @@ QString XenLib::createVIF(const QString& vmRef, const QString& networkRef, const
     }
 
     return this->d->api->createVIF(vmRef, networkRef, device, mac);
-}
-
-bool XenLib::destroyVIF(const QString& vifRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vifRef.isEmpty())
-    {
-        this->setError("Invalid VIF reference");
-        return false;
-    }
-
-    return this->d->api->destroyVIF(vifRef);
-}
-
-bool XenLib::plugVIF(const QString& vifRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vifRef.isEmpty())
-    {
-        this->setError("Invalid VIF reference");
-        return false;
-    }
-
-    return this->d->api->plugVIF(vifRef);
-}
-
-bool XenLib::unplugVIF(const QString& vifRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vifRef.isEmpty())
-    {
-        this->setError("Invalid VIF reference");
-        return false;
-    }
-
-    return this->d->api->unplugVIF(vifRef);
 }
 
 // VM migration operations

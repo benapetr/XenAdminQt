@@ -17,6 +17,7 @@ src/
 ```
 
 **Critical Insight**: XenLib contains ALL Xen API business logic. The UI is a thin layer that invokes XenLib methods and displays results.
+**API Direction**: Use `namespace XenAPI` static bindings for all XenServer API calls. `xen/api.h` (`XenRpcAPI`) is legacy, low-level plumbing only and should not be used directly in new code.
 
 ## Action Framework Expectations
 - Prefer deriving from `AsyncOperation` (and companions under `src/xenlib/xen/actions/`) for any XenAPI workflow.
@@ -83,6 +84,7 @@ QString VM::async_start(XenSession* session, const QString& vm, bool start_pause
 **DON'T:**
 - Build JSON-RPC manually in action classes (use XenAPI methods instead)
 - Put business logic in XenAPI classes (they're thin wrappers - actions handle workflows)
+- Add new direct dependencies on `xen/api.h` in UI or actions; migrate existing ones to `XenAPI` classes
 - Mix up `XenRpcAPI` (low-level client) with `namespace XenAPI` (high-level bindings)
 
 ## Architecture Patterns

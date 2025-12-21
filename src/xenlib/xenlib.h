@@ -133,9 +133,6 @@ public:
 
     // VBD/VDI (Virtual Disk) operations
     QVariantList getVMVBDs(const QString& vmRef);
-    QString createVDI(const QString& srRef, const QString& name, const QString& description, qint64 sizeBytes);
-    bool destroyVDI(const QString& vdiRef);
-    bool resizeVDI(const QString& vdiRef, qint64 newSize);
 
     // CD/DVD operations
     bool changeVMISO(const QString& vmRef, const QString& vbdRef, const QString& vdiRef);
@@ -144,9 +141,6 @@ public:
     // VIF (Virtual Network Interface) operations
     QVariantList getVMVIFs(const QString& vmRef);
     QString createVIF(const QString& vmRef, const QString& networkRef, const QString& device, const QString& mac = QString());
-    bool destroyVIF(const QString& vifRef);
-    bool plugVIF(const QString& vifRef);
-    bool unplugVIF(const QString& vifRef);
 
     // VM migration operations
     QString poolMigrateVM(const QString& vmRef, const QString& hostRef, bool live = true);

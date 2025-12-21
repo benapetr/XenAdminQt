@@ -41,6 +41,7 @@
 #include "xen/vm.h"
 #include <QDebug>
 #include "xen/xenapi/xenapi_VBD.h"
+#include "xen/xenapi/xenapi_VIF.h"
 #include <QDebug>
 #include "xen/actions/vm/vmstartaction.h"
 #include <QDebug>
@@ -733,8 +734,14 @@ void NewVMWizard::createVirtualMachine()
     {
         QVariantMap vif = vifVar.toMap();
         QString vifRef = vif.value("ref").toString();
-        if (!this->m_xenLib->destroyVIF(vifRef))
-            qWarning() << "NewVMWizard: Failed to destroy template VIF" << vifRef;
+        try
+        {
+            XenAPI::VIF::destroy(connection->getSession(), vifRef);
+        }
+        catch (const std::exception& e)
+        {
+            qWarning() << "NewVMWizard: Failed to destroy template VIF" << vifRef << "-" << e.what();
+        }
     }
 
     for (const NetworkConfig& network : this->m_networks)
