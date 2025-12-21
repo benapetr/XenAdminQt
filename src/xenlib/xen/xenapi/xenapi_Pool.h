@@ -32,6 +32,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVariant>
+#include <QVariantMap>
 
 namespace XenAPI
 {
@@ -203,6 +204,21 @@ namespace XenAPI
              * Sets the HA restart priority. Must be called before enabling HA.
              */
             static void set_ha_host_failures_to_tolerate(XenSession* session, const QString& pool, qint64 value);
+
+            /**
+             * @brief Compute maximum host failures to tolerate for current pool state
+             * @param session Active XenSession
+             * @return Max host failures to tolerate
+             */
+            static qint64 ha_compute_max_host_failures_to_tolerate(XenSession* session);
+
+            /**
+             * @brief Compute maximum host failures to tolerate for a hypothetical HA configuration
+             * @param session Active XenSession
+             * @param configuration VM restart priorities (VM ref -> priority string)
+             * @return Max host failures to tolerate
+             */
+            static qint64 ha_compute_hypothetical_max_host_failures_to_tolerate(XenSession* session, const QVariantMap& configuration);
 
             /**
              * @brief Emergency transition to master (synchronous)

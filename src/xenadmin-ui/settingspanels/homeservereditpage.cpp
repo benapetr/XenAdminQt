@@ -27,24 +27,24 @@
 
 #include "homeservereditpage.h"
 #include "ui_homeservereditpage.h"
-#include "../../xenlib/xen/asyncoperation.h"
+#include "../controls/affinitypicker.h"
 #include "../../xenlib/xen/connection.h"
 #include "../../xenlib/xen/session.h"
-#include "../../xenlib/xen/api.h"
+#include "../../xenlib/xen/xenapi/xenapi_VM.h"
+#include "../../xenlib/xencache.h"
+#include "../../xenlib/xen/actions/delegatedasyncoperation.h"
 #include <QTableWidgetItem>
 
-HomeServerEditPage::HomeServerEditPage(QWidget* parent)
-    : IEditPage(parent), ui(new Ui::HomeServerEditPage)
+HomeServerEditPage::HomeServerEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::HomeServerEditPage)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
-    connect(ui->radioButtonStaticHomeServer, &QRadioButton::toggled,
-            this, &HomeServerEditPage::onStaticHomeServerToggled);
+    connect(this->ui->picker, &AffinityPicker::selectedAffinityChanged, this, &HomeServerEditPage::onSelectedAffinityChanged);
 }
 
 HomeServerEditPage::~HomeServerEditPage()
 {
-    delete ui;
+    delete this->ui;
 }
 
 QString HomeServerEditPage::text() const
@@ -54,29 +54,22 @@ QString HomeServerEditPage::text() const
 
 QString HomeServerEditPage::subText() const
 {
-    if (ui->radioButtonNoHomeServer->isChecked())
-    {
+    if (!ui->picker->validState())
         return tr("None defined");
-    }
 
-    QString hostRef = getSelectedHostRef();
+    QString hostRef = ui->picker->selectedAffinityRef();
     if (hostRef.isEmpty())
-    {
-        return tr("None selected");
-    }
+        return tr("None defined");
 
-    // Get host name from hosts map
-    if (m_hosts.contains(hostRef))
+    if (connection() && connection()->getCache())
     {
-        QVariantMap hostData = m_hosts[hostRef].toMap();
+        QVariantMap hostData = connection()->getCache()->resolve("host", hostRef);
         QString name = hostData.value("name_label").toString();
         if (!name.isEmpty())
-        {
             return name;
-        }
     }
 
-    return tr("Unknown host");
+    return tr("None defined");
 }
 
 QIcon HomeServerEditPage::image() const
@@ -97,30 +90,8 @@ void HomeServerEditPage::setXenObjects(const QString& objectRef,
     // Get VM's current affinity
     m_originalAffinityRef = objectDataBefore.value("affinity").toString();
 
-    // Get list of hosts from connection
-    // NOTE: In real implementation, this should request hosts from XenLib
-    // For now, we'll populate from the connection's cached data
-    loadHosts();
-
-    // Select appropriate radio button
-    if (m_originalAffinityRef.isEmpty() || m_originalAffinityRef == "OpaqueRef:NULL")
-    {
-        ui->radioButtonNoHomeServer->setChecked(true);
-    } else
-    {
-        ui->radioButtonStaticHomeServer->setChecked(true);
-
-        // Select the host in the table
-        for (int row = 0; row < ui->tableWidgetServers->rowCount(); ++row)
-        {
-            QTableWidgetItem* item = ui->tableWidgetServers->item(row, 0);
-            if (item && item->data(Qt::UserRole).toString() == m_originalAffinityRef)
-            {
-                ui->tableWidgetServers->selectRow(row);
-                break;
-            }
-        }
-    }
+    ui->picker->setAutoSelectAffinity(false);
+    ui->picker->setAffinity(connection(), m_originalAffinityRef, QString());
 }
 
 AsyncOperation* HomeServerEditPage::saveSettings()
@@ -132,59 +103,27 @@ AsyncOperation* HomeServerEditPage::saveSettings()
 
     // Determine new affinity
     QString newAffinityRef;
-    if (ui->radioButtonNoHomeServer->isChecked())
-    {
-        newAffinityRef = "OpaqueRef:NULL";
-    } else
-    {
-        newAffinityRef = getSelectedHostRef();
-    }
+    QString selectedRef = ui->picker->selectedAffinityRef();
+    newAffinityRef = selectedRef.isEmpty() ? QString("OpaqueRef:NULL") : selectedRef;
 
-    // Return inline AsyncOperation
-    class SetAffinityOperation : public AsyncOperation
-    {
-    public:
-        SetAffinityOperation(XenConnection* conn,
-                             const QString& vmRef,
-                             const QString& affinityRef,
-                             QObject* parent)
-            : AsyncOperation(conn, tr("Set Home Server"),
-                             tr("Setting VM home server..."), parent),
-              m_vmRef(vmRef), m_affinityRef(affinityRef)
-        {}
-
-    protected:
-        void run() override
-        {
-            XenRpcAPI api(connection()->getSession());
-
-            setPercentComplete(30);
-
-            QVariantList params;
-            params << connection()->getSessionId() << m_vmRef << m_affinityRef;
-            QByteArray request = api.buildJsonRpcCall("VM.set_affinity", params);
-            connection()->sendRequest(request);
-
-            setPercentComplete(100);
-        }
-
-    private:
-        QString m_vmRef;
-        QString m_affinityRef;
-    };
-
-    return new SetAffinityOperation(m_connection, m_vmRef, newAffinityRef, this);
+    auto* op = new DelegatedAsyncOperation(
+        m_connection,
+        tr("Change Home Server"),
+        tr("Setting VM home server..."),
+        [vmRef = m_vmRef, affinityRef = newAffinityRef](DelegatedAsyncOperation* self) {
+            XenSession* session = self->connection()->getSession();
+            if (!session || !session->isLoggedIn())
+                throw std::runtime_error("No valid session");
+            XenAPI::VM::set_affinity(session, vmRef, affinityRef);
+        },
+        this);
+    op->addApiMethodToRoleCheck("VM.set_affinity");
+    return op;
 }
 
 bool HomeServerEditPage::isValidToSave() const
 {
-    // Valid if either no home server selected, or a host is selected
-    if (ui->radioButtonNoHomeServer->isChecked())
-    {
-        return true;
-    }
-
-    return !getSelectedHostRef().isEmpty();
+    return ui->picker->validState();
 }
 
 void HomeServerEditPage::showLocalValidationMessages()
@@ -204,89 +143,18 @@ void HomeServerEditPage::cleanup()
 
 bool HomeServerEditPage::hasChanged() const
 {
-    QString currentAffinityRef;
-
-    if (ui->radioButtonNoHomeServer->isChecked())
-    {
+    QString currentAffinityRef = ui->picker->selectedAffinityRef();
+    if (currentAffinityRef.isEmpty())
         currentAffinityRef = "OpaqueRef:NULL";
-    } else
-    {
-        currentAffinityRef = getSelectedHostRef();
-    }
 
-    // Normalize empty and NULL refs
     QString origRef = m_originalAffinityRef;
     if (origRef.isEmpty() || origRef == "OpaqueRef:NULL")
-    {
         origRef = "OpaqueRef:NULL";
-    }
-
-    if (currentAffinityRef.isEmpty() || currentAffinityRef == "OpaqueRef:NULL")
-    {
-        currentAffinityRef = "OpaqueRef:NULL";
-    }
 
     return origRef != currentAffinityRef;
 }
 
-void HomeServerEditPage::onStaticHomeServerToggled(bool checked)
+void HomeServerEditPage::onSelectedAffinityChanged()
 {
-    ui->tableWidgetServers->setEnabled(checked);
-
-    if (checked && ui->tableWidgetServers->selectedItems().isEmpty() && ui->tableWidgetServers->rowCount() > 0)
-    {
-        // Auto-select first host if none selected
-        ui->tableWidgetServers->selectRow(0);
-    }
-}
-
-void HomeServerEditPage::loadHosts()
-{
-    ui->tableWidgetServers->setRowCount(0);
-
-    // In a real implementation, this should request hosts from XenLib
-    // For now, we'll demonstrate with a simplified approach
-    // The connection should provide access to cached host data
-
-    // TODO: Request hosts via connection()->getXenLib()->requestHosts()
-    // and populate m_hosts map
-
-    // For demonstration, we'll show how to populate the table
-    // when host data becomes available:
-    /*
-    foreach (const QString& hostRef, m_hosts.keys()) {
-        QVariantMap hostData = m_hosts[hostRef].toMap();
-        QString hostName = hostData.value("name_label").toString();
-        QString hostStatus = hostData.value("enabled").toBool() ? tr("Online") : tr("Offline");
-
-        int row = ui->tableWidgetServers->rowCount();
-        ui->tableWidgetServers->insertRow(row);
-
-        QTableWidgetItem* nameItem = new QTableWidgetItem(hostName);
-        nameItem->setData(Qt::UserRole, hostRef);
-        ui->tableWidgetServers->setItem(row, 0, nameItem);
-
-        QTableWidgetItem* statusItem = new QTableWidgetItem(hostStatus);
-        ui->tableWidgetServers->setItem(row, 1, statusItem);
-    }
-    */
-}
-
-QString HomeServerEditPage::getSelectedHostRef() const
-{
-    QList<QTableWidgetItem*> selectedItems = ui->tableWidgetServers->selectedItems();
-    if (selectedItems.isEmpty())
-    {
-        return QString();
-    }
-
-    // Get the host ref from the first column item's UserRole data
-    int row = selectedItems.first()->row();
-    QTableWidgetItem* item = ui->tableWidgetServers->item(row, 0);
-    if (item)
-    {
-        return item->data(Qt::UserRole).toString();
-    }
-
-    return QString();
+    emit populated();
 }

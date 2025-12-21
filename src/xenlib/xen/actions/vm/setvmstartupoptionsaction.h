@@ -25,57 +25,36 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HOMESERVEREDITPAGE_H
-#define HOMESERVEREDITPAGE_H
+#ifndef SETVMSTARTUPOPTIONSACTION_H
+#define SETVMSTARTUPOPTIONSACTION_H
 
-#include "ieditpage.h"
+#include "../../asyncoperation.h"
+#include <QMap>
 #include <QVariantMap>
 
-class AsyncOperation;
-
-namespace Ui
-{
-    class HomeServerEditPage;
-}
+class XenConnection;
 
 /**
- * @brief Home server affinity editing page
+ * @brief SetVMStartupOptionsAction - Sets VM start order and delay, then syncs pool database.
  *
- * Matches C# XenAdmin.SettingsPanels.HomeServerEditPage
- * Allows setting VM affinity (home server) - only shown if WLB not enabled
+ * Qt port of C# XenAdmin.Actions.SetVMStartupOptionsAction.
  */
-class HomeServerEditPage : public IEditPage
+class SetVMStartupOptionsAction : public AsyncOperation
 {
     Q_OBJECT
 
     public:
-        explicit HomeServerEditPage(QWidget* parent = nullptr);
-        ~HomeServerEditPage() override;
+        SetVMStartupOptionsAction(XenConnection* connection,
+                                const QString& poolRef,
+                                const QMap<QString, QVariantMap>& vmStartupOptions,
+                                QObject* parent = nullptr);
 
-        // IEditPage interface
-        QString text() const override;
-        QString subText() const override;
-        QIcon image() const override;
-
-        void setXenObjects(const QString& objectRef,
-                           const QString& objectType,
-                           const QVariantMap& objectDataBefore,
-                           const QVariantMap& objectDataCopy) override;
-
-        AsyncOperation* saveSettings() override;
-        bool isValidToSave() const override;
-        void showLocalValidationMessages() override;
-        void hideLocalValidationMessages() override;
-        void cleanup() override;
-        bool hasChanged() const override;
-
-    private slots:
-        void onSelectedAffinityChanged();
+    protected:
+        void run() override;
 
     private:
-        Ui::HomeServerEditPage* ui;
-        QString m_vmRef;
-        QString m_originalAffinityRef; // OpaqueRef or null/empty for no affinity
+        QString m_poolRef;
+        QMap<QString, QVariantMap> m_vmStartupOptions;
 };
 
-#endif // HOMESERVEREDITPAGE_H
+#endif // SETVMSTARTUPOPTIONSACTION_H

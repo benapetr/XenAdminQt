@@ -43,6 +43,7 @@ SOURCES += \
     dialogs/migratevirtualdiskdialog.cpp \
     dialogs/optionsdialog.cpp \
     dialogs/verticallytabbeddialog.cpp \
+    controls/affinitypicker.cpp \
     settingspanels/generaleditpage.cpp \
     settingspanels/hostautostarteditpage.cpp \
     settingspanels/hostmultipathpage.cpp \
@@ -236,6 +237,7 @@ HEADERS += \
     dialogs/migratevirtualdiskdialog.h \
     dialogs/optionsdialog.h \
     dialogs/verticallytabbeddialog.h \
+    controls/affinitypicker.h \
     settingspanels/ieditpage.h \
     settingspanels/generaleditpage.h \
     settingspanels/hostautostarteditpage.h \
@@ -410,6 +412,7 @@ FORMS += \
     dialogs/newvmwizard.ui \
     dialogs/newsrwizard.ui \
     dialogs/verticallytabbeddialog.ui \
+    controls/affinitypicker.ui \
     settingspanels/generaleditpage.ui \
     settingspanels/hostautostarteditpage.ui \
     settingspanels/hostmultipathpage.ui \

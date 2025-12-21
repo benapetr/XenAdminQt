@@ -105,6 +105,7 @@ SOURCES += \
     xen/actions/vm/vmsnapshotrevertaction.cpp \
     xen/actions/vm/changememorysettingsaction.cpp \
     xen/actions/vm/changevcpusettingsaction.cpp \
+    xen/actions/vm/setvmstartupoptionsaction.cpp \
     xen/actions/vm/gpuassignaction.cpp \
     xen/actions/vm/vmmigrateaction.cpp \
     xen/actions/vm/vmcrosspoolmigrateaction.cpp \
@@ -238,6 +239,7 @@ HEADERS += \
     xen/actions/vm/vmsnapshotrevertaction.h \
     xen/actions/vm/changememorysettingsaction.h \
     xen/actions/vm/changevcpusettingsaction.h \
+    xen/actions/vm/setvmstartupoptionsaction.h \
     xen/actions/vm/gpuassignaction.h \
     xen/actions/vm/vmmigrateaction.h \
     xen/actions/vm/vmcrosspoolmigrateaction.h \

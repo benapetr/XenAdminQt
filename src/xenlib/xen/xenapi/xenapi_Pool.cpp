@@ -265,6 +265,35 @@ namespace XenAPI
         session->sendApiRequest(request);
     }
 
+    qint64 Pool::ha_compute_max_host_failures_to_tolerate(XenSession* session)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId();
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("pool.ha_compute_max_host_failures_to_tolerate", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toLongLong();
+    }
+
+    qint64 Pool::ha_compute_hypothetical_max_host_failures_to_tolerate(XenSession* session,
+                                                                       const QVariantMap& configuration)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << configuration;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("pool.ha_compute_hypothetical_max_host_failures_to_tolerate", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toLongLong();
+    }
+
     void Pool::emergency_transition_to_master(XenSession* session)
     {
         if (!session || !session->isLoggedIn())

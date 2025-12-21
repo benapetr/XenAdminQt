@@ -48,44 +48,46 @@ class VMAdvancedEditPage : public IEditPage
 {
     Q_OBJECT
 
-public:
-    explicit VMAdvancedEditPage(QWidget* parent = nullptr);
-    ~VMAdvancedEditPage() override;
+    public:
+        explicit VMAdvancedEditPage(QWidget* parent = nullptr);
+        ~VMAdvancedEditPage() override;
 
-    // IEditPage interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
+        // IEditPage interface
+        QString text() const override;
+        QString subText() const override;
+        QIcon image() const override;
 
-    void setXenObjects(const QString& objectRef,
-                       const QString& objectType,
-                       const QVariantMap& objectDataBefore,
-                       const QVariantMap& objectDataCopy) override;
+        void setXenObjects(const QString& objectRef,
+                           const QString& objectType,
+                           const QVariantMap& objectDataBefore,
+                           const QVariantMap& objectDataCopy) override;
 
-    AsyncOperation* saveSettings() override;
-    bool isValidToSave() const override;
-    void showLocalValidationMessages() override;
-    void hideLocalValidationMessages() override;
-    void cleanup() override;
-    bool hasChanged() const override;
+        AsyncOperation* saveSettings() override;
+        bool isValidToSave() const override;
+        void showLocalValidationMessages() override;
+        void hideLocalValidationMessages() override;
+        void cleanup() override;
+        bool hasChanged() const override;
+        QVariantMap getModifiedObjectData() const override;
 
-private slots:
-    void onGeneralRadioToggled(bool checked);
-    void onCitrixRadioToggled(bool checked);
-    void onManualRadioToggled(bool checked);
-    void onShadowMultiplierChanged(double value);
+    private slots:
+        void onGeneralRadioToggled(bool checked);
+        void onCitrixRadioToggled(bool checked);
+        void onManualRadioToggled(bool checked);
+        void onShadowMultiplierChanged(double value);
 
-private:
-    double getCurrentShadowMultiplier() const;
+    private:
+        double getCurrentShadowMultiplier() const;
 
-    Ui::VMAdvancedEditPage* ui;
-    QString m_vmRef;
-    QString m_powerState;
-    double m_originalShadowMultiplier;
-    QVariantMap m_objectDataCopy;
+        Ui::VMAdvancedEditPage* ui;
+        QString m_vmRef;
+        QString m_powerState;
+        double m_originalShadowMultiplier;
+        QVariantMap m_objectDataCopy;
+        bool m_showCpsOptimisation;
 
-    static constexpr double SHADOW_MULTIPLIER_GENERAL = 1.0;
-    static constexpr double SHADOW_MULTIPLIER_CPS = 4.0;
+        static constexpr double SHADOW_MULTIPLIER_GENERAL = 1.0;
+        static constexpr double SHADOW_MULTIPLIER_CPS = 4.0;
 };
 
 #endif // VMADVANCEDEDITPAGE_H

@@ -969,6 +969,32 @@ namespace XenAPI
         session->sendApiRequest(request);
     }
 
+    void VM::set_HVM_shadow_multiplier(XenSession* session, const QString& vm, double value)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.set_HVM_shadow_multiplier", params);
+        session->sendApiRequest(request);
+    }
+
+    void VM::set_shadow_multiplier_live(XenSession* session, const QString& vm, double value)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.set_shadow_multiplier_live", params);
+        session->sendApiRequest(request);
+    }
+
     // VM.set_HVM_boot_policy
     void VM::set_HVM_boot_policy(XenSession* session, const QString& vm, const QString& value)
     {

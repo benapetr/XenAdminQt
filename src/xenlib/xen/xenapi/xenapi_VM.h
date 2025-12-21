@@ -560,6 +560,22 @@ namespace XenAPI
             static void set_start_delay(XenSession* session, const QString& vm, qint64 value);
 
             /**
+             * @brief Set HVM shadow memory multiplier (offline)
+             * @param session Active XenSession
+             * @param vm VM opaque reference
+             * @param value Shadow multiplier value
+             */
+            static void set_HVM_shadow_multiplier(XenSession* session, const QString& vm, double value);
+
+            /**
+             * @brief Set shadow memory multiplier on a running VM
+             * @param session Active XenSession
+             * @param vm VM opaque reference
+             * @param value Shadow multiplier value
+             */
+            static void set_shadow_multiplier_live(XenSession* session, const QString& vm, double value);
+
+            /**
              * @brief Set HVM boot policy (e.g., "BIOS order")
              * @param session Active XenSession
              * @param vm VM opaque reference

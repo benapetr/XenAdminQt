@@ -38,6 +38,7 @@
 #include "../../xenlib/xen/xenapi/xenapi_Pool.h"
 #include "../../xenlib/xen/xenapi/xenapi_SR.h"
 #include "../../xenlib/xen/xenapi/xenapi_Network.h"
+#include <QtGlobal>
 #include "../../xenlib/xencache.h"
 #include "../../xenlib/operations/multipleoperation.h"
 #include "../../xenlib/xen/asyncoperation.h"
@@ -382,6 +383,11 @@ QList<AsyncOperation*> VerticallyTabbedDialog::collectActions()
             }
             this->m_objectDataCopy["other_config"] = dialogOtherConfig;
         }
+
+        if (pageData.contains("HVM_shadow_multiplier"))
+        {
+            this->m_objectDataCopy["HVM_shadow_multiplier"] = pageData.value("HVM_shadow_multiplier");
+        }
         
         if (action)
         {
@@ -606,6 +612,27 @@ void VerticallyTabbedDialog::applySimpleChanges()
             catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set VM other_config:" << ex.what();
+            }
+        }
+    }
+
+    // 4. Check if HVM_shadow_multiplier changed (VM only)
+    if (this->m_objectType == "vm" && this->m_objectDataCopy.contains("HVM_shadow_multiplier"))
+    {
+        double oldMultiplier = this->m_objectDataBefore.value("HVM_shadow_multiplier").toDouble();
+        double newMultiplier = this->m_objectDataCopy.value("HVM_shadow_multiplier").toDouble();
+        if (qAbs(oldMultiplier - newMultiplier) > 0.0001)
+        {
+            qDebug() << "VerticallyTabbedDialog: Applying HVM_shadow_multiplier change:"
+                     << oldMultiplier << "->" << newMultiplier;
+            try
+            {
+                XenAPI::VM::set_HVM_shadow_multiplier(session, this->m_objectRef, newMultiplier);
+                hasChanges = true;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set HVM_shadow_multiplier:" << ex.what();
             }
         }
     }

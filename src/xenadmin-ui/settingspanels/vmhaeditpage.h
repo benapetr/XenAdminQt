@@ -29,9 +29,12 @@
 #define VMHAEDITPAGE_H
 
 #include "ieditpage.h"
+#include <QMap>
 #include <QVariantMap>
+#include <QPointer>
 
 class AsyncOperation;
+class QThread;
 
 namespace Ui
 {
@@ -73,8 +76,25 @@ public:
     bool hasChanged() const override;
 
 private:
-    QString getRestartPriorityString(int index) const;
-    int getRestartPriorityIndex(const QString& priority) const;
+    QString restartPriorityDisplay(const QString& priority) const;
+    QString restartPriorityDescription(const QString& priority) const;
+    QString normalizePriority(const QString& priority) const;
+    QString selectedPriority() const;
+    bool isRestartPriority(const QString& priority) const;
+    bool vmHasVgpus() const;
+    bool poolHasHAEnabled() const;
+    bool isHaEditable() const;
+    QString ellipsiseName(const QString& name, int maxChars) const;
+    QVariantMap getPoolData() const;
+    void refillPrioritiesComboBox();
+    void updateEnablement();
+    void updateNtolLabelsCalculating();
+    void updateNtolLabelsSuccess();
+    void updateNtolLabelsFailure();
+    void startVmAgilityCheck();
+    void startNtolUpdate();
+    QMap<QString, QVariantMap> buildVmStartupOptions(bool includePriority) const;
+    QVariantMap buildNtolConfig() const;
 
     Ui::VMHAEditPage* ui;
     QString m_vmRef;
@@ -85,6 +105,19 @@ private:
     QString m_origRestartPriority;
     long m_origStartOrder;
     long m_origStartDelay;
+    qint64 m_origNtol;
+    bool m_vmIsAgile;
+    bool m_agilityKnown;
+    bool m_ntolUpdateInProgress;
+    qint64 m_ntol;
+    qint64 m_ntolMax;
+    int m_ntolRequestId;
+    QString m_poolRef;
+
+private slots:
+    void onPriorityChanged();
+    void onLinkActivated(const QString& link);
+    void onCacheObjectChanged(const QString& type, const QString& ref);
 };
 
 #endif // VMHAEDITPAGE_H

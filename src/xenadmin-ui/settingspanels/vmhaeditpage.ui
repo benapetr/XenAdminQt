@@ -6,99 +6,176 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>500</width>
-    <height>400</height>
+    <width>640</width>
+    <height>520</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QLabel" name="labelInfo">
-     <property name="text">
-      <string>Configure high availability and startup settings for this virtual machine.</string>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="groupBoxHA">
+    <widget class="QGroupBox" name="groupBoxStartupOptions">
      <property name="title">
-      <string>High Availability</string>
+      <string>Startup sequence</string>
      </property>
-     <layout class="QFormLayout" name="formLayout">
-      <item row="0" column="0">
-       <widget class="QLabel" name="labelRestartPriority">
+     <layout class="QGridLayout" name="startupLayout">
+      <item row="0" column="0" colspan="3">
+       <widget class="QLabel" name="labelStartBlurb">
         <property name="text">
-         <string>Restart priority:</string>
+         <string>These options specify the preferred startup sequence and timing for VMs when they are automatically started with a vApp or during an HA operation. VMs with a start order of 0 (zero) will be started first. You can also configure a delay interval which specifies how long after starting the VM to wait before starting up the next group of VMs in the startup sequence.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
-       <widget class="QComboBox" name="comboBoxRestartPriority">
-        <item>
-         <property name="text">
-          <string>Do not restart</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Restart</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Best-effort</string>
-         </property>
-        </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="labelStartOrder">
+        <property name="text">
+         <string>&amp;Start order:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QSpinBox" name="spinBoxStartOrder">
+        <property name="minimum">
+         <number>0</number>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="labelStartDelay">
+        <property name="text">
+         <string>&amp;Attempt to start next VM after:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QSpinBox" name="spinBoxStartDelay">
+        <property name="minimum">
+         <number>0</number>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="2">
+       <widget class="QLabel" name="labelStartDelayUnits">
+        <property name="text">
+         <string>seconds</string>
+        </property>
        </widget>
       </item>
      </layout>
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBoxStartupOptions">
-     <property name="title">
-      <string>Startup Options</string>
+    <widget class="QWidget" name="scanningWidget" native="true">
+     <property name="visible">
+      <bool>false</bool>
      </property>
-     <layout class="QFormLayout" name="formLayout_2">
-      <item row="0" column="0">
-       <widget class="QLabel" name="labelStartOrder">
+     <layout class="QHBoxLayout" name="scanningLayout">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <spacer name="scanningLeftSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelScanning">
         <property name="text">
-         <string>Start order:</string>
+         <string>Determining if VM is agile...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="scanningRightSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBoxHA">
+     <property name="title">
+      <string>HA restart priority</string>
+     </property>
+     <layout class="QGridLayout" name="haLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="labelProtectionLevel">
+        <property name="text">
+         <string>&amp;HA restart priority:</string>
         </property>
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QSpinBox" name="spinBoxStartOrder">
-        <property name="minimum">
-         <number>0</number>
-        </property>
-        <property name="maximum">
-         <number>99999</number>
-        </property>
-        <property name="value">
-         <number>0</number>
-        </property>
-       </widget>
+       <widget class="QComboBox" name="comboBoxRestartPriority"/>
       </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="labelStartDelay">
+      <item row="0" column="2">
+       <widget class="QLabel" name="labelPriorityDescription">
         <property name="text">
-         <string>Start delay (seconds):</string>
+         <string/>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
-       <widget class="QSpinBox" name="spinBoxStartDelay">
-        <property name="minimum">
-         <number>0</number>
+      <item row="1" column="0" colspan="3">
+       <widget class="QLabel" name="labelHaStatus">
+        <property name="text">
+         <string/>
         </property>
-        <property name="maximum">
-         <number>99999</number>
+        <property name="wordWrap">
+         <bool>true</bool>
         </property>
-        <property name="value">
-         <number>0</number>
+       </widget>
+      </item>
+      <item row="2" column="0" colspan="3">
+       <widget class="QLabel" name="labelNtol">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0" colspan="3">
+       <widget class="QLabel" name="labelNtolMax">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0" colspan="3">
+       <widget class="QLabel" name="linkLabel">
+        <property name="text">
+         <string>Configure HA now...</string>
         </property>
        </widget>
       </item>

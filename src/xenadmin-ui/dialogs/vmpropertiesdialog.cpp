@@ -26,6 +26,7 @@
  */
 
 #include "vmpropertiesdialog.h"
+#include "ui_verticallytabbeddialog.h"
 #include "../settingspanels/generaleditpage.h"
 #include "../settingspanels/cpumemoryeditpage.h"
 #include "../settingspanels/bootoptionseditpage.h"
@@ -35,60 +36,67 @@
 #include "../settingspanels/homeservereditpage.h"
 #include "../settingspanels/vmadvancededitpage.h"
 #include "../settingspanels/vmenlightenmenteditpage.h"
+#include "xen/connection.h"
+#include "xencache.h"
 
 VMPropertiesDialog::VMPropertiesDialog(XenConnection* connection, const QString& vmRef, QWidget* parent)
     : VerticallyTabbedDialog(connection, vmRef, "vm", parent)
 {
-    this->setWindowTitle(tr("VM Properties"));
+    QString vmName = objectDataBefore().value("name_label", tr("VM")).toString();
+    this->setWindowTitle(tr("'%1' Properties").arg(vmName));
     this->resize(700, 550);
     this->build();
 }
 
 void VMPropertiesDialog::build()
 {
+    // Match C# XenAdmin.Dialogs.PropertiesDialog.Build() tab order for VM objects
+    // Reference: xenadmin/XenAdmin/Dialogs/PropertiesDialog.cs lines 133-234
+
     // Get VM data to check conditional page requirements
     QVariantMap vmData = objectDataBefore();
+    bool isSnapshot = vmData.value("is_a_snapshot").toBool();
+    bool isVm = !isSnapshot;
     bool isTemplate = vmData.value("is_a_template").toBool();
     bool isHVM = vmData.value("HVM_boot_policy", "").toString() != "";
 
-    // General tab (name, description, folder, tags, IQN)
+    // Tab 1: General
     this->showTab(new GeneralEditPage());
 
-    // CPU and Memory tab
-    this->showTab(new CpuMemoryEditPage());
+    // Tab 2: Custom Fields
+    this->showTab(new CustomFieldsDisplayPage());
 
-    // Boot Options tab
-    this->showTab(new BootOptionsEditPage());
-
-    // High Availability tab
-    this->showTab(new VMHAEditPage());
-
-    // Custom Fields tab (not shown for templates in some contexts)
-    if (!isTemplate)
+    if (isVm)
     {
-        this->showTab(new CustomFieldsDisplayPage());
+        // Tab 3: CPU and Memory
+        this->showTab(new CpuMemoryEditPage());
+
+        // Tab 4: Boot Options
+        this->showTab(new BootOptionsEditPage());
+
+        // Tab 5: High Availability
+        this->showTab(new VMHAEditPage());
     }
 
-    // Performance Alerts tab
+    // Tab 6: Performance Alerts
     this->showTab(new PerfmonAlertEditPage());
 
-    // Home Server tab - only if WLB not enabled
-    // TODO: Check Helpers.WlbEnabledAndConfigured() when available
-    // For now, always show it
-    this->showTab(new HomeServerEditPage());
-
-    // Advanced tab - only for HVM VMs
-    if (isHVM)
+    // Tab 7: Home Server (only if WLB not enabled/configured)
+    bool wlbEnabled = false;
+    if (connection() && connection()->getCache())
     {
-        this->showTab(new VMAdvancedEditPage());
+        QStringList poolRefs = connection()->getCache()->getAllRefs("pool");
+        if (!poolRefs.isEmpty())
+        {
+            QVariantMap poolData = connection()->getCache()->resolve("pool", poolRefs.first());
+            QString wlbUrl = poolData.value("wlb_url").toString();
+            wlbEnabled = poolData.value("wlb_enabled").toBool() && !wlbUrl.isEmpty();
+        }
     }
 
-    // Enlightenment tab - only for VMs that can be enlightened
-    // TODO: Check Helpers.ContainerCapability(connection) and VM.CanBeEnlightened()
-    // For now, show for HVM VMs as a simplified check
-    if (isHVM && !isTemplate)
+    if (!wlbEnabled)
     {
-        this->showTab(new VMEnlightenmentEditPage());
+        this->showTab(new HomeServerEditPage());
     }
 
     // TODO: Add remaining conditional VM tabs from C# XenAdmin.Dialogs.PropertiesDialog:
@@ -102,17 +110,28 @@ void VMPropertiesDialog::build()
     //   Has async Populated event - may need data fetching
     //   Needs SaveUSBAction with PUSB/VUSB creation
     //
+    // - USBEditPage (lines 205-212) - only if !template && USB passthrough not restricted && PUSBs exist
+    //
+    // - VMAdvancedEditPage (line 214) - only for HVM VMs
+    //
     // - VMEnlightenmentEditPage (line 218-220) - only if container-capable connection && VM.CanBeEnlightened()
-    //   Windows guest enlightenment settings
-    //   Needs SaveVMEnlightenmentAction
     //
     // - CloudConfigParametersPage (line 222-224) - only if VM.CanHaveCloudConfigDrive()
-    //   Cloud-init configuration parameters
-    //   Needs SaveCloudConfigAction
-    //
-    // Notes:
-    // - Check VM properties: is_a_template, IsHVM(), CanHaveGpu(), CanBeEnlightened(), CanHaveCloudConfigDrive()
-    // - Check connection capabilities: Helpers.WlbEnabledAndConfigured(), Helpers.GpusAvailable(), etc.
-    // - Some pages have async Populated events - handle via IEditPage if needed
-    // - Follow same two-pattern approach: separate Action class for complex, inline AsyncOperation for simple
+
+    if (isHVM)
+    {
+        this->showTab(new VMAdvancedEditPage());
+    }
+
+    // TODO: Implement Helpers.ContainerCapability() and VM.CanBeEnlightened().
+    // For now, mirror previous behavior: show Enlightenment only for HVM non-templates.
+    if (isHVM && !isTemplate)
+    {
+        this->showTab(new VMEnlightenmentEditPage());
+    }
+
+    if (!this->m_pages.isEmpty())
+    {
+        this->ui->verticalTabs->setCurrentRow(0);
+    }
 }
