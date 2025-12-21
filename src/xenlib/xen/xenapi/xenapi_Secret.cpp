@@ -32,7 +32,6 @@
 
 namespace XenAPI
 {
-
     QString Secret::create(XenSession* session, const QString& value)
     {
         if (!session || !session->isLoggedIn())

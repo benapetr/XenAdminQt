@@ -31,7 +31,6 @@
 
 namespace XenAPI
 {
-
     QVariantMap SR::get_record(XenSession* session, const QString& sr)
     {
         if (!session || !session->isLoggedIn())

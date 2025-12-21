@@ -32,7 +32,6 @@
 
 namespace XenAPI
 {
-
     void VGPU::destroy(XenSession* session, const QString& vgpu)
     {
         if (!session || !session->isLoggedIn())

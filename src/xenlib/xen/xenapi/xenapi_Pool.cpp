@@ -31,7 +31,6 @@
 
 namespace XenAPI
 {
-
     QVariant Pool::get_all(XenSession* session)
     {
         if (!session || !session->isLoggedIn())

@@ -32,7 +32,6 @@
 
 namespace XenAPI
 {
-
     void PIF::reconfigure_ip(XenSession* session, const QString& pif,
                              const QString& mode, const QString& ip,
                              const QString& netmask, const QString& gateway,

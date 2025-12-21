@@ -32,7 +32,6 @@
 
 namespace XenAPI
 {
-
     QString Network::async_create(XenSession* session, const QVariantMap& record)
     {
         if (!session || !session->isLoggedIn())

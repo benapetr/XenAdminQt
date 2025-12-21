@@ -51,33 +51,16 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         bool exportVM(const QString& vmRef, const QString& fileName, const QString& format = "xva");
         QString getVMPowerState(const QString& vmRef);
         bool setVMField(const QString& vmRef, const QString& field, const QVariant& value);
-        bool convertVMToTemplate(const QString& vmRef);
         bool setVMOtherConfigKey(const QString& vmRef, const QString& key, const QString& value);
-
-        // VM agility check (for HA)
-        void assertVMAgile(const QString& vmRef);
 
         // VM CPU and memory configuration
         bool setVMVCPUsMax(const QString& vmRef, int vcpus);
         bool setVMVCPUsAtStartup(const QString& vmRef, int vcpus);
         bool setVMMemoryLimits(const QString& vmRef, qint64 staticMin, qint64 staticMax, qint64 dynamicMin, qint64 dynamicMax);
 
-        // VM boot configuration
-        QString getVMBootOrder(const QString& vmRef);
-        bool setVMBootOrder(const QString& vmRef, const QString& order);
-        bool getVMAutoPowerOn(const QString& vmRef);
-        bool setVMAutoPowerOn(const QString& vmRef, bool enabled);
-        QString getVMPVArgs(const QString& vmRef);
-        bool setVMPVArgs(const QString& vmRef, const QString& args);
-
         // VBD (Virtual Block Device) operations
         QVariantList getVMVBDs(const QString& vmRef);
         QVariant getVBDRecord(const QString& vbdRef);
-        bool setVBDBootable(const QString& vbdRef, bool bootable);
-
-        // VDI (Virtual Disk Image) operations
-        QVariant getVDIRecord(const QString& vdiRef);
-        QVariantList getISOList();
 
         // VIF (Virtual Network Interface) operations
         QVariantList getVMVIFs(const QString& vmRef);
@@ -118,11 +101,9 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         bool setPoolMigrationCompression(const QString& poolRef, bool enabled);
 
         // SR (Storage Repository) operations
-        QVariant getSRRecord(const QString& srRef);
         bool setSRField(const QString& srRef, const QString& field, const QVariant& value);
         bool repairSR(const QString& srRef);
         bool setDefaultSR(const QString& srRef);
-        bool detachSR(const QString& srRef);
 
         // PBD (Physical Block Device) operations
         QVariantList getPBDs();
@@ -130,7 +111,6 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
 
         // Network operations
         bool setNetworkField(const QString& networkRef, const QString& field, const QVariant& value);
-        QVariant getNetworkRecord(const QString& networkRef);
 
         // Console operations
         QVariantList getVMConsoles(const QString& vmRef);
@@ -138,18 +118,9 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         QString getConsoleProtocol(const QString& consoleRef);
         QString getConsoleLocation(const QString& consoleRef);
 
-        // Storage operations
-        bool createSR(const QString& type, const QVariantMap& deviceConfig);
-        bool attachSR(const QString& srRef);
-        bool reattachSR(const QString& srRef);
-        bool forgetSR(const QString& srRef);
-        bool destroySR(const QString& srRef);
-
         // Network operations
         QString createNetwork(const QString& name, const QString& description, const QVariantMap& otherConfig = QVariantMap());
         bool destroyNetwork(const QString& networkRef);
-        bool setNetworkNameLabel(const QString& networkRef, const QString& name);
-        bool setNetworkNameDescription(const QString& networkRef, const QString& description);
         bool setNetworkOtherConfig(const QString& networkRef, const QVariantMap& otherConfig);
         bool setNetworkMTU(const QString& networkRef, qint64 mtu);
 
@@ -158,7 +129,6 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         bool destroyBond(const QString& bondRef);
 
         // PIF operations
-        QVariantMap getPIFRecord(const QString& pifRef);
         bool reconfigurePIF(const QString& pifRef, const QString& mode, const QString& ip,
                             const QString& netmask, const QString& gateway, const QString& dns);
         bool reconfigurePIFDHCP(const QString& pifRef);
@@ -186,19 +156,9 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         // event.unregister - Unregister from event classes (legacy, not used in modern API)
         bool eventUnregister(const QStringList& classes);
 
-        // Metrics operations
-        QVariant getVMMetrics(const QString& vmRef);
-
         // Data source operations (performance monitoring)
-        QVariantList getVMDataSources(const QString& vmRef);
-        QVariantList getHostDataSources(const QString& hostRef);
         double queryVMDataSource(const QString& vmRef, const QString& dataSource);
         double queryHostDataSource(const QString& hostRef, const QString& dataSource);
-        bool recordVMDataSource(const QString& vmRef, const QString& dataSource);
-        bool recordHostDataSource(const QString& hostRef, const QString& dataSource);
-        bool forgetVMDataSource(const QString& vmRef, const QString& dataSource);
-        bool forgetHostDataSource(const QString& hostRef, const QString& dataSource);
-        QVariant getHostMetrics(const QString& hostRef);
 
         // JSON-RPC helper methods
         QByteArray buildJsonRpcCall(const QString& method, const QVariantList& params);

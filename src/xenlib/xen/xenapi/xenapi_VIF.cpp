@@ -34,7 +34,6 @@
 
 namespace XenAPI
 {
-
     QString VIF::async_create(XenSession* session, const QVariantMap& vifRecord)
     {
         if (!session || !session->isLoggedIn())

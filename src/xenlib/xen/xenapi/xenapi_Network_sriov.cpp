@@ -32,7 +32,6 @@
 
 namespace XenAPI
 {
-
     QString Network_sriov::async_create(XenSession* session, const QString& pif, const QString& network)
     {
         if (!session || !session->isLoggedIn())

@@ -35,7 +35,6 @@
 
 namespace XenAPI
 {
-
     /**
      * @brief SR - XenAPI Storage Repository bindings
      *

@@ -48,7 +48,8 @@ namespace XenAPI
 
             QJsonObject root = doc.object();
 
-            auto throwFromArray = [](const QJsonArray& array) {
+            auto throwFromArray = [](const QJsonArray& array)
+            {
                 QStringList errors;
                 for (const QJsonValue& val : array)
                     errors << val.toString();

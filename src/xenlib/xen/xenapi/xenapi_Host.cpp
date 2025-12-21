@@ -32,7 +32,6 @@
 
 namespace XenAPI
 {
-
     QVariantList Host::get_all(XenSession* session)
     {
         if (!session || !session->isLoggedIn())

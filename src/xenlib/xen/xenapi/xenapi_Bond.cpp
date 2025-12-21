@@ -32,7 +32,6 @@
 
 namespace XenAPI
 {
-
     QString Bond::async_create(XenSession* session, const QString& network,
                                const QStringList& members, const QString& mac,
                                const QString& mode, const QVariantMap& properties)

@@ -35,7 +35,6 @@
 
 namespace XenAPI
 {
-
     // VDI.create - Create a new VDI
     QString VDI::create(XenSession* session, const QVariantMap& vdiRecord)
     {
