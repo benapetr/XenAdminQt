@@ -55,6 +55,20 @@ namespace XenAPI
         return taskRef;
     }
 
+    QString VIF::create(XenSession* session, const QVariantMap& vifRecord)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vifRecord;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VIF.create", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toString();
+    }
+
     void VIF::destroy(XenSession* session, const QString& vif)
     {
         if (!session || !session->isLoggedIn())

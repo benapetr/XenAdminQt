@@ -643,6 +643,20 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
+    QString VM::clone(XenSession* session, const QString& vm, const QString& new_name)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << new_name;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.clone", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toString();
+    }
+
     QString VM::async_copy(XenSession* session, const QString& vm, const QString& new_name, const QString& sr)
     {
         if (!session || !session->isLoggedIn())
@@ -981,6 +995,62 @@ namespace XenAPI
         QVariant result = api.parseJsonRpcResponse(response);
 
         return result.toMap();
+    }
+
+    void VM::set_PV_args(XenSession* session, const QString& vm, const QString& value)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.set_PV_args", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
+    void VM::set_other_config(XenSession* session, const QString& vm, const QVariantMap& otherConfig)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << otherConfig;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.set_other_config", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
+    void VM::set_platform(XenSession* session, const QString& vm, const QVariantMap& platform)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << platform;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.set_platform", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
+    void VM::set_affinity(XenSession* session, const QString& vm, const QString& host)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.set_affinity", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
     }
 
 } // namespace XenAPI

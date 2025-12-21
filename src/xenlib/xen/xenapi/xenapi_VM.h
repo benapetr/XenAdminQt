@@ -330,6 +330,16 @@ namespace XenAPI
             static QString async_clone(XenSession* session, const QString& vm, const QString& new_name);
 
             /**
+             * @brief Clone a VM (sync)
+             * First published in XenServer 4.0.
+             * @param session The session
+             * @param vm The opaque_ref of the given VM
+             * @param new_name The name of the cloned VM
+             * @return VM ref of the cloned VM
+             */
+            static QString clone(XenSession* session, const QString& vm, const QString& new_name);
+
+            /**
              * @brief Copy a VM to an SR (async)
              * First published in XenServer 4.0.
              * @param session The session
@@ -569,6 +579,46 @@ namespace XenAPI
              * @return Map of boot parameters
              */
             static QVariantMap get_HVM_boot_params(XenSession* session, const QString& vm);
+
+            /**
+             * @brief Set PV args
+             * @param session The session
+             * @param vm The opaque_ref of the given VM
+             * @param value The PV args string
+             *
+             * Matches C# VM.set_PV_args()
+             */
+            static void set_PV_args(XenSession* session, const QString& vm, const QString& value);
+
+            /**
+             * @brief Set other_config
+             * @param session The session
+             * @param vm The opaque_ref of the given VM
+             * @param otherConfig Map of other_config values
+             *
+             * Matches C# VM.set_other_config()
+             */
+            static void set_other_config(XenSession* session, const QString& vm, const QVariantMap& otherConfig);
+
+            /**
+             * @brief Set platform
+             * @param session The session
+             * @param vm The opaque_ref of the given VM
+             * @param platform Platform map
+             *
+             * Matches C# VM.set_platform()
+             */
+            static void set_platform(XenSession* session, const QString& vm, const QVariantMap& platform);
+
+            /**
+             * @brief Set affinity
+             * @param session The session
+             * @param vm The opaque_ref of the given VM
+             * @param host The host ref or "OpaqueRef:NULL"
+             *
+             * Matches C# VM.set_affinity()
+             */
+            static void set_affinity(XenSession* session, const QString& vm, const QString& host);
 
             // TODO: Add more VM methods as needed (pause, unpause, reboot, etc.)
             // See xenadmin/XenModel/XenAPI/VM.cs for complete list

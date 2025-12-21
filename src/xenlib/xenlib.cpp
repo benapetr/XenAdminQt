@@ -31,6 +31,7 @@
 #include "xen/api.h"
 #include "xen/xenapi/xenapi_VBD.h"
 #include "xen/xenapi/xenapi_VDI.h"
+#include "xen/xenapi/xenapi_VM.h"
 #include "xen/asyncoperations.h"
 #include "xen/certificatemanager.h"
 #include "xen/eventpoller.h"
@@ -509,28 +510,6 @@ bool XenLib::exportVM(const QString& vmRef, const QString& fileName, const QStri
     }
 
     return this->d->api->exportVM(vmRef, fileName, format);
-}
-
-QString XenLib::cloneVM(const QString& vmRef, const QString& newName)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    return this->d->api->cloneVM(vmRef, newName);
-}
-
-bool XenLib::deleteVM(const QString& vmRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    return this->d->api->deleteVM(vmRef);
 }
 
 bool XenLib::updateVM(const QString& vmRef, const QVariantMap& updates)

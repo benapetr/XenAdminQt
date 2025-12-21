@@ -26,32 +26,14 @@
  */
 
 #include "newvmwizard.h"
-#include <QDebug>
 #include "ui_newvmwizard.h"
-#include <QDebug>
-
 #include "xenlib.h"
-#include <QDebug>
 #include "xencache.h"
-#include <QDebug>
 #include "xen/connection.h"
-#include <QDebug>
-#include "xen/api.h"
-#include <QDebug>
-#include "xen/vm.h"
-#include <QDebug>
-#include "xen/xenapi/xenapi_VBD.h"
-#include "xen/xenapi/xenapi_VIF.h"
-#include <QDebug>
-#include "xen/actions/vm/vmstartaction.h"
-#include <QDebug>
-#include "xen/actions/vbd/vbdcreateandplugaction.h"
-#include <QDebug>
-#include "../operations/operationmanager.h"
-#include <QDebug>
+#include "operationprogressdialog.h"
+#include "xen/actions/vm/createvmaction.h"
 #include "../widgets/wizardnavigationpane.h"
 #include <QDebug>
-
 #include <QtWidgets>
 #include <QHeaderView>
 #include <algorithm>
@@ -625,7 +607,9 @@ void NewVMWizard::accept()
     this->m_memorySize = this->ui->memoryStaticMaxSpin->value();
     this->m_assignVtpm = this->ui->assignVtpmCheckBox->isChecked();
     this->m_installUrl = this->ui->urlRadioButton->isChecked() ? this->ui->urlLineEdit->text().trimmed() : QString();
-    this->m_selectedIso = this->ui->isoRadioButton->isChecked() ? this->ui->isoComboBox->currentText() : QString();
+    this->m_selectedIso = this->ui->isoRadioButton->isChecked()
+        ? this->ui->isoComboBox->currentData().toString()
+        : QString();
     this->m_bootMode = this->ui->bootModeComboBox->currentData().toString();
 
     if (this->ui->specificHomeServerRadio->isChecked() && !this->ui->homeServerList->selectedItems().isEmpty())
@@ -654,30 +638,6 @@ void NewVMWizard::createVirtualMachine()
         return;
     }
 
-    QString newVMRef = this->m_xenLib->cloneVM(this->m_selectedTemplate, this->m_vmName);
-    if (newVMRef.isEmpty())
-    {
-        QString error = this->m_xenLib->getLastError();
-        QMessageBox::critical(this, tr("Failed to Create VM"),
-                              tr("Failed to create virtual machine '%1'.\n\nError: %2")
-                                  .arg(this->m_vmName, error));
-        return;
-    }
-
-    if (this->m_vcpuCount > 0)
-    {
-        if (!this->m_xenLib->setVMVCPUs(newVMRef, this->m_vcpuCount))
-            qWarning() << "NewVMWizard: Failed to set VCPUs to" << this->m_vcpuCount;
-    }
-
-    if (this->m_memorySize > 0)
-    {
-        if (!this->m_xenLib->setVMMemory(newVMRef, this->m_memorySize))
-            qWarning() << "NewVMWizard: Failed to set memory to" << this->m_memorySize << "MB";
-    }
-
-    QVariantList existingVBDs = this->m_xenLib->getVMVBDs(newVMRef);
-
     XenConnection* connection = this->m_xenLib->getConnection();
     if (!connection || !connection->getSession())
     {
@@ -685,100 +645,76 @@ void NewVMWizard::createVirtualMachine()
                               tr("Unable to configure devices because the Xen connection is no longer valid."));
         return;
     }
+    CreateVMAction::InstallMethod installMethod = CreateVMAction::InstallMethod::None;
+    if (!this->m_installUrl.isEmpty())
+        installMethod = CreateVMAction::InstallMethod::Network;
+    else if (!this->m_selectedIso.isEmpty())
+        installMethod = CreateVMAction::InstallMethod::CD;
 
-    for (const QVariant& vbdVar : existingVBDs)
-    {
-        QVariantMap vbd = vbdVar.toMap();
-        QString vbdRef = vbd.value("ref").toString();
-        QString vbdType = vbd.value("type").toString();
-        if (vbdType == "Disk")
-        {
-            try
-            {
-                XenAPI::VBD::destroy(connection->getSession(), vbdRef);
-            }
-            catch (const std::exception& e)
-            {
-                qWarning() << "NewVMWizard: Failed to destroy template VBD" << vbdRef << "-" << e.what();
-            }
-        }
-    }
+    CreateVMAction::BootMode bootMode = CreateVMAction::BootMode::Auto;
+    if (this->m_bootMode == "bios")
+        bootMode = CreateVMAction::BootMode::Bios;
+    else if (this->m_bootMode == "uefi")
+        bootMode = CreateVMAction::BootMode::Uefi;
+    else if (this->m_bootMode == "secureboot")
+        bootMode = CreateVMAction::BootMode::SecureUefi;
 
-    VM* vm = new VM(connection, newVMRef, this);
+    QList<CreateVMAction::DiskConfig> disks;
     for (const DiskConfig& disk : this->m_disks)
     {
-        QVariantMap vbdRecord;
-        vbdRecord["VM"] = newVMRef;
-        vbdRecord["VDI"] = disk.vdiRef;
-        vbdRecord["userdevice"] = disk.device;
-        vbdRecord["bootable"] = disk.bootable;
-        vbdRecord["mode"] = "RW";
-        vbdRecord["type"] = "Disk";
-        vbdRecord["unpluggable"] = true;
-        vbdRecord["empty"] = false;
-        vbdRecord["other_config"] = QVariantMap();
-        vbdRecord["qos_algorithm_type"] = "";
-        vbdRecord["qos_algorithm_params"] = QVariantMap();
-
-        VbdCreateAndPlugAction* action = new VbdCreateAndPlugAction(
-            vm, vbdRecord, QString("Disk %1").arg(disk.device), true, this);
-        action->runSync();
-        if (action->result().isEmpty())
-            qWarning() << "NewVMWizard: Failed to create VBD for device" << disk.device;
-
-        delete action;
+        CreateVMAction::DiskConfig config;
+        config.vdiRef = disk.vdiRef;
+        config.srRef = disk.srRef;
+        config.sizeBytes = disk.sizeBytes;
+        config.device = disk.device;
+        config.bootable = disk.bootable;
+        disks.append(config);
     }
 
-    QVariantList existingVIFs = this->m_xenLib->getVMVIFs(newVMRef);
-    for (const QVariant& vifVar : existingVIFs)
-    {
-        QVariantMap vif = vifVar.toMap();
-        QString vifRef = vif.value("ref").toString();
-        try
-        {
-            XenAPI::VIF::destroy(connection->getSession(), vifRef);
-        }
-        catch (const std::exception& e)
-        {
-            qWarning() << "NewVMWizard: Failed to destroy template VIF" << vifRef << "-" << e.what();
-        }
-    }
-
+    QList<CreateVMAction::VifConfig> vifs;
     for (const NetworkConfig& network : this->m_networks)
     {
-        QString vifRef = this->m_xenLib->createVIF(newVMRef, network.networkRef, network.device, network.mac);
-        if (vifRef.isEmpty())
-            qWarning() << "NewVMWizard: Failed to create VIF for device" << network.device;
+        CreateVMAction::VifConfig config;
+        config.networkRef = network.networkRef;
+        config.device = network.device;
+        config.mac = network.mac;
+        vifs.append(config);
     }
 
-    if (startImmediately)
+    CreateVMAction* action = new CreateVMAction(
+        connection,
+        this->m_selectedTemplate,
+        this->m_vmName,
+        this->m_vmDescription,
+        installMethod,
+        QString(),
+        this->m_selectedIso,
+        this->m_installUrl,
+        bootMode,
+        this->m_selectedHost,
+        this->m_vcpuCount,
+        this->m_memorySize,
+        disks,
+        vifs,
+        startImmediately,
+        this->m_assignVtpm,
+        this);
+
+    OperationProgressDialog* progressDialog = new OperationProgressDialog(action, this);
+    progressDialog->setAttribute(Qt::WA_DeleteOnClose);
+
+    int result = progressDialog->exec();
+    if (result != QDialog::Accepted || action->hasError())
     {
-        XenConnection* conn = this->m_xenLib->getConnection();
-        if (conn && conn->isConnected())
-        {
-            VM* vmInstance = new VM(conn, newVMRef);
-            VMStartAction* action = new VMStartAction(vmInstance, nullptr, nullptr, this);
-            OperationManager::instance()->registerOperation(action);
-
-            connect(action, &AsyncOperation::completed, this, [this, action]() {
-                if (action->isFailed())
-                {
-                    QMessageBox::warning(this, tr("Failed to Start VM"),
-                                         tr("VM '%1' was created successfully but failed to start.\n\nError: %2\n\n"
-                                            "You can start it manually from the VM list.")
-                                             .arg(this->m_vmName, action->errorMessage()));
-                }
-                action->deleteLater();
-            });
-
-            action->runAsync();
-        }
-        else
-        {
-            QMessageBox::warning(this, tr("Failed to Start VM"),
-                                 tr("The VM was created but could not be started because the connection was lost."));
-        }
+        QString error = action->errorMessage();
+        if (error.isEmpty())
+            error = tr("Failed to create virtual machine '%1'.").arg(this->m_vmName);
+        QMessageBox::critical(this, tr("Failed to Create VM"), error);
+        action->deleteLater();
+        return;
     }
+
+    action->deleteLater();
 
     if (this->m_xenLib->getCache())
     {

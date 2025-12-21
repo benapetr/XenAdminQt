@@ -98,6 +98,7 @@ SOURCES += \
     xen/actions/vm/vmcloneaction.cpp \
     xen/actions/vm/vmtotemplateaction.cpp \
     xen/actions/vm/createvmfastaction.cpp \
+    xen/actions/vm/createvmaction.cpp \
     xen/actions/vm/vmsnapshotcreateaction.cpp \
     xen/actions/vm/vmsnapshotdeleteaction.cpp \
     xen/actions/vm/vmsnapshotrevertaction.cpp \
@@ -223,6 +224,7 @@ HEADERS += \
     xen/actions/vm/vmcloneaction.h \
     xen/actions/vm/vmtotemplateaction.h \
     xen/actions/vm/createvmfastaction.h \
+    xen/actions/vm/createvmaction.h \
     xen/actions/vm/vmsnapshotcreateaction.h \
     xen/actions/vm/vmsnapshotdeleteaction.h \
     xen/actions/vm/vmsnapshotrevertaction.h \

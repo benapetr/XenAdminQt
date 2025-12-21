@@ -60,6 +60,16 @@ namespace XenAPI
             static QString async_create(XenSession* session, const QVariantMap& vifRecord);
 
             /**
+             * @brief Create a VIF (sync)
+             * @param session XenSession
+             * @param vifRecord VIF record with VM, network, device, MAC, MTU, etc.
+             * @return VIF reference
+             *
+             * Matches C# VIF.create()
+             */
+            static QString create(XenSession* session, const QVariantMap& vifRecord);
+
+            /**
              * @brief Destroy a VIF
              * @param session XenSession
              * @param vif VIF opaque reference
