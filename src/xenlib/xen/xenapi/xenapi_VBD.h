@@ -51,6 +51,16 @@ namespace XenAPI
         public:
             // VBD lifecycle operations
             static QString create(XenSession* session, const QVariantMap& vbdRecord);
+
+            /**
+             * @brief Asynchronously create a VBD
+             * @param session XenSession
+             * @param vbdRecord VBD record
+             * @return Task ref
+             *
+             * Matches C# VBD.async_create()
+             */
+            static QString async_create(XenSession* session, const QVariantMap& vbdRecord);
             static QString async_plug(XenSession* session, const QString& vbd);
             static QString async_unplug(XenSession* session, const QString& vbd);
             static QString async_destroy(XenSession* session, const QString& vbd);

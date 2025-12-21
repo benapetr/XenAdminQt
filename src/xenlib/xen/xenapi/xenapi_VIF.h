@@ -70,6 +70,16 @@ namespace XenAPI
             static QString create(XenSession* session, const QVariantMap& vifRecord);
 
             /**
+             * @brief Destroy a VIF asynchronously
+             * @param session XenSession
+             * @param vif VIF opaque reference
+             * @return Task ref
+             *
+             * Matches C# VIF.async_destroy()
+             */
+            static QString async_destroy(XenSession* session, const QString& vif);
+
+            /**
              * @brief Destroy a VIF
              * @param session XenSession
              * @param vif VIF opaque reference

@@ -30,6 +30,7 @@
 #include "connection.h"
 #include "session.h"
 #include "jsonrpcclient.h"
+#include "../utils/misc.h"
 #include <QDebug>
 #include <QThread>
 
@@ -319,7 +320,7 @@ void EventPoller::pollEvents()
 
         foreach (const QVariant& eventVar, events)
         {
-            if (eventVar.type() == QVariant::Map)
+            if (Misc::QVariantIsMap(eventVar))
             {
                 QVariantMap eventData = eventVar.toMap();
 

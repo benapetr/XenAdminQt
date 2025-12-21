@@ -69,6 +69,20 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
+    QString VIF::async_destroy(XenSession* session, const QString& vif)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vif;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("Async.VIF.destroy", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+    }
+
     void VIF::destroy(XenSession* session, const QString& vif)
     {
         if (!session || !session->isLoggedIn())

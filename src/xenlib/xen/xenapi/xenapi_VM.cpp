@@ -567,6 +567,20 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response);
     }
 
+    QVariant VM::get_allowed_VIF_devices(XenSession* session, const QString& vm)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.get_allowed_VIF_devices", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response);
+    }
+
     // VM.get_record - Get full VM record
     QVariantMap VM::get_record(XenSession* session, const QString& vm)
     {
@@ -737,6 +751,20 @@ namespace XenAPI
 
         XenRpcAPI api(session);
         QByteArray request = api.buildJsonRpcCall("VM.set_name_description", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response); // Check for errors
+    }
+
+    void VM::set_tags(XenSession* session, const QString& vm, const QStringList& value)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.set_tags", params);
         QByteArray response = session->sendApiRequest(request);
         api.parseJsonRpcResponse(response); // Check for errors
     }

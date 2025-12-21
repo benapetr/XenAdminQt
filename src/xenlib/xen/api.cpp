@@ -28,6 +28,7 @@
 #include "api.h"
 #include "session.h"
 #include "jsonrpcclient.h"
+#include "../utils/misc.h"
 #include <QDebug>
 
 class XenRpcAPI::Private
@@ -54,137 +55,6 @@ QString XenRpcAPI::getSessionId() const
         return this->d->session->getSessionId();
     }
     return QString();
-}
-
-bool XenRpcAPI::exportVM(const QString& vmRef, const QString& fileName, const QString& format)
-{
-    if (!this->d->session || !this->d->session->isLoggedIn())
-    {
-        emit this->apiCallFailed("exportVM", "Not authenticated");
-        return false;
-    }
-
-    // Make API call to export VM
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-    params.append(vmRef);
-    params.append(fileName);
-    params.append(format);
-
-    QString apiMethod = (format == "ovf") ? "VM.export_ovf" : "VM.export";
-    QByteArray jsonRpcRequest = this->buildJsonRpcCall(apiMethod, params);
-    QByteArray responseData = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
-
-    if (responseData.isEmpty())
-    {
-        emit this->apiCallFailed("exportVM", "Failed to communicate with server: " + this->d->session->getLastError());
-        return false;
-    }
-
-    QVariant response = this->parseJsonRpcResponse(responseData);
-    if (response.isNull())
-    {
-        emit this->apiCallFailed("exportVM", "Server returned an error");
-        return false;
-    }
-
-    emit this->apiCallCompleted("exportVM", true);
-    return true;
-}
-
-bool XenRpcAPI::setVMField(const QString& vmRef, const QString& field, const QVariant& value)
-{
-    if (!this->d->session || !this->d->session->isLoggedIn())
-    {
-        emit this->apiCallFailed("setVMField", "Not authenticated");
-        return false;
-    }
-
-    if (vmRef.isEmpty() || field.isEmpty())
-    {
-        emit this->apiCallFailed("setVMField", "Invalid parameters");
-        return false;
-    }
-
-    // Build method name based on field (e.g., VM.set_name_label, VM.set_VCPUs_max)
-    QString method = QString("VM.set_%1").arg(field);
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-    params.append(vmRef);
-    params.append(value);
-
-    qDebug() << "XenAPI::setVMField: Calling" << method << "with value:" << value;
-
-    QByteArray jsonRpcRequest = this->buildJsonRpcCall(method, params);
-    QByteArray responseData = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
-
-    if (responseData.isEmpty())
-    {
-        QString error = "Failed to communicate with server: " + this->d->session->getLastError();
-        emit this->apiCallFailed("setVMField", error);
-        qWarning() << "XenAPI::setVMField:" << error;
-        return false;
-    }
-
-    QVariant response = this->parseJsonRpcResponse(responseData);
-    if (response.isNull())
-    {
-        emit this->apiCallFailed("setVMField", "Server returned an error");
-        qWarning() << "XenAPI::setVMField: Server returned an error for field" << field;
-        return false;
-    }
-
-    emit this->apiCallCompleted("setVMField", response);
-    qDebug() << "XenAPI::setVMField: Successfully set" << field << "to" << value;
-    return true;
-}
-
-bool XenRpcAPI::setVMOtherConfigKey(const QString& vmRef, const QString& key, const QString& value)
-{
-    if (!this->d->session || !this->d->session->isLoggedIn())
-    {
-        emit this->apiCallFailed("setVMOtherConfigKey", "Not authenticated");
-        return false;
-    }
-
-    if (vmRef.isEmpty() || key.isEmpty())
-    {
-        emit this->apiCallFailed("setVMOtherConfigKey", "Invalid parameters");
-        return false;
-    }
-
-    // Call VM.add_to_other_config to set a key-value pair
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-    params.append(vmRef);
-    params.append(key);
-    params.append(value);
-
-    qDebug() << "XenAPI::setVMOtherConfigKey: Setting" << key << "=" << value << "for VM" << vmRef;
-
-    QByteArray jsonRpcRequest = this->buildJsonRpcCall("VM.add_to_other_config", params);
-    QByteArray responseData = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
-
-    if (responseData.isEmpty())
-    {
-        QString error = "Failed to communicate with server: " + this->d->session->getLastError();
-        emit this->apiCallFailed("setVMOtherConfigKey", error);
-        qWarning() << "XenAPI::setVMOtherConfigKey:" << error;
-        return false;
-    }
-
-    QVariant response = this->parseJsonRpcResponse(responseData);
-    if (response.isNull())
-    {
-        emit this->apiCallFailed("setVMOtherConfigKey", "Server returned an error");
-        qWarning() << "XenAPI::setVMOtherConfigKey: Server returned an error";
-        return false;
-    }
-
-    emit this->apiCallCompleted("setVMOtherConfigKey", response);
-    qDebug() << "XenAPI::setVMOtherConfigKey: Successfully set other_config key";
-    return true;
 }
 
 // VM CPU and Memory Configuration Methods
@@ -332,121 +202,7 @@ QVariant XenRpcAPI::getVBDRecord(const QString& vbdRef)
     return response;
 }
 
-QVariantList XenRpcAPI::getVMVBDs(const QString& vmRef)
-{
-    if (!this->d->session || !this->d->session->isLoggedIn())
-    {
-        emit this->apiCallFailed("getVMVBDs", "Not authenticated");
-        return QVariantList();
-    }
-
-    if (vmRef.isEmpty())
-    {
-        emit this->apiCallFailed("getVMVBDs", "Invalid VM reference");
-        return QVariantList();
-    }
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-    params.append(vmRef);
-
-    QByteArray jsonRpcRequest = this->buildJsonRpcCall("VM.get_VBDs", params);
-    QByteArray responseData = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
-
-    if (responseData.isEmpty())
-    {
-        emit this->apiCallFailed("getVMVBDs", "Failed to communicate with server: " + this->d->session->getLastError());
-        return QVariantList();
-    }
-
-    QVariant response = this->parseJsonRpcResponse(responseData);
-    if (response.isNull())
-    {
-        emit this->apiCallFailed("getVMVBDs", "Failed to parse server response");
-        return QVariantList();
-    }
-
-    QVariantList vbdRefs = response.toList();
-    QVariantList vbds;
-
-    // Get detailed records for each VBD
-    for (const QVariant& vbdRefVariant : vbdRefs)
-    {
-        QString vbdRef = vbdRefVariant.toString();
-        if (!vbdRef.isEmpty())
-        {
-            QVariant vbdRecord = this->getVBDRecord(vbdRef);
-            if (!vbdRecord.isNull())
-            {
-                QVariantMap vbdMap = vbdRecord.toMap();
-                vbdMap["ref"] = vbdRef;
-                vbds.append(vbdMap);
-            }
-        }
-    }
-
-    emit this->apiCallCompleted("getVMVBDs", vbds);
-    return vbds;
-}
-
 // VIF (Virtual Network Interface) Operations
-
-QVariantList XenRpcAPI::getVMVIFs(const QString& vmRef)
-{
-    if (!this->d->session || !this->d->session->isLoggedIn())
-    {
-        emit this->apiCallFailed("getVMVIFs", "Not authenticated");
-        return QVariantList();
-    }
-
-    if (vmRef.isEmpty())
-    {
-        emit this->apiCallFailed("getVMVIFs", "Invalid VM reference");
-        return QVariantList();
-    }
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-    params.append(vmRef);
-
-    QByteArray jsonRpcRequest = this->buildJsonRpcCall("VM.get_VIFs", params);
-    QByteArray responseData = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
-
-    if (responseData.isEmpty())
-    {
-        emit this->apiCallFailed("getVMVIFs", "Failed to communicate with server: " + this->d->session->getLastError());
-        return QVariantList();
-    }
-
-    QVariant response = this->parseJsonRpcResponse(responseData);
-    if (response.isNull())
-    {
-        emit this->apiCallFailed("getVMVIFs", "Failed to parse server response");
-        return QVariantList();
-    }
-
-    QVariantList vifRefs = response.toList();
-    QVariantList vifs;
-
-    // Get detailed records for each VIF
-    for (const QVariant& vifRefVariant : vifRefs)
-    {
-        QString vifRef = vifRefVariant.toString();
-        if (!vifRef.isEmpty())
-        {
-            QVariant vifRecord = this->getVIFRecord(vifRef);
-            if (!vifRecord.isNull())
-            {
-                QVariantMap vifMap = vifRecord.toMap();
-                vifMap["ref"] = vifRef;
-                vifs.append(vifMap);
-            }
-        }
-    }
-
-    emit this->apiCallCompleted("getVMVIFs", vifs);
-    return vifs;
-}
 
 QVariant XenRpcAPI::getVIFRecord(const QString& vifRef)
 {
@@ -485,62 +241,6 @@ QVariant XenRpcAPI::getVIFRecord(const QString& vifRef)
 
     emit this->apiCallCompleted("getVIFRecord", response);
     return response;
-}
-
-QString XenRpcAPI::createVIF(const QString& vmRef, const QString& networkRef, const QString& device, const QString& mac)
-{
-    if (!this->d->session || !this->d->session->isLoggedIn())
-    {
-        emit this->apiCallFailed("createVIF", "Not authenticated");
-        return QString();
-    }
-
-    if (vmRef.isEmpty() || networkRef.isEmpty())
-    {
-        emit this->apiCallFailed("createVIF", "Invalid VM or Network reference");
-        return QString();
-    }
-
-    // Build VIF record
-    QVariantMap vifRecord;
-    vifRecord["VM"] = vmRef;
-    vifRecord["network"] = networkRef;
-    vifRecord["device"] = device;
-    vifRecord["MAC"] = mac; // Empty string for auto-generated MAC
-    vifRecord["MTU"] = QString::number(1500);
-    vifRecord["other_config"] = QVariantMap();
-    vifRecord["qos_algorithm_type"] = QString("");
-    vifRecord["qos_algorithm_params"] = QVariantMap();
-    vifRecord["locking_mode"] = "network_default";
-    vifRecord["ipv4_allowed"] = QVariantList();
-    vifRecord["ipv6_allowed"] = QVariantList();
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-    params.append(vifRecord);
-
-    qDebug() << "XenAPI::createVIF: Creating VIF for VM" << vmRef << "on network" << networkRef;
-
-    QByteArray jsonRpcRequest = this->buildJsonRpcCall("VIF.create", params);
-    QByteArray responseData = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
-
-    if (responseData.isEmpty())
-    {
-        emit this->apiCallFailed("createVIF", "Failed to communicate with server: " + this->d->session->getLastError());
-        return QString();
-    }
-
-    QVariant response = this->parseJsonRpcResponse(responseData);
-    if (response.isNull())
-    {
-        emit this->apiCallFailed("createVIF", "Server returned an error");
-        return QString();
-    }
-
-    QString vifRef = response.toString();
-    emit this->apiCallCompleted("createVIF", vifRef);
-    qDebug() << "XenAPI::createVIF: Successfully created VIF:" << vifRef;
-    return vifRef;
 }
 
 // VM migration operations
@@ -2071,7 +1771,7 @@ QVariantMap XenRpcAPI::eventFrom(const QStringList& classes, const QString& toke
     QVariant result = this->parseJsonRpcResponse(response);
 
     // Convert to map if it's not already
-    if (result.type() == QVariant::Map)
+    if (Misc::QVariantIsMap(result))
     {
         return result.toMap();
     }

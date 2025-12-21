@@ -38,6 +38,7 @@
 #include "xencache.h"
 #include "metricupdater.h"
 #include "collections/connectionsmanager.h"
+#include "utils/misc.h"
 #include <QtCore/QHash>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QDateTime>
@@ -501,17 +502,6 @@ QVariantMap XenLib::getVMMetricsRecord(const QString& metricsRef)
     return getCachedObjectData("vm_metrics", metricsRef);
 }
 
-bool XenLib::exportVM(const QString& vmRef, const QString& fileName, const QString& format)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    return this->d->api->exportVM(vmRef, fileName, format);
-}
-
 bool XenLib::updateVM(const QString& vmRef, const QVariantMap& updates)
 {
     if (!this->isConnected())
@@ -526,7 +516,13 @@ bool XenLib::updateVM(const QString& vmRef, const QVariantMap& updates)
         return false;
     }
 
-    // Update each field via the API
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    // Update each field using explicit XenAPI calls (matches C# VM.SaveChanges)
     bool allSuccess = true;
 
     for (auto it = updates.constBegin(); it != updates.constEnd(); ++it)
@@ -534,10 +530,35 @@ bool XenLib::updateVM(const QString& vmRef, const QVariantMap& updates)
         const QString& field = it.key();
         const QVariant& value = it.value();
 
-        // Call the appropriate API method based on the field
-        if (!this->d->api->setVMField(vmRef, field, value))
+        try
         {
-            qWarning() << "XenLib::updateVM: Failed to set field" << field << "to" << value;
+            if (field == "name_label")
+            {
+                XenAPI::VM::set_name_label(this->d->session, vmRef, value.toString());
+            }
+            else if (field == "name_description")
+            {
+                XenAPI::VM::set_name_description(this->d->session, vmRef, value.toString());
+            }
+            else if (field == "tags")
+            {
+                XenAPI::VM::set_tags(this->d->session, vmRef, value.toStringList());
+            }
+            else if (field == "other_config")
+            {
+                XenAPI::VM::set_other_config(this->d->session, vmRef, value.toMap());
+            }
+            else
+            {
+                qWarning() << "XenLib::updateVM: Unsupported VM field:" << field;
+                this->setError(QString("Unsupported VM field: %1").arg(field));
+                allSuccess = false;
+            }
+        }
+        catch (const std::exception& ex)
+        {
+            qWarning() << "XenLib::updateVM: Failed to set field" << field << "to" << value << ":" << ex.what();
+            this->setError(QString("Failed to update VM field: %1").arg(field));
             allSuccess = false;
         }
     }
@@ -1106,24 +1127,6 @@ bool XenLib::revertToSnapshot(const QString& snapshotRef)
     return this->d->api->revertToSnapshot(snapshotRef);
 }
 
-// VBD/VDI (Virtual Disk) operations
-QVariantList XenLib::getVMVBDs(const QString& vmRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QVariantList();
-    }
-
-    if (vmRef.isEmpty())
-    {
-        this->setError("Invalid VM reference");
-        return QVariantList();
-    }
-
-    return this->d->api->getVMVBDs(vmRef);
-}
-
 bool XenLib::changeVMISO(const QString& vmRef, const QString& vbdRef, const QString& vdiRef)
 {
     // Reference: XenAdmin/Actions/VM/ChangeVMISOAction.cs
@@ -1243,41 +1246,6 @@ bool XenLib::createCdDrive(const QString& vmRef)
         this->setError("Failed to create CD drive");
         return false;
     }
-}
-
-// VIF (Virtual Network Interface) operations
-QVariantList XenLib::getVMVIFs(const QString& vmRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QVariantList();
-    }
-
-    if (vmRef.isEmpty())
-    {
-        this->setError("Invalid VM reference");
-        return QVariantList();
-    }
-
-    return this->d->api->getVMVIFs(vmRef);
-}
-
-QString XenLib::createVIF(const QString& vmRef, const QString& networkRef, const QString& device, const QString& mac)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    if (vmRef.isEmpty() || networkRef.isEmpty())
-    {
-        this->setError("Invalid VM or Network reference");
-        return QString();
-    }
-
-    return this->d->api->createVIF(vmRef, networkRef, device, mac);
 }
 
 // VM migration operations
@@ -2413,7 +2381,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
     // IMPORTANT: parseJsonRpcResponse() should have unwrapped Status/Value,
     // but in case it returned the full map, extract just the Value part
     QVariant responseData = parsedResponse;
-    if (parsedResponse.type() == QVariant::Map)
+    if (Misc::QVariantIsMap(parsedResponse))
     {
         QVariantMap responseMap = parsedResponse.toMap();
         // qDebug() << "XenLib::onConnectionApiResponse - Response map has" << responseMap.size() << "keys";
@@ -2426,7 +2394,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
             // qDebug() << "XenLib::onConnectionApiResponse - Extracting Value from wrapped response";
             responseData = responseMap.value("Value");
             // qDebug() << "XenLib::onConnectionApiResponse - After extraction, responseData type:" << responseData.typeName();
-            if (responseData.type() == QVariant::Map)
+            if (Misc::QVariantIsMap(responseData))
             {
                 QVariantMap extractedMap = responseData.toMap();
                 // qDebug() << "XenLib::onConnectionApiResponse - Extracted map has" << extractedMap.size() << "keys";
@@ -2570,7 +2538,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
 
         QVariantMap eventBatch;
 
-        if (responseData.type() == QVariant::Map)
+        if (Misc::QVariantIsMap(responseData))
         {
             eventBatch = responseData.toMap();
         } else
@@ -2622,7 +2590,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
             // For "add" and "mod" operations, add to cache
             if (operation == "add" || operation == "mod")
             {
-                if (snapshot.isValid() && snapshot.type() == QVariant::Map)
+                if (snapshot.isValid() && Misc::QVariantIsMap(snapshot))
                 {
                     QVariantMap objectData = snapshot.toMap();
                     objectData["ref"] = objectRef; // Ensure legacy ref key is available
@@ -2715,14 +2683,14 @@ QString XenLib::populateCache()
         {
             QVariant parsed = this->d->api->parseJsonRpcResponse(roleResponse);
             QVariant roleData = parsed;
-            if (parsed.type() == QVariant::Map)
+            if (Misc::QVariantIsMap(parsed))
             {
                 QVariantMap map = parsed.toMap();
                 if (map.contains("Value"))
                     roleData = map.value("Value");
             }
 
-            if (roleData.type() == QVariant::Map)
+            if (Misc::QVariantIsMap(roleData))
             {
                 QVariantMap roles = roleData.toMap();
                 for (auto it = roles.constBegin(); it != roles.constEnd(); ++it)
@@ -2781,7 +2749,7 @@ QString XenLib::populateCache()
 
     // Extract responseData (unwrap Status/Value if needed)
     QVariant responseData = parsedResponse;
-    if (parsedResponse.type() == QVariant::Map)
+    if (Misc::QVariantIsMap(parsedResponse))
     {
         QVariantMap responseMap = parsedResponse.toMap();
         if (responseMap.contains("Value"))
@@ -2790,7 +2758,7 @@ QString XenLib::populateCache()
         }
     }
 
-    if (responseData.type() != QVariant::Map)
+    if (!Misc::QVariantIsMap(responseData))
     {
         qWarning() << "XenLib::populateCache - Event.from response is not a map, type:" << responseData.typeName();
         return QString();
@@ -2848,7 +2816,7 @@ QString XenLib::populateCache()
         // For "add" and "mod" operations, add to cache
         if (operation == "add" || operation == "mod")
         {
-            if (snapshot.isValid() && snapshot.type() == QVariant::Map)
+            if (snapshot.isValid() && Misc::QVariantIsMap(snapshot))
             {
                 QVariantMap objectData = snapshot.toMap();
                 objectData["ref"] = objectRef;
@@ -2886,14 +2854,14 @@ QString XenLib::populateCache()
         {
             QVariant parsed = this->d->api->parseJsonRpcResponse(consoleResponse);
             QVariant responseData = parsed;
-            if (parsed.type() == QVariant::Map)
+            if (Misc::QVariantIsMap(parsed))
             {
                 QVariantMap map = parsed.toMap();
                 if (map.contains("Value"))
                     responseData = map.value("Value");
             }
 
-            if (responseData.type() == QVariant::Map)
+            if (Misc::QVariantIsMap(responseData))
             {
                 QVariantMap consolesMap = responseData.toMap();
                 for (auto it = consolesMap.constBegin(); it != consolesMap.constEnd(); ++it)

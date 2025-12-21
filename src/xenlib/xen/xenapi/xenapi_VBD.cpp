@@ -50,6 +50,20 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
+    QString VBD::async_create(XenSession* session, const QVariantMap& vbdRecord)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vbdRecord;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("Async.VBD.create", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+    }
+
     // VBD.async_plug - Asynchronous plug
     QString VBD::async_plug(XenSession* session, const QString& vbd)
     {

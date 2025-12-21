@@ -45,9 +45,6 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         QString getSessionId() const;
 
         // VM operations
-        bool exportVM(const QString& vmRef, const QString& fileName, const QString& format = "xva");
-        bool setVMField(const QString& vmRef, const QString& field, const QVariant& value);
-        bool setVMOtherConfigKey(const QString& vmRef, const QString& key, const QString& value);
 
         // VM CPU and memory configuration
         bool setVMVCPUsMax(const QString& vmRef, int vcpus);
@@ -55,13 +52,10 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         bool setVMMemoryLimits(const QString& vmRef, qint64 staticMin, qint64 staticMax, qint64 dynamicMin, qint64 dynamicMax);
 
         // VBD (Virtual Block Device) operations
-        QVariantList getVMVBDs(const QString& vmRef);
         QVariant getVBDRecord(const QString& vbdRef);
 
         // VIF (Virtual Network Interface) operations
-        QVariantList getVMVIFs(const QString& vmRef);
         QVariant getVIFRecord(const QString& vifRef);
-        QString createVIF(const QString& vmRef, const QString& networkRef, const QString& device, const QString& mac = QString());
 
         // VM migration operations
         QString poolMigrateVM(const QString& vmRef, const QString& hostRef, bool live = true);

@@ -9,6 +9,7 @@ win32:DEFINES += XENLIB_STATIC
 
 # Source files
 SOURCES += \
+    utils/misc.cpp \
     xen/actions/vm/vmstartaction.cpp \
     xen/xenapi/xenapi_Bond.cpp \
     xen/xenapi/xenapi_Network.cpp \
@@ -141,6 +142,7 @@ SOURCES += \
 
 # Header files
 HEADERS += \
+    utils/misc.h \
     xen/actions/vm/vmstartaction.h \
     xen/xenapi/xenapi_Bond.h \
     xen/xenapi/xenapi_Network.h \

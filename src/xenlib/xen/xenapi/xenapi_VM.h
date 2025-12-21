@@ -30,6 +30,7 @@
 
 #include "../../xenlib_global.h"
 #include <QtCore/QString>
+#include <QtCore/QStringList>
 #include <QtCore/QVariant>
 
 //! TODO rewrite all docs to Doxygen format from that XML format
@@ -281,6 +282,7 @@ namespace XenAPI
              * @return List of allowed device numbers as QVariant (QStringList)
              */
             static QVariant get_allowed_VBD_devices(XenSession* session, const QString& vm);
+            static QVariant get_allowed_VIF_devices(XenSession* session, const QString& vm);
 
             /**
              * @brief Get the full record for a VM
@@ -393,6 +395,15 @@ namespace XenAPI
              * @param value New value for name_description
              */
             static void set_name_description(XenSession* session, const QString& vm, const QString& value);
+
+            /**
+             * @brief Set the tags field
+             * First published in XenServer 4.0.
+             * @param session The session
+             * @param vm The opaque_ref of the given VM
+             * @param value New value for tags
+             */
+            static void set_tags(XenSession* session, const QString& vm, const QStringList& value);
 
             // Snapshot operations
 

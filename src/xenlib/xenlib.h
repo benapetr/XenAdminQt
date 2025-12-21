@@ -98,7 +98,6 @@ public:
     void requestObjectData(const QString& objectType, const QString& objectRef);
 
     // VM management operations
-    bool exportVM(const QString& vmRef, const QString& fileName, const QString& format = "xva");
     bool updateVM(const QString& vmRef, const QVariantMap& updates);
     bool setVMVCPUs(const QString& vmRef, int vcpus);
     bool setVMMemory(const QString& vmRef, qint64 memoryMB);
@@ -128,16 +127,11 @@ public:
     bool deleteSnapshot(const QString& snapshotRef);
     bool revertToSnapshot(const QString& snapshotRef);
 
-    // VBD/VDI (Virtual Disk) operations
-    QVariantList getVMVBDs(const QString& vmRef);
-
     // CD/DVD operations
     bool changeVMISO(const QString& vmRef, const QString& vbdRef, const QString& vdiRef);
     bool createCdDrive(const QString& vmRef);
 
     // VIF (Virtual Network Interface) operations
-    QVariantList getVMVIFs(const QString& vmRef);
-    QString createVIF(const QString& vmRef, const QString& networkRef, const QString& device, const QString& mac = QString());
 
     // VM migration operations
     QString poolMigrateVM(const QString& vmRef, const QString& hostRef, bool live = true);

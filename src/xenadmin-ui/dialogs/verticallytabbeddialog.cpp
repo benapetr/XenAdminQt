@@ -34,6 +34,7 @@
 #include "../../xenlib/xen/connection.h"
 #include "../../xenlib/xen/session.h"
 #include "../../xenlib/xen/api.h"
+#include "../../xenlib/xen/xenapi/xenapi_VM.h"
 #include "../../xenlib/xencache.h"
 #include "../../xenlib/operations/multipleoperation.h"
 #include "../../xenlib/xen/asyncoperation.h"
@@ -414,9 +415,20 @@ void VerticallyTabbedDialog::applySimpleChanges()
     }
 
     XenRpcAPI* api = mainWin->xenLib()->getAPI();
+    XenSession* session = nullptr;
+    if (mainWin->xenLib()->getConnection())
+    {
+        session = mainWin->xenLib()->getConnection()->getSession();
+    }
+
     if (!api)
     {
         qWarning() << "VerticallyTabbedDialog::applySimpleChanges: No API instance";
+        return;
+    }
+    if (!session || !session->isLoggedIn())
+    {
+        qWarning() << "VerticallyTabbedDialog::applySimpleChanges: No session";
         return;
     }
 
@@ -432,7 +444,15 @@ void VerticallyTabbedDialog::applySimpleChanges()
         bool success = false;
         if (this->m_objectType == "vm")
         {
-            success = api->setVMField(this->m_objectRef, "name_label", newName);
+            try
+            {
+                XenAPI::VM::set_name_label(session, this->m_objectRef, newName);
+                success = true;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set VM name_label:" << ex.what();
+            }
         }
         else if (this->m_objectType == "host")
         {
@@ -471,7 +491,15 @@ void VerticallyTabbedDialog::applySimpleChanges()
         bool success = false;
         if (this->m_objectType == "vm")
         {
-            success = api->setVMField(this->m_objectRef, "name_description", newDesc);
+            try
+            {
+                XenAPI::VM::set_name_description(session, this->m_objectRef, newDesc);
+                success = true;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set VM name_description:" << ex.what();
+            }
         }
         else if (this->m_objectType == "host")
         {
@@ -503,52 +531,67 @@ void VerticallyTabbedDialog::applySimpleChanges()
     // 3. Check if other_config changed (for things like iscsi_iqn)
     QVariantMap oldOtherConfig = this->m_objectDataBefore.value("other_config").toMap();
     QVariantMap newOtherConfig = this->m_objectDataCopy.value("other_config").toMap();
-    
-    // Find keys that changed - store keys in QList first to avoid dangling iterators
-    QList<QString> oldKeys = oldOtherConfig.keys();
-    QList<QString> newKeys = newOtherConfig.keys();
-    QSet<QString> allKeys(oldKeys.begin(), oldKeys.end());
-    allKeys.unite(QSet<QString>(newKeys.begin(), newKeys.end()));
-    
-    for (const QString& key : allKeys)
+
+    if (this->m_objectType == "vm")
     {
-        QString oldValue = oldOtherConfig.value(key).toString();
-        QString newValue = newOtherConfig.value(key).toString();
-        
-        if (oldValue != newValue)
+        if (oldOtherConfig != newOtherConfig)
         {
-            qDebug() << "VerticallyTabbedDialog: Applying other_config change:" << key 
-                     << ":" << oldValue << "->" << newValue;
-            
-            bool success = false;
-            
-            if (newValue.isEmpty() && oldOtherConfig.contains(key))
+            qDebug() << "VerticallyTabbedDialog: Applying VM other_config changes";
+            try
             {
-                // Remove the key - would need remove_from_other_config API
-                // For now, just skip removal (set to empty string instead)
-                qWarning() << "Skipping removal of other_config key" << key 
-                           << "(remove_from_other_config not implemented)";
+                XenAPI::VM::set_other_config(session, this->m_objectRef, newOtherConfig);
+                hasChanges = true;
             }
-            else
+            catch (const std::exception& ex)
             {
-                // Add or update the key
-                if (this->m_objectType == "vm")
+                qWarning() << "Failed to set VM other_config:" << ex.what();
+            }
+        }
+    }
+    else
+    {
+        // Find keys that changed - store keys in QList first to avoid dangling iterators
+        QList<QString> oldKeys = oldOtherConfig.keys();
+        QList<QString> newKeys = newOtherConfig.keys();
+        QSet<QString> allKeys(oldKeys.begin(), oldKeys.end());
+        allKeys.unite(QSet<QString>(newKeys.begin(), newKeys.end()));
+
+        for (const QString& key : allKeys)
+        {
+            QString oldValue = oldOtherConfig.value(key).toString();
+            QString newValue = newOtherConfig.value(key).toString();
+
+            if (oldValue != newValue)
+            {
+                qDebug() << "VerticallyTabbedDialog: Applying other_config change:" << key
+                         << ":" << oldValue << "->" << newValue;
+
+                bool success = false;
+
+                if (newValue.isEmpty() && oldOtherConfig.contains(key))
                 {
-                    success = api->setVMOtherConfigKey(this->m_objectRef, key, newValue);
+                    // Remove the key - would need remove_from_other_config API
+                    // For now, just skip removal (set to empty string instead)
+                    qWarning() << "Skipping removal of other_config key" << key
+                               << "(remove_from_other_config not implemented)";
                 }
-                else if (this->m_objectType == "host")
-                {
-                    success = api->setHostOtherConfig(this->m_objectRef, key, newValue);
-                }
-                // Pool, SR, Network also have other_config but we haven't implemented helpers yet
                 else
                 {
-                    qWarning() << "other_config updates not implemented for" << this->m_objectType;
-                }
-                
-                if (success)
-                {
-                    hasChanges = true;
+                    // Add or update the key
+                    if (this->m_objectType == "host")
+                    {
+                        success = api->setHostOtherConfig(this->m_objectRef, key, newValue);
+                    }
+                    // Pool, SR, Network also have other_config but we haven't implemented helpers yet
+                    else
+                    {
+                        qWarning() << "other_config updates not implemented for" << this->m_objectType;
+                    }
+
+                    if (success)
+                    {
+                        hasChanges = true;
+                    }
                 }
             }
         }
