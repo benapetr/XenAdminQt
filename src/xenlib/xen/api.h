@@ -45,13 +45,6 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         QString getSessionId() const;
 
         // Snapshot operations
-        QVariantList getVMSnapshots(const QString& vmRef);
-        QString createVMSnapshot(const QString& vmRef, const QString& name, const QString& description = QString());
-        QString createVMSnapshotWithQuiesce(const QString& vmRef, const QString& name, const QString& description = QString());
-        QString createVMCheckpoint(const QString& vmRef, const QString& name, const QString& description = QString());
-        bool deleteSnapshot(const QString& snapshotRef);
-        bool revertToSnapshot(const QString& snapshotRef);
-        QVariant getSnapshotRecord(const QString& snapshotRef);
 
         // Host operations
         QVariantList getHosts();

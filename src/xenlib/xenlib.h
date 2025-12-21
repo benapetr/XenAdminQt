@@ -122,10 +122,6 @@ public:
     QString getControlDomainForHost(const QString& hostRef);
 
     // Snapshot operations
-    QVariantList getVMSnapshots(const QString& vmRef);
-    QString createVMSnapshot(const QString& vmRef, const QString& name, const QString& description = QString());
-    bool deleteSnapshot(const QString& snapshotRef);
-    bool revertToSnapshot(const QString& snapshotRef);
 
     // CD/DVD operations
     bool changeVMISO(const QString& vmRef, const QString& vbdRef, const QString& vdiRef);
