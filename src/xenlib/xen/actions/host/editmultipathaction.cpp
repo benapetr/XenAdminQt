@@ -30,7 +30,7 @@
 #include "../../session.h"
 #include "../../connection.h"
 #include "../../xenapi/xenapi_Host.h"
-#include "../../xenapi/PBD.h"
+#include "../../xenapi/xenapi_PBD.h"
 #include <QDebug>
 
 const char* EditMultipathAction::DEFAULT_MULTIPATH_HANDLE = "dmp";

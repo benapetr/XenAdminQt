@@ -25,69 +25,66 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Network_sriov.h"
-#include "../session.h"
+#include "xenapi_Secret.h"
 #include "../api.h"
-#include "../jsonrpcclient.h"
 #include <stdexcept>
+#include <QVariantMap>
 
 namespace XenAPI
 {
+    QString Secret::create(XenSession* session, const QString& value)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
 
-    QString Network_sriov::async_create(XenSession* session, const QString& pif, const QString& network)
+        // Create a secret record with the value
+        QVariantMap record;
+        record["value"] = value;
+
+        QVariantList params;
+        params << session->getSessionId() << record;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("secret.create", params);
+        QByteArray response = session->sendApiRequest(request);
+
+        // Returns secret reference, then get UUID from it
+        QString secretRef = api.parseJsonRpcResponse(response).toString();
+
+        // Get the UUID
+        QVariantList getUuidParams;
+        getUuidParams << session->getSessionId() << secretRef;
+        QByteArray uuidRequest = api.buildJsonRpcCall("secret.get_uuid", getUuidParams);
+        QByteArray uuidResponse = session->sendApiRequest(uuidRequest);
+        return api.parseJsonRpcResponse(uuidResponse).toString();
+    }
+
+    QString Secret::get_by_uuid(XenSession* session, const QString& uuid)
     {
         if (!session || !session->isLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << pif << network;
+        params << session->getSessionId() << uuid;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.network_sriov.create", params);
+        QByteArray request = api.buildJsonRpcCall("secret.get_by_uuid", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString Network_sriov::async_destroy(XenSession* session, const QString& network_sriov)
+    void Secret::destroy(XenSession* session, const QString& secret)
     {
         if (!session || !session->isLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << network_sriov;
+        params << session->getSessionId() << secret;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.network_sriov.destroy", params);
+        QByteArray request = api.buildJsonRpcCall("secret.destroy", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
-    }
-
-    QVariantMap Network_sriov::get_record(XenSession* session, const QString& network_sriov)
-    {
-        if (!session || !session->isLoggedIn())
-            throw std::runtime_error("Not connected to XenServer");
-
-        QVariantList params;
-        params << session->getSessionId() << network_sriov;
-
-        XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network_sriov.get_record", params);
-        QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toMap();
-    }
-
-    QVariantList Network_sriov::get_all(XenSession* session)
-    {
-        if (!session || !session->isLoggedIn())
-            throw std::runtime_error("Not connected to XenServer");
-
-        QVariantList params;
-        params << session->getSessionId();
-
-        XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network_sriov.get_all", params);
-        QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toList();
+        api.parseJsonRpcResponse(response); // Check for errors
     }
 
 } // namespace XenAPI

@@ -31,7 +31,6 @@
 
 namespace XenAPI
 {
-
     QVariant Pool::get_all(XenSession* session)
     {
         if (!session || !session->isLoggedIn())
@@ -195,6 +194,32 @@ namespace XenAPI
 
         XenRpcAPI api(session);
         QByteArray request = api.buildJsonRpcCall("pool.set_name_description", params);
+        session->sendApiRequest(request);
+    }
+
+    void Pool::set_tags(XenSession* session, const QString& pool, const QStringList& tags)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pool << tags;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("pool.set_tags", params);
+        session->sendApiRequest(request);
+    }
+
+    void Pool::set_migration_compression(XenSession* session, const QString& pool, bool enabled)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pool << enabled;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("pool.set_migration_compression", params);
         session->sendApiRequest(request);
     }
 

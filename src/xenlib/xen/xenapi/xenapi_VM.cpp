@@ -48,7 +48,8 @@ namespace XenAPI
 
             QJsonObject root = doc.object();
 
-            auto throwFromArray = [](const QJsonArray& array) {
+            auto throwFromArray = [](const QJsonArray& array)
+            {
                 QStringList errors;
                 for (const QJsonValue& val : array)
                     errors << val.toString();
@@ -566,6 +567,20 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response);
     }
 
+    QVariant VM::get_allowed_VIF_devices(XenSession* session, const QString& vm)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.get_allowed_VIF_devices", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response);
+    }
+
     // VM.get_record - Get full VM record
     QVariantMap VM::get_record(XenSession* session, const QString& vm)
     {
@@ -595,6 +610,20 @@ namespace XenAPI
         QByteArray request = api.buildJsonRpcCall("VM.get_all_records", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toMap();
+    }
+
+    double VM::query_data_source(XenSession* session, const QString& vm, const QString& data_source)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << data_source;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.query_data_source", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toDouble();
     }
 
     // VM.set_suspend_VDI - Set the suspend VDI
@@ -640,6 +669,20 @@ namespace XenAPI
         QByteArray request = api.buildJsonRpcCall("Async.VM.clone", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+    }
+
+    QString VM::clone(XenSession* session, const QString& vm, const QString& new_name)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << new_name;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.clone", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toString();
     }
 
     QString VM::async_copy(XenSession* session, const QString& vm, const QString& new_name, const QString& sr)
@@ -722,6 +765,20 @@ namespace XenAPI
 
         XenRpcAPI api(session);
         QByteArray request = api.buildJsonRpcCall("VM.set_name_description", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response); // Check for errors
+    }
+
+    void VM::set_tags(XenSession* session, const QString& vm, const QStringList& value)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.set_tags", params);
         QByteArray response = session->sendApiRequest(request);
         api.parseJsonRpcResponse(response); // Check for errors
     }
@@ -980,6 +1037,62 @@ namespace XenAPI
         QVariant result = api.parseJsonRpcResponse(response);
 
         return result.toMap();
+    }
+
+    void VM::set_PV_args(XenSession* session, const QString& vm, const QString& value)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.set_PV_args", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
+    void VM::set_other_config(XenSession* session, const QString& vm, const QVariantMap& otherConfig)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << otherConfig;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.set_other_config", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
+    void VM::set_platform(XenSession* session, const QString& vm, const QVariantMap& platform)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << platform;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.set_platform", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
+    void VM::set_affinity(XenSession* session, const QString& vm, const QString& host)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.set_affinity", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
     }
 
 } // namespace XenAPI

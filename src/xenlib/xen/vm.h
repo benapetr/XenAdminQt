@@ -57,207 +57,207 @@ class XENLIB_EXPORT VM : public XenObject
     Q_PROPERTY(bool isSnapshot READ isSnapshot NOTIFY dataChanged)
     Q_PROPERTY(QString residentOn READ residentOnRef NOTIFY dataChanged)
 
-public:
-    explicit VM(XenConnection* connection,
-                const QString& opaqueRef,
-                QObject* parent = nullptr);
-    ~VM() override = default;
+    public:
+        explicit VM(XenConnection* connection,
+                    const QString& opaqueRef,
+                    QObject* parent = nullptr);
+        ~VM() override = default;
 
-    /**
-     * @brief Get VM power state
-     * @return Power state string: "Running", "Halted", "Suspended", "Paused"
-     */
-    QString powerState() const;
+        /**
+         * @brief Get VM power state
+         * @return Power state string: "Running", "Halted", "Suspended", "Paused"
+         */
+        QString powerState() const;
 
-    /**
-     * @brief Check if this is a template
-     * @return true if template
-     */
-    bool isTemplate() const;
+        /**
+         * @brief Check if this is a template
+         * @return true if template
+         */
+        bool isTemplate() const;
 
-    /**
-     * @brief Check if this is a default template
-     * @return true if default template
-     */
-    bool isDefaultTemplate() const;
+        /**
+         * @brief Check if this is a default template
+         * @return true if default template
+         */
+        bool isDefaultTemplate() const;
 
-    /**
-     * @brief Check if this is a snapshot
-     * @return true if snapshot
-     */
-    bool isSnapshot() const;
+        /**
+         * @brief Check if this is a snapshot
+         * @return true if snapshot
+         */
+        bool isSnapshot() const;
 
-    /**
-     * @brief Get reference to host VM is resident on
-     * @return Host opaque reference (empty if not running)
-     */
-    QString residentOnRef() const;
+        /**
+         * @brief Get reference to host VM is resident on
+         * @return Host opaque reference (empty if not running)
+         */
+        QString residentOnRef() const;
 
-    /**
-     * @brief Get reference to affinity host
-     * @return Host opaque reference
-     */
-    QString affinityRef() const;
+        /**
+         * @brief Get reference to affinity host
+         * @return Host opaque reference
+         */
+        QString affinityRef() const;
 
-    /**
-     * @brief Get list of VBD (virtual block device) references
-     * @return List of VBD opaque references
-     */
-    QStringList vbdRefs() const;
+        /**
+         * @brief Get list of VBD (virtual block device) references
+         * @return List of VBD opaque references
+         */
+        QStringList vbdRefs() const;
 
-    /**
-     * @brief Get list of VIF (virtual network interface) references
-     * @return List of VIF opaque references
-     */
-    QStringList vifRefs() const;
+        /**
+         * @brief Get list of VIF (virtual network interface) references
+         * @return List of VIF opaque references
+         */
+        QStringList vifRefs() const;
 
-    /**
-     * @brief Get list of console references
-     * @return List of console opaque references
-     */
-    QStringList consoleRefs() const;
+        /**
+         * @brief Get list of console references
+         * @return List of console opaque references
+         */
+        QStringList consoleRefs() const;
 
-    /**
-     * @brief Get snapshot parent reference (if this is a snapshot)
-     * @return VM opaque reference of parent VM
-     */
-    QString snapshotOfRef() const;
+        /**
+         * @brief Get snapshot parent reference (if this is a snapshot)
+         * @return VM opaque reference of parent VM
+         */
+        QString snapshotOfRef() const;
 
-    /**
-     * @brief Get list of snapshot children (if this VM has snapshots)
-     * @return List of VM opaque references
-     */
-    QStringList snapshotRefs() const;
+        /**
+         * @brief Get list of snapshot children (if this VM has snapshots)
+         * @return List of VM opaque references
+         */
+        QStringList snapshotRefs() const;
 
-    /**
-     * @brief Get suspend VDI reference
-     * @return VDI opaque reference
-     */
-    QString suspendVDIRef() const;
+        /**
+         * @brief Get suspend VDI reference
+         * @return VDI opaque reference
+         */
+        QString suspendVDIRef() const;
 
-    /**
-     * @brief Get memory target (bytes)
-     * @return Memory target in bytes
-     */
-    qint64 memoryTarget() const;
+        /**
+         * @brief Get memory target (bytes)
+         * @return Memory target in bytes
+         */
+        qint64 memoryTarget() const;
 
-    /**
-     * @brief Get memory static max (bytes)
-     * @return Memory static max in bytes
-     */
-    qint64 memoryStaticMax() const;
+        /**
+         * @brief Get memory static max (bytes)
+         * @return Memory static max in bytes
+         */
+        qint64 memoryStaticMax() const;
 
-    /**
-     * @brief Get memory dynamic max (bytes)
-     * @return Memory dynamic max in bytes
-     */
-    qint64 memoryDynamicMax() const;
+        /**
+         * @brief Get memory dynamic max (bytes)
+         * @return Memory dynamic max in bytes
+         */
+        qint64 memoryDynamicMax() const;
 
-    /**
-     * @brief Get memory dynamic min (bytes)
-     * @return Memory dynamic min in bytes
-     */
-    qint64 memoryDynamicMin() const;
+        /**
+         * @brief Get memory dynamic min (bytes)
+         * @return Memory dynamic min in bytes
+         */
+        qint64 memoryDynamicMin() const;
 
-    /**
-     * @brief Get memory static min (bytes)
-     * @return Memory static min in bytes
-     */
-    qint64 memoryStaticMin() const;
+        /**
+         * @brief Get memory static min (bytes)
+         * @return Memory static min in bytes
+         */
+        qint64 memoryStaticMin() const;
 
-    /**
-     * @brief Get VCPUs max
-     * @return Maximum number of VCPUs
-     */
-    int vcpusMax() const;
+        /**
+         * @brief Get VCPUs max
+         * @return Maximum number of VCPUs
+         */
+        int vcpusMax() const;
 
-    /**
-     * @brief Get VCPUs at startup
-     * @return Number of VCPUs at startup
-     */
-    int vcpusAtStartup() const;
+        /**
+         * @brief Get VCPUs at startup
+         * @return Number of VCPUs at startup
+         */
+        int vcpusAtStartup() const;
 
-    /**
-     * @brief Get other_config dictionary
-     * @return Map of additional configuration
-     */
-    QVariantMap otherConfig() const;
+        /**
+         * @brief Get other_config dictionary
+         * @return Map of additional configuration
+         */
+        QVariantMap otherConfig() const;
 
-    /**
-     * @brief Get platform configuration
-     * @return Map of platform settings
-     */
-    QVariantMap platform() const;
+        /**
+         * @brief Get platform configuration
+         * @return Map of platform settings
+         */
+        QVariantMap platform() const;
 
-    /**
-     * @brief Get tags
-     * @return List of tag strings
-     */
-    QStringList tags() const;
+        /**
+         * @brief Get tags
+         * @return List of tag strings
+         */
+        QStringList tags() const;
 
-    /**
-     * @brief Get allowed operations
-     * @return List of allowed operation strings
-     */
-    QStringList allowedOperations() const;
+        /**
+         * @brief Get allowed operations
+         * @return List of allowed operation strings
+         */
+        QStringList allowedOperations() const;
 
-    /**
-     * @brief Get current operations
-     * @return Map of operation ID to operation type
-     */
-    QVariantMap currentOperations() const;
+        /**
+         * @brief Get current operations
+         * @return Map of operation ID to operation type
+         */
+        QVariantMap currentOperations() const;
 
-    /**
-     * @brief Check if VM is running
-     * @return true if power state is "Running"
-     */
-    bool isRunning() const
-    {
-        return powerState() == "Running";
-    }
+        /**
+         * @brief Check if VM is running
+         * @return true if power state is "Running"
+         */
+        bool isRunning() const
+        {
+            return powerState() == "Running";
+        }
 
-    /**
-     * @brief Check if VM is halted
-     * @return true if power state is "Halted"
-     */
-    bool isHalted() const
-    {
-        return powerState() == "Halted";
-    }
+        /**
+         * @brief Check if VM is halted
+         * @return true if power state is "Halted"
+         */
+        bool isHalted() const
+        {
+            return powerState() == "Halted";
+        }
 
-    /**
-     * @brief Check if VM is suspended
-     * @return true if power state is "Suspended"
-     */
-    bool isSuspended() const
-    {
-        return powerState() == "Suspended";
-    }
+        /**
+         * @brief Check if VM is suspended
+         * @return true if power state is "Suspended"
+         */
+        bool isSuspended() const
+        {
+            return powerState() == "Suspended";
+        }
 
-    /**
-     * @brief Check if VM is paused
-     * @return true if power state is "Paused"
-     */
-    bool isPaused() const
-    {
-        return powerState() == "Paused";
-    }
+        /**
+         * @brief Check if VM is paused
+         * @return true if power state is "Paused"
+         */
+        bool isPaused() const
+        {
+            return powerState() == "Paused";
+        }
 
-    /**
-     * @brief Get home host reference
-     *
-     * Returns the host this VM should preferably run on.
-     * This is determined by affinity or current resident host.
-     *
-     * @return Host opaque reference
-     */
-    QString homeRef() const;
+        /**
+         * @brief Get home host reference
+         *
+         * Returns the host this VM should preferably run on.
+         * This is determined by affinity or current resident host.
+         *
+         * @return Host opaque reference
+         */
+        QString homeRef() const;
 
-protected:
-    QString objectType() const override
-    {
-        return "VM";
-    }
+    protected:
+        QString objectType() const override
+        {
+            return "VM";
+        }
 };
 
 #endif // VM_H

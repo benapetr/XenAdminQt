@@ -27,8 +27,9 @@
 
 #include "repairsrcommand.h"
 #include "../../mainwindow.h"
+#include "../../operations/operationmanager.h"
 #include "xenlib.h"
-#include "xen/api.h"
+#include "xen/actions/sr/srrefreshaction.h"
 #include <QMessageBox>
 #include <QTimer>
 
@@ -62,18 +63,32 @@ void RepairSRCommand::run()
     {
         this->mainWindow()->showStatusMessage(QString("Repairing storage repository '%1'...").arg(srName));
 
-        bool success = this->mainWindow()->xenLib()->getAPI()->repairSR(srRef);
-        if (success)
-        {
-            this->mainWindow()->showStatusMessage(QString("Storage repository '%1' repaired successfully").arg(srName), 5000);
-            // Refresh the tree to update status
-            QTimer::singleShot(2000, this->mainWindow(), &MainWindow::refreshServerTree);
-        } else
+        XenConnection* connection = this->mainWindow()->xenLib()->getConnection();
+        if (!connection)
         {
             QMessageBox::warning(this->mainWindow(), "Repair Storage Repository Failed",
-                                 QString("Failed to repair storage repository '%1'. Check the error log for details.").arg(srName));
-            this->mainWindow()->showStatusMessage("SR repair failed", 5000);
+                                 "No active connection.");
+            return;
         }
+
+        SrRefreshAction* action = new SrRefreshAction(connection, srRef, this);
+        OperationManager::instance()->registerOperation(action);
+
+        connect(action, &AsyncOperation::completed, [this, srName, action]() {
+            this->mainWindow()->showStatusMessage(
+                QString("Storage repository '%1' repaired successfully").arg(srName), 5000);
+            QTimer::singleShot(2000, this->mainWindow(), &MainWindow::refreshServerTree);
+            action->deleteLater();
+        });
+
+        connect(action, &AsyncOperation::failed, [this, srName, action](const QString& error) {
+            QMessageBox::warning(this->mainWindow(), "Repair Storage Repository Failed",
+                                 QString("Failed to repair storage repository '%1': %2").arg(srName, error));
+            this->mainWindow()->showStatusMessage("SR repair failed", 5000);
+            action->deleteLater();
+        });
+
+        action->runAsync();
     }
 }
 

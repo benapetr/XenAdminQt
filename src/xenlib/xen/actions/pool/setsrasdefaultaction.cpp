@@ -25,46 +25,49 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "rescanpifsaction.h"
+#include "setsrasdefaultaction.h"
 #include "../../connection.h"
 #include "../../session.h"
-#include "../../xenapi/xenapi_PIF.h"
-#include "../../../xencache.h"
+#include "../../xenapi/xenapi_Pool.h"
 
-RescanPIFsAction::RescanPIFsAction(XenConnection* connection,
-                                   const QString& hostRef,
-                                   QObject* parent)
+SetSrAsDefaultAction::SetSrAsDefaultAction(XenConnection* connection,
+                                           const QString& poolRef,
+                                           const QString& srRef,
+                                           QObject* parent)
     : AsyncOperation(connection,
-                     "Scanning for NICs",
-                     "Scanning for physical network interfaces",
+                     QString("Setting default storage repository"),
+                     QString("Updating default SR"),
                      parent),
-      m_hostRef(hostRef)
+      m_poolRef(poolRef),
+      m_srRef(srRef)
 {
-    if (m_hostRef.isEmpty())
-        throw std::invalid_argument("Host reference cannot be empty");
-
-    // Get host name for display
-    QVariantMap hostData = connection->getCache()->resolve("host", m_hostRef);
-    m_hostName = hostData.value("name_label").toString();
-
-    setTitle(QString("Scanning for NICs on %1").arg(m_hostName));
-    setDescription(QString("Scanning for physical network interfaces on %1").arg(m_hostName));
 }
 
-void RescanPIFsAction::run()
+void SetSrAsDefaultAction::run()
 {
+    if (!connection() || m_poolRef.isEmpty() || m_srRef.isEmpty())
+    {
+        setError("Invalid connection or references");
+        return;
+    }
+
+    XenSession* session = connection()->getSession();
+    if (!session || !session->isLoggedIn())
+    {
+        setError("No valid session");
+        return;
+    }
+
     try
     {
-        setPercentComplete(40);
-        setDescription(QString("Scanning for NICs on %1...").arg(m_hostName));
-
-        XenAPI::PIF::scan(session(), m_hostRef);
-
-        setPercentComplete(100);
-        setDescription(QString("Scan complete on %1").arg(m_hostName));
-
-    } catch (const std::exception& e)
+        XenAPI::Pool::set_default_SR(session, m_poolRef, m_srRef);
+        XenAPI::Pool::set_suspend_image_SR(session, m_poolRef, m_srRef);
+        XenAPI::Pool::set_crash_dump_SR(session, m_poolRef, m_srRef);
+        setDescription("Completed");
+    }
+    catch (const std::exception& e)
     {
-        setError(QString("Failed to scan NICs: %1").arg(e.what()));
+        setError(QString("Failed to set default SR: %1").arg(e.what()));
+        throw;
     }
 }

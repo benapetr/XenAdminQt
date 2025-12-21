@@ -29,14 +29,20 @@
 #include "xen/connection.h"
 #include "xen/session.h"
 #include "xen/api.h"
-#include "xen/xenapi/VBD.h"
-#include "xen/xenapi/VDI.h"
+#include "xen/xenapi/xenapi_VBD.h"
+#include "xen/xenapi/xenapi_VDI.h"
+#include "xen/xenapi/xenapi_VM.h"
+#include "xen/xenapi/xenapi_Host.h"
+#include "xen/xenapi/xenapi_Pool.h"
+#include "xen/xenapi/xenapi_SR.h"
+#include "xen/xenapi/xenapi_Network.h"
 #include "xen/asyncoperations.h"
 #include "xen/certificatemanager.h"
 #include "xen/eventpoller.h"
 #include "xencache.h"
 #include "metricupdater.h"
 #include "collections/connectionsmanager.h"
+#include "utils/misc.h"
 #include <QtCore/QHash>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QDateTime>
@@ -391,17 +397,6 @@ MetricUpdater* XenLib::getMetricUpdater() const
     return this->d->metricUpdater;
 }
 
-QVariantList XenLib::getPools()
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QVariantList();
-    }
-
-    return this->d->api->getPools();
-}
-
 QVariantMap XenLib::getCachedObjectData(const QString& objectType, const QString& objectRef)
 {
     // Reference: XenModel/Network/Cache.cs lines 438-448 (Resolve method)
@@ -443,11 +438,6 @@ QVariantMap XenLib::getVMRecord(const QString& vmRef)
 QVariantMap XenLib::getHostRecord(const QString& hostRef)
 {
     return getCachedObjectData("host", hostRef);
-}
-
-QVariantMap XenLib::getPoolRecord(const QString& poolRef)
-{
-    return getCachedObjectData("pool", poolRef);
 }
 
 QVariantMap XenLib::getSRRecord(const QString& srRef)
@@ -500,50 +490,6 @@ QVariantMap XenLib::getVMMetricsRecord(const QString& metricsRef)
     return getCachedObjectData("vm_metrics", metricsRef);
 }
 
-bool XenLib::exportVM(const QString& vmRef, const QString& fileName, const QString& format)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    return this->d->api->exportVM(vmRef, fileName, format);
-}
-
-QString XenLib::getVMPowerState(const QString& vmRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    return this->d->api->getVMPowerState(vmRef);
-}
-
-QString XenLib::cloneVM(const QString& vmRef, const QString& newName)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    return this->d->api->cloneVM(vmRef, newName);
-}
-
-bool XenLib::deleteVM(const QString& vmRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    return this->d->api->deleteVM(vmRef);
-}
-
 bool XenLib::updateVM(const QString& vmRef, const QVariantMap& updates)
 {
     if (!this->isConnected())
@@ -558,7 +504,13 @@ bool XenLib::updateVM(const QString& vmRef, const QVariantMap& updates)
         return false;
     }
 
-    // Update each field via the API
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    // Update each field using explicit XenAPI calls (matches C# VM.SaveChanges)
     bool allSuccess = true;
 
     for (auto it = updates.constBegin(); it != updates.constEnd(); ++it)
@@ -566,10 +518,35 @@ bool XenLib::updateVM(const QString& vmRef, const QVariantMap& updates)
         const QString& field = it.key();
         const QVariant& value = it.value();
 
-        // Call the appropriate API method based on the field
-        if (!this->d->api->setVMField(vmRef, field, value))
+        try
         {
-            qWarning() << "XenLib::updateVM: Failed to set field" << field << "to" << value;
+            if (field == "name_label")
+            {
+                XenAPI::VM::set_name_label(this->d->session, vmRef, value.toString());
+            }
+            else if (field == "name_description")
+            {
+                XenAPI::VM::set_name_description(this->d->session, vmRef, value.toString());
+            }
+            else if (field == "tags")
+            {
+                XenAPI::VM::set_tags(this->d->session, vmRef, value.toStringList());
+            }
+            else if (field == "other_config")
+            {
+                XenAPI::VM::set_other_config(this->d->session, vmRef, value.toMap());
+            }
+            else
+            {
+                qWarning() << "XenLib::updateVM: Unsupported VM field:" << field;
+                this->setError(QString("Unsupported VM field: %1").arg(field));
+                allSuccess = false;
+            }
+        }
+        catch (const std::exception& ex)
+        {
+            qWarning() << "XenLib::updateVM: Failed to set field" << field << "to" << value << ":" << ex.what();
+            this->setError(QString("Failed to update VM field: %1").arg(field));
             allSuccess = false;
         }
     }
@@ -585,14 +562,25 @@ bool XenLib::setVMVCPUs(const QString& vmRef, int vcpus)
         return false;
     }
 
-    // Set both VCPUs_max and VCPUs_at_startup to the same value
-    bool success = this->d->api->setVMVCPUsMax(vmRef, vcpus);
-    if (success)
+    if (!this->d->session || !this->d->session->isLoggedIn())
     {
-        success = this->d->api->setVMVCPUsAtStartup(vmRef, vcpus);
+        this->setError("Not authenticated");
+        return false;
     }
 
-    return success;
+    // C# SaveChanges uses explicit VM.set_VCPUs_* calls.
+    try
+    {
+        XenAPI::VM::set_VCPUs_max(this->d->session, vmRef, vcpus);
+        XenAPI::VM::set_VCPUs_at_startup(this->d->session, vmRef, vcpus);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setVMVCPUs: Failed to set VCPUs for" << vmRef << ":" << ex.what();
+        this->setError("Failed to set VCPU configuration");
+        return false;
+    }
 }
 
 bool XenLib::setVMMemory(const QString& vmRef, qint64 memoryMB)
@@ -606,9 +594,26 @@ bool XenLib::setVMMemory(const QString& vmRef, qint64 memoryMB)
     // Convert MB to bytes
     qint64 memoryBytes = memoryMB * 1024 * 1024;
 
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
     // Set all memory limits to the same value (static_min, static_max, dynamic_min, dynamic_max)
-    // This is the simplest approach - for more advanced configs, expose the full API
-    return this->d->api->setVMMemoryLimits(vmRef, memoryBytes, memoryBytes, memoryBytes, memoryBytes);
+    // This matches the C# behavior when a single value is provided.
+    try
+    {
+        XenAPI::VM::set_memory_limits(this->d->session, vmRef,
+                                      memoryBytes, memoryBytes, memoryBytes, memoryBytes);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setVMMemory: Failed to set memory limits for" << vmRef << ":" << ex.what();
+        this->setError("Failed to set memory limits");
+        return false;
+    }
 }
 
 // VM property helpers (use cached data)
@@ -695,11 +700,14 @@ bool XenLib::isSRDriverDomain(const QString& vmRef, QString* outSRRef)
     if (isControlDomainZero(vmRef))
         return false;
 
-    // Check all PBDs to see if any reference this VM as storage_driver_domain
-    QVariantList allPBDs = d->api->getPBDs();
-    for (const QVariant& pbdVar : allPBDs)
+    // Check all cached PBDs to see if any reference this VM as storage_driver_domain
+    XenCache* cache = getCache();
+    if (!cache)
+        return false;
+
+    QList<QVariantMap> allPBDs = cache->getAll("pbd");
+    for (const QVariantMap& pbd : allPBDs)
     {
-        QVariantMap pbd = pbdVar.toMap();
         QVariantMap otherConfig = pbd.value("other_config").toMap();
 
         QString driverDomainRef = otherConfig.value("storage_driver_domain").toString();
@@ -1070,193 +1078,6 @@ QString XenLib::getControlDomainForHost(const QString& hostRef)
 }
 
 // Snapshot operations
-QVariantList XenLib::getVMSnapshots(const QString& vmRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QVariantList();
-    }
-
-    if (vmRef.isEmpty())
-    {
-        this->setError("Invalid VM reference");
-        return QVariantList();
-    }
-
-    return this->d->api->getVMSnapshots(vmRef);
-}
-
-QString XenLib::createVMSnapshot(const QString& vmRef, const QString& name, const QString& description)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    if (vmRef.isEmpty() || name.isEmpty())
-    {
-        this->setError("Invalid parameters for snapshot creation");
-        return QString();
-    }
-
-    return this->d->api->createVMSnapshot(vmRef, name, description);
-}
-
-bool XenLib::deleteSnapshot(const QString& snapshotRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (snapshotRef.isEmpty())
-    {
-        this->setError("Invalid snapshot reference");
-        return false;
-    }
-
-    return this->d->api->deleteSnapshot(snapshotRef);
-}
-
-bool XenLib::revertToSnapshot(const QString& snapshotRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (snapshotRef.isEmpty())
-    {
-        this->setError("Invalid snapshot reference");
-        return false;
-    }
-
-    return this->d->api->revertToSnapshot(snapshotRef);
-}
-
-// VBD/VDI (Virtual Disk) operations
-QVariantList XenLib::getVMVBDs(const QString& vmRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QVariantList();
-    }
-
-    if (vmRef.isEmpty())
-    {
-        this->setError("Invalid VM reference");
-        return QVariantList();
-    }
-
-    return this->d->api->getVMVBDs(vmRef);
-}
-
-QString XenLib::createVBD(const QString& vmRef, const QString& vdiRef, const QString& userdevice, bool bootable)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    if (vmRef.isEmpty())
-    {
-        this->setError("Invalid VM reference");
-        return QString();
-    }
-
-    return this->d->api->createVBD(vmRef, vdiRef, userdevice, bootable);
-}
-
-bool XenLib::destroyVBD(const QString& vbdRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vbdRef.isEmpty())
-    {
-        this->setError("Invalid VBD reference");
-        return false;
-    }
-
-    return this->d->api->destroyVBD(vbdRef);
-}
-
-QString XenLib::createVDI(const QString& srRef, const QString& name, const QString& description, qint64 sizeBytes)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    if (srRef.isEmpty())
-    {
-        this->setError("Invalid SR reference");
-        return QString();
-    }
-
-    return this->d->api->createVDI(srRef, name, description, sizeBytes);
-}
-
-bool XenLib::destroyVDI(const QString& vdiRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vdiRef.isEmpty())
-    {
-        this->setError("Invalid VDI reference");
-        return false;
-    }
-
-    return this->d->api->destroyVDI(vdiRef);
-}
-
-bool XenLib::resizeVDI(const QString& vdiRef, qint64 newSize)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vdiRef.isEmpty())
-    {
-        this->setError("Invalid VDI reference");
-        return false;
-    }
-
-    if (newSize <= 0)
-    {
-        this->setError("Invalid VDI size");
-        return false;
-    }
-
-    try
-    {
-        XenAPI::VDI::resize(this->d->session, vdiRef, newSize);
-    }
-    catch (const std::exception&)
-    {
-        this->setError("Failed to resize VDI");
-        return false;
-    }
-
-    return true;
-}
-
 bool XenLib::changeVMISO(const QString& vmRef, const QString& vbdRef, const QString& vdiRef)
 {
     // Reference: XenAdmin/Actions/VM/ChangeVMISOAction.cs
@@ -1351,122 +1172,34 @@ bool XenLib::createCdDrive(const QString& vmRef)
 
     // Create new CD drive with next device number
     QString nextDevice = QString::number(highestDevice + 1);
-    QString newVbdRef = createVBD(vmRef, QString(), nextDevice, false);
 
-    return !newVbdRef.isEmpty();
-}
+    QVariantMap vbdRecord;
+    vbdRecord["VM"] = vmRef;
+    vbdRecord["VDI"] = "OpaqueRef:NULL";
+    vbdRecord["bootable"] = false;
+    vbdRecord["device"] = "";
+    vbdRecord["userdevice"] = nextDevice;
+    vbdRecord["empty"] = true;
+    vbdRecord["type"] = "CD";
+    vbdRecord["mode"] = "RO";
+    vbdRecord["unpluggable"] = true;
+    vbdRecord["other_config"] = QVariantMap();
+    vbdRecord["qos_algorithm_type"] = "";
+    vbdRecord["qos_algorithm_params"] = QVariantMap();
 
-// VIF (Virtual Network Interface) operations
-QVariantList XenLib::getVMVIFs(const QString& vmRef)
-{
-    if (!this->isConnected())
+    try
     {
-        this->setError("Not connected to server");
-        return QVariantList();
+        QString newVbdRef = XenAPI::VBD::create(this->d->session, vbdRecord);
+        return !newVbdRef.isEmpty();
     }
-
-    if (vmRef.isEmpty())
+    catch (const std::exception&)
     {
-        this->setError("Invalid VM reference");
-        return QVariantList();
-    }
-
-    return this->d->api->getVMVIFs(vmRef);
-}
-
-QString XenLib::createVIF(const QString& vmRef, const QString& networkRef, const QString& device, const QString& mac)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    if (vmRef.isEmpty() || networkRef.isEmpty())
-    {
-        this->setError("Invalid VM or Network reference");
-        return QString();
-    }
-
-    return this->d->api->createVIF(vmRef, networkRef, device, mac);
-}
-
-bool XenLib::destroyVIF(const QString& vifRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
+        this->setError("Failed to create CD drive");
         return false;
     }
-
-    if (vifRef.isEmpty())
-    {
-        this->setError("Invalid VIF reference");
-        return false;
-    }
-
-    return this->d->api->destroyVIF(vifRef);
-}
-
-bool XenLib::plugVIF(const QString& vifRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vifRef.isEmpty())
-    {
-        this->setError("Invalid VIF reference");
-        return false;
-    }
-
-    return this->d->api->plugVIF(vifRef);
-}
-
-bool XenLib::unplugVIF(const QString& vifRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vifRef.isEmpty())
-    {
-        this->setError("Invalid VIF reference");
-        return false;
-    }
-
-    return this->d->api->unplugVIF(vifRef);
 }
 
 // VM migration operations
-QString XenLib::poolMigrateVM(const QString& vmRef, const QString& hostRef, bool live)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    if (vmRef.isEmpty())
-    {
-        this->setError("Invalid VM reference");
-        return QString();
-    }
-
-    if (hostRef.isEmpty())
-    {
-        this->setError("Invalid host reference");
-        return QString();
-    }
-
-    qDebug() << "XenLib::poolMigrateVM: Starting VM migration from VM" << vmRef << "to host" << hostRef;
-    return this->d->api->poolMigrateVM(vmRef, hostRef, live);
-}
-
 bool XenLib::canMigrateVM(const QString& vmRef, const QString& hostRef)
 {
     if (!this->isConnected())
@@ -1487,7 +1220,38 @@ bool XenLib::canMigrateVM(const QString& vmRef, const QString& hostRef)
         return false;
     }
 
-    return this->d->api->assertCanMigrateVM(vmRef, hostRef);
+    QVariantMap vmData = getCachedObjectData("vm", vmRef);
+    if (vmData.isEmpty())
+    {
+        this->setError("VM not found in cache");
+        return false;
+    }
+
+    QVariantList allowedOps = vmData.value("allowed_operations").toList();
+    bool canMigrate = false;
+    for (const QVariant& op : allowedOps)
+    {
+        if (op.toString() == "pool_migrate")
+        {
+            canMigrate = true;
+            break;
+        }
+    }
+
+    if (!canMigrate)
+    {
+        this->setError("VM does not allow migration");
+        return false;
+    }
+
+    QString residentOn = vmData.value("resident_on").toString();
+    if (!residentOn.isEmpty() && residentOn == hostRef)
+    {
+        this->setError("VM is already on the selected host");
+        return false;
+    }
+
+    return true;
 }
 
 // Host management operations
@@ -1505,7 +1269,23 @@ bool XenLib::setHostName(const QString& hostRef, const QString& name)
         return false;
     }
 
-    return this->d->api->setHostField(hostRef, "name_label", name);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Host::set_name_label(this->d->session, hostRef, name);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setHostName: Failed to set host name:" << ex.what();
+        this->setError("Failed to set host name");
+        return false;
+    }
 }
 
 bool XenLib::setHostDescription(const QString& hostRef, const QString& description)
@@ -1522,7 +1302,23 @@ bool XenLib::setHostDescription(const QString& hostRef, const QString& descripti
         return false;
     }
 
-    return this->d->api->setHostField(hostRef, "name_description", description);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Host::set_name_description(this->d->session, hostRef, description);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setHostDescription: Failed to set host description:" << ex.what();
+        this->setError("Failed to set host description");
+        return false;
+    }
 }
 
 bool XenLib::setHostTags(const QString& hostRef, const QStringList& tags)
@@ -1539,7 +1335,23 @@ bool XenLib::setHostTags(const QString& hostRef, const QStringList& tags)
         return false;
     }
 
-    return this->d->api->setHostField(hostRef, "tags", tags);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Host::set_tags(this->d->session, hostRef, tags);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setHostTags: Failed to set host tags:" << ex.what();
+        this->setError("Failed to set host tags");
+        return false;
+    }
 }
 
 bool XenLib::setHostOtherConfig(const QString& hostRef, const QString& key, const QString& value)
@@ -1556,7 +1368,31 @@ bool XenLib::setHostOtherConfig(const QString& hostRef, const QString& key, cons
         return false;
     }
 
-    return this->d->api->setHostOtherConfig(hostRef, key, value);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    QVariantMap hostData = getCachedObjectData("host", hostRef);
+    QVariantMap otherConfig = hostData.value("other_config").toMap();
+
+    if (value.isEmpty())
+        otherConfig.remove(key);
+    else
+        otherConfig[key] = value;
+
+    try
+    {
+        XenAPI::Host::set_other_config(this->d->session, hostRef, otherConfig);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setHostOtherConfig: Failed to set host other_config:" << ex.what();
+        this->setError("Failed to set host other_config");
+        return false;
+    }
 }
 
 bool XenLib::setHostIqn(const QString& hostRef, const QString& iqn)
@@ -1573,8 +1409,23 @@ bool XenLib::setHostIqn(const QString& hostRef, const QString& iqn)
         return false;
     }
 
-    // iSCSI IQN is stored in other_config as "iscsi_iqn"
-    return this->d->api->setHostOtherConfig(hostRef, "iscsi_iqn", iqn);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Host::set_iscsi_iqn(this->d->session, hostRef, iqn);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setHostIqn: Failed to set host iSCSI IQN:" << ex.what();
+        this->setError("Failed to set host iSCSI IQN");
+        return false;
+    }
 }
 
 // Generic object property setters
@@ -1704,7 +1555,23 @@ bool XenLib::setPoolName(const QString& poolRef, const QString& name)
         return false;
     }
 
-    return this->d->api->setPoolField(poolRef, "name_label", name);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Pool::set_name_label(this->d->session, poolRef, name);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setPoolName: Failed to set pool name:" << ex.what();
+        this->setError("Failed to set pool name");
+        return false;
+    }
 }
 
 bool XenLib::setPoolDescription(const QString& poolRef, const QString& description)
@@ -1721,7 +1588,23 @@ bool XenLib::setPoolDescription(const QString& poolRef, const QString& descripti
         return false;
     }
 
-    return this->d->api->setPoolField(poolRef, "name_description", description);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Pool::set_name_description(this->d->session, poolRef, description);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setPoolDescription: Failed to set pool description:" << ex.what();
+        this->setError("Failed to set pool description");
+        return false;
+    }
 }
 
 bool XenLib::setPoolTags(const QString& poolRef, const QStringList& tags)
@@ -1738,7 +1621,23 @@ bool XenLib::setPoolTags(const QString& poolRef, const QStringList& tags)
         return false;
     }
 
-    return this->d->api->setPoolField(poolRef, "tags", tags);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Pool::set_tags(this->d->session, poolRef, tags);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setPoolTags: Failed to set pool tags:" << ex.what();
+        this->setError("Failed to set pool tags");
+        return false;
+    }
 }
 
 bool XenLib::setPoolMigrationCompression(const QString& poolRef, bool enabled)
@@ -1755,7 +1654,23 @@ bool XenLib::setPoolMigrationCompression(const QString& poolRef, bool enabled)
         return false;
     }
 
-    return this->d->api->setPoolMigrationCompression(poolRef, enabled);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Pool::set_migration_compression(this->d->session, poolRef, enabled);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setPoolMigrationCompression: Failed to set pool migration compression:" << ex.what();
+        this->setError("Failed to set pool migration compression");
+        return false;
+    }
 }
 
 // SR (Storage Repository) operations
@@ -1772,8 +1687,17 @@ bool XenLib::setSRName(const QString& srRef, const QString& name)
         this->setError("Invalid SR reference");
         return false;
     }
-
-    return this->d->api->setSRField(srRef, "name_label", name);
+    try
+    {
+        XenAPI::SR::set_name_label(this->d->session, srRef, name);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setSRName: Failed to set SR name_label:" << ex.what();
+        this->setError("Failed to set SR name");
+        return false;
+    }
 }
 
 bool XenLib::setSRDescription(const QString& srRef, const QString& description)
@@ -1789,8 +1713,17 @@ bool XenLib::setSRDescription(const QString& srRef, const QString& description)
         this->setError("Invalid SR reference");
         return false;
     }
-
-    return this->d->api->setSRField(srRef, "name_description", description);
+    try
+    {
+        XenAPI::SR::set_name_description(this->d->session, srRef, description);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setSRDescription: Failed to set SR name_description:" << ex.what();
+        this->setError("Failed to set SR description");
+        return false;
+    }
 }
 
 bool XenLib::setSRTags(const QString& srRef, const QStringList& tags)
@@ -1806,8 +1739,17 @@ bool XenLib::setSRTags(const QString& srRef, const QStringList& tags)
         this->setError("Invalid SR reference");
         return false;
     }
-
-    return this->d->api->setSRField(srRef, "tags", tags);
+    try
+    {
+        XenAPI::SR::set_tags(this->d->session, srRef, tags);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setSRTags: Failed to set SR tags:" << ex.what();
+        this->setError("Failed to set SR tags");
+        return false;
+    }
 }
 
 // Network operations
@@ -1824,8 +1766,17 @@ bool XenLib::setNetworkName(const QString& networkRef, const QString& name)
         this->setError("Invalid Network reference");
         return false;
     }
-
-    return this->d->api->setNetworkField(networkRef, "name_label", name);
+    try
+    {
+        XenAPI::Network::set_name_label(this->d->session, networkRef, name);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setNetworkName: Failed to set network name_label:" << ex.what();
+        this->setError("Failed to set network name");
+        return false;
+    }
 }
 
 bool XenLib::setNetworkDescription(const QString& networkRef, const QString& description)
@@ -1841,8 +1792,17 @@ bool XenLib::setNetworkDescription(const QString& networkRef, const QString& des
         this->setError("Invalid Network reference");
         return false;
     }
-
-    return this->d->api->setNetworkField(networkRef, "name_description", description);
+    try
+    {
+        XenAPI::Network::set_name_description(this->d->session, networkRef, description);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setNetworkDescription: Failed to set network name_description:" << ex.what();
+        this->setError("Failed to set network description");
+        return false;
+    }
 }
 
 bool XenLib::setNetworkTags(const QString& networkRef, const QStringList& tags)
@@ -1858,8 +1818,17 @@ bool XenLib::setNetworkTags(const QString& networkRef, const QStringList& tags)
         this->setError("Invalid Network reference");
         return false;
     }
-
-    return this->d->api->setNetworkField(networkRef, "tags", tags);
+    try
+    {
+        XenAPI::Network::set_tags(this->d->session, networkRef, tags);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setNetworkTags: Failed to set network tags:" << ex.what();
+        this->setError("Failed to set network tags");
+        return false;
+    }
 }
 
 QString XenLib::createNetwork(const QString& name, const QString& description, const QVariantMap& otherConfig)
@@ -1876,17 +1845,33 @@ QString XenLib::createNetwork(const QString& name, const QString& description, c
         return QString();
     }
 
-    QString networkRef = this->d->api->createNetwork(name, description, otherConfig);
-
-    if (!networkRef.isEmpty())
+    try
     {
-        // Invalidate network cache and refresh
-        if (XenCache* cache = getCache())
-            cache->clearType("network");
-        this->requestNetworks();
+        QVariantMap networkRecord;
+        networkRecord["name_label"] = name;
+        networkRecord["name_description"] = description;
+        networkRecord["other_config"] = otherConfig;
+        networkRecord["MTU"] = 1500;
+        networkRecord["tags"] = QVariantList();
+
+        QString networkRef = XenAPI::Network::create(this->d->session, networkRecord);
+
+        if (!networkRef.isEmpty())
+        {
+            if (XenCache* cache = getCache())
+                cache->clearType("network");
+            this->requestNetworks();
+        }
+
+        return networkRef;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::createNetwork: Failed to create network:" << ex.what();
+        this->setError("Failed to create network");
+        return QString();
     }
 
-    return networkRef;
 }
 
 bool XenLib::destroyNetwork(const QString& networkRef)
@@ -1903,17 +1888,20 @@ bool XenLib::destroyNetwork(const QString& networkRef)
         return false;
     }
 
-    bool success = this->d->api->destroyNetwork(networkRef);
-
-    if (success)
+    try
     {
-        // Invalidate network cache and refresh
+        XenAPI::Network::destroy(this->d->session, networkRef);
         if (XenCache* cache = getCache())
             cache->clearType("network");
         this->requestNetworks();
+        return true;
     }
-
-    return success;
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::destroyNetwork: Failed to destroy network:" << ex.what();
+        this->setError("Failed to destroy network");
+        return false;
+    }
 }
 
 bool XenLib::setNetworkMTU(const QString& networkRef, int mtu)
@@ -1936,7 +1924,17 @@ bool XenLib::setNetworkMTU(const QString& networkRef, int mtu)
         return false;
     }
 
-    return this->d->api->setNetworkMTU(networkRef, mtu);
+    try
+    {
+        XenAPI::Network::set_MTU(this->d->session, networkRef, mtu);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setNetworkMTU: Failed to set network MTU:" << ex.what();
+        this->setError("Failed to set network MTU");
+        return false;
+    }
 }
 
 bool XenLib::setNetworkOtherConfig(const QString& networkRef, const QVariantMap& otherConfig)
@@ -1953,7 +1951,17 @@ bool XenLib::setNetworkOtherConfig(const QString& networkRef, const QVariantMap&
         return false;
     }
 
-    return this->d->api->setNetworkOtherConfig(networkRef, otherConfig);
+    try
+    {
+        XenAPI::Network::set_other_config(this->d->session, networkRef, otherConfig);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setNetworkOtherConfig: Failed to set network other_config:" << ex.what();
+        this->setError("Failed to set network other_config");
+        return false;
+    }
 }
 
 QString XenLib::getConnectionInfo() const
@@ -2575,7 +2583,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
     // IMPORTANT: parseJsonRpcResponse() should have unwrapped Status/Value,
     // but in case it returned the full map, extract just the Value part
     QVariant responseData = parsedResponse;
-    if (parsedResponse.type() == QVariant::Map)
+    if (Misc::QVariantIsMap(parsedResponse))
     {
         QVariantMap responseMap = parsedResponse.toMap();
         // qDebug() << "XenLib::onConnectionApiResponse - Response map has" << responseMap.size() << "keys";
@@ -2588,7 +2596,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
             // qDebug() << "XenLib::onConnectionApiResponse - Extracting Value from wrapped response";
             responseData = responseMap.value("Value");
             // qDebug() << "XenLib::onConnectionApiResponse - After extraction, responseData type:" << responseData.typeName();
-            if (responseData.type() == QVariant::Map)
+            if (Misc::QVariantIsMap(responseData))
             {
                 QVariantMap extractedMap = responseData.toMap();
                 // qDebug() << "XenLib::onConnectionApiResponse - Extracted map has" << extractedMap.size() << "keys";
@@ -2732,7 +2740,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
 
         QVariantMap eventBatch;
 
-        if (responseData.type() == QVariant::Map)
+        if (Misc::QVariantIsMap(responseData))
         {
             eventBatch = responseData.toMap();
         } else
@@ -2784,7 +2792,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
             // For "add" and "mod" operations, add to cache
             if (operation == "add" || operation == "mod")
             {
-                if (snapshot.isValid() && snapshot.type() == QVariant::Map)
+                if (snapshot.isValid() && Misc::QVariantIsMap(snapshot))
                 {
                     QVariantMap objectData = snapshot.toMap();
                     objectData["ref"] = objectRef; // Ensure legacy ref key is available
@@ -2877,14 +2885,14 @@ QString XenLib::populateCache()
         {
             QVariant parsed = this->d->api->parseJsonRpcResponse(roleResponse);
             QVariant roleData = parsed;
-            if (parsed.type() == QVariant::Map)
+            if (Misc::QVariantIsMap(parsed))
             {
                 QVariantMap map = parsed.toMap();
                 if (map.contains("Value"))
                     roleData = map.value("Value");
             }
 
-            if (roleData.type() == QVariant::Map)
+            if (Misc::QVariantIsMap(roleData))
             {
                 QVariantMap roles = roleData.toMap();
                 for (auto it = roles.constBegin(); it != roles.constEnd(); ++it)
@@ -2943,7 +2951,7 @@ QString XenLib::populateCache()
 
     // Extract responseData (unwrap Status/Value if needed)
     QVariant responseData = parsedResponse;
-    if (parsedResponse.type() == QVariant::Map)
+    if (Misc::QVariantIsMap(parsedResponse))
     {
         QVariantMap responseMap = parsedResponse.toMap();
         if (responseMap.contains("Value"))
@@ -2952,7 +2960,7 @@ QString XenLib::populateCache()
         }
     }
 
-    if (responseData.type() != QVariant::Map)
+    if (!Misc::QVariantIsMap(responseData))
     {
         qWarning() << "XenLib::populateCache - Event.from response is not a map, type:" << responseData.typeName();
         return QString();
@@ -3010,7 +3018,7 @@ QString XenLib::populateCache()
         // For "add" and "mod" operations, add to cache
         if (operation == "add" || operation == "mod")
         {
-            if (snapshot.isValid() && snapshot.type() == QVariant::Map)
+            if (snapshot.isValid() && Misc::QVariantIsMap(snapshot))
             {
                 QVariantMap objectData = snapshot.toMap();
                 objectData["ref"] = objectRef;
@@ -3048,14 +3056,14 @@ QString XenLib::populateCache()
         {
             QVariant parsed = this->d->api->parseJsonRpcResponse(consoleResponse);
             QVariant responseData = parsed;
-            if (parsed.type() == QVariant::Map)
+            if (Misc::QVariantIsMap(parsed))
             {
                 QVariantMap map = parsed.toMap();
                 if (map.contains("Value"))
                     responseData = map.value("Value");
             }
 
-            if (responseData.type() == QVariant::Map)
+            if (Misc::QVariantIsMap(responseData))
             {
                 QVariantMap consolesMap = responseData.toMap();
                 for (auto it = consolesMap.constBegin(); it != consolesMap.constEnd(); ++it)

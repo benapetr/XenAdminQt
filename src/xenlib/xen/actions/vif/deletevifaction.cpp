@@ -28,7 +28,7 @@
 #include "deletevifaction.h"
 #include "../../connection.h"
 #include "../../session.h"
-#include "../../xenapi/VIF.h"
+#include "../../xenapi/xenapi_VIF.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../../xencache.h"
 #include <QDebug>

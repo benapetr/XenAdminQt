@@ -32,7 +32,6 @@
 
 namespace XenAPI
 {
-
     QVariantList Host::get_all(XenSession* session)
     {
         if (!session || !session->isLoggedIn())
@@ -54,6 +53,104 @@ namespace XenAPI
         }
 
         return QVariantList();
+    }
+
+    QVariant Host::get_servertime(XenSession* session, const QString& host)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("host.get_servertime", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response);
+    }
+
+    double Host::query_data_source(XenSession* session, const QString& host, const QString& data_source)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << host << data_source;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("host.query_data_source", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toDouble();
+    }
+
+    void Host::set_name_label(XenSession* session, const QString& host, const QString& value)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << host << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("host.set_name_label", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
+    void Host::set_name_description(XenSession* session, const QString& host, const QString& value)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << host << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("host.set_name_description", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
+    void Host::set_tags(XenSession* session, const QString& host, const QStringList& value)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << host << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("host.set_tags", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
+    void Host::set_other_config(XenSession* session, const QString& host, const QVariantMap& otherConfig)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << host << otherConfig;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("host.set_other_config", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
+    void Host::set_iscsi_iqn(XenSession* session, const QString& host, const QString& value)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << host << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("host.set_iscsi_iqn", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
     }
 
     QString Host::call_plugin(XenSession* session,

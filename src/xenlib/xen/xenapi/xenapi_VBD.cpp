@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "VBD.h"
+#include "xenapi_VBD.h"
 #include "../session.h"
 #include "../api.h"
 #include <QJsonDocument>
@@ -48,6 +48,20 @@ namespace XenAPI
         QByteArray request = api.buildJsonRpcCall("VBD.create", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString();
+    }
+
+    QString VBD::async_create(XenSession* session, const QVariantMap& vbdRecord)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vbdRecord;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("Async.VBD.create", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     // VBD.async_plug - Asynchronous plug

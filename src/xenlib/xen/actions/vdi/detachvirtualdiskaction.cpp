@@ -30,8 +30,8 @@
 #include "../../vdi.h"
 #include "../../vbd.h"
 #include "../../session.h"
-#include "../../xenapi/VDI.h"
-#include "../../xenapi/VBD.h"
+#include "../../xenapi/xenapi_VDI.h"
+#include "../../xenapi/xenapi_VBD.h"
 
 DetachVirtualDiskAction::DetachVirtualDiskAction(const QString& vdiRef,
                                                  VM* vm,

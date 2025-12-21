@@ -25,51 +25,34 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef XENAPI_SECRET_H
-#define XENAPI_SECRET_H
+#ifndef SETSRASDEFAULTACTION_H
+#define SETSRASDEFAULTACTION_H
 
-#include "../session.h"
-#include <QString>
+#include "../../asyncoperation.h"
 
-namespace XenAPI
+class XenConnection;
+
+/**
+ * @brief Action to set the default SR on a pool.
+ *
+ * Wraps Pool.set_default_SR to match XenCenter's async action usage.
+ */
+class SetSrAsDefaultAction : public AsyncOperation
 {
+    Q_OBJECT
 
-    /**
-     * @brief Secret - XenAPI Secret bindings
-     *
-     * Static-only class providing XenAPI Secret method bindings.
-     * Secrets are used to store sensitive data like passwords.
-     */
-    class Secret
-    {
-    private:
-        Secret() = delete; // Static-only class
+public:
+    explicit SetSrAsDefaultAction(XenConnection* connection,
+                                  const QString& poolRef,
+                                  const QString& srRef,
+                                  QObject* parent = nullptr);
 
-    public:
-        /**
-         * @brief Create a new secret
-         * @param session Active XenSession
-         * @param value Secret value (e.g., password)
-         * @return Secret UUID
-         */
-        static QString create(XenSession* session, const QString& value);
+protected:
+    void run() override;
 
-        /**
-         * @brief Get secret by UUID
-         * @param session Active XenSession
-         * @param uuid Secret UUID
-         * @return Secret opaque reference
-         */
-        static QString get_by_uuid(XenSession* session, const QString& uuid);
+private:
+    QString m_poolRef;
+    QString m_srRef;
+};
 
-        /**
-         * @brief Destroy a secret
-         * @param session Active XenSession
-         * @param secret Secret opaque reference
-         */
-        static void destroy(XenSession* session, const QString& secret);
-    };
-
-} // namespace XenAPI
-
-#endif // XENAPI_SECRET_H
+#endif // SETSRASDEFAULTACTION_H

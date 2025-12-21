@@ -29,7 +29,7 @@
 #include "../../connection.h"
 #include "../../session.h"
 #include "../../api.h"
-#include "../../xenapi/VBD.h"
+#include "../../xenapi/xenapi_VBD.h"
 #include <QDebug>
 
 ChangeVMISOAction::ChangeVMISOAction(XenConnection* connection,

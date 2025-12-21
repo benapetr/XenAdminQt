@@ -66,16 +66,12 @@ public:
     XenCache* getCache() const;
     MetricUpdater* getMetricUpdater() const;
 
-    // High-level operations (blocking - use for backward compatibility)
-    QVariantList getPools();
-
     // Get full object data by type and reference
     QVariantMap getCachedObjectData(const QString& objectType, const QString& objectRef);
 
     // Strongly-typed cache helpers (recommended over getObjectData)
     QVariantMap getVMRecord(const QString& vmRef);
     QVariantMap getHostRecord(const QString& hostRef);
-    QVariantMap getPoolRecord(const QString& poolRef);
     QVariantMap getSRRecord(const QString& srRef);
     QVariantMap getNetworkRecord(const QString& networkRef);
     QVariantMap getVDIRecord(const QString& vdiRef);
@@ -98,10 +94,6 @@ public:
     void requestObjectData(const QString& objectType, const QString& objectRef);
 
     // VM management operations
-    bool exportVM(const QString& vmRef, const QString& fileName, const QString& format = "xva");
-    QString getVMPowerState(const QString& vmRef);
-    QString cloneVM(const QString& vmRef, const QString& newName);
-    bool deleteVM(const QString& vmRef);
     bool updateVM(const QString& vmRef, const QVariantMap& updates);
     bool setVMVCPUs(const QString& vmRef, int vcpus);
     bool setVMMemory(const QString& vmRef, qint64 memoryMB);
@@ -126,32 +118,12 @@ public:
     QString getControlDomainForHost(const QString& hostRef);
 
     // Snapshot operations
-    QVariantList getVMSnapshots(const QString& vmRef);
-    QString createVMSnapshot(const QString& vmRef, const QString& name, const QString& description = QString());
-    bool deleteSnapshot(const QString& snapshotRef);
-    bool revertToSnapshot(const QString& snapshotRef);
-
-    // VBD/VDI (Virtual Disk) operations
-    QVariantList getVMVBDs(const QString& vmRef);
-    QString createVBD(const QString& vmRef, const QString& vdiRef, const QString& userdevice, bool bootable = false);
-    bool destroyVBD(const QString& vbdRef);
-    QString createVDI(const QString& srRef, const QString& name, const QString& description, qint64 sizeBytes);
-    bool destroyVDI(const QString& vdiRef);
-    bool resizeVDI(const QString& vdiRef, qint64 newSize);
 
     // CD/DVD operations
     bool changeVMISO(const QString& vmRef, const QString& vbdRef, const QString& vdiRef);
     bool createCdDrive(const QString& vmRef);
 
-    // VIF (Virtual Network Interface) operations
-    QVariantList getVMVIFs(const QString& vmRef);
-    QString createVIF(const QString& vmRef, const QString& networkRef, const QString& device, const QString& mac = QString());
-    bool destroyVIF(const QString& vifRef);
-    bool plugVIF(const QString& vifRef);
-    bool unplugVIF(const QString& vifRef);
-
     // VM migration operations
-    QString poolMigrateVM(const QString& vmRef, const QString& hostRef, bool live = true);
     bool canMigrateVM(const QString& vmRef, const QString& hostRef);
 
     // Host management operations

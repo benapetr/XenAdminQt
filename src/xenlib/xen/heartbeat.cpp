@@ -28,7 +28,8 @@
 #include "heartbeat.h"
 #include "connection.h"
 #include "session.h"
-#include "api.h"
+#include "xenapi/xenapi_Pool.h"
+#include "xenapi/xenapi_Host.h"
 #include <QtCore/QDebug>
 #include <QtCore/QMutexLocker>
 
@@ -37,7 +38,7 @@ const int XenHeartbeat::HEARTBEAT_INTERVAL_MS;
 const int XenHeartbeat::MIN_CONNECTION_TIMEOUT_MS;
 
 XenHeartbeat::XenHeartbeat(XenConnection* connection, int connectionTimeout, QObject* parent)
-    : QObject(parent), m_connection(connection), m_session(nullptr), m_api(nullptr), m_heartbeatTimer(new QTimer(this)), m_connectionTimeout(qMax(connectionTimeout, MIN_CONNECTION_TIMEOUT_MS)), m_running(false), m_retrying(false)
+    : QObject(parent), m_connection(connection), m_session(nullptr), m_heartbeatTimer(new QTimer(this)), m_connectionTimeout(qMax(connectionTimeout, MIN_CONNECTION_TIMEOUT_MS)), m_running(false), m_retrying(false)
 {
     // Setup heartbeat timer
     m_heartbeatTimer->setInterval(HEARTBEAT_INTERVAL_MS);
@@ -52,12 +53,6 @@ XenHeartbeat::~XenHeartbeat()
 {
     stop();
     dropSession();
-
-    if (m_api)
-    {
-        delete m_api;
-        m_api = nullptr;
-    }
 
     qDebug() << "Heartbeat destroyed for connection" << (m_connection ? m_connection->getHostname() : "null");
 }
@@ -179,19 +174,22 @@ bool XenHeartbeat::createSession()
         return false;
     }
 
-    // Create API interface
-    if (!this->m_api)
-    {
-        this->m_api = new XenRpcAPI(this->m_session, this);
-    }
-
     // Get pool master host reference for heartbeat target
-    QVariantList pools = this->m_api->getPools();
-    if (!pools.isEmpty())
+    try
     {
-        QVariantMap pool = pools.first().toMap();
-        this->m_masterHostRef = pool.value("master").toString();
-        qDebug() << "Heartbeat targeting pool master:" << this->m_masterHostRef;
+        QVariant poolsVar = XenAPI::Pool::get_all(this->m_session);
+        QVariantList pools = poolsVar.toList();
+        if (!pools.isEmpty())
+        {
+            QString poolRef = pools.first().toString();
+            QVariantMap pool = XenAPI::Pool::get_record(this->m_session, poolRef);
+            this->m_masterHostRef = pool.value("master").toString();
+            qDebug() << "Heartbeat targeting pool master:" << this->m_masterHostRef;
+        }
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "Failed to resolve pool master for heartbeat:" << ex.what();
     }
 
     return true;
@@ -199,7 +197,7 @@ bool XenHeartbeat::createSession()
 
 void XenHeartbeat::getServerTime()
 {
-    if (!this->m_session || !this->m_connection || !this->m_api)
+    if (!this->m_session || !this->m_connection)
     {
         return;
     }
@@ -211,7 +209,17 @@ void XenHeartbeat::getServerTime()
         return;
     }
 
-    QVariant serverTimeVar = this->m_api->getHostServerTime(this->m_masterHostRef);
+    QVariant serverTimeVar;
+    try
+    {
+        serverTimeVar = XenAPI::Host::get_servertime(this->m_session, this->m_masterHostRef);
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "Failed to get server time from" << this->m_masterHostRef << ":" << ex.what();
+        this->handleConnectionLoss();
+        return;
+    }
     if (serverTimeVar.isNull())
     {
         qWarning() << "Failed to get server time from" << this->m_masterHostRef;

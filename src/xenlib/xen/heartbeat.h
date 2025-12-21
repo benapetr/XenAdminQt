@@ -38,7 +38,6 @@
 
 QT_FORWARD_DECLARE_CLASS(XenConnection)
 QT_FORWARD_DECLARE_CLASS(XenSession)
-QT_FORWARD_DECLARE_CLASS(XenRpcAPI)
 
 class XENLIB_EXPORT XenHeartbeat : public QObject
 {
@@ -72,7 +71,6 @@ private:
 
     XenConnection* m_connection;
     XenSession* m_session;
-    XenRpcAPI* m_api;
     QTimer* m_heartbeatTimer;
 
     int m_connectionTimeout;

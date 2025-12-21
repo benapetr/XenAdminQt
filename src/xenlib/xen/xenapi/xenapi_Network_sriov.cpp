@@ -25,58 +25,67 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "VGPU.h"
+#include "xenapi_Network_sriov.h"
 #include "../session.h"
 #include "../api.h"
 #include <stdexcept>
 
 namespace XenAPI
 {
-
-    void VGPU::destroy(XenSession* session, const QString& vgpu)
+    QString Network_sriov::async_create(XenSession* session, const QString& pif, const QString& network)
     {
         if (!session || !session->isLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vgpu;
+        params << session->getSessionId() << pif << network;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VGPU.destroy", params);
+        QByteArray request = api.buildJsonRpcCall("Async.network_sriov.create", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Void method
+        return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString VGPU::async_create(XenSession* session, const QString& vm,
-                               const QString& gpu_group, const QString& device,
-                               const QVariantMap& other_config)
+    QString Network_sriov::async_destroy(XenSession* session, const QString& network_sriov)
     {
         if (!session || !session->isLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vm << gpu_group << device << other_config;
+        params << session->getSessionId() << network_sriov;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VGPU.async_create", params);
+        QByteArray request = api.buildJsonRpcCall("Async.network_sriov.destroy", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString VGPU::async_create(XenSession* session, const QString& vm,
-                               const QString& gpu_group, const QString& device,
-                               const QVariantMap& other_config, const QString& vgpu_type)
+    QVariantMap Network_sriov::get_record(XenSession* session, const QString& network_sriov)
     {
         if (!session || !session->isLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vm << gpu_group << device << other_config << vgpu_type;
+        params << session->getSessionId() << network_sriov;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VGPU.async_create", params);
+        QByteArray request = api.buildJsonRpcCall("network_sriov.get_record", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.parseJsonRpcResponse(response).toMap();
+    }
+
+    QVariantList Network_sriov::get_all(XenSession* session)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId();
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("network_sriov.get_all", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toList();
     }
 
 } // namespace XenAPI

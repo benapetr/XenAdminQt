@@ -9,7 +9,18 @@ win32:DEFINES += XENLIB_STATIC
 
 # Source files
 SOURCES += \
+    utils/misc.cpp \
     xen/actions/vm/vmstartaction.cpp \
+    xen/xenapi/xenapi_Bond.cpp \
+    xen/xenapi/xenapi_Network.cpp \
+    xen/xenapi/xenapi_Network_sriov.cpp \
+    xen/xenapi/xenapi_PBD.cpp \
+    xen/xenapi/xenapi_PIF.cpp \
+    xen/xenapi/xenapi_Secret.cpp \
+    xen/xenapi/xenapi_VBD.cpp \
+    xen/xenapi/xenapi_VDI.cpp \
+    xen/xenapi/xenapi_VGPU.cpp \
+    xen/xenapi/xenapi_VIF.cpp \
     xenlib.cpp \
     xencache.cpp \
     vmhelpers.cpp \
@@ -41,19 +52,9 @@ SOURCES += \
     xen/vdi.cpp \
     xen/vbd.cpp \
     xen/xenapi/xenapi_VM.cpp \
-    xen/xenapi/VDI.cpp \
-    xen/xenapi/VBD.cpp \
     xen/xenapi/xenapi_SR.cpp \
-    xen/xenapi/PBD.cpp \
     xen/xenapi/xenapi_Pool.cpp \
-    xen/xenapi/Secret.cpp \
     xen/xenapi/xenapi_Host.cpp \
-    xen/xenapi/Network.cpp \
-    xen/xenapi/Bond.cpp \
-    xen/xenapi/PIF.cpp \
-    xen/xenapi/Network_sriov.cpp \
-    xen/xenapi/VIF.cpp \
-    xen/xenapi/VGPU.cpp \
     xen/xenapi/vm_appliance.cpp \
     xen/actions/vm/changevmisoaction.cpp \
     xen/actions/vm/startapplianceaction.cpp \
@@ -98,6 +99,7 @@ SOURCES += \
     xen/actions/vm/vmcloneaction.cpp \
     xen/actions/vm/vmtotemplateaction.cpp \
     xen/actions/vm/createvmfastaction.cpp \
+    xen/actions/vm/createvmaction.cpp \
     xen/actions/vm/vmsnapshotcreateaction.cpp \
     xen/actions/vm/vmsnapshotdeleteaction.cpp \
     xen/actions/vm/vmsnapshotrevertaction.cpp \
@@ -119,6 +121,7 @@ SOURCES += \
     xen/actions/pool/designatenewmasteraction.cpp \
     xen/actions/pool/syncdatabaseaction.cpp \
     xen/actions/pool/setpoolnameanddescriptionaction.cpp \
+    xen/actions/pool/setsrasdefaultaction.cpp \
     xen/actions/network/changenetworkingaction.cpp \
     xen/actions/network/createbondaction.cpp \
     xen/actions/network/destroybondaction.cpp \
@@ -140,7 +143,18 @@ SOURCES += \
 
 # Header files
 HEADERS += \
+    utils/misc.h \
     xen/actions/vm/vmstartaction.h \
+    xen/xenapi/xenapi_Bond.h \
+    xen/xenapi/xenapi_Network.h \
+    xen/xenapi/xenapi_Network_sriov.h \
+    xen/xenapi/xenapi_PBD.h \
+    xen/xenapi/xenapi_PIF.h \
+    xen/xenapi/xenapi_Secret.h \
+    xen/xenapi/xenapi_VBD.h \
+    xen/xenapi/xenapi_VDI.h \
+    xen/xenapi/xenapi_VGPU.h \
+    xen/xenapi/xenapi_VIF.h \
     xenlib.h \
     xenlib_global.h \
     xencache.h \
@@ -173,19 +187,9 @@ HEADERS += \
     xen/vdi.h \
     xen/vbd.h \
     xen/xenapi/xenapi_VM.h \
-    xen/xenapi/VDI.h \
-    xen/xenapi/VBD.h \
     xen/xenapi/xenapi_SR.h \
-    xen/xenapi/PBD.h \
     xen/xenapi/xenapi_Pool.h \
-    xen/xenapi/Secret.h \
     xen/xenapi/xenapi_Host.h \
-    xen/xenapi/Network.h \
-    xen/xenapi/Bond.h \
-    xen/xenapi/PIF.h \
-    xen/xenapi/Network_sriov.h \
-    xen/xenapi/VIF.h \
-    xen/xenapi/VGPU.h \
     xen/xenapi/vm_appliance.h \
     xen/actions/vm/changevmisoaction.h \
     xen/actions/vm/startapplianceaction.h \
@@ -200,6 +204,11 @@ HEADERS += \
     xen/actions/sr/detachsraction.h \
     xen/actions/sr/forgetsraction.h \
     xen/actions/sr/destroysraction.h \
+    xen/actions/host/reboothostaction.h \
+    xen/actions/host/shutdownhostaction.h \
+    xen/actions/host/enablehostaction.h \
+    xen/actions/host/disablehostaction.h \
+    xen/actions/host/evacuatehostaction.h \
     xen/actions/host/destroyhostaction.h \
     xen/actions/host/changehostautostartaction.h \
     xen/actions/host/editmultipathaction.h \
@@ -223,6 +232,7 @@ HEADERS += \
     xen/actions/vm/vmcloneaction.h \
     xen/actions/vm/vmtotemplateaction.h \
     xen/actions/vm/createvmfastaction.h \
+    xen/actions/vm/createvmaction.h \
     xen/actions/vm/vmsnapshotcreateaction.h \
     xen/actions/vm/vmsnapshotdeleteaction.h \
     xen/actions/vm/vmsnapshotrevertaction.h \
@@ -244,6 +254,7 @@ HEADERS += \
     xen/actions/pool/designatenewmasteraction.h \
     xen/actions/pool/syncdatabaseaction.h \
     xen/actions/pool/setpoolnameanddescriptionaction.h \
+    xen/actions/pool/setsrasdefaultaction.h \
     xen/actions/network/changenetworkingaction.h \
     xen/actions/network/createbondaction.h \
     xen/actions/network/destroybondaction.h \

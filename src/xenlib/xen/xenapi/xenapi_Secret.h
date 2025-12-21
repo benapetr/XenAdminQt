@@ -25,46 +25,51 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef XENAPI_BOND_H
-#define XENAPI_BOND_H
+#ifndef XENAPI_SECRET_H
+#define XENAPI_SECRET_H
 
+#include "../session.h"
 #include <QString>
-#include <QVariantList>
-#include <QVariantMap>
-
-class XenSession;
 
 namespace XenAPI
 {
 
     /**
-     * @brief Bond XenAPI bindings
+     * @brief Secret - XenAPI Secret bindings
      *
-     * Static-only class providing XenServer Bond API calls.
-     * Matches C# XenModel/XenAPI/Bond.cs structure.
+     * Static-only class providing XenAPI Secret method bindings.
+     * Secrets are used to store sensitive data like passwords.
      */
-    class Bond
+    class Secret
     {
-    private:
-        Bond() = delete; // Static-only class
+        private:
+            Secret() = delete; // Static-only class
 
-    public:
-        // Bond creation and destruction
-        static QString async_create(XenSession* session, const QString& network,
-                                    const QStringList& members, const QString& mac,
-                                    const QString& mode, const QVariantMap& properties);
-        static QString async_destroy(XenSession* session, const QString& bond);
+        public:
+            /**
+             * @brief Create a new secret
+             * @param session Active XenSession
+             * @param value Secret value (e.g., password)
+             * @return Secret UUID
+             */
+            static QString create(XenSession* session, const QString& value);
 
-        // Bond configuration
-        static void set_mode(XenSession* session, const QString& bond, const QString& mode);
-        static void set_property(XenSession* session, const QString& bond, const QString& name, const QString& value);
+            /**
+             * @brief Get secret by UUID
+             * @param session Active XenSession
+             * @param uuid Secret UUID
+             * @return Secret opaque reference
+             */
+            static QString get_by_uuid(XenSession* session, const QString& uuid);
 
-        // Bond queries
-        static QVariantMap get_record(XenSession* session, const QString& bond);
-        static QString get_master(XenSession* session, const QString& bond);
-        static QVariantList get_slaves(XenSession* session, const QString& bond);
+            /**
+             * @brief Destroy a secret
+             * @param session Active XenSession
+             * @param secret Secret opaque reference
+             */
+            static void destroy(XenSession* session, const QString& secret);
     };
 
 } // namespace XenAPI
 
-#endif // XENAPI_BOND_H
+#endif // XENAPI_SECRET_H

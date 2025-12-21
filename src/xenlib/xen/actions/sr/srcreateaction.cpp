@@ -33,9 +33,9 @@
 #include "../../sr.h"
 #include "../../pool.h"
 #include "../../xenapi/xenapi_SR.h"
-#include "../../xenapi/PBD.h"
+#include "../../xenapi/xenapi_PBD.h"
 #include "../../xenapi/xenapi_Pool.h"
-#include "../../xenapi/Secret.h"
+#include "../../xenapi/xenapi_Secret.h"
 #include <QDebug>
 
 SrCreateAction::SrCreateAction(XenConnection* connection,

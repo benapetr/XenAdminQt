@@ -25,46 +25,39 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "rescanpifsaction.h"
-#include "../../connection.h"
-#include "../../session.h"
-#include "../../xenapi/xenapi_PIF.h"
-#include "../../../xencache.h"
+#ifndef XENAPI_NETWORKSRIOV_H
+#define XENAPI_NETWORKSRIOV_H
 
-RescanPIFsAction::RescanPIFsAction(XenConnection* connection,
-                                   const QString& hostRef,
-                                   QObject* parent)
-    : AsyncOperation(connection,
-                     "Scanning for NICs",
-                     "Scanning for physical network interfaces",
-                     parent),
-      m_hostRef(hostRef)
+#include <QString>
+#include <QVariantList>
+#include <QVariantMap>
+
+class XenSession;
+
+namespace XenAPI
 {
-    if (m_hostRef.isEmpty())
-        throw std::invalid_argument("Host reference cannot be empty");
 
-    // Get host name for display
-    QVariantMap hostData = connection->getCache()->resolve("host", m_hostRef);
-    m_hostName = hostData.value("name_label").toString();
-
-    setTitle(QString("Scanning for NICs on %1").arg(m_hostName));
-    setDescription(QString("Scanning for physical network interfaces on %1").arg(m_hostName));
-}
-
-void RescanPIFsAction::run()
-{
-    try
+    /**
+     * @brief Network_sriov XenAPI bindings
+     *
+     * Static-only class providing XenServer Network_sriov API calls for SR-IOV configuration.
+     * Matches C# XenModel/XenAPI/Network_sriov.cs structure.
+     */
+    class Network_sriov
     {
-        setPercentComplete(40);
-        setDescription(QString("Scanning for NICs on %1...").arg(m_hostName));
+        private:
+            Network_sriov() = delete; // Static-only class
 
-        XenAPI::PIF::scan(session(), m_hostRef);
+        public:
+            // SR-IOV operations
+            static QString async_create(XenSession* session, const QString& pif, const QString& network);
+            static QString async_destroy(XenSession* session, const QString& network_sriov);
 
-        setPercentComplete(100);
-        setDescription(QString("Scan complete on %1").arg(m_hostName));
+            // SR-IOV queries
+            static QVariantMap get_record(XenSession* session, const QString& network_sriov);
+            static QVariantList get_all(XenSession* session);
+    };
 
-    } catch (const std::exception& e)
-    {
-        setError(QString("Failed to scan NICs: %1").arg(e.what()));
-    }
-}
+} // namespace XenAPI
+
+#endif // XENAPI_NETWORKSRIOV_H

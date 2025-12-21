@@ -28,7 +28,10 @@
 #include "performancetabpage.h"
 #include "ui_performancetabpage.h"
 #include "xenlib.h"
-#include "xen/api.h"
+#include "xen/xenapi/xenapi_VM.h"
+#include "xen/xenapi/xenapi_Host.h"
+#include "xen/session.h"
+#include "xen/connection.h"
 #include <QDateTime>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -240,9 +243,10 @@ void PerformanceTabPage::fetchMetrics()
         return;
     }
 
-    // Get the XenAPI instance
-    XenRpcAPI* api = this->m_xenLib->getAPI();
-    if (!api)
+    XenSession* session = this->m_xenLib->getConnection()
+        ? this->m_xenLib->getConnection()->getSession()
+        : nullptr;
+    if (!session || !session->isLoggedIn())
     {
         return;
     }
@@ -251,14 +255,14 @@ void PerformanceTabPage::fetchMetrics()
     if (this->m_objectType == "vm")
     {
         // Query CPU usage data source
-        double cpuUsage = api->queryVMDataSource(objRef, "cpu");
+        double cpuUsage = XenAPI::VM::query_data_source(session, objRef, "cpu");
         if (cpuUsage >= 0.0)
         {
             this->addDataPoint("cpu", cpuUsage);
         }
 
         // Query memory usage - try memory_internal_free first (guest agent provides this)
-        double memoryInternalFree = api->queryVMDataSource(objRef, "memory_internal_free");
+        double memoryInternalFree = XenAPI::VM::query_data_source(session, objRef, "memory_internal_free");
         if (memoryInternalFree >= 0.0)
         {
             // memory_internal_free is in KB, convert to percentage
@@ -286,8 +290,8 @@ void PerformanceTabPage::fetchMetrics()
         // Query network I/O - sum of all network interfaces
         // XenServer provides per-VIF data sources like "vif_0_rx", "vif_0_tx"
         // For simplicity, query generic network metrics if available
-        double networkRead = api->queryVMDataSource(objRef, "vif_0_rx");
-        double networkWrite = api->queryVMDataSource(objRef, "vif_0_tx");
+        double networkRead = XenAPI::VM::query_data_source(session, objRef, "vif_0_rx");
+        double networkWrite = XenAPI::VM::query_data_source(session, objRef, "vif_0_tx");
         if (networkRead >= 0.0)
         {
             this->addDataPoint("network_read", networkRead / 1024.0); // Convert to KB/s
@@ -298,8 +302,8 @@ void PerformanceTabPage::fetchMetrics()
         }
 
         // Query disk I/O operations
-        double diskRead = api->queryVMDataSource(objRef, "vbd_0_read");
-        double diskWrite = api->queryVMDataSource(objRef, "vbd_0_write");
+        double diskRead = XenAPI::VM::query_data_source(session, objRef, "vbd_0_read");
+        double diskWrite = XenAPI::VM::query_data_source(session, objRef, "vbd_0_write");
         if (diskRead >= 0.0)
         {
             this->addDataPoint("disk_read", diskRead);
@@ -313,14 +317,14 @@ void PerformanceTabPage::fetchMetrics()
     else if (this->m_objectType == "host")
     {
         // Query host CPU usage
-        double cpuUsage = api->queryHostDataSource(objRef, "cpu_avg");
+        double cpuUsage = XenAPI::Host::query_data_source(session, objRef, "cpu_avg");
         if (cpuUsage >= 0.0)
         {
             this->addDataPoint("cpu", cpuUsage * 100.0); // Convert to percentage
         }
 
         // Query host memory usage
-        double memoryFree = api->queryHostDataSource(objRef, "memory_free_kib");
+        double memoryFree = XenAPI::Host::query_data_source(session, objRef, "memory_free_kib");
         if (memoryFree >= 0.0)
         {
             qint64 memoryTotal = this->m_objectData.value("memory_total", 1).toLongLong();
@@ -334,8 +338,8 @@ void PerformanceTabPage::fetchMetrics()
         }
 
         // Query host network I/O (aggregate of all PIFs)
-        double networkRead = api->queryHostDataSource(objRef, "pif_eth0_rx");
-        double networkWrite = api->queryHostDataSource(objRef, "pif_eth0_tx");
+        double networkRead = XenAPI::Host::query_data_source(session, objRef, "pif_eth0_rx");
+        double networkWrite = XenAPI::Host::query_data_source(session, objRef, "pif_eth0_tx");
         if (networkRead >= 0.0)
         {
             this->addDataPoint("network_read", networkRead / 1024.0); // Convert to KB/s
@@ -346,8 +350,8 @@ void PerformanceTabPage::fetchMetrics()
         }
 
         // Query host disk I/O
-        double diskRead = api->queryHostDataSource(objRef, "io_throughput_read");
-        double diskWrite = api->queryHostDataSource(objRef, "io_throughput_write");
+        double diskRead = XenAPI::Host::query_data_source(session, objRef, "io_throughput_read");
+        double diskWrite = XenAPI::Host::query_data_source(session, objRef, "io_throughput_write");
         if (diskRead >= 0.0)
         {
             this->addDataPoint("disk_read", diskRead);

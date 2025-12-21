@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "VDI.h"
+#include "xenapi_VDI.h"
 #include "../session.h"
 #include "../api.h"
 #include <QJsonDocument>
@@ -35,7 +35,6 @@
 
 namespace XenAPI
 {
-
     // VDI.create - Create a new VDI
     QString VDI::create(XenSession* session, const QVariantMap& vdiRecord)
     {

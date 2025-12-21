@@ -50,128 +50,128 @@ namespace XenAPI
 
     class VM_appliance
     {
-    public:
-        // Prevent instantiation - this is a static-only class
-        VM_appliance() = delete;
-        VM_appliance(const VM_appliance&) = delete;
-        VM_appliance& operator=(const VM_appliance&) = delete;
+        public:
+            // Prevent instantiation - this is a static-only class
+            VM_appliance() = delete;
+            VM_appliance(const VM_appliance&) = delete;
+            VM_appliance& operator=(const VM_appliance&) = delete;
 
-        /**
-         * @brief Get allowed operations for this VM appliance
-         * @param session XenSession with valid connection
-         * @param applianceRef OpaqueRef of VM_appliance
-         * @return List of allowed vm_appliance_operation values (as strings: "start", "clean_shutdown", etc.)
-         */
-        static QStringList get_allowed_operations(XenSession* session, const QString& applianceRef);
+            /**
+             * @brief Get allowed operations for this VM appliance
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance
+             * @return List of allowed vm_appliance_operation values (as strings: "start", "clean_shutdown", etc.)
+             */
+            static QStringList get_allowed_operations(XenSession* session, const QString& applianceRef);
 
-        /**
-         * @brief Get current operations in progress
-         * @param session XenSession with valid connection
-         * @param applianceRef OpaqueRef of VM_appliance
-         * @return Map of task_ref → operation_name
-         */
-        static QVariantMap get_current_operations(XenSession* session, const QString& applianceRef);
+            /**
+             * @brief Get current operations in progress
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance
+             * @return Map of task_ref → operation_name
+             */
+            static QVariantMap get_current_operations(XenSession* session, const QString& applianceRef);
 
-        /**
-         * @brief Get list of VMs in this appliance
-         * @param session XenSession with valid connection
-         * @param applianceRef OpaqueRef of VM_appliance
-         * @return List of VM OpaqueRefs
-         */
-        static QStringList get_VMs(XenSession* session, const QString& applianceRef);
+            /**
+             * @brief Get list of VMs in this appliance
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance
+             * @return List of VM OpaqueRefs
+             */
+            static QStringList get_VMs(XenSession* session, const QString& applianceRef);
 
-        /**
-         * @brief Get full record for VM appliance
-         * @param session XenSession with valid connection
-         * @param applianceRef OpaqueRef of VM_appliance
-         * @return QVariantMap with all fields: uuid, name_label, name_description, allowed_operations, current_operations, VMs
-         */
-        static QVariantMap get_record(XenSession* session, const QString& applianceRef);
+            /**
+             * @brief Get full record for VM appliance
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance
+             * @return QVariantMap with all fields: uuid, name_label, name_description, allowed_operations, current_operations, VMs
+             */
+            static QVariantMap get_record(XenSession* session, const QString& applianceRef);
 
-        /**
-         * @brief Get all VM appliance records
-         * @param session XenSession with valid connection
-         * @return Map of appliance_ref → record_map
-         */
-        static QVariantMap get_all_records(XenSession* session);
+            /**
+             * @brief Get all VM appliance records
+             * @param session XenSession with valid connection
+             * @return Map of appliance_ref → record_map
+             */
+            static QVariantMap get_all_records(XenSession* session);
 
-        /**
-         * @brief Set the name/label field
-         * @param session XenSession with valid connection
-         * @param applianceRef OpaqueRef of VM_appliance
-         * @param label New name
-         */
-        static void set_name_label(XenSession* session, const QString& applianceRef, const QString& label);
+            /**
+             * @brief Set the name/label field
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance
+             * @param label New name
+             */
+            static void set_name_label(XenSession* session, const QString& applianceRef, const QString& label);
 
-        /**
-         * @brief Set the name/description field
-         * @param session XenSession with valid connection
-         * @param applianceRef OpaqueRef of VM_appliance
-         * @param description New description
-         */
-        static void set_name_description(XenSession* session, const QString& applianceRef, const QString& description);
+            /**
+             * @brief Set the name/description field
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance
+             * @param description New description
+             */
+            static void set_name_description(XenSession* session, const QString& applianceRef, const QString& description);
 
-        /**
-         * @brief Start all VMs in the appliance (async)
-         * @param session XenSession with valid connection
-         * @param applianceRef OpaqueRef of VM_appliance
-         * @param paused If true, start VMs in paused state
-         * @return Task reference (OpaqueRef) for async operation
-         */
-        static QString async_start(XenSession* session, const QString& applianceRef, bool paused);
+            /**
+             * @brief Start all VMs in the appliance (async)
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance
+             * @param paused If true, start VMs in paused state
+             * @return Task reference (OpaqueRef) for async operation
+             */
+            static QString async_start(XenSession* session, const QString& applianceRef, bool paused);
 
-        /**
-         * @brief Start all VMs in the appliance (sync - blocks until complete)
-         * @param session XenSession with valid connection
-         * @param applianceRef OpaqueRef of VM_appliance
-         * @param paused If true, start VMs in paused state
-         */
-        static void start(XenSession* session, const QString& applianceRef, bool paused);
+            /**
+             * @brief Start all VMs in the appliance (sync - blocks until complete)
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance
+             * @param paused If true, start VMs in paused state
+             */
+            static void start(XenSession* session, const QString& applianceRef, bool paused);
 
-        /**
-         * @brief Perform clean shutdown of all VMs in the appliance (async)
-         * @param session XenSession with valid connection
-         * @param applianceRef OpaqueRef of VM_appliance
-         * @return Task reference (OpaqueRef) for async operation
-         */
-        static QString async_clean_shutdown(XenSession* session, const QString& applianceRef);
+            /**
+             * @brief Perform clean shutdown of all VMs in the appliance (async)
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance
+             * @return Task reference (OpaqueRef) for async operation
+             */
+            static QString async_clean_shutdown(XenSession* session, const QString& applianceRef);
 
-        /**
-         * @brief Perform clean shutdown of all VMs in the appliance (sync)
-         * @param session XenSession with valid connection
-         * @param applianceRef OpaqueRef of VM_appliance
-         */
-        static void clean_shutdown(XenSession* session, const QString& applianceRef);
+            /**
+             * @brief Perform clean shutdown of all VMs in the appliance (sync)
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance
+             */
+            static void clean_shutdown(XenSession* session, const QString& applianceRef);
 
-        /**
-         * @brief Perform hard shutdown of all VMs in the appliance (async)
-         * @param session XenSession with valid connection
-         * @param applianceRef OpaqueRef of VM_appliance
-         * @return Task reference (OpaqueRef) for async operation
-         */
-        static QString async_hard_shutdown(XenSession* session, const QString& applianceRef);
+            /**
+             * @brief Perform hard shutdown of all VMs in the appliance (async)
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance
+             * @return Task reference (OpaqueRef) for async operation
+             */
+            static QString async_hard_shutdown(XenSession* session, const QString& applianceRef);
 
-        /**
-         * @brief Perform hard shutdown of all VMs in the appliance (sync)
-         * @param session XenSession with valid connection
-         * @param applianceRef OpaqueRef of VM_appliance
-         */
-        static void hard_shutdown(XenSession* session, const QString& applianceRef);
+            /**
+             * @brief Perform hard shutdown of all VMs in the appliance (sync)
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance
+             */
+            static void hard_shutdown(XenSession* session, const QString& applianceRef);
 
-        /**
-         * @brief Try clean shutdown, fall back to hard shutdown (async)
-         * @param session XenSession with valid connection
-         * @param applianceRef OpaqueRef of VM_appliance
-         * @return Task reference (OpaqueRef) for async operation
-         */
-        static QString async_shutdown(XenSession* session, const QString& applianceRef);
+            /**
+             * @brief Try clean shutdown, fall back to hard shutdown (async)
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance
+             * @return Task reference (OpaqueRef) for async operation
+             */
+            static QString async_shutdown(XenSession* session, const QString& applianceRef);
 
-        /**
-         * @brief Try clean shutdown, fall back to hard shutdown (sync)
-         * @param session XenSession with valid connection
-         * @param applianceRef OpaqueRef of VM_appliance
-         */
-        static void shutdown(XenSession* session, const QString& applianceRef);
+            /**
+             * @brief Try clean shutdown, fall back to hard shutdown (sync)
+             * @param session XenSession with valid connection
+             * @param applianceRef OpaqueRef of VM_appliance
+             */
+            static void shutdown(XenSession* session, const QString& applianceRef);
     };
 
 } // namespace XenAPI

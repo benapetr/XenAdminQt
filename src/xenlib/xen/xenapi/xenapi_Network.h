@@ -29,6 +29,7 @@
 #define XENAPI_NETWORK_H
 
 #include <QString>
+#include <QStringList>
 #include <QVariantList>
 #include <QVariantMap>
 
@@ -45,27 +46,30 @@ namespace XenAPI
      */
     class Network
     {
-    private:
-        Network() = delete; // Static-only class
+        private:
+            Network() = delete; // Static-only class
 
-    public:
-        // Network creation and destruction
-        static QString async_create(XenSession* session, const QVariantMap& record);
-        static void destroy(XenSession* session, const QString& network);
+        public:
+            // Network creation and destruction
+            static QString create(XenSession* session, const QVariantMap& record);
+            static QString async_create(XenSession* session, const QVariantMap& record);
+            static void destroy(XenSession* session, const QString& network);
 
-        // Network configuration
-        static void set_name_label(XenSession* session, const QString& network, const QString& label);
-        static void set_name_description(XenSession* session, const QString& network, const QString& description);
-        static void set_MTU(XenSession* session, const QString& network, qint64 mtu);
+            // Network configuration
+            static void set_name_label(XenSession* session, const QString& network, const QString& label);
+            static void set_name_description(XenSession* session, const QString& network, const QString& description);
+            static void set_tags(XenSession* session, const QString& network, const QStringList& tags);
+            static void set_MTU(XenSession* session, const QString& network, qint64 mtu);
+            static void set_other_config(XenSession* session, const QString& network, const QVariantMap& otherConfig);
 
-        // other_config management
-        static void add_to_other_config(XenSession* session, const QString& network, const QString& key, const QString& value);
-        static void remove_from_other_config(XenSession* session, const QString& network, const QString& key);
+            // other_config management
+            static void add_to_other_config(XenSession* session, const QString& network, const QString& key, const QString& value);
+            static void remove_from_other_config(XenSession* session, const QString& network, const QString& key);
 
-        // Network queries
-        static QVariantMap get_record(XenSession* session, const QString& network);
-        static QVariantList get_all(XenSession* session);
-        static QVariantList get_PIFs(XenSession* session, const QString& network);
+            // Network queries
+            static QVariantMap get_record(XenSession* session, const QString& network);
+            static QVariantList get_all(XenSession* session);
+            static QVariantList get_PIFs(XenSession* session, const QString& network);
     };
 
 } // namespace XenAPI

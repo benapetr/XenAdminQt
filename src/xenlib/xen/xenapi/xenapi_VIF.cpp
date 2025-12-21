@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "VIF.h"
+#include "xenapi_VIF.h"
 #include "../session.h"
 #include "../connection.h"
 #include "../api.h"
@@ -34,7 +34,6 @@
 
 namespace XenAPI
 {
-
     QString VIF::async_create(XenSession* session, const QVariantMap& vifRecord)
     {
         if (!session || !session->isLoggedIn())
@@ -54,6 +53,34 @@ namespace XenAPI
         qDebug() << "Response was:" << QString::fromUtf8(response);
 
         return taskRef;
+    }
+
+    QString VIF::create(XenSession* session, const QVariantMap& vifRecord)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vifRecord;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VIF.create", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toString();
+    }
+
+    QString VIF::async_destroy(XenSession* session, const QString& vif)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vif;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("Async.VIF.destroy", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     void VIF::destroy(XenSession* session, const QString& vif)

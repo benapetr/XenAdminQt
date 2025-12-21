@@ -31,7 +31,6 @@
 
 namespace XenAPI
 {
-
     QVariantMap SR::get_record(XenSession* session, const QString& sr)
     {
         if (!session || !session->isLoggedIn())
@@ -214,6 +213,20 @@ namespace XenAPI
 
         XenRpcAPI api(session);
         QByteArray request = api.buildJsonRpcCall("SR.set_name_description", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response); // Check for errors
+    }
+
+    void SR::set_tags(XenSession* session, const QString& sr, const QStringList& tags)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << sr << tags;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("SR.set_tags", params);
         QByteArray response = session->sendApiRequest(request);
         api.parseJsonRpcResponse(response); // Check for errors
     }

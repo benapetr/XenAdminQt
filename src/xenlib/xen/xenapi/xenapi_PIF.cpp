@@ -25,15 +25,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "PIF.h"
+#include "xenapi_PIF.h"
 #include "../session.h"
 #include "../api.h"
-#include "../jsonrpcclient.h"
 #include <stdexcept>
 
 namespace XenAPI
 {
-
     void PIF::reconfigure_ip(XenSession* session, const QString& pif,
                              const QString& mode, const QString& ip,
                              const QString& netmask, const QString& gateway,

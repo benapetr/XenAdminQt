@@ -25,46 +25,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "rescanpifsaction.h"
-#include "../../connection.h"
-#include "../../session.h"
-#include "../../xenapi/xenapi_PIF.h"
-#include "../../../xencache.h"
+#include "misc.h"
 
-RescanPIFsAction::RescanPIFsAction(XenConnection* connection,
-                                   const QString& hostRef,
-                                   QObject* parent)
-    : AsyncOperation(connection,
-                     "Scanning for NICs",
-                     "Scanning for physical network interfaces",
-                     parent),
-      m_hostRef(hostRef)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QMetaType>
+#endif
+
+bool Misc::QVariantIsMap(const QVariant &v)
 {
-    if (m_hostRef.isEmpty())
-        throw std::invalid_argument("Host reference cannot be empty");
-
-    // Get host name for display
-    QVariantMap hostData = connection->getCache()->resolve("host", m_hostRef);
-    m_hostName = hostData.value("name_label").toString();
-
-    setTitle(QString("Scanning for NICs on %1").arg(m_hostName));
-    setDescription(QString("Scanning for physical network interfaces on %1").arg(m_hostName));
-}
-
-void RescanPIFsAction::run()
-{
-    try
-    {
-        setPercentComplete(40);
-        setDescription(QString("Scanning for NICs on %1...").arg(m_hostName));
-
-        XenAPI::PIF::scan(session(), m_hostRef);
-
-        setPercentComplete(100);
-        setDescription(QString("Scan complete on %1").arg(m_hostName));
-
-    } catch (const std::exception& e)
-    {
-        setError(QString("Failed to scan NICs: %1").arg(e.what()));
-    }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    // Qt6: QVariant::type() is deprecated
+    return v.metaType() == QMetaType::fromType<QVariantMap>();
+#else
+    // Qt5
+    return v.type() == QVariant::Map;
+#endif
 }
