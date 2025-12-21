@@ -131,10 +131,7 @@ public:
     bool changeVMISO(const QString& vmRef, const QString& vbdRef, const QString& vdiRef);
     bool createCdDrive(const QString& vmRef);
 
-    // VIF (Virtual Network Interface) operations
-
     // VM migration operations
-    QString poolMigrateVM(const QString& vmRef, const QString& hostRef, bool live = true);
     bool canMigrateVM(const QString& vmRef, const QString& hostRef);
 
     // Host management operations

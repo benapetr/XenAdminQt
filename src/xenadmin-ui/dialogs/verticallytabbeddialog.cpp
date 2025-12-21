@@ -35,6 +35,7 @@
 #include "../../xenlib/xen/session.h"
 #include "../../xenlib/xen/api.h"
 #include "../../xenlib/xen/xenapi/xenapi_VM.h"
+#include "../../xenlib/xen/xenapi/xenapi_Host.h"
 #include "../../xenlib/xencache.h"
 #include "../../xenlib/operations/multipleoperation.h"
 #include "../../xenlib/xen/asyncoperation.h"
@@ -456,7 +457,15 @@ void VerticallyTabbedDialog::applySimpleChanges()
         }
         else if (this->m_objectType == "host")
         {
-            success = api->setHostField(this->m_objectRef, "name_label", newName);
+            try
+            {
+                XenAPI::Host::set_name_label(session, this->m_objectRef, newName);
+                success = true;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set Host name_label:" << ex.what();
+            }
         }
         else if (this->m_objectType == "pool")
         {
@@ -503,7 +512,15 @@ void VerticallyTabbedDialog::applySimpleChanges()
         }
         else if (this->m_objectType == "host")
         {
-            success = api->setHostField(this->m_objectRef, "name_description", newDesc);
+            try
+            {
+                XenAPI::Host::set_name_description(session, this->m_objectRef, newDesc);
+                success = true;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set Host name_description:" << ex.what();
+            }
         }
         else if (this->m_objectType == "pool")
         {
@@ -580,7 +597,22 @@ void VerticallyTabbedDialog::applySimpleChanges()
                     // Add or update the key
                     if (this->m_objectType == "host")
                     {
-                        success = api->setHostOtherConfig(this->m_objectRef, key, newValue);
+                        QVariantMap hostData = this->m_objectDataCopy;
+                        QVariantMap otherConfig = hostData.value("other_config").toMap();
+                        if (newValue.isEmpty())
+                            otherConfig.remove(key);
+                        else
+                            otherConfig[key] = newValue;
+
+                        try
+                        {
+                            XenAPI::Host::set_other_config(session, this->m_objectRef, otherConfig);
+                            success = true;
+                        }
+                        catch (const std::exception& ex)
+                        {
+                            qWarning() << "Failed to set Host other_config:" << ex.what();
+                        }
                     }
                     // Pool, SR, Network also have other_config but we haven't implemented helpers yet
                     else

@@ -44,23 +44,6 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         // Session info
         QString getSessionId() const;
 
-        // VM operations
-
-        // VM CPU and memory configuration
-        bool setVMVCPUsMax(const QString& vmRef, int vcpus);
-        bool setVMVCPUsAtStartup(const QString& vmRef, int vcpus);
-        bool setVMMemoryLimits(const QString& vmRef, qint64 staticMin, qint64 staticMax, qint64 dynamicMin, qint64 dynamicMax);
-
-        // VBD (Virtual Block Device) operations
-        QVariant getVBDRecord(const QString& vbdRef);
-
-        // VIF (Virtual Network Interface) operations
-        QVariant getVIFRecord(const QString& vifRef);
-
-        // VM migration operations
-        QString poolMigrateVM(const QString& vmRef, const QString& hostRef, bool live = true);
-        bool assertCanMigrateVM(const QString& vmRef, const QString& hostRef);
-
         // Snapshot operations
         QVariantList getVMSnapshots(const QString& vmRef);
         QString createVMSnapshot(const QString& vmRef, const QString& name, const QString& description = QString());
@@ -79,8 +62,6 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         bool shutdownHost(const QString& hostRef);
         bool enableHost(const QString& hostRef);
         bool disableHost(const QString& hostRef);
-        bool setHostField(const QString& hostRef, const QString& field, const QVariant& value);
-        bool setHostOtherConfig(const QString& hostRef, const QString& key, const QString& value);
 
         // Pool operations
         QVariantList getPools();

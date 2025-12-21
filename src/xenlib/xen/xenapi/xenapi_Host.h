@@ -30,6 +30,7 @@
 
 #include "../../xenlib_global.h"
 #include <QString>
+#include <QStringList>
 #include <QVariant>
 
 class XenSession;
@@ -60,6 +61,36 @@ namespace XenAPI
              * Matches C# Host.get_all()
              */
             static QVariantList get_all(XenSession* session);
+
+            /**
+             * @brief Set the name_label field
+             * Matches C# Host.set_name_label()
+             */
+            static void set_name_label(XenSession* session, const QString& host, const QString& value);
+
+            /**
+             * @brief Set the name_description field
+             * Matches C# Host.set_name_description()
+             */
+            static void set_name_description(XenSession* session, const QString& host, const QString& value);
+
+            /**
+             * @brief Set the tags field
+             * Matches C# Host.set_tags()
+             */
+            static void set_tags(XenSession* session, const QString& host, const QStringList& value);
+
+            /**
+             * @brief Set the other_config field
+             * Matches C# Host.set_other_config()
+             */
+            static void set_other_config(XenSession* session, const QString& host, const QVariantMap& otherConfig);
+
+            /**
+             * @brief Set the iSCSI IQN
+             * Matches C# Host.set_iscsi_iqn()
+             */
+            static void set_iscsi_iqn(XenSession* session, const QString& host, const QString& value);
 
             /**
              * @brief Call a plugin on the host

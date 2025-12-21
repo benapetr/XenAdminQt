@@ -32,6 +32,7 @@
 #include "xen/xenapi/xenapi_VBD.h"
 #include "xen/xenapi/xenapi_VDI.h"
 #include "xen/xenapi/xenapi_VM.h"
+#include "xen/xenapi/xenapi_Host.h"
 #include "xen/asyncoperations.h"
 #include "xen/certificatemanager.h"
 #include "xen/eventpoller.h"
@@ -574,14 +575,25 @@ bool XenLib::setVMVCPUs(const QString& vmRef, int vcpus)
         return false;
     }
 
-    // Set both VCPUs_max and VCPUs_at_startup to the same value
-    bool success = this->d->api->setVMVCPUsMax(vmRef, vcpus);
-    if (success)
+    if (!this->d->session || !this->d->session->isLoggedIn())
     {
-        success = this->d->api->setVMVCPUsAtStartup(vmRef, vcpus);
+        this->setError("Not authenticated");
+        return false;
     }
 
-    return success;
+    // C# SaveChanges uses explicit VM.set_VCPUs_* calls.
+    try
+    {
+        XenAPI::VM::set_VCPUs_max(this->d->session, vmRef, vcpus);
+        XenAPI::VM::set_VCPUs_at_startup(this->d->session, vmRef, vcpus);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setVMVCPUs: Failed to set VCPUs for" << vmRef << ":" << ex.what();
+        this->setError("Failed to set VCPU configuration");
+        return false;
+    }
 }
 
 bool XenLib::setVMMemory(const QString& vmRef, qint64 memoryMB)
@@ -595,9 +607,26 @@ bool XenLib::setVMMemory(const QString& vmRef, qint64 memoryMB)
     // Convert MB to bytes
     qint64 memoryBytes = memoryMB * 1024 * 1024;
 
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
     // Set all memory limits to the same value (static_min, static_max, dynamic_min, dynamic_max)
-    // This is the simplest approach - for more advanced configs, expose the full API
-    return this->d->api->setVMMemoryLimits(vmRef, memoryBytes, memoryBytes, memoryBytes, memoryBytes);
+    // This matches the C# behavior when a single value is provided.
+    try
+    {
+        XenAPI::VM::set_memory_limits(this->d->session, vmRef,
+                                      memoryBytes, memoryBytes, memoryBytes, memoryBytes);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setVMMemory: Failed to set memory limits for" << vmRef << ":" << ex.what();
+        this->setError("Failed to set memory limits");
+        return false;
+    }
 }
 
 // VM property helpers (use cached data)
@@ -1249,30 +1278,6 @@ bool XenLib::createCdDrive(const QString& vmRef)
 }
 
 // VM migration operations
-QString XenLib::poolMigrateVM(const QString& vmRef, const QString& hostRef, bool live)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    if (vmRef.isEmpty())
-    {
-        this->setError("Invalid VM reference");
-        return QString();
-    }
-
-    if (hostRef.isEmpty())
-    {
-        this->setError("Invalid host reference");
-        return QString();
-    }
-
-    qDebug() << "XenLib::poolMigrateVM: Starting VM migration from VM" << vmRef << "to host" << hostRef;
-    return this->d->api->poolMigrateVM(vmRef, hostRef, live);
-}
-
 bool XenLib::canMigrateVM(const QString& vmRef, const QString& hostRef)
 {
     if (!this->isConnected())
@@ -1293,7 +1298,38 @@ bool XenLib::canMigrateVM(const QString& vmRef, const QString& hostRef)
         return false;
     }
 
-    return this->d->api->assertCanMigrateVM(vmRef, hostRef);
+    QVariantMap vmData = getCachedObjectData("vm", vmRef);
+    if (vmData.isEmpty())
+    {
+        this->setError("VM not found in cache");
+        return false;
+    }
+
+    QVariantList allowedOps = vmData.value("allowed_operations").toList();
+    bool canMigrate = false;
+    for (const QVariant& op : allowedOps)
+    {
+        if (op.toString() == "pool_migrate")
+        {
+            canMigrate = true;
+            break;
+        }
+    }
+
+    if (!canMigrate)
+    {
+        this->setError("VM does not allow migration");
+        return false;
+    }
+
+    QString residentOn = vmData.value("resident_on").toString();
+    if (!residentOn.isEmpty() && residentOn == hostRef)
+    {
+        this->setError("VM is already on the selected host");
+        return false;
+    }
+
+    return true;
 }
 
 // Host management operations
@@ -1311,7 +1347,23 @@ bool XenLib::setHostName(const QString& hostRef, const QString& name)
         return false;
     }
 
-    return this->d->api->setHostField(hostRef, "name_label", name);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Host::set_name_label(this->d->session, hostRef, name);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setHostName: Failed to set host name:" << ex.what();
+        this->setError("Failed to set host name");
+        return false;
+    }
 }
 
 bool XenLib::setHostDescription(const QString& hostRef, const QString& description)
@@ -1328,7 +1380,23 @@ bool XenLib::setHostDescription(const QString& hostRef, const QString& descripti
         return false;
     }
 
-    return this->d->api->setHostField(hostRef, "name_description", description);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Host::set_name_description(this->d->session, hostRef, description);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setHostDescription: Failed to set host description:" << ex.what();
+        this->setError("Failed to set host description");
+        return false;
+    }
 }
 
 bool XenLib::setHostTags(const QString& hostRef, const QStringList& tags)
@@ -1345,7 +1413,23 @@ bool XenLib::setHostTags(const QString& hostRef, const QStringList& tags)
         return false;
     }
 
-    return this->d->api->setHostField(hostRef, "tags", tags);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Host::set_tags(this->d->session, hostRef, tags);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setHostTags: Failed to set host tags:" << ex.what();
+        this->setError("Failed to set host tags");
+        return false;
+    }
 }
 
 bool XenLib::setHostOtherConfig(const QString& hostRef, const QString& key, const QString& value)
@@ -1362,7 +1446,31 @@ bool XenLib::setHostOtherConfig(const QString& hostRef, const QString& key, cons
         return false;
     }
 
-    return this->d->api->setHostOtherConfig(hostRef, key, value);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    QVariantMap hostData = getCachedObjectData("host", hostRef);
+    QVariantMap otherConfig = hostData.value("other_config").toMap();
+
+    if (value.isEmpty())
+        otherConfig.remove(key);
+    else
+        otherConfig[key] = value;
+
+    try
+    {
+        XenAPI::Host::set_other_config(this->d->session, hostRef, otherConfig);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setHostOtherConfig: Failed to set host other_config:" << ex.what();
+        this->setError("Failed to set host other_config");
+        return false;
+    }
 }
 
 bool XenLib::setHostIqn(const QString& hostRef, const QString& iqn)
@@ -1379,8 +1487,23 @@ bool XenLib::setHostIqn(const QString& hostRef, const QString& iqn)
         return false;
     }
 
-    // iSCSI IQN is stored in other_config as "iscsi_iqn"
-    return this->d->api->setHostOtherConfig(hostRef, "iscsi_iqn", iqn);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Host::set_iscsi_iqn(this->d->session, hostRef, iqn);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setHostIqn: Failed to set host iSCSI IQN:" << ex.what();
+        this->setError("Failed to set host iSCSI IQN");
+        return false;
+    }
 }
 
 // Generic object property setters
