@@ -27,8 +27,10 @@
 
 #include "setdefaultsrcommand.h"
 #include "../../mainwindow.h"
+#include "../../operations/operationmanager.h"
 #include "xenlib.h"
-#include "xen/api.h"
+#include "xen/actions/pool/setsrasdefaultaction.h"
+#include "xencache.h"
 #include <QMessageBox>
 
 SetDefaultSRCommand::SetDefaultSRCommand(MainWindow* mainWindow, QObject* parent)
@@ -61,16 +63,48 @@ void SetDefaultSRCommand::run()
     {
         this->mainWindow()->showStatusMessage(QString("Setting '%1' as default storage repository...").arg(srName));
 
-        bool success = this->mainWindow()->xenLib()->getAPI()->setDefaultSR(srRef);
-        if (success)
-        {
-            this->mainWindow()->showStatusMessage(QString("Storage repository '%1' set as default successfully").arg(srName), 5000);
-        } else
+        XenLib* xenLib = this->mainWindow()->xenLib();
+        XenConnection* connection = xenLib ? xenLib->getConnection() : nullptr;
+        if (!connection)
         {
             QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
-                                 QString("Failed to set storage repository '%1' as default. Check the error log for details.").arg(srName));
-            this->mainWindow()->showStatusMessage("Set default SR failed", 5000);
+                                 "No active connection.");
+            return;
         }
+
+        XenCache* cache = xenLib->getCache();
+        if (!cache)
+        {
+            QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
+                                 "Pool cache is unavailable.");
+            return;
+        }
+
+        QStringList poolRefs = cache->getAllRefs("pool");
+        if (poolRefs.isEmpty())
+        {
+            QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
+                                 "No pool found.");
+            return;
+        }
+
+        SetSrAsDefaultAction* action = new SetSrAsDefaultAction(connection, poolRefs.first(), srRef, this);
+        OperationManager::instance()->registerOperation(action);
+
+        connect(action, &AsyncOperation::completed, [this, srName, action]() {
+            this->mainWindow()->showStatusMessage(
+                QString("Storage repository '%1' set as default successfully").arg(srName), 5000);
+            action->deleteLater();
+        });
+
+        connect(action, &AsyncOperation::failed, [this, srName, action](const QString& error) {
+            QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
+                                 QString("Failed to set storage repository '%1' as default: %2").arg(srName, error));
+            this->mainWindow()->showStatusMessage("Set default SR failed", 5000);
+            action->deleteLater();
+        });
+
+        action->runAsync();
     }
 }
 

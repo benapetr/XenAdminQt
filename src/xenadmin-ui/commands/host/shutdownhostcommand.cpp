@@ -28,8 +28,11 @@
 #include "shutdownhostcommand.h"
 #include "../../mainwindow.h"
 #include "xenlib.h"
-#include "xen/api.h"
 #include "xencache.h"
+#include "../../operations/operationmanager.h"
+#include "xen/connection.h"
+#include "xen/host.h"
+#include "xen/actions/host/shutdownhostaction.h"
 #include <QMessageBox>
 
 ShutdownHostCommand::ShutdownHostCommand(MainWindow* mainWindow, QObject* parent)
@@ -66,16 +69,34 @@ void ShutdownHostCommand::run()
     {
         this->mainWindow()->showStatusMessage(QString("Shutting down host '%1'...").arg(hostName));
 
-        bool success = this->mainWindow()->xenLib()->getAPI()->shutdownHost(hostRef);
-        if (success)
+        XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+        if (!conn || !conn->isConnected())
         {
-            this->mainWindow()->showStatusMessage(QString("Host '%1' shutdown initiated successfully").arg(hostName), 5000);
-        } else
-        {
-            QMessageBox::warning(this->mainWindow(), "Shutdown Host Failed",
-                                 QString("Failed to shutdown host '%1'. Check the error log for details.").arg(hostName));
-            this->mainWindow()->showStatusMessage("Host shutdown failed", 5000);
+            QMessageBox::warning(this->mainWindow(), "Not Connected",
+                                 "Not connected to XenServer");
+            return;
         }
+
+        Host* host = new Host(conn, hostRef, this);
+        ShutdownHostAction* action = new ShutdownHostAction(conn, host, this);
+
+        OperationManager::instance()->registerOperation(action);
+
+        connect(action, &AsyncOperation::completed, this, [this, hostName, action]() {
+            if (action->state() == AsyncOperation::Completed && !action->isFailed())
+            {
+                this->mainWindow()->showStatusMessage(QString("Host '%1' shutdown initiated successfully").arg(hostName), 5000);
+            }
+            else
+            {
+                QMessageBox::warning(this->mainWindow(), "Shutdown Host Failed",
+                                     QString("Failed to shutdown host '%1'. Check the error log for details.").arg(hostName));
+                this->mainWindow()->showStatusMessage("Host shutdown failed", 5000);
+            }
+            action->deleteLater();
+        });
+
+        action->runAsync();
     }
 }
 

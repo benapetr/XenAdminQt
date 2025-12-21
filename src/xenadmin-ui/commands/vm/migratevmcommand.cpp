@@ -30,7 +30,6 @@
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include "xenlib.h"
-#include "xen/api.h"
 #include "xen/connection.h"
 #include "xen/actions/vm/vmmigrateaction.h"
 #include "xencache.h"
@@ -217,14 +216,11 @@ bool MigrateVMCommand::isVMRunning(const QString& vmRef) const
 QStringList MigrateVMCommand::getAvailableHosts() const
 {
     QStringList hostRefs;
-    QVariantList hosts = this->mainWindow()->xenLib()->getAPI()->getHosts();
+    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    if (!cache)
+        return hostRefs;
 
-    for (const QVariant& host : hosts)
-    {
-        QString hostRef = host.toString();
-        if (!hostRef.isEmpty())
-            hostRefs.append(hostRef);
-    }
+    hostRefs = cache->getAllRefs("host");
 
     return hostRefs;
 }

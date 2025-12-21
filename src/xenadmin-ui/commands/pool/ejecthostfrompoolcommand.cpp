@@ -169,11 +169,10 @@ bool EjectHostFromPoolCommand::isPoolMaster(const QString& hostRef) const
         return false;
 
     XenLib* xenLib = this->mainWindow()->xenLib();
-    QVariantList pools = xenLib->getPools();
-
-    for (const QVariant& poolVariant : pools)
+    QStringList poolRefs = xenLib->getCache()->getAllRefs("pool");
+    for (const QString& poolRef : poolRefs)
     {
-        QVariantMap pool = poolVariant.toMap();
+        QVariantMap pool = xenLib->getCache()->resolve("pool", poolRef);
         QString masterRef = pool.value("master").toString();
 
         if (masterRef == hostRef)

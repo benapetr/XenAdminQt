@@ -33,6 +33,9 @@
 #include "xen/xenapi/xenapi_VDI.h"
 #include "xen/xenapi/xenapi_VM.h"
 #include "xen/xenapi/xenapi_Host.h"
+#include "xen/xenapi/xenapi_Pool.h"
+#include "xen/xenapi/xenapi_SR.h"
+#include "xen/xenapi/xenapi_Network.h"
 #include "xen/asyncoperations.h"
 #include "xen/certificatemanager.h"
 #include "xen/eventpoller.h"
@@ -394,17 +397,6 @@ MetricUpdater* XenLib::getMetricUpdater() const
     return this->d->metricUpdater;
 }
 
-QVariantList XenLib::getPools()
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QVariantList();
-    }
-
-    return this->d->api->getPools();
-}
-
 QVariantMap XenLib::getCachedObjectData(const QString& objectType, const QString& objectRef)
 {
     // Reference: XenModel/Network/Cache.cs lines 438-448 (Resolve method)
@@ -446,11 +438,6 @@ QVariantMap XenLib::getVMRecord(const QString& vmRef)
 QVariantMap XenLib::getHostRecord(const QString& hostRef)
 {
     return getCachedObjectData("host", hostRef);
-}
-
-QVariantMap XenLib::getPoolRecord(const QString& poolRef)
-{
-    return getCachedObjectData("pool", poolRef);
 }
 
 QVariantMap XenLib::getSRRecord(const QString& srRef)
@@ -713,11 +700,14 @@ bool XenLib::isSRDriverDomain(const QString& vmRef, QString* outSRRef)
     if (isControlDomainZero(vmRef))
         return false;
 
-    // Check all PBDs to see if any reference this VM as storage_driver_domain
-    QVariantList allPBDs = d->api->getPBDs();
-    for (const QVariant& pbdVar : allPBDs)
+    // Check all cached PBDs to see if any reference this VM as storage_driver_domain
+    XenCache* cache = getCache();
+    if (!cache)
+        return false;
+
+    QList<QVariantMap> allPBDs = cache->getAll("pbd");
+    for (const QVariantMap& pbd : allPBDs)
     {
-        QVariantMap pbd = pbdVar.toMap();
         QVariantMap otherConfig = pbd.value("other_config").toMap();
 
         QString driverDomainRef = otherConfig.value("storage_driver_domain").toString();
@@ -1565,7 +1555,23 @@ bool XenLib::setPoolName(const QString& poolRef, const QString& name)
         return false;
     }
 
-    return this->d->api->setPoolField(poolRef, "name_label", name);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Pool::set_name_label(this->d->session, poolRef, name);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setPoolName: Failed to set pool name:" << ex.what();
+        this->setError("Failed to set pool name");
+        return false;
+    }
 }
 
 bool XenLib::setPoolDescription(const QString& poolRef, const QString& description)
@@ -1582,7 +1588,23 @@ bool XenLib::setPoolDescription(const QString& poolRef, const QString& descripti
         return false;
     }
 
-    return this->d->api->setPoolField(poolRef, "name_description", description);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Pool::set_name_description(this->d->session, poolRef, description);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setPoolDescription: Failed to set pool description:" << ex.what();
+        this->setError("Failed to set pool description");
+        return false;
+    }
 }
 
 bool XenLib::setPoolTags(const QString& poolRef, const QStringList& tags)
@@ -1599,7 +1621,23 @@ bool XenLib::setPoolTags(const QString& poolRef, const QStringList& tags)
         return false;
     }
 
-    return this->d->api->setPoolField(poolRef, "tags", tags);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Pool::set_tags(this->d->session, poolRef, tags);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setPoolTags: Failed to set pool tags:" << ex.what();
+        this->setError("Failed to set pool tags");
+        return false;
+    }
 }
 
 bool XenLib::setPoolMigrationCompression(const QString& poolRef, bool enabled)
@@ -1616,7 +1654,23 @@ bool XenLib::setPoolMigrationCompression(const QString& poolRef, bool enabled)
         return false;
     }
 
-    return this->d->api->setPoolMigrationCompression(poolRef, enabled);
+    if (!this->d->session || !this->d->session->isLoggedIn())
+    {
+        this->setError("Not authenticated");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::Pool::set_migration_compression(this->d->session, poolRef, enabled);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setPoolMigrationCompression: Failed to set pool migration compression:" << ex.what();
+        this->setError("Failed to set pool migration compression");
+        return false;
+    }
 }
 
 // SR (Storage Repository) operations
@@ -1633,8 +1687,17 @@ bool XenLib::setSRName(const QString& srRef, const QString& name)
         this->setError("Invalid SR reference");
         return false;
     }
-
-    return this->d->api->setSRField(srRef, "name_label", name);
+    try
+    {
+        XenAPI::SR::set_name_label(this->d->session, srRef, name);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setSRName: Failed to set SR name_label:" << ex.what();
+        this->setError("Failed to set SR name");
+        return false;
+    }
 }
 
 bool XenLib::setSRDescription(const QString& srRef, const QString& description)
@@ -1650,8 +1713,17 @@ bool XenLib::setSRDescription(const QString& srRef, const QString& description)
         this->setError("Invalid SR reference");
         return false;
     }
-
-    return this->d->api->setSRField(srRef, "name_description", description);
+    try
+    {
+        XenAPI::SR::set_name_description(this->d->session, srRef, description);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setSRDescription: Failed to set SR name_description:" << ex.what();
+        this->setError("Failed to set SR description");
+        return false;
+    }
 }
 
 bool XenLib::setSRTags(const QString& srRef, const QStringList& tags)
@@ -1667,8 +1739,17 @@ bool XenLib::setSRTags(const QString& srRef, const QStringList& tags)
         this->setError("Invalid SR reference");
         return false;
     }
-
-    return this->d->api->setSRField(srRef, "tags", tags);
+    try
+    {
+        XenAPI::SR::set_tags(this->d->session, srRef, tags);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setSRTags: Failed to set SR tags:" << ex.what();
+        this->setError("Failed to set SR tags");
+        return false;
+    }
 }
 
 // Network operations
@@ -1685,8 +1766,17 @@ bool XenLib::setNetworkName(const QString& networkRef, const QString& name)
         this->setError("Invalid Network reference");
         return false;
     }
-
-    return this->d->api->setNetworkField(networkRef, "name_label", name);
+    try
+    {
+        XenAPI::Network::set_name_label(this->d->session, networkRef, name);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setNetworkName: Failed to set network name_label:" << ex.what();
+        this->setError("Failed to set network name");
+        return false;
+    }
 }
 
 bool XenLib::setNetworkDescription(const QString& networkRef, const QString& description)
@@ -1702,8 +1792,17 @@ bool XenLib::setNetworkDescription(const QString& networkRef, const QString& des
         this->setError("Invalid Network reference");
         return false;
     }
-
-    return this->d->api->setNetworkField(networkRef, "name_description", description);
+    try
+    {
+        XenAPI::Network::set_name_description(this->d->session, networkRef, description);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setNetworkDescription: Failed to set network name_description:" << ex.what();
+        this->setError("Failed to set network description");
+        return false;
+    }
 }
 
 bool XenLib::setNetworkTags(const QString& networkRef, const QStringList& tags)
@@ -1719,8 +1818,17 @@ bool XenLib::setNetworkTags(const QString& networkRef, const QStringList& tags)
         this->setError("Invalid Network reference");
         return false;
     }
-
-    return this->d->api->setNetworkField(networkRef, "tags", tags);
+    try
+    {
+        XenAPI::Network::set_tags(this->d->session, networkRef, tags);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setNetworkTags: Failed to set network tags:" << ex.what();
+        this->setError("Failed to set network tags");
+        return false;
+    }
 }
 
 QString XenLib::createNetwork(const QString& name, const QString& description, const QVariantMap& otherConfig)
@@ -1737,17 +1845,33 @@ QString XenLib::createNetwork(const QString& name, const QString& description, c
         return QString();
     }
 
-    QString networkRef = this->d->api->createNetwork(name, description, otherConfig);
-
-    if (!networkRef.isEmpty())
+    try
     {
-        // Invalidate network cache and refresh
-        if (XenCache* cache = getCache())
-            cache->clearType("network");
-        this->requestNetworks();
+        QVariantMap networkRecord;
+        networkRecord["name_label"] = name;
+        networkRecord["name_description"] = description;
+        networkRecord["other_config"] = otherConfig;
+        networkRecord["MTU"] = 1500;
+        networkRecord["tags"] = QVariantList();
+
+        QString networkRef = XenAPI::Network::create(this->d->session, networkRecord);
+
+        if (!networkRef.isEmpty())
+        {
+            if (XenCache* cache = getCache())
+                cache->clearType("network");
+            this->requestNetworks();
+        }
+
+        return networkRef;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::createNetwork: Failed to create network:" << ex.what();
+        this->setError("Failed to create network");
+        return QString();
     }
 
-    return networkRef;
 }
 
 bool XenLib::destroyNetwork(const QString& networkRef)
@@ -1764,17 +1888,20 @@ bool XenLib::destroyNetwork(const QString& networkRef)
         return false;
     }
 
-    bool success = this->d->api->destroyNetwork(networkRef);
-
-    if (success)
+    try
     {
-        // Invalidate network cache and refresh
+        XenAPI::Network::destroy(this->d->session, networkRef);
         if (XenCache* cache = getCache())
             cache->clearType("network");
         this->requestNetworks();
+        return true;
     }
-
-    return success;
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::destroyNetwork: Failed to destroy network:" << ex.what();
+        this->setError("Failed to destroy network");
+        return false;
+    }
 }
 
 bool XenLib::setNetworkMTU(const QString& networkRef, int mtu)
@@ -1797,7 +1924,17 @@ bool XenLib::setNetworkMTU(const QString& networkRef, int mtu)
         return false;
     }
 
-    return this->d->api->setNetworkMTU(networkRef, mtu);
+    try
+    {
+        XenAPI::Network::set_MTU(this->d->session, networkRef, mtu);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setNetworkMTU: Failed to set network MTU:" << ex.what();
+        this->setError("Failed to set network MTU");
+        return false;
+    }
 }
 
 bool XenLib::setNetworkOtherConfig(const QString& networkRef, const QVariantMap& otherConfig)
@@ -1814,7 +1951,17 @@ bool XenLib::setNetworkOtherConfig(const QString& networkRef, const QVariantMap&
         return false;
     }
 
-    return this->d->api->setNetworkOtherConfig(networkRef, otherConfig);
+    try
+    {
+        XenAPI::Network::set_other_config(this->d->session, networkRef, otherConfig);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "XenLib::setNetworkOtherConfig: Failed to set network other_config:" << ex.what();
+        this->setError("Failed to set network other_config");
+        return false;
+    }
 }
 
 QString XenLib::getConnectionInfo() const

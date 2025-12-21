@@ -121,6 +121,7 @@ SOURCES += \
     xen/actions/pool/designatenewmasteraction.cpp \
     xen/actions/pool/syncdatabaseaction.cpp \
     xen/actions/pool/setpoolnameanddescriptionaction.cpp \
+    xen/actions/pool/setsrasdefaultaction.cpp \
     xen/actions/network/changenetworkingaction.cpp \
     xen/actions/network/createbondaction.cpp \
     xen/actions/network/destroybondaction.cpp \
@@ -203,6 +204,11 @@ HEADERS += \
     xen/actions/sr/detachsraction.h \
     xen/actions/sr/forgetsraction.h \
     xen/actions/sr/destroysraction.h \
+    xen/actions/host/reboothostaction.h \
+    xen/actions/host/shutdownhostaction.h \
+    xen/actions/host/enablehostaction.h \
+    xen/actions/host/disablehostaction.h \
+    xen/actions/host/evacuatehostaction.h \
     xen/actions/host/destroyhostaction.h \
     xen/actions/host/changehostautostartaction.h \
     xen/actions/host/editmultipathaction.h \
@@ -248,6 +254,7 @@ HEADERS += \
     xen/actions/pool/designatenewmasteraction.h \
     xen/actions/pool/syncdatabaseaction.h \
     xen/actions/pool/setpoolnameanddescriptionaction.h \
+    xen/actions/pool/setsrasdefaultaction.h \
     xen/actions/network/changenetworkingaction.h \
     xen/actions/network/createbondaction.h \
     xen/actions/network/destroybondaction.h \

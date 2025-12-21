@@ -66,16 +66,12 @@ public:
     XenCache* getCache() const;
     MetricUpdater* getMetricUpdater() const;
 
-    // High-level operations (blocking - use for backward compatibility)
-    QVariantList getPools();
-
     // Get full object data by type and reference
     QVariantMap getCachedObjectData(const QString& objectType, const QString& objectRef);
 
     // Strongly-typed cache helpers (recommended over getObjectData)
     QVariantMap getVMRecord(const QString& vmRef);
     QVariantMap getHostRecord(const QString& hostRef);
-    QVariantMap getPoolRecord(const QString& poolRef);
     QVariantMap getSRRecord(const QString& srRef);
     QVariantMap getNetworkRecord(const QString& networkRef);
     QVariantMap getVDIRecord(const QString& vdiRef);

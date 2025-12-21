@@ -44,50 +44,6 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         // Session info
         QString getSessionId() const;
 
-        // Snapshot operations
-
-        // Host operations
-        QVariantList getHosts();
-        QVariant getHostRecord(const QString& hostRef);
-        QVariant getHostInfo(const QString& hostRef);
-        QVariant getHostServerTime(const QString& hostRef); // For heartbeat
-        bool rebootHost(const QString& hostRef);
-        bool shutdownHost(const QString& hostRef);
-        bool enableHost(const QString& hostRef);
-        bool disableHost(const QString& hostRef);
-
-        // Pool operations
-        QVariantList getPools();
-        QVariant getPoolRecord(const QString& poolRef);
-        bool joinPool(const QString& masterAddress, const QString& username, const QString& password);
-        bool ejectFromPool(const QString& hostRef);
-        bool setPoolField(const QString& poolRef, const QString& field, const QVariant& value);
-        bool setPoolMigrationCompression(const QString& poolRef, bool enabled);
-
-        // SR (Storage Repository) operations
-        bool setSRField(const QString& srRef, const QString& field, const QVariant& value);
-        bool repairSR(const QString& srRef);
-        bool setDefaultSR(const QString& srRef);
-
-        // PBD (Physical Block Device) operations
-        QVariantList getPBDs();
-        QVariant getPBDRecord(const QString& pbdRef);
-
-        // Network operations
-        bool setNetworkField(const QString& networkRef, const QString& field, const QVariant& value);
-
-        // Console operations
-        QVariantList getVMConsoles(const QString& vmRef);
-        QVariant getConsoleRecord(const QString& consoleRef);
-        QString getConsoleProtocol(const QString& consoleRef);
-        QString getConsoleLocation(const QString& consoleRef);
-
-        // Network operations
-        QString createNetwork(const QString& name, const QString& description, const QVariantMap& otherConfig = QVariantMap());
-        bool destroyNetwork(const QString& networkRef);
-        bool setNetworkOtherConfig(const QString& networkRef, const QVariantMap& otherConfig);
-        bool setNetworkMTU(const QString& networkRef, qint64 mtu);
-
         // Bond operations
         QString createBond(const QString& networkRef, const QStringList& pifRefs, const QString& mac = QString(), const QString& mode = "balance-slb");
         bool destroyBond(const QString& bondRef);

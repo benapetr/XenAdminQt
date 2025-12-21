@@ -33,9 +33,11 @@
 #include "../../xenlib/xenlib.h"
 #include "../../xenlib/xen/connection.h"
 #include "../../xenlib/xen/session.h"
-#include "../../xenlib/xen/api.h"
 #include "../../xenlib/xen/xenapi/xenapi_VM.h"
 #include "../../xenlib/xen/xenapi/xenapi_Host.h"
+#include "../../xenlib/xen/xenapi/xenapi_Pool.h"
+#include "../../xenlib/xen/xenapi/xenapi_SR.h"
+#include "../../xenlib/xen/xenapi/xenapi_Network.h"
 #include "../../xenlib/xencache.h"
 #include "../../xenlib/operations/multipleoperation.h"
 #include "../../xenlib/xen/asyncoperation.h"
@@ -415,18 +417,12 @@ void VerticallyTabbedDialog::applySimpleChanges()
         return;
     }
 
-    XenRpcAPI* api = mainWin->xenLib()->getAPI();
     XenSession* session = nullptr;
     if (mainWin->xenLib()->getConnection())
     {
         session = mainWin->xenLib()->getConnection()->getSession();
     }
 
-    if (!api)
-    {
-        qWarning() << "VerticallyTabbedDialog::applySimpleChanges: No API instance";
-        return;
-    }
     if (!session || !session->isLoggedIn())
     {
         qWarning() << "VerticallyTabbedDialog::applySimpleChanges: No session";
@@ -469,15 +465,39 @@ void VerticallyTabbedDialog::applySimpleChanges()
         }
         else if (this->m_objectType == "pool")
         {
-            success = api->setPoolField(this->m_objectRef, "name_label", newName);
+            try
+            {
+                XenAPI::Pool::set_name_label(session, this->m_objectRef, newName);
+                success = true;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set Pool name_label:" << ex.what();
+            }
         }
         else if (this->m_objectType == "sr")
         {
-            success = api->setSRField(this->m_objectRef, "name_label", newName);
+            try
+            {
+                XenAPI::SR::set_name_label(session, this->m_objectRef, newName);
+                success = true;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set SR name_label:" << ex.what();
+            }
         }
         else if (this->m_objectType == "network")
         {
-            success = api->setNetworkField(this->m_objectRef, "name_label", newName);
+            try
+            {
+                XenAPI::Network::set_name_label(session, this->m_objectRef, newName);
+                success = true;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set Network name_label:" << ex.what();
+            }
         }
         
         if (success)
@@ -524,15 +544,39 @@ void VerticallyTabbedDialog::applySimpleChanges()
         }
         else if (this->m_objectType == "pool")
         {
-            success = api->setPoolField(this->m_objectRef, "name_description", newDesc);
+            try
+            {
+                XenAPI::Pool::set_name_description(session, this->m_objectRef, newDesc);
+                success = true;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set Pool name_description:" << ex.what();
+            }
         }
         else if (this->m_objectType == "sr")
         {
-            success = api->setSRField(this->m_objectRef, "name_description", newDesc);
+            try
+            {
+                XenAPI::SR::set_name_description(session, this->m_objectRef, newDesc);
+                success = true;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set SR name_description:" << ex.what();
+            }
         }
         else if (this->m_objectType == "network")
         {
-            success = api->setNetworkField(this->m_objectRef, "name_description", newDesc);
+            try
+            {
+                XenAPI::Network::set_name_description(session, this->m_objectRef, newDesc);
+                success = true;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set Network name_description:" << ex.what();
+            }
         }
         
         if (success)

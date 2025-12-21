@@ -63,6 +63,12 @@ namespace XenAPI
             static QVariantList get_all(XenSession* session);
 
             /**
+             * @brief Get host server time
+             * Matches C# Host.get_servertime()
+             */
+            static QVariant get_servertime(XenSession* session, const QString& host);
+
+            /**
              * @brief Set the name_label field
              * Matches C# Host.set_name_label()
              */

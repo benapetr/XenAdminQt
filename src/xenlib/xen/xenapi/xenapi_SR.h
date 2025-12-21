@@ -30,6 +30,7 @@
 
 #include "../session.h"
 #include <QString>
+#include <QStringList>
 #include <QVariantMap>
 #include <QVariantList>
 
@@ -163,6 +164,14 @@ namespace XenAPI
              * @param value New description
              */
             static void set_name_description(XenSession* session, const QString& sr, const QString& value);
+
+            /**
+             * @brief Set SR tags
+             * @param session Active XenSession
+             * @param sr SR opaque reference
+             * @param tags Tag list
+             */
+            static void set_tags(XenSession* session, const QString& sr, const QStringList& tags);
 
             /**
              * @brief Set SR other_config

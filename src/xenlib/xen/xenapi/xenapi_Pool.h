@@ -30,6 +30,8 @@
 
 #include "../session.h"
 #include <QString>
+#include <QStringList>
+#include <QVariant>
 
 namespace XenAPI
 {
@@ -153,6 +155,22 @@ namespace XenAPI
              * @param description New description for pool
              */
             static void set_name_description(XenSession* session, const QString& pool, const QString& description);
+
+            /**
+             * @brief Set pool tags
+             * @param session Active XenSession
+             * @param pool Pool opaque reference
+             * @param tags New tags list
+             */
+            static void set_tags(XenSession* session, const QString& pool, const QStringList& tags);
+
+            /**
+             * @brief Set migration compression flag
+             * @param session Active XenSession
+             * @param pool Pool opaque reference
+             * @param enabled New value for migration_compression
+             */
+            static void set_migration_compression(XenSession* session, const QString& pool, bool enabled);
 
             /**
              * @brief Enable HA on pool (async)

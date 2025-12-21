@@ -32,6 +32,20 @@
 
 namespace XenAPI
 {
+    QString Network::create(XenSession* session, const QVariantMap& record)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << record;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("network.create", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toString();
+    }
+
     QString Network::async_create(XenSession* session, const QVariantMap& record)
     {
         if (!session || !session->isLoggedIn())
@@ -88,6 +102,20 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
+    void Network::set_tags(XenSession* session, const QString& network, const QStringList& tags)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << network << tags;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("network.set_tags", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
     void Network::set_MTU(XenSession* session, const QString& network, qint64 mtu)
     {
         if (!session || !session->isLoggedIn())
@@ -98,6 +126,20 @@ namespace XenAPI
 
         XenRpcAPI api(session);
         QByteArray request = api.buildJsonRpcCall("network.set_MTU", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
+    void Network::set_other_config(XenSession* session, const QString& network, const QVariantMap& otherConfig)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << network << otherConfig;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("network.set_other_config", params);
         QByteArray response = session->sendApiRequest(request);
         api.parseJsonRpcResponse(response);
     }
