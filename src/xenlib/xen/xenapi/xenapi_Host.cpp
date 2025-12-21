@@ -69,6 +69,20 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response);
     }
 
+    double Host::query_data_source(XenSession* session, const QString& host, const QString& data_source)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << host << data_source;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("host.query_data_source", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toDouble();
+    }
+
     void Host::set_name_label(XenSession* session, const QString& host, const QString& value)
     {
         if (!session || !session->isLoggedIn())

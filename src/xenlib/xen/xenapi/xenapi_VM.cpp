@@ -612,6 +612,20 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toMap();
     }
 
+    double VM::query_data_source(XenSession* session, const QString& vm, const QString& data_source)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << data_source;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.query_data_source", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.parseJsonRpcResponse(response).toDouble();
+    }
+
     // VM.set_suspend_VDI - Set the suspend VDI
     void VM::set_suspend_VDI(XenSession* session, const QString& vm, const QString& value)
     {

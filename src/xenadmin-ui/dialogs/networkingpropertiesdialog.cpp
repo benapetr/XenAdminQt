@@ -28,10 +28,13 @@
 #include "networkingpropertiesdialog.h"
 #include "ui_networkingpropertiesdialog.h"
 #include "xenlib.h"
-#include "xen/api.h"
+#include "xen/connection.h"
+#include "xen/session.h"
+#include "xen/xenapi/xenapi_PIF.h"
 #include "xencache.h"
 #include <QMessageBox>
 #include <QPushButton>
+#include <QDebug>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 
@@ -232,12 +235,29 @@ void NetworkingPropertiesDialog::applyChanges()
     if (!m_xenLib)
         return;
 
+    XenConnection* connection = m_xenLib->getConnection();
+    XenSession* session = connection ? connection->getSession() : nullptr;
+    if (!session || !session->isLoggedIn())
+    {
+        QMessageBox::critical(this, "Error",
+                              "No active session. Please reconnect and try again.");
+        return;
+    }
+
     bool success = false;
 
     if (ui->radioButtonDHCP->isChecked())
     {
         // Configure for DHCP
-        success = m_xenLib->getAPI()->reconfigurePIFDHCP(m_pifRef);
+        try
+        {
+            XenAPI::PIF::reconfigure_ip(session, m_pifRef, "DHCP", "", "", "", "");
+            success = true;
+        }
+        catch (const std::exception& ex)
+        {
+            qWarning() << "Failed to configure PIF DHCP:" << ex.what();
+        }
     } else
     {
         // Configure for static IP
@@ -257,7 +277,15 @@ void NetworkingPropertiesDialog::applyChanges()
 
         QString dns = dnsList.join(",");
 
-        success = m_xenLib->getAPI()->reconfigurePIF(m_pifRef, "Static", ip, netmask, gateway, dns);
+        try
+        {
+            XenAPI::PIF::reconfigure_ip(session, m_pifRef, "Static", ip, netmask, gateway, dns);
+            success = true;
+        }
+        catch (const std::exception& ex)
+        {
+            qWarning() << "Failed to configure PIF static IP:" << ex.what();
+        }
     }
 
     if (!success)

@@ -44,15 +44,6 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         // Session info
         QString getSessionId() const;
 
-        // Bond operations
-        QString createBond(const QString& networkRef, const QStringList& pifRefs, const QString& mac = QString(), const QString& mode = "balance-slb");
-        bool destroyBond(const QString& bondRef);
-
-        // PIF operations
-        bool reconfigurePIF(const QString& pifRef, const QString& mode, const QString& ip,
-                            const QString& netmask, const QString& gateway, const QString& dns);
-        bool reconfigurePIFDHCP(const QString& pifRef);
-
         // Task operations
         QVariant getTaskRecord(const QString& taskRef);
         QString getTaskStatus(const QString& taskRef);
@@ -75,10 +66,6 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         bool eventRegister(const QStringList& classes);
         // event.unregister - Unregister from event classes (legacy, not used in modern API)
         bool eventUnregister(const QStringList& classes);
-
-        // Data source operations (performance monitoring)
-        double queryVMDataSource(const QString& vmRef, const QString& dataSource);
-        double queryHostDataSource(const QString& hostRef, const QString& dataSource);
 
         // JSON-RPC helper methods
         QByteArray buildJsonRpcCall(const QString& method, const QVariantList& params);

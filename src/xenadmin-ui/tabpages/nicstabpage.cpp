@@ -29,7 +29,10 @@
 #include "ui_nicstabpage.h"
 #include "xenlib.h"
 #include "xencache.h"
-#include "xen/api.h"
+#include "xen/connection.h"
+#include "xen/actions/network/createbondaction.h"
+#include "xen/actions/network/destroybondaction.h"
+#include "operations/operationmanager.h"
 #include "../dialogs/bondpropertiesdialog.h"
 #include <QTableWidgetItem>
 #include <QMessageBox>
@@ -369,7 +372,6 @@ void NICsTabPage::onCreateBondClicked()
     if (dialog.exec() == QDialog::Accepted)
     {
         QString bondMode = dialog.getBondMode();
-        QString mac = dialog.getMACAddress();
         QStringList pifRefs = dialog.getSelectedPIFRefs();
 
         if (pifRefs.size() < 2)
@@ -379,19 +381,51 @@ void NICsTabPage::onCreateBondClicked()
             return;
         }
 
-        // Create the bond using XenAPI
-        QString bondRef = this->m_xenLib->getAPI()->createBond(networkRef, pifRefs, mac, bondMode);
-        if (!bondRef.isEmpty())
-        {
-            QMessageBox::information(this, "Bond Created",
-                                     QString("Bond created successfully with mode: %1").arg(bondMode));
-            // Refresh the NIC list
-            this->onRescanClicked();
-        } else
+        XenConnection* connection = this->m_xenLib->getConnection();
+        if (!connection)
         {
             QMessageBox::critical(this, "Error",
-                                  "Failed to create bond. Check server logs for details.");
+                                  "No active connection.");
+            return;
         }
+
+        QVariantMap networkData = this->m_xenLib->getCache()->resolve("network", networkRef);
+        QString networkName = networkData.value("name_label").toString();
+        if (networkName.isEmpty())
+            networkName = "Bond Network";
+
+        qint64 mtu = networkData.value("MTU").toLongLong();
+        if (mtu <= 0)
+            mtu = 1500;
+
+        QString hashingAlgorithm = (bondMode == "lacp") ? "src_mac" : QString();
+
+        CreateBondAction* action = new CreateBondAction(
+            connection,
+            networkName,
+            pifRefs,
+            true,
+            mtu,
+            bondMode,
+            hashingAlgorithm,
+            this);
+
+        OperationManager::instance()->registerOperation(action);
+
+        connect(action, &AsyncOperation::completed, [this, bondMode, action]() {
+            this->refreshContent();
+            QMessageBox::information(this, "Bond Created",
+                                     QString("Bond created successfully with mode: %1").arg(bondMode));
+            action->deleteLater();
+        });
+
+        connect(action, &AsyncOperation::failed, [this, action](const QString& error) {
+            QMessageBox::critical(this, "Error",
+                                  QString("Failed to create bond: %1").arg(error));
+            action->deleteLater();
+        });
+
+        action->runAsync();
     }
 }
 
@@ -438,19 +472,31 @@ void NICsTabPage::onDeleteBondClicked()
                                                               QMessageBox::Yes | QMessageBox::No);
     if (reply == QMessageBox::Yes)
     {
-        // Delete the bond
-        bool success = this->m_xenLib->getAPI()->destroyBond(bondSlaveOf);
-        if (success)
-        {
-            QMessageBox::information(this, "Bond Deleted",
-                                     "Bond deleted successfully.");
-            // Refresh the NIC list
-            this->onRescanClicked();
-        } else
+        XenConnection* connection = this->m_xenLib->getConnection();
+        if (!connection)
         {
             QMessageBox::critical(this, "Error",
-                                  "Failed to delete bond. Check server logs for details.");
+                                  "No active connection.");
+            return;
         }
+
+        DestroyBondAction* action = new DestroyBondAction(connection, bondSlaveOf, this);
+        OperationManager::instance()->registerOperation(action);
+
+        connect(action, &AsyncOperation::completed, [this, action]() {
+            this->refreshContent();
+            QMessageBox::information(this, "Bond Deleted",
+                                     "Bond deleted successfully.");
+            action->deleteLater();
+        });
+
+        connect(action, &AsyncOperation::failed, [this, action](const QString& error) {
+            QMessageBox::critical(this, "Error",
+                                  QString("Failed to delete bond: %1").arg(error));
+            action->deleteLater();
+        });
+
+        action->runAsync();
     }
 }
 

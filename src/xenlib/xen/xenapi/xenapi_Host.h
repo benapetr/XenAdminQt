@@ -69,6 +69,17 @@ namespace XenAPI
             static QVariant get_servertime(XenSession* session, const QString& host);
 
             /**
+             * @brief Query a performance data source for a host
+             * @param session The session
+             * @param host The opaque_ref of the given Host
+             * @param data_source The data source name
+             * @return Data source value
+             *
+             * Matches C# Host.query_data_source()
+             */
+            static double query_data_source(XenSession* session, const QString& host, const QString& data_source);
+
+            /**
              * @brief Set the name_label field
              * Matches C# Host.set_name_label()
              */

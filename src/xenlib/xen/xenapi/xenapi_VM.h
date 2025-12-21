@@ -302,6 +302,17 @@ namespace XenAPI
             static QVariantMap get_all_records(XenSession* session);
 
             /**
+             * @brief Query a performance data source for a VM
+             * @param session The session
+             * @param vm The opaque_ref of the given VM
+             * @param data_source The data source name
+             * @return Data source value
+             *
+             * Matches C# VM.query_data_source()
+             */
+            static double query_data_source(XenSession* session, const QString& vm, const QString& data_source);
+
+            /**
              * @brief Set the suspend VDI for a suspended VM
              * First published in XenServer 4.0.
              * @param session The session
