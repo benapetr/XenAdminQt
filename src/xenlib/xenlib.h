@@ -99,7 +99,6 @@ public:
 
     // VM management operations
     bool exportVM(const QString& vmRef, const QString& fileName, const QString& format = "xva");
-    QString getVMPowerState(const QString& vmRef);
     QString cloneVM(const QString& vmRef, const QString& newName);
     bool deleteVM(const QString& vmRef);
     bool updateVM(const QString& vmRef, const QVariantMap& updates);

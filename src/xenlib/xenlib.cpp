@@ -511,17 +511,6 @@ bool XenLib::exportVM(const QString& vmRef, const QString& fileName, const QStri
     return this->d->api->exportVM(vmRef, fileName, format);
 }
 
-QString XenLib::getVMPowerState(const QString& vmRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    return this->d->api->getVMPowerState(vmRef);
-}
-
 QString XenLib::cloneVM(const QString& vmRef, const QString& newName)
 {
     if (!this->isConnected())

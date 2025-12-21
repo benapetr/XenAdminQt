@@ -193,39 +193,6 @@ bool XenRpcAPI::exportVM(const QString& vmRef, const QString& fileName, const QS
     return true;
 }
 
-QString XenRpcAPI::getVMPowerState(const QString& vmRef)
-{
-    if (!this->d->session || !this->d->session->isLoggedIn())
-    {
-        emit this->apiCallFailed("getVMPowerState", "Not authenticated");
-        return QString();
-    }
-
-    // Get VM record to access power state
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-    params.append(vmRef);
-
-    QByteArray jsonRpcRequest = this->buildJsonRpcCall("VM.get_power_state", params);
-    QByteArray responseData = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
-
-    if (responseData.isEmpty())
-    {
-        emit this->apiCallFailed("getVMPowerState", "Failed to communicate with server: " + this->d->session->getLastError());
-        return QString();
-    }
-
-    QVariant response = this->parseJsonRpcResponse(responseData);
-    if (response.isNull())
-    {
-        emit this->apiCallFailed("getVMPowerState", "Server returned an error");
-        return QString();
-    }
-
-    emit this->apiCallCompleted("getVMPowerState", response);
-    return response.toString();
-}
-
 bool XenRpcAPI::setVMField(const QString& vmRef, const QString& field, const QVariant& value)
 {
     if (!this->d->session || !this->d->session->isLoggedIn())

@@ -148,19 +148,26 @@ QString ExportVMCommand::getSelectedVMName() const
 
 bool ExportVMCommand::isVMExportable(const QString& vmRef) const
 {
-    // Check if VM is in a state that allows export
-    // Typically VMs should be shut down for export, but some implementations
-    // allow export of running VMs (with caveats)
-
-    try
-    {
-        QString powerState = this->mainWindow()->xenLib()->getVMPowerState(vmRef);
-
-        // Allow export of halted VMs, and optionally running/suspended VMs
-        // (following XenCenter behavior)
-        return powerState == "Halted" || powerState == "Running" || powerState == "Suspended";
-    } catch (const std::exception&)
-    {
+    XenLib* xenLib = this->mainWindow()->xenLib();
+    if (!xenLib)
         return false;
+
+    QVariantMap vmData = xenLib->getCachedObjectData("vm", vmRef);
+    if (vmData.isEmpty())
+        return false;
+
+    bool isTemplate = vmData.value("is_a_template", false).toBool();
+    bool isLocked = vmData.value("Locked", false).toBool();
+    QVariantList allowedOps = vmData.value("allowed_operations").toList();
+
+    if (isTemplate || isLocked)
+        return false;
+
+    for (const QVariant& op : allowedOps)
+    {
+        if (op.toString() == "export")
+            return true;
     }
+
+    return false;
 }

@@ -49,7 +49,6 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         QString cloneVM(const QString& vmRef, const QString& newName);
         bool deleteVM(const QString& vmRef);
         bool exportVM(const QString& vmRef, const QString& fileName, const QString& format = "xva");
-        QString getVMPowerState(const QString& vmRef);
         bool setVMField(const QString& vmRef, const QString& field, const QVariant& value);
         bool setVMOtherConfigKey(const QString& vmRef, const QString& key, const QString& value);
 
