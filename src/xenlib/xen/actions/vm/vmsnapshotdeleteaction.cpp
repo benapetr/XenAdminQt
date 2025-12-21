@@ -29,8 +29,8 @@
 #include "../../../xen/connection.h"
 #include "../../../xencache.h"
 #include "../../xenapi/xenapi_VM.h"
-#include "../../xenapi/VBD.h"
-#include "../../xenapi/VDI.h"
+#include "../../xenapi/xenapi_VBD.h"
+#include "../../xenapi/xenapi_VDI.h"
 #include <QtCore/QDebug>
 
 VMSnapshotDeleteAction::VMSnapshotDeleteAction(XenConnection* connection,

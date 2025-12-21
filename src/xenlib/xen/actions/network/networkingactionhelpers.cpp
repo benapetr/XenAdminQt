@@ -27,8 +27,8 @@
 
 #include "networkingactionhelpers.h"
 #include "../../asyncoperation.h"
-#include "../../xenapi/PIF.h"
-#include "../../xenapi/Network.h"
+#include "../../xenapi/xenapi_PIF.h"
+#include "../../xenapi/xenapi_Network.h"
 #include "../../xenapi/xenapi_Host.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../connection.h"

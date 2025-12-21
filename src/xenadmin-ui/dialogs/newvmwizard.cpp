@@ -40,7 +40,7 @@
 #include <QDebug>
 #include "xen/vm.h"
 #include <QDebug>
-#include "xen/xenapi/VBD.h"
+#include "xen/xenapi/xenapi_VBD.h"
 #include <QDebug>
 #include "xen/actions/vm/vmstartaction.h"
 #include <QDebug>

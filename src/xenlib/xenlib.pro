@@ -10,6 +10,16 @@ win32:DEFINES += XENLIB_STATIC
 # Source files
 SOURCES += \
     xen/actions/vm/vmstartaction.cpp \
+    xen/xenapi/xenapi_Bond.cpp \
+    xen/xenapi/xenapi_Network.cpp \
+    xen/xenapi/xenapi_Network_sriov.cpp \
+    xen/xenapi/xenapi_PBD.cpp \
+    xen/xenapi/xenapi_PIF.cpp \
+    xen/xenapi/xenapi_Secret.cpp \
+    xen/xenapi/xenapi_VBD.cpp \
+    xen/xenapi/xenapi_VDI.cpp \
+    xen/xenapi/xenapi_VGPU.cpp \
+    xen/xenapi/xenapi_VIF.cpp \
     xenlib.cpp \
     xencache.cpp \
     vmhelpers.cpp \
@@ -41,19 +51,9 @@ SOURCES += \
     xen/vdi.cpp \
     xen/vbd.cpp \
     xen/xenapi/xenapi_VM.cpp \
-    xen/xenapi/VDI.cpp \
-    xen/xenapi/VBD.cpp \
     xen/xenapi/xenapi_SR.cpp \
-    xen/xenapi/PBD.cpp \
     xen/xenapi/xenapi_Pool.cpp \
-    xen/xenapi/Secret.cpp \
     xen/xenapi/xenapi_Host.cpp \
-    xen/xenapi/Network.cpp \
-    xen/xenapi/Bond.cpp \
-    xen/xenapi/PIF.cpp \
-    xen/xenapi/Network_sriov.cpp \
-    xen/xenapi/VIF.cpp \
-    xen/xenapi/VGPU.cpp \
     xen/xenapi/vm_appliance.cpp \
     xen/actions/vm/changevmisoaction.cpp \
     xen/actions/vm/startapplianceaction.cpp \
@@ -141,6 +141,16 @@ SOURCES += \
 # Header files
 HEADERS += \
     xen/actions/vm/vmstartaction.h \
+    xen/xenapi/xenapi_Bond.h \
+    xen/xenapi/xenapi_Network.h \
+    xen/xenapi/xenapi_Network_sriov.h \
+    xen/xenapi/xenapi_PBD.h \
+    xen/xenapi/xenapi_PIF.h \
+    xen/xenapi/xenapi_Secret.h \
+    xen/xenapi/xenapi_VBD.h \
+    xen/xenapi/xenapi_VDI.h \
+    xen/xenapi/xenapi_VGPU.h \
+    xen/xenapi/xenapi_VIF.h \
     xenlib.h \
     xenlib_global.h \
     xencache.h \
@@ -173,19 +183,9 @@ HEADERS += \
     xen/vdi.h \
     xen/vbd.h \
     xen/xenapi/xenapi_VM.h \
-    xen/xenapi/VDI.h \
-    xen/xenapi/VBD.h \
     xen/xenapi/xenapi_SR.h \
-    xen/xenapi/PBD.h \
     xen/xenapi/xenapi_Pool.h \
-    xen/xenapi/Secret.h \
     xen/xenapi/xenapi_Host.h \
-    xen/xenapi/Network.h \
-    xen/xenapi/Bond.h \
-    xen/xenapi/PIF.h \
-    xen/xenapi/Network_sriov.h \
-    xen/xenapi/VIF.h \
-    xen/xenapi/VGPU.h \
     xen/xenapi/vm_appliance.h \
     xen/actions/vm/changevmisoaction.h \
     xen/actions/vm/startapplianceaction.h \

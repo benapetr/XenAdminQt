@@ -133,8 +133,6 @@ public:
 
     // VBD/VDI (Virtual Disk) operations
     QVariantList getVMVBDs(const QString& vmRef);
-    QString createVBD(const QString& vmRef, const QString& vdiRef, const QString& userdevice, bool bootable = false);
-    bool destroyVBD(const QString& vbdRef);
     QString createVDI(const QString& srRef, const QString& name, const QString& description, qint64 sizeBytes);
     bool destroyVDI(const QString& vdiRef);
     bool resizeVDI(const QString& vdiRef, qint64 newSize);

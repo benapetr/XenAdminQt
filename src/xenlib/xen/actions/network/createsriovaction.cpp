@@ -28,9 +28,9 @@
 #include "createsriovaction.h"
 #include "../../connection.h"
 #include "../../session.h"
-#include "../../xenapi/Network.h"
-#include "../../xenapi/Network_sriov.h"
-#include "../../xenapi/PIF.h"
+#include "../../xenapi/xenapi_Network.h"
+#include "../../xenapi/xenapi_Network_sriov.h"
+#include "../../xenapi/xenapi_PIF.h"
 #include "../../../xencache.h"
 #include <QDebug>
 

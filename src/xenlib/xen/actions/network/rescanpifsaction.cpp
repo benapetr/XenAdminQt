@@ -28,7 +28,7 @@
 #include "rescanpifsaction.h"
 #include "../../connection.h"
 #include "../../session.h"
-#include "../../xenapi/PIF.h"
+#include "../../xenapi/xenapi_PIF.h"
 #include "../../../xencache.h"
 
 RescanPIFsAction::RescanPIFsAction(XenConnection* connection,

@@ -25,7 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "VBD.h"
+#include "xenapi_VBD.h"
 #include "../session.h"
 #include "../api.h"
 #include <QJsonDocument>

@@ -25,10 +25,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Bond.h"
+#include "xenapi_Bond.h"
 #include "../session.h"
 #include "../api.h"
-#include "../jsonrpcclient.h"
 #include <stdexcept>
 
 namespace XenAPI

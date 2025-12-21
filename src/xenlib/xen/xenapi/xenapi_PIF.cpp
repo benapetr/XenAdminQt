@@ -25,10 +25,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "PIF.h"
+#include "xenapi_PIF.h"
 #include "../session.h"
 #include "../api.h"
-#include "../jsonrpcclient.h"
 #include <stdexcept>
 
 namespace XenAPI

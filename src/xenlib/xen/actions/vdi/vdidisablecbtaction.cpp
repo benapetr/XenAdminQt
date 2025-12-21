@@ -27,7 +27,7 @@
 
 #include "vdidisablecbtaction.h"
 #include "../../connection.h"
-#include "../../xenapi/VDI.h"
+#include "../../xenapi/xenapi_VDI.h"
 #include "../../session.h"
 
 VDIDisableCbtAction::VDIDisableCbtAction(XenConnection* connection,

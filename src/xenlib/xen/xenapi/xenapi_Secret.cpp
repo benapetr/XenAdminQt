@@ -25,58 +25,67 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "VGPU.h"
-#include "../session.h"
+#include "xenapi_Secret.h"
 #include "../api.h"
 #include <stdexcept>
+#include <QVariantMap>
 
 namespace XenAPI
 {
 
-    void VGPU::destroy(XenSession* session, const QString& vgpu)
+    QString Secret::create(XenSession* session, const QString& value)
     {
         if (!session || !session->isLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
+        // Create a secret record with the value
+        QVariantMap record;
+        record["value"] = value;
+
         QVariantList params;
-        params << session->getSessionId() << vgpu;
+        params << session->getSessionId() << record;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VGPU.destroy", params);
+        QByteArray request = api.buildJsonRpcCall("secret.create", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Void method
+
+        // Returns secret reference, then get UUID from it
+        QString secretRef = api.parseJsonRpcResponse(response).toString();
+
+        // Get the UUID
+        QVariantList getUuidParams;
+        getUuidParams << session->getSessionId() << secretRef;
+        QByteArray uuidRequest = api.buildJsonRpcCall("secret.get_uuid", getUuidParams);
+        QByteArray uuidResponse = session->sendApiRequest(uuidRequest);
+        return api.parseJsonRpcResponse(uuidResponse).toString();
     }
 
-    QString VGPU::async_create(XenSession* session, const QString& vm,
-                               const QString& gpu_group, const QString& device,
-                               const QVariantMap& other_config)
+    QString Secret::get_by_uuid(XenSession* session, const QString& uuid)
     {
         if (!session || !session->isLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vm << gpu_group << device << other_config;
+        params << session->getSessionId() << uuid;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VGPU.async_create", params);
+        QByteArray request = api.buildJsonRpcCall("secret.get_by_uuid", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString VGPU::async_create(XenSession* session, const QString& vm,
-                               const QString& gpu_group, const QString& device,
-                               const QVariantMap& other_config, const QString& vgpu_type)
+    void Secret::destroy(XenSession* session, const QString& secret)
     {
         if (!session || !session->isLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vm << gpu_group << device << other_config << vgpu_type;
+        params << session->getSessionId() << secret;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VGPU.async_create", params);
+        QByteArray request = api.buildJsonRpcCall("secret.destroy", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        api.parseJsonRpcResponse(response); // Check for errors
     }
 
 } // namespace XenAPI

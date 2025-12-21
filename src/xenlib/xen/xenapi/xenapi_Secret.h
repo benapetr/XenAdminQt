@@ -25,49 +25,51 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef XENAPI_NETWORK_H
-#define XENAPI_NETWORK_H
+#ifndef XENAPI_SECRET_H
+#define XENAPI_SECRET_H
 
+#include "../session.h"
 #include <QString>
-#include <QVariantList>
-#include <QVariantMap>
-
-class XenSession;
 
 namespace XenAPI
 {
 
     /**
-     * @brief Network XenAPI bindings
+     * @brief Secret - XenAPI Secret bindings
      *
-     * Static-only class providing XenServer Network API calls.
-     * Matches C# XenModel/XenAPI/Network.cs structure.
+     * Static-only class providing XenAPI Secret method bindings.
+     * Secrets are used to store sensitive data like passwords.
      */
-    class Network
+    class Secret
     {
-    private:
-        Network() = delete; // Static-only class
+        private:
+            Secret() = delete; // Static-only class
 
-    public:
-        // Network creation and destruction
-        static QString async_create(XenSession* session, const QVariantMap& record);
-        static void destroy(XenSession* session, const QString& network);
+        public:
+            /**
+             * @brief Create a new secret
+             * @param session Active XenSession
+             * @param value Secret value (e.g., password)
+             * @return Secret UUID
+             */
+            static QString create(XenSession* session, const QString& value);
 
-        // Network configuration
-        static void set_name_label(XenSession* session, const QString& network, const QString& label);
-        static void set_name_description(XenSession* session, const QString& network, const QString& description);
-        static void set_MTU(XenSession* session, const QString& network, qint64 mtu);
+            /**
+             * @brief Get secret by UUID
+             * @param session Active XenSession
+             * @param uuid Secret UUID
+             * @return Secret opaque reference
+             */
+            static QString get_by_uuid(XenSession* session, const QString& uuid);
 
-        // other_config management
-        static void add_to_other_config(XenSession* session, const QString& network, const QString& key, const QString& value);
-        static void remove_from_other_config(XenSession* session, const QString& network, const QString& key);
-
-        // Network queries
-        static QVariantMap get_record(XenSession* session, const QString& network);
-        static QVariantList get_all(XenSession* session);
-        static QVariantList get_PIFs(XenSession* session, const QString& network);
+            /**
+             * @brief Destroy a secret
+             * @param session Active XenSession
+             * @param secret Secret opaque reference
+             */
+            static void destroy(XenSession* session, const QString& secret);
     };
 
 } // namespace XenAPI
 
-#endif // XENAPI_NETWORK_H
+#endif // XENAPI_SECRET_H

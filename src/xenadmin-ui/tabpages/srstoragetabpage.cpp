@@ -31,7 +31,7 @@
 #include "xencache.h"
 #include "xen/connection.h"
 #include "xen/api.h"
-#include "xen/xenapi/VDI.h"
+#include "xen/xenapi/xenapi_VDI.h"
 #include "dialogs/movevirtualdiskdialog.h"
 #include "dialogs/vdipropertiesdialog.h"
 #include "dialogs/operationprogressdialog.h"

@@ -74,10 +74,6 @@ public:
     QVariantList getVMVBDs(const QString& vmRef);
     QVariant getVBDRecord(const QString& vbdRef);
     bool setVBDBootable(const QString& vbdRef, bool bootable);
-    QString createVBD(const QString& vmRef, const QString& vdiRef, const QString& userdevice, bool bootable, const QString& mode = "RW", const QString& type = "Disk");
-    bool destroyVBD(const QString& vbdRef);
-    bool plugVBD(const QString& vbdRef);
-    bool unplugVBD(const QString& vbdRef);
 
     // VDI (Virtual Disk Image) operations
     QVariant getVDIRecord(const QString& vdiRef);

@@ -25,8 +25,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef XENAPI_BOND_H
-#define XENAPI_BOND_H
+#ifndef XENAPI_NETWORKSRIOV_H
+#define XENAPI_NETWORKSRIOV_H
 
 #include <QString>
 #include <QVariantList>
@@ -38,33 +38,26 @@ namespace XenAPI
 {
 
     /**
-     * @brief Bond XenAPI bindings
+     * @brief Network_sriov XenAPI bindings
      *
-     * Static-only class providing XenServer Bond API calls.
-     * Matches C# XenModel/XenAPI/Bond.cs structure.
+     * Static-only class providing XenServer Network_sriov API calls for SR-IOV configuration.
+     * Matches C# XenModel/XenAPI/Network_sriov.cs structure.
      */
-    class Bond
+    class Network_sriov
     {
-    private:
-        Bond() = delete; // Static-only class
+        private:
+            Network_sriov() = delete; // Static-only class
 
-    public:
-        // Bond creation and destruction
-        static QString async_create(XenSession* session, const QString& network,
-                                    const QStringList& members, const QString& mac,
-                                    const QString& mode, const QVariantMap& properties);
-        static QString async_destroy(XenSession* session, const QString& bond);
+        public:
+            // SR-IOV operations
+            static QString async_create(XenSession* session, const QString& pif, const QString& network);
+            static QString async_destroy(XenSession* session, const QString& network_sriov);
 
-        // Bond configuration
-        static void set_mode(XenSession* session, const QString& bond, const QString& mode);
-        static void set_property(XenSession* session, const QString& bond, const QString& name, const QString& value);
-
-        // Bond queries
-        static QVariantMap get_record(XenSession* session, const QString& bond);
-        static QString get_master(XenSession* session, const QString& bond);
-        static QVariantList get_slaves(XenSession* session, const QString& bond);
+            // SR-IOV queries
+            static QVariantMap get_record(XenSession* session, const QString& network_sriov);
+            static QVariantList get_all(XenSession* session);
     };
 
 } // namespace XenAPI
 
-#endif // XENAPI_BOND_H
+#endif // XENAPI_NETWORKSRIOV_H

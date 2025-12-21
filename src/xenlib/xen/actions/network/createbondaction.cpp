@@ -29,9 +29,9 @@
 #include "networkingactionhelpers.h"
 #include "../../connection.h"
 #include "../../session.h"
-#include "../../xenapi/Network.h"
-#include "../../xenapi/Bond.h"
-#include "../../xenapi/PIF.h"
+#include "../../xenapi/xenapi_Network.h"
+#include "../../xenapi/xenapi_Bond.h"
+#include "../../xenapi/xenapi_PIF.h"
 #include "../../../xencache.h"
 #include <QDebug>
 

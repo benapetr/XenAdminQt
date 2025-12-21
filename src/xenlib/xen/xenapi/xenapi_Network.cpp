@@ -25,10 +25,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Network.h"
+#include "xenapi_Network.h"
 #include "../session.h"
 #include "../api.h"
-#include "../jsonrpcclient.h"
 #include <stdexcept>
 
 namespace XenAPI

@@ -25,122 +25,131 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "PBD.h"
+#include "xenapi_VIF.h"
+#include "../session.h"
+#include "../connection.h"
 #include "../api.h"
+#include <QDebug>
 #include <stdexcept>
 
 namespace XenAPI
 {
-    QVariantMap PBD::get_record(XenSession* session, const QString& pbd)
+
+    QString VIF::async_create(XenSession* session, const QVariantMap& vifRecord)
     {
         if (!session || !session->isLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << pbd;
+        params << session->getSessionId() << vifRecord;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PBD.get_record", params);
+        // Use Async.VIF.create (matches C# JsonRpcClient.async_vif_create line 8271)
+        QByteArray request = api.buildJsonRpcCall("Async.VIF.create", params);
+        QByteArray response = session->sendApiRequest(request);
+
+        QString taskRef = api.parseJsonRpcResponse(response).toString();
+        qDebug() << "VIF.async_create returned task ref:" << taskRef;
+        qDebug() << "Request was:" << QString::fromUtf8(request);
+        qDebug() << "Response was:" << QString::fromUtf8(response);
+
+        return taskRef;
+    }
+
+    void VIF::destroy(XenSession* session, const QString& vif)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vif;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VIF.destroy", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
+    void VIF::plug(XenSession* session, const QString& vif)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vif;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VIF.plug", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
+    void VIF::unplug(XenSession* session, const QString& vif)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vif;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VIF.unplug", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
+    QStringList VIF::get_allowed_operations(XenSession* session, const QString& vif)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vif;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VIF.get_allowed_operations", params);
+        QByteArray response = session->sendApiRequest(request);
+        QVariant result = api.parseJsonRpcResponse(response);
+
+        QStringList operations;
+        if (result.canConvert<QVariantList>())
+        {
+            QVariantList list = result.toList();
+            for (const QVariant& op : list)
+            {
+                operations.append(op.toString());
+            }
+        }
+
+        return operations;
+    }
+
+    QVariantMap VIF::get_record(XenSession* session, const QString& vif)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vif;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VIF.get_record", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toMap();
     }
 
-    bool PBD::get_currently_attached(XenSession* session, const QString& pbd)
+    QVariantList VIF::get_all(XenSession* session)
     {
         if (!session || !session->isLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << pbd;
+        params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PBD.get_currently_attached", params);
+        QByteArray request = api.buildJsonRpcCall("VIF.get_all", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toBool();
-    }
-
-    QString PBD::async_create(XenSession* session, const QVariantMap& record)
-    {
-        if (!session || !session->isLoggedIn())
-            throw std::runtime_error("Not connected to XenServer");
-
-        QVariantList params;
-        params << session->getSessionId() << record;
-
-        XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PBD.async_create", params);
-        QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
-    }
-
-    QString PBD::async_plug(XenSession* session, const QString& pbd)
-    {
-        if (!session || !session->isLoggedIn())
-            throw std::runtime_error("Not connected to XenServer");
-
-        QVariantList params;
-        params << session->getSessionId() << pbd;
-
-        XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PBD.async_plug", params);
-        QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
-    }
-
-    void PBD::plug(XenSession* session, const QString& pbd)
-    {
-        if (!session || !session->isLoggedIn())
-            throw std::runtime_error("Not connected to XenServer");
-
-        QVariantList params;
-        params << session->getSessionId() << pbd;
-
-        XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PBD.plug", params);
-        QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
-    }
-
-    void PBD::unplug(XenSession* session, const QString& pbd)
-    {
-        if (!session || !session->isLoggedIn())
-            throw std::runtime_error("Not connected to XenServer");
-
-        QVariantList params;
-        params << session->getSessionId() << pbd;
-
-        XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PBD.unplug", params);
-        QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
-    }
-
-    QString PBD::async_unplug(XenSession* session, const QString& pbd)
-    {
-        if (!session || !session->isLoggedIn())
-            throw std::runtime_error("Not connected to XenServer");
-
-        QVariantList params;
-        params << session->getSessionId() << pbd;
-
-        XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PBD.async_unplug", params);
-        QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
-    }
-
-    QString PBD::async_destroy(XenSession* session, const QString& pbd)
-    {
-        if (!session || !session->isLoggedIn())
-            throw std::runtime_error("Not connected to XenServer");
-
-        QVariantList params;
-        params << session->getSessionId() << pbd;
-
-        XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PBD.async_destroy", params);
-        QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.parseJsonRpcResponse(response).toList();
     }
 
 } // namespace XenAPI

@@ -28,7 +28,7 @@
 #include "detachsraction.h"
 #include "../../../xencache.h"
 #include "../../connection.h"
-#include "../../xenapi/PBD.h"
+#include "../../xenapi/xenapi_PBD.h"
 #include <QDebug>
 
 DetachSrAction::DetachSrAction(XenConnection* connection,

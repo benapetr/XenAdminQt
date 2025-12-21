@@ -29,8 +29,8 @@
 #include "xen/connection.h"
 #include "xen/session.h"
 #include "xen/api.h"
-#include "xen/xenapi/VBD.h"
-#include "xen/xenapi/VDI.h"
+#include "xen/xenapi/xenapi_VBD.h"
+#include "xen/xenapi/xenapi_VDI.h"
 #include "xen/asyncoperations.h"
 #include "xen/certificatemanager.h"
 #include "xen/eventpoller.h"
@@ -1156,40 +1156,6 @@ QVariantList XenLib::getVMVBDs(const QString& vmRef)
     return this->d->api->getVMVBDs(vmRef);
 }
 
-QString XenLib::createVBD(const QString& vmRef, const QString& vdiRef, const QString& userdevice, bool bootable)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    if (vmRef.isEmpty())
-    {
-        this->setError("Invalid VM reference");
-        return QString();
-    }
-
-    return this->d->api->createVBD(vmRef, vdiRef, userdevice, bootable);
-}
-
-bool XenLib::destroyVBD(const QString& vbdRef)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vbdRef.isEmpty())
-    {
-        this->setError("Invalid VBD reference");
-        return false;
-    }
-
-    return this->d->api->destroyVBD(vbdRef);
-}
-
 QString XenLib::createVDI(const QString& srRef, const QString& name, const QString& description, qint64 sizeBytes)
 {
     if (!this->isConnected())
@@ -1351,9 +1317,31 @@ bool XenLib::createCdDrive(const QString& vmRef)
 
     // Create new CD drive with next device number
     QString nextDevice = QString::number(highestDevice + 1);
-    QString newVbdRef = createVBD(vmRef, QString(), nextDevice, false);
 
-    return !newVbdRef.isEmpty();
+    QVariantMap vbdRecord;
+    vbdRecord["VM"] = vmRef;
+    vbdRecord["VDI"] = "OpaqueRef:NULL";
+    vbdRecord["bootable"] = false;
+    vbdRecord["device"] = "";
+    vbdRecord["userdevice"] = nextDevice;
+    vbdRecord["empty"] = true;
+    vbdRecord["type"] = "CD";
+    vbdRecord["mode"] = "RO";
+    vbdRecord["unpluggable"] = true;
+    vbdRecord["other_config"] = QVariantMap();
+    vbdRecord["qos_algorithm_type"] = "";
+    vbdRecord["qos_algorithm_params"] = QVariantMap();
+
+    try
+    {
+        QString newVbdRef = XenAPI::VBD::create(this->d->session, vbdRecord);
+        return !newVbdRef.isEmpty();
+    }
+    catch (const std::exception&)
+    {
+        this->setError("Failed to create CD drive");
+        return false;
+    }
 }
 
 // VIF (Virtual Network Interface) operations

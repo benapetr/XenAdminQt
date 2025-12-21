@@ -27,7 +27,7 @@
 
 #include "vbdcreateandplugaction.h"
 #include "xen/vm.h"
-#include "xen/xenapi/VBD.h"
+#include "xen/xenapi/xenapi_VBD.h"
 #include "xen/xenapi/xenapi_VM.h"
 #include <QDebug>
 

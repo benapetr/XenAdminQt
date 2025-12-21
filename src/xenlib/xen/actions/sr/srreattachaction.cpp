@@ -32,7 +32,7 @@
 #include "../../sr.h"
 #include "../../host.h"
 #include "../../xenapi/xenapi_SR.h"
-#include "../../xenapi/PBD.h"
+#include "../../xenapi/xenapi_PBD.h"
 #include "../../xenapi/xenapi_Host.h"
 #include <QDebug>
 
