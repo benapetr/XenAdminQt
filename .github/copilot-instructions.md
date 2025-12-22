@@ -136,6 +136,29 @@ connect(xenLib, &XenLib::objectDataReceived,
 
 **Key files**: `src/xenlib/xencache.{h,cpp}`
 
+#### XenCache Object Access (C#-style)
+
+XenCenter (C#) works with typed XenObjects where `opaque_ref` is always present and properties are read from the cache. The Qt port now mirrors this:
+
+- **Preferred**: `ResolveObject(...)` / `ResolveObject<T>(...)` returns `QSharedPointer<XenObject>` (or typed subclass) that lazily reads from cache.
+- **Legacy**: `ResolveObjectData(...)` returns raw `QVariantMap` and should be used only for compatibility.
+
+```cpp
+// Preferred: typed object
+QSharedPointer<Host> host = cache->ResolveObject<Host>("host", hostRef);
+if (host && host->isValid())
+    qDebug() << host->nameLabel();
+
+// Legacy: raw data
+QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
+```
+
+**Rules:**
+- Use `ResolveObject<T>()` everywhere possible. Only fall back to `ResolveObjectData()` when a typed class does not exist yet.
+- Treat `opaque_ref` as the canonical ref key in cache data. Avoid guessing alternate keys (`ref`, `opaqueRef`, etc.).
+- Objects are lazy shells: they read current data from `XenCache` on demand.
+- On cache eviction, objects are marked `evicted` (check `isEvicted()` / `isValid()`).
+
 ### 3. API Call Patterns: Async vs Blocking
 
 XenLib provides **two** ways to make XenAPI calls:
