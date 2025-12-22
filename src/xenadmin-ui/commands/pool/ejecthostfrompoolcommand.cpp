@@ -54,7 +54,7 @@ bool EjectHostFromPoolCommand::canRun() const
     // Check if host is in a pool (more than one host exists)
     // Use cache instead of making API calls
     XenLib* xenLib = this->mainWindow()->xenLib();
-    int hostCount = xenLib->getCache()->count("host");
+    int hostCount = xenLib->getCache()->Count("host");
 
     // Need at least 2 hosts to eject one
     return hostCount >= 2;
@@ -78,7 +78,7 @@ void EjectHostFromPoolCommand::run()
     // Get host name for confirmation
     XenLib* xenLib = this->mainWindow()->xenLib();
     // Use cache instead of async API call
-    QVariantMap hostData = xenLib->getCache()->resolve("host", hostRef);
+    QVariantMap hostData = xenLib->getCache()->ResolveObjectData("host", hostRef);
     QString hostName = hostData.value("name_label", "this host").toString();
 
     // Confirm the operation
@@ -102,7 +102,7 @@ void EjectHostFromPoolCommand::run()
     }
 
     // Get the pool reference
-    QStringList poolRefs = xenLib->getCache()->getAllRefs("pool");
+    QStringList poolRefs = xenLib->getCache()->GetAllRefs("pool");
     if (poolRefs.isEmpty())
     {
         QMessageBox::critical(this->mainWindow(), "Eject Host",
@@ -169,10 +169,10 @@ bool EjectHostFromPoolCommand::isPoolMaster(const QString& hostRef) const
         return false;
 
     XenLib* xenLib = this->mainWindow()->xenLib();
-    QStringList poolRefs = xenLib->getCache()->getAllRefs("pool");
+    QStringList poolRefs = xenLib->getCache()->GetAllRefs("pool");
     for (const QString& poolRef : poolRefs)
     {
-        QVariantMap pool = xenLib->getCache()->resolve("pool", poolRef);
+        QVariantMap pool = xenLib->getCache()->ResolveObjectData("pool", poolRef);
         QString masterRef = pool.value("master").toString();
 
         if (masterRef == hostRef)

@@ -54,7 +54,7 @@ bool VdiEditSizeLocationCommand::canRun() const
         return false;
 
     // Check if VDI exists in cache
-    QVariantMap vdiData = cache->resolve("vdi", vdiRef);
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     return !vdiData.isEmpty();
 }
 

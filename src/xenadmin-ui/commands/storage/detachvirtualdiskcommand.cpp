@@ -71,7 +71,7 @@ bool DetachVirtualDiskCommand::canRunVDI(const QString& vdiRef) const
         return false;
     }
 
-    QVariantMap vdiData = cache->resolve("vdi", vdiRef);
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
     {
         return false;
@@ -96,7 +96,7 @@ bool DetachVirtualDiskCommand::canRunVDI(const QString& vdiRef) const
     for (const QVariant& vbdVar : vbds)
     {
         QString vbdRef = vbdVar.toString();
-        QVariantMap vbdData = cache->resolve("vbd", vbdRef);
+        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
 
         if (vbdData.isEmpty())
         {
@@ -112,7 +112,7 @@ bool DetachVirtualDiskCommand::canRunVDI(const QString& vdiRef) const
 
             // Get VM
             QString vmRef = vbdData.value("VM").toString();
-            QVariantMap vmData = cache->resolve("vm", vmRef);
+            QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
             if (vmData.isEmpty() || vmData.value("is_a_template").toBool())
             {
@@ -167,7 +167,7 @@ QString DetachVirtualDiskCommand::getCantRunReasonVDI(const QString& vdiRef) con
         return "Cache not available";
     }
 
-    QVariantMap vdiData = cache->resolve("vdi", vdiRef);
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
     {
         return "VDI not found";
@@ -188,7 +188,7 @@ QString DetachVirtualDiskCommand::getCantRunReasonVDI(const QString& vdiRef) con
     for (const QVariant& vbdVar : vbds)
     {
         QString vbdRef = vbdVar.toString();
-        QVariantMap vbdData = cache->resolve("vbd", vbdRef);
+        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
 
         if (vbdData.isEmpty())
         {
@@ -199,7 +199,7 @@ QString DetachVirtualDiskCommand::getCantRunReasonVDI(const QString& vdiRef) con
         if (currentlyAttached)
         {
             QString vmRef = vbdData.value("VM").toString();
-            QVariantMap vmData = cache->resolve("vm", vmRef);
+            QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
             QString vmName = vmData.value("name_label").toString();
 
             if (vmData.value("is_a_template").toBool())
@@ -249,7 +249,7 @@ void DetachVirtualDiskCommand::run()
         return;
     }
 
-    QVariantMap vdiData = cache->resolve("vdi", vdiRef);
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
     {
         return;
@@ -295,7 +295,7 @@ void DetachVirtualDiskCommand::run()
     for (const QVariant& vbdVar : vbds)
     {
         QString vbdRef = vbdVar.toString();
-        QVariantMap vbdData = cache->resolve("vbd", vbdRef);
+        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
 
         if (vbdData.isEmpty())
         {
@@ -304,7 +304,7 @@ void DetachVirtualDiskCommand::run()
 
         // Get VM
         QString vmRef = vbdData.value("VM").toString();
-        QVariantMap vmData = cache->resolve("vm", vmRef);
+        QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
         QString vmName = vmData.value("name_label", "VM").toString();
 
         // Create VM object for the action

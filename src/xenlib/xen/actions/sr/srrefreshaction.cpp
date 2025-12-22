@@ -49,7 +49,7 @@ QString SrRefreshAction::getSRName() const
     // Try to get SR name from cache
     if (connection()->getCache())
     {
-        QVariantMap srData = connection()->getCache()->resolve("sr", m_srRef);
+        QVariantMap srData = connection()->getCache()->ResolveObjectData("sr", m_srRef);
         QString name = srData.value("name_label", "").toString();
         if (!name.isEmpty())
             return name;

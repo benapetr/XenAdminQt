@@ -29,6 +29,7 @@
 #include "ui_generaltabpage.h"
 #include "../../xenlib/xenlib.h"
 #include "../../xenlib/xencache.h"
+#include "../../xenlib/xen/vm.h"
 #include <QLabel>
 #include <QDebug>
 #include <QDateTime>
@@ -201,7 +202,7 @@ void GeneralTabPage::populateVMProperties()
         QString guestMetricsRef = this->m_objectData.value("guest_metrics").toString();
         if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
         {
-            QVariantMap guestMetrics = this->m_xenLib->getCache()->resolve("vm_guest_metrics", guestMetricsRef);
+            QVariantMap guestMetrics = this->m_xenLib->getCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
             if (!guestMetrics.isEmpty())
             {
                 QVariantMap osVersion = guestMetrics.value("os_version").toMap();
@@ -235,7 +236,7 @@ void GeneralTabPage::populateVMProperties()
         QString applianceRef = this->m_objectData.value("appliance").toString();
         if (!applianceRef.isEmpty() && applianceRef != "OpaqueRef:NULL")
         {
-            QVariantMap appliance = this->m_xenLib->getCache()->resolve("vm_appliance", applianceRef);
+            QVariantMap appliance = this->m_xenLib->getCache()->ResolveObjectData("vm_appliance", applianceRef);
             if (!appliance.isEmpty())
             {
                 QString applianceName = appliance.value("name_label", "Unknown").toString();
@@ -252,7 +253,7 @@ void GeneralTabPage::populateVMProperties()
             QString snapshotOfRef = this->m_objectData.value("snapshot_of").toString();
             if (!snapshotOfRef.isEmpty())
             {
-                QVariantMap snapshotOfVM = this->m_xenLib->getCache()->resolve("vm", snapshotOfRef);
+                QVariantMap snapshotOfVM = this->m_xenLib->getCache()->ResolveObjectData("vm", snapshotOfRef);
                 if (!snapshotOfVM.isEmpty())
                 {
                     QString vmName = snapshotOfVM.value("name_label", "Unknown").toString();
@@ -282,7 +283,7 @@ void GeneralTabPage::populateVMProperties()
             QString guestMetricsRef = this->m_objectData.value("guest_metrics").toString();
             if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
             {
-                QVariantMap guestMetrics = this->m_xenLib->getCache()->resolve("vm_guest_metrics", guestMetricsRef);
+                QVariantMap guestMetrics = this->m_xenLib->getCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
                 if (!guestMetrics.isEmpty())
                 {
                     QVariantMap pvDriversVersion = guestMetrics.value("PV_drivers_version").toMap();
@@ -325,7 +326,7 @@ void GeneralTabPage::populateVMProperties()
             QString metricsRef = this->m_objectData.value("metrics").toString();
             if (!metricsRef.isEmpty())
             {
-                QVariantMap metrics = this->m_xenLib->getCache()->resolve("vm_metrics", metricsRef);
+                QVariantMap metrics = this->m_xenLib->getCache()->ResolveObjectData("vm_metrics", metricsRef);
                 if (!metrics.isEmpty() && metrics.contains("start_time"))
                 {
                     QString startTimeStr = metrics.value("start_time").toString();
@@ -387,7 +388,7 @@ void GeneralTabPage::populateVMProperties()
 
             if (!affinityRef.isEmpty() && affinityRef != "OpaqueRef:NULL")
             {
-                QVariantMap affinityHost = this->m_xenLib->getCache()->resolve("host", affinityRef);
+                QVariantMap affinityHost = this->m_xenLib->getCache()->ResolveObjectData("host", affinityRef);
                 if (!affinityHost.isEmpty())
                 {
                     affinityDisplay = affinityHost.value("name_label", "Unknown").toString();
@@ -418,7 +419,7 @@ void GeneralTabPage::populateVMProperties()
     if (this->m_objectData.contains("VCPUs_at_startup"))
     {
         int vcpusAtStartup = this->m_objectData.value("VCPUs_at_startup").toInt();
-        int vcpusMax = this->m_objectData.value("VCPUs_max", vcpusAtStartup).toInt();
+        qint64 vcpusMax = this->m_objectData.value("VCPUs_max", vcpusAtStartup).toLongLong();
 
         this->addProperty("vCPUs at startup", QString::number(vcpusAtStartup));
 
@@ -429,23 +430,22 @@ void GeneralTabPage::populateVMProperties()
             this->addProperty("vCPUs maximum", QString::number(vcpusMax));
         }
 
-        // Topology
-        if (this->m_objectData.contains("platform"))
+        // Topology (matches C# VM.Topology())
+        qint64 coresPerSocket = 1;
+        QVariantMap platform = this->m_objectData.value("platform").toMap();
+        if (platform.contains("cores-per-socket"))
         {
-            QVariantMap platform = this->m_objectData.value("platform").toMap();
-            if (platform.contains("cores-per-socket"))
-            {
-                int coresPerSocket = platform.value("cores-per-socket").toInt();
-                if (coresPerSocket > 0)
-                {
-                    int sockets = vcpusAtStartup / coresPerSocket;
-                    if (sockets * coresPerSocket == vcpusAtStartup)
-                    {
-                        this->addProperty("Topology", QString("%1 socket(s), %2 core(s) per socket").arg(sockets).arg(coresPerSocket));
-                    }
-                }
-            }
+            bool ok = false;
+            qint64 parsed = platform.value("cores-per-socket").toString().toLongLong(&ok);
+            if (ok && parsed > 0)
+                coresPerSocket = parsed;
         }
+
+        QString topologyWarning = VM::validVcpuConfiguration(vcpusMax, coresPerSocket);
+        qint64 sockets = topologyWarning.isEmpty() && coresPerSocket > 0
+            ? (vcpusMax / coresPerSocket)
+            : 0;
+        this->addProperty("Topology", VM::getTopology(sockets, coresPerSocket));
     }
 }
 
@@ -567,7 +567,7 @@ void GeneralTabPage::populateGeneralSection()
         QString poolRef = this->m_objectData.value("pool").toString();
         if (!poolRef.isEmpty())
         {
-            QVariantMap pool = this->m_xenLib->getCache()->resolve("pool", poolRef);
+            QVariantMap pool = this->m_xenLib->getCache()->ResolveObjectData("pool", poolRef);
             if (!pool.isEmpty())
             {
                 // Check if pool is "visible" (not a standalone host pool)
@@ -642,7 +642,7 @@ void GeneralTabPage::populateGeneralSection()
         QString metricsRef = this->m_objectData.value("metrics").toString();
         if (!metricsRef.isEmpty())
         {
-            QVariantMap metrics = this->m_xenLib->getCache()->resolve("host_metrics", metricsRef);
+            QVariantMap metrics = this->m_xenLib->getCache()->ResolveObjectData("host_metrics", metricsRef);
             if (!metrics.isEmpty() && metrics.contains("start_time"))
             {
                 QString startTimeStr = metrics.value("start_time").toString();
@@ -753,7 +753,7 @@ void GeneralTabPage::populateManagementInterfacesSection()
         if (pifRef.isEmpty())
             continue;
 
-        QVariantMap pif = this->m_xenLib->getCache()->resolve("PIF", pifRef);
+        QVariantMap pif = this->m_xenLib->getCache()->ResolveObjectData("PIF", pifRef);
         if (pif.isEmpty())
             continue;
 
@@ -794,7 +794,7 @@ void GeneralTabPage::populateMemorySection()
         QString metricsRef = this->m_objectData.value("metrics").toString();
         if (!metricsRef.isEmpty())
         {
-            QVariantMap metrics = this->m_xenLib->getCache()->resolve("host_metrics", metricsRef);
+            QVariantMap metrics = this->m_xenLib->getCache()->ResolveObjectData("host_metrics", metricsRef);
             if (!metrics.isEmpty() && metrics.contains("memory_free"))
             {
                 qint64 memFree = metrics.value("memory_free").toLongLong();
@@ -972,7 +972,7 @@ void GeneralTabPage::populateStatusSection()
     for (const QVariant& pbdRefVar : pbdRefs)
     {
         QString pbdRef = pbdRefVar.toString();
-        QVariantMap pbdData = this->m_xenLib->getCache()->resolve("pbd", pbdRef);
+        QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
         if (!pbdData.isEmpty() && pbdData.value("currently_attached").toBool())
         {
             hasAttachedPBD = true;
@@ -1000,7 +1000,7 @@ void GeneralTabPage::populateStatusSection()
         if (isShared)
         {
             // For shared SR, should have PBD for each host in pool
-            QList<QVariantMap> allHosts = this->m_xenLib->getCache()->getAll("host");
+            QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAllData("host");
             expectedPBDCount = allHosts.size();
         }
 
@@ -1014,7 +1014,7 @@ void GeneralTabPage::populateStatusSection()
             for (const QVariant& pbdRefVar : pbdRefs)
             {
                 QString pbdRef = pbdRefVar.toString();
-                QVariantMap pbdData = this->m_xenLib->getCache()->resolve("pbd", pbdRef);
+                QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
                 if (pbdData.isEmpty() || !pbdData.value("currently_attached").toBool())
                 {
                     broken = true;
@@ -1047,7 +1047,7 @@ void GeneralTabPage::populateStatusSection()
     // Show per-host PBD status
     // C# iterates through all hosts and shows their PBD connection status
     bool isShared = this->m_objectData.value("shared", false).toBool();
-    QList<QVariantMap> allHosts = this->m_xenLib->getCache()->getAll("host");
+    QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAllData("host");
 
     for (const QVariantMap& hostData : allHosts)
     {
@@ -1062,7 +1062,7 @@ void GeneralTabPage::populateStatusSection()
         for (const QVariant& pbdRefVar : pbdRefs)
         {
             QString pbdRef = pbdRefVar.toString();
-            QVariantMap pbdData = this->m_xenLib->getCache()->resolve("pbd", pbdRef);
+            QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
 
             if (pbdData.isEmpty())
                 continue;
@@ -1161,7 +1161,7 @@ void GeneralTabPage::populateMultipathingSection()
     // Check each host for multipath status
     // C# iterates through hosts and checks PBD multipath active status
     QVariantList pbdRefs = this->m_objectData.value("PBDs").toList();
-    QList<QVariantMap> allHosts = this->m_xenLib->getCache()->getAll("host");
+    QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAllData("host");
 
     for (const QVariantMap& hostData : allHosts)
     {
@@ -1175,7 +1175,7 @@ void GeneralTabPage::populateMultipathingSection()
         for (const QVariant& pbdRefVar : pbdRefs)
         {
             QString pbdRef = pbdRefVar.toString();
-            QVariantMap pbdData = this->m_xenLib->getCache()->resolve("pbd", pbdRef);
+            QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
 
             if (pbdData.isEmpty())
                 continue;

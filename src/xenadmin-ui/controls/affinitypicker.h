@@ -29,6 +29,7 @@
 #define AFFINITYPICKER_H
 
 #include <QMap>
+#include <QSharedPointer>
 #include <QWidget>
 #include <QVariantMap>
 
@@ -38,6 +39,7 @@ namespace Ui
 }
 
 class XenConnection;
+class Host;
 
 /**
  * @brief Affinity picker control for selecting a VM home server
@@ -81,13 +83,13 @@ class AffinityPicker : public QWidget
         bool selectServer(const QString& hostRef);
         bool selectSomething();
         bool hasFullyConnectedSharedStorage() const;
-        bool isHostLive(const QVariantMap& hostData) const;
+        bool isHostLive(const QSharedPointer<Host>& host) const;
 
         Ui::AffinityPicker* ui;
         XenConnection* m_connection;
         QString m_affinityRef;
         QString m_srHostRef;
-        QMap<QString, QVariantMap> m_hosts;
+        QMap<QString, QSharedPointer<Host>> m_hosts;
         bool m_autoSelectAffinity;
         bool m_selectedOnVisibleChanged;
 };

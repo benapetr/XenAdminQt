@@ -96,7 +96,7 @@ void DeleteVirtualDiskCommand::run()
     for (const QVariant& vbdRefVar : vbds)
     {
         QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = cache->resolve("vbd", vbdRef);
+        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
 
         if (vbdData.value("currently_attached", false).toBool())
         {
@@ -175,7 +175,7 @@ QVariantMap DeleteVirtualDiskCommand::getSelectedVDIData() const
     if (!cache)
         return QVariantMap();
 
-    return cache->resolve("vdi", vdiRef);
+    return cache->ResolveObjectData("vdi", vdiRef);
 }
 
 bool DeleteVirtualDiskCommand::canVDIBeDeleted(const QVariantMap& vdiData) const
@@ -200,7 +200,7 @@ bool DeleteVirtualDiskCommand::canVDIBeDeleted(const QVariantMap& vdiData) const
     if (!cache)
         return false;
 
-    QVariantMap srData = cache->resolve("sr", srRef);
+    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
     if (srData.isEmpty())
         return false;
 
@@ -241,7 +241,7 @@ bool DeleteVirtualDiskCommand::canVDIBeDeleted(const QVariantMap& vdiData) const
     for (const QVariant& vbdRefVar : vbds)
     {
         QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = cache->resolve("vbd", vbdRef);
+        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
 
         if (vbdData.isEmpty())
             continue;
@@ -250,7 +250,7 @@ bool DeleteVirtualDiskCommand::canVDIBeDeleted(const QVariantMap& vdiData) const
         if (type == "system")
         {
             QString vmRef = vbdData.value("VM").toString();
-            QVariantMap vmData = cache->resolve("vm", vmRef);
+            QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
             QString powerState = vmData.value("power_state", "").toString();
             if (powerState == "Running")
@@ -292,7 +292,7 @@ QString DeleteVirtualDiskCommand::getVDIType(const QVariantMap& vdiData) const
         XenCache* cache = mainWindow()->xenLib()->getCache();
         if (cache)
         {
-            QVariantMap srData = cache->resolve("sr", srRef);
+            QVariantMap srData = cache->ResolveObjectData("sr", srRef);
             QString contentType = srData.value("content_type", "").toString();
             if (contentType == "iso")
                 return "ISO";

@@ -80,7 +80,7 @@ void SetDefaultSRCommand::run()
             return;
         }
 
-        QStringList poolRefs = cache->getAllRefs("pool");
+        QStringList poolRefs = cache->GetAllRefs("pool");
         if (poolRefs.isEmpty())
         {
             QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",

@@ -65,7 +65,7 @@ void VdiPropertiesDialog::populateDialog()
     }
 
     // Get VDI data from cache
-    this->m_vdiData = this->m_xenLib->getCache()->resolve("vdi", this->m_vdiRef);
+    this->m_vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", this->m_vdiRef);
 
     if (this->m_vdiData.isEmpty())
     {
@@ -84,7 +84,7 @@ void VdiPropertiesDialog::populateDialog()
 
     // Get SR information
     QString srRef = this->m_vdiData.value("SR", "").toString();
-    QVariantMap srData = this->m_xenLib->getCache()->resolve("sr", srRef);
+    QVariantMap srData = this->m_xenLib->getCache()->ResolveObjectData("sr", srRef);
     QString srName = srData.value("name_label", "Unknown").toString();
     this->ui->srValueLabel->setText(srName);
 
@@ -193,7 +193,7 @@ void VdiPropertiesDialog::validateResize()
 
     // Get SR to check free space
     QString srRef = this->m_vdiData.value("SR", "").toString();
-    QVariantMap srData = this->m_xenLib->getCache()->resolve("sr", srRef);
+    QVariantMap srData = this->m_xenLib->getCache()->ResolveObjectData("sr", srRef);
 
     if (!srData.isEmpty())
     {

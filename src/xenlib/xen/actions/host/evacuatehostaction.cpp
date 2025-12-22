@@ -148,7 +148,7 @@ bool EvacuateHostAction::isCoordinator() const
 {
     // Check if this host is the pool coordinator
     // Get pool from cache
-    QList<QVariantMap> pools = connection()->getCache()->getAll("pool");
+    QList<QVariantMap> pools = connection()->getCache()->GetAllData("pool");
     if (pools.isEmpty())
         return false;
 

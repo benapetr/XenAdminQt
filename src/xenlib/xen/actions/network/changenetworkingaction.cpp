@@ -65,7 +65,7 @@ void ChangeNetworkingAction::run()
         }
 
         // Determine if we're operating on a pool or single host
-        QList<QVariantMap> pools = connection()->getCache()->getAll("pool");
+        QList<QVariantMap> pools = connection()->getCache()->GetAllData("pool");
         bool isPool = !pools.isEmpty();
 
         int inc = totalOps > 0 ? (isPool ? 50 : 100) / totalOps : 100;
@@ -90,14 +90,14 @@ void ChangeNetworkingAction::run()
         // Phase 2: Reconfigure management interface if requested
         if (!m_newManagementPifRef.isEmpty() && !m_oldManagementPifRef.isEmpty())
         {
-            QVariantMap newPifData = connection()->getCache()->resolve("pif", m_newManagementPifRef);
-            QVariantMap oldPifData = connection()->getCache()->resolve("pif", m_oldManagementPifRef);
+            QVariantMap newPifData = connection()->getCache()->ResolveObjectData("pif", m_newManagementPifRef);
+            QVariantMap oldPifData = connection()->getCache()->ResolveObjectData("pif", m_oldManagementPifRef);
 
             // Check if we should clear the old management IP
             bool clearDownManagementIP = true;
             for (const QString& pifRef : m_pifRefsToReconfigure)
             {
-                QVariantMap pifData = connection()->getCache()->resolve("pif", pifRef);
+                QVariantMap pifData = connection()->getCache()->ResolveObjectData("pif", pifRef);
                 if (pifData.value("uuid").toString() == oldPifData.value("uuid").toString())
                 {
                     clearDownManagementIP = false;
@@ -190,7 +190,7 @@ void ChangeNetworkingAction::reconfigure(const QString& pifRef, bool up, bool th
 
 void ChangeNetworkingAction::bringUp(const QString& newPifRef, const QString& existingPifRef, int hi)
 {
-    QVariantMap newPifData = connection()->getCache()->resolve("pif", newPifRef);
+    QVariantMap newPifData = connection()->getCache()->ResolveObjectData("pif", newPifRef);
     QString ipMode = newPifData.value("ip_configuration_mode").toString();
     QString ip = newPifData.value("IP").toString();
 

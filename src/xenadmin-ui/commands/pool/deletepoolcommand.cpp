@@ -61,7 +61,7 @@ void DeletePoolCommand::run()
     if (!cache)
         return;
 
-    QVariantMap poolData = cache->resolve("pool", poolRef);
+    QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
     QString poolName = poolData.value("name_label", "").toString();
 
     if (poolRef.isEmpty())
@@ -197,7 +197,7 @@ bool DeletePoolCommand::hasMultipleHosts() const
         return false;
 
     // Get all hosts
-    QList<QPair<QString, QString>> allObjects = cache->getAllObjects();
+    QList<QPair<QString, QString>> allObjects = cache->GetAllObjectsData();
     int hostCount = 0;
     for (const auto& obj : allObjects)
     {

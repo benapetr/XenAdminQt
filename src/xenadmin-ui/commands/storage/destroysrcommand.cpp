@@ -134,7 +134,7 @@ QString DestroySRCommand::getSelectedSRName() const
     if (!cache)
         return QString();
 
-    QVariantMap srData = cache->resolve("sr", srRef);
+    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
     return srData.value("name_label", "").toString();
 }
 
@@ -151,7 +151,7 @@ bool DestroySRCommand::canSRBeDestroyed() const
     if (!cache)
         return false;
 
-    QVariantMap srData = cache->resolve("sr", srRef);
+    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
 
     // Cannot destroy if SR has VDIs (contains data)
     QVariantList vdis = srData.value("VDIs", QVariantList()).toList();
@@ -166,7 +166,7 @@ bool DestroySRCommand::canSRBeDestroyed() const
         for (const QVariant& pbdRefVar : pbds)
         {
             QString pbdRef = pbdRefVar.toString();
-            QVariantMap pbdData = cache->resolve("pbd", pbdRef);
+            QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
 
             if (pbdData.value("currently_attached", false).toBool())
                 return false; // SR is still attached

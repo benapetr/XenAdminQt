@@ -122,7 +122,7 @@ void NewPoolDialog::populateConnections()
         XenCache* cache = conn->getCache();
         if (cache)
         {
-            QList<QVariantMap> hosts = cache->getAll("host");
+            QList<QVariantMap> hosts = cache->GetAllData("host");
             if (!hosts.isEmpty())
             {
                 QString hostName = hosts.first().value("name_label").toString();
@@ -166,7 +166,7 @@ void NewPoolDialog::updateServerList()
         XenCache* cache = conn->getCache();
         if (cache)
         {
-            QList<QVariantMap> hosts = cache->getAll("host");
+            QList<QVariantMap> hosts = cache->GetAllData("host");
             if (!hosts.isEmpty())
             {
                 QString hostName = hosts.first().value("name_label").toString();
@@ -207,7 +207,7 @@ bool NewPoolDialog::isStandaloneConnection(XenConnection* connection) const
     }
 
     // Check if pool has only one host
-    QList<QVariantMap> hosts = cache->getAll("host");
+    QList<QVariantMap> hosts = cache->GetAllData("host");
     if (hosts.size() != 1)
     {
         return false; // Multi-host pool - not standalone

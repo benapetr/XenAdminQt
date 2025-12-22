@@ -55,7 +55,7 @@ bool ResumeVMCommand::canRun() const
     if (!this->isVMSuspended(vmRef))
         return false;
 
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     QVariantList allowedOperations = vmData.value("allowed_operations").toList();
 
     return allowedOperations.contains("resume");
@@ -80,7 +80,7 @@ bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool
     QString displayName = vmName;
     if (displayName.isEmpty())
     {
-        QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+        QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
         displayName = vmData.value("name_label").toString();
     }
 
@@ -185,7 +185,7 @@ QString ResumeVMCommand::getSelectedVMName() const
 bool ResumeVMCommand::isVMSuspended(const QString& vmRef) const
 {
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     QString powerState = vmData.value("power_state", "Halted").toString();
 
     return (powerState == "Suspended");

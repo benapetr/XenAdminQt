@@ -90,7 +90,7 @@ void MigrateVMCommand::run()
             continue; // Skip current host
 
         // Use cache instead of async API call
-        QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->resolve("host", hostRef);
+        QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
         QString hostName = hostData.value("name_label", "Unknown Host").toString();
         hostMap[hostName] = hostRef;
         hostNames.append(hostName);
@@ -207,7 +207,7 @@ QString MigrateVMCommand::getSelectedVMName() const
 bool MigrateVMCommand::isVMRunning(const QString& vmRef) const
 {
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     QString powerState = vmData.value("power_state", "Halted").toString();
 
     return (powerState == "Running");
@@ -220,7 +220,7 @@ QStringList MigrateVMCommand::getAvailableHosts() const
     if (!cache)
         return hostRefs;
 
-    hostRefs = cache->getAllRefs("host");
+    hostRefs = cache->GetAllRefs("host");
 
     return hostRefs;
 }
@@ -228,6 +228,6 @@ QStringList MigrateVMCommand::getAvailableHosts() const
 QString MigrateVMCommand::getCurrentHostRef(const QString& vmRef) const
 {
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     return vmData.value("resident_on", QString()).toString();
 }

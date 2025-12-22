@@ -66,7 +66,7 @@ void AddVirtualDiskCommand::run()
     if (objectType == "vm")
     {
         // Check VBD limit
-        QVariantMap vmData = mainWindow()->xenLib()->getCache()->resolve("vm", objectRef);
+        QVariantMap vmData = mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", objectRef);
         int maxVBDs = getMaxVBDsAllowed(vmData);
         int currentVBDs = getCurrentVBDCount(objectRef);
 
@@ -251,13 +251,13 @@ bool AddVirtualDiskCommand::canAddDisk() const
 
     if (objectType == "sr")
     {
-        QVariantMap srData = cache->resolve("sr", objectRef);
+        QVariantMap srData = cache->ResolveObjectData("sr", objectRef);
         // Check if SR is locked
         QVariantMap currentOps = srData.value("current_operations", QVariantMap()).toMap();
         return currentOps.isEmpty();
     } else if (objectType == "vm")
     {
-        QVariantMap vmData = cache->resolve("vm", objectRef);
+        QVariantMap vmData = cache->ResolveObjectData("vm", objectRef);
         // Cannot add disk to snapshot or locked VM
         if (vmData.value("is_a_snapshot", false).toBool())
             return false;
@@ -285,7 +285,7 @@ int AddVirtualDiskCommand::getMaxVBDsAllowed(const QVariantMap& vmData) const
 int AddVirtualDiskCommand::getCurrentVBDCount(const QString& vmRef) const
 {
     // Get all VBDs and count those attached to this VM
-    QList<QVariantMap> allVBDs = mainWindow()->xenLib()->getCache()->getAll("vbd");
+    QList<QVariantMap> allVBDs = mainWindow()->xenLib()->getCache()->GetAllData("vbd");
 
     int count = 0;
     for (const QVariantMap& vbdData : allVBDs)

@@ -119,6 +119,24 @@ public:
      */
     bool isValid() const;
 
+    /**
+     * @brief Mark object as evicted from cache
+     *
+     * Cache eviction should set this to true so consumers know the object is stale.
+     */
+    void setEvicted(bool evicted)
+    {
+        m_evicted = evicted;
+    }
+
+    /**
+     * @brief Check if object was evicted from cache
+     */
+    bool isEvicted() const
+    {
+        return m_evicted;
+    }
+
 signals:
     /**
      * @brief Emitted when object data changes
@@ -154,6 +172,7 @@ protected:
 private:
     QPointer<XenConnection> m_connection;
     QString m_opaqueRef;
+    bool m_evicted = false;
 };
 
 #endif // XENOBJECT_H

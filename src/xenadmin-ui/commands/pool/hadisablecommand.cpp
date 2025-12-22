@@ -129,7 +129,7 @@ QString HADisableCommand::getSelectedPoolName() const
     if (!cache)
         return QString();
 
-    QVariantMap poolData = cache->resolve("pool", poolRef);
+    QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
     return poolData.value("name_label", "").toString();
 }
 
@@ -155,6 +155,6 @@ bool HADisableCommand::isHAEnabled() const
     if (!cache)
         return false;
 
-    QVariantMap poolData = cache->resolve("pool", poolRef);
+    QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
     return poolData.value("ha_enabled", false).toBool();
 }

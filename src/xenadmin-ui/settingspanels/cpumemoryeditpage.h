@@ -29,9 +29,13 @@
 #define CPUMEMORYEDITPAGE_H
 
 #include "ieditpage.h"
+#include <QSharedPointer>
 #include <QVariantMap>
+#include <functional>
 
 class AsyncOperation;
+class VM;
+class QComboBox;
 
 namespace Ui
 {
@@ -71,24 +75,62 @@ public:
     void hideLocalValidationMessages() override;
     void cleanup() override;
     bool hasChanged() const override;
+    QVariantMap getModifiedObjectData() const override;
 
 private slots:
-    void onVCPUsMaxChanged(int value);
-    void onVCPUsAtStartupChanged(int value);
+    void onVcpusSelectionChanged();
+    void onVcpusAtStartupSelectionChanged();
+    void onTopologySelectionChanged();
+    void onPriorityChanged(int value);
 
 private:
-    void populateTopology();
+    void repopulate();
+    void initializeVCpuControls();
+    void populateVCpuComboBox(QComboBox* comboBox,
+                              qint64 min,
+                              qint64 max,
+                              qint64 currentValue,
+                              const std::function<bool(qint64)>& isValid) const;
+    void populateVcpus(qint64 maxVcpus, qint64 currentVcpus);
+    void populateVcpusAtStartup(qint64 maxVcpus, qint64 currentValue);
+    void populateTopology(qint64 vcpusAtStartup,
+                          qint64 vcpusMax,
+                          qint64 coresPerSocket,
+                          qint64 maxCoresPerSocket);
+    void updateTopologyOptions(qint64 noOfVcpus);
+    bool isValidVcpu(qint64 noOfVcpus) const;
+    void validateVcpuSettings();
+    void validateTopologySettings();
+    void refreshCurrentVcpus();
+    void showCpuWarnings(const QStringList& warnings);
+    void showTopologyWarnings(const QStringList& warnings);
     void updateSubText();
+    qint64 selectedVcpusMax() const;
+    qint64 selectedVcpusAtStartup() const;
+    qint64 selectedCoresPerSocket() const;
+    QString productBrand() const;
 
     Ui::CpuMemoryEditPage* ui;
     QString m_vmRef;
     QVariantMap m_objectDataBefore;
     QVariantMap m_objectDataCopy;
+    QSharedPointer<VM> m_vm;
 
     // Original values
-    long m_origVCPUsMax;
-    long m_origVCPUsAtStartup;
-    int m_origCoresPerSocket;
+    bool m_validToSave;
+    qint64 m_origVcpus;
+    qint64 m_origVCPUsMax;
+    qint64 m_origVCPUsAtStartup;
+    qint64 m_origCoresPerSocket;
+    qint64 m_prevVcpusMax;
+    double m_origVcpuWeight;
+    double m_currentVcpuWeight;
+    bool m_isVcpuHotplugSupported;
+    int m_minVcpus;
+
+    qint64 m_topologyOrigVcpus;
+    qint64 m_topologyOrigCoresPerSocket;
+    qint64 m_maxCoresPerSocket;
 };
 
 #endif // CPUMEMORYEDITPAGE_H

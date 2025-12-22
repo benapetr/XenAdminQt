@@ -67,7 +67,7 @@ bool isSrVisibleToHost(const QVariantMap& srData, XenCache* cache, const QString
         if (pbdRef.isEmpty() || pbdRef == "OpaqueRef:NULL")
             continue;
 
-        const QVariantMap pbdData = cache->resolve("pbd", pbdRef);
+        const QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
         if (pbdData.value("host").toString() == hostRef)
             return true;
     }
@@ -173,7 +173,7 @@ void IsoDropDownBox::refresh()
     QVariantMap vmData;
     if (!m_vmRef.isEmpty())
     {
-        vmData = cache->resolve("vm", m_vmRef);
+        vmData = cache->ResolveObjectData("vm", m_vmRef);
         QString powerState = vmData.value("power_state").toString();
         if (powerState == "Running")
         {
@@ -198,7 +198,7 @@ void IsoDropDownBox::refresh()
     };
 
     QList<SrEntry> srEntries;
-    const QList<QVariantMap> allSrs = cache->getAll("sr");
+    const QList<QVariantMap> allSrs = cache->GetAllData("sr");
     for (const QVariantMap& srData : allSrs)
     {
         if (srData.value("content_type").toString() != "iso")
@@ -249,7 +249,7 @@ void IsoDropDownBox::refresh()
             if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
                 continue;
 
-            const QVariantMap vdiData = cache->resolve("vdi", vdiRef);
+            const QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
             if (vdiData.isEmpty())
                 continue;
 

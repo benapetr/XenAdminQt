@@ -33,6 +33,8 @@
 #include <QVariantMap>
 #include <QMutex>
 #include <QList>
+#include <QSharedPointer>
+#include "xen/xenobject.h"
 
 /**
  * @brief XenCache - Caches all XenServer objects locally for fast lookups
@@ -51,136 +53,192 @@ class XenCache : public QObject
 {
     Q_OBJECT
 
-public:
-    explicit XenCache(QObject* parent = nullptr);
-    virtual ~XenCache();
+    public:
+        explicit XenCache(QObject* parent = nullptr);
+        virtual ~XenCache();
 
-    /**
-     * @brief Resolve object by reference (instant memory lookup)
-     * @param type Object type (e.g., "VM", "host", "SR", "network")
-     * @param ref XenAPI object reference
-     * @return QVariantMap containing object data, or empty map if not found
-     */
-    QVariantMap resolve(const QString& type, const QString& ref) const;
+        /**
+         * @brief Resolve object by reference (instant memory lookup)
+         * @param type Object type (e.g., "VM", "host", "SR", "network")
+         * @param ref XenAPI object reference
+         * @return QVariantMap containing object data, or empty map if not found
+         */
+        QVariantMap ResolveObjectData(const QString& type, const QString& ref) const;
 
-    /**
-     * @brief Canonicalize a type string so all callers share the same mapping logic
-     * @param type Object type
-     * @return Lowercase canonical form used internally (e.g. "VMs" -> "vm")
-     */
-    QString canonicalType(const QString& type) const;
+        /**
+         * @brief Resolve object as a typed XenObject instance
+         * @param type Object type (e.g., "VM", "host", "SR")
+         * @param ref XenAPI object reference
+         * @return Shared pointer to cached object, or null if not found/unsupported
+         */
+        QSharedPointer<XenObject> ResolveObject(const QString& type, const QString& ref);
 
-    /**
-     * @brief Check if cache has an object
-     * @param type Object type
-     * @param ref Object reference
-     * @return true if object exists in cache
-     */
-    bool contains(const QString& type, const QString& ref) const;
+        /**
+         * @brief Resolve object and cast to the requested type
+         */
+        template <typename T>
+        QSharedPointer<T> ResolveObject(const QString& type, const QString& ref)
+        {
+            QSharedPointer<XenObject> base = ResolveObject(type, ref);
+            return qSharedPointerDynamicCast<T>(base);
+        }
 
-    /**
-     * @brief Get all objects of a specific type
-     * @param type Object type (e.g., "VM", "host")
-     * @return List of all objects of that type
-     */
-    QList<QVariantMap> getAll(const QString& type) const;
+        /**
+         * @brief Canonicalize a type string so all callers share the same mapping logic
+         * @param type Object type
+         * @return Lowercase canonical form used internally (e.g. "VMs" -> "vm")
+         */
+        QString CanonicalType(const QString& type) const;
 
-    /**
-     * @brief Get all object refs of a specific type
-     * @param type Object type
-     * @return List of all refs for that type
-     */
-    QStringList getAllRefs(const QString& type) const;
+        /**
+         * @brief Check if cache has an object
+         * @param type Object type
+         * @param ref Object reference
+         * @return true if object exists in cache
+         */
+        bool Contains(const QString& type, const QString& ref) const;
 
-    /**
-     * @brief Get all objects across all types (for iteration/filtering)
-     * @return List of (type, ref) pairs for all cached objects
-     *
-     * This matches C# connection.Cache.XenSearchableObjects which returns
-     * all cached objects so they can be filtered by Query.Match().
-     * Used by SearchTabPage to iterate all objects and let Query do filtering.
-     */
-    QList<QPair<QString, QString>> getAllObjects() const;
+        /**
+         * @brief Get all objects of a specific type
+         * @param type Object type (e.g., "VM", "host")
+         * @return List of all objects of that type
+         */
+        QList<QVariantMap> GetAllData(const QString& type) const;
 
-    /**
-     * @brief Update or add object to cache
-     * @param type Object type
-     * @param ref Object reference
-     * @param data Object data
-     */
-    void update(const QString& type, const QString& ref, const QVariantMap& data);
+        /**
+         * @brief Get all objects of a specific type as shared pointers
+         * @param type Object type (e.g., "VM", "host")
+         * @return List of cached XenObject instances for that type
+         */
+        QList<QSharedPointer<XenObject>> GetAll(const QString& type);
 
-    /**
-     * @brief Update cache from bulk records (all_records response)
-     * @param type Object type
-     * @param allRecords Map of ref -> object data
-     */
-    void updateBulk(const QString& type, const QVariantMap& allRecords);
+        /**
+         * @brief Get all objects of a specific type as typed shared pointers
+         * @param type Object type (e.g., "VM", "host")
+         * @return List of cached objects cast to requested type
+         */
+        template <typename T>
+        QList<QSharedPointer<T>> GetAll(const QString& type)
+        {
+            QList<QSharedPointer<XenObject>> baseList = this->GetAll(type);
+            QList<QSharedPointer<T>> typedList;
+            typedList.reserve(baseList.size());
+            for (const QSharedPointer<XenObject>& item : baseList)
+            {
+                QSharedPointer<T> casted = qSharedPointerDynamicCast<T>(item);
+                if (casted && casted->isValid())
+                    typedList.append(casted);
+            }
+            return typedList;
+        }
 
-    /**
-     * @brief Remove object from cache
-     * @param type Object type
-     * @param ref Object reference
-     */
-    void remove(const QString& type, const QString& ref);
+        /**
+         * @brief Get all object refs of a specific type
+         * @param type Object type
+         * @return List of all refs for that type
+         */
+        QStringList GetAllRefs(const QString& type) const;
 
-    /**
-     * @brief Clear all objects of a specific type from cache
-     * @param type Object type to clear
-     */
-    void clearType(const QString& type);
+        /**
+         * @brief Get all objects across all types (for iteration/filtering)
+         * @return List of (type, ref) pairs for all cached objects
+         *
+         * This matches C# connection.Cache.XenSearchableObjects which returns
+         * all cached objects so they can be filtered by Query.Match().
+         * Used by SearchTabPage to iterate all objects and let Query do filtering.
+         */
+        QList<QPair<QString, QString>> GetAllObjectsData() const;
 
-    /**
-     * @brief Clear entire cache
-     */
-    void clear();
+        /**
+         * @brief Get all cached objects as shared pointers
+         * @return List of cached XenObject instances
+         */
+        QList<QSharedPointer<XenObject>> GetAllObjects();
 
-    /**
-     * @brief Get number of objects of a type
-     * @param type Object type
-     * @return Count of objects
-     */
-    int count(const QString& type) const;
+        /**
+         * @brief Update or add object to cache
+         * @param type Object type
+         * @param ref Object reference
+         * @param data Object data
+         */
+        void Update(const QString& type, const QString& ref, const QVariantMap& data);
 
-    /**
-     * @brief Check if cache is empty
-     * @return true if cache has no objects
-     */
-    bool isEmpty() const;
+        /**
+         * @brief Update cache from bulk records (all_records response)
+         * @param type Object type
+         * @param allRecords Map of ref -> object data
+         */
+        void UpdateBulk(const QString& type, const QVariantMap& allRecords);
 
-signals:
-    /**
-     * @brief Emitted when an object is added or updated
-     * @param type Object type
-     * @param ref Object reference
-     */
-    void objectChanged(const QString& type, const QString& ref);
+        /**
+         * @brief Remove object from cache
+         * @param type Object type
+         * @param ref Object reference
+         */
+        void Remove(const QString& type, const QString& ref);
 
-    /**
-     * @brief Emitted when an object is removed
-     * @param type Object type
-     * @param ref Object reference
-     */
-    void objectRemoved(const QString& type, const QString& ref);
+        /**
+         * @brief Clear all objects of a specific type from cache
+         * @param type Object type to clear
+         */
+        void ClearType(const QString& type);
 
-    /**
-     * @brief Emitted when cache is cleared
-     */
-    void cacheCleared();
+        /**
+         * @brief Clear entire cache
+         */
+        void Clear();
 
-    /**
-     * @brief Emitted when bulk update completes
-     * @param type Object type that was updated
-     * @param count Number of objects updated
-     */
-    void bulkUpdateComplete(const QString& type, int count);
+        /**
+         * @brief Get number of objects of a type
+         * @param type Object type
+         * @return Count of objects
+         */
+        int Count(const QString& type) const;
 
-private:
-    // Type -> (Ref -> ObjectData)
-    mutable QMutex m_mutex;
-    QMap<QString, QMap<QString, QVariantMap>> m_cache;
+        /**
+         * @brief Check if cache is empty
+         * @return true if cache has no objects
+         */
+        bool IsEmpty() const;
 
-    QString normalizeType(const QString& type) const;
+    signals:
+        /**
+         * @brief Emitted when an object is added or updated
+         * @param type Object type
+         * @param ref Object reference
+         */
+        void objectChanged(const QString& type, const QString& ref);
+
+        /**
+         * @brief Emitted when an object is removed
+         * @param type Object type
+         * @param ref Object reference
+         */
+        void objectRemoved(const QString& type, const QString& ref);
+
+        /**
+         * @brief Emitted when cache is cleared
+         */
+        void cacheCleared();
+
+        /**
+         * @brief Emitted when bulk update completes
+         * @param type Object type that was updated
+         * @param count Number of objects updated
+         */
+        void bulkUpdateComplete(const QString& type, int count);
+
+    private:
+        // Type -> (Ref -> ObjectData)
+        mutable QMutex m_mutex;
+        QMap<QString, QMap<QString, QVariantMap>> m_cache;
+        QMap<QString, QMap<QString, QSharedPointer<XenObject>>> m_objects;
+        QPointer<XenConnection> m_connection;
+
+        QString normalizeType(const QString& type) const;
+        QSharedPointer<XenObject> createObjectForType(const QString& type, const QString& ref);
+        void refreshObject(const QString& type, const QString& ref);
+        void evictObject(const QString& type, const QString& ref);
 };
 
 #endif // XENCACHE_H

@@ -112,7 +112,7 @@ bool RevertToSnapshotCommand::canRevertToSnapshot() const
     }
 
     // Get snapshot data from cache
-    QVariantMap snapshotData = xenLib->getCache()->resolve("vm", this->m_snapshotUuid);
+    QVariantMap snapshotData = xenLib->getCache()->ResolveObjectData("vm", this->m_snapshotUuid);
     if (snapshotData.isEmpty())
     {
         qDebug() << "RevertToSnapshotCommand: Snapshot not found in cache:" << this->m_snapshotUuid;
@@ -146,7 +146,7 @@ bool RevertToSnapshotCommand::canRevertToSnapshot() const
     QString snapshotOf = snapshotData.value("snapshot_of").toString();
     if (!snapshotOf.isEmpty())
     {
-        QVariantMap vmData = xenLib->getCache()->resolve("vm", snapshotOf);
+        QVariantMap vmData = xenLib->getCache()->ResolveObjectData("vm", snapshotOf);
         if (!vmData.isEmpty())
         {
             QVariantList vmCurrentOps = vmData.value("current_operations").toList();
@@ -181,7 +181,7 @@ bool RevertToSnapshotCommand::showConfirmationDialog()
         XenLib* xenLib = this->mainWindow()->xenLib();
         if (xenLib)
         {
-            QVariantMap snapshotData = xenLib->getCache()->resolve("vm", this->m_snapshotUuid);
+            QVariantMap snapshotData = xenLib->getCache()->ResolveObjectData("vm", this->m_snapshotUuid);
             if (!snapshotData.isEmpty())
             {
                 snapshotName = snapshotData.value("name_label").toString();

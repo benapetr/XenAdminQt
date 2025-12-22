@@ -53,7 +53,7 @@ bool InstantVMFromTemplateCommand::canRun() const
     if (!cache)
         return false;
 
-    QVariantMap templateData = cache->resolve("vm", templateRef);
+    QVariantMap templateData = cache->ResolveObjectData("vm", templateRef);
 
     return this->canRunTemplate(templateData);
 }
@@ -71,7 +71,7 @@ void InstantVMFromTemplateCommand::run()
     if (!cache)
         return;
 
-    QVariantMap templateData = cache->resolve("vm", templateRef);
+    QVariantMap templateData = cache->ResolveObjectData("vm", templateRef);
 
     if (!this->canRunTemplate(templateData))
     {

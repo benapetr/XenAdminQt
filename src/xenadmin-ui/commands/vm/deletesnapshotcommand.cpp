@@ -112,7 +112,7 @@ bool DeleteSnapshotCommand::canDeleteSnapshot() const
     }
 
     // Get snapshot data from cache
-    QVariantMap snapshotData = xenLib->getCache()->resolve("vm", this->m_snapshotUuid);
+    QVariantMap snapshotData = xenLib->getCache()->ResolveObjectData("vm", this->m_snapshotUuid);
     if (snapshotData.isEmpty())
     {
         qDebug() << "DeleteSnapshotCommand: Snapshot not found in cache:" << this->m_snapshotUuid;
@@ -155,7 +155,7 @@ bool DeleteSnapshotCommand::showConfirmationDialog()
         XenLib* xenLib = this->mainWindow()->xenLib();
         if (xenLib)
         {
-            QVariantMap snapshotData = xenLib->getCache()->resolve("vm", this->m_snapshotUuid);
+            QVariantMap snapshotData = xenLib->getCache()->ResolveObjectData("vm", this->m_snapshotUuid);
             if (!snapshotData.isEmpty())
             {
                 snapshotName = snapshotData.value("name_label").toString();

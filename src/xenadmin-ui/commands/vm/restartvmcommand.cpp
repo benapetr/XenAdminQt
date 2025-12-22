@@ -51,7 +51,7 @@ bool RestartVMCommand::canRun() const
     if (!this->isVMRunning(vmRef))
         return false;
 
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     QVariantList allowedOperations = vmData.value("allowed_operations").toList();
 
     return allowedOperations.contains("clean_reboot");
@@ -136,7 +136,7 @@ QString RestartVMCommand::getSelectedVMName() const
 bool RestartVMCommand::isVMRunning(const QString& vmRef) const
 {
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     QString powerState = vmData.value("power_state", "Halted").toString();
 
     return (powerState == "Running");

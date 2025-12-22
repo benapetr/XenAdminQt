@@ -157,7 +157,7 @@ void MemoryTabPage::populateHostMemory()
 
     if (metricsRef != "OpaqueRef:NULL")
     {
-        metricsData = this->m_xenLib->getCache()->resolve("host_metrics", metricsRef);
+        metricsData = this->m_xenLib->getCache()->ResolveObjectData("host_metrics", metricsRef);
     }
 
     qint64 totalMemory = metricsData.value("memory_total", 0).toLongLong();
@@ -193,7 +193,7 @@ void MemoryTabPage::populateHostMemory()
     for (const QVariant& vmRefVar : residentVMs)
     {
         QString vmRef = vmRefVar.toString();
-        QVariantMap vmData = this->m_xenLib->getCache()->resolve("vm", vmRef);
+        QVariantMap vmData = this->m_xenLib->getCache()->ResolveObjectData("vm", vmRef);
 
         bool isControlDomain = vmData.value("is_control_domain", false).toBool();
         QString vmName = vmData.value("name_label", "VM").toString();
@@ -208,7 +208,7 @@ void MemoryTabPage::populateHostMemory()
 
         if (vmMetricsRef != "OpaqueRef:NULL")
         {
-            QVariantMap vmMetricsData = this->m_xenLib->getCache()->resolve("vm_metrics", vmMetricsRef);
+            QVariantMap vmMetricsData = this->m_xenLib->getCache()->ResolveObjectData("vm_metrics", vmMetricsRef);
             memoryActual = vmMetricsData.value("memory_actual", 0).toLongLong();
         }
 

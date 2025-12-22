@@ -446,7 +446,7 @@ void NavigationView::buildInfrastructureTree()
 
         // For connected servers, get pool data from CACHE (not API)
         // This matches C# connection.Cache.Resolve pattern
-        QList<QVariantMap> pools = cache->getAll("pool");
+        QList<QVariantMap> pools = cache->GetAllData("pool");
 
         if (pools.isEmpty())
         {
@@ -488,7 +488,7 @@ void NavigationView::buildInfrastructureTree()
             }
 
             // Get all hosts from cache (pool.hosts is just list of refs)
-            QList<QVariantMap> allHosts = cache->getAll("host");
+            QList<QVariantMap> allHosts = cache->GetAllData("host");
 
             // Build map of hostRef -> QTreeWidgetItem* for VM placement
             QMap<QString, QTreeWidgetItem*> hostItems;
@@ -513,7 +513,7 @@ void NavigationView::buildInfrastructureTree()
                 QString metricsRef = hostData.value("metrics").toString();
                 if (!metricsRef.isEmpty() && !metricsRef.contains("NULL"))
                 {
-                    QVariantMap metricsData = cache->resolve("host_metrics", metricsRef);
+                    QVariantMap metricsData = cache->ResolveObjectData("host_metrics", metricsRef);
                     if (!metricsData.isEmpty())
                     {
                         // Add the resolved 'live' status to enriched data for IconManager
@@ -533,13 +533,13 @@ void NavigationView::buildInfrastructureTree()
                 for (const QVariant& pbdRefVar : pbdRefs)
                 {
                     QString pbdRef = pbdRefVar.toString();
-                    QVariantMap pbdData = cache->resolve("pbd", pbdRef);
+                    QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
 
                     if (pbdData.isEmpty())
                         continue;
 
                     QString srRef = pbdData.value("SR").toString();
-                    QVariantMap srData = cache->resolve("sr", srRef);
+                    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
 
                     if (srData.isEmpty())
                         continue;
@@ -577,7 +577,7 @@ void NavigationView::buildInfrastructureTree()
             //
             // This is the KEY FIX for Issue 1: offline VMs were invisible because
             // the old code only placed VMs under resident_on host.
-            QList<QVariantMap> allVMs = cache->getAll("vm");
+            QList<QVariantMap> allVMs = cache->GetAllData("vm");
 
             for (const QVariantMap& vmData : allVMs)
             {
@@ -715,7 +715,7 @@ void NavigationView::buildObjectsTree()
     // No need to iterate connections - cache has all objects
 
     // Pools from cache
-    QList<QVariantMap> pools = cache->getAll("pool");
+    QList<QVariantMap> pools = cache->GetAllData("pool");
     for (const QVariantMap& pool : pools)
     {
         QString poolRef = pool.value("ref").toString();
@@ -751,7 +751,7 @@ void NavigationView::buildObjectsTree()
     }
 
     // Hosts from cache
-    QList<QVariantMap> hosts = cache->getAll("host");
+    QList<QVariantMap> hosts = cache->GetAllData("host");
     for (const QVariantMap& hostData : hosts)
     {
         QString hostRef = hostData.value("ref").toString();
@@ -785,7 +785,7 @@ void NavigationView::buildObjectsTree()
         QString metricsRef = hostData.value("metrics").toString();
         if (!metricsRef.isEmpty() && !metricsRef.contains("NULL"))
         {
-            QVariantMap metricsData = cache->resolve("host_metrics", metricsRef);
+            QVariantMap metricsData = cache->ResolveObjectData("host_metrics", metricsRef);
             if (!metricsData.isEmpty())
             {
                 enrichedHostData["_metrics_live"] = metricsData.value("live", false);
@@ -796,7 +796,7 @@ void NavigationView::buildObjectsTree()
     }
 
     // VMs and Templates from cache
-    QList<QVariantMap> vms = cache->getAll("vm");
+    QList<QVariantMap> vms = cache->GetAllData("vm");
     for (const QVariantMap& vmData : vms)
     {
         QString vmRef = vmData.value("ref").toString();
@@ -864,7 +864,7 @@ void NavigationView::buildObjectsTree()
     }
 
     // Storage Repositories from cache
-    QList<QVariantMap> srs = cache->getAll("sr");
+    QList<QVariantMap> srs = cache->GetAllData("sr");
     for (const QVariantMap& srData : srs)
     {
         QString srRef = srData.value("ref").toString();

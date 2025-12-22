@@ -122,7 +122,7 @@ QString RestartToolstackCommand::getSelectedHostName() const
         return QString();
 
     QString hostRef = this->getSelectedObjectRef();
-    QVariantMap hostData = cache->resolve("host", hostRef);
+    QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
     return hostData.value("name_label", "").toString();
 }
 
@@ -135,7 +135,7 @@ bool RestartToolstackCommand::isHostLive(const QString& hostRef) const
     if (!cache)
         return false;
 
-    QVariantMap hostData = cache->resolve("host", hostRef);
+    QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
     if (hostData.isEmpty())
         return false;
 

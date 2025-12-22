@@ -58,15 +58,15 @@ QString XenObject::nameDescription() const
 
 QVariantMap XenObject::data() const
 {
-    if (!m_connection || m_opaqueRef.isEmpty())
+    if (!this->m_connection || this->m_opaqueRef.isEmpty())
         return QVariantMap();
 
     // Get cache from connection's XenLib
-    XenLib* xenLib = m_connection->property("xenLib").value<XenLib*>();
+    XenLib* xenLib = this->m_connection->property("xenLib").value<XenLib*>();
     if (!xenLib || !xenLib->getCache())
         return QVariantMap();
 
-    return xenLib->getCache()->resolve(objectType(), m_opaqueRef);
+    return xenLib->getCache()->ResolveObjectData(objectType(), this->m_opaqueRef);
 }
 
 void XenObject::refresh()

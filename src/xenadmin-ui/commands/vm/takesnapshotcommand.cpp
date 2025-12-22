@@ -129,7 +129,7 @@ void TakeSnapshotCommand::showSnapshotDialog()
     }
 
     // Get VM data from cache
-    QVariantMap vmData = xenLib->getCache()->resolve("vm", this->m_vmUuid);
+    QVariantMap vmData = xenLib->getCache()->ResolveObjectData("vm", this->m_vmUuid);
     if (vmData.isEmpty())
     {
         qWarning() << "TakeSnapshotCommand: Could not find VM data for" << this->m_vmUuid;
@@ -206,7 +206,7 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     if (actionType == VMSnapshotCreateAction::DISK_AND_MEMORY)
     {
         // Get VM data to check power state
-        QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", this->m_vmUuid);
+        QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", this->m_vmUuid);
         QString powerState = vmData.value("power_state").toString();
 
         if (powerState == "Running" && this->mainWindow()->consolePanel())

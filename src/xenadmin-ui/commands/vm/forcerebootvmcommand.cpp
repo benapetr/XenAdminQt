@@ -60,7 +60,7 @@ void ForceRebootVMCommand::run()
         return;
 
     // Get VM data from cache
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
         return;
 
@@ -165,7 +165,7 @@ bool ForceRebootVMCommand::canForceReboot(const QString& vmRef) const
     //                && EnabledTargetExists(vm.Home(), vm.Connection);
     // }
 
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
         return false;
 
@@ -205,7 +205,7 @@ bool ForceRebootVMCommand::hasRunningTasks(const QString& vmRef) const
 {
     // Matches C# HelpersGUI.HasRunningTasks(vm) logic
     // Check if VM has current_operations (running tasks)
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
         return false;
 
@@ -218,7 +218,7 @@ bool ForceRebootVMCommand::enabledTargetExists(const QString& vmRef) const
     // Matches C# EnabledTargetExists(host, connection) logic:
     // If the vm has a home server check it's enabled, otherwise check if any host is enabled
 
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
         return false;
 
@@ -227,7 +227,7 @@ bool ForceRebootVMCommand::enabledTargetExists(const QString& vmRef) const
     if (!residentOn.isEmpty() && residentOn != "OpaqueRef:NULL")
     {
         // VM has a home server - check if it's enabled
-        QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->resolve("host", residentOn);
+        QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", residentOn);
         if (!hostData.isEmpty())
         {
             return hostData.value("enabled", false).toBool();
@@ -235,7 +235,7 @@ bool ForceRebootVMCommand::enabledTargetExists(const QString& vmRef) const
     }
 
     // No home server or home server not found - check if any host is enabled
-    QList<QVariantMap> hosts = this->mainWindow()->xenLib()->getCache()->getAll("host");
+    QList<QVariantMap> hosts = this->mainWindow()->xenLib()->getCache()->GetAllData("host");
     for (const QVariantMap& host : hosts)
     {
         if (host.value("enabled", false).toBool())

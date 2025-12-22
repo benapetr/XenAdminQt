@@ -134,7 +134,7 @@ void RebootHostAction::shutdownVMs(bool isForReboot)
 
         for (const QString& vmRef : residentVMs)
         {
-            QVariantMap vmData = cache->resolve("vm", vmRef);
+            QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
             if (vmData.isEmpty())
                 continue;
 

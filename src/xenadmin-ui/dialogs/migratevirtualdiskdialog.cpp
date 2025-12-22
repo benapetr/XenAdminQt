@@ -54,7 +54,7 @@ void MigrateVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, c
     if (m_vdiRefs.count() == 1)
     {
         // Single VDI migration
-        QVariantMap vdiData = m_xenLib->getCache()->resolve("vdi", m_vdiRefs.first());
+        QVariantMap vdiData = m_xenLib->getCache()->ResolveObjectData("vdi", m_vdiRefs.first());
         QString vdiName = vdiData.value("name_label", "Virtual Disk").toString();
 
         MigrateVirtualDiskAction* action = new MigrateVirtualDiskAction(
@@ -75,7 +75,7 @@ void MigrateVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, c
         // C# uses ParallelAction with BATCH_SIZE=3
         for (const QString& vdiRef : m_vdiRefs)
         {
-            QVariantMap vdiData = m_xenLib->getCache()->resolve("vdi", vdiRef);
+            QVariantMap vdiData = m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
             QString vdiName = vdiData.value("name_label", "Virtual Disk").toString();
 
             MigrateVirtualDiskAction* action = new MigrateVirtualDiskAction(

@@ -74,7 +74,7 @@ VIFDialog::VIFDialog(XenLib* xenLib, const QString& vifRef, QWidget* parent)
     // Get existing VIF data
     if (m_xenLib && !m_vifRef.isEmpty())
     {
-        m_existingVif = m_xenLib->getCache()->resolve("VIF", m_vifRef);
+        m_existingVif = m_xenLib->getCache()->ResolveObjectData("VIF", m_vifRef);
         m_vmRef = m_existingVif.value("VM").toString();
         m_deviceId = m_existingVif.value("device").toInt();
     }
@@ -115,12 +115,12 @@ void VIFDialog::loadNetworks()
     if (!m_xenLib)
         return;
 
-    QStringList networkRefs = m_xenLib->getCache()->getAllRefs("network");
+    QStringList networkRefs = m_xenLib->getCache()->GetAllRefs("network");
     QList<QPair<QString, QString>> networks; // <ref, name>
 
     for (const QString& networkRef : networkRefs)
     {
-        QVariantMap networkData = m_xenLib->getCache()->resolve("network", networkRef);
+        QVariantMap networkData = m_xenLib->getCache()->ResolveObjectData("network", networkRef);
 
         // C#: if (!network.Show(Properties.Settings.Default.ShowHiddenVMs) || network.IsMember() || (network.IsSriov() && !allowSriov))
         //     continue;
@@ -232,7 +232,7 @@ QVariantMap VIFDialog::getVifSettings() const
     QString networkRef = getSelectedNetworkRef();
     if (!networkRef.isEmpty() && m_xenLib && m_xenLib->getCache())
     {
-        QVariantMap networkData = m_xenLib->getCache()->resolve("network", networkRef);
+        QVariantMap networkData = m_xenLib->getCache()->ResolveObjectData("network", networkRef);
         if (!networkData.isEmpty())
         {
             vif["MTU"] = networkData.value("MTU", 1500).toLongLong();
@@ -417,14 +417,14 @@ bool VIFDialog::isDuplicateMAC(const QString& mac) const
     QString normalizedMAC = mac.toLower().remove(':').remove('-');
 
     // Check all VIFs in the cache
-    QStringList vifRefs = m_xenLib->getCache()->getAllRefs("VIF");
+    QStringList vifRefs = m_xenLib->getCache()->GetAllRefs("VIF");
     for (const QString& vifRef : vifRefs)
     {
         // Skip the VIF we're editing
         if (m_isEditMode && vifRef == m_vifRef)
             continue;
 
-        QVariantMap vifData = m_xenLib->getCache()->resolve("VIF", vifRef);
+        QVariantMap vifData = m_xenLib->getCache()->ResolveObjectData("VIF", vifRef);
         QString existingMAC = vifData.value("MAC").toString();
         QString normalizedExisting = existingMAC.toLower().remove(':').remove('-');
 
@@ -432,7 +432,7 @@ bool VIFDialog::isDuplicateMAC(const QString& mac) const
         {
             // Check if the VM is a real VM (not a template)
             QString vmRef = vifData.value("VM").toString();
-            QVariantMap vmData = m_xenLib->getCache()->resolve("vm", vmRef);
+            QVariantMap vmData = m_xenLib->getCache()->ResolveObjectData("vm", vmRef);
             bool isTemplate = vmData.value("is_a_template", false).toBool();
             bool isSnapshot = vmData.value("is_a_snapshot", false).toBool();
 

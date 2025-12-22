@@ -58,7 +58,7 @@ void PowerOnHostCommand::run()
         return;
 
     // Get host data from cache
-    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->resolve("host", hostRef);
+    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
     if (hostData.isEmpty())
         return;
 
@@ -150,7 +150,7 @@ bool PowerOnHostCommand::canPowerOn(const QString& hostRef) const
     //     && !HelpersGUI.HasActiveHostAction(host)
     //     && host.power_on_mode != "";
 
-    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->resolve("host", hostRef);
+    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
     if (hostData.isEmpty())
         return false;
 
@@ -188,7 +188,7 @@ bool PowerOnHostCommand::canPowerOn(const QString& hostRef) const
 bool PowerOnHostCommand::isHostLive(const QString& hostRef) const
 {
     // Matches C# Host.IsLive() logic - check if host is enabled/running
-    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->resolve("host", hostRef);
+    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
     if (hostData.isEmpty())
         return false;
 
@@ -200,7 +200,7 @@ bool PowerOnHostCommand::hasActiveHostAction(const QString& hostRef) const
 {
     // Matches C# HelpersGUI.HasActiveHostAction(host) logic
     // Check if host has current_operations (active tasks)
-    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->resolve("host", hostRef);
+    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
     if (hostData.isEmpty())
         return false;
 

@@ -73,7 +73,7 @@ void DisconnectPoolCommand::run()
     QString poolName = "this pool";
     if (this->mainWindow()->xenLib()->getCache())
     {
-        QVariantMap poolData = this->mainWindow()->xenLib()->getCache()->resolve("pool", poolRef);
+        QVariantMap poolData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("pool", poolRef);
         if (!poolData.isEmpty())
         {
             poolName = poolData.value("name_label", "this pool").toString();

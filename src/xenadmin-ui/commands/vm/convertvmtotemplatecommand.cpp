@@ -146,7 +146,7 @@ QString ConvertVMToTemplateCommand::getSelectedVMName() const
 bool ConvertVMToTemplateCommand::canConvertToTemplate(const QString& vmRef) const
 {
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
 
     // Check if it's already a template
     bool isTemplate = vmData.value("is_a_template", false).toBool();

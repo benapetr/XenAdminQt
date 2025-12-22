@@ -52,7 +52,7 @@ bool StopVMCommand::canRun() const
         return false;
 
     // Check allowed_operations contains clean_shutdown (matches C# ShutDownVMCommand.CanRun)
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     QVariantList allowedOperations = vmData.value("allowed_operations").toList();
 
     return allowedOperations.contains("clean_shutdown");
@@ -137,7 +137,7 @@ QString StopVMCommand::getSelectedVMName() const
 bool StopVMCommand::isVMRunning(const QString& vmRef) const
 {
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     QString powerState = vmData.value("power_state", "Halted").toString();
 
     return (powerState == "Running");

@@ -47,7 +47,7 @@ BallooningDialog::BallooningDialog(const QString& vmRef, XenLib* xenLib, QWidget
     // Get VM data from cache
     if (m_xenLib && m_xenLib->getCache())
     {
-        m_vmData = m_xenLib->getCache()->resolve("vm", m_vmRef);
+        m_vmData = m_xenLib->getCache()->ResolveObjectData("vm", m_vmRef);
     }
 
     if (m_vmData.isEmpty())

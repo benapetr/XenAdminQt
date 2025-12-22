@@ -26,18 +26,26 @@
  */
 
 #include "xencache.h"
+#include "xen/connection.h"
+#include "xen/vm.h"
+#include "xen/host.h"
+#include "xen/hostmetrics.h"
+#include "xen/pool.h"
+#include "xen/sr.h"
+#include "xen/vdi.h"
+#include "xen/vbd.h"
 #include <QDebug>
 #include <QMutexLocker>
 
-XenCache::XenCache(QObject* parent)
-    : QObject(parent)
+XenCache::XenCache(QObject* parent) : QObject(parent)
 {
+    this->m_connection = qobject_cast<XenConnection*>(parent);
     qDebug() << "XenCache: Created";
 }
 
 XenCache::~XenCache()
 {
-    clear();
+    this->Clear();
 }
 
 QString XenCache::normalizeType(const QString& type) const
@@ -71,18 +79,18 @@ QString XenCache::normalizeType(const QString& type) const
     return normalized;
 }
 
-QVariantMap XenCache::resolve(const QString& type, const QString& ref) const
+QVariantMap XenCache::ResolveObjectData(const QString& type, const QString& ref) const
 {
     if (ref.isEmpty())
     {
         return QVariantMap();
     }
 
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(&this->m_mutex);
 
     QString normalizedType = normalizeType(type);
 
-    if (!m_cache.contains(normalizedType))
+    if (!this->m_cache.contains(normalizedType))
     {
         return QVariantMap();
     }
@@ -96,51 +104,98 @@ QVariantMap XenCache::resolve(const QString& type, const QString& ref) const
     return typeCache[ref];
 }
 
-QString XenCache::canonicalType(const QString& type) const
+QSharedPointer<XenObject> XenCache::ResolveObject(const QString& type, const QString& ref)
+{
+    if (ref.isEmpty())
+        return QSharedPointer<XenObject>();
+
+    QString normalizedType = normalizeType(type);
+
+    QMutexLocker locker(&this->m_mutex);
+
+    if (this->m_objects.contains(normalizedType))
+    {
+        auto it = this->m_objects[normalizedType].find(ref);
+        if (it != this->m_objects[normalizedType].end())
+        {
+            return it.value();
+        }
+    }
+
+    if (!this->m_cache.contains(normalizedType) || !this->m_cache[normalizedType].contains(ref))
+    {
+        return QSharedPointer<XenObject>();
+    }
+
+    QSharedPointer<XenObject> created = this->createObjectForType(normalizedType, ref);
+    if (!created)
+        return QSharedPointer<XenObject>();
+
+    if (!this->m_objects.contains(normalizedType))
+    {
+        this->m_objects[normalizedType] = QMap<QString, QSharedPointer<XenObject>>();
+    }
+    this->m_objects[normalizedType].insert(ref, created);
+    return created;
+}
+
+QString XenCache::CanonicalType(const QString& type) const
 {
     return normalizeType(type);
 }
 
-bool XenCache::contains(const QString& type, const QString& ref) const
+bool XenCache::Contains(const QString& type, const QString& ref) const
 {
     if (ref.isEmpty())
-    {
         return false;
-    }
 
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(&this->m_mutex);
 
     QString normalizedType = normalizeType(type);
 
-    if (!m_cache.contains(normalizedType))
-    {
+    if (!this->m_cache.contains(normalizedType))
         return false;
-    }
 
-    return m_cache[normalizedType].contains(ref);
+    return this->m_cache[normalizedType].contains(ref);
 }
 
-QList<QVariantMap> XenCache::getAll(const QString& type) const
+QList<QVariantMap> XenCache::GetAllData(const QString& type) const
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(&this->m_mutex);
 
     QString normalizedType = normalizeType(type);
 
-    if (!m_cache.contains(normalizedType))
+    if (!this->m_cache.contains(normalizedType))
     {
         return QList<QVariantMap>();
     }
 
-    return m_cache[normalizedType].values();
+    return this->m_cache[normalizedType].values();
 }
 
-QStringList XenCache::getAllRefs(const QString& type) const
+QList<QSharedPointer<XenObject>> XenCache::GetAll(const QString& type)
 {
-    QMutexLocker locker(&m_mutex);
+    QStringList refs = GetAllRefs(type);
+    QList<QSharedPointer<XenObject>> objects;
+    objects.reserve(refs.size());
+
+    for (const QString& ref : refs)
+    {
+        QSharedPointer<XenObject> obj = ResolveObject(type, ref);
+        if (obj)
+            objects.append(obj);
+    }
+
+    return objects;
+}
+
+QStringList XenCache::GetAllRefs(const QString& type) const
+{
+    QMutexLocker locker(&this->m_mutex);
 
     QString normalizedType = normalizeType(type);
 
-    if (!m_cache.contains(normalizedType))
+    if (!this->m_cache.contains(normalizedType))
     {
         return QStringList();
     }
@@ -155,9 +210,9 @@ QStringList XenCache::getAllRefs(const QString& type) const
 // CRITICAL: Only returns object types that should appear in searches/trees.
 // Does NOT return internal objects like: console, host_cpu, host_metrics,
 // message, pbd, pif, vbd, vif, bond, vgpu, etc.
-QList<QPair<QString, QString>> XenCache::getAllObjects() const
+QList<QPair<QString, QString>> XenCache::GetAllObjectsData() const
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(&this->m_mutex);
 
     QList<QPair<QString, QString>> allObjects;
 
@@ -182,10 +237,10 @@ QList<QPair<QString, QString>> XenCache::getAllObjects() const
     {
         QString normalizedType = normalizeType(type);
 
-        if (!m_cache.contains(normalizedType))
+        if (!this->m_cache.contains(normalizedType))
             continue;
 
-        const QMap<QString, QVariantMap>& objectsOfType = m_cache[normalizedType];
+        const QMap<QString, QVariantMap>& objectsOfType = this->m_cache[normalizedType];
 
         // Iterate all objects of this type
         for (auto refIt = objectsOfType.constBegin(); refIt != objectsOfType.constEnd(); ++refIt)
@@ -198,7 +253,23 @@ QList<QPair<QString, QString>> XenCache::getAllObjects() const
     return allObjects;
 }
 
-void XenCache::update(const QString& type, const QString& ref, const QVariantMap& data)
+QList<QSharedPointer<XenObject>> XenCache::GetAllObjects()
+{
+    QList<QPair<QString, QString>> refs = this->GetAllObjectsData();
+    QList<QSharedPointer<XenObject>> objects;
+    objects.reserve(refs.size());
+
+    for (const auto& entry : refs)
+    {
+        QSharedPointer<XenObject> obj = this->ResolveObject(entry.first, entry.second);
+        if (obj)
+            objects.append(obj);
+    }
+
+    return objects;
+}
+
+void XenCache::Update(const QString& type, const QString& ref, const QVariantMap& data)
 {
     if (ref.isEmpty())
     {
@@ -206,14 +277,15 @@ void XenCache::update(const QString& type, const QString& ref, const QVariantMap
         return;
     }
 
-    QString normalizedType = normalizeType(type);
+    QString normalizedType = this->normalizeType(type);
 
+    bool refresh = false;
     {
-        QMutexLocker locker(&m_mutex);
+        QMutexLocker locker(&this->m_mutex);
 
-        if (!m_cache.contains(normalizedType))
+        if (!this->m_cache.contains(normalizedType))
         {
-            m_cache[normalizedType] = QMap<QString, QVariantMap>();
+            this->m_cache[normalizedType] = QMap<QString, QVariantMap>();
         }
 
         // Ensure ref is in the data
@@ -223,23 +295,28 @@ void XenCache::update(const QString& type, const QString& ref, const QVariantMap
             dataWithRef["ref"] = ref;
         }
 
-        m_cache[normalizedType][ref] = dataWithRef;
+        this->m_cache[normalizedType][ref] = dataWithRef;
+        refresh = this->m_objects.contains(normalizedType) && this->m_objects[normalizedType].contains(ref);
     }
+
+    if (refresh)
+        this->refreshObject(normalizedType, ref);
 
     emit objectChanged(normalizedType, ref);
 }
 
-void XenCache::updateBulk(const QString& type, const QVariantMap& allRecords)
+void XenCache::UpdateBulk(const QString& type, const QVariantMap& allRecords)
 {
     QString normalizedType = normalizeType(type);
     int updateCount = 0;
+    QStringList refreshedRefs;
 
     {
-        QMutexLocker locker(&m_mutex);
+        QMutexLocker locker(&this->m_mutex);
 
-        if (!m_cache.contains(normalizedType))
+        if (!this->m_cache.contains(normalizedType))
         {
-            m_cache[normalizedType] = QMap<QString, QVariantMap>();
+            this->m_cache[normalizedType] = QMap<QString, QVariantMap>();
         }
 
         // Iterate through all records and add to cache
@@ -254,10 +331,15 @@ void XenCache::updateBulk(const QString& type, const QVariantMap& allRecords)
                 data["ref"] = ref;
             }
 
-            m_cache[normalizedType][ref] = data;
+            this->m_cache[normalizedType][ref] = data;
+            if (this->m_objects.contains(normalizedType) && this->m_objects[normalizedType].contains(ref))
+                refreshedRefs.append(ref);
             updateCount++;
         }
     }
+
+    for (const QString& ref : refreshedRefs)
+        refreshObject(normalizedType, ref);
 
     qDebug() << "XenCache: Bulk update completed for" << normalizedType
              << "- added/updated" << updateCount << "objects";
@@ -265,43 +347,47 @@ void XenCache::updateBulk(const QString& type, const QVariantMap& allRecords)
     emit bulkUpdateComplete(normalizedType, updateCount);
 }
 
-void XenCache::remove(const QString& type, const QString& ref)
+void XenCache::Remove(const QString& type, const QString& ref)
 {
     if (ref.isEmpty())
-    {
         return;
-    }
 
-    QString normalizedType = normalizeType(type);
+    QString normalizedType = this->normalizeType(type);
 
     {
-        QMutexLocker locker(&m_mutex);
+        QMutexLocker locker(&this->m_mutex);
 
-        if (!m_cache.contains(normalizedType))
+        if (!this->m_cache.contains(normalizedType))
         {
             return;
         }
 
-        m_cache[normalizedType].remove(ref);
+        this->m_cache[normalizedType].remove(ref);
     }
 
+    this->evictObject(normalizedType, ref);
     emit objectRemoved(normalizedType, ref);
 }
 
-void XenCache::clearType(const QString& type)
+void XenCache::ClearType(const QString& type)
 {
     QString normalizedType = normalizeType(type);
 
     int count = 0;
+    QStringList refs;
     {
-        QMutexLocker locker(&m_mutex);
+        QMutexLocker locker(&this->m_mutex);
 
-        if (m_cache.contains(normalizedType))
+        if (this->m_cache.contains(normalizedType))
         {
-            count = m_cache[normalizedType].count();
-            m_cache.remove(normalizedType);
+            count = this->m_cache[normalizedType].count();
+            refs = this->m_cache[normalizedType].keys();
+            this->m_cache.remove(normalizedType);
         }
     }
+
+    for (const QString& ref : refs)
+        this->evictObject(normalizedType, ref);
 
     if (count > 0)
     {
@@ -310,33 +396,104 @@ void XenCache::clearType(const QString& type)
     }
 }
 
-void XenCache::clear()
+void XenCache::Clear()
 {
+    QList<QPair<QString, QString>> refs;
     {
-        QMutexLocker locker(&m_mutex);
-        m_cache.clear();
+        QMutexLocker locker(&this->m_mutex);
+        for (auto typeIt = this->m_cache.constBegin(); typeIt != this->m_cache.constEnd(); ++typeIt)
+        {
+            const QString& type = typeIt.key();
+            const QMap<QString, QVariantMap>& records = typeIt.value();
+            for (auto refIt = records.constBegin(); refIt != records.constEnd(); ++refIt)
+                refs.append(qMakePair(type, refIt.key()));
+        }
+        this->m_cache.clear();
     }
+
+    for (const auto& entry : refs)
+        this->evictObject(entry.first, entry.second);
 
     qDebug() << "XenCache: Cache cleared";
     emit cacheCleared();
 }
 
-int XenCache::count(const QString& type) const
+int XenCache::Count(const QString& type) const
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(&this->m_mutex);
 
     QString normalizedType = normalizeType(type);
 
-    if (!m_cache.contains(normalizedType))
+    if (!this->m_cache.contains(normalizedType))
     {
         return 0;
     }
 
-    return m_cache[normalizedType].count();
+    return this->m_cache[normalizedType].count();
 }
 
-bool XenCache::isEmpty() const
+bool XenCache::IsEmpty() const
 {
-    QMutexLocker locker(&m_mutex);
-    return m_cache.isEmpty();
+    QMutexLocker locker(&this->m_mutex);
+    return this->m_cache.isEmpty();
+}
+
+QSharedPointer<XenObject> XenCache::createObjectForType(const QString& type, const QString& ref)
+{
+    if (!this->m_connection)
+        return QSharedPointer<XenObject>();
+
+    if (type == "vm")
+        return QSharedPointer<XenObject>(new VM(this->m_connection, ref));
+    if (type == "host")
+        return QSharedPointer<XenObject>(new Host(this->m_connection, ref));
+    if (type == "host_metrics")
+        return QSharedPointer<XenObject>(new HostMetrics(this->m_connection, ref));
+    if (type == "pool")
+        return QSharedPointer<XenObject>(new Pool(this->m_connection, ref));
+    if (type == "sr")
+        return QSharedPointer<XenObject>(new SR(this->m_connection, ref));
+    if (type == "vdi")
+        return QSharedPointer<XenObject>(new VDI(this->m_connection, ref));
+    if (type == "vbd")
+        return QSharedPointer<XenObject>(new VBD(this->m_connection, ref));
+
+    return QSharedPointer<XenObject>();
+}
+
+void XenCache::refreshObject(const QString& type, const QString& ref)
+{
+    QSharedPointer<XenObject> obj;
+    {
+        QMutexLocker locker(&this->m_mutex);
+        if (!this->m_objects.contains(type))
+            return;
+        auto it = this->m_objects[type].find(ref);
+        if (it == this->m_objects[type].end())
+            return;
+        obj = it.value();
+        if (obj)
+            obj->setEvicted(false);
+    }
+
+    if (obj)
+        obj->refresh();
+}
+
+void XenCache::evictObject(const QString& type, const QString& ref)
+{
+    QSharedPointer<XenObject> obj;
+    {
+        QMutexLocker locker(&this->m_mutex);
+        if (!this->m_objects.contains(type))
+            return;
+        auto it = this->m_objects[type].find(ref);
+        if (it == this->m_objects[type].end())
+            return;
+        obj = it.value();
+        this->m_objects[type].remove(ref);
+    }
+
+    if (obj)
+        obj->setEvicted(true);
 }

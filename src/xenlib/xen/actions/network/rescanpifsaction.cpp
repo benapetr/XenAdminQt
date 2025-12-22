@@ -44,7 +44,7 @@ RescanPIFsAction::RescanPIFsAction(XenConnection* connection,
         throw std::invalid_argument("Host reference cannot be empty");
 
     // Get host name for display
-    QVariantMap hostData = connection->getCache()->resolve("host", m_hostRef);
+    QVariantMap hostData = connection->getCache()->ResolveObjectData("host", m_hostRef);
     m_hostName = hostData.value("name_label").toString();
 
     setTitle(QString("Scanning for NICs on %1").arg(m_hostName));

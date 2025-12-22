@@ -62,7 +62,7 @@ void HAConfigureCommand::run()
     XenCache* cache = this->mainWindow()->xenLib()->getCache();
     if (cache)
     {
-        QVariantMap poolData = cache->resolve("pool", poolRef);
+        QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
         bool haEnabled = poolData.value("ha_enabled", false).toBool();
 
         if (haEnabled)
@@ -112,10 +112,10 @@ bool HAConfigureCommand::hasCoordinator() const
         return false;
 
     // Get all hosts and check if any is coordinator
-    QStringList hosts = cache->getAllRefs("host");
+    QStringList hosts = cache->GetAllRefs("host");
     for (const QString& hostRef : hosts)
     {
-        QVariantMap hostData = cache->resolve("host", hostRef);
+        QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
         if (hostData.value("master", false).toBool())
             return true;
     }
@@ -136,7 +136,7 @@ bool HAConfigureCommand::isPoolLocked() const
     if (!cache)
         return false;
 
-    QVariantMap poolData = cache->resolve("pool", poolRef);
+    QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
 
     // Check if pool has any operations in progress that would lock it
     QVariantMap currentOps = poolData.value("current_operations", QVariantMap()).toMap();

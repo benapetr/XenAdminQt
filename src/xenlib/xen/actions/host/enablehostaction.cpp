@@ -92,7 +92,7 @@ void EnableHostAction::run()
                 // Migrate VMs back to this host
                 for (const QString& vmRef : migratedVMRefs)
                 {
-                    QVariantMap vmData = connection()->getCache()->resolve("vm", vmRef);
+                    QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", vmRef);
                     QString vmName = vmData.value("name_label").toString();
 
                     qDebug() << "EnableHostAction: Migrating VM" << vmName << "back to host";
@@ -111,7 +111,7 @@ void EnableHostAction::run()
                 // Start halted VMs on this host
                 for (const QString& vmRef : haltedVMRefs)
                 {
-                    QVariantMap vmData = connection()->getCache()->resolve("vm", vmRef);
+                    QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", vmRef);
                     QString vmName = vmData.value("name_label").toString();
 
                     qDebug() << "EnableHostAction: Starting VM" << vmName << "on host";
@@ -126,7 +126,7 @@ void EnableHostAction::run()
                 // Resume suspended VMs on this host
                 for (const QString& vmRef : suspendedVMRefs)
                 {
-                    QVariantMap vmData = connection()->getCache()->resolve("vm", vmRef);
+                    QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", vmRef);
                     QString vmName = vmData.value("name_label").toString();
 
                     qDebug() << "EnableHostAction: Resuming VM" << vmName << "on host";

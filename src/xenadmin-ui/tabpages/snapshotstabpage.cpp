@@ -128,7 +128,7 @@ void SnapshotsTabPage::populateSnapshotTree()
         QString snapshotRef = refVariant.toString();
 
         // Resolve the snapshot reference to get its full data
-        QVariantMap snapshot = this->m_xenLib->getCache()->resolve("vm", snapshotRef);
+        QVariantMap snapshot = this->m_xenLib->getCache()->ResolveObjectData("vm", snapshotRef);
 
         if (snapshot.isEmpty())
         {
@@ -322,7 +322,7 @@ void SnapshotsTabPage::refreshSnapshotList()
     qDebug() << "SnapshotsTabPage: Manually refreshing snapshot list for VM:" << this->m_objectRef;
 
     // Invalidate the VM cache to force fresh data from server
-    this->m_xenLib->getCache()->clearType("vm");
+    this->m_xenLib->getCache()->ClearType("vm");
 
     // Request fresh VM data - this will trigger virtualMachinesReceived signal
     this->m_xenLib->requestVirtualMachines();

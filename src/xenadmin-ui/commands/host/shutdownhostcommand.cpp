@@ -134,6 +134,6 @@ QString ShutdownHostCommand::getSelectedHostName() const
 bool ShutdownHostCommand::isHostEnabled(const QString& hostRef) const
 {
     // Use cache instead of async API call
-    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->resolve("host", hostRef);
+    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
     return hostData.value("enabled", true).toBool();
 }

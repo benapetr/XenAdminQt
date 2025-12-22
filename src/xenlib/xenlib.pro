@@ -183,6 +183,7 @@ HEADERS += \
     xen/xenobject.h \
     xen/pool.h \
     xen/host.h \
+    xen/hostmetrics.h \
     xen/vm.h \
     xen/sr.h \
     xen/vdi.h \

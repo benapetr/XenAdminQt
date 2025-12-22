@@ -55,7 +55,7 @@ QString DeleteTemplateCommand::menuText() const
 bool DeleteTemplateCommand::canDeleteTemplate(const QString& templateRef) const
 {
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", templateRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", templateRef);
 
     // Check if it's a template
     bool isTemplate = vmData.value("is_a_template", false).toBool();
