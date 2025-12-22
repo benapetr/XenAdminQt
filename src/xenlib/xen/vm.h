@@ -58,6 +58,10 @@ class XENLIB_EXPORT VM : public XenObject
     Q_PROPERTY(QString residentOn READ residentOnRef NOTIFY dataChanged)
 
     public:
+        static constexpr int DEFAULT_CORES_PER_SOCKET = 1;
+        static constexpr long MAX_SOCKETS = 16;
+        static constexpr long MAX_VCPUS_FOR_NON_TRUSTED_VMS = 32;
+
         explicit VM(XenConnection* connection,
                     const QString& opaqueRef,
                     QObject* parent = nullptr);
@@ -176,6 +180,56 @@ class XENLIB_EXPORT VM : public XenObject
          * @return Number of VCPUs at startup
          */
         int vcpusAtStartup() const;
+
+        /**
+         * @brief Check if VM is HVM
+         */
+        bool isHvm() const;
+
+        /**
+         * @brief Check if VM is Windows
+         */
+        bool isWindows() const;
+
+        /**
+         * @brief Check if vCPU hotplug is supported
+         */
+        bool supportsVcpuHotplug() const;
+
+        /**
+         * @brief Get maximum allowed VCPUs
+         */
+        int maxVcpusAllowed() const;
+
+        /**
+         * @brief Get minimum recommended VCPUs
+         */
+        int minVcpus() const;
+
+        /**
+         * @brief Get vCPU weight from VCPUs_params
+         */
+        int getVcpuWeight() const;
+
+        /**
+         * @brief Get cores per socket from platform
+         */
+        long getCoresPerSocket() const;
+
+        /**
+         * @brief Get maximum cores per socket based on host capabilities
+         */
+        long maxCoresPerSocket() const;
+
+        /**
+         * @brief Validate vCPU configuration
+         */
+        static QString validVcpuConfiguration(long noOfVcpus, long coresPerSocket);
+
+        /**
+         * @brief Get human readable topology string
+         */
+        static QString getTopology(long sockets, long cores);
 
         /**
          * @brief Get other_config dictionary

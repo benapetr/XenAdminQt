@@ -639,6 +639,16 @@ namespace XenAPI
             static void set_other_config(XenSession* session, const QString& vm, const QVariantMap& otherConfig);
 
             /**
+             * @brief Set VCPUs_params
+             * @param session The session
+             * @param vm The opaque_ref of the given VM
+             * @param vcpusParams Map of VCPUs_params values
+             *
+             * Matches C# VM.set_VCPUs_params()
+             */
+            static void set_VCPUs_params(XenSession* session, const QString& vm, const QVariantMap& vcpusParams);
+
+            /**
              * @brief Set platform
              * @param session The session
              * @param vm The opaque_ref of the given VM

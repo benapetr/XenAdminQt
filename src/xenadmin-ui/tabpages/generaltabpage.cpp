@@ -29,6 +29,7 @@
 #include "ui_generaltabpage.h"
 #include "../../xenlib/xenlib.h"
 #include "../../xenlib/xencache.h"
+#include "../../xenlib/xen/vm.h"
 #include <QLabel>
 #include <QDebug>
 #include <QDateTime>
@@ -418,7 +419,7 @@ void GeneralTabPage::populateVMProperties()
     if (this->m_objectData.contains("VCPUs_at_startup"))
     {
         int vcpusAtStartup = this->m_objectData.value("VCPUs_at_startup").toInt();
-        int vcpusMax = this->m_objectData.value("VCPUs_max", vcpusAtStartup).toInt();
+        qint64 vcpusMax = this->m_objectData.value("VCPUs_max", vcpusAtStartup).toLongLong();
 
         this->addProperty("vCPUs at startup", QString::number(vcpusAtStartup));
 
@@ -429,23 +430,22 @@ void GeneralTabPage::populateVMProperties()
             this->addProperty("vCPUs maximum", QString::number(vcpusMax));
         }
 
-        // Topology
-        if (this->m_objectData.contains("platform"))
+        // Topology (matches C# VM.Topology())
+        qint64 coresPerSocket = 1;
+        QVariantMap platform = this->m_objectData.value("platform").toMap();
+        if (platform.contains("cores-per-socket"))
         {
-            QVariantMap platform = this->m_objectData.value("platform").toMap();
-            if (platform.contains("cores-per-socket"))
-            {
-                int coresPerSocket = platform.value("cores-per-socket").toInt();
-                if (coresPerSocket > 0)
-                {
-                    int sockets = vcpusAtStartup / coresPerSocket;
-                    if (sockets * coresPerSocket == vcpusAtStartup)
-                    {
-                        this->addProperty("Topology", QString("%1 socket(s), %2 core(s) per socket").arg(sockets).arg(coresPerSocket));
-                    }
-                }
-            }
+            bool ok = false;
+            qint64 parsed = platform.value("cores-per-socket").toString().toLongLong(&ok);
+            if (ok && parsed > 0)
+                coresPerSocket = parsed;
         }
+
+        QString topologyWarning = VM::validVcpuConfiguration(vcpusMax, coresPerSocket);
+        qint64 sockets = topologyWarning.isEmpty() && coresPerSocket > 0
+            ? (vcpusMax / coresPerSocket)
+            : 0;
+        this->addProperty("Topology", VM::getTopology(sockets, coresPerSocket));
     }
 }
 

@@ -384,6 +384,16 @@ QList<AsyncOperation*> VerticallyTabbedDialog::collectActions()
             this->m_objectDataCopy["other_config"] = dialogOtherConfig;
         }
 
+        if (pageData.contains("VCPUs_params"))
+        {
+            this->m_objectDataCopy["VCPUs_params"] = pageData.value("VCPUs_params");
+        }
+
+        if (pageData.contains("platform"))
+        {
+            this->m_objectDataCopy["platform"] = pageData.value("platform");
+        }
+
         if (pageData.contains("HVM_shadow_multiplier"))
         {
             this->m_objectDataCopy["HVM_shadow_multiplier"] = pageData.value("HVM_shadow_multiplier");
@@ -612,6 +622,38 @@ void VerticallyTabbedDialog::applySimpleChanges()
             catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set VM other_config:" << ex.what();
+            }
+        }
+
+        QVariantMap oldVcpusParams = this->m_objectDataBefore.value("VCPUs_params").toMap();
+        QVariantMap newVcpusParams = this->m_objectDataCopy.value("VCPUs_params").toMap();
+        if (oldVcpusParams != newVcpusParams)
+        {
+            qDebug() << "VerticallyTabbedDialog: Applying VM VCPUs_params changes";
+            try
+            {
+                XenAPI::VM::set_VCPUs_params(session, this->m_objectRef, newVcpusParams);
+                hasChanges = true;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set VM VCPUs_params:" << ex.what();
+            }
+        }
+
+        QVariantMap oldPlatform = this->m_objectDataBefore.value("platform").toMap();
+        QVariantMap newPlatform = this->m_objectDataCopy.value("platform").toMap();
+        if (oldPlatform != newPlatform)
+        {
+            qDebug() << "VerticallyTabbedDialog: Applying VM platform changes";
+            try
+            {
+                XenAPI::VM::set_platform(session, this->m_objectRef, newPlatform);
+                hasChanges = true;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set VM platform:" << ex.what();
             }
         }
     }

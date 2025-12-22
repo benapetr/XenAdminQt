@@ -29,6 +29,9 @@
 #include "ui_affinitypicker.h"
 #include "../iconmanager.h"
 #include "xen/connection.h"
+#include "xen/host.h"
+#include "xen/hostmetrics.h"
+#include "xen/sr.h"
 #include "xencache.h"
 #include <QHeaderView>
 #include <QShowEvent>
@@ -92,7 +95,7 @@ void AffinityPicker::setAffinity(XenConnection* connection,
     this->loadServers();
     this->updateControl();
     this->selectRadioButtons();
-    emit selectedAffinityChanged();
+    emit this->selectedAffinityChanged();
 }
 
 QString AffinityPicker::selectedAffinityRef() const
@@ -140,13 +143,13 @@ void AffinityPicker::onStaticRadioToggled(bool checked)
         this->selectSomething();
 
     this->updateControl();
-    emit selectedAffinityChanged();
+    emit this->selectedAffinityChanged();
 }
 
 void AffinityPicker::onSelectionChanged()
 {
     this->updateControl();
-    emit selectedAffinityChanged();
+    emit this->selectedAffinityChanged();
 }
 
 void AffinityPicker::loadServers()
@@ -157,26 +160,23 @@ void AffinityPicker::loadServers()
     if (!this->m_connection || !this->m_connection->getCache())
         return;
 
-    QList<QVariantMap> hosts = this->m_connection->getCache()->GetAllData("host");
-    std::sort(hosts.begin(), hosts.end(), [](const QVariantMap& a, const QVariantMap& b) {
-        return a.value("name_label").toString().toLower()
-            < b.value("name_label").toString().toLower();
+    QList<QSharedPointer<Host>> hosts = this->m_connection->getCache()->GetAll<Host>("host");
+
+    std::sort(hosts.begin(), hosts.end(), [](const QSharedPointer<Host>& a, const QSharedPointer<Host>& b) {
+        return a->nameLabel().toLower() < b->nameLabel().toLower();
     });
 
-    for (const QVariantMap& hostData : hosts)
+    for (const QSharedPointer<Host>& host : hosts)
     {
-        QString hostRef = hostData.value("ref").toString();
-        if (hostRef.isEmpty())
-            hostRef = hostData.value("opaqueRef").toString();
-        if (hostRef.isEmpty())
-            hostRef = hostData.value("_ref").toString();
+        QString hostRef = host->opaqueRef();
         if (hostRef.isEmpty())
             continue;
 
-        this->m_hosts.insert(hostRef, hostData);
+        this->m_hosts.insert(hostRef, host);
 
-        QString hostName = hostData.value("name_label").toString();
-        bool isLive = this->isHostLive(hostData);
+        QVariantMap hostData = host->data();
+        QString hostName = host->nameLabel();
+        bool isLive = this->isHostLive(host);
         QString reason = isLive ? QString()
                                 : tr("This server cannot be contacted");
 
@@ -283,32 +283,32 @@ bool AffinityPicker::hasFullyConnectedSharedStorage() const
     if (!this->m_connection || !this->m_connection->getCache())
         return false;
 
-    QList<QVariantMap> hosts = this->m_connection->getCache()->GetAllData("host");
-    if (hosts.isEmpty())
+    QStringList hostRefs = this->m_connection->getCache()->GetAllRefs("host");
+    if (hostRefs.isEmpty())
         return false;
 
-    QSet<QString> hostRefs;
-    for (const QVariantMap& hostData : hosts)
+    QSet<QString> hostRefSet;
+    for (const QString& hostRef : hostRefs)
     {
-        QString hostRef = hostData.value("_ref").toString();
         if (!hostRef.isEmpty())
-            hostRefs.insert(hostRef);
+            hostRefSet.insert(hostRef);
     }
 
-    if (hostRefs.size() <= 1)
+    if (hostRefSet.size() <= 1)
         return true;
 
-    QList<QVariantMap> srs = this->m_connection->getCache()->GetAllData("sr");
-    for (const QVariantMap& srData : srs)
+    QList<QSharedPointer<SR>> srs = this->m_connection->getCache()->GetAll<SR>("sr");
+    for (const QSharedPointer<SR>& sr : srs)
     {
-        if (!srData.value("shared").toBool())
+        if (!sr || !sr->isValid())
+            continue;
+        if (!sr->shared())
             continue;
 
-        QVariantList pbdRefs = srData.value("PBDs").toList();
+        QStringList pbdRefs = sr->pbdRefs();
         QSet<QString> attachedHosts;
-        for (const QVariant& pbdRefVar : pbdRefs)
+        for (const QString& pbdRef : pbdRefs)
         {
-            QString pbdRef = pbdRefVar.toString();
             QVariantMap pbdData = this->m_connection->getCache()->ResolveObjectData("pbd", pbdRef);
             if (pbdData.isEmpty())
                 continue;
@@ -319,16 +319,30 @@ bool AffinityPicker::hasFullyConnectedSharedStorage() const
                 attachedHosts.insert(hostRef);
         }
 
-        if (attachedHosts == hostRefs)
+        if (attachedHosts == hostRefSet)
             return true;
     }
 
     return false;
 }
 
-bool AffinityPicker::isHostLive(const QVariantMap& hostData) const
+bool AffinityPicker::isHostLive(const QSharedPointer<Host>& host) const
 {
-    if (hostData.contains("live"))
-        return hostData.value("live").toBool();
-    return hostData.value("enabled", true).toBool();
+    if (!host)
+        return false;
+
+    if (!this->m_connection || !this->m_connection->getCache())
+        return host->enabled();
+
+    QVariantMap hostData = host->data();
+    QString metricsRef = hostData.value("metrics").toString();
+    if (!metricsRef.isEmpty())
+    {
+        QSharedPointer<HostMetrics> metrics =
+            this->m_connection->getCache()->ResolveObject<HostMetrics>("host_metrics", metricsRef);
+        if (metrics && metrics->isValid())
+            return metrics->live();
+    }
+
+    return host->enabled();
 }

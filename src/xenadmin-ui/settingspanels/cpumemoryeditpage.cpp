@@ -27,37 +27,85 @@
 
 #include "cpumemoryeditpage.h"
 #include "ui_cpumemoryeditpage.h"
-#include "../../xenlib/xen/asyncoperation.h"
-#include "../../xenlib/xen/connection.h"
-#include "../../xenlib/xen/session.h"
-#include "../../xenlib/xen/api.h"
-#include <QMessageBox>
-#include <QToolTip>
+#include "../../xenlib/xen/actions/vm/changevcpusettingsaction.h"
+#include "../../xenlib/operations/multipleoperation.h"
+#include "../../xenlib/xencache.h"
+#include "../../xenlib/xen/host.h"
+#include "../../xenlib/xen/vm.h"
+#include <QComboBox>
+#include <QSlider>
+#include <QStyle>
+#include <QtGlobal>
+#include <QtMath>
+#include <algorithm>
+#include <cmath>
 
 CpuMemoryEditPage::CpuMemoryEditPage(QWidget* parent)
-    : IEditPage(parent), ui(new Ui::CpuMemoryEditPage), m_origVCPUsMax(1), m_origVCPUsAtStartup(1), m_origCoresPerSocket(1)
+    : IEditPage(parent),
+      ui(new Ui::CpuMemoryEditPage),
+      m_validToSave(true),
+      m_origVcpus(1),
+      m_origVCPUsMax(1),
+      m_origVCPUsAtStartup(1),
+      m_origCoresPerSocket(1),
+      m_prevVcpusMax(1),
+      m_origVcpuWeight(0.0),
+      m_currentVcpuWeight(0.0),
+      m_isVcpuHotplugSupported(false),
+      m_minVcpus(1),
+      m_topologyOrigVcpus(1),
+      m_topologyOrigCoresPerSocket(1),
+      m_maxCoresPerSocket(0)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
-    connect(ui->spinBoxVCPUsMax, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &CpuMemoryEditPage::onVCPUsMaxChanged);
-    connect(ui->spinBoxVCPUsAtStartup, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &CpuMemoryEditPage::onVCPUsAtStartupChanged);
+    this->ui->comboBoxVCPUs->setEditable(false);
+    this->ui->comboBoxInitialVCPUs->setEditable(false);
+    this->ui->comboBoxTopology->setEditable(false);
+
+    this->ui->cpuPrioritySlider->setMinimum(0);
+    this->ui->cpuPrioritySlider->setMaximum(8);
+    this->ui->cpuPrioritySlider->setTickInterval(1);
+
+    QPixmap warningPixmap(":/icons/alert_16.png");
+    if (!warningPixmap.isNull())
+    {
+        this->ui->cpuWarningIcon->setPixmap(warningPixmap);
+        this->ui->topologyWarningIcon->setPixmap(warningPixmap);
+    }
+
+    QPixmap infoPixmap = this->style()->standardIcon(QStyle::SP_MessageBoxInformation).pixmap(16, 16);
+    this->ui->infoIcon->setPixmap(infoPixmap);
+
+    this->ui->infoPanel->setVisible(false);
+    this->ui->cpuWarningIcon->setVisible(false);
+    this->ui->cpuWarningLabel->setVisible(false);
+    this->ui->topologyWarningIcon->setVisible(false);
+    this->ui->topologyWarningLabel->setVisible(false);
+
+    connect(this->ui->comboBoxVCPUs, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &CpuMemoryEditPage::onVcpusSelectionChanged);
+    connect(this->ui->comboBoxInitialVCPUs, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &CpuMemoryEditPage::onVcpusAtStartupSelectionChanged);
+    connect(this->ui->comboBoxTopology, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &CpuMemoryEditPage::onTopologySelectionChanged);
+    connect(this->ui->cpuPrioritySlider, &QSlider::valueChanged,
+            this, &CpuMemoryEditPage::onPriorityChanged);
 }
 
 CpuMemoryEditPage::~CpuMemoryEditPage()
 {
-    delete ui;
+    delete this->ui;
 }
 
 QString CpuMemoryEditPage::text() const
 {
-    return tr("CPU and Memory");
+    return tr("CPU");
 }
 
 QString CpuMemoryEditPage::subText() const
 {
-    return tr("%1 vCPUs").arg(ui->spinBoxVCPUsAtStartup->value());
+    return tr("%1 vCPU(s)").arg(this->selectedVcpusAtStartup());
 }
 
 QIcon CpuMemoryEditPage::image() const
@@ -70,239 +118,493 @@ void CpuMemoryEditPage::setXenObjects(const QString& objectRef,
                                       const QVariantMap& objectDataBefore,
                                       const QVariantMap& objectDataCopy)
 {
-    m_vmRef = objectRef;
-    m_objectDataBefore = objectDataBefore;
-    m_objectDataCopy = objectDataCopy;
+    this->m_vmRef = objectRef;
+    this->m_objectDataBefore = objectDataBefore;
+    this->m_objectDataCopy = objectDataCopy;
 
-    // Get current values from VM data
-    m_origVCPUsMax = objectDataBefore.value("VCPUs_max", 1).toLongLong();
-    m_origVCPUsAtStartup = objectDataBefore.value("VCPUs_at_startup", 1).toLongLong();
-
-    // Get CPU topology from platform data
-    QVariantMap platform = objectDataBefore.value("platform").toMap();
-    m_origCoresPerSocket = platform.value("cores-per-socket", 1).toInt();
-
-    // Populate UI
-    ui->spinBoxVCPUsMax->setValue(m_origVCPUsMax);
-    ui->spinBoxVCPUsAtStartup->setValue(m_origVCPUsAtStartup);
-
-    // Ensure VCPUsAtStartup max matches VCPUsMax
-    ui->spinBoxVCPUsAtStartup->setMaximum(m_origVCPUsMax);
-
-    populateTopology();
-
-    // Check power state for enabling/disabling controls
-    QString powerState = objectDataBefore.value("power_state", "").toString();
-    bool isHalted = (powerState == "Halted");
-
-    // VCPUs max can only be changed when halted
-    ui->spinBoxVCPUsMax->setEnabled(isHalted);
-    ui->comboBoxTopology->setEnabled(isHalted);
-
-    // VCPUs at startup can be changed when halted or running (hotplug)
-    // For simplicity, allow when halted or running
-    bool canChangeAtStartup = (isHalted || powerState == "Running");
-    ui->spinBoxVCPUsAtStartup->setEnabled(canChangeAtStartup);
-
-    if (!isHalted && powerState == "Running")
+    if (this->connection() && this->connection()->getCache() && objectType.toLower() == "vm")
     {
-        ui->labelRubric->setText(tr("Configure the number of virtual CPUs. Maximum vCPUs can only be changed when the VM is halted. Current vCPUs can be adjusted while running (hot-plug)."));
+        this->m_vm = this->connection()->getCache()->ResolveObject<VM>("vm", objectRef);
     }
+    else
+    {
+        this->m_vm.reset();
+    }
+
+    this->repopulate();
+
+    emit populated();
 }
 
-AsyncOperation* CpuMemoryEditPage::saveSettings()
+void CpuMemoryEditPage::repopulate()
 {
-    if (!hasChanged())
+    this->ui->comboBoxVCPUs->blockSignals(true);
+    this->ui->comboBoxInitialVCPUs->blockSignals(true);
+    this->ui->comboBoxTopology->blockSignals(true);
+    this->ui->cpuPrioritySlider->blockSignals(true);
+
+    if (!this->m_vm)
     {
-        return nullptr;
+        this->ui->comboBoxVCPUs->clear();
+        this->ui->comboBoxInitialVCPUs->clear();
+        this->ui->comboBoxTopology->clear();
+        this->ui->comboBoxVCPUs->blockSignals(false);
+        this->ui->comboBoxInitialVCPUs->blockSignals(false);
+        this->ui->comboBoxTopology->blockSignals(false);
+        this->ui->cpuPrioritySlider->blockSignals(false);
+        return;
     }
 
-    long newVCPUsMax = ui->spinBoxVCPUsMax->value();
-    long newVCPUsAtStartup = ui->spinBoxVCPUsAtStartup->value();
-    int newCoresPerSocket = 1; // TODO: Get from topology combobox when implemented
+    this->m_isVcpuHotplugSupported = this->m_vm->supportsVcpuHotplug();
+    this->m_minVcpus = this->m_vm->minVcpus();
 
-    // Update objectDataCopy with new values - cast to qlonglong for QVariant
-    m_objectDataCopy["VCPUs_max"] = (qlonglong) newVCPUsMax;
-    m_objectDataCopy["VCPUs_at_startup"] = (qlonglong) newVCPUsAtStartup;
+    this->ui->labelRubric->setText(tr("Specify the number of vCPUs, their topology, and the priority to assign them over other vCPUs. "));
+    if (this->m_isVcpuHotplugSupported)
+        this->ui->labelRubric->setText(this->ui->labelRubric->text() +
+                                       tr("If the initial number of vCPUs is set lower than the maximum number, more vCPUs can be added to the virtual machine while it is running. "));
 
-    if (newCoresPerSocket != m_origCoresPerSocket)
+    if (!this->m_vm->isHalted())
     {
-        QVariantMap platform = m_objectDataCopy.value("platform").toMap();
-        platform["cores-per-socket"] = newCoresPerSocket;
-        m_objectDataCopy["platform"] = platform;
-    }
-
-    // Return inline AsyncOperation (DelegatedAsyncAction pattern)
-    // This matches C# ChangeVCPUSettingsAction
-    class ChangeVCPUSettingsOperation : public AsyncOperation
-    {
-    public:
-        ChangeVCPUSettingsOperation(XenConnection* conn,
-                                    const QString& vmRef,
-                                    long vcpusMax,
-                                    long vcpusAtStartup,
-                                    const QString& powerState,
-                                    QObject* parent)
-            : AsyncOperation(conn, tr("Change vCPU Settings"),
-                             tr("Changing virtual CPU configuration..."), parent),
-              m_vmRef(vmRef), m_vcpusMax(vcpusMax), m_vcpusAtStartup(vcpusAtStartup), m_powerState(powerState)
-        {}
-
-    protected:
-        void run() override
+        if (this->m_isVcpuHotplugSupported)
         {
-            XenRpcAPI api(connection()->getSession());
-
-            setPercentComplete(10);
-
-            // If VM is running, we can only change VCPUs_at_startup (hot-plug)
-            if (m_powerState == "Running")
-            {
-                // VM.set_VCPUs_number_live(session, vm, vcpus_at_startup)
-                QVariantList params;
-                params << connection()->getSessionId() << m_vmRef << (qlonglong) m_vcpusAtStartup;
-
-                QByteArray request = api.buildJsonRpcCall("VM.set_VCPUs_number_live", params);
-                connection()->sendRequest(request);
-
-                setPercentComplete(100);
-                return;
-            }
-
-            // VM is halted - we can change both VCPUs_max and VCPUs_at_startup
-            // Order matters: if reducing, change at_startup first; if increasing, change max first
-
-            if (m_vcpusAtStartup < m_vcpusMax)
-            {
-                // Reducing: set VCPUs_at_startup first
-                QVariantList params1;
-                params1 << connection()->getSessionId() << m_vmRef << (qlonglong) m_vcpusAtStartup;
-                QByteArray request1 = api.buildJsonRpcCall("VM.set_VCPUs_at_startup", params1);
-                connection()->sendRequest(request1);
-
-                setPercentComplete(50);
-
-                QVariantList params2;
-                params2 << connection()->getSessionId() << m_vmRef << (qlonglong) m_vcpusMax;
-                QByteArray request2 = api.buildJsonRpcCall("VM.set_VCPUs_max", params2);
-                connection()->sendRequest(request2);
-            } else
-            {
-                // Increasing: set VCPUs_max first
-                QVariantList params1;
-                params1 << connection()->getSessionId() << m_vmRef << (qlonglong) m_vcpusMax;
-                QByteArray request1 = api.buildJsonRpcCall("VM.set_VCPUs_max", params1);
-                connection()->sendRequest(request1);
-
-                setPercentComplete(50);
-
-                QVariantList params2;
-                params2 << connection()->getSessionId() << m_vmRef << (qlonglong) m_vcpusAtStartup;
-                QByteArray request2 = api.buildJsonRpcCall("VM.set_VCPUs_at_startup", params2);
-                connection()->sendRequest(request2);
-            }
-
-            setPercentComplete(100);
+            QString infoText = tr("The maximum number of vCPUs, the topology and the vCPU priority can only be changed when the VM is shut down. ");
+            if (this->m_vm->powerState() != "Running")
+                infoText += tr("The current number of vCPUs can only be changed when the VM is running or shut down. ");
+            this->ui->labelInfo->setText(infoText);
+        }
+        else
+        {
+            this->ui->labelInfo->setText(tr("The vCPUs can only be changed when the VM is shut down."));
         }
 
-    private:
-        QString m_vmRef;
-        long m_vcpusMax;
-        long m_vcpusAtStartup;
-        QString m_powerState;
-    };
-
-    QString powerState = m_objectDataBefore.value("power_state", "").toString();
-    return new ChangeVCPUSettingsOperation(this->m_connection, this->m_vmRef,
-                                           newVCPUsMax, newVCPUsAtStartup,
-                                           powerState, nullptr);
-}
-
-bool CpuMemoryEditPage::isValidToSave() const
-{
-    long vcpusMax = ui->spinBoxVCPUsMax->value();
-    long vcpusAtStartup = ui->spinBoxVCPUsAtStartup->value();
-
-    // VCPUs at startup cannot exceed VCPUs max
-    if (vcpusAtStartup > vcpusMax)
+        this->ui->infoPanel->setVisible(true);
+    }
+    else
     {
-        return false;
+        this->ui->infoPanel->setVisible(false);
     }
 
-    // Both must be at least 1
-    if (vcpusMax < 1 || vcpusAtStartup < 1)
-    {
-        return false;
-    }
+    this->m_origVCPUsMax = this->m_vm->vcpusMax() > 0 ? this->m_vm->vcpusMax() : 1;
+    this->m_origVCPUsAtStartup = this->m_vm->vcpusAtStartup() > 0 ? this->m_vm->vcpusAtStartup() : 1;
+    this->m_currentVcpuWeight = static_cast<double>(this->m_vm->getVcpuWeight());
+    this->m_origVcpuWeight = this->m_currentVcpuWeight;
+    this->m_origVcpus = this->m_isVcpuHotplugSupported ? this->m_origVCPUsMax : this->m_origVCPUsAtStartup;
+    this->m_prevVcpusMax = this->m_origVCPUsMax;
+    this->m_origCoresPerSocket = this->m_vm->getCoresPerSocket();
 
-    return true;
+    this->initializeVCpuControls();
+    this->m_validToSave = true;
+
+    this->ui->comboBoxVCPUs->blockSignals(false);
+    this->ui->comboBoxInitialVCPUs->blockSignals(false);
+    this->ui->comboBoxTopology->blockSignals(false);
+    this->ui->cpuPrioritySlider->blockSignals(false);
 }
 
-void CpuMemoryEditPage::showLocalValidationMessages()
+void CpuMemoryEditPage::initializeVCpuControls()
 {
-    if (!isValidToSave())
-    {
-        long vcpusMax = ui->spinBoxVCPUsMax->value();
-        long vcpusAtStartup = ui->spinBoxVCPUsAtStartup->value();
+    this->ui->lblVCPUs->setText(this->m_isVcpuHotplugSupported
+        ? tr("Maximum number of v&CPUs:")
+        : tr("&Number of vCPUs:"));
 
-        if (vcpusAtStartup > vcpusMax)
+    this->ui->labelInitialVCPUs->setText(this->m_vm->powerState() == "Halted"
+        ? tr("Initial number of v&CPUs:")
+        : tr("Current number of v&CPUs:"));
+
+    this->ui->labelInitialVCPUs->setVisible(this->m_isVcpuHotplugSupported);
+    this->ui->comboBoxInitialVCPUs->setVisible(this->m_isVcpuHotplugSupported);
+    this->ui->comboBoxInitialVCPUs->setEnabled(this->m_isVcpuHotplugSupported &&
+                                               (this->m_vm->powerState() == "Halted" ||
+                                                this->m_vm->powerState() == "Running"));
+
+    this->ui->comboBoxVCPUs->setEnabled(this->m_vm->isHalted());
+    this->ui->comboBoxTopology->setEnabled(this->m_vm->isHalted());
+
+    this->populateTopology(this->m_vm->vcpusAtStartup(),
+                           this->m_vm->vcpusMax(),
+                           this->m_vm->getCoresPerSocket(),
+                           this->m_vm->maxCoresPerSocket());
+
+    qint64 maxAllowed = this->m_vm->maxVcpusAllowed();
+    qint64 maxVcpus = maxAllowed < this->m_origVcpus ? this->m_origVcpus : maxAllowed;
+    this->populateVcpus(maxVcpus, this->m_origVcpus);
+
+    if (this->m_isVcpuHotplugSupported)
+        this->populateVcpusAtStartup(this->m_origVCPUsMax, this->m_origVCPUsAtStartup);
+
+    double weight = this->m_vm->getVcpuWeight();
+    int sliderValue = qRound(std::log(weight) / std::log(4.0));
+    sliderValue = qBound(this->ui->cpuPrioritySlider->minimum(),
+                         sliderValue,
+                         this->ui->cpuPrioritySlider->maximum());
+    this->ui->cpuPrioritySlider->setValue(sliderValue);
+    this->ui->priorityPanel->setEnabled(this->m_vm->isHalted());
+}
+
+void CpuMemoryEditPage::populateVCpuComboBox(QComboBox* comboBox,
+                                             qint64 min,
+                                             qint64 max,
+                                             qint64 currentValue,
+                                             const std::function<bool(qint64)>& isValid) const
+{
+    comboBox->clear();
+    for (qint64 i = min; i <= max; ++i)
+    {
+        if (i == currentValue || isValid(i))
+            comboBox->addItem(QString::number(i), QVariant::fromValue<qlonglong>(i));
+    }
+
+    if (currentValue > max)
+        comboBox->addItem(QString::number(currentValue), QVariant::fromValue<qlonglong>(currentValue));
+
+    int currentIndex = comboBox->findData(QVariant::fromValue<qlonglong>(currentValue));
+    comboBox->setCurrentIndex(currentIndex >= 0 ? currentIndex : 0);
+}
+
+void CpuMemoryEditPage::populateVcpus(qint64 maxVcpus, qint64 currentVcpus)
+{
+    this->populateVCpuComboBox(this->ui->comboBoxVCPUs, 1, maxVcpus, currentVcpus,
+                               [this](qint64 vcpus) { return this->isValidVcpu(vcpus); });
+}
+
+void CpuMemoryEditPage::populateVcpusAtStartup(qint64 maxVcpus, qint64 currentValue)
+{
+    qint64 min = this->m_vm->isHalted() ? 1 : this->m_origVCPUsAtStartup;
+    this->populateVCpuComboBox(this->ui->comboBoxInitialVCPUs, min, maxVcpus, currentValue,
+                               [](qint64) { return true; });
+}
+
+void CpuMemoryEditPage::populateTopology(qint64 vcpusAtStartup,
+                                         qint64 vcpusMax,
+                                         qint64 coresPerSocket,
+                                         qint64 maxCoresPerSocket)
+{
+    this->m_topologyOrigVcpus = vcpusAtStartup;
+    this->m_topologyOrigCoresPerSocket = coresPerSocket;
+    this->m_maxCoresPerSocket = maxCoresPerSocket;
+    this->updateTopologyOptions(vcpusMax);
+}
+
+void CpuMemoryEditPage::updateTopologyOptions(qint64 noOfVcpus)
+{
+    qint64 currentCores = this->selectedCoresPerSocket();
+    this->ui->comboBoxTopology->clear();
+
+    QList<QPair<qint64, qint64>> topologies;
+    qint64 maxCores = this->m_maxCoresPerSocket > 0
+        ? qMin(noOfVcpus, this->m_maxCoresPerSocket)
+        : noOfVcpus;
+
+    for (qint64 cores = 1; cores <= maxCores; ++cores)
+    {
+        if (noOfVcpus % cores == 0 && (noOfVcpus / cores) <= VM::MAX_SOCKETS)
+            topologies.append(qMakePair(noOfVcpus / cores, cores));
+    }
+
+    for (const auto& topology : topologies)
+    {
+        this->ui->comboBoxTopology->addItem(VM::getTopology(topology.first, topology.second),
+                                            QVariant::fromValue<qlonglong>(topology.second));
+    }
+
+    bool hasOrigCores = std::any_of(topologies.begin(), topologies.end(),
+                                    [this](const QPair<qint64, qint64>& topology)
+                                    {
+                                        return topology.second == this->m_topologyOrigCoresPerSocket;
+                                    });
+
+    if (this->m_topologyOrigVcpus == noOfVcpus && !hasOrigCores)
+    {
+        this->ui->comboBoxTopology->addItem(VM::getTopology(0, this->m_topologyOrigCoresPerSocket),
+                                            QVariant::fromValue<qlonglong>(this->m_topologyOrigCoresPerSocket));
+    }
+
+    int currentIndex = this->ui->comboBoxTopology->findData(
+        QVariant::fromValue<qlonglong>(currentCores));
+    if (currentIndex < 0 && this->ui->comboBoxTopology->count() > 0)
+        currentIndex = 0;
+    this->ui->comboBoxTopology->setCurrentIndex(currentIndex);
+}
+
+bool CpuMemoryEditPage::isValidVcpu(qint64 noOfVcpus) const
+{
+    qint64 maxCores = this->m_maxCoresPerSocket > 0
+        ? qMin(noOfVcpus, this->m_maxCoresPerSocket)
+        : noOfVcpus;
+
+    for (qint64 cores = 1; cores <= maxCores; ++cores)
+    {
+        if (noOfVcpus % cores == 0 && (noOfVcpus / cores) <= VM::MAX_SOCKETS)
+            return true;
+    }
+
+    return false;
+}
+
+void CpuMemoryEditPage::validateVcpuSettings()
+{
+    if (!this->m_vm || !this->ui->comboBoxVCPUs->isEnabled())
+        return;
+
+    XenCache* cache = this->connection() ? this->connection()->getCache() : nullptr;
+    if (!cache)
+        return;
+
+    QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+    int maxPhysicalCpus = 0;
+    for (const QSharedPointer<Host>& host : hosts)
+        maxPhysicalCpus = qMax(maxPhysicalCpus, host ? host->hostCpuCount() : 0);
+
+    QSharedPointer<Host> homeHost = cache->ResolveObject<Host>("host", this->m_vm->homeRef());
+    int homeHostPhysicalCpus = homeHost ? homeHost->hostCpuCount() : 0;
+
+    QStringList warnings;
+
+    if (this->ui->comboBoxVCPUs->currentIndex() >= 0 && maxPhysicalCpus < this->selectedVcpusMax())
+    {
+        if (homeHost && homeHostPhysicalCpus < this->selectedVcpusMax() &&
+            maxPhysicalCpus >= this->selectedVcpusMax())
         {
-            QMessageBox::warning(this, tr("Invalid vCPU Configuration"),
-                                 tr("Initial vCPUs (%1) cannot exceed maximum vCPUs (%2).")
-                                     .arg(vcpusAtStartup)
-                                     .arg(vcpusMax));
+            warnings.append(tr("The VM's home server does not have enough physical CPUs to start the VM. The VM will start on another server."));
+        }
+        else if (maxPhysicalCpus < this->selectedVcpusMax())
+        {
+            warnings.append(tr("There are no servers with enough physical CPUs to start the VM."));
         }
     }
-}
 
-void CpuMemoryEditPage::hideLocalValidationMessages()
-{
-    // No persistent messages to hide
-}
-
-void CpuMemoryEditPage::cleanup()
-{
-    // Nothing to clean up
-}
-
-bool CpuMemoryEditPage::hasChanged() const
-{
-    long currentVCPUsMax = ui->spinBoxVCPUsMax->value();
-    long currentVCPUsAtStartup = ui->spinBoxVCPUsAtStartup->value();
-
-    return (currentVCPUsMax != m_origVCPUsMax ||
-            currentVCPUsAtStartup != m_origVCPUsAtStartup);
-    // TODO: Also check topology when implemented
-}
-
-void CpuMemoryEditPage::onVCPUsMaxChanged(int value)
-{
-    // Ensure VCPUs at startup doesn't exceed max
-    if (ui->spinBoxVCPUsAtStartup->value() > value)
+    if (this->ui->comboBoxVCPUs->currentIndex() >= 0 && this->selectedVcpusMax() < this->m_minVcpus)
     {
-        ui->spinBoxVCPUsAtStartup->setValue(value);
+        warnings.append(tr("It is recommended to allocate at least %1 vCPUs for this VM.").arg(this->m_minVcpus));
     }
-    ui->spinBoxVCPUsAtStartup->setMaximum(value);
 
-    updateSubText();
+    if (this->ui->comboBoxVCPUs->currentIndex() >= 0 &&
+        this->selectedVcpusMax() > VM::MAX_VCPUS_FOR_NON_TRUSTED_VMS)
+    {
+        warnings.append(tr("You have selected more than %1 vCPUs for the new VM. Where a VM may be running actively hostile privileged code %2 recommends that the vCPU limit is set to %1 to prevent impact on system availability.")
+                        .arg(VM::MAX_VCPUS_FOR_NON_TRUSTED_VMS)
+                        .arg(this->productBrand()));
+    }
+
+    if (this->ui->comboBoxInitialVCPUs->currentIndex() >= 0 &&
+        this->selectedVcpusAtStartup() < this->m_minVcpus)
+    {
+        warnings.append(tr("It is recommended to allocate at least %1 vCPUs for this VM.").arg(this->m_minVcpus));
+    }
+
+    this->showCpuWarnings(warnings);
 }
 
-void CpuMemoryEditPage::onVCPUsAtStartupChanged(int value)
+void CpuMemoryEditPage::validateTopologySettings()
 {
-    updateSubText();
+    QStringList warnings;
+    if (this->ui->comboBoxVCPUs->currentIndex() >= 0)
+    {
+        QString topologyWarning = VM::validVcpuConfiguration(this->selectedVcpusMax(),
+                                                             this->selectedCoresPerSocket());
+        if (!topologyWarning.isEmpty())
+            warnings.append(QString("%1.").arg(topologyWarning));
+    }
+    this->showTopologyWarnings(warnings);
 }
 
-void CpuMemoryEditPage::populateTopology()
+void CpuMemoryEditPage::refreshCurrentVcpus()
 {
-    // TODO: Implement topology dropdown
-    // For now, add a simple "1 core per socket" option
-    ui->comboBoxTopology->clear();
-    ui->comboBoxTopology->addItem(tr("1 core per socket (default)"));
-    ui->comboBoxTopology->setCurrentIndex(0);
+    if (this->ui->comboBoxInitialVCPUs->isVisible() && this->ui->comboBoxInitialVCPUs->count() > 0)
+    {
+        qint64 newValue = this->selectedVcpusAtStartup();
+
+        if (this->selectedVcpusMax() < this->selectedVcpusAtStartup())
+            newValue = this->selectedVcpusMax();
+        else if (this->selectedVcpusAtStartup() == this->m_prevVcpusMax &&
+                 this->selectedVcpusMax() != this->m_prevVcpusMax)
+            newValue = this->selectedVcpusMax();
+
+        this->populateVcpusAtStartup(this->selectedVcpusMax(), newValue);
+        this->m_prevVcpusMax = this->selectedVcpusMax();
+    }
+}
+
+void CpuMemoryEditPage::showCpuWarnings(const QStringList& warnings)
+{
+    bool show = !warnings.isEmpty();
+    this->ui->cpuWarningLabel->setText(show ? warnings.join("\n\n") : QString());
+    this->ui->cpuWarningIcon->setVisible(show);
+    this->ui->cpuWarningLabel->setVisible(show);
+}
+
+void CpuMemoryEditPage::showTopologyWarnings(const QStringList& warnings)
+{
+    bool show = !warnings.isEmpty();
+    this->ui->topologyWarningLabel->setText(show ? warnings.join("\n\n") : QString());
+    this->ui->topologyWarningIcon->setVisible(show);
+    this->ui->topologyWarningLabel->setVisible(show);
 }
 
 void CpuMemoryEditPage::updateSubText()
 {
-    // Trigger subText update if needed
-    // The parent dialog will query subText() when needed
+    emit populated();
+}
+
+qint64 CpuMemoryEditPage::selectedVcpusMax() const
+{
+    QVariant data = this->ui->comboBoxVCPUs->currentData();
+    if (data.isValid())
+        return data.toLongLong();
+
+    bool ok = false;
+    qint64 value = this->ui->comboBoxVCPUs->currentText().toLongLong(&ok);
+    return ok ? value : this->m_origVcpus;
+}
+
+qint64 CpuMemoryEditPage::selectedVcpusAtStartup() const
+{
+    if (this->m_isVcpuHotplugSupported)
+    {
+        QVariant data = this->ui->comboBoxInitialVCPUs->currentData();
+        if (data.isValid())
+            return data.toLongLong();
+
+        return this->m_origVCPUsAtStartup;
+    }
+
+    return this->selectedVcpusMax();
+}
+
+qint64 CpuMemoryEditPage::selectedCoresPerSocket() const
+{
+    QVariant data = this->ui->comboBoxTopology->currentData();
+    if (data.isValid())
+        return data.toLongLong();
+
+    return this->m_origCoresPerSocket;
+}
+
+QString CpuMemoryEditPage::productBrand() const
+{
+    if (!this->connection() || !this->connection()->getCache())
+        return tr("XenServer");
+
+    XenCache* cache = this->connection()->getCache();
+    QList<QVariantMap> pools = cache->GetAllData("pool");
+    if (!pools.isEmpty())
+    {
+        QVariantMap swVersion = pools.first().value("software_version").toMap();
+        QString brand = swVersion.value("product_brand").toString();
+        if (!brand.isEmpty())
+            return brand;
+    }
+
+    QList<QVariantMap> hosts = cache->GetAllData("host");
+    if (!hosts.isEmpty())
+    {
+        QVariantMap swVersion = hosts.first().value("software_version").toMap();
+        QString brand = swVersion.value("product_brand").toString();
+        if (!brand.isEmpty())
+            return brand;
+    }
+
+    return tr("XenServer");
+}
+
+AsyncOperation* CpuMemoryEditPage::saveSettings()
+{
+    QList<AsyncOperation*> actions;
+
+    if (this->m_origVcpuWeight != this->m_currentVcpuWeight)
+    {
+        QVariantMap vcpusParams = this->m_objectDataCopy.value("VCPUs_params").toMap();
+        int weight = qRound(this->m_currentVcpuWeight);
+        vcpusParams["weight"] = QString::number(weight);
+        this->m_objectDataCopy["VCPUs_params"] = vcpusParams;
+    }
+
+    if (this->m_origVcpus != this->selectedVcpusMax() ||
+        (this->m_isVcpuHotplugSupported && this->m_origVCPUsAtStartup != this->selectedVcpusAtStartup()))
+    {
+        actions.append(new ChangeVCPUSettingsAction(this->connection(),
+                                                    this->m_vmRef,
+                                                    this->selectedVcpusMax(),
+                                                    this->selectedVcpusAtStartup(),
+                                                    nullptr));
+    }
+
+    if (this->m_origCoresPerSocket != this->selectedCoresPerSocket())
+    {
+        QVariantMap platform = this->m_objectDataCopy.value("platform").toMap();
+        platform["cores-per-socket"] = QString::number(this->selectedCoresPerSocket());
+        this->m_objectDataCopy["platform"] = platform;
+    }
+
+    if (actions.isEmpty())
+        return nullptr;
+
+    if (actions.size() == 1)
+        return actions.first();
+
+    return new MultipleOperation(this->connection(),
+                                 QString(),
+                                 QString(),
+                                 QString(),
+                                 actions,
+                                 true);
+}
+
+bool CpuMemoryEditPage::isValidToSave() const
+{
+    return this->m_validToSave;
+}
+
+void CpuMemoryEditPage::showLocalValidationMessages()
+{
+}
+
+void CpuMemoryEditPage::hideLocalValidationMessages()
+{
+}
+
+void CpuMemoryEditPage::cleanup()
+{
+}
+
+bool CpuMemoryEditPage::hasChanged() const
+{
+    bool vcpuChanged = this->m_origVcpus != this->selectedVcpusMax();
+    bool vcpuAtStartupChanged = this->m_isVcpuHotplugSupported &&
+                                this->m_origVCPUsAtStartup != this->selectedVcpusAtStartup();
+    bool topologyChanged = this->m_origCoresPerSocket != this->selectedCoresPerSocket();
+    bool weightChanged = this->m_origVcpuWeight != this->m_currentVcpuWeight;
+    return vcpuChanged || vcpuAtStartupChanged || topologyChanged || weightChanged;
+}
+
+QVariantMap CpuMemoryEditPage::getModifiedObjectData() const
+{
+    return this->m_objectDataCopy;
+}
+
+void CpuMemoryEditPage::onVcpusSelectionChanged()
+{
+    this->validateVcpuSettings();
+    this->updateTopologyOptions(this->selectedVcpusMax());
+    this->validateTopologySettings();
+    this->refreshCurrentVcpus();
+    this->updateSubText();
+}
+
+void CpuMemoryEditPage::onVcpusAtStartupSelectionChanged()
+{
+    this->validateVcpuSettings();
+    this->updateSubText();
+}
+
+void CpuMemoryEditPage::onTopologySelectionChanged()
+{
+    this->validateTopologySettings();
+}
+
+void CpuMemoryEditPage::onPriorityChanged(int value)
+{
+    this->m_currentVcpuWeight = std::pow(4.0, static_cast<double>(value));
+    if (value == this->ui->cpuPrioritySlider->maximum())
+        this->m_currentVcpuWeight -= 1.0;
 }

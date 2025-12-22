@@ -113,6 +113,26 @@ class XenCache : public QObject
         QList<QSharedPointer<XenObject>> GetAll(const QString& type);
 
         /**
+         * @brief Get all objects of a specific type as typed shared pointers
+         * @param type Object type (e.g., "VM", "host")
+         * @return List of cached objects cast to requested type
+         */
+        template <typename T>
+        QList<QSharedPointer<T>> GetAll(const QString& type)
+        {
+            QList<QSharedPointer<XenObject>> baseList = this->GetAll(type);
+            QList<QSharedPointer<T>> typedList;
+            typedList.reserve(baseList.size());
+            for (const QSharedPointer<XenObject>& item : baseList)
+            {
+                QSharedPointer<T> casted = qSharedPointerDynamicCast<T>(item);
+                if (casted && casted->isValid())
+                    typedList.append(casted);
+            }
+            return typedList;
+        }
+
+        /**
          * @brief Get all object refs of a specific type
          * @param type Object type
          * @return List of all refs for that type

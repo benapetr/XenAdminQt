@@ -104,6 +104,30 @@ public:
     QVariantMap cpuInfo() const;
 
     /**
+     * @brief Get number of CPU sockets
+     * @return Socket count or 0 if unknown
+     */
+    int cpuSockets() const;
+
+    /**
+     * @brief Get total CPU count
+     * @return CPU count or 0 if unknown
+     */
+    int cpuCount() const;
+
+    /**
+     * @brief Get cores per socket
+     * @return Cores per socket or 0 if unknown
+     */
+    int coresPerSocket() const;
+
+    /**
+     * @brief Get physical CPU count from host_CPUs list
+     * @return Count of host CPUs
+     */
+    int hostCpuCount() const;
+
+    /**
      * @brief Get other_config dictionary
      * @return Map of additional configuration
      */

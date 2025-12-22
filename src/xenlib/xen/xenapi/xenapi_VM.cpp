@@ -1093,6 +1093,20 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
+    void VM::set_VCPUs_params(XenSession* session, const QString& vm, const QVariantMap& vcpusParams)
+    {
+        if (!session || !session->isLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << vcpusParams;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.set_VCPUs_params", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
     void VM::set_platform(XenSession* session, const QString& vm, const QVariantMap& platform)
     {
         if (!session || !session->isLoggedIn())

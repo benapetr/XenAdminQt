@@ -69,6 +69,43 @@ QVariantMap Host::cpuInfo() const
     return property("cpu_info").toMap();
 }
 
+int Host::cpuSockets() const
+{
+    QVariantMap cpuInfoMap = this->cpuInfo();
+    if (!cpuInfoMap.contains("socket_count"))
+        return 0;
+
+    bool ok = false;
+    int sockets = cpuInfoMap.value("socket_count").toString().toInt(&ok);
+    return ok ? sockets : 0;
+}
+
+int Host::cpuCount() const
+{
+    QVariantMap cpuInfoMap = this->cpuInfo();
+    if (!cpuInfoMap.contains("cpu_count"))
+        return 0;
+
+    bool ok = false;
+    int cpuCount = cpuInfoMap.value("cpu_count").toString().toInt(&ok);
+    return ok ? cpuCount : 0;
+}
+
+int Host::coresPerSocket() const
+{
+    int sockets = this->cpuSockets();
+    int cpuCount = this->cpuCount();
+    if (sockets > 0 && cpuCount > 0)
+        return cpuCount / sockets;
+
+    return 0;
+}
+
+int Host::hostCpuCount() const
+{
+    return stringListProperty("host_CPUs").size();
+}
+
 QVariantMap Host::otherConfig() const
 {
     return property("other_config").toMap();
