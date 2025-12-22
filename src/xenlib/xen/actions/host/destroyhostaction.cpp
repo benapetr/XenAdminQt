@@ -58,7 +58,7 @@ void DestroyHostAction::run()
         setDescription("Removing host from pool");
 
         // Get all local SRs belonging to this host
-        QList<QVariantMap> allSRs = connection()->getCache()->GetAll("sr");
+        QList<QVariantMap> allSRs = connection()->getCache()->GetAllData("sr");
         QStringList localSRRefs;
 
         for (const QVariantMap& srData : allSRs)

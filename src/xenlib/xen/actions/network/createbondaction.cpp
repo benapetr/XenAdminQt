@@ -90,7 +90,7 @@ void CreateBondAction::run()
         try
         {
             // Get all hosts in pool
-            QList<QVariantMap> hosts = connection()->getCache()->GetAll("host");
+            QList<QVariantMap> hosts = connection()->getCache()->GetAllData("host");
 
             int inc = hosts.count() > 0 ? 90 / (hosts.count() * 2) : 90;
             int progress = 10;
@@ -246,14 +246,14 @@ void CreateBondAction::cleanupOnError()
 
 QList<QVariantMap> CreateBondAction::getHostsCoordinatorLast() const
 {
-    QList<QVariantMap> hosts = connection()->getCache()->GetAll("host");
+    QList<QVariantMap> hosts = connection()->getCache()->GetAllData("host");
     if (hosts.isEmpty())
     {
         return hosts;
     }
 
     // Get the pool to find the coordinator
-    QList<QVariantMap> pools = connection()->getCache()->GetAll("pool");
+    QList<QVariantMap> pools = connection()->getCache()->GetAllData("pool");
     if (pools.isEmpty())
     {
         return hosts; // Not a pool, return as-is
@@ -304,7 +304,7 @@ QStringList CreateBondAction::findMatchingPIFsOnHost(const QString& hostRef) con
 
     // Find PIFs on the target host with matching device names
     QStringList result;
-    QList<QVariantMap> allPifs = connection()->getCache()->GetAll("pif");
+    QList<QVariantMap> allPifs = connection()->getCache()->GetAllData("pif");
 
     for (const QVariantMap& pif : allPifs)
     {

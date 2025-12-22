@@ -85,7 +85,7 @@ void CreateVMFastAction::run()
 QString CreateVMFastAction::generateUniqueName(const QString& baseName)
 {
     // Get all existing VMs
-    QList<QVariantMap> allVMs = connection()->getCache()->GetAll("vm");
+    QList<QVariantMap> allVMs = connection()->getCache()->GetAllData("vm");
 
     // Build set of existing names
     QSet<QString> existingNames;

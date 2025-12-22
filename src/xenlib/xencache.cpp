@@ -159,7 +159,7 @@ bool XenCache::Contains(const QString& type, const QString& ref) const
     return this->m_cache[normalizedType].contains(ref);
 }
 
-QList<QVariantMap> XenCache::GetAll(const QString& type) const
+QList<QVariantMap> XenCache::GetAllData(const QString& type) const
 {
     QMutexLocker locker(&this->m_mutex);
 
@@ -171,6 +171,22 @@ QList<QVariantMap> XenCache::GetAll(const QString& type) const
     }
 
     return this->m_cache[normalizedType].values();
+}
+
+QList<QSharedPointer<XenObject>> XenCache::GetAll(const QString& type)
+{
+    QStringList refs = GetAllRefs(type);
+    QList<QSharedPointer<XenObject>> objects;
+    objects.reserve(refs.size());
+
+    for (const QString& ref : refs)
+    {
+        QSharedPointer<XenObject> obj = ResolveObject(type, ref);
+        if (obj)
+            objects.append(obj);
+    }
+
+    return objects;
 }
 
 QStringList XenCache::GetAllRefs(const QString& type) const

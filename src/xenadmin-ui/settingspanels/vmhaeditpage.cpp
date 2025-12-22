@@ -643,7 +643,7 @@ QVariantMap VMHAEditPage::buildNtolConfig() const
     if (!connection() || !connection()->getCache())
         return config;
 
-    QList<QVariantMap> vms = connection()->getCache()->GetAll("vm");
+    QList<QVariantMap> vms = connection()->getCache()->GetAllData("vm");
     for (const QVariantMap& vmData : vms)
     {
         bool isTemplate = vmData.value("is_a_template", false).toBool();

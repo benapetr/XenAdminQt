@@ -235,7 +235,7 @@ bool ForceRebootVMCommand::enabledTargetExists(const QString& vmRef) const
     }
 
     // No home server or home server not found - check if any host is enabled
-    QList<QVariantMap> hosts = this->mainWindow()->xenLib()->getCache()->GetAll("host");
+    QList<QVariantMap> hosts = this->mainWindow()->xenLib()->getCache()->GetAllData("host");
     for (const QVariantMap& host : hosts)
     {
         if (host.value("enabled", false).toBool())

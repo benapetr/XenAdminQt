@@ -65,7 +65,7 @@ void ChangeNetworkingAction::run()
         }
 
         // Determine if we're operating on a pool or single host
-        QList<QVariantMap> pools = connection()->getCache()->GetAll("pool");
+        QList<QVariantMap> pools = connection()->getCache()->GetAllData("pool");
         bool isPool = !pools.isEmpty();
 
         int inc = totalOps > 0 ? (isPool ? 50 : 100) / totalOps : 100;

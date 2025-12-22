@@ -114,7 +114,7 @@ void MoveVirtualDiskDialog::populateSRTable()
     if (connection)
     {
         // Get pool data
-        QList<QVariantMap> pools = m_xenLib->getCache()->GetAll("pool");
+        QList<QVariantMap> pools = m_xenLib->getCache()->GetAllData("pool");
         if (!pools.isEmpty())
         {
             defaultSRRef = pools.first().value("default_SR").toString();
@@ -122,7 +122,7 @@ void MoveVirtualDiskDialog::populateSRTable()
     }
 
     // Get all SRs
-    QList<QVariantMap> allSRs = m_xenLib->getCache()->GetAll("sr");
+    QList<QVariantMap> allSRs = m_xenLib->getCache()->GetAllData("sr");
 
     int row = 0;
     int rowToSelect = -1; // Track which row to auto-select
@@ -325,7 +325,7 @@ void MoveVirtualDiskDialog::onRescanButtonClicked()
         return;
 
     // Get all SRs and scan them
-    QList<QVariantMap> allSRs = m_xenLib->getCache()->GetAll("sr");
+    QList<QVariantMap> allSRs = m_xenLib->getCache()->GetAllData("sr");
     for (const QVariantMap& srData : allSRs)
     {
         QString srRef = srData.value("ref").toString();

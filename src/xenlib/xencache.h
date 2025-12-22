@@ -103,7 +103,14 @@ class XenCache : public QObject
          * @param type Object type (e.g., "VM", "host")
          * @return List of all objects of that type
          */
-        QList<QVariantMap> GetAll(const QString& type) const;
+        QList<QVariantMap> GetAllData(const QString& type) const;
+
+        /**
+         * @brief Get all objects of a specific type as shared pointers
+         * @param type Object type (e.g., "VM", "host")
+         * @return List of cached XenObject instances for that type
+         */
+        QList<QSharedPointer<XenObject>> GetAll(const QString& type);
 
         /**
          * @brief Get all object refs of a specific type

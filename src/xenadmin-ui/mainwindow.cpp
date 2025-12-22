@@ -513,7 +513,7 @@ void MainWindow::disconnectFromServer()
         if (m_consolePanel)
         {
             // Get all VMs and close their console connections
-            QList<QVariantMap> vms = m_xenLib->getCache()->GetAll("vm");
+            QList<QVariantMap> vms = m_xenLib->getCache()->GetAllData("vm");
             for (const QVariantMap& vm : vms)
             {
                 QString vmRef = vm.value("ref").toString();
@@ -527,7 +527,7 @@ void MainWindow::disconnectFromServer()
         if (m_cvmConsolePanel)
         {
             // Get all hosts and close their CVM console connections
-            QList<QVariantMap> hosts = m_xenLib->getCache()->GetAll("host");
+            QList<QVariantMap> hosts = m_xenLib->getCache()->GetAllData("host");
             for (const QVariantMap& host : hosts)
             {
                 QString hostRef = host.value("ref").toString();
@@ -542,7 +542,7 @@ void MainWindow::disconnectFromServer()
 
                     // Close SR driver domain consoles for this host
                     // Iterate through all VMs to find SR driver domains on this host
-                    QList<QVariantMap> allVMs = m_xenLib->getCache()->GetAll("vm");
+                    QList<QVariantMap> allVMs = m_xenLib->getCache()->GetAllData("vm");
                     for (const QVariantMap& vm : allVMs)
                     {
                         QString vmRef = vm.value("ref").toString();

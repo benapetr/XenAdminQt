@@ -151,7 +151,7 @@ bool MoveVirtualDiskCommand::canBeMoved(const QVariantMap& vdiData) const
 bool MoveVirtualDiskCommand::isVDIInUseByRunningVM(const QString& vdiRef) const
 {
     // Get all VBDs
-    QList<QVariantMap> vbds = this->xenLib()->getCache()->GetAll("vbd");
+    QList<QVariantMap> vbds = this->xenLib()->getCache()->GetAllData("vbd");
 
     for (const QVariantMap& vbdData : vbds)
     {

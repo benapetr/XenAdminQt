@@ -75,7 +75,7 @@ void AttachVirtualDiskDialog::populateSRFilter()
     this->ui->srComboBox->addItem("All Storage Repositories", QString());
 
     // Get all SRs
-    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->GetAll("sr");
+    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->GetAllData("sr");
 
     for (const QVariantMap& srData : allSRs)
     {
@@ -101,7 +101,7 @@ void AttachVirtualDiskDialog::populateVDITable()
     QString selectedSR = this->ui->srComboBox->currentData().toString();
 
     // Get all VDIs from cache
-    QList<QVariantMap> allVDIs = this->m_xenLib->getCache()->GetAll("vdi");
+    QList<QVariantMap> allVDIs = this->m_xenLib->getCache()->GetAllData("vdi");
 
     // Get VBDs already attached to this VM to filter them out
     QStringList attachedVDIs;

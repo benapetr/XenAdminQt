@@ -179,7 +179,7 @@ void NewVMWizard::loadTemplates()
     this->ui->templateTree->clear();
     this->m_templateItems.clear();
 
-    QList<QVariantMap> allVMs = this->m_xenLib->getCache()->GetAll("vm");
+    QList<QVariantMap> allVMs = this->m_xenLib->getCache()->GetAllData("vm");
     for (const QVariant vmVar : allVMs)
     {
         QVariantMap vmRecord = vmVar.toMap();
@@ -348,7 +348,7 @@ void NewVMWizard::loadHosts()
     if (!cache)
         return;
 
-    QList<QVariantMap> hosts = cache->GetAll("host");
+    QList<QVariantMap> hosts = cache->GetAllData("host");
     for (const QVariantMap& host : hosts)
     {
         HostInfo info;
@@ -375,7 +375,7 @@ void NewVMWizard::loadStorageRepositories()
     if (!cache)
         return;
 
-    QList<QVariantMap> srs = cache->GetAll("sr");
+    QList<QVariantMap> srs = cache->GetAllData("sr");
     for (const QVariantMap& sr : srs)
     {
         StorageRepositoryInfo info;
@@ -405,7 +405,7 @@ void NewVMWizard::loadNetworks()
     if (!cache)
         return;
 
-    QList<QVariantMap> nets = cache->GetAll("network");
+    QList<QVariantMap> nets = cache->GetAllData("network");
     for (const QVariantMap& net : nets)
     {
         NetworkInfo info;

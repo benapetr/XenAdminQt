@@ -71,7 +71,7 @@ void NewVirtualDiskDialog::populateSRList()
     this->ui->srListWidget->clear();
 
     // Get all SRs
-    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->GetAll("sr");
+    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->GetAllData("sr");
 
     // Get VM's resident host to check SR visibility
     QString vmResidentOn = this->m_vmData.value("resident_on", "").toString();
@@ -79,7 +79,7 @@ void NewVirtualDiskDialog::populateSRList()
     QString homeHost = vmResidentOn.isEmpty() ? vmAffinity : vmResidentOn;
 
     // Get all hosts to check PBD connections
-    QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAll("host");
+    QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAllData("host");
 
     for (const QVariantMap& srData : allSRs)
     {
@@ -102,7 +102,7 @@ void NewVirtualDiskDialog::populateSRList()
         }
 
         // 3. Check if SM (Storage Manager) supports VDI_CREATE capability
-        QList<QVariantMap> allSMs = this->m_xenLib->getCache()->GetAll("SM");
+        QList<QVariantMap> allSMs = this->m_xenLib->getCache()->GetAllData("SM");
         bool supportsVdiCreate = false;
 
         for (const QVariantMap& smData : allSMs)

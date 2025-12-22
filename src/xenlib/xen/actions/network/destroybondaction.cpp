@@ -194,7 +194,7 @@ QList<DestroyBondAction::BondInfo> DestroyBondAction::findAllEquivalentBonds() c
     QString refDevice = refMasterPifData.value("device").toString();
 
     // Get all hosts in the pool
-    QList<QVariantMap> hosts = connection()->getCache()->GetAll("host");
+    QList<QVariantMap> hosts = connection()->getCache()->GetAllData("host");
 
     for (const QVariantMap& host : hosts)
     {
@@ -202,7 +202,7 @@ QList<DestroyBondAction::BondInfo> DestroyBondAction::findAllEquivalentBonds() c
         QString hostName = host.value("name_label").toString();
 
         // Find bond on this host with matching device name
-        QList<QVariantMap> allBonds = connection()->getCache()->GetAll("bond");
+        QList<QVariantMap> allBonds = connection()->getCache()->GetAllData("bond");
         for (const QVariantMap& bond : allBonds)
         {
             QString bondRef = bond.value("_ref").toString();

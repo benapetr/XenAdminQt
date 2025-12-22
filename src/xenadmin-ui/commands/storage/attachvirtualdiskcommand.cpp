@@ -164,7 +164,7 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     vbdRecord["unpluggable"] = true;
 
     // Check if this is the first VBD for this VDI (owner flag)
-    QList<QVariantMap> allVbds = cache->GetAll("vbd");
+    QList<QVariantMap> allVbds = cache->GetAllData("vbd");
     bool isOwner = true;
     for (const QVariantMap& vbd : allVbds)
     {
@@ -272,7 +272,7 @@ int AttachVirtualDiskCommand::getCurrentVBDCount(const QString& vmRef) const
         return 0;
 
     // Get all VBDs and count those belonging to this VM
-    QList<QVariantMap> vbds = cache->GetAll("vbd");
+    QList<QVariantMap> vbds = cache->GetAllData("vbd");
     int count = 0;
 
     for (const QVariantMap& vbd : vbds)

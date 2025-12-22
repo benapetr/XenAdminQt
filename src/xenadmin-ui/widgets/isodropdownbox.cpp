@@ -198,7 +198,7 @@ void IsoDropDownBox::refresh()
     };
 
     QList<SrEntry> srEntries;
-    const QList<QVariantMap> allSrs = cache->GetAll("sr");
+    const QList<QVariantMap> allSrs = cache->GetAllData("sr");
     for (const QVariantMap& srData : allSrs)
     {
         if (srData.value("content_type").toString() != "iso")

@@ -1000,7 +1000,7 @@ void GeneralTabPage::populateStatusSection()
         if (isShared)
         {
             // For shared SR, should have PBD for each host in pool
-            QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAll("host");
+            QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAllData("host");
             expectedPBDCount = allHosts.size();
         }
 
@@ -1047,7 +1047,7 @@ void GeneralTabPage::populateStatusSection()
     // Show per-host PBD status
     // C# iterates through all hosts and shows their PBD connection status
     bool isShared = this->m_objectData.value("shared", false).toBool();
-    QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAll("host");
+    QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAllData("host");
 
     for (const QVariantMap& hostData : allHosts)
     {
@@ -1161,7 +1161,7 @@ void GeneralTabPage::populateMultipathingSection()
     // Check each host for multipath status
     // C# iterates through hosts and checks PBD multipath active status
     QVariantList pbdRefs = this->m_objectData.value("PBDs").toList();
-    QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAll("host");
+    QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAllData("host");
 
     for (const QVariantMap& hostData : allHosts)
     {

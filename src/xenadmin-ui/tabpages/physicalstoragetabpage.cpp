@@ -277,7 +277,7 @@ void PhysicalStorageTabPage::populatePoolStorage()
 
     // For pools, show all SRs in the pool
     // C#: List<PBD> pbds = host != null ? connection.ResolveAll(host.PBDs) : connection.Cache.PBDs (line 230)
-    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->GetAll("sr");
+    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->GetAllData("sr");
 
     QList<QString> srRefsList;
 

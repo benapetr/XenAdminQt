@@ -285,7 +285,7 @@ int AddVirtualDiskCommand::getMaxVBDsAllowed(const QVariantMap& vmData) const
 int AddVirtualDiskCommand::getCurrentVBDCount(const QString& vmRef) const
 {
     // Get all VBDs and count those attached to this VM
-    QList<QVariantMap> allVBDs = mainWindow()->xenLib()->getCache()->GetAll("vbd");
+    QList<QVariantMap> allVBDs = mainWindow()->xenLib()->getCache()->GetAllData("vbd");
 
     int count = 0;
     for (const QVariantMap& vbdData : allVBDs)

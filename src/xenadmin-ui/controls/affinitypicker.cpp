@@ -157,7 +157,7 @@ void AffinityPicker::loadServers()
     if (!this->m_connection || !this->m_connection->getCache())
         return;
 
-    QList<QVariantMap> hosts = this->m_connection->getCache()->GetAll("host");
+    QList<QVariantMap> hosts = this->m_connection->getCache()->GetAllData("host");
     std::sort(hosts.begin(), hosts.end(), [](const QVariantMap& a, const QVariantMap& b) {
         return a.value("name_label").toString().toLower()
             < b.value("name_label").toString().toLower();
@@ -283,7 +283,7 @@ bool AffinityPicker::hasFullyConnectedSharedStorage() const
     if (!this->m_connection || !this->m_connection->getCache())
         return false;
 
-    QList<QVariantMap> hosts = this->m_connection->getCache()->GetAll("host");
+    QList<QVariantMap> hosts = this->m_connection->getCache()->GetAllData("host");
     if (hosts.isEmpty())
         return false;
 
@@ -298,7 +298,7 @@ bool AffinityPicker::hasFullyConnectedSharedStorage() const
     if (hostRefs.size() <= 1)
         return true;
 
-    QList<QVariantMap> srs = this->m_connection->getCache()->GetAll("sr");
+    QList<QVariantMap> srs = this->m_connection->getCache()->GetAllData("sr");
     for (const QVariantMap& srData : srs)
     {
         if (!srData.value("shared").toBool())

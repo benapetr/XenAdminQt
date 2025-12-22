@@ -355,7 +355,7 @@ void NICsTabPage::onCreateBondClicked()
 
     // Get the network ref - use the first available network or create a bond network
     QString networkRef;
-    QList<QVariantMap> networks = this->m_xenLib->getCache()->GetAll("network");
+    QList<QVariantMap> networks = this->m_xenLib->getCache()->GetAllData("network");
     if (!networks.isEmpty())
     {
         // Use the first network (typically the management network)

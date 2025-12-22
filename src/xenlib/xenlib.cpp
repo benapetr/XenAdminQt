@@ -705,7 +705,7 @@ bool XenLib::isSRDriverDomain(const QString& vmRef, QString* outSRRef)
     if (!cache)
         return false;
 
-    QList<QVariantMap> allPBDs = cache->GetAll("pbd");
+    QList<QVariantMap> allPBDs = cache->GetAllData("pbd");
     for (const QVariantMap& pbd : allPBDs)
     {
         QVariantMap otherConfig = pbd.value("other_config").toMap();
@@ -2236,7 +2236,7 @@ void XenLib::requestVirtualMachines()
 
     // CACHE CHECK FIRST - Return cached VMs if available
     XenCache* cache = getCache();
-    QList<QVariantMap> cachedMaps = cache ? cache->GetAll("VM") : QList<QVariantMap>();
+    QList<QVariantMap> cachedMaps = cache ? cache->GetAllData("VM") : QList<QVariantMap>();
     if (!cachedMaps.isEmpty())
     {
         qDebug() << "XenLib::requestVirtualMachines - Cache hit, returning" << cachedMaps.size() << "VMs";
@@ -2281,7 +2281,7 @@ void XenLib::requestHosts()
     }
 
     // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->GetAll("host");
+    QList<QVariantMap> cachedMaps = getCache()->GetAllData("host");
     if (!cachedMaps.isEmpty())
     {
         qDebug() << "XenLib::requestHosts - Cache hit, returning" << cachedMaps.size() << "hosts";
@@ -2322,7 +2322,7 @@ void XenLib::requestPools()
     }
 
     // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->GetAll("pool");
+    QList<QVariantMap> cachedMaps = getCache()->GetAllData("pool");
     if (!cachedMaps.isEmpty())
     {
         qDebug() << "XenLib::requestPools - Cache hit, returning" << cachedMaps.size() << "pools";
@@ -2363,7 +2363,7 @@ void XenLib::requestStorageRepositories()
     }
 
     // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->GetAll("SR");
+    QList<QVariantMap> cachedMaps = getCache()->GetAllData("SR");
     if (!cachedMaps.isEmpty())
     {
         qDebug() << "XenLib::requestStorageRepositories - Cache hit, returning" << cachedMaps.size() << "SRs";
@@ -2404,7 +2404,7 @@ void XenLib::requestNetworks()
     }
 
     // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->GetAll("network");
+    QList<QVariantMap> cachedMaps = getCache()->GetAllData("network");
     if (!cachedMaps.isEmpty())
     {
         qDebug() << "XenLib::requestNetworks - Cache hit, returning" << cachedMaps.size() << "networks";
@@ -2444,7 +2444,7 @@ void XenLib::requestPIFs()
     }
 
     // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->GetAll("PIF");
+    QList<QVariantMap> cachedMaps = getCache()->GetAllData("PIF");
     if (!cachedMaps.isEmpty())
     {
         qDebug() << "XenLib::requestPIFs - Cache hit, returning" << cachedMaps.size() << "PIFs";

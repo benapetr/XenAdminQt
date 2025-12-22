@@ -70,7 +70,7 @@ void CreateSriovAction::run()
             // Check if this host is the pool coordinator
             // In C# this is done via host.IsCoordinator()
             // We can check if this host is the master in the pool
-            QList<QVariantMap> pools = connection()->getCache()->GetAll("pool");
+            QList<QVariantMap> pools = connection()->getCache()->GetAllData("pool");
             if (!pools.isEmpty())
             {
                 QString masterRef = pools.first().value("master").toString();

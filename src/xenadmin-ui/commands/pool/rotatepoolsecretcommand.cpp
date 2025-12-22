@@ -271,7 +271,7 @@ bool RotatePoolSecretCommand::isStockholmOrGreater() const
         return false;
 
     // Get pool to check version
-    QList<QVariantMap> pools = this->xenLib()->getCache()->GetAll("pool");
+    QList<QVariantMap> pools = this->xenLib()->getCache()->GetAllData("pool");
     if (pools.isEmpty())
         return false;
 
