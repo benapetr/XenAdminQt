@@ -190,7 +190,7 @@ bool DestroyHostCommand::isHostLive(const QString& hostRef) const
     QString metricsRef = hostData.value("metrics").toString();
     if (!metricsRef.isEmpty())
     {
-        QVariantMap metricsData = this->xenLib()->getCache()->resolve("host_metrics", metricsRef);
+        QVariantMap metricsData = this->xenLib()->getCache()->ResolveObjectData("host_metrics", metricsRef);
         if (!metricsData.isEmpty())
         {
             return metricsData.value("live", false).toBool();

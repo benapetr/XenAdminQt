@@ -47,7 +47,7 @@ bool MigrateVirtualDiskCommand::canRun() const
     if (vdiRef.isEmpty())
         return false;
 
-    QVariantMap vdiData = this->xenLib()->getCache()->resolve("vdi", vdiRef);
+    QVariantMap vdiData = this->xenLib()->getCache()->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
         return false;
 
@@ -60,7 +60,7 @@ void MigrateVirtualDiskCommand::run()
     if (vdiRef.isEmpty())
         return;
 
-    QVariantMap vdiData = this->xenLib()->getCache()->resolve("vdi", vdiRef);
+    QVariantMap vdiData = this->xenLib()->getCache()->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
     {
         QMessageBox::warning(this->mainWindow(), tr("Error"),
@@ -99,7 +99,7 @@ void MigrateVirtualDiskCommand::run()
                     reason = tr("Cannot migrate: VDI has no SR reference.");
                 } else
                 {
-                    QVariantMap srData = this->xenLib()->getCache()->resolve("sr", srRef);
+                    QVariantMap srData = this->xenLib()->getCache()->ResolveObjectData("sr", srRef);
                     if (srData.isEmpty())
                         reason = tr("Cannot migrate: Unable to retrieve SR information.");
                     else if (this->isHBALunPerVDI(srData))
@@ -159,7 +159,7 @@ bool MigrateVirtualDiskCommand::canBeMigrated(const QVariantMap& vdiData) const
     if (srRef.isEmpty())
         return false;
 
-    QVariantMap srData = this->xenLib()->getCache()->resolve("sr", srRef);
+    QVariantMap srData = this->xenLib()->getCache()->ResolveObjectData("sr", srRef);
     if (srData.isEmpty())
         return false;
 

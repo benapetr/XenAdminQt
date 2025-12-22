@@ -72,7 +72,7 @@ void VMOperationHelpers::startDiagnosisForm(XenLib* xenLib,
                        .arg(vmName, isStart ? "started" : "resumed");
 
     QMap<QString, QPair<QString, QString>> reasons;
-    QList<QVariantMap> hosts = cache->getAll("host");
+    QList<QVariantMap> hosts = cache->GetAll("host");
     
     if (hosts.isEmpty())
     {

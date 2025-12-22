@@ -115,7 +115,7 @@ void SrStorageTabPage::populateSRStorage()
     for (const QVariant& vdiVar : vdiRefs)
     {
         QString vdiRef = vdiVar.toString();
-        QVariantMap vdiRecord = this->m_xenLib->getCache()->resolve("vdi", vdiRef);
+        QVariantMap vdiRecord = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
 
         if (vdiRecord.isEmpty())
         {
@@ -145,14 +145,14 @@ void SrStorageTabPage::populateSRStorage()
         for (const QVariant& vbdVar : vbdRefs)
         {
             QString vbdRef = vbdVar.toString();
-            QVariantMap vbdData = this->m_xenLib->getCache()->resolve("vbd", vbdRef);
+            QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef);
             if (vbdData.isEmpty())
             {
                 continue;
             }
 
             QString vmRef = vbdData.value("VM").toString();
-            QVariantMap vmData = this->m_xenLib->getCache()->resolve("vm", vmRef);
+            QVariantMap vmData = this->m_xenLib->getCache()->ResolveObjectData("vm", vmRef);
             if (!vmData.isEmpty())
             {
                 QString vmName = vmData.value("name_label", "Unknown").toString();
@@ -219,7 +219,7 @@ void SrStorageTabPage::updateButtonStates()
         for (const QVariant& pbdVar : pbdRefs)
         {
             QString pbdRef = pbdVar.toString();
-            QVariantMap pbdData = this->m_xenLib->getCache()->resolve("pbd", pbdRef);
+            QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
             if (pbdData.value("currently_attached", false).toBool())
             {
                 srDetached = false;
@@ -234,7 +234,7 @@ void SrStorageTabPage::updateButtonStates()
 
     if (hasSelection && this->m_xenLib)
     {
-        QVariantMap vdiData = this->m_xenLib->getCache()->resolve("vdi", this->getSelectedVDIRef());
+        QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", this->getSelectedVDIRef());
         bool isSnapshot = vdiData.value("is_a_snapshot", false).toBool();
         QVariantList vdiAllowed = vdiData.value("allowed_operations", QVariantList()).toList();
         bool vdiLocked = vdiAllowed.isEmpty();
@@ -291,7 +291,7 @@ void SrStorageTabPage::onDeleteButtonClicked()
         return;
     }
 
-    QVariantMap vdiData = this->m_xenLib->getCache()->resolve("vdi", vdiRef);
+    QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
     QString vdiName = vdiData.value("name_label", tr("Virtual Disk")).toString();
 
     QMessageBox::StandardButton confirm = QMessageBox::question(
@@ -310,7 +310,7 @@ void SrStorageTabPage::onDeleteButtonClicked()
     for (const QVariant& vbdVar : vbdRefs)
     {
         QString vbdRef = vbdVar.toString();
-        QVariantMap vbdData = this->m_xenLib->getCache()->resolve("vbd", vbdRef);
+        QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef);
         if (vbdData.value("currently_attached", false).toBool())
         {
             QMessageBox::StandardButton attachedConfirm = QMessageBox::question(
@@ -356,7 +356,7 @@ void SrStorageTabPage::onEditButtonClicked()
         return;
 
     bool hasErrors = false;
-    QVariantMap vdiData = this->m_xenLib->getCache()->resolve("vdi", vdiRef);
+    QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
 
     QString newName = dialog.getVdiName();
     QString oldName = vdiData.value("name_label", "").toString();

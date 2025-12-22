@@ -292,7 +292,7 @@ void SearchTabPage::populateTable()
     // Iterate ALL cached objects (like C# connection.Cache.XenSearchableObjects)
     // C# Reference: GroupAlg.cs GetGrouped() lines 83-88
     // The Query.match() call will filter objects based on QueryScope
-    QList<QPair<QString, QString>> allObjects = cache->getAllObjects();
+    QList<QPair<QString, QString>> allObjects = cache->GetAllObjectsData();
 
     // qDebug() << "Total objects from getAllObjects():" << allObjects.size();
 
@@ -304,7 +304,7 @@ void SearchTabPage::populateTable()
         const QString& objectType = objPair.first;
         const QString& objectRef = objPair.second;
 
-        QVariantMap objectData = cache->resolve(objectType, objectRef);
+        QVariantMap objectData = cache->ResolveObjectData(objectType, objectRef);
 
         // Hide internal objects (control domain, tools SR, etc.)
         // C# Equivalent: if (Hide(o)) continue;
@@ -372,7 +372,7 @@ void SearchTabPage::addObjectRow(const QString& objectType, const QString& objec
             XenCache* cache = m_xenLib->getCache();
             if (cache)
             {
-                QVariantMap metricsData = cache->resolve("host_metrics", metricsRef);
+                QVariantMap metricsData = cache->ResolveObjectData("host_metrics", metricsRef);
                 if (!metricsData.isEmpty())
                 {
                     enrichedData["_metrics_live"] = metricsData.value("live", false);
@@ -486,7 +486,7 @@ QString SearchTabPage::getCPUUsageText(const QString& objectType, const QVariant
         if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL" || !m_xenLib || !m_xenLib->getCache())
             return "-";
 
-        QVariantMap vmMetrics = m_xenLib->getCache()->resolve("vm_metrics", metricsRef);
+        QVariantMap vmMetrics = m_xenLib->getCache()->ResolveObjectData("vm_metrics", metricsRef);
         if (vmMetrics.isEmpty())
             return "-";
 
@@ -647,7 +647,7 @@ QString SearchTabPage::getMemoryUsageText(const QString& objectType, const QVari
             QString metricsRef = objectData.value("metrics", "").toString();
             if (!metricsRef.isEmpty() && metricsRef != "OpaqueRef:NULL" && m_xenLib && m_xenLib->getCache())
             {
-                QVariantMap hostMetrics = m_xenLib->getCache()->resolve("host_metrics", metricsRef);
+                QVariantMap hostMetrics = m_xenLib->getCache()->ResolveObjectData("host_metrics", metricsRef);
                 qulonglong memoryTotal = hostMetrics.value("memory_total", 0).toULongLong();
                 if (memoryTotal > 0)
                 {
@@ -751,7 +751,7 @@ QString SearchTabPage::getDiskUsageText(const QString& objectType, const QVarian
             if (!m_xenLib->getCache())
                 continue;
 
-            QVariantMap vbdData = m_xenLib->getCache()->resolve("vbd", vbdRef.toString());
+            QVariantMap vbdData = m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef.toString());
             if (vbdData.isEmpty())
                 continue;
 
@@ -821,7 +821,7 @@ QString SearchTabPage::getNetworkUsageText(const QString& objectType, const QVar
             if (!m_xenLib->getCache())
                 continue;
 
-            QVariantMap vifData = m_xenLib->getCache()->resolve("vif", vifRef.toString());
+            QVariantMap vifData = m_xenLib->getCache()->ResolveObjectData("vif", vifRef.toString());
             if (vifData.isEmpty())
                 continue;
 
@@ -878,7 +878,7 @@ QString SearchTabPage::getNetworkUsageText(const QString& objectType, const QVar
             if (!m_xenLib->getCache())
                 continue;
 
-            QVariantMap pifData = m_xenLib->getCache()->resolve("pif", pifRef.toString());
+            QVariantMap pifData = m_xenLib->getCache()->ResolveObjectData("pif", pifRef.toString());
             if (pifData.isEmpty())
                 continue;
 
@@ -929,7 +929,7 @@ QString SearchTabPage::getIPAddress(const QString& objectType, const QVariantMap
         if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL" || !m_xenLib || !m_xenLib->getCache())
             return "";
 
-        QVariantMap guestMetrics = m_xenLib->getCache()->resolve("vm_guest_metrics", guestMetricsRef);
+        QVariantMap guestMetrics = m_xenLib->getCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
         if (guestMetrics.isEmpty())
             return "";
 
@@ -983,7 +983,7 @@ QString SearchTabPage::getUptime(const QString& objectType, const QVariantMap& o
         if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL" || !m_xenLib || !m_xenLib->getCache())
             return "";
 
-        QVariantMap vmMetrics = m_xenLib->getCache()->resolve("vm_metrics", metricsRef);
+        QVariantMap vmMetrics = m_xenLib->getCache()->ResolveObjectData("vm_metrics", metricsRef);
         if (vmMetrics.isEmpty())
             return "";
 

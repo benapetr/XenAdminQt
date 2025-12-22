@@ -513,7 +513,7 @@ void MainWindow::disconnectFromServer()
         if (m_consolePanel)
         {
             // Get all VMs and close their console connections
-            QList<QVariantMap> vms = m_xenLib->getCache()->getAll("vm");
+            QList<QVariantMap> vms = m_xenLib->getCache()->GetAll("vm");
             for (const QVariantMap& vm : vms)
             {
                 QString vmRef = vm.value("ref").toString();
@@ -527,7 +527,7 @@ void MainWindow::disconnectFromServer()
         if (m_cvmConsolePanel)
         {
             // Get all hosts and close their CVM console connections
-            QList<QVariantMap> hosts = m_xenLib->getCache()->getAll("host");
+            QList<QVariantMap> hosts = m_xenLib->getCache()->GetAll("host");
             for (const QVariantMap& host : hosts)
             {
                 QString hostRef = host.value("ref").toString();
@@ -542,7 +542,7 @@ void MainWindow::disconnectFromServer()
 
                     // Close SR driver domain consoles for this host
                     // Iterate through all VMs to find SR driver domains on this host
-                    QList<QVariantMap> allVMs = m_xenLib->getCache()->getAll("vm");
+                    QList<QVariantMap> allVMs = m_xenLib->getCache()->GetAll("vm");
                     for (const QVariantMap& vm : allVMs)
                     {
                         QString vmRef = vm.value("ref").toString();
@@ -1887,7 +1887,7 @@ void MainWindow::onCacheObjectChanged(const QString& objectType, const QString& 
     if (objectType == m_currentObjectType && objectRef == m_currentObjectRef)
     {
         // Get updated data from cache
-        QVariantMap objectData = m_xenLib->getCache()->resolve(objectType, objectRef);
+        QVariantMap objectData = m_xenLib->getCache()->ResolveObjectData(objectType, objectRef);
         if (!objectData.isEmpty())
         {
             // Update tab pages with new data
@@ -2302,7 +2302,7 @@ void MainWindow::updateToolbarsAndMenus()
 
     // Force Shutdown - show based on Command.ShowOnMainToolBar property
     // Matches C#: ForceShutdownToolbarButton.Available = ((ForceVMShutDownCommand)ForceShutdownToolbarButton.Command).ShowOnMainToolBar
-    QVariantMap vmData = m_xenLib->getCache()->resolve("vm", objectRef);
+    QVariantMap vmData = m_xenLib->getCache()->ResolveObjectData("vm", objectRef);
     QVariantList allowedOps = vmData.value("allowed_operations", QVariantList()).toList();
     bool hasCleanShutdown = false;
     bool hasCleanReboot = false;

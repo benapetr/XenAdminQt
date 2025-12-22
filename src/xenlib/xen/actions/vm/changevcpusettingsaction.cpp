@@ -53,8 +53,8 @@ void ChangeVCPUSettingsAction::run()
         setPercentComplete(0);
         setDescription("Checking VM state...");
 
-        // Re-resolve VM from cache (it may have been updated)
-        QVariantMap vmData = connection()->getCache()->resolve("vm", m_vmRef);
+        // Re-ResolveObjectData VM from cache (it may have been updated)
+        QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", m_vmRef);
         if (vmData.isEmpty())
         {
             // VM disappeared - nothing to do

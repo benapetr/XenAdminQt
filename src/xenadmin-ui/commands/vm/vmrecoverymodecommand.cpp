@@ -51,7 +51,7 @@ bool VMRecoveryModeCommand::canRun() const
     }
 
     // Get VM data from cache
-    QVariantMap vmData = this->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
     {
         return false;

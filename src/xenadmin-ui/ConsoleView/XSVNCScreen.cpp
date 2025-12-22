@@ -83,7 +83,7 @@ XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenLib* x
         XenCache* cache = this->_xenLib->getConnection()->getCache();
         if (cache)
         {
-            QVariantMap vmRecord = cache->resolve("vm", this->_sourceRef);
+            QVariantMap vmRecord = cache->ResolveObjectData("vm", this->_sourceRef);
             if (!vmRecord.isEmpty())
             {
                 // Check if HVM (true) or PV (false)
@@ -113,12 +113,12 @@ XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenLib* x
             XenCache* cache = this->_xenLib->getConnection()->getCache();
             if (cache)
             {
-                QVariantMap vmRecord = cache->resolve("vm", this->_sourceRef);
+                QVariantMap vmRecord = cache->ResolveObjectData("vm", this->_sourceRef);
                 QString guestMetricsRef = vmRecord.value("guest_metrics").toString();
 
                 if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
                 {
-                    QVariantMap guestMetrics = cache->resolve("vm_guest_metrics", guestMetricsRef);
+                    QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
                     QVariantMap networks = guestMetrics.value("networks").toMap();
 
                     // Convert QVariantMap to QMap<QString, QString>
@@ -701,7 +701,7 @@ void XSVNCScreen::onCacheObjectChanged(const QString& objectType, const QString&
     if (!cache)
         return;
 
-    QVariantMap vmData = cache->resolve("vm", objectRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", objectRef);
     if (vmData.isEmpty())
         return;
 
@@ -1087,7 +1087,7 @@ QString XSVNCScreen::pollPort(int port, bool vnc)
         if (!cache)
             return QString();
 
-        QVariantMap vmRecord = cache->resolve("vm", this->_sourceRef);
+        QVariantMap vmRecord = cache->ResolveObjectData("vm", this->_sourceRef);
         if (vmRecord.isEmpty())
             return QString();
 
@@ -1097,7 +1097,7 @@ QString XSVNCScreen::pollPort(int port, bool vnc)
             return QString();
 
         // Get guest metrics record
-        QVariantMap guestMetrics = cache->resolve("vm_guest_metrics", guestMetricsRef);
+        QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
         if (guestMetrics.isEmpty())
             return QString();
 
@@ -1123,7 +1123,7 @@ QString XSVNCScreen::pollPort(int port, bool vnc)
             if (vifRef.isEmpty())
                 continue;
 
-            QVariantMap vif = cache->resolve("vif", vifRef);
+            QVariantMap vif = cache->ResolveObjectData("vif", vifRef);
             if (vif.isEmpty())
                 continue;
 
@@ -1137,14 +1137,14 @@ QString XSVNCScreen::pollPort(int port, bool vnc)
 
             if (!networkRef.isEmpty() && !residentOnRef.isEmpty())
             {
-                QVariantMap network = cache->resolve("network", networkRef);
+                QVariantMap network = cache->ResolveObjectData("network", networkRef);
                 if (!network.isEmpty())
                 {
                     QVariantList pifs = network.value("PIFs").toList();
                     foreach (const QVariant& pifRefVar, pifs)
                     {
                         QString pifRef = pifRefVar.toString();
-                        QVariantMap pifRecord = cache->resolve("pif", pifRef);
+                        QVariantMap pifRecord = cache->ResolveObjectData("pif", pifRef);
                         if (pifRecord.value("host").toString() == residentOnRef)
                         {
                             pif = pifRecord;
@@ -1455,7 +1455,7 @@ void XSVNCScreen::connectNewHostedConsole()
             return;
         }
 
-        QVariantMap vmRecord = cache->resolve("vm", this->_sourceRef);
+        QVariantMap vmRecord = cache->ResolveObjectData("vm", this->_sourceRef);
         if (vmRecord.isEmpty())
         {
             qWarning() << "XSVNCScreen: Cannot resolve VM record";
@@ -1491,7 +1491,7 @@ void XSVNCScreen::connectNewHostedConsole()
             }
 
             // Get console record
-            QVariantMap consoleRecord = cache->resolve("console", consoleRef);
+            QVariantMap consoleRecord = cache->ResolveObjectData("console", consoleRef);
             if (consoleRecord.isEmpty())
             {
                 qWarning() << "XSVNCScreen: Console record missing in cache for" << consoleRef;
@@ -1563,7 +1563,7 @@ bool XSVNCScreen::connectHostedConsole(VNCGraphicsClient* vncClient, const QStri
             throw std::runtime_error("No cache available");
         }
 
-        QVariantMap consoleRecord = cache->resolve("console", consoleRef);
+        QVariantMap consoleRecord = cache->ResolveObjectData("console", consoleRef);
         if (consoleRecord.isEmpty())
         {
             throw std::runtime_error("Cannot resolve console record");
@@ -1585,7 +1585,7 @@ bool XSVNCScreen::connectHostedConsole(VNCGraphicsClient* vncClient, const QStri
         qDebug() << "XSVNCScreen: Console location:" << location;
 
         // Get VM record to check resident_on (host where VM is running)
-        QVariantMap vmRecord = cache->resolve("vm", this->_sourceRef);
+        QVariantMap vmRecord = cache->ResolveObjectData("vm", this->_sourceRef);
         QString residentOnRef = vmRecord.value("resident_on").toString();
 
         if (residentOnRef.isEmpty() || residentOnRef == "OpaqueRef:NULL")
@@ -1594,7 +1594,7 @@ bool XSVNCScreen::connectHostedConsole(VNCGraphicsClient* vncClient, const QStri
         }
 
         // Verify host exists
-        QVariantMap hostRecord = cache->resolve("host", residentOnRef);
+        QVariantMap hostRecord = cache->ResolveObjectData("host", residentOnRef);
         if (hostRecord.isEmpty())
         {
             throw std::runtime_error("Cannot resolve host where VM is running");
@@ -1724,7 +1724,7 @@ bool XSVNCScreen::shouldRetryConnection() const
         return false;
 
     // Check if source is a VM (hosts don't have power_state in the same way)
-    QVariantMap vmRecord = cache->resolve("vm", this->_sourceRef);
+    QVariantMap vmRecord = cache->ResolveObjectData("vm", this->_sourceRef);
     if (!vmRecord.isEmpty())
     {
         QString powerState = vmRecord.value("power_state").toString();
@@ -1732,7 +1732,7 @@ bool XSVNCScreen::shouldRetryConnection() const
     }
 
     // For hosts, check if the host is enabled/connected
-    QVariantMap hostRecord = cache->resolve("host", this->_sourceRef);
+    QVariantMap hostRecord = cache->ResolveObjectData("host", this->_sourceRef);
     if (!hostRecord.isEmpty())
     {
         bool enabled = hostRecord.value("enabled", false).toBool();

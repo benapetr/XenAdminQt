@@ -45,7 +45,7 @@ EditVmHaPrioritiesDialog::EditVmHaPrioritiesDialog(XenLib* xenLib, const QString
       m_maxNtol(0)
 {
     // Get pool data
-    QVariantMap poolData = m_xenLib->getCache()->resolve("pool", m_poolRef);
+    QVariantMap poolData = m_xenLib->getCache()->ResolveObjectData("pool", m_poolRef);
     m_poolName = poolData.value("name_label", "Pool").toString();
     m_originalNtol = poolData.value("ha_host_failures_to_tolerate", 0).toLongLong();
     m_ntol = m_originalNtol;
@@ -140,12 +140,12 @@ void EditVmHaPrioritiesDialog::populateVMTable()
     m_originalSettings.clear();
 
     // Check for dead hosts
-    QStringList hostRefs = m_xenLib->getCache()->getAllRefs("host");
+    QStringList hostRefs = m_xenLib->getCache()->GetAllRefs("host");
     bool hasDeadHosts = false;
     for (const QString& hostRef : hostRefs)
     {
-        QVariantMap hostData = m_xenLib->getCache()->resolve("host", hostRef);
-        QVariantMap metrics = m_xenLib->getCache()->resolve("host_metrics",
+        QVariantMap hostData = m_xenLib->getCache()->ResolveObjectData("host", hostRef);
+        QVariantMap metrics = m_xenLib->getCache()->ResolveObjectData("host_metrics",
                                                             hostData.value("metrics", "").toString());
         bool isLive = metrics.value("live", true).toBool();
         if (!isLive)
@@ -168,11 +168,11 @@ void EditVmHaPrioritiesDialog::populateVMTable()
     }
 
     // Get all VMs from cache
-    QStringList vmRefs = m_xenLib->getCache()->getAllRefs("vm");
+    QStringList vmRefs = m_xenLib->getCache()->GetAllRefs("vm");
 
     for (const QString& vmRef : vmRefs)
     {
-        QVariantMap vmData = m_xenLib->getCache()->resolve("vm", vmRef);
+        QVariantMap vmData = m_xenLib->getCache()->ResolveObjectData("vm", vmRef);
 
         // Skip templates
         bool isTemplate = vmData.value("is_a_template", false).toBool();
@@ -269,7 +269,7 @@ void EditVmHaPrioritiesDialog::updateNtolCalculation()
     m_ntol = m_ntolSpinBox->value();
 
     // Count hosts in pool
-    QStringList hostRefs = m_xenLib->getCache()->getAllRefs("host");
+    QStringList hostRefs = m_xenLib->getCache()->GetAllRefs("host");
     int hostCount = hostRefs.size();
 
     // Maximum NTOL is number of hosts - 1

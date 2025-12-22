@@ -51,7 +51,7 @@ bool UnpauseVMCommand::canRun() const
     if (!this->isVMPaused(vmRef))
         return false;
 
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     QVariantList allowedOperations = vmData.value("allowed_operations").toList();
 
     return allowedOperations.contains("unpause");
@@ -127,7 +127,7 @@ QString UnpauseVMCommand::getSelectedVMName() const
 bool UnpauseVMCommand::isVMPaused(const QString& vmRef) const
 {
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     QString powerState = vmData.value("power_state", "Halted").toString();
 
     return (powerState == "Paused");

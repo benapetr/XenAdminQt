@@ -61,7 +61,7 @@ void CloneVMCommand::run()
         return;
 
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     QString powerState = vmData.value("power_state", "Unknown").toString();
 
     // Check if VM is in a cloneable state
@@ -165,7 +165,7 @@ QString CloneVMCommand::getSelectedVMName() const
 bool CloneVMCommand::isVMCloneable(const QString& vmRef) const
 {
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
 
     // Check if it's not a template
     bool isTemplate = vmData.value("is_a_template", false).toBool();

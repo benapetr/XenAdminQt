@@ -68,7 +68,7 @@ QString CreateVMFromTemplateCommand::getSelectedTemplateRef() const
     if (!cache)
         return QString();
 
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
     // Check if it's a template
     if (!vmData.value("is_a_template", false).toBool())

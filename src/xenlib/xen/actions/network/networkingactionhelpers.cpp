@@ -40,7 +40,7 @@
 // Helper to get PIF record from cache
 static QVariantMap getPIFRecord(AsyncOperation* action, const QString& pifRef)
 {
-    QList<QVariantMap> pifs = action->connection()->getCache()->getAll("pif");
+    QList<QVariantMap> pifs = action->connection()->getCache()->GetAll("pif");
     for (const QVariantMap& pif : pifs)
     {
         if (pif.value("_ref").toString() == pifRef)
@@ -74,7 +74,7 @@ static QString getManagementPurpose(const QVariantMap& pifRecord)
 static bool isUsedByClustering(XenConnection* connection, const QString& pifRef)
 {
     // Check if any cluster_host references this PIF
-    QList<QVariantMap> clusterHosts = connection->getCache()->getAll("cluster_host");
+    QList<QVariantMap> clusterHosts = connection->getCache()->GetAll("cluster_host");
     for (const QVariantMap& ch : clusterHosts)
     {
         if (ch.value("PIF").toString() == pifRef)
@@ -88,7 +88,7 @@ static bool isUsedByClustering(XenConnection* connection, const QString& pifRef)
 // Helper to get coordinator host ref
 static QString getCoordinatorRef(XenConnection* connection)
 {
-    QList<QVariantMap> pools = connection->getCache()->getAll("pool");
+    QList<QVariantMap> pools = connection->getCache()->GetAll("pool");
     if (!pools.isEmpty())
     {
         return pools.first().value("master").toString();
@@ -221,7 +221,7 @@ void NetworkingActionHelpers::waitForMembersToRecover(XenConnection* connection,
 
     QList<QString> deadHosts;
 
-    QList<QVariantMap> hosts = connection->getCache()->getAll("host");
+    QList<QVariantMap> hosts = connection->getCache()->GetAll("host");
     QString coordinatorRef = getCoordinatorRef(connection);
 
     int totalHosts = 0;
@@ -236,7 +236,7 @@ void NetworkingActionHelpers::waitForMembersToRecover(XenConnection* connection,
     // Wait for supporters to go offline
     while (deadHosts.count() < totalHosts && retryAttempt <= retryLimit)
     {
-        hosts = connection->getCache()->getAll("host");
+        hosts = connection->getCache()->GetAll("host");
         for (const QVariantMap& host : hosts)
         {
             QString hostRef = host.value("_ref").toString();
@@ -261,7 +261,7 @@ void NetworkingActionHelpers::waitForMembersToRecover(XenConnection* connection,
     retryAttempt = 0;
     while (!deadHosts.isEmpty() && retryAttempt <= retryLimit)
     {
-        hosts = connection->getCache()->getAll("host");
+        hosts = connection->getCache()->GetAll("host");
         for (const QVariantMap& host : hosts)
         {
             QString hostRef = host.value("_ref").toString();
@@ -456,7 +456,7 @@ void NetworkingActionHelpers::forSomeHosts(AsyncOperation* action,
     QString coordinatorRef = getCoordinatorRef(action->connection());
 
     // Find all PIFs in the same network
-    QList<QVariantMap> allPifs = action->connection()->getCache()->getAll("pif");
+    QList<QVariantMap> allPifs = action->connection()->getCache()->GetAll("pif");
     QList<QString> pifsToReconfigure;
 
     for (const QVariantMap& pif : allPifs)

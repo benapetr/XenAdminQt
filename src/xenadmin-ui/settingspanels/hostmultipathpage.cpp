@@ -31,7 +31,9 @@
 #include "xen/connection.h"
 #include "xen/actions/host/editmultipathaction.h"
 #include "xencache.h"
+#include "xen/hostmetrics.h"
 #include <QDebug>
+#include <QSharedPointer>
 
 HostMultipathPage::HostMultipathPage(QWidget* parent) : IEditPage(parent), ui(new Ui::HostMultipathPage), m_originalMultipathEnabled(false)
 {
@@ -169,13 +171,9 @@ bool HostMultipathPage::isInMaintenanceMode() const
         XenCache* cache = this->connection()->getCache();
         if (cache)
         {
-            QVariantMap metricsData = cache->resolve("host_metrics", metricsRef);
-            if (!metricsData.isEmpty())
-            {
-                bool live = metricsData.value("live", false).toBool();
-                if (!live)
-                    return true; // Host metrics indicate not live (equivalent to maintenance)
-            }
+            QSharedPointer<HostMetrics> metrics = cache->ResolveObject<HostMetrics>("host_metrics", metricsRef);
+            if (metrics && !metrics->live())
+                return true; // Host metrics indicate not live (equivalent to maintenance)
         }
     }
 

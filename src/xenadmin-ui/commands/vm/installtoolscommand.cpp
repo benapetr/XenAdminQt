@@ -97,7 +97,7 @@ bool InstallToolsCommand::isVMRunning() const
     if (!cache)
         return false;
 
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     QString powerState = vmData.value("power_state", "").toString();
 
     return powerState == "Running";
@@ -116,13 +116,13 @@ bool InstallToolsCommand::canInstallTools() const
     if (!cache)
         return false;
 
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
     // Check guest metrics for tools version
     QString guestMetricsRef = vmData.value("guest_metrics", "").toString();
     if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
     {
-        QVariantMap guestMetrics = cache->resolve("vm_guest_metrics", guestMetricsRef);
+        QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
         QVariantMap pvDriversVersion = guestMetrics.value("PV_drivers_version", QVariantMap()).toMap();
 
         // If PV drivers are already installed and up-to-date, don't allow install

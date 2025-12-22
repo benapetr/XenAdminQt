@@ -85,7 +85,7 @@ bool CopyVMCommand::isVMLocked() const
     if (!cache)
         return true;
 
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
     // Check if VM has current operations that would lock it
     QVariantMap currentOps = vmData.value("current_operations", QVariantMap()).toMap();
@@ -105,7 +105,7 @@ bool CopyVMCommand::canVMBeCopied() const
     if (!cache)
         return false;
 
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
     // Check if VM is a template or snapshot
     if (vmData.value("is_a_template", false).toBool())

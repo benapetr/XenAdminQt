@@ -54,7 +54,7 @@ bool DisableChangedBlockTrackingCommand::canRun() const
         return false;
     }
 
-    QVariantMap vmData = this->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
     {
         return false;
@@ -86,7 +86,7 @@ void DisableChangedBlockTrackingCommand::run()
         return;
     }
 
-    QVariantMap vmData = this->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
     {
         return;
@@ -129,7 +129,7 @@ void DisableChangedBlockTrackingCommand::run()
     for (const QVariant& vbdRefVariant : vbds)
     {
         QString vbdRef = vbdRefVariant.toString();
-        QVariantMap vbdData = this->xenLib()->getCache()->resolve("vbd", vbdRef);
+        QVariantMap vbdData = this->xenLib()->getCache()->ResolveObjectData("vbd", vbdRef);
         if (vbdData.isEmpty())
         {
             continue;
@@ -142,7 +142,7 @@ void DisableChangedBlockTrackingCommand::run()
             continue;
         }
 
-        QVariantMap vdiData = this->xenLib()->getCache()->resolve("vdi", vdiRef);
+        QVariantMap vdiData = this->xenLib()->getCache()->ResolveObjectData("vdi", vdiRef);
         if (vdiData.isEmpty())
         {
             continue;
@@ -206,7 +206,7 @@ bool DisableChangedBlockTrackingCommand::isCbtLicensed(const QString& connRef) c
 
 bool DisableChangedBlockTrackingCommand::hasVdiWithCbtEnabled(const QString& vmRef) const
 {
-    QVariantMap vmData = this->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
     {
         return false;
@@ -218,7 +218,7 @@ bool DisableChangedBlockTrackingCommand::hasVdiWithCbtEnabled(const QString& vmR
     for (const QVariant& vbdRefVariant : vbds)
     {
         QString vbdRef = vbdRefVariant.toString();
-        QVariantMap vbdData = this->xenLib()->getCache()->resolve("vbd", vbdRef);
+        QVariantMap vbdData = this->xenLib()->getCache()->ResolveObjectData("vbd", vbdRef);
         if (vbdData.isEmpty())
         {
             continue;
@@ -231,7 +231,7 @@ bool DisableChangedBlockTrackingCommand::hasVdiWithCbtEnabled(const QString& vmR
             continue;
         }
 
-        QVariantMap vdiData = this->xenLib()->getCache()->resolve("vdi", vdiRef);
+        QVariantMap vdiData = this->xenLib()->getCache()->ResolveObjectData("vdi", vdiRef);
         if (vdiData.isEmpty())
         {
             continue;

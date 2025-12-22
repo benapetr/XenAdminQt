@@ -137,7 +137,7 @@ QVariantMap RemoveHostCommand::getSelectedHostData() const
     if (!cache)
         return QVariantMap();
 
-    return cache->resolve("host", hostRef);
+    return cache->ResolveObjectData("host", hostRef);
 }
 
 bool RemoveHostCommand::canHostBeRemoved(const QVariantMap& hostData) const
@@ -187,7 +187,7 @@ bool RemoveHostCommand::isHostCoordinator(const QVariantMap& hostData) const
     }
 
     // Get pool data
-    QVariantMap poolData = cache->resolve("pool", poolRef);
+    QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
     if (poolData.isEmpty())
         return false;
 

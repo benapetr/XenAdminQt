@@ -54,7 +54,7 @@ QString VMHelpers::getVMHome(XenLib* xenLib, const QVariantMap& vmRecord)
         QString snapshotOf = vmRecord.value("snapshot_of").toString();
         if (!snapshotOf.isEmpty() && snapshotOf != "OpaqueRef:NULL")
         {
-            QVariantMap parentVM = cache->resolve("vm", snapshotOf);
+            QVariantMap parentVM = cache->ResolveObjectData("vm", snapshotOf);
             if (!parentVM.isEmpty())
             {
                 return getVMHome(xenLib, parentVM); // Recursive call
@@ -92,7 +92,7 @@ QString VMHelpers::getVMHome(XenLib* xenLib, const QVariantMap& vmRecord)
     QString affinity = vmRecord.value("affinity").toString();
     if (!affinity.isEmpty() && affinity != "OpaqueRef:NULL")
     {
-        QVariantMap affinityHost = cache->resolve("host", affinity);
+        QVariantMap affinityHost = cache->ResolveObjectData("host", affinity);
         if (!affinityHost.isEmpty())
         {
             // Check if host is live (enabled field in host record)
@@ -137,7 +137,7 @@ QString VMHelpers::getVMStorageHost(XenLib* xenLib, const QVariantMap& vmRecord,
         }
 
         // Resolve VBD
-        QVariantMap vbd = cache->resolve("vbd", vbdRef);
+        QVariantMap vbd = cache->ResolveObjectData("vbd", vbdRef);
         if (vbd.isEmpty())
         {
             continue;
@@ -160,7 +160,7 @@ QString VMHelpers::getVMStorageHost(XenLib* xenLib, const QVariantMap& vmRecord,
             continue;
         }
 
-        QVariantMap vdi = cache->resolve("vdi", vdiRef);
+        QVariantMap vdi = cache->ResolveObjectData("vdi", vdiRef);
         if (vdi.isEmpty())
         {
             continue;
@@ -176,7 +176,7 @@ QString VMHelpers::getVMStorageHost(XenLib* xenLib, const QVariantMap& vmRecord,
             continue;
         }
 
-        QVariantMap sr = cache->resolve("sr", srRef);
+        QVariantMap sr = cache->ResolveObjectData("sr", srRef);
         if (sr.isEmpty())
         {
             continue;
@@ -202,7 +202,7 @@ QString VMHelpers::getVMStorageHost(XenLib* xenLib, const QVariantMap& vmRecord,
             continue;
         }
 
-        QVariantMap pbd = cache->resolve("pbd", pbdRef);
+        QVariantMap pbd = cache->ResolveObjectData("pbd", pbdRef);
         if (pbd.isEmpty())
         {
             continue;

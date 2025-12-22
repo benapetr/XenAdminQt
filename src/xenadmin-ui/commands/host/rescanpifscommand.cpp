@@ -56,7 +56,7 @@ void RescanPIFsCommand::run()
     if (hostRef.isEmpty())
         return;
 
-    QVariantMap hostData = this->xenLib()->getCache()->resolve("host", hostRef);
+    QVariantMap hostData = this->xenLib()->getCache()->ResolveObjectData("host", hostRef);
     if (hostData.isEmpty())
     {
         QMessageBox::warning(this->mainWindow(), tr("Error"),

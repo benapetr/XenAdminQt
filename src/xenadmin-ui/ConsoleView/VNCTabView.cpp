@@ -1236,7 +1236,7 @@ void VNCTabView::registerEventListeners()
         if (type == "vm" && ref == this->_vmRef)
         {
             // Get updated VM data from cache
-            QVariantMap vmData = this->_xenLib->getCache()->resolve("vm", ref);
+            QVariantMap vmData = this->_xenLib->getCache()->ResolveObjectData("vm", ref);
             if (!vmData.isEmpty())
             {
                 // Check what changed and update UI accordingly
@@ -1288,7 +1288,7 @@ void VNCTabView::registerEventListeners()
         });
 
         // C#: Also register host_metrics property changes
-        QVariantMap hostData = cache->resolve("host", hostRef);
+        QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
         QString hostMetricsRef = hostData.value("metrics").toString();
         if (!hostMetricsRef.isEmpty() && hostMetricsRef != "OpaqueRef:NULL")
         {

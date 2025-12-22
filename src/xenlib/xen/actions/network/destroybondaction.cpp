@@ -48,8 +48,8 @@ DestroyBondAction::DestroyBondAction(XenConnection* connection,
         throw std::invalid_argument("Bond reference cannot be empty");
 
     // Get bond name for display
-    QVariantMap bondData = connection->getCache()->resolve("bond", m_bondRef);
-    QVariantMap masterPifData = connection->getCache()->resolve("pif",
+    QVariantMap bondData = connection->getCache()->ResolveObjectData("bond", m_bondRef);
+    QVariantMap masterPifData = connection->getCache()->ResolveObjectData("pif",
                                                                 bondData.value("master").toString());
     m_bondName = masterPifData.value("device").toString();
 
@@ -188,13 +188,13 @@ QList<DestroyBondAction::BondInfo> DestroyBondAction::findAllEquivalentBonds() c
     QList<BondInfo> result;
 
     // Get the coordinator bond data to use as reference
-    QVariantMap refBondData = connection()->getCache()->resolve("bond", m_bondRef);
+    QVariantMap refBondData = connection()->getCache()->ResolveObjectData("bond", m_bondRef);
     QString refMasterPifRef = refBondData.value("master").toString();
-    QVariantMap refMasterPifData = connection()->getCache()->resolve("pif", refMasterPifRef);
+    QVariantMap refMasterPifData = connection()->getCache()->ResolveObjectData("pif", refMasterPifRef);
     QString refDevice = refMasterPifData.value("device").toString();
 
     // Get all hosts in the pool
-    QList<QVariantMap> hosts = connection()->getCache()->getAll("host");
+    QList<QVariantMap> hosts = connection()->getCache()->GetAll("host");
 
     for (const QVariantMap& host : hosts)
     {
@@ -202,14 +202,14 @@ QList<DestroyBondAction::BondInfo> DestroyBondAction::findAllEquivalentBonds() c
         QString hostName = host.value("name_label").toString();
 
         // Find bond on this host with matching device name
-        QList<QVariantMap> allBonds = connection()->getCache()->getAll("bond");
+        QList<QVariantMap> allBonds = connection()->getCache()->GetAll("bond");
         for (const QVariantMap& bond : allBonds)
         {
             QString bondRef = bond.value("_ref").toString();
             QString masterPifRef = bond.value("master").toString();
             QString primarySlaveRef = bond.value("primary_slave").toString();
 
-            QVariantMap masterPifData = connection()->getCache()->resolve("pif", masterPifRef);
+            QVariantMap masterPifData = connection()->getCache()->ResolveObjectData("pif", masterPifRef);
             QString device = masterPifData.value("device").toString();
             QString bondHost = masterPifData.value("host").toString();
             QString networkRef = masterPifData.value("network").toString();

@@ -54,7 +54,7 @@ HAWizard::HAWizard(XenLib* xenLib, const QString& poolRef, QWidget* parent)
     setMinimumSize(700, 500);
 
     // Get pool name for display
-    QVariantMap poolData = m_xenLib->getCache()->resolve("pool", m_poolRef);
+    QVariantMap poolData = m_xenLib->getCache()->ResolveObjectData("pool", m_poolRef);
     m_poolName = poolData.value("name_label", "Pool").toString();
 
     // Create wizard pages
@@ -426,11 +426,11 @@ void HAWizard::scanForHeartbeatSRs()
         }
 
         // Get all SRs from cache
-        QStringList srRefs = m_xenLib->getCache()->getAllRefs("sr");
+        QStringList srRefs = m_xenLib->getCache()->GetAllRefs("sr");
 
         for (const QString& srRef : srRefs)
         {
-            QVariantMap srData = m_xenLib->getCache()->resolve("sr", srRef);
+            QVariantMap srData = m_xenLib->getCache()->ResolveObjectData("sr", srRef);
 
             // Check if SR is suitable for heartbeat:
             // - Must be shared
@@ -459,7 +459,7 @@ void HAWizard::scanForHeartbeatSRs()
             for (const QVariant& pbdVar : pbds)
             {
                 QString pbdRef = pbdVar.toString();
-                QVariantMap pbdData = m_xenLib->getCache()->resolve("pbd", pbdRef);
+                QVariantMap pbdData = m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
                 if (pbdData.value("currently_attached", false).toBool())
                 {
                     hasConnectedPBD = true;
@@ -565,11 +565,11 @@ void HAWizard::populateVMTable()
     m_vmTable->setRowCount(0);
 
     // Get all VMs from cache
-    QStringList vmRefs = m_xenLib->getCache()->getAllRefs("vm");
+    QStringList vmRefs = m_xenLib->getCache()->GetAllRefs("vm");
 
     for (const QString& vmRef : vmRefs)
     {
-        QVariantMap vmData = m_xenLib->getCache()->resolve("vm", vmRef);
+        QVariantMap vmData = m_xenLib->getCache()->ResolveObjectData("vm", vmRef);
 
         // Skip templates
         bool isTemplate = vmData.value("is_a_template", false).toBool();
@@ -658,7 +658,7 @@ void HAWizard::updateNtolCalculation()
     m_ntol = m_ntolSpinBox->value();
 
     // Count hosts in pool
-    QStringList hostRefs = m_xenLib->getCache()->getAllRefs("host");
+    QStringList hostRefs = m_xenLib->getCache()->GetAllRefs("host");
     int hostCount = hostRefs.size();
 
     // Maximum NTOL is number of hosts - 1

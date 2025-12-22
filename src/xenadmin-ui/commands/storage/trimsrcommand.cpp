@@ -158,7 +158,7 @@ QVariantMap TrimSRCommand::getSelectedSRData() const
     if (!cache)
         return QVariantMap();
 
-    return cache->resolve("sr", srRef);
+    return cache->ResolveObjectData("sr", srRef);
 }
 
 bool TrimSRCommand::supportsTrim(const QVariantMap& srData) const
@@ -220,7 +220,7 @@ bool TrimSRCommand::isAttachedToHost(const QVariantMap& srData) const
     for (const QVariant& pbdRefVar : pbds)
     {
         QString pbdRef = pbdRefVar.toString();
-        QVariantMap pbdData = cache->resolve("pbd", pbdRef);
+        QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
 
         bool currentlyAttached = pbdData.value("currently_attached", false).toBool();
         if (currentlyAttached)

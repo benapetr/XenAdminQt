@@ -84,7 +84,7 @@ bool MoveVMCommand::canVMBeMoved() const
     if (!cache)
         return false;
 
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
     // Check if VM is a template or snapshot
     if (vmData.value("is_a_template", false).toBool())
@@ -98,12 +98,12 @@ bool MoveVMCommand::canVMBeMoved() const
     for (const QVariant& vbdRefVar : vbds)
     {
         QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = cache->resolve("vbd", vbdRef);
+        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
         QString vdiRef = vbdData.value("VDI", "").toString();
 
         if (!vdiRef.isEmpty())
         {
-            QVariantMap vdiData = cache->resolve("vdi", vdiRef);
+            QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
             if (vdiData.value("cbt_enabled", false).toBool())
                 return false; // CBT enabled, cannot move
         }

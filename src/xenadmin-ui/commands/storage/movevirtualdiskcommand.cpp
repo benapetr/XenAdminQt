@@ -51,7 +51,7 @@ bool MoveVirtualDiskCommand::canRun() const
         return false;
     }
 
-    QVariantMap vdiData = this->xenLib()->getCache()->resolve("vdi", vdiRef);
+    QVariantMap vdiData = this->xenLib()->getCache()->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
     {
         return false;
@@ -123,7 +123,7 @@ bool MoveVirtualDiskCommand::canBeMoved(const QVariantMap& vdiData) const
         return false;
     }
 
-    QVariantMap srData = this->xenLib()->getCache()->resolve("sr", srRef);
+    QVariantMap srData = this->xenLib()->getCache()->ResolveObjectData("sr", srRef);
     if (srData.isEmpty())
     {
         return false;
@@ -151,7 +151,7 @@ bool MoveVirtualDiskCommand::canBeMoved(const QVariantMap& vdiData) const
 bool MoveVirtualDiskCommand::isVDIInUseByRunningVM(const QString& vdiRef) const
 {
     // Get all VBDs
-    QList<QVariantMap> vbds = this->xenLib()->getCache()->getAll("vbd");
+    QList<QVariantMap> vbds = this->xenLib()->getCache()->GetAll("vbd");
 
     for (const QVariantMap& vbdData : vbds)
     {
@@ -169,7 +169,7 @@ bool MoveVirtualDiskCommand::isVDIInUseByRunningVM(const QString& vdiRef) const
             continue;
         }
 
-        QVariantMap vmData = this->xenLib()->getCache()->resolve("vm", vmRef);
+        QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
         if (vmData.isEmpty())
         {
             continue;

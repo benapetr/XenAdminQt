@@ -51,7 +51,7 @@ void ForgetSrAction::run()
 
         // Check if SR allows forget operation
         XenCache* cache = connection()->getCache();
-        QVariantMap srData = cache->resolve("sr", m_srRef);
+        QVariantMap srData = cache->ResolveObjectData("sr", m_srRef);
         if (srData.isEmpty())
         {
             setError(QString("SR '%1' not found in cache").arg(m_srRef));

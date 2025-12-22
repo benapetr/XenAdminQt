@@ -113,7 +113,7 @@ bool DisconnectHostCommand::isSelectedHostCoordinator() const
     if (!cache)
         return false;
 
-    QVariantMap hostData = cache->resolve("host", hostRef);
+    QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
     if (hostData.isEmpty())
         return false;
 

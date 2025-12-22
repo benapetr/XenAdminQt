@@ -114,7 +114,7 @@ void BondPropertiesDialog::loadAvailablePIFs()
         return;
 
     // Get all PIFs from cache
-    QList<QVariantMap> allPIFs = m_xenLib->getCache()->getAll("pif");
+    QList<QVariantMap> allPIFs = m_xenLib->getCache()->GetAll("pif");
 
     // Filter PIFs that belong to this host and are physical (not VLANs or bonds)
     QList<QVariantMap> availablePIFs;

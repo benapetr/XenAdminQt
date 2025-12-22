@@ -95,7 +95,7 @@ QMenu* ContextMenuBuilder::buildContextMenu(QTreeWidgetItem* item, QWidget* pare
     {
         // Check if this is a snapshot
         QString vmRef = item->data(0, Qt::UserRole).toString();
-        QVariantMap vmData = this->m_mainWindow->xenLib()->getCache()->resolve("vm", vmRef);
+        QVariantMap vmData = this->m_mainWindow->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
         bool isSnapshot = vmData.value("is_a_snapshot", false).toBool();
 
         if (isSnapshot)
@@ -133,7 +133,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QTreeWidgetItem* item)
 {
     QString vmRef = item->data(0, Qt::UserRole).toString();
     // Use cache lookup instead of async API call to avoid spawning unhandled requests
-    QVariantMap vmData = this->m_mainWindow->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->m_mainWindow->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     QString powerState = vmData.value("power_state", "Halted").toString();
 
     // Power operations based on VM state
@@ -267,7 +267,7 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QTreeWidgetItem* item
 {
     QString hostRef = item->data(0, Qt::UserRole).toString();
     // Use cache lookup instead of async API call to avoid spawning unhandled requests
-    QVariantMap hostData = this->m_mainWindow->xenLib()->getCache()->resolve("host", hostRef);
+    QVariantMap hostData = this->m_mainWindow->xenLib()->getCache()->ResolveObjectData("host", hostRef);
     bool enabled = hostData.value("enabled", true).toBool();
 
     // New VM command (available for both pool and standalone hosts)

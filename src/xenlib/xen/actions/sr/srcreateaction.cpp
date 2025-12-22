@@ -316,7 +316,7 @@ bool SrCreateAction::isFirstSharedNonISOSR() const
         return false;
     }
 
-    QList<QVariantMap> allSRs = cache->getAll("sr");
+    QList<QVariantMap> allSRs = cache->GetAll("sr");
     for (const QVariantMap& srData : allSRs)
     {
         QString srRef = srData.value("ref").toString();

@@ -271,7 +271,7 @@ void VMStorageTabPage::populateVMStorage()
     for (const QVariant& vbdVar : vbdRefs)
     {
         QString vbdRef = vbdVar.toString();
-        QVariantMap vbdRecord = this->m_xenLib->getCache()->resolve("vbd", vbdRef);
+        QVariantMap vbdRecord = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef);
 
         if (vbdRecord.isEmpty())
         {
@@ -295,7 +295,7 @@ void VMStorageTabPage::populateVMStorage()
             continue;
         }
 
-        QVariantMap vdiRecord = this->m_xenLib->getCache()->resolve("vdi", vdiRef);
+        QVariantMap vdiRecord = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
 
         if (vdiRecord.isEmpty())
         {
@@ -311,7 +311,7 @@ void VMStorageTabPage::populateVMStorage()
 
         // Get SR information
         QString srRef = vdiRecord.value("SR", "").toString();
-        QVariantMap srRecord = this->m_xenLib->getCache()->resolve("sr", srRef);
+        QVariantMap srRecord = this->m_xenLib->getCache()->ResolveObjectData("sr", srRef);
 
         if (srRecord.isEmpty())
         {
@@ -452,7 +452,7 @@ void VMStorageTabPage::refreshCDDVDDrives()
         QString vbdRef = vbdRefVar.toString();
 
         // Get VBD record from cache
-        QVariantMap vbdData = this->m_xenLib->getCache()->resolve("vbd", vbdRef);
+        QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef);
 
         if (vbdData.isEmpty())
             continue;
@@ -522,7 +522,7 @@ void VMStorageTabPage::refreshISOList()
     isoBox->refresh();
 
     // Get current VBD data to see what's mounted
-    QVariantMap vbdData = this->m_xenLib->getCache()->resolve("vbd", this->m_currentVBDRef);
+    QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", this->m_currentVBDRef);
 
     QString currentVdiRef;
     bool empty = true;
@@ -538,7 +538,7 @@ void VMStorageTabPage::refreshISOList()
         isoBox->setSelectedVdiRef(currentVdiRef);
         if (isoBox->selectedVdiRef() != currentVdiRef)
         {
-            QVariantMap vdiData = this->m_xenLib->getCache()->resolve("vdi", currentVdiRef);
+            QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", currentVdiRef);
             if (!vdiData.isEmpty())
             {
                 QString isoName = vdiData.value("name_label").toString();
@@ -574,7 +574,7 @@ void VMStorageTabPage::onIsoComboBoxChanged(int index)
     if (this->m_currentVBDRef.isEmpty())
         return;
 
-    QVariantMap vbdData = this->m_xenLib->getCache()->resolve("vbd", this->m_currentVBDRef);
+    QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", this->m_currentVBDRef);
     QString currentVdiRef = vbdData.value("VDI").toString();
     bool empty = vbdData.value("empty", true).toBool();
 
@@ -660,7 +660,7 @@ void VMStorageTabPage::onNewCDDriveLinkClicked(const QString& link)
     for (const QVariant& vbdRefVar : vbdRefs)
     {
         QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = this->m_xenLib->getCache()->resolve("vbd", vbdRef);
+        QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef);
 
         if (!vbdData.isEmpty())
         {
@@ -783,7 +783,7 @@ void VMStorageTabPage::updateStorageButtons()
         {
             for (const QString& vbdRef : vbdRefs)
             {
-                QVariantMap vbdData = this->m_xenLib->getCache()->resolve("vbd", vbdRef);
+                QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef);
                 if (vbdData.isEmpty())
                 {
                     continue;
@@ -793,7 +793,7 @@ void VMStorageTabPage::updateStorageButtons()
                 QVariantMap vdiData;
                 if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
                 {
-                    vdiData = this->m_xenLib->getCache()->resolve("vdi", vdiRef);
+                    vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
                 }
 
                 bool currentlyAttached = vbdData.value("currently_attached", false).toBool();
@@ -864,9 +864,9 @@ void VMStorageTabPage::updateStorageButtons()
         if (singleSelection && this->m_xenLib)
         {
             QString vbdRef = vbdRefs.first();
-            QVariantMap vbdData = this->m_xenLib->getCache()->resolve("vbd", vbdRef);
+            QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef);
             QString vdiRef = vbdData.value("VDI", "").toString();
-            QVariantMap vdiData = this->m_xenLib->getCache()->resolve("vdi", vdiRef);
+            QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
 
             QVariantList vbdAllowedOps = vbdData.value("allowed_operations", QVariantList()).toList();
             QVariantList vdiAllowedOps = vdiData.value("allowed_operations", QVariantList()).toList();
@@ -1078,15 +1078,15 @@ void VMStorageTabPage::runVbdPlugOperations(const QStringList& vbdRefs, bool plu
 
         if (cache)
         {
-            QVariantMap vbdData = cache->resolve("vbd", vbdRef);
+            QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
             QString vdiRef = vbdData.value("VDI").toString();
             if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
             {
-                QVariantMap vdiData = cache->resolve("vdi", vdiRef);
+                QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
                 vdiName = vdiData.value("name_label", vdiName).toString();
             }
 
-            QVariantMap vmData = cache->resolve("vm", this->m_objectRef);
+            QVariantMap vmData = cache->ResolveObjectData("vm", this->m_objectRef);
             vmName = vmData.value("name_label", vmName).toString();
         }
 
@@ -1175,7 +1175,7 @@ void VMStorageTabPage::runDetachOperations(const QStringList& vdiRefs)
     QString confirmText;
     if (vdiRefs.size() == 1)
     {
-        QVariantMap vdiData = this->m_xenLib->getCache()->resolve("vdi", vdiRefs.first());
+        QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRefs.first());
         QString vdiName = vdiData.value("name_label", tr("this virtual disk")).toString();
         confirmText = tr("Are you sure you want to detach '%1' from this VM?\n\n"
                          "The disk will not be deleted and can be attached again later.")
@@ -1251,7 +1251,7 @@ void VMStorageTabPage::runDeleteOperations(const QStringList& vdiRefs)
     QString confirmText;
     if (vdiRefs.size() == 1)
     {
-        QVariantMap vdiData = this->m_xenLib->getCache()->resolve("vdi", vdiRefs.first());
+        QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRefs.first());
         QString vdiName = vdiData.value("name_label", tr("this virtual disk")).toString();
         confirmText = tr("Are you sure you want to permanently delete '%1'?\n\n"
                          "This operation cannot be undone.")
@@ -1272,11 +1272,11 @@ void VMStorageTabPage::runDeleteOperations(const QStringList& vdiRefs)
     bool allowRunningVMDelete = false;
     for (const QString& vdiRef : vdiRefs)
     {
-        QVariantMap vdiData = this->m_xenLib->getCache()->resolve("vdi", vdiRef);
+        QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
         QVariantList vbdRefs = vdiData.value("VBDs").toList();
         for (const QVariant& vbdVar : vbdRefs)
         {
-            QVariantMap vbdData = this->m_xenLib->getCache()->resolve("vbd", vbdVar.toString());
+            QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdVar.toString());
             if (vbdData.value("currently_attached", false).toBool())
             {
                 allowRunningVMDelete = true;
@@ -1638,7 +1638,7 @@ void VMStorageTabPage::onAttachButtonClicked()
 
     // Get VDI name for display
     QString vdiName = "Virtual Disk";
-    QVariantMap vdiData = m_xenLib->getCache()->resolve("vdi", vdiRef);
+    QVariantMap vdiData = m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
     if (vdiData.contains("name_label"))
     {
         vdiName = vdiData["name_label"].toString();
@@ -1739,7 +1739,7 @@ void VMStorageTabPage::onEditButtonClicked()
 
     // Update name if changed
     QString newName = dialog.getVdiName();
-    QVariantMap vdiData = this->m_xenLib->getCache()->resolve("vdi", vdiRef);
+    QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
     QString oldName = vdiData.value("name_label", "").toString();
 
     if (newName != oldName)

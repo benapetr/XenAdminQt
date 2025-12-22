@@ -69,7 +69,7 @@ bool DeactivateVBDCommand::canRunVBD(const QString& vbdRef) const
         return false;
     }
 
-    QVariantMap vbdData = cache->resolve("vbd", vbdRef);
+    QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
     {
         return false;
@@ -83,7 +83,7 @@ bool DeactivateVBDCommand::canRunVBD(const QString& vbdRef) const
 
     // Get VM
     QString vmRef = vbdData.value("VM").toString();
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty() || vmData.value("is_a_template").toBool())
     {
         return false;
@@ -96,7 +96,7 @@ bool DeactivateVBDCommand::canRunVBD(const QString& vbdRef) const
         return false; // No VDI attached
     }
 
-    QVariantMap vdiData = cache->resolve("vdi", vdiRef);
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
     {
         return false;
@@ -154,7 +154,7 @@ QString DeactivateVBDCommand::getCantRunReasonVBD(const QString& vbdRef) const
         return "Cache not available";
     }
 
-    QVariantMap vbdData = cache->resolve("vbd", vbdRef);
+    QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
     {
         return "VBD not found";
@@ -162,7 +162,7 @@ QString DeactivateVBDCommand::getCantRunReasonVBD(const QString& vbdRef) const
 
     // Get VM
     QString vmRef = vbdData.value("VM").toString();
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
     {
         return "VM not found";
@@ -180,7 +180,7 @@ QString DeactivateVBDCommand::getCantRunReasonVBD(const QString& vbdRef) const
         return "No VDI attached to this VBD";
     }
 
-    QVariantMap vdiData = cache->resolve("vdi", vdiRef);
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
     {
         return "VDI not found";
@@ -188,7 +188,7 @@ QString DeactivateVBDCommand::getCantRunReasonVBD(const QString& vbdRef) const
 
     // Get SR to check if contactable
     QString srRef = vdiData.value("SR").toString();
-    QVariantMap srData = cache->resolve("sr", srRef);
+    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
     if (srData.isEmpty())
     {
         return "SR could not be contacted";
@@ -260,7 +260,7 @@ void DeactivateVBDCommand::run()
         return;
     }
 
-    QVariantMap vbdData = cache->resolve("vbd", vbdRef);
+    QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
     {
         return;
@@ -270,8 +270,8 @@ void DeactivateVBDCommand::run()
     QString vdiRef = vbdData.value("VDI").toString();
     QString vmRef = vbdData.value("VM").toString();
 
-    QVariantMap vdiData = cache->resolve("vdi", vdiRef);
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
     QString vdiName = vdiData.value("name_label", "disk").toString();
     QString vmName = vmData.value("name_label", "VM").toString();

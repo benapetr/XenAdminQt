@@ -189,7 +189,7 @@ bool HostMaintenanceModeCommand::isHostEnabled() const
         return false;
 
     // Use cache instead of async API call
-    QVariantMap hostData = this->xenLib()->getCache()->resolve("host", hostRef);
+    QVariantMap hostData = this->xenLib()->getCache()->ResolveObjectData("host", hostRef);
     return hostData.value("enabled", true).toBool();
 }
 

@@ -119,7 +119,7 @@ QString VMLifeCycleCommand::getVMPowerState() const
     if (!cache)
         return QString();
 
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     return vmData.value("power_state", "").toString();
 }
 
@@ -136,7 +136,7 @@ bool VMLifeCycleCommand::isVMOperationAllowed(const QString& operation) const
     if (!cache)
         return false;
 
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     QVariantList allowedOps = vmData.value("allowed_operations", QVariantList()).toList();
 
     return allowedOps.contains(operation);

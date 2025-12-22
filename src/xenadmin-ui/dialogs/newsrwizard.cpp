@@ -563,7 +563,7 @@ void NewSRWizard::onTestConnection()
     }
 
     XenLib* xenLib = this->m_mainWindow->xenLib();
-    QList<QVariantMap> pools = xenLib->getCache()->getAll("pool");
+    QList<QVariantMap> pools = xenLib->getCache()->GetAll("pool");
     if (pools.isEmpty())
     {
         this->ui->connectionStatusLabel->setText(tr("Error: Failed to get pool information"));
@@ -742,7 +742,7 @@ void NewSRWizard::onScanISCSITarget()
             throw std::runtime_error("Not connected to XenServer");
 
         XenLib* xenLib = this->m_mainWindow->xenLib();
-        QList<QVariantMap> pools = xenLib->getCache()->getAll("pool");
+        QList<QVariantMap> pools = xenLib->getCache()->GetAll("pool");
         if (pools.isEmpty())
             throw std::runtime_error("No pool found");
 
@@ -840,7 +840,7 @@ void NewSRWizard::onISCSIIqnSelected(int index)
             throw std::runtime_error("Not connected to XenServer");
 
         XenLib* xenLib = this->m_mainWindow->xenLib();
-        QList<QVariantMap> pools = xenLib->getCache()->getAll("pool");
+        QList<QVariantMap> pools = xenLib->getCache()->GetAll("pool");
         if (pools.isEmpty())
             throw std::runtime_error("No pool found");
 
@@ -925,7 +925,7 @@ void NewSRWizard::onScanFibreDevices()
             throw std::runtime_error("Not connected to XenServer");
 
         XenLib* xenLib = this->m_mainWindow->xenLib();
-        QList<QVariantMap> pools = xenLib->getCache()->getAll("pool");
+        QList<QVariantMap> pools = xenLib->getCache()->GetAll("pool");
         if (pools.isEmpty())
             throw std::runtime_error("No pool found");
 
@@ -1126,7 +1126,7 @@ void NewSRWizard::accept()
     }
 
     XenLib* xenLib = this->m_mainWindow->xenLib();
-    QList<QVariantMap> pools = xenLib->getCache()->getAll("pool");
+    QList<QVariantMap> pools = xenLib->getCache()->GetAll("pool");
     if (pools.isEmpty())
     {
         QMessageBox::critical(this, tr("Error"), tr("Failed to get pool information. Connection may be lost."));

@@ -81,7 +81,7 @@ void NetworkingPropertiesDialog::loadPIFData()
         return;
 
     // Get PIF data from cache
-    QVariant pifDataVar = m_xenLib->getCache()->resolve("pif", m_pifRef);
+    QVariant pifDataVar = m_xenLib->getCache()->ResolveObjectData("pif", m_pifRef);
     if (pifDataVar.isNull())
     {
         QMessageBox::warning(this, "Error", "Failed to load network interface data.");
@@ -99,7 +99,7 @@ void NetworkingPropertiesDialog::loadPIFData()
     ui->labelMACValue->setText(mac);
 
     // Get network name
-    QVariant networkDataVar = m_xenLib->getCache()->resolve("network", networkRef);
+    QVariant networkDataVar = m_xenLib->getCache()->ResolveObjectData("network", networkRef);
     if (!networkDataVar.isNull())
     {
         QVariantMap networkData = networkDataVar.value<QVariantMap>();

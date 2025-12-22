@@ -214,7 +214,7 @@ QString PoolGrouping::getGroupName(const QVariant& group) const
         return "Unknown Pool";
 
     QString poolRef = group.toString();
-    QVariantMap poolData = m_xenLib->getCache()->resolve("pool", poolRef);
+    QVariantMap poolData = m_xenLib->getCache()->ResolveObjectData("pool", poolRef);
 
     if (poolData.isEmpty())
         return "Unknown Pool";
@@ -260,7 +260,7 @@ QVariant PoolGrouping::getGroup(const QVariantMap& objectData, const QString& ob
         if (!m_xenLib)
             return QVariant();
 
-        QVariantMap hostData = m_xenLib->getCache()->resolve("host", hostRef);
+        QVariantMap hostData = m_xenLib->getCache()->ResolveObjectData("host", hostRef);
         if (hostData.isEmpty())
             return QVariant();
 
@@ -278,7 +278,7 @@ QVariant PoolGrouping::getGroup(const QVariantMap& objectData, const QString& ob
 
         // Get first PBD's host
         QString pbdRef = pbds.first().toString();
-        QVariantMap pbdData = m_xenLib->getCache()->resolve("pbd", pbdRef);
+        QVariantMap pbdData = m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
         if (pbdData.isEmpty())
             return QVariant();
 
@@ -286,7 +286,7 @@ QVariant PoolGrouping::getGroup(const QVariantMap& objectData, const QString& ob
         if (hostRef.isEmpty() || hostRef == "OpaqueRef:NULL")
             return QVariant();
 
-        QVariantMap hostData = m_xenLib->getCache()->resolve("host", hostRef);
+        QVariantMap hostData = m_xenLib->getCache()->ResolveObjectData("host", hostRef);
         if (hostData.isEmpty())
             return QVariant();
 
@@ -328,7 +328,7 @@ QString HostGrouping::getGroupName(const QVariant& group) const
         return "Unknown Server";
 
     QString hostRef = group.toString();
-    QVariantMap hostData = m_xenLib->getCache()->resolve("host", hostRef);
+    QVariantMap hostData = m_xenLib->getCache()->ResolveObjectData("host", hostRef);
 
     if (hostData.isEmpty())
         return "Unknown Server";

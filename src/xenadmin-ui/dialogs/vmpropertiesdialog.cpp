@@ -85,10 +85,10 @@ void VMPropertiesDialog::build()
     bool wlbEnabled = false;
     if (connection() && connection()->getCache())
     {
-        QStringList poolRefs = connection()->getCache()->getAllRefs("pool");
+        QStringList poolRefs = connection()->getCache()->GetAllRefs("pool");
         if (!poolRefs.isEmpty())
         {
-            QVariantMap poolData = connection()->getCache()->resolve("pool", poolRefs.first());
+            QVariantMap poolData = connection()->getCache()->ResolveObjectData("pool", poolRefs.first());
             QString wlbUrl = poolData.value("wlb_url").toString();
             wlbEnabled = poolData.value("wlb_enabled").toBool() && !wlbUrl.isEmpty();
         }

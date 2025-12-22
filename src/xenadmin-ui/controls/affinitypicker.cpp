@@ -79,10 +79,10 @@ void AffinityPicker::setAffinity(XenConnection* connection,
     bool wlbEnabled = false;
     if (this->m_connection && this->m_connection->getCache())
     {
-        QStringList poolRefs = this->m_connection->getCache()->getAllRefs("pool");
+        QStringList poolRefs = this->m_connection->getCache()->GetAllRefs("pool");
         if (!poolRefs.isEmpty())
         {
-            QVariantMap poolData = this->m_connection->getCache()->resolve("pool", poolRefs.first());
+            QVariantMap poolData = this->m_connection->getCache()->ResolveObjectData("pool", poolRefs.first());
             QString wlbUrl = poolData.value("wlb_url").toString();
             wlbEnabled = poolData.value("wlb_enabled").toBool() && !wlbUrl.isEmpty();
         }
@@ -157,7 +157,7 @@ void AffinityPicker::loadServers()
     if (!this->m_connection || !this->m_connection->getCache())
         return;
 
-    QList<QVariantMap> hosts = this->m_connection->getCache()->getAll("host");
+    QList<QVariantMap> hosts = this->m_connection->getCache()->GetAll("host");
     std::sort(hosts.begin(), hosts.end(), [](const QVariantMap& a, const QVariantMap& b) {
         return a.value("name_label").toString().toLower()
             < b.value("name_label").toString().toLower();
@@ -283,7 +283,7 @@ bool AffinityPicker::hasFullyConnectedSharedStorage() const
     if (!this->m_connection || !this->m_connection->getCache())
         return false;
 
-    QList<QVariantMap> hosts = this->m_connection->getCache()->getAll("host");
+    QList<QVariantMap> hosts = this->m_connection->getCache()->GetAll("host");
     if (hosts.isEmpty())
         return false;
 
@@ -298,7 +298,7 @@ bool AffinityPicker::hasFullyConnectedSharedStorage() const
     if (hostRefs.size() <= 1)
         return true;
 
-    QList<QVariantMap> srs = this->m_connection->getCache()->getAll("sr");
+    QList<QVariantMap> srs = this->m_connection->getCache()->GetAll("sr");
     for (const QVariantMap& srData : srs)
     {
         if (!srData.value("shared").toBool())
@@ -309,7 +309,7 @@ bool AffinityPicker::hasFullyConnectedSharedStorage() const
         for (const QVariant& pbdRefVar : pbdRefs)
         {
             QString pbdRef = pbdRefVar.toString();
-            QVariantMap pbdData = this->m_connection->getCache()->resolve("pbd", pbdRef);
+            QVariantMap pbdData = this->m_connection->getCache()->ResolveObjectData("pbd", pbdRef);
             if (pbdData.isEmpty())
                 continue;
             if (!pbdData.value("currently_attached").toBool())

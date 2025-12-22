@@ -95,7 +95,7 @@ void VerticallyTabbedDialog::loadObjectData()
     XenCache* cache = this->m_connection->getCache();
     
     // Resolve object data from cache (matches C# clone pattern)
-    QVariantMap objectData = cache->resolve(this->m_objectType, this->m_objectRef);
+    QVariantMap objectData = cache->ResolveObjectData(this->m_objectType, this->m_objectRef);
     
     if (objectData.isEmpty())
     {

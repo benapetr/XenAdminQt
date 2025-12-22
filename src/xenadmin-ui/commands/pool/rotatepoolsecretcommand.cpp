@@ -60,7 +60,7 @@ bool RotatePoolSecretCommand::canRun() const
     } else if (objectType == "host")
     {
         QString hostRef = this->getSelectedObjectRef();
-        QVariantMap hostData = this->xenLib()->getCache()->resolve("host", hostRef);
+        QVariantMap hostData = this->xenLib()->getCache()->ResolveObjectData("host", hostRef);
         QList<QVariant> poolList = hostData.value("pool", QVariantList()).toList();
         if (!poolList.isEmpty())
             poolRef = poolList.first().toString();
@@ -69,7 +69,7 @@ bool RotatePoolSecretCommand::canRun() const
     if (poolRef.isEmpty())
         return false;
 
-    QVariantMap poolData = this->xenLib()->getCache()->resolve("pool", poolRef);
+    QVariantMap poolData = this->xenLib()->getCache()->ResolveObjectData("pool", poolRef);
     if (poolData.isEmpty())
         return false;
 
@@ -88,7 +88,7 @@ void RotatePoolSecretCommand::run()
     } else if (objectType == "host")
     {
         QString hostRef = this->getSelectedObjectRef();
-        QVariantMap hostData = this->xenLib()->getCache()->resolve("host", hostRef);
+        QVariantMap hostData = this->xenLib()->getCache()->ResolveObjectData("host", hostRef);
         QList<QVariant> poolList = hostData.value("pool", QVariantList()).toList();
         if (!poolList.isEmpty())
             poolRef = poolList.first().toString();
@@ -97,7 +97,7 @@ void RotatePoolSecretCommand::run()
     if (poolRef.isEmpty())
         return;
 
-    QVariantMap poolData = this->xenLib()->getCache()->resolve("pool", poolRef);
+    QVariantMap poolData = this->xenLib()->getCache()->ResolveObjectData("pool", poolRef);
     if (poolData.isEmpty())
     {
         QMessageBox::warning(this->mainWindow(), tr("Error"),
@@ -184,7 +184,7 @@ QString RotatePoolSecretCommand::getCantRunReason() const
     } else if (objectType == "host")
     {
         QString hostRef = this->getSelectedObjectRef();
-        QVariantMap hostData = this->xenLib()->getCache()->resolve("host", hostRef);
+        QVariantMap hostData = this->xenLib()->getCache()->ResolveObjectData("host", hostRef);
         QList<QVariant> poolList = hostData.value("pool", QVariantList()).toList();
         if (!poolList.isEmpty())
             poolRef = poolList.first().toString();
@@ -193,7 +193,7 @@ QString RotatePoolSecretCommand::getCantRunReason() const
     if (poolRef.isEmpty())
         return tr("No pool selected.");
 
-    QVariantMap poolData = this->xenLib()->getCache()->resolve("pool", poolRef);
+    QVariantMap poolData = this->xenLib()->getCache()->ResolveObjectData("pool", poolRef);
     if (poolData.isEmpty())
         return tr("Unable to retrieve pool information.");
 
@@ -245,13 +245,13 @@ bool RotatePoolSecretCommand::canRotateSecret(const QVariantMap& poolData) const
 bool RotatePoolSecretCommand::hasRotationRestriction(const QString& poolRef) const
 {
     // Get all hosts in pool
-    QVariantMap poolData = this->xenLib()->getCache()->resolve("pool", poolRef);
+    QVariantMap poolData = this->xenLib()->getCache()->ResolveObjectData("pool", poolRef);
     QList<QVariant> hostRefs = poolData.value("hosts", QVariantList()).toList();
 
     for (const QVariant& hostRefVariant : hostRefs)
     {
         QString hostRef = hostRefVariant.toString();
-        QVariantMap hostData = this->xenLib()->getCache()->resolve("host", hostRef);
+        QVariantMap hostData = this->xenLib()->getCache()->ResolveObjectData("host", hostRef);
 
         // Check for restrict_pool_secret_rotation in host restrictions
         QVariantMap restrictions = hostData.value("restrictions", QVariantMap()).toMap();
@@ -271,7 +271,7 @@ bool RotatePoolSecretCommand::isStockholmOrGreater() const
         return false;
 
     // Get pool to check version
-    QList<QVariantMap> pools = this->xenLib()->getCache()->getAll("pool");
+    QList<QVariantMap> pools = this->xenLib()->getCache()->GetAll("pool");
     if (pools.isEmpty())
         return false;
 

@@ -92,16 +92,16 @@ void HostAutostartEditPage::repopulate()
     {
         // Get the pool for this host
         // In C#: Pool p = Helpers.GetPoolOfOne(Connection);
-        QVariantMap hostData = cache->resolve("host", this->m_hostRef);
+        QVariantMap hostData = cache->ResolveObjectData("host", this->m_hostRef);
         if (!hostData.isEmpty())
         {
             // Get pool reference from host
-            QStringList poolRefs = cache->getAllRefs("pool");
+            QStringList poolRefs = cache->GetAllRefs("pool");
             if (!poolRefs.isEmpty())
             {
                 // Typically there's only one pool
                 QString poolRef = poolRefs.first();
-                QVariantMap poolData = cache->resolve("pool", poolRef);
+                QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
                 
                 if (!poolData.isEmpty())
                 {

@@ -58,7 +58,7 @@ bool DetachSRCommand::canRun() const
         return false;
     }
 
-    QVariantMap srData = cache->resolve("sr", srRef);
+    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
     if (srData.isEmpty())
     {
         return false;
@@ -71,7 +71,7 @@ bool DetachSRCommand::canRun() const
     for (const QVariant& pbdVar : pbds)
     {
         QString pbdRef = pbdVar.toString();
-        QVariantMap pbdData = cache->resolve("pbd", pbdRef);
+        QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
         if (pbdData.value("currently_attached").toBool())
         {
             hasAttachedPBD = true;
@@ -90,18 +90,18 @@ bool DetachSRCommand::canRun() const
     for (const QVariant& vdiVar : vdis)
     {
         QString vdiRef = vdiVar.toString();
-        QVariantMap vdiData = cache->resolve("vdi", vdiRef);
+        QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
         QVariantList vbds = vdiData.value("VBDs").toList();
 
         for (const QVariant& vbdVar : vbds)
         {
             QString vbdRef = vbdVar.toString();
-            QVariantMap vbdData = cache->resolve("vbd", vbdRef);
+            QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
             QString vmRef = vbdData.value("VM").toString();
 
             if (!vmRef.isEmpty())
             {
-                QVariantMap vmData = cache->resolve("vm", vmRef);
+                QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
                 QString powerState = vmData.value("power_state").toString();
 
                 if (powerState == "Running" || powerState == "Paused")
@@ -126,7 +126,7 @@ void DetachSRCommand::run()
     }
 
     XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    QVariantMap srData = cache->resolve("sr", srRef);
+    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
     QString srName = srData.value("name_label").toString();
 
     if (srName.isEmpty())

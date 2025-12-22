@@ -67,7 +67,7 @@ bool AttachVirtualDiskCommand::canRun() const
     if (!cache)
         return false;
 
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
     // Cannot attach to snapshot or locked VM
     if (vmData.value("is_a_snapshot", false).toBool())
@@ -92,7 +92,7 @@ void AttachVirtualDiskCommand::run()
         return;
 
     // Check VBD limit
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     int maxVBDs = getMaxVBDsAllowed(vmData);
     int currentVBDs = getCurrentVBDCount(vmRef);
 
@@ -147,7 +147,7 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     }
 
     // Get VDI name for UI feedback
-    QVariantMap vdiData = cache->resolve("vdi", vdiRef);
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     QString vdiName = vdiData.value("name_label", "Virtual Disk").toString();
     qDebug() << "[AttachVirtualDiskCommand] VDI name:" << vdiName;
 
@@ -164,7 +164,7 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     vbdRecord["unpluggable"] = true;
 
     // Check if this is the first VBD for this VDI (owner flag)
-    QList<QVariantMap> allVbds = cache->getAll("vbd");
+    QList<QVariantMap> allVbds = cache->GetAll("vbd");
     bool isOwner = true;
     for (const QVariantMap& vbd : allVbds)
     {
@@ -272,7 +272,7 @@ int AttachVirtualDiskCommand::getCurrentVBDCount(const QString& vmRef) const
         return 0;
 
     // Get all VBDs and count those belonging to this VM
-    QList<QVariantMap> vbds = cache->getAll("vbd");
+    QList<QVariantMap> vbds = cache->GetAll("vbd");
     int count = 0;
 
     for (const QVariantMap& vbd : vbds)

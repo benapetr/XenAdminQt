@@ -52,7 +52,7 @@ bool VappStartCommand::canRun() const
     // Case 1: VM_appliance directly selected
     if (type == "vm_appliance" || type == "appliance")
     {
-        QVariantMap appData = this->xenLib()->getCache()->resolve(type, objRef);
+        QVariantMap appData = this->xenLib()->getCache()->ResolveObjectData(type, objRef);
         return this->canStartAppliance(appData);
     }
 
@@ -65,7 +65,7 @@ bool VappStartCommand::canRun() const
             return false;
         }
 
-        QVariantMap appData = this->xenLib()->getCache()->resolve("vm_appliance", applianceRef);
+        QVariantMap appData = this->xenLib()->getCache()->ResolveObjectData("vm_appliance", applianceRef);
         return this->canStartAppliance(appData);
     }
 
@@ -96,7 +96,7 @@ void VappStartCommand::run()
     }
 
     // Get appliance data for name
-    QVariantMap appData = this->xenLib()->getCache()->resolve("vm_appliance", applianceRef);
+    QVariantMap appData = this->xenLib()->getCache()->ResolveObjectData("vm_appliance", applianceRef);
     QString appName = appData.value("name_label").toString();
 
     if (appName.isEmpty())
@@ -175,7 +175,7 @@ bool VappStartCommand::canStartAppliance(const QVariantMap& applianceData) const
 
 QString VappStartCommand::getApplianceRefFromVM(const QString& vmRef) const
 {
-    QVariantMap vmData = this->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
     {
         return QString();

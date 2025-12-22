@@ -186,7 +186,7 @@ QVariantMap DestroyBondCommand::getSelectedNetworkData() const
     if (!cache)
         return QVariantMap();
 
-    return cache->resolve("network", networkRef);
+    return cache->ResolveObjectData("network", networkRef);
 }
 
 bool DestroyBondCommand::isNetworkABond(const QVariantMap& networkData) const
@@ -210,7 +210,7 @@ bool DestroyBondCommand::isNetworkABond(const QVariantMap& networkData) const
     for (const QVariant& pifRefVar : pifs)
     {
         QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = cache->resolve("pif", pifRef);
+        QVariantMap pifData = cache->ResolveObjectData("pif", pifRef);
 
         // Check if PIF has a bond_master_of field (is a bond interface)
         QVariantList bondMasterOf = pifData.value("bond_master_of", QVariantList()).toList();
@@ -244,7 +244,7 @@ QString DestroyBondCommand::getBondRefFromNetwork(const QVariantMap& networkData
     for (const QVariant& pifRefVar : pifs)
     {
         QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = cache->resolve("pif", pifRef);
+        QVariantMap pifData = cache->ResolveObjectData("pif", pifRef);
 
         QVariantList bondMasterOf = pifData.value("bond_master_of", QVariantList()).toList();
         if (!bondMasterOf.isEmpty())
@@ -282,14 +282,14 @@ void DestroyBondCommand::checkManagementImpact(const QVariantMap& networkData,
     for (const QVariant& pifRefVar : pifs)
     {
         QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = cache->resolve("pif", pifRef);
+        QVariantMap pifData = cache->ResolveObjectData("pif", pifRef);
 
         bool isManagement = pifData.value("management", false).toBool();
         if (isManagement)
         {
             // Check if this is the primary management interface (host.address matches PIF.IP)
             QString hostRef = pifData.value("host").toString();
-            QVariantMap hostData = cache->resolve("host", hostRef);
+            QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
             QString hostAddress = hostData.value("address").toString();
             QString pifIP = pifData.value("IP").toString();
 
@@ -314,12 +314,12 @@ bool DestroyBondCommand::isHAEnabled() const
         return false;
 
     // Get all objects and check pools
-    QList<QPair<QString, QString>> allObjects = cache->getAllObjects();
+    QList<QPair<QString, QString>> allObjects = cache->GetAllObjectsData();
     for (const auto& obj : allObjects)
     {
         if (obj.first == "pool")
         {
-            QVariantMap poolData = cache->resolve("pool", obj.second);
+            QVariantMap poolData = cache->ResolveObjectData("pool", obj.second);
             bool haEnabled = poolData.value("ha_enabled", false).toBool();
             if (haEnabled)
                 return true;
@@ -347,7 +347,7 @@ QString DestroyBondCommand::getBondName(const QVariantMap& networkData) const
         if (cache)
         {
             QString pifRef = pifs.first().toString();
-            QVariantMap pifData = cache->resolve("pif", pifRef);
+            QVariantMap pifData = cache->ResolveObjectData("pif", pifRef);
             QString device = pifData.value("device", "").toString();
             if (!device.isEmpty())
                 return device;

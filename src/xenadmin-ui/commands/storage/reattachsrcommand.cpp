@@ -51,7 +51,7 @@ bool ReattachSRCommand::canRun() const
     if (!cache)
         return false;
 
-    QVariantMap srData = cache->resolve("sr", srRef);
+    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
     if (srData.isEmpty())
         return false;
 
@@ -69,7 +69,7 @@ void ReattachSRCommand::run()
     if (!cache)
         return;
 
-    QVariantMap srData = cache->resolve("sr", srRef);
+    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
     QString srName = srData.value("name_label", "").toString();
 
     if (srRef.isEmpty() || srData.isEmpty())
@@ -125,7 +125,7 @@ bool ReattachSRCommand::canSRBeReattached(const QVariantMap& srData) const
     for (const QVariant& pbdRefVar : pbds)
     {
         QString pbdRef = pbdRefVar.toString();
-        QVariantMap pbdData = cache->resolve("pbd", pbdRef);
+        QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
 
         if (pbdData.value("currently_attached", false).toBool())
         {

@@ -61,7 +61,7 @@ void ForceShutdownVMCommand::run()
         return;
 
     // Get VM data from cache
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
         return;
 
@@ -165,7 +165,7 @@ bool ForceShutdownVMCommand::canForceShutdown(const QString& vmRef) const
     //         return vm.allowed_operations != null && vm.allowed_operations.Contains(vm_operations.hard_shutdown);
     // }
 
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
         return false;
 
@@ -197,7 +197,7 @@ bool ForceShutdownVMCommand::hasRunningTasks(const QString& vmRef) const
 {
     // Matches C# HelpersGUI.HasRunningTasks(vm) logic
     // Check if VM has current_operations (running tasks)
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
         return false;
 

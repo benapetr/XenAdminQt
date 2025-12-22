@@ -40,7 +40,7 @@ NewVirtualDiskDialog::NewVirtualDiskDialog(XenLib* xenLib, const QString& vmRef,
     this->ui->setupUi(this);
 
     // Get VM data
-    this->m_vmData = this->m_xenLib->getCache()->resolve("vm", this->m_vmRef);
+    this->m_vmData = this->m_xenLib->getCache()->ResolveObjectData("vm", this->m_vmRef);
 
     // Connect signals
     connect(this->ui->srListWidget, &QListWidget::currentRowChanged, this, &NewVirtualDiskDialog::onSRChanged);
@@ -71,7 +71,7 @@ void NewVirtualDiskDialog::populateSRList()
     this->ui->srListWidget->clear();
 
     // Get all SRs
-    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->getAll("sr");
+    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->GetAll("sr");
 
     // Get VM's resident host to check SR visibility
     QString vmResidentOn = this->m_vmData.value("resident_on", "").toString();
@@ -79,7 +79,7 @@ void NewVirtualDiskDialog::populateSRList()
     QString homeHost = vmResidentOn.isEmpty() ? vmAffinity : vmResidentOn;
 
     // Get all hosts to check PBD connections
-    QList<QVariantMap> allHosts = this->m_xenLib->getCache()->getAll("host");
+    QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAll("host");
 
     for (const QVariantMap& srData : allSRs)
     {
@@ -102,7 +102,7 @@ void NewVirtualDiskDialog::populateSRList()
         }
 
         // 3. Check if SM (Storage Manager) supports VDI_CREATE capability
-        QList<QVariantMap> allSMs = this->m_xenLib->getCache()->getAll("SM");
+        QList<QVariantMap> allSMs = this->m_xenLib->getCache()->GetAll("SM");
         bool supportsVdiCreate = false;
 
         for (const QVariantMap& smData : allSMs)
@@ -157,7 +157,7 @@ void NewVirtualDiskDialog::populateSRList()
             for (const QVariant& pbdRefVar : pbdRefs)
             {
                 QString pbdRef = pbdRefVar.toString();
-                QVariantMap pbdData = this->m_xenLib->getCache()->resolve("pbd", pbdRef);
+                QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
 
                 if (pbdData.value("host", "").toString() == hostRef &&
                     pbdData.value("currently_attached", false).toBool())
@@ -191,7 +191,7 @@ void NewVirtualDiskDialog::populateSRList()
         } else if (!homeHost.isEmpty())
         {
             // Check if SR is visible from VM's home host
-            QVariantMap homeHostData = this->m_xenLib->getCache()->resolve("host", homeHost);
+            QVariantMap homeHostData = this->m_xenLib->getCache()->ResolveObjectData("host", homeHost);
             QString homeHostName = homeHostData.value("name_label", "").toString();
 
             if (!hostsWithoutAccess.isEmpty() && hostsWithoutAccess.contains(homeHostName))
@@ -264,7 +264,7 @@ int NewVirtualDiskDialog::findNextAvailableDevice()
     for (const QVariant& vbdRefVar : vbdRefs)
     {
         QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = this->m_xenLib->getCache()->resolve("vbd", vbdRef);
+        QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef);
 
         QString userdevice = vbdData.value("userdevice", "").toString();
         bool ok;
@@ -318,7 +318,7 @@ void NewVirtualDiskDialog::validateInput()
     }
 
     QString srRef = selectedItem->data(Qt::UserRole).toString();
-    QVariantMap srData = this->m_xenLib->getCache()->resolve("sr", srRef);
+    QVariantMap srData = this->m_xenLib->getCache()->ResolveObjectData("sr", srRef);
 
     if (srData.isEmpty())
     {
@@ -438,7 +438,7 @@ QString NewVirtualDiskDialog::getDevicePosition() const
     for (const QVariant& vbdRefVar : vbdRefs)
     {
         QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = this->m_xenLib->getCache()->resolve("vbd", vbdRef);
+        QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef);
 
         QString userdevice = vbdData.value("userdevice", "").toString();
         bool ok;

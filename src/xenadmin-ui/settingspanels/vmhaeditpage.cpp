@@ -137,11 +137,11 @@ void VMHAEditPage::setXenObjects(const QString& objectRef,
     m_origNtol = 0;
     if (connection() && connection()->getCache())
     {
-        QStringList poolRefs = connection()->getCache()->getAllRefs("pool");
+        QStringList poolRefs = connection()->getCache()->GetAllRefs("pool");
         if (!poolRefs.isEmpty())
         {
             m_poolRef = poolRefs.first();
-            QVariantMap poolData = connection()->getCache()->resolve("pool", m_poolRef);
+            QVariantMap poolData = connection()->getCache()->ResolveObjectData("pool", m_poolRef);
             m_origNtol = poolData.value("ha_host_failures_to_tolerate", 0).toLongLong();
         }
 
@@ -324,13 +324,13 @@ QVariantMap VMHAEditPage::getPoolData() const
         return QVariantMap();
 
     if (!m_poolRef.isEmpty())
-        return connection()->getCache()->resolve("pool", m_poolRef);
+        return connection()->getCache()->ResolveObjectData("pool", m_poolRef);
 
-    QStringList poolRefs = connection()->getCache()->getAllRefs("pool");
+    QStringList poolRefs = connection()->getCache()->GetAllRefs("pool");
     if (poolRefs.isEmpty())
         return QVariantMap();
 
-    return connection()->getCache()->resolve("pool", poolRefs.first());
+    return connection()->getCache()->ResolveObjectData("pool", poolRefs.first());
 }
 
 void VMHAEditPage::refillPrioritiesComboBox()
@@ -387,7 +387,7 @@ void VMHAEditPage::updateEnablement()
     QString masterRef = poolData.value("master").toString();
     if (!masterRef.isEmpty() && connection() && connection()->getCache())
     {
-        QVariantMap hostData = connection()->getCache()->resolve("host", masterRef);
+        QVariantMap hostData = connection()->getCache()->ResolveObjectData("host", masterRef);
         QVariantMap licenseParams = hostData.value("license_params").toMap();
         bool enableHa = licenseParams.value("enable_xha", true).toBool();
         if (!enableHa)
@@ -419,12 +419,12 @@ void VMHAEditPage::updateEnablement()
     QStringList deadHosts;
     if (connection() && connection()->getCache())
     {
-        QStringList hostRefs = connection()->getCache()->getAllRefs("host");
+        QStringList hostRefs = connection()->getCache()->GetAllRefs("host");
         for (const QString& hostRef : hostRefs)
         {
-            QVariantMap hostData = connection()->getCache()->resolve("host", hostRef);
+            QVariantMap hostData = connection()->getCache()->ResolveObjectData("host", hostRef);
             QString metricsRef = hostData.value("metrics").toString();
-            QVariantMap metricsData = connection()->getCache()->resolve("host_metrics", metricsRef);
+            QVariantMap metricsData = connection()->getCache()->ResolveObjectData("host_metrics", metricsRef);
             bool isLive = metricsData.value("live", true).toBool();
             if (!isLive)
                 deadHosts << ellipsiseName(hostData.value("name_label").toString(), 30);
@@ -607,7 +607,7 @@ void VMHAEditPage::startNtolUpdate()
             }
 
             self->m_ntolMax = ntolMax;
-            QVariantMap poolData = self->connection()->getCache()->resolve("pool", poolRef);
+            QVariantMap poolData = self->connection()->getCache()->ResolveObjectData("pool", poolRef);
             if (poolData.value("ha_enabled", false).toBool())
                 self->m_ntol = poolData.value("ha_host_failures_to_tolerate", 0).toLongLong();
             else
@@ -643,7 +643,7 @@ QVariantMap VMHAEditPage::buildNtolConfig() const
     if (!connection() || !connection()->getCache())
         return config;
 
-    QList<QVariantMap> vms = connection()->getCache()->getAll("vm");
+    QList<QVariantMap> vms = connection()->getCache()->GetAll("vm");
     for (const QVariantMap& vmData : vms)
     {
         bool isTemplate = vmData.value("is_a_template", false).toBool();

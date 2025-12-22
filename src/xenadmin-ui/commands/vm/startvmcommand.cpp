@@ -52,7 +52,7 @@ bool StartVMCommand::canRun() const
         return false;
 
     // Check VM is not running (Halted or Suspended) AND start is allowed (matches C# StartVMCommand.CanRun)
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     QString powerState = vmData.value("power_state", "Halted").toString();
 
     if (powerState == "Running")
@@ -91,7 +91,7 @@ bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
     QString displayName = vmName;
     if (displayName.isEmpty())
     {
-        QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+        QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
         displayName = vmData.value("name_label").toString();
     }
 
@@ -175,7 +175,7 @@ QString StartVMCommand::getSelectedVMName() const
 bool StartVMCommand::isVMRunning(const QString& vmRef) const
 {
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
     QString powerState = vmData.value("power_state", "Halted").toString();
 
     return (powerState == "Running");

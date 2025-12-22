@@ -70,7 +70,7 @@ VMDestroyAction::VMDestroyAction(XenConnection* connection,
         QStringList vbdRefs = m_vm->vbdRefs();
         for (const QString& vbdRef : vbdRefs)
         {
-            QVariantMap vbdData = connection->getCache()->resolve("vbd", vbdRef);
+            QVariantMap vbdData = connection->getCache()->ResolveObjectData("vbd", vbdRef);
 
             // Check if this VBD owns its VDI
             bool isOwner = vbdData.value("owner", false).toBool();
@@ -106,7 +106,7 @@ void VMDestroyAction::destroyVM(const QString& vmRef,
     {
         try
         {
-            QVariantMap snapshotData = connection()->getCache()->resolve("vm", snapshotRef);
+            QVariantMap snapshotData = connection()->getCache()->ResolveObjectData("vm", snapshotRef);
             QString powerState = snapshotData.value("power_state").toString();
 
             // If snapshot is suspended, hard shutdown first
@@ -131,7 +131,7 @@ void VMDestroyAction::destroyVM(const QString& vmRef,
     // Add VDIs from specified VBDs
     for (const QString& vbdRef : vbdRefsToDelete)
     {
-        QVariantMap vbdData = connection()->getCache()->resolve("vbd", vbdRef);
+        QVariantMap vbdData = connection()->getCache()->ResolveObjectData("vbd", vbdRef);
         QString vdiRef = vbdData.value("VDI").toString();
 
         if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
@@ -141,7 +141,7 @@ void VMDestroyAction::destroyVM(const QString& vmRef,
     }
 
     // Add suspend VDI if present
-    QVariantMap vmData = connection()->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", vmRef);
     QString suspendVdiRef = vmData.value("suspend_VDI").toString();
     if (!suspendVdiRef.isEmpty() && suspendVdiRef != "OpaqueRef:NULL")
     {

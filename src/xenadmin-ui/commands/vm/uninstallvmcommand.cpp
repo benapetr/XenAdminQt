@@ -99,7 +99,7 @@ QString UninstallVMCommand::getSelectedVMName() const
     if (!cache)
         return QString();
 
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     return vmData.value("name_label", "").toString();
 }
 
@@ -116,7 +116,7 @@ bool UninstallVMCommand::canVMBeUninstalled() const
     if (!cache)
         return false;
 
-    QVariantMap vmData = cache->resolve("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
     // Cannot uninstall templates or snapshots
     if (vmData.value("is_a_template", false).toBool())

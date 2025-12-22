@@ -418,7 +418,7 @@ QVariantMap XenLib::getCachedObjectData(const QString& objectType, const QString
         return QVariantMap();
     }
 
-    if (!cache->contains(objectType, objectRef))
+    if (!cache->Contains(objectType, objectRef))
     {
         // Cache miss - this is NOT an error, caller should use requestObjectData() first
         qDebug() << "XenLib::getObjectData - Cache miss for" << objectType << objectRef
@@ -426,7 +426,7 @@ QVariantMap XenLib::getCachedObjectData(const QString& objectType, const QString
         return QVariantMap();
     }
 
-    return cache->resolve(objectType, objectRef);
+    return cache->ResolveObjectData(objectType, objectRef);
 }
 
 // Strongly-typed cache helpers - these wrap getCachedObjectData for type safety
@@ -705,7 +705,7 @@ bool XenLib::isSRDriverDomain(const QString& vmRef, QString* outSRRef)
     if (!cache)
         return false;
 
-    QList<QVariantMap> allPBDs = cache->getAll("pbd");
+    QList<QVariantMap> allPBDs = cache->GetAll("pbd");
     for (const QVariantMap& pbd : allPBDs)
     {
         QVariantMap otherConfig = pbd.value("other_config").toMap();
@@ -1046,7 +1046,7 @@ QString XenLib::getControlDomainForHost(const QString& hostRef)
         return QString();
 
     // Try 1: Check if host record has control_domain field directly
-    QVariantMap hostData = cache->resolve("host", hostRef);
+    QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
     if (!hostData.isEmpty())
     {
         QString controlDomainRef = hostData.value("control_domain").toString();
@@ -1058,10 +1058,10 @@ QString XenLib::getControlDomainForHost(const QString& hostRef)
 
     // Try 2: Search for VM with is_control_domain=true and resident_on=hostRef
     // This is the fallback for older API versions that don't expose control_domain
-    QStringList allVMRefs = cache->getAllRefs("vm");
+    QStringList allVMRefs = cache->GetAllRefs("vm");
     for (const QString& vmRef : allVMRefs)
     {
-        QVariantMap vmData = cache->resolve("vm", vmRef);
+        QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
         if (vmData.isEmpty())
             continue;
 
@@ -1859,7 +1859,7 @@ QString XenLib::createNetwork(const QString& name, const QString& description, c
         if (!networkRef.isEmpty())
         {
             if (XenCache* cache = getCache())
-                cache->clearType("network");
+                cache->ClearType("network");
             this->requestNetworks();
         }
 
@@ -1892,7 +1892,7 @@ bool XenLib::destroyNetwork(const QString& networkRef)
     {
         XenAPI::Network::destroy(this->d->session, networkRef);
         if (XenCache* cache = getCache())
-            cache->clearType("network");
+            cache->ClearType("network");
         this->requestNetworks();
         return true;
     }
@@ -2236,7 +2236,7 @@ void XenLib::requestVirtualMachines()
 
     // CACHE CHECK FIRST - Return cached VMs if available
     XenCache* cache = getCache();
-    QList<QVariantMap> cachedMaps = cache ? cache->getAll("VM") : QList<QVariantMap>();
+    QList<QVariantMap> cachedMaps = cache ? cache->GetAll("VM") : QList<QVariantMap>();
     if (!cachedMaps.isEmpty())
     {
         qDebug() << "XenLib::requestVirtualMachines - Cache hit, returning" << cachedMaps.size() << "VMs";
@@ -2281,7 +2281,7 @@ void XenLib::requestHosts()
     }
 
     // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->getAll("host");
+    QList<QVariantMap> cachedMaps = getCache()->GetAll("host");
     if (!cachedMaps.isEmpty())
     {
         qDebug() << "XenLib::requestHosts - Cache hit, returning" << cachedMaps.size() << "hosts";
@@ -2322,7 +2322,7 @@ void XenLib::requestPools()
     }
 
     // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->getAll("pool");
+    QList<QVariantMap> cachedMaps = getCache()->GetAll("pool");
     if (!cachedMaps.isEmpty())
     {
         qDebug() << "XenLib::requestPools - Cache hit, returning" << cachedMaps.size() << "pools";
@@ -2363,7 +2363,7 @@ void XenLib::requestStorageRepositories()
     }
 
     // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->getAll("SR");
+    QList<QVariantMap> cachedMaps = getCache()->GetAll("SR");
     if (!cachedMaps.isEmpty())
     {
         qDebug() << "XenLib::requestStorageRepositories - Cache hit, returning" << cachedMaps.size() << "SRs";
@@ -2404,7 +2404,7 @@ void XenLib::requestNetworks()
     }
 
     // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->getAll("network");
+    QList<QVariantMap> cachedMaps = getCache()->GetAll("network");
     if (!cachedMaps.isEmpty())
     {
         qDebug() << "XenLib::requestNetworks - Cache hit, returning" << cachedMaps.size() << "networks";
@@ -2444,7 +2444,7 @@ void XenLib::requestPIFs()
     }
 
     // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->getAll("PIF");
+    QList<QVariantMap> cachedMaps = getCache()->GetAll("PIF");
     if (!cachedMaps.isEmpty())
     {
         qDebug() << "XenLib::requestPIFs - Cache hit, returning" << cachedMaps.size() << "PIFs";
@@ -2478,7 +2478,7 @@ void XenLib::requestObjectData(const QString& objectType, const QString& objectR
     }
 
     // CACHE CHECK FIRST - Transparent cache integration (like C# Connection.Resolve)
-    QVariantMap cachedData = getCache()->resolve(objectType, objectRef);
+    QVariantMap cachedData = getCache()->ResolveObjectData(objectType, objectRef);
     if (!cachedData.isEmpty())
     {
         qDebug() << "XenLib::requestObjectData - Cache hit for" << objectType << objectRef;
@@ -2616,7 +2616,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
         // qDebug() << "XenLib::onConnectionApiResponse - GetVirtualMachines: first few keys:" << allRecords.keys().mid(0, 3);
 
         // Populate cache with bulk data
-        getCache()->updateBulk("VM", allRecords);
+        getCache()->UpdateBulk("VM", allRecords);
 
         QVariantList vms;
         for (auto it = allRecords.begin(); it != allRecords.end(); ++it)
@@ -2638,7 +2638,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
         QVariantMap allRecords = responseData.toMap();
 
         // Populate cache
-        getCache()->updateBulk("host", allRecords);
+        getCache()->UpdateBulk("host", allRecords);
 
         QVariantList hosts;
         for (auto it = allRecords.begin(); it != allRecords.end(); ++it)
@@ -2657,7 +2657,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
         QVariantMap allRecords = responseData.toMap();
 
         // Populate cache
-        getCache()->updateBulk("pool", allRecords);
+        getCache()->UpdateBulk("pool", allRecords);
         // qDebug() << "XenLib::onConnectionApiResponse - GetPools: responseData type:" << responseData.typeName();
         // qDebug() << "XenLib::onConnectionApiResponse - GetPools: allRecords size:" << allRecords.size();
         // qDebug() << "XenLib::onConnectionApiResponse - GetPools: first few keys:" << allRecords.keys().mid(0, 3);
@@ -2687,7 +2687,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
         QVariantMap allRecords = responseData.toMap();
 
         // Populate cache
-        getCache()->updateBulk("SR", allRecords);
+        getCache()->UpdateBulk("SR", allRecords);
 
         QVariantList srs;
         for (auto it = allRecords.begin(); it != allRecords.end(); ++it)
@@ -2707,7 +2707,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
         QVariantMap allRecords = responseData.toMap();
 
         // Populate cache
-        getCache()->updateBulk("network", allRecords);
+        getCache()->UpdateBulk("network", allRecords);
 
         QVariantList networks;
         for (auto it = allRecords.begin(); it != allRecords.end(); ++it)
@@ -2727,7 +2727,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
         QVariantMap allRecords = responseData.toMap();
 
         // Populate cache with PIFs
-        getCache()->updateBulk("PIF", allRecords);
+        getCache()->UpdateBulk("PIF", allRecords);
 
         qDebug() << "XenLib: Cached" << allRecords.size() << "PIFs";
         break;
@@ -2800,7 +2800,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
 
                     // Update cache with this object
                     // XenCache normalizes type to lowercase, so "VM" becomes "vm"
-                    getCache()->update(objectClass.toLower(), objectRef, objectData);
+                    getCache()->Update(objectClass.toLower(), objectRef, objectData);
                     objectCounts[objectClass]++;
                 }
             }
@@ -2854,7 +2854,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
         // qDebug() << "XenLib: Received" << allRecords.size() << objectType << "records for cache";
 
         // Populate cache with bulk data
-        getCache()->updateBulk(objectType, allRecords);
+        getCache()->UpdateBulk(objectType, allRecords);
     }
 }
 
@@ -2868,7 +2868,7 @@ QString XenLib::populateCache()
 
     // Clear existing cache
     if (XenCache* cache = getCache())
-        cache->clear();
+        cache->Clear();
 
     // Preload roles (not delivered by event.from) to mirror C# XenObjectDownloader.GetAllObjects
     try
@@ -2902,7 +2902,7 @@ QString XenLib::populateCache()
                     roleRecord["ref"] = roleRef;
                     roleRecord["opaqueRef"] = roleRef;
                     if (XenCache* cache = getCache())
-                        cache->update("role", roleRef, roleRecord);
+                        cache->Update("role", roleRef, roleRecord);
                 }
                 qDebug() << timestamp() << "XenLib::populateCache - Cached" << roles.size() << "role records";
             } else
@@ -3025,7 +3025,7 @@ QString XenLib::populateCache()
                 objectData["opaqueRef"] = objectRef;
 
                 // Update cache
-                getCache()->update(objectClass.toLower(), objectRef, objectData);
+                getCache()->Update(objectClass.toLower(), objectRef, objectData);
                 objectCounts[objectClass]++;
             }
         }
@@ -3073,7 +3073,7 @@ QString XenLib::populateCache()
                     consoleData["ref"] = consoleRef;
                     consoleData["opaqueRef"] = consoleRef;
                     if (XenCache* cache = getCache())
-                        cache->update("console", consoleRef, consoleData);
+                        cache->Update("console", consoleRef, consoleData);
                 }
                 qDebug() << "XenLib::populateCache - Cached" << consolesMap.size() << "console records";
             } else
@@ -3149,7 +3149,7 @@ void XenLib::onEventReceived(const QVariantMap& eventData)
         // Remove object from cache
         // qDebug() << "XenLib: Event - Removing" << cacheType << ref;
         if (XenCache* cache = getCache())
-            cache->remove(cacheType, ref);
+            cache->Remove(cacheType, ref);
     } else if (operation == "add" || operation == "mod")
     {
         // Get snapshot from event
@@ -3162,7 +3162,7 @@ void XenLib::onEventReceived(const QVariantMap& eventData)
             snapshot["opaqueRef"] = ref;
 
             // qDebug() << "XenLib: Event -" << operation << cacheType << ref;
-            getCache()->update(cacheType, ref, snapshot);
+            getCache()->Update(cacheType, ref, snapshot);
         } else
         {
             // Snapshot not provided - fetch full record
