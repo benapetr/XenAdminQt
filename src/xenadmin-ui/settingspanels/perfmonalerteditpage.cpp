@@ -72,7 +72,7 @@ QString PerfmonAlertEditPage::subText() const
 
 QIcon PerfmonAlertEditPage::image() const
 {
-    return QIcon::fromTheme("dialog-warning");
+    return QIcon(":/icons/alert_16.png");
 }
 
 void PerfmonAlertEditPage::setXenObjects(const QString& objectRef,

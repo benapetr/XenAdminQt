@@ -11,16 +11,6 @@
    </rect>
   </property>
   <layout class="QGridLayout" name="tableLayoutPanel1">
-   <item row="0" column="0" colspan="3">
-    <widget class="QLabel" name="label1">
-     <property name="text">
-      <string>Use these options to optimize this VM for increased performance in different environments.</string>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="0" colspan="3">
     <widget class="QRadioButton" name="GeneralOptimizationRadioButton">
      <property name="text">
@@ -28,24 +18,16 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="0" colspan="3">
-    <widget class="QRadioButton" name="CPSOptimizationRadioButton">
-     <property name="text">
-      <string>Optimize for &amp;Virtual Apps</string>
+   <item row="6" column="1" colspan="2">
+    <widget class="QLabel" name="labelWarning">
+     <property name="visible">
+      <bool>false</bool>
      </property>
-    </widget>
-   </item>
-   <item row="3" column="0" colspan="3">
-    <widget class="QRadioButton" name="ManualOptimizationRadioButton">
      <property name="text">
-      <string>Optimize manually (&amp;advanced use only)</string>
+      <string>These settings cannot be adjusted when the VM is suspended</string>
      </property>
-    </widget>
-   </item>
-   <item row="4" column="1">
-    <widget class="QLabel" name="labelShadowMultiplier">
-     <property name="text">
-      <string>Shadow memory &amp;multiplier:</string>
+     <property name="wordWrap">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
@@ -65,31 +47,62 @@
      </property>
     </widget>
    </item>
-   <item row="5" column="0">
+   <item row="2" column="0" colspan="3">
+    <widget class="QRadioButton" name="CPSOptimizationRadioButton">
+     <property name="text">
+      <string>Optimize for &amp;Virtual Apps</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0" colspan="3">
+    <widget class="QRadioButton" name="ManualOptimizationRadioButton">
+     <property name="text">
+      <string>Optimize manually (&amp;advanced use only)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0">
     <widget class="QLabel" name="iconWarning">
+     <property name="visible">
+      <bool>false</bool>
+     </property>
      <property name="text">
       <string/>
      </property>
      <property name="pixmap">
       <pixmap>:/icons/alert-warning.png</pixmap>
      </property>
-     <property name="visible">
-      <bool>false</bool>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QLabel" name="labelShadowMultiplier">
+     <property name="text">
+      <string>Shadow memory &amp;multiplier:</string>
      </property>
     </widget>
    </item>
-   <item row="5" column="1" colspan="2">
-    <widget class="QLabel" name="labelWarning">
+   <item row="0" column="0" colspan="3">
+    <widget class="QLabel" name="label1">
      <property name="text">
-      <string>These settings cannot be adjusted when the VM is suspended</string>
+      <string>Use these options to optimize this VM for increased performance in different environments.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
      </property>
-     <property name="visible">
-      <bool>false</bool>
-     </property>
     </widget>
+   </item>
+   <item row="5" column="1">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>

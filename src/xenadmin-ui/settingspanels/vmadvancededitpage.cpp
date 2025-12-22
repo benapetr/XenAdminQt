@@ -74,7 +74,7 @@ QString VMAdvancedEditPage::subText() const
 
 QIcon VMAdvancedEditPage::image() const
 {
-    return QIcon::fromTheme("preferences-system");
+    return QIcon(":/icons/configure_16.png");
 }
 
 void VMAdvancedEditPage::setXenObjects(const QString& objectRef,

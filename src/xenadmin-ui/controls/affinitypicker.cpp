@@ -42,115 +42,122 @@ AffinityPicker::AffinityPicker(QWidget* parent)
       m_autoSelectAffinity(true),
       m_selectedOnVisibleChanged(false)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
-    ui->serversTable->setSelectionMode(QAbstractItemView::SingleSelection);
-    ui->serversTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    ui->serversTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    ui->serversTable->verticalHeader()->setVisible(false);
-    ui->serversTable->horizontalHeader()->setStretchLastSection(true);
+    this->ui->serversTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    this->ui->serversTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    this->ui->serversTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    this->ui->serversTable->verticalHeader()->setVisible(false);
+    this->ui->serversTable->setIconSize(QSize(16, 16));
 
-    connect(ui->staticRadioButton, &QRadioButton::toggled,
+    QHeaderView* header = this->ui->serversTable->horizontalHeader();
+    header->setStretchLastSection(false);
+    header->setSectionResizeMode(0, QHeaderView::Fixed);
+    header->setSectionResizeMode(1, QHeaderView::Stretch);
+    header->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    this->ui->serversTable->setColumnWidth(0, 24);
+
+    connect(this->ui->staticRadioButton, &QRadioButton::toggled,
             this, &AffinityPicker::onStaticRadioToggled);
-    connect(ui->serversTable, &QTableWidget::itemSelectionChanged,
+    connect(this->ui->serversTable, &QTableWidget::itemSelectionChanged,
             this, &AffinityPicker::onSelectionChanged);
 }
 
 AffinityPicker::~AffinityPicker()
 {
-    delete ui;
+    delete this->ui;
 }
 
 void AffinityPicker::setAffinity(XenConnection* connection,
                                  const QString& affinityRef,
                                  const QString& srHostRef)
 {
-    m_connection = connection;
-    m_affinityRef = affinityRef;
-    m_srHostRef = srHostRef;
+    this->m_connection = connection;
+    this->m_affinityRef = affinityRef;
+    this->m_srHostRef = srHostRef;
 
     bool wlbEnabled = false;
-    if (m_connection && m_connection->getCache())
+    if (this->m_connection && this->m_connection->getCache())
     {
-        QStringList poolRefs = m_connection->getCache()->getAllRefs("pool");
+        QStringList poolRefs = this->m_connection->getCache()->getAllRefs("pool");
         if (!poolRefs.isEmpty())
         {
-            QVariantMap poolData = m_connection->getCache()->resolve("pool", poolRefs.first());
+            QVariantMap poolData = this->m_connection->getCache()->resolve("pool", poolRefs.first());
             QString wlbUrl = poolData.value("wlb_url").toString();
             wlbEnabled = poolData.value("wlb_enabled").toBool() && !wlbUrl.isEmpty();
         }
     }
-    ui->wlbWarningWidget->setVisible(wlbEnabled);
+    this->ui->wlbWarningWidget->setVisible(wlbEnabled);
 
-    loadServers();
-    updateControl();
-    selectRadioButtons();
+    this->loadServers();
+    this->updateControl();
+    this->selectRadioButtons();
     emit selectedAffinityChanged();
 }
 
 QString AffinityPicker::selectedAffinityRef() const
 {
-    if (ui->dynamicRadioButton->isChecked())
+    if (this->ui->dynamicRadioButton->isChecked())
         return QString();
 
-    QList<QTableWidgetItem*> selectedItems = ui->serversTable->selectedItems();
+    QList<QTableWidgetItem*> selectedItems = this->ui->serversTable->selectedItems();
     if (selectedItems.isEmpty())
         return QString();
 
-    QTableWidgetItem* item = ui->serversTable->item(selectedItems.first()->row(), 1);
+    QTableWidgetItem* item = this->ui->serversTable->item(selectedItems.first()->row(), 1);
     return item ? item->data(Qt::UserRole).toString() : QString();
 }
 
 bool AffinityPicker::validState() const
 {
-    return ui->dynamicRadioButton->isChecked() || !selectedAffinityRef().isEmpty();
+    return this->ui->dynamicRadioButton->isChecked() || !this->selectedAffinityRef().isEmpty();
 }
 
 void AffinityPicker::setAutoSelectAffinity(bool enabled)
 {
-    m_autoSelectAffinity = enabled;
+    this->m_autoSelectAffinity = enabled;
 }
 
 bool AffinityPicker::autoSelectAffinity() const
 {
-    return m_autoSelectAffinity;
+    return this->m_autoSelectAffinity;
 }
 
 void AffinityPicker::showEvent(QShowEvent* event)
 {
     QWidget::showEvent(event);
 
-    if (!m_selectedOnVisibleChanged)
+    if (!this->m_selectedOnVisibleChanged)
     {
-        m_selectedOnVisibleChanged = true;
-        selectSomething();
+        this->m_selectedOnVisibleChanged = true;
+        this->selectSomething();
     }
 }
 
 void AffinityPicker::onStaticRadioToggled(bool checked)
 {
-    if (checked && selectedAffinityRef().isEmpty())
-        selectSomething();
+    if (checked && this->selectedAffinityRef().isEmpty())
+        this->selectSomething();
 
-    updateControl();
+    this->updateControl();
     emit selectedAffinityChanged();
 }
 
 void AffinityPicker::onSelectionChanged()
 {
-    updateControl();
+    this->updateControl();
     emit selectedAffinityChanged();
 }
 
 void AffinityPicker::loadServers()
 {
-    ui->serversTable->setRowCount(0);
-    m_hosts.clear();
+    this->ui->serversTable->setRowCount(0);
+    this->m_hosts.clear();
 
-    if (!m_connection || !m_connection->getCache())
+    if (!this->m_connection || !this->m_connection->getCache())
         return;
 
-    QList<QVariantMap> hosts = m_connection->getCache()->getAll("host");
+    QList<QVariantMap> hosts = this->m_connection->getCache()->getAll("host");
     std::sort(hosts.begin(), hosts.end(), [](const QVariantMap& a, const QVariantMap& b) {
         return a.value("name_label").toString().toLower()
             < b.value("name_label").toString().toLower();
@@ -166,29 +173,34 @@ void AffinityPicker::loadServers()
         if (hostRef.isEmpty())
             continue;
 
-        m_hosts.insert(hostRef, hostData);
+        this->m_hosts.insert(hostRef, hostData);
 
         QString hostName = hostData.value("name_label").toString();
-        bool isLive = isHostLive(hostData);
+        bool isLive = this->isHostLive(hostData);
         QString reason = isLive ? QString()
                                 : tr("This server cannot be contacted");
 
-        int row = ui->serversTable->rowCount();
-        ui->serversTable->insertRow(row);
+        int row = this->ui->serversTable->rowCount();
+        this->ui->serversTable->insertRow(row);
 
+        QVariantMap iconHostData = hostData;
+        if (!iconHostData.contains("_metrics_live"))
+        {
+            iconHostData["_metrics_live"] = isLive;
+        }
         QTableWidgetItem* iconItem = new QTableWidgetItem();
-        iconItem->setIcon(IconManager::instance().getIconForHost(hostData));
+        iconItem->setIcon(IconManager::instance().getIconForHost(iconHostData));
         iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
-        ui->serversTable->setItem(row, 0, iconItem);
+        this->ui->serversTable->setItem(row, 0, iconItem);
 
         QTableWidgetItem* nameItem = new QTableWidgetItem(hostName);
         nameItem->setData(Qt::UserRole, hostRef);
         nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);
-        ui->serversTable->setItem(row, 1, nameItem);
+        this->ui->serversTable->setItem(row, 1, nameItem);
 
         QTableWidgetItem* reasonItem = new QTableWidgetItem(reason);
         reasonItem->setFlags(reasonItem->flags() & ~Qt::ItemIsEditable);
-        ui->serversTable->setItem(row, 2, reasonItem);
+        this->ui->serversTable->setItem(row, 2, reasonItem);
 
         if (!isLive)
         {
@@ -201,45 +213,45 @@ void AffinityPicker::loadServers()
 
 void AffinityPicker::updateControl()
 {
-    if (!m_connection)
+    if (!this->m_connection)
         return;
 
-    bool sharedStorage = hasFullyConnectedSharedStorage();
-    bool dynamicEnabled = (sharedStorage && m_srHostRef.isEmpty())
-        || (m_affinityRef.isEmpty() && !m_autoSelectAffinity);
+    bool sharedStorage = this->hasFullyConnectedSharedStorage();
+    bool dynamicEnabled = (sharedStorage && this->m_srHostRef.isEmpty())
+        || (this->m_affinityRef.isEmpty() && !this->m_autoSelectAffinity);
 
-    ui->dynamicRadioButton->setEnabled(dynamicEnabled);
-    ui->dynamicRadioButton->setText(sharedStorage
+    this->ui->dynamicRadioButton->setEnabled(dynamicEnabled);
+    this->ui->dynamicRadioButton->setText(sharedStorage
         ? tr("&Don't assign this VM a home server. The VM will be started on any server with the necessary resources.")
         : tr("&Don't assign this VM a home server. The VM will be started on any server with the necessary resources. (Shared storage required)."));
 
-    ui->serversTable->setEnabled(ui->staticRadioButton->isChecked());
+    this->ui->serversTable->setEnabled(this->ui->staticRadioButton->isChecked());
 }
 
 void AffinityPicker::selectRadioButtons()
 {
-    if (!selectAffinityServer() && ui->dynamicRadioButton->isEnabled())
+    if (!this->selectAffinityServer() && this->ui->dynamicRadioButton->isEnabled())
     {
-        ui->dynamicRadioButton->setChecked(true);
-        ui->staticRadioButton->setChecked(false);
+        this->ui->dynamicRadioButton->setChecked(true);
+        this->ui->staticRadioButton->setChecked(false);
     }
     else
     {
-        ui->dynamicRadioButton->setChecked(false);
-        ui->staticRadioButton->setChecked(true);
+        this->ui->dynamicRadioButton->setChecked(false);
+        this->ui->staticRadioButton->setChecked(true);
     }
 }
 
 bool AffinityPicker::selectAffinityServer()
 {
-    return !m_affinityRef.isEmpty() && selectServer(m_affinityRef);
+    return !this->m_affinityRef.isEmpty() && this->selectServer(this->m_affinityRef);
 }
 
 bool AffinityPicker::selectServer(const QString& hostRef)
 {
-    for (int row = 0; row < ui->serversTable->rowCount(); ++row)
+    for (int row = 0; row < this->ui->serversTable->rowCount(); ++row)
     {
-        QTableWidgetItem* item = ui->serversTable->item(row, 1);
+        QTableWidgetItem* item = this->ui->serversTable->item(row, 1);
         if (!item)
             continue;
         if (item->data(Qt::UserRole).toString() != hostRef)
@@ -247,7 +259,7 @@ bool AffinityPicker::selectServer(const QString& hostRef)
         if (!(item->flags() & Qt::ItemIsEnabled))
             return false;
 
-        ui->serversTable->selectRow(row);
+        this->ui->serversTable->selectRow(row);
         return true;
     }
     return false;
@@ -257,21 +269,21 @@ bool AffinityPicker::selectSomething()
 {
     bool selected = false;
 
-    if (!m_affinityRef.isEmpty())
-        selected = selectServer(m_affinityRef);
+    if (!this->m_affinityRef.isEmpty())
+        selected = this->selectServer(this->m_affinityRef);
 
-    if (!selected && !m_srHostRef.isEmpty())
-        selected = selectServer(m_srHostRef);
+    if (!selected && !this->m_srHostRef.isEmpty())
+        selected = this->selectServer(this->m_srHostRef);
 
     return selected;
 }
 
 bool AffinityPicker::hasFullyConnectedSharedStorage() const
 {
-    if (!m_connection || !m_connection->getCache())
+    if (!this->m_connection || !this->m_connection->getCache())
         return false;
 
-    QList<QVariantMap> hosts = m_connection->getCache()->getAll("host");
+    QList<QVariantMap> hosts = this->m_connection->getCache()->getAll("host");
     if (hosts.isEmpty())
         return false;
 
@@ -286,7 +298,7 @@ bool AffinityPicker::hasFullyConnectedSharedStorage() const
     if (hostRefs.size() <= 1)
         return true;
 
-    QList<QVariantMap> srs = m_connection->getCache()->getAll("sr");
+    QList<QVariantMap> srs = this->m_connection->getCache()->getAll("sr");
     for (const QVariantMap& srData : srs)
     {
         if (!srData.value("shared").toBool())
@@ -297,7 +309,7 @@ bool AffinityPicker::hasFullyConnectedSharedStorage() const
         for (const QVariant& pbdRefVar : pbdRefs)
         {
             QString pbdRef = pbdRefVar.toString();
-            QVariantMap pbdData = m_connection->getCache()->resolve("pbd", pbdRef);
+            QVariantMap pbdData = this->m_connection->getCache()->resolve("pbd", pbdRef);
             if (pbdData.isEmpty())
                 continue;
             if (!pbdData.value("currently_attached").toBool())

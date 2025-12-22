@@ -51,12 +51,6 @@ public:
                    const QModelIndex& index) const override;
 
 private:
-    static constexpr int TOP_COLOR_R = 101;
-    static constexpr int TOP_COLOR_G = 140;
-    static constexpr int TOP_COLOR_B = 244;
-    static constexpr int BOTTOM_COLOR_R = 31;
-    static constexpr int BOTTOM_COLOR_G = 102;
-    static constexpr int BOTTOM_COLOR_B = 241;
 };
 
 class VerticalTabWidget : public QListWidget

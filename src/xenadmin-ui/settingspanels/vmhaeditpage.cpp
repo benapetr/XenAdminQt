@@ -112,7 +112,7 @@ QString VMHAEditPage::subText() const
 
 QIcon VMHAEditPage::image() const
 {
-    return QIcon::fromTheme("system-reboot");
+    return QIcon(":/icons/reboot_vm_16.png");
 }
 
 void VMHAEditPage::setXenObjects(const QString& objectRef,

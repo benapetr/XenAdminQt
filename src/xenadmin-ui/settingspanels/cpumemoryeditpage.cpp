@@ -62,8 +62,7 @@ QString CpuMemoryEditPage::subText() const
 
 QIcon CpuMemoryEditPage::image() const
 {
-    // TODO: Use proper CPU icon from resources
-    return QIcon::fromTheme("cpu");
+    return QIcon(":/icons/cpu_16.png");
 }
 
 void CpuMemoryEditPage::setXenObjects(const QString& objectRef,

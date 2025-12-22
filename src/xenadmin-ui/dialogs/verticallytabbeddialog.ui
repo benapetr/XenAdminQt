@@ -141,12 +141,16 @@
                <property name="styleSheet">
                 <string notr="true">QLabel {
     color: white;
-    font-weight: bold;
-    font-size: 12pt;
 }</string>
                </property>
                <property name="text">
                 <string>General</string>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>12</pointsize>
+                 <bold>true</bold>
+                </font>
                </property>
               </widget>
              </item>
@@ -175,10 +179,7 @@
              </sizepolicy>
             </property>
             <property name="styleSheet">
-             <string notr="true">QStackedWidget {
-    background-color: white;
-}
-QStackedWidget > QWidget {
+             <string notr="true">QStackedWidget &gt; QWidget {
     padding: 10px;
 }</string>
             </property>

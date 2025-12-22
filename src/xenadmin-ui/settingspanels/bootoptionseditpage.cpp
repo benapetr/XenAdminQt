@@ -91,7 +91,7 @@ QString BootOptionsEditPage::subText() const
 
 QIcon BootOptionsEditPage::image() const
 {
-    return QIcon::fromTheme("system-reboot");
+    return QIcon(":/icons/power_on.png");
 }
 
 void BootOptionsEditPage::setXenObjects(const QString& objectRef,

@@ -30,14 +30,16 @@ All XenServer API bindings live in the **`XenAPI` namespace** with **static meth
 
 ```cpp
 // File hierarchy mirrors C#: src/xenlib/xen/xenapi/ ↔ XenModel/XenAPI/
-namespace XenAPI {
-    class VM {  // Static-only class
-    public:
-        static QString async_start(XenSession* session, const QString& vm, bool start_paused, bool force);
-        static void clean_shutdown(XenSession* session, const QString& vm);
-        // ... ~60 more VM methods
+namespace XenAPI
+{
+    class VM
+    {  // Static-only class
+        public:
+            static QString async_start(XenSession* session, const QString& vm, bool start_paused, bool force);
+            static void clean_shutdown(XenSession* session, const QString& vm);
+            // ... ~60 more VM methods
     };
-    
+        
     class Host { /* static methods */ };
     class Pool { /* static methods */ };
     class SR   { /* static methods */ };
@@ -165,9 +167,11 @@ The project currently uses **sync `XenAPI` methods** for most operations. This i
 ```cpp
 // Commands use sync pattern (see StartVMCommand, etc.)
 bool success = api->startVM(vmRef);
-if (success) {
-    mainWindow()->showStatusMessage("VM started", 5000);
-} else {
+if (success)
+{
+    this->mainWindow()->showStatusMessage("VM started", 5000);
+} else
+{
     QMessageBox::warning(this, "Error", "Failed to start VM");
 }
 ```
@@ -186,16 +190,18 @@ int requestId = connection->sendRequestAsync(xmlRequest.toUtf8());
 pendingRequests[requestId] = RequestType::GetVirtualMachines;
 
 // Handle response via signal
-connect(connection, &XenConnection::apiResponse, 
-    this, &XenLib::onConnectionApiResponse);
+connect(connection, &XenConnection::apiResponse, this, &XenLib::onConnectionApiResponse);
 
-void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response) {
-    if (!pendingRequests.contains(requestId)) return;
+void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
+{
+    if (!pendingRequests.contains(requestId))
+        return;
     
     RequestType type = pendingRequests.take(requestId);
     QVariant data = api->parseXmlRpcResponse(QString::fromUtf8(response));
     
-    if (type == GetVirtualMachines) {
+    if (type == GetVirtualMachines)
+    {
         emit virtualMachinesReceived(processData(data));
     }
 }
@@ -230,13 +236,16 @@ op->startVirtualMachine(vmRef);
 All user-initiated operations (menu items, context menu, toolbar) use the Command pattern:
 
 ```cpp
-class StartVMCommand : public Command {
-    bool canRun() const override {
+class StartVMCommand : public Command
+{
+    bool canRun() const override
+    {
         return getSelectedObjectType() == "vm" && 
                xenLib()->getVMPowerState(getSelectedObjectRef()) == "Halted";
     }
     
-    void run() override {
+    void run() override
+    {
         AsyncOperation* op = new AsyncOperation(xenLib()->getAPI(), this);
         op->startVirtualMachine(getSelectedObjectRef());
     }
@@ -257,13 +266,15 @@ Commands are created by `ContextMenuBuilder::buildContextMenu()` based on select
 Object-specific tabs inherit from `BaseTabPage`. MainWindow shows applicable tabs based on selection:
 
 ```cpp
-class StorageTabPage : public BaseTabPage {
-    bool isApplicableForObjectType(const QString& type) const override {
+class StorageTabPage : public BaseTabPage
+{
+    bool isApplicableForObjectType(const QString& type) const override
+    {
         return type == "vm" || type == "host" || type == "sr";
     }
     
-    void setXenObject(const QString& type, const QString& ref, 
-                      const QVariantMap& data) override {
+    void setXenObject(const QString& type, const QString& ref, const QVariantMap& data) override
+    {
         // Update display based on object type
     }
 };
@@ -445,3 +456,34 @@ The `xenadmin/` folder contains the original C# implementation. When porting fea
 **Build system**: qmake (not CMake)
 **Original codebase**: C# WinForms → Qt6 Widgets
 **Status**: Core functionality complete (connection, VMs, hosts, storage, commands, wizards, console). Advanced features (HA, WLB, metrics, alerts) in progress.
+
+## Coding style
+Uses old-school Microsoft C++ style with braces on new lines. We are also prefixing local member accesses with this-> to improve code readability.
+
+Public members (functions and variables) use PascalCase, private/protected members use camelCase with a trailing underscore for member variables, this makes the scope obvious without context.
+
+Example:
+```cpp
+class MyClass
+{
+    public:
+        void MyFunction()
+        {
+            this->myMember = 5;
+            if (this->myMember > 0)
+            {
+                this->doSomething();
+            } else // else should be on same line as closing brace to save space
+            {
+                // Handle else case
+            }
+
+            // Simple statements don't need braces
+            if (this->myMember == 0)
+                this->myMember = 1;
+        }
+    private:
+        int myMember;
+        void doSomething() { /* ... */ }
+};
+```

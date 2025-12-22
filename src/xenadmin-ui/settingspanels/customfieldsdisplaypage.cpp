@@ -84,7 +84,7 @@ QString CustomFieldsDisplayPage::subText() const
 
 QIcon CustomFieldsDisplayPage::image() const
 {
-    return QIcon::fromTheme("document-properties");
+    return QIcon(":/icons/fields_16.png");
 }
 
 void CustomFieldsDisplayPage::setXenObjects(const QString& objectRef,

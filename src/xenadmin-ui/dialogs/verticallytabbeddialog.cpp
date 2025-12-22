@@ -718,6 +718,10 @@ void VerticallyTabbedDialog::onVerticalTabsCurrentChanged(int index)
 
     IEditPage* page = this->m_pages[index];
 
+    // Update header to match selected page
+    this->ui->TabImage->setPixmap(page->image().pixmap(32, 32));
+    this->ui->TabTitle->setText(page->text());
+
     // Show selected page in content panel
     this->ui->ContentPanel->setCurrentWidget(page);
 

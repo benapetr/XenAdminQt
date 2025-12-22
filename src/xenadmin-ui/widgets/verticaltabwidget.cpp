@@ -47,19 +47,21 @@ void VerticalTabDelegate::paint(QPainter* painter, const QStyleOptionViewItem& o
 
     QRect rect = option.rect;
     bool isSelected = (option.state & QStyle::State_Selected);
+    const QPalette& palette = option.palette;
 
     // Draw background
     if (isSelected)
     {
-        // Selected item - gradient background
+        // Selected item - theme-derived gradient background
+        QColor highlight = palette.highlight().color();
         QLinearGradient gradient(rect.topLeft(), rect.bottomLeft());
-        gradient.setColorAt(0, QColor(TOP_COLOR_R, TOP_COLOR_G, TOP_COLOR_B));
-        gradient.setColorAt(1, QColor(BOTTOM_COLOR_R, BOTTOM_COLOR_G, BOTTOM_COLOR_B));
+        gradient.setColorAt(0, highlight.lighter(115));
+        gradient.setColorAt(1, highlight.darker(115));
         painter->fillRect(rect, gradient);
     } else
     {
-        // Not selected - light gray background
-        painter->fillRect(rect, QColor(240, 240, 240));
+        // Not selected - use palette base color
+        painter->fillRect(rect, palette.base());
     }
 
     // Get data from model
@@ -77,8 +79,13 @@ void VerticalTabDelegate::paint(QPainter* painter, const QStyleOptionViewItem& o
     }
 
     // Text colors
-    QColor textColor = isSelected ? Qt::white : Qt::black;
-    QColor subTextColor = isSelected ? QColor(230, 230, 230) : Qt::gray;
+    QColor textColor = isSelected ? palette.highlightedText().color() : palette.text().color();
+    QColor subTextColor = isSelected ? palette.highlightedText().color() : palette.placeholderText().color();
+    if (!subTextColor.isValid())
+    {
+        subTextColor = textColor;
+        subTextColor.setAlphaF(0.6);
+    }
 
     // Draw main text (top half)
     QRect topRect(rect.x() + 36, rect.y() + 2, rect.width() - 38, rect.height() / 2 - 2);
@@ -116,23 +123,22 @@ VerticalTabWidget::VerticalTabWidget(QWidget* parent)
     : QListWidget(parent)
 {
     // Set delegate for custom painting
-    setItemDelegate(new VerticalTabDelegate(this));
+    this->setItemDelegate(new VerticalTabDelegate(this));
 
     // Matches C# VerticalTabs properties
-    setFixedWidth(180); // Match C# vertical tab width
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    setSpacing(0);
-    setUniformItemSizes(true);
+    this->setFixedWidth(180); // Match C# vertical tab width
+    this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    this->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    this->setSpacing(0);
+    this->setUniformItemSizes(true);
 
     // Match C# item height (40 pixels)
-    setIconSize(QSize(32, 32));
+    this->setIconSize(QSize(32, 32));
 
     // Style to remove default selection appearance (delegate handles it)
-    setStyleSheet(R"(
+    this->setStyleSheet(R"(
         QListWidget {
             border: none;
-            background-color: #f0f0f0;
             outline: none;
             show-decoration-selected: 0;
         }
@@ -156,17 +162,17 @@ void VerticalTabWidget::addTab(const QIcon& icon, const QString& text, const QSt
     data.text = text;
     data.subText = subText;
     data.page = page;
-    m_tabs.append(data);
+    this->m_tabs.append(data);
 
     // Add item to list
     QListWidgetItem* item = new QListWidgetItem(this);
     item->setSizeHint(QSize(180, 40));              // Match C# ItemHeight
-    item->setData(Qt::UserRole, m_tabs.size() - 1); // Store index for page lookup
+    item->setData(Qt::UserRole, this->m_tabs.size() - 1); // Store index for page lookup
     item->setData(Qt::DisplayRole, text);           // Main text
     item->setData(Qt::UserRole + 1, subText);       // Subtext
     item->setData(Qt::DecorationRole, icon);        // Icon
 
-    addItem(item);
+    this->addItem(item);
 
     // Hide page initially
     if (page)
@@ -177,30 +183,30 @@ void VerticalTabWidget::addTab(const QIcon& icon, const QString& text, const QSt
 
 QWidget* VerticalTabWidget::currentPage() const
 {
-    int index = currentRow();
-    if (index >= 0 && index < m_tabs.size())
+    int index = this->currentRow();
+    if (index >= 0 && index < this->m_tabs.size())
     {
-        return m_tabs[index].page;
+        return this->m_tabs[index].page;
     }
     return nullptr;
 }
 
 QWidget* VerticalTabWidget::pageAt(int index) const
 {
-    if (index >= 0 && index < m_tabs.size())
+    if (index >= 0 && index < this->m_tabs.size())
     {
-        return m_tabs[index].page;
+        return this->m_tabs[index].page;
     }
     return nullptr;
 }
 
 void VerticalTabWidget::setCurrentPage(QWidget* page)
 {
-    for (int i = 0; i < m_tabs.size(); ++i)
+    for (int i = 0; i < this->m_tabs.size(); ++i)
     {
-        if (m_tabs[i].page == page)
+        if (this->m_tabs[i].page == page)
         {
-            setCurrentRow(i);
+            this->setCurrentRow(i);
             break;
         }
     }

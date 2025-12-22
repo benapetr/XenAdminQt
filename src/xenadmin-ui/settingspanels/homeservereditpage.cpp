@@ -74,7 +74,7 @@ QString HomeServerEditPage::subText() const
 
 QIcon HomeServerEditPage::image() const
 {
-    return QIcon::fromTheme("network-server");
+    return QIcon(":/icons/server_home_16.png");
 }
 
 void HomeServerEditPage::setXenObjects(const QString& objectRef,

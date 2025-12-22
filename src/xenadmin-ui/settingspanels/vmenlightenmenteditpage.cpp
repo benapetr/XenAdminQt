@@ -55,7 +55,7 @@ QString VMEnlightenmentEditPage::subText() const
 
 QIcon VMEnlightenmentEditPage::image() const
 {
-    return QIcon::fromTheme("preferences-desktop");
+    return QIcon(":/icons/dc_16.png");
 }
 
 void VMEnlightenmentEditPage::setXenObjects(const QString& objectRef,
