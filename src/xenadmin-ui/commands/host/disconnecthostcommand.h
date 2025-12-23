@@ -28,9 +28,9 @@
 #ifndef DISCONNECTHOSTCOMMAND_H
 #define DISCONNECTHOSTCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
-class DisconnectHostCommand : public Command
+class DisconnectHostCommand : public HostCommand
 {
     Q_OBJECT
 
@@ -41,10 +41,6 @@ class DisconnectHostCommand : public Command
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
-
-    private:
-        bool isConnectionConnected() const;
-        bool isSelectedHostCoordinator() const;
 };
 
 #endif // DISCONNECTHOSTCOMMAND_H

@@ -28,7 +28,7 @@
 #include "hostpropertiescommand.h"
 #include "../../dialogs/hostpropertiesdialog.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
+#include "xen/host.h"
 #include <QMessageBox>
 
 HostPropertiesCommand::HostPropertiesCommand(MainWindow* mainWindow, QObject* parent)
@@ -38,22 +38,21 @@ HostPropertiesCommand::HostPropertiesCommand(MainWindow* mainWindow, QObject* pa
 
 bool HostPropertiesCommand::CanRun() const
 {
-    QString hostRef = this->getSelectedHostRef();
-    return !hostRef.isEmpty() && this->mainWindow()->xenLib()->isConnected();
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
+        return false;
+
+    return host->connection() && host->connection()->isConnected();
 }
 
 void HostPropertiesCommand::Run()
 {
-    QString hostRef = this->getSelectedHostRef();
-
-    if (hostRef.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return;
 
     // New signature: connection, hostRef, parent
-    HostPropertiesDialog* dialog = new HostPropertiesDialog(
-        this->mainWindow()->xenLib()->getConnection(),
-        hostRef,
-        this->mainWindow());
+    HostPropertiesDialog* dialog = new HostPropertiesDialog(host->connection(), host->opaqueRef(), this->mainWindow());
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setModal(true);
     dialog->exec();

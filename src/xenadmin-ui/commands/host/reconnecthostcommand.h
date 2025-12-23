@@ -28,9 +28,9 @@
 #ifndef RECONNECTHOSTCOMMAND_H
 #define RECONNECTHOSTCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
-class ReconnectHostCommand : public Command
+class ReconnectHostCommand : public HostCommand
 {
     Q_OBJECT
 

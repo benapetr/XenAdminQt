@@ -27,20 +27,17 @@
 
 #include "restarttoolstackcommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
-#include "xen/api.h"
-#include "xencache.h"
 #include <QMessageBox>
+#include "xen/host.h"
 
-RestartToolstackCommand::RestartToolstackCommand(MainWindow* mainWindow, QObject* parent)
-    : HostCommand(mainWindow, parent)
+RestartToolstackCommand::RestartToolstackCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
 bool RestartToolstackCommand::CanRun() const
 {
-    QString hostRef = this->getSelectedHostRef();
-    if (hostRef.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return false;
 
     // Can restart toolstack if host is live
@@ -49,11 +46,12 @@ bool RestartToolstackCommand::CanRun() const
 
 void RestartToolstackCommand::Run()
 {
-    QString hostRef = this->getSelectedHostRef();
-    QString hostName = this->getSelectedHostName();
-
-    if (hostRef.isEmpty() || hostName.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return;
+
+    QString hostRef = host->opaqueRef();
+    QString hostName = this->getSelectedHostName();
 
     // Show confirmation dialog
     int ret = QMessageBox::warning(this->mainWindow(), "Restart Toolstack",

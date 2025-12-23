@@ -28,12 +28,11 @@
 #include "hostreconnectascommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/connectdialog.h"
-#include "xenlib.h"
 #include "xen/network/connection.h"
-#include "xencache.h"
+#include "xenlib.h"
+#include "xen/host.h"
 
-HostReconnectAsCommand::HostReconnectAsCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+HostReconnectAsCommand::HostReconnectAsCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
@@ -43,15 +42,16 @@ bool HostReconnectAsCommand::CanRun() const
     // 1. Connection is connected AND selected object is pool coordinator
     // 2. OR connection is in progress (to change credentials during connection)
 
-    if (!mainWindow()->xenLib())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return false;
 
-    XenConnection* conn = mainWindow()->xenLib()->getConnection();
+    XenConnection* conn = host->connection();
     if (!conn)
         return false;
 
     // Can reconnect-as if connected and selected host is coordinator
-    if (conn->isConnected() && isSelectedHostCoordinator())
+    if (conn->isConnected() && host->isMaster())
         return true;
 
     // Can also reconnect-as if connection is in progress (to change creds)
@@ -62,10 +62,11 @@ bool HostReconnectAsCommand::CanRun() const
 
 void HostReconnectAsCommand::Run()
 {
-    if (!mainWindow()->xenLib())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return;
 
-    XenConnection* conn = mainWindow()->xenLib()->getConnection();
+    XenConnection* conn = host->connection();
     if (!conn)
         return;
 
@@ -96,30 +97,4 @@ void HostReconnectAsCommand::Run()
 QString HostReconnectAsCommand::MenuText() const
 {
     return "Reconnect As...";
-}
-
-bool HostReconnectAsCommand::isSelectedHostCoordinator() const
-{
-    QString objectType = getSelectedObjectType();
-    if (objectType != "host")
-        return false;
-
-    QString hostRef = getSelectedObjectRef();
-    if (hostRef.isEmpty())
-        return false;
-
-    // Get host data from cache
-    if (!mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
-
-    QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
-    if (hostData.isEmpty())
-        return false;
-
-    // Check if this is the pool coordinator/master
-    return hostData.value("master", false).toBool();
 }

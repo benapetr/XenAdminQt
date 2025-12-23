@@ -27,8 +27,6 @@
 
 #include "reboothostcommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
-#include "xencache.h"
 #include "../../operations/operationmanager.h"
 #include "xen/network/connection.h"
 #include "xen/host.h"
@@ -52,11 +50,12 @@ bool RebootHostCommand::CanRun() const
 
 void RebootHostCommand::Run()
 {
-    QString hostRef = this->getSelectedHostRef();
-    QString hostName = this->getSelectedHostName();
-
-    if (hostRef.isEmpty() || hostName.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return;
+
+    QString hostRef = host->opaqueRef();
+    QString hostName = this->getSelectedHostName();
 
     // Show warning dialog
     int ret = QMessageBox::warning(this->mainWindow(), "Reboot Host",
@@ -69,7 +68,7 @@ void RebootHostCommand::Run()
     {
         this->mainWindow()->showStatusMessage(QString("Rebooting host '%1'...").arg(hostName));
 
-        XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+        XenConnection* conn = host->connection();
         if (!conn || !conn->isConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",

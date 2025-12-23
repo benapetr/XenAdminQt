@@ -27,10 +27,8 @@
 
 #include "removehostcommand.h"
 #include "../../mainwindow.h"
-#include "../../connectionprofile.h"
-#include "xenlib.h"
-#include "xencache.h"
 #include "xen/network/connection.h"
+#include "xen/host.h"
 #include <QMessageBox>
 #include <QDebug>
 
@@ -41,34 +39,25 @@ RemoveHostCommand::RemoveHostCommand(MainWindow* mainWindow, QObject* parent)
 
 bool RemoveHostCommand::CanRun() const
 {
-    QString hostRef = this->getSelectedHostRef();
-    if (hostRef.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return false;
 
-    QVariantMap hostData = this->getSelectedHostData();
-    if (hostData.isEmpty())
-        return false;
-
-    return this->canHostBeRemoved(hostData);
+    return this->canHostBeRemoved(host);
 }
 
 void RemoveHostCommand::Run()
 {
-    QString hostRef = this->getSelectedHostRef();
-    QVariantMap hostData = this->getSelectedHostData();
-
-    if (hostRef.isEmpty() || hostData.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return;
 
-    if (!this->mainWindow()->xenLib())
-        return;
-
-    XenConnection* connection = this->mainWindow()->xenLib()->getConnection();
+    XenConnection* connection = host->connection();
     if (!connection)
         return;
 
     QString hostname = connection->getHostname();
-    QString hostName = hostData.value("name_label", hostname).toString();
+    QString hostName = host->nameLabel();
 
     // Show confirmation dialog
     QMessageBox msgBox(this->mainWindow());
@@ -115,31 +104,12 @@ QString RemoveHostCommand::MenuText() const
     return "Remove Host from XenAdmin";
 }
 
-QVariantMap RemoveHostCommand::getSelectedHostData() const
+bool RemoveHostCommand::canHostBeRemoved(QSharedPointer<Host> host) const
 {
-    QString hostRef = this->getSelectedHostRef();
-    if (hostRef.isEmpty())
-        return QVariantMap();
-
-    if (!this->mainWindow()->xenLib())
-        return QVariantMap();
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return QVariantMap();
-
-    return cache->ResolveObjectData("host", hostRef);
-}
-
-bool RemoveHostCommand::canHostBeRemoved(const QVariantMap& hostData) const
-{
-    if (hostData.isEmpty())
+    if (!host)
         return false;
 
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenConnection* connection = this->mainWindow()->xenLib()->getConnection();
+    XenConnection* connection = host->connection();
     if (!connection)
         return false;
 
@@ -154,38 +124,14 @@ bool RemoveHostCommand::canHostBeRemoved(const QVariantMap& hostData) const
     }
 
     // Connected - can only remove if this is the coordinator
-    return this->isHostCoordinator(hostData);
+    return this->isHostCoordinator(host);
 }
 
-bool RemoveHostCommand::isHostCoordinator(const QVariantMap& hostData) const
+bool RemoveHostCommand::isHostCoordinator(QSharedPointer<Host> host) const
 {
-    if (hostData.isEmpty())
+    if (!host)
         return false;
 
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
-
-    // Get pool reference
-    QString poolRef = hostData.value("pool", "").toString();
-    if (poolRef.isEmpty())
-    {
-        // Standalone host (no pool) - is coordinator by definition
-        return true;
-    }
-
-    // Get pool data
-    QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
-    if (poolData.isEmpty())
-        return false;
-
-    // Get pool master reference
-    QString masterRef = poolData.value("master", "").toString();
-
-    // Check if this host is the master
-    QString hostRef = this->getSelectedHostRef();
-    return hostRef == masterRef;
+    // Use the isMaster() method from Host class
+    return host->isMaster();
 }

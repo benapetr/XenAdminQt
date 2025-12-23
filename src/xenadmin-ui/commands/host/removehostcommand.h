@@ -58,24 +58,18 @@ class RemoveHostCommand : public HostCommand
 
     private:
         /**
-         * @brief Get selected host data
-         * @return Host data from cache
-         */
-        QVariantMap getSelectedHostData() const;
-
-        /**
          * @brief Check if host can be removed
-         * @param hostData Host data from cache
+         * @param host Host object
          * @return true if host can be removed
          */
-        bool canHostBeRemoved(const QVariantMap& hostData) const;
+        bool canHostBeRemoved(QSharedPointer<Host> host) const;
 
         /**
-         * @brief Check if host is pool coordinator (master)
-         * @param hostData Host data from cache
-         * @return true if host is coordinator
+         * @brief Check if host is pool coordinator
+         * @param host Host object
+         * @return true if host is pool coordinator
          */
-        bool isHostCoordinator(const QVariantMap& hostData) const;
+        bool isHostCoordinator(QSharedPointer<Host> host) const;
 };
 
 #endif // REMOVEHOSTCOMMAND_H

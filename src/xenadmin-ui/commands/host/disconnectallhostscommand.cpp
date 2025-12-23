@@ -27,12 +27,10 @@
 
 #include "disconnectallhostscommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
 #include "xen/network/connectionsmanager.h"
 #include <QMessageBox>
 
-DisconnectAllHostsCommand::DisconnectAllHostsCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+DisconnectAllHostsCommand::DisconnectAllHostsCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
@@ -44,10 +42,7 @@ bool DisconnectAllHostsCommand::CanRun() const
 
 void DisconnectAllHostsCommand::Run()
 {
-    if (!this->mainWindow()->xenLib())
-        return;
-
-    Xen::ConnectionsManager* manager = this->mainWindow()->xenLib()->getConnectionsManager();
+    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
     if (!manager)
         return;
 
@@ -70,10 +65,7 @@ QString DisconnectAllHostsCommand::MenuText() const
 
 bool DisconnectAllHostsCommand::hasConnectedConnections() const
 {
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    Xen::ConnectionsManager* manager = this->mainWindow()->xenLib()->getConnectionsManager();
+    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
     if (!manager)
         return false;
 

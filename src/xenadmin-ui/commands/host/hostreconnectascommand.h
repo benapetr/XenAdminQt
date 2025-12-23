@@ -28,22 +28,19 @@
 #ifndef HOSTRECONNECTASCOMMAND_H
 #define HOSTRECONNECTASCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
-class HostReconnectAsCommand : public Command
+class HostReconnectAsCommand : public HostCommand
 {
     Q_OBJECT
 
-public:
-    explicit HostReconnectAsCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit HostReconnectAsCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
-
-private:
-    bool isSelectedHostCoordinator() const;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // HOSTRECONNECTASCOMMAND_H

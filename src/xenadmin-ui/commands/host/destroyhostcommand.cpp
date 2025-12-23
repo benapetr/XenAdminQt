@@ -35,40 +35,30 @@
 #include "../../../xenlib/xencache.h"
 #include <QMessageBox>
 
-DestroyHostCommand::DestroyHostCommand(MainWindow* mainWindow, QObject* parent)
-    : HostCommand(mainWindow, parent)
+DestroyHostCommand::DestroyHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
 bool DestroyHostCommand::CanRun() const
 {
-    if (!this->isHostSelected())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return false;
 
-    QString hostRef = this->getSelectedObjectRef();
-    return this->canRunForHost(hostRef);
-}
-
-bool DestroyHostCommand::canRunForHost(const QString& hostRef) const
-{
-    if (hostRef.isEmpty())
-        return false;
-
-    QVariantMap hostData = this->xenLib()->getCachedObjectData("host", hostRef);
+    QVariantMap hostData = host->data();
     if (hostData.isEmpty())
         return false;
 
     // Host must be in a pool
-    QString poolRef = hostData.value("pool").toString();
-    if (poolRef.isEmpty())
+    if (host->poolRef().isEmpty())
         return false;
 
     // Host must not be the pool coordinator
-    if (this->isHostCoordinator(hostRef))
+    if (host->isMaster())
         return false;
 
     // Host must not be live (running)
-    if (this->isHostLive(hostRef))
+    if (this->isHostLive(hostData))
         return false;
 
     return true;
@@ -76,12 +66,13 @@ bool DestroyHostCommand::canRunForHost(const QString& hostRef) const
 
 void DestroyHostCommand::Run()
 {
-    if (!this->isHostSelected())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return;
 
-    QString hostRef = this->getSelectedObjectRef();
-    QVariantMap hostData = this->xenLib()->getCachedObjectData("host", hostRef);
-    QString hostName = hostData.value("name_label").toString();
+    QString hostRef = host->opaqueRef();
+    QVariantMap hostData = host->data();
+    QString hostName = host->nameLabel();
 
     // Show confirmation dialog
     QString message = this->buildConfirmationMessage();
@@ -100,33 +91,27 @@ void DestroyHostCommand::Run()
     }
 
     // Get connection
-    XenConnection* conn = this->xenLib()->getConnection();
+    XenConnection* conn = host->connection();
     if (!conn || !conn->isConnected())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
-                             tr("Not connected to XenServer"));
+        QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
         return;
     }
 
     // Get pool reference
-    QString poolRef = hostData.value("pool").toString();
+    QString poolRef = host->poolRef();
     if (poolRef.isEmpty())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Error"),
-                             tr("Host does not belong to a pool"));
+        QMessageBox::warning(this->mainWindow(), tr("Error"), tr("Host does not belong to a pool"));
         return;
     }
 
     // Create Pool and Host objects
     Pool* pool = new Pool(conn, poolRef, this);
-    Host* host = new Host(conn, hostRef, this);
+    Host* temp_host = new Host(conn, hostRef, this);
 
     // Create and run the destroy host action
-    DestroyHostAction* action = new DestroyHostAction(
-        conn,
-        pool,
-        host,
-        this);
+    DestroyHostAction* action = new DestroyHostAction(conn, pool, temp_host, this);
 
     action->setTitle(tr("Destroying host '%1'...").arg(hostName));
 
@@ -136,9 +121,7 @@ void DestroyHostCommand::Run()
     // Run the action asynchronously
     action->runAsync();
 
-    this->mainWindow()->showStatusMessage(
-        tr("Destroying host: %1").arg(hostName),
-        5000);
+    this->mainWindow()->showStatusMessage(tr("Destroying host: %1").arg(hostName), 5000);
 }
 
 QString DestroyHostCommand::MenuText() const
@@ -163,29 +146,8 @@ QString DestroyHostCommand::buildConfirmationTitle() const
     return tr("Confirm Destroy Host");
 }
 
-bool DestroyHostCommand::isHostSelected() const
+bool DestroyHostCommand::isHostLive(const QVariantMap& hostData) const
 {
-    return this->getSelectedObjectType() == "host";
-}
-
-bool DestroyHostCommand::isHostCoordinator(const QString& hostRef) const
-{
-    QVariantMap hostData = this->xenLib()->getCachedObjectData("host", hostRef);
-    QString poolRef = hostData.value("pool").toString();
-
-    if (poolRef.isEmpty())
-        return false;
-
-    QVariantMap poolData = this->xenLib()->getCachedObjectData("pool", poolRef);
-    QString coordinatorRef = poolData.value("master").toString();
-
-    return hostRef == coordinatorRef;
-}
-
-bool DestroyHostCommand::isHostLive(const QString& hostRef) const
-{
-    QVariantMap hostData = this->xenLib()->getCachedObjectData("host", hostRef);
-
     // Check if host is live (has a metrics object with live flag)
     QString metricsRef = hostData.value("metrics").toString();
     if (!metricsRef.isEmpty())

@@ -58,7 +58,6 @@ class HostMaintenanceModeCommand : public HostCommand
 
     private:
         bool m_enterMode; // true = enter maintenance mode, false = exit maintenance mode
-
         bool isHostInMaintenanceMode() const;
 };
 

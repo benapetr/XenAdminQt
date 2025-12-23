@@ -27,15 +27,11 @@
 
 #include "poweronhostcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
-#include "xenlib.h"
-#include "xencache.h"
 #include "xen/host.h"
 #include "xen/network/connection.h"
 #include <QMessageBox>
 
-PowerOnHostCommand::PowerOnHostCommand(MainWindow* mainWindow, QObject* parent)
-    : HostCommand(mainWindow, parent)
+PowerOnHostCommand::PowerOnHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
@@ -52,18 +48,15 @@ bool PowerOnHostCommand::CanRun() const
 void PowerOnHostCommand::Run()
 {
     // Matches C# PowerOnHostCommand.RunCore() logic
-    QString hostRef = this->getSelectedHostRef();
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
+        return;
+
     QString hostName = this->getSelectedHostName();
-
-    if (hostRef.isEmpty() || hostName.isEmpty())
+    if (hostName.isEmpty())
         return;
 
-    // Get host data from cache
-    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
-    if (hostData.isEmpty())
-        return;
-
-    QString powerOnMode = hostData.value("power_on_mode", "").toString();
+    QString powerOnMode = host->data().value("power_on_mode", "").toString();
 
     // Check if power_on_mode is set (matches C# GetCantRunReasonCore logic)
     if (powerOnMode.isEmpty())
@@ -76,7 +69,7 @@ void PowerOnHostCommand::Run()
     }
 
     // Get XenConnection from XenLib
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    XenConnection* conn = host->connection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -130,12 +123,10 @@ bool PowerOnHostCommand::canPowerOn() const
         return false;
 
     QVariantMap hostData = host->data();
-    if (hostData.isEmpty())
-        return false;
 
     // Check if host is not live (not running)
     // Note: PowerOn uses enabled field, not live field (different from isHostLive base class)
-    if (hostData.value("enabled", false).toBool())
+    if (!host->enabled())
         return false;
 
     // Check if power_on is in allowed_operations

@@ -6,6 +6,7 @@ TARGET = xenadmin-qt
 # Source files
 SOURCES += \
     commands/host/hostcommand.cpp \
+    commands/vm/vmcommand.cpp \
     main.cpp \
     mainwindow.cpp \
     tabpages/vmstoragetabpage.cpp \
@@ -200,6 +201,7 @@ SOURCES += \
 # Header files
 HEADERS += \
     commands/host/hostcommand.h \
+    commands/vm/vmcommand.h \
     globals.h \
     mainwindow.h \
     tabpages/vmstoragetabpage.h \

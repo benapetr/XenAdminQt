@@ -25,38 +25,22 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DESTROYHOSTCOMMAND_H
-#define DESTROYHOSTCOMMAND_H
+#ifndef VMCOMMAND_H
+#define VMCOMMAND_H
 
-#include "hostcommand.h"
+#include "../command.h"
 
-/**
- * @brief Destroys the selected hosts.
- *
- * Qt port of C# DestroyHostCommand. Destroys hosts that are not live
- * and are not pool coordinators. Requires confirmation from user.
- *
- * Can run if:
- * - Single or multiple hosts selected
- * - Host is not live (not running)
- * - Host is not the pool coordinator
- * - Host belongs to a pool
- */
-class DestroyHostCommand : public HostCommand
+class VM;
+
+class VMCommand : public Command
 {
-    Q_OBJECT
-
     public:
-        explicit DestroyHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        VMCommand(MainWindow* mainWindow, QObject* parent);
 
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
-
-    private:
-        bool isHostLive(const QVariantMap &hostData) const;
-        QString buildConfirmationMessage() const;
-        QString buildConfirmationTitle() const;
+    protected:
+        QSharedPointer<VM> getVM() const;
+        QString getSelectedVMRef() const;
+        QString getSelectedVMName() const;
 };
 
-#endif // DESTROYHOSTCOMMAND_H
+#endif // VMCOMMAND_H

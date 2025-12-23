@@ -65,9 +65,11 @@ QString HostCommand::getSelectedHostName() const
 
 bool HostCommand::isHostEnabled() const
 {
-    // Use cache instead of async API call
-    QVariantMap hostData = this->getSelectedHost()->data();
-    return hostData.value("enabled", true).toBool();
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
+        return false;
+
+    return host->enabled();
 }
 
 bool HostCommand::isHostLive() const

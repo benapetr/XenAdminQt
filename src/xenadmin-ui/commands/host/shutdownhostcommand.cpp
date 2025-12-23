@@ -27,8 +27,6 @@
 
 #include "shutdownhostcommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
-#include "xencache.h"
 #include "../../operations/operationmanager.h"
 #include "xen/network/connection.h"
 #include "xen/host.h"
@@ -41,8 +39,8 @@ ShutdownHostCommand::ShutdownHostCommand(MainWindow* mainWindow, QObject* parent
 
 bool ShutdownHostCommand::CanRun() const
 {
-    QString hostRef = this->getSelectedHostRef();
-    if (hostRef.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return false;
 
     // Can shutdown if host is enabled (not in maintenance mode)
@@ -51,6 +49,10 @@ bool ShutdownHostCommand::CanRun() const
 
 void ShutdownHostCommand::Run()
 {
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
+        return;
+
     QString hostRef = this->getSelectedHostRef();
     QString hostName = this->getSelectedHostName();
 
@@ -68,7 +70,7 @@ void ShutdownHostCommand::Run()
     {
         this->mainWindow()->showStatusMessage(QString("Shutting down host '%1'...").arg(hostName));
 
-        XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+        XenConnection* conn = host->connection();
         if (!conn || !conn->isConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",

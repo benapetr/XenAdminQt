@@ -30,9 +30,9 @@
 #include "xenlib.h"
 #include "xen/network/connection.h"
 #include "xen/network/connectionsmanager.h"
+#include "xen/host.h"
 
-ReconnectHostCommand::ReconnectHostCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+ReconnectHostCommand::ReconnectHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
@@ -44,10 +44,11 @@ bool ReconnectHostCommand::CanRun() const
 
 void ReconnectHostCommand::Run()
 {
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return;
 
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    XenConnection* conn = host->connection();
     if (!conn)
         return;
 
@@ -67,10 +68,11 @@ QString ReconnectHostCommand::MenuText() const
 
 bool ReconnectHostCommand::isConnectionDisconnected() const
 {
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return false;
 
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    XenConnection* conn = host->connection();
     if (!conn)
         return false;
 

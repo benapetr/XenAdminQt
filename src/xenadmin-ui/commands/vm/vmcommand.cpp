@@ -25,38 +25,40 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DESTROYHOSTCOMMAND_H
-#define DESTROYHOSTCOMMAND_H
+#include "vmcommand.h"
+#include "xen/vm.h"
 
-#include "hostcommand.h"
-
-/**
- * @brief Destroys the selected hosts.
- *
- * Qt port of C# DestroyHostCommand. Destroys hosts that are not live
- * and are not pool coordinators. Requires confirmation from user.
- *
- * Can run if:
- * - Single or multiple hosts selected
- * - Host is not live (not running)
- * - Host is not the pool coordinator
- * - Host belongs to a pool
- */
-class DestroyHostCommand : public HostCommand
+VMCommand::VMCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
-    Q_OBJECT
+}
 
-    public:
-        explicit DestroyHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+QSharedPointer<VM> VMCommand::getVM() const
+{
+    return qSharedPointerCast<VM>(this->GetObject());
+}
 
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
+QString VMCommand::getSelectedVMRef() const
+{
+    QTreeWidgetItem* item = this->getSelectedItem();
+    if (!item)
+        return QString();
 
-    private:
-        bool isHostLive(const QVariantMap &hostData) const;
-        QString buildConfirmationMessage() const;
-        QString buildConfirmationTitle() const;
-};
+    QString objectType = this->getSelectedObjectType();
+    if (objectType != "vm")
+        return QString();
 
-#endif // DESTROYHOSTCOMMAND_H
+    return this->getSelectedObjectRef();
+}
+
+QString VMCommand::getSelectedVMName() const
+{
+    QTreeWidgetItem* item = this->getSelectedItem();
+    if (!item)
+        return QString();
+
+    QString objectType = this->getSelectedObjectType();
+    if (objectType != "vm")
+        return QString();
+
+    return item->text(0);
+}

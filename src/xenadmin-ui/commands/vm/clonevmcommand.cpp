@@ -28,8 +28,6 @@
 #include "clonevmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
-#include "xen/api.h"
 #include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/actions/vm/vmcloneaction.h"
@@ -37,32 +35,35 @@
 #include <QMessageBox>
 #include <QInputDialog>
 
-CloneVMCommand::CloneVMCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+CloneVMCommand::CloneVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 
 bool CloneVMCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
     // Only enable if VM can be cloned (halted and not a template)
-    return this->isVMCloneable(vmRef);
+    return this->isVMCloneable();
 }
 
 void CloneVMCommand::Run()
 {
-    QString vmRef = this->getSelectedVMRef();
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
+        return;
+
+    QString vmRef = vm->opaqueRef();
     QString vmName = this->getSelectedVMName();
 
     if (vmRef.isEmpty() || vmName.isEmpty())
         return;
 
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-    QString powerState = vmData.value("power_state", "Unknown").toString();
+    QVariantMap vmData = vm->data();
+    QString powerState = vm->powerState();
 
     // Check if VM is in a cloneable state
     if (powerState != "Halted")
@@ -94,7 +95,7 @@ void CloneVMCommand::Run()
     if (ret == QMessageBox::Yes)
     {
         // Get XenConnection from XenLib
-        XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+        XenConnection* conn = vm->connection();
         if (!conn || !conn->isConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -136,36 +137,14 @@ QString CloneVMCommand::MenuText() const
     return "Clone VM";
 }
 
-QString CloneVMCommand::getSelectedVMRef() const
+bool CloneVMCommand::isVMCloneable() const
 {
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
+        return false;
 
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString CloneVMCommand::getSelectedVMName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return item->text(0);
-}
-
-bool CloneVMCommand::isVMCloneable(const QString& vmRef) const
-{
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = vm->data();
 
     // Check if it's not a template
     bool isTemplate = vmData.value("is_a_template", false).toBool();
