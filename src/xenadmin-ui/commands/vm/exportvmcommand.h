@@ -28,11 +28,11 @@
 #ifndef EXPORTVMCOMMAND_H
 #define EXPORTVMCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
 class ExportWizard;
 
-class ExportVMCommand : public Command
+class ExportVMCommand : public VMCommand
 {
     Q_OBJECT
 
@@ -48,10 +48,7 @@ class ExportVMCommand : public Command
         void onWizardFinished(int result);
 
     private:
-        QString getSelectedVMRef() const;
-        QString getSelectedVMName() const;
-        bool isVMExportable(const QString& vmRef) const;
-
+        bool isVMExportable() const;
         ExportWizard* m_exportWizard;
 };
 

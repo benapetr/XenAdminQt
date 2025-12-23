@@ -28,7 +28,7 @@
 #ifndef VMRECOVERYMODECOMMAND_H
 #define VMRECOVERYMODECOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
 class MainWindow;
 
@@ -48,46 +48,46 @@ class MainWindow;
  *
  * C# equivalent: XenAdmin.Commands.VMRecoveryModeCommand
  */
-class VMRecoveryModeCommand : public Command
+class VMRecoveryModeCommand : public VMCommand
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct a new VMRecoveryModeCommand
-     * @param mainWindow Main window reference
-     * @param parent Parent QObject
-     */
-    explicit VMRecoveryModeCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct a new VMRecoveryModeCommand
+         * @param mainWindow Main window reference
+         * @param parent Parent QObject
+         */
+        explicit VMRecoveryModeCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    /**
-     * @brief Check if command can run with current selection
-     *
-     * Validates:
-     * - Exactly one VM selected
-     * - VM is halted (power state is "Halted")
-     * - VM supports HVM boot (has HVM_boot_policy)
-     *
-     * @return true if command can execute
-     */
-    bool CanRun() const override;
+        /**
+         * @brief Check if command can run with current selection
+         *
+         * Validates:
+         * - Exactly one VM selected
+         * - VM is halted (power state is "Halted")
+         * - VM supports HVM boot (has HVM_boot_policy)
+         *
+         * @return true if command can execute
+         */
+        bool CanRun() const override;
 
-    /**
-     * @brief Execute the recovery boot command
-     *
-     * Creates and starts HVMBootAction to:
-     * 1. Save current boot settings
-     * 2. Set temporary recovery boot mode
-     * 3. Start VM
-     * 4. Restore original boot settings
-     */
-    void Run() override;
+        /**
+         * @brief Execute the recovery boot command
+         *
+         * Creates and starts HVMBootAction to:
+         * 1. Save current boot settings
+         * 2. Set temporary recovery boot mode
+         * 3. Start VM
+         * 4. Restore original boot settings
+         */
+        void Run() override;
 
-    /**
-     * @brief Get menu text for this command
-     * @return "Boot in Recovery Mode"
-     */
-    QString MenuText() const override;
+        /**
+         * @brief Get menu text for this command
+         * @return "Boot in Recovery Mode"
+         */
+        QString MenuText() const override;
 };
 
 #endif // VMRECOVERYMODECOMMAND_H

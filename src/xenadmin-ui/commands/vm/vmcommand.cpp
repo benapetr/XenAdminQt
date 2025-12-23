@@ -62,3 +62,12 @@ QString VMCommand::getSelectedVMName() const
 
     return item->text(0);
 }
+
+bool VMCommand::isVMRunning() const
+{
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
+        return false;
+
+    return (vm->powerState() == "Running");
+}

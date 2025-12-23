@@ -29,48 +29,43 @@
 #include "vmoperationhelpers.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
 #include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/actions/vm/vmstartaction.h"
 #include "xen/failure.h"
-#include "xencache.h"
 #include <QMessageBox>
 #include <QTimer>
 #include <QMetaObject>
 #include <QPointer>
 
 StartVMCommand::StartVMCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VMCommand(mainWindow, parent)
 {
 }
 
 bool StartVMCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
     // Check VM is not running (Halted or Suspended) AND start is allowed (matches C# StartVMCommand.CanRun)
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-    QString powerState = vmData.value("power_state", "Halted").toString();
+    QString powerState = vm->powerState();
 
     if (powerState == "Running")
         return false;
 
-    QVariantList allowedOperations = vmData.value("allowed_operations").toList();
+    QVariantList allowedOperations = vm->data().value("allowed_operations").toList();
     return allowedOperations.contains("start");
 }
 
 void StartVMCommand::Run()
 {
-    QString vmRef = this->getSelectedVMRef();
-    QString vmName = this->getSelectedVMName();
-
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return;
 
-    runForVm(vmRef, vmName);
+    runForVm(vm->opaqueRef(), this->getSelectedVMName());
 }
 
 bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
@@ -78,8 +73,12 @@ bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
     if (vmRef.isEmpty())
         return false;
 
-    // Get XenConnection from XenLib
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
+        return false;
+
+    // Get XenConnection from VM
+    XenConnection* conn = vm->connection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -91,19 +90,18 @@ bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
     QString displayName = vmName;
     if (displayName.isEmpty())
     {
-        QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-        displayName = vmData.value("name_label").toString();
+        displayName = vm->nameLabel();
     }
 
-    // Create VM object (lightweight wrapper)
-    VM* vm = new VM(conn, vmRef);
+    // Create VM object for action (action will own and delete it)
+    VM* vmForAction = new VM(conn, vmRef);
 
     // Create VMStartAction with diagnosis callbacks (matches C# pattern)
     // NOTE: The callbacks are called by the action when failures occur
     QPointer<MainWindow> mainWindow = this->mainWindow();
 
     VMStartAction* action = new VMStartAction(
-        vm,
+        vmForAction,
         nullptr,  // WarningDialogHAInvalidConfig callback (TODO: implement if needed)
         [conn, vmRef, displayName, mainWindow](VMStartAbstractAction* abstractAction, const Failure& failure) {
             Q_UNUSED(abstractAction)
@@ -144,39 +142,4 @@ bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
 QString StartVMCommand::MenuText() const
 {
     return "Start VM";
-}
-
-QString StartVMCommand::getSelectedVMRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString StartVMCommand::getSelectedVMName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return item->text(0);
-}
-
-bool StartVMCommand::isVMRunning(const QString& vmRef) const
-{
-    // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-    QString powerState = vmData.value("power_state", "Halted").toString();
-
-    return (powerState == "Running");
 }

@@ -36,18 +36,18 @@ class VMLifeCycleCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit VMLifeCycleCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit VMLifeCycleCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
-private:
-    QString getSelectedVMRef() const;
-    QString getVMPowerState() const;
-    bool isVMOperationAllowed(const QString& operation) const;
+    private:
+        QString getSelectedVMRef() const;
+        QString getVMPowerState() const;
+        bool isVMOperationAllowed(const QString& operation) const;
 };
 
 #endif // VMLIFECYCLECOMMAND_H

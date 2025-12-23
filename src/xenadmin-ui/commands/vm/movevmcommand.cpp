@@ -27,19 +27,19 @@
 
 #include "movevmcommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
+#include "xen/vm.h"
 #include "xencache.h"
 #include <QMessageBox>
 
 MoveVMCommand::MoveVMCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VMCommand(mainWindow, parent)
 {
 }
 
 bool MoveVMCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
     return this->canVMBeMoved();
@@ -47,8 +47,8 @@ bool MoveVMCommand::CanRun() const
 
 void MoveVMCommand::Run()
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return;
 
     // TODO: Launch Move/Migrate VM wizard
@@ -62,29 +62,13 @@ QString MoveVMCommand::MenuText() const
     return "Move VM...";
 }
 
-QString MoveVMCommand::getSelectedVMRef() const
-{
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
 bool MoveVMCommand::canVMBeMoved() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
-
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = vm->data();
 
     // Check if VM is a template or snapshot
     if (vmData.value("is_a_template", false).toBool())
@@ -94,6 +78,10 @@ bool MoveVMCommand::canVMBeMoved() const
 
     // Check if VM has CBT (Changed Block Tracking) disabled
     // VMs with CBT enabled cannot be moved
+    XenCache* cache = vm->connection()->getCache();
+    if (!cache)
+        return false;
+
     QVariantList vbds = vmData.value("VBDs", QVariantList()).toList();
     for (const QVariant& vbdRefVar : vbds)
     {

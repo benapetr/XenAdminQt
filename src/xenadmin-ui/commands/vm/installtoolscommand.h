@@ -28,9 +28,9 @@
 #ifndef INSTALLTOOLSCOMMAND_H
 #define INSTALLTOOLSCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
-class InstallToolsCommand : public Command
+class InstallToolsCommand : public VMCommand
 {
     Q_OBJECT
 
@@ -43,8 +43,6 @@ class InstallToolsCommand : public Command
         QString MenuText() const override;
 
     private:
-        QString getSelectedVMRef() const;
-        bool isVMRunning() const;
         bool canInstallTools() const;
 };
 

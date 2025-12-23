@@ -28,7 +28,7 @@
 #ifndef FORCEREBOOTVMCOMMAND_H
 #define FORCEREBOOTVMCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
 /**
  * @brief ForceRebootVMCommand - Forces the selected VM to reboot
@@ -36,7 +36,7 @@
  * Matches C# ForceVMRebootCommand from XenAdmin/Commands/ForceVMRebootCommand.cs
  * Shows a confirmation dialog before forcing reboot (equivalent to pressing reset button).
  */
-class ForceRebootVMCommand : public Command
+class ForceRebootVMCommand : public VMCommand
 {
     Q_OBJECT
 
@@ -49,11 +49,9 @@ class ForceRebootVMCommand : public Command
         QString MenuText() const override;
 
     private:
-        QString getSelectedVMRef() const;
-        QString getSelectedVMName() const;
-        bool canForceReboot(const QString& vmRef) const;
-        bool hasRunningTasks(const QString& vmRef) const;
-        bool enabledTargetExists(const QString& vmRef) const;
+        bool canForceReboot() const;
+        bool hasRunningTasks() const;
+        bool enabledTargetExists() const;
 };
 
 #endif // FORCEREBOOTVMCOMMAND_H

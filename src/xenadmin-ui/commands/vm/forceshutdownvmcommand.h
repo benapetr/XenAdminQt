@@ -28,7 +28,7 @@
 #ifndef FORCESHUTDOWNVMCOMMAND_H
 #define FORCESHUTDOWNVMCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
 /**
  * @brief ForceShutdownVMCommand - Forces the selected VM to shut-down
@@ -36,7 +36,7 @@
  * Matches C# ForceVMShutDownCommand from XenAdmin/Commands/ForceVMShutDownCommand.cs
  * Shows a confirmation dialog before forcing shutdown (equivalent to pulling power cable).
  */
-class ForceShutdownVMCommand : public Command
+class ForceShutdownVMCommand : public VMCommand
 {
     Q_OBJECT
 
@@ -49,10 +49,8 @@ class ForceShutdownVMCommand : public Command
         QString MenuText() const override;
 
     private:
-        QString getSelectedVMRef() const;
-        QString getSelectedVMName() const;
-        bool canForceShutdown(const QString& vmRef) const;
-        bool hasRunningTasks(const QString& vmRef) const;
+        bool canForceShutdown() const;
+        bool hasRunningTasks() const;
 };
 
 #endif // FORCESHUTDOWNVMCOMMAND_H

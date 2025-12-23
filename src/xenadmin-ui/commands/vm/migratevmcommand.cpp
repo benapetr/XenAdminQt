@@ -29,31 +29,32 @@
 #include "migratevmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
+#include "xen/vm.h"
+#include "xencache.h"
 #include "xen/network/connection.h"
 #include "xen/actions/vm/vmmigrateaction.h"
-#include "xencache.h"
+#include "xenlib.h"
 #include <QMessageBox>
 #include <QInputDialog>
 
 MigrateVMCommand::MigrateVMCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VMCommand(mainWindow, parent)
 {
 }
 
 bool MigrateVMCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
     // Only enable if VM is running (can only live migrate running VMs)
-    if (!this->isVMRunning(vmRef))
+    if (vm->powerState() != "Running")
         return false;
 
     // Check if there are other hosts available in the pool
     QStringList hosts = this->getAvailableHosts();
-    QString currentHost = this->getCurrentHostRef(vmRef);
+    QString currentHost = this->getCurrentHostRef();
 
     // Need at least one other host to migrate to
     return hosts.size() > 1;
@@ -61,14 +62,16 @@ bool MigrateVMCommand::CanRun() const
 
 void MigrateVMCommand::Run()
 {
-    QString vmRef = this->getSelectedVMRef();
-    QString vmName = this->getSelectedVMName();
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
+        return;
 
-    if (vmRef.isEmpty() || vmName.isEmpty())
+    QString vmName = this->getSelectedVMName();
+    if (vmName.isEmpty())
         return;
 
     // Get current host
-    QString currentHostRef = this->getCurrentHostRef(vmRef);
+    QString currentHostRef = this->getCurrentHostRef();
 
     // Get all available hosts
     QStringList hosts = this->getAvailableHosts();
@@ -84,16 +87,22 @@ void MigrateVMCommand::Run()
     QMap<QString, QString> hostMap;
     QStringList hostNames;
 
+    XenConnection* conn = vm->connection();
+    XenCache* cache = conn ? conn->getCache() : nullptr;
+
     for (const QString& hostRef : hosts)
     {
         if (hostRef == currentHostRef)
             continue; // Skip current host
 
         // Use cache instead of async API call
-        QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
-        QString hostName = hostData.value("name_label", "Unknown Host").toString();
-        hostMap[hostName] = hostRef;
-        hostNames.append(hostName);
+        if (cache)
+        {
+            QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
+            QString hostName = hostData.value("name_label", "Unknown Host").toString();
+            hostMap[hostName] = hostRef;
+            hostNames.append(hostName);
+        }
     }
 
     if (hostNames.isEmpty())
@@ -117,6 +126,7 @@ void MigrateVMCommand::Run()
         return;
 
     QString destHostRef = hostMap[selectedHostName];
+    QString vmRef = vm->opaqueRef();
 
     // Check if migration is possible
     if (!this->mainWindow()->xenLib()->canMigrateVM(vmRef, destHostRef))
@@ -137,8 +147,8 @@ void MigrateVMCommand::Run()
 
     if (ret == QMessageBox::Yes)
     {
-        // Get XenConnection from XenLib
-        XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+        // Get XenConnection from VM's connection
+        XenConnection* conn = vm->connection();
         if (!conn || !conn->isConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -178,45 +188,14 @@ QString MigrateVMCommand::MenuText() const
     return "Migrate VM...";
 }
 
-QString MigrateVMCommand::getSelectedVMRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString MigrateVMCommand::getSelectedVMName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return item->text(0);
-}
-
-bool MigrateVMCommand::isVMRunning(const QString& vmRef) const
-{
-    // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-    QString powerState = vmData.value("power_state", "Halted").toString();
-
-    return (powerState == "Running");
-}
-
 QStringList MigrateVMCommand::getAvailableHosts() const
 {
     QStringList hostRefs;
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
+        return hostRefs;
+
+    XenCache* cache = vm->connection()->getCache();
     if (!cache)
         return hostRefs;
 
@@ -225,9 +204,11 @@ QStringList MigrateVMCommand::getAvailableHosts() const
     return hostRefs;
 }
 
-QString MigrateVMCommand::getCurrentHostRef(const QString& vmRef) const
+QString MigrateVMCommand::getCurrentHostRef() const
 {
-    // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-    return vmData.value("resident_on", QString()).toString();
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
+        return QString();
+
+    return vm->data().value("resident_on", QString()).toString();
 }

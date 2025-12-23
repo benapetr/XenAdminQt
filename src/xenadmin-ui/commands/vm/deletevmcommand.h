@@ -28,9 +28,22 @@
 #ifndef DELETEVMCOMMAND_H
 #define DELETEVMCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
-class DeleteVMCommand : public Command
+/**
+ * @class DeleteVMCommand
+ * @brief Command to delete a halted VM with optional disk deletion.
+ *
+ * Displays a confirmation dialog that allows the user to choose whether to:
+ * - Delete the VM metadata only (keeping virtual disks for potential reuse)
+ * - Delete the VM AND all associated virtual disk files (default option)
+ *
+ * The VM must be in a halted state before it can be deleted.
+ * Matches the C# XenAdmin DeleteVMCommand behavior with ConfirmVMDeleteDialog.
+ *
+ * @see UninstallVMCommand for unconditional VM+disk deletion without choice
+ */
+class DeleteVMCommand : public VMCommand
 {
     Q_OBJECT
 
@@ -43,9 +56,7 @@ class DeleteVMCommand : public Command
         QString MenuText() const override;
 
     protected:
-        QString getSelectedVMRef() const;
-        QString getSelectedVMName() const;
-        bool isVMDeletable(const QString& vmRef) const;
+        bool isVMDeletable() const;
 };
 
 #endif // DELETEVMCOMMAND_H

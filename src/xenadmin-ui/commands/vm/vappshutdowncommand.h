@@ -49,54 +49,54 @@ class VappShutDownCommand : public Command
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct a new VappShutDownCommand
-     * @param mainWindow Main window reference
-     * @param parent Parent QObject
-     */
-    explicit VappShutDownCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct a new VappShutDownCommand
+         * @param mainWindow Main window reference
+         * @param parent Parent QObject
+         */
+        explicit VappShutDownCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    /**
-     * @brief Check if command can run with current selection
-     *
-     * Validates:
-     * - Selection is VM_appliance(s) OR VM(s) from same appliance
-     * - At least one appliance has "clean_shutdown" or "hard_shutdown" in allowed_operations
-     *
-     * @return true if command can execute
-     */
-    bool CanRun() const override;
+        /**
+         * @brief Check if command can run with current selection
+         *
+         * Validates:
+         * - Selection is VM_appliance(s) OR VM(s) from same appliance
+         * - At least one appliance has "clean_shutdown" or "hard_shutdown" in allowed_operations
+         *
+         * @return true if command can execute
+         */
+        bool CanRun() const override;
 
-    /**
-     * @brief Execute the vApp shutdown command
-     *
-     * Prompts for confirmation, then creates ShutDownApplianceAction
-     * for each shutdownable appliance. If VMs selected, finds their
-     * common appliance and shuts it down.
-     */
-    void Run() override;
+        /**
+         * @brief Execute the vApp shutdown command
+         *
+         * Prompts for confirmation, then creates ShutDownApplianceAction
+         * for each shutdownable appliance. If VMs selected, finds their
+         * common appliance and shuts it down.
+         */
+        void Run() override;
 
-    /**
-     * @brief Get menu text for this command
-     * @return "Shut Down vApp"
-     */
-    QString MenuText() const override;
+        /**
+         * @brief Get menu text for this command
+         * @return "Shut Down vApp"
+         */
+        QString MenuText() const override;
 
-private:
-    /**
-     * @brief Check if appliance can be shut down
-     * @param applianceData VM_appliance record data
-     * @return true if "clean_shutdown" or "hard_shutdown" in allowed_operations
-     */
-    bool canShutDownAppliance(const QVariantMap& applianceData) const;
+    private:
+        /**
+         * @brief Check if appliance can be shut down
+         * @param applianceData VM_appliance record data
+         * @return true if "clean_shutdown" or "hard_shutdown" in allowed_operations
+         */
+        bool canShutDownAppliance(const QVariantMap& applianceData) const;
 
-    /**
-     * @brief Get appliance ref from selected VM
-     * @param vmRef VM opaque reference
-     * @return Appliance ref or empty string if not in appliance
-     */
-    QString getApplianceRefFromVM(const QString& vmRef) const;
+        /**
+         * @brief Get appliance ref from selected VM
+         * @param vmRef VM opaque reference
+         * @return Appliance ref or empty string if not in appliance
+         */
+        QString getApplianceRefFromVM(const QString& vmRef) const;
 };
 
 #endif // VAPPSHUTDOWNCOMMAND_H

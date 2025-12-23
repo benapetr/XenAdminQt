@@ -27,19 +27,18 @@
 
 #include "uninstallvmcommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
-#include "xencache.h"
+#include "xen/vm.h"
 #include <QMessageBox>
 
 UninstallVMCommand::UninstallVMCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VMCommand(mainWindow, parent)
 {
 }
 
 bool UninstallVMCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
     return this->canVMBeUninstalled();
@@ -47,11 +46,11 @@ bool UninstallVMCommand::CanRun() const
 
 void UninstallVMCommand::Run()
 {
-    QString vmRef = this->getSelectedVMRef();
-    QString vmName = this->getSelectedVMName();
-
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return;
+
+    QString vmName = vm->nameLabel();
 
     // Show warning dialog
     int ret = QMessageBox::warning(this->mainWindow(), "Uninstall VM",
@@ -77,46 +76,13 @@ QString UninstallVMCommand::MenuText() const
     return "Uninstall VM";
 }
 
-QString UninstallVMCommand::getSelectedVMRef() const
-{
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString UninstallVMCommand::getSelectedVMName() const
-{
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
-        return QString();
-
-    if (!this->mainWindow()->xenLib())
-        return QString();
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return QString();
-
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-    return vmData.value("name_label", "").toString();
-}
-
 bool UninstallVMCommand::canVMBeUninstalled() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
-
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = vm->data();
 
     // Cannot uninstall templates or snapshots
     if (vmData.value("is_a_template", false).toBool())
@@ -125,8 +91,7 @@ bool UninstallVMCommand::canVMBeUninstalled() const
         return false;
 
     // Cannot uninstall if VM is running
-    QString powerState = vmData.value("power_state", "").toString();
-    if (powerState == "Running")
+    if (vm->powerState() == "Running")
         return false;
 
     // Check if VM has any current operations

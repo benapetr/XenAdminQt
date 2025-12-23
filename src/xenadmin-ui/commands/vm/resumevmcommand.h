@@ -28,32 +28,27 @@
 #ifndef RESUMEVMCOMMAND_H
 #define RESUMEVMCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
-class ResumeVMCommand : public Command
+class ResumeVMCommand : public VMCommand
 {
     Q_OBJECT
 
-public:
-    explicit ResumeVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit ResumeVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
-    /**
-     * @brief Run the command for a specific suspended VM.
-     * @param vmRef VM opaque ref.
-     * @param vmName Optional display name.
-     * @return true if action scheduled.
-     */
-    bool runForVm(const QString& vmRef, const QString& vmName = QString(), bool promptUser = false);
-
-private:
-    QString getSelectedVMRef() const;
-    QString getSelectedVMName() const;
-    bool isVMSuspended(const QString& vmRef) const;
+        /**
+         * @brief Run the command for a specific suspended VM.
+         * @param vmRef VM opaque ref.
+         * @param vmName Optional display name.
+         * @return true if action scheduled.
+         */
+        bool runForVm(const QString& vmRef, const QString& vmName = QString(), bool promptUser = false);
 };
 
 #endif // RESUMEVMCOMMAND_H

@@ -49,47 +49,47 @@ class NewTemplateFromSnapshotCommand : public Command
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct a new NewTemplateFromSnapshotCommand
-     * @param mainWindow Main window reference
-     * @param parent Parent QObject
-     */
-    explicit NewTemplateFromSnapshotCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct a new NewTemplateFromSnapshotCommand
+         * @param mainWindow Main window reference
+         * @param parent Parent QObject
+         */
+        explicit NewTemplateFromSnapshotCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    /**
-     * @brief Check if command can run with current selection
-     *
-     * Validates:
-     * - Exactly one VM selected
-     * - VM is a snapshot (is_a_snapshot == true)
-     *
-     * @return true if command can execute
-     */
-    bool CanRun() const override;
+        /**
+         * @brief Check if command can run with current selection
+         *
+         * Validates:
+         * - Exactly one VM selected
+         * - VM is a snapshot (is_a_snapshot == true)
+         *
+         * @return true if command can execute
+         */
+        bool CanRun() const override;
 
-    /**
-     * @brief Execute the create template command
-     *
-     * Prompts user for template name, then creates template by cloning
-     * the snapshot. Sets other_config["instant"] = "true" to mark as
-     * instant template.
-     */
-    void Run() override;
+        /**
+         * @brief Execute the create template command
+         *
+         * Prompts user for template name, then creates template by cloning
+         * the snapshot. Sets other_config["instant"] = "true" to mark as
+         * instant template.
+         */
+        void Run() override;
 
-    /**
-     * @brief Get menu text for this command
-     * @return "Create Template from Snapshot..."
-     */
-    QString MenuText() const override;
+        /**
+         * @brief Get menu text for this command
+         * @return "Create Template from Snapshot..."
+         */
+        QString MenuText() const override;
 
-private:
-    /**
-     * @brief Generate a unique name for the new template
-     * @param snapshotName Name of the source snapshot
-     * @return Unique template name (e.g., "Template from 'Snapshot 1'")
-     */
-    QString generateUniqueName(const QString& snapshotName) const;
+    private:
+        /**
+         * @brief Generate a unique name for the new template
+         * @param snapshotName Name of the source snapshot
+         * @return Unique template name (e.g., "Template from 'Snapshot 1'")
+         */
+        QString generateUniqueName(const QString& snapshotName) const;
 };
 
 #endif // NEWTEMPLATEFROMSNAPSHOTCOMMAND_H

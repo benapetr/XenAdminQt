@@ -28,24 +28,19 @@
 #ifndef RESTARTVMCOMMAND_H
 #define RESTARTVMCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
-class RestartVMCommand : public Command
+class RestartVMCommand : public VMCommand
 {
     Q_OBJECT
 
-public:
-    explicit RestartVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit RestartVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
-
-private:
-    QString getSelectedVMRef() const;
-    QString getSelectedVMName() const;
-    bool isVMRunning(const QString& vmRef) const;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // RESTARTVMCOMMAND_H

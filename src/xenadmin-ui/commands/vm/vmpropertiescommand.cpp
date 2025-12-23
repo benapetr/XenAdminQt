@@ -31,15 +31,16 @@
 #include "../../dialogs/vmpropertiesdialog.h"
 #include "xenlib.h"
 #include <QtWidgets>
+#include "xen/vm.h"
 
 VMPropertiesCommand::VMPropertiesCommand(QObject* parent)
-    : Command(nullptr, parent)
+    : VMCommand(nullptr, parent)
 {
     // qDebug() << "VMPropertiesCommand: Created default constructor";
 }
 
 VMPropertiesCommand::VMPropertiesCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent), m_vmUuid(vmUuid)
+    : VMCommand(mainWindow, parent), m_vmUuid(vmUuid)
 {
     // qDebug() << "VMPropertiesCommand: Created with VM UUID:" << vmUuid;
 }
@@ -66,22 +67,12 @@ bool VMPropertiesCommand::CanRun() const
     // TemplatePropertiesCommand: selection is VM AND is_a_template AND not snapshot AND not locked
     //
     // Since Qt uses the same VMPropertiesDialog for both, we accept both vm and template types
-
-    if (!this->mainWindow())
-        return false;
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm" && objectType != "template")
-        return false;
-
-    // Check if we have a valid VM/template reference
-    QString vmRef = this->getSelectedObjectRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
     // TODO: Check locked state and snapshot state when implemented
-    // For now, allow if we have a VM/template selected and connected
-    return this->xenLib() && this->xenLib()->isConnected();
+    return (vm->connection() && vm->connection()->isConnected());
 }
 
 QString VMPropertiesCommand::MenuText() const

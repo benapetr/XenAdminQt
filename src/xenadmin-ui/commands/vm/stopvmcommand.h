@@ -28,24 +28,19 @@
 #ifndef STOPVMCOMMAND_H
 #define STOPVMCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
-class StopVMCommand : public Command
+class StopVMCommand : public VMCommand
 {
     Q_OBJECT
 
-public:
-    explicit StopVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit StopVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
-
-private:
-    QString getSelectedVMRef() const;
-    QString getSelectedVMName() const;
-    bool isVMRunning(const QString& vmRef) const;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // STOPVMCOMMAND_H

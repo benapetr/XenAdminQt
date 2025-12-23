@@ -28,7 +28,7 @@
 #ifndef DISABLECHANGEDBLOCKTRACKINGCOMMAND_H
 #define DISABLECHANGEDBLOCKTRACKINGCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
 class MainWindow;
 
@@ -49,7 +49,7 @@ class MainWindow;
  *
  * C# equivalent: XenAdmin.Commands.DisableChangedBlockTrackingCommand
  */
-class DisableChangedBlockTrackingCommand : public Command
+class DisableChangedBlockTrackingCommand : public VMCommand
 {
     Q_OBJECT
 
@@ -104,10 +104,9 @@ class DisableChangedBlockTrackingCommand : public Command
 
         /**
          * @brief Check if VM has at least one VDI with CBT enabled
-         * @param vmRef VM reference
          * @return true if any VDI has cbt_enabled == true
          */
-        bool hasVdiWithCbtEnabled(const QString& vmRef) const;
+        bool hasVdiWithCbtEnabled() const;
 };
 
 #endif // DISABLECHANGEDBLOCKTRACKINGCOMMAND_H

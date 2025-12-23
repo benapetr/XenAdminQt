@@ -34,22 +34,22 @@ class RevertToSnapshotCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit RevertToSnapshotCommand(QObject* parent = nullptr);
-    explicit RevertToSnapshotCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-    explicit RevertToSnapshotCommand(const QString& snapshotUuid, MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit RevertToSnapshotCommand(QObject* parent = nullptr);
+        explicit RevertToSnapshotCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit RevertToSnapshotCommand(const QString& snapshotUuid, MainWindow* mainWindow, QObject* parent = nullptr);
 
-    void Run() override;
-    bool CanRun() const override;
-    QString MenuText() const override;
+        void Run() override;
+        bool CanRun() const override;
+        QString MenuText() const override;
 
-private:
-    QString m_snapshotUuid;
+    private:
+        QString m_snapshotUuid;
 
-    // Check if snapshot can be reverted to
-    bool canRevertToSnapshot() const;
-    void revertToSnapshot();
-    bool showConfirmationDialog();
+        // Check if snapshot can be reverted to
+        bool canRevertToSnapshot() const;
+        void revertToSnapshot();
+        bool showConfirmationDialog();
 };
 
 #endif // REVERTTOSNAPSHOTCOMMAND_H

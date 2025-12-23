@@ -27,19 +27,19 @@
 
 #include "copyvmcommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
+#include "xen/vm.h"
 #include "xencache.h"
 #include <QMessageBox>
 
 CopyVMCommand::CopyVMCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VMCommand(mainWindow, parent)
 {
 }
 
 bool CopyVMCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
     // Can copy if VM is not locked and copy/clone operation is allowed
@@ -48,8 +48,8 @@ bool CopyVMCommand::CanRun() const
 
 void CopyVMCommand::Run()
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return;
 
     // TODO: Launch Copy VM wizard/dialog
@@ -63,48 +63,31 @@ QString CopyVMCommand::MenuText() const
     return "Copy VM to Shared Storage...";
 }
 
-QString CopyVMCommand::getSelectedVMRef() const
-{
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
 bool CopyVMCommand::isVMLocked() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return true;
-
-    if (!this->mainWindow()->xenLib())
-        return true;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return true;
-
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
     // Check if VM has current operations that would lock it
-    QVariantMap currentOps = vmData.value("current_operations", QVariantMap()).toMap();
+    QVariantMap currentOps = vm->data().value("current_operations", QVariantMap()).toMap();
     return !currentOps.isEmpty();
 }
 
 bool CopyVMCommand::canVMBeCopied() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
     if (!this->mainWindow()->xenLib())
         return false;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenCache* cache = vm->connection()->getCache();
     if (!cache)
         return false;
 
+    QString vmRef = vm->opaqueRef();
     QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
     // Check if VM is a template or snapshot

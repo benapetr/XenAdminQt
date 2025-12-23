@@ -28,24 +28,39 @@
 #ifndef UNINSTALLVMCOMMAND_H
 #define UNINSTALLVMCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
-class UninstallVMCommand : public Command
+/**
+ * @class UninstallVMCommand
+ * @brief Command to completely remove a VM and ALL its virtual disks.
+ *
+ * This is a destructive operation that ALWAYS deletes both the VM metadata
+ * and all associated virtual disk files. Unlike DeleteVMCommand, this does NOT
+ * offer an option to keep the disks - they are permanently deleted.
+ *
+ * Shows a warning dialog emphasizing the permanent nature of the deletion.
+ * The VM cannot be running or have any active operations.
+ *
+ * Use cases:
+ * - Complete removal of unwanted VMs and their storage
+ * - Cleanup when disk space recovery is needed
+ *
+ * @see DeleteVMCommand for deletion with disk preservation option
+ */
+class UninstallVMCommand : public VMCommand
 {
     Q_OBJECT
 
-public:
-    explicit UninstallVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit UninstallVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
-private:
-    QString getSelectedVMRef() const;
-    QString getSelectedVMName() const;
-    bool canVMBeUninstalled() const;
+    private:
+        bool canVMBeUninstalled() const;
 };
 
 #endif // UNINSTALLVMCOMMAND_H

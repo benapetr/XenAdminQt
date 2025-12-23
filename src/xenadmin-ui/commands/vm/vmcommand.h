@@ -41,6 +41,7 @@ class VMCommand : public Command
         QSharedPointer<VM> getVM() const;
         QString getSelectedVMRef() const;
         QString getSelectedVMName() const;
+        bool isVMRunning() const;
 };
 
 #endif // VMCOMMAND_H

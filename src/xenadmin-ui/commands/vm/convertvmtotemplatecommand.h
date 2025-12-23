@@ -28,9 +28,9 @@
 #ifndef CONVERTVMTOTEMPLATECOMMAND_H
 #define CONVERTVMTOTEMPLATECOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
-class ConvertVMToTemplateCommand : public Command
+class ConvertVMToTemplateCommand : public VMCommand
 {
     Q_OBJECT
 
@@ -43,9 +43,7 @@ class ConvertVMToTemplateCommand : public Command
         QString MenuText() const override;
 
     private:
-        QString getSelectedVMRef() const;
-        QString getSelectedVMName() const;
-        bool canConvertToTemplate(const QString& vmRef) const;
+        bool canConvertToTemplate() const;
 };
 
 #endif // CONVERTVMTOTEMPLATECOMMAND_H

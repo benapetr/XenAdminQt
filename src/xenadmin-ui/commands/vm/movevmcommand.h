@@ -28,9 +28,9 @@
 #ifndef MOVEVMCOMMAND_H
 #define MOVEVMCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
-class MoveVMCommand : public Command
+class MoveVMCommand : public VMCommand
 {
     Q_OBJECT
 
@@ -43,7 +43,6 @@ class MoveVMCommand : public Command
         QString MenuText() const override;
 
     private:
-        QString getSelectedVMRef() const;
         bool canVMBeMoved() const;
 };
 
