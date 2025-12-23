@@ -28,7 +28,7 @@
 #include "bootoptionseditpage.h"
 #include "ui_bootoptionseditpage.h"
 #include "../../xenlib/xen/asyncoperation.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xen/session.h"
 #include "../../xenlib/xen/api.h"
 #include <QMessageBox>
@@ -36,11 +36,11 @@
 BootOptionsEditPage::BootOptionsEditPage(QWidget* parent)
     : IEditPage(parent), ui(new Ui::BootOptionsEditPage), m_origAutoBoot(false)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
-    connect(ui->buttonUp, &QPushButton::clicked, this, &BootOptionsEditPage::onMoveUpClicked);
-    connect(ui->buttonDown, &QPushButton::clicked, this, &BootOptionsEditPage::onMoveDownClicked);
-    connect(ui->listWidgetBootOrder, &QListWidget::currentRowChanged,
+    connect(this->ui->buttonUp, &QPushButton::clicked, this, &BootOptionsEditPage::onMoveUpClicked);
+    connect(this->ui->buttonDown, &QPushButton::clicked, this, &BootOptionsEditPage::onMoveDownClicked);
+    connect(this->ui->listWidgetBootOrder, &QListWidget::currentRowChanged,
             this, &BootOptionsEditPage::onSelectionChanged);
 }
 
@@ -56,9 +56,9 @@ QString BootOptionsEditPage::text() const
 
 QString BootOptionsEditPage::subText() const
 {
-    if (isHVM())
+    if (this->isHVM())
     {
-        QString order = getBootOrder();
+        QString order = this->getBootOrder();
         QString devices;
         for (QChar c : order)
         {
@@ -72,7 +72,7 @@ QString BootOptionsEditPage::subText() const
                 devices += tr("Network");
         }
 
-        if (ui->checkBoxAutoBoot->isChecked())
+        if (this->ui->checkBoxAutoBoot->isChecked())
         {
             return tr("Auto-start; Boot order: %1").arg(devices.isEmpty() ? tr("Default") : devices);
         } else
@@ -81,13 +81,13 @@ QString BootOptionsEditPage::subText() const
         }
     }
 
-    if (ui->checkBoxAutoBoot->isChecked())
+    if (this->ui->checkBoxAutoBoot->isChecked())
     {
         return tr("Auto-start enabled");
     }
 
     return tr("No specific boot order");
-}
+} 
 
 QIcon BootOptionsEditPage::image() const
 {
@@ -99,58 +99,58 @@ void BootOptionsEditPage::setXenObjects(const QString& objectRef,
                                         const QVariantMap& objectDataBefore,
                                         const QVariantMap& objectDataCopy)
 {
-    m_vmRef = objectRef;
-    m_objectDataBefore = objectDataBefore;
-    m_objectDataCopy = objectDataCopy;
+    this->m_vmRef = objectRef;
+    this->m_objectDataBefore = objectDataBefore;
+    this->m_objectDataCopy = objectDataCopy;
 
     // Get auto-boot setting from other_config
     QVariantMap otherConfig = objectDataBefore.value("other_config").toMap();
-    m_origAutoBoot = (otherConfig.value("auto_poweron", "false").toString() == "true");
-    ui->checkBoxAutoBoot->setChecked(m_origAutoBoot);
+    this->m_origAutoBoot = (otherConfig.value("auto_poweron", "false").toString() == "true");
+    this->ui->checkBoxAutoBoot->setChecked(this->m_origAutoBoot);
 
     // Get boot order from HVM_boot_params
     QVariantMap hvmBootParams = objectDataBefore.value("HVM_boot_params").toMap();
-    m_origBootOrder = hvmBootParams.value("order", "dc").toString().toUpper();
+    this->m_origBootOrder = hvmBootParams.value("order", "dc").toString().toUpper();
 
     // Get PV args
-    m_origPVArgs = objectDataBefore.value("PV_args", "").toString();
-    ui->lineEditOsParams->setText(m_origPVArgs);
+    this->m_origPVArgs = objectDataBefore.value("PV_args", "").toString();
+    this->ui->lineEditOsParams->setText(this->m_origPVArgs);
 
     // Check if HVM or PV
     bool vmIsHVM = objectDataBefore.value("HVM_boot_policy", "").toString() != "";
 
     // Show/hide appropriate sections
-    ui->groupBoxBootOrder->setEnabled(vmIsHVM);
-    ui->groupBoxPVParams->setVisible(!vmIsHVM);
+    this->ui->groupBoxBootOrder->setEnabled(vmIsHVM);
+    this->ui->groupBoxPVParams->setVisible(!vmIsHVM);
 
     if (vmIsHVM)
     {
-        populateBootOrder(m_origBootOrder);
+        this->populateBootOrder(this->m_origBootOrder);
     }
 
-    updateButtonStates();
-}
+    this->updateButtonStates();
+} 
 
 AsyncOperation* BootOptionsEditPage::saveSettings()
 {
-    if (!hasChanged())
+    if (!this->hasChanged())
     {
         return nullptr;
     }
 
     // Update objectDataCopy
-    QVariantMap otherConfig = m_objectDataCopy.value("other_config").toMap();
-    otherConfig["auto_poweron"] = ui->checkBoxAutoBoot->isChecked() ? "true" : "false";
-    m_objectDataCopy["other_config"] = otherConfig;
+    QVariantMap otherConfig = this->m_objectDataCopy.value("other_config").toMap();
+    otherConfig["auto_poweron"] = this->ui->checkBoxAutoBoot->isChecked() ? "true" : "false";
+    this->m_objectDataCopy["other_config"] = otherConfig;
 
-    if (isHVM())
+    if (this->isHVM())
     {
-        QVariantMap hvmBootParams = m_objectDataCopy.value("HVM_boot_params").toMap();
-        hvmBootParams["order"] = getBootOrder().toLower();
-        m_objectDataCopy["HVM_boot_params"] = hvmBootParams;
+        QVariantMap hvmBootParams = this->m_objectDataCopy.value("HVM_boot_params").toMap();
+        hvmBootParams["order"] = this->getBootOrder().toLower();
+        this->m_objectDataCopy["HVM_boot_params"] = hvmBootParams;
     } else
     {
-        m_objectDataCopy["PV_args"] = ui->lineEditOsParams->text();
+        this->m_objectDataCopy["PV_args"] = this->ui->lineEditOsParams->text();
     }
 
     // Return inline AsyncOperation for boot order changes
@@ -229,10 +229,10 @@ AsyncOperation* BootOptionsEditPage::saveSettings()
 
     return new BootOptionsOperation(this->m_connection, this->m_vmRef,
                                     this->ui->checkBoxAutoBoot->isChecked(),
-                                    getBootOrder(),
+                                    this->getBootOrder(),
                                     this->ui->lineEditOsParams->text(),
-                                    isHVM(), nullptr);
-}
+                                    this->isHVM(), nullptr);
+} 
 
 bool BootOptionsEditPage::isValidToSave() const
 {
@@ -256,42 +256,42 @@ void BootOptionsEditPage::cleanup()
 
 bool BootOptionsEditPage::hasChanged() const
 {
-    bool autoBootChanged = (ui->checkBoxAutoBoot->isChecked() != m_origAutoBoot);
+    bool autoBootChanged = (this->ui->checkBoxAutoBoot->isChecked() != this->m_origAutoBoot);
 
-    if (isHVM())
+    if (this->isHVM())
     {
-        bool bootOrderChanged = (getBootOrder() != m_origBootOrder);
+        bool bootOrderChanged = (this->getBootOrder() != this->m_origBootOrder);
         return autoBootChanged || bootOrderChanged;
     } else
     {
-        bool pvArgsChanged = (ui->lineEditOsParams->text() != m_origPVArgs);
+        bool pvArgsChanged = (this->ui->lineEditOsParams->text() != this->m_origPVArgs);
         return autoBootChanged || pvArgsChanged;
     }
-}
+} 
 
 void BootOptionsEditPage::onMoveUpClicked()
 {
-    int currentRow = ui->listWidgetBootOrder->currentRow();
+    int currentRow = this->ui->listWidgetBootOrder->currentRow();
     if (currentRow > 0)
     {
-        QListWidgetItem* item = ui->listWidgetBootOrder->takeItem(currentRow);
-        ui->listWidgetBootOrder->insertItem(currentRow - 1, item);
-        ui->listWidgetBootOrder->setCurrentRow(currentRow - 1);
+        QListWidgetItem* item = this->ui->listWidgetBootOrder->takeItem(currentRow);
+        this->ui->listWidgetBootOrder->insertItem(currentRow - 1, item);
+        this->ui->listWidgetBootOrder->setCurrentRow(currentRow - 1);
     }
-    updateButtonStates();
-}
+    this->updateButtonStates();
+} 
 
 void BootOptionsEditPage::onMoveDownClicked()
 {
-    int currentRow = ui->listWidgetBootOrder->currentRow();
-    if (currentRow >= 0 && currentRow < ui->listWidgetBootOrder->count() - 1)
+    int currentRow = this->ui->listWidgetBootOrder->currentRow();
+    if (currentRow >= 0 && currentRow < this->ui->listWidgetBootOrder->count() - 1)
     {
-        QListWidgetItem* item = ui->listWidgetBootOrder->takeItem(currentRow);
-        ui->listWidgetBootOrder->insertItem(currentRow + 1, item);
-        ui->listWidgetBootOrder->setCurrentRow(currentRow + 1);
+        QListWidgetItem* item = this->ui->listWidgetBootOrder->takeItem(currentRow);
+        this->ui->listWidgetBootOrder->insertItem(currentRow + 1, item);
+        this->ui->listWidgetBootOrder->setCurrentRow(currentRow + 1);
     }
-    updateButtonStates();
-}
+    this->updateButtonStates();
+} 
 
 void BootOptionsEditPage::onSelectionChanged()
 {
@@ -300,7 +300,7 @@ void BootOptionsEditPage::onSelectionChanged()
 
 void BootOptionsEditPage::populateBootOrder(const QString& bootOrder)
 {
-    ui->listWidgetBootOrder->clear();
+    this->ui->listWidgetBootOrder->clear();
 
     // Add devices in the specified order
     for (QChar c : bootOrder)
@@ -319,7 +319,7 @@ void BootOptionsEditPage::populateBootOrder(const QString& bootOrder)
             item->setText(tr("Network (N)"));
             item->setData(Qt::UserRole, 'N');
         }
-        ui->listWidgetBootOrder->addItem(item);
+        this->ui->listWidgetBootOrder->addItem(item);
     }
 
     // Add any missing devices at the end
@@ -342,32 +342,32 @@ void BootOptionsEditPage::populateBootOrder(const QString& bootOrder)
                 item->setText(tr("Network (N)"));
                 item->setData(Qt::UserRole, 'N');
             }
-            ui->listWidgetBootOrder->addItem(item);
+            this->ui->listWidgetBootOrder->addItem(item);
         }
     }
-}
+} 
 
 QString BootOptionsEditPage::getBootOrder() const
 {
     QString order;
-    for (int i = 0; i < ui->listWidgetBootOrder->count(); ++i)
+    for (int i = 0; i < this->ui->listWidgetBootOrder->count(); ++i)
     {
-        QListWidgetItem* item = ui->listWidgetBootOrder->item(i);
+        QListWidgetItem* item = this->ui->listWidgetBootOrder->item(i);
         order += item->data(Qt::UserRole).toChar();
     }
     return order;
-}
+} 
 
 bool BootOptionsEditPage::isHVM() const
 {
-    return m_objectDataBefore.value("HVM_boot_policy", "").toString() != "";
-}
+    return this->m_objectDataBefore.value("HVM_boot_policy", "").toString() != "";
+} 
 
 void BootOptionsEditPage::updateButtonStates()
 {
-    int currentRow = ui->listWidgetBootOrder->currentRow();
-    int count = ui->listWidgetBootOrder->count();
+    int currentRow = this->ui->listWidgetBootOrder->currentRow();
+    int count = this->ui->listWidgetBootOrder->count();
 
-    ui->buttonUp->setEnabled(currentRow > 0);
-    ui->buttonDown->setEnabled(currentRow >= 0 && currentRow < count - 1);
+    this->ui->buttonUp->setEnabled(currentRow > 0);
+    this->ui->buttonDown->setEnabled(currentRow >= 0 && currentRow < count - 1);
 }

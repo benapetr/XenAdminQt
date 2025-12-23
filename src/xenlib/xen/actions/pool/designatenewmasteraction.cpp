@@ -26,8 +26,8 @@
  */
 
 #include "designatenewmasteraction.h"
-#include "../../../xen/connection.h"
-#include "../../../xen/session.h"
+#include "../../network/connection.h"
+#include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include <stdexcept>
 

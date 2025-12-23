@@ -28,7 +28,7 @@
 #include "hostautostarteditpage.h"
 #include "ui_hostautostarteditpage.h"
 #include "../../xenlib/xen/actions/host/changehostautostartaction.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xencache.h"
 #include <QIcon>
 

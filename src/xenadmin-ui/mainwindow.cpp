@@ -63,7 +63,7 @@
 #include "groupingtag.h"
 #include "grouping.h"
 #include "xen/api.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/actions/vm/vmrebootaction.h"
 #include "operations/operationmanager.h"

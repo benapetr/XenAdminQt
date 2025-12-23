@@ -26,7 +26,7 @@
  */
 
 #include "movevirtualdiskaction.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/xenapi/xenapi_VDI.h"
 #include "xen/xenapi/xenapi_VBD.h"
 #include "xen/xenapi/xenapi_VM.h"

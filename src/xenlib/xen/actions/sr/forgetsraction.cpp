@@ -27,7 +27,7 @@
 
 #include "forgetsraction.h"
 #include "../../../xencache.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../xenapi/xenapi_SR.h"
 
 ForgetSrAction::ForgetSrAction(XenConnection* connection,

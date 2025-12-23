@@ -31,16 +31,16 @@ SOURCES += \
     queryfilter.cpp \
     query.cpp \
     search.cpp \
-    xen/connection.cpp \
-    xen/connectionworker.cpp \
+    xen/network/connection.cpp \
+    xen/network/connectionworker.cpp \
     xen/session.cpp \
     xen/api.cpp \
     xen/apiversion.cpp \
     xen/jsonrpcclient.cpp \
     xen/asyncoperations.cpp \
     xen/eventpoller.cpp \
-    xen/certificatemanager.cpp \
-    xen/heartbeat.cpp \
+    xen/network/certificatemanager.cpp \
+    xen/network/heartbeat.cpp \
     xen/failure.cpp \
     xen/friendlyerrornames.cpp \
     xen/asyncoperation.cpp \
@@ -136,7 +136,7 @@ SOURCES += \
     xen/actions/vif/updatevifaction.cpp \
     xen/actions/delegatedasyncoperation.cpp \
     utils/encryption.cpp \
-    collections/connectionsmanager.cpp \
+    xen/network/connectionsmanager.cpp \
     operations/producerconsumerqueue.cpp \
     operations/multipleoperation.cpp \
     operations/paralleloperation.cpp \
@@ -167,16 +167,16 @@ HEADERS += \
     queryfilter.h \
     query.h \
     search.h \
-    xen/connection.h \
-    xen/connectionworker.h \
+    xen/network/connection.h \
+    xen/network/connectionworker.h \
     xen/session.h \
     xen/api.h \
     xen/apiversion.h \
     xen/jsonrpcclient.h \
     xen/asyncoperations.h \
     xen/eventpoller.h \
-    xen/certificatemanager.h \
-    xen/heartbeat.h \
+    xen/network/certificatemanager.h \
+    xen/network/heartbeat.h \
     xen/failure.h \
     xen/friendlyerrornames.h \
     xen/asyncoperation.h \
@@ -272,7 +272,7 @@ HEADERS += \
     xen/actions/delegatedasyncoperation.h \
     utils/encryption.h \
     collections/observablelist.h \
-    collections/connectionsmanager.h \
+    xen/network/connectionsmanager.h \
     operations/producerconsumerqueue.h \
     operations/multipleoperation.h \
     operations/paralleloperation.h \

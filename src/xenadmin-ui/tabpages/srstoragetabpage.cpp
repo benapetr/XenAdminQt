@@ -29,7 +29,7 @@
 #include "ui_srstoragetabpage.h"
 #include "xenlib.h"
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/api.h"
 #include "xen/xenapi/xenapi_VDI.h"
 #include "dialogs/movevirtualdiskdialog.h"

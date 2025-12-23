@@ -28,8 +28,8 @@
 #include "connection.h"
 #include "connectionworker.h"
 #include "certificatemanager.h"
-#include "session.h"
-#include "../xencache.h"
+#include "../session.h"
+#include "../../xencache.h"
 #include <QtCore/QMutex>
 #include <QtCore/QDebug>
 #include <QtCore/QDateTime>

@@ -29,7 +29,7 @@
 #include "../../dialogs/commanderrordialog.h"
 #include "xenlib.h"
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/session.h"
 #include "xen/failure.h"
 #include "xen/xenapi/xenapi_VM.h"

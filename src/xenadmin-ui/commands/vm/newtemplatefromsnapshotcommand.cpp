@@ -28,7 +28,7 @@
 #include "newtemplatefromsnapshotcommand.h"
 #include "../../../xenlib/xen/actions/vm/vmcloneaction.h"
 #include "../../../xenlib/xen/xenapi/xenapi_VM.h"
-#include "../../../xenlib/xen/connection.h"
+#include "../../../xenlib/xen/network/connection.h"
 #include "../../../xenlib/xen/vm.h"
 #include "../../../xenlib/xenlib.h"
 #include "../../../xenlib/xencache.h"

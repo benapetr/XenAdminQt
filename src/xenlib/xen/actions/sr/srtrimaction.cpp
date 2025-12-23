@@ -26,7 +26,7 @@
  */
 
 #include "srtrimaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../sr.h"
 #include "../../host.h"

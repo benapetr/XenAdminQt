@@ -26,7 +26,7 @@
  */
 
 #include "changevcpusettingsaction.h"
-#include "../../../xen/connection.h"
+#include "../../../xen/network/connection.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../../xencache.h"
 #include <stdexcept>

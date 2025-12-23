@@ -26,7 +26,7 @@
  */
 
 #include "metricupdater.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/session.h"
 #include <QXmlStreamReader>
 #include <QDateTime>

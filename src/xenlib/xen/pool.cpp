@@ -26,7 +26,7 @@
  */
 
 #include "pool.h"
-#include "connection.h"
+#include "network/connection.h"
 #include "../xenlib.h"
 
 Pool::Pool(XenConnection* connection, const QString& opaqueRef, QObject* parent)

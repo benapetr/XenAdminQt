@@ -37,9 +37,13 @@ QT_FORWARD_DECLARE_CLASS(XenSession)
 QT_FORWARD_DECLARE_CLASS(XenRpcAPI)
 QT_FORWARD_DECLARE_CLASS(XenAsyncOperations)
 QT_FORWARD_DECLARE_CLASS(XenCertificateManager)
-QT_FORWARD_DECLARE_CLASS(ConnectionsManager)
 QT_FORWARD_DECLARE_CLASS(XenCache)
 QT_FORWARD_DECLARE_CLASS(MetricUpdater)
+
+namespace Xen
+{
+    QT_FORWARD_DECLARE_CLASS(ConnectionsManager)
+}
 
 class XENLIB_EXPORT XenLib : public QObject
 {
@@ -62,7 +66,7 @@ class XENLIB_EXPORT XenLib : public QObject
         XenConnection* getConnection() const;
         XenAsyncOperations* getAsyncOperations() const;
         XenCertificateManager* getCertificateManager() const;
-        ConnectionsManager* getConnectionsManager() const;
+        Xen::ConnectionsManager* getConnectionsManager() const;
         // Cache is per-connection; each XenConnection owns its own XenCache instance.
         XenCache* getCache() const;
         MetricUpdater* getMetricUpdater() const;

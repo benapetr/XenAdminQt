@@ -26,12 +26,14 @@
  */
 
 #include "connectionsmanager.h"
-#include "../xen/heartbeat.h"
-#include "../xen/session.h"
+#include "heartbeat.h"
+#include "../session.h"
 #include <QtCore/QDebug>
 #include <QtCore/QThread>
 #include <QtCore/QMutexLocker>
 #include <QtCore/QDateTime>
+
+using namespace Xen;
 
 // Define static members
 ConnectionsManager* ConnectionsManager::s_instance = nullptr;
@@ -61,41 +63,41 @@ ConnectionsManager::ConnectionsManager(QObject* parent)
     : QObject(parent), m_connections(new ObservableList<XenConnection*>(this)), m_monitoringTimer(new QTimer(this)), m_isMonitoring(false), m_autoReconnectionEnabled(false)
 {
     // Connect to collection events
-    connect(m_connections, &ObservableListBase::collectionChanged,
+    connect(this->m_connections, &ObservableListBase::collectionChanged,
             this, &ConnectionsManager::connectionsChanged);
-    connect(m_connections, &ObservableListBase::cleared,
+    connect(this->m_connections, &ObservableListBase::cleared,
             this, &ConnectionsManager::connectionsChanged);
 
     // Setup monitoring timer
-    m_monitoringTimer->setInterval(MONITORING_INTERVAL_MS);
-    m_monitoringTimer->setSingleShot(false);
-    connect(m_monitoringTimer, &QTimer::timeout,
+    this->m_monitoringTimer->setInterval(MONITORING_INTERVAL_MS);
+    this->m_monitoringTimer->setSingleShot(false);
+    connect(this->m_monitoringTimer, &QTimer::timeout,
             this, &ConnectionsManager::onMonitoringTimer);
 }
 
 ConnectionsManager::~ConnectionsManager()
 {
-    stopConnectionMonitoring();
-    disconnectAll();
+    this->stopConnectionMonitoring();
+    this->disconnectAll();
 
     // Clean up all connections
-    auto connections = m_connections->toList();
+    auto connections = this->m_connections->toList();
     for (XenConnection* conn : connections)
     {
-        cleanupConnection(conn);
+        this->cleanupConnection(conn);
     }
-    m_connections->clear();
+    this->m_connections->clear();
 }
 
 void ConnectionsManager::addConnection(XenConnection* connection)
 {
-    if (!connection || containsConnection(connection))
+    if (!connection || this->containsConnection(connection))
     {
         return;
     }
 
-    setupConnection(connection);
-    m_connections->append(connection);
+    this->setupConnection(connection);
+    this->m_connections->append(connection);
 
     emit connectionAdded(connection);
     qDebug() << "Added connection:" << connection->getHostname() << ":" << connection->getPort();
@@ -103,19 +105,19 @@ void ConnectionsManager::addConnection(XenConnection* connection)
 
 void ConnectionsManager::removeConnection(XenConnection* connection)
 {
-    if (!connection || !containsConnection(connection))
+    if (!connection || !this->containsConnection(connection))
     {
         return;
     }
 
-    cleanupConnection(connection);
-    m_connections->removeOne(connection);
+    this->cleanupConnection(connection);
+    this->m_connections->removeOne(connection);
 
     emit connectionRemoved(connection);
     qDebug() << "Removed connection:" << connection->getHostname() << ":" << connection->getPort();
 
     // Check if all connections are now disconnected
-    if (getConnectedConnections().isEmpty())
+    if (this->getConnectedConnections().isEmpty())
     {
         emit allConnectionsDisconnected();
     }
@@ -123,12 +125,12 @@ void ConnectionsManager::removeConnection(XenConnection* connection)
 
 bool ConnectionsManager::containsConnection(XenConnection* connection) const
 {
-    return m_connections->contains(connection);
+    return this->m_connections->contains(connection);
 }
 
 XenConnection* ConnectionsManager::findConnectionByHostname(const QString& hostname, int port) const
 {
-    auto connections = m_connections->toList();
+    auto connections = this->m_connections->toList();
     for (XenConnection* conn : connections)
     {
         if (conn->getHostname() == hostname)
@@ -145,7 +147,7 @@ XenConnection* ConnectionsManager::findConnectionByHostname(const QString& hostn
 QList<XenConnection*> ConnectionsManager::getConnectedConnections() const
 {
     QList<XenConnection*> connected;
-    auto connections = m_connections->toList();
+    auto connections = this->m_connections->toList();
 
     for (XenConnection* conn : connections)
     {
@@ -159,12 +161,12 @@ QList<XenConnection*> ConnectionsManager::getConnectedConnections() const
 
 QList<XenConnection*> ConnectionsManager::getAllConnections() const
 {
-    return m_connections->toList();
+    return this->m_connections->toList();
 }
 
 int ConnectionsManager::connectionCount() const
 {
-    return m_connections->size();
+    return this->m_connections->size();
 }
 
 XenSession* ConnectionsManager::acquireSession(XenConnection* connection)
@@ -175,10 +177,10 @@ XenSession* ConnectionsManager::acquireSession(XenConnection* connection)
         return nullptr;
     }
 
-    QMutexLocker locker(&m_sessionPoolMutex);
+    QMutexLocker locker(&this->m_sessionPoolMutex);
 
     // Check if we have any available sessions in the pool for this connection
-    QList<XenSession*>& pool = m_sessionPool[connection];
+    QList<XenSession*>& pool = this->m_sessionPool[connection];
 
     if (!pool.isEmpty())
     {
@@ -202,10 +204,10 @@ void ConnectionsManager::releaseSession(XenSession* session)
         return;
     }
 
-    QMutexLocker locker(&m_sessionPoolMutex);
+    QMutexLocker locker(&this->m_sessionPoolMutex);
 
     // Find which connection this session belongs to
-    XenConnection* connection = m_sessionToConnection.value(session);
+    XenConnection* connection = this->m_sessionToConnection.value(session);
     if (!connection)
     {
         qWarning() << "Cannot release session: connection not found";
@@ -216,7 +218,7 @@ void ConnectionsManager::releaseSession(XenSession* session)
     }
 
     // Return the session to the pool
-    QList<XenSession*>& pool = m_sessionPool[connection];
+    QList<XenSession*>& pool = this->m_sessionPool[connection];
     if (!pool.contains(session))
     {
         pool.append(session);
@@ -243,7 +245,7 @@ void ConnectionsManager::connectAll()
 
 void ConnectionsManager::disconnectAll()
 {
-    auto connections = m_connections->toList();
+    auto connections = this->m_connections->toList();
     for (XenConnection* conn : connections)
     {
         if (conn && conn->isConnected())
@@ -264,33 +266,33 @@ void ConnectionsManager::cancelAllOperations(XenConnection* connection)
     {
         // Cancel operations for all connections
         qDebug() << "Canceling operations for all connections";
-        disconnectAll();
+        this->disconnectAll();
     }
 }
 
 void ConnectionsManager::startConnectionMonitoring()
 {
-    if (!m_isMonitoring)
+    if (!this->m_isMonitoring)
     {
-        m_isMonitoring = true;
-        m_monitoringTimer->start();
+        this->m_isMonitoring = true;
+        this->m_monitoringTimer->start();
         qDebug() << "Started connection monitoring";
     }
 }
 
 void ConnectionsManager::stopConnectionMonitoring()
 {
-    if (m_isMonitoring)
+    if (this->m_isMonitoring)
     {
-        m_isMonitoring = false;
-        m_monitoringTimer->stop();
+        this->m_isMonitoring = false;
+        this->m_monitoringTimer->stop();
         qDebug() << "Stopped connection monitoring";
     }
 }
 
 bool ConnectionsManager::isMonitoring() const
 {
-    return m_isMonitoring;
+    return this->m_isMonitoring;
 }
 
 void ConnectionsManager::onConnectionConnected()
@@ -298,19 +300,19 @@ void ConnectionsManager::onConnectionConnected()
     XenConnection* connection = qobject_cast<XenConnection*>(sender());
     if (connection)
     {
-        m_connectionStates[connection] = "connected";
+        this->m_connectionStates[connection] = "connected";
         emit connectionStateChanged(connection, true);
         qDebug() << "Connection established:" << connection->getHostname();
 
         // Start heartbeat monitoring for this connection
-        XenHeartbeat* heartbeat = m_heartbeats.value(connection);
+        XenHeartbeat* heartbeat = this->m_heartbeats.value(connection);
         if (heartbeat)
         {
             heartbeat->start();
         }
 
         // Stop reconnection timer for this connection since it's now connected
-        QTimer* timer = m_reconnectionTimers.value(connection);
+        QTimer* timer = this->m_reconnectionTimers.value(connection);
         if (timer && timer->isActive())
         {
             timer->stop();
@@ -326,12 +328,12 @@ void ConnectionsManager::onConnectionDisconnected()
         return;
     }
 
-    m_connectionStates[connection] = "disconnected";
+    this->m_connectionStates[connection] = "disconnected";
     emit connectionStateChanged(connection, false);
     qDebug() << "Connection lost:" << connection->getHostname();
 
     // Stop heartbeat monitoring for this connection
-    XenHeartbeat* heartbeat = m_heartbeats.value(connection);
+    XenHeartbeat* heartbeat = this->m_heartbeats.value(connection);
     if (heartbeat)
     {
         heartbeat->stop();
@@ -365,20 +367,20 @@ void ConnectionsManager::onConnectionDisconnected()
         }
 
         // Start searching for new coordinator with initial timeout
-        startCoordinatorSearchTimer(connection, SEARCH_NEW_COORDINATOR_TIMEOUT_MS);
+        this->startCoordinatorSearchTimer(connection, SEARCH_NEW_COORDINATOR_TIMEOUT_MS);
     } else
     {
         qDebug() << "ConnectionsManager: Simple reconnection (single host or no HA)";
 
         // Simple reconnection for standalone hosts
-        if (m_autoReconnectionEnabled)
+        if (this->m_autoReconnectionEnabled)
         {
-            reconnectConnection(connection);
+            this->reconnectConnection(connection);
         }
     }
 
     // Check if all connections are now disconnected
-    if (getConnectedConnections().isEmpty())
+    if (this->getConnectedConnections().isEmpty())
     {
         emit allConnectionsDisconnected();
     }
@@ -389,7 +391,7 @@ void ConnectionsManager::onConnectionError(const QString& error)
     XenConnection* connection = qobject_cast<XenConnection*>(sender());
     if (connection)
     {
-        m_connectionStates[connection] = "error";
+        this->m_connectionStates[connection] = "error";
         qWarning() << "Connection error for" << connection->getHostname() << ":" << error;
         emit connectionStateChanged(connection, false);
     }
@@ -397,7 +399,7 @@ void ConnectionsManager::onConnectionError(const QString& error)
 
 void ConnectionsManager::onMonitoringTimer()
 {
-    checkConnectionHealth();
+    this->checkConnectionHealth();
 }
 
 void ConnectionsManager::setupConnection(XenConnection* connection)
@@ -412,15 +414,15 @@ void ConnectionsManager::setupConnection(XenConnection* connection)
 
     // Create and setup heartbeat for this connection
     XenHeartbeat* heartbeat = new XenHeartbeat(connection, 15000, this); // 15 second timeout
-    m_heartbeats[connection] = heartbeat;
+    this->m_heartbeats[connection] = heartbeat;
 
     connect(heartbeat, &XenHeartbeat::connectionLost,
             this, [this, connection]() {
-                onHeartbeatConnectionLost(connection);
+                this->onHeartbeatConnectionLost(connection);
             });
 
     // Initialize state tracking
-    m_connectionStates[connection] = "new";
+    this->m_connectionStates[connection] = "new";
 }
 
 void ConnectionsManager::cleanupConnection(XenConnection* connection)
@@ -434,7 +436,7 @@ void ConnectionsManager::cleanupConnection(XenConnection* connection)
                this, &ConnectionsManager::onConnectionError);
 
     // Clean up heartbeat
-    XenHeartbeat* heartbeat = m_heartbeats.take(connection);
+    XenHeartbeat* heartbeat = this->m_heartbeats.take(connection);
     if (heartbeat)
     {
         heartbeat->stop();
@@ -442,7 +444,7 @@ void ConnectionsManager::cleanupConnection(XenConnection* connection)
     }
 
     // Clean up reconnection timer
-    QTimer* timer = m_reconnectionTimers.take(connection);
+    QTimer* timer = this->m_reconnectionTimers.take(connection);
     if (timer)
     {
         timer->stop();
@@ -450,22 +452,22 @@ void ConnectionsManager::cleanupConnection(XenConnection* connection)
     }
 
     // Clean up pooled sessions for this connection
-    QMutexLocker locker(&m_sessionPoolMutex);
-    QList<XenSession*> sessions = m_sessionPool.take(connection);
+    QMutexLocker locker(&this->m_sessionPoolMutex);
+    QList<XenSession*> sessions = this->m_sessionPool.take(connection);
     for (XenSession* session : sessions)
     {
         if (session)
         {
             session->logout();
-            m_sessionToConnection.remove(session);
+            this->m_sessionToConnection.remove(session);
             session->deleteLater();
         }
     }
 
     // Remove from state tracking
-    m_connectionStates.remove(connection);
-    m_lastConnectionAttempt.remove(connection);
-    m_lastConnectionAttempt.remove(connection);
+    this->m_connectionStates.remove(connection);
+    this->m_lastConnectionAttempt.remove(connection);
+    this->m_lastConnectionAttempt.remove(connection);
 
     // Ensure connection is disconnected
     if (connection->isConnected())
@@ -476,7 +478,7 @@ void ConnectionsManager::cleanupConnection(XenConnection* connection)
 
 void ConnectionsManager::checkConnectionHealth()
 {
-    auto connections = m_connections->toList();
+    auto connections = this->m_connections->toList();
     int connectedCount = 0;
     int totalCount = connections.size();
 
@@ -494,7 +496,7 @@ void ConnectionsManager::checkConnectionHealth()
 
 void ConnectionsManager::enableAutoReconnection(bool enabled)
 {
-    m_autoReconnectionEnabled = enabled;
+    this->m_autoReconnectionEnabled = enabled;
 
     if (enabled)
     {
@@ -504,7 +506,7 @@ void ConnectionsManager::enableAutoReconnection(bool enabled)
     {
         qDebug() << "Auto-reconnection disabled";
         // Stop all individual reconnection timers
-        for (auto timer : m_reconnectionTimers)
+        for (auto timer : this->m_reconnectionTimers)
         {
             if (timer && timer->isActive())
             {
@@ -516,18 +518,18 @@ void ConnectionsManager::enableAutoReconnection(bool enabled)
 
 bool ConnectionsManager::isAutoReconnectionEnabled() const
 {
-    return m_autoReconnectionEnabled;
+    return this->m_autoReconnectionEnabled;
 }
 
 void ConnectionsManager::reconnectConnection(XenConnection* connection)
 {
-    if (!connection || !m_autoReconnectionEnabled)
+    if (!connection || !this->m_autoReconnectionEnabled)
     {
         return;
     }
 
     QDateTime now = QDateTime::currentDateTime();
-    QDateTime lastAttempt = m_lastConnectionAttempt.value(connection, QDateTime());
+    QDateTime lastAttempt = this->m_lastConnectionAttempt.value(connection, QDateTime());
 
     // Rate limiting - don't retry more than once per 5 seconds
     if (lastAttempt.isValid() && lastAttempt.msecsTo(now) < RECONNECTION_SHORT_TIMEOUT_MS)
@@ -536,7 +538,7 @@ void ConnectionsManager::reconnectConnection(XenConnection* connection)
         return;
     }
 
-    m_lastConnectionAttempt[connection] = now;
+    this->m_lastConnectionAttempt[connection] = now;
 
     if (!connection->isConnected())
     {
@@ -548,7 +550,7 @@ void ConnectionsManager::reconnectConnection(XenConnection* connection)
         */
 
         // Setup a reconnection timer for this specific connection if it doesn't exist
-        if (!m_reconnectionTimers.contains(connection))
+        if (!this->m_reconnectionTimers.contains(connection))
         {
             QTimer* timer = new QTimer(this);
             timer->setInterval(RECONNECTION_TIMEOUT_MS);
@@ -557,11 +559,11 @@ void ConnectionsManager::reconnectConnection(XenConnection* connection)
             connect(timer, &QTimer::timeout, [this, connection]() {
                 if (connection && !connection->isConnected())
                 {
-                    reconnectConnection(connection);
+                    this->reconnectConnection(connection);
                 }
             });
 
-            m_reconnectionTimers[connection] = timer;
+            this->m_reconnectionTimers[connection] = timer;
             timer->start();
         }
     }
@@ -569,12 +571,12 @@ void ConnectionsManager::reconnectConnection(XenConnection* connection)
 
 void ConnectionsManager::reconnectAll()
 {
-    auto connections = m_connections->toList();
+    auto connections = this->m_connections->toList();
     for (XenConnection* conn : connections)
     {
         if (conn && !conn->isConnected())
         {
-            reconnectConnection(conn);
+            this->reconnectConnection(conn);
         }
     }
 }
@@ -589,7 +591,7 @@ void ConnectionsManager::onHeartbeatConnectionLost(XenConnection* connection)
     qWarning() << "Heartbeat detected connection loss for" << connection->getHostname();
 
     // Mark as disconnected
-    m_connectionStates[connection] = "heartbeat_lost";
+    this->m_connectionStates[connection] = "heartbeat_lost";
     emit connectionStateChanged(connection, false);
 
     // Use same failover logic as onConnectionDisconnected
@@ -613,10 +615,10 @@ void ConnectionsManager::onHeartbeatConnectionLost(XenConnection* connection)
             connection->setCurrentPoolMemberIndex(1); // Skip coordinator
         }
 
-        startCoordinatorSearchTimer(connection, SEARCH_NEW_COORDINATOR_TIMEOUT_MS);
-    } else if (m_autoReconnectionEnabled)
+        this->startCoordinatorSearchTimer(connection, SEARCH_NEW_COORDINATOR_TIMEOUT_MS);
+    } else if (this->m_autoReconnectionEnabled)
     {
-        reconnectConnection(connection);
+        this->reconnectConnection(connection);
     }
 }
 
@@ -631,11 +633,11 @@ void ConnectionsManager::startCoordinatorSearchTimer(XenConnection* connection, 
              << connection->getLastCoordinatorHostname() << "with timeout" << timeoutMs << "ms";
 
     // Create or reuse timer for this connection
-    QTimer* timer = m_reconnectionTimers.value(connection);
+    QTimer* timer = this->m_reconnectionTimers.value(connection);
     if (!timer)
     {
         timer = new QTimer(this);
-        m_reconnectionTimers[connection] = timer;
+        this->m_reconnectionTimers[connection] = timer;
     }
 
     timer->setSingleShot(true);
@@ -644,7 +646,7 @@ void ConnectionsManager::startCoordinatorSearchTimer(XenConnection* connection, 
     // Connect to tryNextPoolMember when timer fires
     disconnect(timer, nullptr, nullptr, nullptr); // Clear old connections
     connect(timer, &QTimer::timeout, this, [this, connection]() {
-        tryNextPoolMember(connection);
+        this->tryNextPoolMember(connection);
     });
 
     timer->start();
@@ -691,7 +693,7 @@ void ConnectionsManager::tryNextPoolMember(XenConnection* connection)
         qWarning() << "ConnectionsManager: Pool member connection not yet implemented";
 
         // Schedule next attempt with shorter timeout
-        startCoordinatorSearchTimer(connection, SEARCH_NEXT_SUPPORTER_TIMEOUT_MS);
+        this->startCoordinatorSearchTimer(connection, SEARCH_NEXT_SUPPORTER_TIMEOUT_MS);
     } else
     {
         // Tried all pool members, loop back if expecting disruption or within time limit
@@ -700,7 +702,7 @@ void ConnectionsManager::tryNextPoolMember(XenConnection* connection)
 
         if (connection->hasMorePoolMembers())
         {
-            startCoordinatorSearchTimer(connection, SEARCH_NEXT_SUPPORTER_TIMEOUT_MS);
+            this->startCoordinatorSearchTimer(connection, SEARCH_NEXT_SUPPORTER_TIMEOUT_MS);
         } else
         {
             qWarning() << "ConnectionsManager: No pool members available for failover";

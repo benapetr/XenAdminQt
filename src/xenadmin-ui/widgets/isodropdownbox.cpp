@@ -30,7 +30,7 @@
 #include "../../xenlib/xenlib.h"
 #include "../../xenlib/xencache.h"
 #include "../../xenlib/vmhelpers.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xen/session.h"
 #include "../../xenlib/xen/apiversion.h"
 #include <QStandardItemModel>

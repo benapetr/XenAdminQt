@@ -28,7 +28,7 @@
 #include "connectallhostscommand.h"
 #include "../../mainwindow.h"
 #include "xenlib.h"
-#include "collections/connectionsmanager.h"
+#include "xen/network//connectionsmanager.h"
 
 ConnectAllHostsCommand::ConnectAllHostsCommand(MainWindow* mainWindow, QObject* parent)
     : Command(mainWindow, parent)
@@ -46,7 +46,7 @@ void ConnectAllHostsCommand::run()
     if (!this->mainWindow()->xenLib())
         return;
 
-    ConnectionsManager* manager = this->mainWindow()->xenLib()->getConnectionsManager();
+    Xen::ConnectionsManager* manager = this->mainWindow()->xenLib()->getConnectionsManager();
     if (!manager)
         return;
 
@@ -64,7 +64,7 @@ bool ConnectAllHostsCommand::hasDisconnectedConnections() const
     if (!this->mainWindow()->xenLib())
         return false;
 
-    ConnectionsManager* manager = this->mainWindow()->xenLib()->getConnectionsManager();
+    Xen::ConnectionsManager* manager = this->mainWindow()->xenLib()->getConnectionsManager();
     if (!manager)
         return false;
 

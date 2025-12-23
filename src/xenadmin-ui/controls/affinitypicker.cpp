@@ -28,7 +28,7 @@
 #include "affinitypicker.h"
 #include "ui_affinitypicker.h"
 #include "../iconmanager.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/host.h"
 #include "xen/hostmetrics.h"
 #include "xen/sr.h"

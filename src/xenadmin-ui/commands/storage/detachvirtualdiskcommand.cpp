@@ -29,7 +29,7 @@
 #include "deactivatevbdcommand.h"
 #include "../../../xenlib/xencache.h"
 #include "../../../xenlib/xenlib.h"
-#include "../../../xenlib/xen/connection.h"
+#include "../../../xenlib/xen/network/connection.h"
 #include "../../../xenlib/xen/vm.h"
 #include "../../../xenlib/xen/actions/vdi/detachvirtualdiskaction.h"
 #include "../../mainwindow.h"

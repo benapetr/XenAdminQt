@@ -27,7 +27,7 @@
 
 #include "detachsraction.h"
 #include "../../../xencache.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../xenapi/xenapi_PBD.h"
 #include <QDebug>
 

@@ -29,7 +29,7 @@
 #include "ui_nicstabpage.h"
 #include "xenlib.h"
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/actions/network/createbondaction.h"
 #include "xen/actions/network/destroybondaction.h"
 #include "operations/operationmanager.h"

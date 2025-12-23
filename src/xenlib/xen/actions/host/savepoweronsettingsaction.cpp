@@ -26,7 +26,7 @@
  */
 
 #include "savepoweronsettingsaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../api.h"
 #include "../../../utils/misc.h"

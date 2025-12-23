@@ -28,14 +28,14 @@
 #include "vmenlightenmenteditpage.h"
 #include "ui_vmenlightenmenteditpage.h"
 #include "../../xenlib/xen/asyncoperation.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xen/session.h"
 #include "../../xenlib/xen/api.h"
 
 VMEnlightenmentEditPage::VMEnlightenmentEditPage(QWidget* parent)
     : IEditPage(parent), ui(new Ui::VMEnlightenmentEditPage), m_originalEnlightened(false)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 }
 
 VMEnlightenmentEditPage::~VMEnlightenmentEditPage()
@@ -50,7 +50,7 @@ QString VMEnlightenmentEditPage::text() const
 
 QString VMEnlightenmentEditPage::subText() const
 {
-    return ui->checkBoxEnlightenment->isChecked() ? tr("Enabled") : tr("Disabled");
+    return this->ui->checkBoxEnlightenment->isChecked() ? tr("Enabled") : tr("Disabled");
 }
 
 QIcon VMEnlightenmentEditPage::image() const
@@ -66,12 +66,12 @@ void VMEnlightenmentEditPage::setXenObjects(const QString& objectRef,
     Q_UNUSED(objectType);
     Q_UNUSED(objectDataCopy);
 
-    m_vmRef = objectRef;
+    this->m_vmRef = objectRef;
 
     // Check if VM is enlightened
     // In C#, this checks for platform:device_id in VM.platform
-    m_originalEnlightened = isVMEnlightened(objectDataBefore);
-    ui->checkBoxEnlightenment->setChecked(m_originalEnlightened);
+    this->m_originalEnlightened = this->isVMEnlightened(objectDataBefore);
+    this->ui->checkBoxEnlightenment->setChecked(this->m_originalEnlightened);
 }
 
 AsyncOperation* VMEnlightenmentEditPage::saveSettings()
@@ -81,7 +81,7 @@ AsyncOperation* VMEnlightenmentEditPage::saveSettings()
         return nullptr;
     }
 
-    bool enable = ui->checkBoxEnlightenment->isChecked();
+    bool enable = this->ui->checkBoxEnlightenment->isChecked();
 
     // Return inline AsyncOperation for enlightenment change
     class VMEnlightenmentOperation : public AsyncOperation
@@ -141,7 +141,7 @@ AsyncOperation* VMEnlightenmentEditPage::saveSettings()
     // Get VM UUID for plugin call
     QString vmUuid = ""; // TODO: Extract from objectDataBefore
 
-    return new VMEnlightenmentOperation(m_connection, m_vmRef, enable, vmUuid, this);
+    return new VMEnlightenmentOperation(this->m_connection, this->m_vmRef, enable, vmUuid, this);
 }
 
 bool VMEnlightenmentEditPage::isValidToSave() const
@@ -166,7 +166,7 @@ void VMEnlightenmentEditPage::cleanup()
 
 bool VMEnlightenmentEditPage::hasChanged() const
 {
-    return ui->checkBoxEnlightenment->isChecked() != m_originalEnlightened;
+    return this->ui->checkBoxEnlightenment->isChecked() != this->m_originalEnlightened;
 }
 
 bool VMEnlightenmentEditPage::isVMEnlightened(const QVariantMap& vmData) const

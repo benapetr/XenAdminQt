@@ -28,7 +28,7 @@
 #include "joinpoolcommand.h"
 #include "../../mainwindow.h"
 #include "xenlib.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/session.h"
 #include "xen/xenapi/xenapi_Pool.h"
 #include <QMessageBox>

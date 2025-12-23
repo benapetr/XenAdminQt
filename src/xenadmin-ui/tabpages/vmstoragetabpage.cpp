@@ -30,7 +30,7 @@
 #include "xenlib.h"
 #include "xencache.h"
 #include "xen/api.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/vdi.h"
 #include "xen/vbd.h"

@@ -31,7 +31,7 @@
 #include "shutdownapplianceaction.h"
 #include "../../xenapi/vm_appliance.h"
 #include "../../session.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include <stdexcept>
 
 // ============================================================================

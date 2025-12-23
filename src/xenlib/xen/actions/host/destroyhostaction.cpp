@@ -26,7 +26,7 @@
  */
 
 #include "destroyhostaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_Host.h"
 #include "../../xenapi/xenapi_SR.h"

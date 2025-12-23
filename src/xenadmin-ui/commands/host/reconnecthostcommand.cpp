@@ -28,8 +28,8 @@
 #include "reconnecthostcommand.h"
 #include "../../mainwindow.h"
 #include "xenlib.h"
-#include "xen/connection.h"
-#include "collections/connectionsmanager.h"
+#include "xen/network/connection.h"
+#include "xen/network/connectionsmanager.h"
 
 ReconnectHostCommand::ReconnectHostCommand(MainWindow* mainWindow, QObject* parent)
     : Command(mainWindow, parent)
@@ -51,7 +51,7 @@ void ReconnectHostCommand::run()
     if (!conn)
         return;
 
-    ConnectionsManager* manager = this->mainWindow()->xenLib()->getConnectionsManager();
+    Xen::ConnectionsManager* manager = this->mainWindow()->xenLib()->getConnectionsManager();
     if (!manager)
         return;
 

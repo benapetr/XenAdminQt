@@ -30,7 +30,7 @@
 #include "../dialogs/operationprogressdialog.h"
 #include "xenlib.h"
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/session.h"
 #include "xen/actions/pool/sethaprioritiesaction.h"
 #include <QMessageBox>

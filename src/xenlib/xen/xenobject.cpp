@@ -26,7 +26,7 @@
  */
 
 #include "xenobject.h"
-#include "connection.h"
+#include "network/connection.h"
 #include "../xencache.h"
 #include "../xenlib.h"
 

@@ -29,7 +29,7 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/connectdialog.h"
 #include "xenlib.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xencache.h"
 
 HostReconnectAsCommand::HostReconnectAsCommand(MainWindow* mainWindow, QObject* parent)

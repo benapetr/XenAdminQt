@@ -26,22 +26,15 @@
  */
 
 #include "snapshotstabpage.h"
-#include <QDebug>
 #include "ui_snapshotstabpage.h"
-#include <QDebug>
 #include "../mainwindow.h"
-#include <QDebug>
 #include "../commands/vm/takesnapshotcommand.h"
-#include <QDebug>
 #include "../commands/vm/deletesnapshotcommand.h"
-#include <QDebug>
 #include "../commands/vm/reverttosnapshotcommand.h"
-#include <QDebug>
 #include "xenlib.h"
-#include <QDebug>
 #include "xencache.h"
-#include <QDebug>
 #include <QDateTime>
+#include <QDebug>
 #include <QMessageBox>
 #include <QTimer>
 #include <QMenu>

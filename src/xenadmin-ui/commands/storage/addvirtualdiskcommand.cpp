@@ -28,23 +28,14 @@
 #include "addvirtualdiskcommand.h"
 #include <QDebug>
 #include "../../mainwindow.h"
-#include <QDebug>
 #include "../../dialogs/newvirtualdiskdialog.h"
-#include <QDebug>
 #include "../../dialogs/operationprogressdialog.h"
-#include <QDebug>
 #include "xenlib.h"
-#include <QDebug>
 #include "xencache.h"
-#include <QDebug>
-#include "xen/connection.h"
-#include <QDebug>
+#include "xen/network/connection.h"
 #include "xen/vm.h"
-#include <QDebug>
 #include "xen/actions/vdi/creatediskaction.h"
-#include <QDebug>
 #include "xen/actions/vbd/vbdcreateandplugaction.h"
-#include <QDebug>
 #include <QMessageBox>
 
 AddVirtualDiskCommand::AddVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)

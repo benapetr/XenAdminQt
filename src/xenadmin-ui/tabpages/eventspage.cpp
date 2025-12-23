@@ -29,7 +29,7 @@
 #include "ui_eventspage.h"
 #include "xenlib.h"
 #include "operations/operationmanager.h"
-#include <xen/connection.h>
+#include "xen/network/connection.h"
 #include <QDebug>
 #include <QMessageBox>
 #include <QPushButton>

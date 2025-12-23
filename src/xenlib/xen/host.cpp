@@ -26,7 +26,7 @@
  */
 
 #include "host.h"
-#include "connection.h"
+#include "network/connection.h"
 #include "../xenlib.h"
 
 Host::Host(XenConnection* connection, const QString& opaqueRef, QObject* parent)

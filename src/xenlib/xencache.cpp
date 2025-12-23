@@ -26,7 +26,7 @@
  */
 
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/host.h"
 #include "xen/hostmetrics.h"

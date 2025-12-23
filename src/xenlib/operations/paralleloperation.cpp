@@ -26,7 +26,7 @@
  */
 
 #include "paralleloperation.h"
-#include "../xen/connection.h"
+#include "../xen/network/connection.h"
 #include <QDebug>
 #include <algorithm>
 

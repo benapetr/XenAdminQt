@@ -33,7 +33,7 @@
 #include "xenlib.h"
 #include "../widgets/isodropdownbox.h"
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/actions/vm/vmstartaction.h"
 #include "xen/actions/vm/vmresumeaction.h"

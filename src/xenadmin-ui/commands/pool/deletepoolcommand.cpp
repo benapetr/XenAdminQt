@@ -29,7 +29,7 @@
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include "xenlib.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xencache.h"
 #include "xen/actions/pool/destroypoolaction.h"
 #include <QMessageBox>

@@ -31,7 +31,7 @@
 #include "operationprogressdialog.h"
 #include "../mainwindow.h"
 #include "../../xenlib/xenlib.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xen/session.h"
 #include "../../xenlib/xen/xenapi/xenapi_VM.h"
 #include "../../xenlib/xen/xenapi/xenapi_Host.h"

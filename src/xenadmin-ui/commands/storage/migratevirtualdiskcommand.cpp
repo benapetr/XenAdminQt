@@ -63,8 +63,7 @@ void MigrateVirtualDiskCommand::run()
     QVariantMap vdiData = this->xenLib()->getCache()->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Error"),
-                             tr("Unable to retrieve VDI information."));
+        QMessageBox::warning(this->mainWindow(), tr("Error"), tr("Unable to retrieve VDI information."));
         return;
     }
 

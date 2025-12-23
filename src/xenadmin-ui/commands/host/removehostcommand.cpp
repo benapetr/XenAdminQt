@@ -30,7 +30,7 @@
 #include "../../connectionprofile.h"
 #include "xenlib.h"
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include <QMessageBox>
 #include <QDebug>
 

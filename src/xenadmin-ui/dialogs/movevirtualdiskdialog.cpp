@@ -29,7 +29,7 @@
 #include "ui_movevirtualdiskdialog.h"
 #include "xenlib.h"
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/api.h"
 #include "xen/actions/vdi/movevirtualdiskaction.h"
 #include "../operations/operationmanager.h"
@@ -42,7 +42,7 @@ MoveVirtualDiskDialog::MoveVirtualDiskDialog(XenLib* xenLib, const QString& vdiR
                                              QWidget* parent)
     : QDialog(parent), ui(new Ui::MoveVirtualDiskDialog), m_xenLib(xenLib)
 {
-    m_vdiRefs << vdiRef;
+    this->m_vdiRefs << vdiRef;
     setupUI();
 }
 
@@ -78,19 +78,19 @@ void MoveVirtualDiskDialog::setupUI()
     ui->srTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 
     // Update window title for multiple VDIs
-    if (m_vdiRefs.count() > 1)
+    if (this->m_vdiRefs.count() > 1)
     {
-        setWindowTitle(QString("Move %1 Virtual Disks").arg(m_vdiRefs.count()));
+        setWindowTitle(QString("Move %1 Virtual Disks").arg(this->m_vdiRefs.count()));
     }
 
     // Get source SR(s) for filtering
-    for (const QString& vdiRef : m_vdiRefs)
+    for (const QString& vdiRef : this->m_vdiRefs)
     {
-        QVariantMap vdiData = m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
+        QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
         QString srRef = vdiData.value("SR").toString();
-        if (!srRef.isEmpty() && !m_sourceSRs.contains(srRef))
+        if (!srRef.isEmpty() && !this->m_sourceSRs.contains(srRef))
         {
-            m_sourceSRs << srRef;
+            this->m_sourceSRs << srRef;
         }
     }
 
@@ -105,16 +105,16 @@ void MoveVirtualDiskDialog::populateSRTable()
 {
     ui->srTable->setRowCount(0);
 
-    if (!m_xenLib)
+    if (!this->m_xenLib)
         return;
 
     // Get default SR from pool (for auto-selection)
     QString defaultSRRef;
-    XenConnection* connection = m_xenLib->getConnection();
+    XenConnection* connection = this->m_xenLib->getConnection();
     if (connection)
     {
         // Get pool data
-        QList<QVariantMap> pools = m_xenLib->getCache()->GetAllData("pool");
+        QList<QVariantMap> pools = this->m_xenLib->getCache()->GetAllData("pool");
         if (!pools.isEmpty())
         {
             defaultSRRef = pools.first().value("default_SR").toString();
@@ -122,7 +122,7 @@ void MoveVirtualDiskDialog::populateSRTable()
     }
 
     // Get all SRs
-    QList<QVariantMap> allSRs = m_xenLib->getCache()->GetAllData("sr");
+    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->GetAllData("sr");
 
     int row = 0;
     int rowToSelect = -1; // Track which row to auto-select
@@ -216,7 +216,7 @@ void MoveVirtualDiskDialog::populateSRTable()
 bool MoveVirtualDiskDialog::isValidDestination(const QString& srRef, const QVariantMap& srData)
 {
     // Exclude source SRs
-    if (m_sourceSRs.contains(srRef))
+    if (this->m_sourceSRs.contains(srRef))
         return false;
 
     // Exclude ISO SRs
@@ -234,7 +234,7 @@ bool MoveVirtualDiskDialog::isValidDestination(const QString& srRef, const QVari
     for (const QVariant& pbdRefVar : pbdRefs)
     {
         QString pbdRef = pbdRefVar.toString();
-        QVariantMap pbdData = m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
+        QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
         if (pbdData.value("currently_attached", false).toBool())
         {
             hasAttachedPBD = true;
@@ -267,9 +267,9 @@ qint64 MoveVirtualDiskDialog::getTotalVDISize() const
 {
     qint64 totalSize = 0;
 
-    for (const QString& vdiRef : m_vdiRefs)
+    for (const QString& vdiRef : this->m_vdiRefs)
     {
-        QVariantMap vdiData = m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
+        QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
         totalSize += vdiData.value("virtual_size", 0).toLongLong();
     }
 
@@ -317,15 +317,15 @@ void MoveVirtualDiskDialog::onSRDoubleClicked(int row, int column)
 void MoveVirtualDiskDialog::onRescanButtonClicked()
 {
     // Rescan all SRs
-    if (!m_xenLib)
+    if (!this->m_xenLib)
         return;
 
-    XenConnection* connection = m_xenLib->getConnection();
+    XenConnection* connection = this->m_xenLib->getConnection();
     if (!connection || !connection->isConnected())
         return;
 
     // Get all SRs and scan them
-    QList<QVariantMap> allSRs = m_xenLib->getCache()->GetAllData("sr");
+    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->GetAllData("sr");
     for (const QVariantMap& srData : allSRs)
     {
         QString srRef = srData.value("ref").toString();
@@ -334,7 +334,7 @@ void MoveVirtualDiskDialog::onRescanButtonClicked()
         QVariantList params;
         params << connection->getSessionId() << srRef;
 
-        QString jsonRequest = m_xenLib->getAPI()->buildJsonRpcCall("SR.scan", params);
+        QString jsonRequest = this->m_xenLib->getAPI()->buildJsonRpcCall("SR.scan", params);
         QByteArray requestData = jsonRequest.toUtf8();
         connection->sendRequestAsync(requestData);
     }
@@ -369,7 +369,7 @@ void MoveVirtualDiskDialog::onMoveButtonClicked()
         return;
 
     // Get target SR name
-    QVariantMap targetSRData = m_xenLib->getCache()->ResolveObjectData("sr", targetSRRef);
+    QVariantMap targetSRData = this->m_xenLib->getCache()->ResolveObjectData("sr", targetSRRef);
     QString targetSRName = targetSRData.value("name_label", "").toString();
 
     // Close dialog
@@ -384,15 +384,15 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
     // Create move operations
     OperationManager* opManager = OperationManager::instance();
 
-    if (m_vdiRefs.count() == 1)
+    if (this->m_vdiRefs.count() == 1)
     {
         // Single VDI move
-        QVariantMap vdiData = m_xenLib->getCache()->ResolveObjectData("vdi", m_vdiRefs.first());
+        QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", this->m_vdiRefs.first());
         QString vdiName = vdiData.value("name_label", "Virtual Disk").toString();
 
         MoveVirtualDiskAction* action = new MoveVirtualDiskAction(
-            m_xenLib->getConnection(),
-            m_vdiRefs.first(),
+            this->m_xenLib->getConnection(),
+            this->m_vdiRefs.first(),
             targetSRRef);
 
         action->setTitle(QString("Moving virtual disk '%1' to '%2'")
@@ -406,13 +406,13 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
     {
         // Multiple VDI move - batch in parallel (max 3 at a time)
         // C# uses ParallelAction with BATCH_SIZE=3
-        for (const QString& vdiRef : m_vdiRefs)
+        for (const QString& vdiRef : this->m_vdiRefs)
         {
-            QVariantMap vdiData = m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
+            QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
             QString vdiName = vdiData.value("name_label", "Virtual Disk").toString();
 
             MoveVirtualDiskAction* action = new MoveVirtualDiskAction(
-                m_xenLib->getConnection(),
+                this->m_xenLib->getConnection(),
                 vdiRef,
                 targetSRRef);
 

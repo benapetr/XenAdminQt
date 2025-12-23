@@ -26,7 +26,7 @@
  */
 
 #include "xenlib.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/session.h"
 #include "xen/api.h"
 #include "xen/xenapi/xenapi_VBD.h"
@@ -37,11 +37,11 @@
 #include "xen/xenapi/xenapi_SR.h"
 #include "xen/xenapi/xenapi_Network.h"
 #include "xen/asyncoperations.h"
-#include "xen/certificatemanager.h"
+#include "xen/network/certificatemanager.h"
 #include "xen/eventpoller.h"
 #include "xencache.h"
 #include "metricupdater.h"
-#include "collections/connectionsmanager.h"
+#include "xen/network/connectionsmanager.h"
 #include "utils/misc.h"
 #include <QtCore/QHash>
 #include <QtCore/QJsonDocument>
@@ -298,7 +298,7 @@ bool XenLib::connectToServer(const QString& hostname, int port, const QString& u
     this->d->pendingPassword = password;
 
     // Register connection with ConnectionsManager so tree builders can find it
-    ConnectionsManager* connMgr = ConnectionsManager::instance();
+    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     if (connMgr && !connMgr->containsConnection(this->d->connection))
     {
         connMgr->addConnection(this->d->connection);
@@ -340,7 +340,7 @@ void XenLib::disconnectFromServer()
         this->d->connection->disconnect();
 
         // Unregister connection from ConnectionsManager
-        ConnectionsManager* connMgr = ConnectionsManager::instance();
+        Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
         if (connMgr && connMgr->containsConnection(this->d->connection))
         {
             connMgr->removeConnection(this->d->connection);
@@ -381,9 +381,9 @@ XenCertificateManager* XenLib::getCertificateManager() const
     return this->d->certManager;
 }
 
-ConnectionsManager* XenLib::getConnectionsManager() const
+Xen::ConnectionsManager* XenLib::getConnectionsManager() const
 {
-    return ConnectionsManager::instance();
+    return Xen::ConnectionsManager::instance();
 }
 
 XenCache* XenLib::getCache() const

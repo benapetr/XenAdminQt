@@ -26,7 +26,7 @@
  */
 
 #include "session.h"
-#include "connection.h"
+#include "network/connection.h"
 #include "jsonrpcclient.h"
 #include <QtNetwork/QNetworkReply>
 #include <QtCore/QByteArray>
@@ -39,20 +39,20 @@
 
 class XenSession::Private
 {
-public:
-    XenConnection* connection = nullptr;
-    bool loggedIn = false;
-    QString sessionId;
-    QString username;
-    QString password; // Store password for session duplication
-    QString lastError;
-    QNetworkReply* currentReply = nullptr;
-    APIVersion apiVersion = APIVersion::UNKNOWN;
-    bool ownsSessionToken = false;
-    bool isDuplicate = false;
+    public:
+        XenConnection* connection = nullptr;
+        bool loggedIn = false;
+        QString sessionId;
+        QString username;
+        QString password; // Store password for session duplication
+        QString lastError;
+        QNetworkReply* currentReply = nullptr;
+        APIVersion apiVersion = APIVersion::UNKNOWN;
+        bool ownsSessionToken = false;
+        bool isDuplicate = false;
 
-    QString createLoginJsonRpc(const QString& username, const QString& password);
-    bool parseLoginResponse(const QByteArray& response, QString& sessionId);
+        QString createLoginJsonRpc(const QString& username, const QString& password);
+        bool parseLoginResponse(const QByteArray& response, QString& sessionId);
 };
 
 XenSession::XenSession(XenConnection* connection, QObject* parent)

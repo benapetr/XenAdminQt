@@ -26,7 +26,7 @@
  */
 
 #include "srrepairaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../../xencache.h"
 #include "../../sr.h"

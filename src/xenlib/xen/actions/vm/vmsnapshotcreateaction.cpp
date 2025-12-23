@@ -26,7 +26,7 @@
  */
 
 #include "vmsnapshotcreateaction.h"
-#include "../../../xen/connection.h"
+#include "../../../xen/network/connection.h"
 #include "../../../xencache.h"
 #include "../../xenapi/xenapi_VM.h"
 #include <QtCore/QDebug>

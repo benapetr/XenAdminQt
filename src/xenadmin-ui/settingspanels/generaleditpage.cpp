@@ -29,7 +29,7 @@
 #include "generaleditpage.h"
 #include "ui_generaleditpage.h"
 #include "../../xenlib/xen/actions/general/generaleditpageaction.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include <QIcon>
 #include <QDebug>
 

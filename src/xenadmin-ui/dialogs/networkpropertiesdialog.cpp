@@ -41,25 +41,25 @@ NetworkPropertiesDialog::NetworkPropertiesDialog(XenLib* xenLib, const QString& 
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
 
     // Tab widget
-    m_tabWidget = new QTabWidget(this);
+    this->m_tabWidget = new QTabWidget(this);
     setupGeneralTab();
     setupAdvancedTab();
-    mainLayout->addWidget(m_tabWidget);
+    mainLayout->addWidget(this->m_tabWidget);
 
     // Buttons
     QHBoxLayout* buttonLayout = new QHBoxLayout();
-    m_okButton = new QPushButton("OK", this);
-    m_cancelButton = new QPushButton("Cancel", this);
+    this->m_okButton = new QPushButton("OK", this);
+    this->m_cancelButton = new QPushButton("Cancel", this);
     buttonLayout->addStretch();
-    buttonLayout->addWidget(m_okButton);
-    buttonLayout->addWidget(m_cancelButton);
+    buttonLayout->addWidget(this->m_okButton);
+    buttonLayout->addWidget(this->m_cancelButton);
     mainLayout->addLayout(buttonLayout);
 
-    connect(m_okButton, &QPushButton::clicked, this, &NetworkPropertiesDialog::onOkClicked);
-    connect(m_cancelButton, &QPushButton::clicked, this, &NetworkPropertiesDialog::onCancelClicked);
+    connect(this->m_okButton, &QPushButton::clicked, this, &NetworkPropertiesDialog::onOkClicked);
+    connect(this->m_cancelButton, &QPushButton::clicked, this, &NetworkPropertiesDialog::onCancelClicked);
 
     // Connect async signal
-    connect(m_xenLib, &XenLib::networksReceived,
+    connect(this->m_xenLib, &XenLib::networksReceived,
             this, &NetworkPropertiesDialog::onNetworksReceived);
 
     // Load data asynchronously
@@ -143,11 +143,11 @@ void NetworkPropertiesDialog::onNetworksReceived(const QVariantList& networks)
     for (const QVariant& networkVar : networks)
     {
         QVariantMap networkMap = networkVar.toMap();
-        if (networkMap.contains(m_networkUuid))
+        if (networkMap.contains(this->m_networkUuid))
         {
             // Get the network record
-            QVariantMap networkRecord = networkMap[m_networkUuid].toMap();
-            m_networkRecord = networkRecord;
+            QVariantMap networkRecord = networkMap[this->m_networkUuid].toMap();
+            this->m_networkRecord = networkRecord;
 
             // Populate UI with network data
             populateNetworkData();
@@ -155,69 +155,69 @@ void NetworkPropertiesDialog::onNetworksReceived(const QVariantList& networks)
         }
     }
 
-    qWarning() << "Network not found:" << m_networkUuid;
+    qWarning() << "Network not found:" << this->m_networkUuid;
 }
 
 void NetworkPropertiesDialog::populateNetworkData()
 {
-    if (m_networkRecord.isEmpty())
+    if (this->m_networkRecord.isEmpty())
     {
         return;
     }
 
     // General tab - editable fields
-    QString name = m_networkRecord["name_label"].toString();
-    QString description = m_networkRecord["name_description"].toString();
-    m_nameEdit->setText(name);
-    m_descriptionEdit->setPlainText(description);
+    QString name = this->m_networkRecord["name_label"].toString();
+    QString description = this->m_networkRecord["name_description"].toString();
+    this->m_nameEdit->setText(name);
+    this->m_descriptionEdit->setPlainText(description);
 
     // General tab - read-only labels
-    m_uuidLabel->setText(m_networkUuid);
+    this->m_uuidLabel->setText(this->m_networkUuid);
 
-    QString bridge = m_networkRecord["bridge"].toString();
-    m_bridgeLabel->setText(bridge.isEmpty() ? "N/A" : bridge);
+    QString bridge = this->m_networkRecord["bridge"].toString();
+    this->m_bridgeLabel->setText(bridge.isEmpty() ? "N/A" : bridge);
 
-    QVariantMap otherConfig = m_networkRecord["other_config"].toMap();
+    QVariantMap otherConfig = this->m_networkRecord["other_config"].toMap();
     if (otherConfig.contains("mtu"))
     {
-        m_mtuLabel->setText(otherConfig["mtu"].toString());
+        this->m_mtuLabel->setText(otherConfig["mtu"].toString());
     } else
     {
-        m_mtuLabel->setText("1500"); // Default MTU
+        this->m_mtuLabel->setText("1500"); // Default MTU
     }
 
-    bool managed = m_networkRecord["managed"].toBool();
-    m_managedLabel->setText(managed ? "Yes" : "No");
+    bool managed = this->m_networkRecord["managed"].toBool();
+    this->m_managedLabel->setText(managed ? "Yes" : "No");
 
     // Advanced tab - tags (editable)
-    QVariantList tags = m_networkRecord["tags"].toList();
+    QVariantList tags = this->m_networkRecord["tags"].toList();
     QStringList tagStrings;
     for (const QVariant& tag : tags)
     {
         tagStrings << tag.toString();
     }
-    m_tagsEdit->setText(tagStrings.join(", "));
+    this->m_tagsEdit->setText(tagStrings.join(", "));
 
     // Other config
-    m_otherConfigList->clear();
+    this->m_otherConfigList->clear();
     for (auto it = otherConfig.begin(); it != otherConfig.end(); ++it)
     {
         QString item = QString("%1: %2").arg(it.key(), it.value().toString());
-        m_otherConfigList->addItem(item);
+        this->m_otherConfigList->addItem(item);
     }
 }
 
 void NetworkPropertiesDialog::saveNetworkData()
 {
-    QString newName = m_nameEdit->text().trimmed();
-    QString newDescription = m_descriptionEdit->toPlainText().trimmed();
-    QString currentName = m_networkRecord.value("name_label").toString();
-    QString currentDescription = m_networkRecord.value("name_description").toString();
+    QString newName = this->m_nameEdit->text().trimmed();
+    QString newDescription = this->m_descriptionEdit->toPlainText().trimmed();
+    QString currentName = this->m_networkRecord.value("name_label").toString();
+    QString currentDescription = this->m_networkRecord.value("name_description").toString();
 
     // Update name if changed
     if (newName != currentName && !newName.isEmpty())
     {
-        if (!m_xenLib->setNetworkName(m_networkRef, newName))
+        if (!this->m_xenLib->setNetworkName(this->m_networkRef, newName))
         {
             QMessageBox::warning(this, "Error", "Failed to update network name");
             return;
@@ -227,7 +227,7 @@ void NetworkPropertiesDialog::saveNetworkData()
     // Update description if changed
     if (newDescription != currentDescription)
     {
-        if (!m_xenLib->setNetworkDescription(m_networkRef, newDescription))
+        if (!this->m_xenLib->setNetworkDescription(this->m_networkRef, newDescription))
         {
             QMessageBox::warning(this, "Error", "Failed to update network description");
             return;
@@ -235,8 +235,8 @@ void NetworkPropertiesDialog::saveNetworkData()
     }
 
     // Update tags if changed
-    QStringList currentTags = m_networkRecord.value("tags").toStringList();
-    QString newTagsStr = m_tagsEdit->text().trimmed();
+    QStringList currentTags = this->m_networkRecord.value("tags").toStringList();
+    QString newTagsStr = this->m_tagsEdit->text().trimmed();
     QStringList newTags;
     if (!newTagsStr.isEmpty())
     {
@@ -249,7 +249,7 @@ void NetworkPropertiesDialog::saveNetworkData()
 
     if (newTags != currentTags)
     {
-        if (!m_xenLib->setNetworkTags(m_networkRef, newTags))
+        if (!this->m_xenLib->setNetworkTags(this->m_networkRef, newTags))
         {
             QMessageBox::warning(this, "Error", "Failed to update network tags");
             return;

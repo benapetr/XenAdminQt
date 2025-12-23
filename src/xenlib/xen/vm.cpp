@@ -26,7 +26,7 @@
  */
 
 #include "vm.h"
-#include "connection.h"
+#include "network/connection.h"
 #include "../xenlib.h"
 #include "../xencache.h"
 #include "host.h"

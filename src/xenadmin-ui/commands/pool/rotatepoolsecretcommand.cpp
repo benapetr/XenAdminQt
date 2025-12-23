@@ -29,7 +29,7 @@
 #include "mainwindow.h"
 #include "xenlib.h"
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/api.h"
 #include "operations/operationmanager.h"
 #include "xen/actions/pool/rotatepoolsecretaction.h"

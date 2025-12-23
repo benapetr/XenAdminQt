@@ -28,7 +28,7 @@
 #include "homeservereditpage.h"
 #include "ui_homeservereditpage.h"
 #include "../controls/affinitypicker.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xen/session.h"
 #include "../../xenlib/xen/xenapi/xenapi_VM.h"
 #include "../../xenlib/xencache.h"

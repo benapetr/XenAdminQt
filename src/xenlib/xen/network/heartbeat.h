@@ -28,7 +28,7 @@
 #ifndef XEN_HEARTBEAT_H
 #define XEN_HEARTBEAT_H
 
-#include "../xenlib_global.h"
+#include "../../xenlib_global.h"
 #include <QtCore/QObject>
 #include <QtCore/QTimer>
 #include <QtCore/QThread>
@@ -43,47 +43,47 @@ class XENLIB_EXPORT XenHeartbeat : public QObject
 {
     Q_OBJECT
 
-public:
-    explicit XenHeartbeat(XenConnection* connection, int connectionTimeout, QObject* parent = nullptr);
-    ~XenHeartbeat();
+    public:
+        explicit XenHeartbeat(XenConnection* connection, int connectionTimeout, QObject* parent = nullptr);
+        ~XenHeartbeat();
 
-    // Control methods
-    void start();
-    void stop();
-    bool isRunning() const;
+        // Control methods
+        void start();
+        void stop();
+        bool isRunning() const;
 
-    // Server time offset calculation
-    QDateTime getServerTimeOffset() const;
+        // Server time offset calculation
+        QDateTime getServerTimeOffset() const;
 
-signals:
-    void connectionLost();
-    void serverTimeUpdated(const QDateTime& serverTime, const QDateTime& localTime);
+    signals:
+        void connectionLost();
+        void serverTimeUpdated(const QDateTime& serverTime, const QDateTime& localTime);
 
-private slots:
-    void performHeartbeat();
-    void onHeartbeatTimer();
+    private slots:
+        void performHeartbeat();
+        void onHeartbeatTimer();
 
-private:
-    void getServerTime();
-    void handleConnectionLoss();
-    void dropSession();
-    bool createSession();
+    private:
+        void getServerTime();
+        void handleConnectionLoss();
+        void dropSession();
+        bool createSession();
 
-    XenConnection* m_connection;
-    XenSession* m_session;
-    QTimer* m_heartbeatTimer;
+        XenConnection* m_connection;
+        XenSession* m_session;
+        QTimer* m_heartbeatTimer;
 
-    int m_connectionTimeout;
-    bool m_running;
-    bool m_retrying;
-    QDateTime m_serverTimeOffset;
-    QString m_masterHostRef; // Track pool master for heartbeat
+        int m_connectionTimeout;
+        bool m_running;
+        bool m_retrying;
+        QDateTime m_serverTimeOffset;
+        QString m_masterHostRef; // Track pool master for heartbeat
 
-    mutable QMutex m_mutex;
+        mutable QMutex m_mutex;
 
-    // Configuration constants
-    static const int HEARTBEAT_INTERVAL_MS = 15000;    // 15 seconds
-    static const int MIN_CONNECTION_TIMEOUT_MS = 5000; // 5 seconds minimum
+        // Configuration constants
+        static const int HEARTBEAT_INTERVAL_MS = 15000;    // 15 seconds
+        static const int MIN_CONNECTION_TIMEOUT_MS = 5000; // 5 seconds minimum
 };
 
 #endif // XEN_HEARTBEAT_H

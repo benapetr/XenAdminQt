@@ -27,7 +27,7 @@
 
 #include "eventpoller.h"
 #include "api.h"
-#include "connection.h"
+#include "network/connection.h"
 #include "session.h"
 #include "jsonrpcclient.h"
 #include "../utils/misc.h"

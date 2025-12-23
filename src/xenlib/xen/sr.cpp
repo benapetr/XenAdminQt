@@ -26,7 +26,7 @@
  */
 
 #include "sr.h"
-#include "connection.h"
+#include "network/connection.h"
 #include "host.h"
 #include "../xenlib.h"
 #include "../xencache.h"

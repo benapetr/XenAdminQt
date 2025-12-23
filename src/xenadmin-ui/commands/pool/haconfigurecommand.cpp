@@ -30,7 +30,7 @@
 #include "../../dialogs/hawizard.h"
 #include "../../dialogs/editvmhaprioritiesdialog.h"
 #include "xenlib.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xencache.h"
 #include <QMessageBox>
 

@@ -26,7 +26,7 @@
  */
 
 #include "vmcrosspoolmigrateaction.h"
-#include "../../../xen/connection.h"
+#include "../../../xen/network/connection.h"
 #include "../../../xen/session.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../xenapi/xenapi_Host.h"

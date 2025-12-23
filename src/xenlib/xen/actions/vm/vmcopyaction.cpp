@@ -26,7 +26,7 @@
  */
 
 #include "vmcopyaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../vm.h"
 #include "../../sr.h"

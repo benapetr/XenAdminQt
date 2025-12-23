@@ -28,7 +28,7 @@
 #include "hostmultipathpage.h"
 #include "ui_hostmultipathpage.h"
 #include "xen/host.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/actions/host/editmultipathaction.h"
 #include "xencache.h"
 #include "xen/hostmetrics.h"

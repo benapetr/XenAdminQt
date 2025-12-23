@@ -28,7 +28,7 @@
 #include "meddlingaction.h"
 #include <QDebug>
 #include <xen/api.h>
-#include <xen/connection.h>
+#include <xen/network/connection.h>
 #include <xen/session.h>
 #include <QtCore/QDebug>
 #include <QtCore/QDateTime>

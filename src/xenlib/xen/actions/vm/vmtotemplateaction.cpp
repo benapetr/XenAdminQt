@@ -26,7 +26,7 @@
  */
 
 #include "vmtotemplateaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
 

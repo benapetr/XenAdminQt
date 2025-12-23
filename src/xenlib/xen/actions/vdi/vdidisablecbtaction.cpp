@@ -26,7 +26,7 @@
  */
 
 #include "vdidisablecbtaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../xenapi/xenapi_VDI.h"
 #include "../../session.h"
 

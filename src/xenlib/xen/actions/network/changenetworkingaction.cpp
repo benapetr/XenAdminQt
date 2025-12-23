@@ -27,7 +27,7 @@
 
 #include "changenetworkingaction.h"
 #include "networkingactionhelpers.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_PIF.h"
 #include "../../xenapi/xenapi_Host.h"

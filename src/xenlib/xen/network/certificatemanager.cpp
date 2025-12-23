@@ -34,16 +34,15 @@
 
 class XenCertificateManager::Private
 {
-public:
-    QHash<QString, QSslCertificate> storedCertificates;
-    QStringList trustedHosts;
-    bool allowSelfSigned = true; // XenServer/XCP-ng typically use self-signed certs
-    bool allowExpired = false;
-    QString certificateStorePath;
+    public:
+        QHash<QString, QSslCertificate> storedCertificates;
+        QStringList trustedHosts;
+        bool allowSelfSigned = true; // XenServer/XCP-ng typically use self-signed certs
+        bool allowExpired = false;
+        QString certificateStorePath;
 };
 
-XenCertificateManager::XenCertificateManager(QObject* parent)
-    : QObject(parent), d(new Private)
+XenCertificateManager::XenCertificateManager(QObject* parent) : QObject(parent), d(new Private)
 {
     // Set up certificate storage path
     QString appDataPath = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);

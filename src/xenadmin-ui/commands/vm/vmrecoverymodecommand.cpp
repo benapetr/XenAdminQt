@@ -27,7 +27,7 @@
 
 #include "vmrecoverymodecommand.h"
 #include "../../../xenlib/xen/actions/vm/hvmbootaction.h"
-#include "../../../xenlib/xen/connection.h"
+#include "../../../xenlib/xen/network/connection.h"
 #include "../../../xenlib/xen/vm.h"
 #include "../../../xenlib/xenlib.h"
 #include "../../../xenlib/xencache.h"

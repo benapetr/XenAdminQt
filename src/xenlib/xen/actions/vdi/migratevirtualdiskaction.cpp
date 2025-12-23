@@ -26,7 +26,7 @@
  */
 
 #include "migratevirtualdiskaction.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/xenapi/xenapi_VDI.h"
 #include "xen/xenapi/xenapi_SR.h"
 #include <QDebug>

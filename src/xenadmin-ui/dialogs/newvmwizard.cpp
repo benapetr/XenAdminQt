@@ -29,7 +29,7 @@
 #include "ui_newvmwizard.h"
 #include "xenlib.h"
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "operationprogressdialog.h"
 #include "xen/actions/vm/createvmaction.h"
 #include "../widgets/wizardnavigationpane.h"

@@ -28,7 +28,7 @@
 #include "editmultipathaction.h"
 #include "../../host.h"
 #include "../../session.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../xenapi/xenapi_Host.h"
 #include "../../xenapi/xenapi_PBD.h"
 #include <QDebug>

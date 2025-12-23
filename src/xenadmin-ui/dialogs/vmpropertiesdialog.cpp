@@ -36,7 +36,7 @@
 #include "../settingspanels/homeservereditpage.h"
 #include "../settingspanels/vmadvancededitpage.h"
 #include "../settingspanels/vmenlightenmenteditpage.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xencache.h"
 
 VMPropertiesDialog::VMPropertiesDialog(XenConnection* connection, const QString& vmRef, QWidget* parent)

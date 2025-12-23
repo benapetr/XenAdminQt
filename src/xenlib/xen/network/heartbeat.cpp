@@ -27,9 +27,9 @@
 
 #include "heartbeat.h"
 #include "connection.h"
-#include "session.h"
-#include "xenapi/xenapi_Pool.h"
-#include "xenapi/xenapi_Host.h"
+#include "../session.h"
+#include "../xenapi/xenapi_Pool.h"
+#include "../xenapi/xenapi_Host.h"
 #include <QtCore/QDebug>
 #include <QtCore/QMutexLocker>
 
@@ -41,9 +41,9 @@ XenHeartbeat::XenHeartbeat(XenConnection* connection, int connectionTimeout, QOb
     : QObject(parent), m_connection(connection), m_session(nullptr), m_heartbeatTimer(new QTimer(this)), m_connectionTimeout(qMax(connectionTimeout, MIN_CONNECTION_TIMEOUT_MS)), m_running(false), m_retrying(false)
 {
     // Setup heartbeat timer
-    m_heartbeatTimer->setInterval(HEARTBEAT_INTERVAL_MS);
-    m_heartbeatTimer->setSingleShot(false);
-    connect(m_heartbeatTimer, &QTimer::timeout, this, &XenHeartbeat::onHeartbeatTimer);
+    this->m_heartbeatTimer->setInterval(HEARTBEAT_INTERVAL_MS);
+    this->m_heartbeatTimer->setSingleShot(false);
+    connect(this->m_heartbeatTimer, &QTimer::timeout, this, &XenHeartbeat::onHeartbeatTimer);
 
     qDebug() << "Heartbeat created for connection" << connection->getHostname()
              << "with timeout" << this->m_connectionTimeout << "ms";
@@ -51,17 +51,17 @@ XenHeartbeat::XenHeartbeat(XenConnection* connection, int connectionTimeout, QOb
 
 XenHeartbeat::~XenHeartbeat()
 {
-    stop();
-    dropSession();
+    this->stop();
+    this->dropSession();
 
-    qDebug() << "Heartbeat destroyed for connection" << (m_connection ? m_connection->getHostname() : "null");
+    qDebug() << "Heartbeat destroyed for connection" << (this->m_connection ? this->m_connection->getHostname() : "null");
 }
 
 void XenHeartbeat::start()
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(&this->m_mutex);
 
-    if (m_running)
+    if (this->m_running)
     {
         qDebug() << "Heartbeat already running for" << this->m_connection->getHostname();
         return;
@@ -82,9 +82,9 @@ void XenHeartbeat::start()
 
 void XenHeartbeat::stop()
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(&this->m_mutex);
 
-    if (!m_running)
+    if (!this->m_running)
     {
         return;
     }
@@ -97,20 +97,20 @@ void XenHeartbeat::stop()
 
 bool XenHeartbeat::isRunning() const
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(&this->m_mutex);
     return this->m_running;
 }
 
 QDateTime XenHeartbeat::getServerTimeOffset() const
 {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(&this->m_mutex);
     return this->m_serverTimeOffset;
 }
 
 void XenHeartbeat::onHeartbeatTimer()
 {
     // Perform heartbeat on timer thread - this is safe for network operations
-    performHeartbeat();
+    this->performHeartbeat();
 }
 
 void XenHeartbeat::performHeartbeat()

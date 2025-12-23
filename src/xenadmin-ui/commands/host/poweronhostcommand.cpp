@@ -30,7 +30,7 @@
 #include "../../operations/operationmanager.h"
 #include "xenlib.h"
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include <QMessageBox>
 
 PowerOnHostCommand::PowerOnHostCommand(MainWindow* mainWindow, QObject* parent)

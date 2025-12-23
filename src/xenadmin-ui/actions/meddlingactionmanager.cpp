@@ -29,7 +29,7 @@
 #include <QDebug>
 #include "meddlingaction.h"
 #include <QDebug>
-#include <xen/connection.h>
+#include <xen/network/connection.h>
 #include <xen/session.h>
 #include <xen/api.h>
 #include <QtCore/QDebug>
@@ -47,8 +47,8 @@ MeddlingActionManager::MeddlingActionManager(QObject* parent)
 MeddlingActionManager::~MeddlingActionManager()
 {
     // Clean up matched tasks
-    qDeleteAll(m_matchedTasks);
-    m_matchedTasks.clear();
+    qDeleteAll(this->m_matchedTasks);
+    this->m_matchedTasks.clear();
 }
 
 QString MeddlingActionManager::applicationUuid()
@@ -99,8 +99,8 @@ void MeddlingActionManager::rehydrateTasks(XenConnection* connection)
     }
 
     qDebug() << "MeddlingActionManager: Rehydration complete."
-             << m_matchedTasks.count() << "meddling operations created,"
-             << m_unmatchedTasks.count() << "tasks unmatched";
+             << this->m_matchedTasks.count() << "meddling operations created,"
+             << this->m_unmatchedTasks.count() << "tasks unmatched";
 }
 
 void MeddlingActionManager::handleTaskAdded(XenConnection* connection, const QString& taskRef, const QVariantMap& taskData)
@@ -109,7 +109,7 @@ void MeddlingActionManager::handleTaskAdded(XenConnection* connection, const QSt
         return;
 
     // Skip if already tracked
-    if (m_matchedTasks.contains(taskRef) || m_unmatchedTasks.contains(taskRef))
+    if (this->m_matchedTasks.contains(taskRef) || this->m_unmatchedTasks.contains(taskRef))
         return;
 
     qDebug() << "MeddlingActionManager: New task added:" << taskRef;
@@ -123,27 +123,27 @@ void MeddlingActionManager::handleTaskUpdated(XenConnection* connection, const Q
         return;
 
     // Check if this is an unmatched task that's now suitable
-    if (m_unmatchedTasks.contains(taskRef))
+    if (this->m_unmatchedTasks.contains(taskRef))
     {
-        qint64 serverTimeOffset = getServerTimeOffset(connection);
+        qint64 serverTimeOffset = this->getServerTimeOffset(connection);
 
         if (MeddlingAction::isTaskUnwanted(taskData, s_applicationUuid))
         {
             qDebug() << "MeddlingActionManager: Unmatched task is now unwanted:" << taskRef;
-            m_unmatchedTasks.remove(taskRef);
+            this->m_unmatchedTasks.remove(taskRef);
         } else if (MeddlingAction::isTaskSuitable(taskData, serverTimeOffset))
         {
             qDebug() << "MeddlingActionManager: Unmatched task is now suitable:" << taskRef;
-            m_unmatchedTasks.remove(taskRef);
-            categorizeTask(connection, taskRef, taskData);
+            this->m_unmatchedTasks.remove(taskRef);
+            this->categorizeTask(connection, taskRef, taskData);
         }
         return;
     }
 
     // Update matched task
-    if (m_matchedTasks.contains(taskRef))
+    if (this->m_matchedTasks.contains(taskRef))
     {
-        MeddlingAction* op = m_matchedTasks.value(taskRef);
+        MeddlingAction* op = this->m_matchedTasks.value(taskRef);
         if (op)
         {
             op->updateFromTask(taskData, false);
@@ -153,7 +153,7 @@ void MeddlingActionManager::handleTaskUpdated(XenConnection* connection, const Q
             if (status == "success" || status == "failure" || status == "cancelled")
             {
                 qDebug() << "MeddlingActionManager: Task completed:" << taskRef << status;
-                m_matchedTasks.remove(taskRef);
+                this->m_matchedTasks.remove(taskRef);
                 // Don't delete - OperationManager owns it
             }
         }
@@ -167,11 +167,11 @@ void MeddlingActionManager::handleTaskRemoved(XenConnection* connection, const Q
     if (taskRef.isEmpty())
         return;
 
-    m_unmatchedTasks.remove(taskRef);
+    this->m_unmatchedTasks.remove(taskRef);
 
-    if (m_matchedTasks.contains(taskRef))
+    if (this->m_matchedTasks.contains(taskRef))
     {
-        MeddlingAction* op = m_matchedTasks.take(taskRef);
+        MeddlingAction* op = this->m_matchedTasks.take(taskRef);
         if (op)
         {
             qDebug() << "MeddlingActionManager: Task removed from server:" << taskRef;
@@ -187,7 +187,7 @@ void MeddlingActionManager::handleTaskRemoved(XenConnection* connection, const Q
 
 void MeddlingActionManager::categorizeTask(XenConnection* connection, const QString& taskRef, const QVariantMap& taskData)
 {
-    qint64 serverTimeOffset = getServerTimeOffset(connection);
+    qint64 serverTimeOffset = this->getServerTimeOffset(connection);
 
     // Check if task is unwanted (our own task, subtask, etc.)
     if (MeddlingAction::isTaskUnwanted(taskData, s_applicationUuid))
@@ -200,7 +200,7 @@ void MeddlingActionManager::categorizeTask(XenConnection* connection, const QStr
     if (!MeddlingAction::isTaskSuitable(taskData, serverTimeOffset))
     {
         qDebug() << "MeddlingActionManager: Task not yet suitable (waiting for appliesTo):" << taskRef;
-        m_unmatchedTasks[taskRef] = taskData;
+        this->m_unmatchedTasks[taskRef] = taskData;
         return;
     }
 
@@ -217,7 +217,7 @@ void MeddlingActionManager::categorizeTask(XenConnection* connection, const QStr
     op->updateFromTask(taskData, false);
 
     // Track it
-    m_matchedTasks[taskRef] = op;
+    this->m_matchedTasks[taskRef] = op;
 
     // Notify (OperationManager will register it)
     emit meddlingOperationCreated(op);

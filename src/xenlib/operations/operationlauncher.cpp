@@ -28,7 +28,7 @@
 #include "operationlauncher.h"
 #include "multipleoperation.h"
 #include "paralleloperation.h"
-#include "../xen/connection.h"
+#include "../xen/network/connection.h"
 #include <QHash>
 
 OperationLauncher::OperationLauncher(const QList<AsyncOperation*>& operations,

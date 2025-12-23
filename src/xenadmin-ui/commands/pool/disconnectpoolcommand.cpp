@@ -28,7 +28,7 @@
 #include "disconnectpoolcommand.h"
 #include "../../mainwindow.h"
 #include "xenlib.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xencache.h"
 #include <QMessageBox>
 

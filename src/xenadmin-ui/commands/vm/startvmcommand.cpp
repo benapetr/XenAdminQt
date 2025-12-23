@@ -30,7 +30,7 @@
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include "xenlib.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/actions/vm/vmstartaction.h"
 #include "xen/failure.h"

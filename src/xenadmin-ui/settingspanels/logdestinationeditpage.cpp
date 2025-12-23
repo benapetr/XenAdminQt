@@ -28,7 +28,7 @@
 #include "logdestinationeditpage.h"
 #include "ui_logdestinationeditpage.h"
 #include "../../xenlib/xen/asyncoperation.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xen/session.h"
 #include "../../xenlib/xen/api.h"
 #include <QIcon>

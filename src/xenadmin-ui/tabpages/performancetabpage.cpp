@@ -31,7 +31,7 @@
 #include "xen/xenapi/xenapi_VM.h"
 #include "xen/xenapi/xenapi_Host.h"
 #include "xen/session.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include <QDateTime>
 #include <QVBoxLayout>
 #include <QLabel>

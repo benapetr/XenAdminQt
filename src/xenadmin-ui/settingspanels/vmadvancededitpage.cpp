@@ -28,7 +28,7 @@
 #include "vmadvancededitpage.h"
 #include "ui_vmadvancededitpage.h"
 #include "../../xenlib/xen/actions/delegatedasyncoperation.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xen/session.h"
 #include "../../xenlib/xen/xenapi/xenapi_VM.h"
 #include <QToolTip>
@@ -39,15 +39,15 @@ VMAdvancedEditPage::VMAdvancedEditPage(QWidget* parent)
       m_originalShadowMultiplier(1.0),
       m_showCpsOptimisation(true)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
-    connect(ui->GeneralOptimizationRadioButton, &QRadioButton::toggled,
+    connect(this->ui->GeneralOptimizationRadioButton, &QRadioButton::toggled,
             this, &VMAdvancedEditPage::onGeneralRadioToggled);
-    connect(ui->CPSOptimizationRadioButton, &QRadioButton::toggled,
+    connect(this->ui->CPSOptimizationRadioButton, &QRadioButton::toggled,
             this, &VMAdvancedEditPage::onCitrixRadioToggled);
-    connect(ui->ManualOptimizationRadioButton, &QRadioButton::toggled,
+    connect(this->ui->ManualOptimizationRadioButton, &QRadioButton::toggled,
             this, &VMAdvancedEditPage::onManualRadioToggled);
-    connect(ui->ShadowMultiplierTextBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+    connect(this->ui->ShadowMultiplierTextBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this, &VMAdvancedEditPage::onShadowMultiplierChanged);
 }
 
@@ -63,13 +63,13 @@ QString VMAdvancedEditPage::text() const
 
 QString VMAdvancedEditPage::subText() const
 {
-    if (ui->GeneralOptimizationRadioButton->isChecked())
-        return ui->GeneralOptimizationRadioButton->text().remove('&');
+    if (this->ui->GeneralOptimizationRadioButton->isChecked())
+        return this->ui->GeneralOptimizationRadioButton->text().remove('&');
 
-    if (ui->CPSOptimizationRadioButton->isChecked())
-        return ui->CPSOptimizationRadioButton->text().remove('&');
+    if (this->ui->CPSOptimizationRadioButton->isChecked())
+        return this->ui->CPSOptimizationRadioButton->text().remove('&');
 
-    return tr("Shadow memory multiplier: %1").arg(ui->ShadowMultiplierTextBox->text());
+    return tr("Shadow memory multiplier: %1").arg(this->ui->ShadowMultiplierTextBox->text());
 }
 
 QIcon VMAdvancedEditPage::image() const
@@ -84,56 +84,56 @@ void VMAdvancedEditPage::setXenObjects(const QString& objectRef,
 {
     Q_UNUSED(objectType);
 
-    m_vmRef = objectRef;
-    m_objectDataCopy = objectDataCopy;
-    m_powerState = objectDataBefore.value("power_state").toString();
+    this->m_vmRef = objectRef;
+    this->m_objectDataCopy = objectDataCopy;
+    this->m_powerState = objectDataBefore.value("power_state").toString();
 
-    ui->CPSOptimizationRadioButton->setVisible(m_showCpsOptimisation);
+    this->ui->CPSOptimizationRadioButton->setVisible(this->m_showCpsOptimisation);
 
-    m_originalShadowMultiplier = objectDataCopy.value("HVM_shadow_multiplier").toDouble();
-    if (m_originalShadowMultiplier < 1.0)
-        m_originalShadowMultiplier = 1.0;
+    this->m_originalShadowMultiplier = objectDataCopy.value("HVM_shadow_multiplier").toDouble();
+    if (this->m_originalShadowMultiplier < 1.0)
+        this->m_originalShadowMultiplier = 1.0;
 
-    bool isSuspendedOrPaused = (m_powerState == "Suspended" || m_powerState == "Paused");
-    ui->GeneralOptimizationRadioButton->setEnabled(!isSuspendedOrPaused);
-    ui->CPSOptimizationRadioButton->setEnabled(!isSuspendedOrPaused);
-    ui->ManualOptimizationRadioButton->setEnabled(!isSuspendedOrPaused);
-    ui->labelShadowMultiplier->setEnabled(!isSuspendedOrPaused);
-    ui->ShadowMultiplierTextBox->setEnabled(!isSuspendedOrPaused);
-    ui->iconWarning->setVisible(isSuspendedOrPaused);
-    ui->labelWarning->setVisible(isSuspendedOrPaused);
+    bool isSuspendedOrPaused = (this->m_powerState == "Suspended" || this->m_powerState == "Paused");
+    this->ui->GeneralOptimizationRadioButton->setEnabled(!isSuspendedOrPaused);
+    this->ui->CPSOptimizationRadioButton->setEnabled(!isSuspendedOrPaused);
+    this->ui->ManualOptimizationRadioButton->setEnabled(!isSuspendedOrPaused);
+    this->ui->labelShadowMultiplier->setEnabled(!isSuspendedOrPaused);
+    this->ui->ShadowMultiplierTextBox->setEnabled(!isSuspendedOrPaused);
+    this->ui->iconWarning->setVisible(isSuspendedOrPaused);
+    this->ui->labelWarning->setVisible(isSuspendedOrPaused);
 
-    if (qAbs(m_originalShadowMultiplier - SHADOW_MULTIPLIER_GENERAL) < 0.0001)
+    if (qAbs(this->m_originalShadowMultiplier - SHADOW_MULTIPLIER_GENERAL) < 0.0001)
     {
-        ui->GeneralOptimizationRadioButton->setChecked(true);
+        this->ui->GeneralOptimizationRadioButton->setChecked(true);
     }
-    else if (qAbs(m_originalShadowMultiplier - SHADOW_MULTIPLIER_CPS) < 0.0001 && m_showCpsOptimisation)
+    else if (qAbs(this->m_originalShadowMultiplier - SHADOW_MULTIPLIER_CPS) < 0.0001 && this->m_showCpsOptimisation)
     {
-        ui->CPSOptimizationRadioButton->setChecked(true);
+        this->ui->CPSOptimizationRadioButton->setChecked(true);
     }
     else
     {
-        ui->ManualOptimizationRadioButton->setChecked(true);
+        this->ui->ManualOptimizationRadioButton->setChecked(true);
     }
 
-    ui->ShadowMultiplierTextBox->setValue(m_originalShadowMultiplier);
+    this->ui->ShadowMultiplierTextBox->setValue(this->m_originalShadowMultiplier);
 }
 
 AsyncOperation* VMAdvancedEditPage::saveSettings()
 {
-    if (!hasChanged())
+    if (!this->hasChanged())
         return nullptr;
 
-    double newMultiplier = getCurrentShadowMultiplier();
+    double newMultiplier = this->getCurrentShadowMultiplier();
 
-    if (m_powerState == "Running")
+    if (this->m_powerState == "Running")
     {
-        QString vmName = m_objectDataCopy.value("name_label").toString();
+        QString vmName = this->m_objectDataCopy.value("name_label").toString();
         auto* op = new DelegatedAsyncOperation(
-            m_connection,
+            this->m_connection,
             tr("Change shadow multiplier"),
             tr("Changing shadow multiplier for '%1'...").arg(vmName),
-            [vmRef = m_vmRef, newMultiplier](DelegatedAsyncOperation* self) {
+            [vmRef = this->m_vmRef, newMultiplier](DelegatedAsyncOperation* self) {
                 XenSession* session = self->connection()->getSession();
                 if (!session || !session->isLoggedIn())
                     throw std::runtime_error("No valid session");
@@ -144,13 +144,13 @@ AsyncOperation* VMAdvancedEditPage::saveSettings()
         return op;
     }
 
-    m_objectDataCopy["HVM_shadow_multiplier"] = newMultiplier;
+    this->m_objectDataCopy["HVM_shadow_multiplier"] = newMultiplier;
     return nullptr;
 }
 
 bool VMAdvancedEditPage::isValidToSave() const
 {
-    return getCurrentShadowMultiplier() >= 1.0;
+    return this->getCurrentShadowMultiplier() >= 1.0;
 }
 
 void VMAdvancedEditPage::showLocalValidationMessages()
@@ -158,10 +158,10 @@ void VMAdvancedEditPage::showLocalValidationMessages()
     if (!isValidToSave())
     {
         QToolTip::showText(
-            ui->ShadowMultiplierTextBox->mapToGlobal(QPoint(0, ui->ShadowMultiplierTextBox->height())),
+            this->ui->ShadowMultiplierTextBox->mapToGlobal(QPoint(0, this->ui->ShadowMultiplierTextBox->height())),
             tr("Value should be a number greater than or equal to 1.0"),
-            ui->ShadowMultiplierTextBox);
-        ui->ShadowMultiplierTextBox->setFocus();
+            this->ui->ShadowMultiplierTextBox);
+        this->ui->ShadowMultiplierTextBox->setFocus();
     }
 }
 
@@ -177,27 +177,27 @@ void VMAdvancedEditPage::cleanup()
 
 bool VMAdvancedEditPage::hasChanged() const
 {
-    return qAbs(getCurrentShadowMultiplier() - m_originalShadowMultiplier) > 0.0001;
+    return qAbs(this->getCurrentShadowMultiplier() - this->m_originalShadowMultiplier) > 0.0001;
 }
 
 QVariantMap VMAdvancedEditPage::getModifiedObjectData() const
 {
     QVariantMap data;
-    if (m_powerState != "Running" && hasChanged())
-        data["HVM_shadow_multiplier"] = getCurrentShadowMultiplier();
+    if (this->m_powerState != "Running" && this->hasChanged())
+        data["HVM_shadow_multiplier"] = this->getCurrentShadowMultiplier();
     return data;
 }
 
 void VMAdvancedEditPage::onGeneralRadioToggled(bool checked)
 {
     if (checked)
-        ui->ShadowMultiplierTextBox->setValue(SHADOW_MULTIPLIER_GENERAL);
+        this->ui->ShadowMultiplierTextBox->setValue(SHADOW_MULTIPLIER_GENERAL);
 }
 
 void VMAdvancedEditPage::onCitrixRadioToggled(bool checked)
 {
     if (checked)
-        ui->ShadowMultiplierTextBox->setValue(SHADOW_MULTIPLIER_CPS);
+        this->ui->ShadowMultiplierTextBox->setValue(SHADOW_MULTIPLIER_CPS);
 }
 
 void VMAdvancedEditPage::onManualRadioToggled(bool checked)
@@ -209,11 +209,11 @@ void VMAdvancedEditPage::onShadowMultiplierChanged(double value)
 {
     Q_UNUSED(value);
 
-    if (ui->ShadowMultiplierTextBox->hasFocus())
-        ui->ManualOptimizationRadioButton->setChecked(true);
+    if (this->ui->ShadowMultiplierTextBox->hasFocus())
+        this->ui->ManualOptimizationRadioButton->setChecked(true);
 }
 
 double VMAdvancedEditPage::getCurrentShadowMultiplier() const
 {
-    return ui->ShadowMultiplierTextBox->value();
+    return this->ui->ShadowMultiplierTextBox->value();
 }

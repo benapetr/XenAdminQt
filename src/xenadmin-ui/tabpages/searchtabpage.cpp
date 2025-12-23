@@ -1,71 +1,28 @@
-/* Copyright (c) 2025 Petr Bena
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
  *
- * Redistribution and use in source and binary forms,
- * with or without modification, are permitted provided
- * that the following conditions are met:
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * 1. Redistributions of source code must retain the above
- *    copyright notice, this list of conditions and the
- *    following disclaimer.
- * 2. Redistributions in binary form must reproduce the above
- *    copyright notice, this list of conditions and the
- *    following disclaimer in the documentint SearchTabPage::getCPUUsagePercent(const QString& objectType, const QVariantMap& objectData) const
-{
-    if (!m_xenLib)
-        return -1;
-
-    MetricUpdater* metrics = m_xenLib->getMetricUpdater();
-    if (!metrics)
-        return -1;
-
-    QString uuid = objectData.value("uuid", "").toString();
-    if (uuid.isEmpty() || !metrics->hasMetrics(objectType, uuid))
-        return -1;
-
-    int cpuCount = 0;
-    if (objectType == "vm")
-    {
-        QString metricsRef = objectData.value("metrics", "").toString();
-        if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL")
-            return -1;
-
-        QVariantMap vmMetrics = m_xenLib->getCache()->resolve("vm_metrics", metricsRef);
-        cpuCount = vmMetrics.value("VCPUs_number", 0).toInt();
-    }
-    else if (objectType == "host")
-    {
-        cpuCount = objectData.value("cpu_count", 0).toInt();
-    }
-
-    if (cpuCount == 0)
-        return -1;
-
-    double sum = 0.0;
-    for (int i = 0; i < cpuCount; i++)
-    {
-        QString metricName = QString("cpu%1").arg(i);
-        sum += metrics->getValue(objectType, uuid, metricName);
-    }
-
-    double avgPercent = (sum / cpuCount) * 100.0;
-    return qBound(0, qRound(avgPercent), 100);
-}nd/or other
- *    materials provided with the distribution.
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
- * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "searchtabpage.h"
@@ -95,7 +52,7 @@ SearchTabPage::SearchTabPage(QWidget* parent)
 
     // Setup table widget with columns matching C# QueryPanel
     // C# Reference: QueryPanel.SetupHeaderRow() lines 189-197
-    m_tableWidget->setColumnCount(COL_COUNT);
+    this->m_tableWidget->setColumnCount(COL_COUNT);
 
     QStringList headers;
     headers << tr("Name")                      // COL_NAME
@@ -106,58 +63,58 @@ SearchTabPage::SearchTabPage(QWidget* parent)
             << tr("Address")                   // COL_ADDRESS
             << tr("Uptime");                   // COL_UPTIME
 
-    m_tableWidget->setHorizontalHeaderLabels(headers);
+    this->m_tableWidget->setHorizontalHeaderLabels(headers);
 
     // Configure table appearance
-    m_tableWidget->setAlternatingRowColors(true);
-    m_tableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_tableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
-    m_tableWidget->setSortingEnabled(true);
-    m_tableWidget->verticalHeader()->setVisible(false);
-    m_tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    this->m_tableWidget->setAlternatingRowColors(true);
+    this->m_tableWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
+    this->m_tableWidget->setSelectionMode(QAbstractItemView::SingleSelection);
+    this->m_tableWidget->setSortingEnabled(true);
+    this->m_tableWidget->verticalHeader()->setVisible(false);
+    this->m_tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     // Column sizing (matching C# GetDefaultColumn widths)
     // C# Reference: QueryPanel.GetDefaultColumn() lines 198-250
     // Allow user to resize all columns with mouse (Interactive mode)
-    m_tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
-    m_tableWidget->horizontalHeader()->setStretchLastSection(true); // Last column fills remaining space
-    m_tableWidget->setColumnWidth(COL_NAME, 250);
-    m_tableWidget->setColumnWidth(COL_CPU, 115);
-    m_tableWidget->setColumnWidth(COL_MEMORY, 125);
-    m_tableWidget->setColumnWidth(COL_DISKS, 120);
-    m_tableWidget->setColumnWidth(COL_NETWORK, 120);
-    m_tableWidget->setColumnWidth(COL_ADDRESS, 120);
-    m_tableWidget->setColumnWidth(COL_UPTIME, 170);
+    this->m_tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
+    this->m_tableWidget->horizontalHeader()->setStretchLastSection(true); // Last column fills remaining space
+    this->m_tableWidget->setColumnWidth(COL_NAME, 250);
+    this->m_tableWidget->setColumnWidth(COL_CPU, 115);
+    this->m_tableWidget->setColumnWidth(COL_MEMORY, 125);
+    this->m_tableWidget->setColumnWidth(COL_DISKS, 120);
+    this->m_tableWidget->setColumnWidth(COL_NETWORK, 120);
+    this->m_tableWidget->setColumnWidth(COL_ADDRESS, 120);
+    this->m_tableWidget->setColumnWidth(COL_UPTIME, 170);
 
     // Apply progress bar delegates to CPU and Memory columns
     // C# Equivalent: BarGraphColumn with Images.GetImageForPercentage()
     // C# Reference: xenadmin/XenAdmin/XenSearch/Columns.cs lines 50-51, 249-300
-    m_tableWidget->setItemDelegateForColumn(COL_CPU, new ProgressBarDelegate(this));
-    m_tableWidget->setItemDelegateForColumn(COL_MEMORY, new ProgressBarDelegate(this));
+    this->m_tableWidget->setItemDelegateForColumn(COL_CPU, new ProgressBarDelegate(this));
+    this->m_tableWidget->setItemDelegateForColumn(COL_MEMORY, new ProgressBarDelegate(this));
 
-    layout->addWidget(m_tableWidget);
+    layout->addWidget(this->m_tableWidget);
 
     // Connect signals
-    connect(m_tableWidget, &QTableWidget::cellDoubleClicked,
+    connect(this->m_tableWidget, &QTableWidget::cellDoubleClicked,
             this, &SearchTabPage::onItemDoubleClicked);
-    connect(m_tableWidget, &QTableWidget::itemSelectionChanged,
+    connect(this->m_tableWidget, &QTableWidget::itemSelectionChanged,
             this, &SearchTabPage::onItemSelectionChanged);
 }
 
 SearchTabPage::~SearchTabPage()
 {
-    delete m_search; // Search owns Query and Grouping
+    delete this->m_search; // Search owns Query and Grouping
 }
 
 // C# Equivalent: QueryPanel.Search property setter
 // C# Reference: xenadmin/XenAdmin/Controls/XenSearch/QueryPanel.cs lines 378-396
 void SearchTabPage::setSearch(Search* search)
 {
-    if (m_search != search)
+    if (this->m_search != search)
     {
-        delete m_search;
-        m_search = search;
-        buildList();
+        delete this->m_search;
+        this->m_search = search;
+        this->buildList();
     }
 }
 
@@ -248,13 +205,13 @@ void SearchTabPage::setXenObject(const QString& type, const QString& ref, const 
 // - xenadmin/XenAdmin/Controls/XenSearch/QueryPanel.cs lines 500-528
 void SearchTabPage::buildList()
 {
-    if (!m_search || !m_xenLib || !m_xenLib->getCache())
+    if (!this->m_search || !this->m_xenLib || !this->m_xenLib->getCache())
     {
-        m_tableWidget->setRowCount(0);
+        this->m_tableWidget->setRowCount(0);
         return;
     }
 
-    populateTable();
+    this->populateTable();
 }
 
 // C# Equivalent: QueryPanel.listUpdateManager_Update() + CreateRow()
@@ -264,26 +221,26 @@ void SearchTabPage::populateTable()
     // qDebug() << "SearchTabPage::populateTable() - Starting table population";
 
     // Disable sorting while populating (improves performance)
-    m_tableWidget->setSortingEnabled(false);
-    m_tableWidget->setRowCount(0);
+    this->m_tableWidget->setSortingEnabled(false);
+    this->m_tableWidget->setRowCount(0);
 
-    if (!m_search)
+    if (!this->m_search)
     {
         qDebug() << "SearchTabPage::populateTable() - No search object";
-        m_tableWidget->setSortingEnabled(true);
+        this->m_tableWidget->setSortingEnabled(true);
         return;
     }
 
-    Query* query = m_search->getQuery();
+    Query* query = this->m_search->getQuery();
 
-    if (!query || !m_xenLib || !m_xenLib->getCache())
+    if (!query || !this->m_xenLib || !this->m_xenLib->getCache())
     {
         qDebug() << "SearchTabPage::populateTable() - No query or cache";
-        m_tableWidget->setSortingEnabled(true);
+        this->m_tableWidget->setSortingEnabled(true);
         return;
     }
 
-    XenCache* cache = m_xenLib->getCache();
+    XenCache* cache = this->m_xenLib->getCache();
     int itemsAdded = 0;
 
     // qDebug() << "=== SearchTabPage::populateTable() START ===";
@@ -318,12 +275,12 @@ void SearchTabPage::populateTable()
         // Filter: does this object match the query?
         // C# Equivalent: Group.FilterAdd() calls query.Match(o)
         // C# Reference: xenadmin/XenModel/XenSearch/GroupAlg.cs line 161
-        if (query->match(objectData, objectType, m_xenLib))
+        if (query->match(objectData, objectType, this->m_xenLib))
         {
             // Add object as a table row
             // C# Equivalent: QueryPanel.CreateRow() for IXenObject
             // C# Reference: xenadmin/XenAdmin/Controls/XenSearch/QueryPanel.cs lines 629-679
-            addObjectRow(objectType, objectRef, objectData);
+            this->addObjectRow(objectType, objectRef, objectData);
             itemsAdded++;
         } else
         {
@@ -337,19 +294,19 @@ void SearchTabPage::populateTable()
     // qDebug() << "=== SearchTabPage::populateTable() END ===";
 
     // Re-enable sorting
-    m_tableWidget->setSortingEnabled(true);
+    this->m_tableWidget->setSortingEnabled(true);
 
     // If no results, show message
     // C# Equivalent: QueryPanel.AddNoResultsRow()
     // C# Reference: xenadmin/XenAdmin/Controls/XenSearch/QueryPanel.cs lines 573-578
     if (itemsAdded == 0)
     {
-        m_tableWidget->setRowCount(1);
+        this->m_tableWidget->setRowCount(1);
         QTableWidgetItem* noResultsItem = new QTableWidgetItem(tr("No results found"));
         noResultsItem->setForeground(QBrush(Qt::gray));
         noResultsItem->setFlags(noResultsItem->flags() & ~Qt::ItemIsSelectable);
-        m_tableWidget->setItem(0, COL_NAME, noResultsItem);
-        m_tableWidget->setSpan(0, COL_NAME, 1, COL_COUNT); // Merge all columns
+        this->m_tableWidget->setItem(0, COL_NAME, noResultsItem);
+        this->m_tableWidget->setSpan(0, COL_NAME, 1, COL_COUNT); // Merge all columns
     }
 }
 
@@ -367,9 +324,9 @@ void SearchTabPage::addObjectRow(const QString& objectType, const QString& objec
         // Resolve host_metrics to get liveness status for icon
         // C# pattern: Host_metrics metrics = host.Connection.Resolve(host.metrics);
         QString metricsRef = objectData.value("metrics").toString();
-        if (!metricsRef.isEmpty() && !metricsRef.contains("NULL") && m_xenLib)
+        if (!metricsRef.isEmpty() && !metricsRef.contains("NULL") && this->m_xenLib)
         {
-            XenCache* cache = m_xenLib->getCache();
+            XenCache* cache = this->m_xenLib->getCache();
             if (cache)
             {
                 QVariantMap metricsData = cache->ResolveObjectData("host_metrics", metricsRef);
@@ -383,14 +340,14 @@ void SearchTabPage::addObjectRow(const QString& objectType, const QString& objec
         //          << "_metrics_live=" << enrichedData.value("_metrics_live", false);
     }
 
-    int row = m_tableWidget->rowCount();
-    m_tableWidget->insertRow(row);
+    int row = this->m_tableWidget->rowCount();
+    this->m_tableWidget->insertRow(row);
 
     // Column 0: Name
     // C# Equivalent: NameColumn.GetGridItem()
     // C# Reference: xenadmin/XenAdmin/XenSearch/Columns.cs lines 191-220
-    QString name = getObjectName(objectType, objectData);
-    QString description = getObjectDescription(objectType, objectData);
+    QString name = this->getObjectName(objectType, objectData);
+    QString description = this->getObjectDescription(objectType, objectData);
     QString nameWithDesc = name;
     if (!description.isEmpty())
         nameWithDesc += "\n" + description;
@@ -401,17 +358,17 @@ void SearchTabPage::addObjectRow(const QString& objectType, const QString& objec
         nameItem->setIcon(icon);
     nameItem->setData(Qt::UserRole, objectType);    // Store type for sorting/filtering
     nameItem->setData(Qt::UserRole + 1, objectRef); // Store ref for double-click
-    m_tableWidget->setItem(row, COL_NAME, nameItem);
+    this->m_tableWidget->setItem(row, COL_NAME, nameItem);
 
     // Column 1: CPU Usage
     // C# Equivalent: BarGraphColumn(PropertyNames.cpuText, PropertyNames.cpuValue)
     // C# Reference: xenadmin/XenAdmin/XenSearch/Columns.cs lines 48
-    QString cpuText = getCPUUsageText(objectType, objectData);
-    int cpuPercent = getCPUUsagePercent(objectType, objectData);
+    QString cpuText = this->getCPUUsageText(objectType, objectData);
+    int cpuPercent = this->getCPUUsagePercent(objectType, objectData);
     QTableWidgetItem* cpuItem = new QTableWidgetItem(cpuText);
     cpuItem->setData(Qt::UserRole, cpuPercent); // Store for sorting
     cpuItem->setTextAlignment(Qt::AlignCenter);
-    m_tableWidget->setItem(row, COL_CPU, cpuItem);
+    this->m_tableWidget->setItem(row, COL_CPU, cpuItem);
 
     // Column 2: Memory Usage
     // C# Equivalent: BarGraphColumn(PropertyNames.memoryText, PropertyNames.memoryValue, PropertyNames.memoryRank, true)
@@ -421,23 +378,23 @@ void SearchTabPage::addObjectRow(const QString& objectType, const QString& objec
     QTableWidgetItem* memoryItem = new QTableWidgetItem(memoryText);
     memoryItem->setData(Qt::UserRole, memoryPercent); // Store for sorting
     memoryItem->setTextAlignment(Qt::AlignCenter);
-    m_tableWidget->setItem(row, COL_MEMORY, memoryItem);
+    this->m_tableWidget->setItem(row, COL_MEMORY, memoryItem);
 
     // Column 3: Disks
     // C# Equivalent: PropertyColumn(PropertyNames.diskText, true)
     // C# Reference: xenadmin/XenAdmin/XenSearch/Columns.cs line 50
-    QString disksText = getDiskUsageText(objectType, objectData);
+    QString disksText = this->getDiskUsageText(objectType, objectData);
     QTableWidgetItem* disksItem = new QTableWidgetItem(disksText);
     disksItem->setTextAlignment(Qt::AlignCenter);
-    m_tableWidget->setItem(row, COL_DISKS, disksItem);
+    this->m_tableWidget->setItem(row, COL_DISKS, disksItem);
 
     // Column 4: Network
     // C# Equivalent: PropertyColumn(PropertyNames.networkText, true)
     // C# Reference: xenadmin/XenAdmin/XenSearch/Columns.cs line 51
-    QString networkText = getNetworkUsageText(objectType, objectData);
+    QString networkText = this->getNetworkUsageText(objectType, objectData);
     QTableWidgetItem* networkItem = new QTableWidgetItem(networkText);
     networkItem->setTextAlignment(Qt::AlignCenter);
-    m_tableWidget->setItem(row, COL_NETWORK, networkItem);
+    this->m_tableWidget->setItem(row, COL_NETWORK, networkItem);
 
     // Column 5: IP Address
     // C# Equivalent: PropertyColumn(PropertyNames.ip_address)
@@ -445,15 +402,15 @@ void SearchTabPage::addObjectRow(const QString& objectType, const QString& objec
     QString ipAddress = getIPAddress(objectType, objectData);
     QTableWidgetItem* ipItem = new QTableWidgetItem(ipAddress);
     ipItem->setTextAlignment(Qt::AlignCenter);
-    m_tableWidget->setItem(row, COL_ADDRESS, ipItem);
+    this->m_tableWidget->setItem(row, COL_ADDRESS, ipItem);
 
     // Column 6: Uptime
     // C# Equivalent: PropertyColumn(PropertyNames.uptime)
     // C# Reference: xenadmin/XenAdmin/XenSearch/Columns.cs line 54
-    QString uptime = getUptime(objectType, objectData);
+    QString uptime = this->getUptime(objectType, objectData);
     QTableWidgetItem* uptimeItem = new QTableWidgetItem(uptime);
     uptimeItem->setTextAlignment(Qt::AlignCenter);
-    m_tableWidget->setItem(row, COL_UPTIME, uptimeItem);
+    this->m_tableWidget->setItem(row, COL_UPTIME, uptimeItem);
 }
 
 QString SearchTabPage::getObjectName(const QString& objectType, const QVariantMap& objectData) const
@@ -483,10 +440,10 @@ QString SearchTabPage::getCPUUsageText(const QString& objectType, const QVariant
         // C# Logic: Get VM_metrics, sum VCPUs_utilisation for all VCPUs
         // Format: "X% of Y CPUs" (or "X% of 1 CPU" for single CPU)
         QString metricsRef = objectData.value("metrics", "").toString();
-        if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL" || !m_xenLib || !m_xenLib->getCache())
+        if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL" || !this->m_xenLib || !this->m_xenLib->getCache())
             return "-";
 
-        QVariantMap vmMetrics = m_xenLib->getCache()->ResolveObjectData("vm_metrics", metricsRef);
+        QVariantMap vmMetrics = this->m_xenLib->getCache()->ResolveObjectData("vm_metrics", metricsRef);
         if (vmMetrics.isEmpty())
             return "-";
 
@@ -502,7 +459,7 @@ QString SearchTabPage::getCPUUsageText(const QString& objectType, const QVariant
 
         // Get CPU utilization from MetricUpdater
         // C# uses: for (int i = 0; i < vcpus; i++) sum += MetricUpdater.GetValue(vm, String.Format("cpu{0}", i))
-        MetricUpdater* metrics = m_xenLib->getMetricUpdater();
+        MetricUpdater* metrics = this->m_xenLib->getMetricUpdater();
         if (!metrics || !metrics->hasMetrics("vm", uuid))
         {
             // No metrics available yet, show placeholder
@@ -541,7 +498,7 @@ QString SearchTabPage::getCPUUsageText(const QString& objectType, const QVariant
             return "-";
 
         // Get CPU utilization from MetricUpdater
-        MetricUpdater* metrics = m_xenLib->getMetricUpdater();
+        MetricUpdater* metrics = this->m_xenLib->getMetricUpdater();
         if (!metrics || !metrics->hasMetrics("host", uuid))
         {
             // No metrics available yet
@@ -598,7 +555,7 @@ QString SearchTabPage::getMemoryUsageText(const QString& objectType, const QVari
         if (uuid.isEmpty())
             return "-";
 
-        MetricUpdater* metrics = m_xenLib ? m_xenLib->getMetricUpdater() : nullptr;
+        MetricUpdater* metrics = this->m_xenLib ? this->m_xenLib->getMetricUpdater() : nullptr;
         if (!metrics || !metrics->hasMetrics("vm", uuid))
         {
             // No metrics available, show static allocation
@@ -640,14 +597,14 @@ QString SearchTabPage::getMemoryUsageText(const QString& objectType, const QVari
         if (uuid.isEmpty())
             return "-";
 
-        MetricUpdater* metrics = m_xenLib ? m_xenLib->getMetricUpdater() : nullptr;
+        MetricUpdater* metrics = this->m_xenLib ? this->m_xenLib->getMetricUpdater() : nullptr;
         if (!metrics || !metrics->hasMetrics("host", uuid))
         {
             // No metrics available, show from host_metrics if available
             QString metricsRef = objectData.value("metrics", "").toString();
-            if (!metricsRef.isEmpty() && metricsRef != "OpaqueRef:NULL" && m_xenLib && m_xenLib->getCache())
+            if (!metricsRef.isEmpty() && metricsRef != "OpaqueRef:NULL" && this->m_xenLib && this->m_xenLib->getCache())
             {
-                QVariantMap hostMetrics = m_xenLib->getCache()->ResolveObjectData("host_metrics", metricsRef);
+                QVariantMap hostMetrics = this->m_xenLib->getCache()->ResolveObjectData("host_metrics", metricsRef);
                 qulonglong memoryTotal = hostMetrics.value("memory_total", 0).toULongLong();
                 if (memoryTotal > 0)
                 {
@@ -679,10 +636,10 @@ QString SearchTabPage::getMemoryUsageText(const QString& objectType, const QVari
 
 int SearchTabPage::getMemoryUsagePercent(const QString& objectType, const QVariantMap& objectData) const
 {
-    if (!m_xenLib)
+    if (!this->m_xenLib)
         return -1;
 
-    MetricUpdater* metrics = m_xenLib->getMetricUpdater();
+    MetricUpdater* metrics = this->m_xenLib->getMetricUpdater();
     if (!metrics)
         return -1;
 
@@ -731,7 +688,7 @@ QString SearchTabPage::getDiskUsageText(const QString& objectType, const QVarian
         if (uuid.isEmpty())
             return "-";
 
-        MetricUpdater* metrics = m_xenLib ? m_xenLib->getMetricUpdater() : nullptr;
+        MetricUpdater* metrics = this->m_xenLib ? this->m_xenLib->getMetricUpdater() : nullptr;
         if (!metrics || !metrics->hasMetrics("vm", uuid))
             return "-";
 
@@ -748,10 +705,10 @@ QString SearchTabPage::getDiskUsageText(const QString& objectType, const QVarian
 
         foreach (QVariant vbdRef, vbds)
         {
-            if (!m_xenLib->getCache())
+            if (!this->m_xenLib->getCache())
                 continue;
 
-            QVariantMap vbdData = m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef.toString());
+            QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef.toString());
             if (vbdData.isEmpty())
                 continue;
 
@@ -801,7 +758,7 @@ QString SearchTabPage::getNetworkUsageText(const QString& objectType, const QVar
         if (uuid.isEmpty())
             return "-";
 
-        MetricUpdater* metrics = m_xenLib ? m_xenLib->getMetricUpdater() : nullptr;
+        MetricUpdater* metrics = this->m_xenLib ? this->m_xenLib->getMetricUpdater() : nullptr;
         if (!metrics || !metrics->hasMetrics("vm", uuid))
             return "-";
 
@@ -818,10 +775,10 @@ QString SearchTabPage::getNetworkUsageText(const QString& objectType, const QVar
 
         foreach (QVariant vifRef, vifs)
         {
-            if (!m_xenLib->getCache())
+            if (!this->m_xenLib->getCache())
                 continue;
 
-            QVariantMap vifData = m_xenLib->getCache()->ResolveObjectData("vif", vifRef.toString());
+            QVariantMap vifData = this->m_xenLib->getCache()->ResolveObjectData("vif", vifRef.toString());
             if (vifData.isEmpty())
                 continue;
 
@@ -860,7 +817,7 @@ QString SearchTabPage::getNetworkUsageText(const QString& objectType, const QVar
         if (uuid.isEmpty())
             return "-";
 
-        MetricUpdater* metrics = m_xenLib ? m_xenLib->getMetricUpdater() : nullptr;
+        MetricUpdater* metrics = this->m_xenLib ? this->m_xenLib->getMetricUpdater() : nullptr;
         if (!metrics || !metrics->hasMetrics("host", uuid))
             return "-";
 
@@ -875,10 +832,10 @@ QString SearchTabPage::getNetworkUsageText(const QString& objectType, const QVar
 
         foreach (QVariant pifRef, pifs)
         {
-            if (!m_xenLib->getCache())
+            if (!this->m_xenLib->getCache())
                 continue;
 
-            QVariantMap pifData = m_xenLib->getCache()->ResolveObjectData("pif", pifRef.toString());
+            QVariantMap pifData = this->m_xenLib->getCache()->ResolveObjectData("pif", pifRef.toString());
             if (pifData.isEmpty())
                 continue;
 
@@ -926,10 +883,10 @@ QString SearchTabPage::getIPAddress(const QString& objectType, const QVariantMap
         // We want the first IPv4 address from VIF device 0
 
         QString guestMetricsRef = objectData.value("guest_metrics", "").toString();
-        if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL" || !m_xenLib || !m_xenLib->getCache())
+        if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL" || !this->m_xenLib || !this->m_xenLib->getCache())
             return "";
 
-        QVariantMap guestMetrics = m_xenLib->getCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+        QVariantMap guestMetrics = this->m_xenLib->getCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
         if (guestMetrics.isEmpty())
             return "";
 
@@ -980,10 +937,10 @@ QString SearchTabPage::getUptime(const QString& objectType, const QVariantMap& o
         // C# Logic: Get VM_metrics.start_time, calculate uptime = now - start_time
         // Format: "X days Y hours Z minutes" (using PrettyTimeSpan)
         QString metricsRef = objectData.value("metrics", "").toString();
-        if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL" || !m_xenLib || !m_xenLib->getCache())
+        if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL" || !this->m_xenLib || !this->m_xenLib->getCache())
             return "";
 
-        QVariantMap vmMetrics = m_xenLib->getCache()->ResolveObjectData("vm_metrics", metricsRef);
+        QVariantMap vmMetrics = this->m_xenLib->getCache()->ResolveObjectData("vm_metrics", metricsRef);
         if (vmMetrics.isEmpty())
             return "";
 
@@ -1055,10 +1012,10 @@ void SearchTabPage::onItemDoubleClicked(int row, int column)
 {
     Q_UNUSED(column);
 
-    if (row < 0 || row >= m_tableWidget->rowCount())
+    if (row < 0 || row >= this->m_tableWidget->rowCount())
         return;
 
-    QTableWidgetItem* nameItem = m_tableWidget->item(row, COL_NAME);
+    QTableWidgetItem* nameItem = this->m_tableWidget->item(row, COL_NAME);
     if (!nameItem)
         return;
 

@@ -27,7 +27,7 @@
 
 #include "vappstartcommand.h"
 #include "../../../xenlib/xen/actions/vm/startapplianceaction.h"
-#include "../../../xenlib/xen/connection.h"
+#include "../../../xenlib/xen/network/connection.h"
 #include "../../../xenlib/xenlib.h"
 #include "../../../xenlib/xencache.h"
 #include "../../mainwindow.h"

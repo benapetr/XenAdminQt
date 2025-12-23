@@ -32,11 +32,11 @@
 #include "../mainwindow.h"
 
 #include <xenlib.h>
-#include <xen/connection.h>
+#include <xen/network/connection.h>
 #include <xen/session.h>
 #include <xen/host.h>
 #include <xen/actions/pool/createpoolaction.h>
-#include <collections/connectionsmanager.h>
+#include <xen/network/connectionsmanager.h>
 #include <xencache.h>
 #include <xen/xenapi/xenapi_Pool.h>
 
@@ -92,7 +92,7 @@ NewPoolDialog::~NewPoolDialog()
  */
 void NewPoolDialog::populateConnections()
 {
-    ConnectionsManager* connMgr = ConnectionsManager::instance();
+    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     if (!connMgr)
     {
         qWarning() << "NewPoolDialog: No ConnectionsManager available";

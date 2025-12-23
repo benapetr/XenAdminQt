@@ -27,7 +27,7 @@
 
 #include "asyncoperation.h"
 #include "session.h"
-#include "connection.h"
+#include "network/connection.h"
 #include "api.h"
 #include "pool.h"
 #include "host.h"
