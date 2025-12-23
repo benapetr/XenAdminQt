@@ -39,7 +39,7 @@ DestroyBondCommand::DestroyBondCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool DestroyBondCommand::canRun() const
+bool DestroyBondCommand::CanRun() const
 {
     QString networkRef = this->getSelectedNetworkRef();
     if (networkRef.isEmpty())
@@ -53,7 +53,7 @@ bool DestroyBondCommand::canRun() const
     return this->isNetworkABond(networkData);
 }
 
-void DestroyBondCommand::run()
+void DestroyBondCommand::Run()
 {
     QString networkRef = this->getSelectedNetworkRef();
     QVariantMap networkData = this->getSelectedNetworkData();
@@ -159,7 +159,7 @@ void DestroyBondCommand::run()
     action->runAsync();
 }
 
-QString DestroyBondCommand::menuText() const
+QString DestroyBondCommand::MenuText() const
 {
     return "Delete Bond";
 }

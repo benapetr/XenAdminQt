@@ -39,7 +39,7 @@ HADisableCommand::HADisableCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool HADisableCommand::canRun() const
+bool HADisableCommand::CanRun() const
 {
     QString poolRef = this->getSelectedPoolRef();
     if (poolRef.isEmpty())
@@ -49,7 +49,7 @@ bool HADisableCommand::canRun() const
     return this->isPoolConnected() && this->isHAEnabled();
 }
 
-void HADisableCommand::run()
+void HADisableCommand::Run()
 {
     QString poolRef = this->getSelectedPoolRef();
     QString poolName = this->getSelectedPoolName();
@@ -102,7 +102,7 @@ void HADisableCommand::run()
     this->mainWindow()->showStatusMessage(QString("Disabling HA on pool '%1'...").arg(poolName), 0);
 }
 
-QString HADisableCommand::menuText() const
+QString HADisableCommand::MenuText() const
 {
     return "Disable";
 }

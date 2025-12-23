@@ -41,7 +41,7 @@ SuspendVMCommand::SuspendVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool SuspendVMCommand::canRun() const
+bool SuspendVMCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -57,7 +57,7 @@ bool SuspendVMCommand::canRun() const
     return allowedOperations.contains("suspend");
 }
 
-void SuspendVMCommand::run()
+void SuspendVMCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     QString vmName = this->getSelectedVMName();
@@ -102,7 +102,7 @@ void SuspendVMCommand::run()
     action->runAsync();
 }
 
-QString SuspendVMCommand::menuText() const
+QString SuspendVMCommand::MenuText() const
 {
     return "Suspend VM";
 }

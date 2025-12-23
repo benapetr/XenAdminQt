@@ -38,8 +38,8 @@ class DeleteTemplateCommand : public DeleteVMCommand
         explicit DeleteTemplateCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
-        bool canRun() const override;
-        QString menuText() const override;
+        bool CanRun() const override;
+        QString MenuText() const override;
 
     private:
         bool canDeleteTemplate(const QString& templateRef) const;

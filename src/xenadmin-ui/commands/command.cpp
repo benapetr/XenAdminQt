@@ -33,14 +33,22 @@
 #include <QTreeWidget>
 #include <QList>
 
-Command::Command(MainWindow* mainWindow, QObject* parent)
-    : QObject(parent), m_mainWindow(mainWindow)
+Command::Command(MainWindow* mainWindow, QObject* parent) : QObject(parent), m_mainWindow(mainWindow)
 {
 }
 
-Command::Command(MainWindow* mainWindow, const QStringList& selection, QObject* parent)
-    : QObject(parent), m_mainWindow(mainWindow), m_selection(selection)
+Command::Command(MainWindow* mainWindow, const QStringList& selection, QObject* parent) : QObject(parent), m_mainWindow(mainWindow), m_selection(selection)
 {
+}
+
+QSharedPointer<XenObject> Command::GetObject() const
+{
+    QTreeWidgetItem* item = this->getSelectedItem();
+    if (!item)
+        return QSharedPointer<XenObject>();
+
+    QVariant data = item->data(0, Qt::UserRole);
+    return data.value<QSharedPointer<XenObject>>();
 }
 
 XenLib* Command::xenLib() const

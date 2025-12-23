@@ -47,7 +47,7 @@ HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, c
 {
 }
 
-bool HostMaintenanceModeCommand::canRun() const
+bool HostMaintenanceModeCommand::CanRun() const
 {
     QString objectType = this->getSelectedObjectType();
     if (objectType != "host")
@@ -71,9 +71,9 @@ bool HostMaintenanceModeCommand::canRun() const
         return !hostEnabled; // Can only exit maintenance if host is currently disabled
 }
 
-void HostMaintenanceModeCommand::run()
+void HostMaintenanceModeCommand::Run()
 {
-    if (!this->canRun())
+    if (!this->CanRun())
         return;
 
     QString hostRef = this->getSelectedObjectRef();
@@ -174,7 +174,7 @@ void HostMaintenanceModeCommand::run()
     }
 }
 
-QString HostMaintenanceModeCommand::menuText() const
+QString HostMaintenanceModeCommand::MenuText() const
 {
     if (this->m_enterMode)
         return "Enter Maintenance Mode";

@@ -38,7 +38,7 @@ ExportTemplateCommand::ExportTemplateCommand(MainWindow* mainWindow, QObject* pa
 {
 }
 
-bool ExportTemplateCommand::canRun() const
+bool ExportTemplateCommand::CanRun() const
 {
     QString templateRef = this->getSelectedTemplateRef();
     if (templateRef.isEmpty())
@@ -47,7 +47,7 @@ bool ExportTemplateCommand::canRun() const
     return this->canExportTemplate(templateRef);
 }
 
-void ExportTemplateCommand::run()
+void ExportTemplateCommand::Run()
 {
     QString templateRef = this->getSelectedTemplateRef();
     QString templateName = this->getSelectedTemplateName();
@@ -66,7 +66,7 @@ void ExportTemplateCommand::run()
     }
 }
 
-QString ExportTemplateCommand::menuText() const
+QString ExportTemplateCommand::MenuText() const
 {
     return "Export Template";
 }

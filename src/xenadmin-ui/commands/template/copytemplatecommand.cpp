@@ -36,7 +36,7 @@ CopyTemplateCommand::CopyTemplateCommand(MainWindow* mainWindow, QObject* parent
 {
 }
 
-bool CopyTemplateCommand::canRun() const
+bool CopyTemplateCommand::CanRun() const
 {
     QString objectType = this->getSelectedObjectType();
     if (objectType != "vm")
@@ -58,7 +58,7 @@ bool CopyTemplateCommand::canRun() const
     return this->canRunTemplate(templateData);
 }
 
-void CopyTemplateCommand::run()
+void CopyTemplateCommand::Run()
 {
     QString templateRef = this->getSelectedObjectRef();
     if (templateRef.isEmpty())
@@ -91,7 +91,7 @@ void CopyTemplateCommand::run()
                              "Template copy will be implemented using CopyVMDialog or CrossPoolMigrateWizard.");
 }
 
-QString CopyTemplateCommand::menuText() const
+QString CopyTemplateCommand::MenuText() const
 {
     return "Copy Template";
 }

@@ -36,13 +36,13 @@ ReconnectHostCommand::ReconnectHostCommand(MainWindow* mainWindow, QObject* pare
 {
 }
 
-bool ReconnectHostCommand::canRun() const
+bool ReconnectHostCommand::CanRun() const
 {
     // Can reconnect if connection is disconnected
     return this->isConnectionDisconnected();
 }
 
-void ReconnectHostCommand::run()
+void ReconnectHostCommand::Run()
 {
     if (!this->mainWindow()->xenLib())
         return;
@@ -60,7 +60,7 @@ void ReconnectHostCommand::run()
     this->mainWindow()->showStatusMessage("Reconnecting...");
 }
 
-QString ReconnectHostCommand::menuText() const
+QString ReconnectHostCommand::MenuText() const
 {
     return "Reconnect";
 }

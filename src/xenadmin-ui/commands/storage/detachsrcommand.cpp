@@ -44,7 +44,7 @@ void DetachSRCommand::setTargetSR(const QString& srRef)
     this->m_overrideSRRef = srRef;
 }
 
-bool DetachSRCommand::canRun() const
+bool DetachSRCommand::CanRun() const
 {
     QString srRef = this->currentSR();
     if (srRef.isEmpty())
@@ -116,7 +116,7 @@ bool DetachSRCommand::canRun() const
     return true;
 }
 
-void DetachSRCommand::run()
+void DetachSRCommand::Run()
 {
     QString srRef = this->currentSR();
     if (srRef.isEmpty())

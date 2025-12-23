@@ -43,13 +43,13 @@ AddVirtualDiskCommand::AddVirtualDiskCommand(MainWindow* mainWindow, QObject* pa
 {
 }
 
-bool AddVirtualDiskCommand::canRun() const
+bool AddVirtualDiskCommand::CanRun() const
 {
     // Can add virtual disk if SR or VM is selected
     return (isSRSelected() || isVMSelected()) && canAddDisk();
 }
 
-void AddVirtualDiskCommand::run()
+void AddVirtualDiskCommand::Run()
 {
     QString objectType = getSelectedObjectType();
     QString objectRef = getSelectedRef();
@@ -208,7 +208,7 @@ void AddVirtualDiskCommand::run()
     }
 }
 
-QString AddVirtualDiskCommand::menuText() const
+QString AddVirtualDiskCommand::MenuText() const
 {
     return "Add Virtual Disk...";
 }

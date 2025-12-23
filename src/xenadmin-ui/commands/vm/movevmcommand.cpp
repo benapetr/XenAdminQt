@@ -36,7 +36,7 @@ MoveVMCommand::MoveVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool MoveVMCommand::canRun() const
+bool MoveVMCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -45,7 +45,7 @@ bool MoveVMCommand::canRun() const
     return this->canVMBeMoved();
 }
 
-void MoveVMCommand::run()
+void MoveVMCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -57,7 +57,7 @@ void MoveVMCommand::run()
                              "This allows moving or migrating a VM to different storage or hosts.");
 }
 
-QString MoveVMCommand::menuText() const
+QString MoveVMCommand::MenuText() const
 {
     return "Move VM...";
 }

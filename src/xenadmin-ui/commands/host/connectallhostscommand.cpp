@@ -30,18 +30,17 @@
 #include "xenlib.h"
 #include "xen/network//connectionsmanager.h"
 
-ConnectAllHostsCommand::ConnectAllHostsCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+ConnectAllHostsCommand::ConnectAllHostsCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
-bool ConnectAllHostsCommand::canRun() const
+bool ConnectAllHostsCommand::CanRun() const
 {
     // Can connect all if there are any disconnected connections
     return this->hasDisconnectedConnections();
 }
 
-void ConnectAllHostsCommand::run()
+void ConnectAllHostsCommand::Run()
 {
     if (!this->mainWindow()->xenLib())
         return;
@@ -54,7 +53,7 @@ void ConnectAllHostsCommand::run()
     manager->connectAll();
 }
 
-QString ConnectAllHostsCommand::menuText() const
+QString ConnectAllHostsCommand::MenuText() const
 {
     return "Connect All";
 }

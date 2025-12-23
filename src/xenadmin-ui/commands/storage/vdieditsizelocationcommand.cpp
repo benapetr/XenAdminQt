@@ -36,7 +36,7 @@ VdiEditSizeLocationCommand::VdiEditSizeLocationCommand(MainWindow* mainWindow, Q
 {
 }
 
-bool VdiEditSizeLocationCommand::canRun() const
+bool VdiEditSizeLocationCommand::CanRun() const
 {
     // Can edit VDI properties if a VDI is selected
     if (!isVDISelected())
@@ -58,7 +58,7 @@ bool VdiEditSizeLocationCommand::canRun() const
     return !vdiData.isEmpty();
 }
 
-void VdiEditSizeLocationCommand::run()
+void VdiEditSizeLocationCommand::Run()
 {
     QString vdiRef = getSelectedVDIRef();
     if (vdiRef.isEmpty())
@@ -76,7 +76,7 @@ void VdiEditSizeLocationCommand::run()
     dialog->show();
 }
 
-QString VdiEditSizeLocationCommand::menuText() const
+QString VdiEditSizeLocationCommand::MenuText() const
 {
     return "Properties...";
 }

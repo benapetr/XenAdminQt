@@ -36,7 +36,7 @@ UninstallVMCommand::UninstallVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool UninstallVMCommand::canRun() const
+bool UninstallVMCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -45,7 +45,7 @@ bool UninstallVMCommand::canRun() const
     return this->canVMBeUninstalled();
 }
 
-void UninstallVMCommand::run()
+void UninstallVMCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     QString vmName = this->getSelectedVMName();
@@ -72,7 +72,7 @@ void UninstallVMCommand::run()
     }
 }
 
-QString UninstallVMCommand::menuText() const
+QString UninstallVMCommand::MenuText() const
 {
     return "Uninstall VM";
 }

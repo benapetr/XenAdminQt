@@ -25,24 +25,47 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NEWNETWORKCOMMAND_H
-#define NEWNETWORKCOMMAND_H
+#include "hostcommand.h"
+#include "xen/host.h"
 
-#include "../command.h"
-
-class NewNetworkCommand : public Command
+HostCommand::HostCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
-    Q_OBJECT
+}
 
-public:
-    explicit NewNetworkCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+QSharedPointer<Host> HostCommand::getSelectedHost() const
+{
+    return qSharedPointerCast<Host>(this->GetObject());
+}
 
-    void Run() override;
-    bool CanRun() const override;
-    QString MenuText() const override;
+QString HostCommand::getSelectedHostRef() const
+{
+    QTreeWidgetItem* item = this->getSelectedItem();
+    if (!item)
+        return QString();
 
-private:
-    void showNewNetworkWizard();
-};
+    QString objectType = this->getSelectedObjectType();
+    if (objectType != "host")
+        return QString();
 
-#endif // NEWNETWORKCOMMAND_H
+    return this->getSelectedObjectRef();
+}
+
+QString HostCommand::getSelectedHostName() const
+{
+    QTreeWidgetItem* item = this->getSelectedItem();
+    if (!item)
+        return QString();
+
+    QString objectType = this->getSelectedObjectType();
+    if (objectType != "host")
+        return QString();
+
+    return item->text(0);
+}
+
+bool HostCommand::isHostEnabled() const
+{
+    // Use cache instead of async API call
+    QVariantMap hostData = this->getSelectedHost()->data();
+    return hostData.value("enabled", true).toBool();
+}

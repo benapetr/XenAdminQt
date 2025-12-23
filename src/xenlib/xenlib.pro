@@ -51,6 +51,7 @@ SOURCES += \
     xen/sr.cpp \
     xen/vdi.cpp \
     xen/vbd.cpp \
+    xen/network.cpp \
     xen/xenapi/xenapi_VM.cpp \
     xen/xenapi/xenapi_SR.cpp \
     xen/xenapi/xenapi_Pool.cpp \
@@ -188,6 +189,7 @@ HEADERS += \
     xen/sr.h \
     xen/vdi.h \
     xen/vbd.h \
+    xen/network.h \
     xen/xenapi/xenapi_VM.h \
     xen/xenapi/xenapi_SR.h \
     xen/xenapi/xenapi_Pool.h \

@@ -60,9 +60,9 @@ class RescanPIFsCommand : public Command
     public:
         explicit RescanPIFsCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
     private:
         bool isHostSelected() const;

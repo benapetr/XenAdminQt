@@ -55,9 +55,9 @@ class TrimSRCommand : public Command
     public:
         explicit TrimSRCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
         /**
          * @brief Explicitly set the SR this command should operate on

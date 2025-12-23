@@ -42,7 +42,7 @@ CloneVMCommand::CloneVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool CloneVMCommand::canRun() const
+bool CloneVMCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -52,7 +52,7 @@ bool CloneVMCommand::canRun() const
     return this->isVMCloneable(vmRef);
 }
 
-void CloneVMCommand::run()
+void CloneVMCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     QString vmName = this->getSelectedVMName();
@@ -131,7 +131,7 @@ void CloneVMCommand::run()
     }
 }
 
-QString CloneVMCommand::menuText() const
+QString CloneVMCommand::MenuText() const
 {
     return "Clone VM";
 }

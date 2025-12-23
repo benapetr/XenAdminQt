@@ -39,7 +39,7 @@ VappStartCommand::VappStartCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool VappStartCommand::canRun() const
+bool VappStartCommand::CanRun() const
 {
     QString objRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -72,7 +72,7 @@ bool VappStartCommand::canRun() const
     return false;
 }
 
-void VappStartCommand::run()
+void VappStartCommand::Run()
 {
     QString objRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -148,7 +148,7 @@ void VappStartCommand::run()
     action->runAsync();
 }
 
-QString VappStartCommand::menuText() const
+QString VappStartCommand::MenuText() const
 {
     return tr("Start v&App");
 }

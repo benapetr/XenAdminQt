@@ -36,13 +36,13 @@ HostPropertiesCommand::HostPropertiesCommand(MainWindow* mainWindow, QObject* pa
 {
 }
 
-bool HostPropertiesCommand::canRun() const
+bool HostPropertiesCommand::CanRun() const
 {
     QString hostRef = this->getSelectedHostRef();
     return !hostRef.isEmpty() && this->mainWindow()->xenLib()->isConnected();
 }
 
-void HostPropertiesCommand::run()
+void HostPropertiesCommand::Run()
 {
     QString hostRef = this->getSelectedHostRef();
 
@@ -59,7 +59,7 @@ void HostPropertiesCommand::run()
     dialog->exec();
 }
 
-QString HostPropertiesCommand::menuText() const
+QString HostPropertiesCommand::MenuText() const
 {
     return "Properties";
 }

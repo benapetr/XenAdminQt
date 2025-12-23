@@ -42,7 +42,7 @@ NewTemplateFromSnapshotCommand::NewTemplateFromSnapshotCommand(MainWindow* mainW
 {
 }
 
-bool NewTemplateFromSnapshotCommand::canRun() const
+bool NewTemplateFromSnapshotCommand::CanRun() const
 {
     QString vmRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -64,7 +64,7 @@ bool NewTemplateFromSnapshotCommand::canRun() const
     return isSnapshot;
 }
 
-void NewTemplateFromSnapshotCommand::run()
+void NewTemplateFromSnapshotCommand::Run()
 {
     QString vmRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -152,7 +152,7 @@ void NewTemplateFromSnapshotCommand::run()
     action->runAsync();
 }
 
-QString NewTemplateFromSnapshotCommand::menuText() const
+QString NewTemplateFromSnapshotCommand::MenuText() const
 {
     return tr("Create &Template from Snapshot...");
 }

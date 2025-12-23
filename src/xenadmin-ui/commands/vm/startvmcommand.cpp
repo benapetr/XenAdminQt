@@ -45,7 +45,7 @@ StartVMCommand::StartVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool StartVMCommand::canRun() const
+bool StartVMCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -62,7 +62,7 @@ bool StartVMCommand::canRun() const
     return allowedOperations.contains("start");
 }
 
-void StartVMCommand::run()
+void StartVMCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     QString vmName = this->getSelectedVMName();
@@ -141,7 +141,7 @@ bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
     return true;
 }
 
-QString StartVMCommand::menuText() const
+QString StartVMCommand::MenuText() const
 {
     return "Start VM";
 }

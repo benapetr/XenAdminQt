@@ -42,7 +42,7 @@ ExportVMCommand::ExportVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool ExportVMCommand::canRun() const
+bool ExportVMCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -53,9 +53,9 @@ bool ExportVMCommand::canRun() const
     return this->isVMExportable(vmRef);
 }
 
-void ExportVMCommand::run()
+void ExportVMCommand::Run()
 {
-    if (!this->canRun())
+    if (!this->CanRun())
     {
         return;
     }
@@ -115,7 +115,7 @@ void ExportVMCommand::onWizardFinished(int result)
     }
 }
 
-QString ExportVMCommand::menuText() const
+QString ExportVMCommand::MenuText() const
 {
     return "Export...";
 }

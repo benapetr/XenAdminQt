@@ -41,7 +41,7 @@ PauseVMCommand::PauseVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool PauseVMCommand::canRun() const
+bool PauseVMCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -57,7 +57,7 @@ bool PauseVMCommand::canRun() const
     return allowedOperations.contains("pause");
 }
 
-void PauseVMCommand::run()
+void PauseVMCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     QString vmName = this->getSelectedVMName();
@@ -93,7 +93,7 @@ void PauseVMCommand::run()
     action->runAsync();
 }
 
-QString PauseVMCommand::menuText() const
+QString PauseVMCommand::MenuText() const
 {
     return "Pause VM";
 }

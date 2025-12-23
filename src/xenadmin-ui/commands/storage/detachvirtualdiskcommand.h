@@ -47,9 +47,9 @@ class DetachVirtualDiskCommand : public Command
     public:
         explicit DetachVirtualDiskCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        QString menuText() const override;
-        bool canRun() const override;
-        void run() override;
+        QString MenuText() const override;
+        bool CanRun() const override;
+        void Run() override;
 
     private:
         bool canRunVDI(const QString& vdiRef) const;

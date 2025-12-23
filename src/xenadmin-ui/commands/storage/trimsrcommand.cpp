@@ -45,7 +45,7 @@ void TrimSRCommand::setTargetSR(const QString& srRef)
     this->m_overrideSRRef = srRef;
 }
 
-bool TrimSRCommand::canRun() const
+bool TrimSRCommand::CanRun() const
 {
     QString srRef = this->getSelectedSRRef();
     if (srRef.isEmpty())
@@ -59,7 +59,7 @@ bool TrimSRCommand::canRun() const
     return this->supportsTrim(srData) && this->isAttachedToHost(srData);
 }
 
-void TrimSRCommand::run()
+void TrimSRCommand::Run()
 {
     QString srRef = this->getSelectedSRRef();
     QVariantMap srData = this->getSelectedSRData();
@@ -128,7 +128,7 @@ void TrimSRCommand::run()
     action->runAsync();
 }
 
-QString TrimSRCommand::menuText() const
+QString TrimSRCommand::MenuText() const
 {
     return "Trim SR...";
 }

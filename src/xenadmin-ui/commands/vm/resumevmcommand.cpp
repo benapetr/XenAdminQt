@@ -45,7 +45,7 @@ ResumeVMCommand::ResumeVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool ResumeVMCommand::canRun() const
+bool ResumeVMCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -61,7 +61,7 @@ bool ResumeVMCommand::canRun() const
     return allowedOperations.contains("resume");
 }
 
-void ResumeVMCommand::run()
+void ResumeVMCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     QString vmName = this->getSelectedVMName();
@@ -151,7 +151,7 @@ bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool
     return true;
 }
 
-QString ResumeVMCommand::menuText() const
+QString ResumeVMCommand::MenuText() const
 {
     return "Resume VM";
 }

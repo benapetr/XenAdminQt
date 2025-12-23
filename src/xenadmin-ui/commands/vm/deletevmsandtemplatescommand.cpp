@@ -34,7 +34,7 @@ DeleteVMsAndTemplatesCommand::DeleteVMsAndTemplatesCommand(MainWindow* mainWindo
 {
 }
 
-bool DeleteVMsAndTemplatesCommand::canRun() const
+bool DeleteVMsAndTemplatesCommand::CanRun() const
 {
     QString objectType = this->getSelectedObjectType();
 
@@ -68,7 +68,7 @@ bool DeleteVMsAndTemplatesCommand::canRunForVM(const QString& vmRef) const
     return allowedOps.contains("destroy");
 }
 
-QString DeleteVMsAndTemplatesCommand::menuText() const
+QString DeleteVMsAndTemplatesCommand::MenuText() const
 {
     return tr("&Delete");
 }

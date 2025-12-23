@@ -269,14 +269,10 @@ MainWindow::MainWindow(QWidget* parent)
     this->m_navigationPane = this->ui->navigationPane;
 
     // Connect NavigationPane events (matches C# MainWindow.navigationPane_* event handlers)
-    connect(this->m_navigationPane, &NavigationPane::navigationModeChanged,
-            this, &MainWindow::onNavigationModeChanged);
-    connect(this->m_navigationPane, &NavigationPane::notificationsSubModeChanged,
-            this, &MainWindow::onNotificationsSubModeChanged);
-    connect(this->m_navigationPane, &NavigationPane::treeViewSelectionChanged,
-            this, &MainWindow::onNavigationPaneTreeViewSelectionChanged);
-    connect(this->m_navigationPane, &NavigationPane::treeNodeRightClicked,
-            this, &MainWindow::onNavigationPaneTreeNodeRightClicked);
+    connect(this->m_navigationPane, &NavigationPane::navigationModeChanged, this, &MainWindow::onNavigationModeChanged);
+    connect(this->m_navigationPane, &NavigationPane::notificationsSubModeChanged, this, &MainWindow::onNotificationsSubModeChanged);
+    connect(this->m_navigationPane, &NavigationPane::treeViewSelectionChanged, this, &MainWindow::onNavigationPaneTreeViewSelectionChanged);
+    connect(this->m_navigationPane, &NavigationPane::treeNodeRightClicked, this, &MainWindow::onNavigationPaneTreeNodeRightClicked);
 
     // Get tree widget from NavigationPane's NavigationView for legacy code compatibility
     // TODO: Refactor to use NavigationPane API instead of direct tree access
@@ -621,7 +617,7 @@ void MainWindow::showImportWizard()
 
     // Use the ImportVMCommand to show the wizard
     ImportVMCommand importCmd(this);
-    importCmd.run();
+    importCmd.Run();
 }
 
 void MainWindow::showExportWizard()
@@ -629,7 +625,7 @@ void MainWindow::showExportWizard()
     qDebug() << "MainWindow: Showing Export Wizard";
 
     ExportVMCommand exportCmd(this);
-    exportCmd.run();
+    exportCmd.Run();
 }
 
 void MainWindow::showNewNetworkWizard()
@@ -637,7 +633,7 @@ void MainWindow::showNewNetworkWizard()
     qDebug() << "MainWindow: Showing New Network Wizard";
 
     NewNetworkCommand newNetCmd(this);
-    newNetCmd.run();
+    newNetCmd.Run();
 }
 
 void MainWindow::showNewStorageRepositoryWizard()
@@ -645,7 +641,7 @@ void MainWindow::showNewStorageRepositoryWizard()
     qDebug() << "MainWindow: Showing New Storage Repository Wizard";
 
     NewSRCommand newSRCmd(this);
-    newSRCmd.run();
+    newSRCmd.Run();
 }
 
 void MainWindow::onConnectionStateChanged(bool connected)
@@ -2285,20 +2281,20 @@ void MainWindow::updateToolbarsAndMenus()
     // ========================================================================
 
     // Polymorphic commands (work for both VMs and Hosts)
-    bool canShutdown = m_commands["Shutdown"]->canRun();
-    bool canReboot = m_commands["Reboot"]->canRun();
+    bool canShutdown = m_commands["Shutdown"]->CanRun();
+    bool canReboot = m_commands["Reboot"]->CanRun();
 
     // VM-specific commands
-    bool canStartVM = m_commands["StartVM"]->canRun();
-    bool canResume = m_commands["ResumeVM"]->canRun();
-    bool canSuspend = m_commands["SuspendVM"]->canRun();
-    bool canPause = m_commands["PauseVM"]->canRun();
-    bool canUnpause = m_commands["UnpauseVM"]->canRun();
-    bool canForceShutdown = m_commands["ForceShutdownVM"]->canRun();
-    bool canForceReboot = m_commands["ForceRebootVM"]->canRun();
+    bool canStartVM = m_commands["StartVM"]->CanRun();
+    bool canResume = m_commands["ResumeVM"]->CanRun();
+    bool canSuspend = m_commands["SuspendVM"]->CanRun();
+    bool canPause = m_commands["PauseVM"]->CanRun();
+    bool canUnpause = m_commands["UnpauseVM"]->CanRun();
+    bool canForceShutdown = m_commands["ForceShutdownVM"]->CanRun();
+    bool canForceReboot = m_commands["ForceRebootVM"]->CanRun();
 
     // Host-specific commands
-    bool canPowerOnHost = m_commands["PowerOnHost"]->canRun();
+    bool canPowerOnHost = m_commands["PowerOnHost"]->CanRun();
 
     // Container buttons availability (for future Docker support)
     bool containerButtonsAvailable = false; // TODO: Docker support
@@ -2372,64 +2368,64 @@ void MainWindow::updateToolbarsAndMenus()
     // ========================================================================
 
     // Server menu - use the polymorphic Shutdown/Reboot commands
-    ui->ReconnectToolStripMenuItem1->setEnabled(m_commands["ReconnectHost"]->canRun());
-    ui->DisconnectToolStripMenuItem->setEnabled(m_commands["DisconnectHost"]->canRun());
-    ui->connectAllToolStripMenuItem->setEnabled(m_commands["ConnectAllHosts"]->canRun());
-    ui->disconnectAllToolStripMenuItem->setEnabled(m_commands["DisconnectAllHosts"]->canRun());
-    ui->restartToolstackAction->setEnabled(m_commands["RestartToolstack"]->canRun());
-    ui->reconnectAsToolStripMenuItem->setEnabled(m_commands["HostReconnectAs"]->canRun());
+    ui->ReconnectToolStripMenuItem1->setEnabled(m_commands["ReconnectHost"]->CanRun());
+    ui->DisconnectToolStripMenuItem->setEnabled(m_commands["DisconnectHost"]->CanRun());
+    ui->connectAllToolStripMenuItem->setEnabled(m_commands["ConnectAllHosts"]->CanRun());
+    ui->disconnectAllToolStripMenuItem->setEnabled(m_commands["DisconnectAllHosts"]->CanRun());
+    ui->restartToolstackAction->setEnabled(m_commands["RestartToolstack"]->CanRun());
+    ui->reconnectAsToolStripMenuItem->setEnabled(m_commands["HostReconnectAs"]->CanRun());
     ui->rebootAction->setEnabled(canReboot);           // Use same variable as toolbar
     ui->shutDownAction->setEnabled(canShutdown);       // Use same variable as toolbar
     ui->powerOnHostAction->setEnabled(canPowerOnHost); // Use same variable as toolbar
-    ui->maintenanceModeToolStripMenuItem1->setEnabled(m_commands["HostMaintenanceMode"]->canRun());
-    ui->ServerPropertiesToolStripMenuItem->setEnabled(m_commands["HostProperties"]->canRun());
+    ui->maintenanceModeToolStripMenuItem1->setEnabled(m_commands["HostMaintenanceMode"]->CanRun());
+    ui->ServerPropertiesToolStripMenuItem->setEnabled(m_commands["HostProperties"]->CanRun());
 
     // Pool menu
-    ui->AddPoolToolStripMenuItem->setEnabled(m_commands["NewPool"]->canRun());
-    ui->deleteToolStripMenuItem->setEnabled(m_commands["DeletePool"]->canRun());
-    ui->toolStripMenuItemHaConfigure->setEnabled(m_commands["HAConfigure"]->canRun());
-    ui->toolStripMenuItemHaDisable->setEnabled(m_commands["HADisable"]->canRun());
-    ui->PoolPropertiesToolStripMenuItem->setEnabled(m_commands["PoolProperties"]->canRun());
-    ui->addServerToPoolMenuItem->setEnabled(m_commands["JoinPool"]->canRun());
-    ui->menuItemRemoveFromPool->setEnabled(m_commands["EjectHostFromPool"]->canRun());
+    ui->AddPoolToolStripMenuItem->setEnabled(m_commands["NewPool"]->CanRun());
+    ui->deleteToolStripMenuItem->setEnabled(m_commands["DeletePool"]->CanRun());
+    ui->toolStripMenuItemHaConfigure->setEnabled(m_commands["HAConfigure"]->CanRun());
+    ui->toolStripMenuItemHaDisable->setEnabled(m_commands["HADisable"]->CanRun());
+    ui->PoolPropertiesToolStripMenuItem->setEnabled(m_commands["PoolProperties"]->CanRun());
+    ui->addServerToPoolMenuItem->setEnabled(m_commands["JoinPool"]->CanRun());
+    ui->menuItemRemoveFromPool->setEnabled(m_commands["EjectHostFromPool"]->CanRun());
 
     // VM menu
-    ui->newVmAction->setEnabled(m_commands["NewVM"]->canRun());
-    ui->startShutdownToolStripMenuItem->setEnabled(m_commands["VMLifeCycle"]->canRun());
-    ui->copyVMtoSharedStorageMenuItem->setEnabled(m_commands["CopyVM"]->canRun());
-    ui->MoveVMToolStripMenuItem->setEnabled(m_commands["MoveVM"]->canRun());
-    ui->installToolsToolStripMenuItem->setEnabled(m_commands["InstallTools"]->canRun());
-    ui->uninstallToolStripMenuItem->setEnabled(m_commands["UninstallVM"]->canRun());
-    ui->VMPropertiesToolStripMenuItem->setEnabled(m_commands["VMProperties"]->canRun());
-    ui->snapshotToolStripMenuItem->setEnabled(m_commands["TakeSnapshot"]->canRun());
-    ui->convertToTemplateToolStripMenuItem->setEnabled(m_commands["ConvertVMToTemplate"]->canRun());
-    ui->exportToolStripMenuItem->setEnabled(m_commands["ExportVM"]->canRun());
+    ui->newVmAction->setEnabled(m_commands["NewVM"]->CanRun());
+    ui->startShutdownToolStripMenuItem->setEnabled(m_commands["VMLifeCycle"]->CanRun());
+    ui->copyVMtoSharedStorageMenuItem->setEnabled(m_commands["CopyVM"]->CanRun());
+    ui->MoveVMToolStripMenuItem->setEnabled(m_commands["MoveVM"]->CanRun());
+    ui->installToolsToolStripMenuItem->setEnabled(m_commands["InstallTools"]->CanRun());
+    ui->uninstallToolStripMenuItem->setEnabled(m_commands["UninstallVM"]->CanRun());
+    ui->VMPropertiesToolStripMenuItem->setEnabled(m_commands["VMProperties"]->CanRun());
+    ui->snapshotToolStripMenuItem->setEnabled(m_commands["TakeSnapshot"]->CanRun());
+    ui->convertToTemplateToolStripMenuItem->setEnabled(m_commands["ConvertVMToTemplate"]->CanRun());
+    ui->exportToolStripMenuItem->setEnabled(m_commands["ExportVM"]->CanRun());
 
     // Update dynamic menu text for VMLifeCycle command
-    ui->startShutdownToolStripMenuItem->setText(m_commands["VMLifeCycle"]->menuText());
+    ui->startShutdownToolStripMenuItem->setText(m_commands["VMLifeCycle"]->MenuText());
 
     // Template menu
-    ui->newVMFromTemplateToolStripMenuItem->setEnabled(m_commands["NewVMFromTemplate"]->canRun());
-    ui->InstantVmToolStripMenuItem->setEnabled(m_commands["InstantVMFromTemplate"]->canRun());
-    ui->exportTemplateToolStripMenuItem->setEnabled(m_commands["ExportTemplate"]->canRun());
-    ui->duplicateTemplateToolStripMenuItem->setEnabled(m_commands["CopyTemplate"]->canRun());
-    ui->uninstallTemplateToolStripMenuItem->setEnabled(m_commands["DeleteTemplate"]->canRun());
-    ui->templatePropertiesToolStripMenuItem->setEnabled(m_commands["VMProperties"]->canRun());
+    ui->newVMFromTemplateToolStripMenuItem->setEnabled(m_commands["NewVMFromTemplate"]->CanRun());
+    ui->InstantVmToolStripMenuItem->setEnabled(m_commands["InstantVMFromTemplate"]->CanRun());
+    ui->exportTemplateToolStripMenuItem->setEnabled(m_commands["ExportTemplate"]->CanRun());
+    ui->duplicateTemplateToolStripMenuItem->setEnabled(m_commands["CopyTemplate"]->CanRun());
+    ui->uninstallTemplateToolStripMenuItem->setEnabled(m_commands["DeleteTemplate"]->CanRun());
+    ui->templatePropertiesToolStripMenuItem->setEnabled(m_commands["VMProperties"]->CanRun());
 
     // Storage menu
-    ui->addVirtualDiskToolStripMenuItem->setEnabled(m_commands["AddVirtualDisk"]->canRun());
-    ui->attachVirtualDiskToolStripMenuItem->setEnabled(m_commands["AttachVirtualDisk"]->canRun());
-    ui->DetachStorageToolStripMenuItem->setEnabled(m_commands["DetachSR"]->canRun());
-    ui->ReattachStorageRepositoryToolStripMenuItem->setEnabled(m_commands["ReattachSR"]->canRun());
-    ui->ForgetStorageRepositoryToolStripMenuItem->setEnabled(m_commands["ForgetSR"]->canRun());
-    ui->DestroyStorageRepositoryToolStripMenuItem->setEnabled(m_commands["DestroySR"]->canRun());
-    ui->RepairStorageToolStripMenuItem->setEnabled(m_commands["RepairSR"]->canRun());
-    ui->DefaultSRToolStripMenuItem->setEnabled(m_commands["SetDefaultSR"]->canRun());
-    ui->newStorageRepositoryAction->setEnabled(m_commands["NewSR"]->canRun());
-    ui->virtualDisksToolStripMenuItem->setEnabled(m_commands["StorageProperties"]->canRun());
+    ui->addVirtualDiskToolStripMenuItem->setEnabled(m_commands["AddVirtualDisk"]->CanRun());
+    ui->attachVirtualDiskToolStripMenuItem->setEnabled(m_commands["AttachVirtualDisk"]->CanRun());
+    ui->DetachStorageToolStripMenuItem->setEnabled(m_commands["DetachSR"]->CanRun());
+    ui->ReattachStorageRepositoryToolStripMenuItem->setEnabled(m_commands["ReattachSR"]->CanRun());
+    ui->ForgetStorageRepositoryToolStripMenuItem->setEnabled(m_commands["ForgetSR"]->CanRun());
+    ui->DestroyStorageRepositoryToolStripMenuItem->setEnabled(m_commands["DestroySR"]->CanRun());
+    ui->RepairStorageToolStripMenuItem->setEnabled(m_commands["RepairSR"]->CanRun());
+    ui->DefaultSRToolStripMenuItem->setEnabled(m_commands["SetDefaultSR"]->CanRun());
+    ui->newStorageRepositoryAction->setEnabled(m_commands["NewSR"]->CanRun());
+    ui->virtualDisksToolStripMenuItem->setEnabled(m_commands["StorageProperties"]->CanRun());
 
     // Network menu
-    ui->newNetworkAction->setEnabled(m_commands["NewNetwork"]->canRun());
+    ui->newNetworkAction->setEnabled(m_commands["NewNetwork"]->CanRun());
 }
 
 void MainWindow::disableAllOperationButtons()
@@ -2539,70 +2535,70 @@ void MainWindow::onStartVMButton()
 {
     // Matches C# StartVMCommand execution from toolbar
     StartVMCommand cmd(this);
-    if (cmd.canRun())
-        cmd.run();
+    if (cmd.CanRun())
+        cmd.Run();
 }
 
 void MainWindow::onShutDownButton()
 {
     // Use polymorphic Shutdown command (handles both VMs and Hosts - matches C# ShutDownCommand)
     if (m_commands.contains("Shutdown"))
-        m_commands["Shutdown"]->run();
+        m_commands["Shutdown"]->Run();
 }
 
 void MainWindow::onRebootButton()
 {
     // Use polymorphic Reboot command (handles both VMs and Hosts - matches C# RebootCommand pattern)
     if (m_commands.contains("Reboot"))
-        m_commands["Reboot"]->run();
+        m_commands["Reboot"]->Run();
 }
 
 void MainWindow::onResumeButton()
 {
     // Matches C# ResumeVMCommand execution from toolbar
     ResumeVMCommand cmd(this);
-    if (cmd.canRun())
-        cmd.run();
+    if (cmd.CanRun())
+        cmd.Run();
 }
 
 void MainWindow::onSuspendButton()
 {
     // Matches C# SuspendVMCommand execution from toolbar
     SuspendVMCommand cmd(this);
-    if (cmd.canRun())
-        cmd.run();
+    if (cmd.CanRun())
+        cmd.Run();
 }
 
 void MainWindow::onPauseButton()
 {
     // Matches C# PauseVMCommand execution from toolbar
     PauseVMCommand cmd(this);
-    if (cmd.canRun())
-        cmd.run();
+    if (cmd.CanRun())
+        cmd.Run();
 }
 
 void MainWindow::onUnpauseButton()
 {
     // Matches C# UnPauseVMCommand execution from toolbar
     UnpauseVMCommand cmd(this);
-    if (cmd.canRun())
-        cmd.run();
+    if (cmd.CanRun())
+        cmd.Run();
 }
 
 void MainWindow::onForceShutdownButton()
 {
     // Matches C# ForceVMShutDownCommand execution from toolbar
     ForceShutdownVMCommand cmd(this);
-    if (cmd.canRun())
-        cmd.run();
+    if (cmd.CanRun())
+        cmd.Run();
 }
 
 void MainWindow::onForceRebootButton()
 {
     // Matches C# ForceVMRebootCommand execution from toolbar
     ForceRebootVMCommand cmd(this);
-    if (cmd.canRun())
-        cmd.run();
+    if (cmd.CanRun())
+        cmd.Run();
 }
 
 // Toolbar Host operation button handlers
@@ -2610,8 +2606,8 @@ void MainWindow::onPowerOnHostButton()
 {
     // Matches C# PowerOnHostCommand execution from toolbar
     PowerOnHostCommand cmd(this);
-    if (cmd.canRun())
-        cmd.run();
+    if (cmd.CanRun())
+        cmd.Run();
 }
 
 // Toolbar Container operation button handlers
@@ -2654,258 +2650,258 @@ void MainWindow::onResumeContainerButton()
 void MainWindow::onReconnectHost()
 {
     if (m_commands.contains("ReconnectHost"))
-        m_commands["ReconnectHost"]->run();
+        m_commands["ReconnectHost"]->Run();
 }
 
 void MainWindow::onDisconnectHost()
 {
     if (m_commands.contains("DisconnectHost"))
-        m_commands["DisconnectHost"]->run();
+        m_commands["DisconnectHost"]->Run();
 }
 
 void MainWindow::onConnectAllHosts()
 {
     if (m_commands.contains("ConnectAllHosts"))
-        m_commands["ConnectAllHosts"]->run();
+        m_commands["ConnectAllHosts"]->Run();
 }
 
 void MainWindow::onDisconnectAllHosts()
 {
     if (m_commands.contains("DisconnectAllHosts"))
-        m_commands["DisconnectAllHosts"]->run();
+        m_commands["DisconnectAllHosts"]->Run();
 }
 
 void MainWindow::onRestartToolstack()
 {
     if (m_commands.contains("RestartToolstack"))
-        m_commands["RestartToolstack"]->run();
+        m_commands["RestartToolstack"]->Run();
 }
 
 void MainWindow::onReconnectAs()
 {
     if (m_commands.contains("HostReconnectAs"))
-        m_commands["HostReconnectAs"]->run();
+        m_commands["HostReconnectAs"]->Run();
 }
 
 void MainWindow::onMaintenanceMode()
 {
     if (m_commands.contains("HostMaintenanceMode"))
-        m_commands["HostMaintenanceMode"]->run();
+        m_commands["HostMaintenanceMode"]->Run();
 }
 
 void MainWindow::onServerProperties()
 {
     if (m_commands.contains("HostProperties"))
-        m_commands["HostProperties"]->run();
+        m_commands["HostProperties"]->Run();
 }
 
 // Pool menu slots
 void MainWindow::onNewPool()
 {
     if (m_commands.contains("NewPool"))
-        m_commands["NewPool"]->run();
+        m_commands["NewPool"]->Run();
 }
 
 void MainWindow::onDeletePool()
 {
     if (m_commands.contains("DeletePool"))
-        m_commands["DeletePool"]->run();
+        m_commands["DeletePool"]->Run();
 }
 
 void MainWindow::onHAConfigure()
 {
     if (m_commands.contains("HAConfigure"))
-        m_commands["HAConfigure"]->run();
+        m_commands["HAConfigure"]->Run();
 }
 
 void MainWindow::onHADisable()
 {
     if (m_commands.contains("HADisable"))
-        m_commands["HADisable"]->run();
+        m_commands["HADisable"]->Run();
 }
 
 void MainWindow::onPoolProperties()
 {
     if (m_commands.contains("PoolProperties"))
-        m_commands["PoolProperties"]->run();
+        m_commands["PoolProperties"]->Run();
 }
 
 void MainWindow::onJoinPool()
 {
     if (m_commands.contains("JoinPool"))
-        m_commands["JoinPool"]->run();
+        m_commands["JoinPool"]->Run();
 }
 
 void MainWindow::onEjectFromPool()
 {
     if (m_commands.contains("EjectHostFromPool"))
-        m_commands["EjectHostFromPool"]->run();
+        m_commands["EjectHostFromPool"]->Run();
 }
 
 // VM menu slots
 void MainWindow::onNewVM()
 {
     if (m_commands.contains("NewVM"))
-        m_commands["NewVM"]->run();
+        m_commands["NewVM"]->Run();
 }
 
 void MainWindow::onStartShutdownVM()
 {
     if (m_commands.contains("VMLifeCycle"))
-        m_commands["VMLifeCycle"]->run();
+        m_commands["VMLifeCycle"]->Run();
 }
 
 void MainWindow::onCopyVM()
 {
     if (m_commands.contains("CopyVM"))
-        m_commands["CopyVM"]->run();
+        m_commands["CopyVM"]->Run();
 }
 
 void MainWindow::onMoveVM()
 {
     if (m_commands.contains("MoveVM"))
-        m_commands["MoveVM"]->run();
+        m_commands["MoveVM"]->Run();
 }
 
 void MainWindow::onInstallTools()
 {
     if (m_commands.contains("InstallTools"))
-        m_commands["InstallTools"]->run();
+        m_commands["InstallTools"]->Run();
 }
 
 void MainWindow::onUninstallVM()
 {
     if (m_commands.contains("UninstallVM"))
-        m_commands["UninstallVM"]->run();
+        m_commands["UninstallVM"]->Run();
 }
 
 void MainWindow::onVMProperties()
 {
     if (m_commands.contains("VMProperties"))
-        m_commands["VMProperties"]->run();
+        m_commands["VMProperties"]->Run();
 }
 
 void MainWindow::onTakeSnapshot()
 {
     if (m_commands.contains("TakeSnapshot"))
-        m_commands["TakeSnapshot"]->run();
+        m_commands["TakeSnapshot"]->Run();
 }
 
 void MainWindow::onConvertToTemplate()
 {
     if (m_commands.contains("ConvertVMToTemplate"))
-        m_commands["ConvertVMToTemplate"]->run();
+        m_commands["ConvertVMToTemplate"]->Run();
 }
 
 void MainWindow::onExportVM()
 {
     if (m_commands.contains("ExportVM"))
-        m_commands["ExportVM"]->run();
+        m_commands["ExportVM"]->Run();
 }
 
 // Template menu slots
 void MainWindow::onNewVMFromTemplate()
 {
     if (m_commands.contains("NewVMFromTemplate"))
-        m_commands["NewVMFromTemplate"]->run();
+        m_commands["NewVMFromTemplate"]->Run();
 }
 
 void MainWindow::onInstantVM()
 {
     if (m_commands.contains("InstantVMFromTemplate"))
-        m_commands["InstantVMFromTemplate"]->run();
+        m_commands["InstantVMFromTemplate"]->Run();
 }
 
 void MainWindow::onExportTemplate()
 {
     if (m_commands.contains("ExportTemplate"))
-        m_commands["ExportTemplate"]->run();
+        m_commands["ExportTemplate"]->Run();
 }
 
 void MainWindow::onDuplicateTemplate()
 {
     if (m_commands.contains("CopyTemplate"))
-        m_commands["CopyTemplate"]->run();
+        m_commands["CopyTemplate"]->Run();
 }
 
 void MainWindow::onDeleteTemplate()
 {
     if (m_commands.contains("DeleteTemplate"))
-        m_commands["DeleteTemplate"]->run();
+        m_commands["DeleteTemplate"]->Run();
 }
 
 void MainWindow::onTemplateProperties()
 {
     if (m_commands.contains("VMProperties"))
-        m_commands["VMProperties"]->run(); // Use VMProperties for templates too
+        m_commands["VMProperties"]->Run(); // Use VMProperties for templates too
 }
 
 // Storage menu slots
 void MainWindow::onAddVirtualDisk()
 {
     if (m_commands.contains("AddVirtualDisk"))
-        m_commands["AddVirtualDisk"]->run();
+        m_commands["AddVirtualDisk"]->Run();
 }
 
 void MainWindow::onAttachVirtualDisk()
 {
     if (m_commands.contains("AttachVirtualDisk"))
-        m_commands["AttachVirtualDisk"]->run();
+        m_commands["AttachVirtualDisk"]->Run();
 }
 
 void MainWindow::onDetachSR()
 {
     if (m_commands.contains("DetachSR"))
-        m_commands["DetachSR"]->run();
+        m_commands["DetachSR"]->Run();
 }
 
 void MainWindow::onReattachSR()
 {
     if (m_commands.contains("ReattachSR"))
-        m_commands["ReattachSR"]->run();
+        m_commands["ReattachSR"]->Run();
 }
 
 void MainWindow::onForgetSR()
 {
     if (m_commands.contains("ForgetSR"))
-        m_commands["ForgetSR"]->run();
+        m_commands["ForgetSR"]->Run();
 }
 
 void MainWindow::onDestroySR()
 {
     if (m_commands.contains("DestroySR"))
-        m_commands["DestroySR"]->run();
+        m_commands["DestroySR"]->Run();
 }
 
 void MainWindow::onRepairSR()
 {
     if (m_commands.contains("RepairSR"))
-        m_commands["RepairSR"]->run();
+        m_commands["RepairSR"]->Run();
 }
 
 void MainWindow::onSetDefaultSR()
 {
     if (m_commands.contains("SetDefaultSR"))
-        m_commands["SetDefaultSR"]->run();
+        m_commands["SetDefaultSR"]->Run();
 }
 
 void MainWindow::onNewSR()
 {
     if (m_commands.contains("NewSR"))
-        m_commands["NewSR"]->run();
+        m_commands["NewSR"]->Run();
 }
 
 void MainWindow::onStorageProperties()
 {
     if (m_commands.contains("StorageProperties"))
-        m_commands["StorageProperties"]->run();
+        m_commands["StorageProperties"]->Run();
 }
 
 // Network menu slots
 void MainWindow::onNewNetwork()
 {
     if (m_commands.contains("NewNetwork"))
-        m_commands["NewNetwork"]->run();
+        m_commands["NewNetwork"]->Run();
 }
 
 QString MainWindow::getSelectedObjectRef() const
@@ -3080,63 +3076,63 @@ void MainWindow::updateMenuItems()
     // This matches C# CommandToolStripMenuItem.Update() pattern
 
     // Server menu
-    ui->ReconnectToolStripMenuItem1->setEnabled(m_commands["ReconnectHost"]->canRun());
-    ui->DisconnectToolStripMenuItem->setEnabled(m_commands["DisconnectHost"]->canRun());
-    ui->connectAllToolStripMenuItem->setEnabled(m_commands["ConnectAllHosts"]->canRun());
-    ui->disconnectAllToolStripMenuItem->setEnabled(m_commands["DisconnectAllHosts"]->canRun());
-    ui->restartToolstackAction->setEnabled(m_commands["RestartToolstack"]->canRun());
-    ui->reconnectAsToolStripMenuItem->setEnabled(m_commands["HostReconnectAs"]->canRun());
-    ui->rebootAction->setEnabled(m_commands["Reboot"]->canRun());     // Use polymorphic Reboot command
-    ui->shutDownAction->setEnabled(m_commands["Shutdown"]->canRun()); // Use polymorphic Shutdown command
-    ui->powerOnHostAction->setEnabled(m_commands["PowerOnHost"]->canRun());
-    ui->maintenanceModeToolStripMenuItem1->setEnabled(m_commands["HostMaintenanceMode"]->canRun());
-    ui->ServerPropertiesToolStripMenuItem->setEnabled(m_commands["HostProperties"]->canRun());
+    ui->ReconnectToolStripMenuItem1->setEnabled(m_commands["ReconnectHost"]->CanRun());
+    ui->DisconnectToolStripMenuItem->setEnabled(m_commands["DisconnectHost"]->CanRun());
+    ui->connectAllToolStripMenuItem->setEnabled(m_commands["ConnectAllHosts"]->CanRun());
+    ui->disconnectAllToolStripMenuItem->setEnabled(m_commands["DisconnectAllHosts"]->CanRun());
+    ui->restartToolstackAction->setEnabled(m_commands["RestartToolstack"]->CanRun());
+    ui->reconnectAsToolStripMenuItem->setEnabled(m_commands["HostReconnectAs"]->CanRun());
+    ui->rebootAction->setEnabled(m_commands["Reboot"]->CanRun());     // Use polymorphic Reboot command
+    ui->shutDownAction->setEnabled(m_commands["Shutdown"]->CanRun()); // Use polymorphic Shutdown command
+    ui->powerOnHostAction->setEnabled(m_commands["PowerOnHost"]->CanRun());
+    ui->maintenanceModeToolStripMenuItem1->setEnabled(m_commands["HostMaintenanceMode"]->CanRun());
+    ui->ServerPropertiesToolStripMenuItem->setEnabled(m_commands["HostProperties"]->CanRun());
 
     // Pool menu
-    ui->AddPoolToolStripMenuItem->setEnabled(m_commands["NewPool"]->canRun());
-    ui->deleteToolStripMenuItem->setEnabled(m_commands["DeletePool"]->canRun());
-    ui->toolStripMenuItemHaConfigure->setEnabled(m_commands["HAConfigure"]->canRun());
-    ui->toolStripMenuItemHaDisable->setEnabled(m_commands["HADisable"]->canRun());
-    ui->PoolPropertiesToolStripMenuItem->setEnabled(m_commands["PoolProperties"]->canRun());
-    ui->addServerToPoolMenuItem->setEnabled(m_commands["JoinPool"]->canRun());
-    ui->menuItemRemoveFromPool->setEnabled(m_commands["EjectHostFromPool"]->canRun());
+    ui->AddPoolToolStripMenuItem->setEnabled(m_commands["NewPool"]->CanRun());
+    ui->deleteToolStripMenuItem->setEnabled(m_commands["DeletePool"]->CanRun());
+    ui->toolStripMenuItemHaConfigure->setEnabled(m_commands["HAConfigure"]->CanRun());
+    ui->toolStripMenuItemHaDisable->setEnabled(m_commands["HADisable"]->CanRun());
+    ui->PoolPropertiesToolStripMenuItem->setEnabled(m_commands["PoolProperties"]->CanRun());
+    ui->addServerToPoolMenuItem->setEnabled(m_commands["JoinPool"]->CanRun());
+    ui->menuItemRemoveFromPool->setEnabled(m_commands["EjectHostFromPool"]->CanRun());
 
     // VM menu
-    ui->newVmAction->setEnabled(m_commands["NewVM"]->canRun());
-    ui->startShutdownToolStripMenuItem->setEnabled(m_commands["VMLifeCycle"]->canRun());
-    ui->copyVMtoSharedStorageMenuItem->setEnabled(m_commands["CopyVM"]->canRun());
-    ui->MoveVMToolStripMenuItem->setEnabled(m_commands["MoveVM"]->canRun());
-    ui->installToolsToolStripMenuItem->setEnabled(m_commands["InstallTools"]->canRun());
-    ui->uninstallToolStripMenuItem->setEnabled(m_commands["UninstallVM"]->canRun());
-    ui->VMPropertiesToolStripMenuItem->setEnabled(m_commands["VMProperties"]->canRun());
-    ui->snapshotToolStripMenuItem->setEnabled(m_commands["TakeSnapshot"]->canRun());
-    ui->convertToTemplateToolStripMenuItem->setEnabled(m_commands["ConvertVMToTemplate"]->canRun());
-    ui->exportToolStripMenuItem->setEnabled(m_commands["ExportVM"]->canRun());
+    ui->newVmAction->setEnabled(m_commands["NewVM"]->CanRun());
+    ui->startShutdownToolStripMenuItem->setEnabled(m_commands["VMLifeCycle"]->CanRun());
+    ui->copyVMtoSharedStorageMenuItem->setEnabled(m_commands["CopyVM"]->CanRun());
+    ui->MoveVMToolStripMenuItem->setEnabled(m_commands["MoveVM"]->CanRun());
+    ui->installToolsToolStripMenuItem->setEnabled(m_commands["InstallTools"]->CanRun());
+    ui->uninstallToolStripMenuItem->setEnabled(m_commands["UninstallVM"]->CanRun());
+    ui->VMPropertiesToolStripMenuItem->setEnabled(m_commands["VMProperties"]->CanRun());
+    ui->snapshotToolStripMenuItem->setEnabled(m_commands["TakeSnapshot"]->CanRun());
+    ui->convertToTemplateToolStripMenuItem->setEnabled(m_commands["ConvertVMToTemplate"]->CanRun());
+    ui->exportToolStripMenuItem->setEnabled(m_commands["ExportVM"]->CanRun());
 
     // Update dynamic menu text for VMLifeCycle command
-    ui->startShutdownToolStripMenuItem->setText(m_commands["VMLifeCycle"]->menuText());
+    ui->startShutdownToolStripMenuItem->setText(m_commands["VMLifeCycle"]->MenuText());
 
     // Template menu
-    ui->newVMFromTemplateToolStripMenuItem->setEnabled(m_commands["NewVMFromTemplate"]->canRun());
-    ui->InstantVmToolStripMenuItem->setEnabled(m_commands["InstantVMFromTemplate"]->canRun());
-    ui->exportTemplateToolStripMenuItem->setEnabled(m_commands["ExportTemplate"]->canRun());
-    ui->duplicateTemplateToolStripMenuItem->setEnabled(m_commands["CopyTemplate"]->canRun());
-    ui->uninstallTemplateToolStripMenuItem->setEnabled(m_commands["DeleteTemplate"]->canRun());
-    ui->templatePropertiesToolStripMenuItem->setEnabled(m_commands["VMProperties"]->canRun());
+    ui->newVMFromTemplateToolStripMenuItem->setEnabled(m_commands["NewVMFromTemplate"]->CanRun());
+    ui->InstantVmToolStripMenuItem->setEnabled(m_commands["InstantVMFromTemplate"]->CanRun());
+    ui->exportTemplateToolStripMenuItem->setEnabled(m_commands["ExportTemplate"]->CanRun());
+    ui->duplicateTemplateToolStripMenuItem->setEnabled(m_commands["CopyTemplate"]->CanRun());
+    ui->uninstallTemplateToolStripMenuItem->setEnabled(m_commands["DeleteTemplate"]->CanRun());
+    ui->templatePropertiesToolStripMenuItem->setEnabled(m_commands["VMProperties"]->CanRun());
 
     // Storage menu
-    ui->addVirtualDiskToolStripMenuItem->setEnabled(m_commands["AddVirtualDisk"]->canRun());
-    ui->attachVirtualDiskToolStripMenuItem->setEnabled(m_commands["AttachVirtualDisk"]->canRun());
-    ui->DetachStorageToolStripMenuItem->setEnabled(m_commands["DetachSR"]->canRun());
-    ui->ReattachStorageRepositoryToolStripMenuItem->setEnabled(m_commands["ReattachSR"]->canRun());
-    ui->ForgetStorageRepositoryToolStripMenuItem->setEnabled(m_commands["ForgetSR"]->canRun());
-    ui->DestroyStorageRepositoryToolStripMenuItem->setEnabled(m_commands["DestroySR"]->canRun());
-    ui->RepairStorageToolStripMenuItem->setEnabled(m_commands["RepairSR"]->canRun());
-    ui->DefaultSRToolStripMenuItem->setEnabled(m_commands["SetDefaultSR"]->canRun());
-    ui->newStorageRepositoryAction->setEnabled(m_commands["NewSR"]->canRun());
-    ui->virtualDisksToolStripMenuItem->setEnabled(m_commands["StorageProperties"]->canRun());
+    ui->addVirtualDiskToolStripMenuItem->setEnabled(m_commands["AddVirtualDisk"]->CanRun());
+    ui->attachVirtualDiskToolStripMenuItem->setEnabled(m_commands["AttachVirtualDisk"]->CanRun());
+    ui->DetachStorageToolStripMenuItem->setEnabled(m_commands["DetachSR"]->CanRun());
+    ui->ReattachStorageRepositoryToolStripMenuItem->setEnabled(m_commands["ReattachSR"]->CanRun());
+    ui->ForgetStorageRepositoryToolStripMenuItem->setEnabled(m_commands["ForgetSR"]->CanRun());
+    ui->DestroyStorageRepositoryToolStripMenuItem->setEnabled(m_commands["DestroySR"]->CanRun());
+    ui->RepairStorageToolStripMenuItem->setEnabled(m_commands["RepairSR"]->CanRun());
+    ui->DefaultSRToolStripMenuItem->setEnabled(m_commands["SetDefaultSR"]->CanRun());
+    ui->newStorageRepositoryAction->setEnabled(m_commands["NewSR"]->CanRun());
+    ui->virtualDisksToolStripMenuItem->setEnabled(m_commands["StorageProperties"]->CanRun());
 
     // Network menu
-    ui->newNetworkAction->setEnabled(m_commands["NewNetwork"]->canRun());
+    ui->newNetworkAction->setEnabled(m_commands["NewNetwork"]->CanRun());
     // Note: NetworkProperties will be added when action exists
 }

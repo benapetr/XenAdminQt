@@ -40,7 +40,7 @@ VMRecoveryModeCommand::VMRecoveryModeCommand(MainWindow* mainWindow, QObject* pa
 {
 }
 
-bool VMRecoveryModeCommand::canRun() const
+bool VMRecoveryModeCommand::CanRun() const
 {
     QString vmRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -82,7 +82,7 @@ bool VMRecoveryModeCommand::canRun() const
     return true;
 }
 
-void VMRecoveryModeCommand::run()
+void VMRecoveryModeCommand::Run()
 {
     QString vmRef = this->getSelectedObjectRef();
     QString vmName = this->getSelectedObjectName();
@@ -142,7 +142,7 @@ void VMRecoveryModeCommand::run()
     action->runAsync();
 }
 
-QString VMRecoveryModeCommand::menuText() const
+QString VMRecoveryModeCommand::MenuText() const
 {
     return tr("Boot in &Recovery Mode");
 }

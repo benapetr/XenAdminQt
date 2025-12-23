@@ -41,13 +41,13 @@ NetworkPropertiesCommand::~NetworkPropertiesCommand()
 {
 }
 
-bool NetworkPropertiesCommand::canRun() const
+bool NetworkPropertiesCommand::CanRun() const
 {
     QString networkUuid = this->getSelectedNetworkUuid();
     return !networkUuid.isEmpty() && this->mainWindow()->xenLib()->isConnected();
 }
 
-void NetworkPropertiesCommand::run()
+void NetworkPropertiesCommand::Run()
 {
     QString networkUuid = this->getSelectedNetworkUuid();
     if (networkUuid.isEmpty())
@@ -57,7 +57,7 @@ void NetworkPropertiesCommand::run()
     dialog.exec();
 }
 
-QString NetworkPropertiesCommand::menuText() const
+QString NetworkPropertiesCommand::MenuText() const
 {
     return "Properties";
 }

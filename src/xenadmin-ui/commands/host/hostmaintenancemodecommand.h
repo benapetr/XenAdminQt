@@ -52,9 +52,9 @@ class HostMaintenanceModeCommand : public Command
         HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode = true, QObject* parent = nullptr);
 
         // Command interface
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
     private:
         bool m_enterMode; // true = enter maintenance mode, false = exit maintenance mode

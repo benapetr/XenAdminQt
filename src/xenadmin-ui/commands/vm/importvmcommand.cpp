@@ -43,11 +43,11 @@ ImportVMCommand::ImportVMCommand(MainWindow* mainWindow, QObject* parent)
     // qDebug() << "ImportVMCommand: Created with MainWindow";
 }
 
-void ImportVMCommand::run()
+void ImportVMCommand::Run()
 {
     // qDebug() << "ImportVMCommand: Executing Import VM command";
 
-    if (!this->canRun())
+    if (!this->CanRun())
     {
         qWarning() << "ImportVMCommand: Cannot execute - conditions not met";
         QMessageBox::warning(nullptr, tr("Cannot Import VM"),
@@ -58,13 +58,13 @@ void ImportVMCommand::run()
     this->showImportWizard();
 }
 
-bool ImportVMCommand::canRun() const
+bool ImportVMCommand::CanRun() const
 {
     // Import is generally always available
     return true;
 }
 
-QString ImportVMCommand::menuText() const
+QString ImportVMCommand::MenuText() const
 {
     return tr("Import VM...");
 }

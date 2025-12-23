@@ -53,11 +53,11 @@ DeleteSnapshotCommand::DeleteSnapshotCommand(const QString& snapshotUuid, MainWi
     // qDebug() << "DeleteSnapshotCommand: Created with snapshot UUID:" << snapshotUuid;
 }
 
-void DeleteSnapshotCommand::run()
+void DeleteSnapshotCommand::Run()
 {
     // qDebug() << "DeleteSnapshotCommand: Executing Delete Snapshot command";
 
-    if (!this->canRun())
+    if (!this->CanRun())
     {
         qWarning() << "DeleteSnapshotCommand: Cannot execute - snapshot is not valid or cannot be deleted";
         QMessageBox::warning(nullptr, tr("Cannot Delete Snapshot"),
@@ -72,7 +72,7 @@ void DeleteSnapshotCommand::run()
     }
 }
 
-bool DeleteSnapshotCommand::canRun() const
+bool DeleteSnapshotCommand::CanRun() const
 {
     if (!this->mainWindow() || this->m_snapshotUuid.isEmpty())
     {
@@ -82,7 +82,7 @@ bool DeleteSnapshotCommand::canRun() const
     return this->canDeleteSnapshot();
 }
 
-QString DeleteSnapshotCommand::menuText() const
+QString DeleteSnapshotCommand::MenuText() const
 {
     return tr("Delete Snapshot");
 }

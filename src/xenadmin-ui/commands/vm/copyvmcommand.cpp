@@ -36,7 +36,7 @@ CopyVMCommand::CopyVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool CopyVMCommand::canRun() const
+bool CopyVMCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -46,7 +46,7 @@ bool CopyVMCommand::canRun() const
     return !this->isVMLocked() && this->canVMBeCopied();
 }
 
-void CopyVMCommand::run()
+void CopyVMCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -58,7 +58,7 @@ void CopyVMCommand::run()
                              "This allows copying a VM to shared storage for migration purposes.");
 }
 
-QString CopyVMCommand::menuText() const
+QString CopyVMCommand::MenuText() const
 {
     return "Copy VM to Shared Storage...";
 }

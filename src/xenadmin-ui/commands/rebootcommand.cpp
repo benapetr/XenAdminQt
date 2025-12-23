@@ -36,7 +36,7 @@ RebootCommand::RebootCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool RebootCommand::canRun() const
+bool RebootCommand::CanRun() const
 {
     // Try host first, then VM (matches C# pattern)
     QString objectType = this->getSelectedObjectType();
@@ -44,26 +44,26 @@ bool RebootCommand::canRun() const
     if (objectType == "host")
     {
         RebootHostCommand hostCmd(this->mainWindow(), nullptr);
-        return hostCmd.canRun();
+        return hostCmd.CanRun();
     } else if (objectType == "vm")
     {
         RestartVMCommand vmCmd(this->mainWindow(), nullptr);
-        return vmCmd.canRun();
+        return vmCmd.CanRun();
     }
 
     return false;
 }
 
-void RebootCommand::run()
+void RebootCommand::Run()
 {
     QString objectType = this->getSelectedObjectType();
 
     if (objectType == "host")
     {
         RebootHostCommand* hostCmd = new RebootHostCommand(this->mainWindow(), this);
-        if (hostCmd->canRun())
+        if (hostCmd->CanRun())
         {
-            hostCmd->run();
+            hostCmd->Run();
             hostCmd->deleteLater();
             return;
         }
@@ -73,9 +73,9 @@ void RebootCommand::run()
     if (objectType == "vm")
     {
         RestartVMCommand* vmCmd = new RestartVMCommand(this->mainWindow(), this);
-        if (vmCmd->canRun())
+        if (vmCmd->CanRun())
         {
-            vmCmd->run();
+            vmCmd->Run();
             vmCmd->deleteLater();
             return;
         }
@@ -86,7 +86,7 @@ void RebootCommand::run()
                          "The selected object cannot be rebooted.");
 }
 
-QString RebootCommand::menuText() const
+QString RebootCommand::MenuText() const
 {
     return "Reboot";
 }

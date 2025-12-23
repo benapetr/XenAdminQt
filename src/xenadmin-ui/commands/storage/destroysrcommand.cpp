@@ -39,7 +39,7 @@ DestroySRCommand::DestroySRCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool DestroySRCommand::canRun() const
+bool DestroySRCommand::CanRun() const
 {
     QString srRef = getSelectedSRRef();
     if (srRef.isEmpty())
@@ -48,7 +48,7 @@ bool DestroySRCommand::canRun() const
     return canSRBeDestroyed();
 }
 
-void DestroySRCommand::run()
+void DestroySRCommand::Run()
 {
     QString srRef = getSelectedSRRef();
     QString srName = getSelectedSRName();
@@ -107,7 +107,7 @@ void DestroySRCommand::run()
     action->runAsync();
 }
 
-QString DestroySRCommand::menuText() const
+QString DestroySRCommand::MenuText() const
 {
     return "Destroy Storage Repository";
 }

@@ -43,7 +43,7 @@ DisableChangedBlockTrackingCommand::DisableChangedBlockTrackingCommand(MainWindo
 {
 }
 
-bool DisableChangedBlockTrackingCommand::canRun() const
+bool DisableChangedBlockTrackingCommand::CanRun() const
 {
     // Get selected VM
     QString vmRef = this->getSelectedObjectRef();
@@ -78,7 +78,7 @@ bool DisableChangedBlockTrackingCommand::canRun() const
     return this->hasVdiWithCbtEnabled(vmRef);
 }
 
-void DisableChangedBlockTrackingCommand::run()
+void DisableChangedBlockTrackingCommand::Run()
 {
     QString vmRef = this->getSelectedObjectRef();
     if (vmRef.isEmpty())
@@ -190,7 +190,7 @@ void DisableChangedBlockTrackingCommand::run()
     }
 }
 
-QString DisableChangedBlockTrackingCommand::menuText() const
+QString DisableChangedBlockTrackingCommand::MenuText() const
 {
     return tr("Disable Changed Block &Tracking");
 }

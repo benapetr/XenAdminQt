@@ -39,7 +39,7 @@ DeleteVirtualDiskCommand::DeleteVirtualDiskCommand(MainWindow* mainWindow, QObje
 {
 }
 
-bool DeleteVirtualDiskCommand::canRun() const
+bool DeleteVirtualDiskCommand::CanRun() const
 {
     QString vdiRef = getSelectedVDIRef();
     if (vdiRef.isEmpty())
@@ -52,7 +52,7 @@ bool DeleteVirtualDiskCommand::canRun() const
     return canVDIBeDeleted(vdiData);
 }
 
-void DeleteVirtualDiskCommand::run()
+void DeleteVirtualDiskCommand::Run()
 {
     QString vdiRef = getSelectedVDIRef();
     QString vdiName = getSelectedVDIName();
@@ -137,7 +137,7 @@ void DeleteVirtualDiskCommand::run()
     action->runAsync();
 }
 
-QString DeleteVirtualDiskCommand::menuText() const
+QString DeleteVirtualDiskCommand::MenuText() const
 {
     QVariantMap vdiData = getSelectedVDIData();
     if (vdiData.isEmpty())

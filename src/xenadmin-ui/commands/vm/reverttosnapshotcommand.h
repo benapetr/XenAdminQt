@@ -39,9 +39,9 @@ public:
     explicit RevertToSnapshotCommand(MainWindow* mainWindow, QObject* parent = nullptr);
     explicit RevertToSnapshotCommand(const QString& snapshotUuid, MainWindow* mainWindow, QObject* parent = nullptr);
 
-    void run() override;
-    bool canRun() const override;
-    QString menuText() const override;
+    void Run() override;
+    bool CanRun() const override;
+    QString MenuText() const override;
 
 private:
     QString m_snapshotUuid;

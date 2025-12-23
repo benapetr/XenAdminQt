@@ -39,7 +39,7 @@ RemoveHostCommand::RemoveHostCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool RemoveHostCommand::canRun() const
+bool RemoveHostCommand::CanRun() const
 {
     QString hostRef = this->getSelectedHostRef();
     if (hostRef.isEmpty())
@@ -52,7 +52,7 @@ bool RemoveHostCommand::canRun() const
     return this->canHostBeRemoved(hostData);
 }
 
-void RemoveHostCommand::run()
+void RemoveHostCommand::Run()
 {
     QString hostRef = this->getSelectedHostRef();
     QVariantMap hostData = this->getSelectedHostData();
@@ -110,7 +110,7 @@ void RemoveHostCommand::run()
             .arg(hostName));
 }
 
-QString RemoveHostCommand::menuText() const
+QString RemoveHostCommand::MenuText() const
 {
     return "Remove Host from XenAdmin";
 }

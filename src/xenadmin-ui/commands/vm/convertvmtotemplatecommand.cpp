@@ -41,7 +41,7 @@ ConvertVMToTemplateCommand::ConvertVMToTemplateCommand(MainWindow* mainWindow, Q
 {
 }
 
-bool ConvertVMToTemplateCommand::canRun() const
+bool ConvertVMToTemplateCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -50,7 +50,7 @@ bool ConvertVMToTemplateCommand::canRun() const
     return this->canConvertToTemplate(vmRef);
 }
 
-void ConvertVMToTemplateCommand::run()
+void ConvertVMToTemplateCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     QString vmName = this->getSelectedVMName();
@@ -112,7 +112,7 @@ void ConvertVMToTemplateCommand::run()
     }
 }
 
-QString ConvertVMToTemplateCommand::menuText() const
+QString ConvertVMToTemplateCommand::MenuText() const
 {
     return "Convert to Template";
 }

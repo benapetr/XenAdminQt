@@ -40,7 +40,7 @@ ForceRebootVMCommand::ForceRebootVMCommand(MainWindow* mainWindow, QObject* pare
 {
 }
 
-bool ForceRebootVMCommand::canRun() const
+bool ForceRebootVMCommand::CanRun() const
 {
     // Matches C# ForceVMRebootCommand.CanRun() logic
     QString vmRef = this->getSelectedVMRef();
@@ -50,7 +50,7 @@ bool ForceRebootVMCommand::canRun() const
     return this->canForceReboot(vmRef);
 }
 
-void ForceRebootVMCommand::run()
+void ForceRebootVMCommand::Run()
 {
     // Matches C# ForceVMRebootCommand.Run() with confirmation dialog
     QString vmRef = this->getSelectedVMRef();
@@ -121,7 +121,7 @@ void ForceRebootVMCommand::run()
     action->runAsync();
 }
 
-QString ForceRebootVMCommand::menuText() const
+QString ForceRebootVMCommand::MenuText() const
 {
     // Matches C# Messages.MAINWINDOW_FORCE_REBOOT
     return "Force Reboot";

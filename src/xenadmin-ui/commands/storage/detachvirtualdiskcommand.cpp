@@ -42,12 +42,12 @@ DetachVirtualDiskCommand::DetachVirtualDiskCommand(MainWindow* mainWindow, QObje
 {
 }
 
-QString DetachVirtualDiskCommand::menuText() const
+QString DetachVirtualDiskCommand::MenuText() const
 {
     return "Detach Virtual Disk";
 }
 
-bool DetachVirtualDiskCommand::canRun() const
+bool DetachVirtualDiskCommand::CanRun() const
 {
     if (this->getSelectedObjectType() != "vdi")
     {
@@ -235,7 +235,7 @@ QString DetachVirtualDiskCommand::getCantRunReasonVDI(const QString& vdiRef) con
     return "Unknown reason";
 }
 
-void DetachVirtualDiskCommand::run()
+void DetachVirtualDiskCommand::Run()
 {
     QString vdiRef = this->getSelectedObjectRef();
     if (vdiRef.isEmpty())

@@ -40,13 +40,13 @@ PoolPropertiesCommand::PoolPropertiesCommand(MainWindow* mainWindow, QObject* pa
 {
 }
 
-bool PoolPropertiesCommand::canRun() const
+bool PoolPropertiesCommand::CanRun() const
 {
     QString poolRef = this->getSelectedPoolRef();
     return !poolRef.isEmpty() && this->mainWindow()->xenLib()->isConnected();
 }
 
-void PoolPropertiesCommand::run()
+void PoolPropertiesCommand::Run()
 {
     QString poolRef = this->getSelectedPoolRef();
 
@@ -69,7 +69,7 @@ void PoolPropertiesCommand::run()
     dialog->exec();
 }
 
-QString PoolPropertiesCommand::menuText() const
+QString PoolPropertiesCommand::MenuText() const
 {
     return "Properties";
 }

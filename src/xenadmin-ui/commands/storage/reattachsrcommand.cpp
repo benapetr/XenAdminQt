@@ -38,7 +38,7 @@ ReattachSRCommand::ReattachSRCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool ReattachSRCommand::canRun() const
+bool ReattachSRCommand::CanRun() const
 {
     QString srRef = this->getSelectedSRRef();
     if (srRef.isEmpty())
@@ -58,7 +58,7 @@ bool ReattachSRCommand::canRun() const
     return this->canSRBeReattached(srData);
 }
 
-void ReattachSRCommand::run()
+void ReattachSRCommand::Run()
 {
     QString srRef = this->getSelectedSRRef();
 
@@ -85,7 +85,7 @@ void ReattachSRCommand::run()
     wizard->show();
 }
 
-QString ReattachSRCommand::menuText() const
+QString ReattachSRCommand::MenuText() const
 {
     return "Reattach Storage Repository";
 }

@@ -41,7 +41,7 @@ RestartVMCommand::RestartVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool RestartVMCommand::canRun() const
+bool RestartVMCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -57,7 +57,7 @@ bool RestartVMCommand::canRun() const
     return allowedOperations.contains("clean_reboot");
 }
 
-void RestartVMCommand::run()
+void RestartVMCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     QString vmName = this->getSelectedVMName();
@@ -102,7 +102,7 @@ void RestartVMCommand::run()
     action->runAsync();
 }
 
-QString RestartVMCommand::menuText() const
+QString RestartVMCommand::MenuText() const
 {
     return "Restart VM";
 }

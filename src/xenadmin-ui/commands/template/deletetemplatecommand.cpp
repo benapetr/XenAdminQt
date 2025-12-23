@@ -38,7 +38,7 @@ DeleteTemplateCommand::DeleteTemplateCommand(MainWindow* mainWindow, QObject* pa
 {
 }
 
-bool DeleteTemplateCommand::canRun() const
+bool DeleteTemplateCommand::CanRun() const
 {
     QString templateRef = this->getSelectedVMRef();
     if (templateRef.isEmpty())
@@ -47,7 +47,7 @@ bool DeleteTemplateCommand::canRun() const
     return this->canDeleteTemplate(templateRef);
 }
 
-QString DeleteTemplateCommand::menuText() const
+QString DeleteTemplateCommand::MenuText() const
 {
     return "Delete Template";
 }

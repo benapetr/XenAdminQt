@@ -38,13 +38,13 @@ SetDefaultSRCommand::SetDefaultSRCommand(MainWindow* mainWindow, QObject* parent
 {
 }
 
-bool SetDefaultSRCommand::canRun() const
+bool SetDefaultSRCommand::CanRun() const
 {
     QString srRef = this->getSelectedSRRef();
     return !srRef.isEmpty();
 }
 
-void SetDefaultSRCommand::run()
+void SetDefaultSRCommand::Run()
 {
     QString srRef = this->getSelectedSRRef();
     QString srName = this->getSelectedSRName();
@@ -108,7 +108,7 @@ void SetDefaultSRCommand::run()
     }
 }
 
-QString SetDefaultSRCommand::menuText() const
+QString SetDefaultSRCommand::MenuText() const
 {
     return "Set as Default";
 }

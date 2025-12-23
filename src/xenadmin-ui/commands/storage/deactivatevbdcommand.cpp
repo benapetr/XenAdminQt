@@ -40,12 +40,12 @@ DeactivateVBDCommand::DeactivateVBDCommand(MainWindow* mainWindow, QObject* pare
 {
 }
 
-QString DeactivateVBDCommand::menuText() const
+QString DeactivateVBDCommand::MenuText() const
 {
     return "Deactivate Virtual Disk";
 }
 
-bool DeactivateVBDCommand::canRun() const
+bool DeactivateVBDCommand::CanRun() const
 {
     if (getSelectedObjectType() != "vbd")
     {
@@ -246,7 +246,7 @@ bool DeactivateVBDCommand::areIODriversNeededAndMissing(const QVariantMap& vmDat
     return false;
 }
 
-void DeactivateVBDCommand::run()
+void DeactivateVBDCommand::Run()
 {
     QString vbdRef = getSelectedObjectRef();
     if (vbdRef.isEmpty())

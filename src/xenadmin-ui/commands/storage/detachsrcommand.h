@@ -45,14 +45,14 @@ class DetachSRCommand : public Command
     public:
         explicit DetachSRCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        QString menuText() const override
+        QString MenuText() const override
         {
             return "Detach SR";
         }
 
         void setTargetSR(const QString& srRef);
-        bool canRun() const override;
-        void run() override;
+        bool CanRun() const override;
+        void Run() override;
 
     private:
         QString currentSR() const;

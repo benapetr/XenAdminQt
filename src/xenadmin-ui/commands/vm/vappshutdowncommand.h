@@ -66,7 +66,7 @@ public:
      *
      * @return true if command can execute
      */
-    bool canRun() const override;
+    bool CanRun() const override;
 
     /**
      * @brief Execute the vApp shutdown command
@@ -75,13 +75,13 @@ public:
      * for each shutdownable appliance. If VMs selected, finds their
      * common appliance and shuts it down.
      */
-    void run() override;
+    void Run() override;
 
     /**
      * @brief Get menu text for this command
      * @return "Shut Down vApp"
      */
-    QString menuText() const override;
+    QString MenuText() const override;
 
 private:
     /**

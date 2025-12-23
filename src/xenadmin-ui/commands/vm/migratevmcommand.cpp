@@ -41,7 +41,7 @@ MigrateVMCommand::MigrateVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool MigrateVMCommand::canRun() const
+bool MigrateVMCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -59,7 +59,7 @@ bool MigrateVMCommand::canRun() const
     return hosts.size() > 1;
 }
 
-void MigrateVMCommand::run()
+void MigrateVMCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     QString vmName = this->getSelectedVMName();
@@ -173,7 +173,7 @@ void MigrateVMCommand::run()
     }
 }
 
-QString MigrateVMCommand::menuText() const
+QString MigrateVMCommand::MenuText() const
 {
     return "Migrate VM...";
 }

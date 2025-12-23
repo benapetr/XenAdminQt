@@ -38,13 +38,13 @@ RepairSRCommand::RepairSRCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool RepairSRCommand::canRun() const
+bool RepairSRCommand::CanRun() const
 {
     QString srRef = this->getSelectedSRRef();
     return !srRef.isEmpty();
 }
 
-void RepairSRCommand::run()
+void RepairSRCommand::Run()
 {
     QString srRef = this->getSelectedSRRef();
     QString srName = this->getSelectedSRName();
@@ -92,7 +92,7 @@ void RepairSRCommand::run()
     }
 }
 
-QString RepairSRCommand::menuText() const
+QString RepairSRCommand::MenuText() const
 {
     return "Repair";
 }

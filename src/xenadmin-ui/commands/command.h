@@ -35,6 +35,7 @@
 
 class MainWindow;
 class XenLib;
+class XenObject;
 
 /**
  * @brief Base class for all XenAdmin commands
@@ -47,87 +48,89 @@ class Command : public QObject
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct a command with a main window reference
-     */
-    explicit Command(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct a command with a main window reference
+         */
+        explicit Command(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    /**
-     * @brief Construct a command with selection context
-     */
-    Command(MainWindow* mainWindow, const QStringList& selection, QObject* parent = nullptr);
+        /**
+         * @brief Construct a command with selection context
+         */
+        Command(MainWindow* mainWindow, const QStringList& selection, QObject* parent = nullptr);
 
-    virtual ~Command() = default;
+        virtual ~Command() = default;
 
-    /**
-     * @brief Check if this command can run with current selection
-     */
-    virtual bool canRun() const = 0;
+        /**
+         * @brief Check if this command can run with current selection
+         */
+        virtual bool CanRun() const = 0;
 
-    /**
-     * @brief Execute the command
-     */
-    virtual void run() = 0;
+        /**
+         * @brief Execute the command
+         */
+        virtual void Run() = 0;
 
-    /**
-     * @brief Get the menu text for this command
-     */
-    virtual QString menuText() const = 0;
+        /**
+         * @brief Get the menu text for this command
+         */
+        virtual QString MenuText() const = 0;
 
-    /**
-     * @brief Get the current selection
-     */
-    QStringList getSelection() const
-    {
-        return m_selection;
-    }
+        /**
+         * @brief Get the current selection
+         */
+        QStringList GetSelection() const
+        {
+            return this->m_selection;
+        }
 
-    /**
-     * @brief Set the selection context
-     */
-    void setSelection(const QStringList& selection)
-    {
-        m_selection = selection;
-    }
+        /**
+         * @brief Set the selection context
+         */
+        void SetSelection(const QStringList& selection)
+        {
+            this->m_selection = selection;
+        }
 
-protected:
-    /**
-     * @brief Get the main window interface
-     */
-    MainWindow* mainWindow() const
-    {
-        return m_mainWindow;
-    }
+        QSharedPointer<XenObject> GetObject() const;
 
-    /**
-     * @brief Get XenLib instance
-     */
-    XenLib* xenLib() const;
+    protected:
+        /**
+         * @brief Get the main window interface
+         */
+        MainWindow* mainWindow() const
+        {
+            return this->m_mainWindow;
+        }
 
-    /**
-     * @brief Get the currently selected tree item
-     */
-    QTreeWidgetItem* getSelectedItem() const;
+        /**
+         * @brief Get XenLib instance
+         */
+        XenLib* xenLib() const;
 
-    /**
-     * @brief Get the object reference from selection
-     */
-    QString getSelectedObjectRef() const;
+        /**
+         * @brief Get the currently selected tree item
+         */
+        QTreeWidgetItem* getSelectedItem() const;
 
-    /**
-     * @brief Get the object name from selection
-     */
-    QString getSelectedObjectName() const;
+        /**
+         * @brief Get the object reference from selection
+         */
+        QString getSelectedObjectRef() const;
 
-    /**
-     * @brief Get the object type from selection
-     */
-    QString getSelectedObjectType() const;
+        /**
+         * @brief Get the object name from selection
+         */
+        QString getSelectedObjectName() const;
 
-private:
-    MainWindow* m_mainWindow;
-    QStringList m_selection;
+        /**
+         * @brief Get the object type from selection
+         */
+        QString getSelectedObjectType() const;
+
+    private:
+        MainWindow* m_mainWindow;
+        QStringList m_selection;
 };
 
 #endif // COMMAND_H

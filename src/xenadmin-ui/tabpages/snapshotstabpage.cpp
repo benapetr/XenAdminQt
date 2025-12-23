@@ -205,7 +205,7 @@ void SnapshotsTabPage::onTakeSnapshot()
     }
 
     TakeSnapshotCommand* cmd = new TakeSnapshotCommand(this->m_objectRef, mainWindow);
-    cmd->run();
+    cmd->Run();
 
     // No manual refresh needed - cache will be automatically updated via event polling
     // This matches C# behavior where SnapshotsPage relies on VM_BatchCollectionChanged events
@@ -242,7 +242,7 @@ void SnapshotsTabPage::onDeleteSnapshot()
     }
 
     DeleteSnapshotCommand* cmd = new DeleteSnapshotCommand(snapshotRef, mainWindow);
-    cmd->run();
+    cmd->Run();
 
     // Refresh after a short delay to allow the operation to complete
     QTimer::singleShot(1000, this, &SnapshotsTabPage::refreshSnapshotList);
@@ -294,7 +294,7 @@ void SnapshotsTabPage::onRevertToSnapshot()
     }
 
     RevertToSnapshotCommand* cmd = new RevertToSnapshotCommand(snapshotRef, mainWindow);
-    cmd->run();
+    cmd->Run();
 
     // Refresh after a short delay to allow the operation to complete
     QTimer::singleShot(1000, this, &SnapshotsTabPage::refreshSnapshotList);

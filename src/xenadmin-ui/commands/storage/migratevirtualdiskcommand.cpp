@@ -37,7 +37,7 @@ MigrateVirtualDiskCommand::MigrateVirtualDiskCommand(MainWindow* mainWindow, QOb
 {
 }
 
-bool MigrateVirtualDiskCommand::canRun() const
+bool MigrateVirtualDiskCommand::CanRun() const
 {
     QString objectType = this->getSelectedObjectType();
     if (objectType != "vdi")
@@ -54,7 +54,7 @@ bool MigrateVirtualDiskCommand::canRun() const
     return this->canBeMigrated(vdiData);
 }
 
-void MigrateVirtualDiskCommand::run()
+void MigrateVirtualDiskCommand::Run()
 {
     QString vdiRef = this->getSelectedObjectRef();
     if (vdiRef.isEmpty())
@@ -125,7 +125,7 @@ void MigrateVirtualDiskCommand::run()
     dialog->show();
 }
 
-QString MigrateVirtualDiskCommand::menuText() const
+QString MigrateVirtualDiskCommand::MenuText() const
 {
     return tr("&Migrate Virtual Disk...");
 }

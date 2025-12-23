@@ -25,24 +25,23 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NEWNETWORKCOMMAND_H
-#define NEWNETWORKCOMMAND_H
+#ifndef HOSTCOMMAND_H
+#define HOSTCOMMAND_H
 
 #include "../command.h"
 
-class NewNetworkCommand : public Command
+class Host;
+
+class HostCommand : public Command
 {
-    Q_OBJECT
-
-public:
-    explicit NewNetworkCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-
-    void Run() override;
-    bool CanRun() const override;
-    QString MenuText() const override;
-
-private:
-    void showNewNetworkWizard();
+        Q_OBJECT
+    public:
+        HostCommand(MainWindow* mainWindow, QObject* parent);
+    protected:
+        QSharedPointer<Host> getSelectedHost() const;
+        QString getSelectedHostRef() const;
+        QString getSelectedHostName() const;
+        bool isHostEnabled() const;
 };
 
-#endif // NEWNETWORKCOMMAND_H
+#endif // HOSTCOMMAND_H

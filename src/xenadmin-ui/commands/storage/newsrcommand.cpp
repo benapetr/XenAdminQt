@@ -41,11 +41,11 @@ NewSRCommand::NewSRCommand(MainWindow* mainWindow, QObject* parent)
     qDebug() << "NewSRCommand: Created";
 }
 
-void NewSRCommand::run()
+void NewSRCommand::Run()
 {
     qDebug() << "NewSRCommand: Executing New Storage Repository command";
 
-    if (!canRun())
+    if (!CanRun())
     {
         qWarning() << "NewSRCommand: Cannot execute - requirements not met";
         QMessageBox::warning(nullptr, tr("Cannot Create Storage Repository"),
@@ -57,7 +57,7 @@ void NewSRCommand::run()
     showNewSRWizard();
 }
 
-bool NewSRCommand::canRun() const
+bool NewSRCommand::CanRun() const
 {
     // Match C# NewSRCommand::CanRunCore logic:
     // - Must have a host or pool connection
@@ -78,7 +78,7 @@ bool NewSRCommand::canRun() const
     return true;
 }
 
-QString NewSRCommand::menuText() const
+QString NewSRCommand::MenuText() const
 {
     return tr("New Storage Repository...");
 }

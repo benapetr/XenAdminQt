@@ -28,24 +28,21 @@
 #ifndef SHUTDOWNHOSTCOMMAND_H
 #define SHUTDOWNHOSTCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
-class ShutdownHostCommand : public Command
+class Host;
+
+class ShutdownHostCommand : public HostCommand
 {
     Q_OBJECT
 
-public:
-    explicit ShutdownHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit ShutdownHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool canRun() const override;
-    void run() override;
-    QString menuText() const override;
-
-private:
-    QString getSelectedHostRef() const;
-    QString getSelectedHostName() const;
-    bool isHostEnabled(const QString& hostRef) const;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // SHUTDOWNHOSTCOMMAND_H

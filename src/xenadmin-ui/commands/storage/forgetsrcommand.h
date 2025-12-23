@@ -45,14 +45,14 @@ class ForgetSRCommand : public Command
     public:
         explicit ForgetSRCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        QString menuText() const override
+        QString MenuText() const override
         {
             return "Forget SR";
         }
 
     protected:
-        bool canRun() const override;
-        void run() override;
+        bool CanRun() const override;
+        void Run() override;
 };
 
 #endif // FORGETSRCOMMAND_H

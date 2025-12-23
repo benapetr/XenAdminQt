@@ -46,7 +46,7 @@ RotatePoolSecretCommand::RotatePoolSecretCommand(MainWindow* mainWindow, QObject
 {
 }
 
-bool RotatePoolSecretCommand::canRun() const
+bool RotatePoolSecretCommand::CanRun() const
 {
     QString objectType = this->getSelectedObjectType();
     if (objectType != "pool" && objectType != "host")
@@ -76,7 +76,7 @@ bool RotatePoolSecretCommand::canRun() const
     return this->canRotateSecret(poolData);
 }
 
-void RotatePoolSecretCommand::run()
+void RotatePoolSecretCommand::Run()
 {
     QString objectType = this->getSelectedObjectType();
 
@@ -167,7 +167,7 @@ void RotatePoolSecretCommand::run()
     this->mainWindow()->showStatusMessage(tr("Pool secret rotation started"), 3000);
 }
 
-QString RotatePoolSecretCommand::menuText() const
+QString RotatePoolSecretCommand::MenuText() const
 {
     return tr("&Rotate Pool Secret...");
 }

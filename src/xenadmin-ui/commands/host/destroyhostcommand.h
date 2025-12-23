@@ -49,9 +49,9 @@ class DestroyHostCommand : public Command
 public:
     explicit DestroyHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    bool canRun() const override;
-    void run() override;
-    QString menuText() const override;
+    bool CanRun() const override;
+    void Run() override;
+    QString MenuText() const override;
 
 private:
     bool canRunForHost(const QString& hostRef) const;

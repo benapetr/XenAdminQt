@@ -37,7 +37,7 @@ HostReconnectAsCommand::HostReconnectAsCommand(MainWindow* mainWindow, QObject* 
 {
 }
 
-bool HostReconnectAsCommand::canRun() const
+bool HostReconnectAsCommand::CanRun() const
 {
     // Can reconnect as if:
     // 1. Connection is connected AND selected object is pool coordinator
@@ -60,7 +60,7 @@ bool HostReconnectAsCommand::canRun() const
     return false;
 }
 
-void HostReconnectAsCommand::run()
+void HostReconnectAsCommand::Run()
 {
     if (!mainWindow()->xenLib())
         return;
@@ -93,7 +93,7 @@ void HostReconnectAsCommand::run()
     }
 }
 
-QString HostReconnectAsCommand::menuText() const
+QString HostReconnectAsCommand::MenuText() const
 {
     return "Reconnect As...";
 }

@@ -41,7 +41,7 @@ StopVMCommand::StopVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool StopVMCommand::canRun() const
+bool StopVMCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -58,7 +58,7 @@ bool StopVMCommand::canRun() const
     return allowedOperations.contains("clean_shutdown");
 }
 
-void StopVMCommand::run()
+void StopVMCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     QString vmName = this->getSelectedVMName();
@@ -103,7 +103,7 @@ void StopVMCommand::run()
     action->runAsync();
 }
 
-QString StopVMCommand::menuText() const
+QString StopVMCommand::MenuText() const
 {
     return "Shutdown VM";
 }

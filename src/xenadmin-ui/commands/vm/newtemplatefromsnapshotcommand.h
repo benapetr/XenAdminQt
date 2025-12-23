@@ -66,7 +66,7 @@ public:
      *
      * @return true if command can execute
      */
-    bool canRun() const override;
+    bool CanRun() const override;
 
     /**
      * @brief Execute the create template command
@@ -75,13 +75,13 @@ public:
      * the snapshot. Sets other_config["instant"] = "true" to mark as
      * instant template.
      */
-    void run() override;
+    void Run() override;
 
     /**
      * @brief Get menu text for this command
      * @return "Create Template from Snapshot..."
      */
-    QString menuText() const override;
+    QString MenuText() const override;
 
 private:
     /**

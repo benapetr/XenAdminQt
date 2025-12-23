@@ -40,7 +40,7 @@ DestroyHostCommand::DestroyHostCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool DestroyHostCommand::canRun() const
+bool DestroyHostCommand::CanRun() const
 {
     if (!this->isHostSelected())
         return false;
@@ -74,7 +74,7 @@ bool DestroyHostCommand::canRunForHost(const QString& hostRef) const
     return true;
 }
 
-void DestroyHostCommand::run()
+void DestroyHostCommand::Run()
 {
     if (!this->isHostSelected())
         return;
@@ -141,7 +141,7 @@ void DestroyHostCommand::run()
         5000);
 }
 
-QString DestroyHostCommand::menuText() const
+QString DestroyHostCommand::MenuText() const
 {
     return tr("&Destroy Host");
 }

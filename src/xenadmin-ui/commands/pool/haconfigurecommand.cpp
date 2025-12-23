@@ -39,7 +39,7 @@ HAConfigureCommand::HAConfigureCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool HAConfigureCommand::canRun() const
+bool HAConfigureCommand::CanRun() const
 {
     QString poolRef = this->getSelectedPoolRef();
     if (poolRef.isEmpty())
@@ -52,7 +52,7 @@ bool HAConfigureCommand::canRun() const
     return this->isPoolConnected() && this->hasCoordinator() && !this->isPoolLocked();
 }
 
-void HAConfigureCommand::run()
+void HAConfigureCommand::Run()
 {
     QString poolRef = this->getSelectedPoolRef();
     if (poolRef.isEmpty())
@@ -79,7 +79,7 @@ void HAConfigureCommand::run()
     wizard.exec();
 }
 
-QString HAConfigureCommand::menuText() const
+QString HAConfigureCommand::MenuText() const
 {
     return "Configure...";
 }

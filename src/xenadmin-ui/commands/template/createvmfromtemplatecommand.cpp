@@ -35,18 +35,18 @@ CreateVMFromTemplateCommand::CreateVMFromTemplateCommand(MainWindow* mainWindow,
 {
 }
 
-bool CreateVMFromTemplateCommand::canRun() const
+bool CreateVMFromTemplateCommand::CanRun() const
 {
     // Can run if template is selected (delegates to submenu items)
     return this->isTemplateSelected();
 }
 
-void CreateVMFromTemplateCommand::run()
+void CreateVMFromTemplateCommand::Run()
 {
     // This is a submenu, run() doesn't get called
 }
 
-QString CreateVMFromTemplateCommand::menuText() const
+QString CreateVMFromTemplateCommand::MenuText() const
 {
     return "Create VM from Template";
 }

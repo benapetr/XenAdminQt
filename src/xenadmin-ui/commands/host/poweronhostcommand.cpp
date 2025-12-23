@@ -38,7 +38,7 @@ PowerOnHostCommand::PowerOnHostCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool PowerOnHostCommand::canRun() const
+bool PowerOnHostCommand::CanRun() const
 {
     // Matches C# PowerOnHostCommand.CanRunCore() logic
     QString hostRef = this->getSelectedHostRef();
@@ -48,7 +48,7 @@ bool PowerOnHostCommand::canRun() const
     return this->canPowerOn(hostRef);
 }
 
-void PowerOnHostCommand::run()
+void PowerOnHostCommand::Run()
 {
     // Matches C# PowerOnHostCommand.RunCore() logic
     QString hostRef = this->getSelectedHostRef();
@@ -109,7 +109,7 @@ void PowerOnHostCommand::run()
     */
 }
 
-QString PowerOnHostCommand::menuText() const
+QString PowerOnHostCommand::MenuText() const
 {
     // Matches C# Messages.MAINWINDOW_POWER_ON
     return "Power On";

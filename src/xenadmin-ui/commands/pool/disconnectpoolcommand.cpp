@@ -37,7 +37,7 @@ DisconnectPoolCommand::DisconnectPoolCommand(MainWindow* mainWindow, QObject* pa
 {
 }
 
-bool DisconnectPoolCommand::canRun() const
+bool DisconnectPoolCommand::CanRun() const
 {
     // Can disconnect if:
     // 1. A pool is selected
@@ -58,7 +58,7 @@ bool DisconnectPoolCommand::canRun() const
     return conn->isConnected();
 }
 
-void DisconnectPoolCommand::run()
+void DisconnectPoolCommand::Run()
 {
     if (!this->mainWindow()->xenLib())
         return;
@@ -93,7 +93,7 @@ void DisconnectPoolCommand::run()
     }
 }
 
-QString DisconnectPoolCommand::menuText() const
+QString DisconnectPoolCommand::MenuText() const
 {
     return "Disconnect from Pool";
 }

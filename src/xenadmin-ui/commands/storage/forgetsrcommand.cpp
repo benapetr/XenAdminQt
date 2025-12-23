@@ -39,7 +39,7 @@ ForgetSRCommand::ForgetSRCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool ForgetSRCommand::canRun() const
+bool ForgetSRCommand::CanRun() const
 {
     if (this->getSelectedObjectType() != "sr")
     {
@@ -106,9 +106,9 @@ bool ForgetSRCommand::canRun() const
     return false;
 }
 
-void ForgetSRCommand::run()
+void ForgetSRCommand::Run()
 {
-    if (!this->canRun())
+    if (!this->CanRun())
     {
         qWarning() << "ForgetSRCommand: Cannot run";
         return;

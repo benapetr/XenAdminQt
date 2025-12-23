@@ -44,11 +44,11 @@ VMPropertiesCommand::VMPropertiesCommand(const QString& vmUuid, MainWindow* main
     // qDebug() << "VMPropertiesCommand: Created with VM UUID:" << vmUuid;
 }
 
-void VMPropertiesCommand::run()
+void VMPropertiesCommand::Run()
 {
     // qDebug() << "VMPropertiesCommand: Executing VM Properties command for VM:" << this->m_vmUuid;
 
-    if (!this->canRun())
+    if (!this->CanRun())
     {
         qWarning() << "VMPropertiesCommand: Cannot execute - no VM selected or invalid state";
         QMessageBox::warning(nullptr, tr("Cannot Show Properties"),
@@ -59,7 +59,7 @@ void VMPropertiesCommand::run()
     this->showPropertiesDialog();
 }
 
-bool VMPropertiesCommand::canRun() const
+bool VMPropertiesCommand::CanRun() const
 {
     // Match C# logic:
     // VMPropertiesCommand: selection is VM AND not template AND not snapshot AND not locked
@@ -84,7 +84,7 @@ bool VMPropertiesCommand::canRun() const
     return this->xenLib() && this->xenLib()->isConnected();
 }
 
-QString VMPropertiesCommand::menuText() const
+QString VMPropertiesCommand::MenuText() const
 {
     return tr("Properties...");
 }

@@ -36,13 +36,13 @@ DisconnectAllHostsCommand::DisconnectAllHostsCommand(MainWindow* mainWindow, QOb
 {
 }
 
-bool DisconnectAllHostsCommand::canRun() const
+bool DisconnectAllHostsCommand::CanRun() const
 {
     // Can disconnect all if there are any connected connections
     return this->hasConnectedConnections();
 }
 
-void DisconnectAllHostsCommand::run()
+void DisconnectAllHostsCommand::Run()
 {
     if (!this->mainWindow()->xenLib())
         return;
@@ -63,7 +63,7 @@ void DisconnectAllHostsCommand::run()
     }
 }
 
-QString DisconnectAllHostsCommand::menuText() const
+QString DisconnectAllHostsCommand::MenuText() const
 {
     return "Disconnect All";
 }

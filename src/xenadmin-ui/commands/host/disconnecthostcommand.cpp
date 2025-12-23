@@ -37,7 +37,7 @@ DisconnectHostCommand::DisconnectHostCommand(MainWindow* mainWindow, QObject* pa
 {
 }
 
-bool DisconnectHostCommand::canRun() const
+bool DisconnectHostCommand::CanRun() const
 {
     // Can disconnect if:
     // 1. Connection is connected AND selected object is pool coordinator (host)
@@ -60,7 +60,7 @@ bool DisconnectHostCommand::canRun() const
     return false;
 }
 
-void DisconnectHostCommand::run()
+void DisconnectHostCommand::Run()
 {
     if (!this->mainWindow()->xenLib())
         return;
@@ -81,7 +81,7 @@ void DisconnectHostCommand::run()
     }
 }
 
-QString DisconnectHostCommand::menuText() const
+QString DisconnectHostCommand::MenuText() const
 {
     return "Disconnect";
 }

@@ -56,11 +56,11 @@ TakeSnapshotCommand::TakeSnapshotCommand(const QString& vmUuid, MainWindow* main
     // qDebug() << "TakeSnapshotCommand: Created with VM UUID:" << vmUuid;
 }
 
-void TakeSnapshotCommand::run()
+void TakeSnapshotCommand::Run()
 {
     // qDebug() << "TakeSnapshotCommand: Executing Take Snapshot command";
 
-    if (!this->canRun())
+    if (!this->CanRun())
     {
         qWarning() << "TakeSnapshotCommand: Cannot execute - VM doesn't support snapshots";
         QMessageBox::warning(nullptr, tr("Cannot Take Snapshot"),
@@ -72,7 +72,7 @@ void TakeSnapshotCommand::run()
     this->showSnapshotDialog();
 }
 
-bool TakeSnapshotCommand::canRun() const
+bool TakeSnapshotCommand::CanRun() const
 {
     if (!this->mainWindow() || this->m_vmUuid.isEmpty())
     {
@@ -82,7 +82,7 @@ bool TakeSnapshotCommand::canRun() const
     return this->canTakeSnapshot();
 }
 
-QString TakeSnapshotCommand::menuText() const
+QString TakeSnapshotCommand::MenuText() const
 {
     return tr("Take Snapshot...");
 }

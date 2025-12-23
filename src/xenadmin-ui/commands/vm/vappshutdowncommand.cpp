@@ -39,7 +39,7 @@ VappShutDownCommand::VappShutDownCommand(MainWindow* mainWindow, QObject* parent
 {
 }
 
-bool VappShutDownCommand::canRun() const
+bool VappShutDownCommand::CanRun() const
 {
     QString objRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -72,7 +72,7 @@ bool VappShutDownCommand::canRun() const
     return false;
 }
 
-void VappShutDownCommand::run()
+void VappShutDownCommand::Run()
 {
     QString objRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -162,7 +162,7 @@ void VappShutDownCommand::run()
     action->runAsync();
 }
 
-QString VappShutDownCommand::menuText() const
+QString VappShutDownCommand::MenuText() const
 {
     return tr("Shut Down v&App");
 }

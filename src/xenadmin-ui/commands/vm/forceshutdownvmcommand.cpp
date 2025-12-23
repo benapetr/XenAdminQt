@@ -41,7 +41,7 @@ ForceShutdownVMCommand::ForceShutdownVMCommand(MainWindow* mainWindow, QObject* 
 {
 }
 
-bool ForceShutdownVMCommand::canRun() const
+bool ForceShutdownVMCommand::CanRun() const
 {
     // Matches C# ForceVMShutDownCommand.CanRun() logic
     QString vmRef = this->getSelectedVMRef();
@@ -51,7 +51,7 @@ bool ForceShutdownVMCommand::canRun() const
     return this->canForceShutdown(vmRef);
 }
 
-void ForceShutdownVMCommand::run()
+void ForceShutdownVMCommand::Run()
 {
     // Matches C# ForceVMShutDownCommand.Run() with confirmation dialog
     QString vmRef = this->getSelectedVMRef();
@@ -122,7 +122,7 @@ void ForceShutdownVMCommand::run()
     action->runAsync();
 }
 
-QString ForceShutdownVMCommand::menuText() const
+QString ForceShutdownVMCommand::MenuText() const
 {
     // Matches C# Messages.MAINWINDOW_FORCE_SHUTDOWN
     return "Force Shutdown";

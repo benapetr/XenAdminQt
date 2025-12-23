@@ -72,7 +72,7 @@ class DisableChangedBlockTrackingCommand : public Command
          *
          * @return true if command can execute
          */
-        bool canRun() const override;
+        bool CanRun() const override;
 
         /**
          * @brief Execute the disable CBT command
@@ -86,13 +86,13 @@ class DisableChangedBlockTrackingCommand : public Command
          * Uses ParallelAction if multiple VDIs need processing.
          * Shows confirmation dialog before execution.
          */
-        void run() override;
+        void Run() override;
 
         /**
          * @brief Get menu text for this command
          * @return "Disable Changed Block &Tracking"
          */
-        QString menuText() const override;
+        QString MenuText() const override;
 
     private:
         /**

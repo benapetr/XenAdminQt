@@ -41,9 +41,9 @@ public:
     explicit NewVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
     explicit NewVMCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent = nullptr);
 
-    void run() override;
-    bool canRun() const override;
-    QString menuText() const override;
+    void Run() override;
+    bool CanRun() const override;
+    QString MenuText() const override;
 
 private:
     void showNewVMWizard();

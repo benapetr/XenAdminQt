@@ -37,7 +37,7 @@ MoveVirtualDiskCommand::MoveVirtualDiskCommand(MainWindow* mainWindow, QObject* 
 {
 }
 
-bool MoveVirtualDiskCommand::canRun() const
+bool MoveVirtualDiskCommand::CanRun() const
 {
     QString type = this->getSelectedObjectType();
     if (type != "vdi")
@@ -60,7 +60,7 @@ bool MoveVirtualDiskCommand::canRun() const
     return this->canBeMoved(vdiData);
 }
 
-void MoveVirtualDiskCommand::run()
+void MoveVirtualDiskCommand::Run()
 {
     QString vdiRef = this->getSelectedObjectRef();
     if (vdiRef.isEmpty())
@@ -78,7 +78,7 @@ void MoveVirtualDiskCommand::run()
     dialog->show();
 }
 
-QString MoveVirtualDiskCommand::menuText() const
+QString MoveVirtualDiskCommand::MenuText() const
 {
     return tr("Move...");
 }

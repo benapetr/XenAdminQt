@@ -36,7 +36,7 @@ InstallToolsCommand::InstallToolsCommand(MainWindow* mainWindow, QObject* parent
 {
 }
 
-bool InstallToolsCommand::canRun() const
+bool InstallToolsCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -46,7 +46,7 @@ bool InstallToolsCommand::canRun() const
     return this->isVMRunning() && this->canInstallTools();
 }
 
-void InstallToolsCommand::run()
+void InstallToolsCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -70,7 +70,7 @@ void InstallToolsCommand::run()
     }
 }
 
-QString InstallToolsCommand::menuText() const
+QString InstallToolsCommand::MenuText() const
 {
     return "Install XenServer Tools...";
 }

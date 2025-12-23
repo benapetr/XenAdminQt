@@ -40,7 +40,7 @@ DeletePoolCommand::DeletePoolCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool DeletePoolCommand::canRun() const
+bool DeletePoolCommand::CanRun() const
 {
     QString poolRef = this->getSelectedPoolRef();
     if (poolRef.isEmpty())
@@ -50,7 +50,7 @@ bool DeletePoolCommand::canRun() const
     return this->isPoolConnected() && !this->hasMultipleHosts();
 }
 
-void DeletePoolCommand::run()
+void DeletePoolCommand::Run()
 {
     QString poolRef = this->getSelectedPoolRef();
 
@@ -164,7 +164,7 @@ void DeletePoolCommand::run()
     action->runAsync();
 }
 
-QString DeletePoolCommand::menuText() const
+QString DeletePoolCommand::MenuText() const
 {
     return "Delete Pool";
 }

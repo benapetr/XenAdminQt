@@ -37,7 +37,7 @@ RestartToolstackCommand::RestartToolstackCommand(MainWindow* mainWindow, QObject
 {
 }
 
-bool RestartToolstackCommand::canRun() const
+bool RestartToolstackCommand::CanRun() const
 {
     QString hostRef = this->getSelectedHostRef();
     if (hostRef.isEmpty())
@@ -47,7 +47,7 @@ bool RestartToolstackCommand::canRun() const
     return this->isHostLive(hostRef);
 }
 
-void RestartToolstackCommand::run()
+void RestartToolstackCommand::Run()
 {
     QString hostRef = this->getSelectedHostRef();
     QString hostName = this->getSelectedHostName();
@@ -86,7 +86,7 @@ void RestartToolstackCommand::run()
     }
 }
 
-QString RestartToolstackCommand::menuText() const
+QString RestartToolstackCommand::MenuText() const
 {
     return "Restart Toolstack";
 }

@@ -44,9 +44,9 @@ class ActivateVBDCommand : public Command
     public:
         explicit ActivateVBDCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        QString menuText() const override;
-        bool canRun() const override;
-        void run() override;
+        QString MenuText() const override;
+        bool CanRun() const override;
+        void Run() override;
 
     private:
         bool canRunVBD(const QString& vbdRef) const;

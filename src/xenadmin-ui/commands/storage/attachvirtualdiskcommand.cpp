@@ -42,7 +42,7 @@ AttachVirtualDiskCommand::AttachVirtualDiskCommand(MainWindow* mainWindow, QObje
 {
 }
 
-bool AttachVirtualDiskCommand::canRun() const
+bool AttachVirtualDiskCommand::CanRun() const
 {
     // Can attach virtual disk if VM is selected and not a snapshot
     if (!isVMSelected())
@@ -69,7 +69,7 @@ bool AttachVirtualDiskCommand::canRun() const
     return currentOps.isEmpty();
 }
 
-void AttachVirtualDiskCommand::run()
+void AttachVirtualDiskCommand::Run()
 {
     QString vmRef = getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -225,7 +225,7 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     }
 }
 
-QString AttachVirtualDiskCommand::menuText() const
+QString AttachVirtualDiskCommand::MenuText() const
 {
     return "Attach Virtual Disk...";
 }

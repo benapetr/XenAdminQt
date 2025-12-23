@@ -53,11 +53,11 @@ RevertToSnapshotCommand::RevertToSnapshotCommand(const QString& snapshotUuid, Ma
     // qDebug() << "RevertToSnapshotCommand: Created with snapshot UUID:" << snapshotUuid;
 }
 
-void RevertToSnapshotCommand::run()
+void RevertToSnapshotCommand::Run()
 {
     // qDebug() << "RevertToSnapshotCommand: Executing Revert to Snapshot command";
 
-    if (!this->canRun())
+    if (!this->CanRun())
     {
         qWarning() << "RevertToSnapshotCommand: Cannot execute - snapshot is not valid or cannot be reverted to";
         QMessageBox::warning(nullptr, tr("Cannot Revert to Snapshot"),
@@ -72,7 +72,7 @@ void RevertToSnapshotCommand::run()
     }
 }
 
-bool RevertToSnapshotCommand::canRun() const
+bool RevertToSnapshotCommand::CanRun() const
 {
     if (!this->mainWindow() || this->m_snapshotUuid.isEmpty())
     {
@@ -82,7 +82,7 @@ bool RevertToSnapshotCommand::canRun() const
     return this->canRevertToSnapshot();
 }
 
-QString RevertToSnapshotCommand::menuText() const
+QString RevertToSnapshotCommand::MenuText() const
 {
     return tr("Revert to Snapshot");
 }

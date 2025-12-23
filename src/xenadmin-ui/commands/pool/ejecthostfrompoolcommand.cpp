@@ -41,7 +41,7 @@ EjectHostFromPoolCommand::EjectHostFromPoolCommand(MainWindow* mainWindow, QObje
 {
 }
 
-bool EjectHostFromPoolCommand::canRun() const
+bool EjectHostFromPoolCommand::CanRun() const
 {
     QString hostRef = this->getSelectedHostRef();
     if (hostRef.isEmpty() || !this->mainWindow()->xenLib()->isConnected())
@@ -60,7 +60,7 @@ bool EjectHostFromPoolCommand::canRun() const
     return hostCount >= 2;
 }
 
-void EjectHostFromPoolCommand::run()
+void EjectHostFromPoolCommand::Run()
 {
     QString hostRef = this->getSelectedHostRef();
 
@@ -145,7 +145,7 @@ void EjectHostFromPoolCommand::run()
     this->mainWindow()->showStatusMessage(QString("Ejecting '%1' from pool...").arg(hostName), 0);
 }
 
-QString EjectHostFromPoolCommand::menuText() const
+QString EjectHostFromPoolCommand::MenuText() const
 {
     return "Eject from Pool...";
 }

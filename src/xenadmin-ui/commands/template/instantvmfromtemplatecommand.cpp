@@ -36,7 +36,7 @@ InstantVMFromTemplateCommand::InstantVMFromTemplateCommand(MainWindow* mainWindo
 {
 }
 
-bool InstantVMFromTemplateCommand::canRun() const
+bool InstantVMFromTemplateCommand::CanRun() const
 {
     QString objectType = this->getSelectedObjectType();
     if (objectType != "vm")
@@ -58,7 +58,7 @@ bool InstantVMFromTemplateCommand::canRun() const
     return this->canRunTemplate(templateData);
 }
 
-void InstantVMFromTemplateCommand::run()
+void InstantVMFromTemplateCommand::Run()
 {
     QString templateRef = this->getSelectedObjectRef();
     if (templateRef.isEmpty())
@@ -94,7 +94,7 @@ void InstantVMFromTemplateCommand::run()
                              "Instant VM creation will be implemented using CreateVMFastAction + auto-start.");
 }
 
-QString InstantVMFromTemplateCommand::menuText() const
+QString InstantVMFromTemplateCommand::MenuText() const
 {
     return "Instant VM from Template";
 }

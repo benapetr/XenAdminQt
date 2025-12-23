@@ -40,9 +40,9 @@ public:
     explicit TakeSnapshotCommand(MainWindow* mainWindow, QObject* parent = nullptr);
     explicit TakeSnapshotCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent = nullptr);
 
-    void run() override;
-    bool canRun() const override;
-    QString menuText() const override;
+    void Run() override;
+    bool CanRun() const override;
+    QString MenuText() const override;
 
 signals:
     void snapshotStarted();

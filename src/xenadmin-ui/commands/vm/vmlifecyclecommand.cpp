@@ -37,7 +37,7 @@ VMLifeCycleCommand::VMLifeCycleCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool VMLifeCycleCommand::canRun() const
+bool VMLifeCycleCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -52,7 +52,7 @@ bool VMLifeCycleCommand::canRun() const
            (powerState == "Suspended" && this->isVMOperationAllowed("resume"));
 }
 
-void VMLifeCycleCommand::run()
+void VMLifeCycleCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -80,7 +80,7 @@ void VMLifeCycleCommand::run()
     }
 }
 
-QString VMLifeCycleCommand::menuText() const
+QString VMLifeCycleCommand::MenuText() const
 {
     QString powerState = this->getVMPowerState();
 

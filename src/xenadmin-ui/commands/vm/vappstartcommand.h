@@ -65,7 +65,7 @@ public:
      *
      * @return true if command can execute
      */
-    bool canRun() const override;
+    bool CanRun() const override;
 
     /**
      * @brief Execute the vApp start command
@@ -73,13 +73,13 @@ public:
      * Creates StartApplianceAction for each startable appliance.
      * If VMs selected, finds their common appliance and starts it.
      */
-    void run() override;
+    void Run() override;
 
     /**
      * @brief Get menu text for this command
      * @return "Start vApp"
      */
-    QString menuText() const override;
+    QString MenuText() const override;
 
 private:
     /**

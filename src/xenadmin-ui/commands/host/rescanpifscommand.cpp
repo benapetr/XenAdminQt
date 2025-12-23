@@ -38,7 +38,7 @@ RescanPIFsCommand::RescanPIFsCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool RescanPIFsCommand::canRun() const
+bool RescanPIFsCommand::CanRun() const
 {
     QString objectType = this->getSelectedObjectType();
     if (objectType != "host")
@@ -47,7 +47,7 @@ bool RescanPIFsCommand::canRun() const
     return this->isHostSelected();
 }
 
-void RescanPIFsCommand::run()
+void RescanPIFsCommand::Run()
 {
     if (!this->isHostSelected())
         return;
@@ -81,7 +81,7 @@ void RescanPIFsCommand::run()
     this->mainWindow()->showStatusMessage(tr("Network interface rescan started for host '%1'").arg(hostName), 3000);
 }
 
-QString RescanPIFsCommand::menuText() const
+QString RescanPIFsCommand::MenuText() const
 {
     return tr("&Rescan Network Interfaces");
 }

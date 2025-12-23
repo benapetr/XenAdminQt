@@ -41,7 +41,7 @@ UnpauseVMCommand::UnpauseVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool UnpauseVMCommand::canRun() const
+bool UnpauseVMCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -57,7 +57,7 @@ bool UnpauseVMCommand::canRun() const
     return allowedOperations.contains("unpause");
 }
 
-void UnpauseVMCommand::run()
+void UnpauseVMCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     QString vmName = this->getSelectedVMName();
@@ -93,7 +93,7 @@ void UnpauseVMCommand::run()
     action->runAsync();
 }
 
-QString UnpauseVMCommand::menuText() const
+QString UnpauseVMCommand::MenuText() const
 {
     return "Unpause VM";
 }

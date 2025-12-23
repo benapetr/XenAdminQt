@@ -49,11 +49,11 @@ NewVMCommand::NewVMCommand(const QString& templateUuid, MainWindow* mainWindow, 
     // qDebug() << "NewVMCommand: Created with template UUID:" << templateUuid;
 }
 
-void NewVMCommand::run()
+void NewVMCommand::Run()
 {
     // qDebug() << "NewVMCommand: Executing New VM command";
 
-    if (!this->canRun())
+    if (!this->CanRun())
     {
         qWarning() << "NewVMCommand: Cannot execute - no suitable host available";
         QMessageBox::warning(nullptr, tr("Cannot Create VM"),
@@ -65,7 +65,7 @@ void NewVMCommand::run()
     this->showNewVMWizard();
 }
 
-bool NewVMCommand::canRun() const
+bool NewVMCommand::CanRun() const
 {
     // Check if we have an active connection with at least one enabled host
     if (!this->mainWindow())
@@ -76,7 +76,7 @@ bool NewVMCommand::canRun() const
     return this->hasEnabledHost();
 }
 
-QString NewVMCommand::menuText() const
+QString NewVMCommand::MenuText() const
 {
     return tr("New VM...");
 }

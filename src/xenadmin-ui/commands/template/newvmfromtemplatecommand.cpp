@@ -37,7 +37,7 @@ NewVMFromTemplateCommand::NewVMFromTemplateCommand(MainWindow* mainWindow, QObje
 {
 }
 
-bool NewVMFromTemplateCommand::canRun() const
+bool NewVMFromTemplateCommand::CanRun() const
 {
     QString objectType = this->getSelectedObjectType();
     if (objectType != "vm")
@@ -59,7 +59,7 @@ bool NewVMFromTemplateCommand::canRun() const
     return this->canRunTemplate(templateData);
 }
 
-void NewVMFromTemplateCommand::run()
+void NewVMFromTemplateCommand::Run()
 {
     QString templateRef = this->getSelectedObjectRef();
     if (templateRef.isEmpty())
@@ -88,7 +88,7 @@ void NewVMFromTemplateCommand::run()
     wizard->show();
 }
 
-QString NewVMFromTemplateCommand::menuText() const
+QString NewVMFromTemplateCommand::MenuText() const
 {
     return "New VM from Template";
 }

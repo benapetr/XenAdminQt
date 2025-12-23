@@ -37,7 +37,7 @@ ExportSnapshotAsTemplateCommand::ExportSnapshotAsTemplateCommand(MainWindow* mai
 {
 }
 
-bool ExportSnapshotAsTemplateCommand::canRun() const
+bool ExportSnapshotAsTemplateCommand::CanRun() const
 {
     QString vmRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -59,7 +59,7 @@ bool ExportSnapshotAsTemplateCommand::canRun() const
     return isSnapshot;
 }
 
-void ExportSnapshotAsTemplateCommand::run()
+void ExportSnapshotAsTemplateCommand::Run()
 {
     QString vmRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -86,11 +86,11 @@ void ExportSnapshotAsTemplateCommand::run()
 
     // Reuse ExportVMCommand - snapshots are exported just like VMs
     ExportVMCommand* exportCmd = new ExportVMCommand(this->mainWindow(), this);
-    exportCmd->run();
+    exportCmd->Run();
     exportCmd->deleteLater();
 }
 
-QString ExportSnapshotAsTemplateCommand::menuText() const
+QString ExportSnapshotAsTemplateCommand::MenuText() const
 {
     return tr("E&xport Snapshot as Template...");
 }

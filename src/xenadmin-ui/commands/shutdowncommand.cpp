@@ -36,7 +36,7 @@ ShutdownCommand::ShutdownCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool ShutdownCommand::canRun() const
+bool ShutdownCommand::CanRun() const
 {
     // Matches C# ShutDownCommand.CanRunCore: try host first, then VM
     // This allows the button to be enabled if EITHER a shutdownable host OR VM is selected
@@ -47,18 +47,18 @@ bool ShutdownCommand::canRun() const
     {
         // Check if host can be shut down
         ShutdownHostCommand hostCmd(this->mainWindow(), nullptr);
-        return hostCmd.canRun();
+        return hostCmd.CanRun();
     } else if (objectType == "vm")
     {
         // Check if VM can be shut down
         StopVMCommand vmCmd(this->mainWindow(), nullptr);
-        return vmCmd.canRun();
+        return vmCmd.CanRun();
     }
 
     return false;
 }
 
-void ShutdownCommand::run()
+void ShutdownCommand::Run()
 {
     // Matches C# ShutDownCommand.RunCore: try host first, then VM
     QString objectType = this->getSelectedObjectType();
@@ -66,9 +66,9 @@ void ShutdownCommand::run()
     if (objectType == "host")
     {
         ShutdownHostCommand* hostCmd = new ShutdownHostCommand(this->mainWindow(), this);
-        if (hostCmd->canRun())
+        if (hostCmd->CanRun())
         {
-            hostCmd->run();
+            hostCmd->Run();
             hostCmd->deleteLater();
             return;
         }
@@ -78,9 +78,9 @@ void ShutdownCommand::run()
     if (objectType == "vm")
     {
         StopVMCommand* vmCmd = new StopVMCommand(this->mainWindow(), this);
-        if (vmCmd->canRun())
+        if (vmCmd->CanRun())
         {
-            vmCmd->run();
+            vmCmd->Run();
             vmCmd->deleteLater();
             return;
         }
@@ -92,7 +92,7 @@ void ShutdownCommand::run()
                          "The selected object cannot be shut down.");
 }
 
-QString ShutdownCommand::menuText() const
+QString ShutdownCommand::MenuText() const
 {
     return "Shutdown";
 }

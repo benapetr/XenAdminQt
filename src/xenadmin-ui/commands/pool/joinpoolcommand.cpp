@@ -43,7 +43,7 @@ JoinPoolCommand::JoinPoolCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool JoinPoolCommand::canRun() const
+bool JoinPoolCommand::CanRun() const
 {
     QString hostRef = this->getSelectedHostRef();
     if (hostRef.isEmpty() || !this->mainWindow()->xenLib()->isConnected())
@@ -54,7 +54,7 @@ bool JoinPoolCommand::canRun() const
     return true;
 }
 
-void JoinPoolCommand::run()
+void JoinPoolCommand::Run()
 {
     QString hostRef = this->getSelectedHostRef();
 
@@ -149,7 +149,7 @@ void JoinPoolCommand::run()
     }
 }
 
-QString JoinPoolCommand::menuText() const
+QString JoinPoolCommand::MenuText() const
 {
     return "Join Pool...";
 }

@@ -40,12 +40,12 @@ ActivateVBDCommand::ActivateVBDCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-QString ActivateVBDCommand::menuText() const
+QString ActivateVBDCommand::MenuText() const
 {
     return "Activate Virtual Disk";
 }
 
-bool ActivateVBDCommand::canRun() const
+bool ActivateVBDCommand::CanRun() const
 {
     if (getSelectedObjectType() != "vbd")
     {
@@ -219,7 +219,7 @@ bool ActivateVBDCommand::areIODriversNeededAndMissing(const QVariantMap& vmData)
     return false;
 }
 
-void ActivateVBDCommand::run()
+void ActivateVBDCommand::Run()
 {
     QString vbdRef = getSelectedObjectRef();
     if (vbdRef.isEmpty())

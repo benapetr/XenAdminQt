@@ -44,13 +44,13 @@ void StoragePropertiesCommand::setTargetSR(const QString& srRef)
     this->m_overrideSRRef = srRef;
 }
 
-bool StoragePropertiesCommand::canRun() const
+bool StoragePropertiesCommand::CanRun() const
 {
     QString srRef = getSelectedSRRef();
     return !srRef.isEmpty() && mainWindow()->xenLib()->isConnected();
 }
 
-void StoragePropertiesCommand::run()
+void StoragePropertiesCommand::Run()
 {
     QString srRef = getSelectedSRRef();
     if (srRef.isEmpty())
@@ -68,7 +68,7 @@ void StoragePropertiesCommand::run()
     dialog.exec();
 }
 
-QString StoragePropertiesCommand::menuText() const
+QString StoragePropertiesCommand::MenuText() const
 {
     return "P&roperties";
 }

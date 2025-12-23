@@ -47,7 +47,7 @@ DeleteVMCommand::DeleteVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool DeleteVMCommand::canRun() const
+bool DeleteVMCommand::CanRun() const
 {
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
@@ -57,7 +57,7 @@ bool DeleteVMCommand::canRun() const
     return this->isVMDeletable(vmRef);
 }
 
-void DeleteVMCommand::run()
+void DeleteVMCommand::Run()
 {
     QString vmRef = this->getSelectedVMRef();
     QString vmName = this->getSelectedVMName();
@@ -150,7 +150,7 @@ void DeleteVMCommand::run()
     }
 }
 
-QString DeleteVMCommand::menuText() const
+QString DeleteVMCommand::MenuText() const
 {
     return "Delete VM";
 }

@@ -40,7 +40,7 @@ RebootHostCommand::RebootHostCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool RebootHostCommand::canRun() const
+bool RebootHostCommand::CanRun() const
 {
     QString hostRef = this->getSelectedHostRef();
     if (hostRef.isEmpty())
@@ -50,7 +50,7 @@ bool RebootHostCommand::canRun() const
     return this->isHostEnabled(hostRef);
 }
 
-void RebootHostCommand::run()
+void RebootHostCommand::Run()
 {
     QString hostRef = this->getSelectedHostRef();
     QString hostName = this->getSelectedHostName();
@@ -100,7 +100,7 @@ void RebootHostCommand::run()
     }
 }
 
-QString RebootHostCommand::menuText() const
+QString RebootHostCommand::MenuText() const
 {
     return "Reboot Host";
 }

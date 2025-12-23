@@ -402,7 +402,7 @@ void PhysicalStorageTabPage::updateButtonStates()
     if (mainWindow)
     {
         NewSRCommand newSrCmd(mainWindow);
-        this->ui->newSRButton->setEnabled(newSrCmd.canRun());
+        this->ui->newSRButton->setEnabled(newSrCmd.CanRun());
     } else
     {
         this->ui->newSRButton->setEnabled(false);
@@ -415,11 +415,11 @@ void PhysicalStorageTabPage::updateButtonStates()
     {
         TrimSRCommand trimCmd(mainWindow);
         trimCmd.setTargetSR(selectedSrRef);
-        canTrim = trimCmd.canRun();
+        canTrim = trimCmd.CanRun();
 
         StoragePropertiesCommand propsCmd(mainWindow);
         propsCmd.setTargetSR(selectedSrRef);
-        canShowProperties = propsCmd.canRun();
+        canShowProperties = propsCmd.CanRun();
     }
 
     this->ui->trimButton->setEnabled(canTrim);
@@ -453,14 +453,14 @@ void PhysicalStorageTabPage::onNewSRButtonClicked()
         return;
 
     NewSRCommand command(mainWindow);
-    if (!command.canRun())
+    if (!command.CanRun())
     {
         QMessageBox::warning(this, tr("Cannot Create Storage Repository"),
                              tr("Storage repository creation is not available right now."));
         return;
     }
 
-    command.run();
+    command.Run();
 }
 
 void PhysicalStorageTabPage::onTrimButtonClicked()
@@ -476,14 +476,14 @@ void PhysicalStorageTabPage::onTrimButtonClicked()
     TrimSRCommand command(mainWindow);
     command.setTargetSR(srRef);
 
-    if (!command.canRun())
+    if (!command.CanRun())
     {
         QMessageBox::warning(this, tr("Cannot Trim Storage Repository"),
                              tr("The selected storage repository cannot be trimmed at this time."));
         return;
     }
 
-    command.run();
+    command.Run();
 }
 
 void PhysicalStorageTabPage::onPropertiesButtonClicked()
@@ -499,10 +499,10 @@ void PhysicalStorageTabPage::onPropertiesButtonClicked()
     StoragePropertiesCommand command(mainWindow);
     command.setTargetSR(srRef);
 
-    if (!command.canRun())
+    if (!command.CanRun())
         return;
 
-    command.run();
+    command.Run();
 }
 
 void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& pos)
@@ -523,11 +523,11 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
 
     NewSRCommand newCmd(mainWindow);
     QAction* newAction = menu.addAction(tr("New Storage Repository..."));
-    newAction->setEnabled(newCmd.canRun());
+    newAction->setEnabled(newCmd.CanRun());
     connect(newAction, &QAction::triggered, this, [mainWindow]() {
         NewSRCommand cmd(mainWindow);
-        if (cmd.canRun())
-            cmd.run();
+        if (cmd.CanRun())
+            cmd.Run();
     });
 
     if (!srRef.isEmpty())
@@ -535,34 +535,34 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
         TrimSRCommand trimCmd(mainWindow);
         trimCmd.setTargetSR(srRef);
         QAction* trimAction = menu.addAction(tr("Reclaim Freed Space..."));
-        trimAction->setEnabled(trimCmd.canRun());
+        trimAction->setEnabled(trimCmd.CanRun());
         connect(trimAction, &QAction::triggered, this, [mainWindow, srRef]() {
             TrimSRCommand cmd(mainWindow);
             cmd.setTargetSR(srRef);
-            if (cmd.canRun())
-                cmd.run();
+            if (cmd.CanRun())
+                cmd.Run();
         });
 
         DetachSRCommand detachCmd(mainWindow);
         detachCmd.setTargetSR(srRef);
         QAction* detachAction = menu.addAction(tr("Detach Storage Repository"));
-        detachAction->setEnabled(detachCmd.canRun());
+        detachAction->setEnabled(detachCmd.CanRun());
         connect(detachAction, &QAction::triggered, this, [mainWindow, srRef]() {
             DetachSRCommand cmd(mainWindow);
             cmd.setTargetSR(srRef);
-            if (cmd.canRun())
-                cmd.run();
+            if (cmd.CanRun())
+                cmd.Run();
         });
 
         StoragePropertiesCommand propsCmd(mainWindow);
         propsCmd.setTargetSR(srRef);
         QAction* propsAction = menu.addAction(tr("Properties..."));
-        propsAction->setEnabled(propsCmd.canRun());
+        propsAction->setEnabled(propsCmd.CanRun());
         connect(propsAction, &QAction::triggered, this, [mainWindow, srRef]() {
             StoragePropertiesCommand cmd(mainWindow);
             cmd.setTargetSR(srRef);
-            if (cmd.canRun())
-                cmd.run();
+            if (cmd.CanRun())
+                cmd.Run();
         });
     }
 

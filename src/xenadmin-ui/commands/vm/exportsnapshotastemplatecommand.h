@@ -65,7 +65,7 @@ class ExportSnapshotAsTemplateCommand : public Command
          *
          * @return true if command can execute
          */
-        bool canRun() const override;
+        bool CanRun() const override;
 
         /**
          * @brief Execute the export snapshot command
@@ -73,13 +73,13 @@ class ExportSnapshotAsTemplateCommand : public Command
          * Creates and runs ExportVMCommand for the selected snapshot.
          * This reuses the same export wizard as regular VM export.
          */
-        void run() override;
+        void Run() override;
 
         /**
          * @brief Get menu text for this command
          * @return "Export Snapshot as Template..."
          */
-        QString menuText() const override;
+        QString MenuText() const override;
 };
 
 #endif // EXPORTSNAPSHOTASTEMPLATECOMMAND_H

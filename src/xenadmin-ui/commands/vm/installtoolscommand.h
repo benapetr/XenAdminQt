@@ -38,9 +38,9 @@ class InstallToolsCommand : public Command
         explicit InstallToolsCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
     private:
         QString getSelectedVMRef() const;

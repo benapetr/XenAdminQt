@@ -70,7 +70,7 @@ public:
      *
      * @return true if command can execute
      */
-    bool canRun() const override;
+    bool CanRun() const override;
 
     /**
      * @brief Execute the recovery boot command
@@ -81,13 +81,13 @@ public:
      * 3. Start VM
      * 4. Restore original boot settings
      */
-    void run() override;
+    void Run() override;
 
     /**
      * @brief Get menu text for this command
      * @return "Boot in Recovery Mode"
      */
-    QString menuText() const override;
+    QString MenuText() const override;
 };
 
 #endif // VMRECOVERYMODECOMMAND_H
