@@ -36,6 +36,11 @@ SR::SR(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
+QString SR::objectType() const
+{
+    return "sr";
+}
+
 QString SR::type() const
 {
     return stringProperty("type");

@@ -28,6 +28,8 @@
 #include "command.h"
 #include "../mainwindow.h"
 #include "xenlib.h"
+#include "xen/xenobject.h"
+#include "xen/network/connection.h"
 #include <QTreeWidget>
 #include <QList>
 
@@ -69,7 +71,12 @@ QString Command::getSelectedObjectRef() const
     if (!item)
         return QString();
 
-    return item->data(0, Qt::UserRole).toString();
+    QVariant data = item->data(0, Qt::UserRole);
+    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+    if (obj)
+        return obj->opaqueRef();
+    
+    return QString();
 }
 
 QString Command::getSelectedObjectName() const
@@ -87,5 +94,17 @@ QString Command::getSelectedObjectType() const
     if (!item)
         return QString();
 
-    return item->data(0, Qt::UserRole + 1).toString();
+    QVariant data = item->data(0, Qt::UserRole);
+    if (data.canConvert<QSharedPointer<XenObject>>())
+    {
+        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+        if (obj)
+            return obj->objectType();
+    }
+    else if (data.canConvert<XenConnection*>())
+    {
+        return "disconnected_host";
+    }
+    
+    return QString();
 }

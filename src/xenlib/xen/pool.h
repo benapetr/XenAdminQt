@@ -119,10 +119,7 @@ public:
     bool livePatchingDisabled() const;
 
 protected:
-    QString objectType() const override
-    {
-        return "pool";
-    }
+    QString objectType() const override;
 };
 
 #endif // POOL_H

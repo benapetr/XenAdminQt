@@ -130,5 +130,5 @@ QString VBD::description() const
 
 QString VBD::objectType() const
 {
-    return "VBD";
+    return "vbd";
 }

@@ -31,6 +31,7 @@
 #include "../xenlib_global.h"
 #include <QObject>
 #include <QString>
+#include <QSharedPointer>
 #include <QVariantMap>
 #include <QPointer>
 #include "network/connection.h"
@@ -69,7 +70,7 @@ public:
      */
     QString opaqueRef() const
     {
-        return m_opaqueRef;
+        return this->m_opaqueRef;
     }
 
     /**
@@ -96,8 +97,16 @@ public:
      */
     XenConnection* connection() const
     {
-        return m_connection;
+        return this->m_connection;
     }
+
+    /**
+     * @brief Get the object type string for cache lookups
+     *
+     * Must be overridden by derived classes to return the XenAPI type
+     * (e.g., "vm", "host", "sr", "pool", "network")
+     */
+    virtual QString objectType() const = 0;
 
     /**
      * @brief Get all cached data for this object
@@ -126,7 +135,7 @@ public:
      */
     void setEvicted(bool evicted)
     {
-        m_evicted = evicted;
+        this->m_evicted = evicted;
     }
 
     /**
@@ -134,45 +143,39 @@ public:
      */
     bool isEvicted() const
     {
-        return m_evicted;
+        return this->m_evicted;
     }
 
-signals:
-    /**
-     * @brief Emitted when object data changes
-     */
-    void dataChanged();
+    signals:
+        /**
+         * @brief Emitted when object data changes
+         */
+        void dataChanged();
 
-protected:
-    /**
-     * @brief Get property value from cache
-     * @param key Property key
-     * @param defaultValue Default if property doesn't exist
-     * @return Property value
-     */
-    QVariant property(const QString& key, const QVariant& defaultValue = QVariant()) const;
+    protected:
+        /**
+         * @brief Get property value from cache
+         * @param key Property key
+         * @param defaultValue Default if property doesn't exist
+         * @return Property value
+         */
+        QVariant property(const QString& key, const QVariant& defaultValue = QVariant()) const;
 
-    /**
-     * @brief Get typed property value
-     */
-    QString stringProperty(const QString& key, const QString& defaultValue = QString()) const;
-    bool boolProperty(const QString& key, bool defaultValue = false) const;
-    int intProperty(const QString& key, int defaultValue = 0) const;
-    qint64 longProperty(const QString& key, qint64 defaultValue = 0) const;
-    QStringList stringListProperty(const QString& key) const;
+        /**
+         * @brief Get typed property value
+         */
+        QString stringProperty(const QString& key, const QString& defaultValue = QString()) const;
+        bool boolProperty(const QString& key, bool defaultValue = false) const;
+        int intProperty(const QString& key, int defaultValue = 0) const;
+        qint64 longProperty(const QString& key, qint64 defaultValue = 0) const;
+        QStringList stringListProperty(const QString& key) const;
 
-    /**
-     * @brief Get the object type string for cache lookups
-     *
-     * Must be overridden by derived classes to return the XenAPI type
-     * (e.g., "VM", "host", "SR", "pool", "network")
-     */
-    virtual QString objectType() const = 0;
-
-private:
-    QPointer<XenConnection> m_connection;
-    QString m_opaqueRef;
-    bool m_evicted = false;
+    private:
+        QPointer<XenConnection> m_connection;
+        QString m_opaqueRef;
+        bool m_evicted = false;
 };
+
+Q_DECLARE_METATYPE(QSharedPointer<XenObject>)
 
 #endif // XENOBJECT_H

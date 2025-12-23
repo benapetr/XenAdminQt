@@ -29,6 +29,7 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/exportwizard.h"
 #include "xenlib.h"
+#include "xen/xenobject.h"
 #include <QProgressDialog>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -125,9 +126,14 @@ QString ExportVMCommand::getSelectedVMRef() const
     QTreeWidget* serverTree = this->mainWindow()->getServerTreeWidget();
     QTreeWidgetItem* currentItem = serverTree->currentItem();
 
-    if (currentItem && currentItem->data(0, Qt::UserRole + 1).toString() == "vm")
+    QVariant data = currentItem ? currentItem->data(0, Qt::UserRole) : QVariant();
+    if (data.canConvert<QSharedPointer<XenObject>>())
     {
-        return currentItem->data(0, Qt::UserRole).toString();
+        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+        if (obj && obj->objectType() == "vm")
+        {
+            return obj->opaqueRef();
+        }
     }
 
     return QString();
@@ -138,7 +144,9 @@ QString ExportVMCommand::getSelectedVMName() const
     QTreeWidget* serverTree = this->mainWindow()->getServerTreeWidget();
     QTreeWidgetItem* currentItem = serverTree->currentItem();
 
-    if (currentItem && currentItem->data(0, Qt::UserRole + 1).toString() == "vm")
+    QVariant data = currentItem ? currentItem->data(0, Qt::UserRole) : QVariant();
+    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+    if (obj && obj->objectType() == "vm")
     {
         return currentItem->text(0);
     }

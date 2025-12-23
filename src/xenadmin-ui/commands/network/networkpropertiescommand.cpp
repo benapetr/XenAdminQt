@@ -29,6 +29,7 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/networkpropertiesdialog.h"
 #include "xenlib.h"
+#include "xen/xenobject.h"
 #include <QTreeWidgetItem>
 
 NetworkPropertiesCommand::NetworkPropertiesCommand(MainWindow* mainWindow, QObject* parent)
@@ -68,8 +69,11 @@ QString NetworkPropertiesCommand::getSelectedNetworkUuid() const
         return QString();
 
     // Check if this is a Network item
-    if (item->data(0, Qt::UserRole).toString() != "network")
+    QVariant data = item->data(0, Qt::UserRole);
+    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+    if (!obj || obj->objectType() != "network")
         return QString();
 
-    return item->data(0, Qt::UserRole + 1).toString(); // UUID
+    return obj->uuid();
+    return QString();
 }

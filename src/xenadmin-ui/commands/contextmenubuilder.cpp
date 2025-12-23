@@ -69,6 +69,9 @@
 #include "../mainwindow.h"
 #include "xenlib.h"
 #include "xencache.h"
+#include "xen/xenobject.h"
+#include "xen/vm.h"
+#include "xen/network/connection.h"
 #include <QAction>
 #include <QDebug>
 
@@ -82,7 +85,24 @@ QMenu* ContextMenuBuilder::buildContextMenu(QTreeWidgetItem* item, QWidget* pare
     if (!item)
         return nullptr;
 
-    QString objectType = item->data(0, Qt::UserRole + 1).toString();
+    QVariant data = item->data(0, Qt::UserRole);
+    QString objectType;
+    QString objectRef;
+    
+    // Extract type and ref from QSharedPointer<XenObject>
+    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+    // TODO: check if it's even possible for obj to be nullptr here, I think we shouldn't really continue in such case
+    // because in theory such code path should be invalid / bug, so this code can be probably drastically simplified
+    if (obj)
+    {
+        objectType = obj->objectType();
+        objectRef = obj->opaqueRef();
+    } else if (data.canConvert<XenConnection*>())
+    {
+        objectType = "disconnected_host";
+        objectRef = QString();
+    }
+    
     if (objectType.isEmpty())
         return nullptr;
 
@@ -93,17 +113,17 @@ QMenu* ContextMenuBuilder::buildContextMenu(QTreeWidgetItem* item, QWidget* pare
 
     if (objectType == "vm")
     {
-        // Check if this is a snapshot
-        QString vmRef = item->data(0, Qt::UserRole).toString();
-        QVariantMap vmData = this->m_mainWindow->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-        bool isSnapshot = vmData.value("is_a_snapshot", false).toBool();
+        if (!obj)
+            return menu;
 
-        if (isSnapshot)
+        QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
+
+        if (vm->isSnapshot())
         {
             this->buildSnapshotContextMenu(menu, item);
         } else
         {
-            this->buildVMContextMenu(menu, item);
+            this->buildVMContextMenu(menu, item, vm);
         }
     } else if (objectType == "template")
     {
@@ -129,12 +149,10 @@ QMenu* ContextMenuBuilder::buildContextMenu(QTreeWidgetItem* item, QWidget* pare
     return menu;
 }
 
-void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QTreeWidgetItem* item)
+void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QTreeWidgetItem* item, QSharedPointer<VM> vm)
 {
-    QString vmRef = item->data(0, Qt::UserRole).toString();
-    // Use cache lookup instead of async API call to avoid spawning unhandled requests
-    QVariantMap vmData = this->m_mainWindow->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-    QString powerState = vmData.value("power_state", "Halted").toString();
+    QString powerState = vm->powerState();
+    QString vmRef = vm->opaqueRef();
 
     // Power operations based on VM state
     if (powerState == "Halted")
@@ -205,7 +223,8 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QTreeWidgetItem* item)
 
 void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QTreeWidgetItem* item)
 {
-    QString vmRef = item->data(0, Qt::UserRole).toString();
+    QSharedPointer<XenObject> obj = item->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
+    QString vmRef = obj ? obj->opaqueRef() : QString();
 
     // C# SingleSnapshot builder pattern:
     // - NewVMFromSnapshotCommand (not implemented yet)
@@ -241,7 +260,8 @@ void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QTreeWidgetItem* 
 
 void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QTreeWidgetItem* item)
 {
-    QString templateRef = item->data(0, Qt::UserRole).toString();
+    QSharedPointer<XenObject> obj = item->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
+    QString templateRef = obj ? obj->opaqueRef() : QString();
 
     // VM Creation from template
     NewVMFromTemplateCommand* newVMFromTemplateCmd = new NewVMFromTemplateCommand(this->m_mainWindow, this);
@@ -265,9 +285,12 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QTreeWidgetItem* 
 
 void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QTreeWidgetItem* item)
 {
-    QString hostRef = item->data(0, Qt::UserRole).toString();
+    QSharedPointer<XenObject> obj = item->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
+    if (!obj)
+        return;
+
     // Use cache lookup instead of async API call to avoid spawning unhandled requests
-    QVariantMap hostData = this->m_mainWindow->xenLib()->getCache()->ResolveObjectData("host", hostRef);
+    QVariantMap hostData = obj->data();
     bool enabled = hostData.value("enabled", true).toBool();
 
     // New VM command (available for both pool and standalone hosts)
@@ -367,7 +390,8 @@ void ContextMenuBuilder::buildDisconnectedHostContextMenu(QMenu* menu, QTreeWidg
 
 void ContextMenuBuilder::buildPoolContextMenu(QMenu* menu, QTreeWidgetItem* item)
 {
-    QString poolRef = item->data(0, Qt::UserRole).toString();
+    QSharedPointer<XenObject> obj = item->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
+    QString poolRef = obj ? obj->opaqueRef() : QString();
 
     // VM Creation operations
     NewVMCommand* newVMCmd = new NewVMCommand(this->m_mainWindow, this);

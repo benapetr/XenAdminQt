@@ -36,6 +36,10 @@
 #include "../../xenlib/vmhelpers.h"
 #include "../../xenlib/groupingtag.h"
 #include "../../xenlib/grouping.h"
+#include "../../xenlib/xen/vm.h"
+#include "../../xenlib/xen/host.h"
+#include "../../xenlib/xen/pool.h"
+#include "../../xenlib/xen/sr.h"
 #include <algorithm>
 #include <QDebug>
 
@@ -459,8 +463,11 @@ void NavigationView::buildInfrastructureTree()
 
             QTreeWidgetItem* poolItem = new QTreeWidgetItem(this->ui->treeWidget);
             poolItem->setText(0, poolName);
-            poolItem->setData(0, Qt::UserRole, poolRef);
-            poolItem->setData(0, Qt::UserRole + 1, QString("pool")); // Object type
+            
+            // Store QSharedPointer<Pool> instead of separate ref+type
+            QSharedPointer<Pool> poolObj = cache->ResolveObject<Pool>("pool", poolRef);
+            // Upcast to base type so canConvert<QSharedPointer<XenObject>>() works
+            poolItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(poolObj));
             poolItem->setExpanded(true);                             // Expand pool by default
 
             // Set pool icon
@@ -491,8 +498,11 @@ void NavigationView::buildInfrastructureTree()
 
                 QTreeWidgetItem* hostItem = new QTreeWidgetItem(poolItem);
                 hostItem->setText(0, hostName);
-                hostItem->setData(0, Qt::UserRole, hostRef);
-                hostItem->setData(0, Qt::UserRole + 1, QString("host")); // Object type
+                
+                // Store QSharedPointer<Host>
+                QSharedPointer<Host> hostObj = cache->ResolveObject<Host>("host", hostRef);
+                // Upcast to base type so canConvert<QSharedPointer<XenObject>>() works
+                hostItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(hostObj));
                 hostItem->setExpanded(true);                             // Expand host by default
 
                 // Set host icon - resolve host_metrics to determine liveness
@@ -548,8 +558,11 @@ void NavigationView::buildInfrastructureTree()
 
                     QTreeWidgetItem* srItem = new QTreeWidgetItem(hostItem);
                     srItem->setText(0, srName);
-                    srItem->setData(0, Qt::UserRole, srRef);
-                    srItem->setData(0, Qt::UserRole + 1, QString("sr")); // Object type
+                    
+                    // Store QSharedPointer<SR>
+                    QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
+                    // Upcast to base type so canConvert<QSharedPointer<XenObject>>() works
+                    srItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(srObj));
 
                     // Set SR icon
                     QIcon srIcon = IconManager::instance().getIconForSR(srData);
@@ -617,8 +630,11 @@ void NavigationView::buildInfrastructureTree()
 
                 QTreeWidgetItem* vmItem = new QTreeWidgetItem(parentItem);
                 vmItem->setText(0, displayName);
-                vmItem->setData(0, Qt::UserRole, vmRef);
-                vmItem->setData(0, Qt::UserRole + 1, QString("vm")); // Object type
+                
+                // Store QSharedPointer<VM>
+                QSharedPointer<VM> vmObj = cache->ResolveObject<VM>("vm", vmRef);
+                // Upcast to base type so canConvert<QSharedPointer<XenObject>>() works
+                vmItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(vmObj));
 
                 // Set VM icon based on power state
                 QIcon vmIcon = IconManager::instance().getIconForVM(vmData);
@@ -731,8 +747,11 @@ void NavigationView::buildObjectsTree()
 
         QTreeWidgetItem* poolItem = new QTreeWidgetItem(poolsGroup);
         poolItem->setText(0, poolName);
-        poolItem->setData(0, Qt::UserRole, poolRef);
-        poolItem->setData(0, Qt::UserRole + 1, QString("pool"));
+        
+        // Store QSharedPointer<Pool>
+        QSharedPointer<Pool> poolObj = cache->ResolveObject<Pool>("pool", poolRef);
+        // Upcast to base type so canConvert<QSharedPointer<XenObject>>() works
+        poolItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(poolObj));
 
         // Set pool icon
         QIcon poolIcon = IconManager::instance().getIconForPool(pool);
@@ -765,8 +784,11 @@ void NavigationView::buildObjectsTree()
 
         QTreeWidgetItem* hostItem = new QTreeWidgetItem(hostsGroup);
         hostItem->setText(0, hostName);
-        hostItem->setData(0, Qt::UserRole, hostRef);
-        hostItem->setData(0, Qt::UserRole + 1, QString("host"));
+        
+        // Store QSharedPointer<Host>
+        QSharedPointer<Host> hostObj = cache->ResolveObject<Host>("host", hostRef);
+        // Upcast to base type so canConvert<QSharedPointer<XenObject>>() works
+        hostItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(hostObj));
 
         // Set host icon - resolve host_metrics to determine liveness
         // C# pattern: Host_metrics metrics = host.Connection.Resolve(host.metrics);
@@ -819,8 +841,11 @@ void NavigationView::buildObjectsTree()
 
             QTreeWidgetItem* templateItem = new QTreeWidgetItem(templatesGroup);
             templateItem->setText(0, vmName);
-            templateItem->setData(0, Qt::UserRole, vmRef);
-            templateItem->setData(0, Qt::UserRole + 1, QString("template"));
+            
+            // Store QSharedPointer<VM> (templates are VMs with is_a_template=true)
+            QSharedPointer<VM> vmObj = cache->ResolveObject<VM>("vm", vmRef);
+            // Upcast to base type so canConvert<QSharedPointer<XenObject>>() works
+            templateItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(vmObj));
 
             // Set template icon
             QIcon templateIcon = IconManager::instance().getIconForVM(vmData);
@@ -843,8 +868,11 @@ void NavigationView::buildObjectsTree()
 
             QTreeWidgetItem* vmItem = new QTreeWidgetItem(vmsGroup);
             vmItem->setText(0, vmName);
-            vmItem->setData(0, Qt::UserRole, vmRef);
-            vmItem->setData(0, Qt::UserRole + 1, QString("vm"));
+            
+            // Store QSharedPointer<VM>
+            QSharedPointer<VM> vmObj = cache->ResolveObject<VM>("vm", vmRef);
+            // Upcast to base type so canConvert<QSharedPointer<XenObject>>() works
+            vmItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(vmObj));
 
             // Set VM icon based on power state
             QIcon vmIcon = IconManager::instance().getIconForVM(vmData);
@@ -878,8 +906,11 @@ void NavigationView::buildObjectsTree()
 
         QTreeWidgetItem* srItem = new QTreeWidgetItem(storageGroup);
         srItem->setText(0, srName);
-        srItem->setData(0, Qt::UserRole, srRef);
-        srItem->setData(0, Qt::UserRole + 1, QString("sr"));
+        
+        // Store QSharedPointer<SR>
+        QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
+        // Upcast to base type so canConvert<QSharedPointer<XenObject>>() works
+        srItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(srObj));
 
         // Set SR icon
         QIcon srIcon = IconManager::instance().getIconForSR(srData);
@@ -986,8 +1017,17 @@ QString NavigationView::getItemPath(QTreeWidgetItem* item) const
     // Build path from item to root (excluding root)
     while (current)
     {
-        QString type = current->data(0, Qt::UserRole + 1).toString();
-        QString ref = current->data(0, Qt::UserRole).toString();
+        QVariant data = current->data(0, Qt::UserRole);
+        QString type;
+        QString ref;
+        
+        // Extract type and ref from QSharedPointer<XenObject>
+        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+        if (obj)
+        {
+            type = obj->objectType();
+            ref = obj->opaqueRef();
+        }
 
         // Use type:ref or just text if no type/ref available
         if (!type.isEmpty() && !ref.isEmpty())
@@ -1039,12 +1079,18 @@ QTreeWidgetItem* NavigationView::findItemByTypeAndRef(const QString& type, const
     for (int i = 0; i < count; ++i)
     {
         QTreeWidgetItem* child = parent->child(i);
-        QString itemType = child->data(0, Qt::UserRole + 1).toString();
-        QString itemRef = child->data(0, Qt::UserRole).toString();
-
-        if (itemType == type && itemRef == ref)
+        
+        // Extract XenObject from UserRole
+        QVariant data = child->data(0, Qt::UserRole);
+        
+        // Check if it's a XenObject
+        if (data.canConvert<QSharedPointer<XenObject>>())
         {
-            return child;
+            QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+            if (obj && obj->objectType() == type && obj->opaqueRef() == ref)
+            {
+                return child;
+            }
         }
 
         // Recurse for children
@@ -1064,8 +1110,27 @@ void NavigationView::persistSelectionAndExpansion()
     QTreeWidgetItem* selectedItem = this->ui->treeWidget->currentItem();
     if (selectedItem)
     {
-        this->m_savedSelectionType = selectedItem->data(0, Qt::UserRole + 1).toString();
-        this->m_savedSelectionRef = selectedItem->data(0, Qt::UserRole).toString();
+        QVariant data = selectedItem->data(0, Qt::UserRole);
+        
+        // Check if it's a XenObject
+        if (data.canConvert<QSharedPointer<XenObject>>())
+        {
+            QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+            if (obj)
+            {
+                this->m_savedSelectionType = obj->objectType();
+                this->m_savedSelectionRef = obj->opaqueRef();
+            } else
+            {
+                this->m_savedSelectionType.clear();
+                this->m_savedSelectionRef.clear();
+            }
+        } else
+        {
+            // Not a XenObject (e.g., disconnected server or GroupingTag)
+            this->m_savedSelectionType.clear();
+            this->m_savedSelectionRef.clear();
+        }
     } else
     {
         this->m_savedSelectionType.clear();
@@ -1123,8 +1188,16 @@ void NavigationView::restoreSelectionAndExpansion()
                     for (int i = 0; i < topCount; ++i)
                     {
                         QTreeWidgetItem* item = ui->treeWidget->topLevelItem(i);
-                        QString itemType = item->data(0, Qt::UserRole + 1).toString();
-                        QString itemRef = item->data(0, Qt::UserRole).toString();
+                        QVariant data = item->data(0, Qt::UserRole);
+                        
+                        QString itemType;
+                        QString itemRef;
+                        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+                        if (obj)
+                        {
+                            itemType = obj->objectType();
+                            itemRef = obj->opaqueRef();
+                        }
 
                         if (itemType == type && itemRef == ref)
                         {
@@ -1144,8 +1217,16 @@ void NavigationView::restoreSelectionAndExpansion()
                     for (int i = 0; i < childCount; ++i)
                     {
                         QTreeWidgetItem* child = current->child(i);
-                        QString itemType = child->data(0, Qt::UserRole + 1).toString();
-                        QString itemRef = child->data(0, Qt::UserRole).toString();
+                        QVariant data = child->data(0, Qt::UserRole);
+                        
+                        QString itemType;
+                        QString itemRef;
+                        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+                        if (obj)
+                        {
+                            itemType = obj->objectType();
+                            itemRef = obj->opaqueRef();
+                        }
 
                         if (itemType == type && itemRef == ref)
                         {
@@ -1221,8 +1302,16 @@ void NavigationView::restoreSelectionAndExpansion()
             if (!itemToSelect)
             {
                 // Check root item itself
-                QString rootType = rootItem->data(0, Qt::UserRole + 1).toString();
-                QString rootRef = rootItem->data(0, Qt::UserRole).toString();
+                QVariant data = rootItem->data(0, Qt::UserRole);
+                QString rootType;
+                QString rootRef;
+                QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+                if (obj)
+                {
+                    rootType = obj->objectType();
+                    rootRef = obj->opaqueRef();
+                }
+                
                 if (rootType == this->m_savedSelectionType && rootRef == this->m_savedSelectionRef)
                 {
                     itemToSelect = rootItem;

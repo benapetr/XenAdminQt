@@ -193,10 +193,7 @@ public:
     class Host* getFirstAttachedStorageHost() const;
 
 protected:
-    QString objectType() const override
-    {
-        return "SR";
-    }
+    QString objectType() const override;
 };
 
 #endif // SR_H

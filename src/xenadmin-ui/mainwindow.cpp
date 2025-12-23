@@ -768,19 +768,35 @@ void MainWindow::onTreeItemSelected()
         this->clearTabs();
         this->updatePlaceholderVisibility();
         this->m_titleBar->clear();
-        m_lastSelectedRef.clear(); // Clear selection tracking
+        this->m_lastSelectedRef.clear(); // Clear selection tracking
 
         // Update both toolbar and menu from Commands (matches C# UpdateToolbars)
-        updateToolbarsAndMenus();
+        this->updateToolbarsAndMenus();
 
         return;
     }
 
     QTreeWidgetItem* item = selectedItems.first();
     QString itemText = item->text(0);
-    QVariant itemRef = item->data(0, Qt::UserRole);
-    QString objectType = item->data(0, Qt::UserRole + 1).toString();
+    QVariant itemData = item->data(0, Qt::UserRole);
     QIcon itemIcon = item->icon(0);
+    
+    // Extract object type and ref from QSharedPointer<XenObject>
+    QString objectType;
+    QString objectRef;
+    QSharedPointer<XenObject> xenObject;
+    
+    xenObject = itemData.value<QSharedPointer<XenObject>>();
+    if (xenObject)
+    {
+        objectType = xenObject->objectType();
+        objectRef = xenObject->opaqueRef();
+    } else if (itemData.canConvert<XenConnection*>())
+    {
+        // Disconnected server - handle specially
+        objectType = "disconnected_host";
+        objectRef = QString();
+    }
 
     // Check if this is a GroupingTag node (matches C# MainWindow.SwitchToTab line 1718)
     // GroupingTag is stored in Qt::UserRole + 3
@@ -800,25 +816,23 @@ void MainWindow::onTreeItemSelected()
     // Update title bar with selected object
     this->m_titleBar->setTitle(itemText, itemIcon);
 
-    if (!itemRef.isNull())
+    if (!objectRef.isEmpty())
     {
-        QString refString = itemRef.toString();
-
         // Prevent duplicate API calls for same selection
         // This fixes the double-call issue when Qt emits itemSelectionChanged multiple times
-        if (refString == m_lastSelectedRef && !refString.isEmpty())
+        if (objectRef == this->m_lastSelectedRef && !objectRef.isEmpty())
         {
             //qDebug() << "MainWindow::onTreeItemSelected - Same object already selected, skipping duplicate API call";
             return;
         }
 
-        m_lastSelectedRef = refString;
+        this->m_lastSelectedRef = objectRef;
 
-        this->ui->statusbar->showMessage("Selected: " + itemText + " (Ref: " + refString + ")", 5000);
+        this->ui->statusbar->showMessage("Selected: " + itemText + " (Ref: " + objectRef + ")", 5000);
 
         // Store context for async handler
         this->m_currentObjectType = objectType;
-        this->m_currentObjectRef = refString;
+        this->m_currentObjectRef = objectRef;
         this->m_currentObjectText = itemText;
         this->m_currentObjectIcon = itemIcon;
 
@@ -829,12 +843,12 @@ void MainWindow::onTreeItemSelected()
         // Request full object data asynchronously - returns immediately, no UI freeze
         /*if (this->m_xenLib && this->m_xenLib->isConnected())
         {
-            this->m_xenLib->requestObjectData(objectType, refString);
+            this->m_xenLib->requestObjectData(objectType, objectRef);
         }*/
 
         // Now we have the data, show the tabs
-        auto objectData = this->m_xenLib->getCachedObjectData(objectType, refString);
-        this->showObjectTabs(objectType, refString, objectData);
+        auto objectData = this->m_xenLib->getCachedObjectData(objectType, objectRef);
+        this->showObjectTabs(objectType, objectRef, objectData);
 
         // Add to navigation history (matches C# MainWindow.TreeView_SelectionsChanged)
         // Get current tab name (first tab is shown by default)
@@ -844,20 +858,20 @@ void MainWindow::onTreeItemSelected()
             currentTabName = this->ui->mainTabWidget->tabText(this->ui->mainTabWidget->currentIndex());
         }
 
-        if (m_navigationHistory && !m_navigationHistory->isInHistoryNavigation())
+        if (this->m_navigationHistory && !this->m_navigationHistory->isInHistoryNavigation())
         {
-            HistoryItemPtr historyItem(new XenModelObjectHistoryItem(refString, objectType, m_currentObjectText, m_currentObjectIcon, currentTabName));
-            m_navigationHistory->newHistoryItem(historyItem);
+            HistoryItemPtr historyItem(new XenModelObjectHistoryItem(objectRef, objectType, this->m_currentObjectText, this->m_currentObjectIcon, currentTabName));
+            this->m_navigationHistory->newHistoryItem(historyItem);
         }
     } else
     {
         this->ui->statusbar->showMessage("Selected: " + itemText, 3000);
         this->clearTabs();
         this->updatePlaceholderVisibility();
-        m_lastSelectedRef.clear(); // Clear selection tracking
+        this->m_lastSelectedRef.clear(); // Clear selection tracking
 
         // Update both toolbar and menu from Commands (matches C# UpdateToolbars)
-        updateToolbarsAndMenus();
+        this->updateToolbarsAndMenus();
     }
 }
 
@@ -912,8 +926,16 @@ void MainWindow::onSearchTabPageObjectSelected(const QString& objectType, const 
     while (*it)
     {
         QTreeWidgetItem* item = *it;
-        QString itemType = item->data(0, Qt::UserRole + 1).toString();
-        QString itemRef = item->data(0, Qt::UserRole).toString();
+        QVariant data = item->data(0, Qt::UserRole);
+        
+        QString itemType;
+        QString itemRef;
+        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+        if (obj)
+        {
+            itemType = obj->objectType();
+            itemRef = obj->opaqueRef();
+        }
 
         if (itemType == objectType && itemRef == objectRef)
         {
@@ -1477,7 +1499,8 @@ void MainWindow::saveSettings()
     {
         if ((*it)->isExpanded())
         {
-            QString ref = (*it)->data(0, Qt::UserRole).toString();
+            QSharedPointer<XenObject> obj = (*it)->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
+            QString ref = obj ? obj->opaqueRef() : QString();
             if (!ref.isEmpty())
             {
                 expandedItems.append(ref);
@@ -1720,7 +1743,7 @@ void MainWindow::onNavigationPaneTreeViewSelectionChanged()
         return;
     
     // Forward to existing tree selection handler
-    onTreeItemSelected();
+    this->onTreeItemSelected();
 }
 
 void MainWindow::onNavigationPaneTreeNodeRightClicked()
@@ -1772,11 +1795,18 @@ bool MainWindow::itemMatchesSearch(QTreeWidgetItem* item, const QString& searchT
         return true;
 
     // Also search in item data (uuid, type, etc.)
-    QString objectType = item->data(0, Qt::UserRole + 1).toString().toLower();
-    QString objectRef = item->data(0, Qt::UserRole + 2).toString().toLower();
-
-    if (objectType.contains(search) || objectRef.contains(search))
-        return true;
+    QVariant data = item->data(0, Qt::UserRole);
+    if (data.canConvert<QSharedPointer<XenObject>>())
+    {
+        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+        if (obj)
+        {
+            QString objectType = obj->objectType().toLower();
+            QString uuid = obj->uuid().toLower();
+            if (objectType.contains(search) || uuid.contains(search))
+                return true;
+        }
+    }
 
     return false;
 }
@@ -2232,8 +2262,23 @@ void MainWindow::updateToolbarsAndMenus()
         return;
     }
 
-    QString objectType = currentItem->data(0, Qt::UserRole + 1).toString();
-    QString objectRef = currentItem->data(0, Qt::UserRole).toString();
+    QString objectType;
+    QString objectRef;
+    QVariant data = currentItem->data(0, Qt::UserRole);
+    if (data.canConvert<QSharedPointer<XenObject>>())
+    {
+        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+        if (obj)
+        {
+            objectType = obj->objectType();
+            objectRef = obj->opaqueRef();
+        }
+    }
+    else if (data.canConvert<XenConnection*>())
+    {
+        objectType = "disconnected_host";
+        objectRef = QString();
+    }
 
     // ========================================================================
     // TOOLBAR BUTTONS - Read from Command.canRun() (matches C# CommandToolStripButton.Update)
@@ -2457,10 +2502,10 @@ void MainWindow::selectObjectInTree(const QString& objectRef, const QString& obj
     while (*it)
     {
         QTreeWidgetItem* item = *it;
-        QVariant itemRef = item->data(0, Qt::UserRole);
-        QString itemType = item->data(0, Qt::UserRole + 1).toString();
-
-        if (!itemRef.isNull() && itemRef.toString() == objectRef && itemType == objectType)
+        QVariant data = item->data(0, Qt::UserRole);
+        
+        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+        if (obj && obj->opaqueRef() == objectRef && obj->objectType() == objectType)
         {
             // Found the item - select it
             this->getServerTreeWidget()->setCurrentItem(item);
@@ -2869,7 +2914,8 @@ QString MainWindow::getSelectedObjectRef() const
     if (!item)
         return QString();
 
-    return item->data(0, Qt::UserRole).toString();
+    QSharedPointer<XenObject> obj = item->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
+    return obj ? obj->opaqueRef() : QString();
 }
 
 QString MainWindow::getSelectedObjectName() const

@@ -34,6 +34,8 @@
 
 class MainWindow;
 class Command;
+class XenObject;
+class VM;
 
 /**
  * @brief Builds context menus for different XenObject types
@@ -57,7 +59,7 @@ private:
     MainWindow* m_mainWindow;
 
     // Builders for specific object types
-    void buildVMContextMenu(QMenu* menu, QTreeWidgetItem* item);
+    void buildVMContextMenu(QMenu* menu, QTreeWidgetItem* item, QSharedPointer<VM> vm);
     void buildSnapshotContextMenu(QMenu* menu, QTreeWidgetItem* item);
     void buildTemplateContextMenu(QMenu* menu, QTreeWidgetItem* item);
     void buildHostContextMenu(QMenu* menu, QTreeWidgetItem* item);

@@ -34,6 +34,11 @@ Pool::Pool(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
+QString Pool::objectType() const
+{
+    return "pool";
+}
+
 QString Pool::masterRef() const
 {
     return stringProperty("master");

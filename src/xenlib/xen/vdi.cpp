@@ -119,5 +119,5 @@ bool VDI::isSnapshot() const
 
 QString VDI::objectType() const
 {
-    return "VDI";
+    return "vdi";
 }

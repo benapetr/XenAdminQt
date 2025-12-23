@@ -33,6 +33,7 @@
 #include "../../xenlib/queryfilter.h"
 #include "../../xenlib/xenlib.h"
 #include "../../xenlib/xencache.h"
+#include "../../xenlib/xen/xenobject.h"
 #include "../../xenlib/metricupdater.h"
 #include "../iconmanager.h"
 #include "../widgets/progressbardelegate.h"
@@ -356,8 +357,10 @@ void SearchTabPage::addObjectRow(const QString& objectType, const QString& objec
     QIcon icon = IconManager::instance().getIconForObject(objectType, enrichedData);
     if (!icon.isNull())
         nameItem->setIcon(icon);
-    nameItem->setData(Qt::UserRole, objectType);    // Store type for sorting/filtering
-    nameItem->setData(Qt::UserRole + 1, objectRef); // Store ref for double-click
+    
+    // Store QSharedPointer<XenObject> instead of separate type+ref
+    QSharedPointer<XenObject> obj = this->m_xenLib->getCache()->ResolveObject(objectType, objectRef);
+    nameItem->setData(Qt::UserRole, QVariant::fromValue(obj));
     this->m_tableWidget->setItem(row, COL_NAME, nameItem);
 
     // Column 1: CPU Usage
@@ -1019,8 +1022,15 @@ void SearchTabPage::onItemDoubleClicked(int row, int column)
     if (!nameItem)
         return;
 
-    QString objectType = nameItem->data(Qt::UserRole).toString();
-    QString objectRef = nameItem->data(Qt::UserRole + 1).toString();
+    QString objectType;
+    QString objectRef;
+    QVariant data = nameItem->data(Qt::UserRole);
+    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+    if (obj)
+    {
+        objectType = obj->objectType();
+        objectRef = obj->opaqueRef();
+    }
 
     if (!objectType.isEmpty() && !objectRef.isEmpty())
     {

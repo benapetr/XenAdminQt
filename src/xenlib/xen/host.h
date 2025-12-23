@@ -180,10 +180,7 @@ public:
     QString poolRef() const;
 
 protected:
-    QString objectType() const override
-    {
-        return "host";
-    }
+    QString objectType() const override;
 };
 
 #endif // HOST_H

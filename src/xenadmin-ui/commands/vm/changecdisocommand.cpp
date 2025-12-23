@@ -31,6 +31,7 @@
 #include "xenlib.h"
 #include "xen/api.h"
 #include "xen/connection.h"
+#include "xen/xenobject.h"
 #include "xen/actions/vm/changevmisoaction.h"
 #include "xencache.h"
 #include <QMessageBox>
@@ -53,7 +54,8 @@ bool ChangeCDISOCommand::canRun() const
     }
 
     // Check if it's a VM
-    QString type = item->data(0, Qt::UserRole).toString();
+    QSharedPointer<XenObject> obj = item->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
+    QString type = obj ? obj->objectType() : QString();
     if (type != "vm")
     {
         return false;
@@ -76,7 +78,11 @@ void ChangeCDISOCommand::run()
         return;
     }
 
-    QString vmRef = item->data(0, Qt::UserRole + 1).toString();
+    QString vmRef;
+    QVariant data = item->data(0, Qt::UserRole);
+    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+    if (obj)
+        vmRef = obj->opaqueRef();
 
     // Get XenConnection from XenLib
     XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
@@ -145,7 +151,11 @@ QString ChangeCDISOCommand::getVMCDROM() const
         return QString();
     }
 
-    QString vmRef = item->data(0, Qt::UserRole + 1).toString();
+    QString vmRef;
+    QVariant data = item->data(0, Qt::UserRole);
+    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+    if (obj)
+        vmRef = obj->opaqueRef();
 
     XenLib* xenLib = this->mainWindow()->xenLib();
     if (!xenLib || !xenLib->isConnected())

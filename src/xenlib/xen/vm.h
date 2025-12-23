@@ -308,10 +308,7 @@ class XENLIB_EXPORT VM : public XenObject
         QString homeRef() const;
 
     protected:
-        QString objectType() const override
-        {
-            return "VM";
-        }
+        QString objectType() const override;
 };
 
 #endif // VM_H

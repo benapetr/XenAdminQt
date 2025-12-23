@@ -34,6 +34,11 @@ Host::Host(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
+QString Host::objectType() const
+{
+    return "host";
+}
+
 QString Host::hostname() const
 {
     return stringProperty("hostname");

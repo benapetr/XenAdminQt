@@ -39,6 +39,11 @@ VM::VM(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
+QString VM::objectType() const
+{
+    return "vm";
+}
+
 QString VM::powerState() const
 {
     return stringProperty("power_state");

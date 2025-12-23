@@ -989,8 +989,9 @@ QString NavigationView::getItemPath(QTreeWidgetItem* item) const
     // Build path from item to root (excluding root)
     while (current)
     {
-        QString type = current->data(0, Qt::UserRole + 1).toString();
-        QString ref = current->data(0, Qt::UserRole).toString();
+        QSharedPointer<XenObject> obj = current->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
+        QString type = obj ? obj->objectType() : QString();
+        QString ref = obj ? obj->opaqueRef() : QString();
 
         // Use type:ref or just text if no type/ref available
         if (!type.isEmpty() && !ref.isEmpty())
@@ -1042,8 +1043,9 @@ QTreeWidgetItem* NavigationView::findItemByTypeAndRef(const QString& type, const
     for (int i = 0; i < count; ++i)
     {
         QTreeWidgetItem* child = parent->child(i);
-        QString itemType = child->data(0, Qt::UserRole + 1).toString();
-        QString itemRef = child->data(0, Qt::UserRole).toString();
+        QSharedPointer<XenObject> obj = child->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
+        QString itemType = obj ? obj->objectType() : QString();
+        QString itemRef = obj ? obj->opaqueRef() : QString();
 
         if (itemType == type && itemRef == ref)
         {
@@ -1067,8 +1069,9 @@ void NavigationView::persistSelectionAndExpansion()
     QTreeWidgetItem* selectedItem = ui->treeWidget->currentItem();
     if (selectedItem)
     {
-        this->m_savedSelectionType = selectedItem->data(0, Qt::UserRole + 1).toString();
-        this->m_savedSelectionRef = selectedItem->data(0, Qt::UserRole).toString();
+        QSharedPointer<XenObject> obj = selectedItem->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
+        this->m_savedSelectionType = obj ? obj->objectType() : QString();
+        this->m_savedSelectionRef = obj ? obj->opaqueRef() : QString();
     } else
     {
         this->m_savedSelectionType.clear();
@@ -1126,8 +1129,9 @@ void NavigationView::restoreSelectionAndExpansion()
                     for (int i = 0; i < topCount; ++i)
                     {
                         QTreeWidgetItem* item = ui->treeWidget->topLevelItem(i);
-                        QString itemType = item->data(0, Qt::UserRole + 1).toString();
-                        QString itemRef = item->data(0, Qt::UserRole).toString();
+                        QSharedPointer<XenObject> obj = item->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
+                        QString itemType = obj ? obj->objectType() : QString();
+                        QString itemRef = obj ? obj->opaqueRef() : QString();
 
                         if (itemType == type && itemRef == ref)
                         {
@@ -1147,8 +1151,9 @@ void NavigationView::restoreSelectionAndExpansion()
                     for (int i = 0; i < childCount; ++i)
                     {
                         QTreeWidgetItem* child = current->child(i);
-                        QString itemType = child->data(0, Qt::UserRole + 1).toString();
-                        QString itemRef = child->data(0, Qt::UserRole).toString();
+                        QSharedPointer<XenObject> obj = child->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
+                        QString itemType = obj ? obj->objectType() : QString();
+                        QString itemRef = obj ? obj->opaqueRef() : QString();
 
                         if (itemType == type && itemRef == ref)
                         {
@@ -1224,8 +1229,9 @@ void NavigationView::restoreSelectionAndExpansion()
             if (!itemToSelect)
             {
                 // Check root item itself
-                QString rootType = rootItem->data(0, Qt::UserRole + 1).toString();
-                QString rootRef = rootItem->data(0, Qt::UserRole).toString();
+                QSharedPointer<XenObject> obj = rootItem->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
+                QString rootType = obj ? obj->objectType() : QString();
+                QString rootRef = obj ? obj->opaqueRef() : QString();
                 if (rootType == this->m_savedSelectionType && rootRef == this->m_savedSelectionRef)
                 {
                     itemToSelect = rootItem;
