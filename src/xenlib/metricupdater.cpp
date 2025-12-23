@@ -56,7 +56,7 @@ MetricUpdater::~MetricUpdater()
 
 void MetricUpdater::start()
 {
-    if (m_running)
+    if (this->m_running)
         return;
 
     qDebug() << "MetricUpdater: Starting metric updates";

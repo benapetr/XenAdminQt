@@ -1175,7 +1175,7 @@
   <customwidget>
    <class>NavigationPane</class>
    <extends>QWidget</extends>
-   <header>widgets/navigationpane.h</header>
+   <header>navigation/navigationpane.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -38,7 +38,7 @@ Search::Search(Query* query, Grouping* grouping, const QString& name,
     // C# equivalent: Search constructor (lines 67-83 in Search.cs)
 
     // If query is null, create default query
-    if (m_query == nullptr)
+    if (this->m_query == nullptr)
     {
         // C# code: this.query = new Query(null, null);
         m_query = new Query(nullptr, nullptr);

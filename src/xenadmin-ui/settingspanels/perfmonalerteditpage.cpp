@@ -151,7 +151,7 @@ AsyncOperation* PerfmonAlertEditPage::saveSettings()
             QString methodName = m_objectType + ".set_other_config";
 
             QVariantList params;
-            params << connection()->getSessionId() << m_objectRef << m_otherConfig;
+            params << connection()->getSessionId() << this->m_objectRef << this->m_otherConfig;
             QByteArray request = api.buildJsonRpcCall(methodName, params);
             connection()->sendRequest(request);
 

@@ -30,7 +30,7 @@
 
 #include <QWidget>
 #include <QListWidget>
-#include "../widgets/navigationpane.h"
+#include "../navigation/navigationpane.h"
 #include "notificationssubmodeitem.h"
 
 QT_BEGIN_NAMESPACE
@@ -50,35 +50,35 @@ class NotificationsView : public QWidget
 {
     Q_OBJECT
 
-public:
-    explicit NotificationsView(QWidget* parent = nullptr);
-    ~NotificationsView();
+    public:
+        explicit NotificationsView(QWidget* parent = nullptr);
+        ~NotificationsView();
 
-    // Public methods matching C# NotificationsView interface
-    void selectNotificationsSubMode(NavigationPane::NotificationsSubMode subMode);
-    void updateEntries(NavigationPane::NotificationsSubMode mode, int entries);
-    int getTotalEntries() const;
+        // Public methods matching C# NotificationsView interface
+        void selectNotificationsSubMode(NavigationPane::NotificationsSubMode subMode);
+        void updateEntries(NavigationPane::NotificationsSubMode mode, int entries);
+        int getTotalEntries() const;
 
-signals:
-    void notificationsSubModeChanged(NavigationPane::NotificationsSubMode subMode);
+    signals:
+        void notificationsSubModeChanged(NavigationPane::NotificationsSubMode subMode);
 
-private slots:
-    void onItemClicked(QListWidgetItem* item);
+    private slots:
+        void onItemClicked(QListWidgetItem* item);
 
-private:
-    void initializeItems();
-    QListWidgetItem* getItemForSubMode(NavigationPane::NotificationsSubMode subMode) const;
+    private:
+        void initializeItems();
+        QListWidgetItem* getItemForSubMode(NavigationPane::NotificationsSubMode subMode) const;
 
-    Ui::NotificationsView* ui;
-    NotificationsSubModeItemDelegate* m_delegate;
+        Ui::NotificationsView* ui;
+        NotificationsSubModeItemDelegate* m_delegate;
 
-    // Entry counts for each sub-mode
-    int m_alertsCount;
-    int m_eventsCount;
+        // Entry counts for each sub-mode
+        int m_alertsCount;
+        int m_eventsCount;
 
-    // List items
-    QListWidgetItem* m_alertsItem;
-    QListWidgetItem* m_eventsItem;
+        // List items
+        QListWidgetItem* m_alertsItem;
+        QListWidgetItem* m_eventsItem;
 };
 
 #endif // NOTIFICATIONSVIEW_H

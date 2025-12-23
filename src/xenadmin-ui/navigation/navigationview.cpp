@@ -172,7 +172,7 @@ NavigationView::NavigationView(QWidget* parent)
       ,
       m_savedSelectionType(""), m_savedSelectionRef(""), m_suppressSelectionSignals(false)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
     // Setup debounce timer for cache updates (200ms delay)
     this->m_refreshTimer->setSingleShot(true);
@@ -181,48 +181,45 @@ NavigationView::NavigationView(QWidget* parent)
 
     // Connect tree widget signals to our signals
     // Emit before-selected signal before selection changes (C# TreeView.BeforeSelect)
-    connect(ui->treeWidget, &QTreeWidget::currentItemChanged,
+    connect(this->ui->treeWidget, &QTreeWidget::currentItemChanged,
             this, [this](QTreeWidgetItem* current, QTreeWidgetItem* previous) {
                 Q_UNUSED(current);
                 Q_UNUSED(previous);
-                emit treeNodeBeforeSelected();
+                emit this->treeNodeBeforeSelected();
             });
 
     // Connect selection changed signal with suppression check
-    connect(ui->treeWidget, &QTreeWidget::itemSelectionChanged,
+    connect(this->ui->treeWidget, &QTreeWidget::itemSelectionChanged,
             this, [this]() {
                 // Don't emit signal during tree rebuild (matches C# ignoring selection changes during BeginUpdate)
                 if (!this->m_suppressSelectionSignals)
                 {
-                    emit treeViewSelectionChanged();
+                    emit this->treeViewSelectionChanged();
                 }
             });
 
-    connect(ui->treeWidget, &QTreeWidget::itemClicked,
-            this, &NavigationView::treeNodeClicked);
+    connect(this->ui->treeWidget, &QTreeWidget::itemClicked, this, &NavigationView::treeNodeClicked);
 
-    connect(ui->treeWidget, &QTreeWidget::customContextMenuRequested,
-            this, &NavigationView::treeNodeRightClicked);
+    connect(this->ui->treeWidget, &QTreeWidget::customContextMenuRequested, this, &NavigationView::treeNodeRightClicked);
 
     // Connect search box (matches C# searchTextBox_TextChanged line 215)
-    connect(ui->searchLineEdit, &QLineEdit::textChanged,
-            this, &NavigationView::onSearchTextChanged);
+    connect(this->ui->searchLineEdit, &QLineEdit::textChanged, this, &NavigationView::onSearchTextChanged);
 }
 
 NavigationView::~NavigationView()
 {
     delete this->m_typeGrouping;
-    delete ui;
+    delete this->ui;
 }
 
 QTreeWidget* NavigationView::treeWidget() const
 {
-    return ui->treeWidget;
+    return this->ui->treeWidget;
 }
 
 void NavigationView::focusTreeView()
 {
-    ui->treeWidget->setFocus();
+    this->ui->treeWidget->setFocus();
 }
 
 void NavigationView::requestRefreshTreeView()
@@ -231,53 +228,53 @@ void NavigationView::requestRefreshTreeView()
     // Suppress selection signals while rebuilding to avoid clearing selection in MainWindow
     this->m_suppressSelectionSignals = true;
 
-    emit treeViewRefreshSuspended(); // Signal that we're about to rebuild
+    emit this->treeViewRefreshSuspended(); // Signal that we're about to rebuild
 
-    ui->treeWidget->setUpdatesEnabled(false); // Suspend painting
+    this->ui->treeWidget->setUpdatesEnabled(false); // Suspend painting
 
     // Persist current selection and expanded nodes BEFORE rebuild (matches C# PersistExpandedNodes)
-    persistSelectionAndExpansion();
+    this->persistSelectionAndExpansion();
 
     // Rebuild tree based on navigation mode
     switch (this->m_navigationMode)
     {
         case NavigationPane::Infrastructure:
-            buildInfrastructureTree();
+            this->buildInfrastructureTree();
             break;
         case NavigationPane::Objects:
-            buildObjectsTree();
+            this->buildObjectsTree();
             break;
         case NavigationPane::Tags:
         case NavigationPane::Folders:
         case NavigationPane::CustomFields:
         case NavigationPane::vApps:
-            buildOrganizationTree();
+            this->buildOrganizationTree();
             break;
         default:
-            buildInfrastructureTree();
+            this->buildInfrastructureTree();
             break;
     }
 
     // Restore selection and expanded nodes AFTER rebuild (matches C# RestoreExpandedNodes)
     bool selectionRestored = !this->m_savedSelectionType.isEmpty() && !this->m_savedSelectionRef.isEmpty();
-    restoreSelectionAndExpansion();
+    this->restoreSelectionAndExpansion();
 
-    ui->treeWidget->setUpdatesEnabled(true); // Resume painting
+    this->ui->treeWidget->setUpdatesEnabled(true); // Resume painting
 
     // Re-enable selection signals and emit a single change notification if we restored selection
     this->m_suppressSelectionSignals = false;
-    if (selectionRestored && ui->treeWidget->currentItem())
+    if (selectionRestored && this->ui->treeWidget->currentItem())
     {
-        emit treeViewSelectionChanged();
+        emit this->treeViewSelectionChanged();
     }
 
-    emit treeViewRefreshResumed(); // Signal rebuild is complete
-    emit treeViewRefreshed();
+    emit this->treeViewRefreshResumed(); // Signal rebuild is complete
+    emit this->treeViewRefreshed();
 }
 
 void NavigationView::resetSearchBox()
 {
-    ui->searchLineEdit->clear();
+    this->ui->searchLineEdit->clear();
 }
 
 void NavigationView::setInSearchMode(bool enabled)
@@ -294,18 +291,18 @@ void NavigationView::setNavigationMode(NavigationPane::NavigationMode mode)
     {
         this->m_navigationMode = mode;
         // Rebuild tree with new mode
-        requestRefreshTreeView();
+        this->requestRefreshTreeView();
     }
 }
 
 QString NavigationView::searchText() const
 {
-    return ui->searchLineEdit->text();
+    return this->ui->searchLineEdit->text();
 }
 
 void NavigationView::setSearchText(const QString& text)
 {
-    ui->searchLineEdit->setText(text);
+    this->ui->searchLineEdit->setText(text);
 }
 
 void NavigationView::setXenLib(XenLib* xenLib)
@@ -339,7 +336,7 @@ void NavigationView::onCacheObjectChanged(const QString& type, const QString& re
         type == "sr" || type == "network" || type == "vbd" ||
         type == "vdi" || type == "vif")
     {
-        scheduleRefresh();
+        this->scheduleRefresh();
     }
 }
 
@@ -353,7 +350,7 @@ void NavigationView::scheduleRefresh()
 void NavigationView::onRefreshTimerTimeout()
 {
     // Timer fired - perform actual refresh
-    requestRefreshTreeView();
+    this->requestRefreshTreeView();
 }
 
 void NavigationView::onSearchTextChanged(const QString& text)
@@ -364,7 +361,7 @@ void NavigationView::onSearchTextChanged(const QString& text)
     // 1. Create filtered search: CurrentSearch.AddFullTextFilter(text)
     // 2. Call treeBuilder.RefreshTreeView(newRoot, text, mode)
     Q_UNUSED(text);
-    requestRefreshTreeView();
+    this->requestRefreshTreeView();
 }
 
 void NavigationView::buildInfrastructureTree()
@@ -373,12 +370,12 @@ void NavigationView::buildInfrastructureTree()
     // This creates hierarchical tree: Pool → Host → VM → SR
     // Uses cache directly like C# connection.Cache.XenSearchableObjects
 
-    ui->treeWidget->clear();
+    this->ui->treeWidget->clear();
 
     if (!this->m_xenLib)
     {
         // No XenLib - show placeholder
-        QTreeWidgetItem* placeholder = new QTreeWidgetItem(ui->treeWidget);
+        QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
         placeholder->setText(0, "(No connection manager available)");
         return;
     }
@@ -391,7 +388,7 @@ void NavigationView::buildInfrastructureTree()
 
     if (!connMgr || !cache)
     {
-        QTreeWidgetItem* placeholder = new QTreeWidgetItem(ui->treeWidget);
+        QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
         placeholder->setText(0, "(Connection manager not initialized)");
         return;
     }
@@ -404,7 +401,7 @@ void NavigationView::buildInfrastructureTree()
     if (connections.isEmpty())
     {
         // No connections - show connection prompt (matches C# behavior)
-        QTreeWidgetItem* placeholder = new QTreeWidgetItem(ui->treeWidget);
+        QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
         placeholder->setText(0, "Connect to a XenServer");
         placeholder->setData(0, Qt::UserRole, QVariant::fromValue<void*>(nullptr)); // No object data
         return;
@@ -424,7 +421,7 @@ void NavigationView::buildInfrastructureTree()
             // Show disconnected connection at ROOT LEVEL (matches C# behavior)
             // C# creates a fake Host object with opaque_ref = HostnameWithPort (GroupAlg.cs line 97)
             // This allows disconnected servers to appear in tree with context menu
-            QTreeWidgetItem* connItem = new QTreeWidgetItem(ui->treeWidget);
+            QTreeWidgetItem* connItem = new QTreeWidgetItem(this->ui->treeWidget);
             connItem->setText(0, connection->getHostname()); // Show hostname WITHOUT "(disconnected)"
             // Store connection object as data (matches C# where fake Host.Connection points to XenConnection)
             connItem->setData(0, Qt::UserRole, QVariant::fromValue(connection));
@@ -443,8 +440,8 @@ void NavigationView::buildInfrastructureTree()
         if (pools.isEmpty())
         {
             // Connection has no pool data yet
-            QTreeWidgetItem* connItem = new QTreeWidgetItem(ui->treeWidget);
-            connItem->setText(0, QString("%1 (connecting...)").arg(connection->getHostname()));
+            QTreeWidgetItem* connItem = new QTreeWidgetItem(this->ui->treeWidget);
+            connItem->setText(0, QString("%1 (connecting...) ").arg(connection->getHostname()));
             connItem->setData(0, Qt::UserRole, QVariant::fromValue(connection));
             continue;
         }
@@ -460,7 +457,7 @@ void NavigationView::buildInfrastructureTree()
                 poolName = connection->getHostname(); // Fallback to hostname
             }
 
-            QTreeWidgetItem* poolItem = new QTreeWidgetItem(ui->treeWidget);
+            QTreeWidgetItem* poolItem = new QTreeWidgetItem(this->ui->treeWidget);
             poolItem->setText(0, poolName);
             poolItem->setData(0, Qt::UserRole, poolRef);
             poolItem->setData(0, Qt::UserRole + 1, QString("pool")); // Object type
@@ -640,7 +637,7 @@ void NavigationView::buildInfrastructureTree()
     }
 
     // Sort top-level pool items
-    sortTreeTopLevel(ui->treeWidget);
+    sortTreeTopLevel(this->ui->treeWidget);
 }
 
 void NavigationView::buildObjectsTree()
@@ -650,11 +647,11 @@ void NavigationView::buildObjectsTree()
     // Groups objects by PropertyNames.type: Pools, Hosts, VMs, SRs, Networks
     // Uses cache directly like C# connection.Cache.XenSearchableObjects
 
-    ui->treeWidget->clear();
+    this->ui->treeWidget->clear();
 
     if (!this->m_xenLib)
     {
-        QTreeWidgetItem* placeholder = new QTreeWidgetItem(ui->treeWidget);
+        QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
         placeholder->setText(0, "(No connection manager available)");
         return;
     }
@@ -665,7 +662,7 @@ void NavigationView::buildObjectsTree()
 
     if (!connMgr || !cache)
     {
-        QTreeWidgetItem* placeholder = new QTreeWidgetItem(ui->treeWidget);
+        QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
         placeholder->setText(0, "(Connection manager not initialized)");
         return;
     }
@@ -687,7 +684,7 @@ void NavigationView::buildObjectsTree()
     // Check if we have ANY connections at all
     if (allConnections.isEmpty())
     {
-        QTreeWidgetItem* placeholder = new QTreeWidgetItem(ui->treeWidget);
+        QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
         placeholder->setText(0, "Connect to a XenServer");
         return;
     }
@@ -719,7 +716,7 @@ void NavigationView::buildObjectsTree()
         // Create Pools group if needed
         if (!poolsGroup)
         {
-            poolsGroup = new QTreeWidgetItem(ui->treeWidget);
+            poolsGroup = new QTreeWidgetItem(this->ui->treeWidget);
             poolsGroup->setText(0, "Pools");
             poolsGroup->setExpanded(true);
 
@@ -755,7 +752,7 @@ void NavigationView::buildObjectsTree()
         // Create Hosts group if needed
         if (!hostsGroup)
         {
-            hostsGroup = new QTreeWidgetItem(ui->treeWidget);
+            hostsGroup = new QTreeWidgetItem(this->ui->treeWidget);
             hostsGroup->setText(0, "Hosts");
             hostsGroup->setExpanded(true);
 
@@ -809,7 +806,7 @@ void NavigationView::buildObjectsTree()
             // Create Templates group if needed
             if (!templatesGroup)
             {
-                templatesGroup = new QTreeWidgetItem(ui->treeWidget);
+                templatesGroup = new QTreeWidgetItem(this->ui->treeWidget);
                 templatesGroup->setText(0, "Templates");
                 templatesGroup->setExpanded(false); // Templates collapsed by default
 
@@ -833,7 +830,7 @@ void NavigationView::buildObjectsTree()
             // Create VMs group if needed
             if (!vmsGroup)
             {
-                vmsGroup = new QTreeWidgetItem(ui->treeWidget);
+                vmsGroup = new QTreeWidgetItem(this->ui->treeWidget);
                 vmsGroup->setText(0, "VMs");
                 vmsGroup->setExpanded(true);
 
@@ -868,7 +865,7 @@ void NavigationView::buildObjectsTree()
         // Create Storage group if needed
         if (!storageGroup)
         {
-            storageGroup = new QTreeWidgetItem(ui->treeWidget);
+            storageGroup = new QTreeWidgetItem(this->ui->treeWidget);
             storageGroup->setText(0, "Storage");
             storageGroup->setExpanded(true);
 
@@ -895,7 +892,7 @@ void NavigationView::buildObjectsTree()
     if (!disconnectedConnections.isEmpty())
     {
         // Create Disconnected Servers group
-        disconnectedHostsGroup = new QTreeWidgetItem(ui->treeWidget);
+        disconnectedHostsGroup = new QTreeWidgetItem(this->ui->treeWidget);
         disconnectedHostsGroup->setText(0, "Disconnected servers"); // Matches C# Messages.DISCONNECTED_SERVERS
         disconnectedHostsGroup->setExpanded(true);
 
@@ -944,7 +941,7 @@ void NavigationView::buildOrganizationTree()
     // Matches C# OrganizationViewTags/Folders/Fields/Vapps.Populate
     // This creates tree organized by tags, folders, custom fields, or vApps
 
-    ui->treeWidget->clear();
+    this->ui->treeWidget->clear();
 
     QString viewName;
     switch (this->m_navigationMode)
@@ -1018,7 +1015,7 @@ void NavigationView::collectExpandedItems(QTreeWidgetItem* parent, QStringList& 
         QTreeWidgetItem* child = parent->child(i);
         if (child->isExpanded())
         {
-            QString path = getItemPath(child);
+            QString path = this->getItemPath(child);
             if (!path.isEmpty())
             {
                 expandedPaths.append(path);
@@ -1028,7 +1025,7 @@ void NavigationView::collectExpandedItems(QTreeWidgetItem* parent, QStringList& 
         // Recurse for children
         if (child->childCount() > 0)
         {
-            collectExpandedItems(child, expandedPaths);
+            this->collectExpandedItems(child, expandedPaths);
         }
     }
 }
@@ -1051,7 +1048,7 @@ QTreeWidgetItem* NavigationView::findItemByTypeAndRef(const QString& type, const
         }
 
         // Recurse for children
-        QTreeWidgetItem* found = findItemByTypeAndRef(type, ref, child);
+        QTreeWidgetItem* found = this->findItemByTypeAndRef(type, ref, child);
         if (found)
         {
             return found;
@@ -1064,7 +1061,7 @@ QTreeWidgetItem* NavigationView::findItemByTypeAndRef(const QString& type, const
 void NavigationView::persistSelectionAndExpansion()
 {
     // Save current selection (matches C# PersistSelectedNode)
-    QTreeWidgetItem* selectedItem = ui->treeWidget->currentItem();
+    QTreeWidgetItem* selectedItem = this->ui->treeWidget->currentItem();
     if (selectedItem)
     {
         this->m_savedSelectionType = selectedItem->data(0, Qt::UserRole + 1).toString();
@@ -1079,13 +1076,13 @@ void NavigationView::persistSelectionAndExpansion()
     this->m_savedExpandedPaths.clear();
 
     // Check if root nodes are expanded
-    int topLevelCount = ui->treeWidget->topLevelItemCount();
+    int topLevelCount = this->ui->treeWidget->topLevelItemCount();
     for (int i = 0; i < topLevelCount; ++i)
     {
-        QTreeWidgetItem* rootItem = ui->treeWidget->topLevelItem(i);
+        QTreeWidgetItem* rootItem = this->ui->treeWidget->topLevelItem(i);
         if (rootItem->isExpanded())
         {
-            QString path = getItemPath(rootItem);
+            QString path = this->getItemPath(rootItem);
             if (!path.isEmpty())
             {
                 this->m_savedExpandedPaths.append(path);
@@ -1093,7 +1090,7 @@ void NavigationView::persistSelectionAndExpansion()
         }
 
         // Collect expanded children
-        collectExpandedItems(rootItem, this->m_savedExpandedPaths);
+        this->collectExpandedItems(rootItem, this->m_savedExpandedPaths);
     }
 }
 
@@ -1168,10 +1165,10 @@ void NavigationView::restoreSelectionAndExpansion()
                 if (!current)
                 {
                     // Search top-level items
-                    int topCount = ui->treeWidget->topLevelItemCount();
+                    int topCount = this->ui->treeWidget->topLevelItemCount();
                     for (int i = 0; i < topCount; ++i)
                     {
-                        QTreeWidgetItem* item = ui->treeWidget->topLevelItem(i);
+                        QTreeWidgetItem* item = this->ui->treeWidget->topLevelItem(i);
                         if (item->text(0) == part)
                         {
                             current = item;
@@ -1213,13 +1210,13 @@ void NavigationView::restoreSelectionAndExpansion()
     if (!this->m_savedSelectionType.isEmpty() && !this->m_savedSelectionRef.isEmpty())
     {
         // Search all top-level items
-        int topCount = ui->treeWidget->topLevelItemCount();
+        int topCount = this->ui->treeWidget->topLevelItemCount();
         QTreeWidgetItem* itemToSelect = nullptr;
 
         for (int i = 0; i < topCount; ++i)
         {
-            QTreeWidgetItem* rootItem = ui->treeWidget->topLevelItem(i);
-            itemToSelect = findItemByTypeAndRef(this->m_savedSelectionType, this->m_savedSelectionRef, rootItem);
+            QTreeWidgetItem* rootItem = this->ui->treeWidget->topLevelItem(i);
+            itemToSelect = this->findItemByTypeAndRef(this->m_savedSelectionType, this->m_savedSelectionRef, rootItem);
 
             if (!itemToSelect)
             {
@@ -1240,7 +1237,7 @@ void NavigationView::restoreSelectionAndExpansion()
 
         if (itemToSelect)
         {
-            ui->treeWidget->setCurrentItem(itemToSelect);
+            this->ui->treeWidget->setCurrentItem(itemToSelect);
         }
     }
 

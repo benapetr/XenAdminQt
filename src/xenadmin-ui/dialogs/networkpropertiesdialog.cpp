@@ -75,12 +75,12 @@ void NetworkPropertiesDialog::setupGeneralTab()
     QGroupBox* basicGroup = new QGroupBox("Basic Information");
     QFormLayout* basicLayout = new QFormLayout();
 
-    m_nameEdit = new QLineEdit();
-    m_descriptionEdit = new QTextEdit();
-    m_descriptionEdit->setMaximumHeight(80);
+    this->m_nameEdit = new QLineEdit();
+    this->m_descriptionEdit = new QTextEdit();
+    this->m_descriptionEdit->setMaximumHeight(80);
 
-    basicLayout->addRow("Name:", m_nameEdit);
-    basicLayout->addRow("Description:", m_descriptionEdit);
+    basicLayout->addRow("Name:", this->m_nameEdit);
+    basicLayout->addRow("Description:", this->m_descriptionEdit);
     basicGroup->setLayout(basicLayout);
     layout->addWidget(basicGroup);
 
@@ -88,21 +88,21 @@ void NetworkPropertiesDialog::setupGeneralTab()
     QGroupBox* networkGroup = new QGroupBox("Network Information");
     QFormLayout* networkLayout = new QFormLayout();
 
-    m_uuidLabel = new QLabel();
-    m_bridgeLabel = new QLabel();
-    m_mtuLabel = new QLabel();
-    m_managedLabel = new QLabel();
+    this->m_uuidLabel = new QLabel();
+    this->m_bridgeLabel = new QLabel();
+    this->m_mtuLabel = new QLabel();
+    this->m_managedLabel = new QLabel();
 
-    networkLayout->addRow("UUID:", m_uuidLabel);
-    networkLayout->addRow("Bridge:", m_bridgeLabel);
-    networkLayout->addRow("MTU:", m_mtuLabel);
-    networkLayout->addRow("Managed:", m_managedLabel);
+    networkLayout->addRow("UUID:", this->m_uuidLabel);
+    networkLayout->addRow("Bridge:", this->m_bridgeLabel);
+    networkLayout->addRow("MTU:", this->m_mtuLabel);
+    networkLayout->addRow("Managed:", this->m_managedLabel);
 
     networkGroup->setLayout(networkLayout);
     layout->addWidget(networkGroup);
 
     layout->addStretch();
-    m_tabWidget->addTab(generalTab, "General");
+    this->m_tabWidget->addTab(generalTab, "General");
 }
 
 void NetworkPropertiesDialog::setupAdvancedTab()
@@ -113,28 +113,28 @@ void NetworkPropertiesDialog::setupAdvancedTab()
     // Tags Group
     QGroupBox* tagsGroup = new QGroupBox("Tags");
     QVBoxLayout* tagsLayout = new QVBoxLayout();
-    m_tagsEdit = new QLineEdit();
-    m_tagsEdit->setPlaceholderText("Comma-separated tags");
-    tagsLayout->addWidget(m_tagsEdit);
+    this->m_tagsEdit = new QLineEdit();
+    this->m_tagsEdit->setPlaceholderText("Comma-separated tags");
+    tagsLayout->addWidget(this->m_tagsEdit);
     tagsGroup->setLayout(tagsLayout);
     layout->addWidget(tagsGroup);
 
     // Other Configuration Group
     QGroupBox* configGroup = new QGroupBox("Other Configuration");
     QVBoxLayout* configLayout = new QVBoxLayout();
-    m_otherConfigList = new QListWidget();
-    m_otherConfigList->setSelectionMode(QAbstractItemView::NoSelection);
-    configLayout->addWidget(m_otherConfigList);
+    this->m_otherConfigList = new QListWidget();
+    this->m_otherConfigList->setSelectionMode(QAbstractItemView::NoSelection);
+    configLayout->addWidget(this->m_otherConfigList);
     configGroup->setLayout(configLayout);
     layout->addWidget(configGroup);
 
-    m_tabWidget->addTab(advancedTab, "Advanced");
+    this->m_tabWidget->addTab(advancedTab, "Advanced");
 }
 
 void NetworkPropertiesDialog::requestNetworkData()
 {
     // Request networks asynchronously
-    m_xenLib->requestNetworks();
+    this->m_xenLib->requestNetworks();
 }
 
 void NetworkPropertiesDialog::onNetworksReceived(const QVariantList& networks)

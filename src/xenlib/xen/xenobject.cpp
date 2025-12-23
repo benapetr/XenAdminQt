@@ -62,11 +62,10 @@ QVariantMap XenObject::data() const
         return QVariantMap();
 
     // Get cache from connection's XenLib
-    XenLib* xenLib = this->m_connection->property("xenLib").value<XenLib*>();
-    if (!xenLib || !xenLib->getCache())
+    if (!this->m_connection->getCache())
         return QVariantMap();
 
-    return xenLib->getCache()->ResolveObjectData(objectType(), this->m_opaqueRef);
+    return this->m_connection->getCache()->ResolveObjectData(objectType(), this->m_opaqueRef);
 }
 
 void XenObject::refresh()

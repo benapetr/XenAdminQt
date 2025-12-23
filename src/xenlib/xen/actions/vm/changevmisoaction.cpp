@@ -43,10 +43,10 @@ ChangeVMISOAction::ChangeVMISOAction(XenConnection* connection,
                      parent),
       m_vmRef(vmRef), m_vdiRef(vdiRef), m_vbdRef(vbdRef), m_isEmpty(false)
 {
-    if (m_vmRef.isEmpty())
+    if (this->m_vmRef.isEmpty())
         qWarning() << "ChangeVMISOAction: VM reference is empty";
 
-    if (m_vbdRef.isEmpty())
+    if (this->m_vbdRef.isEmpty())
         qWarning() << "ChangeVMISOAction: VBD reference is empty";
 
     // Add RBAC methods to check
@@ -64,7 +64,7 @@ ChangeVMISOAction::~ChangeVMISOAction()
 
 void ChangeVMISOAction::run()
 {
-    if (m_vbdRef.isEmpty())
+    if (this->m_vbdRef.isEmpty())
     {
         setError("Invalid VBD reference");
         return;
@@ -79,7 +79,7 @@ void ChangeVMISOAction::run()
 
     // Get the VBD record to check if it's empty
     QVariantList params;
-    params << session->getSessionId() << m_vbdRef;
+    params << session->getSessionId() << this->m_vbdRef;
 
     XenRpcAPI api(session);
     QByteArray jsonRequest = api.buildJsonRpcCall("VBD.get_record", params);

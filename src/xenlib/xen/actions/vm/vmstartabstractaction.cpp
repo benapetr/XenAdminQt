@@ -128,7 +128,7 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
         }
 
         auto invokeDiagnosis = [this]() {
-            if (!m_startDiagnosisForm)
+            if (!this->m_startDiagnosisForm)
                 return;
 
             QStringList description = this->errorDetails();
@@ -152,8 +152,8 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
             invokeDiagnosis();
     } catch (const Failure& failure)
     {
-        if (m_startDiagnosisForm)
-            m_startDiagnosisForm(this, failure);
+        if (this->m_startDiagnosisForm)
+            this->m_startDiagnosisForm(this, failure);
         throw;
     } catch (const std::exception& e)
     {

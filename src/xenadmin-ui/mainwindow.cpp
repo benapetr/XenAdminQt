@@ -54,8 +54,8 @@
 #include "iconmanager.h"
 #include "connectionprofile.h"
 #include "navigation/navigationhistory.h"
-#include "widgets/navigationpane.h"
-#include "widgets/navigationview.h"
+#include "navigation/navigationpane.h"
+#include "navigation/navigationview.h"
 #include "xenlib.h"
 #include "xencache.h"      // Need full definition for resolve() calls
 #include "metricupdater.h" // Need full definition for start() call
@@ -245,9 +245,9 @@ MainWindow::MainWindow(QWidget* parent)
     });
 
     // Connect cache objectChanged signal to refresh tabs when selected object updates
-    if (m_xenLib->getCache())
+    if (this->m_xenLib->getCache())
     {
-        connect(m_xenLib->getCache(), &XenCache::objectChanged,
+        connect(this->m_xenLib->getCache(), &XenCache::objectChanged,
                 this, &MainWindow::onCacheObjectChanged);
     }
 
@@ -266,21 +266,21 @@ MainWindow::MainWindow(QWidget* parent)
     connect(this->m_xenLib, &XenLib::messageRemoved, this, &MainWindow::onMessageRemoved);
 
     // Get NavigationPane from UI (matches C# MainWindow.navigationPane)
-    m_navigationPane = ui->navigationPane;
+    this->m_navigationPane = this->ui->navigationPane;
 
     // Connect NavigationPane events (matches C# MainWindow.navigationPane_* event handlers)
-    connect(m_navigationPane, &NavigationPane::navigationModeChanged,
+    connect(this->m_navigationPane, &NavigationPane::navigationModeChanged,
             this, &MainWindow::onNavigationModeChanged);
-    connect(m_navigationPane, &NavigationPane::notificationsSubModeChanged,
+    connect(this->m_navigationPane, &NavigationPane::notificationsSubModeChanged,
             this, &MainWindow::onNotificationsSubModeChanged);
-    connect(m_navigationPane, &NavigationPane::treeViewSelectionChanged,
+    connect(this->m_navigationPane, &NavigationPane::treeViewSelectionChanged,
             this, &MainWindow::onNavigationPaneTreeViewSelectionChanged);
-    connect(m_navigationPane, &NavigationPane::treeNodeRightClicked,
+    connect(this->m_navigationPane, &NavigationPane::treeNodeRightClicked,
             this, &MainWindow::onNavigationPaneTreeNodeRightClicked);
 
     // Get tree widget from NavigationPane's NavigationView for legacy code compatibility
     // TODO: Refactor to use NavigationPane API instead of direct tree access
-    auto* navView = m_navigationPane->navigationView();
+    auto* navView = this->m_navigationPane->navigationView();
     if (navView)
     {
         QTreeWidget* treeWidget = navView->treeWidget();
@@ -318,9 +318,9 @@ MainWindow::MainWindow(QWidget* parent)
     this->m_cvmConsolePanel->setXenLib(this->m_xenLib);
 
     // Set XenLib instance for navigation pane (for tree building)
-    if (m_navigationPane)
+    if (this->m_navigationPane)
     {
-        m_navigationPane->setXenLib(this->m_xenLib);
+        this->m_navigationPane->setXenLib(this->m_xenLib);
     }
 
     // Initialize tab pages (without parent - they will be parented to QTabWidget when added)
@@ -510,7 +510,7 @@ void MainWindow::disconnectFromServer()
     {
         // Close all VNC/console connections before disconnecting
         // Reference: C# MainWindow.cs lines 745-762
-        if (m_consolePanel)
+        if (this->m_consolePanel)
         {
             // Get all VMs and close their console connections
             QList<QVariantMap> vms = m_xenLib->getCache()->GetAllData("vm");
@@ -519,41 +519,41 @@ void MainWindow::disconnectFromServer()
                 QString vmRef = vm.value("ref").toString();
                 if (!vmRef.isEmpty())
                 {
-                    m_consolePanel->closeVncForSource(vmRef);
+                    this->m_consolePanel->closeVncForSource(vmRef);
                 }
             }
         }
 
-        if (m_cvmConsolePanel)
+        if (this->m_cvmConsolePanel)
         {
             // Get all hosts and close their CVM console connections
-            QList<QVariantMap> hosts = m_xenLib->getCache()->GetAllData("host");
+            QList<QVariantMap> hosts = this->m_xenLib->getCache()->GetAllData("host");
             for (const QVariantMap& host : hosts)
             {
                 QString hostRef = host.value("ref").toString();
                 if (!hostRef.isEmpty())
                 {
                     // Close control domain zero console
-                    QString controlDomainRef = m_xenLib->getControlDomainForHost(hostRef);
+                    QString controlDomainRef = this->m_xenLib->getControlDomainForHost(hostRef);
                     if (!controlDomainRef.isEmpty())
                     {
-                        m_consolePanel->closeVncForSource(controlDomainRef);
+                        this->m_consolePanel->closeVncForSource(controlDomainRef);
                     }
 
                     // Close SR driver domain consoles for this host
                     // Iterate through all VMs to find SR driver domains on this host
-                    QList<QVariantMap> allVMs = m_xenLib->getCache()->GetAllData("vm");
+                    QList<QVariantMap> allVMs = this->m_xenLib->getCache()->GetAllData("vm");
                     for (const QVariantMap& vm : allVMs)
                     {
                         QString vmRef = vm.value("ref").toString();
                         QString vmHostRef = vm.value("resident_on").toString();
 
                         // Check if this VM is an SR driver domain on the current host
-                        if (vmHostRef == hostRef && m_xenLib->isSRDriverDomain(vmRef))
+                        if (vmHostRef == hostRef && this->m_xenLib->isSRDriverDomain(vmRef))
                         {
-                            if (m_cvmConsolePanel)
+                            if (this->m_cvmConsolePanel)
                             {
-                                m_cvmConsolePanel->closeVncForSource(vmRef);
+                                this->m_cvmConsolePanel->closeVncForSource(vmRef);
                             }
                         }
                     }
@@ -2453,7 +2453,7 @@ void MainWindow::updateHistoryButtons(bool canGoBack, bool canGoForward)
 void MainWindow::selectObjectInTree(const QString& objectRef, const QString& objectType)
 {
     // Find and select the tree item with matching objectRef
-    QTreeWidgetItemIterator it(getServerTreeWidget());
+    QTreeWidgetItemIterator it(this->getServerTreeWidget());
     while (*it)
     {
         QTreeWidgetItem* item = *it;
@@ -2463,8 +2463,8 @@ void MainWindow::selectObjectInTree(const QString& objectRef, const QString& obj
         if (!itemRef.isNull() && itemRef.toString() == objectRef && itemType == objectType)
         {
             // Found the item - select it
-            getServerTreeWidget()->setCurrentItem(item);
-            getServerTreeWidget()->scrollToItem(item);
+            this->getServerTreeWidget()->setCurrentItem(item);
+            this->getServerTreeWidget()->scrollToItem(item);
             return;
         }
         ++it;
@@ -2476,11 +2476,11 @@ void MainWindow::selectObjectInTree(const QString& objectRef, const QString& obj
 void MainWindow::setCurrentTab(const QString& tabName)
 {
     // Find and activate tab by name
-    for (int i = 0; i < ui->mainTabWidget->count(); ++i)
+    for (int i = 0; i < this->ui->mainTabWidget->count(); ++i)
     {
-        if (ui->mainTabWidget->tabText(i) == tabName)
+        if (this->ui->mainTabWidget->tabText(i) == tabName)
         {
-            ui->mainTabWidget->setCurrentIndex(i);
+            this->ui->mainTabWidget->setCurrentIndex(i);
             return;
         }
     }

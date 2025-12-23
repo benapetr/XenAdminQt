@@ -55,7 +55,7 @@ void StartApplianceAction::run()
     try
     {
         // Get appliance name for progress messages
-        QString applianceName = m_applianceRef;
+        QString applianceName = this->m_applianceRef;
         try
         {
             QVariantMap record = XenAPI::VM_appliance::get_record(session(), m_applianceRef);
@@ -69,7 +69,7 @@ void StartApplianceAction::run()
         }
 
         // Update description
-        if (m_suspend)
+        if (this->m_suspend)
         {
             setDescription(tr("Starting appliance '%1' in paused state...").arg(applianceName));
         } else
@@ -78,7 +78,7 @@ void StartApplianceAction::run()
         }
 
         // Start the VM appliance (async operation returns task ref)
-        QString taskRef = XenAPI::VM_appliance::async_start(session(), m_applianceRef, m_suspend);
+        QString taskRef = XenAPI::VM_appliance::async_start(session(), this->m_applianceRef, this->m_suspend);
 
         // Poll task to completion with progress tracking
         pollToCompletion(taskRef, 0, 100);

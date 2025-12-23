@@ -29,7 +29,7 @@
 #include "ui_navigationpane.h"
 #include "navigationbuttons.h"
 #include "navigationview.h"
-#include "notificationsview.h"
+#include "../widgets/notificationsview.h"
 #include <QVBoxLayout>
 #include <QResizeEvent>
 #include <QDebug>
@@ -37,7 +37,7 @@
 NavigationPane::NavigationPane(QWidget* parent)
     : QWidget(parent), ui(new Ui::NavigationPane), m_currentMode(Infrastructure), m_lastNotificationsMode(Alerts), m_buttonInfraBig(nullptr), m_buttonObjectsBig(nullptr), m_buttonOrganizationBig(nullptr), m_buttonSearchesBig(nullptr), m_buttonNotifyBig(nullptr), m_buttonInfraSmall(nullptr), m_buttonObjectsSmall(nullptr), m_buttonOrganizationSmall(nullptr), m_buttonSearchesSmall(nullptr), m_buttonNotifySmall(nullptr)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
     // Create NavigationView and NotificationsView
     // These replace the placeholders in the UI
@@ -45,107 +45,96 @@ NavigationPane::NavigationPane(QWidget* parent)
     NotificationsView* notifView = new NotificationsView(this);
 
     // Replace placeholder widgets with actual views
-    QVBoxLayout* navPlaceholderLayout = qobject_cast<QVBoxLayout*>(
-        ui->navigationViewPlaceholder->layout());
+    QVBoxLayout* navPlaceholderLayout = qobject_cast<QVBoxLayout*>(this->ui->navigationViewPlaceholder->layout());
     if (navPlaceholderLayout)
     {
         navPlaceholderLayout->addWidget(navView);
     }
 
-    QVBoxLayout* notifPlaceholderLayout = qobject_cast<QVBoxLayout*>(
-        ui->notificationsViewPlaceholder->layout());
+    QVBoxLayout* notifPlaceholderLayout = qobject_cast<QVBoxLayout*>(this->ui->notificationsViewPlaceholder->layout());
     if (notifPlaceholderLayout)
     {
         notifPlaceholderLayout->addWidget(notifView);
     }
 
     // Initially show navigation view, hide notifications view
-    ui->navigationViewPlaceholder->setVisible(true);
-    ui->notificationsViewPlaceholder->setVisible(false);
+    this->ui->navigationViewPlaceholder->setVisible(true);
+    this->ui->notificationsViewPlaceholder->setVisible(false);
 
     // Create navigation buttons
     setupNavigationButtons();
 
     // Wire up NavigationView events to forward them
-    connect(navView, &NavigationView::treeViewSelectionChanged,
-            this, &NavigationPane::onNavigationViewSelectionChanged);
-    connect(navView, &NavigationView::treeNodeBeforeSelected,
-            this, &NavigationPane::onNavigationViewBeforeSelected);
-    connect(navView, &NavigationView::treeNodeClicked,
-            this, &NavigationPane::onNavigationViewClicked);
-    connect(navView, &NavigationView::treeNodeRightClicked,
-            this, &NavigationPane::onNavigationViewRightClicked);
-    connect(navView, &NavigationView::treeViewRefreshed,
-            this, &NavigationPane::onNavigationViewRefreshed);
-    connect(navView, &NavigationView::treeViewRefreshSuspended,
-            this, &NavigationPane::onNavigationViewRefreshSuspended);
-    connect(navView, &NavigationView::treeViewRefreshResumed,
-            this, &NavigationPane::onNavigationViewRefreshResumed);
-    connect(navView, &NavigationView::dragDropCommandActivated,
-            this, &NavigationPane::onNavigationViewDragDropCommand);
+    connect(navView, &NavigationView::treeViewSelectionChanged, this, &NavigationPane::onNavigationViewSelectionChanged);
+    connect(navView, &NavigationView::treeNodeBeforeSelected, this, &NavigationPane::onNavigationViewBeforeSelected);
+    connect(navView, &NavigationView::treeNodeClicked, this, &NavigationPane::onNavigationViewClicked);
+    connect(navView, &NavigationView::treeNodeRightClicked, this, &NavigationPane::onNavigationViewRightClicked);
+    connect(navView, &NavigationView::treeViewRefreshed, this, &NavigationPane::onNavigationViewRefreshed);
+    connect(navView, &NavigationView::treeViewRefreshSuspended, this, &NavigationPane::onNavigationViewRefreshSuspended);
+    connect(navView, &NavigationView::treeViewRefreshResumed, this, &NavigationPane::onNavigationViewRefreshResumed);
+    connect(navView, &NavigationView::dragDropCommandActivated, this, &NavigationPane::onNavigationViewDragDropCommand);
 
     // Wire up NotificationsView events
-    connect(notifView, &NotificationsView::notificationsSubModeChanged,
-            this, &NavigationPane::onNotificationsSubModeChanged);
+    connect(notifView, &NotificationsView::notificationsSubModeChanged, this, &NavigationPane::onNotificationsSubModeChanged);
 
     // Set initial mode
-    m_buttonInfraBig->setChecked(true);
+    this->m_buttonInfraBig->setChecked(true);
 }
 
 NavigationPane::~NavigationPane()
 {
-    delete ui;
+    delete this->ui;
 }
 
 void NavigationPane::setupNavigationButtons()
 {
     // Create big buttons (vertical toolbar in Panel2)
-    m_buttonInfraBig = new NavigationButtonBig(this);
-    m_buttonInfraBig->setText("Infrastructure");
-    m_buttonInfraBig->setIcon(QIcon(":/icons/infra_view_24.png")); // TODO: Add icons
-    m_buttonInfraBig->setTag(QVariant::fromValue(Infrastructure));
+    this->m_buttonInfraBig = new NavigationButtonBig(this);
+    this->m_buttonInfraBig->setText("Infrastructure");
+    this->m_buttonInfraBig->setIcon(QIcon(":/icons/infra_view_24.png")); // TODO: Add icons
+    this->m_buttonInfraBig->setTag(QVariant::fromValue(Infrastructure));
 
-    m_buttonObjectsBig = new NavigationButtonBig(this);
-    m_buttonObjectsBig->setText("Objects");
-    m_buttonObjectsBig->setIcon(QIcon(":/icons/objects_24.png"));
-    m_buttonObjectsBig->setTag(QVariant::fromValue(Objects));
+    this->m_buttonObjectsBig = new NavigationButtonBig(this);
+    this->m_buttonObjectsBig->setText("Objects");
+    this->m_buttonObjectsBig->setIcon(QIcon(":/icons/objects_24.png"));
+    this->m_buttonObjectsBig->setTag(QVariant::fromValue(Objects));
 
-    m_buttonOrganizationBig = new NavigationDropDownButtonBig(this);
-    m_buttonOrganizationBig->setText("Organization");
-    m_buttonOrganizationBig->setIcon(QIcon(":/icons/org_view_24.png"));
+    this->m_buttonOrganizationBig = new NavigationDropDownButtonBig(this);
+    this->m_buttonOrganizationBig->setText("Organization");
+    this->m_buttonOrganizationBig->setIcon(QIcon(":/icons/org_view_24.png"));
 
-    m_buttonSearchesBig = new NavigationDropDownButtonBig(this);
-    m_buttonSearchesBig->setText("Saved Searches");
-    m_buttonSearchesBig->setIcon(QIcon(":/icons/saved_searches_24.png"));
+    this->m_buttonSearchesBig = new NavigationDropDownButtonBig(this);
+    this->m_buttonSearchesBig->setText("Saved Searches");
+    this->m_buttonSearchesBig->setIcon(QIcon(":/icons/saved_searches_24.png"));
 
-    m_buttonNotifyBig = new NotificationButtonBig(this);
-    m_buttonNotifyBig->setText("Notifications");
-    m_buttonNotifyBig->setIcon(QIcon(":/icons/notif_none_24.png"));
-    m_buttonNotifyBig->setTag(QVariant::fromValue(Notifications));
+    this->m_buttonNotifyBig = new NotificationButtonBig(this);
+    this->m_buttonNotifyBig->setText("Notifications");
+    this->m_buttonNotifyBig->setIcon(QIcon(":/icons/notif_none_24.png"));
+    this->m_buttonNotifyBig->setTag(QVariant::fromValue(Notifications));
 
     // Create small buttons (horizontal toolbar, shown when pane is narrow)
-    m_buttonInfraSmall = new NavigationButtonSmall(this);
-    m_buttonInfraSmall->setIcon(QIcon(":/icons/infra_view_16.png"));
-    m_buttonInfraSmall->setToolTip("Infrastructure");
-    m_buttonInfraSmall->setTag(QVariant::fromValue(Infrastructure));
+    this->m_buttonInfraSmall = new NavigationButtonSmall(this);
+    this->m_buttonInfraSmall->setIcon(QIcon(":/icons/infra_view_16.png"));
+    this->m_buttonInfraSmall->setToolTip("Infrastructure");
+    this->m_buttonInfraSmall->setTag(QVariant::fromValue(Infrastructure));
 
-    m_buttonObjectsSmall = new NavigationButtonSmall(this);
-    m_buttonObjectsSmall->setIcon(QIcon(":/icons/objects_16.png"));
-    m_buttonObjectsSmall->setToolTip("Objects");
-    m_buttonObjectsSmall->setTag(QVariant::fromValue(Objects));
+    this->m_buttonObjectsSmall = new NavigationButtonSmall(this);
+    this->m_buttonObjectsSmall->setIcon(QIcon(":/icons/objects_16.png"));
+    this->m_buttonObjectsSmall->setToolTip("Objects");
+    this->m_buttonObjectsSmall->setTag(QVariant::fromValue(Objects));
 
-    m_buttonOrganizationSmall = new NavigationDropDownButtonSmall(this);
-    m_buttonOrganizationSmall->setIcon(QIcon(":/icons/org_view_16.png"));
-    m_buttonOrganizationSmall->setToolTip("Organization");
+    this->m_buttonOrganizationSmall = new NavigationDropDownButtonSmall(this);
+    this->m_buttonOrganizationSmall->setIcon(QIcon(":/icons/org_view_16.png"));
+    this->m_buttonOrganizationSmall->setToolTip("Organization");
 
-    m_buttonSearchesSmall = new NavigationDropDownButtonSmall(this);
-    m_buttonSearchesSmall->setIcon(QIcon(":/icons/saved_searches_16.png"));
-    m_buttonSearchesSmall->setToolTip("Saved Searches");
+    this->m_buttonSearchesSmall = new NavigationDropDownButtonSmall(this);
+    this->m_buttonSearchesSmall->setIcon(QIcon(":/icons/saved_searches_16.png"));
+    this->m_buttonSearchesSmall->setToolTip("Saved Searches");
 
-    m_buttonNotifySmall = new NotificationButtonSmall(this);
-    m_buttonNotifySmall->setIcon(QIcon(":/icons/notif_none_16.png"));
-    m_buttonNotifySmall->setToolTip("Notifications");
-    m_buttonNotifySmall->setTag(QVariant::fromValue(Notifications));
+    this->m_buttonNotifySmall = new NotificationButtonSmall(this);
+    this->m_buttonNotifySmall->setIcon(QIcon(":/icons/notif_none_16.png"));
+    this->m_buttonNotifySmall->setToolTip("Notifications");
+    this->m_buttonNotifySmall->setTag(QVariant::fromValue(Notifications));
 
     // Pair buttons (big + small sync selection)
     addNavigationItemPair(m_buttonInfraBig, m_buttonInfraSmall);

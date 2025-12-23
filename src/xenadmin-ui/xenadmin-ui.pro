@@ -179,11 +179,11 @@ SOURCES += \
     widgets/memorybar.cpp \
     widgets/progressbardelegate.cpp \
     widgets/verticaltabwidget.cpp \
-    widgets/navigationpane.cpp \
-    widgets/navigationview.cpp \
+    navigation/navigationpane.cpp \
+    navigation/navigationview.cpp \
     widgets/notificationsview.cpp \
     widgets/notificationssubmodeitem.cpp \
-    widgets/navigationbuttons.cpp \
+    navigation/navigationbuttons.cpp \
     widgets/wizardnavigationpane.cpp \
     network/httpconnect.cpp \
     ConsoleView/ConsoleKeyHandler.cpp \
@@ -375,11 +375,11 @@ HEADERS += \
     widgets/memorybar.h \
     widgets/progressbardelegate.h \
     widgets/verticaltabwidget.h \
-    widgets/navigationpane.h \
-    widgets/navigationview.h \
+    navigation/navigationpane.h \
+    navigation/navigationview.h \
     widgets/notificationsview.h \
     widgets/notificationssubmodeitem.h \
-    widgets/navigationbuttons.h \
+    navigation/navigationbuttons.h \
     widgets/wizardnavigationpane.h \
     network/httpconnect.h \
     navigation/navigationhistory.h \
@@ -445,8 +445,8 @@ FORMS += \
     tabpages/vmstoragetabpage.ui \
     tabpages/alertsummarypage.ui \
     tabpages/eventspage.ui \
-    widgets/navigationpane.ui \
-    widgets/navigationview.ui \
+    navigation/navigationpane.ui \
+    navigation/navigationview.ui \
     widgets/notificationsview.ui \
     widgets/wizardnavigationpane.ui \
     ConsoleView/VNCTabView.ui \

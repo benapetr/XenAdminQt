@@ -60,7 +60,7 @@ void ChangeMemorySettingsAction::run()
         setDescription("Checking VM state...");
 
         // Get current VM data from cache
-        QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", this->m_vmRef);
         if (vmData.isEmpty())
         {
             throw std::runtime_error("VM not found in cache");
@@ -69,32 +69,32 @@ void ChangeMemorySettingsAction::run()
         // Check if static memory changed
         qint64 currentStaticMin = vmData.value("memory_static_min").toLongLong();
         qint64 currentStaticMax = vmData.value("memory_static_max").toLongLong();
-        m_staticChanged = (m_staticMin != currentStaticMin || m_staticMax != currentStaticMax);
+        this->m_staticChanged = (this->m_staticMin != currentStaticMin || this->m_staticMax != currentStaticMax);
 
         // Get current power state
         QString powerState = vmData.value("power_state").toString();
 
         // Determine if reboot is needed
-        if (m_staticChanged)
+        if (this->m_staticChanged)
         {
-            m_needReboot = (powerState != "Halted");
+            this->m_needReboot = (powerState != "Halted");
         } else
         {
             // Dynamic-only changes require VM to be running or halted
-            m_needReboot = (powerState != "Halted" && powerState != "Running");
+            this->m_needReboot = (powerState != "Halted" && powerState != "Running");
         }
 
         // Save host affinity for restart
         QString residentOn = vmData.value("resident_on").toString();
         if (!residentOn.isEmpty() && residentOn != "OpaqueRef:NULL")
         {
-            m_vmHost = residentOn;
+            this->m_vmHost = residentOn;
         }
 
         setPercentComplete(10);
 
         // Shutdown VM if needed
-        if (m_needReboot)
+        if (this->m_needReboot)
         {
             setDescription("Shutting down VM...");
 
@@ -105,10 +105,10 @@ void ChangeMemorySettingsAction::run()
             QString taskRef;
             if (canCleanShutdown)
             {
-                taskRef = XenAPI::VM::async_clean_shutdown(session(), m_vmRef);
+                taskRef = XenAPI::VM::async_clean_shutdown(session(), this->m_vmRef);
             } else
             {
-                taskRef = XenAPI::VM::async_hard_shutdown(session(), m_vmRef);
+                taskRef = XenAPI::VM::async_hard_shutdown(session(), this->m_vmRef);
             }
 
             pollToCompletion(taskRef, 10, 40);
@@ -118,7 +118,7 @@ void ChangeMemorySettingsAction::run()
             bool halted = false;
             for (int i = 0; i < 60; ++i)
             { // Wait up to 60 seconds
-                vmData = connection()->getCache()->ResolveObjectData("vm", m_vmRef);
+                vmData = connection()->getCache()->ResolveObjectData("vm", this->m_vmRef);
                 if (vmData.value("power_state").toString() == "Halted")
                 {
                     halted = true;
