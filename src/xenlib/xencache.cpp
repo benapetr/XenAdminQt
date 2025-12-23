@@ -200,7 +200,7 @@ QStringList XenCache::GetAllRefs(const QString& type) const
         return QStringList();
     }
 
-    return m_cache[normalizedType].keys();
+    return this->m_cache[normalizedType].keys();
 }
 
 // C# Equivalent: connection.Cache.XenSearchableObjects

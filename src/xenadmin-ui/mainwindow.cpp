@@ -209,18 +209,18 @@ MainWindow::MainWindow(QWidget* parent)
     splitter->insertWidget(tabWidgetIndex, tabContainer);
     
     // Store the tab container for later use with notification pages
-    m_tabContainer = tabContainer;
-    m_tabContainerLayout = containerLayout;
+    this->m_tabContainer = tabContainer;
+    this->m_tabContainerLayout = containerLayout;
 
     // Status bar widgets (matches C# MainWindow.statusProgressBar and statusLabel)
-    m_statusLabel = new QLabel(this);
-    m_statusProgressBar = new QProgressBar(this);
-    m_statusProgressBar->setMaximumWidth(200);
-    m_statusProgressBar->setVisible(false); // Hidden by default
-    m_statusBarAction = nullptr;
+    this->m_statusLabel = new QLabel(this);
+    this->m_statusProgressBar = new QProgressBar(this);
+    this->m_statusProgressBar->setMaximumWidth(200);
+    this->m_statusProgressBar->setVisible(false); // Hidden by default
+    this->m_statusBarAction = nullptr;
 
-    ui->statusbar->addPermanentWidget(m_statusLabel);
-    ui->statusbar->addPermanentWidget(m_statusProgressBar);
+    this->ui->statusbar->addPermanentWidget(m_statusLabel);
+    this->ui->statusbar->addPermanentWidget(m_statusProgressBar);
 
     // Connect to OperationManager for progress tracking (matches C# History_CollectionChanged)
     connect(OperationManager::instance(), &OperationManager::newOperation, this, &MainWindow::onNewOperation);

@@ -43,6 +43,18 @@
  * and provides instant lookups without API calls. The cache is populated
  * once on connection and kept up-to-date via events.
  *
+ * Object access model (C# parity):
+ * - Raw records live in m_cache as QVariantMap entries.
+ * - Typed XenObject instances are lazy shells: they hold only connection + opaque_ref
+ *   and read properties from the cache on demand.
+ * - ResolveObject/ResolveObject<T> creates XenObject instances lazily; the number of
+ *   objects in m_objects is NOT expected to match the number of raw records.
+ *
+ * Eviction and reconnect:
+ * - opaque_ref values are connection-scoped and may change after reconnect.
+ * - When records are removed (or cache cleared), existing XenObject instances are
+ *   marked evicted so consumers can detect stale data.
+ *
  * This dramatically improves performance:
  * - No network latency on selection
  * - No duplicate API calls
