@@ -36,7 +36,7 @@
 #include <QMessageBox>
 
 RebootHostCommand::RebootHostCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : HostCommand(mainWindow, parent)
 {
 }
 
@@ -47,7 +47,7 @@ bool RebootHostCommand::CanRun() const
         return false;
 
     // Can reboot if host is enabled (not in maintenance mode)
-    return this->isHostEnabled(hostRef);
+    return this->isHostEnabled();
 }
 
 void RebootHostCommand::Run()
@@ -103,37 +103,4 @@ void RebootHostCommand::Run()
 QString RebootHostCommand::MenuText() const
 {
     return "Reboot Host";
-}
-
-QString RebootHostCommand::getSelectedHostRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString RebootHostCommand::getSelectedHostName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return item->text(0);
-}
-
-bool RebootHostCommand::isHostEnabled(const QString& hostRef) const
-{
-    // Use cache instead of async API call
-    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
-    return hostData.value("enabled", true).toBool();
 }

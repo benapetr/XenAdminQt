@@ -28,9 +28,9 @@
 #ifndef HOSTPROPERTIESCOMMAND_H
 #define HOSTPROPERTIESCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
-class HostPropertiesCommand : public Command
+class HostPropertiesCommand : public HostCommand
 {
     Q_OBJECT
 
@@ -40,9 +40,6 @@ class HostPropertiesCommand : public Command
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
-
-    private:
-        QString getSelectedHostRef() const;
 };
 
 #endif // HOSTPROPERTIESCOMMAND_H

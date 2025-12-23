@@ -35,7 +35,7 @@
 #include <QDebug>
 
 RemoveHostCommand::RemoveHostCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : HostCommand(mainWindow, parent)
 {
 }
 
@@ -113,15 +113,6 @@ void RemoveHostCommand::Run()
 QString RemoveHostCommand::MenuText() const
 {
     return "Remove Host from XenAdmin";
-}
-
-QString RemoveHostCommand::getSelectedHostRef() const
-{
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return this->getSelectedObjectRef();
 }
 
 QVariantMap RemoveHostCommand::getSelectedHostData() const

@@ -28,7 +28,7 @@
 #ifndef REMOVEHOSTCOMMAND_H
 #define REMOVEHOSTCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
 /**
  * @brief RemoveHostCommand - Remove host connection from server list
@@ -45,7 +45,7 @@
  * - Remove the connection from the server list
  * - Save the updated server list
  */
-class RemoveHostCommand : public Command
+class RemoveHostCommand : public HostCommand
 {
     Q_OBJECT
 
@@ -57,12 +57,6 @@ class RemoveHostCommand : public Command
         QString MenuText() const override;
 
     private:
-        /**
-         * @brief Get selected host reference
-         * @return Host opaque reference or empty string
-         */
-        QString getSelectedHostRef() const;
-
         /**
          * @brief Get selected host data
          * @return Host data from cache

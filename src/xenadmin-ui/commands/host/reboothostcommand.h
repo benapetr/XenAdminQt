@@ -28,9 +28,9 @@
 #ifndef REBOOTHOSTCOMMAND_H
 #define REBOOTHOSTCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
-class RebootHostCommand : public Command
+class RebootHostCommand : public HostCommand
 {
     Q_OBJECT
 
@@ -41,11 +41,6 @@ public:
     bool CanRun() const override;
     void Run() override;
     QString MenuText() const override;
-
-private:
-    QString getSelectedHostRef() const;
-    QString getSelectedHostName() const;
-    bool isHostEnabled(const QString& hostRef) const;
 };
 
 #endif // REBOOTHOSTCOMMAND_H

@@ -38,13 +38,14 @@
 #include <QTimer>
 
 HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode, QObject* parent)
-    : Command(mainWindow, parent), m_enterMode(enterMode)
+    : HostCommand(mainWindow, parent), m_enterMode(enterMode)
 {
 }
 
 HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode, QObject* parent)
-    : Command(mainWindow, selection, parent), m_enterMode(enterMode)
+    : HostCommand(mainWindow, parent), m_enterMode(enterMode)
 {
+    Q_UNUSED(selection);
 }
 
 bool HostMaintenanceModeCommand::CanRun() const
@@ -180,17 +181,6 @@ QString HostMaintenanceModeCommand::MenuText() const
         return "Enter Maintenance Mode";
     else
         return "Exit Maintenance Mode";
-}
-
-bool HostMaintenanceModeCommand::isHostEnabled() const
-{
-    QString hostRef = this->getSelectedObjectRef();
-    if (hostRef.isEmpty() || !this->xenLib())
-        return false;
-
-    // Use cache instead of async API call
-    QVariantMap hostData = this->xenLib()->getCache()->ResolveObjectData("host", hostRef);
-    return hostData.value("enabled", true).toBool();
 }
 
 bool HostMaintenanceModeCommand::isHostInMaintenanceMode() const

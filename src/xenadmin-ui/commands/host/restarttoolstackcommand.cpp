@@ -33,7 +33,7 @@
 #include <QMessageBox>
 
 RestartToolstackCommand::RestartToolstackCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : HostCommand(mainWindow, parent)
 {
 }
 
@@ -44,7 +44,7 @@ bool RestartToolstackCommand::CanRun() const
         return false;
 
     // Can restart toolstack if host is live
-    return this->isHostLive(hostRef);
+    return this->isHostLive();
 }
 
 void RestartToolstackCommand::Run()
@@ -89,57 +89,4 @@ void RestartToolstackCommand::Run()
 QString RestartToolstackCommand::MenuText() const
 {
     return "Restart Toolstack";
-}
-
-QString RestartToolstackCommand::getSelectedHostRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString RestartToolstackCommand::getSelectedHostName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    if (!this->mainWindow()->xenLib())
-        return QString();
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return QString();
-
-    QString hostRef = this->getSelectedObjectRef();
-    QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
-    return hostData.value("name_label", "").toString();
-}
-
-bool RestartToolstackCommand::isHostLive(const QString& hostRef) const
-{
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
-
-    QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
-    if (hostData.isEmpty())
-        return false;
-
-    // Check if host is live (connected and responsive)
-    bool live = hostData.value("live", false).toBool();
-    return live;
 }

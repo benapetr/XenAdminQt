@@ -28,9 +28,9 @@
 #ifndef RESTARTTOOLSTACKCOMMAND_H
 #define RESTARTTOOLSTACKCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
-class RestartToolstackCommand : public Command
+class RestartToolstackCommand : public HostCommand
 {
     Q_OBJECT
 
@@ -41,11 +41,6 @@ public:
     bool CanRun() const override;
     void Run() override;
     QString MenuText() const override;
-
-private:
-    QString getSelectedHostRef() const;
-    QString getSelectedHostName() const;
-    bool isHostLive(const QString& hostRef) const;
 };
 
 #endif // RESTARTTOOLSTACKCOMMAND_H

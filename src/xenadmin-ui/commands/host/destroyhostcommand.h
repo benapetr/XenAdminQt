@@ -28,7 +28,7 @@
 #ifndef DESTROYHOSTCOMMAND_H
 #define DESTROYHOSTCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
 /**
  * @brief Destroys the selected hosts.
@@ -42,7 +42,7 @@
  * - Host is not the pool coordinator
  * - Host belongs to a pool
  */
-class DestroyHostCommand : public Command
+class DestroyHostCommand : public HostCommand
 {
     Q_OBJECT
 

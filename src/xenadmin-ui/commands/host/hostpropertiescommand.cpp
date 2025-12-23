@@ -32,7 +32,7 @@
 #include <QMessageBox>
 
 HostPropertiesCommand::HostPropertiesCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : HostCommand(mainWindow, parent)
 {
 }
 
@@ -62,17 +62,4 @@ void HostPropertiesCommand::Run()
 QString HostPropertiesCommand::MenuText() const
 {
     return "Properties";
-}
-
-QString HostPropertiesCommand::getSelectedHostRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return this->getSelectedObjectRef();
 }

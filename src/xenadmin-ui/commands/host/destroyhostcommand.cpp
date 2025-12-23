@@ -36,7 +36,7 @@
 #include <QMessageBox>
 
 DestroyHostCommand::DestroyHostCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : HostCommand(mainWindow, parent)
 {
 }
 

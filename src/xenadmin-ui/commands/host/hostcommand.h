@@ -42,6 +42,7 @@ class HostCommand : public Command
         QString getSelectedHostRef() const;
         QString getSelectedHostName() const;
         bool isHostEnabled() const;
+        bool isHostLive() const;
 };
 
 #endif // HOSTCOMMAND_H
