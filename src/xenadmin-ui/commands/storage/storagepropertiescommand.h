@@ -30,20 +30,23 @@
 
 #include "srcommand.h"
 
+class XenConnection;
+
 class StoragePropertiesCommand : public SRCommand
 {
     Q_OBJECT
 
-public:
-    explicit StoragePropertiesCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit StoragePropertiesCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
-    void setTargetSR(const QString& srRef);
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
+        void setTargetSR(const QString& srRef, XenConnection *connection);
 
-private:
-    QString m_overrideSRRef;
+    private:
+        QString m_overrideSRRef;
+        XenConnection *m_overrideConn = nullptr;
 };
 
 #endif // STORAGEPROPERTIESCOMMAND_H

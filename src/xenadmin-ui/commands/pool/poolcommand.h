@@ -25,26 +25,46 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HADISABLECOMMAND_H
-#define HADISABLECOMMAND_H
+#ifndef POOLCOMMAND_H
+#define POOLCOMMAND_H
 
-#include "poolcommand.h"
+#include "../command.h"
+#include <QSharedPointer>
 
-class HADisableCommand : public PoolCommand
+class Pool;
+
+/**
+ * @brief Base class for Pool-related commands
+ *
+ * Provides common functionality for commands operating on Pool objects.
+ * Similar to VMCommand, SRCommand, VBDCommand, and VDICommand patterns.
+ */
+class PoolCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit HADisableCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit PoolCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        ~PoolCommand() override = default;
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+    protected:
+        /**
+         * @brief Get the currently selected Pool as a typed XenObject
+         * @return Shared pointer to Pool object, or nullptr if not a Pool
+         */
+        QSharedPointer<Pool> getPool() const;
 
-private:
-    bool isPoolConnected() const;
-    bool isHAEnabled() const;
+        /**
+         * @brief Get selected Pool opaque reference
+         * @return Pool reference or empty string
+         */
+        QString getSelectedPoolRef() const;
+
+        /**
+         * @brief Get selected Pool name
+         * @return Pool name label or empty string
+         */
+        QString getSelectedPoolName() const;
 };
 
-#endif // HADISABLECOMMAND_H
+#endif // POOLCOMMAND_H

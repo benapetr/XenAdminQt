@@ -28,26 +28,23 @@
 #ifndef DELETEPOOLCOMMAND_H
 #define DELETEPOOLCOMMAND_H
 
-#include "../command.h"
+#include "poolcommand.h"
 
-class DeletePoolCommand : public Command
+class DeletePoolCommand : public PoolCommand
 {
     Q_OBJECT
 
-public:
-    explicit DeletePoolCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit DeletePoolCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
-private:
-    QString getSelectedPoolRef() const;
-    QString getSelectedPoolName() const;
-    bool isPoolConnected() const;
-    bool hasMultipleHosts() const;
-    bool isHAEnabled() const;
+    private:
+        bool hasMultipleHosts(QSharedPointer<Pool> pool) const;
+        bool isHAEnabled() const;
 };
 
 #endif // DELETEPOOLCOMMAND_H

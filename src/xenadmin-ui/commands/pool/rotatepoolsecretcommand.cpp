@@ -27,10 +27,10 @@
 
 #include "rotatepoolsecretcommand.h"
 #include "mainwindow.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
-#include "xen/api.h"
+#include "xen/pool.h"
+#include "xen/host.h"
 #include "operations/operationmanager.h"
 #include "xen/actions/pool/rotatepoolsecretaction.h"
 #include <QMessageBox>
@@ -41,8 +41,7 @@
 #include <QLabel>
 #include <QSettings>
 
-RotatePoolSecretCommand::RotatePoolSecretCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+RotatePoolSecretCommand::RotatePoolSecretCommand(MainWindow* mainWindow, QObject* parent) : PoolCommand(mainWindow, parent)
 {
 }
 
@@ -54,14 +53,24 @@ bool RotatePoolSecretCommand::CanRun() const
 
     // Get pool reference
     QString poolRef;
+    XenCache* cache = nullptr;
+    
     if (objectType == "pool")
     {
-        poolRef = this->getSelectedObjectRef();
+        QSharedPointer<Pool> pool = this->getPool();
+        if (!pool || !pool->connection() || !pool->isValid())
+            return false;
+        poolRef = pool->opaqueRef();
+        cache = pool->connection()->getCache();
     } else if (objectType == "host")
     {
-        QString hostRef = this->getSelectedObjectRef();
-        QVariantMap hostData = this->xenLib()->getCache()->ResolveObjectData("host", hostRef);
+        QSharedPointer<Host> host = qSharedPointerCast<Host>(this->GetObject());
+        if (!host || !host->connection() || !host->isValid())
+            return false;
+        QString hostRef = host->opaqueRef();
+        QVariantMap hostData = host->data();
         QList<QVariant> poolList = hostData.value("pool", QVariantList()).toList();
+        cache = host->connection()->getCache();
         if (!poolList.isEmpty())
             poolRef = poolList.first().toString();
     }
@@ -69,35 +78,74 @@ bool RotatePoolSecretCommand::CanRun() const
     if (poolRef.isEmpty())
         return false;
 
-    QVariantMap poolData = this->xenLib()->getCache()->ResolveObjectData("pool", poolRef);
+    QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
     if (poolData.isEmpty())
         return false;
 
-    return this->canRotateSecret(poolData);
+    return this->canRotateSecret(poolData, cache);
+}
+
+bool RotatePoolSecretCommand::canRotateSecret(const QVariantMap& poolData, XenCache *cache) const
+{
+    // Check HA enabled
+    if (poolData.value("ha_enabled", false).toBool())
+        return false;
+
+    // Check rolling upgrade
+    QVariantMap otherConfig = poolData.value("other_config", QVariantMap()).toMap();
+    bool rollingUpgrade = otherConfig.contains("rolling_upgrade_in_progress");
+    if (rollingUpgrade)
+        return false;
+
+    // Check XenServer version
+    if (!this->isStockholmOrGreater(cache))
+        return false;
+
+    // Check host restrictions
+    QString poolRef = poolData.value("uuid", "").toString();
+    if (this->hasRotationRestriction(poolRef, cache))
+        return false;
+
+    return true;
 }
 
 void RotatePoolSecretCommand::Run()
 {
     QString objectType = this->getSelectedObjectType();
 
-    // Get pool reference
+    // Get pool reference and cache
     QString poolRef;
+    XenCache* cache = nullptr;
+    XenConnection *connection = nullptr;
+    
     if (objectType == "pool")
     {
-        poolRef = this->getSelectedObjectRef();
+        QSharedPointer<Pool> pool = this->getPool();
+        if (!pool || !pool->connection() || !pool->isValid())
+            return;
+
+        poolRef = pool->opaqueRef();
+        connection = pool->connection();
+        cache = pool->connection()->getCache();
     } else if (objectType == "host")
     {
-        QString hostRef = this->getSelectedObjectRef();
-        QVariantMap hostData = this->xenLib()->getCache()->ResolveObjectData("host", hostRef);
+        QSharedPointer<Host> host = qSharedPointerCast<Host>(this->GetObject());
+        if (!host || !host->connection() || !host->isValid())
+            return;
+
+        QString hostRef = host->opaqueRef();
+        QVariantMap hostData = host->data();
+        connection = host->connection();
+        cache = host->connection()->getCache();
         QList<QVariant> poolList = hostData.value("pool", QVariantList()).toList();
         if (!poolList.isEmpty())
             poolRef = poolList.first().toString();
     }
 
-    if (poolRef.isEmpty())
+    if (poolRef.isEmpty() || !cache)
         return;
 
-    QVariantMap poolData = this->xenLib()->getCache()->ResolveObjectData("pool", poolRef);
+    QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
     if (poolData.isEmpty())
     {
         QMessageBox::warning(this->mainWindow(), tr("Error"),
@@ -105,7 +153,7 @@ void RotatePoolSecretCommand::Run()
         return;
     }
 
-    if (!this->canRotateSecret(poolData))
+    if (!this->canRotateSecret(poolData, cache))
     {
         QString reason = this->getCantRunReason();
         QMessageBox::information(this->mainWindow(), tr("Cannot Rotate Pool Secret"), reason);
@@ -153,9 +201,7 @@ void RotatePoolSecretCommand::Run()
     // Create and run action
     QString poolName = poolData.value("name_label", "Pool").toString();
 
-    RotatePoolSecretAction* action = new RotatePoolSecretAction(
-        this->xenLib()->getConnection(),
-        poolRef);
+    RotatePoolSecretAction* action = new RotatePoolSecretAction(connection, poolRef);
 
     action->setTitle(tr("Rotating pool secret"));
     action->setDescription(tr("Rotating secret for pool '%1'...").arg(poolName));
@@ -175,16 +221,27 @@ QString RotatePoolSecretCommand::MenuText() const
 QString RotatePoolSecretCommand::getCantRunReason() const
 {
     QString objectType = this->getSelectedObjectType();
+    XenCache* cache = nullptr;
 
     // Get pool reference
     QString poolRef;
     if (objectType == "pool")
     {
+        QSharedPointer<Pool> pool = this->getPool();
+        if (!pool || !pool->connection() || !pool->isValid())
+            return tr("No pool selected.");
+
+        cache = pool->connection()->getCache();
         poolRef = this->getSelectedObjectRef();
     } else if (objectType == "host")
     {
-        QString hostRef = this->getSelectedObjectRef();
-        QVariantMap hostData = this->xenLib()->getCache()->ResolveObjectData("host", hostRef);
+        QSharedPointer<Host> host = qSharedPointerCast<Host>(this->GetObject());
+        if (!host || !host->connection() || !host->isValid())
+            return tr("No pool selected.");
+
+        cache = host->connection()->getCache();
+        QString hostRef = host->opaqueRef();
+        QVariantMap hostData = host->data();
         QList<QVariant> poolList = hostData.value("pool", QVariantList()).toList();
         if (!poolList.isEmpty())
             poolRef = poolList.first().toString();
@@ -193,7 +250,7 @@ QString RotatePoolSecretCommand::getCantRunReason() const
     if (poolRef.isEmpty())
         return tr("No pool selected.");
 
-    QVariantMap poolData = this->xenLib()->getCache()->ResolveObjectData("pool", poolRef);
+    QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
     if (poolData.isEmpty())
         return tr("Unable to retrieve pool information.");
 
@@ -208,50 +265,26 @@ QString RotatePoolSecretCommand::getCantRunReason() const
         return tr("Cannot rotate pool secret during rolling upgrade.");
 
     // Check XenServer version
-    if (!this->isStockholmOrGreater())
+    if (!this->isStockholmOrGreater(cache))
         return tr("Pool secret rotation requires XenServer 8.0 or later.");
 
     // Check host restrictions
-    if (this->hasRotationRestriction(poolRef))
+    if (this->hasRotationRestriction(poolRef, cache))
         return tr("One or more hosts in the pool have restrictions preventing secret rotation.");
 
     return tr("Unknown reason.");
 }
 
-bool RotatePoolSecretCommand::canRotateSecret(const QVariantMap& poolData) const
-{
-    // Check HA enabled
-    if (poolData.value("ha_enabled", false).toBool())
-        return false;
-
-    // Check rolling upgrade
-    QVariantMap otherConfig = poolData.value("other_config", QVariantMap()).toMap();
-    bool rollingUpgrade = otherConfig.contains("rolling_upgrade_in_progress");
-    if (rollingUpgrade)
-        return false;
-
-    // Check XenServer version
-    if (!this->isStockholmOrGreater())
-        return false;
-
-    // Check host restrictions
-    QString poolRef = poolData.value("uuid", "").toString();
-    if (this->hasRotationRestriction(poolRef))
-        return false;
-
-    return true;
-}
-
-bool RotatePoolSecretCommand::hasRotationRestriction(const QString& poolRef) const
+bool RotatePoolSecretCommand::hasRotationRestriction(const QString& poolRef, XenCache* cache) const
 {
     // Get all hosts in pool
-    QVariantMap poolData = this->xenLib()->getCache()->ResolveObjectData("pool", poolRef);
+    QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
     QList<QVariant> hostRefs = poolData.value("hosts", QVariantList()).toList();
 
     for (const QVariant& hostRefVariant : hostRefs)
     {
         QString hostRef = hostRefVariant.toString();
-        QVariantMap hostData = this->xenLib()->getCache()->ResolveObjectData("host", hostRef);
+        QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
 
         // Check for restrict_pool_secret_rotation in host restrictions
         QVariantMap restrictions = hostData.value("restrictions", QVariantMap()).toMap();
@@ -262,16 +295,13 @@ bool RotatePoolSecretCommand::hasRotationRestriction(const QString& poolRef) con
     return false;
 }
 
-bool RotatePoolSecretCommand::isStockholmOrGreater() const
+bool RotatePoolSecretCommand::isStockholmOrGreater(XenCache *cache) const
 {
     // Check API version from connection
     // Stockholm = XenServer 8.0 = API version 2.11+
-    XenConnection* conn = this->xenLib()->getConnection();
-    if (!conn)
-        return false;
 
     // Get pool to check version
-    QList<QVariantMap> pools = this->xenLib()->getCache()->GetAllData("pool");
+    QList<QVariantMap> pools = cache->GetAllData("pool");
     if (pools.isEmpty())
         return false;
 

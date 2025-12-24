@@ -33,53 +33,45 @@
 #include "xen/host.h"
 #include "xen/pool.h"
 #include "xen/actions/pool/ejecthostfrompoolaction.h"
-#include "xencache.h"
 #include <QMessageBox>
 
-EjectHostFromPoolCommand::EjectHostFromPoolCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+EjectHostFromPoolCommand::EjectHostFromPoolCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
 bool EjectHostFromPoolCommand::CanRun() const
 {
-    QString hostRef = this->getSelectedHostRef();
-    if (hostRef.isEmpty() || !this->mainWindow()->xenLib()->isConnected())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return false;
 
     // Can't eject if this is the pool master
-    if (this->isPoolMaster(hostRef))
+    if (host->isMaster())
         return false;
 
-    // Check if host is in a pool (more than one host exists)
-    // Use cache instead of making API calls
-    XenLib* xenLib = this->mainWindow()->xenLib();
-    int hostCount = xenLib->getCache()->Count("host");
+    // Check if host is in a pool
+    if (host->poolRef().isEmpty())
+        return false;
 
-    // Need at least 2 hosts to eject one
-    return hostCount >= 2;
+    return true;
 }
 
 void EjectHostFromPoolCommand::Run()
 {
-    QString hostRef = this->getSelectedHostRef();
-
-    if (hostRef.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host || !host->isValid())
         return;
 
-    if (this->isPoolMaster(hostRef))
+    QString hostRef = host->opaqueRef();
+    QString hostName = host->nameLabel();
+
+    if (host->isMaster())
     {
         QMessageBox::warning(this->mainWindow(), "Eject Host",
                              "Cannot eject the pool master.\n"
                              "Please designate a new master first.");
         return;
     }
-
-    // Get host name for confirmation
-    XenLib* xenLib = this->mainWindow()->xenLib();
-    // Use cache instead of async API call
-    QVariantMap hostData = xenLib->getCache()->ResolveObjectData("host", hostRef);
-    QString hostName = hostData.value("name_label", "this host").toString();
 
     // Confirm the operation
     int result = QMessageBox::question(this->mainWindow(), "Eject Host from Pool",
@@ -92,8 +84,8 @@ void EjectHostFromPoolCommand::Run()
     if (result != QMessageBox::Yes)
         return;
 
-    // Get pool and host objects for the action
-    XenConnection* connection = xenLib->getConnection();
+    // Get pool and connection for the action
+    XenConnection* connection = host->connection();
     if (!connection)
     {
         QMessageBox::critical(this->mainWindow(), "Eject Host",
@@ -101,24 +93,24 @@ void EjectHostFromPoolCommand::Run()
         return;
     }
 
-    // Get the pool reference
-    QStringList poolRefs = xenLib->getCache()->GetAllRefs("pool");
-    if (poolRefs.isEmpty())
+    QString poolRef = host->poolRef();
+    if (poolRef.isEmpty())
     {
         QMessageBox::critical(this->mainWindow(), "Eject Host",
                               "Could not find pool.");
         return;
     }
 
-    // Create Pool and Host wrapper objects for the action
-    Pool* pool = new Pool(connection, poolRefs.first(), this);
-    Host* host = new Host(connection, hostRef, this);
+    // Create Pool and Host objects for the action (action expects raw pointers)
+    // These will be owned by the action and deleted when action completes
+    Pool* poolObj = new Pool(connection, poolRef, nullptr);
+    Host* hostObj = new Host(connection, hostRef, nullptr);
 
     // Create and run the EjectHostFromPoolAction
     EjectHostFromPoolAction* action = new EjectHostFromPoolAction(
         connection,
-        pool,
-        host,
+        poolObj,
+        hostObj,
         this);
 
     // Register with OperationManager for history tracking
@@ -148,36 +140,4 @@ void EjectHostFromPoolCommand::Run()
 QString EjectHostFromPoolCommand::MenuText() const
 {
     return "Eject from Pool...";
-}
-
-QString EjectHostFromPoolCommand::getSelectedHostRef() const
-{
-    QTreeWidgetItem* item = getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return getSelectedObjectRef();
-}
-
-bool EjectHostFromPoolCommand::isPoolMaster(const QString& hostRef) const
-{
-    if (hostRef.isEmpty())
-        return false;
-
-    XenLib* xenLib = this->mainWindow()->xenLib();
-    QStringList poolRefs = xenLib->getCache()->GetAllRefs("pool");
-    for (const QString& poolRef : poolRefs)
-    {
-        QVariantMap pool = xenLib->getCache()->ResolveObjectData("pool", poolRef);
-        QString masterRef = pool.value("master").toString();
-
-        if (masterRef == hostRef)
-            return true;
-    }
-
-    return false;
 }

@@ -120,16 +120,13 @@ void NewPoolDialog::populateConnections()
 
         // Try to get host name from cache
         XenCache* cache = conn->getCache();
-        if (cache)
+        QList<QVariantMap> hosts = cache->GetAllData("host");
+        if (!hosts.isEmpty())
         {
-            QList<QVariantMap> hosts = cache->GetAllData("host");
-            if (!hosts.isEmpty())
+            QString hostName = hosts.first().value("name_label").toString();
+            if (!hostName.isEmpty())
             {
-                QString hostName = hosts.first().value("name_label").toString();
-                if (!hostName.isEmpty())
-                {
-                    displayName = hostName;
-                }
+                displayName = hostName;
             }
         }
 
@@ -201,10 +198,6 @@ bool NewPoolDialog::isStandaloneConnection(XenConnection* connection) const
     }
 
     XenCache* cache = connection->getCache();
-    if (!cache)
-    {
-        return false;
-    }
 
     // Check if pool has only one host
     QList<QVariantMap> hosts = cache->GetAllData("host");

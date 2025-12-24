@@ -78,19 +78,16 @@ XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenLib* x
     if (!this->_sourceRef.isEmpty() && this->_xenLib && this->_xenLib->getConnection())
     {
         XenCache* cache = this->_xenLib->getConnection()->getCache();
-        if (cache)
+        QVariantMap vmRecord = cache->ResolveObjectData("vm", this->_sourceRef);
+        if (!vmRecord.isEmpty())
         {
-            QVariantMap vmRecord = cache->ResolveObjectData("vm", this->_sourceRef);
-            if (!vmRecord.isEmpty())
-            {
-                // Check if HVM (true) or PV (false)
-                bool isHvm = vmRecord.value("is_hvm", false).toBool();
-                this->_sourceIsPv = !isHvm;
-                qDebug() << "XSVNCScreen: VM" << this->_sourceRef << "is" << (this->_sourceIsPv ? "PV" : "HVM");
-            } else
-            {
-                qWarning() << "XSVNCScreen: Could not resolve VM record for" << this->_sourceRef;
-            }
+            // Check if HVM (true) or PV (false)
+            bool isHvm = vmRecord.value("is_hvm", false).toBool();
+            this->_sourceIsPv = !isHvm;
+            qDebug() << "XSVNCScreen: VM" << this->_sourceRef << "is" << (this->_sourceIsPv ? "PV" : "HVM");
+        } else
+        {
+            qWarning() << "XSVNCScreen: Could not resolve VM record for" << this->_sourceRef;
         }
     }
 
@@ -108,25 +105,22 @@ XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenLib* x
         if (this->_xenLib && this->_xenLib->getConnection())
         {
             XenCache* cache = this->_xenLib->getConnection()->getCache();
-            if (cache)
+            QVariantMap vmRecord = cache->ResolveObjectData("vm", this->_sourceRef);
+            QString guestMetricsRef = vmRecord.value("guest_metrics").toString();
+
+            if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
             {
-                QVariantMap vmRecord = cache->ResolveObjectData("vm", this->_sourceRef);
-                QString guestMetricsRef = vmRecord.value("guest_metrics").toString();
+                QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+                QVariantMap networks = guestMetrics.value("networks").toMap();
 
-                if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
+                // Convert QVariantMap to QMap<QString, QString>
+                this->_cachedNetworks.clear();
+                for (auto it = networks.begin(); it != networks.end(); ++it)
                 {
-                    QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
-                    QVariantMap networks = guestMetrics.value("networks").toMap();
-
-                    // Convert QVariantMap to QMap<QString, QString>
-                    this->_cachedNetworks.clear();
-                    for (auto it = networks.begin(); it != networks.end(); ++it)
-                    {
-                        this->_cachedNetworks.insert(it.key(), it.value().toString());
-                    }
-
-                    qDebug() << "XSVNCScreen: Cached" << this->_cachedNetworks.size() << "network entries";
+                    this->_cachedNetworks.insert(it.key(), it.value().toString());
                 }
+
+                qDebug() << "XSVNCScreen: Cached" << this->_cachedNetworks.size() << "network entries";
             }
         }
     }

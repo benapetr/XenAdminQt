@@ -45,9 +45,6 @@ bool ReattachSRCommand::CanRun() const
         return false;
 
     XenCache* cache = sr->connection()->getCache();
-    if (!cache)
-        return false;
-
     QVariantMap srData = sr->data();
     if (srData.isEmpty())
         return false;
@@ -109,8 +106,6 @@ bool ReattachSRCommand::canSRBeReattached(const QVariantMap& srData) const
         return false;
 
     XenCache* cache = sr->connection()->getCache();
-    if (!cache)
-        return false;
 
     for (const QVariant& pbdRefVar : pbds)
     {

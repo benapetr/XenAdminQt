@@ -28,7 +28,7 @@
 #ifndef DISCONNECTPOOLCOMMAND_H
 #define DISCONNECTPOOLCOMMAND_H
 
-#include "../command.h"
+#include "poolcommand.h"
 
 /**
  * @brief Command to disconnect from pools (disconnect pool coordinators)
@@ -37,20 +37,17 @@
  * It differs from DisconnectHostCommand in that it operates on pool selections
  * and shows pool-specific messaging.
  */
-class DisconnectPoolCommand : public Command
+class DisconnectPoolCommand : public PoolCommand
 {
     Q_OBJECT
 
-public:
-    explicit DisconnectPoolCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit DisconnectPoolCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
-
-private:
-    bool isPoolConnected() const;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // DISCONNECTPOOLCOMMAND_H

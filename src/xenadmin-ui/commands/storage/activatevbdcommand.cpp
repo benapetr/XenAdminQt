@@ -27,7 +27,6 @@
 
 #include "activatevbdcommand.h"
 #include "xencache.h"
-#include "xenlib.h"
 #include "xen/network/connection.h"
 #include "xen/session.h"
 #include "xen/vbd.h"
@@ -38,8 +37,7 @@
 #include <QMessageBox>
 #include <QDebug>
 
-ActivateVBDCommand::ActivateVBDCommand(MainWindow* mainWindow, QObject* parent)
-    : VBDCommand(mainWindow, parent)
+ActivateVBDCommand::ActivateVBDCommand(MainWindow* mainWindow, QObject* parent) : VBDCommand(mainWindow, parent)
 {
 }
 
@@ -64,8 +62,6 @@ bool ActivateVBDCommand::canRunVBD(const QString& vbdRef) const
         return false;
 
     XenCache* cache = vbd->connection()->getCache();
-    if (!cache)
-        return false;
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
@@ -126,19 +122,15 @@ bool ActivateVBDCommand::canRunVBD(const QString& vbdRef) const
     return true;
 }
 
-QString ActivateVBDCommand::getCantRunReasonVBD(const QString& vbdRef) const
+QString ActivateVBDCommand::getCantRunReasonVBD(QSharedPointer<VBD> vbd) const
 {
-    XenCache* cache = mainWindow()->xenLib()->getCache();
-    if (!cache)
-    {
-        return "Cache not available";
-    }
-
-    QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-    if (vbdData.isEmpty())
+    if (!vbd || !vbd->isConnected())
     {
         return "VBD not found";
     }
+
+    XenCache* cache = vbd->connection()->getCache();
+    QVariantMap vbdData = vbd->data();
 
     // Get VM
     QString vmRef = vbdData.value("VM").toString();
@@ -223,8 +215,6 @@ void ActivateVBDCommand::Run()
 
     QString vbdRef = vbd->opaqueRef();
     XenCache* cache = vbd->connection()->getCache();
-    if (!cache)
-        return;
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())

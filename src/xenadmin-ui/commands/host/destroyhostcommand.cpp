@@ -28,11 +28,10 @@
 #include "destroyhostcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "../../../xenlib/xen/actions/host/destroyhostaction.h"
-#include "../../../xenlib/xen/pool.h"
-#include "../../../xenlib/xen/host.h"
-#include "../../../xenlib/xenlib.h"
-#include "../../../xenlib/xencache.h"
+#include "xen/actions/host/destroyhostaction.h"
+#include "xen/pool.h"
+#include "xen/host.h"
+#include "xencache.h"
 #include <QMessageBox>
 
 DestroyHostCommand::DestroyHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
@@ -45,10 +44,6 @@ bool DestroyHostCommand::CanRun() const
     if (!host)
         return false;
 
-    QVariantMap hostData = host->data();
-    if (hostData.isEmpty())
-        return false;
-
     // Host must be in a pool
     if (host->poolRef().isEmpty())
         return false;
@@ -58,7 +53,7 @@ bool DestroyHostCommand::CanRun() const
         return false;
 
     // Host must not be live (running)
-    if (this->isHostLive(hostData))
+    if (this->isHostLive(host))
         return false;
 
     return true;
@@ -75,7 +70,7 @@ void DestroyHostCommand::Run()
     QString hostName = host->nameLabel();
 
     // Show confirmation dialog
-    QString message = this->buildConfirmationMessage();
+    QString message = this->buildConfirmationMessage(host);
     QString title = this->buildConfirmationTitle();
 
     QMessageBox msgBox(this->mainWindow());
@@ -129,10 +124,9 @@ QString DestroyHostCommand::MenuText() const
     return tr("&Destroy Host");
 }
 
-QString DestroyHostCommand::buildConfirmationMessage() const
+QString DestroyHostCommand::buildConfirmationMessage(QSharedPointer<Host> host) const
 {
-    QString hostRef = this->getSelectedObjectRef();
-    QVariantMap hostData = this->xenLib()->getCachedObjectData("host", hostRef);
+    QVariantMap hostData = host->data();
     QString hostName = hostData.value("name_label").toString();
 
     return tr("Are you sure you want to destroy host '%1'?\n\n"
@@ -146,13 +140,16 @@ QString DestroyHostCommand::buildConfirmationTitle() const
     return tr("Confirm Destroy Host");
 }
 
-bool DestroyHostCommand::isHostLive(const QVariantMap& hostData) const
+bool DestroyHostCommand::isHostLive(QSharedPointer<Host> host) const
 {
+    if (!host->isConnected())
+        return false;
+
     // Check if host is live (has a metrics object with live flag)
-    QString metricsRef = hostData.value("metrics").toString();
+    QString metricsRef = host->data().value("metrics").toString();
     if (!metricsRef.isEmpty())
     {
-        QVariantMap metricsData = this->xenLib()->getCache()->ResolveObjectData("host_metrics", metricsRef);
+        QVariantMap metricsData = host->connection()->getCache()->ResolveObjectData("host_metrics", metricsRef);
         if (!metricsData.isEmpty())
         {
             return metricsData.value("live", false).toBool();

@@ -152,6 +152,7 @@ SOURCES += \
     commands/storage/trimsrcommand.cpp \
     commands/storage/vdieditsizelocationcommand.cpp \
     commands/storage/migratevirtualdiskcommand.cpp \
+    commands/pool/poolcommand.cpp \
     commands/pool/poolpropertiescommand.cpp \
     commands/pool/joinpoolcommand.cpp \
     commands/pool/ejecthostfrompoolcommand.cpp \
@@ -353,6 +354,7 @@ HEADERS += \
     commands/storage/trimsrcommand.h \
     commands/storage/vdieditsizelocationcommand.h \
     commands/storage/migratevirtualdiskcommand.h \
+    commands/pool/poolcommand.h \
     commands/pool/poolpropertiescommand.h \
     commands/pool/joinpoolcommand.h \
     commands/pool/ejecthostfrompoolcommand.h \

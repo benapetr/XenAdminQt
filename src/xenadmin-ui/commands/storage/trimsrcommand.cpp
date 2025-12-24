@@ -140,27 +140,6 @@ QString TrimSRCommand::MenuText() const
     return "Trim SR...";
 }
 
-QString TrimSRCommand::getSelectedSRRef() const
-{
-    if (!this->m_overrideSRRef.isEmpty())
-        return this->m_overrideSRRef;
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "sr")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QVariantMap TrimSRCommand::getSelectedSRData() const
-{
-    QSharedPointer<SR> sr = this->getSR();
-    if (!sr)
-        return QVariantMap();
-
-    return sr->data();
-}
-
 bool TrimSRCommand::supportsTrim(const QVariantMap& srData) const
 {
     if (srData.isEmpty())
@@ -212,8 +191,6 @@ bool TrimSRCommand::isAttachedToHost(const QVariantMap& srData) const
         return false;
 
     XenCache* cache = sr->connection()->getCache();
-    if (!cache)
-        return false;
 
     // Check if any PBD is currently attached
     QVariantList pbds = srData.value("PBDs", QVariantList()).toList();

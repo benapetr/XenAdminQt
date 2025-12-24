@@ -28,33 +28,33 @@
 #include "poolpropertiescommand.h"
 #include <QDebug>
 #include "../../dialogs/poolpropertiesdialog.h"
-#include <QDebug>
 #include "../../mainwindow.h"
-#include <QDebug>
-#include "xenlib.h"
-#include <QDebug>
+#include "xen/pool.h"
 #include <QMessageBox>
 
-PoolPropertiesCommand::PoolPropertiesCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+PoolPropertiesCommand::PoolPropertiesCommand(MainWindow* mainWindow, QObject* parent) : PoolCommand(mainWindow, parent)
 {
 }
 
 bool PoolPropertiesCommand::CanRun() const
 {
-    QString poolRef = this->getSelectedPoolRef();
-    return !poolRef.isEmpty() && this->mainWindow()->xenLib()->isConnected();
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool || !pool->isValid() || !pool->isConnected())
+        return false;
+
+    return true;
 }
 
 void PoolPropertiesCommand::Run()
 {
-    QString poolRef = this->getSelectedPoolRef();
-
-    if (poolRef.isEmpty())
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool || !pool->isValid())
         return;
 
-    // Get connection from xenLib
-    XenConnection* connection = this->xenLib()->getConnection();
+    QString poolRef = pool->opaqueRef();
+
+    // Get connection from pool object for multi-connection support
+    XenConnection* connection = pool->connection();
     if (!connection)
     {
         qWarning() << "PoolPropertiesCommand: No connection available";
@@ -72,17 +72,4 @@ void PoolPropertiesCommand::Run()
 QString PoolPropertiesCommand::MenuText() const
 {
     return "Properties";
-}
-
-QString PoolPropertiesCommand::getSelectedPoolRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "pool")
-        return QString();
-
-    return this->getSelectedObjectRef();
 }

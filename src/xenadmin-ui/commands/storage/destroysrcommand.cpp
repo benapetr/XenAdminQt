@@ -139,9 +139,6 @@ bool DestroySRCommand::canSRBeDestroyed() const
     if (shared)
     {
         XenCache* cache = sr->connection()->getCache();
-        if (!cache)
-            return false;
-
         QVariantList pbds = srData.value("PBDs", QVariantList()).toList();
         for (const QVariant& pbdRefVar : pbds)
         {

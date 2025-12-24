@@ -122,7 +122,7 @@ void CpuMemoryEditPage::setXenObjects(const QString& objectRef,
     this->m_objectDataBefore = objectDataBefore;
     this->m_objectDataCopy = objectDataCopy;
 
-    if (this->connection() && this->connection()->getCache() && objectType.toLower() == "vm")
+    if (this->connection() && objectType.toLower() == "vm")
     {
         this->m_vm = this->connection()->getCache()->ResolveObject<VM>("vm", objectRef);
     }
@@ -482,7 +482,7 @@ qint64 CpuMemoryEditPage::selectedCoresPerSocket() const
 
 QString CpuMemoryEditPage::productBrand() const
 {
-    if (!this->connection() || !this->connection()->getCache())
+    if (!this->connection())
         return tr("XenServer");
 
     XenCache* cache = this->connection()->getCache();

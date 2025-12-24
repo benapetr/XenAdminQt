@@ -54,8 +54,8 @@ class DestroyHostCommand : public HostCommand
         QString MenuText() const override;
 
     private:
-        bool isHostLive(const QVariantMap &hostData) const;
-        QString buildConfirmationMessage() const;
+        bool isHostLive(QSharedPointer<Host> host) const;
+        QString buildConfirmationMessage(QSharedPointer<Host> host) const;
         QString buildConfirmationTitle() const;
 };
 

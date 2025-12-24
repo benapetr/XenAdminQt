@@ -52,74 +52,74 @@ class XENLIB_EXPORT Pool : public XenObject
     Q_PROPERTY(QString defaultSR READ defaultSRRef NOTIFY dataChanged)
     Q_PROPERTY(bool haEnabled READ haEnabled NOTIFY dataChanged)
 
-public:
-    explicit Pool(XenConnection* connection,
-                  const QString& opaqueRef,
-                  QObject* parent = nullptr);
-    ~Pool() override = default;
+    public:
+        explicit Pool(XenConnection* connection,
+                      const QString& opaqueRef,
+                      QObject* parent = nullptr);
+        ~Pool() override = default;
 
-    /**
-     * @brief Get reference to pool master host
-     * @return Host opaque reference
-     */
-    QString masterRef() const;
+        /**
+         * @brief Get reference to pool master host
+         * @return Host opaque reference
+         */
+        QString masterRef() const;
 
-    /**
-     * @brief Get reference to default SR
-     * @return SR opaque reference
-     */
-    QString defaultSRRef() const;
+        /**
+         * @brief Get reference to default SR
+         * @return SR opaque reference
+         */
+        QString defaultSRRef() const;
 
-    /**
-     * @brief Check if HA is enabled
-     * @return true if HA is enabled
-     */
-    bool haEnabled() const;
+        /**
+         * @brief Check if HA is enabled
+         * @return true if HA is enabled
+         */
+        bool haEnabled() const;
 
-    /**
-     * @brief Get HA configuration
-     * @return Map of HA configuration keys/values
-     */
-    QVariantMap haConfiguration() const;
+        /**
+         * @brief Get HA configuration
+         * @return Map of HA configuration keys/values
+         */
+        QVariantMap haConfiguration() const;
 
-    /**
-     * @brief Get other_config dictionary
-     * @return Map of additional configuration
-     */
-    QVariantMap otherConfig() const;
+        /**
+         * @brief Get other_config dictionary
+         * @return Map of additional configuration
+         */
+        QVariantMap otherConfig() const;
 
-    /**
-     * @brief Get list of all host refs in this pool
-     * @return List of host opaque references
-     */
-    QStringList hostRefs() const;
+        /**
+         * @brief Get list of all host refs in this pool
+         * @return List of host opaque references
+         */
+        QStringList hostRefs() const;
 
-    /**
-     * @brief Check if this is a pool-of-one (single host pool)
-     * @return true if pool has only one host
-     */
-    bool isPoolOfOne() const;
+        /**
+         * @brief Check if this is a pool-of-one (single host pool)
+         * @return true if pool has only one host
+         */
+        bool isPoolOfOne() const;
 
-    /**
-     * @brief Get tags
-     * @return List of tag strings
-     */
-    QStringList tags() const;
+        /**
+         * @brief Get tags
+         * @return List of tag strings
+         */
+        QStringList tags() const;
 
-    /**
-     * @brief Get WLB (Workload Balancing) enabled status
-     * @return true if WLB is enabled
-     */
-    bool wlbEnabled() const;
+        /**
+         * @brief Get WLB (Workload Balancing) enabled status
+         * @return true if WLB is enabled
+         */
+        bool wlbEnabled() const;
 
-    /**
-     * @brief Get live patching disabled status
-     * @return true if live patching is disabled
-     */
-    bool livePatchingDisabled() const;
+        /**
+         * @brief Get live patching disabled status
+         * @return true if live patching is disabled
+         */
+        bool livePatchingDisabled() const;
 
-protected:
-    QString objectType() const override;
+    protected:
+        QString objectType() const override;
 };
 
 #endif // POOL_H

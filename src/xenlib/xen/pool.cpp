@@ -28,6 +28,7 @@
 #include "pool.h"
 #include "network/connection.h"
 #include "../xenlib.h"
+#include "../xencache.h"
 
 Pool::Pool(XenConnection* connection, const QString& opaqueRef, QObject* parent)
     : XenObject(connection, opaqueRef, parent)
@@ -66,10 +67,14 @@ QVariantMap Pool::otherConfig() const
 
 QStringList Pool::hostRefs() const
 {
-    // In XenAPI, we need to query the cache for all hosts in this pool
-    // For now, return empty list - this will be populated when we integrate with cache properly
-    // TODO: Query cache for all hosts where host.pool == this->opaqueRef()
-    return QStringList();
+    // In XenAPI, there's exactly one pool per connection, so all hosts belong to this pool
+    // Query the cache for all host references
+    XenConnection* conn = this->connection();
+    if (!conn || !conn->getCache())
+        return QStringList();
+
+    // Get all host references from the cache
+    return conn->getCache()->GetAllRefs("host");
 }
 
 bool Pool::isPoolOfOne() const

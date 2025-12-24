@@ -48,11 +48,6 @@ bool ForgetSRCommand::CanRun() const
     }
 
     XenCache* cache = sr->connection()->getCache();
-    if (!cache)
-    {
-        return false;
-    }
-
     QVariantMap srData = sr->data();
 
     // Check if SR has running VMs

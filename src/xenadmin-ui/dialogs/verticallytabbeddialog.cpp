@@ -84,9 +84,9 @@ VerticallyTabbedDialog::~VerticallyTabbedDialog()
 void VerticallyTabbedDialog::loadObjectData()
 {
     // Load object data from XenCache
-    if (!this->m_connection || !this->m_connection->getCache())
+    if (!this->m_connection)
     {
-        qWarning() << "VerticallyTabbedDialog: No connection or cache available";
+        qWarning() << "VerticallyTabbedDialog: No connection available";
         this->m_objectDataBefore = QVariantMap();
         this->m_objectDataCopy = QVariantMap();
         return;

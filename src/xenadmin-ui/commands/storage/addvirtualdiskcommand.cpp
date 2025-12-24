@@ -30,16 +30,15 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/newvirtualdiskdialog.h"
 #include "../../dialogs/operationprogressdialog.h"
-#include "xenlib.h"
 #include "xencache.h"
+#include "xenlib.h"
 #include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/actions/vdi/creatediskaction.h"
 #include "xen/actions/vbd/vbdcreateandplugaction.h"
 #include <QMessageBox>
 
-AddVirtualDiskCommand::AddVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+AddVirtualDiskCommand::AddVirtualDiskCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
@@ -53,11 +52,15 @@ void AddVirtualDiskCommand::Run()
 {
     QString objectType = getSelectedObjectType();
     QString objectRef = getSelectedRef();
+    QSharedPointer<XenObject> object = this->GetObject();
+    if (!object || !object->connection())
+        return;
+    XenCache *cache = object->connection()->getCache();
 
     if (objectType == "vm")
     {
         // Check VBD limit
-        QVariantMap vmData = mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", objectRef);
+        QVariantMap vmData = cache->ResolveObjectData("vm", objectRef);
         int maxVBDs = getMaxVBDsAllowed(vmData);
         int currentVBDs = getCurrentVBDCount(objectRef);
 
@@ -70,7 +73,7 @@ void AddVirtualDiskCommand::Run()
             return;
         }
 
-        XenConnection* connection = mainWindow()->xenLib()->getConnection();
+        XenConnection* connection = object->connection();
         if (!connection)
         {
             qWarning() << "[AddVirtualDiskCommand] No connection available";

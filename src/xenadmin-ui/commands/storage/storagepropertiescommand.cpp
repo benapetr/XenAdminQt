@@ -28,43 +28,49 @@
 #include "storagepropertiescommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/storagepropertiesdialog.h"
-#include "xenlib.h"
 #include "xen/sr.h"
+#include "xencache.h"
+#include <QDebug>
 
-StoragePropertiesCommand::StoragePropertiesCommand(MainWindow* mainWindow, QObject* parent)
-    : SRCommand(mainWindow, parent)
+StoragePropertiesCommand::StoragePropertiesCommand(MainWindow* mainWindow, QObject* parent) : SRCommand(mainWindow, parent)
 {
 }
 
-void StoragePropertiesCommand::setTargetSR(const QString& srRef)
+void StoragePropertiesCommand::setTargetSR(const QString& srRef, XenConnection *connection)
 {
     this->m_overrideSRRef = srRef;
+    this->m_overrideConn = connection;
 }
 
 bool StoragePropertiesCommand::CanRun() const
 {
-    QString srRef = this->m_overrideSRRef.isEmpty() ? this->getSelectedSRRef() : this->m_overrideSRRef;
-    return !srRef.isEmpty() && this->mainWindow()->xenLib()->isConnected();
+    if (this->m_overrideConn == nullptr)
+    {
+        QSharedPointer<SR> sr = this->getSR();
+        if (!sr || !sr->isConnected())
+            return false;
+        return true;
+    } else
+    {
+        return this->m_overrideConn->isConnected();
+    }
 }
 
 void StoragePropertiesCommand::Run()
 {
-    QString srRef = this->m_overrideSRRef.isEmpty() ? this->getSelectedSRRef() : this->m_overrideSRRef;
-    if (srRef.isEmpty())
+    QSharedPointer<SR> sr;
+    if (!this->m_overrideConn)
+        sr = this->getSR();
+    else
+        sr = this->m_overrideConn->getCache()->ResolveObject<SR>("sr", this->m_overrideSRRef);
+
+    if (!sr || !sr->isValid())
         return;
 
+    QString srRef = sr->opaqueRef();
+
     // Get connection from SR object for multi-connection support
-    QSharedPointer<SR> sr = this->getSR();
-    XenConnection* connection = nullptr;
-    
-    if (sr && sr->isValid())
-    {
-        connection = sr->connection();
-    } else
-    {
-        // Fallback to main connection if no SR selected (shouldn't happen)
-        connection = this->xenLib()->getConnection();
-    }
+    XenConnection* connection = sr->connection();
 
     if (!connection)
     {

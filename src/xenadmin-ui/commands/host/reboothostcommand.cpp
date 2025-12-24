@@ -81,7 +81,8 @@ void RebootHostCommand::Run()
 
         OperationManager::instance()->registerOperation(action);
 
-        connect(action, &AsyncOperation::completed, this, [this, hostName, action]() {
+        connect(action, &AsyncOperation::completed, this, [this, hostName, action]()
+        {
             if (action->state() == AsyncOperation::Completed && !action->isFailed())
             {
                 this->mainWindow()->showStatusMessage(QString("Host '%1' reboot initiated successfully").arg(hostName), 5000);

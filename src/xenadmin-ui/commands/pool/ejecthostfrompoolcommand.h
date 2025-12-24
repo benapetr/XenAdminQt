@@ -28,22 +28,18 @@
 #ifndef EJECTHOSTFROMPOOLCOMMAND_H
 #define EJECTHOSTFROMPOOLCOMMAND_H
 
-#include "../command.h"
+#include "../host/hostcommand.h"
 
-class EjectHostFromPoolCommand : public Command
+class EjectHostFromPoolCommand : public HostCommand
 {
     Q_OBJECT
 
-public:
-    explicit EjectHostFromPoolCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit EjectHostFromPoolCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
-
-private:
-    QString getSelectedHostRef() const;
-    bool isPoolMaster(const QString& hostRef) const;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // EJECTHOSTFROMPOOLCOMMAND_H

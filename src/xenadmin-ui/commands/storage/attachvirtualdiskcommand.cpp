@@ -28,7 +28,6 @@
 #include "attachvirtualdiskcommand.h"
 #include <QDebug>
 #include "../../mainwindow.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
 #include "xen/vm.h"
@@ -37,8 +36,7 @@
 #include "../../dialogs/operationprogressdialog.h"
 #include <QMessageBox>
 
-AttachVirtualDiskCommand::AttachVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+AttachVirtualDiskCommand::AttachVirtualDiskCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
@@ -48,14 +46,16 @@ bool AttachVirtualDiskCommand::CanRun() const
     if (!isVMSelected())
         return false;
 
+    QSharedPointer<XenObject> object = this->GetObject();
+
     QString vmRef = getSelectedVMRef();
     if (vmRef.isEmpty())
         return false;
 
-    if (!mainWindow()->xenLib())
+    if (!object || !object->connection())
         return false;
 
-    XenCache* cache = mainWindow()->xenLib()->getCache();
+    XenCache* cache = object->connection()->getCache();
     if (!cache)
         return false;
 
@@ -71,22 +71,22 @@ bool AttachVirtualDiskCommand::CanRun() const
 
 void AttachVirtualDiskCommand::Run()
 {
+    QSharedPointer<XenObject> object = this->GetObject();
     QString vmRef = getSelectedVMRef();
     if (vmRef.isEmpty())
         return;
 
-    XenLib* xenLib = mainWindow()->xenLib();
-    if (!xenLib)
+    if (!object || !object->connection())
         return;
 
-    XenCache* cache = xenLib->getCache();
+    XenCache* cache = object->connection()->getCache();
     if (!cache)
         return;
 
     // Check VBD limit
     QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-    int maxVBDs = getMaxVBDsAllowed(vmData);
-    int currentVBDs = getCurrentVBDCount(vmRef);
+    int maxVBDs = this->getMaxVBDsAllowed(vmData);
+    int currentVBDs = this->getCurrentVBDCount(vmRef, cache);
 
     if (currentVBDs >= maxVBDs)
     {
@@ -98,7 +98,7 @@ void AttachVirtualDiskCommand::Run()
     }
 
     // Launch attach dialog
-    AttachVirtualDiskDialog dialog(xenLib, vmRef, mainWindow());
+    AttachVirtualDiskDialog dialog(mainWindow()->xenLib(), vmRef, mainWindow());
 
     qDebug() << "[AttachVirtualDiskCommand] Showing AttachVirtualDiskDialog modally...";
     if (dialog.exec() != QDialog::Accepted)
@@ -108,11 +108,18 @@ void AttachVirtualDiskCommand::Run()
     }
 
     qDebug() << "[AttachVirtualDiskCommand] Dialog accepted, proceeding with attachment";
-    performAttachment(&dialog, xenLib, vmRef);
+    performAttachment(&dialog, object->connection(), vmRef);
 }
 
-void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog, XenLib* xenLib, const QString& vmRef)
+void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog, XenConnection* connection, const QString& vmRef)
 {
+    if (!connection)
+    {
+        qWarning() << "[AttachVirtualDiskCommand] No connection available, aborting";
+        QMessageBox::warning(mainWindow(), "Error", "No connection available");
+        return;
+    }
+
     qDebug() << "[AttachVirtualDiskCommand] Starting attachment process for VM:" << vmRef;
 
     QString vdiRef = dialog->getSelectedVDIRef();
@@ -131,7 +138,7 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     qDebug() << "[AttachVirtualDiskCommand] Device position:" << devicePosition
              << "Mode:" << mode << "Bootable:" << bootable;
 
-    XenCache* cache = xenLib->getCache();
+    XenCache* cache = connection->getCache();
     if (!cache)
     {
         qWarning() << "[AttachVirtualDiskCommand] No cache available, aborting";
@@ -168,15 +175,6 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     }
     vbdRecord["owner"] = isOwner;
     qDebug() << "[AttachVirtualDiskCommand] VBD owner flag:" << isOwner;
-
-    // Get VM object for action (same pattern as StorageTabPage line 1241)
-    XenConnection* connection = xenLib->getConnection();
-    if (!connection)
-    {
-        qWarning() << "[AttachVirtualDiskCommand] No connection available, aborting";
-        QMessageBox::warning(mainWindow(), "Error", "No connection available");
-        return;
-    }
 
     qDebug() << "[AttachVirtualDiskCommand] Creating VM object for" << vmRef;
     VM* vm = new VM(connection, vmRef, this);
@@ -253,16 +251,8 @@ int AttachVirtualDiskCommand::getMaxVBDsAllowed(const QVariantMap& vmData) const
     return 16;
 }
 
-int AttachVirtualDiskCommand::getCurrentVBDCount(const QString& vmRef) const
+int AttachVirtualDiskCommand::getCurrentVBDCount(const QString& vmRef, XenCache* cache) const
 {
-    XenLib* xenLib = mainWindow()->xenLib();
-    if (!xenLib)
-        return 0;
-
-    XenCache* cache = xenLib->getCache();
-    if (!cache)
-        return 0;
-
     // Get all VBDs and count those belonging to this VM
     QList<QVariantMap> vbds = cache->GetAllData("vbd");
     int count = 0;

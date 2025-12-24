@@ -61,7 +61,7 @@ QString HomeServerEditPage::subText() const
     if (hostRef.isEmpty())
         return tr("None defined");
 
-    if (connection() && connection()->getCache())
+    if (connection())
     {
         QVariantMap hostData = connection()->getCache()->ResolveObjectData("host", hostRef);
         QString name = hostData.value("name_label").toString();

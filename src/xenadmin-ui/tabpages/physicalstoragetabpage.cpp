@@ -418,7 +418,7 @@ void PhysicalStorageTabPage::updateButtonStates()
         canTrim = trimCmd.CanRun();
 
         StoragePropertiesCommand propsCmd(mainWindow);
-        propsCmd.setTargetSR(selectedSrRef);
+        propsCmd.setTargetSR(selectedSrRef, mainWindow->xenLib()->getConnection());
         canShowProperties = propsCmd.CanRun();
     }
 
@@ -497,7 +497,7 @@ void PhysicalStorageTabPage::onPropertiesButtonClicked()
         return;
 
     StoragePropertiesCommand command(mainWindow);
-    command.setTargetSR(srRef);
+    command.setTargetSR(srRef, mainWindow->xenLib()->getConnection());
 
     if (!command.CanRun())
         return;
@@ -555,12 +555,12 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
         });
 
         StoragePropertiesCommand propsCmd(mainWindow);
-        propsCmd.setTargetSR(srRef);
+        propsCmd.setTargetSR(srRef, mainWindow->xenLib()->getConnection());
         QAction* propsAction = menu.addAction(tr("Properties..."));
         propsAction->setEnabled(propsCmd.CanRun());
         connect(propsAction, &QAction::triggered, this, [mainWindow, srRef]() {
             StoragePropertiesCommand cmd(mainWindow);
-            cmd.setTargetSR(srRef);
+            cmd.setTargetSR(srRef, mainWindow->xenLib()->getConnection());
             if (cmd.CanRun())
                 cmd.Run();
         });

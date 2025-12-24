@@ -72,15 +72,7 @@ void SetDefaultSRCommand::Run()
             return;
         }
 
-        XenCache* cache = connection->getCache();
-        if (!cache)
-        {
-            QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
-                                 "Pool cache is unavailable.");
-            return;
-        }
-
-        QStringList poolRefs = cache->GetAllRefs("pool");
+        QStringList poolRefs = connection->getCache()->GetAllRefs("pool");
         if (poolRefs.isEmpty())
         {
             QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",

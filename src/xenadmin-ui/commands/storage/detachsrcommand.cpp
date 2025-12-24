@@ -59,16 +59,8 @@ bool DetachSRCommand::CanRun() const
     }
 
     XenCache* cache = sr->connection()->getCache();
-    if (!cache)
-    {
-        return false;
-    }
 
     QVariantMap srData = sr->data();
-    if (srData.isEmpty())
-    {
-        return false;
-    }
 
     // Check if SR is already detached
     QVariantList pbds = srData.value("PBDs").toList();

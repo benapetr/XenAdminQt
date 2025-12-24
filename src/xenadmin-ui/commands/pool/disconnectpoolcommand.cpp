@@ -29,11 +29,10 @@
 #include "../../mainwindow.h"
 #include "xenlib.h"
 #include "xen/network/connection.h"
-#include "xencache.h"
+#include "xen/pool.h"
 #include <QMessageBox>
 
-DisconnectPoolCommand::DisconnectPoolCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+DisconnectPoolCommand::DisconnectPoolCommand(MainWindow* mainWindow, QObject* parent) : PoolCommand(mainWindow, parent)
 {
 }
 
@@ -43,14 +42,11 @@ bool DisconnectPoolCommand::CanRun() const
     // 1. A pool is selected
     // 2. Connection is connected or in progress
 
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool || !pool->isValid())
         return false;
 
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "pool")
-        return false;
-
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    XenConnection* conn = pool->connection();
     if (!conn)
         return false;
 
@@ -60,25 +56,18 @@ bool DisconnectPoolCommand::CanRun() const
 
 void DisconnectPoolCommand::Run()
 {
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool || !pool->isValid())
         return;
 
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    XenConnection* conn = pool->connection();
     if (!conn)
         return;
 
-    QString poolRef = this->getSelectedObjectRef();
+    QString poolName = pool->nameLabel();
 
-    // Get pool name for confirmation dialog
-    QString poolName = "this pool";
-    if (this->mainWindow()->xenLib()->getCache())
-    {
-        QVariantMap poolData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("pool", poolRef);
-        if (!poolData.isEmpty())
-        {
-            poolName = poolData.value("name_label", "this pool").toString();
-        }
-    }
+    if (poolName.isEmpty())
+        poolName = "this pool";
 
     // Show confirmation dialog
     QString message = QString("Are you sure you want to disconnect from pool '%1'?").arg(poolName);
@@ -96,13 +85,4 @@ void DisconnectPoolCommand::Run()
 QString DisconnectPoolCommand::MenuText() const
 {
     return "Disconnect from Pool";
-}
-
-bool DisconnectPoolCommand::isPoolConnected() const
-{
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-    return conn && conn->isConnected();
 }

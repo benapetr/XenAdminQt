@@ -25,26 +25,30 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HADISABLECOMMAND_H
-#define HADISABLECOMMAND_H
-
 #include "poolcommand.h"
+#include "xen/pool.h"
 
-class HADisableCommand : public PoolCommand
+PoolCommand::PoolCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
-    Q_OBJECT
+}
 
-public:
-    explicit HADisableCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+QSharedPointer<Pool> PoolCommand::getPool() const
+{
+    return qSharedPointerCast<Pool>(this->GetObject());
+}
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+QString PoolCommand::getSelectedPoolRef() const
+{
+    QSharedPointer<Pool> pool = this->getPool();
+    if (pool)
+        return pool->opaqueRef();
+    return QString();
+}
 
-private:
-    bool isPoolConnected() const;
-    bool isHAEnabled() const;
-};
-
-#endif // HADISABLECOMMAND_H
+QString PoolCommand::getSelectedPoolName() const
+{
+    QSharedPointer<Pool> pool = this->getPool();
+    if (pool)
+        return pool->nameLabel();
+    return QString();
+}

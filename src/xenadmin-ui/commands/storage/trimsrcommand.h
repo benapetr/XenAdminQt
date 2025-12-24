@@ -67,18 +67,6 @@ class TrimSRCommand : public SRCommand
 
     private:
         /**
-         * @brief Get selected SR reference
-         * @return SR opaque reference or empty string
-         */
-        QString getSelectedSRRef() const;
-
-        /**
-         * @brief Get selected SR data
-         * @return SR data from cache
-         */
-        QVariantMap getSelectedSRData() const;
-
-        /**
          * @brief Check if SR supports trim
          * @param srData SR data from cache
          * @return true if SR supports trim

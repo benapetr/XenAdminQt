@@ -359,6 +359,7 @@ void XenConnection::setCoordinatorMayChange(bool mayChange)
 }
 
 // Cache access (each connection has its own cache)
+// TODO this functions is called all over the place and we verify if it didn't return NULL, this can never return NULL so we need to cleanup that code and remove all those redundant checks
 XenCache* XenConnection::getCache() const
 {
     return this->d->cache;

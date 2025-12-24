@@ -111,12 +111,6 @@ void DisableChangedBlockTrackingCommand::Run()
 
     // Get cache from connection
     XenCache* cache = conn->getCache();
-    if (!cache)
-    {
-        QMessageBox::warning(this->mainWindow(), tr("Error"),
-                             tr("Failed to access cache"));
-        return;
-    }
 
     // Get all VBDs for this VM
     QVariantList vbds = vmData.value("VBDs").toList();
@@ -213,8 +207,6 @@ bool DisableChangedBlockTrackingCommand::hasVdiWithCbtEnabled() const
     QVariantList vbds = vmData.value("VBDs").toList();
 
     XenCache* cache = vm->connection()->getCache();
-    if (!cache)
-        return false;
 
     for (const QVariant& vbdRefVariant : vbds)
     {

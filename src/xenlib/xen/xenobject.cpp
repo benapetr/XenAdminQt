@@ -56,6 +56,13 @@ QString XenObject::nameDescription() const
     return stringProperty("name_description");
 }
 
+bool XenObject::isConnected() const
+{
+    if (!this->m_connection)
+        return false;
+    return this->m_connection->isConnected();
+}
+
 QVariantMap XenObject::data() const
 {
     if (!this->m_connection || this->m_opaqueRef.isEmpty())

@@ -43,22 +43,22 @@ class VBDCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit VBDCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-    ~VBDCommand() override = default;
+    public:
+        explicit VBDCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        ~VBDCommand() override = default;
 
-protected:
-    /**
-     * @brief Get the currently selected VBD as a typed XenObject
-     * @return Shared pointer to VBD object, or nullptr if not a VBD
-     */
-    QSharedPointer<VBD> getVBD() const;
+    protected:
+        /**
+        * @brief Get the currently selected VBD as a typed XenObject
+        * @return Shared pointer to VBD object, or nullptr if not a VBD
+        */
+        QSharedPointer<VBD> getVBD() const;
 
-    /**
-     * @brief Get selected VBD opaque reference
-     * @return VBD reference or empty string
-     */
-    QString getSelectedVBDRef() const;
+        /**
+        * @brief Get selected VBD opaque reference
+        * @return VBD reference or empty string
+        */
+        QString getSelectedVBDRef() const;
 };
 
 #endif // VBDCOMMAND_H

@@ -32,8 +32,7 @@
 #include <QMessageBox>
 #include <QDebug>
 
-RemoveHostCommand::RemoveHostCommand(MainWindow* mainWindow, QObject* parent)
-    : HostCommand(mainWindow, parent)
+RemoveHostCommand::RemoveHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 

@@ -88,14 +88,11 @@ bool InstallToolsCommand::canInstallTools() const
     if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
     {
         XenCache* cache = vm->connection()->getCache();
-        if (cache)
-        {
-            QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
-            QVariantMap pvDriversVersion = guestMetrics.value("PV_drivers_version", QVariantMap()).toMap();
+        QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+        QVariantMap pvDriversVersion = guestMetrics.value("PV_drivers_version", QVariantMap()).toMap();
 
-            // If PV drivers are already installed and up-to-date, don't allow install
-            // For now, always allow install (TODO: check version properly)
-        }
+        // If PV drivers are already installed and up-to-date, don't allow install
+        // For now, always allow install (TODO: check version properly)
     }
 
     return true;

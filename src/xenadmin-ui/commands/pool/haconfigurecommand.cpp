@@ -31,18 +31,19 @@
 #include "../../dialogs/editvmhaprioritiesdialog.h"
 #include "xenlib.h"
 #include "xen/network/connection.h"
+#include "xen/pool.h"
 #include "xencache.h"
 #include <QMessageBox>
 
 HAConfigureCommand::HAConfigureCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : PoolCommand(mainWindow, parent)
 {
 }
 
 bool HAConfigureCommand::CanRun() const
 {
-    QString poolRef = this->getSelectedPoolRef();
-    if (poolRef.isEmpty())
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool || !pool->isValid())
         return false;
 
     // Can configure HA if:
@@ -54,24 +55,22 @@ bool HAConfigureCommand::CanRun() const
 
 void HAConfigureCommand::Run()
 {
-    QString poolRef = this->getSelectedPoolRef();
-    if (poolRef.isEmpty())
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool || !pool->isValid())
         return;
 
+    QString poolRef = pool->opaqueRef();
+    
     // Check if HA is already enabled
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (cache)
-    {
-        QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
-        bool haEnabled = poolData.value("ha_enabled", false).toBool();
+    bool haEnabled = pool->haEnabled();
 
-        if (haEnabled)
-        {
-            // HA is already enabled - show edit dialog to modify priorities
-            EditVmHaPrioritiesDialog dialog(this->mainWindow()->xenLib(), poolRef, this->mainWindow());
-            dialog.exec();
-            return;
-        }
+    if (haEnabled)
+    {
+        // HA is already enabled - show edit dialog to modify priorities
+        // Note: These dialogs still use xenLib() - will need future refactoring
+        EditVmHaPrioritiesDialog dialog(this->mainWindow()->xenLib(), poolRef, this->mainWindow());
+        dialog.exec();
+        return;
     }
 
     // Launch HA wizard to enable HA
@@ -82,15 +81,6 @@ void HAConfigureCommand::Run()
 QString HAConfigureCommand::MenuText() const
 {
     return "Configure...";
-}
-
-QString HAConfigureCommand::getSelectedPoolRef() const
-{
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "pool")
-        return QString();
-
-    return this->getSelectedObjectRef();
 }
 
 bool HAConfigureCommand::isPoolConnected() const

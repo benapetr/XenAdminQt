@@ -32,6 +32,8 @@
 
 class AttachVirtualDiskDialog;
 class XenLib;
+class XenConnection;
+class XenCache;
 
 class AttachVirtualDiskCommand : public Command
 {
@@ -49,9 +51,9 @@ class AttachVirtualDiskCommand : public Command
         bool isVMSelected() const;
         QString getSelectedVMRef() const;
         int getMaxVBDsAllowed(const QVariantMap& vmData) const;
-        int getCurrentVBDCount(const QString& vmRef) const;
+        int getCurrentVBDCount(const QString& vmRef, XenCache *cache) const;
 
-        void performAttachment(AttachVirtualDiskDialog* dialog, XenLib* xenLib, const QString& vmRef);
+        void performAttachment(AttachVirtualDiskDialog* dialog, XenConnection *connection, const QString& vmRef);
 };
 
 #endif // ATTACHVIRTUALDISKCOMMAND_H

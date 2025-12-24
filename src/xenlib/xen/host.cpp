@@ -28,6 +28,7 @@
 #include "host.h"
 #include "network/connection.h"
 #include "../xenlib.h"
+#include "../xencache.h"
 
 Host::Host(XenConnection* connection, const QString& opaqueRef, QObject* parent)
     : XenObject(connection, opaqueRef, parent)
@@ -144,16 +145,38 @@ QStringList Host::pifRefs() const
 bool Host::isMaster() const
 {
     // Check if this host is referenced as master in its pool
-    // TODO: Query pool and check if pool.master == this->opaqueRef()
-    // For now, check other_config for pool_master flag
-    QVariantMap config = otherConfig();
-    return config.value("pool_master", false).toBool();
+    // Query the pool and check if pool.master == this->opaqueRef()
+    XenConnection* conn = this->connection();
+    if (!conn || !conn->getCache())
+        return false;
+
+    // Get the pool for this connection (there's always exactly one pool per connection)
+    QStringList poolRefs = conn->getCache()->GetAllRefs("pool");
+    if (poolRefs.isEmpty())
+        return false;
+
+    // Get the first (and only) pool
+    QString poolRef = poolRefs.first();
+    QVariantMap poolData = conn->getCache()->ResolveObjectData("pool", poolRef);
+    
+    // Compare pool's master reference with this host's opaque reference
+    QString masterRef = poolData.value("master", "").toString();
+    return masterRef == this->opaqueRef();
 }
 
 QString Host::poolRef() const
 {
-    // In XenAPI, hosts don't directly store pool reference
-    // We need to query the cache for the pool that contains this host
-    // TODO: Implement proper pool lookup
-    return QString();
+    // In XenAPI, there's always exactly one pool per connection
+    // Query the cache for the pool that contains this host
+    XenConnection* conn = this->connection();
+    if (!conn || !conn->getCache())
+        return QString();
+
+    // Get all pool refs (there's always exactly one pool per connection)
+    QStringList poolRefs = conn->getCache()->GetAllRefs("pool");
+    if (poolRefs.isEmpty())
+        return QString();
+
+    // Return the first (and only) pool reference
+    return poolRefs.first();
 }

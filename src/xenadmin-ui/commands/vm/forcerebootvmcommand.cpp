@@ -205,26 +205,20 @@ bool ForceRebootVMCommand::enabledTargetExists() const
     {
         // VM has a home server - check if it's enabled
         XenCache* cache = vm->connection()->getCache();
-        if (cache)
+        QVariantMap hostData = cache->ResolveObjectData("host", residentOn);
+        if (!hostData.isEmpty())
         {
-            QVariantMap hostData = cache->ResolveObjectData("host", residentOn);
-            if (!hostData.isEmpty())
-            {
-                return hostData.value("enabled", false).toBool();
-            }
+            return hostData.value("enabled", false).toBool();
         }
     }
 
     // No home server or home server not found - check if any host is enabled
     XenCache* cache = vm->connection()->getCache();
-    if (cache)
+    QList<QVariantMap> hosts = cache->GetAllData("host");
+    for (const QVariantMap& host : hosts)
     {
-        QList<QVariantMap> hosts = cache->GetAllData("host");
-        for (const QVariantMap& host : hosts)
-        {
-            if (host.value("enabled", false).toBool())
-                return true;
-        }
+        if (host.value("enabled", false).toBool())
+            return true;
     }
 
     return false;

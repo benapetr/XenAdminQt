@@ -57,17 +57,17 @@ class DeleteVirtualDiskCommand : public VDICommand
     private:
         /**
          * @brief Check if VDI can be deleted
-         * @param vdiData VDI data from cache
+         * @param vdi VDI data from cache
          * @return true if VDI can be deleted
          */
-        bool canVDIBeDeleted(const QVariantMap& vdiData) const;
+        bool canVDIBeDeleted(QSharedPointer<VDI> vdi) const;
 
         /**
          * @brief Get VDI type for display
-         * @param vdiData VDI data from cache
+         * @param vdi VDI data from cache
          * @return VDI type string ("Snapshot", "ISO", "System Disk", "Virtual Disk")
          */
-        QString getVDIType(const QVariantMap& vdiData) const;
+        QString getVDIType(QSharedPointer<VDI> vdi) const;
 
         /**
          * @brief Get confirmation dialog text based on VDI type

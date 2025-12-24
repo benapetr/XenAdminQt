@@ -83,7 +83,7 @@ void VMPropertiesDialog::build()
 
     // Tab 7: Home Server (only if WLB not enabled/configured)
     bool wlbEnabled = false;
-    if (connection() && connection()->getCache())
+    if (connection())
     {
         QStringList poolRefs = connection()->getCache()->GetAllRefs("pool");
         if (!poolRefs.isEmpty())
