@@ -30,48 +30,43 @@
 #include "../../dialogs/vdipropertiesdialog.h"
 #include "xenlib.h"
 #include "xencache.h"
+#include "xen/vdi.h"
 
 VdiEditSizeLocationCommand::VdiEditSizeLocationCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VDICommand(mainWindow, parent)
 {
 }
 
 bool VdiEditSizeLocationCommand::CanRun() const
 {
-    // Can edit VDI properties if a VDI is selected
-    if (!isVDISelected())
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->isValid())
         return false;
 
-    QString vdiRef = getSelectedVDIRef();
-    if (vdiRef.isEmpty())
-        return false;
-
-    if (!mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = mainWindow()->xenLib()->getCache();
+    XenCache* cache = vdi->connection()->getCache();
     if (!cache)
         return false;
 
     // Check if VDI exists in cache
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->opaqueRef());
     return !vdiData.isEmpty();
 }
 
 void VdiEditSizeLocationCommand::Run()
 {
-    QString vdiRef = getSelectedVDIRef();
-    if (vdiRef.isEmpty())
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->isValid())
         return;
 
-    XenLib* xenLib = mainWindow()->xenLib();
+    QString vdiRef = vdi->opaqueRef();
+    XenLib* xenLib = this->mainWindow()->xenLib();
     if (!xenLib)
         return;
 
     // Open VDI properties dialog
     // The dialog handles size editing, name/description editing
     // For location changes, user can use "Move Virtual Disk" command
-    VdiPropertiesDialog* dialog = new VdiPropertiesDialog(xenLib, vdiRef, mainWindow());
+    VdiPropertiesDialog* dialog = new VdiPropertiesDialog(xenLib, vdiRef, this->mainWindow());
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
 }
@@ -79,16 +74,4 @@ void VdiEditSizeLocationCommand::Run()
 QString VdiEditSizeLocationCommand::MenuText() const
 {
     return "Properties...";
-}
-
-bool VdiEditSizeLocationCommand::isVDISelected() const
-{
-    return getSelectedObjectType() == "vdi";
-}
-
-QString VdiEditSizeLocationCommand::getSelectedVDIRef() const
-{
-    if (!isVDISelected())
-        return QString();
-    return getSelectedObjectRef();
 }

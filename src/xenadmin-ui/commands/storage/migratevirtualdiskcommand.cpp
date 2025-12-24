@@ -29,25 +29,26 @@
 #include "mainwindow.h"
 #include "xenlib.h"
 #include "xencache.h"
+#include "xen/vdi.h"
 #include "dialogs/migratevirtualdiskdialog.h"
 #include <QMessageBox>
 
 MigrateVirtualDiskCommand::MigrateVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VDICommand(mainWindow, parent)
 {
 }
 
 bool MigrateVirtualDiskCommand::CanRun() const
 {
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vdi")
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->isValid())
         return false;
 
-    QString vdiRef = this->getSelectedObjectRef();
-    if (vdiRef.isEmpty())
+    XenCache* cache = vdi->connection()->getCache();
+    if (!cache)
         return false;
 
-    QVariantMap vdiData = this->xenLib()->getCache()->ResolveObjectData("vdi", vdiRef);
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->opaqueRef());
     if (vdiData.isEmpty())
         return false;
 
@@ -56,11 +57,16 @@ bool MigrateVirtualDiskCommand::CanRun() const
 
 void MigrateVirtualDiskCommand::Run()
 {
-    QString vdiRef = this->getSelectedObjectRef();
-    if (vdiRef.isEmpty())
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->isValid())
         return;
 
-    QVariantMap vdiData = this->xenLib()->getCache()->ResolveObjectData("vdi", vdiRef);
+    XenCache* cache = vdi->connection()->getCache();
+    if (!cache)
+        return;
+
+    QString vdiRef = vdi->opaqueRef();
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
     {
         QMessageBox::warning(this->mainWindow(), tr("Error"), tr("Unable to retrieve VDI information."));

@@ -28,7 +28,7 @@
 #ifndef MIGRATEVIRTUALDISKCOMMAND_H
 #define MIGRATEVIRTUALDISKCOMMAND_H
 
-#include "../command.h"
+#include "vdicommand.h"
 #include <QString>
 #include <QVariantMap>
 
@@ -59,7 +59,7 @@ class MainWindow;
  *
  * C# Reference: XenAdmin/Commands/MigrateVirtualDiskCommand.cs
  */
-class MigrateVirtualDiskCommand : public Command
+class MigrateVirtualDiskCommand : public VDICommand
 {
     Q_OBJECT
 

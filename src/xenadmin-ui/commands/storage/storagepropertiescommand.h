@@ -28,9 +28,9 @@
 #ifndef STORAGEPROPERTIESCOMMAND_H
 #define STORAGEPROPERTIESCOMMAND_H
 
-#include "../command.h"
+#include "srcommand.h"
 
-class StoragePropertiesCommand : public Command
+class StoragePropertiesCommand : public SRCommand
 {
     Q_OBJECT
 
@@ -43,7 +43,6 @@ public:
     void setTargetSR(const QString& srRef);
 
 private:
-    QString getSelectedSRRef() const;
     QString m_overrideSRRef;
 };
 

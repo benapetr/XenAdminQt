@@ -26,16 +26,13 @@
  */
 
 #include "storagepropertiescommand.h"
-#include <QDebug>
 #include "../../mainwindow.h"
-#include <QDebug>
 #include "../../dialogs/storagepropertiesdialog.h"
-#include <QDebug>
 #include "xenlib.h"
-#include <QDebug>
+#include "xen/sr.h"
 
 StoragePropertiesCommand::StoragePropertiesCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : SRCommand(mainWindow, parent)
 {
 }
 
@@ -46,41 +43,40 @@ void StoragePropertiesCommand::setTargetSR(const QString& srRef)
 
 bool StoragePropertiesCommand::CanRun() const
 {
-    QString srRef = getSelectedSRRef();
-    return !srRef.isEmpty() && mainWindow()->xenLib()->isConnected();
+    QString srRef = this->m_overrideSRRef.isEmpty() ? this->getSelectedSRRef() : this->m_overrideSRRef;
+    return !srRef.isEmpty() && this->mainWindow()->xenLib()->isConnected();
 }
 
 void StoragePropertiesCommand::Run()
 {
-    QString srRef = getSelectedSRRef();
+    QString srRef = this->m_overrideSRRef.isEmpty() ? this->getSelectedSRRef() : this->m_overrideSRRef;
     if (srRef.isEmpty())
         return;
 
-    // Get connection from xenLib
-    XenConnection* connection = xenLib()->getConnection();
+    // Get connection from SR object for multi-connection support
+    QSharedPointer<SR> sr = this->getSR();
+    XenConnection* connection = nullptr;
+    
+    if (sr && sr->isValid())
+    {
+        connection = sr->connection();
+    } else
+    {
+        // Fallback to main connection if no SR selected (shouldn't happen)
+        connection = this->xenLib()->getConnection();
+    }
+
     if (!connection)
     {
         qWarning() << "StoragePropertiesCommand: No connection available";
         return;
     }
 
-    StoragePropertiesDialog dialog(connection, srRef, mainWindow());
+    StoragePropertiesDialog dialog(connection, srRef, this->mainWindow());
     dialog.exec();
 }
 
 QString StoragePropertiesCommand::MenuText() const
 {
     return "P&roperties";
-}
-
-QString StoragePropertiesCommand::getSelectedSRRef() const
-{
-    if (!this->m_overrideSRRef.isEmpty())
-        return this->m_overrideSRRef;
-
-    QString objectType = getSelectedObjectType();
-    if (objectType != "sr")
-        return QString();
-
-    return getSelectedObjectRef();
 }

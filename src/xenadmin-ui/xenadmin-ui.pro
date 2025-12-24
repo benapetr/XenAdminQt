@@ -138,6 +138,9 @@ SOURCES += \
     commands/storage/storagepropertiescommand.cpp \
     commands/storage/addvirtualdiskcommand.cpp \
     commands/storage/attachvirtualdiskcommand.cpp \
+    commands/storage/srcommand.cpp \
+    commands/storage/vbdcommand.cpp \
+    commands/storage/vdicommand.cpp \
     commands/storage/reattachsrcommand.cpp \
     commands/storage/forgetsrcommand.cpp \
     commands/storage/destroysrcommand.cpp \
@@ -336,6 +339,9 @@ HEADERS += \
     commands/storage/storagepropertiescommand.h \
     commands/storage/addvirtualdiskcommand.h \
     commands/storage/attachvirtualdiskcommand.h \
+    commands/storage/srcommand.h \
+    commands/storage/vbdcommand.h \
+    commands/storage/vdicommand.h \
     commands/storage/reattachsrcommand.h \
     commands/storage/forgetsrcommand.h \
     commands/storage/destroysrcommand.h \

@@ -28,23 +28,25 @@
 #ifndef REPAIRSRCOMMAND_H
 #define REPAIRSRCOMMAND_H
 
-#include "../command.h"
+#include "srcommand.h"
 
-class RepairSRCommand : public Command
+/**
+ * @class RepairSRCommand
+ * @brief Repairs a broken storage repository.
+ *
+ * Attempts to repair SR metadata and reconnect to storage backend.
+ */
+class RepairSRCommand : public SRCommand
 {
     Q_OBJECT
 
     public:
         explicit RepairSRCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        // Inherited from Command
+        // Inherited from SRCommand
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
-
-    private:
-        QString getSelectedSRRef() const;
-        QString getSelectedSRName() const;
 };
 
 #endif // REPAIRSRCOMMAND_H

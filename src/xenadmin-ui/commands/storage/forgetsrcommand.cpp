@@ -27,42 +27,33 @@
 
 #include "forgetsrcommand.h"
 #include "../../../xenlib/xen/actions/sr/forgetsraction.h"
+#include "../../../xenlib/xen/sr.h"
 #include "../../../xenlib/xencache.h"
-#include "../../../xenlib/xenlib.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>
 #include <QDebug>
 
 ForgetSRCommand::ForgetSRCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : SRCommand(mainWindow, parent)
 {
 }
 
 bool ForgetSRCommand::CanRun() const
 {
-    if (this->getSelectedObjectType() != "sr")
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
     {
         return false;
     }
 
-    QString srRef = this->getSelectedObjectRef();
-    if (srRef.isEmpty())
-    {
-        return false;
-    }
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenCache* cache = sr->connection()->getCache();
     if (!cache)
     {
         return false;
     }
 
-    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-    if (srData.isEmpty())
-    {
-        return false;
-    }
+    QVariantMap srData = sr->data();
 
     // Check if SR has running VMs
     QVariantList vdis = srData.value("VDIs").toList();
@@ -114,10 +105,12 @@ void ForgetSRCommand::Run()
         return;
     }
 
-    QString srRef = this->getSelectedObjectRef();
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-    QString srName = srData.value("name_label").toString();
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
+        return;
+
+    QString srRef = sr->opaqueRef();
+    QString srName = sr->nameLabel();
 
     if (srName.isEmpty())
     {
@@ -144,9 +137,18 @@ void ForgetSRCommand::Run()
 
     qDebug() << "ForgetSRCommand: Forgetting SR" << srName << "(" << srRef << ")";
 
-    // Create and run action
+    // Get connection from SR object for multi-connection support
+    XenConnection* conn = sr->connection();
+    if (!conn || !conn->isConnected())
+    {
+        QMessageBox::warning(this->mainWindow(), "Not Connected",
+                             "Not connected to XenServer");
+        return;
+    }
+
+    // Create and run forget action
     ForgetSrAction* action = new ForgetSrAction(
-        this->mainWindow()->xenLib()->getConnection(),
+        conn,
         srRef,
         srName,
         this);

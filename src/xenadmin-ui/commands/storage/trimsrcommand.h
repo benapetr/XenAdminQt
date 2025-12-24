@@ -28,7 +28,7 @@
 #ifndef TRIMSRCOMMAND_H
 #define TRIMSRCOMMAND_H
 
-#include "../command.h"
+#include "srcommand.h"
 
 /**
  * @brief TrimSRCommand - Trim (reclaim freed space) from storage repository
@@ -48,7 +48,7 @@
  * - Show confirmation dialog
  * - Run SrTrimAction to reclaim space
  */
-class TrimSRCommand : public Command
+class TrimSRCommand : public SRCommand
 {
     Q_OBJECT
 

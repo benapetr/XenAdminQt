@@ -26,16 +26,16 @@
  */
 
 #include "detachsrcommand.h"
-#include "../../../xenlib/xen/actions/sr/detachsraction.h"
-#include "../../../xenlib/xencache.h"
-#include "../../../xenlib/xenlib.h"
+#include "xen/actions/sr/detachsraction.h"
+#include "xen/sr.h"
+#include "xencache.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>
 #include <QDebug>
 
 DetachSRCommand::DetachSRCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : SRCommand(mainWindow, parent)
 {
 }
 
@@ -52,13 +52,19 @@ bool DetachSRCommand::CanRun() const
         return false;
     }
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
+    {
+        return false;
+    }
+
+    XenCache* cache = sr->connection()->getCache();
     if (!cache)
     {
         return false;
     }
 
-    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
+    QVariantMap srData = sr->data();
     if (srData.isEmpty())
     {
         return false;
@@ -125,10 +131,13 @@ void DetachSRCommand::Run()
         return;
     }
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-    QString srName = srData.value("name_label").toString();
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
+    {
+        return;
+    }
 
+    QString srName = sr->nameLabel();
     if (srName.isEmpty())
     {
         srName = srRef;
@@ -153,9 +162,18 @@ void DetachSRCommand::Run()
 
     qDebug() << "DetachSRCommand: Detaching SR" << srName << "(" << srRef << ")";
 
+    // Get connection from SR object for multi-connection support
+    XenConnection* conn = sr->connection();
+    if (!conn || !conn->isConnected())
+    {
+        QMessageBox::warning(this->mainWindow(), "Not Connected",
+                             "Not connected to XenServer");
+        return;
+    }
+
     // Create and run action
     DetachSrAction* action = new DetachSrAction(
-        this->mainWindow()->xenLib()->getConnection(),
+        conn,
         srRef,
         srName,
         false, // Don't destroy PBDs, just unplug

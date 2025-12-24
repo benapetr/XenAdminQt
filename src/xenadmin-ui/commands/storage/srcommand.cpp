@@ -25,33 +25,44 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ACTIVATEVBDCOMMAND_H
-#define ACTIVATEVBDCOMMAND_H
+#include "srcommand.h"
+#include "xen/sr.h"
 
-#include "vbdcommand.h"
-
-/**
- * @brief Command to activate (plug) a VBD
- *
- * Qt port of C# ActivateVBDCommand.  Activates (plugs) a VBD to attach
- * a virtual disk to a running VM. Requires VM to be running and PV drivers
- * installed (for older hosts).
- */
-class ActivateVBDCommand : public VBDCommand
+SRCommand::SRCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
-    Q_OBJECT
+}
 
-    public:
-        explicit ActivateVBDCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+QSharedPointer<SR> SRCommand::getSR() const
+{
+    return qSharedPointerCast<SR>(this->GetObject());
+}
 
-        QString MenuText() const override;
-        bool CanRun() const override;
-        void Run() override;
+QString SRCommand::getSelectedSRRef() const
+{
+    QTreeWidgetItem* item = this->getSelectedItem();
+    if (!item)
+        return QString();
 
-    private:
-        bool canRunVBD(const QString& vbdRef) const;
-        QString getCantRunReasonVBD(const QString& vbdRef) const;
-        bool areIODriversNeededAndMissing(const QVariantMap& vmData) const;
-};
+    QString objectType = this->getSelectedObjectType();
+    if (objectType != "sr")
+        return QString();
 
-#endif // ACTIVATEVBDCOMMAND_H
+    return this->getSelectedObjectRef();
+}
+
+QString SRCommand::getSelectedSRName() const
+{
+    QTreeWidgetItem* item = this->getSelectedItem();
+    if (!item)
+        return QString();
+
+    QString objectType = this->getSelectedObjectType();
+    if (objectType != "sr")
+        return QString();
+
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
+        return QString();
+
+    return sr->nameLabel();
+}

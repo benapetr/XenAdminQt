@@ -28,30 +28,27 @@
 #include "reattachsrcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/newsrwizard.h"
-#include "xenlib.h"
+#include "xen/sr.h"
 #include "xencache.h"
 #include <QMessageBox>
 #include <QDebug>
 
 ReattachSRCommand::ReattachSRCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : SRCommand(mainWindow, parent)
 {
 }
 
 bool ReattachSRCommand::CanRun() const
 {
-    QString srRef = this->getSelectedSRRef();
-    if (srRef.isEmpty())
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
         return false;
 
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenCache* cache = sr->connection()->getCache();
     if (!cache)
         return false;
 
-    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
+    QVariantMap srData = sr->data();
     if (srData.isEmpty())
         return false;
 
@@ -60,20 +57,12 @@ bool ReattachSRCommand::CanRun() const
 
 void ReattachSRCommand::Run()
 {
-    QString srRef = this->getSelectedSRRef();
-
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
         return;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return;
-
-    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-    QString srName = srData.value("name_label", "").toString();
-
-    if (srRef.isEmpty() || srData.isEmpty())
-        return;
+    QString srRef = sr->opaqueRef();
+    QString srName = sr->nameLabel();
 
     qDebug() << "ReattachSRCommand: Opening NewSR wizard for reattaching SR" << srName << "(" << srRef << ")";
 
@@ -115,10 +104,11 @@ bool ReattachSRCommand::canSRBeReattached(const QVariantMap& srData) const
     // Check if all PBDs are currently unplugged (SR is detached)
     bool allUnplugged = true;
 
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
         return false;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenCache* cache = sr->connection()->getCache();
     if (!cache)
         return false;
 

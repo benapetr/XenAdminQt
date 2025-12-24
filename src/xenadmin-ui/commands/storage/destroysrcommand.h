@@ -28,23 +28,29 @@
 #ifndef DESTROYSRCOMMAND_H
 #define DESTROYSRCOMMAND_H
 
-#include "../command.h"
+#include "srcommand.h"
 
-class DestroySRCommand : public Command
+/**
+ * @class DestroySRCommand
+ * @brief Permanently destroys (deletes) a storage repository.
+ *
+ * This is a destructive operation that removes the SR metadata from the pool.
+ * The SR must be empty (no VDIs) and detached from all hosts before destruction.
+ * Cannot destroy ISO/tools SRs.
+ */
+class DestroySRCommand : public SRCommand
 {
     Q_OBJECT
 
     public:
         explicit DestroySRCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        // Inherited from Command
+        // Inherited from SRCommand
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
 
     private:
-        QString getSelectedSRRef() const;
-        QString getSelectedSRName() const;
         bool canSRBeDestroyed() const;
 };
 

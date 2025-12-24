@@ -27,18 +27,19 @@
 
 #include "detachvirtualdiskcommand.h"
 #include "deactivatevbdcommand.h"
-#include "../../../xenlib/xencache.h"
-#include "../../../xenlib/xenlib.h"
-#include "../../../xenlib/xen/network/connection.h"
-#include "../../../xenlib/xen/vm.h"
-#include "../../../xenlib/xen/actions/vdi/detachvirtualdiskaction.h"
+#include "xencache.h"
+#include "xenlib.h"
+#include "xen/network/connection.h"
+#include "xen/vdi.h"
+#include "xen/vm.h"
+#include "xen/actions/vdi/detachvirtualdiskaction.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>
 #include <QDebug>
 
 DetachVirtualDiskCommand::DetachVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VDICommand(mainWindow, parent)
 {
 }
 
@@ -49,46 +50,35 @@ QString DetachVirtualDiskCommand::MenuText() const
 
 bool DetachVirtualDiskCommand::CanRun() const
 {
-    if (this->getSelectedObjectType() != "vdi")
-    {
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->isValid())
         return false;
-    }
 
-    QString vdiRef = this->getSelectedObjectRef();
-    if (vdiRef.isEmpty())
-    {
-        return false;
-    }
-
-    return this->canRunVDI(vdiRef);
+    return this->canRunVDI(vdi->opaqueRef());
 }
 
 bool DetachVirtualDiskCommand::canRunVDI(const QString& vdiRef) const
 {
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-    {
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->isValid())
         return false;
-    }
+
+    XenCache* cache = vdi->connection()->getCache();
+    if (!cache)
+        return false;
 
     QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
-    {
         return false;
-    }
 
     // Check if VDI is locked
     if (vdiData.value("Locked", false).toBool())
-    {
         return false;
-    }
 
     // Get all VBDs attached to this VDI
     QVariantList vbds = vdiData.value("VBDs").toList();
     if (vbds.isEmpty())
-    {
         return false; // No VBDs - nothing to detach
-    }
 
     // Check each VBD - at least one must be detachable
     bool hasDetachableVBD = false;

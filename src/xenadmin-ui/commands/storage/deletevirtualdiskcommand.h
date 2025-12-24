@@ -28,7 +28,7 @@
 #ifndef DELETEVIRTUALDISKCOMMAND_H
 #define DELETEVIRTUALDISKCOMMAND_H
 
-#include "../command.h"
+#include "vdicommand.h"
 
 /**
  * @brief DeleteVirtualDiskCommand - Delete virtual disk (VDI)
@@ -43,7 +43,7 @@
  *
  * Uses DestroyDiskAction which handles detach + destroy.
  */
-class DeleteVirtualDiskCommand : public Command
+class DeleteVirtualDiskCommand : public VDICommand
 {
     Q_OBJECT
 
@@ -55,24 +55,6 @@ class DeleteVirtualDiskCommand : public Command
         QString MenuText() const override;
 
     private:
-        /**
-         * @brief Get selected VDI reference
-         * @return VDI opaque reference or empty string
-         */
-        QString getSelectedVDIRef() const;
-
-        /**
-         * @brief Get selected VDI name
-         * @return VDI name_label or empty string
-         */
-        QString getSelectedVDIName() const;
-
-        /**
-         * @brief Get VDI data from cache
-         * @return VDI data map
-         */
-        QVariantMap getSelectedVDIData() const;
-
         /**
          * @brief Check if VDI can be deleted
          * @param vdiData VDI data from cache

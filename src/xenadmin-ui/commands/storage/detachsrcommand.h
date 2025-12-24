@@ -28,7 +28,7 @@
 #ifndef DETACHSRCOMMAND_H
 #define DETACHSRCOMMAND_H
 
-#include "../command.h"
+#include "srcommand.h"
 
 /**
  * @brief DetachSRCommand - Detaches selected SRs
@@ -38,7 +38,7 @@
  * Detaches SRs by unplugging their PBDs. Shows confirmation dialog.
  * Cannot detach SRs with running VMs or actions in progress.
  */
-class DetachSRCommand : public Command
+class DetachSRCommand : public SRCommand
 {
     Q_OBJECT
 

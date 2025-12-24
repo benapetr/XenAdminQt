@@ -30,48 +30,41 @@
 #include "../../dialogs/movevirtualdiskdialog.h"
 #include "xenlib.h"
 #include "xencache.h"
+#include "xen/vdi.h"
 #include <QMessageBox>
 
 MoveVirtualDiskCommand::MoveVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VDICommand(mainWindow, parent)
 {
 }
 
 bool MoveVirtualDiskCommand::CanRun() const
 {
-    QString type = this->getSelectedObjectType();
-    if (type != "vdi")
-    {
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->isValid())
         return false;
-    }
 
-    QString vdiRef = this->getSelectedObjectRef();
-    if (vdiRef.isEmpty())
-    {
+    XenCache* cache = vdi->connection()->getCache();
+    if (!cache)
         return false;
-    }
 
-    QVariantMap vdiData = this->xenLib()->getCache()->ResolveObjectData("vdi", vdiRef);
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->opaqueRef());
     if (vdiData.isEmpty())
-    {
         return false;
-    }
 
     return this->canBeMoved(vdiData);
 }
 
 void MoveVirtualDiskCommand::Run()
 {
-    QString vdiRef = this->getSelectedObjectRef();
-    if (vdiRef.isEmpty())
-    {
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->isValid())
         return;
-    }
 
     // Open the move virtual disk dialog
     MoveVirtualDiskDialog* dialog = new MoveVirtualDiskDialog(
         this->xenLib(),
-        vdiRef,
+        vdi->opaqueRef(),
         this->mainWindow());
 
     dialog->setAttribute(Qt::WA_DeleteOnClose);

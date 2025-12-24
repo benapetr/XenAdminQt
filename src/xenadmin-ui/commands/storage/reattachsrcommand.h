@@ -28,7 +28,7 @@
 #ifndef REATTACHSRCOMMAND_H
 #define REATTACHSRCOMMAND_H
 
-#include "../command.h"
+#include "srcommand.h"
 
 /**
  * @brief ReattachSRCommand - Reattach a detached storage repository
@@ -40,7 +40,7 @@
  *
  * The SR must have PBDs (not forgotten) but all PBDs must be unplugged.
  */
-class ReattachSRCommand : public Command
+class ReattachSRCommand : public SRCommand
 {
     Q_OBJECT
 

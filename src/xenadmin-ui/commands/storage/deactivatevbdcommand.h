@@ -28,7 +28,7 @@
 #ifndef DEACTIVATEVBDCOMMAND_H
 #define DEACTIVATEVBDCOMMAND_H
 
-#include "../command.h"
+#include "vbdcommand.h"
 
 /**
  * @brief Command to deactivate (unplug) a VBD
@@ -37,7 +37,7 @@
  * a virtual disk from a running VM. Requires VM to be running and PV drivers
  * installed (for older hosts).
  */
-class DeactivateVBDCommand : public Command
+class DeactivateVBDCommand : public VBDCommand
 {
     Q_OBJECT
 

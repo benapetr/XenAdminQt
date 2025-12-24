@@ -26,17 +26,20 @@
  */
 
 #include "deactivatevbdcommand.h"
-#include "../../../xenlib/xencache.h"
-#include "../../../xenlib/xenlib.h"
-#include "../../../xenlib/xen/network/connection.h"
-#include "../../../xenlib/xen/session.h"
-#include "../../../xenlib/xen/xenapi/xenapi_VBD.h"
+#include "xencache.h"
+#include "xenlib.h"
+#include "xen/network/connection.h"
+#include "xen/session.h"
+#include "xen/vbd.h"
+#include "xen/vdi.h"
+#include "xen/vm.h"
+#include "xen/xenapi/xenapi_VBD.h"
 #include "../../mainwindow.h"
 #include <QMessageBox>
 #include <QDebug>
 
 DeactivateVBDCommand::DeactivateVBDCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VBDCommand(mainWindow, parent)
 {
 }
 
@@ -47,33 +50,26 @@ QString DeactivateVBDCommand::MenuText() const
 
 bool DeactivateVBDCommand::CanRun() const
 {
-    if (getSelectedObjectType() != "vbd")
-    {
+    QSharedPointer<VBD> vbd = this->getVBD();
+    if (!vbd || !vbd->isValid())
         return false;
-    }
 
-    QString vbdRef = getSelectedObjectRef();
-    if (vbdRef.isEmpty())
-    {
-        return false;
-    }
-
-    return canRunVBD(vbdRef);
+    return this->canRunVBD(vbd->opaqueRef());
 }
 
 bool DeactivateVBDCommand::canRunVBD(const QString& vbdRef) const
 {
-    XenCache* cache = mainWindow()->xenLib()->getCache();
-    if (!cache)
-    {
+    QSharedPointer<VBD> vbd = this->getVBD();
+    if (!vbd || !vbd->isValid())
         return false;
-    }
+
+    XenCache* cache = vbd->connection()->getCache();
+    if (!cache)
+        return false;
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
-    {
         return false;
-    }
 
     // Check if VBD is locked
     if (vbdData.value("Locked", false).toBool())
@@ -248,23 +244,18 @@ bool DeactivateVBDCommand::areIODriversNeededAndMissing(const QVariantMap& vmDat
 
 void DeactivateVBDCommand::Run()
 {
-    QString vbdRef = getSelectedObjectRef();
-    if (vbdRef.isEmpty())
-    {
+    QSharedPointer<VBD> vbd = this->getVBD();
+    if (!vbd || !vbd->isValid())
         return;
-    }
 
-    XenCache* cache = mainWindow()->xenLib()->getCache();
+    QString vbdRef = vbd->opaqueRef();
+    XenCache* cache = vbd->connection()->getCache();
     if (!cache)
-    {
         return;
-    }
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
-    {
         return;
-    }
 
     // Get VDI and VM names for status message
     QString vdiRef = vbdData.value("VDI").toString();
@@ -279,15 +270,15 @@ void DeactivateVBDCommand::Run()
     // Execute unplug operation directly (matches C# DelegatedAsyncAction pattern)
     try
     {
-        XenAPI::VBD::unplug(mainWindow()->xenLib()->getConnection()->getSession(), vbdRef);
+        XenAPI::VBD::unplug(vbd->connection()->getSession(), vbdRef);
 
-        mainWindow()->showStatusMessage(
+        this->mainWindow()->showStatusMessage(
             QString("Successfully deactivated virtual disk '%1' from VM '%2'").arg(vdiName, vmName),
             5000);
     } catch (const std::exception& e)
     {
         QMessageBox::warning(
-            mainWindow(),
+            this->mainWindow(),
             "Deactivate Virtual Disk Failed",
             QString("Failed to deactivate virtual disk '%1' from VM '%2': %3")
                 .arg(vdiName, vmName, e.what()));

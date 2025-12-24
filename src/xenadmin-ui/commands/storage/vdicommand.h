@@ -25,33 +25,46 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ACTIVATEVBDCOMMAND_H
-#define ACTIVATEVBDCOMMAND_H
+#ifndef VDICOMMAND_H
+#define VDICOMMAND_H
 
-#include "vbdcommand.h"
+#include "../command.h"
+#include <QSharedPointer>
+
+class VDI;
 
 /**
- * @brief Command to activate (plug) a VBD
+ * @brief Base class for VDI-related commands
  *
- * Qt port of C# ActivateVBDCommand.  Activates (plugs) a VBD to attach
- * a virtual disk to a running VM. Requires VM to be running and PV drivers
- * installed (for older hosts).
+ * Provides common functionality for commands operating on VDI (Virtual Disk Image) objects.
+ * Similar to VMCommand, SRCommand, and VBDCommand patterns.
  */
-class ActivateVBDCommand : public VBDCommand
+class VDICommand : public Command
 {
     Q_OBJECT
 
-    public:
-        explicit ActivateVBDCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+public:
+    explicit VDICommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    ~VDICommand() override = default;
 
-        QString MenuText() const override;
-        bool CanRun() const override;
-        void Run() override;
+protected:
+    /**
+     * @brief Get the currently selected VDI as a typed XenObject
+     * @return Shared pointer to VDI object, or nullptr if not a VDI
+     */
+    QSharedPointer<VDI> getVDI() const;
 
-    private:
-        bool canRunVBD(const QString& vbdRef) const;
-        QString getCantRunReasonVBD(const QString& vbdRef) const;
-        bool areIODriversNeededAndMissing(const QVariantMap& vmData) const;
+    /**
+     * @brief Get selected VDI opaque reference
+     * @return VDI reference or empty string
+     */
+    QString getSelectedVDIRef() const;
+
+    /**
+     * @brief Get selected VDI name
+     * @return VDI name label or empty string
+     */
+    QString getSelectedVDIName() const;
 };
 
-#endif // ACTIVATEVBDCOMMAND_H
+#endif // VDICOMMAND_H

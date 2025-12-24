@@ -30,43 +30,52 @@
 #include "../../operations/operationmanager.h"
 #include "xenlib.h"
 #include "xencache.h"
+#include "xen/vdi.h"
 #include "xen/actions/vdi/destroydiskaction.h"
 #include <QMessageBox>
 #include <QDebug>
 
 DeleteVirtualDiskCommand::DeleteVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VDICommand(mainWindow, parent)
 {
 }
 
 bool DeleteVirtualDiskCommand::CanRun() const
 {
-    QString vdiRef = getSelectedVDIRef();
-    if (vdiRef.isEmpty())
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->isValid())
         return false;
 
-    QVariantMap vdiData = getSelectedVDIData();
+    QString vdiRef = vdi->opaqueRef();
+    QVariantMap vdiData = vdi->connection()->getCache()->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
         return false;
 
-    return canVDIBeDeleted(vdiData);
+    return this->canVDIBeDeleted(vdiData);
 }
 
 void DeleteVirtualDiskCommand::Run()
 {
-    QString vdiRef = getSelectedVDIRef();
-    QString vdiName = getSelectedVDIName();
-    QVariantMap vdiData = getSelectedVDIData();
-
-    if (vdiRef.isEmpty() || vdiData.isEmpty())
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->isValid())
         return;
 
-    QString vdiType = getVDIType(vdiData);
-    QString confirmTitle = getConfirmationTitle(vdiType);
-    QString confirmText = getConfirmationText(vdiType, vdiName);
+    QString vdiRef = vdi->opaqueRef();
+    QString vdiName = vdi->nameLabel();
+    XenCache* cache = vdi->connection()->getCache();
+    if (!cache)
+        return;
+
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
+    if (vdiData.isEmpty())
+        return;
+
+    QString vdiType = this->getVDIType(vdiData);
+    QString confirmTitle = this->getConfirmationTitle(vdiType);
+    QString confirmText = this->getConfirmationText(vdiType, vdiName);
 
     // Show confirmation dialog
-    QMessageBox msgBox(mainWindow());
+    QMessageBox msgBox(this->mainWindow());
     msgBox.setWindowTitle(confirmTitle);
     msgBox.setText(confirmText);
     msgBox.setIcon(QMessageBox::Warning);
@@ -76,22 +85,13 @@ void DeleteVirtualDiskCommand::Run()
     int ret = msgBox.exec();
 
     if (ret != QMessageBox::Yes)
-    {
         return;
-    }
 
     qDebug() << "DeleteVirtualDiskCommand: Deleting VDI" << vdiName << "(" << vdiRef << ")";
 
     // Check if VDI is attached to running VMs
     QVariantList vbds = vdiData.value("VBDs", QVariantList()).toList();
     bool hasAttachedVBDs = false;
-
-    if (!mainWindow()->xenLib())
-        return;
-
-    XenCache* cache = mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return;
 
     for (const QVariant& vbdRefVar : vbds)
     {
@@ -109,7 +109,7 @@ void DeleteVirtualDiskCommand::Run()
     // allowRunningVMDelete = true if VDI is attached, action will handle detaching first
     DestroyDiskAction* action = new DestroyDiskAction(
         vdiRef,
-        mainWindow()->xenLib()->getConnection(),
+        vdi->connection(),
         hasAttachedVBDs, // Allow deletion even if attached (action will detach first)
         this);
 
@@ -139,43 +139,20 @@ void DeleteVirtualDiskCommand::Run()
 
 QString DeleteVirtualDiskCommand::MenuText() const
 {
-    QVariantMap vdiData = getSelectedVDIData();
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->isValid())
+        return "Delete Virtual Disk";
+
+    XenCache* cache = vdi->connection()->getCache();
+    if (!cache)
+        return "Delete Virtual Disk";
+
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->opaqueRef());
     if (vdiData.isEmpty())
         return "Delete Virtual Disk";
 
-    QString vdiType = getVDIType(vdiData);
+    QString vdiType = this->getVDIType(vdiData);
     return QString("Delete %1").arg(vdiType);
-}
-
-QString DeleteVirtualDiskCommand::getSelectedVDIRef() const
-{
-    QString objectType = getSelectedObjectType();
-    if (objectType != "vdi")
-        return QString();
-
-    return getSelectedObjectRef();
-}
-
-QString DeleteVirtualDiskCommand::getSelectedVDIName() const
-{
-    QVariantMap vdiData = getSelectedVDIData();
-    return vdiData.value("name_label", "").toString();
-}
-
-QVariantMap DeleteVirtualDiskCommand::getSelectedVDIData() const
-{
-    QString vdiRef = getSelectedVDIRef();
-    if (vdiRef.isEmpty())
-        return QVariantMap();
-
-    if (!mainWindow()->xenLib())
-        return QVariantMap();
-
-    XenCache* cache = mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return QVariantMap();
-
-    return cache->ResolveObjectData("vdi", vdiRef);
 }
 
 bool DeleteVirtualDiskCommand::canVDIBeDeleted(const QVariantMap& vdiData) const

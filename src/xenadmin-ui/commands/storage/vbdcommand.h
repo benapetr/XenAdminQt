@@ -25,33 +25,40 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ACTIVATEVBDCOMMAND_H
-#define ACTIVATEVBDCOMMAND_H
+#ifndef VBDCOMMAND_H
+#define VBDCOMMAND_H
 
-#include "vbdcommand.h"
+#include "../command.h"
+#include <QSharedPointer>
+
+class VBD;
 
 /**
- * @brief Command to activate (plug) a VBD
+ * @brief Base class for VBD-related commands
  *
- * Qt port of C# ActivateVBDCommand.  Activates (plugs) a VBD to attach
- * a virtual disk to a running VM. Requires VM to be running and PV drivers
- * installed (for older hosts).
+ * Provides common functionality for commands operating on VBD (Virtual Block Device) objects.
+ * Similar to VMCommand and SRCommand patterns.
  */
-class ActivateVBDCommand : public VBDCommand
+class VBDCommand : public Command
 {
     Q_OBJECT
 
-    public:
-        explicit ActivateVBDCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+public:
+    explicit VBDCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    ~VBDCommand() override = default;
 
-        QString MenuText() const override;
-        bool CanRun() const override;
-        void Run() override;
+protected:
+    /**
+     * @brief Get the currently selected VBD as a typed XenObject
+     * @return Shared pointer to VBD object, or nullptr if not a VBD
+     */
+    QSharedPointer<VBD> getVBD() const;
 
-    private:
-        bool canRunVBD(const QString& vbdRef) const;
-        QString getCantRunReasonVBD(const QString& vbdRef) const;
-        bool areIODriversNeededAndMissing(const QVariantMap& vmData) const;
+    /**
+     * @brief Get selected VBD opaque reference
+     * @return VBD reference or empty string
+     */
+    QString getSelectedVBDRef() const;
 };
 
-#endif // ACTIVATEVBDCOMMAND_H
+#endif // VBDCOMMAND_H

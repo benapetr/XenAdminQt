@@ -28,7 +28,7 @@
 #ifndef MOVEVIRTUALDISKCOMMAND_H
 #define MOVEVIRTUALDISKCOMMAND_H
 
-#include "../command.h"
+#include "vdicommand.h"
 #include <QVariantMap>
 
 /**
@@ -51,7 +51,7 @@
  *
  * C# Reference: XenAdmin/Commands/MoveVirtualDiskCommand.cs
  */
-class MoveVirtualDiskCommand : public Command
+class MoveVirtualDiskCommand : public VDICommand
 {
     Q_OBJECT
 

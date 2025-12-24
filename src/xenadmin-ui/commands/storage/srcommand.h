@@ -25,33 +25,47 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ACTIVATEVBDCOMMAND_H
-#define ACTIVATEVBDCOMMAND_H
+#ifndef SRCOMMAND_H
+#define SRCOMMAND_H
 
-#include "vbdcommand.h"
+#include "../command.h"
+
+class SR;
 
 /**
- * @brief Command to activate (plug) a VBD
+ * @class SRCommand
+ * @brief Base class for SR (Storage Repository) commands.
  *
- * Qt port of C# ActivateVBDCommand.  Activates (plugs) a VBD to attach
- * a virtual disk to a running VM. Requires VM to be running and PV drivers
- * installed (for older hosts).
+ * Provides common functionality for SR-specific commands:
+ * - getSR() returns typed SR object instead of raw QVariant data
+ * - Helper methods for SR reference and name access
+ * - Multi-connection support via sr->connection() instead of global xenLib()
+ *
+ * Similar to VMCommand but for storage repository operations.
  */
-class ActivateVBDCommand : public VBDCommand
+class SRCommand : public Command
 {
-    Q_OBJECT
-
     public:
-        explicit ActivateVBDCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        SRCommand(MainWindow* mainWindow, QObject* parent);
 
-        QString MenuText() const override;
-        bool CanRun() const override;
-        void Run() override;
+    protected:
+        /**
+         * @brief Get the selected SR as a typed object.
+         * @return QSharedPointer to SR object, or null if not an SR or not found
+         */
+        QSharedPointer<SR> getSR() const;
 
-    private:
-        bool canRunVBD(const QString& vbdRef) const;
-        QString getCantRunReasonVBD(const QString& vbdRef) const;
-        bool areIODriversNeededAndMissing(const QVariantMap& vmData) const;
+        /**
+         * @brief Get the opaque reference of the selected SR.
+         * @return SR opaque reference, or empty string if not an SR
+         */
+        QString getSelectedSRRef() const;
+
+        /**
+         * @brief Get the name of the selected SR.
+         * @return SR name label, or empty string if not an SR
+         */
+        QString getSelectedSRName() const;
 };
 
-#endif // ACTIVATEVBDCOMMAND_H
+#endif // SRCOMMAND_H

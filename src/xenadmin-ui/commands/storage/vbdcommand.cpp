@@ -25,33 +25,23 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ACTIVATEVBDCOMMAND_H
-#define ACTIVATEVBDCOMMAND_H
-
 #include "vbdcommand.h"
+#include "xen/vbd.h"
 
-/**
- * @brief Command to activate (plug) a VBD
- *
- * Qt port of C# ActivateVBDCommand.  Activates (plugs) a VBD to attach
- * a virtual disk to a running VM. Requires VM to be running and PV drivers
- * installed (for older hosts).
- */
-class ActivateVBDCommand : public VBDCommand
+VBDCommand::VBDCommand(MainWindow* mainWindow, QObject* parent)
+    : Command(mainWindow, parent)
 {
-    Q_OBJECT
+}
 
-    public:
-        explicit ActivateVBDCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+QSharedPointer<VBD> VBDCommand::getVBD() const
+{
+    return qSharedPointerCast<VBD>(this->GetObject());
+}
 
-        QString MenuText() const override;
-        bool CanRun() const override;
-        void Run() override;
-
-    private:
-        bool canRunVBD(const QString& vbdRef) const;
-        QString getCantRunReasonVBD(const QString& vbdRef) const;
-        bool areIODriversNeededAndMissing(const QVariantMap& vmData) const;
-};
-
-#endif // ACTIVATEVBDCOMMAND_H
+QString VBDCommand::getSelectedVBDRef() const
+{
+    QSharedPointer<VBD> vbd = this->getVBD();
+    if (vbd)
+        return vbd->opaqueRef();
+    return QString();
+}
