@@ -48,7 +48,7 @@ void ReconnectHostCommand::Run()
     if (!host)
         return;
 
-    XenConnection* conn = host->connection();
+    XenConnection* conn = host->GetConnection();
     if (!conn)
         return;
 
@@ -72,7 +72,7 @@ bool ReconnectHostCommand::isConnectionDisconnected() const
     if (!host)
         return false;
 
-    XenConnection* conn = host->connection();
+    XenConnection* conn = host->GetConnection();
     if (!conn)
         return false;
 

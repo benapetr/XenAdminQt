@@ -1025,8 +1025,8 @@ QString NavigationView::getItemPath(QTreeWidgetItem* item) const
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
         if (obj)
         {
-            type = obj->objectType();
-            ref = obj->opaqueRef();
+            type = obj->GetObjectType();
+            ref = obj->OpaqueRef();
         }
 
         // Use type:ref or just text if no type/ref available
@@ -1087,7 +1087,7 @@ QTreeWidgetItem* NavigationView::findItemByTypeAndRef(const QString& type, const
         if (data.canConvert<QSharedPointer<XenObject>>())
         {
             QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-            if (obj && obj->objectType() == type && obj->opaqueRef() == ref)
+            if (obj && obj->GetObjectType() == type && obj->OpaqueRef() == ref)
             {
                 return child;
             }
@@ -1118,8 +1118,8 @@ void NavigationView::persistSelectionAndExpansion()
             QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
             if (obj)
             {
-                this->m_savedSelectionType = obj->objectType();
-                this->m_savedSelectionRef = obj->opaqueRef();
+                this->m_savedSelectionType = obj->GetObjectType();
+                this->m_savedSelectionRef = obj->OpaqueRef();
             } else
             {
                 this->m_savedSelectionType.clear();
@@ -1195,8 +1195,8 @@ void NavigationView::restoreSelectionAndExpansion()
                         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
                         if (obj)
                         {
-                            itemType = obj->objectType();
-                            itemRef = obj->opaqueRef();
+                            itemType = obj->GetObjectType();
+                            itemRef = obj->OpaqueRef();
                         }
 
                         if (itemType == type && itemRef == ref)
@@ -1224,8 +1224,8 @@ void NavigationView::restoreSelectionAndExpansion()
                         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
                         if (obj)
                         {
-                            itemType = obj->objectType();
-                            itemRef = obj->opaqueRef();
+                            itemType = obj->GetObjectType();
+                            itemRef = obj->OpaqueRef();
                         }
 
                         if (itemType == type && itemRef == ref)
@@ -1308,8 +1308,8 @@ void NavigationView::restoreSelectionAndExpansion()
                 QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
                 if (obj)
                 {
-                    rootType = obj->objectType();
-                    rootRef = obj->opaqueRef();
+                    rootType = obj->GetObjectType();
+                    rootRef = obj->OpaqueRef();
                 }
                 
                 if (rootType == this->m_savedSelectionType && rootRef == this->m_savedSelectionRef)

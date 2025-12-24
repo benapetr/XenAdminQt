@@ -43,7 +43,7 @@ HAConfigureCommand::HAConfigureCommand(MainWindow* mainWindow, QObject* parent)
 bool HAConfigureCommand::CanRun() const
 {
     QSharedPointer<Pool> pool = this->getPool();
-    if (!pool || !pool->isValid())
+    if (!pool || !pool->IsValid())
         return false;
 
     // Can configure HA if:
@@ -56,10 +56,10 @@ bool HAConfigureCommand::CanRun() const
 void HAConfigureCommand::Run()
 {
     QSharedPointer<Pool> pool = this->getPool();
-    if (!pool || !pool->isValid())
+    if (!pool || !pool->IsValid())
         return;
 
-    QString poolRef = pool->opaqueRef();
+    QString poolRef = pool->OpaqueRef();
     
     // Check if HA is already enabled
     bool haEnabled = pool->haEnabled();

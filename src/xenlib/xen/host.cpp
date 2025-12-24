@@ -35,27 +35,27 @@ Host::Host(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString Host::objectType() const
+QString Host::GetObjectType() const
 {
     return "host";
 }
 
-QString Host::hostname() const
+QString Host::GetHostname() const
 {
     return stringProperty("hostname");
 }
 
-QString Host::address() const
+QString Host::GetAddress() const
 {
     return stringProperty("address");
 }
 
-bool Host::enabled() const
+bool Host::IsEnabled() const
 {
     return boolProperty("enabled", true);
 }
 
-QStringList Host::residentVMRefs() const
+QStringList Host::ResidentVMRefs() const
 {
     return stringListProperty("resident_VMs");
 }
@@ -65,19 +65,19 @@ QVariantMap Host::softwareVersion() const
     return property("software_version").toMap();
 }
 
-QStringList Host::capabilities() const
+QStringList Host::Capabilities() const
 {
     return stringListProperty("capabilities");
 }
 
-QVariantMap Host::cpuInfo() const
+QVariantMap Host::CPUInfo() const
 {
     return property("cpu_info").toMap();
 }
 
 int Host::cpuSockets() const
 {
-    QVariantMap cpuInfoMap = this->cpuInfo();
+    QVariantMap cpuInfoMap = this->CPUInfo();
     if (!cpuInfoMap.contains("socket_count"))
         return 0;
 
@@ -88,7 +88,7 @@ int Host::cpuSockets() const
 
 int Host::cpuCount() const
 {
-    QVariantMap cpuInfoMap = this->cpuInfo();
+    QVariantMap cpuInfoMap = this->CPUInfo();
     if (!cpuInfoMap.contains("cpu_count"))
         return 0;
 
@@ -132,21 +132,21 @@ QString Host::crashDumpSRRef() const
     return stringProperty("crash_dump_sr");
 }
 
-QStringList Host::pbdRefs() const
+QStringList Host::PBDRefs() const
 {
     return stringListProperty("PBDs");
 }
 
-QStringList Host::pifRefs() const
+QStringList Host::PIFRefs() const
 {
     return stringListProperty("PIFs");
 }
 
-bool Host::isMaster() const
+bool Host::IsMaster() const
 {
     // Check if this host is referenced as master in its pool
     // Query the pool and check if pool.master == this->opaqueRef()
-    XenConnection* conn = this->connection();
+    XenConnection* conn = this->GetConnection();
     if (!conn || !conn->getCache())
         return false;
 
@@ -161,14 +161,14 @@ bool Host::isMaster() const
     
     // Compare pool's master reference with this host's opaque reference
     QString masterRef = poolData.value("master", "").toString();
-    return masterRef == this->opaqueRef();
+    return masterRef == this->OpaqueRef();
 }
 
-QString Host::poolRef() const
+QString Host::PoolRef() const
 {
-    // In XenAPI, there's always exactly one pool per connection
+    // In XenAPI, there's always exactly one pool per GetConnection
     // Query the cache for the pool that contains this host
-    XenConnection* conn = this->connection();
+    XenConnection* conn = this->GetConnection();
     if (!conn || !conn->getCache())
         return QString();
 
@@ -181,189 +181,189 @@ QString Host::poolRef() const
     return poolRefs.first();
 }
 
-qint64 Host::memoryOverhead() const
+qint64 Host::MemoryOverhead() const
 {
     return intProperty("memory_overhead", 0);
 }
 
-qint64 Host::apiVersionMajor() const
+qint64 Host::APIVersionMajor() const
 {
     return intProperty("API_version_major", 0);
 }
 
-qint64 Host::apiVersionMinor() const
+qint64 Host::APIVersionMinor() const
 {
-    return intProperty("API_version_minor", 0);
+    return this->intProperty("API_version_minor", 0);
 }
 
-QString Host::apiVersionVendor() const
+QString Host::APIVersionVendor() const
 {
-    return stringProperty("API_version_vendor");
+    return this->stringProperty("API_version_vendor");
 }
 
-QVariantMap Host::apiVersionVendorImplementation() const
+QVariantMap Host::APIVersionVendorImplementation() const
 {
-    return property("API_version_vendor_implementation").toMap();
+    return this->property("API_version_vendor_implementation").toMap();
 }
 
-QVariantMap Host::cpuConfiguration() const
+QVariantMap Host::CPUConfiguration() const
 {
-    return property("cpu_configuration").toMap();
+    return this->property("cpu_configuration").toMap();
 }
 
-QString Host::schedPolicy() const
+QString Host::SchedPolicy() const
 {
-    return stringProperty("sched_policy");
+    return this->stringProperty("sched_policy");
 }
 
-QStringList Host::hostCPURefs() const
+QStringList Host::HostCPURefs() const
 {
-    return stringListProperty("host_CPUs");
+    return this->stringListProperty("host_CPUs");
 }
 
-QStringList Host::allowedOperations() const
+QStringList Host::AllowedOperations() const
 {
-    return stringListProperty("allowed_operations");
+    return this->stringListProperty("allowed_operations");
 }
 
-QVariantMap Host::currentOperations() const
+QVariantMap Host::CurrentOperations() const
 {
-    return property("current_operations").toMap();
+    return this->property("current_operations").toMap();
 }
 
-QStringList Host::supportedBootloaders() const
+QStringList Host::SupportedBootloaders() const
 {
-    return stringListProperty("supported_bootloaders");
+    return this->stringListProperty("supported_bootloaders");
 }
 
-QVariantMap Host::logging() const
+QVariantMap Host::Logging() const
 {
-    return property("logging").toMap();
+    return this->property("logging").toMap();
 }
 
-QString Host::metricsRef() const
+QString Host::MetricsRef() const
 {
-    return stringProperty("metrics");
+    return this->stringProperty("metrics");
 }
 
-QStringList Host::haStatefiles() const
+QStringList Host::HAStatefiles() const
 {
-    return stringListProperty("ha_statefiles");
+    return this->stringListProperty("ha_statefiles");
 }
 
-QStringList Host::haNetworkPeers() const
+QStringList Host::HANetworkPeers() const
 {
-    return stringListProperty("ha_network_peers");
+    return this->stringListProperty("ha_network_peers");
 }
 
-QVariantMap Host::biosStrings() const
+QVariantMap Host::BIOSStrings() const
 {
-    return property("bios_strings").toMap();
+    return this->property("bios_strings").toMap();
 }
 
-QVariantMap Host::chipsetInfo() const
+QVariantMap Host::ChipsetInfo() const
 {
-    return property("chipset_info").toMap();
+    return this->property("chipset_info").toMap();
 }
 
-QString Host::externalAuthType() const
+QString Host::ExternalAuthType() const
 {
-    return stringProperty("external_auth_type");
+    return this->stringProperty("external_auth_type");
 }
 
-QString Host::externalAuthServiceName() const
+QString Host::ExternalAuthServiceName() const
 {
-    return stringProperty("external_auth_service_name");
+    return this->stringProperty("external_auth_service_name");
 }
 
-QVariantMap Host::externalAuthConfiguration() const
+QVariantMap Host::ExternalAuthConfiguration() const
 {
-    return property("external_auth_configuration").toMap();
+    return this->property("external_auth_configuration").toMap();
 }
 
-QString Host::powerOnMode() const
+QString Host::PowerOnMode() const
 {
-    return stringProperty("power_on_mode");
+    return this->stringProperty("power_on_mode");
 }
 
-QVariantMap Host::powerOnConfig() const
+QVariantMap Host::PowerOnConfig() const
 {
-    return property("power_on_config").toMap();
+    return this->property("power_on_config").toMap();
 }
 
-QString Host::localCacheSRRef() const
+QString Host::LocalCacheSRRef() const
 {
-    return stringProperty("local_cache_sr");
+    return this->stringProperty("local_cache_sr");
 }
 
-QStringList Host::pciRefs() const
+QStringList Host::PCIRefs() const
 {
-    return stringListProperty("PCIs");
+    return this->stringListProperty("PCIs");
 }
 
-QStringList Host::pgpuRefs() const
+QStringList Host::PGPURefs() const
 {
-    return stringListProperty("PGPUs");
+    return this->stringListProperty("PGPUs");
 }
 
-QStringList Host::pusbRefs() const
+QStringList Host::PUSBRefs() const
 {
-    return stringListProperty("PUSBs");
+    return this->stringListProperty("PUSBs");
 }
 
-QStringList Host::patchRefs() const
+QStringList Host::PatchRefs() const
 {
-    return stringListProperty("patches");
+    return this->stringListProperty("patches");
 }
 
-QStringList Host::updateRefs() const
+QStringList Host::UpdateRefs() const
 {
-    return stringListProperty("updates");
+    return this->stringListProperty("updates");
 }
 
-QStringList Host::updatesRequiringRebootRefs() const
+QStringList Host::UpdatesRequiringRebootRefs() const
 {
-    return stringListProperty("updates_requiring_reboot");
+    return this->stringListProperty("updates_requiring_reboot");
 }
 
-QStringList Host::featureRefs() const
+QStringList Host::FeatureRefs() const
 {
-    return stringListProperty("features");
+    return this->stringListProperty("features");
 }
 
-QStringList Host::pendingGuidances() const
+QStringList Host::PendingGuidances() const
 {
-    return stringListProperty("pending_guidances");
+    return this->stringListProperty("pending_guidances");
 }
 
-bool Host::sslLegacy() const
+bool Host::SSLLegacy() const
 {
-    return boolProperty("ssl_legacy", true);
+    return this->boolProperty("ssl_legacy", true);
 }
 
-bool Host::tlsVerificationEnabled() const
+bool Host::TLSVerificationEnabled() const
 {
-    return boolProperty("tls_verification_enabled", false);
+    return this->boolProperty("tls_verification_enabled", false);
 }
 
-bool Host::httpsOnly() const
+bool Host::HTTPSOnly() const
 {
-    return boolProperty("https_only", false);
+    return this->boolProperty("https_only", false);
 }
 
-QVariantMap Host::guestVCPUsParams() const
+QVariantMap Host::GuestVCPUsParams() const
 {
-    return property("guest_VCPUs_params").toMap();
+    return this->property("guest_VCPUs_params").toMap();
 }
 
-QString Host::display() const
+QString Host::Display() const
 {
-    return stringProperty("display");
+    return this->stringProperty("display");
 }
 
-QList<qint64> Host::virtualHardwarePlatformVersions() const
+QList<qint64> Host::VirtualHardwarePlatformVersions() const
 {
-    QVariantList list = property("virtual_hardware_platform_versions").toList();
+    QVariantList list = this->property("virtual_hardware_platform_versions").toList();
     QList<qint64> result;
     for (const QVariant& v : list)
     {
@@ -372,65 +372,65 @@ QList<qint64> Host::virtualHardwarePlatformVersions() const
     return result;
 }
 
-QString Host::controlDomainRef() const
+QString Host::ControlDomainRef() const
 {
-    return stringProperty("control_domain");
+    return this->stringProperty("control_domain");
 }
 
-QString Host::iscsiIqn() const
+QString Host::IscsiIQN() const
 {
-    return stringProperty("iscsi_iqn");
+    return this->stringProperty("iscsi_iqn");
 }
 
-bool Host::multipathing() const
+bool Host::Multipathing() const
 {
-    return boolProperty("multipathing", false);
+    return this->boolProperty("multipathing", false);
 }
 
-QString Host::uefiCertificates() const
+QString Host::UEFICertificates() const
 {
-    return stringProperty("uefi_certificates");
+    return this->stringProperty("uefi_certificates");
 }
 
-QStringList Host::certificateRefs() const
+QStringList Host::CertificateRefs() const
 {
-    return stringListProperty("certificates");
+    return this->stringListProperty("certificates");
 }
 
-QStringList Host::editions() const
+QStringList Host::Editions() const
 {
-    return stringListProperty("editions");
+    return this->stringListProperty("editions");
 }
 
-QStringList Host::crashdumpRefs() const
+QStringList Host::CrashdumpRefs() const
 {
-    return stringListProperty("crashdumps");
+    return this->stringListProperty("crashdumps");
 }
 
-QDateTime Host::lastSoftwareUpdate() const
+QDateTime Host::LastSoftwareUpdate() const
 {
-    QString dateStr = stringProperty("last_software_update");
+    QString dateStr = this->stringProperty("last_software_update");
     if (dateStr.isEmpty())
         return QDateTime();
     return QDateTime::fromString(dateStr, Qt::ISODate);
 }
 
-QString Host::latestSyncedUpdatesApplied() const
+QString Host::LatestSyncedUpdatesApplied() const
 {
-    return stringProperty("latest_synced_updates_applied");
+    return this->stringProperty("latest_synced_updates_applied");
 }
 
-QVariantMap Host::licenseParams() const
+QVariantMap Host::LicenseParams() const
 {
-    return property("license_params").toMap();
+    return this->property("license_params").toMap();
 }
 
-QString Host::edition() const
+QString Host::Edition() const
 {
-    return stringProperty("edition");
+    return this->stringProperty("edition");
 }
 
-QVariantMap Host::licenseServer() const
+QVariantMap Host::LicenseServer() const
 {
-    return property("license_server").toMap();
+    return this->property("license_server").toMap();
 }

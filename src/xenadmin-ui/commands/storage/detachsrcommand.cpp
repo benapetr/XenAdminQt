@@ -58,9 +58,9 @@ bool DetachSRCommand::CanRun() const
         return false;
     }
 
-    XenCache* cache = sr->connection()->getCache();
+    XenCache* cache = sr->GetConnection()->getCache();
 
-    QVariantMap srData = sr->data();
+    QVariantMap srData = sr->GetData();
 
     // Check if SR is already detached
     QVariantList pbds = srData.value("PBDs").toList();
@@ -129,7 +129,7 @@ void DetachSRCommand::Run()
         return;
     }
 
-    QString srName = sr->nameLabel();
+    QString srName = sr->GetName();
     if (srName.isEmpty())
     {
         srName = srRef;
@@ -154,8 +154,8 @@ void DetachSRCommand::Run()
 
     qDebug() << "DetachSRCommand: Detaching SR" << srName << "(" << srRef << ")";
 
-    // Get connection from SR object for multi-connection support
-    XenConnection* conn = sr->connection();
+    // Get GetConnection from SR object for multi-GetConnection support
+    XenConnection* conn = sr->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",

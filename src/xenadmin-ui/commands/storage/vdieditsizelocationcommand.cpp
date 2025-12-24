@@ -40,23 +40,23 @@ VdiEditSizeLocationCommand::VdiEditSizeLocationCommand(MainWindow* mainWindow, Q
 bool VdiEditSizeLocationCommand::CanRun() const
 {
     QSharedPointer<VDI> vdi = this->getVDI();
-    if (!vdi || !vdi->isValid())
+    if (!vdi || !vdi->IsValid())
         return false;
 
-    XenCache* cache = vdi->connection()->getCache();
+    XenCache* cache = vdi->GetConnection()->getCache();
 
     // Check if VDI exists in cache
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->opaqueRef());
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->OpaqueRef());
     return !vdiData.isEmpty();
 }
 
 void VdiEditSizeLocationCommand::Run()
 {
     QSharedPointer<VDI> vdi = this->getVDI();
-    if (!vdi || !vdi->isValid())
+    if (!vdi || !vdi->IsValid())
         return;
 
-    QString vdiRef = vdi->opaqueRef();
+    QString vdiRef = vdi->OpaqueRef();
     XenLib* xenLib = this->mainWindow()->xenLib();
     if (!xenLib)
         return;

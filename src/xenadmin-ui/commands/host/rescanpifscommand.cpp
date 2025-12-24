@@ -49,10 +49,10 @@ void RescanPIFsCommand::Run()
         return;
 
     QString hostRef = this->getSelectedHostRef();
-    QString hostName = host->nameLabel();
+    QString hostName = host->GetName();
 
     // Create and run rescan action
-    RescanPIFsAction* action = new RescanPIFsAction(host->connection(), hostRef);
+    RescanPIFsAction* action = new RescanPIFsAction(host->GetConnection(), hostRef);
 
     action->setTitle(tr("Rescanning network interfaces"));
     action->setDescription(tr("Rescanning network interfaces on host '%1'...").arg(hostName));

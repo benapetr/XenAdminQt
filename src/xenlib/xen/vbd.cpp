@@ -178,7 +178,7 @@ QString VBD::metricsRef() const
     return this->stringProperty("metrics");
 }
 
-QString VBD::objectType() const
+QString VBD::GetObjectType() const
 {
     return "vbd";
 }

@@ -47,8 +47,8 @@ bool ForgetSRCommand::CanRun() const
         return false;
     }
 
-    XenCache* cache = sr->connection()->getCache();
-    QVariantMap srData = sr->data();
+    XenCache* cache = sr->GetConnection()->getCache();
+    QVariantMap srData = sr->GetData();
 
     // Check if SR has running VMs
     QVariantList vdis = srData.value("VDIs").toList();
@@ -104,8 +104,8 @@ void ForgetSRCommand::Run()
     if (!sr)
         return;
 
-    QString srRef = sr->opaqueRef();
-    QString srName = sr->nameLabel();
+    QString srRef = sr->OpaqueRef();
+    QString srName = sr->GetName();
 
     if (srName.isEmpty())
     {
@@ -132,8 +132,8 @@ void ForgetSRCommand::Run()
 
     qDebug() << "ForgetSRCommand: Forgetting SR" << srName << "(" << srRef << ")";
 
-    // Get connection from SR object for multi-connection support
-    XenConnection* conn = sr->connection();
+    // Get GetConnection from SR object for multi-GetConnection support
+    XenConnection* conn = sr->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",

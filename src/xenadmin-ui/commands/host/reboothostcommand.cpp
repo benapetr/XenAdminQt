@@ -54,7 +54,7 @@ void RebootHostCommand::Run()
     if (!host)
         return;
 
-    QString hostRef = host->opaqueRef();
+    QString hostRef = host->OpaqueRef();
     QString hostName = this->getSelectedHostName();
 
     // Show warning dialog
@@ -68,7 +68,7 @@ void RebootHostCommand::Run()
     {
         this->mainWindow()->showStatusMessage(QString("Rebooting host '%1'...").arg(hostName));
 
-        XenConnection* conn = host->connection();
+        XenConnection* conn = host->GetConnection();
         if (!conn || !conn->isConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",

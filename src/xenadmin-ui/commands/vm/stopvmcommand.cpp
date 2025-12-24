@@ -46,11 +46,11 @@ bool StopVMCommand::CanRun() const
         return false;
 
     // Check if VM is running AND clean_shutdown is allowed
-    if (vm->powerState() != "Running")
+    if (vm->GetPowerState() != "Running")
         return false;
 
     // Check allowed_operations contains clean_shutdown (matches C# ShutDownVMCommand.CanRun)
-    QVariantList allowedOperations = vm->data().value("allowed_operations").toList();
+    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
 
     return allowedOperations.contains("clean_shutdown");
 }
@@ -66,7 +66,7 @@ void StopVMCommand::Run()
         return;
 
     // Get XenConnection from VM
-    XenConnection* conn = vm->connection();
+    XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -83,7 +83,7 @@ void StopVMCommand::Run()
         return;
 
     // Create VM object for action (action will own and delete it)
-    VM* vmForAction = new VM(conn, vm->opaqueRef());
+    VM* vmForAction = new VM(conn, vm->OpaqueRef());
 
     // Create VMCleanShutdown action (parent is MainWindow to prevent premature deletion)
     VMCleanShutdown* action = new VMCleanShutdown(vmForAction, this->mainWindow());

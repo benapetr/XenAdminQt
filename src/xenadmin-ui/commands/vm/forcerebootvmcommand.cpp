@@ -90,7 +90,7 @@ void ForceRebootVMCommand::Run()
         return;
 
     // Get XenConnection from VM
-    XenConnection* conn = vm->connection();
+    XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(),
@@ -100,7 +100,7 @@ void ForceRebootVMCommand::Run()
     }
 
     // Create VM object for action (action will own and delete it)
-    VM* vmForAction = new VM(conn, vm->opaqueRef());
+    VM* vmForAction = new VM(conn, vm->OpaqueRef());
 
     // Create the hard reboot action
     VMHardReboot* action = new VMHardReboot(vmForAction, this->mainWindow());
@@ -138,7 +138,7 @@ bool ForceRebootVMCommand::canForceReboot() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->data();
+    QVariantMap vmData = vm->GetData();
     if (vmData.isEmpty())
         return false;
 
@@ -148,7 +148,7 @@ bool ForceRebootVMCommand::canForceReboot() const
     if (isTemplate || isLocked)
         return false;
 
-    QString powerState = vm->powerState();
+    QString powerState = vm->GetPowerState();
 
     // CA-16960: If the VM is up and has a running task, we will disregard the allowed_operations
     // and always allow forced options.
@@ -182,7 +182,7 @@ bool ForceRebootVMCommand::hasRunningTasks() const
     if (!vm)
         return false;
 
-    QVariantMap currentOps = vm->data().value("current_operations", QVariantMap()).toMap();
+    QVariantMap currentOps = vm->GetData().value("current_operations", QVariantMap()).toMap();
     return !currentOps.isEmpty();
 }
 
@@ -195,7 +195,7 @@ bool ForceRebootVMCommand::enabledTargetExists() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->data();
+    QVariantMap vmData = vm->GetData();
     if (vmData.isEmpty())
         return false;
 
@@ -204,7 +204,7 @@ bool ForceRebootVMCommand::enabledTargetExists() const
     if (!residentOn.isEmpty() && residentOn != "OpaqueRef:NULL")
     {
         // VM has a home server - check if it's enabled
-        XenCache* cache = vm->connection()->getCache();
+        XenCache* cache = vm->GetConnection()->getCache();
         QVariantMap hostData = cache->ResolveObjectData("host", residentOn);
         if (!hostData.isEmpty())
         {
@@ -213,7 +213,7 @@ bool ForceRebootVMCommand::enabledTargetExists() const
     }
 
     // No home server or home server not found - check if any host is enabled
-    XenCache* cache = vm->connection()->getCache();
+    XenCache* cache = vm->GetConnection()->getCache();
     QList<QVariantMap> hosts = cache->GetAllData("host");
     for (const QVariantMap& host : hosts)
     {

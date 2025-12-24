@@ -68,7 +68,7 @@ bool MoveVMCommand::canVMBeMoved() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->data();
+    QVariantMap vmData = vm->GetData();
 
     // Check if VM is a template or snapshot
     if (vmData.value("is_a_template", false).toBool())
@@ -78,7 +78,7 @@ bool MoveVMCommand::canVMBeMoved() const
 
     // Check if VM has CBT (Changed Block Tracking) disabled
     // VMs with CBT enabled cannot be moved
-    XenCache* cache = vm->connection()->getCache();
+    XenCache* cache = vm->GetConnection()->getCache();
 
     QVariantList vbds = vmData.value("VBDs", QVariantList()).toList();
     for (const QVariant& vbdRefVar : vbds)

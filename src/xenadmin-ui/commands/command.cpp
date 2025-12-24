@@ -82,7 +82,7 @@ QString Command::getSelectedObjectRef() const
     QVariant data = item->data(0, Qt::UserRole);
     QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
     if (obj)
-        return obj->opaqueRef();
+        return obj->OpaqueRef();
     
     return QString();
 }
@@ -107,7 +107,7 @@ QString Command::getSelectedObjectType() const
     {
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
         if (obj)
-            return obj->objectType();
+            return obj->GetObjectType();
     }
     else if (data.canConvert<XenConnection*>())
     {

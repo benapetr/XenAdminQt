@@ -41,7 +41,7 @@ QString PoolCommand::getSelectedPoolRef() const
 {
     QSharedPointer<Pool> pool = this->getPool();
     if (pool)
-        return pool->opaqueRef();
+        return pool->OpaqueRef();
     return QString();
 }
 
@@ -49,6 +49,6 @@ QString PoolCommand::getSelectedPoolName() const
 {
     QSharedPointer<Pool> pool = this->getPool();
     if (pool)
-        return pool->nameLabel();
+        return pool->GetName();
     return QString();
 }

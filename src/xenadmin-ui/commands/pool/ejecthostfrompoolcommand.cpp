@@ -46,11 +46,11 @@ bool EjectHostFromPoolCommand::CanRun() const
         return false;
 
     // Can't eject if this is the pool master
-    if (host->isMaster())
+    if (host->IsMaster())
         return false;
 
     // Check if host is in a pool
-    if (host->poolRef().isEmpty())
+    if (host->PoolRef().isEmpty())
         return false;
 
     return true;
@@ -59,13 +59,13 @@ bool EjectHostFromPoolCommand::CanRun() const
 void EjectHostFromPoolCommand::Run()
 {
     QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host || !host->isValid())
+    if (!host || !host->IsValid())
         return;
 
-    QString hostRef = host->opaqueRef();
-    QString hostName = host->nameLabel();
+    QString hostRef = host->OpaqueRef();
+    QString hostName = host->GetName();
 
-    if (host->isMaster())
+    if (host->IsMaster())
     {
         QMessageBox::warning(this->mainWindow(), "Eject Host",
                              "Cannot eject the pool master.\n"
@@ -84,8 +84,8 @@ void EjectHostFromPoolCommand::Run()
     if (result != QMessageBox::Yes)
         return;
 
-    // Get pool and connection for the action
-    XenConnection* connection = host->connection();
+    // Get pool and GetConnection for the action
+    XenConnection* connection = host->GetConnection();
     if (!connection)
     {
         QMessageBox::critical(this->mainWindow(), "Eject Host",
@@ -93,7 +93,7 @@ void EjectHostFromPoolCommand::Run()
         return;
     }
 
-    QString poolRef = host->poolRef();
+    QString poolRef = host->PoolRef();
     if (poolRef.isEmpty())
     {
         QMessageBox::critical(this->mainWindow(), "Eject Host",

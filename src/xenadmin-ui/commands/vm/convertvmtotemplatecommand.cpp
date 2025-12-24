@@ -71,7 +71,7 @@ void ConvertVMToTemplateCommand::Run()
     if (reply == QMessageBox::Yes)
     {
         // Get XenConnection from VM
-        XenConnection* conn = vm->connection();
+        XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->isConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -80,7 +80,7 @@ void ConvertVMToTemplateCommand::Run()
         }
 
         // Create VM object for action (action will own and delete it)
-        VM* vmForAction = new VM(conn, vm->opaqueRef());
+        VM* vmForAction = new VM(conn, vm->OpaqueRef());
 
         // Create VMToTemplateAction (matches C# VMToTemplateAction pattern)
         // Action automatically sets other_config["instant"] = "true"
@@ -122,7 +122,7 @@ bool ConvertVMToTemplateCommand::canConvertToTemplate() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->data();
+    QVariantMap vmData = vm->GetData();
 
     // Check if it's already a template
     bool isTemplate = vmData.value("is_a_template", false).toBool();
@@ -135,7 +135,7 @@ bool ConvertVMToTemplateCommand::canConvertToTemplate() const
         return false;
 
     // Check power state - must be halted
-    if (vm->powerState() != "Halted")
+    if (vm->GetPowerState() != "Halted")
         return false;
 
     // Check if the operation is allowed

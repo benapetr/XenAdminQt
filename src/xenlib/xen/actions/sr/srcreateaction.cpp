@@ -100,7 +100,7 @@ void SrCreateAction::run()
     {
         // Create the SR
         srRef = XenAPI::SR::create(session,
-                                   m_host->opaqueRef(),
+                                   m_host->OpaqueRef(),
                                    m_deviceConfig,
                                    0, // physical_size (let server determine)
                                    m_srName,

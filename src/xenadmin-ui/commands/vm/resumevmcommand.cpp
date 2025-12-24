@@ -50,10 +50,10 @@ bool ResumeVMCommand::CanRun() const
         return false;
 
     // Check if VM is suspended AND resume is allowed (matches C# ResumeVMCommand.CanRun)
-    if (vm->powerState() != "Suspended")
+    if (vm->GetPowerState() != "Suspended")
         return false;
 
-    QVariantList allowedOperations = vm->data().value("allowed_operations").toList();
+    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
 
     return allowedOperations.contains("resume");
 }
@@ -64,7 +64,7 @@ void ResumeVMCommand::Run()
     if (!vm)
         return;
 
-    runForVm(vm->opaqueRef(), this->getSelectedVMName(), true);
+    runForVm(vm->OpaqueRef(), this->getSelectedVMName(), true);
 }
 
 bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool promptUser)
@@ -79,7 +79,7 @@ bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool
     QString displayName = vmName;
     if (displayName.isEmpty())
     {
-        displayName = vm->nameLabel();
+        displayName = vm->GetName();
     }
 
     if (promptUser)
@@ -93,7 +93,7 @@ bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool
     }
 
     // Get XenConnection from VM
-    XenConnection* conn = vm->connection();
+    XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",

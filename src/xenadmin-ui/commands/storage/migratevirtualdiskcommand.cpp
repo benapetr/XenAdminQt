@@ -41,11 +41,11 @@ MigrateVirtualDiskCommand::MigrateVirtualDiskCommand(MainWindow* mainWindow, QOb
 bool MigrateVirtualDiskCommand::CanRun() const
 {
     QSharedPointer<VDI> vdi = this->getVDI();
-    if (!vdi || !vdi->isValid())
+    if (!vdi || !vdi->IsValid())
         return false;
 
-    XenCache* cache = vdi->connection()->getCache();
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->opaqueRef());
+    XenCache* cache = vdi->GetConnection()->getCache();
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->OpaqueRef());
     if (vdiData.isEmpty())
         return false;
 
@@ -55,11 +55,11 @@ bool MigrateVirtualDiskCommand::CanRun() const
 void MigrateVirtualDiskCommand::Run()
 {
     QSharedPointer<VDI> vdi = this->getVDI();
-    if (!vdi || !vdi->isValid())
+    if (!vdi || !vdi->IsValid())
         return;
 
-    XenCache* cache = vdi->connection()->getCache();
-    QString vdiRef = vdi->opaqueRef();
+    XenCache* cache = vdi->GetConnection()->getCache();
+    QString vdiRef = vdi->OpaqueRef();
     QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
     {

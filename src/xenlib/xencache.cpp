@@ -473,11 +473,11 @@ void XenCache::refreshObject(const QString& type, const QString& ref)
             return;
         obj = it.value();
         if (obj)
-            obj->setEvicted(false);
+            obj->SetEvicted(false);
     }
 
     if (obj)
-        obj->refresh();
+        obj->Refresh();
 }
 
 void XenCache::evictObject(const QString& type, const QString& ref)
@@ -495,5 +495,5 @@ void XenCache::evictObject(const QString& type, const QString& ref)
     }
 
     if (obj)
-        obj->setEvicted(true);
+        obj->SetEvicted(true);
 }

@@ -50,7 +50,7 @@ bool TrimSRCommand::CanRun() const
     if (!sr)
         return false;
 
-    QVariantMap srData = sr->data();
+    QVariantMap srData = sr->GetData();
     if (srData.isEmpty())
         return false;
 
@@ -64,8 +64,8 @@ void TrimSRCommand::Run()
     if (!sr)
         return;
 
-    QString srRef = sr->opaqueRef();
-    QString srName = sr->nameLabel();
+    QString srRef = sr->OpaqueRef();
+    QString srName = sr->GetName();
 
     // Show confirmation dialog
     QMessageBox msgBox(this->mainWindow());
@@ -85,8 +85,8 @@ void TrimSRCommand::Run()
 
     qDebug() << "TrimSRCommand: Trimming SR" << srName << "(" << srRef << ")";
 
-    // Get connection from SR object for multi-connection support
-    XenConnection* conn = sr->connection();
+    // Get GetConnection from SR object for multi-GetConnection support
+    XenConnection* conn = sr->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -190,7 +190,7 @@ bool TrimSRCommand::isAttachedToHost(const QVariantMap& srData) const
     if (!sr)
         return false;
 
-    XenCache* cache = sr->connection()->getCache();
+    XenCache* cache = sr->GetConnection()->getCache();
 
     // Check if any PBD is currently attached
     QVariantList pbds = srData.value("PBDs", QVariantList()).toList();

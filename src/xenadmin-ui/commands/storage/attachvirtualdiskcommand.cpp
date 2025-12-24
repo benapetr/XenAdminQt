@@ -52,10 +52,10 @@ bool AttachVirtualDiskCommand::CanRun() const
     if (vmRef.isEmpty())
         return false;
 
-    if (!object || !object->connection())
+    if (!object || !object->GetConnection())
         return false;
 
-    XenCache* cache = object->connection()->getCache();
+    XenCache* cache = object->GetConnection()->getCache();
     if (!cache)
         return false;
 
@@ -76,10 +76,10 @@ void AttachVirtualDiskCommand::Run()
     if (vmRef.isEmpty())
         return;
 
-    if (!object || !object->connection())
+    if (!object || !object->GetConnection())
         return;
 
-    XenCache* cache = object->connection()->getCache();
+    XenCache* cache = object->GetConnection()->getCache();
     if (!cache)
         return;
 
@@ -108,7 +108,7 @@ void AttachVirtualDiskCommand::Run()
     }
 
     qDebug() << "[AttachVirtualDiskCommand] Dialog accepted, proceeding with attachment";
-    performAttachment(&dialog, object->connection(), vmRef);
+    performAttachment(&dialog, object->GetConnection(), vmRef);
 }
 
 void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog, XenConnection* connection, const QString& vmRef)

@@ -49,7 +49,7 @@ bool MigrateVMCommand::CanRun() const
         return false;
 
     // Only enable if VM is running (can only live migrate running VMs)
-    if (vm->powerState() != "Running")
+    if (vm->GetPowerState() != "Running")
         return false;
 
     // Check if there are other hosts available in the pool
@@ -87,7 +87,7 @@ void MigrateVMCommand::Run()
     QMap<QString, QString> hostMap;
     QStringList hostNames;
 
-    XenConnection* conn = vm->connection();
+    XenConnection* conn = vm->GetConnection();
     XenCache* cache = conn ? conn->getCache() : nullptr;
 
     for (const QString& hostRef : hosts)
@@ -126,7 +126,7 @@ void MigrateVMCommand::Run()
         return;
 
     QString destHostRef = hostMap[selectedHostName];
-    QString vmRef = vm->opaqueRef();
+    QString vmRef = vm->OpaqueRef();
 
     // Check if migration is possible
     if (!this->mainWindow()->xenLib()->canMigrateVM(vmRef, destHostRef))
@@ -147,8 +147,8 @@ void MigrateVMCommand::Run()
 
     if (ret == QMessageBox::Yes)
     {
-        // Get XenConnection from VM's connection
-        XenConnection* conn = vm->connection();
+        // Get XenConnection from VM's GetConnection
+        XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->isConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -195,7 +195,7 @@ QStringList MigrateVMCommand::getAvailableHosts() const
     if (!vm)
         return hostRefs;
 
-    XenCache* cache = vm->connection()->getCache();
+    XenCache* cache = vm->GetConnection()->getCache();
     if (!cache)
         return hostRefs;
 
@@ -210,5 +210,5 @@ QString MigrateVMCommand::getCurrentHostRef() const
     if (!vm)
         return QString();
 
-    return vm->data().value("resident_on", QString()).toString();
+    return vm->GetData().value("resident_on", QString()).toString();
 }

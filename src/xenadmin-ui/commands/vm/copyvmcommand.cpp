@@ -70,7 +70,7 @@ bool CopyVMCommand::isVMLocked() const
         return true;
 
     // Check if VM has current operations that would lock it
-    QVariantMap currentOps = vm->data().value("current_operations", QVariantMap()).toMap();
+    QVariantMap currentOps = vm->GetData().value("current_operations", QVariantMap()).toMap();
     return !currentOps.isEmpty();
 }
 
@@ -83,9 +83,9 @@ bool CopyVMCommand::canVMBeCopied() const
     if (!this->mainWindow()->xenLib())
         return false;
 
-    XenCache* cache = vm->connection()->getCache();
+    XenCache* cache = vm->GetConnection()->getCache();
 
-    QString vmRef = vm->opaqueRef();
+    QString vmRef = vm->OpaqueRef();
     QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
     // Check if VM is a template or snapshot

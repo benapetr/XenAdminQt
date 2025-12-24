@@ -58,19 +58,19 @@ bool RotatePoolSecretCommand::CanRun() const
     if (objectType == "pool")
     {
         QSharedPointer<Pool> pool = this->getPool();
-        if (!pool || !pool->connection() || !pool->isValid())
+        if (!pool || !pool->GetConnection() || !pool->IsValid())
             return false;
-        poolRef = pool->opaqueRef();
-        cache = pool->connection()->getCache();
+        poolRef = pool->OpaqueRef();
+        cache = pool->GetConnection()->getCache();
     } else if (objectType == "host")
     {
         QSharedPointer<Host> host = qSharedPointerCast<Host>(this->GetObject());
-        if (!host || !host->connection() || !host->isValid())
+        if (!host || !host->GetConnection() || !host->IsValid())
             return false;
-        QString hostRef = host->opaqueRef();
-        QVariantMap hostData = host->data();
+        QString hostRef = host->OpaqueRef();
+        QVariantMap hostData = host->GetData();
         QList<QVariant> poolList = hostData.value("pool", QVariantList()).toList();
-        cache = host->connection()->getCache();
+        cache = host->GetConnection()->getCache();
         if (!poolList.isEmpty())
             poolRef = poolList.first().toString();
     }
@@ -121,22 +121,22 @@ void RotatePoolSecretCommand::Run()
     if (objectType == "pool")
     {
         QSharedPointer<Pool> pool = this->getPool();
-        if (!pool || !pool->connection() || !pool->isValid())
+        if (!pool || !pool->GetConnection() || !pool->IsValid())
             return;
 
-        poolRef = pool->opaqueRef();
-        connection = pool->connection();
-        cache = pool->connection()->getCache();
+        poolRef = pool->OpaqueRef();
+        connection = pool->GetConnection();
+        cache = pool->GetConnection()->getCache();
     } else if (objectType == "host")
     {
         QSharedPointer<Host> host = qSharedPointerCast<Host>(this->GetObject());
-        if (!host || !host->connection() || !host->isValid())
+        if (!host || !host->GetConnection() || !host->IsValid())
             return;
 
-        QString hostRef = host->opaqueRef();
-        QVariantMap hostData = host->data();
-        connection = host->connection();
-        cache = host->connection()->getCache();
+        QString hostRef = host->OpaqueRef();
+        QVariantMap hostData = host->GetData();
+        connection = host->GetConnection();
+        cache = host->GetConnection()->getCache();
         QList<QVariant> poolList = hostData.value("pool", QVariantList()).toList();
         if (!poolList.isEmpty())
             poolRef = poolList.first().toString();
@@ -228,20 +228,20 @@ QString RotatePoolSecretCommand::getCantRunReason() const
     if (objectType == "pool")
     {
         QSharedPointer<Pool> pool = this->getPool();
-        if (!pool || !pool->connection() || !pool->isValid())
+        if (!pool || !pool->GetConnection() || !pool->IsValid())
             return tr("No pool selected.");
 
-        cache = pool->connection()->getCache();
+        cache = pool->GetConnection()->getCache();
         poolRef = this->getSelectedObjectRef();
     } else if (objectType == "host")
     {
         QSharedPointer<Host> host = qSharedPointerCast<Host>(this->GetObject());
-        if (!host || !host->connection() || !host->isValid())
+        if (!host || !host->GetConnection() || !host->IsValid())
             return tr("No pool selected.");
 
-        cache = host->connection()->getCache();
-        QString hostRef = host->opaqueRef();
-        QVariantMap hostData = host->data();
+        cache = host->GetConnection()->getCache();
+        QString hostRef = host->OpaqueRef();
+        QVariantMap hostData = host->GetData();
         QList<QVariant> poolList = hostData.value("pool", QVariantList()).toList();
         if (!poolList.isEmpty())
             poolRef = poolList.first().toString();

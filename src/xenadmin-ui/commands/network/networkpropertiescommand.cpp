@@ -71,9 +71,9 @@ QString NetworkPropertiesCommand::getSelectedNetworkUuid() const
     // Check if this is a Network item
     QVariant data = item->data(0, Qt::UserRole);
     QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-    if (!obj || obj->objectType() != "network")
+    if (!obj || obj->GetObjectType() != "network")
         return QString();
 
-    return obj->uuid();
+    return obj->GetUUID();
     return QString();
 }

@@ -42,6 +42,6 @@ QString VBDCommand::getSelectedVBDRef() const
 {
     QSharedPointer<VBD> vbd = this->getVBD();
     if (vbd)
-        return vbd->opaqueRef();
+        return vbd->OpaqueRef();
     return QString();
 }

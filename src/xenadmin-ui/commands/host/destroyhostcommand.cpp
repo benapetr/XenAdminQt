@@ -45,11 +45,11 @@ bool DestroyHostCommand::CanRun() const
         return false;
 
     // Host must be in a pool
-    if (host->poolRef().isEmpty())
+    if (host->PoolRef().isEmpty())
         return false;
 
     // Host must not be the pool coordinator
-    if (host->isMaster())
+    if (host->IsMaster())
         return false;
 
     // Host must not be live (running)
@@ -65,9 +65,9 @@ void DestroyHostCommand::Run()
     if (!host)
         return;
 
-    QString hostRef = host->opaqueRef();
-    QVariantMap hostData = host->data();
-    QString hostName = host->nameLabel();
+    QString hostRef = host->OpaqueRef();
+    QVariantMap hostData = host->GetData();
+    QString hostName = host->GetName();
 
     // Show confirmation dialog
     QString message = this->buildConfirmationMessage(host);
@@ -85,8 +85,8 @@ void DestroyHostCommand::Run()
         return;
     }
 
-    // Get connection
-    XenConnection* conn = host->connection();
+    // Get GetConnection
+    XenConnection* conn = host->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
@@ -94,7 +94,7 @@ void DestroyHostCommand::Run()
     }
 
     // Get pool reference
-    QString poolRef = host->poolRef();
+    QString poolRef = host->PoolRef();
     if (poolRef.isEmpty())
     {
         QMessageBox::warning(this->mainWindow(), tr("Error"), tr("Host does not belong to a pool"));
@@ -126,7 +126,7 @@ QString DestroyHostCommand::MenuText() const
 
 QString DestroyHostCommand::buildConfirmationMessage(QSharedPointer<Host> host) const
 {
-    QVariantMap hostData = host->data();
+    QVariantMap hostData = host->GetData();
     QString hostName = hostData.value("name_label").toString();
 
     return tr("Are you sure you want to destroy host '%1'?\n\n"
@@ -142,14 +142,14 @@ QString DestroyHostCommand::buildConfirmationTitle() const
 
 bool DestroyHostCommand::isHostLive(QSharedPointer<Host> host) const
 {
-    if (!host->isConnected())
+    if (!host->IsConnected())
         return false;
 
     // Check if host is live (has a metrics object with live flag)
-    QString metricsRef = host->data().value("metrics").toString();
+    QString metricsRef = host->GetData().value("metrics").toString();
     if (!metricsRef.isEmpty())
     {
-        QVariantMap metricsData = host->connection()->getCache()->ResolveObjectData("host_metrics", metricsRef);
+        QVariantMap metricsData = host->GetConnection()->getCache()->ResolveObjectData("host_metrics", metricsRef);
         if (!metricsData.isEmpty())
         {
             return metricsData.value("live", false).toBool();

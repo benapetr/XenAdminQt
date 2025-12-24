@@ -39,7 +39,7 @@ PoolPropertiesCommand::PoolPropertiesCommand(MainWindow* mainWindow, QObject* pa
 bool PoolPropertiesCommand::CanRun() const
 {
     QSharedPointer<Pool> pool = this->getPool();
-    if (!pool || !pool->isValid() || !pool->isConnected())
+    if (!pool || !pool->IsValid() || !pool->IsConnected())
         return false;
 
     return true;
@@ -48,13 +48,13 @@ bool PoolPropertiesCommand::CanRun() const
 void PoolPropertiesCommand::Run()
 {
     QSharedPointer<Pool> pool = this->getPool();
-    if (!pool || !pool->isValid())
+    if (!pool || !pool->IsValid())
         return;
 
-    QString poolRef = pool->opaqueRef();
+    QString poolRef = pool->OpaqueRef();
 
-    // Get connection from pool object for multi-connection support
-    XenConnection* connection = pool->connection();
+    // Get GetConnection from pool object for multi-GetConnection support
+    XenConnection* connection = pool->GetConnection();
     if (!connection)
     {
         qWarning() << "PoolPropertiesCommand: No connection available";

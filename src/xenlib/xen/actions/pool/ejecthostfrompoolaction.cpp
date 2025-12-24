@@ -40,8 +40,8 @@ EjectHostFromPoolAction::EjectHostFromPoolAction(XenConnection* connection,
                                                  QObject* parent)
     : AsyncOperation(connection,
                      QString("Removing %1 from pool %2")
-                         .arg(hostToEject ? hostToEject->nameLabel() : "host")
-                         .arg(pool ? pool->nameLabel() : ""),
+                         .arg(hostToEject ? hostToEject->GetName() : "host")
+                         .arg(pool ? pool->GetName() : ""),
                      QString("Removing host from pool"),
                      parent),
       m_pool(pool), m_hostToEject(hostToEject)
@@ -61,11 +61,11 @@ void EjectHostFromPoolAction::run()
     {
         setDescription("Removing host from pool...");
 
-        qDebug() << "EjectHostFromPoolAction: Ejecting" << m_hostToEject->nameLabel()
-                 << "from pool" << m_pool->nameLabel();
+        qDebug() << "EjectHostFromPoolAction: Ejecting" << m_hostToEject->GetName()
+                 << "from pool" << m_pool->GetName();
 
         // Call Pool.eject to remove the host
-        XenAPI::Pool::eject(session(), m_hostToEject->opaqueRef());
+        XenAPI::Pool::eject(session(), m_hostToEject->OpaqueRef());
 
         setDescription("Host removed from pool");
 

@@ -35,7 +35,7 @@ Pool::Pool(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString Pool::objectType() const
+QString Pool::GetObjectType() const
 {
     return "pool";
 }
@@ -67,9 +67,9 @@ QVariantMap Pool::otherConfig() const
 
 QStringList Pool::hostRefs() const
 {
-    // In XenAPI, there's exactly one pool per connection, so all hosts belong to this pool
+    // In XenAPI, there's exactly one pool per GetConnection, so all hosts belong to this pool
     // Query the cache for all host references
-    XenConnection* conn = this->connection();
+    XenConnection* conn = this->GetConnection();
     if (!conn || !conn->getCache())
         return QStringList();
 

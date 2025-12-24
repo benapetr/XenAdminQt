@@ -46,7 +46,7 @@ JoinPoolCommand::JoinPoolCommand(MainWindow* mainWindow, QObject* parent)
 bool JoinPoolCommand::CanRun() const
 {
     QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host || !host->connection() || !host->connection()->isConnected())
+    if (!host || !host->GetConnection() || !host->GetConnection()->isConnected())
         return false;
 
     // A standalone host can always attempt to join a pool
@@ -60,7 +60,7 @@ void JoinPoolCommand::Run()
     if (!host)
         return;
 
-    QString hostRef = host->opaqueRef();
+    QString hostRef = host->OpaqueRef();
 
     if (hostRef.isEmpty())
         return;
@@ -114,8 +114,8 @@ void JoinPoolCommand::Run()
     if (result != QMessageBox::Yes)
         return;
 
-    // Get the current connection (host being joined)
-    XenConnection* hostConnection = host->connection();
+    // Get the current GetConnection (host being joined)
+    XenConnection* hostConnection = host->GetConnection();
     if (!hostConnection)
     {
         QMessageBox::critical(this->mainWindow(), "Join Pool", "No active connection to the host.");

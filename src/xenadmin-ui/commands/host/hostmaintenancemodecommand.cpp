@@ -51,12 +51,12 @@ bool HostMaintenanceModeCommand::CanRun() const
         return false;
 
     // Check if host exists and we have a valid connection
-    if (!host->connection())
+    if (!host->GetConnection())
         return false;
 
-    // For enter mode: host must be enabled
+    // For enter mode: host must be IsEnabled
     // For exit mode: host must be disabled (in maintenance mode)
-    bool hostEnabled = host->enabled();
+    bool hostEnabled = host->IsEnabled();
 
     if (this->m_enterMode)
         return hostEnabled; // Can only enter maintenance if host is currently enabled
@@ -73,7 +73,7 @@ void HostMaintenanceModeCommand::Run()
     if (!host)
         return;
 
-    QString hostRef = host->opaqueRef();
+    QString hostRef = host->OpaqueRef();
     QString hostName = this->getSelectedObjectName();
 
     if (hostRef.isEmpty())
@@ -97,7 +97,7 @@ void HostMaintenanceModeCommand::Run()
         {
             mw->showStatusMessage(QString("Entering maintenance mode for host '%1'...").arg(hostName));
 
-            XenConnection* conn = host->connection();
+            XenConnection* conn = host->GetConnection();
             if (!conn || !conn->isConnected())
             {
                 QMessageBox::warning(mw, "Not Connected",
@@ -138,7 +138,7 @@ void HostMaintenanceModeCommand::Run()
         {
             mw->showStatusMessage(QString("Exiting maintenance mode for host '%1'...").arg(hostName));
 
-            XenConnection* conn = host->connection();
+            XenConnection* conn = host->GetConnection();
             if (!conn || !conn->isConnected())
             {
                 QMessageBox::warning(mw, "Not Connected",

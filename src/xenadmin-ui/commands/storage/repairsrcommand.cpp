@@ -50,8 +50,8 @@ void RepairSRCommand::Run()
     if (!sr)
         return;
 
-    QString srRef = sr->opaqueRef();
-    QString srName = sr->nameLabel();
+    QString srRef = sr->OpaqueRef();
+    QString srName = sr->GetName();
 
     // Show confirmation dialog
     int ret = QMessageBox::question(this->mainWindow(), "Repair Storage Repository",
@@ -64,7 +64,7 @@ void RepairSRCommand::Run()
     {
         this->mainWindow()->showStatusMessage(QString("Repairing storage repository '%1'...").arg(srName));
 
-        XenConnection* connection = sr->connection();
+        XenConnection* connection = sr->GetConnection();
         if (!connection || !connection->isConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Repair Storage Repository Failed",

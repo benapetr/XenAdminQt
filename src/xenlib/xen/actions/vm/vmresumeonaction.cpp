@@ -38,7 +38,7 @@ VMResumeOnAction::VMResumeOnAction(VM* vm,
                                    StartDiagnosisForm startDiagnosisForm,
                                    QObject* parent)
     : VMStartAbstractAction(vm,
-                            tr("Resuming '%1' on '%2'...").arg(vm ? vm->nameLabel() : "VM").arg(hostToStart ? hostToStart->nameLabel() : "Host"),
+                            tr("Resuming '%1' on '%2'...").arg(vm ? vm->GetName() : "VM").arg(hostToStart ? hostToStart->GetName() : "Host"),
                             warningDialogHAInvalidConfig,
                             startDiagnosisForm,
                             parent),
@@ -78,7 +78,7 @@ void VMResumeOnAction::doAction(int start, int end)
     }
 
     // Call XenAPI::VM static method
-    QString taskRef = XenAPI::VM::async_resume_on(sess, vmObj->opaqueRef(), m_hostToStart->opaqueRef(), false, false);
+    QString taskRef = XenAPI::VM::async_resume_on(sess, vmObj->OpaqueRef(), m_hostToStart->OpaqueRef(), false, false);
 
     if (taskRef.isEmpty())
     {

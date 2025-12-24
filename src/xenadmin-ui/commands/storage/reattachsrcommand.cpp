@@ -44,8 +44,8 @@ bool ReattachSRCommand::CanRun() const
     if (!sr)
         return false;
 
-    XenCache* cache = sr->connection()->getCache();
-    QVariantMap srData = sr->data();
+    XenCache* cache = sr->GetConnection()->getCache();
+    QVariantMap srData = sr->GetData();
     if (srData.isEmpty())
         return false;
 
@@ -58,8 +58,8 @@ void ReattachSRCommand::Run()
     if (!sr)
         return;
 
-    QString srRef = sr->opaqueRef();
-    QString srName = sr->nameLabel();
+    QString srRef = sr->OpaqueRef();
+    QString srName = sr->GetName();
 
     qDebug() << "ReattachSRCommand: Opening NewSR wizard for reattaching SR" << srName << "(" << srRef << ")";
 
@@ -105,7 +105,7 @@ bool ReattachSRCommand::canSRBeReattached(const QVariantMap& srData) const
     if (!sr)
         return false;
 
-    XenCache* cache = sr->connection()->getCache();
+    XenCache* cache = sr->GetConnection()->getCache();
 
     for (const QVariant& pbdRefVar : pbds)
     {

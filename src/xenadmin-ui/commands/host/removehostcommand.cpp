@@ -51,12 +51,12 @@ void RemoveHostCommand::Run()
     if (!host)
         return;
 
-    XenConnection* connection = host->connection();
+    XenConnection* connection = host->GetConnection();
     if (!connection)
         return;
 
     QString hostname = connection->getHostname();
-    QString hostName = host->nameLabel();
+    QString hostName = host->GetName();
 
     // Show confirmation dialog
     QMessageBox msgBox(this->mainWindow());
@@ -108,7 +108,7 @@ bool RemoveHostCommand::canHostBeRemoved(QSharedPointer<Host> host) const
     if (!host)
         return false;
 
-    XenConnection* connection = host->connection();
+    XenConnection* connection = host->GetConnection();
     if (!connection)
         return false;
 
@@ -132,5 +132,5 @@ bool RemoveHostCommand::isHostCoordinator(QSharedPointer<Host> host) const
         return false;
 
     // Use the isMaster() method from Host class
-    return host->isMaster();
+    return host->IsMaster();
 }

@@ -47,7 +47,7 @@ bool StoragePropertiesCommand::CanRun() const
     if (this->m_overrideConn == nullptr)
     {
         QSharedPointer<SR> sr = this->getSR();
-        if (!sr || !sr->isConnected())
+        if (!sr || !sr->IsConnected())
             return false;
         return true;
     } else
@@ -64,13 +64,13 @@ void StoragePropertiesCommand::Run()
     else
         sr = this->m_overrideConn->getCache()->ResolveObject<SR>("sr", this->m_overrideSRRef);
 
-    if (!sr || !sr->isValid())
+    if (!sr || !sr->IsValid())
         return;
 
-    QString srRef = sr->opaqueRef();
+    QString srRef = sr->OpaqueRef();
 
-    // Get connection from SR object for multi-connection support
-    XenConnection* connection = sr->connection();
+    // Get GetConnection from SR object for multi-GetConnection support
+    XenConnection* connection = sr->GetConnection();
 
     if (!connection)
     {

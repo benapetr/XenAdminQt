@@ -36,7 +36,7 @@ DisableHostAction::DisableHostAction(XenConnection* connection,
                                      QObject* parent)
     : AsyncOperation(connection,
                      "Disabling host",
-                     QString("Evacuating '%1'").arg(host ? host->nameLabel() : ""),
+                     QString("Evacuating '%1'").arg(host ? host->GetName() : ""),
                      parent),
       m_host(host)
 {
@@ -48,21 +48,21 @@ void DisableHostAction::run()
 {
     try
     {
-        setDescription(QString("Evacuating '%1'").arg(m_host->nameLabel()));
+        setDescription(QString("Evacuating '%1'").arg(m_host->GetName()));
 
         try
         {
             // Disable the host (this will evacuate VMs)
-            QString taskRef = XenAPI::Host::async_disable(session(), m_host->opaqueRef());
+            QString taskRef = XenAPI::Host::async_disable(session(), m_host->OpaqueRef());
             pollToCompletion(taskRef, 0, 100);
         } catch (...)
         {
             // On error, remove MAINTENANCE_MODE flag
-            XenAPI::Host::remove_from_other_config(session(), m_host->opaqueRef(), "MAINTENANCE_MODE");
+            XenAPI::Host::remove_from_other_config(session(), m_host->OpaqueRef(), "MAINTENANCE_MODE");
             throw;
         }
 
-        setDescription(QString("Evacuated '%1'").arg(m_host->nameLabel()));
+        setDescription(QString("Evacuated '%1'").arg(m_host->GetName()));
 
     } catch (const std::exception& e)
     {

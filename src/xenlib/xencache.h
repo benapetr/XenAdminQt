@@ -138,7 +138,7 @@ class XenCache : public QObject
             for (const QSharedPointer<XenObject>& item : baseList)
             {
                 QSharedPointer<T> casted = qSharedPointerDynamicCast<T>(item);
-                if (casted && casted->isValid())
+                if (casted && casted->IsValid())
                     typedList.append(casted);
             }
             return typedList;

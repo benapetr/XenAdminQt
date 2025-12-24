@@ -441,11 +441,11 @@ void GeneralTabPage::populateVMProperties()
                 coresPerSocket = parsed;
         }
 
-        QString topologyWarning = VM::validVcpuConfiguration(vcpusMax, coresPerSocket);
+        QString topologyWarning = VM::ValidVCPUConfiguration(vcpusMax, coresPerSocket);
         qint64 sockets = topologyWarning.isEmpty() && coresPerSocket > 0
             ? (vcpusMax / coresPerSocket)
             : 0;
-        this->addProperty("Topology", VM::getTopology(sockets, coresPerSocket));
+        this->addProperty("Topology", VM::GetTopology(sockets, coresPerSocket));
     }
 }
 

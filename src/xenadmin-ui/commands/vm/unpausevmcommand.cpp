@@ -46,10 +46,10 @@ bool UnpauseVMCommand::CanRun() const
         return false;
 
     // Check if VM is paused AND unpause is allowed (matches C# UnpauseVMCommand.CanRun)
-    if (vm->powerState() != "Paused")
+    if (vm->GetPowerState() != "Paused")
         return false;
 
-    QVariantList allowedOperations = vm->data().value("allowed_operations").toList();
+    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
 
     return allowedOperations.contains("unpause");
 }
@@ -61,7 +61,7 @@ void UnpauseVMCommand::Run()
         return;
 
     // Get XenConnection from VM
-    XenConnection* conn = vm->connection();
+    XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -70,7 +70,7 @@ void UnpauseVMCommand::Run()
     }
 
     // Create VM object for action (action will own and delete it)
-    VM* vmForAction = new VM(conn, vm->opaqueRef());
+    VM* vmForAction = new VM(conn, vm->OpaqueRef());
 
     // Create VMUnpause action (parent is MainWindow to prevent premature deletion)
     VMUnpause* action = new VMUnpause(vmForAction, this->mainWindow());

@@ -70,7 +70,7 @@ void ShutdownHostCommand::Run()
     {
         this->mainWindow()->showStatusMessage(QString("Shutting down host '%1'...").arg(hostName));
 
-        XenConnection* conn = host->connection();
+        XenConnection* conn = host->GetConnection();
         if (!conn || !conn->isConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",

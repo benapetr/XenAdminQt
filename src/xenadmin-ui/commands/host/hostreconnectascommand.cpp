@@ -46,12 +46,12 @@ bool HostReconnectAsCommand::CanRun() const
     if (!host)
         return false;
 
-    XenConnection* conn = host->connection();
+    XenConnection* conn = host->GetConnection();
     if (!conn)
         return false;
 
     // Can reconnect-as if connected and selected host is coordinator
-    if (conn->isConnected() && host->isMaster())
+    if (conn->isConnected() && host->IsMaster())
         return true;
 
     // Can also reconnect-as if connection is in progress (to change creds)
@@ -66,7 +66,7 @@ void HostReconnectAsCommand::Run()
     if (!host)
         return;
 
-    XenConnection* conn = host->connection();
+    XenConnection* conn = host->GetConnection();
     if (!conn)
         return;
 

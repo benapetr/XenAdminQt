@@ -124,7 +124,7 @@ bool ExportVMCommand::isVMExportable() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->data();
+    QVariantMap vmData = vm->GetData();
     if (vmData.isEmpty())
         return false;
 

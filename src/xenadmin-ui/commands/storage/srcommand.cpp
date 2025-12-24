@@ -64,5 +64,5 @@ QString SRCommand::getSelectedSRName() const
     if (!sr)
         return QString();
 
-    return sr->nameLabel();
+    return sr->GetName();
 }

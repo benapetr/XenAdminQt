@@ -296,7 +296,7 @@ void AsyncOperation::setPool(Pool* pool)
     if (pool)
     {
         // Inline add to m_appliesTo - already have mutex lock
-        QString ref = pool->opaqueRef();
+        QString ref = pool->OpaqueRef();
         if (!ref.isEmpty() && !this->m_appliesTo.contains(ref))
         {
             this->m_appliesTo.append(ref);
@@ -317,7 +317,7 @@ void AsyncOperation::setHost(Host* host)
     if (host)
     {
         // Inline add to m_appliesTo - already have mutex lock
-        QString ref = host->opaqueRef();
+        QString ref = host->OpaqueRef();
         if (!ref.isEmpty() && !this->m_appliesTo.contains(ref))
         {
             this->m_appliesTo.append(ref);
@@ -342,19 +342,19 @@ void AsyncOperation::setVM(VM* vm)
     {
         QString ref;
         // If this is a snapshot, add the parent VM instead (matches C# ActionBase.VM setter)
-        if (vm->isSnapshot())
+        if (vm->IsSnapshot())
         {
-            QString parentRef = vm->snapshotOfRef();
+            QString parentRef = vm->SnapshotOfRef();
             if (!parentRef.isEmpty())
             {
                 ref = parentRef;
             } else
             {
-                ref = vm->opaqueRef();
+                ref = vm->OpaqueRef();
             }
         } else
         {
-            ref = vm->opaqueRef();
+            ref = vm->OpaqueRef();
         }
 
         // Inline add to m_appliesTo - already have mutex lock
@@ -364,7 +364,7 @@ void AsyncOperation::setVM(VM* vm)
         }
 
         // Add home host if available
-        QString homeRef = vm->homeRef();
+        QString homeRef = vm->HomeRef();
         if (!homeRef.isEmpty() && !this->m_appliesTo.contains(homeRef))
         {
             this->m_appliesTo.append(homeRef);
@@ -385,7 +385,7 @@ void AsyncOperation::setSR(SR* sr)
     if (sr)
     {
         // Inline add to m_appliesTo - already have mutex lock
-        QString ref = sr->opaqueRef();
+        QString ref = sr->OpaqueRef();
         if (!ref.isEmpty() && !this->m_appliesTo.contains(ref))
         {
             this->m_appliesTo.append(ref);
@@ -416,7 +416,7 @@ void AsyncOperation::setVMTemplate(VM* vmTemplate)
     if (vmTemplate)
     {
         // Inline add to m_appliesTo - already have mutex lock
-        QString ref = vmTemplate->opaqueRef();
+        QString ref = vmTemplate->OpaqueRef();
         if (!ref.isEmpty() && !this->m_appliesTo.contains(ref))
         {
             this->m_appliesTo.append(ref);
@@ -1115,7 +1115,7 @@ void AsyncOperation::setAppliesToFromObject(QObject* xenObject)
     } else if (VM* vm = qobject_cast<VM*>(xenObject))
     {
         // Check if it's a template
-        if (vm->isTemplate())
+        if (vm->IsTemplate())
         {
             setVMTemplate(vm);
         } else

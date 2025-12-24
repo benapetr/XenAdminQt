@@ -55,15 +55,15 @@ void CloneVMCommand::Run()
     if (!vm)
         return;
 
-    QString vmRef = vm->opaqueRef();
+    QString vmRef = vm->OpaqueRef();
     QString vmName = this->getSelectedVMName();
 
     if (vmRef.isEmpty() || vmName.isEmpty())
         return;
 
     // Use cache instead of async API call
-    QVariantMap vmData = vm->data();
-    QString powerState = vm->powerState();
+    QVariantMap vmData = vm->GetData();
+    QString powerState = vm->GetPowerState();
 
     // Check if VM is in a cloneable state
     if (powerState != "Halted")
@@ -95,7 +95,7 @@ void CloneVMCommand::Run()
     if (ret == QMessageBox::Yes)
     {
         // Get XenConnection from XenLib
-        XenConnection* conn = vm->connection();
+        XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->isConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -144,7 +144,7 @@ bool CloneVMCommand::isVMCloneable() const
         return false;
 
     // Use cache instead of async API call
-    QVariantMap vmData = vm->data();
+    QVariantMap vmData = vm->GetData();
 
     // Check if it's not a template
     bool isTemplate = vmData.value("is_a_template", false).toBool();

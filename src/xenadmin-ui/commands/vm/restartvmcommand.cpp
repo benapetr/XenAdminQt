@@ -46,10 +46,10 @@ bool RestartVMCommand::CanRun() const
         return false;
 
     // Check if VM is running AND clean_reboot is allowed (matches C# RebootVMCommand.CanRun)
-    if (vm->powerState() != "Running")
+    if (vm->GetPowerState() != "Running")
         return false;
 
-    QVariantList allowedOperations = vm->data().value("allowed_operations").toList();
+    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
 
     return allowedOperations.contains("clean_reboot");
 }
@@ -73,7 +73,7 @@ void RestartVMCommand::Run()
         return;
 
     // Get XenConnection from VM
-    XenConnection* conn = vm->connection();
+    XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -82,7 +82,7 @@ void RestartVMCommand::Run()
     }
 
     // Create VM object for action (action will own and delete it)
-    VM* vmForAction = new VM(conn, vm->opaqueRef());
+    VM* vmForAction = new VM(conn, vm->OpaqueRef());
 
     // Create VMCleanReboot action (parent is MainWindow to prevent premature deletion)
     VMCleanReboot* action = new VMCleanReboot(vmForAction, this->mainWindow());

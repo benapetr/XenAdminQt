@@ -41,29 +41,29 @@ XenObject::~XenObject()
 {
 }
 
-QString XenObject::uuid() const
+QString XenObject::GetUUID() const
 {
     return stringProperty("uuid");
 }
 
-QString XenObject::nameLabel() const
+QString XenObject::GetName() const
 {
     return stringProperty("name_label");
 }
 
-QString XenObject::nameDescription() const
+QString XenObject::GetDescription() const
 {
     return stringProperty("name_description");
 }
 
-bool XenObject::isConnected() const
+bool XenObject::IsConnected() const
 {
     if (!this->m_connection)
         return false;
     return this->m_connection->isConnected();
 }
 
-QVariantMap XenObject::data() const
+QVariantMap XenObject::GetData() const
 {
     if (!this->m_connection || this->m_opaqueRef.isEmpty())
         return QVariantMap();
@@ -72,22 +72,22 @@ QVariantMap XenObject::data() const
     if (!this->m_connection->getCache())
         return QVariantMap();
 
-    return this->m_connection->getCache()->ResolveObjectData(objectType(), this->m_opaqueRef);
+    return this->m_connection->getCache()->ResolveObjectData(GetObjectType(), this->m_opaqueRef);
 }
 
-void XenObject::refresh()
+void XenObject::Refresh()
 {
     emit dataChanged();
 }
 
-bool XenObject::isValid() const
+bool XenObject::IsValid() const
 {
-    return !data().isEmpty();
+    return !GetData().isEmpty();
 }
 
 QVariant XenObject::property(const QString& key, const QVariant& defaultValue) const
 {
-    QVariantMap d = data();
+    QVariantMap d = GetData();
     return d.value(key, defaultValue);
 }
 

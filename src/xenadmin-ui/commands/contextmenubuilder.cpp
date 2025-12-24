@@ -99,8 +99,8 @@ QMenu* ContextMenuBuilder::buildContextMenu(QTreeWidgetItem* item, QWidget* pare
     // because in theory such code path should be invalid / bug, so this code can be probably drastically simplified
     if (obj)
     {
-        objectType = obj->objectType();
-        objectRef = obj->opaqueRef();
+        objectType = obj->GetObjectType();
+        objectRef = obj->OpaqueRef();
     } else if (data.canConvert<XenConnection*>())
     {
         objectType = "disconnected_host";
@@ -129,7 +129,7 @@ QMenu* ContextMenuBuilder::buildContextMenu(QTreeWidgetItem* item, QWidget* pare
     {
         QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
 
-        if (vm->isSnapshot())
+        if (vm->IsSnapshot())
             this->buildSnapshotContextMenu(menu, vm);
         else
             this->buildVMContextMenu(menu, vm);
@@ -160,8 +160,8 @@ QMenu* ContextMenuBuilder::buildContextMenu(QTreeWidgetItem* item, QWidget* pare
 
 void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 {
-    QString powerState = vm->powerState();
-    QString vmRef = vm->opaqueRef();
+    QString powerState = vm->GetPowerState();
+    QString vmRef = vm->OpaqueRef();
 
     // Power operations based on VM state
     if (powerState == "Halted")
@@ -215,7 +215,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
     this->addSeparator(menu);
 
     // Snapshot operations
-    TakeSnapshotCommand* takeSnapshotCmd = new TakeSnapshotCommand(vm->opaqueRef(), this->m_mainWindow, this);
+    TakeSnapshotCommand* takeSnapshotCmd = new TakeSnapshotCommand(vm->OpaqueRef(), this->m_mainWindow, this);
     this->addCommand(menu, takeSnapshotCmd);
 
     this->addSeparator(menu);
@@ -226,13 +226,13 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
     this->addSeparator(menu);
 
     // Properties
-    VMPropertiesCommand* propertiesCmd = new VMPropertiesCommand(vm->opaqueRef(), this->m_mainWindow, this);
+    VMPropertiesCommand* propertiesCmd = new VMPropertiesCommand(vm->OpaqueRef(), this->m_mainWindow, this);
     this->addCommand(menu, propertiesCmd);
 }
 
 void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM> snapshot)
 {
-    QString vmRef = snapshot->opaqueRef();
+    QString vmRef = snapshot->OpaqueRef();
 
     // C# SingleSnapshot builder pattern:
     // - NewVMFromSnapshotCommand (not implemented yet)
@@ -268,7 +268,7 @@ void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM
 
 void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM> templateVM)
 {
-    QString templateRef = templateVM->opaqueRef();
+    QString templateRef = templateVM->OpaqueRef();
 
     // VM Creation from template
     NewVMFromTemplateCommand* newVMFromTemplateCmd = new NewVMFromTemplateCommand(this->m_mainWindow, this);
@@ -292,7 +292,7 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM
 
 void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> host)
 {
-    bool enabled = host->enabled();
+    bool enabled = host->IsEnabled();
 
     // New VM command (available for both pool and standalone hosts)
     NewVMCommand* newVMCmd = new NewVMCommand(this->m_mainWindow, this);
@@ -391,7 +391,7 @@ void ContextMenuBuilder::buildDisconnectedHostContextMenu(QMenu* menu, QTreeWidg
 
 void ContextMenuBuilder::buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> pool)
 {
-    QString poolRef = pool->opaqueRef();
+    QString poolRef = pool->OpaqueRef();
 
     // VM Creation operations
     NewVMCommand* newVMCmd = new NewVMCommand(this->m_mainWindow, this);

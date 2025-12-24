@@ -43,7 +43,7 @@ HADisableCommand::HADisableCommand(MainWindow* mainWindow, QObject* parent)
 bool HADisableCommand::CanRun() const
 {
     QSharedPointer<Pool> pool = this->getPool();
-    if (!pool || !pool->isValid())
+    if (!pool || !pool->IsValid())
         return false;
 
     // Can disable HA if pool is connected and HA is enabled
@@ -53,11 +53,11 @@ bool HADisableCommand::CanRun() const
 void HADisableCommand::Run()
 {
     QSharedPointer<Pool> pool = this->getPool();
-    if (!pool || !pool->isValid())
+    if (!pool || !pool->IsValid())
         return;
 
-    QString poolRef = pool->opaqueRef();
-    QString poolName = pool->nameLabel();
+    QString poolRef = pool->OpaqueRef();
+    QString poolName = pool->GetName();
 
     if (poolRef.isEmpty())
         return;
@@ -73,7 +73,7 @@ void HADisableCommand::Run()
         return;
 
     // Create and run the DisableHAAction
-    XenConnection* connection = pool->connection();
+    XenConnection* connection = pool->GetConnection();
     if (!connection)
     {
         QMessageBox::critical(this->mainWindow(), "Error", "No active connection.");

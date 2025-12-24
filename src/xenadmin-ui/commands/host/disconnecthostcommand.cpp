@@ -45,12 +45,12 @@ bool DisconnectHostCommand::CanRun() const
     if (!host)
         return false;
 
-    XenConnection* conn = host->connection();
+    XenConnection* conn = host->GetConnection();
     if (!conn)
         return false;
 
     // Can disconnect if connected and selected host is coordinator
-    if (conn->isConnected() && host->isMaster())
+    if (conn->isConnected() && host->IsMaster())
         return true;
 
     // Can also disconnect if connection is in progress (to cancel)
@@ -65,7 +65,7 @@ void DisconnectHostCommand::Run()
     if (!host)
         return;
 
-    XenConnection* conn = host->connection();
+    XenConnection* conn = host->GetConnection();
     if (!conn)
         return;
 

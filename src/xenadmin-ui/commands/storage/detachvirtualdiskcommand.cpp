@@ -51,19 +51,19 @@ QString DetachVirtualDiskCommand::MenuText() const
 bool DetachVirtualDiskCommand::CanRun() const
 {
     QSharedPointer<VDI> vdi = this->getVDI();
-    if (!vdi || !vdi->isValid())
+    if (!vdi || !vdi->IsValid())
         return false;
 
-    return this->canRunVDI(vdi->opaqueRef());
+    return this->canRunVDI(vdi->OpaqueRef());
 }
 
 bool DetachVirtualDiskCommand::canRunVDI(const QString& vdiRef) const
 {
     QSharedPointer<VDI> vdi = this->getVDI();
-    if (!vdi || !vdi->isValid())
+    if (!vdi || !vdi->IsValid())
         return false;
 
-    XenCache* cache = vdi->connection()->getCache();
+    XenCache* cache = vdi->GetConnection()->getCache();
     QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
         return false;

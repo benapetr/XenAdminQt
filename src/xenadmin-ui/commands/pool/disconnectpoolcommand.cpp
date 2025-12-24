@@ -43,10 +43,10 @@ bool DisconnectPoolCommand::CanRun() const
     // 2. Connection is connected or in progress
 
     QSharedPointer<Pool> pool = this->getPool();
-    if (!pool || !pool->isValid())
+    if (!pool || !pool->IsValid())
         return false;
 
-    XenConnection* conn = pool->connection();
+    XenConnection* conn = pool->GetConnection();
     if (!conn)
         return false;
 
@@ -57,14 +57,14 @@ bool DisconnectPoolCommand::CanRun() const
 void DisconnectPoolCommand::Run()
 {
     QSharedPointer<Pool> pool = this->getPool();
-    if (!pool || !pool->isValid())
+    if (!pool || !pool->IsValid())
         return;
 
-    XenConnection* conn = pool->connection();
+    XenConnection* conn = pool->GetConnection();
     if (!conn)
         return;
 
-    QString poolName = pool->nameLabel();
+    QString poolName = pool->GetName();
 
     if (poolName.isEmpty())
         poolName = "this pool";

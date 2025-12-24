@@ -36,7 +36,7 @@ CreateVMFastAction::CreateVMFastAction(XenConnection* connection,
                                        VM* templateVM,
                                        QObject* parent)
     : AsyncOperation(connection,
-                     QString("Creating VM from template '%1'").arg(templateVM ? templateVM->nameLabel() : ""),
+                     QString("Creating VM from template '%1'").arg(templateVM ? templateVM->GetName() : ""),
                      "",
                      parent),
       m_template(templateVM)
@@ -49,13 +49,13 @@ void CreateVMFastAction::run()
 {
     try
     {
-        QString originalName = m_template->nameLabel();
+        QString originalName = m_template->GetName();
 
         // Clone template with hidden name (matches C# MakeHiddenName)
         setDescription(QString("Cloning template '%1'").arg(originalName));
         QString hiddenName = QString("__gui__%1").arg(originalName);
 
-        QString taskRef = XenAPI::VM::async_clone(session(), m_template->opaqueRef(), hiddenName);
+        QString taskRef = XenAPI::VM::async_clone(session(), m_template->OpaqueRef(), hiddenName);
         pollToCompletion(taskRef, 0, 80);
 
         QString newVmRef = result();

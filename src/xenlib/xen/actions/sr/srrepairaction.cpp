@@ -38,9 +38,9 @@
 SrRepairAction::SrRepairAction(SR* sr,
                                bool isSharedAction,
                                QObject* parent)
-    : AsyncOperation(sr ? sr->connection() : nullptr,
-                     isSharedAction ? QString("Sharing SR '%1'").arg(sr ? sr->nameLabel() : "")
-                                    : QString("Repairing SR '%1'").arg(sr ? sr->nameLabel() : ""),
+    : AsyncOperation(sr ? sr->GetConnection() : nullptr,
+                     isSharedAction ? QString("Sharing SR '%1'").arg(sr ? sr->GetName() : "")
+                                    : QString("Repairing SR '%1'").arg(sr ? sr->GetName() : ""),
                      isSharedAction ? QString("Sharing storage repository...")
                                     : QString("Repairing storage repository..."),
                      parent),
@@ -71,9 +71,9 @@ void SrRepairAction::run()
         return;
     }
 
-    qDebug() << "SrRepairAction: Repairing SR" << m_sr->nameLabel();
+    qDebug() << "SrRepairAction: Repairing SR" << m_sr->GetName();
 
-    QString srRef = m_sr->opaqueRef();
+    QString srRef = m_sr->OpaqueRef();
     bool srShared = m_sr->shared();
 
     // Get all PBDs for this SR
@@ -246,9 +246,9 @@ void SrRepairAction::run()
     // Success
     setPercentComplete(100);
     if (m_isSharedAction)
-        setDescription(QString("SR '%1' shared successfully").arg(m_sr->nameLabel()));
+        setDescription(QString("SR '%1' shared successfully").arg(m_sr->GetName()));
     else
-        setDescription(QString("SR '%1' repaired successfully").arg(m_sr->nameLabel()));
+        setDescription(QString("SR '%1' repaired successfully").arg(m_sr->GetName()));
 
     qDebug() << "SrRepairAction: Repair complete";
 }

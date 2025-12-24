@@ -220,7 +220,7 @@ bool VDI::cbtEnabled() const
     return this->boolProperty("cbt_enabled", false);
 }
 
-QString VDI::objectType() const
+QString VDI::GetObjectType() const
 {
     return "vdi";
 }

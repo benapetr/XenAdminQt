@@ -54,8 +54,8 @@ void DestroySRCommand::Run()
     if (!sr)
         return;
 
-    QString srRef = sr->opaqueRef();
-    QString srName = sr->nameLabel();
+    QString srRef = sr->OpaqueRef();
+    QString srName = sr->GetName();
 
     // Show critical warning dialog (double confirmation)
     QMessageBox msgBox(mainWindow());
@@ -78,8 +78,8 @@ void DestroySRCommand::Run()
 
     qDebug() << "DestroySRCommand: Destroying SR" << srName << "(" << srRef << ")";
 
-    // Get connection from SR object for multi-connection support
-    XenConnection* conn = sr->connection();
+    // Get GetConnection from SR object for multi-GetConnection support
+    XenConnection* conn = sr->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
@@ -127,7 +127,7 @@ bool DestroySRCommand::canSRBeDestroyed() const
     if (!sr)
         return false;
 
-    QVariantMap srData = sr->data();
+    QVariantMap srData = sr->GetData();
 
     // Cannot destroy if SR has VDIs (contains data)
     QVariantList vdis = srData.value("VDIs", QVariantList()).toList();
@@ -138,7 +138,7 @@ bool DestroySRCommand::canSRBeDestroyed() const
     bool shared = srData.value("shared", false).toBool();
     if (shared)
     {
-        XenCache* cache = sr->connection()->getCache();
+        XenCache* cache = sr->GetConnection()->getCache();
         QVariantList pbds = srData.value("PBDs", QVariantList()).toList();
         for (const QVariant& pbdRefVar : pbds)
         {

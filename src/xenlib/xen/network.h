@@ -139,7 +139,7 @@ public:
     QStringList purpose() const;
 
     // XenObject interface
-    QString objectType() const override { return "network"; }
+    QString GetObjectType() const override { return "network"; }
 };
 
 #endif // NETWORK_H

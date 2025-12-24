@@ -34,7 +34,7 @@ VMToTemplateAction::VMToTemplateAction(XenConnection* connection,
                                        VM* vm,
                                        QObject* parent)
     : AsyncOperation(connection,
-                     QString("Converting '%1' to template").arg(vm ? vm->nameLabel() : ""),
+                     QString("Converting '%1' to template").arg(vm ? vm->GetName() : ""),
                      "Preparing",
                      parent),
       m_vm(vm)
@@ -50,7 +50,7 @@ void VMToTemplateAction::run()
         setDescription("Converting VM to template");
 
         // Set is_a_template flag to true
-        XenAPI::VM::set_is_a_template(session(), m_vm->opaqueRef(), true);
+        XenAPI::VM::set_is_a_template(session(), m_vm->OpaqueRef(), true);
 
         setDescription("VM converted to template");
 

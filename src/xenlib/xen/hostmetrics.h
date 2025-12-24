@@ -66,7 +66,7 @@ public:
      * @brief Get unique identifier
      * @return UUID string
      */
-    QString uuid() const;
+    QString GetUUID() const;
 
     /**
      * @brief Get total host memory
@@ -93,7 +93,7 @@ public:
     QVariantMap otherConfig() const;
 
 protected:
-    QString objectType() const override;
+    QString GetObjectType() const override;
 };
 
 #endif // HOSTMETRICS_H

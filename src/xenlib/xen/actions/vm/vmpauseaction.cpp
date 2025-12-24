@@ -37,7 +37,7 @@
 // VMPauseAction implementation
 
 VMPauseAction::VMPauseAction(VM* vm, const QString& title, QObject* parent)
-    : AsyncOperation(vm ? vm->connection() : nullptr, title, tr("Preparing..."), parent)
+    : AsyncOperation(vm ? vm->GetConnection() : nullptr, title, tr("Preparing..."), parent)
 {
     setVM(vm);
 
@@ -48,7 +48,7 @@ VMPauseAction::VMPauseAction(VM* vm, const QString& title, QObject* parent)
         // setHost(vm->home());
 
         // Set pool
-        XenConnection* conn = vm->connection();
+        XenConnection* conn = vm->GetConnection();
         if (conn)
         {
             // TODO: Get pool from connection
@@ -65,7 +65,7 @@ VMPauseAction::~VMPauseAction()
 
 VMPause::VMPause(VM* vm, QObject* parent)
     : VMPauseAction(vm,
-                    tr("Pausing '%1'...").arg(vm ? vm->nameLabel() : "VM"),
+                    tr("Pausing '%1'...").arg(vm ? vm->GetName() : "VM"),
                     parent)
 {
     addApiMethodToRoleCheck("VM.async_pause");
@@ -90,7 +90,7 @@ void VMPause::run()
     }
 
     // Call XenAPI::VM static method
-    QString taskRef = XenAPI::VM::async_pause(sess, vmObj->opaqueRef());
+    QString taskRef = XenAPI::VM::async_pause(sess, vmObj->OpaqueRef());
 
     if (taskRef.isEmpty())
     {
@@ -108,7 +108,7 @@ void VMPause::run()
 
 VMUnpause::VMUnpause(VM* vm, QObject* parent)
     : VMPauseAction(vm,
-                    tr("Unpausing '%1'...").arg(vm ? vm->nameLabel() : "VM"),
+                    tr("Unpausing '%1'...").arg(vm ? vm->GetName() : "VM"),
                     parent)
 {
     addApiMethodToRoleCheck("VM.async_unpause");
@@ -133,7 +133,7 @@ void VMUnpause::run()
     }
 
     // Call XenAPI::VM static method
-    QString taskRef = XenAPI::VM::async_unpause(sess, vmObj->opaqueRef());
+    QString taskRef = XenAPI::VM::async_unpause(sess, vmObj->OpaqueRef());
 
     if (taskRef.isEmpty())
     {

@@ -50,7 +50,7 @@ bool DisableChangedBlockTrackingCommand::CanRun() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->data();
+    QVariantMap vmData = vm->GetData();
     if (vmData.isEmpty())
         return false;
 
@@ -74,8 +74,8 @@ void DisableChangedBlockTrackingCommand::Run()
     if (!vm)
         return;
 
-    QString vmRef = vm->opaqueRef();
-    QString vmName = vm->nameLabel();
+    QString vmRef = vm->OpaqueRef();
+    QString vmName = vm->GetName();
 
     // Show confirmation dialog
     QString message = tr("Are you sure you want to disable Changed Block Tracking for VM '%1'?\n\n"
@@ -94,8 +94,8 @@ void DisableChangedBlockTrackingCommand::Run()
         return;
     }
 
-    // Get connection
-    XenConnection* conn = vm->connection();
+    // Get GetConnection
+    XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
@@ -103,8 +103,8 @@ void DisableChangedBlockTrackingCommand::Run()
         return;
     }
 
-    // Get VM data for VBD access
-    QVariantMap vmData = vm->data();
+    // Get VM GetData for VBD access
+    QVariantMap vmData = vm->GetData();
 
     // Collect all actions for VDIs with CBT enabled
     QList<AsyncOperation*> actions;
@@ -199,14 +199,14 @@ bool DisableChangedBlockTrackingCommand::hasVdiWithCbtEnabled() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->data();
+    QVariantMap vmData = vm->GetData();
     if (vmData.isEmpty())
         return false;
 
     // Get all VBDs for this VM
     QVariantList vbds = vmData.value("VBDs").toList();
 
-    XenCache* cache = vm->connection()->getCache();
+    XenCache* cache = vm->GetConnection()->getCache();
 
     for (const QVariant& vbdRefVariant : vbds)
     {

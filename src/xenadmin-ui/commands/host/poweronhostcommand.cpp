@@ -56,7 +56,7 @@ void PowerOnHostCommand::Run()
     if (hostName.isEmpty())
         return;
 
-    QString powerOnMode = host->data().value("power_on_mode", "").toString();
+    QString powerOnMode = host->GetData().value("power_on_mode", "").toString();
 
     // Check if power_on_mode is set (matches C# GetCantRunReasonCore logic)
     if (powerOnMode.isEmpty())
@@ -69,7 +69,7 @@ void PowerOnHostCommand::Run()
     }
 
     // Get XenConnection from XenLib
-    XenConnection* conn = host->connection();
+    XenConnection* conn = host->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -122,11 +122,11 @@ bool PowerOnHostCommand::canPowerOn() const
     if (!host)
         return false;
 
-    QVariantMap hostData = host->data();
+    QVariantMap hostData = host->GetData();
 
     // Check if host is not live (not running)
     // Note: PowerOn uses enabled field, not live field (different from isHostLive base class)
-    if (!host->enabled())
+    if (!host->IsEnabled())
         return false;
 
     // Check if power_on is in allowed_operations
@@ -164,7 +164,7 @@ bool PowerOnHostCommand::hasActiveHostAction() const
     if (!host)
         return false;
 
-    QVariantMap hostData = host->data();
+    QVariantMap hostData = host->GetData();
     if (hostData.isEmpty())
         return false;
 

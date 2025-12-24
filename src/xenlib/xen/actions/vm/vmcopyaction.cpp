@@ -45,10 +45,10 @@ VMCopyAction::VMCopyAction(XenConnection* connection,
                            QObject* parent)
     : AsyncOperation(connection,
                      QString("Copying '%1' to '%2' on '%3'")
-                         .arg(vm ? vm->nameLabel() : "")
+                         .arg(vm ? vm->GetName() : "")
                          .arg(nameLabel)
-                         .arg(sr ? sr->nameLabel() : ""),
-                     QString("Copying VM '%1'").arg(vm ? vm->nameLabel() : ""),
+                         .arg(sr ? sr->GetName() : ""),
+                     QString("Copying VM '%1'").arg(vm ? vm->GetName() : ""),
                      parent),
       m_vm(vm), m_host(host), m_sr(sr), m_nameLabel(nameLabel), m_description(description)
 {
@@ -64,7 +64,7 @@ VMCopyAction::VMCopyAction(XenConnection* connection,
         setHost(this->m_host);
 
     // If VM is a template, set template context
-    if (this->m_vm->isTemplate())
+    if (this->m_vm->IsTemplate())
         setVMTemplate(this->m_vm);
 }
 
@@ -75,9 +75,9 @@ void VMCopyAction::run()
         // Call VM.async_copy
         QString taskRef = XenAPI::VM::async_copy(
             session(),
-            this->m_vm->opaqueRef(),
+            this->m_vm->OpaqueRef(),
             this->m_nameLabel,
-            this->m_sr->opaqueRef());
+            this->m_sr->OpaqueRef());
 
         // Poll task to completion
         pollToCompletion(taskRef, 0, 90);

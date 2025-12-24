@@ -38,8 +38,8 @@ const char* EditMultipathAction::DEFAULT_MULTIPATH_HANDLE = "dmp";
 EditMultipathAction::EditMultipathAction(Host* host,
                                          bool enableMultipath,
                                          QObject* parent)
-    : AsyncOperation(host->connection(),
-                     QString("Changing multipath setting on %1").arg(host->nameLabel()),
+    : AsyncOperation(host->GetConnection(),
+                     QString("Changing multipath setting on %1").arg(host->GetName()),
                      QString("Changing multipath..."),
                      parent),
       m_host(host), m_enableMultipath(enableMultipath)
@@ -64,16 +64,16 @@ void EditMultipathAction::run()
         return;
     }
 
-    qDebug() << "EditMultipathAction: Changing multipath setting on host" << m_host->nameLabel()
+    qDebug() << "EditMultipathAction: Changing multipath setting on host" << m_host->GetName()
              << "to" << m_enableMultipath;
 
-    QString hostRef = m_host->opaqueRef();
+    QString hostRef = m_host->OpaqueRef();
     QStringList pluggedPBDs;
 
     try
     {
         // Get all PBDs for this host
-        QVariantMap hostRecord = m_host->data();
+        QVariantMap hostRecord = m_host->GetData();
         QVariantList pbdRefs = hostRecord.value("PBDs").toList();
 
         // Step 1: Unplug all currently attached PBDs

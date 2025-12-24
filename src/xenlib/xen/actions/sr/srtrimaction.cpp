@@ -39,7 +39,7 @@ SrTrimAction::SrTrimAction(XenConnection* connection,
                            SR* sr,
                            QObject* parent)
     : AsyncOperation(connection,
-                     QString("Trim SR '%1'").arg(sr->nameLabel()),
+                     QString("Trim SR '%1'").arg(sr->GetName()),
                      QString("Reclaiming freed space..."),
                      parent),
       m_sr(sr)
@@ -49,7 +49,7 @@ SrTrimAction::SrTrimAction(XenConnection* connection,
 
 void SrTrimAction::run()
 {
-    qDebug() << "SrTrimAction: Trimming SR" << m_sr->uuid();
+    qDebug() << "SrTrimAction: Trimming SR" << m_sr->GetUUID();
 
     XenSession* session = this->session();
     if (!session || !session->isLoggedIn())
@@ -69,16 +69,16 @@ void SrTrimAction::run()
         return;
     }
 
-    qDebug() << "SrTrimAction: Using host" << host->nameLabel();
+    qDebug() << "SrTrimAction: Using host" << host->GetName();
 
     // Call trim plugin
     try
     {
         QVariantMap args;
-        args["sr_uuid"] = m_sr->uuid();
+        args["sr_uuid"] = m_sr->GetUUID();
 
         QString result = XenAPI::Host::call_plugin(session,
-                                                   host->opaqueRef(),
+                                                   host->OpaqueRef(),
                                                    "trim",
                                                    "do_trim",
                                                    args);

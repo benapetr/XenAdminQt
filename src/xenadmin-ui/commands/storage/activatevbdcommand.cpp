@@ -49,19 +49,19 @@ QString ActivateVBDCommand::MenuText() const
 bool ActivateVBDCommand::CanRun() const
 {
     QSharedPointer<VBD> vbd = this->getVBD();
-    if (!vbd || !vbd->isValid())
+    if (!vbd || !vbd->IsValid())
         return false;
 
-    return this->canRunVBD(vbd->opaqueRef());
+    return this->canRunVBD(vbd->OpaqueRef());
 }
 
 bool ActivateVBDCommand::canRunVBD(const QString& vbdRef) const
 {
     QSharedPointer<VBD> vbd = this->getVBD();
-    if (!vbd || !vbd->isValid())
+    if (!vbd || !vbd->IsValid())
         return false;
 
-    XenCache* cache = vbd->connection()->getCache();
+    XenCache* cache = vbd->GetConnection()->getCache();
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
@@ -124,13 +124,13 @@ bool ActivateVBDCommand::canRunVBD(const QString& vbdRef) const
 
 QString ActivateVBDCommand::getCantRunReasonVBD(QSharedPointer<VBD> vbd) const
 {
-    if (!vbd || !vbd->isConnected())
+    if (!vbd || !vbd->IsConnected())
     {
         return "VBD not found";
     }
 
-    XenCache* cache = vbd->connection()->getCache();
-    QVariantMap vbdData = vbd->data();
+    XenCache* cache = vbd->GetConnection()->getCache();
+    QVariantMap vbdData = vbd->GetData();
 
     // Get VM
     QString vmRef = vbdData.value("VM").toString();
@@ -210,11 +210,11 @@ bool ActivateVBDCommand::areIODriversNeededAndMissing(const QVariantMap& vmData)
 void ActivateVBDCommand::Run()
 {
     QSharedPointer<VBD> vbd = this->getVBD();
-    if (!vbd || !vbd->isValid())
+    if (!vbd || !vbd->IsValid())
         return;
 
-    QString vbdRef = vbd->opaqueRef();
-    XenCache* cache = vbd->connection()->getCache();
+    QString vbdRef = vbd->OpaqueRef();
+    XenCache* cache = vbd->GetConnection()->getCache();
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
@@ -233,7 +233,7 @@ void ActivateVBDCommand::Run()
     // Execute plug operation directly (matches C# DelegatedAsyncAction pattern)
     try
     {
-        XenAPI::VBD::plug(vbd->connection()->getSession(), vbdRef);
+        XenAPI::VBD::plug(vbd->GetConnection()->getSession(), vbdRef);
 
         this->mainWindow()->showStatusMessage(
             QString("Successfully activated virtual disk '%1' on VM '%2'").arg(vdiName, vmName),

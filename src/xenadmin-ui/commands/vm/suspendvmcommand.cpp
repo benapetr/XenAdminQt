@@ -45,10 +45,10 @@ bool SuspendVMCommand::CanRun() const
         return false;
 
     // Check if VM is running AND suspend is allowed (matches C# SuspendVMCommand.CanRun)
-    if (vm->powerState() != "Running")
+    if (vm->GetPowerState() != "Running")
         return false;
 
-    QVariantList allowedOperations = vm->data().value("allowed_operations").toList();
+    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
 
     return allowedOperations.contains("suspend");
 }
@@ -64,7 +64,7 @@ void SuspendVMCommand::Run()
         return;
 
     // Get XenConnection from VM
-    XenConnection* conn = vm->connection();
+    XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -81,7 +81,7 @@ void SuspendVMCommand::Run()
         return;
 
     // Create VM object for action (action will own and delete it)
-    VM* vmForAction = new VM(conn, vm->opaqueRef());
+    VM* vmForAction = new VM(conn, vm->OpaqueRef());
 
     // Create VMSuspendAction (parent is MainWindow to prevent premature deletion)
     VMSuspendAction* action = new VMSuspendAction(vmForAction, this->mainWindow());

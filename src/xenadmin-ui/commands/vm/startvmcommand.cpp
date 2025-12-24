@@ -50,12 +50,12 @@ bool StartVMCommand::CanRun() const
         return false;
 
     // Check VM is not running (Halted or Suspended) AND start is allowed (matches C# StartVMCommand.CanRun)
-    QString powerState = vm->powerState();
+    QString powerState = vm->GetPowerState();
 
     if (powerState == "Running")
         return false;
 
-    QVariantList allowedOperations = vm->data().value("allowed_operations").toList();
+    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
     return allowedOperations.contains("start");
 }
 
@@ -65,7 +65,7 @@ void StartVMCommand::Run()
     if (!vm)
         return;
 
-    runForVm(vm->opaqueRef(), this->getSelectedVMName());
+    runForVm(vm->OpaqueRef(), this->getSelectedVMName());
 }
 
 bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
@@ -78,7 +78,7 @@ bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
         return false;
 
     // Get XenConnection from VM
-    XenConnection* conn = vm->connection();
+    XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -90,7 +90,7 @@ bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
     QString displayName = vmName;
     if (displayName.isEmpty())
     {
-        displayName = vm->nameLabel();
+        displayName = vm->GetName();
     }
 
     // Create VM object for action (action will own and delete it)

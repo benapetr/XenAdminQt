@@ -42,7 +42,7 @@ QString VDICommand::getSelectedVDIRef() const
 {
     QSharedPointer<VDI> vdi = this->getVDI();
     if (vdi)
-        return vdi->opaqueRef();
+        return vdi->OpaqueRef();
     return QString();
 }
 
@@ -50,6 +50,6 @@ QString VDICommand::getSelectedVDIName() const
 {
     QSharedPointer<VDI> vdi = this->getVDI();
     if (vdi)
-        return vdi->nameLabel();
+        return vdi->GetName();
     return QString();
 }

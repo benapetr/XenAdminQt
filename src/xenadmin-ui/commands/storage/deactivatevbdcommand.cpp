@@ -51,19 +51,19 @@ QString DeactivateVBDCommand::MenuText() const
 bool DeactivateVBDCommand::CanRun() const
 {
     QSharedPointer<VBD> vbd = this->getVBD();
-    if (!vbd || !vbd->isValid())
+    if (!vbd || !vbd->IsValid())
         return false;
 
-    return this->canRunVBD(vbd->opaqueRef());
+    return this->canRunVBD(vbd->OpaqueRef());
 }
 
 bool DeactivateVBDCommand::canRunVBD(const QString& vbdRef) const
 {
     QSharedPointer<VBD> vbd = this->getVBD();
-    if (!vbd || !vbd->isValid())
+    if (!vbd || !vbd->IsValid())
         return false;
 
-    XenCache* cache = vbd->connection()->getCache();
+    XenCache* cache = vbd->GetConnection()->getCache();
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
@@ -243,11 +243,11 @@ bool DeactivateVBDCommand::areIODriversNeededAndMissing(const QVariantMap& vmDat
 void DeactivateVBDCommand::Run()
 {
     QSharedPointer<VBD> vbd = this->getVBD();
-    if (!vbd || !vbd->isValid())
+    if (!vbd || !vbd->IsValid())
         return;
 
-    QString vbdRef = vbd->opaqueRef();
-    XenCache* cache = vbd->connection()->getCache();
+    QString vbdRef = vbd->OpaqueRef();
+    XenCache* cache = vbd->GetConnection()->getCache();
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
@@ -266,7 +266,7 @@ void DeactivateVBDCommand::Run()
     // Execute unplug operation directly (matches C# DelegatedAsyncAction pattern)
     try
     {
-        XenAPI::VBD::unplug(vbd->connection()->getSession(), vbdRef);
+        XenAPI::VBD::unplug(vbd->GetConnection()->getSession(), vbdRef);
 
         this->mainWindow()->showStatusMessage(
             QString("Successfully deactivated virtual disk '%1' from VM '%2'").arg(vdiName, vmName),

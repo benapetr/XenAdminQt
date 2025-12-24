@@ -34,7 +34,7 @@ HostMetrics::HostMetrics(XenConnection* connection,
 {
 }
 
-QString HostMetrics::objectType() const
+QString HostMetrics::GetObjectType() const
 {
     return QStringLiteral("host_metrics");
 }
@@ -44,7 +44,7 @@ bool HostMetrics::live() const
     return this->boolProperty("live", false);
 }
 
-QString HostMetrics::uuid() const
+QString HostMetrics::GetUUID() const
 {
     return this->stringProperty("uuid");
 }

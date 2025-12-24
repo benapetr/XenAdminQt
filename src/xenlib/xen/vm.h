@@ -52,10 +52,10 @@ class VIF;
 class XENLIB_EXPORT VM : public XenObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString powerState READ powerState NOTIFY dataChanged)
-    Q_PROPERTY(bool isTemplate READ isTemplate NOTIFY dataChanged)
-    Q_PROPERTY(bool isSnapshot READ isSnapshot NOTIFY dataChanged)
-    Q_PROPERTY(QString residentOn READ residentOnRef NOTIFY dataChanged)
+    Q_PROPERTY(QString powerState READ GetPowerState NOTIFY dataChanged)
+    Q_PROPERTY(bool IsTemplate READ IsTemplate NOTIFY dataChanged)
+    Q_PROPERTY(bool isSnapshot READ IsSnapshot NOTIFY dataChanged)
+    Q_PROPERTY(QString residentOn READ ResidentOnRef NOTIFY dataChanged)
 
     public:
         static constexpr int DEFAULT_CORES_PER_SOCKET = 1;
@@ -71,230 +71,232 @@ class XENLIB_EXPORT VM : public XenObject
          * @brief Get VM power state
          * @return Power state string: "Running", "Halted", "Suspended", "Paused"
          */
-        QString powerState() const;
+        QString GetPowerState() const;
 
         /**
          * @brief Check if this is a template
          * @return true if template
          */
-        bool isTemplate() const;
+        bool IsTemplate() const;
 
         /**
          * @brief Check if this is a default template
          * @return true if default template
          */
-        bool isDefaultTemplate() const;
+        bool IsDefaultTemplate() const;
 
         /**
          * @brief Check if this is a snapshot
          * @return true if snapshot
          */
-        bool isSnapshot() const;
+        bool IsSnapshot() const;
 
         /**
          * @brief Get reference to host VM is resident on
          * @return Host opaque reference (empty if not running)
          */
-        QString residentOnRef() const;
+        QString ResidentOnRef() const;
+
+        QSharedPointer<Host> GetHost();
 
         /**
          * @brief Get reference to affinity host
          * @return Host opaque reference
          */
-        QString affinityRef() const;
+        QString AffinityRef() const;
 
         /**
          * @brief Get list of VBD (virtual block device) references
          * @return List of VBD opaque references
          */
-        QStringList vbdRefs() const;
+        QStringList VBDRefs() const;
 
         /**
          * @brief Get list of VIF (virtual network interface) references
          * @return List of VIF opaque references
          */
-        QStringList vifRefs() const;
+        QStringList VIFRefs() const;
 
         /**
          * @brief Get list of console references
          * @return List of console opaque references
          */
-        QStringList consoleRefs() const;
+        QStringList ConsoleRefs() const;
 
         /**
          * @brief Get snapshot parent reference (if this is a snapshot)
          * @return VM opaque reference of parent VM
          */
-        QString snapshotOfRef() const;
+        QString SnapshotOfRef() const;
 
         /**
          * @brief Get list of snapshot children (if this VM has snapshots)
          * @return List of VM opaque references
          */
-        QStringList snapshotRefs() const;
+        QStringList SnapshotRefs() const;
 
         /**
          * @brief Get suspend VDI reference
          * @return VDI opaque reference
          */
-        QString suspendVDIRef() const;
+        QString SuspendVDIRef() const;
 
         /**
          * @brief Get memory target (bytes)
          * @return Memory target in bytes
          */
-        qint64 memoryTarget() const;
+        qint64 MemoryTarget() const;
 
         /**
          * @brief Get memory static max (bytes)
          * @return Memory static max in bytes
          */
-        qint64 memoryStaticMax() const;
+        qint64 MemoryStaticMax() const;
 
         /**
          * @brief Get memory dynamic max (bytes)
          * @return Memory dynamic max in bytes
          */
-        qint64 memoryDynamicMax() const;
+        qint64 MemoryDynamicMax() const;
 
         /**
          * @brief Get memory dynamic min (bytes)
          * @return Memory dynamic min in bytes
          */
-        qint64 memoryDynamicMin() const;
+        qint64 MemoryDynamicMin() const;
 
         /**
          * @brief Get memory static min (bytes)
          * @return Memory static min in bytes
          */
-        qint64 memoryStaticMin() const;
+        qint64 MemoryStaticMin() const;
 
         /**
          * @brief Get VCPUs max
          * @return Maximum number of VCPUs
          */
-        int vcpusMax() const;
+        int VCPUsMax() const;
 
         /**
          * @brief Get VCPUs at startup
          * @return Number of VCPUs at startup
          */
-        int vcpusAtStartup() const;
+        int VCPUsAtStartup() const;
 
         /**
          * @brief Check if VM is HVM
          */
-        bool isHvm() const;
+        bool IsHvm() const;
 
         /**
          * @brief Check if VM is Windows
          */
-        bool isWindows() const;
+        bool IsWindows() const;
 
         /**
          * @brief Check if vCPU hotplug is supported
          */
-        bool supportsVcpuHotplug() const;
+        bool SupportsVCPUHotplug() const;
 
         /**
          * @brief Get maximum allowed VCPUs
          */
-        int maxVcpusAllowed() const;
+        int MaxVCPUsAllowed() const;
 
         /**
          * @brief Get minimum recommended VCPUs
          */
-        int minVcpus() const;
+        int MinVCPUs() const;
 
         /**
          * @brief Get vCPU weight from VCPUs_params
          */
-        int getVcpuWeight() const;
+        int GetVCPUWeight() const;
 
         /**
          * @brief Get cores per socket from platform
          */
-        long getCoresPerSocket() const;
+        long GetCoresPerSocket() const;
 
         /**
          * @brief Get maximum cores per socket based on host capabilities
          */
-        long maxCoresPerSocket() const;
+        long MaxCoresPerSocket() const;
 
         /**
          * @brief Validate vCPU configuration
          */
-        static QString validVcpuConfiguration(long noOfVcpus, long coresPerSocket);
+        static QString ValidVCPUConfiguration(long noOfVcpus, long coresPerSocket);
 
         /**
          * @brief Get human readable topology string
          */
-        static QString getTopology(long sockets, long cores);
+        static QString GetTopology(long sockets, long cores);
 
         /**
          * @brief Get other_config dictionary
          * @return Map of additional configuration
          */
-        QVariantMap otherConfig() const;
+        QVariantMap OtherConfig() const;
 
         /**
          * @brief Get platform configuration
          * @return Map of platform settings
          */
-        QVariantMap platform() const;
+        QVariantMap Platform() const;
 
         /**
          * @brief Get tags
          * @return List of tag strings
          */
-        QStringList tags() const;
+        QStringList Tags() const;
 
         /**
          * @brief Get allowed operations
          * @return List of allowed operation strings
          */
-        QStringList allowedOperations() const;
+        QStringList AllowedOperations() const;
 
         /**
          * @brief Get current operations
          * @return Map of operation ID to operation type
          */
-        QVariantMap currentOperations() const;
+        QVariantMap CurrentOperations() const;
 
         /**
          * @brief Check if VM is running
          * @return true if power state is "Running"
          */
-        bool isRunning() const
+        bool IsRunning() const
         {
-            return powerState() == "Running";
+            return GetPowerState() == "Running";
         }
 
         /**
          * @brief Check if VM is halted
          * @return true if power state is "Halted"
          */
-        bool isHalted() const
+        bool IsHalted() const
         {
-            return powerState() == "Halted";
+            return GetPowerState() == "Halted";
         }
 
         /**
          * @brief Check if VM is suspended
          * @return true if power state is "Suspended"
          */
-        bool isSuspended() const
+        bool IsSuspended() const
         {
-            return powerState() == "Suspended";
+            return GetPowerState() == "Suspended";
         }
 
         /**
          * @brief Check if VM is paused
          * @return true if power state is "Paused"
          */
-        bool isPaused() const
+        bool IsPaused() const
         {
-            return powerState() == "Paused";
+            return GetPowerState() == "Paused";
         }
 
         /**
@@ -305,376 +307,376 @@ class XENLIB_EXPORT VM : public XenObject
          *
          * @return Host opaque reference
          */
-        QString homeRef() const;
+        QString HomeRef() const;
 
         /**
          * @brief Get user-defined version number
          * @return User version number for this VM
          */
-        qint64 userVersion() const;
+        qint64 UserVersion() const;
 
         /**
          * @brief Get host where VM is scheduled to start
          * @return Opaque reference to host (memory reservation indicator)
          */
-        QString scheduledToBeResidentOnRef() const;
+        QString ScheduledToBeResidentOnRef() const;
 
         /**
          * @brief Get virtualization memory overhead
          * @return Memory overhead in bytes
          */
-        qint64 memoryOverhead() const;
+        qint64 MemoryOverhead() const;
 
         /**
          * @brief Get vCPU parameters dictionary
          * @return Map of vCPU configuration parameters
          */
-        QVariantMap vcpusParams() const;
+        QVariantMap VCPUsParams() const;
 
         /**
          * @brief Get action to take after soft reboot
          * @return Action string (e.g., "soft_reboot", "destroy")
          */
-        QString actionsAfterSoftreboot() const;
+        QString ActionsAfterSoftreboot() const;
 
         /**
          * @brief Get action to take after guest shutdown
          * @return Action string ("destroy", "restart", etc.)
          */
-        QString actionsAfterShutdown() const;
+        QString ActionsAfterShutdown() const;
 
         /**
          * @brief Get action to take after guest reboot
          * @return Action string
          */
-        QString actionsAfterReboot() const;
+        QString ActionsAfterReboot() const;
 
         /**
          * @brief Get action to take if guest crashes
          * @return Action string ("destroy", "coredump_and_destroy", etc.)
          */
-        QString actionsAfterCrash() const;
+        QString ActionsAfterCrash() const;
 
         /**
          * @brief Get virtual USB device references
          * @return List of VUSB opaque references
          */
-        QStringList vusbRefs() const;
+        QStringList VUSBRefs() const;
 
         /**
          * @brief Get crash dump references
          * @return List of Crashdump opaque references
          */
-        QStringList crashDumpRefs() const;
+        QStringList CrashDumpRefs() const;
 
         /**
          * @brief Get virtual TPM references
          * @return List of VTPM opaque references
          */
-        QStringList vtpmRefs() const;
+        QStringList VTPMRefs() const;
 
         /**
          * @brief Get PV bootloader path or name
          * @return Path to bootloader for paravirtualized VMs
          */
-        QString pvBootloader() const;
+        QString PVBootloader() const;
 
         /**
          * @brief Get PV kernel path
          * @return Path to kernel for paravirtualized VMs
          */
-        QString pvKernel() const;
+        QString PVKernel() const;
 
         /**
          * @brief Get PV ramdisk path
          * @return Path to initrd/ramdisk for paravirtualized VMs
          */
-        QString pvRamdisk() const;
+        QString PVRamdisk() const;
 
         /**
          * @brief Get PV kernel command-line arguments
          * @return Kernel boot arguments
          */
-        QString pvArgs() const;
+        QString PVArgs() const;
 
         /**
          * @brief Get PV bootloader arguments
          * @return Miscellaneous bootloader arguments
          */
-        QString pvBootloaderArgs() const;
+        QString PVBootloaderArgs() const;
 
         /**
          * @brief Get PV legacy arguments
          * @return Legacy arguments for Zurich guests (deprecated)
          */
-        QString pvLegacyArgs() const;
+        QString PVLegacyArgs() const;
 
         /**
          * @brief Get HVM boot policy
          * @return HVM boot policy string ("BIOS order", etc.)
          */
-        QString hvmBootPolicy() const;
+        QString HVMBootPolicy() const;
 
         /**
          * @brief Get HVM boot parameters
          * @return Map of HVM boot configuration (boot order, etc.)
          */
-        QVariantMap hvmBootParams() const;
+        QVariantMap HVMBootParams() const;
 
         /**
          * @brief Get HVM shadow page multiplier
          * @return Multiplier for shadow page table allocation
          */
-        double hvmShadowMultiplier() const;
+        double HVMShadowMultiplier() const;
 
         /**
          * @brief Get PCI bus path for passthrough devices
          * @return PCI bus configuration string
          */
-        QString pciBus() const;
+        QString PCIBus() const;
 
         /**
          * @brief Get domain ID
          * @return Xen domain ID (if VM is running), or -1
          */
-        qint64 domid() const;
+        qint64 Domid() const;
 
         /**
          * @brief Get domain architecture
          * @return Architecture string ("x86_64", "x86_32", etc.) or empty
          */
-        QString domarch() const;
+        QString Domarch() const;
 
         /**
          * @brief Get last boot CPU flags
          * @return Map of CPU flags VM was last booted with
          */
-        QVariantMap lastBootCPUFlags() const;
+        QVariantMap LastBootCPUFlags() const;
 
         /**
          * @brief Check if this is a control domain
          * @return true if this is domain 0 or a driver domain
          */
-        bool isControlDomain() const;
+        bool IsControlDomain() const;
 
         /**
          * @brief Get VM metrics reference
          * @return Opaque reference to VM_metrics object
          */
-        QString metricsRef() const;
+        QString MetricsRef() const;
 
         /**
          * @brief Get guest metrics reference
          * @return Opaque reference to VM_guest_metrics object
          */
-        QString guestMetricsRef() const;
+        QString GuestMetricsRef() const;
 
         /**
          * @brief Get last booted record
          * @return Marshalled VM record from last boot
          */
-        QString lastBootedRecord() const;
+        QString LastBootedRecord() const;
 
         /**
          * @brief Get resource recommendations
          * @return XML specification of recommended resource values
          */
-        QString recommendations() const;
+        QString Recommendations() const;
 
         /**
          * @brief Get XenStore data
          * @return Map of key-value pairs for /local/domain/<domid>/vm-data
          */
-        QVariantMap xenstoreData() const;
+        QVariantMap XenstoreData() const;
 
         /**
          * @brief Check if HA always-run is enabled
          * @return true if system will attempt to keep VM running
          */
-        bool haAlwaysRun() const;
+        bool HAAlwaysRun() const;
 
         /**
          * @brief Get HA restart priority
          * @return Priority string ("restart", "best-effort", "")
          */
-        QString haRestartPriority() const;
+        QString HARestartPriority() const;
 
         /**
          * @brief Get snapshot creation timestamp
          * @return Date/time when snapshot was created
          */
-        QDateTime snapshotTime() const;
+        QDateTime SnapshotTime() const;
 
         /**
          * @brief Get transportable snapshot ID
          * @return Snapshot ID for XVA export
          */
-        QString transportableSnapshotId() const;
+        QString TransportableSnapshotId() const;
 
         /**
          * @brief Get binary large objects
          * @return Map of blob names to blob references
          */
-        QVariantMap blobs() const;
+        QVariantMap Blobs() const;
 
         /**
          * @brief Get blocked operations
          * @return Map of blocked operations to error codes
          */
-        QVariantMap blockedOperations() const;
+        QVariantMap BlockedOperations() const;
 
         /**
          * @brief Get snapshot information
          * @return Map of human-readable snapshot metadata
          */
-        QVariantMap snapshotInfo() const;
+        QVariantMap SnapshotInfo() const;
 
         /**
          * @brief Get encoded snapshot metadata
          * @return Encoded information about VM's metadata
          */
-        QString snapshotMetadata() const;
+        QString SnapshotMetadata() const;
 
         /**
          * @brief Get parent VM reference
          * @return Opaque reference to parent VM
          */
-        QString parentRef() const;
+        QString ParentRef() const;
 
         /**
          * @brief Get child VM references
          * @return List of child VM opaque references
          */
-        QStringList childrenRefs() const;
+        QStringList ChildrenRefs() const;
 
         /**
          * @brief Get BIOS strings
          * @return Map of BIOS string identifiers to values
          */
-        QVariantMap biosStrings() const;
+        QVariantMap BIOSStrings() const;
 
         /**
          * @brief Get VM protection policy reference
          * @return Opaque reference to VMPP (VM Protection Policy)
          */
-        QString protectionPolicyRef() const;
+        QString ProtectionPolicyRef() const;
 
         /**
          * @brief Check if snapshot was created by VMPP
          * @return true if this snapshot was created by protection policy
          */
-        bool isSnapshotFromVmpp() const;
+        bool IsSnapshotFromVMPP() const;
 
         /**
          * @brief Get VM snapshot schedule reference
          * @return Opaque reference to VMSS (VM Snapshot Schedule)
          */
-        QString snapshotScheduleRef() const;
+        QString SnapshotScheduleRef() const;
 
         /**
          * @brief Check if snapshot was created by VMSS
          * @return true if this snapshot was created by snapshot schedule
          */
-        bool isVmssSnapshot() const;
+        bool IsVMSSSnapshot() const;
 
         /**
          * @brief Get VM appliance reference
          * @return Opaque reference to VM_appliance
          */
-        QString applianceRef() const;
+        QString ApplianceRef() const;
 
         /**
          * @brief Get appliance start delay
          * @return Delay in seconds before proceeding to next order in startup
          */
-        qint64 startDelay() const;
+        qint64 StartDelay() const;
 
         /**
          * @brief Get appliance shutdown delay
          * @return Delay in seconds before proceeding to next order in shutdown
          */
-        qint64 shutdownDelay() const;
+        qint64 ShutdownDelay() const;
 
         /**
          * @brief Get appliance boot order
          * @return Point in startup/shutdown sequence for this VM
          */
-        qint64 order() const;
+        qint64 Order() const;
 
         /**
          * @brief Get virtual GPU references
          * @return List of VGPU opaque references
          */
-        QStringList vgpuRefs() const;
+        QStringList VGPURefs() const;
 
         /**
          * @brief Get attached PCI device references
          * @return List of currently passed-through PCI device references
          */
-        QStringList attachedPCIRefs() const;
+        QStringList AttachedPCIRefs() const;
 
         /**
          * @brief Get suspend SR reference
          * @return Opaque reference to SR where suspend image is stored
          */
-        QString suspendSRRef() const;
+        QString SuspendSRRef() const;
 
         /**
          * @brief Get VM version (recovery count)
          * @return Number of times this VM has been recovered
          */
-        qint64 version() const;
+        qint64 Version() const;
 
         /**
          * @brief Get VM generation ID
          * @return Generation ID string (for AD domain controllers)
          */
-        QString generationId() const;
+        QString GenerationId() const;
 
         /**
          * @brief Get hardware platform version
          * @return Host virtual hardware platform version VM can run on
          */
-        qint64 hardwarePlatformVersion() const;
+        qint64 HardwarePlatformVersion() const;
 
         /**
          * @brief Check if vendor device is present
          * @return true if emulated C000 PCI device is enabled (for Windows Update)
          */
-        bool hasVendorDevice() const;
+        bool HasVendorDevice() const;
 
         /**
          * @brief Check if VM requires reboot
          * @return true if VM needs reboot to apply configuration changes
          */
-        bool requiresReboot() const;
+        bool RequiresReboot() const;
 
         /**
          * @brief Get immutable template reference label
          * @return Textual reference to template used to create this VM
          */
-        QString referenceLabel() const;
+        QString ReferenceLabel() const;
 
         /**
          * @brief Get domain type
          * @return Domain type string ("hvm", "pv", "pvh", "pv_in_pvh", "unspecified")
          */
-        QString domainType() const;
+        QString DomainType() const;
 
         /**
          * @brief Get NVRAM data
          * @return Map of NVRAM key-value pairs (UEFI variables, etc.)
          */
-        QVariantMap nvram() const;
+        QVariantMap NVRAM() const;
 
         /**
          * @brief Get pending update guidances
          * @return List of guidance strings for pending updates
          */
-        QStringList pendingGuidances() const;
+        QStringList PendingGuidances() const;
 
     protected:
-        QString objectType() const override;
+        QString GetObjectType() const override;
 };
 
 #endif // VM_H

@@ -53,10 +53,10 @@
 class XENLIB_EXPORT XenObject : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString opaqueRef READ opaqueRef CONSTANT)
-    Q_PROPERTY(QString uuid READ uuid NOTIFY dataChanged)
-    Q_PROPERTY(QString nameLabel READ nameLabel NOTIFY dataChanged)
-    Q_PROPERTY(QString nameDescription READ nameDescription NOTIFY dataChanged)
+    Q_PROPERTY(QString opaqueRef READ OpaqueRef CONSTANT)
+    Q_PROPERTY(QString GetUUID READ GetUUID NOTIFY dataChanged)
+    Q_PROPERTY(QString GetName READ GetName NOTIFY dataChanged)
+    Q_PROPERTY(QString GetDescription READ GetDescription NOTIFY dataChanged)
 
     public:
         explicit XenObject(XenConnection* connection,
@@ -68,7 +68,7 @@ class XENLIB_EXPORT XenObject : public QObject
          * @brief Get the XenAPI opaque reference for this object
          * @return Opaque reference (e.g., "OpaqueRef:12345678-...")
          */
-        QString opaqueRef() const
+        QString OpaqueRef() const
         {
             return this->m_opaqueRef;
         }
@@ -77,30 +77,30 @@ class XENLIB_EXPORT XenObject : public QObject
          * @brief Get the object's UUID
          * @return UUID string
          */
-        QString uuid() const;
+        QString GetUUID() const;
 
         /**
          * @brief Get the object's human-readable name
          * @return Name label
          */
-        QString nameLabel() const;
+        QString GetName() const;
 
         /**
          * @brief Get the object's description
          * @return Name description
          */
-        QString nameDescription() const;
+        QString GetDescription() const;
 
         /**
-         * @brief Get connection this object belongs to
+         * @brief Get GetConnection this object belongs to
          * @return XenConnection pointer (may be null if disconnected)
          */
-        XenConnection* connection() const
+        XenConnection* GetConnection() const
         {
             return this->m_connection;
         }
 
-        bool isConnected() const;
+        bool IsConnected() const;
 
         /**
          * @brief Get the object type string for cache lookups
@@ -108,13 +108,13 @@ class XENLIB_EXPORT XenObject : public QObject
          * Must be overridden by derived classes to return the XenAPI type
          * (e.g., "vm", "host", "sr", "pool", "network")
          */
-        virtual QString objectType() const = 0;
+        virtual QString GetObjectType() const = 0;
 
         /**
-         * @brief Get all cached data for this object
+         * @brief Get all cached GetData for this object
          * @return QVariantMap with all XenAPI properties
          */
-        QVariantMap data() const;
+        QVariantMap GetData() const;
 
         /**
          * @brief Refresh object data from cache
@@ -122,20 +122,20 @@ class XENLIB_EXPORT XenObject : public QObject
          * Call this after cache updates to emit dataChanged signal.
          * Derived classes should override to update specific properties.
          */
-        virtual void refresh();
+        virtual void Refresh();
 
         /**
          * @brief Check if object exists in cache
          * @return true if object data is available
          */
-        bool isValid() const;
+        bool IsValid() const;
 
         /**
          * @brief Mark object as evicted from cache
          *
          * Cache eviction should set this to true so consumers know the object is stale.
          */
-        void setEvicted(bool evicted)
+        void SetEvicted(bool evicted)
         {
             this->m_evicted = evicted;
         }
@@ -143,7 +143,7 @@ class XENLIB_EXPORT XenObject : public QObject
         /**
          * @brief Check if object was evicted from cache
          */
-        bool isEvicted() const
+        bool IsEvicted() const
         {
             return this->m_evicted;
         }

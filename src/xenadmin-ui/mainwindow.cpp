@@ -783,8 +783,8 @@ void MainWindow::onTreeItemSelected()
     xenObject = itemData.value<QSharedPointer<XenObject>>();
     if (xenObject)
     {
-        objectType = xenObject->objectType();
-        objectRef = xenObject->opaqueRef();
+        objectType = xenObject->GetObjectType();
+        objectRef = xenObject->OpaqueRef();
     } else if (itemData.canConvert<XenConnection*>())
     {
         // Disconnected server - handle specially
@@ -927,8 +927,8 @@ void MainWindow::onSearchTabPageObjectSelected(const QString& objectType, const 
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
         if (obj)
         {
-            itemType = obj->objectType();
-            itemRef = obj->opaqueRef();
+            itemType = obj->GetObjectType();
+            itemRef = obj->OpaqueRef();
         }
 
         if (itemType == objectType && itemRef == objectRef)
@@ -1494,7 +1494,7 @@ void MainWindow::saveSettings()
         if ((*it)->isExpanded())
         {
             QSharedPointer<XenObject> obj = (*it)->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
-            QString ref = obj ? obj->opaqueRef() : QString();
+            QString ref = obj ? obj->OpaqueRef() : QString();
             if (!ref.isEmpty())
             {
                 expandedItems.append(ref);
@@ -1795,8 +1795,8 @@ bool MainWindow::itemMatchesSearch(QTreeWidgetItem* item, const QString& searchT
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
         if (obj)
         {
-            QString objectType = obj->objectType().toLower();
-            QString uuid = obj->uuid().toLower();
+            QString objectType = obj->GetObjectType().toLower();
+            QString uuid = obj->GetUUID().toLower();
             if (objectType.contains(search) || uuid.contains(search))
                 return true;
         }
@@ -2264,8 +2264,8 @@ void MainWindow::updateToolbarsAndMenus()
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
         if (obj)
         {
-            objectType = obj->objectType();
-            objectRef = obj->opaqueRef();
+            objectType = obj->GetObjectType();
+            objectRef = obj->OpaqueRef();
         }
     }
     else if (data.canConvert<XenConnection*>())
@@ -2499,7 +2499,7 @@ void MainWindow::selectObjectInTree(const QString& objectRef, const QString& obj
         QVariant data = item->data(0, Qt::UserRole);
         
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (obj && obj->opaqueRef() == objectRef && obj->objectType() == objectType)
+        if (obj && obj->OpaqueRef() == objectRef && obj->GetObjectType() == objectType)
         {
             // Found the item - select it
             this->getServerTreeWidget()->setCurrentItem(item);
@@ -2909,7 +2909,7 @@ QString MainWindow::getSelectedObjectRef() const
         return QString();
 
     QSharedPointer<XenObject> obj = item->data(0, Qt::UserRole).value<QSharedPointer<XenObject>>();
-    return obj ? obj->opaqueRef() : QString();
+    return obj ? obj->OpaqueRef() : QString();
 }
 
 QString MainWindow::getSelectedObjectName() const

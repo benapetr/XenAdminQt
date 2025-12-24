@@ -53,9 +53,9 @@ void AddVirtualDiskCommand::Run()
     QString objectType = getSelectedObjectType();
     QString objectRef = getSelectedRef();
     QSharedPointer<XenObject> object = this->GetObject();
-    if (!object || !object->connection())
+    if (!object || !object->GetConnection())
         return;
-    XenCache *cache = object->connection()->getCache();
+    XenCache *cache = object->GetConnection()->getCache();
 
     if (objectType == "vm")
     {
@@ -73,7 +73,7 @@ void AddVirtualDiskCommand::Run()
             return;
         }
 
-        XenConnection* connection = object->connection();
+        XenConnection* connection = object->GetConnection();
         if (!connection)
         {
             qWarning() << "[AddVirtualDiskCommand] No connection available";

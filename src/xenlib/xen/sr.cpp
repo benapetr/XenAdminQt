@@ -36,7 +36,7 @@ SR::SR(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString SR::objectType() const
+QString SR::GetObjectType() const
 {
     return "sr";
 }
@@ -164,7 +164,7 @@ Host* SR::getFirstAttachedStorageHost() const
         return nullptr;
 
     // Iterate through PBDs to find first currently_attached one
-    XenCache* cache = connection()->getCache();
+    XenCache* cache = GetConnection()->getCache();
     if (!cache)
         return nullptr;
 
@@ -180,7 +180,7 @@ Host* SR::getFirstAttachedStorageHost() const
             QString hostRef = pbdData.value("host").toString();
             if (!hostRef.isEmpty())
             {
-                return new Host(connection(), hostRef, nullptr);
+                return new Host(GetConnection(), hostRef, nullptr);
             }
         }
     }

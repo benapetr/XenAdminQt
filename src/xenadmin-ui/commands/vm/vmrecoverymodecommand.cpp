@@ -44,12 +44,12 @@ bool VMRecoveryModeCommand::CanRun() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->data();
+    QVariantMap vmData = vm->GetData();
     if (vmData.isEmpty())
         return false;
 
     // VM must be halted
-    if (vm->powerState() != "Halted")
+    if (vm->GetPowerState() != "Halted")
         return false;
 
     // Check if is_a_template is false (templates can't be started)
@@ -71,8 +71,8 @@ void VMRecoveryModeCommand::Run()
     if (!vm)
         return;
 
-    QString vmRef = vm->opaqueRef();
-    QString vmName = vm->nameLabel();
+    QString vmRef = vm->OpaqueRef();
+    QString vmName = vm->GetName();
 
     // Confirm action with user
     QMessageBox::StandardButton reply = QMessageBox::question(
@@ -90,7 +90,7 @@ void VMRecoveryModeCommand::Run()
     }
 
     // Get XenConnection
-    XenConnection* conn = vm->connection();
+    XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not Connected"),

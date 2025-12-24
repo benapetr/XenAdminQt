@@ -64,8 +64,8 @@ void DeleteVMCommand::Run()
     if (vmName.isEmpty())
         return;
 
-    // Use VM powerState method
-    QString powerState = vm->powerState();
+    // Use VM GetPowerState method
+    QString powerState = vm->GetPowerState();
 
     // Check if VM is in a deletable state
     if (powerState != "Halted")
@@ -110,7 +110,7 @@ void DeleteVMCommand::Run()
         bool deleteDisks = deleteDisksCheckbox->isChecked();
 
         // Get XenConnection from VM
-        XenConnection* conn = vm->connection();
+        XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->isConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",
@@ -119,7 +119,7 @@ void DeleteVMCommand::Run()
         }
 
         // Create VM object for action (action will own and delete it)
-        VM* vmForAction = new VM(conn, vm->opaqueRef());
+        VM* vmForAction = new VM(conn, vm->OpaqueRef());
 
         // Create VMDestroyAction (matches C# VMDestroyAction pattern)
         // Action handles VDI cleanup, task polling, and error aggregation
@@ -159,7 +159,7 @@ bool DeleteVMCommand::isVMDeletable() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->data();
+    QVariantMap vmData = vm->GetData();
 
     // Check if it's not a template (templates handled separately)
     bool isTemplate = vmData.value("is_a_template", false).toBool();
@@ -167,5 +167,5 @@ bool DeleteVMCommand::isVMDeletable() const
         return false;
 
     // Check if VM is halted (required for deletion in most cases)
-    return (vm->powerState() == "Halted");
+    return (vm->GetPowerState() == "Halted");
 }

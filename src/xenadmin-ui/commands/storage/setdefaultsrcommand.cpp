@@ -50,8 +50,8 @@ void SetDefaultSRCommand::Run()
     if (!sr)
         return;
 
-    QString srRef = sr->opaqueRef();
-    QString srName = sr->nameLabel();
+    QString srRef = sr->OpaqueRef();
+    QString srName = sr->GetName();
 
     // Show confirmation dialog
     int ret = QMessageBox::question(this->mainWindow(), "Set as Default Storage Repository",
@@ -64,7 +64,7 @@ void SetDefaultSRCommand::Run()
     {
         this->mainWindow()->showStatusMessage(QString("Setting '%1' as default storage repository...").arg(srName));
 
-        XenConnection* connection = sr->connection();
+        XenConnection* connection = sr->GetConnection();
         if (!connection || !connection->isConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",

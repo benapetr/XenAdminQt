@@ -39,7 +39,7 @@ VMStartAbstractAction::VMStartAbstractAction(VM* vm,
                                              WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
                                              StartDiagnosisForm startDiagnosisForm,
                                              QObject* parent)
-    : AsyncOperation(vm ? vm->connection() : nullptr, title, tr("Preparing..."), parent), m_warningDialogHAInvalidConfig(warningDialogHAInvalidConfig), m_startDiagnosisForm(startDiagnosisForm)
+    : AsyncOperation(vm ? vm->GetConnection() : nullptr, title, tr("Preparing..."), parent), m_warningDialogHAInvalidConfig(warningDialogHAInvalidConfig), m_startDiagnosisForm(startDiagnosisForm)
 {
     setVM(vm);
 
@@ -50,7 +50,7 @@ VMStartAbstractAction::VMStartAbstractAction(VM* vm,
         // setHost(vm->home());
 
         // Set pool
-        XenConnection* conn = vm->connection();
+        XenConnection* conn = vm->GetConnection();
         if (conn)
         {
             // TODO: Get pool from connection
@@ -94,12 +94,12 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
         Pool* poolObj = pool();
         if (poolObj)
         {
-            bool haEnabled = poolObj->data().value("ha_enabled", false).toBool();
+            bool haEnabled = poolObj->GetData().value("ha_enabled", false).toBool();
 
             if (haEnabled)
             {
                 // Check if VM has HA restart priority set (is protected)
-                QString haPriority = vmObj->data().value("ha_restart_priority", "").toString();
+                QString haPriority = vmObj->GetData().value("ha_restart_priority", "").toString();
                 bool isProtected = !haPriority.isEmpty() && haPriority != "best-effort";
 
                 if (isProtected)
@@ -107,7 +107,7 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
                     // Check if VM is agile (can run on any host in the pool)
                     try
                     {
-                        XenAPI::VM::assert_agile(sess, vmObj->opaqueRef());
+                        XenAPI::VM::assert_agile(sess, vmObj->OpaqueRef());
                     } catch (...)
                     {
                         // VM is not agile but protected - inconsistent state
@@ -121,7 +121,7 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
 
                         // TODO: Implement HAUnprotectVMAction equivalent
                         // For now, just log the issue
-                        qWarning() << "VM" << vmObj->nameLabel() << "is protected by HA but not agile";
+                        qWarning() << "VM" << vmObj->GetName() << "is protected by HA but not agile";
                     }
                 }
             }

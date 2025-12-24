@@ -42,7 +42,7 @@ bool HostPropertiesCommand::CanRun() const
     if (!host)
         return false;
 
-    return host->connection() && host->connection()->isConnected();
+    return host->GetConnection() && host->GetConnection()->isConnected();
 }
 
 void HostPropertiesCommand::Run()
@@ -51,8 +51,8 @@ void HostPropertiesCommand::Run()
     if (!host)
         return;
 
-    // New signature: connection, hostRef, parent
-    HostPropertiesDialog* dialog = new HostPropertiesDialog(host->connection(), host->opaqueRef(), this->mainWindow());
+    // New signature: GetConnection, hostRef, parent
+    HostPropertiesDialog* dialog = new HostPropertiesDialog(host->GetConnection(), host->OpaqueRef(), this->mainWindow());
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setModal(true);
     dialog->exec();

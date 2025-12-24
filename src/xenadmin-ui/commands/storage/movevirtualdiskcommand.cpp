@@ -41,11 +41,11 @@ MoveVirtualDiskCommand::MoveVirtualDiskCommand(MainWindow* mainWindow, QObject* 
 bool MoveVirtualDiskCommand::CanRun() const
 {
     QSharedPointer<VDI> vdi = this->getVDI();
-    if (!vdi || !vdi->isValid())
+    if (!vdi || !vdi->IsValid())
         return false;
 
-    XenCache* cache = vdi->connection()->getCache();
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->opaqueRef());
+    XenCache* cache = vdi->GetConnection()->getCache();
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->OpaqueRef());
     if (vdiData.isEmpty())
         return false;
 
@@ -55,13 +55,13 @@ bool MoveVirtualDiskCommand::CanRun() const
 void MoveVirtualDiskCommand::Run()
 {
     QSharedPointer<VDI> vdi = this->getVDI();
-    if (!vdi || !vdi->isValid())
+    if (!vdi || !vdi->IsValid())
         return;
 
     // Open the move virtual disk dialog
     MoveVirtualDiskDialog* dialog = new MoveVirtualDiskDialog(
         this->xenLib(),
-        vdi->opaqueRef(),
+        vdi->OpaqueRef(),
         this->mainWindow());
 
     dialog->setAttribute(Qt::WA_DeleteOnClose);

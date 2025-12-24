@@ -39,7 +39,7 @@ DestroyHostAction::DestroyHostAction(XenConnection* connection,
                                      Host* host,
                                      QObject* parent)
     : AsyncOperation(connection,
-                     QString("Removing host '%1'").arg(host ? host->nameLabel() : ""),
+                     QString("Removing host '%1'").arg(host ? host->GetName() : ""),
                      "Removing host from pool",
                      parent),
       m_pool(pool),
@@ -80,7 +80,7 @@ void DestroyHostAction::run()
                 QVariantMap pbdData = connection()->getCache()->ResolveObjectData("pbd", pbdRef);
                 QString pbdHost = pbdData.value("host").toString();
 
-                if (pbdHost == m_host->opaqueRef())
+                if (pbdHost == m_host->OpaqueRef())
                 {
                     belongsToThisHost = true;
                     break;
@@ -99,7 +99,7 @@ void DestroyHostAction::run()
         int i = 0;
 
         // Destroy the host
-        QString taskRef = XenAPI::Host::async_destroy(session(), m_host->opaqueRef());
+        QString taskRef = XenAPI::Host::async_destroy(session(), m_host->OpaqueRef());
         pollToCompletion(taskRef, 0, (int) p);
         i++;
 

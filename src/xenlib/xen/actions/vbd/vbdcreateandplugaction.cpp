@@ -34,9 +34,9 @@
 VbdCreateAndPlugAction::VbdCreateAndPlugAction(VM* vm, const QVariantMap& vbdRecord,
                                                const QString& vdiName, bool suppress,
                                                QObject* parent)
-    : AsyncOperation(vm ? vm->connection() : nullptr,
+    : AsyncOperation(vm ? vm->GetConnection() : nullptr,
                      QString("Attaching Virtual Disk"),
-                     QString("Attaching '%1' to '%2'...").arg(vdiName).arg(vm ? vm->nameLabel() : ""),
+                     QString("Attaching '%1' to '%2'...").arg(vdiName).arg(vm ? vm->GetName() : ""),
                      parent),
       m_vm(vm), m_vbdRecord(vbdRecord), m_vdiName(vdiName), m_suppress(suppress)
 {
@@ -49,12 +49,12 @@ VbdCreateAndPlugAction::VbdCreateAndPlugAction(VM* vm, const QVariantMap& vbdRec
 void VbdCreateAndPlugAction::run()
 {
     qDebug() << "[VbdCreateAndPlugAction] Starting VBD creation and plug for" << m_vdiName;
-    qDebug() << "[VbdCreateAndPlugAction] VM ref:" << m_vm->opaqueRef();
+    qDebug() << "[VbdCreateAndPlugAction] VM ref:" << m_vm->OpaqueRef();
     qDebug() << "[VbdCreateAndPlugAction] VBD record:" << m_vbdRecord;
 
     try
     {
-        XenSession* session = m_vm->connection()->getSession();
+        XenSession* session = m_vm->GetConnection()->getSession();
         if (!session)
         {
             qCritical() << "[VbdCreateAndPlugAction] No valid session!";
@@ -137,7 +137,7 @@ void VbdCreateAndPlugAction::run()
         {
             // Can't hot-plug - check if VM is running and inform user
             qDebug() << "[VbdCreateAndPlugAction] Hot-plug not available, checking VM power state...";
-            QString vmRef = m_vm->opaqueRef();
+            QString vmRef = m_vm->OpaqueRef();
             QVariantMap vmRecord = XenAPI::VM::get_record(session, vmRef);
             QString powerState = vmRecord.value("power_state").toString();
 
@@ -179,8 +179,8 @@ bool VbdCreateAndPlugAction::isVMHVM() const
 {
     try
     {
-        XenSession* session = m_vm->connection()->getSession();
-        QString vmRef = m_vm->opaqueRef();
+        XenSession* session = m_vm->GetConnection()->getSession();
+        QString vmRef = m_vm->OpaqueRef();
         QVariantMap vmRecord = XenAPI::VM::get_record(session, vmRef);
 
         // HVM mode is indicated by HVM_boot_policy field

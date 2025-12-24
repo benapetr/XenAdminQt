@@ -163,19 +163,19 @@ void AffinityPicker::loadServers()
     QList<QSharedPointer<Host>> hosts = this->m_connection->getCache()->GetAll<Host>("host");
 
     std::sort(hosts.begin(), hosts.end(), [](const QSharedPointer<Host>& a, const QSharedPointer<Host>& b) {
-        return a->nameLabel().toLower() < b->nameLabel().toLower();
+        return a->GetName().toLower() < b->GetName().toLower();
     });
 
     for (const QSharedPointer<Host>& host : hosts)
     {
-        QString hostRef = host->opaqueRef();
+        QString hostRef = host->OpaqueRef();
         if (hostRef.isEmpty())
             continue;
 
         this->m_hosts.insert(hostRef, host);
 
-        QVariantMap hostData = host->data();
-        QString hostName = host->nameLabel();
+        QVariantMap hostData = host->GetData();
+        QString hostName = host->GetName();
         bool isLive = this->isHostLive(host);
         QString reason = isLive ? QString()
                                 : tr("This server cannot be contacted");
@@ -300,7 +300,7 @@ bool AffinityPicker::hasFullyConnectedSharedStorage() const
     QList<QSharedPointer<SR>> srs = this->m_connection->getCache()->GetAll<SR>("sr");
     for (const QSharedPointer<SR>& sr : srs)
     {
-        if (!sr || !sr->isValid())
+        if (!sr || !sr->IsValid())
             continue;
         if (!sr->shared())
             continue;
@@ -332,17 +332,17 @@ bool AffinityPicker::isHostLive(const QSharedPointer<Host>& host) const
         return false;
 
     if (!this->m_connection || !this->m_connection->getCache())
-        return host->enabled();
+        return host->IsEnabled();
 
-    QVariantMap hostData = host->data();
+    QVariantMap hostData = host->GetData();
     QString metricsRef = hostData.value("metrics").toString();
     if (!metricsRef.isEmpty())
     {
         QSharedPointer<HostMetrics> metrics =
             this->m_connection->getCache()->ResolveObject<HostMetrics>("host_metrics", metricsRef);
-        if (metrics && metrics->isValid())
+        if (metrics && metrics->IsValid())
             return metrics->live();
     }
 
-    return host->enabled();
+    return host->IsEnabled();
 }

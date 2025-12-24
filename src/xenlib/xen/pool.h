@@ -377,7 +377,7 @@ class XENLIB_EXPORT Pool : public XenObject
         bool isPsrPending() const;
 
     protected:
-        QString objectType() const override;
+        QString GetObjectType() const override;
 };
 
 #endif // POOL_H

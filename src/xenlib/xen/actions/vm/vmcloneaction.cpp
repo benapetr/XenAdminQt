@@ -37,8 +37,8 @@ VMCloneAction::VMCloneAction(XenConnection* connection,
                              const QString& description,
                              QObject* parent)
     : AsyncOperation(connection,
-                     QString("Cloning '%1' to '%2'").arg(vm ? vm->nameLabel() : "").arg(name),
-                     QString("Cloning '%1'").arg(vm ? vm->nameLabel() : ""),
+                     QString("Cloning '%1' to '%2'").arg(vm ? vm->GetName() : "").arg(name),
+                     QString("Cloning '%1'").arg(vm ? vm->GetName() : ""),
                      parent),
       m_vm(vm),
       m_cloneName(name),
@@ -53,7 +53,7 @@ void VMCloneAction::run()
     try
     {
         // Clone the VM
-        QString taskRef = XenAPI::VM::async_clone(session(), m_vm->opaqueRef(), m_cloneName);
+        QString taskRef = XenAPI::VM::async_clone(session(), m_vm->OpaqueRef(), m_cloneName);
         pollToCompletion(taskRef, 0, 90);
 
         QString createdVmRef = result();

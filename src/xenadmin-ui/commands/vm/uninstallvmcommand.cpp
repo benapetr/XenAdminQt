@@ -50,7 +50,7 @@ void UninstallVMCommand::Run()
     if (!vm)
         return;
 
-    QString vmName = vm->nameLabel();
+    QString vmName = vm->GetName();
 
     // Show warning dialog
     int ret = QMessageBox::warning(this->mainWindow(), "Uninstall VM",
@@ -82,7 +82,7 @@ bool UninstallVMCommand::canVMBeUninstalled() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->data();
+    QVariantMap vmData = vm->GetData();
 
     // Cannot uninstall templates or snapshots
     if (vmData.value("is_a_template", false).toBool())
@@ -91,7 +91,7 @@ bool UninstallVMCommand::canVMBeUninstalled() const
         return false;
 
     // Cannot uninstall if VM is running
-    if (vm->powerState() == "Running")
+    if (vm->GetPowerState() == "Running")
         return false;
 
     // Check if VM has any current operations

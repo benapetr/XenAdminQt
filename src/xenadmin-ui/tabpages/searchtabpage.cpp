@@ -1028,8 +1028,8 @@ void SearchTabPage::onItemDoubleClicked(int row, int column)
     QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
     if (obj)
     {
-        objectType = obj->objectType();
-        objectRef = obj->opaqueRef();
+        objectType = obj->GetObjectType();
+        objectRef = obj->OpaqueRef();
     }
 
     if (!objectType.isEmpty() && !objectRef.isEmpty())

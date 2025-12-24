@@ -69,7 +69,7 @@ bool HostCommand::isHostEnabled() const
     if (!host)
         return false;
 
-    return host->enabled();
+    return host->IsEnabled();
 }
 
 bool HostCommand::isHostLive() const
@@ -78,7 +78,7 @@ bool HostCommand::isHostLive() const
     if (!host)
         return false;
 
-    QVariantMap hostData = host->data();
+    QVariantMap hostData = host->GetData();
     if (hostData.isEmpty())
         return false;
 

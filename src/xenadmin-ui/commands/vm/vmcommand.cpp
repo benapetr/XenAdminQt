@@ -69,5 +69,5 @@ bool VMCommand::isVMRunning() const
     if (!vm)
         return false;
 
-    return (vm->powerState() == "Running");
+    return (vm->GetPowerState() == "Running");
 }

@@ -90,7 +90,7 @@ void ForceShutdownVMCommand::Run()
         return;
 
     // Get XenConnection from VM
-    XenConnection* conn = vm->connection();
+    XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(this->mainWindow(),
@@ -100,7 +100,7 @@ void ForceShutdownVMCommand::Run()
     }
 
     // Create VM object for action (action will own and delete it)
-    VM* vmForAction = new VM(conn, vm->opaqueRef());
+    VM* vmForAction = new VM(conn, vm->OpaqueRef());
 
     // Create the hard shutdown action
     VMHardShutdown* action = new VMHardShutdown(vmForAction, this->mainWindow());
@@ -138,7 +138,7 @@ bool ForceShutdownVMCommand::canForceShutdown() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->data();
+    QVariantMap vmData = vm->GetData();
     if (vmData.isEmpty())
         return false;
 
@@ -148,7 +148,7 @@ bool ForceShutdownVMCommand::canForceShutdown() const
     if (isTemplate || isLocked)
         return false;
 
-    QString powerState = vm->powerState();
+    QString powerState = vm->GetPowerState();
 
     // CA-16960: If the VM is up and has a running task, we will disregard the allowed_operations
     // and always allow forced options.
@@ -174,6 +174,6 @@ bool ForceShutdownVMCommand::hasRunningTasks() const
     if (!vm)
         return false;
 
-    QVariantMap currentOps = vm->data().value("current_operations", QVariantMap()).toMap();
+    QVariantMap currentOps = vm->GetData().value("current_operations", QVariantMap()).toMap();
     return !currentOps.isEmpty();
 }

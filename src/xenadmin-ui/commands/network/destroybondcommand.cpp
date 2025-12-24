@@ -34,8 +34,7 @@
 #include <QMessageBox>
 #include <QDebug>
 
-DestroyBondCommand::DestroyBondCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+DestroyBondCommand::DestroyBondCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
@@ -175,18 +174,10 @@ QString DestroyBondCommand::getSelectedNetworkRef() const
 
 QVariantMap DestroyBondCommand::getSelectedNetworkData() const
 {
-    QString networkRef = this->getSelectedNetworkRef();
-    if (networkRef.isEmpty())
+    if (!this->GetObject())
         return QVariantMap();
 
-    if (!this->mainWindow()->xenLib())
-        return QVariantMap();
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return QVariantMap();
-
-    return cache->ResolveObjectData("network", networkRef);
+    return this->GetObject()->GetData();
 }
 
 bool DestroyBondCommand::isNetworkABond(const QVariantMap& networkData) const
@@ -199,12 +190,10 @@ bool DestroyBondCommand::isNetworkABond(const QVariantMap& networkData) const
     if (pifs.isEmpty())
         return false;
 
-    if (!this->mainWindow()->xenLib())
+    if (!this->GetObject() || !this->GetObject()->GetConnection())
         return false;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
+    XenCache* cache = this->GetObject()->GetConnection()->getCache();
 
     // Check if any PIF is a bond interface
     for (const QVariant& pifRefVar : pifs)

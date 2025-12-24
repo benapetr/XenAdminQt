@@ -50,7 +50,7 @@ void RestartToolstackCommand::Run()
     if (!host)
         return;
 
-    QString hostRef = host->opaqueRef();
+    QString hostRef = host->OpaqueRef();
     QString hostName = this->getSelectedHostName();
 
     // Show confirmation dialog
