@@ -52,7 +52,7 @@ bool StoragePropertiesCommand::CanRun() const
         return true;
     } else
     {
-        return this->m_overrideConn->isConnected();
+        return this->m_overrideConn->IsConnected();
     }
 }
 
@@ -62,7 +62,7 @@ void StoragePropertiesCommand::Run()
     if (!this->m_overrideConn)
         sr = this->getSR();
     else
-        sr = this->m_overrideConn->getCache()->ResolveObject<SR>("sr", this->m_overrideSRRef);
+        sr = this->m_overrideConn->GetCache()->ResolveObject<SR>("sr", this->m_overrideSRRef);
 
     if (!sr || !sr->IsValid())
         return;

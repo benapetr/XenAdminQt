@@ -46,7 +46,7 @@ StartApplianceAction::StartApplianceAction(XenConnection* connection, const QStr
 
 void StartApplianceAction::run()
 {
-    if (!session() || !session()->isLoggedIn())
+    if (!session() || !session()->IsLoggedIn())
     {
         setError(tr("Not connected to XenServer"));
         return;

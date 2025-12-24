@@ -64,7 +64,7 @@ void VMCrossPoolMigrateAction::run()
         setDescription("Preparing cross-pool operation...");
 
         // Get VM data from source
-        QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         if (vmData.isEmpty())
         {
             throw std::runtime_error("VM not found in cache");
@@ -73,7 +73,7 @@ void VMCrossPoolMigrateAction::run()
         QString vmName = vmData.value("name_label").toString();
 
         // Get destination host data
-        QVariantMap destHostData = m_destConnection->getCache()->ResolveObjectData("host", m_destinationHostRef);
+        QVariantMap destHostData = m_destConnection->GetCache()->ResolveObjectData("host", m_destinationHostRef);
         if (destHostData.isEmpty())
         {
             throw std::runtime_error("Destination host not found");
@@ -83,15 +83,15 @@ void VMCrossPoolMigrateAction::run()
 
         // Get source pool/connection name
         QString sourcePoolName;
-        QStringList poolRefs = connection()->getCache()->GetAllRefs("pool");
+        QStringList poolRefs = connection()->GetCache()->GetAllRefs("pool");
         if (!poolRefs.isEmpty())
         {
-            QVariantMap poolData = connection()->getCache()->ResolveObjectData("pool", poolRefs.first());
+            QVariantMap poolData = connection()->GetCache()->ResolveObjectData("pool", poolRefs.first());
             sourcePoolName = poolData.value("name_label").toString();
         }
         if (sourcePoolName.isEmpty())
         {
-            sourcePoolName = connection()->getHostname();
+            sourcePoolName = connection()->GetHostname();
         }
 
         if (m_copy)
@@ -105,7 +105,7 @@ void VMCrossPoolMigrateAction::run()
             QString residentOnRef = vmData.value("resident_on").toString();
             if (!residentOnRef.isEmpty() && residentOnRef != "OpaqueRef:NULL")
             {
-                QVariantMap residentHostData = connection()->getCache()->ResolveObjectData("host", residentOnRef);
+                QVariantMap residentHostData = connection()->GetCache()->ResolveObjectData("host", residentOnRef);
                 QString sourceHostName = residentHostData.value("name_label").toString();
                 setTitle(QString("Migrating %1 from %2 to %3")
                              .arg(vmName)
@@ -126,7 +126,7 @@ void VMCrossPoolMigrateAction::run()
 
         try
         {
-            receiveData = XenAPI::Host::migrate_receive(m_destConnection->getSession(),
+            receiveData = XenAPI::Host::migrate_receive(m_destConnection->GetSession(),
                                                         m_destinationHostRef,
                                                         m_transferNetworkRef,
                                                         receiveOptions);
@@ -172,7 +172,7 @@ QVariantMap VMCrossPoolMigrateAction::convertVifMapToRefs(const QVariantMap& mac
     QVariantMap vifRefMap;
 
     // Get VM's VIFs
-    QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", m_vmRef);
+    QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
     QVariantList vifRefs = vmData.value("VIFs").toList();
 
     // Build MAC -> VIF ref mapping
@@ -180,7 +180,7 @@ QVariantMap VMCrossPoolMigrateAction::convertVifMapToRefs(const QVariantMap& mac
     for (const QVariant& vifRefVar : vifRefs)
     {
         QString vifRef = vifRefVar.toString();
-        QVariantMap vifData = connection()->getCache()->ResolveObjectData("vif", vifRef);
+        QVariantMap vifData = connection()->GetCache()->ResolveObjectData("vif", vifRef);
         QString mac = vifData.value("MAC").toString();
         if (!mac.isEmpty())
         {
@@ -193,13 +193,13 @@ QVariantMap VMCrossPoolMigrateAction::convertVifMapToRefs(const QVariantMap& mac
     for (const QVariant& snapRefVar : snapshotRefs)
     {
         QString snapRef = snapRefVar.toString();
-        QVariantMap snapData = connection()->getCache()->ResolveObjectData("vm", snapRef);
+        QVariantMap snapData = connection()->GetCache()->ResolveObjectData("vm", snapRef);
         QVariantList snapVifRefs = snapData.value("VIFs").toList();
 
         for (const QVariant& vifRefVar : snapVifRefs)
         {
             QString vifRef = vifRefVar.toString();
-            QVariantMap vifData = connection()->getCache()->ResolveObjectData("vif", vifRef);
+            QVariantMap vifData = connection()->GetCache()->ResolveObjectData("vif", vifRef);
             QString mac = vifData.value("MAC").toString();
             if (!mac.isEmpty() && !macToVifRef.contains(mac))
             {

@@ -51,7 +51,7 @@ bool DisconnectPoolCommand::CanRun() const
         return false;
 
     // Can disconnect if connected
-    return conn->isConnected();
+    return conn->IsConnected();
 }
 
 void DisconnectPoolCommand::Run()
@@ -78,7 +78,7 @@ void DisconnectPoolCommand::Run()
     if (ret == QMessageBox::Yes)
     {
         this->mainWindow()->showStatusMessage(QString("Disconnecting from pool '%1'...").arg(poolName));
-        conn->disconnect();
+        conn->Disconnect();
     }
 }
 

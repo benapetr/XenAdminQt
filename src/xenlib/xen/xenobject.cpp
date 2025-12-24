@@ -60,7 +60,7 @@ bool XenObject::IsConnected() const
 {
     if (!this->m_connection)
         return false;
-    return this->m_connection->isConnected();
+    return this->m_connection->IsConnected();
 }
 
 QVariantMap XenObject::GetData() const
@@ -69,10 +69,10 @@ QVariantMap XenObject::GetData() const
         return QVariantMap();
 
     // Get cache from connection's XenLib
-    if (!this->m_connection->getCache())
+    if (!this->m_connection->GetCache())
         return QVariantMap();
 
-    return this->m_connection->getCache()->ResolveObjectData(GetObjectType(), this->m_opaqueRef);
+    return this->m_connection->GetCache()->ResolveObjectData(GetObjectType(), this->m_opaqueRef);
 }
 
 void XenObject::Refresh()

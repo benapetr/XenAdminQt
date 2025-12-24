@@ -171,9 +171,9 @@
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), ui(new Ui::MainWindow), m_xenLib(nullptr), m_debugWindow(nullptr), m_titleBar(nullptr),
       m_consolePanel(nullptr), m_cvmConsolePanel(nullptr), m_navigationPane(nullptr),
-      m_connected(false),
-      m_navigationHistory(nullptr),
-      m_tabContainer(nullptr), m_tabContainerLayout(nullptr),
+      m_tabContainer(nullptr),
+      m_tabContainerLayout(nullptr),
+      m_connected(false), m_navigationHistory(nullptr),
       m_poolsTreeItem(nullptr), m_hostsTreeItem(nullptr), m_vmsTreeItem(nullptr), m_storageTreeItem(nullptr),
       m_currentObjectType(""), m_currentObjectRef("")
 {

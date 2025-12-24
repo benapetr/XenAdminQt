@@ -33,7 +33,7 @@ namespace XenAPI
 {
     QVariantMap PBD::get_record(XenSession* session, const QString& pbd)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -47,7 +47,7 @@ namespace XenAPI
 
     bool PBD::get_currently_attached(XenSession* session, const QString& pbd)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -61,7 +61,7 @@ namespace XenAPI
 
     QString PBD::async_create(XenSession* session, const QVariantMap& record)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -75,7 +75,7 @@ namespace XenAPI
 
     QString PBD::async_plug(XenSession* session, const QString& pbd)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -89,7 +89,7 @@ namespace XenAPI
 
     void PBD::plug(XenSession* session, const QString& pbd)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -103,7 +103,7 @@ namespace XenAPI
 
     void PBD::unplug(XenSession* session, const QString& pbd)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -117,7 +117,7 @@ namespace XenAPI
 
     QString PBD::async_unplug(XenSession* session, const QString& pbd)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -131,7 +131,7 @@ namespace XenAPI
 
     QString PBD::async_destroy(XenSession* session, const QString& pbd)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;

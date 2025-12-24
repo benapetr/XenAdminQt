@@ -108,7 +108,7 @@ void NewTemplateFromSnapshotCommand::Run()
 
     // Get connection
     XenConnection* conn = this->xenLib()->getConnection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
                              tr("Not connected to XenServer"));

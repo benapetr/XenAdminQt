@@ -57,10 +57,10 @@ void AddHostToPoolAction::run()
 
         // Get pool coordinator address and credentials from pool's session
         // In C# they get Pool.Connection.Hostname and Pool.Connection.Username/Password
-        QString coordinatorAddress = m_poolConnection->getHostname();
+        QString coordinatorAddress = m_poolConnection->GetHostname();
 
         // Get credentials from the pool's session
-        XenSession* poolSession = m_poolConnection->getSession();
+        XenSession* poolSession = m_poolConnection->GetSession();
         if (!poolSession)
         {
             throw std::runtime_error("Pool connection has no session");

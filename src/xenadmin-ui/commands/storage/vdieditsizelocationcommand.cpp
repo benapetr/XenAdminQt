@@ -43,7 +43,7 @@ bool VdiEditSizeLocationCommand::CanRun() const
     if (!vdi || !vdi->IsValid())
         return false;
 
-    XenCache* cache = vdi->GetConnection()->getCache();
+    XenCache* cache = vdi->GetConnection()->GetCache();
 
     // Check if VDI exists in cache
     QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->OpaqueRef());

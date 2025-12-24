@@ -64,7 +64,7 @@ bool ConnectAllHostsCommand::hasDisconnectedConnections() const
     QList<XenConnection*> allConnections = manager->getAllConnections();
     for (XenConnection* conn : allConnections)
     {
-        if (conn && !conn->isConnected())
+        if (conn && !conn->IsConnected())
         {
             // TODO: Also check if connection is not already in progress
             return true;

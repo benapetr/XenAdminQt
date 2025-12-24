@@ -34,7 +34,7 @@ namespace XenAPI
 {
     QString Secret::create(XenSession* session, const QString& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         // Create a secret record with the value
@@ -61,7 +61,7 @@ namespace XenAPI
 
     QString Secret::get_by_uuid(XenSession* session, const QString& uuid)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -75,7 +75,7 @@ namespace XenAPI
 
     void Secret::destroy(XenSession* session, const QString& secret)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;

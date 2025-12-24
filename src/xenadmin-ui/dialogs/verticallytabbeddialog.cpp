@@ -92,7 +92,7 @@ void VerticallyTabbedDialog::loadObjectData()
         return;
     }
 
-    XenCache* cache = this->m_connection->getCache();
+    XenCache* cache = this->m_connection->GetCache();
     
     // Resolve object data from cache (matches C# clone pattern)
     QVariantMap objectData = cache->ResolveObjectData(this->m_objectType, this->m_objectRef);
@@ -436,10 +436,10 @@ void VerticallyTabbedDialog::applySimpleChanges()
     XenSession* session = nullptr;
     if (mainWin->xenLib()->getConnection())
     {
-        session = mainWin->xenLib()->getConnection()->getSession();
+        session = mainWin->xenLib()->getConnection()->GetSession();
     }
 
-    if (!session || !session->isLoggedIn())
+    if (!session || !session->IsLoggedIn())
     {
         qWarning() << "VerticallyTabbedDialog::applySimpleChanges: No session";
         return;

@@ -70,11 +70,11 @@ QStringList Pool::HostRefs() const
     // In XenAPI, there's exactly one pool per GetConnection, so all hosts belong to this pool
     // Query the cache for all host references
     XenConnection* conn = this->GetConnection();
-    if (!conn || !conn->getCache())
+    if (!conn || !conn->GetCache())
         return QStringList();
 
     // Get all host references from the cache
-    return conn->getCache()->GetAllRefs("host");
+    return conn->GetCache()->GetAllRefs("host");
 }
 
 bool Pool::IsPoolOfOne() const

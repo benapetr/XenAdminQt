@@ -34,7 +34,6 @@
 
 namespace XenAPI
 {
-
     /**
      * @brief PBD - XenAPI Physical Block Device bindings
      *

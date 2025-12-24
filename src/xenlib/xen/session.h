@@ -42,12 +42,12 @@ class XENLIB_EXPORT XenSession : public QObject
         explicit XenSession(XenConnection* connection, QObject* parent = nullptr);
         ~XenSession();
 
-        bool login(const QString& username, const QString& password);
-        void logout();
-        bool isLoggedIn() const;
+        bool Login(const QString& username, const QString& password);
+        void Logout();
+        bool IsLoggedIn() const;
 
         // Session duplication for separate TCP streams
-        static XenSession* duplicateSession(XenSession* originalSession, QObject* parent = nullptr);
+        static XenSession* DuplicateSession(XenSession* originalSession, QObject* parent = nullptr);
 
         QString getSessionId() const;
         QString getUsername() const;

@@ -32,23 +32,23 @@ Network::Network(XenConnection* connection, const QString& opaqueRef, QObject* p
 {
 }
 
-QString Network::bridge() const
+QString Network::Bridge() const
 {
     return this->GetData().value("bridge").toString();
 }
 
-bool Network::managed() const
+bool Network::IsManaged() const
 {
     // Default to true (managed by xapi) if not specified
     return this->GetData().value("managed", true).toBool();
 }
 
-qint64 Network::mtu() const
+qint64 Network::GetMTU() const
 {
     return this->GetData().value("MTU", 1500).toLongLong();
 }
 
-QStringList Network::vifRefs() const
+QStringList Network::GetVIFRefs() const
 {
     QVariantList vifs = this->GetData().value("VIFs").toList();
     QStringList result;
@@ -59,7 +59,7 @@ QStringList Network::vifRefs() const
     return result;
 }
 
-QStringList Network::pifRefs() const
+QStringList Network::GetPIFRefs() const
 {
     QVariantList pifs = this->GetData().value("PIFs").toList();
     QStringList result;
@@ -70,12 +70,12 @@ QStringList Network::pifRefs() const
     return result;
 }
 
-QVariantMap Network::otherConfig() const
+QVariantMap Network::OtherConfig() const
 {
     return this->GetData().value("other_config").toMap();
 }
 
-QStringList Network::allowedOperations() const
+QStringList Network::AllowedOperations() const
 {
     QVariantList ops = this->GetData().value("allowed_operations").toList();
     QStringList result;
@@ -86,7 +86,7 @@ QStringList Network::allowedOperations() const
     return result;
 }
 
-QVariantMap Network::currentOperations() const
+QVariantMap Network::CurrentOperations() const
 {
     return this->GetData().value("current_operations").toMap();
 }

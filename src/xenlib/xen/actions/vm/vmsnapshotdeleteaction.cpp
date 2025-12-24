@@ -43,7 +43,7 @@ VMSnapshotDeleteAction::VMSnapshotDeleteAction(XenConnection* connection,
       m_snapshotRef(snapshotRef)
 {
     // Get snapshot details
-    QVariantMap snapshotData = connection->getCache()->ResolveObjectData("vm", snapshotRef);
+    QVariantMap snapshotData = connection->GetCache()->ResolveObjectData("vm", snapshotRef);
     m_snapshotName = snapshotData.value("name_label").toString();
 
     // Update title with actual name
@@ -54,7 +54,7 @@ VMSnapshotDeleteAction::VMSnapshotDeleteAction(XenConnection* connection,
     for (const QVariant& vbdRefVar : vbdRefs)
     {
         QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = connection->getCache()->ResolveObjectData("vbd", vbdRef);
+        QVariantMap vbdData = connection->GetCache()->ResolveObjectData("vbd", vbdRef);
 
         // Check if VBD is owned by this snapshot
         // In XenAPI, VBD.other_config["owner"] == "true" indicates ownership
@@ -74,7 +74,7 @@ void VMSnapshotDeleteAction::run()
         setPercentComplete(0);
 
         // Check if snapshot is suspended - if so, hard shutdown first
-        QVariantMap snapshotData = connection()->getCache()->ResolveObjectData("vm", m_snapshotRef);
+        QVariantMap snapshotData = connection()->GetCache()->ResolveObjectData("vm", m_snapshotRef);
         QString powerState = snapshotData.value("power_state").toString();
 
         if (powerState == "Suspended")
@@ -96,7 +96,7 @@ void VMSnapshotDeleteAction::run()
             {
                 try
                 {
-                    QVariantMap vbdData = connection()->getCache()->ResolveObjectData("vbd", vbdRef);
+                    QVariantMap vbdData = connection()->GetCache()->ResolveObjectData("vbd", vbdRef);
                     QString vdiRef = vbdData.value("VDI").toString();
 
                     if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")

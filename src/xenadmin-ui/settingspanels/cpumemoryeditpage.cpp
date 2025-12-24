@@ -124,7 +124,7 @@ void CpuMemoryEditPage::setXenObjects(const QString& objectRef,
 
     if (this->connection() && objectType.toLower() == "vm")
     {
-        this->m_vm = this->connection()->getCache()->ResolveObject<VM>("vm", objectRef);
+        this->m_vm = this->connection()->GetCache()->ResolveObject<VM>("vm", objectRef);
     }
     else
     {
@@ -346,7 +346,7 @@ void CpuMemoryEditPage::validateVcpuSettings()
     if (!this->m_vm || !this->ui->comboBoxVCPUs->isEnabled())
         return;
 
-    XenCache* cache = this->connection() ? this->connection()->getCache() : nullptr;
+    XenCache* cache = this->connection() ? this->connection()->GetCache() : nullptr;
     if (!cache)
         return;
 
@@ -485,7 +485,7 @@ QString CpuMemoryEditPage::productBrand() const
     if (!this->connection())
         return tr("XenServer");
 
-    XenCache* cache = this->connection()->getCache();
+    XenCache* cache = this->connection()->GetCache();
     QList<QVariantMap> pools = cache->GetAllData("pool");
     if (!pools.isEmpty())
     {

@@ -46,7 +46,7 @@ JoinPoolCommand::JoinPoolCommand(MainWindow* mainWindow, QObject* parent)
 bool JoinPoolCommand::CanRun() const
 {
     QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host || !host->GetConnection() || !host->GetConnection()->isConnected())
+    if (!host || !host->GetConnection() || !host->GetConnection()->IsConnected())
         return false;
 
     // A standalone host can always attempt to join a pool
@@ -122,8 +122,8 @@ void JoinPoolCommand::Run()
         return;
     }
 
-    XenSession* session = hostConnection->getSession();
-    if (!session || !session->isLoggedIn())
+    XenSession* session = hostConnection->GetSession();
+    if (!session || !session->IsLoggedIn())
     {
         QMessageBox::critical(this->mainWindow(), "Join Pool",
                               "Host session is not active.");

@@ -53,8 +53,8 @@ void VMOperationHelpers::startDiagnosisForm(XenLib* xenLib,
         return;
     }
 
-    XenSession* session = connection->getSession();
-    if (!session || !session->isLoggedIn())
+    XenSession* session = connection->GetSession();
+    if (!session || !session->IsLoggedIn())
     {
         qWarning() << "VMOperationHelpers::startDiagnosisForm: Session is not valid";
         return;

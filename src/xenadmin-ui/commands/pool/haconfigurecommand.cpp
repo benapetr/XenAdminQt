@@ -89,7 +89,7 @@ bool HAConfigureCommand::isPoolConnected() const
         return false;
 
     XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-    return conn && conn->isConnected();
+    return conn && conn->IsConnected();
 }
 
 bool HAConfigureCommand::hasCoordinator() const

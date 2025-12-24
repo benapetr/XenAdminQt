@@ -36,7 +36,6 @@ class XenSession;
 
 namespace XenAPI
 {
-
     /**
      * @brief Static XenAPI VDI (Virtual Disk Image) bindings
      *

@@ -55,7 +55,7 @@ void AddVirtualDiskCommand::Run()
     QSharedPointer<XenObject> object = this->GetObject();
     if (!object || !object->GetConnection())
         return;
-    XenCache *cache = object->GetConnection()->getCache();
+    XenCache *cache = object->GetConnection()->GetCache();
 
     if (objectType == "vm")
     {

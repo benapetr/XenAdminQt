@@ -47,7 +47,6 @@ class XenSession;
  */
 namespace XenAPI
 {
-
     class VM_appliance
     {
         public:

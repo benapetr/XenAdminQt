@@ -65,7 +65,7 @@ void RepairSRCommand::Run()
         this->mainWindow()->showStatusMessage(QString("Repairing storage repository '%1'...").arg(srName));
 
         XenConnection* connection = sr->GetConnection();
-        if (!connection || !connection->isConnected())
+        if (!connection || !connection->IsConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Repair Storage Repository Failed",
                                  "Not connected to XenServer.");

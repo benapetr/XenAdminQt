@@ -64,14 +64,14 @@ void MeddlingActionManager::rehydrateTasks(XenConnection* connection)
         return;
     }
 
-    XenSession* session = connection->getSession();
-    if (!session || !session->isLoggedIn())
+    XenSession* session = connection->GetSession();
+    if (!session || !session->IsLoggedIn())
     {
         qWarning() << "MeddlingActionManager: Cannot rehydrate tasks - not logged in";
         return;
     }
 
-    qDebug() << "MeddlingActionManager: Rehydrating tasks for connection" << connection->getHostname();
+    qDebug() << "MeddlingActionManager: Rehydrating tasks for connection" << connection->GetHostname();
 
     // Get all task records (Dictionary<XenRef<Task>, Task> equivalent)
     XenRpcAPI api(session);

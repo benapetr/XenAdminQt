@@ -44,7 +44,7 @@ bool MoveVirtualDiskCommand::CanRun() const
     if (!vdi || !vdi->IsValid())
         return false;
 
-    XenCache* cache = vdi->GetConnection()->getCache();
+    XenCache* cache = vdi->GetConnection()->GetCache();
     QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->OpaqueRef());
     if (vdiData.isEmpty())
         return false;

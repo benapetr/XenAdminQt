@@ -55,7 +55,7 @@ void RemoveHostCommand::Run()
     if (!connection)
         return;
 
-    QString hostname = connection->getHostname();
+    QString hostname = connection->GetHostname();
     QString hostName = host->GetName();
 
     // Show confirmation dialog
@@ -78,10 +78,10 @@ void RemoveHostCommand::Run()
     qDebug() << "RemoveHostCommand: Removing host connection" << hostName << "(" << hostname << ")";
 
     // Disconnect if still connected
-    if (connection->isConnected())
+    if (connection->IsConnected())
     {
         qDebug() << "RemoveHostCommand: Disconnecting from" << hostname;
-        connection->disconnect();
+        connection->Disconnect();
     }
 
     // Remove from connection profiles
@@ -116,7 +116,7 @@ bool RemoveHostCommand::canHostBeRemoved(QSharedPointer<Host> host) const
     // 1. Connection is disconnected
     // 2. OR host is the pool coordinator (master)
 
-    if (!connection->isConnected())
+    if (!connection->IsConnected())
     {
         // Disconnected host - can always remove
         return true;

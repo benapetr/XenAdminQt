@@ -55,7 +55,7 @@ bool AttachVirtualDiskCommand::CanRun() const
     if (!object || !object->GetConnection())
         return false;
 
-    XenCache* cache = object->GetConnection()->getCache();
+    XenCache* cache = object->GetConnection()->GetCache();
     if (!cache)
         return false;
 
@@ -79,7 +79,7 @@ void AttachVirtualDiskCommand::Run()
     if (!object || !object->GetConnection())
         return;
 
-    XenCache* cache = object->GetConnection()->getCache();
+    XenCache* cache = object->GetConnection()->GetCache();
     if (!cache)
         return;
 
@@ -138,7 +138,7 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     qDebug() << "[AttachVirtualDiskCommand] Device position:" << devicePosition
              << "Mode:" << mode << "Bootable:" << bootable;
 
-    XenCache* cache = connection->getCache();
+    XenCache* cache = connection->GetCache();
     if (!cache)
     {
         qWarning() << "[AttachVirtualDiskCommand] No cache available, aborting";

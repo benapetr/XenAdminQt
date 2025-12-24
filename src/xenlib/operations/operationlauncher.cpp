@@ -51,7 +51,7 @@ void OperationLauncher::run()
     {
         if (op->connection() != nullptr)
         {
-            if (op->connection()->isConnected())
+            if (op->connection()->IsConnected())
             {
                 if (!operationsByConnection.contains(op->connection()))
                 {

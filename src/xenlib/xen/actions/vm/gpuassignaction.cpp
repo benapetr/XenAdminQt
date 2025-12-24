@@ -53,7 +53,7 @@ void GpuAssignAction::run()
         setDescription("Retrieving VM configuration...");
 
         // Get current VM data from cache
-        QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         if (vmData.isEmpty())
         {
             throw std::runtime_error("VM not found in cache");

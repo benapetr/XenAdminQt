@@ -33,7 +33,6 @@
 
 namespace XenAPI
 {
-
     /**
      * @brief Secret - XenAPI Secret bindings
      *

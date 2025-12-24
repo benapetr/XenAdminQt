@@ -38,7 +38,7 @@ HVMBootAction::HVMBootAction(XenConnection* connection, const QString& vmRef, QO
     // Get VM name for display purposes
     try
     {
-        QVariantMap vmRecord = XenAPI::VM::get_record(connection->getSession(), vmRef);
+        QVariantMap vmRecord = XenAPI::VM::get_record(connection->GetSession(), vmRef);
         m_vmName = vmRecord.value("name_label").toString();
         if (m_vmName.isEmpty())
         {

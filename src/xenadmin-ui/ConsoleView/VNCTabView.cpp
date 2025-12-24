@@ -891,7 +891,7 @@ void VNCTabView::onPowerStateLabelClicked()
         return;
 
     XenConnection* conn = this->_xenLib->getConnection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         qWarning() << "VNCTabView: Not connected to XenServer";
         return;

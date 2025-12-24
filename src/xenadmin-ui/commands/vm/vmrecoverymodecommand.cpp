@@ -91,7 +91,7 @@ void VMRecoveryModeCommand::Run()
 
     // Get XenConnection
     XenConnection* conn = vm->GetConnection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
                              tr("Not connected to XenServer"));

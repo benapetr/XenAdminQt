@@ -56,7 +56,7 @@ void DeleteVirtualDiskCommand::Run()
 
     QString vdiRef = vdi->OpaqueRef();
     QString vdiName = vdi->GetName();
-    XenCache* cache = vdi->GetConnection()->getCache();
+    XenCache* cache = vdi->GetConnection()->GetCache();
     QVariantMap vdiData = vdi->GetData();
     if (vdiData.isEmpty())
         return;
@@ -134,7 +134,7 @@ QString DeleteVirtualDiskCommand::MenuText() const
     if (!vdi || !vdi->IsValid())
         return "Delete Virtual Disk";
 
-    XenCache* cache = vdi->GetConnection()->getCache();
+    XenCache* cache = vdi->GetConnection()->GetCache();
     if (!cache)
         return "Delete Virtual Disk";
 
@@ -163,7 +163,7 @@ bool DeleteVirtualDiskCommand::canVDIBeDeleted(QSharedPointer<VDI> vdi) const
     if (!vdi->GetConnection())
         return false;
 
-    XenCache* cache = vdi->GetConnection()->getCache();
+    XenCache* cache = vdi->GetConnection()->GetCache();
     if (!cache)
         return false;
 
@@ -258,7 +258,7 @@ QString DeleteVirtualDiskCommand::getVDIType(QSharedPointer<VDI> vdi) const
     QString srRef = vdiData.value("SR").toString();
     if (!srRef.isEmpty() && vdi->GetConnection())
     {
-        XenCache* cache = vdi->GetConnection()->getCache();
+        XenCache* cache = vdi->GetConnection()->GetCache();
         if (cache)
         {
             QVariantMap srData = cache->ResolveObjectData("sr", srRef);

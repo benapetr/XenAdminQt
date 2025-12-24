@@ -38,7 +38,7 @@ namespace XenAPI
     // VDI.create - Create a new VDI
     QString VDI::create(XenSession* session, const QVariantMap& vdiRecord)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -53,7 +53,7 @@ namespace XenAPI
     // VDI.async_destroy - Asynchronous destroy
     QString VDI::async_destroy(XenSession* session, const QString& vdi)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -68,7 +68,7 @@ namespace XenAPI
     // VDI.destroy - Synchronous destroy
     void VDI::destroy(XenSession* session, const QString& vdi)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -83,7 +83,7 @@ namespace XenAPI
     // VDI.async_copy - Copy VDI to another SR
     QString VDI::async_copy(XenSession* session, const QString& vdi, const QString& sr)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -98,7 +98,7 @@ namespace XenAPI
     // VDI.async_pool_migrate - Live migrate VDI to another SR
     QString VDI::async_pool_migrate(XenSession* session, const QString& vdi, const QString& sr, const QVariantMap& options)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -113,7 +113,7 @@ namespace XenAPI
     // VDI.get_VBDs - Get list of VBDs attached to this VDI
     QVariantList VDI::get_VBDs(XenSession* session, const QString& vdi)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -128,7 +128,7 @@ namespace XenAPI
     // VDI.get_SR - Get the SR this VDI belongs to
     QString VDI::get_SR(XenSession* session, const QString& vdi)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -143,7 +143,7 @@ namespace XenAPI
     // VDI.get_name_label
     QString VDI::get_name_label(XenSession* session, const QString& vdi)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -158,7 +158,7 @@ namespace XenAPI
     // VDI.get_name_description
     QString VDI::get_name_description(XenSession* session, const QString& vdi)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -173,7 +173,7 @@ namespace XenAPI
     // VDI.get_virtual_size
     qint64 VDI::get_virtual_size(XenSession* session, const QString& vdi)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -188,7 +188,7 @@ namespace XenAPI
     // VDI.get_read_only
     bool VDI::get_read_only(XenSession* session, const QString& vdi)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -203,7 +203,7 @@ namespace XenAPI
     // VDI.get_type
     QString VDI::get_type(XenSession* session, const QString& vdi)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -218,7 +218,7 @@ namespace XenAPI
     // VDI.get_sharable
     bool VDI::get_sharable(XenSession* session, const QString& vdi)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -233,7 +233,7 @@ namespace XenAPI
     // VDI.set_name_label
     void VDI::set_name_label(XenSession* session, const QString& vdi, const QString& label)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -248,7 +248,7 @@ namespace XenAPI
     // VDI.set_name_description
     void VDI::set_name_description(XenSession* session, const QString& vdi, const QString& description)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -263,7 +263,7 @@ namespace XenAPI
     // VDI.resize
     void VDI::resize(XenSession* session, const QString& vdi, qint64 size)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -278,7 +278,7 @@ namespace XenAPI
     // VDI.resize_online
     void VDI::resize_online(XenSession* session, const QString& vdi, qint64 size)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -293,7 +293,7 @@ namespace XenAPI
     // VDI.get_record
     QVariantMap VDI::get_record(XenSession* session, const QString& vdi)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -308,7 +308,7 @@ namespace XenAPI
     // VDI.async_disable_cbt - Disable Changed Block Tracking (async)
     QString VDI::async_disable_cbt(XenSession* session, const QString& vdi)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -323,7 +323,7 @@ namespace XenAPI
     // VDI.get_cbt_enabled - Check if CBT is enabled
     bool VDI::get_cbt_enabled(XenSession* session, const QString& vdi)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -338,7 +338,7 @@ namespace XenAPI
     // VDI.get_all
     QVariantList VDI::get_all(XenSession* session)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -353,7 +353,7 @@ namespace XenAPI
     // VDI.get_all_records
     QVariantMap VDI::get_all_records(XenSession* session)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;

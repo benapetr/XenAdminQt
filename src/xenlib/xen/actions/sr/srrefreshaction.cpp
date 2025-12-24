@@ -47,9 +47,9 @@ QString SrRefreshAction::getSRName() const
         return "Storage Repository";
 
     // Try to get SR name from cache
-    if (connection()->getCache())
+    if (connection()->GetCache())
     {
-        QVariantMap srData = connection()->getCache()->ResolveObjectData("sr", m_srRef);
+        QVariantMap srData = connection()->GetCache()->ResolveObjectData("sr", m_srRef);
         QString name = srData.value("name_label", "").toString();
         if (!name.isEmpty())
             return name;
@@ -68,7 +68,7 @@ void SrRefreshAction::run()
 
     try
     {
-        XenSession* session = connection()->getSession();
+        XenSession* session = connection()->GetSession();
         if (!session)
         {
             throw std::runtime_error("No valid session");

@@ -36,7 +36,6 @@ class XenSession;
 
 namespace XenAPI
 {
-
     /**
      * @brief Network_sriov XenAPI bindings
      *

@@ -96,7 +96,7 @@ void DisableChangedBlockTrackingCommand::Run()
 
     // Get GetConnection
     XenConnection* conn = vm->GetConnection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
                              tr("Not connected to XenServer"));
@@ -110,7 +110,7 @@ void DisableChangedBlockTrackingCommand::Run()
     QList<AsyncOperation*> actions;
 
     // Get cache from connection
-    XenCache* cache = conn->getCache();
+    XenCache* cache = conn->GetCache();
 
     // Get all VBDs for this VM
     QVariantList vbds = vmData.value("VBDs").toList();
@@ -206,7 +206,7 @@ bool DisableChangedBlockTrackingCommand::hasVdiWithCbtEnabled() const
     // Get all VBDs for this VM
     QVariantList vbds = vmData.value("VBDs").toList();
 
-    XenCache* cache = vm->GetConnection()->getCache();
+    XenCache* cache = vm->GetConnection()->GetCache();
 
     for (const QVariant& vbdRefVariant : vbds)
     {

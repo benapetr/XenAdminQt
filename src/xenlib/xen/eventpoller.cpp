@@ -157,7 +157,7 @@ void EventPoller::initialize(XenSession* originalSession)
 
     // Create a duplicate session with its own connection stack
     // This is the C# XenAdmin pattern - separate TCP connection prevents blocking
-    this->d->session = XenSession::duplicateSession(originalSession, this);
+    this->d->session = XenSession::DuplicateSession(originalSession, this);
 
     if (!this->d->session)
     {

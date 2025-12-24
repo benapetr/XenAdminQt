@@ -149,7 +149,7 @@ bool VM::IsWindows() const
     QString guestMetricsRef = stringProperty("guest_metrics");
     if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
     {
-        XenCache* cache = GetConnection() ? GetConnection()->getCache() : nullptr;
+        XenCache* cache = GetConnection() ? GetConnection()->GetCache() : nullptr;
         if (cache)
         {
             QVariantMap metricsData = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
@@ -304,7 +304,7 @@ namespace
 
 int VM::MaxVCPUsAllowed() const
 {
-    XenCache* cache = GetConnection() ? GetConnection()->getCache() : nullptr;
+    XenCache* cache = GetConnection() ? GetConnection()->GetCache() : nullptr;
     QVariantMap vmData = this->GetData();
 
     qint64 value = 0;
@@ -318,7 +318,7 @@ int VM::MaxVCPUsAllowed() const
 
 int VM::MinVCPUs() const
 {
-    XenCache* cache = GetConnection() ? GetConnection()->getCache() : nullptr;
+    XenCache* cache = GetConnection() ? GetConnection()->GetCache() : nullptr;
     QVariantMap vmData = this->GetData();
 
     qint64 value = 0;
@@ -361,7 +361,7 @@ long VM::GetCoresPerSocket() const
 
 long VM::MaxCoresPerSocket() const
 {
-    XenCache* cache = GetConnection() ? GetConnection()->getCache() : nullptr;
+    XenCache* cache = GetConnection() ? GetConnection()->GetCache() : nullptr;
     if (!cache)
         return 0;
 

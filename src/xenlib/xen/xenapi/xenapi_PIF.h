@@ -36,7 +36,6 @@ class XenSession;
 
 namespace XenAPI
 {
-
     /**
      * @brief PIF (Physical Interface) XenAPI bindings
      *

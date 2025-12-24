@@ -35,7 +35,6 @@ class XenSession;
 
 namespace XenAPI
 {
-
     /**
      * @brief VGPU - Virtual GPU management
      *

@@ -80,7 +80,7 @@ void DestroySRCommand::Run()
 
     // Get GetConnection from SR object for multi-GetConnection support
     XenConnection* conn = sr->GetConnection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
         return;
@@ -138,7 +138,7 @@ bool DestroySRCommand::canSRBeDestroyed() const
     bool shared = srData.value("shared", false).toBool();
     if (shared)
     {
-        XenCache* cache = sr->GetConnection()->getCache();
+        XenCache* cache = sr->GetConnection()->GetCache();
         QVariantList pbds = srData.value("PBDs", QVariantList()).toList();
         for (const QVariant& pbdRefVar : pbds)
         {

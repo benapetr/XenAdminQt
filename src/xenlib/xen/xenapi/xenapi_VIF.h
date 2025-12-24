@@ -36,7 +36,6 @@ class XenSession;
 
 namespace XenAPI
 {
-
     /**
      * @brief VIF (Virtual Network Interface) XenAPI bindings
      *

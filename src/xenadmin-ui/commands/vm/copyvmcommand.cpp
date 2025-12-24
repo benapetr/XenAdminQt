@@ -83,7 +83,7 @@ bool CopyVMCommand::canVMBeCopied() const
     if (!this->mainWindow()->xenLib())
         return false;
 
-    XenCache* cache = vm->GetConnection()->getCache();
+    XenCache* cache = vm->GetConnection()->GetCache();
 
     QString vmRef = vm->OpaqueRef();
     QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);

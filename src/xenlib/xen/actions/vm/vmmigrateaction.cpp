@@ -52,13 +52,13 @@ void VMMigrateAction::run()
         setDescription("Preparing migration...");
 
         // Get VM and host data from cache
-        QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         if (vmData.isEmpty())
         {
             throw std::runtime_error("VM not found in cache");
         }
 
-        QVariantMap hostData = connection()->getCache()->ResolveObjectData("host", m_destinationHostRef);
+        QVariantMap hostData = connection()->GetCache()->ResolveObjectData("host", m_destinationHostRef);
         if (hostData.isEmpty())
         {
             throw std::runtime_error("Destination host not found in cache");
@@ -73,7 +73,7 @@ void VMMigrateAction::run()
 
         if (!residentOnRef.isEmpty() && residentOnRef != "OpaqueRef:NULL")
         {
-            QVariantMap residentHostData = connection()->getCache()->ResolveObjectData("host", residentOnRef);
+            QVariantMap residentHostData = connection()->GetCache()->ResolveObjectData("host", residentOnRef);
             sourceHostName = residentHostData.value("name_label").toString();
 
             setTitle(QString("Migrating %1 from %2 to %3")

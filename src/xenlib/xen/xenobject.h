@@ -148,34 +148,34 @@ class XENLIB_EXPORT XenObject : public QObject
             return this->m_evicted;
         }
 
-        signals:
-            /**
-             * @brief Emitted when object data changes
-             */
-            void dataChanged();
+    signals:
+        /**
+         * @brief Emitted when object data changes
+         */
+        void dataChanged();
 
-        protected:
-            /**
-             * @brief Get property value from cache
-             * @param key Property key
-             * @param defaultValue Default if property doesn't exist
-             * @return Property value
-             */
-            QVariant property(const QString& key, const QVariant& defaultValue = QVariant()) const;
+    protected:
+        /**
+         * @brief Get property value from cache
+         * @param key Property key
+         * @param defaultValue Default if property doesn't exist
+         * @return Property value
+         */
+        QVariant property(const QString& key, const QVariant& defaultValue = QVariant()) const;
 
-            /**
-             * @brief Get typed property value
-             */
-            QString stringProperty(const QString& key, const QString& defaultValue = QString()) const;
-            bool boolProperty(const QString& key, bool defaultValue = false) const;
-            int intProperty(const QString& key, int defaultValue = 0) const;
-            qint64 longProperty(const QString& key, qint64 defaultValue = 0) const;
-            QStringList stringListProperty(const QString& key) const;
+        /**
+         * @brief Get typed property value
+         */
+        QString stringProperty(const QString& key, const QString& defaultValue = QString()) const;
+        bool boolProperty(const QString& key, bool defaultValue = false) const;
+        int intProperty(const QString& key, int defaultValue = 0) const;
+        qint64 longProperty(const QString& key, qint64 defaultValue = 0) const;
+        QStringList stringListProperty(const QString& key) const;
 
-        private:
-            QPointer<XenConnection> m_connection;
-            QString m_opaqueRef;
-            bool m_evicted = false;
+    private:
+        QPointer<XenConnection> m_connection;
+        QString m_opaqueRef;
+        bool m_evicted = false;
 };
 
 Q_DECLARE_METATYPE(QSharedPointer<XenObject>)

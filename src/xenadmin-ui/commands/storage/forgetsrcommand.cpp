@@ -47,7 +47,7 @@ bool ForgetSRCommand::CanRun() const
         return false;
     }
 
-    XenCache* cache = sr->GetConnection()->getCache();
+    XenCache* cache = sr->GetConnection()->GetCache();
     QVariantMap srData = sr->GetData();
 
     // Check if SR has running VMs
@@ -134,7 +134,7 @@ void ForgetSRCommand::Run()
 
     // Get GetConnection from SR object for multi-GetConnection support
     XenConnection* conn = sr->GetConnection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
                              "Not connected to XenServer");

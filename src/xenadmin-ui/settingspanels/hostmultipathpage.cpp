@@ -168,7 +168,7 @@ bool HostMultipathPage::isInMaintenanceMode() const
     QString metricsRef = this->m_objectDataCopy.value("metrics").toString();
     if (!metricsRef.isEmpty() && this->connection())
     {
-        XenCache* cache = this->connection()->getCache();
+        XenCache* cache = this->connection()->GetCache();
         if (cache)
         {
             QSharedPointer<HostMetrics> metrics = cache->ResolveObject<HostMetrics>("host_metrics", metricsRef);

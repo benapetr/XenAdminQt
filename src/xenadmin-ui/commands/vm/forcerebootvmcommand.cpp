@@ -91,7 +91,7 @@ void ForceRebootVMCommand::Run()
 
     // Get XenConnection from VM
     XenConnection* conn = vm->GetConnection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(),
                              tr("Not Connected"),
@@ -204,7 +204,7 @@ bool ForceRebootVMCommand::enabledTargetExists() const
     if (!residentOn.isEmpty() && residentOn != "OpaqueRef:NULL")
     {
         // VM has a home server - check if it's enabled
-        XenCache* cache = vm->GetConnection()->getCache();
+        XenCache* cache = vm->GetConnection()->GetCache();
         QVariantMap hostData = cache->ResolveObjectData("host", residentOn);
         if (!hostData.isEmpty())
         {
@@ -213,7 +213,7 @@ bool ForceRebootVMCommand::enabledTargetExists() const
     }
 
     // No home server or home server not found - check if any host is enabled
-    XenCache* cache = vm->GetConnection()->getCache();
+    XenCache* cache = vm->GetConnection()->GetCache();
     QList<QVariantMap> hosts = cache->GetAllData("host");
     for (const QVariantMap& host : hosts)
     {

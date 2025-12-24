@@ -45,7 +45,7 @@ XenHeartbeat::XenHeartbeat(XenConnection* connection, int connectionTimeout, QOb
     this->m_heartbeatTimer->setSingleShot(false);
     connect(this->m_heartbeatTimer, &QTimer::timeout, this, &XenHeartbeat::onHeartbeatTimer);
 
-    qDebug() << "Heartbeat created for connection" << connection->getHostname()
+    qDebug() << "Heartbeat created for connection" << connection->GetHostname()
              << "with timeout" << this->m_connectionTimeout << "ms";
 }
 
@@ -54,7 +54,7 @@ XenHeartbeat::~XenHeartbeat()
     this->stop();
     this->dropSession();
 
-    qDebug() << "Heartbeat destroyed for connection" << (this->m_connection ? this->m_connection->getHostname() : "null");
+    qDebug() << "Heartbeat destroyed for connection" << (this->m_connection ? this->m_connection->GetHostname() : "null");
 }
 
 void XenHeartbeat::start()
@@ -63,11 +63,11 @@ void XenHeartbeat::start()
 
     if (this->m_running)
     {
-        qDebug() << "Heartbeat already running for" << this->m_connection->getHostname();
+        qDebug() << "Heartbeat already running for" << this->m_connection->GetHostname();
         return;
     }
 
-    if (!this->m_connection || !this->m_connection->isConnected())
+    if (!this->m_connection || !this->m_connection->IsConnected())
     {
         qWarning() << "Cannot start heartbeat: connection not available or not connected";
         return;
@@ -77,7 +77,7 @@ void XenHeartbeat::start()
     this->m_retrying = false;
     this->m_heartbeatTimer->start();
 
-    qDebug() << "Heartbeat started for connection" << this->m_connection->getHostname();
+    qDebug() << "Heartbeat started for connection" << this->m_connection->GetHostname();
 }
 
 void XenHeartbeat::stop()
@@ -92,7 +92,7 @@ void XenHeartbeat::stop()
     this->m_running = false;
     this->m_heartbeatTimer->stop();
 
-    qDebug() << "Heartbeat stopped for connection" << (this->m_connection ? this->m_connection->getHostname() : "null");
+    qDebug() << "Heartbeat stopped for connection" << (this->m_connection ? this->m_connection->GetHostname() : "null");
 }
 
 bool XenHeartbeat::isRunning() const
@@ -115,7 +115,7 @@ void XenHeartbeat::onHeartbeatTimer()
 
 void XenHeartbeat::performHeartbeat()
 {
-    if (!this->m_connection || !this->m_connection->isConnected())
+    if (!this->m_connection || !this->m_connection->IsConnected())
     {
         qDebug() << "Skipping heartbeat: connection not available";
         return;
@@ -139,35 +139,35 @@ void XenHeartbeat::performHeartbeat()
         // Reset retry flag on successful heartbeat
         if (this->m_retrying)
         {
-            qDebug() << "Heartbeat for" << this->m_connection->getHostname() << "has recovered";
+            qDebug() << "Heartbeat for" << this->m_connection->GetHostname() << "has recovered";
             this->m_retrying = false;
         }
     } catch (...)
     {
-        qWarning() << "Exception during heartbeat for" << this->m_connection->getHostname();
+        qWarning() << "Exception during heartbeat for" << this->m_connection->GetHostname();
         this->handleConnectionLoss();
     }
 }
 
 bool XenHeartbeat::createSession()
 {
-    if (!this->m_connection || !this->m_connection->isConnected())
+    if (!this->m_connection || !this->m_connection->IsConnected())
     {
         return false;
     }
 
-    qDebug() << "Creating heartbeat session for" << this->m_connection->getHostname();
+    qDebug() << "Creating heartbeat session for" << this->m_connection->GetHostname();
 
     // Get the main session from the connection
-    XenSession* mainSession = this->m_connection->getSession();
-    if (!mainSession || !mainSession->isLoggedIn())
+    XenSession* mainSession = this->m_connection->GetSession();
+    if (!mainSession || !mainSession->IsLoggedIn())
     {
         qWarning() << "Cannot create heartbeat session: main session not logged in";
         return false;
     }
 
     // Duplicate the session for heartbeat (separate TCP stream)
-    this->m_session = XenSession::duplicateSession(mainSession, this);
+    this->m_session = XenSession::DuplicateSession(mainSession, this);
     if (!this->m_session)
     {
         qWarning() << "Failed to duplicate session for heartbeat";
@@ -281,7 +281,7 @@ void XenHeartbeat::getServerTime()
 
     emit serverTimeUpdated(serverTime, localTime);
 
-    qDebug() << "Heartbeat successful for" << this->m_connection->getHostname()
+    qDebug() << "Heartbeat successful for" << this->m_connection->GetHostname()
              << "offset:" << offsetSeconds << "seconds";
 }
 
@@ -290,7 +290,7 @@ void XenHeartbeat::handleConnectionLoss()
     if (this->m_retrying)
     {
         // Second failure - connection is likely dead
-        qDebug() << "Heartbeat for" << this->m_connection->getHostname()
+        qDebug() << "Heartbeat for" << this->m_connection->GetHostname()
                  << "failed for second time - closing connection";
 
         this->dropSession();
@@ -298,7 +298,7 @@ void XenHeartbeat::handleConnectionLoss()
     } else
     {
         // First failure - give it another chance
-        qDebug() << "Heartbeat for" << this->m_connection->getHostname()
+        qDebug() << "Heartbeat for" << this->m_connection->GetHostname()
                  << "failed - will retry";
         this->m_retrying = true;
         this->dropSession(); // Drop session to create a fresh one next time
@@ -311,7 +311,7 @@ void XenHeartbeat::dropSession()
     {
         // In a full implementation, this would logout the session on a background thread
         // to avoid blocking if the coordinator has died
-        qDebug() << "Dropping heartbeat session for" << (this->m_connection ? this->m_connection->getHostname() : "null");
+        qDebug() << "Dropping heartbeat session for" << (this->m_connection ? this->m_connection->GetHostname() : "null");
 
         // this->m_session->logoutAsync(); // Would be implemented
         this->m_session = nullptr;

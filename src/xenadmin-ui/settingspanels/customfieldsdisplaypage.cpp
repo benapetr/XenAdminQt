@@ -167,7 +167,7 @@ AsyncOperation* CustomFieldsDisplayPage::saveSettings()
     protected:
         void run() override
         {
-            XenRpcAPI api(connection()->getSession());
+            XenRpcAPI api(connection()->GetSession());
 
             setPercentComplete(30);
 
@@ -175,9 +175,9 @@ AsyncOperation* CustomFieldsDisplayPage::saveSettings()
             QString methodName = m_objectType + ".set_other_config";
 
             QVariantList params;
-            params << connection()->getSessionId() << m_objectRef << m_otherConfig;
+            params << connection()->GetSessionId() << m_objectRef << m_otherConfig;
             QByteArray request = api.buildJsonRpcCall(methodName, params);
-            connection()->sendRequest(request);
+            connection()->SendRequest(request);
 
             setPercentComplete(100);
         }

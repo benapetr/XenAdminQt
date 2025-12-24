@@ -52,7 +52,7 @@ void MigrateVirtualDiskAction::run()
 {
     try
     {
-        XenSession* session = connection()->getSession();
+        XenSession* session = connection()->GetSession();
         if (!session)
         {
             throw std::runtime_error("No valid session");
@@ -91,7 +91,7 @@ QString MigrateVirtualDiskAction::getVDIName() const
 {
     try
     {
-        XenSession* session = connection()->getSession();
+        XenSession* session = connection()->GetSession();
         QString name = XenAPI::VDI::get_name_label(session, m_vdiRef);
         return name.isEmpty() ? m_vdiRef : name;
     } catch (...)
@@ -104,7 +104,7 @@ QString MigrateVirtualDiskAction::getSRName(const QString& srRef) const
 {
     try
     {
-        XenSession* session = connection()->getSession();
+        XenSession* session = connection()->GetSession();
         QString actualSrRef = srRef;
 
         // If no SR ref provided, get it from the VDI

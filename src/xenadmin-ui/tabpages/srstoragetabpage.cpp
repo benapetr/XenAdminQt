@@ -352,7 +352,7 @@ void SrStorageTabPage::onEditButtonClicked()
     }
 
     XenConnection* connection = this->m_xenLib->getConnection();
-    if (!connection || !connection->getSession())
+    if (!connection || !connection->GetSession())
         return;
 
     bool hasErrors = false;
@@ -364,7 +364,7 @@ void SrStorageTabPage::onEditButtonClicked()
     {
         try
         {
-            XenAPI::VDI::set_name_label(connection->getSession(), vdiRef, newName);
+            XenAPI::VDI::set_name_label(connection->GetSession(), vdiRef, newName);
         }
         catch (const std::exception&)
         {
@@ -379,7 +379,7 @@ void SrStorageTabPage::onEditButtonClicked()
     {
         try
         {
-            XenAPI::VDI::set_name_description(connection->getSession(), vdiRef, newDescription);
+            XenAPI::VDI::set_name_description(connection->GetSession(), vdiRef, newDescription);
         }
         catch (const std::exception&)
         {
@@ -394,7 +394,7 @@ void SrStorageTabPage::onEditButtonClicked()
     {
         try
         {
-            XenAPI::VDI::resize(connection->getSession(), vdiRef, newSize);
+            XenAPI::VDI::resize(connection->GetSession(), vdiRef, newSize);
         }
         catch (const std::exception&)
         {

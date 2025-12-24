@@ -164,7 +164,7 @@ Host* SR::GetFirstAttachedStorageHost() const
         return nullptr;
 
     // Iterate through PBDs to find first currently_attached one
-    XenCache* cache = GetConnection()->getCache();
+    XenCache* cache = GetConnection()->GetCache();
     if (!cache)
         return nullptr;
 

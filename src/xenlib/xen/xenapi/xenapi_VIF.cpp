@@ -36,7 +36,7 @@ namespace XenAPI
 {
     QString VIF::async_create(XenSession* session, const QVariantMap& vifRecord)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -57,7 +57,7 @@ namespace XenAPI
 
     QString VIF::create(XenSession* session, const QVariantMap& vifRecord)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -71,7 +71,7 @@ namespace XenAPI
 
     QString VIF::async_destroy(XenSession* session, const QString& vif)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -85,7 +85,7 @@ namespace XenAPI
 
     void VIF::destroy(XenSession* session, const QString& vif)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -99,7 +99,7 @@ namespace XenAPI
 
     void VIF::plug(XenSession* session, const QString& vif)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -113,7 +113,7 @@ namespace XenAPI
 
     void VIF::unplug(XenSession* session, const QString& vif)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -127,7 +127,7 @@ namespace XenAPI
 
     QStringList VIF::get_allowed_operations(XenSession* session, const QString& vif)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -153,7 +153,7 @@ namespace XenAPI
 
     QVariantMap VIF::get_record(XenSession* session, const QString& vif)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -167,7 +167,7 @@ namespace XenAPI
 
     QVariantList VIF::get_all(XenSession* session)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;

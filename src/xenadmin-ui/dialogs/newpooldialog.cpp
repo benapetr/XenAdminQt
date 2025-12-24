@@ -116,10 +116,10 @@ void NewPoolDialog::populateConnections()
     this->ui->comboBoxCoordinator->clear();
     for (XenConnection* conn : this->m_connections)
     {
-        QString displayName = conn->getHostname();
+        QString displayName = conn->GetHostname();
 
         // Try to get host name from cache
-        XenCache* cache = conn->getCache();
+        XenCache* cache = conn->GetCache();
         QList<QVariantMap> hosts = cache->GetAllData("host");
         if (!hosts.isEmpty())
         {
@@ -157,10 +157,10 @@ void NewPoolDialog::updateServerList()
             continue;
         }
 
-        QString displayName = conn->getHostname();
+        QString displayName = conn->GetHostname();
 
         // Try to get host name from cache
-        XenCache* cache = conn->getCache();
+        XenCache* cache = conn->GetCache();
         if (cache)
         {
             QList<QVariantMap> hosts = cache->GetAllData("host");
@@ -192,12 +192,12 @@ void NewPoolDialog::updateServerList()
  */
 bool NewPoolDialog::isStandaloneConnection(XenConnection* connection) const
 {
-    if (!connection || !connection->isConnected())
+    if (!connection || !connection->IsConnected())
     {
         return false;
     }
 
-    XenCache* cache = connection->getCache();
+    XenCache* cache = connection->GetCache();
 
     // Check if pool has only one host
     QList<QVariantMap> hosts = cache->GetAllData("host");
@@ -334,14 +334,14 @@ void NewPoolDialog::createPool()
         return;
     }
 
-    XenSession* coordinatorSession = coordinatorConn->getSession();
-    if (!coordinatorSession || !coordinatorSession->isLoggedIn())
+    XenSession* coordinatorSession = coordinatorConn->GetSession();
+    if (!coordinatorSession || !coordinatorSession->IsLoggedIn())
     {
         QMessageBox::warning(this, tr("Error"), tr("Coordinator is not connected."));
         return;
     }
 
-    qDebug() << "Creating pool:" << poolName << "with coordinator:" << coordinatorConn->getHostname();
+    qDebug() << "Creating pool:" << poolName << "with coordinator:" << coordinatorConn->GetHostname();
     qDebug() << "Supporters:" << supporterConns.size();
 
     // Create the action using the existing CreatePoolAction class

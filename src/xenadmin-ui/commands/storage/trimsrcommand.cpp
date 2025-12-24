@@ -87,7 +87,7 @@ void TrimSRCommand::Run()
 
     // Get GetConnection from SR object for multi-GetConnection support
     XenConnection* conn = sr->GetConnection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
                              "Not connected to XenServer");
@@ -190,7 +190,7 @@ bool TrimSRCommand::isAttachedToHost(const QVariantMap& srData) const
     if (!sr)
         return false;
 
-    XenCache* cache = sr->GetConnection()->getCache();
+    XenCache* cache = sr->GetConnection()->GetCache();
 
     // Check if any PBD is currently attached
     QVariantList pbds = srData.value("PBDs", QVariantList()).toList();

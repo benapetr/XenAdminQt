@@ -63,7 +63,7 @@ bool DetachVirtualDiskCommand::canRunVDI(const QString& vdiRef) const
     if (!vdi || !vdi->IsValid())
         return false;
 
-    XenCache* cache = vdi->GetConnection()->getCache();
+    XenCache* cache = vdi->GetConnection()->GetCache();
     QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
         return false;

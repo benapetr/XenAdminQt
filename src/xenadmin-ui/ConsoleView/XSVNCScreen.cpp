@@ -77,7 +77,7 @@ XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenLib* x
     // Reference: C# XSVNCScreen.cs line 703: _sourceIsPv = !value.IsHVM();
     if (!this->_sourceRef.isEmpty() && this->_xenLib && this->_xenLib->getConnection())
     {
-        XenCache* cache = this->_xenLib->getConnection()->getCache();
+        XenCache* cache = this->_xenLib->getConnection()->GetCache();
         QVariantMap vmRecord = cache->ResolveObjectData("vm", this->_sourceRef);
         if (!vmRecord.isEmpty())
         {
@@ -104,7 +104,7 @@ XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenLib* x
         // C#: _cachedNetworks = guestMetrics.networks;
         if (this->_xenLib && this->_xenLib->getConnection())
         {
-            XenCache* cache = this->_xenLib->getConnection()->getCache();
+            XenCache* cache = this->_xenLib->getConnection()->GetCache();
             QVariantMap vmRecord = cache->ResolveObjectData("vm", this->_sourceRef);
             QString guestMetricsRef = vmRecord.value("guest_metrics").toString();
 
@@ -531,7 +531,7 @@ void XSVNCScreen::registerEventListeners()
 
     // Connect to cache's objectChanged signal for real-time updates (e.g., power_state changes)
     // This is the key signal for detecting when a VM powers on/off
-    XenCache* cache = this->_xenLib->getConnection() ? this->_xenLib->getConnection()->getCache() : nullptr;
+    XenCache* cache = this->_xenLib->getConnection() ? this->_xenLib->getConnection()->GetCache() : nullptr;
     if (cache)
     {
         QObject::connect(cache, &XenCache::objectChanged, this, &XSVNCScreen::onCacheObjectChanged);
@@ -556,7 +556,7 @@ void XSVNCScreen::unregisterEventListeners()
         disconnect(this->_xenLib, &XenLib::objectDataReceived, this, &XSVNCScreen::onObjectDataReceived);
 
         // Disconnect from cache signals
-        XenCache* cache = this->_xenLib->getConnection() ? this->_xenLib->getConnection()->getCache() : nullptr;
+        XenCache* cache = this->_xenLib->getConnection() ? this->_xenLib->getConnection()->GetCache() : nullptr;
         if (cache)
         {
             disconnect(cache, &XenCache::objectChanged, this, &XSVNCScreen::onCacheObjectChanged);
@@ -688,7 +688,7 @@ void XSVNCScreen::onCacheObjectChanged(const QString& objectType, const QString&
         return;
 
     // Get the updated data from cache
-    XenCache* cache = this->_xenLib->getConnection() ? this->_xenLib->getConnection()->getCache() : nullptr;
+    XenCache* cache = this->_xenLib->getConnection() ? this->_xenLib->getConnection()->GetCache() : nullptr;
     if (!cache)
         return;
 
@@ -1074,7 +1074,7 @@ QString XSVNCScreen::pollPort(int port, bool vnc)
             return QString();
 
         // Get VM record from cache
-        XenCache* cache = this->_xenLib->getConnection()->getCache();
+        XenCache* cache = this->_xenLib->getConnection()->GetCache();
         if (!cache)
             return QString();
 
@@ -1439,7 +1439,7 @@ void XSVNCScreen::connectNewHostedConsole()
     try
     {
         // Get VM record from cache
-        XenCache* cache = this->_xenLib->getConnection()->getCache();
+        XenCache* cache = this->_xenLib->getConnection()->GetCache();
         if (!cache)
         {
             qWarning() << "XSVNCScreen: No cache available";
@@ -1548,7 +1548,7 @@ bool XSVNCScreen::connectHostedConsole(VNCGraphicsClient* vncClient, const QStri
     try
     {
         // Get console record from cache
-        XenCache* cache = this->_xenLib->getConnection()->getCache();
+        XenCache* cache = this->_xenLib->getConnection()->GetCache();
         if (!cache)
         {
             throw std::runtime_error("No cache available");
@@ -1595,7 +1595,7 @@ bool XSVNCScreen::connectHostedConsole(VNCGraphicsClient* vncClient, const QStri
 
         // Get current session ID
         // C#: Uses elevated credentials if available (CA-91132), otherwise duplicates session
-        QString sessionId = this->_xenLib->getConnection()->getSession()->getSessionId();
+        QString sessionId = this->_xenLib->getConnection()->GetSession()->getSessionId();
         if (sessionId.isEmpty())
         {
             throw std::runtime_error("No active session");
@@ -1710,7 +1710,7 @@ bool XSVNCScreen::shouldRetryConnection() const
     if (this->_sourceRef.isEmpty() || !this->_xenLib)
         return false;
 
-    XenCache* cache = this->_xenLib->getConnection() ? this->_xenLib->getConnection()->getCache() : nullptr;
+    XenCache* cache = this->_xenLib->getConnection() ? this->_xenLib->getConnection()->GetCache() : nullptr;
     if (!cache)
         return false;
 

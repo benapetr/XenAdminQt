@@ -36,7 +36,6 @@ class XenSession;
 
 namespace XenAPI
 {
-
     /**
      * @brief Bond XenAPI bindings
      *

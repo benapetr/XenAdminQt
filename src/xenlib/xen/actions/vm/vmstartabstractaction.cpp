@@ -82,7 +82,7 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
     }
 
     XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;

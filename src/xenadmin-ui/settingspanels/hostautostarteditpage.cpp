@@ -87,7 +87,7 @@ void HostAutostartEditPage::repopulate()
     
     this->m_originalAutostartEnabled = false; // Default to false
     
-    XenCache* cache = this->m_connection->getCache();
+    XenCache* cache = this->m_connection->GetCache();
     if (cache)
     {
         // Get the pool for this host

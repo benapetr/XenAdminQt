@@ -193,7 +193,7 @@ bool DestroyBondCommand::isNetworkABond(const QVariantMap& networkData) const
     if (!this->GetObject() || !this->GetObject()->GetConnection())
         return false;
 
-    XenCache* cache = this->GetObject()->GetConnection()->getCache();
+    XenCache* cache = this->GetObject()->GetConnection()->GetCache();
 
     // Check if any PIF is a bond interface
     for (const QVariant& pifRefVar : pifs)

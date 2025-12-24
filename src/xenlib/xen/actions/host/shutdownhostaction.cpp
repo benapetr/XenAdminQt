@@ -131,7 +131,7 @@ void ShutdownHostAction::shutdownVMs(bool isForReboot)
 
         // Count VMs that need shutdown (running, non-control-domain)
         QList<VM*> toShutdown;
-        XenCache* cache = connection()->getCache();
+        XenCache* cache = connection()->GetCache();
 
         for (const QString& vmRef : residentVMs)
         {

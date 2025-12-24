@@ -69,7 +69,7 @@ CreateDiskAction::CreateDiskAction(const QVariantMap& vdiRecord,
 void CreateDiskAction::run()
 {
     XenSession* session = this->session();
-    if (!session || !session->isLoggedIn())
+    if (!session || !session->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
     }
@@ -199,7 +199,7 @@ bool CreateDiskAction::hasBootableDisk()
     try
     {
         XenSession* session = this->session();
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
         {
             return false;
         }

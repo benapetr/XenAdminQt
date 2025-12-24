@@ -61,7 +61,7 @@ bool ActivateVBDCommand::canRunVBD(const QString& vbdRef) const
     if (!vbd || !vbd->IsValid())
         return false;
 
-    XenCache* cache = vbd->GetConnection()->getCache();
+    XenCache* cache = vbd->GetConnection()->GetCache();
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
@@ -129,7 +129,7 @@ QString ActivateVBDCommand::getCantRunReasonVBD(QSharedPointer<VBD> vbd) const
         return "VBD not found";
     }
 
-    XenCache* cache = vbd->GetConnection()->getCache();
+    XenCache* cache = vbd->GetConnection()->GetCache();
     QVariantMap vbdData = vbd->GetData();
 
     // Get VM
@@ -214,7 +214,7 @@ void ActivateVBDCommand::Run()
         return;
 
     QString vbdRef = vbd->OpaqueRef();
-    XenCache* cache = vbd->GetConnection()->getCache();
+    XenCache* cache = vbd->GetConnection()->GetCache();
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
@@ -233,7 +233,7 @@ void ActivateVBDCommand::Run()
     // Execute plug operation directly (matches C# DelegatedAsyncAction pattern)
     try
     {
-        XenAPI::VBD::plug(vbd->GetConnection()->getSession(), vbdRef);
+        XenAPI::VBD::plug(vbd->GetConnection()->GetSession(), vbdRef);
 
         this->mainWindow()->showStatusMessage(
             QString("Successfully activated virtual disk '%1' on VM '%2'").arg(vdiName, vmName),

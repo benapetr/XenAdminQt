@@ -420,13 +420,13 @@ void NavigationView::buildInfrastructureTree()
             continue;
 
         // Check if connected
-        if (!connection->isConnected())
+        if (!connection->IsConnected())
         {
             // Show disconnected connection at ROOT LEVEL (matches C# behavior)
             // C# creates a fake Host object with opaque_ref = HostnameWithPort (GroupAlg.cs line 97)
             // This allows disconnected servers to appear in tree with context menu
             QTreeWidgetItem* connItem = new QTreeWidgetItem(this->ui->treeWidget);
-            connItem->setText(0, connection->getHostname()); // Show hostname WITHOUT "(disconnected)"
+            connItem->setText(0, connection->GetHostname()); // Show hostname WITHOUT "(disconnected)"
             // Store connection object as data (matches C# where fake Host.Connection points to XenConnection)
             connItem->setData(0, Qt::UserRole, QVariant::fromValue(connection));
             connItem->setData(0, Qt::UserRole + 1, QString("disconnected_host")); // Object type for context menu
@@ -445,7 +445,7 @@ void NavigationView::buildInfrastructureTree()
         {
             // Connection has no pool data yet
             QTreeWidgetItem* connItem = new QTreeWidgetItem(this->ui->treeWidget);
-            connItem->setText(0, QString("%1 (connecting...) ").arg(connection->getHostname()));
+            connItem->setText(0, QString("%1 (connecting...) ").arg(connection->GetHostname()));
             connItem->setData(0, Qt::UserRole, QVariant::fromValue(connection));
             continue;
         }
@@ -458,7 +458,7 @@ void NavigationView::buildInfrastructureTree()
 
             if (poolName.isEmpty())
             {
-                poolName = connection->getHostname(); // Fallback to hostname
+                poolName = connection->GetHostname(); // Fallback to hostname
             }
 
             QTreeWidgetItem* poolItem = new QTreeWidgetItem(this->ui->treeWidget);
@@ -691,7 +691,7 @@ void NavigationView::buildObjectsTree()
     // Separate disconnected connections
     for (XenConnection* conn : allConnections)
     {
-        if (conn && !conn->isConnected())
+        if (conn && !conn->IsConnected())
         {
             disconnectedConnections.append(conn);
         }
@@ -939,7 +939,7 @@ void NavigationView::buildObjectsTree()
         for (XenConnection* conn : disconnectedConnections)
         {
             QTreeWidgetItem* disconnectedItem = new QTreeWidgetItem(disconnectedHostsGroup);
-            disconnectedItem->setText(0, conn->getHostname());
+            disconnectedItem->setText(0, conn->GetHostname());
             disconnectedItem->setData(0, Qt::UserRole, QVariant::fromValue(conn));
             disconnectedItem->setData(0, Qt::UserRole + 1, QString("disconnected_host"));
 

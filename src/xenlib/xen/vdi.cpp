@@ -33,49 +33,49 @@ VDI::VDI(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-qint64 VDI::virtualSize() const
+qint64 VDI::VirtualSize() const
 {
     return longProperty("virtual_size");
 }
 
-qint64 VDI::physicalUtilisation() const
+qint64 VDI::PhysicalUtilisation() const
 {
     return longProperty("physical_utilisation");
 }
 
-QString VDI::type() const
+QString VDI::GetType() const
 {
     return stringProperty("type");
 }
 
-bool VDI::sharable() const
+bool VDI::Sharable() const
 {
     return boolProperty("sharable");
 }
 
-bool VDI::readOnly() const
+bool VDI::ReadOnly() const
 {
     return boolProperty("read_only");
 }
 
-QString VDI::srRef() const
+QString VDI::SRRef() const
 {
     return stringProperty("SR");
 }
 
-QStringList VDI::vbdRefs() const
+QStringList VDI::VBDRefs() const
 {
     return stringListProperty("VBDs");
 }
 
-bool VDI::isInUse() const
+bool VDI::IsInUse() const
 {
-    return !vbdRefs().isEmpty();
+    return !VBDRefs().isEmpty();
 }
 
-QString VDI::sizeString() const
+QString VDI::SizeString() const
 {
-    qint64 size = virtualSize();
+    qint64 size = VirtualSize();
 
     if (size < 0)
     {
@@ -106,73 +106,73 @@ QString VDI::sizeString() const
     }
 }
 
-QString VDI::snapshotOfRef() const
+QString VDI::SnapshotOfRef() const
 {
     return stringProperty("snapshot_of");
 }
 
-bool VDI::isSnapshot() const
+bool VDI::IsSnapshot() const
 {
-    QString snapshotOf = this->snapshotOfRef();
+    QString snapshotOf = this->SnapshotOfRef();
     return !snapshotOf.isEmpty() && snapshotOf != "OpaqueRef:NULL";
 }
 
-QStringList VDI::allowedOperations() const
+QStringList VDI::AllowedOperations() const
 {
     return this->stringListProperty("allowed_operations");
 }
 
-QVariantMap VDI::currentOperations() const
+QVariantMap VDI::CurrentOperations() const
 {
     return this->property("current_operations").toMap();
 }
 
-bool VDI::storageLock() const
+bool VDI::StorageLock() const
 {
     return this->boolProperty("storage_lock", false);
 }
 
-QString VDI::location() const
+QString VDI::Location() const
 {
     return this->stringProperty("location");
 }
 
-bool VDI::managed() const
+bool VDI::Managed() const
 {
     return this->boolProperty("managed", true);
 }
 
-bool VDI::missing() const
+bool VDI::Missing() const
 {
     return this->boolProperty("missing", false);
 }
 
-QString VDI::parentRef() const
+QString VDI::ParentRef() const
 {
     return this->stringProperty("parent");
 }
 
-QStringList VDI::crashDumpRefs() const
+QStringList VDI::CrashDumpRefs() const
 {
     return this->stringListProperty("crash_dumps");
 }
 
-QVariantMap VDI::xenstoreData() const
+QVariantMap VDI::XenstoreData() const
 {
     return this->property("xenstore_data").toMap();
 }
 
-QVariantMap VDI::smConfig() const
+QVariantMap VDI::SMConfig() const
 {
     return this->property("sm_config").toMap();
 }
 
-QStringList VDI::snapshotRefs() const
+QStringList VDI::SnapshotRefs() const
 {
     return this->stringListProperty("snapshots");
 }
 
-QDateTime VDI::snapshotTime() const
+QDateTime VDI::SnapshotTime() const
 {
     QString dateStr = this->stringProperty("snapshot_time");
     if (dateStr.isEmpty())
@@ -180,42 +180,42 @@ QDateTime VDI::snapshotTime() const
     return QDateTime::fromString(dateStr, Qt::ISODate);
 }
 
-QStringList VDI::tags() const
+QStringList VDI::Tags() const
 {
     return this->stringListProperty("tags");
 }
 
-QVariantMap VDI::otherConfig() const
+QVariantMap VDI::OtherConfig() const
 {
     return this->property("other_config").toMap();
 }
 
-bool VDI::allowCaching() const
+bool VDI::AllowCaching() const
 {
     return this->boolProperty("allow_caching", false);
 }
 
-QString VDI::onBoot() const
+QString VDI::OnBoot() const
 {
     return this->stringProperty("on_boot");
 }
 
-QString VDI::metadataOfPoolRef() const
+QString VDI::MetadataOfPoolRef() const
 {
     return this->stringProperty("metadata_of_pool");
 }
 
-bool VDI::metadataLatest() const
+bool VDI::MetadataLatest() const
 {
     return this->boolProperty("metadata_latest", false);
 }
 
-bool VDI::isToolsIso() const
+bool VDI::IsToolsIso() const
 {
     return this->boolProperty("is_tools_iso", false);
 }
 
-bool VDI::cbtEnabled() const
+bool VDI::CbtEnabled() const
 {
     return this->boolProperty("cbt_enabled", false);
 }

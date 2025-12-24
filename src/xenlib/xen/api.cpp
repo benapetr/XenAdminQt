@@ -50,7 +50,7 @@ XenRpcAPI::~XenRpcAPI()
 
 QString XenRpcAPI::getSessionId() const
 {
-    if (this->d->session && this->d->session->isLoggedIn())
+    if (this->d->session && this->d->session->IsLoggedIn())
     {
         return this->d->session->getSessionId();
     }
@@ -82,7 +82,7 @@ void XenRpcAPI::makeAsyncCall(const QString& method, const QVariantList& params,
 {
     Q_UNUSED(callId);
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         emit this->apiCallFailed(method, "Not logged in");
         return;
@@ -94,7 +94,7 @@ void XenRpcAPI::makeAsyncCall(const QString& method, const QVariantList& params,
 
 QVariant XenRpcAPI::getTaskRecord(const QString& taskRef)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         emit this->apiCallFailed("task.get_record", "Not logged in");
         return QVariant();
@@ -119,7 +119,7 @@ QVariant XenRpcAPI::getTaskRecord(const QString& taskRef)
 
 QString XenRpcAPI::getTaskStatus(const QString& taskRef)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         return QString();
     }
@@ -142,7 +142,7 @@ QString XenRpcAPI::getTaskStatus(const QString& taskRef)
 
 double XenRpcAPI::getTaskProgress(const QString& taskRef)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         return -1.0;
     }
@@ -165,7 +165,7 @@ double XenRpcAPI::getTaskProgress(const QString& taskRef)
 
 QString XenRpcAPI::getTaskResult(const QString& taskRef)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         return QString();
     }
@@ -188,7 +188,7 @@ QString XenRpcAPI::getTaskResult(const QString& taskRef)
 
 QStringList XenRpcAPI::getTaskErrorInfo(const QString& taskRef)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         return QStringList();
     }
@@ -222,7 +222,7 @@ QStringList XenRpcAPI::getTaskErrorInfo(const QString& taskRef)
 
 QVariantMap XenRpcAPI::getAllTaskRecords()
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         emit this->apiCallFailed("task.get_all_records", "Not logged in");
         return QVariantMap();
@@ -252,7 +252,7 @@ QVariantMap XenRpcAPI::getAllTaskRecords()
 
 bool XenRpcAPI::cancelTask(const QString& taskRef)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         emit this->apiCallFailed("task.cancel", "Not logged in");
         return false;
@@ -278,7 +278,7 @@ bool XenRpcAPI::cancelTask(const QString& taskRef)
 
 bool XenRpcAPI::destroyTask(const QString& taskRef)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         emit this->apiCallFailed("task.destroy", "Not logged in");
         return false;
@@ -304,7 +304,7 @@ bool XenRpcAPI::destroyTask(const QString& taskRef)
 
 bool XenRpcAPI::addToTaskOtherConfig(const QString& taskRef, const QString& key, const QString& value)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         return false;
     }
@@ -329,7 +329,7 @@ bool XenRpcAPI::addToTaskOtherConfig(const QString& taskRef, const QString& key,
 
 bool XenRpcAPI::removeFromTaskOtherConfig(const QString& taskRef, const QString& key)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         return false;
     }
@@ -353,7 +353,7 @@ bool XenRpcAPI::removeFromTaskOtherConfig(const QString& taskRef, const QString&
 
 QVariantMap XenRpcAPI::getTaskOtherConfig(const QString& taskRef)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         return QVariantMap();
     }
@@ -384,7 +384,7 @@ QVariantMap XenRpcAPI::getTaskOtherConfig(const QString& taskRef)
 // Returns: { "events": [...], "token": "...", "valid_ref_counts": {...} }
 QVariantMap XenRpcAPI::eventFrom(const QStringList& classes, const QString& token, double timeout)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         emit this->apiCallFailed("event.from", "Not logged in");
         return QVariantMap();
@@ -422,7 +422,7 @@ QVariantMap XenRpcAPI::eventFrom(const QStringList& classes, const QString& toke
 // Legacy event registration (pre-1.9 API, rarely used now)
 bool XenRpcAPI::eventRegister(const QStringList& classes)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         emit this->apiCallFailed("event.register", "Not logged in");
         return false;
@@ -441,7 +441,7 @@ bool XenRpcAPI::eventRegister(const QStringList& classes)
 // Legacy event unregistration (pre-1.9 API, rarely used now)
 bool XenRpcAPI::eventUnregister(const QStringList& classes)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         emit this->apiCallFailed("event.unregister", "Not logged in");
         return false;

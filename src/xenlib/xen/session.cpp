@@ -70,11 +70,11 @@ XenSession::XenSession(XenConnection* connection, QObject* parent)
 XenSession::~XenSession()
 {
     if (this->d->loggedIn || this->d->connection)
-        this->logout();
+        this->Logout();
     delete this->d;
 }
 
-bool XenSession::login(const QString& username, const QString& password)
+bool XenSession::Login(const QString& username, const QString& password)
 {
     this->d->lastError.clear();
 
@@ -92,7 +92,7 @@ bool XenSession::login(const QString& username, const QString& password)
     QString request = this->buildLoginRequest(username, password);
 
     // Send login request and get response (this may establish connection if needed)
-    QByteArray response = this->d->connection->sendRequest(request.toUtf8());
+    QByteArray response = this->d->connection->SendRequest(request.toUtf8());
     if (response.isEmpty())
     {
         this->d->lastError = "Failed to send login request or empty response";
@@ -102,7 +102,7 @@ bool XenSession::login(const QString& username, const QString& password)
     return this->parseLoginResponse(response);
 }
 
-void XenSession::logout()
+void XenSession::Logout()
 {
     if (!this->d->connection && !this->d->loggedIn)
         return;
@@ -110,11 +110,11 @@ void XenSession::logout()
     if (this->d->loggedIn && this->d->ownsSessionToken && !this->d->sessionId.isEmpty())
     {
         QByteArray requestData = this->buildLogoutRequest().toUtf8();
-        this->d->connection->sendRequest(requestData);
+        this->d->connection->SendRequest(requestData);
     }
 
     if (this->d->connection)
-        this->d->connection->disconnect();
+        this->d->connection->Disconnect();
 
     bool wasLoggedIn = this->d->loggedIn;
     this->d->sessionId.clear();
@@ -125,7 +125,7 @@ void XenSession::logout()
         emit this->loggedOut();
 }
 
-bool XenSession::isLoggedIn() const
+bool XenSession::IsLoggedIn() const
 {
     return this->d->loggedIn;
 }
@@ -150,9 +150,9 @@ QString XenSession::getLastError() const
     return this->d->lastError;
 }
 
-XenSession* XenSession::duplicateSession(XenSession* originalSession, QObject* parent)
+XenSession* XenSession::DuplicateSession(XenSession* originalSession, QObject* parent)
 {
-    if (!originalSession || !originalSession->isLoggedIn())
+    if (!originalSession || !originalSession->IsLoggedIn())
     {
         qWarning() << "XenSession::duplicateSession: Original session is null or not logged in";
         return nullptr;
@@ -167,13 +167,13 @@ XenSession* XenSession::duplicateSession(XenSession* originalSession, QObject* p
     }
 
     qDebug() << "XenSession::duplicateSession: Creating duplicate session to"
-             << originalConn->getHostname() << ":" << originalConn->getPort()
+             << originalConn->GetHostname() << ":" << originalConn->GetPort()
              << "from" << originalSession->d->sessionId.left(20) + "...";
 
     // Create new connection to the same host with separate worker thread
     XenConnection* newConn = new XenConnection(parent);
-    bool connected = newConn->connectToHost(originalConn->getHostname(),
-                                            originalConn->getPort(),
+    bool connected = newConn->ConnectToHost(originalConn->GetHostname(),
+                                            originalConn->GetPort(),
                                             "", ""); // Empty credentials - we'll reuse session ID
 
     if (!connected)
@@ -183,7 +183,7 @@ XenSession* XenSession::duplicateSession(XenSession* originalSession, QObject* p
         return nullptr;
     }
 
-    if (!newConn->isConnected())
+    if (!newConn->IsConnected())
     {
         QEventLoop loop;
         QTimer timer;
@@ -193,7 +193,7 @@ XenSession* XenSession::duplicateSession(XenSession* originalSession, QObject* p
         QObject::connect(newConn, &XenConnection::error, &loop, &QEventLoop::quit);
         timer.start(10000);
         loop.exec();
-        if (!newConn->isConnected())
+        if (!newConn->IsConnected())
         {
             qWarning() << "XenSession::duplicateSession: Timed out waiting for duplicate connection";
             delete newConn;
@@ -203,7 +203,7 @@ XenSession* XenSession::duplicateSession(XenSession* originalSession, QObject* p
 
     // Create new session with the duplicate connection
     XenSession* newSession = new XenSession(newConn, parent);
-    newConn->setSession(newSession);
+    newConn->SetSession(newSession);
 
     // Copy the session ID from original (this allows reusing authentication)
     newSession->d->sessionId = originalSession->d->sessionId;
@@ -230,7 +230,7 @@ QByteArray XenSession::sendApiRequest(const QString& jsonRequest)
 
     // Send the JSON-RPC request through the connection
     QByteArray requestData = jsonRequest.toUtf8();
-    QByteArray response = this->d->connection->sendRequest(requestData);
+    QByteArray response = this->d->connection->SendRequest(requestData);
 
     if (response.isEmpty())
     {

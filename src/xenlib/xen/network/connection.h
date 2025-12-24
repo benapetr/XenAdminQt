@@ -57,14 +57,13 @@ class XENLIB_EXPORT XenConnection : public QObject
         ~XenConnection();
 
         // Connection management
-        bool connectToHost(const QString& hostname, int port,
-                           const QString& username, const QString& password);
-        void disconnect();
-        bool isConnected() const;
+        bool ConnectToHost(const QString& hostname, int port, const QString& username, const QString& password);
+        void Disconnect();
+        bool IsConnected() const;
 
-        QString getHostname() const;
-        int getPort() const;
-        QString getSessionId() const;
+        QString GetHostname() const;
+        int GetPort() const;
+        QString GetSessionId() const;
 
         /**
          * @brief Send an API request and BLOCK waiting for response
@@ -76,7 +75,7 @@ class XENLIB_EXPORT XenConnection : public QObject
          * @param data request body
          * @return API response body (extracted from HTTP response)
          */
-        QByteArray sendRequest(const QByteArray& data);
+        QByteArray SendRequest(const QByteArray& data);
 
         /**
          * @brief Send an API request asynchronously (non-blocking)
@@ -87,17 +86,17 @@ class XENLIB_EXPORT XenConnection : public QObject
          * @param data request body
          * @return Request ID (use to match with apiResponse signal)
          */
-        int sendRequestAsync(const QByteArray& data);
+        int SendRequestAsync(const QByteArray& data);
 
         // Session association (for heartbeat and other operations)
-        void setSession(XenSession* session);
-        XenSession* getSession() const;
+        void SetSession(XenSession* session);
+        XenSession* GetSession() const;
 
         // Pool member tracking for failover
-        void setPoolMembers(const QStringList& members);
-        QStringList getPoolMembers() const;
-        int getCurrentPoolMemberIndex() const;
-        void setCurrentPoolMemberIndex(int index);
+        void SetPoolMembers(const QStringList& members);
+        QStringList GetPoolMembers() const;
+        int GetCurrentPoolMemberIndex() const;
+        void SetCurrentPoolMemberIndex(int index);
         bool hasMorePoolMembers() const;
         QString getNextPoolMember();
         void resetPoolMemberIndex(); // Reset to try all members again
@@ -120,7 +119,7 @@ class XENLIB_EXPORT XenConnection : public QObject
         void setCertificateManager(XenCertificateManager* certManager);
 
         // Cache access (each connection owns its own cache, matching C# architecture)
-        class XenCache* getCache() const;
+        class XenCache* GetCache() const;
 
     signals:
         void connected();

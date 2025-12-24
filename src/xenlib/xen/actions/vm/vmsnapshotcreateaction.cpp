@@ -46,7 +46,7 @@ VMSnapshotCreateAction::VMSnapshotCreateAction(XenConnection* connection,
       m_vmRef(vmRef), m_newName(newName), m_newDescription(newDescription), m_type(type), m_screenshot(screenshot)
 {
     // Get VM name for display
-    QVariantMap vmData = connection->getCache()->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", vmRef);
     m_vmName = vmData.value("name_label").toString();
 }
 

@@ -719,8 +719,8 @@ XenSession* AsyncOperation::createSession()
         return nullptr;
     }
 
-    XenSession* baseSession = this->m_connection->getSession();
-    if (!baseSession || !baseSession->isLoggedIn())
+    XenSession* baseSession = this->m_connection->GetSession();
+    if (!baseSession || !baseSession->IsLoggedIn())
     {
         qWarning() << "AsyncOperation::createSession: Base session unavailable";
         return nullptr;
@@ -728,7 +728,7 @@ XenSession* AsyncOperation::createSession()
 
     // Don't pass 'this' as parent - session will be created in worker thread
     // We manage lifetime manually via destroySession()
-    XenSession* duplicate = XenSession::duplicateSession(baseSession, nullptr);
+    XenSession* duplicate = XenSession::DuplicateSession(baseSession, nullptr);
     if (!duplicate)
     {
         qWarning() << "AsyncOperation::createSession: Failed to duplicate session";
@@ -743,7 +743,7 @@ void AsyncOperation::destroySession()
 {
     if (this->m_session && this->m_ownsSession)
     {
-        this->m_session->logout();
+        this->m_session->Logout();
         // TODO investigate why this sometimes instantly becomes nullptr
         if (this->m_session)
         {
@@ -827,7 +827,7 @@ bool AsyncOperation::pollTask(const QString& taskRef, double start, double finis
     }
 
     XenSession* session = this->session();
-    if (!session || !session->isLoggedIn())
+    if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer", QStringList());
         return true;
@@ -933,7 +933,7 @@ void AsyncOperation::destroyTask()
     QString taskRef = relatedTaskRef();
 
     XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn() || taskRef.isEmpty())
+    if (!sess || !sess->IsLoggedIn() || taskRef.isEmpty())
     {
         // Clear task ref even if we can't destroy it
         if (!taskRef.isEmpty())
@@ -981,7 +981,7 @@ void AsyncOperation::cancelRelatedTask()
     }
 
     XenConnection* conn = connection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         qDebug() << "AsyncOperation::cancelRelatedTask: No connection available";
         return;
@@ -989,7 +989,7 @@ void AsyncOperation::cancelRelatedTask()
 
     // Get current session - if we don't have one, we can't cancel
     XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    if (!sess || !sess->IsLoggedIn())
     {
         qDebug() << "AsyncOperation::cancelRelatedTask: No session available";
         return;
@@ -1020,7 +1020,7 @@ void AsyncOperation::tagTaskWithUuid(const QString& taskRef)
         return;
 
     XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    if (!sess || !sess->IsLoggedIn())
         return;
 
     XenRpcAPI api(sess);
@@ -1048,7 +1048,7 @@ void AsyncOperation::removeUuidFromTask(const QString& taskRef)
         return;
 
     XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    if (!sess || !sess->IsLoggedIn())
         return;
 
     XenRpcAPI api(sess);

@@ -87,7 +87,7 @@ bool InstallToolsCommand::canInstallTools() const
     QString guestMetricsRef = vmData.value("guest_metrics", "").toString();
     if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
     {
-        XenCache* cache = vm->GetConnection()->getCache();
+        XenCache* cache = vm->GetConnection()->GetCache();
         QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
         QVariantMap pvDriversVersion = guestMetrics.value("PV_drivers_version", QVariantMap()).toMap();
 

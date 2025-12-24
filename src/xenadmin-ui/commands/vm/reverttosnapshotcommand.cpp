@@ -232,7 +232,7 @@ void RevertToSnapshotCommand::revertToSnapshot()
 
     // Get XenConnection from XenLib
     XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         qWarning() << "RevertToSnapshotCommand: Not connected";
         QMessageBox::critical(this->mainWindow(), tr("Revert Error"),

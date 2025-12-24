@@ -42,7 +42,7 @@ bool HostPropertiesCommand::CanRun() const
     if (!host)
         return false;
 
-    return host->GetConnection() && host->GetConnection()->isConnected();
+    return host->GetConnection() && host->GetConnection()->IsConnected();
 }
 
 void HostPropertiesCommand::Run()

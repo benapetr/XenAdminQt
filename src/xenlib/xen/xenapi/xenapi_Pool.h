@@ -36,7 +36,6 @@
 
 namespace XenAPI
 {
-
     /**
      * @brief Pool - XenAPI Pool bindings
      *

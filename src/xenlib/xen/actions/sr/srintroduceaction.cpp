@@ -63,7 +63,7 @@ void SrIntroduceAction::run()
              << "type:" << m_srType;
 
     XenSession* session = this->session();
-    if (!session || !session->isLoggedIn())
+    if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
@@ -247,7 +247,7 @@ bool SrIntroduceAction::isFirstSharedNonISOSR() const
     }
 
     // Check cache for existing shared non-ISO SRs
-    XenCache* cache = connection()->getCache();
+    XenCache* cache = connection()->GetCache();
     if (!cache)
     {
         return false;

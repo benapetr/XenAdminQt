@@ -107,7 +107,7 @@ QString XenAsyncOperations::generateOperationId()
 
 QString XenAsyncOperations::startAsyncOperation(const QString& method, const QVariantList& params)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         emit this->operationFailed("", "Not authenticated");
         return QString();

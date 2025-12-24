@@ -605,7 +605,7 @@ void NewSRWizard::onTestConnection()
     try
     {
         QVariantList probeResult = XenAPI::SR::probe_ext(
-            xenLib->getConnection()->getSession(),
+            xenLib->getConnection()->GetSession(),
             masterRef,
             deviceConfig,
             srTypeStr,
@@ -749,7 +749,7 @@ void NewSRWizard::onScanISCSITarget()
         QString masterRef = pools.first().value("master").toString();
 
         QVariantList probeResult = XenAPI::SR::probe_ext(
-            xenLib->getConnection()->getSession(),
+            xenLib->getConnection()->GetSession(),
             masterRef,
             deviceConfig,
             "lvmoiscsi",
@@ -847,7 +847,7 @@ void NewSRWizard::onISCSIIqnSelected(int index)
         QString masterRef = pools.first().value("master").toString();
 
         QVariantList probeResult = XenAPI::SR::probe_ext(
-            xenLib->getConnection()->getSession(),
+            xenLib->getConnection()->GetSession(),
             masterRef,
             deviceConfig,
             "lvmoiscsi",
@@ -937,7 +937,7 @@ void NewSRWizard::onScanFibreDevices()
             deviceConfig["provider"] = "fcoe";
 
         QVariantList probeResult = XenAPI::SR::probe_ext(
-            xenLib->getConnection()->getSession(),
+            xenLib->getConnection()->GetSession(),
             masterRef,
             deviceConfig,
             srTypeStr,

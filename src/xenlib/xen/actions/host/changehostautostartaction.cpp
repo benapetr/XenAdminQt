@@ -67,7 +67,7 @@ void ChangeHostAutostartAction::run()
         hostPoolParams << session()->getSessionId() << m_hostRef;
 
         QByteArray hostPoolRequest = api.buildJsonRpcCall("session.get_pool", hostPoolParams);
-        QByteArray hostPoolResponse = connection()->sendRequest(hostPoolRequest);
+        QByteArray hostPoolResponse = connection()->SendRequest(hostPoolRequest);
         QVariant poolRefVariant = api.parseJsonRpcResponse(hostPoolResponse);
         QString poolRef = poolRefVariant.toString();
 
@@ -84,7 +84,7 @@ void ChangeHostAutostartAction::run()
         getConfigParams << session()->getSessionId() << poolRef;
 
         QByteArray getConfigRequest = api.buildJsonRpcCall("pool.get_other_config", getConfigParams);
-        QByteArray getConfigResponse = connection()->sendRequest(getConfigRequest);
+        QByteArray getConfigResponse = connection()->SendRequest(getConfigRequest);
         QVariant otherConfigVariant = api.parseJsonRpcResponse(getConfigResponse);
         QVariantMap otherConfig = otherConfigVariant.toMap();
 
@@ -98,7 +98,7 @@ void ChangeHostAutostartAction::run()
         setConfigParams << session()->getSessionId() << poolRef << otherConfig;
 
         QByteArray setConfigRequest = api.buildJsonRpcCall("pool.set_other_config", setConfigParams);
-        QByteArray setConfigResponse = connection()->sendRequest(setConfigRequest);
+        QByteArray setConfigResponse = connection()->SendRequest(setConfigRequest);
 
         // Parse response to check for errors
         api.parseJsonRpcResponse(setConfigResponse);

@@ -37,7 +37,6 @@ class XenSession;
 
 namespace XenAPI
 {
-
     /**
      * @brief Network XenAPI bindings
      *

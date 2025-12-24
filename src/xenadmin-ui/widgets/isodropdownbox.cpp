@@ -186,9 +186,9 @@ void IsoDropDownBox::refresh()
 
     bool stockholmOrGreater = false;
     XenConnection* connection = m_xenLib->getConnection();
-    if (connection && connection->getSession())
+    if (connection && connection->GetSession())
     {
-        stockholmOrGreater = connection->getSession()->apiVersionMeets(APIVersion::API_2_11);
+        stockholmOrGreater = connection->GetSession()->apiVersionMeets(APIVersion::API_2_11);
     }
 
     struct SrEntry

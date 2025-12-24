@@ -102,7 +102,7 @@ AsyncOperation* VMEnlightenmentEditPage::saveSettings()
     protected:
         void run() override
         {
-            XenRpcAPI api(connection()->getSession());
+            XenRpcAPI api(connection()->GetSession());
 
             setPercentComplete(30);
 
@@ -117,7 +117,7 @@ AsyncOperation* VMEnlightenmentEditPage::saveSettings()
             args["vmuuid"] = m_vmUuid;
 
             QVariantList params;
-            params << connection()->getSessionId()
+            params << connection()->GetSessionId()
                    << "coordinator_host_ref" // TODO: Get actual coordinator host ref
                    << "xscontainer"
                    << action
@@ -127,7 +127,7 @@ AsyncOperation* VMEnlightenmentEditPage::saveSettings()
 
             // NOTE: This will fail without proper coordinator host ref
             // Full implementation needs to query pool to get coordinator
-            connection()->sendRequest(request);
+            connection()->SendRequest(request);
 
             setPercentComplete(100);
         }

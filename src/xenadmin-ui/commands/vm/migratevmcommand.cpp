@@ -88,7 +88,7 @@ void MigrateVMCommand::Run()
     QStringList hostNames;
 
     XenConnection* conn = vm->GetConnection();
-    XenCache* cache = conn ? conn->getCache() : nullptr;
+    XenCache* cache = conn ? conn->GetCache() : nullptr;
 
     for (const QString& hostRef : hosts)
     {
@@ -149,7 +149,7 @@ void MigrateVMCommand::Run()
     {
         // Get XenConnection from VM's GetConnection
         XenConnection* conn = vm->GetConnection();
-        if (!conn || !conn->isConnected())
+        if (!conn || !conn->IsConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",
                                  "Not connected to XenServer");
@@ -195,7 +195,7 @@ QStringList MigrateVMCommand::getAvailableHosts() const
     if (!vm)
         return hostRefs;
 
-    XenCache* cache = vm->GetConnection()->getCache();
+    XenCache* cache = vm->GetConnection()->GetCache();
     if (!cache)
         return hostRefs;
 

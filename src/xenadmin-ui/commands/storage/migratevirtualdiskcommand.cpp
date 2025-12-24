@@ -44,7 +44,7 @@ bool MigrateVirtualDiskCommand::CanRun() const
     if (!vdi || !vdi->IsValid())
         return false;
 
-    XenCache* cache = vdi->GetConnection()->getCache();
+    XenCache* cache = vdi->GetConnection()->GetCache();
     QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->OpaqueRef());
     if (vdiData.isEmpty())
         return false;
@@ -58,7 +58,7 @@ void MigrateVirtualDiskCommand::Run()
     if (!vdi || !vdi->IsValid())
         return;
 
-    XenCache* cache = vdi->GetConnection()->getCache();
+    XenCache* cache = vdi->GetConnection()->GetCache();
     QString vdiRef = vdi->OpaqueRef();
     QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())

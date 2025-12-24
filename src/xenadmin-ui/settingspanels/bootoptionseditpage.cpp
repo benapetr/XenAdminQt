@@ -172,23 +172,23 @@ AsyncOperation* BootOptionsEditPage::saveSettings()
         protected:
             void run() override
             {
-                XenRpcAPI api(connection()->getSession());
+                XenRpcAPI api(connection()->GetSession());
 
                 setPercentComplete(10);
 
                 // Set auto-boot (via other_config.auto_poweron)
                 QVariantList getConfigParams;
-                getConfigParams << connection()->getSessionId() << this->m_vmRef;
+                getConfigParams << connection()->GetSessionId() << this->m_vmRef;
                 QByteArray getConfigRequest = api.buildJsonRpcCall("VM.get_other_config", getConfigParams);
-                QByteArray getConfigResponse = connection()->sendRequest(getConfigRequest);
+                QByteArray getConfigResponse = connection()->SendRequest(getConfigRequest);
                 QVariantMap otherConfig = api.parseJsonRpcResponse(getConfigResponse).toMap();
 
                 otherConfig["auto_poweron"] = this->m_autoBoot ? "true" : "false";
 
                 QVariantList setConfigParams;
-                setConfigParams << connection()->getSessionId() << this->m_vmRef << otherConfig;
+                setConfigParams << connection()->GetSessionId() << this->m_vmRef << otherConfig;
                 QByteArray setConfigRequest = api.buildJsonRpcCall("VM.set_other_config", setConfigParams);
-                connection()->sendRequest(setConfigRequest);
+                connection()->SendRequest(setConfigRequest);
 
                 setPercentComplete(40);
 
@@ -196,24 +196,24 @@ AsyncOperation* BootOptionsEditPage::saveSettings()
                 {
                     // Set boot order (via HVM_boot_params.order)
                     QVariantList getBootParams;
-                    getBootParams << connection()->getSessionId() << this->m_vmRef;
+                    getBootParams << connection()->GetSessionId() << this->m_vmRef;
                     QByteArray getBootRequest = api.buildJsonRpcCall("VM.get_HVM_boot_params", getBootParams);
-                    QByteArray getBootResponse = connection()->sendRequest(getBootRequest);
+                    QByteArray getBootResponse = connection()->SendRequest(getBootRequest);
                     QVariantMap hvmBootParams = api.parseJsonRpcResponse(getBootResponse).toMap();
 
                     hvmBootParams["order"] = this->m_bootOrder.toLower();
 
                     QVariantList setBootParams;
-                    setBootParams << connection()->getSessionId() << this->m_vmRef << hvmBootParams;
+                    setBootParams << connection()->GetSessionId() << this->m_vmRef << hvmBootParams;
                     QByteArray setBootRequest = api.buildJsonRpcCall("VM.set_HVM_boot_params", setBootParams);
-                    connection()->sendRequest(setBootRequest);
+                    connection()->SendRequest(setBootRequest);
                 } else
                 {
                     // Set PV args
                     QVariantList setPVParams;
-                    setPVParams << connection()->getSessionId() << this->m_vmRef << this->m_pvArgs;
+                    setPVParams << connection()->GetSessionId() << this->m_vmRef << this->m_pvArgs;
                     QByteArray setPVRequest = api.buildJsonRpcCall("VM.set_PV_args", setPVParams);
-                    connection()->sendRequest(setPVRequest);
+                    connection()->SendRequest(setPVRequest);
                 }
 
                 setPercentComplete(100);

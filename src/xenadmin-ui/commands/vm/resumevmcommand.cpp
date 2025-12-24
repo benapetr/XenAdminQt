@@ -94,7 +94,7 @@ bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool
 
     // Get XenConnection from VM
     XenConnection* conn = vm->GetConnection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
                              "Not connected to XenServer");

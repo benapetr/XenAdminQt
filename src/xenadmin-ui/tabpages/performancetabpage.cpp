@@ -244,9 +244,9 @@ void PerformanceTabPage::fetchMetrics()
     }
 
     XenSession* session = this->m_xenLib->getConnection()
-        ? this->m_xenLib->getConnection()->getSession()
+        ? this->m_xenLib->getConnection()->GetSession()
         : nullptr;
-    if (!session || !session->isLoggedIn())
+    if (!session || !session->IsLoggedIn())
     {
         return;
     }

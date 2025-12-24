@@ -60,7 +60,7 @@ void ChangeMemorySettingsAction::run()
         setDescription("Checking VM state...");
 
         // Get current VM data from cache
-        QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", this->m_vmRef);
+        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", this->m_vmRef);
         if (vmData.isEmpty())
         {
             throw std::runtime_error("VM not found in cache");
@@ -118,7 +118,7 @@ void ChangeMemorySettingsAction::run()
             bool halted = false;
             for (int i = 0; i < 60; ++i)
             { // Wait up to 60 seconds
-                vmData = connection()->getCache()->ResolveObjectData("vm", this->m_vmRef);
+                vmData = connection()->GetCache()->ResolveObjectData("vm", this->m_vmRef);
                 if (vmData.value("power_state").toString() == "Halted")
                 {
                     halted = true;

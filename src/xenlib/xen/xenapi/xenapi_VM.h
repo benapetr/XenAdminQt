@@ -40,7 +40,6 @@ class XenSession;
 
 namespace XenAPI
 {
-
     /**
      * @brief XenAPI VM class - Static methods for VM operations
      *

@@ -54,7 +54,7 @@ void VbdCreateAndPlugAction::run()
 
     try
     {
-        XenSession* session = m_vm->GetConnection()->getSession();
+        XenSession* session = m_vm->GetConnection()->GetSession();
         if (!session)
         {
             qCritical() << "[VbdCreateAndPlugAction] No valid session!";
@@ -179,7 +179,7 @@ bool VbdCreateAndPlugAction::isVMHVM() const
 {
     try
     {
-        XenSession* session = m_vm->GetConnection()->getSession();
+        XenSession* session = m_vm->GetConnection()->GetSession();
         QString vmRef = m_vm->OpaqueRef();
         QVariantMap vmRecord = XenAPI::VM::get_record(session, vmRef);
 

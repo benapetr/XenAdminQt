@@ -164,7 +164,7 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
 
     // Get XenConnection from XenLib
     XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         qWarning() << "TakeSnapshotCommand: Not connected";
         QMessageBox::critical(this->mainWindow(), tr("Snapshot Error"),

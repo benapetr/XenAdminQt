@@ -58,7 +58,7 @@ void EditMultipathAction::run()
     }
 
     XenSession* sess = this->session();
-    if (!sess || !sess->isLoggedIn())
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;

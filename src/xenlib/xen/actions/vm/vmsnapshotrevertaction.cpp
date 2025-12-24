@@ -41,7 +41,7 @@ VMSnapshotRevertAction::VMSnapshotRevertAction(XenConnection* connection,
       m_snapshotRef(snapshotRef), m_revertPowerState(false), m_revertFinished(false)
 {
     // Get snapshot details
-    QVariantMap snapshotData = connection->getCache()->ResolveObjectData("vm", snapshotRef);
+    QVariantMap snapshotData = connection->GetCache()->ResolveObjectData("vm", snapshotRef);
     m_snapshotName = snapshotData.value("name_label").toString();
 
     // Update title with actual name
@@ -52,7 +52,7 @@ VMSnapshotRevertAction::VMSnapshotRevertAction(XenConnection* connection,
 
     if (!m_vmRef.isEmpty())
     {
-        QVariantMap vmData = connection->getCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", m_vmRef);
 
         // Get the host the VM was running on
         m_previousHostRef = vmData.value("resident_on").toString();
@@ -111,7 +111,7 @@ void VMSnapshotRevertAction::run()
 void VMSnapshotRevertAction::revertPowerState(const QString& vmRef)
 {
     // Get current VM state
-    QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", vmRef);
     QString powerState = vmData.value("power_state").toString();
 
     QString taskRef;

@@ -1057,7 +1057,7 @@ void VMStorageTabPage::runVbdPlugOperations(const QStringList& vbdRefs, bool plu
     }
 
     XenConnection* connection = this->m_xenLib->getConnection();
-    if (!connection || !connection->getSession())
+    if (!connection || !connection->GetSession())
     {
         QMessageBox::warning(this, tr("Error"), tr("No active connection."));
         return;
@@ -1719,7 +1719,7 @@ void VMStorageTabPage::onEditButtonClicked()
         return;
 
     XenConnection* connection = this->m_xenLib->getConnection();
-    if (!connection || !connection->getSession())
+    if (!connection || !connection->GetSession())
         return;
 
     // Open VDI Properties Dialog
@@ -1747,7 +1747,7 @@ void VMStorageTabPage::onEditButtonClicked()
         qDebug() << "Updating VDI name:" << oldName << "->" << newName;
         try
         {
-            XenAPI::VDI::set_name_label(connection->getSession(), vdiRef, newName);
+            XenAPI::VDI::set_name_label(connection->GetSession(), vdiRef, newName);
         }
         catch (const std::exception&)
         {
@@ -1765,7 +1765,7 @@ void VMStorageTabPage::onEditButtonClicked()
         qDebug() << "Updating VDI description";
         try
         {
-            XenAPI::VDI::set_name_description(connection->getSession(), vdiRef, newDescription);
+            XenAPI::VDI::set_name_description(connection->GetSession(), vdiRef, newDescription);
         }
         catch (const std::exception&)
         {
@@ -1784,7 +1784,7 @@ void VMStorageTabPage::onEditButtonClicked()
         qDebug() << "Resizing VDI from" << oldSize << "to" << newSize << "bytes";
         try
         {
-            XenAPI::VDI::resize(connection->getSession(), vdiRef, newSize);
+            XenAPI::VDI::resize(connection->GetSession(), vdiRef, newSize);
         }
         catch (const std::exception&)
         {

@@ -54,7 +54,7 @@ void DetachSrAction::run()
     try
     {
         // Get SR data to find PBDs
-        XenCache* cache = connection()->getCache();
+        XenCache* cache = connection()->GetCache();
         QVariantMap srData = cache->ResolveObjectData("sr", m_srRef);
         if (srData.isEmpty())
         {

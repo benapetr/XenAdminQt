@@ -36,7 +36,7 @@ namespace XenAPI
                                const QStringList& members, const QString& mac,
                                const QString& mode, const QVariantMap& properties)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList memberRefs;
@@ -56,7 +56,7 @@ namespace XenAPI
 
     QString Bond::async_destroy(XenSession* session, const QString& bond)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -70,7 +70,7 @@ namespace XenAPI
 
     void Bond::set_mode(XenSession* session, const QString& bond, const QString& mode)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -84,7 +84,7 @@ namespace XenAPI
 
     void Bond::set_property(XenSession* session, const QString& bond, const QString& name, const QString& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -98,7 +98,7 @@ namespace XenAPI
 
     QVariantMap Bond::get_record(XenSession* session, const QString& bond)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -112,7 +112,7 @@ namespace XenAPI
 
     QString Bond::get_master(XenSession* session, const QString& bond)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -126,7 +126,7 @@ namespace XenAPI
 
     QVariantList Bond::get_slaves(XenSession* session, const QString& bond)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;

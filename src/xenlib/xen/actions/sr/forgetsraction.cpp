@@ -50,7 +50,7 @@ void ForgetSrAction::run()
         setDescription(QString("Forgetting SR '%1'...").arg(m_srName));
 
         // Check if SR allows forget operation
-        XenCache* cache = connection()->getCache();
+        XenCache* cache = connection()->GetCache();
         QVariantMap srData = cache->ResolveObjectData("sr", m_srRef);
         if (srData.isEmpty())
         {

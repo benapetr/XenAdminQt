@@ -47,7 +47,7 @@ ShutDownApplianceAction::ShutDownApplianceAction(XenConnection* connection, cons
 
 void ShutDownApplianceAction::run()
 {
-    if (!session() || !session()->isLoggedIn())
+    if (!session() || !session()->IsLoggedIn())
     {
         setError(tr("Not connected to XenServer"));
         return;
@@ -102,7 +102,7 @@ CleanShutDownApplianceAction::CleanShutDownApplianceAction(XenConnection* connec
 
 void CleanShutDownApplianceAction::run()
 {
-    if (!session() || !session()->isLoggedIn())
+    if (!session() || !session()->IsLoggedIn())
     {
         setError(tr("Not connected to XenServer"));
         return;
@@ -157,7 +157,7 @@ HardShutDownApplianceAction::HardShutDownApplianceAction(XenConnection* connecti
 
 void HardShutDownApplianceAction::run()
 {
-    if (!session() || !session()->isLoggedIn())
+    if (!session() || !session()->IsLoggedIn())
     {
         setError(tr("Not connected to XenServer"));
         return;

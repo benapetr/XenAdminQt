@@ -50,7 +50,7 @@ bool DisconnectHostCommand::CanRun() const
         return false;
 
     // Can disconnect if connected and selected host is coordinator
-    if (conn->isConnected() && host->IsMaster())
+    if (conn->IsConnected() && host->IsMaster())
         return true;
 
     // Can also disconnect if connection is in progress (to cancel)
@@ -77,7 +77,7 @@ void DisconnectHostCommand::Run()
     if (ret == QMessageBox::Yes)
     {
         this->mainWindow()->showStatusMessage("Disconnecting...");
-        conn->disconnect();
+        conn->Disconnect();
     }
 }
 

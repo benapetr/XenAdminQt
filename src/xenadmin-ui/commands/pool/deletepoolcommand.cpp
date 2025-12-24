@@ -57,7 +57,7 @@ void DeletePoolCommand::Run()
         return;
 
     QString poolRef = pool->OpaqueRef();
-    XenCache* cache = pool->GetConnection()->getCache();
+    XenCache* cache = pool->GetConnection()->GetCache();
 
     QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
     QString poolName = pool->GetName();
@@ -169,7 +169,7 @@ bool DeletePoolCommand::hasMultipleHosts(QSharedPointer<Pool> pool) const
     if (!pool || !pool->GetConnection())
         return false;
 
-    XenCache* cache = pool->GetConnection()->getCache();
+    XenCache* cache = pool->GetConnection()->GetCache();
 
     // Get all hosts
     QList<QPair<QString, QString>> allObjects = cache->GetAllObjectsData();

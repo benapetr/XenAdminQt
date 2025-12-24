@@ -150,7 +150,7 @@ void MetricUpdater::updateMetrics()
     if (!m_running || m_paused)
         return;
 
-    if (!m_connection || !m_connection->isConnected())
+    if (!m_connection || !m_connection->IsConnected())
     {
         qDebug() << "MetricUpdater: Connection not available, skipping update";
         return;
@@ -204,10 +204,10 @@ QString MetricUpdater::buildRrdUrl() const
     // - interval: Data point interval (5 seconds)
     // - host: Include host metrics (true)
 
-    if (!m_connection || !m_connection->getSession())
+    if (!m_connection || !m_connection->GetSession())
         return QString();
 
-    QString sessionId = m_connection->getSession()->getSessionId();
+    QString sessionId = m_connection->GetSession()->getSessionId();
     if (sessionId.isEmpty())
         return QString();
 
@@ -220,12 +220,12 @@ QString MetricUpdater::buildRrdUrl() const
                         .arg(startTime)
                         .arg(RRD_INTERVAL_SECONDS);
 
-    int port = m_connection->getPort();
+    int port = m_connection->GetPort();
     bool useSSL = (port == 443); // Default XenServer SSL port
 
     QUrl url;
     url.setScheme(useSSL ? "https" : "http");
-    url.setHost(m_connection->getHostname());
+    url.setHost(m_connection->GetHostname());
     url.setPort(port);
     url.setPath("/rrd_updates");
     url.setQuery(query);

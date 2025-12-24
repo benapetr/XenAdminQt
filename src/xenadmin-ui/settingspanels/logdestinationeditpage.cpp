@@ -210,7 +210,7 @@ AsyncOperation* LogDestinationEditPage::saveSettings()
                 params << session()->getSessionId() << m_hostRef;
 
                 QByteArray request = api.buildJsonRpcCall("host.syslog_reconfigure", params);
-                QByteArray response = connection()->sendRequest(request);
+                QByteArray response = connection()->SendRequest(request);
 
                 // Parse response to check for errors
                 api.parseJsonRpcResponse(response);

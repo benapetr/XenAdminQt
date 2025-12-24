@@ -51,206 +51,206 @@ class VBD;
 class XENLIB_EXPORT VDI : public XenObject
 {
     Q_OBJECT
-    Q_PROPERTY(qint64 virtualSize READ virtualSize NOTIFY dataChanged)
-    Q_PROPERTY(qint64 physicalUtilisation READ physicalUtilisation NOTIFY dataChanged)
-    Q_PROPERTY(QString type READ type NOTIFY dataChanged)
-    Q_PROPERTY(bool sharable READ sharable NOTIFY dataChanged)
-    Q_PROPERTY(bool readOnly READ readOnly NOTIFY dataChanged)
+    Q_PROPERTY(qint64 virtualSize READ VirtualSize NOTIFY dataChanged)
+    Q_PROPERTY(qint64 physicalUtilisation READ PhysicalUtilisation NOTIFY dataChanged)
+    Q_PROPERTY(QString type READ GetType NOTIFY dataChanged)
+    Q_PROPERTY(bool sharable READ Sharable NOTIFY dataChanged)
+    Q_PROPERTY(bool readOnly READ ReadOnly NOTIFY dataChanged)
 
-    public:
-        explicit VDI(XenConnection* connection,
-                     const QString& opaqueRef,
-                     QObject* parent = nullptr);
-        ~VDI() override = default;
+public:
+    explicit VDI(XenConnection* connection,
+                 const QString& opaqueRef,
+                 QObject* parent = nullptr);
+    ~VDI() override = default;
 
-        /**
-         * @brief Get virtual size of VDI
-         * @return Size in bytes
-         */
-        qint64 virtualSize() const;
+    /**
+     * @brief Get virtual size of VDI
+     * @return Size in bytes
+     */
+    qint64 VirtualSize() const;
 
-        /**
-         * @brief Get physical space used by VDI
-         * @return Size in bytes
-         */
-        qint64 physicalUtilisation() const;
+    /**
+     * @brief Get physical space used by VDI
+     * @return Size in bytes
+     */
+    qint64 PhysicalUtilisation() const;
 
-        /**
-         * @brief Get VDI type
-         * @return Type string: "System", "User", "Ephemeral", "Suspend", "Crashdump", etc.
-         */
-        QString type() const;
+    /**
+     * @brief Get VDI type
+     * @return Type string: "System", "User", "Ephemeral", "Suspend", "Crashdump", etc.
+     */
+    QString GetType() const;
 
-        /**
-         * @brief Check if VDI is sharable
-         * @return true if VDI can be attached to multiple VMs
-         */
-        bool sharable() const;
+    /**
+     * @brief Check if VDI is sharable
+     * @return true if VDI can be attached to multiple VMs
+     */
+    bool Sharable() const;
 
-        /**
-         * @brief Check if VDI is read-only
-         * @return true if VDI is read-only
-         */
-        bool readOnly() const;
+    /**
+     * @brief Check if VDI is read-only
+     * @return true if VDI is read-only
+     */
+    bool ReadOnly() const;
 
-        /**
-         * @brief Get reference to parent SR
-         * @return SR opaque reference
-         */
-        QString srRef() const;
+    /**
+     * @brief Get reference to parent SR
+     * @return SR opaque reference
+     */
+    QString SRRef() const;
 
-        /**
-         * @brief Get list of VBD references using this VDI
-         * @return List of VBD opaque references
-         */
-        QStringList vbdRefs() const;
+    /**
+     * @brief Get list of VBD references using this VDI
+     * @return List of VBD opaque references
+     */
+    QStringList VBDRefs() const;
 
-        /**
-         * @brief Check if VDI is in use (has attached VBDs)
-         * @return true if VDI has any VBDs
-         */
-        bool isInUse() const;
+    /**
+     * @brief Check if VDI is in use (has attached VBDs)
+     * @return true if VDI has any VBDs
+     */
+    bool IsInUse() const;
 
-        /**
-         * @brief Get human-readable size string
-         * @return Size formatted as "10 GB", "512 MB", etc.
-         */
-        QString sizeString() const;
+    /**
+     * @brief Get human-readable size string
+     * @return Size formatted as "10 GB", "512 MB", etc.
+     */
+    QString SizeString() const;
 
-        /**
-         * @brief Get snapshot parent reference (if this is a snapshot)
-         * @return VDI opaque reference of parent VDI
-         */
-        QString snapshotOfRef() const;
+    /**
+     * @brief Get snapshot parent reference (if this is a snapshot)
+     * @return VDI opaque reference of parent VDI
+     */
+    QString SnapshotOfRef() const;
 
-        /**
-         * @brief Check if this is a snapshot
-         * @return true if VDI is a snapshot
-         */
-        bool isSnapshot() const;
+    /**
+     * @brief Check if this is a snapshot
+     * @return true if VDI is a snapshot
+     */
+    bool IsSnapshot() const;
 
-        /**
-         * @brief Get list of allowed operations on this VDI
-         * @return List of operation type strings
-         */
-        QStringList allowedOperations() const;
+    /**
+     * @brief Get list of allowed operations on this VDI
+     * @return List of operation type strings
+     */
+    QStringList AllowedOperations() const;
 
-        /**
-         * @brief Get currently running operations
-         * @return Map of task reference to operation type
-         */
-        QVariantMap currentOperations() const;
+    /**
+     * @brief Get currently running operations
+     * @return Map of task reference to operation type
+     */
+    QVariantMap CurrentOperations() const;
 
-        /**
-         * @brief Check if VDI is locked at storage level
-         * @return true if storage-level lock is active
-         */
-        bool storageLock() const;
+    /**
+     * @brief Check if VDI is locked at storage level
+     * @return true if storage-level lock is active
+     */
+    bool StorageLock() const;
 
-        /**
-         * @brief Get VDI location on SR
-         * @return Location string (path or identifier on storage repository)
-         */
-        QString location() const;
+    /**
+     * @brief Get VDI location on SR
+     * @return Location string (path or identifier on storage repository)
+     */
+    QString Location() const;
 
-        /**
-         * @brief Check if VDI is managed by XAPI
-         * @return true if XAPI manages this VDI
-         */
-        bool managed() const;
+    /**
+     * @brief Check if VDI is managed by XAPI
+     * @return true if XAPI manages this VDI
+     */
+    bool Managed() const;
 
-        /**
-         * @brief Check if VDI is missing from storage
-         * @return true if SR scan reported VDI not present on disk
-         */
-        bool missing() const;
+    /**
+     * @brief Check if VDI is missing from storage
+     * @return true if SR scan reported VDI not present on disk
+     */
+    bool Missing() const;
 
-        /**
-         * @brief Get parent VDI reference
-         * @return Opaque reference to parent VDI (for clones) - deprecated, always null
-         */
-        QString parentRef() const;
+    /**
+     * @brief Get parent VDI reference
+     * @return Opaque reference to parent VDI (for clones) - deprecated, always null
+     */
+    QString ParentRef() const;
 
-        /**
-         * @brief Get crash dump references
-         * @return List of crashdump opaque references
-         */
-        QStringList crashDumpRefs() const;
+    /**
+     * @brief Get crash dump references
+     * @return List of crashdump opaque references
+     */
+    QStringList CrashDumpRefs() const;
 
-        /**
-         * @brief Get XenStore data
-         * @return Map of key-value pairs for /local/domain/0/backend/vbd/<domid>/<device-id>/sm-data
-         */
-        QVariantMap xenstoreData() const;
+    /**
+     * @brief Get XenStore data
+     * @return Map of key-value pairs for /local/domain/0/backend/vbd/<domid>/<device-id>/sm-data
+     */
+    QVariantMap XenstoreData() const;
 
-        /**
-         * @brief Get Storage Manager configuration
-         * @return Map of SM-dependent configuration data
-         */
-        QVariantMap smConfig() const;
+    /**
+     * @brief Get Storage Manager configuration
+     * @return Map of SM-dependent configuration data
+     */
+    QVariantMap SMConfig() const;
 
-        /**
-         * @brief Get snapshot VDI references
-         * @return List of snapshot VDI opaque references
-         */
-        QStringList snapshotRefs() const;
+    /**
+     * @brief Get snapshot VDI references
+     * @return List of snapshot VDI opaque references
+     */
+    QStringList SnapshotRefs() const;
 
-        /**
-         * @brief Get snapshot creation timestamp
-         * @return Date/time when snapshot was created
-         */
-        QDateTime snapshotTime() const;
+    /**
+     * @brief Get snapshot creation timestamp
+     * @return Date/time when snapshot was created
+     */
+    QDateTime SnapshotTime() const;
 
-        /**
-         * @brief Get user-specified tags
-         * @return List of tag strings for categorization
-         */
-        QStringList tags() const;
+    /**
+     * @brief Get user-specified tags
+     * @return List of tag strings for categorization
+     */
+    QStringList Tags() const;
 
-        /**
-         * @brief Get additional configuration
-         * @return Map of additional configuration key-value pairs
-         */
-        QVariantMap otherConfig() const;
+    /**
+     * @brief Get additional configuration
+     * @return Map of additional configuration key-value pairs
+     */
+    QVariantMap OtherConfig() const;
 
-        /**
-         * @brief Check if VDI should be cached in local cache SR
-         * @return true if caching is enabled
-         */
-        bool allowCaching() const;
+    /**
+     * @brief Check if VDI should be cached in local cache SR
+     * @return true if caching is enabled
+     */
+    bool AllowCaching() const;
 
-        /**
-         * @brief Get VDI behavior on VM boot
-         * @return Behavior string ("persist", "reset")
-         */
-        QString onBoot() const;
+    /**
+     * @brief Get VDI behavior on VM boot
+     * @return Behavior string ("persist", "reset")
+     */
+    QString OnBoot() const;
 
-        /**
-         * @brief Get pool reference if this VDI contains pool metadata
-         * @return Opaque reference to pool or null
-         */
-        QString metadataOfPoolRef() const;
+    /**
+     * @brief Get pool reference if this VDI contains pool metadata
+     * @return Opaque reference to pool or null
+     */
+    QString MetadataOfPoolRef() const;
 
-        /**
-         * @brief Check if this VDI contains latest pool metadata
-         * @return true if this is the most recent accessible pool metadata
-         */
-        bool metadataLatest() const;
+    /**
+     * @brief Check if this VDI contains latest pool metadata
+     * @return true if this is the most recent accessible pool metadata
+     */
+    bool MetadataLatest() const;
 
-        /**
-         * @brief Check if this VDI is a XenServer Tools ISO
-         * @return true if this is a tools ISO image
-         */
-        bool isToolsIso() const;
+    /**
+     * @brief Check if this VDI is a XenServer Tools ISO
+     * @return true if this is a tools ISO image
+     */
+    bool IsToolsIso() const;
 
-        /**
-         * @brief Check if Changed Block Tracking is enabled
-         * @return true if CBT is tracking changed blocks for this VDI
-         */
-        bool cbtEnabled() const;
+    /**
+     * @brief Check if Changed Block Tracking is enabled
+     * @return true if CBT is tracking changed blocks for this VDI
+     */
+    bool CbtEnabled() const;
 
-    protected:
-        QString GetObjectType() const override;
+protected:
+    QString GetObjectType() const override;
 };
 
 #endif // VDI_H

@@ -83,7 +83,7 @@ void VMCleanShutdown::run()
     }
 
     XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
@@ -126,7 +126,7 @@ void VMHardShutdown::run()
     }
 
     XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
@@ -169,7 +169,7 @@ void VMSuspendAction::run()
     }
 
     XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;

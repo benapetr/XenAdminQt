@@ -90,7 +90,7 @@ void CreateBondAction::run()
         try
         {
             // Get all hosts in pool
-            QList<QVariantMap> hosts = connection()->getCache()->GetAllData("host");
+            QList<QVariantMap> hosts = connection()->GetCache()->GetAllData("host");
 
             int inc = hosts.count() > 0 ? 90 / (hosts.count() * 2) : 90;
             int progress = 10;
@@ -132,7 +132,7 @@ void CreateBondAction::run()
                 qDebug() << "Created bond on" << hostName << ":" << bondRef;
 
                 // Get bond interface PIF
-                QVariantMap bondData = connection()->getCache()->ResolveObjectData("bond", bondRef);
+                QVariantMap bondData = connection()->GetCache()->ResolveObjectData("bond", bondRef);
                 QString bondInterfaceRef = bondData.value("master").toString();
 
                 // Store bond info for management interface reconfiguration
@@ -194,7 +194,7 @@ void CreateBondAction::cleanupOnError()
             try
             {
                 // Get bond data to find primary slave
-                QVariantMap bondData = connection()->getCache()->ResolveObjectData("bond", newBond.bondRef);
+                QVariantMap bondData = connection()->GetCache()->ResolveObjectData("bond", newBond.bondRef);
                 QString primarySlaveRef = bondData.value("primary_slave").toString();
 
                 if (!primarySlaveRef.isEmpty())
@@ -246,14 +246,14 @@ void CreateBondAction::cleanupOnError()
 
 QList<QVariantMap> CreateBondAction::getHostsCoordinatorLast() const
 {
-    QList<QVariantMap> hosts = connection()->getCache()->GetAllData("host");
+    QList<QVariantMap> hosts = connection()->GetCache()->GetAllData("host");
     if (hosts.isEmpty())
     {
         return hosts;
     }
 
     // Get the pool to find the coordinator
-    QList<QVariantMap> pools = connection()->getCache()->GetAllData("pool");
+    QList<QVariantMap> pools = connection()->GetCache()->GetAllData("pool");
     if (pools.isEmpty())
     {
         return hosts; // Not a pool, return as-is
@@ -294,7 +294,7 @@ QStringList CreateBondAction::findMatchingPIFsOnHost(const QString& hostRef) con
     QStringList deviceNames;
     for (const QString& pifRef : m_pifRefs)
     {
-        QVariantMap pifData = connection()->getCache()->ResolveObjectData("pif", pifRef);
+        QVariantMap pifData = connection()->GetCache()->ResolveObjectData("pif", pifRef);
         QString device = pifData.value("device").toString();
         if (!device.isEmpty() && !deviceNames.contains(device))
         {
@@ -304,7 +304,7 @@ QStringList CreateBondAction::findMatchingPIFsOnHost(const QString& hostRef) con
 
     // Find PIFs on the target host with matching device names
     QStringList result;
-    QList<QVariantMap> allPifs = connection()->getCache()->GetAllData("pif");
+    QList<QVariantMap> allPifs = connection()->GetCache()->GetAllData("pif");
 
     for (const QVariantMap& pif : allPifs)
     {

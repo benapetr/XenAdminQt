@@ -83,7 +83,7 @@ void VMPause::run()
     }
 
     XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
@@ -126,7 +126,7 @@ void VMUnpause::run()
     }
 
     XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;

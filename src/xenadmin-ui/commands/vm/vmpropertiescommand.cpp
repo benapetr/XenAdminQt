@@ -72,7 +72,7 @@ bool VMPropertiesCommand::CanRun() const
         return false;
 
     // TODO: Check locked state and snapshot state when implemented
-    return (vm->GetConnection() && vm->GetConnection()->isConnected());
+    return (vm->GetConnection() && vm->GetConnection()->IsConnected());
 }
 
 QString VMPropertiesCommand::MenuText() const

@@ -129,7 +129,7 @@ XenLib::XenLib(QObject* parent) : QObject(parent), d(new Private)
     qDebug() << "XenLib: EventPoller created on dedicated thread";
 
     // Associate session with connection for heartbeat and other operations
-    this->d->connection->setSession(this->d->session);
+    this->d->connection->SetSession(this->d->session);
 
     this->setupConnections();
 }
@@ -311,7 +311,7 @@ bool XenLib::connectToServer(const QString& hostname, int port, const QString& u
     connect(this->d->connection, &XenConnection::progressUpdate, this, &XenLib::onConnectionProgress, Qt::UniqueConnection);
 
     // Start connection (worker thread handles TCP + SSL only, login happens in onConnectionEstablished)
-    if (!this->d->connection->connectToHost(hostname, port, username, password))
+    if (!this->d->connection->ConnectToHost(hostname, port, username, password))
     {
         this->setError("Failed to initiate connection");
         return false;
@@ -332,12 +332,12 @@ void XenLib::disconnectFromServer()
 
     if (this->d->session)
     {
-        this->d->session->logout();
+        this->d->session->Logout();
     }
 
     if (this->d->connection)
     {
-        this->d->connection->disconnect();
+        this->d->connection->Disconnect();
 
         // Unregister connection from ConnectionsManager
         Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
@@ -357,8 +357,8 @@ void XenLib::disconnectFromServer()
 bool XenLib::isConnected() const
 {
     return this->d->connected &&
-           this->d->connection && this->d->connection->isConnected() &&
-           this->d->session && this->d->session->isLoggedIn();
+           this->d->connection && this->d->connection->IsConnected() &&
+           this->d->session && this->d->session->IsLoggedIn();
 }
 
 XenRpcAPI* XenLib::getAPI() const
@@ -389,7 +389,7 @@ Xen::ConnectionsManager* XenLib::getConnectionsManager() const
 XenCache* XenLib::getCache() const
 {
     // Cache is now owned by connection (matching C# architecture)
-    return this->d->connection ? this->d->connection->getCache() : nullptr;
+    return this->d->connection ? this->d->connection->GetCache() : nullptr;
 }
 
 MetricUpdater* XenLib::getMetricUpdater() const
@@ -504,7 +504,7 @@ bool XenLib::updateVM(const QString& vmRef, const QVariantMap& updates)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -562,7 +562,7 @@ bool XenLib::setVMVCPUs(const QString& vmRef, int vcpus)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -594,7 +594,7 @@ bool XenLib::setVMMemory(const QString& vmRef, qint64 memoryMB)
     // Convert MB to bytes
     qint64 memoryBytes = memoryMB * 1024 * 1024;
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1269,7 +1269,7 @@ bool XenLib::setHostName(const QString& hostRef, const QString& name)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1302,7 +1302,7 @@ bool XenLib::setHostDescription(const QString& hostRef, const QString& descripti
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1335,7 +1335,7 @@ bool XenLib::setHostTags(const QString& hostRef, const QStringList& tags)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1368,7 +1368,7 @@ bool XenLib::setHostOtherConfig(const QString& hostRef, const QString& key, cons
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1409,7 +1409,7 @@ bool XenLib::setHostIqn(const QString& hostRef, const QString& iqn)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1555,7 +1555,7 @@ bool XenLib::setPoolName(const QString& poolRef, const QString& name)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1588,7 +1588,7 @@ bool XenLib::setPoolDescription(const QString& poolRef, const QString& descripti
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1621,7 +1621,7 @@ bool XenLib::setPoolTags(const QString& poolRef, const QStringList& tags)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1654,7 +1654,7 @@ bool XenLib::setPoolMigrationCompression(const QString& poolRef, bool enabled)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -2005,8 +2005,8 @@ void XenLib::handleLoginResult(bool success)
 
         // Build connection info with session ID
         this->d->connectionInfo = QString("%1:%2")
-                                      .arg(this->d->connection->getHostname())
-                                      .arg(this->d->connection->getPort());
+                                      .arg(this->d->connection->GetHostname())
+                                      .arg(this->d->connection->GetPort());
 
         // qDebug() << timestamp() << "XenLib:" << QString("Connected to %1:%2 with session %3")
         //                                             .arg(this->d->connection->getHostname())
@@ -2077,7 +2077,7 @@ void XenLib::onConnectionEstablished()
 
     // TCP/SSL connection is ready, now login using XenSession
     // This will queue the login request to the worker thread
-    if (!this->d->session->login(this->d->pendingUsername, this->d->pendingPassword))
+    if (!this->d->session->Login(this->d->pendingUsername, this->d->pendingPassword))
     {
         QString error = this->d->session->getLastError();
         qWarning() << "XenLib: Login failed:" << error;
@@ -2185,7 +2185,7 @@ void XenLib::onHostsReceivedForPoolMembers(const QVariantList& hosts)
 
     if (!members.isEmpty())
     {
-        this->d->connection->setPoolMembers(members);
+        this->d->connection->SetPoolMembers(members);
         qDebug() << "XenLib: Populated" << members.size() << "pool members for failover:" << members;
     }
 }
@@ -2260,7 +2260,7 @@ void XenLib::requestVirtualMachines()
     QByteArray jsonRequest = this->d->api->buildJsonRpcCall("VM.get_all_records", params);
 
     // Send async and track the request
-    int requestId = this->d->connection->sendRequestAsync(jsonRequest);
+    int requestId = this->d->connection->SendRequestAsync(jsonRequest);
     if (requestId < 0)
     {
         qWarning() << "XenLib::requestVirtualMachines - Failed to queue request";
@@ -2301,7 +2301,7 @@ void XenLib::requestHosts()
 
     QByteArray jsonRequest = this->d->api->buildJsonRpcCall("host.get_all_records", params);
 
-    int requestId = this->d->connection->sendRequestAsync(jsonRequest);
+    int requestId = this->d->connection->SendRequestAsync(jsonRequest);
     if (requestId < 0)
     {
         qWarning() << "XenLib::requestHosts - Failed to queue request";
@@ -2342,7 +2342,7 @@ void XenLib::requestPools()
 
     QByteArray jsonRequest = this->d->api->buildJsonRpcCall("pool.get_all_records", params);
 
-    int requestId = this->d->connection->sendRequestAsync(jsonRequest);
+    int requestId = this->d->connection->SendRequestAsync(jsonRequest);
     if (requestId < 0)
     {
         qWarning() << "XenLib::requestPools - Failed to queue request";
@@ -2383,7 +2383,7 @@ void XenLib::requestStorageRepositories()
 
     QByteArray jsonRequest = this->d->api->buildJsonRpcCall("SR.get_all_records", params);
 
-    int requestId = this->d->connection->sendRequestAsync(jsonRequest);
+    int requestId = this->d->connection->SendRequestAsync(jsonRequest);
     if (requestId < 0)
     {
         qWarning() << "XenLib::requestStorageRepositories - Failed to queue request";
@@ -2424,7 +2424,7 @@ void XenLib::requestNetworks()
 
     QByteArray jsonRequest = this->d->api->buildJsonRpcCall("network.get_all_records", params);
 
-    int requestId = this->d->connection->sendRequestAsync(jsonRequest);
+    int requestId = this->d->connection->SendRequestAsync(jsonRequest);
     if (requestId < 0)
     {
         qWarning() << "XenLib::requestNetworks - Failed to queue request";
@@ -2458,7 +2458,7 @@ void XenLib::requestPIFs()
 
     QByteArray jsonRequest = this->d->api->buildJsonRpcCall("PIF.get_all_records", params);
 
-    int requestId = this->d->connection->sendRequestAsync(jsonRequest);
+    int requestId = this->d->connection->SendRequestAsync(jsonRequest);
     if (requestId < 0)
     {
         qWarning() << "XenLib::requestPIFs - Failed to queue request";
@@ -2514,7 +2514,7 @@ void XenLib::requestObjectData(const QString& objectType, const QString& objectR
 
     QByteArray jsonRequest = this->d->api->buildJsonRpcCall(methodName, params);
 
-    int requestId = this->d->connection->sendRequestAsync(jsonRequest);
+    int requestId = this->d->connection->SendRequestAsync(jsonRequest);
     if (requestId < 0)
     {
         qWarning() << "XenLib::requestObjectData - Failed to queue request";
@@ -2876,7 +2876,7 @@ QString XenLib::populateCache()
         QVariantList roleParams;
         roleParams.append(this->d->session->getSessionId());
         QByteArray roleRequest = this->d->api->buildJsonRpcCall("role.get_all_records", roleParams);
-        QByteArray roleResponse = this->d->connection->sendRequest(roleRequest);
+        QByteArray roleResponse = this->d->connection->SendRequest(roleRequest);
 
         if (roleResponse.isEmpty())
         {
@@ -2936,9 +2936,9 @@ QString XenLib::populateCache()
 
     QByteArray jsonRequest = this->d->api->buildJsonRpcCall("event.from", params);
 
-    // Use SYNCHRONOUS sendRequest() to block until response arrives
+    // Use SYNCHRONOUS SendRequest() to block until response arrives
     // This prevents xapi violation of multiple outstanding event.from calls
-    QByteArray response = this->d->connection->sendRequest(jsonRequest);
+    QByteArray response = this->d->connection->SendRequest(jsonRequest);
 
     if (response.isEmpty())
     {
@@ -3047,7 +3047,7 @@ QString XenLib::populateCache()
         QVariantList consoleParams;
         consoleParams.append(this->d->session->getSessionId());
         QByteArray consoleRequest = this->d->api->buildJsonRpcCall("console.get_all_records", consoleParams);
-        QByteArray consoleResponse = this->d->connection->sendRequest(consoleRequest);
+        QByteArray consoleResponse = this->d->connection->SendRequest(consoleRequest);
 
         if (consoleResponse.isEmpty())
         {

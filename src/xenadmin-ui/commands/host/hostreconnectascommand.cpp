@@ -51,7 +51,7 @@ bool HostReconnectAsCommand::CanRun() const
         return false;
 
     // Can reconnect-as if connected and selected host is coordinator
-    if (conn->isConnected() && host->IsMaster())
+    if (conn->IsConnected() && host->IsMaster())
         return true;
 
     // Can also reconnect-as if connection is in progress (to change creds)
@@ -80,13 +80,13 @@ void HostReconnectAsCommand::Run()
 
     if (dialog.exec() == QDialog::Accepted)
     {
-        QString hostname = conn->getHostname(); // Keep same hostname
-        int port = conn->getPort();             // Keep same port
+        QString hostname = conn->GetHostname(); // Keep same hostname
+        int port = conn->GetPort();             // Keep same port
         QString username = dialog.getUsername();
         QString password = dialog.getPassword();
 
         // Disconnect current connection
-        conn->disconnect();
+        conn->Disconnect();
 
         // Reconnect with new credentials
         mainWindow()->showStatusMessage("Reconnecting as different user...");

@@ -186,7 +186,7 @@ void DeleteSnapshotCommand::deleteSnapshot()
 
     // Get XenConnection from XenLib
     XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         qWarning() << "DeleteSnapshotCommand: Not connected";
         QMessageBox::critical(this->mainWindow(), tr("Delete Error"),

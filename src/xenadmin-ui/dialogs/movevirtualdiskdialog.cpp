@@ -321,7 +321,7 @@ void MoveVirtualDiskDialog::onRescanButtonClicked()
         return;
 
     XenConnection* connection = this->m_xenLib->getConnection();
-    if (!connection || !connection->isConnected())
+    if (!connection || !connection->IsConnected())
         return;
 
     // Get all SRs and scan them
@@ -332,11 +332,11 @@ void MoveVirtualDiskDialog::onRescanButtonClicked()
 
         // Build JSON-RPC request for SR.scan
         QVariantList params;
-        params << connection->getSessionId() << srRef;
+        params << connection->GetSessionId() << srRef;
 
         QString jsonRequest = this->m_xenLib->getAPI()->buildJsonRpcCall("SR.scan", params);
         QByteArray requestData = jsonRequest.toUtf8();
-        connection->sendRequestAsync(requestData);
+        connection->SendRequestAsync(requestData);
     }
 
     ui->labelInfo->setText("Scanning storage repositories...");

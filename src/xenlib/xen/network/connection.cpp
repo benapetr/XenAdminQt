@@ -76,18 +76,18 @@ XenConnection::XenConnection(QObject* parent) : QObject(parent), d(new Private)
 
 XenConnection::~XenConnection()
 {
-    this->disconnect();
+    this->Disconnect();
     delete this->d->cache;
     delete this->d;
 }
 
-bool XenConnection::connectToHost(const QString& host, int port, const QString& username, const QString& password)
+bool XenConnection::ConnectToHost(const QString& host, int port, const QString& username, const QString& password)
 {
     // qDebug() << "XenConnection: Connecting to" << host << ":" << port;
 
     // Disconnect any existing connection
-    if (this->isConnected())
-        this->disconnect();
+    if (this->IsConnected())
+        this->Disconnect();
 
     this->d->host = host;
     this->d->port = port;
@@ -115,7 +115,7 @@ bool XenConnection::connectToHost(const QString& host, int port, const QString& 
     return true;
 }
 
-void XenConnection::disconnect()
+void XenConnection::Disconnect()
 {
     // qDebug() << "XenConnection: Disconnecting";
 
@@ -140,29 +140,29 @@ void XenConnection::disconnect()
     }
 }
 
-bool XenConnection::isConnected() const
+bool XenConnection::IsConnected() const
 {
     return this->d->connected;
 }
 
-QString XenConnection::getHostname() const
+QString XenConnection::GetHostname() const
 {
     return this->d->host;
 }
 
-int XenConnection::getPort() const
+int XenConnection::GetPort() const
 {
     return this->d->port;
 }
 
-QString XenConnection::getSessionId() const
+QString XenConnection::GetSessionId() const
 {
     return this->d->sessionId;
 }
 
-QByteArray XenConnection::sendRequest(const QByteArray& data)
+QByteArray XenConnection::SendRequest(const QByteArray& data)
 {
-    if (!this->isConnected() || !this->d->worker)
+    if (!this->IsConnected() || !this->d->worker)
     {
         qWarning() << "XenConnection::sendRequest: Not connected or no worker";
         return QByteArray();
@@ -181,9 +181,9 @@ QByteArray XenConnection::sendRequest(const QByteArray& data)
     return response;
 }
 
-int XenConnection::sendRequestAsync(const QByteArray& data)
+int XenConnection::SendRequestAsync(const QByteArray& data)
 {
-    if (!this->isConnected() || !this->d->worker)
+    if (!this->IsConnected() || !this->d->worker)
     {
         qWarning() << "XenConnection::sendRequestAsync: Not connected or no worker";
         return -1;
@@ -246,37 +246,37 @@ void XenConnection::onWorkerApiResponse(int requestId, const QByteArray& respons
 }
 
 // Session association methods
-void XenConnection::setSession(XenSession* session)
+void XenConnection::SetSession(XenSession* session)
 {
     this->d->session = session;
 }
 
-XenSession* XenConnection::getSession() const
+XenSession* XenConnection::GetSession() const
 {
     return this->d->session;
 }
 
 // Pool member tracking methods
-void XenConnection::setPoolMembers(const QStringList& members)
+void XenConnection::SetPoolMembers(const QStringList& members)
 {
     QMutexLocker locker(&this->d->poolMembersMutex);
     this->d->poolMembers = members;
     this->d->poolMemberIndex = 0;
 }
 
-QStringList XenConnection::getPoolMembers() const
+QStringList XenConnection::GetPoolMembers() const
 {
     QMutexLocker locker(&this->d->poolMembersMutex);
     return this->d->poolMembers;
 }
 
-int XenConnection::getCurrentPoolMemberIndex() const
+int XenConnection::GetCurrentPoolMemberIndex() const
 {
     QMutexLocker locker(&this->d->poolMembersMutex);
     return this->d->poolMemberIndex;
 }
 
-void XenConnection::setCurrentPoolMemberIndex(int index)
+void XenConnection::SetCurrentPoolMemberIndex(int index)
 {
     QMutexLocker locker(&this->d->poolMembersMutex);
     this->d->poolMemberIndex = index;
@@ -360,7 +360,7 @@ void XenConnection::setCoordinatorMayChange(bool mayChange)
 
 // Cache access (each connection has its own cache)
 // TODO this functions is called all over the place and we verify if it didn't return NULL, this can never return NULL so we need to cleanup that code and remove all those redundant checks
-XenCache* XenConnection::getCache() const
+XenCache* XenConnection::GetCache() const
 {
     return this->d->cache;
 }

@@ -78,7 +78,7 @@ bool MoveVMCommand::canVMBeMoved() const
 
     // Check if VM has CBT (Changed Block Tracking) disabled
     // VMs with CBT enabled cannot be moved
-    XenCache* cache = vm->GetConnection()->getCache();
+    XenCache* cache = vm->GetConnection()->GetCache();
 
     QVariantList vbds = vmData.value("VBDs", QVariantList()).toList();
     for (const QVariant& vbdRefVar : vbds)

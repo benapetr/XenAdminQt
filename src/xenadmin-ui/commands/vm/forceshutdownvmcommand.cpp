@@ -91,7 +91,7 @@ void ForceShutdownVMCommand::Run()
 
     // Get XenConnection from VM
     XenConnection* conn = vm->GetConnection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(),
                              tr("Not Connected"),

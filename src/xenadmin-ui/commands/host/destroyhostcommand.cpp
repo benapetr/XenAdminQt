@@ -87,7 +87,7 @@ void DestroyHostCommand::Run()
 
     // Get GetConnection
     XenConnection* conn = host->GetConnection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
         return;
@@ -149,7 +149,7 @@ bool DestroyHostCommand::isHostLive(QSharedPointer<Host> host) const
     QString metricsRef = host->GetData().value("metrics").toString();
     if (!metricsRef.isEmpty())
     {
-        QVariantMap metricsData = host->GetConnection()->getCache()->ResolveObjectData("host_metrics", metricsRef);
+        QVariantMap metricsData = host->GetConnection()->GetCache()->ResolveObjectData("host_metrics", metricsRef);
         if (!metricsData.isEmpty())
         {
             return metricsData.value("live", false).toBool();

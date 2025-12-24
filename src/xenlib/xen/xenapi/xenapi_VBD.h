@@ -36,7 +36,6 @@ class XenSession;
 
 namespace XenAPI
 {
-
     /**
      * @brief Static XenAPI VBD (Virtual Block Device) bindings
      *

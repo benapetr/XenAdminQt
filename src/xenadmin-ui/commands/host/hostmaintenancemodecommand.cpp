@@ -98,7 +98,7 @@ void HostMaintenanceModeCommand::Run()
             mw->showStatusMessage(QString("Entering maintenance mode for host '%1'...").arg(hostName));
 
             XenConnection* conn = host->GetConnection();
-            if (!conn || !conn->isConnected())
+            if (!conn || !conn->IsConnected())
             {
                 QMessageBox::warning(mw, "Not Connected",
                                      "Not connected to XenServer");
@@ -139,7 +139,7 @@ void HostMaintenanceModeCommand::Run()
             mw->showStatusMessage(QString("Exiting maintenance mode for host '%1'...").arg(hostName));
 
             XenConnection* conn = host->GetConnection();
-            if (!conn || !conn->isConnected())
+            if (!conn || !conn->IsConnected())
             {
                 QMessageBox::warning(mw, "Not Connected",
                                      "Not connected to XenServer");

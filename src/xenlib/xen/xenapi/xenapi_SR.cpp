@@ -33,7 +33,7 @@ namespace XenAPI
 {
     QVariantMap SR::get_record(XenSession* session, const QString& sr)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -47,7 +47,7 @@ namespace XenAPI
 
     QString SR::get_name_label(XenSession* session, const QString& sr)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -61,7 +61,7 @@ namespace XenAPI
 
     QString SR::get_by_uuid(XenSession* session, const QString& uuid)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -75,7 +75,7 @@ namespace XenAPI
 
     QVariantList SR::get_PBDs(XenSession* session, const QString& sr)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -98,7 +98,7 @@ namespace XenAPI
                        bool shared,
                        const QVariantMap& smConfig)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -128,7 +128,7 @@ namespace XenAPI
                                 bool shared,
                                 const QVariantMap& smConfig)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -149,7 +149,7 @@ namespace XenAPI
 
     QString SR::async_forget(XenSession* session, const QString& sr)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -163,7 +163,7 @@ namespace XenAPI
 
     void SR::forget(XenSession* session, const QString& sr)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -177,7 +177,7 @@ namespace XenAPI
 
     QString SR::async_destroy(XenSession* session, const QString& sr)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -191,7 +191,7 @@ namespace XenAPI
 
     void SR::set_name_label(XenSession* session, const QString& sr, const QString& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -205,7 +205,7 @@ namespace XenAPI
 
     void SR::set_name_description(XenSession* session, const QString& sr, const QString& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -219,7 +219,7 @@ namespace XenAPI
 
     void SR::set_tags(XenSession* session, const QString& sr, const QStringList& tags)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -233,7 +233,7 @@ namespace XenAPI
 
     void SR::set_other_config(XenSession* session, const QString& sr, const QVariantMap& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -247,7 +247,7 @@ namespace XenAPI
 
     void SR::scan(XenSession* session, const QString& sr)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -264,7 +264,7 @@ namespace XenAPI
                             const QString& type,
                             const QVariantMap& sm_config)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -281,7 +281,7 @@ namespace XenAPI
                                const QString& type,
                                const QVariantMap& sm_config)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -304,7 +304,7 @@ namespace XenAPI
                              bool shared,
                              const QVariantMap& sm_config)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;

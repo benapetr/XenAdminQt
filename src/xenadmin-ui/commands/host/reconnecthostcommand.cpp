@@ -76,5 +76,5 @@ bool ReconnectHostCommand::isConnectionDisconnected() const
     if (!conn)
         return false;
 
-    return !conn->isConnected();
+    return !conn->IsConnected();
 }

@@ -63,7 +63,7 @@ bool DeactivateVBDCommand::canRunVBD(const QString& vbdRef) const
     if (!vbd || !vbd->IsValid())
         return false;
 
-    XenCache* cache = vbd->GetConnection()->getCache();
+    XenCache* cache = vbd->GetConnection()->GetCache();
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
@@ -247,7 +247,7 @@ void DeactivateVBDCommand::Run()
         return;
 
     QString vbdRef = vbd->OpaqueRef();
-    XenCache* cache = vbd->GetConnection()->getCache();
+    XenCache* cache = vbd->GetConnection()->GetCache();
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
@@ -266,7 +266,7 @@ void DeactivateVBDCommand::Run()
     // Execute unplug operation directly (matches C# DelegatedAsyncAction pattern)
     try
     {
-        XenAPI::VBD::unplug(vbd->GetConnection()->getSession(), vbdRef);
+        XenAPI::VBD::unplug(vbd->GetConnection()->GetSession(), vbdRef);
 
         this->mainWindow()->showStatusMessage(
             QString("Successfully deactivated virtual disk '%1' from VM '%2'").arg(vdiName, vmName),

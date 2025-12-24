@@ -639,7 +639,7 @@ void NewVMWizard::createVirtualMachine()
     }
 
     XenConnection* connection = this->m_xenLib->getConnection();
-    if (!connection || !connection->getSession())
+    if (!connection || !connection->GetSession())
     {
         QMessageBox::critical(this, tr("Connection Error"),
                               tr("Unable to configure devices because the Xen connection is no longer valid."));

@@ -37,7 +37,7 @@ namespace XenAPI
                              const QString& netmask, const QString& gateway,
                              const QString& dns)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -51,7 +51,7 @@ namespace XenAPI
 
     void PIF::plug(XenSession* session, const QString& pif)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -65,7 +65,7 @@ namespace XenAPI
 
     void PIF::unplug(XenSession* session, const QString& pif)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -79,7 +79,7 @@ namespace XenAPI
 
     QString PIF::async_plug(XenSession* session, const QString& pif)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -93,7 +93,7 @@ namespace XenAPI
 
     QString PIF::async_unplug(XenSession* session, const QString& pif)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -107,7 +107,7 @@ namespace XenAPI
 
     void PIF::set_disallow_unplug(XenSession* session, const QString& pif, bool value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -121,7 +121,7 @@ namespace XenAPI
 
     void PIF::set_property(XenSession* session, const QString& pif, const QString& name, const QString& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -138,7 +138,7 @@ namespace XenAPI
                                       const QString& netmask, const QString& gateway,
                                       const QString& dns)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -152,7 +152,7 @@ namespace XenAPI
 
     void PIF::add_to_other_config(XenSession* session, const QString& pif, const QString& key, const QString& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -166,7 +166,7 @@ namespace XenAPI
 
     void PIF::remove_from_other_config(XenSession* session, const QString& pif, const QString& key)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -180,7 +180,7 @@ namespace XenAPI
 
     QVariantMap PIF::get_record(XenSession* session, const QString& pif)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -194,7 +194,7 @@ namespace XenAPI
 
     QVariantList PIF::get_all(XenSession* session)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -208,7 +208,7 @@ namespace XenAPI
 
     QString PIF::get_network(XenSession* session, const QString& pif)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -222,7 +222,7 @@ namespace XenAPI
 
     QString PIF::get_host(XenSession* session, const QString& pif)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -236,7 +236,7 @@ namespace XenAPI
 
     void PIF::scan(XenSession* session, const QString& host)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;

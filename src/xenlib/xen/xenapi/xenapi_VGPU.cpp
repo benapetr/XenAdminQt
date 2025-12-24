@@ -34,7 +34,7 @@ namespace XenAPI
 {
     void VGPU::destroy(XenSession* session, const QString& vgpu)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -50,7 +50,7 @@ namespace XenAPI
                                const QString& gpu_group, const QString& device,
                                const QVariantMap& other_config)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -66,7 +66,7 @@ namespace XenAPI
                                const QString& gpu_group, const QString& device,
                                const QVariantMap& other_config, const QString& vgpu_type)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
