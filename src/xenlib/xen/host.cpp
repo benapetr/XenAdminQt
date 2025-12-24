@@ -180,3 +180,257 @@ QString Host::poolRef() const
     // Return the first (and only) pool reference
     return poolRefs.first();
 }
+
+qint64 Host::memoryOverhead() const
+{
+    return intProperty("memory_overhead", 0);
+}
+
+qint64 Host::apiVersionMajor() const
+{
+    return intProperty("API_version_major", 0);
+}
+
+qint64 Host::apiVersionMinor() const
+{
+    return intProperty("API_version_minor", 0);
+}
+
+QString Host::apiVersionVendor() const
+{
+    return stringProperty("API_version_vendor");
+}
+
+QVariantMap Host::apiVersionVendorImplementation() const
+{
+    return property("API_version_vendor_implementation").toMap();
+}
+
+QVariantMap Host::cpuConfiguration() const
+{
+    return property("cpu_configuration").toMap();
+}
+
+QString Host::schedPolicy() const
+{
+    return stringProperty("sched_policy");
+}
+
+QStringList Host::hostCPURefs() const
+{
+    return stringListProperty("host_CPUs");
+}
+
+QStringList Host::allowedOperations() const
+{
+    return stringListProperty("allowed_operations");
+}
+
+QVariantMap Host::currentOperations() const
+{
+    return property("current_operations").toMap();
+}
+
+QStringList Host::supportedBootloaders() const
+{
+    return stringListProperty("supported_bootloaders");
+}
+
+QVariantMap Host::logging() const
+{
+    return property("logging").toMap();
+}
+
+QString Host::metricsRef() const
+{
+    return stringProperty("metrics");
+}
+
+QStringList Host::haStatefiles() const
+{
+    return stringListProperty("ha_statefiles");
+}
+
+QStringList Host::haNetworkPeers() const
+{
+    return stringListProperty("ha_network_peers");
+}
+
+QVariantMap Host::biosStrings() const
+{
+    return property("bios_strings").toMap();
+}
+
+QVariantMap Host::chipsetInfo() const
+{
+    return property("chipset_info").toMap();
+}
+
+QString Host::externalAuthType() const
+{
+    return stringProperty("external_auth_type");
+}
+
+QString Host::externalAuthServiceName() const
+{
+    return stringProperty("external_auth_service_name");
+}
+
+QVariantMap Host::externalAuthConfiguration() const
+{
+    return property("external_auth_configuration").toMap();
+}
+
+QString Host::powerOnMode() const
+{
+    return stringProperty("power_on_mode");
+}
+
+QVariantMap Host::powerOnConfig() const
+{
+    return property("power_on_config").toMap();
+}
+
+QString Host::localCacheSRRef() const
+{
+    return stringProperty("local_cache_sr");
+}
+
+QStringList Host::pciRefs() const
+{
+    return stringListProperty("PCIs");
+}
+
+QStringList Host::pgpuRefs() const
+{
+    return stringListProperty("PGPUs");
+}
+
+QStringList Host::pusbRefs() const
+{
+    return stringListProperty("PUSBs");
+}
+
+QStringList Host::patchRefs() const
+{
+    return stringListProperty("patches");
+}
+
+QStringList Host::updateRefs() const
+{
+    return stringListProperty("updates");
+}
+
+QStringList Host::updatesRequiringRebootRefs() const
+{
+    return stringListProperty("updates_requiring_reboot");
+}
+
+QStringList Host::featureRefs() const
+{
+    return stringListProperty("features");
+}
+
+QStringList Host::pendingGuidances() const
+{
+    return stringListProperty("pending_guidances");
+}
+
+bool Host::sslLegacy() const
+{
+    return boolProperty("ssl_legacy", true);
+}
+
+bool Host::tlsVerificationEnabled() const
+{
+    return boolProperty("tls_verification_enabled", false);
+}
+
+bool Host::httpsOnly() const
+{
+    return boolProperty("https_only", false);
+}
+
+QVariantMap Host::guestVCPUsParams() const
+{
+    return property("guest_VCPUs_params").toMap();
+}
+
+QString Host::display() const
+{
+    return stringProperty("display");
+}
+
+QList<qint64> Host::virtualHardwarePlatformVersions() const
+{
+    QVariantList list = property("virtual_hardware_platform_versions").toList();
+    QList<qint64> result;
+    for (const QVariant& v : list)
+    {
+        result.append(v.toLongLong());
+    }
+    return result;
+}
+
+QString Host::controlDomainRef() const
+{
+    return stringProperty("control_domain");
+}
+
+QString Host::iscsiIqn() const
+{
+    return stringProperty("iscsi_iqn");
+}
+
+bool Host::multipathing() const
+{
+    return boolProperty("multipathing", false);
+}
+
+QString Host::uefiCertificates() const
+{
+    return stringProperty("uefi_certificates");
+}
+
+QStringList Host::certificateRefs() const
+{
+    return stringListProperty("certificates");
+}
+
+QStringList Host::editions() const
+{
+    return stringListProperty("editions");
+}
+
+QStringList Host::crashdumpRefs() const
+{
+    return stringListProperty("crashdumps");
+}
+
+QDateTime Host::lastSoftwareUpdate() const
+{
+    QString dateStr = stringProperty("last_software_update");
+    if (dateStr.isEmpty())
+        return QDateTime();
+    return QDateTime::fromString(dateStr, Qt::ISODate);
+}
+
+QString Host::latestSyncedUpdatesApplied() const
+{
+    return stringProperty("latest_synced_updates_applied");
+}
+
+QVariantMap Host::licenseParams() const
+{
+    return property("license_params").toMap();
+}
+
+QString Host::edition() const
+{
+    return stringProperty("edition");
+}
+
+QVariantMap Host::licenseServer() const
+{
+    return property("license_server").toMap();
+}

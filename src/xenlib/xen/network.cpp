@@ -74,3 +74,56 @@ QVariantMap Network::otherConfig() const
 {
     return this->data().value("other_config").toMap();
 }
+
+QStringList Network::allowedOperations() const
+{
+    QVariantList ops = this->data().value("allowed_operations").toList();
+    QStringList result;
+    for (const QVariant& op : ops)
+    {
+        result.append(op.toString());
+    }
+    return result;
+}
+
+QVariantMap Network::currentOperations() const
+{
+    return this->data().value("current_operations").toMap();
+}
+
+QVariantMap Network::blobs() const
+{
+    return this->data().value("blobs").toMap();
+}
+
+QStringList Network::tags() const
+{
+    QVariantList tagList = this->data().value("tags").toList();
+    QStringList result;
+    for (const QVariant& tag : tagList)
+    {
+        result.append(tag.toString());
+    }
+    return result;
+}
+
+QString Network::defaultLockingMode() const
+{
+    return this->data().value("default_locking_mode", "unlocked").toString();
+}
+
+QVariantMap Network::assignedIPs() const
+{
+    return this->data().value("assigned_ips").toMap();
+}
+
+QStringList Network::purpose() const
+{
+    QVariantList purposeList = this->data().value("purpose").toList();
+    QStringList result;
+    for (const QVariant& p : purposeList)
+    {
+        result.append(p.toString());
+    }
+    return result;
+}

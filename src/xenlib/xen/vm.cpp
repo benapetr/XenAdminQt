@@ -447,9 +447,317 @@ QVariantMap VM::currentOperations() const
 QString VM::homeRef() const
 {
     // Return affinity host if set, otherwise resident host
-    QString affinity = affinityRef();
+    QString affinity = this->affinityRef();
     if (!affinity.isEmpty() && affinity != "OpaqueRef:NULL")
         return affinity;
 
-    return residentOnRef();
+    return this->residentOnRef();
+}
+
+qint64 VM::userVersion() const
+{
+    return this->intProperty("user_version", 0);
+}
+
+QString VM::scheduledToBeResidentOnRef() const
+{
+    return this->stringProperty("scheduled_to_be_resident_on");
+}
+
+qint64 VM::memoryOverhead() const
+{
+    return this->intProperty("memory_overhead", 0);
+}
+
+QVariantMap VM::vcpusParams() const
+{
+    return this->property("VCPUs_params").toMap();
+}
+
+QString VM::actionsAfterSoftreboot() const
+{
+    return this->stringProperty("actions_after_softreboot");
+}
+
+QString VM::actionsAfterShutdown() const
+{
+    return this->stringProperty("actions_after_shutdown");
+}
+
+QString VM::actionsAfterReboot() const
+{
+    return this->stringProperty("actions_after_reboot");
+}
+
+QString VM::actionsAfterCrash() const
+{
+    return this->stringProperty("actions_after_crash");
+}
+
+QStringList VM::vusbRefs() const
+{
+    return this->stringListProperty("VUSBs");
+}
+
+QStringList VM::crashDumpRefs() const
+{
+    return this->stringListProperty("crash_dumps");
+}
+
+QStringList VM::vtpmRefs() const
+{
+    return this->stringListProperty("VTPMs");
+}
+
+QString VM::pvBootloader() const
+{
+    return this->stringProperty("PV_bootloader");
+}
+
+QString VM::pvKernel() const
+{
+    return this->stringProperty("PV_kernel");
+}
+
+QString VM::pvRamdisk() const
+{
+    return this->stringProperty("PV_ramdisk");
+}
+
+QString VM::pvArgs() const
+{
+    return this->stringProperty("PV_args");
+}
+
+QString VM::pvBootloaderArgs() const
+{
+    return this->stringProperty("PV_bootloader_args");
+}
+
+QString VM::pvLegacyArgs() const
+{
+    return this->stringProperty("PV_legacy_args");
+}
+
+QString VM::hvmBootPolicy() const
+{
+    return this->stringProperty("HVM_boot_policy");
+}
+
+QVariantMap VM::hvmBootParams() const
+{
+    return this->property("HVM_boot_params").toMap();
+}
+
+double VM::hvmShadowMultiplier() const
+{
+    return this->property("HVM_shadow_multiplier").toDouble();
+}
+
+QString VM::pciBus() const
+{
+    return this->stringProperty("PCI_bus");
+}
+
+qint64 VM::domid() const
+{
+    return this->intProperty("domid", -1);
+}
+
+QString VM::domarch() const
+{
+    return this->stringProperty("domarch");
+}
+
+QVariantMap VM::lastBootCPUFlags() const
+{
+    return this->property("last_boot_CPU_flags").toMap();
+}
+
+bool VM::isControlDomain() const
+{
+    return this->boolProperty("is_control_domain", false);
+}
+
+QString VM::metricsRef() const
+{
+    return this->stringProperty("metrics");
+}
+
+QString VM::guestMetricsRef() const
+{
+    return this->stringProperty("guest_metrics");
+}
+
+QString VM::lastBootedRecord() const
+{
+    return this->stringProperty("last_booted_record");
+}
+
+QString VM::recommendations() const
+{
+    return this->stringProperty("recommendations");
+}
+
+QVariantMap VM::xenstoreData() const
+{
+    return this->property("xenstore_data").toMap();
+}
+
+bool VM::haAlwaysRun() const
+{
+    return this->boolProperty("ha_always_run", false);
+}
+
+QString VM::haRestartPriority() const
+{
+    return this->stringProperty("ha_restart_priority");
+}
+
+QDateTime VM::snapshotTime() const
+{
+    QString dateStr = this->stringProperty("snapshot_time");
+    if (dateStr.isEmpty())
+        return QDateTime();
+    return QDateTime::fromString(dateStr, Qt::ISODate);
+}
+
+QString VM::transportableSnapshotId() const
+{
+    return this->stringProperty("transportable_snapshot_id");
+}
+
+QVariantMap VM::blobs() const
+{
+    return this->property("blobs").toMap();
+}
+
+QVariantMap VM::blockedOperations() const
+{
+    return this->property("blocked_operations").toMap();
+}
+
+QVariantMap VM::snapshotInfo() const
+{
+    return this->property("snapshot_info").toMap();
+}
+
+QString VM::snapshotMetadata() const
+{
+    return this->stringProperty("snapshot_metadata");
+}
+
+QString VM::parentRef() const
+{
+    return this->stringProperty("parent");
+}
+
+QStringList VM::childrenRefs() const
+{
+    return this->stringListProperty("children");
+}
+
+QVariantMap VM::biosStrings() const
+{
+    return this->property("bios_strings").toMap();
+}
+
+QString VM::protectionPolicyRef() const
+{
+    return this->stringProperty("protection_policy");
+}
+
+bool VM::isSnapshotFromVmpp() const
+{
+    return this->boolProperty("is_snapshot_from_vmpp", false);
+}
+
+QString VM::snapshotScheduleRef() const
+{
+    return this->stringProperty("snapshot_schedule");
+}
+
+bool VM::isVmssSnapshot() const
+{
+    return this->boolProperty("is_vmss_snapshot", false);
+}
+
+QString VM::applianceRef() const
+{
+    return this->stringProperty("appliance");
+}
+
+qint64 VM::startDelay() const
+{
+    return this->intProperty("start_delay", 0);
+}
+
+qint64 VM::shutdownDelay() const
+{
+    return this->intProperty("shutdown_delay", 0);
+}
+
+qint64 VM::order() const
+{
+    return this->intProperty("order", 0);
+}
+
+QStringList VM::vgpuRefs() const
+{
+    return this->stringListProperty("VGPUs");
+}
+
+QStringList VM::attachedPCIRefs() const
+{
+    return this->stringListProperty("attached_PCIs");
+}
+
+QString VM::suspendSRRef() const
+{
+    return this->stringProperty("suspend_SR");
+}
+
+qint64 VM::version() const
+{
+    return this->intProperty("version", 0);
+}
+
+QString VM::generationId() const
+{
+    return this->stringProperty("generation_id");
+}
+
+qint64 VM::hardwarePlatformVersion() const
+{
+    return this->intProperty("hardware_platform_version", 0);
+}
+
+bool VM::hasVendorDevice() const
+{
+    return this->boolProperty("has_vendor_device", false);
+}
+
+bool VM::requiresReboot() const
+{
+    return this->boolProperty("requires_reboot", false);
+}
+
+QString VM::referenceLabel() const
+{
+    return this->stringProperty("reference_label");
+}
+
+QString VM::domainType() const
+{
+    return this->stringProperty("domain_type");
+}
+
+QVariantMap VM::nvram() const
+{
+    return this->property("NVRAM").toMap();
+}
+
+QStringList VM::pendingGuidances() const
+{
+    return this->stringListProperty("pending_guidances");
 }

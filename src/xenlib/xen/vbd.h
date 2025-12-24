@@ -163,6 +163,66 @@ public:
      */
     QString description() const;
 
+    /**
+     * @brief Get currently running operations
+     * @return Map of task reference to operation type
+     */
+    QVariantMap currentOperations() const;
+
+    /**
+     * @brief Check if VBD is locked at storage level
+     * @return true if storage-level lock is active
+     */
+    bool storageLock() const;
+
+    /**
+     * @brief Get additional configuration
+     * @return Map of additional configuration key-value pairs
+     */
+    QVariantMap otherConfig() const;
+
+    /**
+     * @brief Get status code from last attach operation
+     * @return Error/success code (erased on reboot)
+     */
+    qint64 statusCode() const;
+
+    /**
+     * @brief Get status detail from last attach operation
+     * @return Error/success information string (erased on reboot)
+     */
+    QString statusDetail() const;
+
+    /**
+     * @brief Get device runtime properties
+     * @return Map of runtime property key-value pairs
+     */
+    QVariantMap runtimeProperties() const;
+
+    /**
+     * @brief Get QoS algorithm type
+     * @return QoS algorithm identifier string
+     */
+    QString qosAlgorithmType() const;
+
+    /**
+     * @brief Get QoS algorithm parameters
+     * @return Map of parameters for chosen QoS algorithm
+     */
+    QVariantMap qosAlgorithmParams() const;
+
+    /**
+     * @brief Get supported QoS algorithms
+     * @return List of supported QoS algorithm identifiers
+     */
+    QStringList qosSupportedAlgorithms() const;
+
+    /**
+     * @brief Get VBD metrics reference
+     * @return Opaque reference to VBD_metrics object
+     */
+    QString metricsRef() const;
+
 protected:
     QString objectType() const override;
 };

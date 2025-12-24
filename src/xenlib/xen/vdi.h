@@ -129,6 +129,126 @@ public:
      */
     bool isSnapshot() const;
 
+    /**
+     * @brief Get list of allowed operations on this VDI
+     * @return List of operation type strings
+     */
+    QStringList allowedOperations() const;
+
+    /**
+     * @brief Get currently running operations
+     * @return Map of task reference to operation type
+     */
+    QVariantMap currentOperations() const;
+
+    /**
+     * @brief Check if VDI is locked at storage level
+     * @return true if storage-level lock is active
+     */
+    bool storageLock() const;
+
+    /**
+     * @brief Get VDI location on SR
+     * @return Location string (path or identifier on storage repository)
+     */
+    QString location() const;
+
+    /**
+     * @brief Check if VDI is managed by XAPI
+     * @return true if XAPI manages this VDI
+     */
+    bool managed() const;
+
+    /**
+     * @brief Check if VDI is missing from storage
+     * @return true if SR scan reported VDI not present on disk
+     */
+    bool missing() const;
+
+    /**
+     * @brief Get parent VDI reference
+     * @return Opaque reference to parent VDI (for clones) - deprecated, always null
+     */
+    QString parentRef() const;
+
+    /**
+     * @brief Get crash dump references
+     * @return List of crashdump opaque references
+     */
+    QStringList crashDumpRefs() const;
+
+    /**
+     * @brief Get XenStore data
+     * @return Map of key-value pairs for /local/domain/0/backend/vbd/<domid>/<device-id>/sm-data
+     */
+    QVariantMap xenstoreData() const;
+
+    /**
+     * @brief Get Storage Manager configuration
+     * @return Map of SM-dependent configuration data
+     */
+    QVariantMap smConfig() const;
+
+    /**
+     * @brief Get snapshot VDI references
+     * @return List of snapshot VDI opaque references
+     */
+    QStringList snapshotRefs() const;
+
+    /**
+     * @brief Get snapshot creation timestamp
+     * @return Date/time when snapshot was created
+     */
+    QDateTime snapshotTime() const;
+
+    /**
+     * @brief Get user-specified tags
+     * @return List of tag strings for categorization
+     */
+    QStringList tags() const;
+
+    /**
+     * @brief Get additional configuration
+     * @return Map of additional configuration key-value pairs
+     */
+    QVariantMap otherConfig() const;
+
+    /**
+     * @brief Check if VDI should be cached in local cache SR
+     * @return true if caching is enabled
+     */
+    bool allowCaching() const;
+
+    /**
+     * @brief Get VDI behavior on VM boot
+     * @return Behavior string ("persist", "reset")
+     */
+    QString onBoot() const;
+
+    /**
+     * @brief Get pool reference if this VDI contains pool metadata
+     * @return Opaque reference to pool or null
+     */
+    QString metadataOfPoolRef() const;
+
+    /**
+     * @brief Check if this VDI contains latest pool metadata
+     * @return true if this is the most recent accessible pool metadata
+     */
+    bool metadataLatest() const;
+
+    /**
+     * @brief Check if this VDI is a XenServer Tools ISO
+     * @return true if this is a tools ISO image
+     */
+    bool isToolsIso() const;
+
+    /**
+     * @brief Check if Changed Block Tracking is enabled
+     * @return true if CBT is tracking changed blocks for this VDI
+     */
+    bool cbtEnabled() const;
+
 protected:
     QString objectType() const override;
 };

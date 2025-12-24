@@ -115,9 +115,9 @@ bool VBD::canUnplug() const
 
 QString VBD::description() const
 {
-    QString typeStr = isCD() ? "CD Drive" : "Disk";
-    QString deviceNum = userdevice();
-    QString deviceName = device();
+    QString typeStr = this->isCD() ? "CD Drive" : "Disk";
+    QString deviceNum = this->userdevice();
+    QString deviceName = this->device();
 
     if (deviceName.isEmpty())
     {
@@ -126,6 +126,56 @@ QString VBD::description() const
     {
         return QString("%1 %2 (%3)").arg(typeStr, deviceNum, deviceName);
     }
+}
+
+QVariantMap VBD::currentOperations() const
+{
+    return this->property("current_operations").toMap();
+}
+
+bool VBD::storageLock() const
+{
+    return this->boolProperty("storage_lock", false);
+}
+
+QVariantMap VBD::otherConfig() const
+{
+    return this->property("other_config").toMap();
+}
+
+qint64 VBD::statusCode() const
+{
+    return this->intProperty("status_code", 0);
+}
+
+QString VBD::statusDetail() const
+{
+    return this->stringProperty("status_detail");
+}
+
+QVariantMap VBD::runtimeProperties() const
+{
+    return this->property("runtime_properties").toMap();
+}
+
+QString VBD::qosAlgorithmType() const
+{
+    return this->stringProperty("qos_algorithm_type");
+}
+
+QVariantMap VBD::qosAlgorithmParams() const
+{
+    return this->property("qos_algorithm_params").toMap();
+}
+
+QStringList VBD::qosSupportedAlgorithms() const
+{
+    return this->stringListProperty("qos_supported_algorithms");
+}
+
+QString VBD::metricsRef() const
+{
+    return this->stringProperty("metrics");
 }
 
 QString VBD::objectType() const

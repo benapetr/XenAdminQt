@@ -153,6 +153,36 @@ public:
     bool supportsTrim() const;
 
     /**
+     * @brief Get binary blobs associated with this SR
+     * @return Map of blob name to blob reference
+     */
+    QVariantMap blobs() const;
+
+    /**
+     * @brief Check if SR is assigned as local cache for its host
+     * @return true if SR is assigned to be the local cache for its host
+     */
+    bool localCacheEnabled() const;
+
+    /**
+     * @brief Get disaster recovery task which introduced this SR
+     * @return DR_task opaque reference, or empty string if none
+     */
+    QString introducedBy() const;
+
+    /**
+     * @brief Check if SR is using aggregated local storage
+     * @return true if SR is using clustered local storage
+     */
+    bool clustered() const;
+
+    /**
+     * @brief Check if this is the SR that contains the Tools ISO VDIs
+     * @return true if this SR contains XenServer Tools ISOs
+     */
+    bool isToolsSR() const;
+
+    /**
      * @brief Check if SR is local (not shared)
      * @return true if SR is local to single host
      */

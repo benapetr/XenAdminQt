@@ -114,8 +114,33 @@ QVariantMap SR::currentOperations() const
 bool SR::supportsTrim() const
 {
     // Check sm_config for trim support
-    QVariantMap sm = smConfig();
+    QVariantMap sm = this->smConfig();
     return sm.value("supports_trim", false).toBool();
+}
+
+QVariantMap SR::blobs() const
+{
+    return this->property("blobs").toMap();
+}
+
+bool SR::localCacheEnabled() const
+{
+    return this->boolProperty("local_cache_enabled", false);
+}
+
+QString SR::introducedBy() const
+{
+    return this->stringProperty("introduced_by");
+}
+
+bool SR::clustered() const
+{
+    return this->boolProperty("clustered", false);
+}
+
+bool SR::isToolsSR() const
+{
+    return this->boolProperty("is_tools_sr", false);
 }
 
 QString SR::homeRef() const

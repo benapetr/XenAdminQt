@@ -96,6 +96,48 @@ public:
      */
     QVariantMap otherConfig() const;
 
+    /**
+     * @brief Get allowed operations
+     * @return List of allowed network operations
+     */
+    QStringList allowedOperations() const;
+
+    /**
+     * @brief Get current operations
+     * @return Map of task ID to operation type
+     */
+    QVariantMap currentOperations() const;
+
+    /**
+     * @brief Get binary blobs associated with this network
+     * @return Map of blob name to blob reference
+     */
+    QVariantMap blobs() const;
+
+    /**
+     * @brief Get user-specified tags for categorization
+     * @return List of tag strings
+     */
+    QStringList tags() const;
+
+    /**
+     * @brief Get default locking mode for VIFs
+     * @return Default locking mode string ("locked", "unlocked", or "disabled")
+     */
+    QString defaultLockingMode() const;
+
+    /**
+     * @brief Get IP addresses assigned to VIFs on this network
+     * @return Map of VIF reference to assigned IP address (for xapi-managed DHCP networks)
+     */
+    QVariantMap assignedIPs() const;
+
+    /**
+     * @brief Get purposes for which the server will use this network
+     * @return List of network purpose strings ("nbd", "insecure_nbd", etc.)
+     */
+    QStringList purpose() const;
+
     // XenObject interface
     QString objectType() const override { return "network"; }
 };

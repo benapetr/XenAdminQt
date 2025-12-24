@@ -113,8 +113,111 @@ QString VDI::snapshotOfRef() const
 
 bool VDI::isSnapshot() const
 {
-    QString snapshotOf = snapshotOfRef();
+    QString snapshotOf = this->snapshotOfRef();
     return !snapshotOf.isEmpty() && snapshotOf != "OpaqueRef:NULL";
+}
+
+QStringList VDI::allowedOperations() const
+{
+    return this->stringListProperty("allowed_operations");
+}
+
+QVariantMap VDI::currentOperations() const
+{
+    return this->property("current_operations").toMap();
+}
+
+bool VDI::storageLock() const
+{
+    return this->boolProperty("storage_lock", false);
+}
+
+QString VDI::location() const
+{
+    return this->stringProperty("location");
+}
+
+bool VDI::managed() const
+{
+    return this->boolProperty("managed", true);
+}
+
+bool VDI::missing() const
+{
+    return this->boolProperty("missing", false);
+}
+
+QString VDI::parentRef() const
+{
+    return this->stringProperty("parent");
+}
+
+QStringList VDI::crashDumpRefs() const
+{
+    return this->stringListProperty("crash_dumps");
+}
+
+QVariantMap VDI::xenstoreData() const
+{
+    return this->property("xenstore_data").toMap();
+}
+
+QVariantMap VDI::smConfig() const
+{
+    return this->property("sm_config").toMap();
+}
+
+QStringList VDI::snapshotRefs() const
+{
+    return this->stringListProperty("snapshots");
+}
+
+QDateTime VDI::snapshotTime() const
+{
+    QString dateStr = this->stringProperty("snapshot_time");
+    if (dateStr.isEmpty())
+        return QDateTime();
+    return QDateTime::fromString(dateStr, Qt::ISODate);
+}
+
+QStringList VDI::tags() const
+{
+    return this->stringListProperty("tags");
+}
+
+QVariantMap VDI::otherConfig() const
+{
+    return this->property("other_config").toMap();
+}
+
+bool VDI::allowCaching() const
+{
+    return this->boolProperty("allow_caching", false);
+}
+
+QString VDI::onBoot() const
+{
+    return this->stringProperty("on_boot");
+}
+
+QString VDI::metadataOfPoolRef() const
+{
+    return this->stringProperty("metadata_of_pool");
+}
+
+bool VDI::metadataLatest() const
+{
+    return this->boolProperty("metadata_latest", false);
+}
+
+bool VDI::isToolsIso() const
+{
+    return this->boolProperty("is_tools_iso", false);
+}
+
+bool VDI::cbtEnabled() const
+{
+    return this->boolProperty("cbt_enabled", false);
 }
 
 QString VDI::objectType() const

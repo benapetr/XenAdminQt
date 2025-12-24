@@ -47,6 +47,7 @@ SOURCES += \
     xen/xenobject.cpp \
     xen/pool.cpp \
     xen/host.cpp \
+    xen/hostmetrics.cpp \
     xen/vm.cpp \
     xen/sr.cpp \
     xen/vdi.cpp \

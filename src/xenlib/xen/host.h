@@ -179,6 +179,56 @@ class XENLIB_EXPORT Host : public XenObject
          */
         QString poolRef() const;
 
+        qint64 memoryOverhead() const;
+        qint64 apiVersionMajor() const;
+        qint64 apiVersionMinor() const;
+        QString apiVersionVendor() const;
+        QVariantMap apiVersionVendorImplementation() const;
+        QVariantMap cpuConfiguration() const;
+        QString schedPolicy() const;
+        QStringList hostCPURefs() const;
+        QStringList allowedOperations() const;
+        QVariantMap currentOperations() const;
+        QStringList supportedBootloaders() const;
+        QVariantMap logging() const;
+        QString metricsRef() const;
+        QStringList haStatefiles() const;
+        QStringList haNetworkPeers() const;
+        QVariantMap biosStrings() const;
+        QVariantMap chipsetInfo() const;
+        QString externalAuthType() const;
+        QString externalAuthServiceName() const;
+        QVariantMap externalAuthConfiguration() const;
+        QString powerOnMode() const;
+        QVariantMap powerOnConfig() const;
+        QString localCacheSRRef() const;
+        QStringList pciRefs() const;
+        QStringList pgpuRefs() const;
+        QStringList pusbRefs() const;
+        QStringList patchRefs() const;
+        QStringList updateRefs() const;
+        QStringList updatesRequiringRebootRefs() const;
+        QStringList featureRefs() const;
+        QStringList pendingGuidances() const;
+        bool sslLegacy() const;
+        bool tlsVerificationEnabled() const;
+        bool httpsOnly() const;
+        QVariantMap guestVCPUsParams() const;
+        QString display() const;
+        QList<qint64> virtualHardwarePlatformVersions() const;
+        QString controlDomainRef() const;
+        QString iscsiIqn() const;
+        bool multipathing() const;
+        QString uefiCertificates() const;
+        QStringList certificateRefs() const;
+        QStringList editions() const;
+        QStringList crashdumpRefs() const;
+        QDateTime lastSoftwareUpdate() const;
+        QString latestSyncedUpdatesApplied() const;
+        QVariantMap licenseParams() const;
+        QString edition() const;
+        QVariantMap licenseServer() const;
+
     protected:
         QString objectType() const override;
 };
