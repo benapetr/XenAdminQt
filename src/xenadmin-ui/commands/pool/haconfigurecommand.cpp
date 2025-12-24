@@ -62,7 +62,7 @@ void HAConfigureCommand::Run()
     QString poolRef = pool->OpaqueRef();
     
     // Check if HA is already enabled
-    bool haEnabled = pool->haEnabled();
+    bool haEnabled = pool->HAEnabled();
 
     if (haEnabled)
     {

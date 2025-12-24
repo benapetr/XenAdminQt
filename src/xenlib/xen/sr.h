@@ -51,10 +51,10 @@ class PBD;
 class XENLIB_EXPORT SR : public XenObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString type READ type NOTIFY dataChanged)
-    Q_PROPERTY(bool shared READ shared NOTIFY dataChanged)
-    Q_PROPERTY(qint64 physicalSize READ physicalSize NOTIFY dataChanged)
-    Q_PROPERTY(qint64 physicalUtilisation READ physicalUtilisation NOTIFY dataChanged)
+    Q_PROPERTY(QString type READ GetType NOTIFY dataChanged)
+    Q_PROPERTY(bool shared READ IsShared NOTIFY dataChanged)
+    Q_PROPERTY(qint64 physicalSize READ PhysicalSize NOTIFY dataChanged)
+    Q_PROPERTY(qint64 physicalUtilisation READ PhysicalUtilisation NOTIFY dataChanged)
 
     public:
         explicit SR(XenConnection* connection,
@@ -66,138 +66,138 @@ class XENLIB_EXPORT SR : public XenObject
          * @brief Get SR type
          * @return Type string (e.g., "nfs", "lvmoiscsi", "lvm", "ext", "iso")
          */
-        QString type() const;
+        QString GetType() const;
 
         /**
          * @brief Check if SR is shared
          * @return true if SR is shared across multiple hosts
          */
-        bool shared() const;
+        bool IsShared() const;
 
         /**
          * @brief Get physical size (bytes)
          * @return Total physical size in bytes
          */
-        qint64 physicalSize() const;
+        qint64 PhysicalSize() const;
 
         /**
          * @brief Get physical utilisation (bytes)
          * @return Used physical space in bytes
          */
-        qint64 physicalUtilisation() const;
+        qint64 PhysicalUtilisation() const;
 
         /**
          * @brief Get virtual allocation (bytes)
          * @return Total virtual allocation in bytes
          */
-        qint64 virtualAllocation() const;
+        qint64 VirtualAllocation() const;
 
         /**
          * @brief Get free space (bytes)
          * @return Free physical space in bytes
          */
-        qint64 freeSpace() const;
+        qint64 FreeSpace() const;
 
         /**
          * @brief Get list of VDI references
          * @return List of VDI opaque references
          */
-        QStringList vdiRefs() const;
+        QStringList VDIRefs() const;
 
         /**
          * @brief Get list of PBD references
          * @return List of PBD opaque references
          */
-        QStringList pbdRefs() const;
+        QStringList PBDRefs() const;
 
         /**
          * @brief Get content type
          * @return Content type string ("user", "iso", "system", etc.)
          */
-        QString contentType() const;
+        QString ContentType() const;
 
         /**
          * @brief Get other_config dictionary
          * @return Map of additional configuration
          */
-        QVariantMap otherConfig() const;
+        QVariantMap OtherConfig() const;
 
         /**
          * @brief Get SM (storage manager) config
          * @return Map of SM configuration
          */
-        QVariantMap smConfig() const;
+        QVariantMap SMConfig() const;
 
         /**
          * @brief Get tags
          * @return List of tag strings
          */
-        QStringList tags() const;
+        QStringList Tags() const;
 
         /**
          * @brief Get allowed operations
          * @return List of allowed operation strings
          */
-        QStringList allowedOperations() const;
+        QStringList AllowedOperations() const;
 
         /**
          * @brief Get current operations
          * @return Map of operation ID to operation type
          */
-        QVariantMap currentOperations() const;
+        QVariantMap CurrentOperations() const;
 
         /**
          * @brief Check if SR supports trim/unmap
          * @return true if SR supports trim
          */
-        bool supportsTrim() const;
+        bool SupportsTrim() const;
 
         /**
          * @brief Get binary blobs associated with this SR
          * @return Map of blob name to blob reference
          */
-        QVariantMap blobs() const;
+        QVariantMap Blobs() const;
 
         /**
          * @brief Check if SR is assigned as local cache for its host
          * @return true if SR is assigned to be the local cache for its host
          */
-        bool localCacheEnabled() const;
+        bool LocalCacheEnabled() const;
 
         /**
          * @brief Get disaster recovery task which introduced this SR
          * @return DR_task opaque reference, or empty string if none
          */
-        QString introducedBy() const;
+        QString IntroducedBy() const;
 
         /**
          * @brief Check if SR is using aggregated local storage
          * @return true if SR is using clustered local storage
          */
-        bool clustered() const;
+        bool Clustered() const;
 
         /**
          * @brief Check if this is the SR that contains the Tools ISO VDIs
          * @return true if this SR contains XenServer Tools ISOs
          */
-        bool isToolsSR() const;
+        bool IsToolsSR() const;
 
         /**
          * @brief Check if SR is local (not shared)
          * @return true if SR is local to single host
          */
-        bool isLocal() const
+        bool IsLocal() const
         {
-            return !shared();
+            return !IsShared();
         }
 
         /**
          * @brief Check if SR is an ISO library
          * @return true if content type is "iso"
          */
-        bool isISOLibrary() const
+        bool IsISOLibrary() const
         {
-            return contentType() == "iso";
+            return ContentType() == "iso";
         }
 
         /**
@@ -208,7 +208,7 @@ class XENLIB_EXPORT SR : public XenObject
          *
          * @return Host opaque reference
          */
-        QString homeRef() const;
+        QString HomeRef() const;
 
         /**
          * @brief Get first attached storage host
@@ -220,7 +220,7 @@ class XENLIB_EXPORT SR : public XenObject
          *
          * @return Pointer to first attached Host, or nullptr if none
          */
-        class Host* getFirstAttachedStorageHost() const;
+        class Host* GetFirstAttachedStorageHost() const;
 
     protected:
         QString GetObjectType() const override;

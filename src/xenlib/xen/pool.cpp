@@ -40,32 +40,32 @@ QString Pool::GetObjectType() const
     return "pool";
 }
 
-QString Pool::masterRef() const
+QString Pool::GetMasterHostRef() const
 {
     return stringProperty("master");
 }
 
-QString Pool::defaultSRRef() const
+QString Pool::DefaultSRRef() const
 {
     return stringProperty("default_SR");
 }
 
-bool Pool::haEnabled() const
+bool Pool::HAEnabled() const
 {
     return boolProperty("ha_enabled", false);
 }
 
-QVariantMap Pool::haConfiguration() const
+QVariantMap Pool::HAConfiguration() const
 {
     return property("ha_configuration").toMap();
 }
 
-QVariantMap Pool::otherConfig() const
+QVariantMap Pool::OtherConfig() const
 {
     return property("other_config").toMap();
 }
 
-QStringList Pool::hostRefs() const
+QStringList Pool::HostRefs() const
 {
     // In XenAPI, there's exactly one pool per GetConnection, so all hosts belong to this pool
     // Query the cache for all host references
@@ -77,212 +77,212 @@ QStringList Pool::hostRefs() const
     return conn->getCache()->GetAllRefs("host");
 }
 
-bool Pool::isPoolOfOne() const
+bool Pool::IsPoolOfOne() const
 {
-    return hostRefs().count() == 1;
+    return HostRefs().count() == 1;
 }
 
-QStringList Pool::tags() const
+QStringList Pool::Tags() const
 {
     return stringListProperty("tags");
 }
 
-bool Pool::wlbEnabled() const
+bool Pool::WLBEnabled() const
 {
     return boolProperty("wlb_enabled", false);
 }
 
-bool Pool::livePatchingDisabled() const
+bool Pool::LivePatchingDisabled() const
 {
     return boolProperty("live_patching_disabled", false);
 }
 
-QString Pool::suspendImageSRRef() const
+QString Pool::SuspendImageSRRef() const
 {
     return stringProperty("suspend_image_SR");
 }
 
-QString Pool::crashDumpSRRef() const
+QString Pool::CrashDumpSRRef() const
 {
     return stringProperty("crash_dump_SR");
 }
 
-QStringList Pool::haStatefiles() const
+QStringList Pool::HAStatefiles() const
 {
     return stringListProperty("ha_statefiles");
 }
 
-qint64 Pool::haHostFailuresToTolerate() const
+qint64 Pool::HAHostFailuresToTolerate() const
 {
     return intProperty("ha_host_failures_to_tolerate", 0);
 }
 
-qint64 Pool::haPlanExistsFor() const
+qint64 Pool::HAPlanExistsFor() const
 {
     return intProperty("ha_plan_exists_for", 0);
 }
 
-bool Pool::haAllowOvercommit() const
+bool Pool::HAAllowOvercommit() const
 {
     return boolProperty("ha_allow_overcommit", false);
 }
 
-bool Pool::haOvercommitted() const
+bool Pool::HAOvercommitted() const
 {
     return boolProperty("ha_overcommitted", false);
 }
 
-QString Pool::haClusterStack() const
+QString Pool::HAClusterStack() const
 {
     return stringProperty("ha_cluster_stack");
 }
 
-bool Pool::redoLogEnabled() const
+bool Pool::RedoLogEnabled() const
 {
     return boolProperty("redo_log_enabled", false);
 }
 
-QString Pool::redoLogVDIRef() const
+QString Pool::RedoLogVDIRef() const
 {
     return stringProperty("redo_log_vdi");
 }
 
-QVariantMap Pool::guiConfig() const
+QVariantMap Pool::GUIConfig() const
 {
     return property("gui_config").toMap();
 }
 
-QVariantMap Pool::healthCheckConfig() const
+QVariantMap Pool::HealthCheckConfig() const
 {
     return property("health_check_config").toMap();
 }
 
-QVariantMap Pool::guestAgentConfig() const
+QVariantMap Pool::GuestAgentConfig() const
 {
     return property("guest_agent_config").toMap();
 }
 
-QVariantMap Pool::cpuInfo() const
+QVariantMap Pool::CPUInfo() const
 {
     return property("cpu_info").toMap();
 }
 
-QVariantMap Pool::blobs() const
+QVariantMap Pool::Blobs() const
 {
     return property("blobs").toMap();
 }
 
-QStringList Pool::metadataVDIRefs() const
+QStringList Pool::MetadataVDIRefs() const
 {
     return stringListProperty("metadata_VDIs");
 }
 
-QString Pool::wlbUrl() const
+QString Pool::WLBUrl() const
 {
     return stringProperty("wlb_url");
 }
 
-QString Pool::wlbUsername() const
+QString Pool::WLBUsername() const
 {
     return stringProperty("wlb_username");
 }
 
-bool Pool::wlbVerifyCert() const
+bool Pool::WLBVerifyCert() const
 {
     return boolProperty("wlb_verify_cert", false);
 }
 
-QString Pool::vswitchController() const
+QString Pool::VswitchController() const
 {
     return stringProperty("vswitch_controller");
 }
 
-QVariantMap Pool::restrictions() const
+QVariantMap Pool::Restrictions() const
 {
     return property("restrictions").toMap();
 }
 
-bool Pool::policyNoVendorDevice() const
+bool Pool::PolicyNoVendorDevice() const
 {
     return boolProperty("policy_no_vendor_device", false);
 }
 
-QStringList Pool::allowedOperations() const
+QStringList Pool::AllowedOperations() const
 {
     return stringListProperty("allowed_operations");
 }
 
-QVariantMap Pool::currentOperations() const
+QVariantMap Pool::CurrentOperations() const
 {
     return property("current_operations").toMap();
 }
 
-bool Pool::igmpSnoopingEnabled() const
+bool Pool::IGMPSnoopingEnabled() const
 {
     return boolProperty("igmp_snooping_enabled", false);
 }
 
-QString Pool::uefiCertificates() const
+QString Pool::UEFICertificates() const
 {
     return stringProperty("uefi_certificates");
 }
 
-bool Pool::tlsVerificationEnabled() const
+bool Pool::TLSVerificationEnabled() const
 {
     return boolProperty("tls_verification_enabled", false);
 }
 
-bool Pool::clientCertificateAuthEnabled() const
+bool Pool::ClientCertificateAuthEnabled() const
 {
     return boolProperty("client_certificate_auth_enabled", false);
 }
 
-QString Pool::clientCertificateAuthName() const
+QString Pool::ClientCertificateAuthName() const
 {
     return stringProperty("client_certificate_auth_name");
 }
 
-QStringList Pool::repositoryRefs() const
+QStringList Pool::RepositoryRefs() const
 {
     return stringListProperty("repositories");
 }
 
-QString Pool::repositoryProxyUrl() const
+QString Pool::RepositoryProxyUrl() const
 {
     return stringProperty("repository_proxy_url");
 }
 
-QString Pool::repositoryProxyUsername() const
+QString Pool::RepositoryProxyUsername() const
 {
     return stringProperty("repository_proxy_username");
 }
 
-QString Pool::repositoryProxyPasswordRef() const
+QString Pool::RepositoryProxyPasswordRef() const
 {
     return stringProperty("repository_proxy_password");
 }
 
-bool Pool::migrationCompression() const
+bool Pool::MigrationCompression() const
 {
     return boolProperty("migration_compression", false);
 }
 
-bool Pool::coordinatorBias() const
+bool Pool::CoordinatorBias() const
 {
     return boolProperty("coordinator_bias", true);
 }
 
-QString Pool::telemetryUuidRef() const
+QString Pool::TelemetryUuidRef() const
 {
     return stringProperty("telemetry_uuid");
 }
 
-QString Pool::telemetryFrequency() const
+QString Pool::TelemetryFrequency() const
 {
     return stringProperty("telemetry_frequency");
 }
 
-QDateTime Pool::telemetryNextCollection() const
+QDateTime Pool::TelemetryNextCollection() const
 {
     QString dateStr = stringProperty("telemetry_next_collection");
     if (dateStr.isEmpty())
@@ -290,7 +290,7 @@ QDateTime Pool::telemetryNextCollection() const
     return QDateTime::fromString(dateStr, Qt::ISODate);
 }
 
-QDateTime Pool::lastUpdateSync() const
+QDateTime Pool::LastUpdateSync() const
 {
     QString dateStr = stringProperty("last_update_sync");
     if (dateStr.isEmpty())
@@ -298,22 +298,22 @@ QDateTime Pool::lastUpdateSync() const
     return QDateTime::fromString(dateStr, Qt::ISODate);
 }
 
-QString Pool::updateSyncFrequency() const
+QString Pool::UpdateSyncFrequency() const
 {
     return stringProperty("update_sync_frequency");
 }
 
-qint64 Pool::updateSyncDay() const
+qint64 Pool::UpdateSyncDay() const
 {
     return intProperty("update_sync_day", 0);
 }
 
-bool Pool::updateSyncEnabled() const
+bool Pool::UpdateSyncEnabled() const
 {
     return boolProperty("update_sync_enabled", false);
 }
 
-bool Pool::isPsrPending() const
+bool Pool::IsPsrPending() const
 {
     return boolProperty("is_psr_pending", false);
 }

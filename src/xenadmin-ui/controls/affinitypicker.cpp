@@ -302,10 +302,10 @@ bool AffinityPicker::hasFullyConnectedSharedStorage() const
     {
         if (!sr || !sr->IsValid())
             continue;
-        if (!sr->shared())
+        if (!sr->IsShared())
             continue;
 
-        QStringList pbdRefs = sr->pbdRefs();
+        QStringList pbdRefs = sr->PBDRefs();
         QSet<QString> attachedHosts;
         for (const QString& pbdRef : pbdRefs)
         {

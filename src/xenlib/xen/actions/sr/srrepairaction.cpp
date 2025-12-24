@@ -74,7 +74,7 @@ void SrRepairAction::run()
     qDebug() << "SrRepairAction: Repairing SR" << m_sr->GetName();
 
     QString srRef = m_sr->OpaqueRef();
-    bool srShared = m_sr->shared();
+    bool srShared = m_sr->IsShared();
 
     // Get all PBDs for this SR
     QVariant pbdsVar = XenAPI::SR::get_PBDs(session, srRef);

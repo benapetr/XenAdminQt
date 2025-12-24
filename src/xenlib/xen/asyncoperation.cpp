@@ -394,7 +394,7 @@ void AsyncOperation::setSR(SR* sr)
         // Add home host if available and host is null (matches C# ActionBase.SR setter)
         if (!this->m_host)
         {
-            QString homeRef = sr->homeRef();
+            QString homeRef = sr->HomeRef();
             if (!homeRef.isEmpty() && !this->m_appliesTo.contains(homeRef))
             {
                 this->m_appliesTo.append(homeRef);

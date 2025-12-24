@@ -61,7 +61,7 @@ void SrTrimAction::run()
     setDescription("Reclaiming freed space from storage...");
 
     // Find first attached storage host
-    Host* host = m_sr->getFirstAttachedStorageHost();
+    Host* host = m_sr->GetFirstAttachedStorageHost();
     if (!host)
     {
         qWarning() << "SrTrimAction: Cannot reclaim freed space - SR is detached";
