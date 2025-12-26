@@ -16,6 +16,7 @@ SOURCES += \
     iconmanager.cpp \
     connectionprofile.cpp \
     dialogs/connectdialog.cpp \
+    dialogs/addserverdialog.cpp \
     dialogs/debugwindow.cpp \
     dialogs/aboutdialog.cpp \
     dialogs/ballooningdialog.cpp \
@@ -192,6 +193,7 @@ SOURCES += \
     navigation/navigationbuttons.cpp \
     widgets/wizardnavigationpane.cpp \
     network/httpconnect.cpp \
+    network/xenconnectionui.cpp \
     ConsoleView/ConsoleKeyHandler.cpp \
     ConsoleView/VNCGraphicsClient.cpp \
     ConsoleView/RdpClient.cpp \
@@ -215,6 +217,7 @@ HEADERS += \
     iconmanager.h \
     connectionprofile.h \
     dialogs/connectdialog.h \
+    dialogs/addserverdialog.h \
     dialogs/debugwindow.h \
     dialogs/aboutdialog.h \
     dialogs/ballooningdialog.h \
@@ -245,6 +248,7 @@ HEADERS += \
     dialogs/migratevirtualdiskdialog.h \
     dialogs/optionsdialog.h \
     dialogs/verticallytabbeddialog.h \
+    network/xenconnectionui.h \
     controls/affinitypicker.h \
     settingspanels/ieditpage.h \
     settingspanels/generaleditpage.h \
@@ -408,6 +412,7 @@ HEADERS += \
 FORMS += \
     mainwindow.ui \
     dialogs/connectdialog.ui \
+    dialogs/addserverdialog.ui \
     dialogs/debugwindow.ui \
     dialogs/ballooningdialog.ui \
     dialogs/commanderrordialog.ui \

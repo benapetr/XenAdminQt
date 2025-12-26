@@ -33,6 +33,9 @@
 #include <QtCore/QMutex>
 #include <QtCore/QDebug>
 #include <QtCore/QDateTime>
+#include <QtCore/QEventLoop>
+#include <QtCore/QThread>
+#include <QtCore/QTimer>
 
 class XenConnection::Private
 {
@@ -155,9 +158,123 @@ int XenConnection::GetPort() const
     return this->d->port;
 }
 
+QString XenConnection::GetUsername() const
+{
+    return this->d->username;
+}
+
+QString XenConnection::GetPassword() const
+{
+    return this->d->password;
+}
+
 QString XenConnection::GetSessionId() const
 {
     return this->d->sessionId;
+}
+
+XenSession* XenConnection::GetNewSession(const QString& hostname,
+                                         int port,
+                                         const QString& username,
+                                         const QString& password,
+                                         bool isElevated,
+                                         const PasswordPrompt& promptForNewPassword,
+                                         QString* outError,
+                                         QString* redirectHostname)
+{
+    static const int kMaxAttempts = 3;
+    static const int kDelayMs = 250;
+
+    QString currentUsername = username;
+    QString currentPassword = password;
+
+    for (int attempt = 0; attempt < kMaxAttempts; ++attempt)
+    {
+        XenConnection* newConn = new XenConnection(this);
+        newConn->setCertificateManager(this->d->certManager);
+
+        if (!newConn->ConnectToHost(hostname, port, currentUsername, currentPassword))
+        {
+            if (outError)
+                *outError = "Failed to initiate connection";
+            delete newConn;
+            QThread::msleep(kDelayMs);
+            continue;
+        }
+
+        if (!newConn->IsConnected())
+        {
+            QEventLoop loop;
+            QTimer timer;
+            timer.setSingleShot(true);
+            QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+            QObject::connect(newConn, &XenConnection::connected, &loop, &QEventLoop::quit);
+            QObject::connect(newConn, &XenConnection::error, &loop, &QEventLoop::quit);
+            timer.start(10000);
+            loop.exec();
+        }
+
+        if (!newConn->IsConnected())
+        {
+            if (outError)
+                *outError = "Failed to establish transport connection";
+            delete newConn;
+            QThread::msleep(kDelayMs);
+            continue;
+        }
+
+        XenSession* session = new XenSession(newConn, newConn);
+        newConn->SetSession(session);
+
+        QString redirectHost;
+        QObject::connect(session, &XenSession::needsRedirectToMaster,
+                         session, [&redirectHost](const QString& host) {
+                             redirectHost = host;
+                         });
+
+        if (session->Login(currentUsername, currentPassword))
+        {
+            return session;
+        }
+
+        if (!redirectHost.isEmpty())
+        {
+            if (redirectHostname)
+                *redirectHostname = redirectHost;
+            if (outError)
+                *outError = QString("HOST_IS_SLAVE:%1").arg(redirectHost);
+            delete newConn;
+            return nullptr;
+        }
+
+        const QString lastError = session->getLastError();
+        if (!isElevated && promptForNewPassword)
+        {
+            QString newPassword;
+            if (promptForNewPassword(currentPassword, &newPassword))
+            {
+                currentPassword = newPassword;
+                if (!newPassword.isEmpty())
+                    this->d->password = newPassword;
+                attempt = -1;
+                delete newConn;
+                continue;
+            }
+
+            if (outError)
+                *outError = "Authentication cancelled";
+            delete newConn;
+            return nullptr;
+        }
+
+        if (outError)
+            *outError = lastError.isEmpty() ? "Authentication failed" : lastError;
+
+        delete newConn;
+        QThread::msleep(kDelayMs);
+    }
+
+    return nullptr;
 }
 
 QByteArray XenConnection::SendRequest(const QByteArray& data)

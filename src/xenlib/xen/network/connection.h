@@ -33,6 +33,7 @@
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 #include <QtCore/QDateTime>
+#include <functional>
 
 class XenCertificateManager;
 class XenSession;
@@ -63,7 +64,20 @@ class XENLIB_EXPORT XenConnection : public QObject
 
         QString GetHostname() const;
         int GetPort() const;
+        QString GetUsername() const;
+        QString GetPassword() const;
         QString GetSessionId() const;
+
+        using PasswordPrompt = std::function<bool(const QString& oldPassword, QString* newPassword)>;
+
+        XenSession* GetNewSession(const QString& hostname,
+                                  int port,
+                                  const QString& username,
+                                  const QString& password,
+                                  bool isElevated,
+                                  const PasswordPrompt& promptForNewPassword = PasswordPrompt(),
+                                  QString* outError = nullptr,
+                                  QString* redirectHostname = nullptr);
 
         /**
          * @brief Send an API request and BLOCK waiting for response

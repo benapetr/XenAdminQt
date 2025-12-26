@@ -171,6 +171,7 @@ HEADERS += \
     search.h \
     xen/network/connection.h \
     xen/network/connectionworker.h \
+    xen/network/connecttask.h \
     xen/session.h \
     xen/api.h \
     xen/apiversion.h \

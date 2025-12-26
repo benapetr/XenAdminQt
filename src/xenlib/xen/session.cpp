@@ -55,8 +55,7 @@ class XenSession::Private
         bool parseLoginResponse(const QByteArray& response, QString& sessionId);
 };
 
-XenSession::XenSession(XenConnection* connection, QObject* parent)
-    : QObject(parent), d(new Private)
+XenSession::XenSession(XenConnection* connection, QObject* parent) : QObject(parent), d(new Private)
 {
     this->d->connection = connection;
     if (connection)
