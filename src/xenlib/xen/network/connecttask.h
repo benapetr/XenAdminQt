@@ -31,7 +31,10 @@
 #include "../../xenlib_global.h"
 #include <QtCore/QString>
 
-class Session;
+namespace XenAPI
+{
+    class Session;
+}
 
 /**
  * @brief Lightweight connection attempt state
@@ -60,7 +63,7 @@ class XENLIB_EXPORT ConnectTask
         /// True when the connection attempt has successfully completed.
         bool Connected = false;
         /// Session created by the connection attempt (not owned here).
-        Session* Session = nullptr;
+        XenAPI::Session* Session = nullptr;
 
         /**
          * @brief Convenience for cancellation callbacks.

@@ -25,25 +25,53 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NETWORKPROPERTIESCOMMAND_H
-#define NETWORKPROPERTIESCOMMAND_H
+#ifndef CONNECTINGTOSERVERDIALOG_H
+#define CONNECTINGTOSERVERDIALOG_H
 
-#include "../command.h"
+#include <QtCore/QPointer>
+#include <QtWidgets/QDialog>
 
-class NetworkPropertiesCommand : public Command
+class XenConnection;
+
+namespace Ui
+{
+    class ConnectingToServerDialog;
+}
+
+class ConnectingToServerDialog : public QDialog
 {
     Q_OBJECT
 
     public:
-        explicit NetworkPropertiesCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        ~NetworkPropertiesCommand() override;
+        explicit ConnectingToServerDialog(XenConnection* connection, QWidget* parent = nullptr);
+        ~ConnectingToServerDialog() override;
 
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
+        bool BeginConnect(QWidget* owner, bool initiateCoordinatorSearch);
+        QWidget* GetOwnerWidget() const;
+        void CloseConnectingDialog();
+
+    protected:
+        void closeEvent(QCloseEvent* event) override;
+
+    private slots:
+        void btnCancel_Click();
 
     private:
-        QString getSelectedNetworkUuid() const;
+        void RegisterEventHandlers();
+        void UnregisterEventHandlers();
+        bool HideAndPromptForNewPassword(const QString& oldPassword, QString* newPassword);
+        void Connection_ConnectionClosed();
+        void Connection_BeforeConnectionEnd();
+        void Connection_ConnectionMessageChanged(const QString& message);
+
+        Ui::ConnectingToServerDialog* ui;
+        XenConnection* m_connection;
+        QPointer<QWidget> m_ownerForm;
+        bool m_endBegun = false;
+
+        QMetaObject::Connection m_closedConn;
+        QMetaObject::Connection m_beforeEndConn;
+        QMetaObject::Connection m_messageConn;
 };
 
-#endif // NETWORKPROPERTIESCOMMAND_H
+#endif // CONNECTINGTOSERVERDIALOG_H

@@ -17,6 +17,7 @@ SOURCES += \
     connectionprofile.cpp \
     dialogs/connectdialog.cpp \
     dialogs/addserverdialog.cpp \
+    dialogs/connectingtoserverdialog.cpp \
     dialogs/debugwindow.cpp \
     dialogs/aboutdialog.cpp \
     dialogs/ballooningdialog.cpp \
@@ -218,6 +219,7 @@ HEADERS += \
     connectionprofile.h \
     dialogs/connectdialog.h \
     dialogs/addserverdialog.h \
+    dialogs/connectingtoserverdialog.h \
     dialogs/debugwindow.h \
     dialogs/aboutdialog.h \
     dialogs/ballooningdialog.h \
@@ -413,6 +415,7 @@ FORMS += \
     mainwindow.ui \
     dialogs/connectdialog.ui \
     dialogs/addserverdialog.ui \
+    dialogs/connectingtoserverdialog.ui \
     dialogs/debugwindow.ui \
     dialogs/ballooningdialog.ui \
     dialogs/commanderrordialog.ui \

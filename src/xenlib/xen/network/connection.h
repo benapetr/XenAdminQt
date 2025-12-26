@@ -36,6 +36,7 @@
 #include <functional>
 
 class XenCertificateManager;
+class ConnectTask;
 
 namespace XenAPI
 {
@@ -82,6 +83,27 @@ class XENLIB_EXPORT XenConnection : public QObject
                                   const PasswordPrompt& promptForNewPassword = PasswordPrompt(),
                                   QString* outError = nullptr,
                                   QString* redirectHostname = nullptr);
+
+        // C#-style connection flow scaffolding (not wired into current runtime).
+        void BeginConnect(bool initiateCoordinatorSearch,
+                          const PasswordPrompt& promptForNewPassword = PasswordPrompt());
+        void EndConnect(bool clearCache = true, bool exiting = false);
+        void Interrupt();
+        ConnectTask* GetConnectTask() const;
+        bool InProgress() const;
+        bool IsConnectedNewFlow() const;
+        XenAPI::Session* GetConnectSession() const;
+
+        bool getSaveDisconnected() const;
+        void setSaveDisconnected(bool save);
+        bool getExpectPasswordIsCorrect() const;
+        void setExpectPasswordIsCorrect(bool expect);
+        bool getSuppressErrors() const;
+        void setSuppressErrors(bool suppress);
+        bool getPreventResettingPasswordPrompt() const;
+        void setPreventResettingPasswordPrompt(bool prevent);
+        bool getFromDialog() const;
+        void setFromDialog(bool fromDialog);
 
         /**
          * @brief Send an API request and BLOCK waiting for response
@@ -145,6 +167,16 @@ class XENLIB_EXPORT XenConnection : public QObject
         void error(const QString& message);
         void progressUpdate(const QString& message);
         void cacheDataReceived(const QByteArray& data);
+        void cachePopulated();
+        void connectionResult(bool connected, const QString& reason);
+        void connectionStateChanged();
+        void connectionLost();
+        void connectionClosed();
+        void connectionReconnecting();
+        void beforeConnectionEnd();
+        void connectionMessageChanged(const QString& message);
+        void beforeMajorChange(bool background);
+        void afterMajorChange(bool background);
 
         /**
          * @brief Emitted when async API request completes

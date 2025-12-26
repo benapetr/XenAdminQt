@@ -28,6 +28,7 @@
 #include "connection.h"
 #include "connectionworker.h"
 #include "certificatemanager.h"
+#include "connecttask.h"
 #include "../session.h"
 #include "../../xencache.h"
 #include <QtCore/QMutex>
@@ -71,6 +72,14 @@ class XenConnection::Private
         // Failover state
         bool expectDisruption = false;
         bool coordinatorMayChange = false;
+
+        // C#-style connection flow scaffolding
+        ConnectTask* connectTask = nullptr;
+        bool saveDisconnected = false;
+        bool expectPasswordIsCorrect = true;
+        bool suppressErrors = false;
+        bool preventResettingPasswordPrompt = false;
+        bool fromDialog = false;
 };
 
 XenConnection::XenConnection(QObject* parent) : QObject(parent), d(new Private)
@@ -81,6 +90,8 @@ XenConnection::XenConnection(QObject* parent) : QObject(parent), d(new Private)
 
 XenConnection::~XenConnection()
 {
+    if (this->d->connectTask)
+        this->EndConnect(false, true);
     this->Disconnect();
     delete this->d->cache;
     delete this->d;
@@ -277,6 +288,165 @@ Session* XenConnection::GetNewSession(const QString& hostname,
     }
 
     return nullptr;
+}
+
+void XenConnection::BeginConnect(bool initiateCoordinatorSearch,
+                                 const PasswordPrompt& promptForNewPassword)
+{
+    if (this->d->connectTask)
+        return;
+
+    if (initiateCoordinatorSearch)
+    {
+        this->d->findingNewCoordinator = true;
+        this->d->findingNewCoordinatorStartedAt = QDateTime::currentDateTimeUtc();
+    }
+
+    this->d->connectTask = new ConnectTask(this->d->host, this->d->port);
+
+    QString error;
+    QString redirectHost;
+    Session* session = this->GetNewSession(this->d->host,
+                                           this->d->port,
+                                           this->d->username,
+                                           this->d->password,
+                                           false,
+                                           promptForNewPassword,
+                                           &error,
+                                           &redirectHost);
+
+    if (session)
+    {
+        this->d->connectTask->Session = session;
+        this->d->connectTask->Connected = true;
+        this->d->expectPasswordIsCorrect = true;
+        emit this->connectionResult(true, QString());
+    } else
+    {
+        if (!error.isEmpty())
+            emit this->connectionResult(false, error);
+        else
+            emit this->connectionResult(false, "Connection failed");
+    }
+
+    emit this->connectionStateChanged();
+}
+
+void XenConnection::EndConnect(bool clearCache, bool exiting)
+{
+    Q_UNUSED(exiting);
+
+    if (!this->d->connectTask)
+        return;
+
+    emit this->beforeConnectionEnd();
+
+    this->d->connectTask->Cancelled = true;
+    Session* session = this->d->connectTask->Session;
+    if (session)
+    {
+        session->Logout();
+        QObject* owner = session->parent();
+        if (owner)
+            delete owner;
+        else
+            delete session;
+    }
+
+    // TODO: mirror C# ClearCache path (ClearingCache event, event queue flush, cache clear on background thread).
+    if (clearCache && this->d->cache)
+    {
+        this->d->cache->Clear();
+    }
+
+    // TODO: reset password prompt handler when PreventResettingPasswordPrompt is false (C#).
+
+    delete this->d->connectTask;
+    this->d->connectTask = nullptr;
+
+    emit this->connectionClosed();
+    emit this->connectionStateChanged();
+}
+
+void XenConnection::Interrupt()
+{
+    if (!this->d->connectTask)
+        return;
+
+    this->d->connectTask->Cancelled = true;
+    // TODO: port HandleConnectionLost behavior (cancel actions, cache clear, reconnection scheduling).
+    emit this->connectionLost();
+    emit this->connectionStateChanged();
+}
+
+ConnectTask* XenConnection::GetConnectTask() const
+{
+    return this->d->connectTask;
+}
+
+bool XenConnection::InProgress() const
+{
+    return this->d->connectTask != nullptr;
+}
+
+bool XenConnection::IsConnectedNewFlow() const
+{
+    return this->d->connectTask && this->d->connectTask->Connected;
+}
+
+Session* XenConnection::GetConnectSession() const
+{
+    return this->d->connectTask ? this->d->connectTask->Session : nullptr;
+}
+
+bool XenConnection::getSaveDisconnected() const
+{
+    return this->d->saveDisconnected;
+}
+
+void XenConnection::setSaveDisconnected(bool save)
+{
+    this->d->saveDisconnected = save;
+}
+
+bool XenConnection::getExpectPasswordIsCorrect() const
+{
+    return this->d->expectPasswordIsCorrect;
+}
+
+void XenConnection::setExpectPasswordIsCorrect(bool expect)
+{
+    this->d->expectPasswordIsCorrect = expect;
+}
+
+bool XenConnection::getSuppressErrors() const
+{
+    return this->d->suppressErrors;
+}
+
+void XenConnection::setSuppressErrors(bool suppress)
+{
+    this->d->suppressErrors = suppress;
+}
+
+bool XenConnection::getPreventResettingPasswordPrompt() const
+{
+    return this->d->preventResettingPasswordPrompt;
+}
+
+void XenConnection::setPreventResettingPasswordPrompt(bool prevent)
+{
+    this->d->preventResettingPasswordPrompt = prevent;
+}
+
+bool XenConnection::getFromDialog() const
+{
+    return this->d->fromDialog;
+}
+
+void XenConnection::setFromDialog(bool fromDialog)
+{
+    this->d->fromDialog = fromDialog;
 }
 
 QByteArray XenConnection::SendRequest(const QByteArray& data)
