@@ -29,16 +29,43 @@
 #include "connectionworker.h"
 #include "certificatemanager.h"
 #include "connecttask.h"
+#include "../api.h"
+#include "../eventpoller.h"
+#include "../failure.h"
+#include "../../utils/misc.h"
 #include "../session.h"
 #include "../../xencache.h"
 #include <QtCore/QMutex>
+#include <QtCore/QMutexLocker>
+#include <QtCore/QQueue>
 #include <QtCore/QDebug>
 #include <QtCore/QDateTime>
 #include <QtCore/QEventLoop>
 #include <QtCore/QThread>
 #include <QtCore/QTimer>
+#include <QtCore/QStringList>
 
 using namespace XenAPI;
+
+namespace
+{
+    const int kReconnectHostTimeoutMs = 120 * 1000;
+    const int kReconnectShortTimeoutMs = 5 * 1000;
+    const int kSearchNewCoordinatorTimeoutMs = 60 * 1000;
+    const int kSearchNextSupporterTimeoutMs = 15 * 1000;
+    const int kSearchNewCoordinatorStopAfterMs = 6 * 60 * 1000;
+
+    QString valueForKeys(const QVariantMap& map, std::initializer_list<const char*> keys)
+    {
+        for (const char* key : keys)
+        {
+            const QString value = map.value(QString::fromLatin1(key)).toString();
+            if (!value.isEmpty())
+                return value;
+        }
+        return QString();
+    }
+}
 
 class XenConnection::Private
 {
@@ -66,6 +93,7 @@ class XenConnection::Private
 
         // Coordinator tracking for failover
         QString lastCoordinatorHostname;
+        QString lastConnectionFullName;
         bool findingNewCoordinator = false;
         QDateTime findingNewCoordinatorStartedAt;
 
@@ -80,6 +108,22 @@ class XenConnection::Private
         bool suppressErrors = false;
         bool preventResettingPasswordPrompt = false;
         bool fromDialog = false;
+        bool cacheIsPopulated = false;
+        PasswordPrompt promptForNewPassword;
+        QStringList lastFailureDescription;
+
+        QThread* connectThread = nullptr;
+        QThread* eventPollerThread = nullptr;
+        EventPoller* eventPoller = nullptr;
+        QString eventToken;
+
+        QQueue<QVariantMap> eventQueue;
+        QMutex eventQueueMutex;
+        QTimer* cacheUpdateTimer = nullptr;
+        bool cacheUpdaterRunning = false;
+        bool updatesWaiting = false;
+
+        QTimer* reconnectionTimer = nullptr;
 };
 
 XenConnection::XenConnection(QObject* parent) : QObject(parent), d(new Private)
@@ -186,6 +230,26 @@ QString XenConnection::GetSessionId() const
     return this->d->sessionId;
 }
 
+void XenConnection::SetHostname(const QString& hostname)
+{
+    this->d->host = hostname;
+}
+
+void XenConnection::SetPort(int port)
+{
+    this->d->port = port;
+}
+
+void XenConnection::SetUsername(const QString& username)
+{
+    this->d->username = username;
+}
+
+void XenConnection::SetPassword(const QString& password)
+{
+    this->d->password = password;
+}
+
 Session* XenConnection::GetNewSession(const QString& hostname,
                                          int port,
                                          const QString& username,
@@ -247,6 +311,7 @@ Session* XenConnection::GetNewSession(const QString& hostname,
 
         if (session->Login(currentUsername, currentPassword))
         {
+            this->d->lastFailureDescription.clear();
             return session;
         }
 
@@ -256,6 +321,8 @@ Session* XenConnection::GetNewSession(const QString& hostname,
                 *redirectHostname = redirectHost;
             if (outError)
                 *outError = QString("HOST_IS_SLAVE:%1").arg(redirectHost);
+            this->d->lastFailureDescription = QStringList()
+                << Failure::HOST_IS_SLAVE << redirectHost;
             delete newConn;
             return nullptr;
         }
@@ -283,6 +350,8 @@ Session* XenConnection::GetNewSession(const QString& hostname,
         if (outError)
             *outError = lastError.isEmpty() ? "Authentication failed" : lastError;
 
+        this->d->lastFailureDescription = session->getLastErrorDescription();
+
         delete newConn;
         QThread::msleep(kDelayMs);
     }
@@ -293,7 +362,7 @@ Session* XenConnection::GetNewSession(const QString& hostname,
 void XenConnection::BeginConnect(bool initiateCoordinatorSearch,
                                  const PasswordPrompt& promptForNewPassword)
 {
-    if (this->d->connectTask)
+    if (this->d->connectTask || (this->d->connectThread && this->d->connectThread->isRunning()))
         return;
 
     if (initiateCoordinatorSearch)
@@ -303,33 +372,23 @@ void XenConnection::BeginConnect(bool initiateCoordinatorSearch,
     }
 
     this->d->connectTask = new ConnectTask(this->d->host, this->d->port);
+    this->d->promptForNewPassword = promptForNewPassword;
+    this->d->cacheIsPopulated = false;
+    emit this->connectionMessageChanged(QString("Attempting to connect to %1...").arg(this->d->host));
 
-    QString error;
-    QString redirectHost;
-    Session* session = this->GetNewSession(this->d->host,
-                                           this->d->port,
-                                           this->d->username,
-                                           this->d->password,
-                                           false,
-                                           promptForNewPassword,
-                                           &error,
-                                           &redirectHost);
+    this->d->connectThread = QThread::create([this]() {
+        this->connectWorkerThread();
+    });
 
-    if (session)
-    {
-        this->d->connectTask->Session = session;
-        this->d->connectTask->Connected = true;
-        this->d->expectPasswordIsCorrect = true;
-        emit this->connectionResult(true, QString());
-    } else
-    {
-        if (!error.isEmpty())
-            emit this->connectionResult(false, error);
-        else
-            emit this->connectionResult(false, "Connection failed");
-    }
+    connect(this->d->connectThread, &QThread::finished, this, [this]() {
+        if (this->d->connectThread)
+        {
+            this->d->connectThread->deleteLater();
+            this->d->connectThread = nullptr;
+        }
+    });
 
-    emit this->connectionStateChanged();
+    this->d->connectThread->start();
 }
 
 void XenConnection::EndConnect(bool clearCache, bool exiting)
@@ -342,6 +401,44 @@ void XenConnection::EndConnect(bool clearCache, bool exiting)
     emit this->beforeConnectionEnd();
 
     this->d->connectTask->Cancelled = true;
+
+    if (this->d->eventPoller)
+    {
+        QMetaObject::invokeMethod(this->d->eventPoller, [this]() {
+            this->d->eventPoller->stop();
+            this->d->eventPoller->reset();
+        }, Qt::BlockingQueuedConnection);
+    }
+
+    if (this->d->eventPollerThread && this->d->eventPollerThread->isRunning())
+    {
+        this->d->eventPollerThread->quit();
+        this->d->eventPollerThread->wait(5000);
+    }
+
+    if (this->d->eventPoller)
+    {
+        this->d->eventPoller->deleteLater();
+        this->d->eventPoller = nullptr;
+    }
+
+    if (this->d->eventPollerThread)
+    {
+        this->d->eventPollerThread->deleteLater();
+        this->d->eventPollerThread = nullptr;
+    }
+
+    if (this->d->connectThread && this->d->connectThread->isRunning())
+    {
+        this->d->connectThread->requestInterruption();
+        this->d->connectThread->quit();
+        this->d->connectThread->wait(5000);
+    }
+
+    if (this->d->reconnectionTimer)
+    {
+        this->d->reconnectionTimer->stop();
+    }
     Session* session = this->d->connectTask->Session;
     if (session)
     {
@@ -379,6 +476,504 @@ void XenConnection::Interrupt()
     emit this->connectionStateChanged();
 }
 
+void XenConnection::onCacheUpdateTimer()
+{
+    QList<QVariantMap> events;
+    {
+        QMutexLocker locker(&this->d->eventQueueMutex);
+        if (this->d->cacheUpdaterRunning)
+        {
+            this->d->updatesWaiting = true;
+            return;
+        }
+
+        this->d->cacheUpdaterRunning = true;
+        this->d->updatesWaiting = false;
+        while (!this->d->eventQueue.isEmpty())
+            events.append(this->d->eventQueue.dequeue());
+    }
+
+    for (const QVariantMap& eventData : events)
+    {
+        QString eventClass = valueForKeys(eventData, {"class_", "class"});
+        QString operation = eventData.value("operation").toString();
+        QString ref = valueForKeys(eventData, {"opaqueRef", "ref"});
+
+        if (eventClass.isEmpty() || operation.isEmpty() || ref.isEmpty())
+            continue;
+
+        QString cacheType = eventClass.toLower();
+
+        if (operation == "del")
+        {
+            if (this->d->cache)
+                this->d->cache->Remove(cacheType, ref);
+        } else if (operation == "add" || operation == "mod")
+        {
+            QVariantMap snapshot = eventData.value("snapshot").toMap();
+            if (!snapshot.isEmpty())
+            {
+                snapshot["ref"] = ref;
+                snapshot["opaqueRef"] = ref;
+                if (this->d->cache)
+                    this->d->cache->Update(cacheType, ref, snapshot);
+            } else
+            {
+                // TODO: fetch full record when snapshot is missing (mirrors XenLib::requestObjectData).
+            }
+        }
+    }
+
+    if (!this->d->cacheIsPopulated)
+    {
+        this->d->cacheIsPopulated = true;
+        emit this->cachePopulated();
+    }
+
+    {
+        QMutexLocker locker(&this->d->eventQueueMutex);
+        this->d->cacheUpdaterRunning = false;
+        if (this->d->updatesWaiting)
+        {
+            this->d->updatesWaiting = false;
+            if (this->d->cacheUpdateTimer)
+                this->d->cacheUpdateTimer->start(50);
+        }
+    }
+}
+
+void XenConnection::onEventPollerEventReceived(const QVariantMap& eventData)
+{
+    {
+        QMutexLocker locker(&this->d->eventQueueMutex);
+        this->d->eventQueue.enqueue(eventData);
+    }
+
+    if (!this->d->cacheUpdateTimer)
+    {
+        this->d->cacheUpdateTimer = new QTimer(this);
+        this->d->cacheUpdateTimer->setSingleShot(true);
+        connect(this->d->cacheUpdateTimer, &QTimer::timeout, this, &XenConnection::onCacheUpdateTimer);
+    }
+
+    if (!this->d->cacheUpdaterRunning)
+        this->d->cacheUpdateTimer->start(50);
+    else
+        this->d->updatesWaiting = true;
+}
+
+void XenConnection::onEventPollerCachePopulated()
+{
+    if (!this->d->cacheIsPopulated)
+    {
+        this->d->cacheIsPopulated = true;
+        emit this->cachePopulated();
+    }
+}
+
+void XenConnection::onEventPollerConnectionLost()
+{
+    this->handleConnectionLostNewFlow();
+}
+
+void XenConnection::handleConnectionLostNewFlow()
+{
+    if (!this->d->connectTask)
+        return;
+
+    this->d->connectTask->Connected = false;
+
+    QString poolName;
+    bool haEnabled = false;
+    QString coordinatorAddress;
+    this->updatePoolMembersFromCache(&poolName, &haEnabled, &coordinatorAddress);
+
+    const QString hostnameWithPort = QString("%1:%2").arg(this->d->host).arg(this->d->port);
+    this->d->lastCoordinatorHostname = this->d->host;
+    if (poolName.isEmpty())
+        this->d->lastConnectionFullName = hostnameWithPort;
+    else
+        this->d->lastConnectionFullName = QString("'%1' (%2)").arg(poolName, hostnameWithPort);
+
+    const QStringList members = this->GetPoolMembers();
+    this->EndConnect(true, false);
+
+    if (!members.isEmpty() && coordinatorAddress == members.first() && members.size() > 1)
+        this->SetCurrentPoolMemberIndex(1);
+
+    const bool searchCoordinator = (this->d->coordinatorMayChange || haEnabled) &&
+                                   members.count() > 1;
+    if (searchCoordinator)
+    {
+        this->d->findingNewCoordinator = true;
+        this->d->findingNewCoordinatorStartedAt = QDateTime::currentDateTimeUtc();
+        this->startReconnectCoordinatorTimer(kSearchNewCoordinatorTimeoutMs);
+    } else
+    {
+        this->d->findingNewCoordinator = false;
+        this->startReconnectSingleHostTimer();
+    }
+
+    emit this->connectionLost();
+}
+
+int XenConnection::reconnectHostTimeoutMs() const
+{
+    if (this->d->eventPollerThread && !this->d->eventPollerThread->isRunning())
+        return kReconnectShortTimeoutMs;
+    return kReconnectHostTimeoutMs;
+}
+
+void XenConnection::startReconnectSingleHostTimer()
+{
+    const int timeoutMs = this->reconnectHostTimeoutMs();
+    if (!this->d->reconnectionTimer)
+        this->d->reconnectionTimer = new QTimer(this);
+
+    this->d->reconnectionTimer->setSingleShot(!this->d->expectDisruption);
+    QObject::disconnect(this->d->reconnectionTimer, nullptr, nullptr, nullptr);
+    connect(this->d->reconnectionTimer, &QTimer::timeout,
+            this, &XenConnection::reconnectSingleHostTimer);
+
+    const QString target = this->d->lastConnectionFullName.isEmpty()
+        ? this->d->host
+        : this->d->lastConnectionFullName;
+    emit this->connectionMessageChanged(
+        QString("Connection lost. Reconnecting to %1 in %2 seconds...")
+            .arg(target)
+            .arg(timeoutMs / 1000));
+
+    this->d->reconnectionTimer->start(timeoutMs);
+}
+
+void XenConnection::startReconnectCoordinatorTimer(int timeoutMs)
+{
+    if (!this->d->reconnectionTimer)
+        this->d->reconnectionTimer = new QTimer(this);
+
+    this->d->reconnectionTimer->setSingleShot(true);
+    QObject::disconnect(this->d->reconnectionTimer, nullptr, nullptr, nullptr);
+    connect(this->d->reconnectionTimer, &QTimer::timeout,
+            this, &XenConnection::reconnectCoordinatorTimer);
+
+    const QString target = this->d->lastConnectionFullName.isEmpty()
+        ? this->d->host
+        : this->d->lastConnectionFullName;
+    emit this->connectionMessageChanged(
+        QString("Searching for pool coordinator for %1. Retrying in %2 seconds...")
+            .arg(target)
+            .arg(timeoutMs / 1000));
+
+    this->d->reconnectionTimer->start(timeoutMs);
+}
+
+void XenConnection::reconnectSingleHostTimer()
+{
+    if (this->IsConnectedNewFlow() || this->InProgress())
+        return;
+
+    if (!this->d->expectDisruption && this->d->reconnectionTimer)
+        this->d->reconnectionTimer->stop();
+
+    emit this->connectionReconnecting();
+    this->BeginConnect(false, this->d->promptForNewPassword);
+}
+
+void XenConnection::reconnectCoordinatorTimer()
+{
+    if (this->IsConnectedNewFlow() || this->InProgress())
+        return;
+
+    const QDateTime startedAt = this->d->findingNewCoordinatorStartedAt;
+    if (startedAt.isValid())
+    {
+        const qint64 elapsedMs = startedAt.msecsTo(QDateTime::currentDateTimeUtc());
+        if (!this->d->expectDisruption && elapsedMs > kSearchNewCoordinatorStopAfterMs)
+        {
+            this->d->findingNewCoordinator = false;
+            if (!this->d->lastCoordinatorHostname.isEmpty())
+                this->SetHostname(this->d->lastCoordinatorHostname);
+            emit this->connectionReconnecting();
+            this->BeginConnect(false, this->d->promptForNewPassword);
+            return;
+        }
+    }
+
+    if (this->poolMemberRemaining())
+    {
+        const QString nextMember = this->getNextPoolMember();
+        if (!nextMember.isEmpty())
+            this->SetHostname(nextMember);
+
+        emit this->connectionMessageChanged(
+            QString("Retrying pool member %1...").arg(this->d->host));
+
+        emit this->connectionReconnecting();
+        this->BeginConnect(false, this->d->promptForNewPassword);
+        return;
+    }
+
+    this->resetPoolMemberIndex();
+    if (this->poolMemberRemaining())
+    {
+        this->startReconnectCoordinatorTimer(kSearchNextSupporterTimeoutMs);
+    } else
+    {
+        this->d->findingNewCoordinator = false;
+    }
+}
+
+bool XenConnection::poolMemberRemaining() const
+{
+    QMutexLocker locker(&this->d->poolMembersMutex);
+    return this->d->poolMemberIndex < this->d->poolMembers.count();
+}
+
+void XenConnection::updatePoolMembersFromCache(QString* poolName,
+                                               bool* haEnabled,
+                                               QString* coordinatorAddress)
+{
+    if (poolName)
+        poolName->clear();
+    if (haEnabled)
+        *haEnabled = false;
+    if (coordinatorAddress)
+        coordinatorAddress->clear();
+
+    if (!this->d->cache)
+        return;
+
+    QVariantMap poolData;
+    const QList<QVariantMap> pools = this->d->cache->GetAllData("pool");
+    if (!pools.isEmpty())
+        poolData = pools.first();
+
+    const QString resolvedPoolName = poolData.value("name_label").toString();
+    if (poolName)
+        *poolName = resolvedPoolName.isEmpty() ? poolData.value("name").toString() : resolvedPoolName;
+
+    if (haEnabled)
+        *haEnabled = poolData.value("ha_enabled", false).toBool();
+
+    QVariant masterVar = poolData.value("master");
+    QString masterRef;
+    if (masterVar.type() == QVariant::List)
+    {
+        const QVariantList masterList = masterVar.toList();
+        if (!masterList.isEmpty())
+            masterRef = masterList.first().toString();
+    } else
+    {
+        masterRef = masterVar.toString();
+    }
+
+    QString resolvedCoordinator;
+    if (!masterRef.isEmpty())
+    {
+        const QVariantMap hostData = this->d->cache->ResolveObjectData("host", masterRef);
+        resolvedCoordinator = hostData.value("address").toString();
+    }
+
+    if (coordinatorAddress)
+        *coordinatorAddress = resolvedCoordinator;
+
+    QStringList members;
+    const QList<QVariantMap> hosts = this->d->cache->GetAllData("host");
+    for (const QVariantMap& hostData : hosts)
+    {
+        const QString address = hostData.value("address").toString();
+        if (!address.isEmpty())
+            members.append(address);
+    }
+
+    if (!members.isEmpty() && !resolvedCoordinator.isEmpty())
+    {
+        members.removeAll(resolvedCoordinator);
+        members.prepend(resolvedCoordinator);
+    }
+
+    if (!members.isEmpty())
+        this->SetPoolMembers(members);
+}
+
+void XenConnection::connectWorkerThread()
+{
+    QString error;
+    QString redirectHost;
+    if (!this->d->connectTask || this->d->connectTask->Cancelled)
+        return;
+
+    Session* session = this->GetNewSession(this->d->host,
+                                           this->d->port,
+                                           this->d->username,
+                                           this->d->password,
+                                           false,
+                                           this->d->promptForNewPassword,
+                                           &error,
+                                           &redirectHost);
+
+    if (!session || !this->d->connectTask || this->d->connectTask->Cancelled)
+    {
+        const QString reason = !error.isEmpty() ? error : QString("Connection failed");
+        emit this->connectionResult(false, reason);
+        emit this->connectionStateChanged();
+        return;
+    }
+
+    this->d->connectTask->Session = session;
+    this->d->connectTask->Connected = true;
+    this->d->expectPasswordIsCorrect = true;
+    emit this->connectionMessageChanged(QString("Synchronizing with %1...").arg(this->d->host));
+
+    XenRpcAPI api(session);
+    QString token;
+
+           // Populate cache using event.from
+    if (this->d->cache)
+        this->d->cache->Clear();
+
+           // Preload roles (not delivered by event.from)
+    try
+    {
+        QVariantList roleParams;
+        roleParams.append(session->getSessionId());
+        QByteArray roleRequest = api.buildJsonRpcCall("role.get_all_records", roleParams);
+        QByteArray roleResponse = session->sendApiRequest(QString::fromUtf8(roleRequest));
+        if (!roleResponse.isEmpty())
+        {
+            QVariant parsed = api.parseJsonRpcResponse(roleResponse);
+            QVariant roleData = parsed;
+            if (Misc::QVariantIsMap(parsed))
+            {
+                QVariantMap map = parsed.toMap();
+                if (map.contains("Value"))
+                    roleData = map.value("Value");
+            }
+
+            if (Misc::QVariantIsMap(roleData))
+            {
+                QVariantMap roles = roleData.toMap();
+                for (auto it = roles.constBegin(); it != roles.constEnd(); ++it)
+                {
+                    QString roleRef = it.key();
+                    QVariantMap roleRecord = it.value().toMap();
+                    roleRecord["ref"] = roleRef;
+                    roleRecord["opaqueRef"] = roleRef;
+                    if (this->d->cache)
+                        this->d->cache->Update("role", roleRef, roleRecord);
+                }
+            }
+        }
+    } catch (...)
+    {
+      // Ignore role preload failures; event.from cache population still proceeds.
+    }
+
+    QVariantMap eventBatch = api.eventFrom(QStringList() << "*", "", 30.0);
+    if (eventBatch.contains("token"))
+        token = eventBatch.value("token").toString();
+
+    QVariantList events = eventBatch.value("events").toList();
+    for (const QVariant& eventVar : events)
+    {
+        QVariantMap event = eventVar.toMap();
+        const QString objectClass = valueForKeys(event, {"class_", "class"});
+        const QString operation = event.value("operation").toString();
+        const QString objectRef = valueForKeys(event, {"opaqueRef", "ref"});
+        const QVariant snapshot = event.value("snapshot");
+
+        if (objectClass.isEmpty() || objectRef.isEmpty())
+            continue;
+
+        if (objectClass == "session" || objectClass == "event" ||
+            objectClass == "user" || objectClass == "secret")
+        {
+            continue;
+        }
+
+        if ((operation == "add" || operation == "mod") &&
+            snapshot.isValid() && Misc::QVariantIsMap(snapshot))
+        {
+            QVariantMap objectData = snapshot.toMap();
+            objectData["ref"] = objectRef;
+            objectData["opaqueRef"] = objectRef;
+            if (this->d->cache)
+                this->d->cache->Update(objectClass.toLower(), objectRef, objectData);
+        }
+    }
+
+    // Cache explicit console records
+    try
+    {
+        QVariantList consoleParams;
+        consoleParams.append(session->getSessionId());
+        QByteArray consoleRequest = api.buildJsonRpcCall("console.get_all_records", consoleParams);
+        QByteArray consoleResponse = session->sendApiRequest(QString::fromUtf8(consoleRequest));
+        if (!consoleResponse.isEmpty())
+        {
+            QVariant parsed = api.parseJsonRpcResponse(consoleResponse);
+            QVariant responseData = parsed;
+            if (Misc::QVariantIsMap(parsed))
+            {
+                QVariantMap map = parsed.toMap();
+                if (map.contains("Value"))
+                    responseData = map.value("Value");
+            }
+
+            if (Misc::QVariantIsMap(responseData))
+            {
+                QVariantMap consolesMap = responseData.toMap();
+                for (auto it = consolesMap.constBegin(); it != consolesMap.constEnd(); ++it)
+                {
+                    QString consoleRef = it.key();
+                    QVariantMap consoleData = it.value().toMap();
+                    consoleData["ref"] = consoleRef;
+                    consoleData["opaqueRef"] = consoleRef;
+                    if (this->d->cache)
+                        this->d->cache->Update("console", consoleRef, consoleData);
+                }
+            }
+        }
+    } catch (...)
+    {
+    }
+
+    this->d->cacheIsPopulated = true;
+    emit this->cachePopulated();
+
+    if (!this->d->eventPollerThread)
+    {
+        this->d->eventPollerThread = new QThread();
+        this->d->eventPollerThread->start();
+    }
+
+    if (!this->d->eventPoller)
+    {
+        this->d->eventPoller = new EventPoller();
+        this->d->eventPoller->moveToThread(this->d->eventPollerThread);
+        connect(this->d->eventPoller, &EventPoller::eventReceived,
+                this, &XenConnection::onEventPollerEventReceived);
+        connect(this->d->eventPoller, &EventPoller::cachePopulated,
+                this, &XenConnection::onEventPollerCachePopulated);
+        connect(this->d->eventPoller, &EventPoller::connectionLost,
+                this, &XenConnection::onEventPollerConnectionLost);
+    }
+
+    const QStringList classes = {
+                                 "vm", "host", "pool", "sr", "vbd", "vdi", "vif",
+                                 "network", "pbd", "pif", "task", "message", "console",
+                                 "vm_guest_metrics", "host_metrics", "vm_metrics"};
+
+    QMetaObject::invokeMethod(this->d->eventPoller, [this, session, classes, token]() {
+        this->d->eventPoller->reset();
+        this->d->eventPoller->initialize(session);
+        this->d->eventPoller->start(classes, token);
+    }, Qt::QueuedConnection);
+
+    emit this->connectionResult(true, QString());
+    emit this->connectionStateChanged();
+}
+
 ConnectTask* XenConnection::GetConnectTask() const
 {
     return this->d->connectTask;
@@ -397,6 +992,11 @@ bool XenConnection::IsConnectedNewFlow() const
 Session* XenConnection::GetConnectSession() const
 {
     return this->d->connectTask ? this->d->connectTask->Session : nullptr;
+}
+
+QStringList XenConnection::GetLastFailureDescription() const
+{
+    return this->d->lastFailureDescription;
 }
 
 bool XenConnection::getSaveDisconnected() const

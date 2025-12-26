@@ -28,6 +28,7 @@
 #include "session.h"
 #include "network/connection.h"
 #include "jsonrpcclient.h"
+#include "failure.h"
 #include <QtNetwork/QNetworkReply>
 #include <QtCore/QByteArray>
 #include <QtCore/QDebug>
@@ -48,6 +49,7 @@ namespace XenAPI
             QString username;
             QString password; // Store password for session duplication
             QString lastError;
+            QStringList lastErrorDescription;
             QNetworkReply* currentReply = nullptr;
             APIVersion apiVersion = APIVersion::UNKNOWN;
             bool ownsSessionToken = false;
@@ -78,6 +80,7 @@ namespace XenAPI
     bool Session::Login(const QString& username, const QString& password)
     {
         this->d->lastError.clear();
+        this->d->lastErrorDescription.clear();
 
         // Store credentials for this session (for duplication)
         this->d->username = username;
@@ -149,6 +152,11 @@ namespace XenAPI
     QString Session::getLastError() const
     {
         return this->d->lastError;
+    }
+
+    QStringList Session::getLastErrorDescription() const
+    {
+        return this->d->lastErrorDescription;
     }
 
     Session* Session::DuplicateSession(Session* originalSession, QObject* parent)
@@ -303,6 +311,7 @@ namespace XenAPI
             this->d->loggedIn = true;
             this->d->ownsSessionToken = true;
             this->d->isDuplicate = false;
+            this->d->lastErrorDescription.clear();
             qDebug() << "XenSession: Login successful, sessionId"
                      << this->d->sessionId.left(20) + "...";
             emit this->loginSuccessful();
@@ -325,6 +334,8 @@ namespace XenAPI
 
     QString Session::extractAuthenticationError(const QByteArray& response)
     {
+        this->d->lastErrorDescription.clear();
+
         // Parse JSON-RPC error response
         QJsonDocument doc = QJsonDocument::fromJson(response);
         if (doc.isNull() || !doc.isObject())
@@ -353,9 +364,12 @@ namespace XenAPI
                         qDebug() << "XenSession: HOST_IS_SLAVE detected, master is at:" << masterAddress;
                         // Signal that we need to redirect to the pool master
                         emit needsRedirectToMaster(masterAddress);
+                        this->d->lastErrorDescription = QStringList()
+                            << Failure::HOST_IS_SLAVE << masterAddress;
                         return QString("Redirecting to pool master: %1").arg(masterAddress);
                     }
                 }
+                this->d->lastErrorDescription = QStringList() << Failure::HOST_IS_SLAVE;
                 return "Server is pool slave, master address not provided";
             }
 
@@ -368,8 +382,14 @@ namespace XenAPI
                     QJsonArray errorDesc = data["ErrorDescription"].toArray();
                     if (!errorDesc.isEmpty())
                     {
-                        QString errorCode = errorDesc[0].toString();
-                        if (errorCode == "SESSION_AUTHENTICATION_FAILED")
+                        QStringList description;
+                        description.reserve(errorDesc.size());
+                        for (const QJsonValue& val : errorDesc)
+                            description.append(val.toString());
+                        this->d->lastErrorDescription = description;
+
+                        QString errorCode = description.first();
+                        if (errorCode == Failure::SESSION_AUTHENTICATION_FAILED)
                         {
                             return "Authentication failed: Invalid username or password";
                         }
@@ -381,7 +401,10 @@ namespace XenAPI
             // Fallback to error message
             if (error.contains("message"))
             {
-                return QString("Server error: %1").arg(error["message"].toString());
+                const QString errorMessage = error["message"].toString();
+                if (!errorMessage.isEmpty())
+                    this->d->lastErrorDescription = QStringList() << errorMessage;
+                return QString("Server error: %1").arg(errorMessage);
             }
         }
 

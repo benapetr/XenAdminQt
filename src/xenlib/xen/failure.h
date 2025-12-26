@@ -129,6 +129,8 @@ private:
 
     // Parse error description and generate friendly messages
     void parseExceptionMessage();
+    void parseSmapiV3Failures();
+    void parseCslgFailures();
 };
 
 #endif // FAILURE_H

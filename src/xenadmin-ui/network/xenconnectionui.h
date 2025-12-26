@@ -35,7 +35,7 @@
 #include <functional>
 
 class QWidget;
-class QProgressDialog;
+class ConnectingToServerDialog;
 class XenConnection;
 
 class XenConnectionUI
@@ -54,7 +54,7 @@ class XenConnectionUI
         static void HandleConnectionStateChanged(XenConnection* connection, bool connected);
         static void ShowConnectingDialogError(QWidget* owner, XenConnection* connection, const QString& error);
 
-        static QHash<XenConnection*, QPointer<QProgressDialog>> s_connectionDialogs;
+        static QHash<XenConnection*, QPointer<ConnectingToServerDialog>> s_connectionDialogs;
         static QHash<XenConnection*, QMetaObject::Connection> s_connectedHandlers;
         static QHash<XenConnection*, QMetaObject::Connection> s_errorHandlers;
         static QHash<XenConnection*, QMetaObject::Connection> s_disconnectedHandlers;

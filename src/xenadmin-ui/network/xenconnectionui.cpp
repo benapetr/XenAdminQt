@@ -27,13 +27,15 @@
 
 #include "xenconnectionui.h"
 #include "../dialogs/addserverdialog.h"
+#include "../dialogs/connectingtoserverdialog.h"
 #include "../../xenlib/xen/network/connection.h"
+#include "../../xenlib/xen/failure.h"
 #include <QtCore/QDateTime>
 #include <QtWidgets/QMessageBox>
-#include <QtWidgets/QProgressDialog>
 #include <QtWidgets/QDialog>
+#include <QtWidgets/QMessageBox>
 
-QHash<XenConnection*, QPointer<QProgressDialog>> XenConnectionUI::s_connectionDialogs;
+QHash<XenConnection*, QPointer<ConnectingToServerDialog>> XenConnectionUI::s_connectionDialogs;
 QHash<XenConnection*, QMetaObject::Connection> XenConnectionUI::s_connectedHandlers;
 QHash<XenConnection*, QMetaObject::Connection> XenConnectionUI::s_errorHandlers;
 QHash<XenConnection*, QMetaObject::Connection> XenConnectionUI::s_disconnectedHandlers;
@@ -53,6 +55,8 @@ void XenConnectionUI::BeginConnect(XenConnection* connection,
         connection->setFindingNewCoordinatorStartedAt(QDateTime::currentDateTimeUtc());
     }
 
+    RegisterEventHandlers(connection);
+
     if (interactive)
     {
         if (s_connectionDialogs.contains(connection) && s_connectionDialogs[connection])
@@ -62,36 +66,19 @@ void XenConnectionUI::BeginConnect(XenConnection* connection,
             return;
         }
 
-        QProgressDialog* dialog = new QProgressDialog("Connecting to server...", "Cancel", 0, 0, owner);
-        dialog->setWindowTitle("Connect to Server");
-        dialog->setWindowModality(Qt::WindowModal);
-        dialog->setAutoClose(false);
-        dialog->setAutoReset(false);
-        dialog->show();
-
+        ConnectingToServerDialog* dialog = new ConnectingToServerDialog(connection, owner);
         s_connectionDialogs.insert(connection, dialog);
-        QObject::connect(dialog, &QProgressDialog::canceled, connection, [connection]() {
-            connection->Disconnect();
-        });
-    }
-
-    RegisterEventHandlers(connection);
-
-    if (promptForNewPassword)
-    {
-        QString newPassword;
-        if (promptForNewPassword(connection, connection->GetPassword(), &newPassword))
-            connection->ConnectToHost(connection->GetHostname(),
-                                      connection->GetPort(),
-                                      connection->GetUsername(),
-                                      newPassword);
+        dialog->BeginConnect(owner, initiateCoordinatorSearch);
         return;
     }
 
-    connection->ConnectToHost(connection->GetHostname(),
-                              connection->GetPort(),
-                              connection->GetUsername(),
-                              connection->GetPassword());
+    if (promptForNewPassword)
+        connection->BeginConnect(initiateCoordinatorSearch,
+                                 [connection, promptForNewPassword](const QString& oldPassword, QString* newPassword) {
+                                     return promptForNewPassword(connection, oldPassword, newPassword);
+                                 });
+    else
+        connection->BeginConnect(initiateCoordinatorSearch);
 }
 
 bool XenConnectionUI::PromptForNewPassword(XenConnection* connection,
@@ -119,17 +106,17 @@ void XenConnectionUI::RegisterEventHandlers(XenConnection* connection)
     UnregisterEventHandlers(connection);
 
     s_connectedHandlers.insert(connection,
-        QObject::connect(connection, &XenConnection::connected, connection, [connection]() {
-            HandleConnectionResult(connection, true, QString());
+        QObject::connect(connection, &XenConnection::connectionResult, connection, [connection](bool connected, const QString& error) {
+            HandleConnectionResult(connection, connected, error);
         }));
 
     s_errorHandlers.insert(connection,
-        QObject::connect(connection, &XenConnection::error, connection, [connection](const QString& error) {
-            HandleConnectionResult(connection, false, error);
+        QObject::connect(connection, &XenConnection::connectionStateChanged, connection, [connection]() {
+            HandleConnectionStateChanged(connection, connection->IsConnectedNewFlow());
         }));
 
     s_disconnectedHandlers.insert(connection,
-        QObject::connect(connection, &XenConnection::disconnected, connection, [connection]() {
+        QObject::connect(connection, &XenConnection::connectionClosed, connection, [connection]() {
             HandleConnectionStateChanged(connection, false);
         }));
 }
@@ -149,7 +136,7 @@ void XenConnectionUI::UnregisterEventHandlers(XenConnection* connection)
 
 void XenConnectionUI::HandleConnectionResult(XenConnection* connection, bool connected, const QString& error)
 {
-    QPointer<QProgressDialog> dialog = s_connectionDialogs.value(connection);
+    QPointer<ConnectingToServerDialog> dialog = s_connectionDialogs.value(connection);
     if (dialog)
     {
         dialog->close();
@@ -168,7 +155,7 @@ void XenConnectionUI::HandleConnectionStateChanged(XenConnection* connection, bo
     if (connected || !connection)
         return;
 
-    QPointer<QProgressDialog> dialog = s_connectionDialogs.value(connection);
+    QPointer<ConnectingToServerDialog> dialog = s_connectionDialogs.value(connection);
     if (dialog)
     {
         dialog->close();
@@ -179,6 +166,90 @@ void XenConnectionUI::HandleConnectionStateChanged(XenConnection* connection, bo
 
 void XenConnectionUI::ShowConnectingDialogError(QWidget* owner, XenConnection* connection, const QString& error)
 {
-    Q_UNUSED(connection);
+    if (!connection)
+        return;
+
+    QStringList failureDescription = connection->GetLastFailureDescription();
+    if (!failureDescription.isEmpty())
+    {
+        Failure failure(failureDescription);
+        const QString code = failure.errorCode();
+
+        if (code == Failure::HOST_IS_SLAVE)
+        {
+            const QString masterHost = failureDescription.size() > 1
+                ? failureDescription.at(1)
+                : QString();
+            if (!masterHost.isEmpty())
+            {
+                const QString prompt = QString("This server is a pool member. Connect to the pool coordinator at %1 instead?")
+                                           .arg(masterHost);
+                if (QMessageBox::question(owner, "Connect to Server", prompt) == QMessageBox::Yes)
+                {
+                    connection->Disconnect();
+                    connection->setFindingNewCoordinator(false);
+                    connection->setFindingNewCoordinatorStartedAt(QDateTime());
+                    connection->SetHostname(masterHost);
+                    connection->BeginConnect(false);
+                    return;
+                }
+            }
+        } else if (code == Failure::RBAC_PERMISSION_DENIED)
+        {
+            QMessageBox::critical(owner, "Connection Failed", "You do not have permission to log in.");
+            return;
+        } else if (code == Failure::SESSION_AUTHENTICATION_FAILED)
+        {
+            QMessageBox::critical(owner, "Connection Failed", "User name and password mismatch.");
+            return;
+        } else if (code == Failure::HOST_STILL_BOOTING)
+        {
+            QMessageBox::critical(owner, "Connection Failed", "The host is still booting.");
+            return;
+        } else
+        {
+            const QString message = failure.message().isEmpty() ? error : failure.message();
+            QMessageBox::critical(owner, "Connection Failed", message);
+            return;
+        }
+    }
+
+    //! TODO this fallback is probably not needed, review and eventually delete it
+
+    if (error.startsWith("HOST_IS_SLAVE:"))
+    {
+        const QString masterHost = error.section(':', 1);
+        const QString prompt = QString("This server is a pool member. Connect to the pool coordinator at %1 instead?")
+                                   .arg(masterHost);
+        if (QMessageBox::question(owner, "Connect to Server", prompt) == QMessageBox::Yes)
+        {
+            connection->Disconnect();
+            connection->setFindingNewCoordinator(false);
+            connection->setFindingNewCoordinatorStartedAt(QDateTime());
+            connection->SetHostname(masterHost);
+            connection->BeginConnect(false);
+            return;
+        }
+    }
+
+    if (error.contains("RBAC_PERMISSION_DENIED", Qt::CaseInsensitive))
+    {
+        QMessageBox::critical(owner, "Connection Failed", "You do not have permission to log in.");
+        return;
+    }
+
+    if (error.contains("SESSION_AUTHENTICATION_FAILED", Qt::CaseInsensitive) ||
+        error.contains("Authentication failed", Qt::CaseInsensitive))
+    {
+        QMessageBox::critical(owner, "Connection Failed", "User name and password mismatch.");
+        return;
+    }
+
+    if (error.contains("HOST_STILL_BOOTING", Qt::CaseInsensitive))
+    {
+        QMessageBox::critical(owner, "Connection Failed", "The host is still booting.");
+        return;
+    }
+
     QMessageBox::critical(owner, "Connection Failed", error);
 }

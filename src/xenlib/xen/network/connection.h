@@ -72,6 +72,10 @@ class XENLIB_EXPORT XenConnection : public QObject
         QString GetUsername() const;
         QString GetPassword() const;
         QString GetSessionId() const;
+        void SetHostname(const QString& hostname);
+        void SetPort(int port);
+        void SetUsername(const QString& username);
+        void SetPassword(const QString& password);
 
         using PasswordPrompt = std::function<bool(const QString& oldPassword, QString* newPassword)>;
 
@@ -93,6 +97,7 @@ class XENLIB_EXPORT XenConnection : public QObject
         bool InProgress() const;
         bool IsConnectedNewFlow() const;
         XenAPI::Session* GetConnectSession() const;
+        QStringList GetLastFailureDescription() const;
 
         bool getSaveDisconnected() const;
         void setSaveDisconnected(bool save);
@@ -192,8 +197,25 @@ class XENLIB_EXPORT XenConnection : public QObject
         void onWorkerProgress(const QString& message);
         void onWorkerCacheData(const QByteArray& data);
         void onWorkerApiResponse(int requestId, const QByteArray& response);
+        void onCacheUpdateTimer();
+        void onEventPollerEventReceived(const QVariantMap& eventData);
+        void onEventPollerCachePopulated();
+        void onEventPollerConnectionLost();
 
     private:
+        //! Connection orchestration thread: login / cache warm / event loop
+        void connectWorkerThread();
+        void handleConnectionLostNewFlow();
+        int reconnectHostTimeoutMs() const;
+        void startReconnectSingleHostTimer();
+        void startReconnectCoordinatorTimer(int timeoutMs);
+        void reconnectSingleHostTimer();
+        void reconnectCoordinatorTimer();
+        bool poolMemberRemaining() const;
+        void updatePoolMembersFromCache(QString* poolName,
+                                        bool* haEnabled,
+                                        QString* coordinatorAddress);
+
         class Private;
         Private* d;
 };

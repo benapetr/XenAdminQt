@@ -32,6 +32,7 @@
 #include "apiversion.h"
 #include <QtCore/QObject>
 #include <QtCore/QString>
+#include <QtCore/QStringList>
 
 class XenConnection;
 
@@ -55,6 +56,7 @@ namespace XenAPI
             QString getUsername() const;
             QString getPassword() const;
             QString getLastError() const;
+            QStringList getLastErrorDescription() const;
 
             // API version management
             APIVersion getAPIVersion() const;
