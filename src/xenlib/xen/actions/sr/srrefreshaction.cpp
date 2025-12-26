@@ -32,6 +32,8 @@
 #include "../../../xencache.h"
 #include <QVariant>
 
+using namespace XenAPI;
+
 SrRefreshAction::SrRefreshAction(XenConnection* connection, const QString& srRef,
                                  QObject* parent)
     : AsyncOperation(connection, QString("Refreshing Storage Repository"), QString(), parent), m_srRef(srRef)
@@ -68,7 +70,7 @@ void SrRefreshAction::run()
 
     try
     {
-        XenSession* session = connection()->GetSession();
+        Session* session = connection()->GetSession();
         if (!session)
         {
             throw std::runtime_error("No valid session");

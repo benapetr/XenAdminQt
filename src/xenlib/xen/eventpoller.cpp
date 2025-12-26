@@ -34,12 +34,14 @@
 #include <QDebug>
 #include <QThread>
 
+using namespace XenAPI;
+
 class EventPoller::Private
 {
     public:
         // Own connection stack for event polling (separate from main API connection)
         XenConnection* connection;
-        XenSession* session;
+        Session* session;
         XenRpcAPI* api;
 
         QString token;       // Current event token
@@ -129,7 +131,7 @@ void EventPoller::reset()
     qDebug() << "EventPoller: Reset duplicated session/connection";
 }
 
-void EventPoller::initialize(XenSession* originalSession)
+void EventPoller::initialize(Session* originalSession)
 {
     if (!originalSession)
     {
@@ -157,7 +159,7 @@ void EventPoller::initialize(XenSession* originalSession)
 
     // Create a duplicate session with its own connection stack
     // This is the C# XenAdmin pattern - separate TCP connection prevents blocking
-    this->d->session = XenSession::DuplicateSession(originalSession, this);
+    this->d->session = Session::DuplicateSession(originalSession, this);
 
     if (!this->d->session)
     {

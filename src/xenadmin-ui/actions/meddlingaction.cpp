@@ -78,7 +78,7 @@ void MeddlingAction::onCancel()
     }
 
     // Cancel the XenAPI task
-    XenSession* sess = this->session();
+    XenAPI::Session* sess = this->session();
     if (!sess || !sess->IsLoggedIn())
     {
         qWarning() << "Cannot cancel task - no valid session";

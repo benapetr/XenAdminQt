@@ -62,7 +62,7 @@ HVMBootAction::HVMBootAction(XenConnection* connection, const QString& vmRef, QO
 
 void HVMBootAction::run()
 {
-    XenSession* session = this->session();
+    XenAPI::Session* session = this->session();
     if (!session)
     {
         throw std::runtime_error("Not connected to XenServer");
@@ -137,7 +137,7 @@ void HVMBootAction::setBootOrder(QVariantMap& bootParams, const QString& order)
     }
 }
 
-void HVMBootAction::restoreBootSettings(XenSession* session)
+void HVMBootAction::restoreBootSettings(XenAPI::Session* session)
 {
     if (!session || m_vmRef.isEmpty())
     {

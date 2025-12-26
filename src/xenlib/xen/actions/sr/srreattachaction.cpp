@@ -65,7 +65,7 @@ void SrReattachAction::run()
              << "name:" << m_name
              << "description:" << m_description;
 
-    XenSession* session = this->session();
+    XenAPI::Session* session = this->session();
     if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");

@@ -38,6 +38,8 @@
 #include "../../xenapi/xenapi_Secret.h"
 #include <QDebug>
 
+using namespace XenAPI;
+
 SrCreateAction::SrCreateAction(XenConnection* connection,
                                Host* host,
                                const QString& srName,
@@ -73,7 +75,7 @@ void SrCreateAction::run()
              << "contentType:" << m_srContentType
              << "shared:" << m_srIsShared;
 
-    XenSession* session = this->session();
+    Session* session = this->session();
     if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -257,7 +259,7 @@ QString SrCreateAction::createSecret(const QString& key, const QString& value)
     m_deviceConfig.remove(key);
 
     // Create secret and add <key>_secret entry
-    XenSession* session = this->session();
+    Session* session = this->session();
     QString uuid = XenAPI::Secret::create(session, value);
 
     m_deviceConfig[key + "_secret"] = uuid;
@@ -272,7 +274,7 @@ void SrCreateAction::forgetFailedSR(const QString& srRef)
 
     try
     {
-        XenSession* session = this->session();
+        Session* session = this->session();
 
         // Unplug all PBDs
         QVariantList pbdRefs = XenAPI::SR::get_PBDs(session, srRef);

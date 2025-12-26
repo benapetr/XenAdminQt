@@ -32,7 +32,7 @@
 
 namespace XenAPI
 {
-    void PIF::reconfigure_ip(XenSession* session, const QString& pif,
+    void PIF::reconfigure_ip(Session* session, const QString& pif,
                              const QString& mode, const QString& ip,
                              const QString& netmask, const QString& gateway,
                              const QString& dns)
@@ -49,7 +49,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    void PIF::plug(XenSession* session, const QString& pif)
+    void PIF::plug(Session* session, const QString& pif)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -63,7 +63,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    void PIF::unplug(XenSession* session, const QString& pif)
+    void PIF::unplug(Session* session, const QString& pif)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -77,7 +77,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    QString PIF::async_plug(XenSession* session, const QString& pif)
+    QString PIF::async_plug(Session* session, const QString& pif)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -91,7 +91,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString PIF::async_unplug(XenSession* session, const QString& pif)
+    QString PIF::async_unplug(Session* session, const QString& pif)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -105,7 +105,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    void PIF::set_disallow_unplug(XenSession* session, const QString& pif, bool value)
+    void PIF::set_disallow_unplug(Session* session, const QString& pif, bool value)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -119,7 +119,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    void PIF::set_property(XenSession* session, const QString& pif, const QString& name, const QString& value)
+    void PIF::set_property(Session* session, const QString& pif, const QString& name, const QString& value)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -133,7 +133,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    QString PIF::async_reconfigure_ip(XenSession* session, const QString& pif,
+    QString PIF::async_reconfigure_ip(Session* session, const QString& pif,
                                       const QString& mode, const QString& ip,
                                       const QString& netmask, const QString& gateway,
                                       const QString& dns)
@@ -150,7 +150,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    void PIF::add_to_other_config(XenSession* session, const QString& pif, const QString& key, const QString& value)
+    void PIF::add_to_other_config(Session* session, const QString& pif, const QString& key, const QString& value)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -164,7 +164,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    void PIF::remove_from_other_config(XenSession* session, const QString& pif, const QString& key)
+    void PIF::remove_from_other_config(Session* session, const QString& pif, const QString& key)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -178,7 +178,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    QVariantMap PIF::get_record(XenSession* session, const QString& pif)
+    QVariantMap PIF::get_record(Session* session, const QString& pif)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -192,7 +192,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toMap();
     }
 
-    QVariantList PIF::get_all(XenSession* session)
+    QVariantList PIF::get_all(Session* session)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -206,7 +206,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toList();
     }
 
-    QString PIF::get_network(XenSession* session, const QString& pif)
+    QString PIF::get_network(Session* session, const QString& pif)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -220,7 +220,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString PIF::get_host(XenSession* session, const QString& pif)
+    QString PIF::get_host(Session* session, const QString& pif)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -234,7 +234,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    void PIF::scan(XenSession* session, const QString& host)
+    void PIF::scan(Session* session, const QString& host)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");

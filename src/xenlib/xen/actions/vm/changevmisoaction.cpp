@@ -32,6 +32,8 @@
 #include "../../xenapi/xenapi_VBD.h"
 #include <QDebug>
 
+using namespace XenAPI;
+
 ChangeVMISOAction::ChangeVMISOAction(XenConnection* connection,
                                      const QString& vmRef,
                                      const QString& vdiRef,
@@ -70,7 +72,7 @@ void ChangeVMISOAction::run()
         return;
     }
 
-    XenSession* session = this->session();
+    Session* session = this->session();
     if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");

@@ -32,10 +32,10 @@
 #include <QVariantMap>
 #include <QVariantList>
 
-class XenSession;
-
 namespace XenAPI
 {
+    class Session;
+
     /**
      * @brief Static XenAPI VBD (Virtual Block Device) bindings
      *
@@ -49,7 +49,7 @@ namespace XenAPI
 
         public:
             // VBD lifecycle operations
-            static QString create(XenSession* session, const QVariantMap& vbdRecord);
+            static QString create(Session* session, const QVariantMap& vbdRecord);
 
             /**
              * @brief Asynchronously create a VBD
@@ -59,40 +59,40 @@ namespace XenAPI
              *
              * Matches C# VBD.async_create()
              */
-            static QString async_create(XenSession* session, const QVariantMap& vbdRecord);
-            static QString async_plug(XenSession* session, const QString& vbd);
-            static QString async_unplug(XenSession* session, const QString& vbd);
-            static QString async_destroy(XenSession* session, const QString& vbd);
-            static QString async_eject(XenSession* session, const QString& vbd);
-            static QString async_insert(XenSession* session, const QString& vbd, const QString& vdi);
-            static void plug(XenSession* session, const QString& vbd);
-            static void unplug(XenSession* session, const QString& vbd);
-            static void destroy(XenSession* session, const QString& vbd);
-            static void eject(XenSession* session, const QString& vbd);
-            static void insert(XenSession* session, const QString& vbd, const QString& vdi);
+            static QString async_create(Session* session, const QVariantMap& vbdRecord);
+            static QString async_plug(Session* session, const QString& vbd);
+            static QString async_unplug(Session* session, const QString& vbd);
+            static QString async_destroy(Session* session, const QString& vbd);
+            static QString async_eject(Session* session, const QString& vbd);
+            static QString async_insert(Session* session, const QString& vbd, const QString& vdi);
+            static void plug(Session* session, const QString& vbd);
+            static void unplug(Session* session, const QString& vbd);
+            static void destroy(Session* session, const QString& vbd);
+            static void eject(Session* session, const QString& vbd);
+            static void insert(Session* session, const QString& vbd, const QString& vdi);
 
             // VBD query operations
-            static QVariantList get_allowed_operations(XenSession* session, const QString& vbd);
-            static QString get_VM(XenSession* session, const QString& vbd);
-            static QString get_VDI(XenSession* session, const QString& vbd);
-            static QString get_device(XenSession* session, const QString& vbd);
-            static QString get_userdevice(XenSession* session, const QString& vbd);
-            static bool get_bootable(XenSession* session, const QString& vbd);
-            static QString get_mode(XenSession* session, const QString& vbd);
-            static QString get_type(XenSession* session, const QString& vbd);
-            static bool get_unpluggable(XenSession* session, const QString& vbd);
-            static bool get_currently_attached(XenSession* session, const QString& vbd);
-            static bool get_empty(XenSession* session, const QString& vbd);
+            static QVariantList get_allowed_operations(Session* session, const QString& vbd);
+            static QString get_VM(Session* session, const QString& vbd);
+            static QString get_VDI(Session* session, const QString& vbd);
+            static QString get_device(Session* session, const QString& vbd);
+            static QString get_userdevice(Session* session, const QString& vbd);
+            static bool get_bootable(Session* session, const QString& vbd);
+            static QString get_mode(Session* session, const QString& vbd);
+            static QString get_type(Session* session, const QString& vbd);
+            static bool get_unpluggable(Session* session, const QString& vbd);
+            static bool get_currently_attached(Session* session, const QString& vbd);
+            static bool get_empty(Session* session, const QString& vbd);
 
             // VBD modification operations
-            static void set_bootable(XenSession* session, const QString& vbd, bool bootable);
-            static void set_mode(XenSession* session, const QString& vbd, const QString& mode);
-            static void set_userdevice(XenSession* session, const QString& vbd, const QString& userdevice);
+            static void set_bootable(Session* session, const QString& vbd, bool bootable);
+            static void set_mode(Session* session, const QString& vbd, const QString& mode);
+            static void set_userdevice(Session* session, const QString& vbd, const QString& userdevice);
 
             // Bulk query operations
-            static QVariantMap get_record(XenSession* session, const QString& vbd);
-            static QVariantList get_all(XenSession* session);
-            static QVariantMap get_all_records(XenSession* session);
+            static QVariantMap get_record(Session* session, const QString& vbd);
+            static QVariantList get_all(Session* session);
+            static QVariantMap get_all_records(Session* session);
     };
 
 } // namespace XenAPI

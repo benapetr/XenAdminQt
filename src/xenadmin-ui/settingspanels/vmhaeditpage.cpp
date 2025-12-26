@@ -523,7 +523,7 @@ void VMHAEditPage::startVmAgilityCheck()
             return;
 
         bool isAgile = false;
-        XenSession* session = XenSession::DuplicateSession(self->connection()->GetSession(), nullptr);
+        XenAPI::Session* session = XenAPI::Session::DuplicateSession(self->connection()->GetSession(), nullptr);
         if (session)
         {
             try
@@ -576,7 +576,7 @@ void VMHAEditPage::startNtolUpdate()
 
         qint64 ntolMax = -1;
         bool ok = false;
-        XenSession* session = XenSession::DuplicateSession(self->connection()->GetSession(), nullptr);
+        XenAPI::Session* session = XenAPI::Session::DuplicateSession(self->connection()->GetSession(), nullptr);
         if (session)
         {
             try

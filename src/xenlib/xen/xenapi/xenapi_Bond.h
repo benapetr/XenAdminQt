@@ -32,10 +32,10 @@
 #include <QVariantList>
 #include <QVariantMap>
 
-class XenSession;
-
 namespace XenAPI
 {
+    class Session;
+
     /**
      * @brief Bond XenAPI bindings
      *
@@ -49,19 +49,19 @@ namespace XenAPI
 
         public:
             // Bond creation and destruction
-            static QString async_create(XenSession* session, const QString& network,
+            static QString async_create(Session* session, const QString& network,
                                         const QStringList& members, const QString& mac,
                                         const QString& mode, const QVariantMap& properties);
-            static QString async_destroy(XenSession* session, const QString& bond);
+            static QString async_destroy(Session* session, const QString& bond);
 
             // Bond configuration
-            static void set_mode(XenSession* session, const QString& bond, const QString& mode);
-            static void set_property(XenSession* session, const QString& bond, const QString& name, const QString& value);
+            static void set_mode(Session* session, const QString& bond, const QString& mode);
+            static void set_property(Session* session, const QString& bond, const QString& name, const QString& value);
 
             // Bond queries
-            static QVariantMap get_record(XenSession* session, const QString& bond);
-            static QString get_master(XenSession* session, const QString& bond);
-            static QVariantList get_slaves(XenSession* session, const QString& bond);
+            static QVariantMap get_record(Session* session, const QString& bond);
+            static QString get_master(Session* session, const QString& bond);
+            static QVariantList get_slaves(Session* session, const QString& bond);
     };
 
 } // namespace XenAPI

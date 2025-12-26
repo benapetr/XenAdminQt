@@ -58,7 +58,7 @@ DetachVirtualDiskAction::DetachVirtualDiskAction(const QString& vdiRef,
 
 void DetachVirtualDiskAction::run()
 {
-    XenSession* session = this->session();
+    XenAPI::Session* session = this->session();
     if (!session || !session->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");

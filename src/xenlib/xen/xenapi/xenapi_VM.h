@@ -33,13 +33,10 @@
 #include <QtCore/QStringList>
 #include <QtCore/QVariant>
 
-//! TODO rewrite all docs to Doxygen format from that XML format
-
-// Forward declarations
-class XenSession;
-
 namespace XenAPI
 {
+    class Session;
+
     /**
      * @brief XenAPI VM class - Static methods for VM operations
      *
@@ -62,7 +59,7 @@ namespace XenAPI
              * @param start_paused Instantiate VM in paused state if true
              * @param force Attempt to force the VM to start; if false the VM may fail pre-boot checks
              */
-            static void start(XenSession* session, const QString& vm, bool start_paused, bool force);
+            static void start(Session* session, const QString& vm, bool start_paused, bool force);
 
             /**
              * @brief Start the specified VM asynchronously; returns a task ref.
@@ -74,7 +71,7 @@ namespace XenAPI
              * @param force Attempt to force the VM to start
              * @return Task ref for async operation
              */
-            static QString async_start(XenSession* session, const QString& vm, bool start_paused, bool force);
+            static QString async_start(Session* session, const QString& vm, bool start_paused, bool force);
 
             /**
              * @brief Start the specified VM on a particular host. Only valid when VM is Halted.
@@ -86,7 +83,7 @@ namespace XenAPI
              * @param start_paused Instantiate VM in paused state if true
              * @param force Attempt to force the VM to start
              */
-            static void start_on(XenSession* session, const QString& vm, const QString& host, bool start_paused, bool force);
+            static void start_on(Session* session, const QString& vm, const QString& host, bool start_paused, bool force);
 
             /**
              * @brief Start the specified VM on a particular host asynchronously; returns a task ref.
@@ -97,7 +94,7 @@ namespace XenAPI
              * @param force Attempt to force the VM to start
              * @return Task ref for async operation
              */
-            static QString async_start_on(XenSession* session, const QString& vm, const QString& host, bool start_paused, bool force);
+            static QString async_start_on(Session* session, const QString& vm, const QString& host, bool start_paused, bool force);
 
             /**
              * @brief Resume the specified VM. Only valid when VM is Suspended.
@@ -106,7 +103,7 @@ namespace XenAPI
              * @param start_paused Resume VM in paused state if true
              * @param force Attempt to force the VM to resume
              */
-            static void resume(XenSession* session, const QString& vm, bool start_paused, bool force);
+            static void resume(Session* session, const QString& vm, bool start_paused, bool force);
 
             /**
              * @brief Resume the specified VM asynchronously; returns a task ref.
@@ -116,7 +113,7 @@ namespace XenAPI
              * @param force Attempt to force the VM to resume
              * @return Task ref for async operation
              */
-            static QString async_resume(XenSession* session, const QString& vm, bool start_paused, bool force);
+            static QString async_resume(Session* session, const QString& vm, bool start_paused, bool force);
 
             /**
              * @brief Resume the specified VM on a particular host. Only valid when VM is Suspended.
@@ -126,7 +123,7 @@ namespace XenAPI
              * @param start_paused Resume VM in paused state if true
              * @param force Attempt to force the VM to resume
              */
-            static void resume_on(XenSession* session, const QString& vm, const QString& host, bool start_paused, bool force);
+            static void resume_on(Session* session, const QString& vm, const QString& host, bool start_paused, bool force);
 
             /**
              * @brief Resume the specified VM on a particular host asynchronously; returns a task ref.
@@ -137,14 +134,14 @@ namespace XenAPI
              * @param force Attempt to force the VM to resume
              * @return Task ref for async operation
              */
-            static QString async_resume_on(XenSession* session, const QString& vm, const QString& host, bool start_paused, bool force);
+            static QString async_resume_on(Session* session, const QString& vm, const QString& host, bool start_paused, bool force);
 
             /**
              * @brief Attempt a clean shutdown of a VM; fall back to hard shutdown on failure.
              * @param session The session
              * @param vm The opaque_ref of the given VM
              */
-            static void clean_shutdown(XenSession* session, const QString& vm);
+            static void clean_shutdown(Session* session, const QString& vm);
 
             /**
              * @brief Asynchronous clean shutdown; returns a task ref.
@@ -152,14 +149,14 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @return Task ref for async operation
              */
-            static QString async_clean_shutdown(XenSession* session, const QString& vm);
+            static QString async_clean_shutdown(Session* session, const QString& vm);
 
             /**
              * @brief Perform a hard shutdown (stop without clean shutdown).
              * @param session The session
              * @param vm The opaque_ref of the given VM
              */
-            static void hard_shutdown(XenSession* session, const QString& vm);
+            static void hard_shutdown(Session* session, const QString& vm);
 
             /**
              * @brief Asynchronous hard shutdown; returns a task ref.
@@ -167,14 +164,14 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @return Task ref for async operation
              */
-            static QString async_hard_shutdown(XenSession* session, const QString& vm);
+            static QString async_hard_shutdown(Session* session, const QString& vm);
 
             /**
              * @brief Suspend the specified VM to disk. Only valid when VM is Running.
              * @param session The session
              * @param vm The opaque_ref of the given VM
              */
-            static void suspend(XenSession* session, const QString& vm);
+            static void suspend(Session* session, const QString& vm);
 
             /**
              * @brief Asynchronous suspend; returns a task ref.
@@ -182,14 +179,14 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @return Task ref for async operation
              */
-            static QString async_suspend(XenSession* session, const QString& vm);
+            static QString async_suspend(Session* session, const QString& vm);
 
             /**
              * @brief Attempt a clean reboot of a VM; fall back to hard reboot on failure.
              * @param session The session
              * @param vm The opaque_ref of the given VM
              */
-            static void clean_reboot(XenSession* session, const QString& vm);
+            static void clean_reboot(Session* session, const QString& vm);
 
             /**
              * @brief Asynchronous clean reboot; returns a task ref.
@@ -197,14 +194,14 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @return Task ref for async operation
              */
-            static QString async_clean_reboot(XenSession* session, const QString& vm);
+            static QString async_clean_reboot(Session* session, const QString& vm);
 
             /**
              * @brief Hard reboot the VM (immediate stop and restart).
              * @param session The session
              * @param vm The opaque_ref of the given VM
              */
-            static void hard_reboot(XenSession* session, const QString& vm);
+            static void hard_reboot(Session* session, const QString& vm);
 
             /**
              * @brief Asynchronous hard reboot; returns a task ref.
@@ -212,7 +209,7 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @return Task ref for async operation
              */
-            static QString async_hard_reboot(XenSession* session, const QString& vm);
+            static QString async_hard_reboot(Session* session, const QString& vm);
 
             /**
              * @brief Pause the specified VM. This can only be called when the specified VM is in the Running state.
@@ -220,7 +217,7 @@ namespace XenAPI
              * @param session The session
              * @param vm The opaque_ref of the given VM
              */
-            static void pause(XenSession* session, const QString& vm);
+            static void pause(Session* session, const QString& vm);
 
             /**
              * @brief Asynchronous pause; returns a task ref.
@@ -228,7 +225,7 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @return Task ref for async operation
              */
-            static QString async_pause(XenSession* session, const QString& vm);
+            static QString async_pause(Session* session, const QString& vm);
 
             /**
              * @brief Resume the specified VM. This can only be called when the specified VM is in the Paused state.
@@ -236,7 +233,7 @@ namespace XenAPI
              * @param session The session
              * @param vm The opaque_ref of the given VM
              */
-            static void unpause(XenSession* session, const QString& vm);
+            static void unpause(Session* session, const QString& vm);
 
             /**
              * @brief Asynchronous unpause; returns a task ref.
@@ -244,7 +241,7 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @return Task ref for async operation
              */
-            static QString async_unpause(XenSession* session, const QString& vm);
+            static QString async_unpause(Session* session, const QString& vm);
 
             /**
              * @brief Assert whether a VM can boot on this host.
@@ -253,7 +250,7 @@ namespace XenAPI
              * @param self The opaque_ref of the given vm
              * @param host The host on which we want to assert the VM can boot
              */
-            static void assert_can_boot_here(XenSession* session, const QString& self, const QString& host);
+            static void assert_can_boot_here(Session* session, const QString& self, const QString& host);
 
             /**
              * @brief Assert whether all SRs required to recover this VM are available.
@@ -262,7 +259,7 @@ namespace XenAPI
              * @param self The opaque_ref of the given vm
              * @param session_to The session to which we want to recover the VM.
              */
-            static void assert_can_migrate(XenSession* session, const QString& self, const QString& session_to);
+            static void assert_can_migrate(Session* session, const QString& self, const QString& session_to);
 
             /**
              * @brief Assert whether the VM is agile (i.e. can be migrated without downtime).
@@ -271,7 +268,7 @@ namespace XenAPI
              * @param session The session
              * @param self The opaque_ref of the given vm
              */
-            static void assert_agile(XenSession* session, const QString& self);
+            static void assert_agile(Session* session, const QString& self);
 
             /**
              * @brief Get the list of allowed VBD device numbers
@@ -280,8 +277,8 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @return List of allowed device numbers as QVariant (QStringList)
              */
-            static QVariant get_allowed_VBD_devices(XenSession* session, const QString& vm);
-            static QVariant get_allowed_VIF_devices(XenSession* session, const QString& vm);
+            static QVariant get_allowed_VBD_devices(Session* session, const QString& vm);
+            static QVariant get_allowed_VIF_devices(Session* session, const QString& vm);
 
             /**
              * @brief Get the full record for a VM
@@ -290,7 +287,7 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @return VM record as QVariantMap
              */
-            static QVariantMap get_record(XenSession* session, const QString& vm);
+            static QVariantMap get_record(Session* session, const QString& vm);
 
             /**
              * @brief Get all VMs and their records
@@ -298,7 +295,7 @@ namespace XenAPI
              * @param session The session
              * @return Map of VM refs to VM records
              */
-            static QVariantMap get_all_records(XenSession* session);
+            static QVariantMap get_all_records(Session* session);
 
             /**
              * @brief Query a performance data source for a VM
@@ -309,7 +306,7 @@ namespace XenAPI
              *
              * Matches C# VM.query_data_source()
              */
-            static double query_data_source(XenSession* session, const QString& vm, const QString& data_source);
+            static double query_data_source(Session* session, const QString& vm, const QString& data_source);
 
             /**
              * @brief Set the suspend VDI for a suspended VM
@@ -318,7 +315,7 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @param value The new value for suspend_VDI
              */
-            static void set_suspend_VDI(XenSession* session, const QString& vm, const QString& value);
+            static void set_suspend_VDI(Session* session, const QString& vm, const QString& value);
 
             /**
              * @brief Migrate a VM to another Host (async)
@@ -329,7 +326,7 @@ namespace XenAPI
              * @param options Extra configuration operations (live migration, etc.)
              * @return Task ref for async operation
              */
-            static QString async_pool_migrate(XenSession* session, const QString& vm, const QString& host, const QVariantMap& options);
+            static QString async_pool_migrate(Session* session, const QString& vm, const QString& host, const QVariantMap& options);
 
             /**
              * @brief Clone a VM (async)
@@ -339,7 +336,7 @@ namespace XenAPI
              * @param new_name The name of the cloned VM
              * @return Task ref for async operation
              */
-            static QString async_clone(XenSession* session, const QString& vm, const QString& new_name);
+            static QString async_clone(Session* session, const QString& vm, const QString& new_name);
 
             /**
              * @brief Clone a VM (sync)
@@ -349,7 +346,7 @@ namespace XenAPI
              * @param new_name The name of the cloned VM
              * @return VM ref of the cloned VM
              */
-            static QString clone(XenSession* session, const QString& vm, const QString& new_name);
+            static QString clone(Session* session, const QString& vm, const QString& new_name);
 
             /**
              * @brief Copy a VM to an SR (async)
@@ -360,7 +357,7 @@ namespace XenAPI
              * @param sr The SR to copy the VM to
              * @return Task ref for async operation
              */
-            static QString async_copy(XenSession* session, const QString& vm, const QString& new_name, const QString& sr);
+            static QString async_copy(Session* session, const QString& vm, const QString& new_name, const QString& sr);
 
             /**
              * @brief Provision a VM (async)
@@ -369,7 +366,7 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @return Task ref for async operation
              */
-            static QString async_provision(XenSession* session, const QString& vm);
+            static QString async_provision(Session* session, const QString& vm);
 
             /**
              * @brief Destroy a VM
@@ -377,7 +374,7 @@ namespace XenAPI
              * @param session The session
              * @param vm The opaque_ref of the given VM
              */
-            static void destroy(XenSession* session, const QString& vm);
+            static void destroy(Session* session, const QString& vm);
 
             /**
              * @brief Set the is_a_template field
@@ -386,7 +383,7 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @param value New value for is_a_template
              */
-            static void set_is_a_template(XenSession* session, const QString& vm, bool value);
+            static void set_is_a_template(Session* session, const QString& vm, bool value);
 
             /**
              * @brief Set the name_label field
@@ -395,7 +392,7 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @param value New value for name_label
              */
-            static void set_name_label(XenSession* session, const QString& vm, const QString& value);
+            static void set_name_label(Session* session, const QString& vm, const QString& value);
 
             /**
              * @brief Set the name_description field
@@ -404,7 +401,7 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @param value New value for name_description
              */
-            static void set_name_description(XenSession* session, const QString& vm, const QString& value);
+            static void set_name_description(Session* session, const QString& vm, const QString& value);
 
             /**
              * @brief Set the tags field
@@ -413,7 +410,7 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @param value New value for tags
              */
-            static void set_tags(XenSession* session, const QString& vm, const QStringList& value);
+            static void set_tags(Session* session, const QString& vm, const QStringList& value);
 
             // Snapshot operations
 
@@ -427,7 +424,7 @@ namespace XenAPI
              * @param new_name The name of the snapshotted VM
              * @return Task ref for async operation (ref of the newly created VM)
              */
-            static QString async_snapshot(XenSession* session, const QString& vm, const QString& new_name);
+            static QString async_snapshot(Session* session, const QString& vm, const QString& new_name);
 
             /**
              * @brief Snapshot the VM with quiesce asynchronously; returns new VM ref.
@@ -436,7 +433,7 @@ namespace XenAPI
              * @param new_name The name of the snapshotted VM
              * @return Task ref for async operation (ref of the newly created VM)
              */
-            static QString async_snapshot_with_quiesce(XenSession* session, const QString& vm, const QString& new_name);
+            static QString async_snapshot_with_quiesce(Session* session, const QString& vm, const QString& new_name);
 
             /**
              * @brief Checkpoint the specified VM asynchronously (includes memory image).
@@ -445,7 +442,7 @@ namespace XenAPI
              * @param new_name The name of the checkpointed VM
              * @return Task ref for async operation (ref of the newly created VM)
              */
-            static QString async_checkpoint(XenSession* session, const QString& vm, const QString& new_name);
+            static QString async_checkpoint(Session* session, const QString& vm, const QString& new_name);
 
             /**
              * @brief Revert the specified VM to a previous snapshot asynchronously.
@@ -453,7 +450,7 @@ namespace XenAPI
              * @param snapshot The opaque_ref of the snapshot
              * @return Task ref for async operation
              */
-            static QString async_revert(XenSession* session, const QString& snapshot);
+            static QString async_revert(Session* session, const QString& snapshot);
 
             // Memory configuration
 
@@ -468,7 +465,7 @@ namespace XenAPI
              * @param dynamic_min New value for memory_dynamic_min (bytes)
              * @param dynamic_max New value for memory_dynamic_max (bytes)
              */
-            static void set_memory_limits(XenSession* session, const QString& vm,
+            static void set_memory_limits(Session* session, const QString& vm,
                                           qint64 static_min, qint64 static_max,
                                           qint64 dynamic_min, qint64 dynamic_max);
 
@@ -479,7 +476,7 @@ namespace XenAPI
              * @param dynamic_min New value for memory_dynamic_min (bytes)
              * @param dynamic_max New value for memory_dynamic_max (bytes)
              */
-            static void set_memory_dynamic_range(XenSession* session, const QString& vm,
+            static void set_memory_dynamic_range(Session* session, const QString& vm,
                                                  qint64 dynamic_min, qint64 dynamic_max);
 
             // VCPU configuration
@@ -490,7 +487,7 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @param value New value for VCPUs_max
              */
-            static void set_VCPUs_max(XenSession* session, const QString& vm, qint64 value);
+            static void set_VCPUs_max(Session* session, const QString& vm, qint64 value);
 
             /**
              * @brief Set the number of VCPUs at startup for a halted VM.
@@ -498,7 +495,7 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @param value New value for VCPUs_at_startup
              */
-            static void set_VCPUs_at_startup(XenSession* session, const QString& vm, qint64 value);
+            static void set_VCPUs_at_startup(Session* session, const QString& vm, qint64 value);
 
             /**
              * @brief Set the number of VCPUs for a running VM (hotplug).
@@ -506,7 +503,7 @@ namespace XenAPI
              * @param vm The opaque_ref of the given VM
              * @param nvcpu The number of VCPUs
              */
-            static void set_VCPUs_number_live(XenSession* session, const QString& vm, qint64 nvcpu);
+            static void set_VCPUs_number_live(Session* session, const QString& vm, qint64 nvcpu);
 
             /**
              * @brief Migrate VM asynchronously (cross-pool)
@@ -519,7 +516,7 @@ namespace XenAPI
              * @param options Migration options (e.g., {"copy": "true"} for copy operation)
              * @return Task reference
              */
-            static QString async_migrate_send(XenSession* session, const QString& vm,
+            static QString async_migrate_send(Session* session, const QString& vm,
                                               const QVariantMap& dest, bool live,
                                               const QVariantMap& vdi_map, const QVariantMap& vif_map,
                                               const QVariantMap& options);
@@ -535,7 +532,7 @@ namespace XenAPI
              * - "restart" = Always restart
              * - "best-effort" = Restart if possible
              */
-            static void set_ha_restart_priority(XenSession* session, const QString& vm, const QString& value);
+            static void set_ha_restart_priority(Session* session, const QString& vm, const QString& value);
 
             /**
              * @brief Set VM start order for HA
@@ -546,7 +543,7 @@ namespace XenAPI
              * Sets the order in which VMs are started during HA recovery.
              * VMs with lower order values start first.
              */
-            static void set_order(XenSession* session, const QString& vm, qint64 value);
+            static void set_order(Session* session, const QString& vm, qint64 value);
 
             /**
              * @brief Set VM start delay for HA
@@ -556,7 +553,7 @@ namespace XenAPI
              *
              * Sets the delay between starting this VM and the next VM in the HA sequence.
              */
-            static void set_start_delay(XenSession* session, const QString& vm, qint64 value);
+            static void set_start_delay(Session* session, const QString& vm, qint64 value);
 
             /**
              * @brief Set HVM shadow memory multiplier (offline)
@@ -564,7 +561,7 @@ namespace XenAPI
              * @param vm VM opaque reference
              * @param value Shadow multiplier value
              */
-            static void set_HVM_shadow_multiplier(XenSession* session, const QString& vm, double value);
+            static void set_HVM_shadow_multiplier(Session* session, const QString& vm, double value);
 
             /**
              * @brief Set shadow memory multiplier on a running VM
@@ -572,7 +569,7 @@ namespace XenAPI
              * @param vm VM opaque reference
              * @param value Shadow multiplier value
              */
-            static void set_shadow_multiplier_live(XenSession* session, const QString& vm, double value);
+            static void set_shadow_multiplier_live(Session* session, const QString& vm, double value);
 
             /**
              * @brief Set HVM boot policy (e.g., "BIOS order")
@@ -583,7 +580,7 @@ namespace XenAPI
              * First published in XenServer 4.0.
              * Deprecated in XenServer 7.5.
              */
-            static void set_HVM_boot_policy(XenSession* session, const QString& vm, const QString& value);
+            static void set_HVM_boot_policy(Session* session, const QString& vm, const QString& value);
 
             /**
              * @brief Set HVM boot parameters (e.g., boot order)
@@ -599,7 +596,7 @@ namespace XenAPI
              *
              * First published in XenServer 4.0.
              */
-            static void set_HVM_boot_params(XenSession* session, const QString& vm, const QVariantMap& bootParams);
+            static void set_HVM_boot_params(Session* session, const QString& vm, const QVariantMap& bootParams);
 
             /**
              * @brief Get HVM boot policy
@@ -607,7 +604,7 @@ namespace XenAPI
              * @param vm VM opaque reference
              * @return Boot policy string
              */
-            static QString get_HVM_boot_policy(XenSession* session, const QString& vm);
+            static QString get_HVM_boot_policy(Session* session, const QString& vm);
 
             /**
              * @brief Get HVM boot parameters
@@ -615,7 +612,7 @@ namespace XenAPI
              * @param vm VM opaque reference
              * @return Map of boot parameters
              */
-            static QVariantMap get_HVM_boot_params(XenSession* session, const QString& vm);
+            static QVariantMap get_HVM_boot_params(Session* session, const QString& vm);
 
             /**
              * @brief Set PV args
@@ -625,7 +622,7 @@ namespace XenAPI
              *
              * Matches C# VM.set_PV_args()
              */
-            static void set_PV_args(XenSession* session, const QString& vm, const QString& value);
+            static void set_PV_args(Session* session, const QString& vm, const QString& value);
 
             /**
              * @brief Set other_config
@@ -635,7 +632,7 @@ namespace XenAPI
              *
              * Matches C# VM.set_other_config()
              */
-            static void set_other_config(XenSession* session, const QString& vm, const QVariantMap& otherConfig);
+            static void set_other_config(Session* session, const QString& vm, const QVariantMap& otherConfig);
 
             /**
              * @brief Set VCPUs_params
@@ -645,7 +642,7 @@ namespace XenAPI
              *
              * Matches C# VM.set_VCPUs_params()
              */
-            static void set_VCPUs_params(XenSession* session, const QString& vm, const QVariantMap& vcpusParams);
+            static void set_VCPUs_params(Session* session, const QString& vm, const QVariantMap& vcpusParams);
 
             /**
              * @brief Set platform
@@ -655,7 +652,7 @@ namespace XenAPI
              *
              * Matches C# VM.set_platform()
              */
-            static void set_platform(XenSession* session, const QString& vm, const QVariantMap& platform);
+            static void set_platform(Session* session, const QString& vm, const QVariantMap& platform);
 
             /**
              * @brief Set affinity
@@ -665,7 +662,7 @@ namespace XenAPI
              *
              * Matches C# VM.set_affinity()
              */
-            static void set_affinity(XenSession* session, const QString& vm, const QString& host);
+            static void set_affinity(Session* session, const QString& vm, const QString& host);
 
             // TODO: Add more VM methods as needed (pause, unpause, reboot, etc.)
             // See xenadmin/XenModel/XenAPI/VM.cs for complete list

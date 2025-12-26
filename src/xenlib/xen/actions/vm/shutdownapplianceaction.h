@@ -46,21 +46,21 @@ class ShutDownApplianceAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct ShutDownApplianceAction
-     * @param connection XenConnection
-     * @param applianceRef OpaqueRef of VM_appliance to shut down
-     * @param parent Parent QObject
-     */
-    explicit ShutDownApplianceAction(XenConnection* connection, const QString& applianceRef,
-                                     QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct ShutDownApplianceAction
+         * @param connection XenConnection
+         * @param applianceRef OpaqueRef of VM_appliance to shut down
+         * @param parent Parent QObject
+         */
+        explicit ShutDownApplianceAction(XenConnection* connection, const QString& applianceRef,
+                                         QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_applianceRef;
+    private:
+        QString m_applianceRef;
 };
 
 /**
@@ -72,15 +72,15 @@ class CleanShutDownApplianceAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    explicit CleanShutDownApplianceAction(XenConnection* connection, const QString& applianceRef,
-                                          QObject* parent = nullptr);
+    public:
+        explicit CleanShutDownApplianceAction(XenConnection* connection, const QString& applianceRef,
+                                              QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_applianceRef;
+    private:
+        QString m_applianceRef;
 };
 
 /**
@@ -92,15 +92,15 @@ class HardShutDownApplianceAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    explicit HardShutDownApplianceAction(XenConnection* connection, const QString& applianceRef,
-                                         QObject* parent = nullptr);
+    public:
+        explicit HardShutDownApplianceAction(XenConnection* connection, const QString& applianceRef,
+                                             QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_applianceRef;
+    private:
+        QString m_applianceRef;
 };
 
 #endif // SHUTDOWNAPPLIANCEACTION_H

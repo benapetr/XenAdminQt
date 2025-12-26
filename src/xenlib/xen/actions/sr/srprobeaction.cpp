@@ -29,6 +29,8 @@
 #include "../../xenapi/xenapi_SR.h"
 #include <QXmlStreamReader>
 
+using namespace XenAPI;
+
 SrProbeAction::SrProbeAction(XenConnection* connection,
                              Host* host,
                              const QString& srType,

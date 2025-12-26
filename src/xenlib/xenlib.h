@@ -33,12 +33,16 @@
 #include <QtCore/QVariant>
 
 QT_FORWARD_DECLARE_CLASS(XenConnection)
-QT_FORWARD_DECLARE_CLASS(XenSession)
 QT_FORWARD_DECLARE_CLASS(XenRpcAPI)
 QT_FORWARD_DECLARE_CLASS(XenAsyncOperations)
 QT_FORWARD_DECLARE_CLASS(XenCertificateManager)
 QT_FORWARD_DECLARE_CLASS(XenCache)
 QT_FORWARD_DECLARE_CLASS(MetricUpdater)
+
+namespace XenAPI
+{
+    class Session;
+}
 
 namespace Xen
 {

@@ -28,7 +28,6 @@
 #ifndef XENAPI_SR_H
 #define XENAPI_SR_H
 
-#include "../session.h"
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
@@ -36,6 +35,8 @@
 
 namespace XenAPI
 {
+    class Session;
+
     /**
      * @brief SR - XenAPI Storage Repository bindings
      *
@@ -54,7 +55,7 @@ namespace XenAPI
              * @param sr SR opaque reference
              * @return SR record as QVariantMap
              */
-            static QVariantMap get_record(XenSession* session, const QString& sr);
+            static QVariantMap get_record(Session* session, const QString& sr);
 
             /**
              * @brief Get SR name label
@@ -62,7 +63,7 @@ namespace XenAPI
              * @param sr SR opaque reference
              * @return SR name label
              */
-            static QString get_name_label(XenSession* session, const QString& sr);
+            static QString get_name_label(Session* session, const QString& sr);
 
             /**
              * @brief Get SR by UUID
@@ -70,7 +71,7 @@ namespace XenAPI
              * @param uuid SR UUID
              * @return SR opaque reference
              */
-            static QString get_by_uuid(XenSession* session, const QString& uuid);
+            static QString get_by_uuid(Session* session, const QString& uuid);
 
             /**
              * @brief Get list of PBDs for SR
@@ -78,7 +79,7 @@ namespace XenAPI
              * @param sr SR opaque reference
              * @return List of PBD references
              */
-            static QVariantList get_PBDs(XenSession* session, const QString& sr);
+            static QVariantList get_PBDs(Session* session, const QString& sr);
 
             /**
              * @brief Create a new SR
@@ -94,7 +95,7 @@ namespace XenAPI
              * @param smConfig SM-specific config
              * @return SR opaque reference
              */
-            static QString create(XenSession* session,
+            static QString create(Session* session,
                                   const QString& host,
                                   const QVariantMap& deviceConfig,
                                   qint64 physicalSize,
@@ -117,7 +118,7 @@ namespace XenAPI
              * @param smConfig SM config
              * @return Task reference
              */
-            static QString async_introduce(XenSession* session,
+            static QString async_introduce(Session* session,
                                            const QString& uuid,
                                            const QString& nameLabel,
                                            const QString& nameDescription,
@@ -132,14 +133,14 @@ namespace XenAPI
              * @param sr SR opaque reference
              * @return Task reference
              */
-            static QString async_forget(XenSession* session, const QString& sr);
+            static QString async_forget(Session* session, const QString& sr);
 
             /**
              * @brief Forget SR (sync)
              * @param session Active XenSession
              * @param sr SR opaque reference
              */
-            static void forget(XenSession* session, const QString& sr);
+            static void forget(Session* session, const QString& sr);
 
             /**
              * @brief Destroy SR (async)
@@ -147,7 +148,7 @@ namespace XenAPI
              * @param sr SR opaque reference
              * @return Task reference
              */
-            static QString async_destroy(XenSession* session, const QString& sr);
+            static QString async_destroy(Session* session, const QString& sr);
 
             /**
              * @brief Set SR name label
@@ -155,7 +156,7 @@ namespace XenAPI
              * @param sr SR opaque reference
              * @param value New name label
              */
-            static void set_name_label(XenSession* session, const QString& sr, const QString& value);
+            static void set_name_label(Session* session, const QString& sr, const QString& value);
 
             /**
              * @brief Set SR name description
@@ -163,7 +164,7 @@ namespace XenAPI
              * @param sr SR opaque reference
              * @param value New description
              */
-            static void set_name_description(XenSession* session, const QString& sr, const QString& value);
+            static void set_name_description(Session* session, const QString& sr, const QString& value);
 
             /**
              * @brief Set SR tags
@@ -171,7 +172,7 @@ namespace XenAPI
              * @param sr SR opaque reference
              * @param tags Tag list
              */
-            static void set_tags(XenSession* session, const QString& sr, const QStringList& tags);
+            static void set_tags(Session* session, const QString& sr, const QStringList& tags);
 
             /**
              * @brief Set SR other_config
@@ -179,7 +180,7 @@ namespace XenAPI
              * @param sr SR opaque reference
              * @param value other_config map
              */
-            static void set_other_config(XenSession* session, const QString& sr, const QVariantMap& value);
+            static void set_other_config(Session* session, const QString& sr, const QVariantMap& value);
 
             /**
              * @brief Scan SR for new/changed VDIs
@@ -189,7 +190,7 @@ namespace XenAPI
              * C# equivalent: SR.scan(Session, sr)
              * Scans the SR to detect new, changed, or removed VDIs
              */
-            static void scan(XenSession* session, const QString& sr);
+            static void scan(Session* session, const QString& sr);
 
             /**
              * @brief Probe for existing SRs (async version)
@@ -203,7 +204,7 @@ namespace XenAPI
              * C# equivalent: SR.async_probe()
              * Returns XML describing available SRs
              */
-            static QString async_probe(XenSession* session, const QString& host,
+            static QString async_probe(Session* session, const QString& host,
                                        const QVariantMap& device_config,
                                        const QString& type,
                                        const QVariantMap& sm_config);
@@ -220,7 +221,7 @@ namespace XenAPI
              * C# equivalent: SR.probe_ext()
              * Returns structured data instead of XML
              */
-            static QVariantList probe_ext(XenSession* session, const QString& host,
+            static QVariantList probe_ext(Session* session, const QString& host,
                                           const QVariantMap& device_config,
                                           const QString& type,
                                           const QVariantMap& sm_config);
@@ -242,7 +243,7 @@ namespace XenAPI
              * C# equivalent: SR.async_create()
              * Creates new storage repository
              */
-            static QString async_create(XenSession* session,
+            static QString async_create(Session* session,
                                         const QString& host,
                                         const QVariantMap& device_config,
                                         qint64 physical_size,

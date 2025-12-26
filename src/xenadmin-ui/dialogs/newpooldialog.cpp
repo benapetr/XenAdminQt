@@ -334,7 +334,7 @@ void NewPoolDialog::createPool()
         return;
     }
 
-    XenSession* coordinatorSession = coordinatorConn->GetSession();
+    XenAPI::Session* coordinatorSession = coordinatorConn->GetSession();
     if (!coordinatorSession || !coordinatorSession->IsLoggedIn())
     {
         QMessageBox::warning(this, tr("Error"), tr("Coordinator is not connected."));

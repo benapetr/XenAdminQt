@@ -77,19 +77,11 @@ AddServerDialog::AddServerDialog(XenConnection* connection, bool changedPass, QW
         ui->PasswordTextBox->setText(m_connection->GetPassword());
     }
 
-    connect(ui->ServerNameComboBox->lineEdit(), &QLineEdit::textChanged,
-            this, &AddServerDialog::TextFields_TextChanged);
-    connect(ui->UsernameTextBox, &QLineEdit::textChanged,
-            this, &AddServerDialog::TextFields_TextChanged);
-    connect(ui->PasswordTextBox, &QLineEdit::textChanged,
-            this, &AddServerDialog::TextFields_TextChanged);
-    connect(ui->AddButton, &QPushButton::clicked,
-            this, &AddServerDialog::AddButton_Click);
-    connect(ui->CancelButton2, &QPushButton::clicked,
-            this, &AddServerDialog::CancelButton2_Click);
-    connect(ui->labelError, &QLabel::textChanged,
-            this, &AddServerDialog::labelError_TextChanged);
-
+    connect(ui->ServerNameComboBox->lineEdit(), &QLineEdit::textChanged, this, &AddServerDialog::TextFields_TextChanged);
+    connect(ui->UsernameTextBox, &QLineEdit::textChanged, this, &AddServerDialog::TextFields_TextChanged);
+    connect(ui->PasswordTextBox, &QLineEdit::textChanged, this, &AddServerDialog::TextFields_TextChanged);
+    connect(ui->AddButton, &QPushButton::clicked, this, &AddServerDialog::AddButton_Click);
+    connect(ui->CancelButton2, &QPushButton::clicked, this, &AddServerDialog::CancelButton2_Click);
     QIcon warnIcon = style()->standardIcon(QStyle::SP_MessageBoxWarning);
     ui->pictureBoxError->setPixmap(warnIcon.pixmap(16, 16));
 
@@ -157,8 +149,7 @@ void AddServerDialog::UpdateText()
         ui->labelError->setText(QString());
         ui->ServerNameComboBox->setEnabled(false);
         ui->AddButton->setText(tr("Connect"));
-    }
-    else
+    } else
     {
         setWindowTitle(kTextConnectToServer);
         ui->labelInstructions->setText(kTextErrorConnectingBlurb);

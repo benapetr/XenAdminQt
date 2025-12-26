@@ -109,7 +109,7 @@ CreateVMAction::CreateVMAction(XenConnection* connection,
 
 void CreateVMAction::run()
 {
-    XenSession* sess = session();
+    XenAPI::Session* sess = session();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");

@@ -419,7 +419,7 @@ void HAWizard::scanForHeartbeatSRs()
 
     try
     {
-        XenSession* session = this->m_xenLib->getConnection()->GetSession();
+        XenAPI::Session* session = this->m_xenLib->getConnection()->GetSession();
         if (!session || !session->IsLoggedIn())
         {
             throw std::runtime_error("Not connected");

@@ -31,14 +31,16 @@
 #include "../utils/misc.h"
 #include <QDebug>
 
+using namespace XenAPI;
+
 class XenRpcAPI::Private
 {
     public:
-        XenSession* session = nullptr;
+        Session* session = nullptr;
         int nextRequestId = 1; // Request ID counter for JSON-RPC
 };
 
-XenRpcAPI::XenRpcAPI(XenSession* session, QObject* parent) : QObject(parent), d(new Private)
+XenRpcAPI::XenRpcAPI(Session *session, QObject* parent) : QObject(parent), d(new Private)
 {
     this->d->session = session;
 }

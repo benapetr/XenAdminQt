@@ -64,7 +64,7 @@ void MeddlingActionManager::rehydrateTasks(XenConnection* connection)
         return;
     }
 
-    XenSession* session = connection->GetSession();
+    XenAPI::Session* session = connection->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         qWarning() << "MeddlingActionManager: Cannot rehydrate tasks - not logged in";

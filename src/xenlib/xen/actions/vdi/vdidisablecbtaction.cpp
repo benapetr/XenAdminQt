@@ -53,7 +53,7 @@ void VDIDisableCbtAction::run()
         return;
     }
 
-    XenSession* xenSession = session();
+    XenAPI::Session* xenSession = session();
 
     try
     {

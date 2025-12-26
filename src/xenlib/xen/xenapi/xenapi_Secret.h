@@ -28,11 +28,12 @@
 #ifndef XENAPI_SECRET_H
 #define XENAPI_SECRET_H
 
-#include "../session.h"
 #include <QString>
 
 namespace XenAPI
 {
+    class Session;
+
     /**
      * @brief Secret - XenAPI Secret bindings
      *
@@ -51,7 +52,7 @@ namespace XenAPI
              * @param value Secret value (e.g., password)
              * @return Secret UUID
              */
-            static QString create(XenSession* session, const QString& value);
+            static QString create(Session* session, const QString& value);
 
             /**
              * @brief Get secret by UUID
@@ -59,14 +60,14 @@ namespace XenAPI
              * @param uuid Secret UUID
              * @return Secret opaque reference
              */
-            static QString get_by_uuid(XenSession* session, const QString& uuid);
+            static QString get_by_uuid(Session* session, const QString& uuid);
 
             /**
              * @brief Destroy a secret
              * @param session Active XenSession
              * @param secret Secret opaque reference
              */
-            static void destroy(XenSession* session, const QString& secret);
+            static void destroy(Session* session, const QString& secret);
     };
 
 } // namespace XenAPI

@@ -36,7 +36,7 @@
 namespace XenAPI
 {
     // VBD.create - Create a new VBD
-    QString VBD::create(XenSession* session, const QVariantMap& vbdRecord)
+    QString VBD::create(Session* session, const QVariantMap& vbdRecord)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -50,7 +50,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString VBD::async_create(XenSession* session, const QVariantMap& vbdRecord)
+    QString VBD::async_create(Session* session, const QVariantMap& vbdRecord)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -65,7 +65,7 @@ namespace XenAPI
     }
 
     // VBD.async_plug - Asynchronous plug
-    QString VBD::async_plug(XenSession* session, const QString& vbd)
+    QString VBD::async_plug(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -80,7 +80,7 @@ namespace XenAPI
     }
 
     // VBD.async_unplug - Asynchronous unplug
-    QString VBD::async_unplug(XenSession* session, const QString& vbd)
+    QString VBD::async_unplug(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -95,7 +95,7 @@ namespace XenAPI
     }
 
     // VBD.async_destroy - Asynchronous destroy
-    QString VBD::async_destroy(XenSession* session, const QString& vbd)
+    QString VBD::async_destroy(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -110,7 +110,7 @@ namespace XenAPI
     }
 
     // VBD.async_eject - Asynchronous eject
-    QString VBD::async_eject(XenSession* session, const QString& vbd)
+    QString VBD::async_eject(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -125,7 +125,7 @@ namespace XenAPI
     }
 
     // VBD.async_insert - Asynchronous insert
-    QString VBD::async_insert(XenSession* session, const QString& vbd, const QString& vdi)
+    QString VBD::async_insert(Session* session, const QString& vbd, const QString& vdi)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -140,7 +140,7 @@ namespace XenAPI
     }
 
     // VBD.plug - Synchronous plug
-    void VBD::plug(XenSession* session, const QString& vbd)
+    void VBD::plug(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -155,7 +155,7 @@ namespace XenAPI
     }
 
     // VBD.unplug - Synchronous unplug
-    void VBD::unplug(XenSession* session, const QString& vbd)
+    void VBD::unplug(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -170,7 +170,7 @@ namespace XenAPI
     }
 
     // VBD.destroy - Destroy a VBD
-    void VBD::destroy(XenSession* session, const QString& vbd)
+    void VBD::destroy(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -185,7 +185,7 @@ namespace XenAPI
     }
 
     // VBD.eject - Synchronous eject
-    void VBD::eject(XenSession* session, const QString& vbd)
+    void VBD::eject(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -200,7 +200,7 @@ namespace XenAPI
     }
 
     // VBD.insert - Synchronous insert
-    void VBD::insert(XenSession* session, const QString& vbd, const QString& vdi)
+    void VBD::insert(Session* session, const QString& vbd, const QString& vdi)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -215,7 +215,7 @@ namespace XenAPI
     }
 
     // VBD.get_allowed_operations
-    QVariantList VBD::get_allowed_operations(XenSession* session, const QString& vbd)
+    QVariantList VBD::get_allowed_operations(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -230,7 +230,7 @@ namespace XenAPI
     }
 
     // VBD.get_VM
-    QString VBD::get_VM(XenSession* session, const QString& vbd)
+    QString VBD::get_VM(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -245,7 +245,7 @@ namespace XenAPI
     }
 
     // VBD.get_VDI
-    QString VBD::get_VDI(XenSession* session, const QString& vbd)
+    QString VBD::get_VDI(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -260,7 +260,7 @@ namespace XenAPI
     }
 
     // VBD.get_device
-    QString VBD::get_device(XenSession* session, const QString& vbd)
+    QString VBD::get_device(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -275,7 +275,7 @@ namespace XenAPI
     }
 
     // VBD.get_userdevice
-    QString VBD::get_userdevice(XenSession* session, const QString& vbd)
+    QString VBD::get_userdevice(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -290,7 +290,7 @@ namespace XenAPI
     }
 
     // VBD.get_bootable
-    bool VBD::get_bootable(XenSession* session, const QString& vbd)
+    bool VBD::get_bootable(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -305,7 +305,7 @@ namespace XenAPI
     }
 
     // VBD.get_mode
-    QString VBD::get_mode(XenSession* session, const QString& vbd)
+    QString VBD::get_mode(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -320,7 +320,7 @@ namespace XenAPI
     }
 
     // VBD.get_type
-    QString VBD::get_type(XenSession* session, const QString& vbd)
+    QString VBD::get_type(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -335,7 +335,7 @@ namespace XenAPI
     }
 
     // VBD.get_unpluggable
-    bool VBD::get_unpluggable(XenSession* session, const QString& vbd)
+    bool VBD::get_unpluggable(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -350,7 +350,7 @@ namespace XenAPI
     }
 
     // VBD.get_currently_attached
-    bool VBD::get_currently_attached(XenSession* session, const QString& vbd)
+    bool VBD::get_currently_attached(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -365,7 +365,7 @@ namespace XenAPI
     }
 
     // VBD.get_empty
-    bool VBD::get_empty(XenSession* session, const QString& vbd)
+    bool VBD::get_empty(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -380,7 +380,7 @@ namespace XenAPI
     }
 
     // VBD.set_bootable
-    void VBD::set_bootable(XenSession* session, const QString& vbd, bool bootable)
+    void VBD::set_bootable(Session* session, const QString& vbd, bool bootable)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -395,7 +395,7 @@ namespace XenAPI
     }
 
     // VBD.set_mode
-    void VBD::set_mode(XenSession* session, const QString& vbd, const QString& mode)
+    void VBD::set_mode(Session* session, const QString& vbd, const QString& mode)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -410,7 +410,7 @@ namespace XenAPI
     }
 
     // VBD.set_userdevice
-    void VBD::set_userdevice(XenSession* session, const QString& vbd, const QString& userdevice)
+    void VBD::set_userdevice(Session* session, const QString& vbd, const QString& userdevice)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -425,7 +425,7 @@ namespace XenAPI
     }
 
     // VBD.get_record
-    QVariantMap VBD::get_record(XenSession* session, const QString& vbd)
+    QVariantMap VBD::get_record(Session* session, const QString& vbd)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -440,7 +440,7 @@ namespace XenAPI
     }
 
     // VBD.get_all
-    QVariantList VBD::get_all(XenSession* session)
+    QVariantList VBD::get_all(Session* session)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -455,7 +455,7 @@ namespace XenAPI
     }
 
     // VBD.get_all_records
-    QVariantMap VBD::get_all_records(XenSession* session)
+    QVariantMap VBD::get_all_records(Session* session)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");

@@ -103,7 +103,7 @@ void CreatePoolAction::run()
             // Get coordinator credentials from session
             QString coordinatorAddress = m_coordinatorConnection->GetHostname();
 
-            XenSession* coordinatorSession = m_coordinatorConnection->GetSession();
+            XenAPI::Session* coordinatorSession = m_coordinatorConnection->GetSession();
             if (!coordinatorSession)
             {
                 throw std::runtime_error("Coordinator connection has no session");

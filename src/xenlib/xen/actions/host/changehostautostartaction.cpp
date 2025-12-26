@@ -31,6 +31,8 @@
 #include "../../api.h"
 #include <QDebug>
 
+using namespace XenAPI;
+
 ChangeHostAutostartAction::ChangeHostAutostartAction(XenConnection* connection,
                                                      const QString& hostRef,
                                                      bool enable,

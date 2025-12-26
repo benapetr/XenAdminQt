@@ -433,7 +433,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
         return;
     }
 
-    XenSession* session = nullptr;
+    XenAPI::Session* session = nullptr;
     if (mainWin->xenLib()->getConnection())
     {
         session = mainWin->xenLib()->getConnection()->GetSession();

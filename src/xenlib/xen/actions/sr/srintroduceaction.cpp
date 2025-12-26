@@ -38,6 +38,8 @@
 #include "../../xenapi/xenapi_Host.h"
 #include <QDebug>
 
+using namespace XenAPI;
+
 SrIntroduceAction::SrIntroduceAction(XenConnection* connection,
                                      const QString& srUuid,
                                      const QString& srName,
@@ -62,7 +64,7 @@ void SrIntroduceAction::run()
              << "name:" << m_srName
              << "type:" << m_srType;
 
-    XenSession* session = this->session();
+    Session* session = this->session();
     if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");

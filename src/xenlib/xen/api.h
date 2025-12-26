@@ -32,13 +32,16 @@
 #include <QtCore/QObject>
 #include <QtCore/QVariant>
 
-class XenSession;
+namespace XenAPI
+{
+    class Session;
+}
 
 class XENLIB_EXPORT XenRpcAPI : public QObject
 {
     Q_OBJECT
     public:
-        explicit XenRpcAPI(XenSession* session, QObject* parent = nullptr);
+        explicit XenRpcAPI(XenAPI::Session* session, QObject* parent = nullptr);
         ~XenRpcAPI();
 
         // Session info

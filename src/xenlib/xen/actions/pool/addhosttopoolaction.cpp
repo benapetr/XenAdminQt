@@ -60,7 +60,7 @@ void AddHostToPoolAction::run()
         QString coordinatorAddress = m_poolConnection->GetHostname();
 
         // Get credentials from the pool's session
-        XenSession* poolSession = m_poolConnection->GetSession();
+        XenAPI::Session* poolSession = m_poolConnection->GetSession();
         if (!poolSession)
         {
             throw std::runtime_error("Pool connection has no session");

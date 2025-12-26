@@ -38,7 +38,7 @@ namespace XenAPI
 {
 
     // VM_appliance.get_allowed_operations
-    QStringList VM_appliance::get_allowed_operations(XenSession* session, const QString& applianceRef)
+    QStringList VM_appliance::get_allowed_operations(Session* session, const QString& applianceRef)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -65,7 +65,7 @@ namespace XenAPI
     }
 
     // VM_appliance.get_current_operations
-    QVariantMap VM_appliance::get_current_operations(XenSession* session, const QString& applianceRef)
+    QVariantMap VM_appliance::get_current_operations(Session* session, const QString& applianceRef)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -84,7 +84,7 @@ namespace XenAPI
     }
 
     // VM_appliance.get_VMs
-    QStringList VM_appliance::get_VMs(XenSession* session, const QString& applianceRef)
+    QStringList VM_appliance::get_VMs(Session* session, const QString& applianceRef)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -111,7 +111,7 @@ namespace XenAPI
     }
 
     // VM_appliance.get_record
-    QVariantMap VM_appliance::get_record(XenSession* session, const QString& applianceRef)
+    QVariantMap VM_appliance::get_record(Session* session, const QString& applianceRef)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -129,7 +129,7 @@ namespace XenAPI
     }
 
     // VM_appliance.get_all_records
-    QVariantMap VM_appliance::get_all_records(XenSession* session)
+    QVariantMap VM_appliance::get_all_records(Session* session)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -146,7 +146,7 @@ namespace XenAPI
     }
 
     // VM_appliance.set_name_label
-    void VM_appliance::set_name_label(XenSession* session, const QString& applianceRef, const QString& label)
+    void VM_appliance::set_name_label(Session* session, const QString& applianceRef, const QString& label)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -163,7 +163,7 @@ namespace XenAPI
     }
 
     // VM_appliance.set_name_description
-    void VM_appliance::set_name_description(XenSession* session, const QString& applianceRef, const QString& description)
+    void VM_appliance::set_name_description(Session* session, const QString& applianceRef, const QString& description)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -180,7 +180,7 @@ namespace XenAPI
     }
 
     // VM_appliance.async_start
-    QString VM_appliance::async_start(XenSession* session, const QString& applianceRef, bool paused)
+    QString VM_appliance::async_start(Session* session, const QString& applianceRef, bool paused)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -199,7 +199,7 @@ namespace XenAPI
     }
 
     // VM_appliance.start
-    void VM_appliance::start(XenSession* session, const QString& applianceRef, bool paused)
+    void VM_appliance::start(Session* session, const QString& applianceRef, bool paused)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -216,7 +216,7 @@ namespace XenAPI
     }
 
     // VM_appliance.async_clean_shutdown
-    QString VM_appliance::async_clean_shutdown(XenSession* session, const QString& applianceRef)
+    QString VM_appliance::async_clean_shutdown(Session* session, const QString& applianceRef)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -234,7 +234,7 @@ namespace XenAPI
     }
 
     // VM_appliance.clean_shutdown
-    void VM_appliance::clean_shutdown(XenSession* session, const QString& applianceRef)
+    void VM_appliance::clean_shutdown(Session* session, const QString& applianceRef)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -250,7 +250,7 @@ namespace XenAPI
     }
 
     // VM_appliance.async_hard_shutdown
-    QString VM_appliance::async_hard_shutdown(XenSession* session, const QString& applianceRef)
+    QString VM_appliance::async_hard_shutdown(Session* session, const QString& applianceRef)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -268,7 +268,7 @@ namespace XenAPI
     }
 
     // VM_appliance.hard_shutdown
-    void VM_appliance::hard_shutdown(XenSession* session, const QString& applianceRef)
+    void VM_appliance::hard_shutdown(Session* session, const QString& applianceRef)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -284,7 +284,7 @@ namespace XenAPI
     }
 
     // VM_appliance.async_shutdown
-    QString VM_appliance::async_shutdown(XenSession* session, const QString& applianceRef)
+    QString VM_appliance::async_shutdown(Session* session, const QString& applianceRef)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -302,7 +302,7 @@ namespace XenAPI
     }
 
     // VM_appliance.shutdown
-    void VM_appliance::shutdown(XenSession* session, const QString& applianceRef)
+    void VM_appliance::shutdown(Session* session, const QString& applianceRef)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");

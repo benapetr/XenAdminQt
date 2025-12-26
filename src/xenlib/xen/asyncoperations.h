@@ -35,13 +35,16 @@
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtNetwork/QNetworkReply>
 
-class XenSession;
+namespace XenAPI
+{
+    class Session;
+}
 
 class XENLIB_EXPORT XenAsyncOperations : public QObject
 {
     Q_OBJECT
     public:
-        explicit XenAsyncOperations(XenSession* session, QObject* parent = nullptr);
+        explicit XenAsyncOperations(XenAPI::Session* session, QObject* parent = nullptr);
         ~XenAsyncOperations();
 
         // Async operation management

@@ -86,7 +86,7 @@ class XenLib::Private
         bool isRedirecting = false; // True when handling HOST_IS_SLAVE redirect
 
         XenConnection* connection = nullptr;
-        XenSession* session = nullptr;
+        XenAPI::Session* session = nullptr;
         XenRpcAPI* api = nullptr;
         XenAsyncOperations* asyncOps = nullptr;
         XenCertificateManager* certManager = nullptr;
@@ -111,7 +111,7 @@ XenLib::XenLib(QObject* parent) : QObject(parent), d(new Private)
     this->d->connection->setCertificateManager(this->d->certManager);
     // Set xenLib property so XenObject subclasses can access cache
     this->d->connection->setProperty("xenLib", QVariant::fromValue(this));
-    this->d->session = new XenSession(this->d->connection, this->d->connection);
+    this->d->session = new XenAPI::Session(this->d->connection, this->d->connection);
     this->d->api = new XenRpcAPI(this->d->session, this);
     this->d->asyncOps = new XenAsyncOperations(this->d->session, this);
     this->d->metricUpdater = new MetricUpdater(this->d->connection, this);
@@ -190,14 +190,14 @@ void XenLib::setupConnections()
     connect(this->d->connection, &XenConnection::apiResponse, this, &XenLib::onConnectionApiResponse);
 
     // Session signals
-    connect(this->d->session, &XenSession::loginSuccessful,
+    connect(this->d->session, &XenAPI::Session::loginSuccessful,
             [this]() { this->handleLoginResult(true); });
-    connect(this->d->session, &XenSession::loginFailed,
+    connect(this->d->session, &XenAPI::Session::loginFailed,
             [this](const QString& reason) {
                 this->setError(reason);
                 this->handleLoginResult(false);
             });
-    connect(this->d->session, &XenSession::needsRedirectToMaster, this, &XenLib::onRedirectToMaster);
+    connect(this->d->session, &XenAPI::Session::needsRedirectToMaster, this, &XenLib::onRedirectToMaster);
 
     // API signals
     connect(this->d->api, &XenRpcAPI::apiCallCompleted, this, &XenLib::handleApiCallResult);

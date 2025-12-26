@@ -32,6 +32,8 @@
 #include "../../../utils/misc.h"
 #include <QDebug>
 
+using namespace XenAPI;
+
 // PowerOnMode toString implementation
 QString PowerOnMode::toString() const
 {
@@ -92,7 +94,7 @@ void SavePowerOnSettingsAction::run()
 void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const PowerOnMode& mode)
 {
     XenConnection* conn = this->connection();
-    XenSession* session = conn->GetSession();
+    Session* session = conn->GetSession();
     XenRpcAPI api(session);
     
     QString modeString = mode.toString();
@@ -151,7 +153,7 @@ void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const Pow
 QString SavePowerOnSettingsAction::createSecret(const QString& value)
 {
     XenConnection* conn = this->connection();
-    XenSession* session = conn->GetSession();
+    Session* session = conn->GetSession();
     XenRpcAPI api(session);
     
     // Create a secret to store the password
@@ -196,7 +198,7 @@ QString SavePowerOnSettingsAction::createSecret(const QString& value)
 void SavePowerOnSettingsAction::destroySecret(const QString& secretRef)
 {
     XenConnection* conn = this->connection();
-    XenSession* session = conn->GetSession();
+    Session* session = conn->GetSession();
     XenRpcAPI api(session);
     
     QVariantList params;

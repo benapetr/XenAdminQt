@@ -28,7 +28,6 @@
 #include "srrepairaction.h"
 #include "../../network/connection.h"
 #include "../../session.h"
-#include "../../../xencache.h"
 #include "../../sr.h"
 #include "../../xenapi/xenapi_SR.h"
 #include "../../xenapi/xenapi_PBD.h"
@@ -64,7 +63,7 @@ void SrRepairAction::run()
         return;
     }
 
-    XenSession* session = this->session();
+    XenAPI::Session* session = this->session();
     if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");

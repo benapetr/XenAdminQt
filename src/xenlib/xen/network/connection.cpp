@@ -37,6 +37,8 @@
 #include <QtCore/QThread>
 #include <QtCore/QTimer>
 
+using namespace XenAPI;
+
 class XenConnection::Private
 {
     public:
@@ -51,7 +53,7 @@ class XenConnection::Private
         XenCertificateManager* certManager = nullptr;
 
         // Session association
-        XenSession* session = nullptr;
+        Session* session = nullptr;
 
         // Cache (each connection owns its own cache, matching C# architecture)
         XenCache* cache = nullptr;
@@ -173,7 +175,7 @@ QString XenConnection::GetSessionId() const
     return this->d->sessionId;
 }
 
-XenSession* XenConnection::GetNewSession(const QString& hostname,
+Session* XenConnection::GetNewSession(const QString& hostname,
                                          int port,
                                          const QString& username,
                                          const QString& password,
@@ -223,11 +225,11 @@ XenSession* XenConnection::GetNewSession(const QString& hostname,
             continue;
         }
 
-        XenSession* session = new XenSession(newConn, newConn);
+        Session* session = new Session(newConn, newConn);
         newConn->SetSession(session);
 
         QString redirectHost;
-        QObject::connect(session, &XenSession::needsRedirectToMaster,
+        QObject::connect(session, &Session::needsRedirectToMaster,
                          session, [&redirectHost](const QString& host) {
                              redirectHost = host;
                          });
@@ -363,12 +365,12 @@ void XenConnection::onWorkerApiResponse(int requestId, const QByteArray& respons
 }
 
 // Session association methods
-void XenConnection::SetSession(XenSession* session)
+void XenConnection::SetSession(Session* session)
 {
     this->d->session = session;
 }
 
-XenSession* XenConnection::GetSession() const
+Session* XenConnection::GetSession() const
 {
     return this->d->session;
 }

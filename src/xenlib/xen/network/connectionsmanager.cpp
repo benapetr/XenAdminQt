@@ -169,7 +169,7 @@ int ConnectionsManager::connectionCount() const
     return this->m_connections->size();
 }
 
-XenSession* ConnectionsManager::acquireSession(XenConnection* connection)
+XenAPI::Session* ConnectionsManager::acquireSession(XenConnection* connection)
 {
     if (!connection || !connection->IsConnected())
     {
@@ -180,12 +180,12 @@ XenSession* ConnectionsManager::acquireSession(XenConnection* connection)
     QMutexLocker locker(&this->m_sessionPoolMutex);
 
     // Check if we have any available sessions in the pool for this connection
-    QList<XenSession*>& pool = this->m_sessionPool[connection];
+    QList<XenAPI::Session*>& pool = this->m_sessionPool[connection];
 
     if (!pool.isEmpty())
     {
         // Reuse an existing session from the pool
-        XenSession* session = pool.takeFirst();
+        XenAPI::Session* session = pool.takeFirst();
         qDebug() << "Reusing pooled session for" << connection->GetHostname();
         return session;
     }
@@ -197,7 +197,7 @@ XenSession* ConnectionsManager::acquireSession(XenConnection* connection)
     return nullptr;
 }
 
-void ConnectionsManager::releaseSession(XenSession* session)
+void ConnectionsManager::releaseSession(XenAPI::Session* session)
 {
     if (!session)
     {
@@ -218,7 +218,7 @@ void ConnectionsManager::releaseSession(XenSession* session)
     }
 
     // Return the session to the pool
-    QList<XenSession*>& pool = this->m_sessionPool[connection];
+    QList<XenAPI::Session*>& pool = this->m_sessionPool[connection];
     if (!pool.contains(session))
     {
         pool.append(session);
@@ -453,8 +453,8 @@ void ConnectionsManager::cleanupConnection(XenConnection* connection)
 
     // Clean up pooled sessions for this connection
     QMutexLocker locker(&this->m_sessionPoolMutex);
-    QList<XenSession*> sessions = this->m_sessionPool.take(connection);
-    for (XenSession* session : sessions)
+    QList<XenAPI::Session*> sessions = this->m_sessionPool.take(connection);
+    for (XenAPI::Session* session : sessions)
     {
         if (session)
         {

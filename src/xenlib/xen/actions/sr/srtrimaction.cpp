@@ -51,7 +51,7 @@ void SrTrimAction::run()
 {
     qDebug() << "SrTrimAction: Trimming SR" << m_sr->GetUUID();
 
-    XenSession* session = this->session();
+    XenAPI::Session* session = this->session();
     if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");

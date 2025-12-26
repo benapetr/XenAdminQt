@@ -34,7 +34,7 @@
 
 namespace XenAPI
 {
-    QString VIF::async_create(XenSession* session, const QVariantMap& vifRecord)
+    QString VIF::async_create(Session* session, const QVariantMap& vifRecord)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -55,7 +55,7 @@ namespace XenAPI
         return taskRef;
     }
 
-    QString VIF::create(XenSession* session, const QVariantMap& vifRecord)
+    QString VIF::create(Session* session, const QVariantMap& vifRecord)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -69,7 +69,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString VIF::async_destroy(XenSession* session, const QString& vif)
+    QString VIF::async_destroy(Session* session, const QString& vif)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -83,7 +83,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    void VIF::destroy(XenSession* session, const QString& vif)
+    void VIF::destroy(Session* session, const QString& vif)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -97,7 +97,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    void VIF::plug(XenSession* session, const QString& vif)
+    void VIF::plug(Session* session, const QString& vif)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -111,7 +111,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    void VIF::unplug(XenSession* session, const QString& vif)
+    void VIF::unplug(Session* session, const QString& vif)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -125,7 +125,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    QStringList VIF::get_allowed_operations(XenSession* session, const QString& vif)
+    QStringList VIF::get_allowed_operations(Session* session, const QString& vif)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -151,7 +151,7 @@ namespace XenAPI
         return operations;
     }
 
-    QVariantMap VIF::get_record(XenSession* session, const QString& vif)
+    QVariantMap VIF::get_record(Session* session, const QString& vif)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -165,7 +165,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toMap();
     }
 
-    QVariantList VIF::get_all(XenSession* session)
+    QVariantList VIF::get_all(Session* session)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");

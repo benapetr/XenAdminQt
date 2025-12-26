@@ -28,7 +28,6 @@
 #ifndef XENAPI_POOL_H
 #define XENAPI_POOL_H
 
-#include "../session.h"
 #include <QString>
 #include <QStringList>
 #include <QVariant>
@@ -36,6 +35,8 @@
 
 namespace XenAPI
 {
+    class Session;
+
     /**
      * @brief Pool - XenAPI Pool bindings
      *
@@ -52,7 +53,7 @@ namespace XenAPI
              * @param session Active XenSession
              * @return QVariant containing list of pool references
              */
-            static QVariant get_all(XenSession* session);
+            static QVariant get_all(Session* session);
 
             /**
              * @brief Set default SR for pool
@@ -60,7 +61,7 @@ namespace XenAPI
              * @param pool Pool opaque reference
              * @param sr SR opaque reference
              */
-            static void set_default_SR(XenSession* session, const QString& pool, const QString& sr);
+            static void set_default_SR(Session* session, const QString& pool, const QString& sr);
 
             /**
              * @brief Set suspend image SR for pool
@@ -68,7 +69,7 @@ namespace XenAPI
              * @param pool Pool opaque reference
              * @param sr SR opaque reference
              */
-            static void set_suspend_image_SR(XenSession* session, const QString& pool, const QString& sr);
+            static void set_suspend_image_SR(Session* session, const QString& pool, const QString& sr);
 
             /**
              * @brief Set crash dump SR for pool
@@ -76,7 +77,7 @@ namespace XenAPI
              * @param pool Pool opaque reference
              * @param sr SR opaque reference
              */
-            static void set_crash_dump_SR(XenSession* session, const QString& pool, const QString& sr);
+            static void set_crash_dump_SR(Session* session, const QString& pool, const QString& sr);
 
             /**
              * @brief Designate new pool master/coordinator (async)
@@ -86,7 +87,7 @@ namespace XenAPI
              *
              * Matches C# Pool.async_designate_new_master()
              */
-            static QString async_designate_new_master(XenSession* session, const QString& host);
+            static QString async_designate_new_master(Session* session, const QString& host);
 
             /**
              * @brief Reconfigure pool-wide management interface (async)
@@ -99,7 +100,7 @@ namespace XenAPI
              *
              * Matches C# Pool.async_management_reconfigure()
              */
-            static QString async_management_reconfigure(XenSession* session, const QString& network);
+            static QString async_management_reconfigure(Session* session, const QString& network);
 
             /**
              * @brief Get pool record
@@ -107,7 +108,7 @@ namespace XenAPI
              * @param pool Pool opaque reference
              * @return QVariantMap containing pool record fields
              */
-            static QVariantMap get_record(XenSession* session, const QString& pool);
+            static QVariantMap get_record(Session* session, const QString& pool);
 
             /**
              * @brief Get pool master/coordinator host reference
@@ -115,7 +116,7 @@ namespace XenAPI
              * @param pool Pool opaque reference
              * @return Host opaque reference of pool coordinator
              */
-            static QString get_master(XenSession* session, const QString& pool);
+            static QString get_master(Session* session, const QString& pool);
 
             /**
              * @brief Join a host to a pool (async)
@@ -128,7 +129,7 @@ namespace XenAPI
              * Instructs a standalone host to join an existing pool.
              * The session should be from the host being joined, not the pool.
              */
-            static QString async_join(XenSession* session, const QString& master_address,
+            static QString async_join(Session* session, const QString& master_address,
                                       const QString& master_username, const QString& master_password);
 
             /**
@@ -138,7 +139,7 @@ namespace XenAPI
              *
              * Removes a host from the pool. Host must have no running VMs.
              */
-            static void eject(XenSession* session, const QString& host);
+            static void eject(Session* session, const QString& host);
 
             /**
              * @brief Set pool name label
@@ -146,7 +147,7 @@ namespace XenAPI
              * @param pool Pool opaque reference
              * @param label New name for pool
              */
-            static void set_name_label(XenSession* session, const QString& pool, const QString& label);
+            static void set_name_label(Session* session, const QString& pool, const QString& label);
 
             /**
              * @brief Set pool name description
@@ -154,7 +155,7 @@ namespace XenAPI
              * @param pool Pool opaque reference
              * @param description New description for pool
              */
-            static void set_name_description(XenSession* session, const QString& pool, const QString& description);
+            static void set_name_description(Session* session, const QString& pool, const QString& description);
 
             /**
              * @brief Set pool tags
@@ -162,7 +163,7 @@ namespace XenAPI
              * @param pool Pool opaque reference
              * @param tags New tags list
              */
-            static void set_tags(XenSession* session, const QString& pool, const QStringList& tags);
+            static void set_tags(Session* session, const QString& pool, const QStringList& tags);
 
             /**
              * @brief Set migration compression flag
@@ -170,7 +171,7 @@ namespace XenAPI
              * @param pool Pool opaque reference
              * @param enabled New value for migration_compression
              */
-            static void set_migration_compression(XenSession* session, const QString& pool, bool enabled);
+            static void set_migration_compression(Session* session, const QString& pool, bool enabled);
 
             /**
              * @brief Enable HA on pool (async)
@@ -182,7 +183,7 @@ namespace XenAPI
              * Enables High Availability for the pool. Requires at least one shared SR for heartbeat.
              * Sets up HA metadata and starts HA monitoring.
              */
-            static QString async_enable_ha(XenSession* session, const QStringList& heartbeat_srs,
+            static QString async_enable_ha(Session* session, const QStringList& heartbeat_srs,
                                            const QVariantMap& configuration);
 
             /**
@@ -192,7 +193,7 @@ namespace XenAPI
              *
              * Disables High Availability for the pool and removes HA metadata.
              */
-            static QString async_disable_ha(XenSession* session);
+            static QString async_disable_ha(Session* session);
 
             /**
              * @brief Set number of host failures to tolerate
@@ -202,14 +203,14 @@ namespace XenAPI
              *
              * Sets the HA restart priority. Must be called before enabling HA.
              */
-            static void set_ha_host_failures_to_tolerate(XenSession* session, const QString& pool, qint64 value);
+            static void set_ha_host_failures_to_tolerate(Session* session, const QString& pool, qint64 value);
 
             /**
              * @brief Compute maximum host failures to tolerate for current pool state
              * @param session Active XenSession
              * @return Max host failures to tolerate
              */
-            static qint64 ha_compute_max_host_failures_to_tolerate(XenSession* session);
+            static qint64 ha_compute_max_host_failures_to_tolerate(Session* session);
 
             /**
              * @brief Compute maximum host failures to tolerate for a hypothetical HA configuration
@@ -217,7 +218,7 @@ namespace XenAPI
              * @param configuration VM restart priorities (VM ref -> priority string)
              * @return Max host failures to tolerate
              */
-            static qint64 ha_compute_hypothetical_max_host_failures_to_tolerate(XenSession* session, const QVariantMap& configuration);
+            static qint64 ha_compute_hypothetical_max_host_failures_to_tolerate(Session* session, const QVariantMap& configuration);
 
             /**
              * @brief Emergency transition to master (synchronous)
@@ -227,7 +228,7 @@ namespace XenAPI
              * Used in emergency situations when the current master is unavailable.
              * This is a synchronous operation - does not return a task.
              */
-            static void emergency_transition_to_master(XenSession* session);
+            static void emergency_transition_to_master(Session* session);
 
             /**
              * @brief Forcibly synchronise the database now (asynchronous)
@@ -237,7 +238,7 @@ namespace XenAPI
              * Ensures all pool members have the latest database state.
              * First published in XenServer 4.0.
              */
-            static QString async_sync_database(XenSession* session);
+            static QString async_sync_database(Session* session);
 
             /**
              * @brief Rotate the pool secret
@@ -250,7 +251,7 @@ namespace XenAPI
              *
              * First published in XenServer 8.0.
              */
-            static void rotate_secret(XenSession* session, const QString& pool);
+            static void rotate_secret(Session* session, const QString& pool);
     };
 
 } // namespace XenAPI

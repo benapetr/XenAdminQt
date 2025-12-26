@@ -40,7 +40,11 @@
 #include <QtCore/QDateTime>
 
 class XenHeartbeat;
-class XenSession;
+
+namespace XenAPI
+{
+    class Session;
+}
 
 namespace Xen
 {
@@ -65,8 +69,8 @@ namespace Xen
             int connectionCount() const;
 
             // Session pooling - get or create duplicate session for long-running operations
-            class XenSession* acquireSession(XenConnection* connection);
-            void releaseSession(class XenSession* session);
+            XenAPI::Session *acquireSession(XenConnection* connection);
+            void releaseSession(XenAPI::Session *session);
 
             // Connection state management
             void connectAll();
@@ -124,8 +128,8 @@ namespace Xen
             bool m_autoReconnectionEnabled;
 
             // Session pool for duplicate sessions
-            QHash<XenConnection*, QList<XenSession*>> m_sessionPool;
-            QHash<XenSession*, XenConnection*> m_sessionToConnection;
+            QHash<XenConnection*, QList<XenAPI::Session*>> m_sessionPool;
+            QHash<XenAPI::Session*, XenConnection*> m_sessionToConnection;
             QMutex m_sessionPoolMutex;
 
             // Default connection parameters

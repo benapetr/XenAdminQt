@@ -28,12 +28,13 @@
 #ifndef XENAPI_PBD_H
 #define XENAPI_PBD_H
 
-#include "../session.h"
 #include <QString>
 #include <QVariantMap>
 
 namespace XenAPI
 {
+    class Session;
+
     /**
      * @brief PBD - XenAPI Physical Block Device bindings
      *
@@ -52,7 +53,7 @@ namespace XenAPI
              * @param pbd PBD opaque reference
              * @return PBD record (all fields)
              */
-            static QVariantMap get_record(XenSession* session, const QString& pbd);
+            static QVariantMap get_record(Session* session, const QString& pbd);
 
             /**
              * @brief Check if PBD is currently attached
@@ -60,7 +61,7 @@ namespace XenAPI
              * @param pbd PBD opaque reference
              * @return true if attached
              */
-            static bool get_currently_attached(XenSession* session, const QString& pbd);
+            static bool get_currently_attached(Session* session, const QString& pbd);
 
             /**
              * @brief Create a new PBD (async)
@@ -68,7 +69,7 @@ namespace XenAPI
              * @param record PBD record (SR, host, device_config, currently_attached)
              * @return Task reference
              */
-            static QString async_create(XenSession* session, const QVariantMap& record);
+            static QString async_create(Session* session, const QVariantMap& record);
 
             /**
              * @brief Plug a PBD (async)
@@ -76,21 +77,21 @@ namespace XenAPI
              * @param pbd PBD opaque reference
              * @return Task reference
              */
-            static QString async_plug(XenSession* session, const QString& pbd);
+            static QString async_plug(Session* session, const QString& pbd);
 
             /**
              * @brief Plug a PBD (sync)
              * @param session Active XenSession
              * @param pbd PBD opaque reference
              */
-            static void plug(XenSession* session, const QString& pbd);
+            static void plug(Session* session, const QString& pbd);
 
             /**
              * @brief Unplug a PBD (sync)
              * @param session Active XenSession
              * @param pbd PBD opaque reference
              */
-            static void unplug(XenSession* session, const QString& pbd);
+            static void unplug(Session* session, const QString& pbd);
 
             /**
              * @brief Unplug a PBD (async)
@@ -98,7 +99,7 @@ namespace XenAPI
              * @param pbd PBD opaque reference
              * @return Task reference
              */
-            static QString async_unplug(XenSession* session, const QString& pbd);
+            static QString async_unplug(Session* session, const QString& pbd);
 
             /**
              * @brief Destroy a PBD (async)
@@ -106,7 +107,7 @@ namespace XenAPI
              * @param pbd PBD opaque reference
              * @return Task reference
              */
-            static QString async_destroy(XenSession* session, const QString& pbd);
+            static QString async_destroy(Session* session, const QString& pbd);
     };
 
 } // namespace XenAPI

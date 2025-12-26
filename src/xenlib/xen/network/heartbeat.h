@@ -37,7 +37,11 @@
 #include <QtCore/QString>
 
 QT_FORWARD_DECLARE_CLASS(XenConnection)
-QT_FORWARD_DECLARE_CLASS(XenSession)
+
+namespace XenAPI
+{
+    class Session;
+}
 
 class XENLIB_EXPORT XenHeartbeat : public QObject
 {
@@ -70,7 +74,7 @@ class XENLIB_EXPORT XenHeartbeat : public QObject
         bool createSession();
 
         XenConnection* m_connection;
-        XenSession* m_session;
+        XenAPI::Session* m_session;
         QTimer* m_heartbeatTimer;
 
         int m_connectionTimeout;

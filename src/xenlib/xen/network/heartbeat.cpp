@@ -33,6 +33,8 @@
 #include <QtCore/QDebug>
 #include <QtCore/QMutexLocker>
 
+using namespace XenAPI;
+
 // Define static const members
 const int XenHeartbeat::HEARTBEAT_INTERVAL_MS;
 const int XenHeartbeat::MIN_CONNECTION_TIMEOUT_MS;
@@ -159,7 +161,7 @@ bool XenHeartbeat::createSession()
     qDebug() << "Creating heartbeat session for" << this->m_connection->GetHostname();
 
     // Get the main session from the connection
-    XenSession* mainSession = this->m_connection->GetSession();
+    Session* mainSession = this->m_connection->GetSession();
     if (!mainSession || !mainSession->IsLoggedIn())
     {
         qWarning() << "Cannot create heartbeat session: main session not logged in";
@@ -167,7 +169,7 @@ bool XenHeartbeat::createSession()
     }
 
     // Duplicate the session for heartbeat (separate TCP stream)
-    this->m_session = XenSession::DuplicateSession(mainSession, this);
+    this->m_session = Session::DuplicateSession(mainSession, this);
     if (!this->m_session)
     {
         qWarning() << "Failed to duplicate session for heartbeat";

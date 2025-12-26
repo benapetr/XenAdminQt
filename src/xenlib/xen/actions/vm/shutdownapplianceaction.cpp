@@ -32,7 +32,8 @@
 #include "../../xenapi/vm_appliance.h"
 #include "../../session.h"
 #include "../../network/connection.h"
-#include <stdexcept>
+
+using namespace XenAPI;
 
 // ============================================================================
 // ShutDownApplianceAction (try clean, fall back to hard)

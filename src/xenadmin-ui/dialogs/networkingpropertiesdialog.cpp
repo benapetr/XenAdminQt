@@ -236,7 +236,7 @@ void NetworkingPropertiesDialog::applyChanges()
         return;
 
     XenConnection* connection = this->m_xenLib->getConnection();
-    XenSession* session = connection ? connection->GetSession() : nullptr;
+    XenAPI::Session* session = connection ? connection->GetSession() : nullptr;
     if (!session || !session->IsLoggedIn())
     {
         QMessageBox::critical(this, "Error",

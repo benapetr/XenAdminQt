@@ -27,11 +27,12 @@
 
 #include "xenapi_SR.h"
 #include "../api.h"
+#include "../session.h"
 #include <stdexcept>
 
 namespace XenAPI
 {
-    QVariantMap SR::get_record(XenSession* session, const QString& sr)
+    QVariantMap SR::get_record(Session* session, const QString& sr)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -45,7 +46,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toMap();
     }
 
-    QString SR::get_name_label(XenSession* session, const QString& sr)
+    QString SR::get_name_label(Session* session, const QString& sr)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -59,7 +60,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString SR::get_by_uuid(XenSession* session, const QString& uuid)
+    QString SR::get_by_uuid(Session* session, const QString& uuid)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -73,7 +74,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QVariantList SR::get_PBDs(XenSession* session, const QString& sr)
+    QVariantList SR::get_PBDs(Session* session, const QString& sr)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -87,7 +88,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toList();
     }
 
-    QString SR::create(XenSession* session,
+    QString SR::create(Session* session,
                        const QString& host,
                        const QVariantMap& deviceConfig,
                        qint64 physicalSize,
@@ -119,7 +120,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString SR::async_introduce(XenSession* session,
+    QString SR::async_introduce(Session* session,
                                 const QString& uuid,
                                 const QString& nameLabel,
                                 const QString& nameDescription,
@@ -147,7 +148,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString SR::async_forget(XenSession* session, const QString& sr)
+    QString SR::async_forget(Session* session, const QString& sr)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -161,7 +162,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    void SR::forget(XenSession* session, const QString& sr)
+    void SR::forget(Session* session, const QString& sr)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -175,7 +176,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    QString SR::async_destroy(XenSession* session, const QString& sr)
+    QString SR::async_destroy(Session* session, const QString& sr)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -189,7 +190,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    void SR::set_name_label(XenSession* session, const QString& sr, const QString& value)
+    void SR::set_name_label(Session* session, const QString& sr, const QString& value)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -203,7 +204,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    void SR::set_name_description(XenSession* session, const QString& sr, const QString& value)
+    void SR::set_name_description(Session* session, const QString& sr, const QString& value)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -217,7 +218,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    void SR::set_tags(XenSession* session, const QString& sr, const QStringList& tags)
+    void SR::set_tags(Session* session, const QString& sr, const QStringList& tags)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -231,7 +232,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    void SR::set_other_config(XenSession* session, const QString& sr, const QVariantMap& value)
+    void SR::set_other_config(Session* session, const QString& sr, const QVariantMap& value)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -245,7 +246,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    void SR::scan(XenSession* session, const QString& sr)
+    void SR::scan(Session* session, const QString& sr)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -259,7 +260,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    QString SR::async_probe(XenSession* session, const QString& host,
+    QString SR::async_probe(Session* session, const QString& host,
                             const QVariantMap& device_config,
                             const QString& type,
                             const QVariantMap& sm_config)
@@ -276,7 +277,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    QVariantList SR::probe_ext(XenSession* session, const QString& host,
+    QVariantList SR::probe_ext(Session* session, const QString& host,
                                const QVariantMap& device_config,
                                const QString& type,
                                const QVariantMap& sm_config)
@@ -293,7 +294,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toList();
     }
 
-    QString SR::async_create(XenSession* session,
+    QString SR::async_create(Session* session,
                              const QString& host,
                              const QVariantMap& device_config,
                              qint64 physical_size,

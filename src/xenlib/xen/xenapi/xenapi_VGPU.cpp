@@ -32,7 +32,7 @@
 
 namespace XenAPI
 {
-    void VGPU::destroy(XenSession* session, const QString& vgpu)
+    void VGPU::destroy(Session* session, const QString& vgpu)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -46,7 +46,7 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Void method
     }
 
-    QString VGPU::async_create(XenSession* session, const QString& vm,
+    QString VGPU::async_create(Session* session, const QString& vm,
                                const QString& gpu_group, const QString& device,
                                const QVariantMap& other_config)
     {
@@ -62,7 +62,7 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    QString VGPU::async_create(XenSession* session, const QString& vm,
+    QString VGPU::async_create(Session* session, const QString& vm,
                                const QString& gpu_group, const QString& device,
                                const QVariantMap& other_config, const QString& vgpu_type)
     {

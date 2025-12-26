@@ -36,7 +36,11 @@
 #include <functional>
 
 class XenCertificateManager;
-class XenSession;
+
+namespace XenAPI
+{
+    class Session;
+}
 
 namespace Xen
 {
@@ -70,7 +74,7 @@ class XENLIB_EXPORT XenConnection : public QObject
 
         using PasswordPrompt = std::function<bool(const QString& oldPassword, QString* newPassword)>;
 
-        XenSession* GetNewSession(const QString& hostname,
+        XenAPI::Session* GetNewSession(const QString& hostname,
                                   int port,
                                   const QString& username,
                                   const QString& password,
@@ -103,8 +107,8 @@ class XENLIB_EXPORT XenConnection : public QObject
         int SendRequestAsync(const QByteArray& data);
 
         // Session association (for heartbeat and other operations)
-        void SetSession(XenSession* session);
-        XenSession* GetSession() const;
+        void SetSession(XenAPI::Session* session);
+        XenAPI::Session* GetSession() const;
 
         // Pool member tracking for failover
         void SetPoolMembers(const QStringList& members);

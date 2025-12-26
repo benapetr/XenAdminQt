@@ -31,6 +31,8 @@
 #include "../../api.h"
 #include <QDebug>
 
+using namespace XenAPI;
+
 GeneralEditPageAction::GeneralEditPageAction(XenConnection* connection,
                                              const QString& objectRef,
                                              const QString& objectType,
@@ -170,7 +172,7 @@ void GeneralEditPageAction::setFolderPath(const QString& folderPath)
     // - Move: Sets other_config["folder"] to new path
     // - Unfolder: Removes other_config["folder"] key
 
-    XenSession* sess = session();
+    Session* sess = session();
     if (!sess || !sess->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
@@ -212,7 +214,7 @@ void GeneralEditPageAction::removeTag(const QString& tag)
     // C# equivalent: Tags.RemoveTag(session, o, tag)
     // Implementation: o.Do("remove_tags", session, o.opaque_ref, tag);
 
-    XenSession* sess = session();
+    Session* sess = session();
     if (!sess || !sess->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
@@ -236,7 +238,7 @@ void GeneralEditPageAction::addTag(const QString& tag)
     // C# equivalent: Tags.AddTag(session, o, tag)
     // Implementation: o.Do("add_tags", session, o.opaque_ref, tag);
 
-    XenSession* sess = session();
+    Session* sess = session();
     if (!sess || !sess->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");

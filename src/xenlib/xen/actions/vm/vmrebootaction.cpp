@@ -82,7 +82,7 @@ void VMCleanReboot::run()
         return;
     }
 
-    XenSession* sess = session();
+    XenAPI::Session* sess = session();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -125,7 +125,7 @@ void VMHardReboot::run()
         return;
     }
 
-    XenSession* sess = session();
+    XenAPI::Session* sess = session();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");

@@ -122,7 +122,7 @@ void JoinPoolCommand::Run()
         return;
     }
 
-    XenSession* session = hostConnection->GetSession();
+    XenAPI::Session* session = hostConnection->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         QMessageBox::critical(this->mainWindow(), "Join Pool",

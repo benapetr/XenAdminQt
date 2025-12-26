@@ -61,7 +61,7 @@ void VMStartAction::doAction(int start, int end)
         return;
     }
 
-    XenSession* sess = session();
+    XenAPI::Session* sess = session();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
