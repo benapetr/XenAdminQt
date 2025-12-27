@@ -45,7 +45,6 @@ class NavigationDropDownButtonBig;
 class NavigationDropDownButtonSmall;
 class NotificationButtonBig;
 class NotificationButtonSmall;
-class XenLib;
 
 /**
  * @brief Navigation pane widget matching C# NavigationPane control
@@ -114,9 +113,6 @@ class NavigationPane : public QWidget
 
         // Search mode control (matches C# NavigationPane.InSearchMode property)
         void setInSearchMode(bool enabled);
-
-        // XenLib access (pass through to NavigationView)
-        void setXenLib(XenLib* xenLib);
 
     signals:
         /**

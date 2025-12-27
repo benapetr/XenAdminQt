@@ -32,7 +32,6 @@
 #include <QObject>
 
 class XenConnection;
-class XenLib;
 class Failure;  // Forward declaration
 
 /*!
@@ -56,19 +55,14 @@ class VMOperationHelpers : public QObject
          *
          * Matches C# VMOperationCommand.StartDiagnosisForm(VM vm, bool isStart)
          *
-         * \param xenLib XenLib instance for cache access
+         * \param conn XenLib instance for cache access
          * \param connection XenServer connection
          * \param vmRef VM opaque reference
          * \param vmName VM name (for display)
          * \param isStart true if this is a start operation, false for resume
          * \param parent Parent widget for dialogs
          */
-        static void startDiagnosisForm(XenLib* xenLib,
-                                       XenConnection* connection,
-                                       const QString& vmRef,
-                                       const QString& vmName,
-                                       bool isStart,
-                                       QWidget* parent = nullptr);
+        static void startDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, QWidget* parent = nullptr);
 
         /*!
          * \brief Show diagnosis form after catching a Failure
@@ -87,13 +81,7 @@ class VMOperationHelpers : public QObject
          * \param failure The Failure exception that was caught
          * \param parent Parent widget for dialogs
          */
-        static void startDiagnosisForm(XenLib* xenLib,
-                                       XenConnection* connection,
-                                       const QString& vmRef,
-                                       const QString& vmName,
-                                       bool isStart,
-                                       const Failure& failure,
-                                       QWidget* parent = nullptr);
+        static void startDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, const Failure& failure, QWidget* parent = nullptr);
 
     private:
         VMOperationHelpers() = delete;  // Static-only class

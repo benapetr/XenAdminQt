@@ -27,12 +27,12 @@
 
 #include "isodropdownbox.h"
 #include "../settingsmanager.h"
-#include "../../xenlib/xenlib.h"
-#include "../../xenlib/xencache.h"
-#include "../../xenlib/vmhelpers.h"
-#include "../../xenlib/xen/network/connection.h"
-#include "../../xenlib/xen/session.h"
-#include "../../xenlib/xen/apiversion.h"
+#include "xenlib/xenlib.h"
+#include "xenlib/xencache.h"
+#include "xenlib/vmhelpers.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/apiversion.h"
 #include <QStandardItemModel>
 #include <QSignalBlocker>
 #include <algorithm>
@@ -195,8 +195,7 @@ QString getVMStorageHostFromCache(const QVariantMap& vmRecord, XenCache* cache, 
 }
 }
 
-IsoDropDownBox::IsoDropDownBox(QWidget* parent)
-    : QComboBox(parent), m_xenLib(nullptr), m_connection(nullptr)
+IsoDropDownBox::IsoDropDownBox(QWidget* parent) : QComboBox(parent), m_xenLib(nullptr), m_connection(nullptr)
 {
     setEditable(false);
     setInsertPolicy(QComboBox::NoInsert);
@@ -253,8 +252,8 @@ void IsoDropDownBox::refresh()
             hostRef = vmData.value("resident_on").toString();
         } else
         {
-            if (m_xenLib)
-                hostRef = VMHelpers::getVMStorageHost(m_xenLib, vmData, true);
+            if (connection)
+                hostRef = VMHelpers::getVMStorageHost(connection, vmData, true);
             else
                 hostRef = getVMStorageHostFromCache(vmData, cache, true);
         }

@@ -32,6 +32,8 @@
 #include <QTreeWidget>
 #include <QTimer>
 #include <QSharedPointer>
+#include <QHash>
+#include <QMetaObject>
 #include "navigationpane.h" // For NavigationMode enum
 
 QT_BEGIN_NAMESPACE
@@ -41,9 +43,12 @@ namespace Ui
 }
 QT_END_NAMESPACE
 
-class XenLib;
 class XenConnection;
 class XenCache;
+namespace Xen
+{
+    class ConnectionsManager;
+}
 class Host;
 class XenCache;
 class XenConnection;
@@ -91,9 +96,6 @@ class NavigationView : public QWidget
         QString searchText() const;
         void setSearchText(const QString& text);
 
-        // XenLib access
-        void setXenLib(XenLib* xenLib);
-
     signals:
         // Events matching C# NavigationView
         void treeViewSelectionChanged();
@@ -109,12 +111,16 @@ class NavigationView : public QWidget
         void onSearchTextChanged(const QString& text);
         void onCacheObjectChanged(const QString& type, const QString& ref);
         void onRefreshTimerTimeout();
+        void onConnectionAdded(XenConnection* connection);
+        void onConnectionRemoved(XenConnection* connection);
 
     private:
         void buildInfrastructureTree();
         void buildObjectsTree();
         void buildOrganizationTree();
         void scheduleRefresh(); // Debounced refresh
+        void connectCacheSignals(XenConnection* connection);
+        void disconnectCacheSignals(XenConnection* connection);
 
         // Selection and expansion preservation (matches C# MainWindowTreeBuilder)
         void persistSelectionAndExpansion();
@@ -124,10 +130,12 @@ class NavigationView : public QWidget
         QString getItemPath(QTreeWidgetItem* item) const;
 
         Ui::NavigationView* ui;
-        bool m_inSearchMode;
-        NavigationPane::NavigationMode m_navigationMode;
-        XenLib* m_xenLib;
+        bool m_inSearchMode = false;
+        NavigationPane::NavigationMode m_navigationMode = NavigationPane::Infrastructure;
+        Xen::ConnectionsManager* m_connectionsManager = nullptr;
         QTimer* m_refreshTimer; // Debounce timer for cache updates
+        QHash<XenConnection*, QMetaObject::Connection> m_cacheChangedHandlers;
+        QHash<XenConnection*, QMetaObject::Connection> m_cacheRemovedHandlers;
 
         // Grouping instances for Objects view (matches C# OrganizationViewObjects)
         class TypeGrouping* m_typeGrouping;
@@ -136,7 +144,7 @@ class NavigationView : public QWidget
         QString m_savedSelectionType;
         QString m_savedSelectionRef;
         QStringList m_savedExpandedPaths;
-        bool m_suppressSelectionSignals; // Block itemSelectionChanged during rebuild
+        bool m_suppressSelectionSignals = false; // Block itemSelectionChanged during rebuild
 };
 
 #endif // NAVIGATIONVIEW_H

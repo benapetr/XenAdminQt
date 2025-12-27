@@ -62,7 +62,7 @@ NavigationPane::NavigationPane(QWidget* parent)
     this->ui->notificationsViewPlaceholder->setVisible(false);
 
     // Create navigation buttons
-    setupNavigationButtons();
+    this->setupNavigationButtons();
 
     // Wire up NavigationView events to forward them
     connect(navView, &NavigationView::treeViewSelectionChanged, this, &NavigationPane::onNavigationViewSelectionChanged);
@@ -137,57 +137,57 @@ void NavigationPane::setupNavigationButtons()
     this->m_buttonNotifySmall->setTag(QVariant::fromValue(Notifications));
 
     // Pair buttons (big + small sync selection)
-    addNavigationItemPair(m_buttonInfraBig, m_buttonInfraSmall);
-    addNavigationItemPair(m_buttonObjectsBig, m_buttonObjectsSmall);
-    addNavigationItemPair(m_buttonOrganizationBig, m_buttonOrganizationSmall);
-    addNavigationItemPair(m_buttonSearchesBig, m_buttonSearchesSmall);
-    addNavigationItemPair(m_buttonNotifyBig, m_buttonNotifySmall);
+    this->addNavigationItemPair(this->m_buttonInfraBig, this->m_buttonInfraSmall);
+    this->addNavigationItemPair(this->m_buttonObjectsBig, this->m_buttonObjectsSmall);
+    this->addNavigationItemPair(this->m_buttonOrganizationBig, this->m_buttonOrganizationSmall);
+    this->addNavigationItemPair(this->m_buttonSearchesBig, this->m_buttonSearchesSmall);
+    this->addNavigationItemPair(this->m_buttonNotifyBig, this->m_buttonNotifySmall);
 
     // Add big buttons to toolStripBig placeholder
     QVBoxLayout* bigButtonLayout = qobject_cast<QVBoxLayout*>(
-        ui->toolStripBigPlaceholder->layout());
+        this->ui->toolStripBigPlaceholder->layout());
     if (bigButtonLayout)
     {
-        bigButtonLayout->addWidget(m_buttonInfraBig);
-        bigButtonLayout->addWidget(m_buttonObjectsBig);
-        bigButtonLayout->addWidget(m_buttonOrganizationBig);
-        bigButtonLayout->addWidget(m_buttonSearchesBig);
-        bigButtonLayout->addWidget(m_buttonNotifyBig);
+        bigButtonLayout->addWidget(this->m_buttonInfraBig);
+        bigButtonLayout->addWidget(this->m_buttonObjectsBig);
+        bigButtonLayout->addWidget(this->m_buttonOrganizationBig);
+        bigButtonLayout->addWidget(this->m_buttonSearchesBig);
+        bigButtonLayout->addWidget(this->m_buttonNotifyBig);
         bigButtonLayout->addStretch(); // Push buttons to top
     }
 
     // Add small buttons to toolStripSmall placeholder
     QHBoxLayout* smallButtonLayout = qobject_cast<QHBoxLayout*>(
-        ui->toolStripSmallPlaceholder->layout());
+        this->ui->toolStripSmallPlaceholder->layout());
     if (smallButtonLayout)
     {
         smallButtonLayout->addStretch(); // Push buttons to right
-        smallButtonLayout->addWidget(m_buttonInfraSmall);
-        smallButtonLayout->addWidget(m_buttonObjectsSmall);
-        smallButtonLayout->addWidget(m_buttonOrganizationSmall);
-        smallButtonLayout->addWidget(m_buttonSearchesSmall);
-        smallButtonLayout->addWidget(m_buttonNotifySmall);
+        smallButtonLayout->addWidget(this->m_buttonInfraSmall);
+        smallButtonLayout->addWidget(this->m_buttonObjectsSmall);
+        smallButtonLayout->addWidget(this->m_buttonOrganizationSmall);
+        smallButtonLayout->addWidget(this->m_buttonSearchesSmall);
+        smallButtonLayout->addWidget(this->m_buttonNotifySmall);
     }
 
     // Populate dropdown menus
-    populateOrganizationDropDown();
-    populateSearchDropDown();
+    this->populateOrganizationDropDown();
+    this->populateSearchDropDown();
 
     // Connect big button signals
-    connect(m_buttonInfraBig, &NavigationButtonBig::navigationViewChanged,
-            this, [this]() { onNavigationButtonChecked(); });
-    connect(m_buttonObjectsBig, &NavigationButtonBig::navigationViewChanged,
-            this, [this]() { onNavigationButtonChecked(); });
-    connect(m_buttonNotifyBig, &NotificationButtonBig::navigationViewChanged,
-            this, [this]() { onNavigationButtonChecked(); });
+    connect(this->m_buttonInfraBig, &NavigationButtonBig::navigationViewChanged,
+            this, [this]() { this->onNavigationButtonChecked(); });
+    connect(this->m_buttonObjectsBig, &NavigationButtonBig::navigationViewChanged,
+            this, [this]() { this->onNavigationButtonChecked(); });
+    connect(this->m_buttonNotifyBig, &NotificationButtonBig::navigationViewChanged,
+            this, [this]() { this->onNavigationButtonChecked(); });
 
     // Connect small button signals (for collapsed toolbar state)
-    connect(m_buttonInfraSmall, &NavigationButtonSmall::navigationViewChanged,
-            this, [this]() { onNavigationButtonChecked(); });
-    connect(m_buttonObjectsSmall, &NavigationButtonSmall::navigationViewChanged,
-            this, [this]() { onNavigationButtonChecked(); });
-    connect(m_buttonNotifySmall, &NotificationButtonSmall::navigationViewChanged,
-            this, [this]() { onNavigationButtonChecked(); });
+    connect(this->m_buttonInfraSmall, &NavigationButtonSmall::navigationViewChanged,
+            this, [this]() { this->onNavigationButtonChecked(); });
+    connect(this->m_buttonObjectsSmall, &NavigationButtonSmall::navigationViewChanged,
+            this, [this]() { this->onNavigationButtonChecked(); });
+    connect(this->m_buttonNotifySmall, &NotificationButtonSmall::navigationViewChanged,
+            this, [this]() { this->onNavigationButtonChecked(); });
 }
 
 void NavigationPane::addNavigationItemPair(QObject* bigButton, QObject* smallButton)
@@ -226,8 +226,8 @@ void NavigationPane::populateOrganizationDropDown()
     connect(vappsAction, &QAction::triggered, this, &NavigationPane::onOrganizationMenuItemTriggered);
 
     QList<QAction*> items = {tagsAction, foldersAction, fieldsAction, vappsAction};
-    m_buttonOrganizationBig->setItemList(items);
-    m_buttonOrganizationSmall->setItemList(items);
+    this->m_buttonOrganizationBig->setItemList(items);
+    this->m_buttonOrganizationSmall->setItemList(items);
 }
 
 void NavigationPane::populateSearchDropDown()
@@ -239,48 +239,48 @@ void NavigationPane::populateSearchDropDown()
 
 void NavigationPane::onNavigationButtonChecked()
 {
-    QObject* senderObj = QObject::sender();
+    QObject* senderObj = this->sender();
 
     // Determine which mode was selected
-    NavigationMode newMode = m_currentMode;
+    NavigationMode newMode = this->m_currentMode;
 
-    if (senderObj == m_buttonInfraBig || senderObj == m_buttonInfraSmall)
+    if (senderObj == this->m_buttonInfraBig || senderObj == this->m_buttonInfraSmall)
     {
         newMode = Infrastructure;
-    } else if (senderObj == m_buttonObjectsBig || senderObj == m_buttonObjectsSmall)
+    } else if (senderObj == this->m_buttonObjectsBig || senderObj == this->m_buttonObjectsSmall)
     {
         newMode = Objects;
-    } else if (senderObj == m_buttonNotifyBig || senderObj == m_buttonNotifySmall)
+    } else if (senderObj == this->m_buttonNotifyBig || senderObj == this->m_buttonNotifySmall)
     {
         newMode = Notifications;
     }
 
-    if (newMode != m_currentMode)
+    if (newMode != this->m_currentMode)
     {
-        m_currentMode = newMode;
-        onNavigationModeChanged();
-        emit navigationModeChanged(m_currentMode);
+        this->m_currentMode = newMode;
+        this->onNavigationModeChanged();
+        emit navigationModeChanged(this->m_currentMode);
     }
 }
 
 void NavigationPane::onOrganizationMenuItemTriggered()
 {
-    QAction* action = qobject_cast<QAction*>(sender());
+    QAction* action = qobject_cast<QAction*>(this->sender());
     if (!action)
         return;
 
     NavigationMode mode = action->data().value<NavigationMode>();
-    if (mode != m_currentMode)
+    if (mode != this->m_currentMode)
     {
-        m_currentMode = mode;
+        this->m_currentMode = mode;
 
         // Check the organization button since we're in organization mode
-        m_buttonOrganizationBig->setChecked(true);
+        this->m_buttonOrganizationBig->setChecked(true);
 
-        onNavigationModeChanged();
-        emit navigationModeChanged(m_currentMode);
+        this->onNavigationModeChanged();
+        emit navigationModeChanged(this->m_currentMode);
     }
-}
+} 
 
 void NavigationPane::onSearchMenuItemTriggered()
 {
@@ -290,36 +290,36 @@ void NavigationPane::onSearchMenuItemTriggered()
 void NavigationPane::onNavigationModeChanged()
 {
     // Matches C# NavigationPane.OnNavigationModeChanged
-    if (m_currentMode == Notifications)
+    if (this->m_currentMode == Notifications)
     {
         // Switch to notifications view
-        ui->navigationViewPlaceholder->setVisible(false);
-        ui->notificationsViewPlaceholder->setVisible(true);
+        this->ui->navigationViewPlaceholder->setVisible(false);
+        this->ui->notificationsViewPlaceholder->setVisible(true);
 
         // Select last notifications mode
-        NotificationsView* notifView = findChild<NotificationsView*>();
+        NotificationsView* notifView = this->findChild<NotificationsView*>();
         if (notifView)
         {
-            notifView->selectNotificationsSubMode(m_lastNotificationsMode);
+            notifView->selectNotificationsSubMode(this->m_lastNotificationsMode);
         }
     } else
     {
         // Switch to navigation view
-        ui->notificationsViewPlaceholder->setVisible(false);
-        ui->navigationViewPlaceholder->setVisible(true);
+        this->ui->notificationsViewPlaceholder->setVisible(false);
+        this->ui->navigationViewPlaceholder->setVisible(true);
 
         // Update tree view for new mode
-        NavigationView* navView = navigationView();
+        NavigationView* navView = this->navigationView();
         if (navView)
         {
             // Set the navigation mode so tree builder uses correct layout
-            navView->setNavigationMode(m_currentMode);
+            navView->setNavigationMode(this->m_currentMode);
             navView->resetSearchBox();
             // requestRefreshTreeView() is called by setNavigationMode()
             navView->focusTreeView();
         }
     }
-}
+} 
 
 // Event forwarding slots
 void NavigationPane::onNavigationViewSelectionChanged()
@@ -364,50 +364,50 @@ void NavigationPane::onNavigationViewDragDropCommand(const QString& commandKey)
 
 void NavigationPane::onNotificationsSubModeChanged(NotificationsSubMode subMode)
 {
-    m_lastNotificationsMode = subMode;
+    this->m_lastNotificationsMode = subMode;
     emit notificationsSubModeChanged(subMode);
 }
 
 // Public methods
 NavigationView* NavigationPane::navigationView() const
 {
-    return findChild<NavigationView*>();
+    return this->findChild<NavigationView*>();
 }
 
 NotificationsView* NavigationPane::notificationsView() const
 {
-    return findChild<NotificationsView*>();
-}
+    return this->findChild<NotificationsView*>();
+} 
 
 void NavigationPane::updateNotificationsButton(NotificationsSubMode mode, int entries)
 {
-    NotificationsView* notifView = notificationsView();
+    NotificationsView* notifView = this->notificationsView();
     if (notifView)
     {
         notifView->updateEntries(mode, entries);
         int totalEntries = notifView->getTotalEntries();
-        m_buttonNotifyBig->setUnreadEntries(totalEntries);
-        m_buttonNotifySmall->setUnreadEntries(totalEntries);
+        this->m_buttonNotifyBig->setUnreadEntries(totalEntries);
+        this->m_buttonNotifySmall->setUnreadEntries(totalEntries);
     }
-}
+} 
 
 void NavigationPane::switchToInfrastructureMode()
 {
-    if (!m_buttonInfraBig->isChecked())
+    if (!this->m_buttonInfraBig->isChecked())
     {
-        m_buttonInfraBig->setChecked(true);
+        this->m_buttonInfraBig->setChecked(true);
     }
 }
 
 void NavigationPane::switchToNotificationsView(NotificationsSubMode subMode)
 {
     // Check the notification button if switching programmatically
-    if (!m_buttonNotifyBig->isChecked())
+    if (!this->m_buttonNotifyBig->isChecked())
     {
-        m_buttonNotifyBig->setChecked(true);
+        this->m_buttonNotifyBig->setChecked(true);
     }
 
-    NotificationsView* notifView = notificationsView();
+    NotificationsView* notifView = this->notificationsView();
     if (notifView)
     {
         notifView->selectNotificationsSubMode(subMode);
@@ -416,7 +416,7 @@ void NavigationPane::switchToNotificationsView(NotificationsSubMode subMode)
 
 void NavigationPane::focusTreeView()
 {
-    NavigationView* navView = navigationView();
+    NavigationView* navView = this->navigationView();
     if (navView)
     {
         navView->focusTreeView();
@@ -425,7 +425,7 @@ void NavigationPane::focusTreeView()
 
 void NavigationPane::requestRefreshTreeView()
 {
-    NavigationView* navView = navigationView();
+    NavigationView* navView = this->navigationView();
     if (navView)
     {
         navView->requestRefreshTreeView();
@@ -449,22 +449,12 @@ void NavigationPane::updateSearch()
 void NavigationPane::setInSearchMode(bool enabled)
 {
     // Matches C# NavigationPane.InSearchMode property
-    NavigationView* navView = navigationView();
+    NavigationView* navView = this->navigationView();
     if (navView)
     {
         // TODO: Implement when NavigationView gains InSearchMode property
         // navView->setInSearchMode(enabled);
         Q_UNUSED(enabled);
-    }
-}
-
-void NavigationPane::setXenLib(XenLib* xenLib)
-{
-    // Pass XenLib to NavigationView for tree building
-    NavigationView* navView = navigationView();
-    if (navView)
-    {
-        navView->setXenLib(xenLib);
     }
 }
 
@@ -474,7 +464,7 @@ void NavigationPane::resizeEvent(QResizeEvent* event)
     // Preserve Panel2 height during resize
     QWidget::resizeEvent(event);
 
-    QSplitter* splitter = ui->splitContainer;
+    QSplitter* splitter = this->ui->splitContainer;
     int panel2Height = splitter->widget(1)->height();
     int totalHeight = splitter->height();
     int splitterWidth = splitter->handleWidth();

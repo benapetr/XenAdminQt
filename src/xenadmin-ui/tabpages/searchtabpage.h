@@ -38,7 +38,6 @@
 
 class Search;
 class Grouping;
-class XenLib;
 
 /**
  * @brief SearchTabPage - Displays search results in multi-column table

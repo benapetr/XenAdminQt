@@ -112,14 +112,7 @@ bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
             QMetaObject::invokeMethod(mainWindow, [mainWindow, conn, vmRef, displayName, failureCopy]() {
                 if (!mainWindow)
                     return;
-                XenLib* lib = mainWindow->xenLib();
-                if (!lib)
-                    return;
-                VMOperationHelpers::startDiagnosisForm(lib,
-                                                       conn, vmRef, displayName,
-                                                       true,
-                                                       failureCopy,
-                                                       mainWindow);
+                VMOperationHelpers::startDiagnosisForm(conn, vmRef, displayName, true, failureCopy, mainWindow);
             }, Qt::QueuedConnection);
         },
         this->mainWindow());

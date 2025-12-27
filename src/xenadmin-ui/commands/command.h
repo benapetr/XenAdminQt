@@ -34,7 +34,6 @@
 #include <QTreeWidgetItem>
 
 class MainWindow;
-class XenLib;
 class XenObject;
 
 /**

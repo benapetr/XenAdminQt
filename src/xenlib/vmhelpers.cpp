@@ -28,20 +28,21 @@
 #include "vmhelpers.h"
 #include "xenlib.h"
 #include "xencache.h"
+#include "xen/network/connection.h"
 #include <QtCore/QDebug>
 
 /**
  * Get the "home" host for a VM
  * Matches: xenadmin/XenModel/XenAPI-Extensions/VM.cs line 457-481
  */
-QString VMHelpers::getVMHome(XenLib* xenLib, const QVariantMap& vmRecord)
+QString VMHelpers::getVMHome(XenConnection* conn, const QVariantMap& vmRecord)
 {
-    if (!xenLib || vmRecord.isEmpty())
+    if (!conn || vmRecord.isEmpty())
     {
         return QString();
     }
 
-    XenCache* cache = xenLib->getCache();
+    XenCache* cache = conn->GetCache();
     if (!cache)
     {
         return QString();
@@ -57,7 +58,7 @@ QString VMHelpers::getVMHome(XenLib* xenLib, const QVariantMap& vmRecord)
             QVariantMap parentVM = cache->ResolveObjectData("vm", snapshotOf);
             if (!parentVM.isEmpty())
             {
-                return getVMHome(xenLib, parentVM); // Recursive call
+                return getVMHome(conn, parentVM); // Recursive call
             }
         }
         return QString(); // Parent VM deleted
@@ -82,7 +83,7 @@ QString VMHelpers::getVMHome(XenLib* xenLib, const QVariantMap& vmRecord)
     }
 
     // 4. Check for storage host (local storage)
-    QString storageHost = getVMStorageHost(xenLib, vmRecord, false);
+    QString storageHost = getVMStorageHost(conn, vmRecord, false);
     if (!storageHost.isEmpty())
     {
         return storageHost;
@@ -112,14 +113,14 @@ QString VMHelpers::getVMHome(XenLib* xenLib, const QVariantMap& vmRecord)
  * Get the storage host for a VM
  * Matches: xenadmin/XenModel/XenAPI-Extensions/VM.cs line 517-534
  */
-QString VMHelpers::getVMStorageHost(XenLib* xenLib, const QVariantMap& vmRecord, bool ignoreCDs)
+QString VMHelpers::getVMStorageHost(XenConnection *conn, const QVariantMap& vmRecord, bool ignoreCDs)
 {
-    if (!xenLib || vmRecord.isEmpty())
+    if (!conn || vmRecord.isEmpty())
     {
         return QString();
     }
 
-    XenCache* cache = xenLib->getCache();
+    XenCache* cache = conn->GetCache();
     if (!cache)
     {
         return QString();

@@ -285,12 +285,6 @@ MainWindow::MainWindow(QWidget* parent)
     this->m_consolePanel->setXenLib(this->m_xenLib);
     this->m_cvmConsolePanel->setXenLib(this->m_xenLib);
 
-    // Set XenLib instance for navigation pane (for tree building)
-    if (this->m_navigationPane)
-    {
-        this->m_navigationPane->setXenLib(this->m_xenLib);
-    }
-
     // Initialize tab pages (without parent - they will be parented to QTabWidget when added)
     // Order matches C# MainWindow.Designer.cs lines 326-345
     // Note: We don't implement all C# tabs yet (Home, Ballooning, HA, WLB, AD, GPU, Docker, USB)

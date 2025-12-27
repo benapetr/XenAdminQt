@@ -38,8 +38,7 @@
 #include <QMetaObject>
 #include <QPointer>
 
-ResumeVMCommand::ResumeVMCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+ResumeVMCommand::ResumeVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 
@@ -122,15 +121,7 @@ bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool
                 if (!mainWindow)
                     return;
 
-                XenLib* lib = mainWindow->xenLib();
-                if (!lib)
-                    return;
-
-                VMOperationHelpers::startDiagnosisForm(lib,
-                                                       conn, vmRef, displayName,
-                                                       false,
-                                                       failureCopy,
-                                                       mainWindow);
+                VMOperationHelpers::startDiagnosisForm(conn, vmRef, displayName, false, failureCopy, mainWindow);
             }, Qt::QueuedConnection);
         },
         this->mainWindow());
