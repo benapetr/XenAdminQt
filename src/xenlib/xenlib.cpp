@@ -40,6 +40,7 @@
 #include "xen/network/certificatemanager.h"
 #include "xen/eventpoller.h"
 #include "xencache.h"
+#include "xen/failure.h"
 #include "metricupdater.h"
 #include "xen/network/connectionsmanager.h"
 #include "utils/misc.h"
@@ -369,6 +370,108 @@ XenRpcAPI* XenLib::getAPI() const
 XenConnection* XenLib::getConnection() const
 {
     return this->d->connection;
+}
+
+void XenLib::setConnection(XenConnection* connection)
+{
+    if (connection == this->d->connection)
+        return;
+
+    if (this->d->connection)
+        this->d->connection->disconnect(this);
+
+    if (this->d->session)
+    {
+        this->d->session->detachConnection();
+        this->d->session->deleteLater();
+        this->d->session = nullptr;
+    }
+
+    if (this->d->api)
+    {
+        this->d->api->deleteLater();
+        this->d->api = nullptr;
+    }
+
+    if (this->d->asyncOps)
+    {
+        this->d->asyncOps->deleteLater();
+        this->d->asyncOps = nullptr;
+    }
+
+    this->d->connection = connection;
+    if (!this->d->connection)
+        return;
+
+    this->d->connection->setParent(this);
+    this->d->connection->setProperty("xenLib", QVariant::fromValue(this));
+    this->d->connection->setCertificateManager(this->d->certManager);
+
+    if (this->d->metricUpdater)
+        this->d->metricUpdater->deleteLater();
+    this->d->metricUpdater = new MetricUpdater(this->d->connection, this);
+
+    connect(this->d->connection, &XenConnection::disconnected,
+            [this]() { this->handleConnectionStateChanged(false); });
+    connect(this->d->connection, &XenConnection::error, this, &XenLib::handleConnectionError);
+    connect(this->d->connection, &XenConnection::connectionStateChanged, this, [this]() {
+        this->handleConnectionStateChanged(this->d->connection->IsConnectedNewFlow());
+    });
+    connect(this->d->connection, &XenConnection::connectionClosed, this, [this]() {
+        this->handleConnectionStateChanged(false);
+    });
+    connect(this->d->connection, &XenConnection::connectionLost, this, [this]() {
+        this->handleConnectionStateChanged(false);
+    });
+    connect(this->d->connection, &XenConnection::connectionResult, this, [this](bool connected, const QString& error) {
+        if (connected)
+        {
+            XenAPI::Session* session = this->d->connection->GetConnectSession();
+            if (session && session != this->d->session)
+            {
+                this->d->session = session;
+                this->d->connection->SetSession(session);
+
+                if (this->d->api)
+                    this->d->api->deleteLater();
+                this->d->api = new XenRpcAPI(this->d->session, this);
+                connect(this->d->api, &XenRpcAPI::apiCallCompleted, this, &XenLib::handleApiCallResult);
+                connect(this->d->api, &XenRpcAPI::apiCallFailed, this, &XenLib::handleApiCallError);
+
+                if (this->d->asyncOps)
+                    this->d->asyncOps->deleteLater();
+                this->d->asyncOps = new XenAsyncOperations(this->d->session, this);
+            }
+
+            this->handleConnectionStateChanged(true);
+            return;
+        }
+
+        const QStringList failureDescription = this->d->connection->GetLastFailureDescription();
+        if (!failureDescription.isEmpty() && failureDescription.first() == Failure::HOST_IS_SLAVE)
+            return;
+
+        const QString hostname = this->d->connection->GetHostname();
+        const int port = this->d->connection->GetPort();
+        const QString username = this->d->connection->GetUsername();
+        if (!error.isEmpty())
+            this->setError(error);
+        emit this->authenticationFailed(hostname, port, username, error);
+    });
+    connect(this->d->connection, &XenConnection::apiResponse, this, &XenLib::onConnectionApiResponse);
+    connect(this->d->connection, &XenConnection::cachePopulated, this, &XenLib::onCachePopulated);
+    connect(this->d->connection, &XenConnection::taskAdded,
+            this, [this](const QString& taskRef, const QVariantMap& taskData) {
+                emit this->taskAdded(this->d->connection, taskRef, taskData);
+            });
+    connect(this->d->connection, &XenConnection::taskModified,
+            this, [this](const QString& taskRef, const QVariantMap& taskData) {
+                emit this->taskModified(this->d->connection, taskRef, taskData);
+            });
+    connect(this->d->connection, &XenConnection::taskDeleted,
+            this, [this](const QString& taskRef) {
+                emit this->taskDeleted(this->d->connection, taskRef);
+            });
 }
 
 XenAsyncOperations* XenLib::getAsyncOperations() const

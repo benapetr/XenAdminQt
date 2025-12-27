@@ -68,6 +68,7 @@ class XENLIB_EXPORT XenLib : public QObject
         // API access
         XenRpcAPI* getAPI() const;
         XenConnection* getConnection() const;
+        void setConnection(XenConnection* connection);
         XenAsyncOperations* getAsyncOperations() const;
         XenCertificateManager* getCertificateManager() const;
         Xen::ConnectionsManager* getConnectionsManager() const;

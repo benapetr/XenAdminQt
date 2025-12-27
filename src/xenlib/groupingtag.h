@@ -45,59 +45,59 @@ class Grouping;
  */
 class GroupingTag
 {
-public:
-    /**
-     * @brief Constructor
-     * @param grouping The grouping algorithm (must not be null)
-     * @param parent Parent group (may be null for top-level)
-     * @param group The group value (must not be null)
-     */
-    GroupingTag(Grouping* grouping, const QVariant& parent, const QVariant& group);
+    public:
+        /**
+         * @brief Constructor
+         * @param grouping The grouping algorithm (must not be null)
+         * @param parent Parent group (may be null for top-level)
+         * @param group The group value (must not be null)
+         */
+        GroupingTag(Grouping* grouping, const QVariant& parent, const QVariant& group);
 
-    ~GroupingTag();
+        ~GroupingTag();
 
-    /**
-     * @brief Get the grouping algorithm
-     * @return Pointer to Grouping
-     */
-    Grouping* getGrouping() const
-    {
-        return m_grouping;
-    }
+        /**
+         * @brief Get the grouping algorithm
+         * @return Pointer to Grouping
+         */
+        Grouping* getGrouping() const
+        {
+            return m_grouping;
+        }
 
-    /**
-     * @brief Get the parent group (may be null)
-     * @return Parent group value
-     */
-    QVariant getParent() const
-    {
-        return m_parent;
-    }
+        /**
+         * @brief Get the parent group (may be null)
+         * @return Parent group value
+         */
+        QVariant getParent() const
+        {
+            return m_parent;
+        }
 
-    /**
-     * @brief Get the group value
-     * @return Group value
-     */
-    QVariant getGroup() const
-    {
-        return m_group;
-    }
+        /**
+         * @brief Get the group value
+         * @return Group value
+         */
+        QVariant getGroup() const
+        {
+            return m_group;
+        }
 
-    /**
-     * @brief Equality comparison (two GroupingTags are equal if grouping and group are equal)
-     */
-    bool operator==(const GroupingTag& other) const;
+        /**
+         * @brief Equality comparison (two GroupingTags are equal if grouping and group are equal)
+         */
+        bool operator==(const GroupingTag& other) const;
 
-    /**
-     * @brief Hash code for use in QHash
-     * @return 32-bit hash value
-     */
-    uint hashCode() const;
+        /**
+         * @brief Hash code for use in QHash
+         * @return 32-bit hash value
+         */
+        uint hashCode() const;
 
-private:
-    Grouping* m_grouping; // The grouping algorithm
-    QVariant m_parent;    // Parent group (optional)
-    QVariant m_group;     // The group value
+    private:
+        Grouping* m_grouping; // The grouping algorithm
+        QVariant m_parent;    // Parent group (optional)
+        QVariant m_group;     // The group value
 };
 
 // Hash function for QHash support

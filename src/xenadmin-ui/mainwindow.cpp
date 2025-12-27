@@ -27,6 +27,7 @@
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "dialogs/addserverdialog.h"
 #include "dialogs/connectdialog.h"
 #include "dialogs/debugwindow.h"
 #include "dialogs/aboutdialog.h"
@@ -55,15 +56,15 @@
 #include "navigation/navigationhistory.h"
 #include "navigation/navigationpane.h"
 #include "navigation/navigationview.h"
+#include "network/xenconnectionui.h"
 #include "xenlib.h"
-#include "xencache.h"      // Need full definition for resolve() calls
-#include "metricupdater.h" // Need full definition for start() call
+#include "xencache.h"
+#include "metricupdater.h"
 #include "search.h"
 #include "groupingtag.h"
 #include "grouping.h"
 #include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/actions/vm/vmrebootaction.h"
+#include "xen/network/connectionsmanager.h"
 #include "operations/operationmanager.h"
 #include "commands/contextmenubuilder.h"
 
@@ -225,38 +226,12 @@ MainWindow::MainWindow(QWidget* parent)
 
     this->m_titleBar->clear(); // Start with empty title
 
-    // Initialize XenLib
+    // Initialize XenLib (compatibility facade for legacy code paths)
     this->m_xenLib = new XenLib(this);
-    connect(this->m_xenLib, &XenLib::connectionStateChanged, this, &MainWindow::onConnectionStateChanged);
 
-    // Connect cache populated signal to refresh tree after initial data load
-    connect(this->m_xenLib, &XenLib::cachePopulated, this, &MainWindow::onCachePopulated);
-
-    // Connect authentication failure signal for retry prompt
-    connect(this->m_xenLib, &XenLib::authenticationFailed, this, &MainWindow::onAuthenticationFailed);
-
-    // Connect redirect to master signal
-    connect(this->m_xenLib, &XenLib::redirectedToMaster, this, [this](const QString& masterAddress) {
-        QString msg = QString("Redirecting to pool master: %1").arg(masterAddress);
-        qDebug() << "MainWindow:" << msg;
-        this->ui->statusbar->showMessage(msg, 5000);
-    });
-
-    // Connect cache objectChanged signal to refresh tabs when selected object updates
-    if (this->m_xenLib->getCache())
-    {
-        connect(this->m_xenLib->getCache(), &XenCache::objectChanged,
-                this, &MainWindow::onCacheObjectChanged);
-    }
-
-    // Connect task rehydration signals to MeddlingActionManager
-    auto* rehydrationMgr = OperationManager::instance()->meddlingActionManager();
-    if (rehydrationMgr)
-    {
-        connect(this->m_xenLib, &XenLib::taskAdded, rehydrationMgr, &MeddlingActionManager::handleTaskAdded);
-        connect(this->m_xenLib, &XenLib::taskModified, rehydrationMgr, &MeddlingActionManager::handleTaskUpdated);
-        connect(this->m_xenLib, &XenLib::taskDeleted, rehydrationMgr, &MeddlingActionManager::handleTaskRemoved);
-    }
+    // Wire UI to ConnectionsManager (C# model), keep XenLib only as active-connection facade.
+    Xen::ConnectionsManager* connMgr = this->m_xenLib->getConnectionsManager();
+    connect(connMgr, &Xen::ConnectionsManager::connectionAdded, this, &MainWindow::onConnectionAdded);
 
     // Connect XenAPI message signals to AlertManager for alert system
     // C# Reference: MainWindow.cs line 703 - connection.Cache.RegisterCollectionChanged<Message>
@@ -446,121 +421,44 @@ void MainWindow::updateActions()
 
 void MainWindow::connectToServer()
 {
-    ConnectDialog dialog(this);
-    if (dialog.exec() == QDialog::Accepted)
+    if (!this->m_xenLib)
+        return;
+
+    AddServerDialog dialog(nullptr, false, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    QString serverInput = dialog.serverInput();
+    QString hostname = serverInput;
+    int port = 443;
+    const int lastColon = serverInput.lastIndexOf(':');
+    if (lastColon > 0 && lastColon < serverInput.size() - 1)
     {
-        QString hostname = dialog.getHostname();
-        int port = dialog.getPort();
-        QString username = dialog.getUsername();
-        QString password = dialog.getPassword();
-        bool useSSL = dialog.useSSL();
-        bool saveProfile = dialog.saveProfile();
-
-        qDebug() << "XenAdmin Qt: Attempting to connect to" << hostname << "port" << port << "SSL:" << useSSL;
-        this->ui->statusbar->showMessage("Connecting to " + hostname + "...");
-
-        // Create progress dialog for connection attempt
-        QProgressDialog* progressDialog = new QProgressDialog("Connecting to server...", "Cancel", 0, 0, this);
-        progressDialog->setWindowModality(Qt::WindowModal);
-        progressDialog->show();
-
-        // Store the connection profile for later use if save is requested
-        ConnectionProfile* profile = new ConnectionProfile(dialog.getConnectionProfile());
-
-        // Create connection context
-        ConnectionContext* context = new ConnectionContext{
-            progressDialog,
-            hostname,
-            saveProfile,
-            profile,
-            new QMetaObject::Connection(),
-            new QMetaObject::Connection(),
-            new QMetaObject::Connection()};
-
-        *context->successConn = connect(this->m_xenLib, &XenLib::connectionStateChanged, this,
-                                        [this, context](bool connected) {
-                                            handleConnectionSuccess(context, connected);
-                                        });
-
-        *context->errorConn = connect(this->m_xenLib, &XenLib::connectionError, this,
-                                      [this, context](const QString& error) {
-                                          handleConnectionError(context, error);
-                                      });
-
-        // Handle authentication failures - clean up and let onAuthenticationFailed() handle retry
-        *context->authFailedConn = connect(this->m_xenLib, &XenLib::authenticationFailed, this,
-                                           [this, context](const QString&, int, const QString&, const QString&) {
-                                               handleInitialAuthFailed(context);
-                                           });
-
-        // Initiate async connection
-        this->m_xenLib->connectToServer(hostname, port, username, password, useSSL);
-    }
-}
-
-void MainWindow::disconnectFromServer()
-{
-    if (this->m_xenLib && this->m_xenLib->isConnected())
-    {
-        // Close all VNC/console connections before disconnecting
-        // Reference: C# MainWindow.cs lines 745-762
-        if (this->m_consolePanel)
+        bool ok = false;
+        int parsedPort = serverInput.mid(lastColon + 1).toInt(&ok);
+        if (ok)
         {
-            // Get all VMs and close their console connections
-            QList<QVariantMap> vms = m_xenLib->getCache()->GetAllData("vm");
-            for (const QVariantMap& vm : vms)
-            {
-                QString vmRef = vm.value("ref").toString();
-                if (!vmRef.isEmpty())
-                {
-                    this->m_consolePanel->closeVncForSource(vmRef);
-                }
-            }
+            hostname = serverInput.left(lastColon).trimmed();
+            port = parsedPort;
         }
-
-        if (this->m_cvmConsolePanel)
-        {
-            // Get all hosts and close their CVM console connections
-            QList<QVariantMap> hosts = this->m_xenLib->getCache()->GetAllData("host");
-            for (const QVariantMap& host : hosts)
-            {
-                QString hostRef = host.value("ref").toString();
-                if (!hostRef.isEmpty())
-                {
-                    // Close control domain zero console
-                    QString controlDomainRef = this->m_xenLib->getControlDomainForHost(hostRef);
-                    if (!controlDomainRef.isEmpty())
-                    {
-                        this->m_consolePanel->closeVncForSource(controlDomainRef);
-                    }
-
-                    // Close SR driver domain consoles for this host
-                    // Iterate through all VMs to find SR driver domains on this host
-                    QList<QVariantMap> allVMs = this->m_xenLib->getCache()->GetAllData("vm");
-                    for (const QVariantMap& vm : allVMs)
-                    {
-                        QString vmRef = vm.value("ref").toString();
-                        QString vmHostRef = vm.value("resident_on").toString();
-
-                        // Check if this VM is an SR driver domain on the current host
-                        if (vmHostRef == hostRef && this->m_xenLib->isSRDriverDomain(vmRef))
-                        {
-                            if (this->m_cvmConsolePanel)
-                            {
-                                this->m_cvmConsolePanel->closeVncForSource(vmRef);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        this->m_xenLib->disconnectFromServer();
-        getServerTreeWidget()->clear();
-        this->clearTabs();
-        this->updatePlaceholderVisibility();
-        this->ui->statusbar->showMessage("Disconnected", 5000);
     }
+
+    Xen::ConnectionsManager* connMgr = this->m_xenLib->getConnectionsManager();
+    if (!connMgr)
+        return;
+
+    XenConnection* connection = new XenConnection(nullptr);
+    connection->setCertificateManager(this->m_xenLib->getCertificateManager());
+    connMgr->addConnection(connection);
+
+    connection->SetHostname(hostname);
+    connection->SetPort(port);
+    connection->SetUsername(dialog.username());
+    connection->SetPassword(dialog.password());
+    connection->setExpectPasswordIsCorrect(false);
+    connection->setFromDialog(true);
+
+    XenConnectionUI::BeginConnect(connection, true, this, false);
 }
 
 void MainWindow::showAbout()
@@ -674,6 +572,15 @@ void MainWindow::onConnectionStateChanged(bool connected)
 void MainWindow::onCachePopulated()
 {
     qDebug() << "MainWindow: Cache populated, refreshing tree view";
+    if (this->m_xenLib && this->m_xenLib->getCache())
+    {
+        XenCache* cache = this->m_xenLib->getCache();
+        qDebug() << "MainWindow: Cache counts"
+                 << "hosts=" << cache->Count("host")
+                 << "pools=" << cache->Count("pool")
+                 << "vms=" << cache->Count("vm")
+                 << "srs=" << cache->Count("sr");
+    }
 
     // Refresh tree now that cache has data
     if (m_navigationPane)
@@ -691,66 +598,60 @@ void MainWindow::onCachePopulated()
     }
 }
 
-void MainWindow::onAuthenticationFailed(const QString& hostname, int port,
-                                        const QString& username, const QString& errorMessage)
+void MainWindow::onConnectionAdded(XenConnection* connection)
 {
-    qDebug() << "XenAdmin Qt: Authentication failed for" << hostname << ":" << port
-             << "username:" << username << "error:" << errorMessage;
+    if (!connection)
+        return;
 
-    // Show retry dialog with pre-filled credentials
-    ConnectDialog retryDialog(hostname, port, username, errorMessage, this);
+    this->m_xenLib->setConnection(connection);
 
-    if (retryDialog.exec() == QDialog::Accepted)
+    connect(connection, &XenConnection::connectionResult, this, [this](bool connected, const QString&)
     {
-        // User wants to retry with new credentials
-        QString newUsername = retryDialog.getUsername();
-        QString newPassword = retryDialog.getPassword();
-        bool useSSL = retryDialog.useSSL();
-        bool saveProfile = retryDialog.saveProfile();
-
-        qDebug() << "XenAdmin Qt: Retrying connection to" << hostname << "with new credentials";
-        this->ui->statusbar->showMessage("Retrying connection to " + hostname + "...");
-
-        // Create progress dialog for retry attempt
-        QProgressDialog* progressDialog = new QProgressDialog("Retrying connection...", "Cancel", 0, 0, this);
-        progressDialog->setWindowModality(Qt::WindowModal);
-        progressDialog->show();
-
-        // Store the connection profile for later use if save is requested
-        ConnectionProfile* profile = new ConnectionProfile(retryDialog.getConnectionProfile());
-
-        // Create connection context for retry
-        ConnectionContext* context = new ConnectionContext{
-            progressDialog,
-            hostname,
-            saveProfile,
-            profile,
-            new QMetaObject::Connection(),
-            new QMetaObject::Connection(),
-            new QMetaObject::Connection()};
-
-        *context->successConn = connect(this->m_xenLib, &XenLib::connectionStateChanged, this,
-                                        [this, context](bool connected) {
-                                            handleConnectionSuccess(context, connected);
-                                        });
-
-        *context->errorConn = connect(this->m_xenLib, &XenLib::connectionError, this,
-                                      [this, context](const QString& error) {
-                                          handleConnectionError(context, error);
-                                      });
-
-        // Handle recursive authentication failures (user can keep retrying)
-        *context->authFailedConn = connect(this->m_xenLib, &XenLib::authenticationFailed, this,
-                                           [this, context](const QString&, int, const QString&, const QString&) {
-                                               handleRetryAuthFailed(context);
-                                           });
-
-        // Initiate async connection with new credentials
-        this->m_xenLib->connectToServer(hostname, port, newUsername, newPassword, useSSL);
-    } else
+        this->onConnectionStateChanged(connected);
+    });
+    connect(connection, &XenConnection::connectionClosed, this, [this]()
     {
-        this->ui->statusbar->showMessage("Connection cancelled", 3000);
+        this->onConnectionStateChanged(false);
+    });
+    connect(connection, &XenConnection::connectionLost, this, [this]()
+    {
+        this->onConnectionStateChanged(false);
+    });
+    connect(connection, &XenConnection::cachePopulated, this, &MainWindow::onCachePopulated);
+
+    XenCache* cache = connection->GetCache();
+    if (cache)
+    {
+        connect(cache, &XenCache::objectChanged, this, &MainWindow::onCacheObjectChanged);
     }
+
+    connect(connection, &XenConnection::taskAdded, this, &MainWindow::onConnectionTaskAdded);
+    connect(connection, &XenConnection::taskModified, this, &MainWindow::onConnectionTaskModified);
+    connect(connection, &XenConnection::taskDeleted, this, &MainWindow::onConnectionTaskDeleted);
+}
+
+void MainWindow::onConnectionTaskAdded(const QString& taskRef, const QVariantMap& taskData)
+{
+    auto* rehydrationMgr = OperationManager::instance()->meddlingActionManager();
+    XenConnection* connection = qobject_cast<XenConnection*>(sender());
+    if (rehydrationMgr && connection)
+        rehydrationMgr->handleTaskAdded(connection, taskRef, taskData);
+}
+
+void MainWindow::onConnectionTaskModified(const QString& taskRef, const QVariantMap& taskData)
+{
+    auto* rehydrationMgr = OperationManager::instance()->meddlingActionManager();
+    XenConnection* connection = qobject_cast<XenConnection*>(sender());
+    if (rehydrationMgr && connection)
+        rehydrationMgr->handleTaskUpdated(connection, taskRef, taskData);
+}
+
+void MainWindow::onConnectionTaskDeleted(const QString& taskRef)
+{
+    auto* rehydrationMgr = OperationManager::instance()->meddlingActionManager();
+    XenConnection* connection = qobject_cast<XenConnection*>(sender());
+    if (rehydrationMgr && connection)
+        rehydrationMgr->handleTaskRemoved(connection, taskRef);
 }
 
 void MainWindow::onTreeItemSelected()
@@ -832,13 +733,6 @@ void MainWindow::onTreeItemSelected()
 
         // Update both toolbar and menu from Commands (matches C# UpdateToolbars)
         this->updateToolbarsAndMenus();
-
-        // This is no longer needed, we get everything from the cache now, stuff is being updated via event poller instead
-        // Request full object data asynchronously - returns immediately, no UI freeze
-        /*if (this->m_xenLib && this->m_xenLib->isConnected())
-        {
-            this->m_xenLib->requestObjectData(objectType, objectRef);
-        }*/
 
         // Now we have the data, show the tabs
         auto objectData = this->m_xenLib->getCachedObjectData(objectType, objectRef);
@@ -1828,6 +1722,13 @@ void MainWindow::restoreConnections()
 
     qDebug() << "XenAdmin Qt: Found" << profiles.size() << "saved connection profile(s)";
 
+    Xen::ConnectionsManager* connMgr = this->m_xenLib ? this->m_xenLib->getConnectionsManager() : nullptr;
+    if (!connMgr)
+    {
+        qWarning() << "XenAdmin Qt: ConnectionsManager not available, skipping restore";
+        return;
+    }
+
     // Restore connections that have autoConnect enabled or were previously connected
     for (const ConnectionProfile& profile : profiles)
     {
@@ -1844,36 +1745,20 @@ void MainWindow::restoreConnections()
 
         qDebug() << "XenAdmin Qt: Restoring connection to" << profile.displayName();
 
-        // Attempt connection using the saved credentials
-        bool success = m_xenLib->connectToServer(
-            profile.hostname(),
-            profile.port(),
-            profile.username(),
-            profile.password(),
-            profile.useSSL());
+        XenConnection* connection = new XenConnection(nullptr);
+        connection->setCertificateManager(this->m_xenLib->getCertificateManager());
+        connection->SetHostname(profile.hostname());
+        connection->SetPort(profile.port());
+        connection->SetUsername(profile.username());
+        connection->SetPassword(profile.password());
+        connection->setSaveDisconnected(profile.saveDisconnected());
+        connection->SetPoolMembers(profile.poolMembers());
+        connection->setExpectPasswordIsCorrect(!profile.password().isEmpty());
+        connection->setFromDialog(false);
 
-        if (success)
-        {
-            qDebug() << "XenAdmin Qt: Successfully restored connection to" << profile.displayName();
-            ui->statusbar->showMessage("Reconnected to " + profile.displayName(), 3000);
+        connMgr->addConnection(connection);
 
-            // Delegate tree building to NavigationView which respects current navigation mode
-            if (m_navigationPane)
-            {
-                m_navigationPane->requestRefreshTreeView();
-            }
-
-            // Update last connected timestamp
-            ConnectionProfile updatedProfile = profile;
-            updatedProfile.setLastConnected(QDateTime::currentSecsSinceEpoch());
-            SettingsManager::instance().saveConnectionProfile(updatedProfile);
-        } else
-        {
-            qWarning() << "XenAdmin Qt: Failed to restore connection to" << profile.displayName();
-
-            QString errorMsg = m_xenLib->hasError() ? m_xenLib->getLastError() : "Unknown error";
-            qWarning() << "XenAdmin Qt: Error:" << errorMsg;
-        }
+        XenConnectionUI::BeginConnect(connection, true, this, true);
     }
 }
 

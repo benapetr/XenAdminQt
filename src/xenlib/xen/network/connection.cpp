@@ -202,7 +202,7 @@ void XenConnection::Disconnect()
 
 bool XenConnection::IsConnected() const
 {
-    return this->d->connected;
+    return this->d->connected || this->IsConnectedNewFlow();
 }
 
 QString XenConnection::GetHostname() const
@@ -828,13 +828,14 @@ void XenConnection::connectWorkerThread()
     XenRpcAPI api(session);
     QString token;
 
-           // Populate cache using event.from
+    // Populate cache using event.from
     if (this->d->cache)
         this->d->cache->Clear();
 
-           // Preload roles (not delivered by event.from)
+    // Preload roles (not delivered by event.from)
     try
     {
+        qDebug() << "XenConnection: Preloading roles via role.get_all_records";
         QVariantList roleParams;
         roleParams.append(session->getSessionId());
         QByteArray roleRequest = api.buildJsonRpcCall("role.get_all_records", roleParams);
@@ -853,6 +854,7 @@ void XenConnection::connectWorkerThread()
             if (Misc::QVariantIsMap(roleData))
             {
                 QVariantMap roles = roleData.toMap();
+                qDebug() << "XenConnection: Role records fetched:" << roles.size();
                 for (auto it = roles.constBegin(); it != roles.constEnd(); ++it)
                 {
                     QString roleRef = it.key();
@@ -864,16 +866,18 @@ void XenConnection::connectWorkerThread()
                 }
             }
         }
-    } catch (...)
+    } catch (const std::exception& exn)
     {
-      // Ignore role preload failures; event.from cache population still proceeds.
+        qWarning() << "XenLib::populateCache - Failed to fetch role records:" << exn.what();
     }
 
+    qDebug() << "XenConnection: Calling event.from for initial cache population";
     QVariantMap eventBatch = api.eventFrom(QStringList() << "*", "", 30.0);
     if (eventBatch.contains("token"))
         token = eventBatch.value("token").toString();
 
     QVariantList events = eventBatch.value("events").toList();
+    qDebug() << "XenConnection: event.from returned events:" << events.size();
     for (const QVariant& eventVar : events)
     {
         QVariantMap event = eventVar.toMap();
@@ -905,6 +909,7 @@ void XenConnection::connectWorkerThread()
     // Cache explicit console records
     try
     {
+        qDebug() << "XenConnection: Preloading console.get_all_records";
         QVariantList consoleParams;
         consoleParams.append(session->getSessionId());
         QByteArray consoleRequest = api.buildJsonRpcCall("console.get_all_records", consoleParams);
@@ -923,6 +928,7 @@ void XenConnection::connectWorkerThread()
             if (Misc::QVariantIsMap(responseData))
             {
                 QVariantMap consolesMap = responseData.toMap();
+                qDebug() << "XenConnection: Console records fetched:" << consolesMap.size();
                 for (auto it = consolesMap.constBegin(); it != consolesMap.constEnd(); ++it)
                 {
                     QString consoleRef = it.key();
@@ -934,11 +940,13 @@ void XenConnection::connectWorkerThread()
                 }
             }
         }
-    } catch (...)
+    } catch (const std::exception& exn)
     {
+        qWarning() << "XenLib::populateCache - Failed to fetch console records:" << exn.what();
     }
 
     this->d->cacheIsPopulated = true;
+    qDebug() << "XenConnection: Cache populated, emitting cachePopulated";
     emit this->cachePopulated();
 
     if (!this->d->eventPollerThread)
@@ -951,20 +959,22 @@ void XenConnection::connectWorkerThread()
     {
         this->d->eventPoller = new EventPoller();
         this->d->eventPoller->moveToThread(this->d->eventPollerThread);
-        connect(this->d->eventPoller, &EventPoller::eventReceived,
-                this, &XenConnection::onEventPollerEventReceived);
-        connect(this->d->eventPoller, &EventPoller::cachePopulated,
-                this, &XenConnection::onEventPollerCachePopulated);
-        connect(this->d->eventPoller, &EventPoller::connectionLost,
-                this, &XenConnection::onEventPollerConnectionLost);
+        connect(this->d->eventPoller, &EventPoller::eventReceived, this, &XenConnection::onEventPollerEventReceived);
+        connect(this->d->eventPoller, &EventPoller::cachePopulated, this, &XenConnection::onEventPollerCachePopulated);
+        connect(this->d->eventPoller, &EventPoller::connectionLost, this, &XenConnection::onEventPollerConnectionLost);
+        connect(this->d->eventPoller, &EventPoller::taskAdded, this, &XenConnection::taskAdded);
+        connect(this->d->eventPoller, &EventPoller::taskModified, this, &XenConnection::taskModified);
+        connect(this->d->eventPoller, &EventPoller::taskDeleted, this, &XenConnection::taskDeleted);
     }
 
     const QStringList classes = {
                                  "vm", "host", "pool", "sr", "vbd", "vdi", "vif",
                                  "network", "pbd", "pif", "task", "message", "console",
-                                 "vm_guest_metrics", "host_metrics", "vm_metrics"};
+                                 "vm_guest_metrics", "host_metrics", "vm_metrics"
+                                };
 
-    QMetaObject::invokeMethod(this->d->eventPoller, [this, session, classes, token]() {
+    QMetaObject::invokeMethod(this->d->eventPoller, [this, session, classes, token]()
+    {
         this->d->eventPoller->reset();
         this->d->eventPoller->initialize(session);
         this->d->eventPoller->start(classes, token);

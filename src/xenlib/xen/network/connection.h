@@ -33,6 +33,7 @@
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 #include <QtCore/QDateTime>
+#include <QtCore/QVariantMap>
 #include <functional>
 
 class XenCertificateManager;
@@ -182,6 +183,10 @@ class XENLIB_EXPORT XenConnection : public QObject
         void connectionMessageChanged(const QString& message);
         void beforeMajorChange(bool background);
         void afterMajorChange(bool background);
+        // These are just temporary for xenlib compat
+        void taskAdded(const QString& taskRef, const QVariantMap& taskData);
+        void taskModified(const QString& taskRef, const QVariantMap& taskData);
+        void taskDeleted(const QString& taskRef);
 
         /**
          * @brief Emitted when async API request completes

@@ -30,8 +30,7 @@
 #include "grouping.h"
 #include <QDebug>
 
-GroupingTag::GroupingTag(Grouping* grouping, const QVariant& parent, const QVariant& group)
-    : m_grouping(grouping), m_parent(parent), m_group(group)
+GroupingTag::GroupingTag(Grouping* grouping, const QVariant& parent, const QVariant& group) : m_grouping(grouping), m_parent(parent), m_group(group)
 {
     // C# equivalent: xenadmin/XenAdmin/GroupingTag.cs constructor
     Q_ASSERT(grouping != nullptr);

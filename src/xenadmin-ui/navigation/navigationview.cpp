@@ -388,7 +388,7 @@ void NavigationView::buildInfrastructureTree()
     Xen::ConnectionsManager* connMgr = this->m_xenLib->getConnectionsManager();
     XenCache* cache = this->m_xenLib->getCache();
 
-    //qDebug() << "NavigationView::buildInfrastructureTree: connMgr=" << connMgr << "cache=" << cache;
+    qDebug() << "NavigationView::buildInfrastructureTree: connMgr=" << connMgr << "cache=" << cache;
 
     if (!connMgr || !cache)
     {
@@ -400,7 +400,7 @@ void NavigationView::buildInfrastructureTree()
     // Get all connections (both connected and disconnected)
     QList<XenConnection*> connections = connMgr->getAllConnections();
 
-    //qDebug() << "NavigationView::buildInfrastructureTree: connections count=" << connections.size();
+    qDebug() << "NavigationView::buildInfrastructureTree: connections count=" << connections.size();
 
     if (connections.isEmpty())
     {
@@ -418,6 +418,11 @@ void NavigationView::buildInfrastructureTree()
     {
         if (!connection)
             continue;
+
+        qDebug() << "NavigationView::buildInfrastructureTree: connection"
+                 << connection->GetHostname()
+                 << "IsConnected=" << connection->IsConnected()
+                 << "IsConnectedNewFlow=" << connection->IsConnectedNewFlow();
 
         // Check if connected
         if (!connection->IsConnected())
@@ -438,6 +443,11 @@ void NavigationView::buildInfrastructureTree()
         }
 
         // For connected servers, get pool data from CACHE (not API)
+        qDebug() << "NavigationView::buildInfrastructureTree: cache counts"
+                 << "hosts=" << cache->Count("host")
+                 << "pools=" << cache->Count("pool")
+                 << "vms=" << cache->Count("vm")
+                 << "srs=" << cache->Count("sr");
         // This matches C# connection.Cache.Resolve pattern
         QList<QVariantMap> pools = cache->GetAllData("pool");
 

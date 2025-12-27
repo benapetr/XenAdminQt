@@ -97,7 +97,6 @@ class MainWindow : public QMainWindow
 
     private slots:
         void connectToServer();
-        void disconnectFromServer();
         void showAbout();
         void showDebugWindow();
         void showOptions();
@@ -111,7 +110,10 @@ class MainWindow : public QMainWindow
 
         void onConnectionStateChanged(bool connected);
         void onCachePopulated();
-        void onAuthenticationFailed(const QString& hostname, int port, const QString& username, const QString& errorMessage);
+        void onConnectionAdded(XenConnection* connection);
+        void onConnectionTaskAdded(const QString& taskRef, const QVariantMap& taskData);
+        void onConnectionTaskModified(const QString& taskRef, const QVariantMap& taskData);
+        void onConnectionTaskDeleted(const QString& taskRef);
         void onTreeItemSelected();
         void showTreeContextMenu(const QPoint& position);
         void onTabChanged(int index);
