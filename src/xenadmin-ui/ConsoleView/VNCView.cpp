@@ -47,16 +47,18 @@
 VNCView::VNCView(const QString& vmRef,
                  const QString& elevatedUsername,
                  const QString& elevatedPassword,
-                 XenLib* xenLib,
+                 XenConnection *conn,
                  QWidget* parent)
-    : QWidget(parent), _vmRef(vmRef), _xenLib(xenLib), _vncTabView(nullptr), _undockedForm(nullptr), _findConsoleButton(nullptr), _reattachConsoleButton(nullptr), _oldUndockedSize(QSize()), _oldUndockedLocation(QPoint()), _oldScaledSetting(false), _undockedFormResized(false)
+    : QWidget(parent), _vmRef(vmRef), _vncTabView(nullptr), _undockedForm(nullptr), _findConsoleButton(nullptr), _reattachConsoleButton(nullptr), _oldUndockedSize(QSize()), _oldUndockedLocation(QPoint()), _oldScaledSetting(false), _undockedFormResized(false)
 {
+    this->_connection = conn;
+
     qDebug() << "VNCView: Constructor for VM:" << vmRef;
 
     Q_ASSERT(QThread::currentThread() == QApplication::instance()->thread());
 
     // Create VNCTabView (equivalent to C# new VNCTabView(this, source, ...))
-    this->_vncTabView = new VNCTabView(this, vmRef, elevatedUsername, elevatedPassword, xenLib, this);
+    this->_vncTabView = new VNCTabView(this, vmRef, elevatedUsername, elevatedPassword, conn, this);
 
     // Setup UI
     this->setupUI();

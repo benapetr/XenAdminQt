@@ -33,7 +33,6 @@
 #include "../../ConsoleView/ConsolePanel.h"
 #include "xenlib.h"
 #include "xencache.h"
-#include "xen/api.h"
 #include "xen/network/connection.h"
 #include "xen/actions/vm/vmsnapshotcreateaction.h"
 #include <QtWidgets>
@@ -141,7 +140,7 @@ void TakeSnapshotCommand::showSnapshotDialog()
         // Set console to this VM before snapshot (matches C# line 89)
         if (this->mainWindow() && this->mainWindow()->consolePanel())
         {
-            this->mainWindow()->consolePanel()->setCurrentSource(this->m_vmUuid);
+            this->mainWindow()->consolePanel()->SetCurrentSource(xenLib->getConnection(), this->m_vmUuid);
         }
 
         this->executeSnapshotOperation(name, description, type);
@@ -150,8 +149,7 @@ void TakeSnapshotCommand::showSnapshotDialog()
 
 void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QString& description, VmSnapshotDialog::SnapshotType type)
 {
-    qDebug() << "TakeSnapshotCommand: Creating snapshot" << name << "for VM" << this->m_vmUuid
-             << "with type" << type;
+    qDebug() << "TakeSnapshotCommand: Creating snapshot" << name << "for VM" << this->m_vmUuid << "with type" << type;
 
     emit snapshotStarted();
 
@@ -207,7 +205,7 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
             {
                 // C#: screenshot = _screenShotProvider(VM, sudoUsername, sudoPassword);
                 // Note: We don't have sudo credentials yet - pass empty strings
-                screenshot = this->mainWindow()->consolePanel()->snapshot(this->m_vmUuid, QString(), QString());
+                screenshot = this->mainWindow()->consolePanel()->Snapshot(this->m_vmUuid, QString(), QString());
                 if (!screenshot.isNull())
                 {
                     qDebug() << "TakeSnapshotCommand: Screenshot captured, size:"

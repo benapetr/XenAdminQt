@@ -38,6 +38,7 @@
 // Forward declarations
 class VNCView;
 class XenLib;
+class XenConnection;
 
 namespace Ui
 {
@@ -72,198 +73,198 @@ class ConsolePanel : public QWidget
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Maximum number of active VM console instances to cache
-     * Reference: ConsolePanel.cs line 43
-     */
-    static constexpr int MAX_ACTIVE_VM_CONSOLES = 10;
+    public:
+        /**
+         * @brief Maximum number of active VM console instances to cache
+         * Reference: ConsolePanel.cs line 43
+         */
+        static constexpr int MAX_ACTIVE_VM_CONSOLES = 10;
 
-    /**
-     * @brief Constructor
-     * Reference: ConsolePanel.cs lines 49-54
-     */
-    explicit ConsolePanel(QWidget* parent = nullptr);
+        /**
+         * @brief Constructor
+         * Reference: ConsolePanel.cs lines 49-54
+         */
+        explicit ConsolePanel(QWidget* parent = nullptr);
 
-    /**
-     * @brief Destructor - cleanup cached VNCView instances
-     */
-    ~ConsolePanel();
+        /**
+         * @brief Destructor - cleanup cached VNCView instances
+         */
+        ~ConsolePanel();
 
-    /**
-     * @brief Pause all docked VNC views (called when tab hidden)
-     * Reference: ConsolePanel.cs lines 58-64
-     *
-     * Pauses rendering for all docked consoles to save CPU/network resources.
-     * Undocked consoles are not paused (user may still be viewing them).
-     */
-    void pauseAllDockedViews();
+        /**
+         * @brief Pause all docked VNC views (called when tab hidden)
+         * Reference: ConsolePanel.cs lines 58-64
+         *
+         * Pauses rendering for all docked consoles to save CPU/network resources.
+         * Undocked consoles are not paused (user may still be viewing them).
+         */
+        void PauseAllDockedViews();
 
-    /**
-     * @brief Reset all cached views (clear cache)
-     * Reference: ConsolePanel.cs lines 66-69
-     *
-     * Removes all cached VNCView instances. Called on disconnect.
-     */
-    void resetAllViews();
+        /**
+         * @brief Reset all cached views (clear cache)
+         * Reference: ConsolePanel.cs lines 66-69
+         *
+         * Removes all cached VNCView instances. Called on disconnect.
+         * TODO: this isn't used yet
+         */
+        void ResetAllViews();
 
-    /**
-     * @brief Unpause the active view and optionally focus it
-     * Reference: ConsolePanel.cs lines 71-91
-     *
-     * Explicitly pauses all docked consoles except the active one,
-     * then unpauses the active console.
-     *
-     * @param focus If true, also focus the console and switch protocol if needed
-     */
-    void unpauseActiveView(bool focus = false);
+        /**
+         * @brief Unpause the active view and optionally focus it
+         * Reference: ConsolePanel.cs lines 71-91
+         *
+         * Explicitly pauses all docked consoles except the active one,
+         * then unpauses the active console.
+         *
+         * @param focus If true, also focus the console and switch protocol if needed
+         */
+        void UnpauseActiveView(bool focus = false);
 
-    /**
-     * @brief Update RDP resolution for active view
-     * Reference: ConsolePanel.cs lines 93-97
-     *
-     * @param fullscreen True if switching to fullscreen mode
-     */
-    void updateRDPResolution(bool fullscreen = false);
+        /**
+         * @brief Update RDP resolution for active view
+         * Reference: ConsolePanel.cs lines 93-97
+         *
+         * @param fullscreen True if switching to fullscreen mode
+         */
+        void UpdateRDPResolution(bool fullscreen = false);
 
-    /**
-     * @brief Set current VM source for console display
-     * Reference: ConsolePanel.cs lines 99-155
-     *
-     * Main method for switching VM console. Handles:
-     * - RBAC permission checking
-     * - Cache lookup/creation
-     * - LRU eviction when cache full
-     * - Active view switching
-     *
-     * @param vmRef VM OpaqueRef to display console for
-     */
-    void setCurrentSource(const QString& vmRef);
+        /**
+         * @brief Set current VM source for console display
+         * Reference: ConsolePanel.cs lines 99-155
+         *
+         * Main method for switching VM console. Handles:
+         * - RBAC permission checking
+         * - Cache lookup/creation
+         * - LRU eviction when cache full
+         * - Active view switching
+         *
+         * @param vmRef VM OpaqueRef to display console for
+         */
+        void SetCurrentSource(XenConnection *connection, const QString& vmRef);
 
-    /**
-     * @brief Set current host source for console display
-     * Reference: ConsolePanel.cs lines 157-170
-     *
-     * Shows host console by finding dom0 (control domain) and displaying its console.
-     *
-     * @param hostRef Host OpaqueRef to display console for
-     */
-    virtual void setCurrentSourceHost(const QString& hostRef);
+        /**
+         * @brief Set current host source for console display
+         * Reference: ConsolePanel.cs lines 157-170
+         *
+         * Shows host console by finding dom0 (control domain) and displaying its console.
+         *
+         * @param hostRef Host OpaqueRef to display console for
+         */
+        virtual void SetCurrentSourceHost(XenConnection *connection, const QString& hostRef);
 
-    /**
-     * @brief Take snapshot of VM console (for preview images)
-     * Reference: ConsolePanel.cs lines 197-234
-     *
-     * Creates a temporary VNCView if needed (with elevated credentials),
-     * captures screenshot, then disposes temporary view.
-     *
-     * @param vmRef VM OpaqueRef to snapshot
-     * @param elevatedUsername Optional elevated credentials username
-     * @param elevatedPassword Optional elevated credentials password
-     * @return Console screenshot image (null if failed)
-     */
-    QImage snapshot(const QString& vmRef,
-                    const QString& elevatedUsername = QString(),
-                    const QString& elevatedPassword = QString());
+        /**
+         * @brief Take Snapshot of VM console (for preview images)
+         * Reference: ConsolePanel.cs lines 197-234
+         *
+         * Creates a temporary VNCView if needed (with elevated credentials),
+         * captures screenshot, then disposes temporary view.
+         *
+         * @param vmRef VM OpaqueRef to Snapshot
+         * @param elevatedUsername Optional elevated credentials username
+         * @param elevatedPassword Optional elevated credentials password
+         * @return Console screenshot image (null if failed)
+         */
+        QImage Snapshot(const QString& vmRef,
+                        const QString& elevatedUsername = QString(),
+                        const QString& elevatedPassword = QString());
 
-    /**
-     * @brief Close VNC connection for specified VM
-     * Reference: ConsolePanel.cs lines 236-247
-     *
-     * Removes VNCView from cache and disposes it (if docked).
-     *
-     * @param vmRef VM OpaqueRef to close console for
-     */
-    void closeVncForSource(const QString& vmRef);
+        /**
+         * @brief Close VNC connection for specified VM
+         * Reference: ConsolePanel.cs lines 236-247
+         *
+         * Removes VNCView from cache and disposes it (if docked).
+         *
+         * @param vmRef VM OpaqueRef to close console for
+         */
+        void closeVncForSource(const QString& vmRef);
 
-    /**
-     * @brief Send Ctrl+Alt+Delete to active console
-     * Reference: ConsolePanel.cs lines 259-263
-     */
-    void sendCAD();
+        /**
+         * @brief Send Ctrl+Alt+Delete to active console
+         * Reference: ConsolePanel.cs lines 259-263
+         */
+        void SendCAD();
 
-    /**
-     * @brief Get current active VM reference
-     */
-    QString currentVM() const
-    {
-        return _currentVmRef;
-    }
+        /**
+         * @brief Get current active VM reference
+         */
+        QString CurrentVM() const
+        {
+            return _currentVmRef;
+        }
 
-    /**
-     * @brief Set XenLib instance (for XenAPI access)
-     */
-    void setXenLib(XenLib* xenLib)
-    {
-        _xenLib = xenLib;
-    }
+        void SetConnection(XenConnection *connection)
+        {
+            this->_connection = connection;
+        }
 
-protected:
-    /**
-     * @brief Display error message panel
-     * Reference: ConsolePanel.cs lines 249-254
-     */
-    void setErrorMessage(const QString& message);
+        /**
+         * @brief Set XenLib instance (for XenAPI access)
+         */
+        void setXenLib(XenLib* xenLib)
+        {
+            _xenLib = xenLib;
+        }
 
-    /**
-     * @brief Hide error message panel
-     * Reference: ConsolePanel.cs lines 256-259
-     */
-    void clearErrorMessage();
+    protected:
+        /**
+         * @brief Display error message panel
+         * Reference: ConsolePanel.cs lines 249-254
+         */
+        void setErrorMessage(const QString& message);
 
-    // ========== Member Variables ==========
+        /**
+         * @brief Hide error message panel
+         * Reference: ConsolePanel.cs lines 256-259
+         */
+        void clearErrorMessage();
 
-    Ui::ConsolePanel* ui;
+        // ========== Member Variables ==========
 
-    /// XenLib instance for XenAPI access
-    XenLib* _xenLib;
+        Ui::ConsolePanel* ui;
 
-    /// Active VNCView currently displayed
-    VNCView* _activeVNCView;
+        /// XenLib instance for XenAPI access
+        XenLib* _xenLib;
 
-    /// Cache of VNCView instances keyed by VM OpaqueRef
-    /// Reference: C# Dictionary<VM, VNCView> vncViews
-    QMap<QString, VNCView*> _vncViews;
+        XenConnection *_connection = nullptr;;
 
-    /// Current VM OpaqueRef
-    QString _currentVmRef;
+        /// Active VNCView currently displayed
+        VNCView* _activeVNCView;
 
-private:
-    // ========== Private Methods ==========
+        /// Cache of VNCView instances keyed by VM OpaqueRef
+        /// Reference: C# Dictionary<VM, VNCView> vncViews
+        QMap<QString, VNCView*> _vncViews;
 
-    /**
-     * @brief Check if user has RBAC permission to access VM console
-     * Reference: ConsolePanel.cs lines 172-195
-     *
-     * @param vmRef VM OpaqueRef to check
-     * @param allowedRoles Output list of roles that have permission
-     * @return True if RBAC denies access, false if allowed
-     */
-    bool rbacDenied(const QString& vmRef, QStringList& allowedRoles);
+        /// Current VM OpaqueRef
+        QString _currentVmRef;
 
-    /**
-     * @brief Show RBAC warning panel with role information
-     *
-     * @param userRoles Current user's roles
-     * @param allowedRoles Roles that have console permission
-     */
-    void showRbacWarning(const QStringList& userRoles, const QStringList& allowedRoles);
+    private:
+        // ========== Private Methods ==========
 
-    /**
-     * @brief Get control domain (dom0) for host
-     *
-     * @param hostRef Host OpaqueRef
-     * @return VM OpaqueRef of dom0, or empty string if not found
-     */
-    QString getControlDomainForHost(const QString& hostRef);
+        /**
+         * @brief Check if user has RBAC permission to access VM console
+         * Reference: ConsolePanel.cs lines 172-195
+         *
+         * @param vmRef VM OpaqueRef to check
+         * @param allowedRoles Output list of roles that have permission
+         * @return True if RBAC denies access, false if allowed
+         */
+        bool rbacDenied(const QString& vmRef, QStringList& allowedRoles);
 
-    /**
-     * @brief Remove oldest cached console view to make room for new one
-     *
-     * Removes first cached view (oldest) that is docked.
-     * Does not remove undocked views (user may still be viewing them).
-     */
-    void evictOldestView();
+        /**
+         * @brief Show RBAC warning panel with role information
+         *
+         * @param userRoles Current user's roles
+         * @param allowedRoles Roles that have console permission
+         */
+        void showRbacWarning(const QStringList& userRoles, const QStringList& allowedRoles);
+
+        /**
+         * @brief Remove oldest cached console view to make room for new one
+         *
+         * Removes first cached view (oldest) that is docked.
+         * Does not remove undocked views (user may still be viewing them).
+         */
+        void evictOldestView();
 };
 
 /**
@@ -279,25 +280,25 @@ class CvmConsolePanel : public ConsolePanel
 {
     Q_OBJECT
 
-public:
-    explicit CvmConsolePanel(QWidget* parent = nullptr);
+    public:
+        explicit CvmConsolePanel(QWidget* parent = nullptr);
 
-    /**
-     * @brief Set current host source for CVM console display
-     * Reference: CvmConsolePanel.SetCurrentSource() lines 273-286
-     *
-     * Shows CVM console by finding "other control domain" instead of dom0.
-     */
-    void setCurrentSourceHost(const QString& hostRef) override;
+        /**
+         * @brief Set current host source for CVM console display
+         * Reference: CvmConsolePanel.SetCurrentSource() lines 273-286
+         *
+         * Shows CVM console by finding "other control domain" instead of dom0.
+         */
+        void SetCurrentSourceHost(XenConnection *connection, const QString& hostRef) override;
 
-private:
-    /**
-     * @brief Get CVM (other control domain) for host
-     *
-     * @param hostRef Host OpaqueRef
-     * @return VM OpaqueRef of CVM, or empty string if not found
-     */
-    QString getOtherControlDomainForHost(const QString& hostRef);
+    private:
+        /**
+         * @brief Get CVM (other control domain) for host
+         *
+         * @param hostRef Host OpaqueRef
+         * @return VM OpaqueRef of CVM, or empty string if not found
+         */
+        QString getOtherControlDomainForHost(const QString& hostRef);
 };
 
 #endif // CONSOLEPANEL_H

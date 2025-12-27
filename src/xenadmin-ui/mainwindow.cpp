@@ -491,7 +491,7 @@ void MainWindow::sendCADToConsole()
 {
     if (m_consolePanel)
     {
-        m_consolePanel->sendCAD();
+        m_consolePanel->SendCAD();
     }
 }
 
@@ -684,12 +684,14 @@ void MainWindow::onTreeItemSelected()
     QString objectType;
     QString objectRef;
     QSharedPointer<XenObject> xenObject;
+    XenConnection *connection = nullptr;
     
     xenObject = itemData.value<QSharedPointer<XenObject>>();
     if (xenObject)
     {
         objectType = xenObject->GetObjectType();
         objectRef = xenObject->OpaqueRef();
+        connection = xenObject->GetConnection();
     } else if (itemData.canConvert<XenConnection*>())
     {
         // Disconnected server - handle specially
@@ -734,13 +736,14 @@ void MainWindow::onTreeItemSelected()
         this->m_currentObjectRef = objectRef;
         this->m_currentObjectText = itemText;
         this->m_currentObjectIcon = itemIcon;
+        this->m_currentObjectConn = connection;
 
         // Update both toolbar and menu from Commands (matches C# UpdateToolbars)
         this->updateToolbarsAndMenus();
 
         // Now we have the data, show the tabs
         auto objectData = this->m_xenLib->getCachedObjectData(objectType, objectRef);
-        this->showObjectTabs(objectType, objectRef, objectData);
+        this->showObjectTabs(connection, objectType, objectRef, objectData);
 
         // Add to navigation history (matches C# MainWindow.TreeView_SelectionsChanged)
         // Get current tab name (first tab is shown by default)
@@ -767,10 +770,10 @@ void MainWindow::onTreeItemSelected()
     }
 }
 
-void MainWindow::showObjectTabs(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void MainWindow::showObjectTabs(XenConnection *connection, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
 {
     this->clearTabs();
-    this->updateTabPages(objectType, objectRef, objectData);
+    this->updateTabPages(connection, objectType, objectRef, objectData);
     this->updatePlaceholderVisibility();
 }
 
@@ -1031,7 +1034,7 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType, const 
     return newTabs;
 }
 
-void MainWindow::updateTabPages(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void MainWindow::updateTabPages(XenConnection *connection, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
 {
     // Get the correct tabs in order for this object type
     // C# Reference: xenadmin/XenAdmin/MainWindow.cs line 1432 (ChangeToNewTabs)
@@ -1108,23 +1111,23 @@ void MainWindow::updateTabPages(const QString& objectType, const QString& object
                 // Pause CVM console
                 if (m_cvmConsolePanel)
                 {
-                    m_cvmConsolePanel->pauseAllDockedViews();
+                    m_cvmConsolePanel->PauseAllDockedViews();
                 }
 
                 // Set current source based on object type
                 if (objectType == "vm")
                 {
-                    consoleTab->consolePanel()->setCurrentSource(objectRef);
-                    consoleTab->consolePanel()->unpauseActiveView(true);
+                    consoleTab->consolePanel()->SetCurrentSource(connection, objectRef);
+                    consoleTab->consolePanel()->UnpauseActiveView(true);
                 }
                 else if (objectType == "host")
                 {
-                    consoleTab->consolePanel()->setCurrentSourceHost(objectRef);
-                    consoleTab->consolePanel()->unpauseActiveView(true);
+                    consoleTab->consolePanel()->SetCurrentSourceHost(connection, objectRef);
+                    consoleTab->consolePanel()->UnpauseActiveView(true);
                 }
 
                 // Update RDP resolution
-                consoleTab->consolePanel()->updateRDPResolution();
+                consoleTab->consolePanel()->UpdateRDPResolution();
             }
             else
             {
@@ -1135,14 +1138,14 @@ void MainWindow::updateTabPages(const QString& objectType, const QString& object
                     // Pause regular console
                     if (m_consolePanel)
                     {
-                        m_consolePanel->pauseAllDockedViews();
+                        m_consolePanel->PauseAllDockedViews();
                     }
 
                     // Set current source for SR
                     if (objectType == "sr")
                     {
-                        cvmConsoleTab->consolePanel()->setCurrentSource(objectRef);
-                        cvmConsoleTab->consolePanel()->unpauseActiveView(true);
+                        cvmConsoleTab->consolePanel()->SetCurrentSource(connection, objectRef);
+                        cvmConsoleTab->consolePanel()->UnpauseActiveView(true);
                     }
                 }
                 else
@@ -1150,11 +1153,11 @@ void MainWindow::updateTabPages(const QString& objectType, const QString& object
                     // Not a console tab - pause all consoles
                     if (m_consolePanel)
                     {
-                        m_consolePanel->pauseAllDockedViews();
+                        m_consolePanel->PauseAllDockedViews();
                     }
                     if (m_cvmConsolePanel)
                     {
-                        m_cvmConsolePanel->pauseAllDockedViews();
+                        m_cvmConsolePanel->PauseAllDockedViews();
                     }
                 }
             }
@@ -1235,22 +1238,22 @@ void MainWindow::onTabChanged(int index)
             // Pause CVM console (other console panel)
             if (m_cvmConsolePanel)
             {
-                m_cvmConsolePanel->pauseAllDockedViews();
+                m_cvmConsolePanel->PauseAllDockedViews();
             }
 
             // Set current source based on selection
             if (m_currentObjectType == "vm")
             {
-                consoleTab->consolePanel()->setCurrentSource(m_currentObjectRef);
-                consoleTab->consolePanel()->unpauseActiveView(true); // Focus console
+                consoleTab->consolePanel()->SetCurrentSource(this->m_currentObjectConn, this->m_currentObjectRef);
+                consoleTab->consolePanel()->UnpauseActiveView(true); // Focus console
             } else if (m_currentObjectType == "host")
             {
-                consoleTab->consolePanel()->setCurrentSourceHost(m_currentObjectRef);
-                consoleTab->consolePanel()->unpauseActiveView(true); // Focus console
+                consoleTab->consolePanel()->SetCurrentSourceHost(this->m_currentObjectConn, this->m_currentObjectRef);
+                consoleTab->consolePanel()->UnpauseActiveView(true); // Focus console
             }
 
             // Update RDP resolution
-            consoleTab->consolePanel()->updateRDPResolution();
+            consoleTab->consolePanel()->UpdateRDPResolution();
         } else
         {
             // Check if this is the CVM console tab (SR driver domain consoles)
@@ -1265,7 +1268,7 @@ void MainWindow::onTabChanged(int index)
                 // Pause regular console (other console panel)
                 if (m_consolePanel)
                 {
-                    m_consolePanel->pauseAllDockedViews();
+                    m_consolePanel->PauseAllDockedViews();
                 }
 
                 // Set current source - CvmConsolePanel expects SR with driver domain
@@ -1273,8 +1276,8 @@ void MainWindow::onTabChanged(int index)
                 if (m_currentObjectType == "sr")
                 {
                     // CvmConsolePanel.setCurrentSource() will look up driver domain VM
-                    cvmConsoleTab->consolePanel()->setCurrentSource(m_currentObjectRef);
-                    cvmConsoleTab->consolePanel()->unpauseActiveView(true); // Focus console
+                    cvmConsoleTab->consolePanel()->SetCurrentSource(this->m_currentObjectConn, this->m_currentObjectRef);
+                    cvmConsoleTab->consolePanel()->UnpauseActiveView(true); // Focus console
                 }
             } else
             {
@@ -1282,11 +1285,11 @@ void MainWindow::onTabChanged(int index)
                 // Reference: C# TheTabControl_SelectedIndexChanged lines 1681-1682
                 if (m_consolePanel)
                 {
-                    m_consolePanel->pauseAllDockedViews();
+                    m_consolePanel->PauseAllDockedViews();
                 }
                 if (m_cvmConsolePanel)
                 {
-                    m_cvmConsolePanel->pauseAllDockedViews();
+                    m_cvmConsolePanel->PauseAllDockedViews();
                 }
             }
         }

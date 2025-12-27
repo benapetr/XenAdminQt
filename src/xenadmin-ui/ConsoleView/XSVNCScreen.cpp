@@ -27,9 +27,7 @@
 
 #include "XSVNCScreen.h"
 #include "VNCGraphicsClient.h"
-#include "RdpClient.h"
 #include "IRemoteConsole.h"
-#include "ConsoleKeyHandler.h"
 #include <QDebug>
 #include <QThread>
 #include <QThreadPool>
@@ -54,9 +52,9 @@ class RdpClient;
  *
  * Reference: XenAdmin/ConsoleView/XSVNCScreen.cs lines 147-177
  */
-XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenLib* xenLib,
+XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenConnection *connection,
                          const QString& elevatedUsername, const QString& elevatedPassword)
-    : QWidget(nullptr), _sourceRef(sourceRef), _sourceIsPv(false), _xenLib(xenLib), _parentVNCTabView(parent), _keyHandler(nullptr) // TODO: Get from parent when VNCTabView exists
+    : QWidget(nullptr), _sourceRef(sourceRef), _sourceIsPv(false), _connection(connection), _parentVNCTabView(parent), _keyHandler(nullptr) // TODO: Get from parent when VNCTabView exists
       ,
       _vncClient(nullptr), _rdpClient(nullptr), _remoteConsole(nullptr), _useVNC(true), _useSource(true) // Default to hosted/source console (C#: _useSource = true)
       ,

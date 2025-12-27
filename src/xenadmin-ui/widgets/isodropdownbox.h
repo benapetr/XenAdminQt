@@ -31,6 +31,7 @@
 #include <QComboBox>
 
 class XenLib;
+class XenConnection;
 
 class IsoDropDownBox : public QComboBox
 {
@@ -40,6 +41,7 @@ public:
     explicit IsoDropDownBox(QWidget* parent = nullptr);
 
     void setXenLib(XenLib* xenLib);
+    void setConnection(XenConnection* connection);
     void setVMRef(const QString& vmRef);
 
     void refresh();
@@ -48,6 +50,7 @@ public:
 
 private:
     XenLib* m_xenLib;
+    XenConnection* m_connection;
     QString m_vmRef;
 };
 

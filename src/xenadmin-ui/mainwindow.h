@@ -252,10 +252,10 @@ class MainWindow : public QMainWindow
         bool itemMatchesSearch(QTreeWidgetItem* item, const QString& searchText);
 
         // Tab management - new system
-        void showObjectTabs(const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
+        void showObjectTabs(XenConnection *connection, const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
         void showSearchPage(class GroupingTag* groupingTag);
         void clearTabs();
-        void updateTabPages(const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
+        void updateTabPages(XenConnection *connection, const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
         void updatePlaceholderVisibility();
 
         // Get correct tab order for object type (C# GetNewTabPages equivalent)
@@ -358,6 +358,7 @@ class MainWindow : public QMainWindow
         QString m_currentObjectRef;
         QString m_currentObjectText;
         QIcon m_currentObjectIcon;
+        XenConnection *m_currentObjectConn = nullptr;
 
         // Selection deduplication - prevent multiple API calls for same selection
         QString m_lastSelectedRef;
