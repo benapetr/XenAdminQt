@@ -28,7 +28,7 @@
 #include "vappshutdowncommand.h"
 #include "../../../xenlib/xen/actions/vm/shutdownapplianceaction.h"
 #include "../../../xenlib/xen/network/connection.h"
-#include "../../../xenlib/xenlib.h"
+#include "../../../xenlib/xen/xenobject.h"
 #include "../../../xenlib/xencache.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
@@ -52,7 +52,16 @@ bool VappShutDownCommand::CanRun() const
     // Case 1: VM_appliance directly selected
     if (type == "vm_appliance" || type == "appliance")
     {
-        QVariantMap appData = this->xenLib()->getCache()->ResolveObjectData(type, objRef);
+        QSharedPointer<XenObject> selectedObject = this->GetObject();
+        if (!selectedObject)
+            return false;
+
+        XenConnection* connection = selectedObject->GetConnection();
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        if (!cache)
+            return false;
+
+        QVariantMap appData = cache->ResolveObjectData(type, objRef);
         return this->canShutDownAppliance(appData);
     }
 
@@ -65,7 +74,16 @@ bool VappShutDownCommand::CanRun() const
             return false;
         }
 
-        QVariantMap appData = this->xenLib()->getCache()->ResolveObjectData("vm_appliance", applianceRef);
+        QSharedPointer<XenObject> selectedObject = this->GetObject();
+        if (!selectedObject)
+            return false;
+
+        XenConnection* connection = selectedObject->GetConnection();
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        if (!cache)
+            return false;
+
+        QVariantMap appData = cache->ResolveObjectData("vm_appliance", applianceRef);
         return this->canShutDownAppliance(appData);
     }
 
@@ -96,7 +114,16 @@ void VappShutDownCommand::Run()
     }
 
     // Get appliance data for name
-    QVariantMap appData = this->xenLib()->getCache()->ResolveObjectData("vm_appliance", applianceRef);
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+        return;
+
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return;
+
+    QVariantMap appData = cache->ResolveObjectData("vm_appliance", applianceRef);
     QString appName = appData.value("name_label").toString();
 
     if (appName.isEmpty())
@@ -127,7 +154,7 @@ void VappShutDownCommand::Run()
     }
 
     // Get connection
-    XenConnection* conn = this->xenLib()->getConnection();
+    XenConnection* conn = connection;
     if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
@@ -190,7 +217,16 @@ bool VappShutDownCommand::canShutDownAppliance(const QVariantMap& applianceData)
 
 QString VappShutDownCommand::getApplianceRefFromVM(const QString& vmRef) const
 {
-    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+        return QString();
+
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return QString();
+
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
     {
         return QString();

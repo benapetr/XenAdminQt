@@ -41,7 +41,8 @@
 #include <QMap>
 #include <QVariantMap>
 
-class XenLib;
+class XenConnection;
+class XenCache;
 
 /**
  * @brief EditVmHaPrioritiesDialog - Dialog for editing VM HA priorities when HA is already enabled.
@@ -63,11 +64,11 @@ class EditVmHaPrioritiesDialog : public QDialog
     public:
         /**
          * @brief Constructor
-         * @param xenLib XenLib instance
+         * @param connection XenConnection instance
          * @param poolRef Pool opaque reference (must have HA enabled)
          * @param parent Parent widget
          */
-        explicit EditVmHaPrioritiesDialog(XenLib* xenLib, const QString& poolRef, QWidget* parent = nullptr);
+        explicit EditVmHaPrioritiesDialog(XenConnection* connection, const QString& poolRef, QWidget* parent = nullptr);
 
     private slots:
         void onNtolChanged(int value);
@@ -75,13 +76,14 @@ class EditVmHaPrioritiesDialog : public QDialog
         void accept() override;
 
     private:
+        XenCache* cache() const;
         void setupUi();
         void populateVMTable();
         void updateNtolCalculation();
         bool hasChanges() const;
         QMap<QString, QVariantMap> buildVmStartupOptions() const;
 
-        XenLib* m_xenLib;
+        XenConnection* m_connection;
         QString m_poolRef;
         QString m_poolName;
         qint64 m_originalNtol;

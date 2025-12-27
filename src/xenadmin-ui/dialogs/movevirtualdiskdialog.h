@@ -32,6 +32,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
+#include "../controls/srpicker.h"
 
 namespace Ui
 {
@@ -70,8 +71,7 @@ class MoveVirtualDiskDialog : public QDialog
          * @param vdiRef VDI reference to move
          * @param parent Parent widget
          */
-        explicit MoveVirtualDiskDialog(XenLib* xenLib, const QString& vdiRef,
-                                       QWidget* parent = nullptr);
+        explicit MoveVirtualDiskDialog(XenConnection* conn, const QString& vdiRef, QWidget* parent = nullptr);
 
         /**
          * @brief Constructor for multiple VDI move
@@ -79,15 +79,15 @@ class MoveVirtualDiskDialog : public QDialog
          * @param vdiRefs List of VDI references to move
          * @param parent Parent widget
          */
-        explicit MoveVirtualDiskDialog(XenLib* xenLib, const QStringList& vdiRefs,
-                                       QWidget* parent = nullptr);
+        explicit MoveVirtualDiskDialog(XenConnection* conn, const QStringList& vdiRefs, QWidget* parent = nullptr);
 
         ~MoveVirtualDiskDialog();
 
     protected slots:
         void onSRSelectionChanged();
-        void onSRDoubleClicked(int row, int column);
+        void onSRDoubleClicked();
         void onRescanButtonClicked();
+        void onCanBeScannedChanged();
         virtual void onMoveButtonClicked();
 
     protected:
@@ -101,44 +101,14 @@ class MoveVirtualDiskDialog : public QDialog
          */
         virtual void createAndRunActions(const QString& targetSRRef, const QString& targetSRName);
 
+        virtual SrPicker::SRPickerType srPickerType() const;
         void setupUI();
-        void populateSRTable();
         void updateMoveButton();
-
-        /**
-         * @brief Check if an SR is valid destination for the VDI(s)
-         * @param srRef SR reference
-         * @param srData SR data record
-         * @return true if SR can be used as destination
-         *
-         * Filters out:
-         * - Source SR (where VDI currently resides)
-         * - Read-only SRs
-         * - Detached SRs
-         * - SRs with insufficient space
-         * - ISO SRs
-         */
-        bool isValidDestination(const QString& srRef, const QVariantMap& srData);
-
-        /**
-         * @brief Get total size needed for all VDIs being moved
-         * @return Total size in bytes
-         */
-        qint64 getTotalVDISize() const;
-
-        /**
-         * @brief Format bytes as human-readable string
-         * @param bytes Size in bytes
-         * @return Formatted string (e.g., "10.5 GB")
-         */
-        QString formatSize(qint64 bytes) const;
 
     protected:
         Ui::MoveVirtualDiskDialog* ui;
-        XenLib* m_xenLib;
-        XenConnection *m_connection;
+        XenConnection* m_connection;
         QStringList m_vdiRefs;   // VDI(s) to move
-        QStringList m_sourceSRs; // Source SR(s) - exclude from destination list
 };
 
 #endif // MOVEVIRTUALDISKDIALOG_H

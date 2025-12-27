@@ -28,12 +28,11 @@
 #include "networkpropertiescommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/networkpropertiesdialog.h"
-#include "xenlib.h"
-#include "xen/xenobject.h"
+#include "xenlib/xenlib.h"
+#include "xenlib/xen/xenobject.h"
 #include <QTreeWidgetItem>
 
-NetworkPropertiesCommand::NetworkPropertiesCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+NetworkPropertiesCommand::NetworkPropertiesCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 

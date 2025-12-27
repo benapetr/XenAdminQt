@@ -29,6 +29,10 @@
 #define HOSTRECONNECTASCOMMAND_H
 
 #include "hostcommand.h"
+#include <QtCore/QPointer>
+#include <QtCore/QMetaObject>
+
+class XenConnection;
 
 class HostReconnectAsCommand : public HostCommand
 {
@@ -41,6 +45,14 @@ class HostReconnectAsCommand : public HostCommand
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
+
+    private slots:
+        void onReconnectConnectionStateChanged();
+        void startReconnect();
+
+    private:
+        QPointer<XenConnection> m_reconnectConnection;
+        QMetaObject::Connection m_disconnectHandler;
 };
 
 #endif // HOSTRECONNECTASCOMMAND_H

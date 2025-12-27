@@ -28,9 +28,9 @@
 #include "destroybondcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
-#include "xencache.h"
-#include "xen/actions/network/destroybondaction.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/actions/network/destroybondaction.h"
+#include "xenlib/xen/xenobject.h"
 #include <QMessageBox>
 #include <QDebug>
 
@@ -128,9 +128,13 @@ void DestroyBondCommand::Run()
 
     qDebug() << "DestroyBondCommand: Destroying bond" << bondName << "(" << bondRef << ")";
 
+    XenConnection* connection = this->GetObject() ? this->GetObject()->GetConnection() : nullptr;
+    if (!connection)
+        return;
+
     // Create and run destroy bond action
     DestroyBondAction* action = new DestroyBondAction(
-        this->mainWindow()->xenLib()->getConnection(),
+        connection,
         bondRef,
         this);
 
@@ -222,10 +226,10 @@ QString DestroyBondCommand::getBondRefFromNetwork(const QVariantMap& networkData
     if (pifs.isEmpty())
         return QString();
 
-    if (!this->mainWindow()->xenLib())
+    if (!this->GetObject() || !this->GetObject()->GetConnection())
         return QString();
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenCache* cache = this->GetObject()->GetConnection()->GetCache();
     if (!cache)
         return QString();
 
@@ -260,10 +264,10 @@ void DestroyBondCommand::checkManagementImpact(const QVariantMap& networkData,
     if (pifs.isEmpty())
         return;
 
-    if (!this->mainWindow()->xenLib())
+    if (!this->GetObject() || !this->GetObject()->GetConnection())
         return;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenCache* cache = this->GetObject()->GetConnection()->GetCache();
     if (!cache)
         return;
 
@@ -295,10 +299,10 @@ void DestroyBondCommand::checkManagementImpact(const QVariantMap& networkData,
 
 bool DestroyBondCommand::isHAEnabled() const
 {
-    if (!this->mainWindow()->xenLib())
+    if (!this->GetObject() || !this->GetObject()->GetConnection())
         return false;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenCache* cache = this->GetObject()->GetConnection()->GetCache();
     if (!cache)
         return false;
 
@@ -330,9 +334,9 @@ QString DestroyBondCommand::getBondName(const QVariantMap& networkData) const
 
     // Otherwise try to get the PIF device name
     QVariantList pifs = networkData.value("PIFs", QVariantList()).toList();
-    if (!pifs.isEmpty() && this->mainWindow()->xenLib())
+    if (!pifs.isEmpty() && this->GetObject() && this->GetObject()->GetConnection())
     {
-        XenCache* cache = this->mainWindow()->xenLib()->getCache();
+        XenCache* cache = this->GetObject()->GetConnection()->GetCache();
         if (cache)
         {
             QString pifRef = pifs.first().toString();

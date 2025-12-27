@@ -28,11 +28,11 @@
 #include "hadisablecommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
 #include "xen/network/connection.h"
 #include "xen/pool.h"
 #include "xen/actions/pool/disablehaaction.h"
 #include "xencache.h"
+#include "xen/xenobject.h"
 #include <QMessageBox>
 
 HADisableCommand::HADisableCommand(MainWindow* mainWindow, QObject* parent)
@@ -114,10 +114,8 @@ QString HADisableCommand::MenuText() const
 
 bool HADisableCommand::isPoolConnected() const
 {
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    QSharedPointer<Pool> pool = this->getPool();
+    XenConnection* conn = pool ? pool->GetConnection() : nullptr;
     return conn && conn->IsConnected();
 }
 
@@ -127,10 +125,8 @@ bool HADisableCommand::isHAEnabled() const
     if (poolRef.isEmpty())
         return false;
 
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    QSharedPointer<Pool> pool = this->getPool();
+    XenCache* cache = pool && pool->GetConnection() ? pool->GetConnection()->GetCache() : nullptr;
     if (!cache)
         return false;
 

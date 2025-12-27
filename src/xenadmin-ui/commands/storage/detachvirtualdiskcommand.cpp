@@ -28,11 +28,11 @@
 #include "detachvirtualdiskcommand.h"
 #include "deactivatevbdcommand.h"
 #include "xencache.h"
-#include "xenlib.h"
 #include "xen/network/connection.h"
 #include "xen/vdi.h"
 #include "xen/vm.h"
 #include "xen/actions/vdi/detachvirtualdiskaction.h"
+#include "xen/xenobject.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>
@@ -148,7 +148,8 @@ bool DetachVirtualDiskCommand::canRunVDI(const QString& vdiRef) const
 
 QString DetachVirtualDiskCommand::getCantRunReasonVDI(const QString& vdiRef) const
 {
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    QSharedPointer<VDI> vdi = this->getVDI();
+    XenCache* cache = vdi ? vdi->GetConnection()->GetCache() : nullptr;
     if (!cache)
     {
         return "Cache not available";
@@ -230,7 +231,9 @@ void DetachVirtualDiskCommand::Run()
         return;
     }
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    QSharedPointer<VDI> vdi = this->getVDI();
+    XenConnection* connection = vdi ? vdi->GetConnection() : nullptr;
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
     if (!cache)
     {
         return;
@@ -295,7 +298,7 @@ void DetachVirtualDiskCommand::Run()
         QString vmName = vmData.value("name_label", "VM").toString();
 
         // Create VM object for the action
-        VM* vm = new VM(this->mainWindow()->xenLib()->getConnection(), vmRef, this);
+        VM* vm = new VM(connection, vmRef, this);
 
         // Create detach action
         DetachVirtualDiskAction* action = new DetachVirtualDiskAction(

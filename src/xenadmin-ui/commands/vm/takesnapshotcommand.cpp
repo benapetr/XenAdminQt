@@ -31,10 +31,10 @@
 #include "../../operations/operationmanager.h"
 #include "../../dialogs/vmsnapshotdialog.h"
 #include "../../ConsoleView/ConsolePanel.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
 #include "xen/actions/vm/vmsnapshotcreateaction.h"
+#include "xen/xenobject.h"
 #include <QtWidgets>
 
 TakeSnapshotCommand::TakeSnapshotCommand(QObject* parent)
@@ -111,15 +111,20 @@ void TakeSnapshotCommand::showSnapshotDialog()
         return;
     }
 
-    XenLib* xenLib = this->mainWindow()->xenLib();
-    if (!xenLib)
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    XenConnection* connection = selectedObject ? selectedObject->GetConnection() : nullptr;
+    if (!connection)
     {
-        qWarning() << "TakeSnapshotCommand: XenLib not available";
+        qWarning() << "TakeSnapshotCommand: Connection not available";
         return;
     }
 
     // Get VM data from cache
-    QVariantMap vmData = xenLib->getCache()->ResolveObjectData("vm", this->m_vmUuid);
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return;
+
+    QVariantMap vmData = cache->ResolveObjectData("vm", this->m_vmUuid);
     if (vmData.isEmpty())
     {
         qWarning() << "TakeSnapshotCommand: Could not find VM data for" << this->m_vmUuid;
@@ -129,7 +134,7 @@ void TakeSnapshotCommand::showSnapshotDialog()
     }
 
     // Show the snapshot dialog
-    VmSnapshotDialog dialog(vmData, xenLib, this->mainWindow());
+    VmSnapshotDialog dialog(vmData, this->mainWindow());
     if (dialog.exec() == QDialog::Accepted)
     {
         QString name = dialog.snapshotName();
@@ -140,7 +145,7 @@ void TakeSnapshotCommand::showSnapshotDialog()
         // Set console to this VM before snapshot (matches C# line 89)
         if (this->mainWindow() && this->mainWindow()->consolePanel())
         {
-            this->mainWindow()->consolePanel()->SetCurrentSource(xenLib->getConnection(), this->m_vmUuid);
+            this->mainWindow()->consolePanel()->SetCurrentSource(connection, this->m_vmUuid);
         }
 
         this->executeSnapshotOperation(name, description, type);
@@ -160,8 +165,9 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
         return;
     }
 
-    // Get XenConnection from XenLib
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    // Get connection for snapshot actions
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    XenConnection* conn = selectedObject ? selectedObject->GetConnection() : nullptr;
     if (!conn || !conn->IsConnected())
     {
         qWarning() << "TakeSnapshotCommand: Not connected";
@@ -195,29 +201,36 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     if (actionType == VMSnapshotCreateAction::DISK_AND_MEMORY)
     {
         // Get VM data to check power state
-        QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", this->m_vmUuid);
-        QString powerState = vmData.value("power_state").toString();
-
-        if (powerState == "Running" && this->mainWindow()->consolePanel())
+        XenCache* cache = conn ? conn->GetCache() : nullptr;
+        if (!cache)
         {
-            qDebug() << "TakeSnapshotCommand: Capturing console screenshot for checkpoint";
-            try
+            qWarning() << "TakeSnapshotCommand: Cache not available";
+        } else
+        {
+            QVariantMap vmData = cache->ResolveObjectData("vm", this->m_vmUuid);
+            QString powerState = vmData.value("power_state").toString();
+
+            if (powerState == "Running" && this->mainWindow()->consolePanel())
             {
-                // C#: screenshot = _screenShotProvider(VM, sudoUsername, sudoPassword);
-                // Note: We don't have sudo credentials yet - pass empty strings
-                screenshot = this->mainWindow()->consolePanel()->Snapshot(this->m_vmUuid, QString(), QString());
-                if (!screenshot.isNull())
+                qDebug() << "TakeSnapshotCommand: Capturing console screenshot for checkpoint";
+                try
                 {
-                    qDebug() << "TakeSnapshotCommand: Screenshot captured, size:"
-                             << screenshot.width() << "x" << screenshot.height();
-                } else
+                    // C#: screenshot = _screenShotProvider(VM, sudoUsername, sudoPassword);
+                    // Note: We don't have sudo credentials yet - pass empty strings
+                    screenshot = this->mainWindow()->consolePanel()->Snapshot(this->m_vmUuid, QString(), QString());
+                    if (!screenshot.isNull())
+                    {
+                        qDebug() << "TakeSnapshotCommand: Screenshot captured, size:"
+                                 << screenshot.width() << "x" << screenshot.height();
+                    } else
+                    {
+                        qDebug() << "TakeSnapshotCommand: Screenshot capture returned null image";
+                    }
+                } catch (...)
                 {
-                    qDebug() << "TakeSnapshotCommand: Screenshot capture returned null image";
+                    // C#: Ignore; the screenshot is optional, we will do without it (CA-37095/CA-37103)
+                    qWarning() << "TakeSnapshotCommand: Failed to capture screenshot (optional, continuing anyway)";
                 }
-            } catch (...)
-            {
-                // C#: Ignore; the screenshot is optional, we will do without it (CA-37095/CA-37103)
-                qWarning() << "TakeSnapshotCommand: Failed to capture screenshot (optional, continuing anyway)";
             }
         }
     }

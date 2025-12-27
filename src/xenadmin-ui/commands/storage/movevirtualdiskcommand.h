@@ -31,6 +31,8 @@
 #include "vdicommand.h"
 #include <QVariantMap>
 
+class XenConnection;
+
 /**
  * @brief Command to move a virtual disk (VDI) to a different storage repository
  *
@@ -68,14 +70,14 @@ class MoveVirtualDiskCommand : public VDICommand
          * @param vdiData VDI data record
          * @return true if VDI can be moved
          */
-        bool canBeMoved(const QVariantMap& vdiData) const;
+        bool canBeMoved(XenConnection *conn, const QVariantMap& vdiData) const;
 
         /**
          * @brief Check if any VM using this VDI is running
          * @param vdiRef VDI reference
          * @return true if any attached VM is not halted
          */
-        bool isVDIInUseByRunningVM(const QString& vdiRef) const;
+        bool isVDIInUseByRunningVM(XenConnection *conn, const QString& vdiRef) const;
 
         /**
          * @brief Check if VDI is HA metadata disk

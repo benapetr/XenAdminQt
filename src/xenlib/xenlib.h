@@ -58,20 +58,12 @@ class XENLIB_EXPORT XenLib : public QObject
 
         // Core Xen API functionality
         bool initialize();
-        void cleanup();
 
-        // TODO - delete this
-        bool connectToServer(const QString& hostname, int port, const QString& username, const QString& password, bool useSSL = true);
-        // TODO - delete this
-        void disconnectFromServer();
         // TODO - delete this
         bool isConnected() const;
 
-        // API access
-        XenRpcAPI* getAPI() const;
         XenConnection* getConnection() const;
         void setConnection(XenConnection* connection);
-        XenAsyncOperations* getAsyncOperations() const;
         XenCertificateManager* getCertificateManager() const;
         // Cache is per-connection; each XenConnection owns its own XenCache instance.
         XenCache* getCache() const;
@@ -79,20 +71,6 @@ class XENLIB_EXPORT XenLib : public QObject
 
         // Get full object data by type and reference
         QVariantMap getCachedObjectData(const QString& objectType, const QString& objectRef);
-
-        // Strongly-typed cache helpers (recommended over getObjectData)
-        QVariantMap getVMRecord(const QString& vmRef);
-        QVariantMap getHostRecord(const QString& hostRef);
-        QVariantMap getSRRecord(const QString& srRef);
-        QVariantMap getNetworkRecord(const QString& networkRef);
-        QVariantMap getVDIRecord(const QString& vdiRef);
-        QVariantMap getVBDRecord(const QString& vbdRef);
-        QVariantMap getVIFRecord(const QString& vifRef);
-        QVariantMap getPIFRecord(const QString& pifRef);
-        QVariantMap getPBDRecord(const QString& pbdRef);
-        QVariantMap getVMGuestMetricsRecord(const QString& metricsRef);
-        QVariantMap getHostMetricsRecord(const QString& metricsRef);
-        QVariantMap getVMMetricsRecord(const QString& metricsRef);
 
         // Async high-level operations (non-blocking - recommended for UI)
         // These methods return immediately and emit signals when data is ready
@@ -106,29 +84,15 @@ class XENLIB_EXPORT XenLib : public QObject
 
         // VM management operations
         bool updateVM(const QString& vmRef, const QVariantMap& updates);
-        bool setVMVCPUs(const QString& vmRef, int vcpus);
-        bool setVMMemory(const QString& vmRef, qint64 memoryMB);
 
-        // VM property helpers (use cached data)
-        QString getVMProperty(const QString& vmRef, const QString& property);
         QString getGuestMetricsRef(const QString& vmRef);
         QVariantMap getGuestMetrics(const QString& vmRef);
         bool isControlDomainZero(const QString& vmRef, QString* outHostRef = nullptr);
         bool isSRDriverDomain(const QString& vmRef, QString* outSRRef = nullptr);
         bool srHasDriverDomain(const QString& srRef, QString* outVMRef = nullptr);
-        bool isHVM(const QString& vmRef);
-        bool hasRDP(const QString& vmRef);
-        bool isRDPEnabled(const QString& vmRef);
-        bool canEnableRDP(const QString& vmRef);
-        bool isRDPControlEnabled(const QString& vmRef);
-        bool isVMWindows(const QString& vmRef);
-        QString getVMIPAddressForSSH(const QString& vmRef);
-        bool hasGPUPassthrough(const QString& vmRef);
 
         // Host property helpers
         QString getControlDomainForHost(const QString& hostRef);
-
-        // Snapshot operations
 
         // CD/DVD operations
         bool changeVMISO(const QString& vmRef, const QString& vbdRef, const QString& vdiRef);
@@ -215,7 +179,6 @@ class XENLIB_EXPORT XenLib : public QObject
         void onConnectionEstablished();
         void onConnectionError(const QString& errorMessage);
         void onConnectionProgress(const QString& message);
-        void onRedirectToMaster(const QString& masterAddress);
 
         // Async API response handler
         void onConnectionApiResponse(int requestId, const QByteArray& response);

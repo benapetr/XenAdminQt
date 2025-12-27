@@ -27,29 +27,21 @@
 
 #include "movevirtualdiskdialog.h"
 #include "ui_movevirtualdiskdialog.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
-#include "xen/api.h"
 #include "xen/actions/vdi/movevirtualdiskaction.h"
 #include "../operations/operationmanager.h"
-#include <QTableWidgetItem>
+#include "../controls/srpicker.h"
 #include <QMessageBox>
-#include <QHeaderView>
-#include <QTimer>
 
-MoveVirtualDiskDialog::MoveVirtualDiskDialog(XenLib* xenLib, const QString& vdiRef, QWidget* parent)
-    : QDialog(parent), ui(new Ui::MoveVirtualDiskDialog), m_xenLib(xenLib)
+MoveVirtualDiskDialog::MoveVirtualDiskDialog(XenConnection* conn, const QString& vdiRef, QWidget* parent) : QDialog(parent), ui(new Ui::MoveVirtualDiskDialog), m_connection(conn)
 {
-    this->m_connection = xenLib->getConnection();
     this->m_vdiRefs << vdiRef;
     this->setupUI();
 }
 
-MoveVirtualDiskDialog::MoveVirtualDiskDialog(XenLib* xenLib, const QStringList& vdiRefs, QWidget* parent)
-    : QDialog(parent), ui(new Ui::MoveVirtualDiskDialog), m_xenLib(xenLib), m_vdiRefs(vdiRefs)
+MoveVirtualDiskDialog::MoveVirtualDiskDialog(XenConnection* conn, const QStringList& vdiRefs, QWidget* parent) : QDialog(parent), ui(new Ui::MoveVirtualDiskDialog), m_connection(conn), m_vdiRefs(vdiRefs)
 {
-    this->m_connection = xenLib->getConnection();
     this->setupUI();
 }
 
@@ -62,16 +54,12 @@ void MoveVirtualDiskDialog::setupUI()
 {
     this->ui->setupUi(this);
 
-    // Connect signals
-    connect(this->ui->srTable, &QTableWidget::itemSelectionChanged, this, &MoveVirtualDiskDialog::onSRSelectionChanged);
-    connect(this->ui->srTable, &QTableWidget::cellDoubleClicked, this, &MoveVirtualDiskDialog::onSRDoubleClicked);
+    // Connect SrPicker signals (C# MoveVirtualDiskDialog pattern)
+    connect(this->ui->srPicker1, &SrPicker::selectedIndexChanged, this, &MoveVirtualDiskDialog::onSRSelectionChanged);
+    connect(this->ui->srPicker1, &SrPicker::doubleClickOnRow, this, &MoveVirtualDiskDialog::onSRDoubleClicked);
+    connect(this->ui->srPicker1, &SrPicker::canBeScannedChanged, this, &MoveVirtualDiskDialog::onCanBeScannedChanged);
     connect(this->ui->rescanButton, &QPushButton::clicked, this, &MoveVirtualDiskDialog::onRescanButtonClicked);
     connect(this->ui->moveButton, &QPushButton::clicked, this, &MoveVirtualDiskDialog::onMoveButtonClicked);
-
-    // Configure table
-    this->ui->srTable->horizontalHeader()->setStretchLastSection(true);
-    this->ui->srTable->setSelectionMode(QAbstractItemView::SingleSelection);
-    this->ui->srTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 
     // Update window title for multiple VDIs
     if (this->m_vdiRefs.count() > 1)
@@ -79,301 +67,70 @@ void MoveVirtualDiskDialog::setupUI()
         this->setWindowTitle(QString("Move %1 Virtual Disks").arg(this->m_vdiRefs.count()));
     }
 
-    // Get source SR(s) for filtering
-    for (const QString& vdiRef : this->m_vdiRefs)
-    {
-        QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
-        QString srRef = vdiData.value("SR").toString();
-        if (!srRef.isEmpty() && !this->m_sourceSRs.contains(srRef))
-        {
-            this->m_sourceSRs << srRef;
-        }
-    }
+    // Populate SR picker (C# OnLoad pattern)
+    this->ui->srPicker1->populate(this->srPickerType(), this->m_connection, QString(), QString(), this->m_vdiRefs);
 
-    // Populate SR list
-    this->populateSRTable();
-
-    // Update button state
+    // Update button states
     this->updateMoveButton();
+    this->onCanBeScannedChanged();
 }
 
-void MoveVirtualDiskDialog::populateSRTable()
+SrPicker::SRPickerType MoveVirtualDiskDialog::srPickerType() const
 {
-    this->ui->srTable->setRowCount(0);
-
-    if (!this->m_xenLib)
-        return;
-
-    // Get default SR from pool (for auto-selection)
-    QString defaultSRRef;
-    XenConnection* connection = this->m_xenLib->getConnection();
-    if (connection)
-    {
-        // Get pool data
-        QList<QVariantMap> pools = this->m_xenLib->getCache()->GetAllData("pool");
-        if (!pools.isEmpty())
-        {
-            defaultSRRef = pools.first().value("default_SR").toString();
-        }
-    }
-
-    // Get all SRs
-    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->GetAllData("sr");
-
-    int row = 0;
-    int rowToSelect = -1; // Track which row to auto-select
-    for (const QVariantMap& srData : allSRs)
-    {
-        QString srRef = srData.value("ref").toString();
-
-        // Filter out invalid destinations
-        if (!isValidDestination(srRef, srData))
-            continue;
-
-        // Add SR to table
-        ui->srTable->insertRow(row);
-
-        // Name
-        QString name = srData.value("name_label", "").toString();
-        QTableWidgetItem* nameItem = new QTableWidgetItem(name);
-        nameItem->setData(Qt::UserRole, srRef);
-        ui->srTable->setItem(row, 0, nameItem);
-
-        // Description
-        QString description = srData.value("name_description", "").toString();
-        ui->srTable->setItem(row, 1, new QTableWidgetItem(description));
-
-        // Type
-        QString type = srData.value("type", "").toString();
-        ui->srTable->setItem(row, 2, new QTableWidgetItem(type));
-
-        // Shared
-        bool shared = srData.value("shared", false).toBool();
-        ui->srTable->setItem(row, 3, new QTableWidgetItem(shared ? "Yes" : "No"));
-
-        // Size
-        qint64 size = srData.value("physical_size", 0).toLongLong();
-        ui->srTable->setItem(row, 4, new QTableWidgetItem(formatSize(size)));
-
-        // Free space
-        qint64 utilisation = srData.value("physical_utilisation", 0).toLongLong();
-        qint64 freeSpace = size - utilisation;
-        QTableWidgetItem* freeItem = new QTableWidgetItem(formatSize(freeSpace));
-
-        // Highlight if insufficient space
-        qint64 requiredSpace = getTotalVDISize();
-        if (requiredSpace > 0 && freeSpace < requiredSpace)
-        {
-            freeItem->setForeground(Qt::red);
-        }
-
-        ui->srTable->setItem(row, 5, freeItem);
-
-        // Check if this SR should be auto-selected (matches C# SrPicker logic)
-        if (rowToSelect == -1) // If nothing selected yet
-        {
-            // Priority 1: Default SR from pool
-            if (!defaultSRRef.isEmpty() && srRef == defaultSRRef)
-            {
-                rowToSelect = row;
-            }
-            // Priority 2: First valid SR (fallback)
-            else if (rowToSelect == -1)
-            {
-                rowToSelect = row;
-            }
-        }
-
-        row++;
-    }
-
-    // Resize columns to content
-    ui->srTable->resizeColumnsToContents();
-
-    // Auto-select first valid SR (or default SR) - matches C# SrPicker behavior
-    if (rowToSelect >= 0 && rowToSelect < ui->srTable->rowCount())
-    {
-        ui->srTable->selectRow(rowToSelect);
-    }
-
-    // Update info label
-    if (ui->srTable->rowCount() == 0)
-    {
-        ui->labelInfo->setText("<b>No compatible storage repositories found.</b>");
-    } else
-    {
-        ui->labelInfo->setText("");
-    }
-
-    // Update button states after populating and selecting
-    updateMoveButton();
-}
-
-bool MoveVirtualDiskDialog::isValidDestination(const QString& srRef, const QVariantMap& srData)
-{
-    // Exclude source SRs
-    if (this->m_sourceSRs.contains(srRef))
-        return false;
-
-    // Exclude ISO SRs
-    QString contentType = srData.value("content_type", "").toString();
-    if (contentType == "iso")
-        return false;
-
-    // Exclude detached/broken SRs
-    QVariantList pbdRefs = srData.value("PBDs").toList();
-    if (pbdRefs.isEmpty())
-        return false;
-
-    // Check if at least one PBD is attached
-    bool hasAttachedPBD = false;
-    for (const QVariant& pbdRefVar : pbdRefs)
-    {
-        QString pbdRef = pbdRefVar.toString();
-        QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
-        if (pbdData.value("currently_attached", false).toBool())
-        {
-            hasAttachedPBD = true;
-            break;
-        }
-    }
-
-    if (!hasAttachedPBD)
-        return false;
-
-    // Exclude read-only SRs (check for allowed_operations containing "vdi_create")
-    QVariantList allowedOps = srData.value("allowed_operations").toList();
-    bool canCreateVDI = false;
-    for (const QVariant& opVar : allowedOps)
-    {
-        if (opVar.toString() == "vdi_create")
-        {
-            canCreateVDI = true;
-            break;
-        }
-    }
-
-    if (!canCreateVDI)
-        return false;
-
-    return true;
-}
-
-qint64 MoveVirtualDiskDialog::getTotalVDISize() const
-{
-    qint64 totalSize = 0;
-
-    for (const QString& vdiRef : this->m_vdiRefs)
-    {
-        QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
-        totalSize += vdiData.value("virtual_size", 0).toLongLong();
-    }
-
-    return totalSize;
-}
-
-QString MoveVirtualDiskDialog::formatSize(qint64 bytes) const
-{
-    if (bytes < 0)
-        return "Unknown";
-
-    const qint64 KB = 1024;
-    const qint64 MB = 1024 * KB;
-    const qint64 GB = 1024 * MB;
-    const qint64 TB = 1024 * GB;
-
-    if (bytes >= TB)
-        return QString("%1 TB").arg(bytes / (double) TB, 0, 'f', 2);
-    else if (bytes >= GB)
-        return QString("%1 GB").arg(bytes / (double) GB, 0, 'f', 2);
-    else if (bytes >= MB)
-        return QString("%1 MB").arg(bytes / (double) MB, 0, 'f', 2);
-    else if (bytes >= KB)
-        return QString("%1 KB").arg(bytes / (double) KB, 0, 'f', 2);
-    else
-        return QString("%1 bytes").arg(bytes);
+    // C# MoveVirtualDiskDialog uses SrPickerType.Move
+    return SrPicker::Move;
 }
 
 void MoveVirtualDiskDialog::onSRSelectionChanged()
 {
-    updateMoveButton();
+    this->updateMoveButton();
 }
 
-void MoveVirtualDiskDialog::onSRDoubleClicked(int row, int column)
+void MoveVirtualDiskDialog::onSRDoubleClicked()
 {
-    Q_UNUSED(row);
-    Q_UNUSED(column);
-
-    if (ui->moveButton->isEnabled())
+    // C# srPicker1_DoubleClickOnRow pattern
+    if (this->ui->moveButton->isEnabled())
     {
-        onMoveButtonClicked();
+        this->ui->moveButton->click();
     }
 }
 
 void MoveVirtualDiskDialog::onRescanButtonClicked()
 {
-    // Rescan all SRs
-    if (!this->m_xenLib)
-        return;
+    // C# buttonRescan_Click - delegate to SrPicker.ScanSRs()
+    this->ui->srPicker1->scanSRs();
+}
 
-    XenConnection* connection = this->m_xenLib->getConnection();
-    if (!connection || !connection->IsConnected())
-        return;
-
-    // Get all SRs and scan them
-    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->GetAllData("sr");
-    for (const QVariantMap& srData : allSRs)
-    {
-        QString srRef = srData.value("ref").toString();
-
-        // Build JSON-RPC request for SR.scan
-        QVariantList params;
-        params << connection->GetSessionId() << srRef;
-
-        QString jsonRequest = this->m_xenLib->getAPI()->buildJsonRpcCall("SR.scan", params);
-        QByteArray requestData = jsonRequest.toUtf8();
-        connection->SendRequestAsync(requestData);
-    }
-
-    ui->labelInfo->setText("Scanning storage repositories...");
-
-    // Refresh SR list after a delay
-    QTimer::singleShot(3000, this, [this]() {
-        populateSRTable();
-        updateMoveButton();
-    });
+void MoveVirtualDiskDialog::onCanBeScannedChanged()
+{
+    // C# srPicker1_CanBeScannedChanged - update Rescan button state
+    this->ui->rescanButton->setEnabled(this->ui->srPicker1->canBeScanned());
+    this->updateMoveButton();
 }
 
 void MoveVirtualDiskDialog::updateMoveButton()
 {
-    // Enable Move button only if an SR is selected
-    bool hasSelection = !ui->srTable->selectedItems().isEmpty();
-    ui->moveButton->setEnabled(hasSelection);
+    // C# UpdateMoveButton - enable Move button only if SR is selected
+    this->ui->moveButton->setEnabled(!this->ui->srPicker1->selectedSR().isEmpty());
 }
 
 void MoveVirtualDiskDialog::onMoveButtonClicked()
 {
-    // Get selected SR
-    QList<QTableWidgetItem*> selectedItems = ui->srTable->selectedItems();
-    if (selectedItems.isEmpty())
-        return;
-
-    QTableWidgetItem* firstItem = ui->srTable->item(selectedItems.first()->row(), 0);
-    QString targetSRRef = firstItem->data(Qt::UserRole).toString();
-
+    // Get selected SR from SrPicker
+    QString targetSRRef = this->ui->srPicker1->selectedSR();
     if (targetSRRef.isEmpty())
         return;
 
     // Get target SR name
-    QVariantMap targetSRData = this->m_xenLib->getCache()->ResolveObjectData("sr", targetSRRef);
+    QVariantMap targetSRData = this->m_connection->GetCache()->ResolveObjectData("sr", targetSRRef);
     QString targetSRName = targetSRData.value("name_label", "").toString();
 
     // Close dialog
-    accept();
+    this->accept();
 
     // Create actions (virtual method - can be overridden)
-    createAndRunActions(targetSRRef, targetSRName);
-}
+    this->createAndRunActions(targetSRRef, targetSRName);
+} 
 
 void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, const QString& targetSRName)
 {
@@ -383,17 +140,12 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
     if (this->m_vdiRefs.count() == 1)
     {
         // Single VDI move
-        QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", this->m_vdiRefs.first());
+        QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", this->m_vdiRefs.first());
         QString vdiName = vdiData.value("name_label", "Virtual Disk").toString();
 
-        MoveVirtualDiskAction* action = new MoveVirtualDiskAction(
-            this->m_xenLib->getConnection(),
-            this->m_vdiRefs.first(),
-            targetSRRef);
+        MoveVirtualDiskAction* action = new MoveVirtualDiskAction(this->m_connection, this->m_vdiRefs.first(), targetSRRef);
 
-        action->setTitle(QString("Moving virtual disk '%1' to '%2'")
-                             .arg(vdiName)
-                             .arg(targetSRName));
+        action->setTitle(QString("Moving virtual disk '%1' to '%2'").arg(vdiName).arg(targetSRName));
         action->setDescription(QString("Moving '%1'...").arg(vdiName));
 
         opManager->registerOperation(action);
@@ -404,17 +156,12 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
         // C# uses ParallelAction with BATCH_SIZE=3
         for (const QString& vdiRef : this->m_vdiRefs)
         {
-            QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
+            QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
             QString vdiName = vdiData.value("name_label", "Virtual Disk").toString();
 
-            MoveVirtualDiskAction* action = new MoveVirtualDiskAction(
-                this->m_xenLib->getConnection(),
-                vdiRef,
-                targetSRRef);
+            MoveVirtualDiskAction* action = new MoveVirtualDiskAction(this->m_connection, vdiRef, targetSRRef);
 
-            action->setTitle(QString("Moving virtual disk '%1' to '%2'")
-                                 .arg(vdiName)
-                                 .arg(targetSRName));
+            action->setTitle(QString("Moving virtual disk '%1' to '%2'").arg(vdiName).arg(targetSRName));
             action->setDescription(QString("Moving '%1'...").arg(vdiName));
 
             opManager->registerOperation(action);

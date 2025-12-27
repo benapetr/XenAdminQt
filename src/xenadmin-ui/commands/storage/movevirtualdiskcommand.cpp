@@ -28,13 +28,11 @@
 #include "movevirtualdiskcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/movevirtualdiskdialog.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/vdi.h"
 #include <QMessageBox>
 
-MoveVirtualDiskCommand::MoveVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)
-    : VDICommand(mainWindow, parent)
+MoveVirtualDiskCommand::MoveVirtualDiskCommand(MainWindow* mainWindow, QObject* parent) : VDICommand(mainWindow, parent)
 {
 }
 
@@ -49,7 +47,7 @@ bool MoveVirtualDiskCommand::CanRun() const
     if (vdiData.isEmpty())
         return false;
 
-    return this->canBeMoved(vdiData);
+    return this->canBeMoved(vdi->GetConnection(), vdiData);
 }
 
 void MoveVirtualDiskCommand::Run()
@@ -59,10 +57,7 @@ void MoveVirtualDiskCommand::Run()
         return;
 
     // Open the move virtual disk dialog
-    MoveVirtualDiskDialog* dialog = new MoveVirtualDiskDialog(
-        this->xenLib(),
-        vdi->OpaqueRef(),
-        this->mainWindow());
+    MoveVirtualDiskDialog* dialog = new MoveVirtualDiskDialog(vdi->GetConnection(), vdi->OpaqueRef(), this->mainWindow());
 
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
@@ -73,7 +68,7 @@ QString MoveVirtualDiskCommand::MenuText() const
     return tr("Move...");
 }
 
-bool MoveVirtualDiskCommand::canBeMoved(const QVariantMap& vdiData) const
+bool MoveVirtualDiskCommand::canBeMoved(XenConnection *conn, const QVariantMap& vdiData) const
 {
     // Check if VDI is a snapshot
     if (vdiData.value("is_a_snapshot", false).toBool())
@@ -113,7 +108,7 @@ bool MoveVirtualDiskCommand::canBeMoved(const QVariantMap& vdiData) const
         return false;
     }
 
-    QVariantMap srData = this->xenLib()->getCache()->ResolveObjectData("sr", srRef);
+    QVariantMap srData = conn->GetCache()->ResolveObjectData("sr", srRef);
     if (srData.isEmpty())
     {
         return false;
@@ -130,7 +125,7 @@ bool MoveVirtualDiskCommand::canBeMoved(const QVariantMap& vdiData) const
 
     // Check if any VMs using this VDI are running
     QString vdiUuid = vdiData.value("uuid").toString();
-    if (!vdiUuid.isEmpty() && this->isVDIInUseByRunningVM(vdiUuid))
+    if (!vdiUuid.isEmpty() && this->isVDIInUseByRunningVM(conn, vdiUuid))
     {
         return false;
     }
@@ -138,10 +133,10 @@ bool MoveVirtualDiskCommand::canBeMoved(const QVariantMap& vdiData) const
     return true;
 }
 
-bool MoveVirtualDiskCommand::isVDIInUseByRunningVM(const QString& vdiRef) const
+bool MoveVirtualDiskCommand::isVDIInUseByRunningVM(XenConnection *conn, const QString& vdiRef) const
 {
     // Get all VBDs
-    QList<QVariantMap> vbds = this->xenLib()->getCache()->GetAllData("vbd");
+    QList<QVariantMap> vbds = conn->GetCache()->GetAllData("vbd");
 
     for (const QVariantMap& vbdData : vbds)
     {
@@ -159,7 +154,7 @@ bool MoveVirtualDiskCommand::isVDIInUseByRunningVM(const QString& vdiRef) const
             continue;
         }
 
-        QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
+        QVariantMap vmData = conn->GetCache()->ResolveObjectData("vm", vmRef);
         if (vmData.isEmpty())
         {
             continue;

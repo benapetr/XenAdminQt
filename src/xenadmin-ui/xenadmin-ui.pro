@@ -18,6 +18,7 @@ SOURCES += \
     dialogs/connectdialog.cpp \
     dialogs/addserverdialog.cpp \
     dialogs/connectingtoserverdialog.cpp \
+    dialogs/reconnectasdialog.cpp \
     dialogs/debugwindow.cpp \
     dialogs/aboutdialog.cpp \
     dialogs/ballooningdialog.cpp \
@@ -48,6 +49,7 @@ SOURCES += \
     dialogs/optionsdialog.cpp \
     dialogs/verticallytabbeddialog.cpp \
     controls/affinitypicker.cpp \
+    controls/srpicker.cpp \
     settingspanels/generaleditpage.cpp \
     settingspanels/hostautostarteditpage.cpp \
     settingspanels/hostmultipathpage.cpp \
@@ -221,6 +223,7 @@ HEADERS += \
     dialogs/connectdialog.h \
     dialogs/addserverdialog.h \
     dialogs/connectingtoserverdialog.h \
+    dialogs/reconnectasdialog.h \
     dialogs/debugwindow.h \
     dialogs/aboutdialog.h \
     dialogs/ballooningdialog.h \
@@ -253,6 +256,7 @@ HEADERS += \
     dialogs/verticallytabbeddialog.h \
     network/xenconnectionui.h \
     controls/affinitypicker.h \
+    controls/srpicker.h \
     settingspanels/ieditpage.h \
     settingspanels/generaleditpage.h \
     settingspanels/hostautostarteditpage.h \
@@ -418,6 +422,7 @@ FORMS += \
     dialogs/connectdialog.ui \
     dialogs/addserverdialog.ui \
     dialogs/connectingtoserverdialog.ui \
+    dialogs/reconnectasdialog.ui \
     dialogs/debugwindow.ui \
     dialogs/ballooningdialog.ui \
     dialogs/commanderrordialog.ui \
@@ -435,6 +440,7 @@ FORMS += \
     dialogs/newsrwizard.ui \
     dialogs/verticallytabbeddialog.ui \
     controls/affinitypicker.ui \
+    controls/srpicker.ui \
     settingspanels/generaleditpage.ui \
     settingspanels/hostautostarteditpage.ui \
     settingspanels/hostmultipathpage.ui \
@@ -478,7 +484,7 @@ FORMS += \
 RESOURCES += resources.qrc
 
 # Link with xenlib
-INCLUDEPATH += ../xenlib
+INCLUDEPATH += .. ../xenlib
 
 # Windows: using xenlib as a static lib; avoid dllimport in headers
 win32:DEFINES += XENLIB_STATIC

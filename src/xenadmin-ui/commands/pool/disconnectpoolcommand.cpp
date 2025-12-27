@@ -28,8 +28,8 @@
 #include "disconnectpoolcommand.h"
 #include "../../mainwindow.h"
 #include "../connection/disconnectcommand.h"
-#include "xen/network/connection.h"
-#include "xen/pool.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/pool.h"
 
 DisconnectPoolCommand::DisconnectPoolCommand(MainWindow* mainWindow, QObject* parent) : PoolCommand(mainWindow, parent)
 {

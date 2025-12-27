@@ -29,6 +29,10 @@
 #include <QDebug>
 #include "../../mainwindow.h"
 #include "../../dialogs/newvmwizard.h"
+#include "xencache.h"
+#include "xen/network/connectionsmanager.h"
+#include "xen/network/connection.h"
+#include "xen/xenobject.h"
 #include <QtWidgets>
 
 NewVMCommand::NewVMCommand(QObject* parent)
@@ -85,7 +89,30 @@ void NewVMCommand::showNewVMWizard()
 {
     // qDebug() << "NewVMCommand: Opening New VM Wizard";
 
-    NewVMWizard wizard(this->xenLib(), this->mainWindow());
+    XenConnection* connection = nullptr;
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (selectedObject)
+        connection = selectedObject->GetConnection();
+
+    if (!connection)
+    {
+        Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
+        if (connMgr)
+        {
+            QList<XenConnection*> connections = connMgr->getConnectedConnections();
+            if (!connections.isEmpty())
+                connection = connections.first();
+        }
+    }
+
+    if (!connection)
+    {
+        QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
+                             tr("Not connected to XenServer"));
+        return;
+    }
+
+    NewVMWizard wizard(connection, this->mainWindow());
 
     // If we have a default template, we could set it here
     if (!this->m_defaultTemplateUuid.isEmpty())
@@ -121,13 +148,34 @@ void NewVMCommand::runWithConnection()
 
 bool NewVMCommand::hasEnabledHost() const
 {
-    // For now, return true if we have a main window
-    // TODO: Replace with actual check for enabled hosts through XenLib
     if (!this->mainWindow())
-    {
         return false;
+
+    XenConnection* connection = nullptr;
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (selectedObject)
+        connection = selectedObject->GetConnection();
+
+    if (!connection)
+    {
+        Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
+        if (connMgr)
+        {
+            QList<XenConnection*> connections = connMgr->getConnectedConnections();
+            if (!connections.isEmpty())
+                connection = connections.first();
+        }
     }
 
-    // Placeholder logic - should check actual XenAPI connection and host status
-    return true;
+    if (!connection || !connection->GetCache())
+        return false;
+
+    QList<QVariantMap> hosts = connection->GetCache()->GetAllData("host");
+    for (const QVariantMap& host : hosts)
+    {
+        if (host.value("enabled").toBool())
+            return true;
+    }
+
+    return false;
 }

@@ -29,10 +29,10 @@
 #include <QDebug>
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
 #include "xen/actions/vm/vmsnapshotdeleteaction.h"
+#include "xen/xenobject.h"
 #include <QtWidgets>
 
 DeleteSnapshotCommand::DeleteSnapshotCommand(QObject* parent)
@@ -99,14 +99,17 @@ bool DeleteSnapshotCommand::canDeleteSnapshot() const
         return false;
     }
 
-    XenLib* xenLib = this->mainWindow()->xenLib();
-    if (!xenLib)
-    {
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
         return false;
-    }
 
     // Get snapshot data from cache
-    QVariantMap snapshotData = xenLib->getCache()->ResolveObjectData("vm", this->m_snapshotUuid);
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
+    QVariantMap snapshotData = cache->ResolveObjectData("vm", this->m_snapshotUuid);
     if (snapshotData.isEmpty())
     {
         qDebug() << "DeleteSnapshotCommand: Snapshot not found in cache:" << this->m_snapshotUuid;
@@ -144,19 +147,18 @@ bool DeleteSnapshotCommand::showConfirmationDialog()
     QString snapshotName = this->m_snapshotUuid;
 
     // Try to get snapshot name from cache
-    if (this->mainWindow())
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    XenConnection* connection = selectedObject ? selectedObject->GetConnection() : nullptr;
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (cache)
     {
-        XenLib* xenLib = this->mainWindow()->xenLib();
-        if (xenLib)
+        QVariantMap snapshotData = cache->ResolveObjectData("vm", this->m_snapshotUuid);
+        if (!snapshotData.isEmpty())
         {
-            QVariantMap snapshotData = xenLib->getCache()->ResolveObjectData("vm", this->m_snapshotUuid);
-            if (!snapshotData.isEmpty())
+            snapshotName = snapshotData.value("name_label").toString();
+            if (snapshotName.isEmpty())
             {
-                snapshotName = snapshotData.value("name_label").toString();
-                if (snapshotName.isEmpty())
-                {
-                    snapshotName = this->m_snapshotUuid;
-                }
+                snapshotName = this->m_snapshotUuid;
             }
         }
     }
@@ -184,8 +186,8 @@ void DeleteSnapshotCommand::deleteSnapshot()
         return;
     }
 
-    // Get XenConnection from XenLib
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    XenConnection* conn = selectedObject ? selectedObject->GetConnection() : nullptr;
     if (!conn || !conn->IsConnected())
     {
         qWarning() << "DeleteSnapshotCommand: Not connected";

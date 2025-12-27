@@ -26,14 +26,14 @@
  */
 
 #include "deactivatevbdcommand.h"
-#include "xencache.h"
-#include "xenlib.h"
-#include "xen/network/connection.h"
-#include "xen/session.h"
-#include "xen/vbd.h"
-#include "xen/vdi.h"
-#include "xen/vm.h"
-#include "xen/xenapi/xenapi_VBD.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xenlib.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/vbd.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/xenapi/xenapi_VBD.h"
 #include "../../mainwindow.h"
 #include <QMessageBox>
 #include <QDebug>

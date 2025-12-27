@@ -27,9 +27,9 @@
 
 #include "command.h"
 #include "../mainwindow.h"
-#include "xenlib.h"
-#include "xen/xenobject.h"
-#include "xen/network/connection.h"
+#include "xenlib/xenlib.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/network/connection.h"
 #include <QTreeWidget>
 #include <QList>
 
@@ -49,11 +49,6 @@ QSharedPointer<XenObject> Command::GetObject() const
 
     QVariant data = item->data(0, Qt::UserRole);
     return data.value<QSharedPointer<XenObject>>();
-}
-
-XenLib* Command::xenLib() const
-{
-    return this->mainWindow()->xenLib();
 }
 
 QTreeWidgetItem* Command::getSelectedItem() const

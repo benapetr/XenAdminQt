@@ -26,10 +26,9 @@
  */
 
 #include "vbdcommand.h"
-#include "xen/vbd.h"
+#include "xenlib/xen/vbd.h"
 
-VBDCommand::VBDCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+VBDCommand::VBDCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 

@@ -28,7 +28,6 @@
 #include "hawizard.h"
 #include "../operations/operationmanager.h"
 #include "../dialogs/operationprogressdialog.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
 #include "xen/session.h"
@@ -42,9 +41,9 @@
 #include <QTimer>
 #include <QApplication>
 
-HAWizard::HAWizard(XenLib* xenLib, const QString& poolRef, QWidget* parent)
+HAWizard::HAWizard(XenConnection* connection, const QString& poolRef, QWidget* parent)
     : QWizard(parent),
-      m_xenLib(xenLib),
+      m_connection(connection),
       m_poolRef(poolRef),
       m_ntol(1),
       m_maxNtol(0)
@@ -54,7 +53,8 @@ HAWizard::HAWizard(XenLib* xenLib, const QString& poolRef, QWidget* parent)
     setMinimumSize(700, 500);
 
     // Get pool name for display
-    QVariantMap poolData = this->m_xenLib->getCache()->ResolveObjectData("pool", this->m_poolRef);
+    XenCache* cache = this->cache();
+    QVariantMap poolData = cache ? cache->ResolveObjectData("pool", this->m_poolRef) : QVariantMap();
     this->m_poolName = poolData.value("name_label", "Pool").toString();
 
     // Create wizard pages
@@ -373,7 +373,7 @@ void HAWizard::accept()
 
     // Create and run EnableHAAction
     EnableHAAction* action = new EnableHAAction(
-        this->m_xenLib->getConnection(),
+        this->m_connection,
         this->m_poolRef,
         QStringList{this->m_selectedHeartbeatSR},
         this->m_ntol,
@@ -419,18 +419,22 @@ void HAWizard::scanForHeartbeatSRs()
 
     try
     {
-        XenAPI::Session* session = this->m_xenLib->getConnection()->GetSession();
+        XenAPI::Session* session = m_connection ? m_connection->GetSession() : nullptr;
         if (!session || !session->IsLoggedIn())
         {
             throw std::runtime_error("Not connected");
         }
 
         // Get all SRs from cache
-        QStringList srRefs = this->m_xenLib->getCache()->GetAllRefs("sr");
+        XenCache* cache = this->cache();
+        if (!cache)
+            throw std::runtime_error("Cache not available");
+
+        QStringList srRefs = cache->GetAllRefs("sr");
 
         for (const QString& srRef : srRefs)
         {
-            QVariantMap srData = this->m_xenLib->getCache()->ResolveObjectData("sr", srRef);
+            QVariantMap srData = cache->ResolveObjectData("sr", srRef);
 
             // Check if SR is suitable for heartbeat:
             // - Must be shared
@@ -459,7 +463,7 @@ void HAWizard::scanForHeartbeatSRs()
             for (const QVariant& pbdVar : pbds)
             {
                 QString pbdRef = pbdVar.toString();
-                QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
+                QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
                 if (pbdData.value("currently_attached", false).toBool())
                 {
                     hasConnectedPBD = true;
@@ -565,11 +569,15 @@ void HAWizard::populateVMTable()
     this->m_vmTable->setRowCount(0);
 
     // Get all VMs from cache
-    QStringList vmRefs = this->m_xenLib->getCache()->GetAllRefs("vm");
+    XenCache* cache = this->cache();
+    if (!cache)
+        return;
+
+    QStringList vmRefs = cache->GetAllRefs("vm");
 
     for (const QString& vmRef : vmRefs)
     {
-        QVariantMap vmData = this->m_xenLib->getCache()->ResolveObjectData("vm", vmRef);
+        QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
         // Skip templates
         bool isTemplate = vmData.value("is_a_template", false).toBool();
@@ -658,7 +666,11 @@ void HAWizard::updateNtolCalculation()
     this->m_ntol = this->m_ntolSpinBox->value();
 
     // Count hosts in pool
-    QStringList hostRefs = this->m_xenLib->getCache()->GetAllRefs("host");
+    XenCache* cache = this->cache();
+    if (!cache)
+        return;
+
+    QStringList hostRefs = cache->GetAllRefs("host");
     int hostCount = hostRefs.size();
 
     // Maximum NTOL is number of hosts - 1
@@ -749,6 +761,11 @@ void HAWizard::updateFinishPage()
     this->m_finishWarningIcon->setVisible(showWarning);
     this->m_finishWarningLabel->setVisible(showWarning);
     this->m_finishWarningLabel->setText(warningText);
+}
+
+XenCache* HAWizard::cache() const
+{
+    return m_connection ? m_connection->GetCache() : nullptr;
 }
 
 QString HAWizard::priorityToString(HaRestartPriority priority) const

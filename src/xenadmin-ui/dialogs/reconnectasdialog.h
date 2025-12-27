@@ -25,55 +25,37 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "deletevmsandtemplatescommand.h"
-#include "../../mainwindow.h"
-#include "xen/xenobject.h"
-#include "xencache.h"
+#ifndef RECONNECTASDIALOG_H
+#define RECONNECTASDIALOG_H
 
-DeleteVMsAndTemplatesCommand::DeleteVMsAndTemplatesCommand(MainWindow* mainWindow, QObject* parent) : DeleteVMCommand(mainWindow, parent)
+#include <QtWidgets/QDialog>
+
+class XenConnection;
+
+namespace Ui
 {
+    class ReconnectAsDialog;
 }
 
-bool DeleteVMsAndTemplatesCommand::CanRun() const
+class ReconnectAsDialog : public QDialog
 {
-    QString objectType = this->getSelectedObjectType();
+    Q_OBJECT
 
-    // Allow both VMs and templates
-    if (objectType != "vm" && objectType != "template")
-        return false;
+    public:
+        explicit ReconnectAsDialog(XenConnection* connection, QWidget* parent = nullptr);
+        ~ReconnectAsDialog() override;
 
-    QString vmRef = this->getSelectedObjectRef();
-    return this->canRunForVM(vmRef);
-}
+        QString username() const;
+        QString password() const;
 
-bool DeleteVMsAndTemplatesCommand::canRunForVM(const QString& vmRef) const
-{
-    if (vmRef.isEmpty())
-        return false;
+    private slots:
+        void updateButtonState();
 
-    QSharedPointer<XenObject> ob = this->GetObject();
+    private:
+        void updateBlurb();
 
-    if (!ob)
-        return false;
+        Ui::ReconnectAsDialog* ui;
+        XenConnection* m_connection;
+};
 
-    QVariantMap vmData = ob->GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-        return false;
-
-    // Check if VM/template is locked
-    if (vmData.value("locked", false).toBool())
-        return false;
-
-    // Don't allow deletion of snapshots
-    if (vmData.value("is_a_snapshot", false).toBool())
-        return false;
-
-    // Check allowed operations
-    QVariantList allowedOps = vmData.value("allowed_operations").toList();
-    return allowedOps.contains("destroy");
-}
-
-QString DeleteVMsAndTemplatesCommand::MenuText() const
-{
-    return tr("&Delete");
-}
+#endif // RECONNECTASDIALOG_H

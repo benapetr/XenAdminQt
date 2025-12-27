@@ -27,9 +27,9 @@
 
 #include "newvmwizard.h"
 #include "ui_newvmwizard.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
+#include "xen/xenapi/xenapi_VM.h"
 #include "operationprogressdialog.h"
 #include "xen/actions/vm/createvmaction.h"
 #include "../widgets/wizardnavigationpane.h"
@@ -38,9 +38,9 @@
 #include <QHeaderView>
 #include <algorithm>
 
-NewVMWizard::NewVMWizard(XenLib* xenLib, QWidget* parent)
+NewVMWizard::NewVMWizard(XenConnection* connection, QWidget* parent)
     : QWizard(parent),
-      m_xenLib(xenLib),
+      m_connection(connection),
       ui(new Ui::NewVMWizard),
       m_vcpuCount(1),
       m_memorySize(1024)
@@ -173,13 +173,14 @@ void NewVMWizard::setupUiPages()
 
 void NewVMWizard::loadTemplates()
 {
-    if (!this->m_xenLib)
+    XenCache* cache = this->cache();
+    if (!cache)
         return;
 
     this->ui->templateTree->clear();
     this->m_templateItems.clear();
 
-    QList<QVariantMap> allVMs = this->m_xenLib->getCache()->GetAllData("vm");
+    QList<QVariantMap> allVMs = cache->GetAllData("vm");
     for (const QVariant vmVar : allVMs)
     {
         QVariantMap vmRecord = vmVar.toMap();
@@ -248,7 +249,8 @@ void NewVMWizard::handleTemplateSelectionChanged()
             this->ui->vmNameEdit->setText(it->name);
     }
 
-    this->m_selectedTemplateRecord = this->m_xenLib ? this->m_xenLib->getVMRecord(ref) : QVariantMap();
+    XenCache* cache = this->cache();
+    this->m_selectedTemplateRecord = cache ? cache->ResolveObjectData("vm", ref) : QVariantMap();
     if (!this->m_selectedTemplateRecord.isEmpty())
     {
         long vcpusMax = this->m_selectedTemplateRecord.value("VCPUs_max", 1).toLongLong();
@@ -279,7 +281,8 @@ void NewVMWizard::loadTemplateDevices()
     this->m_disks.clear();
     this->m_networks.clear();
 
-    if (!this->m_xenLib || this->m_selectedTemplate.isEmpty())
+    XenCache* cache = this->cache();
+    if (!cache || this->m_selectedTemplate.isEmpty())
     {
         this->updateDiskTable();
         this->updateNetworkTable();
@@ -287,7 +290,7 @@ void NewVMWizard::loadTemplateDevices()
     }
 
     // Get template record from cache
-    QVariantMap templateRecord = this->m_xenLib->getVMRecord(this->m_selectedTemplate);
+    QVariantMap templateRecord = cache->ResolveObjectData("vm", this->m_selectedTemplate);
     if (templateRecord.isEmpty())
     {
         this->updateDiskTable();
@@ -300,14 +303,14 @@ void NewVMWizard::loadTemplateDevices()
     for (const QVariant& vbdRefVar : vbdRefs)
     {
         QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbd = this->m_xenLib->getVBDRecord(vbdRef);
+        QVariantMap vbd = cache->ResolveObjectData("vbd", vbdRef);
         
         QString vbdType = vbd.value("type").toString();
         if (vbdType != "Disk")
             continue;
 
         QString vdiRef = vbd.value("VDI").toString();
-        QVariantMap vdiData = this->m_xenLib->getVDIRecord(vdiRef);
+        QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
 
         DiskConfig disk;
         disk.vdiRef = vdiRef;
@@ -323,7 +326,7 @@ void NewVMWizard::loadTemplateDevices()
     for (const QVariant& vifRefVar : vifRefs)
     {
         QString vifRef = vifRefVar.toString();
-        QVariantMap vif = this->m_xenLib->getVIFRecord(vifRef);
+        QVariantMap vif = cache->ResolveObjectData("vif", vifRef);
         
         NetworkConfig network;
         network.networkRef = vif.value("network").toString();
@@ -338,15 +341,12 @@ void NewVMWizard::loadTemplateDevices()
 
 void NewVMWizard::loadHosts()
 {
-    if (!this->m_xenLib)
+    XenCache* cache = this->cache();
+    if (!cache)
         return;
 
     this->ui->homeServerList->clear();
     this->m_hosts.clear();
-
-    XenCache* cache = this->m_xenLib->getCache();
-    if (!cache)
-        return;
 
     QList<QVariantMap> hosts = cache->GetAllData("host");
     for (const QVariantMap& host : hosts)
@@ -365,15 +365,12 @@ void NewVMWizard::loadHosts()
 
 void NewVMWizard::loadStorageRepositories()
 {
-    if (!this->m_xenLib)
+    XenCache* cache = this->cache();
+    if (!cache)
         return;
 
     this->ui->defaultSrCombo->clear();
     this->m_storageRepositories.clear();
-
-    XenCache* cache = this->m_xenLib->getCache();
-    if (!cache)
-        return;
 
     QList<QVariantMap> srs = cache->GetAllData("sr");
     for (const QVariantMap& sr : srs)
@@ -396,14 +393,11 @@ void NewVMWizard::loadStorageRepositories()
 
 void NewVMWizard::loadNetworks()
 {
-    if (!this->m_xenLib)
+    XenCache* cache = this->cache();
+    if (!cache)
         return;
 
     this->m_availableNetworks.clear();
-
-    XenCache* cache = this->m_xenLib->getCache();
-    if (!cache)
-        return;
 
     QList<QVariantMap> nets = cache->GetAllData("network");
     for (const QVariantMap& net : nets)
@@ -423,7 +417,8 @@ void NewVMWizard::updateDiskTable()
     int row = 0;
     for (const DiskConfig& disk : this->m_disks)
     {
-        QVariantMap srRecord = this->m_xenLib ? this->m_xenLib->getSRRecord(disk.srRef) : QVariantMap();
+        XenCache* cache = this->cache();
+        QVariantMap srRecord = cache ? cache->ResolveObjectData("sr", disk.srRef) : QVariantMap();
         QString srName = srRecord.value("name_label").toString();
         QString sizeGB = QString::number(double(disk.sizeBytes) / (1024.0 * 1024.0 * 1024.0), 'f', 1);
 
@@ -449,7 +444,8 @@ void NewVMWizard::updateNetworkTable()
     int row = 0;
     for (const NetworkConfig& network : this->m_networks)
     {
-        QVariantMap networkRecord = this->m_xenLib ? this->m_xenLib->getNetworkRecord(network.networkRef) : QVariantMap();
+        XenCache* cache = this->cache();
+        QVariantMap networkRecord = cache ? cache->ResolveObjectData("network", network.networkRef) : QVariantMap();
         QString networkName = networkRecord.value("name_label").toString();
 
         auto deviceItem = new QTableWidgetItem(network.device);
@@ -623,9 +619,9 @@ void NewVMWizard::accept()
 
 void NewVMWizard::createVirtualMachine()
 {
-    if (!this->m_xenLib)
+    if (!this->m_connection)
     {
-        QMessageBox::critical(this, tr("Error"), tr("XenLib not available"));
+        QMessageBox::critical(this, tr("Error"), tr("Xen connection not available"));
         return;
     }
 
@@ -638,8 +634,8 @@ void NewVMWizard::createVirtualMachine()
         return;
     }
 
-    XenConnection* connection = this->m_xenLib->getConnection();
-    if (!connection || !connection->GetSession())
+    XenConnection* connection = this->m_connection;
+    if (!connection->GetSession())
     {
         QMessageBox::critical(this, tr("Connection Error"),
                               tr("Unable to configure devices because the Xen connection is no longer valid."));
@@ -716,10 +712,18 @@ void NewVMWizard::createVirtualMachine()
 
     action->deleteLater();
 
-    if (this->m_xenLib->getCache())
+    XenCache* cache = this->cache();
+    if (cache && connection->GetSession())
     {
-        this->m_xenLib->getCache()->ClearType("vm");
-        this->m_xenLib->requestVirtualMachines();
+        cache->ClearType("vm");
+        try
+        {
+            QVariantMap records = XenAPI::VM::get_all_records(connection->GetSession());
+            cache->UpdateBulk("vm", records);
+        } catch (const std::exception& exn)
+        {
+            qWarning() << "NewVMWizard: Failed to refresh VM records:" << exn.what();
+        }
     }
 
     QString message = tr("Virtual machine '%1' has been created successfully.").arg(this->m_vmName);
@@ -733,4 +737,9 @@ void NewVMWizard::onCurrentIdChanged(int id)
     if (id == Page_Finish)
         this->updateSummaryPage();
     this->updateNavigationSelection();
+}
+
+XenCache* NewVMWizard::cache() const
+{
+    return m_connection ? m_connection->GetCache() : nullptr;
 }

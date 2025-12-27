@@ -34,19 +34,17 @@
 #include <QPushButton>
 #include <QDebug>
 
-VdiPropertiesDialog::VdiPropertiesDialog(XenLib* xenLib, const QString& vdiRef, QWidget* parent)
-    : QDialog(parent), ui(new Ui::VdiPropertiesDialog), m_xenLib(xenLib), m_vdiRef(vdiRef), m_originalSize(0), m_canResize(false)
+VdiPropertiesDialog::VdiPropertiesDialog(XenConnection *conn, const QString& vdiRef, QWidget* parent)
+    : QDialog(parent), ui(new Ui::VdiPropertiesDialog), m_connection(conn), m_vdiRef(vdiRef), m_originalSize(0), m_canResize(false)
 {
     this->ui->setupUi(this);
 
     // Connect size change signal
-    connect(this->ui->sizeSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &VdiPropertiesDialog::onSizeChanged);
+    connect(this->ui->sizeSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &VdiPropertiesDialog::onSizeChanged);
 
     // Connect OK button to validation
     disconnect(this->ui->buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
-    connect(this->ui->buttonBox, &QDialogButtonBox::accepted,
-            this, &VdiPropertiesDialog::validateAndAccept);
+    connect(this->ui->buttonBox, &QDialogButtonBox::accepted, this, &VdiPropertiesDialog::validateAndAccept);
 
     this->populateDialog();
 }
@@ -58,14 +56,14 @@ VdiPropertiesDialog::~VdiPropertiesDialog()
 
 void VdiPropertiesDialog::populateDialog()
 {
-    if (!this->m_xenLib || this->m_vdiRef.isEmpty())
+    if (!this->m_connection || this->m_vdiRef.isEmpty())
     {
-        qWarning() << "VdiPropertiesDialog: Invalid XenLib or VDI ref";
+        qWarning() << "VdiPropertiesDialog: Invalid Connection or VDI ref";
         return;
     }
 
     // Get VDI data from cache
-    this->m_vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", this->m_vdiRef);
+    this->m_vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", this->m_vdiRef);
 
     if (this->m_vdiData.isEmpty())
     {
@@ -84,7 +82,7 @@ void VdiPropertiesDialog::populateDialog()
 
     // Get SR information
     QString srRef = this->m_vdiData.value("SR", "").toString();
-    QVariantMap srData = this->m_xenLib->getCache()->ResolveObjectData("sr", srRef);
+    QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
     QString srName = srData.value("name_label", "Unknown").toString();
     this->ui->srValueLabel->setText(srName);
 
@@ -193,7 +191,7 @@ void VdiPropertiesDialog::validateResize()
 
     // Get SR to check free space
     QString srRef = this->m_vdiData.value("SR", "").toString();
-    QVariantMap srData = this->m_xenLib->getCache()->ResolveObjectData("sr", srRef);
+    QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
 
     if (!srData.isEmpty())
     {

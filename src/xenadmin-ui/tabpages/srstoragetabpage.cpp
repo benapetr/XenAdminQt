@@ -276,7 +276,7 @@ void SrStorageTabPage::onMoveButtonClicked()
         return;
     }
 
-    MoveVirtualDiskDialog dialog(this->m_xenLib, vdiRef, this);
+    MoveVirtualDiskDialog dialog(this->m_xenLib->getConnection(), vdiRef, this);
     if (dialog.exec() == QDialog::Accepted)
     {
         this->requestSrRefresh(1000);
@@ -345,7 +345,7 @@ void SrStorageTabPage::onEditButtonClicked()
         return;
     }
 
-    VdiPropertiesDialog dialog(this->m_xenLib, vdiRef, this);
+    VdiPropertiesDialog dialog(this->m_xenLib->getConnection(), vdiRef, this);
     if (dialog.exec() != QDialog::Accepted || !dialog.hasChanges())
     {
         return;

@@ -27,10 +27,12 @@
 
 #include "hostreconnectascommand.h"
 #include "../../mainwindow.h"
-#include "../../dialogs/connectdialog.h"
+#include "../../dialogs/reconnectasdialog.h"
+#include "../connection/disconnectcommand.h"
+#include "../../network/xenconnectionui.h"
 #include "xen/network/connection.h"
-#include "xenlib.h"
 #include "xen/host.h"
+#include <QtCore/QTimer>
 
 HostReconnectAsCommand::HostReconnectAsCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
@@ -55,7 +57,8 @@ bool HostReconnectAsCommand::CanRun() const
         return true;
 
     // Can also reconnect-as if connection is in progress (to change creds)
-    // TODO: Need to add inProgress() method to XenConnection
+    if (conn->InProgress() && !conn->IsConnected())
+        return true;
 
     return false;
 }
@@ -70,31 +73,57 @@ void HostReconnectAsCommand::Run()
     if (!conn)
         return;
 
-    // Show reconnect dialog with current connection details
-    ConnectDialog dialog(mainWindow());
-    dialog.setWindowTitle("Reconnect As...");
+    ReconnectAsDialog dialog(conn, mainWindow());
+    if (dialog.exec() != QDialog::Accepted)
+        return;
 
-    // Pre-fill with current connection details
-    // Note: ConnectDialog doesn't have setHostname/setPort/setUsername methods
-    // The dialog will use default/empty values
+    conn->SetUsername(dialog.username().trimmed());
+    conn->SetPassword(dialog.password());
+    conn->setExpectPasswordIsCorrect(true);
 
-    if (dialog.exec() == QDialog::Accepted)
+    if (m_disconnectHandler)
+        QObject::disconnect(m_disconnectHandler);
+    m_reconnectConnection = conn;
+    m_disconnectHandler = connect(conn, &XenConnection::connectionStateChanged,
+                                  this, &HostReconnectAsCommand::onReconnectConnectionStateChanged);
+
+    DisconnectCommand disconnectCmd(this->mainWindow(), conn, true, this);
+    disconnectCmd.Run();
+
+    if (conn->IsConnected())
     {
-        QString hostname = conn->GetHostname(); // Keep same hostname
-        int port = conn->GetPort();             // Keep same port
-        QString username = dialog.getUsername();
-        QString password = dialog.getPassword();
-
-        // Disconnect current connection
-        conn->Disconnect();
-
-        // Reconnect with new credentials
-        mainWindow()->showStatusMessage("Reconnecting as different user...");
-        mainWindow()->xenLib()->connectToServer(hostname, port, username, password);
+        if (m_disconnectHandler)
+            QObject::disconnect(m_disconnectHandler);
+        m_disconnectHandler = QMetaObject::Connection();
+        m_reconnectConnection.clear();
     }
 }
 
 QString HostReconnectAsCommand::MenuText() const
 {
     return "Reconnect As...";
+}
+
+void HostReconnectAsCommand::onReconnectConnectionStateChanged()
+{
+    if (!m_reconnectConnection)
+        return;
+
+    if (m_reconnectConnection->IsConnected())
+        return;
+
+    if (m_disconnectHandler)
+        QObject::disconnect(m_disconnectHandler);
+    m_disconnectHandler = QMetaObject::Connection();
+
+    QTimer::singleShot(500, this, &HostReconnectAsCommand::startReconnect);
+}
+
+void HostReconnectAsCommand::startReconnect()
+{
+    if (!m_reconnectConnection)
+        return;
+
+    this->mainWindow()->showStatusMessage("Reconnecting as different user...");
+    XenConnectionUI::BeginConnect(m_reconnectConnection, true, this->mainWindow(), true);
 }

@@ -30,7 +30,6 @@
 #include "../../../xenlib/xen/xenapi/xenapi_VM.h"
 #include "../../../xenlib/xen/network/connection.h"
 #include "../../../xenlib/xen/vm.h"
-#include "../../../xenlib/xenlib.h"
 #include "../../../xenlib/xencache.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
@@ -52,8 +51,17 @@ bool NewTemplateFromSnapshotCommand::CanRun() const
         return false;
     }
 
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+        return false;
+
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
     // Get VM data from cache
-    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
     {
         return false;
@@ -74,8 +82,17 @@ void NewTemplateFromSnapshotCommand::Run()
         return;
     }
 
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+        return;
+
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return;
+
     // Get snapshot data
-    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
     {
         return;
@@ -107,7 +124,7 @@ void NewTemplateFromSnapshotCommand::Run()
     }
 
     // Get connection
-    XenConnection* conn = this->xenLib()->getConnection();
+    XenConnection* conn = connection;
     if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
@@ -164,8 +181,9 @@ QString NewTemplateFromSnapshotCommand::generateUniqueName(const QString& snapsh
     int suffix = 1;
 
     // Get all VM names from cache to check for uniqueness
-    XenConnection* conn = this->xenLib()->getConnection();
-    if (!conn)
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    XenConnection* conn = selectedObject ? selectedObject->GetConnection() : nullptr;
+    if (!conn || !conn->GetCache())
     {
         return name;
     }

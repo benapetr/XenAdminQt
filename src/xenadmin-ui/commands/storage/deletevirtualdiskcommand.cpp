@@ -28,14 +28,13 @@
 #include "deletevirtualdiskcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xencache.h"
-#include "xen/vdi.h"
-#include "xen/actions/vdi/destroydiskaction.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/xen/actions/vdi/destroydiskaction.h"
 #include <QMessageBox>
 #include <QDebug>
 
-DeleteVirtualDiskCommand::DeleteVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)
-    : VDICommand(mainWindow, parent)
+DeleteVirtualDiskCommand::DeleteVirtualDiskCommand(MainWindow* mainWindow, QObject* parent) : VDICommand(mainWindow, parent)
 {
 }
 

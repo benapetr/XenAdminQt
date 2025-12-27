@@ -1690,7 +1690,7 @@ void VMStorageTabPage::onMoveButtonClicked()
         return;
     }
 
-    MoveVirtualDiskDialog dialog(this->m_xenLib, vdiRefs, this);
+    MoveVirtualDiskDialog dialog(this->m_xenLib->getConnection(), vdiRefs, this);
     if (dialog.exec() == QDialog::Accepted)
     {
         if (this->m_xenLib)
@@ -1723,7 +1723,7 @@ void VMStorageTabPage::onEditButtonClicked()
         return;
 
     // Open VDI Properties Dialog
-    VdiPropertiesDialog dialog(this->m_xenLib, vdiRef, this);
+    VdiPropertiesDialog dialog(this->m_xenLib->getConnection(), vdiRef, this);
     if (dialog.exec() != QDialog::Accepted)
         return;
 

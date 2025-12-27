@@ -104,11 +104,6 @@ class Command : public QObject
         }
 
         /**
-         * @brief Get XenLib instance
-         */
-        XenLib* xenLib() const;
-
-        /**
          * @brief Get the currently selected tree item
          */
         QTreeWidgetItem* getSelectedItem() const;

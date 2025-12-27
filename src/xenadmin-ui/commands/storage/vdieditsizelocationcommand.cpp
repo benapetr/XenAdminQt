@@ -28,12 +28,10 @@
 #include "vdieditsizelocationcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/vdipropertiesdialog.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/vdi.h"
 
-VdiEditSizeLocationCommand::VdiEditSizeLocationCommand(MainWindow* mainWindow, QObject* parent)
-    : VDICommand(mainWindow, parent)
+VdiEditSizeLocationCommand::VdiEditSizeLocationCommand(MainWindow* mainWindow, QObject* parent) : VDICommand(mainWindow, parent)
 {
 }
 
@@ -57,14 +55,11 @@ void VdiEditSizeLocationCommand::Run()
         return;
 
     QString vdiRef = vdi->OpaqueRef();
-    XenLib* xenLib = this->mainWindow()->xenLib();
-    if (!xenLib)
-        return;
 
     // Open VDI properties dialog
     // The dialog handles size editing, name/description editing
     // For location changes, user can use "Move Virtual Disk" command
-    VdiPropertiesDialog* dialog = new VdiPropertiesDialog(xenLib, vdiRef, this->mainWindow());
+    VdiPropertiesDialog* dialog = new VdiPropertiesDialog(vdi->GetConnection(), vdiRef, this->mainWindow());
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
 }

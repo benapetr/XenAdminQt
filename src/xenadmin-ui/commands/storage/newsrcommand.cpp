@@ -28,15 +28,11 @@
 #include "newsrcommand.h"
 #include <QDebug>
 #include "../../mainwindow.h"
-#include <QDebug>
 #include "../../dialogs/newsrwizard.h"
-#include <QDebug>
-#include "xenlib.h"
-#include <QDebug>
+#include "xen/xenobject.h"
 #include <QtWidgets>
 
-NewSRCommand::NewSRCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+NewSRCommand::NewSRCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
     qDebug() << "NewSRCommand: Created";
 }
@@ -45,7 +41,7 @@ void NewSRCommand::Run()
 {
     qDebug() << "NewSRCommand: Executing New Storage Repository command";
 
-    if (!CanRun())
+    if (!this->CanRun())
     {
         qWarning() << "NewSRCommand: Cannot execute - requirements not met";
         QMessageBox::warning(nullptr, tr("Cannot Create Storage Repository"),
@@ -54,7 +50,7 @@ void NewSRCommand::Run()
         return;
     }
 
-    showNewSRWizard();
+    this->showNewSRWizard();
 }
 
 bool NewSRCommand::CanRun() const
@@ -64,7 +60,9 @@ bool NewSRCommand::CanRun() const
     // - Connection must be active
     // - Host (if selected) must not have active host actions
 
-    if (!mainWindow() || !xenLib() || !xenLib()->isConnected())
+    QSharedPointer<XenObject> ob = this->GetObject();
+
+    if (!mainWindow() || !ob || !ob->GetConnection()->IsConnected())
         return false;
 
     QString objectType = getSelectedObjectType();

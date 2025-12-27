@@ -31,7 +31,6 @@
 #include "../command.h"
 
 class AttachVirtualDiskDialog;
-class XenLib;
 class XenConnection;
 class XenCache;
 

@@ -34,7 +34,8 @@
 #include <QVariant>
 
 class QWizardPage;
-class XenLib;
+class XenConnection;
+class XenCache;
 class QTreeWidgetItem;
 class WizardNavigationPane;
 namespace Ui
@@ -60,7 +61,7 @@ public:
         Page_Finish
     };
 
-    explicit NewVMWizard(XenLib* xenLib, QWidget* parent = nullptr);
+    explicit NewVMWizard(XenConnection* connection, QWidget* parent = nullptr);
     ~NewVMWizard() override;
 
 protected:
@@ -72,6 +73,7 @@ private slots:
     void onCurrentIdChanged(int id);
 
 private:
+    XenCache* cache() const;
     void setupUiPages();
     void createVirtualMachine();
     void loadTemplates();
@@ -119,7 +121,7 @@ private:
     };
 
     // Store wizard data
-    XenLib* m_xenLib;
+    XenConnection* m_connection;
     Ui::NewVMWizard* ui;
 
     QString m_selectedTemplate;

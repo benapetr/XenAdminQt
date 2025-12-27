@@ -56,14 +56,14 @@
 #include "navigation/navigationpane.h"
 #include "navigation/navigationview.h"
 #include "network/xenconnectionui.h"
-#include "xenlib.h"
-#include "xencache.h"
+#include "xenlib/xenlib.h"
+#include "xenlib/xencache.h"
 #include "metricupdater.h"
 #include "search.h"
 #include "groupingtag.h"
 #include "grouping.h"
-#include "xen/network/connection.h"
-#include "xen/network/connectionsmanager.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/network/connectionsmanager.h"
 #include "operations/operationmanager.h"
 #include "commands/contextmenubuilder.h"
 
@@ -390,11 +390,6 @@ MainWindow::~MainWindow()
     // Cleanup debug handler
     DebugWindow::uninstallDebugHandler();
 
-    if (this->m_xenLib)
-    {
-        this->m_xenLib->cleanup();
-    }
-
     // Clean up tab pages
     qDeleteAll(this->m_tabPages);
     this->m_tabPages.clear();
@@ -717,7 +712,7 @@ void MainWindow::onTreeItemSelected()
     // Update title bar with selected object
     this->m_titleBar->setTitle(itemText, itemIcon);
 
-    if (!objectRef.isEmpty())
+    if (!objectRef.isEmpty() && connection)
     {
         // Prevent duplicate API calls for same selection
         // This fixes the double-call issue when Qt emits itemSelectionChanged multiple times
@@ -742,7 +737,7 @@ void MainWindow::onTreeItemSelected()
         this->updateToolbarsAndMenus();
 
         // Now we have the data, show the tabs
-        auto objectData = this->m_xenLib->getCachedObjectData(objectType, objectRef);
+        auto objectData = connection->GetCache()->ResolveObjectData(objectType, objectRef);
         this->showObjectTabs(connection, objectType, objectRef, objectData);
 
         // Add to navigation history (matches C# MainWindow.TreeView_SelectionsChanged)
@@ -1474,10 +1469,16 @@ void MainWindow::closeEvent(QCloseEvent* event)
     // Clean up operation UUIDs before exit (matches C# MainWindow.OnClosing)
     OperationManager::instance()->prepareAllOperationsForRestart();
 
-    // Disconnect if connected
-    if (m_xenLib && m_xenLib->isConnected())
+    // Disconnect active connections (new flow via ConnectionsManager)
+    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
+    if (connMgr)
     {
-        m_xenLib->disconnectFromServer();
+        const QList<XenConnection*> connections = connMgr->getAllConnections();
+        for (XenConnection* connection : connections)
+        {
+            if (connection && (connection->IsConnected() || connection->InProgress()))
+                connection->EndConnect(true, true);
+        }
     }
 
     event->accept();

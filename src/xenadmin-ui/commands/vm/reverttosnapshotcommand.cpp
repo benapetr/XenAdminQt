@@ -29,10 +29,10 @@
 #include <QDebug>
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
 #include "xen/actions/vm/vmsnapshotrevertaction.h"
+#include "xen/xenobject.h"
 #include <QtWidgets>
 
 RevertToSnapshotCommand::RevertToSnapshotCommand(QObject* parent)
@@ -99,14 +99,17 @@ bool RevertToSnapshotCommand::canRevertToSnapshot() const
         return false;
     }
 
-    XenLib* xenLib = this->mainWindow()->xenLib();
-    if (!xenLib)
-    {
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
         return false;
-    }
 
     // Get snapshot data from cache
-    QVariantMap snapshotData = xenLib->getCache()->ResolveObjectData("vm", this->m_snapshotUuid);
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
+    QVariantMap snapshotData = cache->ResolveObjectData("vm", this->m_snapshotUuid);
     if (snapshotData.isEmpty())
     {
         qDebug() << "RevertToSnapshotCommand: Snapshot not found in cache:" << this->m_snapshotUuid;
@@ -140,7 +143,7 @@ bool RevertToSnapshotCommand::canRevertToSnapshot() const
     QString snapshotOf = snapshotData.value("snapshot_of").toString();
     if (!snapshotOf.isEmpty())
     {
-        QVariantMap vmData = xenLib->getCache()->ResolveObjectData("vm", snapshotOf);
+        QVariantMap vmData = cache->ResolveObjectData("vm", snapshotOf);
         if (!vmData.isEmpty())
         {
             QVariantList vmCurrentOps = vmData.value("current_operations").toList();
@@ -170,28 +173,27 @@ bool RevertToSnapshotCommand::showConfirmationDialog()
     QString snapshotTime;
 
     // Try to get snapshot details from cache
-    if (this->mainWindow())
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    XenConnection* connection = selectedObject ? selectedObject->GetConnection() : nullptr;
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (cache)
     {
-        XenLib* xenLib = this->mainWindow()->xenLib();
-        if (xenLib)
+        QVariantMap snapshotData = cache->ResolveObjectData("vm", this->m_snapshotUuid);
+        if (!snapshotData.isEmpty())
         {
-            QVariantMap snapshotData = xenLib->getCache()->ResolveObjectData("vm", this->m_snapshotUuid);
-            if (!snapshotData.isEmpty())
+            snapshotName = snapshotData.value("name_label").toString();
+            if (snapshotName.isEmpty())
             {
-                snapshotName = snapshotData.value("name_label").toString();
-                if (snapshotName.isEmpty())
-                {
-                    snapshotName = this->m_snapshotUuid;
-                }
+                snapshotName = this->m_snapshotUuid;
+            }
 
-                QString timestamp = snapshotData.value("snapshot_time").toString();
-                if (!timestamp.isEmpty())
+            QString timestamp = snapshotData.value("snapshot_time").toString();
+            if (!timestamp.isEmpty())
+            {
+                QDateTime dt = QDateTime::fromString(timestamp, Qt::ISODate);
+                if (dt.isValid())
                 {
-                    QDateTime dt = QDateTime::fromString(timestamp, Qt::ISODate);
-                    if (dt.isValid())
-                    {
-                        snapshotTime = dt.toString("yyyy-MM-dd HH:mm:ss");
-                    }
+                    snapshotTime = dt.toString("yyyy-MM-dd HH:mm:ss");
                 }
             }
         }
@@ -230,8 +232,8 @@ void RevertToSnapshotCommand::revertToSnapshot()
         return;
     }
 
-    // Get XenConnection from XenLib
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    XenConnection* conn = selectedObject ? selectedObject->GetConnection() : nullptr;
     if (!conn || !conn->IsConnected())
     {
         qWarning() << "RevertToSnapshotCommand: Not connected";

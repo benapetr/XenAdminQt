@@ -33,6 +33,7 @@
 #include <QVariantMap>
 
 class MainWindow;
+class XenConnection;
 
 /**
  * @brief Command to migrate (live-move) one or more VDIs to a different SR
@@ -86,7 +87,7 @@ class MigrateVirtualDiskCommand : public VDICommand
          * - SR is not HBA LUN-per-VDI
          * - SR supports storage migration
          */
-        bool canBeMigrated(const QVariantMap& vdiData) const;
+        bool canBeMigrated(XenConnection *connection, const QVariantMap& vdiData) const;
 
         /**
          * @brief Check if VDI is HA type (statefile or redo log)

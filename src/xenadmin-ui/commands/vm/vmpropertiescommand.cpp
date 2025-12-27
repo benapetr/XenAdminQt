@@ -33,14 +33,12 @@
 #include <QtWidgets>
 #include "xen/vm.h"
 
-VMPropertiesCommand::VMPropertiesCommand(QObject* parent)
-    : VMCommand(nullptr, parent)
+VMPropertiesCommand::VMPropertiesCommand(QObject* parent) : VMCommand(nullptr, parent)
 {
     // qDebug() << "VMPropertiesCommand: Created default constructor";
 }
 
-VMPropertiesCommand::VMPropertiesCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent), m_vmUuid(vmUuid)
+VMPropertiesCommand::VMPropertiesCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent), m_vmUuid(vmUuid)
 {
     // qDebug() << "VMPropertiesCommand: Created with VM UUID:" << vmUuid;
 }
@@ -103,8 +101,12 @@ void VMPropertiesCommand::showPropertiesDialog()
         return;
     }
 
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
+        return;
+
     // Get connection from xenLib
-    XenConnection* connection = xenLib()->getConnection();
+    XenConnection* connection = vm->GetConnection();
     if (!connection)
     {
         qWarning() << "VMPropertiesCommand: No connection available";

@@ -699,12 +699,12 @@ void VMHAEditPage::onLinkActivated(const QString& link)
 
     if (haEnabled)
     {
-        EditVmHaPrioritiesDialog dialog(mainWindow->xenLib(), this->m_poolRef, mainWindow);
+        EditVmHaPrioritiesDialog dialog(this->connection(), this->m_poolRef, mainWindow);
         dialog.exec();
     }
     else
     {
-        HAWizard wizard(mainWindow->xenLib(), this->m_poolRef, mainWindow);
+        HAWizard wizard(this->connection(), this->m_poolRef, mainWindow);
         wizard.exec();
     }
 }

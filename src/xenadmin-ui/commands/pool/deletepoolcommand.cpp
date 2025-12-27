@@ -28,15 +28,14 @@
 #include "deletepoolcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/pool.h"
-#include "xencache.h"
-#include "xen/actions/pool/destroypoolaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/actions/pool/destroypoolaction.h"
 #include <QMessageBox>
 #include <QDebug>
 
-DeletePoolCommand::DeletePoolCommand(MainWindow* mainWindow, QObject* parent)
-    : PoolCommand(mainWindow, parent)
+DeletePoolCommand::DeletePoolCommand(MainWindow* mainWindow, QObject* parent) : PoolCommand(mainWindow, parent)
 {
 }
 

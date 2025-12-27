@@ -66,6 +66,7 @@ public:
      */
     SrRefreshAction(XenConnection* connection, const QString& srRef,
                     QObject* parent = nullptr);
+    QString srRef() const { return m_srRef; }
 
 protected:
     void run() override;
