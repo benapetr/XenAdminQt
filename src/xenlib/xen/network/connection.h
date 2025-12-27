@@ -64,8 +64,8 @@ class XENLIB_EXPORT XenConnection : public QObject
         ~XenConnection();
 
         // Connection management
-        bool ConnectToHost(const QString& hostname, int port, const QString& username, const QString& password);
-        void Disconnect();
+        bool ConnectToHost(const QString& hostname, int port, const QString& username, const QString& password); // OBSOLETE: legacy direct connection flow (use BeginConnect)
+        void Disconnect(); // OBSOLETE: legacy direct disconnect (use EndConnect)
         bool IsConnected() const;
 
         QString GetHostname() const;
@@ -121,7 +121,7 @@ class XENLIB_EXPORT XenConnection : public QObject
          * @param data request body
          * @return API response body (extracted from HTTP response)
          */
-        QByteArray SendRequest(const QByteArray& data);
+        QByteArray SendRequest(const QByteArray& data); // OBSOLETE: legacy direct request path
 
         /**
          * @brief Send an API request asynchronously (non-blocking)
@@ -132,7 +132,7 @@ class XENLIB_EXPORT XenConnection : public QObject
          * @param data request body
          * @return Request ID (use to match with apiResponse signal)
          */
-        int SendRequestAsync(const QByteArray& data);
+        int SendRequestAsync(const QByteArray& data); // OBSOLETE: legacy direct request path
 
         // Session association (for heartbeat and other operations)
         void SetSession(XenAPI::Session* session);

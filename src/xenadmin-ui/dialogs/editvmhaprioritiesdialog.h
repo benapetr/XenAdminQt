@@ -60,54 +60,54 @@ class EditVmHaPrioritiesDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param xenLib XenLib instance
-     * @param poolRef Pool opaque reference (must have HA enabled)
-     * @param parent Parent widget
-     */
-    explicit EditVmHaPrioritiesDialog(XenLib* xenLib, const QString& poolRef, QWidget* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param xenLib XenLib instance
+         * @param poolRef Pool opaque reference (must have HA enabled)
+         * @param parent Parent widget
+         */
+        explicit EditVmHaPrioritiesDialog(XenLib* xenLib, const QString& poolRef, QWidget* parent = nullptr);
 
-private slots:
-    void onNtolChanged(int value);
-    void updateOkButtonState();
-    void accept() override;
+    private slots:
+        void onNtolChanged(int value);
+        void updateOkButtonState();
+        void accept() override;
 
-private:
-    void setupUi();
-    void populateVMTable();
-    void updateNtolCalculation();
-    bool hasChanges() const;
-    QMap<QString, QVariantMap> buildVmStartupOptions() const;
+    private:
+        void setupUi();
+        void populateVMTable();
+        void updateNtolCalculation();
+        bool hasChanges() const;
+        QMap<QString, QVariantMap> buildVmStartupOptions() const;
 
-    XenLib* m_xenLib;
-    QString m_poolRef;
-    QString m_poolName;
-    qint64 m_originalNtol;
+        XenLib* m_xenLib;
+        QString m_poolRef;
+        QString m_poolName;
+        qint64 m_originalNtol;
 
-    // UI widgets
-    QLabel* m_headerLabel;
-    QLabel* m_warningIcon;
-    QLabel* m_warningLabel;
+        // UI widgets
+        QLabel* m_headerLabel;
+        QLabel* m_warningIcon;
+        QLabel* m_warningLabel;
 
-    // NTOL controls
-    QGroupBox* m_ntolGroup;
-    QSpinBox* m_ntolSpinBox;
-    QLabel* m_ntolStatusLabel;
-    QLabel* m_maxNtolLabel;
+        // NTOL controls
+        QGroupBox* m_ntolGroup;
+        QSpinBox* m_ntolSpinBox;
+        QLabel* m_ntolStatusLabel;
+        QLabel* m_maxNtolLabel;
 
-    // VM table
-    QTableWidget* m_vmTable;
+        // VM table
+        QTableWidget* m_vmTable;
 
-    // Buttons
-    QPushButton* m_okButton;
-    QPushButton* m_cancelButton;
+        // Buttons
+        QPushButton* m_okButton;
+        QPushButton* m_cancelButton;
 
-    // State
-    qint64 m_ntol;
-    qint64 m_maxNtol;
-    QMap<QString, QVariantMap> m_originalSettings; // Original VM settings for change detection
+        // State
+        qint64 m_ntol;
+        qint64 m_maxNtol;
+        QMap<QString, QVariantMap> m_originalSettings; // Original VM settings for change detection
 };
 
 #endif // EDITVMHAPRIORITIESDIALOG_H

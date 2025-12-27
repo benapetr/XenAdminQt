@@ -44,7 +44,6 @@ class XenConnectionUI
         using PasswordPrompt = std::function<bool(XenConnection* connection, const QString& oldPassword, QString* newPassword)>;
 
         static void BeginConnect(XenConnection* connection, bool interactive, QWidget* owner, bool initiateCoordinatorSearch, const PasswordPrompt& promptForNewPassword = PasswordPrompt());
-
         static bool PromptForNewPassword(XenConnection* connection, const QString& oldPassword, QWidget* owner, QString* newPassword);
 
     private:

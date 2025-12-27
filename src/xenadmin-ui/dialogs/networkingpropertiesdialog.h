@@ -42,27 +42,27 @@ class NetworkingPropertiesDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    explicit NetworkingPropertiesDialog(XenLib* xenLib, const QString& pifRef, QWidget* parent = nullptr);
-    ~NetworkingPropertiesDialog();
+    public:
+        explicit NetworkingPropertiesDialog(XenLib* xenLib, const QString& pifRef, QWidget* parent = nullptr);
+        ~NetworkingPropertiesDialog();
 
-    void accept() override;
+        void accept() override;
 
-private slots:
-    void onIPModeChanged();
-    void onInputChanged();
-    void validateAndUpdateUI();
+    private slots:
+        void onIPModeChanged();
+        void onInputChanged();
+        void validateAndUpdateUI();
 
-private:
-    void loadPIFData();
-    bool validateIP(const QString& ip, bool allowEmpty = false);
-    bool validateSubnetMask(const QString& mask);
-    void applyChanges();
+    private:
+        void loadPIFData();
+        bool validateIP(const QString& ip, bool allowEmpty = false);
+        bool validateSubnetMask(const QString& mask);
+        void applyChanges();
 
-    Ui::NetworkingPropertiesDialog* ui;
-    XenLib* m_xenLib;
-    QString m_pifRef;
-    QVariantMap m_pifData;
+        Ui::NetworkingPropertiesDialog* ui;
+        XenLib* m_xenLib;
+        QString m_pifRef;
+        QVariantMap m_pifData;
 };
 
 #endif // NETWORKINGPROPERTIESDIALOG_H

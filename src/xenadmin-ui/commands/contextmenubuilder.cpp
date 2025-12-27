@@ -35,6 +35,7 @@
 #include "host/removehostcommand.h"
 #include "pool/joinpoolcommand.h"
 #include "pool/ejecthostfrompoolcommand.h"
+#include "pool/disconnectpoolcommand.h"
 #include "pool/poolpropertiescommand.h"
 #include "vm/startvmcommand.h"
 #include "vm/stopvmcommand.h"
@@ -396,6 +397,11 @@ void ContextMenuBuilder::buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> 
     // VM Creation operations
     NewVMCommand* newVMCmd = new NewVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, newVMCmd);
+
+    this->addSeparator(menu);
+
+    DisconnectPoolCommand* disconnectCmd = new DisconnectPoolCommand(this->m_mainWindow, this);
+    this->addCommand(menu, disconnectCmd);
 
     this->addSeparator(menu);
 

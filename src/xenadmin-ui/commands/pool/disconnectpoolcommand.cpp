@@ -27,7 +27,6 @@
 
 #include "disconnectpoolcommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
 #include "xen/network/connection.h"
 #include "xen/pool.h"
 #include <QMessageBox>
@@ -78,7 +77,7 @@ void DisconnectPoolCommand::Run()
     if (ret == QMessageBox::Yes)
     {
         this->mainWindow()->showStatusMessage(QString("Disconnecting from pool '%1'...").arg(poolName));
-        conn->Disconnect();
+        conn->EndConnect(true, false);
     }
 }
 
