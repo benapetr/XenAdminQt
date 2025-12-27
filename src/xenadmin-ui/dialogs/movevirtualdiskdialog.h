@@ -39,6 +39,7 @@ namespace Ui
 }
 
 class XenLib;
+class XenConnection;
 
 /**
  * @brief Dialog for moving one or more VDIs to a different SR
@@ -135,6 +136,7 @@ class MoveVirtualDiskDialog : public QDialog
     protected:
         Ui::MoveVirtualDiskDialog* ui;
         XenLib* m_xenLib;
+        XenConnection *m_connection;
         QStringList m_vdiRefs;   // VDI(s) to move
         QStringList m_sourceSRs; // Source SR(s) - exclude from destination list
 };

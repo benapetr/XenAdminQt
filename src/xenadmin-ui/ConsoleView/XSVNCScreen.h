@@ -38,6 +38,7 @@
 #include <QMap>
 #include <QList>
 #include <QTcpSocket>
+#include <QSharedPointer>
 #include <functional>
 
 // Forward declarations
@@ -46,13 +47,13 @@ class RdpClient;
 class IRemoteConsole;
 class ConsoleKeyHandler;
 class VNCTabView;
-class XenLib;
 class XenConnection;
+class XenCache;
+class VM;
+class Host;
 
 namespace XenAPI
 {
-    class VM;
-    class Console;
     class Session;
 } // namespace XenAPI
 
@@ -95,7 +96,7 @@ class XSVNCScreen : public QWidget
          * @brief Constructor matching C# XSVNCScreen(VM, EventHandler, VNCTabView, string, string)
          * @param source The VM or Host to connect to
          * @param parent The parent VNCTabView (equivalent to C# parent parameter)
-         * @param xenLib XenLib instance for API access
+         * @param connection XenConnection instance for API access
          * @param elevatedUsername Username for elevated credential sessions (can be empty)
          * @param elevatedPassword Password for elevated credential sessions (can be empty)
          */
@@ -465,7 +466,7 @@ class XSVNCScreen : public QWidget
          * @brief Main connection logic (runs on background thread)
          * Equivalent to C#: private void Connect(object o)
          */
-        void connect(void* data);
+        void connect();
 
         /**
          * @brief Connect hosted console with VNC client
@@ -540,6 +541,11 @@ class XSVNCScreen : public QWidget
          * Reference: XSVNCScreen.cs lines 599-604
          */
         void setKeyboardAndMouseCapture(bool enabled);
+        XenCache* cache() const;
+        QSharedPointer<VM> resolveVM(const QString& vmRef) const;
+        QSharedPointer<Host> resolveHost(const QString& hostRef) const;
+        bool isControlDomainZero(const QString& vmRef, QString* outHostRef = nullptr) const;
+        bool hasGPUPassthrough(const QString& vmRef) const;
 
         // ========== Private Fields (matching C# fields exactly) ==========
 
@@ -547,7 +553,6 @@ class XSVNCScreen : public QWidget
         QString _sourceRef;             // VM or Host ref (C#: VM Source)
         bool _sourceIsPv;               // Is source a PV VM? (C#: bool _sourceIsPv)
         XenConnection* _connection;
-        XenLib* _xenLib;                // XenLib instance for API access
         VNCTabView* _parentVNCTabView;  // Parent view (C#: internal readonly VNCTabView)
         ConsoleKeyHandler* _keyHandler; // Keyboard handler (C#: internal ConsoleKeyHandler)
 

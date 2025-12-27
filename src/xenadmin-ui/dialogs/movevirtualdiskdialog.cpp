@@ -38,49 +38,45 @@
 #include <QHeaderView>
 #include <QTimer>
 
-MoveVirtualDiskDialog::MoveVirtualDiskDialog(XenLib* xenLib, const QString& vdiRef,
-                                             QWidget* parent)
+MoveVirtualDiskDialog::MoveVirtualDiskDialog(XenLib* xenLib, const QString& vdiRef, QWidget* parent)
     : QDialog(parent), ui(new Ui::MoveVirtualDiskDialog), m_xenLib(xenLib)
 {
+    this->m_connection = xenLib->getConnection();
     this->m_vdiRefs << vdiRef;
-    setupUI();
+    this->setupUI();
 }
 
-MoveVirtualDiskDialog::MoveVirtualDiskDialog(XenLib* xenLib, const QStringList& vdiRefs,
-                                             QWidget* parent)
+MoveVirtualDiskDialog::MoveVirtualDiskDialog(XenLib* xenLib, const QStringList& vdiRefs, QWidget* parent)
     : QDialog(parent), ui(new Ui::MoveVirtualDiskDialog), m_xenLib(xenLib), m_vdiRefs(vdiRefs)
 {
-    setupUI();
+    this->m_connection = xenLib->getConnection();
+    this->setupUI();
 }
 
 MoveVirtualDiskDialog::~MoveVirtualDiskDialog()
 {
-    delete ui;
+    delete this->ui;
 }
 
 void MoveVirtualDiskDialog::setupUI()
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
     // Connect signals
-    connect(ui->srTable, &QTableWidget::itemSelectionChanged,
-            this, &MoveVirtualDiskDialog::onSRSelectionChanged);
-    connect(ui->srTable, &QTableWidget::cellDoubleClicked,
-            this, &MoveVirtualDiskDialog::onSRDoubleClicked);
-    connect(ui->rescanButton, &QPushButton::clicked,
-            this, &MoveVirtualDiskDialog::onRescanButtonClicked);
-    connect(ui->moveButton, &QPushButton::clicked,
-            this, &MoveVirtualDiskDialog::onMoveButtonClicked);
+    connect(this->ui->srTable, &QTableWidget::itemSelectionChanged, this, &MoveVirtualDiskDialog::onSRSelectionChanged);
+    connect(this->ui->srTable, &QTableWidget::cellDoubleClicked, this, &MoveVirtualDiskDialog::onSRDoubleClicked);
+    connect(this->ui->rescanButton, &QPushButton::clicked, this, &MoveVirtualDiskDialog::onRescanButtonClicked);
+    connect(this->ui->moveButton, &QPushButton::clicked, this, &MoveVirtualDiskDialog::onMoveButtonClicked);
 
     // Configure table
-    ui->srTable->horizontalHeader()->setStretchLastSection(true);
-    ui->srTable->setSelectionMode(QAbstractItemView::SingleSelection);
-    ui->srTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    this->ui->srTable->horizontalHeader()->setStretchLastSection(true);
+    this->ui->srTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    this->ui->srTable->setSelectionBehavior(QAbstractItemView::SelectRows);
 
     // Update window title for multiple VDIs
     if (this->m_vdiRefs.count() > 1)
     {
-        setWindowTitle(QString("Move %1 Virtual Disks").arg(this->m_vdiRefs.count()));
+        this->setWindowTitle(QString("Move %1 Virtual Disks").arg(this->m_vdiRefs.count()));
     }
 
     // Get source SR(s) for filtering
@@ -95,15 +91,15 @@ void MoveVirtualDiskDialog::setupUI()
     }
 
     // Populate SR list
-    populateSRTable();
+    this->populateSRTable();
 
     // Update button state
-    updateMoveButton();
+    this->updateMoveButton();
 }
 
 void MoveVirtualDiskDialog::populateSRTable()
 {
-    ui->srTable->setRowCount(0);
+    this->ui->srTable->setRowCount(0);
 
     if (!this->m_xenLib)
         return;
