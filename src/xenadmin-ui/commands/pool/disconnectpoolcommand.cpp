@@ -27,9 +27,9 @@
 
 #include "disconnectpoolcommand.h"
 #include "../../mainwindow.h"
+#include "../connection/disconnectcommand.h"
 #include "xen/network/connection.h"
 #include "xen/pool.h"
-#include <QMessageBox>
 
 DisconnectPoolCommand::DisconnectPoolCommand(MainWindow* mainWindow, QObject* parent) : PoolCommand(mainWindow, parent)
 {
@@ -63,22 +63,8 @@ void DisconnectPoolCommand::Run()
     if (!conn)
         return;
 
-    QString poolName = pool->GetName();
-
-    if (poolName.isEmpty())
-        poolName = "this pool";
-
-    // Show confirmation dialog
-    QString message = QString("Are you sure you want to disconnect from pool '%1'?").arg(poolName);
-    int ret = QMessageBox::question(this->mainWindow(), "Disconnect Pool",
-                                    message,
-                                    QMessageBox::Yes | QMessageBox::No);
-
-    if (ret == QMessageBox::Yes)
-    {
-        this->mainWindow()->showStatusMessage(QString("Disconnecting from pool '%1'...").arg(poolName));
-        conn->EndConnect(true, false);
-    }
+    DisconnectCommand disconnectCmd(this->mainWindow(), conn, true, this);
+    disconnectCmd.Run();
 }
 
 QString DisconnectPoolCommand::MenuText() const

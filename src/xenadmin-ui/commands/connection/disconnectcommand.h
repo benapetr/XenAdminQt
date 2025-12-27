@@ -25,55 +25,39 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "disconnecthostcommand.h"
-#include "../../mainwindow.h"
-#include "../connection/disconnectcommand.h"
-#include "xen/network/connection.h"
-#include "xen/host.h"
+#ifndef DISCONNECTCOMMAND_H
+#define DISCONNECTCOMMAND_H
 
-DisconnectHostCommand::DisconnectHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
+#include "../command.h"
+
+class XenConnection;
+
+/**
+ * @brief DisconnectCommand - Disconnects a XenConnection (C# DisconnectCommand).
+ *
+ * Mirrors XenAdmin.Commands.DisconnectCommand: prompts, cancels work (TODO),
+ * ends the connection, and saves the server list.
+ */
+class DisconnectCommand : public Command
 {
-}
+    Q_OBJECT
 
-bool DisconnectHostCommand::CanRun() const
-{
-    // Can disconnect if:
-    // 1. Connection is connected AND selected object is pool coordinator (host)
-    // 2. OR connection is in progress (to cancel connection attempt)
+public:
+    explicit DisconnectCommand(MainWindow* mainWindow,
+                               XenConnection* connection,
+                               bool prompt,
+                               QObject* parent = nullptr);
 
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
-        return false;
+    bool CanRun() const override;
+    void Run() override;
+    QString MenuText() const override;
 
-    XenConnection* conn = host->GetConnection();
-    if (!conn)
-        return false;
+private:
+    bool confirmDisconnect() const;
+    void doDisconnect();
 
-    // Can disconnect if connected and selected host is coordinator
-    if (conn->IsConnected() && host->IsMaster())
-        return true;
+    XenConnection* m_connection = nullptr;
+    bool m_prompt = true;
+};
 
-    // Can also disconnect if connection is in progress (to cancel)
-    // TODO: Need to add inProgress() method to XenConnection
-
-    return false;
-}
-
-void DisconnectHostCommand::Run()
-{
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
-        return;
-
-    XenConnection* conn = host->GetConnection();
-    if (!conn)
-        return;
-
-    DisconnectCommand disconnectCmd(this->mainWindow(), conn, true, this);
-    disconnectCmd.Run();
-}
-
-QString DisconnectHostCommand::MenuText() const
-{
-    return "Disconnect";
-}
+#endif // DISCONNECTCOMMAND_H

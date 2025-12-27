@@ -60,9 +60,11 @@ class XENLIB_EXPORT XenLib : public QObject
         bool initialize();
         void cleanup();
 
-        // Connection management
+        // TODO - delete this
         bool connectToServer(const QString& hostname, int port, const QString& username, const QString& password, bool useSSL = true);
+        // TODO - delete this
         void disconnectFromServer();
+        // TODO - delete this
         bool isConnected() const;
 
         // API access
@@ -71,7 +73,6 @@ class XENLIB_EXPORT XenLib : public QObject
         void setConnection(XenConnection* connection);
         XenAsyncOperations* getAsyncOperations() const;
         XenCertificateManager* getCertificateManager() const;
-        Xen::ConnectionsManager* getConnectionsManager() const;
         // Cache is per-connection; each XenConnection owns its own XenCache instance.
         XenCache* getCache() const;
         MetricUpdater* getMetricUpdater() const;

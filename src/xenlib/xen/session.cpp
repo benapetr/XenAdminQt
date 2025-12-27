@@ -111,14 +111,22 @@ namespace XenAPI
         if (!this->d->connection && !this->d->loggedIn)
             return;
 
+        this->LogoutWithoutDisconnect();
+
+        if (this->d->connection)
+            this->d->connection->Disconnect();
+    }
+
+    void Session::LogoutWithoutDisconnect()
+    {
+        if (!this->d->connection && !this->d->loggedIn)
+            return;
+
         if (this->d->loggedIn && this->d->ownsSessionToken && !this->d->sessionId.isEmpty())
         {
             QByteArray requestData = this->buildLogoutRequest().toUtf8();
             this->d->connection->SendRequest(requestData);
         }
-
-        if (this->d->connection)
-            this->d->connection->Disconnect();
 
         bool wasLoggedIn = this->d->loggedIn;
         this->d->sessionId.clear();

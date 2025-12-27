@@ -78,6 +78,7 @@ SOURCES += \
     actions/meddlingactionmanager.cpp \
     commands/command.cpp \
     commands/contextmenubuilder.cpp \
+    commands/connection/disconnectcommand.cpp \
     commands/host/hostmaintenancemodecommand.cpp \
     commands/host/reboothostcommand.cpp \
     commands/host/shutdownhostcommand.cpp \
@@ -284,6 +285,7 @@ HEADERS += \
     actions/meddlingactionmanager.h \
     commands/command.h \
     commands/contextmenubuilder.h \
+    commands/connection/disconnectcommand.h \
     commands/host/hostmaintenancemodecommand.h \
     commands/host/reboothostcommand.h \
     commands/host/shutdownhostcommand.h \

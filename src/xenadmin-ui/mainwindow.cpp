@@ -28,7 +28,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "dialogs/addserverdialog.h"
-#include "dialogs/connectdialog.h"
 #include "dialogs/debugwindow.h"
 #include "dialogs/aboutdialog.h"
 #include "dialogs/optionsdialog.h"
@@ -230,7 +229,7 @@ MainWindow::MainWindow(QWidget* parent)
     this->m_xenLib = new XenLib(this);
 
     // Wire UI to ConnectionsManager (C# model), keep XenLib only as active-connection facade.
-    Xen::ConnectionsManager* connMgr = this->m_xenLib->getConnectionsManager();
+    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     connect(connMgr, &Xen::ConnectionsManager::connectionAdded, this, &MainWindow::onConnectionAdded);
 
     // Connect XenAPI message signals to AlertManager for alert system
@@ -443,7 +442,7 @@ void MainWindow::connectToServer()
         }
     }
 
-    Xen::ConnectionsManager* connMgr = this->m_xenLib->getConnectionsManager();
+    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     if (!connMgr)
         return;
 
@@ -563,8 +562,11 @@ void MainWindow::onConnectionStateChanged(bool connected)
     {
         qDebug() << "XenAdmin Qt: Disconnected from Xen server";
         this->ui->statusbar->showMessage("Disconnected", 2000);
-        getServerTreeWidget()->clear();
         this->clearTabs();
+        if (m_navigationPane)
+        {
+            m_navigationPane->requestRefreshTreeView();
+        }
         this->updatePlaceholderVisibility();
     }
 }
@@ -580,6 +582,8 @@ void MainWindow::onCachePopulated()
                  << "pools=" << cache->Count("pool")
                  << "vms=" << cache->Count("vm")
                  << "srs=" << cache->Count("sr");
+
+        this->updateConnectionProfileFromCache(this->m_xenLib->getConnection(), cache);
     }
 
     // Refresh tree now that cache has data
@@ -1402,6 +1406,11 @@ void MainWindow::saveSettings()
     qDebug() << "Settings saved to:" << settings.getValue("").toString();
 }
 
+void MainWindow::SaveConnections()
+{
+    SaveServerList();
+}
+
 void MainWindow::loadSettings()
 {
     SettingsManager& settings = SettingsManager::instance();
@@ -1457,7 +1466,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
     saveSettings();
 
     // Save current connections
-    saveConnections();
+    SaveServerList();
 
     // Clean up operation UUIDs before exit (matches C# MainWindow.OnClosing)
     OperationManager::instance()->prepareAllOperationsForRestart();
@@ -1722,7 +1731,7 @@ void MainWindow::restoreConnections()
 
     qDebug() << "XenAdmin Qt: Found" << profiles.size() << "saved connection profile(s)";
 
-    Xen::ConnectionsManager* connMgr = this->m_xenLib ? this->m_xenLib->getConnectionsManager() : nullptr;
+    Xen::ConnectionsManager* connMgr = this->m_xenLib ? Xen::ConnectionsManager::instance() : nullptr;
     if (!connMgr)
     {
         qWarning() << "XenAdmin Qt: ConnectionsManager not available, skipping restore";
@@ -1762,31 +1771,141 @@ void MainWindow::restoreConnections()
     }
 }
 
-void MainWindow::saveConnections()
+void MainWindow::SaveServerList()
 {
-    qDebug() << "XenAdmin Qt: Saving current connections...";
+    qDebug() << "XenAdmin Qt: Saving server list...";
 
-    // Check if save session is enabled
-    if (!SettingsManager::instance().getSaveSession())
+    Xen::ConnectionsManager* connMgr = this->m_xenLib ? Xen::ConnectionsManager::instance() : nullptr;
+    if (!connMgr)
     {
-        qDebug() << "XenAdmin Qt: Save session is disabled, skipping connection save";
+        qWarning() << "XenAdmin Qt: ConnectionsManager not available, skipping save";
         return;
     }
 
-    // Get all current connection profiles and update their state
-    QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+    const bool saveSession = SettingsManager::instance().getSaveSession();
 
-    // Update connection states based on current connections
-    // For now, we mark all as disconnected since we're closing
-    // In a future version, we could track which connections are still active
-    for (ConnectionProfile& profile : profiles)
+    QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+    QMap<QString, ConnectionProfile> existing;
+    for (const ConnectionProfile& profile : profiles)
     {
-        // Mark as disconnected when app closes
-        profile.setSaveDisconnected(!m_xenLib->isConnected());
+        const QString key = profile.hostname() + ":" + QString::number(profile.port());
+        existing.insert(key, profile);
+        if (!profile.name().isEmpty())
+            SettingsManager::instance().removeConnectionProfile(profile.name());
+    }
+
+    const QList<XenConnection*> connections = connMgr->getAllConnections();
+    for (XenConnection* connection : connections)
+    {
+        if (!connection)
+            continue;
+
+        const QString hostname = connection->GetHostname();
+        const int port = connection->GetPort();
+        const QString key = hostname + ":" + QString::number(port);
+        const QString profileName = port == 443
+            ? hostname
+            : QString("%1:%2").arg(hostname).arg(port);
+
+        ConnectionProfile profile = existing.value(key, ConnectionProfile(profileName, hostname, port,
+                                                                          connection->GetUsername(), false));
+
+        profile.setName(profileName);
+        profile.setHostname(hostname);
+        profile.setPort(port);
+        profile.setUsername(connection->GetUsername());
+        profile.setSaveDisconnected(!connection->IsConnected());
+        profile.setPoolMembers(connection->GetPoolMembers());
+
+        const bool rememberPassword = saveSession && !connection->GetPassword().isEmpty();
+        profile.setRememberPassword(rememberPassword);
+        if (rememberPassword)
+            profile.setPassword(connection->GetPassword());
+        else
+            profile.setPassword(QString());
+
+        QString friendlyName = profile.friendlyName();
+        XenCache* cache = connection->GetCache();
+        if (cache)
+        {
+            const QList<QVariantMap> pools = cache->GetAllData("pool");
+            if (!pools.isEmpty())
+            {
+                friendlyName = pools.first().value("name_label").toString();
+                if (friendlyName.isEmpty())
+                    friendlyName = pools.first().value("name").toString();
+            }
+        }
+
+        if (!friendlyName.isEmpty())
+            profile.setFriendlyName(friendlyName);
+
         SettingsManager::instance().saveConnectionProfile(profile);
     }
 
-    qDebug() << "XenAdmin Qt: Saved" << profiles.size() << "connection profile(s)";
+    qDebug() << "XenAdmin Qt: Saved" << connections.size() << "connection profile(s)";
+    SettingsManager::instance().sync();
+}
+
+void MainWindow::updateConnectionProfileFromCache(XenConnection* connection, XenCache* cache)
+{
+    if (!connection || !cache)
+        return;
+
+    if (!SettingsManager::instance().getSaveSession())
+        return;
+
+    const QString hostname = connection->GetHostname();
+    const int port = connection->GetPort();
+    const QString profileName = port == 443
+        ? hostname
+        : QString("%1:%2").arg(hostname).arg(port);
+
+    QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+    ConnectionProfile targetProfile;
+    bool found = false;
+
+    for (const ConnectionProfile& profile : profiles)
+    {
+        if (profile.hostname() == hostname && profile.port() == port)
+        {
+            targetProfile = profile;
+            found = true;
+            break;
+        }
+    }
+
+    if (!found)
+    {
+        targetProfile = ConnectionProfile(profileName, hostname, port, connection->GetUsername(),
+                                          !connection->GetPassword().isEmpty());
+    }
+
+    targetProfile.setName(profileName);
+    targetProfile.setHostname(hostname);
+    targetProfile.setPort(port);
+    targetProfile.setUsername(connection->GetUsername());
+    targetProfile.setSaveDisconnected(false);
+
+    const bool rememberPassword = !connection->GetPassword().isEmpty();
+    targetProfile.setRememberPassword(rememberPassword);
+    if (rememberPassword)
+        targetProfile.setPassword(connection->GetPassword());
+
+    QString poolName;
+    const QList<QVariantMap> pools = cache->GetAllData("pool");
+    if (!pools.isEmpty())
+    {
+        poolName = pools.first().value("name_label").toString();
+        if (poolName.isEmpty())
+            poolName = pools.first().value("name").toString();
+    }
+
+    if (!poolName.isEmpty())
+        targetProfile.setFriendlyName(poolName);
+
+    SettingsManager::instance().saveConnectionProfile(targetProfile);
+    SettingsManager::instance().updateServerHistory(profileName);
     SettingsManager::instance().sync();
 }
 

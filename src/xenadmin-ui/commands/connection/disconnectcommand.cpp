@@ -25,51 +25,61 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "reconnecthostcommand.h"
+#include "disconnectcommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
 #include "xen/network/connection.h"
-#include "xen/host.h"
-#include "../../network/xenconnectionui.h"
+#include <QMessageBox>
+#include <QMetaObject>
 
-ReconnectHostCommand::ReconnectHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
+DisconnectCommand::DisconnectCommand(MainWindow* mainWindow,
+                                     XenConnection* connection,
+                                     bool prompt,
+                                     QObject* parent)
+    : Command(mainWindow, parent),
+      m_connection(connection),
+      m_prompt(prompt)
 {
 }
 
-bool ReconnectHostCommand::CanRun() const
+bool DisconnectCommand::CanRun() const
 {
-    // Can reconnect if connection is disconnected
-    return this->isConnectionDisconnected();
+    return m_connection && (m_connection->IsConnected() || m_connection->InProgress());
 }
 
-void ReconnectHostCommand::Run()
+void DisconnectCommand::Run()
 {
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
+    if (!CanRun())
         return;
 
-    XenConnection* conn = host->GetConnection();
-    if (!conn)
+    if (m_prompt && !confirmDisconnect())
         return;
 
-    this->mainWindow()->showStatusMessage("Reconnecting...");
-    XenConnectionUI::BeginConnect(conn, true, this->mainWindow(), false);
+    doDisconnect();
 }
 
-QString ReconnectHostCommand::MenuText() const
+QString DisconnectCommand::MenuText() const
 {
-    return "Reconnect";
+    return "Disconnect";
 }
 
-bool ReconnectHostCommand::isConnectionDisconnected() const
+bool DisconnectCommand::confirmDisconnect() const
 {
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
-        return false;
+    return QMessageBox::question(this->mainWindow(),
+                                 "Disconnect",
+                                 "Are you sure you want to disconnect from the server?",
+                                 QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes;
+}
 
-    XenConnection* conn = host->GetConnection();
-    if (!conn)
-        return false;
+void DisconnectCommand::doDisconnect()
+{
+    if (!m_connection)
+        return;
 
-    return !conn->IsConnected();
+    this->mainWindow()->showStatusMessage("Disconnecting...");
+
+    m_connection->EndConnect(true, false);
+    QMetaObject::invokeMethod(this->mainWindow(), "SaveServerList", Qt::QueuedConnection);
+
+    // TODO: mirror C# DisconnectCommand.ConfirmCancelRunningActions by canceling running actions
+    // and showing a progress dialog while tasks are canceled.
 }

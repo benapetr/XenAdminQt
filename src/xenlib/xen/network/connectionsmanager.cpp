@@ -523,7 +523,7 @@ bool ConnectionsManager::isAutoReconnectionEnabled() const
 
 void ConnectionsManager::reconnectConnection(XenConnection* connection)
 {
-    if (!connection || !this->m_autoReconnectionEnabled)
+    if (!connection)
     {
         return;
     }

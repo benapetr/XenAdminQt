@@ -180,6 +180,7 @@ class XENLIB_EXPORT XenConnection : public QObject
         void connectionClosed();
         void connectionReconnecting();
         void beforeConnectionEnd();
+        void clearingCache();
         void connectionMessageChanged(const QString& message);
         void beforeMajorChange(bool background);
         void afterMajorChange(bool background);

@@ -27,7 +27,10 @@
 
 #include "removehostcommand.h"
 #include "../../mainwindow.h"
+#include "../../settingsmanager.h"
+#include "../../connectionprofile.h"
 #include "xen/network/connection.h"
+#include "xen/network/connectionsmanager.h"
 #include "xen/host.h"
 #include <QMessageBox>
 #include <QDebug>
@@ -78,24 +81,30 @@ void RemoveHostCommand::Run()
     qDebug() << "RemoveHostCommand: Removing host connection" << hostName << "(" << hostname << ")";
 
     // Disconnect if still connected
-    if (connection->IsConnected())
+    if (connection->IsConnected() || connection->InProgress())
     {
         qDebug() << "RemoveHostCommand: Disconnecting from" << hostname;
-        connection->Disconnect();
+        connection->EndConnect(true, false);
     }
 
-    // Remove from connection profiles
-    // This will be handled by MainWindow when connection is closed
-    this->mainWindow()->showStatusMessage(QString("Removed connection to '%1'").arg(hostName), 5000);
+    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
+    if (manager)
+        manager->removeConnection(connection);
 
-    // TODO: Implement proper connection removal via ConnectionManager
-    // For now, just disconnect - MainWindow should handle the rest
-    QMessageBox::information(
-        this->mainWindow(),
-        "Remove Host",
-        QString("Connection to '%1' has been disconnected.\n\n"
-                "Full connection removal from server list will be implemented in ConnectionManager.")
-            .arg(hostName));
+    QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+    for (const ConnectionProfile& profile : profiles)
+    {
+        if (profile.hostname() == hostname && profile.port() == connection->GetPort())
+        {
+            if (!profile.name().isEmpty())
+                SettingsManager::instance().removeConnectionProfile(profile.name());
+        }
+    }
+
+    SettingsManager::instance().sync();
+    this->mainWindow()->SaveServerList();
+    this->mainWindow()->showStatusMessage(QString("Removed connection to '%1'").arg(hostName), 5000);
+    this->mainWindow()->refreshServerTree();
 }
 
 QString RemoveHostCommand::MenuText() const

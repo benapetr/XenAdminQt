@@ -116,7 +116,8 @@ QMenu* ContextMenuBuilder::buildContextMenu(QTreeWidgetItem* item, QWidget* pare
 
     QMenu* menu = new QMenu(parent);
 
-    if (objectType == "disconnected_host")
+    const QString itemType = item->data(0, Qt::UserRole + 1).toString();
+    if (objectType == "disconnected_host" || itemType == "disconnected_host")
     {
         // C# pattern: disconnected servers show Connect, Forget Password, Remove menu items
         this->buildDisconnectedHostContextMenu(menu, item);

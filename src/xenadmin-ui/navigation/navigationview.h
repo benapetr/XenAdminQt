@@ -31,6 +31,7 @@
 #include <QWidget>
 #include <QTreeWidget>
 #include <QTimer>
+#include <QSharedPointer>
 #include "navigationpane.h" // For NavigationMode enum
 
 QT_BEGIN_NAMESPACE
@@ -41,6 +42,11 @@ namespace Ui
 QT_END_NAMESPACE
 
 class XenLib;
+class XenConnection;
+class XenCache;
+class Host;
+class XenCache;
+class XenConnection;
 
 /**
  * @brief Navigation tree view widget

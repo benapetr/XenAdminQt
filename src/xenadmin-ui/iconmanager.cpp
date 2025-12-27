@@ -32,8 +32,8 @@
 IconManager::IconManager()
 {
     // Load static icons from resources
-    this->m_connectedIcon = QIcon(":/images/000_TreeConnected_h32bit_16.png");
-    this->m_disconnectedIcon = QIcon(":/images/000_ServerDisconnected_h32bit_16.png");
+    this->m_connectedIcon = QIcon(":/tree-icons/host.png");
+    this->m_disconnectedIcon = QIcon(":/tree-icons/host_disconnected.png");
     this->m_connectingIcon = this->createStatusIcon(QColor(255, 165, 0)); // Orange for connecting
 }
 

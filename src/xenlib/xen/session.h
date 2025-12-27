@@ -47,6 +47,7 @@ namespace XenAPI
 
             bool Login(const QString& username, const QString& password);
             void Logout();
+            void LogoutWithoutDisconnect();
             bool IsLoggedIn() const;
 
             // Session duplication for separate TCP streams

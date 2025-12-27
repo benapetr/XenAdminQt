@@ -98,7 +98,7 @@ void MigrateVirtualDiskCommand::Run()
                     reason = tr("Cannot migrate: VDI has no SR reference.");
                 } else
                 {
-                    QVariantMap srData = this->xenLib()->getCache()->ResolveObjectData("sr", srRef);
+                    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
                     if (srData.isEmpty())
                         reason = tr("Cannot migrate: Unable to retrieve SR information.");
                     else if (this->isHBALunPerVDI(srData))

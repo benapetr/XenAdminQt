@@ -48,6 +48,7 @@ QT_END_NAMESPACE
 QT_FORWARD_DECLARE_CLASS(XenLib)
 QT_FORWARD_DECLARE_CLASS(DebugWindow)
 QT_FORWARD_DECLARE_CLASS(AsyncOperation)
+
 class BaseTabPage;
 class PlaceholderWidget;
 class SettingsManager;
@@ -63,6 +64,7 @@ class QToolButton;
 class NavigationHistory;
 class Command;
 class NavigationPane;
+class XenCache;
 
 class MainWindow : public QMainWindow
 {
@@ -94,6 +96,8 @@ class MainWindow : public QMainWindow
 
         // Update navigation button states (called by NavigationHistory)
         void updateHistoryButtons(bool canGoBack, bool canGoForward);
+        void SaveServerList();
+        void SaveConnections(); // OBSOLETE: use SaveServerList (C# naming parity)
 
     private slots:
         void connectToServer();
@@ -261,7 +265,7 @@ class MainWindow : public QMainWindow
         void saveSettings();
         void loadSettings();
         void restoreConnections();
-        void saveConnections();
+        void updateConnectionProfileFromCache(XenConnection* connection, XenCache* cache);
 
         // Connection attempt context
         struct ConnectionContext

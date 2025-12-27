@@ -55,14 +55,7 @@ AddServerDialog::AddServerDialog(XenConnection* connection, bool changedPass, QW
 
     ui->ServerNameComboBox->setEditable(true);
 
-    const QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
-    QStringList history;
-    history.reserve(profiles.size());
-    for (const ConnectionProfile& profile : profiles)
-    {
-        if (!profile.hostname().isEmpty())
-            history.append(profile.hostname());
-    }
+    QStringList history = SettingsManager::instance().getServerHistory();
     history.removeDuplicates();
     std::sort(history.begin(), history.end(), [](const QString& a, const QString& b) {
         return a.toLower() < b.toLower();

@@ -28,6 +28,7 @@
 #include "connectallhostscommand.h"
 #include "../../mainwindow.h"
 #include "xen/network/connectionsmanager.h"
+#include "../../network/xenconnectionui.h"
 
 ConnectAllHostsCommand::ConnectAllHostsCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
@@ -41,12 +42,17 @@ bool ConnectAllHostsCommand::CanRun() const
 
 void ConnectAllHostsCommand::Run()
 {
+    this->mainWindow()->showStatusMessage("Connecting to all servers...");
     Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
     if (!manager)
         return;
 
-    this->mainWindow()->showStatusMessage("Connecting to all servers...");
-    manager->connectAll();
+    QList<XenConnection*> allConnections = manager->getAllConnections();
+    for (XenConnection* conn : allConnections)
+    {
+        if (conn && !conn->IsConnected() && !conn->InProgress())
+            XenConnectionUI::BeginConnect(conn, false, this->mainWindow(), false);
+    }
 }
 
 QString ConnectAllHostsCommand::MenuText() const

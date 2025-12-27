@@ -77,6 +77,10 @@ class SettingsManager : public QObject
         QString getLastConnectedServer() const;
         void setLastConnectedServer(const QString& id);
 
+        // Server history (matches C# Settings.UpdateServerHistory)
+        QStringList getServerHistory() const;
+        void updateServerHistory(const QString& hostnameWithPort);
+
         // Connection profiles
         void saveConnectionProfile(const ConnectionProfile& profile);
         QList<ConnectionProfile> loadConnectionProfiles() const;

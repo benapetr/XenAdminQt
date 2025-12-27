@@ -484,11 +484,6 @@ XenCertificateManager* XenLib::getCertificateManager() const
     return this->d->certManager;
 }
 
-Xen::ConnectionsManager* XenLib::getConnectionsManager() const
-{
-    return Xen::ConnectionsManager::instance();
-}
-
 XenCache* XenLib::getCache() const
 {
     // Cache is now owned by connection (matching C# architecture)

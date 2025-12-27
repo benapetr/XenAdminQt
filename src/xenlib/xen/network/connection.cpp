@@ -38,6 +38,7 @@
 #include <QtCore/QMutex>
 #include <QtCore/QMutexLocker>
 #include <QtCore/QQueue>
+#include <QtCore/QPointer>
 #include <QtCore/QDebug>
 #include <QtCore/QDateTime>
 #include <QtCore/QEventLoop>
@@ -394,26 +395,55 @@ void XenConnection::BeginConnect(bool initiateCoordinatorSearch,
 void XenConnection::EndConnect(bool clearCache, bool exiting)
 {
     Q_UNUSED(exiting);
-
-    if (!this->d->connectTask)
-        return;
+    ConnectTask* task = this->d->connectTask;
+    this->d->connectTask = nullptr;
 
     emit this->beforeConnectionEnd();
 
-    this->d->connectTask->Cancelled = true;
+    const bool allowBlocking = QThread::currentThread() != this->thread();
+    const Qt::ConnectionType stopConnectionType = allowBlocking
+        ? Qt::BlockingQueuedConnection
+        : Qt::QueuedConnection;
+
+    if (task)
+    {
+        task->Cancelled = true;
+        Session* session = task->Session;
+        task->Session = nullptr;
+        if (session)
+        {
+            if (exiting)
+            {
+                session->LogoutWithoutDisconnect();
+                session->deleteLater();
+            } else
+            {
+                QPointer<Session> sessionPtr(session);
+                QThread* logoutThread = QThread::create([sessionPtr]() {
+                    if (!sessionPtr)
+                        return;
+                    sessionPtr->LogoutWithoutDisconnect();
+                    QMetaObject::invokeMethod(sessionPtr, "deleteLater", Qt::QueuedConnection);
+                });
+                connect(logoutThread, &QThread::finished, logoutThread, &QObject::deleteLater);
+                logoutThread->start();
+            }
+        }
+    }
 
     if (this->d->eventPoller)
     {
         QMetaObject::invokeMethod(this->d->eventPoller, [this]() {
             this->d->eventPoller->stop();
             this->d->eventPoller->reset();
-        }, Qt::BlockingQueuedConnection);
+        }, stopConnectionType);
     }
 
     if (this->d->eventPollerThread && this->d->eventPollerThread->isRunning())
     {
         this->d->eventPollerThread->quit();
-        this->d->eventPollerThread->wait(5000);
+        if (allowBlocking)
+            this->d->eventPollerThread->wait(5000);
     }
 
     if (this->d->eventPoller)
@@ -432,34 +462,48 @@ void XenConnection::EndConnect(bool clearCache, bool exiting)
     {
         this->d->connectThread->requestInterruption();
         this->d->connectThread->quit();
-        this->d->connectThread->wait(5000);
+        if (allowBlocking)
+            this->d->connectThread->wait(5000);
     }
 
     if (this->d->reconnectionTimer)
     {
         this->d->reconnectionTimer->stop();
     }
-    Session* session = this->d->connectTask->Session;
-    if (session)
+
+    QString poolName;
+    bool haEnabled = false;
+    QString coordinatorAddress;
+    this->updatePoolMembersFromCache(&poolName, &haEnabled, &coordinatorAddress);
+
+    if (clearCache)
     {
-        session->Logout();
-        QObject* owner = session->parent();
-        if (owner)
-            delete owner;
-        else
-            delete session;
+        emit this->clearingCache();
+        {
+            QMutexLocker locker(&this->d->eventQueueMutex);
+            this->d->eventQueue.clear();
+            this->d->cacheUpdaterRunning = false;
+            this->d->updatesWaiting = false;
+        }
+        if (this->d->cacheUpdateTimer)
+            this->d->cacheUpdateTimer->stop();
+
+        if (this->d->cache)
+        {
+            QMetaObject::invokeMethod(this->d->cache, [cache = this->d->cache]() {
+                cache->Clear();
+            }, Qt::QueuedConnection);
+        }
     }
 
-    // TODO: mirror C# ClearCache path (ClearingCache event, event queue flush, cache clear on background thread).
-    if (clearCache && this->d->cache)
-    {
-        this->d->cache->Clear();
-    }
+    this->d->cacheIsPopulated = false;
+    if (!this->d->preventResettingPasswordPrompt)
+        this->d->promptForNewPassword = PasswordPrompt();
 
-    // TODO: reset password prompt handler when PreventResettingPasswordPrompt is false (C#).
+    if (task)
+        delete task;
 
-    delete this->d->connectTask;
-    this->d->connectTask = nullptr;
+    this->d->connected = false;
 
     emit this->connectionClosed();
     emit this->connectionStateChanged();

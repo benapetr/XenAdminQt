@@ -40,6 +40,8 @@
 #include "../../xenlib/xen/host.h"
 #include "../../xenlib/xen/pool.h"
 #include "../../xenlib/xen/sr.h"
+#include "../settingsmanager.h"
+#include "../connectionprofile.h"
 #include <algorithm>
 #include <QDebug>
 
@@ -113,6 +115,42 @@ static int naturalCompare(const QString& s1, const QString& s2)
 
     // Strings are equal up to minLen, shorter one is smaller
     return len1 - len2;
+}
+
+QSharedPointer<Host> buildDisconnectedHostObject(XenConnection* connection, XenCache* cache)
+{
+    if (!connection)
+        return QSharedPointer<Host>();
+
+    const QString hostname = connection->GetHostname();
+    const QString ref = connection->GetPort() == 443
+        ? hostname
+        : QString("%1:%2").arg(hostname).arg(connection->GetPort());
+    QString displayName = hostname;
+
+    const QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+    for (const ConnectionProfile& profile : profiles)
+    {
+        if (profile.hostname() == hostname && profile.port() == connection->GetPort())
+        {
+            displayName = profile.displayName();
+            break;
+        }
+    }
+
+    QVariantMap record;
+    record["ref"] = ref;
+    record["opaqueRef"] = ref;
+    record["name_label"] = displayName;
+    record["name_description"] = QString();
+    record["hostname"] = hostname;
+    record["address"] = hostname;
+    record["enabled"] = false;
+
+    if (cache)
+        cache->Update("host", ref, record);
+
+    return QSharedPointer<Host>(new Host(connection, ref));
 }
 
 /**
@@ -385,7 +423,7 @@ void NavigationView::buildInfrastructureTree()
     }
 
     // Get ConnectionsManager and Cache
-    Xen::ConnectionsManager* connMgr = this->m_xenLib->getConnectionsManager();
+    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     XenCache* cache = this->m_xenLib->getCache();
 
     qDebug() << "NavigationView::buildInfrastructureTree: connMgr=" << connMgr << "cache=" << cache;
@@ -431,9 +469,10 @@ void NavigationView::buildInfrastructureTree()
             // C# creates a fake Host object with opaque_ref = HostnameWithPort (GroupAlg.cs line 97)
             // This allows disconnected servers to appear in tree with context menu
             QTreeWidgetItem* connItem = new QTreeWidgetItem(this->ui->treeWidget);
-            connItem->setText(0, connection->GetHostname()); // Show hostname WITHOUT "(disconnected)"
-            // Store connection object as data (matches C# where fake Host.Connection points to XenConnection)
-            connItem->setData(0, Qt::UserRole, QVariant::fromValue(connection));
+            QSharedPointer<Host> disconnectedHost = buildDisconnectedHostObject(connection, cache);
+            connItem->setText(0, disconnectedHost ? disconnectedHost->GetName() : connection->GetHostname());
+            // Store fake Host object (matches C# disconnected host behavior)
+            connItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(disconnectedHost));
             connItem->setData(0, Qt::UserRole + 1, QString("disconnected_host")); // Object type for context menu
 
             // Set disconnected host icon (C# uses HostDisconnected icon)
@@ -683,7 +722,7 @@ void NavigationView::buildObjectsTree()
     }
 
     // Get ConnectionsManager and Cache
-    Xen::ConnectionsManager* connMgr = this->m_xenLib->getConnectionsManager();
+    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     XenCache* cache = this->m_xenLib->getCache();
 
     if (!connMgr || !cache)
@@ -949,8 +988,9 @@ void NavigationView::buildObjectsTree()
         for (XenConnection* conn : disconnectedConnections)
         {
             QTreeWidgetItem* disconnectedItem = new QTreeWidgetItem(disconnectedHostsGroup);
-            disconnectedItem->setText(0, conn->GetHostname());
-            disconnectedItem->setData(0, Qt::UserRole, QVariant::fromValue(conn));
+            QSharedPointer<Host> disconnectedHost = buildDisconnectedHostObject(conn, cache);
+            disconnectedItem->setText(0, disconnectedHost ? disconnectedHost->GetName() : conn->GetHostname());
+            disconnectedItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(disconnectedHost));
             disconnectedItem->setData(0, Qt::UserRole + 1, QString("disconnected_host"));
 
             // Set disconnected host icon
