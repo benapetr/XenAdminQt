@@ -830,7 +830,7 @@ void NetworkTabPage::onConfigureClicked()
     }
 
     // Open NetworkingProperties dialog with selected PIF
-    NetworkingPropertiesDialog dialog(this->m_xenLib, selectedPifRef, this);
+    NetworkingPropertiesDialog dialog(this->m_connection, selectedPifRef, this);
     if (dialog.exec() == QDialog::Accepted)
     {
         // Refresh the IP configuration display after changes
@@ -1273,12 +1273,12 @@ void NetworkTabPage::onEditNetwork()
     {
         // C#: launchHostOrPoolNetworkSettingsDialog()
         QString selectedNetworkRef = this->getSelectedNetworkRef();
-        if (selectedNetworkRef.isEmpty() || !this->m_xenLib)
+        if (selectedNetworkRef.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
         {
             return;
         }
 
-        QVariantMap networkData = this->m_xenLib->getCache()->ResolveObjectData("network", selectedNetworkRef);
+        QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", selectedNetworkRef);
         QString networkUuid = networkData.value("uuid", "").toString();
 
         if (networkUuid.isEmpty())
@@ -1288,7 +1288,7 @@ void NetworkTabPage::onEditNetwork()
         }
 
         // Launch network properties dialog
-        NetworkPropertiesDialog dialog(this->m_xenLib, networkUuid, this);
+        NetworkPropertiesDialog dialog(this->m_connection, networkUuid, this);
 
         if (dialog.exec() == QDialog::Accepted)
         {
@@ -1821,4 +1821,3 @@ QString NetworkTabPage::getPifNetworkSriov(const QVariantMap& pifData) const
 
     return QString();
 }
-

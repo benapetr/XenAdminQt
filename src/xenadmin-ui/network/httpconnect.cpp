@@ -41,30 +41,30 @@ HTTPConnect::HTTPConnect(QObject* parent)
 
 HTTPConnect::~HTTPConnect()
 {
-    cleanupSocket(false);
+    this->cleanupSocket(false);
 
-    if (m_timeoutTimer)
+    if (this->m_timeoutTimer)
     {
-        m_timeoutTimer->stop();
-        m_timeoutTimer->deleteLater();
-        m_timeoutTimer = nullptr;
+        this->m_timeoutTimer->stop();
+        this->m_timeoutTimer->deleteLater();
+        this->m_timeoutTimer = nullptr;
     }
 }
 
 void HTTPConnect::connectToConsoleAsync(const QUrl& consoleUrl, const QString& sessionId)
 {
-    m_lastError.clear();
+    this->m_lastError.clear();
 
     // Validate input
     if (!consoleUrl.isValid())
     {
-        failWithError("Invalid console URL");
+        this->failWithError("Invalid console URL");
         return;
     }
 
     if (sessionId.isEmpty())
     {
-        failWithError("Session ID is required");
+        this->failWithError("Session ID is required");
         return;
     }
 
@@ -73,90 +73,90 @@ void HTTPConnect::connectToConsoleAsync(const QUrl& consoleUrl, const QString& s
 
     if (host.isEmpty())
     {
-        failWithError("No host in console URL");
+        this->failWithError("No host in console URL");
         return;
     }
 
     // Clean up any previous connection
-    cleanupSocket();
+    this->cleanupSocket();
 
     // Store connection parameters
-    m_consoleUrl = consoleUrl;
-    m_sessionId = sessionId;
-    m_responseBuffer.clear();
-    m_state = ConnectingSSL;
+    this->m_consoleUrl = consoleUrl;
+    this->m_sessionId = sessionId;
+    this->m_responseBuffer.clear();
+    this->m_state = ConnectingSSL;
 
     qDebug() << "HTTPConnect: Connecting to" << host << ":" << port;
     qDebug() << "HTTPConnect: Console URL:" << consoleUrl.toString();
 
     // Create SSL socket
-    m_socket = new QSslSocket(this);
+    this->m_socket = new QSslSocket(this);
 
     // Configure SSL to accept XenServer self-signed certificates
-    QSslConfiguration sslConfig = m_socket->sslConfiguration();
+    QSslConfiguration sslConfig = this->m_socket->sslConfiguration();
     sslConfig.setPeerVerifyMode(QSslSocket::VerifyNone); // Accept self-signed certs
     sslConfig.setProtocol(QSsl::TlsV1_2OrLater);
-    m_socket->setSslConfiguration(sslConfig);
+    this->m_socket->setSslConfiguration(sslConfig);
 
     // Set socket options
-    m_socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
-    m_socket->setReadBufferSize(0); // Unlimited read buffer
+    this->m_socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
+    this->m_socket->setReadBufferSize(0); // Unlimited read buffer
 
     // Connect signals (async)
-    connect(m_socket, &QSslSocket::encrypted,
+    connect(this->m_socket, &QSslSocket::encrypted,
             this, &HTTPConnect::onSslEncrypted);
-    connect(m_socket, QOverload<const QList<QSslError>&>::of(&QSslSocket::sslErrors),
+    connect(this->m_socket, QOverload<const QList<QSslError>&>::of(&QSslSocket::sslErrors),
             this, &HTTPConnect::onSslError);
-    connect(m_socket, QOverload<QAbstractSocket::SocketError>::of(&QSslSocket::errorOccurred),
+    connect(this->m_socket, QOverload<QAbstractSocket::SocketError>::of(&QSslSocket::errorOccurred),
             this, &HTTPConnect::onSocketError);
-    connect(m_socket, &QSslSocket::readyRead,
+    connect(this->m_socket, &QSslSocket::readyRead,
             this, &HTTPConnect::onReadyRead);
 
     // Create timeout timer (30 seconds for SSL connection)
-    if (!m_timeoutTimer)
+    if (!this->m_timeoutTimer)
     {
-        m_timeoutTimer = new QTimer(this);
-        m_timeoutTimer->setSingleShot(true);
-        connect(m_timeoutTimer, &QTimer::timeout,
+        this->m_timeoutTimer = new QTimer(this);
+        this->m_timeoutTimer->setSingleShot(true);
+        connect(this->m_timeoutTimer, &QTimer::timeout,
                 this, &HTTPConnect::onConnectionTimeout);
     }
-    m_timeoutTimer->start(30000); // 30 second timeout
+    this->m_timeoutTimer->start(30000); // 30 second timeout
 
     // Start async SSL connection
-    m_socket->connectToHostEncrypted(host, port);
+    this->m_socket->connectToHostEncrypted(host, port);
 }
 
 void HTTPConnect::onSslEncrypted()
 {
-    if (m_state != ConnectingSSL)
+    if (this->m_state != ConnectingSSL)
     {
         return;
     }
 
-    if (!m_socket)
+    if (!this->m_socket)
     {
-        failWithError("Socket invalid after SSL handshake");
+        this->failWithError("Socket invalid after SSL handshake");
         return;
     }
 
     qDebug() << "HTTPConnect: SSL connection established";
 
     // Stop timeout timer
-    if (m_timeoutTimer)
+    if (this->m_timeoutTimer)
     {
-        m_timeoutTimer->stop();
+        this->m_timeoutTimer->stop();
     }
 
     // Send HTTP CONNECT request
-    m_state = SendingConnect;
-    sendConnectRequest();
+    this->m_state = SendingConnect;
+    this->sendConnectRequest();
 }
 
 void HTTPConnect::sendConnectRequest()
 {
-    if (!m_socket)
+    if (!this->m_socket)
     {
-        failWithError("Socket is null before sending CONNECT");
+        this->failWithError("Socket is null before sending CONNECT");
         return;
     }
 
@@ -167,16 +167,16 @@ void HTTPConnect::sendConnectRequest()
     // Cookie: session_id=sessionId
     // (blank line)
 
-    QString pathAndQuery = m_consoleUrl.path();
-    if (m_consoleUrl.hasQuery())
+    QString pathAndQuery = this->m_consoleUrl.path();
+    if (this->m_consoleUrl.hasQuery())
     {
-        pathAndQuery += "?" + m_consoleUrl.query();
+        pathAndQuery += "?" + this->m_consoleUrl.query();
     }
 
     QString request;
     request += QString("CONNECT %1 HTTP/1.0\r\n").arg(pathAndQuery);
-    request += QString("Host: %1\r\n").arg(m_consoleUrl.host());
-    request += QString("Cookie: session_id=%1\r\n").arg(m_sessionId);
+    request += QString("Host: %1\r\n").arg(this->m_consoleUrl.host());
+    request += QString("Cookie: session_id=%1\r\n").arg(this->m_sessionId);
     request += "\r\n"; // Empty line to end headers
 
     qDebug() << "HTTPConnect: Sending CONNECT request:";
@@ -184,66 +184,66 @@ void HTTPConnect::sendConnectRequest()
 
     // Send the request (non-blocking)
     QByteArray requestData = request.toUtf8();
-    qint64 written = m_socket->write(requestData);
+    qint64 written = this->m_socket->write(requestData);
     if (written != requestData.size())
     {
-        failWithError("Failed to write complete CONNECT request");
+        this->failWithError("Failed to write complete CONNECT request");
         return;
     }
 
-    m_socket->flush();
+    this->m_socket->flush();
 
     // Start reading response
-    m_state = ReadingResponse;
-    m_responseBuffer.clear();
+    this->m_state = ReadingResponse;
+    this->m_responseBuffer.clear();
 
     // Restart timeout timer for response (30 seconds)
-    if (m_timeoutTimer)
+    if (this->m_timeoutTimer)
     {
-        m_timeoutTimer->start(30000);
+        this->m_timeoutTimer->start(30000);
     }
 
     // If data is already available, process it
-    if (m_socket->bytesAvailable() > 0)
+    if (this->m_socket->bytesAvailable() > 0)
     {
-        onReadyRead();
+        this->onReadyRead();
     }
 }
 
 void HTTPConnect::onReadyRead()
 {
-    if (!m_socket)
+    if (!this->m_socket)
     {
-        failWithError("Socket is null during read");
+        this->failWithError("Socket is null during read");
         return;
     }
 
-    if (m_state != ReadingResponse)
+    if (this->m_state != ReadingResponse)
     {
         return;
     }
 
     // Read available data into buffer
-    m_responseBuffer.append(m_socket->readAll());
+    this->m_responseBuffer.append(this->m_socket->readAll());
 
     // Try to parse HTTP response
-    int statusCode = readHttpResponse();
+    int statusCode = this->readHttpResponse();
 
     if (statusCode == 200)
     {
         qDebug() << "HTTPConnect: Received HTTP 200 OK - tunnel established";
 
         // Stop timeout timer
-        if (m_timeoutTimer)
+        if (this->m_timeoutTimer)
         {
-            m_timeoutTimer->stop();
+            this->m_timeoutTimer->stop();
         }
 
-        m_state = Idle;
+        this->m_state = Idle;
 
         // Transfer ownership of socket to caller
-        QSslSocket* socket = m_socket;
-        m_socket = nullptr; // Don't delete it in destructor
+        QSslSocket* socket = this->m_socket;
+        this->m_socket = nullptr; // Don't delete it in destructor
 
         // Disconnect our signals so caller can use the socket
         socket->disconnect(this);
@@ -253,10 +253,10 @@ void HTTPConnect::onReadyRead()
     } else if (statusCode > 0)
     {
         // Got a response but not 200 OK
-        failWithError(QString("HTTP CONNECT failed with status code %1").arg(statusCode));
+        this->failWithError(QString("HTTP CONNECT failed with status code %1").arg(statusCode));
     }
     // else statusCode == 0 means incomplete response, wait for more data
-}
+} 
 
 int HTTPConnect::readHttpResponse()
 {
@@ -268,10 +268,10 @@ int HTTPConnect::readHttpResponse()
     bool firstLine = true;
     int pos = 0;
 
-    while (pos < m_responseBuffer.size())
+    while (pos < this->m_responseBuffer.size())
     {
         // Find next line ending
-        int lineEnd = m_responseBuffer.indexOf("\r\n", pos);
+        int lineEnd = this->m_responseBuffer.indexOf("\r\n", pos);
         if (lineEnd == -1)
         {
             // Incomplete line, need more data
@@ -279,7 +279,7 @@ int HTTPConnect::readHttpResponse()
         }
 
         // Extract line
-        QByteArray line = m_responseBuffer.mid(pos, lineEnd - pos);
+        QByteArray line = this->m_responseBuffer.mid(pos, lineEnd - pos);
         pos = lineEnd + 2; // Skip \r\n
 
         // Check if this is the end of headers (blank line)
@@ -310,7 +310,7 @@ int HTTPConnect::readHttpResponse()
 
     // Haven't found end of headers yet, need more data
     return 0;
-}
+} 
 
 void HTTPConnect::onSslError(const QList<QSslError>& errors)
 {
@@ -322,9 +322,9 @@ void HTTPConnect::onSslError(const QList<QSslError>& errors)
     qDebug() << "HTTPConnect:" << errorStr;
 
     // Since we're accepting self-signed certificates, ignore SSL errors
-    if (m_socket)
+    if (this->m_socket)
     {
-        m_socket->ignoreSslErrors();
+        this->m_socket->ignoreSslErrors();
     }
 }
 
@@ -332,19 +332,19 @@ void HTTPConnect::onSocketError(QAbstractSocket::SocketError socketError)
 {
     Q_UNUSED(socketError);
 
-    if (m_socket)
+    if (this->m_socket)
     {
-        QString error = m_socket->errorString();
+        QString error = this->m_socket->errorString();
         qDebug() << "HTTPConnect: Socket error:" << error;
-        failWithError(QString("Socket error: %1").arg(error));
+        this->failWithError(QString("Socket error: %1").arg(error));
     }
-}
+} 
 
 void HTTPConnect::onConnectionTimeout()
 {
     QString timeoutMsg;
 
-    switch (m_state)
+    switch (this->m_state)
     {
     case ConnectingSSL:
         timeoutMsg = "Timeout waiting for SSL connection";
@@ -361,43 +361,43 @@ void HTTPConnect::onConnectionTimeout()
     }
 
     qDebug() << "HTTPConnect:" << timeoutMsg;
-    failWithError(timeoutMsg);
-}
+    this->failWithError(timeoutMsg);
+} 
 
 void HTTPConnect::failWithError(const QString& error)
 {
-    m_lastError = error;
-    m_state = Idle;
+    this->m_lastError = error;
+    this->m_state = Idle;
 
     // Stop timeout timer
-    if (m_timeoutTimer)
+    if (this->m_timeoutTimer)
     {
-        m_timeoutTimer->stop();
+        this->m_timeoutTimer->stop();
     }
 
-    cleanupSocket();
+    this->cleanupSocket();
 
     // Defer error signal emission to avoid crash if receiver calls deleteLater() on sender
     // This ensures failWithError() completes before object deletion
     QTimer::singleShot(0, this, [this]() {
-        emit this->error(m_lastError);
+        emit this->error(this->m_lastError);
     });
-}
+} 
 
 void HTTPConnect::cleanupSocket(bool closeConnection)
 {
-    if (!m_socket)
+    if (!this->m_socket)
         return;
 
     // Disconnect to prevent signal callbacks after cleanup
-    m_socket->disconnect(this);
+    this->m_socket->disconnect(this);
 
     if (closeConnection)
     {
-        m_socket->disconnectFromHost();
+        this->m_socket->disconnectFromHost();
     }
 
     // Safe async delete; QPointer will null itself if already destroyed elsewhere
-    m_socket->deleteLater();
-    m_socket = nullptr;
+    this->m_socket->deleteLater();
+    this->m_socket = nullptr;
 }

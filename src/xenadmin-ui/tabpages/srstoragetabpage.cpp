@@ -78,9 +78,9 @@ bool SrStorageTabPage::isApplicableForObjectType(const QString& objectType) cons
     return objectType == "sr";
 }
 
-void SrStorageTabPage::setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void SrStorageTabPage::SetXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
 {
-    BaseTabPage::setXenObject(objectType, objectRef, objectData);
+    BaseTabPage::SetXenObject(objectType, objectRef, objectData);
 }
 
 void SrStorageTabPage::refreshContent()

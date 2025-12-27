@@ -39,28 +39,26 @@
 #include <QFormLayout>
 #include <QGroupBox>
 
-QT_FORWARD_DECLARE_CLASS(XenLib)
+class XenConnection;
 
 class NetworkPropertiesDialog : public QDialog
 {
     Q_OBJECT
 
     public:
-        explicit NetworkPropertiesDialog(XenLib* xenLib, const QString& networkUuid, QWidget* parent = nullptr);
+        explicit NetworkPropertiesDialog(XenConnection* connection, const QString& networkUuid, QWidget* parent = nullptr);
 
     private slots:
         void onOkClicked();
         void onCancelClicked();
-        void onNetworksReceived(const QVariantList& networks);
-
     private:
         void setupGeneralTab();
         void setupAdvancedTab();
-        void requestNetworkData();
+        void loadNetworkData();
         void populateNetworkData();
         void saveNetworkData();
 
-        XenLib* m_xenLib;
+        XenConnection* m_connection;
         QString m_networkUuid;
         QString m_networkRef;
         QVariantMap m_networkRecord; // Stores the received network record

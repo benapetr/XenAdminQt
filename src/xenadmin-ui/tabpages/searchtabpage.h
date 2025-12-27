@@ -77,7 +77,7 @@ public:
 
     // BaseTabPage interface
     bool isApplicableForObjectType(const QString& type) const override;
-    void setXenObject(const QString& type, const QString& ref, const QVariantMap& data) override;
+    void SetXenObject(const QString& type, const QString& ref, const QVariantMap& data) override;
     QString tabTitle() const override
     {
         return tr("Search");

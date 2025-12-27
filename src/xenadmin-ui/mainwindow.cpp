@@ -1047,7 +1047,7 @@ void MainWindow::updateTabPages(XenConnection *connection, const QString& object
         tabPage->setXenLib(this->m_xenLib);
 
         // Set the object data on the tab page
-        tabPage->setXenObject(objectType, objectRef, objectData);
+        tabPage->SetXenObject(objectType, objectRef, objectData);
 
         // Add the tab to the widget
         this->ui->mainTabWidget->addTab(tabPage, tabPage->tabTitle());
@@ -1922,7 +1922,7 @@ void MainWindow::onCacheObjectChanged(const QString& objectType, const QString& 
                 BaseTabPage* tabPage = qobject_cast<BaseTabPage*>(ui->mainTabWidget->widget(i));
                 if (tabPage)
                 {
-                    tabPage->setXenObject(objectType, objectRef, objectData);
+                    tabPage->SetXenObject(objectType, objectRef, objectData);
                 }
             }
         }

@@ -26,9 +26,9 @@
  */
 
 #include "basetabpage.h"
+#include "xenlib.h"
 
-BaseTabPage::BaseTabPage(QWidget* parent)
-    : QWidget(parent), m_xenLib(nullptr)
+BaseTabPage::BaseTabPage(QWidget* parent) : QWidget(parent), m_xenLib(nullptr)
 {
 }
 
@@ -36,7 +36,7 @@ BaseTabPage::~BaseTabPage()
 {
 }
 
-void BaseTabPage::setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void BaseTabPage::SetXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
 {
     this->m_objectType = objectType;
     this->m_objectRef = objectRef;
@@ -47,6 +47,12 @@ void BaseTabPage::setXenObject(const QString& objectType, const QString& objectR
 void BaseTabPage::setXenLib(XenLib* xenLib)
 {
     this->m_xenLib = xenLib;
+    this->m_connection = xenLib->getConnection();
+}
+
+void BaseTabPage::SetConnection(XenConnection *conn)
+{
+    this->m_connection = conn;
 }
 
 void BaseTabPage::onPageShown()

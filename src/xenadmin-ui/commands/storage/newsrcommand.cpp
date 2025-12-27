@@ -30,6 +30,7 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/newsrwizard.h"
 #include "xen/xenobject.h"
+#include "xen/network/connection.h"
 #include <QtWidgets>
 
 NewSRCommand::NewSRCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
@@ -91,7 +92,9 @@ void NewSRCommand::showNewSRWizard()
     // - If accepted, SR was successfully created (wizard shows progress dialog)
     // - If rejected, user cancelled
 
-    NewSRWizard wizard(mainWindow());
+    QSharedPointer<XenObject> ob = this->GetObject();
+    XenConnection* connection = ob ? ob->GetConnection() : nullptr;
+    NewSRWizard wizard(connection, mainWindow());
 
     if (wizard.exec() == QDialog::Accepted)
     {

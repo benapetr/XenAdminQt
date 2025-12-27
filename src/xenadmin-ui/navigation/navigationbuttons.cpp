@@ -36,21 +36,21 @@
 NavigationButtonBig::NavigationButtonBig(QWidget* parent)
     : QToolButton(parent), m_pairedItem(nullptr)
 {
-    setCheckable(true);
-    setAutoExclusive(true); // Radio button behavior
-    setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    setMinimumHeight(40);
-    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    this->setCheckable(true);
+    this->setAutoExclusive(true); // Radio button behavior
+    this->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    this->setMinimumHeight(40);
+    this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
     connect(this, &QToolButton::toggled, this, [this](bool checked) {
-        if (checked && m_pairedItem)
+        if (checked && this->m_pairedItem)
         {
             // Sync paired item without triggering signals
-            m_pairedItem->setChecked(true);
+            this->m_pairedItem->setChecked(true);
         }
         if (checked)
         {
-            emit navigationViewChanged();
+            emit this->navigationViewChanged();
         }
     });
 }
@@ -67,21 +67,21 @@ void NavigationButtonBig::setChecked(bool checked)
 NavigationButtonSmall::NavigationButtonSmall(QWidget* parent)
     : QToolButton(parent), m_pairedItem(nullptr)
 {
-    setCheckable(true);
-    setAutoExclusive(true); // Radio button behavior
-    setToolButtonStyle(Qt::ToolButtonIconOnly);
-    setIconSize(QSize(16, 16));
-    setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    this->setCheckable(true);
+    this->setAutoExclusive(true); // Radio button behavior
+    this->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    this->setIconSize(QSize(16, 16));
+    this->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     connect(this, &QToolButton::toggled, this, [this](bool checked) {
-        if (checked && m_pairedItem)
+        if (checked && this->m_pairedItem)
         {
             // Sync paired item without triggering signals
-            m_pairedItem->setChecked(true);
+            this->m_pairedItem->setChecked(true);
         }
         if (checked)
         {
-            emit navigationViewChanged();
+            emit this->navigationViewChanged();
         }
     });
 }
@@ -98,19 +98,19 @@ void NavigationButtonSmall::setChecked(bool checked)
 NavigationDropDownButtonBig::NavigationDropDownButtonBig(QWidget* parent)
     : NavigationButtonBig(parent), m_menu(nullptr)
 {
-    m_menu = new QMenu(this);
-    setMenu(m_menu);
-    setPopupMode(QToolButton::MenuButtonPopup); // Split button with dropdown arrow
+    this->m_menu = new QMenu(this);
+    this->setMenu(this->m_menu);
+    this->setPopupMode(QToolButton::MenuButtonPopup); // Split button with dropdown arrow
 }
 
 void NavigationDropDownButtonBig::setItemList(const QList<QAction*>& items)
 {
-    m_menu->clear();
+    this->m_menu->clear();
     for (QAction* action : items)
     {
-        m_menu->addAction(action);
+        this->m_menu->addAction(action);
     }
-}
+} 
 
 // ============================================================================
 // NavigationDropDownButtonSmall
@@ -119,17 +119,17 @@ void NavigationDropDownButtonBig::setItemList(const QList<QAction*>& items)
 NavigationDropDownButtonSmall::NavigationDropDownButtonSmall(QWidget* parent)
     : NavigationButtonSmall(parent), m_menu(nullptr)
 {
-    m_menu = new QMenu(this);
-    setMenu(m_menu);
-    setPopupMode(QToolButton::InstantPopup); // Show menu immediately on click
+    this->m_menu = new QMenu(this);
+    this->setMenu(this->m_menu);
+    this->setPopupMode(QToolButton::InstantPopup); // Show menu immediately on click
 }
 
 void NavigationDropDownButtonSmall::setItemList(const QList<QAction*>& items)
 {
-    m_menu->clear();
+    this->m_menu->clear();
     for (QAction* action : items)
     {
-        m_menu->addAction(action);
+        this->m_menu->addAction(action);
     }
 }
 
@@ -144,10 +144,10 @@ NotificationButtonBig::NotificationButtonBig(QWidget* parent)
 
 void NotificationButtonBig::setUnreadEntries(int count)
 {
-    if (m_unreadCount != count)
+    if (this->m_unreadCount != count)
     {
-        m_unreadCount = count;
-        update(); // Repaint to show badge
+        this->m_unreadCount = count;
+        this->update(); // Repaint to show badge
     }
 }
 
@@ -157,14 +157,14 @@ void NotificationButtonBig::paintEvent(QPaintEvent* event)
     NavigationButtonBig::paintEvent(event);
 
     // Draw unread count badge if > 0
-    if (m_unreadCount > 0)
+    if (this->m_unreadCount > 0)
     {
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
 
         // Draw red badge in top-right corner
         int badgeSize = 18;
-        int badgeX = width() - badgeSize - 4;
+        int badgeX = this->width() - badgeSize - 4;
         int badgeY = 4;
 
         painter.setBrush(QColor(200, 0, 0));
@@ -178,7 +178,7 @@ void NotificationButtonBig::paintEvent(QPaintEvent* event)
         font.setBold(true);
         painter.setFont(font);
 
-        QString countText = m_unreadCount > 99 ? "99+" : QString::number(m_unreadCount);
+        QString countText = this->m_unreadCount > 99 ? "99+" : QString::number(this->m_unreadCount);
         painter.drawText(QRect(badgeX, badgeY, badgeSize, badgeSize),
                          Qt::AlignCenter, countText);
     }
@@ -195,10 +195,10 @@ NotificationButtonSmall::NotificationButtonSmall(QWidget* parent)
 
 void NotificationButtonSmall::setUnreadEntries(int count)
 {
-    if (m_unreadCount != count)
+    if (this->m_unreadCount != count)
     {
-        m_unreadCount = count;
-        update(); // Repaint to show badge
+        this->m_unreadCount = count;
+        this->update(); // Repaint to show badge
     }
 }
 
@@ -208,14 +208,14 @@ void NotificationButtonSmall::paintEvent(QPaintEvent* event)
     NavigationButtonSmall::paintEvent(event);
 
     // Draw unread count badge if > 0
-    if (m_unreadCount > 0)
+    if (this->m_unreadCount > 0)
     {
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
 
         // Draw red badge in top-right corner (smaller for small button)
         int badgeSize = 12;
-        int badgeX = width() - badgeSize - 2;
+        int badgeX = this->width() - badgeSize - 2;
         int badgeY = 2;
 
         painter.setBrush(QColor(200, 0, 0));
@@ -229,7 +229,7 @@ void NotificationButtonSmall::paintEvent(QPaintEvent* event)
         font.setBold(true);
         painter.setFont(font);
 
-        QString countText = m_unreadCount > 99 ? "99+" : QString::number(m_unreadCount);
+        QString countText = this->m_unreadCount > 99 ? "99+" : QString::number(this->m_unreadCount);
         painter.drawText(QRect(badgeX, badgeY, badgeSize, badgeSize),
                          Qt::AlignCenter, countText);
     }

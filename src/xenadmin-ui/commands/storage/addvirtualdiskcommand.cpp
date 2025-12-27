@@ -83,7 +83,7 @@ void AddVirtualDiskCommand::Run()
 
         // Open NewVirtualDiskDialog for VM (modal)
         qDebug() << "[AddVirtualDiskCommand] Opening NewVirtualDiskDialog for VM:" << objectRef;
-        NewVirtualDiskDialog dialog(mainWindow()->xenLib(), objectRef, mainWindow());
+        NewVirtualDiskDialog dialog(connection, objectRef, mainWindow());
         if (dialog.exec() != QDialog::Accepted)
         {
             qDebug() << "[AddVirtualDiskCommand] Dialog cancelled by user";

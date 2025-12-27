@@ -30,15 +30,14 @@
 #include "xenlib.h"
 #include <QDebug>
 
-Query::Query(QueryScope* scope, QueryFilter* filter)
-    : m_scope(scope), m_filter(filter)
+Query::Query(QueryScope* scope, QueryFilter* filter) : m_scope(scope), m_filter(filter)
 {
     // C# equivalent: Query constructor
 
     // If scope is null, default to AllExcFolders
-    if (m_scope == nullptr)
+    if (this->m_scope == nullptr)
     {
-        m_scope = new QueryScope(ObjectTypes::AllExcFolders);
+        this->m_scope = new QueryScope(ObjectTypes::AllExcFolders);
     }
 
     // filter can be null (no filtering)
@@ -47,8 +46,8 @@ Query::Query(QueryScope* scope, QueryFilter* filter)
 Query::~Query()
 {
     // Clean up owned pointers
-    delete m_scope;
-    delete m_filter;
+    delete this->m_scope;
+    delete this->m_filter;
 }
 
 bool Query::match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const
@@ -65,16 +64,16 @@ bool Query::match(const QVariantMap& objectData, const QString& objectType, XenL
     QString objectName = objectData.value("name_label", objectData.value("name_description", "(unnamed)").toString()).toString();
 
     // Check if scope wants this object type
-    if (!m_scope->wantType(objectData, objectType, xenLib))
+    if (!this->m_scope->wantType(objectData, objectType, xenLib))
     {
         // qDebug() << "    Query::match() - scope rejected:" << objectType << objectName;
         return false;
     }
 
     // Check if filter matches (or there is no filter)
-    if (m_filter != nullptr)
+    if (this->m_filter != nullptr)
     {
-        QVariant filterResult = m_filter->match(objectData, objectType, xenLib);
+        QVariant filterResult = this->m_filter->match(objectData, objectType, xenLib);
 
         // If filter returns false, object doesn't match
         // If filter returns null (indeterminate), treat as match (like C# != false)
@@ -96,14 +95,14 @@ bool Query::equals(const Query* other) const
         return false;
 
     // Check filter equality
-    if ((m_filter == nullptr) != (other->m_filter == nullptr))
+    if ((this->m_filter == nullptr) != (other->m_filter == nullptr))
         return false;
 
-    if (m_filter != nullptr && !m_filter->equals(other->m_filter))
+    if (this->m_filter != nullptr && !this->m_filter->equals(other->m_filter))
         return false;
 
     // Check scope equality
-    return m_scope->equals(other->m_scope);
+    return this->m_scope->equals(other->m_scope);
 }
 
 uint Query::hashCode() const
@@ -111,8 +110,8 @@ uint Query::hashCode() const
     // C# equivalent: GetHashCode()
     // return filter == null ? scope.GetHashCode() : (filter.GetHashCode() + 1) * scope.GetHashCode();
 
-    if (m_filter == nullptr)
-        return m_scope->hashCode();
+    if (this->m_filter == nullptr)
+        return this->m_scope->hashCode();
     else
-        return (qHash(*m_filter) + 1) * m_scope->hashCode();
+        return (qHash(*this->m_filter) + 1) * this->m_scope->hashCode();
 }

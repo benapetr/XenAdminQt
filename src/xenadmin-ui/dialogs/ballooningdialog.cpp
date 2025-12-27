@@ -27,27 +27,27 @@
 
 #include "ballooningdialog.h"
 #include "ui_ballooningdialog.h"
-#include "xenlib.h"
+#include "xen/network/connection.h"
 #include "xencache.h"
 #include "operationprogressdialog.h"
 #include "xen/actions/vm/changememorysettingsaction.h"
 #include <QMessageBox>
 #include <QDebug>
 
-BallooningDialog::BallooningDialog(const QString& vmRef, XenLib* xenLib, QWidget* parent)
+BallooningDialog::BallooningDialog(const QString& vmRef, XenConnection* connection, QWidget* parent)
     : QDialog(parent),
       ui(new Ui::BallooningDialog),
       m_vmRef(vmRef),
-      m_xenLib(xenLib),
+      m_connection(connection),
       m_hasBallooning(false),
       m_isTemplate(false)
 {
     ui->setupUi(this);
 
     // Get VM data from cache
-    if (m_xenLib && m_xenLib->getCache())
+    if (m_connection && m_connection->GetCache())
     {
-        m_vmData = m_xenLib->getCache()->ResolveObjectData("vm", m_vmRef);
+        m_vmData = m_connection->GetCache()->ResolveObjectData("vm", m_vmRef);
     }
 
     if (m_vmData.isEmpty())
@@ -350,14 +350,14 @@ bool BallooningDialog::applyMemoryChanges()
     }
 
     // Create and execute the memory settings action
-    if (!m_xenLib || !m_xenLib->getConnection())
+    if (!m_connection)
     {
         QMessageBox::critical(this, tr("Error"), tr("No connection available"));
         return false;
     }
 
     ChangeMemorySettingsAction* action = new ChangeMemorySettingsAction(
-        m_xenLib->getConnection(),
+        m_connection,
         m_vmRef,
         staticMin,
         dynamicMin,

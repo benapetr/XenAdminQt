@@ -39,7 +39,6 @@ namespace Ui
     class MoveVirtualDiskDialog;
 }
 
-class XenLib;
 class XenConnection;
 
 /**

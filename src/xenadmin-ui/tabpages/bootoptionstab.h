@@ -59,7 +59,7 @@ public:
     {
         return objectType == "vm";
     }
-    void setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
+    void SetXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
 
     /**
      * Check if any boot settings have been modified.

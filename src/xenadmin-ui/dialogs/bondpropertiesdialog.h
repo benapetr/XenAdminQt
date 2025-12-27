@@ -37,14 +37,14 @@ namespace Ui
     class BondPropertiesDialog;
 }
 
-class XenLib;
+class XenConnection;
 
 class BondPropertiesDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit BondPropertiesDialog(XenLib* xenLib, const QString& hostRef, const QString& networkRef, QWidget* parent = nullptr);
+    explicit BondPropertiesDialog(XenConnection* connection, const QString& hostRef, const QString& networkRef, QWidget* parent = nullptr);
     ~BondPropertiesDialog();
 
     QString getBondMode() const;
@@ -59,7 +59,7 @@ private:
     void updateOkButtonState();
 
     Ui::BondPropertiesDialog* ui;
-    XenLib* m_xenLib;
+    XenConnection* m_connection;
     QString m_hostRef;
     QString m_networkRef;
     QMap<int, QString> m_rowToPIFRef;

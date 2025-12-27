@@ -26,13 +26,16 @@
  */
 
 #include "networkpropertiesdialog.h"
-#include "xenlib.h"
+#include "xen/network/connection.h"
+#include "xen/session.h"
+#include "xen/xenapi/xenapi_Network.h"
+#include "xencache.h"
 #include <QDebug>
 #include <QMessageBox>
 #include <QHBoxLayout>
 
-NetworkPropertiesDialog::NetworkPropertiesDialog(XenLib* xenLib, const QString& networkUuid, QWidget* parent)
-    : QDialog(parent), m_xenLib(xenLib), m_networkUuid(networkUuid)
+NetworkPropertiesDialog::NetworkPropertiesDialog(XenConnection* connection, const QString& networkUuid, QWidget* parent)
+    : QDialog(parent), m_connection(connection), m_networkUuid(networkUuid)
 {
     setWindowTitle("Network Properties");
     setMinimumSize(600, 500);
@@ -58,12 +61,8 @@ NetworkPropertiesDialog::NetworkPropertiesDialog(XenLib* xenLib, const QString& 
     connect(this->m_okButton, &QPushButton::clicked, this, &NetworkPropertiesDialog::onOkClicked);
     connect(this->m_cancelButton, &QPushButton::clicked, this, &NetworkPropertiesDialog::onCancelClicked);
 
-    // Connect async signal
-    connect(this->m_xenLib, &XenLib::networksReceived,
-            this, &NetworkPropertiesDialog::onNetworksReceived);
-
-    // Load data asynchronously
-    requestNetworkData();
+    // Load data from cache
+    loadNetworkData();
 }
 
 void NetworkPropertiesDialog::setupGeneralTab()
@@ -131,31 +130,43 @@ void NetworkPropertiesDialog::setupAdvancedTab()
     this->m_tabWidget->addTab(advancedTab, "Advanced");
 }
 
-void NetworkPropertiesDialog::requestNetworkData()
+void NetworkPropertiesDialog::loadNetworkData()
 {
-    // Request networks asynchronously
-    this->m_xenLib->requestNetworks();
-}
+    if (!this->m_connection || !this->m_connection->GetCache())
+        return;
 
-void NetworkPropertiesDialog::onNetworksReceived(const QVariantList& networks)
-{
-    // Find our network by UUID
-    for (const QVariant& networkVar : networks)
+    QVariantMap networkRecord = this->m_connection->GetCache()->ResolveObjectData("network", this->m_networkUuid);
+    if (!networkRecord.isEmpty())
     {
-        QVariantMap networkMap = networkVar.toMap();
-        if (networkMap.contains(this->m_networkUuid))
-        {
-            // Get the network record
-            QVariantMap networkRecord = networkMap[this->m_networkUuid].toMap();
-            this->m_networkRecord = networkRecord;
+        this->m_networkRecord = networkRecord;
+        this->m_networkRef = networkRecord.value("ref").toString();
+        if (this->m_networkRef.isEmpty())
+            this->m_networkRef = networkRecord.value("opaqueRef").toString();
+        if (this->m_networkRef.isEmpty())
+            this->m_networkRef = networkRecord.value("_ref").toString();
+        populateNetworkData();
+        return;
+    }
 
-            // Populate UI with network data
+    QList<QVariantMap> networks = this->m_connection->GetCache()->GetAllData("network");
+    for (const QVariantMap& record : networks)
+    {
+        QString uuid = record.value("uuid").toString();
+        QString ref = record.value("ref").toString();
+        if (uuid == this->m_networkUuid || ref == this->m_networkUuid)
+        {
+            this->m_networkRecord = record;
+            this->m_networkRef = ref;
+            if (this->m_networkRef.isEmpty())
+                this->m_networkRef = record.value("opaqueRef").toString();
+            if (this->m_networkRef.isEmpty())
+                this->m_networkRef = record.value("_ref").toString();
             populateNetworkData();
             return;
         }
     }
 
-    qWarning() << "Network not found:" << this->m_networkUuid;
+    qWarning() << "Network not found in cache:" << this->m_networkUuid;
 }
 
 void NetworkPropertiesDialog::populateNetworkData()
@@ -172,7 +183,10 @@ void NetworkPropertiesDialog::populateNetworkData()
     this->m_descriptionEdit->setPlainText(description);
 
     // General tab - read-only labels
-    this->m_uuidLabel->setText(this->m_networkUuid);
+    QString uuidText = this->m_networkRecord.value("uuid").toString();
+    if (uuidText.isEmpty())
+        uuidText = this->m_networkUuid;
+    this->m_uuidLabel->setText(uuidText);
 
     QString bridge = this->m_networkRecord["bridge"].toString();
     this->m_bridgeLabel->setText(bridge.isEmpty() ? "N/A" : bridge);
@@ -209,6 +223,12 @@ void NetworkPropertiesDialog::populateNetworkData()
 
 void NetworkPropertiesDialog::saveNetworkData()
 {
+    if (!this->m_connection || this->m_networkRef.isEmpty())
+    {
+        QMessageBox::warning(this, "Error", "No network reference available");
+        return;
+    }
+
     QString newName = this->m_nameEdit->text().trimmed();
     QString newDescription = this->m_descriptionEdit->toPlainText().trimmed();
     QString currentName = this->m_networkRecord.value("name_label").toString();
@@ -217,9 +237,20 @@ void NetworkPropertiesDialog::saveNetworkData()
     // Update name if changed
     if (newName != currentName && !newName.isEmpty())
     {
-        if (!this->m_xenLib->setNetworkName(this->m_networkRef, newName))
+        XenAPI::Session* session = this->m_connection ? this->m_connection->GetSession() : nullptr;
+        if (!session || !session->IsLoggedIn())
         {
-            QMessageBox::warning(this, "Error", "Failed to update network name");
+            QMessageBox::warning(this, "Error", "No active session to update network name");
+            return;
+        }
+        try
+        {
+            XenAPI::Network::set_name_label(session, this->m_networkRef, newName);
+        }
+        catch (const std::exception& ex)
+        {
+            QMessageBox::warning(this, "Error",
+                                 QString("Failed to update network name: %1").arg(ex.what()));
             return;
         }
     }
@@ -227,9 +258,20 @@ void NetworkPropertiesDialog::saveNetworkData()
     // Update description if changed
     if (newDescription != currentDescription)
     {
-        if (!this->m_xenLib->setNetworkDescription(this->m_networkRef, newDescription))
+        XenAPI::Session* session = this->m_connection ? this->m_connection->GetSession() : nullptr;
+        if (!session || !session->IsLoggedIn())
         {
-            QMessageBox::warning(this, "Error", "Failed to update network description");
+            QMessageBox::warning(this, "Error", "No active session to update network description");
+            return;
+        }
+        try
+        {
+            XenAPI::Network::set_name_description(session, this->m_networkRef, newDescription);
+        }
+        catch (const std::exception& ex)
+        {
+            QMessageBox::warning(this, "Error",
+                                 QString("Failed to update network description: %1").arg(ex.what()));
             return;
         }
     }
@@ -249,9 +291,20 @@ void NetworkPropertiesDialog::saveNetworkData()
 
     if (newTags != currentTags)
     {
-        if (!this->m_xenLib->setNetworkTags(this->m_networkRef, newTags))
+        XenAPI::Session* session = this->m_connection ? this->m_connection->GetSession() : nullptr;
+        if (!session || !session->IsLoggedIn())
         {
-            QMessageBox::warning(this, "Error", "Failed to update network tags");
+            QMessageBox::warning(this, "Error", "No active session to update network tags");
+            return;
+        }
+        try
+        {
+            XenAPI::Network::set_tags(session, this->m_networkRef, newTags);
+        }
+        catch (const std::exception& ex)
+        {
+            QMessageBox::warning(this, "Error",
+                                 QString("Failed to update network tags: %1").arg(ex.what()));
             return;
         }
     }

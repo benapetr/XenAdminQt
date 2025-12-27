@@ -127,7 +127,7 @@ bool SearchTabPage::isApplicableForObjectType(const QString& type) const
     return true;
 }
 
-void SearchTabPage::setXenObject(const QString& type, const QString& ref, const QVariantMap& data)
+void SearchTabPage::SetXenObject(const QString& type, const QString& ref, const QVariantMap& data)
 {
     // C# Reference: MainWindow.cs lines 1716-1810
     // When Search tab is shown for a specific object (not in SearchMode),

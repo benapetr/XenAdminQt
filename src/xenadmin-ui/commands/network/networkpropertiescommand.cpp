@@ -28,8 +28,8 @@
 #include "networkpropertiescommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/networkpropertiesdialog.h"
-#include "xenlib/xenlib.h"
 #include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/network/connection.h"
 #include <QTreeWidgetItem>
 
 NetworkPropertiesCommand::NetworkPropertiesCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
@@ -43,7 +43,9 @@ NetworkPropertiesCommand::~NetworkPropertiesCommand()
 bool NetworkPropertiesCommand::CanRun() const
 {
     QString networkUuid = this->getSelectedNetworkUuid();
-    return !networkUuid.isEmpty() && this->mainWindow()->xenLib()->isConnected();
+    QSharedPointer<XenObject> ob = this->GetObject();
+    XenConnection* connection = ob ? ob->GetConnection() : nullptr;
+    return !networkUuid.isEmpty() && connection && connection->IsConnected();
 }
 
 void NetworkPropertiesCommand::Run()
@@ -52,7 +54,9 @@ void NetworkPropertiesCommand::Run()
     if (networkUuid.isEmpty())
         return;
 
-    NetworkPropertiesDialog dialog(this->mainWindow()->xenLib(), networkUuid, this->mainWindow());
+    QSharedPointer<XenObject> ob = this->GetObject();
+    XenConnection* connection = ob ? ob->GetConnection() : nullptr;
+    NetworkPropertiesDialog dialog(connection, networkUuid, this->mainWindow());
     dialog.exec();
 }
 

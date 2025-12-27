@@ -36,14 +36,14 @@ namespace Ui
     class NetworkingPropertiesDialog;
 }
 
-class XenLib;
+class XenConnection;
 
 class NetworkingPropertiesDialog : public QDialog
 {
     Q_OBJECT
 
     public:
-        explicit NetworkingPropertiesDialog(XenLib* xenLib, const QString& pifRef, QWidget* parent = nullptr);
+        explicit NetworkingPropertiesDialog(XenConnection* connection, const QString& pifRef, QWidget* parent = nullptr);
         ~NetworkingPropertiesDialog();
 
         void accept() override;
@@ -60,7 +60,7 @@ class NetworkingPropertiesDialog : public QDialog
         void applyChanges();
 
         Ui::NetworkingPropertiesDialog* ui;
-        XenLib* m_xenLib;
+        XenConnection* m_connection;
         QString m_pifRef;
         QVariantMap m_pifData;
 };

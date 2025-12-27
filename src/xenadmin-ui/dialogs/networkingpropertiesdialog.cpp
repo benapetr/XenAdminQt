@@ -27,7 +27,6 @@
 
 #include "networkingpropertiesdialog.h"
 #include "ui_networkingpropertiesdialog.h"
-#include "xenlib.h"
 #include "xen/network/connection.h"
 #include "xen/session.h"
 #include "xen/xenapi/xenapi_PIF.h"
@@ -38,8 +37,8 @@
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 
-NetworkingPropertiesDialog::NetworkingPropertiesDialog(XenLib* xenLib, const QString& pifRef, QWidget* parent)
-    : QDialog(parent), ui(new Ui::NetworkingPropertiesDialog), m_xenLib(xenLib), m_pifRef(pifRef)
+NetworkingPropertiesDialog::NetworkingPropertiesDialog(XenConnection* connection, const QString& pifRef, QWidget* parent)
+    : QDialog(parent), ui(new Ui::NetworkingPropertiesDialog), m_connection(connection), m_pifRef(pifRef)
 {
     ui->setupUi(this);
 
@@ -77,11 +76,11 @@ NetworkingPropertiesDialog::~NetworkingPropertiesDialog()
 
 void NetworkingPropertiesDialog::loadPIFData()
 {
-    if (!this->m_xenLib)
+    if (!this->m_connection || !this->m_connection->GetCache())
         return;
 
     // Get PIF data from cache
-    QVariant pifDataVar = this->m_xenLib->getCache()->ResolveObjectData("pif", this->m_pifRef);
+    QVariant pifDataVar = this->m_connection->GetCache()->ResolveObjectData("pif", this->m_pifRef);
     if (pifDataVar.isNull())
     {
         QMessageBox::warning(this, "Error", "Failed to load network interface data.");
@@ -99,7 +98,7 @@ void NetworkingPropertiesDialog::loadPIFData()
     ui->labelMACValue->setText(mac);
 
     // Get network name
-    QVariant networkDataVar = this->m_xenLib->getCache()->ResolveObjectData("network", networkRef);
+    QVariant networkDataVar = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
     if (!networkDataVar.isNull())
     {
         QVariantMap networkData = networkDataVar.value<QVariantMap>();
@@ -232,11 +231,10 @@ bool NetworkingPropertiesDialog::validateSubnetMask(const QString& mask)
 
 void NetworkingPropertiesDialog::applyChanges()
 {
-    if (!this->m_xenLib)
+    if (!this->m_connection)
         return;
 
-    XenConnection* connection = this->m_xenLib->getConnection();
-    XenAPI::Session* session = connection ? connection->GetSession() : nullptr;
+    XenAPI::Session* session = this->m_connection->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         QMessageBox::critical(this, "Error",

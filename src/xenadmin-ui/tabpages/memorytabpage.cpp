@@ -411,7 +411,7 @@ void MemoryTabPage::onEditButtonClicked()
         return;
 
     // Open ballooning dialog
-    BallooningDialog dialog(this->m_objectRef, this->m_xenLib, this);
+    BallooningDialog dialog(this->m_objectRef, this->m_connection, this);
     dialog.exec();
 
     // Refresh the tab to show updated values

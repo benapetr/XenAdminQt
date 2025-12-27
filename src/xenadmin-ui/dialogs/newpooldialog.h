@@ -31,7 +31,6 @@
 #include <QDialog>
 #include <QListWidgetItem>
 
-class XenLib;
 class XenConnection;
 class Session;
 

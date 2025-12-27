@@ -136,7 +136,7 @@ bool VMStorageTabPage::isApplicableForObjectType(const QString& objectType) cons
     return objectType == "vm";
 }
 
-void VMStorageTabPage::setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void VMStorageTabPage::SetXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
 {
     // Disconnect previous object updates
     if (this->m_xenLib)
@@ -145,7 +145,7 @@ void VMStorageTabPage::setXenObject(const QString& objectType, const QString& ob
     }
 
     // Call base implementation
-    BaseTabPage::setXenObject(objectType, objectRef, objectData);
+    BaseTabPage::SetXenObject(objectType, objectRef, objectData);
 
     // Connect to object updates for real-time CD/DVD changes
     if (this->m_xenLib && objectType == "vm")
@@ -1489,7 +1489,7 @@ void VMStorageTabPage::onAddButtonClicked()
     }
 
     // Open New Virtual Disk Dialog
-    NewVirtualDiskDialog dialog(this->m_xenLib, this->m_objectRef, this);
+    NewVirtualDiskDialog dialog(this->m_connection, this->m_objectRef, this);
     if (dialog.exec() != QDialog::Accepted)
         return;
 

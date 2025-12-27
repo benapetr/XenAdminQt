@@ -76,10 +76,10 @@ bool PhysicalStorageTabPage::isApplicableForObjectType(const QString& objectType
     return objectType == "host" || objectType == "pool";
 }
 
-void PhysicalStorageTabPage::setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void PhysicalStorageTabPage::SetXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
 {
     // Call base implementation
-    BaseTabPage::setXenObject(objectType, objectRef, objectData);
+    BaseTabPage::SetXenObject(objectType, objectRef, objectData);
 }
 
 void PhysicalStorageTabPage::refreshContent()

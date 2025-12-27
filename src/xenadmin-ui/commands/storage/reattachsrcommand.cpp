@@ -29,6 +29,7 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/newsrwizard.h"
 #include "xen/sr.h"
+#include "xen/network/connection.h"
 #include "xencache.h"
 #include <QMessageBox>
 #include <QDebug>
@@ -66,7 +67,9 @@ void ReattachSRCommand::Run()
     // Open the New SR wizard which already supports reattach mode
     // The wizard will detect that this SR is detached and allow user to reattach it
     // TODO: Add constructor NewSRWizard(SR*) to pre-configure for reattach mode
-    NewSRWizard* wizard = new NewSRWizard(this->mainWindow());
+    QSharedPointer<XenObject> ob = this->GetObject();
+    XenConnection* connection = ob ? ob->GetConnection() : nullptr;
+    NewSRWizard* wizard = new NewSRWizard(connection, this->mainWindow());
     wizard->setAttribute(Qt::WA_DeleteOnClose);
     wizard->show();
 }

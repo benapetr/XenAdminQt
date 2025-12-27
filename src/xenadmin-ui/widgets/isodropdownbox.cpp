@@ -197,43 +197,43 @@ QString getVMStorageHostFromCache(const QVariantMap& vmRecord, XenCache* cache, 
 
 IsoDropDownBox::IsoDropDownBox(QWidget* parent) : QComboBox(parent), m_xenLib(nullptr), m_connection(nullptr)
 {
-    setEditable(false);
-    setInsertPolicy(QComboBox::NoInsert);
-}
+    this->setEditable(false);
+    this->setInsertPolicy(QComboBox::NoInsert);
+} 
 
 void IsoDropDownBox::setXenLib(XenLib* xenLib)
 {
-    m_xenLib = xenLib;
-}
+    this->m_xenLib = xenLib;
+} 
 
 void IsoDropDownBox::setConnection(XenConnection* connection)
 {
-    m_connection = connection;
-}
+    this->m_connection = connection;
+} 
 
 void IsoDropDownBox::setVMRef(const QString& vmRef)
 {
-    m_vmRef = vmRef;
-}
+    this->m_vmRef = vmRef;
+} 
 
 void IsoDropDownBox::refresh()
 {
     QSignalBlocker blocker(this);
-    clear();
+    this->clear();
 
-    addItem(tr("<empty>"), QString());
+    this->addItem(tr("<empty>"), QString());
 
-    XenConnection* connection = m_connection;
-    if (!connection && m_xenLib)
-        connection = m_xenLib->getConnection();
+    XenConnection* connection = this->m_connection;
+    if (!connection && this->m_xenLib)
+        connection = this->m_xenLib->getConnection();
 
     XenCache* cache = nullptr;
-    if (m_connection)
+    if (this->m_connection)
     {
-        cache = m_connection->GetCache();
-    } else if (m_xenLib)
+        cache = this->m_connection->GetCache();
+    } else if (this->m_xenLib)
     {
-        cache = m_xenLib->getCache();
+        cache = this->m_xenLib->getCache();
     }
 
     if (!cache)
@@ -243,9 +243,9 @@ void IsoDropDownBox::refresh()
 
     QString hostRef;
     QVariantMap vmData;
-    if (!m_vmRef.isEmpty())
+    if (!this->m_vmRef.isEmpty())
     {
-        vmData = cache->ResolveObjectData("vm", m_vmRef);
+        vmData = cache->ResolveObjectData("vm", this->m_vmRef);
         QString powerState = vmData.value("power_state").toString();
         if (powerState == "Running")
         {
@@ -278,7 +278,7 @@ void IsoDropDownBox::refresh()
         if (srData.value("content_type").toString() != "iso")
             continue;
 
-        if (srData.value("is_broken", false).toBool() && m_vmRef.isEmpty())
+        if (srData.value("is_broken", false).toBool() && this->m_vmRef.isEmpty())
             continue;
 
         if (!isSrVisibleToHost(srData, cache, hostRef))
@@ -304,10 +304,10 @@ void IsoDropDownBox::refresh()
 
     for (const SrEntry& srEntry : srEntries)
     {
-        addItem(srEntry.name, QString());
+        this->addItem(srEntry.name, QString());
         if (model)
         {
-            QStandardItem* item = model->item(count() - 1);
+            QStandardItem* item = model->item(this->count() - 1);
             if (item)
                 item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
         }
@@ -350,32 +350,32 @@ void IsoDropDownBox::refresh()
 
         for (const auto& vdiEntry : vdiEntries)
         {
-            addItem(QString("    %1").arg(vdiEntry.first), vdiEntry.second);
+            this->addItem(QString("    %1").arg(vdiEntry.first), vdiEntry.second);
         }
     }
 }
 
 QString IsoDropDownBox::selectedVdiRef() const
 {
-    return currentData().toString();
+    return this->currentData().toString();
 }
 
 void IsoDropDownBox::setSelectedVdiRef(const QString& vdiRef)
 {
     if (vdiRef.isEmpty())
     {
-        setCurrentIndex(0);
+        this->setCurrentIndex(0);
         return;
     }
 
-    for (int i = 0; i < count(); ++i)
+    for (int i = 0; i < this->count(); ++i)
     {
-        if (itemData(i).toString() == vdiRef)
+        if (this->itemData(i).toString() == vdiRef)
         {
-            setCurrentIndex(i);
+            this->setCurrentIndex(i);
             return;
         }
     }
 
-    setCurrentIndex(0);
+    this->setCurrentIndex(0);
 }

@@ -56,7 +56,7 @@ public:
     }
 
     bool isApplicableForObjectType(const QString& objectType) const override;
-    void setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
+    void SetXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
 
 protected:
     void refreshContent() override;

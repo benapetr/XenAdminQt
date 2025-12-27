@@ -368,7 +368,7 @@ void NICsTabPage::onCreateBondClicked()
     }
 
     // Open bond creation dialog
-    BondPropertiesDialog dialog(this->m_xenLib, this->m_objectRef, networkRef, this);
+    BondPropertiesDialog dialog(this->m_connection, this->m_objectRef, networkRef, this);
     if (dialog.exec() == QDialog::Accepted)
     {
         QString bondMode = dialog.getBondMode();
