@@ -42,8 +42,7 @@
  * @brief Constructor
  * Reference: ConsolePanel.cs lines 49-54
  */
-ConsolePanel::ConsolePanel(QWidget* parent)
-    : QWidget(parent), ui(new Ui::ConsolePanel), _xenLib(nullptr), _activeVNCView(nullptr), _currentVmRef()
+ConsolePanel::ConsolePanel(QWidget* parent) : QWidget(parent), ui(new Ui::ConsolePanel), _currentVmRef()
 {
     qDebug() << "ConsolePanel: Constructor START - parent:" << parent << "this:" << this;
 

@@ -37,7 +37,6 @@
 
 // Forward declarations
 class VNCView;
-class XenLib;
 class XenConnection;
 
 namespace Ui
@@ -197,14 +196,6 @@ class ConsolePanel : public QWidget
             this->_connection = connection;
         }
 
-        /**
-         * @brief Set XenLib instance (for XenAPI access)
-         */
-        void setXenLib(XenLib* xenLib)
-        {
-            _xenLib = xenLib;
-        }
-
     protected:
         /**
          * @brief Display error message panel
@@ -222,19 +213,16 @@ class ConsolePanel : public QWidget
 
         Ui::ConsolePanel* ui;
 
-        /// XenLib instance for XenAPI access
-        XenLib* _xenLib;
-
         XenConnection *_connection = nullptr;;
 
-        /// Active VNCView currently displayed
-        VNCView* _activeVNCView;
+        //! Active VNCView currently displayed
+        VNCView* _activeVNCView = nullptr;
 
-        /// Cache of VNCView instances keyed by VM OpaqueRef
-        /// Reference: C# Dictionary<VM, VNCView> vncViews
+        //! Cache of VNCView instances keyed by VM OpaqueRef
+        //! Reference: C# Dictionary<VM, VNCView> vncViews
         QMap<QString, VNCView*> _vncViews;
 
-        /// Current VM OpaqueRef
+        //! Current VM OpaqueRef
         QString _currentVmRef;
 
     private:

@@ -281,10 +281,6 @@ MainWindow::MainWindow(QWidget* parent)
     this->m_consolePanel = new ConsolePanel(this);
     this->m_cvmConsolePanel = new CvmConsolePanel(this);
 
-    // Set XenLib instance for console panels
-    this->m_consolePanel->setXenLib(this->m_xenLib);
-    this->m_cvmConsolePanel->setXenLib(this->m_xenLib);
-
     // Initialize tab pages (without parent - they will be parented to QTabWidget when added)
     // Order matches C# MainWindow.Designer.cs lines 326-345
     // Note: We don't implement all C# tabs yet (Home, Ballooning, HA, WLB, AD, GPU, Docker, USB)
@@ -451,7 +447,7 @@ void MainWindow::connectToServer()
 
 void MainWindow::showAbout()
 {
-    AboutDialog dialog(m_xenLib, this);
+    AboutDialog dialog(this);
     dialog.exec();
 }
 
