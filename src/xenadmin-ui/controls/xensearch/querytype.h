@@ -295,6 +295,66 @@ public:
 };
 
 /**
+ * IP Address query type
+ * 
+ * C# Equivalent: IPAddressQueryType in QueryElement.cs (extends PropertyQueryType<List<ComparableAddress>>)
+ * Matches IP addresses (simplified version without full CIDR support)
+ */
+class IPAddressQueryType : public QueryType
+{
+public:
+    IPAddressQueryType(int group, ObjectTypes appliesTo, PropertyNames property);
+    
+    bool ForQuery(QueryFilter* query) const override;
+    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    QueryFilter* GetQuery(QueryElement* queryElement) const override;
+    QString toString() const override;
+    
+    bool showMatchTypeComboButton() const override { return true; }
+    bool showTextBox(QueryElement* queryElement) const override { Q_UNUSED(queryElement); return true; }
+    QStringList getMatchTypeComboButtonEntries() const override;
+
+protected:
+    PropertyNames property_;
+};
+
+/**
+ * Null property query type - checks if a reference is null or not null
+ * 
+ * C# Equivalent: NullQueryType<T> in QueryElement.cs (extends PropertyQueryType<T> where T : XenObject<T>)
+ * Used for "Is standalone", "Not in a folder", etc.
+ */
+class NullPropertyQueryType : public QueryType
+{
+public:
+    NullPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, bool isNull, const QString& displayName);
+    
+    bool ForQuery(QueryFilter* query) const override;
+    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    QueryFilter* GetQuery(QueryElement* queryElement) const override;
+    QString toString() const override;
+
+protected:
+    PropertyNames property_;
+    bool isNull_;
+    QString displayName_;
+};
+
+/**
+ * UUID string query type - searches for UUID strings
+ * 
+ * C# Equivalent: UuidStringQueryType in QueryElement.cs (extends StringPropertyQueryType)
+ * Limits match types to "startswith" and "exactmatch" only
+ */
+class UuidStringQueryType : public StringPropertyQueryType
+{
+public:
+    UuidStringQueryType(int group, ObjectTypes appliesTo);
+    
+    QStringList getMatchTypeComboButtonEntries() const override;
+};
+
+/**
  * QueryType Registry - manages all available query types
  */
 class QueryTypeRegistry

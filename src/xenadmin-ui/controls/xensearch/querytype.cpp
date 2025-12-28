@@ -752,6 +752,111 @@ QStringList TagQueryType::getMatchTypeComboButtonEntries() const
 }
 
 // ============================================================================
+// IPAddressQueryType
+// ============================================================================
+
+IPAddressQueryType::IPAddressQueryType(int group, ObjectTypes appliesTo, PropertyNames property)
+    : QueryType(group, appliesTo)
+    , property_(property)
+{
+}
+
+bool IPAddressQueryType::ForQuery(QueryFilter* query) const
+{
+    IPAddressQuery* ipQuery = dynamic_cast<IPAddressQuery*>(query);
+    if (!ipQuery)
+        return false;
+    
+    return ipQuery->getProperty() == this->property_;
+}
+
+void IPAddressQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
+{
+    IPAddressQuery* ipQuery = dynamic_cast<IPAddressQuery*>(query);
+    if (!ipQuery)
+        return;
+    
+    queryElement->setTextBoxValue(ipQuery->getAddress());
+}
+
+QueryFilter* IPAddressQueryType::GetQuery(QueryElement* queryElement) const
+{
+    QString address = queryElement->getTextBoxValue();
+    
+    if (address.isEmpty())
+        return nullptr;
+    
+    return new IPAddressQuery(this->property_, address);
+}
+
+QString IPAddressQueryType::toString() const
+{
+    return getPropertyName(this->property_);
+}
+
+QStringList IPAddressQueryType::getMatchTypeComboButtonEntries() const
+{
+    return QStringList() << "Is";
+}
+
+// ============================================================================
+// NullPropertyQueryType
+// ============================================================================
+
+NullPropertyQueryType::NullPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, bool isNull, const QString& displayName)
+    : QueryType(group, appliesTo)
+    , property_(property)
+    , isNull_(isNull)
+    , displayName_(displayName)
+{
+}
+
+bool NullPropertyQueryType::ForQuery(QueryFilter* query) const
+{
+    NullPropertyQuery* nullQuery = dynamic_cast<NullPropertyQuery*>(query);
+    if (!nullQuery)
+        return false;
+    
+    return nullQuery->getProperty() == this->property_ &&
+           nullQuery->getIsNull() == this->isNull_;
+}
+
+void NullPropertyQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
+{
+    Q_UNUSED(query);
+    Q_UNUSED(queryElement);
+    // Nothing to populate - no UI controls needed (C# also does nothing here)
+}
+
+QueryFilter* NullPropertyQueryType::GetQuery(QueryElement* queryElement) const
+{
+    Q_UNUSED(queryElement);
+    return new NullPropertyQuery(this->property_, this->isNull_);
+}
+
+QString NullPropertyQueryType::toString() const
+{
+    return this->displayName_;
+}
+
+// ============================================================================
+// UuidStringQueryType - UUID search with limited match types
+// ============================================================================
+
+UuidStringQueryType::UuidStringQueryType(int group, ObjectTypes appliesTo)
+    : StringPropertyQueryType(group, appliesTo, PropertyNames::uuid)
+{
+}
+
+QStringList UuidStringQueryType::getMatchTypeComboButtonEntries() const
+{
+    // Only "starts with" and "exact match" are allowed for UUID searches
+    return QStringList()
+        << StringPropertyQueryType::matchTypeToString(StringPropertyQuery::MatchType::StartsWith)
+        << StringPropertyQueryType::matchTypeToString(StringPropertyQuery::MatchType::ExactMatch);
+}
+
+// ============================================================================
 // QueryTypeRegistry - Singleton registry of all query types
 // ============================================================================
 
@@ -795,6 +900,7 @@ void QueryTypeRegistry::initialize()
     // Basic property queries (Group 1)
     this->queryTypes_.append(new StringPropertyQueryType(1, ObjectTypes::AllIncFolders, PropertyNames::label));
     this->queryTypes_.append(new StringPropertyQueryType(1, ObjectTypes::AllExcFolders, PropertyNames::description));
+    this->queryTypes_.append(new UuidStringQueryType(1, ObjectTypes::AllExcFolders));
     this->queryTypes_.append(new TagQueryType(1, ObjectTypes::AllExcFolders));
     
     // Object type query (Group 1)
@@ -803,6 +909,8 @@ void QueryTypeRegistry::initialize()
     // VM-specific queries (Group 3)
     this->queryTypes_.append(new NumericPropertyQueryType(3, ObjectTypes::VM, PropertyNames::memory, 
                                                           "Memory", BINARY_MEGA, "MB"));
+    this->queryTypes_.append(new IPAddressQueryType(3, ObjectTypes::VM | ObjectTypes::Server | ObjectTypes::LocalSR | ObjectTypes::RemoteSR,
+                                                    PropertyNames::ip_address));
     this->queryTypes_.append(new EnumPropertyQueryType(3, ObjectTypes::VM, PropertyNames::power_state));
     this->queryTypes_.append(new EnumPropertyQueryType(3, ObjectTypes::VM, PropertyNames::virtualisation_status));
     this->queryTypes_.append(new StringPropertyQueryType(3, ObjectTypes::VM, PropertyNames::os_name, "OS Name"));
@@ -822,6 +930,11 @@ void QueryTypeRegistry::initialize()
     // Pool queries (Group 4)
     this->queryTypes_.append(new BooleanQueryType(4, ObjectTypes::Pool, PropertyNames::ha_enabled));
     this->queryTypes_.append(new BooleanQueryType(4, ObjectTypes::Pool, PropertyNames::isNotFullyUpgraded));
+    this->queryTypes_.append(new NullPropertyQueryType(4, ObjectTypes::Server | ObjectTypes::VM, PropertyNames::pool, false, "Is in a pool"));
+    this->queryTypes_.append(new NullPropertyQueryType(4, ObjectTypes::Server | ObjectTypes::VM, PropertyNames::pool, true, "Is standalone"));
+    
+    // Custom fields (Group 9)
+    this->queryTypes_.append(new BooleanQueryType(9, ObjectTypes::AllExcFolders, PropertyNames::has_custom_fields));
 }
 
 QueryType* QueryTypeRegistry::findQueryTypeForFilter(QueryFilter* filter) const

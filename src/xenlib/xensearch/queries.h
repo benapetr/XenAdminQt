@@ -273,4 +273,264 @@ class TagQuery : public QueryFilter
         bool negated_;
 };
 
+/**
+ * IP Address query - matches IP addresses (simplified version without full CIDR support)
+ * 
+ * C# Equivalent: IPAddressQuery in QueryTypes.cs (extends ListContainsQuery<ComparableAddress>)
+ * Note: C# has full CIDR support via ComparableAddress, this is simplified version
+ */
+class IPAddressQuery : public QueryFilter
+{
+    public:
+        IPAddressQuery(PropertyNames property, const QString& address);
+
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        bool Equals(const QueryFilter* other) const override;
+        uint HashCode() const override;
+
+        PropertyNames getProperty() const { return this->property_; }
+        QString getAddress() const { return this->address_; }
+
+    private:
+        PropertyNames property_;
+        QString address_;  // IP address to match (exact or prefix)
+};
+
+/**
+ * Null property query - checks if a reference property is null or not null
+ * 
+ * C# Equivalent: NullQuery<T> in QueryTypes.cs (extends PropertyQuery<T> where T : XenObject<T>)
+ * Used for queries like "Is standalone" (pool == null), "Not in a folder" (folder == null)
+ */
+class NullPropertyQuery : public QueryFilter
+{
+    public:
+        NullPropertyQuery(PropertyNames property, bool isNull);
+
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        bool Equals(const QueryFilter* other) const override;
+        uint HashCode() const override;
+
+        PropertyNames getProperty() const { return this->property_; }
+        bool getIsNull() const { return this->isNull_; }
+
+    private:
+        PropertyNames property_;
+        bool isNull_;  // true = check if null, false = check if not null
+};
+
+/**
+ * Recursive property query base class - evaluates subquery on property value
+ * 
+ * C# Equivalent: RecursivePropertyQuery<T> in QueryTypes.cs
+ * Used for parent-child filtering (e.g., "Pool is...", "Host contains VM where...")
+ */
+class RecursivePropertyQuery : public QueryFilter
+{
+    public:
+        RecursivePropertyQuery(PropertyNames property, QueryFilter* subQuery);
+        virtual ~RecursivePropertyQuery();
+
+        PropertyNames getProperty() const { return this->property_; }
+        QueryFilter* getSubQuery() const { return this->subQuery_; }
+
+    protected:
+        PropertyNames property_;
+        QueryFilter* subQuery_;  // Owned by this object
+};
+
+/**
+ * Recursive XenObject property query - evaluates subquery on single object property
+ * 
+ * C# Equivalent: RecursiveXMOPropertyQuery<T> in QueryTypes.cs
+ * Used for queries like "Pool is..." (checks pool property with subquery)
+ */
+class RecursiveXMOPropertyQuery : public RecursivePropertyQuery
+{
+    public:
+        RecursiveXMOPropertyQuery(PropertyNames property, QueryFilter* subQuery);
+
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        bool Equals(const QueryFilter* other) const override;
+        uint HashCode() const override;
+};
+
+/**
+ * Recursive XenObject list property query - evaluates subquery on list items
+ * 
+ * C# Equivalent: RecursiveXMOListPropertyQuery<T> in QueryTypes.cs
+ * Returns true if ANY item in the list matches the subquery
+ * Returns false if all items don't match or list is empty
+ */
+class RecursiveXMOListPropertyQuery : public RecursivePropertyQuery
+{
+    public:
+        RecursiveXMOListPropertyQuery(PropertyNames property, QueryFilter* subQuery);
+
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        bool Equals(const QueryFilter* other) const override;
+        uint HashCode() const override;
+};
+
+/**
+ * XenObject property query - matches object by UUID
+ * 
+ * C# Equivalent: XenModelObjectPropertyQuery<T> in QueryTypes.cs
+ * Deprecated but still needed for saved searches
+ */
+class XenModelObjectPropertyQuery : public QueryFilter
+{
+    public:
+        XenModelObjectPropertyQuery(PropertyNames property, const QString& uuid, bool equals);
+
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        bool Equals(const QueryFilter* other) const override;
+        uint HashCode() const override;
+
+        PropertyNames getProperty() const { return this->property_; }
+        QString getUuid() const { return this->uuid_; }
+        bool getEquals() const { return this->equals_; }
+
+    private:
+        PropertyNames property_;
+        QString uuid_;  // UUID of object to match
+        bool equals_;   // true = equals, false = not equals
+};
+
+/**
+ * XenObject list contains query - checks if list contains object with UUID
+ * 
+ * C# Equivalent: XenModelObjectListContainsQuery<T> in QueryTypes.cs
+ */
+class XenModelObjectListContainsQuery : public QueryFilter
+{
+    public:
+        XenModelObjectListContainsQuery(PropertyNames property, const QString& uuid, bool contains);
+
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        bool Equals(const QueryFilter* other) const override;
+        uint HashCode() const override;
+
+        PropertyNames getProperty() const { return this->property_; }
+        QString getUuid() const { return this->uuid_; }
+        bool getContains() const { return this->contains_; }
+
+    private:
+        PropertyNames property_;
+        QString uuid_;      // UUID of object to find in list
+        bool contains_;     // true = contains, false = does not contain
+};
+
+/**
+ * XenObject list contains name query - checks if list contains object matching name pattern
+ * 
+ * C# Equivalent: XenModelObjectListContainsNameQuery<T> in QueryTypes.cs
+ */
+class XenModelObjectListContainsNameQuery : public QueryFilter
+{
+    public:
+        XenModelObjectListContainsNameQuery(PropertyNames property, const QString& query, 
+                                           StringPropertyQuery::MatchType type);
+
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        bool Equals(const QueryFilter* other) const override;
+        uint HashCode() const override;
+
+        PropertyNames getProperty() const { return this->property_; }
+        QString getQuery() const { return this->query_; }
+        StringPropertyQuery::MatchType getType() const { return this->type_; }
+
+    private:
+        PropertyNames property_;
+        QString query_;                        // Name pattern to match
+        StringPropertyQuery::MatchType type_;  // Match type (contains, starts with, etc.)
+};
+
+/**
+ * List empty query - checks if list property is empty or not empty
+ * 
+ * C# Equivalent: ListEmptyQuery<T> in QueryTypes.cs
+ */
+class ListEmptyQuery : public QueryFilter
+{
+    public:
+        ListEmptyQuery(PropertyNames property, bool empty);
+
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        bool Equals(const QueryFilter* other) const override;
+        uint HashCode() const override;
+
+        PropertyNames getProperty() const { return this->property_; }
+        bool getEmpty() const { return this->empty_; }
+
+    private:
+        PropertyNames property_;
+        bool empty_;  // true = check if empty, false = check if not empty
+};
+
+/**
+ * Custom field query base class
+ * 
+ * C# Equivalent: CustomFieldQueryBase in QueryTypes.cs
+ * Note: Requires CustomFieldDefinition infrastructure (not yet implemented)
+ */
+class CustomFieldQueryBase : public QueryFilter
+{
+    public:
+        CustomFieldQueryBase(const QString& fieldName);
+
+        QString getFieldName() const { return this->fieldName_; }
+
+    protected:
+        QString fieldName_;  // Custom field name
+};
+
+/**
+ * Custom field string query - matches custom field string values
+ * 
+ * C# Equivalent: CustomFieldQuery in QueryTypes.cs
+ * Note: Requires CustomFieldsManager integration
+ */
+class CustomFieldQuery : public CustomFieldQueryBase
+{
+    public:
+        CustomFieldQuery(const QString& fieldName, const QString& query, 
+                        StringPropertyQuery::MatchType type);
+
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        bool Equals(const QueryFilter* other) const override;
+        uint HashCode() const override;
+
+        QString getQuery() const { return this->query_; }
+        StringPropertyQuery::MatchType getType() const { return this->type_; }
+
+    private:
+        QString query_;                        // Value to match
+        StringPropertyQuery::MatchType type_;  // Match type
+};
+
+/**
+ * Custom field date query - matches custom field date values
+ * 
+ * C# Equivalent: CustomFieldDateQuery in QueryTypes.cs
+ * Note: Requires CustomFieldsManager integration
+ */
+class CustomFieldDateQuery : public CustomFieldQueryBase
+{
+    public:
+        CustomFieldDateQuery(const QString& fieldName, const QDateTime& query, 
+                            DateQuery::ComparisonType type);
+
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        bool Equals(const QueryFilter* other) const override;
+        uint HashCode() const override;
+
+        QDateTime getQuery() const { return this->query_; }
+        DateQuery::ComparisonType getType() const { return this->type_; }
+
+    private:
+        QDateTime query_;                      // Date to match
+        DateQuery::ComparisonType type_;       // Match type (before, after, exact)
+};
+
 #endif // QUERIES_H
