@@ -80,6 +80,87 @@ enum class PropertyNames
     has_custom_fields           // Boolean for custom field presence
 };
 
+// Helper function to get property value from QVariantMap
+inline QVariant getPropertyValue(const QVariantMap& objectData, PropertyNames property)
+{
+    switch (property)
+    {
+        case PropertyNames::label:
+            return objectData.value("name_label");
+        case PropertyNames::description:
+            return objectData.value("name_description");
+        case PropertyNames::uuid:
+            return objectData.value("uuid");
+        case PropertyNames::tags:
+            return objectData.value("tags");
+        case PropertyNames::type:
+            return objectData.value("type");
+        case PropertyNames::power_state:
+            return objectData.value("power_state");
+        case PropertyNames::virtualisation_status:
+            return objectData.value("PV_drivers_detected");
+        case PropertyNames::os_name:
+            {
+                QVariantMap guestMetrics = objectData.value("guest_metrics").toMap();
+                QVariantMap osVersion = guestMetrics.value("os_version").toMap();
+                return osVersion.value("name");
+            }
+        case PropertyNames::ha_restart_priority:
+            return objectData.value("ha_restart_priority");
+        case PropertyNames::start_time:
+            return objectData.value("start_time");
+        case PropertyNames::memory:
+            return objectData.value("memory_dynamic_max");
+        case PropertyNames::size:
+            return objectData.value("virtual_size");
+        case PropertyNames::shared:
+            return objectData.value("shared");
+        case PropertyNames::ha_enabled:
+            return objectData.value("ha_enabled");
+        case PropertyNames::sr_type:
+            return objectData.value("type"); // For SR
+        case PropertyNames::read_caching_enabled:
+            return objectData.value("read_caching_enabled");
+        case PropertyNames::ip_address:
+            {
+                QVariantMap guestMetrics = objectData.value("guest_metrics").toMap();
+                QVariantMap networks = guestMetrics.value("networks").toMap();
+                // Return first IP address found
+                for (const QVariant& ip : networks)
+                    return ip;
+                return QVariant();
+            }
+        default:
+            return QVariant();
+    }
+}
+
+// Helper function to get property name string  
+inline QString getPropertyName(PropertyNames property)
+{
+    switch (property)
+    {
+        case PropertyNames::label: return "label";
+        case PropertyNames::description: return "description";
+        case PropertyNames::uuid: return "uuid";
+        case PropertyNames::tags: return "tags";
+        case PropertyNames::type: return "type";
+        case PropertyNames::power_state: return "power_state";
+        case PropertyNames::virtualisation_status: return "virtualisation_status";
+        case PropertyNames::os_name: return "os_name";
+        case PropertyNames::ha_restart_priority: return "ha_restart_priority";
+        case PropertyNames::start_time: return "start_time";
+        case PropertyNames::memory: return "memory";
+        case PropertyNames::size: return "size";
+        case PropertyNames::shared: return "shared";
+        case PropertyNames::ha_enabled: return "ha_enabled";
+        case PropertyNames::sr_type: return "sr_type";
+        case PropertyNames::read_caching_enabled: return "read_caching_enabled";
+        case PropertyNames::ip_address: return "ip_address";
+        default: return "unknown";
+    }
+}
+
 /**
  * Dummy query - used for "Select a filter..." placeholder
  */
@@ -531,6 +612,32 @@ class CustomFieldDateQuery : public CustomFieldQueryBase
     private:
         QDateTime query_;                      // Date to match
         DateQuery::ComparisonType type_;       // Match type (before, after, exact)
+};
+
+/**
+ * Value property query - matches property value with equals/not equals
+ * 
+ * C# Equivalent: ValuePropertyQuery in QueryTypes.cs (lines 802-850)
+ * Used by ValuePropertyQueryType for dynamic value matching (e.g., OS names).
+ * Simple equality check: property value equals/not equals a specific string.
+ */
+class ValuePropertyQuery : public QueryFilter
+{
+    public:
+        ValuePropertyQuery(PropertyNames property, const QString& query, bool equals);
+
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        bool Equals(const QueryFilter* other) const override;
+        uint HashCode() const override;
+
+        QString getQuery() const { return this->query_; }
+        bool getEquals() const { return this->equals_; }
+        PropertyNames getProperty() const { return this->property_; }
+
+    private:
+        PropertyNames property_;  // Property to check
+        QString query_;    // Value to match
+        bool equals_;      // true="is", false="is not"
 };
 
 #endif // QUERIES_H

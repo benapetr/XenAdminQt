@@ -27,103 +27,7 @@
 
 #include "queries.h"
 #include "../xenlib.h"
-
-// Helper function to get property value from QVariantMap
-static QVariant getPropertyValue(const QVariantMap& objectData, PropertyNames property)
-{
-    switch (property)
-    {
-        case PropertyNames::label:
-            return objectData.value("name_label");
-        case PropertyNames::description:
-            return objectData.value("name_description");
-        case PropertyNames::uuid:
-            return objectData.value("uuid");
-        case PropertyNames::tags:
-            return objectData.value("tags");
-        case PropertyNames::type:
-            return objectData.value("type");
-        case PropertyNames::power_state:
-            return objectData.value("power_state");
-        case PropertyNames::virtualisation_status:
-            return objectData.value("PV_drivers_detected");
-        case PropertyNames::os_name:
-            {
-                QVariantMap guestMetrics = objectData.value("guest_metrics").toMap();
-                QVariantMap osVersion = guestMetrics.value("os_version").toMap();
-                return osVersion.value("name");
-            }
-        case PropertyNames::ha_restart_priority:
-            return objectData.value("ha_restart_priority");
-        case PropertyNames::start_time:
-            return objectData.value("start_time");
-        case PropertyNames::memory:
-            return objectData.value("memory_dynamic_max");
-        case PropertyNames::size:
-            return objectData.value("virtual_size");
-        case PropertyNames::shared:
-            return objectData.value("shared");
-        case PropertyNames::ha_enabled:
-            return objectData.value("ha_enabled");
-        case PropertyNames::sr_type:
-            return objectData.value("type"); // For SR
-        case PropertyNames::read_caching_enabled:
-            return objectData.value("read_caching_enabled");
-        case PropertyNames::ip_address:
-            {
-                QVariantMap guestMetrics = objectData.value("guest_metrics").toMap();
-                QVariantMap networks = guestMetrics.value("networks").toMap();
-                // Return first IP address found
-                for (const QVariant& ip : networks)
-                    return ip;
-                return QVariant();
-            }
-    }
-    return QVariant();
-}
-
-// Helper function to get property name string
-static QString getPropertyName(PropertyNames property)
-{
-    switch (property)
-    {
-        case PropertyNames::label:
-            return "Name";
-        case PropertyNames::description:
-            return "Description";
-        case PropertyNames::uuid:
-            return "UUID";
-        case PropertyNames::tags:
-            return "Tags";
-        case PropertyNames::type:
-            return "Type";
-        case PropertyNames::power_state:
-            return "Power State";
-        case PropertyNames::virtualisation_status:
-            return "Virtualization Status";
-        case PropertyNames::os_name:
-            return "OS Name";
-        case PropertyNames::ha_restart_priority:
-            return "HA Restart Priority";
-        case PropertyNames::start_time:
-            return "Start Time";
-        case PropertyNames::memory:
-            return "Memory";
-        case PropertyNames::size:
-            return "Size";
-        case PropertyNames::shared:
-            return "Shared";
-        case PropertyNames::ha_enabled:
-            return "HA Enabled";
-        case PropertyNames::sr_type:
-            return "SR Type";
-        case PropertyNames::read_caching_enabled:
-            return "Read Caching";
-        case PropertyNames::ip_address:
-            return "IP Address";
-    }
-    return "Unknown";
-}
+#include "../xencache.h"
 
 // Helper function to get object type from property name
 static QString getObjectTypeFromPropertyName(PropertyNames property)
@@ -731,17 +635,11 @@ QVariant RecursiveXMOPropertyQuery::Match(const QVariantMap& objectData, const Q
     if (refType.isEmpty())
         return QVariant();  // Indeterminate
     
-    // TODO: Get object data from cache when XenConnection cache API is complete
-    // For now, return indeterminate since cache infrastructure isn't ready
-    Q_UNUSED(conn);
-    return QVariant();  // Indeterminate - cache not yet integrated
-    
-    #if 0  // Disabled until cache API is available
     // Get object data from cache
     QVariantMap refData;
-    if (conn && conn->cache())
+    if (conn && conn->GetCache())
     {
-        refData = conn->cache()->ResolveObjectData(refType, ref);
+        refData = conn->GetCache()->ResolveObjectData(refType, ref);
     }
     
     if (refData.isEmpty())
@@ -749,7 +647,6 @@ QVariant RecursiveXMOPropertyQuery::Match(const QVariantMap& objectData, const Q
     
     // Evaluate subquery on the referenced object
     return this->subQuery_->Match(refData, refType, conn);
-    #endif
 }
 
 bool RecursiveXMOPropertyQuery::Equals(const QueryFilter* other) const
@@ -798,11 +695,6 @@ QVariant RecursiveXMOListPropertyQuery::Match(const QVariantMap& objectData, con
     if (refList.isEmpty())
         return false;  // Empty list
     
-    // TODO: Implement full recursive list matching when cache API is complete
-    Q_UNUSED(conn);
-    return QVariant();  // Indeterminate - cache not yet integrated
-    
-    #if 0  // Disabled until cache API is available
     // Determine object type from property name
     QString refType = getObjectTypeFromPropertyName(this->property_);
     if (refType.isEmpty())
@@ -820,9 +712,9 @@ QVariant RecursiveXMOListPropertyQuery::Match(const QVariantMap& objectData, con
         
         // Get object data from cache
         QVariantMap refData;
-        if (conn && conn->cache())
+        if (conn && conn->GetCache())
         {
-            refData = conn->cache()->ResolveObjectData(refType, ref);
+            refData = conn->GetCache()->ResolveObjectData(refType, ref);
         }
         
         if (refData.isEmpty())
@@ -858,7 +750,6 @@ QVariant RecursiveXMOListPropertyQuery::Match(const QVariantMap& objectData, con
     
     // All items were skipped (null/empty)
     return false;
-    #endif
 }
 
 bool RecursiveXMOListPropertyQuery::Equals(const QueryFilter* other) const
@@ -1020,11 +911,6 @@ QVariant XenModelObjectListContainsNameQuery::Match(const QVariantMap& objectDat
             refList.append(str);
     }
     
-    // TODO: Implement full name matching when cache API is complete
-    Q_UNUSED(conn);
-    return false;  // Not yet implemented - cache not available
-    
-    #if 0  // Disabled until cache API is available
     // Determine object type from property name
     QString refType = getObjectTypeFromPropertyName(this->property_);
     if (refType.isEmpty())
@@ -1039,9 +925,9 @@ QVariant XenModelObjectListContainsNameQuery::Match(const QVariantMap& objectDat
         
         // Get object data from cache
         QVariantMap refData;
-        if (conn && conn->cache())
+        if (conn && conn->GetCache())
         {
-            refData = conn->cache()->ResolveObjectData(refType, ref);
+            refData = conn->GetCache()->ResolveObjectData(refType, ref);
         }
         
         if (refData.isEmpty())
@@ -1077,7 +963,6 @@ QVariant XenModelObjectListContainsNameQuery::Match(const QVariantMap& objectDat
     }
     
     return false;  // No matches found
-    #endif
 }
 
 bool XenModelObjectListContainsNameQuery::Equals(const QueryFilter* other) const
@@ -1280,4 +1165,48 @@ bool CustomFieldDateQuery::Equals(const QueryFilter* other) const
 uint CustomFieldDateQuery::HashCode() const
 {
     return qHash(this->fieldName_) ^ qHash(this->query_.toString());
+}
+// ============================================================================
+// ValuePropertyQuery - Simple value equality matching
+// ============================================================================
+
+ValuePropertyQuery::ValuePropertyQuery(PropertyNames property, const QString& query, bool equals)
+    : property_(property)
+    , query_(query)
+    , equals_(equals)
+{
+}
+
+QVariant ValuePropertyQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const
+{
+    Q_UNUSED(objectType);
+    Q_UNUSED(conn);
+    
+    // Get property value
+    QVariant propertyValue = getPropertyValue(objectData, this->property_);
+    
+    if (!propertyValue.isValid())
+        return QVariant();  // Indeterminate
+    
+    QString value = propertyValue.toString();
+    
+    // Check equality
+    bool matches = (value == this->query_);
+    return matches == this->equals_;  // If equals_=true, return matches; if equals_=false, return !matches
+}
+
+bool ValuePropertyQuery::Equals(const QueryFilter* other) const
+{
+    const ValuePropertyQuery* otherQuery = dynamic_cast<const ValuePropertyQuery*>(other);
+    if (!otherQuery)
+        return false;
+    
+    return this->property_ == otherQuery->property_ &&
+           this->query_ == otherQuery->query_ &&
+           this->equals_ == otherQuery->equals_;
+}
+
+uint ValuePropertyQuery::HashCode() const
+{
+    return qHash(static_cast<int>(this->property_)) ^ qHash(this->query_);
 }

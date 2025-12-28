@@ -28,15 +28,23 @@
 #ifndef QUERYTYPE_H
 #define QUERYTYPE_H
 
+#include <QObject>
 #include <QString>
 #include <QVariant>
 #include <QVariantList>
 #include "searcher.h"
 #include "../../../xenlib/xensearch/queryfilter.h"
 #include "../../../xenlib/xensearch/queries.h"
+#include "../../../xenlib/xensearch/queryscope.h"
 
 // Forward declarations
 class QueryElement;
+class RecursiveXMOPropertyQuery;
+class RecursiveXMOListPropertyQuery;
+class XenModelObjectPropertyQuery;
+class XenModelObjectListContainsQuery;
+class XenModelObjectListContainsNameQuery;
+class NullPropertyQuery;
 
 /**
  * Base class for all query types
@@ -341,6 +349,80 @@ protected:
 };
 
 /**
+ * Value property query type - dynamic value collection from cache
+ * 
+ * C# Equivalent: ValuePropertyQueryType in QueryElement.cs (lines 1436-1630)
+ * Collects unique values for a property (e.g., OS names) from all VMs in cache.
+ * Provides dropdown with collected values and "is/is not" matching.
+ * 
+ * Currently only used for PropertyNames::os_name (VM operating systems).
+ * Monitors ConnectionsManager for VM additions/removals to keep list updated.
+ */
+class ValuePropertyQueryType : public QObject, public QueryType
+{
+    Q_OBJECT
+
+public:
+    ValuePropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent = nullptr);
+    ~ValuePropertyQueryType() override;
+    
+    bool ForQuery(QueryFilter* query) const override;
+    QString toString() const override;
+    
+    bool showMatchTypeComboButton() const override { return true; }
+    QStringList getMatchTypeComboButtonEntries() const override;
+    
+    bool showComboButton(QueryElement* queryElement) const override;
+    QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
+    
+    QueryFilter* GetQuery(QueryElement* queryElement) const override;
+    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+private slots:
+    void onConnectionsChanged();
+    void onCacheChanged();
+
+private:
+    PropertyNames property_;
+    QMap<QString, bool> collectedValues_;  // Value → true (C# uses Dictionary<String, Object>)
+    
+    void populateCollectedValues();
+};
+
+/**
+ * UUID query type - resource selection with dropdown
+ * 
+ * C# Equivalent: Uuid QueryType pattern (not a single class, but pattern used in XenModelObjectPropertyQueryType)
+ * Uses ResourceSelectButton widget to show hierarchical object picker.
+ * User selects an object (VM, Host, Pool, etc.), query matches by opaque_ref.
+ * 
+ * Note: Requires ResourceSelectButton widget which is not yet functional (needs Search::PopulateAdapters).
+ * For now, this falls back to UuidStringQueryType behavior.
+ */
+class UuidQueryType : public QObject, public QueryType
+{
+    Q_OBJECT
+
+public:
+    UuidQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent = nullptr);
+    
+    bool ForQuery(QueryFilter* query) const override;
+    QString toString() const override;
+    
+    bool showMatchTypeComboButton() const override { return true; }
+    QStringList getMatchTypeComboButtonEntries() const override;
+    
+    bool showResourceSelectButton(QueryElement* queryElement) const override;
+    
+    QueryFilter* GetQuery(QueryElement* queryElement) const override;
+    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+private:
+    PropertyNames property_;
+    // TODO: Implement when ResourceSelectButton + Search::PopulateAdapters ready
+};
+
+/**
  * UUID string query type - searches for UUID strings
  * 
  * C# Equivalent: UuidStringQueryType in QueryElement.cs (extends StringPropertyQueryType)
@@ -352,6 +434,475 @@ public:
     UuidStringQueryType(int group, ObjectTypes appliesTo);
     
     QStringList getMatchTypeComboButtonEntries() const override;
+};
+
+// ============================================================================
+// Recursive QueryTypes - Parent/Child Filtering  
+// ============================================================================
+
+/**
+ * Recursive query type base - enables filtering by parent/child object properties
+ * 
+ * C# Equivalent: RecursiveQueryType<T, O, Q> in QueryElement.cs (lines 1538-1617)
+ * 
+ * Allows queries like "Pool is <sub-query>" or "Host contains VM where <sub-query>".
+ * The sub-query operates on the related object (parent or child).
+ * 
+ * Template parameters (C# generics):
+ * - propertyName: The PropertyNames value for this query
+ * - subQueryScope: The ObjectTypes that the sub-query can filter
+ * 
+ * Example: RecursiveXMOQueryType for Pool→parent pool relationship
+ *   - User sees "Pool is..." with sub-query "Name contains 'Production'"
+ *   - Matches VMs/Hosts whose parent pool's name contains "Production"
+ */
+class RecursiveQueryTypeBase : public QObject, public QueryType
+{
+    Q_OBJECT
+
+public:
+    RecursiveQueryTypeBase(int group, ObjectTypes appliesTo, PropertyNames property, ObjectTypes subQueryScope, QObject* parent = nullptr);
+    ~RecursiveQueryTypeBase() override;
+    
+    Category getCategory() const override { return Category::ParentChild; }
+    QueryScope* getSubQueryScope() const override { return this->subQueryScope_; }
+    
+    bool ForQuery(QueryFilter* query) const override;
+    
+protected:
+    PropertyNames property_;
+    QueryScope* subQueryScope_;
+    
+    // Derived classes implement this to create the appropriate RecursivePropertyQuery
+    virtual QueryFilter* newQuery(PropertyNames property, QueryFilter* subQuery) const = 0;
+    
+private slots:
+    void onConnectionsChanged();
+    void onCacheChanged();
+};
+
+/**
+ * Recursive XMO query type - single object relationship
+ * 
+ * C# Equivalent: RecursiveXMOQueryType<T> in QueryElement.cs (lines 1619-1629)
+ * Uses RecursiveXMOPropertyQuery<T> for evaluation
+ * 
+ * Examples:
+ * - "Pool is <sub-query>" (VM→Pool relationship)
+ * - "Parent folder is <sub-query>" (VM→Folder relationship)  
+ * - "Appliance is <sub-query>" (VM→VM_appliance relationship)
+ */
+class RecursiveXMOQueryType : public RecursiveQueryTypeBase
+{
+public:
+    RecursiveXMOQueryType(int group, ObjectTypes appliesTo, PropertyNames property, ObjectTypes subQueryScope, QObject* parent = nullptr);
+    
+    QString toString() const override;
+    QueryFilter* GetQuery(QueryElement* queryElement) const override;
+    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    
+protected:
+    QueryFilter* newQuery(PropertyNames property, QueryFilter* subQuery) const override;
+};
+
+/**
+ * Recursive XMO list query type - list object relationship
+ * 
+ * C# Equivalent: RecursiveXMOListQueryType<T> in QueryElement.cs (lines 1631-1643)
+ * Uses RecursiveXMOListPropertyQuery<T> for evaluation
+ * 
+ * Examples:
+ * - "Host contains VM where <sub-query>" (Pool→Host list relationship)
+ * - "Network uses <sub-query>" (VM→Network list relationship)
+ * - "Storage uses <sub-query>" (VM→SR list relationship)
+ * - "Disks contain <sub-query>" (VM→VDI list relationship)
+ */
+class RecursiveXMOListQueryType : public RecursiveQueryTypeBase
+{
+public:
+    RecursiveXMOListQueryType(int group, ObjectTypes appliesTo, PropertyNames property, ObjectTypes subQueryScope, QObject* parent = nullptr);
+    
+    QString toString() const override;
+    QueryFilter* GetQuery(QueryElement* queryElement) const override;
+    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    
+protected:
+    QueryFilter* newQuery(PropertyNames property, QueryFilter* subQuery) const override;
+};
+
+// ============================================================================
+// Legacy Resource QueryTypes (NOT USED FOR NEW QUERIES)
+// ============================================================================
+
+/**
+ * XenModelObject property query type - direct object selection with dropdown
+ * 
+ * C# Equivalent: XenModelObjectPropertyQueryType<T> in QueryElement.cs (lines 1645-1729)
+ * 
+ * Legacy query type for selecting specific objects from dropdown (e.g., "Pool is Production-Pool").
+ * New queries should use RecursiveXMOQueryType + sub-query instead.
+ * 
+ * Kept for backward compatibility with saved searches.
+ * Uses XenModelObjectPropertyQuery<T> for evaluation.
+ */
+class XenModelObjectPropertyQueryType : public QObject, public QueryType
+{
+    Q_OBJECT
+
+public:
+    XenModelObjectPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent = nullptr);
+    ~XenModelObjectPropertyQueryType() override;
+    
+    bool ForQuery(QueryFilter* query) const override;
+    QString toString() const override;
+    
+    bool showMatchTypeComboButton() const override { return true; }
+    QStringList getMatchTypeComboButtonEntries() const override;
+    
+    bool showComboButton(QueryElement* queryElement) const override;
+    QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
+    
+    QueryFilter* GetQuery(QueryElement* queryElement) const override;
+    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+private slots:
+    void onConnectionsChanged();
+    void onCacheChanged();
+
+private:
+    PropertyNames property_;
+};
+
+/**
+ * XenModelObject list contains query type - object list filtering with dropdown
+ * 
+ * C# Equivalent: XenModelObjectListContainsQueryType<T> in QueryElement.cs (lines 1731-1884)
+ * 
+ * Legacy query type for "Network uses Production-Net", "Storage uses iSCSI-SR", etc.
+ * New queries should use RecursiveXMOListQueryType + sub-query instead.
+ * 
+ * Supports both dropdown selection and text matching.
+ * Uses XenModelObjectListContainsQuery<T> for evaluation.
+ */
+class XenModelObjectListContainsQueryType : public QObject, public QueryType
+{
+    Q_OBJECT
+
+public:
+    XenModelObjectListContainsQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent = nullptr);
+    ~XenModelObjectListContainsQueryType() override;
+    
+    bool ForQuery(QueryFilter* query) const override;
+    QString toString() const override;
+    
+    bool showMatchTypeComboButton() const override { return true; }
+    QStringList getMatchTypeComboButtonEntries() const override;
+    
+    bool showComboButton(QueryElement* queryElement) const override;
+    QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
+    
+    bool showTextBox(QueryElement* queryElement) const override;
+    
+    QueryFilter* GetQuery(QueryElement* queryElement) const override;
+    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+private slots:
+    void onConnectionsChanged();
+    void onCacheChanged();
+
+protected:
+    PropertyNames property_;
+};
+
+/**
+ * Host query type - special handling for standalone/in-pool
+ * 
+ * C# Equivalent: HostQueryType in QueryElement.cs (lines 1946-2006)
+ * 
+ * Extends XenModelObjectListContainsQueryType with additional match types:
+ * - "Is standalone" - Host not in a pool (uses NullQuery<Pool>)
+ * - "Is in a pool" - Host in a pool (uses !NullQuery<Pool>)
+ * 
+ * Also supports standard "Uses Host-A", text matching, etc.
+ */
+class HostQueryType : public XenModelObjectListContainsQueryType
+{
+public:
+    HostQueryType(int group, ObjectTypes appliesTo, QObject* parent = nullptr);
+    
+    QStringList getMatchTypeComboButtonEntries() const override;
+    bool showTextBox(QueryElement* queryElement) const override;
+    
+    QueryFilter* GetQuery(QueryElement* queryElement) const override;
+    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+};
+
+/**
+ * NullQueryType - Check if reference property is null or not null
+ * 
+ * C# Equivalent: NullQueryType<T> in QueryElement.cs (lines 2202-2260)
+ * 
+ * Simple QueryType that creates NullPropertyQuery for checking null references.
+ * Used for queries like "Is standalone" (pool == null), "Not in a folder" (folder == null)
+ * 
+ * Note: C# uses generics NullQueryType<T> where T : XenObject<T>
+ *       Qt uses PropertyNames for type safety instead
+ */
+class NullQueryType : public QueryType
+{
+public:
+    NullQueryType(int group, ObjectTypes appliesTo, PropertyNames property, 
+                  bool isNull, const QString& i18n);
+    
+    QString toString() const override { return this->i18n_; }
+    
+    QueryFilter* GetQuery(QueryElement* queryElement) const override;
+    bool ForQuery(QueryFilter* query) const override;
+    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+private:
+    PropertyNames property_;
+    bool isNull_;
+    QString i18n_;
+};
+
+/**
+ * MatchType - Abstract base class for match types used by MatchQueryType
+ * 
+ * C# Equivalent: MatchType in QueryElement.cs (lines 2374-2394)
+ * 
+ * Represents different matching modes (e.g., "Contained in", "Bigger than", etc.)
+ * Each MatchType controls which UI elements are shown and how to build queries.
+ */
+class MatchType
+{
+public:
+    explicit MatchType(const QString& matchText);
+    virtual ~MatchType() = default;
+    
+    QString toString() const { return this->matchText_; }
+    
+    virtual bool showComboButton(QueryElement* queryElement) const { return false; }
+    virtual bool showTextBox(QueryElement* queryElement) const { return false; }
+    virtual bool showNumericUpDown(QueryElement* queryElement) const { return false; }
+    
+    virtual QString units(QueryElement* queryElement) const { return QString(); }
+    virtual QVariantList getComboButtonEntries() const { return QVariantList(); }
+    
+    virtual QueryFilter* getQuery(QueryElement* queryElement) const = 0;
+    virtual bool forQuery(QueryFilter* query) const = 0;
+    virtual void fromQuery(QueryFilter* query, QueryElement* queryElement) = 0;
+
+protected:
+    QString matchText_;
+};
+
+/**
+ * XMOListContains - MatchType for "Contained in" / "Not contained in" with resource picker
+ * 
+ * C# Equivalent: XMOListContains<T> in QueryElement.cs (lines 2396-2448)
+ * 
+ * Template note: C# uses XenObject<T> generics, Qt uses QString type parameter.
+ * Filter predicate not implemented yet (needs cache API).
+ */
+class XMOListContains : public MatchType
+{
+public:
+    XMOListContains(PropertyNames property, bool contains, const QString& matchText,
+                    const QString& objectType);
+    
+    bool showComboButton(QueryElement* queryElement) const override;
+    QVariantList getComboButtonEntries() const override;
+    
+    QueryFilter* getQuery(QueryElement* queryElement) const override;
+    bool forQuery(QueryFilter* query) const override;
+    void fromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+private:
+    PropertyNames property_;
+    bool contains_;
+    QString objectType_;  // "vm", "host", "sr", etc.
+};
+
+/**
+ * IntMatch - MatchType for numeric matching with multiplier/units
+ * 
+ * C# Equivalent: IntMatch in QueryElement.cs (lines 2450-2495)
+ * 
+ * Used for size queries (e.g., "Size is 10 GB", "Bigger than 5 MB")
+ */
+class IntMatch : public MatchType
+{
+public:
+    IntMatch(PropertyNames property, const QString& matchText,
+             const QString& units, qint64 multiplier,
+             NumericQuery::ComparisonType type);
+    
+    bool showNumericUpDown(QueryElement* queryElement) const override;
+    QString units(QueryElement* queryElement) const override;
+    
+    QueryFilter* getQuery(QueryElement* queryElement) const override;
+    bool forQuery(QueryFilter* query) const override;
+    void fromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+private:
+    PropertyNames property_;
+    NumericQuery::ComparisonType type_;
+    QString units_;
+    qint64 multiplier_;
+};
+
+/**
+ * MatchQueryType - Abstract base class for QueryTypes that use MatchTypes
+ * 
+ * C# Equivalent: MatchQueryType in QueryElement.cs (lines 2260-2372)
+ * 
+ * Delegates UI control and query building to selected MatchType.
+ * Used by DiskQueryType and LongQueryType.
+ */
+class MatchQueryType : public QueryType
+{
+public:
+    MatchQueryType(int group, ObjectTypes appliesTo, const QString& i18n);
+    virtual ~MatchQueryType();
+    
+    QString toString() const override { return this->i18n_; }
+    
+    bool showMatchTypeComboButton() const override { return true; }
+    QStringList getMatchTypeComboButtonEntries() const override;
+    
+    bool showComboButton(QueryElement* queryElement) const override;
+    bool showNumericUpDown(QueryElement* queryElement) const override;
+    bool showTextBox(QueryElement* queryElement) const override;
+    
+    QString getUnits(QueryElement* queryElement) const override;
+    QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
+    
+    QueryFilter* GetQuery(QueryElement* queryElement) const override;
+    bool ForQuery(QueryFilter* query) const override;
+    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+protected:
+    virtual QList<MatchType*> getMatchTypes() const = 0;
+    
+    MatchType* getSelectedMatchType(QueryElement* queryElement) const;
+
+private:
+    QString i18n_;
+};
+
+/**
+ * DiskQueryType - Complex disk query with 7 match types
+ * 
+ * C# Equivalent: DiskQueryType in QueryElement.cs (lines 2497-2524)
+ * 
+ * Match types:
+ * - Contained in SR X / Not contained in SR X
+ * - Attached to VM X / Not attached to VM X
+ * - Size is X GB / Bigger than X GB / Smaller than X GB
+ * 
+ * NOTE: Marked as "NOT USED FOR NEW QUERIES" in C# - kept for backward compatibility
+ */
+class DiskQueryType : public MatchQueryType
+{
+public:
+    DiskQueryType(int group, ObjectTypes appliesTo, const QString& i18n);
+    ~DiskQueryType() override;
+
+protected:
+    QList<MatchType*> getMatchTypes() const override;
+
+private:
+    mutable QList<MatchType*> matchTypes_;
+};
+
+/**
+ * LongQueryType - Numeric range query (bigger/smaller/exact)
+ * 
+ * C# Equivalent: LongQueryType in QueryElement.cs (lines 2526-2545)
+ * 
+ * Generic numeric query with 3 match types:
+ * - Bigger than X
+ * - Smaller than X  
+ * - Is exactly X
+ */
+class LongQueryType : public MatchQueryType
+{
+public:
+    LongQueryType(int group, ObjectTypes appliesTo, const QString& i18n,
+                  PropertyNames property, qint64 multiplier, const QString& unit);
+    ~LongQueryType() override;
+
+protected:
+    QList<MatchType*> getMatchTypes() const override;
+
+private:
+    mutable QList<MatchType*> matchTypes_;
+};
+
+/**
+ * CustomFieldQueryTypeBase - Abstract base for custom field queries
+ * 
+ * C# Equivalent: CustomFieldQueryTypeBase in QueryElement.cs (lines 2106-2129)
+ * 
+ * NOTE: Requires CustomFieldDefinition class - stubbed for now
+ */
+class CustomFieldQueryTypeBase : public QueryType
+{
+public:
+    CustomFieldQueryTypeBase(int group, ObjectTypes appliesTo, 
+                            const QString& fieldName);
+    
+    QString toString() const override { return this->fieldName_; }
+    
+    bool ForQuery(QueryFilter* query) const override;
+
+protected:
+    QString fieldName_;  // Will be CustomFieldDefinition* when implemented
+};
+
+/**
+ * CustomFieldStringQueryType - String custom field queries
+ * 
+ * C# Equivalent: CustomFieldStringQueryType in QueryElement.cs (lines 2131-2162)
+ * 
+ * Uses same match types as StringPropertyQueryType (contains, starts with, etc.)
+ */
+class CustomFieldStringQueryType : public CustomFieldQueryTypeBase
+{
+public:
+    CustomFieldStringQueryType(int group, ObjectTypes appliesTo,
+                               const QString& fieldName);
+    
+    bool showMatchTypeComboButton() const override { return true; }
+    bool showTextBox(QueryElement* queryElement) const override { return true; }
+    
+    QStringList getMatchTypeComboButtonEntries() const override;
+    
+    QueryFilter* GetQuery(QueryElement* queryElement) const override;
+    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+};
+
+/**
+ * CustomFieldDateQueryType - Date custom field queries
+ * 
+ * C# Equivalent: CustomFieldDateQueryType in QueryElement.cs (lines 2164-2200)
+ * 
+ * Uses same match types as DatePropertyQueryType (on, before, after, etc.)
+ */
+class CustomFieldDateQueryType : public CustomFieldQueryTypeBase
+{
+public:
+    CustomFieldDateQueryType(int group, ObjectTypes appliesTo,
+                            const QString& fieldName);
+    
+    bool showMatchTypeComboButton() const override { return true; }
+    bool showDateTimePicker(QueryElement* queryElement) const override;
+    
+    QStringList getMatchTypeComboButtonEntries() const override;
+    
+    QueryFilter* GetQuery(QueryElement* queryElement) const override;
+    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
 };
 
 /**

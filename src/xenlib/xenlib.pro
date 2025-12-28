@@ -30,6 +30,7 @@ SOURCES += \
     xensearch/queryscope.cpp \
     xensearch/queryfilter.cpp \
     xensearch/queries.cpp \
+    xensearch/propertyaccessorhelper.cpp \
     xensearch/query.cpp \
     xensearch/search.cpp \
     xensearch/sort.cpp \
@@ -170,6 +171,7 @@ HEADERS += \
     xensearch/queryscope.h \
     xensearch/queryfilter.h \
     xensearch/queries.h \
+    xensearch/propertyaccessorhelper.h \
     xensearch/query.h \
     xensearch/search.h \
     xensearch/sort.h \

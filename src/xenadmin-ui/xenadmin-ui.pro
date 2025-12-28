@@ -58,6 +58,7 @@ SOURCES += \
     controls/xensearch/queryelement.cpp \
     controls/xensearch/querytype.cpp \
     controls/xensearch/searcher.cpp \
+    controls/xensearch/resourceselectbutton.cpp \
     controls/xensearch/treewidgetgroupacceptor.cpp \
     settingspanels/generaleditpage.cpp \
     settingspanels/hostautostarteditpage.cpp \
@@ -274,6 +275,7 @@ HEADERS += \
     controls/xensearch/queryelement.h \
     controls/xensearch/querytype.h \
     controls/xensearch/searcher.h \
+    controls/xensearch/resourceselectbutton.h \
     controls/xensearch/treewidgetgroupacceptor.h \
     settingspanels/ieditpage.h \
     settingspanels/generaleditpage.h \
