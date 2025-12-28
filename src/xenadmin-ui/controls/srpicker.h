@@ -138,8 +138,8 @@ class SrPicker : public QWidget
     private slots:
         void onSelectionChanged();
         void onItemDoubleClicked(int row, int column);
-        void onCacheUpdated(const QString &type, const QString &ref);
-        void onCacheRemoved(const QString& type, const QString& ref);
+        void onCacheUpdated(XenConnection *connection, const QString &type, const QString &ref);
+        void onCacheRemoved(XenConnection *connection, const QString& type, const QString& ref);
         void onSrRefreshCompleted();
 
     private:

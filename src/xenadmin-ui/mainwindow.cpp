@@ -787,7 +787,7 @@ void MainWindow::showSearchPage(GroupingTag* groupingTag)
 
     // Clear existing tabs and show only SearchTabPage
     clearTabs();
-    ui->mainTabWidget->addTab(m_searchTabPage, m_searchTabPage->tabTitle());
+    ui->mainTabWidget->addTab(m_searchTabPage, m_searchTabPage->GetTitle());
     updatePlaceholderVisibility();
 
     // Update status bar
@@ -832,7 +832,7 @@ void MainWindow::onSearchTabPageObjectSelected(const QString& objectType, const 
             for (int i = 0; i < ui->mainTabWidget->count(); ++i)
             {
                 BaseTabPage* page = qobject_cast<BaseTabPage*>(ui->mainTabWidget->widget(i));
-                if (page && page->tabTitle() == tr("General"))
+                if (page && page->GetTitle() == tr("General"))
                 {
                     ui->mainTabWidget->setCurrentIndex(i);
                     break;
@@ -905,7 +905,7 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType, const 
         else if (qobject_cast<PhysicalStorageTabPage*>(tab))
             physicalStorageTab = tab;
 
-        QString title = tab->tabTitle();
+        QString title = tab->GetTitle();
         if (title == "General")
             generalTab = tab;
         else if (title == "Memory")
@@ -1010,7 +1010,7 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType, const 
     {
         for (BaseTabPage* tab : m_tabPages)
         {
-            if (tab->isApplicableForObjectType(objectType))
+            if (tab->IsApplicableForObjectType(objectType))
                 newTabs.append(tab);
         }
     }
@@ -1044,17 +1044,17 @@ void MainWindow::updateTabPages(XenConnection *connection, const QString& object
         BaseTabPage* tabPage = newTabs[i];
 
         // Set the XenLib so tab pages can access XenAPI
-        tabPage->setXenLib(this->m_xenLib);
+        //tabPage->setXenLib(this->m_xenLib);
 
         // Set the object data on the tab page
-        tabPage->SetXenObject(objectType, objectRef, objectData);
+        tabPage->SetXenObject(connection, objectType, objectRef, objectData);
 
         // Add the tab to the widget
-        this->ui->mainTabWidget->addTab(tabPage, tabPage->tabTitle());
+        this->ui->mainTabWidget->addTab(tabPage, tabPage->GetTitle());
 
         // Check if this is the remembered tab
         // C# Reference: MainWindow.cs line 1460 - if (newTab == pageToSelect)
-        if (!rememberedTabTitle.isEmpty() && tabPage->tabTitle() == rememberedTabTitle)
+        if (!rememberedTabTitle.isEmpty() && tabPage->GetTitle() == rememberedTabTitle)
         {
             pageToSelectIndex = i;
         }
@@ -1151,7 +1151,7 @@ void MainWindow::updateTabPages(XenConnection *connection, const QString& object
                 }
             }
             
-            currentPage->onPageShown();
+            currentPage->OnPageShown();
         }
     }
 }
@@ -1205,7 +1205,7 @@ void MainWindow::onTabChanged(int index)
         BaseTabPage* previousPage = qobject_cast<BaseTabPage*>(previousWidget);
         if (previousPage)
         {
-            previousPage->onPageHidden();
+            previousPage->OnPageHidden();
         }
     }
 
@@ -1285,7 +1285,7 @@ void MainWindow::onTabChanged(int index)
 
         if (currentPage)
         {
-            currentPage->onPageShown();
+            currentPage->OnPageShown();
         }
     }
 
@@ -1907,7 +1907,7 @@ void MainWindow::updateConnectionProfileFromCache(XenConnection* connection, Xen
     SettingsManager::instance().sync();
 }
 
-void MainWindow::onCacheObjectChanged(const QString& objectType, const QString& objectRef)
+void MainWindow::onCacheObjectChanged(XenConnection* connection, const QString& objectType, const QString& objectRef)
 {
     // If the changed object is the currently displayed one, refresh the tabs
     if (objectType == m_currentObjectType && objectRef == m_currentObjectRef)
@@ -1922,7 +1922,7 @@ void MainWindow::onCacheObjectChanged(const QString& objectType, const QString& 
                 BaseTabPage* tabPage = qobject_cast<BaseTabPage*>(ui->mainTabWidget->widget(i));
                 if (tabPage)
                 {
-                    tabPage->SetXenObject(objectType, objectRef, objectData);
+                    tabPage->SetXenObject(connection, objectType, objectRef, objectData);
                 }
             }
         }

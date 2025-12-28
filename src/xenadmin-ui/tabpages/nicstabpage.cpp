@@ -64,7 +64,7 @@ NICsTabPage::~NICsTabPage()
     delete this->ui;
 }
 
-bool NICsTabPage::isApplicableForObjectType(const QString& objectType) const
+bool NICsTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // NICs tab is only applicable to Hosts
     return objectType == "host";

@@ -73,14 +73,14 @@ SrStorageTabPage::~SrStorageTabPage()
     delete this->ui;
 }
 
-bool SrStorageTabPage::isApplicableForObjectType(const QString& objectType) const
+bool SrStorageTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     return objectType == "sr";
 }
 
-void SrStorageTabPage::SetXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void SrStorageTabPage::SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
 {
-    BaseTabPage::SetXenObject(objectType, objectRef, objectData);
+    BaseTabPage::SetXenObject(conn, objectType, objectRef, objectData);
 }
 
 void SrStorageTabPage::refreshContent()

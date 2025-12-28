@@ -134,68 +134,9 @@ int naturalCompare(const QString& s1, const QString& s2)
 
     return len1 - len2;
 }
-
-QString getVMStorageHostFromCache(const QVariantMap& vmRecord, XenCache* cache, bool ignoreCDs)
-{
-    if (!cache || vmRecord.isEmpty())
-        return QString();
-
-    QVariantList vbds = vmRecord.value("VBDs").toList();
-
-    for (const QVariant& vbdRefVariant : vbds)
-    {
-        QString vbdRef = vbdRefVariant.toString();
-        if (vbdRef.isEmpty() || vbdRef == "OpaqueRef:NULL")
-            continue;
-
-        QVariantMap vbd = cache->ResolveObjectData("vbd", vbdRef);
-        if (vbd.isEmpty())
-            continue;
-
-        if (ignoreCDs && vbd.value("type").toString() == "CD")
-            continue;
-
-        QString vdiRef = vbd.value("VDI").toString();
-        if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
-            continue;
-
-        QVariantMap vdi = cache->ResolveObjectData("vdi", vdiRef);
-        if (vdi.isEmpty())
-            continue;
-
-        QString srRef = vdi.value("SR").toString();
-        if (srRef.isEmpty() || srRef == "OpaqueRef:NULL")
-            continue;
-
-        QVariantMap sr = cache->ResolveObjectData("sr", srRef);
-        if (sr.isEmpty())
-            continue;
-
-        if (sr.value("shared").toBool())
-            continue;
-
-        QVariantList pbds = sr.value("PBDs").toList();
-        if (pbds.count() != 1)
-            continue;
-
-        QString pbdRef = pbds.first().toString();
-        if (pbdRef.isEmpty() || pbdRef == "OpaqueRef:NULL")
-            continue;
-
-        QVariantMap pbd = cache->ResolveObjectData("pbd", pbdRef);
-        if (pbd.isEmpty())
-            continue;
-
-        QString hostRef = pbd.value("host").toString();
-        if (!hostRef.isEmpty() && hostRef != "OpaqueRef:NULL")
-            return hostRef;
-    }
-
-    return QString();
-}
 }
 
-IsoDropDownBox::IsoDropDownBox(QWidget* parent) : QComboBox(parent), m_xenLib(nullptr), m_connection(nullptr)
+IsoDropDownBox::IsoDropDownBox(QWidget* parent) : QComboBox(parent), m_connection(nullptr)
 {
     this->setEditable(false);
     this->setInsertPolicy(QComboBox::NoInsert);
@@ -218,21 +159,10 @@ void IsoDropDownBox::refresh()
 
     this->addItem(tr("<empty>"), QString());
 
-    XenConnection* connection = this->m_connection;
-    if (!connection && this->m_xenLib)
-        connection = this->m_xenLib->getConnection();
-
-    XenCache* cache = nullptr;
-    if (this->m_connection)
-    {
-        cache = this->m_connection->GetCache();
-    } else if (this->m_xenLib)
-    {
-        cache = this->m_xenLib->getCache();
-    }
-
-    if (!cache)
+    if (!this->m_connection)
         return;
+
+    XenCache* cache = this->m_connection->GetCache();
 
     bool showHidden = SettingsManager::instance().getShowHiddenObjects();
 
@@ -247,17 +177,14 @@ void IsoDropDownBox::refresh()
             hostRef = vmData.value("resident_on").toString();
         } else
         {
-            if (connection)
-                hostRef = VMHelpers::getVMStorageHost(connection, vmData, true);
-            else
-                hostRef = getVMStorageHostFromCache(vmData, cache, true);
+            hostRef = VMHelpers::getVMStorageHost(this->m_connection, vmData, true);
         }
     }
 
     bool stockholmOrGreater = false;
-    if (connection && connection->GetSession())
+    if (this->m_connection->GetSession())
     {
-        stockholmOrGreater = connection->GetSession()->apiVersionMeets(APIVersion::API_2_11);
+        stockholmOrGreater = this->m_connection->GetSession()->apiVersionMeets(APIVersion::API_2_11);
     }
 
     struct SrEntry

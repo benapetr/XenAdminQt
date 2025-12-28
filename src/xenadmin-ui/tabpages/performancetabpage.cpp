@@ -65,7 +65,7 @@ PerformanceTabPage::~PerformanceTabPage()
     delete this->ui;
 }
 
-bool PerformanceTabPage::isApplicableForObjectType(const QString& objectType) const
+bool PerformanceTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // Performance tab is applicable to VMs and Hosts
     return objectType == "vm" || objectType == "host";

@@ -54,15 +54,15 @@ public:
     explicit NICsTabPage(QWidget* parent = nullptr);
     ~NICsTabPage();
 
-    QString tabTitle() const override
+    QString GetTitle() const override
     {
         return "NICs";
     }
-    QString helpID() const override
+    QString HelpID() const override
     {
         return "TabPageNICs";
     }
-    bool isApplicableForObjectType(const QString& objectType) const override;
+    bool IsApplicableForObjectType(const QString& objectType) const override;
 
 protected:
     void refreshContent() override;

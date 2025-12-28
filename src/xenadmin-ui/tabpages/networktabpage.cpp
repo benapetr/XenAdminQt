@@ -47,8 +47,7 @@
 #include <QClipboard>
 #include <QApplication>
 
-NetworkTabPage::NetworkTabPage(QWidget* parent)
-    : BaseTabPage(parent), ui(new Ui::NetworkTabPage)
+NetworkTabPage::NetworkTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::NetworkTabPage)
 {
     this->ui->setupUi(this);
 
@@ -68,42 +67,15 @@ NetworkTabPage::NetworkTabPage(QWidget* parent)
     this->ui->ipConfigTable->setContextMenuPolicy(Qt::CustomContextMenu);
 
     // Connect button signals (matches C# flowLayoutPanel1 buttons)
-    connect(this->ui->addButton, &QPushButton::clicked,
-            this, &NetworkTabPage::onAddNetwork);
-    connect(this->ui->propertiesButton, &QPushButton::clicked,
-            this, &NetworkTabPage::onEditNetwork);
-    connect(this->ui->removeButton, &QPushButton::clicked,
-            this, &NetworkTabPage::onRemoveNetwork);
-    connect(this->ui->activateButton, &QPushButton::clicked,
-            this, &NetworkTabPage::onActivateToggle);
-
-    connect(this->ui->configureButton, &QPushButton::clicked,
-            this, &NetworkTabPage::onConfigureClicked);
-
-    connect(this->ui->networksTable, &QTableWidget::customContextMenuRequested,
-            this, &NetworkTabPage::showNetworksContextMenu);
-
-    connect(this->ui->ipConfigTable, &QTableWidget::customContextMenuRequested,
-            this, &NetworkTabPage::showIPConfigContextMenu);
-
-    connect(this->ui->networksTable, &QTableWidget::itemSelectionChanged,
-            this, &NetworkTabPage::onNetworksTableSelectionChanged);
-
-    connect(this->ui->ipConfigTable, &QTableWidget::itemSelectionChanged,
-            this, &NetworkTabPage::onIPConfigTableSelectionChanged);
-}
-
-void NetworkTabPage::setXenLib(XenLib* xenLib)
-{
-    BaseTabPage::setXenLib(xenLib);
-
-    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
-    if (cache)
-    {
-        connect(cache, &XenCache::objectChanged,
-                this, &NetworkTabPage::onCacheObjectChanged,
-                Qt::UniqueConnection);
-    }
+    connect(this->ui->addButton, &QPushButton::clicked, this, &NetworkTabPage::onAddNetwork);
+    connect(this->ui->propertiesButton, &QPushButton::clicked, this, &NetworkTabPage::onEditNetwork);
+    connect(this->ui->removeButton, &QPushButton::clicked, this, &NetworkTabPage::onRemoveNetwork);
+    connect(this->ui->activateButton, &QPushButton::clicked, this, &NetworkTabPage::onActivateToggle);
+    connect(this->ui->configureButton, &QPushButton::clicked, this, &NetworkTabPage::onConfigureClicked);
+    connect(this->ui->networksTable, &QTableWidget::customContextMenuRequested, this, &NetworkTabPage::showNetworksContextMenu);
+    connect(this->ui->ipConfigTable, &QTableWidget::customContextMenuRequested, this, &NetworkTabPage::showIPConfigContextMenu);
+    connect(this->ui->networksTable, &QTableWidget::itemSelectionChanged, this, &NetworkTabPage::onNetworksTableSelectionChanged);
+    connect(this->ui->ipConfigTable, &QTableWidget::itemSelectionChanged, this, &NetworkTabPage::onIPConfigTableSelectionChanged);
 }
 
 NetworkTabPage::~NetworkTabPage()
@@ -111,7 +83,7 @@ NetworkTabPage::~NetworkTabPage()
     delete this->ui;
 }
 
-bool NetworkTabPage::isApplicableForObjectType(const QString& objectType) const
+bool NetworkTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // Network tab is applicable to VMs, Hosts, and Pools
     // For VMs: shows network interfaces (VIFs)
@@ -159,6 +131,21 @@ void NetworkTabPage::refreshContent()
         this->populateNetworksForPool();
         this->populateIPConfigForPool();
     }
+}
+
+void NetworkTabPage::removeObject()
+{
+    if (!this->m_connection)
+        return;
+
+    XenCache* cache = this->m_connection->GetCache();
+    disconnect(cache, &XenCache::objectChanged, this, &NetworkTabPage::onCacheObjectChanged);
+}
+
+void NetworkTabPage::updateObject()
+{
+    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
+    connect(cache, &XenCache::objectChanged, this, &NetworkTabPage::onCacheObjectChanged, Qt::UniqueConnection);
 }
 
 void NetworkTabPage::setupVifColumns()
@@ -1600,8 +1587,13 @@ void NetworkTabPage::onNetworksDataUpdated(const QVariantList& networks)
     this->refreshContent();
 }
 
-void NetworkTabPage::onCacheObjectChanged(const QString& type, const QString& ref)
+void NetworkTabPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
 {
+    Q_ASSERT(this->m_connection == connection);
+
+    if (this->m_connection != connection)
+        return;
+
     Q_UNUSED(ref);
 
     if (type == "network" || type == "pif" || type == "vif" || type == "bond" ||

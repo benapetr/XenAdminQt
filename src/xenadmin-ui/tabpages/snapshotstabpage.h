@@ -42,34 +42,36 @@ class SnapshotsTabPage : public BaseTabPage
 {
     Q_OBJECT
 
-public:
-    explicit SnapshotsTabPage(QWidget* parent = nullptr);
-    ~SnapshotsTabPage();
+    public:
+        explicit SnapshotsTabPage(QWidget* parent = nullptr);
+        ~SnapshotsTabPage();
 
-    QString tabTitle() const override
-    {
-        return "Snapshots";
-    }
-    bool isApplicableForObjectType(const QString& objectType) const override;
+        QString GetTitle() const override
+        {
+            return "Snapshots";
+        }
+        bool IsApplicableForObjectType(const QString& objectType) const override;
 
-protected:
-    void refreshContent() override;
-    void setXenLib(XenLib* xenLib) override;
+    protected:
+        void refreshContent() override;
 
-private slots:
-    void onTakeSnapshot();
-    void onDeleteSnapshot();
-    void onRevertToSnapshot();
-    void onSnapshotSelectionChanged();
-    void refreshSnapshotList();
-    void onVirtualMachinesDataUpdated(QVariantList vms);
-    void onCacheObjectChanged(const QString& type, const QString& ref);
-    void onSnapshotContextMenu(const QPoint& pos);
+    private slots:
+        void onTakeSnapshot();
+        void onDeleteSnapshot();
+        void onRevertToSnapshot();
+        void onSnapshotSelectionChanged();
+        void refreshSnapshotList();
+        void onVirtualMachinesDataUpdated(QVariantList vms);
+        void onCacheObjectChanged(XenConnection *connection, const QString& type, const QString& ref);
+        void onSnapshotContextMenu(const QPoint& pos);
 
-private:
-    Ui::SnapshotsTabPage* ui;
-    void populateSnapshotTree();
-    void updateButtonStates();
+    private:
+        void removeObject() override;
+        void updateObject() override;
+
+        Ui::SnapshotsTabPage* ui;
+        void populateSnapshotTree();
+        void updateButtonStates();
 };
 
 #endif // SNAPSHOTSTABPAGE_H

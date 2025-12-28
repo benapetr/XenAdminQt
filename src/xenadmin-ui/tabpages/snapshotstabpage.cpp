@@ -72,20 +72,22 @@ SnapshotsTabPage::~SnapshotsTabPage()
     delete this->ui;
 }
 
-void SnapshotsTabPage::setXenLib(XenLib* xenLib)
+void SnapshotsTabPage::removeObject()
 {
-    BaseTabPage::setXenLib(xenLib);
+    if (!this->m_connection)
+        return;
 
-    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
-    if (cache)
-    {
-        connect(cache, &XenCache::objectChanged,
-                this, &SnapshotsTabPage::onCacheObjectChanged,
-                Qt::UniqueConnection);
-    }
+    XenCache* cache = this->m_connection->GetCache();
+    disconnect(cache, &XenCache::objectChanged, this, &SnapshotsTabPage::onCacheObjectChanged);
 }
 
-bool SnapshotsTabPage::isApplicableForObjectType(const QString& objectType) const
+void SnapshotsTabPage::updateObject()
+{
+    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
+    connect(cache, &XenCache::objectChanged, this, &SnapshotsTabPage::onCacheObjectChanged, Qt::UniqueConnection);
+}
+
+bool SnapshotsTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // Snapshots are only applicable to VMs
     return objectType == "vm";
@@ -362,9 +364,10 @@ void SnapshotsTabPage::onVirtualMachinesDataUpdated(QVariantList vms)
     }
 }
 
-void SnapshotsTabPage::onCacheObjectChanged(const QString& type, const QString& ref)
+void SnapshotsTabPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
 {
-    Q_UNUSED(ref);
+    (void) connection;
+    (void) ref;
 
     if (this->m_objectType == "vm" && (type == "vm" || type == "vdi" || type == "vbd"))
     {
@@ -421,3 +424,4 @@ void SnapshotsTabPage::onSnapshotContextMenu(const QPoint& pos)
         this->onDeleteSnapshot();
     }
 }
+

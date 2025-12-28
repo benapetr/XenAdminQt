@@ -153,13 +153,13 @@ VMStorageTabPage::~VMStorageTabPage()
     delete this->ui;
 }
 
-bool VMStorageTabPage::isApplicableForObjectType(const QString& objectType) const
+bool VMStorageTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // VM storage tab is only applicable to VMs (matches C# VMStoragePage)
     return objectType == "vm";
 }
 
-void VMStorageTabPage::SetXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void VMStorageTabPage::SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
 {
     // Disconnect previous object updates
     if (this->m_connection && this->m_connection->GetCache())
@@ -169,14 +169,12 @@ void VMStorageTabPage::SetXenObject(const QString& objectType, const QString& ob
     }
 
     // Call base implementation
-    BaseTabPage::SetXenObject(objectType, objectRef, objectData);
+    BaseTabPage::SetXenObject(conn, objectType, objectRef, objectData);
 
     // Connect to object updates for real-time CD/DVD changes
-    if (this->m_connection && this->m_connection->GetCache() && objectType == "vm")
+    if (this->m_connection && objectType == "vm")
     {
-        connect(this->m_connection->GetCache(), &XenCache::objectChanged,
-                this, &VMStorageTabPage::onCacheObjectChanged,
-                Qt::UniqueConnection);
+        connect(this->m_connection->GetCache(), &XenCache::objectChanged, this, &VMStorageTabPage::onCacheObjectChanged, Qt::UniqueConnection);
     }
 }
 
@@ -211,12 +209,14 @@ void VMStorageTabPage::onObjectDataReceived(QString type, QString ref, QVariantM
     }
 }
 
-void VMStorageTabPage::onCacheObjectChanged(const QString& type, const QString& ref)
+void VMStorageTabPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
 {
-    if (!this->m_connection || !this->m_connection->GetCache())
+    Q_ASSERT(this->m_connection == connection);
+
+    if (this->m_connection != connection)
         return;
 
-    QVariantMap data = this->m_connection->GetCache()->ResolveObjectData(type, ref);
+    QVariantMap data = connection->GetCache()->ResolveObjectData(type, ref);
     this->onObjectDataReceived(type, ref, data);
 }
 

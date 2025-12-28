@@ -145,11 +145,7 @@ void VMHAEditPage::setXenObjects(const QString& objectRef,
             this->m_origNtol = poolData.value("ha_host_failures_to_tolerate", 0).toLongLong();
         }
 
-        connect(this->connection()->GetCache(),
-                &XenCache::objectChanged,
-                this,
-                &VMHAEditPage::onCacheObjectChanged,
-                Qt::UniqueConnection);
+        connect(this->connection()->GetCache(), &XenCache::objectChanged, this, &VMHAEditPage::onCacheObjectChanged, Qt::UniqueConnection);
     }
 
     this->ui->scanningWidget->setVisible(true);
@@ -709,7 +705,7 @@ void VMHAEditPage::onLinkActivated(const QString& link)
     }
 }
 
-void VMHAEditPage::onCacheObjectChanged(const QString& type, const QString& ref)
+void VMHAEditPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
 {
     Q_UNUSED(ref);
     if (type != "pool" && type != "host" && type != "host_metrics")

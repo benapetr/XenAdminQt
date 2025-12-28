@@ -119,7 +119,7 @@ void SearchTabPage::setSearch(Search* search)
     }
 }
 
-bool SearchTabPage::isApplicableForObjectType(const QString& type) const
+bool SearchTabPage::IsApplicableForObjectType(const QString& type) const
 {
     // SearchTabPage is shown for all object types as the last tab
     // Reference: MainWindow.cs BuildTabList() - newTabs.Add(TabPageSearch) is always added at the end
@@ -127,7 +127,7 @@ bool SearchTabPage::isApplicableForObjectType(const QString& type) const
     return true;
 }
 
-void SearchTabPage::SetXenObject(const QString& type, const QString& ref, const QVariantMap& data)
+void SearchTabPage::SetXenObject(XenConnection *conn, const QString& type, const QString& ref, const QVariantMap& data)
 {
     // C# Reference: MainWindow.cs lines 1716-1810
     // When Search tab is shown for a specific object (not in SearchMode),
@@ -136,6 +136,7 @@ void SearchTabPage::SetXenObject(const QString& type, const QString& ref, const 
     Q_UNUSED(data);
     
     // Store the current object
+    this->m_connection = conn;
     this->m_currentObjectType = type;
     this->m_currentObjectRef = ref;
     

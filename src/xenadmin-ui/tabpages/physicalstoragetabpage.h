@@ -56,43 +56,43 @@ class PhysicalStorageTabPage : public BaseTabPage
 {
     Q_OBJECT
 
-public:
-    explicit PhysicalStorageTabPage(QWidget* parent = nullptr);
-    ~PhysicalStorageTabPage();
+    public:
+        explicit PhysicalStorageTabPage(QWidget* parent = nullptr);
+        ~PhysicalStorageTabPage();
 
-    QString tabTitle() const override
-    {
-        return "Storage";
-    }
-    
-    QString helpID() const override
-    {
-        return "TabPageStorage";
-    }
-    
-    bool isApplicableForObjectType(const QString& objectType) const override;
+        QString GetTitle() const override
+        {
+            return "Storage";
+        }
 
-    void SetXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
+        QString HelpID() const override
+        {
+            return "TabPageStorage";
+        }
 
-protected:
-    void refreshContent() override;
+        bool IsApplicableForObjectType(const QString& objectType) const override;
 
-private slots:
-    void onNewSRButtonClicked();
-    void onTrimButtonClicked();
-    void onPropertiesButtonClicked();
-    void onStorageTableCustomContextMenuRequested(const QPoint& pos);
-    void onStorageTableSelectionChanged();
-    void onStorageTableDoubleClicked(const QModelIndex& index);
+        void SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
 
-private:
-    Ui::PhysicalStorageTabPage* ui;
+    protected:
+        void refreshContent() override;
 
-    void populateHostStorage();
-    void populatePoolStorage();
-    void updateButtonStates();
-    QString getSelectedSRRef() const;
-    MainWindow* getMainWindow() const;
+    private slots:
+        void onNewSRButtonClicked();
+        void onTrimButtonClicked();
+        void onPropertiesButtonClicked();
+        void onStorageTableCustomContextMenuRequested(const QPoint& pos);
+        void onStorageTableSelectionChanged();
+        void onStorageTableDoubleClicked(const QModelIndex& index);
+
+    private:
+        Ui::PhysicalStorageTabPage* ui;
+
+        void populateHostStorage();
+        void populatePoolStorage();
+        void updateButtonStates();
+        QString getSelectedSRRef() const;
+        MainWindow* getMainWindow() const;
 };
 
 #endif // PHYSICALSTORAGETABPAGE_H

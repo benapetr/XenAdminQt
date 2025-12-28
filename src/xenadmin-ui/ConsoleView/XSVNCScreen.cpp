@@ -670,11 +670,10 @@ void XSVNCScreen::onVMDataChanged(const QVariantMap& vmData)
  * @brief Handle cache object changes from EventPoller
  * This is the primary handler for real-time VM power state changes
  */
-void XSVNCScreen::onCacheObjectChanged(const QString& objectType, const QString& objectRef)
+void XSVNCScreen::onCacheObjectChanged(XenConnection* connection, const QString& objectType, const QString& objectRef)
 {
-    XenCache* cache = this->_connection ? this->_connection->GetCache() : nullptr;
-    if (!cache)
-        return;
+    Q_ASSERT(this->_connection == connection);
+    XenCache* cache = connection->GetCache();
 
     if (objectType == "vm" && objectRef == this->_sourceRef)
     {

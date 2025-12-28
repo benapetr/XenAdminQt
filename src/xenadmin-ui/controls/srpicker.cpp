@@ -361,7 +361,7 @@ void SrPicker::onItemDoubleClicked(int row, int column)
     emit this->doubleClickOnRow();
 }
 
-void SrPicker::onCacheUpdated(const QString& type, const QString& ref)
+void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, const QString& ref)
 {
     if (!this->m_connection)
         return;
@@ -433,7 +433,7 @@ void SrPicker::onCacheUpdated(const QString& type, const QString& ref)
     }
 }
 
-void SrPicker::onCacheRemoved(const QString& type, const QString& ref)
+void SrPicker::onCacheRemoved(XenConnection* connection, const QString& type, const QString& ref)
 {
     if (!this->m_connection || type != "sr")
         return;

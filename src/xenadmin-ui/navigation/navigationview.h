@@ -109,7 +109,7 @@ class NavigationView : public QWidget
 
     private slots:
         void onSearchTextChanged(const QString& text);
-        void onCacheObjectChanged(const QString& type, const QString& ref);
+        void onCacheObjectChanged(XenConnection *connection, const QString& type, const QString& ref);
         void onRefreshTimerTimeout();
         void onConnectionAdded(XenConnection* connection);
         void onConnectionRemoved(XenConnection* connection);

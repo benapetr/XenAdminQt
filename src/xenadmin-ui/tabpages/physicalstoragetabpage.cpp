@@ -67,7 +67,7 @@ PhysicalStorageTabPage::~PhysicalStorageTabPage()
     delete this->ui;
 }
 
-bool PhysicalStorageTabPage::isApplicableForObjectType(const QString& objectType) const
+bool PhysicalStorageTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // Physical Storage tab is applicable to Hosts and Pools
     // C# Reference: xenadmin/XenAdmin/MainWindow.cs line 1337
@@ -76,10 +76,10 @@ bool PhysicalStorageTabPage::isApplicableForObjectType(const QString& objectType
     return objectType == "host" || objectType == "pool";
 }
 
-void PhysicalStorageTabPage::SetXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void PhysicalStorageTabPage::SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
 {
     // Call base implementation
-    BaseTabPage::SetXenObject(objectType, objectRef, objectData);
+    BaseTabPage::SetXenObject(conn, objectType, objectRef, objectData);
 }
 
 void PhysicalStorageTabPage::refreshContent()

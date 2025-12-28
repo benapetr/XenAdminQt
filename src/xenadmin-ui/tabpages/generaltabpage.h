@@ -51,15 +51,15 @@ public:
     explicit GeneralTabPage(QWidget* parent = nullptr);
     ~GeneralTabPage();
 
-    QString tabTitle() const override
+    QString GetTitle() const override
     {
         return "General";
     }
-    QString helpID() const override
+    QString HelpID() const override
     {
         return "TabPageGeneral";
     }
-    bool isApplicableForObjectType(const QString& objectType) const override;
+    bool IsApplicableForObjectType(const QString& objectType) const override;
 
 protected:
     void refreshContent() override;

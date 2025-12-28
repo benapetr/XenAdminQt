@@ -352,7 +352,7 @@ void NavigationView::setSearchText(const QString& text)
     this->ui->searchLineEdit->setText(text);
 }
 
-void NavigationView::onCacheObjectChanged(const QString& type, const QString& ref)
+void NavigationView::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
 {
     Q_UNUSED(ref);
 
@@ -402,14 +402,12 @@ void NavigationView::connectCacheSignals(XenConnection* connection)
 
     if (!this->m_cacheChangedHandlers.contains(connection))
     {
-        this->m_cacheChangedHandlers.insert(connection,
-            connect(cache, &XenCache::objectChanged, this, &NavigationView::onCacheObjectChanged));
+        this->m_cacheChangedHandlers.insert(connection, connect(cache, &XenCache::objectChanged, this, &NavigationView::onCacheObjectChanged));
     }
 
     if (!this->m_cacheRemovedHandlers.contains(connection))
     {
-        this->m_cacheRemovedHandlers.insert(connection,
-            connect(cache, &XenCache::objectRemoved, this, &NavigationView::onCacheObjectChanged));
+        this->m_cacheRemovedHandlers.insert(connection, connect(cache, &XenCache::objectRemoved, this, &NavigationView::onCacheObjectChanged));
     }
 }
 

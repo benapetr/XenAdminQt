@@ -429,7 +429,7 @@ class XSVNCScreen : public QWidget
         /**
          * @brief Handle cache object changes from EventPoller (real-time updates)
          */
-        void onCacheObjectChanged(const QString& objectType, const QString& objectRef);
+        void onCacheObjectChanged(XenConnection *connection, const QString& objectType, const QString& objectRef);
 
         /**
          * @brief Handle VM data changes (power state, metrics ref, etc.)

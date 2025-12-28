@@ -28,8 +28,7 @@
 #include "notificationsbasepage.h"
 #include "xenlib.h"
 
-NotificationsBasePage::NotificationsBasePage(QWidget* parent)
-    : QWidget(parent), m_xenLib(nullptr), m_connection(nullptr)
+NotificationsBasePage::NotificationsBasePage(QWidget* parent) : QWidget(parent), m_xenLib(nullptr), m_connection(nullptr)
 {
     // C# Reference: xenadmin/XenAdmin/TabPages/NotificationsBasePage.cs
     // Base class constructor - derived classes call InitializeComponent()

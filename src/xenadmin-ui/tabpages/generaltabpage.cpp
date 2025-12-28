@@ -65,7 +65,7 @@ GeneralTabPage::~GeneralTabPage()
     delete this->ui;
 }
 
-bool GeneralTabPage::isApplicableForObjectType(const QString& objectType) const
+bool GeneralTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // General tab is applicable to all object types
     Q_UNUSED(objectType);

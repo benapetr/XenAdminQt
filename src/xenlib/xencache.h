@@ -219,14 +219,14 @@ class XenCache : public QObject
          * @param type Object type
          * @param ref Object reference
          */
-        void objectChanged(const QString& type, const QString& ref);
+        void objectChanged(XenConnection *connection, const QString& type, const QString& ref);
 
         /**
          * @brief Emitted when an object is removed
          * @param type Object type
          * @param ref Object reference
          */
-        void objectRemoved(const QString& type, const QString& ref);
+        void objectRemoved(XenConnection* connection, const QString& type, const QString& ref);
 
         /**
          * @brief Emitted when cache is cleared

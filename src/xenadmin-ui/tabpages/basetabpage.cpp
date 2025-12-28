@@ -27,6 +27,9 @@
 
 #include "basetabpage.h"
 #include "xenlib.h"
+#include "xenlib/xen/xenobject.h"
+
+
 BaseTabPage::BaseTabPage(QWidget* parent) : QWidget(parent), m_xenLib(nullptr)
 {
 }
@@ -35,33 +38,50 @@ BaseTabPage::~BaseTabPage()
 {
 }
 
-void BaseTabPage::SetXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void BaseTabPage::SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
 {
+    this->removeObject();
+    this->m_connection = conn;
     this->m_objectType = objectType;
     this->m_objectRef = objectRef;
     this->m_objectData = objectData;
+    this->updateObject();
     this->refreshContent();
 }
 
 void BaseTabPage::setXenLib(XenLib* xenLib)
 {
+    this->removeObject();
     this->m_xenLib = xenLib;
     if (!this->m_connection && xenLib)
         this->m_connection = xenLib->getConnection();
+    this->updateObject();
 }
 
-void BaseTabPage::SetConnection(XenConnection *conn)
+void BaseTabPage::SetObject(QSharedPointer<XenObject> object)
 {
-    this->m_connection = conn;
+    this->removeObject();
+
+    this->m_object = object;
+
+    if (object)
+    {
+        this->m_objectData = object->GetData();
+        this->m_objectRef = object->OpaqueRef();
+        this->m_objectType = object->GetObjectType();
+        this->m_connection = object->GetConnection();
+        this->updateObject();
+        this->refreshContent();
+    }
 }
 
-void BaseTabPage::onPageShown()
+void BaseTabPage::OnPageShown()
 {
     // Default implementation does nothing
     // Subclasses can override to start timers, etc.
 }
 
-void BaseTabPage::onPageHidden()
+void BaseTabPage::OnPageHidden()
 {
     // Default implementation does nothing
     // Subclasses can override to stop timers, etc.
@@ -71,4 +91,14 @@ void BaseTabPage::refreshContent()
 {
     // Default implementation does nothing
     // Subclasses must override to display content
+}
+
+void BaseTabPage::removeObject()
+{
+
+}
+
+void BaseTabPage::updateObject()
+{
+
 }

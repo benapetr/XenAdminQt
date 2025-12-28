@@ -51,15 +51,15 @@ class BootOptionsTab : public BaseTabPage
 public:
     explicit BootOptionsTab(QWidget* parent = nullptr);
 
-    QString tabTitle() const override
+    QString GetTitle() const override
     {
         return "Boot Options";
     }
-    bool isApplicableForObjectType(const QString& objectType) const override
+    bool IsApplicableForObjectType(const QString& objectType) const override
     {
         return objectType == "vm";
     }
-    void SetXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
+    void SetXenObject(XenConnection* conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
 
     /**
      * Check if any boot settings have been modified.

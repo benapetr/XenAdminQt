@@ -41,43 +41,43 @@ class SrStorageTabPage : public BaseTabPage
 {
     Q_OBJECT
 
-public:
-    explicit SrStorageTabPage(QWidget* parent = nullptr);
-    ~SrStorageTabPage();
+    public:
+        explicit SrStorageTabPage(QWidget* parent = nullptr);
+        ~SrStorageTabPage();
 
-    QString tabTitle() const override
-    {
-        return "Storage";
-    }
+        QString GetTitle() const override
+        {
+            return "Storage";
+        }
 
-    QString helpID() const override
-    {
-        return "TabPageStorage";
-    }
+        QString HelpID() const override
+        {
+            return "TabPageStorage";
+        }
 
-    bool isApplicableForObjectType(const QString& objectType) const override;
-    void SetXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
+        bool IsApplicableForObjectType(const QString& objectType) const override;
+        void SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
 
-protected:
-    void refreshContent() override;
+    protected:
+        void refreshContent() override;
 
-private slots:
-    void onRescanButtonClicked();
-    void onAddButtonClicked();
-    void onMoveButtonClicked();
-    void onDeleteButtonClicked();
-    void onEditButtonClicked();
-    void onStorageTableSelectionChanged();
-    void onStorageTableDoubleClicked(const QModelIndex& index);
-    void onStorageTableCustomContextMenuRequested(const QPoint& pos);
+    private slots:
+        void onRescanButtonClicked();
+        void onAddButtonClicked();
+        void onMoveButtonClicked();
+        void onDeleteButtonClicked();
+        void onEditButtonClicked();
+        void onStorageTableSelectionChanged();
+        void onStorageTableDoubleClicked(const QModelIndex& index);
+        void onStorageTableCustomContextMenuRequested(const QPoint& pos);
 
-private:
-    void populateSRStorage();
-    QString getSelectedVDIRef() const;
-    void updateButtonStates();
-    void requestSrRefresh(int delayMs = 0);
+    private:
+        void populateSRStorage();
+        QString getSelectedVDIRef() const;
+        void updateButtonStates();
+        void requestSrRefresh(int delayMs = 0);
 
-    Ui::SrStorageTabPage* ui;
+        Ui::SrStorageTabPage* ui;
 };
 
 #endif // SRSTORAGETABPAGE_H

@@ -132,7 +132,7 @@ class MainWindow : public QMainWindow
         void onNavigationPaneTreeNodeRightClicked();
 
         // Cache update handler for refreshing selected object
-        void onCacheObjectChanged(const QString& objectType, const QString& objectRef);
+        void onCacheObjectChanged(XenConnection *connection, const QString& objectType, const QString& objectRef);
 
         // XenAPI Message handlers for alert system (matches C# MainWindow.cs line 993 - MessageCollectionChanged)
         void onMessageReceived(const QString& messageRef, const QVariantMap& messageData);

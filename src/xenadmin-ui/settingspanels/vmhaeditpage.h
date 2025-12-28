@@ -54,70 +54,70 @@ class VMHAEditPage : public IEditPage
 {
     Q_OBJECT
 
-public:
-    explicit VMHAEditPage(QWidget* parent = nullptr);
-    ~VMHAEditPage() override;
+    public:
+        explicit VMHAEditPage(QWidget* parent = nullptr);
+        ~VMHAEditPage() override;
 
-    // IEditPage interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
+        // IEditPage interface
+        QString text() const override;
+        QString subText() const override;
+        QIcon image() const override;
 
-    void setXenObjects(const QString& objectRef,
-                       const QString& objectType,
-                       const QVariantMap& objectDataBefore,
-                       const QVariantMap& objectDataCopy) override;
+        void setXenObjects(const QString& objectRef,
+                           const QString& objectType,
+                           const QVariantMap& objectDataBefore,
+                           const QVariantMap& objectDataCopy) override;
 
-    AsyncOperation* saveSettings() override;
-    bool isValidToSave() const override;
-    void showLocalValidationMessages() override;
-    void hideLocalValidationMessages() override;
-    void cleanup() override;
-    bool hasChanged() const override;
+        AsyncOperation* saveSettings() override;
+        bool isValidToSave() const override;
+        void showLocalValidationMessages() override;
+        void hideLocalValidationMessages() override;
+        void cleanup() override;
+        bool hasChanged() const override;
 
-private:
-    QString restartPriorityDisplay(const QString& priority) const;
-    QString restartPriorityDescription(const QString& priority) const;
-    QString normalizePriority(const QString& priority) const;
-    QString selectedPriority() const;
-    bool isRestartPriority(const QString& priority) const;
-    bool vmHasVgpus() const;
-    bool poolHasHAEnabled() const;
-    bool isHaEditable() const;
-    QString ellipsiseName(const QString& name, int maxChars) const;
-    QVariantMap getPoolData() const;
-    void refillPrioritiesComboBox();
-    void updateEnablement();
-    void updateNtolLabelsCalculating();
-    void updateNtolLabelsSuccess();
-    void updateNtolLabelsFailure();
-    void startVmAgilityCheck();
-    void startNtolUpdate();
-    QMap<QString, QVariantMap> buildVmStartupOptions(bool includePriority) const;
-    QVariantMap buildNtolConfig() const;
+    private:
+        QString restartPriorityDisplay(const QString& priority) const;
+        QString restartPriorityDescription(const QString& priority) const;
+        QString normalizePriority(const QString& priority) const;
+        QString selectedPriority() const;
+        bool isRestartPriority(const QString& priority) const;
+        bool vmHasVgpus() const;
+        bool poolHasHAEnabled() const;
+        bool isHaEditable() const;
+        QString ellipsiseName(const QString& name, int maxChars) const;
+        QVariantMap getPoolData() const;
+        void refillPrioritiesComboBox();
+        void updateEnablement();
+        void updateNtolLabelsCalculating();
+        void updateNtolLabelsSuccess();
+        void updateNtolLabelsFailure();
+        void startVmAgilityCheck();
+        void startNtolUpdate();
+        QMap<QString, QVariantMap> buildVmStartupOptions(bool includePriority) const;
+        QVariantMap buildNtolConfig() const;
 
-    Ui::VMHAEditPage* ui;
-    QString m_vmRef;
-    QVariantMap m_objectDataBefore;
-    QVariantMap m_objectDataCopy;
+        Ui::VMHAEditPage* ui;
+        QString m_vmRef;
+        QVariantMap m_objectDataBefore;
+        QVariantMap m_objectDataCopy;
 
-    // Original values
-    QString m_origRestartPriority;
-    long m_origStartOrder;
-    long m_origStartDelay;
-    qint64 m_origNtol;
-    bool m_vmIsAgile;
-    bool m_agilityKnown;
-    bool m_ntolUpdateInProgress;
-    qint64 m_ntol;
-    qint64 m_ntolMax;
-    int m_ntolRequestId;
-    QString m_poolRef;
+        // Original values
+        QString m_origRestartPriority;
+        long m_origStartOrder;
+        long m_origStartDelay;
+        qint64 m_origNtol;
+        bool m_vmIsAgile;
+        bool m_agilityKnown;
+        bool m_ntolUpdateInProgress;
+        qint64 m_ntol;
+        qint64 m_ntolMax;
+        int m_ntolRequestId;
+        QString m_poolRef;
 
-private slots:
-    void onPriorityChanged();
-    void onLinkActivated(const QString& link);
-    void onCacheObjectChanged(const QString& type, const QString& ref);
+    private slots:
+        void onPriorityChanged();
+        void onLinkActivated(const QString& link);
+        void onCacheObjectChanged(XenConnection *connection, const QString& type, const QString& ref);
 };
 
 #endif // VMHAEDITPAGE_H

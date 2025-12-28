@@ -52,7 +52,7 @@ MemoryTabPage::~MemoryTabPage()
     delete this->ui;
 }
 
-bool MemoryTabPage::isApplicableForObjectType(const QString& objectType) const
+bool MemoryTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // Memory tab is applicable to VMs and Hosts
     return objectType == "vm" || objectType == "host";
