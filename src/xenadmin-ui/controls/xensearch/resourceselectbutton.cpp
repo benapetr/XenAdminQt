@@ -26,18 +26,13 @@
  */
 
 #include "resourceselectbutton.h"
-#include "search.h"
-#include "../../../xenlib/xen/xenobject.h"
+#include "xenlib/xensearch/search.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xensearch/queryscope.h"
+#include "xenlib/xen/network/connection.h"
 #include <QAction>
 #include <QMenu>
 #include <QDebug>
-
-// Forward declare QueryScope since it's not implemented yet
-class QueryScope
-{
-public:
-    bool WantType(const QString& type) const { Q_UNUSED(type); return true; }
-};
 
 const QString ResourceSelectButton::INDENT = "       ";
 
@@ -59,17 +54,20 @@ void ResourceSelectButton::Populate(Search* search)
     if (this->menu())
         this->menu()->clear();
     
-    this->scope_ = nullptr; // search ? search->GetQueryScope() : nullptr;
+    this->scope_ = (search && search->GetQuery()) ? search->GetQuery()->getQueryScope() : nullptr;
     
-    // TODO: Implement when Search::PopulateAdapters() is ready
-    Q_UNUSED(search);
-    /*
     if (search)
     {
-        // Call PopulateAdapters which will call our AddGroup method for each object
-        search->PopulateAdapters(this);
+        // Get connection from search
+        XenConnection* conn = search->GetConnection();
+        if (conn)
+        {
+            // Call PopulateAdapters which will call our Add method for each object
+            QList<IAcceptGroups*> adapters;
+            adapters.append(this);
+            search->PopulateAdapters(conn, adapters);
+        }
     }
-    */
 }
 
 QString ResourceSelectButton::selectedRef() const
@@ -81,61 +79,61 @@ void ResourceSelectButton::setSelectedRef(const QString& ref)
 {
     this->selectedRef_ = ref;
     
-    // TODO: Implement when XenObject::ref() is available
-    Q_UNUSED(ref);
-    /*
     // Find action with matching ref
     if (!this->menu())
         return;
     
     for (QAction* action : this->menu()->actions())
     {
-        QSharedPointer<XenObject> object = action->data().value<QSharedPointer<XenObject>>();
-        if (object && object->ref() == ref)
+        QString actionRef = action->data().toString();
+        if (actionRef == ref)
         {
-            QString displayName = object->nameLabel();
-            this->setText(displayName);
+            this->setText(action->text().trimmed());
             return;
         }
     }
     
     // Not found - clear text
     this->setText("");
-    */
 }
 
-void ResourceSelectButton::AddGroup(const QString& grouping, QSharedPointer<XenObject> object, int indent)
+IAcceptGroups* ResourceSelectButton::Add(Grouping* grouping, const QVariant& group,
+                                         const QString& objectType, const QVariantMap& objectData,
+                                         int indent, XenConnection* conn)
 {
     Q_UNUSED(grouping);
-    Q_UNUSED(object);
-    Q_UNUSED(indent);
     
-    // TODO: Implement when XenObject API is available
-    /*
-    if (!object || !this->menu())
-        return;
+    if (!this->menu())
+        return nullptr;
+    
+    // Extract object ref from group variant
+    QString objectRef = group.toString();
     
     // Build indented text (matches C# padding logic)
     QString text = INDENT;
     for (int i = 0; i < indent; ++i)
         text += INDENT;
     
-    QString name = object->nameLabel();
+    QString name = objectData.value("name_label").toString();
+    if (name.isEmpty())
+        name = objectRef;  // Fallback to ref if no name
+    
     // Escape ampersands (C# EscapeAmpersands)
     name.replace("&", "&&");
     text += name;
     
     // Create action
     QAction* action = new QAction(text, this->menu());
-    action->setData(QVariant::fromValue(object));
+    action->setData(objectRef);  // Store ref for selection
     
-    // Set icon
-    QIcon icon = this->getObjectIcon(object);
-    if (!icon.isNull())
-        action->setIcon(icon);
+    // Set icon based on object type
+    // TODO
+    //QIcon icon = this->getObjectIcon(objectType);
+    //if (!icon.isNull())
+    //    action->setIcon(icon);
     
     // Check if object is within scope
-    if (this->scope_ && !this->scope_->WantType(object->objectType()))
+    if (this->scope_ && !this->scope_->wantType(objectData, objectType, conn))
     {
         action->setEnabled(false);
         // C# sets background to Gainsboro - Qt doesn't support per-action background easily,
@@ -143,7 +141,9 @@ void ResourceSelectButton::AddGroup(const QString& grouping, QSharedPointer<XenO
     }
     
     this->menu()->addAction(action);
-    */
+    
+    // Return nullptr - we don't support nested groups
+    return nullptr;
 }
 
 void ResourceSelectButton::FinishedInThisGroup(bool defaultExpand)
@@ -162,14 +162,9 @@ void ResourceSelectButton::onActionTriggered()
     if (!object)
         return;
     
-    // TODO: Implement when XenObject::ref() is available
-    //this->selectedRef_ = object->ref();
-    //QString displayName = object->nameLabel();
-    //this->setText(displayName);
-    
-    // Placeholder until XenObject API is complete
-    this->selectedRef_ = QString();
-    this->setText("(selection not yet supported)");
+    this->selectedRef_ = object->OpaqueRef();
+    QString displayName = object->GetName();
+    this->setText(displayName);
     
     emit this->itemSelected(this->selectedRef_);
 }
@@ -183,7 +178,7 @@ QIcon ResourceSelectButton::getObjectIcon(QSharedPointer<XenObject> object) cons
     // C# uses Images.GetImage16For(IXenObject)
     // For now, return null icon - icons will be added when we implement Images helper
     
-    //QString objectType = object->objectType();
+    QString objectType = object->GetObjectType();
     // Placeholder - would map to actual icons:
     // if (objectType == "vm") return QIcon(":/icons/vm_16.png");
     // if (objectType == "host") return QIcon(":/icons/host_16.png");

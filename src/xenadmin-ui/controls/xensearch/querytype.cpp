@@ -27,11 +27,11 @@
 
 #include "querytype.h"
 #include "queryelement.h"
-#include "../../../xenlib/xensearch/queries.h"
-#include "../../../xenlib/xen/network/connectionsmanager.h"
-#include "../../../xenlib/xen/network/connection.h"
-#include "../../../xenlib/xencache.h"
-#include "../../../xenlib/otherconfig/otherconfigandtagswatcher.h"
+#include "xenlib/xensearch/queries.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xencache.h"
+#include "xenlib/otherconfig/otherconfigandtagswatcher.h"
 #include <algorithm>
 
 // Constants for binary sizes
@@ -1021,17 +1021,24 @@ bool UuidQueryType::showResourceSelectButton(QueryElement* queryElement) const
 
 QueryFilter* UuidQueryType::GetQuery(QueryElement* queryElement) const
 {
-    // TODO: Implement when ResourceSelectButton integration is complete
-    // For now, return null to prevent errors
-    Q_UNUSED(queryElement);
-    return nullptr;
+    // Get selected object ref from ResourceSelectButton
+    QString ref = queryElement->getResourceSelection();
+    if (ref.isEmpty())
+        return nullptr;
+    
+    // Create XenModelObjectPropertyQuery matching the selected object
+    return new XenModelObjectPropertyQuery(this->property_, ref, true);
 }
 
 void UuidQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
 {
-    // TODO: Implement when ResourceSelectButton integration is complete
-    Q_UNUSED(query);
-    Q_UNUSED(queryElement);
+    // Restore selected object from XenModelObjectPropertyQuery
+    XenModelObjectPropertyQuery* propQuery = dynamic_cast<XenModelObjectPropertyQuery*>(query);
+    if (propQuery && propQuery->getProperty() == this->property_)
+    {
+        QString ref = propQuery->getUuid();
+        queryElement->setResourceSelection(ref);
+    }
 }
 
 // ============================================================================

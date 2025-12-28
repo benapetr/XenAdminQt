@@ -28,6 +28,9 @@
 #include "queryelement.h"
 #include "searcher.h"
 #include "resourceselectbutton.h"
+#include "xenlib/xensearch/query.h"
+#include "xenlib/xensearch/sort.h"
+#include "xenlib/xensearch/grouping.h"
 #include <QHBoxLayout>
 #include <QLabel>
 
@@ -481,9 +484,61 @@ void QueryElement::setResourceSelection(const QString& ref)
 
 Search* QueryElement::getSearchForResourceSelectButton()
 {
-    // TODO: Implement Search::PopulateAdapters() integration
-    // For now return nullptr - will be implemented when Search class has PopulateAdapters
-    return nullptr;
+    // C# QueryElement.cs lines 467-511: GetSearchForResourceSelectButton()
+    // Creates Search with appropriate grouping based on ObjectTypes
+    
+    if (!this->queryScope_)
+        return nullptr;
+    
+    // Create query with scope and no filter
+    Query* query = new Query(this->queryScope_, nullptr);
+    
+    // Create sort by name (ascending)
+    Sort nameSort("name", true);
+    QList<Sort> sorts;
+    sorts.append(nameSort);
+    
+    // Determine grouping based on object types
+    Grouping* grouping = nullptr;
+    ObjectTypes types = this->queryScope_->GetObjectTypes();
+    
+    // Same list of recursive types as defined in static QueryElement (C# line 481)
+    if (types == ObjectTypes::Pool)
+    {
+        grouping = nullptr;  // No grouping for pools
+    }
+    else if (types == ObjectTypes::Server || types == ObjectTypes::Appliance)
+    {
+        // Host -> Pool
+        grouping = new PoolGrouping(nullptr);
+    }
+    else if (types == (ObjectTypes::VM | ObjectTypes::Network | (ObjectTypes::LocalSR | ObjectTypes::RemoteSR)))
+    {
+        // VM/Network/SR -> Host -> Pool
+        Grouping* serverGrouping = new HostGrouping(nullptr);
+        grouping = new PoolGrouping(serverGrouping);
+    }
+    else if (types == ObjectTypes::VDI)
+    {
+        // VDI -> SR -> Host -> Pool
+        // TODO: Add SRGrouping when implemented
+        Grouping* serverGrouping = new HostGrouping(nullptr);
+        grouping = new PoolGrouping(serverGrouping);
+    }
+    else if (types == ObjectTypes::Folder)
+    {
+        // TODO: Add FolderGrouping when implemented
+        grouping = nullptr;
+    }
+    else
+    {
+        // Default grouping for other types
+        Grouping* serverGrouping = new HostGrouping(nullptr);
+        grouping = new PoolGrouping(serverGrouping);
+    }
+    
+    // Create search with query, grouping, and sorts
+    return new Search(query, grouping, "", "", false, QList<QPair<QString, int>>(), sorts);
 }
 
 QList<QueryFilter*> QueryElement::getSubQueries() const

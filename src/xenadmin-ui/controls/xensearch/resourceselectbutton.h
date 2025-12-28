@@ -29,11 +29,14 @@
 #define RESOURCESELECTBUTTON_H
 
 #include "../dropdownbutton.h"
+#include "xenlib/xensearch/iacceptgroups.h"
 #include <QSharedPointer>
 
 QT_FORWARD_DECLARE_CLASS(Search)
 QT_FORWARD_DECLARE_CLASS(QueryScope)
+QT_FORWARD_DECLARE_CLASS(Grouping)
 class XenObject;
+class XenConnection;
 
 /**
  * @brief ResourceSelectButton - Dropdown with XenObject selection for UuidQueryType
@@ -61,7 +64,7 @@ class XenObject;
  * - User selects object, widget emits itemSelected(ref)
  * - QueryType uses ref for XenModelObjectPropertyQuery matching
  */
-class ResourceSelectButton : public DropDownButton
+class ResourceSelectButton : public DropDownButton, public IAcceptGroups
 {
     Q_OBJECT
 
@@ -90,8 +93,10 @@ class ResourceSelectButton : public DropDownButton
         void setSelectedRef(const QString& ref);
 
         // IAcceptGroups implementation (matches C# interface)
-        void AddGroup(const QString& grouping, QSharedPointer<XenObject> object, int indent);
-        void FinishedInThisGroup(bool defaultExpand);
+        IAcceptGroups* Add(Grouping* grouping, const QVariant& group,
+                          const QString& objectType, const QVariantMap& objectData,
+                          int indent, XenConnection* conn) override;
+        void FinishedInThisGroup(bool defaultExpand) override;
 
     signals:
         /**
