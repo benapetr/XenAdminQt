@@ -226,7 +226,7 @@ MainWindow::MainWindow(QWidget* parent)
     this->m_titleBar->clear(); // Start with empty title
 
     // Initialize XenLib (compatibility facade for legacy code paths)
-    this->m_xenLib = new XenLib(this);
+    this->m_xenLib = new XenLib(nullptr);
 
     // Wire UI to ConnectionsManager (C# model), keep XenLib only as active-connection facade.
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();

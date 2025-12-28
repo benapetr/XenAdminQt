@@ -31,8 +31,9 @@
 #include "../commands/vm/takesnapshotcommand.h"
 #include "../commands/vm/deletesnapshotcommand.h"
 #include "../commands/vm/reverttosnapshotcommand.h"
-#include "xenlib.h"
+#include "xen/session.h"
 #include "xencache.h"
+#include "xen/xenapi/xenapi_VM.h"
 #include <QDateTime>
 #include <QDebug>
 #include <QMessageBox>
@@ -75,11 +76,11 @@ void SnapshotsTabPage::setXenLib(XenLib* xenLib)
 {
     BaseTabPage::setXenLib(xenLib);
 
-    // Connect to virtualMachinesReceived signal for automatic refresh
-    if (xenLib)
+    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
+    if (cache)
     {
-        connect(xenLib, &XenLib::virtualMachinesReceived,
-                this, &SnapshotsTabPage::onVirtualMachinesDataUpdated,
+        connect(cache, &XenCache::objectChanged,
+                this, &SnapshotsTabPage::onCacheObjectChanged,
                 Qt::UniqueConnection);
     }
 }
@@ -107,7 +108,7 @@ void SnapshotsTabPage::populateSnapshotTree()
 {
     this->ui->snapshotTree->clear();
 
-    if (!this->m_objectData.contains("snapshots") || !this->m_xenLib)
+    if (!this->m_objectData.contains("snapshots") || !this->m_connection || !this->m_connection->GetCache())
     {
         return;
     }
@@ -121,7 +122,7 @@ void SnapshotsTabPage::populateSnapshotTree()
         QString snapshotRef = refVariant.toString();
 
         // Resolve the snapshot reference to get its full data
-        QVariantMap snapshot = this->m_xenLib->getCache()->ResolveObjectData("vm", snapshotRef);
+        QVariantMap snapshot = this->m_connection->GetCache()->ResolveObjectData("vm", snapshotRef);
 
         if (snapshot.isEmpty())
         {
@@ -307,18 +308,29 @@ void SnapshotsTabPage::onSnapshotSelectionChanged()
 
 void SnapshotsTabPage::refreshSnapshotList()
 {
-    if (!this->m_xenLib || this->m_objectRef.isEmpty())
+    if (!this->m_connection || !this->m_connection->GetCache() || this->m_objectRef.isEmpty())
     {
         return;
     }
 
     qDebug() << "SnapshotsTabPage: Manually refreshing snapshot list for VM:" << this->m_objectRef;
 
-    // Invalidate the VM cache to force fresh data from server
-    this->m_xenLib->getCache()->ClearType("vm");
+    XenAPI::Session* session = this->m_connection->GetSession();
+    if (!session || !session->IsLoggedIn())
+    {
+        qWarning() << "SnapshotsTabPage: No active session for refresh";
+        return;
+    }
 
-    // Request fresh VM data - this will trigger virtualMachinesReceived signal
-    this->m_xenLib->requestVirtualMachines();
+    try
+    {
+        QVariantMap records = XenAPI::VM::get_all_records(session);
+        this->m_connection->GetCache()->UpdateBulk("vm", records);
+    }
+    catch (const std::exception& ex)
+    {
+        qWarning() << "SnapshotsTabPage: Failed to refresh VM records:" << ex.what();
+    }
 }
 
 void SnapshotsTabPage::onVirtualMachinesDataUpdated(QVariantList vms)
@@ -347,6 +359,17 @@ void SnapshotsTabPage::onVirtualMachinesDataUpdated(QVariantList vms)
             this->updateButtonStates();
             break;
         }
+    }
+}
+
+void SnapshotsTabPage::onCacheObjectChanged(const QString& type, const QString& ref)
+{
+    Q_UNUSED(ref);
+
+    if (this->m_objectType == "vm" && (type == "vm" || type == "vdi" || type == "vbd"))
+    {
+        this->populateSnapshotTree();
+        this->updateButtonStates();
     }
 }
 

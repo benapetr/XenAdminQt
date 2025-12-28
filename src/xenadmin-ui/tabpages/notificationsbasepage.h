@@ -32,6 +32,7 @@
 #include "navigation/navigationpane.h"
 
 class XenLib;
+class XenConnection;
 
 /**
  * Base class for notification pages (Alerts, Events/History).
@@ -91,6 +92,7 @@ class NotificationsBasePage : public QWidget
          * Set the XenLib instance for accessing XenAPI.
          */
         virtual void setXenLib(XenLib* xenLib);
+        virtual void setConnection(XenConnection* connection);
 
     signals:
         /**
@@ -128,6 +130,7 @@ class NotificationsBasePage : public QWidget
         void onFiltersChanged();
 
         XenLib* m_xenLib;
+        XenConnection* m_connection;
 };
 
 #endif // NOTIFICATIONSBASEPAGE_H

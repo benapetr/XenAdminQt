@@ -86,6 +86,7 @@ class XenConnection::Private
 
         // Cache (each connection owns its own cache, matching C# architecture)
         XenCache* cache = nullptr;
+        MetricUpdater* metricUpdater = nullptr;
 
         // Pool member tracking for failover
         QStringList poolMembers;
@@ -1306,4 +1307,14 @@ void XenConnection::setCoordinatorMayChange(bool mayChange)
 XenCache* XenConnection::GetCache() const
 {
     return this->d->cache;
+}
+
+MetricUpdater* XenConnection::GetMetricUpdater() const
+{
+    return this->d->metricUpdater;
+}
+
+void XenConnection::SetMetricUpdater(MetricUpdater* metricUpdater)
+{
+    this->d->metricUpdater = metricUpdater;
 }

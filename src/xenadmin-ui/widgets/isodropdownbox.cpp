@@ -201,11 +201,6 @@ IsoDropDownBox::IsoDropDownBox(QWidget* parent) : QComboBox(parent), m_xenLib(nu
     this->setInsertPolicy(QComboBox::NoInsert);
 } 
 
-void IsoDropDownBox::setXenLib(XenLib* xenLib)
-{
-    this->m_xenLib = xenLib;
-} 
-
 void IsoDropDownBox::setConnection(XenConnection* connection)
 {
     this->m_connection = connection;

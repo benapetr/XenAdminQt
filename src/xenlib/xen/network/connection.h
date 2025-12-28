@@ -38,6 +38,7 @@
 
 class XenCertificateManager;
 class ConnectTask;
+class MetricUpdater;
 
 namespace XenAPI
 {
@@ -166,6 +167,8 @@ class XENLIB_EXPORT XenConnection : public QObject
 
         // Cache access (each connection owns its own cache, matching C# architecture)
         class XenCache* GetCache() const;
+        MetricUpdater* GetMetricUpdater() const;
+        void SetMetricUpdater(MetricUpdater* metricUpdater);
 
     signals:
         void connected();

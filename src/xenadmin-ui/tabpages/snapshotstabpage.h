@@ -63,6 +63,7 @@ private slots:
     void onSnapshotSelectionChanged();
     void refreshSnapshotList();
     void onVirtualMachinesDataUpdated(QVariantList vms);
+    void onCacheObjectChanged(const QString& type, const QString& ref);
     void onSnapshotContextMenu(const QPoint& pos);
 
 private:

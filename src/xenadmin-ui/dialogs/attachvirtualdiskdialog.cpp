@@ -27,20 +27,21 @@
 
 #include "attachvirtualdiskdialog.h"
 #include "ui_attachvirtualdiskdialog.h"
-#include "xenlib.h"
+#include "xen/network/connection.h"
 #include "xencache.h"
 #include <QTableWidgetItem>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QDebug>
 
-AttachVirtualDiskDialog::AttachVirtualDiskDialog(XenLib* xenLib, const QString& vmRef, QWidget* parent)
-    : QDialog(parent), ui(new Ui::AttachVirtualDiskDialog), m_xenLib(xenLib), m_vmRef(vmRef)
+AttachVirtualDiskDialog::AttachVirtualDiskDialog(XenConnection* connection, const QString& vmRef, QWidget* parent)
+    : QDialog(parent), ui(new Ui::AttachVirtualDiskDialog), m_connection(connection), m_vmRef(vmRef)
 {
     this->ui->setupUi(this);
 
     // Get VM data
-    this->m_vmData = this->m_xenLib->getCache()->ResolveObjectData("vm", this->m_vmRef);
+    if (this->m_connection && this->m_connection->GetCache())
+        this->m_vmData = this->m_connection->GetCache()->ResolveObjectData("vm", this->m_vmRef);
 
     // Set table properties
     this->ui->vdiTable->horizontalHeader()->setStretchLastSection(true);
@@ -74,8 +75,11 @@ void AttachVirtualDiskDialog::populateSRFilter()
     // Add "All Storage Repositories" option
     this->ui->srComboBox->addItem("All Storage Repositories", QString());
 
+    if (!this->m_connection || !this->m_connection->GetCache())
+        return;
+
     // Get all SRs
-    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->GetAllData("sr");
+    QList<QVariantMap> allSRs = this->m_connection->GetCache()->GetAllData("sr");
 
     for (const QVariantMap& srData : allSRs)
     {
@@ -98,10 +102,13 @@ void AttachVirtualDiskDialog::populateVDITable()
 {
     this->ui->vdiTable->setRowCount(0);
 
+    if (!this->m_connection || !this->m_connection->GetCache())
+        return;
+
     QString selectedSR = this->ui->srComboBox->currentData().toString();
 
     // Get all VDIs from cache
-    QList<QVariantMap> allVDIs = this->m_xenLib->getCache()->GetAllData("vdi");
+    QList<QVariantMap> allVDIs = this->m_connection->GetCache()->GetAllData("vdi");
 
     // Get VBDs already attached to this VM to filter them out
     QStringList attachedVDIs;
@@ -109,7 +116,7 @@ void AttachVirtualDiskDialog::populateVDITable()
     for (const QVariant& vbdRefVar : vbdRefs)
     {
         QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef);
+        QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
         QString vdiRef = vbdData.value("VDI", "").toString();
         if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
         {
@@ -135,7 +142,7 @@ void AttachVirtualDiskDialog::populateVDITable()
         }
 
         // Get SR data
-        QVariantMap srData = this->m_xenLib->getCache()->ResolveObjectData("sr", srRef);
+        QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
         QString srName = srData.value("name_label", "Unknown").toString();
         QString srType = srData.value("type", "").toString();
         QString contentType = srData.value("content_type", "").toString();
@@ -158,7 +165,7 @@ void AttachVirtualDiskDialog::populateVDITable()
         for (const QVariant& vbdVar : vbdRefs)
         {
             QString vbdRef = vbdVar.toString();
-            QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef);
+            QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
             QString vmRef = vbdData.value("VM", "").toString();
             if (vmRef != this->m_vmRef)
             {
@@ -206,6 +213,9 @@ void AttachVirtualDiskDialog::populateVDITable()
 
 int AttachVirtualDiskDialog::findNextAvailableDevice()
 {
+    if (!this->m_connection || !this->m_connection->GetCache())
+        return 0;
+
     // Find highest device number in use
     int maxDevice = -1;
 
@@ -213,7 +223,7 @@ int AttachVirtualDiskDialog::findNextAvailableDevice()
     for (const QVariant& vbdRefVar : vbdRefs)
     {
         QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef);
+        QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
 
         QString userdevice = vbdData.value("userdevice", "").toString();
         bool ok;

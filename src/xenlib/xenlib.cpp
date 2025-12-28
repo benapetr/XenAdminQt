@@ -116,6 +116,8 @@ XenLib::XenLib(QObject* parent) : QObject(parent), d(new Private)
     this->d->api = new XenRpcAPI(this->d->session, this);
     this->d->asyncOps = new XenAsyncOperations(this->d->session, this);
     this->d->metricUpdater = new MetricUpdater(this->d->connection, this);
+    if (this->d->connection)
+        this->d->connection->SetMetricUpdater(this->d->metricUpdater);
     // Cache now owned by XenConnection (matching C# architecture)
 
     // Create EventPoller on a dedicated thread to avoid blocking the UI with long-poll requests
@@ -137,6 +139,7 @@ XenLib::XenLib(QObject* parent) : QObject(parent), d(new Private)
 
 XenLib::~XenLib()
 {
+    return;
     // Explicitly destroy dependent objects in a safe order to avoid QObject
     // deleting already-freed children (e.g., session using connection).
     if (this->d->api)
@@ -293,6 +296,8 @@ void XenLib::setConnection(XenConnection* connection)
     if (this->d->metricUpdater)
         this->d->metricUpdater->deleteLater();
     this->d->metricUpdater = new MetricUpdater(this->d->connection, this);
+    if (this->d->connection)
+        this->d->connection->SetMetricUpdater(this->d->metricUpdater);
 
     connect(this->d->connection, &XenConnection::disconnected,
             [this]() { this->handleConnectionStateChanged(false); });

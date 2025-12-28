@@ -30,28 +30,25 @@
 
 #include <QComboBox>
 
-class XenLib;
 class XenConnection;
 
 class IsoDropDownBox : public QComboBox
 {
     Q_OBJECT
 
-public:
-    explicit IsoDropDownBox(QWidget* parent = nullptr);
+    public:
+        explicit IsoDropDownBox(QWidget* parent = nullptr);
 
-    void setXenLib(XenLib* xenLib);
-    void setConnection(XenConnection* connection);
-    void setVMRef(const QString& vmRef);
+        void setConnection(XenConnection* connection);
+        void setVMRef(const QString& vmRef);
 
-    void refresh();
-    QString selectedVdiRef() const;
-    void setSelectedVdiRef(const QString& vdiRef);
+        void refresh();
+        QString selectedVdiRef() const;
+        void setSelectedVdiRef(const QString& vdiRef);
 
-private:
-    XenLib* m_xenLib;
-    XenConnection* m_connection;
-    QString m_vmRef;
+    private:
+        XenConnection* m_connection;
+        QString m_vmRef;
 };
 
 #endif // ISODROPDOWNBOX_H

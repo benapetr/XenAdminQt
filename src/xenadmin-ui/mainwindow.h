@@ -34,7 +34,6 @@
 
 #include "xen/asyncoperation.h"
 
-QT_BEGIN_NAMESPACE
 namespace Ui
 {
     class MainWindow;
@@ -43,11 +42,15 @@ class QTreeWidgetItem;
 class QTreeWidget;
 class QProgressDialog;
 class QVBoxLayout;
-QT_END_NAMESPACE
+class QDockWidget;
+class QAction;
+class QProgressBar;
+class QLabel;
+class QToolButton;
 
-QT_FORWARD_DECLARE_CLASS(XenLib)
-QT_FORWARD_DECLARE_CLASS(DebugWindow)
-QT_FORWARD_DECLARE_CLASS(AsyncOperation)
+class XenLib;
+class DebugWindow;
+class AsyncOperation;
 
 class BaseTabPage;
 class PlaceholderWidget;
@@ -56,11 +59,7 @@ class TitleBar;
 class ConnectionProfile;
 class ConsolePanel;
 class CvmConsolePanel;
-class QDockWidget;
-class QAction;
-class QProgressBar;
-class QLabel;
-class QToolButton;
+
 class NavigationHistory;
 class Command;
 class NavigationPane;

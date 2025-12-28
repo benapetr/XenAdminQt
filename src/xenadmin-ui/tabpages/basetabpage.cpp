@@ -27,7 +27,6 @@
 
 #include "basetabpage.h"
 #include "xenlib.h"
-
 BaseTabPage::BaseTabPage(QWidget* parent) : QWidget(parent), m_xenLib(nullptr)
 {
 }
@@ -47,7 +46,8 @@ void BaseTabPage::SetXenObject(const QString& objectType, const QString& objectR
 void BaseTabPage::setXenLib(XenLib* xenLib)
 {
     this->m_xenLib = xenLib;
-    this->m_connection = xenLib->getConnection();
+    if (!this->m_connection && xenLib)
+        this->m_connection = xenLib->getConnection();
 }
 
 void BaseTabPage::SetConnection(XenConnection *conn)

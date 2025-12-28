@@ -31,9 +31,9 @@
 #include "../../xenlib/grouping.h"
 #include "../../xenlib/queryscope.h"
 #include "../../xenlib/queryfilter.h"
-#include "../../xenlib/xenlib.h"
 #include "../../xenlib/xencache.h"
 #include "../../xenlib/xen/xenobject.h"
+#include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/metricupdater.h"
 #include "../iconmanager.h"
 #include "../widgets/progressbardelegate.h"
@@ -139,9 +139,9 @@ void SearchTabPage::SetXenObject(const QString& type, const QString& ref, const 
     this->m_currentObjectType = type;
     this->m_currentObjectRef = ref;
     
-    if (!this->m_xenLib || !this->m_xenLib->getCache())
+    if (!this->m_connection || !this->m_connection->GetCache())
     {
-        qDebug() << "SearchTabPage::setXenObject - No XenLib or cache available";
+        qDebug() << "SearchTabPage::setXenObject - No connection/cache available";
         return;
     }
     
@@ -206,7 +206,7 @@ void SearchTabPage::SetXenObject(const QString& type, const QString& ref, const 
 // - xenadmin/XenAdmin/Controls/XenSearch/QueryPanel.cs lines 500-528
 void SearchTabPage::buildList()
 {
-    if (!this->m_search || !this->m_xenLib || !this->m_xenLib->getCache())
+    if (!this->m_search || !this->m_connection || !this->m_connection->GetCache())
     {
         this->m_tableWidget->setRowCount(0);
         return;
@@ -234,14 +234,14 @@ void SearchTabPage::populateTable()
 
     Query* query = this->m_search->getQuery();
 
-    if (!query || !this->m_xenLib || !this->m_xenLib->getCache())
+    if (!query || !this->m_connection || !this->m_connection->GetCache())
     {
         qDebug() << "SearchTabPage::populateTable() - No query or cache";
         this->m_tableWidget->setSortingEnabled(true);
         return;
     }
 
-    XenCache* cache = this->m_xenLib->getCache();
+    XenCache* cache = this->m_connection->GetCache();
     int itemsAdded = 0;
 
     // qDebug() << "=== SearchTabPage::populateTable() START ===";
@@ -276,7 +276,7 @@ void SearchTabPage::populateTable()
         // Filter: does this object match the query?
         // C# Equivalent: Group.FilterAdd() calls query.Match(o)
         // C# Reference: xenadmin/XenModel/XenSearch/GroupAlg.cs line 161
-        if (query->match(objectData, objectType, this->m_xenLib))
+        if (query->match(objectData, objectType, nullptr))
         {
             // Add object as a table row
             // C# Equivalent: QueryPanel.CreateRow() for IXenObject
@@ -325,9 +325,9 @@ void SearchTabPage::addObjectRow(const QString& objectType, const QString& objec
         // Resolve host_metrics to get liveness status for icon
         // C# pattern: Host_metrics metrics = host.Connection.Resolve(host.metrics);
         QString metricsRef = objectData.value("metrics").toString();
-        if (!metricsRef.isEmpty() && !metricsRef.contains("NULL") && this->m_xenLib)
+        if (!metricsRef.isEmpty() && !metricsRef.contains("NULL") && this->m_connection)
         {
-            XenCache* cache = this->m_xenLib->getCache();
+            XenCache* cache = this->m_connection->GetCache();
             if (cache)
             {
                 QVariantMap metricsData = cache->ResolveObjectData("host_metrics", metricsRef);
@@ -359,7 +359,7 @@ void SearchTabPage::addObjectRow(const QString& objectType, const QString& objec
         nameItem->setIcon(icon);
     
     // Store QSharedPointer<XenObject> instead of separate type+ref
-    QSharedPointer<XenObject> obj = this->m_xenLib->getCache()->ResolveObject(objectType, objectRef);
+    QSharedPointer<XenObject> obj = this->m_connection->GetCache()->ResolveObject(objectType, objectRef);
     nameItem->setData(Qt::UserRole, QVariant::fromValue(obj));
     this->m_tableWidget->setItem(row, COL_NAME, nameItem);
 
@@ -443,10 +443,10 @@ QString SearchTabPage::getCPUUsageText(const QString& objectType, const QVariant
         // C# Logic: Get VM_metrics, sum VCPUs_utilisation for all VCPUs
         // Format: "X% of Y CPUs" (or "X% of 1 CPU" for single CPU)
         QString metricsRef = objectData.value("metrics", "").toString();
-        if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL" || !this->m_xenLib || !this->m_xenLib->getCache())
+        if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL" || !this->m_connection || !this->m_connection->GetCache())
             return "-";
 
-        QVariantMap vmMetrics = this->m_xenLib->getCache()->ResolveObjectData("vm_metrics", metricsRef);
+        QVariantMap vmMetrics = this->m_connection->GetCache()->ResolveObjectData("vm_metrics", metricsRef);
         if (vmMetrics.isEmpty())
             return "-";
 
@@ -462,7 +462,7 @@ QString SearchTabPage::getCPUUsageText(const QString& objectType, const QVariant
 
         // Get CPU utilization from MetricUpdater
         // C# uses: for (int i = 0; i < vcpus; i++) sum += MetricUpdater.GetValue(vm, String.Format("cpu{0}", i))
-        MetricUpdater* metrics = this->m_xenLib->getMetricUpdater();
+        MetricUpdater* metrics = this->m_connection->GetMetricUpdater();
         if (!metrics || !metrics->hasMetrics("vm", uuid))
         {
             // No metrics available yet, show placeholder
@@ -501,7 +501,7 @@ QString SearchTabPage::getCPUUsageText(const QString& objectType, const QVariant
             return "-";
 
         // Get CPU utilization from MetricUpdater
-        MetricUpdater* metrics = this->m_xenLib->getMetricUpdater();
+        MetricUpdater* metrics = this->m_connection->GetMetricUpdater();
         if (!metrics || !metrics->hasMetrics("host", uuid))
         {
             // No metrics available yet
@@ -558,7 +558,7 @@ QString SearchTabPage::getMemoryUsageText(const QString& objectType, const QVari
         if (uuid.isEmpty())
             return "-";
 
-        MetricUpdater* metrics = this->m_xenLib ? this->m_xenLib->getMetricUpdater() : nullptr;
+        MetricUpdater* metrics = this->m_connection ? this->m_connection->GetMetricUpdater() : nullptr;
         if (!metrics || !metrics->hasMetrics("vm", uuid))
         {
             // No metrics available, show static allocation
@@ -600,14 +600,14 @@ QString SearchTabPage::getMemoryUsageText(const QString& objectType, const QVari
         if (uuid.isEmpty())
             return "-";
 
-        MetricUpdater* metrics = this->m_xenLib ? this->m_xenLib->getMetricUpdater() : nullptr;
+        MetricUpdater* metrics = this->m_connection ? this->m_connection->GetMetricUpdater() : nullptr;
         if (!metrics || !metrics->hasMetrics("host", uuid))
         {
             // No metrics available, show from host_metrics if available
             QString metricsRef = objectData.value("metrics", "").toString();
-            if (!metricsRef.isEmpty() && metricsRef != "OpaqueRef:NULL" && this->m_xenLib && this->m_xenLib->getCache())
+            if (!metricsRef.isEmpty() && metricsRef != "OpaqueRef:NULL" && this->m_connection && this->m_connection->GetCache())
             {
-                QVariantMap hostMetrics = this->m_xenLib->getCache()->ResolveObjectData("host_metrics", metricsRef);
+                QVariantMap hostMetrics = this->m_connection->GetCache()->ResolveObjectData("host_metrics", metricsRef);
                 qulonglong memoryTotal = hostMetrics.value("memory_total", 0).toULongLong();
                 if (memoryTotal > 0)
                 {
@@ -639,10 +639,10 @@ QString SearchTabPage::getMemoryUsageText(const QString& objectType, const QVari
 
 int SearchTabPage::getMemoryUsagePercent(const QString& objectType, const QVariantMap& objectData) const
 {
-    if (!this->m_xenLib)
+    if (!this->m_connection)
         return -1;
 
-    MetricUpdater* metrics = this->m_xenLib->getMetricUpdater();
+    MetricUpdater* metrics = this->m_connection->GetMetricUpdater();
     if (!metrics)
         return -1;
 
@@ -691,7 +691,7 @@ QString SearchTabPage::getDiskUsageText(const QString& objectType, const QVarian
         if (uuid.isEmpty())
             return "-";
 
-        MetricUpdater* metrics = this->m_xenLib ? this->m_xenLib->getMetricUpdater() : nullptr;
+        MetricUpdater* metrics = this->m_connection ? this->m_connection->GetMetricUpdater() : nullptr;
         if (!metrics || !metrics->hasMetrics("vm", uuid))
             return "-";
 
@@ -708,10 +708,10 @@ QString SearchTabPage::getDiskUsageText(const QString& objectType, const QVarian
 
         foreach (QVariant vbdRef, vbds)
         {
-            if (!this->m_xenLib->getCache())
+            if (!this->m_connection->GetCache())
                 continue;
 
-            QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef.toString());
+            QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef.toString());
             if (vbdData.isEmpty())
                 continue;
 
@@ -761,7 +761,7 @@ QString SearchTabPage::getNetworkUsageText(const QString& objectType, const QVar
         if (uuid.isEmpty())
             return "-";
 
-        MetricUpdater* metrics = this->m_xenLib ? this->m_xenLib->getMetricUpdater() : nullptr;
+        MetricUpdater* metrics = this->m_connection ? this->m_connection->GetMetricUpdater() : nullptr;
         if (!metrics || !metrics->hasMetrics("vm", uuid))
             return "-";
 
@@ -778,10 +778,10 @@ QString SearchTabPage::getNetworkUsageText(const QString& objectType, const QVar
 
         foreach (QVariant vifRef, vifs)
         {
-            if (!this->m_xenLib->getCache())
+            if (!this->m_connection->GetCache())
                 continue;
 
-            QVariantMap vifData = this->m_xenLib->getCache()->ResolveObjectData("vif", vifRef.toString());
+            QVariantMap vifData = this->m_connection->GetCache()->ResolveObjectData("vif", vifRef.toString());
             if (vifData.isEmpty())
                 continue;
 
@@ -820,7 +820,7 @@ QString SearchTabPage::getNetworkUsageText(const QString& objectType, const QVar
         if (uuid.isEmpty())
             return "-";
 
-        MetricUpdater* metrics = this->m_xenLib ? this->m_xenLib->getMetricUpdater() : nullptr;
+        MetricUpdater* metrics = this->m_connection ? this->m_connection->GetMetricUpdater() : nullptr;
         if (!metrics || !metrics->hasMetrics("host", uuid))
             return "-";
 
@@ -835,10 +835,10 @@ QString SearchTabPage::getNetworkUsageText(const QString& objectType, const QVar
 
         foreach (QVariant pifRef, pifs)
         {
-            if (!this->m_xenLib->getCache())
+            if (!this->m_connection->GetCache())
                 continue;
 
-            QVariantMap pifData = this->m_xenLib->getCache()->ResolveObjectData("pif", pifRef.toString());
+            QVariantMap pifData = this->m_connection->GetCache()->ResolveObjectData("pif", pifRef.toString());
             if (pifData.isEmpty())
                 continue;
 
@@ -886,10 +886,10 @@ QString SearchTabPage::getIPAddress(const QString& objectType, const QVariantMap
         // We want the first IPv4 address from VIF device 0
 
         QString guestMetricsRef = objectData.value("guest_metrics", "").toString();
-        if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL" || !this->m_xenLib || !this->m_xenLib->getCache())
+        if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL" || !this->m_connection || !this->m_connection->GetCache())
             return "";
 
-        QVariantMap guestMetrics = this->m_xenLib->getCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+        QVariantMap guestMetrics = this->m_connection->GetCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
         if (guestMetrics.isEmpty())
             return "";
 
@@ -940,10 +940,10 @@ QString SearchTabPage::getUptime(const QString& objectType, const QVariantMap& o
         // C# Logic: Get VM_metrics.start_time, calculate uptime = now - start_time
         // Format: "X days Y hours Z minutes" (using PrettyTimeSpan)
         QString metricsRef = objectData.value("metrics", "").toString();
-        if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL" || !this->m_xenLib || !this->m_xenLib->getCache())
+        if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL" || !this->m_connection || !this->m_connection->GetCache())
             return "";
 
-        QVariantMap vmMetrics = this->m_xenLib->getCache()->ResolveObjectData("vm_metrics", metricsRef);
+        QVariantMap vmMetrics = this->m_connection->GetCache()->ResolveObjectData("vm_metrics", metricsRef);
         if (vmMetrics.isEmpty())
             return "";
 

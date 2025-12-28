@@ -73,6 +73,7 @@ class VMStorageTabPage : public BaseTabPage
         void onEjectButtonClicked();
         void onNewCDDriveLinkClicked(const QString& link);
         void onObjectDataReceived(QString type, QString ref, QVariantMap data);
+        void onCacheObjectChanged(const QString& type, const QString& ref);
 
         // Storage table actions
         void onAddButtonClicked();

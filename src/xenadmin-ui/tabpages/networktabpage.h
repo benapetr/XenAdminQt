@@ -118,6 +118,7 @@ private:
     void onRemoveNetwork();  // RemoveNetworkButton_Click
     void onActivateToggle(); // buttonActivateToggle_Click
     void removeNetwork(const QString& networkRef);
+    void onCacheObjectChanged(const QString& type, const QString& ref);
 
 private slots:
     void onConfigureClicked();
