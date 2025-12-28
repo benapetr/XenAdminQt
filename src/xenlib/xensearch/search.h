@@ -32,8 +32,10 @@
 
 #include "query.h"
 #include "grouping.h"
+#include "sort.h"
 #include <QString>
 #include <QList>
+#include <QPair>
 
 // Forward declaration
 class XenConnection;
@@ -60,9 +62,12 @@ class Search
          * @param name The search name
          * @param uuid Optional UUID for saved searches
          * @param defaultSearch True if this is a built-in default search
+         * @param columns Column configuration (name, width pairs). Default empty = use defaults.
+         * @param sorting Sort configuration. Default empty = no sorting.
          */
-        Search(Query* query, Grouping* grouping, const QString& name,
-            const QString& uuid = QString(), bool defaultSearch = false);
+        Search(Query* query, Grouping* grouping, const QString& name, const QString& uuid = QString(), 
+               bool defaultSearch = false, const QList<QPair<QString, int>>& columns = QList<QPair<QString, int>>(),
+               const QList<Sort>& sorting = QList<Sort>());
 
         ~Search();
 
@@ -72,7 +77,7 @@ class Search
          * C# equivalent: Query property
          * @return Pointer to the Query instance owned by this Search
          */
-        Query* getQuery() const
+        Query* GetQuery() const
         {
             return m_query;
         }
@@ -83,7 +88,7 @@ class Search
          * C# equivalent: Grouping property
          * @return Pointer to the Grouping instance owned by this Search
          */
-        Grouping* getGrouping() const
+        Grouping* GetGrouping() const
         {
             return m_grouping;
         }
@@ -95,7 +100,7 @@ class Search
          * C# equivalent: EffectiveGrouping property
          * @return Pointer to the effective Grouping instance
          */
-        Grouping* getEffectiveGrouping() const;
+        Grouping* GetEffectiveGrouping() const;
 
         /**
          * @brief Get the search name
@@ -103,18 +108,18 @@ class Search
          * C# equivalent: Name property
          * @return Name of the search
          */
-        QString getName() const
+        QString GetName() const
         {
-            return m_name;
+            return this->m_name;
         }
 
         /**
          * @brief Set the search name
          * @param name New search name
          */
-        void setName(const QString& name)
+        void SetName(const QString& name)
         {
-            m_name = name;
+            this->m_name = name;
         }
 
         /**
@@ -123,7 +128,7 @@ class Search
          * C# equivalent: UUID property
          * @return UUID string (may be empty)
          */
-        QString getUUID() const
+        QString GetUUID() const
         {
             return m_uuid;
         }
@@ -134,7 +139,7 @@ class Search
          * C# equivalent: DefaultSearch property
          * @return True if this is a built-in default search
          */
-        bool isDefaultSearch() const
+        bool IsDefaultSearch() const
         {
             return m_defaultSearch;
         }
@@ -145,7 +150,7 @@ class Search
          * C# equivalent: Connection property
          * @return Pointer to associated XenConnection or nullptr if none
          */
-        XenConnection* getConnection() const
+        XenConnection* GetConnection() const
         {
             return m_connection;
         }
@@ -154,7 +159,7 @@ class Search
          * @brief Set the connection this search is associated with
          * @param connection Pointer to XenConnection (not owned)
          */
-        void setConnection(XenConnection* connection)
+        void SetConnection(XenConnection* connection)
         {
             m_connection = connection;
         }
@@ -165,7 +170,7 @@ class Search
          * C# equivalent: Items property
          * @return Number of matched items
          */
-        int getItems() const
+        int GetItems() const
         {
             return m_items;
         }
@@ -174,9 +179,49 @@ class Search
          * @brief Set the number of items matched by this search
          * @param items Number of matched items
          */
-        void setItems(int items)
+        void SetItems(int items)
         {
             m_items = items;
+        }
+
+        /**
+         * @brief Get the column configuration
+         *
+         * C# equivalent: Columns property (Search.cs lines 206-209)
+         * @return List of (column name, width) pairs
+         */
+        QList<QPair<QString, int>> GetColumns() const
+        {
+            return this->m_columns;
+        }
+
+        /**
+         * @brief Set the column configuration
+         * @param columns List of (column name, width) pairs
+         */
+        void SetColumns(const QList<QPair<QString, int>>& columns)
+        {
+            this->m_columns = columns;
+        }
+
+        /**
+         * @brief Get the sorting configuration
+         *
+         * C# equivalent: Sorting property (Search.cs lines 211-214)
+         * @return List of Sort specifications
+         */
+        QList<Sort> GetSorting() const
+        {
+            return this->m_sorting;
+        }
+
+        /**
+         * @brief Set the sorting configuration
+         * @param sorting List of Sort specifications
+         */
+        void SetSorting(const QList<Sort>& sorting)
+        {
+            this->m_sorting = sorting;
         }
 
         /**
@@ -193,7 +238,7 @@ class Search
          * @param group The group value
          * @return New Search instance configured for the group
          */
-        static Search* searchForNonVappGroup(Grouping* grouping, const QVariant& parent, const QVariant& group);
+        static Search* SearchForNonVappGroup(Grouping* grouping, const QVariant& parent, const QVariant& group);
 
         /**
          * @brief Create a search for a folder grouping tag
@@ -206,7 +251,7 @@ class Search
          * @param group The group value
          * @return New Search instance configured for the group
          */
-        static Search* searchForFolderGroup(Grouping* grouping, const QVariant& parent, const QVariant& group);
+        static Search* SearchForFolderGroup(Grouping* grouping, const QVariant& parent, const QVariant& group);
 
         /**
          * @brief Create a search for a vApp grouping tag
@@ -219,7 +264,7 @@ class Search
          * @param group The group value
          * @return New Search instance configured for the vApp group
          */
-        static Search* searchForVappGroup(Grouping* grouping, const QVariant& parent, const QVariant& group);
+        static Search* SearchForVappGroup(Grouping* grouping, const QVariant& parent, const QVariant& group);
 
     private:
         Query* m_query;              // The query (what to match) - owned
@@ -229,6 +274,8 @@ class Search
         bool m_defaultSearch;        // True if built-in default search
         XenConnection* m_connection; // Associated connection (not owned)
         int m_items;                 // Number of items matched
+        QList<QPair<QString, int>> m_columns;  // Column configuration (name, width)
+        QList<Sort> m_sorting;       // Sort configuration
 };
 
 #endif // SEARCH_H

@@ -31,9 +31,10 @@
 #include "queryfilter.h"
 #include <QDebug>
 
-Search::Search(Query* query, Grouping* grouping, const QString& name,
-               const QString& uuid, bool defaultSearch)
-    : m_query(query), m_grouping(grouping), m_name(name), m_uuid(uuid), m_defaultSearch(defaultSearch), m_connection(nullptr), m_items(0)
+Search::Search(Query* query, Grouping* grouping, const QString& name, const QString& uuid, 
+               bool defaultSearch, const QList<QPair<QString, int>>& columns, const QList<Sort>& sorting)
+    : m_query(query), m_grouping(grouping), m_name(name), m_uuid(uuid), m_defaultSearch(defaultSearch), 
+      m_connection(nullptr), m_items(0), m_columns(columns), m_sorting(sorting)
 {
     // C# equivalent: Search constructor (lines 67-83 in Search.cs)
 
@@ -41,7 +42,7 @@ Search::Search(Query* query, Grouping* grouping, const QString& name,
     if (this->m_query == nullptr)
     {
         // C# code: this.query = new Query(null, null);
-        m_query = new Query(nullptr, nullptr);
+        this->m_query = new Query(nullptr, nullptr);
     }
 
     // grouping can be null (no grouping)
@@ -50,11 +51,11 @@ Search::Search(Query* query, Grouping* grouping, const QString& name,
 Search::~Search()
 {
     // Clean up owned pointers
-    delete m_query;
-    delete m_grouping;
+    delete this->m_query;
+    delete this->m_grouping;
 }
 
-Grouping* Search::getEffectiveGrouping() const
+Grouping* Search::GetEffectiveGrouping() const
 {
     // C# equivalent: EffectiveGrouping property (lines 120-126 in Search.cs)
     //
@@ -66,10 +67,10 @@ Grouping* Search::getEffectiveGrouping() const
     // C# code: return (FolderForNavigator == null ? Grouping : null);
     //
     // For now, we don't have FolderForNavigator, so just return the grouping
-    return m_grouping;
+    return this->m_grouping;
 }
 
-Search* Search::searchForNonVappGroup(Grouping* grouping, const QVariant& parent, const QVariant& group)
+Search* Search::SearchForNonVappGroup(Grouping* grouping, const QVariant& parent, const QVariant& group)
 {
     // C# equivalent: SearchForNonVappGroup (lines 647-650 in Search.cs)
     //
@@ -110,7 +111,7 @@ Search* Search::searchForNonVappGroup(Grouping* grouping, const QVariant& parent
     return new Search(query, subgrouping, groupName, "", false);
 }
 
-Search* Search::searchForFolderGroup(Grouping* grouping, const QVariant& parent, const QVariant& group)
+Search* Search::SearchForFolderGroup(Grouping* grouping, const QVariant& parent, const QVariant& group)
 {
     // C# equivalent: SearchForFolderGroup (lines 641-644 in Search.cs)
     //
@@ -137,7 +138,7 @@ Search* Search::searchForFolderGroup(Grouping* grouping, const QVariant& parent,
     return new Search(query, subgrouping, groupName, "", false);
 }
 
-Search* Search::searchForVappGroup(Grouping* grouping, const QVariant& parent, const QVariant& group)
+Search* Search::SearchForVappGroup(Grouping* grouping, const QVariant& parent, const QVariant& group)
 {
     // C# equivalent: SearchForVappGroup (lines 652-655 in Search.cs)
     //

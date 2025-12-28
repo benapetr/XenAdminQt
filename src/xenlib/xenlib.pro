@@ -25,12 +25,13 @@ SOURCES += \
     xencache.cpp \
     vmhelpers.cpp \
     metricupdater.cpp \
-    groupingtag.cpp \
-    grouping.cpp \
-    queryscope.cpp \
-    queryfilter.cpp \
-    query.cpp \
-    search.cpp \
+    xensearch/groupingtag.cpp \
+    xensearch/grouping.cpp \
+    xensearch/queryscope.cpp \
+    xensearch/queryfilter.cpp \
+    xensearch/query.cpp \
+    xensearch/search.cpp \
+    xensearch/sort.cpp \
     xen/network/connection.cpp \
     xen/network/connectionworker.cpp \
     xen/session.cpp \
@@ -163,12 +164,13 @@ HEADERS += \
     xencache.h \
     vmhelpers.h \
     metricupdater.h \
-    groupingtag.h \
-    grouping.h \
-    queryscope.h \
-    queryfilter.h \
-    query.h \
-    search.h \
+    xensearch/groupingtag.h \
+    xensearch/grouping.h \
+    xensearch/queryscope.h \
+    xensearch/queryfilter.h \
+    xensearch/query.h \
+    xensearch/search.h \
+    xensearch/sort.h \
     xen/network/connection.h \
     xen/network/connectionworker.h \
     xen/network/connecttask.h \
