@@ -90,7 +90,7 @@ class XENLIB_EXPORT Host : public XenObject
          * @brief Get software version info
          * @return Map of version keys/values
          */
-        QVariantMap softwareVersion() const;
+        QVariantMap SoftwareVersion() const;
 
         /**
          * @brief Get host Capabilities
@@ -485,14 +485,6 @@ class XENLIB_EXPORT Host : public XenObject
          * Iterates through host.PIFs and collects IP addresses
          */
         QList<ComparableAddress> GetIPAddresses() const;
-
-        /**
-         * @brief Get pool this host belongs to
-         * @return Pool opaque reference (cached lookup)
-         * 
-         * C# equivalent: Helpers.GetPoolOfOne(connection)
-         */
-        QString GetPoolRef() const;
 
     protected:
         QString GetObjectType() const override;

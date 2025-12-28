@@ -61,7 +61,7 @@ QStringList Host::ResidentVMRefs() const
     return stringListProperty("resident_VMs");
 }
 
-QVariantMap Host::softwareVersion() const
+QVariantMap Host::SoftwareVersion() const
 {
     return property("software_version").toMap();
 }
@@ -478,44 +478,4 @@ QList<ComparableAddress> Host::GetIPAddresses() const
     }
     
     return addresses;
-}
-
-QString Host::GetPoolRef() const
-{
-    // C# equivalent: Helpers.GetPoolOfOne(connection)
-    // Returns the pool reference this host belongs to
-    
-    XenConnection* conn = this->GetConnection();
-    if (!conn)
-        return QString();
-    
-    XenCache* cache = conn->GetCache();
-    if (!cache)
-        return QString();
-    
-    // Get all pools from cache (typically only one)
-    QStringList poolRefs = cache->GetAllRefs("pool");
-    if (poolRefs.isEmpty())
-        return QString();
-    
-    // Check each pool to see if this host is a member
-    for (const QString& poolRef : poolRefs)
-    {
-        QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
-        
-        // Check if this host is the master
-        QString masterRef = poolData.value("master", QString()).toString();
-        if (masterRef == this->OpaqueRef())
-            return poolRef;
-        
-        // Check if this host is in the pool's host list
-        QVariantList hostRefs = poolData.value("hosts", QVariantList()).toList();
-        for (const QVariant& hostRefVar : hostRefs)
-        {
-            if (hostRefVar.toString() == this->OpaqueRef())
-                return poolRef;
-        }
-    }
-    
-    return QString(); // Standalone host
 }
