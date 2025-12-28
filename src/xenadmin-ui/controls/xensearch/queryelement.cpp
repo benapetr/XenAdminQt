@@ -522,11 +522,26 @@ void QueryElement::onQueryTypeChanged(int index)
     if (!newQueryType || newQueryType == this->currentQueryType_)
         return;
     
+    // Disconnect old query type signals
+    if (this->currentQueryType_)
+    {
+        disconnect(this->currentQueryType_, &QueryType::SomeThingChanged,
+                   this, &QueryElement::onSomeThingChanged);
+    }
+    
     // Save last query filter
     delete this->lastQueryFilter_;
     this->lastQueryFilter_ = this->GetQueryFilter();
     
     this->currentQueryType_ = newQueryType;
+    
+    // Connect new query type signals
+    if (this->currentQueryType_)
+    {
+        connect(this->currentQueryType_, &QueryType::SomeThingChanged,
+                this, &QueryElement::onSomeThingChanged);
+    }
+    
     this->setupControls();
 }
 
@@ -590,4 +605,34 @@ void QueryElement::onRemoveClicked()
 void QueryElement::onSubQueryChanged()
 {
     emit QueryChanged();
+}
+
+void QueryElement::onSomeThingChanged()
+{
+    // C# equivalent: QueryElement_SomeThingChanged handler
+    // Refreshes combo box values when QueryType cache updates
+    
+    if (!this->currentQueryType_)
+        return;
+    
+    // Save current selection
+    QString currentSelection = this->comboBox_->currentText();
+    
+    // Repopulate combo box
+    this->comboBox_->clear();
+    QVariantList entries = this->currentQueryType_->getComboButtonEntries(this);
+    for (const QVariant& entry : entries)
+    {
+        this->comboBox_->addItem(entry.toString());
+    }
+    
+    // Restore selection if still valid
+    int index = this->comboBox_->findText(currentSelection);
+    if (index >= 0)
+    {
+        this->comboBox_->setCurrentIndex(index);
+    } else if (this->comboBox_->count() > 0)
+    {
+        this->comboBox_->setCurrentIndex(0); // Select first if previous value gone
+    }
 }

@@ -317,3 +317,62 @@ bool Pool::IsPsrPending() const
 {
     return boolProperty("is_psr_pending", false);
 }
+
+// Property getters for search/query functionality
+
+QStringList Pool::GetAllVMRefs() const
+{
+    // C# equivalent: PropertyAccessors VM property for Pool
+    // Returns all VMs from connection.Cache.VMs
+    
+    XenConnection* conn = this->GetConnection();
+    if (!conn)
+        return QStringList();
+    
+    XenCache* cache = conn->GetCache();
+    if (!cache)
+        return QStringList();
+    
+    // Get all VMs from cache
+    return cache->GetAllRefs("vm");
+}
+
+bool Pool::IsNotFullyUpgraded() const
+{
+    // C# equivalent: PropertyNames.isNotFullyUpgraded
+    // Returns true if hosts in pool have different software versions
+    
+    QStringList hostRefs = this->HostRefs();
+    if (hostRefs.size() <= 1)
+        return false; // Single host or no hosts, can't be mismatched
+    
+    XenConnection* conn = this->GetConnection();
+    if (!conn)
+        return false;
+    
+    XenCache* cache = conn->GetCache();
+    if (!cache)
+        return false;
+    
+    // Compare software_version of all hosts
+    QString firstVersion;
+    for (const QString& hostRef : hostRefs)
+    {
+        QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
+        if (hostData.isEmpty())
+            continue;
+        
+        QVariantMap softwareVersion = hostData.value("software_version").toMap();
+        QString versionStr = softwareVersion.value("product_version", QString()).toString();
+        
+        if (firstVersion.isEmpty())
+        {
+            firstVersion = versionStr;
+        } else if (firstVersion != versionStr)
+        {
+            return true; // Version mismatch found
+        }
+    }
+    
+    return false; // All versions match
+}

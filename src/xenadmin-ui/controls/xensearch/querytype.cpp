@@ -31,6 +31,7 @@
 #include "../../../xenlib/xen/network/connectionsmanager.h"
 #include "../../../xenlib/xen/network/connection.h"
 #include "../../../xenlib/xencache.h"
+#include "../../../xenlib/otherconfig/otherconfigandtagswatcher.h"
 #include <algorithm>
 
 // Constants for binary sizes
@@ -632,9 +633,55 @@ QStringList BooleanQueryType::getMatchTypeComboButtonEntries() const
 // TagQueryType
 // ============================================================================
 
-TagQueryType::TagQueryType(int group, ObjectTypes appliesTo)
+TagQueryType::TagQueryType(int group, ObjectTypes appliesTo, QObject* parent)
     : QueryType(group, appliesTo)
 {
+    Q_UNUSED(parent);
+    // C# equivalent: Subscribes to OtherConfigAndTagsWatcher.TagsChanged
+    QObject::connect(OtherConfigAndTagsWatcher::instance(), &OtherConfigAndTagsWatcher::TagsChanged,
+            this, &TagQueryType::onTagsChanged);
+    
+    this->populateCollectedTags();
+}
+
+TagQueryType::~TagQueryType()
+{
+    QObject::disconnect(OtherConfigAndTagsWatcher::instance(), &OtherConfigAndTagsWatcher::TagsChanged,
+               this, &TagQueryType::onTagsChanged);
+}
+
+void TagQueryType::populateCollectedTags()
+{
+    // C# equivalent: Tags.GetAllTags()
+    // Collects all unique tags from all connections
+    
+    this->collectedTags_.clear();
+    QSet<QString> uniqueTags;
+    
+    // TODO: When ConnectionsManager is implemented, iterate through all connections
+    // For now, this is a placeholder that will be populated by cache updates
+    
+    // C# logic:
+    // foreach (IXenConnection connection in ConnectionsManager.XenConnectionsCopy)
+    // {
+    //     foreach (IXenObject o in connection.Cache.XenSearchableObjects)
+    //     {
+    //         String[] tags = Tags.GetTags(o);
+    //         if (tags != null)
+    //             foreach (string tag in tags)
+    //                 uniqueTags.insert(tag);
+    //     }
+    // }
+    
+    this->collectedTags_ = uniqueTags.values();
+    std::sort(this->collectedTags_.begin(), this->collectedTags_.end());
+}
+
+void TagQueryType::onTagsChanged()
+{
+    // C# equivalent: OtherConfigAndTagsWatcher_TagsChanged
+    this->populateCollectedTags();
+    emit SomeThingChanged();  // Notify QueryElement to refresh dropdown
 }
 
 bool TagQueryType::ForQuery(QueryFilter* query) const
@@ -648,6 +695,7 @@ void TagQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
     if (!tagQuery)
         return;
     
+    // C# uses "contains" / "not contains" / "are empty" / "are not empty"
     queryElement->setMatchTypeSelection(tagQuery->isNegated() ? "Does not contain" : "Contains");
     queryElement->setTextBoxValue(tagQuery->getTag());
 }
@@ -666,9 +714,36 @@ QString TagQueryType::toString() const
     return "Tags";
 }
 
+bool TagQueryType::showTextBox(QueryElement* queryElement) const
+{
+    Q_UNUSED(queryElement);
+    // Always show text box for tag entry
+    return true;
+}
+
+bool TagQueryType::showComboButton(QueryElement* queryElement) const
+{
+    QString matchType = queryElement->getMatchTypeSelection();
+    // Show combo box when match type is "Contains" or "Does not contain"
+    return matchType == "Contains" || matchType == "Does not contain";
+}
+
 QStringList TagQueryType::getMatchTypeComboButtonEntries() const
 {
     return QStringList() << "Contains" << "Does not contain";
+}
+
+QVariantList TagQueryType::getComboButtonEntries(QueryElement* queryElement) const
+{
+    Q_UNUSED(queryElement);
+    
+    QVariantList entries;
+    for (const QString& tag : this->collectedTags_)
+    {
+        entries.append(tag);
+    }
+    
+    return entries;
 }
 
 // ============================================================================
@@ -764,15 +839,15 @@ QString NullPropertyQueryType::toString() const
 // ============================================================================
 
 ValuePropertyQueryType::ValuePropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent)
-    : QObject(parent)
-    , QueryType(group, appliesTo)
+    : QueryType(group, appliesTo)
     , property_(property)
 {
+    Q_UNUSED(parent);
     // Monitor ConnectionsManager for connection changes
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-    connect(connMgr, &Xen::ConnectionsManager::connectionAdded, this, &ValuePropertyQueryType::onConnectionsChanged);
-    connect(connMgr, &Xen::ConnectionsManager::connectionRemoved, this, &ValuePropertyQueryType::onConnectionsChanged);
-    connect(connMgr, &Xen::ConnectionsManager::connectionsChanged, this, &ValuePropertyQueryType::onConnectionsChanged);
+    QObject::connect(connMgr, &Xen::ConnectionsManager::connectionAdded, this, &ValuePropertyQueryType::onConnectionsChanged);
+    QObject::connect(connMgr, &Xen::ConnectionsManager::connectionRemoved, this, &ValuePropertyQueryType::onConnectionsChanged);
+    QObject::connect(connMgr, &Xen::ConnectionsManager::connectionsChanged, this, &ValuePropertyQueryType::onConnectionsChanged);
     
     // Initial population
     this->populateCollectedValues();
@@ -838,11 +913,16 @@ void ValuePropertyQueryType::populateCollectedValues()
 void ValuePropertyQueryType::onConnectionsChanged()
 {
     this->populateCollectedValues();
+    emit SomeThingChanged(); // Notify QueryElement to refresh dropdowns
 }
 
-void ValuePropertyQueryType::onCacheChanged()
+void ValuePropertyQueryType::onCacheChanged(XenConnection* connection, const QString& type, const QString& ref)
 {
+    Q_UNUSED(connection);
+    Q_UNUSED(type);
+    Q_UNUSED(ref);
     this->populateCollectedValues();
+    emit SomeThingChanged(); // Notify QueryElement to refresh dropdowns
 }
 
 bool ValuePropertyQueryType::showComboButton(QueryElement* queryElement) const
@@ -910,10 +990,10 @@ void ValuePropertyQueryType::FromQuery(QueryFilter* query, QueryElement* queryEl
 // ============================================================================
 
 UuidQueryType::UuidQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent)
-    : QObject(parent)
-    , QueryType(group, appliesTo)
+    : QueryType(group, appliesTo)
     , property_(property)
 {
+    Q_UNUSED(parent);
 }
 
 bool UuidQueryType::ForQuery(QueryFilter* query) const
@@ -976,11 +1056,11 @@ QStringList UuidStringQueryType::getMatchTypeComboButtonEntries() const
 // ============================================================================
 
 RecursiveQueryTypeBase::RecursiveQueryTypeBase(int group, ObjectTypes appliesTo, PropertyNames property, ObjectTypes subQueryScope, QObject* parent)
-    : QObject(parent)
-    , QueryType(group, appliesTo)
+    : QueryType(group, appliesTo)
     , property_(property)
     , subQueryScope_(new QueryScope(subQueryScope))
 {
+    Q_UNUSED(parent);
     // Monitor ConnectionsManager for connection changes (C# XenConnections.CollectionChanged)
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     QObject::connect(connMgr, &Xen::ConnectionsManager::connectionAdded, this, &RecursiveQueryTypeBase::onConnectionsChanged);
@@ -1143,10 +1223,10 @@ QueryFilter* RecursiveXMOListQueryType::newQuery(PropertyNames property, QueryFi
 // ============================================================================
 
 XenModelObjectPropertyQueryType::XenModelObjectPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent)
-    : QObject(parent)
-    , QueryType(group, appliesTo)
+    : QueryType(group, appliesTo)
     , property_(property)
 {
+    Q_UNUSED(parent);
     // Monitor cache changes (C# Cache.RegisterBatchCollectionChanged<T>)
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     QObject::connect(connMgr, &Xen::ConnectionsManager::connectionAdded, this, &XenModelObjectPropertyQueryType::onConnectionsChanged);
@@ -1247,10 +1327,10 @@ void XenModelObjectPropertyQueryType::FromQuery(QueryFilter* query, QueryElement
 // ============================================================================
 
 XenModelObjectListContainsQueryType::XenModelObjectListContainsQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent)
-    : QObject(parent)
-    , QueryType(group, appliesTo)
+    : QueryType(group, appliesTo)
     , property_(property)
 {
+    Q_UNUSED(parent);
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     QObject::connect(connMgr, &Xen::ConnectionsManager::connectionAdded, this, &XenModelObjectListContainsQueryType::onConnectionsChanged);
     QObject::connect(connMgr, &Xen::ConnectionsManager::connectionRemoved, this, &XenModelObjectListContainsQueryType::onConnectionsChanged);
@@ -1277,8 +1357,13 @@ void XenModelObjectListContainsQueryType::onConnectionsChanged()
     }
 }
 
-void XenModelObjectListContainsQueryType::onCacheChanged()
+void XenModelObjectListContainsQueryType::onCacheChanged(XenConnection* connection, const QString& type, const QString& ref)
 {
+    Q_UNUSED(connection);
+    Q_UNUSED(type);
+    Q_UNUSED(ref);
+    // TODO: Update collected values when cache changes
+    // For now, we just ignore the change
 }
 
 bool XenModelObjectListContainsQueryType::ForQuery(QueryFilter* query) const

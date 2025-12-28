@@ -67,9 +67,56 @@ Grouping* Search::GetEffectiveGrouping() const
     //  main results, but we still pretend to the user that it's grouped by folder."
     //
     // C# code: return (FolderForNavigator == null ? Grouping : null);
+    QString folder = this->GetFolderForNavigator();
+    return (folder.isEmpty() ? this->m_grouping : nullptr);
+}
+
+QString Search::GetFolderForNavigator() const
+{
+    // C# equivalent: FolderForNavigator property (Search.cs lines 186-202)
     //
-    // For now, we don't have FolderForNavigator, so just return the grouping
-    return this->m_grouping;
+    // C# code:
+    //   public string FolderForNavigator
+    //   {
+    //       get
+    //       {
+    //           if (Query == null || Query.QueryFilter == null)
+    //               return null;
+    //
+    //           RecursiveXMOPropertyQuery<Folder> filter = Query.QueryFilter as RecursiveXMOPropertyQuery<Folder>;
+    //           if (filter == null)
+    //               return null;  // only show a folder for RecursiveXMOPropertyQuery<Folder>
+    //
+    //           StringPropertyQuery subFilter = filter.subQuery as StringPropertyQuery;
+    //           if (subFilter == null || subFilter.property != PropertyNames.uuid)
+    //               return null;  // also only show a folder if the subquery is "folder is"
+    //
+    //           return subFilter.query;
+    //       }
+    //   }
+
+    if (!this->m_query || !this->m_query->getQueryFilter())
+        return QString();
+
+    // Check if the query filter is a RecursiveXMOPropertyQuery for the "folder" property
+    RecursiveXMOPropertyQuery* recursiveQuery = dynamic_cast<RecursiveXMOPropertyQuery*>(this->m_query->getQueryFilter());
+    if (!recursiveQuery)
+        return QString();
+
+    // Only show folder navigator for "folder" property (parent folder)
+    if (recursiveQuery->getProperty() != PropertyNames::folder)
+        return QString();
+
+    // Check if the subquery is a StringPropertyQuery matching uuid
+    StringPropertyQuery* stringQuery = dynamic_cast<StringPropertyQuery*>(recursiveQuery->getSubQuery());
+    if (!stringQuery)
+        return QString();
+
+    if (stringQuery->getProperty() != PropertyNames::uuid)
+        return QString();
+
+    // Return the folder UUID/path from the subquery
+    return stringQuery->getQuery();
 }
 
 Search* Search::SearchForNonVappGroup(Grouping* grouping, const QVariant& parent, const QVariant& group)

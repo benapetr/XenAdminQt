@@ -106,13 +106,13 @@ void SearchOutput::SetSearch(Search* search)
         return;
     
     // Handle FolderForNavigator - shows breadcrumb navigation if path is set
-    // TODO: Implement Search::GetFolderForNavigator() when folder support is added
-    // QString folder = (search ? search->GetFolderForNavigator() : QString());
-    // if (this->folderNavigator_)
-    // {
-    //     this->folderNavigator_->SetFolder(folder);
-    //     this->folderNavigator_->setVisible(!folder.isEmpty());
-    // }
+    // C# equivalent: SearchOutput.Search setter (SearchOutput.cs lines 60-73)
+    QString folder = (search ? search->GetFolderForNavigator() : QString());
+    if (this->folderNavigator_)
+    {
+        this->folderNavigator_->SetFolder(folder);
+        this->folderNavigator_->setVisible(!folder.isEmpty());
+    }
     
     this->queryPanel_->SetSearch(search);
 }

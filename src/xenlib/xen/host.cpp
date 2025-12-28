@@ -27,6 +27,7 @@
 
 #include "host.h"
 #include "network/connection.h"
+#include "network/comparableaddress.h"
 #include "../xenlib.h"
 #include "../xencache.h"
 
@@ -433,4 +434,88 @@ QString Host::Edition() const
 QVariantMap Host::LicenseServer() const
 {
     return this->property("license_server").toMap();
+}
+
+// Property getters for search/query functionality
+
+QList<ComparableAddress> Host::GetIPAddresses() const
+{
+    // C# equivalent: PropertyAccessors IP address property for Host
+    // Gets IPs from PIFs (physical network interfaces)
+    
+    QList<ComparableAddress> addresses;
+    
+    QStringList pifRefs = this->PIFRefs();
+    if (pifRefs.isEmpty())
+        return addresses;
+    
+    XenConnection* conn = this->GetConnection();
+    if (!conn)
+        return addresses;
+    
+    XenCache* cache = conn->GetCache();
+    if (!cache)
+        return addresses;
+    
+    // Iterate through all PIFs and collect IP addresses
+    for (const QString& pifRef : pifRefs)
+    {
+        QVariantMap pifData = cache->ResolveObjectData("pif", pifRef);
+        if (pifData.isEmpty())
+            continue;
+        
+        // Get IP address from PIF
+        QString ipStr = pifData.value("IP", QString()).toString();
+        if (ipStr.isEmpty() || ipStr == "0.0.0.0")
+            continue;
+        
+        // Try to parse as IP address
+        ComparableAddress addr;
+        if (ComparableAddress::TryParse(ipStr, false, true, addr))
+        {
+            addresses.append(addr);
+        }
+    }
+    
+    return addresses;
+}
+
+QString Host::GetPoolRef() const
+{
+    // C# equivalent: Helpers.GetPoolOfOne(connection)
+    // Returns the pool reference this host belongs to
+    
+    XenConnection* conn = this->GetConnection();
+    if (!conn)
+        return QString();
+    
+    XenCache* cache = conn->GetCache();
+    if (!cache)
+        return QString();
+    
+    // Get all pools from cache (typically only one)
+    QStringList poolRefs = cache->GetAllRefs("pool");
+    if (poolRefs.isEmpty())
+        return QString();
+    
+    // Check each pool to see if this host is a member
+    for (const QString& poolRef : poolRefs)
+    {
+        QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
+        
+        // Check if this host is the master
+        QString masterRef = poolData.value("master", QString()).toString();
+        if (masterRef == this->OpaqueRef())
+            return poolRef;
+        
+        // Check if this host is in the pool's host list
+        QVariantList hostRefs = poolData.value("hosts", QVariantList()).toList();
+        for (const QVariant& hostRefVar : hostRefs)
+        {
+            if (hostRefVar.toString() == this->OpaqueRef())
+                return poolRef;
+        }
+    }
+    
+    return QString(); // Standalone host
 }

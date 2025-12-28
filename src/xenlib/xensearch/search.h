@@ -106,6 +106,21 @@ class Search
         Grouping* GetEffectiveGrouping() const;
 
         /**
+         * @brief Get the folder path for breadcrumb navigator
+         *
+         * C# equivalent: FolderForNavigator property (Search.cs lines 186-202)
+         *
+         * Returns the folder path if this search is a RecursiveXMOPropertyQuery<Folder>
+         * with a StringPropertyQuery(uuid) subquery. Otherwise returns empty string.
+         *
+         * This is used to show a breadcrumb navigator at the top of search results
+         * when browsing folder contents.
+         *
+         * @return Folder opaque_ref/path string, or empty if not a folder search
+         */
+        QString GetFolderForNavigator() const;
+
+        /**
          * @brief Get the search name
          *
          * C# equivalent: Name property

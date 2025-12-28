@@ -493,10 +493,15 @@ void XSVNCScreen::initSubControl()
 
         // PV VMs use keysyms, HVM VMs use scan codes
         // This is critical for proper keyboard input!
-        this->_remoteConsole->setSendScanCodes(!this->_sourceIsPv);
 
-        qDebug() << "XSVNCScreen: SendScanCodes set to" << !this->_sourceIsPv
-                 << "(PV:" << this->_sourceIsPv << ")";
+        //this->_remoteConsole->setSendScanCodes(!this->_sourceIsPv);
+
+        // This actually needs to be forced to false - when it's true it just doesn't work and connection crashes
+        // it was tested that this is working fine for both PV and HVM
+        this->_remoteConsole->setSendScanCodes(false);
+
+        //qDebug() << "XSVNCScreen: SendScanCodes set to" << !this->_sourceIsPv
+        //         << "(PV:" << this->_sourceIsPv << ")";
     }
 
     // Layout the console widget to fill parent

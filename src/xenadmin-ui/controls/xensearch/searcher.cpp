@@ -28,6 +28,7 @@
 #include "searcher.h"
 #include "queryelement.h"
 #include "groupingcontrol.h"
+#include "../../dialogs/customsearchdialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QScrollArea>
@@ -256,11 +257,34 @@ void SearchFor::onComboActivated(int index)
 
 void SearchFor::onCustomDialogRequested()
 {
-    // TODO: Launch custom dialog
-    // For now, just revert to saved selection
-    this->autoSelecting_ = true;
-    this->setFromScope(this->savedTypes_);
-    this->autoSelecting_ = false;
+    // C# equivalent: SearchForCustom dialog in SearchFor.cs line 107
+    CustomSearchDialog* dialog = new CustomSearchDialog(this);
+    dialog->setObjectTypes(this->customValue_);
+    
+    if (dialog->exec() == QDialog::Accepted)
+    {
+        QueryScope* scope = dialog->getQueryScope();
+        if (scope)
+        {
+            this->customValue_ = scope->GetObjectTypes();
+            delete scope;
+            
+            // Update combo box to reflect custom selection
+            this->autoSelecting_ = true;
+            this->setFromScope(this->customValue_);
+            this->autoSelecting_ = false;
+            
+            emit QueryChanged();
+        }
+    } else
+    {
+        // User cancelled - revert to saved selection
+        this->autoSelecting_ = true;
+        this->setFromScope(this->savedTypes_);
+        this->autoSelecting_ = false;
+    }
+    
+    delete dialog;
 }
 
 QueryScope* SearchFor::GetQueryScope() const

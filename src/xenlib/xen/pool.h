@@ -373,6 +373,27 @@ class XENLIB_EXPORT Pool : public XenObject
          */
         bool IsPsrPending() const;
 
+        // Property getters for search/query functionality
+        // C# equivalent: PropertyAccessors dictionary in Common.cs
+
+        /**
+         * @brief Get all VMs in this pool (across all hosts)
+         * @return List of VM opaque references
+         * 
+         * C# equivalent: PropertyAccessors VM property for Pool
+         * Returns all VMs from connection.Cache.VMs
+         */
+        QStringList GetAllVMRefs() const;
+
+        /**
+         * @brief Check if pool is not fully upgraded
+         * @return true if pool hosts have different versions
+         * 
+         * C# equivalent: PropertyNames.isNotFullyUpgraded
+         * Used by search to find pools needing upgrades
+         */
+        bool IsNotFullyUpgraded() const;
+
     protected:
         QString GetObjectType() const override;
 };

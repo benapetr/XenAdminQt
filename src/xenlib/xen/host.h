@@ -29,6 +29,7 @@
 #define HOST_H
 
 #include "xenobject.h"
+#include "network/comparableaddress.h"
 
 class Pool;
 class SR;
@@ -472,6 +473,26 @@ class XENLIB_EXPORT Host : public XenObject
          * @return Map of license server address and port
          */
         QVariantMap LicenseServer() const;
+
+        // Property getters for search/query functionality
+        // C# equivalent: PropertyAccessors dictionary in Common.cs
+
+        /**
+         * @brief Get IP addresses from PIFs (physical interfaces)
+         * @return List of IP addresses from all PIFs
+         * 
+         * C# equivalent: PropertyAccessors IP address property for Host
+         * Iterates through host.PIFs and collects IP addresses
+         */
+        QList<ComparableAddress> GetIPAddresses() const;
+
+        /**
+         * @brief Get pool this host belongs to
+         * @return Pool opaque reference (cached lookup)
+         * 
+         * C# equivalent: Helpers.GetPoolOfOne(connection)
+         */
+        QString GetPoolRef() const;
 
     protected:
         QString GetObjectType() const override;

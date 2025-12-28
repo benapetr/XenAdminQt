@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
- * Copyright (c) Cloud Software Group, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

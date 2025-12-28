@@ -149,7 +149,8 @@ SOURCES += \
     operations/operationlauncher.cpp \
     customfields/customfielddefinition.cpp \
     customfields/customfieldsmanager.cpp \
-    xen/folder.cpp
+    xen/folder.cpp \
+    otherconfig/otherconfigandtagswatcher.cpp
 
 # Header files
 HEADERS += \
@@ -295,7 +296,8 @@ HEADERS += \
     operations/operationlauncher.h \
     customfields/customfielddefinition.h \
     customfields/customfieldsmanager.h \
-    xen/folder.h
+    xen/folder.h \
+    otherconfig/otherconfigandtagswatcher.h
 
 # Installation
 target.path = $$[QT_INSTALL_LIBS]

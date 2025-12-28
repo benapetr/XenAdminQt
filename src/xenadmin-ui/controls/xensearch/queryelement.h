@@ -138,6 +138,7 @@ class QueryElement : public QWidget
         void onResourceSelected(const QString& ref);
         void onRemoveClicked();
         void onSubQueryChanged();
+        void onSomeThingChanged(); // Refreshes combo boxes when QueryType cache changes
 
     private:
         void setupUi();

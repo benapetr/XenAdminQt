@@ -33,9 +33,9 @@
 #include <QVariant>
 #include <QVariantList>
 #include "searcher.h"
-#include "../../../xenlib/xensearch/queryfilter.h"
-#include "../../../xenlib/xensearch/queries.h"
-#include "../../../xenlib/xensearch/queryscope.h"
+#include "xenlib/xensearch/queryfilter.h"
+#include "xenlib/xensearch/queries.h"
+#include "xenlib/xensearch/queryscope.h"
 
 // Forward declarations
 class QueryElement;
@@ -50,8 +50,10 @@ class NullPropertyQuery;
  * Base class for all query types
  * Matches C# QueryType abstract class
  */
-class QueryType
+class QueryType : public QObject
 {
+    Q_OBJECT
+
 public:
     enum class Category
     {
@@ -96,6 +98,15 @@ public:
     
     int getGroup() const { return this->group_; }
     ObjectTypes getAppliesTo() const { return this->appliesTo_; }
+
+signals:
+    /**
+     * @brief Emitted when dropdown values change (e.g., new OS names, new VMs added)
+     * 
+     * C# equivalent: SomeThingChanged event
+     * QueryElement listens to this and refreshes combo boxes
+     */
+    void SomeThingChanged();
 
 protected:
     int group_;
@@ -286,11 +297,17 @@ protected:
 
 /**
  * Tag query type
+ * 
+ * C# Equivalent: TagQueryType in QueryElement.cs
+ * Monitors OtherConfigAndTagsWatcher for tag changes to keep dropdown updated
  */
 class TagQueryType : public QueryType
 {
+    Q_OBJECT
+
 public:
-    TagQueryType(int group, ObjectTypes appliesTo);
+    TagQueryType(int group, ObjectTypes appliesTo, QObject* parent = nullptr);
+    ~TagQueryType() override;
     
     bool ForQuery(QueryFilter* query) const override;
     void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
@@ -298,8 +315,18 @@ public:
     QString toString() const override;
     
     bool showMatchTypeComboButton() const override { return true; }
-    bool showTextBox(QueryElement* queryElement) const override { Q_UNUSED(queryElement); return true; }
+    bool showTextBox(QueryElement* queryElement) const override;
+    bool showComboButton(QueryElement* queryElement) const override;
     QStringList getMatchTypeComboButtonEntries() const override;
+    QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
+
+private slots:
+    void onTagsChanged();
+
+private:
+    QStringList collectedTags_;  // All known tags from cache
+    
+    void populateCollectedTags();
 };
 
 /**
@@ -358,7 +385,7 @@ protected:
  * Currently only used for PropertyNames::os_name (VM operating systems).
  * Monitors ConnectionsManager for VM additions/removals to keep list updated.
  */
-class ValuePropertyQueryType : public QObject, public QueryType
+class ValuePropertyQueryType : public QueryType
 {
     Q_OBJECT
 
@@ -380,7 +407,7 @@ public:
 
 private slots:
     void onConnectionsChanged();
-    void onCacheChanged();
+    void onCacheChanged(XenConnection* connection, const QString& type, const QString& ref);
 
 private:
     PropertyNames property_;
@@ -399,7 +426,7 @@ private:
  * Note: Requires ResourceSelectButton widget which is not yet functional (needs Search::PopulateAdapters).
  * For now, this falls back to UuidStringQueryType behavior.
  */
-class UuidQueryType : public QObject, public QueryType
+class UuidQueryType : public QueryType
 {
     Q_OBJECT
 
@@ -456,7 +483,7 @@ public:
  *   - User sees "Pool is..." with sub-query "Name contains 'Production'"
  *   - Matches VMs/Hosts whose parent pool's name contains "Production"
  */
-class RecursiveQueryTypeBase : public QObject, public QueryType
+class RecursiveQueryTypeBase : public QueryType
 {
     Q_OBJECT
 
@@ -545,7 +572,7 @@ protected:
  * Kept for backward compatibility with saved searches.
  * Uses XenModelObjectPropertyQuery<T> for evaluation.
  */
-class XenModelObjectPropertyQueryType : public QObject, public QueryType
+class XenModelObjectPropertyQueryType : public QueryType
 {
     Q_OBJECT
 
@@ -584,7 +611,7 @@ private:
  * Supports both dropdown selection and text matching.
  * Uses XenModelObjectListContainsQuery<T> for evaluation.
  */
-class XenModelObjectListContainsQueryType : public QObject, public QueryType
+class XenModelObjectListContainsQueryType : public QueryType
 {
     Q_OBJECT
 
@@ -608,7 +635,7 @@ public:
 
 private slots:
     void onConnectionsChanged();
-    void onCacheChanged();
+    void onCacheChanged(XenConnection* connection, const QString& type, const QString& ref);
 
 protected:
     PropertyNames property_;
