@@ -35,23 +35,49 @@
 // Property names enum (matching C# PropertyNames)
 enum class PropertyNames
 {
+    // Basic properties (group 1)
     label,
     description,
     uuid,
     tags,
     type,
+    
+    // VM properties (group 3)
     power_state,
     virtualisation_status,
     os_name,
     ha_restart_priority,
     start_time,
     memory,
+    read_caching_enabled,
+    vendor_device_state,        // NEW: VM vendor device boolean
+    in_any_appliance,           // NEW: VM appliance membership
+    
+    // Storage properties (group 4)
     size,
     shared,
-    ha_enabled,
     sr_type,
-    read_caching_enabled,
-    ip_address
+    
+    // Pool properties (group 4)
+    ha_enabled,
+    isNotFullyUpgraded,         // NEW: Pool upgrade status
+    
+    // Network properties (group 3)
+    ip_address,
+    
+    // Relationship properties (for future recursive queries)
+    pool,                       // Parent pool reference
+    host,                       // Parent/related host reference
+    vm,                         // Related VM reference
+    networks,                   // Network list
+    storage,                    // Storage reference
+    disks,                      // VDI list
+    appliance,                  // VM_appliance reference
+    folder,                     // Parent folder reference
+    folders,                    // Ancestor folder list
+    
+    // Custom field support
+    has_custom_fields           // Boolean for custom field presence
 };
 
 /**
@@ -62,7 +88,7 @@ class DummyQuery : public QueryFilter
     public:
         DummyQuery() {}
 
-        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const override;
         bool Equals(const QueryFilter* other) const override;
         uint HashCode() const override;
 };
@@ -134,7 +160,7 @@ class EnumQuery : public QueryFilter
     public:
         EnumQuery(PropertyNames property, const QString& value, bool negated = false);
 
-        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const override;
         bool Equals(const QueryFilter* other) const override;
         uint HashCode() const override;
 
@@ -193,7 +219,7 @@ class DateQuery : public QueryFilter
 
         DateQuery(PropertyNames property, const QDateTime& value, ComparisonType comparisonType);
 
-        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const override;
         bool Equals(const QueryFilter* other) const override;
         uint HashCode() const override;
 
@@ -215,7 +241,7 @@ class BoolQuery : public QueryFilter
     public:
         BoolQuery(PropertyNames property, bool value);
 
-        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const override;
         bool Equals(const QueryFilter* other) const override;
         uint HashCode() const override;
 

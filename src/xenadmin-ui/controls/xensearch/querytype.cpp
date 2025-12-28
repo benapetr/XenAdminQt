@@ -39,6 +39,7 @@ static QString getPropertyName(PropertyNames property)
 {
     switch (property)
     {
+        // Basic properties
         case PropertyNames::label:
             return "Name";
         case PropertyNames::description:
@@ -49,6 +50,8 @@ static QString getPropertyName(PropertyNames property)
             return "Tags";
         case PropertyNames::type:
             return "Type";
+        
+        // VM properties
         case PropertyNames::power_state:
             return "Power State";
         case PropertyNames::virtualisation_status:
@@ -61,18 +64,54 @@ static QString getPropertyName(PropertyNames property)
             return "Start Time";
         case PropertyNames::memory:
             return "Memory";
+        case PropertyNames::read_caching_enabled:
+            return "Read Caching";
+        case PropertyNames::vendor_device_state:
+            return "Vendor Device";
+        case PropertyNames::in_any_appliance:
+            return "In Appliance";
+        
+        // Storage properties
         case PropertyNames::size:
             return "Size";
         case PropertyNames::shared:
             return "Shared";
-        case PropertyNames::ha_enabled:
-            return "HA Enabled";
         case PropertyNames::sr_type:
             return "SR Type";
-        case PropertyNames::read_caching_enabled:
-            return "Read Caching";
+        
+        // Pool properties
+        case PropertyNames::ha_enabled:
+            return "HA Enabled";
+        case PropertyNames::isNotFullyUpgraded:
+            return "Upgrade Status";
+        
+        // Network properties
         case PropertyNames::ip_address:
             return "IP Address";
+        
+        // Relationship properties
+        case PropertyNames::pool:
+            return "Pool";
+        case PropertyNames::host:
+            return "Host";
+        case PropertyNames::vm:
+            return "VM";
+        case PropertyNames::networks:
+            return "Networks";
+        case PropertyNames::storage:
+            return "Storage";
+        case PropertyNames::disks:
+            return "Disks";
+        case PropertyNames::appliance:
+            return "Appliance";
+        case PropertyNames::folder:
+            return "Folder";
+        case PropertyNames::folders:
+            return "Folders";
+        
+        // Custom fields
+        case PropertyNames::has_custom_fields:
+            return "Has Custom Fields";
     }
     return "Unknown";
 }
@@ -770,6 +809,8 @@ void QueryTypeRegistry::initialize()
     this->queryTypes_.append(new EnumPropertyQueryType(3, ObjectTypes::VM, PropertyNames::ha_restart_priority));
     this->queryTypes_.append(new DatePropertyQueryType(3, ObjectTypes::VM, PropertyNames::start_time));
     this->queryTypes_.append(new BooleanQueryType(3, ObjectTypes::VM, PropertyNames::read_caching_enabled));
+    this->queryTypes_.append(new BooleanQueryType(3, ObjectTypes::VM, PropertyNames::vendor_device_state));
+    this->queryTypes_.append(new BooleanQueryType(3, ObjectTypes::VM, PropertyNames::in_any_appliance));
     
     // Storage queries (Group 4)
     this->queryTypes_.append(new NumericPropertyQueryType(4, ObjectTypes::VDI, PropertyNames::size,
@@ -780,6 +821,7 @@ void QueryTypeRegistry::initialize()
     
     // Pool queries (Group 4)
     this->queryTypes_.append(new BooleanQueryType(4, ObjectTypes::Pool, PropertyNames::ha_enabled));
+    this->queryTypes_.append(new BooleanQueryType(4, ObjectTypes::Pool, PropertyNames::isNotFullyUpgraded));
 }
 
 QueryType* QueryTypeRegistry::findQueryTypeForFilter(QueryFilter* filter) const
