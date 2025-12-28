@@ -48,6 +48,7 @@ SOURCES += \
     dialogs/migratevirtualdiskdialog.cpp \
     dialogs/optionsdialog.cpp \
     dialogs/verticallytabbeddialog.cpp \
+    dialogs/customsearchdialog.cpp \
     controls/affinitypicker.cpp \
     controls/srpicker.cpp \
     controls/dropdownbutton.cpp \
@@ -264,6 +265,7 @@ HEADERS += \
     dialogs/migratevirtualdiskdialog.h \
     dialogs/optionsdialog.h \
     dialogs/verticallytabbeddialog.h \
+    dialogs/customsearchdialog.h \
     network/xenconnectionui.h \
     controls/affinitypicker.h \
     controls/srpicker.h \
@@ -459,6 +461,7 @@ FORMS += \
     dialogs/newvmwizard.ui \
     dialogs/newsrwizard.ui \
     dialogs/verticallytabbeddialog.ui \
+    dialogs/customsearchdialog.ui \
     controls/affinitypicker.ui \
     controls/srpicker.ui \
     settingspanels/generaleditpage.ui \

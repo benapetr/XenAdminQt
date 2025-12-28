@@ -1,0 +1,88 @@
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * Copyright (c) Cloud Software Group, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#ifndef FOLDER_H
+#define FOLDER_H
+
+#include "xenobject.h"
+#include <QList>
+#include <QMutex>
+
+class XenConnection;
+
+/**
+ * @brief Folder XenObject for organizing infrastructure hierarchy
+ *
+ * Folders are client-side organizational containers (not XenServer API objects).
+ * They allow grouping VMs, Hosts, Pools, SRs, etc. into a hierarchical structure.
+ * Folder relationships are stored in object.other_config["XenCenterFolderPath"].
+ *
+ * C# equivalent: XenAdmin/Model/Folder.cs
+ */
+class Folder : public XenObject
+{
+    Q_OBJECT
+
+    public:
+        explicit Folder(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
+        virtual ~Folder();
+
+        // Factory method
+        static Folder* create(XenConnection* connection, const QString& name, Folder* parent = nullptr);
+
+        // XenObject overrides
+        QString GetObjectType() const override { return "folder"; }
+
+        // Folder-specific properties
+        Folder* getParent() const;
+        QString getPath() const;
+        bool isRootFolder() const;
+
+        // Folder contents management
+        void addObject(XenObject* obj);
+        bool removeObject(XenObject* obj);
+        QList<XenObject*> getXenObjects() const;
+        QList<XenObject*> getRecursiveXenObjects() const;
+        int getXenObjectsCount() const;
+
+        // Display
+        QString ToString() const;
+
+        // Equality
+        bool operator==(const Folder& other) const;
+
+    private:
+        QString getFullPath() const;
+
+        QString nameLabel_;
+        Folder* parent_;
+        QList<XenObject*> xenObjects_;
+        mutable QMutex mutex_;
+};
+
+#endif // FOLDER_H

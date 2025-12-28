@@ -33,14 +33,18 @@
 #include <QPushButton>
 #include <QLineEdit>
 #include <QSpinBox>
+#include <QDoubleSpinBox>
 #include <QDateTimeEdit>
 #include <QVBoxLayout>
+#include <QLabel>
 #include "../../../xenlib/xensearch/queryfilter.h"
 #include "querytype.h"
 
 // Forward declarations
 class Searcher;
 class QueryScope;
+class ResourceSelectButton;
+class Search;
 
 /**
  * QueryElement - Search criterion editor widget
@@ -99,11 +103,23 @@ class QueryElement : public QWidget
         qint64 getNumericValue() const;
         void setNumericValue(qint64 value);
 
+        double getDoubleValue() const;
+        void setDoubleValue(double value);
+
         QDateTime getDateTimeValue() const;
         void setDateTimeValue(const QDateTime& value);
 
+        QString getResourceSelection() const;
+        void setResourceSelection(const QString& ref);
+
         QList<QueryFilter*> getSubQueries() const;
         void setSubQueries(const QList<QueryFilter*>& queries);
+
+        /**
+         * Get the Search instance for resource picker population
+         * C# QueryElement.cs line 462: GetSearchForResourceSelectButton()
+         */
+        Search* getSearchForResourceSelectButton();
 
     signals:
         /**
@@ -117,7 +133,9 @@ class QueryElement : public QWidget
         void onTextChanged();
         void onComboChanged(int index);
         void onNumericChanged(int value);
+        void onDoubleChanged(double value);
         void onDateTimeChanged(const QDateTime& dateTime);
+        void onResourceSelected(const QString& ref);
         void onRemoveClicked();
         void onSubQueryChanged();
 
@@ -134,11 +152,13 @@ class QueryElement : public QWidget
         // UI widgets
         QComboBox* queryTypeCombo_;
         QComboBox* matchTypeCombo_;
+        QComboBox* comboBox_;           // General combo button (showComboButton)
         QLineEdit* textBox_;
-        QComboBox* comboBox_;
         QSpinBox* numericUpDown_;
+        QDoubleSpinBox* doubleSpinBox_;
         QLabel* unitsLabel_;
         QDateTimeEdit* dateTimePicker_;
+        ResourceSelectButton* resourceSelectButton_;
         QPushButton* removeButton_;
         QVBoxLayout* subQueryLayout_;
 

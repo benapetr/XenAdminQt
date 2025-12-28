@@ -107,6 +107,14 @@ class NavigationView : public QWidget
         void treeViewRefreshResumed();
         void dragDropCommandActivated(const QString& commandKey);
 
+        /**
+         * Emitted when a folder is selected in the tree
+         * @param folderPath Full path of the selected folder (e.g., "/MyFolder/SubFolder")
+         * Used by SearchTabPage to filter search results by folder
+         * C# equivalent: Custom implementation for folder filtering
+         */
+        void folderSelected(const QString& folderPath);
+
     private slots:
         void onSearchTextChanged(const QString& text);
         void onCacheObjectChanged(XenConnection *connection, const QString& type, const QString& ref);

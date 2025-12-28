@@ -27,6 +27,7 @@
 
 #include "queryelement.h"
 #include "searcher.h"
+#include "resourceselectbutton.h"
 #include <QHBoxLayout>
 #include <QLabel>
 
@@ -37,8 +38,10 @@ QueryElement::QueryElement(QWidget* parent)
     , textBox_(nullptr)
     , comboBox_(nullptr)
     , numericUpDown_(nullptr)
+    , doubleSpinBox_(nullptr)
     , unitsLabel_(nullptr)
     , dateTimePicker_(nullptr)
+    , resourceSelectButton_(nullptr)
     , removeButton_(nullptr)
     , subQueryLayout_(nullptr)
     , searcher_(nullptr)
@@ -125,11 +128,18 @@ void QueryElement::setupUi()
     this->comboBox_->setVisible(false);
     mainLayout->addWidget(this->comboBox_);
     
-    // Numeric input for numeric queries
+    // Numeric input for numeric queries (integer)
     this->numericUpDown_ = new QSpinBox(this);
     this->numericUpDown_->setRange(0, 999999);
     this->numericUpDown_->setVisible(false);
     mainLayout->addWidget(this->numericUpDown_);
+    
+    // Double numeric input (for decimal values)
+    this->doubleSpinBox_ = new QDoubleSpinBox(this);
+    this->doubleSpinBox_->setRange(0.0, 999999.99);
+    this->doubleSpinBox_->setDecimals(2);
+    this->doubleSpinBox_->setVisible(false);
+    mainLayout->addWidget(this->doubleSpinBox_);
     
     this->unitsLabel_ = new QLabel(this);
     this->unitsLabel_->setVisible(false);
@@ -139,6 +149,11 @@ void QueryElement::setupUi()
     this->dateTimePicker_ = new QDateTimeEdit(this);
     this->dateTimePicker_->setVisible(false);
     mainLayout->addWidget(this->dateTimePicker_);
+    
+    // Resource select button for UUID queries
+    this->resourceSelectButton_ = new ResourceSelectButton(this);
+    this->resourceSelectButton_->setVisible(false);
+    mainLayout->addWidget(this->resourceSelectButton_);
     
     mainLayout->addStretch();
     
@@ -172,8 +187,12 @@ void QueryElement::setupUi()
             this, &QueryElement::onComboChanged);
     connect(this->numericUpDown_, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &QueryElement::onNumericChanged);
+    connect(this->doubleSpinBox_, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+            this, &QueryElement::onDoubleChanged);
     connect(this->dateTimePicker_, &QDateTimeEdit::dateTimeChanged,
             this, &QueryElement::onDateTimeChanged);
+    connect(this->resourceSelectButton_, &ResourceSelectButton::itemSelected,
+            this, &QueryElement::onResourceSelected);
     connect(this->removeButton_, &QPushButton::clicked,
             this, &QueryElement::onRemoveClicked);
     
@@ -249,9 +268,23 @@ void QueryElement::setupControls()
     this->matchTypeCombo_->setVisible(this->currentQueryType_->showMatchTypeComboButton());
     this->textBox_->setVisible(this->currentQueryType_->showTextBox(this));
     this->comboBox_->setVisible(this->currentQueryType_->showComboButton(this));
-    this->numericUpDown_->setVisible(this->currentQueryType_->showNumericUpDown(this));
-    this->unitsLabel_->setVisible(this->currentQueryType_->showNumericUpDown(this));
+    
+    // Show numeric updown OR double spinbox (not both)
+    bool showNumeric = this->currentQueryType_->showNumericUpDown(this);
+    this->numericUpDown_->setVisible(showNumeric);
+    this->doubleSpinBox_->setVisible(false);  // For now, always use integer spin box
+    this->unitsLabel_->setVisible(showNumeric);
+    
     this->dateTimePicker_->setVisible(this->currentQueryType_->showDateTimePicker(this));
+    this->resourceSelectButton_->setVisible(this->currentQueryType_->showResourceSelectButton(this));
+    
+    // Populate resource button if needed
+    if (this->currentQueryType_->showResourceSelectButton(this))
+    {
+        Search* search = this->getSearchForResourceSelectButton();
+        if (search)
+            this->resourceSelectButton_->Populate(search);
+    }
     
     // Populate match type combo
     if (this->currentQueryType_->showMatchTypeComboButton())
@@ -416,6 +449,16 @@ void QueryElement::setNumericValue(qint64 value)
     this->numericUpDown_->setValue(static_cast<int>(value));
 }
 
+double QueryElement::getDoubleValue() const
+{
+    return this->doubleSpinBox_->value();
+}
+
+void QueryElement::setDoubleValue(double value)
+{
+    this->doubleSpinBox_->setValue(value);
+}
+
 QDateTime QueryElement::getDateTimeValue() const
 {
     return this->dateTimePicker_->dateTime();
@@ -424,6 +467,23 @@ QDateTime QueryElement::getDateTimeValue() const
 void QueryElement::setDateTimeValue(const QDateTime& value)
 {
     this->dateTimePicker_->setDateTime(value);
+}
+
+QString QueryElement::getResourceSelection() const
+{
+    return this->resourceSelectButton_->selectedRef();
+}
+
+void QueryElement::setResourceSelection(const QString& ref)
+{
+    this->resourceSelectButton_->setSelectedRef(ref);
+}
+
+Search* QueryElement::getSearchForResourceSelectButton()
+{
+    // TODO: Implement Search::PopulateAdapters() integration
+    // For now return nullptr - will be implemented when Search class has PopulateAdapters
+    return nullptr;
 }
 
 QList<QueryFilter*> QueryElement::getSubQueries() const
@@ -506,15 +566,24 @@ void QueryElement::onDateTimeChanged(const QDateTime& dateTime)
     emit QueryChanged();
 }
 
+void QueryElement::onDoubleChanged(double value)
+{
+    Q_UNUSED(value);
+    emit QueryChanged();
+}
+
+void QueryElement::onResourceSelected(const QString& ref)
+{
+    Q_UNUSED(ref);
+    emit QueryChanged();
+}
+
 void QueryElement::onRemoveClicked()
 {
+    // Notify parent to remove this element
     if (this->parentQueryElement_)
     {
         this->parentQueryElement_->removeSubQueryElement(this);
-    } else
-    {
-        this->SelectDefaultQueryType();
-        emit QueryChanged();
     }
 }
 

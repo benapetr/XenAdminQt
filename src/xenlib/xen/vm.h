@@ -29,6 +29,7 @@
 #define VM_H
 
 #include "xenobject.h"
+#include "network/comparableaddress.h"
 
 class Host;
 class VDI;
@@ -674,6 +675,59 @@ class XENLIB_EXPORT VM : public XenObject
          * @return List of guidance strings for pending updates
          */
         QStringList PendingGuidances() const;
+
+        // Property getters for search/query functionality
+        // C# equivalent: PropertyAccessors dictionary in Common.cs
+
+        /**
+         * @brief Check if this is a real VM (not template, not snapshot, not control domain)
+         * @return true if real VM
+         * 
+         * C# equivalent: VM.IsRealVm() extension method
+         */
+        bool IsRealVm() const;
+
+        /**
+         * @brief Get operating system name from guest_metrics
+         * @return OS name string (e.g., "Ubuntu 20.04", "Windows Server 2019")
+         * 
+         * C# equivalent: VM.GetOSName() extension method
+         * Used by PropertyAccessors.Get(PropertyNames.os_name)
+         */
+        QString GetOSName() const;
+
+        /**
+         * @brief Get virtualization status (PV drivers state)
+         * @return Virtualization status flags
+         * 
+         * Flags:
+         * - 0 = NotInstalled
+         * - 1 = Unknown
+         * - 2 = PvDriversOutOfDate
+         * - 4 = IoDriversInstalled
+         * - 8 = ManagementInstalled
+         * 
+         * C# equivalent: VM.GetVirtualizationStatus() extension method
+         * Returns VM.VirtualizationStatus enum
+         */
+        int GetVirtualizationStatus() const;
+
+        /**
+         * @brief Get IP addresses from guest_metrics
+         * @return List of IP addresses (IPv4/IPv6)
+         * 
+         * C# equivalent: PropertyAccessors IP address property
+         * Returns ComparableList<ComparableAddress>
+         */
+        QList<ComparableAddress> GetIPAddresses() const;
+
+        /**
+         * @brief Get start time from guest_metrics
+         * @return Start time (epoch seconds), or 0 if not available
+         * 
+         * C# equivalent: VM.GetStartTime() extension method
+         */
+        qint64 GetStartTime() const;
 
     protected:
         QString GetObjectType() const override;

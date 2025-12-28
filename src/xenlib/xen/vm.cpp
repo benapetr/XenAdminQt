@@ -27,6 +27,7 @@
 
 #include "vm.h"
 #include "network/connection.h"
+#include "network/comparableaddress.h"
 #include "../xenlib.h"
 #include "../xencache.h"
 #include "host.h"
@@ -760,4 +761,200 @@ QVariantMap VM::NVRAM() const
 QStringList VM::PendingGuidances() const
 {
     return this->stringListProperty("pending_guidances");
+}
+
+// Property getters for search/query functionality
+// C# equivalent: VM extensions in XenAPI-Extensions/VM.cs and Common.cs PropertyAccessors
+
+bool VM::IsRealVm() const
+{
+    // C# equivalent: VM.IsRealVm()
+    // Returns true if VM is not a template, not a snapshot, and not a control domain
+    return !this->IsTemplate() && !this->IsSnapshot() && !this->IsControlDomain();
+}
+
+QString VM::GetOSName() const
+{
+    // C# equivalent: VM.GetOSName()
+    // Gets OS name from guest_metrics.os_version["name"]
+    
+    if (!this->IsRealVm())
+        return QString();
+    
+    QString guestMetricsRef = this->GuestMetricsRef();
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+        return QString();
+    
+    // Get guest_metrics from cache
+    XenConnection* conn = this->GetConnection();
+    if (!conn)
+        return QString();
+    
+    XenCache* cache = conn->GetCache();
+    if (!cache)
+        return QString();
+    
+    QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+    if (guestMetrics.isEmpty())
+        return QString();
+    
+    // Get os_version dictionary and extract "name" key
+    QVariantMap osVersion = guestMetrics.value("os_version").toMap();
+    return osVersion.value("name", QString()).toString();
+}
+
+int VM::GetVirtualizationStatus() const
+{
+    // C# equivalent: VM.GetVirtualizationStatus(out _)
+    // Returns VirtualizationStatus flags:
+    // 0 = NotInstalled
+    // 1 = Unknown
+    // 2 = PvDriversOutOfDate
+    // 4 = IoDriversInstalled
+    // 8 = ManagementInstalled
+    
+    if (!this->IsRealVm())
+        return 0; // NotInstalled
+    
+    QString guestMetricsRef = this->GuestMetricsRef();
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+        return 0; // NotInstalled
+    
+    XenConnection* conn = this->GetConnection();
+    if (!conn)
+        return 0;
+    
+    XenCache* cache = conn->GetCache();
+    if (!cache)
+        return 0;
+    
+    QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+    if (guestMetrics.isEmpty())
+        return 0; // NotInstalled
+    
+    // Get PV drivers version from guest_metrics
+    QVariantMap pvDriversVersion = guestMetrics.value("PV_drivers_version").toMap();
+    if (pvDriversVersion.isEmpty())
+        return 0; // NotInstalled
+    
+    // Check for management agent (xe-daemon)
+    bool hasManagement = pvDriversVersion.contains("major") && pvDriversVersion.contains("minor");
+    
+    // Check if drivers are up to date
+    // C# logic: Compare pvDriversVersion with host's recommended version
+    // For now, simplified: if we have PV drivers, assume IoDriversInstalled
+    int status = 0;
+    
+    if (hasManagement)
+    {
+        status |= 4; // IoDriversInstalled
+        status |= 8; // ManagementInstalled
+    } else if (!pvDriversVersion.isEmpty())
+    {
+        status |= 4; // IoDriversInstalled
+    }
+    
+    // Check if drivers are out of date
+    // C# checks PV_drivers_up_to_date field
+    bool upToDate = guestMetrics.value("PV_drivers_up_to_date", true).toBool();
+    if (!upToDate && status != 0)
+    {
+        status |= 2; // PvDriversOutOfDate
+    }
+    
+    return status;
+}
+
+QList<ComparableAddress> VM::GetIPAddresses() const
+{
+    // C# equivalent: PropertyAccessors IP address property
+    // Gets IPs from guest_metrics.networks dictionary
+    
+    QList<ComparableAddress> addresses;
+    
+    if (!this->IsRealVm())
+        return addresses;
+    
+    QString guestMetricsRef = this->GuestMetricsRef();
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+        return addresses;
+    
+    XenConnection* conn = this->GetConnection();
+    if (!conn)
+        return addresses;
+    
+    XenCache* cache = conn->GetCache();
+    if (!cache)
+        return addresses;
+    
+    QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+    if (guestMetrics.isEmpty())
+        return addresses;
+    
+    // Get networks dictionary: key = "0/ip", value = "192.168.1.100"
+    QVariantMap networks = guestMetrics.value("networks").toMap();
+    
+    for (const QString& key : networks.keys())
+    {
+        // Keys are like "0/ip", "1/ip", "0/ipv6/0", etc.
+        if (key.contains("/ip"))
+        {
+            QString ipStr = networks.value(key).toString();
+            if (ipStr.isEmpty())
+                continue;
+            
+            // Try to parse as IP address (not partial IP, allow name fallback)
+            ComparableAddress addr;
+            if (ComparableAddress::TryParse(ipStr, false, true, addr))
+            {
+                addresses.append(addr);
+            }
+        }
+    }
+    
+    return addresses;
+}
+
+qint64 VM::GetStartTime() const
+{
+    // C# equivalent: VM.GetStartTime()
+    // Gets start_time from guest_metrics or metrics
+    
+    QString guestMetricsRef = this->GuestMetricsRef();
+    if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
+    {
+        XenConnection* conn = this->GetConnection();
+        if (conn)
+        {
+            XenCache* cache = conn->GetCache();
+            if (cache)
+            {
+                QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+                if (!guestMetrics.isEmpty())
+                {
+                    // Check if start_time exists
+                    if (guestMetrics.contains("start_time"))
+                    {
+                        // Parse ISO 8601 datetime or epoch seconds
+                        QString startTimeStr = guestMetrics.value("start_time").toString();
+                        if (!startTimeStr.isEmpty())
+                        {
+                            // Try to parse as epoch seconds first
+                            bool ok;
+                            qint64 epochTime = startTimeStr.toLongLong(&ok);
+                            if (ok)
+                                return epochTime;
+                            
+                            // Otherwise try QDateTime parsing
+                            QDateTime dt = QDateTime::fromString(startTimeStr, Qt::ISODate);
+                            if (dt.isValid())
+                                return dt.toSecsSinceEpoch();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    return 0; // Not available
 }

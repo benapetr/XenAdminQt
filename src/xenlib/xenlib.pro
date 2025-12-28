@@ -141,11 +141,15 @@ SOURCES += \
     xen/actions/vif/updatevifaction.cpp \
     xen/actions/delegatedasyncoperation.cpp \
     utils/encryption.cpp \
+    network/comparableaddress.cpp \
     xen/network/connectionsmanager.cpp \
     operations/producerconsumerqueue.cpp \
     operations/multipleoperation.cpp \
     operations/paralleloperation.cpp \
-    operations/operationlauncher.cpp
+    operations/operationlauncher.cpp \
+    customfields/customfielddefinition.cpp \
+    customfields/customfieldsmanager.cpp \
+    xen/folder.cpp
 
 # Header files
 HEADERS += \
@@ -282,12 +286,16 @@ HEADERS += \
     xen/actions/vif/updatevifaction.h \
     xen/actions/delegatedasyncoperation.h \
     utils/encryption.h \
+    network/comparableaddress.h \
     collections/observablelist.h \
     xen/network/connectionsmanager.h \
     operations/producerconsumerqueue.h \
     operations/multipleoperation.h \
     operations/paralleloperation.h \
-    operations/operationlauncher.h
+    operations/operationlauncher.h \
+    customfields/customfielddefinition.h \
+    customfields/customfieldsmanager.h \
+    xen/folder.h
 
 # Installation
 target.path = $$[QT_INSTALL_LIBS]
