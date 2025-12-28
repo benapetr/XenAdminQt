@@ -56,6 +56,7 @@ SOURCES += \
     controls/xensearch/foldernavigator.cpp \
     controls/xensearch/groupingcontrol.cpp \
     controls/xensearch/queryelement.cpp \
+    controls/xensearch/querytype.cpp \
     controls/xensearch/searcher.cpp \
     settingspanels/generaleditpage.cpp \
     settingspanels/hostautostarteditpage.cpp \
@@ -270,6 +271,7 @@ HEADERS += \
     controls/xensearch/foldernavigator.h \
     controls/xensearch/groupingcontrol.h \
     controls/xensearch/queryelement.h \
+    controls/xensearch/querytype.h \
     controls/xensearch/searcher.h \
     settingspanels/ieditpage.h \
     settingspanels/generaleditpage.h \

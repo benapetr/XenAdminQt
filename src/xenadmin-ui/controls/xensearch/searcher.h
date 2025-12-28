@@ -31,6 +31,7 @@
 #include <QWidget>
 #include <QPushButton>
 #include <QLabel>
+#include <QComboBox>
 #include "../../../xenlib/xensearch/search.h"
 #include "../../../xenlib/xensearch/queryscope.h"
 #include "../../../xenlib/xensearch/queryfilter.h"
@@ -151,7 +152,10 @@ private:
 /**
  * SearchFor - Widget for selecting search scope (VMs, Hosts, etc.)
  * 
- * TODO: Port from C# xenadmin/XenAdmin/Controls/XenSearch/SearchFor.cs
+ * Port of C# xenadmin/XenAdmin/Controls/XenSearch/SearchFor.cs
+ * 
+ * Provides a dropdown to select which object types to search for.
+ * Supports individual types, common combinations, and custom selections.
  */
 class SearchFor : public QWidget
 {
@@ -167,8 +171,27 @@ public:
 signals:
     void QueryChanged();
 
+private slots:
+    void onComboActivated(int index);
+    void onCustomDialogRequested();
+
 private:
-    QueryScope* currentScope_;
+    void initializeDictionaries();
+    void populateComboBox();
+    void setFromScope(QueryScope* scope);
+    void setFromScope(ObjectTypes types);
+    ObjectTypes getSelectedItemTag() const;
+    QueryScope* getAsScope() const;
+    QString getTypeName(ObjectTypes type) const;
+
+    QComboBox* comboBox_;
+    QMap<ObjectTypes, QString> typeNames_;
+    QMap<ObjectTypes, QIcon> typeIcons_;
+    ObjectTypes customValue_;
+    ObjectTypes savedTypes_;
+    bool autoSelecting_;
+    
+    static const ObjectTypes CUSTOM = ObjectTypes::None;  // Special value for "Custom..."
 };
 
 #endif // SEARCHER_H

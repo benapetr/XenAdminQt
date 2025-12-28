@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
  * All rights reserved.

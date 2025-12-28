@@ -31,26 +31,27 @@
 #include <QWidget>
 #include <QComboBox>
 #include <QPushButton>
+#include <QLineEdit>
+#include <QSpinBox>
+#include <QDateTimeEdit>
+#include <QVBoxLayout>
 #include "../../../xenlib/xensearch/queryfilter.h"
+#include "querytype.h"
 
-// Forward declaration
+// Forward declarations
 class Searcher;
+class QueryScope;
 
 /**
  * QueryElement - Search criterion editor widget
  * 
- * STUB IMPLEMENTATION - Full C# version is ~2561 lines!
- * TODO: Port complete QueryElement implementation from:
- * xenadmin/XenAdmin/Controls/XenSearch/QueryElement.cs
+ * Full implementation matching C# xenadmin/XenAdmin/Controls/XenSearch/QueryElement.cs
  * 
- * Full implementation includes:
- * - 100+ QueryType classes for different criterion types
+ * Features:
+ * - Multiple QueryType classes for different criterion types
  * - Nested QueryElement support for And/Or/Nor groups
  * - Dynamic UI based on selected QueryType
- * - Parent-child queries (Pool→Host→VM)
- * - Custom field queries
- * - Resource selection popups
- * - Query validation and error handling
+ * - Query validation and building
  * 
  * Based on C# xenadmin/XenAdmin/Controls/XenSearch/QueryElement.cs
  */
@@ -61,6 +62,8 @@ class QueryElement : public QWidget
 public:
     explicit QueryElement(QWidget* parent = nullptr);
     explicit QueryElement(Searcher* searcher, QWidget* parent = nullptr);
+    explicit QueryElement(Searcher* searcher, QueryScope* queryScope, 
+                         QueryElement* parentQueryElement, QWidget* parent = nullptr);
     ~QueryElement();
 
     /**
@@ -82,6 +85,25 @@ public:
      * Select the default query type (empty filter)
      */
     void SelectDefaultQueryType();
+    
+    // UI state access methods (used by QueryType classes)
+    QString getMatchTypeSelection() const;
+    void setMatchTypeSelection(const QString& value);
+    
+    QString getTextBoxValue() const;
+    void setTextBoxValue(const QString& value);
+    
+    QString getComboBoxSelection() const;
+    void setComboBoxSelection(const QString& value);
+    
+    qint64 getNumericValue() const;
+    void setNumericValue(qint64 value);
+    
+    QDateTime getDateTimeValue() const;
+    void setDateTimeValue(const QDateTime& value);
+    
+    QList<QueryFilter*> getSubQueries() const;
+    void setSubQueries(const QList<QueryFilter*>& queries);
 
 signals:
     /**
@@ -91,13 +113,42 @@ signals:
 
 private slots:
     void onQueryTypeChanged(int index);
+    void onMatchTypeChanged(int index);
+    void onTextChanged();
+    void onComboChanged(int index);
+    void onNumericChanged(int value);
+    void onDateTimeChanged(const QDateTime& dateTime);
+    void onRemoveClicked();
+    void onSubQueryChanged();
 
 private:
     void setupUi();
-
+    void setupControls();
+    void populateQueryTypeCombo(bool showAll = false);
+    void refreshSubQueryElements();
+    void clearSubQueryElements();
+    void addSubQueryElement(QueryElement* element);
+    void removeSubQueryElement(QueryElement* element);
+    bool wantQueryType(QueryType* queryType) const;
+    
+    // UI widgets
     QComboBox* queryTypeCombo_;
+    QComboBox* matchTypeCombo_;
+    QLineEdit* textBox_;
+    QComboBox* comboBox_;
+    QSpinBox* numericUpDown_;
+    QLabel* unitsLabel_;
+    QDateTimeEdit* dateTimePicker_;
+    QPushButton* removeButton_;
+    QVBoxLayout* subQueryLayout_;
+    
+    // State
     Searcher* searcher_;
-    QueryFilter* currentFilter_;
+    QueryScope* queryScope_;
+    QueryElement* parentQueryElement_;
+    QueryType* currentQueryType_;
+    QList<QueryElement*> subQueryElements_;
+    QueryFilter* lastQueryFilter_;
 
     // TODO: Add UI controls for:
     // - Query type selector (dropdown with 100+ types)

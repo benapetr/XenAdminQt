@@ -26,61 +26,158 @@
  */
 
 #include "queryelement.h"
-#include <QVBoxLayout>
+#include "searcher.h"
+#include <QHBoxLayout>
 #include <QLabel>
 
 QueryElement::QueryElement(QWidget* parent)
     : QWidget(parent)
     , queryTypeCombo_(nullptr)
+    , matchTypeCombo_(nullptr)
+    , textBox_(nullptr)
+    , comboBox_(nullptr)
+    , numericUpDown_(nullptr)
+    , unitsLabel_(nullptr)
+    , dateTimePicker_(nullptr)
+    , removeButton_(nullptr)
+    , subQueryLayout_(nullptr)
     , searcher_(nullptr)
-    , currentFilter_(nullptr)
+    , queryScope_(nullptr)
+    , parentQueryElement_(nullptr)
+    , currentQueryType_(nullptr)
+    , lastQueryFilter_(nullptr)
 {
     this->setupUi();
+    this->SelectDefaultQueryType();
 }
 
 QueryElement::QueryElement(Searcher* searcher, QWidget* parent)
     : QWidget(parent)
     , queryTypeCombo_(nullptr)
+    , matchTypeCombo_(nullptr)
+    , textBox_(nullptr)
+    , comboBox_(nullptr)
+    , numericUpDown_(nullptr)
+    , unitsLabel_(nullptr)
+    , dateTimePicker_(nullptr)
+    , removeButton_(nullptr)
+    , subQueryLayout_(nullptr)
     , searcher_(searcher)
-    , currentFilter_(nullptr)
+    , queryScope_(nullptr)
+    , parentQueryElement_(nullptr)
+    , currentQueryType_(nullptr)
+    , lastQueryFilter_(nullptr)
 {
     this->setupUi();
+    this->SelectDefaultQueryType();
+}
+
+QueryElement::QueryElement(Searcher* searcher, QueryScope* queryScope, 
+                         QueryElement* parentQueryElement, QWidget* parent)
+    : QWidget(parent)
+    , queryTypeCombo_(nullptr)
+    , matchTypeCombo_(nullptr)
+    , textBox_(nullptr)
+    , comboBox_(nullptr)
+    , numericUpDown_(nullptr)
+    , unitsLabel_(nullptr)
+    , dateTimePicker_(nullptr)
+    , removeButton_(nullptr)
+    , subQueryLayout_(nullptr)
+    , searcher_(searcher)
+    , queryScope_(queryScope)
+    , parentQueryElement_(parentQueryElement)
+    , currentQueryType_(nullptr)
+    , lastQueryFilter_(nullptr)
+{
+    this->setupUi();
+    this->SelectDefaultQueryType();
 }
 
 QueryElement::~QueryElement()
 {
-    delete this->currentFilter_;
+    this->clearSubQueryElements();
+    delete this->lastQueryFilter_;
 }
 
 void QueryElement::setupUi()
 {
-    QVBoxLayout* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(0, 0, 0, 0);
-
-    // Create query type selector
+    QHBoxLayout* mainLayout = new QHBoxLayout();
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(5);
+    
+    // Query type combo
     this->queryTypeCombo_ = new QComboBox(this);
-    this->queryTypeCombo_->addItem("All");
-    this->queryTypeCombo_->addItem("Name");
-    this->queryTypeCombo_->addItem("Description");
-    this->queryTypeCombo_->addItem("Tags");
-    this->queryTypeCombo_->addItem("Power State");
-    this->queryTypeCombo_->addItem("OS Name");
+    mainLayout->addWidget(this->queryTypeCombo_);
     
-    // TODO: Add all 100+ query types from C# implementation
+    // Match type combo (Is/Is not/Contains/etc.)
+    this->matchTypeCombo_ = new QComboBox(this);
+    this->matchTypeCombo_->setVisible(false);
+    mainLayout->addWidget(this->matchTypeCombo_);
     
-    layout->addWidget(this->queryTypeCombo_);
+    // Text box for string queries
+    this->textBox_ = new QLineEdit(this);
+    this->textBox_->setVisible(false);
+    mainLayout->addWidget(this->textBox_);
     
-    // TODO: Add value editor widgets based on selected query type
-    // TODO: Add nested QueryElement container for And/Or/Nor groups
+    // Combo box for enum queries
+    this->comboBox_ = new QComboBox(this);
+    this->comboBox_->setVisible(false);
+    mainLayout->addWidget(this->comboBox_);
     
-    QLabel* stubLabel = new QLabel("QueryElement stub - TODO: Implement full UI", this);
-    stubLabel->setStyleSheet("color: #888; font-style: italic;");
-    layout->addWidget(stubLabel);
+    // Numeric input for numeric queries
+    this->numericUpDown_ = new QSpinBox(this);
+    this->numericUpDown_->setRange(0, 999999);
+    this->numericUpDown_->setVisible(false);
+    mainLayout->addWidget(this->numericUpDown_);
     
-    layout->addStretch();
-
+    this->unitsLabel_ = new QLabel(this);
+    this->unitsLabel_->setVisible(false);
+    mainLayout->addWidget(this->unitsLabel_);
+    
+    // Date/time picker for date queries
+    this->dateTimePicker_ = new QDateTimeEdit(this);
+    this->dateTimePicker_->setVisible(false);
+    mainLayout->addWidget(this->dateTimePicker_);
+    
+    mainLayout->addStretch();
+    
+    // Remove button
+    this->removeButton_ = new QPushButton("−", this);
+    this->removeButton_->setMaximumWidth(30);
+    this->removeButton_->setVisible(false);
+    mainLayout->addWidget(this->removeButton_);
+    
+    // Sub-query layout for group queries
+    this->subQueryLayout_ = new QVBoxLayout();
+    this->subQueryLayout_->setContentsMargins(30, 0, 0, 0);
+    this->subQueryLayout_->setSpacing(2);
+    
+    QVBoxLayout* verticalLayout = new QVBoxLayout();
+    verticalLayout->setContentsMargins(0, 0, 0, 0);
+    verticalLayout->setSpacing(0);
+    verticalLayout->addLayout(mainLayout);
+    verticalLayout->addLayout(this->subQueryLayout_);
+    
+    this->setLayout(verticalLayout);
+    
+    // Connect signals
     connect(this->queryTypeCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &QueryElement::onQueryTypeChanged);
+    connect(this->matchTypeCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &QueryElement::onMatchTypeChanged);
+    connect(this->textBox_, &QLineEdit::textChanged,
+            this, &QueryElement::onTextChanged);
+    connect(this->comboBox_, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &QueryElement::onComboChanged);
+    connect(this->numericUpDown_, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &QueryElement::onNumericChanged);
+    connect(this->dateTimePicker_, &QDateTimeEdit::dateTimeChanged,
+            this, &QueryElement::onDateTimeChanged);
+    connect(this->removeButton_, &QPushButton::clicked,
+            this, &QueryElement::onRemoveClicked);
+    
+    this->populateQueryTypeCombo();
 }
 
 void QueryElement::SetSearcher(Searcher* searcher)
@@ -88,35 +185,340 @@ void QueryElement::SetSearcher(Searcher* searcher)
     this->searcher_ = searcher;
 }
 
+void QueryElement::SelectDefaultQueryType()
+{
+    this->currentQueryType_ = QueryTypeRegistry::instance()->getDefaultQueryType();
+    this->setupControls();
+}
+
+void QueryElement::populateQueryTypeCombo(bool showAll)
+{
+    this->queryTypeCombo_->clear();
+    
+    int lastGroup = -1;
+    const QList<QueryType*>& queryTypes = QueryTypeRegistry::instance()->getAllQueryTypes();
+    
+    for (QueryType* queryType : queryTypes)
+    {
+        if (!showAll && !this->wantQueryType(queryType))
+            continue;
+        
+        // Add separator between groups
+        if (lastGroup != -1 && queryType->getGroup() != lastGroup)
+        {
+            this->queryTypeCombo_->insertSeparator(this->queryTypeCombo_->count());
+        }
+        lastGroup = queryType->getGroup();
+        
+        this->queryTypeCombo_->addItem(queryType->toString(), QVariant::fromValue(queryType));
+    }
+}
+
+bool QueryElement::wantQueryType(QueryType* queryType) const
+{
+    QueryScope* scope = this->queryScope_;
+    if (!scope && this->searcher_)
+        scope = this->searcher_->GetQueryScope();
+    
+    if (!scope)
+        return true;
+    
+    // Check if this query type applies to the current scope
+    ObjectTypes queryAppliesTo = queryType->getAppliesTo();
+    ObjectTypes scopeTypes = scope->getObjectTypes();
+    
+    // If the query type doesn't apply to any of our scope types, hide it
+    if ((static_cast<int>(queryAppliesTo) & static_cast<int>(scopeTypes)) == 0 &&
+        queryAppliesTo != ObjectTypes::None)
+        return false;
+    
+    return true;
+}
+
+void QueryElement::setupControls()
+{
+    if (!this->currentQueryType_)
+        return;
+    
+    // Update remove button visibility
+    bool isSubQuery = (this->parentQueryElement_ != nullptr);
+    bool isDummy = dynamic_cast<DummyQueryType*>(this->currentQueryType_) != nullptr;
+    this->removeButton_->setVisible(!isDummy && isSubQuery);
+    
+    // Update control visibility based on query type
+    this->matchTypeCombo_->setVisible(this->currentQueryType_->showMatchTypeComboButton());
+    this->textBox_->setVisible(this->currentQueryType_->showTextBox(this));
+    this->comboBox_->setVisible(this->currentQueryType_->showComboButton(this));
+    this->numericUpDown_->setVisible(this->currentQueryType_->showNumericUpDown(this));
+    this->unitsLabel_->setVisible(this->currentQueryType_->showNumericUpDown(this));
+    this->dateTimePicker_->setVisible(this->currentQueryType_->showDateTimePicker(this));
+    
+    // Populate match type combo
+    if (this->currentQueryType_->showMatchTypeComboButton())
+    {
+        this->matchTypeCombo_->clear();
+        QStringList entries = this->currentQueryType_->getMatchTypeComboButtonEntries();
+        for (const QString& entry : entries)
+        {
+            this->matchTypeCombo_->addItem(entry);
+        }
+    }
+    
+    // Populate value combo
+    if (this->currentQueryType_->showComboButton(this))
+    {
+        this->comboBox_->clear();
+        QVariantList entries = this->currentQueryType_->getComboButtonEntries(this);
+        for (const QVariant& entry : entries)
+        {
+            this->comboBox_->addItem(entry.toString());
+        }
+    }
+    
+    // Set units label
+    QString units = this->currentQueryType_->getUnits(this);
+    if (!units.isEmpty())
+        this->unitsLabel_->setText(units);
+    
+    // Handle sub-queries for group queries
+    if (this->currentQueryType_->getCategory() == QueryType::Category::Group)
+    {
+        if (this->subQueryElements_.isEmpty())
+        {
+            // Add default sub-query element
+            QueryElement* subElement = new QueryElement(this->searcher_, this->queryScope_, this, this);
+            this->addSubQueryElement(subElement);
+        }
+    } else
+    {
+        this->clearSubQueryElements();
+    }
+    
+    this->refreshSubQueryElements();
+    emit QueryChanged();
+}
+
+void QueryElement::refreshSubQueryElements()
+{
+    for (QueryElement* subElement : this->subQueryElements_)
+    {
+        if (this->subQueryLayout_->indexOf(subElement) == -1)
+            this->subQueryLayout_->addWidget(subElement);
+    }
+}
+
+void QueryElement::clearSubQueryElements()
+{
+    for (QueryElement* element : this->subQueryElements_)
+    {
+        this->subQueryLayout_->removeWidget(element);
+        element->deleteLater();
+    }
+    this->subQueryElements_.clear();
+}
+
+void QueryElement::addSubQueryElement(QueryElement* element)
+{
+    this->subQueryElements_.append(element);
+    this->subQueryLayout_->addWidget(element);
+    connect(element, &QueryElement::QueryChanged, this, &QueryElement::onSubQueryChanged);
+}
+
+void QueryElement::removeSubQueryElement(QueryElement* element)
+{
+    this->subQueryElements_.removeOne(element);
+    this->subQueryLayout_->removeWidget(element);
+    element->deleteLater();
+    emit QueryChanged();
+}
+
 QueryFilter* QueryElement::GetQueryFilter() const
 {
-    // TODO: Build QueryFilter from current UI state
-    if (this->currentFilter_)
-        return this->currentFilter_;
+    if (!this->currentQueryType_)
+        return nullptr;
     
-    // Return null filter (matches all)
-    return nullptr;
+    return this->currentQueryType_->GetQuery(const_cast<QueryElement*>(this));
 }
 
 void QueryElement::SetQueryFilter(QueryFilter* filter)
 {
-    delete this->currentFilter_;
-    this->currentFilter_ = filter;
+    if (!filter)
+    {
+        this->SelectDefaultQueryType();
+        return;
+    }
     
-    // TODO: Update UI to match filter
+    QueryType* queryType = QueryTypeRegistry::instance()->findQueryTypeForFilter(filter);
+    if (queryType)
+    {
+        this->currentQueryType_ = queryType;
+        
+        // Find and select this query type in combo
+        for (int i = 0; i < this->queryTypeCombo_->count(); ++i)
+        {
+            QueryType* comboType = this->queryTypeCombo_->itemData(i).value<QueryType*>();
+            if (comboType == queryType)
+            {
+                this->queryTypeCombo_->setCurrentIndex(i);
+                break;
+            }
+        }
+        
+        // Let query type populate UI from filter
+        queryType->FromQuery(filter, this);
+        this->setupControls();
+    }
 }
 
-void QueryElement::SelectDefaultQueryType()
+// UI state access methods
+
+QString QueryElement::getMatchTypeSelection() const
 {
-    this->queryTypeCombo_->setCurrentIndex(0);  // "All"
+    return this->matchTypeCombo_->currentText();
 }
+
+void QueryElement::setMatchTypeSelection(const QString& value)
+{
+    int index = this->matchTypeCombo_->findText(value);
+    if (index >= 0)
+        this->matchTypeCombo_->setCurrentIndex(index);
+}
+
+QString QueryElement::getTextBoxValue() const
+{
+    return this->textBox_->text();
+}
+
+void QueryElement::setTextBoxValue(const QString& value)
+{
+    this->textBox_->setText(value);
+}
+
+QString QueryElement::getComboBoxSelection() const
+{
+    return this->comboBox_->currentText();
+}
+
+void QueryElement::setComboBoxSelection(const QString& value)
+{
+    int index = this->comboBox_->findText(value);
+    if (index >= 0)
+        this->comboBox_->setCurrentIndex(index);
+}
+
+qint64 QueryElement::getNumericValue() const
+{
+    return this->numericUpDown_->value();
+}
+
+void QueryElement::setNumericValue(qint64 value)
+{
+    this->numericUpDown_->setValue(static_cast<int>(value));
+}
+
+QDateTime QueryElement::getDateTimeValue() const
+{
+    return this->dateTimePicker_->dateTime();
+}
+
+void QueryElement::setDateTimeValue(const QDateTime& value)
+{
+    this->dateTimePicker_->setDateTime(value);
+}
+
+QList<QueryFilter*> QueryElement::getSubQueries() const
+{
+    QList<QueryFilter*> queries;
+    for (QueryElement* element : this->subQueryElements_)
+    {
+        QueryFilter* filter = element->GetQueryFilter();
+        if (filter)
+            queries.append(filter);
+    }
+    return queries;
+}
+
+void QueryElement::setSubQueries(const QList<QueryFilter*>& queries)
+{
+    this->clearSubQueryElements();
+    
+    for (QueryFilter* query : queries)
+    {
+        QueryElement* subElement = new QueryElement(this->searcher_, this->queryScope_, this, this);
+        subElement->SetQueryFilter(query);
+        this->addSubQueryElement(subElement);
+    }
+}
+
+// Slot implementations
 
 void QueryElement::onQueryTypeChanged(int index)
 {
+    QVariant data = this->queryTypeCombo_->itemData(index);
+    if (!data.isValid())
+        return;
+    
+    QueryType* newQueryType = data.value<QueryType*>();
+    if (!newQueryType || newQueryType == this->currentQueryType_)
+        return;
+    
+    // Save last query filter
+    delete this->lastQueryFilter_;
+    this->lastQueryFilter_ = this->GetQueryFilter();
+    
+    this->currentQueryType_ = newQueryType;
+    this->setupControls();
+}
+
+void QueryElement::onMatchTypeChanged(int index)
+{
     Q_UNUSED(index);
     
-    // TODO: Update value editor widgets based on selected query type
-    // TODO: Handle nested QueryElement for And/Or/Nor types
+    // Match type change may affect other control visibility (e.g., date picker)
+    if (this->currentQueryType_)
+    {
+        this->dateTimePicker_->setVisible(this->currentQueryType_->showDateTimePicker(this));
+    }
     
+    emit QueryChanged();
+}
+
+void QueryElement::onTextChanged()
+{
+    emit QueryChanged();
+}
+
+void QueryElement::onComboChanged(int index)
+{
+    Q_UNUSED(index);
+    emit QueryChanged();
+}
+
+void QueryElement::onNumericChanged(int value)
+{
+    Q_UNUSED(value);
+    emit QueryChanged();
+}
+
+void QueryElement::onDateTimeChanged(const QDateTime& dateTime)
+{
+    Q_UNUSED(dateTime);
+    emit QueryChanged();
+}
+
+void QueryElement::onRemoveClicked()
+{
+    if (this->parentQueryElement_)
+    {
+        this->parentQueryElement_->removeSubQueryElement(this);
+    } else
+    {
+        this->SelectDefaultQueryType();
+        emit QueryChanged();
+    }
+}
+
+void QueryElement::onSubQueryChanged()
+{
     emit QueryChanged();
 }
