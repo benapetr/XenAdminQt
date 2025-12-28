@@ -58,8 +58,7 @@ SearchFor::SearchFor(QWidget* parent)
     this->initializeDictionaries();
     this->populateComboBox();
 
-    connect(this->comboBox_, QOverload<int>::of(&QComboBox::activated),
-            this, &SearchFor::onComboActivated);
+    connect(this->comboBox_, QOverload<int>::of(&QComboBox::activated), this, &SearchFor::onComboActivated);
 }
 
 void SearchFor::initializeDictionaries()
@@ -346,16 +345,11 @@ void Searcher::setupUi()
     mainLayout->addStretch();
 
     // Connect signals
-    connect(this->queryElement_, &QueryElement::QueryChanged,
-            this, &Searcher::onQueryElementQueryChanged);
-    connect(this->groupingControl_, &GroupingControl::GroupingChanged,
-            this, &Searcher::onGroupingControlGroupingChanged);
-    connect(this->searchFor_, &SearchFor::QueryChanged,
-            this, &Searcher::onSearchForQueryChanged);
-    connect(this->saveButton_, &QPushButton::clicked,
-            this, &Searcher::onSaveButtonClicked);
-    connect(this->closeButton_, &QPushButton::clicked,
-            this, &Searcher::onCloseButtonClicked);
+    connect(this->queryElement_, &QueryElement::QueryChanged, this, &Searcher::onQueryElementQueryChanged);
+    connect(this->groupingControl_, &GroupingControl::GroupingChanged, this, &Searcher::onGroupingControlGroupingChanged);
+    connect(this->searchFor_, &SearchFor::QueryChanged, this, &Searcher::onSearchForQueryChanged);
+    connect(this->saveButton_, &QPushButton::clicked, this, &Searcher::onSaveButtonClicked);
+    connect(this->closeButton_, &QPushButton::clicked, this, &Searcher::onCloseButtonClicked);
 
     this->setVisible(false);  // Start collapsed
 }

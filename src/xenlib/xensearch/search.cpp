@@ -30,7 +30,6 @@
 #include "queryscope.h"
 #include "queryfilter.h"
 #include "queries.h"
-#include "../xenlib.h"
 #include "../xencache.h"
 #include <QDebug>
 
@@ -168,7 +167,7 @@ Search* Search::SearchForVappGroup(Grouping* grouping, const QVariant& parent, c
     return new Search(query, subgrouping, groupName, "", false);
 }
 
-Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& objectTypes, XenLib* xenLib)
+Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& objectTypes, XenConnection *conn)
 {
     // C# equivalent: SearchFor(IXenObject value) and SearchFor(IEnumerable<IXenObject> objects)
     // Lines 465-472, 398-460 in Search.cs
@@ -186,10 +185,10 @@ Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& obje
 
         // Get object data to determine grouping
         QVariantMap objectData;
-        if (!objType.isEmpty() && xenLib)
+        if (!objType.isEmpty() && conn)
         {
             // Request object data from cache
-            objectData = xenLib->getCache()->ResolveObjectData(objType, objRef);
+            objectData = conn->GetCache()->ResolveObjectData(objType, objRef);
         }
 
         if (objType == "host")

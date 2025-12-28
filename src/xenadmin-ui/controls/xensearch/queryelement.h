@@ -59,103 +59,103 @@ class QueryElement : public QWidget
 {
     Q_OBJECT
 
-public:
-    explicit QueryElement(QWidget* parent = nullptr);
-    explicit QueryElement(Searcher* searcher, QWidget* parent = nullptr);
-    explicit QueryElement(Searcher* searcher, QueryScope* queryScope, 
-                         QueryElement* parentQueryElement, QWidget* parent = nullptr);
-    ~QueryElement();
+    public:
+        explicit QueryElement(QWidget* parent = nullptr);
+        explicit QueryElement(Searcher* searcher, QWidget* parent = nullptr);
+        explicit QueryElement(Searcher* searcher, QueryScope* queryScope,
+                             QueryElement* parentQueryElement, QWidget* parent = nullptr);
+        ~QueryElement();
 
-    /**
-     * Get the current query filter
-     */
-    QueryFilter* GetQueryFilter() const;
+        /**
+         * Get the current query filter
+         */
+        QueryFilter* GetQueryFilter() const;
 
-    /**
-     * Set the query filter
-     */
-    void SetQueryFilter(QueryFilter* filter);
+        /**
+         * Set the query filter
+         */
+        void SetQueryFilter(QueryFilter* filter);
 
-    /**
-     * Set the associated Searcher
-     */
-    void SetSearcher(Searcher* searcher);
+        /**
+         * Set the associated Searcher
+         */
+        void SetSearcher(Searcher* searcher);
 
-    /**
-     * Select the default query type (empty filter)
-     */
-    void SelectDefaultQueryType();
-    
-    // UI state access methods (used by QueryType classes)
-    QString getMatchTypeSelection() const;
-    void setMatchTypeSelection(const QString& value);
-    
-    QString getTextBoxValue() const;
-    void setTextBoxValue(const QString& value);
-    
-    QString getComboBoxSelection() const;
-    void setComboBoxSelection(const QString& value);
-    
-    qint64 getNumericValue() const;
-    void setNumericValue(qint64 value);
-    
-    QDateTime getDateTimeValue() const;
-    void setDateTimeValue(const QDateTime& value);
-    
-    QList<QueryFilter*> getSubQueries() const;
-    void setSubQueries(const QList<QueryFilter*>& queries);
+        /**
+         * Select the default query type (empty filter)
+         */
+        void SelectDefaultQueryType();
 
-signals:
-    /**
-     * Emitted when the query changes
-     */
-    void QueryChanged();
+        // UI state access methods (used by QueryType classes)
+        QString getMatchTypeSelection() const;
+        void setMatchTypeSelection(const QString& value);
 
-private slots:
-    void onQueryTypeChanged(int index);
-    void onMatchTypeChanged(int index);
-    void onTextChanged();
-    void onComboChanged(int index);
-    void onNumericChanged(int value);
-    void onDateTimeChanged(const QDateTime& dateTime);
-    void onRemoveClicked();
-    void onSubQueryChanged();
+        QString getTextBoxValue() const;
+        void setTextBoxValue(const QString& value);
 
-private:
-    void setupUi();
-    void setupControls();
-    void populateQueryTypeCombo(bool showAll = false);
-    void refreshSubQueryElements();
-    void clearSubQueryElements();
-    void addSubQueryElement(QueryElement* element);
-    void removeSubQueryElement(QueryElement* element);
-    bool wantQueryType(QueryType* queryType) const;
-    
-    // UI widgets
-    QComboBox* queryTypeCombo_;
-    QComboBox* matchTypeCombo_;
-    QLineEdit* textBox_;
-    QComboBox* comboBox_;
-    QSpinBox* numericUpDown_;
-    QLabel* unitsLabel_;
-    QDateTimeEdit* dateTimePicker_;
-    QPushButton* removeButton_;
-    QVBoxLayout* subQueryLayout_;
-    
-    // State
-    Searcher* searcher_;
-    QueryScope* queryScope_;
-    QueryElement* parentQueryElement_;
-    QueryType* currentQueryType_;
-    QList<QueryElement*> subQueryElements_;
-    QueryFilter* lastQueryFilter_;
+        QString getComboBoxSelection() const;
+        void setComboBoxSelection(const QString& value);
 
-    // TODO: Add UI controls for:
-    // - Query type selector (dropdown with 100+ types)
-    // - Value editors (text, number, date, enum, resource selector)
-    // - Nested QueryElement container for And/Or/Nor groups
-    // - Add/remove query buttons
-    // - Resource selection popups
+        qint64 getNumericValue() const;
+        void setNumericValue(qint64 value);
+
+        QDateTime getDateTimeValue() const;
+        void setDateTimeValue(const QDateTime& value);
+
+        QList<QueryFilter*> getSubQueries() const;
+        void setSubQueries(const QList<QueryFilter*>& queries);
+
+    signals:
+        /**
+         * Emitted when the query changes
+         */
+        void QueryChanged();
+
+    private slots:
+        void onQueryTypeChanged(int index);
+        void onMatchTypeChanged(int index);
+        void onTextChanged();
+        void onComboChanged(int index);
+        void onNumericChanged(int value);
+        void onDateTimeChanged(const QDateTime& dateTime);
+        void onRemoveClicked();
+        void onSubQueryChanged();
+
+    private:
+        void setupUi();
+        void setupControls();
+        void populateQueryTypeCombo(bool showAll = false);
+        void refreshSubQueryElements();
+        void clearSubQueryElements();
+        void addSubQueryElement(QueryElement* element);
+        void removeSubQueryElement(QueryElement* element);
+        bool wantQueryType(QueryType* queryType) const;
+
+        // UI widgets
+        QComboBox* queryTypeCombo_;
+        QComboBox* matchTypeCombo_;
+        QLineEdit* textBox_;
+        QComboBox* comboBox_;
+        QSpinBox* numericUpDown_;
+        QLabel* unitsLabel_;
+        QDateTimeEdit* dateTimePicker_;
+        QPushButton* removeButton_;
+        QVBoxLayout* subQueryLayout_;
+
+        // State
+        Searcher* searcher_;
+        QueryScope* queryScope_;
+        QueryElement* parentQueryElement_;
+        QueryType* currentQueryType_;
+        QList<QueryElement*> subQueryElements_;
+        QueryFilter* lastQueryFilter_;
+
+        // TODO: Add UI controls for:
+        // - Query type selector (dropdown with 100+ types)
+        // - Value editors (text, number, date, enum, resource selector)
+        // - Nested QueryElement container for And/Or/Nor groups
+        // - Add/remove query buttons
+        // - Resource selection popups
 };
 
 #endif // QUERYELEMENT_H

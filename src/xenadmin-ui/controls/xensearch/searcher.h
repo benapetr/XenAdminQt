@@ -56,97 +56,95 @@ class Searcher : public QWidget
 {
     Q_OBJECT
 
-public:
-    explicit Searcher(QWidget* parent = nullptr);
-    ~Searcher();
+    public:
+        explicit Searcher(QWidget* parent = nullptr);
+        ~Searcher();
 
-    /**
-     * Get the complete search configuration
-     */
-    Search* GetSearch() const;
+        /**
+         * Get the complete search configuration
+         */
+        Search* GetSearch() const;
 
-    /**
-     * Set the search configuration
-     */
-    void SetSearch(Search* search);
+        /**
+         * Set the search configuration
+         */
+        void SetSearch(Search* search);
 
-    /**
-     * Get the current query scope (what to search for)
-     */
-    QueryScope* GetQueryScope() const;
+        /**
+         * Get the current query scope (what to search for)
+         */
+        QueryScope* GetQueryScope() const;
 
-    /**
-     * Get the current query filter (search criteria)
-     */
-    QueryFilter* GetQueryFilter() const;
+        /**
+         * Get the current query filter (search criteria)
+         */
+        QueryFilter* GetQueryFilter() const;
 
-    /**
-     * Get the current grouping
-     */
-    Grouping* GetGrouping() const;
+        /**
+         * Get the current grouping
+         */
+        Grouping* GetGrouping() const;
 
-    /**
-     * Get the maximum height for this control
-     */
-    int GetMaxHeight() const { return this->maxHeight_; }
+        /**
+         * Get the maximum height for this control
+         */
+        int GetMaxHeight() const { return this->maxHeight_; }
 
-    /**
-     * Set the maximum height for this control
-     */
-    void SetMaxHeight(int maxHeight) { this->maxHeight_ = maxHeight; }
+        /**
+         * Set the maximum height for this control
+         */
+        void SetMaxHeight(int maxHeight) { this->maxHeight_ = maxHeight; }
 
-    /**
-     * Toggle the expanded state of the search panel
-     */
-    void ToggleExpandedState(bool expand);
+        /**
+         * Toggle the expanded state of the search panel
+         */
+        void ToggleExpandedState(bool expand);
 
-    /**
-     * Reset to blank search
-     */
-    void BlankSearch();
+        /**
+         * Reset to blank search
+         */
+        void BlankSearch();
 
-signals:
-    /**
-     * Emitted when the search configuration changes
-     */
-    void SearchChanged();
+    signals:
+        /**
+         * Emitted when the search configuration changes
+         */
+        void SearchChanged();
 
-    /**
-     * Emitted when the search-for (QueryScope) changes
-     */
-    void SearchForChanged();
+        /**
+         * Emitted when the search-for (QueryScope) changes
+         */
+        void SearchForChanged();
 
-    /**
-     * Emitted when the user wants to save the current search
-     */
-    void SaveRequested();
+        /**
+         * Emitted when the user wants to save the current search
+         */
+        void SaveRequested();
 
-    /**
-     * Emitted when the search panel expand state changes
-     */
-    void SearchPanelExpandChanged();
+        /**
+         * Emitted when the search panel expand state changes
+         */
+        void SearchPanelExpandChanged();
 
-private slots:
-    void onQueryElementQueryChanged();
-    void onGroupingControlGroupingChanged();
-    void onSearchForQueryChanged();
-    void onSaveButtonClicked();
-    void onCloseButtonClicked();
-    void onQueryElementResize();
+    private slots:
+        void onQueryElementQueryChanged();
+        void onGroupingControlGroupingChanged();
+        void onSearchForQueryChanged();
+        void onSaveButtonClicked();
+        void onCloseButtonClicked();
+        void onQueryElementResize();
 
-private:
-    void setupUi();
-    void updateHeight();
+    private:
+        void setupUi();
+        void updateHeight();
 
-    QueryElement* queryElement_;
-    GroupingControl* groupingControl_;
-    SearchFor* searchFor_;
-    QPushButton* saveButton_;
-    QPushButton* closeButton_;
-    QLabel* groupsLabel_;
-    int maxHeight_;
-
-    // TODO: Implement SearchFor widget for scope selection
+        QueryElement* queryElement_;
+        GroupingControl* groupingControl_;
+        SearchFor* searchFor_;
+        QPushButton* saveButton_;
+        QPushButton* closeButton_;
+        QLabel* groupsLabel_;
+        int maxHeight_;
 };
 
 /**
@@ -161,37 +159,37 @@ class SearchFor : public QWidget
 {
     Q_OBJECT
 
-public:
-    explicit SearchFor(QWidget* parent = nullptr);
-    
-    QueryScope* GetQueryScope() const;
-    void SetQueryScope(QueryScope* scope);
-    void BlankSearch();
+    public:
+        explicit SearchFor(QWidget* parent = nullptr);
 
-signals:
-    void QueryChanged();
+        QueryScope* GetQueryScope() const;
+        void SetQueryScope(QueryScope* scope);
+        void BlankSearch();
 
-private slots:
-    void onComboActivated(int index);
-    void onCustomDialogRequested();
+    signals:
+        void QueryChanged();
 
-private:
-    void initializeDictionaries();
-    void populateComboBox();
-    void setFromScope(QueryScope* scope);
-    void setFromScope(ObjectTypes types);
-    ObjectTypes getSelectedItemTag() const;
-    QueryScope* getAsScope() const;
-    QString getTypeName(ObjectTypes type) const;
+    private slots:
+        void onComboActivated(int index);
+        void onCustomDialogRequested();
 
-    QComboBox* comboBox_;
-    QMap<ObjectTypes, QString> typeNames_;
-    QMap<ObjectTypes, QIcon> typeIcons_;
-    ObjectTypes customValue_;
-    ObjectTypes savedTypes_;
-    bool autoSelecting_;
-    
-    static const ObjectTypes CUSTOM = ObjectTypes::None;  // Special value for "Custom..."
+    private:
+        void initializeDictionaries();
+        void populateComboBox();
+        void setFromScope(QueryScope* scope);
+        void setFromScope(ObjectTypes types);
+        ObjectTypes getSelectedItemTag() const;
+        QueryScope* getAsScope() const;
+        QString getTypeName(ObjectTypes type) const;
+
+        QComboBox* comboBox_;
+        QMap<ObjectTypes, QString> typeNames_;
+        QMap<ObjectTypes, QIcon> typeIcons_;
+        ObjectTypes customValue_;
+        ObjectTypes savedTypes_;
+        bool autoSelecting_;
+
+        static const ObjectTypes CUSTOM = ObjectTypes::None;  // Special value for "Custom..."
 };
 
 #endif // SEARCHER_H
