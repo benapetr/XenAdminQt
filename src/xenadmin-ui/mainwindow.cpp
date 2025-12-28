@@ -59,9 +59,9 @@
 #include "xenlib/xenlib.h"
 #include "xenlib/xencache.h"
 #include "metricupdater.h"
-#include "search.h"
-#include "groupingtag.h"
-#include "grouping.h"
+#include "xenlib/xensearch/search.h"
+#include "xenlib/xensearch/groupingtag.h"
+#include "xenlib/xensearch/grouping.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "operations/operationmanager.h"
@@ -771,7 +771,7 @@ void MainWindow::showSearchPage(GroupingTag* groupingTag)
 
     // Create Search object for this grouping
     // Matches C# MainWindow.cs line 1771: SearchPage.Search = Search.SearchForNonVappGroup(gt.Grouping, gt.Parent, gt.Group);
-    Search* search = Search::searchForNonVappGroup(
+    Search* search = Search::SearchForNonVappGroup(
         groupingTag->getGrouping(),
         groupingTag->getParent(),
         groupingTag->getGroup());

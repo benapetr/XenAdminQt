@@ -1696,6 +1696,7 @@ void XenLib::onConnectionError(const QString& errorMessage)
 
 void XenLib::onConnectionProgress(const QString& message)
 {
+    (void)message;
     // qDebug() << "XenLib: Connection progress:" << message;
     // Could emit a signal here for UI progress updates
 }

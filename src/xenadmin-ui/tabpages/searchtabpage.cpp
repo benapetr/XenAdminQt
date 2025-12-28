@@ -26,11 +26,11 @@
  */
 
 #include "searchtabpage.h"
-#include "../../xenlib/search.h"
-#include "../../xenlib/query.h"
-#include "../../xenlib/grouping.h"
-#include "../../xenlib/queryscope.h"
-#include "../../xenlib/queryfilter.h"
+#include "xenlib/xensearch/search.h"
+#include "xenlib/xensearch/query.h"
+#include "xenlib/xensearch/grouping.h"
+#include "xenlib/xensearch/queryscope.h"
+#include "xenlib/xensearch/queryfilter.h"
 #include "../../xenlib/xencache.h"
 #include "../../xenlib/xen/xenobject.h"
 #include "../../xenlib/xen/network/connection.h"
@@ -161,11 +161,11 @@ void SearchTabPage::SetXenObject(XenConnection *conn, const QString& type, const
         // Check if this search was created by clicking a grouping tag
         // Those searches have meaningful names like "Windows Virtual Machines"
         // Our auto-generated searches have names like "All Virtual Machines"
-        QString searchName = this->m_search->getName();
+        QString searchName = this->m_search->GetName();
         
         // Check if the search scope matches the current object type
         // If we're viewing a VM but search is for hosts, we need a new search
-        Query* query = this->m_search->getQuery();
+        Query* query = this->m_search->GetQuery();
         if (query)
         {
             QueryFilter* filter = query->getQueryFilter();
@@ -233,7 +233,7 @@ void SearchTabPage::populateTable()
         return;
     }
 
-    Query* query = this->m_search->getQuery();
+    Query* query = this->m_search->GetQuery();
 
     if (!query || !this->m_connection || !this->m_connection->GetCache())
     {

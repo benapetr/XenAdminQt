@@ -50,6 +50,13 @@ SOURCES += \
     dialogs/verticallytabbeddialog.cpp \
     controls/affinitypicker.cpp \
     controls/srpicker.cpp \
+    controls/dropdownbutton.cpp \
+    controls/xensearch/querypanel.cpp \
+    controls/xensearch/searchoutput.cpp \
+    controls/xensearch/foldernavigator.cpp \
+    controls/xensearch/groupingcontrol.cpp \
+    controls/xensearch/queryelement.cpp \
+    controls/xensearch/searcher.cpp \
     settingspanels/generaleditpage.cpp \
     settingspanels/hostautostarteditpage.cpp \
     settingspanels/hostmultipathpage.cpp \
@@ -257,6 +264,13 @@ HEADERS += \
     network/xenconnectionui.h \
     controls/affinitypicker.h \
     controls/srpicker.h \
+    controls/dropdownbutton.h \
+    controls/xensearch/querypanel.h \
+    controls/xensearch/searchoutput.h \
+    controls/xensearch/foldernavigator.h \
+    controls/xensearch/groupingcontrol.h \
+    controls/xensearch/queryelement.h \
+    controls/xensearch/searcher.h \
     settingspanels/ieditpage.h \
     settingspanels/generaleditpage.h \
     settingspanels/hostautostarteditpage.h \
