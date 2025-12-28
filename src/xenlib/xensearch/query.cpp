@@ -50,7 +50,7 @@ Query::~Query()
     delete this->m_filter;
 }
 
-bool Query::match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const
+bool Query::match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const
 {
     // C# equivalent: Match(IXenObject o)
     //
@@ -64,7 +64,7 @@ bool Query::match(const QVariantMap& objectData, const QString& objectType, XenL
     QString objectName = objectData.value("name_label", objectData.value("name_description", "(unnamed)").toString()).toString();
 
     // Check if scope wants this object type
-    if (!this->m_scope->wantType(objectData, objectType, xenLib))
+    if (!this->m_scope->wantType(objectData, objectType, conn))
     {
         // qDebug() << "    Query::match() - scope rejected:" << objectType << objectName;
         return false;
@@ -73,7 +73,7 @@ bool Query::match(const QVariantMap& objectData, const QString& objectType, XenL
     // Check if filter matches (or there is no filter)
     if (this->m_filter != nullptr)
     {
-        QVariant filterResult = this->m_filter->match(objectData, objectType, xenLib);
+        QVariant filterResult = this->m_filter->Match(objectData, objectType, conn);
 
         // If filter returns false, object doesn't match
         // If filter returns null (indeterminate), treat as match (like C# != false)
@@ -98,7 +98,7 @@ bool Query::equals(const Query* other) const
     if ((this->m_filter == nullptr) != (other->m_filter == nullptr))
         return false;
 
-    if (this->m_filter != nullptr && !this->m_filter->equals(other->m_filter))
+    if (this->m_filter != nullptr && !this->m_filter->Equals(other->m_filter))
         return false;
 
     // Check scope equality

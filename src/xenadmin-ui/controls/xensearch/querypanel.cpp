@@ -26,6 +26,7 @@
  */
 
 #include "querypanel.h"
+#include "treewidgetgroupacceptor.h"
 #include "xenlib/xensearch/search.h"
 #include "xenlib/xensearch/sort.h"
 #include "xenlib/xensearch/grouping.h"
@@ -34,6 +35,7 @@
 #include "xenlib/xensearch/queryscope.h"
 #include "xen/network/connectionsmanager.h"
 #include "xen/network/connection.h"
+#include "xenlib.h"
 #include "xencache.h"
 #include "xen/xenobject.h"
 #include "xen/vm.h"
@@ -210,7 +212,8 @@ void QueryPanel::buildListInternal()
     this->clear();
     metricsObjects_.clear();
     
-    // Get all connections
+    // Get XenLib instance from any connected connection
+    // C# uses search.PopulateAdapters() which internally queries all connections
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     QList<XenConnection*> connections = connMgr->getConnectedConnections();
     
@@ -220,77 +223,62 @@ void QueryPanel::buildListInternal()
         this->restoreRowStates();
         return;
     }
-    
-    bool addedAny = false;
-    
-    // Iterate through all connections
-    for (XenConnection* conn : connections)
+
+    // Use the stored xenLib_ member instead of getting from connection
+    /*if (!this->xenLib_)
     {
-        if (!conn || !conn->IsConnected())
-            continue;
-        
-        XenCache* cache = conn->GetCache();
-        if (!cache)
-            continue;
-        
-        // Get query and grouping from search
-        Query* query = this->search_->GetQuery();
-        Grouping* grouping = this->search_->GetGrouping();
-        
-        // TODO: Proper grouping implementation - for now show flat list
-        // C# uses search.PopulateAdapters(acceptor, collectionAcceptor)
-        // which builds hierarchical groups via IAcceptGroups interface
-        
-        // Get all objects matching the query scope
-        QueryScope* scope = query ? query->getQueryScope() : nullptr;
-        if (!scope)
-            continue;
-        
-        QList<QString> objectTypes;  // TODO: QueryScope->GetObjectTypes() needs implementation
-        // For now, assume we want VMs and Hosts
-        objectTypes << "vm" << "host";
-        
-        for (const QString& objectType : objectTypes)
-        {
-            QList<QVariantMap> objects = cache->GetAllData(objectType);
-            
-            for (const QVariantMap& objectData : objects)
-            {
-                QString ref = objectData.value("opaque_ref").toString();
-                if (ref.isEmpty())
-                    continue;
-                
-                // Create XenObject wrapper
-                QSharedPointer<XenObject> xenObj = cache->ResolveObject(objectType, ref);
-                if (!xenObj || !xenObj->IsValid())
-                    continue;
-                
-                // Apply query filter
-                // Query::match() takes objectData + type, not XenObject*
-                // TODO: Refactor Query to accept XenObject* directly
-                if (query && !query->match(objectData, objectType, nullptr))
-                    continue;
-                
-                // Create row for this object
-                QTreeWidgetItem* row = this->createRow(grouping, xenObj.data(), 0);
-                if (row)
-                {
-                    this->addTopLevelItem(row);
-                    addedAny = true;
-                    
-                    // Track for metrics updates
-                    metricsObjects_.append(xenObj.data());
-                }
-            }
-        }
-    }
-    
+        this->addNoResultsRow();
+        this->restoreRowStates();
+        return;
+    }*/
+
+    // Use Search.PopulateAdapters() to filter, group, and populate the tree
+    // This delegates to the Search object which applies QueryScope, QueryFilter, and Grouping
+    TreeWidgetGroupAcceptor adapter(this, this);
+    QList<IAcceptGroups*> adapters;
+    adapters.append(&adapter);
+
+    bool addedAny = this->search_->PopulateAdapters(this->m_conn, adapters);
+
     if (!addedAny)
     {
         this->addNoResultsRow();
     }
     
     this->restoreRowStates();
+}
+
+QTreeWidgetItem* QueryPanel::CreateRow(Grouping* grouping, const QString& objectType,
+                                        const QVariantMap& objectData, XenConnection* conn)
+{
+    Q_UNUSED(grouping);
+    
+    if (objectType.isEmpty() || objectData.isEmpty())
+        return nullptr;
+
+    QString ref = objectData.value("opaque_ref").toString();
+    if (ref.isEmpty())
+        return nullptr;
+
+    // Get XenObject wrapper from cache
+    QSharedPointer<XenObject> xenObj = conn->GetCache()->ResolveObject(objectType, ref);
+    if (!xenObj || !xenObj->IsValid())
+        return nullptr;
+
+    // Create tree widget item
+    QTreeWidgetItem* item = new QTreeWidgetItem();
+    
+    // Store XenObject pointer in UserRole for later access
+    item->setData(0, Qt::UserRole, QVariant::fromValue<void*>(xenObj.data()));
+    item->setData(0, Qt::UserRole + 1, objectType); // Store object type
+    
+    // Populate all columns
+    this->populateRow(item, xenObj.data());
+    
+    // Track for metrics updates
+    metricsObjects_.append(xenObj.data());
+    
+    return item;
 }
 
 void QueryPanel::addNoResultsRow()

@@ -29,6 +29,9 @@
 #include "search.h"
 #include "queryscope.h"
 #include "queryfilter.h"
+#include "queries.h"
+#include "../xenlib.h"
+#include "../xencache.h"
 #include <QDebug>
 
 Search::Search(Query* query, Grouping* grouping, const QString& name, const QString& uuid, 
@@ -164,3 +167,357 @@ Search* Search::SearchForVappGroup(Grouping* grouping, const QVariant& parent, c
 
     return new Search(query, subgrouping, groupName, "", false);
 }
+
+Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& objectTypes, XenLib* xenLib)
+{
+    // C# equivalent: SearchFor(IXenObject value) and SearchFor(IEnumerable<IXenObject> objects)
+    // Lines 465-472, 398-460 in Search.cs
+
+    if (objectRefs.isEmpty())
+    {
+        // Default overview search
+        return SearchForAllTypes();
+    }
+    else if (objectRefs.count() == 1)
+    {
+        // Single object search
+        QString objRef = objectRefs.first();
+        QString objType = objectTypes.isEmpty() ? QString() : objectTypes.first();
+
+        // Get object data to determine grouping
+        QVariantMap objectData;
+        if (!objType.isEmpty() && xenLib)
+        {
+            // Request object data from cache
+            objectData = xenLib->getCache()->ResolveObjectData(objType, objRef);
+        }
+
+        if (objType == "host")
+        {
+            // Host search: group by host
+            Grouping* hostGrouping = new HostGrouping(nullptr);
+
+            // Create UUID match query for this specific host
+            QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, objRef, 
+                                                            StringPropertyQuery::MatchType::ExactMatch);
+            // Wrap in recursive query to match host and all descendants
+            QueryFilter* hostQuery = uuidQuery; // TODO: Implement RecursiveXMOListPropertyQuery
+
+            QueryScope* scope = GetOverviewScope();
+            Query* query = new Query(scope, hostQuery);
+
+            QString name = QString("Host: %1").arg(objectData.value("name_label").toString());
+            return new Search(query, hostGrouping, name, "", false);
+        }
+        else if (objType == "pool")
+        {
+            // Pool search: group by pool → host
+            Grouping* hostGrouping = new HostGrouping(nullptr);
+            Grouping* poolGrouping = new PoolGrouping(hostGrouping);
+
+            // Create UUID match query for this specific pool
+            QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, objRef,
+                                                            StringPropertyQuery::MatchType::ExactMatch);
+            // Wrap in recursive query to match pool and all descendants
+            QueryFilter* poolQuery = uuidQuery; // TODO: Implement RecursiveXMOPropertyQuery
+
+            QueryScope* scope = GetOverviewScope();
+            Query* query = new Query(scope, poolQuery);
+
+            QString name = QString("Pool: %1").arg(objectData.value("name_label").toString());
+            return new Search(query, poolGrouping, name, "", false);
+        }
+        else
+        {
+            // Generic object or unknown type - default overview
+            return SearchForAllTypes();
+        }
+    }
+    else
+    {
+        // Multiple objects - create OR query for all objects
+        // C# creates RecursiveXMOPropertyQuery for each object and combines with GroupQuery.Or
+
+        // For now, just return default overview
+        // TODO: Implement multi-object search with proper grouping
+        return SearchForAllTypes();
+    }
+}
+
+Search* Search::SearchForAllTypes()
+{
+    // C# equivalent: SearchForAllTypes() - Line 606 in Search.cs
+    //
+    // C# code:
+    //   public static Search SearchForAllTypes()
+    //   {
+    //       Query query = new Query(new QueryScope(ObjectTypes.AllExcFolders), null);
+    //       return new Search(query, null, "", null, false);
+    //   }
+
+    // Default overview: Pool → Host grouping
+    // Note: DockerVM grouping not yet implemented, using Host only
+    Grouping* hostGrouping = new HostGrouping(nullptr);
+    Grouping* poolGrouping = new PoolGrouping(hostGrouping);
+
+    QueryScope* scope = GetOverviewScope();
+    Query* query = new Query(scope, nullptr); // nullptr = NullQuery (match all)
+
+    return new Search(query, poolGrouping, "Overview", "", false);
+}
+
+bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& adapters)
+{
+    // C# equivalent: PopulateAdapters(params IAcceptGroups[] adapters) - Line 205 in Search.cs
+    //
+    // C# code:
+    //   public bool PopulateAdapters(params IAcceptGroups[] adapters)
+    //   {
+    //       Group group = Group.GetGrouped(this);
+    //       bool added = false;
+    //       foreach (IAcceptGroups adapter in adapters)
+    //           added |= group.Populate(adapter);
+    //       return added;
+    //   }
+    //
+    // This method:
+    // 1. Filters all XenServer objects based on query scope & filter
+    // 2. Groups filtered objects using the grouping algorithm
+    // 3. Populates each adapter with the grouped hierarchy
+
+    if (!this->m_query || !this->m_query->getQueryScope())
+    {
+        return false;
+    }
+
+    // Get all objects matching the query scope and filter
+    QList<QPair<QString, QString>> matchedObjects = this->getMatchedObjects(conn);
+    
+    if (matchedObjects.isEmpty())
+    {
+        return false;
+    }
+
+    // Update item count
+    this->m_items = matchedObjects.count();
+
+    // If no grouping, add objects directly to adapters
+    if (!this->m_grouping)
+    {
+        bool addedAny = false;
+        for (IAcceptGroups* adapter : adapters)
+        {
+            for (const auto& objPair : matchedObjects)
+            {
+                QString objType = objPair.first;
+                QString objRef = objPair.second;
+                QVariantMap objectData = conn->GetCache()->ResolveObjectData(objType, objRef);
+                
+                // Add object directly (no grouping)
+                IAcceptGroups* child = adapter->Add(nullptr, objRef, objType, objectData, 0, conn);
+                if (child)
+                {
+                    child->FinishedInThisGroup(false);
+                    addedAny = true;
+                }
+            }
+            adapter->FinishedInThisGroup(true);
+        }
+        return addedAny;
+    }
+
+    // With grouping: organize objects into hierarchy
+    // Build group hierarchy: Pool -> Host -> (subgrouping)
+    bool addedAny = false;
+    for (IAcceptGroups* adapter : adapters)
+    {
+        addedAny |= this->populateGroupedObjects(adapter, this->m_grouping, matchedObjects, 0, conn);
+        adapter->FinishedInThisGroup(true);
+    }
+
+    return addedAny;
+}
+
+QList<QPair<QString, QString>> Search::getMatchedObjects(XenConnection* connection) const
+{
+    // Get all objects from cache that match the query scope and filter
+    QList<QPair<QString, QString>> matchedObjects;
+
+    QueryScope* scope = this->m_query->getQueryScope();
+    QueryFilter* filter = this->m_query->getQueryFilter();
+    ObjectTypes types = scope->GetObjectTypes();
+
+    // Get all objects from cache
+    QList<QPair<QString, QString>> allCached = connection->GetCache()->GetAllObjectsData();
+
+    for (const auto& pair : allCached)
+    {
+        QString objType = pair.first;
+        QString objRef = pair.second;
+
+        // Check if object type is in scope
+        bool typeMatches = false;
+        if (objType == "pool" && (types & ObjectTypes::Pool) != ObjectTypes::None)
+            typeMatches = true;
+        else if (objType == "host" && (types & ObjectTypes::Server) != ObjectTypes::None)
+            typeMatches = true;
+        else if (objType == "vm")
+        {
+            QVariantMap vmData = connection->GetCache()->ResolveObjectData(objType, objRef);
+            bool isTemplate = vmData.value("is_a_template").toBool();
+            bool isSnapshot = vmData.value("is_a_snapshot").toBool();
+
+            if (!isTemplate && !isSnapshot && (types & ObjectTypes::VM) != ObjectTypes::None)
+                typeMatches = true;
+            else if (isTemplate && (types & ObjectTypes::UserTemplate) != ObjectTypes::None)
+                typeMatches = true;
+            else if (isSnapshot && (types & ObjectTypes::Snapshot) != ObjectTypes::None)
+                typeMatches = true;
+        }
+        else if (objType == "sr" && ((types & ObjectTypes::RemoteSR) != ObjectTypes::None || 
+                                      (types & ObjectTypes::LocalSR) != ObjectTypes::None))
+            typeMatches = true;
+        else if (objType == "network" && (types & ObjectTypes::Network) != ObjectTypes::None)
+            typeMatches = true;
+
+        if (!typeMatches)
+            continue;
+
+        // Apply query filter
+        if (filter)
+        {
+            QVariantMap objectData = connection->GetCache()->ResolveObjectData(objType, objRef);
+            QVariant matchResult = filter->Match(objectData, objType, connection);
+            if (!matchResult.toBool())
+                continue;
+        }
+
+        matchedObjects.append(pair);
+    }
+
+    return matchedObjects;
+}
+
+bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping, 
+                                    const QList<QPair<QString, QString>>& objects,
+                                    int indent, XenConnection* conn)
+{
+    // Group objects by the grouping algorithm
+    // C# equivalent: Group.Populate(IAcceptGroups adapter) in GroupAlg.cs
+
+    if (!grouping || objects.isEmpty())
+        return false;
+
+    // Organize objects by group value (use string keys for QHash)
+    QHash<QString, QList<QPair<QString, QString>>> groupedObjects;
+    QHash<QString, QVariant> groupValueLookup; // Map string key back to original group value
+
+    for (const auto& objPair : objects)
+    {
+        QString objType = objPair.first;
+        QString objRef = objPair.second;
+        QVariantMap objectData = conn->GetCache()->ResolveObjectData(objType, objRef);
+
+        // Get group value for this object
+        QVariant groupValue = grouping->getGroup(objectData, objType);
+        
+        if (!groupValue.isValid())
+            continue; // Object doesn't belong to any group
+
+        // Use string representation as hash key
+        QString groupKey = groupValue.toString();
+        groupedObjects[groupKey].append(objPair);
+        groupValueLookup[groupKey] = groupValue; // Store original value
+    }
+
+    if (groupedObjects.isEmpty())
+        return false;
+
+    bool addedAny = false;
+
+    // Add each group
+    for (auto it = groupedObjects.begin(); it != groupedObjects.end(); ++it)
+    {
+        QString groupKey = it.key();
+        QVariant groupValue = groupValueLookup.value(groupKey); // Retrieve original group value
+        QList<QPair<QString, QString>> groupObjects = it.value();
+
+        // Add group node to adapter (empty objectType/objectData = group header)
+        IAcceptGroups* childAdapter = adapter->Add(grouping, groupValue, QString(), QVariantMap(), indent, conn);
+        
+        if (!childAdapter)
+            continue;
+
+        addedAny = true;
+
+        // Get subgrouping for this group
+        Grouping* subgrouping = grouping->getSubgrouping(groupValue);
+
+        if (subgrouping)
+        {
+            // Recursively populate subgroups
+            this->populateGroupedObjects(childAdapter, subgrouping, groupObjects, indent + 1, conn);
+        }
+        else
+        {
+            // Leaf level - add objects directly
+            for (const auto& objPair : groupObjects)
+            {
+                QString objType = objPair.first;
+                QString objRef = objPair.second;
+                QVariantMap objectData = conn->GetCache()->ResolveObjectData(objType, objRef);
+
+                IAcceptGroups* objAdapter = childAdapter->Add(nullptr, objRef, objType, objectData, indent + 1, conn);
+                if (objAdapter)
+                    objAdapter->FinishedInThisGroup(false);
+            }
+        }
+
+        // Expand groups at top 2 levels by default
+        bool defaultExpand = (indent < 2);
+        childAdapter->FinishedInThisGroup(defaultExpand);
+    }
+
+    return addedAny;
+}
+
+ObjectTypes Search::DefaultObjectTypes()
+{
+    // C# equivalent: DefaultObjectTypes() - Line 520 in Search.cs
+    //
+    // C# code:
+    //   public static ObjectTypes DefaultObjectTypes()
+    //   {
+    //       ObjectTypes types = ObjectTypes.DisconnectedServer | ObjectTypes.Server | ObjectTypes.VM |
+    //                           ObjectTypes.RemoteSR | ObjectTypes.DockerContainer;
+    //       return types;
+    //   }
+
+    ObjectTypes types = ObjectTypes::DisconnectedServer | ObjectTypes::Server | ObjectTypes::VM |
+                        ObjectTypes::RemoteSR | ObjectTypes::DockerContainer;
+
+    return types;
+}
+
+QueryScope* Search::GetOverviewScope()
+{
+    // C# equivalent: GetOverviewScope() - Line 527 in Search.cs
+    //
+    // C# code:
+    //   internal static QueryScope GetOverviewScope()
+    //   {
+    //       ObjectTypes types = DefaultObjectTypes();
+    //       // To avoid excessive number of options in the search-for drop-down,
+    //       // the search panel doesn't respond to the options on the View menu.
+    //       types |= ObjectTypes.UserTemplate;
+    //       return new QueryScope(types);
+    //   }
+
+    ObjectTypes types = DefaultObjectTypes();
+
+    // Include user templates (but not default templates)
+    types = types | ObjectTypes::UserTemplate;
+
+    return new QueryScope(types);
+}
+

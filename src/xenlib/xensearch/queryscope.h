@@ -101,7 +101,7 @@ inline bool operator!=(ObjectTypes a, int b)
 }
 
 // Forward declaration
-class XenLib;
+class XenConnection;
 
 /**
  * @brief Defines the scope of a search query - which object types to include
@@ -138,7 +138,7 @@ class QueryScope
          * @param xenLib XenLib instance for resolving references (optional)
          * @return true if the object matches the scope
          */
-        bool wantType(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib = nullptr) const;
+        bool wantType(const QVariantMap& objectData, const QString& objectType, XenConnection* conn = nullptr) const;
 
         /**
          * @brief Check if this scope wants a specific type
@@ -177,6 +177,19 @@ class QueryScope
          * @return true if this scope is a subset of q
          */
         bool wantSubsetOf(const QueryScope* q) const;
+
+        /**
+         * @brief Get the object types included in this scope
+         *
+         * Exposes ObjectTypes for UI integration (QueryPanel type filtering)
+         * C# equivalent: ObjectTypes property
+         *
+         * @return ObjectTypes flags included in this scope
+         */
+        ObjectTypes GetObjectTypes() const
+        {
+            return this->m_types;
+        }
 
         /**
          * @brief Check if this scope wants any of the types in t
@@ -236,7 +249,7 @@ class QueryScope
          * @param xenLib XenLib instance for resolving references
          * @return ObjectTypes enum value for the object
          */
-        ObjectTypes objectTypeOf(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const;
+        ObjectTypes objectTypeOf(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const;
 
         ObjectTypes m_types; // The object types included in this scope
 };

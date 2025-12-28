@@ -36,7 +36,7 @@
 #include <QIcon>
 
 // Forward declarations
-class XenLib;
+class XenConnection;
 
 /**
  * @brief Base class for all grouping algorithms
@@ -47,91 +47,91 @@ class XenLib;
  */
 class Grouping
 {
-public:
-    /**
-     * @brief Constructor with optional subgrouping
-     * @param subgrouping Sub-grouping to apply within this grouping (may be null)
-     */
-    explicit Grouping(Grouping* subgrouping = nullptr);
+    public:
+        /**
+         * @brief Constructor with optional subgrouping
+         * @param subgrouping Sub-grouping to apply within this grouping (may be null)
+         */
+        explicit Grouping(Grouping* subgrouping = nullptr);
 
-    virtual ~Grouping();
+        virtual ~Grouping();
 
-    /**
-     * @brief Get the name of this grouping (e.g., "Type", "Pool", "Folder")
-     * @return Grouping name
-     */
-    virtual QString getGroupingName() const = 0;
+        /**
+         * @brief Get the name of this grouping (e.g., "Type", "Pool", "Folder")
+         * @return Grouping name
+         */
+        virtual QString getGroupingName() const = 0;
 
-    /**
-     * @brief Get the display name for a specific group value
-     * @param group The group value
-     * @return Human-readable name for the group
-     */
-    virtual QString getGroupName(const QVariant& group) const;
+        /**
+         * @brief Get the display name for a specific group value
+         * @param group The group value
+         * @return Human-readable name for the group
+         */
+        virtual QString getGroupName(const QVariant& group) const;
 
-    /**
-     * @brief Get the icon for a specific group value
-     * @param group The group value
-     * @return Icon to display for the group
-     */
-    virtual QIcon getGroupIcon(const QVariant& group) const;
+        /**
+         * @brief Get the icon for a specific group value
+         * @param group The group value
+         * @return Icon to display for the group
+         */
+        virtual QIcon getGroupIcon(const QVariant& group) const;
 
-    /**
-     * @brief Get the group value for a given object
-     * @param objectData The object data (VM, host, etc.)
-     * @param objectType The object type ("vm", "host", etc.)
-     * @return The group value, or an invalid QVariant if object doesn't belong to any group
-     */
-    virtual QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const = 0;
+        /**
+         * @brief Get the group value for a given object
+         * @param objectData The object data (VM, host, etc.)
+         * @param objectType The object type ("vm", "host", etc.)
+         * @return The group value, or an invalid QVariant if object doesn't belong to any group
+         */
+        virtual QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const = 0;
 
-    /**
-     * @brief Check if object should appear as a group node itself (not just a member)
-     *
-     * For example, folders appear as group nodes
-     * @param objectData The object data
-     * @param objectType The object type
-     * @return true if the object should be shown as a group node
-     */
-    virtual bool belongsAsGroupNotMember(const QVariantMap& objectData, const QString& objectType) const;
+        /**
+         * @brief Check if object should appear as a group node itself (not just a member)
+         *
+         * For example, folders appear as group nodes
+         * @param objectData The object data
+         * @param objectType The object type
+         * @return true if the object should be shown as a group node
+         */
+        virtual bool belongsAsGroupNotMember(const QVariantMap& objectData, const QString& objectType) const;
 
-    /**
-     * @brief Get the subgrouping for a specific group value
-     *
-     * Used when drilling down in the tree (e.g., Type → Pool → Host)
-     * @param group The group value
-     * @return Subgrouping to apply, or nullptr if no further grouping
-     */
-    virtual Grouping* getSubgrouping(const QVariant& group) const;
+        /**
+         * @brief Get the subgrouping for a specific group value
+         *
+         * Used when drilling down in the tree (e.g., Type → Pool → Host)
+         * @param group The group value
+         * @return Subgrouping to apply, or nullptr if no further grouping
+         */
+        virtual Grouping* getSubgrouping(const QVariant& group) const;
 
-    /**
-     * @brief Get a QueryFilter that matches objects in this group
-     *
-     * Used when clicking a group node to show only objects in that group
-     * C# equivalent: Grouping.GetSubquery(object parent, object val)
-     * @param parent Parent group value (may be null)
-     * @param group The group value to filter by
-     * @return QueryFilter that matches objects in this group, or nullptr if no filtering needed
-     */
-    virtual class QueryFilter* getSubquery(const QVariant& parent, const QVariant& group) const;
+        /**
+         * @brief Get a QueryFilter that matches objects in this group
+         *
+         * Used when clicking a group node to show only objects in that group
+         * C# equivalent: Grouping.GetSubquery(object parent, object val)
+         * @param parent Parent group value (may be null)
+         * @param group The group value to filter by
+         * @return QueryFilter that matches objects in this group, or nullptr if no filtering needed
+         */
+        virtual class QueryFilter* getSubquery(const QVariant& parent, const QVariant& group) const;
 
-    /**
-     * @brief Equality comparison for groupings
-     * @param other Other grouping to compare
-     * @return true if equal
-     */
-    virtual bool equals(const Grouping* other) const = 0;
+        /**
+         * @brief Equality comparison for groupings
+         * @param other Other grouping to compare
+         * @return true if equal
+         */
+        virtual bool equals(const Grouping* other) const = 0;
 
-    /**
-     * @brief Get subgrouping pointer
-     * @return Pointer to subgrouping or nullptr
-     */
-    Grouping* subgrouping() const
-    {
-        return m_subgrouping;
-    }
+        /**
+         * @brief Get subgrouping pointer
+         * @return Pointer to subgrouping or nullptr
+         */
+        Grouping* subgrouping() const
+        {
+            return m_subgrouping;
+        }
 
-protected:
-    Grouping* m_subgrouping; // Optional nested grouping
+    protected:
+        Grouping* m_subgrouping; // Optional nested grouping
 };
 
 /**
@@ -142,15 +142,15 @@ protected:
  */
 class TypeGrouping : public Grouping
 {
-public:
-    explicit TypeGrouping(Grouping* subgrouping = nullptr);
+    public:
+        explicit TypeGrouping(Grouping* subgrouping = nullptr);
 
-    QString getGroupingName() const override;
-    QString getGroupName(const QVariant& group) const override;
-    QIcon getGroupIcon(const QVariant& group) const override;
-    QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
-    QueryFilter* getSubquery(const QVariant& parent, const QVariant& group) const override;
-    bool equals(const Grouping* other) const override;
+        QString getGroupingName() const override;
+        QString getGroupName(const QVariant& group) const override;
+        QIcon getGroupIcon(const QVariant& group) const override;
+        QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
+        QueryFilter* getSubquery(const QVariant& parent, const QVariant& group) const override;
+        bool equals(const Grouping* other) const override;
 };
 
 /**
@@ -161,22 +161,22 @@ public:
  */
 class PoolGrouping : public Grouping
 {
-public:
-    explicit PoolGrouping(Grouping* subgrouping = nullptr);
+    public:
+        explicit PoolGrouping(Grouping* subgrouping = nullptr);
 
-    QString getGroupingName() const override;
-    QString getGroupName(const QVariant& group) const override;
-    QIcon getGroupIcon(const QVariant& group) const override;
-    QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
-    bool equals(const Grouping* other) const override;
+        QString getGroupingName() const override;
+        QString getGroupName(const QVariant& group) const override;
+        QIcon getGroupIcon(const QVariant& group) const override;
+        QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
+        bool equals(const Grouping* other) const override;
 
-    void setXenLib(XenLib* xenLib)
-    {
-        m_xenLib = xenLib;
-    }
+        void SetConnection(XenConnection* conn)
+        {
+            m_connection = conn;
+        }
 
-private:
-    XenLib* m_xenLib = nullptr;
+    private:
+        XenConnection* m_connection = nullptr;
 };
 
 /**
@@ -187,22 +187,22 @@ private:
  */
 class HostGrouping : public Grouping
 {
-public:
-    explicit HostGrouping(Grouping* subgrouping = nullptr);
+    public:
+        explicit HostGrouping(Grouping* subgrouping = nullptr);
 
-    QString getGroupingName() const override;
-    QString getGroupName(const QVariant& group) const override;
-    QIcon getGroupIcon(const QVariant& group) const override;
-    QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
-    bool equals(const Grouping* other) const override;
+        QString getGroupingName() const override;
+        QString getGroupName(const QVariant& group) const override;
+        QIcon getGroupIcon(const QVariant& group) const override;
+        QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
+        bool equals(const Grouping* other) const override;
 
-    void setXenLib(XenLib* xenLib)
-    {
-        m_xenLib = xenLib;
-    }
+        void SetConnection(XenConnection* conn)
+        {
+            m_connection = conn;
+        }
 
-private:
-    XenLib* m_xenLib = nullptr;
+    private:
+        XenConnection* m_connection = nullptr;
 };
 
 #endif // GROUPING_H

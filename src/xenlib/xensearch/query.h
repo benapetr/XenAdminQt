@@ -36,7 +36,7 @@
 #include <QVariantMap>
 
 // Forward declaration
-class XenLib;
+class XenConnection;
 
 /**
  * @brief A query combining a scope (which object types) and a filter (which properties to match)
@@ -45,76 +45,76 @@ class XenLib;
  */
 class Query
 {
-public:
-    /**
-     * @brief Constructor with scope and optional filter
-     *
-     * C# equivalent: Query(QueryScope scope, QueryFilter filter)
-     *
-     * @param scope The query scope (which object types to include). If null, defaults to AllExcFolders
-     * @param filter The query filter (which properties to match). Can be null for no filtering
-     */
-    Query(QueryScope* scope, QueryFilter* filter = nullptr);
+    public:
+        /**
+         * @brief Constructor with scope and optional filter
+         *
+         * C# equivalent: Query(QueryScope scope, QueryFilter filter)
+         *
+         * @param scope The query scope (which object types to include). If null, defaults to AllExcFolders
+         * @param filter The query filter (which properties to match). Can be null for no filtering
+         */
+        Query(QueryScope* scope, QueryFilter* filter = nullptr);
 
-    ~Query();
+        ~Query();
 
-    /**
-     * @brief Get the query scope
-     *
-     * C# equivalent: QueryScope property
-     * @return Pointer to the QueryScope owned by this Query
-     */
-    QueryScope* getQueryScope() const
-    {
-        return m_scope;
-    }
+        /**
+         * @brief Get the query scope
+         *
+         * C# equivalent: QueryScope property
+         * @return Pointer to the QueryScope owned by this Query
+         */
+        QueryScope* getQueryScope() const
+        {
+            return m_scope;
+        }
 
-    /**
-     * @brief Get the query filter (may be null)
-     *
-     * C# equivalent: QueryFilter property
-     * @return Pointer to the QueryFilter or nullptr
-     */
-    QueryFilter* getQueryFilter() const
-    {
-        return m_filter;
-    }
+        /**
+         * @brief Get the query filter (may be null)
+         *
+         * C# equivalent: QueryFilter property
+         * @return Pointer to the QueryFilter or nullptr
+         */
+        QueryFilter* getQueryFilter() const
+        {
+            return m_filter;
+        }
 
-    /**
-     * @brief Check if an object matches this query
-     *
-     * An object matches if:
-     *  1. Its type is in the scope
-     *  2. The filter matches (or there is no filter)
-     *
-     * C# equivalent: Match(IXenObject o)
-     * @param objectData The object data
-     * @param objectType The object type
-     * @param xenLib XenLib instance for resolving references
-     * @return true if object matches query, false otherwise
-     */
-    bool match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const;
+        /**
+         * @brief Check if an object matches this query
+         *
+         * An object matches if:
+         *  1. Its type is in the scope
+         *  2. The filter matches (or there is no filter)
+         *
+         * C# equivalent: Match(IXenObject o)
+         * @param objectData The object data
+         * @param objectType The object type
+         * @param conn XenLib instance for resolving references
+         * @return true if object matches query, false otherwise
+         */
+        bool match(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const;
 
-    /**
-     * @brief Equality comparison
-     *
-     * C# equivalent: Equals(object obj)
-     * @param other Other Query to compare
-     * @return true if equal
-     */
-    bool equals(const Query* other) const;
+        /**
+         * @brief Equality comparison
+         *
+         * C# equivalent: Equals(object obj)
+         * @param other Other Query to compare
+         * @return true if equal
+         */
+        bool equals(const Query* other) const;
 
-    /**
-     * @brief Hash code for use in QHash
-     *
-     * C# equivalent: GetHashCode()
-     * @return 32-bit hash value
-     */
-    uint hashCode() const;
+        /**
+         * @brief Hash code for use in QHash
+         *
+         * C# equivalent: GetHashCode()
+         * @return 32-bit hash value
+         */
+        uint hashCode() const;
 
-private:
-    QueryScope* m_scope;   // The query scope (which object types) - owned
-    QueryFilter* m_filter; // The query filter (which properties) - owned, can be null
+    private:
+        QueryScope* m_scope;   // The query scope (which object types) - owned
+        QueryFilter* m_filter; // The query filter (which properties) - owned, can be null
 };
 
 // Hash function for QHash support

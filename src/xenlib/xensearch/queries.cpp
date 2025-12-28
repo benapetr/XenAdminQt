@@ -130,20 +130,20 @@ static QString getPropertyName(PropertyNames property)
 // DummyQuery
 // ============================================================================
 
-QVariant DummyQuery::match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const
+QVariant DummyQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const
 {
     Q_UNUSED(objectData);
     Q_UNUSED(objectType);
-    Q_UNUSED(xenLib);
+    Q_UNUSED(conn);
     return QVariant(); // Indeterminate - used for placeholder
 }
 
-bool DummyQuery::equals(const QueryFilter* other) const
+bool DummyQuery::Equals(const QueryFilter* other) const
 {
     return dynamic_cast<const DummyQuery*>(other) != nullptr;
 }
 
-uint DummyQuery::hashCode() const
+uint DummyQuery::HashCode() const
 {
     return qHash("DummyQuery");
 }
@@ -163,7 +163,7 @@ GroupQuery::~GroupQuery()
     qDeleteAll(this->subQueries_);
 }
 
-QVariant GroupQuery::match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const
+QVariant GroupQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const
 {
     if (this->subQueries_.isEmpty())
         return true; // Empty group matches everything
@@ -175,7 +175,7 @@ QVariant GroupQuery::match(const QVariantMap& objectData, const QString& objectT
             // All must match
             for (QueryFilter* subQuery : this->subQueries_)
             {
-                QVariant result = subQuery->match(objectData, objectType, xenLib);
+                QVariant result = subQuery->Match(objectData, objectType, conn);
                 if (!result.isValid() || !result.toBool())
                     return false;
             }
@@ -187,7 +187,7 @@ QVariant GroupQuery::match(const QVariantMap& objectData, const QString& objectT
             // At least one must match
             for (QueryFilter* subQuery : this->subQueries_)
             {
-                QVariant result = subQuery->match(objectData, objectType, xenLib);
+                QVariant result = subQuery->Match(objectData, objectType, conn);
                 if (result.isValid() && result.toBool())
                     return true;
             }
@@ -199,7 +199,7 @@ QVariant GroupQuery::match(const QVariantMap& objectData, const QString& objectT
             // None must match
             for (QueryFilter* subQuery : this->subQueries_)
             {
-                QVariant result = subQuery->match(objectData, objectType, xenLib);
+                QVariant result = subQuery->Match(objectData, objectType, conn);
                 if (result.isValid() && result.toBool())
                     return false;
             }
@@ -210,7 +210,7 @@ QVariant GroupQuery::match(const QVariantMap& objectData, const QString& objectT
     return false;
 }
 
-bool GroupQuery::equals(const QueryFilter* other) const
+bool GroupQuery::Equals(const QueryFilter* other) const
 {
     const GroupQuery* otherGroup = dynamic_cast<const GroupQuery*>(other);
     if (!otherGroup)
@@ -224,19 +224,19 @@ bool GroupQuery::equals(const QueryFilter* other) const
     
     for (int i = 0; i < this->subQueries_.size(); ++i)
     {
-        if (!this->subQueries_[i]->equals(otherGroup->subQueries_[i]))
+        if (!this->subQueries_[i]->Equals(otherGroup->subQueries_[i]))
             return false;
     }
     
     return true;
 }
 
-uint GroupQuery::hashCode() const
+uint GroupQuery::HashCode() const
 {
     uint hash = qHash(static_cast<int>(this->type_));
     for (QueryFilter* subQuery : this->subQueries_)
     {
-        hash ^= subQuery->hashCode();
+        hash ^= subQuery->HashCode();
     }
     return hash;
 }
@@ -252,9 +252,9 @@ StringPropertyQuery::StringPropertyQuery(PropertyNames property, const QString& 
 {
 }
 
-QVariant StringPropertyQuery::match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const
+QVariant StringPropertyQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const
 {
-    Q_UNUSED(xenLib);
+    Q_UNUSED(conn);
     Q_UNUSED(objectType);
     
     // Get property value
@@ -286,7 +286,7 @@ QVariant StringPropertyQuery::match(const QVariantMap& objectData, const QString
     return false;
 }
 
-bool StringPropertyQuery::equals(const QueryFilter* other) const
+bool StringPropertyQuery::Equals(const QueryFilter* other) const
 {
     const StringPropertyQuery* otherQuery = dynamic_cast<const StringPropertyQuery*>(other);
     if (!otherQuery)
@@ -297,7 +297,7 @@ bool StringPropertyQuery::equals(const QueryFilter* other) const
            this->matchType_ == otherQuery->matchType_;
 }
 
-uint StringPropertyQuery::hashCode() const
+uint StringPropertyQuery::HashCode() const
 {
     return qHash(static_cast<int>(this->property_)) ^ 
            qHash(this->query_) ^
@@ -315,9 +315,9 @@ EnumQuery::EnumQuery(PropertyNames property, const QString& value, bool negated)
 {
 }
 
-QVariant EnumQuery::match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const
+QVariant EnumQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const
 {
-    Q_UNUSED(xenLib);
+    Q_UNUSED(conn);
     Q_UNUSED(objectType);
     
     // Get property value
@@ -331,7 +331,7 @@ QVariant EnumQuery::match(const QVariantMap& objectData, const QString& objectTy
     return this->negated_ ? !matches : matches;
 }
 
-bool EnumQuery::equals(const QueryFilter* other) const
+bool EnumQuery::Equals(const QueryFilter* other) const
 {
     const EnumQuery* otherQuery = dynamic_cast<const EnumQuery*>(other);
     if (!otherQuery)
@@ -342,7 +342,7 @@ bool EnumQuery::equals(const QueryFilter* other) const
            this->negated_ == otherQuery->negated_;
 }
 
-uint EnumQuery::hashCode() const
+uint EnumQuery::HashCode() const
 {
     return qHash(static_cast<int>(this->property_)) ^ 
            qHash(this->value_) ^
@@ -360,9 +360,9 @@ NumericQuery::NumericQuery(PropertyNames property, qint64 value, ComparisonType 
 {
 }
 
-QVariant NumericQuery::match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const
+QVariant NumericQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const
 {
-    Q_UNUSED(xenLib);
+    Q_UNUSED(conn);
     Q_UNUSED(objectType);
     
     // Get property value
@@ -391,7 +391,7 @@ QVariant NumericQuery::match(const QVariantMap& objectData, const QString& objec
     return false;
 }
 
-bool NumericQuery::equals(const QueryFilter* other) const
+bool NumericQuery::Equals(const QueryFilter* other) const
 {
     const NumericQuery* otherQuery = dynamic_cast<const NumericQuery*>(other);
     if (!otherQuery)
@@ -402,7 +402,7 @@ bool NumericQuery::equals(const QueryFilter* other) const
            this->comparisonType_ == otherQuery->comparisonType_;
 }
 
-uint NumericQuery::hashCode() const
+uint NumericQuery::HashCode() const
 {
     return qHash(static_cast<int>(this->property_)) ^ 
            qHash(this->value_) ^
@@ -420,9 +420,9 @@ DateQuery::DateQuery(PropertyNames property, const QDateTime& value, ComparisonT
 {
 }
 
-QVariant DateQuery::match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const
+QVariant DateQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const
 {
-    Q_UNUSED(xenLib);
+    Q_UNUSED(conn);
     Q_UNUSED(objectType);
     
     // Get property value
@@ -451,7 +451,7 @@ QVariant DateQuery::match(const QVariantMap& objectData, const QString& objectTy
     return false;
 }
 
-bool DateQuery::equals(const QueryFilter* other) const
+bool DateQuery::Equals(const QueryFilter* other) const
 {
     const DateQuery* otherQuery = dynamic_cast<const DateQuery*>(other);
     if (!otherQuery)
@@ -462,7 +462,7 @@ bool DateQuery::equals(const QueryFilter* other) const
            this->comparisonType_ == otherQuery->comparisonType_;
 }
 
-uint DateQuery::hashCode() const
+uint DateQuery::HashCode() const
 {
     return qHash(static_cast<int>(this->property_)) ^ 
            qHash(this->value_.toMSecsSinceEpoch()) ^
@@ -479,9 +479,9 @@ BoolQuery::BoolQuery(PropertyNames property, bool value)
 {
 }
 
-QVariant BoolQuery::match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const
+QVariant BoolQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const
 {
-    Q_UNUSED(xenLib);
+    Q_UNUSED(conn);
     Q_UNUSED(objectType);
     
     // Get property value
@@ -493,7 +493,7 @@ QVariant BoolQuery::match(const QVariantMap& objectData, const QString& objectTy
     return value == this->value_;
 }
 
-bool BoolQuery::equals(const QueryFilter* other) const
+bool BoolQuery::Equals(const QueryFilter* other) const
 {
     const BoolQuery* otherQuery = dynamic_cast<const BoolQuery*>(other);
     if (!otherQuery)
@@ -503,7 +503,7 @@ bool BoolQuery::equals(const QueryFilter* other) const
            this->value_ == otherQuery->value_;
 }
 
-uint BoolQuery::hashCode() const
+uint BoolQuery::HashCode() const
 {
     return qHash(static_cast<int>(this->property_)) ^ qHash(this->value_);
 }
@@ -518,9 +518,9 @@ TagQuery::TagQuery(const QString& tag, bool negated)
 {
 }
 
-QVariant TagQuery::match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const
+QVariant TagQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const
 {
-    Q_UNUSED(xenLib);
+    Q_UNUSED(conn);
     Q_UNUSED(objectType);
     
     // Get tags from object
@@ -543,7 +543,7 @@ QVariant TagQuery::match(const QVariantMap& objectData, const QString& objectTyp
     return this->negated_ ? !hasTag : hasTag;
 }
 
-bool TagQuery::equals(const QueryFilter* other) const
+bool TagQuery::Equals(const QueryFilter* other) const
 {
     const TagQuery* otherQuery = dynamic_cast<const TagQuery*>(other);
     if (!otherQuery)
@@ -553,7 +553,7 @@ bool TagQuery::equals(const QueryFilter* other) const
            this->negated_ == otherQuery->negated_;
 }
 
-uint TagQuery::hashCode() const
+uint TagQuery::HashCode() const
 {
     return qHash(this->tag_) ^ qHash(this->negated_);
 }

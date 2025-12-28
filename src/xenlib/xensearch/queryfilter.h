@@ -30,11 +30,12 @@
 #ifndef QUERYFILTER_H
 #define QUERYFILTER_H
 
+#include "xen/network/connection.h"
 #include <QString>
 #include <QVariantMap>
 
 // Forward declaration
-class XenLib;
+class XenConnection;
 
 /**
  * @brief Base class for query filters that match objects based on properties
@@ -48,40 +49,40 @@ class XenLib;
  */
 class QueryFilter
 {
-public:
-    virtual ~QueryFilter()
-    {}
+    public:
+        virtual ~QueryFilter()
+        {}
 
-    /**
-     * @brief Check if an object matches this filter
-     *
-     * C# equivalent: Match(IXenObject o)
-     *
-     * @param objectData The object data
-     * @param objectType The object type
-     * @param xenLib XenLib instance for resolving references
-     * @return QVariant true if match, false if no match, or invalid/Null if indeterminate
-     */
-    virtual QVariant match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const = 0;
+        /**
+         * @brief Check if an object matches this filter
+         *
+         * C# equivalent: Match(IXenObject o)
+         *
+         * @param objectData The object data
+         * @param objectType The object type
+         * @param xenLib XenLib instance for resolving references
+         * @return QVariant true if Match, false if no Match, or invalid/Null if indeterminate
+         */
+        virtual QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const = 0;
 
-    /**
-     * @brief Equality comparison
-     * @param other Other QueryFilter to compare
-     * @return true if equal
-     */
-    virtual bool equals(const QueryFilter* other) const = 0;
+        /**
+         * @brief Equality comparison
+         * @param other Other QueryFilter to compare
+         * @return true if equal
+         */
+        virtual bool Equals(const QueryFilter* other) const = 0;
 
-    /**
-     * @brief Hash code for use in QHash
-     * @return 32-bit hash value
-     */
-    virtual uint hashCode() const = 0;
+        /**
+         * @brief Hash code for use in QHash
+         * @return 32-bit hash value
+         */
+        virtual uint HashCode() const = 0;
 };
 
 // Hash function for QHash support
 inline uint qHash(const QueryFilter& filter)
 {
-    return filter.hashCode();
+    return filter.HashCode();
 }
 
 /**
@@ -94,28 +95,28 @@ inline uint qHash(const QueryFilter& filter)
  */
 class NullQuery : public QueryFilter
 {
-public:
-    NullQuery()
-    {}
+    public:
+        NullQuery()
+        {}
 
-    /**
-     * @brief Always returns true (matches all objects)
-     * @return QVariant true
-     */
-    QVariant match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const override;
+        /**
+         * @brief Always returns true (matches all objects)
+         * @return QVariant true
+         */
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
 
-    /**
-     * @brief Equality comparison
-     * @param other Other QueryFilter
-     * @return true if other is also a NullQuery
-     */
-    bool equals(const QueryFilter* other) const override;
+        /**
+         * @brief Equality comparison
+         * @param other Other QueryFilter
+         * @return true if other is also a NullQuery
+         */
+        bool Equals(const QueryFilter* other) const override;
 
-    /**
-     * @brief Hash code for use in QHash
-     * @return 32-bit hash value
-     */
-    uint hashCode() const override;
+        /**
+         * @brief Hash code for use in QHash
+         * @return 32-bit hash value
+         */
+        uint HashCode() const override;
 };
 
 /**
@@ -127,44 +128,44 @@ public:
  */
 class TypePropertyQuery : public QueryFilter
 {
-public:
-    /**
-     * @brief Constructor
-     * @param objectType The object type to match (e.g., "host", "vm", "sr")
-     * @param equals If true, match objects that equal this type. If false, match objects that don't equal this type.
-     */
-    TypePropertyQuery(const QString& objectType, bool equals = true);
+    public:
+        /**
+         * @brief Constructor
+         * @param objectType The object type to match (e.g., "host", "vm", "sr")
+         * @param equals If true, match objects that equal this type. If false, match objects that don't equal this type.
+         */
+        TypePropertyQuery(const QString& objectType, bool equals = true);
 
-    /**
-     * @brief Check if an object matches this type filter
-     */
-    QVariant match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const override;
+        /**
+         * @brief Check if an object matches this type filter
+         */
+        QVariant Match(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const override;
 
-    bool equals(const QueryFilter* other) const override;
+        bool Equals(const QueryFilter* other) const override;
 
-    uint hashCode() const override;
+        uint HashCode() const override;
 
-    /**
-     * @brief Get the object type being filtered
-     * @return Object type string
-     */
-    QString getObjectType() const
-    {
-        return m_objectType;
-    }
+        /**
+         * @brief Get the object type being filtered
+         * @return Object type string
+         */
+        QString getObjectType() const
+        {
+            return m_objectType;
+        }
 
-    /**
-     * @brief Get whether we're matching equals (true) or not-equals (false)
-     * @return true if equals comparison, false if not-equals
-     */
-    bool getEquals() const
-    {
-        return m_equals;
-    }
+        /**
+         * @brief Get whether we're matching equals (true) or not-equals (false)
+         * @return true if equals comparison, false if not-equals
+         */
+        bool getEquals() const
+        {
+            return m_equals;
+        }
 
-private:
-    QString m_objectType;
-    bool m_equals;
+    private:
+        QString m_objectType;
+        bool m_equals;
 };
 
 #endif // QUERYFILTER_H

@@ -33,11 +33,11 @@
 // NullQuery - Matches all objects (no filtering)
 //==============================================================================
 
-QVariant NullQuery::match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const
+QVariant NullQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const
 {
     Q_UNUSED(objectData);
     Q_UNUSED(objectType);
-    Q_UNUSED(xenLib);
+    Q_UNUSED(conn);
 
     // C# equivalent: No explicit NullQuery in C#, but this represents
     // the behavior when Query.queryFilter is null (no filtering)
@@ -45,13 +45,13 @@ QVariant NullQuery::match(const QVariantMap& objectData, const QString& objectTy
     return true;
 }
 
-bool NullQuery::equals(const QueryFilter* other) const
+bool NullQuery::Equals(const QueryFilter* other) const
 {
     // All NullQuery instances are equivalent
     return dynamic_cast<const NullQuery*>(other) != nullptr;
 }
 
-uint NullQuery::hashCode() const
+uint NullQuery::HashCode() const
 {
     // C# equivalent: DummyQuery doesn't have explicit hash, but we return a constant
     return 0; // All NullQuery instances have same hash
@@ -66,10 +66,10 @@ TypePropertyQuery::TypePropertyQuery(const QString& objectType, bool equals)
 {
 }
 
-QVariant TypePropertyQuery::match(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const
+QVariant TypePropertyQuery::Match(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const
 {
     Q_UNUSED(objectData);
-    Q_UNUSED(xenLib);
+    Q_UNUSED(conn);
 
     // C# equivalent: EnumPropertyQuery<ObjectTypes>.MatchProperty()
     // Compare the object's type with the query type
@@ -95,7 +95,7 @@ QVariant TypePropertyQuery::match(const QVariantMap& objectData, const QString& 
     }
 }
 
-bool TypePropertyQuery::equals(const QueryFilter* other) const
+bool TypePropertyQuery::Equals(const QueryFilter* other) const
 {
     const TypePropertyQuery* otherTypeQuery = dynamic_cast<const TypePropertyQuery*>(other);
     if (!otherTypeQuery)
@@ -105,7 +105,7 @@ bool TypePropertyQuery::equals(const QueryFilter* other) const
            m_equals == otherTypeQuery->m_equals;
 }
 
-uint TypePropertyQuery::hashCode() const
+uint TypePropertyQuery::HashCode() const
 {
     // Combine hash of object type and equals flag
     return qHash(m_objectType) ^ (m_equals ? 1 : 0);

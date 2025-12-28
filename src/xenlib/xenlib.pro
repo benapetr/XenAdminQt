@@ -173,6 +173,7 @@ HEADERS += \
     xensearch/query.h \
     xensearch/search.h \
     xensearch/sort.h \
+    xensearch/iacceptgroups.h \
     xen/network/connection.h \
     xen/network/connectionworker.h \
     xen/network/connecttask.h \

@@ -210,11 +210,11 @@ QString PoolGrouping::getGroupingName() const
 QString PoolGrouping::getGroupName(const QVariant& group) const
 {
     // C# equivalent: Returns pool.Name()
-    if (!m_xenLib || group.isNull())
+    if (!this->m_connection || group.isNull())
         return "Unknown Pool";
 
     QString poolRef = group.toString();
-    QVariantMap poolData = m_xenLib->getCache()->ResolveObjectData("pool", poolRef);
+    QVariantMap poolData = this->m_connection->GetCache()->ResolveObjectData("pool", poolRef);
 
     if (poolData.isEmpty())
         return "Unknown Pool";
@@ -257,10 +257,10 @@ QVariant PoolGrouping::getGroup(const QVariantMap& objectData, const QString& ob
         if (hostRef.isEmpty() || hostRef == "OpaqueRef:NULL")
             return QVariant(); // No pool association
 
-        if (!m_xenLib)
+        if (!this->m_connection)
             return QVariant();
 
-        QVariantMap hostData = m_xenLib->getCache()->ResolveObjectData("host", hostRef);
+        QVariantMap hostData = this->m_connection->GetCache()->ResolveObjectData("host", hostRef);
         if (hostData.isEmpty())
             return QVariant();
 
@@ -273,12 +273,12 @@ QVariant PoolGrouping::getGroup(const QVariantMap& objectData, const QString& ob
     {
         // SRs: get pool via any connected host
         QVariantList pbds = objectData.value("PBDs", QVariantList()).toList();
-        if (pbds.isEmpty() || !m_xenLib)
+        if (pbds.isEmpty() || !this->m_connection)
             return QVariant();
 
         // Get first PBD's host
         QString pbdRef = pbds.first().toString();
-        QVariantMap pbdData = m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
+        QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
         if (pbdData.isEmpty())
             return QVariant();
 
@@ -286,7 +286,7 @@ QVariant PoolGrouping::getGroup(const QVariantMap& objectData, const QString& ob
         if (hostRef.isEmpty() || hostRef == "OpaqueRef:NULL")
             return QVariant();
 
-        QVariantMap hostData = m_xenLib->getCache()->ResolveObjectData("host", hostRef);
+        QVariantMap hostData = this->m_connection->GetCache()->ResolveObjectData("host", hostRef);
         if (hostData.isEmpty())
             return QVariant();
 
@@ -324,11 +324,11 @@ QString HostGrouping::getGroupingName() const
 QString HostGrouping::getGroupName(const QVariant& group) const
 {
     // C# equivalent: Returns host.Name()
-    if (!m_xenLib || group.isNull())
+    if (!this->m_connection || group.isNull())
         return "Unknown Server";
 
     QString hostRef = group.toString();
-    QVariantMap hostData = m_xenLib->getCache()->ResolveObjectData("host", hostRef);
+    QVariantMap hostData = this->m_connection->GetCache()->ResolveObjectData("host", hostRef);
 
     if (hostData.isEmpty())
         return "Unknown Server";

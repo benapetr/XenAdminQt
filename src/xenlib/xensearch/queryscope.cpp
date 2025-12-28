@@ -36,10 +36,10 @@ QueryScope::QueryScope(ObjectTypes types)
     // C# equivalent: QueryScope constructor
 }
 
-bool QueryScope::wantType(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const
+bool QueryScope::wantType(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const
 {
     // C# equivalent: WantType(IXenObject o)
-    ObjectTypes type = objectTypeOf(objectData, objectType, xenLib);
+    ObjectTypes type = objectTypeOf(objectData, objectType, conn);
     bool wants = wantType(type);
 
     // qDebug() << "      QueryScope::wantType() - type:" << objectType
@@ -115,13 +115,13 @@ uint QueryScope::hashCode() const
     return static_cast<uint>(static_cast<int>(m_types));
 }
 
-ObjectTypes QueryScope::objectTypeOf(const QVariantMap& objectData, const QString& objectType, XenLib* xenLib) const
+ObjectTypes QueryScope::objectTypeOf(const QVariantMap& objectData, const QString& objectType, XenConnection *conn) const
 {
     // C# equivalent: ObjectTypeOf(IXenObject o)
     // Uses PropertyAccessors.Get(PropertyNames.type)
     // Returns the ObjectTypes enum value for the given object
 
-    Q_UNUSED(xenLib); // May be needed for more complex type detection
+    Q_UNUSED(conn); // May be needed for more complex type detection
 
     if (objectType == "pool")
     {

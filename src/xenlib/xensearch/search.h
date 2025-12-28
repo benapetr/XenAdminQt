@@ -33,12 +33,16 @@
 #include "query.h"
 #include "grouping.h"
 #include "sort.h"
+#include "queryscope.h"
+#include "iacceptgroups.h"
 #include <QString>
 #include <QList>
 #include <QPair>
+#include <QMap>
 
-// Forward declaration
+// Forward declarations
 class XenConnection;
+class XenLib;
 
 /**
  * @brief A search definition combining a query (what to match) with a grouping (how to organize results)
@@ -266,7 +270,86 @@ class Search
          */
         static Search* SearchForVappGroup(Grouping* grouping, const QVariant& parent, const QVariant& group);
 
+        /**
+         * @brief Create a search for a single object or collection of objects
+         *
+         * This is the default search for the overview panel when an object is selected.
+         * Pass empty list and you'll get the default overview search.
+         *
+         * C# equivalent: SearchFor(IXenObject value) and SearchFor(IEnumerable<IXenObject> objects)
+         * Lines 465-472, 398-460 in Search.cs
+         *
+         * @param objectRefs List of object refs (vm/host/pool/etc.). Empty = default overview.
+         * @param objectTypes List of object type strings corresponding to objectRefs
+         * @param xenLib XenLib instance for resolving object data
+         * @return New Search instance configured for the objects
+         */
+        static Search* SearchFor(const QStringList& objectRefs, const QStringList& objectTypes, XenLib* xenLib);
+
+        /**
+         * @brief Create a search for all types (default overview)
+         *
+         * C# equivalent: SearchForAllTypes() - Line 606 in Search.cs
+         * @return New Search instance for all object types
+         */
+        static Search* SearchForAllTypes();
+
+        /**
+         * @brief Populate UI adapters with grouped results
+         *
+         * This is the key method for the overview panel - it groups all matching objects
+         * and populates UI adapters (tree/list views) with the results.
+         *
+         * C# equivalent: PopulateAdapters(params IAcceptGroups[] adapters) - Line 205 in Search.cs
+         *
+         * Flow:
+         * 1. Query filters all XenServer objects
+         * 2. Grouping organizes filtered results into hierarchy (Pool→Host→VM)
+         * 3. Adapters receive grouped data for display
+         *
+         * @param conn XenLib instance to query objects from
+         * @param adapters List of UI adapters to populate (GroupingListModel, etc.)
+         * @return true if any objects were added to adapters
+         */
+        bool PopulateAdapters(XenConnection *conn, const QList<class IAcceptGroups*>& adapters);
+
+        /**
+         * @brief Get the default object types for overview scope
+         *
+         * C# equivalent: DefaultObjectTypes() - Line 520 in Search.cs
+         * @return ObjectTypes flags for default overview
+         */
+        static ObjectTypes DefaultObjectTypes();
+
+        /**
+         * @brief Get the overview scope (default object types + templates)
+         *
+         * C# equivalent: GetOverviewScope() - Line 527 in Search.cs
+         * @return QueryScope for overview panel
+         */
+        static QueryScope* GetOverviewScope();
+
     private:
+        /**
+         * @brief Get all objects matching the query scope and filter
+         * @param connection XenLib instance to query cache
+         * @return List of (type, ref) pairs for matched objects
+         */
+        QList<QPair<QString, QString>> getMatchedObjects(XenConnection *connection) const;
+
+        /**
+         * @brief Recursively populate grouped objects into adapter
+         * @param adapter UI adapter to populate
+         * @param grouping Grouping algorithm to apply
+         * @param objects List of objects to group
+         * @param indent Current indentation level
+         * @param conn XenLib instance for resolving data
+         * @return true if any objects were added
+         */
+        bool populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
+                                    const QList<QPair<QString, QString>>& objects,
+                                    int indent, XenConnection *conn);
+
         Query* m_query;              // The query (what to match) - owned
         Grouping* m_grouping;        // The grouping (how to organize) - owned
         QString m_name;              // Search name

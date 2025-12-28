@@ -127,6 +127,22 @@ class QueryPanel : public QTreeWidget
          */
         static void PanelHidden();
 
+        /**
+         * @brief Create a row for a specific object (called by TreeWidgetGroupAcceptor)
+         * @param grouping The grouping algorithm (may be nullptr)
+         * @param objectType The object type ("vm", "host", "pool", etc.)
+         * @param objectData Full object data map
+         * @param conn XenLib instance for resolving references
+         * @return QTreeWidgetItem populated with object data
+         */
+        QTreeWidgetItem* CreateRow(Grouping* grouping, const QString& objectType,
+                                   const QVariantMap& objectData, XenConnection *conn);
+
+        /**
+         * @brief Set the Xen Connection instance for cache access
+         */
+        void SetConnection(XenConnection* conn) { this->m_conn = conn; }
+
     signals:
         /**
          * @brief Emitted when search criteria changes (e.g., sort order)
@@ -176,6 +192,7 @@ class QueryPanel : public QTreeWidget
 
     private:
         Search* search_;
+        XenConnection* m_conn = nullptr;
         
         // Column configuration
         // Map of column name -> visible
