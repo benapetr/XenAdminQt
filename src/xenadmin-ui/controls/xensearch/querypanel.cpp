@@ -540,6 +540,21 @@ QString QueryPanel::formatMemoryUsage(XenObject* xenObject, int* percentOut) con
             {
                 QVariantMap hostMetrics = cache->ResolveObjectData("host_metrics", metricsRef);
                 qulonglong memoryTotal = hostMetrics.value("memory_total", 0).toULongLong();
+                qulonglong memoryFree = hostMetrics.value("memory_free", 0).toULongLong();
+                if (memoryTotal > 0 && memoryFree > 0 && memoryFree <= memoryTotal)
+                {
+                    qulonglong usedBytes = memoryTotal - memoryFree;
+                    double usedGB = usedBytes / (1024.0 * 1024.0 * 1024.0);
+                    double totalGB = memoryTotal / (1024.0 * 1024.0 * 1024.0);
+                    if (percentOut)
+                    {
+                        double percent = (static_cast<double>(usedBytes) / memoryTotal) * 100.0;
+                        *percentOut = qBound(0, qRound(percent), 100);
+                    }
+                    return QString("%1 GB of %2 GB")
+                        .arg(usedGB, 0, 'f', 1)
+                        .arg(totalGB, 0, 'f', 1);
+                }
                 if (memoryTotal > 0)
                 {
                     double memoryGB = memoryTotal / (1024.0 * 1024.0 * 1024.0);
