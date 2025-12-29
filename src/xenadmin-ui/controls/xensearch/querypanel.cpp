@@ -51,6 +51,7 @@
 #include <QDateTime>
 #include <QClipboard>
 #include <QGuiApplication>
+#include <cmath>
 
 // Static members
 const QStringList QueryPanel::DEFAULT_COLUMNS = QStringList()
@@ -70,7 +71,7 @@ QueryPanel::QueryPanel(QWidget* parent)
     this->setAlternatingRowColors(true);
     this->setSortingEnabled(true);
     this->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    this->setContextMenuPolicy(Qt::CustomContextMenu);
+    this->setContextMenuPolicy(Qt::DefaultContextMenu);
     this->setItemDelegateForColumn(DEFAULT_COLUMNS.indexOf("cpu"), new ProgressBarDelegate(this));
     this->setItemDelegateForColumn(DEFAULT_COLUMNS.indexOf("memory"), new ProgressBarDelegate(this));
     
@@ -417,8 +418,14 @@ QString QueryPanel::formatCpuUsage(XenObject* xenObject, int* percentOut) const
         for (int i = 0; i < vcpuCount; i++)
         {
             QString metricName = QString("cpu%1").arg(i);
-            sum += metrics->getValue("vm", uuid, metricName);
+            double value = metrics->getValue("vm", uuid, metricName);
+            if (!std::isfinite(value))
+                return "-";
+            sum += value;
         }
+
+        if (!std::isfinite(sum))
+            return "-";
 
         double avgPercent = (sum / vcpuCount) * 100.0;
         int rounded = qRound(avgPercent);
@@ -451,8 +458,14 @@ QString QueryPanel::formatCpuUsage(XenObject* xenObject, int* percentOut) const
         for (int i = 0; i < cpuCount; i++)
         {
             QString metricName = QString("cpu%1").arg(i);
-            sum += metrics->getValue("host", uuid, metricName);
+            double value = metrics->getValue("host", uuid, metricName);
+            if (!std::isfinite(value))
+                return "-";
+            sum += value;
         }
+
+        if (!std::isfinite(sum))
+            return "-";
 
         double avgPercent = (sum / cpuCount) * 100.0;
         int rounded = qRound(avgPercent);
@@ -507,12 +520,18 @@ QString QueryPanel::formatMemoryUsage(XenObject* xenObject, int* percentOut) con
         double memoryBytes = metrics->getValue("vm", uuid, "memory");
         double freeKB = metrics->getValue("vm", uuid, "memory_internal_free");
 
+        if (!std::isfinite(memoryBytes) || !std::isfinite(freeKB))
+            return "-";
+
         if (memoryBytes == 0.0)
         {
             memoryBytes = objectData.value("memory_static_max", 0).toULongLong();
             if (memoryBytes == 0)
                 return "-";
         }
+
+        if (memoryBytes < (freeKB * 1024.0))
+            return "-";
 
         double usedBytes = memoryBytes - (freeKB * 1024.0);
         double usedGB = usedBytes / (1024.0 * 1024.0 * 1024.0);
@@ -568,6 +587,9 @@ QString QueryPanel::formatMemoryUsage(XenObject* xenObject, int* percentOut) con
 
         double totalKiB = metrics->getValue("host", uuid, "memory_total_kib");
         double freeKiB = metrics->getValue("host", uuid, "memory_free_kib");
+
+        if (!std::isfinite(totalKiB) || !std::isfinite(freeKiB))
+            return "-";
 
         if (totalKiB == 0.0)
             return "-";
