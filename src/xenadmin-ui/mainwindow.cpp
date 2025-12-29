@@ -770,27 +770,24 @@ void MainWindow::showObjectTabs(XenConnection *connection, const QString& object
 // C# Reference: xenadmin/XenAdmin/MainWindow.cs lines 1771-1775
 void MainWindow::showSearchPage(XenConnection *connection, GroupingTag* groupingTag)
 {
-    if (!groupingTag || !m_searchTabPage)
+    if (!groupingTag || !this->m_searchTabPage)
         return;
 
     // Create Search object for this grouping
     // Matches C# MainWindow.cs line 1771: SearchPage.Search = Search.SearchForNonVappGroup(gt.Grouping, gt.Parent, gt.Group);
-    Search* search = Search::SearchForNonVappGroup(
-        groupingTag->getGrouping(),
-        groupingTag->getParent(),
-        groupingTag->getGroup());
+    Search* search = Search::SearchForNonVappGroup(groupingTag->getGrouping(), groupingTag->getParent(), groupingTag->getGroup());
 
-    m_searchTabPage->SetXenObject(connection, QString(), QString(), QVariantMap());
-    m_searchTabPage->setSearch(search); // SearchTabPage takes ownership
+    this->m_searchTabPage->SetXenObject(connection, QString(), QString(), QVariantMap());
+    this->m_searchTabPage->setSearch(search); // SearchTabPage takes ownership
 
     // Clear existing tabs and show only SearchTabPage
-    clearTabs();
-    ui->mainTabWidget->addTab(m_searchTabPage, m_searchTabPage->GetTitle());
-    updatePlaceholderVisibility();
+    this->clearTabs();
+    this->ui->mainTabWidget->addTab(this->m_searchTabPage, this->m_searchTabPage->GetTitle());
+    this->updatePlaceholderVisibility();
 
     // Update status bar
     QString groupName = groupingTag->getGrouping()->getGroupName(groupingTag->getGroup());
-    ui->statusbar->showMessage(tr("Showing overview: %1").arg(groupName), 3000);
+    this->ui->statusbar->showMessage(tr("Showing overview: %1").arg(groupName), 3000);
 }
 
 // C# Equivalent: SearchPage double-click handler navigates to object

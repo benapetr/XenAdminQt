@@ -314,9 +314,6 @@ Search* Search::SearchForAllTypes()
 
 bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& adapters)
 {
-    if (!conn)
-        return false;
-
     // C# equivalent: PopulateAdapters(params IAcceptGroups[] adapters) - Line 205 in Search.cs
     //
     // C# code:
@@ -391,6 +388,9 @@ QList<QPair<QString, QString>> Search::getMatchedObjects(XenConnection* connecti
 {
     // Get all objects from cache that match the query scope and filter
     QList<QPair<QString, QString>> matchedObjects;
+
+    //if (!connection || !connection->GetCache())
+    //    return matchedObjects;
 
     QueryScope* scope = this->m_query->getQueryScope();
     QueryFilter* filter = this->m_query->getQueryFilter();

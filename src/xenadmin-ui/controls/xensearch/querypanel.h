@@ -141,7 +141,6 @@ class QueryPanel : public QTreeWidget
         /**
          * @brief Set the Xen Connection instance for cache access
          */
-        void SetConnection(XenConnection* conn) { this->m_conn = conn; }
 
     signals:
         /**
@@ -195,7 +194,6 @@ class QueryPanel : public QTreeWidget
 
     private:
         Search* search_;
-        XenConnection* m_conn = nullptr;
         
         // Column configuration
         // Map of column name -> visible

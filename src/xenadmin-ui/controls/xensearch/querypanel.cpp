@@ -95,8 +95,7 @@ QueryPanel::QueryPanel(QWidget* parent)
     this->updateThrottleTimer_ = new QTimer(this);
     this->updateThrottleTimer_->setSingleShot(true);
     this->updateThrottleTimer_->setInterval(100);
-    connect(this->updateThrottleTimer_, &QTimer::timeout,
-            this, &QueryPanel::buildListInternal);
+    connect(this->updateThrottleTimer_, &QTimer::timeout, this, &QueryPanel::buildListInternal);
     
     // Setup static metrics timer if not already created
     if (!metricsUpdateTimer_)
@@ -232,12 +231,19 @@ void QueryPanel::buildListInternal()
     }*/
 
     // Use Search.PopulateAdapters() to filter, group, and populate the tree
-    // This delegates to the Search object which applies QueryScope, QueryFilter, and Grouping
+    // This delegates to the Search object which applies QueryScope, QueryFilter, and Grouping.
+    // C# runs global searches across all connected connections (no single connection required).
     TreeWidgetGroupAcceptor adapter(this, this);
     QList<IAcceptGroups*> adapters;
     adapters.append(&adapter);
 
-    bool addedAny = this->search_->PopulateAdapters(this->m_conn, adapters);
+    bool addedAny = false;
+    for (XenConnection* connection : connections)
+    {
+        if (!connection)
+            continue;
+        addedAny |= this->search_->PopulateAdapters(connection, adapters);
+    }
 
     if (!addedAny)
     {

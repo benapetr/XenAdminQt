@@ -105,17 +105,12 @@ void SearchTabPage::setSearch(Search* search)
     delete this->m_search;
     this->m_search = search;
 
-    if (this->m_search && this->m_connection)
-        this->m_search->SetConnection(this->m_connection);
-
     if (this->m_searcher)
         this->m_searcher->SetSearch(this->m_search);
 
     if (this->m_output)
     {
         this->m_output->SetSearch(this->m_search);
-        if (this->m_output->GetQueryPanel())
-            this->m_output->GetQueryPanel()->SetConnection(this->m_connection);
     }
 
     this->buildList();
@@ -139,8 +134,6 @@ void SearchTabPage::onSearchChanged()
     Search* search = this->m_searcher ? this->m_searcher->GetSearch() : nullptr;
     if (search)
     {
-        if (this->m_connection)
-            search->SetConnection(this->m_connection);
         this->setSearch(search);
     }
 
