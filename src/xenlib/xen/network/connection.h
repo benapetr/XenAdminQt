@@ -193,6 +193,8 @@ class XENLIB_EXPORT XenConnection : public QObject
         void taskAdded(const QString& taskRef, const QVariantMap& taskData);
         void taskModified(const QString& taskRef, const QVariantMap& taskData);
         void taskDeleted(const QString& taskRef);
+        void messageReceived(const QString& messageRef, const QVariantMap& messageData);
+        void messageRemoved(const QString& messageRef);
 
         /**
          * @brief Emitted when async API request completes
@@ -218,6 +220,7 @@ class XENLIB_EXPORT XenConnection : public QObject
         void connectWorkerThread();
         void handleConnectionLostNewFlow();
         int reconnectHostTimeoutMs() const;
+        QVariantMap fetchObjectRecord(const QString& cacheType, const QString& ref) const;
         void startReconnectSingleHostTimer();
         void startReconnectCoordinatorTimer(int timeoutMs);
         void reconnectSingleHostTimer();

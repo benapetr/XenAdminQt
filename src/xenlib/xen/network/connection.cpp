@@ -550,6 +550,23 @@ void XenConnection::onCacheUpdateTimer()
 
         QString cacheType = eventClass.toLower();
 
+        if (cacheType == "message")
+        {
+            if (operation == "add" || operation == "mod")
+            {
+                QVariantMap snapshot = eventData.value("snapshot").toMap();
+                if (!snapshot.isEmpty())
+                {
+                    snapshot["ref"] = ref;
+                    snapshot["opaqueRef"] = ref;
+                    emit this->messageReceived(ref, snapshot);
+                }
+            } else if (operation == "del")
+            {
+                emit this->messageRemoved(ref);
+            }
+        }
+
         if (operation == "del")
         {
             if (this->d->cache)
@@ -565,7 +582,14 @@ void XenConnection::onCacheUpdateTimer()
                     this->d->cache->Update(cacheType, ref, snapshot);
             } else
             {
-                // TODO: fetch full record when snapshot is missing (mirrors XenLib::requestObjectData).
+                QVariantMap record = this->fetchObjectRecord(cacheType, ref);
+                if (!record.isEmpty())
+                {
+                    record["ref"] = ref;
+                    record["opaqueRef"] = ref;
+                    if (this->d->cache)
+                        this->d->cache->Update(cacheType, ref, record);
+                }
             }
         }
     }
@@ -586,6 +610,43 @@ void XenConnection::onCacheUpdateTimer()
                 this->d->cacheUpdateTimer->start(50);
         }
     }
+}
+
+QVariantMap XenConnection::fetchObjectRecord(const QString& cacheType, const QString& ref) const
+{
+    Session* session = this->GetSession();
+    if (!session || ref.isEmpty() || cacheType.isEmpty())
+        return QVariantMap();
+
+    QString apiClass = cacheType.toLower();
+    if (apiClass == "vm" || apiClass == "vbd" || apiClass == "vdi" ||
+        apiClass == "vif" || apiClass == "sr" || apiClass == "pbd" ||
+        apiClass == "pif")
+    {
+        apiClass = apiClass.toUpper();
+    }
+
+    XenRpcAPI api(session);
+    QVariantList params;
+    params.append(session->getSessionId());
+    params.append(ref);
+
+    const QString methodName = QString("%1.get_record").arg(apiClass);
+    QByteArray jsonRequest = api.buildJsonRpcCall(methodName, params);
+    QByteArray response = session->sendApiRequest(QString::fromUtf8(jsonRequest));
+    if (response.isEmpty())
+        return QVariantMap();
+
+    QVariant parsed = api.parseJsonRpcResponse(response);
+    if (Misc::QVariantIsMap(parsed))
+    {
+        QVariantMap map = parsed.toMap();
+        QVariant value = map.contains("Value") ? map.value("Value") : parsed;
+        if (Misc::QVariantIsMap(value))
+            return value.toMap();
+    }
+
+    return QVariantMap();
 }
 
 void XenConnection::onEventPollerEventReceived(const QVariantMap& eventData)

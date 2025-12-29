@@ -171,7 +171,6 @@ class XENLIB_EXPORT XenLib : public QObject
     private slots:
         void handleConnectionStateChanged(bool connected);
         void handleConnectionError(const QString& error);
-        void handleLoginResult(bool success);
         void handleApiCallResult(const QString& method, const QVariant& result);
         void handleApiCallError(const QString& method, const QString& error);
 
@@ -188,7 +187,6 @@ class XENLIB_EXPORT XenLib : public QObject
         void onPoolsReceivedForHATracking(const QVariantList& pools);
 
         // EventPoller handlers
-        void onEventReceived(const QVariantMap& eventData);
         void onCachePopulated();
         void onEventPollerConnectionLost();
 

@@ -314,6 +314,9 @@ Search* Search::SearchForAllTypes()
 
 bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& adapters)
 {
+    if (!conn)
+        return false;
+
     // C# equivalent: PopulateAdapters(params IAcceptGroups[] adapters) - Line 205 in Search.cs
     //
     // C# code:

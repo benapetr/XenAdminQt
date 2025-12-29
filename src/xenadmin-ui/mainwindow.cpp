@@ -234,8 +234,6 @@ MainWindow::MainWindow(QWidget* parent)
 
     // Connect XenAPI message signals to AlertManager for alert system
     // C# Reference: MainWindow.cs line 703 - connection.Cache.RegisterCollectionChanged<Message>
-    connect(this->m_xenLib, &XenLib::messageReceived, this, &MainWindow::onMessageReceived);
-    connect(this->m_xenLib, &XenLib::messageRemoved, this, &MainWindow::onMessageRemoved);
 
     // Get NavigationPane from UI (matches C# MainWindow.navigationPane)
     this->m_navigationPane = this->ui->navigationPane;
@@ -621,6 +619,8 @@ void MainWindow::onConnectionAdded(XenConnection* connection)
     connect(connection, &XenConnection::taskAdded, this, &MainWindow::onConnectionTaskAdded);
     connect(connection, &XenConnection::taskModified, this, &MainWindow::onConnectionTaskModified);
     connect(connection, &XenConnection::taskDeleted, this, &MainWindow::onConnectionTaskDeleted);
+    connect(connection, &XenConnection::messageReceived, this, &MainWindow::onMessageReceived);
+    connect(connection, &XenConnection::messageRemoved, this, &MainWindow::onMessageRemoved);
 }
 
 void MainWindow::onConnectionTaskAdded(const QString& taskRef, const QVariantMap& taskData)
@@ -1926,11 +1926,16 @@ void MainWindow::onCacheObjectChanged(XenConnection* connection, const QString& 
 
 void MainWindow::onMessageReceived(const QString& messageRef, const QVariantMap& messageData)
 {
+    (void) messageRef;
     // C# Reference: MainWindow.cs line 1000 - Alert.AddAlert(MessageAlert.ParseMessage(m))
     // Create alert from XenAPI message and add to AlertManager
     
     // Use factory method to create appropriate alert type
-    Alert* alert = MessageAlert::parseMessage(m_xenLib->getConnection(), messageData);
+    XenConnection* connection = qobject_cast<XenConnection*>(sender());
+    if (!connection)
+        return;
+
+    Alert* alert = MessageAlert::parseMessage(connection, messageData);
     if (alert)
     {
         AlertManager::instance()->addAlert(alert);

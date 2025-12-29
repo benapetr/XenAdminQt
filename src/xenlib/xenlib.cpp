@@ -184,28 +184,28 @@ void XenLib::setupConnections()
     // That signal means "TCP/SSL ready", not "logged in".
     // connectionStateChanged is emitted from handleLoginResult() after successful login.
 
-    connect(this->d->connection, &XenConnection::disconnected,
-            [this]() { this->handleConnectionStateChanged(false); });
-    connect(this->d->connection, &XenConnection::error, this, &XenLib::handleConnectionError);
+    //connect(this->d->connection, &XenConnection::disconnected,
+    //        [this]() { this->handleConnectionStateChanged(false); });
+    //connect(this->d->connection, &XenConnection::error, this, &XenLib::handleConnectionError);
 
     // Async API response signal
     connect(this->d->connection, &XenConnection::apiResponse, this, &XenLib::onConnectionApiResponse);
 
     // Session signals
-    connect(this->d->session, &XenAPI::Session::loginSuccessful,
+    /*connect(this->d->session, &XenAPI::Session::loginSuccessful,
             [this]() { this->handleLoginResult(true); });
     connect(this->d->session, &XenAPI::Session::loginFailed,
             [this](const QString& reason) {
                 this->setError(reason);
                 this->handleLoginResult(false);
             });
+    */
 
     // API signals
     connect(this->d->api, &XenRpcAPI::apiCallCompleted, this, &XenLib::handleApiCallResult);
     connect(this->d->api, &XenRpcAPI::apiCallFailed, this, &XenLib::handleApiCallError);
 
     // EventPoller signals
-    connect(this->d->eventPoller, &EventPoller::eventReceived, this, &XenLib::onEventReceived);
     connect(this->d->eventPoller, &EventPoller::cachePopulated, this, &XenLib::onCachePopulated);
     connect(this->d->eventPoller, &EventPoller::connectionLost, this, &XenLib::onEventPollerConnectionLost);
 
@@ -1577,85 +1577,6 @@ void XenLib::handleConnectionError(const QString& error)
     emit this->connectionError(error);
 }
 
-void XenLib::handleLoginResult(bool success)
-{
-    if (success)
-    {
-        qDebug() << timestamp() << "XenLib: Login successful!";
-        if (this->d->session)
-        {
-            qDebug() << timestamp() << "XenLib: Session ID"
-                     << this->d->session->getSessionId().left(20) + "...";
-        }
-        this->d->connected = true;
-
-        // Build connection info with session ID
-        this->d->connectionInfo = QString("%1:%2")
-                                      .arg(this->d->connection->GetHostname())
-                                      .arg(this->d->connection->GetPort());
-
-        // qDebug() << timestamp() << "XenLib:" << QString("Connected to %1:%2 with session %3")
-        //                                             .arg(this->d->connection->getHostname())
-        //                                             .arg(this->d->connection->getPort())
-        //                                             .arg(this->d->session->getSessionId());
-
-        // Populate cache with all objects for instant lookups
-        // CRITICAL: This is now SYNCHRONOUS and returns the event token
-        // This matches C# XenObjectDownloader.GetAllObjects() pattern
-        qDebug() << timestamp() << "XenLib: Populating cache (synchronous)...";
-        QString eventToken = this->populateCache();
-
-        if (eventToken.isEmpty())
-        {
-            qWarning() << timestamp() << "XenLib: Cache population failed or returned no token";
-        } else
-        {
-            qDebug() << timestamp() << "XenLib: Cache population complete, received token:" << eventToken.left(20) + "...";
-        }
-
-        // Initialize EventPoller by duplicating our session (creates separate connection stack)
-        // This prevents event.from's 30-second long-poll from blocking main API requests
-        // IMPORTANT: Use invokeMethod to call initialize() on EventPoller's thread to avoid
-        // "Cannot create children for a parent that is in a different thread" warnings
-        qDebug() << timestamp() << "XenLib: Preparing EventPoller for new session (reset+init)...";
-        // Ensure the poller drops any stale duplicated session before re-init
-        QMetaObject::invokeMethod(this->d->eventPoller, [this]() {
-            this->d->eventPoller->reset();
-            this->d->eventPoller->initialize(this->d->session); }, Qt::BlockingQueuedConnection);
-
-        // Start EventPoller with the token from cache population
-        // This ensures the poller continues from where cache population left off,
-        // preventing xapi violation of overlapping event.from calls
-        qDebug() << timestamp() << "XenLib: Starting EventPoller with token from cache population...";
-        QStringList eventClasses = {
-            "vm", "host", "pool", "sr", "vbd", "vdi", "vif",
-            "network", "pbd", "pif", "task", "message", "console",
-            "vm_guest_metrics", "host_metrics", "vm_metrics"};
-        QMetaObject::invokeMethod(this->d->eventPoller, [this, eventClasses, eventToken]() { this->d->eventPoller->start(eventClasses, eventToken); }, Qt::QueuedConnection);
-
-        emit this->connectionStateChanged(true);
-    } else
-    {
-        qWarning() << timestamp() << "XenLib: Login failed";
-        this->d->connected = false;
-
-        // Don't emit authenticationFailed or connectionStateChanged if we're in the middle of a HOST_IS_SLAVE redirect
-        // The redirect will be handled transparently and reconnection will be automatic
-        if (!this->d->isRedirecting)
-        {
-            // Emit specific authentication failure signal with connection details
-            // This allows the UI to show a retry dialog with credentials pre-filled
-            emit this->authenticationFailed(this->d->pendingHostname,
-                                            this->d->pendingPort,
-                                            this->d->pendingUsername,
-                                            this->d->lastError);
-
-            emit this->connectionStateChanged(false);
-        }
-        // Error already set by XenSession signal handler
-    }
-}
-
 void XenLib::onConnectionEstablished()
 {
     // qDebug() << "XenLib: TCP/SSL connection established";
@@ -2647,88 +2568,6 @@ QString XenLib::populateCache()
     }
 
     return token;
-}
-
-void XenLib::onEventReceived(const QVariantMap& eventData)
-{
-    // Process XenServer events and update cache
-    //
-    // Normalize field naming differences between XML-RPC ("class", "ref") and JSON-RPC ("class_", "opaqueRef")
-    auto valueForKeys = [](const QVariantMap& map, std::initializer_list<const char*> keys) -> QString {
-        for (const char* key : keys)
-        {
-            const QString value = map.value(QString::fromLatin1(key)).toString();
-            if (!value.isEmpty())
-                return value;
-        }
-        return QString();
-    };
-
-    QString eventClass = valueForKeys(eventData, {"class_", "class"});
-    QString operation = eventData.value("operation").toString(); // Same in both protocols
-    QString ref = valueForKeys(eventData, {"opaqueRef", "ref"});
-
-    if (eventClass.isEmpty() || operation.isEmpty() || ref.isEmpty())
-    {
-        // Silently ignore invalid events - these might be partial/continuation data
-        return;
-    }
-
-    // Normalize class name to match our cache naming
-    QString cacheType = eventClass.toLower();
-
-    // Special handling for XenAPI Messages - create alerts
-    // C# Reference: MainWindow.cs line 993 - MessageCollectionChanged()
-    if (cacheType == "message")
-    {
-        if (operation == "add" || operation == "mod")
-        {
-            // Get message snapshot
-            QVariantMap snapshot = eventData.value("snapshot").toMap();
-            if (!snapshot.isEmpty())
-            {
-                snapshot["ref"] = ref;
-                snapshot["opaqueRef"] = ref;
-                
-                // TODO: Check if message should be shown as alert
-                // C# checks: !m.ShowOnGraphs() && !m.IsSquelched()
-                // For now, create alert for all messages
-                emit this->messageReceived(ref, snapshot);
-            }
-        }
-        else if (operation == "del")
-        {
-            // Message was dismissed/deleted
-            emit this->messageRemoved(ref);
-        }
-    }
-
-    if (operation == "del")
-    {
-        // Remove object from cache
-        // qDebug() << "XenLib: Event - Removing" << cacheType << ref;
-        if (XenCache* cache = GetCache())
-            cache->Remove(cacheType, ref);
-    } else if (operation == "add" || operation == "mod")
-    {
-        // Get snapshot from event
-        QVariantMap snapshot = eventData.value("snapshot").toMap();
-
-        if (!snapshot.isEmpty())
-        {
-            // Add ref to snapshot
-            snapshot["ref"] = ref;
-            snapshot["opaqueRef"] = ref;
-
-            // qDebug() << "XenLib: Event -" << operation << cacheType << ref;
-            GetCache()->Update(cacheType, ref, snapshot);
-        } else
-        {
-            // Snapshot not provided - fetch full record
-            // qDebug() << "XenLib: Event - No snapshot, fetching" << cacheType << ref;
-            this->requestObjectData(cacheType, ref);
-        }
-    }
 }
 
 void XenLib::onCachePopulated()
