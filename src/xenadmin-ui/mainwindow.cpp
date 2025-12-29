@@ -579,10 +579,13 @@ void MainWindow::onCachePopulated()
     // Start MetricUpdater to begin fetching RRD performance metrics
     // C# Equivalent: MetricUpdater.Start() called after connection established
     // C# Reference: xenadmin/XenModel/XenConnection.cs line 780
-    if (m_xenLib && m_xenLib->getMetricUpdater())
+    XenConnection* connection = qobject_cast<XenConnection*>(sender());
+    if (!connection && m_xenLib)
+        connection = m_xenLib->getConnection();
+    if (connection && connection->GetMetricUpdater())
     {
         qDebug() << "MainWindow: Starting MetricUpdater for performance metrics";
-        m_xenLib->getMetricUpdater()->start();
+        connection->GetMetricUpdater()->start();
     }
 }
 

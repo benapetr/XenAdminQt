@@ -420,6 +420,12 @@ void ConnectionsManager::setupConnection(XenConnection* connection)
             this, [this, connection]() {
                 this->onHeartbeatConnectionLost(connection);
             });
+    connect(heartbeat, &XenHeartbeat::serverTimeUpdated,
+            this, [connection](const QDateTime& serverTime, const QDateTime& localTime) {
+                Q_UNUSED(serverTime);
+                const qint64 offsetSeconds = serverTime.secsTo(localTime);
+                connection->SetServerTimeOffsetSeconds(offsetSeconds);
+            });
 
     // Initialize state tracking
     this->m_connectionStates[connection] = "new";

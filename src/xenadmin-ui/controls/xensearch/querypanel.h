@@ -158,6 +158,9 @@ class QueryPanel : public QTreeWidget
         void onSortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
 
     private:
+        void copyCell(QTreeWidgetItem* item, int column) const;
+        void copyRow(QTreeWidgetItem* item) const;
+
         // Column management
         void setupColumns();
         void showColumn(const QString& column);

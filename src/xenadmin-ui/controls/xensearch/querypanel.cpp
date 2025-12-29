@@ -49,6 +49,8 @@
 #include <QContextMenuEvent>
 #include <QDebug>
 #include <QDateTime>
+#include <QClipboard>
+#include <QGuiApplication>
 
 // Static members
 const QStringList QueryPanel::DEFAULT_COLUMNS = QStringList()
@@ -1143,8 +1145,43 @@ bool QueryPanel::IsSortingByMetrics() const
 
 void QueryPanel::contextMenuEvent(QContextMenuEvent* event)
 {
-    // Show column chooser menu
-    this->ShowChooseColumnsMenu(event->pos());
+    QTreeWidgetItem* item = this->itemAt(event->pos());
+    if (!item)
+    {
+        this->ShowChooseColumnsMenu(event->pos());
+        return;
+    }
+
+    QMenu menu(this);
+    QAction* copyCellAction = menu.addAction(tr("Copy Cell"));
+    QAction* copyRowAction = menu.addAction(tr("Copy Row"));
+    menu.addSeparator();
+    QAction* columnsAction = menu.addAction(tr("Columns..."));
+
+    QAction* chosen = menu.exec(event->globalPos());
+    if (!chosen)
+        return;
+
+    if (chosen == copyCellAction)
+    {
+        int column = this->columnAt(event->pos().x());
+        if (column < 0)
+            column = 0;
+        this->copyCell(item, column);
+        return;
+    }
+
+    if (chosen == copyRowAction)
+    {
+        this->copyRow(item);
+        return;
+    }
+
+    if (chosen == columnsAction)
+    {
+        this->ShowChooseColumnsMenu(event->pos());
+        return;
+    }
 }
 
 void QueryPanel::onHeaderContextMenu(const QPoint& point)
@@ -1174,6 +1211,35 @@ void QueryPanel::onSortIndicatorChanged(int logicalIndex, Qt::SortOrder order)
     
     // Notify that search changed (sort order changed)
     emit this->SearchChanged();
+}
+
+void QueryPanel::copyCell(QTreeWidgetItem* item, int column) const
+{
+    if (!item || column < 0 || column >= this->columnCount())
+        return;
+
+    const QString text = item->text(column);
+    QClipboard* clipboard = QGuiApplication::clipboard();
+    if (clipboard)
+        clipboard->setText(text);
+}
+
+void QueryPanel::copyRow(QTreeWidgetItem* item) const
+{
+    if (!item)
+        return;
+
+    QStringList cells;
+    for (int col = 0; col < this->columnCount(); ++col)
+    {
+        if (this->isColumnHidden(col))
+            continue;
+        cells.append(item->text(col));
+    }
+
+    QClipboard* clipboard = QGuiApplication::clipboard();
+    if (clipboard)
+        clipboard->setText(cells.join("\t"));
 }
 
 void QueryPanel::PanelShown()

@@ -241,12 +241,11 @@ qint64 MetricUpdater::getStartTimestamp() const
     // Request data from 10 seconds ago (to account for clock skew and ensure we get recent data)
 
     QDateTime now = QDateTime::currentDateTimeUtc();
-    qint64 tenSecondsAgo = now.toSecsSinceEpoch() - 10;
+    qint64 offsetSeconds = 0;
+    if (m_connection)
+        offsetSeconds = m_connection->GetServerTimeOffsetSeconds();
 
-    // TODO: Account for server time offset if available
-    // For now, use local UTC time
-
-    return tenSecondsAgo;
+    return now.toSecsSinceEpoch() - offsetSeconds - 10;
 }
 
 void MetricUpdater::parseRrdXml(const QByteArray& xmlData)
@@ -344,6 +343,11 @@ void MetricUpdater::parseRrdXml(const QByteArray& xmlData)
         return;
     }
 
+    if (metricKeys.isEmpty())
+    {
+        qWarning() << "MetricUpdater: No legend entries found in RRD response";
+    }
+
     // Update cache with new metrics
     {
         QMutexLocker locker(&m_metricsMutex);
@@ -387,6 +391,8 @@ void MetricUpdater::onNetworkReplyFinished(QNetworkReply* reply)
         qWarning() << "MetricUpdater: Empty response from RRD endpoint";
         return;
     }
+
+    qDebug() << "MetricUpdater: RRD response head:" << QString::fromUtf8(data.left(200));
 
     onRrdDataReceived(data);
 }

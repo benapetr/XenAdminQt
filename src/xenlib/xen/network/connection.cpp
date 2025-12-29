@@ -102,6 +102,7 @@ class XenConnection::Private
         // Failover state
         bool expectDisruption = false;
         bool coordinatorMayChange = false;
+        qint64 serverTimeOffsetSeconds = 0;
 
         // C#-style connection flow scaffolding
         ConnectTask* connectTask = nullptr;
@@ -866,6 +867,7 @@ void XenConnection::connectWorkerThread()
     }
 
     this->d->connectTask->Session = session;
+    this->SetSession(session);
     this->d->connectTask->Connected = true;
     this->d->expectPasswordIsCorrect = true;
     emit this->connectionMessageChanged(QString("Synchronizing with %1...").arg(this->d->host));
@@ -1300,6 +1302,16 @@ bool XenConnection::getCoordinatorMayChange() const
 void XenConnection::setCoordinatorMayChange(bool mayChange)
 {
     this->d->coordinatorMayChange = mayChange;
+}
+
+qint64 XenConnection::GetServerTimeOffsetSeconds() const
+{
+    return this->d->serverTimeOffsetSeconds;
+}
+
+void XenConnection::SetServerTimeOffsetSeconds(qint64 offsetSeconds)
+{
+    this->d->serverTimeOffsetSeconds = offsetSeconds;
 }
 
 // Cache access (each connection has its own cache)

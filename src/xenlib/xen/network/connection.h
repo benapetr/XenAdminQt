@@ -91,8 +91,7 @@ class XENLIB_EXPORT XenConnection : public QObject
                                   QString* redirectHostname = nullptr);
 
         // C#-style connection flow scaffolding (not wired into current runtime).
-        void BeginConnect(bool initiateCoordinatorSearch,
-                          const PasswordPrompt& promptForNewPassword = PasswordPrompt());
+        void BeginConnect(bool initiateCoordinatorSearch, const PasswordPrompt& promptForNewPassword = PasswordPrompt());
         void EndConnect(bool clearCache = true, bool exiting = false);
         void Interrupt();
         ConnectTask* GetConnectTask() const;
@@ -161,6 +160,9 @@ class XENLIB_EXPORT XenConnection : public QObject
         void setExpectDisruption(bool expect);
         bool getCoordinatorMayChange() const;
         void setCoordinatorMayChange(bool mayChange);
+
+        qint64 GetServerTimeOffsetSeconds() const;
+        void SetServerTimeOffsetSeconds(qint64 offsetSeconds);
 
         // Certificate management
         void setCertificateManager(XenCertificateManager* certManager);
