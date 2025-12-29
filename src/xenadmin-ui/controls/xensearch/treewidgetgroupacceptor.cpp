@@ -74,8 +74,12 @@ IAcceptGroups* TreeWidgetGroupAcceptor::Add(Grouping* grouping, const QVariant& 
     }
     else
     {
+        // Leaf object - ensure objectData carries a usable ref for CreateRow
+        QVariantMap mutableData = objectData;
+        if (!mutableData.contains("opaque_ref"))
+            mutableData.insert("opaque_ref", group.toString());
         // Leaf object - delegate to QueryPanel to create proper row
-        item = this->queryPanel_->CreateRow(grouping, objectType, objectData, conn);
+        item = this->queryPanel_->CreateRow(grouping, objectType, mutableData, conn);
     }
 
     if (!item)

@@ -41,11 +41,14 @@
 #include "xen/vm.h"
 #include "xen/host.h"
 #include "xen/pool.h"
+#include "../../widgets/progressbardelegate.h"
+#include "xenlib/metricupdater.h"
 #include <QHeaderView>
 #include <QMenu>
 #include <QAction>
 #include <QContextMenuEvent>
 #include <QDebug>
+#include <QDateTime>
 
 // Static members
 const QStringList QueryPanel::DEFAULT_COLUMNS = QStringList()
@@ -66,6 +69,8 @@ QueryPanel::QueryPanel(QWidget* parent)
     this->setSortingEnabled(true);
     this->setSelectionMode(QAbstractItemView::ExtendedSelection);
     this->setContextMenuPolicy(Qt::CustomContextMenu);
+    this->setItemDelegateForColumn(DEFAULT_COLUMNS.indexOf("cpu"), new ProgressBarDelegate(this));
+    this->setItemDelegateForColumn(DEFAULT_COLUMNS.indexOf("memory"), new ProgressBarDelegate(this));
     
     // Setup header
     this->header()->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -102,11 +107,7 @@ QueryPanel::QueryPanel(QWidget* parent)
 
 QueryPanel::~QueryPanel()
 {
-    if (this->search_)
-    {
-        delete this->search_;
-        this->search_ = nullptr;
-    }
+    this->search_ = nullptr;
 }
 
 void QueryPanel::setupColumns()
@@ -132,11 +133,6 @@ void QueryPanel::setupColumns()
 
 void QueryPanel::SetSearch(Search* search)
 {
-    if (this->search_)
-    {
-        delete this->search_;
-    }
-    
     this->search_ = search;
     
     if (this->search_)
@@ -248,8 +244,7 @@ void QueryPanel::buildListInternal()
     this->restoreRowStates();
 }
 
-QTreeWidgetItem* QueryPanel::CreateRow(Grouping* grouping, const QString& objectType,
-                                        const QVariantMap& objectData, XenConnection* conn)
+QTreeWidgetItem* QueryPanel::CreateRow(Grouping* grouping, const QString& objectType, const QVariantMap& objectData, XenConnection* conn)
 {
     Q_UNUSED(grouping);
     
@@ -257,6 +252,12 @@ QTreeWidgetItem* QueryPanel::CreateRow(Grouping* grouping, const QString& object
         return nullptr;
 
     QString ref = objectData.value("opaque_ref").toString();
+    if (ref.isEmpty())
+        ref = objectData.value("_ref").toString();
+    if (ref.isEmpty())
+        ref = objectData.value("ref").toString();
+    if (ref.isEmpty())
+        ref = objectData.value("opaqueRef").toString();
     if (ref.isEmpty())
         return nullptr;
 
@@ -328,11 +329,15 @@ void QueryPanel::populateRow(QTreeWidgetItem* item, XenObject* xenObject)
         }
         else if (columnName == "cpu")
         {
-            value = this->formatCpuUsage(xenObject);
+            int percent = -1;
+            value = this->formatCpuUsage(xenObject, &percent);
+            item->setData(col, Qt::UserRole, percent);
         }
         else if (columnName == "memory")
         {
-            value = this->formatMemoryUsage(xenObject);
+            int percent = -1;
+            value = this->formatMemoryUsage(xenObject, &percent);
+            item->setData(col, Qt::UserRole, percent);
         }
         else if (columnName == "disks")
         {
@@ -360,60 +365,524 @@ void QueryPanel::populateRow(QTreeWidgetItem* item, XenObject* xenObject)
     }
 }
 
-QString QueryPanel::formatCpuUsage(XenObject* xenObject) const
+QString QueryPanel::formatCpuUsage(XenObject* xenObject, int* percentOut) const
 {
-    // TODO: Implement metrics reading
-    Q_UNUSED(xenObject);
-    return QString("--");
+    if (percentOut)
+        *percentOut = -1;
+
+    if (!xenObject)
+        return QString("--");
+
+    const QString objectType = xenObject->GetObjectType();
+    const QVariantMap objectData = xenObject->GetData();
+    XenConnection* connection = xenObject->GetConnection();
+    if (!connection)
+        return QString("--");
+
+    MetricUpdater* metrics = connection->GetMetricUpdater();
+    XenCache* cache = connection->GetCache();
+
+    if (objectType == "vm")
+    {
+        QString powerState = objectData.value("power_state", "").toString();
+        if (powerState != "Running")
+            return "";
+
+        QString metricsRef = objectData.value("metrics", "").toString();
+        if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL" || !cache)
+            return "-";
+
+        QVariantMap vmMetrics = cache->ResolveObjectData("vm_metrics", metricsRef);
+        if (vmMetrics.isEmpty())
+            return "-";
+
+        int vcpuCount = vmMetrics.value("VCPUs_number", 0).toInt();
+        if (vcpuCount == 0)
+            return "-";
+
+        QString uuid = objectData.value("uuid", "").toString();
+        if (uuid.isEmpty())
+            return "-";
+
+        if (!metrics || !metrics->hasMetrics("vm", uuid))
+        {
+            if (vcpuCount == 1)
+                return QString("-% of 1 CPU");
+            return QString("-% of %1 CPUs").arg(vcpuCount);
+        }
+
+        double sum = 0.0;
+        for (int i = 0; i < vcpuCount; i++)
+        {
+            QString metricName = QString("cpu%1").arg(i);
+            sum += metrics->getValue("vm", uuid, metricName);
+        }
+
+        double avgPercent = (sum / vcpuCount) * 100.0;
+        int rounded = qRound(avgPercent);
+        if (percentOut)
+            *percentOut = qBound(0, rounded, 100);
+
+        if (vcpuCount == 1)
+            return QString("%1% of 1 CPU").arg(rounded);
+        return QString("%1% of %2 CPUs").arg(rounded).arg(vcpuCount);
+    }
+
+    if (objectType == "host")
+    {
+        int cpuCount = objectData.value("cpu_count", 0).toInt();
+        if (cpuCount == 0)
+            return "-";
+
+        QString uuid = objectData.value("uuid", "").toString();
+        if (uuid.isEmpty())
+            return "-";
+
+        if (!metrics || !metrics->hasMetrics("host", uuid))
+        {
+            if (cpuCount == 1)
+                return QString("-% of 1 CPU");
+            return QString("-% of %1 CPUs").arg(cpuCount);
+        }
+
+        double sum = 0.0;
+        for (int i = 0; i < cpuCount; i++)
+        {
+            QString metricName = QString("cpu%1").arg(i);
+            sum += metrics->getValue("host", uuid, metricName);
+        }
+
+        double avgPercent = (sum / cpuCount) * 100.0;
+        int rounded = qRound(avgPercent);
+        if (percentOut)
+            *percentOut = qBound(0, rounded, 100);
+
+        if (cpuCount == 1)
+            return QString("%1% of 1 CPU").arg(rounded);
+        return QString("%1% of %2 CPUs").arg(rounded).arg(cpuCount);
+    }
+
+    return "";
 }
 
-QString QueryPanel::formatMemoryUsage(XenObject* xenObject) const
+QString QueryPanel::formatMemoryUsage(XenObject* xenObject, int* percentOut) const
 {
-    // TODO: Implement metrics reading
-    Q_UNUSED(xenObject);
-    return QString("--");
+    if (percentOut)
+        *percentOut = -1;
+
+    if (!xenObject)
+        return QString("--");
+
+    const QString objectType = xenObject->GetObjectType();
+    const QVariantMap objectData = xenObject->GetData();
+    XenConnection* connection = xenObject->GetConnection();
+    if (!connection)
+        return QString("--");
+
+    MetricUpdater* metrics = connection->GetMetricUpdater();
+    XenCache* cache = connection->GetCache();
+
+    if (objectType == "vm")
+    {
+        QString powerState = objectData.value("power_state", "").toString();
+        if (powerState != "Running")
+            return "";
+
+        QString uuid = objectData.value("uuid", "").toString();
+        if (uuid.isEmpty())
+            return "-";
+
+        if (!metrics || !metrics->hasMetrics("vm", uuid))
+        {
+            qulonglong memoryBytes = objectData.value("memory_static_max", 0).toULongLong();
+            if (memoryBytes == 0)
+                return "-";
+
+            double memoryGB = memoryBytes / (1024.0 * 1024.0 * 1024.0);
+            return QString("%1 GB").arg(memoryGB, 0, 'f', 1);
+        }
+
+        double memoryBytes = metrics->getValue("vm", uuid, "memory");
+        double freeKB = metrics->getValue("vm", uuid, "memory_internal_free");
+
+        if (memoryBytes == 0.0)
+        {
+            memoryBytes = objectData.value("memory_static_max", 0).toULongLong();
+            if (memoryBytes == 0)
+                return "-";
+        }
+
+        double usedBytes = memoryBytes - (freeKB * 1024.0);
+        double usedGB = usedBytes / (1024.0 * 1024.0 * 1024.0);
+        double totalGB = memoryBytes / (1024.0 * 1024.0 * 1024.0);
+
+        if (percentOut && memoryBytes > 0.0)
+        {
+            double percent = (usedBytes / memoryBytes) * 100.0;
+            *percentOut = qBound(0, qRound(percent), 100);
+        }
+
+        return QString("%1 GB of %2 GB")
+            .arg(usedGB, 0, 'f', 1)
+            .arg(totalGB, 0, 'f', 1);
+    }
+
+    if (objectType == "host")
+    {
+        QString uuid = objectData.value("uuid", "").toString();
+        if (uuid.isEmpty())
+            return "-";
+
+        if (!metrics || !metrics->hasMetrics("host", uuid))
+        {
+            QString metricsRef = objectData.value("metrics", "").toString();
+            if (!metricsRef.isEmpty() && metricsRef != "OpaqueRef:NULL" && cache)
+            {
+                QVariantMap hostMetrics = cache->ResolveObjectData("host_metrics", metricsRef);
+                qulonglong memoryTotal = hostMetrics.value("memory_total", 0).toULongLong();
+                if (memoryTotal > 0)
+                {
+                    double memoryGB = memoryTotal / (1024.0 * 1024.0 * 1024.0);
+                    return QString("%1 GB total").arg(memoryGB, 0, 'f', 1);
+                }
+            }
+            return "-";
+        }
+
+        double totalKiB = metrics->getValue("host", uuid, "memory_total_kib");
+        double freeKiB = metrics->getValue("host", uuid, "memory_free_kib");
+
+        if (totalKiB == 0.0)
+            return "-";
+
+        double usedKiB = totalKiB - freeKiB;
+        double usedGB = (usedKiB * 1024.0) / (1024.0 * 1024.0 * 1024.0);
+        double totalGB = (totalKiB * 1024.0) / (1024.0 * 1024.0 * 1024.0);
+
+        if (percentOut)
+        {
+            double percent = (usedKiB / totalKiB) * 100.0;
+            *percentOut = qBound(0, qRound(percent), 100);
+        }
+
+        return QString("%1 GB of %2 GB")
+            .arg(usedGB, 0, 'f', 1)
+            .arg(totalGB, 0, 'f', 1);
+    }
+
+    return "";
 }
 
 QString QueryPanel::formatDiskIO(XenObject* xenObject) const
 {
-    // TODO: Implement metrics reading
-    Q_UNUSED(xenObject);
-    return QString("--");
+    if (!xenObject)
+        return QString("--");
+
+    const QString objectType = xenObject->GetObjectType();
+    const QVariantMap objectData = xenObject->GetData();
+    XenConnection* connection = xenObject->GetConnection();
+    if (!connection)
+        return QString("--");
+
+    MetricUpdater* metrics = connection->GetMetricUpdater();
+    XenCache* cache = connection->GetCache();
+
+    if (objectType == "vm")
+    {
+        QString powerState = objectData.value("power_state", "").toString();
+        if (powerState != "Running")
+            return "";
+
+        QString uuid = objectData.value("uuid", "").toString();
+        if (uuid.isEmpty())
+            return "-";
+
+        if (!metrics || !metrics->hasMetrics("vm", uuid))
+            return "-";
+
+        QVariantList vbds = objectData.value("VBDs", QVariantList()).toList();
+        if (vbds.isEmpty())
+            return "-";
+
+        double totalRead = 0.0;
+        double totalWrite = 0.0;
+        int vbdCount = 0;
+
+        for (const QVariant& vbdRef : vbds)
+        {
+            if (!cache)
+                continue;
+
+            QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef.toString());
+            if (vbdData.isEmpty())
+                continue;
+
+            QString device = vbdData.value("device", "").toString();
+            if (device.isEmpty())
+                continue;
+
+            QString readMetric = QString("vbd_%1_read").arg(device);
+            QString writeMetric = QString("vbd_%1_write").arg(device);
+
+            double read = metrics->getValue("vm", uuid, readMetric);
+            double write = metrics->getValue("vm", uuid, writeMetric);
+
+            totalRead += read;
+            totalWrite += write;
+            vbdCount++;
+        }
+
+        if (vbdCount == 0)
+            return "-";
+
+        double readKBps = totalRead / 1024.0;
+        double writeKBps = totalWrite / 1024.0;
+
+        return QString("%1 / %2 KB/s")
+            .arg(qRound(readKBps))
+            .arg(qRound(writeKBps));
+    }
+
+    return "";
 }
 
 QString QueryPanel::formatNetworkIO(XenObject* xenObject) const
 {
-    // TODO: Implement metrics reading
-    Q_UNUSED(xenObject);
-    return QString("--");
+    if (!xenObject)
+        return QString("--");
+
+    const QString objectType = xenObject->GetObjectType();
+    const QVariantMap objectData = xenObject->GetData();
+    XenConnection* connection = xenObject->GetConnection();
+    if (!connection)
+        return QString("--");
+
+    MetricUpdater* metrics = connection->GetMetricUpdater();
+    XenCache* cache = connection->GetCache();
+
+    if (objectType == "vm")
+    {
+        QString powerState = objectData.value("power_state", "").toString();
+        if (powerState != "Running")
+            return "";
+
+        QString uuid = objectData.value("uuid", "").toString();
+        if (uuid.isEmpty())
+            return "-";
+
+        if (!metrics || !metrics->hasMetrics("vm", uuid))
+            return "-";
+
+        QVariantList vifs = objectData.value("VIFs", QVariantList()).toList();
+        if (vifs.isEmpty())
+            return "-";
+
+        double totalRx = 0.0;
+        double totalTx = 0.0;
+        int vifCount = 0;
+
+        for (const QVariant& vifRef : vifs)
+        {
+            if (!cache)
+                continue;
+
+            QVariantMap vifData = cache->ResolveObjectData("vif", vifRef.toString());
+            if (vifData.isEmpty())
+                continue;
+
+            QString device = vifData.value("device", "").toString();
+            if (device.isEmpty())
+                continue;
+
+            QString rxMetric = QString("vif_%1_rx").arg(device);
+            QString txMetric = QString("vif_%1_tx").arg(device);
+
+            double rx = metrics->getValue("vm", uuid, rxMetric);
+            double tx = metrics->getValue("vm", uuid, txMetric);
+
+            totalRx += rx;
+            totalTx += tx;
+            vifCount++;
+        }
+
+        if (vifCount == 0)
+            return "-";
+
+        double rxKBps = totalRx / 1024.0;
+        double txKBps = totalTx / 1024.0;
+
+        return QString("%1 / %2 KB/s")
+            .arg(qRound(rxKBps))
+            .arg(qRound(txKBps));
+    }
+
+    if (objectType == "host")
+    {
+        QString uuid = objectData.value("uuid", "").toString();
+        if (uuid.isEmpty())
+            return "-";
+
+        if (!metrics || !metrics->hasMetrics("host", uuid))
+            return "-";
+
+        QVariantList pifs = objectData.value("PIFs", QVariantList()).toList();
+        if (pifs.isEmpty())
+            return "-";
+
+        double totalRx = 0.0;
+        double totalTx = 0.0;
+        int pifCount = 0;
+
+        for (const QVariant& pifRef : pifs)
+        {
+            if (!cache)
+                continue;
+
+            QVariantMap pifData = cache->ResolveObjectData("pif", pifRef.toString());
+            if (pifData.isEmpty())
+                continue;
+
+            QString device = pifData.value("device", "").toString();
+            if (device.isEmpty())
+                continue;
+
+            QString rxMetric = QString("pif_%1_rx").arg(device);
+            QString txMetric = QString("pif_%1_tx").arg(device);
+
+            double rx = metrics->getValue("host", uuid, rxMetric);
+            double tx = metrics->getValue("host", uuid, txMetric);
+
+            totalRx += rx;
+            totalTx += tx;
+            pifCount++;
+        }
+
+        if (pifCount == 0)
+            return "-";
+
+        double rxKBps = totalRx / 1024.0;
+        double txKBps = totalTx / 1024.0;
+
+        return QString("%1 / %2 KB/s")
+            .arg(qRound(rxKBps))
+            .arg(qRound(txKBps));
+    }
+
+    return "";
 }
 
 QString QueryPanel::formatIpAddress(XenObject* xenObject) const
 {
-    // For VMs, get guest_metrics IP addresses
-    VM* vm = dynamic_cast<VM*>(xenObject);
-    if (vm)
+    if (!xenObject)
+        return QString();
+
+    const QString objectType = xenObject->GetObjectType();
+    const QVariantMap objectData = xenObject->GetData();
+    XenConnection* connection = xenObject->GetConnection();
+    if (!connection)
+        return QString();
+
+    XenCache* cache = connection->GetCache();
+
+    if (objectType == "vm")
     {
-        // TODO: Implement VM IP address extraction from guest_metrics
-        return QString("--");
+        QString guestMetricsRef = objectData.value("guest_metrics", "").toString();
+        if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL" || !cache)
+            return "";
+
+        QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+        if (guestMetrics.isEmpty())
+            return "";
+
+        QVariantMap networks = guestMetrics.value("networks", QVariantMap()).toMap();
+        QStringList ipAddresses;
+
+        for (auto it = networks.constBegin(); it != networks.constEnd(); ++it)
+        {
+            QString key = it.key();
+            QString value = it.value().toString();
+            if (key.endsWith("/ip") && !value.isEmpty())
+            {
+                ipAddresses.append(value);
+            }
+        }
+
+        if (!ipAddresses.isEmpty())
+            return ipAddresses.join(", ");
+
+        return "";
     }
-    
-    // For hosts, get management interface address
-    Host* host = dynamic_cast<Host*>(xenObject);
-    if (host)
+
+    if (objectType == "host")
     {
-        // TODO: Implement host IP from management interface
-        return QString("--");
+        QString address = objectData.value("address", "").toString();
+        return address;
     }
-    
+
     return QString();
 }
 
 QString QueryPanel::formatUptime(XenObject* xenObject) const
 {
-    // TODO: Calculate uptime from start_time or metrics
-    Q_UNUSED(xenObject);
-    return QString("--");
+    if (!xenObject)
+        return QString();
+
+    const QString objectType = xenObject->GetObjectType();
+    const QVariantMap objectData = xenObject->GetData();
+    XenConnection* connection = xenObject->GetConnection();
+    if (!connection)
+        return QString();
+
+    XenCache* cache = connection->GetCache();
+
+    if (objectType == "vm")
+    {
+        QString powerState = objectData.value("power_state", "").toString();
+        if (powerState != "Running" && powerState != "Paused" && powerState != "Suspended")
+            return "";
+
+        QString metricsRef = objectData.value("metrics", "").toString();
+        if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL" || !cache)
+            return "";
+
+        QVariantMap vmMetrics = cache->ResolveObjectData("vm_metrics", metricsRef);
+        if (vmMetrics.isEmpty())
+            return "";
+
+        QString startTimeStr = vmMetrics.value("start_time", "").toString();
+        if (startTimeStr.isEmpty())
+            return "";
+
+        QDateTime startTime = QDateTime::fromString(startTimeStr, Qt::ISODate);
+        if (!startTime.isValid())
+            return "";
+
+        QDateTime now = QDateTime::currentDateTimeUtc();
+        qint64 uptimeSeconds = startTime.secsTo(now);
+        if (uptimeSeconds < 0)
+            return "";
+
+        int days = uptimeSeconds / 86400;
+        int hours = (uptimeSeconds % 86400) / 3600;
+        int minutes = (uptimeSeconds % 3600) / 60;
+
+        QStringList parts;
+        if (days > 0)
+            parts.append(tr("%1 days").arg(days));
+        if (hours > 0 || days > 0)
+            parts.append(tr("%1 hours").arg(hours));
+        if (minutes > 0 || parts.isEmpty())
+            parts.append(tr("%1 minutes").arg(minutes));
+
+        return parts.join(" ");
+    }
+
+    if (objectType == "host")
+    {
+        return "-";
+    }
+
+    return "";
 }
 
 QString QueryPanel::formatHA(XenObject* xenObject) const

@@ -178,8 +178,8 @@ class QueryPanel : public QTreeWidget
         void populateGroupRow(QTreeWidgetItem* item, Grouping* grouping, const QVariant& group);
 
         // Cell content helpers
-        QString formatCpuUsage(XenObject* xenObject) const;
-        QString formatMemoryUsage(XenObject* xenObject) const;
+        QString formatCpuUsage(XenObject* xenObject, int* percentOut) const;
+        QString formatMemoryUsage(XenObject* xenObject, int* percentOut) const;
         QString formatDiskIO(XenObject* xenObject) const;
         QString formatNetworkIO(XenObject* xenObject) const;
         QString formatIpAddress(XenObject* xenObject) const;

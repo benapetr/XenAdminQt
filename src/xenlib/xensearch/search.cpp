@@ -433,6 +433,8 @@ QList<QPair<QString, QString>> Search::getMatchedObjects(XenConnection* connecti
         if (filter)
         {
             QVariantMap objectData = connection->GetCache()->ResolveObjectData(objType, objRef);
+            if (objType == "vm" && objectData.value("is_control_domain").toBool())
+                continue;
             QVariant matchResult = filter->Match(objectData, objType, connection);
             if (!matchResult.toBool())
                 continue;
@@ -566,4 +568,3 @@ QueryScope* Search::GetOverviewScope()
 
     return new QueryScope(types);
 }
-

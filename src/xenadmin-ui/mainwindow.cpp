@@ -290,7 +290,7 @@ MainWindow::MainWindow(QWidget* parent)
     this->m_tabPages.append(new VMStorageTabPage()); // C#: TabPageStorage (Virtual Disks for VMs)
     this->m_tabPages.append(new SrStorageTabPage()); // C#: TabPageSR (for SRs)
     this->m_tabPages.append(new PhysicalStorageTabPage()); // C#: TabPagePhysicalStorage (for Hosts/Pools)
-    this->m_tabPages.append(new NetworkTabPage());     // C#: TabPageNetwork (name changed to "Networking")
+    this->m_tabPages.append(new NetworkTabPage());     // C#: TabPageNetwork
     this->m_tabPages.append(new NICsTabPage());        // C#: TabPageNICs
     this->m_tabPages.append(new PerformanceTabPage()); // C#: TabPagePerformance
     // HA - not implemented yet
@@ -298,7 +298,6 @@ MainWindow::MainWindow(QWidget* parent)
     // WLB - not implemented yet
     // AD - not implemented yet
     // GPU - not implemented yet
-    // Search - not implemented yet
     // Docker pages - not implemented yet
     // USB - not implemented yet
     this->m_tabPages.append(new MemoryTabPage());  // Custom Qt tab (not in C# as separate tab)
@@ -317,8 +316,8 @@ MainWindow::MainWindow(QWidget* parent)
     // Create search tab page (matches C# TabPageSearch)
     // This is shown when clicking grouping tags in Objects view
     SearchTabPage* searchTab = new SearchTabPage();
-    searchTab->setXenLib(this->m_xenLib);
     this->m_searchTabPage = searchTab;
+
     this->m_tabPages.append(searchTab);
 
     // Connect SearchTabPage objectSelected signal to navigate to that object
@@ -776,10 +775,9 @@ void MainWindow::showSearchPage(GroupingTag* groupingTag)
         groupingTag->getParent(),
         groupingTag->getGroup());
 
-    // Set the search on SearchTabPage
+    XenConnection* connection = m_xenLib ? m_xenLib->getConnection() : nullptr;
+    m_searchTabPage->SetXenObject(connection, QString(), QString(), QVariantMap());
     m_searchTabPage->setSearch(search); // SearchTabPage takes ownership
-    m_searchTabPage->setXenLib(m_xenLib);
-    m_searchTabPage->buildList();
 
     // Clear existing tabs and show only SearchTabPage
     clearTabs();

@@ -58,34 +58,34 @@ class ProgressBarDelegate : public QStyledItemDelegate
 {
     Q_OBJECT
 
-public:
-    explicit ProgressBarDelegate(QObject* parent = nullptr);
-    ~ProgressBarDelegate() override = default;
+    public:
+        explicit ProgressBarDelegate(QObject* parent = nullptr);
+        ~ProgressBarDelegate() override = default;
 
-    // QStyledItemDelegate interface
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override;
-
-    QSize sizeHint(const QStyleOptionViewItem& option,
+        // QStyledItemDelegate interface
+        void paint(QPainter* painter, const QStyleOptionViewItem& option,
                    const QModelIndex& index) const override;
 
-private:
-    // Helper: Get percentage value from model (stored in Qt::UserRole)
-    int getPercentage(const QModelIndex& index) const;
+        QSize sizeHint(const QStyleOptionViewItem& option,
+                       const QModelIndex& index) const override;
 
-    // Helper: Get display text from model (e.g., "22% of 8 CPUs")
-    QString getText(const QModelIndex& index) const;
+    private:
+        // Helper: Get percentage value from model (stored in Qt::UserRole)
+        int getPercentage(const QModelIndex& index) const;
 
-    // Helper: Draw the progress bar background and fill
-    void drawProgressBar(QPainter* painter, const QRect& barRect, int percent) const;
+        // Helper: Get display text from model (e.g., "22% of 8 CPUs")
+        QString getText(const QModelIndex& index) const;
 
-    // Helper: Draw the text overlay centered on the bar
-    void drawText(QPainter* painter, const QRect& textRect, const QString& text) const;
+        // Helper: Draw the progress bar background and fill
+        void drawProgressBar(QPainter* painter, const QRect& barRect, int percent) const;
 
-    // Visual constants matching C# usagebar images (70x8 pixels)
-    static constexpr int BAR_HEIGHT = 8;
-    static constexpr int BAR_WIDTH = 70;
-    static constexpr int VERTICAL_MARGIN = 2; // Space above/below bar
+        // Helper: Draw the text overlay centered on the bar
+        void drawText(QPainter* painter, const QRect& textRect, const QString& text) const;
+
+        // Visual constants matching C# usagebar images (70x8 pixels)
+        static constexpr int BAR_HEIGHT = 8;
+        static constexpr int BAR_WIDTH = 70;
+        static constexpr int VERTICAL_MARGIN = 2; // Space above/below bar
 };
 
 #endif // PROGRESSBARDELEGATE_H
