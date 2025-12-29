@@ -28,13 +28,11 @@
 #include "exporttemplatecommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/exportwizard.h"
-#include "xenlib.h"
 #include "xen/api.h"
 #include "xencache.h"
 #include <QMessageBox>
 
-ExportTemplateCommand::ExportTemplateCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+ExportTemplateCommand::ExportTemplateCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
@@ -99,8 +97,12 @@ QString ExportTemplateCommand::getSelectedTemplateName() const
 
 bool ExportTemplateCommand::canExportTemplate(const QString& templateRef) const
 {
+    QSharedPointer<XenObject> object = this->GetObject();
+    if (!object || !object->GetConnection())
+        return false;
+
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->GetCache()->ResolveObjectData("vm", templateRef);
+    QVariantMap vmData = object->GetConnection()->GetCache()->ResolveObjectData("vm", templateRef);
 
     // Check if it's a template
     bool isTemplate = vmData.value("is_a_template", false).toBool();

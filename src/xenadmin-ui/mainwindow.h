@@ -98,6 +98,9 @@ class MainWindow : public QMainWindow
         void SaveServerList();
         void SaveConnections(); // OBSOLETE: use SaveServerList (C# naming parity)
 
+        //! True if there is any open connection
+        bool IsConnected();
+
     private slots:
         void connectToServer();
         void showAbout();
@@ -323,7 +326,7 @@ class MainWindow : public QMainWindow
         // Placeholder widget
         PlaceholderWidget* m_placeholderWidget;
 
-        // Status
+        // TODO deprecated should be replaced with ConnectionsManager call instead
         bool m_connected;
 
         // Command map (matches C# CommandToolStripMenuItem pattern)

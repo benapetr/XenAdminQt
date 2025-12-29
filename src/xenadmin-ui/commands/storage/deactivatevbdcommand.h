@@ -50,7 +50,6 @@ class DeactivateVBDCommand : public VBDCommand
 
     private:
         bool canRunVBD(const QString& vbdRef) const;
-        QString getCantRunReasonVBD(const QString& vbdRef) const;
         bool areIODriversNeededAndMissing(const QVariantMap& vmData) const;
 };
 

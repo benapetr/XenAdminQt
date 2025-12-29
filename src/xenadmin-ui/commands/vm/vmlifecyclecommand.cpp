@@ -27,13 +27,11 @@
 
 #include "vmlifecyclecommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include <QMessageBox>
 #include <QMessageBox>
 
-VMLifeCycleCommand::VMLifeCycleCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+VMLifeCycleCommand::VMLifeCycleCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
@@ -108,35 +106,29 @@ QString VMLifeCycleCommand::getSelectedVMRef() const
 
 QString VMLifeCycleCommand::getVMPowerState() const
 {
+    QSharedPointer<XenObject> object = this->GetObject();
+    if (!object || !object->GetConnection())
+        return QString();
+
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
         return QString();
 
-    if (!this->mainWindow()->xenLib())
-        return QString();
-
-    XenCache* cache = this->mainWindow()->xenLib()->GetCache();
-    if (!cache)
-        return QString();
-
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = object->GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
     return vmData.value("power_state", "").toString();
 }
 
 bool VMLifeCycleCommand::isVMOperationAllowed(const QString& operation) const
 {
+    QSharedPointer<XenObject> object = this->GetObject();
+    if (!object || !object->GetConnection())
+        return false;
+
     QString vmRef = this->getSelectedVMRef();
     if (vmRef.isEmpty())
         return false;
 
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->GetCache();
-    if (!cache)
-        return false;
-
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = object->GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
     QVariantList allowedOps = vmData.value("allowed_operations", QVariantList()).toList();
 
     return allowedOps.contains(operation);
