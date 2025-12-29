@@ -49,7 +49,7 @@ bool CopyTemplateCommand::CanRun() const
     if (!this->mainWindow()->xenLib())
         return false;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenCache* cache = this->mainWindow()->xenLib()->GetCache();
     if (!cache)
         return false;
 
@@ -67,7 +67,7 @@ void CopyTemplateCommand::Run()
     if (!this->mainWindow()->xenLib())
         return;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenCache* cache = this->mainWindow()->xenLib()->GetCache();
     if (!cache)
         return;
 

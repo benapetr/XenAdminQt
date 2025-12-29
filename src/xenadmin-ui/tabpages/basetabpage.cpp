@@ -26,11 +26,10 @@
  */
 
 #include "basetabpage.h"
-#include "xenlib.h"
 #include "xenlib/xen/xenobject.h"
 
 
-BaseTabPage::BaseTabPage(QWidget* parent) : QWidget(parent), m_xenLib(nullptr)
+BaseTabPage::BaseTabPage(QWidget* parent) : QWidget(parent)
 {
 }
 
@@ -47,15 +46,6 @@ void BaseTabPage::SetXenObject(XenConnection *conn, const QString& objectType, c
     this->m_objectData = objectData;
     this->updateObject();
     this->refreshContent();
-}
-
-void BaseTabPage::setXenLib(XenLib* xenLib)
-{
-    this->removeObject();
-    this->m_xenLib = xenLib;
-    if (!this->m_connection && xenLib)
-        this->m_connection = xenLib->getConnection();
-    this->updateObject();
 }
 
 void BaseTabPage::SetObject(QSharedPointer<XenObject> object)

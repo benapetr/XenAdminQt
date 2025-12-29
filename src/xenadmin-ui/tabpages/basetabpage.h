@@ -32,7 +32,6 @@
 #include <QVariantMap>
 #include <QSharedPointer>
 
-class XenLib;
 class XenConnection;
 class XenRpcAPI;
 class XenObject;
@@ -59,12 +58,6 @@ class BaseTabPage : public QWidget
          * @param objectData Complete object data as a QVariantMap
          */
         virtual void SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
-
-        /**
-         * DEPRECATED Set the XenLib for this tab page.
-         * This allows tab pages to access XenAPI and make API calls.
-         */
-        virtual void setXenLib(XenLib* xenLib);
 
         /**
          * Set the XenLib object for this tab page
@@ -106,7 +99,6 @@ class BaseTabPage : public QWidget
         QString m_objectRef;
         QSharedPointer<XenObject> m_object;
         QVariantMap m_objectData;
-        XenLib* m_xenLib;
         XenConnection* m_connection = nullptr;
 
         /**

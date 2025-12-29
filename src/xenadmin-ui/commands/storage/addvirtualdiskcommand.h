@@ -31,6 +31,8 @@
 #include "../command.h"
 #include <QVariantMap>
 
+class XenCache;
+
 class AddVirtualDiskCommand : public Command
 {
     Q_OBJECT
@@ -58,10 +60,12 @@ class AddVirtualDiskCommand : public Command
 
         /**
          * @brief Get current VBD count for a VM
+         * @param cache Cache instance
          * @param vmRef VM reference
          * @return Number of VBDs currently attached
          */
         int getCurrentVBDCount(const QString& vmRef) const;
+        int getCurrentVBDCount(XenCache* cache, const QString& vmRef) const;
 };
 
 #endif // ADDVIRTUALDISKCOMMAND_H

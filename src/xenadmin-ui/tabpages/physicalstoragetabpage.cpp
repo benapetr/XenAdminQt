@@ -87,7 +87,7 @@ void PhysicalStorageTabPage::refreshContent()
     // Clear table
     this->ui->storageTable->setRowCount(0);
 
-    if (!this->m_xenLib || this->m_objectRef.isEmpty())
+    if (!this->m_connection || this->m_objectRef.isEmpty())
     {
         this->updateButtonStates();
         return;
@@ -112,13 +112,13 @@ void PhysicalStorageTabPage::populateHostStorage()
     // Shows storage repositories attached to this host
     this->ui->titleLabel->setText("Storage Repositories");
 
-    if (!this->m_xenLib || this->m_objectRef.isEmpty())
+    if (!this->m_connection || this->m_objectRef.isEmpty())
     {
         return;
     }
 
     // Get host record to find PBDs
-    QVariantMap hostData = this->m_xenLib->getCache()->ResolveObjectData("host", this->m_objectRef);
+    QVariantMap hostData = this->m_connection->GetCache()->ResolveObjectData("host", this->m_objectRef);
     QVariantList pbdRefs = hostData.value("PBDs", QVariantList()).toList();
 
     if (pbdRefs.isEmpty())
@@ -134,13 +134,13 @@ void PhysicalStorageTabPage::populateHostStorage()
     for (const QVariant& pbdVar : pbdRefs)
     {
         QString pbdRef = pbdVar.toString();
-        QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
+        QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
 
         if (pbdData.isEmpty())
             continue;
 
         QString srRef = pbdData.value("SR").toString();
-        QVariantMap srData = this->m_xenLib->getCache()->ResolveObjectData("sr", srRef);
+        QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
 
         if (srData.isEmpty())
             continue;
@@ -174,7 +174,7 @@ void PhysicalStorageTabPage::populateHostStorage()
     // Now add rows for each SR
     for (const QString& srRef : srRefsList)
     {
-        QVariantMap srData = this->m_xenLib->getCache()->ResolveObjectData("sr", srRef);
+        QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
 
         if (srData.isEmpty())
             continue;
@@ -199,7 +199,7 @@ void PhysicalStorageTabPage::populateHostStorage()
         for (const QVariant& vdiVar : vdiRefs)
         {
             QString vdiRef = vdiVar.toString();
-            QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
+            QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
             if (!vdiData.isEmpty())
             {
                 virtualAllocation += vdiData.value("virtual_size", 0).toLongLong();
@@ -270,14 +270,14 @@ void PhysicalStorageTabPage::populatePoolStorage()
     // Shows all storage repositories in the pool (when host == null, shows all PBDs in pool)
     this->ui->titleLabel->setText("Storage Repositories");
 
-    if (!this->m_xenLib || this->m_objectRef.isEmpty())
+    if (!this->m_connection || this->m_objectRef.isEmpty())
     {
         return;
     }
 
     // For pools, show all SRs in the pool
     // C#: List<PBD> pbds = host != null ? connection.ResolveAll(host.PBDs) : connection.Cache.PBDs (line 230)
-    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->GetAllData("sr");
+    QList<QVariantMap> allSRs = this->m_connection->GetCache()->GetAllData("sr");
 
     QList<QString> srRefsList;
 
@@ -306,7 +306,7 @@ void PhysicalStorageTabPage::populatePoolStorage()
     // Now add rows for each SR
     for (const QString& srRef : srRefsList)
     {
-        QVariantMap srData = this->m_xenLib->getCache()->ResolveObjectData("sr", srRef);
+        QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
 
         if (srData.isEmpty())
             continue;
@@ -329,7 +329,7 @@ void PhysicalStorageTabPage::populatePoolStorage()
         for (const QVariant& vdiVar : vdiRefs)
         {
             QString vdiRef = vdiVar.toString();
-            QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
+            QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
             if (!vdiData.isEmpty())
             {
                 virtualAllocation += vdiData.value("virtual_size", 0).toLongLong();
@@ -418,7 +418,7 @@ void PhysicalStorageTabPage::updateButtonStates()
         canTrim = trimCmd.CanRun();
 
         StoragePropertiesCommand propsCmd(mainWindow);
-        propsCmd.setTargetSR(selectedSrRef, mainWindow->xenLib()->getConnection());
+        propsCmd.setTargetSR(selectedSrRef, this->m_connection);
         canShowProperties = propsCmd.CanRun();
     }
 
@@ -497,7 +497,7 @@ void PhysicalStorageTabPage::onPropertiesButtonClicked()
         return;
 
     StoragePropertiesCommand command(mainWindow);
-    command.setTargetSR(srRef, mainWindow->xenLib()->getConnection());
+    command.setTargetSR(srRef, this->m_connection);
 
     if (!command.CanRun())
         return;
@@ -555,12 +555,13 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
         });
 
         StoragePropertiesCommand propsCmd(mainWindow);
-        propsCmd.setTargetSR(srRef, mainWindow->xenLib()->getConnection());
+        propsCmd.setTargetSR(srRef, this->m_connection);
         QAction* propsAction = menu.addAction(tr("Properties..."));
         propsAction->setEnabled(propsCmd.CanRun());
-        connect(propsAction, &QAction::triggered, this, [mainWindow, srRef]() {
+        XenConnection *cn = this->m_connection;
+        connect(propsAction, &QAction::triggered, this, [mainWindow, srRef, cn]() {
             StoragePropertiesCommand cmd(mainWindow);
-            cmd.setTargetSR(srRef, mainWindow->xenLib()->getConnection());
+            cmd.setTargetSR(srRef, cn);
             if (cmd.CanRun())
                 cmd.Run();
         });

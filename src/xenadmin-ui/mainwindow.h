@@ -111,7 +111,7 @@ class MainWindow : public QMainWindow
         // Console operations (Reference: C# MainWindow.cs line 2051)
         void sendCADToConsole();
 
-        void onConnectionStateChanged(bool connected);
+        void onConnectionStateChanged(XenConnection *conn, bool connected);
         void onCachePopulated();
         void onConnectionAdded(XenConnection* connection);
         void onConnectionTaskAdded(const QString& taskRef, const QVariantMap& taskData);
@@ -252,7 +252,7 @@ class MainWindow : public QMainWindow
 
         // Tab management - new system
         void showObjectTabs(XenConnection *connection, const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
-        void showSearchPage(class GroupingTag* groupingTag);
+        void showSearchPage(XenConnection *connection, class GroupingTag* groupingTag);
         void clearTabs();
         void updateTabPages(XenConnection *connection, const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
         void updatePlaceholderVisibility();

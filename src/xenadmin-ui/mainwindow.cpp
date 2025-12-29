@@ -328,11 +328,9 @@ MainWindow::MainWindow(QWidget* parent)
     // In C#: splitContainer1.Panel2.Controls.Add(this.alertPage);
     // These pages are shown in the same area as tabs (Panel2 of the main splitter)
     AlertSummaryPage* alertPage = new AlertSummaryPage(this);
-    alertPage->setXenLib(this->m_xenLib);
     this->m_notificationPages.append(alertPage);
 
     EventsPage* eventsPage = new EventsPage(this);
-    eventsPage->setXenLib(this->m_xenLib);
     this->m_notificationPages.append(eventsPage);
 
     // Add notification pages to the tab container (same area as tabs)
@@ -523,7 +521,7 @@ void MainWindow::showNewStorageRepositoryWizard()
     newSRCmd.Run();
 }
 
-void MainWindow::onConnectionStateChanged(bool connected)
+void MainWindow::onConnectionStateChanged(XenConnection *conn, bool connected)
 {
     this->m_connected = connected;
     this->updateActions();
@@ -538,9 +536,9 @@ void MainWindow::onConnectionStateChanged(bool connected)
 
         // Trigger task rehydration after successful reconnect
         auto* rehydrationMgr = OperationManager::instance()->meddlingActionManager();
-        if (rehydrationMgr && this->m_xenLib && this->m_xenLib->getConnection())
+        if (rehydrationMgr && conn)
         {
-            rehydrationMgr->rehydrateTasks(this->m_xenLib->getConnection());
+            rehydrationMgr->rehydrateTasks(conn);
         }
     } else
     {
@@ -557,32 +555,35 @@ void MainWindow::onConnectionStateChanged(bool connected)
 
 void MainWindow::onCachePopulated()
 {
-    qDebug() << "MainWindow: Cache populated, refreshing tree view";
-    if (this->m_xenLib && this->m_xenLib->getCache())
-    {
-        XenCache* cache = this->m_xenLib->getCache();
-        qDebug() << "MainWindow: Cache counts"
-                 << "hosts=" << cache->Count("host")
-                 << "pools=" << cache->Count("pool")
-                 << "vms=" << cache->Count("vm")
-                 << "srs=" << cache->Count("sr");
+    XenConnection* connection = qobject_cast<XenConnection*>(sender());
 
-        this->updateConnectionProfileFromCache(this->m_xenLib->getConnection(), cache);
+    if (!connection)
+    {
+        qDebug() << "MainWindow::onCachePopulated(): nullptr XenConnection";
+        return;
     }
 
+    qDebug() << "MainWindow: Cache populated, refreshing tree view";
+    XenCache* cache = connection->GetCache();
+    qDebug() << "MainWindow: Cache counts"
+             << "hosts=" << cache->Count("host")
+             << "pools=" << cache->Count("pool")
+             << "vms=" << cache->Count("vm")
+             << "srs=" << cache->Count("sr");
+
+    this->updateConnectionProfileFromCache(connection, cache);
+
     // Refresh tree now that cache has data
-    if (m_navigationPane)
+    if (this->m_navigationPane)
     {
-        m_navigationPane->requestRefreshTreeView();
+        this->m_navigationPane->requestRefreshTreeView();
     }
 
     // Start MetricUpdater to begin fetching RRD performance metrics
     // C# Equivalent: MetricUpdater.Start() called after connection established
     // C# Reference: xenadmin/XenModel/XenConnection.cs line 780
-    XenConnection* connection = qobject_cast<XenConnection*>(sender());
-    if (!connection && m_xenLib)
-        connection = m_xenLib->getConnection();
-    if (connection && connection->GetMetricUpdater())
+
+    if (connection->GetMetricUpdater())
     {
         qDebug() << "MainWindow: Starting MetricUpdater for performance metrics";
         connection->GetMetricUpdater()->start();
@@ -595,18 +596,19 @@ void MainWindow::onConnectionAdded(XenConnection* connection)
         return;
 
     this->m_xenLib->setConnection(connection);
+    XenConnection *conn = connection;
 
-    connect(connection, &XenConnection::connectionResult, this, [this](bool connected, const QString&)
+    connect(connection, &XenConnection::connectionResult, this, [this, conn](bool connected, const QString&)
     {
-        this->onConnectionStateChanged(connected);
+        this->onConnectionStateChanged(conn, connected);
     });
-    connect(connection, &XenConnection::connectionClosed, this, [this]()
+    connect(connection, &XenConnection::connectionClosed, this, [this, conn]()
     {
-        this->onConnectionStateChanged(false);
+        this->onConnectionStateChanged(conn, false);
     });
-    connect(connection, &XenConnection::connectionLost, this, [this]()
+    connect(connection, &XenConnection::connectionLost, this, [this, conn]()
     {
-        this->onConnectionStateChanged(false);
+        this->onConnectionStateChanged(conn, false);
     });
     connect(connection, &XenConnection::cachePopulated, this, &MainWindow::onCachePopulated);
 
@@ -696,7 +698,7 @@ void MainWindow::onTreeItemSelected()
         {
             // Show SearchTabPage with results for this grouping
             // Matches C# MainWindow.cs line 1771: SearchPage.Search = Search.SearchForNonVappGroup(...)
-            this->showSearchPage(groupingTag);
+            this->showSearchPage(connection, groupingTag);
             return;
         }
     }
@@ -766,7 +768,7 @@ void MainWindow::showObjectTabs(XenConnection *connection, const QString& object
 
 // C# Equivalent: MainWindow.SwitchToTab(TabPageSearch) with SearchPage.Search = Search.SearchForNonVappGroup(...)
 // C# Reference: xenadmin/XenAdmin/MainWindow.cs lines 1771-1775
-void MainWindow::showSearchPage(GroupingTag* groupingTag)
+void MainWindow::showSearchPage(XenConnection *connection, GroupingTag* groupingTag)
 {
     if (!groupingTag || !m_searchTabPage)
         return;
@@ -778,7 +780,6 @@ void MainWindow::showSearchPage(GroupingTag* groupingTag)
         groupingTag->getParent(),
         groupingTag->getGroup());
 
-    XenConnection* connection = m_xenLib ? m_xenLib->getConnection() : nullptr;
     m_searchTabPage->SetXenObject(connection, QString(), QString(), QVariantMap());
     m_searchTabPage->setSearch(search); // SearchTabPage takes ownership
 
@@ -1039,9 +1040,6 @@ void MainWindow::updateTabPages(XenConnection *connection, const QString& object
     for (int i = 0; i < newTabs.size(); ++i)
     {
         BaseTabPage* tabPage = newTabs[i];
-
-        // Set the XenLib so tab pages can access XenAPI
-        //tabPage->setXenLib(this->m_xenLib);
 
         // Set the object data on the tab page
         tabPage->SetXenObject(connection, objectType, objectRef, objectData);
@@ -1910,7 +1908,7 @@ void MainWindow::onCacheObjectChanged(XenConnection* connection, const QString& 
     if (objectType == m_currentObjectType && objectRef == m_currentObjectRef)
     {
         // Get updated data from cache
-        QVariantMap objectData = m_xenLib->getCache()->ResolveObjectData(objectType, objectRef);
+        QVariantMap objectData = m_xenLib->GetCache()->ResolveObjectData(objectType, objectRef);
         if (!objectData.isEmpty())
         {
             // Update tab pages with new data
@@ -2340,7 +2338,7 @@ void MainWindow::updateToolbarsAndMenus()
 
     // Force Shutdown - show based on Command.ShowOnMainToolBar property
     // Matches C#: ForceShutdownToolbarButton.Available = ((ForceVMShutDownCommand)ForceShutdownToolbarButton.Command).ShowOnMainToolBar
-    QVariantMap vmData = m_xenLib->getCache()->ResolveObjectData("vm", objectRef);
+    QVariantMap vmData = m_xenLib->GetCache()->ResolveObjectData("vm", objectRef);
     QVariantList allowedOps = vmData.value("allowed_operations", QVariantList()).toList();
     bool hasCleanShutdown = false;
     bool hasCleanReboot = false;

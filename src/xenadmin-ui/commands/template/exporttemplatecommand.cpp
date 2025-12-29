@@ -100,7 +100,7 @@ QString ExportTemplateCommand::getSelectedTemplateName() const
 bool ExportTemplateCommand::canExportTemplate(const QString& templateRef) const
 {
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", templateRef);
+    QVariantMap vmData = this->mainWindow()->xenLib()->GetCache()->ResolveObjectData("vm", templateRef);
 
     // Check if it's a template
     bool isTemplate = vmData.value("is_a_template", false).toBool();

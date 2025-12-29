@@ -197,12 +197,12 @@ void GeneralTabPage::populateVMProperties()
     bool isControlDomain = this->m_objectData.value("is_control_domain", false).toBool();
 
     // OS Name / Guest Operating System
-    if (this->m_objectData.contains("guest_metrics") && this->m_xenLib)
+    if (this->m_objectData.contains("guest_metrics") && this->m_connection)
     {
         QString guestMetricsRef = this->m_objectData.value("guest_metrics").toString();
         if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
         {
-            QVariantMap guestMetrics = this->m_xenLib->getCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+            QVariantMap guestMetrics = this->m_connection->GetCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
             if (!guestMetrics.isEmpty())
             {
                 QVariantMap osVersion = guestMetrics.value("os_version").toMap();
@@ -231,12 +231,12 @@ void GeneralTabPage::populateVMProperties()
     }
 
     // vApp / VM Appliance - C# lines 1056-1065
-    if (this->m_objectData.contains("appliance") && this->m_xenLib)
+    if (this->m_objectData.contains("appliance") && this->m_connection)
     {
         QString applianceRef = this->m_objectData.value("appliance").toString();
         if (!applianceRef.isEmpty() && applianceRef != "OpaqueRef:NULL")
         {
-            QVariantMap appliance = this->m_xenLib->getCache()->ResolveObjectData("vm_appliance", applianceRef);
+            QVariantMap appliance = this->m_connection->GetCache()->ResolveObjectData("vm_appliance", applianceRef);
             if (!appliance.isEmpty())
             {
                 QString applianceName = appliance.value("name_label", "Unknown").toString();
@@ -248,12 +248,12 @@ void GeneralTabPage::populateVMProperties()
     // Snapshot information - C# lines 1067-1070
     if (isSnapshot)
     {
-        if (this->m_objectData.contains("snapshot_of") && this->m_xenLib)
+        if (this->m_objectData.contains("snapshot_of") && this->m_connection)
         {
             QString snapshotOfRef = this->m_objectData.value("snapshot_of").toString();
             if (!snapshotOfRef.isEmpty())
             {
-                QVariantMap snapshotOfVM = this->m_xenLib->getCache()->ResolveObjectData("vm", snapshotOfRef);
+                QVariantMap snapshotOfVM = this->m_connection->GetCache()->ResolveObjectData("vm", snapshotOfRef);
                 if (!snapshotOfVM.isEmpty())
                 {
                     QString vmName = snapshotOfVM.value("name_label", "Unknown").toString();
@@ -278,12 +278,12 @@ void GeneralTabPage::populateVMProperties()
     {
         // Virtualization Status - C# lines 1066 GenerateVirtualisationStatusForGeneralBox
         QString powerState = this->m_objectData.value("power_state", "unknown").toString();
-        if (powerState == "Running" && this->m_objectData.contains("guest_metrics") && this->m_xenLib)
+        if (powerState == "Running" && this->m_objectData.contains("guest_metrics") && this->m_connection)
         {
             QString guestMetricsRef = this->m_objectData.value("guest_metrics").toString();
             if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
             {
-                QVariantMap guestMetrics = this->m_xenLib->getCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+                QVariantMap guestMetrics = this->m_connection->GetCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
                 if (!guestMetrics.isEmpty())
                 {
                     QVariantMap pvDriversVersion = guestMetrics.value("PV_drivers_version").toMap();
@@ -321,12 +321,12 @@ void GeneralTabPage::populateVMProperties()
         }
 
         // VM Uptime - C# line 1069 vm.RunningTime()
-        if (powerState == "Running" && this->m_objectData.contains("metrics") && this->m_xenLib)
+        if (powerState == "Running" && this->m_objectData.contains("metrics") && this->m_connection)
         {
             QString metricsRef = this->m_objectData.value("metrics").toString();
             if (!metricsRef.isEmpty())
             {
-                QVariantMap metrics = this->m_xenLib->getCache()->ResolveObjectData("vm_metrics", metricsRef);
+                QVariantMap metrics = this->m_connection->GetCache()->ResolveObjectData("vm_metrics", metricsRef);
                 if (!metrics.isEmpty() && metrics.contains("start_time"))
                 {
                     QString startTimeStr = metrics.value("start_time").toString();
@@ -381,14 +381,14 @@ void GeneralTabPage::populateVMProperties()
 
         // Home Server / Affinity - C# lines 1078-1083 (if WLB not enabled)
         // Show if VM can choose home server (has affinity field and is not managed by WLB)
-        if (this->m_objectData.contains("affinity") && this->m_xenLib)
+        if (this->m_objectData.contains("affinity") && this->m_connection)
         {
             QString affinityRef = this->m_objectData.value("affinity").toString();
             QString affinityDisplay = "None";
 
             if (!affinityRef.isEmpty() && affinityRef != "OpaqueRef:NULL")
             {
-                QVariantMap affinityHost = this->m_xenLib->getCache()->ResolveObjectData("host", affinityRef);
+                QVariantMap affinityHost = this->m_connection->GetCache()->ResolveObjectData("host", affinityRef);
                 if (!affinityHost.isEmpty())
                 {
                     affinityDisplay = affinityHost.value("name_label", "Unknown").toString();
@@ -562,12 +562,12 @@ void GeneralTabPage::populateGeneralSection()
     // GetPool returns null if Pool.IsVisible() is false
     // Pool.IsVisible() returns false when name_label == "" AND HostCount <= 1
     // So we show "Pool master" if the pool has a name OR has multiple hosts
-    if (this->m_objectData.contains("pool") && this->m_xenLib && this->m_objectData.contains("is_pool_coordinator"))
+    if (this->m_objectData.contains("pool") && this->m_connection && this->m_objectData.contains("is_pool_coordinator"))
     {
         QString poolRef = this->m_objectData.value("pool").toString();
         if (!poolRef.isEmpty())
         {
-            QVariantMap pool = this->m_xenLib->getCache()->ResolveObjectData("pool", poolRef);
+            QVariantMap pool = this->m_connection->GetCache()->ResolveObjectData("pool", poolRef);
             if (!pool.isEmpty())
             {
                 // Check if pool is "visible" (not a standalone host pool)
@@ -637,12 +637,12 @@ void GeneralTabPage::populateGeneralSection()
 
     // Server Uptime (calculated from boot time in host_metrics)
     // C# Reference: Host.Uptime() lines 853-859
-    if (this->m_objectData.contains("metrics") && this->m_xenLib)
+    if (this->m_objectData.contains("metrics") && this->m_connection)
     {
         QString metricsRef = this->m_objectData.value("metrics").toString();
         if (!metricsRef.isEmpty())
         {
-            QVariantMap metrics = this->m_xenLib->getCache()->ResolveObjectData("host_metrics", metricsRef);
+            QVariantMap metrics = this->m_connection->GetCache()->ResolveObjectData("host_metrics", metricsRef);
             if (!metrics.isEmpty() && metrics.contains("start_time"))
             {
                 QString startTimeStr = metrics.value("start_time").toString();
@@ -741,7 +741,7 @@ void GeneralTabPage::populateManagementInterfacesSection()
     // Management Interfaces Section
     // C# Reference: GenerateInterfaceBox lines 396-461 (fillInterfacesForHost)
 
-    if (!this->m_objectData.contains("PIFs") || !this->m_xenLib)
+    if (!this->m_objectData.contains("PIFs") || !this->m_connection)
         return;
 
     QVariantList pifRefs = this->m_objectData.value("PIFs").toList();
@@ -753,7 +753,7 @@ void GeneralTabPage::populateManagementInterfacesSection()
         if (pifRef.isEmpty())
             continue;
 
-        QVariantMap pif = this->m_xenLib->getCache()->ResolveObjectData("PIF", pifRef);
+        QVariantMap pif = this->m_connection->GetCache()->ResolveObjectData("PIF", pifRef);
         if (pif.isEmpty())
             continue;
 
@@ -786,7 +786,7 @@ void GeneralTabPage::populateMemorySection()
 
     // Server Memory: Shows "X GB free of Y GB total"
     // C# Reference: Host.HostMemoryString() lines 1269-1281
-    if (this->m_objectData.contains("memory_total") && this->m_xenLib)
+    if (this->m_objectData.contains("memory_total") && this->m_connection)
     {
         qint64 memTotal = this->m_objectData.value("memory_total").toLongLong();
 
@@ -794,7 +794,7 @@ void GeneralTabPage::populateMemorySection()
         QString metricsRef = this->m_objectData.value("metrics").toString();
         if (!metricsRef.isEmpty())
         {
-            QVariantMap metrics = this->m_xenLib->getCache()->ResolveObjectData("host_metrics", metricsRef);
+            QVariantMap metrics = this->m_connection->GetCache()->ResolveObjectData("host_metrics", metricsRef);
             if (!metrics.isEmpty() && metrics.contains("memory_free"))
             {
                 qint64 memFree = metrics.value("memory_free").toLongLong();
@@ -957,7 +957,7 @@ void GeneralTabPage::populateStatusSection()
     // SR Status Section
     // C# Reference: GeneralTabPage.cs GenerateStatusBox() lines 505-588
 
-    if (!this->m_xenLib || this->m_objectRef.isEmpty() || this->m_objectType != "sr")
+    if (!this->m_connection || this->m_objectRef.isEmpty() || this->m_objectType != "sr")
         return;
 
     // Determine SR status (OK, Detached, Broken, Multipath Failure)
@@ -972,7 +972,7 @@ void GeneralTabPage::populateStatusSection()
     for (const QVariant& pbdRefVar : pbdRefs)
     {
         QString pbdRef = pbdRefVar.toString();
-        QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
+        QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
         if (!pbdData.isEmpty() && pbdData.value("currently_attached").toBool())
         {
             hasAttachedPBD = true;
@@ -1000,7 +1000,7 @@ void GeneralTabPage::populateStatusSection()
         if (isShared)
         {
             // For shared SR, should have PBD for each host in pool
-            QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAllData("host");
+            QList<QVariantMap> allHosts = this->m_connection->GetCache()->GetAllData("host");
             expectedPBDCount = allHosts.size();
         }
 
@@ -1014,7 +1014,7 @@ void GeneralTabPage::populateStatusSection()
             for (const QVariant& pbdRefVar : pbdRefs)
             {
                 QString pbdRef = pbdRefVar.toString();
-                QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
+                QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
                 if (pbdData.isEmpty() || !pbdData.value("currently_attached").toBool())
                 {
                     broken = true;
@@ -1047,7 +1047,7 @@ void GeneralTabPage::populateStatusSection()
     // Show per-host PBD status
     // C# iterates through all hosts and shows their PBD connection status
     bool isShared = this->m_objectData.value("shared", false).toBool();
-    QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAllData("host");
+    QList<QVariantMap> allHosts = this->m_connection->GetCache()->GetAllData("host");
 
     for (const QVariantMap& hostData : allHosts)
     {
@@ -1062,7 +1062,7 @@ void GeneralTabPage::populateStatusSection()
         for (const QVariant& pbdRefVar : pbdRefs)
         {
             QString pbdRef = pbdRefVar.toString();
-            QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
+            QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
 
             if (pbdData.isEmpty())
                 continue;
@@ -1134,7 +1134,7 @@ void GeneralTabPage::populateMultipathingSection()
     // SR Multipathing Section
     // C# Reference: GeneralTabPage.cs GenerateMultipathBox() lines 589-717
 
-    if (!this->m_xenLib || this->m_objectRef.isEmpty() || this->m_objectType != "sr")
+    if (!this->m_connection || this->m_objectRef.isEmpty() || this->m_objectType != "sr")
         return;
 
     // Check if SR is multipath capable
@@ -1161,7 +1161,7 @@ void GeneralTabPage::populateMultipathingSection()
     // Check each host for multipath status
     // C# iterates through hosts and checks PBD multipath active status
     QVariantList pbdRefs = this->m_objectData.value("PBDs").toList();
-    QList<QVariantMap> allHosts = this->m_xenLib->getCache()->GetAllData("host");
+    QList<QVariantMap> allHosts = this->m_connection->GetCache()->GetAllData("host");
 
     for (const QVariantMap& hostData : allHosts)
     {
@@ -1175,7 +1175,7 @@ void GeneralTabPage::populateMultipathingSection()
         for (const QVariant& pbdRefVar : pbdRefs)
         {
             QString pbdRef = pbdRefVar.toString();
-            QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
+            QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
 
             if (pbdData.isEmpty())
                 continue;

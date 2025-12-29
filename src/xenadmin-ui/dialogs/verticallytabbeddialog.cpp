@@ -30,18 +30,17 @@
 #include "ui_verticallytabbeddialog.h"
 #include "operationprogressdialog.h"
 #include "../mainwindow.h"
-#include "../../xenlib/xenlib.h"
-#include "../../xenlib/xen/network/connection.h"
-#include "../../xenlib/xen/session.h"
-#include "../../xenlib/xen/xenapi/xenapi_VM.h"
-#include "../../xenlib/xen/xenapi/xenapi_Host.h"
-#include "../../xenlib/xen/xenapi/xenapi_Pool.h"
-#include "../../xenlib/xen/xenapi/xenapi_SR.h"
-#include "../../xenlib/xen/xenapi/xenapi_Network.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/xenapi/xenapi_VM.h"
+#include "xenlib/xen/xenapi/xenapi_Host.h"
+#include "xenlib/xen/xenapi/xenapi_Pool.h"
+#include "xenlib/xen/xenapi/xenapi_SR.h"
+#include "xenlib/xen/xenapi/xenapi_Network.h"
 #include <QtGlobal>
-#include "../../xenlib/xencache.h"
-#include "../../xenlib/operations/multipleoperation.h"
-#include "../../xenlib/xen/asyncoperation.h"
+#include "xenlib/xencache.h"
+#include "xenlib/operations/multipleoperation.h"
+#include "xenlib/xen/asyncoperation.h"
 #include <QMessageBox>
 #include <QPushButton>
 #include <QDebug>
@@ -425,19 +424,8 @@ void VerticallyTabbedDialog::applySimpleChanges()
     // This method detects those changes and makes synchronous XenAPI calls to apply them.
     // Complex operations (folder, tags, etc.) are handled by dedicated Actions.
     
-    // Get API through MainWindow (dialog parent)
-    MainWindow* mainWin = qobject_cast<MainWindow*>(this->parentWidget());
-    if (!mainWin || !mainWin->xenLib())
-    {
-        qWarning() << "VerticallyTabbedDialog::applySimpleChanges: Cannot access XenLib";
-        return;
-    }
 
-    XenAPI::Session* session = nullptr;
-    if (mainWin->xenLib()->getConnection())
-    {
-        session = mainWin->xenLib()->getConnection()->GetSession();
-    }
+    XenAPI::Session* session = this->m_connection->GetSession();
 
     if (!session || !session->IsLoggedIn())
     {

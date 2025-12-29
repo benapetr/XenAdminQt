@@ -231,7 +231,7 @@ void PerformanceTabPage::updateMetrics()
 
 void PerformanceTabPage::fetchMetrics()
 {
-    if (this->m_objectData.isEmpty() || !this->m_xenLib)
+    if (this->m_objectData.isEmpty() || !this->m_connection)
     {
         return;
     }
@@ -243,9 +243,7 @@ void PerformanceTabPage::fetchMetrics()
         return;
     }
 
-    XenAPI::Session* session = this->m_xenLib->getConnection()
-        ? this->m_xenLib->getConnection()->GetSession()
-        : nullptr;
+    XenAPI::Session* session = this->m_connection->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         return;

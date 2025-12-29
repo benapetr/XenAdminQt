@@ -64,7 +64,7 @@ QString CreateVMFromTemplateCommand::getSelectedTemplateRef() const
     if (!this->mainWindow()->xenLib())
         return QString();
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenCache* cache = this->mainWindow()->xenLib()->GetCache();
     if (!cache)
         return QString();
 

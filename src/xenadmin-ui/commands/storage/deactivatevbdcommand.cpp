@@ -142,7 +142,7 @@ bool DeactivateVBDCommand::canRunVBD(const QString& vbdRef) const
 
 QString DeactivateVBDCommand::getCantRunReasonVBD(const QString& vbdRef) const
 {
-    XenCache* cache = mainWindow()->xenLib()->getCache();
+    XenCache* cache = mainWindow()->xenLib()->GetCache();
     if (!cache)
     {
         return "Cache not available";

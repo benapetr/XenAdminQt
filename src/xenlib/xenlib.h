@@ -66,7 +66,7 @@ class XENLIB_EXPORT XenLib : public QObject
         void setConnection(XenConnection* connection);
         XenCertificateManager* getCertificateManager() const;
         // Cache is per-connection; each XenConnection owns its own XenCache instance.
-        XenCache* getCache() const;
+        XenCache* GetCache() const;
         MetricUpdater* getMetricUpdater() const;
 
         // Get full object data by type and reference

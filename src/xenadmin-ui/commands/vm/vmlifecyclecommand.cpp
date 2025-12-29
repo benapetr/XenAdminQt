@@ -115,7 +115,7 @@ QString VMLifeCycleCommand::getVMPowerState() const
     if (!this->mainWindow()->xenLib())
         return QString();
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenCache* cache = this->mainWindow()->xenLib()->GetCache();
     if (!cache)
         return QString();
 
@@ -132,7 +132,7 @@ bool VMLifeCycleCommand::isVMOperationAllowed(const QString& operation) const
     if (!this->mainWindow()->xenLib())
         return false;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenCache* cache = this->mainWindow()->xenLib()->GetCache();
     if (!cache)
         return false;
 

@@ -31,7 +31,6 @@
 #include <QWidget>
 #include "navigation/navigationpane.h"
 
-class XenLib;
 class XenConnection;
 
 /**
@@ -88,10 +87,6 @@ class NotificationsBasePage : public QWidget
             return false;
         }
 
-        /**
-         * Set the XenLib instance for accessing XenAPI.
-         */
-        virtual void setXenLib(XenLib* xenLib);
         virtual void setConnection(XenConnection* connection);
 
     signals:
@@ -129,7 +124,6 @@ class NotificationsBasePage : public QWidget
          */
         void onFiltersChanged();
 
-        XenLib* m_xenLib;
         XenConnection* m_connection;
 };
 
