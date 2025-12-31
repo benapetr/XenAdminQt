@@ -34,6 +34,7 @@
 #include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xencache.h"
 #include "../../xenlib/vmhelpers.h"
+#include "../../xenlib/xen/host.h"
 #include "../../xenlib/groupingtag.h"
 #include "../../xenlib/grouping.h"
 #include <algorithm>
@@ -498,21 +499,10 @@ void NavigationView::buildInfrastructureTree()
                 hostItem->setData(0, Qt::UserRole + 1, QString("host")); // Object type
                 hostItem->setExpanded(true);                             // Expand host by default
 
-                // Set host icon - resolve host_metrics to determine liveness
-                // C# pattern: Host_metrics metrics = host.Connection.Resolve(host.metrics);
-                //             if (metrics != null && metrics.live) { ... }
-                QVariantMap enrichedHostData = hostData;
-                QString metricsRef = hostData.value("metrics").toString();
-                if (!metricsRef.isEmpty() && !metricsRef.contains("NULL"))
-                {
-                    QVariantMap metricsData = cache->ResolveObjectData("host_metrics", metricsRef);
-                    if (!metricsData.isEmpty())
-                    {
-                        // Add the resolved 'live' status to enriched data for IconManager
-                        enrichedHostData["_metrics_live"] = metricsData.value("live", false);
-                    }
-                }
-                QIcon hostIcon = IconManager::instance().getIconForHost(enrichedHostData);
+                QSharedPointer<Host> hostObj = cache->ResolveObject<Host>("host", hostRef);
+                QIcon hostIcon = hostObj
+                    ? IconManager::instance().getIconForObject(hostObj.data())
+                    : IconManager::instance().getIconForHost(hostData);
                 hostItem->setIcon(0, hostIcon);
 
                 // Store in map for VM placement later
@@ -771,19 +761,10 @@ void NavigationView::buildObjectsTree()
         hostItem->setData(0, Qt::UserRole, hostRef);
         hostItem->setData(0, Qt::UserRole + 1, QString("host"));
 
-        // Set host icon - resolve host_metrics to determine liveness
-        // C# pattern: Host_metrics metrics = host.Connection.Resolve(host.metrics);
-        QVariantMap enrichedHostData = hostData;
-        QString metricsRef = hostData.value("metrics").toString();
-        if (!metricsRef.isEmpty() && !metricsRef.contains("NULL"))
-        {
-            QVariantMap metricsData = cache->ResolveObjectData("host_metrics", metricsRef);
-            if (!metricsData.isEmpty())
-            {
-                enrichedHostData["_metrics_live"] = metricsData.value("live", false);
-            }
-        }
-        QIcon hostIcon = IconManager::instance().getIconForHost(enrichedHostData);
+        QSharedPointer<Host> hostObj = cache->ResolveObject<Host>("host", hostRef);
+        QIcon hostIcon = hostObj
+            ? IconManager::instance().getIconForObject(hostObj.data())
+            : IconManager::instance().getIconForHost(hostData);
         hostItem->setIcon(0, hostIcon);
     }
 

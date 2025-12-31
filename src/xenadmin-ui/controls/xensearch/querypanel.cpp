@@ -38,9 +38,7 @@
 #include "xenlib.h"
 #include "xencache.h"
 #include "xen/xenobject.h"
-#include "xen/vm.h"
-#include "xen/host.h"
-#include "xen/pool.h"
+#include "iconmanager.h"
 #include "../../widgets/progressbardelegate.h"
 #include "xenlib/metricupdater.h"
 #include <QHeaderView>
@@ -334,7 +332,9 @@ void QueryPanel::populateRow(QTreeWidgetItem* item, XenObject* xenObject)
         if (columnName == "name")
         {
             value = xenObject->GetName();
-            // TODO: Add icon
+            QIcon icon = IconManager::instance().getIconForObject(xenObject);
+            if (!icon.isNull())
+                item->setIcon(0, icon);
         }
         else if (columnName == "cpu")
         {
