@@ -55,7 +55,7 @@ QString NetworkOptionsEditPage::subText() const
 
 QIcon NetworkOptionsEditPage::image() const
 {
-    return QIcon(":/icons/network.png");
+    return QIcon(":/icons/network_16.png");
 }
 
 void NetworkOptionsEditPage::setXenObjects(const QString& objectRef,

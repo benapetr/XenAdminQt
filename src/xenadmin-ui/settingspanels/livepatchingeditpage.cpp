@@ -53,7 +53,7 @@ QString LivePatchingEditPage::subText() const
 
 QIcon LivePatchingEditPage::image() const
 {
-    return QIcon(":/icons/patch.png");
+    return QIcon(":/icons/patch_16.png");
 }
 
 void LivePatchingEditPage::setXenObjects(const QString& objectRef,

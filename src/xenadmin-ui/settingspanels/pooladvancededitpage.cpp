@@ -55,7 +55,7 @@ QString PoolAdvancedEditPage::subText() const
 
 QIcon PoolAdvancedEditPage::image() const
 {
-    return QIcon(":/icons/configure.png");
+    return QIcon(":/icons/configure_16.png");
 }
 
 void PoolAdvancedEditPage::setXenObjects(const QString& objectRef,
