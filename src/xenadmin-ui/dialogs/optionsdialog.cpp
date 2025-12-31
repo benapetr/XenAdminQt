@@ -37,10 +37,9 @@
 #include <QMessageBox>
 #include <QTimer>
 
-OptionsDialog::OptionsDialog(QWidget* parent)
-    : QDialog(parent), ui(new Ui::OptionsDialog)
+OptionsDialog::OptionsDialog(QWidget* parent) : QDialog(parent), ui(new Ui::OptionsDialog)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
     // Create options pages (matches C# InitializeComponent order)
     SecurityOptionsPage* securityPage = new SecurityOptionsPage(this);
@@ -51,36 +50,35 @@ OptionsDialog::OptionsDialog(QWidget* parent)
     ConfirmationOptionsPage* confirmationPage = new ConfirmationOptionsPage(this);
 
     // Add pages to list (matches C# order)
-    m_pages.append(securityPage);
-    m_pages.append(connectionPage);
-    m_pages.append(displayPage);
-    m_pages.append(consolesPage);
-    m_pages.append(saveRestorePage);
-    m_pages.append(confirmationPage);
+    this->m_pages.append(securityPage);
+    this->m_pages.append(connectionPage);
+    this->m_pages.append(displayPage);
+    this->m_pages.append(consolesPage);
+    this->m_pages.append(saveRestorePage);
+    this->m_pages.append(confirmationPage);
 
     // Add pages to vertical tabs and stacked widget
-    for (IOptionsPage* page : m_pages)
+    for (IOptionsPage* page : this->m_pages)
     {
-        ui->verticalTabs->addTab(page->image(), page->text(), page->subText(), page);
-        ui->ContentPanel->addWidget(page);
+        this->ui->verticalTabs->addTab(page->image(), page->text(), page->subText(), page);
+        this->ui->ContentPanel->addWidget(page);
     }
 
     // Connect vertical tabs selection changed
-    connect(ui->verticalTabs, &QListWidget::currentRowChanged,
-            this, &OptionsDialog::onVerticalTabsCurrentChanged);
+    connect(this->ui->verticalTabs, &QListWidget::currentRowChanged, this, &OptionsDialog::onVerticalTabsCurrentChanged);
 
     // Select first page (Security - matches C# default)
-    if (!m_pages.isEmpty())
+    if (!this->m_pages.isEmpty())
     {
-        ui->verticalTabs->setCurrentRow(0);
-        ui->ContentPanel->setCurrentWidget(m_pages.first());
-        ui->TabImage->setPixmap(m_pages.first()->image().pixmap(32, 32));
-        ui->TabTitle->setText(m_pages.first()->text());
-        m_pages.first()->show(); // Explicitly show the first page
+        this->ui->verticalTabs->setCurrentRow(0);
+        this->ui->ContentPanel->setCurrentWidget(this->m_pages.first());
+        this->ui->TabImage->setPixmap(this->m_pages.first()->image().pixmap(32, 32));
+        this->ui->TabTitle->setText(this->m_pages.first()->text());
+        this->m_pages.first()->show(); // Explicitly show the first page
     }
 
     // Force update of vertical tabs to trigger paint
-    ui->verticalTabs->update();
+    this->ui->verticalTabs->update();
 
     // Build pages after showing (matches C# OnLoad)
     QTimer::singleShot(0, this, &OptionsDialog::buildPages);
@@ -88,13 +86,13 @@ OptionsDialog::OptionsDialog(QWidget* parent)
 
 OptionsDialog::~OptionsDialog()
 {
-    delete ui;
+    delete this->ui;
 }
 
 void OptionsDialog::buildPages()
 {
     // Matches C# OptionsDialog.OnLoad()
-    for (IOptionsPage* page : m_pages)
+    for (IOptionsPage* page : this->m_pages)
     {
         page->build();
     }
@@ -103,11 +101,11 @@ void OptionsDialog::buildPages()
 void OptionsDialog::selectSecurityPage()
 {
     // Matches C# SelectConnectionOptionsPage() pattern
-    for (int i = 0; i < m_pages.size(); ++i)
+    for (int i = 0; i < this->m_pages.size(); ++i)
     {
-        if (qobject_cast<SecurityOptionsPage*>(m_pages[i]))
+        if (qobject_cast<SecurityOptionsPage*>(this->m_pages[i]))
         {
-            selectPage(m_pages[i]);
+            this->selectPage(this->m_pages[i]);
             break;
         }
     }
@@ -116,13 +114,13 @@ void OptionsDialog::selectSecurityPage()
 void OptionsDialog::selectPage(IOptionsPage* page)
 {
     // Matches C# SelectPage(page)
-    if (!page || !m_pages.contains(page))
+    if (!page || !this->m_pages.contains(page))
     {
         return;
     }
 
-    int index = m_pages.indexOf(page);
-    ui->verticalTabs->setCurrentRow(index);
+    int index = this->m_pages.indexOf(page);
+    this->ui->verticalTabs->setCurrentRow(index);
 }
 
 void OptionsDialog::accept()
@@ -130,21 +128,21 @@ void OptionsDialog::accept()
     // Matches C# okButton_Click()
 
     // Validate all pages
-    for (IOptionsPage* page : m_pages)
+    for (IOptionsPage* page : this->m_pages)
     {
         QWidget* control = nullptr;
         QString invalidReason;
 
         if (!page->isValidToSave(&control, invalidReason))
         {
-            selectPage(page);
+            this->selectPage(page);
             page->showValidationMessages(control, invalidReason);
             return; // Don't close dialog
         }
     }
 
     // Save all pages
-    for (IOptionsPage* page : m_pages)
+    for (IOptionsPage* page : this->m_pages)
     {
         page->save();
     }
@@ -165,28 +163,28 @@ void OptionsDialog::reject()
 void OptionsDialog::onVerticalTabsCurrentChanged(int index)
 {
     // Matches C# verticalTabs_SelectedIndexChanged
-    if (index < 0 || index >= m_pages.size())
+    if (index < 0 || index >= this->m_pages.size())
     {
         return;
     }
 
-    IOptionsPage* page = m_pages[index];
+    IOptionsPage* page = this->m_pages[index];
 
     // Update header
-    ui->TabImage->setPixmap(page->image().pixmap(32, 32));
-    ui->TabTitle->setText(page->text());
+    this->ui->TabImage->setPixmap(page->image().pixmap(32, 32));
+    this->ui->TabTitle->setText(page->text());
 
     // Show selected page
-    ui->ContentPanel->setCurrentWidget(page);
+    this->ui->ContentPanel->setCurrentWidget(page);
 
     // Hide validation messages
-    hideValidationToolTips();
+    this->hideValidationToolTips();
 }
 
 void OptionsDialog::hideValidationToolTips()
 {
     // Matches C# HideValidationToolTips()
-    for (IOptionsPage* page : m_pages)
+    for (IOptionsPage* page : this->m_pages)
     {
         page->hideValidationMessages();
     }

@@ -10,11 +10,6 @@
     <height>500</height>
    </rect>
   </property>
-  <property name="styleSheet">
-   <string notr="true">QLabel, QCheckBox {
-    color: black;
-}</string>
-  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QLabel" name="label1">

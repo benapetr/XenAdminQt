@@ -39,8 +39,7 @@
 #include "xen/network/connection.h"
 #include "xencache.h"
 
-VMPropertiesDialog::VMPropertiesDialog(XenConnection* connection, const QString& vmRef, QWidget* parent)
-    : VerticallyTabbedDialog(connection, vmRef, "vm", parent)
+VMPropertiesDialog::VMPropertiesDialog(XenConnection* connection, const QString& vmRef, QWidget* parent) : VerticallyTabbedDialog(connection, vmRef, "vm", parent)
 {
     QString vmName = objectDataBefore().value("name_label", tr("VM")).toString();
     this->setWindowTitle(tr("'%1' Properties").arg(vmName));
