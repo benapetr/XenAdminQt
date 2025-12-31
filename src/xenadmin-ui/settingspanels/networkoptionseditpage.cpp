@@ -27,7 +27,9 @@
 
 #include "networkoptionseditpage.h"
 #include "ui_networkoptionseditpage.h"
+#include "xencache.h"
 #include "xenlib/xen/actions/pool/setpoolpropertyaction.h"
+#include "xenlib/xen/pool.h"
 
 NetworkOptionsEditPage::NetworkOptionsEditPage(QWidget* parent)
     : IEditPage(parent)
@@ -63,12 +65,40 @@ void NetworkOptionsEditPage::setXenObjects(const QString& objectRef,
                                            const QVariantMap& objectDataBefore,
                                            const QVariantMap& objectDataCopy)
 {
-    this->m_poolRef_ = objectRef;
-    this->m_objectDataBefore_ = objectDataBefore;
-    this->m_objectDataCopy_ = objectDataCopy;
+    this->m_poolRef_.clear();
+    this->m_objectDataBefore_.clear();
+    this->m_objectDataCopy_.clear();
+
+    if (objectType == "pool")
+    {
+        this->m_poolRef_ = objectRef;
+        this->m_objectDataBefore_ = objectDataBefore;
+        this->m_objectDataCopy_ = objectDataCopy;
+    } else
+    {
+        XenConnection* conn = this->connection();
+        XenCache* cache = conn ? conn->GetCache() : nullptr;
+        if (cache)
+        {
+            QList<QSharedPointer<Pool>> pools = cache->GetAll<Pool>("pool");
+            if (!pools.isEmpty() && pools.first())
+            {
+                QSharedPointer<Pool> pool = pools.first();
+                this->m_poolRef_ = pool->OpaqueRef();
+                QVariantMap poolData = pool->GetData();
+                this->m_objectDataBefore_ = poolData;
+                this->m_objectDataCopy_ = poolData;
+            }
+        }
+    }
+
+    if (this->m_poolRef_.isEmpty())
+    {
+        return;
+    }
 
     // Read igmp_snooping_enabled property from pool
-    bool enabled = objectDataCopy.value("igmp_snooping_enabled", false).toBool();
+    bool enabled = this->m_objectDataCopy_.value("igmp_snooping_enabled", false).toBool();
     
     if (enabled)
     {

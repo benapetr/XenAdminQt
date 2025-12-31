@@ -27,7 +27,9 @@
 
 #include "pooladvancededitpage.h"
 #include "ui_pooladvancededitpage.h"
+#include "xencache.h"
 #include "xenlib/xen/actions/pool/setpoolpropertyaction.h"
+#include "xenlib/xen/pool.h"
 
 PoolAdvancedEditPage::PoolAdvancedEditPage(QWidget* parent)
     : IEditPage(parent)
@@ -63,12 +65,40 @@ void PoolAdvancedEditPage::setXenObjects(const QString& objectRef,
                                          const QVariantMap& objectDataBefore,
                                          const QVariantMap& objectDataCopy)
 {
-    this->m_poolRef_ = objectRef;
-    this->m_objectDataBefore_ = objectDataBefore;
-    this->m_objectDataCopy_ = objectDataCopy;
+    this->m_poolRef_.clear();
+    this->m_objectDataBefore_.clear();
+    this->m_objectDataCopy_.clear();
+
+    if (objectType == "pool")
+    {
+        this->m_poolRef_ = objectRef;
+        this->m_objectDataBefore_ = objectDataBefore;
+        this->m_objectDataCopy_ = objectDataCopy;
+    } else
+    {
+        XenConnection* conn = this->connection();
+        XenCache* cache = conn ? conn->GetCache() : nullptr;
+        if (cache)
+        {
+            QList<QSharedPointer<Pool>> pools = cache->GetAll<Pool>("pool");
+            if (!pools.isEmpty() && pools.first())
+            {
+                QSharedPointer<Pool> pool = pools.first();
+                this->m_poolRef_ = pool->OpaqueRef();
+                QVariantMap poolData = pool->GetData();
+                this->m_objectDataBefore_ = poolData;
+                this->m_objectDataCopy_ = poolData;
+            }
+        }
+    }
+
+    if (this->m_poolRef_.isEmpty())
+    {
+        return;
+    }
 
     // Read migration_compression property from pool
-    bool compressionEnabled = objectDataCopy.value("migration_compression", false).toBool();
+    bool compressionEnabled = this->m_objectDataCopy_.value("migration_compression", false).toBool();
     this->ui->checkBoxCompression->setChecked(compressionEnabled);
 }
 

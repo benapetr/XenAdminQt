@@ -72,8 +72,7 @@ class XENLIB_EXPORT XenLib : public QObject
         // Get full object data by type and reference
         QVariantMap getCachedObjectData(const QString& objectType, const QString& objectRef);
 
-        // Async high-level operations (non-blocking - recommended for UI)
-        // These methods return immediately and emit signals when data is ready
+        // Deprecated
         void requestVirtualMachines();
         void requestHosts();
         void requestPools();

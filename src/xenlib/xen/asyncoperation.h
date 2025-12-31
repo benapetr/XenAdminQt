@@ -219,6 +219,8 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         // AppliesTo helper - automatically adds object refs (matches C# SetAppliesTo)
         void setAppliesToFromObject(QObject* xenObject);
 
+        QPointer<XenConnection> m_connection;
+
     private:
         // Worker thread management
         void runOnWorkerThread();
@@ -228,7 +230,6 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         // Private data
         QString m_title;
         QString m_description;
-        QPointer<XenConnection> m_connection;
         QPointer<XenAPI::Session> m_session;
         int m_percentComplete;
         OperationState m_state;

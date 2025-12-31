@@ -34,6 +34,52 @@
 #include "../settingspanels/securityeditpage.h"
 #include "../settingspanels/livepatchingeditpage.h"
 #include "../settingspanels/networkoptionseditpage.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/host.h"
+
+namespace
+{
+    int compareVersionStrings(const QString& a, const QString& b)
+    {
+        const QStringList aParts = a.split('.', Qt::SkipEmptyParts);
+        const QStringList bParts = b.split('.', Qt::SkipEmptyParts);
+        const int maxCount = qMax(aParts.size(), bParts.size());
+
+        for (int i = 0; i < maxCount; ++i)
+        {
+            const int aVal = (i < aParts.size()) ? aParts[i].toInt() : 0;
+            const int bVal = (i < bParts.size()) ? bParts[i].toInt() : 0;
+            if (aVal != bVal)
+                return (aVal < bVal) ? -1 : 1;
+        }
+        return 0;
+    }
+
+    QString hostSoftwareVersionValue(const QSharedPointer<Host>& host, const QString& key)
+    {
+        if (!host)
+            return QString();
+        const QVariantMap versionMap = host->SoftwareVersion();
+        return versionMap.value(key).toString();
+    }
+
+    bool cloudOrGreater(const QSharedPointer<Host>& host)
+    {
+        const QString version = hostSoftwareVersionValue(host, "platform_version");
+        if (version.isEmpty())
+            return false;
+        return compareVersionStrings(version, "3.2.50") >= 0;
+    }
+
+    bool xapiEqualOrGreater(const QSharedPointer<Host>& host, const QString& required)
+    {
+        const QString version = hostSoftwareVersionValue(host, "xapi");
+        if (version.isEmpty())
+            return false;
+        return compareVersionStrings(version, required) >= 0;
+    }
+}
 
 PoolPropertiesDialog::PoolPropertiesDialog(XenConnection* connection,
                                            const QString& poolRef,
@@ -112,6 +158,12 @@ void PoolPropertiesDialog::build()
     // Advanced Pool Settings tab (Migration Compression)
     // C# line 188: if (isPool && Helpers.CloudOrGreater(connection)
     //                  && Helpers.XapiEqualOrGreater_22_33_0(connection))
-    // Shown unconditionally for now (TODO: add version check later)
-    this->showTab(new PoolAdvancedEditPage());
+    XenCache* cache = this->connection() ? this->connection()->GetCache() : nullptr;
+    QSharedPointer<Pool> pool = cache ? cache->ResolveObject<Pool>("pool", this->objectRef()) : QSharedPointer<Pool>();
+    QSharedPointer<Host> coordinator;
+    if (pool && cache)
+        coordinator = cache->ResolveObject<Host>("host", pool->GetMasterHostRef());
+
+    if (pool && cloudOrGreater(coordinator) && xapiEqualOrGreater(coordinator, "22.33.0"))
+        this->showTab(new PoolAdvancedEditPage());
 }

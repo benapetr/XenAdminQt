@@ -27,6 +27,7 @@
 
 #include "xenapi_Pool.h"
 #include "../api.h"
+#include "../jsonrpcclient.h"
 #include "../session.h"
 #include <stdexcept>
 
@@ -221,7 +222,13 @@ namespace XenAPI
 
         XenRpcAPI api(session);
         QByteArray request = api.buildJsonRpcCall("pool.set_migration_compression", params);
-        session->sendApiRequest(request);
+        QByteArray response = session->sendApiRequest(request);
+        if (response.isEmpty())
+            throw std::runtime_error("Empty response from server");
+        api.parseJsonRpcResponse(response); // Check for errors
+        const QString error = Xen::JsonRpcClient::lastError();
+        if (!error.isEmpty())
+            throw std::runtime_error(error.toStdString());
     }
 
     void Pool::set_live_patching_disabled(Session* session, const QString& pool, bool value)

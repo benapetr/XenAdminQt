@@ -27,7 +27,9 @@
 
 #include "livepatchingeditpage.h"
 #include "ui_livepatchingeditpage.h"
+#include "xencache.h"
 #include "xenlib/xen/actions/pool/setpoolpropertyaction.h"
+#include "xenlib/xen/pool.h"
 
 LivePatchingEditPage::LivePatchingEditPage(QWidget* parent)
     : IEditPage(parent)
@@ -61,13 +63,41 @@ void LivePatchingEditPage::setXenObjects(const QString& objectRef,
                                          const QVariantMap& objectDataBefore,
                                          const QVariantMap& objectDataCopy)
 {
-    this->m_poolRef_ = objectRef;
-    this->m_objectDataBefore_ = objectDataBefore;
-    this->m_objectDataCopy_ = objectDataCopy;
+    this->m_poolRef_.clear();
+    this->m_objectDataBefore_.clear();
+    this->m_objectDataCopy_.clear();
+
+    if (objectType == "pool")
+    {
+        this->m_poolRef_ = objectRef;
+        this->m_objectDataBefore_ = objectDataBefore;
+        this->m_objectDataCopy_ = objectDataCopy;
+    } else
+    {
+        XenConnection* conn = this->connection();
+        XenCache* cache = conn ? conn->GetCache() : nullptr;
+        if (cache)
+        {
+            QList<QSharedPointer<Pool>> pools = cache->GetAll<Pool>("pool");
+            if (!pools.isEmpty() && pools.first())
+            {
+                QSharedPointer<Pool> pool = pools.first();
+                this->m_poolRef_ = pool->OpaqueRef();
+                QVariantMap poolData = pool->GetData();
+                this->m_objectDataBefore_ = poolData;
+                this->m_objectDataCopy_ = poolData;
+            }
+        }
+    }
+
+    if (this->m_poolRef_.isEmpty())
+    {
+        return;
+    }
 
     // Read live_patching_disabled property from pool
     // Note: The server flag is "disabled", so we invert for the UI
-    bool disabled = objectDataCopy.value("live_patching_disabled", false).toBool();
+    bool disabled = this->m_objectDataCopy_.value("live_patching_disabled", false).toBool();
     
     if (disabled)
     {

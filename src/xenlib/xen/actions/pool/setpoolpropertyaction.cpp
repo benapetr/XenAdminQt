@@ -28,6 +28,7 @@
 #include "setpoolpropertyaction.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../session.h"
+#include "xen/network/connection.h"
 #include <QDebug>
 
 SetPoolPropertyAction::SetPoolPropertyAction(XenConnection* connection,
@@ -51,6 +52,20 @@ void SetPoolPropertyAction::run()
         if (!session || !session->IsLoggedIn())
         {
             setError(tr("Not connected to XenServer"));
+            return;
+        }
+        qDebug() << "SetPoolPropertyAction: Setting" << this->m_propertyName
+                 << "poolRef=" << this->m_poolRef
+                 << "value=" << this->m_value;
+        if (!this->m_connection || !this->m_connection->IsConnected())
+        {
+            qWarning() << "SetPoolPropertyAction: Connection not ready for" << this->m_propertyName
+                       << "poolRef=" << this->m_poolRef
+                       << "connected=" << (this->m_connection ? this->m_connection->IsConnected() : false);
+        }
+        if (this->m_poolRef.isEmpty())
+        {
+            setError(tr("Pool reference is missing"));
             return;
         }
 
