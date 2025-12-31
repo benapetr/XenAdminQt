@@ -253,11 +253,6 @@ bool XenLib::isConnected() const
            this->d->session && this->d->session->IsLoggedIn();
 }
 
-XenConnection* XenLib::getConnection() const
-{
-    return this->d->connection;
-}
-
 void XenLib::setConnection(XenConnection* connection)
 {
     if (connection == this->d->connection)
@@ -373,11 +368,6 @@ XenCache* XenLib::GetCache() const
     return this->d->connection ? this->d->connection->GetCache() : nullptr;
 }
 
-MetricUpdater* XenLib::getMetricUpdater() const
-{
-    return this->d->metricUpdater;
-}
-
 QVariantMap XenLib::getCachedObjectData(const QString& objectType, const QString& objectRef)
 {
     // Reference: XenModel/Network/Cache.cs lines 438-448 (Resolve method)
@@ -485,20 +475,6 @@ QString XenLib::getGuestMetricsRef(const QString& vmRef)
     return vmData.value("guest_metrics").toString();
 }
 
-QVariantMap XenLib::getGuestMetrics(const QString& vmRef)
-{
-    // Get guest_metrics reference
-    QString guestMetricsRef = getGuestMetricsRef(vmRef);
-    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
-        return QVariantMap();
-
-    // Resolve guest_metrics from cache
-    // Note: XenCache should populate guest_metrics when it fetches VMs
-    // For now, we'll need to fetch it via API if not cached
-    // TODO: Enhance cache to auto-resolve references
-    return QVariantMap(); // Placeholder - need cache enhancement
-}
-
 bool XenLib::isControlDomainZero(const QString& vmRef, QString* outHostRef)
 {
     // Reference: XenModel/XenAPI-Extensions/VM.cs lines 1362-1378
@@ -531,46 +507,6 @@ bool XenLib::isControlDomainZero(const QString& vmRef, QString* outHostRef)
     // Fallback: check if domid == 0 (control domain zero has domid 0)
     qint64 domid = vmData.value("domid").toLongLong();
     return domid == 0;
-}
-
-bool XenLib::isSRDriverDomain(const QString& vmRef, QString* outSRRef)
-{
-    // Reference: XenModel/XenAPI-Extensions/VM.cs lines 1380-1399
-    QVariantMap vmData = getCachedObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-        return false;
-
-    // Must be control domain but NOT dom0
-    if (!vmData.value("is_control_domain").toBool())
-        return false;
-
-    if (isControlDomainZero(vmRef))
-        return false;
-
-    // Check all cached PBDs to see if any reference this VM as storage_driver_domain
-    XenCache* cache = GetCache();
-    if (!cache)
-        return false;
-
-    QList<QVariantMap> allPBDs = cache->GetAllData("pbd");
-    for (const QVariantMap& pbd : allPBDs)
-    {
-        QVariantMap otherConfig = pbd.value("other_config").toMap();
-
-        QString driverDomainRef = otherConfig.value("storage_driver_domain").toString();
-        if (driverDomainRef == vmRef)
-        {
-            QString srRef = pbd.value("SR").toString();
-            if (!srRef.isEmpty() && srRef != "OpaqueRef:NULL")
-            {
-                if (outSRRef)
-                    *outSRRef = srRef;
-                return true;
-            }
-        }
-    }
-
-    return false;
 }
 
 bool XenLib::srHasDriverDomain(const QString& srRef, QString* outVMRef)
@@ -617,172 +553,6 @@ bool XenLib::srHasDriverDomain(const QString& srRef, QString* outVMRef)
     }
     
     return false;
-}
-
-QString XenLib::getControlDomainForHost(const QString& hostRef)
-{
-    // Reference: XenModel/XenAPI/Host.cs field "control_domain" (VM reference)
-    // Returns the control domain (dom0) VM reference for the given host
-
-    if (hostRef.isEmpty())
-        return QString();
-
-    XenCache* cache = GetCache();
-    if (!cache)
-        return QString();
-
-    // Try 1: Check if host record has control_domain field directly
-    QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
-    if (!hostData.isEmpty())
-    {
-        QString controlDomainRef = hostData.value("control_domain").toString();
-        if (!controlDomainRef.isEmpty() && controlDomainRef != "OpaqueRef:NULL")
-        {
-            return controlDomainRef;
-        }
-    }
-
-    // Try 2: Search for VM with is_control_domain=true and resident_on=hostRef
-    // This is the fallback for older API versions that don't expose control_domain
-    QStringList allVMRefs = cache->GetAllRefs("vm");
-    for (const QString& vmRef : allVMRefs)
-    {
-        QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-        if (vmData.isEmpty())
-            continue;
-
-        bool isControlDomain = vmData.value("is_control_domain").toBool();
-        QString residentOn = vmData.value("resident_on").toString();
-
-        if (isControlDomain && residentOn == hostRef)
-        {
-            return vmRef;
-        }
-    }
-
-    return QString(); // No control domain found
-}
-
-// Snapshot operations
-bool XenLib::changeVMISO(const QString& vmRef, const QString& vbdRef, const QString& vdiRef)
-{
-    // Reference: XenAdmin/Actions/VM/ChangeVMISOAction.cs
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vmRef.isEmpty() || vbdRef.isEmpty())
-    {
-        this->setError("Invalid VM or VBD reference");
-        return false;
-    }
-
-    // C# ChangeVMISOAction.cs lines 79-93: MUST eject first if not empty, then insert
-    // VBD.insert only works on empty VBDs, so we need to eject any existing disc first
-
-    // Get current VBD state
-    QVariantMap vbdData = getCachedObjectData("vbd", vbdRef);
-    bool isEmpty = vbdData.value("empty", true).toBool();
-
-    // Step 1: Eject current disc if not empty
-    if (!isEmpty)
-    {
-        try
-        {
-            XenAPI::VBD::eject(this->d->session, vbdRef);
-        }
-        catch (const std::exception&)
-        {
-            this->setError("Failed to eject ISO");
-            return false;
-        }
-    }
-
-    // Step 2: Insert new disc if provided
-    if (!vdiRef.isEmpty())
-    {
-        try
-        {
-            XenAPI::VBD::insert(this->d->session, vbdRef, vdiRef);
-        }
-        catch (const std::exception&)
-        {
-            this->setError("Failed to insert ISO");
-            return false;
-        }
-        return true;
-    }
-
-    return true; // Successfully ejected (and nothing to insert)
-}
-
-bool XenLib::createCdDrive(const QString& vmRef)
-{
-    // Reference: XenAdmin/Actions/VM/CreateCdDriveAction.cs
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vmRef.isEmpty())
-    {
-        this->setError("Invalid VM reference");
-        return false;
-    }
-
-    // Get VM data to find next available device number
-    QVariantMap vmData = getCachedObjectData("vm", vmRef);
-    QVariantList vbdRefs = vmData.value("VBDs").toList();
-
-    // Find highest CD device number
-    int highestDevice = -1;
-    for (const QVariant& vbdRefVar : vbdRefs)
-    {
-        QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = getCachedObjectData("vbd", vbdRef);
-
-        if (vbdData.value("type").toString() == "CD")
-        {
-            QString userdevice = vbdData.value("userdevice").toString();
-            bool ok;
-            int deviceNum = userdevice.toInt(&ok);
-            if (ok && deviceNum > highestDevice)
-            {
-                highestDevice = deviceNum;
-            }
-        }
-    }
-
-    // Create new CD drive with next device number
-    QString nextDevice = QString::number(highestDevice + 1);
-
-    QVariantMap vbdRecord;
-    vbdRecord["VM"] = vmRef;
-    vbdRecord["VDI"] = "OpaqueRef:NULL";
-    vbdRecord["bootable"] = false;
-    vbdRecord["device"] = "";
-    vbdRecord["userdevice"] = nextDevice;
-    vbdRecord["empty"] = true;
-    vbdRecord["type"] = "CD";
-    vbdRecord["mode"] = "RO";
-    vbdRecord["unpluggable"] = true;
-    vbdRecord["other_config"] = QVariantMap();
-    vbdRecord["qos_algorithm_type"] = "";
-    vbdRecord["qos_algorithm_params"] = QVariantMap();
-
-    try
-    {
-        QString newVbdRef = XenAPI::VBD::create(this->d->session, vbdRecord);
-        return !newVbdRef.isEmpty();
-    }
-    catch (const std::exception&)
-    {
-        this->setError("Failed to create CD drive");
-        return false;
-    }
 }
 
 // VM migration operations
@@ -1417,49 +1187,6 @@ bool XenLib::setNetworkTags(const QString& networkRef, const QStringList& tags)
     }
 }
 
-QString XenLib::createNetwork(const QString& name, const QString& description, const QVariantMap& otherConfig)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    if (name.isEmpty())
-    {
-        this->setError("Network name cannot be empty");
-        return QString();
-    }
-
-    try
-    {
-        QVariantMap networkRecord;
-        networkRecord["name_label"] = name;
-        networkRecord["name_description"] = description;
-        networkRecord["other_config"] = otherConfig;
-        networkRecord["MTU"] = 1500;
-        networkRecord["tags"] = QVariantList();
-
-        QString networkRef = XenAPI::Network::create(this->d->session, networkRecord);
-
-        if (!networkRef.isEmpty())
-        {
-            if (XenCache* cache = GetCache())
-                cache->ClearType("network");
-            this->requestNetworks();
-        }
-
-        return networkRef;
-    }
-    catch (const std::exception& ex)
-    {
-        qWarning() << "XenLib::createNetwork: Failed to create network:" << ex.what();
-        this->setError("Failed to create network");
-        return QString();
-    }
-
-}
-
 bool XenLib::destroyNetwork(const QString& networkRef)
 {
     if (!this->isConnected())
@@ -1701,179 +1428,6 @@ void XenLib::onPoolsReceivedForHATracking(const QVariantList& pools)
              << ", coordinator_may_change:" << coordinatorMayChange;
 }
 
-// ============================================================================
-// Async API Implementation
-// ============================================================================
-
-void XenLib::requestVirtualMachines()
-{
-    if (!this->isConnected())
-    {
-        qWarning() << "XenLib::requestVirtualMachines - Not connected";
-        emit this->virtualMachinesReceived(QVariantList()); // Empty list on error
-        return;
-    }
-
-    // CACHE CHECK FIRST - Return cached VMs if available
-    XenCache* cache = GetCache();
-    QList<QVariantMap> cachedMaps = cache ? cache->GetAllData("VM") : QList<QVariantMap>();
-    if (!cachedMaps.isEmpty())
-    {
-        qDebug() << "XenLib::requestVirtualMachines - Cache hit, returning" << cachedMaps.size() << "VMs";
-        // Convert QList<QVariantMap> to QVariantList
-        QVariantList cachedVMs;
-        for (const QVariantMap& vm : cachedMaps)
-        {
-            cachedVMs.append(vm);
-        }
-        emit this->virtualMachinesReceived(cachedVMs);
-        return;
-    }
-
-    // Cache miss - fall back to API call
-    qDebug() << "XenLib::requestVirtualMachines - Cache miss, fetching from API";
-
-    // Build the JSON-RPC request for VM.get_all_records
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-
-    QByteArray jsonRequest = this->d->api->buildJsonRpcCall("VM.get_all_records", params);
-
-    // Send async and track the request
-    int requestId = this->d->connection->SendRequestAsync(jsonRequest);
-    if (requestId < 0)
-    {
-        qWarning() << "XenLib::requestVirtualMachines - Failed to queue request";
-        emit this->virtualMachinesReceived(QVariantList());
-        return;
-    }
-
-    this->d->pendingRequests[requestId] = RequestType::GetVirtualMachines;
-}
-
-void XenLib::requestHosts()
-{
-    if (!this->isConnected())
-    {
-        qWarning() << "XenLib::requestHosts - Not connected";
-        emit this->hostsReceived(QVariantList());
-        return;
-    }
-
-    // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = GetCache()->GetAllData("host");
-    if (!cachedMaps.isEmpty())
-    {
-        qDebug() << "XenLib::requestHosts - Cache hit, returning" << cachedMaps.size() << "hosts";
-        QVariantList cachedHosts;
-        for (const QVariantMap& host : cachedMaps)
-        {
-            cachedHosts.append(host);
-        }
-        emit this->hostsReceived(cachedHosts);
-        return;
-    }
-
-    qDebug() << "XenLib::requestHosts - Cache miss, fetching from API";
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-
-    QByteArray jsonRequest = this->d->api->buildJsonRpcCall("host.get_all_records", params);
-
-    int requestId = this->d->connection->SendRequestAsync(jsonRequest);
-    if (requestId < 0)
-    {
-        qWarning() << "XenLib::requestHosts - Failed to queue request";
-        emit this->hostsReceived(QVariantList());
-        return;
-    }
-
-    this->d->pendingRequests[requestId] = RequestType::GetHosts;
-}
-
-void XenLib::requestPools()
-{
-    if (!this->isConnected())
-    {
-        qWarning() << "XenLib::requestPools - Not connected";
-        emit this->poolsReceived(QVariantList());
-        return;
-    }
-
-    // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = GetCache()->GetAllData("pool");
-    if (!cachedMaps.isEmpty())
-    {
-        qDebug() << "XenLib::requestPools - Cache hit, returning" << cachedMaps.size() << "pools";
-        QVariantList cachedPools;
-        for (const QVariantMap& pool : cachedMaps)
-        {
-            cachedPools.append(pool);
-        }
-        emit this->poolsReceived(cachedPools);
-        return;
-    }
-
-    qDebug() << "XenLib::requestPools - Cache miss, fetching from API";
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-
-    QByteArray jsonRequest = this->d->api->buildJsonRpcCall("pool.get_all_records", params);
-
-    int requestId = this->d->connection->SendRequestAsync(jsonRequest);
-    if (requestId < 0)
-    {
-        qWarning() << "XenLib::requestPools - Failed to queue request";
-        emit this->poolsReceived(QVariantList());
-        return;
-    }
-
-    this->d->pendingRequests[requestId] = RequestType::GetPools;
-}
-
-void XenLib::requestStorageRepositories()
-{
-    if (!this->isConnected())
-    {
-        qWarning() << "XenLib::requestStorageRepositories - Not connected";
-        emit this->storageRepositoriesReceived(QVariantList());
-        return;
-    }
-
-    // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = GetCache()->GetAllData("SR");
-    if (!cachedMaps.isEmpty())
-    {
-        qDebug() << "XenLib::requestStorageRepositories - Cache hit, returning" << cachedMaps.size() << "SRs";
-        QVariantList cachedSRs;
-        for (const QVariantMap& sr : cachedMaps)
-        {
-            cachedSRs.append(sr);
-        }
-        emit this->storageRepositoriesReceived(cachedSRs);
-        return;
-    }
-
-    qDebug() << "XenLib::requestStorageRepositories - Cache miss, fetching from API";
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-
-    QByteArray jsonRequest = this->d->api->buildJsonRpcCall("SR.get_all_records", params);
-
-    int requestId = this->d->connection->SendRequestAsync(jsonRequest);
-    if (requestId < 0)
-    {
-        qWarning() << "XenLib::requestStorageRepositories - Failed to queue request";
-        emit this->storageRepositoriesReceived(QVariantList());
-        return;
-    }
-
-    this->d->pendingRequests[requestId] = RequestType::GetStorageRepositories;
-}
-
 void XenLib::requestNetworks()
 {
     if (!this->isConnected())
@@ -1946,64 +1500,6 @@ void XenLib::requestPIFs()
     }
 
     this->d->pendingRequests[requestId] = RequestType::GetPIFs;
-}
-
-void XenLib::requestObjectData(const QString& objectType, const QString& objectRef)
-{
-    if (!this->isConnected())
-    {
-        qWarning() << "XenLib::requestObjectData - Not connected";
-        emit this->objectDataReceived(objectType, objectRef, QVariantMap());
-        return;
-    }
-
-    // CACHE CHECK FIRST - Transparent cache integration (like C# Connection.Resolve)
-    QVariantMap cachedData = GetCache()->ResolveObjectData(objectType, objectRef);
-    if (!cachedData.isEmpty())
-    {
-        qDebug() << "XenLib::requestObjectData - Cache hit for" << objectType << objectRef;
-        // Emit immediately with cached data (synchronous from caller's perspective)
-        emit this->objectDataReceived(objectType, objectRef, cachedData);
-        return;
-    }
-
-    // Cache miss - fall back to API call
-    qDebug() << "XenLib::requestObjectData - Cache miss for" << objectType << objectRef << "- fetching from API";
-
-    // Build appropriate API call based on object type
-    QString methodName;
-    if (objectType == "vm")
-        methodName = "VM.get_all_records";
-    else if (objectType == "host")
-        methodName = "host.get_all_records";
-    else if (objectType == "pool")
-        methodName = "pool.get_all_records";
-    else if (objectType == "storage")
-        methodName = "SR.get_all_records";
-    else if (objectType == "network")
-        methodName = "network.get_all_records";
-    else
-    {
-        qWarning() << "XenLib::requestObjectData - Unknown object type:" << objectType;
-        emit this->objectDataReceived(objectType, objectRef, QVariantMap());
-        return;
-    }
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-
-    QByteArray jsonRequest = this->d->api->buildJsonRpcCall(methodName, params);
-
-    int requestId = this->d->connection->SendRequestAsync(jsonRequest);
-    if (requestId < 0)
-    {
-        qWarning() << "XenLib::requestObjectData - Failed to queue request";
-        emit this->objectDataReceived(objectType, objectRef, QVariantMap());
-        return;
-    }
-
-    this->d->pendingRequests[requestId] = RequestType::GetObjectData;
-    this->d->objectDataRequests[requestId] = qMakePair(objectType, objectRef);
 }
 
 void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)

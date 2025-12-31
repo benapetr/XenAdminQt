@@ -62,40 +62,24 @@ class XENLIB_EXPORT XenLib : public QObject
         // TODO - delete this
         bool isConnected() const;
 
-        XenConnection* getConnection() const;
         void setConnection(XenConnection* connection);
         XenCertificateManager* getCertificateManager() const;
         // Cache is per-connection; each XenConnection owns its own XenCache instance.
         XenCache* GetCache() const;
-        MetricUpdater* getMetricUpdater() const;
 
         // Get full object data by type and reference
         QVariantMap getCachedObjectData(const QString& objectType, const QString& objectRef);
 
         // Deprecated
-        void requestVirtualMachines();
-        void requestHosts();
-        void requestPools();
-        void requestStorageRepositories();
         void requestNetworks();
         void requestPIFs();
-        void requestObjectData(const QString& objectType, const QString& objectRef);
 
         // VM management operations
         bool updateVM(const QString& vmRef, const QVariantMap& updates);
 
         QString getGuestMetricsRef(const QString& vmRef);
-        QVariantMap getGuestMetrics(const QString& vmRef);
         bool isControlDomainZero(const QString& vmRef, QString* outHostRef = nullptr);
-        bool isSRDriverDomain(const QString& vmRef, QString* outSRRef = nullptr);
         bool srHasDriverDomain(const QString& srRef, QString* outVMRef = nullptr);
-
-        // Host property helpers
-        QString getControlDomainForHost(const QString& hostRef);
-
-        // CD/DVD operations
-        bool changeVMISO(const QString& vmRef, const QString& vbdRef, const QString& vdiRef);
-        bool createCdDrive(const QString& vmRef);
 
         // VM migration operations
         bool canMigrateVM(const QString& vmRef, const QString& hostRef);
@@ -125,7 +109,6 @@ class XENLIB_EXPORT XenLib : public QObject
         bool setSRTags(const QString& srRef, const QStringList& tags);
 
         // Network operations
-        QString createNetwork(const QString& name, const QString& description = QString(), const QVariantMap& otherConfig = QVariantMap());
         bool destroyNetwork(const QString& networkRef);
         bool setNetworkName(const QString& networkRef, const QString& name);
         bool setNetworkDescription(const QString& networkRef, const QString& description);
