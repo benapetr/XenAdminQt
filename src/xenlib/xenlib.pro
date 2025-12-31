@@ -128,6 +128,8 @@ SOURCES += \
     xen/actions/pool/syncdatabaseaction.cpp \
     xen/actions/pool/setpoolnameanddescriptionaction.cpp \
     xen/actions/pool/setsrasdefaultaction.cpp \
+    xen/actions/pool/setpoolpropertyaction.cpp \
+    xen/actions/pool/setssllegacyaction.cpp \
     xen/actions/network/changenetworkingaction.cpp \
     xen/actions/network/createbondaction.cpp \
     xen/actions/network/destroybondaction.cpp \
@@ -274,6 +276,8 @@ HEADERS += \
     xen/actions/pool/syncdatabaseaction.h \
     xen/actions/pool/setpoolnameanddescriptionaction.h \
     xen/actions/pool/setsrasdefaultaction.h \
+    xen/actions/pool/setpoolpropertyaction.h \
+    xen/actions/pool/setssllegacyaction.h \
     xen/actions/network/changenetworkingaction.h \
     xen/actions/network/createbondaction.h \
     xen/actions/network/destroybondaction.h \

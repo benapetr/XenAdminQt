@@ -224,6 +224,73 @@ namespace XenAPI
         session->sendApiRequest(request);
     }
 
+    void Pool::set_live_patching_disabled(Session* session, const QString& pool, bool value)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pool << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("pool.set_live_patching_disabled", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response); // Check for errors
+    }
+
+    void Pool::set_igmp_snooping_enabled(Session* session, const QString& pool, bool value)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pool << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("pool.set_igmp_snooping_enabled", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response); // Check for errors
+    }
+
+    void Pool::enable_ssl_legacy(Session* session, const QString& pool)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pool;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("pool.enable_ssl_legacy", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response); // Check for errors
+    }
+
+    void Pool::disable_ssl_legacy(Session* session, const QString& pool)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pool;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("pool.disable_ssl_legacy", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response); // Check for errors
+    }
+
+    void Pool::set_ssl_legacy(Session* session, const QString& pool, bool enable)
+    {
+        if (enable)
+        {
+            Pool::enable_ssl_legacy(session, pool);
+        } else
+        {
+            Pool::disable_ssl_legacy(session, pool);
+        }
+    }
+
     QString Pool::async_enable_ha(Session* session, const QStringList& heartbeat_srs,
                                   const QVariantMap& configuration)
     {

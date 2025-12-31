@@ -42,20 +42,20 @@ OptionsDialog::OptionsDialog(QWidget* parent) : QDialog(parent), ui(new Ui::Opti
     this->ui->setupUi(this);
 
     // Create options pages (matches C# InitializeComponent order)
+    ConfirmationOptionsPage* confirmationPage = new ConfirmationOptionsPage(this);
+    SaveAndRestoreOptionsPage* saveRestorePage = new SaveAndRestoreOptionsPage(this);
     SecurityOptionsPage* securityPage = new SecurityOptionsPage(this);
-    ConnectionOptionsPage* connectionPage = new ConnectionOptionsPage(this);
     DisplayOptionsPage* displayPage = new DisplayOptionsPage(this);
     ConsolesOptionsPage* consolesPage = new ConsolesOptionsPage(this);
-    SaveAndRestoreOptionsPage* saveRestorePage = new SaveAndRestoreOptionsPage(this);
-    ConfirmationOptionsPage* confirmationPage = new ConfirmationOptionsPage(this);
+    ConnectionOptionsPage* connectionPage = new ConnectionOptionsPage(this);
 
     // Add pages to list (matches C# order)
+    this->m_pages.append(confirmationPage);
+    this->m_pages.append(saveRestorePage);
     this->m_pages.append(securityPage);
-    this->m_pages.append(connectionPage);
     this->m_pages.append(displayPage);
     this->m_pages.append(consolesPage);
-    this->m_pages.append(saveRestorePage);
-    this->m_pages.append(confirmationPage);
+    this->m_pages.append(connectionPage);
 
     // Add pages to vertical tabs and stacked widget
     for (IOptionsPage* page : this->m_pages)

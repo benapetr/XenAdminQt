@@ -174,6 +174,55 @@ namespace XenAPI
             static void set_migration_compression(Session* session, const QString& pool, bool enabled);
 
             /**
+             * @brief Set live patching disabled flag
+             * @param session Active XenSession
+             * @param pool Pool opaque reference
+             * @param value New value for live_patching_disabled
+             *
+             * C# Reference: Pool.cs line 1394
+             */
+            static void set_live_patching_disabled(Session* session, const QString& pool, bool value);
+
+            /**
+             * @brief Set IGMP snooping enabled flag
+             * @param session Active XenSession
+             * @param pool Pool opaque reference
+             * @param value New value for igmp_snooping_enabled
+             *
+             * First published in XenServer 7.3.
+             * C# Reference: Pool.cs line 2467
+             */
+            static void set_igmp_snooping_enabled(Session* session, const QString& pool, bool value);
+
+            /**
+             * @brief Enable SSL legacy mode on all hosts in pool
+             * @param session Active XenSession
+             * @param pool Pool opaque reference
+             *
+             * Sets ssl_legacy true on each host, pool-master last.
+             * C# Reference: Pool.cs line 2416
+             */
+            static void enable_ssl_legacy(Session* session, const QString& pool);
+
+            /**
+             * @brief Disable SSL legacy mode on all hosts in pool
+             * @param session Active XenSession
+             * @param pool Pool opaque reference
+             *
+             * Sets ssl_legacy false on each host, pool-master last.
+             * C# Reference: Pool.cs line 2442
+             */
+            static void disable_ssl_legacy(Session* session, const QString& pool);
+
+            /**
+             * @brief Set SSL legacy mode (wrapper for enable/disable)
+             * @param session Active XenSession
+             * @param pool Pool opaque reference
+             * @param enable True to enable SSL legacy, false to disable
+             */
+            static void set_ssl_legacy(Session* session, const QString& pool, bool enable);
+
+            /**
              * @brief Enable HA on pool (async)
              * @param session Active XenSession
              * @param heartbeat_srs List of SR opaque references to use for heartbeat

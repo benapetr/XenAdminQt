@@ -74,6 +74,10 @@ SOURCES += \
     settingspanels/homeservereditpage.cpp \
     settingspanels/vmadvancededitpage.cpp \
     settingspanels/vmenlightenmenteditpage.cpp \
+    settingspanels/pooladvancededitpage.cpp \
+    settingspanels/securityeditpage.cpp \
+    settingspanels/livepatchingeditpage.cpp \
+    settingspanels/networkoptionseditpage.cpp \
     dialogs/optionspages/securityoptionspage.cpp \
     dialogs/optionspages/displayoptionspage.cpp \
     dialogs/optionspages/confirmationoptionspage.cpp \
@@ -293,6 +297,10 @@ HEADERS += \
     settingspanels/homeservereditpage.h \
     settingspanels/vmadvancededitpage.h \
     settingspanels/vmenlightenmenteditpage.h \
+    settingspanels/pooladvancededitpage.h \
+    settingspanels/securityeditpage.h \
+    settingspanels/livepatchingeditpage.h \
+    settingspanels/networkoptionseditpage.h \
     dialogs/optionspages/ioptionspage.h \
     dialogs/optionspages/securityoptionspage.h \
     dialogs/optionspages/displayoptionspage.h \
@@ -477,6 +485,10 @@ FORMS += \
     settingspanels/homeservereditpage.ui \
     settingspanels/vmadvancededitpage.ui \
     settingspanels/vmenlightenmenteditpage.ui \
+    settingspanels/pooladvancededitpage.ui \
+    settingspanels/securityeditpage.ui \
+    settingspanels/livepatchingeditpage.ui \
+    settingspanels/networkoptionseditpage.ui \
     dialogs/optionspages/securityoptionspage.ui \
     dialogs/optionspages/displayoptionspage.ui \
     dialogs/optionspages/confirmationoptionspage.ui \
