@@ -27,9 +27,72 @@
 
 #include "disconnectcommand.h"
 #include "../../mainwindow.h"
+#include "../../dialogs/warningdialogs/closexencenterwarningdialog.h"
 #include "xen/network/connection.h"
-#include <QMessageBox>
+#include "operations/operationmanager.h"
+#include "actions/meddlingaction.h"
 #include <QMetaObject>
+#include <QProgressDialog>
+#include <QCoreApplication>
+#include <QElapsedTimer>
+
+namespace
+{
+    bool allActionsFinished(XenConnection* connection)
+    {
+        const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->records();
+        for (OperationManager::OperationRecord* record : records)
+        {
+            AsyncOperation* operation = record ? record->operation.data() : nullptr;
+            if (!operation)
+                continue;
+            if (qobject_cast<MeddlingAction*>(operation))
+                continue;
+            if (operation->connection() != connection)
+                continue;
+            if (record->state != AsyncOperation::Completed)
+                return false;
+        }
+        return true;
+    }
+
+    void cancelAllActions(XenConnection* connection)
+    {
+        const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->records();
+        for (OperationManager::OperationRecord* record : records)
+        {
+            AsyncOperation* operation = record ? record->operation.data() : nullptr;
+            if (!operation)
+                continue;
+            if (qobject_cast<MeddlingAction*>(operation))
+                continue;
+            if (operation->connection() != connection)
+                continue;
+            if (operation->canCancel())
+                operation->cancel();
+        }
+    }
+
+    void waitForCancel(MainWindow* mainWindow, XenConnection* connection)
+    {
+        QProgressDialog progress(mainWindow);
+        progress.setWindowTitle(QObject::tr("Canceling Tasks"));
+        progress.setLabelText(QObject::tr("Canceling..."));
+        progress.setCancelButton(nullptr);
+        progress.setRange(0, 0);
+        progress.setMinimumDuration(0);
+        progress.show();
+
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.elapsed() < 6000)
+        {
+            if (allActionsFinished(connection))
+                break;
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 200);
+        }
+    }
+}
 
 DisconnectCommand::DisconnectCommand(MainWindow* mainWindow,
                                      XenConnection* connection,
@@ -54,6 +117,9 @@ void DisconnectCommand::Run()
     if (m_prompt && !confirmDisconnect())
         return;
 
+    if (!m_prompt)
+        cancelAllActions(m_connection);
+
     doDisconnect();
 }
 
@@ -64,10 +130,21 @@ QString DisconnectCommand::MenuText() const
 
 bool DisconnectCommand::confirmDisconnect() const
 {
-    return QMessageBox::question(this->mainWindow(),
-                                 "Disconnect",
-                                 "Are you sure you want to disconnect from the server?",
-                                 QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes;
+    if (!m_connection)
+        return false;
+
+    if (!allActionsFinished(m_connection))
+    {
+        CloseXenCenterWarningDialog dlg(false, m_connection, this->mainWindow());
+        if (dlg.exec() != QDialog::Accepted)
+            return false;
+
+        cancelAllActions(m_connection);
+        waitForCancel(this->mainWindow(), m_connection);
+        return true;
+    }
+
+    return true;
 }
 
 void DisconnectCommand::doDisconnect()
@@ -79,7 +156,4 @@ void DisconnectCommand::doDisconnect()
 
     m_connection->EndConnect(true, false);
     QMetaObject::invokeMethod(this->mainWindow(), "SaveServerList", Qt::QueuedConnection);
-
-    // TODO: mirror C# DisconnectCommand.ConfirmCancelRunningActions by canceling running actions
-    // and showing a progress dialog while tasks are canceled.
 }

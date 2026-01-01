@@ -49,6 +49,7 @@ SOURCES += \
     dialogs/optionsdialog.cpp \
     dialogs/verticallytabbeddialog.cpp \
     dialogs/customsearchdialog.cpp \
+    dialogs/warningdialogs/closexencenterwarningdialog.cpp \
     controls/affinitypicker.cpp \
     controls/srpicker.cpp \
     controls/dropdownbutton.cpp \
@@ -270,6 +271,7 @@ HEADERS += \
     dialogs/optionsdialog.h \
     dialogs/verticallytabbeddialog.h \
     dialogs/customsearchdialog.h \
+    dialogs/warningdialogs/closexencenterwarningdialog.h \
     network/xenconnectionui.h \
     controls/affinitypicker.h \
     controls/srpicker.h \
@@ -470,6 +472,7 @@ FORMS += \
     dialogs/newsrwizard.ui \
     dialogs/verticallytabbeddialog.ui \
     dialogs/customsearchdialog.ui \
+    dialogs/warningdialogs/closexencenterwarningdialog.ui \
     controls/affinitypicker.ui \
     controls/srpicker.ui \
     settingspanels/generaleditpage.ui \

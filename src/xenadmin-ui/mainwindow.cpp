@@ -31,6 +31,7 @@
 #include "dialogs/debugwindow.h"
 #include "dialogs/aboutdialog.h"
 #include "dialogs/optionsdialog.h"
+#include "dialogs/warningdialogs/closexencenterwarningdialog.h"
 #include "tabpages/generaltabpage.h"
 #include "tabpages/vmstoragetabpage.h"
 #include "tabpages/srstoragetabpage.h"
@@ -65,6 +66,7 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "operations/operationmanager.h"
+#include "actions/meddlingaction.h"
 #include "commands/contextmenubuilder.h"
 
 // Polymorphic commands (handle VMs and Hosts)
@@ -1433,17 +1435,27 @@ void MainWindow::loadSettings()
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
-    // Check if user wants confirmation on exit
-    if (SettingsManager::instance().getConfirmOnExit())
+    // Match C# behavior: prompt only when there are running operations
+    bool hasRunningOperations = false;
+    const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->records();
+    for (OperationManager::OperationRecord* record : records)
     {
-        QMessageBox::StandardButton reply = QMessageBox::question(
-            this,
-            "Confirm Exit",
-            "Are you sure you want to exit XenAdmin?",
-            QMessageBox::Yes | QMessageBox::No,
-            QMessageBox::No);
+        AsyncOperation* operation = record ? record->operation.data() : nullptr;
+        if (!operation)
+            continue;
+        if (qobject_cast<MeddlingAction*>(operation))
+            continue;
+        if (record->state != AsyncOperation::Completed)
+        {
+            hasRunningOperations = true;
+            break;
+        }
+    }
 
-        if (reply != QMessageBox::Yes)
+    if (hasRunningOperations)
+    {
+        CloseXenCenterWarningDialog dlg(false, nullptr, this);
+        if (dlg.exec() != QDialog::Accepted)
         {
             event->ignore();
             return;
