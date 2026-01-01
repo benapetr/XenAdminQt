@@ -91,6 +91,7 @@ class SnapshotsTabPage : public BaseTabPage
         void showDetailsForSnapshot(const QVariantMap& snapshot, bool force);
         void showDetailsForMultiple(const QList<QVariantMap>& snapshots);
         QList<QString> selectedSnapshotRefs() const;
+        bool canDeleteSnapshots(const QList<QString>& snapshotRefs) const;
         qint64 snapshotSizeBytes(const QVariantMap& snapshot) const;
         QString formatSize(qint64 bytes) const;
         QPixmap noScreenshotPixmap() const;

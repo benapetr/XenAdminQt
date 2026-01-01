@@ -36,6 +36,8 @@
 #include "../commands/vm/newvmfromsnapshotcommand.h"
 #include "../dialogs/snapshotpropertiesdialog.h"
 #include "../controls/snapshottreeview.h"
+#include "../operations/operationmanager.h"
+#include "xen/actions/vm/vmsnapshotdeleteaction.h"
 #include "xen/session.h"
 #include "xencache.h"
 #include "xen/actions/vm/vmsnapshotcreateaction.h"
@@ -85,6 +87,9 @@ SnapshotsTabPage::SnapshotsTabPage(QWidget* parent)
     this->ui->snapshotTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     this->ui->snapshotTable->verticalHeader()->setVisible(false);
     this->ui->snapshotTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    this->ui->snapshotTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    this->ui->snapshotTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    this->ui->snapshotTree->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     QMenu* viewMenu = new QMenu(this);
     this->m_treeViewAction = viewMenu->addAction(tr("Tree View"));
@@ -365,10 +370,9 @@ void SnapshotsTabPage::onTakeSnapshot()
 
 void SnapshotsTabPage::onDeleteSnapshot()
 {
-    QString snapshotName;
-    QString snapshotRef = this->selectedSnapshotRef(&snapshotName);
+    QList<QString> snapshotRefs = this->selectedSnapshotRefs();
 
-    if (snapshotRef.isEmpty())
+    if (snapshotRefs.isEmpty())
     {
         return;
     }
@@ -386,11 +390,38 @@ void SnapshotsTabPage::onDeleteSnapshot()
         return;
     }
 
-    DeleteSnapshotCommand* cmd = new DeleteSnapshotCommand(snapshotRef, mainWindow);
-    cmd->Run();
+    if (snapshotRefs.size() == 1)
+    {
+        DeleteSnapshotCommand* cmd = new DeleteSnapshotCommand(snapshotRefs.first(), mainWindow);
+        cmd->Run();
+        QTimer::singleShot(1000, this, &SnapshotsTabPage::refreshSnapshotList);
+        return;
+    }
 
-    // Refresh after a short delay to allow the operation to complete
-    QTimer::singleShot(1000, this, &SnapshotsTabPage::refreshSnapshotList);
+    if (!this->m_connection || !this->m_connection->IsConnected())
+    {
+        QMessageBox::critical(this, tr("Delete Error"), tr("Not connected to XenServer."));
+        return;
+    }
+
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        tr("Delete Snapshots"),
+        tr("Are you sure you want to delete %1 snapshots?\n\nThis action cannot be undone.")
+            .arg(snapshotRefs.size()),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No);
+
+    if (reply != QMessageBox::Yes)
+        return;
+
+    for (const QString& ref : snapshotRefs)
+    {
+        VMSnapshotDeleteAction* action = new VMSnapshotDeleteAction(this->m_connection, ref, this);
+        OperationManager::instance()->registerOperation(action);
+        connect(action, &AsyncOperation::completed, action, &QObject::deleteLater);
+        action->runAsync();
+    }
 }
 
 void SnapshotsTabPage::onRevertToSnapshot()
@@ -518,12 +549,42 @@ void SnapshotsTabPage::onCacheObjectChanged(XenConnection* connection, const QSt
 
 void SnapshotsTabPage::updateButtonStates()
 {
-    bool hasSelection = !this->selectedSnapshotRef().isEmpty();
-    bool hasVM = !m_objectRef.isEmpty() && m_objectType == "vm";
+    const QList<QString> refs = this->selectedSnapshotRefs();
+    const bool hasVM = !m_objectRef.isEmpty() && m_objectType == "vm";
 
-    ui->takeSnapshotButton->setEnabled(hasVM);
-    ui->deleteSnapshotButton->setEnabled(hasSelection);
-    ui->revertButton->setEnabled(hasSelection);
+    MainWindow* mainWindow = qobject_cast<MainWindow*>(this->window());
+    if (!mainWindow)
+    {
+        ui->takeSnapshotButton->setEnabled(false);
+        ui->deleteSnapshotButton->setEnabled(false);
+        ui->revertButton->setEnabled(false);
+        return;
+    }
+
+    bool canTake = false;
+    if (hasVM)
+    {
+        TakeSnapshotCommand takeCmd(this->m_objectRef, mainWindow);
+        canTake = takeCmd.CanRun();
+    }
+
+    bool canDelete = false;
+    bool canRevert = false;
+    if (refs.size() == 1)
+    {
+        DeleteSnapshotCommand deleteCmd(refs.first(), mainWindow);
+        RevertToSnapshotCommand revertCmd(refs.first(), mainWindow);
+        canDelete = deleteCmd.CanRun();
+        canRevert = revertCmd.CanRun();
+    }
+    else if (refs.size() > 1)
+    {
+        canDelete = this->canDeleteSnapshots(refs);
+    }
+
+    ui->takeSnapshotButton->setEnabled(canTake);
+    ui->deleteSnapshotButton->setEnabled(canDelete);
+    ui->revertButton->setEnabled(canRevert);
 }
 
 void SnapshotsTabPage::updateDetailsPanel(bool force)
@@ -770,6 +831,31 @@ QList<QString> SnapshotsTabPage::selectedSnapshotRefs() const
     return refs;
 }
 
+bool SnapshotsTabPage::canDeleteSnapshots(const QList<QString>& snapshotRefs) const
+{
+    if (snapshotRefs.isEmpty() || !this->m_connection)
+        return false;
+
+    XenCache* cache = this->m_connection->GetCache();
+    if (!cache)
+        return false;
+
+    for (const QString& ref : snapshotRefs)
+    {
+        QVariantMap snapshotData = cache->ResolveObjectData("vm", ref);
+        if (snapshotData.isEmpty())
+            return false;
+        if (!snapshotData.value("is_a_snapshot").toBool())
+            return false;
+        if (!snapshotData.value("current_operations").toList().isEmpty())
+            return false;
+        if (!snapshotData.value("allowed_operations").toList().contains("destroy"))
+            return false;
+    }
+
+    return true;
+}
+
 qint64 SnapshotsTabPage::snapshotSizeBytes(const QVariantMap& snapshot) const
 {
     if (!this->m_connection || !this->m_connection->GetCache())
@@ -962,11 +1048,38 @@ void SnapshotsTabPage::onSnapshotContextMenu(const QPoint& pos)
     QAction* deleteAction = menu.addAction(tr("Delete Snapshot"));
     QAction* propertiesAction = menu.addAction(tr("Properties..."));
 
-    const bool hasSelection = !snapshotRef.isEmpty();
-    revertAction->setEnabled(hasSelection);
-    saveMenu->setEnabled(hasSelection);
-    deleteAction->setEnabled(hasSelection);
-    propertiesAction->setEnabled(hasSelection);
+    bool canRevert = false;
+    bool canDelete = false;
+    bool canSave = false;
+    bool canProperties = false;
+    bool canTake = false;
+
+    MainWindow* mainWindow = qobject_cast<MainWindow*>(this->window());
+    if (mainWindow && !snapshotRef.isEmpty())
+    {
+        RevertToSnapshotCommand revertCmd(snapshotRef, mainWindow);
+        DeleteSnapshotCommand deleteCmd(snapshotRef, mainWindow);
+        NewVMFromSnapshotCommand newVmCmd(snapshotRef, this->m_connection, mainWindow);
+        NewTemplateFromSnapshotCommand newTemplateCmd(snapshotRef, this->m_connection, mainWindow);
+        ExportSnapshotAsTemplateCommand exportCmd(snapshotRef, this->m_connection, mainWindow);
+
+        canRevert = revertCmd.CanRun();
+        canDelete = deleteCmd.CanRun();
+        canSave = newVmCmd.CanRun() || newTemplateCmd.CanRun() || exportCmd.CanRun();
+        canProperties = true;
+    }
+
+    if (mainWindow && this->m_objectType == "vm" && !this->m_objectRef.isEmpty())
+    {
+        TakeSnapshotCommand takeCmd(this->m_objectRef, mainWindow);
+        canTake = takeCmd.CanRun();
+    }
+
+    takeSnapshotAction->setEnabled(canTake);
+    revertAction->setEnabled(canRevert);
+    saveMenu->setEnabled(canSave);
+    deleteAction->setEnabled(canDelete);
+    propertiesAction->setEnabled(canProperties);
 
     QWidget* menuAnchor = treeView
         ? static_cast<QWidget*>(this->ui->snapshotTree)
