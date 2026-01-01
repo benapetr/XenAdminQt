@@ -31,6 +31,7 @@
 #include "../command.h"
 
 class MainWindow;
+class XenConnection;
 
 /**
  * @brief Command to create a new template from a VM snapshot
@@ -56,6 +57,10 @@ class NewTemplateFromSnapshotCommand : public Command
          * @param parent Parent QObject
          */
         explicit NewTemplateFromSnapshotCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit NewTemplateFromSnapshotCommand(const QString& snapshotRef,
+                                                XenConnection* connection,
+                                                MainWindow* mainWindow,
+                                                QObject* parent = nullptr);
 
         /**
          * @brief Check if command can run with current selection
@@ -84,6 +89,9 @@ class NewTemplateFromSnapshotCommand : public Command
         QString MenuText() const override;
 
     private:
+        QString m_snapshotRef;
+        XenConnection* m_connection = nullptr;
+
         /**
          * @brief Generate a unique name for the new template
          * @param snapshotName Name of the source snapshot

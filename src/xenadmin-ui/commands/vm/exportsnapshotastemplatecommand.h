@@ -31,6 +31,7 @@
 #include "../command.h"
 
 class MainWindow;
+class XenConnection;
 
 /**
  * @brief Command to export a VM snapshot as a template
@@ -55,6 +56,10 @@ class ExportSnapshotAsTemplateCommand : public Command
          * @param parent Parent QObject
          */
         explicit ExportSnapshotAsTemplateCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit ExportSnapshotAsTemplateCommand(const QString& snapshotRef,
+                                                 XenConnection* connection,
+                                                 MainWindow* mainWindow,
+                                                 QObject* parent = nullptr);
 
         /**
          * @brief Check if command can run with current selection
@@ -80,6 +85,10 @@ class ExportSnapshotAsTemplateCommand : public Command
          * @return "Export Snapshot as Template..."
          */
         QString MenuText() const override;
+
+    private:
+        QString m_snapshotRef;
+        XenConnection* m_connection = nullptr;
 };
 
 #endif // EXPORTSNAPSHOTASTEMPLATECOMMAND_H

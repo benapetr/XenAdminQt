@@ -34,6 +34,7 @@ SOURCES += \
     dialogs/vmpropertiesdialog.cpp \
     dialogs/hostpropertiesdialog.cpp \
     dialogs/poolpropertiesdialog.cpp \
+    dialogs/snapshotpropertiesdialog.cpp \
     dialogs/storagepropertiesdialog.cpp \
     dialogs/networkpropertiesdialog.cpp \
     dialogs/bondpropertiesdialog.cpp \
@@ -53,6 +54,7 @@ SOURCES += \
     controls/affinitypicker.cpp \
     controls/srpicker.cpp \
     controls/dropdownbutton.cpp \
+    controls/snapshottreeview.cpp \
     controls/xensearch/querypanel.cpp \
     controls/xensearch/searchoutput.cpp \
     controls/xensearch/foldernavigator.cpp \
@@ -143,6 +145,7 @@ SOURCES += \
     commands/vm/vappstartcommand.cpp \
     commands/vm/vappshutdowncommand.cpp \
     commands/vm/exportsnapshotastemplatecommand.cpp \
+    commands/vm/newvmfromsnapshotcommand.cpp \
     commands/vm/newtemplatefromsnapshotcommand.cpp \
     commands/vm/disablechangedblocktrackingcommand.cpp \
     commands/vm/importvmcommand.cpp \
@@ -255,6 +258,7 @@ HEADERS += \
     dialogs/vmpropertiesdialog.h \
     dialogs/hostpropertiesdialog.h \
     dialogs/poolpropertiesdialog.h \
+    dialogs/snapshotpropertiesdialog.h \
     dialogs/storagepropertiesdialog.h \
     dialogs/networkpropertiesdialog.h \
     dialogs/bondpropertiesdialog.h \
@@ -276,6 +280,7 @@ HEADERS += \
     controls/affinitypicker.h \
     controls/srpicker.h \
     controls/dropdownbutton.h \
+    controls/snapshottreeview.h \
     controls/xensearch/querypanel.h \
     controls/xensearch/searchoutput.h \
     controls/xensearch/foldernavigator.h \
@@ -368,6 +373,7 @@ HEADERS += \
     commands/vm/vappstartcommand.h \
     commands/vm/vappshutdowncommand.h \
     commands/vm/exportsnapshotastemplatecommand.h \
+    commands/vm/newvmfromsnapshotcommand.h \
     commands/vm/newtemplatefromsnapshotcommand.h \
     commands/vm/disablechangedblocktrackingcommand.h \
     commands/vm/importvmcommand.h \

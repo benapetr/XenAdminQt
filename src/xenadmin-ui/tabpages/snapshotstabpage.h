@@ -29,7 +29,7 @@
 #define SNAPSHOTSTABPAGE_H
 
 #include "basetabpage.h"
-#include <QTreeWidget>
+#include "../controls/snapshottreeview.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -64,14 +64,51 @@ class SnapshotsTabPage : public BaseTabPage
         void onVirtualMachinesDataUpdated(QVariantList vms);
         void onCacheObjectChanged(XenConnection *connection, const QString& type, const QString& ref);
         void onSnapshotContextMenu(const QPoint& pos);
+        void onScheduledSnapshotsToggled();
+        void onVmssLinkClicked();
 
     private:
+        enum class SnapshotsView
+        {
+            TreeView = 0,
+            ListView = 1
+        };
+
         void removeObject() override;
         void updateObject() override;
+        QString selectedSnapshotRef(QString* snapshotName = nullptr) const;
+        void setViewMode(SnapshotsView view);
+        SnapshotsView currentViewMode() const;
+        void refreshVmssPanel();
+        bool shouldShowSnapshot(const QVariantMap& snapshot) const;
+        bool isScheduledSnapshot(const QVariantMap& snapshot) const;
+        void buildSnapshotTree(const QString& snapshotRef,
+                               SnapshotIcon* parentIcon,
+                               const QHash<QString, QVariantMap>& snapshots,
+                               const QMultiHash<QString, QString>& childrenByParent);
+        void updateDetailsPanel(bool force = false);
+        void showDisabledDetails();
+        void showDetailsForSnapshot(const QVariantMap& snapshot, bool force);
+        void showDetailsForMultiple(const QList<QVariantMap>& snapshots);
+        QList<QString> selectedSnapshotRefs() const;
+        qint64 snapshotSizeBytes(const QVariantMap& snapshot) const;
+        QString formatSize(qint64 bytes) const;
+        QPixmap noScreenshotPixmap() const;
 
         Ui::SnapshotsTabPage* ui;
         void populateSnapshotTree();
         void updateButtonStates();
+
+        QAction* m_treeViewAction = nullptr;
+        QAction* m_listViewAction = nullptr;
+        QAction* m_scheduledSnapshotsAction = nullptr;
+        QAction* m_sortByTypeAction = nullptr;
+        QAction* m_sortByNameAction = nullptr;
+        QAction* m_sortByCreatedAction = nullptr;
+        QAction* m_sortBySizeAction = nullptr;
+        bool m_showScheduledSnapshots = true;
+
+        static QHash<QString, SnapshotsView> s_viewByVmRef;
 };
 
 #endif // SNAPSHOTSTABPAGE_H

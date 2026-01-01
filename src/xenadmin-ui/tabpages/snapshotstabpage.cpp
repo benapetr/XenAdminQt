@@ -31,6 +31,11 @@
 #include "../commands/vm/takesnapshotcommand.h"
 #include "../commands/vm/deletesnapshotcommand.h"
 #include "../commands/vm/reverttosnapshotcommand.h"
+#include "../commands/vm/newtemplatefromsnapshotcommand.h"
+#include "../commands/vm/exportsnapshotastemplatecommand.h"
+#include "../commands/vm/newvmfromsnapshotcommand.h"
+#include "../dialogs/snapshotpropertiesdialog.h"
+#include "../controls/snapshottreeview.h"
 #include "xen/session.h"
 #include "xencache.h"
 #include "xen/xenapi/xenapi_VM.h"
@@ -39,32 +44,90 @@
 #include <QMessageBox>
 #include <QTimer>
 #include <QMenu>
+#include <QActionGroup>
+#include <QHeaderView>
+#include <QSet>
+#include <QPainter>
+
+QHash<QString, SnapshotsTabPage::SnapshotsView> SnapshotsTabPage::s_viewByVmRef;
 
 SnapshotsTabPage::SnapshotsTabPage(QWidget* parent)
     : BaseTabPage(parent), ui(new Ui::SnapshotsTabPage)
 {
     this->ui->setupUi(this);
 
-    // Configure snapshot tree
-    this->ui->snapshotTree->setHeaderLabels(QStringList() << "Snapshot Name"
-                                                          << "Created"
-                                                          << "Description");
-    this->ui->snapshotTree->setSelectionMode(QAbstractItemView::SingleSelection);
-    this->ui->snapshotTree->setAlternatingRowColors(true);
-
     // Enable context menu
     this->ui->snapshotTree->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(this->ui->snapshotTree, &QTreeWidget::customContextMenuRequested,
-            this, &SnapshotsTabPage::onSnapshotContextMenu);
+    connect(this->ui->snapshotTree, &QListWidget::customContextMenuRequested, this, &SnapshotsTabPage::onSnapshotContextMenu);
 
     // Connect signals
     connect(this->ui->takeSnapshotButton, &QPushButton::clicked, this, &SnapshotsTabPage::onTakeSnapshot);
     connect(this->ui->deleteSnapshotButton, &QPushButton::clicked, this, &SnapshotsTabPage::onDeleteSnapshot);
     connect(this->ui->revertButton, &QPushButton::clicked, this, &SnapshotsTabPage::onRevertToSnapshot);
     connect(this->ui->refreshButton, &QPushButton::clicked, this, &SnapshotsTabPage::refreshSnapshotList);
-    connect(this->ui->snapshotTree, &QTreeWidget::itemSelectionChanged, this, &SnapshotsTabPage::onSnapshotSelectionChanged);
+    connect(this->ui->snapshotTree, &QListWidget::itemSelectionChanged, this, &SnapshotsTabPage::onSnapshotSelectionChanged);
+    connect(this->ui->snapshotTable, &QTableWidget::itemSelectionChanged, this, &SnapshotsTabPage::onSnapshotSelectionChanged);
+    connect(this->ui->propertiesButton, &QPushButton::clicked, this, [this]() {
+        QString snapshotRef = this->selectedSnapshotRef();
+        if (snapshotRef.isEmpty() || !this->m_connection)
+            return;
+        SnapshotPropertiesDialog dialog(this->m_connection, snapshotRef, this);
+        dialog.exec();
+    });
+
+    this->ui->snapshotTable->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(this->ui->snapshotTable, &QTableWidget::customContextMenuRequested,
+            this, &SnapshotsTabPage::onSnapshotContextMenu);
+
+    this->ui->snapshotTable->horizontalHeader()->setStretchLastSection(true);
+    this->ui->snapshotTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    this->ui->snapshotTable->verticalHeader()->setVisible(false);
+    this->ui->snapshotTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+    QMenu* viewMenu = new QMenu(this);
+    this->m_treeViewAction = viewMenu->addAction(tr("Tree View"));
+    this->m_treeViewAction->setCheckable(true);
+    this->m_treeViewAction->setChecked(true);
+    this->m_listViewAction = viewMenu->addAction(tr("List View"));
+    this->m_listViewAction->setCheckable(true);
+    viewMenu->addSeparator();
+    this->m_scheduledSnapshotsAction = viewMenu->addAction(tr("Scheduled snapshots"));
+    this->m_scheduledSnapshotsAction->setCheckable(true);
+    this->m_scheduledSnapshotsAction->setChecked(true);
+
+    QActionGroup* viewGroup = new QActionGroup(this);
+    viewGroup->addAction(this->m_treeViewAction);
+    viewGroup->addAction(this->m_listViewAction);
+    this->ui->viewButton->setMenu(viewMenu);
+
+    connect(this->m_treeViewAction, &QAction::triggered, this, [this]() {
+        this->setViewMode(SnapshotsView::TreeView);
+    });
+    connect(this->m_listViewAction, &QAction::triggered, this, [this]() {
+        this->setViewMode(SnapshotsView::ListView);
+    });
+    connect(this->m_scheduledSnapshotsAction, &QAction::triggered, this, &SnapshotsTabPage::onScheduledSnapshotsToggled);
+
+    this->m_sortByTypeAction = new QAction(tr("Type"), this);
+    this->m_sortByNameAction = new QAction(tr("Name"), this);
+    this->m_sortByCreatedAction = new QAction(tr("Created"), this);
+    this->m_sortBySizeAction = new QAction(tr("Size"), this);
+
+    connect(this->m_sortByTypeAction, &QAction::triggered, this, [this]() {
+        this->ui->snapshotTable->sortItems(0, Qt::AscendingOrder);
+    });
+    connect(this->m_sortByNameAction, &QAction::triggered, this, [this]() {
+        this->ui->snapshotTable->sortItems(1, Qt::AscendingOrder);
+    });
+    connect(this->m_sortByCreatedAction, &QAction::triggered, this, [this]() {
+        this->ui->snapshotTable->sortItems(2, Qt::AscendingOrder);
+    });
+    connect(this->m_sortBySizeAction, &QAction::triggered, this, [this]() {
+        this->ui->snapshotTable->sortItems(3, Qt::AscendingOrder);
+    });
 
     updateButtonStates();
+    showDisabledDetails();
 }
 
 SnapshotsTabPage::~SnapshotsTabPage()
@@ -85,6 +148,8 @@ void SnapshotsTabPage::updateObject()
 {
     XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
     connect(cache, &XenCache::objectChanged, this, &SnapshotsTabPage::onCacheObjectChanged, Qt::UniqueConnection);
+    if (!this->m_objectRef.isEmpty())
+        this->setViewMode(this->s_viewByVmRef.value(this->m_objectRef, SnapshotsView::TreeView));
 }
 
 bool SnapshotsTabPage::IsApplicableForObjectType(const QString& objectType) const
@@ -97,94 +162,176 @@ void SnapshotsTabPage::refreshContent()
 {
     if (this->m_objectData.isEmpty() || this->m_objectType != "vm")
     {
-        this->ui->snapshotTree->clear();
+        this->ui->snapshotTree->Clear();
+        this->ui->snapshotTable->setRowCount(0);
         this->updateButtonStates();
         return;
     }
 
+    if (!this->m_objectRef.isEmpty())
+        this->setViewMode(this->s_viewByVmRef.value(this->m_objectRef, SnapshotsView::TreeView));
+
+    this->refreshVmssPanel();
     this->populateSnapshotTree();
     this->updateButtonStates();
+    this->updateDetailsPanel(true);
 }
 
 void SnapshotsTabPage::populateSnapshotTree()
 {
-    this->ui->snapshotTree->clear();
+    SnapshotTreeView* tree = this->ui->snapshotTree;
+    tree->setUpdatesEnabled(false);
+    tree->Clear();
+    this->ui->snapshotTable->setRowCount(0);
 
     if (!this->m_objectData.contains("snapshots") || !this->m_connection || !this->m_connection->GetCache())
     {
+        tree->setUpdatesEnabled(true);
         return;
     }
 
-    // The "snapshots" field contains a list of snapshot references (OpaqueRefs)
-    // We need to resolve each reference to get the actual snapshot data
     QVariantList snapshotRefs = this->m_objectData.value("snapshots").toList();
+    if (snapshotRefs.isEmpty())
+    {
+        tree->setUpdatesEnabled(true);
+        return;
+    }
+
+    XenCache* cache = this->m_connection->GetCache();
+    QHash<QString, QVariantMap> snapshots;
+    QSet<QString> snapshotRefSet;
 
     for (const QVariant& refVariant : snapshotRefs)
     {
         QString snapshotRef = refVariant.toString();
-
-        // Resolve the snapshot reference to get its full data
-        QVariantMap snapshot = this->m_connection->GetCache()->ResolveObjectData("vm", snapshotRef);
-
-        if (snapshot.isEmpty())
-        {
-            qDebug() << "SnapshotsTabPage: Could not resolve snapshot ref:" << snapshotRef;
+        if (snapshotRef.isEmpty())
             continue;
-        }
 
-        // Verify this is actually a snapshot
-        bool isSnapshot = snapshot.value("is_a_snapshot").toBool();
-        if (!isSnapshot)
-        {
+        QVariantMap snapshot = cache->ResolveObjectData("vm", snapshotRef);
+        if (snapshot.isEmpty() || !snapshot.value("is_a_snapshot").toBool())
             continue;
-        }
 
-        QTreeWidgetItem* item = new QTreeWidgetItem(this->ui->snapshotTree);
+        snapshots.insert(snapshotRef, snapshot);
+        snapshotRefSet.insert(snapshotRef);
+    }
 
-        // Set snapshot name
-        QString name = snapshot.value("name_label").toString();
-        item->setText(0, name.isEmpty() ? "Unnamed Snapshot" : name);
+    if (snapshots.isEmpty())
+    {
+        tree->setUpdatesEnabled(true);
+        return;
+    }
 
-        // Set snapshot type based on power_state
-        // If power_state is "Suspended", it's a disk+memory snapshot (checkpoint)
-        // Otherwise it's a disk-only snapshot
-        QString powerState = snapshot.value("power_state").toString();
-        QString snapshotType = (powerState == "Suspended") ? tr("Disk and memory") : tr("Disks only");
-        item->setText(1, snapshotType);
+    int row = 0;
+    for (auto it = snapshots.constBegin(); it != snapshots.constEnd(); ++it)
+    {
+        const QString snapshotRef = it.key();
+        const QVariantMap snapshot = it.value();
+        if (!this->shouldShowSnapshot(snapshot))
+            continue;
 
-        // Format the timestamp
-        QString timestamp = snapshot.value("snapshot_time").toString();
+        const QString powerState = snapshot.value("power_state").toString();
+        const bool isSuspended = powerState == "Suspended";
+        const QString typeText = isSuspended ? tr("Disk and memory") : tr("Disks only");
+
+        QString createdText;
+        const QString timestamp = snapshot.value("snapshot_time").toString();
         if (!timestamp.isEmpty())
         {
-            // Parse ISO 8601 timestamp from Xen API (format: 20240101T12:34:56Z)
             QDateTime dt = QDateTime::fromString(timestamp, Qt::ISODate);
             if (dt.isValid())
             {
-                item->setText(2, dt.toString("yyyy-MM-dd HH:mm:ss"));
+                dt = dt.toLocalTime().addSecs(this->m_connection->GetServerTimeOffsetSeconds());
+                createdText = dt.toString("yyyy-MM-dd HH:mm:ss");
             } else
             {
-                item->setText(2, timestamp);
+                createdText = timestamp;
             }
         }
 
-        // Set description
-        QString description = snapshot.value("name_description").toString();
-        item->setText(3, description);
+        QString nameText = snapshot.value("name_label").toString();
+        if (nameText.isEmpty())
+            nameText = tr("Unnamed Snapshot");
 
-        // Store snapshot reference for operations
-        item->setData(0, Qt::UserRole, snapshotRef);
+        this->ui->snapshotTable->insertRow(row);
+        QTableWidgetItem* typeItem = new QTableWidgetItem(typeText);
+        QTableWidgetItem* nameItem = new QTableWidgetItem(nameText);
+        QTableWidgetItem* createdItem = new QTableWidgetItem(createdText);
+        QTableWidgetItem* sizeItem = new QTableWidgetItem(QString());
 
-        // Store power state for debugging
-        item->setData(0, Qt::UserRole + 1, powerState);
+        QStringList tags;
+        const QVariantList tagList = snapshot.value("tags").toList();
+        for (const QVariant& tagVar : tagList)
+        {
+            const QString tag = tagVar.toString();
+            if (!tag.isEmpty())
+                tags.append(tag);
+        }
+        QTableWidgetItem* tagsItem = new QTableWidgetItem(tags.join(", "));
+
+        typeItem->setData(Qt::UserRole, snapshotRef);
+        nameItem->setData(Qt::UserRole, snapshotRef);
+        createdItem->setData(Qt::UserRole, snapshotRef);
+        sizeItem->setData(Qt::UserRole, snapshotRef);
+        tagsItem->setData(Qt::UserRole, snapshotRef);
+
+        this->ui->snapshotTable->setItem(row, 0, typeItem);
+        this->ui->snapshotTable->setItem(row, 1, nameItem);
+        this->ui->snapshotTable->setItem(row, 2, createdItem);
+        this->ui->snapshotTable->setItem(row, 3, sizeItem);
+        this->ui->snapshotTable->setItem(row, 4, tagsItem);
+        ++row;
     }
 
-    // Resize columns to content
-    for (int i = 0; i < 4; ++i)
+    QSet<QString> childRefs;
+    QMultiHash<QString, QString> childrenByParent;
+    for (auto it = snapshots.constBegin(); it != snapshots.constEnd(); ++it)
     {
-        this->ui->snapshotTree->resizeColumnToContents(i);
+        const QString parentRef = it.key();
+        QVariantList children = it.value().value("children").toList();
+        for (const QVariant& childVar : children)
+        {
+            const QString childRef = childVar.toString();
+            if (!snapshotRefSet.contains(childRef))
+                continue;
+
+            childrenByParent.insert(parentRef, childRef);
+            childRefs.insert(childRef);
+        }
     }
 
-    qDebug() << "SnapshotsTabPage: Populated" << this->ui->snapshotTree->topLevelItemCount() << "snapshots";
+    QList<QString> roots;
+    for (const QString& snapshotRef : snapshotRefSet)
+    {
+        if (!childRefs.contains(snapshotRef))
+            roots.append(snapshotRef);
+    }
+
+    const QString vmName = this->m_objectData.value("name_label").toString();
+    SnapshotIcon* rootIcon = new SnapshotIcon(vmName.isEmpty() ? tr("VM") : vmName,
+                                              tr("Base"), nullptr, tree, SnapshotIcon::Template);
+    tree->AddSnapshot(rootIcon);
+
+    bool parentIsSnapshot = false;
+    const QString parentRef = this->m_objectData.value("parent").toString();
+    if (!parentRef.isEmpty())
+    {
+        QVariantMap parentData = cache->ResolveObjectData("vm", parentRef);
+        parentIsSnapshot = parentData.value("is_a_snapshot").toBool();
+    }
+
+    if (!parentIsSnapshot)
+    {
+        SnapshotIcon* vmIcon = new SnapshotIcon(tr("Now"), QString(), rootIcon, tree, SnapshotIcon::VMImageIndex);
+        tree->AddSnapshot(vmIcon);
+    }
+
+    for (const QString& rootRef : roots)
+    {
+        this->buildSnapshotTree(rootRef, rootIcon, snapshots, childrenByParent);
+    }
+
+    tree->setUpdatesEnabled(true);
+    tree->update();
 }
 
 void SnapshotsTabPage::onTakeSnapshot()
@@ -216,15 +363,8 @@ void SnapshotsTabPage::onTakeSnapshot()
 
 void SnapshotsTabPage::onDeleteSnapshot()
 {
-    QList<QTreeWidgetItem*> selectedItems = this->ui->snapshotTree->selectedItems();
-    if (selectedItems.isEmpty())
-    {
-        return;
-    }
-
-    QTreeWidgetItem* item = selectedItems.first();
-    QString snapshotRef = item->data(0, Qt::UserRole).toString();
-    QString snapshotName = item->text(0);
+    QString snapshotName;
+    QString snapshotRef = this->selectedSnapshotRef(&snapshotName);
 
     if (snapshotRef.isEmpty())
     {
@@ -253,15 +393,8 @@ void SnapshotsTabPage::onDeleteSnapshot()
 
 void SnapshotsTabPage::onRevertToSnapshot()
 {
-    QList<QTreeWidgetItem*> selectedItems = ui->snapshotTree->selectedItems();
-    if (selectedItems.isEmpty())
-    {
-        return;
-    }
-
-    QTreeWidgetItem* item = selectedItems.first();
-    QString snapshotRef = item->data(0, Qt::UserRole).toString();
-    QString snapshotName = item->text(0);
+    QString snapshotName;
+    QString snapshotRef = this->selectedSnapshotRef(&snapshotName);
 
     if (snapshotRef.isEmpty())
     {
@@ -306,6 +439,7 @@ void SnapshotsTabPage::onRevertToSnapshot()
 void SnapshotsTabPage::onSnapshotSelectionChanged()
 {
     updateButtonStates();
+    updateDetailsPanel();
 }
 
 void SnapshotsTabPage::refreshSnapshotList()
@@ -373,12 +507,16 @@ void SnapshotsTabPage::onCacheObjectChanged(XenConnection* connection, const QSt
     {
         this->populateSnapshotTree();
         this->updateButtonStates();
+        this->updateDetailsPanel(true);
     }
+
+    if (this->m_objectType == "vm" && (type == "vm" || type == "vmss"))
+        this->refreshVmssPanel();
 }
 
 void SnapshotsTabPage::updateButtonStates()
 {
-    bool hasSelection = !ui->snapshotTree->selectedItems().isEmpty();
+    bool hasSelection = !this->selectedSnapshotRef().isEmpty();
     bool hasVM = !m_objectRef.isEmpty() && m_objectType == "vm";
 
     ui->takeSnapshotButton->setEnabled(hasVM);
@@ -386,42 +524,583 @@ void SnapshotsTabPage::updateButtonStates()
     ui->revertButton->setEnabled(hasSelection);
 }
 
-void SnapshotsTabPage::onSnapshotContextMenu(const QPoint& pos)
+void SnapshotsTabPage::updateDetailsPanel(bool force)
 {
-    QTreeWidgetItem* item = this->ui->snapshotTree->itemAt(pos);
-    if (!item)
+    QList<QString> refs = this->selectedSnapshotRefs();
+    if (!this->m_connection || refs.isEmpty())
     {
+        this->showDisabledDetails();
         return;
     }
 
-    QString snapshotRef = item->data(0, Qt::UserRole).toString();
-    if (snapshotRef.isEmpty())
+    XenCache* cache = this->m_connection->GetCache();
+    if (!cache)
     {
+        this->showDisabledDetails();
         return;
     }
 
-    // Create context menu
-    QMenu menu(this);
-
-    QAction* revertAction = menu.addAction("Revert to Snapshot");
-    revertAction->setEnabled(true);
-
-    QAction* deleteAction = menu.addAction("Delete Snapshot");
-    deleteAction->setEnabled(true);
-
-    // Show menu and handle selection
-    QAction* selectedAction = menu.exec(this->ui->snapshotTree->mapToGlobal(pos));
-
-    if (selectedAction == revertAction)
+    QList<QVariantMap> snapshots;
+    for (const QString& ref : refs)
     {
-        // Select the item and trigger revert
-        this->ui->snapshotTree->setCurrentItem(item);
-        this->onRevertToSnapshot();
-    } else if (selectedAction == deleteAction)
+        QVariantMap snapshot = cache->ResolveObjectData("vm", ref);
+        if (!snapshot.isEmpty() && snapshot.value("is_a_snapshot").toBool())
+            snapshots.append(snapshot);
+    }
+
+    if (snapshots.isEmpty())
     {
-        // Select the item and trigger delete
-        this->ui->snapshotTree->setCurrentItem(item);
-        this->onDeleteSnapshot();
+        this->showDisabledDetails();
+    }
+    else if (snapshots.size() == 1)
+    {
+        this->showDetailsForSnapshot(snapshots.first(), force);
+    }
+    else
+    {
+        this->showDetailsForMultiple(snapshots);
     }
 }
 
+void SnapshotsTabPage::showDisabledDetails()
+{
+    this->ui->detailsGroupBox->setEnabled(false);
+    this->ui->detailsGroupBox->setTitle(tr("Snapshot created on"));
+    this->ui->snapshotNameLabel->clear();
+    this->ui->descriptionValueLabel->clear();
+    this->ui->modeValueLabel->clear();
+    this->ui->sizeValueLabel->clear();
+    this->ui->tagsValueLabel->clear();
+    this->ui->folderValueLabel->clear();
+    this->ui->customFieldTitleLabel1->clear();
+    this->ui->customFieldValueLabel1->clear();
+    this->ui->customFieldTitleLabel2->clear();
+    this->ui->customFieldValueLabel2->clear();
+    this->ui->propertiesButton->setEnabled(false);
+    this->ui->screenshotLabel->setPixmap(this->noScreenshotPixmap());
+}
+
+void SnapshotsTabPage::showDetailsForSnapshot(const QVariantMap& snapshot, bool force)
+{
+    (void) force;
+    this->ui->detailsGroupBox->setEnabled(true);
+
+    QString createdText;
+    const QString timestamp = snapshot.value("snapshot_time").toString();
+    if (!timestamp.isEmpty())
+    {
+        QDateTime dt = QDateTime::fromString(timestamp, Qt::ISODate);
+        if (dt.isValid())
+        {
+            dt = dt.toLocalTime().addSecs(this->m_connection->GetServerTimeOffsetSeconds());
+            createdText = dt.toString("yyyy-MM-dd HH:mm:ss");
+        } else
+        {
+            createdText = timestamp;
+        }
+    }
+    this->ui->detailsGroupBox->setTitle(tr("Snapshot created on %1").arg(createdText));
+
+    QString nameText = snapshot.value("name_label").toString();
+    if (nameText.isEmpty())
+        nameText = tr("Snapshot");
+    this->ui->snapshotNameLabel->setText(nameText);
+
+    const QString powerState = snapshot.value("power_state").toString();
+    const bool isSuspended = powerState == "Suspended";
+    this->ui->modeValueLabel->setText(isSuspended ? tr("Disks and memory") : tr("Disks only"));
+
+    const QString description = snapshot.value("name_description").toString();
+    this->ui->descriptionValueLabel->setText(description.isEmpty() ? tr("<None>") : description);
+
+    const qint64 sizeBytes = this->snapshotSizeBytes(snapshot);
+    this->ui->sizeValueLabel->setText(sizeBytes > 0 ? this->formatSize(sizeBytes) : tr("<None>"));
+
+    QStringList tags;
+    const QVariantList tagList = snapshot.value("tags").toList();
+    for (const QVariant& tagVar : tagList)
+    {
+        const QString tag = tagVar.toString();
+        if (!tag.isEmpty())
+            tags.append(tag);
+    }
+    this->ui->tagsValueLabel->setText(tags.isEmpty() ? tr("<None>") : tags.join(", "));
+
+    const QVariantMap otherConfig = snapshot.value("other_config").toMap();
+    const QString folderPath = otherConfig.value("folder").toString();
+    this->ui->folderValueLabel->setText(folderPath.isEmpty() ? tr("<None>") : folderPath);
+
+    QList<QPair<QString, QString>> customFields;
+    for (auto it = otherConfig.constBegin(); it != otherConfig.constEnd(); ++it)
+    {
+        if (!it.key().startsWith("XenCenter.CustomFields."))
+            continue;
+        QString name = it.key().mid(23);
+        if (!name.isEmpty())
+            customFields.append(qMakePair(name, it.value().toString()));
+    }
+    std::sort(customFields.begin(), customFields.end(), [](const auto& a, const auto& b) {
+        return a.first.toLower() < b.first.toLower();
+    });
+
+    this->ui->customFieldTitleLabel1->clear();
+    this->ui->customFieldValueLabel1->clear();
+    this->ui->customFieldTitleLabel2->clear();
+    this->ui->customFieldValueLabel2->clear();
+
+    if (!customFields.isEmpty())
+    {
+        this->ui->customFieldTitleLabel1->setText(customFields.at(0).first + ":");
+        this->ui->customFieldValueLabel1->setText(customFields.at(0).second);
+        if (customFields.size() > 1)
+        {
+            this->ui->customFieldTitleLabel2->setText(customFields.at(1).first + ":");
+            this->ui->customFieldValueLabel2->setText(customFields.at(1).second);
+        }
+    }
+
+    // TODO: Load snapshot screenshot from blob/other_config when XenAPI blob support is implemented.
+    this->ui->screenshotLabel->setPixmap(this->noScreenshotPixmap());
+    this->ui->propertiesButton->setEnabled(true);
+}
+
+void SnapshotsTabPage::showDetailsForMultiple(const QList<QVariantMap>& snapshots)
+{
+    if (snapshots.isEmpty())
+    {
+        this->showDisabledDetails();
+        return;
+    }
+
+    this->ui->detailsGroupBox->setEnabled(true);
+    this->ui->snapshotNameLabel->setText(tr("%1 snapshots selected").arg(snapshots.size()));
+
+    qint64 totalSize = 0;
+    QStringList tags;
+    QDateTime earliest = QDateTime::currentDateTime();
+    QDateTime latest = QDateTime::fromSecsSinceEpoch(0);
+
+    for (const QVariantMap& snapshot : snapshots)
+    {
+        totalSize += this->snapshotSizeBytes(snapshot);
+
+        const QVariantList tagList = snapshot.value("tags").toList();
+        for (const QVariant& tagVar : tagList)
+        {
+            const QString tag = tagVar.toString();
+            if (!tag.isEmpty() && !tags.contains(tag))
+                tags.append(tag);
+        }
+
+        const QString timestamp = snapshot.value("snapshot_time").toString();
+        QDateTime dt = QDateTime::fromString(timestamp, Qt::ISODate);
+        if (dt.isValid())
+        {
+            dt = dt.toLocalTime().addSecs(this->m_connection->GetServerTimeOffsetSeconds());
+            if (!earliest.isValid() || dt < earliest)
+                earliest = dt;
+            if (!latest.isValid() || dt > latest)
+                latest = dt;
+        }
+    }
+
+    QString rangeText;
+    if (earliest.isValid() && latest.isValid())
+        rangeText = tr("%1 - %2").arg(earliest.toString("yyyy-MM-dd HH:mm:ss"),
+                                      latest.toString("yyyy-MM-dd HH:mm:ss"));
+    this->ui->detailsGroupBox->setTitle(rangeText.isEmpty() ? tr("Snapshots") : rangeText);
+
+    this->ui->descriptionValueLabel->setText(tr("<None>"));
+    this->ui->modeValueLabel->setText(tr("<Multiple>"));
+    this->ui->sizeValueLabel->setText(totalSize > 0 ? this->formatSize(totalSize) : tr("<None>"));
+    this->ui->tagsValueLabel->setText(tags.isEmpty() ? tr("<None>") : tags.join(", "));
+    this->ui->folderValueLabel->setText(tr("<Multiple>"));
+    this->ui->customFieldTitleLabel1->clear();
+    this->ui->customFieldValueLabel1->clear();
+    this->ui->customFieldTitleLabel2->clear();
+    this->ui->customFieldValueLabel2->clear();
+    this->ui->propertiesButton->setEnabled(false);
+    this->ui->screenshotLabel->setPixmap(this->noScreenshotPixmap());
+}
+
+QList<QString> SnapshotsTabPage::selectedSnapshotRefs() const
+{
+    QList<QString> refs;
+    if (this->ui->viewStack->currentIndex() == 0)
+    {
+        for (QListWidgetItem* item : this->ui->snapshotTree->selectedItems())
+        {
+            auto* icon = dynamic_cast<SnapshotIcon*>(item);
+            if (icon && icon->IsSelectable())
+                refs.append(icon->data(Qt::UserRole).toString());
+        }
+    }
+    else
+    {
+        QList<QTableWidgetItem*> selection = this->ui->snapshotTable->selectedItems();
+        for (QTableWidgetItem* item : selection)
+        {
+            const QString ref = item->data(Qt::UserRole).toString();
+            if (!ref.isEmpty() && !refs.contains(ref))
+                refs.append(ref);
+        }
+    }
+    return refs;
+}
+
+qint64 SnapshotsTabPage::snapshotSizeBytes(const QVariantMap& snapshot) const
+{
+    if (!this->m_connection || !this->m_connection->GetCache())
+        return 0;
+
+    XenCache* cache = this->m_connection->GetCache();
+    qint64 total = 0;
+
+    const QVariantList vbdRefs = snapshot.value("VBDs").toList();
+    for (const QVariant& vbdVar : vbdRefs)
+    {
+        const QString vbdRef = vbdVar.toString();
+        if (vbdRef.isEmpty())
+            continue;
+
+        QVariantMap vbd = cache->ResolveObjectData("vbd", vbdRef);
+        if (vbd.isEmpty())
+            continue;
+
+        if (vbd.value("type").toString() != "Disk")
+            continue;
+
+        const QString vdiRef = vbd.value("VDI").toString();
+        if (vdiRef.isEmpty())
+            continue;
+
+        QVariantMap vdi = cache->ResolveObjectData("vdi", vdiRef);
+        if (vdi.isEmpty())
+            continue;
+
+        qint64 utilisation = vdi.value("physical_utilisation").toLongLong();
+        if (utilisation <= 0)
+            utilisation = vdi.value("physical_utilization").toLongLong();
+        if (utilisation > 0)
+            total += utilisation;
+    }
+
+    const QString suspendVdiRef = snapshot.value("suspend_VDI").toString();
+    if (!suspendVdiRef.isEmpty())
+    {
+        QVariantMap vdi = cache->ResolveObjectData("vdi", suspendVdiRef);
+        qint64 utilisation = vdi.value("physical_utilisation").toLongLong();
+        if (utilisation <= 0)
+            utilisation = vdi.value("physical_utilization").toLongLong();
+        if (utilisation > 0)
+            total += utilisation;
+    }
+
+    return total;
+}
+
+QString SnapshotsTabPage::formatSize(qint64 bytes) const
+{
+    if (bytes <= 0)
+        return tr("<None>");
+
+    const double kb = 1024.0;
+    const double mb = kb * 1024.0;
+    const double gb = mb * 1024.0;
+    const double tb = gb * 1024.0;
+
+    if (bytes >= tb)
+        return QString("%1 TB").arg(bytes / tb, 0, 'f', 2);
+    if (bytes >= gb)
+        return QString("%1 GB").arg(bytes / gb, 0, 'f', 2);
+    if (bytes >= mb)
+        return QString("%1 MB").arg(bytes / mb, 0, 'f', 2);
+    if (bytes >= kb)
+        return QString("%1 KB").arg(bytes / kb, 0, 'f', 2);
+    return QString("%1 B").arg(bytes);
+}
+
+QPixmap SnapshotsTabPage::noScreenshotPixmap() const
+{
+    const int width = 100;
+    const int height = 75;
+    QPixmap pixmap(width, height);
+    pixmap.fill(Qt::black);
+
+    QPainter painter(&pixmap);
+    painter.setPen(Qt::white);
+    painter.drawText(pixmap.rect(), Qt::AlignCenter, tr("No screenshot"));
+    return pixmap;
+}
+
+SnapshotsTabPage::SnapshotsView SnapshotsTabPage::currentViewMode() const
+{
+    return this->ui->viewStack->currentIndex() == 0 ? SnapshotsView::TreeView : SnapshotsView::ListView;
+}
+
+void SnapshotsTabPage::setViewMode(SnapshotsView view)
+{
+    if (view == SnapshotsView::TreeView)
+    {
+        this->ui->viewStack->setCurrentIndex(0);
+        this->ui->snapshotTree->SetTreeMode(true);
+        if (this->m_treeViewAction)
+            this->m_treeViewAction->setChecked(true);
+    }
+    else
+    {
+        this->ui->viewStack->setCurrentIndex(1);
+        if (this->m_listViewAction)
+            this->m_listViewAction->setChecked(true);
+    }
+
+    if (!this->m_objectRef.isEmpty())
+        this->s_viewByVmRef[this->m_objectRef] = view;
+
+    this->updateButtonStates();
+}
+
+QString SnapshotsTabPage::selectedSnapshotRef(QString* snapshotName) const
+{
+    if (this->ui->viewStack->currentIndex() == 0)
+    {
+        if (ui->snapshotTree->selectedItems().isEmpty())
+            return QString();
+
+        auto* icon = dynamic_cast<SnapshotIcon*>(ui->snapshotTree->selectedItems().first());
+        if (!icon || !icon->IsSelectable())
+            return QString();
+
+        if (snapshotName)
+            *snapshotName = icon->text();
+
+        return icon->data(Qt::UserRole).toString();
+    }
+
+    QList<QTableWidgetItem*> selection = this->ui->snapshotTable->selectedItems();
+    if (selection.isEmpty())
+        return QString();
+
+    QTableWidgetItem* item = selection.first();
+    if (snapshotName)
+        *snapshotName = this->ui->snapshotTable->item(item->row(), 1)->text();
+
+    return item->data(Qt::UserRole).toString();
+}
+
+void SnapshotsTabPage::onSnapshotContextMenu(const QPoint& pos)
+{
+    const bool treeView = this->ui->viewStack->currentIndex() == 0;
+    QString snapshotRef;
+    if (treeView)
+    {
+        QListWidgetItem* item = this->ui->snapshotTree->itemAt(pos);
+        auto* icon = dynamic_cast<SnapshotIcon*>(item);
+        if (icon && icon->IsSelectable())
+        {
+            this->ui->snapshotTree->setCurrentItem(item);
+            snapshotRef = icon->data(Qt::UserRole).toString();
+        }
+    }
+    else
+    {
+        QTableWidgetItem* item = this->ui->snapshotTable->itemAt(pos);
+        if (item)
+        {
+            this->ui->snapshotTable->selectRow(item->row());
+            snapshotRef = item->data(Qt::UserRole).toString();
+        }
+    }
+
+    QMenu menu(this);
+    QAction* takeSnapshotAction = menu.addAction(tr("Take Snapshot..."));
+    QAction* revertAction = menu.addAction(tr("Revert to Snapshot..."));
+    QMenu* saveMenu = menu.addMenu(tr("Save"));
+    QAction* saveVmAction = saveMenu->addAction(tr("New VM from Snapshot..."));
+    QAction* saveTemplateAction = saveMenu->addAction(tr("New Template from Snapshot..."));
+    QAction* exportAction = saveMenu->addAction(tr("Export Snapshot as Template..."));
+    menu.addSeparator();
+
+    QMenu* viewMenu = menu.addMenu(tr("View"));
+    viewMenu->addAction(this->m_treeViewAction);
+    viewMenu->addAction(this->m_listViewAction);
+    viewMenu->addSeparator();
+    viewMenu->addAction(this->m_scheduledSnapshotsAction);
+
+    if (!treeView)
+    {
+        QMenu* sortMenu = menu.addMenu(tr("Sort By"));
+        sortMenu->addAction(this->m_sortByTypeAction);
+        sortMenu->addAction(this->m_sortByNameAction);
+        sortMenu->addAction(this->m_sortByCreatedAction);
+        sortMenu->addAction(this->m_sortBySizeAction);
+    }
+
+    menu.addSeparator();
+    QAction* deleteAction = menu.addAction(tr("Delete Snapshot"));
+    QAction* propertiesAction = menu.addAction(tr("Properties..."));
+
+    const bool hasSelection = !snapshotRef.isEmpty();
+    revertAction->setEnabled(hasSelection);
+    saveMenu->setEnabled(hasSelection);
+    deleteAction->setEnabled(hasSelection);
+    propertiesAction->setEnabled(hasSelection);
+
+    QWidget* menuAnchor = treeView
+        ? static_cast<QWidget*>(this->ui->snapshotTree)
+        : static_cast<QWidget*>(this->ui->snapshotTable);
+    QAction* selectedAction = menu.exec(menuAnchor->mapToGlobal(pos));
+
+    if (selectedAction == takeSnapshotAction)
+    {
+        this->onTakeSnapshot();
+    }
+    else if (selectedAction == revertAction)
+    {
+        this->onRevertToSnapshot();
+    }
+    else if (selectedAction == saveVmAction)
+    {
+        QWidget* window = this->window();
+        MainWindow* mainWindow = window ? qobject_cast<MainWindow*>(window) : nullptr;
+        if (mainWindow)
+        {
+            NewVMFromSnapshotCommand cmd(snapshotRef, this->m_connection, mainWindow);
+            cmd.Run();
+        }
+    }
+    else if (selectedAction == saveTemplateAction)
+    {
+        QWidget* window = this->window();
+        MainWindow* mainWindow = window ? qobject_cast<MainWindow*>(window) : nullptr;
+        if (mainWindow)
+        {
+            NewTemplateFromSnapshotCommand cmd(snapshotRef, this->m_connection, mainWindow);
+            cmd.Run();
+        }
+    }
+    else if (selectedAction == exportAction)
+    {
+        QWidget* window = this->window();
+        MainWindow* mainWindow = window ? qobject_cast<MainWindow*>(window) : nullptr;
+        if (mainWindow)
+        {
+            ExportSnapshotAsTemplateCommand cmd(snapshotRef, this->m_connection, mainWindow);
+            cmd.Run();
+        }
+    }
+    else if (selectedAction == deleteAction)
+    {
+        this->onDeleteSnapshot();
+    }
+    else if (selectedAction == propertiesAction)
+    {
+        if (!snapshotRef.isEmpty() && this->m_connection)
+        {
+            SnapshotPropertiesDialog dialog(this->m_connection, snapshotRef, this->window());
+            dialog.exec();
+        }
+    }
+}
+
+void SnapshotsTabPage::onScheduledSnapshotsToggled()
+{
+    if (!this->m_scheduledSnapshotsAction)
+        return;
+
+    this->m_showScheduledSnapshots = this->m_scheduledSnapshotsAction->isChecked();
+    this->populateSnapshotTree();
+    this->updateButtonStates();
+}
+
+void SnapshotsTabPage::onVmssLinkClicked()
+{
+    QMessageBox::information(this,
+                             tr("VM Snapshot Schedules"),
+                             tr("VM snapshot schedules are not available yet in this version."));
+}
+
+bool SnapshotsTabPage::isScheduledSnapshot(const QVariantMap& snapshot) const
+{
+    return snapshot.value("is_snapshot_from_vmpp").toBool()
+        || snapshot.value("is_vmss_snapshot").toBool();
+}
+
+bool SnapshotsTabPage::shouldShowSnapshot(const QVariantMap& snapshot) const
+{
+    return this->m_showScheduledSnapshots || !this->isScheduledSnapshot(snapshot);
+}
+
+void SnapshotsTabPage::buildSnapshotTree(const QString& snapshotRef,
+                                         SnapshotIcon* parentIcon,
+                                         const QHash<QString, QVariantMap>& snapshots,
+                                         const QMultiHash<QString, QString>& childrenByParent)
+{
+    const QVariantMap snapshot = snapshots.value(snapshotRef);
+    const bool showSnapshot = this->shouldShowSnapshot(snapshot);
+    SnapshotIcon* currentIcon = parentIcon;
+
+    if (showSnapshot)
+    {
+        const QString powerState = snapshot.value("power_state").toString();
+        const bool isSuspended = powerState == "Suspended";
+        const bool isScheduled = this->isScheduledSnapshot(snapshot);
+        const int iconIndex = isScheduled
+            ? (isSuspended ? SnapshotIcon::ScheduledDiskMemorySnapshot : SnapshotIcon::ScheduledDiskSnapshot)
+            : (isSuspended ? SnapshotIcon::DiskAndMemorySnapshot : SnapshotIcon::DiskSnapshot);
+
+        QString labelTime;
+        const QString timestamp = snapshot.value("snapshot_time").toString();
+        if (!timestamp.isEmpty())
+        {
+            QDateTime dt = QDateTime::fromString(timestamp, Qt::ISODate);
+            if (dt.isValid())
+            {
+                dt = dt.toLocalTime().addSecs(this->m_connection->GetServerTimeOffsetSeconds());
+                labelTime = dt.toString("yyyy-MM-dd HH:mm:ss");
+            } else
+            {
+                labelTime = timestamp;
+            }
+        }
+
+        QString labelName = snapshot.value("name_label").toString();
+        if (labelName.isEmpty())
+            labelName = tr("Unnamed Snapshot");
+
+        SnapshotIcon* snapshotIcon = new SnapshotIcon(labelName, labelTime, parentIcon, this->ui->snapshotTree, iconIndex);
+        snapshotIcon->setData(Qt::UserRole, snapshotRef);
+        this->ui->snapshotTree->AddSnapshot(snapshotIcon);
+        currentIcon = snapshotIcon;
+    }
+
+    const QList<QString> children = childrenByParent.values(snapshotRef);
+    for (const QString& childRef : children)
+        this->buildSnapshotTree(childRef, currentIcon, snapshots, childrenByParent);
+}
+
+void SnapshotsTabPage::refreshVmssPanel()
+{
+    if (!this->m_connection || this->m_objectType != "vm" || this->m_objectData.isEmpty())
+    {
+        if (this->m_scheduledSnapshotsAction)
+            this->m_scheduledSnapshotsAction->setVisible(false);
+        return;
+    }
+
+    XenCache* cache = this->m_connection->GetCache();
+    if (!cache)
+    {
+        if (this->m_scheduledSnapshotsAction)
+            this->m_scheduledSnapshotsAction->setVisible(false);
+        return;
+    }
+
+    const bool hasVmssSupport = !cache->GetAllData("vmss").isEmpty() || this->m_objectData.contains("snapshot_schedule");
+
+    if (this->m_scheduledSnapshotsAction)
+        this->m_scheduledSnapshotsAction->setVisible(hasVmssSupport);
+
+    // TODO: C# shows VMSS status inside the details panel (not a top banner).
+    // Move VMSS info there once the details panel is ported.
+}

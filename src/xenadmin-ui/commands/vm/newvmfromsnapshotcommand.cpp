@@ -25,39 +25,35 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "exportsnapshotastemplatecommand.h"
-#include "exportvmcommand.h"
-#include "../../dialogs/exportwizard.h"
-#include "../../../xenlib/xen/xenobject.h"
-#include "../../../xenlib/xencache.h"
-#include "../../../xenlib/xen/network/connection.h"
+#include "newvmfromsnapshotcommand.h"
+#include "../../dialogs/newvmwizard.h"
 #include "../../mainwindow.h"
+#include "xencache.h"
+#include "xen/xenobject.h"
+#include "xen/network/connection.h"
 #include <QMessageBox>
 
-ExportSnapshotAsTemplateCommand::ExportSnapshotAsTemplateCommand(MainWindow* mainWindow, QObject* parent)
+NewVMFromSnapshotCommand::NewVMFromSnapshotCommand(MainWindow* mainWindow, QObject* parent)
     : Command(mainWindow, parent)
 {
 }
 
-ExportSnapshotAsTemplateCommand::ExportSnapshotAsTemplateCommand(const QString& snapshotRef,
-                                                                 XenConnection* connection,
-                                                                 MainWindow* mainWindow,
-                                                                 QObject* parent)
+NewVMFromSnapshotCommand::NewVMFromSnapshotCommand(const QString& snapshotRef,
+                                                   XenConnection* connection,
+                                                   MainWindow* mainWindow,
+                                                   QObject* parent)
     : Command(mainWindow, parent),
       m_snapshotRef(snapshotRef),
       m_connection(connection)
 {
 }
 
-bool ExportSnapshotAsTemplateCommand::CanRun() const
+bool NewVMFromSnapshotCommand::CanRun() const
 {
-    QString vmRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
+    QString snapshotRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
     QString type = !this->m_snapshotRef.isEmpty() ? "vm" : this->getSelectedObjectType();
-
-    if (vmRef.isEmpty() || type != "vm")
-    {
+    if (snapshotRef.isEmpty() || type != "vm")
         return false;
-    }
 
     XenConnection* connection = this->m_connection;
     if (!connection)
@@ -65,31 +61,24 @@ bool ExportSnapshotAsTemplateCommand::CanRun() const
         QSharedPointer<XenObject> selectedObject = this->GetObject();
         connection = selectedObject ? selectedObject->GetConnection() : nullptr;
     }
+
     XenCache* cache = connection ? connection->GetCache() : nullptr;
     if (!cache)
         return false;
 
-    // Get VM data from cache
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-    {
-        return false;
-    }
-
-    // VM must be a snapshot
-    bool isSnapshot = vmData.value("is_a_snapshot").toBool();
-    return isSnapshot;
+    QVariantMap snapshotData = cache->ResolveObjectData("vm", snapshotRef);
+    return snapshotData.value("is_a_snapshot").toBool();
 }
 
-void ExportSnapshotAsTemplateCommand::Run()
+void NewVMFromSnapshotCommand::Run()
 {
-    QString vmRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
-    QString type = !this->m_snapshotRef.isEmpty() ? "vm" : this->getSelectedObjectType();
-
-    if (vmRef.isEmpty() || type != "vm")
-    {
+    if (!this->mainWindow())
         return;
-    }
+
+    QString snapshotRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
+    QString type = !this->m_snapshotRef.isEmpty() ? "vm" : this->getSelectedObjectType();
+    if (snapshotRef.isEmpty() || type != "vm")
+        return;
 
     XenConnection* connection = this->m_connection;
     if (!connection)
@@ -97,42 +86,24 @@ void ExportSnapshotAsTemplateCommand::Run()
         QSharedPointer<XenObject> selectedObject = this->GetObject();
         connection = selectedObject ? selectedObject->GetConnection() : nullptr;
     }
+
     XenCache* cache = connection ? connection->GetCache() : nullptr;
     if (!cache)
         return;
 
-    // Get VM data to verify it's a snapshot
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-    {
-        return;
-    }
-
-    bool isSnapshot = vmData.value("is_a_snapshot").toBool();
-    if (!isSnapshot)
+    QVariantMap snapshotData = cache->ResolveObjectData("vm", snapshotRef);
+    if (!snapshotData.value("is_a_snapshot").toBool())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not a Snapshot"),
                              tr("Selected item is not a VM snapshot"));
         return;
     }
 
-    if (!this->m_snapshotRef.isEmpty())
-    {
-        ExportWizard* wizard = new ExportWizard(this->mainWindow());
-        connect(wizard, &QWizard::finished, wizard, &QObject::deleteLater);
-        wizard->show();
-        wizard->raise();
-        wizard->activateWindow();
-        return;
-    }
-
-    // Reuse ExportVMCommand - snapshots are exported just like VMs
-    ExportVMCommand* exportCmd = new ExportVMCommand(this->mainWindow(), this);
-    exportCmd->Run();
-    exportCmd->deleteLater();
+    NewVMWizard wizard(connection, this->mainWindow());
+    wizard.exec();
 }
 
-QString ExportSnapshotAsTemplateCommand::MenuText() const
+QString NewVMFromSnapshotCommand::MenuText() const
 {
-    return tr("E&xport Snapshot as Template...");
+    return tr("New VM from Snapshot...");
 }

@@ -99,8 +99,28 @@
         <file alias="template_user.png">images/000_UserTemplate_h32bit_16.png</file>
         <file alias="template_disabled.png">images/000_TemplateDisabled_h32bit_16.png</file>
         
-        <!-- Snapshot icons -->
+        <!-- Snapshot icons (16x16) -->
         <file alias="snapshot.png">images/000_VMSnapShotDiskOnly_h32bit_16.png</file>
+        
+        <!-- Snapshot icons (32x32 for tree view) -->
+        <file alias="snapshot_disk_32.png">images/000_VMSnapShotDiskOnly_h32bit_32.png</file>
+        <file alias="snapshot_disk_memory_32.png">images/000_VMSnapshotDiskMemory_h32bit_32.png</file>
+        <file alias="snapshot_scheduled_disk_32.png">images/000_ScheduledVMsnapshotDiskOnly_h32bit_32.png</file>
+        <file alias="snapshot_scheduled_disk_memory_32.png">images/000_ScheduledVMSnapshotDiskMemory_h32bit_32.png</file>
+        
+        <!-- VM icons (32x32 for snapshot tree) -->
+        <file alias="vm_highlight_32.png">images/000_HighLightVM_h32bit_32.png</file>
+        <file alias="vm_template_32.png">images/VMTemplate_h32bit_32.png</file>
+        
+        <!-- Spinning animation frames -->
+        <file alias="spinning_frame_0.png">images/SpinningFrame0.png</file>
+        <file alias="spinning_frame_1.png">images/SpinningFrame1.png</file>
+        <file alias="spinning_frame_2.png">images/SpinningFrame2.png</file>
+        <file alias="spinning_frame_3.png">images/SpinningFrame3.png</file>
+        <file alias="spinning_frame_4.png">images/SpinningFrame4.png</file>
+        <file alias="spinning_frame_5.png">images/SpinningFrame5.png</file>
+        <file alias="spinning_frame_6.png">images/SpinningFrame6.png</file>
+        <file alias="spinning_frame_7.png">images/SpinningFrame7.png</file>
         
         <!-- Host icons -->
         <file alias="host.png">images/000_TreeConnected_h32bit_16.png</file>

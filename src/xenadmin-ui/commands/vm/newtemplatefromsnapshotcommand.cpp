@@ -41,21 +41,32 @@ NewTemplateFromSnapshotCommand::NewTemplateFromSnapshotCommand(MainWindow* mainW
 {
 }
 
+NewTemplateFromSnapshotCommand::NewTemplateFromSnapshotCommand(const QString& snapshotRef,
+                                                               XenConnection* connection,
+                                                               MainWindow* mainWindow,
+                                                               QObject* parent)
+    : Command(mainWindow, parent),
+      m_snapshotRef(snapshotRef),
+      m_connection(connection)
+{
+}
+
 bool NewTemplateFromSnapshotCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedObjectRef();
-    QString type = this->getSelectedObjectType();
+    QString vmRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
+    QString type = !this->m_snapshotRef.isEmpty() ? "vm" : this->getSelectedObjectType();
 
     if (vmRef.isEmpty() || type != "vm")
     {
         return false;
     }
 
-    QSharedPointer<XenObject> selectedObject = this->GetObject();
-    if (!selectedObject)
-        return false;
-
-    XenConnection* connection = selectedObject->GetConnection();
+    XenConnection* connection = this->m_connection;
+    if (!connection)
+    {
+        QSharedPointer<XenObject> selectedObject = this->GetObject();
+        connection = selectedObject ? selectedObject->GetConnection() : nullptr;
+    }
     XenCache* cache = connection ? connection->GetCache() : nullptr;
     if (!cache)
         return false;
@@ -74,19 +85,20 @@ bool NewTemplateFromSnapshotCommand::CanRun() const
 
 void NewTemplateFromSnapshotCommand::Run()
 {
-    QString vmRef = this->getSelectedObjectRef();
-    QString type = this->getSelectedObjectType();
+    QString vmRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
+    QString type = !this->m_snapshotRef.isEmpty() ? "vm" : this->getSelectedObjectType();
 
     if (vmRef.isEmpty() || type != "vm")
     {
         return;
     }
 
-    QSharedPointer<XenObject> selectedObject = this->GetObject();
-    if (!selectedObject)
-        return;
-
-    XenConnection* connection = selectedObject->GetConnection();
+    XenConnection* connection = this->m_connection;
+    if (!connection)
+    {
+        QSharedPointer<XenObject> selectedObject = this->GetObject();
+        connection = selectedObject ? selectedObject->GetConnection() : nullptr;
+    }
     XenCache* cache = connection ? connection->GetCache() : nullptr;
     if (!cache)
         return;
