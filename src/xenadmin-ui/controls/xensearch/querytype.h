@@ -54,63 +54,63 @@ class QueryType : public QObject
 {
     Q_OBJECT
 
-public:
-    enum class Category
-    {
-        Single,      // Match the object itself
-        ParentChild, // Match ancestor or descendant object
-        Group        // A group query (And/Or/Nor)
-    };
+    public:
+        enum class Category
+        {
+            Single,      // Match the object itself
+            ParentChild, // Match ancestor or descendant object
+            Group        // A group query (And/Or/Nor)
+        };
 
-    QueryType(int group, ObjectTypes appliesTo);
-    virtual ~QueryType();
+        QueryType(int group, ObjectTypes appliesTo);
+        virtual ~QueryType();
 
-    // Check if this query type is appropriate for the given query filter
-    virtual bool ForQuery(QueryFilter* query) const = 0;
-    
-    // Populate UI from query filter
-    virtual void FromQuery(QueryFilter* query, QueryElement* queryElement) = 0;
-    
-    // Build query filter from UI
-    virtual QueryFilter* GetQuery(QueryElement* queryElement) const = 0;
-    
-    // Display name for this query type
-    virtual QString toString() const = 0;
-    
-    // Category of this query type
-    virtual Category getCategory() const { return Category::Single; }
-    
-    // For ParentChild queries, the scope of the subquery
-    virtual QueryScope* getSubQueryScope() const { return nullptr; }
-    
-    // UI element visibility
-    virtual bool showMatchTypeComboButton() const { return false; }
-    virtual bool showTextBox(QueryElement* queryElement) const { Q_UNUSED(queryElement); return false; }
-    virtual bool showComboButton(QueryElement* queryElement) const { Q_UNUSED(queryElement); return false; }
-    virtual bool showNumericUpDown(QueryElement* queryElement) const { Q_UNUSED(queryElement); return false; }
-    virtual bool showDateTimePicker(QueryElement* queryElement) const { Q_UNUSED(queryElement); return false; }
-    virtual bool showResourceSelectButton(QueryElement* queryElement) const { Q_UNUSED(queryElement); return false; }
-    
-    // UI element data
-    virtual QStringList getMatchTypeComboButtonEntries() const { return QStringList(); }
-    virtual QVariantList getComboButtonEntries(QueryElement* queryElement) const { Q_UNUSED(queryElement); return QVariantList(); }
-    virtual QString getUnits(QueryElement* queryElement) const { Q_UNUSED(queryElement); return QString(); }
-    
-    int getGroup() const { return this->group_; }
-    ObjectTypes getAppliesTo() const { return this->appliesTo_; }
+        // Check if this query type is appropriate for the given query filter
+        virtual bool ForQuery(QueryFilter* query) const = 0;
 
-signals:
-    /**
-     * @brief Emitted when dropdown values change (e.g., new OS names, new VMs added)
-     * 
-     * C# equivalent: SomeThingChanged event
-     * QueryElement listens to this and refreshes combo boxes
-     */
-    void SomeThingChanged();
+        // Populate UI from query filter
+        virtual void FromQuery(QueryFilter* query, QueryElement* queryElement) = 0;
 
-protected:
-    int group_;
-    ObjectTypes appliesTo_;
+        // Build query filter from UI
+        virtual QueryFilter* GetQuery(QueryElement* queryElement) const = 0;
+
+        // Display name for this query type
+        virtual QString toString() const = 0;
+
+        // Category of this query type
+        virtual Category getCategory() const { return Category::Single; }
+
+        // For ParentChild queries, the scope of the subquery
+        virtual QueryScope* getSubQueryScope() const { return nullptr; }
+
+        // UI element visibility
+        virtual bool showMatchTypeComboButton() const { return false; }
+        virtual bool showTextBox(QueryElement* queryElement) const { Q_UNUSED(queryElement); return false; }
+        virtual bool showComboButton(QueryElement* queryElement) const { Q_UNUSED(queryElement); return false; }
+        virtual bool showNumericUpDown(QueryElement* queryElement) const { Q_UNUSED(queryElement); return false; }
+        virtual bool showDateTimePicker(QueryElement* queryElement) const { Q_UNUSED(queryElement); return false; }
+        virtual bool showResourceSelectButton(QueryElement* queryElement) const { Q_UNUSED(queryElement); return false; }
+
+        // UI element data
+        virtual QStringList getMatchTypeComboButtonEntries() const { return QStringList(); }
+        virtual QVariantList getComboButtonEntries(QueryElement* queryElement) const { Q_UNUSED(queryElement); return QVariantList(); }
+        virtual QString getUnits(QueryElement* queryElement) const { Q_UNUSED(queryElement); return QString(); }
+
+        int getGroup() const { return this->group_; }
+        ObjectTypes getAppliesTo() const { return this->appliesTo_; }
+
+    signals:
+        /**
+         * @brief Emitted when dropdown values change (e.g., new OS names, new VMs added)
+         *
+         * C# equivalent: SomeThingChanged event
+         * QueryElement listens to this and refreshes combo boxes
+         */
+        void SomeThingChanged();
+
+    protected:
+        int group_;
+        ObjectTypes appliesTo_;
 };
 
 /**
@@ -118,13 +118,13 @@ protected:
  */
 class DummyQueryType : public QueryType
 {
-public:
-    DummyQueryType(int group, ObjectTypes appliesTo);
-    
-    bool ForQuery(QueryFilter* query) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    QString toString() const override;
+    public:
+        DummyQueryType(int group, ObjectTypes appliesTo);
+
+        bool ForQuery(QueryFilter* query) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        QString toString() const override;
 };
 
 /**
@@ -132,28 +132,28 @@ public:
  */
 class GroupQueryType : public QueryType
 {
-public:
-    enum class GroupType
-    {
-        And,
-        Or,
-        Nor
-    };
+    public:
+        enum class GroupType
+        {
+            And,
+            Or,
+            Nor
+        };
 
-    GroupQueryType(int group, ObjectTypes appliesTo, GroupType type);
-    
-    Category getCategory() const override { return Category::Group; }
-    QueryScope* getSubQueryScope() const override;
-    
-    bool ForQuery(QueryFilter* query) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    QString toString() const override;
-    
-    GroupType getType() const { return this->type_; }
+        GroupQueryType(int group, ObjectTypes appliesTo, GroupType type);
 
-private:
-    GroupType type_;
+        Category getCategory() const override { return Category::Group; }
+        QueryScope* getSubQueryScope() const override;
+
+        bool ForQuery(QueryFilter* query) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        QString toString() const override;
+
+        GroupType getType() const { return this->type_; }
+
+    private:
+        GroupType type_;
 };
 
 /**
@@ -161,28 +161,28 @@ private:
  */
 class StringPropertyQueryType : public QueryType
 {
-public:
-    // Use MatchType from StringPropertyQuery
-    using MatchType = StringPropertyQuery::MatchType;
+    public:
+        // Use MatchType from StringPropertyQuery
+        using MatchType = StringPropertyQuery::MatchType;
 
-    StringPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property);
-    StringPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, const QString& customName);
-    
-    bool ForQuery(QueryFilter* query) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    QString toString() const override;
-    
-    bool showMatchTypeComboButton() const override { return true; }
-    bool showTextBox(QueryElement* queryElement) const override { Q_UNUSED(queryElement); return true; }
-    QStringList getMatchTypeComboButtonEntries() const override;
-    
-    static MatchType matchTypeFromString(const QString& str);
-    static QString matchTypeToString(MatchType type);
+        StringPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property);
+        StringPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, const QString& customName);
 
-protected:
-    PropertyNames property_;
-    QString customName_;
+        bool ForQuery(QueryFilter* query) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        QString toString() const override;
+
+        bool showMatchTypeComboButton() const override { return true; }
+        bool showTextBox(QueryElement* queryElement) const override { Q_UNUSED(queryElement); return true; }
+        QStringList getMatchTypeComboButtonEntries() const override;
+
+        static MatchType matchTypeFromString(const QString& str);
+        static QString matchTypeToString(MatchType type);
+
+    protected:
+        PropertyNames property_;
+        QString customName_;
 };
 
 /**
@@ -190,22 +190,22 @@ protected:
  */
 class EnumPropertyQueryType : public QueryType
 {
-public:
-    EnumPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property);
-    
-    bool ForQuery(QueryFilter* query) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    QString toString() const override;
-    
-    bool showMatchTypeComboButton() const override { return true; }
-    bool showComboButton(QueryElement* queryElement) const override;
-    QStringList getMatchTypeComboButtonEntries() const override;
-    QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
+    public:
+        EnumPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property);
 
-protected:
-    PropertyNames property_;
-    QVariantList getEnumValues() const;
+        bool ForQuery(QueryFilter* query) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        QString toString() const override;
+
+        bool showMatchTypeComboButton() const override { return true; }
+        bool showComboButton(QueryElement* queryElement) const override;
+        QStringList getMatchTypeComboButtonEntries() const override;
+        QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
+
+    protected:
+        PropertyNames property_;
+        QVariantList getEnumValues() const;
 };
 
 /**
@@ -213,31 +213,31 @@ protected:
  */
 class NumericPropertyQueryType : public QueryType
 {
-public:
-    // Use ComparisonType from NumericQuery
-    using ComparisonType = NumericQuery::ComparisonType;
+    public:
+        // Use ComparisonType from NumericQuery
+        using ComparisonType = NumericQuery::ComparisonType;
 
-    NumericPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, 
-                            const QString& name, qint64 multiplier, const QString& units);
-    
-    bool ForQuery(QueryFilter* query) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    QString toString() const override;
-    
-    bool showMatchTypeComboButton() const override { return true; }
-    bool showNumericUpDown(QueryElement* queryElement) const override { Q_UNUSED(queryElement); return true; }
-    QStringList getMatchTypeComboButtonEntries() const override;
-    QString getUnits(QueryElement* queryElement) const override { Q_UNUSED(queryElement); return this->units_; }
-    
-    static ComparisonType comparisonTypeFromString(const QString& str);
-    static QString comparisonTypeToString(ComparisonType type);
+        NumericPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property,
+                                const QString& name, qint64 multiplier, const QString& units);
 
-protected:
-    PropertyNames property_;
-    QString name_;
-    qint64 multiplier_;
-    QString units_;
+        bool ForQuery(QueryFilter* query) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        QString toString() const override;
+
+        bool showMatchTypeComboButton() const override { return true; }
+        bool showNumericUpDown(QueryElement* queryElement) const override { Q_UNUSED(queryElement); return true; }
+        QStringList getMatchTypeComboButtonEntries() const override;
+        QString getUnits(QueryElement* queryElement) const override { Q_UNUSED(queryElement); return this->units_; }
+
+        static ComparisonType comparisonTypeFromString(const QString& str);
+        static QString comparisonTypeToString(ComparisonType type);
+
+    protected:
+        PropertyNames property_;
+        QString name_;
+        qint64 multiplier_;
+        QString units_;
 };
 
 /**
@@ -245,34 +245,34 @@ protected:
  */
 class DatePropertyQueryType : public QueryType
 {
-public:
-    // Extended enum for UI - includes relative time ranges
-    enum class ComparisonType
-    {
-        Before,
-        After,
-        Exact,
-        Last24Hours,
-        Last7Days,
-        LastMonth
-    };
+    public:
+        // Extended enum for UI - includes relative time ranges
+        enum class ComparisonType
+        {
+            Before,
+            After,
+            Exact,
+            Last24Hours,
+            Last7Days,
+            LastMonth
+        };
 
-    DatePropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property);
-    
-    bool ForQuery(QueryFilter* query) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    QString toString() const override;
-    
-    bool showMatchTypeComboButton() const override { return true; }
-    bool showDateTimePicker(QueryElement* queryElement) const override;
-    QStringList getMatchTypeComboButtonEntries() const override;
-    
-    static ComparisonType comparisonTypeFromString(const QString& str);
-    static QString comparisonTypeToString(ComparisonType type);
+        DatePropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property);
 
-protected:
-    PropertyNames property_;
+        bool ForQuery(QueryFilter* query) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        QString toString() const override;
+
+        bool showMatchTypeComboButton() const override { return true; }
+        bool showDateTimePicker(QueryElement* queryElement) const override;
+        QStringList getMatchTypeComboButtonEntries() const override;
+
+        static ComparisonType comparisonTypeFromString(const QString& str);
+        static QString comparisonTypeToString(ComparisonType type);
+
+    protected:
+        PropertyNames property_;
 };
 
 /**
@@ -280,19 +280,19 @@ protected:
  */
 class BooleanQueryType : public QueryType
 {
-public:
-    BooleanQueryType(int group, ObjectTypes appliesTo, PropertyNames property);
-    
-    bool ForQuery(QueryFilter* query) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    QString toString() const override;
-    
-    bool showMatchTypeComboButton() const override { return true; }
-    QStringList getMatchTypeComboButtonEntries() const override;
+    public:
+        BooleanQueryType(int group, ObjectTypes appliesTo, PropertyNames property);
 
-protected:
-    PropertyNames property_;
+        bool ForQuery(QueryFilter* query) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        QString toString() const override;
+
+        bool showMatchTypeComboButton() const override { return true; }
+        QStringList getMatchTypeComboButtonEntries() const override;
+
+    protected:
+        PropertyNames property_;
 };
 
 /**
@@ -305,28 +305,28 @@ class TagQueryType : public QueryType
 {
     Q_OBJECT
 
-public:
-    TagQueryType(int group, ObjectTypes appliesTo, QObject* parent = nullptr);
-    ~TagQueryType() override;
-    
-    bool ForQuery(QueryFilter* query) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    QString toString() const override;
-    
-    bool showMatchTypeComboButton() const override { return true; }
-    bool showTextBox(QueryElement* queryElement) const override;
-    bool showComboButton(QueryElement* queryElement) const override;
-    QStringList getMatchTypeComboButtonEntries() const override;
-    QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
+    public:
+        TagQueryType(int group, ObjectTypes appliesTo, QObject* parent = nullptr);
+        ~TagQueryType() override;
 
-private slots:
-    void onTagsChanged();
+        bool ForQuery(QueryFilter* query) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        QString toString() const override;
 
-private:
-    QStringList collectedTags_;  // All known tags from cache
-    
-    void populateCollectedTags();
+        bool showMatchTypeComboButton() const override { return true; }
+        bool showTextBox(QueryElement* queryElement) const override;
+        bool showComboButton(QueryElement* queryElement) const override;
+        QStringList getMatchTypeComboButtonEntries() const override;
+        QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
+
+    private slots:
+        void onTagsChanged();
+
+    private:
+        QStringList collectedTags_;  // All known tags from cache
+
+        void populateCollectedTags();
 };
 
 /**
@@ -337,20 +337,20 @@ private:
  */
 class IPAddressQueryType : public QueryType
 {
-public:
-    IPAddressQueryType(int group, ObjectTypes appliesTo, PropertyNames property);
-    
-    bool ForQuery(QueryFilter* query) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    QString toString() const override;
-    
-    bool showMatchTypeComboButton() const override { return true; }
-    bool showTextBox(QueryElement* queryElement) const override { Q_UNUSED(queryElement); return true; }
-    QStringList getMatchTypeComboButtonEntries() const override;
+    public:
+        IPAddressQueryType(int group, ObjectTypes appliesTo, PropertyNames property);
 
-protected:
-    PropertyNames property_;
+        bool ForQuery(QueryFilter* query) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        QString toString() const override;
+
+        bool showMatchTypeComboButton() const override { return true; }
+        bool showTextBox(QueryElement* queryElement) const override { Q_UNUSED(queryElement); return true; }
+        QStringList getMatchTypeComboButtonEntries() const override;
+
+    protected:
+        PropertyNames property_;
 };
 
 /**
@@ -361,18 +361,18 @@ protected:
  */
 class NullPropertyQueryType : public QueryType
 {
-public:
-    NullPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, bool isNull, const QString& displayName);
-    
-    bool ForQuery(QueryFilter* query) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    QString toString() const override;
+    public:
+        NullPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, bool isNull, const QString& displayName);
 
-protected:
-    PropertyNames property_;
-    bool isNull_;
-    QString displayName_;
+        bool ForQuery(QueryFilter* query) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        QString toString() const override;
+
+    protected:
+        PropertyNames property_;
+        bool isNull_;
+        QString displayName_;
 };
 
 /**
@@ -389,31 +389,31 @@ class ValuePropertyQueryType : public QueryType
 {
     Q_OBJECT
 
-public:
-    ValuePropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent = nullptr);
-    ~ValuePropertyQueryType() override;
-    
-    bool ForQuery(QueryFilter* query) const override;
-    QString toString() const override;
-    
-    bool showMatchTypeComboButton() const override { return true; }
-    QStringList getMatchTypeComboButtonEntries() const override;
-    
-    bool showComboButton(QueryElement* queryElement) const override;
-    QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
-    
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    public:
+        ValuePropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent = nullptr);
+        ~ValuePropertyQueryType() override;
 
-private slots:
-    void onConnectionsChanged();
-    void onCacheChanged(XenConnection* connection, const QString& type, const QString& ref);
+        bool ForQuery(QueryFilter* query) const override;
+        QString toString() const override;
 
-private:
-    PropertyNames property_;
-    QMap<QString, bool> collectedValues_;  // Value → true (C# uses Dictionary<String, Object>)
-    
-    void populateCollectedValues();
+        bool showMatchTypeComboButton() const override { return true; }
+        QStringList getMatchTypeComboButtonEntries() const override;
+
+        bool showComboButton(QueryElement* queryElement) const override;
+        QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
+
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+    private slots:
+        void onConnectionsChanged();
+        void onCacheChanged(XenConnection* connection, const QString& type, const QString& ref);
+
+    private:
+        PropertyNames property_;
+        QMap<QString, bool> collectedValues_;  // Value → true (C# uses Dictionary<String, Object>)
+
+        void populateCollectedValues();
 };
 
 /**
@@ -430,23 +430,23 @@ class UuidQueryType : public QueryType
 {
     Q_OBJECT
 
-public:
-    UuidQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent = nullptr);
-    
-    bool ForQuery(QueryFilter* query) const override;
-    QString toString() const override;
-    
-    bool showMatchTypeComboButton() const override { return true; }
-    QStringList getMatchTypeComboButtonEntries() const override;
-    
-    bool showResourceSelectButton(QueryElement* queryElement) const override;
-    
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    public:
+        UuidQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent = nullptr);
 
-private:
-    PropertyNames property_;
-    // TODO: Implement when ResourceSelectButton + Search::PopulateAdapters ready
+        bool ForQuery(QueryFilter* query) const override;
+        QString toString() const override;
+
+        bool showMatchTypeComboButton() const override { return true; }
+        QStringList getMatchTypeComboButtonEntries() const override;
+
+        bool showResourceSelectButton(QueryElement* queryElement) const override;
+
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+    private:
+        PropertyNames property_;
+        // TODO: Implement when ResourceSelectButton + Search::PopulateAdapters ready
 };
 
 /**
@@ -457,10 +457,10 @@ private:
  */
 class UuidStringQueryType : public StringPropertyQueryType
 {
-public:
-    UuidStringQueryType(int group, ObjectTypes appliesTo);
-    
-    QStringList getMatchTypeComboButtonEntries() const override;
+    public:
+        UuidStringQueryType(int group, ObjectTypes appliesTo);
+
+        QStringList getMatchTypeComboButtonEntries() const override;
 };
 
 // ============================================================================
@@ -487,74 +487,74 @@ class RecursiveQueryTypeBase : public QueryType
 {
     Q_OBJECT
 
-public:
-    RecursiveQueryTypeBase(int group, ObjectTypes appliesTo, PropertyNames property, ObjectTypes subQueryScope, QObject* parent = nullptr);
-    ~RecursiveQueryTypeBase() override;
-    
-    Category getCategory() const override { return Category::ParentChild; }
-    QueryScope* getSubQueryScope() const override { return this->subQueryScope_; }
-    
-    bool ForQuery(QueryFilter* query) const override;
-    
-protected:
-    PropertyNames property_;
-    QueryScope* subQueryScope_;
-    
-    // Derived classes implement this to create the appropriate RecursivePropertyQuery
-    virtual QueryFilter* newQuery(PropertyNames property, QueryFilter* subQuery) const = 0;
-    
-private slots:
-    void onConnectionsChanged();
-    void onCacheChanged();
-};
+    public:
+        RecursiveQueryTypeBase(int group, ObjectTypes appliesTo, PropertyNames property, ObjectTypes subQueryScope, QObject* parent = nullptr);
+        ~RecursiveQueryTypeBase() override;
 
-/**
- * Recursive XMO query type - single object relationship
- * 
- * C# Equivalent: RecursiveXMOQueryType<T> in QueryElement.cs (lines 1619-1629)
- * Uses RecursiveXMOPropertyQuery<T> for evaluation
- * 
- * Examples:
- * - "Pool is <sub-query>" (VM→Pool relationship)
- * - "Parent folder is <sub-query>" (VM→Folder relationship)  
- * - "Appliance is <sub-query>" (VM→VM_appliance relationship)
- */
-class RecursiveXMOQueryType : public RecursiveQueryTypeBase
-{
-public:
-    RecursiveXMOQueryType(int group, ObjectTypes appliesTo, PropertyNames property, ObjectTypes subQueryScope, QObject* parent = nullptr);
-    
-    QString toString() const override;
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-    
-protected:
-    QueryFilter* newQuery(PropertyNames property, QueryFilter* subQuery) const override;
-};
+        Category getCategory() const override { return Category::ParentChild; }
+        QueryScope* getSubQueryScope() const override { return this->subQueryScope_; }
 
-/**
- * Recursive XMO list query type - list object relationship
- * 
- * C# Equivalent: RecursiveXMOListQueryType<T> in QueryElement.cs (lines 1631-1643)
- * Uses RecursiveXMOListPropertyQuery<T> for evaluation
- * 
- * Examples:
- * - "Host contains VM where <sub-query>" (Pool→Host list relationship)
- * - "Network uses <sub-query>" (VM→Network list relationship)
- * - "Storage uses <sub-query>" (VM→SR list relationship)
- * - "Disks contain <sub-query>" (VM→VDI list relationship)
- */
-class RecursiveXMOListQueryType : public RecursiveQueryTypeBase
-{
-public:
-    RecursiveXMOListQueryType(int group, ObjectTypes appliesTo, PropertyNames property, ObjectTypes subQueryScope, QObject* parent = nullptr);
-    
-    QString toString() const override;
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
-    
-protected:
-    QueryFilter* newQuery(PropertyNames property, QueryFilter* subQuery) const override;
+        bool ForQuery(QueryFilter* query) const override;
+
+    protected:
+        PropertyNames property_;
+        QueryScope* subQueryScope_;
+
+        // Derived classes implement this to create the appropriate RecursivePropertyQuery
+        virtual QueryFilter* newQuery(PropertyNames property, QueryFilter* subQuery) const = 0;
+
+    private slots:
+        void onConnectionsChanged();
+        void onCacheChanged();
+    };
+
+    /**
+     * Recursive XMO query type - single object relationship
+     *
+     * C# Equivalent: RecursiveXMOQueryType<T> in QueryElement.cs (lines 1619-1629)
+     * Uses RecursiveXMOPropertyQuery<T> for evaluation
+     *
+     * Examples:
+     * - "Pool is <sub-query>" (VM→Pool relationship)
+     * - "Parent folder is <sub-query>" (VM→Folder relationship)
+     * - "Appliance is <sub-query>" (VM→VM_appliance relationship)
+     */
+    class RecursiveXMOQueryType : public RecursiveQueryTypeBase
+    {
+    public:
+        RecursiveXMOQueryType(int group, ObjectTypes appliesTo, PropertyNames property, ObjectTypes subQueryScope, QObject* parent = nullptr);
+
+        QString toString() const override;
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+    protected:
+        QueryFilter* newQuery(PropertyNames property, QueryFilter* subQuery) const override;
+    };
+
+    /**
+     * Recursive XMO list query type - list object relationship
+     *
+     * C# Equivalent: RecursiveXMOListQueryType<T> in QueryElement.cs (lines 1631-1643)
+     * Uses RecursiveXMOListPropertyQuery<T> for evaluation
+     *
+     * Examples:
+     * - "Host contains VM where <sub-query>" (Pool→Host list relationship)
+     * - "Network uses <sub-query>" (VM→Network list relationship)
+     * - "Storage uses <sub-query>" (VM→SR list relationship)
+     * - "Disks contain <sub-query>" (VM→VDI list relationship)
+     */
+    class RecursiveXMOListQueryType : public RecursiveQueryTypeBase
+    {
+    public:
+        RecursiveXMOListQueryType(int group, ObjectTypes appliesTo, PropertyNames property, ObjectTypes subQueryScope, QObject* parent = nullptr);
+
+        QString toString() const override;
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+    protected:
+        QueryFilter* newQuery(PropertyNames property, QueryFilter* subQuery) const override;
 };
 
 // ============================================================================
@@ -576,28 +576,28 @@ class XenModelObjectPropertyQueryType : public QueryType
 {
     Q_OBJECT
 
-public:
-    XenModelObjectPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent = nullptr);
-    ~XenModelObjectPropertyQueryType() override;
-    
-    bool ForQuery(QueryFilter* query) const override;
-    QString toString() const override;
-    
-    bool showMatchTypeComboButton() const override { return true; }
-    QStringList getMatchTypeComboButtonEntries() const override;
-    
-    bool showComboButton(QueryElement* queryElement) const override;
-    QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
-    
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    public:
+        XenModelObjectPropertyQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent = nullptr);
+        ~XenModelObjectPropertyQueryType() override;
 
-private slots:
-    void onConnectionsChanged();
-    void onCacheChanged();
+        bool ForQuery(QueryFilter* query) const override;
+        QString toString() const override;
 
-private:
-    PropertyNames property_;
+        bool showMatchTypeComboButton() const override { return true; }
+        QStringList getMatchTypeComboButtonEntries() const override;
+
+        bool showComboButton(QueryElement* queryElement) const override;
+        QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
+
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+    private slots:
+        void onConnectionsChanged();
+        void onCacheChanged();
+
+    private:
+        PropertyNames property_;
 };
 
 /**
@@ -615,30 +615,30 @@ class XenModelObjectListContainsQueryType : public QueryType
 {
     Q_OBJECT
 
-public:
-    XenModelObjectListContainsQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent = nullptr);
-    ~XenModelObjectListContainsQueryType() override;
-    
-    bool ForQuery(QueryFilter* query) const override;
-    QString toString() const override;
-    
-    bool showMatchTypeComboButton() const override { return true; }
-    QStringList getMatchTypeComboButtonEntries() const override;
-    
-    bool showComboButton(QueryElement* queryElement) const override;
-    QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
-    
-    bool showTextBox(QueryElement* queryElement) const override;
-    
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    public:
+        XenModelObjectListContainsQueryType(int group, ObjectTypes appliesTo, PropertyNames property, QObject* parent = nullptr);
+        ~XenModelObjectListContainsQueryType() override;
 
-private slots:
-    void onConnectionsChanged();
-    void onCacheChanged(XenConnection* connection, const QString& type, const QString& ref);
+        bool ForQuery(QueryFilter* query) const override;
+        QString toString() const override;
 
-protected:
-    PropertyNames property_;
+        bool showMatchTypeComboButton() const override { return true; }
+        QStringList getMatchTypeComboButtonEntries() const override;
+
+        bool showComboButton(QueryElement* queryElement) const override;
+        QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
+
+        bool showTextBox(QueryElement* queryElement) const override;
+
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+    private slots:
+        void onConnectionsChanged();
+        void onCacheChanged(XenConnection* connection, const QString& type, const QString& ref);
+
+    protected:
+        PropertyNames property_;
 };
 
 /**
@@ -654,14 +654,14 @@ protected:
  */
 class HostQueryType : public XenModelObjectListContainsQueryType
 {
-public:
-    HostQueryType(int group, ObjectTypes appliesTo, QObject* parent = nullptr);
-    
-    QStringList getMatchTypeComboButtonEntries() const override;
-    bool showTextBox(QueryElement* queryElement) const override;
-    
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    public:
+        HostQueryType(int group, ObjectTypes appliesTo, QObject* parent = nullptr);
+
+        QStringList getMatchTypeComboButtonEntries() const override;
+        bool showTextBox(QueryElement* queryElement) const override;
+
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
 };
 
 /**
@@ -677,20 +677,19 @@ public:
  */
 class NullQueryType : public QueryType
 {
-public:
-    NullQueryType(int group, ObjectTypes appliesTo, PropertyNames property, 
-                  bool isNull, const QString& i18n);
-    
-    QString toString() const override { return this->i18n_; }
-    
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    bool ForQuery(QueryFilter* query) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    public:
+        NullQueryType(int group, ObjectTypes appliesTo, PropertyNames property, bool isNull, const QString& i18n);
 
-private:
-    PropertyNames property_;
-    bool isNull_;
-    QString i18n_;
+        QString toString() const override { return this->i18n_; }
+
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        bool ForQuery(QueryFilter* query) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+    private:
+        PropertyNames property_;
+        bool isNull_;
+        QString i18n_;
 };
 
 /**
@@ -703,25 +702,25 @@ private:
  */
 class MatchType
 {
-public:
-    explicit MatchType(const QString& matchText);
-    virtual ~MatchType() = default;
-    
-    QString toString() const { return this->matchText_; }
-    
-    virtual bool showComboButton(QueryElement* queryElement) const { return false; }
-    virtual bool showTextBox(QueryElement* queryElement) const { return false; }
-    virtual bool showNumericUpDown(QueryElement* queryElement) const { return false; }
-    
-    virtual QString units(QueryElement* queryElement) const { return QString(); }
-    virtual QVariantList getComboButtonEntries() const { return QVariantList(); }
-    
-    virtual QueryFilter* getQuery(QueryElement* queryElement) const = 0;
-    virtual bool forQuery(QueryFilter* query) const = 0;
-    virtual void fromQuery(QueryFilter* query, QueryElement* queryElement) = 0;
+    public:
+        explicit MatchType(const QString& matchText);
+        virtual ~MatchType() = default;
 
-protected:
-    QString matchText_;
+        QString toString() const { return this->matchText_; }
+
+        virtual bool showComboButton(QueryElement* queryElement) const;
+        virtual bool showTextBox(QueryElement* queryElement) const;
+        virtual bool showNumericUpDown(QueryElement* queryElement) const;
+
+        virtual QString units(QueryElement* queryElement) const;
+        virtual QVariantList getComboButtonEntries() const { return QVariantList(); }
+
+        virtual QueryFilter* getQuery(QueryElement* queryElement) const = 0;
+        virtual bool forQuery(QueryFilter* query) const = 0;
+        virtual void fromQuery(QueryFilter* query, QueryElement* queryElement) = 0;
+
+    protected:
+        QString matchText_;
 };
 
 /**
@@ -734,21 +733,20 @@ protected:
  */
 class XMOListContains : public MatchType
 {
-public:
-    XMOListContains(PropertyNames property, bool contains, const QString& matchText,
-                    const QString& objectType);
-    
-    bool showComboButton(QueryElement* queryElement) const override;
-    QVariantList getComboButtonEntries() const override;
-    
-    QueryFilter* getQuery(QueryElement* queryElement) const override;
-    bool forQuery(QueryFilter* query) const override;
-    void fromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    public:
+        XMOListContains(PropertyNames property, bool contains, const QString& matchText, const QString& objectType);
 
-private:
-    PropertyNames property_;
-    bool contains_;
-    QString objectType_;  // "vm", "host", "sr", etc.
+        bool showComboButton(QueryElement* queryElement) const override;
+        QVariantList getComboButtonEntries() const override;
+
+        QueryFilter* getQuery(QueryElement* queryElement) const override;
+        bool forQuery(QueryFilter* query) const override;
+        void fromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+    private:
+        PropertyNames property_;
+        bool contains_;
+        QString objectType_;  // "vm", "host", "sr", etc.
 };
 
 /**
@@ -760,23 +758,21 @@ private:
  */
 class IntMatch : public MatchType
 {
-public:
-    IntMatch(PropertyNames property, const QString& matchText,
-             const QString& units, qint64 multiplier,
-             NumericQuery::ComparisonType type);
-    
-    bool showNumericUpDown(QueryElement* queryElement) const override;
-    QString units(QueryElement* queryElement) const override;
-    
-    QueryFilter* getQuery(QueryElement* queryElement) const override;
-    bool forQuery(QueryFilter* query) const override;
-    void fromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    public:
+        IntMatch(PropertyNames property, const QString& matchText, const QString& units, qint64 multiplier, NumericQuery::ComparisonType type);
 
-private:
-    PropertyNames property_;
-    NumericQuery::ComparisonType type_;
-    QString units_;
-    qint64 multiplier_;
+        bool showNumericUpDown(QueryElement* queryElement) const override;
+        QString units(QueryElement* queryElement) const override;
+
+        QueryFilter* getQuery(QueryElement* queryElement) const override;
+        bool forQuery(QueryFilter* query) const override;
+        void fromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+    private:
+        PropertyNames property_;
+        NumericQuery::ComparisonType type_;
+        QString units_;
+        qint64 multiplier_;
 };
 
 /**
@@ -789,33 +785,33 @@ private:
  */
 class MatchQueryType : public QueryType
 {
-public:
-    MatchQueryType(int group, ObjectTypes appliesTo, const QString& i18n);
-    virtual ~MatchQueryType();
-    
-    QString toString() const override { return this->i18n_; }
-    
-    bool showMatchTypeComboButton() const override { return true; }
-    QStringList getMatchTypeComboButtonEntries() const override;
-    
-    bool showComboButton(QueryElement* queryElement) const override;
-    bool showNumericUpDown(QueryElement* queryElement) const override;
-    bool showTextBox(QueryElement* queryElement) const override;
-    
-    QString getUnits(QueryElement* queryElement) const override;
-    QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
-    
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    bool ForQuery(QueryFilter* query) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    public:
+        MatchQueryType(int group, ObjectTypes appliesTo, const QString& i18n);
+        virtual ~MatchQueryType();
 
-protected:
-    virtual QList<MatchType*> getMatchTypes() const = 0;
-    
-    MatchType* getSelectedMatchType(QueryElement* queryElement) const;
+        QString toString() const override { return this->i18n_; }
 
-private:
-    QString i18n_;
+        bool showMatchTypeComboButton() const override { return true; }
+        QStringList getMatchTypeComboButtonEntries() const override;
+
+        bool showComboButton(QueryElement* queryElement) const override;
+        bool showNumericUpDown(QueryElement* queryElement) const override;
+        bool showTextBox(QueryElement* queryElement) const override;
+
+        QString getUnits(QueryElement* queryElement) const override;
+        QVariantList getComboButtonEntries(QueryElement* queryElement) const override;
+
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        bool ForQuery(QueryFilter* query) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+
+    protected:
+        virtual QList<MatchType*> getMatchTypes() const = 0;
+
+        MatchType* getSelectedMatchType(QueryElement* queryElement) const;
+
+    private:
+        QString i18n_;
 };
 
 /**
@@ -832,15 +828,15 @@ private:
  */
 class DiskQueryType : public MatchQueryType
 {
-public:
-    DiskQueryType(int group, ObjectTypes appliesTo, const QString& i18n);
-    ~DiskQueryType() override;
+    public:
+        DiskQueryType(int group, ObjectTypes appliesTo, const QString& i18n);
+        ~DiskQueryType() override;
 
-protected:
-    QList<MatchType*> getMatchTypes() const override;
+    protected:
+        QList<MatchType*> getMatchTypes() const override;
 
-private:
-    mutable QList<MatchType*> matchTypes_;
+    private:
+        mutable QList<MatchType*> matchTypes_;
 };
 
 /**
@@ -855,16 +851,15 @@ private:
  */
 class LongQueryType : public MatchQueryType
 {
-public:
-    LongQueryType(int group, ObjectTypes appliesTo, const QString& i18n,
-                  PropertyNames property, qint64 multiplier, const QString& unit);
-    ~LongQueryType() override;
+    public:
+        LongQueryType(int group, ObjectTypes appliesTo, const QString& i18n, PropertyNames property, qint64 multiplier, const QString& unit);
+        ~LongQueryType() override;
 
-protected:
-    QList<MatchType*> getMatchTypes() const override;
+    protected:
+        QList<MatchType*> getMatchTypes() const override;
 
-private:
-    mutable QList<MatchType*> matchTypes_;
+    private:
+        mutable QList<MatchType*> matchTypes_;
 };
 
 /**
@@ -876,16 +871,15 @@ private:
  */
 class CustomFieldQueryTypeBase : public QueryType
 {
-public:
-    CustomFieldQueryTypeBase(int group, ObjectTypes appliesTo, 
-                            const QString& fieldName);
-    
-    QString toString() const override { return this->fieldName_; }
-    
-    bool ForQuery(QueryFilter* query) const override;
+    public:
+        CustomFieldQueryTypeBase(int group, ObjectTypes appliesTo, const QString& fieldName);
 
-protected:
-    QString fieldName_;  // Will be CustomFieldDefinition* when implemented
+        QString toString() const override { return this->fieldName_; }
+
+        bool ForQuery(QueryFilter* query) const override;
+
+    protected:
+        QString fieldName_;  // Will be CustomFieldDefinition* when implemented
 };
 
 /**
@@ -897,17 +891,16 @@ protected:
  */
 class CustomFieldStringQueryType : public CustomFieldQueryTypeBase
 {
-public:
-    CustomFieldStringQueryType(int group, ObjectTypes appliesTo,
-                               const QString& fieldName);
-    
-    bool showMatchTypeComboButton() const override { return true; }
-    bool showTextBox(QueryElement* queryElement) const override { return true; }
-    
-    QStringList getMatchTypeComboButtonEntries() const override;
-    
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    public:
+        CustomFieldStringQueryType(int group, ObjectTypes appliesTo, const QString& fieldName);
+
+        bool showMatchTypeComboButton() const override { return true; }
+        bool showTextBox(QueryElement* queryElement) const override;
+
+        QStringList getMatchTypeComboButtonEntries() const override;
+
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
 };
 
 /**
@@ -919,17 +912,16 @@ public:
  */
 class CustomFieldDateQueryType : public CustomFieldQueryTypeBase
 {
-public:
-    CustomFieldDateQueryType(int group, ObjectTypes appliesTo,
-                            const QString& fieldName);
-    
-    bool showMatchTypeComboButton() const override { return true; }
-    bool showDateTimePicker(QueryElement* queryElement) const override;
-    
-    QStringList getMatchTypeComboButtonEntries() const override;
-    
-    QueryFilter* GetQuery(QueryElement* queryElement) const override;
-    void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
+    public:
+        CustomFieldDateQueryType(int group, ObjectTypes appliesTo, const QString& fieldName);
+
+        bool showMatchTypeComboButton() const override { return true; }
+        bool showDateTimePicker(QueryElement* queryElement) const override;
+
+        QStringList getMatchTypeComboButtonEntries() const override;
+
+        QueryFilter* GetQuery(QueryElement* queryElement) const override;
+        void FromQuery(QueryFilter* query, QueryElement* queryElement) override;
 };
 
 /**
@@ -937,23 +929,23 @@ public:
  */
 class QueryTypeRegistry
 {
-public:
-    static QueryTypeRegistry* instance();
-    
-    void initialize();
-    const QList<QueryType*>& getAllQueryTypes() const { return this->queryTypes_; }
-    QueryType* getDefaultQueryType() const { return this->defaultQueryType_; }
-    
-    // Find appropriate query type for a given filter
-    QueryType* findQueryTypeForFilter(QueryFilter* filter) const;
+    public:
+        static QueryTypeRegistry* instance();
 
-private:
-    QueryTypeRegistry();
-    ~QueryTypeRegistry();
-    
-    static QueryTypeRegistry* instance_;
-    QList<QueryType*> queryTypes_;
-    QueryType* defaultQueryType_;
+        void initialize();
+        const QList<QueryType*>& getAllQueryTypes() const { return this->queryTypes_; }
+        QueryType* getDefaultQueryType() const { return this->defaultQueryType_; }
+
+        // Find appropriate query type for a given filter
+        QueryType* findQueryTypeForFilter(QueryFilter* filter) const;
+
+    private:
+        QueryTypeRegistry();
+        ~QueryTypeRegistry();
+
+        static QueryTypeRegistry* instance_;
+        QList<QueryType*> queryTypes_;
+        QueryType* defaultQueryType_;
 };
 
 #endif // QUERYTYPE_H

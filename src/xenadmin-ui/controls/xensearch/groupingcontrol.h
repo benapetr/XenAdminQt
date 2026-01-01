@@ -84,7 +84,7 @@ class GroupingControl : public QWidget
         void onAddGroupMenuTriggered(QAction* action);
         void onSearchForChanged();
 
-    private:
+    public:
         /**
          * GroupingType - Base class for grouping type definitions
          */
@@ -152,6 +152,7 @@ class GroupingControl : public QWidget
                 bool ForGrouping(const Grouping* grouping) const override;
         };
 
+    private:
         void initializePotentialGroups();
         void setup();
         void addGroup(GroupingType* groupType);
@@ -179,5 +180,8 @@ class GroupingControl : public QWidget
         // TODO: Implement custom field grouping types
         // TODO: Implement grouping type hierarchy (ancestors/descendants)
 };
+
+Q_DECLARE_METATYPE(GroupingControl::GroupingType*)
+Q_DECLARE_METATYPE(GroupingControl::FolderGroupingType*)
 
 #endif // GROUPINGCONTROL_H

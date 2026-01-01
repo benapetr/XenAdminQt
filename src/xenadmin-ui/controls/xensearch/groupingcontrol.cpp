@@ -192,7 +192,7 @@ void GroupingControl::removeAllGroups()
 
 void GroupingControl::removeUnwantedGroups()
 {
-    foreach (DropDownButton* button, this->groups_.toList())
+    foreach (DropDownButton* button, this->groups_)
     {
         GroupingType* gt = button->property("groupingType").value<GroupingType*>();
         if (!this->wantGroupingType(gt))

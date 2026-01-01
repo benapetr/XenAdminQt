@@ -33,6 +33,7 @@
 #include "xenlib/xencache.h"
 #include "xenlib/otherconfig/otherconfigandtagswatcher.h"
 #include <algorithm>
+#include <QSet>
 
 // Constants for binary sizes
 static const qint64 BINARY_MEGA = 1024 * 1024;
@@ -1558,21 +1559,40 @@ void NullQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
 // MatchType - Abstract base class for match types
 // ============================================================================
 
-MatchType::MatchType(const QString& matchText)
-    : matchText_(matchText)
+MatchType::MatchType(const QString& matchText) : matchText_(matchText)
 {
+}
+
+bool MatchType::showComboButton(QueryElement *queryElement) const
+{
+    (void) queryElement;
+    return false;
+}
+
+bool MatchType::showTextBox(QueryElement *queryElement) const
+{
+    (void) queryElement;
+    return false;
+}
+
+bool MatchType::showNumericUpDown(QueryElement *queryElement) const
+{
+    (void) queryElement;
+    return false;
+}
+
+QString MatchType::units(QueryElement *queryElement) const
+{
+    (void) queryElement;
+    return QString();
 }
 
 // ============================================================================
 // XMOListContains - "Contained in" / "Not contained in" match type
 // ============================================================================
 
-XMOListContains::XMOListContains(PropertyNames property, bool contains, 
-                                 const QString& matchText, const QString& objectType)
-    : MatchType(matchText)
-    , property_(property)
-    , contains_(contains)
-    , objectType_(objectType)
+XMOListContains::XMOListContains(PropertyNames property, bool contains, const QString& matchText, const QString& objectType)
+    : MatchType(matchText), property_(property), contains_(contains), objectType_(objectType)
 {
 }
 
@@ -1623,14 +1643,8 @@ void XMOListContains::fromQuery(QueryFilter* query, QueryElement* queryElement)
 // IntMatch - Numeric match type with multiplier/units
 // ============================================================================
 
-IntMatch::IntMatch(PropertyNames property, const QString& matchText,
-                   const QString& units, qint64 multiplier,
-                   NumericQuery::ComparisonType type)
-    : MatchType(matchText)
-    , property_(property)
-    , type_(type)
-    , units_(units)
-    , multiplier_(multiplier)
+IntMatch::IntMatch(PropertyNames property, const QString& matchText, const QString& units, qint64 multiplier, NumericQuery::ComparisonType type)
+    : MatchType(matchText), property_(property), type_(type), units_(units), multiplier_(multiplier)
 {
 }
 
@@ -1687,8 +1701,7 @@ void IntMatch::fromQuery(QueryFilter* query, QueryElement* queryElement)
 // ============================================================================
 
 MatchQueryType::MatchQueryType(int group, ObjectTypes appliesTo, const QString& i18n)
-    : QueryType(group, appliesTo)
-    , i18n_(i18n)
+    : QueryType(group, appliesTo), i18n_(i18n)
 {
 }
 
@@ -1806,8 +1819,7 @@ void MatchQueryType::FromQuery(QueryFilter* query, QueryElement* queryElement)
 // DiskQueryType - Complex disk query with 7 match types
 // ============================================================================
 
-DiskQueryType::DiskQueryType(int group, ObjectTypes appliesTo, const QString& i18n)
-    : MatchQueryType(group, appliesTo, i18n)
+DiskQueryType::DiskQueryType(int group, ObjectTypes appliesTo, const QString& i18n) : MatchQueryType(group, appliesTo, i18n)
 {
     // Build match types list (C# QueryElement.cs lines 2497-2514)
     // Note: Using "Contained in" / "Not contained in" for SR
@@ -1850,8 +1862,7 @@ QList<MatchType*> DiskQueryType::getMatchTypes() const
 // LongQueryType - Numeric range query (bigger/smaller/exact)
 // ============================================================================
 
-LongQueryType::LongQueryType(int group, ObjectTypes appliesTo, const QString& i18n,
-                             PropertyNames property, qint64 multiplier, const QString& unit)
+LongQueryType::LongQueryType(int group, ObjectTypes appliesTo, const QString& i18n, PropertyNames property, qint64 multiplier, const QString& unit)
     : MatchQueryType(group, appliesTo, i18n)
 {
     // Build 3 match types: bigger than, smaller than, is exactly
@@ -1881,8 +1892,7 @@ QList<MatchType*> LongQueryType::getMatchTypes() const
 // CustomFieldQueryTypeBase - Abstract base for custom field queries
 // ============================================================================
 
-CustomFieldQueryTypeBase::CustomFieldQueryTypeBase(int group, ObjectTypes appliesTo,
-                                                   const QString& fieldName)
+CustomFieldQueryTypeBase::CustomFieldQueryTypeBase(int group, ObjectTypes appliesTo, const QString& fieldName)
     : QueryType(group, appliesTo)
     , fieldName_(fieldName)
 {
@@ -1900,10 +1910,15 @@ bool CustomFieldQueryTypeBase::ForQuery(QueryFilter* query) const
 // CustomFieldStringQueryType - String custom field queries
 // ============================================================================
 
-CustomFieldStringQueryType::CustomFieldStringQueryType(int group, ObjectTypes appliesTo,
-                                                       const QString& fieldName)
+CustomFieldStringQueryType::CustomFieldStringQueryType(int group, ObjectTypes appliesTo, const QString& fieldName)
     : CustomFieldQueryTypeBase(group, appliesTo, fieldName)
 {
+}
+
+bool CustomFieldStringQueryType::showTextBox(QueryElement *queryElement) const
+{
+    (void) queryElement;
+    return true;
 }
 
 QStringList CustomFieldStringQueryType::getMatchTypeComboButtonEntries() const
