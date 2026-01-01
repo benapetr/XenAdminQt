@@ -58,6 +58,7 @@ namespace XenAPI
             QString getPassword() const;
             QString getLastError() const;
             QStringList getLastErrorDescription() const;
+            XenConnection* getConnection() const;
 
             // API version management
             APIVersion getAPIVersion() const;

@@ -11,6 +11,7 @@ win32:DEFINES += XENLIB_STATIC
 SOURCES += \
     utils/misc.cpp \
     xen/actions/vm/vmstartaction.cpp \
+    xen/xenapi/xenapi_Blob.cpp \
     xen/xenapi/xenapi_Bond.cpp \
     xen/xenapi/xenapi_Network.cpp \
     xen/xenapi/xenapi_Network_sriov.cpp \
@@ -158,6 +159,7 @@ SOURCES += \
 HEADERS += \
     utils/misc.h \
     xen/actions/vm/vmstartaction.h \
+    xen/xenapi/xenapi_Blob.h \
     xen/xenapi/xenapi_Bond.h \
     xen/xenapi/xenapi_Network.h \
     xen/xenapi/xenapi_Network_sriov.h \

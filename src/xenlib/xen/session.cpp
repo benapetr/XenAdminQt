@@ -167,6 +167,11 @@ namespace XenAPI
         return this->d->lastErrorDescription;
     }
 
+    XenConnection* Session::getConnection() const
+    {
+        return this->d->connection;
+    }
+
     Session* Session::DuplicateSession(Session* originalSession, QObject* parent)
     {
         if (!originalSession || !originalSession->IsLoggedIn())

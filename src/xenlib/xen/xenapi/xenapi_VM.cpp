@@ -1135,4 +1135,28 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
+    QString VM::create_new_blob(Session* session,
+                                const QString& vm,
+                                const QString& name,
+                                const QString& mimeType,
+                                bool isPublic)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId();
+        params << vm;
+        params << name;
+        params << mimeType;
+        params << isPublic;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.create_new_blob", params);
+        QByteArray response = session->sendApiRequest(request);
+        QVariant result = api.parseJsonRpcResponse(response);
+
+        return result.toString();
+    }
+
 } // namespace XenAPI

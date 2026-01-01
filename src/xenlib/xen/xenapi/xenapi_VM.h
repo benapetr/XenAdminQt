@@ -664,6 +664,21 @@ namespace XenAPI
              */
             static void set_affinity(Session* session, const QString& vm, const QString& host);
 
+            /**
+             * @brief Create a new blob associated with this VM.
+             * @param session The session
+             * @param vm The opaque_ref of the given VM
+             * @param name The name/label for the blob
+             * @param mimeType MIME type of the blob
+             * @param isPublic Whether the blob should be public
+             * @return The opaque_ref of the created blob
+             */
+            static QString create_new_blob(Session* session,
+                                           const QString& vm,
+                                           const QString& name,
+                                           const QString& mimeType,
+                                           bool isPublic);
+
             // TODO: Add more VM methods as needed (pause, unpause, reboot, etc.)
             // See xenadmin/XenModel/XenAPI/VM.cs for complete list
 

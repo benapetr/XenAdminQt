@@ -50,6 +50,8 @@ class XENLIB_EXPORT VMSnapshotCreateAction : public AsyncOperation
     Q_OBJECT
 
 public:
+    static const QString VNC_SNAPSHOT_NAME;
+
     enum SnapshotType
     {
         DISK,

@@ -38,6 +38,8 @@
 #include "../controls/snapshottreeview.h"
 #include "xen/session.h"
 #include "xencache.h"
+#include "xen/actions/vm/vmsnapshotcreateaction.h"
+#include "xen/xenapi/xenapi_Blob.h"
 #include "xen/xenapi/xenapi_VM.h"
 #include <QDateTime>
 #include <QDebug>
@@ -659,8 +661,28 @@ void SnapshotsTabPage::showDetailsForSnapshot(const QVariantMap& snapshot, bool 
         }
     }
 
-    // TODO: Load snapshot screenshot from blob/other_config when XenAPI blob support is implemented.
-    this->ui->screenshotLabel->setPixmap(this->noScreenshotPixmap());
+    QPixmap screenshot = this->noScreenshotPixmap();
+    const QVariantMap blobs = snapshot.value("blobs").toMap();
+    const QString blobRef = blobs.value(VMSnapshotCreateAction::VNC_SNAPSHOT_NAME).toString();
+    if (!blobRef.isEmpty() && this->m_connection)
+    {
+        XenAPI::Session* session = this->m_connection->GetSession();
+        if (session && session->IsLoggedIn())
+        {
+            try
+            {
+                const QByteArray data = XenAPI::Blob::load(session, blobRef);
+                QPixmap loaded;
+                if (loaded.loadFromData(data, "JPEG"))
+                    screenshot = loaded;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "SnapshotsTabPage: Failed to load snapshot screenshot:" << ex.what();
+            }
+        }
+    }
+    this->ui->screenshotLabel->setPixmap(screenshot);
     this->ui->propertiesButton->setEnabled(true);
 }
 

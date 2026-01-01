@@ -29,8 +29,11 @@
 #include "../../../xen/network/connection.h"
 #include "../../../xencache.h"
 #include "../../xenapi/xenapi_VM.h"
+#include "../../xenapi/xenapi_Blob.h"
 #include <QtCore/QDebug>
 #include <QtCore/QBuffer>
+
+const QString VMSnapshotCreateAction::VNC_SNAPSHOT_NAME = QStringLiteral("XenCenter.VNCSnapshot");
 
 VMSnapshotCreateAction::VMSnapshotCreateAction(XenConnection* connection,
                                                const QString& vmRef,
@@ -169,18 +172,18 @@ void VMSnapshotCreateAction::saveImageInBlob(const QString& snapshotRef, const Q
 
         qDebug() << "VMSnapshotCreateAction: Converted screenshot to JPEG, size:" << jpegData.size();
 
-        // TODO: Implement XenAPI blob operations
-        // C#: XenRef<Blob> blobRef = VM.create_new_blob(Session, newVmRef, VNC_SNAPSHOT, "image/jpeg", false);
-        // C#: Blob blob = Connection.WaitForCache(blobRef);
-        // C#: blob.Save(saveStream, Session);
+        // C#:
+        // XenRef<Blob> blobRef = VM.create_new_blob(Session, newVmRef, VNC_SNAPSHOT, "image/jpeg", false);
+        // Blob blob = Connection.WaitForCache(blobRef);
+        // blob.Save(saveStream, Session);
+        QString blobRef = XenAPI::VM::create_new_blob(session(), snapshotRef, VNC_SNAPSHOT_NAME, "image/jpeg", false);
+        if (blobRef.isEmpty())
+        {
+            qWarning() << "VMSnapshotCreateAction: Failed to create blob for screenshot";
+            return;
+        }
 
-        // Need to implement:
-        // 1. XenAPI::VM::create_new_blob() - creates blob object
-        // 2. XenAPI::Blob::Save() - uploads data to blob
-        // 3. Blob const: VNC_SNAPSHOT = "XenCenter.VNCSnapshot"
-
-        qWarning() << "VMSnapshotCreateAction: Blob saving not yet implemented - screenshot captured but not saved";
-        qWarning() << "VMSnapshotCreateAction: TODO: Implement VM.create_new_blob and Blob.Save in XenAPI";
+        XenAPI::Blob::save(session(), blobRef, jpegData);
 
     } catch (const std::exception& e)
     {
