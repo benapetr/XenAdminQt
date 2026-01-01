@@ -56,6 +56,16 @@ public:
                            const QString& snapshotRef,
                            QObject* parent = nullptr);
 
+    QString vmRef() const
+    {
+        return m_vmRef;
+    }
+
+    QString snapshotRef() const
+    {
+        return m_snapshotRef;
+    }
+
 protected:
     void run() override;
 

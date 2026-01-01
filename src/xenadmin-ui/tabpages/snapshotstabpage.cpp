@@ -38,6 +38,7 @@
 #include "../controls/snapshottreeview.h"
 #include "../operations/operationmanager.h"
 #include "xen/actions/vm/vmsnapshotdeleteaction.h"
+#include "xen/actions/vm/vmsnapshotrevertaction.h"
 #include "xen/session.h"
 #include "xencache.h"
 #include "xen/actions/vm/vmsnapshotcreateaction.h"
@@ -90,6 +91,14 @@ SnapshotsTabPage::SnapshotsTabPage(QWidget* parent)
     this->ui->snapshotTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     this->ui->snapshotTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
     this->ui->snapshotTree->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
+    auto* operationManager = OperationManager::instance();
+    connect(operationManager, &OperationManager::recordAdded,
+            this, &SnapshotsTabPage::onOperationRecordUpdated);
+    connect(operationManager, &OperationManager::recordUpdated,
+            this, &SnapshotsTabPage::onOperationRecordUpdated);
+    connect(operationManager, &OperationManager::recordRemoved,
+            this, &SnapshotsTabPage::onOperationRecordUpdated);
 
     QMenu* viewMenu = new QMenu(this);
     this->m_treeViewAction = viewMenu->addAction(tr("Tree View"));
@@ -182,6 +191,7 @@ void SnapshotsTabPage::refreshContent()
     this->populateSnapshotTree();
     this->updateButtonStates();
     this->updateDetailsPanel(true);
+    this->updateSpinningIcon();
 }
 
 void SnapshotsTabPage::populateSnapshotTree()
@@ -338,6 +348,8 @@ void SnapshotsTabPage::populateSnapshotTree()
     }
 
     tree->setUpdatesEnabled(true);
+    if (tree->selectedItems().isEmpty())
+        tree->setCurrentItem(rootIcon);
     tree->update();
 }
 
@@ -473,6 +485,7 @@ void SnapshotsTabPage::onSnapshotSelectionChanged()
 {
     updateButtonStates();
     updateDetailsPanel();
+    updateSpinningIcon();
 }
 
 void SnapshotsTabPage::refreshSnapshotList()
@@ -541,6 +554,7 @@ void SnapshotsTabPage::onCacheObjectChanged(XenConnection* connection, const QSt
         this->populateSnapshotTree();
         this->updateButtonStates();
         this->updateDetailsPanel(true);
+        this->updateSpinningIcon();
     }
 
     if (this->m_objectType == "vm" && (type == "vm" || type == "vmss"))
@@ -553,24 +567,21 @@ void SnapshotsTabPage::updateButtonStates()
     const bool hasVM = !m_objectRef.isEmpty() && m_objectType == "vm";
 
     MainWindow* mainWindow = qobject_cast<MainWindow*>(this->window());
-    if (!mainWindow)
-    {
-        ui->takeSnapshotButton->setEnabled(false);
-        ui->deleteSnapshotButton->setEnabled(false);
-        ui->revertButton->setEnabled(false);
-        return;
-    }
 
     bool canTake = false;
     if (hasVM)
     {
-        TakeSnapshotCommand takeCmd(this->m_objectRef, mainWindow);
-        canTake = takeCmd.CanRun();
+        canTake = true;
+        if (mainWindow)
+        {
+            TakeSnapshotCommand takeCmd(this->m_objectRef, mainWindow);
+            canTake = takeCmd.CanRun();
+        }
     }
 
     bool canDelete = false;
     bool canRevert = false;
-    if (refs.size() == 1)
+    if (mainWindow && refs.size() == 1)
     {
         DeleteSnapshotCommand deleteCmd(refs.first(), mainWindow);
         RevertToSnapshotCommand revertCmd(refs.first(), mainWindow);
@@ -585,6 +596,11 @@ void SnapshotsTabPage::updateButtonStates()
     ui->takeSnapshotButton->setEnabled(canTake);
     ui->deleteSnapshotButton->setEnabled(canDelete);
     ui->revertButton->setEnabled(canRevert);
+}
+
+void SnapshotsTabPage::onOperationRecordUpdated(OperationManager::OperationRecord*)
+{
+    updateSpinningIcon();
 }
 
 void SnapshotsTabPage::updateDetailsPanel(bool force)
@@ -856,6 +872,67 @@ bool SnapshotsTabPage::canDeleteSnapshots(const QList<QString>& snapshotRefs) co
     return true;
 }
 
+void SnapshotsTabPage::updateSpinningIcon()
+{
+    if (!this->ui->snapshotTree)
+        return;
+
+    bool spinning = false;
+    QString message;
+
+    const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->records();
+    for (OperationManager::OperationRecord* record : records)
+    {
+        if (!record || !record->operation)
+            continue;
+
+        if (record->state == AsyncOperation::Completed ||
+            record->state == AsyncOperation::Cancelled ||
+            record->state == AsyncOperation::Failed)
+        {
+            continue;
+        }
+
+        QString candidateMessage;
+        if (!isSpinningActionForCurrentVm(record->operation, &candidateMessage))
+            continue;
+
+        spinning = true;
+        if (message.isEmpty())
+            message = candidateMessage;
+        if (candidateMessage == tr("Snapshotting..."))
+            break; // Prefer snapshot create message if both are running.
+    }
+
+    this->ui->snapshotTree->ChangeVMToSpinning(spinning, message);
+}
+
+bool SnapshotsTabPage::isSpinningActionForCurrentVm(AsyncOperation* operation, QString* message) const
+{
+    if (!operation || this->m_objectRef.isEmpty() || this->m_objectType != "vm")
+        return false;
+
+    if (auto* createAction = qobject_cast<VMSnapshotCreateAction*>(operation))
+    {
+        if (createAction->vmRef() != this->m_objectRef)
+            return false;
+        if (message)
+            *message = tr("Snapshotting...");
+        return true;
+    }
+
+    if (auto* revertAction = qobject_cast<VMSnapshotRevertAction*>(operation))
+    {
+        if (revertAction->vmRef() != this->m_objectRef)
+            return false;
+        if (message)
+            *message = tr("Reverting VM...");
+        return true;
+    }
+
+    return false;
+}
+
 qint64 SnapshotsTabPage::snapshotSizeBytes(const QVariantMap& snapshot) const
 {
     if (!this->m_connection || !this->m_connection->GetCache())
@@ -1006,7 +1083,10 @@ void SnapshotsTabPage::onSnapshotContextMenu(const QPoint& pos)
         auto* icon = dynamic_cast<SnapshotIcon*>(item);
         if (icon && icon->IsSelectable())
         {
-            this->ui->snapshotTree->setCurrentItem(item);
+            if (!item->isSelected())
+            {
+                this->ui->snapshotTree->setCurrentItem(item);
+            }
             snapshotRef = icon->data(Qt::UserRole).toString();
         }
     }
@@ -1015,7 +1095,10 @@ void SnapshotsTabPage::onSnapshotContextMenu(const QPoint& pos)
         QTableWidgetItem* item = this->ui->snapshotTable->itemAt(pos);
         if (item)
         {
-            this->ui->snapshotTable->selectRow(item->row());
+            if (!item->isSelected())
+            {
+                this->ui->snapshotTable->selectRow(item->row());
+            }
             snapshotRef = item->data(Qt::UserRole).toString();
         }
     }

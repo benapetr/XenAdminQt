@@ -30,6 +30,8 @@
 
 #include "basetabpage.h"
 #include "../controls/snapshottreeview.h"
+#include "../operations/operationmanager.h"
+#include "xen/asyncoperation.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -66,6 +68,7 @@ class SnapshotsTabPage : public BaseTabPage
         void onSnapshotContextMenu(const QPoint& pos);
         void onScheduledSnapshotsToggled();
         void onVmssLinkClicked();
+        void onOperationRecordUpdated(OperationManager::OperationRecord* record);
 
     private:
         enum class SnapshotsView
@@ -92,6 +95,8 @@ class SnapshotsTabPage : public BaseTabPage
         void showDetailsForMultiple(const QList<QVariantMap>& snapshots);
         QList<QString> selectedSnapshotRefs() const;
         bool canDeleteSnapshots(const QList<QString>& snapshotRefs) const;
+        void updateSpinningIcon();
+        bool isSpinningActionForCurrentVm(AsyncOperation* operation, QString* message) const;
         qint64 snapshotSizeBytes(const QVariantMap& snapshot) const;
         QString formatSize(qint64 bytes) const;
         QPixmap noScreenshotPixmap() const;

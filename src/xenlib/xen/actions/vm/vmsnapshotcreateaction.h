@@ -86,6 +86,11 @@ public:
         return m_snapshotRef;
     }
 
+    QString vmRef() const
+    {
+        return m_vmRef;
+    }
+
 protected:
     void run() override;
 
