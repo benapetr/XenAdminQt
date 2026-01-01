@@ -15,6 +15,7 @@ NCPUS=$(sysctl -n hw.ncpu 2>/dev/null || echo 4)
 APP_DISPLAY_NAME="XenAdmin"
 APP_BUNDLE="${APP_DISPLAY_NAME}.app"
 DMG_NAME="${APP_DISPLAY_NAME}-${APP_VERSION}"
+BUILD_ARCHS="arm64 x86_64"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -28,9 +29,13 @@ while [[ $# -gt 0 ]]; do
             DMG_NAME="${APP_DISPLAY_NAME}-${APP_VERSION}"
             shift 2
             ;;
+        --archs)
+            BUILD_ARCHS="$2"
+            shift 2
+            ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--qt /path/to/qt/bin] [--version x.y.z]"
+            echo "Usage: $0 [--qt /path/to/qt/bin] [--version x.y.z] [--archs \"arm64 x86_64\"]"
             exit 1
             ;;
     esac
@@ -82,6 +87,7 @@ echo "============================="
 echo "Qt command: $QMAKE_CMD ($(which $QMAKE_CMD | xargs dirname))"
 echo "CPUs: $NCPUS"
 echo "Version: $APP_VERSION"
+echo "Archs: $BUILD_ARCHS"
 echo ""
 
 # Get project root directory (parent of packaging/)
@@ -100,7 +106,7 @@ cd "$BUILD_DIR"
 # Run qmake to generate Makefiles
 echo "Running $QMAKE_CMD..."
 cd "$PROJECT_ROOT/src"
-$QMAKE_CMD xenadminqt.pro -o "$BUILD_DIR/Makefile"
+$QMAKE_CMD "QMAKE_APPLE_DEVICE_ARCHS=$BUILD_ARCHS" xenadminqt.pro -o "$BUILD_DIR/Makefile"
 
 cd "$BUILD_DIR"
 
