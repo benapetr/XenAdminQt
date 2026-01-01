@@ -28,7 +28,7 @@
 #include "meddlingaction.h"
 #include <QDebug>
 #include <xen/api.h>
-#include <xen/connection.h>
+#include <xen/network/connection.h>
 #include <xen/session.h>
 #include <QtCore/QDebug>
 #include <QtCore/QDateTime>
@@ -78,8 +78,8 @@ void MeddlingAction::onCancel()
     }
 
     // Cancel the XenAPI task
-    XenSession* sess = this->session();
-    if (!sess || !sess->isLoggedIn())
+    XenAPI::Session* sess = this->session();
+    if (!sess || !sess->IsLoggedIn())
     {
         qWarning() << "Cannot cancel task - no valid session";
         return;

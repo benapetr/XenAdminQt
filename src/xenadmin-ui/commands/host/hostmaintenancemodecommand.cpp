@@ -27,43 +27,36 @@
 
 #include "hostmaintenancemodecommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
-#include "xencache.h"
 #include "../../operations/operationmanager.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/host.h"
 #include "xen/actions/host/evacuatehostaction.h"
 #include "xen/actions/host/enablehostaction.h"
 #include <QMessageBox>
 #include <QTimer>
 
-HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode, QObject* parent)
-    : Command(mainWindow, parent), m_enterMode(enterMode)
+HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode, QObject* parent) : HostCommand(mainWindow, parent), m_enterMode(enterMode)
 {
 }
 
-HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode, QObject* parent)
-    : Command(mainWindow, selection, parent), m_enterMode(enterMode)
+HostMaintenanceModeCommand::HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode, QObject* parent) : HostCommand(mainWindow, parent), m_enterMode(enterMode)
 {
+    Q_UNUSED(selection);
 }
 
-bool HostMaintenanceModeCommand::canRun() const
+bool HostMaintenanceModeCommand::CanRun() const
 {
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return false;
-
-    QString hostRef = this->getSelectedObjectRef();
-    if (hostRef.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return false;
 
     // Check if host exists and we have a valid connection
-    if (!this->xenLib() || !this->xenLib()->getConnection())
+    if (!host->GetConnection())
         return false;
 
-    // For enter mode: host must be enabled
+    // For enter mode: host must be IsEnabled
     // For exit mode: host must be disabled (in maintenance mode)
-    bool hostEnabled = this->isHostEnabled();
+    bool hostEnabled = host->IsEnabled();
 
     if (this->m_enterMode)
         return hostEnabled; // Can only enter maintenance if host is currently enabled
@@ -71,12 +64,16 @@ bool HostMaintenanceModeCommand::canRun() const
         return !hostEnabled; // Can only exit maintenance if host is currently disabled
 }
 
-void HostMaintenanceModeCommand::run()
+void HostMaintenanceModeCommand::Run()
 {
-    if (!this->canRun())
+    if (!this->CanRun())
         return;
 
-    QString hostRef = this->getSelectedObjectRef();
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
+        return;
+
+    QString hostRef = host->OpaqueRef();
     QString hostName = this->getSelectedObjectName();
 
     if (hostRef.isEmpty())
@@ -100,8 +97,8 @@ void HostMaintenanceModeCommand::run()
         {
             mw->showStatusMessage(QString("Entering maintenance mode for host '%1'...").arg(hostName));
 
-            XenConnection* conn = this->xenLib()->getConnection();
-            if (!conn || !conn->isConnected())
+            XenConnection* conn = host->GetConnection();
+            if (!conn || !conn->IsConnected())
             {
                 QMessageBox::warning(mw, "Not Connected",
                                      "Not connected to XenServer");
@@ -141,8 +138,8 @@ void HostMaintenanceModeCommand::run()
         {
             mw->showStatusMessage(QString("Exiting maintenance mode for host '%1'...").arg(hostName));
 
-            XenConnection* conn = this->xenLib()->getConnection();
-            if (!conn || !conn->isConnected())
+            XenConnection* conn = host->GetConnection();
+            if (!conn || !conn->IsConnected())
             {
                 QMessageBox::warning(mw, "Not Connected",
                                      "Not connected to XenServer");
@@ -174,23 +171,12 @@ void HostMaintenanceModeCommand::run()
     }
 }
 
-QString HostMaintenanceModeCommand::menuText() const
+QString HostMaintenanceModeCommand::MenuText() const
 {
     if (this->m_enterMode)
         return "Enter Maintenance Mode";
     else
         return "Exit Maintenance Mode";
-}
-
-bool HostMaintenanceModeCommand::isHostEnabled() const
-{
-    QString hostRef = this->getSelectedObjectRef();
-    if (hostRef.isEmpty() || !this->xenLib())
-        return false;
-
-    // Use cache instead of async API call
-    QVariantMap hostData = this->xenLib()->getCache()->ResolveObjectData("host", hostRef);
-    return hostData.value("enabled", true).toBool();
 }
 
 bool HostMaintenanceModeCommand::isHostInMaintenanceMode() const

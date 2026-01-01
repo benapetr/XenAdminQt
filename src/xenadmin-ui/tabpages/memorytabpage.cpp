@@ -37,14 +37,12 @@
 #include <QLabel>
 #include <QFont>
 
-MemoryTabPage::MemoryTabPage(QWidget* parent)
-    : BaseTabPage(parent), ui(new Ui::MemoryTabPage)
+MemoryTabPage::MemoryTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::MemoryTabPage)
 {
     this->ui->setupUi(this);
 
     // Connect edit button
-    connect(this->ui->editButton, &QPushButton::clicked,
-            this, &MemoryTabPage::onEditButtonClicked);
+    connect(this->ui->editButton, &QPushButton::clicked, this, &MemoryTabPage::onEditButtonClicked);
 }
 
 MemoryTabPage::~MemoryTabPage()
@@ -52,7 +50,7 @@ MemoryTabPage::~MemoryTabPage()
     delete this->ui;
 }
 
-bool MemoryTabPage::isApplicableForObjectType(const QString& objectType) const
+bool MemoryTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // Memory tab is applicable to VMs and Hosts
     return objectType == "vm" || objectType == "host";
@@ -148,7 +146,7 @@ void MemoryTabPage::populateVMMemory()
 
 void MemoryTabPage::populateHostMemory()
 {
-    if (!this->m_xenLib)
+    if (!this->m_connection)
         return;
 
     // Get host metrics
@@ -157,7 +155,7 @@ void MemoryTabPage::populateHostMemory()
 
     if (metricsRef != "OpaqueRef:NULL")
     {
-        metricsData = this->m_xenLib->getCache()->ResolveObjectData("host_metrics", metricsRef);
+        metricsData = this->m_connection->GetCache()->ResolveObjectData("host_metrics", metricsRef);
     }
 
     qint64 totalMemory = metricsData.value("memory_total", 0).toLongLong();
@@ -193,7 +191,7 @@ void MemoryTabPage::populateHostMemory()
     for (const QVariant& vmRefVar : residentVMs)
     {
         QString vmRef = vmRefVar.toString();
-        QVariantMap vmData = this->m_xenLib->getCache()->ResolveObjectData("vm", vmRef);
+        QVariantMap vmData = this->m_connection->GetCache()->ResolveObjectData("vm", vmRef);
 
         bool isControlDomain = vmData.value("is_control_domain", false).toBool();
         QString vmName = vmData.value("name_label", "VM").toString();
@@ -208,7 +206,7 @@ void MemoryTabPage::populateHostMemory()
 
         if (vmMetricsRef != "OpaqueRef:NULL")
         {
-            QVariantMap vmMetricsData = this->m_xenLib->getCache()->ResolveObjectData("vm_metrics", vmMetricsRef);
+            QVariantMap vmMetricsData = this->m_connection->GetCache()->ResolveObjectData("vm_metrics", vmMetricsRef);
             memoryActual = vmMetricsData.value("memory_actual", 0).toLongLong();
         }
 
@@ -407,11 +405,11 @@ void MemoryTabPage::onEditButtonClicked()
     // C# Reference: VMMemoryControlsNoEdit.cs editButton_Click (line 140-144)
     // Opens BallooningDialog for single VM or BallooningWizard for multiple VMs
 
-    if (this->m_objectType != "vm" || !this->m_xenLib)
+    if (this->m_objectType != "vm" || !this->m_connection)
         return;
 
     // Open ballooning dialog
-    BallooningDialog dialog(this->m_objectRef, this->m_xenLib, this);
+    BallooningDialog dialog(this->m_objectRef, this->m_connection, this);
     dialog.exec();
 
     // Refresh the tab to show updated values

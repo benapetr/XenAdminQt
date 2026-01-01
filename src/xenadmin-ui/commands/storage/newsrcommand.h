@@ -37,9 +37,9 @@ class NewSRCommand : public Command
     public:
         explicit NewSRCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        void run() override;
-        bool canRun() const override;
-        QString menuText() const override;
+        void Run() override;
+        bool CanRun() const override;
+        QString MenuText() const override;
 
     private:
         void showNewSRWizard();

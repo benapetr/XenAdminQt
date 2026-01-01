@@ -27,14 +27,15 @@
 
 #include "xenapi_Secret.h"
 #include "../api.h"
+#include "../session.h"
 #include <stdexcept>
 #include <QVariantMap>
 
 namespace XenAPI
 {
-    QString Secret::create(XenSession* session, const QString& value)
+    QString Secret::create(Session* session, const QString& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         // Create a secret record with the value
@@ -59,9 +60,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(uuidResponse).toString();
     }
 
-    QString Secret::get_by_uuid(XenSession* session, const QString& uuid)
+    QString Secret::get_by_uuid(Session* session, const QString& uuid)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -73,9 +74,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    void Secret::destroy(XenSession* session, const QString& secret)
+    void Secret::destroy(Session* session, const QString& secret)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;

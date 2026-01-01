@@ -28,36 +28,25 @@
 #include "changecdisocommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
 #include "xen/api.h"
 #include "xen/connection.h"
+#include "xen/xenobject.h"
 #include "xen/actions/vm/changevmisoaction.h"
-#include "xencache.h"
 #include <QMessageBox>
 #include <QVariantMap>
 #include <QVariantList>
 #include <QDebug>
 
 ChangeCDISOCommand::ChangeCDISOCommand(MainWindow* mainWindow, const QString& isoRef, QObject* parent)
-    : Command(mainWindow, parent), m_isoRef(isoRef)
+    : VMCommand(mainWindow, parent), m_isoRef(isoRef)
 {
 }
 
 bool ChangeCDISOCommand::canRun() const
 {
-    // Need exactly one VM selected
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-    {
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
-    }
-
-    // Check if it's a VM
-    QString type = item->data(0, Qt::UserRole).toString();
-    if (type != "vm")
-    {
-        return false;
-    }
 
     // Check if VM has a CD/DVD drive
     return this->hasCD();
@@ -66,20 +55,16 @@ bool ChangeCDISOCommand::canRun() const
 void ChangeCDISOCommand::run()
 {
     if (!this->canRun())
-    {
         return;
-    }
 
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-    {
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return;
-    }
 
-    QString vmRef = item->data(0, Qt::UserRole + 1).toString();
+    QString vmRef = vm->opaqueRef();
 
-    // Get XenConnection from XenLib
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    // Get XenConnection
+    XenConnection* conn = vm->connection();
     if (!conn || !conn->isConnected())
     {
         QMessageBox::warning(nullptr, "Error", "Not connected to XenServer");
@@ -139,38 +124,24 @@ QString ChangeCDISOCommand::menuText() const
 
 QString ChangeCDISOCommand::getVMCDROM() const
 {
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-    {
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return QString();
-    }
 
-    QString vmRef = item->data(0, Qt::UserRole + 1).toString();
-
-    XenLib* xenLib = this->mainWindow()->xenLib();
-    if (!xenLib || !xenLib->isConnected())
-    {
-        return QString();
-    }
-
-    // Use cache to get VM record
-    QVariantMap vmData = xenLib->getCache()->resolve("vm", vmRef);
+    QVariantMap vmData = vm->data();
     QVariantList vbds = vmData.value("VBDs").toList();
 
+    XenCache* cache = vm->connection()->cache();
+    if (!cache)
+        return QString();
+
     // Find the CD/DVD drive
-    XenAPI* api = xenLib->getAPI();
     for (const QVariant& vbdRef : vbds)
     {
-        // Try cache first, fall back to API if needed
-        QVariantMap vbdData = xenLib->getCache()->resolve("vbd", vbdRef.toString());
-        if (vbdData.isEmpty() && api)
-            vbdData = api->getVBDRecord(vbdRef.toString()).toMap();
-
+        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef.toString());
         QString type = vbdData.value("type").toString();
         if (type == "CD")
-        {
             return vbdRef.toString();
-        }
     }
 
     return QString();

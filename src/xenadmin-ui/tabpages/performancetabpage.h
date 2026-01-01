@@ -62,11 +62,11 @@ public:
     explicit PerformanceTabPage(QWidget* parent = nullptr);
     ~PerformanceTabPage();
 
-    QString tabTitle() const override
+    QString GetTitle() const override
     {
         return "Performance";
     }
-    bool isApplicableForObjectType(const QString& objectType) const override;
+    bool IsApplicableForObjectType(const QString& objectType) const override;
 
 protected:
     void refreshContent() override;

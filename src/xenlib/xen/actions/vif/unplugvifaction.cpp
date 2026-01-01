@@ -26,7 +26,7 @@
  */
 
 #include "unplugvifaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VIF.h"
 #include "../../xenapi/xenapi_VM.h"
@@ -46,10 +46,10 @@ UnplugVIFAction::UnplugVIFAction(XenConnection* connection,
         throw std::invalid_argument("VIF reference cannot be empty");
 
     // Get VIF details for display
-    QVariantMap vifData = connection->getCache()->ResolveObjectData("vif", m_vifRef);
+    QVariantMap vifData = connection->GetCache()->ResolveObjectData("vif", m_vifRef);
     m_vmRef = vifData.value("VM").toString();
 
-    QVariantMap vmData = connection->getCache()->ResolveObjectData("vm", m_vmRef);
+    QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", m_vmRef);
     m_vmName = vmData.value("name_label").toString();
 
     setTitle(QString("Unplugging VIF on %1").arg(m_vmName));
@@ -63,7 +63,7 @@ void UnplugVIFAction::run()
         setDescription("Unplugging VIF...");
 
         // Check if VM is running
-        QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         QString powerState = vmData.value("power_state").toString();
 
         if (powerState != "Running")

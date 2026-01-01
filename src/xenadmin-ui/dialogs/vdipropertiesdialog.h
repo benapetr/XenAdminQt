@@ -37,14 +37,14 @@ namespace Ui
     class VdiPropertiesDialog;
 }
 
-class XenLib;
+class XenConnection;
 
 class VdiPropertiesDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit VdiPropertiesDialog(XenLib* xenLib, const QString& vdiRef, QWidget* parent = nullptr);
+    explicit VdiPropertiesDialog(XenConnection* conn, const QString& vdiRef, QWidget* parent = nullptr);
     ~VdiPropertiesDialog();
 
     QString getVdiName() const;
@@ -61,7 +61,7 @@ private:
     void validateResize();
 
     Ui::VdiPropertiesDialog* ui;
-    XenLib* m_xenLib;
+    XenConnection* m_connection;
     QString m_vdiRef;
     QVariantMap m_vdiData;
     qint64 m_originalSize;

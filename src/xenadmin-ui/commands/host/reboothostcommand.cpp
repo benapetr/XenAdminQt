@@ -27,36 +27,35 @@
 
 #include "reboothostcommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
-#include "xencache.h"
 #include "../../operations/operationmanager.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/host.h"
 #include "xen/actions/host/reboothostaction.h"
 #include <QMessageBox>
 
 RebootHostCommand::RebootHostCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : HostCommand(mainWindow, parent)
 {
 }
 
-bool RebootHostCommand::canRun() const
+bool RebootHostCommand::CanRun() const
 {
     QString hostRef = this->getSelectedHostRef();
     if (hostRef.isEmpty())
         return false;
 
     // Can reboot if host is enabled (not in maintenance mode)
-    return this->isHostEnabled(hostRef);
+    return this->isHostEnabled();
 }
 
-void RebootHostCommand::run()
+void RebootHostCommand::Run()
 {
-    QString hostRef = this->getSelectedHostRef();
-    QString hostName = this->getSelectedHostName();
-
-    if (hostRef.isEmpty() || hostName.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return;
+
+    QString hostRef = host->OpaqueRef();
+    QString hostName = this->getSelectedHostName();
 
     // Show warning dialog
     int ret = QMessageBox::warning(this->mainWindow(), "Reboot Host",
@@ -69,8 +68,8 @@ void RebootHostCommand::run()
     {
         this->mainWindow()->showStatusMessage(QString("Rebooting host '%1'...").arg(hostName));
 
-        XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-        if (!conn || !conn->isConnected())
+        XenConnection* conn = host->GetConnection();
+        if (!conn || !conn->IsConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",
                                  "Not connected to XenServer");
@@ -82,7 +81,8 @@ void RebootHostCommand::run()
 
         OperationManager::instance()->registerOperation(action);
 
-        connect(action, &AsyncOperation::completed, this, [this, hostName, action]() {
+        connect(action, &AsyncOperation::completed, this, [this, hostName, action]()
+        {
             if (action->state() == AsyncOperation::Completed && !action->isFailed())
             {
                 this->mainWindow()->showStatusMessage(QString("Host '%1' reboot initiated successfully").arg(hostName), 5000);
@@ -100,40 +100,7 @@ void RebootHostCommand::run()
     }
 }
 
-QString RebootHostCommand::menuText() const
+QString RebootHostCommand::MenuText() const
 {
     return "Reboot Host";
-}
-
-QString RebootHostCommand::getSelectedHostRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString RebootHostCommand::getSelectedHostName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return item->text(0);
-}
-
-bool RebootHostCommand::isHostEnabled(const QString& hostRef) const
-{
-    // Use cache instead of async API call
-    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
-    return hostData.value("enabled", true).toBool();
 }

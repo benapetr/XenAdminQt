@@ -28,24 +28,24 @@
 #include "editvmhaprioritiesdialog.h"
 #include "../operations/operationmanager.h"
 #include "../dialogs/operationprogressdialog.h"
-#include "xenlib.h"
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/session.h"
 #include "xen/actions/pool/sethaprioritiesaction.h"
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QDialogButtonBox>
 
-EditVmHaPrioritiesDialog::EditVmHaPrioritiesDialog(XenLib* xenLib, const QString& poolRef, QWidget* parent)
+EditVmHaPrioritiesDialog::EditVmHaPrioritiesDialog(XenConnection* connection, const QString& poolRef, QWidget* parent)
     : QDialog(parent),
-      m_xenLib(xenLib),
+      m_connection(connection),
       m_poolRef(poolRef),
       m_ntol(0),
       m_maxNtol(0)
 {
     // Get pool data
-    QVariantMap poolData = m_xenLib->getCache()->ResolveObjectData("pool", m_poolRef);
+    XenCache* cache = this->cache();
+    QVariantMap poolData = cache ? cache->ResolveObjectData("pool", m_poolRef) : QVariantMap();
     m_poolName = poolData.value("name_label", "Pool").toString();
     m_originalNtol = poolData.value("ha_host_failures_to_tolerate", 0).toLongLong();
     m_ntol = m_originalNtol;
@@ -140,12 +140,16 @@ void EditVmHaPrioritiesDialog::populateVMTable()
     m_originalSettings.clear();
 
     // Check for dead hosts
-    QStringList hostRefs = m_xenLib->getCache()->GetAllRefs("host");
+    XenCache* cache = this->cache();
+    if (!cache)
+        return;
+
+    QStringList hostRefs = cache->GetAllRefs("host");
     bool hasDeadHosts = false;
     for (const QString& hostRef : hostRefs)
     {
-        QVariantMap hostData = m_xenLib->getCache()->ResolveObjectData("host", hostRef);
-        QVariantMap metrics = m_xenLib->getCache()->ResolveObjectData("host_metrics",
+        QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
+        QVariantMap metrics = cache->ResolveObjectData("host_metrics",
                                                             hostData.value("metrics", "").toString());
         bool isLive = metrics.value("live", true).toBool();
         if (!isLive)
@@ -168,11 +172,11 @@ void EditVmHaPrioritiesDialog::populateVMTable()
     }
 
     // Get all VMs from cache
-    QStringList vmRefs = m_xenLib->getCache()->GetAllRefs("vm");
+    QStringList vmRefs = cache->GetAllRefs("vm");
 
     for (const QString& vmRef : vmRefs)
     {
-        QVariantMap vmData = m_xenLib->getCache()->ResolveObjectData("vm", vmRef);
+        QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
         // Skip templates
         bool isTemplate = vmData.value("is_a_template", false).toBool();
@@ -269,7 +273,11 @@ void EditVmHaPrioritiesDialog::updateNtolCalculation()
     m_ntol = m_ntolSpinBox->value();
 
     // Count hosts in pool
-    QStringList hostRefs = m_xenLib->getCache()->GetAllRefs("host");
+    XenCache* cache = this->cache();
+    if (!cache)
+        return;
+
+    QStringList hostRefs = cache->GetAllRefs("host");
     int hostCount = hostRefs.size();
 
     // Maximum NTOL is number of hosts - 1
@@ -421,7 +429,7 @@ void EditVmHaPrioritiesDialog::accept()
 
     // Create and run SetHaPrioritiesAction
     SetHaPrioritiesAction* action = new SetHaPrioritiesAction(
-        m_xenLib->getConnection(),
+        m_connection,
         m_poolRef,
         vmOptions,
         newNtol,
@@ -446,4 +454,9 @@ void EditVmHaPrioritiesDialog::accept()
 
     action->runAsync();
     progressDialog->exec();
+}
+
+XenCache* EditVmHaPrioritiesDialog::cache() const
+{
+    return m_connection ? m_connection->GetCache() : nullptr;
 }

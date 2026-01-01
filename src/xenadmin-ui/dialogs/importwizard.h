@@ -49,61 +49,61 @@ class ImportWizard : public QWizard
 {
     Q_OBJECT
 
-public:
-    // Import types
-    enum ImportType
-    {
-        ImportType_XVA, // XenServer native format (.xva)
-        ImportType_OVF, // Open Virtualization Format (.ovf, .ova)
-        ImportType_VHD  // Virtual Hard Disk (.vhd, .vmdk)
-    };
+    public:
+        // Import types
+        enum ImportType
+        {
+            ImportType_XVA, // XenServer native format (.xva)
+            ImportType_OVF, // Open Virtualization Format (.ovf, .ova)
+            ImportType_VHD  // Virtual Hard Disk (.vhd, .vmdk)
+        };
 
-    // Wizard page IDs
-    enum Page
-    {
-        Page_Source = 0,
-        Page_Host = 1,
-        Page_Storage = 2,
-        Page_Network = 3,
-        Page_Options = 4,
-        Page_Finish = 5
-    };
+        // Wizard page IDs
+        enum Page
+        {
+            Page_Source = 0,
+            Page_Host = 1,
+            Page_Storage = 2,
+            Page_Network = 3,
+            Page_Options = 4,
+            Page_Finish = 5
+        };
 
-    explicit ImportWizard(QWidget* parent = nullptr);
+        explicit ImportWizard(QWidget* parent = nullptr);
 
-protected:
-    void initializePage(int id) override;
-    bool validateCurrentPage() override;
-    void accept() override;
+    protected:
+        void initializePage(int id) override;
+        bool validateCurrentPage() override;
+        void accept() override;
 
-private slots:
-    void onCurrentIdChanged(int id);
-    void onSourceTypeChanged();
-    void onBrowseClicked();
-    void onImportStarted();
+    private slots:
+        void onCurrentIdChanged(int id);
+        void onSourceTypeChanged();
+        void onBrowseClicked();
+        void onImportStarted();
 
-private:
-    void setupWizardPages();
-    void updateWizardForImportType();
-    void performImport();
-    QString detectImportType(const QString& filePath);
+    private:
+        void setupWizardPages();
+        void updateWizardForImportType();
+        void performImport();
+        QString detectImportType(const QString& filePath);
 
-    // Helper functions for creating pages
-    QWizardPage* createSourcePage();
-    QWizardPage* createHostPage();
-    QWizardPage* createStoragePage();
-    QWizardPage* createNetworkPage();
-    QWizardPage* createOptionsPage();
-    QWizardPage* createFinishPage();
+        // Helper functions for creating pages
+        QWizardPage* createSourcePage();
+        QWizardPage* createHostPage();
+        QWizardPage* createStoragePage();
+        QWizardPage* createNetworkPage();
+        QWizardPage* createOptionsPage();
+        QWizardPage* createFinishPage();
 
-    // Store wizard data
-    ImportType m_importType;
-    QString m_sourceFilePath;
-    QString m_selectedHost;
-    QString m_selectedStorage;
-    QString m_selectedNetwork;
-    bool m_verifyManifest;
-    bool m_startVMsAutomatically;
+        // Store wizard data
+        ImportType m_importType;
+        QString m_sourceFilePath;
+        QString m_selectedHost;
+        QString m_selectedStorage;
+        QString m_selectedNetwork;
+        bool m_verifyManifest;
+        bool m_startVMsAutomatically;
 };
 
 #endif // IMPORTWIZARD_H

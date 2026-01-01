@@ -26,7 +26,7 @@
  */
 
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/host.h"
 #include "xen/hostmetrics.h"
@@ -40,7 +40,6 @@
 XenCache::XenCache(QObject* parent) : QObject(parent)
 {
     this->m_connection = qobject_cast<XenConnection*>(parent);
-    qDebug() << "XenCache: Created";
 }
 
 XenCache::~XenCache()
@@ -200,7 +199,7 @@ QStringList XenCache::GetAllRefs(const QString& type) const
         return QStringList();
     }
 
-    return m_cache[normalizedType].keys();
+    return this->m_cache[normalizedType].keys();
 }
 
 // C# Equivalent: connection.Cache.XenSearchableObjects
@@ -302,7 +301,7 @@ void XenCache::Update(const QString& type, const QString& ref, const QVariantMap
     if (refresh)
         this->refreshObject(normalizedType, ref);
 
-    emit objectChanged(normalizedType, ref);
+    emit objectChanged(this->m_connection, normalizedType, ref);
 }
 
 void XenCache::UpdateBulk(const QString& type, const QVariantMap& allRecords)
@@ -341,8 +340,7 @@ void XenCache::UpdateBulk(const QString& type, const QVariantMap& allRecords)
     for (const QString& ref : refreshedRefs)
         refreshObject(normalizedType, ref);
 
-    qDebug() << "XenCache: Bulk update completed for" << normalizedType
-             << "- added/updated" << updateCount << "objects";
+    qDebug() << "XenCache: Bulk update completed for" << normalizedType << "- added/updated" << updateCount << "objects";
 
     emit bulkUpdateComplete(normalizedType, updateCount);
 }
@@ -366,7 +364,7 @@ void XenCache::Remove(const QString& type, const QString& ref)
     }
 
     this->evictObject(normalizedType, ref);
-    emit objectRemoved(normalizedType, ref);
+    emit objectRemoved(this->m_connection, normalizedType, ref);
 }
 
 void XenCache::ClearType(const QString& type)
@@ -473,11 +471,11 @@ void XenCache::refreshObject(const QString& type, const QString& ref)
             return;
         obj = it.value();
         if (obj)
-            obj->setEvicted(false);
+            obj->SetEvicted(false);
     }
 
     if (obj)
-        obj->refresh();
+        obj->Refresh();
 }
 
 void XenCache::evictObject(const QString& type, const QString& ref)
@@ -495,5 +493,5 @@ void XenCache::evictObject(const QString& type, const QString& ref)
     }
 
     if (obj)
-        obj->setEvicted(true);
+        obj->SetEvicted(true);
 }

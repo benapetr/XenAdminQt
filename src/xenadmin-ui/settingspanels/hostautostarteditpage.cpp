@@ -28,7 +28,7 @@
 #include "hostautostarteditpage.h"
 #include "ui_hostautostarteditpage.h"
 #include "../../xenlib/xen/actions/host/changehostautostartaction.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xencache.h"
 #include <QIcon>
 
@@ -87,7 +87,7 @@ void HostAutostartEditPage::repopulate()
     
     this->m_originalAutostartEnabled = false; // Default to false
     
-    XenCache* cache = this->m_connection->getCache();
+    XenCache* cache = this->m_connection->GetCache();
     if (cache)
     {
         // Get the pool for this host

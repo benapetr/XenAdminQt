@@ -27,12 +27,11 @@
 
 #include "vmsnapshotdialog.h"
 #include "ui_vmsnapshotdialog.h"
-#include "xenlib.h"
 #include <QDateTime>
 #include <QPushButton>
 
-VmSnapshotDialog::VmSnapshotDialog(const QVariantMap& vmData, XenLib* xenLib, QWidget* parent)
-    : QDialog(parent), ui(new Ui::VmSnapshotDialog), m_vmData(vmData), m_xenLib(xenLib)
+VmSnapshotDialog::VmSnapshotDialog(const QVariantMap& vmData, QWidget* parent)
+    : QDialog(parent), ui(new Ui::VmSnapshotDialog), m_vmData(vmData)
 {
     ui->setupUi(this);
     setupDialog();

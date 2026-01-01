@@ -28,29 +28,30 @@
 #include "repairsrcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
+#include "xen/sr.h"
 #include "xen/actions/sr/srrefreshaction.h"
 #include <QMessageBox>
 #include <QTimer>
 
 RepairSRCommand::RepairSRCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : SRCommand(mainWindow, parent)
 {
 }
 
-bool RepairSRCommand::canRun() const
+bool RepairSRCommand::CanRun() const
 {
-    QString srRef = this->getSelectedSRRef();
-    return !srRef.isEmpty();
+    QSharedPointer<SR> sr = this->getSR();
+    return sr != nullptr;
 }
 
-void RepairSRCommand::run()
+void RepairSRCommand::Run()
 {
-    QString srRef = this->getSelectedSRRef();
-    QString srName = this->getSelectedSRName();
-
-    if (srRef.isEmpty() || srName.isEmpty())
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
         return;
+
+    QString srRef = sr->OpaqueRef();
+    QString srName = sr->GetName();
 
     // Show confirmation dialog
     int ret = QMessageBox::question(this->mainWindow(), "Repair Storage Repository",
@@ -63,11 +64,11 @@ void RepairSRCommand::run()
     {
         this->mainWindow()->showStatusMessage(QString("Repairing storage repository '%1'...").arg(srName));
 
-        XenConnection* connection = this->mainWindow()->xenLib()->getConnection();
-        if (!connection)
+        XenConnection* connection = sr->GetConnection();
+        if (!connection || !connection->IsConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Repair Storage Repository Failed",
-                                 "No active connection.");
+                                 "Not connected to XenServer.");
             return;
         }
 
@@ -92,33 +93,7 @@ void RepairSRCommand::run()
     }
 }
 
-QString RepairSRCommand::menuText() const
+QString RepairSRCommand::MenuText() const
 {
     return "Repair";
-}
-
-QString RepairSRCommand::getSelectedSRRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "storage")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString RepairSRCommand::getSelectedSRName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "storage")
-        return QString();
-
-    return item->text(0);
 }

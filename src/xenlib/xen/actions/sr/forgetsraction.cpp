@@ -27,7 +27,7 @@
 
 #include "forgetsraction.h"
 #include "../../../xencache.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../xenapi/xenapi_SR.h"
 
 ForgetSrAction::ForgetSrAction(XenConnection* connection,
@@ -50,7 +50,7 @@ void ForgetSrAction::run()
         setDescription(QString("Forgetting SR '%1'...").arg(m_srName));
 
         // Check if SR allows forget operation
-        XenCache* cache = connection()->getCache();
+        XenCache* cache = connection()->GetCache();
         QVariantMap srData = cache->ResolveObjectData("sr", m_srRef);
         if (srData.isEmpty())
         {

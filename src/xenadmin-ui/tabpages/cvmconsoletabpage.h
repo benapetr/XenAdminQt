@@ -69,7 +69,7 @@ public:
      * @brief Get user-visible tab label
      * Reference: C# TabPageCvmConsole text property
      */
-    QString tabTitle() const override
+    QString GetTitle() const override
     {
         return tr("CVM Console");
     }
@@ -82,18 +82,18 @@ public:
      *
      * Reference: MainWindow.cs BuildTabList() line 1376
      */
-    bool isApplicableForObjectType(const QString& objectType) const override;
+    bool IsApplicableForObjectType(const QString& objectType) const override;
 
     /**
      * @brief Called when page is shown in tab widget
      * Reference: C# TheTabControl_SelectedIndexChanged
      */
-    void onPageShown() override;
+    void OnPageShown() override;
 
     /**
      * @brief Called when page is hidden (another tab selected)
      */
-    void onPageHidden() override;
+    void OnPageHidden() override;
 
     /**
      * @brief Update page content when object data changes

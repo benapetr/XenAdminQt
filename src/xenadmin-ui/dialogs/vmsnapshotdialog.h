@@ -36,8 +36,6 @@ namespace Ui
     class VmSnapshotDialog;
 }
 
-class XenLib;
-
 /**
  * @brief Dialog for creating VM snapshots
  *
@@ -59,7 +57,7 @@ public:
         DISK_AND_MEMORY // Disk and memory snapshot (checkpoint)
     };
 
-    explicit VmSnapshotDialog(const QVariantMap& vmData, XenLib* xenLib, QWidget* parent = nullptr);
+    explicit VmSnapshotDialog(const QVariantMap& vmData, QWidget* parent = nullptr);
     ~VmSnapshotDialog();
 
     QString snapshotName() const;
@@ -81,7 +79,6 @@ private:
 
     Ui::VmSnapshotDialog* ui;
     QVariantMap m_vmData;
-    XenLib* m_xenLib;
 };
 
 #endif // VMSNAPSHOTDIALOG_H

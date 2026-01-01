@@ -31,9 +31,8 @@
 #include <QDialog>
 #include <QListWidgetItem>
 
-class XenLib;
 class XenConnection;
-class XenSession;
+class Session;
 
 namespace Ui
 {

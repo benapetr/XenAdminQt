@@ -26,7 +26,8 @@
  */
 
 #include "vm.h"
-#include "connection.h"
+#include "network/connection.h"
+#include "network/comparableaddress.h"
 #include "../xenlib.h"
 #include "../xencache.h"
 #include "host.h"
@@ -39,112 +40,117 @@ VM::VM(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString VM::powerState() const
+QString VM::GetObjectType() const
+{
+    return "vm";
+}
+
+QString VM::GetPowerState() const
 {
     return stringProperty("power_state");
 }
 
-bool VM::isTemplate() const
+bool VM::IsTemplate() const
 {
     return boolProperty("is_a_template", false);
 }
 
-bool VM::isDefaultTemplate() const
+bool VM::IsDefaultTemplate() const
 {
     return boolProperty("is_default_template", false);
 }
 
-bool VM::isSnapshot() const
+bool VM::IsSnapshot() const
 {
     return boolProperty("is_a_snapshot", false);
 }
 
-QString VM::residentOnRef() const
+QString VM::ResidentOnRef() const
 {
     return stringProperty("resident_on");
 }
 
-QString VM::affinityRef() const
+QString VM::AffinityRef() const
 {
     return stringProperty("affinity");
 }
 
-QStringList VM::vbdRefs() const
+QStringList VM::VBDRefs() const
 {
     return stringListProperty("VBDs");
 }
 
-QStringList VM::vifRefs() const
+QStringList VM::VIFRefs() const
 {
     return stringListProperty("VIFs");
 }
 
-QStringList VM::consoleRefs() const
+QStringList VM::ConsoleRefs() const
 {
     return stringListProperty("consoles");
 }
 
-QString VM::snapshotOfRef() const
+QString VM::SnapshotOfRef() const
 {
     return stringProperty("snapshot_of");
 }
 
-QStringList VM::snapshotRefs() const
+QStringList VM::SnapshotRefs() const
 {
     return stringListProperty("snapshots");
 }
 
-QString VM::suspendVDIRef() const
+QString VM::SuspendVDIRef() const
 {
     return stringProperty("suspend_VDI");
 }
 
-qint64 VM::memoryTarget() const
+qint64 VM::MemoryTarget() const
 {
     return longProperty("memory_target", 0);
 }
 
-qint64 VM::memoryStaticMax() const
+qint64 VM::MemoryStaticMax() const
 {
     return longProperty("memory_static_max", 0);
 }
 
-qint64 VM::memoryDynamicMax() const
+qint64 VM::MemoryDynamicMax() const
 {
     return longProperty("memory_dynamic_max", 0);
 }
 
-qint64 VM::memoryDynamicMin() const
+qint64 VM::MemoryDynamicMin() const
 {
     return longProperty("memory_dynamic_min", 0);
 }
 
-qint64 VM::memoryStaticMin() const
+qint64 VM::MemoryStaticMin() const
 {
     return longProperty("memory_static_min", 0);
 }
 
-int VM::vcpusMax() const
+int VM::VCPUsMax() const
 {
     return intProperty("VCPUs_max", 0);
 }
 
-int VM::vcpusAtStartup() const
+int VM::VCPUsAtStartup() const
 {
     return intProperty("VCPUs_at_startup", 0);
 }
 
-bool VM::isHvm() const
+bool VM::IsHvm() const
 {
     return !stringProperty("HVM_boot_policy").isEmpty();
 }
 
-bool VM::isWindows() const
+bool VM::IsWindows() const
 {
     QString guestMetricsRef = stringProperty("guest_metrics");
     if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
     {
-        XenCache* cache = connection() ? connection()->getCache() : nullptr;
+        XenCache* cache = GetConnection() ? GetConnection()->GetCache() : nullptr;
         if (cache)
         {
             QVariantMap metricsData = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
@@ -176,9 +182,9 @@ bool VM::isWindows() const
         }
     }
 
-    if (this->isHvm())
+    if (this->IsHvm())
     {
-        QVariantMap platformMap = this->platform();
+        QVariantMap platformMap = this->Platform();
         QString viridian = platformMap.value("viridian").toString();
         if (viridian == "true" || viridian == "1")
             return true;
@@ -187,11 +193,11 @@ bool VM::isWindows() const
     return false;
 }
 
-bool VM::supportsVcpuHotplug() const
+bool VM::SupportsVCPUHotplug() const
 {
     // C#: !IsWindows() && !Helpers.FeatureForbidden(Connection, Host.RestrictVcpuHotplug)
     // Feature restrictions are not implemented yet; follow the Windows check for now.
-    return !this->isWindows();
+    return !this->IsWindows();
 }
 
 namespace
@@ -297,10 +303,10 @@ namespace
     }
 }
 
-int VM::maxVcpusAllowed() const
+int VM::MaxVCPUsAllowed() const
 {
-    XenCache* cache = connection() ? connection()->getCache() : nullptr;
-    QVariantMap vmData = this->data();
+    XenCache* cache = GetConnection() ? GetConnection()->GetCache() : nullptr;
+    QVariantMap vmData = this->GetData();
 
     qint64 value = 0;
     if (tryGetMatchingTemplateRestriction(cache, vmData, "vcpus-max", "max", value))
@@ -311,10 +317,10 @@ int VM::maxVcpusAllowed() const
     return static_cast<int>(*std::max_element(values.begin(), values.end()));
 }
 
-int VM::minVcpus() const
+int VM::MinVCPUs() const
 {
-    XenCache* cache = connection() ? connection()->getCache() : nullptr;
-    QVariantMap vmData = this->data();
+    XenCache* cache = GetConnection() ? GetConnection()->GetCache() : nullptr;
+    QVariantMap vmData = this->GetData();
 
     qint64 value = 0;
     if (tryGetMatchingTemplateRestriction(cache, vmData, "vcpus-min", "min", value))
@@ -325,7 +331,7 @@ int VM::minVcpus() const
     return static_cast<int>(*std::min_element(values.begin(), values.end()));
 }
 
-int VM::getVcpuWeight() const
+int VM::GetVCPUWeight() const
 {
     QVariantMap vcpusParams = property("VCPUs_params").toMap();
     if (vcpusParams.contains("weight"))
@@ -341,9 +347,9 @@ int VM::getVcpuWeight() const
     return 256;
 }
 
-long VM::getCoresPerSocket() const
+long VM::GetCoresPerSocket() const
 {
-    QVariantMap platformMap = this->platform();
+    QVariantMap platformMap = this->Platform();
     if (platformMap.contains("cores-per-socket"))
     {
         bool ok = false;
@@ -354,13 +360,13 @@ long VM::getCoresPerSocket() const
     return DEFAULT_CORES_PER_SOCKET;
 }
 
-long VM::maxCoresPerSocket() const
+long VM::MaxCoresPerSocket() const
 {
-    XenCache* cache = connection() ? connection()->getCache() : nullptr;
+    XenCache* cache = GetConnection() ? GetConnection()->GetCache() : nullptr;
     if (!cache)
         return 0;
 
-    QString home = this->homeRef();
+    QString home = this->HomeRef();
     if (!home.isEmpty() && home != "OpaqueRef:NULL")
     {
         QSharedPointer<Host> host = cache->ResolveObject<Host>("host", home);
@@ -383,7 +389,7 @@ long VM::maxCoresPerSocket() const
     return maxCores;
 }
 
-QString VM::validVcpuConfiguration(long noOfVcpus, long coresPerSocket)
+QString VM::ValidVCPUConfiguration(long noOfVcpus, long coresPerSocket)
 {
     if (coresPerSocket > 0)
     {
@@ -396,7 +402,7 @@ QString VM::validVcpuConfiguration(long noOfVcpus, long coresPerSocket)
     return QString();
 }
 
-QString VM::getTopology(long sockets, long cores)
+QString VM::GetTopology(long sockets, long cores)
 {
     if (sockets == 0)
     {
@@ -414,37 +420,541 @@ QString VM::getTopology(long sockets, long cores)
     return QObject::tr("%1 sockets with %2 cores per socket").arg(sockets).arg(cores);
 }
 
-QVariantMap VM::otherConfig() const
+QVariantMap VM::OtherConfig() const
 {
     return property("other_config").toMap();
 }
 
-QVariantMap VM::platform() const
+QVariantMap VM::Platform() const
 {
     return property("platform").toMap();
 }
 
-QStringList VM::tags() const
+QStringList VM::Tags() const
 {
     return stringListProperty("tags");
 }
 
-QStringList VM::allowedOperations() const
+QStringList VM::AllowedOperations() const
 {
     return stringListProperty("allowed_operations");
 }
 
-QVariantMap VM::currentOperations() const
+QVariantMap VM::CurrentOperations() const
 {
     return property("current_operations").toMap();
 }
 
-QString VM::homeRef() const
+QString VM::HomeRef() const
 {
     // Return affinity host if set, otherwise resident host
-    QString affinity = affinityRef();
+    QString affinity = this->AffinityRef();
     if (!affinity.isEmpty() && affinity != "OpaqueRef:NULL")
         return affinity;
 
-    return residentOnRef();
+    return this->ResidentOnRef();
+}
+
+qint64 VM::UserVersion() const
+{
+    return this->intProperty("user_version", 0);
+}
+
+QString VM::ScheduledToBeResidentOnRef() const
+{
+    return this->stringProperty("scheduled_to_be_resident_on");
+}
+
+qint64 VM::MemoryOverhead() const
+{
+    return this->intProperty("memory_overhead", 0);
+}
+
+QVariantMap VM::VCPUsParams() const
+{
+    return this->property("VCPUs_params").toMap();
+}
+
+QString VM::ActionsAfterSoftreboot() const
+{
+    return this->stringProperty("actions_after_softreboot");
+}
+
+QString VM::ActionsAfterShutdown() const
+{
+    return this->stringProperty("actions_after_shutdown");
+}
+
+QString VM::ActionsAfterReboot() const
+{
+    return this->stringProperty("actions_after_reboot");
+}
+
+QString VM::ActionsAfterCrash() const
+{
+    return this->stringProperty("actions_after_crash");
+}
+
+QStringList VM::VUSBRefs() const
+{
+    return this->stringListProperty("VUSBs");
+}
+
+QStringList VM::CrashDumpRefs() const
+{
+    return this->stringListProperty("crash_dumps");
+}
+
+QStringList VM::VTPMRefs() const
+{
+    return this->stringListProperty("VTPMs");
+}
+
+QString VM::PVBootloader() const
+{
+    return this->stringProperty("PV_bootloader");
+}
+
+QString VM::PVKernel() const
+{
+    return this->stringProperty("PV_kernel");
+}
+
+QString VM::PVRamdisk() const
+{
+    return this->stringProperty("PV_ramdisk");
+}
+
+QString VM::PVArgs() const
+{
+    return this->stringProperty("PV_args");
+}
+
+QString VM::PVBootloaderArgs() const
+{
+    return this->stringProperty("PV_bootloader_args");
+}
+
+QString VM::PVLegacyArgs() const
+{
+    return this->stringProperty("PV_legacy_args");
+}
+
+QString VM::HVMBootPolicy() const
+{
+    return this->property("HVM_boot_policy").toString();
+}
+
+QVariantMap VM::HVMBootParams() const
+{
+    return this->property("HVM_boot_params").toMap();
+}
+
+double VM::HVMShadowMultiplier() const
+{
+    return this->property("HVM_shadow_multiplier").toDouble();
+}
+
+QString VM::PCIBus() const
+{
+    return this->stringProperty("PCI_bus");
+}
+
+qint64 VM::Domid() const
+{
+    return this->property("domid").toLongLong();
+}
+
+QString VM::Domarch() const
+{
+    return this->property("domarch").toString();
+}
+
+QVariantMap VM::LastBootCPUFlags() const
+{
+    return this->property("last_boot_CPU_flags").toMap();
+}
+
+bool VM::IsControlDomain() const
+{
+    return this->boolProperty("is_control_domain", false);
+}
+
+QString VM::MetricsRef() const
+{
+    return this->stringProperty("metrics");
+}
+
+QString VM::GuestMetricsRef() const
+{
+    return this->stringProperty("guest_metrics");
+}
+
+QString VM::LastBootedRecord() const
+{
+    return this->stringProperty("last_booted_record");
+}
+
+QString VM::Recommendations() const
+{
+    return this->stringProperty("recommendations");
+}
+
+QVariantMap VM::XenstoreData() const
+{
+    return this->property("xenstore_data").toMap();
+}
+
+bool VM::HAAlwaysRun() const
+{
+    return this->boolProperty("ha_always_run", false);
+}
+
+QString VM::HARestartPriority() const
+{
+    return this->property("ha_restart_priority").toString();
+}
+
+QDateTime VM::SnapshotTime() const
+{
+    QString dateStr = this->stringProperty("snapshot_time");
+    if (dateStr.isEmpty())
+        return QDateTime();
+    return QDateTime::fromString(dateStr, Qt::ISODate);
+}
+
+QString VM::TransportableSnapshotId() const
+{
+    return this->stringProperty("transportable_snapshot_id");
+}
+
+QVariantMap VM::Blobs() const
+{
+    return this->property("blobs").toMap();
+}
+
+QVariantMap VM::BlockedOperations() const
+{
+    return this->property("blocked_operations").toMap();
+}
+
+QVariantMap VM::SnapshotInfo() const
+{
+    return this->property("snapshot_info").toMap();
+}
+
+QString VM::SnapshotMetadata() const
+{
+    return this->stringProperty("snapshot_metadata");
+}
+
+QString VM::ParentRef() const
+{
+    return this->stringProperty("parent");
+}
+
+QStringList VM::ChildrenRefs() const
+{
+    return this->stringListProperty("children");
+}
+
+QVariantMap VM::BIOSStrings() const
+{
+    return this->property("bios_strings").toMap();
+}
+
+QString VM::ProtectionPolicyRef() const
+{
+    return this->stringProperty("protection_policy");
+}
+
+bool VM::IsSnapshotFromVMPP() const
+{
+    return this->boolProperty("is_snapshot_from_vmpp", false);
+}
+
+QString VM::SnapshotScheduleRef() const
+{
+    return this->stringProperty("snapshot_schedule");
+}
+
+bool VM::IsVMSSSnapshot() const
+{
+    return this->boolProperty("is_vmss_snapshot", false);
+}
+
+QString VM::ApplianceRef() const
+{
+    return this->stringProperty("appliance");
+}
+
+qint64 VM::StartDelay() const
+{
+    return this->intProperty("start_delay", 0);
+}
+
+qint64 VM::ShutdownDelay() const
+{
+    return this->intProperty("shutdown_delay", 0);
+}
+
+qint64 VM::Order() const
+{
+    return this->intProperty("order", 0);
+}
+
+QStringList VM::VGPURefs() const
+{
+    return this->stringListProperty("VGPUs");
+}
+
+QStringList VM::AttachedPCIRefs() const
+{
+    return this->stringListProperty("attached_PCIs");
+}
+
+QString VM::SuspendSRRef() const
+{
+    return this->stringProperty("suspend_SR");
+}
+
+qint64 VM::Version() const
+{
+    return this->intProperty("version", 0);
+}
+
+QString VM::GenerationId() const
+{
+    return this->stringProperty("generation_id");
+}
+
+qint64 VM::HardwarePlatformVersion() const
+{
+    return this->intProperty("hardware_platform_version", 0);
+}
+
+bool VM::HasVendorDevice() const
+{
+    return this->boolProperty("has_vendor_device", false);
+}
+
+bool VM::RequiresReboot() const
+{
+    return this->boolProperty("requires_reboot", false);
+}
+
+QString VM::ReferenceLabel() const
+{
+    return this->stringProperty("reference_label");
+}
+
+QString VM::DomainType() const
+{
+    return this->stringProperty("domain_type");
+}
+
+QVariantMap VM::NVRAM() const
+{
+    return this->property("NVRAM").toMap();
+}
+
+QStringList VM::PendingGuidances() const
+{
+    return this->stringListProperty("pending_guidances");
+}
+
+// Property getters for search/query functionality
+// C# equivalent: VM extensions in XenAPI-Extensions/VM.cs and Common.cs PropertyAccessors
+
+bool VM::IsRealVm() const
+{
+    // C# equivalent: VM.IsRealVm()
+    // Returns true if VM is not a template, not a snapshot, and not a control domain
+    return !this->IsTemplate() && !this->IsSnapshot() && !this->IsControlDomain();
+}
+
+QString VM::GetOSName() const
+{
+    // C# equivalent: VM.GetOSName()
+    // Gets OS name from guest_metrics.os_version["name"]
+    
+    if (!this->IsRealVm())
+        return QString();
+    
+    QString guestMetricsRef = this->GuestMetricsRef();
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+        return QString();
+    
+    // Get guest_metrics from cache
+    XenConnection* conn = this->GetConnection();
+    if (!conn)
+        return QString();
+    
+    XenCache* cache = conn->GetCache();
+    if (!cache)
+        return QString();
+    
+    QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+    if (guestMetrics.isEmpty())
+        return QString();
+    
+    // Get os_version dictionary and extract "name" key
+    QVariantMap osVersion = guestMetrics.value("os_version").toMap();
+    return osVersion.value("name", QString()).toString();
+}
+
+int VM::GetVirtualizationStatus() const
+{
+    // C# equivalent: VM.GetVirtualizationStatus(out _)
+    // Returns VirtualizationStatus flags:
+    // 0 = NotInstalled
+    // 1 = Unknown
+    // 2 = PvDriversOutOfDate
+    // 4 = IoDriversInstalled
+    // 8 = ManagementInstalled
+    
+    if (!this->IsRealVm())
+        return 0; // NotInstalled
+    
+    QString guestMetricsRef = this->GuestMetricsRef();
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+        return 0; // NotInstalled
+    
+    XenConnection* conn = this->GetConnection();
+    if (!conn)
+        return 0;
+    
+    XenCache* cache = conn->GetCache();
+    if (!cache)
+        return 0;
+    
+    QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+    if (guestMetrics.isEmpty())
+        return 0; // NotInstalled
+    
+    // Get PV drivers version from guest_metrics
+    QVariantMap pvDriversVersion = guestMetrics.value("PV_drivers_version").toMap();
+    if (pvDriversVersion.isEmpty())
+        return 0; // NotInstalled
+    
+    // Check for management agent (xe-daemon)
+    bool hasManagement = pvDriversVersion.contains("major") && pvDriversVersion.contains("minor");
+    
+    // Check if drivers are up to date
+    // C# logic: Compare pvDriversVersion with host's recommended version
+    // For now, simplified: if we have PV drivers, assume IoDriversInstalled
+    int status = 0;
+    
+    if (hasManagement)
+    {
+        status |= 4; // IoDriversInstalled
+        status |= 8; // ManagementInstalled
+    } else if (!pvDriversVersion.isEmpty())
+    {
+        status |= 4; // IoDriversInstalled
+    }
+    
+    // Check if drivers are out of date
+    // C# checks PV_drivers_up_to_date field
+    bool upToDate = guestMetrics.value("PV_drivers_up_to_date", true).toBool();
+    if (!upToDate && status != 0)
+    {
+        status |= 2; // PvDriversOutOfDate
+    }
+    
+    return status;
+}
+
+QList<ComparableAddress> VM::GetIPAddresses() const
+{
+    // C# equivalent: PropertyAccessors IP address property
+    // Gets IPs from guest_metrics.networks dictionary
+    
+    QList<ComparableAddress> addresses;
+    
+    if (!this->IsRealVm())
+        return addresses;
+    
+    QString guestMetricsRef = this->GuestMetricsRef();
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+        return addresses;
+    
+    XenConnection* conn = this->GetConnection();
+    if (!conn)
+        return addresses;
+    
+    XenCache* cache = conn->GetCache();
+    if (!cache)
+        return addresses;
+    
+    QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+    if (guestMetrics.isEmpty())
+        return addresses;
+    
+    // Get networks dictionary: key = "0/ip", value = "192.168.1.100"
+    QVariantMap networks = guestMetrics.value("networks").toMap();
+    
+    for (const QString& key : networks.keys())
+    {
+        // Keys are like "0/ip", "1/ip", "0/ipv6/0", etc.
+        if (key.contains("/ip"))
+        {
+            QString ipStr = networks.value(key).toString();
+            if (ipStr.isEmpty())
+                continue;
+            
+            // Try to parse as IP address (not partial IP, allow name fallback)
+            ComparableAddress addr;
+            if (ComparableAddress::TryParse(ipStr, false, true, addr))
+            {
+                addresses.append(addr);
+            }
+        }
+    }
+    
+    return addresses;
+}
+
+qint64 VM::GetStartTime() const
+{
+    // C# equivalent: VM.GetStartTime()
+    // Gets start_time from guest_metrics or metrics
+    
+    QString guestMetricsRef = this->GuestMetricsRef();
+    if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
+    {
+        XenConnection* conn = this->GetConnection();
+        if (conn)
+        {
+            XenCache* cache = conn->GetCache();
+            if (cache)
+            {
+                QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+                if (!guestMetrics.isEmpty())
+                {
+                    // Check if start_time exists
+                    if (guestMetrics.contains("start_time"))
+                    {
+                        // Parse ISO 8601 datetime or epoch seconds
+                        QString startTimeStr = guestMetrics.value("start_time").toString();
+                        if (!startTimeStr.isEmpty())
+                        {
+                            // Try to parse as epoch seconds first
+                            bool ok;
+                            qint64 epochTime = startTimeStr.toLongLong(&ok);
+                            if (ok)
+                                return epochTime;
+                            
+                            // Otherwise try QDateTime parsing
+                            QDateTime dt = QDateTime::fromString(startTimeStr, Qt::ISODate);
+                            if (dt.isValid())
+                                return dt.toSecsSinceEpoch();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    return 0; // Not available
 }

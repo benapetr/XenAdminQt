@@ -34,6 +34,8 @@
 #include <QVariantMap>
 #include <QMap>
 
+class XenObject;
+
 /**
  * @brief Manages icons for different object types and states
  *
@@ -47,6 +49,7 @@ public:
 
     // Icon retrieval methods
     QIcon getIconForObject(const QString& objectType, const QVariantMap& objectData) const;
+    QIcon getIconForObject(const XenObject* object) const;
     QIcon getIconForVM(const QVariantMap& vmData) const;
     QIcon getIconForHost(const QVariantMap& hostData) const;
     QIcon getIconForPool(const QVariantMap& poolData) const;

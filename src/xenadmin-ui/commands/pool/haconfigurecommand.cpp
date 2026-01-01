@@ -29,20 +29,21 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/hawizard.h"
 #include "../../dialogs/editvmhaprioritiesdialog.h"
-#include "xenlib.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
+#include "xen/pool.h"
 #include "xencache.h"
+#include "xen/xenobject.h"
 #include <QMessageBox>
 
 HAConfigureCommand::HAConfigureCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : PoolCommand(mainWindow, parent)
 {
 }
 
-bool HAConfigureCommand::canRun() const
+bool HAConfigureCommand::CanRun() const
 {
-    QString poolRef = this->getSelectedPoolRef();
-    if (poolRef.isEmpty())
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool || !pool->IsValid())
         return false;
 
     // Can configure HA if:
@@ -52,62 +53,54 @@ bool HAConfigureCommand::canRun() const
     return this->isPoolConnected() && this->hasCoordinator() && !this->isPoolLocked();
 }
 
-void HAConfigureCommand::run()
+void HAConfigureCommand::Run()
 {
-    QString poolRef = this->getSelectedPoolRef();
-    if (poolRef.isEmpty())
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool || !pool->IsValid())
         return;
 
+    QString poolRef = pool->OpaqueRef();
+    
     // Check if HA is already enabled
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (cache)
-    {
-        QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
-        bool haEnabled = poolData.value("ha_enabled", false).toBool();
+    bool haEnabled = pool->HAEnabled();
 
-        if (haEnabled)
-        {
-            // HA is already enabled - show edit dialog to modify priorities
-            EditVmHaPrioritiesDialog dialog(this->mainWindow()->xenLib(), poolRef, this->mainWindow());
-            dialog.exec();
+    if (haEnabled)
+    {
+        // HA is already enabled - show edit dialog to modify priorities
+        XenConnection* connection = pool->GetConnection();
+        if (!connection)
             return;
-        }
+
+        EditVmHaPrioritiesDialog dialog(connection, poolRef, this->mainWindow());
+        dialog.exec();
+        return;
     }
 
     // Launch HA wizard to enable HA
-    HAWizard wizard(this->mainWindow()->xenLib(), poolRef, this->mainWindow());
+    XenConnection* connection = pool->GetConnection();
+    if (!connection)
+        return;
+
+    HAWizard wizard(connection, poolRef, this->mainWindow());
     wizard.exec();
 }
 
-QString HAConfigureCommand::menuText() const
+QString HAConfigureCommand::MenuText() const
 {
     return "Configure...";
 }
 
-QString HAConfigureCommand::getSelectedPoolRef() const
-{
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "pool")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
 bool HAConfigureCommand::isPoolConnected() const
 {
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-    return conn && conn->isConnected();
+    QSharedPointer<Pool> pool = this->getPool();
+    XenConnection* conn = pool ? pool->GetConnection() : nullptr;
+    return conn && conn->IsConnected();
 }
 
 bool HAConfigureCommand::hasCoordinator() const
 {
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    QSharedPointer<Pool> pool = this->getPool();
+    XenCache* cache = pool && pool->GetConnection() ? pool->GetConnection()->GetCache() : nullptr;
     if (!cache)
         return false;
 
@@ -129,10 +122,8 @@ bool HAConfigureCommand::isPoolLocked() const
     if (poolRef.isEmpty())
         return false;
 
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    QSharedPointer<Pool> pool = this->getPool();
+    XenCache* cache = pool && pool->GetConnection() ? pool->GetConnection()->GetCache() : nullptr;
     if (!cache)
         return false;
 

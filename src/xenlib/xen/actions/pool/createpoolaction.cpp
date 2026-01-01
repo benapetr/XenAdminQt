@@ -26,8 +26,8 @@
  */
 
 #include "createpoolaction.h"
-#include "../../../xen/connection.h"
-#include "../../../xen/session.h"
+#include "../../network/connection.h"
+#include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../../xencache.h"
 #include <stdexcept>
@@ -63,7 +63,7 @@ void CreatePoolAction::run()
 
         // Get pool reference from cache
         // There should be one pool reference for a standalone coordinator
-        QStringList poolRefs = m_coordinatorConnection->getCache()->GetAllRefs("pool");
+        QStringList poolRefs = m_coordinatorConnection->GetCache()->GetAllRefs("pool");
         if (poolRefs.isEmpty())
         {
             throw std::runtime_error("No pool found on coordinator");
@@ -101,9 +101,9 @@ void CreatePoolAction::run()
             setDescription(QString("Adding member %1 of %2...").arg(i + 1).arg(m_members.size()));
 
             // Get coordinator credentials from session
-            QString coordinatorAddress = m_coordinatorConnection->getHostname();
+            QString coordinatorAddress = m_coordinatorConnection->GetHostname();
 
-            XenSession* coordinatorSession = m_coordinatorConnection->getSession();
+            XenAPI::Session* coordinatorSession = m_coordinatorConnection->GetSession();
             if (!coordinatorSession)
             {
                 throw std::runtime_error("Coordinator connection has no session");

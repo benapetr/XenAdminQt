@@ -1,36 +1,36 @@
-/* Copyright (c) Petr Bena
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
  *
- * Redistribution and use in source and binary forms,
- * with or without modification, are permitted provided
- * that the following conditions are met:
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * *   Redistributions of source code must retain the above
- *     copyright notice, this list of conditions and the
- *     following disclaimer.
- * *   Redistributions in binary form must reproduce the above
- *     copyright notice, this list of conditions and the
- *     following disclaimer in the documentation and/or other
- *     materials provided with the distribution.
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
- * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
- * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "ConsolePanel.h"
 #include "ui_ConsolePanel.h"
 #include "VNCView.h"
-#include "xenlib.h"
+#include "xen/network/connection.h"
+#include "xen/host.h"
+#include "xencache.h"
 #include <QDebug>
 #include <QVBoxLayout>
 #include <QThread>
@@ -40,8 +40,7 @@
  * @brief Constructor
  * Reference: ConsolePanel.cs lines 49-54
  */
-ConsolePanel::ConsolePanel(QWidget* parent)
-    : QWidget(parent), ui(new Ui::ConsolePanel), _xenLib(nullptr), _activeVNCView(nullptr), _currentVmRef()
+ConsolePanel::ConsolePanel(QWidget* parent) : QWidget(parent), ui(new Ui::ConsolePanel), _currentVmRef()
 {
     qDebug() << "ConsolePanel: Constructor START - parent:" << parent << "this:" << this;
 
@@ -89,7 +88,7 @@ ConsolePanel::~ConsolePanel()
 
 // ========== Public Methods ==========
 
-void ConsolePanel::pauseAllDockedViews()
+void ConsolePanel::PauseAllDockedViews()
 {
     qDebug() << "ConsolePanel: pauseAllDockedViews() - pausing" << this->_vncViews.count() << "views";
 
@@ -104,7 +103,7 @@ void ConsolePanel::pauseAllDockedViews()
     }
 }
 
-void ConsolePanel::resetAllViews()
+void ConsolePanel::ResetAllViews()
 {
     qDebug() << "ConsolePanel: resetAllViews() - clearing cache";
 
@@ -131,7 +130,7 @@ void ConsolePanel::resetAllViews()
     this->_currentVmRef.clear();
 }
 
-void ConsolePanel::unpauseActiveView(bool focus)
+void ConsolePanel::UnpauseActiveView(bool focus)
 {
     qDebug() << "ConsolePanel: unpauseActiveView() - focus:" << focus;
 
@@ -160,7 +159,7 @@ void ConsolePanel::unpauseActiveView(bool focus)
     }
 }
 
-void ConsolePanel::updateRDPResolution(bool fullscreen)
+void ConsolePanel::UpdateRDPResolution(bool fullscreen)
 {
     qDebug() << "ConsolePanel: updateRDPResolution() - fullscreen:" << fullscreen;
 
@@ -171,9 +170,11 @@ void ConsolePanel::updateRDPResolution(bool fullscreen)
     }
 }
 
-void ConsolePanel::setCurrentSource(const QString& vmRef)
+void ConsolePanel::SetCurrentSource(XenConnection *connection, const QString& vmRef)
 {
     qDebug() << "ConsolePanel: setCurrentSource() - vmRef:" << vmRef;
+
+    this->_connection = connection;
 
     Q_ASSERT(QThread::currentThread() == QApplication::instance()->thread());
 
@@ -194,7 +195,7 @@ void ConsolePanel::setCurrentSource(const QString& vmRef)
     }
 
     // Verify connection is still valid before attempting console operations
-    if (this->_xenLib && !this->_xenLib->isConnected())
+    if (this->_connection && !this->_connection->IsConnected())
     {
         qWarning() << "ConsolePanel: XenLib connection lost, cannot set console source";
         setErrorMessage(tr("Connection to server lost"));
@@ -235,7 +236,7 @@ void ConsolePanel::setCurrentSource(const QString& vmRef)
 
         // Create new VNCView
         // Note: Using empty elevated credentials (TODO: support elevated credentials)
-        VNCView* newView = new VNCView(vmRef, QString(), QString(), this->_xenLib, this);
+        VNCView* newView = new VNCView(vmRef, QString(), QString(), this->_connection, this);
         this->_vncViews[vmRef] = newView;
     }
 
@@ -269,8 +270,10 @@ void ConsolePanel::setCurrentSource(const QString& vmRef)
     this->_currentVmRef = vmRef;
 }
 
-void ConsolePanel::setCurrentSourceHost(const QString& hostRef)
+void ConsolePanel::SetCurrentSourceHost(XenConnection *connection, const QString& hostRef)
 {
+    this->_connection = connection;
+
     qDebug() << "ConsolePanel: setCurrentSourceHost() - hostRef:" << hostRef;
 
     // C#: Lines 157-170
@@ -278,29 +281,40 @@ void ConsolePanel::setCurrentSourceHost(const QString& hostRef)
     if (hostRef.isEmpty())
     {
         qDebug() << "ConsolePanel: No host information when connecting to host VNC console";
-        setErrorMessage(tr("Could not connect to console"));
+        this->setErrorMessage(tr("Could not connect to console"));
         return;
     }
 
-    // Find dom0 (control domain) for this host
-    QString dom0Ref = getControlDomainForHost(hostRef);
+    QString dom0Ref;
+
+    if (this->_connection)
+    {
+        qDebug() << "ConsolePanel: No connection available";
+
+        QSharedPointer<Host> host = this->_connection->GetCache()->ResolveObject<Host>("host", hostRef);
+
+        if (!host)
+        {
+            qWarning() << "ConsolePanel: Failed to lookup host from ref: " << hostRef;
+        } else
+        {
+            dom0Ref = host->ControlDomainRef();
+        }
+    }
 
     if (dom0Ref.isEmpty())
     {
         qDebug() << "ConsolePanel: No dom0 on host when connecting to host VNC console";
-        setErrorMessage(tr("Could not find console"));
+        this->setErrorMessage(tr("Could not find console"));
     } else
     {
-        setCurrentSource(dom0Ref);
+        this->SetCurrentSource(connection, dom0Ref);
     }
 }
 
-QImage ConsolePanel::snapshot(const QString& vmRef,
-                              const QString& elevatedUsername,
-                              const QString& elevatedPassword)
+QImage ConsolePanel::Snapshot(const QString& vmRef, const QString& elevatedUsername, const QString& elevatedPassword)
 {
-    qDebug() << "ConsolePanel: snapshot() - vmRef:" << vmRef
-             << "elevated:" << !elevatedUsername.isEmpty();
+    qDebug() << "ConsolePanel: snapshot() - vmRef:" << vmRef << "elevated:" << !elevatedUsername.isEmpty();
 
     // C#: Lines 197-234
     // Note: C# calls this off-thread, but Qt UI operations must be on main thread
@@ -317,11 +331,11 @@ QImage ConsolePanel::snapshot(const QString& vmRef,
         if (useElevatedCredentials)
         {
             qDebug() << "ConsolePanel: Creating temporary VNCView with elevated credentials";
-            view = new VNCView(vmRef, elevatedUsername, elevatedPassword, this->_xenLib, this);
+            view = new VNCView(vmRef, elevatedUsername, elevatedPassword, this->_connection, this);
         } else
         {
             // Create view normally and add to cache
-            setCurrentSource(vmRef);
+            this->SetCurrentSource(this->_connection, vmRef);
             if (this->_vncViews.contains(vmRef))
                 view = this->_vncViews[vmRef];
         }
@@ -383,7 +397,7 @@ void ConsolePanel::closeVncForSource(const QString& vmRef)
     vncView->deleteLater();
 }
 
-void ConsolePanel::sendCAD()
+void ConsolePanel::SendCAD()
 {
     qDebug() << "ConsolePanel: sendCAD()";
 
@@ -405,7 +419,7 @@ void ConsolePanel::setErrorMessage(const QString& message)
     this->ui->errorPanel->setVisible(true);
 
     // Clear current source
-    setCurrentSource(QString());
+    this->SetCurrentSource(nullptr, QString());
 }
 
 void ConsolePanel::clearErrorMessage()
@@ -422,7 +436,7 @@ bool ConsolePanel::rbacDenied(const QString& vmRef, QStringList& allowedRoles)
 {
     // C#: Lines 172-195
 
-    if (vmRef.isEmpty() || !this->_xenLib)
+    if (vmRef.isEmpty() || !this->_connection)
     {
         allowedRoles.clear();
         return false;
@@ -467,41 +481,6 @@ void ConsolePanel::showRbacWarning(const QStringList& userRoles, const QStringLi
 
     this->ui->rbacWarningLabel->setText(message);
     this->ui->rbacWarningPanel->setVisible(true);
-}
-
-QString ConsolePanel::getControlDomainForHost(const QString& hostRef)
-{
-    qDebug() << "ConsolePanel: getControlDomainForHost() - hostRef:" << hostRef;
-
-    if (!this->_xenLib)
-    {
-        qDebug() << "ConsolePanel: No XenLib instance available";
-        return QString();
-    }
-
-    // Check if connection is still valid before attempting lookups
-    if (!this->_xenLib->isConnected())
-    {
-        qWarning() << "ConsolePanel: XenLib connection lost, cannot look up control domain";
-        return QString();
-    }
-
-    // Use XenLib to look up control domain (dom0) VM for this host
-    // C#: Host.ControlDomainZero() - returns dom0 VM for this host
-    // XenAPI: Either host.control_domain field, or search for VM where:
-    //         is_control_domain=true and resident_on=hostRef
-
-    QString dom0Ref = this->_xenLib->getControlDomainForHost(hostRef);
-
-    if (dom0Ref.isEmpty())
-    {
-        qDebug() << "ConsolePanel: No control domain found for host" << hostRef;
-    } else
-    {
-        qDebug() << "ConsolePanel: Found control domain" << dom0Ref << "for host" << hostRef;
-    }
-
-    return dom0Ref;
 }
 
 void ConsolePanel::evictOldestView()
@@ -557,8 +536,10 @@ CvmConsolePanel::CvmConsolePanel(QWidget* parent)
     qDebug() << "CvmConsolePanel: Constructor (derived class)";
 }
 
-void CvmConsolePanel::setCurrentSourceHost(const QString& hostRef)
+void CvmConsolePanel::SetCurrentSourceHost(XenConnection *connection, const QString& hostRef)
 {
+    this->_connection = connection;
+
     qDebug() << "CvmConsolePanel: setCurrentSourceHost() - hostRef:" << hostRef;
 
     // C#: Lines 273-286
@@ -579,7 +560,7 @@ void CvmConsolePanel::setCurrentSourceHost(const QString& hostRef)
         setErrorMessage(tr("Could not find console"));
     } else
     {
-        setCurrentSource(cvmRef);
+        SetCurrentSource(connection, cvmRef);
     }
 }
 
@@ -587,7 +568,7 @@ QString CvmConsolePanel::getOtherControlDomainForHost(const QString& hostRef)
 {
     qDebug() << "CvmConsolePanel: getOtherControlDomainForHost() - hostRef:" << hostRef;
 
-    if (!this->_xenLib)
+    if (!this->_connection)
         return QString();
 
     // TODO: Implement via XenLib

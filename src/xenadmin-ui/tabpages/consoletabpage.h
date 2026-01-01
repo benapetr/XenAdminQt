@@ -59,15 +59,15 @@ public:
     explicit ConsoleTabPage(QWidget* parent = nullptr);
     ~ConsoleTabPage();
 
-    QString tabTitle() const override
+    QString GetTitle() const override
     {
         return "Console";
     }
-    QString helpID() const override
+    QString HelpID() const override
     {
         return "TabPageConsole";
     }
-    bool isApplicableForObjectType(const QString& objectType) const override;
+    bool IsApplicableForObjectType(const QString& objectType) const override;
 
     /**
      * @brief Set the ConsolePanel instance (called by MainWindow)
@@ -87,13 +87,13 @@ public:
      * @brief Called when the console tab becomes visible
      * Reference: MainWindow.cs TheTabControl_SelectedIndexChanged (lines 1653-1667)
      */
-    void onPageShown() override;
+    void OnPageShown() override;
 
     /**
      * @brief Called when the console tab is hidden
      * Reference: MainWindow.cs TheTabControl_Deselected (lines 1628-1636)
      */
-    void onPageHidden() override;
+    void OnPageHidden() override;
 
 protected:
     /**

@@ -28,23 +28,25 @@
 #ifndef STORAGEPROPERTIESCOMMAND_H
 #define STORAGEPROPERTIESCOMMAND_H
 
-#include "../command.h"
+#include "srcommand.h"
 
-class StoragePropertiesCommand : public Command
+class XenConnection;
+
+class StoragePropertiesCommand : public SRCommand
 {
     Q_OBJECT
 
-public:
-    explicit StoragePropertiesCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit StoragePropertiesCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    bool canRun() const override;
-    void run() override;
-    QString menuText() const override;
-    void setTargetSR(const QString& srRef);
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
+        void setTargetSR(const QString& srRef, XenConnection *connection);
 
-private:
-    QString getSelectedSRRef() const;
-    QString m_overrideSRRef;
+    private:
+        QString m_overrideSRRef;
+        XenConnection *m_overrideConn = nullptr;
 };
 
 #endif // STORAGEPROPERTIESCOMMAND_H

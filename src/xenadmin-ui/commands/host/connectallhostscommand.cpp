@@ -27,44 +27,42 @@
 
 #include "connectallhostscommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
-#include "collections/connectionsmanager.h"
+#include "xen/network/connectionsmanager.h"
+#include "../../network/xenconnectionui.h"
 
-ConnectAllHostsCommand::ConnectAllHostsCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+ConnectAllHostsCommand::ConnectAllHostsCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
-bool ConnectAllHostsCommand::canRun() const
+bool ConnectAllHostsCommand::CanRun() const
 {
     // Can connect all if there are any disconnected connections
     return this->hasDisconnectedConnections();
 }
 
-void ConnectAllHostsCommand::run()
+void ConnectAllHostsCommand::Run()
 {
-    if (!this->mainWindow()->xenLib())
-        return;
-
-    ConnectionsManager* manager = this->mainWindow()->xenLib()->getConnectionsManager();
+    this->mainWindow()->showStatusMessage("Connecting to all servers...");
+    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
     if (!manager)
         return;
 
-    this->mainWindow()->showStatusMessage("Connecting to all servers...");
-    manager->connectAll();
+    QList<XenConnection*> allConnections = manager->getAllConnections();
+    for (XenConnection* conn : allConnections)
+    {
+        if (conn && !conn->IsConnected() && !conn->InProgress())
+            XenConnectionUI::BeginConnect(conn, false, this->mainWindow(), false);
+    }
 }
 
-QString ConnectAllHostsCommand::menuText() const
+QString ConnectAllHostsCommand::MenuText() const
 {
     return "Connect All";
 }
 
 bool ConnectAllHostsCommand::hasDisconnectedConnections() const
 {
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    ConnectionsManager* manager = this->mainWindow()->xenLib()->getConnectionsManager();
+    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
     if (!manager)
         return false;
 
@@ -72,7 +70,7 @@ bool ConnectAllHostsCommand::hasDisconnectedConnections() const
     QList<XenConnection*> allConnections = manager->getAllConnections();
     for (XenConnection* conn : allConnections)
     {
-        if (conn && !conn->isConnected())
+        if (conn && !conn->IsConnected())
         {
             // TODO: Also check if connection is not already in progress
             return true;

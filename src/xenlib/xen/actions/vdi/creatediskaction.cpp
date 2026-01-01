@@ -52,10 +52,10 @@ CreateDiskAction::CreateDiskAction(const QVariantMap& vdiRecord,
                                    const QVariantMap& vbdRecord,
                                    VM* vm,
                                    QObject* parent)
-    : AsyncOperation(vm->connection(),
+    : AsyncOperation(vm->GetConnection(),
                      tr("Creating disk '%1' on VM '%2'")
                          .arg(vdiRecord.value("name_label").toString())
-                         .arg(vm->nameLabel()),
+                         .arg(vm->GetName()),
                      tr("Creating and attaching virtual disk..."),
                      parent),
       m_vdiRecord(vdiRecord), m_vbdRecord(vbdRecord), m_vm(vm), m_attachToVM(true)
@@ -68,8 +68,8 @@ CreateDiskAction::CreateDiskAction(const QVariantMap& vdiRecord,
 
 void CreateDiskAction::run()
 {
-    XenSession* session = this->session();
-    if (!session || !session->isLoggedIn())
+    XenAPI::Session* session = this->session();
+    if (!session || !session->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
     }
@@ -105,7 +105,7 @@ void CreateDiskAction::run()
         setPercentComplete(10);
         setDescription(tr("Getting available device numbers..."));
 
-        QVariant allowedDevicesVar = XenAPI::VM::get_allowed_VBD_devices(session, m_vm->opaqueRef());
+        QVariant allowedDevicesVar = XenAPI::VM::get_allowed_VBD_devices(session, m_vm->OpaqueRef());
         QStringList allowedDevices;
 
         if (allowedDevicesVar.canConvert<QStringList>())
@@ -153,7 +153,7 @@ void CreateDiskAction::run()
 
         QVariantMap vbdRecord = m_vbdRecord;
         vbdRecord["VDI"] = vdiRef;
-        vbdRecord["VM"] = m_vm->opaqueRef();
+        vbdRecord["VM"] = m_vm->OpaqueRef();
         vbdRecord["userdevice"] = userdevice;
         vbdRecord["bootable"] = shouldBeBootable;
 
@@ -198,14 +198,14 @@ bool CreateDiskAction::hasBootableDisk()
 
     try
     {
-        XenSession* session = this->session();
-        if (!session || !session->isLoggedIn())
+        XenAPI::Session* session = this->session();
+        if (!session || !session->IsLoggedIn())
         {
             return false;
         }
 
         // Get all VBDs for this VM
-        QStringList vbdRefs = m_vm->vbdRefs();
+        QStringList vbdRefs = m_vm->VBDRefs();
 
         for (const QString& vbdRef : vbdRefs)
         {

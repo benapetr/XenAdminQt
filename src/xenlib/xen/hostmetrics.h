@@ -36,6 +36,15 @@
  * @brief Host metrics XenObject wrapper
  *
  * Provides typed access to host_metrics fields in XenCache.
+ * Qt equivalent of C# XenAPI.Host_metrics class.
+ *
+ * Key properties (from C# Host_metrics class):
+ * - uuid - Unique identifier
+ * - memory_total - Total host memory in bytes
+ * - memory_free - Free host memory in bytes
+ * - live - Pool master thinks this host is live
+ * - last_updated - Time at which this information was last updated
+ * - other_config - Additional configuration
  */
 class XENLIB_EXPORT HostMetrics : public XenObject
 {
@@ -43,62 +52,48 @@ class XENLIB_EXPORT HostMetrics : public XenObject
 
 public:
     explicit HostMetrics(XenConnection* connection,
-                         const QString& opaqueRef,
-                         QObject* parent = nullptr)
-        : XenObject(connection, opaqueRef, parent)
-    {
-    }
+                        const QString& opaqueRef,
+                        QObject* parent = nullptr);
+    ~HostMetrics() override = default;
 
-    bool live() const
-    {
-        return boolProperty("live", false);
-    }
+    /**
+     * @brief Check if pool master thinks this host is live
+     * @return true if host is considered live by pool master
+     */
+    bool live() const;
 
-    QString uuid() const
-    {
-        return stringProperty("uuid");
-    }
+    /**
+     * @brief Get unique identifier
+     * @return UUID string
+     */
+    QString GetUUID() const;
 
-    qint64 memoryTotal() const
-    {
-        return longProperty("memory_total", 0);
-    }
+    /**
+     * @brief Get total host memory
+     * @return Total memory in bytes
+     */
+    qint64 memoryTotal() const;
 
-    qint64 memoryFree() const
-    {
-        return longProperty("memory_free", 0);
-    }
+    /**
+     * @brief Get free host memory
+     * @return Free memory in bytes
+     */
+    qint64 memoryFree() const;
 
-    QDateTime lastUpdated() const
-    {
-        QVariant value = property("last_updated");
-        if (value.canConvert<QDateTime>())
-            return value.toDateTime();
+    /**
+     * @brief Get time at which this information was last updated
+     * @return Timestamp of last update
+     */
+    QDateTime lastUpdated() const;
 
-        QString text = value.toString();
-        if (text.isEmpty())
-            return QDateTime();
-
-        QDateTime parsed = QDateTime::fromString(text, Qt::ISODate);
-        if (parsed.isValid())
-            return parsed;
-
-        return QDateTime::fromString(text, Qt::ISODateWithMs);
-    }
-
-    QVariantMap otherConfig() const
-    {
-        QVariant value = property("other_config");
-        if (value.canConvert<QVariantMap>())
-            return value.toMap();
-        return QVariantMap();
-    }
+    /**
+     * @brief Get additional configuration
+     * @return Map of additional configuration key-value pairs
+     */
+    QVariantMap otherConfig() const;
 
 protected:
-    QString objectType() const override
-    {
-        return QStringLiteral("host_metrics");
-    }
+    QString GetObjectType() const override;
 };
 
 #endif // HOSTMETRICS_H

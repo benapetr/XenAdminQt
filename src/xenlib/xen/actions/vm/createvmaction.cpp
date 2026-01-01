@@ -26,7 +26,7 @@
  */
 
 #include "createvmaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../xenapi/xenapi_VBD.h"
@@ -109,8 +109,8 @@ CreateVMAction::CreateVMAction(XenConnection* connection,
 
 void CreateVMAction::run()
 {
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    XenAPI::Session* sess = session();
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;

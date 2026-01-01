@@ -30,9 +30,11 @@
 
 #include <QWidget>
 #include <QVariantMap>
+#include <QSharedPointer>
 
-class XenLib;
+class XenConnection;
 class XenRpcAPI;
+class XenObject;
 
 /**
  * Base class for all tab pages in XenAdmin Qt.
@@ -44,65 +46,73 @@ class BaseTabPage : public QWidget
 {
     Q_OBJECT
 
-public:
-    explicit BaseTabPage(QWidget* parent = nullptr);
-    virtual ~BaseTabPage();
+    public:
+        explicit BaseTabPage(QWidget* parent = nullptr);
+        virtual ~BaseTabPage();
 
-    /**
-     * Set the Xen object this tab page should display information about.
-     * @param objectType The type of object ("vm", "host", "pool", "sr", "network", etc.)
-     * @param objectRef The object reference from XenAPI
-     * @param objectData Complete object data as a QVariantMap
-     */
-    virtual void setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
+        /**
+         * Set the Xen object this tab page should display information about.
+         * DEPRECATED
+         * @param objectType The type of object ("vm", "host", "pool", "sr", "network", etc.)
+         * @param objectRef The object reference from XenAPI
+         * @param objectData Complete object data as a QVariantMap
+         */
+        virtual void SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
 
-    /**
-     * Set the XenLib for this tab page.
-     * This allows tab pages to access XenAPI and make API calls.
-     */
-    virtual void setXenLib(XenLib* xenLib);
+        /**
+         * Set the XenLib object for this tab page
+         */
+        virtual void SetObject(QSharedPointer<XenObject> object);
 
-    /**
-     * Called when the tab page becomes visible.
-     * Override to implement lazy loading or start updates.
-     */
-    virtual void onPageShown();
+        /**
+         * Called when the tab page becomes visible.
+         * Override to implement lazy loading or start updates.
+         */
+        virtual void OnPageShown();
 
-    /**
-     * Called when the tab page is hidden.
-     * Override to stop updates or clean up resources.
-     */
-    virtual void onPageHidden();
+        /**
+         * Called when the tab page is hidden.
+         * Override to stop updates or clean up resources.
+         */
+        virtual void OnPageHidden();
 
-    /**
-     * Get the title for this tab page.
-     */
-    virtual QString tabTitle() const = 0;
+        /**
+         * Get the title for this tab page.
+         */
+        virtual QString GetTitle() const = 0;
 
-    /**
-     * Get the help ID for this tab page.
-     */
-    virtual QString helpID() const
-    {
-        return "";
-    }
+        /**
+         * Get the help ID for this tab page.
+         */
+        virtual QString HelpID() const
+        {
+            return "";
+        }
 
-    /**
-     * Check if this tab page is applicable for the given object type.
-     */
-    virtual bool isApplicableForObjectType(const QString& objectType) const = 0;
+        /**
+         * Check if this tab page is applicable for the given object type.
+         */
+        virtual bool IsApplicableForObjectType(const QString& objectType) const = 0;
 
-protected:
-    QString m_objectType;
-    QString m_objectRef;
-    QVariantMap m_objectData;
-    XenLib* m_xenLib;
+    protected:
+        QString m_objectType;
+        QString m_objectRef;
+        QSharedPointer<XenObject> m_object;
+        QVariantMap m_objectData;
+        XenConnection* m_connection = nullptr;
 
-    /**
-     * Refresh the tab page content with current object data.
-     * Override to implement tab-specific display logic.
-     */
-    virtual void refreshContent();
+        /**
+         * Refresh the tab page content with current object data.
+         * Override to implement tab-specific display logic.
+         */
+        virtual void refreshContent();
+
+        //! Called before object is replaced while old refs to old connection still exist
+        //! tabs that created some cache connections should use this to remove them
+        virtual void removeObject();
+
+        //! Refresh all signals when object changes
+        virtual void updateObject();
 };
 
 #endif // BASETABPAGE_H

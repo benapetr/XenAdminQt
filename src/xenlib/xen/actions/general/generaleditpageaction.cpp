@@ -26,10 +26,12 @@
  */
 
 #include "generaleditpageaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../api.h"
 #include <QDebug>
+
+using namespace XenAPI;
 
 GeneralEditPageAction::GeneralEditPageAction(XenConnection* connection,
                                              const QString& objectRef,
@@ -170,8 +172,8 @@ void GeneralEditPageAction::setFolderPath(const QString& folderPath)
     // - Move: Sets other_config["folder"] to new path
     // - Unfolder: Removes other_config["folder"] key
 
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    Session* sess = session();
+    if (!sess || !sess->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
     }
@@ -201,7 +203,7 @@ void GeneralEditPageAction::setFolderPath(const QString& folderPath)
     // Execute API call
     XenRpcAPI api(sess);
     QByteArray request = api.buildJsonRpcCall(method, params);
-    QByteArray response = connection()->sendRequest(request);
+    QByteArray response = connection()->SendRequest(request);
 
     // Parse response (will throw on error)
     api.parseJsonRpcResponse(response);
@@ -212,8 +214,8 @@ void GeneralEditPageAction::removeTag(const QString& tag)
     // C# equivalent: Tags.RemoveTag(session, o, tag)
     // Implementation: o.Do("remove_tags", session, o.opaque_ref, tag);
 
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    Session* sess = session();
+    if (!sess || !sess->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
     }
@@ -225,7 +227,7 @@ void GeneralEditPageAction::removeTag(const QString& tag)
 
     XenRpcAPI api(sess);
     QByteArray request = api.buildJsonRpcCall(method, params);
-    QByteArray response = connection()->sendRequest(request);
+    QByteArray response = connection()->SendRequest(request);
 
     // Parse response (will throw on error)
     api.parseJsonRpcResponse(response);
@@ -236,8 +238,8 @@ void GeneralEditPageAction::addTag(const QString& tag)
     // C# equivalent: Tags.AddTag(session, o, tag)
     // Implementation: o.Do("add_tags", session, o.opaque_ref, tag);
 
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    Session* sess = session();
+    if (!sess || !sess->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
     }
@@ -249,7 +251,7 @@ void GeneralEditPageAction::addTag(const QString& tag)
 
     XenRpcAPI api(sess);
     QByteArray request = api.buildJsonRpcCall(method, params);
-    QByteArray response = connection()->sendRequest(request);
+    QByteArray response = connection()->SendRequest(request);
 
     // Parse response (will throw on error)
     api.parseJsonRpcResponse(response);

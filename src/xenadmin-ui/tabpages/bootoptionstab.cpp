@@ -129,9 +129,9 @@ void BootOptionsTab::createUI()
     mainLayout->addStretch();
 }
 
-void BootOptionsTab::setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void BootOptionsTab::SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
 {
-    BaseTabPage::setXenObject(objectType, objectRef, objectData);
+    BaseTabPage::SetXenObject(conn, objectType, objectRef, objectData);
 
     this->m_vmRef = objectRef;
     this->m_vmData = objectData;

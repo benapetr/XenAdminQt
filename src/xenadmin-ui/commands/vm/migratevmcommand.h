@@ -28,9 +28,9 @@
 #ifndef MIGRATEVMCOMMAND_H
 #define MIGRATEVMCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
-class MigrateVMCommand : public Command
+class MigrateVMCommand : public VMCommand
 {
     Q_OBJECT
 
@@ -38,16 +38,13 @@ class MigrateVMCommand : public Command
         explicit MigrateVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
     private:
-        QString getSelectedVMRef() const;
-        QString getSelectedVMName() const;
-        bool isVMRunning(const QString& vmRef) const;
         QStringList getAvailableHosts() const;
-        QString getCurrentHostRef(const QString& vmRef) const;
+        QString getCurrentHostRef() const;
 };
 
 #endif // MIGRATEVMCOMMAND_H

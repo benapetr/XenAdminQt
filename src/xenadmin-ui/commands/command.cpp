@@ -27,23 +27,28 @@
 
 #include "command.h"
 #include "../mainwindow.h"
-#include "xenlib.h"
+#include "xenlib/xenlib.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/network/connection.h"
 #include <QTreeWidget>
 #include <QList>
 
-Command::Command(MainWindow* mainWindow, QObject* parent)
-    : QObject(parent), m_mainWindow(mainWindow)
+Command::Command(MainWindow* mainWindow, QObject* parent) : QObject(parent), m_mainWindow(mainWindow)
 {
 }
 
-Command::Command(MainWindow* mainWindow, const QStringList& selection, QObject* parent)
-    : QObject(parent), m_mainWindow(mainWindow), m_selection(selection)
+Command::Command(MainWindow* mainWindow, const QStringList& selection, QObject* parent) : QObject(parent), m_mainWindow(mainWindow), m_selection(selection)
 {
 }
 
-XenLib* Command::xenLib() const
+QSharedPointer<XenObject> Command::GetObject() const
 {
-    return this->mainWindow()->xenLib();
+    QTreeWidgetItem* item = this->getSelectedItem();
+    if (!item)
+        return QSharedPointer<XenObject>();
+
+    QVariant data = item->data(0, Qt::UserRole);
+    return data.value<QSharedPointer<XenObject>>();
 }
 
 QTreeWidgetItem* Command::getSelectedItem() const
@@ -69,7 +74,12 @@ QString Command::getSelectedObjectRef() const
     if (!item)
         return QString();
 
-    return item->data(0, Qt::UserRole).toString();
+    QVariant data = item->data(0, Qt::UserRole);
+    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+    if (obj)
+        return obj->OpaqueRef();
+    
+    return QString();
 }
 
 QString Command::getSelectedObjectName() const
@@ -87,5 +97,17 @@ QString Command::getSelectedObjectType() const
     if (!item)
         return QString();
 
-    return item->data(0, Qt::UserRole + 1).toString();
+    QVariant data = item->data(0, Qt::UserRole);
+    if (data.canConvert<QSharedPointer<XenObject>>())
+    {
+        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+        if (obj)
+            return obj->GetObjectType();
+    }
+    else if (data.canConvert<XenConnection*>())
+    {
+        return "disconnected_host";
+    }
+    
+    return QString();
 }

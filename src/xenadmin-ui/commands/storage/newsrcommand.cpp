@@ -28,24 +28,21 @@
 #include "newsrcommand.h"
 #include <QDebug>
 #include "../../mainwindow.h"
-#include <QDebug>
 #include "../../dialogs/newsrwizard.h"
-#include <QDebug>
-#include "xenlib.h"
-#include <QDebug>
+#include "xen/xenobject.h"
+#include "xen/network/connection.h"
 #include <QtWidgets>
 
-NewSRCommand::NewSRCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+NewSRCommand::NewSRCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
     qDebug() << "NewSRCommand: Created";
 }
 
-void NewSRCommand::run()
+void NewSRCommand::Run()
 {
     qDebug() << "NewSRCommand: Executing New Storage Repository command";
 
-    if (!canRun())
+    if (!this->CanRun())
     {
         qWarning() << "NewSRCommand: Cannot execute - requirements not met";
         QMessageBox::warning(nullptr, tr("Cannot Create Storage Repository"),
@@ -54,17 +51,19 @@ void NewSRCommand::run()
         return;
     }
 
-    showNewSRWizard();
+    this->showNewSRWizard();
 }
 
-bool NewSRCommand::canRun() const
+bool NewSRCommand::CanRun() const
 {
     // Match C# NewSRCommand::CanRunCore logic:
     // - Must have a host or pool connection
     // - Connection must be active
     // - Host (if selected) must not have active host actions
 
-    if (!mainWindow() || !xenLib() || !xenLib()->isConnected())
+    QSharedPointer<XenObject> ob = this->GetObject();
+
+    if (!mainWindow() || !ob || !ob->GetConnection()->IsConnected())
         return false;
 
     QString objectType = getSelectedObjectType();
@@ -78,7 +77,7 @@ bool NewSRCommand::canRun() const
     return true;
 }
 
-QString NewSRCommand::menuText() const
+QString NewSRCommand::MenuText() const
 {
     return tr("New Storage Repository...");
 }
@@ -93,7 +92,9 @@ void NewSRCommand::showNewSRWizard()
     // - If accepted, SR was successfully created (wizard shows progress dialog)
     // - If rejected, user cancelled
 
-    NewSRWizard wizard(mainWindow());
+    QSharedPointer<XenObject> ob = this->GetObject();
+    XenConnection* connection = ob ? ob->GetConnection() : nullptr;
+    NewSRWizard wizard(connection, mainWindow());
 
     if (wizard.exec() == QDialog::Accepted)
     {

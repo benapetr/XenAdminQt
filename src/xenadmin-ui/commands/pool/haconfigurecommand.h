@@ -28,9 +28,9 @@
 #ifndef HACONFIGURECOMMAND_H
 #define HACONFIGURECOMMAND_H
 
-#include "../command.h"
+#include "poolcommand.h"
 
-class HAConfigureCommand : public Command
+class HAConfigureCommand : public PoolCommand
 {
     Q_OBJECT
 
@@ -38,12 +38,11 @@ public:
     explicit HAConfigureCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
     // Inherited from Command
-    bool canRun() const override;
-    void run() override;
-    QString menuText() const override;
+    bool CanRun() const override;
+    void Run() override;
+    QString MenuText() const override;
 
 private:
-    QString getSelectedPoolRef() const;
     bool isPoolConnected() const;
     bool hasCoordinator() const;
     bool isPoolLocked() const;

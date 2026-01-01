@@ -28,7 +28,7 @@
 #ifndef HOSTMAINTENANCEMODECOMMAND_H
 #define HOSTMAINTENANCEMODECOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
 /**
  * @brief Command to enter/exit host maintenance mode
@@ -36,7 +36,7 @@
  * Similar to the original C# HostMaintenanceModeCommand, this handles
  * putting hosts into and out of maintenance mode.
  */
-class HostMaintenanceModeCommand : public Command
+class HostMaintenanceModeCommand : public HostCommand
 {
     Q_OBJECT
 
@@ -52,14 +52,12 @@ class HostMaintenanceModeCommand : public Command
         HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode = true, QObject* parent = nullptr);
 
         // Command interface
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
     private:
         bool m_enterMode; // true = enter maintenance mode, false = exit maintenance mode
-
-        bool isHostEnabled() const;
         bool isHostInMaintenanceMode() const;
 };
 

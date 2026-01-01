@@ -26,54 +26,46 @@
  */
 
 #include "activatevbdcommand.h"
-#include "../../../xenlib/xencache.h"
-#include "../../../xenlib/xenlib.h"
-#include "../../../xenlib/xen/connection.h"
-#include "../../../xenlib/xen/session.h"
-#include "../../../xenlib/xen/xenapi/xenapi_VBD.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/vbd.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/xenapi/xenapi_VBD.h"
 #include "../../mainwindow.h"
 #include <QMessageBox>
 #include <QDebug>
 
-ActivateVBDCommand::ActivateVBDCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+ActivateVBDCommand::ActivateVBDCommand(MainWindow* mainWindow, QObject* parent) : VBDCommand(mainWindow, parent)
 {
 }
 
-QString ActivateVBDCommand::menuText() const
+QString ActivateVBDCommand::MenuText() const
 {
     return "Activate Virtual Disk";
 }
 
-bool ActivateVBDCommand::canRun() const
+bool ActivateVBDCommand::CanRun() const
 {
-    if (getSelectedObjectType() != "vbd")
-    {
+    QSharedPointer<VBD> vbd = this->getVBD();
+    if (!vbd || !vbd->IsValid())
         return false;
-    }
 
-    QString vbdRef = getSelectedObjectRef();
-    if (vbdRef.isEmpty())
-    {
-        return false;
-    }
-
-    return canRunVBD(vbdRef);
+    return this->canRunVBD(vbd->OpaqueRef());
 }
 
 bool ActivateVBDCommand::canRunVBD(const QString& vbdRef) const
 {
-    XenCache* cache = mainWindow()->xenLib()->getCache();
-    if (!cache)
-    {
+    QSharedPointer<VBD> vbd = this->getVBD();
+    if (!vbd || !vbd->IsValid())
         return false;
-    }
+
+    XenCache* cache = vbd->GetConnection()->GetCache();
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
-    {
         return false;
-    }
 
     // Get VM
     QString vmRef = vbdData.value("VM").toString();
@@ -130,19 +122,15 @@ bool ActivateVBDCommand::canRunVBD(const QString& vbdRef) const
     return true;
 }
 
-QString ActivateVBDCommand::getCantRunReasonVBD(const QString& vbdRef) const
+QString ActivateVBDCommand::getCantRunReasonVBD(QSharedPointer<VBD> vbd) const
 {
-    XenCache* cache = mainWindow()->xenLib()->getCache();
-    if (!cache)
-    {
-        return "Cache not available";
-    }
-
-    QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-    if (vbdData.isEmpty())
+    if (!vbd || !vbd->IsConnected())
     {
         return "VBD not found";
     }
+
+    XenCache* cache = vbd->GetConnection()->GetCache();
+    QVariantMap vbdData = vbd->GetData();
 
     // Get VM
     QString vmRef = vbdData.value("VM").toString();
@@ -219,25 +207,18 @@ bool ActivateVBDCommand::areIODriversNeededAndMissing(const QVariantMap& vmData)
     return false;
 }
 
-void ActivateVBDCommand::run()
+void ActivateVBDCommand::Run()
 {
-    QString vbdRef = getSelectedObjectRef();
-    if (vbdRef.isEmpty())
-    {
+    QSharedPointer<VBD> vbd = this->getVBD();
+    if (!vbd || !vbd->IsValid())
         return;
-    }
 
-    XenCache* cache = mainWindow()->xenLib()->getCache();
-    if (!cache)
-    {
-        return;
-    }
+    QString vbdRef = vbd->OpaqueRef();
+    XenCache* cache = vbd->GetConnection()->GetCache();
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
-    {
         return;
-    }
 
     // Get VDI and VM names for status message
     QString vdiRef = vbdData.value("VDI").toString();
@@ -252,15 +233,15 @@ void ActivateVBDCommand::run()
     // Execute plug operation directly (matches C# DelegatedAsyncAction pattern)
     try
     {
-        XenAPI::VBD::plug(mainWindow()->xenLib()->getConnection()->getSession(), vbdRef);
+        XenAPI::VBD::plug(vbd->GetConnection()->GetSession(), vbdRef);
 
-        mainWindow()->showStatusMessage(
+        this->mainWindow()->showStatusMessage(
             QString("Successfully activated virtual disk '%1' on VM '%2'").arg(vdiName, vmName),
             5000);
     } catch (const std::exception& e)
     {
         QMessageBox::warning(
-            mainWindow(),
+            this->mainWindow(),
             "Activate Virtual Disk Failed",
             QString("Failed to activate virtual disk '%1' on VM '%2': %3")
                 .arg(vdiName, vmName, e.what()));

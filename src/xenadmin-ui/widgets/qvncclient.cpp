@@ -168,164 +168,162 @@ void QVncClient::onSocketReadyRead()
 
     while (!m_readBuffer.isEmpty())
     {
-        int consumed = 0;
-
         switch (m_state)
         {
-        case ProtocolVersion: {
-            if (m_readBuffer.size() < 12)
-                return;
+            case ProtocolVersion: {
+                if (m_readBuffer.size() < 12)
+                    return;
 
-            QString version = QString::fromLatin1(m_readBuffer.left(12));
-            qDebug() << "QVncClient: Server version:" << version;
+                QString version = QString::fromLatin1(m_readBuffer.left(12));
+                qDebug() << "QVncClient: Server version:" << version;
 
-            // Send our protocol version (RFB 003.008)
-            m_socket->write("RFB 003.008\n");
-            m_socket->flush();
+                // Send our protocol version (RFB 003.008)
+                m_socket->write("RFB 003.008\n");
+                m_socket->flush();
 
-            m_readBuffer.remove(0, 12);
-            m_state = SecurityHandshake;
-            break;
-        }
-
-        case SecurityHandshake: {
-            if (m_readBuffer.size() < 1)
-                return;
-
-            quint8 securityTypeCount = (quint8) m_readBuffer.at(0);
-            if (m_readBuffer.size() < 1 + securityTypeCount)
-                return;
-
-            qDebug() << "QVncClient: Security types:" << securityTypeCount;
-
-            // Look for security types (1 = None, 2 = VNC Authentication)
-            bool foundNone = false;
-            bool foundVNC = false;
-
-            for (int i = 0; i < securityTypeCount; i++)
-            {
-                quint8 secType = (quint8) m_readBuffer.at(1 + i);
-                qDebug() << "QVncClient: Security type:" << secType;
-                if (secType == 1)
-                    foundNone = true;
-                if (secType == 2)
-                    foundVNC = true;
+                m_readBuffer.remove(0, 12);
+                m_state = SecurityHandshake;
+                break;
             }
 
-            m_readBuffer.remove(0, 1 + securityTypeCount);
+            case SecurityHandshake: {
+                if (m_readBuffer.size() < 1)
+                    return;
 
-            // Choose security type
-            if (!m_password.isEmpty() && foundVNC)
-            {
-                qDebug() << "QVncClient: Using VNC authentication";
-                writeU8(2); // VNC Authentication
-                m_socket->flush();
-                m_state = Authentication;
-            } else if (foundNone)
-            {
-                qDebug() << "QVncClient: Using no authentication";
-                writeU8(1); // None
+                quint8 securityTypeCount = (quint8) m_readBuffer.at(0);
+                if (m_readBuffer.size() < 1 + securityTypeCount)
+                    return;
+
+                qDebug() << "QVncClient: Security types:" << securityTypeCount;
+
+                // Look for security types (1 = None, 2 = VNC Authentication)
+                bool foundNone = false;
+                bool foundVNC = false;
+
+                for (int i = 0; i < securityTypeCount; i++)
+                {
+                    quint8 secType = (quint8) m_readBuffer.at(1 + i);
+                    qDebug() << "QVncClient: Security type:" << secType;
+                    if (secType == 1)
+                        foundNone = true;
+                    if (secType == 2)
+                        foundVNC = true;
+                }
+
+                m_readBuffer.remove(0, 1 + securityTypeCount);
+
+                // Choose security type
+                if (!m_password.isEmpty() && foundVNC)
+                {
+                    qDebug() << "QVncClient: Using VNC authentication";
+                    writeU8(2); // VNC Authentication
+                    m_socket->flush();
+                    m_state = Authentication;
+                } else if (foundNone)
+                {
+                    qDebug() << "QVncClient: Using no authentication";
+                    writeU8(1); // None
+                    m_socket->flush();
+                    m_state = SecurityResult;
+                } else
+                {
+                    emit connectionError("No supported security type found");
+                    disconnectFromHost();
+                    return;
+                }
+                break;
+            }
+
+            case Authentication: {
+                // VNC Authentication with DES (simplified - real implementation needs proper DES)
+                if (m_readBuffer.size() < 16)
+                    return;
+
+                QByteArray challenge = m_readBuffer.left(16);
+                m_readBuffer.remove(0, 16);
+
+                // For now, just send the password padded/truncated to 8 bytes
+                // Real VNC auth requires DES encryption
+                QByteArray response(16, 0);
+                QByteArray pwd = m_password.toLatin1();
+                pwd.resize(8);
+
+                // This is a placeholder - proper DES encryption needed for production
+                for (int i = 0; i < 16; i++)
+                {
+                    response[i] = challenge[i] ^ pwd[i % 8];
+                }
+
+                m_socket->write(response);
                 m_socket->flush();
                 m_state = SecurityResult;
-            } else
-            {
-                emit connectionError("No supported security type found");
-                disconnectFromHost();
-                return;
-            }
-            break;
-        }
-
-        case Authentication: {
-            // VNC Authentication with DES (simplified - real implementation needs proper DES)
-            if (m_readBuffer.size() < 16)
-                return;
-
-            QByteArray challenge = m_readBuffer.left(16);
-            m_readBuffer.remove(0, 16);
-
-            // For now, just send the password padded/truncated to 8 bytes
-            // Real VNC auth requires DES encryption
-            QByteArray response(16, 0);
-            QByteArray pwd = m_password.toLatin1();
-            pwd.resize(8);
-
-            // This is a placeholder - proper DES encryption needed for production
-            for (int i = 0; i < 16; i++)
-            {
-                response[i] = challenge[i] ^ pwd[i % 8];
+                break;
             }
 
-            m_socket->write(response);
-            m_socket->flush();
-            m_state = SecurityResult;
-            break;
-        }
-
-        case SecurityResult: {
-            if (m_readBuffer.size() < 4)
-                return;
-
-            quint32 result = readU32();
-            qDebug() << "QVncClient: Security result:" << result;
-
-            if (result != 0)
-            {
-                // Authentication failed
+            case SecurityResult: {
                 if (m_readBuffer.size() < 4)
                     return;
-                quint32 reasonLength = readU32();
-                if (m_readBuffer.size() < (int) reasonLength)
+
+                quint32 result = readU32();
+                qDebug() << "QVncClient: Security result:" << result;
+
+                if (result != 0)
+                {
+                    // Authentication failed
+                    if (m_readBuffer.size() < 4)
+                        return;
+                    quint32 reasonLength = readU32();
+                    if (m_readBuffer.size() < (int) reasonLength)
+                        return;
+                    QString reason = QString::fromLatin1(m_readBuffer.left(reasonLength));
+                    m_readBuffer.remove(0, reasonLength);
+                    emit connectionError("Authentication failed: " + reason);
+                    disconnectFromHost();
                     return;
-                QString reason = QString::fromLatin1(m_readBuffer.left(reasonLength));
-                m_readBuffer.remove(0, reasonLength);
-                emit connectionError("Authentication failed: " + reason);
-                disconnectFromHost();
-                return;
+                }
+
+                // Send ClientInit
+                sendClientInit();
+                m_state = Initialization;
+                break;
             }
 
-            // Send ClientInit
-            sendClientInit();
-            m_state = Initialization;
-            break;
-        }
-
-        case Initialization: {
-            handleServerInit();
-            break;
-        }
-
-        case Normal: {
-            // Handle server messages
-            if (m_readBuffer.size() < 1)
-                return;
-
-            quint8 msgType = (quint8) m_readBuffer.at(0);
-
-            switch (msgType)
-            {
-            case 0: // FramebufferUpdate
-                handleFramebufferUpdate();
+            case Initialization: {
+                handleServerInit();
                 break;
-            case 1: // SetColorMapEntries
-                handleSetColorMapEntries();
+            }
+
+            case Normal: {
+                // Handle server messages
+                if (m_readBuffer.size() < 1)
+                    return;
+
+                quint8 msgType = (quint8) m_readBuffer.at(0);
+
+                switch (msgType)
+                {
+                case 0: // FramebufferUpdate
+                    handleFramebufferUpdate();
+                    break;
+                case 1: // SetColorMapEntries
+                    handleSetColorMapEntries();
+                    break;
+                case 2: // Bell
+                    handleBell();
+                    break;
+                case 3: // ServerCutText
+                    handleServerCutText();
+                    break;
+                default:
+                    qDebug() << "QVncClient: Unknown message type:" << msgType;
+                    m_readBuffer.remove(0, 1);
+                    break;
+                }
                 break;
-            case 2: // Bell
-                handleBell();
-                break;
-            case 3: // ServerCutText
-                handleServerCutText();
-                break;
+            }
+
             default:
-                qDebug() << "QVncClient: Unknown message type:" << msgType;
-                m_readBuffer.remove(0, 1);
-                break;
-            }
-            break;
-        }
-
-        default:
-            return;
+                return;
         }
     }
 }

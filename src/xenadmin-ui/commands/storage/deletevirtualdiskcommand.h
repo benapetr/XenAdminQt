@@ -28,7 +28,7 @@
 #ifndef DELETEVIRTUALDISKCOMMAND_H
 #define DELETEVIRTUALDISKCOMMAND_H
 
-#include "../command.h"
+#include "vdicommand.h"
 
 /**
  * @brief DeleteVirtualDiskCommand - Delete virtual disk (VDI)
@@ -43,49 +43,31 @@
  *
  * Uses DestroyDiskAction which handles detach + destroy.
  */
-class DeleteVirtualDiskCommand : public Command
+class DeleteVirtualDiskCommand : public VDICommand
 {
     Q_OBJECT
 
     public:
         explicit DeleteVirtualDiskCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
     private:
         /**
-         * @brief Get selected VDI reference
-         * @return VDI opaque reference or empty string
-         */
-        QString getSelectedVDIRef() const;
-
-        /**
-         * @brief Get selected VDI name
-         * @return VDI name_label or empty string
-         */
-        QString getSelectedVDIName() const;
-
-        /**
-         * @brief Get VDI data from cache
-         * @return VDI data map
-         */
-        QVariantMap getSelectedVDIData() const;
-
-        /**
          * @brief Check if VDI can be deleted
-         * @param vdiData VDI data from cache
+         * @param vdi VDI data from cache
          * @return true if VDI can be deleted
          */
-        bool canVDIBeDeleted(const QVariantMap& vdiData) const;
+        bool canVDIBeDeleted(QSharedPointer<VDI> vdi) const;
 
         /**
          * @brief Get VDI type for display
-         * @param vdiData VDI data from cache
+         * @param vdi VDI data from cache
          * @return VDI type string ("Snapshot", "ISO", "System Disk", "Virtual Disk")
          */
-        QString getVDIType(const QVariantMap& vdiData) const;
+        QString getVDIType(QSharedPointer<VDI> vdi) const;
 
         /**
          * @brief Get confirmation dialog text based on VDI type

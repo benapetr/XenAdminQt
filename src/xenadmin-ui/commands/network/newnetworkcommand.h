@@ -34,15 +34,15 @@ class NewNetworkCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit NewNetworkCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit NewNetworkCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    void run() override;
-    bool canRun() const override;
-    QString menuText() const override;
+        void Run() override;
+        bool CanRun() const override;
+        QString MenuText() const override;
 
-private:
-    void showNewNetworkWizard();
+    private:
+        void showNewNetworkWizard();
 };
 
 #endif // NEWNETWORKCOMMAND_H

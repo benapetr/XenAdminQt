@@ -28,7 +28,7 @@
 #include "logdestinationeditpage.h"
 #include "ui_logdestinationeditpage.h"
 #include "../../xenlib/xen/asyncoperation.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xen/session.h"
 #include "../../xenlib/xen/api.h"
 #include <QIcon>
@@ -210,7 +210,7 @@ AsyncOperation* LogDestinationEditPage::saveSettings()
                 params << session()->getSessionId() << m_hostRef;
 
                 QByteArray request = api.buildJsonRpcCall("host.syslog_reconfigure", params);
-                QByteArray response = connection()->sendRequest(request);
+                QByteArray response = connection()->SendRequest(request);
 
                 // Parse response to check for errors
                 api.parseJsonRpcResponse(response);

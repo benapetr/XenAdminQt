@@ -27,8 +27,7 @@
 
 #include "networkingpropertiesdialog.h"
 #include "ui_networkingpropertiesdialog.h"
-#include "xenlib.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/session.h"
 #include "xen/xenapi/xenapi_PIF.h"
 #include "xencache.h"
@@ -38,8 +37,8 @@
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 
-NetworkingPropertiesDialog::NetworkingPropertiesDialog(XenLib* xenLib, const QString& pifRef, QWidget* parent)
-    : QDialog(parent), ui(new Ui::NetworkingPropertiesDialog), m_xenLib(xenLib), m_pifRef(pifRef)
+NetworkingPropertiesDialog::NetworkingPropertiesDialog(XenConnection* connection, const QString& pifRef, QWidget* parent)
+    : QDialog(parent), ui(new Ui::NetworkingPropertiesDialog), m_connection(connection), m_pifRef(pifRef)
 {
     ui->setupUi(this);
 
@@ -77,29 +76,29 @@ NetworkingPropertiesDialog::~NetworkingPropertiesDialog()
 
 void NetworkingPropertiesDialog::loadPIFData()
 {
-    if (!m_xenLib)
+    if (!this->m_connection || !this->m_connection->GetCache())
         return;
 
     // Get PIF data from cache
-    QVariant pifDataVar = m_xenLib->getCache()->ResolveObjectData("pif", m_pifRef);
+    QVariant pifDataVar = this->m_connection->GetCache()->ResolveObjectData("pif", this->m_pifRef);
     if (pifDataVar.isNull())
     {
         QMessageBox::warning(this, "Error", "Failed to load network interface data.");
         return;
     }
 
-    m_pifData = pifDataVar.value<QVariantMap>();
+    this->m_pifData = pifDataVar.value<QVariantMap>();
 
     // Display interface information
-    QString device = m_pifData.value("device").toString();
-    QString mac = m_pifData.value("MAC").toString();
-    QString networkRef = m_pifData.value("network").toString();
+    QString device = this->m_pifData.value("device").toString();
+    QString mac = this->m_pifData.value("MAC").toString();
+    QString networkRef = this->m_pifData.value("network").toString();
 
     ui->labelDeviceValue->setText(device);
     ui->labelMACValue->setText(mac);
 
     // Get network name
-    QVariant networkDataVar = m_xenLib->getCache()->ResolveObjectData("network", networkRef);
+    QVariant networkDataVar = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
     if (!networkDataVar.isNull())
     {
         QVariantMap networkData = networkDataVar.value<QVariantMap>();
@@ -108,7 +107,7 @@ void NetworkingPropertiesDialog::loadPIFData()
     }
 
     // Load IP configuration
-    QString ipConfigMode = m_pifData.value("ip_configuration_mode").toString();
+    QString ipConfigMode = this->m_pifData.value("ip_configuration_mode").toString();
     bool isDHCP = (ipConfigMode == "DHCP" || ipConfigMode == "dhcp");
 
     if (isDHCP)
@@ -119,9 +118,9 @@ void NetworkingPropertiesDialog::loadPIFData()
         ui->radioButtonStatic->setChecked(true);
 
         // Load static IP settings
-        QString ip = m_pifData.value("IP").toString();
-        QString netmask = m_pifData.value("netmask").toString();
-        QString gateway = m_pifData.value("gateway").toString();
+        QString ip = this->m_pifData.value("IP").toString();
+        QString netmask = this->m_pifData.value("netmask").toString();
+        QString gateway = this->m_pifData.value("gateway").toString();
 
         ui->lineEditIPAddress->setText(ip);
         ui->lineEditSubnetMask->setText(netmask);
@@ -129,7 +128,7 @@ void NetworkingPropertiesDialog::loadPIFData()
     }
 
     // Load DNS settings
-    QString dnsString = m_pifData.value("DNS").toString();
+    QString dnsString = this->m_pifData.value("DNS").toString();
     QStringList dnsList = dnsString.split(',', Qt::SkipEmptyParts);
 
     if (dnsList.size() > 0)
@@ -232,12 +231,11 @@ bool NetworkingPropertiesDialog::validateSubnetMask(const QString& mask)
 
 void NetworkingPropertiesDialog::applyChanges()
 {
-    if (!m_xenLib)
+    if (!this->m_connection)
         return;
 
-    XenConnection* connection = m_xenLib->getConnection();
-    XenSession* session = connection ? connection->getSession() : nullptr;
-    if (!session || !session->isLoggedIn())
+    XenAPI::Session* session = this->m_connection->GetSession();
+    if (!session || !session->IsLoggedIn())
     {
         QMessageBox::critical(this, "Error",
                               "No active session. Please reconnect and try again.");
@@ -251,7 +249,7 @@ void NetworkingPropertiesDialog::applyChanges()
         // Configure for DHCP
         try
         {
-            XenAPI::PIF::reconfigure_ip(session, m_pifRef, "DHCP", "", "", "", "");
+            XenAPI::PIF::reconfigure_ip(session, this->m_pifRef, "DHCP", "", "", "", "");
             success = true;
         }
         catch (const std::exception& ex)
@@ -279,7 +277,7 @@ void NetworkingPropertiesDialog::applyChanges()
 
         try
         {
-            XenAPI::PIF::reconfigure_ip(session, m_pifRef, "Static", ip, netmask, gateway, dns);
+            XenAPI::PIF::reconfigure_ip(session, this->m_pifRef, "Static", ip, netmask, gateway, dns);
             success = true;
         }
         catch (const std::exception& ex)

@@ -28,9 +28,9 @@
 #ifndef HADISABLECOMMAND_H
 #define HADISABLECOMMAND_H
 
-#include "../command.h"
+#include "poolcommand.h"
 
-class HADisableCommand : public Command
+class HADisableCommand : public PoolCommand
 {
     Q_OBJECT
 
@@ -38,13 +38,11 @@ public:
     explicit HADisableCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
     // Inherited from Command
-    bool canRun() const override;
-    void run() override;
-    QString menuText() const override;
+    bool CanRun() const override;
+    void Run() override;
+    QString MenuText() const override;
 
 private:
-    QString getSelectedPoolRef() const;
-    QString getSelectedPoolName() const;
     bool isPoolConnected() const;
     bool isHAEnabled() const;
 };

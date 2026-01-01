@@ -27,13 +27,15 @@
 
 #include "xenapi_Pool.h"
 #include "../api.h"
+#include "../jsonrpcclient.h"
+#include "../session.h"
 #include <stdexcept>
 
 namespace XenAPI
 {
-    QVariant Pool::get_all(XenSession* session)
+    QVariant Pool::get_all(Session* session)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -45,9 +47,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response);
     }
 
-    void Pool::set_default_SR(XenSession* session, const QString& pool, const QString& sr)
+    void Pool::set_default_SR(Session* session, const QString& pool, const QString& sr)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -59,9 +61,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    void Pool::set_suspend_image_SR(XenSession* session, const QString& pool, const QString& sr)
+    void Pool::set_suspend_image_SR(Session* session, const QString& pool, const QString& sr)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -73,9 +75,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    void Pool::set_crash_dump_SR(XenSession* session, const QString& pool, const QString& sr)
+    void Pool::set_crash_dump_SR(Session* session, const QString& pool, const QString& sr)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -87,9 +89,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    QString Pool::async_designate_new_master(XenSession* session, const QString& host)
+    QString Pool::async_designate_new_master(Session* session, const QString& host)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -101,9 +103,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    QString Pool::async_management_reconfigure(XenSession* session, const QString& network)
+    QString Pool::async_management_reconfigure(Session* session, const QString& network)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -115,9 +117,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    QVariantMap Pool::get_record(XenSession* session, const QString& pool)
+    QVariantMap Pool::get_record(Session* session, const QString& pool)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -129,9 +131,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toMap();
     }
 
-    QString Pool::get_master(XenSession* session, const QString& pool)
+    QString Pool::get_master(Session* session, const QString& pool)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -143,10 +145,10 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString Pool::async_join(XenSession* session, const QString& master_address,
+    QString Pool::async_join(Session* session, const QString& master_address,
                              const QString& master_username, const QString& master_password)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -158,9 +160,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    void Pool::eject(XenSession* session, const QString& host)
+    void Pool::eject(Session* session, const QString& host)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -171,9 +173,9 @@ namespace XenAPI
         session->sendApiRequest(request);
     }
 
-    void Pool::set_name_label(XenSession* session, const QString& pool, const QString& label)
+    void Pool::set_name_label(Session* session, const QString& pool, const QString& label)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -184,9 +186,9 @@ namespace XenAPI
         session->sendApiRequest(request);
     }
 
-    void Pool::set_name_description(XenSession* session, const QString& pool, const QString& description)
+    void Pool::set_name_description(Session* session, const QString& pool, const QString& description)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -197,9 +199,9 @@ namespace XenAPI
         session->sendApiRequest(request);
     }
 
-    void Pool::set_tags(XenSession* session, const QString& pool, const QStringList& tags)
+    void Pool::set_tags(Session* session, const QString& pool, const QStringList& tags)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -210,9 +212,9 @@ namespace XenAPI
         session->sendApiRequest(request);
     }
 
-    void Pool::set_migration_compression(XenSession* session, const QString& pool, bool enabled)
+    void Pool::set_migration_compression(Session* session, const QString& pool, bool enabled)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -220,13 +222,86 @@ namespace XenAPI
 
         XenRpcAPI api(session);
         QByteArray request = api.buildJsonRpcCall("pool.set_migration_compression", params);
-        session->sendApiRequest(request);
+        QByteArray response = session->sendApiRequest(request);
+        if (response.isEmpty())
+            throw std::runtime_error("Empty response from server");
+        api.parseJsonRpcResponse(response); // Check for errors
+        const QString error = Xen::JsonRpcClient::lastError();
+        if (!error.isEmpty())
+            throw std::runtime_error(error.toStdString());
     }
 
-    QString Pool::async_enable_ha(XenSession* session, const QStringList& heartbeat_srs,
+    void Pool::set_live_patching_disabled(Session* session, const QString& pool, bool value)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pool << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("pool.set_live_patching_disabled", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response); // Check for errors
+    }
+
+    void Pool::set_igmp_snooping_enabled(Session* session, const QString& pool, bool value)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pool << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("pool.set_igmp_snooping_enabled", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response); // Check for errors
+    }
+
+    void Pool::enable_ssl_legacy(Session* session, const QString& pool)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pool;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("pool.enable_ssl_legacy", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response); // Check for errors
+    }
+
+    void Pool::disable_ssl_legacy(Session* session, const QString& pool)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pool;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("pool.disable_ssl_legacy", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response); // Check for errors
+    }
+
+    void Pool::set_ssl_legacy(Session* session, const QString& pool, bool enable)
+    {
+        if (enable)
+        {
+            Pool::enable_ssl_legacy(session, pool);
+        } else
+        {
+            Pool::disable_ssl_legacy(session, pool);
+        }
+    }
+
+    QString Pool::async_enable_ha(Session* session, const QStringList& heartbeat_srs,
                                   const QVariantMap& configuration)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -238,9 +313,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString Pool::async_disable_ha(XenSession* session)
+    QString Pool::async_disable_ha(Session* session)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -252,9 +327,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    void Pool::set_ha_host_failures_to_tolerate(XenSession* session, const QString& pool, qint64 value)
+    void Pool::set_ha_host_failures_to_tolerate(Session* session, const QString& pool, qint64 value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -265,9 +340,9 @@ namespace XenAPI
         session->sendApiRequest(request);
     }
 
-    qint64 Pool::ha_compute_max_host_failures_to_tolerate(XenSession* session)
+    qint64 Pool::ha_compute_max_host_failures_to_tolerate(Session* session)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -279,10 +354,10 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toLongLong();
     }
 
-    qint64 Pool::ha_compute_hypothetical_max_host_failures_to_tolerate(XenSession* session,
+    qint64 Pool::ha_compute_hypothetical_max_host_failures_to_tolerate(Session* session,
                                                                        const QVariantMap& configuration)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -294,9 +369,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toLongLong();
     }
 
-    void Pool::emergency_transition_to_master(XenSession* session)
+    void Pool::emergency_transition_to_master(Session* session)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -307,9 +382,9 @@ namespace XenAPI
         session->sendApiRequest(request);
     }
 
-    QString Pool::async_sync_database(XenSession* session)
+    QString Pool::async_sync_database(Session* session)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -321,9 +396,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    void Pool::rotate_secret(XenSession* session, const QString& pool)
+    void Pool::rotate_secret(Session* session, const QString& pool)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;

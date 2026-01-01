@@ -28,34 +28,33 @@
 #include "convertvmtotemplatecommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
-#include "xen/api.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/actions/vm/vmtotemplateaction.h"
-#include "xencache.h"
 #include <QMessageBox>
 
 ConvertVMToTemplateCommand::ConvertVMToTemplateCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VMCommand(mainWindow, parent)
 {
 }
 
-bool ConvertVMToTemplateCommand::canRun() const
+bool ConvertVMToTemplateCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
-    return this->canConvertToTemplate(vmRef);
+    return this->canConvertToTemplate();
 }
 
-void ConvertVMToTemplateCommand::run()
+void ConvertVMToTemplateCommand::Run()
 {
-    QString vmRef = this->getSelectedVMRef();
-    QString vmName = this->getSelectedVMName();
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
+        return;
 
-    if (vmRef.isEmpty() || vmName.isEmpty())
+    QString vmName = this->getSelectedVMName();
+    if (vmName.isEmpty())
         return;
 
     // Show confirmation dialog
@@ -71,21 +70,21 @@ void ConvertVMToTemplateCommand::run()
 
     if (reply == QMessageBox::Yes)
     {
-        // Get XenConnection from XenLib
-        XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-        if (!conn || !conn->isConnected())
+        // Get XenConnection from VM
+        XenConnection* conn = vm->GetConnection();
+        if (!conn || !conn->IsConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",
                                  "Not connected to XenServer");
             return;
         }
 
-        // Create VM object (lightweight wrapper)
-        VM* vm = new VM(conn, vmRef);
+        // Create VM object for action (action will own and delete it)
+        VM* vmForAction = new VM(conn, vm->OpaqueRef());
 
         // Create VMToTemplateAction (matches C# VMToTemplateAction pattern)
         // Action automatically sets other_config["instant"] = "true"
-        VMToTemplateAction* action = new VMToTemplateAction(conn, vm, this->mainWindow());
+        VMToTemplateAction* action = new VMToTemplateAction(conn, vmForAction, this->mainWindow());
 
         // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
         OperationManager::instance()->registerOperation(action);
@@ -112,41 +111,18 @@ void ConvertVMToTemplateCommand::run()
     }
 }
 
-QString ConvertVMToTemplateCommand::menuText() const
+QString ConvertVMToTemplateCommand::MenuText() const
 {
     return "Convert to Template";
 }
 
-QString ConvertVMToTemplateCommand::getSelectedVMRef() const
+bool ConvertVMToTemplateCommand::canConvertToTemplate() const
 {
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
+        return false;
 
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString ConvertVMToTemplateCommand::getSelectedVMName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return item->text(0);
-}
-
-bool ConvertVMToTemplateCommand::canConvertToTemplate(const QString& vmRef) const
-{
-    // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = vm->GetData();
 
     // Check if it's already a template
     bool isTemplate = vmData.value("is_a_template", false).toBool();
@@ -159,8 +135,7 @@ bool ConvertVMToTemplateCommand::canConvertToTemplate(const QString& vmRef) cons
         return false;
 
     // Check power state - must be halted
-    QString powerState = vmData.value("power_state", "Halted").toString();
-    if (powerState != "Halted")
+    if (vm->GetPowerState() != "Halted")
         return false;
 
     // Check if the operation is allowed

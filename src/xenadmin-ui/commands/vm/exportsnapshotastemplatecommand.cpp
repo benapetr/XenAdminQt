@@ -27,8 +27,9 @@
 
 #include "exportsnapshotastemplatecommand.h"
 #include "exportvmcommand.h"
-#include "../../../xenlib/xenlib.h"
+#include "../../../xenlib/xen/xenobject.h"
 #include "../../../xenlib/xencache.h"
+#include "../../../xenlib/xen/network/connection.h"
 #include "../../mainwindow.h"
 #include <QMessageBox>
 
@@ -37,7 +38,7 @@ ExportSnapshotAsTemplateCommand::ExportSnapshotAsTemplateCommand(MainWindow* mai
 {
 }
 
-bool ExportSnapshotAsTemplateCommand::canRun() const
+bool ExportSnapshotAsTemplateCommand::CanRun() const
 {
     QString vmRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -47,8 +48,17 @@ bool ExportSnapshotAsTemplateCommand::canRun() const
         return false;
     }
 
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+        return false;
+
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
     // Get VM data from cache
-    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
     {
         return false;
@@ -59,7 +69,7 @@ bool ExportSnapshotAsTemplateCommand::canRun() const
     return isSnapshot;
 }
 
-void ExportSnapshotAsTemplateCommand::run()
+void ExportSnapshotAsTemplateCommand::Run()
 {
     QString vmRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -69,8 +79,17 @@ void ExportSnapshotAsTemplateCommand::run()
         return;
     }
 
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+        return;
+
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return;
+
     // Get VM data to verify it's a snapshot
-    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
     {
         return;
@@ -86,11 +105,11 @@ void ExportSnapshotAsTemplateCommand::run()
 
     // Reuse ExportVMCommand - snapshots are exported just like VMs
     ExportVMCommand* exportCmd = new ExportVMCommand(this->mainWindow(), this);
-    exportCmd->run();
+    exportCmd->Run();
     exportCmd->deleteLater();
 }
 
-QString ExportSnapshotAsTemplateCommand::menuText() const
+QString ExportSnapshotAsTemplateCommand::MenuText() const
 {
     return tr("E&xport Snapshot as Template...");
 }

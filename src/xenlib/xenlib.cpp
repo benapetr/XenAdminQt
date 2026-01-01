@@ -26,7 +26,7 @@
  */
 
 #include "xenlib.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/session.h"
 #include "xen/api.h"
 #include "xen/xenapi/xenapi_VBD.h"
@@ -37,11 +37,12 @@
 #include "xen/xenapi/xenapi_SR.h"
 #include "xen/xenapi/xenapi_Network.h"
 #include "xen/asyncoperations.h"
-#include "xen/certificatemanager.h"
+#include "xen/network/certificatemanager.h"
 #include "xen/eventpoller.h"
 #include "xencache.h"
+#include "xen/failure.h"
 #include "metricupdater.h"
-#include "collections/connectionsmanager.h"
+#include "xen/network/connectionsmanager.h"
 #include "utils/misc.h"
 #include <QtCore/QHash>
 #include <QtCore/QJsonDocument>
@@ -86,7 +87,7 @@ class XenLib::Private
         bool isRedirecting = false; // True when handling HOST_IS_SLAVE redirect
 
         XenConnection* connection = nullptr;
-        XenSession* session = nullptr;
+        XenAPI::Session* session = nullptr;
         XenRpcAPI* api = nullptr;
         XenAsyncOperations* asyncOps = nullptr;
         XenCertificateManager* certManager = nullptr;
@@ -111,10 +112,12 @@ XenLib::XenLib(QObject* parent) : QObject(parent), d(new Private)
     this->d->connection->setCertificateManager(this->d->certManager);
     // Set xenLib property so XenObject subclasses can access cache
     this->d->connection->setProperty("xenLib", QVariant::fromValue(this));
-    this->d->session = new XenSession(this->d->connection, this->d->connection);
+    this->d->session = new XenAPI::Session(this->d->connection, this->d->connection);
     this->d->api = new XenRpcAPI(this->d->session, this);
     this->d->asyncOps = new XenAsyncOperations(this->d->session, this);
     this->d->metricUpdater = new MetricUpdater(this->d->connection, this);
+    if (this->d->connection)
+        this->d->connection->SetMetricUpdater(this->d->metricUpdater);
     // Cache now owned by XenConnection (matching C# architecture)
 
     // Create EventPoller on a dedicated thread to avoid blocking the UI with long-poll requests
@@ -129,15 +132,14 @@ XenLib::XenLib(QObject* parent) : QObject(parent), d(new Private)
     qDebug() << "XenLib: EventPoller created on dedicated thread";
 
     // Associate session with connection for heartbeat and other operations
-    this->d->connection->setSession(this->d->session);
+    this->d->connection->SetSession(this->d->session);
 
     this->setupConnections();
 }
 
 XenLib::~XenLib()
 {
-    this->cleanup();
-
+    return;
     // Explicitly destroy dependent objects in a safe order to avoid QObject
     // deleting already-freed children (e.g., session using connection).
     if (this->d->api)
@@ -182,29 +184,28 @@ void XenLib::setupConnections()
     // That signal means "TCP/SSL ready", not "logged in".
     // connectionStateChanged is emitted from handleLoginResult() after successful login.
 
-    connect(this->d->connection, &XenConnection::disconnected,
-            [this]() { this->handleConnectionStateChanged(false); });
-    connect(this->d->connection, &XenConnection::error, this, &XenLib::handleConnectionError);
+    //connect(this->d->connection, &XenConnection::disconnected,
+    //        [this]() { this->handleConnectionStateChanged(false); });
+    //connect(this->d->connection, &XenConnection::error, this, &XenLib::handleConnectionError);
 
     // Async API response signal
     connect(this->d->connection, &XenConnection::apiResponse, this, &XenLib::onConnectionApiResponse);
 
     // Session signals
-    connect(this->d->session, &XenSession::loginSuccessful,
+    /*connect(this->d->session, &XenAPI::Session::loginSuccessful,
             [this]() { this->handleLoginResult(true); });
-    connect(this->d->session, &XenSession::loginFailed,
+    connect(this->d->session, &XenAPI::Session::loginFailed,
             [this](const QString& reason) {
                 this->setError(reason);
                 this->handleLoginResult(false);
             });
-    connect(this->d->session, &XenSession::needsRedirectToMaster, this, &XenLib::onRedirectToMaster);
+    */
 
     // API signals
     connect(this->d->api, &XenRpcAPI::apiCallCompleted, this, &XenLib::handleApiCallResult);
     connect(this->d->api, &XenRpcAPI::apiCallFailed, this, &XenLib::handleApiCallError);
 
     // EventPoller signals
-    connect(this->d->eventPoller, &EventPoller::eventReceived, this, &XenLib::onEventReceived);
     connect(this->d->eventPoller, &EventPoller::cachePopulated, this, &XenLib::onCachePopulated);
     connect(this->d->eventPoller, &EventPoller::connectionLost, this, &XenLib::onEventPollerConnectionLost);
 
@@ -245,135 +246,115 @@ bool XenLib::initialize()
     return true;
 }
 
-void XenLib::cleanup()
-{
-    if (!this->d->initialized)
-    {
-        return;
-    }
-
-    this->disconnectFromServer();
-
-    // Stop EventPoller thread
-    if (this->d->eventPollerThread && this->d->eventPollerThread->isRunning())
-    {
-        qDebug() << "XenLib: Stopping EventPoller thread";
-        this->d->eventPollerThread->quit();
-        if (!this->d->eventPollerThread->wait(5000))
-        {
-            qWarning() << "XenLib: EventPoller thread did not stop in time, terminating";
-            this->d->eventPollerThread->terminate();
-            this->d->eventPollerThread->wait();
-        }
-
-        // Delete EventPoller (it's on the thread, so use deleteLater)
-        if (this->d->eventPoller)
-        {
-            this->d->eventPoller->deleteLater();
-            this->d->eventPoller = nullptr;
-        }
-    }
-
-    this->d->initialized = false;
-}
-
-bool XenLib::connectToServer(const QString& hostname, int port, const QString& username, const QString& password, bool useSSL)
-{
-    if (!this->d->initialized)
-    {
-        this->setError("XenLib not initialized");
-        return false;
-    }
-
-    this->clearError();
-
-    // Disconnect any existing connection
-    if (this->isConnected())
-        this->disconnectFromServer();
-
-    // Store credentials for login after TCP/SSL connection is established
-    this->d->pendingHostname = hostname;
-    this->d->pendingPort = port;
-    this->d->pendingUsername = username;
-    this->d->pendingPassword = password;
-
-    // Register connection with ConnectionsManager so tree builders can find it
-    ConnectionsManager* connMgr = ConnectionsManager::instance();
-    if (connMgr && !connMgr->containsConnection(this->d->connection))
-    {
-        connMgr->addConnection(this->d->connection);
-        qDebug() << "XenLib: Registered connection with ConnectionsManager";
-    }
-
-    // Connect the connection's signals to handle worker connection
-    connect(this->d->connection, &XenConnection::connected, this, &XenLib::onConnectionEstablished, Qt::UniqueConnection);
-    connect(this->d->connection, &XenConnection::error, this, &XenLib::onConnectionError, Qt::UniqueConnection);
-    connect(this->d->connection, &XenConnection::progressUpdate, this, &XenLib::onConnectionProgress, Qt::UniqueConnection);
-
-    // Start connection (worker thread handles TCP + SSL only, login happens in onConnectionEstablished)
-    if (!this->d->connection->connectToHost(hostname, port, username, password))
-    {
-        this->setError("Failed to initiate connection");
-        return false;
-    }
-
-    // Connection is in progress, will emit connectionStateChanged when complete
-    return true;
-}
-
-void XenLib::disconnectFromServer()
-{
-    // Stop event polling first
-    if (this->d->eventPoller)
-    {
-        qDebug() << "XenLib: Stopping EventPoller...";
-        this->d->eventPoller->stop();
-    }
-
-    if (this->d->session)
-    {
-        this->d->session->logout();
-    }
-
-    if (this->d->connection)
-    {
-        this->d->connection->disconnect();
-
-        // Unregister connection from ConnectionsManager
-        ConnectionsManager* connMgr = ConnectionsManager::instance();
-        if (connMgr && connMgr->containsConnection(this->d->connection))
-        {
-            connMgr->removeConnection(this->d->connection);
-            qDebug() << "XenLib: Unregistered connection from ConnectionsManager";
-        }
-    }
-
-    this->d->connected = false;
-    this->d->connectionInfo.clear();
-
-    emit this->connectionStateChanged(false);
-}
-
 bool XenLib::isConnected() const
 {
     return this->d->connected &&
-           this->d->connection && this->d->connection->isConnected() &&
-           this->d->session && this->d->session->isLoggedIn();
+           this->d->connection && this->d->connection->IsConnected() &&
+           this->d->session && this->d->session->IsLoggedIn();
 }
 
-XenRpcAPI* XenLib::getAPI() const
+void XenLib::setConnection(XenConnection* connection)
 {
-    return this->d->api;
-}
+    if (connection == this->d->connection)
+        return;
 
-XenConnection* XenLib::getConnection() const
-{
-    return this->d->connection;
-}
+    if (this->d->connection)
+        this->d->connection->disconnect(this);
 
-XenAsyncOperations* XenLib::getAsyncOperations() const
-{
-    return this->d->asyncOps;
+    if (this->d->session)
+    {
+        this->d->session->detachConnection();
+        this->d->session->deleteLater();
+        this->d->session = nullptr;
+    }
+
+    if (this->d->api)
+    {
+        this->d->api->deleteLater();
+        this->d->api = nullptr;
+    }
+
+    if (this->d->asyncOps)
+    {
+        this->d->asyncOps->deleteLater();
+        this->d->asyncOps = nullptr;
+    }
+
+    this->d->connection = connection;
+    if (!this->d->connection)
+        return;
+
+    this->d->connection->setParent(this);
+    this->d->connection->setProperty("xenLib", QVariant::fromValue(this));
+    this->d->connection->setCertificateManager(this->d->certManager);
+
+    if (this->d->metricUpdater)
+        this->d->metricUpdater->deleteLater();
+    this->d->metricUpdater = new MetricUpdater(this->d->connection, this);
+    if (this->d->connection)
+        this->d->connection->SetMetricUpdater(this->d->metricUpdater);
+
+    connect(this->d->connection, &XenConnection::disconnected,
+            [this]() { this->handleConnectionStateChanged(false); });
+    connect(this->d->connection, &XenConnection::error, this, &XenLib::handleConnectionError);
+    connect(this->d->connection, &XenConnection::connectionStateChanged, this, [this]() {
+        this->handleConnectionStateChanged(this->d->connection->IsConnectedNewFlow());
+    });
+    connect(this->d->connection, &XenConnection::connectionClosed, this, [this]() {
+        this->handleConnectionStateChanged(false);
+    });
+    connect(this->d->connection, &XenConnection::connectionLost, this, [this]() {
+        this->handleConnectionStateChanged(false);
+    });
+    connect(this->d->connection, &XenConnection::connectionResult, this, [this](bool connected, const QString& error) {
+        if (connected)
+        {
+            XenAPI::Session* session = this->d->connection->GetConnectSession();
+            if (session && session != this->d->session)
+            {
+                this->d->session = session;
+                this->d->connection->SetSession(session);
+
+                if (this->d->api)
+                    this->d->api->deleteLater();
+                this->d->api = new XenRpcAPI(this->d->session, this);
+                connect(this->d->api, &XenRpcAPI::apiCallCompleted, this, &XenLib::handleApiCallResult);
+                connect(this->d->api, &XenRpcAPI::apiCallFailed, this, &XenLib::handleApiCallError);
+
+                if (this->d->asyncOps)
+                    this->d->asyncOps->deleteLater();
+                this->d->asyncOps = new XenAsyncOperations(this->d->session, this);
+            }
+
+            this->handleConnectionStateChanged(true);
+            return;
+        }
+
+        const QStringList failureDescription = this->d->connection->GetLastFailureDescription();
+        if (!failureDescription.isEmpty() && failureDescription.first() == Failure::HOST_IS_SLAVE)
+            return;
+
+        const QString hostname = this->d->connection->GetHostname();
+        const int port = this->d->connection->GetPort();
+        const QString username = this->d->connection->GetUsername();
+        if (!error.isEmpty())
+            this->setError(error);
+        emit this->authenticationFailed(hostname, port, username, error);
+    });
+    connect(this->d->connection, &XenConnection::apiResponse, this, &XenLib::onConnectionApiResponse);
+    connect(this->d->connection, &XenConnection::cachePopulated, this, &XenLib::onCachePopulated);
+    connect(this->d->connection, &XenConnection::taskAdded,
+            this, [this](const QString& taskRef, const QVariantMap& taskData) {
+                emit this->taskAdded(this->d->connection, taskRef, taskData);
+            });
+    connect(this->d->connection, &XenConnection::taskModified,
+            this, [this](const QString& taskRef, const QVariantMap& taskData) {
+                emit this->taskModified(this->d->connection, taskRef, taskData);
+            });
+    connect(this->d->connection, &XenConnection::taskDeleted,
+            this, [this](const QString& taskRef) {
+                emit this->taskDeleted(this->d->connection, taskRef);
+            });
 }
 
 XenCertificateManager* XenLib::getCertificateManager() const
@@ -381,20 +362,10 @@ XenCertificateManager* XenLib::getCertificateManager() const
     return this->d->certManager;
 }
 
-ConnectionsManager* XenLib::getConnectionsManager() const
-{
-    return ConnectionsManager::instance();
-}
-
-XenCache* XenLib::getCache() const
+XenCache* XenLib::GetCache() const
 {
     // Cache is now owned by connection (matching C# architecture)
-    return this->d->connection ? this->d->connection->getCache() : nullptr;
-}
-
-MetricUpdater* XenLib::getMetricUpdater() const
-{
-    return this->d->metricUpdater;
+    return this->d->connection ? this->d->connection->GetCache() : nullptr;
 }
 
 QVariantMap XenLib::getCachedObjectData(const QString& objectType, const QString& objectRef)
@@ -411,7 +382,7 @@ QVariantMap XenLib::getCachedObjectData(const QString& objectType, const QString
     }
 
     // Cache-only lookup - matches C# Cache.Resolve exactly
-    XenCache* cache = getCache();
+    XenCache* cache = GetCache();
     if (!cache)
     {
         qWarning() << "XenLib::getObjectData - Cache not initialized";
@@ -429,67 +400,6 @@ QVariantMap XenLib::getCachedObjectData(const QString& objectType, const QString
     return cache->ResolveObjectData(objectType, objectRef);
 }
 
-// Strongly-typed cache helpers - these wrap getCachedObjectData for type safety
-QVariantMap XenLib::getVMRecord(const QString& vmRef)
-{
-    return getCachedObjectData("vm", vmRef);
-}
-
-QVariantMap XenLib::getHostRecord(const QString& hostRef)
-{
-    return getCachedObjectData("host", hostRef);
-}
-
-QVariantMap XenLib::getSRRecord(const QString& srRef)
-{
-    return getCachedObjectData("sr", srRef);
-}
-
-QVariantMap XenLib::getNetworkRecord(const QString& networkRef)
-{
-    return getCachedObjectData("network", networkRef);
-}
-
-QVariantMap XenLib::getVDIRecord(const QString& vdiRef)
-{
-    return getCachedObjectData("vdi", vdiRef);
-}
-
-QVariantMap XenLib::getVBDRecord(const QString& vbdRef)
-{
-    return getCachedObjectData("vbd", vbdRef);
-}
-
-QVariantMap XenLib::getVIFRecord(const QString& vifRef)
-{
-    return getCachedObjectData("vif", vifRef);
-}
-
-QVariantMap XenLib::getPIFRecord(const QString& pifRef)
-{
-    return getCachedObjectData("pif", pifRef);
-}
-
-QVariantMap XenLib::getPBDRecord(const QString& pbdRef)
-{
-    return getCachedObjectData("pbd", pbdRef);
-}
-
-QVariantMap XenLib::getVMGuestMetricsRecord(const QString& metricsRef)
-{
-    return getCachedObjectData("vm_guest_metrics", metricsRef);
-}
-
-QVariantMap XenLib::getHostMetricsRecord(const QString& metricsRef)
-{
-    return getCachedObjectData("host_metrics", metricsRef);
-}
-
-QVariantMap XenLib::getVMMetricsRecord(const QString& metricsRef)
-{
-    return getCachedObjectData("vm_metrics", metricsRef);
-}
-
 bool XenLib::updateVM(const QString& vmRef, const QVariantMap& updates)
 {
     if (!this->isConnected())
@@ -504,7 +414,7 @@ bool XenLib::updateVM(const QString& vmRef, const QVariantMap& updates)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -554,79 +464,6 @@ bool XenLib::updateVM(const QString& vmRef, const QVariantMap& updates)
     return allSuccess;
 }
 
-bool XenLib::setVMVCPUs(const QString& vmRef, int vcpus)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (!this->d->session || !this->d->session->isLoggedIn())
-    {
-        this->setError("Not authenticated");
-        return false;
-    }
-
-    // C# SaveChanges uses explicit VM.set_VCPUs_* calls.
-    try
-    {
-        XenAPI::VM::set_VCPUs_max(this->d->session, vmRef, vcpus);
-        XenAPI::VM::set_VCPUs_at_startup(this->d->session, vmRef, vcpus);
-        return true;
-    }
-    catch (const std::exception& ex)
-    {
-        qWarning() << "XenLib::setVMVCPUs: Failed to set VCPUs for" << vmRef << ":" << ex.what();
-        this->setError("Failed to set VCPU configuration");
-        return false;
-    }
-}
-
-bool XenLib::setVMMemory(const QString& vmRef, qint64 memoryMB)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    // Convert MB to bytes
-    qint64 memoryBytes = memoryMB * 1024 * 1024;
-
-    if (!this->d->session || !this->d->session->isLoggedIn())
-    {
-        this->setError("Not authenticated");
-        return false;
-    }
-
-    // Set all memory limits to the same value (static_min, static_max, dynamic_min, dynamic_max)
-    // This matches the C# behavior when a single value is provided.
-    try
-    {
-        XenAPI::VM::set_memory_limits(this->d->session, vmRef,
-                                      memoryBytes, memoryBytes, memoryBytes, memoryBytes);
-        return true;
-    }
-    catch (const std::exception& ex)
-    {
-        qWarning() << "XenLib::setVMMemory: Failed to set memory limits for" << vmRef << ":" << ex.what();
-        this->setError("Failed to set memory limits");
-        return false;
-    }
-}
-
-// VM property helpers (use cached data)
-// Reference: XenModel/XenAPI-Extensions/VM.cs
-QString XenLib::getVMProperty(const QString& vmRef, const QString& property)
-{
-    QVariantMap vmData = getCachedObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-        return QString();
-
-    return vmData.value(property).toString();
-}
-
 QString XenLib::getGuestMetricsRef(const QString& vmRef)
 {
     // Get VM data from cache
@@ -636,20 +473,6 @@ QString XenLib::getGuestMetricsRef(const QString& vmRef)
 
     // Return guest_metrics reference
     return vmData.value("guest_metrics").toString();
-}
-
-QVariantMap XenLib::getGuestMetrics(const QString& vmRef)
-{
-    // Get guest_metrics reference
-    QString guestMetricsRef = getGuestMetricsRef(vmRef);
-    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
-        return QVariantMap();
-
-    // Resolve guest_metrics from cache
-    // Note: XenCache should populate guest_metrics when it fetches VMs
-    // For now, we'll need to fetch it via API if not cached
-    // TODO: Enhance cache to auto-resolve references
-    return QVariantMap(); // Placeholder - need cache enhancement
 }
 
 bool XenLib::isControlDomainZero(const QString& vmRef, QString* outHostRef)
@@ -684,46 +507,6 @@ bool XenLib::isControlDomainZero(const QString& vmRef, QString* outHostRef)
     // Fallback: check if domid == 0 (control domain zero has domid 0)
     qint64 domid = vmData.value("domid").toLongLong();
     return domid == 0;
-}
-
-bool XenLib::isSRDriverDomain(const QString& vmRef, QString* outSRRef)
-{
-    // Reference: XenModel/XenAPI-Extensions/VM.cs lines 1380-1399
-    QVariantMap vmData = getCachedObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-        return false;
-
-    // Must be control domain but NOT dom0
-    if (!vmData.value("is_control_domain").toBool())
-        return false;
-
-    if (isControlDomainZero(vmRef))
-        return false;
-
-    // Check all cached PBDs to see if any reference this VM as storage_driver_domain
-    XenCache* cache = getCache();
-    if (!cache)
-        return false;
-
-    QList<QVariantMap> allPBDs = cache->GetAllData("pbd");
-    for (const QVariantMap& pbd : allPBDs)
-    {
-        QVariantMap otherConfig = pbd.value("other_config").toMap();
-
-        QString driverDomainRef = otherConfig.value("storage_driver_domain").toString();
-        if (driverDomainRef == vmRef)
-        {
-            QString srRef = pbd.value("SR").toString();
-            if (!srRef.isEmpty() && srRef != "OpaqueRef:NULL")
-            {
-                if (outSRRef)
-                    *outSRRef = srRef;
-                return true;
-            }
-        }
-    }
-
-    return false;
 }
 
 bool XenLib::srHasDriverDomain(const QString& srRef, QString* outVMRef)
@@ -770,433 +553,6 @@ bool XenLib::srHasDriverDomain(const QString& srRef, QString* outVMRef)
     }
     
     return false;
-}
-
-bool XenLib::isHVM(const QString& vmRef)
-{
-    // HVM VMs have non-empty HVM_boot_policy
-    // Reference: XenModel/XenAPI-Extensions/VM.cs (HVM check based on HVM_boot_policy)
-    QString hvmBootPolicy = getVMProperty(vmRef, "HVM_boot_policy");
-    return !hvmBootPolicy.isEmpty();
-}
-
-bool XenLib::hasRDP(const QString& vmRef)
-{
-    // Reference: XenModel/XenAPI-Extensions/VM.cs line 636-649 (CanUseRDP method)
-    // RDP is available if:
-    // 1. guest_metrics exists
-    // 2. feature-ts2, feature-ts, data-ts are non-zero in guest_metrics.other
-    // 3. guest_metrics.networks is not empty
-
-    QString guestMetricsRef = getGuestMetricsRef(vmRef);
-    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
-        return false;
-
-    // For now, return false until we implement full guest_metrics resolution
-    // TODO: Resolve guest_metrics and check other["feature-ts2"], other["feature-ts"],
-    //       other["data-ts"], and networks.count > 0
-    return false;
-}
-
-bool XenLib::isRDPEnabled(const QString& vmRef)
-{
-    // RDP is "enabled" if it has RDP capability and is currently usable
-    return hasRDP(vmRef);
-}
-
-bool XenLib::canEnableRDP(const QString& vmRef)
-{
-    // Can enable RDP if it's an HVM VM and not a control domain
-    QVariantMap vmData = getCachedObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-        return false;
-
-    // Control domains can't use RDP
-    if (vmData.value("is_control_domain").toBool())
-        return false;
-
-    // Must be HVM
-    if (!isHVM(vmRef))
-        return false;
-
-    // Must be a real VM (not template or snapshot)
-    if (vmData.value("is_a_template").toBool() || vmData.value("is_a_snapshot").toBool())
-        return false;
-
-    return true;
-}
-
-/**
- * @brief Check if RDP control is enabled (feature-ts2 flag in guest metrics)
- * Reference: XenModel/XenAPI-Extensions/VM.cs lines 627-634
- * C#: public bool RDPControlEnabled()
- */
-bool XenLib::isRDPControlEnabled(const QString& vmRef)
-{
-    // C#: var metrics = Connection.Resolve(guest_metrics);
-    //     if (metrics == null) return false;
-    //     // feature-ts2 is the feature flag indicating that data/ts is valid
-    //     return 0 != IntKey(metrics.other, "feature-ts2", 0);
-
-    QString guestMetricsRef = getGuestMetricsRef(vmRef);
-    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
-        return false;
-
-    QVariantMap metricsData = getCachedObjectData("vm_guest_metrics", guestMetricsRef);
-    if (metricsData.isEmpty())
-        return false;
-
-    // Check feature-ts2 flag in other config
-    QVariantMap otherConfig = metricsData.value("other").toMap();
-    int featureTs2 = otherConfig.value("feature-ts2", "0").toInt();
-
-    return featureTs2 != 0;
-}
-
-bool XenLib::isVMWindows(const QString& vmRef)
-{
-    // Reference: XenModel/XenAPI-Extensions/VM.cs lines 1712-1724
-    // Returns true if VM is Windows
-
-    if (vmRef.isEmpty())
-        return false;
-
-    QVariantMap vmData = getCachedObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-        return false;
-
-    // Check guest_metrics for OS identification
-    QString guestMetricsRef = getGuestMetricsRef(vmRef);
-    if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
-    {
-        QVariantMap metricsData = getCachedObjectData("vm_guest_metrics", guestMetricsRef);
-        if (!metricsData.isEmpty())
-        {
-            QVariantMap osVersion = metricsData.value("os_version").toMap();
-
-            // Check for Linux distros
-            QString distro = osVersion.value("distro").toString().toLower();
-            if (!distro.isEmpty() && (distro.contains("ubuntu") || distro.contains("debian") ||
-                                      distro.contains("centos") || distro.contains("redhat") || distro.contains("suse") ||
-                                      distro.contains("fedora") || distro.contains("linux")))
-            {
-                return false; // Not Windows
-            }
-
-            // Check for NetScaler
-            QString uname = osVersion.value("uname").toString().toLower();
-            if (!uname.isEmpty() && uname.contains("netscaler"))
-            {
-                return false; // Not Windows
-            }
-
-            // Check for "Microsoft" in name
-            QString osName = osVersion.value("name").toString();
-            if (osName.contains("Microsoft", Qt::CaseInsensitive))
-            {
-                return true; // Windows
-            }
-        }
-    }
-
-    // Fallback: Check if HVM with viridian platform flag (Windows optimization)
-    if (isHVM(vmRef))
-    {
-        QVariantMap platform = vmData.value("platform").toMap();
-        QString viridian = platform.value("viridian").toString();
-        if (viridian == "true" || viridian == "1")
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-QString XenLib::getVMIPAddressForSSH(const QString& vmRef)
-{
-    // Reference: XenModel/XenAPI-Extensions/VM.cs lines 1768-1813
-    // Returns first IPv4 address suitable for SSH, or any IP if IPv4 not available
-
-    if (vmRef.isEmpty())
-        return QString();
-
-    QVariantMap vmData = getCachedObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-        return QString();
-
-    QStringList ipAddresses;
-
-    // For regular VMs (not control domain): get IPs from VIFs
-    bool isControlDomain = isControlDomainZero(vmRef);
-
-    if (!isControlDomain)
-    {
-        // Get guest_metrics networks data
-        QString guestMetricsRef = getGuestMetricsRef(vmRef);
-        if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
-        {
-            QVariantMap metricsData = getCachedObjectData("vm_guest_metrics", guestMetricsRef);
-            if (!metricsData.isEmpty())
-            {
-                // Get networks from guest_metrics
-                QVariantMap networks = metricsData.value("networks").toMap();
-
-                // Collect all IP addresses
-                for (auto it = networks.begin(); it != networks.end(); ++it)
-                {
-                    QString value = it.value().toString();
-                    if (!value.isEmpty() && value != "0.0.0.0")
-                    {
-                        ipAddresses.append(value);
-                    }
-                }
-            }
-        }
-    } else
-    {
-        // For control domain: would need to get PIFs (more complex)
-        // For now, just try guest_metrics networks
-        QString guestMetricsRef = getGuestMetricsRef(vmRef);
-        if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
-        {
-            QVariantMap metricsData = getCachedObjectData("vm_guest_metrics", guestMetricsRef);
-            QVariantMap networks = metricsData.value("networks").toMap();
-
-            for (auto it = networks.begin(); it != networks.end(); ++it)
-            {
-                QString value = it.value().toString();
-                if (!value.isEmpty() && value != "0.0.0.0")
-                {
-                    ipAddresses.append(value);
-                }
-            }
-        }
-    }
-
-    // Find first IPv4 address (prefer IPv4 over IPv6)
-    QRegularExpression ipv4Regex("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
-    for (const QString& ip : ipAddresses)
-    {
-        if (ipv4Regex.match(ip).hasMatch())
-        {
-            return ip; // Return first IPv4
-        }
-    }
-
-    // Return first address (might be IPv6)
-    return ipAddresses.isEmpty() ? QString() : ipAddresses.first();
-}
-
-bool XenLib::hasGPUPassthrough(const QString& vmRef)
-{
-    // Reference: xenadmin/XenModel/XenAPI-Extensions/VM.cs HasGPUPassthrough()
-    // Checks if VM has any VGPU with passthrough implementation
-
-    if (vmRef.isEmpty())
-        return false;
-
-    QVariantMap vmData = getCachedObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-        return false;
-
-    QVariantList vgpuRefs = vmData.value("VGPUs").toList();
-    if (vgpuRefs.isEmpty())
-        return false;
-
-    // Check each VGPU for passthrough type
-    for (const QVariant& vgpuRefVar : vgpuRefs)
-    {
-        QString vgpuRef = vgpuRefVar.toString();
-        if (vgpuRef.isEmpty() || vgpuRef == "OpaqueRef:NULL")
-            continue;
-
-        QVariantMap vgpuData = getCachedObjectData("vgpu", vgpuRef);
-        if (vgpuData.isEmpty())
-            continue;
-
-        QString vgpuTypeRef = vgpuData.value("type").toString();
-        if (vgpuTypeRef.isEmpty() || vgpuTypeRef == "OpaqueRef:NULL")
-            continue;
-
-        QVariantMap vgpuTypeData = getCachedObjectData("vgpu_type", vgpuTypeRef);
-        if (vgpuTypeData.isEmpty())
-            continue;
-
-        QString implementation = vgpuTypeData.value("implementation").toString();
-        if (implementation == "passthrough")
-        {
-            return true; // Found passthrough GPU
-        }
-    }
-
-    return false;
-}
-
-QString XenLib::getControlDomainForHost(const QString& hostRef)
-{
-    // Reference: XenModel/XenAPI/Host.cs field "control_domain" (VM reference)
-    // Returns the control domain (dom0) VM reference for the given host
-
-    if (hostRef.isEmpty())
-        return QString();
-
-    XenCache* cache = getCache();
-    if (!cache)
-        return QString();
-
-    // Try 1: Check if host record has control_domain field directly
-    QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
-    if (!hostData.isEmpty())
-    {
-        QString controlDomainRef = hostData.value("control_domain").toString();
-        if (!controlDomainRef.isEmpty() && controlDomainRef != "OpaqueRef:NULL")
-        {
-            return controlDomainRef;
-        }
-    }
-
-    // Try 2: Search for VM with is_control_domain=true and resident_on=hostRef
-    // This is the fallback for older API versions that don't expose control_domain
-    QStringList allVMRefs = cache->GetAllRefs("vm");
-    for (const QString& vmRef : allVMRefs)
-    {
-        QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-        if (vmData.isEmpty())
-            continue;
-
-        bool isControlDomain = vmData.value("is_control_domain").toBool();
-        QString residentOn = vmData.value("resident_on").toString();
-
-        if (isControlDomain && residentOn == hostRef)
-        {
-            return vmRef;
-        }
-    }
-
-    return QString(); // No control domain found
-}
-
-// Snapshot operations
-bool XenLib::changeVMISO(const QString& vmRef, const QString& vbdRef, const QString& vdiRef)
-{
-    // Reference: XenAdmin/Actions/VM/ChangeVMISOAction.cs
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vmRef.isEmpty() || vbdRef.isEmpty())
-    {
-        this->setError("Invalid VM or VBD reference");
-        return false;
-    }
-
-    // C# ChangeVMISOAction.cs lines 79-93: MUST eject first if not empty, then insert
-    // VBD.insert only works on empty VBDs, so we need to eject any existing disc first
-
-    // Get current VBD state
-    QVariantMap vbdData = getCachedObjectData("vbd", vbdRef);
-    bool isEmpty = vbdData.value("empty", true).toBool();
-
-    // Step 1: Eject current disc if not empty
-    if (!isEmpty)
-    {
-        try
-        {
-            XenAPI::VBD::eject(this->d->session, vbdRef);
-        }
-        catch (const std::exception&)
-        {
-            this->setError("Failed to eject ISO");
-            return false;
-        }
-    }
-
-    // Step 2: Insert new disc if provided
-    if (!vdiRef.isEmpty())
-    {
-        try
-        {
-            XenAPI::VBD::insert(this->d->session, vbdRef, vdiRef);
-        }
-        catch (const std::exception&)
-        {
-            this->setError("Failed to insert ISO");
-            return false;
-        }
-        return true;
-    }
-
-    return true; // Successfully ejected (and nothing to insert)
-}
-
-bool XenLib::createCdDrive(const QString& vmRef)
-{
-    // Reference: XenAdmin/Actions/VM/CreateCdDriveAction.cs
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return false;
-    }
-
-    if (vmRef.isEmpty())
-    {
-        this->setError("Invalid VM reference");
-        return false;
-    }
-
-    // Get VM data to find next available device number
-    QVariantMap vmData = getCachedObjectData("vm", vmRef);
-    QVariantList vbdRefs = vmData.value("VBDs").toList();
-
-    // Find highest CD device number
-    int highestDevice = -1;
-    for (const QVariant& vbdRefVar : vbdRefs)
-    {
-        QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = getCachedObjectData("vbd", vbdRef);
-
-        if (vbdData.value("type").toString() == "CD")
-        {
-            QString userdevice = vbdData.value("userdevice").toString();
-            bool ok;
-            int deviceNum = userdevice.toInt(&ok);
-            if (ok && deviceNum > highestDevice)
-            {
-                highestDevice = deviceNum;
-            }
-        }
-    }
-
-    // Create new CD drive with next device number
-    QString nextDevice = QString::number(highestDevice + 1);
-
-    QVariantMap vbdRecord;
-    vbdRecord["VM"] = vmRef;
-    vbdRecord["VDI"] = "OpaqueRef:NULL";
-    vbdRecord["bootable"] = false;
-    vbdRecord["device"] = "";
-    vbdRecord["userdevice"] = nextDevice;
-    vbdRecord["empty"] = true;
-    vbdRecord["type"] = "CD";
-    vbdRecord["mode"] = "RO";
-    vbdRecord["unpluggable"] = true;
-    vbdRecord["other_config"] = QVariantMap();
-    vbdRecord["qos_algorithm_type"] = "";
-    vbdRecord["qos_algorithm_params"] = QVariantMap();
-
-    try
-    {
-        QString newVbdRef = XenAPI::VBD::create(this->d->session, vbdRecord);
-        return !newVbdRef.isEmpty();
-    }
-    catch (const std::exception&)
-    {
-        this->setError("Failed to create CD drive");
-        return false;
-    }
 }
 
 // VM migration operations
@@ -1269,7 +625,7 @@ bool XenLib::setHostName(const QString& hostRef, const QString& name)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1302,7 +658,7 @@ bool XenLib::setHostDescription(const QString& hostRef, const QString& descripti
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1335,7 +691,7 @@ bool XenLib::setHostTags(const QString& hostRef, const QStringList& tags)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1368,7 +724,7 @@ bool XenLib::setHostOtherConfig(const QString& hostRef, const QString& key, cons
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1409,7 +765,7 @@ bool XenLib::setHostIqn(const QString& hostRef, const QString& iqn)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1555,7 +911,7 @@ bool XenLib::setPoolName(const QString& poolRef, const QString& name)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1588,7 +944,7 @@ bool XenLib::setPoolDescription(const QString& poolRef, const QString& descripti
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1621,7 +977,7 @@ bool XenLib::setPoolTags(const QString& poolRef, const QStringList& tags)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1654,7 +1010,7 @@ bool XenLib::setPoolMigrationCompression(const QString& poolRef, bool enabled)
         return false;
     }
 
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         this->setError("Not authenticated");
         return false;
@@ -1831,49 +1187,6 @@ bool XenLib::setNetworkTags(const QString& networkRef, const QStringList& tags)
     }
 }
 
-QString XenLib::createNetwork(const QString& name, const QString& description, const QVariantMap& otherConfig)
-{
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QString();
-    }
-
-    if (name.isEmpty())
-    {
-        this->setError("Network name cannot be empty");
-        return QString();
-    }
-
-    try
-    {
-        QVariantMap networkRecord;
-        networkRecord["name_label"] = name;
-        networkRecord["name_description"] = description;
-        networkRecord["other_config"] = otherConfig;
-        networkRecord["MTU"] = 1500;
-        networkRecord["tags"] = QVariantList();
-
-        QString networkRef = XenAPI::Network::create(this->d->session, networkRecord);
-
-        if (!networkRef.isEmpty())
-        {
-            if (XenCache* cache = getCache())
-                cache->ClearType("network");
-            this->requestNetworks();
-        }
-
-        return networkRef;
-    }
-    catch (const std::exception& ex)
-    {
-        qWarning() << "XenLib::createNetwork: Failed to create network:" << ex.what();
-        this->setError("Failed to create network");
-        return QString();
-    }
-
-}
-
 bool XenLib::destroyNetwork(const QString& networkRef)
 {
     if (!this->isConnected())
@@ -1891,7 +1204,7 @@ bool XenLib::destroyNetwork(const QString& networkRef)
     try
     {
         XenAPI::Network::destroy(this->d->session, networkRef);
-        if (XenCache* cache = getCache())
+        if (XenCache* cache = GetCache())
             cache->ClearType("network");
         this->requestNetworks();
         return true;
@@ -1991,85 +1304,6 @@ void XenLib::handleConnectionError(const QString& error)
     emit this->connectionError(error);
 }
 
-void XenLib::handleLoginResult(bool success)
-{
-    if (success)
-    {
-        qDebug() << timestamp() << "XenLib: Login successful!";
-        if (this->d->session)
-        {
-            qDebug() << timestamp() << "XenLib: Session ID"
-                     << this->d->session->getSessionId().left(20) + "...";
-        }
-        this->d->connected = true;
-
-        // Build connection info with session ID
-        this->d->connectionInfo = QString("%1:%2")
-                                      .arg(this->d->connection->getHostname())
-                                      .arg(this->d->connection->getPort());
-
-        // qDebug() << timestamp() << "XenLib:" << QString("Connected to %1:%2 with session %3")
-        //                                             .arg(this->d->connection->getHostname())
-        //                                             .arg(this->d->connection->getPort())
-        //                                             .arg(this->d->session->getSessionId());
-
-        // Populate cache with all objects for instant lookups
-        // CRITICAL: This is now SYNCHRONOUS and returns the event token
-        // This matches C# XenObjectDownloader.GetAllObjects() pattern
-        qDebug() << timestamp() << "XenLib: Populating cache (synchronous)...";
-        QString eventToken = this->populateCache();
-
-        if (eventToken.isEmpty())
-        {
-            qWarning() << timestamp() << "XenLib: Cache population failed or returned no token";
-        } else
-        {
-            qDebug() << timestamp() << "XenLib: Cache population complete, received token:" << eventToken.left(20) + "...";
-        }
-
-        // Initialize EventPoller by duplicating our session (creates separate connection stack)
-        // This prevents event.from's 30-second long-poll from blocking main API requests
-        // IMPORTANT: Use invokeMethod to call initialize() on EventPoller's thread to avoid
-        // "Cannot create children for a parent that is in a different thread" warnings
-        qDebug() << timestamp() << "XenLib: Preparing EventPoller for new session (reset+init)...";
-        // Ensure the poller drops any stale duplicated session before re-init
-        QMetaObject::invokeMethod(this->d->eventPoller, [this]() {
-            this->d->eventPoller->reset();
-            this->d->eventPoller->initialize(this->d->session); }, Qt::BlockingQueuedConnection);
-
-        // Start EventPoller with the token from cache population
-        // This ensures the poller continues from where cache population left off,
-        // preventing xapi violation of overlapping event.from calls
-        qDebug() << timestamp() << "XenLib: Starting EventPoller with token from cache population...";
-        QStringList eventClasses = {
-            "vm", "host", "pool", "sr", "vbd", "vdi", "vif",
-            "network", "pbd", "pif", "task", "message", "console",
-            "vm_guest_metrics", "host_metrics", "vm_metrics"};
-        QMetaObject::invokeMethod(this->d->eventPoller, [this, eventClasses, eventToken]() { this->d->eventPoller->start(eventClasses, eventToken); }, Qt::QueuedConnection);
-
-        emit this->connectionStateChanged(true);
-    } else
-    {
-        qWarning() << timestamp() << "XenLib: Login failed";
-        this->d->connected = false;
-
-        // Don't emit authenticationFailed or connectionStateChanged if we're in the middle of a HOST_IS_SLAVE redirect
-        // The redirect will be handled transparently and reconnection will be automatic
-        if (!this->d->isRedirecting)
-        {
-            // Emit specific authentication failure signal with connection details
-            // This allows the UI to show a retry dialog with credentials pre-filled
-            emit this->authenticationFailed(this->d->pendingHostname,
-                                            this->d->pendingPort,
-                                            this->d->pendingUsername,
-                                            this->d->lastError);
-
-            emit this->connectionStateChanged(false);
-        }
-        // Error already set by XenSession signal handler
-    }
-}
-
 void XenLib::onConnectionEstablished()
 {
     // qDebug() << "XenLib: TCP/SSL connection established";
@@ -2077,7 +1311,7 @@ void XenLib::onConnectionEstablished()
 
     // TCP/SSL connection is ready, now login using XenSession
     // This will queue the login request to the worker thread
-    if (!this->d->session->login(this->d->pendingUsername, this->d->pendingPassword))
+    if (!this->d->session->Login(this->d->pendingUsername, this->d->pendingPassword))
     {
         QString error = this->d->session->getLastError();
         qWarning() << "XenLib: Login failed:" << error;
@@ -2110,36 +1344,9 @@ void XenLib::onConnectionError(const QString& errorMessage)
 
 void XenLib::onConnectionProgress(const QString& message)
 {
+    (void)message;
     // qDebug() << "XenLib: Connection progress:" << message;
     // Could emit a signal here for UI progress updates
-}
-
-void XenLib::onRedirectToMaster(const QString& masterAddress)
-{
-    qDebug() << "XenLib: Redirecting connection from slave to master:" << masterAddress;
-
-    // Set flag to prevent authenticationFailed signal during transparent redirect
-    this->d->isRedirecting = true;
-
-    // Store credentials for reconnection
-    QString username = this->d->pendingUsername;
-    QString password = this->d->pendingPassword;
-    int port = this->d->pendingPort;
-    // SSL is always enabled for XenServer connections (default true)
-    bool useSSL = true;
-
-    // Disconnect current connection (to the slave)
-    this->disconnect();
-
-    // Emit signal to inform UI about the redirect
-    emit this->redirectedToMaster(masterAddress);
-
-    // Reconnect to the master
-    qDebug() << "XenLib: Attempting connection to pool master at" << masterAddress << ":" << port;
-    this->connectToServer(masterAddress, port, username, password, useSSL);
-
-    // Reset redirecting flag after initiating reconnection
-    this->d->isRedirecting = false;
 }
 
 void XenLib::handleApiCallResult(const QString& method, const QVariant& result)
@@ -2185,7 +1392,7 @@ void XenLib::onHostsReceivedForPoolMembers(const QVariantList& hosts)
 
     if (!members.isEmpty())
     {
-        this->d->connection->setPoolMembers(members);
+        this->d->connection->SetPoolMembers(members);
         qDebug() << "XenLib: Populated" << members.size() << "pool members for failover:" << members;
     }
 }
@@ -2221,179 +1428,6 @@ void XenLib::onPoolsReceivedForHATracking(const QVariantList& pools)
              << ", coordinator_may_change:" << coordinatorMayChange;
 }
 
-// ============================================================================
-// Async API Implementation
-// ============================================================================
-
-void XenLib::requestVirtualMachines()
-{
-    if (!this->isConnected())
-    {
-        qWarning() << "XenLib::requestVirtualMachines - Not connected";
-        emit this->virtualMachinesReceived(QVariantList()); // Empty list on error
-        return;
-    }
-
-    // CACHE CHECK FIRST - Return cached VMs if available
-    XenCache* cache = getCache();
-    QList<QVariantMap> cachedMaps = cache ? cache->GetAllData("VM") : QList<QVariantMap>();
-    if (!cachedMaps.isEmpty())
-    {
-        qDebug() << "XenLib::requestVirtualMachines - Cache hit, returning" << cachedMaps.size() << "VMs";
-        // Convert QList<QVariantMap> to QVariantList
-        QVariantList cachedVMs;
-        for (const QVariantMap& vm : cachedMaps)
-        {
-            cachedVMs.append(vm);
-        }
-        emit this->virtualMachinesReceived(cachedVMs);
-        return;
-    }
-
-    // Cache miss - fall back to API call
-    qDebug() << "XenLib::requestVirtualMachines - Cache miss, fetching from API";
-
-    // Build the JSON-RPC request for VM.get_all_records
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-
-    QByteArray jsonRequest = this->d->api->buildJsonRpcCall("VM.get_all_records", params);
-
-    // Send async and track the request
-    int requestId = this->d->connection->sendRequestAsync(jsonRequest);
-    if (requestId < 0)
-    {
-        qWarning() << "XenLib::requestVirtualMachines - Failed to queue request";
-        emit this->virtualMachinesReceived(QVariantList());
-        return;
-    }
-
-    this->d->pendingRequests[requestId] = RequestType::GetVirtualMachines;
-}
-
-void XenLib::requestHosts()
-{
-    if (!this->isConnected())
-    {
-        qWarning() << "XenLib::requestHosts - Not connected";
-        emit this->hostsReceived(QVariantList());
-        return;
-    }
-
-    // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->GetAllData("host");
-    if (!cachedMaps.isEmpty())
-    {
-        qDebug() << "XenLib::requestHosts - Cache hit, returning" << cachedMaps.size() << "hosts";
-        QVariantList cachedHosts;
-        for (const QVariantMap& host : cachedMaps)
-        {
-            cachedHosts.append(host);
-        }
-        emit this->hostsReceived(cachedHosts);
-        return;
-    }
-
-    qDebug() << "XenLib::requestHosts - Cache miss, fetching from API";
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-
-    QByteArray jsonRequest = this->d->api->buildJsonRpcCall("host.get_all_records", params);
-
-    int requestId = this->d->connection->sendRequestAsync(jsonRequest);
-    if (requestId < 0)
-    {
-        qWarning() << "XenLib::requestHosts - Failed to queue request";
-        emit this->hostsReceived(QVariantList());
-        return;
-    }
-
-    this->d->pendingRequests[requestId] = RequestType::GetHosts;
-}
-
-void XenLib::requestPools()
-{
-    if (!this->isConnected())
-    {
-        qWarning() << "XenLib::requestPools - Not connected";
-        emit this->poolsReceived(QVariantList());
-        return;
-    }
-
-    // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->GetAllData("pool");
-    if (!cachedMaps.isEmpty())
-    {
-        qDebug() << "XenLib::requestPools - Cache hit, returning" << cachedMaps.size() << "pools";
-        QVariantList cachedPools;
-        for (const QVariantMap& pool : cachedMaps)
-        {
-            cachedPools.append(pool);
-        }
-        emit this->poolsReceived(cachedPools);
-        return;
-    }
-
-    qDebug() << "XenLib::requestPools - Cache miss, fetching from API";
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-
-    QByteArray jsonRequest = this->d->api->buildJsonRpcCall("pool.get_all_records", params);
-
-    int requestId = this->d->connection->sendRequestAsync(jsonRequest);
-    if (requestId < 0)
-    {
-        qWarning() << "XenLib::requestPools - Failed to queue request";
-        emit this->poolsReceived(QVariantList());
-        return;
-    }
-
-    this->d->pendingRequests[requestId] = RequestType::GetPools;
-}
-
-void XenLib::requestStorageRepositories()
-{
-    if (!this->isConnected())
-    {
-        qWarning() << "XenLib::requestStorageRepositories - Not connected";
-        emit this->storageRepositoriesReceived(QVariantList());
-        return;
-    }
-
-    // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->GetAllData("SR");
-    if (!cachedMaps.isEmpty())
-    {
-        qDebug() << "XenLib::requestStorageRepositories - Cache hit, returning" << cachedMaps.size() << "SRs";
-        QVariantList cachedSRs;
-        for (const QVariantMap& sr : cachedMaps)
-        {
-            cachedSRs.append(sr);
-        }
-        emit this->storageRepositoriesReceived(cachedSRs);
-        return;
-    }
-
-    qDebug() << "XenLib::requestStorageRepositories - Cache miss, fetching from API";
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-
-    QByteArray jsonRequest = this->d->api->buildJsonRpcCall("SR.get_all_records", params);
-
-    int requestId = this->d->connection->sendRequestAsync(jsonRequest);
-    if (requestId < 0)
-    {
-        qWarning() << "XenLib::requestStorageRepositories - Failed to queue request";
-        emit this->storageRepositoriesReceived(QVariantList());
-        return;
-    }
-
-    this->d->pendingRequests[requestId] = RequestType::GetStorageRepositories;
-}
-
 void XenLib::requestNetworks()
 {
     if (!this->isConnected())
@@ -2404,7 +1438,7 @@ void XenLib::requestNetworks()
     }
 
     // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->GetAllData("network");
+    QList<QVariantMap> cachedMaps = GetCache()->GetAllData("network");
     if (!cachedMaps.isEmpty())
     {
         qDebug() << "XenLib::requestNetworks - Cache hit, returning" << cachedMaps.size() << "networks";
@@ -2424,7 +1458,7 @@ void XenLib::requestNetworks()
 
     QByteArray jsonRequest = this->d->api->buildJsonRpcCall("network.get_all_records", params);
 
-    int requestId = this->d->connection->sendRequestAsync(jsonRequest);
+    int requestId = this->d->connection->SendRequestAsync(jsonRequest);
     if (requestId < 0)
     {
         qWarning() << "XenLib::requestNetworks - Failed to queue request";
@@ -2444,7 +1478,7 @@ void XenLib::requestPIFs()
     }
 
     // CACHE CHECK FIRST
-    QList<QVariantMap> cachedMaps = getCache()->GetAllData("PIF");
+    QList<QVariantMap> cachedMaps = GetCache()->GetAllData("PIF");
     if (!cachedMaps.isEmpty())
     {
         qDebug() << "XenLib::requestPIFs - Cache hit, returning" << cachedMaps.size() << "PIFs";
@@ -2458,7 +1492,7 @@ void XenLib::requestPIFs()
 
     QByteArray jsonRequest = this->d->api->buildJsonRpcCall("PIF.get_all_records", params);
 
-    int requestId = this->d->connection->sendRequestAsync(jsonRequest);
+    int requestId = this->d->connection->SendRequestAsync(jsonRequest);
     if (requestId < 0)
     {
         qWarning() << "XenLib::requestPIFs - Failed to queue request";
@@ -2466,64 +1500,6 @@ void XenLib::requestPIFs()
     }
 
     this->d->pendingRequests[requestId] = RequestType::GetPIFs;
-}
-
-void XenLib::requestObjectData(const QString& objectType, const QString& objectRef)
-{
-    if (!this->isConnected())
-    {
-        qWarning() << "XenLib::requestObjectData - Not connected";
-        emit this->objectDataReceived(objectType, objectRef, QVariantMap());
-        return;
-    }
-
-    // CACHE CHECK FIRST - Transparent cache integration (like C# Connection.Resolve)
-    QVariantMap cachedData = getCache()->ResolveObjectData(objectType, objectRef);
-    if (!cachedData.isEmpty())
-    {
-        qDebug() << "XenLib::requestObjectData - Cache hit for" << objectType << objectRef;
-        // Emit immediately with cached data (synchronous from caller's perspective)
-        emit this->objectDataReceived(objectType, objectRef, cachedData);
-        return;
-    }
-
-    // Cache miss - fall back to API call
-    qDebug() << "XenLib::requestObjectData - Cache miss for" << objectType << objectRef << "- fetching from API";
-
-    // Build appropriate API call based on object type
-    QString methodName;
-    if (objectType == "vm")
-        methodName = "VM.get_all_records";
-    else if (objectType == "host")
-        methodName = "host.get_all_records";
-    else if (objectType == "pool")
-        methodName = "pool.get_all_records";
-    else if (objectType == "storage")
-        methodName = "SR.get_all_records";
-    else if (objectType == "network")
-        methodName = "network.get_all_records";
-    else
-    {
-        qWarning() << "XenLib::requestObjectData - Unknown object type:" << objectType;
-        emit this->objectDataReceived(objectType, objectRef, QVariantMap());
-        return;
-    }
-
-    QVariantList params;
-    params.append(this->d->session->getSessionId());
-
-    QByteArray jsonRequest = this->d->api->buildJsonRpcCall(methodName, params);
-
-    int requestId = this->d->connection->sendRequestAsync(jsonRequest);
-    if (requestId < 0)
-    {
-        qWarning() << "XenLib::requestObjectData - Failed to queue request";
-        emit this->objectDataReceived(objectType, objectRef, QVariantMap());
-        return;
-    }
-
-    this->d->pendingRequests[requestId] = RequestType::GetObjectData;
-    this->d->objectDataRequests[requestId] = qMakePair(objectType, objectRef);
 }
 
 void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
@@ -2616,7 +1592,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
         // qDebug() << "XenLib::onConnectionApiResponse - GetVirtualMachines: first few keys:" << allRecords.keys().mid(0, 3);
 
         // Populate cache with bulk data
-        getCache()->UpdateBulk("VM", allRecords);
+        GetCache()->UpdateBulk("VM", allRecords);
 
         QVariantList vms;
         for (auto it = allRecords.begin(); it != allRecords.end(); ++it)
@@ -2638,7 +1614,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
         QVariantMap allRecords = responseData.toMap();
 
         // Populate cache
-        getCache()->UpdateBulk("host", allRecords);
+        GetCache()->UpdateBulk("host", allRecords);
 
         QVariantList hosts;
         for (auto it = allRecords.begin(); it != allRecords.end(); ++it)
@@ -2657,7 +1633,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
         QVariantMap allRecords = responseData.toMap();
 
         // Populate cache
-        getCache()->UpdateBulk("pool", allRecords);
+        GetCache()->UpdateBulk("pool", allRecords);
         // qDebug() << "XenLib::onConnectionApiResponse - GetPools: responseData type:" << responseData.typeName();
         // qDebug() << "XenLib::onConnectionApiResponse - GetPools: allRecords size:" << allRecords.size();
         // qDebug() << "XenLib::onConnectionApiResponse - GetPools: first few keys:" << allRecords.keys().mid(0, 3);
@@ -2687,7 +1663,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
         QVariantMap allRecords = responseData.toMap();
 
         // Populate cache
-        getCache()->UpdateBulk("SR", allRecords);
+        GetCache()->UpdateBulk("SR", allRecords);
 
         QVariantList srs;
         for (auto it = allRecords.begin(); it != allRecords.end(); ++it)
@@ -2707,7 +1683,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
         QVariantMap allRecords = responseData.toMap();
 
         // Populate cache
-        getCache()->UpdateBulk("network", allRecords);
+        GetCache()->UpdateBulk("network", allRecords);
 
         QVariantList networks;
         for (auto it = allRecords.begin(); it != allRecords.end(); ++it)
@@ -2727,7 +1703,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
         QVariantMap allRecords = responseData.toMap();
 
         // Populate cache with PIFs
-        getCache()->UpdateBulk("PIF", allRecords);
+        GetCache()->UpdateBulk("PIF", allRecords);
 
         qDebug() << "XenLib: Cached" << allRecords.size() << "PIFs";
         break;
@@ -2800,7 +1776,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
 
                     // Update cache with this object
                     // XenCache normalizes type to lowercase, so "VM" becomes "vm"
-                    getCache()->Update(objectClass.toLower(), objectRef, objectData);
+                    GetCache()->Update(objectClass.toLower(), objectRef, objectData);
                     objectCounts[objectClass]++;
                 }
             }
@@ -2854,7 +1830,7 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
         // qDebug() << "XenLib: Received" << allRecords.size() << objectType << "records for cache";
 
         // Populate cache with bulk data
-        getCache()->UpdateBulk(objectType, allRecords);
+        GetCache()->UpdateBulk(objectType, allRecords);
     }
 }
 
@@ -2867,7 +1843,7 @@ QString XenLib::populateCache()
     }
 
     // Clear existing cache
-    if (XenCache* cache = getCache())
+    if (XenCache* cache = GetCache())
         cache->Clear();
 
     // Preload roles (not delivered by event.from) to mirror C# XenObjectDownloader.GetAllObjects
@@ -2876,7 +1852,7 @@ QString XenLib::populateCache()
         QVariantList roleParams;
         roleParams.append(this->d->session->getSessionId());
         QByteArray roleRequest = this->d->api->buildJsonRpcCall("role.get_all_records", roleParams);
-        QByteArray roleResponse = this->d->connection->sendRequest(roleRequest);
+        QByteArray roleResponse = this->d->connection->SendRequest(roleRequest);
 
         if (roleResponse.isEmpty())
         {
@@ -2901,7 +1877,7 @@ QString XenLib::populateCache()
                     QVariantMap roleRecord = it.value().toMap();
                     roleRecord["ref"] = roleRef;
                     roleRecord["opaqueRef"] = roleRef;
-                    if (XenCache* cache = getCache())
+                    if (XenCache* cache = GetCache())
                         cache->Update("role", roleRef, roleRecord);
                 }
                 qDebug() << timestamp() << "XenLib::populateCache - Cached" << roles.size() << "role records";
@@ -2936,9 +1912,9 @@ QString XenLib::populateCache()
 
     QByteArray jsonRequest = this->d->api->buildJsonRpcCall("event.from", params);
 
-    // Use SYNCHRONOUS sendRequest() to block until response arrives
+    // Use SYNCHRONOUS SendRequest() to block until response arrives
     // This prevents xapi violation of multiple outstanding event.from calls
-    QByteArray response = this->d->connection->sendRequest(jsonRequest);
+    QByteArray response = this->d->connection->SendRequest(jsonRequest);
 
     if (response.isEmpty())
     {
@@ -3025,7 +2001,7 @@ QString XenLib::populateCache()
                 objectData["opaqueRef"] = objectRef;
 
                 // Update cache
-                getCache()->Update(objectClass.toLower(), objectRef, objectData);
+                GetCache()->Update(objectClass.toLower(), objectRef, objectData);
                 objectCounts[objectClass]++;
             }
         }
@@ -3047,7 +2023,7 @@ QString XenLib::populateCache()
         QVariantList consoleParams;
         consoleParams.append(this->d->session->getSessionId());
         QByteArray consoleRequest = this->d->api->buildJsonRpcCall("console.get_all_records", consoleParams);
-        QByteArray consoleResponse = this->d->connection->sendRequest(consoleRequest);
+        QByteArray consoleResponse = this->d->connection->SendRequest(consoleRequest);
 
         if (consoleResponse.isEmpty())
         {
@@ -3072,7 +2048,7 @@ QString XenLib::populateCache()
                     QVariantMap consoleData = it.value().toMap();
                     consoleData["ref"] = consoleRef;
                     consoleData["opaqueRef"] = consoleRef;
-                    if (XenCache* cache = getCache())
+                    if (XenCache* cache = GetCache())
                         cache->Update("console", consoleRef, consoleData);
                 }
                 qDebug() << "XenLib::populateCache - Cached" << consolesMap.size() << "console records";
@@ -3088,88 +2064,6 @@ QString XenLib::populateCache()
     }
 
     return token;
-}
-
-void XenLib::onEventReceived(const QVariantMap& eventData)
-{
-    // Process XenServer events and update cache
-    //
-    // Normalize field naming differences between XML-RPC ("class", "ref") and JSON-RPC ("class_", "opaqueRef")
-    auto valueForKeys = [](const QVariantMap& map, std::initializer_list<const char*> keys) -> QString {
-        for (const char* key : keys)
-        {
-            const QString value = map.value(QString::fromLatin1(key)).toString();
-            if (!value.isEmpty())
-                return value;
-        }
-        return QString();
-    };
-
-    QString eventClass = valueForKeys(eventData, {"class_", "class"});
-    QString operation = eventData.value("operation").toString(); // Same in both protocols
-    QString ref = valueForKeys(eventData, {"opaqueRef", "ref"});
-
-    if (eventClass.isEmpty() || operation.isEmpty() || ref.isEmpty())
-    {
-        // Silently ignore invalid events - these might be partial/continuation data
-        return;
-    }
-
-    // Normalize class name to match our cache naming
-    QString cacheType = eventClass.toLower();
-
-    // Special handling for XenAPI Messages - create alerts
-    // C# Reference: MainWindow.cs line 993 - MessageCollectionChanged()
-    if (cacheType == "message")
-    {
-        if (operation == "add" || operation == "mod")
-        {
-            // Get message snapshot
-            QVariantMap snapshot = eventData.value("snapshot").toMap();
-            if (!snapshot.isEmpty())
-            {
-                snapshot["ref"] = ref;
-                snapshot["opaqueRef"] = ref;
-                
-                // TODO: Check if message should be shown as alert
-                // C# checks: !m.ShowOnGraphs() && !m.IsSquelched()
-                // For now, create alert for all messages
-                emit this->messageReceived(ref, snapshot);
-            }
-        }
-        else if (operation == "del")
-        {
-            // Message was dismissed/deleted
-            emit this->messageRemoved(ref);
-        }
-    }
-
-    if (operation == "del")
-    {
-        // Remove object from cache
-        // qDebug() << "XenLib: Event - Removing" << cacheType << ref;
-        if (XenCache* cache = getCache())
-            cache->Remove(cacheType, ref);
-    } else if (operation == "add" || operation == "mod")
-    {
-        // Get snapshot from event
-        QVariantMap snapshot = eventData.value("snapshot").toMap();
-
-        if (!snapshot.isEmpty())
-        {
-            // Add ref to snapshot
-            snapshot["ref"] = ref;
-            snapshot["opaqueRef"] = ref;
-
-            // qDebug() << "XenLib: Event -" << operation << cacheType << ref;
-            getCache()->Update(cacheType, ref, snapshot);
-        } else
-        {
-            // Snapshot not provided - fetch full record
-            // qDebug() << "XenLib: Event - No snapshot, fetching" << cacheType << ref;
-            this->requestObjectData(cacheType, ref);
-        }
-    }
 }
 
 void XenLib::onCachePopulated()
@@ -3188,7 +2082,4 @@ void XenLib::onEventPollerConnectionLost()
 
     this->setError("Event polling failed - connection lost");
     emit this->connectionError("Event polling connection lost");
-
-    // Trigger reconnection or cleanup
-    this->disconnectFromServer();
 }

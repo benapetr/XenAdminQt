@@ -26,7 +26,7 @@
  */
 
 #include "deletevifaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VIF.h"
 #include "../../xenapi/xenapi_VM.h"
@@ -46,14 +46,14 @@ DeleteVIFAction::DeleteVIFAction(XenConnection* connection,
         throw std::invalid_argument("VIF reference cannot be empty");
 
     // Get VIF details for display
-    QVariantMap vifData = connection->getCache()->ResolveObjectData("vif", m_vifRef);
+    QVariantMap vifData = connection->GetCache()->ResolveObjectData("vif", m_vifRef);
     m_vmRef = vifData.value("VM").toString();
     QString networkRef = vifData.value("network").toString();
 
-    QVariantMap vmData = connection->getCache()->ResolveObjectData("vm", m_vmRef);
+    QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", m_vmRef);
     m_vmName = vmData.value("name_label").toString();
 
-    QVariantMap networkData = connection->getCache()->ResolveObjectData("network", networkRef);
+    QVariantMap networkData = connection->GetCache()->ResolveObjectData("network", networkRef);
     m_networkName = networkData.value("name_label").toString();
 
     setTitle(QString("Deleting VIF for %1").arg(m_vmName));
@@ -67,7 +67,7 @@ void DeleteVIFAction::run()
         setDescription("Deleting VIF...");
 
         // Check if VM is running and if we need to unplug first
-        QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         QString powerState = vmData.value("power_state").toString();
 
         if (powerState == "Running")

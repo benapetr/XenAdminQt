@@ -28,31 +28,36 @@
 #include "hadisablecommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
+#include "xen/pool.h"
 #include "xen/actions/pool/disablehaaction.h"
 #include "xencache.h"
+#include "xen/xenobject.h"
 #include <QMessageBox>
 
 HADisableCommand::HADisableCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : PoolCommand(mainWindow, parent)
 {
 }
 
-bool HADisableCommand::canRun() const
+bool HADisableCommand::CanRun() const
 {
-    QString poolRef = this->getSelectedPoolRef();
-    if (poolRef.isEmpty())
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool || !pool->IsValid())
         return false;
 
     // Can disable HA if pool is connected and HA is enabled
     return this->isPoolConnected() && this->isHAEnabled();
 }
 
-void HADisableCommand::run()
+void HADisableCommand::Run()
 {
-    QString poolRef = this->getSelectedPoolRef();
-    QString poolName = this->getSelectedPoolName();
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool || !pool->IsValid())
+        return;
+
+    QString poolRef = pool->OpaqueRef();
+    QString poolName = pool->GetName();
 
     if (poolRef.isEmpty())
         return;
@@ -68,7 +73,7 @@ void HADisableCommand::run()
         return;
 
     // Create and run the DisableHAAction
-    XenConnection* connection = this->mainWindow()->xenLib()->getConnection();
+    XenConnection* connection = pool->GetConnection();
     if (!connection)
     {
         QMessageBox::critical(this->mainWindow(), "Error", "No active connection.");
@@ -102,44 +107,16 @@ void HADisableCommand::run()
     this->mainWindow()->showStatusMessage(QString("Disabling HA on pool '%1'...").arg(poolName), 0);
 }
 
-QString HADisableCommand::menuText() const
+QString HADisableCommand::MenuText() const
 {
     return "Disable";
 }
 
-QString HADisableCommand::getSelectedPoolRef() const
-{
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "pool")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString HADisableCommand::getSelectedPoolName() const
-{
-    QString poolRef = this->getSelectedPoolRef();
-    if (poolRef.isEmpty())
-        return QString();
-
-    if (!this->mainWindow()->xenLib())
-        return QString();
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return QString();
-
-    QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
-    return poolData.value("name_label", "").toString();
-}
-
 bool HADisableCommand::isPoolConnected() const
 {
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-    return conn && conn->isConnected();
+    QSharedPointer<Pool> pool = this->getPool();
+    XenConnection* conn = pool ? pool->GetConnection() : nullptr;
+    return conn && conn->IsConnected();
 }
 
 bool HADisableCommand::isHAEnabled() const
@@ -148,10 +125,8 @@ bool HADisableCommand::isHAEnabled() const
     if (poolRef.isEmpty())
         return false;
 
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    QSharedPointer<Pool> pool = this->getPool();
+    XenCache* cache = pool && pool->GetConnection() ? pool->GetConnection()->GetCache() : nullptr;
     if (!cache)
         return false;
 

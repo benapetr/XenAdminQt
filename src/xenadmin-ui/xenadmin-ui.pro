@@ -5,6 +5,8 @@ TARGET = xenadmin-qt
 
 # Source files
 SOURCES += \
+    commands/host/hostcommand.cpp \
+    commands/vm/vmcommand.cpp \
     main.cpp \
     mainwindow.cpp \
     tabpages/vmstoragetabpage.cpp \
@@ -14,6 +16,9 @@ SOURCES += \
     iconmanager.cpp \
     connectionprofile.cpp \
     dialogs/connectdialog.cpp \
+    dialogs/addserverdialog.cpp \
+    dialogs/connectingtoserverdialog.cpp \
+    dialogs/reconnectasdialog.cpp \
     dialogs/debugwindow.cpp \
     dialogs/aboutdialog.cpp \
     dialogs/ballooningdialog.cpp \
@@ -43,7 +48,20 @@ SOURCES += \
     dialogs/migratevirtualdiskdialog.cpp \
     dialogs/optionsdialog.cpp \
     dialogs/verticallytabbeddialog.cpp \
+    dialogs/customsearchdialog.cpp \
+    dialogs/warningdialogs/closexencenterwarningdialog.cpp \
     controls/affinitypicker.cpp \
+    controls/srpicker.cpp \
+    controls/dropdownbutton.cpp \
+    controls/xensearch/querypanel.cpp \
+    controls/xensearch/searchoutput.cpp \
+    controls/xensearch/foldernavigator.cpp \
+    controls/xensearch/groupingcontrol.cpp \
+    controls/xensearch/queryelement.cpp \
+    controls/xensearch/querytype.cpp \
+    controls/xensearch/searcher.cpp \
+    controls/xensearch/resourceselectbutton.cpp \
+    controls/xensearch/treewidgetgroupacceptor.cpp \
     settingspanels/generaleditpage.cpp \
     settingspanels/hostautostarteditpage.cpp \
     settingspanels/hostmultipathpage.cpp \
@@ -57,6 +75,10 @@ SOURCES += \
     settingspanels/homeservereditpage.cpp \
     settingspanels/vmadvancededitpage.cpp \
     settingspanels/vmenlightenmenteditpage.cpp \
+    settingspanels/pooladvancededitpage.cpp \
+    settingspanels/securityeditpage.cpp \
+    settingspanels/livepatchingeditpage.cpp \
+    settingspanels/networkoptionseditpage.cpp \
     dialogs/optionspages/securityoptionspage.cpp \
     dialogs/optionspages/displayoptionspage.cpp \
     dialogs/optionspages/confirmationoptionspage.cpp \
@@ -74,6 +96,7 @@ SOURCES += \
     actions/meddlingactionmanager.cpp \
     commands/command.cpp \
     commands/contextmenubuilder.cpp \
+    commands/connection/disconnectcommand.cpp \
     commands/host/hostmaintenancemodecommand.cpp \
     commands/host/reboothostcommand.cpp \
     commands/host/shutdownhostcommand.cpp \
@@ -136,6 +159,9 @@ SOURCES += \
     commands/storage/storagepropertiescommand.cpp \
     commands/storage/addvirtualdiskcommand.cpp \
     commands/storage/attachvirtualdiskcommand.cpp \
+    commands/storage/srcommand.cpp \
+    commands/storage/vbdcommand.cpp \
+    commands/storage/vdicommand.cpp \
     commands/storage/reattachsrcommand.cpp \
     commands/storage/forgetsrcommand.cpp \
     commands/storage/destroysrcommand.cpp \
@@ -147,6 +173,7 @@ SOURCES += \
     commands/storage/trimsrcommand.cpp \
     commands/storage/vdieditsizelocationcommand.cpp \
     commands/storage/migratevirtualdiskcommand.cpp \
+    commands/pool/poolcommand.cpp \
     commands/pool/poolpropertiescommand.cpp \
     commands/pool/joinpoolcommand.cpp \
     commands/pool/ejecthostfrompoolcommand.cpp \
@@ -179,13 +206,14 @@ SOURCES += \
     widgets/memorybar.cpp \
     widgets/progressbardelegate.cpp \
     widgets/verticaltabwidget.cpp \
-    widgets/navigationpane.cpp \
-    widgets/navigationview.cpp \
+    navigation/navigationpane.cpp \
+    navigation/navigationview.cpp \
     widgets/notificationsview.cpp \
     widgets/notificationssubmodeitem.cpp \
-    widgets/navigationbuttons.cpp \
+    navigation/navigationbuttons.cpp \
     widgets/wizardnavigationpane.cpp \
     network/httpconnect.cpp \
+    network/xenconnectionui.cpp \
     ConsoleView/ConsoleKeyHandler.cpp \
     ConsoleView/VNCGraphicsClient.cpp \
     ConsoleView/RdpClient.cpp \
@@ -198,6 +226,8 @@ SOURCES += \
 
 # Header files
 HEADERS += \
+    commands/host/hostcommand.h \
+    commands/vm/vmcommand.h \
     globals.h \
     mainwindow.h \
     tabpages/vmstoragetabpage.h \
@@ -207,6 +237,9 @@ HEADERS += \
     iconmanager.h \
     connectionprofile.h \
     dialogs/connectdialog.h \
+    dialogs/addserverdialog.h \
+    dialogs/connectingtoserverdialog.h \
+    dialogs/reconnectasdialog.h \
     dialogs/debugwindow.h \
     dialogs/aboutdialog.h \
     dialogs/ballooningdialog.h \
@@ -237,7 +270,21 @@ HEADERS += \
     dialogs/migratevirtualdiskdialog.h \
     dialogs/optionsdialog.h \
     dialogs/verticallytabbeddialog.h \
+    dialogs/customsearchdialog.h \
+    dialogs/warningdialogs/closexencenterwarningdialog.h \
+    network/xenconnectionui.h \
     controls/affinitypicker.h \
+    controls/srpicker.h \
+    controls/dropdownbutton.h \
+    controls/xensearch/querypanel.h \
+    controls/xensearch/searchoutput.h \
+    controls/xensearch/foldernavigator.h \
+    controls/xensearch/groupingcontrol.h \
+    controls/xensearch/queryelement.h \
+    controls/xensearch/querytype.h \
+    controls/xensearch/searcher.h \
+    controls/xensearch/resourceselectbutton.h \
+    controls/xensearch/treewidgetgroupacceptor.h \
     settingspanels/ieditpage.h \
     settingspanels/generaleditpage.h \
     settingspanels/hostautostarteditpage.h \
@@ -252,6 +299,10 @@ HEADERS += \
     settingspanels/homeservereditpage.h \
     settingspanels/vmadvancededitpage.h \
     settingspanels/vmenlightenmenteditpage.h \
+    settingspanels/pooladvancededitpage.h \
+    settingspanels/securityeditpage.h \
+    settingspanels/livepatchingeditpage.h \
+    settingspanels/networkoptionseditpage.h \
     dialogs/optionspages/ioptionspage.h \
     dialogs/optionspages/securityoptionspage.h \
     dialogs/optionspages/displayoptionspage.h \
@@ -270,6 +321,7 @@ HEADERS += \
     actions/meddlingactionmanager.h \
     commands/command.h \
     commands/contextmenubuilder.h \
+    commands/connection/disconnectcommand.h \
     commands/host/hostmaintenancemodecommand.h \
     commands/host/reboothostcommand.h \
     commands/host/shutdownhostcommand.h \
@@ -332,6 +384,9 @@ HEADERS += \
     commands/storage/storagepropertiescommand.h \
     commands/storage/addvirtualdiskcommand.h \
     commands/storage/attachvirtualdiskcommand.h \
+    commands/storage/srcommand.h \
+    commands/storage/vbdcommand.h \
+    commands/storage/vdicommand.h \
     commands/storage/reattachsrcommand.h \
     commands/storage/forgetsrcommand.h \
     commands/storage/destroysrcommand.h \
@@ -343,6 +398,7 @@ HEADERS += \
     commands/storage/trimsrcommand.h \
     commands/storage/vdieditsizelocationcommand.h \
     commands/storage/migratevirtualdiskcommand.h \
+    commands/pool/poolcommand.h \
     commands/pool/poolpropertiescommand.h \
     commands/pool/joinpoolcommand.h \
     commands/pool/ejecthostfrompoolcommand.h \
@@ -375,11 +431,11 @@ HEADERS += \
     widgets/memorybar.h \
     widgets/progressbardelegate.h \
     widgets/verticaltabwidget.h \
-    widgets/navigationpane.h \
-    widgets/navigationview.h \
+    navigation/navigationpane.h \
+    navigation/navigationview.h \
     widgets/notificationsview.h \
     widgets/notificationssubmodeitem.h \
-    widgets/navigationbuttons.h \
+    navigation/navigationbuttons.h \
     widgets/wizardnavigationpane.h \
     network/httpconnect.h \
     navigation/navigationhistory.h \
@@ -396,6 +452,9 @@ HEADERS += \
 FORMS += \
     mainwindow.ui \
     dialogs/connectdialog.ui \
+    dialogs/addserverdialog.ui \
+    dialogs/connectingtoserverdialog.ui \
+    dialogs/reconnectasdialog.ui \
     dialogs/debugwindow.ui \
     dialogs/ballooningdialog.ui \
     dialogs/commanderrordialog.ui \
@@ -412,7 +471,10 @@ FORMS += \
     dialogs/newvmwizard.ui \
     dialogs/newsrwizard.ui \
     dialogs/verticallytabbeddialog.ui \
+    dialogs/customsearchdialog.ui \
+    dialogs/warningdialogs/closexencenterwarningdialog.ui \
     controls/affinitypicker.ui \
+    controls/srpicker.ui \
     settingspanels/generaleditpage.ui \
     settingspanels/hostautostarteditpage.ui \
     settingspanels/hostmultipathpage.ui \
@@ -426,6 +488,10 @@ FORMS += \
     settingspanels/homeservereditpage.ui \
     settingspanels/vmadvancededitpage.ui \
     settingspanels/vmenlightenmenteditpage.ui \
+    settingspanels/pooladvancededitpage.ui \
+    settingspanels/securityeditpage.ui \
+    settingspanels/livepatchingeditpage.ui \
+    settingspanels/networkoptionseditpage.ui \
     dialogs/optionspages/securityoptionspage.ui \
     dialogs/optionspages/displayoptionspage.ui \
     dialogs/optionspages/confirmationoptionspage.ui \
@@ -445,8 +511,8 @@ FORMS += \
     tabpages/vmstoragetabpage.ui \
     tabpages/alertsummarypage.ui \
     tabpages/eventspage.ui \
-    widgets/navigationpane.ui \
-    widgets/navigationview.ui \
+    navigation/navigationpane.ui \
+    navigation/navigationview.ui \
     widgets/notificationsview.ui \
     widgets/wizardnavigationpane.ui \
     ConsoleView/VNCTabView.ui \
@@ -456,7 +522,7 @@ FORMS += \
 RESOURCES += resources.qrc
 
 # Link with xenlib
-INCLUDEPATH += ../xenlib
+INCLUDEPATH += .. ../xenlib
 
 # Windows: using xenlib as a static lib; avoid dllimport in headers
 win32:DEFINES += XENLIB_STATIC

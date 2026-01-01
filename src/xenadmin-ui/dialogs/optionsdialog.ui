@@ -172,10 +172,7 @@
              </sizepolicy>
             </property>
             <property name="styleSheet">
-             <string notr="true">QStackedWidget {
-    background-color: white;
-}
-QStackedWidget > QWidget {
+             <string notr="true">QStackedWidget > QWidget {
     padding: 10px;
 }</string>
             </property>

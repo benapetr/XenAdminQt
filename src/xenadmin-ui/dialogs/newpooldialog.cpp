@@ -32,11 +32,11 @@
 #include "../mainwindow.h"
 
 #include <xenlib.h>
-#include <xen/connection.h>
+#include <xen/network/connection.h>
 #include <xen/session.h>
 #include <xen/host.h>
 #include <xen/actions/pool/createpoolaction.h>
-#include <collections/connectionsmanager.h>
+#include <xen/network/connectionsmanager.h>
 #include <xencache.h>
 #include <xen/xenapi/xenapi_Pool.h>
 
@@ -92,7 +92,7 @@ NewPoolDialog::~NewPoolDialog()
  */
 void NewPoolDialog::populateConnections()
 {
-    ConnectionsManager* connMgr = ConnectionsManager::instance();
+    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     if (!connMgr)
     {
         qWarning() << "NewPoolDialog: No ConnectionsManager available";
@@ -116,20 +116,17 @@ void NewPoolDialog::populateConnections()
     this->ui->comboBoxCoordinator->clear();
     for (XenConnection* conn : this->m_connections)
     {
-        QString displayName = conn->getHostname();
+        QString displayName = conn->GetHostname();
 
         // Try to get host name from cache
-        XenCache* cache = conn->getCache();
-        if (cache)
+        XenCache* cache = conn->GetCache();
+        QList<QVariantMap> hosts = cache->GetAllData("host");
+        if (!hosts.isEmpty())
         {
-            QList<QVariantMap> hosts = cache->GetAllData("host");
-            if (!hosts.isEmpty())
+            QString hostName = hosts.first().value("name_label").toString();
+            if (!hostName.isEmpty())
             {
-                QString hostName = hosts.first().value("name_label").toString();
-                if (!hostName.isEmpty())
-                {
-                    displayName = hostName;
-                }
+                displayName = hostName;
             }
         }
 
@@ -160,10 +157,10 @@ void NewPoolDialog::updateServerList()
             continue;
         }
 
-        QString displayName = conn->getHostname();
+        QString displayName = conn->GetHostname();
 
         // Try to get host name from cache
-        XenCache* cache = conn->getCache();
+        XenCache* cache = conn->GetCache();
         if (cache)
         {
             QList<QVariantMap> hosts = cache->GetAllData("host");
@@ -195,16 +192,12 @@ void NewPoolDialog::updateServerList()
  */
 bool NewPoolDialog::isStandaloneConnection(XenConnection* connection) const
 {
-    if (!connection || !connection->isConnected())
+    if (!connection || !connection->IsConnected())
     {
         return false;
     }
 
-    XenCache* cache = connection->getCache();
-    if (!cache)
-    {
-        return false;
-    }
+    XenCache* cache = connection->GetCache();
 
     // Check if pool has only one host
     QList<QVariantMap> hosts = cache->GetAllData("host");
@@ -341,14 +334,14 @@ void NewPoolDialog::createPool()
         return;
     }
 
-    XenSession* coordinatorSession = coordinatorConn->getSession();
-    if (!coordinatorSession || !coordinatorSession->isLoggedIn())
+    XenAPI::Session* coordinatorSession = coordinatorConn->GetSession();
+    if (!coordinatorSession || !coordinatorSession->IsLoggedIn())
     {
         QMessageBox::warning(this, tr("Error"), tr("Coordinator is not connected."));
         return;
     }
 
-    qDebug() << "Creating pool:" << poolName << "with coordinator:" << coordinatorConn->getHostname();
+    qDebug() << "Creating pool:" << poolName << "with coordinator:" << coordinatorConn->GetHostname();
     qDebug() << "Supporters:" << supporterConns.size();
 
     // Create the action using the existing CreatePoolAction class

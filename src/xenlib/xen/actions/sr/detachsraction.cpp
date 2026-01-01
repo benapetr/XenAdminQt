@@ -27,7 +27,7 @@
 
 #include "detachsraction.h"
 #include "../../../xencache.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../xenapi/xenapi_PBD.h"
 #include <QDebug>
 
@@ -54,7 +54,7 @@ void DetachSrAction::run()
     try
     {
         // Get SR data to find PBDs
-        XenCache* cache = connection()->getCache();
+        XenCache* cache = connection()->GetCache();
         QVariantMap srData = cache->ResolveObjectData("sr", m_srRef);
         if (srData.isEmpty())
         {

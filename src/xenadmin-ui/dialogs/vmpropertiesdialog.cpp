@@ -36,11 +36,10 @@
 #include "../settingspanels/homeservereditpage.h"
 #include "../settingspanels/vmadvancededitpage.h"
 #include "../settingspanels/vmenlightenmenteditpage.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xencache.h"
 
-VMPropertiesDialog::VMPropertiesDialog(XenConnection* connection, const QString& vmRef, QWidget* parent)
-    : VerticallyTabbedDialog(connection, vmRef, "vm", parent)
+VMPropertiesDialog::VMPropertiesDialog(XenConnection* connection, const QString& vmRef, QWidget* parent) : VerticallyTabbedDialog(connection, vmRef, "vm", parent)
 {
     QString vmName = objectDataBefore().value("name_label", tr("VM")).toString();
     this->setWindowTitle(tr("'%1' Properties").arg(vmName));
@@ -83,12 +82,12 @@ void VMPropertiesDialog::build()
 
     // Tab 7: Home Server (only if WLB not enabled/configured)
     bool wlbEnabled = false;
-    if (connection() && connection()->getCache())
+    if (connection())
     {
-        QStringList poolRefs = connection()->getCache()->GetAllRefs("pool");
+        QStringList poolRefs = connection()->GetCache()->GetAllRefs("pool");
         if (!poolRefs.isEmpty())
         {
-            QVariantMap poolData = connection()->getCache()->ResolveObjectData("pool", poolRefs.first());
+            QVariantMap poolData = connection()->GetCache()->ResolveObjectData("pool", poolRefs.first());
             QString wlbUrl = poolData.value("wlb_url").toString();
             wlbEnabled = poolData.value("wlb_enabled").toBool() && !wlbUrl.isEmpty();
         }

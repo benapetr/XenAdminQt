@@ -32,6 +32,11 @@
 #include <QString>
 #include <QVariantMap>
 
+namespace XenAPI
+{
+    class Session;
+}
+
 /**
  * @brief Action to boot a VM in recovery mode with temporary boot settings
  *
@@ -49,57 +54,57 @@ class HVMBootAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct a new HVMBootAction
-     * @param connection XenServer connection
-     * @param vmRef VM opaque reference
-     * @param parent Parent QObject
-     */
-    explicit HVMBootAction(XenConnection* connection, const QString& vmRef, QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct a new HVMBootAction
+         * @param connection XenServer connection
+         * @param vmRef VM opaque reference
+         * @param parent Parent QObject
+         */
+        explicit HVMBootAction(XenConnection* connection, const QString& vmRef, QObject* parent = nullptr);
 
-protected:
-    /**
-     * @brief Execute the recovery boot sequence
-     *
-     * Steps:
-     * 1. Get current HVM boot policy and boot order
-     * 2. Set policy to "BIOS order" and order to "DN"
-     * 3. Start VM
-     * 4. Restore original boot policy and order
-     *
-     * @throws std::runtime_error if any step fails
-     */
-    void run() override;
+    protected:
+        /**
+         * @brief Execute the recovery boot sequence
+         *
+         * Steps:
+         * 1. Get current HVM boot policy and boot order
+         * 2. Set policy to "BIOS order" and order to "DN"
+         * 3. Start VM
+         * 4. Restore original boot policy and order
+         *
+         * @throws std::runtime_error if any step fails
+         */
+        void run() override;
 
-private:
-    QString m_vmRef;         ///< VM opaque reference
-    QString m_vmName;        ///< VM name (for display)
-    QString m_oldBootPolicy; ///< Original boot policy to restore
-    QString m_oldBootOrder;  ///< Original boot order to restore
+    private:
+        QString m_vmRef;         ///< VM opaque reference
+        QString m_vmName;        ///< VM name (for display)
+        QString m_oldBootPolicy; ///< Original boot policy to restore
+        QString m_oldBootOrder;  ///< Original boot order to restore
 
-    /**
-     * @brief Extract "order" value from HVM_boot_params map
-     * @param bootParams HVM_boot_params dictionary
-     * @return Boot order string (e.g., "cdn", "DN") or empty if not set
-     */
-    QString getBootOrder(const QVariantMap& bootParams) const;
+        /**
+         * @brief Extract "order" value from HVM_boot_params map
+         * @param bootParams HVM_boot_params dictionary
+         * @return Boot order string (e.g., "cdn", "DN") or empty if not set
+         */
+        QString getBootOrder(const QVariantMap& bootParams) const;
 
-    /**
-     * @brief Set "order" value in HVM_boot_params map
-     * @param bootParams HVM_boot_params dictionary (modified in place)
-     * @param order New boot order string
-     */
-    void setBootOrder(QVariantMap& bootParams, const QString& order);
+        /**
+         * @brief Set "order" value in HVM_boot_params map
+         * @param bootParams HVM_boot_params dictionary (modified in place)
+         * @param order New boot order string
+         */
+        void setBootOrder(QVariantMap& bootParams, const QString& order);
 
-    /**
-     * @brief Restore original boot settings after recovery boot
-     * @param session XenServer session
-     *
-     * Called after VM start (success or failure) to restore the original
-     * boot policy and boot order. Errors are logged but not propagated.
-     */
-    void restoreBootSettings(XenSession* session);
+        /**
+         * @brief Restore original boot settings after recovery boot
+         * @param session XenServer session
+         *
+         * Called after VM start (success or failure) to restore the original
+         * boot policy and boot order. Errors are logged but not propagated.
+         */
+        void restoreBootSettings(XenAPI::Session* session);
 };
 
 #endif // HVMBOOTACTION_H

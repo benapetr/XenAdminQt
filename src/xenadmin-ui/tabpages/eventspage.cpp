@@ -29,7 +29,7 @@
 #include "ui_eventspage.h"
 #include "xenlib.h"
 #include "operations/operationmanager.h"
-#include <xen/connection.h>
+#include "xen/network/connection.h"
 #include <QDebug>
 #include <QMessageBox>
 #include <QPushButton>
@@ -203,7 +203,7 @@ bool EventsPage::filterRecord(OperationManager::OperationRecord* record)
     // Filter by location
     if (!this->m_locationFilters.isEmpty() && record->operation && record->operation->connection())
     {
-        QString location = record->operation->connection()->getHostname();
+        QString location = record->operation->connection()->GetHostname();
         if (!this->m_locationFilters.contains(location))
             return true;  // Hide this record
     }
@@ -252,7 +252,7 @@ void EventsPage::createRecordRow(OperationManager::OperationRecord* record)
     // Column 3: Location (connection name)
     QString location = "";
     if (record->operation && record->operation->connection())
-        location = record->operation->connection()->getHostname();
+        location = record->operation->connection()->GetHostname();
     QTableWidgetItem* locationItem = new QTableWidgetItem(location);
     locationItem->setData(Qt::UserRole, QVariant::fromValue(record));
     this->ui->eventsTable->setItem(row, 3, locationItem);
@@ -416,7 +416,7 @@ QString EventsPage::buildRecordTitle(OperationManager::OperationRecord* record) 
 
     // Fall back to connection hostname if available
     if (record->operation && record->operation->connection())
-        return record->operation->connection()->getHostname();
+        return record->operation->connection()->GetHostname();
 
     return tr("Operation");
 }
@@ -569,7 +569,7 @@ void EventsPage::onFilterLocationChanged()
     {
         if (record && record->operation && record->operation->connection())
         {
-            QString hostname = record->operation->connection()->getHostname();
+            QString hostname = record->operation->connection()->GetHostname();
             if (!hostname.isEmpty())
                 allLocations.insert(hostname);
         }

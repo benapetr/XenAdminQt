@@ -28,7 +28,7 @@
 #ifndef DETACHSRCOMMAND_H
 #define DETACHSRCOMMAND_H
 
-#include "../command.h"
+#include "srcommand.h"
 
 /**
  * @brief DetachSRCommand - Detaches selected SRs
@@ -38,21 +38,21 @@
  * Detaches SRs by unplugging their PBDs. Shows confirmation dialog.
  * Cannot detach SRs with running VMs or actions in progress.
  */
-class DetachSRCommand : public Command
+class DetachSRCommand : public SRCommand
 {
     Q_OBJECT
 
     public:
         explicit DetachSRCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        QString menuText() const override
+        QString MenuText() const override
         {
             return "Detach SR";
         }
 
         void setTargetSR(const QString& srRef);
-        bool canRun() const override;
-        void run() override;
+        bool CanRun() const override;
+        void Run() override;
 
     private:
         QString currentSR() const;

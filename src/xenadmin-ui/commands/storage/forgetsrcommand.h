@@ -28,7 +28,7 @@
 #ifndef FORGETSRCOMMAND_H
 #define FORGETSRCOMMAND_H
 
-#include "../command.h"
+#include "srcommand.h"
 
 /**
  * @brief ForgetSRCommand - Forgets selected SRs
@@ -38,21 +38,21 @@
  * Forgets SRs from XenServer database without destroying backend storage.
  * Shows confirmation dialog. SR must be detached and have no running VMs.
  */
-class ForgetSRCommand : public Command
+class ForgetSRCommand : public SRCommand
 {
     Q_OBJECT
 
     public:
         explicit ForgetSRCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        QString menuText() const override
+        QString MenuText() const override
         {
             return "Forget SR";
         }
 
     protected:
-        bool canRun() const override;
-        void run() override;
+        bool CanRun() const override;
+        void Run() override;
 };
 
 #endif // FORGETSRCOMMAND_H

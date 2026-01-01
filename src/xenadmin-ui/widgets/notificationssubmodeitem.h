@@ -31,7 +31,7 @@
 #include <QStyledItemDelegate>
 #include <QPainter>
 #include <QListWidget>
-#include "../widgets/navigationpane.h"
+#include "../navigation/navigationpane.h"
 
 /**
  * @brief Custom delegate for painting notification sub-mode items
@@ -43,19 +43,19 @@ class NotificationsSubModeItemDelegate : public QStyledItemDelegate
 {
     Q_OBJECT
 
-public:
-    explicit NotificationsSubModeItemDelegate(QObject* parent = nullptr);
+    public:
+        explicit NotificationsSubModeItemDelegate(QObject* parent = nullptr);
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override;
-
-    QSize sizeHint(const QStyleOptionViewItem& option,
+        void paint(QPainter* painter, const QStyleOptionViewItem& option,
                    const QModelIndex& index) const override;
 
-private:
-    static constexpr int IMG_LEFT_MARGIN = 5;
-    static constexpr int IMG_RIGHT_MARGIN = 5;
-    static constexpr int ITEM_HEIGHT = 40;
+        QSize sizeHint(const QStyleOptionViewItem& option,
+                       const QModelIndex& index) const override;
+
+    private:
+        static constexpr int IMG_LEFT_MARGIN = 5;
+        static constexpr int IMG_RIGHT_MARGIN = 5;
+        static constexpr int ITEM_HEIGHT = 40;
 };
 
 /**

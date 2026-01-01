@@ -26,9 +26,8 @@
  */
 
 #include "srrepairaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
-#include "../../../xencache.h"
 #include "../../sr.h"
 #include "../../xenapi/xenapi_SR.h"
 #include "../../xenapi/xenapi_PBD.h"
@@ -38,9 +37,9 @@
 SrRepairAction::SrRepairAction(SR* sr,
                                bool isSharedAction,
                                QObject* parent)
-    : AsyncOperation(sr ? sr->connection() : nullptr,
-                     isSharedAction ? QString("Sharing SR '%1'").arg(sr ? sr->nameLabel() : "")
-                                    : QString("Repairing SR '%1'").arg(sr ? sr->nameLabel() : ""),
+    : AsyncOperation(sr ? sr->GetConnection() : nullptr,
+                     isSharedAction ? QString("Sharing SR '%1'").arg(sr ? sr->GetName() : "")
+                                    : QString("Repairing SR '%1'").arg(sr ? sr->GetName() : ""),
                      isSharedAction ? QString("Sharing storage repository...")
                                     : QString("Repairing storage repository..."),
                      parent),
@@ -64,17 +63,17 @@ void SrRepairAction::run()
         return;
     }
 
-    XenSession* session = this->session();
-    if (!session || !session->isLoggedIn())
+    XenAPI::Session* session = this->session();
+    if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
     }
 
-    qDebug() << "SrRepairAction: Repairing SR" << m_sr->nameLabel();
+    qDebug() << "SrRepairAction: Repairing SR" << m_sr->GetName();
 
-    QString srRef = m_sr->opaqueRef();
-    bool srShared = m_sr->shared();
+    QString srRef = m_sr->OpaqueRef();
+    bool srShared = m_sr->IsShared();
 
     // Get all PBDs for this SR
     QVariant pbdsVar = XenAPI::SR::get_PBDs(session, srRef);
@@ -246,9 +245,9 @@ void SrRepairAction::run()
     // Success
     setPercentComplete(100);
     if (m_isSharedAction)
-        setDescription(QString("SR '%1' shared successfully").arg(m_sr->nameLabel()));
+        setDescription(QString("SR '%1' shared successfully").arg(m_sr->GetName()));
     else
-        setDescription(QString("SR '%1' repaired successfully").arg(m_sr->nameLabel()));
+        setDescription(QString("SR '%1' repaired successfully").arg(m_sr->GetName()));
 
     qDebug() << "SrRepairAction: Repair complete";
 }

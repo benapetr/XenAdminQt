@@ -26,15 +26,12 @@
  */
 
 #include "destroydiskaction.h"
-#include "detachvirtualdiskaction.h"
-#include "../../vdi.h"
-#include "../../vbd.h"
-#include "../../vm.h"
-#include "../../sr.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VDI.h"
 #include "../../xenapi/xenapi_VBD.h"
 #include "../../xenapi/xenapi_VM.h"
+
+using namespace XenAPI;
 
 DestroyDiskAction::DestroyDiskAction(const QString& vdiRef,
                                      XenConnection* connection,
@@ -54,8 +51,8 @@ DestroyDiskAction::DestroyDiskAction(const QString& vdiRef,
 
 void DestroyDiskAction::run()
 {
-    XenSession* session = this->session();
-    if (!session || !session->isLoggedIn())
+    Session* session = this->session();
+    if (!session || !session->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
     }

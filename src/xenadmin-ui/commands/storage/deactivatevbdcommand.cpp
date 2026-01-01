@@ -26,54 +26,48 @@
  */
 
 #include "deactivatevbdcommand.h"
-#include "../../../xenlib/xencache.h"
-#include "../../../xenlib/xenlib.h"
-#include "../../../xenlib/xen/connection.h"
-#include "../../../xenlib/xen/session.h"
-#include "../../../xenlib/xen/xenapi/xenapi_VBD.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xenlib.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/vbd.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/xenapi/xenapi_VBD.h"
 #include "../../mainwindow.h"
 #include <QMessageBox>
 #include <QDebug>
 
 DeactivateVBDCommand::DeactivateVBDCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VBDCommand(mainWindow, parent)
 {
 }
 
-QString DeactivateVBDCommand::menuText() const
+QString DeactivateVBDCommand::MenuText() const
 {
     return "Deactivate Virtual Disk";
 }
 
-bool DeactivateVBDCommand::canRun() const
+bool DeactivateVBDCommand::CanRun() const
 {
-    if (getSelectedObjectType() != "vbd")
-    {
+    QSharedPointer<VBD> vbd = this->getVBD();
+    if (!vbd || !vbd->IsValid())
         return false;
-    }
 
-    QString vbdRef = getSelectedObjectRef();
-    if (vbdRef.isEmpty())
-    {
-        return false;
-    }
-
-    return canRunVBD(vbdRef);
+    return this->canRunVBD(vbd->OpaqueRef());
 }
 
 bool DeactivateVBDCommand::canRunVBD(const QString& vbdRef) const
 {
-    XenCache* cache = mainWindow()->xenLib()->getCache();
-    if (!cache)
-    {
+    QSharedPointer<VBD> vbd = this->getVBD();
+    if (!vbd || !vbd->IsValid())
         return false;
-    }
+
+    XenCache* cache = vbd->GetConnection()->GetCache();
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
-    {
         return false;
-    }
 
     // Check if VBD is locked
     if (vbdData.value("Locked", false).toBool())
@@ -146,97 +140,6 @@ bool DeactivateVBDCommand::canRunVBD(const QString& vbdRef) const
     return true;
 }
 
-QString DeactivateVBDCommand::getCantRunReasonVBD(const QString& vbdRef) const
-{
-    XenCache* cache = mainWindow()->xenLib()->getCache();
-    if (!cache)
-    {
-        return "Cache not available";
-    }
-
-    QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-    if (vbdData.isEmpty())
-    {
-        return "VBD not found";
-    }
-
-    // Get VM
-    QString vmRef = vbdData.value("VM").toString();
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-    {
-        return "VM not found";
-    }
-
-    if (vmData.value("is_a_template").toBool())
-    {
-        return "Cannot deactivate disk on template";
-    }
-
-    // Get VDI
-    QString vdiRef = vbdData.value("VDI").toString();
-    if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
-    {
-        return "No VDI attached to this VBD";
-    }
-
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-    if (vdiData.isEmpty())
-    {
-        return "VDI not found";
-    }
-
-    // Get SR to check if contactable
-    QString srRef = vdiData.value("SR").toString();
-    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-    if (srData.isEmpty())
-    {
-        return "SR could not be contacted";
-    }
-
-    // Check if VDI is locked
-    if (vdiData.value("Locked", false).toBool())
-    {
-        return "Virtual disk is in use";
-    }
-
-    // Check if VBD is locked
-    if (vbdData.value("Locked", false).toBool())
-    {
-        return "Virtual disk is in use";
-    }
-
-    // Check VM power state
-    QString powerState = vmData.value("power_state").toString();
-    if (powerState != "Running")
-    {
-        QString vmName = vmData.value("name_label").toString();
-        return QString("VM '%1' is not running").arg(vmName);
-    }
-
-    // Check if system disk
-    QString vdiType = vdiData.value("type").toString();
-    if (vdiType == "system")
-    {
-        bool isOwner = vbdData.value("device", "").toString() == "0" ||
-                       vbdData.value("bootable", false).toBool();
-        if (isOwner)
-        {
-            return "Cannot hot-unplug system boot disk";
-        }
-    }
-
-    // Check if not currently attached
-    bool currentlyAttached = vbdData.value("currently_attached").toBool();
-    if (!currentlyAttached)
-    {
-        QString vmName = vmData.value("name_label").toString();
-        return QString("Virtual disk is not active on %1").arg(vmName);
-    }
-
-    return "Unknown reason";
-}
-
 bool DeactivateVBDCommand::areIODriversNeededAndMissing(const QVariantMap& vmData) const
 {
     // Simplified check - C# has complex API version checking (Ely or greater)
@@ -246,25 +149,18 @@ bool DeactivateVBDCommand::areIODriversNeededAndMissing(const QVariantMap& vmDat
     return false;
 }
 
-void DeactivateVBDCommand::run()
+void DeactivateVBDCommand::Run()
 {
-    QString vbdRef = getSelectedObjectRef();
-    if (vbdRef.isEmpty())
-    {
+    QSharedPointer<VBD> vbd = this->getVBD();
+    if (!vbd || !vbd->IsValid())
         return;
-    }
 
-    XenCache* cache = mainWindow()->xenLib()->getCache();
-    if (!cache)
-    {
-        return;
-    }
+    QString vbdRef = vbd->OpaqueRef();
+    XenCache* cache = vbd->GetConnection()->GetCache();
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
-    {
         return;
-    }
 
     // Get VDI and VM names for status message
     QString vdiRef = vbdData.value("VDI").toString();
@@ -279,15 +175,15 @@ void DeactivateVBDCommand::run()
     // Execute unplug operation directly (matches C# DelegatedAsyncAction pattern)
     try
     {
-        XenAPI::VBD::unplug(mainWindow()->xenLib()->getConnection()->getSession(), vbdRef);
+        XenAPI::VBD::unplug(vbd->GetConnection()->GetSession(), vbdRef);
 
-        mainWindow()->showStatusMessage(
+        this->mainWindow()->showStatusMessage(
             QString("Successfully deactivated virtual disk '%1' from VM '%2'").arg(vdiName, vmName),
             5000);
     } catch (const std::exception& e)
     {
         QMessageBox::warning(
-            mainWindow(),
+            this->mainWindow(),
             "Deactivate Virtual Disk Failed",
             QString("Failed to deactivate virtual disk '%1' from VM '%2': %3")
                 .arg(vdiName, vmName, e.what()));

@@ -32,7 +32,6 @@
 #include <QObject>
 
 class XenConnection;
-class XenLib;
 class Failure;  // Forward declaration
 
 /*!
@@ -47,56 +46,45 @@ class VMOperationHelpers : public QObject
 {
     Q_OBJECT
 
-public:
-    /*!
-     * \brief Show diagnosis form for VM start failures
-     *
-     * Walks through all hosts in the pool, calls VM.assert_can_boot_here on each,
-     * and displays the results in a CommandErrorDialog.
-     *
-     * Matches C# VMOperationCommand.StartDiagnosisForm(VM vm, bool isStart)
-     *
-     * \param xenLib XenLib instance for cache access
-     * \param connection XenServer connection
-     * \param vmRef VM opaque reference
-     * \param vmName VM name (for display)
-     * \param isStart true if this is a start operation, false for resume
-     * \param parent Parent widget for dialogs
-     */
-    static void startDiagnosisForm(XenLib* xenLib,
-                                   XenConnection* connection,
-                                   const QString& vmRef,
-                                   const QString& vmName,
-                                   bool isStart,
-                                   QWidget* parent = nullptr);
+    public:
+        /*!
+         * \brief Show diagnosis form for VM start failures
+         *
+         * Walks through all hosts in the pool, calls VM.assert_can_boot_here on each,
+         * and displays the results in a CommandErrorDialog.
+         *
+         * Matches C# VMOperationCommand.StartDiagnosisForm(VM vm, bool isStart)
+         *
+         * \param conn XenLib instance for cache access
+         * \param connection XenServer connection
+         * \param vmRef VM opaque reference
+         * \param vmName VM name (for display)
+         * \param isStart true if this is a start operation, false for resume
+         * \param parent Parent widget for dialogs
+         */
+        static void startDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, QWidget* parent = nullptr);
 
-    /*!
-     * \brief Show diagnosis form after catching a Failure
-     *
-     * Inspects the Failure error code and shows appropriate dialog:
-     * - NO_HOSTS_AVAILABLE: Shows per-host diagnosis (calls other overload)
-     * - HA_OPERATION_WOULD_BREAK_FAILOVER_PLAN: Offers to reduce ntol and retry
-     *
-     * Matches C# VMOperationCommand.StartDiagnosisForm(VMStartAbstractAction, Failure)
-     *
-     * \param xenLib XenLib instance for cache access
-     * \param connection XenServer connection
-     * \param vmRef VM opaque reference
-     * \param vmName VM name (for display)
-     * \param isStart true if this is a start operation, false for resume
-     * \param failure The Failure exception that was caught
-     * \param parent Parent widget for dialogs
-     */
-    static void startDiagnosisForm(XenLib* xenLib,
-                                   XenConnection* connection,
-                                   const QString& vmRef,
-                                   const QString& vmName,
-                                   bool isStart,
-                                   const Failure& failure,
-                                   QWidget* parent = nullptr);
+        /*!
+         * \brief Show diagnosis form after catching a Failure
+         *
+         * Inspects the Failure error code and shows appropriate dialog:
+         * - NO_HOSTS_AVAILABLE: Shows per-host diagnosis (calls other overload)
+         * - HA_OPERATION_WOULD_BREAK_FAILOVER_PLAN: Offers to reduce ntol and retry
+         *
+         * Matches C# VMOperationCommand.StartDiagnosisForm(VMStartAbstractAction, Failure)
+         *
+         * \param xenLib XenLib instance for cache access
+         * \param connection XenServer connection
+         * \param vmRef VM opaque reference
+         * \param vmName VM name (for display)
+         * \param isStart true if this is a start operation, false for resume
+         * \param failure The Failure exception that was caught
+         * \param parent Parent widget for dialogs
+         */
+        static void startDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, const Failure& failure, QWidget* parent = nullptr);
 
-private:
-    VMOperationHelpers() = delete;  // Static-only class
+    private:
+        VMOperationHelpers() = delete;  // Static-only class
 };
 
 #endif // VMOPERATIONHELPERS_H

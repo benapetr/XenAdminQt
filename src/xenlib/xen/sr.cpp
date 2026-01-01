@@ -26,7 +26,7 @@
  */
 
 #include "sr.h"
-#include "connection.h"
+#include "network/connection.h"
 #include "host.h"
 #include "../xenlib.h"
 #include "../xencache.h"
@@ -36,88 +36,118 @@ SR::SR(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString SR::type() const
+QString SR::GetObjectType() const
+{
+    return "sr";
+}
+
+QString SR::GetType() const
 {
     return stringProperty("type");
 }
 
-bool SR::shared() const
+bool SR::IsShared() const
 {
     return boolProperty("shared", false);
 }
 
-qint64 SR::physicalSize() const
+qint64 SR::PhysicalSize() const
 {
     return longProperty("physical_size", 0);
 }
 
-qint64 SR::physicalUtilisation() const
+qint64 SR::PhysicalUtilisation() const
 {
     return longProperty("physical_utilisation", 0);
 }
 
-qint64 SR::virtualAllocation() const
+qint64 SR::VirtualAllocation() const
 {
     return longProperty("virtual_allocation", 0);
 }
 
-qint64 SR::freeSpace() const
+qint64 SR::FreeSpace() const
 {
-    return physicalSize() - physicalUtilisation();
+    return PhysicalSize() - PhysicalUtilisation();
 }
 
-QStringList SR::vdiRefs() const
+QStringList SR::VDIRefs() const
 {
     return stringListProperty("VDIs");
 }
 
-QStringList SR::pbdRefs() const
+QStringList SR::PBDRefs() const
 {
     return stringListProperty("PBDs");
 }
 
-QString SR::contentType() const
+QString SR::ContentType() const
 {
     return stringProperty("content_type", "user");
 }
 
-QVariantMap SR::otherConfig() const
+QVariantMap SR::OtherConfig() const
 {
     return property("other_config").toMap();
 }
 
-QVariantMap SR::smConfig() const
+QVariantMap SR::SMConfig() const
 {
     return property("sm_config").toMap();
 }
 
-QStringList SR::tags() const
+QStringList SR::Tags() const
 {
     return stringListProperty("tags");
 }
 
-QStringList SR::allowedOperations() const
+QStringList SR::AllowedOperations() const
 {
     return stringListProperty("allowed_operations");
 }
 
-QVariantMap SR::currentOperations() const
+QVariantMap SR::CurrentOperations() const
 {
     return property("current_operations").toMap();
 }
 
-bool SR::supportsTrim() const
+bool SR::SupportsTrim() const
 {
     // Check sm_config for trim support
-    QVariantMap sm = smConfig();
+    QVariantMap sm = this->SMConfig();
     return sm.value("supports_trim", false).toBool();
 }
 
-QString SR::homeRef() const
+QVariantMap SR::Blobs() const
+{
+    return this->property("blobs").toMap();
+}
+
+bool SR::LocalCacheEnabled() const
+{
+    return this->boolProperty("local_cache_enabled", false);
+}
+
+QString SR::IntroducedBy() const
+{
+    return this->stringProperty("introduced_by");
+}
+
+bool SR::Clustered() const
+{
+    return this->boolProperty("clustered", false);
+}
+
+bool SR::IsToolsSR() const
+{
+    return this->boolProperty("is_tools_sr", false);
+}
+
+QString SR::HomeRef() const
 {
     // For local SRs, find the host via PBD connections
     // For shared SRs, could return any connected host or empty
-    QStringList pbds = pbdRefs();
+    QStringList pbds = this->PBDRefs();
     if (pbds.isEmpty())
         return QString();
 
@@ -127,14 +157,14 @@ QString SR::homeRef() const
     return QString();
 }
 
-Host* SR::getFirstAttachedStorageHost() const
+Host* SR::GetFirstAttachedStorageHost() const
 {
-    QStringList pbds = pbdRefs();
+    QStringList pbds = this->PBDRefs();
     if (pbds.isEmpty())
         return nullptr;
 
     // Iterate through PBDs to find first currently_attached one
-    XenCache* cache = connection()->getCache();
+    XenCache* cache = GetConnection()->GetCache();
     if (!cache)
         return nullptr;
 
@@ -150,7 +180,7 @@ Host* SR::getFirstAttachedStorageHost() const
             QString hostRef = pbdData.value("host").toString();
             if (!hostRef.isEmpty())
             {
-                return new Host(connection(), hostRef, nullptr);
+                return new Host(GetConnection(), hostRef, nullptr);
             }
         }
     }

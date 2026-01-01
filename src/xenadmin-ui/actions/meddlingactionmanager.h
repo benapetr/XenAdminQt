@@ -56,101 +56,101 @@ class MeddlingActionManager : public QObject
 {
     Q_OBJECT
 
-public:
-    explicit MeddlingActionManager(QObject* parent = nullptr);
-    ~MeddlingActionManager() override;
+    public:
+        explicit MeddlingActionManager(QObject* parent = nullptr);
+        ~MeddlingActionManager() override;
 
-    /**
-     * @brief Get the application UUID for task tagging
-     *
-     * This UUID is written to task.other_config["XenAdminQtUUID"] and used
-     * to identify our tasks after reconnect.
-     */
-    static QString applicationUuid();
+        /**
+         * @brief Get the application UUID for task tagging
+         *
+         * This UUID is written to task.other_config["XenAdminQtUUID"] and used
+         * to identify our tasks after reconnect.
+         */
+        static QString applicationUuid();
 
-    /**
-     * @brief Rehydrate tasks for a connection after reconnect
-     *
-     * Called after XenLib reports connectionStateChanged(true). Queries all
-     * tasks and creates MeddlingActions for:
-     * - Tasks with our XenAdminQtUUID (rehydration)
-     * - Tasks from other clients (external monitoring)
-     *
-     * @param connection The connection that just reconnected
-     */
-    void rehydrateTasks(XenConnection* connection);
+        /**
+         * @brief Rehydrate tasks for a connection after reconnect
+         *
+         * Called after XenLib reports connectionStateChanged(true). Queries all
+         * tasks and creates MeddlingActions for:
+         * - Tasks with our XenAdminQtUUID (rehydration)
+         * - Tasks from other clients (external monitoring)
+         *
+         * @param connection The connection that just reconnected
+         */
+        void rehydrateTasks(XenConnection* connection);
 
-    /**
-     * @brief Handle task added event from cache
-     *
-     * Called when EventPoller sees a new task. Categorizes and creates
-     * MeddlingAction if needed.
-     *
-     * @param connection Connection where task appeared
-     * @param taskRef Task opaque reference
-     * @param taskData Task record
-     */
-    void handleTaskAdded(XenConnection* connection, const QString& taskRef, const QVariantMap& taskData);
+        /**
+         * @brief Handle task added event from cache
+         *
+         * Called when EventPoller sees a new task. Categorizes and creates
+         * MeddlingAction if needed.
+         *
+         * @param connection Connection where task appeared
+         * @param taskRef Task opaque reference
+         * @param taskData Task record
+         */
+        void handleTaskAdded(XenConnection* connection, const QString& taskRef, const QVariantMap& taskData);
 
-    /**
-     * @brief Handle task updated event from cache
-     *
-     * Updates existing MeddlingAction with new task state.
-     *
-     * @param connection Connection where task was updated
-     * @param taskRef Task opaque reference
-     * @param taskData Updated task record
-     */
-    void handleTaskUpdated(XenConnection* connection, const QString& taskRef, const QVariantMap& taskData);
+        /**
+         * @brief Handle task updated event from cache
+         *
+         * Updates existing MeddlingAction with new task state.
+         *
+         * @param connection Connection where task was updated
+         * @param taskRef Task opaque reference
+         * @param taskData Updated task record
+         */
+        void handleTaskUpdated(XenConnection* connection, const QString& taskRef, const QVariantMap& taskData);
 
-    /**
-     * @brief Handle task removed event from cache
-     *
-     * Removes MeddlingAction when task is destroyed on server.
-     *
-     * @param connection Connection where task was removed
-     * @param taskRef Task opaque reference
-     */
-    void handleTaskRemoved(XenConnection* connection, const QString& taskRef);
+        /**
+         * @brief Handle task removed event from cache
+         *
+         * Removes MeddlingAction when task is destroyed on server.
+         *
+         * @param connection Connection where task was removed
+         * @param taskRef Task opaque reference
+         */
+        void handleTaskRemoved(XenConnection* connection, const QString& taskRef);
 
-signals:
-    /**
-     * @brief Emitted when a meddling operation is created
-     *
-     * Connect to this signal to register the operation with OperationManager
-     * so it appears in the history/events UI.
-     */
-    void meddlingOperationCreated(MeddlingAction* operation);
+    signals:
+        /**
+         * @brief Emitted when a meddling operation is created
+         *
+         * Connect to this signal to register the operation with OperationManager
+         * so it appears in the history/events UI.
+         */
+        void meddlingOperationCreated(MeddlingAction* operation);
 
-private:
-    /**
-     * @brief Categorize a task and create MeddlingAction if suitable
-     *
-     * Tasks are categorized as:
-     * - Unwanted: Our own tasks, subtasks, unrecognized operations
-     * - Unmatched: New tasks waiting for appliesTo to be set
-     * - Matched: Suitable tasks that get a MeddlingAction
-     *
-     * @param connection Connection where task exists
-     * @param taskRef Task opaque reference
-     * @param taskData Task record
-     */
-    void categorizeTask(XenConnection* connection, const QString& taskRef, const QVariantMap& taskData);
+    private:
+        /**
+         * @brief Categorize a task and create MeddlingAction if suitable
+         *
+         * Tasks are categorized as:
+         * - Unwanted: Our own tasks, subtasks, unrecognized operations
+         * - Unmatched: New tasks waiting for appliesTo to be set
+         * - Matched: Suitable tasks that get a MeddlingAction
+         *
+         * @param connection Connection where task exists
+         * @param taskRef Task opaque reference
+         * @param taskData Task record
+         */
+        void categorizeTask(XenConnection* connection, const QString& taskRef, const QVariantMap& taskData);
 
-    /**
-     * @brief Get server time offset for a connection
-     */
-    qint64 getServerTimeOffset(XenConnection* connection) const;
+        /**
+         * @brief Get server time offset for a connection
+         */
+        qint64 getServerTimeOffset(XenConnection* connection) const;
 
-private:
-    /// Tasks we've seen but haven't categorized yet (waiting for appliesTo)
-    QHash<QString, QVariantMap> m_unmatchedTasks;
+    private:
+        /// Tasks we've seen but haven't categorized yet (waiting for appliesTo)
+        QHash<QString, QVariantMap> m_unmatchedTasks;
 
-    /// Tasks we've categorized and created MeddlingActions for
-    QHash<QString, MeddlingAction*> m_matchedTasks;
+        /// Tasks we've categorized and created MeddlingActions for
+        QHash<QString, MeddlingAction*> m_matchedTasks;
 
-    /// Application UUID (generated once at startup)
-    static QString s_applicationUuid;
+        /// Application UUID (generated once at startup)
+        static QString s_applicationUuid;
 };
 
 #endif // MEDDLINGACTIONMANAGER_H

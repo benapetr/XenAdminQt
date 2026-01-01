@@ -37,14 +37,14 @@ namespace Ui
     class AttachVirtualDiskDialog;
 }
 
-class XenLib;
+class XenConnection;
 
 class AttachVirtualDiskDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit AttachVirtualDiskDialog(XenLib* xenLib, const QString& vmRef, QWidget* parent = nullptr);
+    explicit AttachVirtualDiskDialog(XenConnection* connection, const QString& vmRef, QWidget* parent = nullptr);
     ~AttachVirtualDiskDialog();
 
     QString getSelectedVDIRef() const;
@@ -62,7 +62,7 @@ private:
     int findNextAvailableDevice();
 
     Ui::AttachVirtualDiskDialog* ui;
-    XenLib* m_xenLib;
+    XenConnection* m_connection;
     QString m_vmRef;
     QVariantMap m_vmData;
 };

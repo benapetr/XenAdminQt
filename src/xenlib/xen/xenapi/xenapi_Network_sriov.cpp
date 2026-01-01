@@ -32,9 +32,9 @@
 
 namespace XenAPI
 {
-    QString Network_sriov::async_create(XenSession* session, const QString& pif, const QString& network)
+    QString Network_sriov::async_create(Session* session, const QString& pif, const QString& network)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -46,9 +46,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString Network_sriov::async_destroy(XenSession* session, const QString& network_sriov)
+    QString Network_sriov::async_destroy(Session* session, const QString& network_sriov)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -60,9 +60,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QVariantMap Network_sriov::get_record(XenSession* session, const QString& network_sriov)
+    QVariantMap Network_sriov::get_record(Session* session, const QString& network_sriov)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -74,9 +74,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toMap();
     }
 
-    QVariantList Network_sriov::get_all(XenSession* session)
+    QVariantList Network_sriov::get_all(Session* session)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;

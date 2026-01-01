@@ -27,7 +27,7 @@
 
 #include "asyncoperation.h"
 #include "session.h"
-#include "connection.h"
+#include "network/connection.h"
 #include "api.h"
 #include "pool.h"
 #include "host.h"
@@ -112,7 +112,7 @@ void AsyncOperation::setConnection(XenConnection* connection)
     this->m_connection = connection;
 }
 
-XenSession* AsyncOperation::session() const
+XenAPI::Session *AsyncOperation::session() const
 {
     return this->m_session;
 }
@@ -296,7 +296,7 @@ void AsyncOperation::setPool(Pool* pool)
     if (pool)
     {
         // Inline add to m_appliesTo - already have mutex lock
-        QString ref = pool->opaqueRef();
+        QString ref = pool->OpaqueRef();
         if (!ref.isEmpty() && !this->m_appliesTo.contains(ref))
         {
             this->m_appliesTo.append(ref);
@@ -317,7 +317,7 @@ void AsyncOperation::setHost(Host* host)
     if (host)
     {
         // Inline add to m_appliesTo - already have mutex lock
-        QString ref = host->opaqueRef();
+        QString ref = host->OpaqueRef();
         if (!ref.isEmpty() && !this->m_appliesTo.contains(ref))
         {
             this->m_appliesTo.append(ref);
@@ -342,19 +342,19 @@ void AsyncOperation::setVM(VM* vm)
     {
         QString ref;
         // If this is a snapshot, add the parent VM instead (matches C# ActionBase.VM setter)
-        if (vm->isSnapshot())
+        if (vm->IsSnapshot())
         {
-            QString parentRef = vm->snapshotOfRef();
+            QString parentRef = vm->SnapshotOfRef();
             if (!parentRef.isEmpty())
             {
                 ref = parentRef;
             } else
             {
-                ref = vm->opaqueRef();
+                ref = vm->OpaqueRef();
             }
         } else
         {
-            ref = vm->opaqueRef();
+            ref = vm->OpaqueRef();
         }
 
         // Inline add to m_appliesTo - already have mutex lock
@@ -364,7 +364,7 @@ void AsyncOperation::setVM(VM* vm)
         }
 
         // Add home host if available
-        QString homeRef = vm->homeRef();
+        QString homeRef = vm->HomeRef();
         if (!homeRef.isEmpty() && !this->m_appliesTo.contains(homeRef))
         {
             this->m_appliesTo.append(homeRef);
@@ -385,7 +385,7 @@ void AsyncOperation::setSR(SR* sr)
     if (sr)
     {
         // Inline add to m_appliesTo - already have mutex lock
-        QString ref = sr->opaqueRef();
+        QString ref = sr->OpaqueRef();
         if (!ref.isEmpty() && !this->m_appliesTo.contains(ref))
         {
             this->m_appliesTo.append(ref);
@@ -394,7 +394,7 @@ void AsyncOperation::setSR(SR* sr)
         // Add home host if available and host is null (matches C# ActionBase.SR setter)
         if (!this->m_host)
         {
-            QString homeRef = sr->homeRef();
+            QString homeRef = sr->HomeRef();
             if (!homeRef.isEmpty() && !this->m_appliesTo.contains(homeRef))
             {
                 this->m_appliesTo.append(homeRef);
@@ -416,7 +416,7 @@ void AsyncOperation::setVMTemplate(VM* vmTemplate)
     if (vmTemplate)
     {
         // Inline add to m_appliesTo - already have mutex lock
-        QString ref = vmTemplate->opaqueRef();
+        QString ref = vmTemplate->OpaqueRef();
         if (!ref.isEmpty() && !this->m_appliesTo.contains(ref))
         {
             this->m_appliesTo.append(ref);
@@ -559,7 +559,7 @@ void AsyncOperation::runOnWorkerThread()
     qDebug() << "[AsyncOperation] runOnWorkerThread completed for:" << m_title;
 }
 
-void AsyncOperation::runSync(XenSession* session)
+void AsyncOperation::runSync(XenAPI::Session* session)
 {
     QMutexLocker locker(&this->m_mutex);
 
@@ -712,15 +712,15 @@ void AsyncOperation::clearError()
 }
 
 // Session management
-XenSession* AsyncOperation::createSession()
+XenAPI::Session* AsyncOperation::createSession()
 {
     if (!this->m_connection)
     {
         return nullptr;
     }
 
-    XenSession* baseSession = this->m_connection->getSession();
-    if (!baseSession || !baseSession->isLoggedIn())
+    XenAPI::Session* baseSession = this->m_connection->GetSession();
+    if (!baseSession || !baseSession->IsLoggedIn())
     {
         qWarning() << "AsyncOperation::createSession: Base session unavailable";
         return nullptr;
@@ -728,7 +728,7 @@ XenSession* AsyncOperation::createSession()
 
     // Don't pass 'this' as parent - session will be created in worker thread
     // We manage lifetime manually via destroySession()
-    XenSession* duplicate = XenSession::duplicateSession(baseSession, nullptr);
+    XenAPI::Session* duplicate = XenAPI::Session::DuplicateSession(baseSession, nullptr);
     if (!duplicate)
     {
         qWarning() << "AsyncOperation::createSession: Failed to duplicate session";
@@ -743,7 +743,7 @@ void AsyncOperation::destroySession()
 {
     if (this->m_session && this->m_ownsSession)
     {
-        this->m_session->logout();
+        this->m_session->Logout();
         // TODO investigate why this sometimes instantly becomes nullptr
         if (this->m_session)
         {
@@ -826,8 +826,8 @@ bool AsyncOperation::pollTask(const QString& taskRef, double start, double finis
         return true;
     }
 
-    XenSession* session = this->session();
-    if (!session || !session->isLoggedIn())
+    XenAPI::Session* session = this->session();
+    if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer", QStringList());
         return true;
@@ -932,8 +932,8 @@ void AsyncOperation::destroyTask()
     // Null or empty task ref can happen during RBAC dry-run
     QString taskRef = relatedTaskRef();
 
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn() || taskRef.isEmpty())
+    XenAPI::Session* sess = session();
+    if (!sess || !sess->IsLoggedIn() || taskRef.isEmpty())
     {
         // Clear task ref even if we can't destroy it
         if (!taskRef.isEmpty())
@@ -981,15 +981,15 @@ void AsyncOperation::cancelRelatedTask()
     }
 
     XenConnection* conn = connection();
-    if (!conn || !conn->isConnected())
+    if (!conn || !conn->IsConnected())
     {
         qDebug() << "AsyncOperation::cancelRelatedTask: No connection available";
         return;
     }
 
     // Get current session - if we don't have one, we can't cancel
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    XenAPI::Session* sess = session();
+    if (!sess || !sess->IsLoggedIn())
     {
         qDebug() << "AsyncOperation::cancelRelatedTask: No session available";
         return;
@@ -1019,8 +1019,8 @@ void AsyncOperation::tagTaskWithUuid(const QString& taskRef)
     if (taskRef.isEmpty() || m_operationUuid.isEmpty())
         return;
 
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    XenAPI::Session* sess = session();
+    if (!sess || !sess->IsLoggedIn())
         return;
 
     XenRpcAPI api(sess);
@@ -1047,8 +1047,8 @@ void AsyncOperation::removeUuidFromTask(const QString& taskRef)
     if (taskRef.isEmpty())
         return;
 
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    XenAPI::Session* sess = session();
+    if (!sess || !sess->IsLoggedIn())
         return;
 
     XenRpcAPI api(sess);
@@ -1115,7 +1115,7 @@ void AsyncOperation::setAppliesToFromObject(QObject* xenObject)
     } else if (VM* vm = qobject_cast<VM*>(xenObject))
     {
         // Check if it's a template
-        if (vm->isTemplate())
+        if (vm->IsTemplate())
         {
             setVMTemplate(vm);
         } else

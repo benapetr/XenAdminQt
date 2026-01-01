@@ -26,8 +26,8 @@
  */
 
 #include "destroypoolaction.h"
-#include "../../../xen/connection.h"
-#include "../../../xen/session.h"
+#include "../../network/connection.h"
+#include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../../xencache.h"
 #include <stdexcept>
@@ -55,7 +55,7 @@ void DestroyPoolAction::run()
         setDescription("Checking pool state...");
 
         // Check that pool has only one host
-        QStringList hostRefs = connection()->getCache()->GetAllRefs("host");
+        QStringList hostRefs = connection()->GetCache()->GetAllRefs("host");
         if (hostRefs.size() > 1)
         {
             throw std::runtime_error("Cannot destroy pool with multiple hosts. Remove all hosts except coordinator first.");

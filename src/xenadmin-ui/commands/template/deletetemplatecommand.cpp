@@ -33,12 +33,11 @@
 #include <QMessageBox>
 #include <QTimer>
 
-DeleteTemplateCommand::DeleteTemplateCommand(MainWindow* mainWindow, QObject* parent)
-    : DeleteVMCommand(mainWindow, parent)
+DeleteTemplateCommand::DeleteTemplateCommand(MainWindow* mainWindow, QObject* parent) : DeleteVMCommand(mainWindow, parent)
 {
 }
 
-bool DeleteTemplateCommand::canRun() const
+bool DeleteTemplateCommand::CanRun() const
 {
     QString templateRef = this->getSelectedVMRef();
     if (templateRef.isEmpty())
@@ -47,15 +46,19 @@ bool DeleteTemplateCommand::canRun() const
     return this->canDeleteTemplate(templateRef);
 }
 
-QString DeleteTemplateCommand::menuText() const
+QString DeleteTemplateCommand::MenuText() const
 {
     return "Delete Template";
 }
 
 bool DeleteTemplateCommand::canDeleteTemplate(const QString& templateRef) const
 {
+    QSharedPointer<XenObject> object = this->GetObject();
+    if (!object || !object->GetConnection())
+        return false;
+
     // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", templateRef);
+    QVariantMap vmData = object->GetConnection()->GetCache()->ResolveObjectData("vm", templateRef);
 
     // Check if it's a template
     bool isTemplate = vmData.value("is_a_template", false).toBool();

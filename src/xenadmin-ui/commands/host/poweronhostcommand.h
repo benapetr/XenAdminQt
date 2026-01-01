@@ -28,7 +28,7 @@
 #ifndef POWERONHOSTCOMMAND_H
 #define POWERONHOSTCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
 /**
  * @brief PowerOnHostCommand - Powers on the selected host
@@ -36,7 +36,7 @@
  * Matches C# PowerOnHostCommand from XenAdmin/Commands/PowerOnHostCommand.cs
  * Uses Wake-on-LAN or IPMI to power on a host that has been shut down.
  */
-class PowerOnHostCommand : public Command
+class PowerOnHostCommand : public HostCommand
 {
     Q_OBJECT
 
@@ -44,16 +44,13 @@ public:
     explicit PowerOnHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
     // Inherited from Command
-    bool canRun() const override;
-    void run() override;
-    QString menuText() const override;
+    bool CanRun() const override;
+    void Run() override;
+    QString MenuText() const override;
 
 private:
-    QString getSelectedHostRef() const;
-    QString getSelectedHostName() const;
-    bool canPowerOn(const QString& hostRef) const;
-    bool isHostLive(const QString& hostRef) const;
-    bool hasActiveHostAction(const QString& hostRef) const;
+    bool canPowerOn() const;
+    bool hasActiveHostAction() const;
 };
 
 #endif // POWERONHOSTCOMMAND_H

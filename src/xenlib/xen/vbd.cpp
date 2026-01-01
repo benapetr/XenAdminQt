@@ -32,12 +32,12 @@ VBD::VBD(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString VBD::vmRef() const
+QString VBD::VMRef() const
 {
     return stringProperty("VM");
 }
 
-QString VBD::vdiRef() const
+QString VBD::VDIRef() const
 {
     QString vdi = stringProperty("VDI");
     // Return empty string if VDI is NULL reference (CD drive with no disc)
@@ -48,76 +48,76 @@ QString VBD::vdiRef() const
     return vdi;
 }
 
-QString VBD::device() const
+QString VBD::Device() const
 {
     return stringProperty("device");
 }
 
-QString VBD::userdevice() const
+QString VBD::Userdevice() const
 {
     return stringProperty("userdevice");
 }
 
-bool VBD::bootable() const
+bool VBD::Bootable() const
 {
     return boolProperty("bootable");
 }
 
-QString VBD::mode() const
+QString VBD::Mode() const
 {
     return stringProperty("mode");
 }
 
-bool VBD::isReadOnly() const
+bool VBD::IsReadOnly() const
 {
-    return mode() == "RO";
+    return Mode() == "RO";
 }
 
-QString VBD::type() const
+QString VBD::GetType() const
 {
     return stringProperty("type");
 }
 
-bool VBD::isCD() const
+bool VBD::IsCD() const
 {
-    return type() == "CD";
+    return GetType() == "CD";
 }
 
-bool VBD::unpluggable() const
+bool VBD::Unpluggable() const
 {
     return boolProperty("unpluggable");
 }
 
-bool VBD::currentlyAttached() const
+bool VBD::CurrentlyAttached() const
 {
     return boolProperty("currently_attached");
 }
 
-bool VBD::empty() const
+bool VBD::Empty() const
 {
     return boolProperty("empty");
 }
 
-QStringList VBD::allowedOperations() const
+QStringList VBD::AllowedOperations() const
 {
     return stringListProperty("allowed_operations");
 }
 
-bool VBD::canPlug() const
+bool VBD::CanPlug() const
 {
-    return allowedOperations().contains("plug");
+    return AllowedOperations().contains("plug");
 }
 
-bool VBD::canUnplug() const
+bool VBD::CanUnplug() const
 {
-    return allowedOperations().contains("unplug");
+    return AllowedOperations().contains("unplug");
 }
 
-QString VBD::description() const
+QString VBD::Description() const
 {
-    QString typeStr = isCD() ? "CD Drive" : "Disk";
-    QString deviceNum = userdevice();
-    QString deviceName = device();
+    QString typeStr = this->IsCD() ? "CD Drive" : "Disk";
+    QString deviceNum = this->Userdevice();
+    QString deviceName = this->Device();
 
     if (deviceName.isEmpty())
     {
@@ -128,7 +128,57 @@ QString VBD::description() const
     }
 }
 
-QString VBD::objectType() const
+QVariantMap VBD::CurrentOperations() const
 {
-    return "VBD";
+    return this->property("current_operations").toMap();
+}
+
+bool VBD::StorageLock() const
+{
+    return this->boolProperty("storage_lock", false);
+}
+
+QVariantMap VBD::OtherConfig() const
+{
+    return this->property("other_config").toMap();
+}
+
+qint64 VBD::StatusCode() const
+{
+    return this->intProperty("status_code", 0);
+}
+
+QString VBD::StatusDetail() const
+{
+    return this->stringProperty("status_detail");
+}
+
+QVariantMap VBD::RuntimeProperties() const
+{
+    return this->property("runtime_properties").toMap();
+}
+
+QString VBD::QosAlgorithmType() const
+{
+    return this->stringProperty("qos_algorithm_type");
+}
+
+QVariantMap VBD::QosAlgorithmParams() const
+{
+    return this->property("qos_algorithm_params").toMap();
+}
+
+QStringList VBD::QosSupportedAlgorithms() const
+{
+    return this->stringListProperty("qos_supported_algorithms");
+}
+
+QString VBD::MetricsRef() const
+{
+    return this->stringProperty("metrics");
+}
+
+QString VBD::GetObjectType() const
+{
+    return "vbd";
 }

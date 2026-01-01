@@ -27,42 +27,36 @@
 
 #include "poweronhostcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
-#include "xenlib.h"
-#include "xencache.h"
-#include "xen/connection.h"
+#include "xen/host.h"
+#include "xen/network/connection.h"
 #include <QMessageBox>
 
-PowerOnHostCommand::PowerOnHostCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+PowerOnHostCommand::PowerOnHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
-bool PowerOnHostCommand::canRun() const
+bool PowerOnHostCommand::CanRun() const
 {
     // Matches C# PowerOnHostCommand.CanRunCore() logic
     QString hostRef = this->getSelectedHostRef();
     if (hostRef.isEmpty())
         return false;
 
-    return this->canPowerOn(hostRef);
+    return this->canPowerOn();
 }
 
-void PowerOnHostCommand::run()
+void PowerOnHostCommand::Run()
 {
     // Matches C# PowerOnHostCommand.RunCore() logic
-    QString hostRef = this->getSelectedHostRef();
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
+        return;
+
     QString hostName = this->getSelectedHostName();
-
-    if (hostRef.isEmpty() || hostName.isEmpty())
+    if (hostName.isEmpty())
         return;
 
-    // Get host data from cache
-    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
-    if (hostData.isEmpty())
-        return;
-
-    QString powerOnMode = hostData.value("power_on_mode", "").toString();
+    QString powerOnMode = host->GetData().value("power_on_mode", "").toString();
 
     // Check if power_on_mode is set (matches C# GetCantRunReasonCore logic)
     if (powerOnMode.isEmpty())
@@ -75,8 +69,8 @@ void PowerOnHostCommand::run()
     }
 
     // Get XenConnection from XenLib
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-    if (!conn || !conn->isConnected())
+    XenConnection* conn = host->GetConnection();
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
                              "Not connected to XenServer");
@@ -109,39 +103,13 @@ void PowerOnHostCommand::run()
     */
 }
 
-QString PowerOnHostCommand::menuText() const
+QString PowerOnHostCommand::MenuText() const
 {
     // Matches C# Messages.MAINWINDOW_POWER_ON
     return "Power On";
 }
 
-QString PowerOnHostCommand::getSelectedHostRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString PowerOnHostCommand::getSelectedHostName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return item->text(0);
-}
-
-bool PowerOnHostCommand::canPowerOn(const QString& hostRef) const
+bool PowerOnHostCommand::canPowerOn() const
 {
     // Matches C# PowerOnHostCommand.CanRun() logic:
     // return host != null
@@ -150,12 +118,15 @@ bool PowerOnHostCommand::canPowerOn(const QString& hostRef) const
     //     && !HelpersGUI.HasActiveHostAction(host)
     //     && host.power_on_mode != "";
 
-    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
-    if (hostData.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return false;
 
+    QVariantMap hostData = host->GetData();
+
     // Check if host is not live (not running)
-    if (this->isHostLive(hostRef))
+    // Note: PowerOn uses enabled field, not live field (different from isHostLive base class)
+    if (!host->IsEnabled())
         return false;
 
     // Check if power_on is in allowed_operations
@@ -174,7 +145,7 @@ bool PowerOnHostCommand::canPowerOn(const QString& hostRef) const
         return false;
 
     // Check if host has active actions (matches C# HelpersGUI.HasActiveHostAction)
-    if (this->hasActiveHostAction(hostRef))
+    if (this->hasActiveHostAction())
         return false;
 
     // Check if power_on_mode is set
@@ -185,22 +156,15 @@ bool PowerOnHostCommand::canPowerOn(const QString& hostRef) const
     return true;
 }
 
-bool PowerOnHostCommand::isHostLive(const QString& hostRef) const
-{
-    // Matches C# Host.IsLive() logic - check if host is enabled/running
-    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
-    if (hostData.isEmpty())
-        return false;
-
-    // A host is "live" if it's enabled (matches C# logic)
-    return hostData.value("enabled", false).toBool();
-}
-
-bool PowerOnHostCommand::hasActiveHostAction(const QString& hostRef) const
+bool PowerOnHostCommand::hasActiveHostAction() const
 {
     // Matches C# HelpersGUI.HasActiveHostAction(host) logic
     // Check if host has current_operations (active tasks)
-    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
+        return false;
+
+    QVariantMap hostData = host->GetData();
     if (hostData.isEmpty())
         return false;
 

@@ -36,14 +36,14 @@
 DetachVirtualDiskAction::DetachVirtualDiskAction(const QString& vdiRef,
                                                  VM* vm,
                                                  QObject* parent)
-    : AsyncOperation(vm->connection(),
-                     tr("Detaching disk from VM '%1'").arg(vm->nameLabel()),
+    : AsyncOperation(vm->GetConnection(),
+                     tr("Detaching disk from VM '%1'").arg(vm->GetName()),
                      tr("Detaching virtual disk..."),
                      parent),
       m_vdiRef(vdiRef), m_vm(vm)
 {
     // Find the VBD connecting this VDI to the VM
-    QStringList vbdRefs = vm->vbdRefs();
+    QStringList vbdRefs = vm->VBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
         // We'll check VDI reference in run() when we have session
@@ -58,8 +58,8 @@ DetachVirtualDiskAction::DetachVirtualDiskAction(const QString& vdiRef,
 
 void DetachVirtualDiskAction::run()
 {
-    XenSession* session = this->session();
-    if (!session || !session->isLoggedIn())
+    XenAPI::Session* session = this->session();
+    if (!session || !session->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
     }
@@ -74,7 +74,7 @@ void DetachVirtualDiskAction::run()
     setDescription(tr("Finding VBD..."));
 
     QString vbdRef;
-    QStringList vbdRefs = m_vm->vbdRefs();
+    QStringList vbdRefs = m_vm->VBDRefs();
 
     for (const QString& ref : vbdRefs)
     {

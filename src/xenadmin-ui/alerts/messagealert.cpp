@@ -30,7 +30,7 @@
 #include "policyalert.h"
 #include "certificatealert.h"
 #include "alertmanager.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include <QDateTime>
 
 MessageAlert::MessageAlert(XenConnection* connection, const QVariantMap& messageData) : Alert(connection), m_messageData(messageData), m_priority(AlertPriority::Unknown)

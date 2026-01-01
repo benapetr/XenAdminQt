@@ -32,11 +32,11 @@
 
 namespace XenAPI
 {
-    QString Bond::async_create(XenSession* session, const QString& network,
+    QString Bond::async_create(Session* session, const QString& network,
                                const QStringList& members, const QString& mac,
                                const QString& mode, const QVariantMap& properties)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList memberRefs;
@@ -54,9 +54,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString Bond::async_destroy(XenSession* session, const QString& bond)
+    QString Bond::async_destroy(Session* session, const QString& bond)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -68,9 +68,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    void Bond::set_mode(XenSession* session, const QString& bond, const QString& mode)
+    void Bond::set_mode(Session* session, const QString& bond, const QString& mode)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -82,9 +82,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    void Bond::set_property(XenSession* session, const QString& bond, const QString& name, const QString& value)
+    void Bond::set_property(Session* session, const QString& bond, const QString& name, const QString& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -96,9 +96,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    QVariantMap Bond::get_record(XenSession* session, const QString& bond)
+    QVariantMap Bond::get_record(Session* session, const QString& bond)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -110,9 +110,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toMap();
     }
 
-    QString Bond::get_master(XenSession* session, const QString& bond)
+    QString Bond::get_master(Session* session, const QString& bond)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -124,9 +124,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QVariantList Bond::get_slaves(XenSession* session, const QString& bond)
+    QVariantList Bond::get_slaves(Session* session, const QString& bond)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;

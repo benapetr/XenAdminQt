@@ -29,7 +29,7 @@
 #include "../../vm.h"
 #include "../../host.h"
 #include "../../pool.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
 #include <QtCore/QDebug>
@@ -37,7 +37,7 @@
 // VMRebootAction implementation
 
 VMRebootAction::VMRebootAction(VM* vm, const QString& title, QObject* parent)
-    : AsyncOperation(vm ? vm->connection() : nullptr, title, tr("Preparing..."), parent)
+    : AsyncOperation(vm ? vm->GetConnection() : nullptr, title, tr("Preparing..."), parent)
 {
     setVM(vm);
 
@@ -48,7 +48,7 @@ VMRebootAction::VMRebootAction(VM* vm, const QString& title, QObject* parent)
         // setHost(vm->home());
 
         // Set pool
-        XenConnection* conn = vm->connection();
+        XenConnection* conn = vm->GetConnection();
         if (conn)
         {
             // TODO: Get pool from connection
@@ -65,7 +65,7 @@ VMRebootAction::~VMRebootAction()
 
 VMCleanReboot::VMCleanReboot(VM* vm, QObject* parent)
     : VMRebootAction(vm,
-                     tr("Rebooting '%1'...").arg(vm ? vm->nameLabel() : "VM"),
+                     tr("Rebooting '%1'...").arg(vm ? vm->GetName() : "VM"),
                      parent)
 {
     addApiMethodToRoleCheck("VM.async_clean_reboot");
@@ -82,15 +82,15 @@ void VMCleanReboot::run()
         return;
     }
 
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    XenAPI::Session* sess = session();
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
     }
 
     // Call XenAPI::VM static method
-    QString taskRef = XenAPI::VM::async_clean_reboot(sess, vmObj->opaqueRef());
+    QString taskRef = XenAPI::VM::async_clean_reboot(sess, vmObj->OpaqueRef());
 
     if (taskRef.isEmpty())
     {
@@ -108,7 +108,7 @@ void VMCleanReboot::run()
 
 VMHardReboot::VMHardReboot(VM* vm, QObject* parent)
     : VMRebootAction(vm,
-                     tr("Rebooting '%1'...").arg(vm ? vm->nameLabel() : "VM"),
+                     tr("Rebooting '%1'...").arg(vm ? vm->GetName() : "VM"),
                      parent)
 {
     addApiMethodToRoleCheck("VM.async_hard_reboot");
@@ -125,15 +125,15 @@ void VMHardReboot::run()
         return;
     }
 
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    XenAPI::Session* sess = session();
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
     }
 
     // Call XenAPI::VM static method
-    QString taskRef = XenAPI::VM::async_hard_reboot(sess, vmObj->opaqueRef());
+    QString taskRef = XenAPI::VM::async_hard_reboot(sess, vmObj->OpaqueRef());
 
     if (taskRef.isEmpty())
     {

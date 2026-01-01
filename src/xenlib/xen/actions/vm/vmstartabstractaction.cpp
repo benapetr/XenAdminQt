@@ -29,7 +29,7 @@
 #include "../../vm.h"
 #include "../../host.h"
 #include "../../pool.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
 #include <QtCore/QDebug>
@@ -39,7 +39,7 @@ VMStartAbstractAction::VMStartAbstractAction(VM* vm,
                                              WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
                                              StartDiagnosisForm startDiagnosisForm,
                                              QObject* parent)
-    : AsyncOperation(vm ? vm->connection() : nullptr, title, tr("Preparing..."), parent), m_warningDialogHAInvalidConfig(warningDialogHAInvalidConfig), m_startDiagnosisForm(startDiagnosisForm)
+    : AsyncOperation(vm ? vm->GetConnection() : nullptr, title, tr("Preparing..."), parent), m_warningDialogHAInvalidConfig(warningDialogHAInvalidConfig), m_startDiagnosisForm(startDiagnosisForm)
 {
     setVM(vm);
 
@@ -50,7 +50,7 @@ VMStartAbstractAction::VMStartAbstractAction(VM* vm,
         // setHost(vm->home());
 
         // Set pool
-        XenConnection* conn = vm->connection();
+        XenConnection* conn = vm->GetConnection();
         if (conn)
         {
             // TODO: Get pool from connection
@@ -81,8 +81,8 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
         return;
     }
 
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    XenAPI::Session* sess = session();
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
@@ -94,12 +94,12 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
         Pool* poolObj = pool();
         if (poolObj)
         {
-            bool haEnabled = poolObj->data().value("ha_enabled", false).toBool();
+            bool haEnabled = poolObj->GetData().value("ha_enabled", false).toBool();
 
             if (haEnabled)
             {
                 // Check if VM has HA restart priority set (is protected)
-                QString haPriority = vmObj->data().value("ha_restart_priority", "").toString();
+                QString haPriority = vmObj->GetData().value("ha_restart_priority", "").toString();
                 bool isProtected = !haPriority.isEmpty() && haPriority != "best-effort";
 
                 if (isProtected)
@@ -107,7 +107,7 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
                     // Check if VM is agile (can run on any host in the pool)
                     try
                     {
-                        XenAPI::VM::assert_agile(sess, vmObj->opaqueRef());
+                        XenAPI::VM::assert_agile(sess, vmObj->OpaqueRef());
                     } catch (...)
                     {
                         // VM is not agile but protected - inconsistent state
@@ -121,14 +121,14 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
 
                         // TODO: Implement HAUnprotectVMAction equivalent
                         // For now, just log the issue
-                        qWarning() << "VM" << vmObj->nameLabel() << "is protected by HA but not agile";
+                        qWarning() << "VM" << vmObj->GetName() << "is protected by HA but not agile";
                     }
                 }
             }
         }
 
         auto invokeDiagnosis = [this]() {
-            if (!m_startDiagnosisForm)
+            if (!this->m_startDiagnosisForm)
                 return;
 
             QStringList description = this->errorDetails();
@@ -152,8 +152,8 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
             invokeDiagnosis();
     } catch (const Failure& failure)
     {
-        if (m_startDiagnosisForm)
-            m_startDiagnosisForm(this, failure);
+        if (this->m_startDiagnosisForm)
+            this->m_startDiagnosisForm(this, failure);
         throw;
     } catch (const std::exception& e)
     {

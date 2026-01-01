@@ -26,7 +26,7 @@
  */
 
 #include "createvifaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VIF.h"
 #include "../../xenapi/xenapi_VM.h"
@@ -49,7 +49,7 @@ CreateVIFAction::CreateVIFAction(XenConnection* connection,
         throw std::invalid_argument("VM reference cannot be empty");
 
     // Get VM name for display
-    QVariantMap vmData = connection->getCache()->ResolveObjectData("vm", m_vmRef);
+    QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", m_vmRef);
     m_vmName = vmData.value("name_label").toString();
 
     setTitle(QString("Creating VIF for %1").arg(m_vmName));
@@ -93,7 +93,7 @@ void CreateVIFAction::run()
         }
 
         // Check if VM is running and if we can hot-plug
-        QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         QString powerState = vmData.value("power_state").toString();
 
         if (powerState == "Running")

@@ -50,15 +50,15 @@ public:
     explicit MemoryTabPage(QWidget* parent = nullptr);
     ~MemoryTabPage();
 
-    QString tabTitle() const override
+    QString GetTitle() const override
     {
         return "Memory";
     }
-    QString helpID() const override
+    QString HelpID() const override
     {
         return "TabPageBallooning";
     }
-    bool isApplicableForObjectType(const QString& objectType) const override;
+    bool IsApplicableForObjectType(const QString& objectType) const override;
 
 protected:
     void refreshContent() override;

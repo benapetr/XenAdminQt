@@ -28,22 +28,21 @@
 #ifndef COPYVMCOMMAND_H
 #define COPYVMCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
-class CopyVMCommand : public Command
+class CopyVMCommand : public VMCommand
 {
     Q_OBJECT
 
     public:
         explicit CopyVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        // Inherited from Command
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
+        // Inherited from VMCommand
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
     private:
-        QString getSelectedVMRef() const;
         bool isVMLocked() const;
         bool canVMBeCopied() const;
 };

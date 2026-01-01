@@ -31,7 +31,7 @@
 #include <QDialog>
 #include <QVariantMap>
 
-class XenLib;
+class XenConnection;
 class ChangeMemorySettingsAction;
 
 QT_BEGIN_NAMESPACE
@@ -55,48 +55,48 @@ class BallooningDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct ballooning dialog
-     * @param vmRef VM opaque reference
-     * @param xenLib XenLib instance for API access
-     * @param parent Parent widget
-     */
-    explicit BallooningDialog(const QString& vmRef, XenLib* xenLib, QWidget* parent = nullptr);
-    ~BallooningDialog();
+    public:
+        /**
+         * @brief Construct ballooning dialog
+         * @param vmRef VM opaque reference
+         * @param connection XenConnection instance for API access
+         * @param parent Parent widget
+         */
+        explicit BallooningDialog(const QString& vmRef, XenConnection* connection, QWidget* parent = nullptr);
+        ~BallooningDialog();
 
-private slots:
-    void onFixedRadioToggled(bool checked);
-    void onDynamicRadioToggled(bool checked);
-    void onFixedValueChanged(double value);
-    void onDynMinValueChanged(double value);
-    void onDynMaxValueChanged(double value);
-    void onAccepted();
+    private slots:
+        void onFixedRadioToggled(bool checked);
+        void onDynamicRadioToggled(bool checked);
+        void onFixedValueChanged(double value);
+        void onDynMinValueChanged(double value);
+        void onDynMaxValueChanged(double value);
+        void onAccepted();
 
-private:
-    Ui::BallooningDialog* ui;
-    QString m_vmRef;
-    XenLib* m_xenLib;
-    QVariantMap m_vmData;
+    private:
+        Ui::BallooningDialog* ui;
+        QString m_vmRef;
+        XenConnection* m_connection;
+        QVariantMap m_vmData;
 
-    bool m_hasBallooning; // Whether VM supports DMC
-    bool m_isTemplate;
+        bool m_hasBallooning; // Whether VM supports DMC
+        bool m_isTemplate;
 
-    qint64 m_originalStaticMin;
-    qint64 m_originalStaticMax;
-    qint64 m_originalDynamicMin;
-    qint64 m_originalDynamicMax;
+        qint64 m_originalStaticMin;
+        qint64 m_originalStaticMax;
+        qint64 m_originalDynamicMin;
+        qint64 m_originalDynamicMax;
 
-    void populateControls();
-    void updateDMCAvailability();
-    void updateSpinnerRanges();
-    void setSpinnerEnabled(bool fixed, bool dynamic);
+        void populateControls();
+        void updateDMCAvailability();
+        void updateSpinnerRanges();
+        void setSpinnerEnabled(bool fixed, bool dynamic);
 
-    qint64 bytesToMB(qint64 bytes) const;
-    qint64 mbToBytes(double mb) const;
+        qint64 bytesToMB(qint64 bytes) const;
+        qint64 mbToBytes(double mb) const;
 
-    bool validateMemorySettings() const;
-    bool applyMemoryChanges();
+        bool validateMemorySettings() const;
+        bool applyMemoryChanges();
 };
 
 #endif // BALLOONINGDIALOG_H

@@ -28,47 +28,40 @@
 #include "addvirtualdiskcommand.h"
 #include <QDebug>
 #include "../../mainwindow.h"
-#include <QDebug>
 #include "../../dialogs/newvirtualdiskdialog.h"
-#include <QDebug>
 #include "../../dialogs/operationprogressdialog.h"
-#include <QDebug>
-#include "xenlib.h"
-#include <QDebug>
 #include "xencache.h"
-#include <QDebug>
-#include "xen/connection.h"
-#include <QDebug>
+#include "xen/network/connection.h"
 #include "xen/vm.h"
-#include <QDebug>
 #include "xen/actions/vdi/creatediskaction.h"
-#include <QDebug>
 #include "xen/actions/vbd/vbdcreateandplugaction.h"
-#include <QDebug>
 #include <QMessageBox>
 
-AddVirtualDiskCommand::AddVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+AddVirtualDiskCommand::AddVirtualDiskCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
-bool AddVirtualDiskCommand::canRun() const
+bool AddVirtualDiskCommand::CanRun() const
 {
     // Can add virtual disk if SR or VM is selected
     return (isSRSelected() || isVMSelected()) && canAddDisk();
 }
 
-void AddVirtualDiskCommand::run()
+void AddVirtualDiskCommand::Run()
 {
     QString objectType = getSelectedObjectType();
     QString objectRef = getSelectedRef();
+    QSharedPointer<XenObject> object = this->GetObject();
+    if (!object || !object->GetConnection())
+        return;
+    XenCache *cache = object->GetConnection()->GetCache();
 
     if (objectType == "vm")
     {
         // Check VBD limit
-        QVariantMap vmData = mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", objectRef);
+        QVariantMap vmData = cache->ResolveObjectData("vm", objectRef);
         int maxVBDs = getMaxVBDsAllowed(vmData);
-        int currentVBDs = getCurrentVBDCount(objectRef);
+        int currentVBDs = getCurrentVBDCount(cache, objectRef);
 
         if (currentVBDs >= maxVBDs)
         {
@@ -79,7 +72,7 @@ void AddVirtualDiskCommand::run()
             return;
         }
 
-        XenConnection* connection = mainWindow()->xenLib()->getConnection();
+        XenConnection* connection = object->GetConnection();
         if (!connection)
         {
             qWarning() << "[AddVirtualDiskCommand] No connection available";
@@ -89,7 +82,7 @@ void AddVirtualDiskCommand::run()
 
         // Open NewVirtualDiskDialog for VM (modal)
         qDebug() << "[AddVirtualDiskCommand] Opening NewVirtualDiskDialog for VM:" << objectRef;
-        NewVirtualDiskDialog dialog(mainWindow()->xenLib(), objectRef, mainWindow());
+        NewVirtualDiskDialog dialog(connection, objectRef, mainWindow());
         if (dialog.exec() != QDialog::Accepted)
         {
             qDebug() << "[AddVirtualDiskCommand] Dialog cancelled by user";
@@ -194,8 +187,6 @@ void AddVirtualDiskCommand::run()
                                  tr("Virtual disk created but failed to attach to VM.\n"
                                     "You can attach it manually from the Attach menu."));
             delete attachDialog;
-            // VDI was created, so refresh anyway
-            mainWindow()->xenLib()->requestObjectData("vm", objectRef);
             return;
         }
 
@@ -203,9 +194,6 @@ void AddVirtualDiskCommand::run()
         delete attachDialog;
 
         mainWindow()->showStatusMessage(tr("Virtual disk created and attached successfully"), 5000);
-
-        // Refresh to show new disk
-        mainWindow()->xenLib()->requestObjectData("vm", objectRef);
     } else if (objectType == "sr")
     {
         // For SR, we need to create a disk without a specific VM
@@ -217,7 +205,7 @@ void AddVirtualDiskCommand::run()
     }
 }
 
-QString AddVirtualDiskCommand::menuText() const
+QString AddVirtualDiskCommand::MenuText() const
 {
     return "Add Virtual Disk...";
 }
@@ -239,15 +227,13 @@ QString AddVirtualDiskCommand::getSelectedRef() const
 
 bool AddVirtualDiskCommand::canAddDisk() const
 {
-    if (!mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
-
     QString objectType = getSelectedObjectType();
     QString objectRef = getSelectedRef();
+    QSharedPointer<XenObject> object = this->GetObject();
+    if (!object || !object->GetConnection() || !object->GetConnection()->GetCache())
+        return false;
+
+    XenCache* cache = object->GetConnection()->GetCache();
 
     if (objectType == "sr")
     {
@@ -284,8 +270,16 @@ int AddVirtualDiskCommand::getMaxVBDsAllowed(const QVariantMap& vmData) const
 
 int AddVirtualDiskCommand::getCurrentVBDCount(const QString& vmRef) const
 {
+    return this->getCurrentVBDCount(nullptr, vmRef);
+}
+
+int AddVirtualDiskCommand::getCurrentVBDCount(XenCache* cache, const QString& vmRef) const
+{
+    if (!cache)
+        return 0;
+
     // Get all VBDs and count those attached to this VM
-    QList<QVariantMap> allVBDs = mainWindow()->xenLib()->getCache()->GetAllData("vbd");
+    QList<QVariantMap> allVBDs = cache->GetAllData("vbd");
 
     int count = 0;
     for (const QVariantMap& vbdData : allVBDs)

@@ -28,51 +28,48 @@
 #include "reconnecthostcommand.h"
 #include "../../mainwindow.h"
 #include "xenlib.h"
-#include "xen/connection.h"
-#include "collections/connectionsmanager.h"
+#include "xen/network/connection.h"
+#include "xen/host.h"
+#include "../../network/xenconnectionui.h"
 
-ReconnectHostCommand::ReconnectHostCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+ReconnectHostCommand::ReconnectHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
-bool ReconnectHostCommand::canRun() const
+bool ReconnectHostCommand::CanRun() const
 {
     // Can reconnect if connection is disconnected
     return this->isConnectionDisconnected();
 }
 
-void ReconnectHostCommand::run()
+void ReconnectHostCommand::Run()
 {
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return;
 
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    XenConnection* conn = host->GetConnection();
     if (!conn)
         return;
 
-    ConnectionsManager* manager = this->mainWindow()->xenLib()->getConnectionsManager();
-    if (!manager)
-        return;
-
-    // Reconnect this connection
-    manager->reconnectConnection(conn);
     this->mainWindow()->showStatusMessage("Reconnecting...");
+    XenConnectionUI::BeginConnect(conn, true, this->mainWindow(), false);
 }
 
-QString ReconnectHostCommand::menuText() const
+QString ReconnectHostCommand::MenuText() const
 {
     return "Reconnect";
 }
 
 bool ReconnectHostCommand::isConnectionDisconnected() const
 {
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return false;
 
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    XenConnection* conn = host->GetConnection();
     if (!conn)
         return false;
 
-    return !conn->isConnected();
+    return !conn->IsConnected();
 }

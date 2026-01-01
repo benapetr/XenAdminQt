@@ -27,31 +27,32 @@
 
 #include "shutdownhostcommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
-#include "xencache.h"
 #include "../../operations/operationmanager.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/host.h"
 #include "xen/actions/host/shutdownhostaction.h"
 #include <QMessageBox>
 
-ShutdownHostCommand::ShutdownHostCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+ShutdownHostCommand::ShutdownHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
-bool ShutdownHostCommand::canRun() const
+bool ShutdownHostCommand::CanRun() const
 {
-    QString hostRef = this->getSelectedHostRef();
-    if (hostRef.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return false;
 
     // Can shutdown if host is enabled (not in maintenance mode)
-    return this->isHostEnabled(hostRef);
+    return this->isHostEnabled();
 }
 
-void ShutdownHostCommand::run()
+void ShutdownHostCommand::Run()
 {
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
+        return;
+
     QString hostRef = this->getSelectedHostRef();
     QString hostName = this->getSelectedHostName();
 
@@ -69,8 +70,8 @@ void ShutdownHostCommand::run()
     {
         this->mainWindow()->showStatusMessage(QString("Shutting down host '%1'...").arg(hostName));
 
-        XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-        if (!conn || !conn->isConnected())
+        XenConnection* conn = host->GetConnection();
+        if (!conn || !conn->IsConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",
                                  "Not connected to XenServer");
@@ -100,40 +101,7 @@ void ShutdownHostCommand::run()
     }
 }
 
-QString ShutdownHostCommand::menuText() const
+QString ShutdownHostCommand::MenuText() const
 {
     return "Shutdown Host";
-}
-
-QString ShutdownHostCommand::getSelectedHostRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString ShutdownHostCommand::getSelectedHostName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return item->text(0);
-}
-
-bool ShutdownHostCommand::isHostEnabled(const QString& hostRef) const
-{
-    // Use cache instead of async API call
-    QVariantMap hostData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("host", hostRef);
-    return hostData.value("enabled", true).toBool();
 }

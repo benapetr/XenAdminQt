@@ -30,7 +30,7 @@
 #include "../dialogs/hawizard.h"
 #include "../dialogs/editvmhaprioritiesdialog.h"
 #include "../mainwindow.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xen/session.h"
 #include "../../xenlib/xencache.h"
 #include "../../xenlib/xen/xenapi/xenapi_VM.h"
@@ -64,25 +64,25 @@ VMHAEditPage::VMHAEditPage(QWidget* parent)
       m_ntolMax(-1),
       m_ntolRequestId(0)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
-    ui->spinBoxStartOrder->setMaximum(std::numeric_limits<int>::max());
-    ui->spinBoxStartDelay->setMaximum(std::numeric_limits<int>::max());
+    this->ui->spinBoxStartOrder->setMaximum(std::numeric_limits<int>::max());
+    this->ui->spinBoxStartDelay->setMaximum(std::numeric_limits<int>::max());
 
-    ui->labelPriorityDescription->setWordWrap(true);
-    ui->labelHaStatus->setWordWrap(true);
-    ui->labelNtol->setWordWrap(true);
-    ui->labelNtolMax->setWordWrap(true);
+    this->ui->labelPriorityDescription->setWordWrap(true);
+    this->ui->labelHaStatus->setWordWrap(true);
+    this->ui->labelNtol->setWordWrap(true);
+    this->ui->labelNtolMax->setWordWrap(true);
 
-    ui->linkLabel->setTextFormat(Qt::RichText);
-    ui->linkLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
-    ui->linkLabel->setOpenExternalLinks(false);
+    this->ui->linkLabel->setTextFormat(Qt::RichText);
+    this->ui->linkLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    this->ui->linkLabel->setOpenExternalLinks(false);
 
-    connect(ui->comboBoxRestartPriority,
+    connect(this->ui->comboBoxRestartPriority,
             QOverload<int>::of(&QComboBox::currentIndexChanged),
             this,
             &VMHAEditPage::onPriorityChanged);
-    connect(ui->linkLabel, &QLabel::linkActivated, this, &VMHAEditPage::onLinkActivated);
+    connect(this->ui->linkLabel, &QLabel::linkActivated, this, &VMHAEditPage::onLinkActivated);
 }
 
 VMHAEditPage::~VMHAEditPage()
@@ -122,60 +122,56 @@ void VMHAEditPage::setXenObjects(const QString& objectRef,
 {
     Q_UNUSED(objectType);
 
-    m_vmRef = objectRef;
-    m_objectDataBefore = objectDataBefore;
-    m_objectDataCopy = objectDataCopy;
+    this->m_vmRef = objectRef;
+    this->m_objectDataBefore = objectDataBefore;
+    this->m_objectDataCopy = objectDataCopy;
 
-    m_origRestartPriority = normalizePriority(objectDataBefore.value("ha_restart_priority", "").toString());
-    m_origStartOrder = objectDataBefore.value("order", 0).toLongLong();
-    m_origStartDelay = objectDataBefore.value("start_delay", 0).toLongLong();
+    this->m_origRestartPriority = this->normalizePriority(objectDataBefore.value("ha_restart_priority", "").toString());
+    this->m_origStartOrder = objectDataBefore.value("order", 0).toLongLong();
+    this->m_origStartDelay = objectDataBefore.value("start_delay", 0).toLongLong();
 
-    ui->spinBoxStartOrder->setValue(static_cast<int>(m_origStartOrder));
-    ui->spinBoxStartDelay->setValue(static_cast<int>(m_origStartDelay));
+    this->ui->spinBoxStartOrder->setValue(static_cast<int>(this->m_origStartOrder));
+    this->ui->spinBoxStartDelay->setValue(static_cast<int>(this->m_origStartDelay));
 
-    m_poolRef.clear();
-    m_origNtol = 0;
-    if (connection() && connection()->getCache())
+    this->m_poolRef.clear();
+    this->m_origNtol = 0;
+    if (this->connection() && this->connection()->GetCache())
     {
-        QStringList poolRefs = connection()->getCache()->GetAllRefs("pool");
+        QStringList poolRefs = this->connection()->GetCache()->GetAllRefs("pool");
         if (!poolRefs.isEmpty())
         {
-            m_poolRef = poolRefs.first();
-            QVariantMap poolData = connection()->getCache()->ResolveObjectData("pool", m_poolRef);
-            m_origNtol = poolData.value("ha_host_failures_to_tolerate", 0).toLongLong();
+            this->m_poolRef = poolRefs.first();
+            QVariantMap poolData = this->connection()->GetCache()->ResolveObjectData("pool", this->m_poolRef);
+            this->m_origNtol = poolData.value("ha_host_failures_to_tolerate", 0).toLongLong();
         }
 
-        connect(connection()->getCache(),
-                &XenCache::objectChanged,
-                this,
-                &VMHAEditPage::onCacheObjectChanged,
-                Qt::UniqueConnection);
+        connect(this->connection()->GetCache(), &XenCache::objectChanged, this, &VMHAEditPage::onCacheObjectChanged, Qt::UniqueConnection);
     }
 
-    ui->scanningWidget->setVisible(true);
-    ui->groupBoxHA->setVisible(false);
-    m_agilityKnown = false;
+    this->ui->scanningWidget->setVisible(true);
+    this->ui->groupBoxHA->setVisible(false);
+    this->m_agilityKnown = false;
 
-    updateEnablement();
-    startVmAgilityCheck();
+    this->updateEnablement();
+    this->startVmAgilityCheck();
     emit populated();
 }
 
 AsyncOperation* VMHAEditPage::saveSettings()
 {
-    if (!hasChanged())
+    if (!this->hasChanged())
         return nullptr;
 
-    bool haChanges = isHaEditable() &&
-        (selectedPriority() != m_origRestartPriority || m_ntol != m_origNtol);
+    bool haChanges = this->isHaEditable() &&
+        (this->selectedPriority() != this->m_origRestartPriority || this->m_ntol != this->m_origNtol);
     bool startupChanges =
-        ui->spinBoxStartOrder->value() != m_origStartOrder ||
-        ui->spinBoxStartDelay->value() != m_origStartDelay;
+        this->ui->spinBoxStartOrder->value() != this->m_origStartOrder ||
+        this->ui->spinBoxStartDelay->value() != this->m_origStartDelay;
 
-    if (haChanges && poolHasHAEnabled())
+    if (haChanges && this->poolHasHAEnabled())
     {
-        QMap<QString, QVariantMap> settings = buildVmStartupOptions(true);
-        auto* action = new SetHaPrioritiesAction(m_connection, m_poolRef, settings, m_ntol, this);
+        QMap<QString, QVariantMap> settings = this->buildVmStartupOptions(true);
+        auto* action = new SetHaPrioritiesAction(this->m_connection, this->m_poolRef, settings, this->m_ntol, this);
         action->addApiMethodToRoleCheck("pool.set_ha_host_failures_to_tolerate");
         action->addApiMethodToRoleCheck("pool.sync_database");
         action->addApiMethodToRoleCheck("vm.set_ha_restart_priority");
@@ -185,8 +181,8 @@ AsyncOperation* VMHAEditPage::saveSettings()
 
     if (startupChanges)
     {
-        QMap<QString, QVariantMap> settings = buildVmStartupOptions(false);
-        auto* action = new SetVMStartupOptionsAction(m_connection, m_poolRef, settings, this);
+        QMap<QString, QVariantMap> settings = this->buildVmStartupOptions(false);
+        auto* action = new SetVMStartupOptionsAction(this->m_connection, this->m_poolRef, settings, this);
         action->addApiMethodToRoleCheck("VM.set_order");
         action->addApiMethodToRoleCheck("VM.set_start_delay");
         action->addApiMethodToRoleCheck("Pool.async_sync_database");
@@ -198,10 +194,10 @@ AsyncOperation* VMHAEditPage::saveSettings()
 
 bool VMHAEditPage::isValidToSave() const
 {
-    if (!poolHasHAEnabled())
+    if (!this->poolHasHAEnabled())
         return true;
 
-    return !m_ntolUpdateInProgress && m_ntol >= 0;
+    return !this->m_ntolUpdateInProgress && this->m_ntol >= 0;
 }
 
 void VMHAEditPage::showLocalValidationMessages()
@@ -216,9 +212,9 @@ void VMHAEditPage::hideLocalValidationMessages()
 
 void VMHAEditPage::cleanup()
 {
-    if (connection() && connection()->getCache())
+    if (this->connection() && this->connection()->GetCache())
     {
-        disconnect(connection()->getCache(),
+        disconnect(this->connection()->GetCache(),
                    &XenCache::objectChanged,
                    this,
                    &VMHAEditPage::onCacheObjectChanged);
@@ -227,11 +223,11 @@ void VMHAEditPage::cleanup()
 
 bool VMHAEditPage::hasChanged() const
 {
-    bool haChanges = isHaEditable() &&
-        (selectedPriority() != m_origRestartPriority || m_ntol != m_origNtol);
+    bool haChanges = this->isHaEditable() &&
+        (this->selectedPriority() != this->m_origRestartPriority || this->m_ntol != this->m_origNtol);
     bool startupChanges =
-        ui->spinBoxStartOrder->value() != m_origStartOrder ||
-        ui->spinBoxStartDelay->value() != m_origStartDelay;
+        this->ui->spinBoxStartOrder->value() != this->m_origStartOrder ||
+        this->ui->spinBoxStartDelay->value() != this->m_origStartDelay;
 
     return haChanges || startupChanges;
 }
@@ -277,11 +273,11 @@ QString VMHAEditPage::normalizePriority(const QString& priority) const
 
 QString VMHAEditPage::selectedPriority() const
 {
-    QVariant data = ui->comboBoxRestartPriority->currentData();
+    QVariant data = this->ui->comboBoxRestartPriority->currentData();
     if (data.isValid())
-        return normalizePriority(data.toString());
+        return this->normalizePriority(data.toString());
 
-    return m_origRestartPriority;
+    return this->m_origRestartPriority;
 }
 
 bool VMHAEditPage::isRestartPriority(const QString& priority) const
@@ -293,21 +289,21 @@ bool VMHAEditPage::isRestartPriority(const QString& priority) const
 
 bool VMHAEditPage::vmHasVgpus() const
 {
-    QVariantList vgpus = m_objectDataBefore.value("VGPUs").toList();
+    QVariantList vgpus = this->m_objectDataBefore.value("VGPUs").toList();
     return !vgpus.isEmpty();
 }
 
 bool VMHAEditPage::poolHasHAEnabled() const
 {
-    QVariantMap poolData = getPoolData();
+    QVariantMap poolData = this->getPoolData();
     return !poolData.isEmpty() && poolData.value("ha_enabled", false).toBool();
 }
 
 bool VMHAEditPage::isHaEditable() const
 {
-    return ui->comboBoxRestartPriority->isVisible() ||
-        ui->linkLabel->isVisible() ||
-        ui->labelNtol->isVisible();
+    return this->ui->comboBoxRestartPriority->isVisible() ||
+        this->ui->linkLabel->isVisible() ||
+        this->ui->labelNtol->isVisible();
 }
 
 QString VMHAEditPage::ellipsiseName(const QString& name, int maxChars) const
@@ -320,157 +316,157 @@ QString VMHAEditPage::ellipsiseName(const QString& name, int maxChars) const
 
 QVariantMap VMHAEditPage::getPoolData() const
 {
-    if (!connection() || !connection()->getCache())
+    if (!this->connection() || !this->connection()->GetCache())
         return QVariantMap();
 
-    if (!m_poolRef.isEmpty())
-        return connection()->getCache()->ResolveObjectData("pool", m_poolRef);
+    if (!this->m_poolRef.isEmpty())
+        return this->connection()->GetCache()->ResolveObjectData("pool", this->m_poolRef);
 
-    QStringList poolRefs = connection()->getCache()->GetAllRefs("pool");
+    QStringList poolRefs = this->connection()->GetCache()->GetAllRefs("pool");
     if (poolRefs.isEmpty())
         return QVariantMap();
 
-    return connection()->getCache()->ResolveObjectData("pool", poolRefs.first());
+    return this->connection()->GetCache()->ResolveObjectData("pool", poolRefs.first());
 }
 
 void VMHAEditPage::refillPrioritiesComboBox()
 {
-    ui->comboBoxRestartPriority->blockSignals(true);
-    ui->comboBoxRestartPriority->clear();
+    this->ui->comboBoxRestartPriority->blockSignals(true);
+    this->ui->comboBoxRestartPriority->clear();
 
     QStringList priorities;
     priorities << kPriorityRestart << kPriorityBestEffort << "";
 
-    QString currentPriority = m_origRestartPriority;
-    bool hasVgpus = vmHasVgpus();
+    QString currentPriority = this->m_origRestartPriority;
+    bool hasVgpus = this->vmHasVgpus();
 
     for (const QString& priority : priorities)
     {
-        if (isRestartPriority(priority) && (!m_vmIsAgile || hasVgpus))
+        if (this->isRestartPriority(priority) && (!this->m_vmIsAgile || hasVgpus))
             continue;
-        ui->comboBoxRestartPriority->addItem(restartPriorityDisplay(priority), priority);
+        this->ui->comboBoxRestartPriority->addItem(this->restartPriorityDisplay(priority), priority);
     }
 
-    int index = ui->comboBoxRestartPriority->findData(currentPriority);
+    int index = this->ui->comboBoxRestartPriority->findData(currentPriority);
     if (index < 0)
     {
-        ui->comboBoxRestartPriority->insertItem(0, restartPriorityDisplay(currentPriority), currentPriority);
+        this->ui->comboBoxRestartPriority->insertItem(0, this->restartPriorityDisplay(currentPriority), currentPriority);
         index = 0;
     }
-    ui->comboBoxRestartPriority->setCurrentIndex(index);
+    this->ui->comboBoxRestartPriority->setCurrentIndex(index);
 
-    ui->comboBoxRestartPriority->blockSignals(false);
+    this->ui->comboBoxRestartPriority->blockSignals(false);
 
-    ui->labelPriorityDescription->setText(restartPriorityDescription(selectedPriority()));
+    this->ui->labelPriorityDescription->setText(this->restartPriorityDescription(this->selectedPriority()));
 }
 
 void VMHAEditPage::updateEnablement()
 {
-    QVariantMap poolData = getPoolData();
-    ui->labelHaStatus->clear();
+    QVariantMap poolData = this->getPoolData();
+    this->ui->labelHaStatus->clear();
 
     if (poolData.isEmpty())
     {
-        ui->labelHaStatus->setText(tr("HA is not available on standalone servers."));
-        ui->comboBoxRestartPriority->setVisible(false);
-        ui->labelProtectionLevel->setVisible(false);
-        ui->labelPriorityDescription->setVisible(false);
-        ui->labelNtol->setVisible(false);
-        ui->labelNtolMax->setVisible(false);
-        ui->linkLabel->setVisible(false);
+        this->ui->labelHaStatus->setText(tr("HA is not available on standalone servers."));
+        this->ui->comboBoxRestartPriority->setVisible(false);
+        this->ui->labelProtectionLevel->setVisible(false);
+        this->ui->labelPriorityDescription->setVisible(false);
+        this->ui->labelNtol->setVisible(false);
+        this->ui->labelNtolMax->setVisible(false);
+        this->ui->linkLabel->setVisible(false);
         return;
     }
 
     bool haEnabled = poolData.value("ha_enabled", false).toBool();
-    QString poolName = ellipsiseName(poolData.value("name_label", "").toString(), 30);
+    QString poolName = this->ellipsiseName(poolData.value("name_label", "").toString(), 30);
 
     QString masterRef = poolData.value("master").toString();
-    if (!masterRef.isEmpty() && connection() && connection()->getCache())
+    if (!masterRef.isEmpty() && this->connection() && this->connection()->GetCache())
     {
-        QVariantMap hostData = connection()->getCache()->ResolveObjectData("host", masterRef);
+        QVariantMap hostData = this->connection()->GetCache()->ResolveObjectData("host", masterRef);
         QVariantMap licenseParams = hostData.value("license_params").toMap();
         bool enableHa = licenseParams.value("enable_xha", true).toBool();
         if (!enableHa)
         {
-            ui->labelHaStatus->setText(tr("The server does not have a license permitting HA."));
-            ui->comboBoxRestartPriority->setVisible(false);
-            ui->labelProtectionLevel->setVisible(false);
-            ui->labelPriorityDescription->setVisible(false);
-            ui->labelNtol->setVisible(false);
-            ui->labelNtolMax->setVisible(false);
-            ui->linkLabel->setVisible(false);
+            this->ui->labelHaStatus->setText(tr("The server does not have a license permitting HA."));
+            this->ui->comboBoxRestartPriority->setVisible(false);
+            this->ui->labelProtectionLevel->setVisible(false);
+            this->ui->labelPriorityDescription->setVisible(false);
+            this->ui->labelNtol->setVisible(false);
+            this->ui->labelNtolMax->setVisible(false);
+            this->ui->linkLabel->setVisible(false);
             return;
         }
     }
 
     if (!haEnabled)
     {
-        ui->labelHaStatus->setText(tr("HA is not currently configured on pool '%1'.").arg(poolName));
-        ui->comboBoxRestartPriority->setVisible(false);
-        ui->labelProtectionLevel->setVisible(false);
-        ui->labelPriorityDescription->setVisible(false);
-        ui->labelNtol->setVisible(false);
-        ui->labelNtolMax->setVisible(false);
-        ui->linkLabel->setVisible(true);
-        ui->linkLabel->setText(tr("<a href=\"configure\">Configure HA now...</a>"));
+        this->ui->labelHaStatus->setText(tr("HA is not currently configured on pool '%1'.").arg(poolName));
+        this->ui->comboBoxRestartPriority->setVisible(false);
+        this->ui->labelProtectionLevel->setVisible(false);
+        this->ui->labelPriorityDescription->setVisible(false);
+        this->ui->labelNtol->setVisible(false);
+        this->ui->labelNtolMax->setVisible(false);
+        this->ui->linkLabel->setVisible(true);
+        this->ui->linkLabel->setText(tr("<a href=\"configure\">Configure HA now...</a>"));
         return;
     }
 
     QStringList deadHosts;
-    if (connection() && connection()->getCache())
+    if (this->connection() && this->connection()->GetCache())
     {
-        QStringList hostRefs = connection()->getCache()->GetAllRefs("host");
+        QStringList hostRefs = this->connection()->GetCache()->GetAllRefs("host");
         for (const QString& hostRef : hostRefs)
         {
-            QVariantMap hostData = connection()->getCache()->ResolveObjectData("host", hostRef);
+            QVariantMap hostData = this->connection()->GetCache()->ResolveObjectData("host", hostRef);
             QString metricsRef = hostData.value("metrics").toString();
-            QVariantMap metricsData = connection()->getCache()->ResolveObjectData("host_metrics", metricsRef);
+            QVariantMap metricsData = this->connection()->GetCache()->ResolveObjectData("host_metrics", metricsRef);
             bool isLive = metricsData.value("live", true).toBool();
             if (!isLive)
-                deadHosts << ellipsiseName(hostData.value("name_label").toString(), 30);
+                deadHosts << this->ellipsiseName(hostData.value("name_label").toString(), 30);
         }
     }
 
     if (!deadHosts.isEmpty())
     {
-        ui->labelHaStatus->setText(tr("In order to edit the HA restart priorities of your virtual machine,\n"
+        this->ui->labelHaStatus->setText(tr("In order to edit the HA restart priorities of your virtual machine,\n"
                                      "all servers in the pool must be live. The following servers are\n"
                                      "not currently live:\n\n%1")
                                    .arg(deadHosts.join("\n")));
-        ui->comboBoxRestartPriority->setVisible(false);
-        ui->labelProtectionLevel->setVisible(false);
-        ui->labelPriorityDescription->setVisible(false);
-        ui->labelNtol->setVisible(false);
-        ui->labelNtolMax->setVisible(false);
-        ui->linkLabel->setVisible(false);
+        this->ui->comboBoxRestartPriority->setVisible(false);
+        this->ui->labelProtectionLevel->setVisible(false);
+        this->ui->labelPriorityDescription->setVisible(false);
+        this->ui->labelNtol->setVisible(false);
+        this->ui->labelNtolMax->setVisible(false);
+        this->ui->linkLabel->setVisible(false);
         return;
     }
 
-    if (!m_ntolUpdateInProgress && m_ntol < 0)
+    if (!this->m_ntolUpdateInProgress && this->m_ntol < 0)
     {
-        ui->labelHaStatus->setText(tr("The number of server failures that can be tolerated could not be determined. Check the logs for more information."));
-        ui->comboBoxRestartPriority->setVisible(false);
-        ui->labelProtectionLevel->setVisible(false);
-        ui->labelPriorityDescription->setVisible(false);
-        ui->labelNtol->setVisible(false);
-        ui->labelNtolMax->setVisible(false);
-        ui->linkLabel->setVisible(false);
+        this->ui->labelHaStatus->setText(tr("The number of server failures that can be tolerated could not be determined. Check the logs for more information."));
+        this->ui->comboBoxRestartPriority->setVisible(false);
+        this->ui->labelProtectionLevel->setVisible(false);
+        this->ui->labelPriorityDescription->setVisible(false);
+        this->ui->labelNtol->setVisible(false);
+        this->ui->labelNtolMax->setVisible(false);
+        this->ui->linkLabel->setVisible(false);
         return;
     }
 
-    ui->labelHaStatus->setText(tr("HA is currently configured on pool '%1' with these settings:").arg(poolName));
-    ui->comboBoxRestartPriority->setVisible(true);
-    ui->labelProtectionLevel->setVisible(true);
-    ui->labelPriorityDescription->setVisible(true);
-    ui->labelNtol->setVisible(true);
-    ui->labelNtolMax->setVisible(true);
-    ui->linkLabel->setVisible(true);
-    ui->linkLabel->setText(tr("<a href=\"configure\">Change these HA settings now...</a>"));
+    this->ui->labelHaStatus->setText(tr("HA is currently configured on pool '%1' with these settings:").arg(poolName));
+    this->ui->comboBoxRestartPriority->setVisible(true);
+    this->ui->labelProtectionLevel->setVisible(true);
+    this->ui->labelPriorityDescription->setVisible(true);
+    this->ui->labelNtol->setVisible(true);
+    this->ui->labelNtolMax->setVisible(true);
+    this->ui->linkLabel->setVisible(true);
+    this->ui->linkLabel->setText(tr("<a href=\"configure\">Change these HA settings now...</a>"));
 
-    if (m_ntolUpdateInProgress)
-        updateNtolLabelsCalculating();
+    if (this->m_ntolUpdateInProgress)
+        this->updateNtolLabelsCalculating();
     else
-        updateNtolLabelsSuccess();
+        this->updateNtolLabelsSuccess();
 }
 
 void VMHAEditPage::updateNtolLabelsCalculating()
@@ -481,19 +477,19 @@ void VMHAEditPage::updateNtolLabelsCalculating()
 
 void VMHAEditPage::updateNtolLabelsSuccess()
 {
-    QString ntolText = tr("Server failure limit: %1").arg(m_ntol);
-    if (m_ntolMax >= 0)
+    QString ntolText = tr("Server failure limit: %1").arg(this->m_ntol);
+    if (this->m_ntolMax >= 0)
     {
-        if (m_ntolMax < m_ntol)
-            ntolText = tr("%1 - pool is overcommitted").arg(m_ntol);
-        ui->labelNtolMax->setText(tr("Max failover capacity: %1").arg(m_ntolMax));
+        if (this->m_ntolMax < this->m_ntol)
+            ntolText = tr("%1 - pool is overcommitted").arg(this->m_ntol);
+        this->ui->labelNtolMax->setText(tr("Max failover capacity: %1").arg(this->m_ntolMax));
     }
     else
     {
-        ui->labelNtolMax->clear();
+        this->ui->labelNtolMax->clear();
     }
 
-    ui->labelNtol->setText(ntolText);
+    this->ui->labelNtol->setText(ntolText);
 }
 
 void VMHAEditPage::updateNtolLabelsFailure()
@@ -504,15 +500,15 @@ void VMHAEditPage::updateNtolLabelsFailure()
 
 void VMHAEditPage::startVmAgilityCheck()
 {
-    if (!connection() || !connection()->getSession())
+    if (!this->connection() || !this->connection()->GetSession())
     {
-        m_vmIsAgile = false;
-        m_agilityKnown = true;
-        ui->scanningWidget->setVisible(false);
-        ui->groupBoxHA->setVisible(true);
-        refillPrioritiesComboBox();
-        startNtolUpdate();
-        updateEnablement();
+        this->m_vmIsAgile = false;
+        this->m_agilityKnown = true;
+        this->ui->scanningWidget->setVisible(false);
+        this->ui->groupBoxHA->setVisible(true);
+        this->refillPrioritiesComboBox();
+        this->startNtolUpdate();
+        this->updateEnablement();
         emit populated();
         return;
     }
@@ -523,7 +519,7 @@ void VMHAEditPage::startVmAgilityCheck()
             return;
 
         bool isAgile = false;
-        XenSession* session = XenSession::duplicateSession(self->connection()->getSession(), nullptr);
+        XenAPI::Session* session = XenAPI::Session::DuplicateSession(self->connection()->GetSession(), nullptr);
         if (session)
         {
             try
@@ -559,15 +555,15 @@ void VMHAEditPage::startVmAgilityCheck()
 
 void VMHAEditPage::startNtolUpdate()
 {
-    if (!connection() || !connection()->getCache() || m_poolRef.isEmpty())
+    if (!this->connection() || !this->connection()->GetCache() || this->m_poolRef.isEmpty())
         return;
 
-    int requestId = ++m_ntolRequestId;
-    m_ntolUpdateInProgress = true;
-    updateNtolLabelsCalculating();
+    int requestId = ++this->m_ntolRequestId;
+    this->m_ntolUpdateInProgress = true;
+    this->updateNtolLabelsCalculating();
 
-    QVariantMap ntolConfig = buildNtolConfig();
-    QString poolRef = m_poolRef;
+    QVariantMap ntolConfig = this->buildNtolConfig();
+    QString poolRef = this->m_poolRef;
 
     QPointer<VMHAEditPage> self(this);
     QThread* thread = QThread::create([self, requestId, ntolConfig, poolRef]() {
@@ -576,7 +572,7 @@ void VMHAEditPage::startNtolUpdate()
 
         qint64 ntolMax = -1;
         bool ok = false;
-        XenSession* session = XenSession::duplicateSession(self->connection()->getSession(), nullptr);
+        XenAPI::Session* session = XenAPI::Session::DuplicateSession(self->connection()->GetSession(), nullptr);
         if (session)
         {
             try
@@ -607,7 +603,7 @@ void VMHAEditPage::startNtolUpdate()
             }
 
             self->m_ntolMax = ntolMax;
-            QVariantMap poolData = self->connection()->getCache()->ResolveObjectData("pool", poolRef);
+            QVariantMap poolData = self->connection()->GetCache()->ResolveObjectData("pool", poolRef);
             if (poolData.value("ha_enabled", false).toBool())
                 self->m_ntol = poolData.value("ha_host_failures_to_tolerate", 0).toLongLong();
             else
@@ -627,23 +623,23 @@ QMap<QString, QVariantMap> VMHAEditPage::buildVmStartupOptions(bool includePrior
 {
     QMap<QString, QVariantMap> settings;
     QVariantMap options;
-    options.insert("order", static_cast<qint64>(ui->spinBoxStartOrder->value()));
-    options.insert("start_delay", static_cast<qint64>(ui->spinBoxStartDelay->value()));
+    options.insert("order", static_cast<qint64>(this->ui->spinBoxStartOrder->value()));
+    options.insert("start_delay", static_cast<qint64>(this->ui->spinBoxStartDelay->value()));
 
     if (includePriority)
-        options.insert("ha_restart_priority", selectedPriority());
+        options.insert("ha_restart_priority", this->selectedPriority());
 
-    settings.insert(m_vmRef, options);
+    settings.insert(this->m_vmRef, options);
     return settings;
 }
 
 QVariantMap VMHAEditPage::buildNtolConfig() const
 {
     QVariantMap config;
-    if (!connection() || !connection()->getCache())
+    if (!this->connection() || !this->connection()->GetCache())
         return config;
 
-    QList<QVariantMap> vms = connection()->getCache()->GetAllData("vm");
+    QList<QVariantMap> vms = this->connection()->GetCache()->GetAllData("vm");
     for (const QVariantMap& vmData : vms)
     {
         bool isTemplate = vmData.value("is_a_template", false).toBool();
@@ -660,11 +656,11 @@ QVariantMap VMHAEditPage::buildNtolConfig() const
         if (vmRef.isEmpty())
             continue;
 
-        QString priority = normalizePriority(vmData.value("ha_restart_priority", "").toString());
-        if (vmRef == m_vmRef)
-            priority = selectedPriority();
+        QString priority = this->normalizePriority(vmData.value("ha_restart_priority", "").toString());
+        if (vmRef == this->m_vmRef)
+            priority = this->selectedPriority();
 
-        if (!isRestartPriority(priority))
+        if (!this->isRestartPriority(priority))
             continue;
 
         config.insert(vmRef, priority);
@@ -675,9 +671,9 @@ QVariantMap VMHAEditPage::buildNtolConfig() const
 
 void VMHAEditPage::onPriorityChanged()
 {
-    ui->labelPriorityDescription->setText(restartPriorityDescription(selectedPriority()));
-    startNtolUpdate();
-    updateEnablement();
+    this->ui->labelPriorityDescription->setText(this->restartPriorityDescription(this->selectedPriority()));
+    this->startNtolUpdate();
+    this->updateEnablement();
     emit populated();
 }
 
@@ -685,35 +681,35 @@ void VMHAEditPage::onLinkActivated(const QString& link)
 {
     Q_UNUSED(link);
 
-    if (!connection() || !connection()->getCache())
+    if (!this->connection() || !this->connection()->GetCache())
         return;
 
-    QVariantMap poolData = getPoolData();
+    QVariantMap poolData = this->getPoolData();
     if (poolData.isEmpty())
         return;
 
     bool haEnabled = poolData.value("ha_enabled", false).toBool();
-    MainWindow* mainWindow = qobject_cast<MainWindow*>(window());
+    MainWindow* mainWindow = qobject_cast<MainWindow*>(this->window());
     if (!mainWindow)
         return;
 
     if (haEnabled)
     {
-        EditVmHaPrioritiesDialog dialog(mainWindow->xenLib(), m_poolRef, mainWindow);
+        EditVmHaPrioritiesDialog dialog(this->connection(), this->m_poolRef, mainWindow);
         dialog.exec();
     }
     else
     {
-        HAWizard wizard(mainWindow->xenLib(), m_poolRef, mainWindow);
+        HAWizard wizard(this->connection(), this->m_poolRef, mainWindow);
         wizard.exec();
     }
 }
 
-void VMHAEditPage::onCacheObjectChanged(const QString& type, const QString& ref)
+void VMHAEditPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
 {
     Q_UNUSED(ref);
     if (type != "pool" && type != "host" && type != "host_metrics")
         return;
 
-    updateEnablement();
+    this->updateEnablement();
 }

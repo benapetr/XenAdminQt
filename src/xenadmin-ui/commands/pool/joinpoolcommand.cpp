@@ -27,9 +27,9 @@
 
 #include "joinpoolcommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/session.h"
+#include "xen/host.h"
 #include "xen/xenapi/xenapi_Pool.h"
 #include <QMessageBox>
 #include <QInputDialog>
@@ -43,10 +43,10 @@ JoinPoolCommand::JoinPoolCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool JoinPoolCommand::canRun() const
+bool JoinPoolCommand::CanRun() const
 {
-    QString hostRef = this->getSelectedHostRef();
-    if (hostRef.isEmpty() || !this->mainWindow()->xenLib()->isConnected())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host || !host->GetConnection() || !host->GetConnection()->IsConnected())
         return false;
 
     // A standalone host can always attempt to join a pool
@@ -54,9 +54,13 @@ bool JoinPoolCommand::canRun() const
     return true;
 }
 
-void JoinPoolCommand::run()
+void JoinPoolCommand::Run()
 {
-    QString hostRef = this->getSelectedHostRef();
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
+        return;
+
+    QString hostRef = host->OpaqueRef();
 
     if (hostRef.isEmpty())
         return;
@@ -110,16 +114,16 @@ void JoinPoolCommand::run()
     if (result != QMessageBox::Yes)
         return;
 
-    // Get the current connection (host being joined)
-    XenConnection* hostConnection = this->mainWindow()->xenLib()->getConnection();
+    // Get the current GetConnection (host being joined)
+    XenConnection* hostConnection = host->GetConnection();
     if (!hostConnection)
     {
         QMessageBox::critical(this->mainWindow(), "Join Pool", "No active connection to the host.");
         return;
     }
 
-    XenSession* session = hostConnection->getSession();
-    if (!session || !session->isLoggedIn())
+    XenAPI::Session* session = hostConnection->GetSession();
+    if (!session || !session->IsLoggedIn())
     {
         QMessageBox::critical(this->mainWindow(), "Join Pool",
                               "Host session is not active.");
@@ -149,20 +153,12 @@ void JoinPoolCommand::run()
     }
 }
 
-QString JoinPoolCommand::menuText() const
+QString JoinPoolCommand::MenuText() const
 {
     return "Join Pool...";
 }
 
-QString JoinPoolCommand::getSelectedHostRef() const
+QSharedPointer<Host> JoinPoolCommand::getSelectedHost() const
 {
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return this->getSelectedObjectRef();
+    return qSharedPointerCast<Host>(this->GetObject());
 }

@@ -28,21 +28,18 @@
 #ifndef HOSTPROPERTIESCOMMAND_H
 #define HOSTPROPERTIESCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
-class HostPropertiesCommand : public Command
+class HostPropertiesCommand : public HostCommand
 {
     Q_OBJECT
 
     public:
         explicit HostPropertiesCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
-
-    private:
-        QString getSelectedHostRef() const;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // HOSTPROPERTIESCOMMAND_H

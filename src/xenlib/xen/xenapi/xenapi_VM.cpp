@@ -97,9 +97,9 @@ namespace XenAPI
     }
 
     // VM.start - Synchronous
-    void VM::start(XenSession* session, const QString& vm, bool start_paused, bool force)
+    void VM::start(Session* session, const QString& vm, bool start_paused, bool force)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -117,9 +117,9 @@ namespace XenAPI
     }
 
     // VM.async_start - Asynchronous (returns task ref)
-    QString VM::async_start(XenSession* session, const QString& vm, bool start_paused, bool force)
+    QString VM::async_start(Session* session, const QString& vm, bool start_paused, bool force)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -137,9 +137,9 @@ namespace XenAPI
     }
 
     // VM.start_on - Synchronous
-    void VM::start_on(XenSession* session, const QString& vm, const QString& host, bool start_paused, bool force)
+    void VM::start_on(Session* session, const QString& vm, const QString& host, bool start_paused, bool force)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -156,9 +156,9 @@ namespace XenAPI
     }
 
     // VM.async_start_on - Asynchronous
-    QString VM::async_start_on(XenSession* session, const QString& vm, const QString& host, bool start_paused, bool force)
+    QString VM::async_start_on(Session* session, const QString& vm, const QString& host, bool start_paused, bool force)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -177,9 +177,9 @@ namespace XenAPI
     }
 
     // VM.resume - Synchronous
-    void VM::resume(XenSession* session, const QString& vm, bool start_paused, bool force)
+    void VM::resume(Session* session, const QString& vm, bool start_paused, bool force)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -195,9 +195,9 @@ namespace XenAPI
     }
 
     // VM.async_resume - Asynchronous
-    QString VM::async_resume(XenSession* session, const QString& vm, bool start_paused, bool force)
+    QString VM::async_resume(Session* session, const QString& vm, bool start_paused, bool force)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -215,9 +215,9 @@ namespace XenAPI
     }
 
     // VM.resume_on - Synchronous
-    void VM::resume_on(XenSession* session, const QString& vm, const QString& host, bool start_paused, bool force)
+    void VM::resume_on(Session* session, const QString& vm, const QString& host, bool start_paused, bool force)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -234,9 +234,9 @@ namespace XenAPI
     }
 
     // VM.async_resume_on - Asynchronous
-    QString VM::async_resume_on(XenSession* session, const QString& vm, const QString& host, bool start_paused, bool force)
+    QString VM::async_resume_on(Session* session, const QString& vm, const QString& host, bool start_paused, bool force)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -255,9 +255,9 @@ namespace XenAPI
     }
 
     // VM.clean_shutdown - Synchronous
-    void VM::clean_shutdown(XenSession* session, const QString& vm)
+    void VM::clean_shutdown(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -271,9 +271,9 @@ namespace XenAPI
     }
 
     // VM.async_clean_shutdown - Asynchronous
-    QString VM::async_clean_shutdown(XenSession* session, const QString& vm)
+    QString VM::async_clean_shutdown(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -289,9 +289,9 @@ namespace XenAPI
     }
 
     // VM.hard_shutdown - Synchronous
-    void VM::hard_shutdown(XenSession* session, const QString& vm)
+    void VM::hard_shutdown(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -305,9 +305,9 @@ namespace XenAPI
     }
 
     // VM.async_hard_shutdown - Asynchronous
-    QString VM::async_hard_shutdown(XenSession* session, const QString& vm)
+    QString VM::async_hard_shutdown(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -323,9 +323,9 @@ namespace XenAPI
     }
 
     // VM.suspend - Synchronous
-    void VM::suspend(XenSession* session, const QString& vm)
+    void VM::suspend(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -339,9 +339,9 @@ namespace XenAPI
     }
 
     // VM.async_suspend - Asynchronous
-    QString VM::async_suspend(XenSession* session, const QString& vm)
+    QString VM::async_suspend(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -357,9 +357,9 @@ namespace XenAPI
     }
 
     // VM.clean_reboot - Synchronous
-    void VM::clean_reboot(XenSession* session, const QString& vm)
+    void VM::clean_reboot(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -373,9 +373,9 @@ namespace XenAPI
     }
 
     // VM.async_clean_reboot - Asynchronous
-    QString VM::async_clean_reboot(XenSession* session, const QString& vm)
+    QString VM::async_clean_reboot(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -391,9 +391,9 @@ namespace XenAPI
     }
 
     // VM.hard_reboot - Synchronous
-    void VM::hard_reboot(XenSession* session, const QString& vm)
+    void VM::hard_reboot(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -407,9 +407,9 @@ namespace XenAPI
     }
 
     // VM.async_hard_reboot - Asynchronous
-    QString VM::async_hard_reboot(XenSession* session, const QString& vm)
+    QString VM::async_hard_reboot(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -425,9 +425,9 @@ namespace XenAPI
     }
 
     // VM.pause - Synchronous
-    void VM::pause(XenSession* session, const QString& vm)
+    void VM::pause(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -441,9 +441,9 @@ namespace XenAPI
     }
 
     // VM.async_pause - Asynchronous
-    QString VM::async_pause(XenSession* session, const QString& vm)
+    QString VM::async_pause(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -459,9 +459,9 @@ namespace XenAPI
     }
 
     // VM.unpause - Synchronous
-    void VM::unpause(XenSession* session, const QString& vm)
+    void VM::unpause(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -475,9 +475,9 @@ namespace XenAPI
     }
 
     // VM.async_unpause - Asynchronous
-    QString VM::async_unpause(XenSession* session, const QString& vm)
+    QString VM::async_unpause(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -493,9 +493,9 @@ namespace XenAPI
     }
 
     // VM.assert_can_boot_here
-    void VM::assert_can_boot_here(XenSession* session, const QString& self, const QString& host)
+    void VM::assert_can_boot_here(Session* session, const QString& self, const QString& host)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -515,9 +515,9 @@ namespace XenAPI
     }
 
     // VM.assert_can_migrate
-    void VM::assert_can_migrate(XenSession* session, const QString& self, const QString& session_to)
+    void VM::assert_can_migrate(Session* session, const QString& self, const QString& session_to)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -534,9 +534,9 @@ namespace XenAPI
     }
 
     // VM.assert_agile - Used for HA protection checks
-    void VM::assert_agile(XenSession* session, const QString& self)
+    void VM::assert_agile(Session* session, const QString& self)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -552,9 +552,9 @@ namespace XenAPI
     }
 
     // VM.get_allowed_VBD_devices - Get list of allowed VBD device numbers
-    QVariant VM::get_allowed_VBD_devices(XenSession* session, const QString& vm)
+    QVariant VM::get_allowed_VBD_devices(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -567,9 +567,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response);
     }
 
-    QVariant VM::get_allowed_VIF_devices(XenSession* session, const QString& vm)
+    QVariant VM::get_allowed_VIF_devices(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -582,9 +582,9 @@ namespace XenAPI
     }
 
     // VM.get_record - Get full VM record
-    QVariantMap VM::get_record(XenSession* session, const QString& vm)
+    QVariantMap VM::get_record(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -598,9 +598,9 @@ namespace XenAPI
     }
 
     // VM.get_all_records - Get all VMs and their records
-    QVariantMap VM::get_all_records(XenSession* session)
+    QVariantMap VM::get_all_records(Session* session)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -612,9 +612,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toMap();
     }
 
-    double VM::query_data_source(XenSession* session, const QString& vm, const QString& data_source)
+    double VM::query_data_source(Session* session, const QString& vm, const QString& data_source)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -627,9 +627,9 @@ namespace XenAPI
     }
 
     // VM.set_suspend_VDI - Set the suspend VDI
-    void VM::set_suspend_VDI(XenSession* session, const QString& vm, const QString& value)
+    void VM::set_suspend_VDI(Session* session, const QString& vm, const QString& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -643,9 +643,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    QString VM::async_pool_migrate(XenSession* session, const QString& vm, const QString& host, const QVariantMap& options)
+    QString VM::async_pool_migrate(Session* session, const QString& vm, const QString& host, const QVariantMap& options)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -657,9 +657,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    QString VM::async_clone(XenSession* session, const QString& vm, const QString& new_name)
+    QString VM::async_clone(Session* session, const QString& vm, const QString& new_name)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -671,9 +671,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    QString VM::clone(XenSession* session, const QString& vm, const QString& new_name)
+    QString VM::clone(Session* session, const QString& vm, const QString& new_name)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -685,9 +685,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString VM::async_copy(XenSession* session, const QString& vm, const QString& new_name, const QString& sr)
+    QString VM::async_copy(Session* session, const QString& vm, const QString& new_name, const QString& sr)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -699,9 +699,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    QString VM::async_provision(XenSession* session, const QString& vm)
+    QString VM::async_provision(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -713,9 +713,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    void VM::destroy(XenSession* session, const QString& vm)
+    void VM::destroy(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -727,9 +727,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    void VM::set_is_a_template(XenSession* session, const QString& vm, bool value)
+    void VM::set_is_a_template(Session* session, const QString& vm, bool value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -741,9 +741,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    void VM::set_name_label(XenSession* session, const QString& vm, const QString& value)
+    void VM::set_name_label(Session* session, const QString& vm, const QString& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -755,9 +755,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    void VM::set_name_description(XenSession* session, const QString& vm, const QString& value)
+    void VM::set_name_description(Session* session, const QString& vm, const QString& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -769,9 +769,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    void VM::set_tags(XenSession* session, const QString& vm, const QStringList& value)
+    void VM::set_tags(Session* session, const QString& vm, const QStringList& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -783,9 +783,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    QString VM::async_snapshot(XenSession* session, const QString& vm, const QString& new_name)
+    QString VM::async_snapshot(Session* session, const QString& vm, const QString& new_name)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -797,9 +797,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    QString VM::async_snapshot_with_quiesce(XenSession* session, const QString& vm, const QString& new_name)
+    QString VM::async_snapshot_with_quiesce(Session* session, const QString& vm, const QString& new_name)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -811,9 +811,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    QString VM::async_checkpoint(XenSession* session, const QString& vm, const QString& new_name)
+    QString VM::async_checkpoint(Session* session, const QString& vm, const QString& new_name)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -825,9 +825,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    QString VM::async_revert(XenSession* session, const QString& snapshot)
+    QString VM::async_revert(Session* session, const QString& snapshot)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -839,11 +839,11 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    void VM::set_memory_limits(XenSession* session, const QString& vm,
+    void VM::set_memory_limits(Session* session, const QString& vm,
                                qint64 static_min, qint64 static_max,
                                qint64 dynamic_min, qint64 dynamic_max)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -856,10 +856,10 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Void method
     }
 
-    void VM::set_memory_dynamic_range(XenSession* session, const QString& vm,
+    void VM::set_memory_dynamic_range(Session* session, const QString& vm,
                                       qint64 dynamic_min, qint64 dynamic_max)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -871,9 +871,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Void method
     }
 
-    void VM::set_VCPUs_max(XenSession* session, const QString& vm, qint64 value)
+    void VM::set_VCPUs_max(Session* session, const QString& vm, qint64 value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -885,9 +885,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Void method
     }
 
-    void VM::set_VCPUs_at_startup(XenSession* session, const QString& vm, qint64 value)
+    void VM::set_VCPUs_at_startup(Session* session, const QString& vm, qint64 value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -899,9 +899,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Void method
     }
 
-    void VM::set_VCPUs_number_live(XenSession* session, const QString& vm, qint64 nvcpu)
+    void VM::set_VCPUs_number_live(Session* session, const QString& vm, qint64 nvcpu)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -913,12 +913,12 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Void method
     }
 
-    QString VM::async_migrate_send(XenSession* session, const QString& vm,
+    QString VM::async_migrate_send(Session* session, const QString& vm,
                                    const QVariantMap& dest, bool live,
                                    const QVariantMap& vdi_map, const QVariantMap& vif_map,
                                    const QVariantMap& options)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -930,9 +930,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
-    void VM::set_ha_restart_priority(XenSession* session, const QString& vm, const QString& value)
+    void VM::set_ha_restart_priority(Session* session, const QString& vm, const QString& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -943,9 +943,9 @@ namespace XenAPI
         session->sendApiRequest(request);
     }
 
-    void VM::set_order(XenSession* session, const QString& vm, qint64 value)
+    void VM::set_order(Session* session, const QString& vm, qint64 value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -956,9 +956,9 @@ namespace XenAPI
         session->sendApiRequest(request);
     }
 
-    void VM::set_start_delay(XenSession* session, const QString& vm, qint64 value)
+    void VM::set_start_delay(Session* session, const QString& vm, qint64 value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -969,9 +969,9 @@ namespace XenAPI
         session->sendApiRequest(request);
     }
 
-    void VM::set_HVM_shadow_multiplier(XenSession* session, const QString& vm, double value)
+    void VM::set_HVM_shadow_multiplier(Session* session, const QString& vm, double value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -982,9 +982,9 @@ namespace XenAPI
         session->sendApiRequest(request);
     }
 
-    void VM::set_shadow_multiplier_live(XenSession* session, const QString& vm, double value)
+    void VM::set_shadow_multiplier_live(Session* session, const QString& vm, double value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -996,9 +996,9 @@ namespace XenAPI
     }
 
     // VM.set_HVM_boot_policy
-    void VM::set_HVM_boot_policy(XenSession* session, const QString& vm, const QString& value)
+    void VM::set_HVM_boot_policy(Session* session, const QString& vm, const QString& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -1013,9 +1013,9 @@ namespace XenAPI
     }
 
     // VM.set_HVM_boot_params
-    void VM::set_HVM_boot_params(XenSession* session, const QString& vm, const QVariantMap& bootParams)
+    void VM::set_HVM_boot_params(Session* session, const QString& vm, const QVariantMap& bootParams)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -1030,9 +1030,9 @@ namespace XenAPI
     }
 
     // VM.get_HVM_boot_policy
-    QString VM::get_HVM_boot_policy(XenSession* session, const QString& vm)
+    QString VM::get_HVM_boot_policy(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -1048,9 +1048,9 @@ namespace XenAPI
     }
 
     // VM.get_HVM_boot_params
-    QVariantMap VM::get_HVM_boot_params(XenSession* session, const QString& vm)
+    QVariantMap VM::get_HVM_boot_params(Session* session, const QString& vm)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -1065,9 +1065,9 @@ namespace XenAPI
         return result.toMap();
     }
 
-    void VM::set_PV_args(XenSession* session, const QString& vm, const QString& value)
+    void VM::set_PV_args(Session* session, const QString& vm, const QString& value)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -1079,9 +1079,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    void VM::set_other_config(XenSession* session, const QString& vm, const QVariantMap& otherConfig)
+    void VM::set_other_config(Session* session, const QString& vm, const QVariantMap& otherConfig)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -1093,9 +1093,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    void VM::set_VCPUs_params(XenSession* session, const QString& vm, const QVariantMap& vcpusParams)
+    void VM::set_VCPUs_params(Session* session, const QString& vm, const QVariantMap& vcpusParams)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -1107,9 +1107,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    void VM::set_platform(XenSession* session, const QString& vm, const QVariantMap& platform)
+    void VM::set_platform(Session* session, const QString& vm, const QVariantMap& platform)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -1121,9 +1121,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response);
     }
 
-    void VM::set_affinity(XenSession* session, const QString& vm, const QString& host)
+    void VM::set_affinity(Session* session, const QString& vm, const QString& host)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;

@@ -26,7 +26,7 @@
  */
 
 #include "srreattachaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../../xencache.h"
 #include "../../sr.h"
@@ -41,7 +41,7 @@ SrReattachAction::SrReattachAction(SR* sr,
                                    const QString& description,
                                    const QVariantMap& deviceConfig,
                                    QObject* parent)
-    : AsyncOperation(sr ? sr->connection() : nullptr,
+    : AsyncOperation(sr ? sr->GetConnection() : nullptr,
                      QString("Reattaching SR '%1'").arg(name),
                      QString("Reattaching storage repository..."),
                      parent),
@@ -61,12 +61,12 @@ void SrReattachAction::run()
         return;
     }
 
-    qDebug() << "SrReattachAction: Reattaching SR" << m_sr->uuid()
+    qDebug() << "SrReattachAction: Reattaching SR" << m_sr->GetUUID()
              << "name:" << m_name
              << "description:" << m_description;
 
-    XenSession* session = this->session();
-    if (!session || !session->isLoggedIn())
+    XenAPI::Session* session = this->session();
+    if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
@@ -74,7 +74,7 @@ void SrReattachAction::run()
 
     setDescription("Reattaching storage repository...");
 
-    QString srRef = m_sr->opaqueRef();
+    QString srRef = m_sr->OpaqueRef();
 
     // Get all hosts in the pool using XenAPI
     QVariant hostsVar;

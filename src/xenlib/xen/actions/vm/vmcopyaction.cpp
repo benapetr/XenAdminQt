@@ -26,7 +26,7 @@
  */
 
 #include "vmcopyaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../vm.h"
 #include "../../sr.h"
@@ -45,10 +45,10 @@ VMCopyAction::VMCopyAction(XenConnection* connection,
                            QObject* parent)
     : AsyncOperation(connection,
                      QString("Copying '%1' to '%2' on '%3'")
-                         .arg(vm ? vm->nameLabel() : "")
+                         .arg(vm ? vm->GetName() : "")
                          .arg(nameLabel)
-                         .arg(sr ? sr->nameLabel() : ""),
-                     QString("Copying VM '%1'").arg(vm ? vm->nameLabel() : ""),
+                         .arg(sr ? sr->GetName() : ""),
+                     QString("Copying VM '%1'").arg(vm ? vm->GetName() : ""),
                      parent),
       m_vm(vm), m_host(host), m_sr(sr), m_nameLabel(nameLabel), m_description(description)
 {
@@ -60,12 +60,12 @@ VMCopyAction::VMCopyAction(XenConnection* connection,
     // Set context objects
     setVM(m_vm);
     setSR(m_sr);
-    if (m_host)
-        setHost(m_host);
+    if (this->m_host)
+        setHost(this->m_host);
 
     // If VM is a template, set template context
-    if (m_vm->isTemplate())
-        setVMTemplate(m_vm);
+    if (this->m_vm->IsTemplate())
+        setVMTemplate(this->m_vm);
 }
 
 void VMCopyAction::run()
@@ -75,9 +75,9 @@ void VMCopyAction::run()
         // Call VM.async_copy
         QString taskRef = XenAPI::VM::async_copy(
             session(),
-            m_vm->opaqueRef(),
-            m_nameLabel,
-            m_sr->opaqueRef());
+            this->m_vm->OpaqueRef(),
+            this->m_nameLabel,
+            this->m_sr->OpaqueRef());
 
         // Poll task to completion
         pollToCompletion(taskRef, 0, 90);
@@ -94,11 +94,11 @@ void VMCopyAction::run()
         qDebug() << "VMCopyAction: Copied VM ref:" << newVmRef;
 
         // Set the description on the new VM
-        if (!m_description.isEmpty())
+        if (!this->m_description.isEmpty())
         {
             try
             {
-                XenAPI::VM::set_name_description(session(), newVmRef, m_description);
+                XenAPI::VM::set_name_description(session(), newVmRef, this->m_description);
             } catch (const std::exception& e)
             {
                 // Non-fatal - log but continue

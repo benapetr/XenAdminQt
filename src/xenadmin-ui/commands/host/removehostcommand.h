@@ -28,7 +28,7 @@
 #ifndef REMOVEHOSTCOMMAND_H
 #define REMOVEHOSTCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
 /**
  * @brief RemoveHostCommand - Remove host connection from server list
@@ -45,43 +45,31 @@
  * - Remove the connection from the server list
  * - Save the updated server list
  */
-class RemoveHostCommand : public Command
+class RemoveHostCommand : public HostCommand
 {
     Q_OBJECT
 
     public:
         explicit RemoveHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
     private:
         /**
-         * @brief Get selected host reference
-         * @return Host opaque reference or empty string
-         */
-        QString getSelectedHostRef() const;
-
-        /**
-         * @brief Get selected host data
-         * @return Host data from cache
-         */
-        QVariantMap getSelectedHostData() const;
-
-        /**
          * @brief Check if host can be removed
-         * @param hostData Host data from cache
+         * @param host Host object
          * @return true if host can be removed
          */
-        bool canHostBeRemoved(const QVariantMap& hostData) const;
+        bool canHostBeRemoved(QSharedPointer<Host> host) const;
 
         /**
-         * @brief Check if host is pool coordinator (master)
-         * @param hostData Host data from cache
-         * @return true if host is coordinator
+         * @brief Check if host is pool coordinator
+         * @param host Host object
+         * @return true if host is pool coordinator
          */
-        bool isHostCoordinator(const QVariantMap& hostData) const;
+        bool isHostCoordinator(QSharedPointer<Host> host) const;
 };
 
 #endif // REMOVEHOSTCOMMAND_H

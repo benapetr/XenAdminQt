@@ -27,68 +27,55 @@
 
 #include "detachvirtualdiskcommand.h"
 #include "deactivatevbdcommand.h"
-#include "../../../xenlib/xencache.h"
-#include "../../../xenlib/xenlib.h"
-#include "../../../xenlib/xen/connection.h"
-#include "../../../xenlib/xen/vm.h"
-#include "../../../xenlib/xen/actions/vdi/detachvirtualdiskaction.h"
+#include "xencache.h"
+#include "xen/network/connection.h"
+#include "xen/vdi.h"
+#include "xen/vm.h"
+#include "xen/actions/vdi/detachvirtualdiskaction.h"
+#include "xen/xenobject.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>
 #include <QDebug>
 
 DetachVirtualDiskCommand::DetachVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VDICommand(mainWindow, parent)
 {
 }
 
-QString DetachVirtualDiskCommand::menuText() const
+QString DetachVirtualDiskCommand::MenuText() const
 {
     return "Detach Virtual Disk";
 }
 
-bool DetachVirtualDiskCommand::canRun() const
+bool DetachVirtualDiskCommand::CanRun() const
 {
-    if (this->getSelectedObjectType() != "vdi")
-    {
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->IsValid())
         return false;
-    }
 
-    QString vdiRef = this->getSelectedObjectRef();
-    if (vdiRef.isEmpty())
-    {
-        return false;
-    }
-
-    return this->canRunVDI(vdiRef);
+    return this->canRunVDI(vdi->OpaqueRef());
 }
 
 bool DetachVirtualDiskCommand::canRunVDI(const QString& vdiRef) const
 {
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-    {
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->IsValid())
         return false;
-    }
 
+    XenCache* cache = vdi->GetConnection()->GetCache();
     QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
-    {
         return false;
-    }
 
     // Check if VDI is locked
     if (vdiData.value("Locked", false).toBool())
-    {
         return false;
-    }
 
     // Get all VBDs attached to this VDI
     QVariantList vbds = vdiData.value("VBDs").toList();
     if (vbds.isEmpty())
-    {
         return false; // No VBDs - nothing to detach
-    }
 
     // Check each VBD - at least one must be detachable
     bool hasDetachableVBD = false;
@@ -161,7 +148,8 @@ bool DetachVirtualDiskCommand::canRunVDI(const QString& vdiRef) const
 
 QString DetachVirtualDiskCommand::getCantRunReasonVDI(const QString& vdiRef) const
 {
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    QSharedPointer<VDI> vdi = this->getVDI();
+    XenCache* cache = vdi ? vdi->GetConnection()->GetCache() : nullptr;
     if (!cache)
     {
         return "Cache not available";
@@ -235,7 +223,7 @@ QString DetachVirtualDiskCommand::getCantRunReasonVDI(const QString& vdiRef) con
     return "Unknown reason";
 }
 
-void DetachVirtualDiskCommand::run()
+void DetachVirtualDiskCommand::Run()
 {
     QString vdiRef = this->getSelectedObjectRef();
     if (vdiRef.isEmpty())
@@ -243,7 +231,9 @@ void DetachVirtualDiskCommand::run()
         return;
     }
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    QSharedPointer<VDI> vdi = this->getVDI();
+    XenConnection* connection = vdi ? vdi->GetConnection() : nullptr;
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
     if (!cache)
     {
         return;
@@ -308,7 +298,7 @@ void DetachVirtualDiskCommand::run()
         QString vmName = vmData.value("name_label", "VM").toString();
 
         // Create VM object for the action
-        VM* vm = new VM(this->mainWindow()->xenLib()->getConnection(), vmRef, this);
+        VM* vm = new VM(connection, vmRef, this);
 
         // Create detach action
         DetachVirtualDiskAction* action = new DetachVirtualDiskAction(

@@ -34,133 +34,133 @@
 
 class ConnectionProfile
 {
-public:
-    ConnectionProfile();
-    ConnectionProfile(const QString& name, const QString& hostname, int port = 443,
-                      const QString& username = QString(), bool rememberPassword = false);
+    public:
+        ConnectionProfile();
+        ConnectionProfile(const QString& name, const QString& hostname, int port = 443,
+                          const QString& username = QString(), bool rememberPassword = false);
 
-    // Getters
-    QString name() const
-    {
-        return m_name;
-    }
-    QString hostname() const
-    {
-        return m_hostname;
-    }
-    int port() const
-    {
-        return m_port;
-    }
-    QString username() const
-    {
-        return m_username;
-    }
-    bool rememberPassword() const
-    {
-        return m_rememberPassword;
-    }
-    QString password() const
-    {
-        return m_password;
-    }
-    bool useSSL() const
-    {
-        return m_useSSL;
-    }
-    QString friendlyName() const
-    {
-        return m_friendlyName;
-    }
-    bool saveDisconnected() const
-    {
-        return m_saveDisconnected;
-    }
-    QStringList poolMembers() const
-    {
-        return m_poolMembers;
-    }
-    bool autoConnect() const
-    {
-        return m_autoConnect;
-    }
-    qint64 lastConnected() const
-    {
-        return m_lastConnected;
-    }
+        // Getters
+        QString name() const
+        {
+            return m_name;
+        }
+        QString hostname() const
+        {
+            return m_hostname;
+        }
+        int port() const
+        {
+            return m_port;
+        }
+        QString username() const
+        {
+            return m_username;
+        }
+        bool rememberPassword() const
+        {
+            return m_rememberPassword;
+        }
+        QString password() const
+        {
+            return m_password;
+        }
+        bool useSSL() const
+        {
+            return m_useSSL;
+        }
+        QString friendlyName() const
+        {
+            return m_friendlyName;
+        }
+        bool saveDisconnected() const
+        {
+            return m_saveDisconnected;
+        }
+        QStringList poolMembers() const
+        {
+            return m_poolMembers;
+        }
+        bool autoConnect() const
+        {
+            return m_autoConnect;
+        }
+        qint64 lastConnected() const
+        {
+            return m_lastConnected;
+        }
 
-    // Setters
-    void setName(const QString& name)
-    {
-        m_name = name;
-    }
-    void setHostname(const QString& hostname)
-    {
-        m_hostname = hostname;
-    }
-    void setPort(int port)
-    {
-        m_port = port;
-    }
-    void setUsername(const QString& username)
-    {
-        m_username = username;
-    }
-    void setRememberPassword(bool remember)
-    {
-        m_rememberPassword = remember;
-    }
-    void setPassword(const QString& password)
-    {
-        m_password = password;
-    }
-    void setUseSSL(bool useSSL)
-    {
-        m_useSSL = useSSL;
-    }
-    void setFriendlyName(const QString& name)
-    {
-        m_friendlyName = name;
-    }
-    void setSaveDisconnected(bool save)
-    {
-        m_saveDisconnected = save;
-    }
-    void setPoolMembers(const QStringList& members)
-    {
-        m_poolMembers = members;
-    }
-    void setAutoConnect(bool autoConnect)
-    {
-        m_autoConnect = autoConnect;
-    }
-    void setLastConnected(qint64 timestamp)
-    {
-        m_lastConnected = timestamp;
-    }
+        // Setters
+        void setName(const QString& name)
+        {
+            m_name = name;
+        }
+        void setHostname(const QString& hostname)
+        {
+            m_hostname = hostname;
+        }
+        void setPort(int port)
+        {
+            m_port = port;
+        }
+        void setUsername(const QString& username)
+        {
+            m_username = username;
+        }
+        void setRememberPassword(bool remember)
+        {
+            m_rememberPassword = remember;
+        }
+        void setPassword(const QString& password)
+        {
+            m_password = password;
+        }
+        void setUseSSL(bool useSSL)
+        {
+            m_useSSL = useSSL;
+        }
+        void setFriendlyName(const QString& name)
+        {
+            m_friendlyName = name;
+        }
+        void setSaveDisconnected(bool save)
+        {
+            m_saveDisconnected = save;
+        }
+        void setPoolMembers(const QStringList& members)
+        {
+            m_poolMembers = members;
+        }
+        void setAutoConnect(bool autoConnect)
+        {
+            m_autoConnect = autoConnect;
+        }
+        void setLastConnected(qint64 timestamp)
+        {
+            m_lastConnected = timestamp;
+        }
 
-    // Serialization
-    QVariantMap toVariantMap() const;
-    static ConnectionProfile fromVariantMap(const QVariantMap& map);
+        // Serialization
+        QVariantMap toVariantMap() const;
+        static ConnectionProfile fromVariantMap(const QVariantMap& map);
 
-    // Display name for UI
-    QString displayName() const;
+        // Display name for UI
+        QString displayName() const;
 
-    bool isValid() const;
+        bool isValid() const;
 
-private:
-    QString m_name;
-    QString m_hostname;
-    int m_port;
-    QString m_username;
-    bool m_rememberPassword;
-    QString m_password; // Note: will be encrypted in storage
-    bool m_useSSL;
-    QString m_friendlyName;
-    bool m_saveDisconnected;
-    QStringList m_poolMembers; // List of pool member hostnames for failover
-    bool m_autoConnect;        // Auto-connect on startup
-    qint64 m_lastConnected;    // Timestamp of last successful connection
+    private:
+        QString m_name;
+        QString m_hostname;
+        int m_port;
+        QString m_username;
+        bool m_rememberPassword;
+        QString m_password; // Note: will be encrypted in storage
+        bool m_useSSL;
+        QString m_friendlyName;
+        bool m_saveDisconnected;
+        QStringList m_poolMembers; // List of pool member hostnames for failover
+        bool m_autoConnect;        // Auto-connect on startup
+        qint64 m_lastConnected;    // Timestamp of last successful connection
 };
 
 #endif // CONNECTIONPROFILE_H

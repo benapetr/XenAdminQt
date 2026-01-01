@@ -27,8 +27,9 @@
 
 #include "networktabpage.h"
 #include "ui_networktabpage.h"
-#include "xenlib.h"
+#include "xen/session.h"
 #include "xencache.h"
+#include "xen/xenapi/xenapi_Network.h"
 #include "../dialogs/newnetworkwizard.h"
 #include "../dialogs/networkpropertiesdialog.h"
 #include "../dialogs/networkingpropertiesdialog.h"
@@ -46,8 +47,7 @@
 #include <QClipboard>
 #include <QApplication>
 
-NetworkTabPage::NetworkTabPage(QWidget* parent)
-    : BaseTabPage(parent), ui(new Ui::NetworkTabPage)
+NetworkTabPage::NetworkTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::NetworkTabPage)
 {
     this->ui->setupUi(this);
 
@@ -67,38 +67,15 @@ NetworkTabPage::NetworkTabPage(QWidget* parent)
     this->ui->ipConfigTable->setContextMenuPolicy(Qt::CustomContextMenu);
 
     // Connect button signals (matches C# flowLayoutPanel1 buttons)
-    connect(this->ui->addButton, &QPushButton::clicked,
-            this, &NetworkTabPage::onAddNetwork);
-    connect(this->ui->propertiesButton, &QPushButton::clicked,
-            this, &NetworkTabPage::onEditNetwork);
-    connect(this->ui->removeButton, &QPushButton::clicked,
-            this, &NetworkTabPage::onRemoveNetwork);
-    connect(this->ui->activateButton, &QPushButton::clicked,
-            this, &NetworkTabPage::onActivateToggle);
-
-    connect(this->ui->configureButton, &QPushButton::clicked,
-            this, &NetworkTabPage::onConfigureClicked);
-
-    connect(this->ui->networksTable, &QTableWidget::customContextMenuRequested,
-            this, &NetworkTabPage::showNetworksContextMenu);
-
-    connect(this->ui->ipConfigTable, &QTableWidget::customContextMenuRequested,
-            this, &NetworkTabPage::showIPConfigContextMenu);
-
-    connect(this->ui->networksTable, &QTableWidget::itemSelectionChanged,
-            this, &NetworkTabPage::onNetworksTableSelectionChanged);
-
-    connect(this->ui->ipConfigTable, &QTableWidget::itemSelectionChanged,
-            this, &NetworkTabPage::onIPConfigTableSelectionChanged);
-}
-
-void NetworkTabPage::setXenLib(XenLib* xenLib)
-{
-    BaseTabPage::setXenLib(xenLib);
-
-    // Connect to networks received signal for automatic refresh after create/delete
-    if (xenLib)
-        connect(xenLib, &XenLib::networksReceived, this, &NetworkTabPage::onNetworksDataUpdated);
+    connect(this->ui->addButton, &QPushButton::clicked, this, &NetworkTabPage::onAddNetwork);
+    connect(this->ui->propertiesButton, &QPushButton::clicked, this, &NetworkTabPage::onEditNetwork);
+    connect(this->ui->removeButton, &QPushButton::clicked, this, &NetworkTabPage::onRemoveNetwork);
+    connect(this->ui->activateButton, &QPushButton::clicked, this, &NetworkTabPage::onActivateToggle);
+    connect(this->ui->configureButton, &QPushButton::clicked, this, &NetworkTabPage::onConfigureClicked);
+    connect(this->ui->networksTable, &QTableWidget::customContextMenuRequested, this, &NetworkTabPage::showNetworksContextMenu);
+    connect(this->ui->ipConfigTable, &QTableWidget::customContextMenuRequested, this, &NetworkTabPage::showIPConfigContextMenu);
+    connect(this->ui->networksTable, &QTableWidget::itemSelectionChanged, this, &NetworkTabPage::onNetworksTableSelectionChanged);
+    connect(this->ui->ipConfigTable, &QTableWidget::itemSelectionChanged, this, &NetworkTabPage::onIPConfigTableSelectionChanged);
 }
 
 NetworkTabPage::~NetworkTabPage()
@@ -106,7 +83,7 @@ NetworkTabPage::~NetworkTabPage()
     delete this->ui;
 }
 
-bool NetworkTabPage::isApplicableForObjectType(const QString& objectType) const
+bool NetworkTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // Network tab is applicable to VMs, Hosts, and Pools
     // For VMs: shows network interfaces (VIFs)
@@ -154,6 +131,21 @@ void NetworkTabPage::refreshContent()
         this->populateNetworksForPool();
         this->populateIPConfigForPool();
     }
+}
+
+void NetworkTabPage::removeObject()
+{
+    if (!this->m_connection)
+        return;
+
+    XenCache* cache = this->m_connection->GetCache();
+    disconnect(cache, &XenCache::objectChanged, this, &NetworkTabPage::onCacheObjectChanged);
+}
+
+void NetworkTabPage::updateObject()
+{
+    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
+    connect(cache, &XenCache::objectChanged, this, &NetworkTabPage::onCacheObjectChanged, Qt::UniqueConnection);
 }
 
 void NetworkTabPage::setupVifColumns()
@@ -212,9 +204,9 @@ void NetworkTabPage::populateVIFsForVM()
     // Clear the table
     this->ui->networksTable->setRowCount(0);
 
-    if (!this->m_xenLib)
+    if (!this->m_connection || !this->m_connection->GetCache())
     {
-        qDebug() << "NetworkTabPage::populateVIFsForVM - No XenLib";
+        qDebug() << "NetworkTabPage::populateVIFsForVM - No connection/cache";
         return;
     }
 
@@ -243,10 +235,12 @@ void NetworkTabPage::populateVIFsForVM()
     QVariantMap guestMetrics;
     QVariantMap networks;
 
+    XenCache* cache = this->m_connection->GetCache();
+
     if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
     {
         // Resolve guest_metrics from cache to get network info (IP addresses)
-        guestMetrics = this->m_xenLib->getCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+        guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
         if (!guestMetrics.isEmpty())
         {
             networks = guestMetrics.value("networks").toMap();
@@ -263,7 +257,7 @@ void NetworkTabPage::populateVIFsForVM()
             continue;
 
         // Resolve VIF from cache (matches C# vm.Connection.Resolve(vifRef))
-        QVariantMap vifRecord = this->m_xenLib->getCache()->ResolveObjectData("VIF", vifRef);
+        QVariantMap vifRecord = cache->ResolveObjectData("VIF", vifRef);
         if (vifRecord.isEmpty())
         {
             qDebug() << "NetworkTabPage::populateVIFsForVM - Failed to resolve VIF:" << vifRef;
@@ -279,7 +273,7 @@ void NetworkTabPage::populateVIFsForVM()
         QString networkRef = vifRecord.value("network").toString();
         if (!networkRef.isEmpty())
         {
-            QVariantMap networkRecord = this->m_xenLib->getCache()->ResolveObjectData("network", networkRef);
+            QVariantMap networkRecord = cache->ResolveObjectData("network", networkRef);
             if (!networkRecord.isEmpty())
             {
                 // Check for guest installer network (HIMN)
@@ -363,7 +357,7 @@ void NetworkTabPage::populateVIFsForVM()
         if (!networkRef.isEmpty())
         {
             // Resolve network from cache (not API call!)
-            QVariantMap networkRecord = this->m_xenLib->getCache()->ResolveObjectData("network", networkRef);
+            QVariantMap networkRecord = cache->ResolveObjectData("network", networkRef);
             if (!networkRecord.isEmpty())
             {
                 networkName = networkRecord.value("name_label", "-").toString();
@@ -414,19 +408,19 @@ void NetworkTabPage::populateNetworksForHost()
 {
     this->ui->networksTable->setRowCount(0);
 
-    if (!this->m_xenLib)
+    if (!this->m_connection || !this->m_connection->GetCache())
     {
-        qDebug() << "NetworkTabPage::populateNetworksForHost - No XenLib";
+        qDebug() << "NetworkTabPage::populateNetworksForHost - No connection/cache";
         return;
     }
 
     // Get ALL networks from the cache (matching C# logic)
-    QStringList allNetworkRefs = this->m_xenLib->getCache()->GetAllRefs("network");
+    QStringList allNetworkRefs = this->m_connection->GetCache()->GetAllRefs("network");
     //qDebug() << "NetworkTabPage::populateNetworksForHost - Total networks in cache:" << allNetworkRefs.size();
 
     for (const QString& networkRef : allNetworkRefs)
     {
-        QVariantMap networkData = this->m_xenLib->getCache()->ResolveObjectData("network", networkRef);
+        QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
 
         // Implement C# network.Show() filtering logic
         if (!shouldShowNetwork(networkData))
@@ -494,7 +488,8 @@ void NetworkTabPage::addNetworkRow(const QVariantMap& networkData)
     QVariantMap pifData;
     QVariantList pifRefs = networkData.value("PIFs", QVariantList()).toList();
 
-    if (this->m_objectType == "host" && this->m_xenLib)
+    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
+    if (this->m_objectType == "host" && cache)
     {
         QString currentHostRef = this->m_objectData.value("ref", "").toString();
         if (currentHostRef.isEmpty())
@@ -507,7 +502,7 @@ void NetworkTabPage::addNetworkRow(const QVariantMap& networkData)
         for (const QVariant& pifRefVar : pifRefs)
         {
             QString pifRef = pifRefVar.toString();
-            QVariantMap tempPifData = this->m_xenLib->getCache()->ResolveObjectData("PIF", pifRef);
+            QVariantMap tempPifData = cache->ResolveObjectData("PIF", pifRef);
             QString pifHostRef = tempPifData.value("host", "").toString();
 
             if (pifHostRef == currentHostRef)
@@ -516,11 +511,11 @@ void NetworkTabPage::addNetworkRow(const QVariantMap& networkData)
                 break;
             }
         }
-    } else if (this->m_objectType == "pool" && !pifRefs.isEmpty() && this->m_xenLib)
+    } else if (this->m_objectType == "pool" && !pifRefs.isEmpty() && cache)
     {
         // For pools, get first PIF to display representative data
         QString pifRef = pifRefs.first().toString();
-        pifData = this->m_xenLib->getCache()->ResolveObjectData("PIF", pifRef);
+        pifData = cache->ResolveObjectData("PIF", pifRef);
     }
 
     QString nicInfo = "-";
@@ -544,14 +539,14 @@ void NetworkTabPage::addNetworkRow(const QVariantMap& networkData)
             // This PIF is a bond master (IsBondNIC)
             // C# PIF.NICIdentifier() - builds "Bond 0+1" etc.
             QString bondRef = bondMasterOfRefs.first().toString();
-            QVariantMap bondData = this->m_xenLib->getCache()->ResolveObjectData("Bond", bondRef);
+            QVariantMap bondData = cache->ResolveObjectData("Bond", bondRef);
             QVariantList slaveRefs = bondData.value("slaves", QVariantList()).toList();
 
             QStringList memberDevices;
             for (const QVariant& slaveRefVar : slaveRefs)
             {
                 QString slaveRef = slaveRefVar.toString();
-                QVariantMap slavePif = this->m_xenLib->getCache()->ResolveObjectData("PIF", slaveRef);
+                QVariantMap slavePif = cache->ResolveObjectData("PIF", slaveRef);
                 QString slaveDevice = slavePif.value("device", "").toString();
                 // Remove "eth" prefix to get number
                 QString deviceNum = slaveDevice;
@@ -623,7 +618,7 @@ void NetworkTabPage::addNetworkRow(const QVariantMap& networkData)
         QString networkSriovRef = this->getPifNetworkSriov(pifData);
         if (!networkSriovRef.isEmpty())
         {
-            QVariantMap sriovData = this->m_xenLib->getCache()->ResolveObjectData("network_sriov", networkSriovRef);
+            QVariantMap sriovData = cache->ResolveObjectData("network_sriov", networkSriovRef);
             bool requiresReboot = sriovData.value("requires_reboot", false).toBool();
             if (requiresReboot)
             {
@@ -657,7 +652,7 @@ void NetworkTabPage::populateIPConfigForHost()
 {
     this->ui->ipConfigTable->setRowCount(0);
 
-    if (!this->m_xenLib)
+    if (!this->m_connection || !this->m_connection->GetCache())
         return;
 
     // Get all PIFs for this host
@@ -668,7 +663,7 @@ void NetworkTabPage::populateIPConfigForHost()
     for (const QVariant& pifRefVar : pifRefs)
     {
         QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = this->m_xenLib->getCache()->ResolveObjectData("PIF", pifRef);
+        QVariantMap pifData = this->m_connection->GetCache()->ResolveObjectData("PIF", pifRef);
 
         // Only show management interfaces
         bool isManagement = pifData.value("management", false).toBool();
@@ -703,7 +698,7 @@ void NetworkTabPage::populateIPConfigForPool()
 {
     this->ui->ipConfigTable->setRowCount(0);
 
-    if (!this->m_xenLib)
+    if (!this->m_connection || !this->m_connection->GetCache())
         return;
 
     // For pools, show management interfaces from all hosts
@@ -712,14 +707,14 @@ void NetworkTabPage::populateIPConfigForPool()
     for (const QVariant& hostRefVar : hostRefs)
     {
         QString hostRef = hostRefVar.toString();
-        QVariantMap hostData = this->m_xenLib->getCache()->ResolveObjectData("host", hostRef);
+        QVariantMap hostData = this->m_connection->GetCache()->ResolveObjectData("host", hostRef);
 
         QVariantList pifRefs = hostData.value("PIFs", QVariantList()).toList();
 
         for (const QVariant& pifRefVar : pifRefs)
         {
             QString pifRef = pifRefVar.toString();
-            QVariantMap pifData = this->m_xenLib->getCache()->ResolveObjectData("PIF", pifRef);
+            QVariantMap pifData = this->m_connection->GetCache()->ResolveObjectData("PIF", pifRef);
 
             // Only show management interfaces
             bool isManagement = pifData.value("management", false).toBool();
@@ -736,7 +731,7 @@ void NetworkTabPage::populateIPConfigForPool()
 
 void NetworkTabPage::addIPConfigRow(const QVariantMap& pifData, const QVariantMap& hostData)
 {
-    if (!this->m_xenLib)
+    if (!this->m_connection || !this->m_connection->GetCache())
         return;
 
     int row = this->ui->ipConfigTable->rowCount();
@@ -750,7 +745,7 @@ void NetworkTabPage::addIPConfigRow(const QVariantMap& pifData, const QVariantMa
     {
         // Get host from PIF
         QString hostRef = pifData.value("host", "").toString();
-        QVariantMap hData = this->m_xenLib->getCache()->ResolveObjectData("host", hostRef);
+        QVariantMap hData = this->m_connection->GetCache()->ResolveObjectData("host", hostRef);
         hostName = hData.value("name_label", "Unknown").toString();
     } else
     {
@@ -773,7 +768,7 @@ void NetworkTabPage::addIPConfigRow(const QVariantMap& pifData, const QVariantMa
 
     // Network name
     QString networkRef = pifData.value("network", "").toString();
-    QVariantMap networkData = this->m_xenLib->getCache()->ResolveObjectData("network", networkRef);
+    QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
     QString networkName = networkData.value("name_label", "").toString();
 
     // NIC (device name)
@@ -830,7 +825,7 @@ void NetworkTabPage::onConfigureClicked()
     }
 
     // Open NetworkingProperties dialog with selected PIF
-    NetworkingPropertiesDialog dialog(this->m_xenLib, selectedPifRef, this);
+    NetworkingPropertiesDialog dialog(this->m_connection, selectedPifRef, this);
     if (dialog.exec() == QDialog::Accepted)
     {
         // Refresh the IP configuration display after changes
@@ -917,9 +912,9 @@ void NetworkTabPage::showNetworksContextMenu(const QPoint& pos)
         addAction = contextMenu.addAction(tr("&Add Network..."));
 
         QString selectedNetworkRef = this->getSelectedNetworkRef();
-        if (!selectedNetworkRef.isEmpty() && this->m_xenLib)
+        if (!selectedNetworkRef.isEmpty() && this->m_connection && this->m_connection->GetCache())
         {
-            QVariantMap networkData = this->m_xenLib->getCache()->ResolveObjectData("network", selectedNetworkRef);
+            QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", selectedNetworkRef);
 
             // Enable Properties and Remove for editable networks
             // Check if network is not a bond member, not guest installer, etc.
@@ -1049,7 +1044,7 @@ void NetworkTabPage::onAddNetwork()
 {
     // Match C# NetworkList::AddNetworkButton_Click
 
-    if (!this->m_xenLib || !this->m_xenLib->isConnected())
+    if (!this->m_connection || !this->m_connection->IsConnected())
     {
         QMessageBox::warning(this, tr("Not Connected"),
                              tr("Not connected to XenServer."));
@@ -1088,13 +1083,13 @@ void NetworkTabPage::onAddNetwork()
             deviceId++;
 
         // Show VIFDialog
-        VIFDialog dialog(this->m_xenLib, this->m_objectRef, deviceId, this);
+        VIFDialog dialog(this->m_connection, this->m_objectRef, deviceId, this);
         if (dialog.exec() == QDialog::Accepted)
         {
             QVariantMap vifSettings = dialog.getVifSettings();
 
             // Create VIF using CreateVIFAction
-            CreateVIFAction* action = new CreateVIFAction(this->m_xenLib->getConnection(),
+            CreateVIFAction* action = new CreateVIFAction(this->m_connection,
                                                           this->m_objectRef, // VM ref
                                                           vifSettings,
                                                           this);
@@ -1193,7 +1188,34 @@ void NetworkTabPage::onAddNetwork()
             }
 
             // Create network using XenAPI
-            QString networkRef = this->m_xenLib->createNetwork(networkName, networkDescription, otherConfig);
+            XenAPI::Session* session = this->m_connection ? this->m_connection->GetSession() : nullptr;
+            if (!session || !session->IsLoggedIn())
+            {
+                QMessageBox::critical(this, tr("Failed to Create Network"),
+                                      tr("No active session to create network."));
+                return;
+            }
+
+            QVariantMap networkRecord;
+            networkRecord["name_label"] = networkName;
+            networkRecord["name_description"] = networkDescription;
+            networkRecord["other_config"] = otherConfig;
+            networkRecord["MTU"] = 1500;
+            networkRecord["tags"] = QVariantList();
+
+            QString networkRef;
+            try
+            {
+                networkRef = XenAPI::Network::create(session, networkRecord);
+            }
+            catch (const std::exception& ex)
+            {
+                QMessageBox::critical(this, tr("Failed to Create Network"),
+                                      tr("Failed to create network '%1'.\n\nError: %2")
+                                          .arg(networkName)
+                                          .arg(ex.what()));
+                return;
+            }
 
             if (!networkRef.isEmpty())
             {
@@ -1202,20 +1224,42 @@ void NetworkTabPage::onAddNetwork()
                 // Set MTU if specified
                 if (mtu > 0 && mtu != 1500) // 1500 is the default
                 {
-                    this->m_xenLib->setNetworkMTU(networkRef, mtu);
+                    try
+                    {
+                        XenAPI::Network::set_MTU(session, networkRef, mtu);
+                    }
+                    catch (const std::exception& ex)
+                    {
+                        qWarning() << "NetworkTabPage::onAddNetwork - Failed to set MTU:" << ex.what();
+                    }
                 }
 
-                // Network creation triggers requestNetworks() in createNetwork()
-                // which will emit networksReceived signal
-                // onNetworksDataUpdated() will refresh the UI
+                // Refresh network cache after creation
+                try
+                {
+                    QVariantMap allRecords;
+                    QVariantList refs = XenAPI::Network::get_all(session);
+                    for (const QVariant& refVar : refs)
+                    {
+                        QString ref = refVar.toString();
+                        if (ref.isEmpty())
+                            continue;
+                        QVariantMap record = XenAPI::Network::get_record(session, ref);
+                        record["ref"] = ref;
+                        allRecords[ref] = record;
+                    }
+                    if (this->m_connection && this->m_connection->GetCache())
+                        this->m_connection->GetCache()->UpdateBulk("network", allRecords);
+                }
+                catch (const std::exception& ex)
+                {
+                    qWarning() << "NetworkTabPage::onAddNetwork - Failed to refresh networks:" << ex.what();
+                }
             } else
             {
                 // Show error message
-                QString error = this->m_xenLib->getLastError();
                 QMessageBox::critical(this, tr("Failed to Create Network"),
-                                      tr("Failed to create network '%1'.\n\nError: %2")
-                                          .arg(networkName)
-                                          .arg(error));
+                                      tr("Failed to create network '%1'.").arg(networkName));
             }
         }
     }
@@ -1233,13 +1277,13 @@ void NetworkTabPage::onEditNetwork()
             return;
 
         // Show VIFDialog for editing
-        VIFDialog dialog(this->m_xenLib, vifRef, this);
+        VIFDialog dialog(this->m_connection, vifRef, this);
         if (dialog.exec() == QDialog::Accepted && dialog.hasChanges())
         {
             QVariantMap newSettings = dialog.getVifSettings();
 
             // Update VIF using UpdateVIFAction
-            UpdateVIFAction* action = new UpdateVIFAction(this->m_xenLib->getConnection(),
+            UpdateVIFAction* action = new UpdateVIFAction(this->m_connection,
                                                           this->m_objectRef, // VM ref
                                                           vifRef,            // old VIF ref
                                                           newSettings,       // new settings
@@ -1273,12 +1317,12 @@ void NetworkTabPage::onEditNetwork()
     {
         // C#: launchHostOrPoolNetworkSettingsDialog()
         QString selectedNetworkRef = this->getSelectedNetworkRef();
-        if (selectedNetworkRef.isEmpty() || !this->m_xenLib)
+        if (selectedNetworkRef.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
         {
             return;
         }
 
-        QVariantMap networkData = this->m_xenLib->getCache()->ResolveObjectData("network", selectedNetworkRef);
+        QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", selectedNetworkRef);
         QString networkUuid = networkData.value("uuid", "").toString();
 
         if (networkUuid.isEmpty())
@@ -1288,7 +1332,7 @@ void NetworkTabPage::onEditNetwork()
         }
 
         // Launch network properties dialog
-        NetworkPropertiesDialog dialog(this->m_xenLib, networkUuid, this);
+        NetworkPropertiesDialog dialog(this->m_connection, networkUuid, this);
 
         if (dialog.exec() == QDialog::Accepted)
         {
@@ -1318,9 +1362,9 @@ void NetworkTabPage::onRemoveNetwork()
 
         // Get network name
         QString networkRef = vif.value("network").toString();
-        if (!networkRef.isEmpty() && this->m_xenLib)
+        if (!networkRef.isEmpty() && this->m_connection && this->m_connection->GetCache())
         {
-            QVariantMap networkData = this->m_xenLib->getCache()->ResolveObjectData("network", networkRef);
+            QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
             networkName = networkData.value("name_label", "-").toString();
         }
 
@@ -1333,7 +1377,7 @@ void NetworkTabPage::onRemoveNetwork()
         if (ret == QMessageBox::Yes)
         {
             // Use DeleteVIFAction (matches C# DeleteVIFAction)
-            DeleteVIFAction* action = new DeleteVIFAction(this->m_xenLib->getConnection(), vifRef, this);
+            DeleteVIFAction* action = new DeleteVIFAction(this->m_connection, vifRef, this);
 
             connect(action, &DeleteVIFAction::completed, this, [this, action]() {
                 if (action->state() == AsyncOperation::OperationState::Completed)
@@ -1363,12 +1407,12 @@ void NetworkTabPage::onRemoveNetwork()
     {
         // C#: Use NetworkAction for hosts/pools
         QString selectedNetworkRef = this->getSelectedNetworkRef();
-        if (selectedNetworkRef.isEmpty() || !this->m_xenLib)
+        if (selectedNetworkRef.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
         {
             return;
         }
 
-        QVariantMap networkData = this->m_xenLib->getCache()->ResolveObjectData("network", selectedNetworkRef);
+        QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", selectedNetworkRef);
         QString networkName = networkData.value("name_label", tr("Unknown")).toString();
 
         // Confirm removal
@@ -1405,7 +1449,7 @@ void NetworkTabPage::onActivateToggle()
     if (currentlyAttached)
     {
         // C#: Use UnplugVIFAction to deactivate (unplug) VIF
-        UnplugVIFAction* action = new UnplugVIFAction(this->m_xenLib->getConnection(), vifRef, this);
+        UnplugVIFAction* action = new UnplugVIFAction(this->m_connection, vifRef, this);
 
         connect(action, &UnplugVIFAction::completed, this, [this, action]() {
             if (action->state() == AsyncOperation::OperationState::Completed)
@@ -1433,7 +1477,7 @@ void NetworkTabPage::onActivateToggle()
     } else
     {
         // C#: Use PlugVIFAction to activate (plug) VIF
-        PlugVIFAction* action = new PlugVIFAction(this->m_xenLib->getConnection(), vifRef, this);
+        PlugVIFAction* action = new PlugVIFAction(this->m_connection, vifRef, this);
 
         connect(action, &PlugVIFAction::completed, this, [this, action]() {
             if (action->state() == AsyncOperation::OperationState::Completed)
@@ -1463,13 +1507,13 @@ void NetworkTabPage::onActivateToggle()
 
 void NetworkTabPage::removeNetwork(const QString& networkRef)
 {
-    if (!this->m_xenLib)
+    if (!this->m_connection || !this->m_connection->GetCache())
     {
-        qWarning() << "NetworkTabPage::removeNetwork - No XenLib available";
+        qWarning() << "NetworkTabPage::removeNetwork - No connection/cache available";
         return;
     }
 
-    QVariantMap networkData = this->m_xenLib->getCache()->ResolveObjectData("network", networkRef);
+    QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
     QString networkName = networkData.value("name_label", tr("Unknown")).toString();
 
     qDebug() << "Removing network:" << networkName << "ref:" << networkRef;
@@ -1497,23 +1541,40 @@ void NetworkTabPage::removeNetwork(const QString& networkRef)
     }
 
     // Remove network using XenAPI
-    bool success = this->m_xenLib->destroyNetwork(networkRef);
-
-    if (success)
+    XenAPI::Session* session = this->m_connection->GetSession();
+    if (!session || !session->IsLoggedIn())
     {
+        QMessageBox::critical(this, tr("Failed to Remove Network"),
+                              tr("No active session to remove network '%1'.").arg(networkName));
+        return;
+    }
+
+    try
+    {
+        XenAPI::Network::destroy(session, networkRef);
         qDebug() << "Network removed successfully:" << networkRef;
 
-        // Network deletion triggers requestNetworks() in destroyNetwork()
-        // which will emit networksReceived signal
-        // onNetworksDataUpdated() will refresh the UI
-    } else
+        QVariantMap allRecords;
+        QVariantList refs = XenAPI::Network::get_all(session);
+        for (const QVariant& refVar : refs)
+        {
+            QString ref = refVar.toString();
+            if (ref.isEmpty())
+                continue;
+            QVariantMap record = XenAPI::Network::get_record(session, ref);
+            record["ref"] = ref;
+            allRecords[ref] = record;
+        }
+        if (this->m_connection->GetCache())
+            this->m_connection->GetCache()->UpdateBulk("network", allRecords);
+    }
+    catch (const std::exception& ex)
     {
         // Show error message
-        QString error = this->m_xenLib->getLastError();
         QMessageBox::critical(this, tr("Failed to Remove Network"),
                               tr("Failed to remove network '%1'.\n\nError: %2")
                                   .arg(networkName)
-                                  .arg(error));
+                                  .arg(ex.what()));
     }
 }
 
@@ -1524,6 +1585,22 @@ void NetworkTabPage::onNetworksDataUpdated(const QVariantList& networks)
     // Networks data has been updated - refresh the UI
     //qDebug() << "NetworkTabPage::onNetworksDataUpdated - Refreshing UI with" << networks.size() << "networks";
     this->refreshContent();
+}
+
+void NetworkTabPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
+{
+    Q_ASSERT(this->m_connection == connection);
+
+    if (this->m_connection != connection)
+        return;
+
+    Q_UNUSED(ref);
+
+    if (type == "network" || type == "pif" || type == "vif" || type == "bond" ||
+        type == "network_sriov" || type == "pif_metrics")
+    {
+        this->refreshContent();
+    }
 }
 
 // ===== Button Handlers (matches C# NetworkList button handlers) =====
@@ -1546,10 +1623,10 @@ QString NetworkTabPage::getSelectedVifRef() const
 QVariantMap NetworkTabPage::getSelectedVif() const
 {
     QString vifRef = getSelectedVifRef();
-    if (vifRef.isEmpty() || !this->m_xenLib)
+    if (vifRef.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
         return QVariantMap();
 
-    return this->m_xenLib->getCache()->ResolveObjectData("VIF", vifRef);
+    return this->m_connection->GetCache()->ResolveObjectData("VIF", vifRef);
 }
 
 void NetworkTabPage::updateButtonStates()
@@ -1624,7 +1701,7 @@ QString NetworkTabPage::getPifLinkStatus(const QVariantMap& pifData) const
     // Matches C# PIF.LinkStatusString() and PIF.LinkStatus()
     // Key insight: Must check PIF_metrics.carrier, NOT currently_attached!
 
-    if (pifData.isEmpty() || !this->m_xenLib)
+    if (pifData.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
         return "Unknown";
 
     // Check if this is a tunnel access PIF
@@ -1633,7 +1710,7 @@ QString NetworkTabPage::getPifLinkStatus(const QVariantMap& pifData) const
     if (!tunnelAccessPifOf.isEmpty())
     {
         QString tunnelRef = tunnelAccessPifOf.first().toString();
-        QVariantMap tunnelData = this->m_xenLib->getCache()->ResolveObjectData("tunnel", tunnelRef);
+        QVariantMap tunnelData = this->m_connection->GetCache()->ResolveObjectData("tunnel", tunnelRef);
         QVariantMap status = tunnelData.value("status", QVariantMap()).toMap();
         bool active = status.value("active", "false").toString() == "true";
         return active ? "Connected" : "Disconnected";
@@ -1649,7 +1726,7 @@ QString NetworkTabPage::getPifLinkStatus(const QVariantMap& pifData) const
         return "Unknown";
     }
 
-    QVariantMap metricsData = this->m_xenLib->getCache()->ResolveObjectData("pif_metrics", metricsRef);
+    QVariantMap metricsData = this->m_connection->GetCache()->ResolveObjectData("pif_metrics", metricsRef);
     
     if (metricsData.isEmpty())
     {
@@ -1670,7 +1747,7 @@ QString NetworkTabPage::getPifLinkStatus(const QVariantMap& pifData) const
         QString networkSriovRef = this->getPifNetworkSriov(pifData);
         if (!networkSriovRef.isEmpty())
         {
-            QVariantMap sriovData = this->m_xenLib->getCache()->ResolveObjectData("network_sriov", networkSriovRef);
+            QVariantMap sriovData = this->m_connection->GetCache()->ResolveObjectData("network_sriov", networkSriovRef);
             QString configMode = sriovData.value("configuration_mode", "unknown").toString();
             bool requiresReboot = sriovData.value("requires_reboot", false).toBool();
 
@@ -1685,7 +1762,7 @@ QString NetworkTabPage::getPifLinkStatus(const QVariantMap& pifData) const
 QString NetworkTabPage::getNetworkLinkStatus(const QVariantMap& networkData) const
 {
     // Matches C# Network.LinkStatusString() - aggregates link status across all PIFs
-    if (networkData.isEmpty() || !this->m_xenLib)
+    if (networkData.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
         return "Unknown";
     
     QVariantList pifRefs = networkData.value("PIFs", QVariantList()).toList();
@@ -1701,7 +1778,7 @@ QString NetworkTabPage::getNetworkLinkStatus(const QVariantMap& networkData) con
     for (const QVariant& pifRefVar : pifRefs)
     {
         QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = this->m_xenLib->getCache()->ResolveObjectData("PIF", pifRef);
+        QVariantMap pifData = this->m_connection->GetCache()->ResolveObjectData("PIF", pifRef);
 
         QString status = this->getPifLinkStatus(pifData);
 
@@ -1764,7 +1841,7 @@ bool NetworkTabPage::networkCanUseJumboFrames(const QVariantMap& networkData) co
     // Matches C# Network.CanUseJumboFrames()
     // Returns false for CHINs (tunnel access PIFs)
 
-    if (networkData.isEmpty() || !this->m_xenLib)
+    if (networkData.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
         return false;
 
     QVariantList pifRefs = networkData.value("PIFs", QVariantList()).toList();
@@ -1773,7 +1850,7 @@ bool NetworkTabPage::networkCanUseJumboFrames(const QVariantMap& networkData) co
     for (const QVariant& pifRefVar : pifRefs)
     {
         QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = this->m_xenLib->getCache()->ResolveObjectData("PIF", pifRef);
+        QVariantMap pifData = this->m_connection->GetCache()->ResolveObjectData("PIF", pifRef);
 
         QVariantList tunnelAccessPifOf = pifData.value("tunnel_access_PIF_of", QVariantList()).toList();
         if (!tunnelAccessPifOf.isEmpty())
@@ -1803,16 +1880,16 @@ QString NetworkTabPage::getPifNetworkSriov(const QVariantMap& pifData) const
 
     // Resolve VLAN to get tagged_PIF
     QString vlanMasterOf = pifData.value("VLAN_master_of").toString();
-    if (vlanMasterOf.isEmpty() || !this->m_xenLib)
+    if (vlanMasterOf.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
         return QString();
 
-    QVariantMap vlanData = this->m_xenLib->getCache()->ResolveObjectData("VLAN", vlanMasterOf);
+    QVariantMap vlanData = this->m_connection->GetCache()->ResolveObjectData("VLAN", vlanMasterOf);
     QString taggedPifRef = vlanData.value("tagged_PIF").toString();
 
     if (taggedPifRef.isEmpty())
         return QString();
 
-    QVariantMap taggedPifData = this->m_xenLib->getCache()->ResolveObjectData("PIF", taggedPifRef);
+    QVariantMap taggedPifData = this->m_connection->GetCache()->ResolveObjectData("PIF", taggedPifRef);
 
     // Check if tagged PIF is SR-IOV logical PIF
     QVariantList taggedSriovLogicalPifOf = taggedPifData.value("sriov_logical_PIF_of", QVariantList()).toList();
@@ -1821,4 +1898,3 @@ QString NetworkTabPage::getPifNetworkSriov(const QVariantMap& pifData) const
 
     return QString();
 }
-

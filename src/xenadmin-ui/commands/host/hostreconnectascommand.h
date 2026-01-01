@@ -28,22 +28,31 @@
 #ifndef HOSTRECONNECTASCOMMAND_H
 #define HOSTRECONNECTASCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
+#include <QtCore/QPointer>
+#include <QtCore/QMetaObject>
 
-class HostReconnectAsCommand : public Command
+class XenConnection;
+
+class HostReconnectAsCommand : public HostCommand
 {
     Q_OBJECT
 
-public:
-    explicit HostReconnectAsCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit HostReconnectAsCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool canRun() const override;
-    void run() override;
-    QString menuText() const override;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
-private:
-    bool isSelectedHostCoordinator() const;
+    private slots:
+        void onReconnectConnectionStateChanged();
+        void startReconnect();
+
+    private:
+        QPointer<XenConnection> m_reconnectConnection;
+        QMetaObject::Connection m_disconnectHandler;
 };
 
 #endif // HOSTRECONNECTASCOMMAND_H

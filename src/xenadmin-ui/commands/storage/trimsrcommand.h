@@ -28,7 +28,7 @@
 #ifndef TRIMSRCOMMAND_H
 #define TRIMSRCOMMAND_H
 
-#include "../command.h"
+#include "srcommand.h"
 
 /**
  * @brief TrimSRCommand - Trim (reclaim freed space) from storage repository
@@ -48,16 +48,16 @@
  * - Show confirmation dialog
  * - Run SrTrimAction to reclaim space
  */
-class TrimSRCommand : public Command
+class TrimSRCommand : public SRCommand
 {
     Q_OBJECT
 
     public:
         explicit TrimSRCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
         /**
          * @brief Explicitly set the SR this command should operate on
@@ -66,18 +66,6 @@ class TrimSRCommand : public Command
         void setTargetSR(const QString& srRef);
 
     private:
-        /**
-         * @brief Get selected SR reference
-         * @return SR opaque reference or empty string
-         */
-        QString getSelectedSRRef() const;
-
-        /**
-         * @brief Get selected SR data
-         * @return SR data from cache
-         */
-        QVariantMap getSelectedSRData() const;
-
         /**
          * @brief Check if SR supports trim
          * @param srData SR data from cache

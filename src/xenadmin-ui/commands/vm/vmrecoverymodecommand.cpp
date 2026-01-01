@@ -27,70 +27,52 @@
 
 #include "vmrecoverymodecommand.h"
 #include "../../../xenlib/xen/actions/vm/hvmbootaction.h"
-#include "../../../xenlib/xen/connection.h"
+#include "../../../xenlib/xen/network/connection.h"
 #include "../../../xenlib/xen/vm.h"
-#include "../../../xenlib/xenlib.h"
-#include "../../../xenlib/xencache.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>
 
 VMRecoveryModeCommand::VMRecoveryModeCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VMCommand(mainWindow, parent)
 {
 }
 
-bool VMRecoveryModeCommand::canRun() const
+bool VMRecoveryModeCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedObjectRef();
-    QString type = this->getSelectedObjectType();
-
-    if (vmRef.isEmpty() || type != "vm")
-    {
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
-    }
 
-    // Get VM data from cache
-    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = vm->GetData();
     if (vmData.isEmpty())
-    {
         return false;
-    }
 
     // VM must be halted
-    QString powerState = vmData.value("power_state").toString();
-    if (powerState != "Halted")
-    {
+    if (vm->GetPowerState() != "Halted")
         return false;
-    }
 
     // Check if is_a_template is false (templates can't be started)
-    bool isTemplate = vmData.value("is_a_template").toBool();
-    if (isTemplate)
-    {
+    if (vmData.value("is_a_template").toBool())
         return false;
-    }
 
     // Check if VM is HVM (has HVM_boot_policy)
     QString bootPolicy = vmData.value("HVM_boot_policy").toString();
     // Empty boot policy means PV VM (paravirtualized), which doesn't support HVM boot
     if (bootPolicy.isEmpty())
-    {
         return false;
-    }
 
     return true;
 }
 
-void VMRecoveryModeCommand::run()
+void VMRecoveryModeCommand::Run()
 {
-    QString vmRef = this->getSelectedObjectRef();
-    QString vmName = this->getSelectedObjectName();
-
-    if (vmRef.isEmpty())
-    {
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return;
-    }
+
+    QString vmRef = vm->OpaqueRef();
+    QString vmName = vm->GetName();
 
     // Confirm action with user
     QMessageBox::StandardButton reply = QMessageBox::question(
@@ -107,9 +89,9 @@ void VMRecoveryModeCommand::run()
         return;
     }
 
-    // Get XenConnection from XenLib
-    XenConnection* conn = this->xenLib()->getConnection();
-    if (!conn || !conn->isConnected())
+    // Get XenConnection
+    XenConnection* conn = vm->GetConnection();
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
                              tr("Not connected to XenServer"));
@@ -142,7 +124,7 @@ void VMRecoveryModeCommand::run()
     action->runAsync();
 }
 
-QString VMRecoveryModeCommand::menuText() const
+QString VMRecoveryModeCommand::MenuText() const
 {
     return tr("Boot in &Recovery Mode");
 }

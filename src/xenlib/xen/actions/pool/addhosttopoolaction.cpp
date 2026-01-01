@@ -26,8 +26,8 @@
  */
 
 #include "addhosttopoolaction.h"
-#include "../../../xen/connection.h"
-#include "../../../xen/session.h"
+#include "../../network/connection.h"
+#include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../../xencache.h"
 #include <stdexcept>
@@ -57,10 +57,10 @@ void AddHostToPoolAction::run()
 
         // Get pool coordinator address and credentials from pool's session
         // In C# they get Pool.Connection.Hostname and Pool.Connection.Username/Password
-        QString coordinatorAddress = m_poolConnection->getHostname();
+        QString coordinatorAddress = m_poolConnection->GetHostname();
 
         // Get credentials from the pool's session
-        XenSession* poolSession = m_poolConnection->getSession();
+        XenAPI::Session* poolSession = m_poolConnection->GetSession();
         if (!poolSession)
         {
             throw std::runtime_error("Pool connection has no session");

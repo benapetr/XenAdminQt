@@ -28,44 +28,38 @@
 #include "deletepoolcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
-#include "xen/connection.h"
-#include "xencache.h"
-#include "xen/actions/pool/destroypoolaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/actions/pool/destroypoolaction.h"
 #include <QMessageBox>
 #include <QDebug>
 
-DeletePoolCommand::DeletePoolCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+DeletePoolCommand::DeletePoolCommand(MainWindow* mainWindow, QObject* parent) : PoolCommand(mainWindow, parent)
 {
 }
 
-bool DeletePoolCommand::canRun() const
+bool DeletePoolCommand::CanRun() const
 {
-    QString poolRef = this->getSelectedPoolRef();
-    if (poolRef.isEmpty())
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool || !pool->IsValid())
         return false;
 
     // Can delete pool if connected and single host
-    return this->isPoolConnected() && !this->hasMultipleHosts();
+    return pool->IsConnected() && !this->hasMultipleHosts(pool);
 }
 
-void DeletePoolCommand::run()
+void DeletePoolCommand::Run()
 {
-    QString poolRef = this->getSelectedPoolRef();
-
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool || !pool->IsValid())
         return;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return;
+    QString poolRef = pool->OpaqueRef();
+    XenCache* cache = pool->GetConnection()->GetCache();
 
     QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
-    QString poolName = poolData.value("name_label", "").toString();
-
-    if (poolRef.isEmpty())
-        return;
+    QString poolName = pool->GetName();
 
     // Check if HA is enabled or enabling
     bool haEnabled = poolData.value("ha_enabled", false).toBool();
@@ -105,7 +99,7 @@ void DeletePoolCommand::run()
     }
 
     // Check if pool has multiple hosts
-    if (this->hasMultipleHosts())
+    if (this->hasMultipleHosts(pool))
     {
         QMessageBox::warning(
             this->mainWindow(),
@@ -136,7 +130,7 @@ void DeletePoolCommand::run()
 
     // Create and run destroy pool action
     DestroyPoolAction* action = new DestroyPoolAction(
-        this->mainWindow()->xenLib()->getConnection(),
+        pool->GetConnection(),
         poolRef,
         this);
 
@@ -164,37 +158,17 @@ void DeletePoolCommand::run()
     action->runAsync();
 }
 
-QString DeletePoolCommand::menuText() const
+QString DeletePoolCommand::MenuText() const
 {
     return "Delete Pool";
 }
 
-QString DeletePoolCommand::getSelectedPoolRef() const
+bool DeletePoolCommand::hasMultipleHosts(QSharedPointer<Pool> pool) const
 {
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "pool")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-bool DeletePoolCommand::isPoolConnected() const
-{
-    if (!this->mainWindow()->xenLib())
+    if (!pool || !pool->GetConnection())
         return false;
 
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-    return conn && conn->isConnected();
-}
-
-bool DeletePoolCommand::hasMultipleHosts() const
-{
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
+    XenCache* cache = pool->GetConnection()->GetCache();
 
     // Get all hosts
     QList<QPair<QString, QString>> allObjects = cache->GetAllObjectsData();

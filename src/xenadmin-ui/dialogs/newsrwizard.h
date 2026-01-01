@@ -36,6 +36,7 @@
 
 class MainWindow;
 class WizardNavigationPane;
+class XenConnection;
 
 namespace Ui
 {
@@ -94,7 +95,7 @@ class NewSRWizard : public QWizard
             bool poolMetadataDetected;
         };
 
-        explicit NewSRWizard(MainWindow* parent = nullptr);
+        explicit NewSRWizard(XenConnection* connection, MainWindow* parent = nullptr);
         ~NewSRWizard() override;
 
         enum PageIds
@@ -209,6 +210,7 @@ class NewSRWizard : public QWizard
         QString formatSRTypeString(SRType srType) const;
 
         MainWindow* m_mainWindow;
+        XenConnection* m_connection;
         Ui::NewSRWizard* ui;
         WizardNavigationPane* m_navigationPane;
         QButtonGroup* m_typeButtonGroup;

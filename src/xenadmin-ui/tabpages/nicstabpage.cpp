@@ -27,9 +27,8 @@
 
 #include "nicstabpage.h"
 #include "ui_nicstabpage.h"
-#include "xenlib.h"
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/actions/network/createbondaction.h"
 #include "xen/actions/network/destroybondaction.h"
 #include "operations/operationmanager.h"
@@ -65,7 +64,7 @@ NICsTabPage::~NICsTabPage()
     delete this->ui;
 }
 
-bool NICsTabPage::isApplicableForObjectType(const QString& objectType) const
+bool NICsTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // NICs tab is only applicable to Hosts
     return objectType == "host";
@@ -86,9 +85,9 @@ void NICsTabPage::refreshContent()
 
 void NICsTabPage::populateNICs()
 {
-    if (!this->m_xenLib)
+    if (!this->m_connection || !this->m_connection->GetCache())
     {
-        qDebug() << "NICsTabPage::populateNICs - No XenLib";
+        qDebug() << "NICsTabPage::populateNICs - No connection/cache";
         return;
     }
 
@@ -101,7 +100,7 @@ void NICsTabPage::populateNICs()
     for (const QVariant& pifRefVar : pifRefs)
     {
         QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = this->m_xenLib->getCache()->ResolveObjectData("PIF", pifRef);
+        QVariantMap pifData = this->m_connection->GetCache()->ResolveObjectData("PIF", pifRef);
 
         // Debug: print all keys in pifData
         if (pifData.isEmpty())
@@ -147,7 +146,7 @@ void NICsTabPage::populateNICs()
 
 void NICsTabPage::addNICRow(const QVariantMap& pifData)
 {
-    if (!this->m_xenLib)
+    if (!this->m_connection || !this->m_connection->GetCache())
         return;
 
     int row = this->ui->nicsTable->rowCount();
@@ -171,14 +170,14 @@ void NICsTabPage::addNICRow(const QVariantMap& pifData)
     {
         // Bond: Get all slave PIFs and format as "Bond 1+2+3"
         QString bondRef = bondMasterOfRefs.first().toString();
-        QVariantMap bondData = this->m_xenLib->getCache()->ResolveObjectData("bond", bondRef);
+        QVariantMap bondData = this->m_connection->GetCache()->ResolveObjectData("bond", bondRef);
         QVariantList slaveRefs = bondData.value("slaves", QVariantList()).toList();
         
         QStringList slaveNumbers;
         for (const QVariant& slaveRefVar : slaveRefs)
         {
             QString slaveRef = slaveRefVar.toString();
-            QVariantMap slavePif = this->m_xenLib->getCache()->ResolveObjectData("pif", slaveRef);
+            QVariantMap slavePif = this->m_connection->GetCache()->ResolveObjectData("pif", slaveRef);
             QString slaveDevice = slavePif.value("device", "").toString();
             QString number = slaveDevice;
             number.remove("eth");
@@ -203,7 +202,7 @@ void NICsTabPage::addNICRow(const QVariantMap& pifData)
     QString pifMetricsRef = pifData.value("metrics", "").toString();
     if (!pifMetricsRef.isEmpty() && pifMetricsRef != "OpaqueRef:NULL")
     {
-        QVariantMap metricsData = this->m_xenLib->getCache()->ResolveObjectData("pif_metrics", pifMetricsRef);
+        QVariantMap metricsData = this->m_connection->GetCache()->ResolveObjectData("pif_metrics", pifMetricsRef);
         if (!metricsData.isEmpty())
         {
             bool carrier = metricsData.value("carrier", false).toBool();
@@ -219,7 +218,7 @@ void NICsTabPage::addNICRow(const QVariantMap& pifData)
     if (linkStatus == "Connected")
     {
         // Re-ResolveObjectData metrics for speed/duplex (we already have it above but let's be consistent)
-        QVariantMap metricsData = this->m_xenLib->getCache()->ResolveObjectData("pif_metrics", pifMetricsRef);
+        QVariantMap metricsData = this->m_connection->GetCache()->ResolveObjectData("pif_metrics", pifMetricsRef);
         if (!metricsData.isEmpty())
         {
             qint64 speedValue = metricsData.value("speed", -1).toLongLong();
@@ -238,7 +237,7 @@ void NICsTabPage::addNICRow(const QVariantMap& pifData)
     QVariantMap metricsData;
     if (!pifMetricsRef.isEmpty())
     {
-        metricsData = this->m_xenLib->getCache()->ResolveObjectData("pif_metrics", pifMetricsRef);
+        metricsData = this->m_connection->GetCache()->ResolveObjectData("pif_metrics", pifMetricsRef);
     }
 
     QString vendor = metricsData.value("vendor_name", "-").toString();
@@ -258,7 +257,7 @@ void NICsTabPage::addNICRow(const QVariantMap& pifData)
     {
         // This PIF has SR-IOV capability
         QString networkSriovRef = sriovPhysicalPIFOf.first().toString();
-        QVariantMap networkSriov = this->m_xenLib->getCache()->ResolveObjectData("network_sriov", networkSriovRef);
+        QVariantMap networkSriov = this->m_connection->GetCache()->ResolveObjectData("network_sriov", networkSriovRef);
 
         if (!networkSriov.isEmpty())
         {
@@ -272,7 +271,7 @@ void NICsTabPage::addNICRow(const QVariantMap& pifData)
                 QString logicalPifRef = networkSriov.value("logical_PIF", "").toString();
                 if (!logicalPifRef.isEmpty())
                 {
-                    QVariantMap logicalPif = this->m_xenLib->getCache()->ResolveObjectData("pif", logicalPifRef);
+                    QVariantMap logicalPif = this->m_connection->GetCache()->ResolveObjectData("pif", logicalPifRef);
                     bool currentlyAttached = logicalPif.value("currently_attached", false).toBool();
 
                     if (currentlyAttached)
@@ -326,13 +325,13 @@ void NICsTabPage::updateButtonStates()
     int row = this->ui->nicsTable->currentRow();
     QString pifRef = this->ui->nicsTable->item(row, 0)->data(Qt::UserRole).toString();
 
-    if (pifRef.isEmpty() || !this->m_xenLib)
+    if (pifRef.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
     {
         this->ui->deleteBondButton->setEnabled(false);
         return;
     }
 
-    QVariantMap pifData = this->m_xenLib->getCache()->ResolveObjectData("pif", pifRef);
+    QVariantMap pifData = this->m_connection->GetCache()->ResolveObjectData("pif", pifRef);
 
     // Check if this PIF is a bond interface
     QVariantList bondInterfaceOf = pifData.value("bond_slave_of", QVariantList()).toList();
@@ -348,14 +347,14 @@ void NICsTabPage::onSelectionChanged()
 
 void NICsTabPage::onCreateBondClicked()
 {
-    if (!this->m_xenLib || this->m_objectType != "host")
+    if (!this->m_connection || !this->m_connection->GetCache() || this->m_objectType != "host")
     {
         return;
     }
 
     // Get the network ref - use the first available network or create a bond network
     QString networkRef;
-    QList<QVariantMap> networks = this->m_xenLib->getCache()->GetAllData("network");
+    QList<QVariantMap> networks = this->m_connection->GetCache()->GetAllData("network");
     if (!networks.isEmpty())
     {
         // Use the first network (typically the management network)
@@ -368,7 +367,7 @@ void NICsTabPage::onCreateBondClicked()
     }
 
     // Open bond creation dialog
-    BondPropertiesDialog dialog(this->m_xenLib, this->m_objectRef, networkRef, this);
+    BondPropertiesDialog dialog(this->m_connection, this->m_objectRef, networkRef, this);
     if (dialog.exec() == QDialog::Accepted)
     {
         QString bondMode = dialog.getBondMode();
@@ -381,7 +380,7 @@ void NICsTabPage::onCreateBondClicked()
             return;
         }
 
-        XenConnection* connection = this->m_xenLib->getConnection();
+        XenConnection* connection = this->m_connection;
         if (!connection)
         {
             QMessageBox::critical(this, "Error",
@@ -389,7 +388,7 @@ void NICsTabPage::onCreateBondClicked()
             return;
         }
 
-        QVariantMap networkData = this->m_xenLib->getCache()->ResolveObjectData("network", networkRef);
+        QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
         QString networkName = networkData.value("name_label").toString();
         if (networkName.isEmpty())
             networkName = "Bond Network";
@@ -449,7 +448,7 @@ void NICsTabPage::onDeleteBondClicked()
         return;
 
     // Get PIF data to check if it's a bond
-    QVariant pifDataVar = this->m_xenLib->getCache()->ResolveObjectData("pif", pifRef);
+    QVariant pifDataVar = this->m_connection->GetCache()->ResolveObjectData("pif", pifRef);
     if (pifDataVar.isNull())
         return;
 
@@ -472,7 +471,7 @@ void NICsTabPage::onDeleteBondClicked()
                                                               QMessageBox::Yes | QMessageBox::No);
     if (reply == QMessageBox::Yes)
     {
-        XenConnection* connection = this->m_xenLib->getConnection();
+        XenConnection* connection = this->m_connection;
         if (!connection)
         {
             QMessageBox::critical(this, "Error",
@@ -503,7 +502,7 @@ void NICsTabPage::onDeleteBondClicked()
 void NICsTabPage::onRescanClicked()
 {
     // Refresh the PIF data
-    if (this->m_xenLib)
+    if (this->m_connection)
     {
         this->refreshContent();
         QMessageBox::information(this, "Rescan",

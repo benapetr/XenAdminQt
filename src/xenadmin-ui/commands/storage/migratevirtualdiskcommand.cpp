@@ -27,49 +27,46 @@
 
 #include "migratevirtualdiskcommand.h"
 #include "mainwindow.h"
-#include "xenlib.h"
 #include "xencache.h"
+#include "xen/vdi.h"
 #include "dialogs/migratevirtualdiskdialog.h"
 #include <QMessageBox>
 
-MigrateVirtualDiskCommand::MigrateVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+MigrateVirtualDiskCommand::MigrateVirtualDiskCommand(MainWindow* mainWindow, QObject* parent) : VDICommand(mainWindow, parent)
 {
 }
 
-bool MigrateVirtualDiskCommand::canRun() const
+bool MigrateVirtualDiskCommand::CanRun() const
 {
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vdi")
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->IsValid())
         return false;
 
-    QString vdiRef = this->getSelectedObjectRef();
-    if (vdiRef.isEmpty())
-        return false;
-
-    QVariantMap vdiData = this->xenLib()->getCache()->ResolveObjectData("vdi", vdiRef);
+    XenCache* cache = vdi->GetConnection()->GetCache();
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->OpaqueRef());
     if (vdiData.isEmpty())
         return false;
 
-    return this->canBeMigrated(vdiData);
+    return this->canBeMigrated(vdi->GetConnection(), vdiData);
 }
 
-void MigrateVirtualDiskCommand::run()
+void MigrateVirtualDiskCommand::Run()
 {
-    QString vdiRef = this->getSelectedObjectRef();
-    if (vdiRef.isEmpty())
+    QSharedPointer<VDI> vdi = this->getVDI();
+    if (!vdi || !vdi->IsValid())
         return;
 
-    QVariantMap vdiData = this->xenLib()->getCache()->ResolveObjectData("vdi", vdiRef);
+    XenCache* cache = vdi->GetConnection()->GetCache();
+    QString vdiRef = vdi->OpaqueRef();
+    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Error"),
-                             tr("Unable to retrieve VDI information."));
+        QMessageBox::warning(this->mainWindow(), tr("Error"), tr("Unable to retrieve VDI information."));
         return;
     }
 
     // Double-check migration eligibility with detailed error messages
-    if (!this->canBeMigrated(vdiData))
+    if (!this->canBeMigrated(vdi->GetConnection(), vdiData))
     {
         QString reason;
 
@@ -99,7 +96,7 @@ void MigrateVirtualDiskCommand::run()
                     reason = tr("Cannot migrate: VDI has no SR reference.");
                 } else
                 {
-                    QVariantMap srData = this->xenLib()->getCache()->ResolveObjectData("sr", srRef);
+                    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
                     if (srData.isEmpty())
                         reason = tr("Cannot migrate: Unable to retrieve SR information.");
                     else if (this->isHBALunPerVDI(srData))
@@ -117,21 +114,18 @@ void MigrateVirtualDiskCommand::run()
     }
 
     // Open migrate dialog
-    MigrateVirtualDiskDialog* dialog = new MigrateVirtualDiskDialog(
-        this->xenLib(),
-        vdiRef,
-        this->mainWindow());
+    MigrateVirtualDiskDialog* dialog = new MigrateVirtualDiskDialog(vdi->GetConnection(), vdiRef, this->mainWindow());
 
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
 }
 
-QString MigrateVirtualDiskCommand::menuText() const
+QString MigrateVirtualDiskCommand::MenuText() const
 {
     return tr("&Migrate Virtual Disk...");
 }
 
-bool MigrateVirtualDiskCommand::canBeMigrated(const QVariantMap& vdiData) const
+bool MigrateVirtualDiskCommand::canBeMigrated(XenConnection *connection, const QVariantMap& vdiData) const
 {
     // Check basic VDI properties
     if (vdiData.value("is_a_snapshot", false).toBool())
@@ -159,7 +153,7 @@ bool MigrateVirtualDiskCommand::canBeMigrated(const QVariantMap& vdiData) const
     if (srRef.isEmpty())
         return false;
 
-    QVariantMap srData = this->xenLib()->getCache()->ResolveObjectData("sr", srRef);
+    QVariantMap srData = connection->GetCache()->ResolveObjectData("sr", srRef);
     if (srData.isEmpty())
         return false;
 

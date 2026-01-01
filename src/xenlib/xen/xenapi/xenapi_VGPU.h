@@ -31,10 +31,9 @@
 #include <QString>
 #include <QVariantMap>
 
-class XenSession;
-
 namespace XenAPI
 {
+    class Session;
 
     /**
      * @brief VGPU - Virtual GPU management
@@ -53,7 +52,7 @@ namespace XenAPI
              * @param session Active XenSession
              * @param vgpu VGPU opaque reference
              */
-            static void destroy(XenSession* session, const QString& vgpu);
+            static void destroy(Session* session, const QString& vgpu);
 
             /**
              * @brief Create a VGPU asynchronously
@@ -64,7 +63,7 @@ namespace XenAPI
              * @param other_config Additional configuration
              * @return Task reference
              */
-            static QString async_create(XenSession* session, const QString& vm,
+            static QString async_create(Session* session, const QString& vm,
                                         const QString& gpu_group, const QString& device,
                                         const QVariantMap& other_config);
 
@@ -78,7 +77,7 @@ namespace XenAPI
              * @param vgpu_type VGPU type opaque reference
              * @return Task reference
              */
-            static QString async_create(XenSession* session, const QString& vm,
+            static QString async_create(Session* session, const QString& vm,
                                         const QString& gpu_group, const QString& device,
                                         const QVariantMap& other_config, const QString& vgpu_type);
     };

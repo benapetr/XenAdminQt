@@ -32,10 +32,9 @@
 #include <QVariantList>
 #include <QVariantMap>
 
-class XenSession;
-
 namespace XenAPI
 {
+    class Session;
 
     /**
      * @brief PIF (Physical Interface) XenAPI bindings
@@ -50,31 +49,31 @@ namespace XenAPI
 
         public:
             // PIF configuration
-            static void reconfigure_ip(XenSession* session, const QString& pif,
+            static void reconfigure_ip(Session* session, const QString& pif,
                                        const QString& mode, const QString& ip,
                                        const QString& netmask, const QString& gateway,
                                        const QString& dns);
-            static QString async_reconfigure_ip(XenSession* session, const QString& pif,
+            static QString async_reconfigure_ip(Session* session, const QString& pif,
                                                 const QString& mode, const QString& ip,
                                                 const QString& netmask, const QString& gateway,
                                                 const QString& dns);
-            static void plug(XenSession* session, const QString& pif);
-            static void unplug(XenSession* session, const QString& pif);
+            static void plug(Session* session, const QString& pif);
+            static void unplug(Session* session, const QString& pif);
 
-            static QString async_plug(XenSession* session, const QString& pif);
-            static QString async_unplug(XenSession* session, const QString& pif);
+            static QString async_plug(Session* session, const QString& pif);
+            static QString async_unplug(Session* session, const QString& pif);
 
             // PIF properties
-            static void set_disallow_unplug(XenSession* session, const QString& pif, bool value);
-            static void set_property(XenSession* session, const QString& pif, const QString& name, const QString& value);
-            static void add_to_other_config(XenSession* session, const QString& pif, const QString& key, const QString& value);
-            static void remove_from_other_config(XenSession* session, const QString& pif, const QString& key);
+            static void set_disallow_unplug(Session* session, const QString& pif, bool value);
+            static void set_property(Session* session, const QString& pif, const QString& name, const QString& value);
+            static void add_to_other_config(Session* session, const QString& pif, const QString& key, const QString& value);
+            static void remove_from_other_config(Session* session, const QString& pif, const QString& key);
 
             // PIF queries
-            static QVariantMap get_record(XenSession* session, const QString& pif);
-            static QVariantList get_all(XenSession* session);
-            static QString get_network(XenSession* session, const QString& pif);
-            static QString get_host(XenSession* session, const QString& pif);
+            static QVariantMap get_record(Session* session, const QString& pif);
+            static QVariantList get_all(Session* session);
+            static QString get_network(Session* session, const QString& pif);
+            static QString get_host(Session* session, const QString& pif);
 
             // PIF operations
             /**
@@ -84,7 +83,7 @@ namespace XenAPI
              *
              * Matches C# PIF.scan()
              */
-            static void scan(XenSession* session, const QString& host);
+            static void scan(Session* session, const QString& host);
     };
 
 } // namespace XenAPI

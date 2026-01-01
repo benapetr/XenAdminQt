@@ -46,7 +46,7 @@ void XenModelObjectHistoryItem::go()
 {
     // Navigate to this object and tab (matches C# XenModelObjectHistoryItem.Go)
     // The MainWindow pointer is available through NavigationHistory
-    qDebug() << "NavigationHistory: Navigate to" << m_objectName << "tab:" << m_tabName;
+    qDebug() << "NavigationHistory: Navigate to" << this->m_objectName << "tab:" << this->m_tabName;
 
     // This will be called by NavigationHistory::doHistoryItem which has access to MainWindow
     // The actual navigation happens there
@@ -55,13 +55,13 @@ void XenModelObjectHistoryItem::go()
 QString XenModelObjectHistoryItem::name() const
 {
     // Format: "ObjectName, (TabName)" - matches C# format
-    QString displayName = m_objectName.isEmpty() ? "XenAdmin Qt" : m_objectName;
-    return QString("%1, (%2)").arg(displayName, m_tabName);
+    QString displayName = this->m_objectName.isEmpty() ? "XenAdmin Qt" : this->m_objectName;
+    return QString("%1, (%2)").arg(displayName, this->m_tabName);
 }
 
 QIcon XenModelObjectHistoryItem::icon() const
 {
-    return m_objectIcon;
+    return this->m_objectIcon;
 }
 
 bool XenModelObjectHistoryItem::equals(const HistoryItem* other) const
@@ -71,17 +71,17 @@ bool XenModelObjectHistoryItem::equals(const HistoryItem* other) const
         return false;
 
     // Items are equal if they refer to same object and same tab
-    if (otherXen->m_tabName != m_tabName)
+    if (otherXen->m_tabName != this->m_tabName)
         return false;
 
     // Both null refs means home/overview
-    if (otherXen->m_objectRef.isEmpty() && m_objectRef.isEmpty())
+    if (otherXen->m_objectRef.isEmpty() && this->m_objectRef.isEmpty())
         return true;
 
-    if (otherXen->m_objectRef.isEmpty() || m_objectRef.isEmpty())
+    if (otherXen->m_objectRef.isEmpty() || this->m_objectRef.isEmpty())
         return false;
 
-    return otherXen->m_objectRef == m_objectRef;
+    return otherXen->m_objectRef == this->m_objectRef; 
 }
 
 // SearchHistoryItem implementation
@@ -94,7 +94,7 @@ SearchHistoryItem::SearchHistoryItem(const QString& searchQuery)
 void SearchHistoryItem::go()
 {
     // Navigate to search results (matches C# SearchHistoryItem.Go)
-    qDebug() << "NavigationHistory: Navigate to search:" << m_searchQuery;
+    qDebug() << "NavigationHistory: Navigate to search:" << this->m_searchQuery;
 
     // This will be handled by NavigationHistory::doHistoryItem
 }
@@ -102,7 +102,7 @@ void SearchHistoryItem::go()
 QString SearchHistoryItem::name() const
 {
     // Format: "Search for 'query'" - matches C# format
-    return QString("Search for '%1'").arg(m_searchQuery);
+    return QString("Search for '%1'").arg(this->m_searchQuery);
 }
 
 QIcon SearchHistoryItem::icon() const
@@ -117,7 +117,7 @@ bool SearchHistoryItem::equals(const HistoryItem* other) const
     if (!otherSearch)
         return false;
 
-    return otherSearch->m_searchQuery == m_searchQuery;
+    return otherSearch->m_searchQuery == this->m_searchQuery;
 }
 
 // NavigationHistory implementation
@@ -133,9 +133,9 @@ NavigationHistory::NavigationHistory(MainWindow* mainWindow, QObject* parent)
 
 NavigationHistory::~NavigationHistory()
 {
-    m_backwardHistory.clear();
-    m_forwardHistory.clear();
-    m_currentHistoryItem.clear();
+    this->m_backwardHistory.clear();
+    this->m_forwardHistory.clear();
+    this->m_currentHistoryItem.clear();
 }
 
 void NavigationHistory::newHistoryItem(const HistoryItemPtr& historyItem)
@@ -144,31 +144,31 @@ void NavigationHistory::newHistoryItem(const HistoryItemPtr& historyItem)
         return;
 
     // Don't add history items during history navigation
-    if (m_inHistoryNavigation)
+    if (this->m_inHistoryNavigation)
     {
         return;
     }
 
     // Don't add duplicate of current item
-    if (!m_currentHistoryItem.isNull() && historyItem->equals(m_currentHistoryItem.data()))
+    if (!this->m_currentHistoryItem.isNull() && historyItem->equals(this->m_currentHistoryItem.data()))
     {
         return;
     }
 
     // Push current item to backward history
-    if (!m_currentHistoryItem.isNull())
+    if (!this->m_currentHistoryItem.isNull())
     {
-        m_backwardHistory.push(m_currentHistoryItem);
+        this->m_backwardHistory.push(this->m_currentHistoryItem);
     }
 
     // Clear forward history (new navigation path started)
-    m_forwardHistory.clear();
+    this->m_forwardHistory.clear();
 
     // Set new current item
-    m_currentHistoryItem = historyItem;
+    this->m_currentHistoryItem = historyItem;
 
     // Update button states
-    enableHistoryButtons();
+    this->enableHistoryButtons();
 }
 
 void NavigationHistory::replaceHistoryItem(const HistoryItemPtr& historyItem)
@@ -177,60 +177,60 @@ void NavigationHistory::replaceHistoryItem(const HistoryItemPtr& historyItem)
         return;
 
     // Used when modifying current item (e.g., search refinement)
-    if (m_inHistoryNavigation)
+    if (this->m_inHistoryNavigation)
     {
         return;
     }
 
     // Replace current item without affecting history stacks
-    m_currentHistoryItem = historyItem;
+    this->m_currentHistoryItem = historyItem;
 
-    enableHistoryButtons();
+    this->enableHistoryButtons();
 }
 
 void NavigationHistory::back(int steps)
 {
-    while (steps > 0 && !m_backwardHistory.isEmpty())
+    while (steps > 0 && !this->m_backwardHistory.isEmpty())
     {
         // Push current to forward history
-        if (!m_currentHistoryItem.isNull())
+        if (!this->m_currentHistoryItem.isNull())
         {
-            m_forwardHistory.push(m_currentHistoryItem);
+            this->m_forwardHistory.push(this->m_currentHistoryItem);
         }
 
         // Pop from backward history to current
-        m_currentHistoryItem = m_backwardHistory.pop();
+        this->m_currentHistoryItem = this->m_backwardHistory.pop();
 
         steps--;
     }
 
     // Navigate to the history item
-    if (!m_currentHistoryItem.isNull())
+    if (!this->m_currentHistoryItem.isNull())
     {
-        doHistoryItem(m_currentHistoryItem);
+        this->doHistoryItem(this->m_currentHistoryItem);
     }
 }
 
 void NavigationHistory::forward(int steps)
 {
-    while (steps > 0 && !m_forwardHistory.isEmpty())
+    while (steps > 0 && !this->m_forwardHistory.isEmpty())
     {
         // Push current to backward history
-        if (!m_currentHistoryItem.isNull())
+        if (!this->m_currentHistoryItem.isNull())
         {
-            m_backwardHistory.push(m_currentHistoryItem);
+            this->m_backwardHistory.push(this->m_currentHistoryItem);
         }
 
         // Pop from forward history to current
-        m_currentHistoryItem = m_forwardHistory.pop();
+        this->m_currentHistoryItem = this->m_forwardHistory.pop();
 
         steps--;
     }
 
     // Navigate to the history item
-    if (!m_currentHistoryItem.isNull())
+    if (!this->m_currentHistoryItem.isNull())
     {
-        doHistoryItem(m_currentHistoryItem);
+        this->doHistoryItem(this->m_currentHistoryItem);
     }
 }
 
@@ -240,35 +240,35 @@ void NavigationHistory::doHistoryItem(const HistoryItemPtr& item)
         return;
 
     // Set flag to prevent recursive history updates
-    m_inHistoryNavigation = true;
+    this->m_inHistoryNavigation = true;
 
     try
     {
         // Perform actual navigation (matches C# History.Go)
         auto xenItem = qSharedPointerDynamicCast<XenModelObjectHistoryItem>(item);
-        if (xenItem && m_mainWindow)
+        if (xenItem && this->m_mainWindow)
         {
             // Navigate to the object in the tree
-            m_mainWindow->selectObjectInTree(xenItem->m_objectRef, xenItem->m_objectType);
+            this->m_mainWindow->selectObjectInTree(xenItem->m_objectRef, xenItem->m_objectType);
 
             // Switch to the correct tab (will happen after object data loads)
             // We need to delay this slightly to allow tree selection to trigger
             QTimer::singleShot(100, this, [this, xenItem]() {
-                if (m_mainWindow)
+                if (this->m_mainWindow)
                 {
-                    m_mainWindow->setCurrentTab(xenItem->m_tabName);
+                    this->m_mainWindow->setCurrentTab(xenItem->m_tabName);
                 }
             });
         } else
         {
             // Handle SearchHistoryItem
             auto searchItem = qSharedPointerDynamicCast<SearchHistoryItem>(item);
-            if (searchItem && m_mainWindow)
+            if (searchItem && this->m_mainWindow)
             {
                 // TODO: Set search text in search box and trigger search
                 // For now, just log it
                 qDebug() << "NavigationHistory: Navigate to search:" << searchItem->m_searchQuery;
-                // m_mainWindow->setSearchText(searchItem->m_searchQuery);
+                // this->m_mainWindow->setSearchText(searchItem->m_searchQuery);
             } else
             {
                 // Call go() for unknown item types
@@ -281,30 +281,30 @@ void NavigationHistory::doHistoryItem(const HistoryItemPtr& item)
     }
 
     // Clear flag and update buttons
-    m_inHistoryNavigation = false;
-    enableHistoryButtons();
+    this->m_inHistoryNavigation = false;
+    this->enableHistoryButtons();
 }
 
 void NavigationHistory::enableHistoryButtons()
 {
     // Update back/forward button enabled state based on history availability
-    bool canGoBack = !m_backwardHistory.isEmpty();
-    bool canGoForward = !m_forwardHistory.isEmpty();
+    bool canGoBack = !this->m_backwardHistory.isEmpty();
+    bool canGoForward = !this->m_forwardHistory.isEmpty();
 
-    if (m_mainWindow)
+    if (this->m_mainWindow)
     {
-        m_mainWindow->updateHistoryButtons(canGoBack, canGoForward);
+        this->m_mainWindow->updateHistoryButtons(canGoBack, canGoForward);
     }
 }
 
 void NavigationHistory::populateBackDropDown(QMenu* menu)
 {
-    populateMenuWith(menu, m_backwardHistory, true);
+    populateMenuWith(menu, this->m_backwardHistory, true);
 }
 
 void NavigationHistory::populateForwardDropDown(QMenu* menu)
 {
-    populateMenuWith(menu, m_forwardHistory, false);
+    populateMenuWith(menu, this->m_forwardHistory, false);
 }
 
 void NavigationHistory::populateMenuWith(QMenu* menu,

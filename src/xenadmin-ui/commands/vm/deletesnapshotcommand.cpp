@@ -28,17 +28,11 @@
 #include "deletesnapshotcommand.h"
 #include <QDebug>
 #include "../../mainwindow.h"
-#include <QDebug>
 #include "../../operations/operationmanager.h"
-#include <QDebug>
-#include "xenlib.h"
-#include <QDebug>
 #include "xencache.h"
-#include <QDebug>
-#include "xen/connection.h"
-#include <QDebug>
+#include "xen/network/connection.h"
 #include "xen/actions/vm/vmsnapshotdeleteaction.h"
-#include <QDebug>
+#include "xen/xenobject.h"
 #include <QtWidgets>
 
 DeleteSnapshotCommand::DeleteSnapshotCommand(QObject* parent)
@@ -59,11 +53,11 @@ DeleteSnapshotCommand::DeleteSnapshotCommand(const QString& snapshotUuid, MainWi
     // qDebug() << "DeleteSnapshotCommand: Created with snapshot UUID:" << snapshotUuid;
 }
 
-void DeleteSnapshotCommand::run()
+void DeleteSnapshotCommand::Run()
 {
     // qDebug() << "DeleteSnapshotCommand: Executing Delete Snapshot command";
 
-    if (!this->canRun())
+    if (!this->CanRun())
     {
         qWarning() << "DeleteSnapshotCommand: Cannot execute - snapshot is not valid or cannot be deleted";
         QMessageBox::warning(nullptr, tr("Cannot Delete Snapshot"),
@@ -78,7 +72,7 @@ void DeleteSnapshotCommand::run()
     }
 }
 
-bool DeleteSnapshotCommand::canRun() const
+bool DeleteSnapshotCommand::CanRun() const
 {
     if (!this->mainWindow() || this->m_snapshotUuid.isEmpty())
     {
@@ -88,7 +82,7 @@ bool DeleteSnapshotCommand::canRun() const
     return this->canDeleteSnapshot();
 }
 
-QString DeleteSnapshotCommand::menuText() const
+QString DeleteSnapshotCommand::MenuText() const
 {
     return tr("Delete Snapshot");
 }
@@ -105,14 +99,17 @@ bool DeleteSnapshotCommand::canDeleteSnapshot() const
         return false;
     }
 
-    XenLib* xenLib = this->mainWindow()->xenLib();
-    if (!xenLib)
-    {
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
         return false;
-    }
 
     // Get snapshot data from cache
-    QVariantMap snapshotData = xenLib->getCache()->ResolveObjectData("vm", this->m_snapshotUuid);
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
+    QVariantMap snapshotData = cache->ResolveObjectData("vm", this->m_snapshotUuid);
     if (snapshotData.isEmpty())
     {
         qDebug() << "DeleteSnapshotCommand: Snapshot not found in cache:" << this->m_snapshotUuid;
@@ -150,19 +147,18 @@ bool DeleteSnapshotCommand::showConfirmationDialog()
     QString snapshotName = this->m_snapshotUuid;
 
     // Try to get snapshot name from cache
-    if (this->mainWindow())
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    XenConnection* connection = selectedObject ? selectedObject->GetConnection() : nullptr;
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (cache)
     {
-        XenLib* xenLib = this->mainWindow()->xenLib();
-        if (xenLib)
+        QVariantMap snapshotData = cache->ResolveObjectData("vm", this->m_snapshotUuid);
+        if (!snapshotData.isEmpty())
         {
-            QVariantMap snapshotData = xenLib->getCache()->ResolveObjectData("vm", this->m_snapshotUuid);
-            if (!snapshotData.isEmpty())
+            snapshotName = snapshotData.value("name_label").toString();
+            if (snapshotName.isEmpty())
             {
-                snapshotName = snapshotData.value("name_label").toString();
-                if (snapshotName.isEmpty())
-                {
-                    snapshotName = this->m_snapshotUuid;
-                }
+                snapshotName = this->m_snapshotUuid;
             }
         }
     }
@@ -190,9 +186,9 @@ void DeleteSnapshotCommand::deleteSnapshot()
         return;
     }
 
-    // Get XenConnection from XenLib
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-    if (!conn || !conn->isConnected())
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    XenConnection* conn = selectedObject ? selectedObject->GetConnection() : nullptr;
+    if (!conn || !conn->IsConnected())
     {
         qWarning() << "DeleteSnapshotCommand: Not connected";
         QMessageBox::critical(this->mainWindow(), tr("Delete Error"),

@@ -28,7 +28,7 @@
 #ifndef VDIEDITSIZELOCATIONCOMMAND_H
 #define VDIEDITSIZELOCATIONCOMMAND_H
 
-#include "../command.h"
+#include "vdicommand.h"
 #include <QString>
 
 class MainWindow;
@@ -43,20 +43,16 @@ class MainWindow;
  *
  * Corresponds to C# VdiEditSizeLocationCommand.
  */
-class VdiEditSizeLocationCommand : public Command
+class VdiEditSizeLocationCommand : public VDICommand
 {
     Q_OBJECT
 
     public:
         explicit VdiEditSizeLocationCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
-
-    private:
-        bool isVDISelected() const;
-        QString getSelectedVDIRef() const;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // VDIEDITSIZELOCATIONCOMMAND_H

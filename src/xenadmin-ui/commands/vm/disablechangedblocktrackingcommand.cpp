@@ -29,70 +29,53 @@
 #include "../../../xenlib/xen/actions/vdi/vdidisablecbtaction.h"
 #include "../../../xenlib/xen/xenapi/xenapi_VDI.h"
 #include "../../../xenlib/xen/xenapi/xenapi_VBD.h"
-#include "../../../xenlib/xen/connection.h"
-#include "../../../xenlib/xenlib.h"
+#include "../../../xenlib/xen/network/connection.h"
 #include "../../../xenlib/xencache.h"
 #include "../../../xenlib/operations/paralleloperation.h"
+#include "../../../xenlib/xen/vm.h"
+#include "../../../xenlib/xenlib.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>
 #include <QVariantList>
 
 DisableChangedBlockTrackingCommand::DisableChangedBlockTrackingCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VMCommand(mainWindow, parent)
 {
 }
 
-bool DisableChangedBlockTrackingCommand::canRun() const
+bool DisableChangedBlockTrackingCommand::CanRun() const
 {
-    // Get selected VM
-    QString vmRef = this->getSelectedObjectRef();
-    QString type = this->getSelectedObjectType();
-
-    if (vmRef.isEmpty() || type != "vm")
-    {
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
-    }
 
-    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = vm->GetData();
     if (vmData.isEmpty())
-    {
         return false;
-    }
 
     // Skip templates
     if (vmData.value("is_a_template", false).toBool())
-    {
         return false;
-    }
 
     QString connRef = vmData.value("$connection").toString();
 
     // Check if CBT is licensed
     if (!this->isCbtLicensed(connRef))
-    {
         return false;
-    }
 
     // VM must have a VDI with CBT enabled
-    return this->hasVdiWithCbtEnabled(vmRef);
+    return this->hasVdiWithCbtEnabled();
 }
 
-void DisableChangedBlockTrackingCommand::run()
+void DisableChangedBlockTrackingCommand::Run()
 {
-    QString vmRef = this->getSelectedObjectRef();
-    if (vmRef.isEmpty())
-    {
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return;
-    }
 
-    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-    {
-        return;
-    }
-
-    QString vmName = vmData.value("name_label").toString();
+    QString vmRef = vm->OpaqueRef();
+    QString vmName = vm->GetName();
 
     // Show confirmation dialog
     QString message = tr("Are you sure you want to disable Changed Block Tracking for VM '%1'?\n\n"
@@ -111,17 +94,23 @@ void DisableChangedBlockTrackingCommand::run()
         return;
     }
 
-    // Get connection
-    XenConnection* conn = this->xenLib()->getConnection();
-    if (!conn || !conn->isConnected())
+    // Get GetConnection
+    XenConnection* conn = vm->GetConnection();
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
                              tr("Not connected to XenServer"));
         return;
     }
 
+    // Get VM GetData for VBD access
+    QVariantMap vmData = vm->GetData();
+
     // Collect all actions for VDIs with CBT enabled
     QList<AsyncOperation*> actions;
+
+    // Get cache from connection
+    XenCache* cache = conn->GetCache();
 
     // Get all VBDs for this VM
     QVariantList vbds = vmData.value("VBDs").toList();
@@ -129,7 +118,7 @@ void DisableChangedBlockTrackingCommand::run()
     for (const QVariant& vbdRefVariant : vbds)
     {
         QString vbdRef = vbdRefVariant.toString();
-        QVariantMap vbdData = this->xenLib()->getCache()->ResolveObjectData("vbd", vbdRef);
+        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
         if (vbdData.isEmpty())
         {
             continue;
@@ -142,7 +131,7 @@ void DisableChangedBlockTrackingCommand::run()
             continue;
         }
 
-        QVariantMap vdiData = this->xenLib()->getCache()->ResolveObjectData("vdi", vdiRef);
+        QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
         if (vdiData.isEmpty())
         {
             continue;
@@ -190,7 +179,7 @@ void DisableChangedBlockTrackingCommand::run()
     }
 }
 
-QString DisableChangedBlockTrackingCommand::menuText() const
+QString DisableChangedBlockTrackingCommand::MenuText() const
 {
     return tr("Disable Changed Block &Tracking");
 }
@@ -204,44 +193,40 @@ bool DisableChangedBlockTrackingCommand::isCbtLicensed(const QString& connRef) c
     return true;
 }
 
-bool DisableChangedBlockTrackingCommand::hasVdiWithCbtEnabled(const QString& vmRef) const
+bool DisableChangedBlockTrackingCommand::hasVdiWithCbtEnabled() const
 {
-    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-    {
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
-    }
+
+    QVariantMap vmData = vm->GetData();
+    if (vmData.isEmpty())
+        return false;
 
     // Get all VBDs for this VM
     QVariantList vbds = vmData.value("VBDs").toList();
 
+    XenCache* cache = vm->GetConnection()->GetCache();
+
     for (const QVariant& vbdRefVariant : vbds)
     {
         QString vbdRef = vbdRefVariant.toString();
-        QVariantMap vbdData = this->xenLib()->getCache()->ResolveObjectData("vbd", vbdRef);
+        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
         if (vbdData.isEmpty())
-        {
             continue;
-        }
 
         // Get VDI from VBD
         QString vdiRef = vbdData.value("VDI").toString();
         if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
-        {
             continue;
-        }
 
-        QVariantMap vdiData = this->xenLib()->getCache()->ResolveObjectData("vdi", vdiRef);
+        QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
         if (vdiData.isEmpty())
-        {
             continue;
-        }
 
         // Check if CBT is enabled
         if (vdiData.value("cbt_enabled", false).toBool())
-        {
             return true;
-        }
     }
 
     return false;

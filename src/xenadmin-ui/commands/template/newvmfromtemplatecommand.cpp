@@ -28,8 +28,9 @@
 #include "newvmfromtemplatecommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/newvmwizard.h"
-#include "xenlib.h"
-#include "xencache.h"
+#include "../../../xenlib/xencache.h"
+#include "../../../xenlib/xen/network/connection.h"
+#include "../../../xenlib/xen/xenobject.h"
 #include <QMessageBox>
 
 NewVMFromTemplateCommand::NewVMFromTemplateCommand(MainWindow* mainWindow, QObject* parent)
@@ -37,7 +38,7 @@ NewVMFromTemplateCommand::NewVMFromTemplateCommand(MainWindow* mainWindow, QObje
 {
 }
 
-bool NewVMFromTemplateCommand::canRun() const
+bool NewVMFromTemplateCommand::CanRun() const
 {
     QString objectType = this->getSelectedObjectType();
     if (objectType != "vm")
@@ -47,10 +48,12 @@ bool NewVMFromTemplateCommand::canRun() const
     if (templateRef.isEmpty())
         return false;
 
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
         return false;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
     if (!cache)
         return false;
 
@@ -59,16 +62,18 @@ bool NewVMFromTemplateCommand::canRun() const
     return this->canRunTemplate(templateData);
 }
 
-void NewVMFromTemplateCommand::run()
+void NewVMFromTemplateCommand::Run()
 {
     QString templateRef = this->getSelectedObjectRef();
     if (templateRef.isEmpty())
         return;
 
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
         return;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
     if (!cache)
         return;
 
@@ -82,13 +87,16 @@ void NewVMFromTemplateCommand::run()
     }
 
     // Launch New VM wizard with template as source
-    NewVMWizard* wizard = new NewVMWizard(this->mainWindow()->xenLib(), this->mainWindow());
+    if (!connection)
+        return;
+
+    NewVMWizard* wizard = new NewVMWizard(connection, this->mainWindow());
     // TODO: Set template as wizard source
     // wizard->setSourceTemplate(templateRef);
     wizard->show();
 }
 
-QString NewVMFromTemplateCommand::menuText() const
+QString NewVMFromTemplateCommand::MenuText() const
 {
     return "New VM from Template";
 }
@@ -121,7 +129,12 @@ bool NewVMFromTemplateCommand::canRunTemplate(const QVariantMap& templateData) c
         return false;
 
     // Connection must be connected
-    if (!this->mainWindow()->xenLib() || !this->mainWindow()->xenLib()->isConnected())
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+        return false;
+
+    XenConnection* connection = selectedObject->GetConnection();
+    if (!connection || !connection->IsConnected())
         return false;
 
     // Pool must have enabled hosts

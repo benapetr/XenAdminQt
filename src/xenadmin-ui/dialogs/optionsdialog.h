@@ -38,30 +38,30 @@ class OptionsDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    explicit OptionsDialog(QWidget* parent = nullptr);
-    ~OptionsDialog();
+    public:
+        explicit OptionsDialog(QWidget* parent = nullptr);
+        ~OptionsDialog();
 
-    // Methods to select specific pages (matches C# public methods)
-    void selectSecurityPage();
+        // Methods to select specific pages (matches C# public methods)
+        void selectSecurityPage();
 
-protected:
-    // Override accept to validate and save (matches C# okButton_Click)
-    void accept() override;
+    protected:
+        // Override accept to validate and save (matches C# okButton_Click)
+        void accept() override;
 
-    // Override reject to just close (matches C# cancelButton_Click)
-    void reject() override;
+        // Override reject to just close (matches C# cancelButton_Click)
+        void reject() override;
 
-private slots:
-    void onVerticalTabsCurrentChanged(int index);
+    private slots:
+        void onVerticalTabsCurrentChanged(int index);
 
-private:
-    void buildPages();                   // Call build() on all pages (matches C# OnLoad)
-    void selectPage(IOptionsPage* page); // Helper to select a page
-    void hideValidationToolTips();       // Matches C# HideValidationToolTips()
+    private:
+        void buildPages();                   // Call build() on all pages (matches C# OnLoad)
+        void selectPage(IOptionsPage* page); // Helper to select a page
+        void hideValidationToolTips();       // Matches C# HideValidationToolTips()
 
-    Ui::OptionsDialog* ui;
-    QList<IOptionsPage*> m_pages;
+        Ui::OptionsDialog* ui;
+        QList<IOptionsPage*> m_pages;
 };
 
 #endif // OPTIONSDIALOG_H

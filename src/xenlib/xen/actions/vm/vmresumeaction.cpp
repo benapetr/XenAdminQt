@@ -36,7 +36,7 @@ VMResumeAction::VMResumeAction(VM* vm,
                                StartDiagnosisForm startDiagnosisForm,
                                QObject* parent)
     : VMStartAbstractAction(vm,
-                            tr("Resuming '%1'...").arg(vm ? vm->nameLabel() : "VM"),
+                            tr("Resuming '%1'...").arg(vm ? vm->GetName() : "VM"),
                             warningDialogHAInvalidConfig,
                             startDiagnosisForm,
                             parent)
@@ -61,15 +61,15 @@ void VMResumeAction::doAction(int start, int end)
         return;
     }
 
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    XenAPI::Session* sess = session();
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
     }
 
     // Call XenAPI::VM static method
-    QString taskRef = XenAPI::VM::async_resume(sess, vmObj->opaqueRef(), false, false);
+    QString taskRef = XenAPI::VM::async_resume(sess, vmObj->OpaqueRef(), false, false);
 
     if (taskRef.isEmpty())
     {

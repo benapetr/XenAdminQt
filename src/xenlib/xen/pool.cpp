@@ -26,63 +26,353 @@
  */
 
 #include "pool.h"
-#include "connection.h"
+#include "network/connection.h"
 #include "../xenlib.h"
+#include "../xencache.h"
 
 Pool::Pool(XenConnection* connection, const QString& opaqueRef, QObject* parent)
     : XenObject(connection, opaqueRef, parent)
 {
 }
 
-QString Pool::masterRef() const
+QString Pool::GetObjectType() const
+{
+    return "pool";
+}
+
+QString Pool::GetMasterHostRef() const
 {
     return stringProperty("master");
 }
 
-QString Pool::defaultSRRef() const
+QString Pool::DefaultSRRef() const
 {
     return stringProperty("default_SR");
 }
 
-bool Pool::haEnabled() const
+bool Pool::HAEnabled() const
 {
     return boolProperty("ha_enabled", false);
 }
 
-QVariantMap Pool::haConfiguration() const
+QVariantMap Pool::HAConfiguration() const
 {
     return property("ha_configuration").toMap();
 }
 
-QVariantMap Pool::otherConfig() const
+QVariantMap Pool::OtherConfig() const
 {
     return property("other_config").toMap();
 }
 
-QStringList Pool::hostRefs() const
+QStringList Pool::HostRefs() const
 {
-    // In XenAPI, we need to query the cache for all hosts in this pool
-    // For now, return empty list - this will be populated when we integrate with cache properly
-    // TODO: Query cache for all hosts where host.pool == this->opaqueRef()
-    return QStringList();
+    // In XenAPI, there's exactly one pool per GetConnection, so all hosts belong to this pool
+    // Query the cache for all host references
+    XenConnection* conn = this->GetConnection();
+    if (!conn || !conn->GetCache())
+        return QStringList();
+
+    // Get all host references from the cache
+    return conn->GetCache()->GetAllRefs("host");
 }
 
-bool Pool::isPoolOfOne() const
+bool Pool::IsPoolOfOne() const
 {
-    return hostRefs().count() == 1;
+    return HostRefs().count() == 1;
 }
 
-QStringList Pool::tags() const
+QStringList Pool::Tags() const
 {
     return stringListProperty("tags");
 }
 
-bool Pool::wlbEnabled() const
+bool Pool::WLBEnabled() const
 {
     return boolProperty("wlb_enabled", false);
 }
 
-bool Pool::livePatchingDisabled() const
+bool Pool::LivePatchingDisabled() const
 {
     return boolProperty("live_patching_disabled", false);
+}
+
+QString Pool::SuspendImageSRRef() const
+{
+    return stringProperty("suspend_image_SR");
+}
+
+QString Pool::CrashDumpSRRef() const
+{
+    return stringProperty("crash_dump_SR");
+}
+
+QStringList Pool::HAStatefiles() const
+{
+    return stringListProperty("ha_statefiles");
+}
+
+qint64 Pool::HAHostFailuresToTolerate() const
+{
+    return intProperty("ha_host_failures_to_tolerate", 0);
+}
+
+qint64 Pool::HAPlanExistsFor() const
+{
+    return intProperty("ha_plan_exists_for", 0);
+}
+
+bool Pool::HAAllowOvercommit() const
+{
+    return boolProperty("ha_allow_overcommit", false);
+}
+
+bool Pool::HAOvercommitted() const
+{
+    return boolProperty("ha_overcommitted", false);
+}
+
+QString Pool::HAClusterStack() const
+{
+    return stringProperty("ha_cluster_stack");
+}
+
+bool Pool::RedoLogEnabled() const
+{
+    return boolProperty("redo_log_enabled", false);
+}
+
+QString Pool::RedoLogVDIRef() const
+{
+    return stringProperty("redo_log_vdi");
+}
+
+QVariantMap Pool::GUIConfig() const
+{
+    return property("gui_config").toMap();
+}
+
+QVariantMap Pool::HealthCheckConfig() const
+{
+    return property("health_check_config").toMap();
+}
+
+QVariantMap Pool::GuestAgentConfig() const
+{
+    return property("guest_agent_config").toMap();
+}
+
+QVariantMap Pool::CPUInfo() const
+{
+    return property("cpu_info").toMap();
+}
+
+QVariantMap Pool::Blobs() const
+{
+    return property("blobs").toMap();
+}
+
+QStringList Pool::MetadataVDIRefs() const
+{
+    return stringListProperty("metadata_VDIs");
+}
+
+QString Pool::WLBUrl() const
+{
+    return stringProperty("wlb_url");
+}
+
+QString Pool::WLBUsername() const
+{
+    return stringProperty("wlb_username");
+}
+
+bool Pool::WLBVerifyCert() const
+{
+    return boolProperty("wlb_verify_cert", false);
+}
+
+QString Pool::VswitchController() const
+{
+    return stringProperty("vswitch_controller");
+}
+
+QVariantMap Pool::Restrictions() const
+{
+    return property("restrictions").toMap();
+}
+
+bool Pool::PolicyNoVendorDevice() const
+{
+    return boolProperty("policy_no_vendor_device", false);
+}
+
+QStringList Pool::AllowedOperations() const
+{
+    return stringListProperty("allowed_operations");
+}
+
+QVariantMap Pool::CurrentOperations() const
+{
+    return property("current_operations").toMap();
+}
+
+bool Pool::IGMPSnoopingEnabled() const
+{
+    return boolProperty("igmp_snooping_enabled", false);
+}
+
+QString Pool::UEFICertificates() const
+{
+    return stringProperty("uefi_certificates");
+}
+
+bool Pool::TLSVerificationEnabled() const
+{
+    return boolProperty("tls_verification_enabled", false);
+}
+
+bool Pool::ClientCertificateAuthEnabled() const
+{
+    return boolProperty("client_certificate_auth_enabled", false);
+}
+
+QString Pool::ClientCertificateAuthName() const
+{
+    return stringProperty("client_certificate_auth_name");
+}
+
+QStringList Pool::RepositoryRefs() const
+{
+    return stringListProperty("repositories");
+}
+
+QString Pool::RepositoryProxyUrl() const
+{
+    return stringProperty("repository_proxy_url");
+}
+
+QString Pool::RepositoryProxyUsername() const
+{
+    return stringProperty("repository_proxy_username");
+}
+
+QString Pool::RepositoryProxyPasswordRef() const
+{
+    return stringProperty("repository_proxy_password");
+}
+
+bool Pool::MigrationCompression() const
+{
+    return boolProperty("migration_compression", false);
+}
+
+bool Pool::CoordinatorBias() const
+{
+    return boolProperty("coordinator_bias", true);
+}
+
+QString Pool::TelemetryUuidRef() const
+{
+    return stringProperty("telemetry_uuid");
+}
+
+QString Pool::TelemetryFrequency() const
+{
+    return stringProperty("telemetry_frequency");
+}
+
+QDateTime Pool::TelemetryNextCollection() const
+{
+    QString dateStr = stringProperty("telemetry_next_collection");
+    if (dateStr.isEmpty())
+        return QDateTime();
+    return QDateTime::fromString(dateStr, Qt::ISODate);
+}
+
+QDateTime Pool::LastUpdateSync() const
+{
+    QString dateStr = stringProperty("last_update_sync");
+    if (dateStr.isEmpty())
+        return QDateTime();
+    return QDateTime::fromString(dateStr, Qt::ISODate);
+}
+
+QString Pool::UpdateSyncFrequency() const
+{
+    return stringProperty("update_sync_frequency");
+}
+
+qint64 Pool::UpdateSyncDay() const
+{
+    return intProperty("update_sync_day", 0);
+}
+
+bool Pool::UpdateSyncEnabled() const
+{
+    return boolProperty("update_sync_enabled", false);
+}
+
+bool Pool::IsPsrPending() const
+{
+    return boolProperty("is_psr_pending", false);
+}
+
+// Property getters for search/query functionality
+
+QStringList Pool::GetAllVMRefs() const
+{
+    // C# equivalent: PropertyAccessors VM property for Pool
+    // Returns all VMs from connection.Cache.VMs
+    
+    XenConnection* conn = this->GetConnection();
+    if (!conn)
+        return QStringList();
+    
+    XenCache* cache = conn->GetCache();
+    if (!cache)
+        return QStringList();
+    
+    // Get all VMs from cache
+    return cache->GetAllRefs("vm");
+}
+
+bool Pool::IsNotFullyUpgraded() const
+{
+    // C# equivalent: PropertyNames.isNotFullyUpgraded
+    // Returns true if hosts in pool have different software versions
+    
+    QStringList hostRefs = this->HostRefs();
+    if (hostRefs.size() <= 1)
+        return false; // Single host or no hosts, can't be mismatched
+    
+    XenConnection* conn = this->GetConnection();
+    if (!conn)
+        return false;
+    
+    XenCache* cache = conn->GetCache();
+    if (!cache)
+        return false;
+    
+    // Compare software_version of all hosts
+    QString firstVersion;
+    for (const QString& hostRef : hostRefs)
+    {
+        QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
+        if (hostData.isEmpty())
+            continue;
+        
+        QVariantMap softwareVersion = hostData.value("software_version").toMap();
+        QString versionStr = softwareVersion.value("product_version", QString()).toString();
+        
+        if (firstVersion.isEmpty())
+        {
+            firstVersion = versionStr;
+        } else if (firstVersion != versionStr)
+        {
+            return true; // Version mismatch found
+        }
+    }
+    
+    return false; // All versions match
 }

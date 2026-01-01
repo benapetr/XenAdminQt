@@ -26,7 +26,7 @@
  */
 
 #include "alert.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 
 Alert::Alert(XenConnection* connection)
     : QObject(nullptr)

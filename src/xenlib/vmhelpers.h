@@ -32,7 +32,7 @@
 #include <QtCore/QString>
 #include <QtCore/QVariantMap>
 
-class XenLib;
+class XenConnection;
 
 /**
  * @brief Helper functions for VM operations that require cache/connection access
@@ -43,42 +43,42 @@ class XenLib;
  */
 class XENLIB_EXPORT VMHelpers
 {
-public:
-    /**
-     * @brief Get the "home" host for a VM
-     *
-     * A VM's "home" is determined by:
-     * 1. If it's a snapshot: the home of its snapshot_of VM
-     * 2. If it's a template (non-snapshot): null (templates don't have homes)
-     * 3. If Running or Paused: the resident_on host
-     * 4. If it has local storage: the storage host
-     * 5. If it has affinity set: the affinity host (if live)
-     * 6. Otherwise: null (offline VM with no affinity)
-     *
-     * This matches the C# VM.Home() method in VM.cs line 457-481
-     *
-     * @param xenLib XenLib instance for cache access
-     * @param vmRecord VM record containing all VM fields
-     * @return Host reference string, or empty string if no home
-     */
-    static QString getVMHome(XenLib* xenLib, const QVariantMap& vmRecord);
+    public:
+        /**
+         * @brief Get the "home" host for a VM
+         *
+         * A VM's "home" is determined by:
+         * 1. If it's a snapshot: the home of its snapshot_of VM
+         * 2. If it's a template (non-snapshot): null (templates don't have homes)
+         * 3. If Running or Paused: the resident_on host
+         * 4. If it has local storage: the storage host
+         * 5. If it has affinity set: the affinity host (if live)
+         * 6. Otherwise: null (offline VM with no affinity)
+         *
+         * This matches the C# VM.Home() method in VM.cs line 457-481
+         *
+         * @param conn XenLib instance for cache access
+         * @param vmRecord VM record containing all VM fields
+         * @return Host reference string, or empty string if no home
+         */
+        static QString getVMHome(XenConnection *conn, const QVariantMap& vmRecord);
 
-    /**
-     * @brief Get the storage host for a VM
-     *
-     * Returns the host where the VM's storage is located (for non-shared storage).
-     * This is determined by finding the first VBD's VDI's SR's storage host.
-     *
-     * @param xenLib XenLib instance for cache access
-     * @param vmRecord VM record containing VBDs list
-     * @param ignoreCDs If true, skip CD/DVD drives
-     * @return Host reference string, or empty string if no storage host
-     */
-    static QString getVMStorageHost(XenLib* xenLib, const QVariantMap& vmRecord, bool ignoreCDs = false);
+        /**
+         * @brief Get the storage host for a VM
+         *
+         * Returns the host where the VM's storage is located (for non-shared storage).
+         * This is determined by finding the first VBD's VDI's SR's storage host.
+         *
+         * @param xenLib XenLib instance for cache access
+         * @param vmRecord VM record containing VBDs list
+         * @param ignoreCDs If true, skip CD/DVD drives
+         * @return Host reference string, or empty string if no storage host
+         */
+        static QString getVMStorageHost(XenConnection *conn, const QVariantMap& vmRecord, bool ignoreCDs = false);
 
-private:
-    VMHelpers() = delete; // Static class, no instances
-    ~VMHelpers() = delete;
+    private:
+        VMHelpers() = delete; // Static class, no instances
+        ~VMHelpers() = delete;
 };
 
 #endif // VMHELPERS_H

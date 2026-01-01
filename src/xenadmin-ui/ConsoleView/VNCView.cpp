@@ -1,30 +1,28 @@
-/* Copyright (c) Petr Bena
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
  *
- * Redistribution and use in source and binary forms,
- * with or without modification, are permitted provided
- * that the following conditions are met:
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * *   Redistributions of source code must retain the above
- *     copyright notice, this list of conditions and the
- *     following disclaimer.
- * *   Redistributions in binary form must reproduce the above
- *     copyright notice, this list of conditions and the
- *     following disclaimer in the documentation and/or other
- *     materials provided with the distribution.
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
- * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
- * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "VNCView.h"
@@ -47,16 +45,18 @@
 VNCView::VNCView(const QString& vmRef,
                  const QString& elevatedUsername,
                  const QString& elevatedPassword,
-                 XenLib* xenLib,
+                 XenConnection *conn,
                  QWidget* parent)
-    : QWidget(parent), _vmRef(vmRef), _xenLib(xenLib), _vncTabView(nullptr), _undockedForm(nullptr), _findConsoleButton(nullptr), _reattachConsoleButton(nullptr), _oldUndockedSize(QSize()), _oldUndockedLocation(QPoint()), _oldScaledSetting(false), _undockedFormResized(false)
+    : QWidget(parent), _vmRef(vmRef), _vncTabView(nullptr), _undockedForm(nullptr), _findConsoleButton(nullptr), _reattachConsoleButton(nullptr), _oldUndockedSize(QSize()), _oldUndockedLocation(QPoint()), _oldScaledSetting(false), _undockedFormResized(false)
 {
+    this->_connection = conn;
+
     qDebug() << "VNCView: Constructor for VM:" << vmRef;
 
     Q_ASSERT(QThread::currentThread() == QApplication::instance()->thread());
 
     // Create VNCTabView (equivalent to C# new VNCTabView(this, source, ...))
-    this->_vncTabView = new VNCTabView(this, vmRef, elevatedUsername, elevatedPassword, xenLib, this);
+    this->_vncTabView = new VNCTabView(this, vmRef, elevatedUsername, elevatedPassword, conn, this);
 
     // Setup UI
     this->setupUI();

@@ -27,31 +27,30 @@
 
 #include "disconnecthostcommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
-#include "xen/connection.h"
-#include "xencache.h"
-#include <QMessageBox>
+#include "../connection/disconnectcommand.h"
+#include "xen/network/connection.h"
+#include "xen/host.h"
 
-DisconnectHostCommand::DisconnectHostCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+DisconnectHostCommand::DisconnectHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
-bool DisconnectHostCommand::canRun() const
+bool DisconnectHostCommand::CanRun() const
 {
     // Can disconnect if:
     // 1. Connection is connected AND selected object is pool coordinator (host)
     // 2. OR connection is in progress (to cancel connection attempt)
 
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return false;
 
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    XenConnection* conn = host->GetConnection();
     if (!conn)
         return false;
 
     // Can disconnect if connected and selected host is coordinator
-    if (conn->isConnected() && this->isSelectedHostCoordinator())
+    if (conn->IsConnected() && host->IsMaster())
         return true;
 
     // Can also disconnect if connection is in progress (to cancel)
@@ -60,64 +59,21 @@ bool DisconnectHostCommand::canRun() const
     return false;
 }
 
-void DisconnectHostCommand::run()
+void DisconnectHostCommand::Run()
 {
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return;
 
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
+    XenConnection* conn = host->GetConnection();
     if (!conn)
         return;
 
-    // Show confirmation dialog
-    int ret = QMessageBox::question(this->mainWindow(), "Disconnect",
-                                    "Are you sure you want to disconnect from the server?",
-                                    QMessageBox::Yes | QMessageBox::No);
-
-    if (ret == QMessageBox::Yes)
-    {
-        this->mainWindow()->showStatusMessage("Disconnecting...");
-        conn->disconnect();
-    }
+    DisconnectCommand disconnectCmd(this->mainWindow(), conn, true, this);
+    disconnectCmd.Run();
 }
 
-QString DisconnectHostCommand::menuText() const
+QString DisconnectHostCommand::MenuText() const
 {
     return "Disconnect";
-}
-
-bool DisconnectHostCommand::isConnectionConnected() const
-{
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-    return conn && conn->isConnected();
-}
-
-bool DisconnectHostCommand::isSelectedHostCoordinator() const
-{
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return false;
-
-    QString hostRef = this->getSelectedObjectRef();
-    if (hostRef.isEmpty())
-        return false;
-
-    // Get host data from cache
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
-
-    QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
-    if (hostData.isEmpty())
-        return false;
-
-    // Check if this is the pool coordinator/master
-    // In XenServer, the coordinator has master=true or is the pool master
-    return hostData.value("master", false).toBool();
 }

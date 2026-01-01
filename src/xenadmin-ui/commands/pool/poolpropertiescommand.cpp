@@ -28,33 +28,33 @@
 #include "poolpropertiescommand.h"
 #include <QDebug>
 #include "../../dialogs/poolpropertiesdialog.h"
-#include <QDebug>
 #include "../../mainwindow.h"
-#include <QDebug>
-#include "xenlib.h"
-#include <QDebug>
+#include "xen/pool.h"
 #include <QMessageBox>
 
-PoolPropertiesCommand::PoolPropertiesCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+PoolPropertiesCommand::PoolPropertiesCommand(MainWindow* mainWindow, QObject* parent) : PoolCommand(mainWindow, parent)
 {
 }
 
-bool PoolPropertiesCommand::canRun() const
+bool PoolPropertiesCommand::CanRun() const
 {
-    QString poolRef = this->getSelectedPoolRef();
-    return !poolRef.isEmpty() && this->mainWindow()->xenLib()->isConnected();
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool || !pool->IsValid() || !pool->IsConnected())
+        return false;
+
+    return true;
 }
 
-void PoolPropertiesCommand::run()
+void PoolPropertiesCommand::Run()
 {
-    QString poolRef = this->getSelectedPoolRef();
-
-    if (poolRef.isEmpty())
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool || !pool->IsValid())
         return;
 
-    // Get connection from xenLib
-    XenConnection* connection = this->xenLib()->getConnection();
+    QString poolRef = pool->OpaqueRef();
+
+    // Get GetConnection from pool object for multi-GetConnection support
+    XenConnection* connection = pool->GetConnection();
     if (!connection)
     {
         qWarning() << "PoolPropertiesCommand: No connection available";
@@ -69,20 +69,7 @@ void PoolPropertiesCommand::run()
     dialog->exec();
 }
 
-QString PoolPropertiesCommand::menuText() const
+QString PoolPropertiesCommand::MenuText() const
 {
     return "Properties";
-}
-
-QString PoolPropertiesCommand::getSelectedPoolRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "pool")
-        return QString();
-
-    return this->getSelectedObjectRef();
 }

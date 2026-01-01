@@ -28,7 +28,7 @@
 #include "editmultipathaction.h"
 #include "../../host.h"
 #include "../../session.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../xenapi/xenapi_Host.h"
 #include "../../xenapi/xenapi_PBD.h"
 #include <QDebug>
@@ -38,8 +38,8 @@ const char* EditMultipathAction::DEFAULT_MULTIPATH_HANDLE = "dmp";
 EditMultipathAction::EditMultipathAction(Host* host,
                                          bool enableMultipath,
                                          QObject* parent)
-    : AsyncOperation(host->connection(),
-                     QString("Changing multipath setting on %1").arg(host->nameLabel()),
+    : AsyncOperation(host->GetConnection(),
+                     QString("Changing multipath setting on %1").arg(host->GetName()),
                      QString("Changing multipath..."),
                      parent),
       m_host(host), m_enableMultipath(enableMultipath)
@@ -57,23 +57,23 @@ void EditMultipathAction::run()
         return;
     }
 
-    XenSession* sess = this->session();
-    if (!sess || !sess->isLoggedIn())
+    XenAPI::Session* sess = this->session();
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
     }
 
-    qDebug() << "EditMultipathAction: Changing multipath setting on host" << m_host->nameLabel()
+    qDebug() << "EditMultipathAction: Changing multipath setting on host" << m_host->GetName()
              << "to" << m_enableMultipath;
 
-    QString hostRef = m_host->opaqueRef();
+    QString hostRef = m_host->OpaqueRef();
     QStringList pluggedPBDs;
 
     try
     {
         // Get all PBDs for this host
-        QVariantMap hostRecord = m_host->data();
+        QVariantMap hostRecord = m_host->GetData();
         QVariantList pbdRefs = hostRecord.value("PBDs").toList();
 
         // Step 1: Unplug all currently attached PBDs

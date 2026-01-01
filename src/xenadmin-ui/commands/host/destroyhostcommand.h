@@ -28,7 +28,7 @@
 #ifndef DESTROYHOSTCOMMAND_H
 #define DESTROYHOSTCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
 /**
  * @brief Destroys the selected hosts.
@@ -42,24 +42,21 @@
  * - Host is not the pool coordinator
  * - Host belongs to a pool
  */
-class DestroyHostCommand : public Command
+class DestroyHostCommand : public HostCommand
 {
     Q_OBJECT
 
-public:
-    explicit DestroyHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit DestroyHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    bool canRun() const override;
-    void run() override;
-    QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
-private:
-    bool canRunForHost(const QString& hostRef) const;
-    bool isHostSelected() const;
-    bool isHostCoordinator(const QString& hostRef) const;
-    bool isHostLive(const QString& hostRef) const;
-    QString buildConfirmationMessage() const;
-    QString buildConfirmationTitle() const;
+    private:
+        bool isHostLive(QSharedPointer<Host> host) const;
+        QString buildConfirmationMessage(QSharedPointer<Host> host) const;
+        QString buildConfirmationTitle() const;
 };
 
 #endif // DESTROYHOSTCOMMAND_H

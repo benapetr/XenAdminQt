@@ -1,30 +1,28 @@
-/* Copyright (c) Petr Bena
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
  *
- * Redistribution and use in source and binary forms,
- * with or without modification, are permitted provided
- * that the following conditions are met:
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * *   Redistributions of source code must retain the above
- *     copyright notice, this list of conditions and the
- *     following disclaimer.
- * *   Redistributions in binary form must reproduce the above
- *     copyright notice, this list of conditions and the
- *     following disclaimer in the documentation and/or other
- *     materials provided with the distribution.
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
- * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
- * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -56,7 +54,8 @@
 // Forward declarations
 class XSVNCScreen;
 class VNCView;
-class XenLib;
+class XenConnection;
+class XenCache;
 
 namespace Ui
 {
@@ -87,504 +86,518 @@ class VNCTabView : public QWidget
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Timeout for INS key detection (milliseconds)
-     * C#: public const int INS_KEY_TIMEOUT = 500;
-     */
-    static constexpr int INS_KEY_TIMEOUT = 500;
-
-    /**
-     * @brief Constructor
-     * Reference: VNCTabView.cs lines 94-228
-     *
-     * @param parent Parent VNCView (for docking callbacks)
-     * @param vmRef VM OpaqueRef
-     * @param elevatedUsername Optional elevated credentials username
-     * @param elevatedPassword Optional elevated credentials password
-     * @param xenLib XenLib instance for XenAPI access
-     * @param parentWidget Qt parent widget
-     */
-    explicit VNCTabView(VNCView* parent,
-                        const QString& vmRef,
-                        const QString& elevatedUsername,
-                        const QString& elevatedPassword,
-                        XenLib* xenLib,
-                        QWidget* parentWidget = nullptr);
-
-    /**
-     * @brief Destructor - cleanup resources, unregister listeners
-     * Reference: VNCTabView.Designer.cs lines 14-37
-     */
-    ~VNCTabView();
-
-    /**
-     * @brief Get/set scaled mode
-     * Reference: VNCTabView.cs lines 230-234
-     */
-    bool isScaled() const;
-    void setScaled(bool scaled);
-
-    /**
-     * @brief Check if RDP control is enabled (for XSVNCScreen)
-     * Reference: VNCTabView.cs line 92
-     */
-    bool isRDPControlEnabled() const;
-
-    /**
-     * @brief Pause console updates (when tab hidden)
-     * Reference: VNCTabView.cs lines 772-776
-     */
-    void pause();
-
-    /**
-     * @brief Resume console updates (when tab visible)
-     * Reference: VNCTabView.cs lines 778-782
-     */
-    void unpause();
-
-    /**
-     * @brief Disable VNC toggle button (called by XSVNCScreen during default console detection)
-     * Reference: VNCTabView.cs lines 1072-1076
-     */
-    void disableToggleVNCButton();
-
-    /**
-     * @brief Enable VNC toggle button
-     * Reference: VNCTabView.cs lines 1078-1082
-     */
-    void enableToggleVNCButton();
-
-    /**
-     * @brief Update dock button icon/text based on docked state
-     * Reference: VNCTabView.cs lines 478-490
-     */
-    void updateDockButton();
-
-    /**
-     * @brief Update fullscreen button enabled state
-     * Reference: VNCTabView.cs lines 492-509
-     */
-    void updateFullScreenButton();
-
-    /**
-     * @brief Setup CD/DVD ISO toolbar
-     * Reference: VNCTabView.cs lines 618-621
-     */
-    void setupCD();
-
-    /**
-     * @brief Send Ctrl+Alt+Delete to the VM
-     * Reference: VNCTabView.cs lines 1269-1273
-     */
-    void sendCAD();
-
-    /**
-     * @brief Update parent VNCView minimum size based on content
-     * Reference: VNCTabView.cs lines 350-358
-     */
-    void updateParentMinimumSize();
-
-    /**
-     * @brief Scale console to fit window (if scaling enabled)
-     * Reference: VNCTabView.cs lines 846-868
-     */
-    void maybeScale();
-
-    /**
-     * @brief Calculate required size to show desktop at 1:1 scale
-     * Reference: VNCTabView.cs lines 883-910
-     * @return Size needed for unscaled display
-     */
-    QSize growToFit();
-
-    /**
-     * @brief Access to keyboard shortcut handler
-     * C#: internal readonly ConsoleKeyHandler KeyHandler = new ConsoleKeyHandler();
-     */
-    ConsoleKeyHandler* keyHandler()
-    {
-        return &_keyHandler;
-    }
-
-public slots:
-    /**
-     * @brief Handle tab opened event - may auto-switch to RDP
-     * Reference: VNCTabView.cs lines 1275-1300
-     */
-    void onTabOpened();
-
-signals:
-    /**
-     * @brief Emitted when toggle dock/undock requested
-     * Reference: VNCTabView.cs line 995
-     */
-    void toggleDockRequested();
-
-    /**
-     * @brief Emitted when fullscreen mode requested
-     * Reference: VNCTabView.cs line 1008
-     */
-    void toggleFullscreenRequested();
-
-    /**
-     * @brief Emitted when VM start requested (from power state label click)
-     */
-    void vmStartRequested(const QString& vmRef);
-
-    /**
-     * @brief Emitted when VM resume requested (from power state label click)
-     */
-    void vmResumeRequested(const QString& vmRef);
-
-    /**
-     * @brief Emitted when console size changes (for VNCView resize)
-     * Reference: VNCTabView.cs line 826
-     */
-    void consoleResized();
-
-private slots:
-    /**
-     * @brief Handle VM property changes
-     * Reference: VNCTabView.cs lines 511-563
-     */
-    void onVMPropertyChanged(const QString& propertyName);
-
-    /**
-     * @brief Handle guest metrics property changes
-     * Reference: VNCTabView.cs lines 565-590
-     */
-    void onGuestMetricsPropertyChanged(const QString& propertyName);
-
-    /**
-     * @brief Handle settings changes
-     * Reference: VNCTabView.cs lines 340-348
-     */
-    void onSettingsPropertyChanged(const QString& settingName);
-
-    /**
-     * @brief Handle send CAD button click
-     * Reference: VNCTabView.cs lines 930-934
-     */
-    void onSendCADClicked();
-
-    /**
-     * @brief Handle scale checkbox toggled
-     * Reference: VNCTabView.cs lines 912-928
-     */
-    void onScaleCheckBoxChanged(bool checked);
-
-    /**
-     * @brief Handle dock button click
-     * Reference: VNCTabView.cs lines 936-941
-     */
-    void onDockButtonClicked();
-
-    /**
-     * @brief Handle fullscreen button click
-     * Reference: VNCTabView.cs lines 943-946
-     */
-    void onFullscreenButtonClicked();
-
-    /**
-     * @brief Handle toggle console button (VNC ↔ RDP) click
-     * Reference: VNCTabView.cs lines 1143-1241
-     */
-    void onToggleConsoleButtonClicked();
-
-    /**
-     * @brief Handle SSH console button click
-     * Reference: VNCTabView.cs lines 1536-1550
-     */
-    void onSSHButtonClicked();
-
-    /**
-     * @brief Handle power state label click (show lifecycle menu)
-     * Reference: VNCTabView.cs lines 738-770
-     */
-    void onPowerStateLabelClicked();
-
-    /**
-     * @brief Handle VNC/RDP resize events
-     * Reference: VNCTabView.cs lines 826-834
-     */
-    void onRDPorVNCResizeHandler();
-
-    /**
-     * @brief RDP detected callback from XSVNCScreen
-     * Reference: VNCTabView.cs lines 1084-1113
-     */
-    void onDetectRDP();
-
-    /**
-     * @brief VNC detected callback from XSVNCScreen
-     * Reference: VNCTabView.cs lines 1115-1141
-     */
-    void onDetectVNC();
-
-    /**
-     * @brief User cancelled auth (password prompt)
-     * Reference: VNCTabView.cs lines 1252-1273
-     */
-    void onUserCancelledAuth();
-
-    /**
-     * @brief VNC connection attempt cancelled
-     * Reference: VNCTabView.cs lines 1243-1250
-     */
-    void onVncConnectionAttemptCancelled();
-
-    /**
-     * @brief INS key timer timeout (for Ctrl+Alt+Ins → Ctrl+Alt+Del)
-     * Reference: VNCTabView.cs lines 969-983
-     */
-    void onInsKeyTimeout();
-
-    /**
-     * @brief Handle CD/DVD drive selection change
-     * Reference: MultipleDvdIsoList.cs lines 233-241
-     */
-    void onCdDriveChanged(int index);
-
-    /**
-     * @brief Handle ISO selection from dropdown
-     * Reference: CDChanger.cs lines 66-87
-     */
-    void onCdIsoSelected(int index);
-
-    /**
-     * @brief Handle eject CD/DVD button click
-     * Reference: MultipleDvdIsoList.cs lines 267-273
-     */
-    void onCdEject();
-
-    /**
-     * @brief Handle create new CD/DVD drive link
-     * Reference: MultipleDvdIsoList.cs lines 243-265
-     */
-    void onCreateNewCdDrive();
-
-private:
-    /**
-     * @brief Register keyboard shortcuts
-     * Reference: VNCTabView.cs lines 360-421
-     */
-    void registerShortcutKeys();
-
-    /**
-     * @brief Deregister keyboard shortcuts
-     * Reference: VNCTabView.cs lines 423-476
-     */
-    void deregisterShortcutKeys();
-
-    /**
-     * @brief Register event listeners (VM, guest metrics, hosts, settings)
-     * Reference: VNCTabView.cs lines 94-228 (constructor registration)
-     */
-    void registerEventListeners();
-
-    /**
-     * @brief Unregister all event listeners
-     * Reference: VNCTabView.cs lines 290-338
-     */
-    void unregisterEventListeners();
-
-    /**
-     * @brief Update power state display
-     * Reference: VNCTabView.cs lines 623-660
-     */
-    void updatePowerState();
-
-    /**
-     * @brief Maybe enable toggle console button based on VM state
-     * Reference: VNCTabView.cs lines 662-668
-     */
-    void maybeEnableButton();
-
-    /**
-     * @brief Show power state label with message
-     * Reference: VNCTabView.cs lines 670-675
-     */
-    void enablePowerStateLabel(const QString& label);
-
-    /**
-     * @brief Hide power state label with message
-     * Reference: VNCTabView.cs lines 677-682
-     */
-    void disablePowerStateLabel(const QString& label);
-
-    /**
-     * @brief Hide top bar controls
-     * Reference: VNCTabView.cs lines 684-728
-     */
-    void hideTopBarContents();
-
-    /**
-     * @brief Show top bar controls
-     * Reference: VNCTabView.cs lines 730-736
-     */
-    void showTopBarContents();
-
-    /**
-     * @brief Disable console controls when VM is powered off
-     * Reference: VNCTabView.cs lines 1290-1302
-     */
-    void vmPowerOff();
-
-    /**
-     * @brief Enable console controls when VM is powered on
-     * Reference: VNCTabView.cs lines 1304-1308
-     */
-    void vmPowerOn();
-
-    /**
-     * @brief Check if RDP can be enabled
-     * Reference: VNCTabView.cs lines 784-788
-     */
-    bool canEnableRDP() const;
-
-    /**
-     * @brief Enable RDP if VM capabilities allow
-     * Reference: VNCTabView.cs lines 592-598
-     */
-    void enableRDPIfCapable();
-
-    /**
-     * @brief Update button states and labels based on protocol
-     * Reference: VNCTabView.cs lines 1194-1219
-     */
-    void updateButtons();
-
-    /**
-     * @brief Guess native console label (RDP/VNC/X Console)
-     * Reference: VNCTabView.cs lines 790-824
-     */
-    QString guessNativeConsoleLabel() const;
-
-    /**
-     * @brief VNC resize handler (update scaling, parent size)
-     * Reference: VNCTabView.cs lines 836-844
-     */
-    void vncResizeHandler();
-
-    /**
-     * @brief Check if desktop size has changed
-     * Reference: VNCTabView.cs lines 870-881
-     */
-    bool desktopSizeHasChanged();
-
-    /**
-     * @brief Wait for INS key (Ctrl+Alt+Ins handling)
-     * Reference: VNCTabView.cs lines 950-956
-     */
-    void waitForInsKey();
-
-    /**
-     * @brief Cancel wait for INS key and send CAD
-     * Reference: VNCTabView.cs lines 958-967
-     */
-    void cancelWaitForInsKeyAndSendCAD();
-
-    /**
-     * @brief Update tooltip of toggle console button
-     * Reference: VNCTabView.cs lines 1302-1332
-     */
-    void updateTooltipOfToggleButton();
-
-    /**
-     * @brief Update SSH console button state
-     * Reference: VNCTabView.cs lines 1334-1365
-     */
-    void updateOpenSSHConsoleButtonState();
-
-    /**
-     * @brief Show/hide RDP version warning
-     * Reference: VNCTabView.cs lines 220-223
-     */
-    void showOrHideRdpVersionWarning();
-
-    /**
-     * @brief Refresh CD/DVD drives list
-     * Reference: MultipleDvdIsoList.cs lines 116-187
-     */
-    void refreshCdDrives();
-
-    /**
-     * @brief Refresh ISO list for selected drive
-     * Reference: CDChanger.cs (inherits from ISODropDownBox)
-     */
-    void refreshIsoList();
-
-    /**
-     * @brief Change CD/DVD ISO image
-     * Reference: CDChanger.cs lines 89-108
-     */
-    void changeCdIso(const QString& vdiRef);
-
-    /**
-     * @brief Show GPU warning if required
-     * Reference: VNCTabView.cs lines 1367-1379
-     */
-    void showGpuWarningIfRequired(bool mustConnectRemoteDesktop);
-
-    /**
-     * @brief Toggle dock/undock (internal)
-     * Reference: VNCTabView.cs lines 995-1005
-     */
-    void toggleDockUnDock();
-
-    /**
-     * @brief Toggle fullscreen (internal)
-     * Reference: VNCTabView.cs lines 1008-1066
-     */
-    void toggleFullscreen();
-
-    /**
-     * @brief Toggle console focus (capture/release keyboard and mouse)
-     * Reference: VNCTabView.cs lines 1436-1456
-     */
-    void toggleConsoleFocus();
-
-private:
-    QVariantMap getCachedVmData() const;
-    QString getCachedVmPowerState() const;
-
-    Ui::VNCTabView* ui; ///< Qt Designer UI
-
-    XSVNCScreen* _vncScreen; ///< Console controller
-    VNCView* _parentVNCView; ///< Parent docking manager
-    XenLib* _xenLib;         ///< XenLib instance
-
-    QString _vmRef;           ///< VM OpaqueRef
-    QString _guestMetricsRef; ///< Guest metrics OpaqueRef
-    QString _targetHostRef;   ///< Target host OpaqueRef (for non-control-domain VMs)
-
-    QSize _lastDesktopSize;     ///< Last known desktop size
-    bool _switchOnTabOpened;    ///< Auto-switch to RDP on tab open
-    bool _ignoringResizes;      ///< Ignore resize events during scaling changes
-    bool _ignoreScaleChange;    ///< Ignore scale checkbox change events
-    bool _inToggleDockUnDock;   ///< Guard for dock/undock toggle
-    bool _inToggleFullscreen;   ///< Guard for fullscreen toggle
-    bool _inToggleConsoleFocus; ///< Guard for console focus toggle
-    bool _oldScaleValue;        ///< Previous scale checkbox value (C#: bool oldScaleValue)
-    bool _tryToConnectRDP;      ///< Flag to attempt RDP connection (C#: bool tryToConnectRDP)
-
-    ConsoleKeyHandler _keyHandler; ///< Keyboard shortcut handler
-
-    QTimer* _insKeyTimer; ///< Timer for Ctrl+Alt+Ins detection
-
-    // RDP/VNC toggle state
-    static constexpr bool RDP = true;   ///< C#: private const bool RDP = true;
-    static constexpr bool XVNC = false; ///< C#: private const bool XVNC = false;
-    bool _toggleToXVNCorRDP;            ///< Next protocol to switch to
-
-    // CD/DVD drive state
-    bool _inCdRefresh;        ///< Guard for CD refresh to avoid recursion
-    QString _currentCdVbdRef; ///< Currently selected VBD (CD/DVD drive)
-
-    // Fullscreen support (forward declare, will implement with VNCView)
-    // FullScreenForm* _fullscreenForm;
-    // FullScreenHint* _fullscreenHint;
+    public:
+        /**
+         * @brief Timeout for INS key detection (milliseconds)
+         * C#: public const int INS_KEY_TIMEOUT = 500;
+         */
+        static constexpr int INS_KEY_TIMEOUT = 500;
+
+        /**
+         * @brief Constructor
+         * Reference: VNCTabView.cs lines 94-228
+         *
+         * @param parent Parent VNCView (for docking callbacks)
+         * @param vmRef VM OpaqueRef
+         * @param elevatedUsername Optional elevated credentials username
+         * @param elevatedPassword Optional elevated credentials password
+         * @param conn XenConnection instance for XenAPI access
+         * @param parentWidget Qt parent widget
+         */
+        explicit VNCTabView(VNCView* parent,
+                            const QString& vmRef,
+                            const QString& elevatedUsername,
+                            const QString& elevatedPassword,
+                            XenConnection* conn,
+                            QWidget* parentWidget = nullptr);
+
+        /**
+         * @brief Destructor - cleanup resources, unregister listeners
+         * Reference: VNCTabView.Designer.cs lines 14-37
+         */
+        ~VNCTabView();
+
+        /**
+         * @brief Get/set scaled mode
+         * Reference: VNCTabView.cs lines 230-234
+         */
+        bool isScaled() const;
+        void setScaled(bool scaled);
+
+        /**
+         * @brief Check if RDP control is enabled (for XSVNCScreen)
+         * Reference: VNCTabView.cs line 92
+         */
+        bool isRDPControlEnabled() const;
+
+        /**
+         * @brief Pause console updates (when tab hidden)
+         * Reference: VNCTabView.cs lines 772-776
+         */
+        void pause();
+
+        /**
+         * @brief Resume console updates (when tab visible)
+         * Reference: VNCTabView.cs lines 778-782
+         */
+        void unpause();
+
+        /**
+         * @brief Disable VNC toggle button (called by XSVNCScreen during default console detection)
+         * Reference: VNCTabView.cs lines 1072-1076
+         */
+        void disableToggleVNCButton();
+
+        /**
+         * @brief Enable VNC toggle button
+         * Reference: VNCTabView.cs lines 1078-1082
+         */
+        void enableToggleVNCButton();
+
+        /**
+         * @brief Update dock button icon/text based on docked state
+         * Reference: VNCTabView.cs lines 478-490
+         */
+        void updateDockButton();
+
+        /**
+         * @brief Update fullscreen button enabled state
+         * Reference: VNCTabView.cs lines 492-509
+         */
+        void updateFullScreenButton();
+
+        /**
+         * @brief Setup CD/DVD ISO toolbar
+         * Reference: VNCTabView.cs lines 618-621
+         */
+        void setupCD();
+
+        /**
+         * @brief Send Ctrl+Alt+Delete to the VM
+         * Reference: VNCTabView.cs lines 1269-1273
+         */
+        void sendCAD();
+
+        /**
+         * @brief Update parent VNCView minimum size based on content
+         * Reference: VNCTabView.cs lines 350-358
+         */
+        void updateParentMinimumSize();
+
+        /**
+         * @brief Scale console to fit window (if scaling enabled)
+         * Reference: VNCTabView.cs lines 846-868
+         */
+        void maybeScale();
+
+        /**
+         * @brief Calculate required size to show desktop at 1:1 scale
+         * Reference: VNCTabView.cs lines 883-910
+         * @return Size needed for unscaled display
+         */
+        QSize growToFit();
+
+        /**
+         * @brief Access to keyboard shortcut handler
+         * C#: internal readonly ConsoleKeyHandler KeyHandler = new ConsoleKeyHandler();
+         */
+        ConsoleKeyHandler* keyHandler()
+        {
+            return &_keyHandler;
+        }
+
+    public slots:
+        /**
+         * @brief Handle tab opened event - may auto-switch to RDP
+         * Reference: VNCTabView.cs lines 1275-1300
+         */
+        void onTabOpened();
+
+    signals:
+        /**
+         * @brief Emitted when toggle dock/undock requested
+         * Reference: VNCTabView.cs line 995
+         */
+        void toggleDockRequested();
+
+        /**
+         * @brief Emitted when fullscreen mode requested
+         * Reference: VNCTabView.cs line 1008
+         */
+        void toggleFullscreenRequested();
+
+        /**
+         * @brief Emitted when VM start requested (from power state label click)
+         */
+        void vmStartRequested(const QString& vmRef);
+
+        /**
+         * @brief Emitted when VM resume requested (from power state label click)
+         */
+        void vmResumeRequested(const QString& vmRef);
+
+        /**
+         * @brief Emitted when console size changes (for VNCView resize)
+         * Reference: VNCTabView.cs line 826
+         */
+        void consoleResized();
+
+    private slots:
+        /**
+         * @brief Handle VM property changes
+         * Reference: VNCTabView.cs lines 511-563
+         */
+        void onVMPropertyChanged(const QString& propertyName);
+
+        /**
+         * @brief Handle guest metrics property changes
+         * Reference: VNCTabView.cs lines 565-590
+         */
+        void onGuestMetricsPropertyChanged(const QString& propertyName);
+
+        /**
+         * @brief Handle settings changes
+         * Reference: VNCTabView.cs lines 340-348
+         */
+        void onSettingsPropertyChanged(const QString& settingName);
+
+        /**
+         * @brief Handle send CAD button click
+         * Reference: VNCTabView.cs lines 930-934
+         */
+        void onSendCADClicked();
+
+        /**
+         * @brief Handle scale checkbox toggled
+         * Reference: VNCTabView.cs lines 912-928
+         */
+        void onScaleCheckBoxChanged(bool checked);
+
+        /**
+         * @brief Handle dock button click
+         * Reference: VNCTabView.cs lines 936-941
+         */
+        void onDockButtonClicked();
+
+        /**
+         * @brief Handle fullscreen button click
+         * Reference: VNCTabView.cs lines 943-946
+         */
+        void onFullscreenButtonClicked();
+
+        /**
+         * @brief Handle toggle console button (VNC ↔ RDP) click
+         * Reference: VNCTabView.cs lines 1143-1241
+         */
+        void onToggleConsoleButtonClicked();
+
+        /**
+         * @brief Handle SSH console button click
+         * Reference: VNCTabView.cs lines 1536-1550
+         */
+        void onSSHButtonClicked();
+
+        /**
+         * @brief Handle power state label click (show lifecycle menu)
+         * Reference: VNCTabView.cs lines 738-770
+         */
+        void onPowerStateLabelClicked();
+
+        /**
+         * @brief Handle VNC/RDP resize events
+         * Reference: VNCTabView.cs lines 826-834
+         */
+        void onRDPorVNCResizeHandler();
+
+        /**
+         * @brief RDP detected callback from XSVNCScreen
+         * Reference: VNCTabView.cs lines 1084-1113
+         */
+        void onDetectRDP();
+
+        /**
+         * @brief VNC detected callback from XSVNCScreen
+         * Reference: VNCTabView.cs lines 1115-1141
+         */
+        void onDetectVNC();
+
+        /**
+         * @brief User cancelled auth (password prompt)
+         * Reference: VNCTabView.cs lines 1252-1273
+         */
+        void onUserCancelledAuth();
+
+        /**
+         * @brief VNC connection attempt cancelled
+         * Reference: VNCTabView.cs lines 1243-1250
+         */
+        void onVncConnectionAttemptCancelled();
+
+        /**
+         * @brief INS key timer timeout (for Ctrl+Alt+Ins → Ctrl+Alt+Del)
+         * Reference: VNCTabView.cs lines 969-983
+         */
+        void onInsKeyTimeout();
+
+        /**
+         * @brief Handle CD/DVD drive selection change
+         * Reference: MultipleDvdIsoList.cs lines 233-241
+         */
+        void onCdDriveChanged(int index);
+
+        /**
+         * @brief Handle ISO selection from dropdown
+         * Reference: CDChanger.cs lines 66-87
+         */
+        void onCdIsoSelected(int index);
+
+        /**
+         * @brief Handle eject CD/DVD button click
+         * Reference: MultipleDvdIsoList.cs lines 267-273
+         */
+        void onCdEject();
+
+        /**
+         * @brief Handle create new CD/DVD drive link
+         * Reference: MultipleDvdIsoList.cs lines 243-265
+         */
+        void onCreateNewCdDrive();
+
+    private:
+        /**
+         * @brief Register keyboard shortcuts
+         * Reference: VNCTabView.cs lines 360-421
+         */
+        void registerShortcutKeys();
+
+        /**
+         * @brief Deregister keyboard shortcuts
+         * Reference: VNCTabView.cs lines 423-476
+         */
+        void deregisterShortcutKeys();
+
+        /**
+         * @brief Register event listeners (VM, guest metrics, hosts, settings)
+         * Reference: VNCTabView.cs lines 94-228 (constructor registration)
+         */
+        void registerEventListeners();
+
+        /**
+         * @brief Unregister all event listeners
+         * Reference: VNCTabView.cs lines 290-338
+         */
+        void unregisterEventListeners();
+
+        /**
+         * @brief Update power state display
+         * Reference: VNCTabView.cs lines 623-660
+         */
+        void updatePowerState();
+
+        /**
+         * @brief Maybe enable toggle console button based on VM state
+         * Reference: VNCTabView.cs lines 662-668
+         */
+        void maybeEnableButton();
+
+        /**
+         * @brief Show power state label with message
+         * Reference: VNCTabView.cs lines 670-675
+         */
+        void enablePowerStateLabel(const QString& label);
+
+        /**
+         * @brief Hide power state label with message
+         * Reference: VNCTabView.cs lines 677-682
+         */
+        void disablePowerStateLabel(const QString& label);
+
+        /**
+         * @brief Hide top bar controls
+         * Reference: VNCTabView.cs lines 684-728
+         */
+        void hideTopBarContents();
+
+        /**
+         * @brief Show top bar controls
+         * Reference: VNCTabView.cs lines 730-736
+         */
+        void showTopBarContents();
+
+        /**
+         * @brief Disable console controls when VM is powered off
+         * Reference: VNCTabView.cs lines 1290-1302
+         */
+        void vmPowerOff();
+
+        /**
+         * @brief Enable console controls when VM is powered on
+         * Reference: VNCTabView.cs lines 1304-1308
+         */
+        void vmPowerOn();
+
+        /**
+         * @brief Check if RDP can be enabled
+         * Reference: VNCTabView.cs lines 784-788
+         */
+        bool canEnableRDP() const;
+
+        /**
+         * @brief Enable RDP if VM capabilities allow
+         * Reference: VNCTabView.cs lines 592-598
+         */
+        void enableRDPIfCapable();
+
+        /**
+         * @brief Update button states and labels based on protocol
+         * Reference: VNCTabView.cs lines 1194-1219
+         */
+        void updateButtons();
+
+        /**
+         * @brief Guess native console label (RDP/VNC/X Console)
+         * Reference: VNCTabView.cs lines 790-824
+         */
+        QString guessNativeConsoleLabel() const;
+
+        /**
+         * @brief VNC resize handler (update scaling, parent size)
+         * Reference: VNCTabView.cs lines 836-844
+         */
+        void vncResizeHandler();
+
+        /**
+         * @brief Check if desktop size has changed
+         * Reference: VNCTabView.cs lines 870-881
+         */
+        bool desktopSizeHasChanged();
+
+        /**
+         * @brief Wait for INS key (Ctrl+Alt+Ins handling)
+         * Reference: VNCTabView.cs lines 950-956
+         */
+        void waitForInsKey();
+
+        /**
+         * @brief Cancel wait for INS key and send CAD
+         * Reference: VNCTabView.cs lines 958-967
+         */
+        void cancelWaitForInsKeyAndSendCAD();
+
+        /**
+         * @brief Update tooltip of toggle console button
+         * Reference: VNCTabView.cs lines 1302-1332
+         */
+        void updateTooltipOfToggleButton();
+
+        /**
+         * @brief Update SSH console button state
+         * Reference: VNCTabView.cs lines 1334-1365
+         */
+        void updateOpenSSHConsoleButtonState();
+
+        /**
+         * @brief Show/hide RDP version warning
+         * Reference: VNCTabView.cs lines 220-223
+         */
+        void showOrHideRdpVersionWarning();
+
+        /**
+         * @brief Refresh CD/DVD drives list
+         * Reference: MultipleDvdIsoList.cs lines 116-187
+         */
+        void refreshCdDrives();
+
+        /**
+         * @brief Refresh ISO list for selected drive
+         * Reference: CDChanger.cs (inherits from ISODropDownBox)
+         */
+        void refreshIsoList();
+
+        /**
+         * @brief Change CD/DVD ISO image
+         * Reference: CDChanger.cs lines 89-108
+         */
+        void changeCdIso(const QString& vdiRef);
+
+        /**
+         * @brief Show GPU warning if required
+         * Reference: VNCTabView.cs lines 1367-1379
+         */
+        void showGpuWarningIfRequired(bool mustConnectRemoteDesktop);
+
+        /**
+         * @brief Toggle dock/undock (internal)
+         * Reference: VNCTabView.cs lines 995-1005
+         */
+        void toggleDockUnDock();
+
+        /**
+         * @brief Toggle fullscreen (internal)
+         * Reference: VNCTabView.cs lines 1008-1066
+         */
+        void toggleFullscreen();
+
+        /**
+         * @brief Toggle console focus (capture/release keyboard and mouse)
+         * Reference: VNCTabView.cs lines 1436-1456
+         */
+        void toggleConsoleFocus();
+
+    private:
+        QVariantMap getCachedVmData() const;
+        QString getCachedVmPowerState() const;
+        XenCache* cache() const;
+        QVariantMap getCachedObjectData(const QString& type, const QString& ref) const;
+        QString getGuestMetricsRef(const QString& vmRef) const;
+        bool isControlDomainZero(const QString& vmRef, QString* outHostRef = nullptr) const;
+        bool isSRDriverDomain(const QString& vmRef, QString* outSRRef = nullptr) const;
+        bool isHVM(const QString& vmRef) const;
+        bool hasRDP(const QString& vmRef) const;
+        bool isRDPEnabled(const QString& vmRef) const;
+        bool rdpControlEnabledForVm(const QString& vmRef) const;
+        bool canEnableRDPForVm(const QString& vmRef) const;
+        bool isVMWindows(const QString& vmRef) const;
+        QString getVMIPAddressForSSH(const QString& vmRef) const;
+        bool changeVMISO(const QString& vmRef, const QString& vbdRef, const QString& vdiRef) const;
+        bool createCdDrive(const QString& vmRef) const;
+
+        Ui::VNCTabView* ui; ///< Qt Designer UI
+
+        XSVNCScreen* _vncScreen; ///< Console controller
+        VNCView* _parentVNCView; ///< Parent docking manager
+        XenConnection *_connection;
+
+        QString _vmRef;           ///< VM OpaqueRef
+        QString _guestMetricsRef; ///< Guest metrics OpaqueRef
+        QString _targetHostRef;   ///< Target host OpaqueRef (for non-control-domain VMs)
+
+        QSize _lastDesktopSize;     ///< Last known desktop size
+        bool _switchOnTabOpened;    ///< Auto-switch to RDP on tab open
+        bool _ignoringResizes;      ///< Ignore resize events during scaling changes
+        bool _ignoreScaleChange;    ///< Ignore scale checkbox change events
+        bool _inToggleDockUnDock;   ///< Guard for dock/undock toggle
+        bool _inToggleFullscreen;   ///< Guard for fullscreen toggle
+        bool _inToggleConsoleFocus; ///< Guard for console focus toggle
+        bool _oldScaleValue;        ///< Previous scale checkbox value (C#: bool oldScaleValue)
+        bool _tryToConnectRDP;      ///< Flag to attempt RDP connection (C#: bool tryToConnectRDP)
+
+        ConsoleKeyHandler _keyHandler; ///< Keyboard shortcut handler
+
+        QTimer* _insKeyTimer; ///< Timer for Ctrl+Alt+Ins detection
+
+        // RDP/VNC toggle state
+        static constexpr bool RDP = true;   ///< C#: private const bool RDP = true;
+        static constexpr bool XVNC = false; ///< C#: private const bool XVNC = false;
+        bool _toggleToXVNCorRDP;            ///< Next protocol to switch to
+
+        // CD/DVD drive state
+        bool _inCdRefresh;        ///< Guard for CD refresh to avoid recursion
+        QString _currentCdVbdRef; ///< Currently selected VBD (CD/DVD drive)
+
+        // Fullscreen support (forward declare, will implement with VNCView)
+        // FullScreenForm* _fullscreenForm;
+        // FullScreenHint* _fullscreenHint;
 };
 
 #endif // VNCTABVIEW_H

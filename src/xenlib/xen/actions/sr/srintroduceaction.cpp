@@ -26,7 +26,7 @@
  */
 
 #include "srintroduceaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../../xencache.h"
 #include "../../sr.h"
@@ -37,6 +37,8 @@
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../xenapi/xenapi_Host.h"
 #include <QDebug>
+
+using namespace XenAPI;
 
 SrIntroduceAction::SrIntroduceAction(XenConnection* connection,
                                      const QString& srUuid,
@@ -62,8 +64,8 @@ void SrIntroduceAction::run()
              << "name:" << m_srName
              << "type:" << m_srType;
 
-    XenSession* session = this->session();
-    if (!session || !session->isLoggedIn())
+    Session* session = this->session();
+    if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
@@ -247,7 +249,7 @@ bool SrIntroduceAction::isFirstSharedNonISOSR() const
     }
 
     // Check cache for existing shared non-ISO SRs
-    XenCache* cache = connection()->getCache();
+    XenCache* cache = connection()->GetCache();
     if (!cache)
     {
         return false;

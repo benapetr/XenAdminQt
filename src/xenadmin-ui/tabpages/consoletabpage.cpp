@@ -61,7 +61,7 @@ ConsoleTabPage::~ConsoleTabPage()
  * @brief Check if tab is applicable for object type
  * Reference: Console tab is shown for VMs and Hosts
  */
-bool ConsoleTabPage::isApplicableForObjectType(const QString& objectType) const
+bool ConsoleTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // Console tab is applicable to VMs and Hosts
     return objectType == "vm" || objectType == "host";
@@ -104,7 +104,7 @@ void ConsoleTabPage::setConsolePanel(ConsolePanel* consolePanel)
  * - ConsolePanel.UnpauseActiveView(focusIfTabClicked)
  * - ConsolePanel.UpdateRDPResolution()
  */
-void ConsoleTabPage::onPageShown()
+void ConsoleTabPage::OnPageShown()
 {
     qDebug() << "ConsoleTabPage: onPageShown()";
 
@@ -125,7 +125,7 @@ void ConsoleTabPage::onPageShown()
  * - Call PageHidden() on the tab page being hidden
  * - Tab page can perform cleanup if needed
  */
-void ConsoleTabPage::onPageHidden()
+void ConsoleTabPage::OnPageHidden()
 {
     qDebug() << "ConsoleTabPage: onPageHidden()";
 

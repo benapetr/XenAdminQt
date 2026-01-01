@@ -55,7 +55,7 @@ struct AsyncOpState
 class XenAsyncOperations::Private
 {
     public:
-        XenSession* session = nullptr;
+        XenAPI::Session* session = nullptr;
         XenRpcAPI* api = nullptr;
         QHash<QString, AsyncOpState*> operations;
         QTimer* globalStatusTimer = nullptr;
@@ -67,7 +67,7 @@ class XenAsyncOperations::Private
         int statusPollInterval = 1000; // 1 second - poll frequently for responsive UI
 };
 
-XenAsyncOperations::XenAsyncOperations(XenSession* session, QObject* parent)
+XenAsyncOperations::XenAsyncOperations(XenAPI::Session* session, QObject* parent)
     : QObject(parent), d(new Private)
 {
     this->d->session = session;
@@ -107,7 +107,7 @@ QString XenAsyncOperations::generateOperationId()
 
 QString XenAsyncOperations::startAsyncOperation(const QString& method, const QVariantList& params)
 {
-    if (!this->d->session || !this->d->session->isLoggedIn())
+    if (!this->d->session || !this->d->session->IsLoggedIn())
     {
         emit this->operationFailed("", "Not authenticated");
         return QString();

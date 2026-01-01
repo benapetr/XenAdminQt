@@ -27,14 +27,14 @@
 
 #include "deletevmsandtemplatescommand.h"
 #include "../../mainwindow.h"
-#include "../../../xenlib/xenlib.h"
+#include "xen/xenobject.h"
+#include "xencache.h"
 
-DeleteVMsAndTemplatesCommand::DeleteVMsAndTemplatesCommand(MainWindow* mainWindow, QObject* parent)
-    : DeleteVMCommand(mainWindow, parent)
+DeleteVMsAndTemplatesCommand::DeleteVMsAndTemplatesCommand(MainWindow* mainWindow, QObject* parent) : DeleteVMCommand(mainWindow, parent)
 {
 }
 
-bool DeleteVMsAndTemplatesCommand::canRun() const
+bool DeleteVMsAndTemplatesCommand::CanRun() const
 {
     QString objectType = this->getSelectedObjectType();
 
@@ -51,7 +51,12 @@ bool DeleteVMsAndTemplatesCommand::canRunForVM(const QString& vmRef) const
     if (vmRef.isEmpty())
         return false;
 
-    QVariantMap vmData = this->xenLib()->getCachedObjectData("vm", vmRef);
+    QSharedPointer<XenObject> ob = this->GetObject();
+
+    if (!ob)
+        return false;
+
+    QVariantMap vmData = ob->GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
         return false;
 
@@ -68,7 +73,7 @@ bool DeleteVMsAndTemplatesCommand::canRunForVM(const QString& vmRef) const
     return allowedOps.contains("destroy");
 }
 
-QString DeleteVMsAndTemplatesCommand::menuText() const
+QString DeleteVMsAndTemplatesCommand::MenuText() const
 {
     return tr("&Delete");
 }

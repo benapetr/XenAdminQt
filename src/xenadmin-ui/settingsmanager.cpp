@@ -173,6 +173,28 @@ void SettingsManager::setLastConnectedServer(const QString& id)
     emit settingsChanged("General/lastConnectedServer");
 }
 
+QStringList SettingsManager::getServerHistory() const
+{
+    return this->m_settings->value("General/serverHistory").toStringList();
+}
+
+void SettingsManager::updateServerHistory(const QString& hostnameWithPort)
+{
+    if (hostnameWithPort.isEmpty())
+        return;
+
+    QStringList history = getServerHistory();
+    if (!history.contains(hostnameWithPort))
+    {
+        while (history.size() >= 20)
+            history.removeFirst();
+        history.append(hostnameWithPort);
+        this->m_settings->setValue("General/serverHistory", history);
+        emit settingsChanged("General/serverHistory");
+        this->sync();
+    }
+}
+
 // Connection profiles
 void SettingsManager::saveConnectionProfile(const ConnectionProfile& profile)
 {

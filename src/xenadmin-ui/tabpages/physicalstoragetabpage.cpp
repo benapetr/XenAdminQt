@@ -67,7 +67,7 @@ PhysicalStorageTabPage::~PhysicalStorageTabPage()
     delete this->ui;
 }
 
-bool PhysicalStorageTabPage::isApplicableForObjectType(const QString& objectType) const
+bool PhysicalStorageTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // Physical Storage tab is applicable to Hosts and Pools
     // C# Reference: xenadmin/XenAdmin/MainWindow.cs line 1337
@@ -76,10 +76,10 @@ bool PhysicalStorageTabPage::isApplicableForObjectType(const QString& objectType
     return objectType == "host" || objectType == "pool";
 }
 
-void PhysicalStorageTabPage::setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void PhysicalStorageTabPage::SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
 {
     // Call base implementation
-    BaseTabPage::setXenObject(objectType, objectRef, objectData);
+    BaseTabPage::SetXenObject(conn, objectType, objectRef, objectData);
 }
 
 void PhysicalStorageTabPage::refreshContent()
@@ -87,7 +87,7 @@ void PhysicalStorageTabPage::refreshContent()
     // Clear table
     this->ui->storageTable->setRowCount(0);
 
-    if (!this->m_xenLib || this->m_objectRef.isEmpty())
+    if (!this->m_connection || this->m_objectRef.isEmpty())
     {
         this->updateButtonStates();
         return;
@@ -112,13 +112,13 @@ void PhysicalStorageTabPage::populateHostStorage()
     // Shows storage repositories attached to this host
     this->ui->titleLabel->setText("Storage Repositories");
 
-    if (!this->m_xenLib || this->m_objectRef.isEmpty())
+    if (!this->m_connection || this->m_objectRef.isEmpty())
     {
         return;
     }
 
     // Get host record to find PBDs
-    QVariantMap hostData = this->m_xenLib->getCache()->ResolveObjectData("host", this->m_objectRef);
+    QVariantMap hostData = this->m_connection->GetCache()->ResolveObjectData("host", this->m_objectRef);
     QVariantList pbdRefs = hostData.value("PBDs", QVariantList()).toList();
 
     if (pbdRefs.isEmpty())
@@ -134,13 +134,13 @@ void PhysicalStorageTabPage::populateHostStorage()
     for (const QVariant& pbdVar : pbdRefs)
     {
         QString pbdRef = pbdVar.toString();
-        QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
+        QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
 
         if (pbdData.isEmpty())
             continue;
 
         QString srRef = pbdData.value("SR").toString();
-        QVariantMap srData = this->m_xenLib->getCache()->ResolveObjectData("sr", srRef);
+        QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
 
         if (srData.isEmpty())
             continue;
@@ -174,7 +174,7 @@ void PhysicalStorageTabPage::populateHostStorage()
     // Now add rows for each SR
     for (const QString& srRef : srRefsList)
     {
-        QVariantMap srData = this->m_xenLib->getCache()->ResolveObjectData("sr", srRef);
+        QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
 
         if (srData.isEmpty())
             continue;
@@ -199,7 +199,7 @@ void PhysicalStorageTabPage::populateHostStorage()
         for (const QVariant& vdiVar : vdiRefs)
         {
             QString vdiRef = vdiVar.toString();
-            QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
+            QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
             if (!vdiData.isEmpty())
             {
                 virtualAllocation += vdiData.value("virtual_size", 0).toLongLong();
@@ -270,14 +270,14 @@ void PhysicalStorageTabPage::populatePoolStorage()
     // Shows all storage repositories in the pool (when host == null, shows all PBDs in pool)
     this->ui->titleLabel->setText("Storage Repositories");
 
-    if (!this->m_xenLib || this->m_objectRef.isEmpty())
+    if (!this->m_connection || this->m_objectRef.isEmpty())
     {
         return;
     }
 
     // For pools, show all SRs in the pool
     // C#: List<PBD> pbds = host != null ? connection.ResolveAll(host.PBDs) : connection.Cache.PBDs (line 230)
-    QList<QVariantMap> allSRs = this->m_xenLib->getCache()->GetAllData("sr");
+    QList<QVariantMap> allSRs = this->m_connection->GetCache()->GetAllData("sr");
 
     QList<QString> srRefsList;
 
@@ -306,7 +306,7 @@ void PhysicalStorageTabPage::populatePoolStorage()
     // Now add rows for each SR
     for (const QString& srRef : srRefsList)
     {
-        QVariantMap srData = this->m_xenLib->getCache()->ResolveObjectData("sr", srRef);
+        QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
 
         if (srData.isEmpty())
             continue;
@@ -329,7 +329,7 @@ void PhysicalStorageTabPage::populatePoolStorage()
         for (const QVariant& vdiVar : vdiRefs)
         {
             QString vdiRef = vdiVar.toString();
-            QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
+            QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
             if (!vdiData.isEmpty())
             {
                 virtualAllocation += vdiData.value("virtual_size", 0).toLongLong();
@@ -402,7 +402,7 @@ void PhysicalStorageTabPage::updateButtonStates()
     if (mainWindow)
     {
         NewSRCommand newSrCmd(mainWindow);
-        this->ui->newSRButton->setEnabled(newSrCmd.canRun());
+        this->ui->newSRButton->setEnabled(newSrCmd.CanRun());
     } else
     {
         this->ui->newSRButton->setEnabled(false);
@@ -415,11 +415,11 @@ void PhysicalStorageTabPage::updateButtonStates()
     {
         TrimSRCommand trimCmd(mainWindow);
         trimCmd.setTargetSR(selectedSrRef);
-        canTrim = trimCmd.canRun();
+        canTrim = trimCmd.CanRun();
 
         StoragePropertiesCommand propsCmd(mainWindow);
-        propsCmd.setTargetSR(selectedSrRef);
-        canShowProperties = propsCmd.canRun();
+        propsCmd.setTargetSR(selectedSrRef, this->m_connection);
+        canShowProperties = propsCmd.CanRun();
     }
 
     this->ui->trimButton->setEnabled(canTrim);
@@ -453,14 +453,14 @@ void PhysicalStorageTabPage::onNewSRButtonClicked()
         return;
 
     NewSRCommand command(mainWindow);
-    if (!command.canRun())
+    if (!command.CanRun())
     {
         QMessageBox::warning(this, tr("Cannot Create Storage Repository"),
                              tr("Storage repository creation is not available right now."));
         return;
     }
 
-    command.run();
+    command.Run();
 }
 
 void PhysicalStorageTabPage::onTrimButtonClicked()
@@ -476,14 +476,14 @@ void PhysicalStorageTabPage::onTrimButtonClicked()
     TrimSRCommand command(mainWindow);
     command.setTargetSR(srRef);
 
-    if (!command.canRun())
+    if (!command.CanRun())
     {
         QMessageBox::warning(this, tr("Cannot Trim Storage Repository"),
                              tr("The selected storage repository cannot be trimmed at this time."));
         return;
     }
 
-    command.run();
+    command.Run();
 }
 
 void PhysicalStorageTabPage::onPropertiesButtonClicked()
@@ -497,12 +497,12 @@ void PhysicalStorageTabPage::onPropertiesButtonClicked()
         return;
 
     StoragePropertiesCommand command(mainWindow);
-    command.setTargetSR(srRef);
+    command.setTargetSR(srRef, this->m_connection);
 
-    if (!command.canRun())
+    if (!command.CanRun())
         return;
 
-    command.run();
+    command.Run();
 }
 
 void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& pos)
@@ -523,11 +523,11 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
 
     NewSRCommand newCmd(mainWindow);
     QAction* newAction = menu.addAction(tr("New Storage Repository..."));
-    newAction->setEnabled(newCmd.canRun());
+    newAction->setEnabled(newCmd.CanRun());
     connect(newAction, &QAction::triggered, this, [mainWindow]() {
         NewSRCommand cmd(mainWindow);
-        if (cmd.canRun())
-            cmd.run();
+        if (cmd.CanRun())
+            cmd.Run();
     });
 
     if (!srRef.isEmpty())
@@ -535,34 +535,35 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
         TrimSRCommand trimCmd(mainWindow);
         trimCmd.setTargetSR(srRef);
         QAction* trimAction = menu.addAction(tr("Reclaim Freed Space..."));
-        trimAction->setEnabled(trimCmd.canRun());
+        trimAction->setEnabled(trimCmd.CanRun());
         connect(trimAction, &QAction::triggered, this, [mainWindow, srRef]() {
             TrimSRCommand cmd(mainWindow);
             cmd.setTargetSR(srRef);
-            if (cmd.canRun())
-                cmd.run();
+            if (cmd.CanRun())
+                cmd.Run();
         });
 
         DetachSRCommand detachCmd(mainWindow);
         detachCmd.setTargetSR(srRef);
         QAction* detachAction = menu.addAction(tr("Detach Storage Repository"));
-        detachAction->setEnabled(detachCmd.canRun());
+        detachAction->setEnabled(detachCmd.CanRun());
         connect(detachAction, &QAction::triggered, this, [mainWindow, srRef]() {
             DetachSRCommand cmd(mainWindow);
             cmd.setTargetSR(srRef);
-            if (cmd.canRun())
-                cmd.run();
+            if (cmd.CanRun())
+                cmd.Run();
         });
 
         StoragePropertiesCommand propsCmd(mainWindow);
-        propsCmd.setTargetSR(srRef);
+        propsCmd.setTargetSR(srRef, this->m_connection);
         QAction* propsAction = menu.addAction(tr("Properties..."));
-        propsAction->setEnabled(propsCmd.canRun());
-        connect(propsAction, &QAction::triggered, this, [mainWindow, srRef]() {
+        propsAction->setEnabled(propsCmd.CanRun());
+        XenConnection *cn = this->m_connection;
+        connect(propsAction, &QAction::triggered, this, [mainWindow, srRef, cn]() {
             StoragePropertiesCommand cmd(mainWindow);
-            cmd.setTargetSR(srRef);
-            if (cmd.canRun())
-                cmd.run();
+            cmd.setTargetSR(srRef, cn);
+            if (cmd.CanRun())
+                cmd.Run();
         });
     }
 

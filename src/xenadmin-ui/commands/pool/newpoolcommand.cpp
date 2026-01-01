@@ -34,19 +34,19 @@ NewPoolCommand::NewPoolCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool NewPoolCommand::canRun() const
+bool NewPoolCommand::CanRun() const
 {
     // Can always run (dialog decides what's selectable)
     return true;
 }
 
-void NewPoolCommand::run()
+void NewPoolCommand::Run()
 {
     NewPoolDialog dialog(this->mainWindow());
     dialog.exec();
 }
 
-QString NewPoolCommand::menuText() const
+QString NewPoolCommand::MenuText() const
 {
     return "New Pool...";
 }

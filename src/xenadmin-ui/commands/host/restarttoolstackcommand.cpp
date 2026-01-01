@@ -27,33 +27,31 @@
 
 #include "restarttoolstackcommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
-#include "xen/api.h"
-#include "xencache.h"
 #include <QMessageBox>
+#include "xen/host.h"
 
-RestartToolstackCommand::RestartToolstackCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+RestartToolstackCommand::RestartToolstackCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
-bool RestartToolstackCommand::canRun() const
+bool RestartToolstackCommand::CanRun() const
 {
-    QString hostRef = this->getSelectedHostRef();
-    if (hostRef.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return false;
 
     // Can restart toolstack if host is live
-    return this->isHostLive(hostRef);
+    return this->isHostLive();
 }
 
-void RestartToolstackCommand::run()
+void RestartToolstackCommand::Run()
 {
-    QString hostRef = this->getSelectedHostRef();
-    QString hostName = this->getSelectedHostName();
-
-    if (hostRef.isEmpty() || hostName.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return;
+
+    QString hostRef = host->OpaqueRef();
+    QString hostName = this->getSelectedHostName();
 
     // Show confirmation dialog
     int ret = QMessageBox::warning(this->mainWindow(), "Restart Toolstack",
@@ -86,60 +84,7 @@ void RestartToolstackCommand::run()
     }
 }
 
-QString RestartToolstackCommand::menuText() const
+QString RestartToolstackCommand::MenuText() const
 {
     return "Restart Toolstack";
-}
-
-QString RestartToolstackCommand::getSelectedHostRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString RestartToolstackCommand::getSelectedHostName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    if (!this->mainWindow()->xenLib())
-        return QString();
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return QString();
-
-    QString hostRef = this->getSelectedObjectRef();
-    QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
-    return hostData.value("name_label", "").toString();
-}
-
-bool RestartToolstackCommand::isHostLive(const QString& hostRef) const
-{
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
-
-    QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
-    if (hostData.isEmpty())
-        return false;
-
-    // Check if host is live (connected and responsive)
-    bool live = hostData.value("live", false).toBool();
-    return live;
 }

@@ -27,13 +27,14 @@
 
 #include "xenapi_PBD.h"
 #include "../api.h"
+#include "../session.h"
 #include <stdexcept>
 
 namespace XenAPI
 {
-    QVariantMap PBD::get_record(XenSession* session, const QString& pbd)
+    QVariantMap PBD::get_record(Session* session, const QString& pbd)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -45,9 +46,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toMap();
     }
 
-    bool PBD::get_currently_attached(XenSession* session, const QString& pbd)
+    bool PBD::get_currently_attached(Session* session, const QString& pbd)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -59,9 +60,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toBool();
     }
 
-    QString PBD::async_create(XenSession* session, const QVariantMap& record)
+    QString PBD::async_create(Session* session, const QVariantMap& record)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -73,9 +74,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString PBD::async_plug(XenSession* session, const QString& pbd)
+    QString PBD::async_plug(Session* session, const QString& pbd)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -87,9 +88,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    void PBD::plug(XenSession* session, const QString& pbd)
+    void PBD::plug(Session* session, const QString& pbd)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -101,9 +102,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    void PBD::unplug(XenSession* session, const QString& pbd)
+    void PBD::unplug(Session* session, const QString& pbd)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -115,9 +116,9 @@ namespace XenAPI
         api.parseJsonRpcResponse(response); // Check for errors
     }
 
-    QString PBD::async_unplug(XenSession* session, const QString& pbd)
+    QString PBD::async_unplug(Session* session, const QString& pbd)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -129,9 +130,9 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response).toString();
     }
 
-    QString PBD::async_destroy(XenSession* session, const QString& pbd)
+    QString PBD::async_destroy(Session* session, const QString& pbd)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;

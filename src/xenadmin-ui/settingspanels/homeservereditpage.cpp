@@ -28,7 +28,7 @@
 #include "homeservereditpage.h"
 #include "ui_homeservereditpage.h"
 #include "../controls/affinitypicker.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xen/session.h"
 #include "../../xenlib/xen/xenapi/xenapi_VM.h"
 #include "../../xenlib/xencache.h"
@@ -61,9 +61,9 @@ QString HomeServerEditPage::subText() const
     if (hostRef.isEmpty())
         return tr("None defined");
 
-    if (connection() && connection()->getCache())
+    if (connection())
     {
-        QVariantMap hostData = connection()->getCache()->ResolveObjectData("host", hostRef);
+        QVariantMap hostData = connection()->GetCache()->ResolveObjectData("host", hostRef);
         QString name = hostData.value("name_label").toString();
         if (!name.isEmpty())
             return name;
@@ -111,8 +111,8 @@ AsyncOperation* HomeServerEditPage::saveSettings()
         tr("Change Home Server"),
         tr("Setting VM home server..."),
         [vmRef = m_vmRef, affinityRef = newAffinityRef](DelegatedAsyncOperation* self) {
-            XenSession* session = self->connection()->getSession();
-            if (!session || !session->isLoggedIn())
+            XenAPI::Session* session = self->connection()->GetSession();
+            if (!session || !session->IsLoggedIn())
                 throw std::runtime_error("No valid session");
             XenAPI::VM::set_affinity(session, vmRef, affinityRef);
         },

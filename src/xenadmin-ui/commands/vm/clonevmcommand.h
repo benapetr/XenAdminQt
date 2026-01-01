@@ -28,9 +28,9 @@
 #ifndef CLONEVMCOMMAND_H
 #define CLONEVMCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
-class CloneVMCommand : public Command
+class CloneVMCommand : public VMCommand
 {
     Q_OBJECT
 
@@ -38,14 +38,12 @@ class CloneVMCommand : public Command
         explicit CloneVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
     private:
-        QString getSelectedVMRef() const;
-        QString getSelectedVMName() const;
-        bool isVMCloneable(const QString& vmRef) const;
+        bool isVMCloneable() const;
 };
 
 #endif // CLONEVMCOMMAND_H

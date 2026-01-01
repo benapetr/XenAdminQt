@@ -38,8 +38,7 @@ AlertManager* AlertManager::instance()
     return s_instance;
 }
 
-AlertManager::AlertManager(QObject* parent)
-    : QObject(parent)
+AlertManager::AlertManager(QObject* parent) : QObject(parent)
 {
 }
 
@@ -53,8 +52,10 @@ void AlertManager::addAlert(Alert* alert)
     if (!alert)
         return;
     
-    QMutexLocker locker(&this->m_mutex);
-    this->m_alerts.append(alert);
+    {
+        QMutexLocker locker(&this->m_mutex);
+        this->m_alerts.append(alert);
+    }
     
     emit this->alertAdded(alert);
     emit this->collectionChanged();
@@ -65,7 +66,8 @@ void AlertManager::addAlerts(const QList<Alert*>& alerts)
     if (alerts.isEmpty())
         return;
     
-    QMutexLocker locker(&this->m_mutex);
+    // TODO This can cause a deadlock, need to figure it out
+    //QMutexLocker locker(&this->m_mutex);
     this->m_alerts.append(alerts);
     
     for (Alert* alert : alerts)
@@ -80,7 +82,8 @@ void AlertManager::removeAlert(Alert* alert)
     if (!alert)
         return;
     
-    QMutexLocker locker(&this->m_mutex);
+    // TODO This can cause a deadlock, need to figure it out
+    //QMutexLocker locker(&this->m_mutex);
     if (this->m_alerts.removeOne(alert))
     {
         emit this->alertRemoved(alert);
@@ -91,7 +94,8 @@ void AlertManager::removeAlert(Alert* alert)
 
 void AlertManager::removeAlerts(const std::function<bool(Alert*)>& predicate)
 {
-    QMutexLocker locker(&this->m_mutex);
+    // TODO This can cause a deadlock, need to figure it out
+    //QMutexLocker locker(&this->m_mutex);
     
     QList<Alert*> toRemove;
     for (Alert* alert : this->m_alerts)
@@ -182,8 +186,11 @@ QList<Alert*> AlertManager::allAlerts() const
 
 void AlertManager::clearAllAlerts()
 {
-    QMutexLocker locker(&this->m_mutex);
-    qDeleteAll(this->m_alerts);
-    this->m_alerts.clear();
+    {
+        QMutexLocker locker(&this->m_mutex);
+        qDeleteAll(this->m_alerts);
+        this->m_alerts.clear();
+    }
+
     emit this->collectionChanged();
 }

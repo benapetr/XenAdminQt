@@ -28,12 +28,9 @@
 #include "deletevmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
-#include "xen/api.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/actions/vm/vmdestroyaction.h"
-#include "xencache.h"
 #include <QMessageBox>
 #include <QCheckBox>
 #include <QVBoxLayout>
@@ -43,31 +40,32 @@
 #include <QDialogButtonBox>
 
 DeleteVMCommand::DeleteVMCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VMCommand(mainWindow, parent)
 {
 }
 
-bool DeleteVMCommand::canRun() const
+bool DeleteVMCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
     // Only enable if VM can be deleted
-    return this->isVMDeletable(vmRef);
+    return this->isVMDeletable();
 }
 
-void DeleteVMCommand::run()
+void DeleteVMCommand::Run()
 {
-    QString vmRef = this->getSelectedVMRef();
-    QString vmName = this->getSelectedVMName();
-
-    if (vmRef.isEmpty() || vmName.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return;
 
-    // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-    QString powerState = vmData.value("power_state", "Unknown").toString();
+    QString vmName = this->getSelectedVMName();
+    if (vmName.isEmpty())
+        return;
+
+    // Use VM GetPowerState method
+    QString powerState = vm->GetPowerState();
 
     // Check if VM is in a deletable state
     if (powerState != "Halted")
@@ -111,21 +109,21 @@ void DeleteVMCommand::run()
     {
         bool deleteDisks = deleteDisksCheckbox->isChecked();
 
-        // Get XenConnection from XenLib
-        XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-        if (!conn || !conn->isConnected())
+        // Get XenConnection from VM
+        XenConnection* conn = vm->GetConnection();
+        if (!conn || !conn->IsConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected",
                                  "Not connected to XenServer");
             return;
         }
 
-        // Create VM object (lightweight wrapper)
-        VM* vm = new VM(conn, vmRef);
+        // Create VM object for action (action will own and delete it)
+        VM* vmForAction = new VM(conn, vm->OpaqueRef());
 
         // Create VMDestroyAction (matches C# VMDestroyAction pattern)
         // Action handles VDI cleanup, task polling, and error aggregation
-        VMDestroyAction* action = new VMDestroyAction(conn, vm, deleteDisks, this->mainWindow());
+        VMDestroyAction* action = new VMDestroyAction(conn, vmForAction, deleteDisks, this->mainWindow());
 
         // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
         OperationManager::instance()->registerOperation(action);
@@ -150,41 +148,18 @@ void DeleteVMCommand::run()
     }
 }
 
-QString DeleteVMCommand::menuText() const
+QString DeleteVMCommand::MenuText() const
 {
     return "Delete VM";
 }
 
-QString DeleteVMCommand::getSelectedVMRef() const
+bool DeleteVMCommand::isVMDeletable() const
 {
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
+        return false;
 
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString DeleteVMCommand::getSelectedVMName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return item->text(0);
-}
-
-bool DeleteVMCommand::isVMDeletable(const QString& vmRef) const
-{
-    // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = vm->GetData();
 
     // Check if it's not a template (templates handled separately)
     bool isTemplate = vmData.value("is_a_template", false).toBool();
@@ -192,6 +167,5 @@ bool DeleteVMCommand::isVMDeletable(const QString& vmRef) const
         return false;
 
     // Check if VM is halted (required for deletion in most cases)
-    QString powerState = vmData.value("power_state", "Unknown").toString();
-    return (powerState == "Halted");
+    return (vm->GetPowerState() == "Halted");
 }

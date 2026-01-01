@@ -31,6 +31,8 @@
 #include "../command.h"
 #include <QVariantMap>
 
+class XenCache;
+
 class AddVirtualDiskCommand : public Command
 {
     Q_OBJECT
@@ -39,9 +41,9 @@ class AddVirtualDiskCommand : public Command
         explicit AddVirtualDiskCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
     private:
         bool isSRSelected() const;
@@ -58,10 +60,12 @@ class AddVirtualDiskCommand : public Command
 
         /**
          * @brief Get current VBD count for a VM
+         * @param cache Cache instance
          * @param vmRef VM reference
          * @return Number of VBDs currently attached
          */
         int getCurrentVBDCount(const QString& vmRef) const;
+        int getCurrentVBDCount(XenCache* cache, const QString& vmRef) const;
 };
 
 #endif // ADDVIRTUALDISKCOMMAND_H

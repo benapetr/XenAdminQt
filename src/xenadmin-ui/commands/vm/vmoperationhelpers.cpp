@@ -27,40 +27,33 @@
 
 #include "vmoperationhelpers.h"
 #include "../../dialogs/commanderrordialog.h"
-#include "xenlib.h"
-#include "xencache.h"
-#include "xen/connection.h"
-#include "xen/session.h"
-#include "xen/failure.h"
-#include "xen/xenapi/xenapi_VM.h"
-#include "xen/xenapi/xenapi_Pool.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/failure.h"
+#include "xenlib/xen/xenapi/xenapi_VM.h"
+#include "xenlib/xen/xenapi/xenapi_Pool.h"
 #include <QMessageBox>
 #include <QDebug>
-#include <new>
 
 using namespace XenAPI;
 
-void VMOperationHelpers::startDiagnosisForm(XenLib* xenLib,
-                                           XenConnection* connection,
-                                           const QString& vmRef,
-                                           const QString& vmName,
-                                           bool isStart,
-                                           QWidget* parent)
+void VMOperationHelpers::startDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, QWidget* parent)
 {
-    if (!xenLib || !connection)
+    if (connection)
     {
         qWarning() << "VMOperationHelpers::startDiagnosisForm: Invalid xenLib or connection";
         return;
     }
 
-    XenSession* session = connection->getSession();
-    if (!session || !session->isLoggedIn())
+    Session* session = connection->GetSession();
+    if (!session || !session->IsLoggedIn())
     {
         qWarning() << "VMOperationHelpers::startDiagnosisForm: Session is not valid";
         return;
     }
 
-    XenCache* cache = xenLib->getCache();
+    XenCache* cache = connection->GetCache();
     if (!cache)
     {
         qWarning() << "VMOperationHelpers::startDiagnosisForm: XenCache is not available";
@@ -138,13 +131,7 @@ void VMOperationHelpers::startDiagnosisForm(XenLib* xenLib,
     }
 }
 
-void VMOperationHelpers::startDiagnosisForm(XenLib* xenLib,
-                                           XenConnection* connection,
-                                           const QString& vmRef,
-                                           const QString& vmName,
-                                           bool isStart,
-                                           const Failure& failure,
-                                           QWidget* parent)
+void VMOperationHelpers::startDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, const Failure& failure, QWidget* parent)
 {
     QString errorCode = failure.errorCode();
     
@@ -154,7 +141,7 @@ void VMOperationHelpers::startDiagnosisForm(XenLib* xenLib,
     if (errorCode == Failure::NO_HOSTS_AVAILABLE)
     {
         qDebug() << "VMOperationHelpers: NO_HOSTS_AVAILABLE - starting host diagnosis";
-        startDiagnosisForm(xenLib, connection, vmRef, vmName, isStart, parent);
+        startDiagnosisForm(connection, vmRef, vmName, isStart, parent);
     }
     else if (errorCode == Failure::HA_OPERATION_WOULD_BREAK_FAILOVER_PLAN)
     {

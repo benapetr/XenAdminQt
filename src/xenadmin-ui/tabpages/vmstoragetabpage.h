@@ -50,18 +50,18 @@ class VMStorageTabPage : public BaseTabPage
         explicit VMStorageTabPage(QWidget* parent = nullptr);
         ~VMStorageTabPage();
 
-        QString tabTitle() const override
+        QString GetTitle() const override
         {
             // Tab caption shown as "Storage" in original XenCenter client
             return "Storage";
         }
-        QString helpID() const override
+        QString HelpID() const override
         {
             return "TabPageStorage";
         }
-        bool isApplicableForObjectType(const QString& objectType) const override;
+        bool IsApplicableForObjectType(const QString& objectType) const override;
 
-        void setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
+        void SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
 
     protected:
         void refreshContent() override;
@@ -73,6 +73,7 @@ class VMStorageTabPage : public BaseTabPage
         void onEjectButtonClicked();
         void onNewCDDriveLinkClicked(const QString& link);
         void onObjectDataReceived(QString type, QString ref, QVariantMap data);
+        void onCacheObjectChanged(XenConnection *connection, const QString& type, const QString& ref);
 
         // Storage table actions
         void onAddButtonClicked();

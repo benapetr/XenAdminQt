@@ -25,32 +25,37 @@ SOURCES += \
     xencache.cpp \
     vmhelpers.cpp \
     metricupdater.cpp \
-    groupingtag.cpp \
-    grouping.cpp \
-    queryscope.cpp \
-    queryfilter.cpp \
-    query.cpp \
-    search.cpp \
-    xen/connection.cpp \
-    xen/connectionworker.cpp \
+    xensearch/groupingtag.cpp \
+    xensearch/grouping.cpp \
+    xensearch/queryscope.cpp \
+    xensearch/queryfilter.cpp \
+    xensearch/queries.cpp \
+    xensearch/propertyaccessorhelper.cpp \
+    xensearch/query.cpp \
+    xensearch/search.cpp \
+    xensearch/sort.cpp \
+    xen/network/connection.cpp \
+    xen/network/connectionworker.cpp \
     xen/session.cpp \
     xen/api.cpp \
     xen/apiversion.cpp \
     xen/jsonrpcclient.cpp \
     xen/asyncoperations.cpp \
     xen/eventpoller.cpp \
-    xen/certificatemanager.cpp \
-    xen/heartbeat.cpp \
+    xen/network/certificatemanager.cpp \
+    xen/network/heartbeat.cpp \
     xen/failure.cpp \
     xen/friendlyerrornames.cpp \
     xen/asyncoperation.cpp \
     xen/xenobject.cpp \
     xen/pool.cpp \
     xen/host.cpp \
+    xen/hostmetrics.cpp \
     xen/vm.cpp \
     xen/sr.cpp \
     xen/vdi.cpp \
     xen/vbd.cpp \
+    xen/network.cpp \
     xen/xenapi/xenapi_VM.cpp \
     xen/xenapi/xenapi_SR.cpp \
     xen/xenapi/xenapi_Pool.cpp \
@@ -123,6 +128,8 @@ SOURCES += \
     xen/actions/pool/syncdatabaseaction.cpp \
     xen/actions/pool/setpoolnameanddescriptionaction.cpp \
     xen/actions/pool/setsrasdefaultaction.cpp \
+    xen/actions/pool/setpoolpropertyaction.cpp \
+    xen/actions/pool/setssllegacyaction.cpp \
     xen/actions/network/changenetworkingaction.cpp \
     xen/actions/network/createbondaction.cpp \
     xen/actions/network/destroybondaction.cpp \
@@ -136,11 +143,16 @@ SOURCES += \
     xen/actions/vif/updatevifaction.cpp \
     xen/actions/delegatedasyncoperation.cpp \
     utils/encryption.cpp \
-    collections/connectionsmanager.cpp \
+    network/comparableaddress.cpp \
+    xen/network/connectionsmanager.cpp \
     operations/producerconsumerqueue.cpp \
     operations/multipleoperation.cpp \
     operations/paralleloperation.cpp \
-    operations/operationlauncher.cpp
+    operations/operationlauncher.cpp \
+    customfields/customfielddefinition.cpp \
+    customfields/customfieldsmanager.cpp \
+    xen/folder.cpp \
+    otherconfig/otherconfigandtagswatcher.cpp
 
 # Header files
 HEADERS += \
@@ -161,22 +173,27 @@ HEADERS += \
     xencache.h \
     vmhelpers.h \
     metricupdater.h \
-    groupingtag.h \
-    grouping.h \
-    queryscope.h \
-    queryfilter.h \
-    query.h \
-    search.h \
-    xen/connection.h \
-    xen/connectionworker.h \
+    xensearch/groupingtag.h \
+    xensearch/grouping.h \
+    xensearch/queryscope.h \
+    xensearch/queryfilter.h \
+    xensearch/queries.h \
+    xensearch/propertyaccessorhelper.h \
+    xensearch/query.h \
+    xensearch/search.h \
+    xensearch/sort.h \
+    xensearch/iacceptgroups.h \
+    xen/network/connection.h \
+    xen/network/connectionworker.h \
+    xen/network/connecttask.h \
     xen/session.h \
     xen/api.h \
     xen/apiversion.h \
     xen/jsonrpcclient.h \
     xen/asyncoperations.h \
     xen/eventpoller.h \
-    xen/certificatemanager.h \
-    xen/heartbeat.h \
+    xen/network/certificatemanager.h \
+    xen/network/heartbeat.h \
     xen/failure.h \
     xen/friendlyerrornames.h \
     xen/asyncoperation.h \
@@ -188,6 +205,7 @@ HEADERS += \
     xen/sr.h \
     xen/vdi.h \
     xen/vbd.h \
+    xen/network.h \
     xen/xenapi/xenapi_VM.h \
     xen/xenapi/xenapi_SR.h \
     xen/xenapi/xenapi_Pool.h \
@@ -258,6 +276,8 @@ HEADERS += \
     xen/actions/pool/syncdatabaseaction.h \
     xen/actions/pool/setpoolnameanddescriptionaction.h \
     xen/actions/pool/setsrasdefaultaction.h \
+    xen/actions/pool/setpoolpropertyaction.h \
+    xen/actions/pool/setssllegacyaction.h \
     xen/actions/network/changenetworkingaction.h \
     xen/actions/network/createbondaction.h \
     xen/actions/network/destroybondaction.h \
@@ -271,12 +291,17 @@ HEADERS += \
     xen/actions/vif/updatevifaction.h \
     xen/actions/delegatedasyncoperation.h \
     utils/encryption.h \
+    network/comparableaddress.h \
     collections/observablelist.h \
-    collections/connectionsmanager.h \
+    xen/network/connectionsmanager.h \
     operations/producerconsumerqueue.h \
     operations/multipleoperation.h \
     operations/paralleloperation.h \
-    operations/operationlauncher.h
+    operations/operationlauncher.h \
+    customfields/customfielddefinition.h \
+    customfields/customfieldsmanager.h \
+    xen/folder.h \
+    otherconfig/otherconfigandtagswatcher.h
 
 # Installation
 target.path = $$[QT_INSTALL_LIBS]

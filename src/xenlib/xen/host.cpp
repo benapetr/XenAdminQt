@@ -26,52 +26,59 @@
  */
 
 #include "host.h"
-#include "connection.h"
+#include "network/connection.h"
+#include "network/comparableaddress.h"
 #include "../xenlib.h"
+#include "../xencache.h"
 
 Host::Host(XenConnection* connection, const QString& opaqueRef, QObject* parent)
     : XenObject(connection, opaqueRef, parent)
 {
 }
 
-QString Host::hostname() const
+QString Host::GetObjectType() const
+{
+    return "host";
+}
+
+QString Host::GetHostname() const
 {
     return stringProperty("hostname");
 }
 
-QString Host::address() const
+QString Host::GetAddress() const
 {
     return stringProperty("address");
 }
 
-bool Host::enabled() const
+bool Host::IsEnabled() const
 {
     return boolProperty("enabled", true);
 }
 
-QStringList Host::residentVMRefs() const
+QStringList Host::ResidentVMRefs() const
 {
     return stringListProperty("resident_VMs");
 }
 
-QVariantMap Host::softwareVersion() const
+QVariantMap Host::SoftwareVersion() const
 {
     return property("software_version").toMap();
 }
 
-QStringList Host::capabilities() const
+QStringList Host::Capabilities() const
 {
     return stringListProperty("capabilities");
 }
 
-QVariantMap Host::cpuInfo() const
+QVariantMap Host::CPUInfo() const
 {
     return property("cpu_info").toMap();
 }
 
 int Host::cpuSockets() const
 {
-    QVariantMap cpuInfoMap = this->cpuInfo();
+    QVariantMap cpuInfoMap = this->CPUInfo();
     if (!cpuInfoMap.contains("socket_count"))
         return 0;
 
@@ -82,7 +89,7 @@ int Host::cpuSockets() const
 
 int Host::cpuCount() const
 {
-    QVariantMap cpuInfoMap = this->cpuInfo();
+    QVariantMap cpuInfoMap = this->CPUInfo();
     if (!cpuInfoMap.contains("cpu_count"))
         return 0;
 
@@ -126,29 +133,349 @@ QString Host::crashDumpSRRef() const
     return stringProperty("crash_dump_sr");
 }
 
-QStringList Host::pbdRefs() const
+QStringList Host::PBDRefs() const
 {
     return stringListProperty("PBDs");
 }
 
-QStringList Host::pifRefs() const
+QStringList Host::PIFRefs() const
 {
     return stringListProperty("PIFs");
 }
 
-bool Host::isMaster() const
+bool Host::IsMaster() const
 {
     // Check if this host is referenced as master in its pool
-    // TODO: Query pool and check if pool.master == this->opaqueRef()
-    // For now, check other_config for pool_master flag
-    QVariantMap config = otherConfig();
-    return config.value("pool_master", false).toBool();
+    // Query the pool and check if pool.master == this->opaqueRef()
+    XenConnection* conn = this->GetConnection();
+    if (!conn || !conn->GetCache())
+        return false;
+
+    // Get the pool for this connection (there's always exactly one pool per connection)
+    QStringList poolRefs = conn->GetCache()->GetAllRefs("pool");
+    if (poolRefs.isEmpty())
+        return false;
+
+    // Get the first (and only) pool
+    QString poolRef = poolRefs.first();
+    QVariantMap poolData = conn->GetCache()->ResolveObjectData("pool", poolRef);
+    
+    // Compare pool's master reference with this host's opaque reference
+    QString masterRef = poolData.value("master", "").toString();
+    return masterRef == this->OpaqueRef();
 }
 
-QString Host::poolRef() const
+QString Host::PoolRef() const
 {
-    // In XenAPI, hosts don't directly store pool reference
-    // We need to query the cache for the pool that contains this host
-    // TODO: Implement proper pool lookup
-    return QString();
+    // In XenAPI, there's always exactly one pool per GetConnection
+    // Query the cache for the pool that contains this host
+    XenConnection* conn = this->GetConnection();
+    if (!conn || !conn->GetCache())
+        return QString();
+
+    // Get all pool refs (there's always exactly one pool per connection)
+    QStringList poolRefs = conn->GetCache()->GetAllRefs("pool");
+    if (poolRefs.isEmpty())
+        return QString();
+
+    // Return the first (and only) pool reference
+    return poolRefs.first();
+}
+
+qint64 Host::MemoryOverhead() const
+{
+    return intProperty("memory_overhead", 0);
+}
+
+qint64 Host::APIVersionMajor() const
+{
+    return intProperty("API_version_major", 0);
+}
+
+qint64 Host::APIVersionMinor() const
+{
+    return this->intProperty("API_version_minor", 0);
+}
+
+QString Host::APIVersionVendor() const
+{
+    return this->stringProperty("API_version_vendor");
+}
+
+QVariantMap Host::APIVersionVendorImplementation() const
+{
+    return this->property("API_version_vendor_implementation").toMap();
+}
+
+QVariantMap Host::CPUConfiguration() const
+{
+    return this->property("cpu_configuration").toMap();
+}
+
+QString Host::SchedPolicy() const
+{
+    return this->stringProperty("sched_policy");
+}
+
+QStringList Host::HostCPURefs() const
+{
+    return this->stringListProperty("host_CPUs");
+}
+
+QStringList Host::AllowedOperations() const
+{
+    return this->stringListProperty("allowed_operations");
+}
+
+QVariantMap Host::CurrentOperations() const
+{
+    return this->property("current_operations").toMap();
+}
+
+QStringList Host::SupportedBootloaders() const
+{
+    return this->stringListProperty("supported_bootloaders");
+}
+
+QVariantMap Host::Logging() const
+{
+    return this->property("logging").toMap();
+}
+
+QString Host::MetricsRef() const
+{
+    return this->stringProperty("metrics");
+}
+
+QStringList Host::HAStatefiles() const
+{
+    return this->stringListProperty("ha_statefiles");
+}
+
+QStringList Host::HANetworkPeers() const
+{
+    return this->stringListProperty("ha_network_peers");
+}
+
+QVariantMap Host::BIOSStrings() const
+{
+    return this->property("bios_strings").toMap();
+}
+
+QVariantMap Host::ChipsetInfo() const
+{
+    return this->property("chipset_info").toMap();
+}
+
+QString Host::ExternalAuthType() const
+{
+    return this->stringProperty("external_auth_type");
+}
+
+QString Host::ExternalAuthServiceName() const
+{
+    return this->stringProperty("external_auth_service_name");
+}
+
+QVariantMap Host::ExternalAuthConfiguration() const
+{
+    return this->property("external_auth_configuration").toMap();
+}
+
+QString Host::PowerOnMode() const
+{
+    return this->stringProperty("power_on_mode");
+}
+
+QVariantMap Host::PowerOnConfig() const
+{
+    return this->property("power_on_config").toMap();
+}
+
+QString Host::LocalCacheSRRef() const
+{
+    return this->stringProperty("local_cache_sr");
+}
+
+QStringList Host::PCIRefs() const
+{
+    return this->stringListProperty("PCIs");
+}
+
+QStringList Host::PGPURefs() const
+{
+    return this->stringListProperty("PGPUs");
+}
+
+QStringList Host::PUSBRefs() const
+{
+    return this->stringListProperty("PUSBs");
+}
+
+QStringList Host::PatchRefs() const
+{
+    return this->stringListProperty("patches");
+}
+
+QStringList Host::UpdateRefs() const
+{
+    return this->stringListProperty("updates");
+}
+
+QStringList Host::UpdatesRequiringRebootRefs() const
+{
+    return this->stringListProperty("updates_requiring_reboot");
+}
+
+QStringList Host::FeatureRefs() const
+{
+    return this->stringListProperty("features");
+}
+
+QStringList Host::PendingGuidances() const
+{
+    return this->stringListProperty("pending_guidances");
+}
+
+bool Host::SSLLegacy() const
+{
+    return this->boolProperty("ssl_legacy", true);
+}
+
+bool Host::TLSVerificationEnabled() const
+{
+    return this->boolProperty("tls_verification_enabled", false);
+}
+
+bool Host::HTTPSOnly() const
+{
+    return this->boolProperty("https_only", false);
+}
+
+QVariantMap Host::GuestVCPUsParams() const
+{
+    return this->property("guest_VCPUs_params").toMap();
+}
+
+QString Host::Display() const
+{
+    return this->stringProperty("display");
+}
+
+QList<qint64> Host::VirtualHardwarePlatformVersions() const
+{
+    QVariantList list = this->property("virtual_hardware_platform_versions").toList();
+    QList<qint64> result;
+    for (const QVariant& v : list)
+    {
+        result.append(v.toLongLong());
+    }
+    return result;
+}
+
+QString Host::ControlDomainRef() const
+{
+    return this->stringProperty("control_domain");
+}
+
+QString Host::IscsiIQN() const
+{
+    return this->stringProperty("iscsi_iqn");
+}
+
+bool Host::Multipathing() const
+{
+    return this->boolProperty("multipathing", false);
+}
+
+QString Host::UEFICertificates() const
+{
+    return this->stringProperty("uefi_certificates");
+}
+
+QStringList Host::CertificateRefs() const
+{
+    return this->stringListProperty("certificates");
+}
+
+QStringList Host::Editions() const
+{
+    return this->stringListProperty("editions");
+}
+
+QStringList Host::CrashdumpRefs() const
+{
+    return this->stringListProperty("crashdumps");
+}
+
+QDateTime Host::LastSoftwareUpdate() const
+{
+    QString dateStr = this->stringProperty("last_software_update");
+    if (dateStr.isEmpty())
+        return QDateTime();
+    return QDateTime::fromString(dateStr, Qt::ISODate);
+}
+
+QString Host::LatestSyncedUpdatesApplied() const
+{
+    return this->stringProperty("latest_synced_updates_applied");
+}
+
+QVariantMap Host::LicenseParams() const
+{
+    return this->property("license_params").toMap();
+}
+
+QString Host::Edition() const
+{
+    return this->stringProperty("edition");
+}
+
+QVariantMap Host::LicenseServer() const
+{
+    return this->property("license_server").toMap();
+}
+
+// Property getters for search/query functionality
+
+QList<ComparableAddress> Host::GetIPAddresses() const
+{
+    // C# equivalent: PropertyAccessors IP address property for Host
+    // Gets IPs from PIFs (physical network interfaces)
+    
+    QList<ComparableAddress> addresses;
+    
+    QStringList pifRefs = this->PIFRefs();
+    if (pifRefs.isEmpty())
+        return addresses;
+    
+    XenConnection* conn = this->GetConnection();
+    if (!conn)
+        return addresses;
+    
+    XenCache* cache = conn->GetCache();
+    if (!cache)
+        return addresses;
+    
+    // Iterate through all PIFs and collect IP addresses
+    for (const QString& pifRef : pifRefs)
+    {
+        QVariantMap pifData = cache->ResolveObjectData("pif", pifRef);
+        if (pifData.isEmpty())
+            continue;
+        
+        // Get IP address from PIF
+        QString ipStr = pifData.value("IP", QString()).toString();
+        if (ipStr.isEmpty() || ipStr == "0.0.0.0")
+            continue;
+        
+        // Try to parse as IP address
+        ComparableAddress addr;
+        if (ComparableAddress::TryParse(ipStr, false, true, addr))
+        {
+            addresses.append(addr);
+        }
+    }
+    
+    return addresses;
 }

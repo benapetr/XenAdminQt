@@ -28,7 +28,7 @@
 #include "hostmultipathpage.h"
 #include "ui_hostmultipathpage.h"
 #include "xen/host.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/actions/host/editmultipathaction.h"
 #include "xencache.h"
 #include "xen/hostmetrics.h"
@@ -168,7 +168,7 @@ bool HostMultipathPage::isInMaintenanceMode() const
     QString metricsRef = this->m_objectDataCopy.value("metrics").toString();
     if (!metricsRef.isEmpty() && this->connection())
     {
-        XenCache* cache = this->connection()->getCache();
+        XenCache* cache = this->connection()->GetCache();
         if (cache)
         {
             QSharedPointer<HostMetrics> metrics = cache->ResolveObject<HostMetrics>("host_metrics", metricsRef);

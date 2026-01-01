@@ -38,9 +38,9 @@ class ImportVMCommand : public Command
         explicit ImportVMCommand(QObject* parent = nullptr);
         explicit ImportVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        void run() override;
-        bool canRun() const override;
-        QString menuText() const override;
+        void Run() override;
+        bool CanRun() const override;
+        QString MenuText() const override;
 
     private:
         void showImportWizard();

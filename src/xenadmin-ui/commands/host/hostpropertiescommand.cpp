@@ -28,51 +28,37 @@
 #include "hostpropertiescommand.h"
 #include "../../dialogs/hostpropertiesdialog.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
+#include "xen/host.h"
 #include <QMessageBox>
 
 HostPropertiesCommand::HostPropertiesCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : HostCommand(mainWindow, parent)
 {
 }
 
-bool HostPropertiesCommand::canRun() const
+bool HostPropertiesCommand::CanRun() const
 {
-    QString hostRef = this->getSelectedHostRef();
-    return !hostRef.isEmpty() && this->mainWindow()->xenLib()->isConnected();
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
+        return false;
+
+    return host->GetConnection() && host->GetConnection()->IsConnected();
 }
 
-void HostPropertiesCommand::run()
+void HostPropertiesCommand::Run()
 {
-    QString hostRef = this->getSelectedHostRef();
-
-    if (hostRef.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return;
 
-    // New signature: connection, hostRef, parent
-    HostPropertiesDialog* dialog = new HostPropertiesDialog(
-        this->mainWindow()->xenLib()->getConnection(),
-        hostRef,
-        this->mainWindow());
+    // New signature: GetConnection, hostRef, parent
+    HostPropertiesDialog* dialog = new HostPropertiesDialog(host->GetConnection(), host->OpaqueRef(), this->mainWindow());
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setModal(true);
     dialog->exec();
 }
 
-QString HostPropertiesCommand::menuText() const
+QString HostPropertiesCommand::MenuText() const
 {
     return "Properties";
-}
-
-QString HostPropertiesCommand::getSelectedHostRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return this->getSelectedObjectRef();
 }

@@ -29,7 +29,7 @@
 #include "../../vm.h"
 #include "../../host.h"
 #include "../../pool.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
 #include <QtCore/QDebug>
@@ -37,7 +37,7 @@
 // VMShutdownAction implementation
 
 VMShutdownAction::VMShutdownAction(VM* vm, const QString& title, QObject* parent)
-    : AsyncOperation(vm ? vm->connection() : nullptr, title, tr("Preparing..."), parent)
+    : AsyncOperation(vm ? vm->GetConnection() : nullptr, title, tr("Preparing..."), parent)
 {
     setVM(vm);
 
@@ -48,7 +48,7 @@ VMShutdownAction::VMShutdownAction(VM* vm, const QString& title, QObject* parent
         // setHost(vm->home());
 
         // Set pool
-        XenConnection* conn = vm->connection();
+        XenConnection* conn = vm->GetConnection();
         if (conn)
         {
             // TODO: Get pool from connection
@@ -65,7 +65,7 @@ VMShutdownAction::~VMShutdownAction()
 
 VMCleanShutdown::VMCleanShutdown(VM* vm, QObject* parent)
     : VMShutdownAction(vm,
-                       tr("Shutting down '%1'...").arg(vm ? vm->nameLabel() : "VM"),
+                       tr("Shutting down '%1'...").arg(vm ? vm->GetName() : "VM"),
                        parent)
 {
     addApiMethodToRoleCheck("VM.async_clean_shutdown");
@@ -82,15 +82,15 @@ void VMCleanShutdown::run()
         return;
     }
 
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    XenAPI::Session* sess = session();
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
     }
 
     // Call XenAPI::VM static method
-    QString taskRef = XenAPI::VM::async_clean_shutdown(sess, vmObj->opaqueRef());
+    QString taskRef = XenAPI::VM::async_clean_shutdown(sess, vmObj->OpaqueRef());
 
     if (taskRef.isEmpty())
     {
@@ -108,7 +108,7 @@ void VMCleanShutdown::run()
 
 VMHardShutdown::VMHardShutdown(VM* vm, QObject* parent)
     : VMShutdownAction(vm,
-                       tr("Shutting down '%1'...").arg(vm ? vm->nameLabel() : "VM"),
+                       tr("Shutting down '%1'...").arg(vm ? vm->GetName() : "VM"),
                        parent)
 {
     addApiMethodToRoleCheck("VM.async_hard_shutdown");
@@ -125,15 +125,15 @@ void VMHardShutdown::run()
         return;
     }
 
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    XenAPI::Session* sess = session();
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
     }
 
     // Call XenAPI::VM static method
-    QString taskRef = XenAPI::VM::async_hard_shutdown(sess, vmObj->opaqueRef());
+    QString taskRef = XenAPI::VM::async_hard_shutdown(sess, vmObj->OpaqueRef());
 
     if (taskRef.isEmpty())
     {
@@ -151,7 +151,7 @@ void VMHardShutdown::run()
 
 VMSuspendAction::VMSuspendAction(VM* vm, QObject* parent)
     : VMShutdownAction(vm,
-                       tr("Suspending '%1'...").arg(vm ? vm->nameLabel() : "VM"),
+                       tr("Suspending '%1'...").arg(vm ? vm->GetName() : "VM"),
                        parent)
 {
     addApiMethodToRoleCheck("VM.async_suspend");
@@ -168,15 +168,15 @@ void VMSuspendAction::run()
         return;
     }
 
-    XenSession* sess = session();
-    if (!sess || !sess->isLoggedIn())
+    XenAPI::Session* sess = session();
+    if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
     }
 
     // Call XenAPI::VM static method
-    QString taskRef = XenAPI::VM::async_suspend(sess, vmObj->opaqueRef());
+    QString taskRef = XenAPI::VM::async_suspend(sess, vmObj->OpaqueRef());
 
     if (taskRef.isEmpty())
     {

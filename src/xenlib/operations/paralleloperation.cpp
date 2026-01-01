@@ -26,7 +26,7 @@
  */
 
 #include "paralleloperation.h"
-#include "../xen/connection.h"
+#include "../xen/network/connection.h"
 #include <QDebug>
 #include <algorithm>
 
@@ -55,7 +55,7 @@ ParallelOperation::ParallelOperation(const QString& title,
             {
                 m_operationsWithNoConnection.append(op);
                 m_totalOperationsCount++;
-            } else if (op->connection()->isConnected())
+            } else if (op->connection()->IsConnected())
             {
                 if (!m_operationsByConnection.contains(op->connection()))
                 {

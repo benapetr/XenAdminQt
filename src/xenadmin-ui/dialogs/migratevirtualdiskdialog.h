@@ -56,36 +56,40 @@ class MigrateVirtualDiskDialog : public MoveVirtualDiskDialog
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor for single VDI migration
-     * @param xenLib XenLib instance
-     * @param vdiRef VDI reference to migrate
-     * @param parent Parent widget
-     */
-    explicit MigrateVirtualDiskDialog(XenLib* xenLib, const QString& vdiRef,
-                                      QWidget* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor for single VDI migration
+         * @param xenLib XenLib instance
+         * @param vdiRef VDI reference to migrate
+         * @param parent Parent widget
+         */
+        explicit MigrateVirtualDiskDialog(XenConnection* conn, const QString& vdiRef, QWidget* parent = nullptr);
 
-    /**
-     * @brief Constructor for multiple VDI migration
-     * @param xenLib XenLib instance
-     * @param vdiRefs List of VDI references to migrate
-     * @param parent Parent widget
-     */
-    explicit MigrateVirtualDiskDialog(XenLib* xenLib, const QStringList& vdiRefs,
-                                      QWidget* parent = nullptr);
+        /**
+         * @brief Constructor for multiple VDI migration
+         * @param xenLib XenLib instance
+         * @param vdiRefs List of VDI references to migrate
+         * @param parent Parent widget
+         */
+        explicit MigrateVirtualDiskDialog(XenConnection* conn, const QStringList& vdiRefs, QWidget* parent = nullptr);
 
-protected:
-    /**
-     * @brief Create and execute migration actions
-     *
-     * Overridden to use MigrateVirtualDiskAction instead of MoveVirtualDiskAction.
-     * This uses VDI.async_pool_migrate API which allows live migration.
-     *
-     * @param targetSRRef Target SR reference
-     * @param targetSRName Target SR name (for display in progress messages)
-     */
-    void createAndRunActions(const QString& targetSRRef, const QString& targetSRName) override;
+    protected:
+        /**
+         * @brief Create and execute migration actions
+         *
+         * Overridden to use MigrateVirtualDiskAction instead of MoveVirtualDiskAction.
+         * This uses VDI.async_pool_migrate API which allows live migration.
+         *
+         * @param targetSRRef Target SR reference
+         * @param targetSRName Target SR name (for display in progress messages)
+         */
+        void createAndRunActions(const QString& targetSRRef, const QString& targetSRName) override;
+
+        /**
+         * @brief Get the SR picker type for this dialog
+         * @return SrPicker::Migrate (uses different filtering logic than Move)
+         */
+        SrPicker::SRPickerType srPickerType() const override;
 };
 
 #endif // MIGRATEVIRTUALDISKDIALOG_H

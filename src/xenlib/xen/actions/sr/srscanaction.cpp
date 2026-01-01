@@ -26,7 +26,7 @@
  */
 
 #include "srscanaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_SR.h"
 #include "../../xenapi/xenapi_Host.h"

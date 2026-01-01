@@ -28,64 +28,53 @@
 #include "reattachsrcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/newsrwizard.h"
-#include "xenlib.h"
+#include "xen/sr.h"
+#include "xen/network/connection.h"
 #include "xencache.h"
 #include <QMessageBox>
 #include <QDebug>
 
 ReattachSRCommand::ReattachSRCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : SRCommand(mainWindow, parent)
 {
 }
 
-bool ReattachSRCommand::canRun() const
+bool ReattachSRCommand::CanRun() const
 {
-    QString srRef = this->getSelectedSRRef();
-    if (srRef.isEmpty())
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
         return false;
 
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
-
-    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
+    XenCache* cache = sr->GetConnection()->GetCache();
+    QVariantMap srData = sr->GetData();
     if (srData.isEmpty())
         return false;
 
     return this->canSRBeReattached(srData);
 }
 
-void ReattachSRCommand::run()
+void ReattachSRCommand::Run()
 {
-    QString srRef = this->getSelectedSRRef();
-
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
         return;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return;
-
-    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-    QString srName = srData.value("name_label", "").toString();
-
-    if (srRef.isEmpty() || srData.isEmpty())
-        return;
+    QString srRef = sr->OpaqueRef();
+    QString srName = sr->GetName();
 
     qDebug() << "ReattachSRCommand: Opening NewSR wizard for reattaching SR" << srName << "(" << srRef << ")";
 
     // Open the New SR wizard which already supports reattach mode
     // The wizard will detect that this SR is detached and allow user to reattach it
     // TODO: Add constructor NewSRWizard(SR*) to pre-configure for reattach mode
-    NewSRWizard* wizard = new NewSRWizard(this->mainWindow());
+    QSharedPointer<XenObject> ob = this->GetObject();
+    XenConnection* connection = ob ? ob->GetConnection() : nullptr;
+    NewSRWizard* wizard = new NewSRWizard(connection, this->mainWindow());
     wizard->setAttribute(Qt::WA_DeleteOnClose);
     wizard->show();
 }
 
-QString ReattachSRCommand::menuText() const
+QString ReattachSRCommand::MenuText() const
 {
     return "Reattach Storage Repository";
 }
@@ -115,12 +104,11 @@ bool ReattachSRCommand::canSRBeReattached(const QVariantMap& srData) const
     // Check if all PBDs are currently unplugged (SR is detached)
     bool allUnplugged = true;
 
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
         return false;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
+    XenCache* cache = sr->GetConnection()->GetCache();
 
     for (const QVariant& pbdRefVar : pbds)
     {

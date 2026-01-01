@@ -34,16 +34,16 @@ class NetworkPropertiesCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit NetworkPropertiesCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-    ~NetworkPropertiesCommand() override;
+    public:
+        explicit NetworkPropertiesCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        ~NetworkPropertiesCommand() override;
 
-    bool canRun() const override;
-    void run() override;
-    QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
-private:
-    QString getSelectedNetworkUuid() const;
+    private:
+        QString getSelectedNetworkUuid() const;
 };
 
 #endif // NETWORKPROPERTIESCOMMAND_H

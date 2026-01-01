@@ -28,33 +28,34 @@
 #include "destroysrcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
+#include "xen/sr.h"
 #include "xencache.h"
 #include "xen/actions/sr/destroysraction.h"
 #include <QMessageBox>
 #include <QDebug>
 
 DestroySRCommand::DestroySRCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : SRCommand(mainWindow, parent)
 {
 }
 
-bool DestroySRCommand::canRun() const
+bool DestroySRCommand::CanRun() const
 {
-    QString srRef = getSelectedSRRef();
-    if (srRef.isEmpty())
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
         return false;
 
-    return canSRBeDestroyed();
+    return this->canSRBeDestroyed();
 }
 
-void DestroySRCommand::run()
+void DestroySRCommand::Run()
 {
-    QString srRef = getSelectedSRRef();
-    QString srName = getSelectedSRName();
-
-    if (srRef.isEmpty())
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
         return;
+
+    QString srRef = sr->OpaqueRef();
+    QString srName = sr->GetName();
 
     // Show critical warning dialog (double confirmation)
     QMessageBox msgBox(mainWindow());
@@ -77,9 +78,17 @@ void DestroySRCommand::run()
 
     qDebug() << "DestroySRCommand: Destroying SR" << srName << "(" << srRef << ")";
 
+    // Get GetConnection from SR object for multi-GetConnection support
+    XenConnection* conn = sr->GetConnection();
+    if (!conn || !conn->IsConnected())
+    {
+        QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
+        return;
+    }
+
     // Create and run destroy action
     DestroySrAction* action = new DestroySrAction(
-        mainWindow()->xenLib()->getConnection(),
+        conn,
         srRef,
         srName,
         this);
@@ -107,51 +116,18 @@ void DestroySRCommand::run()
     action->runAsync();
 }
 
-QString DestroySRCommand::menuText() const
+QString DestroySRCommand::MenuText() const
 {
     return "Destroy Storage Repository";
 }
 
-QString DestroySRCommand::getSelectedSRRef() const
-{
-    QString objectType = getSelectedObjectType();
-    if (objectType != "sr")
-        return QString();
-
-    return getSelectedObjectRef();
-}
-
-QString DestroySRCommand::getSelectedSRName() const
-{
-    QString srRef = getSelectedSRRef();
-    if (srRef.isEmpty())
-        return QString();
-
-    if (!mainWindow()->xenLib())
-        return QString();
-
-    XenCache* cache = mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return QString();
-
-    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-    return srData.value("name_label", "").toString();
-}
-
 bool DestroySRCommand::canSRBeDestroyed() const
 {
-    QString srRef = getSelectedSRRef();
-    if (srRef.isEmpty())
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
         return false;
 
-    if (!mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
-
-    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
+    QVariantMap srData = sr->GetData();
 
     // Cannot destroy if SR has VDIs (contains data)
     QVariantList vdis = srData.value("VDIs", QVariantList()).toList();
@@ -162,6 +138,7 @@ bool DestroySRCommand::canSRBeDestroyed() const
     bool shared = srData.value("shared", false).toBool();
     if (shared)
     {
+        XenCache* cache = sr->GetConnection()->GetCache();
         QVariantList pbds = srData.value("PBDs", QVariantList()).toList();
         for (const QVariant& pbdRefVar : pbds)
         {

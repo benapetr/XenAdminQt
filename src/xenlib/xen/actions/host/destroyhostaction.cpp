@@ -26,7 +26,7 @@
  */
 
 #include "destroyhostaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_Host.h"
 #include "../../xenapi/xenapi_SR.h"
@@ -39,7 +39,7 @@ DestroyHostAction::DestroyHostAction(XenConnection* connection,
                                      Host* host,
                                      QObject* parent)
     : AsyncOperation(connection,
-                     QString("Removing host '%1'").arg(host ? host->nameLabel() : ""),
+                     QString("Removing host '%1'").arg(host ? host->GetName() : ""),
                      "Removing host from pool",
                      parent),
       m_pool(pool),
@@ -58,7 +58,7 @@ void DestroyHostAction::run()
         setDescription("Removing host from pool");
 
         // Get all local SRs belonging to this host
-        QList<QVariantMap> allSRs = connection()->getCache()->GetAllData("sr");
+        QList<QVariantMap> allSRs = connection()->GetCache()->GetAllData("sr");
         QStringList localSRRefs;
 
         for (const QVariantMap& srData : allSRs)
@@ -77,10 +77,10 @@ void DestroyHostAction::run()
             for (const QVariant& pbdVar : pbdRefs)
             {
                 QString pbdRef = pbdVar.toString();
-                QVariantMap pbdData = connection()->getCache()->ResolveObjectData("pbd", pbdRef);
+                QVariantMap pbdData = connection()->GetCache()->ResolveObjectData("pbd", pbdRef);
                 QString pbdHost = pbdData.value("host").toString();
 
-                if (pbdHost == m_host->opaqueRef())
+                if (pbdHost == m_host->OpaqueRef())
                 {
                     belongsToThisHost = true;
                     break;
@@ -99,7 +99,7 @@ void DestroyHostAction::run()
         int i = 0;
 
         // Destroy the host
-        QString taskRef = XenAPI::Host::async_destroy(session(), m_host->opaqueRef());
+        QString taskRef = XenAPI::Host::async_destroy(session(), m_host->OpaqueRef());
         pollToCompletion(taskRef, 0, (int) p);
         i++;
 
@@ -141,7 +141,7 @@ bool DestroyHostAction::isSRDetached(const QString& srRef)
 
     for (int i = 0; i < maxSeconds; i++)
     {
-        QVariantMap srData = connection()->getCache()->ResolveObjectData("sr", srRef);
+        QVariantMap srData = connection()->GetCache()->ResolveObjectData("sr", srRef);
         QVariantList pbdRefs = srData.value("PBDs").toList();
 
         if (pbdRefs.isEmpty())
@@ -154,7 +154,7 @@ bool DestroyHostAction::isSRDetached(const QString& srRef)
         for (const QVariant& pbdVar : pbdRefs)
         {
             QString pbdRef = pbdVar.toString();
-            QVariantMap pbdData = connection()->getCache()->ResolveObjectData("pbd", pbdRef);
+            QVariantMap pbdData = connection()->GetCache()->ResolveObjectData("pbd", pbdRef);
             bool currentlyAttached = pbdData.value("currently_attached", false).toBool();
 
             if (currentlyAttached)
@@ -174,7 +174,7 @@ bool DestroyHostAction::isSRDetached(const QString& srRef)
     }
 
     // Timeout - check one last time
-    QVariantMap srData = connection()->getCache()->ResolveObjectData("sr", srRef);
+    QVariantMap srData = connection()->GetCache()->ResolveObjectData("sr", srRef);
     QVariantList pbdRefs = srData.value("PBDs").toList();
     return pbdRefs.isEmpty();
 }

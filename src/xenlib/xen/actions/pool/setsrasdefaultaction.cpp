@@ -26,7 +26,7 @@
  */
 
 #include "setsrasdefaultaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
 
@@ -51,8 +51,8 @@ void SetSrAsDefaultAction::run()
         return;
     }
 
-    XenSession* session = connection()->getSession();
-    if (!session || !session->isLoggedIn())
+    XenAPI::Session* session = connection()->GetSession();
+    if (!session || !session->IsLoggedIn())
     {
         setError("No valid session");
         return;

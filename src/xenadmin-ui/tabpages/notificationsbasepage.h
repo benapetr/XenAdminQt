@@ -29,9 +29,9 @@
 #define NOTIFICATIONSBASEPAGE_H
 
 #include <QWidget>
-#include "widgets/navigationpane.h"
+#include "navigation/navigationpane.h"
 
-class XenLib;
+class XenConnection;
 
 /**
  * Base class for notification pages (Alerts, Events/History).
@@ -47,87 +47,84 @@ class NotificationsBasePage : public QWidget
 {
     Q_OBJECT
 
-public:
-    explicit NotificationsBasePage(QWidget* parent = nullptr);
-    virtual ~NotificationsBasePage();
+    public:
+        explicit NotificationsBasePage(QWidget* parent = nullptr);
+        virtual ~NotificationsBasePage();
 
-    /**
-     * Show this notification page and refresh its content.
-     * C# Reference: NotificationsBasePage.ShowPage() line 48
-     */
-    void showPage();
+        /**
+         * Show this notification page and refresh its content.
+         * C# Reference: NotificationsBasePage.ShowPage() line 48
+         */
+        void showPage();
 
-    /**
-     * Hide this notification page and deregister event handlers.
-     * C# Reference: NotificationsBasePage.HidePage() line 56
-     */
-    void hidePage();
+        /**
+         * Hide this notification page and deregister event handlers.
+         * C# Reference: NotificationsBasePage.HidePage() line 56
+         */
+        void hidePage();
 
-    /**
-     * Get the notifications sub-mode this page represents.
-     * C# Reference: NotificationsBasePage.NotificationsSubMode line 63
-     */
-    virtual NavigationPane::NotificationsSubMode notificationsSubMode() const = 0;
+        /**
+         * Get the notifications sub-mode this page represents.
+         * C# Reference: NotificationsBasePage.NotificationsSubMode line 63
+         */
+        virtual NavigationPane::NotificationsSubMode notificationsSubMode() const = 0;
 
-    /**
-     * Get the help ID for context-sensitive help.
-     * C# Reference: NotificationsBasePage.HelpID line 65
-     */
-    virtual QString helpID() const
-    {
-        return "";
-    }
+        /**
+         * Get the help ID for context-sensitive help.
+         * C# Reference: NotificationsBasePage.HelpID line 65
+         */
+        virtual QString helpID() const
+        {
+            return "";
+        }
 
-    /**
-     * Check if any filters are currently active on this page.
-     * C# Reference: NotificationsBasePage.FilterIsOn line 67
-     */
-    virtual bool filterIsOn() const
-    {
-        return false;
-    }
+        /**
+         * Check if any filters are currently active on this page.
+         * C# Reference: NotificationsBasePage.FilterIsOn line 67
+         */
+        virtual bool filterIsOn() const
+        {
+            return false;
+        }
 
-    /**
-     * Set the XenLib instance for accessing XenAPI.
-     */
-    virtual void setXenLib(XenLib* xenLib);
+        virtual void setConnection(XenConnection* connection);
 
-signals:
-    /**
-     * Emitted when filters change on this page.
-     * C# Reference: NotificationsBasePage.FiltersChanged event line 39
-     */
-    void filtersChanged();
+    signals:
+        /**
+         * Emitted when filters change on this page.
+         * C# Reference: NotificationsBasePage.FiltersChanged event line 39
+         */
+        void filtersChanged();
 
-protected:
-    /**
-     * Refresh the page content (rebuild lists, update display).
-     * Override in derived classes to implement page-specific refresh logic.
-     * C# Reference: NotificationsBasePage.RefreshPage() line 44
-     */
-    virtual void refreshPage();
+    protected:
+        /**
+         * Refresh the page content (rebuild lists, update display).
+         * Override in derived classes to implement page-specific refresh logic.
+         * C# Reference: NotificationsBasePage.RefreshPage() line 44
+         */
+        virtual void refreshPage();
 
-    /**
-     * Register event handlers when the page becomes visible.
-     * Override in derived classes to subscribe to events.
-     * C# Reference: NotificationsBasePage.RegisterEventHandlers() line 49
-     */
-    virtual void registerEventHandlers();
+        /**
+         * Register event handlers when the page becomes visible.
+         * Override in derived classes to subscribe to events.
+         * C# Reference: NotificationsBasePage.RegisterEventHandlers() line 49
+         */
+        virtual void registerEventHandlers();
 
-    /**
-     * Deregister event handlers when the page is hidden.
-     * Override in derived classes to unsubscribe from events.
-     * C# Reference: NotificationsBasePage.DeregisterEventHandlers() line 52
-     */
-    virtual void deregisterEventHandlers();
+        /**
+         * Deregister event handlers when the page is hidden.
+         * Override in derived classes to unsubscribe from events.
+         * C# Reference: NotificationsBasePage.DeregisterEventHandlers() line 52
+         */
+        virtual void deregisterEventHandlers();
 
-    /**
-     * Called by derived classes when filters change.
-     * C# Reference: NotificationsBasePage.OnFiltersChanged() line 41
-     */
-    void onFiltersChanged();
+        /**
+         * Called by derived classes when filters change.
+         * C# Reference: NotificationsBasePage.OnFiltersChanged() line 41
+         */
+        void onFiltersChanged();
 
-    XenLib* m_xenLib;
+        XenConnection* m_connection;
 };
 
 #endif // NOTIFICATIONSBASEPAGE_H

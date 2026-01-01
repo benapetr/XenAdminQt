@@ -26,11 +26,13 @@
  */
 
 #include "savepoweronsettingsaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../api.h"
 #include "../../../utils/misc.h"
 #include <QDebug>
+
+using namespace XenAPI;
 
 // PowerOnMode toString implementation
 QString PowerOnMode::toString() const
@@ -60,7 +62,7 @@ SavePowerOnSettingsAction::SavePowerOnSettingsAction(XenConnection* connection,
 void SavePowerOnSettingsAction::run()
 {
     XenConnection* conn = this->connection();
-    if (!conn || !conn->getSession()) {
+    if (!conn || !conn->GetSession()) {
         this->setError(tr("Not connected to server"));
         return;
     }
@@ -92,7 +94,7 @@ void SavePowerOnSettingsAction::run()
 void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const PowerOnMode& mode)
 {
     XenConnection* conn = this->connection();
-    XenSession* session = conn->getSession();
+    Session* session = conn->GetSession();
     XenRpcAPI api(session);
     
     QString modeString = mode.toString();
@@ -136,7 +138,7 @@ void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const Pow
     params << configMap;
     
     QByteArray request = api.buildJsonRpcCall("host.set_power_on_mode", params);
-    QByteArray response = conn->sendRequest(request);
+    QByteArray response = conn->SendRequest(request);
     
     QVariant result = api.parseJsonRpcResponse(response);
     if (Misc::QVariantIsMap(result)) {
@@ -151,7 +153,7 @@ void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const Pow
 QString SavePowerOnSettingsAction::createSecret(const QString& value)
 {
     XenConnection* conn = this->connection();
-    XenSession* session = conn->getSession();
+    Session* session = conn->GetSession();
     XenRpcAPI api(session);
     
     // Create a secret to store the password
@@ -164,7 +166,7 @@ QString SavePowerOnSettingsAction::createSecret(const QString& value)
     params << secretRecord;
     
     QByteArray request = api.buildJsonRpcCall("secret.create", params);
-    QByteArray response = conn->sendRequest(request);
+    QByteArray response = conn->SendRequest(request);
     
     QVariant result = api.parseJsonRpcResponse(response);
     if (Misc::QVariantIsMap(result)) {
@@ -178,7 +180,7 @@ QString SavePowerOnSettingsAction::createSecret(const QString& value)
             params << secretRef;
             
             request = api.buildJsonRpcCall("secret.get_uuid", params);
-            response = conn->sendRequest(request);
+            response = conn->SendRequest(request);
             
             result = api.parseJsonRpcResponse(response);
             if (Misc::QVariantIsMap(result)) {
@@ -196,7 +198,7 @@ QString SavePowerOnSettingsAction::createSecret(const QString& value)
 void SavePowerOnSettingsAction::destroySecret(const QString& secretRef)
 {
     XenConnection* conn = this->connection();
-    XenSession* session = conn->getSession();
+    Session* session = conn->GetSession();
     XenRpcAPI api(session);
     
     QVariantList params;
@@ -204,6 +206,6 @@ void SavePowerOnSettingsAction::destroySecret(const QString& secretRef)
     params << secretRef;
     
     QByteArray request = api.buildJsonRpcCall("secret.destroy", params);
-    conn->sendRequest(request);
+    conn->SendRequest(request);
     // Ignore errors when destroying secrets
 }

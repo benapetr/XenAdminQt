@@ -39,50 +39,48 @@
 #include <QFormLayout>
 #include <QGroupBox>
 
-QT_FORWARD_DECLARE_CLASS(XenLib)
+class XenConnection;
 
 class NetworkPropertiesDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    explicit NetworkPropertiesDialog(XenLib* xenLib, const QString& networkUuid, QWidget* parent = nullptr);
+    public:
+        explicit NetworkPropertiesDialog(XenConnection* connection, const QString& networkUuid, QWidget* parent = nullptr);
 
-private slots:
-    void onOkClicked();
-    void onCancelClicked();
-    void onNetworksReceived(const QVariantList& networks);
+    private slots:
+        void onOkClicked();
+        void onCancelClicked();
+    private:
+        void setupGeneralTab();
+        void setupAdvancedTab();
+        void loadNetworkData();
+        void populateNetworkData();
+        void saveNetworkData();
 
-private:
-    void setupGeneralTab();
-    void setupAdvancedTab();
-    void requestNetworkData();
-    void populateNetworkData();
-    void saveNetworkData();
+        XenConnection* m_connection;
+        QString m_networkUuid;
+        QString m_networkRef;
+        QVariantMap m_networkRecord; // Stores the received network record
 
-    XenLib* m_xenLib;
-    QString m_networkUuid;
-    QString m_networkRef;
-    QVariantMap m_networkRecord; // Stores the received network record
+        // Tabs
+        QTabWidget* m_tabWidget;
 
-    // Tabs
-    QTabWidget* m_tabWidget;
+        // General tab widgets
+        QLineEdit* m_nameEdit;
+        QTextEdit* m_descriptionEdit;
+        QLabel* m_uuidLabel;
+        QLabel* m_bridgeLabel;
+        QLabel* m_mtuLabel;
+        QLabel* m_managedLabel;
 
-    // General tab widgets
-    QLineEdit* m_nameEdit;
-    QTextEdit* m_descriptionEdit;
-    QLabel* m_uuidLabel;
-    QLabel* m_bridgeLabel;
-    QLabel* m_mtuLabel;
-    QLabel* m_managedLabel;
+        // Advanced tab widgets
+        QLineEdit* m_tagsEdit;
+        QListWidget* m_otherConfigList;
 
-    // Advanced tab widgets
-    QLineEdit* m_tagsEdit;
-    QListWidget* m_otherConfigList;
-
-    // Buttons
-    QPushButton* m_okButton;
-    QPushButton* m_cancelButton;
+        // Buttons
+        QPushButton* m_okButton;
+        QPushButton* m_cancelButton;
 };
 
 #endif // NETWORKPROPERTIESDIALOG_H

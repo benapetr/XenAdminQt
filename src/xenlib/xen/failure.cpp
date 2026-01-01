@@ -27,6 +27,10 @@
 
 #include "failure.h"
 #include "friendlyerrornames.h"
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QRegularExpression>
+#include <QXmlStreamReader>
 #include <QDebug>
 
 // Define error code constants (matches xenadmin/XenModel/XenAPI-Extensions/Failure.cs)
@@ -172,4 +176,65 @@ void Failure::parseExceptionMessage()
     this->m_shortError = FriendlyErrorNames::getString(shortKey);
     if (this->m_shortError.isEmpty())
         this->m_shortError = this->m_errorText;
+
+    this->parseSmapiV3Failures();
+    this->parseCslgFailures();
+}
+
+void Failure::parseSmapiV3Failures()
+{
+    if (this->m_errorDescription.count() < 3)
+        return;
+
+    const QString code = this->m_errorDescription.first();
+    if (code.isEmpty() || !code.startsWith("SR_BACKEND_FAILURE"))
+        return;
+
+    const QString jsonPayload = this->m_errorDescription[2];
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(jsonPayload.toUtf8(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !doc.isObject())
+        return;
+
+    QJsonObject obj = doc.object();
+    const QString errorText = obj.value(QStringLiteral("error")).toString();
+    if (!errorText.isEmpty())
+        this->m_errorText = errorText;
+}
+
+void Failure::parseCslgFailures()
+{
+    if (this->m_errorDescription.count() < 3)
+        return;
+
+    const QString code = this->m_errorDescription.first();
+    if (code.isEmpty() || !code.startsWith("SR_BACKEND_FAILURE"))
+        return;
+
+    const QString payload = this->m_errorDescription[2];
+    QRegularExpression re(QStringLiteral("<StorageLinkServiceError>.*</StorageLinkServiceError>"),
+                          QRegularExpression::DotMatchesEverythingOption);
+    QRegularExpressionMatch match = re.match(payload);
+    if (!match.hasMatch())
+        return;
+
+    const QString xml = match.captured(0);
+    QXmlStreamReader reader(xml);
+    QString faultText;
+    while (!reader.atEnd())
+    {
+        reader.readNext();
+        if (reader.isStartElement() && reader.name() == QStringLiteral("Fault"))
+        {
+            faultText = reader.readElementText();
+            break;
+        }
+    }
+    if (faultText.isEmpty())
+        return;
+
+    if (this->m_errorText.isEmpty())
+        this->m_errorText = faultText;
+    else
+        this->m_errorText = QString("%1 (%2)").arg(this->m_errorText, faultText);
 }

@@ -27,15 +27,14 @@
 
 #include "bondpropertiesdialog.h"
 #include "ui_bondpropertiesdialog.h"
-#include "xenlib.h"
-#include "xen/api.h"
+#include "xen/network/connection.h"
 #include "xencache.h"
 #include <QMessageBox>
 #include <QTableWidgetItem>
 #include <QPushButton>
 
-BondPropertiesDialog::BondPropertiesDialog(XenLib* xenLib, const QString& hostRef, const QString& networkRef, QWidget* parent)
-    : QDialog(parent), ui(new Ui::BondPropertiesDialog), m_xenLib(xenLib), m_hostRef(hostRef), m_networkRef(networkRef)
+BondPropertiesDialog::BondPropertiesDialog(XenConnection* connection, const QString& hostRef, const QString& networkRef, QWidget* parent)
+    : QDialog(parent), ui(new Ui::BondPropertiesDialog), m_connection(connection), m_hostRef(hostRef), m_networkRef(networkRef)
 {
     ui->setupUi(this);
 
@@ -110,11 +109,11 @@ QStringList BondPropertiesDialog::getSelectedPIFRefs() const
 
 void BondPropertiesDialog::loadAvailablePIFs()
 {
-    if (!m_xenLib)
+    if (!m_connection || !m_connection->GetCache())
         return;
 
     // Get all PIFs from cache
-    QList<QVariantMap> allPIFs = m_xenLib->getCache()->GetAllData("pif");
+    QList<QVariantMap> allPIFs = m_connection->GetCache()->GetAllData("pif");
 
     // Filter PIFs that belong to this host and are physical (not VLANs or bonds)
     QList<QVariantMap> availablePIFs;

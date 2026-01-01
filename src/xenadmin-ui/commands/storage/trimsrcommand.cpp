@@ -28,7 +28,6 @@
 #include "trimsrcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/sr.h"
 #include "xen/actions/sr/srtrimaction.h"
@@ -36,7 +35,7 @@
 #include <QDebug>
 
 TrimSRCommand::TrimSRCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : SRCommand(mainWindow, parent)
 {
 }
 
@@ -45,13 +44,13 @@ void TrimSRCommand::setTargetSR(const QString& srRef)
     this->m_overrideSRRef = srRef;
 }
 
-bool TrimSRCommand::canRun() const
+bool TrimSRCommand::CanRun() const
 {
-    QString srRef = this->getSelectedSRRef();
-    if (srRef.isEmpty())
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
         return false;
 
-    QVariantMap srData = this->getSelectedSRData();
+    QVariantMap srData = sr->GetData();
     if (srData.isEmpty())
         return false;
 
@@ -59,15 +58,14 @@ bool TrimSRCommand::canRun() const
     return this->supportsTrim(srData) && this->isAttachedToHost(srData);
 }
 
-void TrimSRCommand::run()
+void TrimSRCommand::Run()
 {
-    QString srRef = this->getSelectedSRRef();
-    QVariantMap srData = this->getSelectedSRData();
-
-    if (srRef.isEmpty() || srData.isEmpty())
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
         return;
 
-    QString srName = this->getSRName(srData);
+    QString srRef = sr->OpaqueRef();
+    QString srName = sr->GetName();
 
     // Show confirmation dialog
     QMessageBox msgBox(this->mainWindow());
@@ -87,13 +85,22 @@ void TrimSRCommand::run()
 
     qDebug() << "TrimSRCommand: Trimming SR" << srName << "(" << srRef << ")";
 
-    // Create SR object for action
-    SR* sr = new SR(this->mainWindow()->xenLib()->getConnection(), srRef, this);
+    // Get GetConnection from SR object for multi-GetConnection support
+    XenConnection* conn = sr->GetConnection();
+    if (!conn || !conn->IsConnected())
+    {
+        QMessageBox::warning(this->mainWindow(), "Not Connected",
+                             "Not connected to XenServer");
+        return;
+    }
+
+    // Create SR object for action (action owns it)
+    SR* srForAction = new SR(conn, srRef, this);
 
     // Create and run trim action
     SrTrimAction* action = new SrTrimAction(
-        this->mainWindow()->xenLib()->getConnection(),
-        sr,
+        conn,
+        srForAction,
         this);
 
     // Register with OperationManager for history tracking
@@ -128,37 +135,9 @@ void TrimSRCommand::run()
     action->runAsync();
 }
 
-QString TrimSRCommand::menuText() const
+QString TrimSRCommand::MenuText() const
 {
     return "Trim SR...";
-}
-
-QString TrimSRCommand::getSelectedSRRef() const
-{
-    if (!this->m_overrideSRRef.isEmpty())
-        return this->m_overrideSRRef;
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "sr")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QVariantMap TrimSRCommand::getSelectedSRData() const
-{
-    QString srRef = this->getSelectedSRRef();
-    if (srRef.isEmpty())
-        return QVariantMap();
-
-    if (!this->mainWindow()->xenLib())
-        return QVariantMap();
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return QVariantMap();
-
-    return cache->ResolveObjectData("sr", srRef);
 }
 
 bool TrimSRCommand::supportsTrim(const QVariantMap& srData) const
@@ -207,12 +186,11 @@ bool TrimSRCommand::isAttachedToHost(const QVariantMap& srData) const
     if (srData.isEmpty())
         return false;
 
-    if (!this->mainWindow()->xenLib())
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
         return false;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
+    XenCache* cache = sr->GetConnection()->GetCache();
 
     // Check if any PBD is currently attached
     QVariantList pbds = srData.value("PBDs", QVariantList()).toList();

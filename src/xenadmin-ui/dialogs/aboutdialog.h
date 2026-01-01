@@ -33,39 +33,25 @@
 #include <QPushButton>
 #include <QTextBrowser>
 
-class XenLib;
-
 class AboutDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    explicit AboutDialog(XenLib* xenLib = nullptr, QWidget* parent = nullptr);
+    public:
+        explicit AboutDialog(QWidget* parent = nullptr);
 
-private slots:
-    void onPoolsReceived(const QVariantList& pools);
-    void onHostsReceived(const QVariantList& hosts);
-    void onVirtualMachinesReceived(const QVariantList& vms);
+    private:
+        void setupUI();
+        QString getVersionInfo() const;
+        QString getSystemInfo() const;
+        QString getConnectionInfo() const;
+        QString getLicenseDetails() const;
 
-private:
-    void setupUI();
-    QString getVersionInfo() const;
-    QString getSystemInfo() const;
-    void requestConnectionInfo();
-    void updateConnectionInfo();
-
-    XenLib* m_xenLib;
-    QLabel* m_logoLabel;
-    QLabel* m_titleLabel;
-    QLabel* m_versionLabel;
-    QTextBrowser* m_infoText;
-    QPushButton* m_okButton;
-
-    // Cache async results
-    QVariantList m_pools;
-    QVariantList m_hosts;
-    QVariantList m_vms;
-    int m_pendingRequests;
+        QLabel* m_logoLabel;
+        QLabel* m_titleLabel;
+        QLabel* m_versionLabel;
+        QTextBrowser* m_infoText;
+        QPushButton* m_okButton;
 };
 
 #endif // ABOUTDIALOG_H

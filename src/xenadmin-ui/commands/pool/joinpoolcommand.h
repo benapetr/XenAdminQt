@@ -30,19 +30,21 @@
 
 #include "../command.h"
 
+class Host;
+
 class JoinPoolCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit JoinPoolCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit JoinPoolCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    bool canRun() const override;
-    void run() override;
-    QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
-private:
-    QString getSelectedHostRef() const;
+    private:
+        QSharedPointer<Host> getSelectedHost() const;
 };
 
 #endif // JOINPOOLCOMMAND_H

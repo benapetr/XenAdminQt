@@ -28,41 +28,40 @@
 #include "restartvmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/actions/vm/vmrebootaction.h"
-#include "xencache.h"
 #include <QMessageBox>
 #include <QTimer>
 
 RestartVMCommand::RestartVMCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VMCommand(mainWindow, parent)
 {
 }
 
-bool RestartVMCommand::canRun() const
+bool RestartVMCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
     // Check if VM is running AND clean_reboot is allowed (matches C# RebootVMCommand.CanRun)
-    if (!this->isVMRunning(vmRef))
+    if (vm->GetPowerState() != "Running")
         return false;
 
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-    QVariantList allowedOperations = vmData.value("allowed_operations").toList();
+    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
 
     return allowedOperations.contains("clean_reboot");
 }
 
-void RestartVMCommand::run()
+void RestartVMCommand::Run()
 {
-    QString vmRef = this->getSelectedVMRef();
-    QString vmName = this->getSelectedVMName();
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
+        return;
 
-    if (vmRef.isEmpty() || vmName.isEmpty())
+    QString vmName = this->getSelectedVMName();
+    if (vmName.isEmpty())
         return;
 
     // Show confirmation dialog
@@ -73,20 +72,20 @@ void RestartVMCommand::run()
     if (ret != QMessageBox::Yes)
         return;
 
-    // Get XenConnection from XenLib
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-    if (!conn || !conn->isConnected())
+    // Get XenConnection from VM
+    XenConnection* conn = vm->GetConnection();
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
                              "Not connected to XenServer");
         return;
     }
 
-    // Create VM object (lightweight wrapper)
-    VM* vm = new VM(conn, vmRef);
+    // Create VM object for action (action will own and delete it)
+    VM* vmForAction = new VM(conn, vm->OpaqueRef());
 
     // Create VMCleanReboot action (parent is MainWindow to prevent premature deletion)
-    VMCleanReboot* action = new VMCleanReboot(vm, this->mainWindow());
+    VMCleanReboot* action = new VMCleanReboot(vmForAction, this->mainWindow());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
     OperationManager::instance()->registerOperation(action);
@@ -102,42 +101,7 @@ void RestartVMCommand::run()
     action->runAsync();
 }
 
-QString RestartVMCommand::menuText() const
+QString RestartVMCommand::MenuText() const
 {
     return "Restart VM";
-}
-
-QString RestartVMCommand::getSelectedVMRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString RestartVMCommand::getSelectedVMName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return item->text(0);
-}
-
-bool RestartVMCommand::isVMRunning(const QString& vmRef) const
-{
-    // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-    QString powerState = vmData.value("power_state", "Halted").toString();
-
-    return (powerState == "Running");
 }

@@ -48,53 +48,53 @@ class VappStartCommand : public Command
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct a new VappStartCommand
-     * @param mainWindow Main window reference
-     * @param parent Parent QObject
-     */
-    explicit VappStartCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct a new VappStartCommand
+         * @param mainWindow Main window reference
+         * @param parent Parent QObject
+         */
+        explicit VappStartCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    /**
-     * @brief Check if command can run with current selection
-     *
-     * Validates:
-     * - Selection is VM_appliance(s) OR VM(s) from same appliance
-     * - At least one appliance has "start" in allowed_operations
-     *
-     * @return true if command can execute
-     */
-    bool canRun() const override;
+        /**
+         * @brief Check if command can run with current selection
+         *
+         * Validates:
+         * - Selection is VM_appliance(s) OR VM(s) from same appliance
+         * - At least one appliance has "start" in allowed_operations
+         *
+         * @return true if command can execute
+         */
+        bool CanRun() const override;
 
-    /**
-     * @brief Execute the vApp start command
-     *
-     * Creates StartApplianceAction for each startable appliance.
-     * If VMs selected, finds their common appliance and starts it.
-     */
-    void run() override;
+        /**
+         * @brief Execute the vApp start command
+         *
+         * Creates StartApplianceAction for each startable appliance.
+         * If VMs selected, finds their common appliance and starts it.
+         */
+        void Run() override;
 
-    /**
-     * @brief Get menu text for this command
-     * @return "Start vApp"
-     */
-    QString menuText() const override;
+        /**
+         * @brief Get menu text for this command
+         * @return "Start vApp"
+         */
+        QString MenuText() const override;
 
-private:
-    /**
-     * @brief Check if appliance can be started
-     * @param applianceData VM_appliance record data
-     * @return true if "start" in allowed_operations
-     */
-    bool canStartAppliance(const QVariantMap& applianceData) const;
+    private:
+        /**
+         * @brief Check if appliance can be started
+         * @param applianceData VM_appliance record data
+         * @return true if "start" in allowed_operations
+         */
+        bool canStartAppliance(const QVariantMap& applianceData) const;
 
-    /**
-     * @brief Get appliance ref from selected VM
-     * @param vmRef VM opaque reference
-     * @return Appliance ref or empty string if not in appliance
-     */
-    QString getApplianceRefFromVM(const QString& vmRef) const;
+        /**
+         * @brief Get appliance ref from selected VM
+         * @param vmRef VM opaque reference
+         * @return Appliance ref or empty string if not in appliance
+         */
+        QString getApplianceRefFromVM(const QString& vmRef) const;
 };
 
 #endif // VAPPSTARTCOMMAND_H

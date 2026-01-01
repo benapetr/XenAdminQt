@@ -26,14 +26,17 @@
  */
 
 #include "iconmanager.h"
+#include "xen/xenobject.h"
+#include "xen/network/connection.h"
+#include "xencache.h"
 #include <QPainter>
 #include <QDebug>
 
 IconManager::IconManager()
 {
     // Load static icons from resources
-    this->m_connectedIcon = QIcon(":/images/000_TreeConnected_h32bit_16.png");
-    this->m_disconnectedIcon = QIcon(":/images/000_ServerDisconnected_h32bit_16.png");
+    this->m_connectedIcon = QIcon(":/tree-icons/host.png");
+    this->m_disconnectedIcon = QIcon(":/tree-icons/host_disconnected.png");
     this->m_connectingIcon = this->createStatusIcon(QColor(255, 165, 0)); // Orange for connecting
 }
 
@@ -63,6 +66,32 @@ QIcon IconManager::getIconForObject(const QString& objectType, const QVariantMap
     }
 
     return QIcon(); // Empty icon for unknown types
+}
+
+QIcon IconManager::getIconForObject(const XenObject* object) const
+{
+    if (!object)
+        return QIcon();
+
+    const QString objectType = object->GetObjectType();
+    QVariantMap objectData = object->GetData();
+
+    if (objectType == "host")
+    {
+        XenConnection* connection = object->GetConnection();
+        if (connection && connection->GetCache())
+        {
+            QString metricsRef = objectData.value("metrics", "").toString();
+            if (!metricsRef.isEmpty() && metricsRef != "OpaqueRef:NULL")
+            {
+                QVariantMap metricsData = connection->GetCache()->ResolveObjectData("host_metrics", metricsRef);
+                if (!metricsData.isEmpty())
+                    objectData["_metrics_live"] = metricsData.value("live", false);
+            }
+        }
+    }
+
+    return this->getIconForObject(objectType, objectData);
 }
 
 QIcon IconManager::getIconForVM(const QVariantMap& vmData) const

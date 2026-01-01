@@ -26,16 +26,16 @@
  */
 
 #include "detachsrcommand.h"
-#include "../../../xenlib/xen/actions/sr/detachsraction.h"
-#include "../../../xenlib/xencache.h"
-#include "../../../xenlib/xenlib.h"
+#include "xen/actions/sr/detachsraction.h"
+#include "xen/sr.h"
+#include "xencache.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>
 #include <QDebug>
 
 DetachSRCommand::DetachSRCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : SRCommand(mainWindow, parent)
 {
 }
 
@@ -44,7 +44,7 @@ void DetachSRCommand::setTargetSR(const QString& srRef)
     this->m_overrideSRRef = srRef;
 }
 
-bool DetachSRCommand::canRun() const
+bool DetachSRCommand::CanRun() const
 {
     QString srRef = this->currentSR();
     if (srRef.isEmpty())
@@ -52,17 +52,15 @@ bool DetachSRCommand::canRun() const
         return false;
     }
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
     {
         return false;
     }
 
-    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-    if (srData.isEmpty())
-    {
-        return false;
-    }
+    XenCache* cache = sr->GetConnection()->GetCache();
+
+    QVariantMap srData = sr->GetData();
 
     // Check if SR is already detached
     QVariantList pbds = srData.value("PBDs").toList();
@@ -116,7 +114,7 @@ bool DetachSRCommand::canRun() const
     return true;
 }
 
-void DetachSRCommand::run()
+void DetachSRCommand::Run()
 {
     QString srRef = this->currentSR();
     if (srRef.isEmpty())
@@ -125,10 +123,13 @@ void DetachSRCommand::run()
         return;
     }
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-    QString srName = srData.value("name_label").toString();
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
+    {
+        return;
+    }
 
+    QString srName = sr->GetName();
     if (srName.isEmpty())
     {
         srName = srRef;
@@ -153,9 +154,18 @@ void DetachSRCommand::run()
 
     qDebug() << "DetachSRCommand: Detaching SR" << srName << "(" << srRef << ")";
 
+    // Get GetConnection from SR object for multi-GetConnection support
+    XenConnection* conn = sr->GetConnection();
+    if (!conn || !conn->IsConnected())
+    {
+        QMessageBox::warning(this->mainWindow(), "Not Connected",
+                             "Not connected to XenServer");
+        return;
+    }
+
     // Create and run action
     DetachSrAction* action = new DetachSrAction(
-        this->mainWindow()->xenLib()->getConnection(),
+        conn,
         srRef,
         srName,
         false, // Don't destroy PBDs, just unplug

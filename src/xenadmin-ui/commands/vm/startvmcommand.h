@@ -28,33 +28,28 @@
 #ifndef STARTVMCOMMAND_H
 #define STARTVMCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
-class StartVMCommand : public Command
+class StartVMCommand : public VMCommand
 {
     Q_OBJECT
 
-public:
-    explicit StartVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit StartVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool canRun() const override;
-    void run() override;
-    QString menuText() const override;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
-    /**
-     * @brief Run the command for a specific VM reference.
-     * Matches C# StartVMCommand.Run() overloads used by console power controls.
-     * @param vmRef XenAPI opaque ref of the VM to start.
-     * @param vmName Optional name (used for prompts/logging); if empty it will be looked up.
-     * @return true if the action was scheduled.
-     */
-    bool runForVm(const QString& vmRef, const QString& vmName = QString());
-
-private:
-    QString getSelectedVMRef() const;
-    QString getSelectedVMName() const;
-    bool isVMRunning(const QString& vmRef) const;
+        /**
+         * @brief Run the command for a specific VM reference.
+         * Matches C# StartVMCommand.Run() overloads used by console power controls.
+         * @param vmRef XenAPI opaque ref of the VM to start.
+         * @param vmName Optional name (used for prompts/logging); if empty it will be looked up.
+         * @return true if the action was scheduled.
+         */
+        bool runForVm(const QString& vmRef, const QString& vmName = QString());
 };
 
 #endif // STARTVMCOMMAND_H

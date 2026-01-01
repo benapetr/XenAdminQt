@@ -28,7 +28,7 @@
 #include "perfmonalerteditpage.h"
 #include "ui_perfmonalerteditpage.h"
 #include "../../xenlib/xen/asyncoperation.h"
-#include "../../xenlib/xen/connection.h"
+#include "../../xenlib/xen/network/connection.h"
 #include "../../xenlib/xen/session.h"
 #include "../../xenlib/xen/api.h"
 
@@ -143,7 +143,7 @@ AsyncOperation* PerfmonAlertEditPage::saveSettings()
     protected:
         void run() override
         {
-            XenRpcAPI api(connection()->getSession());
+            XenRpcAPI api(connection()->GetSession());
 
             setPercentComplete(30);
 
@@ -151,9 +151,9 @@ AsyncOperation* PerfmonAlertEditPage::saveSettings()
             QString methodName = m_objectType + ".set_other_config";
 
             QVariantList params;
-            params << connection()->getSessionId() << m_objectRef << m_otherConfig;
+            params << connection()->GetSessionId() << this->m_objectRef << this->m_otherConfig;
             QByteArray request = api.buildJsonRpcCall(methodName, params);
-            connection()->sendRequest(request);
+            connection()->SendRequest(request);
 
             setPercentComplete(100);
         }

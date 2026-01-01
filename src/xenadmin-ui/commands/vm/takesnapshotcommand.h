@@ -35,26 +35,26 @@ class TakeSnapshotCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit TakeSnapshotCommand(QObject* parent = nullptr);
-    explicit TakeSnapshotCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-    explicit TakeSnapshotCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit TakeSnapshotCommand(QObject* parent = nullptr);
+        explicit TakeSnapshotCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit TakeSnapshotCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent = nullptr);
 
-    void run() override;
-    bool canRun() const override;
-    QString menuText() const override;
+        void Run() override;
+        bool CanRun() const override;
+        QString MenuText() const override;
 
-signals:
-    void snapshotStarted();
-    void snapshotCompleted(bool success);
+    signals:
+        void snapshotStarted();
+        void snapshotCompleted(bool success);
 
-private:
-    QString m_vmUuid;
+    private:
+        QString m_vmUuid;
 
-    // Check if VM supports snapshot operations
-    bool canTakeSnapshot() const;
-    void showSnapshotDialog();
-    void executeSnapshotOperation(const QString& name, const QString& description, VmSnapshotDialog::SnapshotType type);
+        // Check if VM supports snapshot operations
+        bool canTakeSnapshot() const;
+        void showSnapshotDialog();
+        void executeSnapshotOperation(const QString& name, const QString& description, VmSnapshotDialog::SnapshotType type);
 };
 
 #endif // TAKESNAPSHOTCOMMAND_H

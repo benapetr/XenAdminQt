@@ -28,7 +28,7 @@
 #ifndef DEACTIVATEVBDCOMMAND_H
 #define DEACTIVATEVBDCOMMAND_H
 
-#include "../command.h"
+#include "vbdcommand.h"
 
 /**
  * @brief Command to deactivate (unplug) a VBD
@@ -37,20 +37,19 @@
  * a virtual disk from a running VM. Requires VM to be running and PV drivers
  * installed (for older hosts).
  */
-class DeactivateVBDCommand : public Command
+class DeactivateVBDCommand : public VBDCommand
 {
     Q_OBJECT
 
     public:
         explicit DeactivateVBDCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        QString menuText() const override;
-        bool canRun() const override;
-        void run() override;
+        QString MenuText() const override;
+        bool CanRun() const override;
+        void Run() override;
 
     private:
         bool canRunVBD(const QString& vbdRef) const;
-        QString getCantRunReasonVBD(const QString& vbdRef) const;
         bool areIODriversNeededAndMissing(const QVariantMap& vmData) const;
 };
 

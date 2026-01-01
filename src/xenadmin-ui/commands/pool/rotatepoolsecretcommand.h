@@ -28,7 +28,7 @@
 #ifndef ROTATEPOOLSECRETCOMMAND_H
 #define ROTATEPOOLSECRETCOMMAND_H
 
-#include "../command.h"
+#include "poolcommand.h"
 #include <QString>
 #include <QVariantMap>
 
@@ -58,38 +58,41 @@ class MainWindow;
  *
  * C# Reference: XenAdmin/Commands/RotatePoolSecretCommand.cs
  */
-class RotatePoolSecretCommand : public Command
+
+class XenCache;
+
+class RotatePoolSecretCommand : public PoolCommand
 {
     Q_OBJECT
 
 public:
     explicit RotatePoolSecretCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    bool canRun() const override;
-    void run() override;
-    QString menuText() const override;
+    bool CanRun() const override;
+    void Run() override;
+    QString MenuText() const override;
     QString getCantRunReason() const;
 
 private:
-    /**
-     * @brief Check if pool meets requirements for secret rotation
-     * @param poolData Pool data record
-     * @return true if rotation is allowed
-     */
-    bool canRotateSecret(const QVariantMap& poolData) const;
-
     /**
      * @brief Check if any host in pool has rotation restriction
      * @param poolRef Pool reference
      * @return true if any host is restricted
      */
-    bool hasRotationRestriction(const QString& poolRef) const;
+    bool hasRotationRestriction(const QString& poolRef, XenCache *cache) const;
+
+    /**
+     * @brief Check if pool meets requirements for secret rotation
+     * @param poolData Pool data record
+     * @return true if rotation is allowed
+     */
+    bool canRotateSecret(const QVariantMap& poolData, XenCache *cache) const;
 
     /**
      * @brief Check if XenServer version supports secret rotation
      * @return true if Stockholm or greater (8.0+)
      */
-    bool isStockholmOrGreater() const;
+    bool isStockholmOrGreater(XenCache *cache) const;
 };
 
 #endif // ROTATEPOOLSECRETCOMMAND_H

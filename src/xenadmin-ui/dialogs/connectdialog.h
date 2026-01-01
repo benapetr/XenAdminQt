@@ -38,38 +38,39 @@ namespace Ui
 }
 QT_END_NAMESPACE
 
+//! TODO delete this entire thing it doesn't exist in C#
 class ConnectDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    explicit ConnectDialog(QWidget* parent = nullptr);
-    // Constructor for retry mode with pre-filled credentials
-    explicit ConnectDialog(const QString& hostname, int port, const QString& username,
-                           const QString& errorMessage, QWidget* parent = nullptr);
-    ~ConnectDialog();
+    public:
+        explicit ConnectDialog(QWidget* parent = nullptr);
+        // Constructor for retry mode with pre-filled credentials
+        explicit ConnectDialog(const QString& hostname, int port, const QString& username,
+                               const QString& errorMessage, QWidget* parent = nullptr);
+        ~ConnectDialog();
 
-    QString getHostname() const;
-    int getPort() const;
-    QString getUsername() const;
-    QString getPassword() const;
-    bool useSSL() const;
-    bool saveProfile() const;
-    QString getProfileName() const;
-    ConnectionProfile getConnectionProfile() const;
+        QString getHostname() const;
+        int getPort() const;
+        QString getUsername() const;
+        QString getPassword() const;
+        bool useSSL() const;
+        bool saveProfile() const;
+        QString getProfileName() const;
+        ConnectionProfile getConnectionProfile() const;
 
-private slots:
-    void validateInput();
-    void onProfileSelected(int index);
-    void onSaveProfileChanged(int state);
-    void onDeleteProfile();
+    private slots:
+        void validateInput();
+        void onProfileSelected(int index);
+        void onSaveProfileChanged(int state);
+        void onDeleteProfile();
 
-private:
-    void loadProfiles();
-    void fillFromProfile(const ConnectionProfile& profile);
+    private:
+        void loadProfiles();
+        void fillFromProfile(const ConnectionProfile& profile);
 
-    Ui::ConnectDialog* ui;
-    QList<ConnectionProfile> m_profiles;
+        Ui::ConnectDialog* ui;
+        QList<ConnectionProfile> m_profiles;
 };
 
 #endif // CONNECTDIALOG_H

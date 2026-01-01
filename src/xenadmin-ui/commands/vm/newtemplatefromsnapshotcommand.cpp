@@ -28,9 +28,8 @@
 #include "newtemplatefromsnapshotcommand.h"
 #include "../../../xenlib/xen/actions/vm/vmcloneaction.h"
 #include "../../../xenlib/xen/xenapi/xenapi_VM.h"
-#include "../../../xenlib/xen/connection.h"
+#include "../../../xenlib/xen/network/connection.h"
 #include "../../../xenlib/xen/vm.h"
-#include "../../../xenlib/xenlib.h"
 #include "../../../xenlib/xencache.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
@@ -42,7 +41,7 @@ NewTemplateFromSnapshotCommand::NewTemplateFromSnapshotCommand(MainWindow* mainW
 {
 }
 
-bool NewTemplateFromSnapshotCommand::canRun() const
+bool NewTemplateFromSnapshotCommand::CanRun() const
 {
     QString vmRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -52,8 +51,17 @@ bool NewTemplateFromSnapshotCommand::canRun() const
         return false;
     }
 
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+        return false;
+
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
     // Get VM data from cache
-    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
     {
         return false;
@@ -64,7 +72,7 @@ bool NewTemplateFromSnapshotCommand::canRun() const
     return isSnapshot;
 }
 
-void NewTemplateFromSnapshotCommand::run()
+void NewTemplateFromSnapshotCommand::Run()
 {
     QString vmRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -74,8 +82,17 @@ void NewTemplateFromSnapshotCommand::run()
         return;
     }
 
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+        return;
+
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return;
+
     // Get snapshot data
-    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
     {
         return;
@@ -107,8 +124,8 @@ void NewTemplateFromSnapshotCommand::run()
     }
 
     // Get connection
-    XenConnection* conn = this->xenLib()->getConnection();
-    if (!conn || !conn->isConnected())
+    XenConnection* conn = connection;
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
                              tr("Not connected to XenServer"));
@@ -152,7 +169,7 @@ void NewTemplateFromSnapshotCommand::run()
     action->runAsync();
 }
 
-QString NewTemplateFromSnapshotCommand::menuText() const
+QString NewTemplateFromSnapshotCommand::MenuText() const
 {
     return tr("Create &Template from Snapshot...");
 }
@@ -164,8 +181,9 @@ QString NewTemplateFromSnapshotCommand::generateUniqueName(const QString& snapsh
     int suffix = 1;
 
     // Get all VM names from cache to check for uniqueness
-    XenConnection* conn = this->xenLib()->getConnection();
-    if (!conn)
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    XenConnection* conn = selectedObject ? selectedObject->GetConnection() : nullptr;
+    if (!conn || !conn->GetCache())
     {
         return name;
     }

@@ -28,57 +28,52 @@
 #include "pausevmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/actions/vm/vmpauseaction.h"
-#include "xencache.h"
 #include <QMessageBox>
 #include <QTimer>
 
 PauseVMCommand::PauseVMCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VMCommand(mainWindow, parent)
 {
 }
 
-bool PauseVMCommand::canRun() const
+bool PauseVMCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
     // Check if VM is running AND pause is allowed (matches C# PauseVMCommand.CanRun)
-    if (!this->isVMRunning(vmRef))
+    if (vm->GetPowerState() != "Running")
         return false;
 
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-    QVariantList allowedOperations = vmData.value("allowed_operations").toList();
+    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
 
     return allowedOperations.contains("pause");
 }
 
-void PauseVMCommand::run()
+void PauseVMCommand::Run()
 {
-    QString vmRef = this->getSelectedVMRef();
-    QString vmName = this->getSelectedVMName();
-
-    if (vmRef.isEmpty() || vmName.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return;
 
-    // Get XenConnection from XenLib
-    XenConnection* conn = this->mainWindow()->xenLib()->getConnection();
-    if (!conn || !conn->isConnected())
+    // Get XenConnection from VM
+    XenConnection* conn = vm->GetConnection();
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), "Not Connected",
                              "Not connected to XenServer");
         return;
     }
 
-    // Create VM object (lightweight wrapper)
-    VM* vm = new VM(conn, vmRef);
+    // Create VM object for action (action will own and delete it)
+    VM* vmForAction = new VM(conn, vm->OpaqueRef());
 
     // Create VMPause action (parent is MainWindow to prevent premature deletion)
-    VMPause* action = new VMPause(vm, this->mainWindow());
+    VMPause* action = new VMPause(vmForAction, this->mainWindow());
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->registerOperation(action);
@@ -93,42 +88,7 @@ void PauseVMCommand::run()
     action->runAsync();
 }
 
-QString PauseVMCommand::menuText() const
+QString PauseVMCommand::MenuText() const
 {
     return "Pause VM";
-}
-
-QString PauseVMCommand::getSelectedVMRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString PauseVMCommand::getSelectedVMName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return item->text(0);
-}
-
-bool PauseVMCommand::isVMRunning(const QString& vmRef) const
-{
-    // Use cache instead of async API call
-    QVariantMap vmData = this->mainWindow()->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-    QString powerState = vmData.value("power_state", "Halted").toString();
-
-    return (powerState == "Running");
 }

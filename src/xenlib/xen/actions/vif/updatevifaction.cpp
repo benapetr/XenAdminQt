@@ -26,7 +26,7 @@
  */
 
 #include "updatevifaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VIF.h"
 #include "../../xenapi/xenapi_VM.h"
@@ -53,12 +53,12 @@ UpdateVIFAction::UpdateVIFAction(XenConnection* connection,
         throw std::invalid_argument("Old VIF reference cannot be empty");
 
     // Get VM and network names for display
-    QVariantMap vmData = connection->getCache()->ResolveObjectData("vm", m_vmRef);
+    QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", m_vmRef);
     m_vmName = vmData.value("name_label").toString();
 
-    QVariantMap oldVifData = connection->getCache()->ResolveObjectData("vif", m_oldVifRef);
+    QVariantMap oldVifData = connection->GetCache()->ResolveObjectData("vif", m_oldVifRef);
     QString networkRef = oldVifData.value("network").toString();
-    QVariantMap networkData = connection->getCache()->ResolveObjectData("network", networkRef);
+    QVariantMap networkData = connection->GetCache()->ResolveObjectData("network", networkRef);
     m_networkName = networkData.value("name_label").toString();
 
     setTitle(QString("Updating VIF for %1").arg(m_vmName));
@@ -74,7 +74,7 @@ void UpdateVIFAction::run()
         // Step 1: Delete the old VIF (includes unplugging if needed)
         setDescription("Removing old VIF configuration...");
 
-        QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         QString powerState = vmData.value("power_state").toString();
 
         if (powerState == "Running")
@@ -124,7 +124,7 @@ void UpdateVIFAction::run()
 
         // Step 3: Attempt to hot-plug if VM is running
         // Refresh VM power state in case it changed
-        vmData = connection()->getCache()->ResolveObjectData("vm", m_vmRef);
+        vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         powerState = vmData.value("power_state").toString();
 
         if (powerState == "Running")

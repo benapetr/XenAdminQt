@@ -27,29 +27,29 @@
 
 #include "installtoolscommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
+#include "xen/vm.h"
 #include "xencache.h"
 #include <QMessageBox>
 
 InstallToolsCommand::InstallToolsCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : VMCommand(mainWindow, parent)
 {
 }
 
-bool InstallToolsCommand::canRun() const
+bool InstallToolsCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
     // Can install tools if VM is running and tools are not already installed/current
     return this->isVMRunning() && this->canInstallTools();
 }
 
-void InstallToolsCommand::run()
+void InstallToolsCommand::Run()
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return;
 
     // Show confirmation dialog
@@ -70,58 +70,24 @@ void InstallToolsCommand::run()
     }
 }
 
-QString InstallToolsCommand::menuText() const
+QString InstallToolsCommand::MenuText() const
 {
     return "Install XenServer Tools...";
 }
 
-QString InstallToolsCommand::getSelectedVMRef() const
-{
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-bool InstallToolsCommand::isVMRunning() const
-{
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
-        return false;
-
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
-
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-    QString powerState = vmData.value("power_state", "").toString();
-
-    return powerState == "Running";
-}
-
 bool InstallToolsCommand::canInstallTools() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
-
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = vm->GetData();
 
     // Check guest metrics for tools version
     QString guestMetricsRef = vmData.value("guest_metrics", "").toString();
     if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
     {
+        XenCache* cache = vm->GetConnection()->GetCache();
         QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
         QVariantMap pvDriversVersion = guestMetrics.value("PV_drivers_version", QVariantMap()).toMap();
 

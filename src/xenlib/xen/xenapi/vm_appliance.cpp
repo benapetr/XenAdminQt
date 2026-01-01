@@ -1,31 +1,28 @@
-/* Copyright (c) Cloud Software Group, Inc.
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
  *
- * Redistribution and use in source and binary forms,
- * with or without modification, are permitted provided
- * that the following conditions are met:
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * *   Redistributions of source code must retain the above
- *     copyright notice, this list of conditions and the
- *     following disclaimer.
- * *   Redistributions in binary form must reproduce the above
- *     copyright notice, this list of conditions and the
- *     following disclaimer in the documentation and/or other
- *     materials provided with the distribution.
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
- * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "vm_appliance.h"
@@ -38,9 +35,9 @@ namespace XenAPI
 {
 
     // VM_appliance.get_allowed_operations
-    QStringList VM_appliance::get_allowed_operations(XenSession* session, const QString& applianceRef)
+    QStringList VM_appliance::get_allowed_operations(Session* session, const QString& applianceRef)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -65,9 +62,9 @@ namespace XenAPI
     }
 
     // VM_appliance.get_current_operations
-    QVariantMap VM_appliance::get_current_operations(XenSession* session, const QString& applianceRef)
+    QVariantMap VM_appliance::get_current_operations(Session* session, const QString& applianceRef)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -84,9 +81,9 @@ namespace XenAPI
     }
 
     // VM_appliance.get_VMs
-    QStringList VM_appliance::get_VMs(XenSession* session, const QString& applianceRef)
+    QStringList VM_appliance::get_VMs(Session* session, const QString& applianceRef)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -111,9 +108,9 @@ namespace XenAPI
     }
 
     // VM_appliance.get_record
-    QVariantMap VM_appliance::get_record(XenSession* session, const QString& applianceRef)
+    QVariantMap VM_appliance::get_record(Session* session, const QString& applianceRef)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -129,9 +126,9 @@ namespace XenAPI
     }
 
     // VM_appliance.get_all_records
-    QVariantMap VM_appliance::get_all_records(XenSession* session)
+    QVariantMap VM_appliance::get_all_records(Session* session)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -146,9 +143,9 @@ namespace XenAPI
     }
 
     // VM_appliance.set_name_label
-    void VM_appliance::set_name_label(XenSession* session, const QString& applianceRef, const QString& label)
+    void VM_appliance::set_name_label(Session* session, const QString& applianceRef, const QString& label)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -163,9 +160,9 @@ namespace XenAPI
     }
 
     // VM_appliance.set_name_description
-    void VM_appliance::set_name_description(XenSession* session, const QString& applianceRef, const QString& description)
+    void VM_appliance::set_name_description(Session* session, const QString& applianceRef, const QString& description)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -180,9 +177,9 @@ namespace XenAPI
     }
 
     // VM_appliance.async_start
-    QString VM_appliance::async_start(XenSession* session, const QString& applianceRef, bool paused)
+    QString VM_appliance::async_start(Session* session, const QString& applianceRef, bool paused)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -199,9 +196,9 @@ namespace XenAPI
     }
 
     // VM_appliance.start
-    void VM_appliance::start(XenSession* session, const QString& applianceRef, bool paused)
+    void VM_appliance::start(Session* session, const QString& applianceRef, bool paused)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -216,9 +213,9 @@ namespace XenAPI
     }
 
     // VM_appliance.async_clean_shutdown
-    QString VM_appliance::async_clean_shutdown(XenSession* session, const QString& applianceRef)
+    QString VM_appliance::async_clean_shutdown(Session* session, const QString& applianceRef)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -234,9 +231,9 @@ namespace XenAPI
     }
 
     // VM_appliance.clean_shutdown
-    void VM_appliance::clean_shutdown(XenSession* session, const QString& applianceRef)
+    void VM_appliance::clean_shutdown(Session* session, const QString& applianceRef)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -250,9 +247,9 @@ namespace XenAPI
     }
 
     // VM_appliance.async_hard_shutdown
-    QString VM_appliance::async_hard_shutdown(XenSession* session, const QString& applianceRef)
+    QString VM_appliance::async_hard_shutdown(Session* session, const QString& applianceRef)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -268,9 +265,9 @@ namespace XenAPI
     }
 
     // VM_appliance.hard_shutdown
-    void VM_appliance::hard_shutdown(XenSession* session, const QString& applianceRef)
+    void VM_appliance::hard_shutdown(Session* session, const QString& applianceRef)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -284,9 +281,9 @@ namespace XenAPI
     }
 
     // VM_appliance.async_shutdown
-    QString VM_appliance::async_shutdown(XenSession* session, const QString& applianceRef)
+    QString VM_appliance::async_shutdown(Session* session, const QString& applianceRef)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
@@ -302,9 +299,9 @@ namespace XenAPI
     }
 
     // VM_appliance.shutdown
-    void VM_appliance::shutdown(XenSession* session, const QString& applianceRef)
+    void VM_appliance::shutdown(Session* session, const QString& applianceRef)
     {
-        if (!session || !session->isLoggedIn())
+        if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;

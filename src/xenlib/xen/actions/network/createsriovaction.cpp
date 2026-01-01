@@ -26,7 +26,7 @@
  */
 
 #include "createsriovaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_Network.h"
 #include "../../xenapi/xenapi_Network_sriov.h"
@@ -63,14 +63,14 @@ void CreateSriovAction::run()
         QString coordinatorPifRef;
         for (const QString& pifRef : m_pifRefs)
         {
-            QVariantMap pifData = connection()->getCache()->ResolveObjectData("pif", pifRef);
+            QVariantMap pifData = connection()->GetCache()->ResolveObjectData("pif", pifRef);
             QString hostRef = pifData.value("host").toString();
-            QVariantMap hostData = connection()->getCache()->ResolveObjectData("host", hostRef);
+            QVariantMap hostData = connection()->GetCache()->ResolveObjectData("host", hostRef);
 
             // Check if this host is the pool coordinator
             // In C# this is done via host.IsCoordinator()
             // We can check if this host is the master in the pool
-            QList<QVariantMap> pools = connection()->getCache()->GetAllData("pool");
+            QList<QVariantMap> pools = connection()->GetCache()->GetAllData("pool");
             if (!pools.isEmpty())
             {
                 QString masterRef = pools.first().value("master").toString();
@@ -112,9 +112,9 @@ void CreateSriovAction::run()
         {
             const QString& pifRef = orderedPifs[i];
 
-            QVariantMap pifData = connection()->getCache()->ResolveObjectData("pif", pifRef);
+            QVariantMap pifData = connection()->GetCache()->ResolveObjectData("pif", pifRef);
             QString hostRef = pifData.value("host").toString();
-            QVariantMap hostData = connection()->getCache()->ResolveObjectData("host", hostRef);
+            QVariantMap hostData = connection()->GetCache()->ResolveObjectData("host", hostRef);
             QString hostName = hostData.value("name_label").toString();
 
             setDescription(QString("Enabling SR-IOV on %1").arg(hostName));

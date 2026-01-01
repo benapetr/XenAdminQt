@@ -26,7 +26,7 @@
  */
 
 #include "xenobject.h"
-#include "connection.h"
+#include "network/connection.h"
 #include "../xencache.h"
 #include "../xenlib.h"
 
@@ -41,47 +41,53 @@ XenObject::~XenObject()
 {
 }
 
-QString XenObject::uuid() const
+QString XenObject::GetUUID() const
 {
     return stringProperty("uuid");
 }
 
-QString XenObject::nameLabel() const
+QString XenObject::GetName() const
 {
     return stringProperty("name_label");
 }
 
-QString XenObject::nameDescription() const
+QString XenObject::GetDescription() const
 {
     return stringProperty("name_description");
 }
 
-QVariantMap XenObject::data() const
+bool XenObject::IsConnected() const
+{
+    if (!this->m_connection)
+        return false;
+    return this->m_connection->IsConnected();
+}
+
+QVariantMap XenObject::GetData() const
 {
     if (!this->m_connection || this->m_opaqueRef.isEmpty())
         return QVariantMap();
 
     // Get cache from connection's XenLib
-    XenLib* xenLib = this->m_connection->property("xenLib").value<XenLib*>();
-    if (!xenLib || !xenLib->getCache())
+    if (!this->m_connection->GetCache())
         return QVariantMap();
 
-    return xenLib->getCache()->ResolveObjectData(objectType(), this->m_opaqueRef);
+    return this->m_connection->GetCache()->ResolveObjectData(GetObjectType(), this->m_opaqueRef);
 }
 
-void XenObject::refresh()
+void XenObject::Refresh()
 {
     emit dataChanged();
 }
 
-bool XenObject::isValid() const
+bool XenObject::IsValid() const
 {
-    return !data().isEmpty();
+    return !GetData().isEmpty();
 }
 
 QVariant XenObject::property(const QString& key, const QVariant& defaultValue) const
 {
-    QVariantMap d = data();
+    QVariantMap d = GetData();
     return d.value(key, defaultValue);
 }
 

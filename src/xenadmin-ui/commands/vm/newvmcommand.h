@@ -36,23 +36,23 @@ class NewVMCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit NewVMCommand(QObject* parent = nullptr);
-    explicit NewVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-    explicit NewVMCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit NewVMCommand(QObject* parent = nullptr);
+        explicit NewVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit NewVMCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent = nullptr);
 
-    void run() override;
-    bool canRun() const override;
-    QString menuText() const override;
+        void Run() override;
+        bool CanRun() const override;
+        QString MenuText() const override;
 
-private:
-    void showNewVMWizard();
-    void runWithConnection();
-    QString m_defaultTemplateUuid;
-    QString m_defaultHostUuid;
+    private:
+        void showNewVMWizard();
+        void runWithConnection();
+        QString m_defaultTemplateUuid;
+        QString m_defaultHostUuid;
 
-    // Check if we have suitable host for VM creation
-    bool hasEnabledHost() const;
+        // Check if we have suitable host for VM creation
+        bool hasEnabledHost() const;
 };
 
 #endif // NEWVMCOMMAND_H

@@ -36,7 +36,11 @@
 #include <QStringList>
 
 class XenConnection;
-class XenSession;
+
+namespace XenAPI
+{
+    class Session;
+}
 
 /**
  * @brief Polls XenServer for events using event.from
@@ -56,99 +60,99 @@ class EventPoller : public QObject
 {
     Q_OBJECT
 
-public:
-    explicit EventPoller(QObject* parent = nullptr);
-    ~EventPoller();
+    public:
+        explicit EventPoller(QObject* parent = nullptr);
+        ~EventPoller();
 
-    /**
-     * @brief Initialize EventPoller by duplicating an existing session
-     * Creates a separate connection stack to avoid blocking main API
-     * @param originalSession Session to duplicate (must be logged in)
-     */
-    void initialize(XenSession* originalSession);
+        /**
+         * @brief Initialize EventPoller by duplicating an existing session
+         * Creates a separate connection stack to avoid blocking main API
+         * @param originalSession Session to duplicate (must be logged in)
+         */
+        void initialize(XenAPI::Session* originalSession);
 
-    /**
-     * @brief Reset state and drop duplicated session/connection so a fresh session can be used.
-     * Should be invoked on the EventPoller thread (use invokeMethod).
-     */
-    void reset();
+        /**
+         * @brief Reset state and drop duplicated session/connection so a fresh session can be used.
+         * Should be invoked on the EventPoller thread (use invokeMethod).
+         */
+        void reset();
 
-    /**
-     * @brief Initialize EventPoller with connection credentials (deprecated)
-     * @deprecated Use initialize(XenSession*) instead
-     */
-    void initialize(const QString& hostname, int port, const QString& sessionId);
+        /**
+         * @brief Initialize EventPoller with connection credentials (deprecated)
+         * @deprecated Use initialize(XenSession*) instead
+         */
+        void initialize(const QString& hostname, int port, const QString& sessionId);
 
-    /**
-     * @brief Start polling for events
-     * @param classes List of event classes to monitor (e.g., "VM", "host", "*" for all)
-     * @param initialToken Token from initial event.from (empty to start fresh)
-     */
-    void start(const QStringList& classes = QStringList() << "*", const QString& initialToken = QString());
+        /**
+         * @brief Start polling for events
+         * @param classes List of event classes to monitor (e.g., "VM", "host", "*" for all)
+         * @param initialToken Token from initial event.from (empty to start fresh)
+         */
+        void start(const QStringList& classes = QStringList() << "*", const QString& initialToken = QString());
 
-    /**
-     * @brief Stop polling for events
-     */
-    void stop();
+        /**
+         * @brief Stop polling for events
+         */
+        void stop();
 
-    /**
-     * @brief Check if poller is currently running
-     */
-    bool isRunning() const;
+        /**
+         * @brief Check if poller is currently running
+         */
+        bool isRunning() const;
 
-    /**
-     * @brief Get the current event token
-     */
-    QString currentToken() const;
+        /**
+         * @brief Get the current event token
+         */
+        QString currentToken() const;
 
-signals:
-    /**
-     * @brief Emitted when an event is received
-     * @param eventData Map containing: id, timestamp, class_, operation, opaqueRef, snapshot
-     */
-    void eventReceived(const QVariantMap& eventData);
+    signals:
+        /**
+         * @brief Emitted when an event is received
+         * @param eventData Map containing: id, timestamp, class_, operation, opaqueRef, snapshot
+         */
+        void eventReceived(const QVariantMap& eventData);
 
-    /**
-     * @brief Emitted when a task is added (for task rehydration)
-     * @param taskRef Task opaque reference
-     * @param taskData Task snapshot data
-     */
-    void taskAdded(const QString& taskRef, const QVariantMap& taskData);
+        /**
+         * @brief Emitted when a task is added (for task rehydration)
+         * @param taskRef Task opaque reference
+         * @param taskData Task snapshot data
+         */
+        void taskAdded(const QString& taskRef, const QVariantMap& taskData);
 
-    /**
-     * @brief Emitted when a task is modified (for task rehydration)
-     * @param taskRef Task opaque reference
-     * @param taskData Task snapshot data
-     */
-    void taskModified(const QString& taskRef, const QVariantMap& taskData);
+        /**
+         * @brief Emitted when a task is modified (for task rehydration)
+         * @param taskRef Task opaque reference
+         * @param taskData Task snapshot data
+         */
+        void taskModified(const QString& taskRef, const QVariantMap& taskData);
 
-    /**
-     * @brief Emitted when a task is deleted (for task rehydration)
-     * @param taskRef Task opaque reference
-     */
-    void taskDeleted(const QString& taskRef);
+        /**
+         * @brief Emitted when a task is deleted (for task rehydration)
+         * @param taskRef Task opaque reference
+         */
+        void taskDeleted(const QString& taskRef);
 
-    /**
-     * @brief Emitted when initial cache population is complete
-     */
-    void cachePopulated();
+        /**
+         * @brief Emitted when initial cache population is complete
+         */
+        void cachePopulated();
 
-    /**
-     * @brief Emitted when an error occurs
-     */
-    void errorOccurred(const QString& error);
+        /**
+         * @brief Emitted when an error occurs
+         */
+        void errorOccurred(const QString& error);
 
-    /**
-     * @brief Emitted when connection is lost
-     */
-    void connectionLost();
+        /**
+         * @brief Emitted when connection is lost
+         */
+        void connectionLost();
 
-private slots:
-    void pollEvents();
+    private slots:
+        void pollEvents();
 
-private:
-    class Private;
-    Private* d;
+    private:
+        class Private;
+        Private* d;
 };
 
 #endif // EVENTPOLLER_H

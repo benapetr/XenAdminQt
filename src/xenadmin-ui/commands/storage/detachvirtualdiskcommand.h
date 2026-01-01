@@ -28,7 +28,7 @@
 #ifndef DETACHVIRTUALDISKCOMMAND_H
 #define DETACHVIRTUALDISKCOMMAND_H
 
-#include "../command.h"
+#include "vdicommand.h"
 
 /**
  * @brief Command to detach virtual disks from VMs
@@ -40,16 +40,16 @@
  * This is a "hard detach" - the VBD is destroyed, not just unplugged.
  * Uses DetachVirtualDiskAction.
  */
-class DetachVirtualDiskCommand : public Command
+class DetachVirtualDiskCommand : public VDICommand
 {
     Q_OBJECT
 
     public:
         explicit DetachVirtualDiskCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        QString menuText() const override;
-        bool canRun() const override;
-        void run() override;
+        QString MenuText() const override;
+        bool CanRun() const override;
+        void Run() override;
 
     private:
         bool canRunVDI(const QString& vdiRef) const;

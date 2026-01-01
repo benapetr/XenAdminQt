@@ -27,27 +27,22 @@
 
 #include "disconnectallhostscommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
-#include "collections/connectionsmanager.h"
+#include "xen/network/connectionsmanager.h"
 #include <QMessageBox>
 
-DisconnectAllHostsCommand::DisconnectAllHostsCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+DisconnectAllHostsCommand::DisconnectAllHostsCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
-bool DisconnectAllHostsCommand::canRun() const
+bool DisconnectAllHostsCommand::CanRun() const
 {
     // Can disconnect all if there are any connected connections
     return this->hasConnectedConnections();
 }
 
-void DisconnectAllHostsCommand::run()
+void DisconnectAllHostsCommand::Run()
 {
-    if (!this->mainWindow()->xenLib())
-        return;
-
-    ConnectionsManager* manager = this->mainWindow()->xenLib()->getConnectionsManager();
+    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
     if (!manager)
         return;
 
@@ -63,17 +58,14 @@ void DisconnectAllHostsCommand::run()
     }
 }
 
-QString DisconnectAllHostsCommand::menuText() const
+QString DisconnectAllHostsCommand::MenuText() const
 {
     return "Disconnect All";
 }
 
 bool DisconnectAllHostsCommand::hasConnectedConnections() const
 {
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    ConnectionsManager* manager = this->mainWindow()->xenLib()->getConnectionsManager();
+    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
     if (!manager)
         return false;
 

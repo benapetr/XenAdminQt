@@ -54,12 +54,12 @@ class VDI;
 class XENLIB_EXPORT VBD : public XenObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString device READ device NOTIFY dataChanged)
-    Q_PROPERTY(QString userdevice READ userdevice NOTIFY dataChanged)
-    Q_PROPERTY(bool bootable READ bootable NOTIFY dataChanged)
-    Q_PROPERTY(QString mode READ mode NOTIFY dataChanged)
-    Q_PROPERTY(QString type READ type NOTIFY dataChanged)
-    Q_PROPERTY(bool currentlyAttached READ currentlyAttached NOTIFY dataChanged)
+    Q_PROPERTY(QString device READ Device NOTIFY dataChanged)
+    Q_PROPERTY(QString userdevice READ Userdevice NOTIFY dataChanged)
+    Q_PROPERTY(bool bootable READ Bootable NOTIFY dataChanged)
+    Q_PROPERTY(QString mode READ Mode NOTIFY dataChanged)
+    Q_PROPERTY(QString type READ GetType NOTIFY dataChanged)
+    Q_PROPERTY(bool currentlyAttached READ CurrentlyAttached NOTIFY dataChanged)
 
 public:
     explicit VBD(XenConnection* connection,
@@ -71,100 +71,160 @@ public:
      * @brief Get parent VM reference
      * @return VM opaque reference
      */
-    QString vmRef() const;
+    QString VMRef() const;
 
     /**
      * @brief Get VDI reference
      * @return VDI opaque reference (empty if CD drive with no disc)
      */
-    QString vdiRef() const;
+    QString VDIRef() const;
 
     /**
      * @brief Get device name in guest
      * @return Device name like "xvda", "hda", "xvdb", etc.
      */
-    QString device() const;
+    QString Device() const;
 
     /**
      * @brief Get user device number
      * @return Device number like "0", "1", "2", etc.
      */
-    QString userdevice() const;
+    QString Userdevice() const;
 
     /**
      * @brief Check if device is bootable
      * @return true if bootable
      */
-    bool bootable() const;
+    bool Bootable() const;
 
     /**
      * @brief Get device mode
      * @return "RO" (read-only) or "RW" (read-write)
      */
-    QString mode() const;
+    QString Mode() const;
 
     /**
      * @brief Check if device is read-only
      * @return true if mode is "RO"
      */
-    bool isReadOnly() const;
+    bool IsReadOnly() const;
 
     /**
      * @brief Get device type
      * @return "Disk" or "CD"
      */
-    QString type() const;
+    QString GetType() const;
 
     /**
      * @brief Check if device is a CD drive
      * @return true if type is "CD"
      */
-    bool isCD() const;
+    bool IsCD() const;
 
     /**
      * @brief Check if device can be unplugged
      * @return true if unpluggable
      */
-    bool unpluggable() const;
+    bool Unpluggable() const;
 
     /**
      * @brief Check if device is currently attached
      * @return true if currently attached to VM
      */
-    bool currentlyAttached() const;
+    bool CurrentlyAttached() const;
 
     /**
      * @brief Check if VDI is empty (CD with no disc)
      * @return true if empty
      */
-    bool empty() const;
+    bool Empty() const;
 
     /**
      * @brief Get allowed operations on this VBD
      * @return List of allowed operation strings (e.g., "plug", "unplug")
      */
-    QStringList allowedOperations() const;
+    QStringList AllowedOperations() const;
 
     /**
      * @brief Check if plug operation is allowed
      * @return true if "plug" is in allowed operations
      */
-    bool canPlug() const;
+    bool CanPlug() const;
 
     /**
      * @brief Check if unplug operation is allowed
      * @return true if "unplug" is in allowed operations
      */
-    bool canUnplug() const;
+    bool CanUnplug() const;
 
     /**
      * @brief Get human-readable description
      * @return String like "Disk 0 (xvda)" or "CD Drive 1 (hdc)"
      */
-    QString description() const;
+    QString Description() const;
+
+    /**
+     * @brief Get currently running operations
+     * @return Map of task reference to operation type
+     */
+    QVariantMap CurrentOperations() const;
+
+    /**
+     * @brief Check if VBD is locked at storage level
+     * @return true if storage-level lock is active
+     */
+    bool StorageLock() const;
+
+    /**
+     * @brief Get additional configuration
+     * @return Map of additional configuration key-value pairs
+     */
+    QVariantMap OtherConfig() const;
+
+    /**
+     * @brief Get status code from last attach operation
+     * @return Error/success code (erased on reboot)
+     */
+    qint64 StatusCode() const;
+
+    /**
+     * @brief Get status detail from last attach operation
+     * @return Error/success information string (erased on reboot)
+     */
+    QString StatusDetail() const;
+
+    /**
+     * @brief Get device runtime properties
+     * @return Map of runtime property key-value pairs
+     */
+    QVariantMap RuntimeProperties() const;
+
+    /**
+     * @brief Get QoS algorithm type
+     * @return QoS algorithm identifier string
+     */
+    QString QosAlgorithmType() const;
+
+    /**
+     * @brief Get QoS algorithm parameters
+     * @return Map of parameters for chosen QoS algorithm
+     */
+    QVariantMap QosAlgorithmParams() const;
+
+    /**
+     * @brief Get supported QoS algorithms
+     * @return List of supported QoS algorithm identifiers
+     */
+    QStringList QosSupportedAlgorithms() const;
+
+    /**
+     * @brief Get VBD metrics reference
+     * @return Opaque reference to VBD_metrics object
+     */
+    QString MetricsRef() const;
 
 protected:
-    QString objectType() const override;
+    QString GetObjectType() const override;
 };
 
 #endif // VBD_H

@@ -67,7 +67,7 @@ CvmConsoleTabPage::~CvmConsoleTabPage()
  * if (consoleFeatures.Count == 0 && !multi && !SearchMode && isSRSelected && selectedSr.HasDriverDomain(out _))
  *     newTabs.Add(TabPageCvmConsole);
  */
-bool CvmConsoleTabPage::isApplicableForObjectType(const QString& objectType) const
+bool CvmConsoleTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // CVM Console tab is only shown for storage repositories (SR)
     // MainWindow will check if SR has driver domain before showing this tab
@@ -80,7 +80,7 @@ bool CvmConsoleTabPage::isApplicableForObjectType(const QString& objectType) con
  * This is just a notification - actual console switching happens
  * in MainWindow::onTabChanged()
  */
-void CvmConsoleTabPage::onPageShown()
+void CvmConsoleTabPage::OnPageShown()
 {
     qDebug() << "CvmConsoleTabPage: onPageShown()";
     // MainWindow handles console unpause in onTabChanged()
@@ -89,7 +89,7 @@ void CvmConsoleTabPage::onPageShown()
 /**
  * @brief Called when page is hidden (another tab selected)
  */
-void CvmConsoleTabPage::onPageHidden()
+void CvmConsoleTabPage::OnPageHidden()
 {
     qDebug() << "CvmConsoleTabPage: onPageHidden()";
     // MainWindow handles console pause in onTabChanged()

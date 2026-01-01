@@ -32,54 +32,60 @@
 #include "apiversion.h"
 #include <QtCore/QObject>
 #include <QtCore/QString>
+#include <QtCore/QStringList>
 
 class XenConnection;
 
-class XENLIB_EXPORT XenSession : public QObject
+namespace XenAPI
 {
-    Q_OBJECT
-public:
-    explicit XenSession(XenConnection* connection, QObject* parent = nullptr);
-    ~XenSession();
+    class XENLIB_EXPORT Session : public QObject
+    {
+        Q_OBJECT
+        public:
+            explicit Session(XenConnection* connection, QObject* parent = nullptr);
+            ~Session();
 
-    bool login(const QString& username, const QString& password);
-    void logout();
-    bool isLoggedIn() const;
+            bool Login(const QString& username, const QString& password);
+            void Logout();
+            void LogoutWithoutDisconnect();
+            bool IsLoggedIn() const;
 
-    // Session duplication for separate TCP streams
-    static XenSession* duplicateSession(XenSession* originalSession, QObject* parent = nullptr);
+            // Session duplication for separate TCP streams
+            static Session* DuplicateSession(Session* originalSession, QObject* parent = nullptr);
 
-    QString getSessionId() const;
-    QString getUsername() const;
-    QString getPassword() const;
-    QString getLastError() const;
+            QString getSessionId() const;
+            QString getUsername() const;
+            QString getPassword() const;
+            QString getLastError() const;
+            QStringList getLastErrorDescription() const;
 
-    // API version management
-    APIVersion getAPIVersion() const;
-    void setAPIVersion(APIVersion version);
-    bool apiVersionMeets(APIVersion required) const;
+            // API version management
+            APIVersion getAPIVersion() const;
+            void setAPIVersion(APIVersion version);
+            bool apiVersionMeets(APIVersion required) const;
 
-    // API communication - this is always synchronous, despite it's also using the worker thread, it waits for it to finish
-    QByteArray sendApiRequest(const QString& jsonRequest);
+            // API communication - this is always synchronous, despite it's also using the worker thread, it waits for it to finish
+            QByteArray sendApiRequest(const QString& jsonRequest);
 
-    bool ownsSessionToken() const;
-    void setOwnsSessionToken(bool ownsToken);
-    void detachConnection();
+            bool ownsSessionToken() const;
+            void setOwnsSessionToken(bool ownsToken);
+            void detachConnection();
 
-signals:
-    void loginSuccessful();
-    void loginFailed(const QString& reason);
-    void loggedOut();
-    void needsRedirectToMaster(const QString& masterAddress);
+        signals:
+            void loginSuccessful();
+            void loginFailed(const QString& reason);
+            void loggedOut();
+            void needsRedirectToMaster(const QString& masterAddress);
 
-private:
-    bool parseLoginResponse(const QByteArray& response);
-    QString extractAuthenticationError(const QByteArray& response);
-    QString buildLoginRequest(const QString& username, const QString& password);
-    QString buildLogoutRequest();
+        private:
+            bool parseLoginResponse(const QByteArray& response);
+            QString extractAuthenticationError(const QByteArray& response);
+            QString buildLoginRequest(const QString& username, const QString& password);
+            QString buildLogoutRequest();
 
-    class Private;
-    Private* d;
-};
+            class Private;
+            Private* d;
+    };
+}
 
 #endif // XEN_SESSION_H

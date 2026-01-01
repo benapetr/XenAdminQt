@@ -31,7 +31,7 @@
 #include "xen/xenapi/xenapi_VM.h"
 #include "xen/xenapi/xenapi_Host.h"
 #include "xen/session.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include <QDateTime>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -65,7 +65,7 @@ PerformanceTabPage::~PerformanceTabPage()
     delete this->ui;
 }
 
-bool PerformanceTabPage::isApplicableForObjectType(const QString& objectType) const
+bool PerformanceTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     // Performance tab is applicable to VMs and Hosts
     return objectType == "vm" || objectType == "host";
@@ -231,7 +231,7 @@ void PerformanceTabPage::updateMetrics()
 
 void PerformanceTabPage::fetchMetrics()
 {
-    if (this->m_objectData.isEmpty() || !this->m_xenLib)
+    if (this->m_objectData.isEmpty() || !this->m_connection)
     {
         return;
     }
@@ -243,10 +243,8 @@ void PerformanceTabPage::fetchMetrics()
         return;
     }
 
-    XenSession* session = this->m_xenLib->getConnection()
-        ? this->m_xenLib->getConnection()->getSession()
-        : nullptr;
-    if (!session || !session->isLoggedIn())
+    XenAPI::Session* session = this->m_connection->GetSession();
+    if (!session || !session->IsLoggedIn())
     {
         return;
     }

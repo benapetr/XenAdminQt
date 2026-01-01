@@ -64,32 +64,32 @@ enum class APIVersion
  */
 class APIVersionHelper
 {
-public:
-    /**
-     * @brief Convert API version to string (e.g., "2.21")
-     */
-    static QString versionToString(APIVersion version);
+    public:
+        /**
+         * @brief Convert API version to string (e.g., "2.21")
+         */
+        static QString versionToString(APIVersion version);
 
-    /**
-     * @brief Parse API version from major/minor numbers
-     */
-    static APIVersion fromMajorMinor(long major, long minor);
+        /**
+         * @brief Parse API version from major/minor numbers
+         */
+        static APIVersion fromMajorMinor(long major, long minor);
 
-    /**
-     * @brief Parse API version from string (e.g., "2.21")
-     */
-    static APIVersion fromString(const QString& version);
+        /**
+         * @brief Parse API version from string (e.g., "2.21")
+         */
+        static APIVersion fromString(const QString& version);
 
-    /**
-     * @brief Check if version meets minimum requirement
-     */
-    static bool versionMeets(APIVersion current, APIVersion required);
+        /**
+         * @brief Check if version meets minimum requirement
+         */
+        static bool versionMeets(APIVersion current, APIVersion required);
 
-    /**
-     * @brief Compare two API versions
-     * @return <0 if v1 < v2, 0 if equal, >0 if v1 > v2
-     */
-    static int versionCompare(APIVersion v1, APIVersion v2);
+        /**
+         * @brief Compare two API versions
+         * @return <0 if v1 < v2, 0 if equal, >0 if v1 > v2
+         */
+        static int versionCompare(APIVersion v1, APIVersion v2);
 };
 
 #endif // APIVERSION_H

@@ -29,7 +29,7 @@
 #include "ui_srstoragetabpage.h"
 #include "xenlib.h"
 #include "xencache.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/api.h"
 #include "xen/xenapi/xenapi_VDI.h"
 #include "dialogs/movevirtualdiskdialog.h"
@@ -73,14 +73,14 @@ SrStorageTabPage::~SrStorageTabPage()
     delete this->ui;
 }
 
-bool SrStorageTabPage::isApplicableForObjectType(const QString& objectType) const
+bool SrStorageTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
     return objectType == "sr";
 }
 
-void SrStorageTabPage::setXenObject(const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void SrStorageTabPage::SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
 {
-    BaseTabPage::setXenObject(objectType, objectRef, objectData);
+    BaseTabPage::SetXenObject(conn, objectType, objectRef, objectData);
 }
 
 void SrStorageTabPage::refreshContent()
@@ -101,7 +101,7 @@ void SrStorageTabPage::populateSRStorage()
 {
     this->ui->titleLabel->setText("Virtual Disks");
 
-    if (!this->m_xenLib)
+    if (!this->m_connection)
     {
         return;
     }
@@ -115,7 +115,7 @@ void SrStorageTabPage::populateSRStorage()
     for (const QVariant& vdiVar : vdiRefs)
     {
         QString vdiRef = vdiVar.toString();
-        QVariantMap vdiRecord = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
+        QVariantMap vdiRecord = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
 
         if (vdiRecord.isEmpty())
         {
@@ -145,14 +145,14 @@ void SrStorageTabPage::populateSRStorage()
         for (const QVariant& vbdVar : vbdRefs)
         {
             QString vbdRef = vbdVar.toString();
-            QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef);
+            QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
             if (vbdData.isEmpty())
             {
                 continue;
             }
 
             QString vmRef = vbdData.value("VM").toString();
-            QVariantMap vmData = this->m_xenLib->getCache()->ResolveObjectData("vm", vmRef);
+            QVariantMap vmData = this->m_connection->GetCache()->ResolveObjectData("vm", vmRef);
             if (!vmData.isEmpty())
             {
                 QString vmName = vmData.value("name_label", "Unknown").toString();
@@ -214,12 +214,12 @@ void SrStorageTabPage::updateButtonStates()
 
     bool srDetached = true;
     QVariantList pbdRefs = this->m_objectData.value("PBDs", QVariantList()).toList();
-    if (this->m_xenLib)
+    if (this->m_connection)
     {
         for (const QVariant& pbdVar : pbdRefs)
         {
             QString pbdRef = pbdVar.toString();
-            QVariantMap pbdData = this->m_xenLib->getCache()->ResolveObjectData("pbd", pbdRef);
+            QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
             if (pbdData.value("currently_attached", false).toBool())
             {
                 srDetached = false;
@@ -232,9 +232,9 @@ void SrStorageTabPage::updateButtonStates()
     this->ui->addButton->setEnabled(srAvailable && !srLocked);
     this->ui->moveButton->setEnabled(hasSelection);
 
-    if (hasSelection && this->m_xenLib)
+    if (hasSelection && this->m_connection)
     {
-        QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", this->getSelectedVDIRef());
+        QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", this->getSelectedVDIRef());
         bool isSnapshot = vdiData.value("is_a_snapshot", false).toBool();
         QVariantList vdiAllowed = vdiData.value("allowed_operations", QVariantList()).toList();
         bool vdiLocked = vdiAllowed.isEmpty();
@@ -250,12 +250,12 @@ void SrStorageTabPage::updateButtonStates()
 
 void SrStorageTabPage::onRescanButtonClicked()
 {
-    if (!this->m_xenLib || this->m_objectRef.isEmpty())
+    if (!this->m_connection || this->m_objectRef.isEmpty())
     {
         return;
     }
 
-    SrRefreshAction* action = new SrRefreshAction(this->m_xenLib->getConnection(), this->m_objectRef);
+    SrRefreshAction* action = new SrRefreshAction(this->m_connection, this->m_objectRef);
     OperationManager::instance()->registerOperation(action);
     action->runAsync();
 
@@ -271,12 +271,12 @@ void SrStorageTabPage::onAddButtonClicked()
 void SrStorageTabPage::onMoveButtonClicked()
 {
     QString vdiRef = this->getSelectedVDIRef();
-    if (vdiRef.isEmpty() || !this->m_xenLib)
+    if (vdiRef.isEmpty() || !this->m_connection)
     {
         return;
     }
 
-    MoveVirtualDiskDialog dialog(this->m_xenLib, vdiRef, this);
+    MoveVirtualDiskDialog dialog(this->m_connection, vdiRef, this);
     if (dialog.exec() == QDialog::Accepted)
     {
         this->requestSrRefresh(1000);
@@ -286,12 +286,12 @@ void SrStorageTabPage::onMoveButtonClicked()
 void SrStorageTabPage::onDeleteButtonClicked()
 {
     QString vdiRef = this->getSelectedVDIRef();
-    if (vdiRef.isEmpty() || !this->m_xenLib)
+    if (vdiRef.isEmpty() || !this->m_connection)
     {
         return;
     }
 
-    QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
+    QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
     QString vdiName = vdiData.value("name_label", tr("Virtual Disk")).toString();
 
     QMessageBox::StandardButton confirm = QMessageBox::question(
@@ -310,7 +310,7 @@ void SrStorageTabPage::onDeleteButtonClicked()
     for (const QVariant& vbdVar : vbdRefs)
     {
         QString vbdRef = vbdVar.toString();
-        QVariantMap vbdData = this->m_xenLib->getCache()->ResolveObjectData("vbd", vbdRef);
+        QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
         if (vbdData.value("currently_attached", false).toBool())
         {
             QMessageBox::StandardButton attachedConfirm = QMessageBox::question(
@@ -329,7 +329,7 @@ void SrStorageTabPage::onDeleteButtonClicked()
         }
     }
 
-    DestroyDiskAction* action = new DestroyDiskAction(vdiRef, this->m_xenLib->getConnection(), allowRunningDelete, this);
+    DestroyDiskAction* action = new DestroyDiskAction(vdiRef, this->m_connection, allowRunningDelete, this);
     OperationProgressDialog* dialog = new OperationProgressDialog(action, this);
     dialog->exec();
     delete dialog;
@@ -340,23 +340,22 @@ void SrStorageTabPage::onDeleteButtonClicked()
 void SrStorageTabPage::onEditButtonClicked()
 {
     QString vdiRef = this->getSelectedVDIRef();
-    if (vdiRef.isEmpty() || !this->m_xenLib)
+    if (vdiRef.isEmpty() || !this->m_connection)
     {
         return;
     }
 
-    VdiPropertiesDialog dialog(this->m_xenLib, vdiRef, this);
+    VdiPropertiesDialog dialog(this->m_connection, vdiRef, this);
     if (dialog.exec() != QDialog::Accepted || !dialog.hasChanges())
     {
         return;
     }
 
-    XenConnection* connection = this->m_xenLib->getConnection();
-    if (!connection || !connection->getSession())
+    if (!this->m_connection->GetSession())
         return;
 
     bool hasErrors = false;
-    QVariantMap vdiData = this->m_xenLib->getCache()->ResolveObjectData("vdi", vdiRef);
+    QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
 
     QString newName = dialog.getVdiName();
     QString oldName = vdiData.value("name_label", "").toString();
@@ -364,7 +363,7 @@ void SrStorageTabPage::onEditButtonClicked()
     {
         try
         {
-            XenAPI::VDI::set_name_label(connection->getSession(), vdiRef, newName);
+            XenAPI::VDI::set_name_label(this->m_connection->GetSession(), vdiRef, newName);
         }
         catch (const std::exception&)
         {
@@ -379,7 +378,7 @@ void SrStorageTabPage::onEditButtonClicked()
     {
         try
         {
-            XenAPI::VDI::set_name_description(connection->getSession(), vdiRef, newDescription);
+            XenAPI::VDI::set_name_description(this->m_connection->GetSession(), vdiRef, newDescription);
         }
         catch (const std::exception&)
         {
@@ -394,7 +393,7 @@ void SrStorageTabPage::onEditButtonClicked()
     {
         try
         {
-            XenAPI::VDI::resize(connection->getSession(), vdiRef, newSize);
+            XenAPI::VDI::resize(this->m_connection->GetSession(), vdiRef, newSize);
         }
         catch (const std::exception&)
         {
@@ -457,16 +456,15 @@ void SrStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& po
 
 void SrStorageTabPage::requestSrRefresh(int delayMs)
 {
-    if (!this->m_xenLib || this->m_objectRef.isEmpty())
+    if (!this->m_connection || this->m_objectRef.isEmpty())
     {
         return;
     }
 
     auto request = [this]() {
-        if (this->m_xenLib && !this->m_objectRef.isEmpty())
-        {
-            this->m_xenLib->requestObjectData("sr", this->m_objectRef);
-        }
+        SrRefreshAction* action = new SrRefreshAction(this->m_connection, this->m_objectRef);
+        OperationManager::instance()->registerOperation(action);
+        action->runAsync();
     };
 
     if (delayMs <= 0)

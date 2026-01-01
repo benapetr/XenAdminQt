@@ -32,7 +32,7 @@
 #include <QVariantMap>
 #include <QString>
 
-class XenLib;
+class XenConnection;
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -67,7 +67,7 @@ public:
      * @param deviceId Device ID for the new VIF
      * @param parent Parent widget
      */
-    explicit VIFDialog(XenLib* xenLib,
+    explicit VIFDialog(XenConnection* connection,
                        const QString& vmRef,
                        int deviceId,
                        QWidget* parent = nullptr);
@@ -78,7 +78,7 @@ public:
      * @param vifRef VIF opaque reference to edit
      * @param parent Parent widget
      */
-    explicit VIFDialog(XenLib* xenLib,
+    explicit VIFDialog(XenConnection* connection,
                        const QString& vifRef,
                        QWidget* parent = nullptr);
 
@@ -121,7 +121,7 @@ private:
     bool isDuplicateMAC(const QString& mac) const;
 
     Ui::VIFDialog* ui;
-    XenLib* m_xenLib;
+    XenConnection* m_connection;
     QString m_vmRef;           // VM reference (for new VIFs)
     QString m_vifRef;          // VIF reference (for editing)
     int m_deviceId;            // Device ID for new VIF

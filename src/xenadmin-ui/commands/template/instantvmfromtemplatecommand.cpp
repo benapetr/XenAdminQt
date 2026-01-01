@@ -27,17 +27,19 @@
 
 #include "instantvmfromtemplatecommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include <QMessageBox>
 
-InstantVMFromTemplateCommand::InstantVMFromTemplateCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+InstantVMFromTemplateCommand::InstantVMFromTemplateCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
-bool InstantVMFromTemplateCommand::canRun() const
+bool InstantVMFromTemplateCommand::CanRun() const
 {
+    QSharedPointer<XenObject> object = this->GetObject();
+    if (!object || !object->GetConnection())
+        return false;
+
     QString objectType = this->getSelectedObjectType();
     if (objectType != "vm")
         return false;
@@ -46,32 +48,22 @@ bool InstantVMFromTemplateCommand::canRun() const
     if (templateRef.isEmpty())
         return false;
 
-    if (!this->mainWindow()->xenLib())
-        return false;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
-
-    QVariantMap templateData = cache->ResolveObjectData("vm", templateRef);
+    QVariantMap templateData = object->GetConnection()->GetCache()->ResolveObjectData("vm", templateRef);
 
     return this->canRunTemplate(templateData);
 }
 
-void InstantVMFromTemplateCommand::run()
+void InstantVMFromTemplateCommand::Run()
 {
+    QSharedPointer<XenObject> object = this->GetObject();
+    if (!object || !object->GetConnection())
+        return;
+
     QString templateRef = this->getSelectedObjectRef();
     if (templateRef.isEmpty())
         return;
 
-    if (!this->mainWindow()->xenLib())
-        return;
-
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return;
-
-    QVariantMap templateData = cache->ResolveObjectData("vm", templateRef);
+    QVariantMap templateData = object->GetConnection()->GetCache()->ResolveObjectData("vm", templateRef);
 
     if (!this->canRunTemplate(templateData))
     {
@@ -94,7 +86,7 @@ void InstantVMFromTemplateCommand::run()
                              "Instant VM creation will be implemented using CreateVMFastAction + auto-start.");
 }
 
-QString InstantVMFromTemplateCommand::menuText() const
+QString InstantVMFromTemplateCommand::MenuText() const
 {
     return "Instant VM from Template";
 }

@@ -27,7 +27,7 @@
 
 #include "copytemplatecommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
+#include "xen/xenobject.h"
 #include "xencache.h"
 #include <QMessageBox>
 
@@ -36,8 +36,12 @@ CopyTemplateCommand::CopyTemplateCommand(MainWindow* mainWindow, QObject* parent
 {
 }
 
-bool CopyTemplateCommand::canRun() const
+bool CopyTemplateCommand::CanRun() const
 {
+    QSharedPointer<XenObject> object = this->GetObject();
+    if (!object || !object->GetConnection())
+        return false;
+
     QString objectType = this->getSelectedObjectType();
     if (objectType != "vm")
         return false;
@@ -49,17 +53,17 @@ bool CopyTemplateCommand::canRun() const
     if (!this->mainWindow()->xenLib())
         return false;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
-    if (!cache)
-        return false;
-
-    QVariantMap templateData = cache->ResolveObjectData("vm", templateRef);
+    QVariantMap templateData = object->GetConnection()->GetCache()->ResolveObjectData("vm", templateRef);
 
     return this->canRunTemplate(templateData);
 }
 
-void CopyTemplateCommand::run()
+void CopyTemplateCommand::Run()
 {
+    QSharedPointer<XenObject> object = this->GetObject();
+    if (!object || !object->GetConnection())
+        return;
+
     QString templateRef = this->getSelectedObjectRef();
     if (templateRef.isEmpty())
         return;
@@ -67,7 +71,7 @@ void CopyTemplateCommand::run()
     if (!this->mainWindow()->xenLib())
         return;
 
-    XenCache* cache = this->mainWindow()->xenLib()->getCache();
+    XenCache* cache = object->GetConnection()->GetCache();
     if (!cache)
         return;
 
@@ -91,7 +95,7 @@ void CopyTemplateCommand::run()
                              "Template copy will be implemented using CopyVMDialog or CrossPoolMigrateWizard.");
 }
 
-QString CopyTemplateCommand::menuText() const
+QString CopyTemplateCommand::MenuText() const
 {
     return "Copy Template";
 }

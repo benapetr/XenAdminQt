@@ -28,29 +28,30 @@
 #include "setdefaultsrcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
+#include "xen/sr.h"
 #include "xen/actions/pool/setsrasdefaultaction.h"
 #include "xencache.h"
 #include <QMessageBox>
 
 SetDefaultSRCommand::SetDefaultSRCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+    : SRCommand(mainWindow, parent)
 {
 }
 
-bool SetDefaultSRCommand::canRun() const
+bool SetDefaultSRCommand::CanRun() const
 {
-    QString srRef = this->getSelectedSRRef();
-    return !srRef.isEmpty();
+    QSharedPointer<SR> sr = this->getSR();
+    return sr != nullptr;
 }
 
-void SetDefaultSRCommand::run()
+void SetDefaultSRCommand::Run()
 {
-    QString srRef = this->getSelectedSRRef();
-    QString srName = this->getSelectedSRName();
-
-    if (srRef.isEmpty() || srName.isEmpty())
+    QSharedPointer<SR> sr = this->getSR();
+    if (!sr)
         return;
+
+    QString srRef = sr->OpaqueRef();
+    QString srName = sr->GetName();
 
     // Show confirmation dialog
     int ret = QMessageBox::question(this->mainWindow(), "Set as Default Storage Repository",
@@ -63,24 +64,15 @@ void SetDefaultSRCommand::run()
     {
         this->mainWindow()->showStatusMessage(QString("Setting '%1' as default storage repository...").arg(srName));
 
-        XenLib* xenLib = this->mainWindow()->xenLib();
-        XenConnection* connection = xenLib ? xenLib->getConnection() : nullptr;
-        if (!connection)
+        XenConnection* connection = sr->GetConnection();
+        if (!connection || !connection->IsConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
-                                 "No active connection.");
+                                 "Not connected to XenServer.");
             return;
         }
 
-        XenCache* cache = xenLib->getCache();
-        if (!cache)
-        {
-            QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
-                                 "Pool cache is unavailable.");
-            return;
-        }
-
-        QStringList poolRefs = cache->GetAllRefs("pool");
+        QStringList poolRefs = connection->GetCache()->GetAllRefs("pool");
         if (poolRefs.isEmpty())
         {
             QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
@@ -108,33 +100,7 @@ void SetDefaultSRCommand::run()
     }
 }
 
-QString SetDefaultSRCommand::menuText() const
+QString SetDefaultSRCommand::MenuText() const
 {
     return "Set as Default";
-}
-
-QString SetDefaultSRCommand::getSelectedSRRef() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "storage")
-        return QString();
-
-    return this->getSelectedObjectRef();
-}
-
-QString SetDefaultSRCommand::getSelectedSRName() const
-{
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "storage")
-        return QString();
-
-    return item->text(0);
 }

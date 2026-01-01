@@ -26,7 +26,7 @@
  */
 
 #include "enablehostaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_Host.h"
 #include "../../xenapi/xenapi_VM.h"
@@ -40,7 +40,7 @@ EnableHostAction::EnableHostAction(XenConnection* connection,
                                    QObject* parent)
     : AsyncOperation(connection,
                      "Enabling host",
-                     QString("Exiting maintenance mode for '%1'").arg(host ? host->nameLabel() : ""),
+                     QString("Exiting maintenance mode for '%1'").arg(host ? host->GetName() : ""),
                      parent),
       m_host(host),
       m_resumeVMs(resumeVMs)
@@ -53,7 +53,7 @@ void EnableHostAction::run()
 {
     try
     {
-        setDescription(QString("Exiting maintenance mode for '%1'").arg(m_host->nameLabel()));
+        setDescription(QString("Exiting maintenance mode for '%1'").arg(m_host->GetName()));
 
         // Enable host (0-10% or 0-100% depending on whether we resume VMs)
         enable(0, m_resumeVMs ? 10 : 100, true);
@@ -71,15 +71,15 @@ void EnableHostAction::run()
             // Clear evacuated VM lists from host's other_config
             if (!migratedVMRefs.isEmpty())
             {
-                XenAPI::Host::remove_from_other_config(session(), m_host->opaqueRef(), "MAINTENANCE_MODE_MIGRATED_VMS");
+                XenAPI::Host::remove_from_other_config(session(), m_host->OpaqueRef(), "MAINTENANCE_MODE_MIGRATED_VMS");
             }
             if (!haltedVMRefs.isEmpty())
             {
-                XenAPI::Host::remove_from_other_config(session(), m_host->opaqueRef(), "MAINTENANCE_MODE_HALTED_VMS");
+                XenAPI::Host::remove_from_other_config(session(), m_host->OpaqueRef(), "MAINTENANCE_MODE_HALTED_VMS");
             }
             if (!suspendedVMRefs.isEmpty())
             {
-                XenAPI::Host::remove_from_other_config(session(), m_host->opaqueRef(), "MAINTENANCE_MODE_SUSPENDED_VMS");
+                XenAPI::Host::remove_from_other_config(session(), m_host->OpaqueRef(), "MAINTENANCE_MODE_SUSPENDED_VMS");
             }
 
             int totalVMs = migratedVMRefs.size() + haltedVMRefs.size() + suspendedVMRefs.size();
@@ -92,7 +92,7 @@ void EnableHostAction::run()
                 // Migrate VMs back to this host
                 for (const QString& vmRef : migratedVMRefs)
                 {
-                    QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", vmRef);
+                    QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", vmRef);
                     QString vmName = vmData.value("name_label").toString();
 
                     qDebug() << "EnableHostAction: Migrating VM" << vmName << "back to host";
@@ -102,7 +102,7 @@ void EnableHostAction::run()
                     options["live"] = true;
 
                     QString taskRef = XenAPI::VM::async_pool_migrate(session(), vmRef,
-                                                                     m_host->opaqueRef(),
+                                                                     m_host->OpaqueRef(),
                                                                      options);
                     pollToCompletion(taskRef, start, start + each);
                     start += each;
@@ -111,13 +111,13 @@ void EnableHostAction::run()
                 // Start halted VMs on this host
                 for (const QString& vmRef : haltedVMRefs)
                 {
-                    QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", vmRef);
+                    QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", vmRef);
                     QString vmName = vmData.value("name_label").toString();
 
                     qDebug() << "EnableHostAction: Starting VM" << vmName << "on host";
 
                     QString taskRef = XenAPI::VM::async_start_on(session(), vmRef,
-                                                                 m_host->opaqueRef(),
+                                                                 m_host->OpaqueRef(),
                                                                  false, false);
                     pollToCompletion(taskRef, start, start + each);
                     start += each;
@@ -126,13 +126,13 @@ void EnableHostAction::run()
                 // Resume suspended VMs on this host
                 for (const QString& vmRef : suspendedVMRefs)
                 {
-                    QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", vmRef);
+                    QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", vmRef);
                     QString vmName = vmData.value("name_label").toString();
 
                     qDebug() << "EnableHostAction: Resuming VM" << vmName << "on host";
 
                     QString taskRef = XenAPI::VM::async_resume_on(session(), vmRef,
-                                                                  m_host->opaqueRef(),
+                                                                  m_host->OpaqueRef(),
                                                                   false, false);
                     pollToCompletion(taskRef, start, start + each);
                     start += each;
@@ -140,7 +140,7 @@ void EnableHostAction::run()
             }
         }
 
-        setDescription(QString("Exited maintenance mode for '%1'").arg(m_host->nameLabel()));
+        setDescription(QString("Exited maintenance mode for '%1'").arg(m_host->GetName()));
 
     } catch (const std::exception& e)
     {
@@ -151,10 +151,10 @@ void EnableHostAction::run()
 void EnableHostAction::enable(int start, int finish, bool queryNtolIncrease)
 {
     // Remove MAINTENANCE_MODE flag from other_config
-    XenAPI::Host::remove_from_other_config(session(), m_host->opaqueRef(), "MAINTENANCE_MODE");
+    XenAPI::Host::remove_from_other_config(session(), m_host->OpaqueRef(), "MAINTENANCE_MODE");
 
     // Enable the host
-    QString taskRef = XenAPI::Host::async_enable(session(), m_host->opaqueRef());
+    QString taskRef = XenAPI::Host::async_enable(session(), m_host->OpaqueRef());
     pollToCompletion(taskRef, start, finish);
 
     // TODO: HA ntol increase query

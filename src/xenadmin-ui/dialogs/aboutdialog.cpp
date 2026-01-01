@@ -26,27 +26,18 @@
  */
 
 #include "aboutdialog.h"
-#include "xenlib.h"
+#include "xen/network/connectionsmanager.h"
+#include "xen/network/connection.h"
+#include "xencache.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QApplication>
 #include <QSysInfo>
 #include <QDateTime>
 
-AboutDialog::AboutDialog(XenLib* xenLib, QWidget* parent) : QDialog(parent), m_xenLib(xenLib), m_pendingRequests(0)
+AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent)
 {
     this->setupUI();
-
-    // Connect async signals if we have a valid XenLib instance
-    if (this->m_xenLib && this->m_xenLib->isConnected())
-    {
-        connect(this->m_xenLib, &XenLib::poolsReceived, this, &AboutDialog::onPoolsReceived);
-        connect(this->m_xenLib, &XenLib::hostsReceived, this, &AboutDialog::onHostsReceived);
-        connect(this->m_xenLib, &XenLib::virtualMachinesReceived, this, &AboutDialog::onVirtualMachinesReceived);
-
-        // Request data asynchronously
-        this->requestConnectionInfo();
-    }
 }
 
 void AboutDialog::setupUI()
@@ -81,13 +72,15 @@ void AboutDialog::setupUI()
                            "<h3>System Information</h3>"
                            "%1"
                            "<h3>Connection Information</h3>"
-                           "<p><i>Loading...</i></p>"
+                           "%2"
+                           "<h3>License Information</h3>"
+                           "%3"
                            "<h3>Copyright</h3>"
                            "<p>Copyright © 2024-2025 XenAdmin Qt Project Contributors</p>"
                            "<p>Based on XenCenter/XenAdmin by Cloud Software Group, Inc.</p>"
                            "<h3>License</h3>"
                            "<p>This software is open source and distributed under the BSD license.</p>")
-                           .arg(this->getSystemInfo());
+                           .arg(this->getSystemInfo(), this->getConnectionInfo(), this->getLicenseDetails());
 
     this->m_infoText->setHtml(infoHtml);
     mainLayout->addWidget(this->m_infoText);
@@ -119,102 +112,102 @@ QString AboutDialog::getSystemInfo() const
     return info;
 }
 
-void AboutDialog::requestConnectionInfo()
+QString AboutDialog::getConnectionInfo() const
 {
-    if (!this->m_xenLib || !this->m_xenLib->isConnected())
+    // C# AboutDialog pattern: iterate through ConnectionsManager connections
+    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
+    QList<XenConnection*> connections = connMgr->getConnectedConnections();
+
+    if (connections.isEmpty())
     {
-        this->updateConnectionInfo();
-        return;
+        return "<p><i>Not connected to any XenServer</i></p>";
     }
 
-    // Request data asynchronously - will arrive via signals
-    this->m_pendingRequests = 3;
-    this->m_xenLib->requestPools();
-    this->m_xenLib->requestHosts();
-    this->m_xenLib->requestVirtualMachines();
-}
-
-void AboutDialog::onPoolsReceived(const QVariantList& pools)
-{
-    this->m_pools = pools;
-    this->m_pendingRequests--;
-
-    if (this->m_pendingRequests == 0)
-    {
-        this->updateConnectionInfo();
-    }
-}
-
-void AboutDialog::onHostsReceived(const QVariantList& hosts)
-{
-    this->m_hosts = hosts;
-    this->m_pendingRequests--;
-
-    if (this->m_pendingRequests == 0)
-    {
-        this->updateConnectionInfo();
-    }
-}
-
-void AboutDialog::onVirtualMachinesReceived(const QVariantList& vms)
-{
-    this->m_vms = vms;
-    this->m_pendingRequests--;
-
-    if (this->m_pendingRequests == 0)
-    {
-        this->updateConnectionInfo();
-    }
-}
-
-void AboutDialog::updateConnectionInfo()
-{
     QString info;
+    int totalHosts = 0;
+    int totalVMs = 0;
 
-    if (!this->m_xenLib || !this->m_xenLib->isConnected())
+    // Iterate through all connected connections
+    for (XenConnection* conn : connections)
     {
-        info = "<p><i>Not connected to any XenServer</i></p>";
-    } else
-    {
-        QString connInfo = this->m_xenLib->getConnectionInfo();
-        info += QString("<p><b>Connected to:</b> %1</p>").arg(connInfo);
+        if (!conn || !conn->IsConnected())
+            continue;
 
-        // Get pool information if available
-        if (!this->m_pools.isEmpty())
+        XenCache* cache = conn->GetCache();
+        if (!cache)
+            continue;
+
+        // Get pool information
+        QList<QVariantMap> pools = cache->GetAllData("pool");
+        if (!pools.isEmpty())
         {
-            QVariantMap pool = this->m_pools.first().toMap();
+            QVariantMap pool = pools.first();
             QString poolName = pool.value("name_label", "Unnamed Pool").toString();
-            QString poolUuid = pool.value("uuid", "Unknown").toString();
-
             info += QString("<p><b>Pool:</b> %1</p>").arg(poolName);
-            info += QString("<p><b>Pool UUID:</b> %2</p>").arg(poolUuid);
         }
 
-        // Get host information
-        if (!this->m_hosts.isEmpty())
-        {
-            info += QString("<p><b>Number of Hosts:</b> %1</p>").arg(this->m_hosts.size());
-        }
+        // Count hosts
+        QList<QVariantMap> hosts = cache->GetAllData("host");
+        totalHosts += hosts.size();
 
-        // Get VM count
-        if (!this->m_vms.isEmpty())
+        // Count VMs
+        QList<QVariantMap> vms = cache->GetAllData("vm");
+        totalVMs += vms.size();
+    }
+
+    info += QString("<p><b>Total Connections:</b> %1</p>").arg(connections.size());
+    info += QString("<p><b>Total Hosts:</b> %1</p>").arg(totalHosts);
+    info += QString("<p><b>Total VMs:</b> %1</p>").arg(totalVMs);
+
+    return info;
+}
+
+QString AboutDialog::getLicenseDetails() const
+{
+    // C# AboutDialog.GetLicenseDetails() pattern
+    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
+    QList<XenConnection*> connections = connMgr->getConnectedConnections();
+
+    if (connections.isEmpty())
+    {
+        return "<p><i>No license information available</i></p>";
+    }
+
+    QStringList companies;
+
+    // Iterate through all connected connections and collect license company info
+    for (XenConnection* conn : connections)
+    {
+        if (!conn || !conn->IsConnected())
+            continue;
+
+        XenCache* cache = conn->GetCache();
+        if (!cache)
+            continue;
+
+        QList<QVariantMap> hosts = cache->GetAllData("host");
+        for (const QVariantMap& hostData : hosts)
         {
-            info += QString("<p><b>Number of VMs:</b> %1</p>").arg(this->m_vms.size());
+            QVariantMap licenseParams = hostData.value("license_params").toMap();
+            if (licenseParams.contains("company"))
+            {
+                QString company = licenseParams.value("company").toString();
+                if (!company.isEmpty() && !companies.contains(company))
+                {
+                    companies.append(company);
+                }
+            }
         }
     }
 
-    // Update the HTML with connection info
-    QString infoHtml = QString(
-                           "<h3>System Information</h3>"
-                           "%1"
-                           "<h3>Connection Information</h3>"
-                           "%2"
-                           "<h3>Copyright</h3>"
-                           "<p>Copyright © 2024-2025 XenAdmin Qt Project Contributors</p>"
-                           "<p>Based on XenCenter/XenAdmin by Cloud Software Group, Inc.</p>"
-                           "<h3>License</h3>"
-                           "<p>This software is open source and distributed under the BSD license.</p>")
-                           .arg(this->getSystemInfo(), info);
+    if (companies.isEmpty())
+    {
+        return "<p><i>No license company information available</i></p>";
+    }
 
-    this->m_infoText->setHtml(infoHtml);
+    QString info = "<p>";
+    info += companies.join("<br>");
+    info += "</p>";
+
+    return info;
 }

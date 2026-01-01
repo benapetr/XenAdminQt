@@ -50,80 +50,81 @@ class NetworkTabPage : public BaseTabPage
 {
     Q_OBJECT
 
-public:
-    explicit NetworkTabPage(QWidget* parent = nullptr);
-    ~NetworkTabPage();
+    public:
+        explicit NetworkTabPage(QWidget* parent = nullptr);
+        ~NetworkTabPage();
 
-    // Override setXenLib to connect to signals
-    void setXenLib(XenLib* xenLib) override;
+        QString GetTitle() const override
+        {
+            // C# uses context-specific titles: "Pool Networks", "Server Networks", "Virtual Network Interfaces"
+            // For simplicity in Qt, we use "Networking" to match C# tab name pattern
+            return "Networking";
+        }
+        QString HelpID() const override
+        {
+            return "TabPageNetwork";
+        }
+        bool IsApplicableForObjectType(const QString& objectType) const override;
 
-    QString tabTitle() const override
-    {
-        // C# uses context-specific titles: "Pool Networks", "Server Networks", "Virtual Network Interfaces"
-        // For simplicity in Qt, we use "Networking" to match C# tab name pattern
-        return "Networking";
-    }
-    QString helpID() const override
-    {
-        return "TabPageNetwork";
-    }
-    bool isApplicableForObjectType(const QString& objectType) const override;
+    protected:
+        void refreshContent() override;
 
-protected:
-    void refreshContent() override;
+    private:
+        void removeObject() override;
+        void updateObject() override;
 
-private:
-    Ui::NetworkTabPage* ui;
+        Ui::NetworkTabPage* ui;
 
-    // Column setup
-    void setupVifColumns();     // For VMs: Device, MAC, Limit, Network, IP, Active
-    void setupNetworkColumns(); // For Host/Pool: Name, Description, NIC, VLAN, etc.
+        // Column setup
+        void setupVifColumns();     // For VMs: Device, MAC, Limit, Network, IP, Active
+        void setupNetworkColumns(); // For Host/Pool: Name, Description, NIC, VLAN, etc.
 
-    // Networks section population
-    void populateVIFsForVM();
-    void populateNetworksForHost();
-    void populateNetworksForPool();
-    void addNetworkRow(const QVariantMap& networkData);
-    bool shouldShowNetwork(const QVariantMap& networkData);
+        // Networks section population
+        void populateVIFsForVM();
+        void populateNetworksForHost();
+        void populateNetworksForPool();
+        void addNetworkRow(const QVariantMap& networkData);
+        bool shouldShowNetwork(const QVariantMap& networkData);
 
-    // IP Address Configuration section population
-    void populateIPConfigForHost();
-    void populateIPConfigForPool();
-    void addIPConfigRow(const QVariantMap& pifData, const QVariantMap& hostData = QVariantMap());
+        // IP Address Configuration section population
+        void populateIPConfigForHost();
+        void populateIPConfigForPool();
+        void addIPConfigRow(const QVariantMap& pifData, const QVariantMap& hostData = QVariantMap());
 
-    // Helper methods
-    QString getSelectedNetworkRef() const;
-    QString getSelectedPifRef() const;
-    QString getSelectedVifRef() const;  // For VM network interfaces
-    QVariantMap getSelectedVif() const; // Get full VIF record
+        // Helper methods
+        QString getSelectedNetworkRef() const;
+        QString getSelectedPifRef() const;
+        QString getSelectedVifRef() const;  // For VM network interfaces
+        QVariantMap getSelectedVif() const; // Get full VIF record
 
-    // PIF/Network helper methods (matching C# XenAPI extension methods)
-    QString getPifLinkStatus(const QVariantMap& pifData) const;     // PIF.LinkStatusString()
-    QString getNetworkLinkStatus(const QVariantMap& networkData) const; // Network.LinkStatusString()
-    bool isPifPhysical(const QVariantMap& pifData) const;            // PIF.IsPhysical()
-    bool networkCanUseJumboFrames(const QVariantMap& networkData) const; // Network.CanUseJumboFrames()
-    QString getPifNetworkSriov(const QVariantMap& pifData) const;    // PIF.NetworkSriov()
+        // PIF/Network helper methods (matching C# XenAPI extension methods)
+        QString getPifLinkStatus(const QVariantMap& pifData) const;     // PIF.LinkStatusString()
+        QString getNetworkLinkStatus(const QVariantMap& networkData) const; // Network.LinkStatusString()
+        bool isPifPhysical(const QVariantMap& pifData) const;            // PIF.IsPhysical()
+        bool networkCanUseJumboFrames(const QVariantMap& networkData) const; // Network.CanUseJumboFrames()
+        QString getPifNetworkSriov(const QVariantMap& pifData) const;    // PIF.NetworkSriov()
 
-    // Button enablement (matches C# UpdateEnablement)
-    void updateButtonStates();
+        // Button enablement (matches C# UpdateEnablement)
+        void updateButtonStates();
 
-    // Context menu handlers
-    void showNetworksContextMenu(const QPoint& pos);
-    void showIPConfigContextMenu(const QPoint& pos);
-    void copyToClipboard();
+        // Context menu handlers
+        void showNetworksContextMenu(const QPoint& pos);
+        void showIPConfigContextMenu(const QPoint& pos);
+        void copyToClipboard();
 
-    // Network operations (matches C# button click handlers)
-    void onAddNetwork();     // AddNetworkButton_Click
-    void onEditNetwork();    // EditNetworkButton_Click
-    void onRemoveNetwork();  // RemoveNetworkButton_Click
-    void onActivateToggle(); // buttonActivateToggle_Click
-    void removeNetwork(const QString& networkRef);
+        // Network operations (matches C# button click handlers)
+        void onAddNetwork();     // AddNetworkButton_Click
+        void onEditNetwork();    // EditNetworkButton_Click
+        void onRemoveNetwork();  // RemoveNetworkButton_Click
+        void onActivateToggle(); // buttonActivateToggle_Click
+        void removeNetwork(const QString& networkRef);
+        void onCacheObjectChanged(XenConnection *connection, const QString& type, const QString& ref);
 
-private slots:
-    void onConfigureClicked();
-    void onNetworksTableSelectionChanged();
-    void onIPConfigTableSelectionChanged();
-    void onNetworksDataUpdated(const QVariantList& networks);
+    private slots:
+        void onConfigureClicked();
+        void onNetworksTableSelectionChanged();
+        void onIPConfigTableSelectionChanged();
+        void onNetworksDataUpdated(const QVariantList& networks);
 };
 
 #endif // NETWORKTABPAGE_H

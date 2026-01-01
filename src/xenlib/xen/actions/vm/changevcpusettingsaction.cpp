@@ -26,7 +26,7 @@
  */
 
 #include "changevcpusettingsaction.h"
-#include "../../../xen/connection.h"
+#include "../../../xen/network/connection.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../../xencache.h"
 #include <stdexcept>
@@ -54,7 +54,7 @@ void ChangeVCPUSettingsAction::run()
         setDescription("Checking VM state...");
 
         // Re-ResolveObjectData VM from cache (it may have been updated)
-        QVariantMap vmData = connection()->getCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         if (vmData.isEmpty())
         {
             // VM disappeared - nothing to do

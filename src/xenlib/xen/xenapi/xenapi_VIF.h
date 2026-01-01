@@ -32,10 +32,9 @@
 #include <QVariantList>
 #include <QVariantMap>
 
-class XenSession;
-
 namespace XenAPI
 {
+    class Session;
 
     /**
      * @brief VIF (Virtual Network Interface) XenAPI bindings
@@ -57,7 +56,7 @@ namespace XenAPI
              *
              * Matches C# VIF.async_create()
              */
-            static QString async_create(XenSession* session, const QVariantMap& vifRecord);
+            static QString async_create(Session* session, const QVariantMap& vifRecord);
 
             /**
              * @brief Create a VIF (sync)
@@ -67,7 +66,7 @@ namespace XenAPI
              *
              * Matches C# VIF.create()
              */
-            static QString create(XenSession* session, const QVariantMap& vifRecord);
+            static QString create(Session* session, const QVariantMap& vifRecord);
 
             /**
              * @brief Destroy a VIF asynchronously
@@ -77,7 +76,7 @@ namespace XenAPI
              *
              * Matches C# VIF.async_destroy()
              */
-            static QString async_destroy(XenSession* session, const QString& vif);
+            static QString async_destroy(Session* session, const QString& vif);
 
             /**
              * @brief Destroy a VIF
@@ -86,7 +85,7 @@ namespace XenAPI
              *
              * Matches C# VIF.destroy()
              */
-            static void destroy(XenSession* session, const QString& vif);
+            static void destroy(Session* session, const QString& vif);
 
             /**
              * @brief Plug (hot-plug) a VIF
@@ -95,7 +94,7 @@ namespace XenAPI
              *
              * Matches C# VIF.plug()
              */
-            static void plug(XenSession* session, const QString& vif);
+            static void plug(Session* session, const QString& vif);
 
             /**
              * @brief Unplug a VIF
@@ -104,7 +103,7 @@ namespace XenAPI
              *
              * Matches C# VIF.unplug()
              */
-            static void unplug(XenSession* session, const QString& vif);
+            static void unplug(Session* session, const QString& vif);
 
             /**
              * @brief Get allowed operations for a VIF
@@ -114,7 +113,7 @@ namespace XenAPI
              *
              * Matches C# VIF.get_allowed_operations()
              */
-            static QStringList get_allowed_operations(XenSession* session, const QString& vif);
+            static QStringList get_allowed_operations(Session* session, const QString& vif);
 
             /**
              * @brief Get VIF record
@@ -124,7 +123,7 @@ namespace XenAPI
              *
              * Matches C# VIF.get_record()
              */
-            static QVariantMap get_record(XenSession* session, const QString& vif);
+            static QVariantMap get_record(Session* session, const QString& vif);
 
             /**
              * @brief Get all VIF references
@@ -133,7 +132,7 @@ namespace XenAPI
              *
              * Matches C# VIF.get_all()
              */
-            static QVariantList get_all(XenSession* session);
+            static QVariantList get_all(Session* session);
     };
 
 } // namespace XenAPI

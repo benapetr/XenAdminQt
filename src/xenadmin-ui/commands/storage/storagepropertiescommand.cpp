@@ -26,61 +26,63 @@
  */
 
 #include "storagepropertiescommand.h"
-#include <QDebug>
 #include "../../mainwindow.h"
-#include <QDebug>
 #include "../../dialogs/storagepropertiesdialog.h"
-#include <QDebug>
-#include "xenlib.h"
+#include "xen/sr.h"
+#include "xencache.h"
 #include <QDebug>
 
-StoragePropertiesCommand::StoragePropertiesCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+StoragePropertiesCommand::StoragePropertiesCommand(MainWindow* mainWindow, QObject* parent) : SRCommand(mainWindow, parent)
 {
 }
 
-void StoragePropertiesCommand::setTargetSR(const QString& srRef)
+void StoragePropertiesCommand::setTargetSR(const QString& srRef, XenConnection *connection)
 {
     this->m_overrideSRRef = srRef;
+    this->m_overrideConn = connection;
 }
 
-bool StoragePropertiesCommand::canRun() const
+bool StoragePropertiesCommand::CanRun() const
 {
-    QString srRef = getSelectedSRRef();
-    return !srRef.isEmpty() && mainWindow()->xenLib()->isConnected();
+    if (this->m_overrideConn == nullptr)
+    {
+        QSharedPointer<SR> sr = this->getSR();
+        if (!sr || !sr->IsConnected())
+            return false;
+        return true;
+    } else
+    {
+        return this->m_overrideConn->IsConnected();
+    }
 }
 
-void StoragePropertiesCommand::run()
+void StoragePropertiesCommand::Run()
 {
-    QString srRef = getSelectedSRRef();
-    if (srRef.isEmpty())
+    QSharedPointer<SR> sr;
+    if (!this->m_overrideConn)
+        sr = this->getSR();
+    else
+        sr = this->m_overrideConn->GetCache()->ResolveObject<SR>("sr", this->m_overrideSRRef);
+
+    if (!sr || !sr->IsValid())
         return;
 
-    // Get connection from xenLib
-    XenConnection* connection = xenLib()->getConnection();
+    QString srRef = sr->OpaqueRef();
+
+    // Get GetConnection from SR object for multi-GetConnection support
+    XenConnection* connection = sr->GetConnection();
+
     if (!connection)
     {
         qWarning() << "StoragePropertiesCommand: No connection available";
         return;
     }
 
-    StoragePropertiesDialog dialog(connection, srRef, mainWindow());
+    StoragePropertiesDialog dialog(connection, srRef, this->mainWindow());
     dialog.exec();
 }
 
-QString StoragePropertiesCommand::menuText() const
+QString StoragePropertiesCommand::MenuText() const
 {
     return "P&roperties";
-}
-
-QString StoragePropertiesCommand::getSelectedSRRef() const
-{
-    if (!this->m_overrideSRRef.isEmpty())
-        return this->m_overrideSRRef;
-
-    QString objectType = getSelectedObjectType();
-    if (objectType != "sr")
-        return QString();
-
-    return getSelectedObjectRef();
 }

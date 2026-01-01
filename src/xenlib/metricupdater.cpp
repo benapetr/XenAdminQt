@@ -26,7 +26,7 @@
  */
 
 #include "metricupdater.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xen/session.h"
 #include <QXmlStreamReader>
 #include <QDateTime>
@@ -56,7 +56,7 @@ MetricUpdater::~MetricUpdater()
 
 void MetricUpdater::start()
 {
-    if (m_running)
+    if (this->m_running)
         return;
 
     qDebug() << "MetricUpdater: Starting metric updates";
@@ -150,7 +150,7 @@ void MetricUpdater::updateMetrics()
     if (!m_running || m_paused)
         return;
 
-    if (!m_connection || !m_connection->isConnected())
+    if (!m_connection || !m_connection->IsConnected())
     {
         qDebug() << "MetricUpdater: Connection not available, skipping update";
         return;
@@ -204,10 +204,10 @@ QString MetricUpdater::buildRrdUrl() const
     // - interval: Data point interval (5 seconds)
     // - host: Include host metrics (true)
 
-    if (!m_connection || !m_connection->getSession())
+    if (!m_connection || !m_connection->GetSession())
         return QString();
 
-    QString sessionId = m_connection->getSession()->getSessionId();
+    QString sessionId = m_connection->GetSession()->getSessionId();
     if (sessionId.isEmpty())
         return QString();
 
@@ -220,12 +220,12 @@ QString MetricUpdater::buildRrdUrl() const
                         .arg(startTime)
                         .arg(RRD_INTERVAL_SECONDS);
 
-    int port = m_connection->getPort();
+    int port = m_connection->GetPort();
     bool useSSL = (port == 443); // Default XenServer SSL port
 
     QUrl url;
     url.setScheme(useSSL ? "https" : "http");
-    url.setHost(m_connection->getHostname());
+    url.setHost(m_connection->GetHostname());
     url.setPort(port);
     url.setPath("/rrd_updates");
     url.setQuery(query);
@@ -241,12 +241,11 @@ qint64 MetricUpdater::getStartTimestamp() const
     // Request data from 10 seconds ago (to account for clock skew and ensure we get recent data)
 
     QDateTime now = QDateTime::currentDateTimeUtc();
-    qint64 tenSecondsAgo = now.toSecsSinceEpoch() - 10;
+    qint64 offsetSeconds = 0;
+    if (m_connection)
+        offsetSeconds = m_connection->GetServerTimeOffsetSeconds();
 
-    // TODO: Account for server time offset if available
-    // For now, use local UTC time
-
-    return tenSecondsAgo;
+    return now.toSecsSinceEpoch() - offsetSeconds - 10;
 }
 
 void MetricUpdater::parseRrdXml(const QByteArray& xmlData)
@@ -344,6 +343,11 @@ void MetricUpdater::parseRrdXml(const QByteArray& xmlData)
         return;
     }
 
+    if (metricKeys.isEmpty())
+    {
+        qWarning() << "MetricUpdater: No legend entries found in RRD response";
+    }
+
     // Update cache with new metrics
     {
         QMutexLocker locker(&m_metricsMutex);
@@ -387,6 +391,8 @@ void MetricUpdater::onNetworkReplyFinished(QNetworkReply* reply)
         qWarning() << "MetricUpdater: Empty response from RRD endpoint";
         return;
     }
+
+    qDebug() << "MetricUpdater: RRD response head:" << QString::fromUtf8(data.left(200));
 
     onRrdDataReceived(data);
 }

@@ -28,7 +28,7 @@
 #ifndef DISABLECHANGEDBLOCKTRACKINGCOMMAND_H
 #define DISABLECHANGEDBLOCKTRACKINGCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
 class MainWindow;
 
@@ -49,7 +49,7 @@ class MainWindow;
  *
  * C# equivalent: XenAdmin.Commands.DisableChangedBlockTrackingCommand
  */
-class DisableChangedBlockTrackingCommand : public Command
+class DisableChangedBlockTrackingCommand : public VMCommand
 {
     Q_OBJECT
 
@@ -72,7 +72,7 @@ class DisableChangedBlockTrackingCommand : public Command
          *
          * @return true if command can execute
          */
-        bool canRun() const override;
+        bool CanRun() const override;
 
         /**
          * @brief Execute the disable CBT command
@@ -86,13 +86,13 @@ class DisableChangedBlockTrackingCommand : public Command
          * Uses ParallelAction if multiple VDIs need processing.
          * Shows confirmation dialog before execution.
          */
-        void run() override;
+        void Run() override;
 
         /**
          * @brief Get menu text for this command
          * @return "Disable Changed Block &Tracking"
          */
-        QString menuText() const override;
+        QString MenuText() const override;
 
     private:
         /**
@@ -104,10 +104,9 @@ class DisableChangedBlockTrackingCommand : public Command
 
         /**
          * @brief Check if VM has at least one VDI with CBT enabled
-         * @param vmRef VM reference
          * @return true if any VDI has cbt_enabled == true
          */
-        bool hasVdiWithCbtEnabled(const QString& vmRef) const;
+        bool hasVdiWithCbtEnabled() const;
 };
 
 #endif // DISABLECHANGEDBLOCKTRACKINGCOMMAND_H

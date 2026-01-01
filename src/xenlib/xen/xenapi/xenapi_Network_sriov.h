@@ -32,10 +32,9 @@
 #include <QVariantList>
 #include <QVariantMap>
 
-class XenSession;
-
 namespace XenAPI
 {
+    class Session;
 
     /**
      * @brief Network_sriov XenAPI bindings
@@ -50,12 +49,12 @@ namespace XenAPI
 
         public:
             // SR-IOV operations
-            static QString async_create(XenSession* session, const QString& pif, const QString& network);
-            static QString async_destroy(XenSession* session, const QString& network_sriov);
+            static QString async_create(Session* session, const QString& pif, const QString& network);
+            static QString async_destroy(Session* session, const QString& network_sriov);
 
             // SR-IOV queries
-            static QVariantMap get_record(XenSession* session, const QString& network_sriov);
-            static QVariantList get_all(XenSession* session);
+            static QVariantMap get_record(Session* session, const QString& network_sriov);
+            static QVariantList get_all(Session* session);
     };
 
 } // namespace XenAPI

@@ -28,21 +28,18 @@
 #ifndef POOLPROPERTIESCOMMAND_H
 #define POOLPROPERTIESCOMMAND_H
 
-#include "../command.h"
+#include "poolcommand.h"
 
-class PoolPropertiesCommand : public Command
+class PoolPropertiesCommand : public PoolCommand
 {
     Q_OBJECT
 
-public:
-    explicit PoolPropertiesCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit PoolPropertiesCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    bool canRun() const override;
-    void run() override;
-    QString menuText() const override;
-
-private:
-    QString getSelectedPoolRef() const;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // POOLPROPERTIESCOMMAND_H

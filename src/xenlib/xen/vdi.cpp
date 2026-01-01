@@ -33,49 +33,49 @@ VDI::VDI(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-qint64 VDI::virtualSize() const
+qint64 VDI::VirtualSize() const
 {
     return longProperty("virtual_size");
 }
 
-qint64 VDI::physicalUtilisation() const
+qint64 VDI::PhysicalUtilisation() const
 {
     return longProperty("physical_utilisation");
 }
 
-QString VDI::type() const
+QString VDI::GetType() const
 {
     return stringProperty("type");
 }
 
-bool VDI::sharable() const
+bool VDI::Sharable() const
 {
     return boolProperty("sharable");
 }
 
-bool VDI::readOnly() const
+bool VDI::ReadOnly() const
 {
     return boolProperty("read_only");
 }
 
-QString VDI::srRef() const
+QString VDI::SRRef() const
 {
     return stringProperty("SR");
 }
 
-QStringList VDI::vbdRefs() const
+QStringList VDI::VBDRefs() const
 {
     return stringListProperty("VBDs");
 }
 
-bool VDI::isInUse() const
+bool VDI::IsInUse() const
 {
-    return !vbdRefs().isEmpty();
+    return !VBDRefs().isEmpty();
 }
 
-QString VDI::sizeString() const
+QString VDI::SizeString() const
 {
-    qint64 size = virtualSize();
+    qint64 size = VirtualSize();
 
     if (size < 0)
     {
@@ -106,18 +106,121 @@ QString VDI::sizeString() const
     }
 }
 
-QString VDI::snapshotOfRef() const
+QString VDI::SnapshotOfRef() const
 {
     return stringProperty("snapshot_of");
 }
 
-bool VDI::isSnapshot() const
+bool VDI::IsSnapshot() const
 {
-    QString snapshotOf = snapshotOfRef();
+    QString snapshotOf = this->SnapshotOfRef();
     return !snapshotOf.isEmpty() && snapshotOf != "OpaqueRef:NULL";
 }
 
-QString VDI::objectType() const
+QStringList VDI::AllowedOperations() const
 {
-    return "VDI";
+    return this->stringListProperty("allowed_operations");
+}
+
+QVariantMap VDI::CurrentOperations() const
+{
+    return this->property("current_operations").toMap();
+}
+
+bool VDI::StorageLock() const
+{
+    return this->boolProperty("storage_lock", false);
+}
+
+QString VDI::Location() const
+{
+    return this->stringProperty("location");
+}
+
+bool VDI::Managed() const
+{
+    return this->boolProperty("managed", true);
+}
+
+bool VDI::Missing() const
+{
+    return this->boolProperty("missing", false);
+}
+
+QString VDI::ParentRef() const
+{
+    return this->stringProperty("parent");
+}
+
+QStringList VDI::CrashDumpRefs() const
+{
+    return this->stringListProperty("crash_dumps");
+}
+
+QVariantMap VDI::XenstoreData() const
+{
+    return this->property("xenstore_data").toMap();
+}
+
+QVariantMap VDI::SMConfig() const
+{
+    return this->property("sm_config").toMap();
+}
+
+QStringList VDI::SnapshotRefs() const
+{
+    return this->stringListProperty("snapshots");
+}
+
+QDateTime VDI::SnapshotTime() const
+{
+    QString dateStr = this->stringProperty("snapshot_time");
+    if (dateStr.isEmpty())
+        return QDateTime();
+    return QDateTime::fromString(dateStr, Qt::ISODate);
+}
+
+QStringList VDI::Tags() const
+{
+    return this->stringListProperty("tags");
+}
+
+QVariantMap VDI::OtherConfig() const
+{
+    return this->property("other_config").toMap();
+}
+
+bool VDI::AllowCaching() const
+{
+    return this->boolProperty("allow_caching", false);
+}
+
+QString VDI::OnBoot() const
+{
+    return this->stringProperty("on_boot");
+}
+
+QString VDI::MetadataOfPoolRef() const
+{
+    return this->stringProperty("metadata_of_pool");
+}
+
+bool VDI::MetadataLatest() const
+{
+    return this->boolProperty("metadata_latest", false);
+}
+
+bool VDI::IsToolsIso() const
+{
+    return this->boolProperty("is_tools_iso", false);
+}
+
+bool VDI::CbtEnabled() const
+{
+    return this->boolProperty("cbt_enabled", false);
+}
+
+QString VDI::GetObjectType() const
+{
+    return "vdi";
 }

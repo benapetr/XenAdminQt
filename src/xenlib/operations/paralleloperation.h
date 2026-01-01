@@ -54,89 +54,89 @@ class ParallelOperation : public MultipleOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Default maximum number of parallel operations per connection
-     */
-    static const int DEFAULT_MAX_PARALLEL_OPERATIONS = 25;
+    public:
+        /**
+         * @brief Default maximum number of parallel operations per connection
+         */
+        static const int DEFAULT_MAX_PARALLEL_OPERATIONS = 25;
 
-    /**
-     * @brief Construct a parallel operation
-     * @param title Operation title
-     * @param startDescription Description shown when starting
-     * @param endDescription Description shown when complete
-     * @param subOperations List of operations to run in parallel
-     * @param connection Parent connection (nullptr for cross-connection ops)
-     * @param suppressHistory If true, don't add to history
-     * @param showSubOperationDetails If true, show details of sub-operations
-     * @param maxParallelOperations Max concurrent operations per connection (default 25)
-     * @param parent Parent QObject
-     */
-    explicit ParallelOperation(const QString& title,
-                               const QString& startDescription,
-                               const QString& endDescription,
-                               const QList<AsyncOperation*>& subOperations,
-                               XenConnection* connection = nullptr,
-                               bool suppressHistory = false,
-                               bool showSubOperationDetails = false,
-                               int maxParallelOperations = DEFAULT_MAX_PARALLEL_OPERATIONS,
-                               QObject* parent = nullptr);
+        /**
+         * @brief Construct a parallel operation
+         * @param title Operation title
+         * @param startDescription Description shown when starting
+         * @param endDescription Description shown when complete
+         * @param subOperations List of operations to run in parallel
+         * @param connection Parent connection (nullptr for cross-connection ops)
+         * @param suppressHistory If true, don't add to history
+         * @param showSubOperationDetails If true, show details of sub-operations
+         * @param maxParallelOperations Max concurrent operations per connection (default 25)
+         * @param parent Parent QObject
+         */
+        explicit ParallelOperation(const QString& title,
+                                   const QString& startDescription,
+                                   const QString& endDescription,
+                                   const QList<AsyncOperation*>& subOperations,
+                                   XenConnection* connection = nullptr,
+                                   bool suppressHistory = false,
+                                   bool showSubOperationDetails = false,
+                                   int maxParallelOperations = DEFAULT_MAX_PARALLEL_OPERATIONS,
+                                   QObject* parent = nullptr);
 
-    /**
-     * @brief Destructor
-     */
-    ~ParallelOperation() override;
+        /**
+         * @brief Destructor
+         */
+        ~ParallelOperation() override;
 
-protected:
-    /**
-     * @brief Run sub-operations in parallel
-     * @param exceptions List to collect exception messages
-     */
-    void runSubOperations(QStringList& exceptions) override;
+    protected:
+        /**
+         * @brief Run sub-operations in parallel
+         * @param exceptions List to collect exception messages
+         */
+        void runSubOperations(QStringList& exceptions) override;
 
-    /**
-     * @brief Recalculate progress from all sub-operations
-     */
-    void recalculatePercentComplete() override;
+        /**
+         * @brief Recalculate progress from all sub-operations
+         */
+        void recalculatePercentComplete() override;
 
-    /**
-     * @brief Called when operation completes
-     */
-    void onMultipleOperationCompleted() override;
+        /**
+         * @brief Called when operation completes
+         */
+        void onMultipleOperationCompleted() override;
 
-private:
-    /**
-     * @brief Enqueue a single operation
-     */
-    void enqueueOperation(AsyncOperation* operation,
-                          ProducerConsumerQueue* queue,
-                          QStringList& exceptions);
+    private:
+        /**
+         * @brief Enqueue a single operation
+         */
+        void enqueueOperation(AsyncOperation* operation,
+                              ProducerConsumerQueue* queue,
+                              QStringList& exceptions);
 
-private slots:
-    /**
-     * @brief Handle sub-operation completion
-     */
-    void onOperationCompleted();
+    private slots:
+        /**
+         * @brief Handle sub-operation completion
+         */
+        void onOperationCompleted();
 
-private:
-    // Operations grouped by connection
-    QHash<XenConnection*, QList<AsyncOperation*>> m_operationsByConnection;
+    private:
+        // Operations grouped by connection
+        QHash<XenConnection*, QList<AsyncOperation*>> m_operationsByConnection;
 
-    // Producer-consumer queues per connection
-    QHash<XenConnection*, ProducerConsumerQueue*> m_queuesByConnection;
+        // Producer-consumer queues per connection
+        QHash<XenConnection*, ProducerConsumerQueue*> m_queuesByConnection;
 
-    // Operations with no connection
-    QList<AsyncOperation*> m_operationsWithNoConnection;
-    ProducerConsumerQueue* m_queueWithNoConnection;
+        // Operations with no connection
+        QList<AsyncOperation*> m_operationsWithNoConnection;
+        ProducerConsumerQueue* m_queueWithNoConnection;
 
-    // Configuration
-    int m_maxParallelOperations;
-    int m_totalOperationsCount;
+        // Configuration
+        int m_maxParallelOperations;
+        int m_totalOperationsCount;
 
-    // Completion tracking
-    QMutex m_completionMutex;
-    QWaitCondition m_completionWaitCondition;
-    int m_completedOperationsCount;
+        // Completion tracking
+        QMutex m_completionMutex;
+        QWaitCondition m_completionWaitCondition;
+        int m_completedOperationsCount;
 };
 
 #endif // PARALLELOPERATION_H

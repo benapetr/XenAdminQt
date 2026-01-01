@@ -27,8 +27,8 @@
 
 #include "vappstartcommand.h"
 #include "../../../xenlib/xen/actions/vm/startapplianceaction.h"
-#include "../../../xenlib/xen/connection.h"
-#include "../../../xenlib/xenlib.h"
+#include "../../../xenlib/xen/network/connection.h"
+#include "../../../xenlib/xen/xenobject.h"
 #include "../../../xenlib/xencache.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
@@ -39,7 +39,7 @@ VappStartCommand::VappStartCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-bool VappStartCommand::canRun() const
+bool VappStartCommand::CanRun() const
 {
     QString objRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -52,7 +52,16 @@ bool VappStartCommand::canRun() const
     // Case 1: VM_appliance directly selected
     if (type == "vm_appliance" || type == "appliance")
     {
-        QVariantMap appData = this->xenLib()->getCache()->ResolveObjectData(type, objRef);
+        QSharedPointer<XenObject> selectedObject = this->GetObject();
+        if (!selectedObject)
+            return false;
+
+        XenConnection* connection = selectedObject->GetConnection();
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        if (!cache)
+            return false;
+
+        QVariantMap appData = cache->ResolveObjectData(type, objRef);
         return this->canStartAppliance(appData);
     }
 
@@ -65,14 +74,23 @@ bool VappStartCommand::canRun() const
             return false;
         }
 
-        QVariantMap appData = this->xenLib()->getCache()->ResolveObjectData("vm_appliance", applianceRef);
+        QSharedPointer<XenObject> selectedObject = this->GetObject();
+        if (!selectedObject)
+            return false;
+
+        XenConnection* connection = selectedObject->GetConnection();
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        if (!cache)
+            return false;
+
+        QVariantMap appData = cache->ResolveObjectData("vm_appliance", applianceRef);
         return this->canStartAppliance(appData);
     }
 
     return false;
 }
 
-void VappStartCommand::run()
+void VappStartCommand::Run()
 {
     QString objRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
@@ -96,7 +114,16 @@ void VappStartCommand::run()
     }
 
     // Get appliance data for name
-    QVariantMap appData = this->xenLib()->getCache()->ResolveObjectData("vm_appliance", applianceRef);
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+        return;
+
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return;
+
+    QVariantMap appData = cache->ResolveObjectData("vm_appliance", applianceRef);
     QString appName = appData.value("name_label").toString();
 
     if (appName.isEmpty())
@@ -113,8 +140,8 @@ void VappStartCommand::run()
     }
 
     // Get connection
-    XenConnection* conn = this->xenLib()->getConnection();
-    if (!conn || !conn->isConnected())
+    XenConnection* conn = connection;
+    if (!conn || !conn->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
                              tr("Not connected to XenServer"));
@@ -148,7 +175,7 @@ void VappStartCommand::run()
     action->runAsync();
 }
 
-QString VappStartCommand::menuText() const
+QString VappStartCommand::MenuText() const
 {
     return tr("Start v&App");
 }
@@ -175,7 +202,16 @@ bool VappStartCommand::canStartAppliance(const QVariantMap& applianceData) const
 
 QString VappStartCommand::getApplianceRefFromVM(const QString& vmRef) const
 {
-    QVariantMap vmData = this->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
+    QSharedPointer<XenObject> selectedObject = this->GetObject();
+    if (!selectedObject)
+        return QString();
+
+    XenConnection* connection = selectedObject->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return QString();
+
+    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty())
     {
         return QString();

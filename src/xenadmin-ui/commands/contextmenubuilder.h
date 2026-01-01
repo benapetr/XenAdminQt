@@ -34,6 +34,12 @@
 
 class MainWindow;
 class Command;
+class XenObject;
+class VM;
+class Host;
+class Pool;
+class SR;
+class Network;
 
 /**
  * @brief Builds context menus for different XenObject types
@@ -57,14 +63,14 @@ private:
     MainWindow* m_mainWindow;
 
     // Builders for specific object types
-    void buildVMContextMenu(QMenu* menu, QTreeWidgetItem* item);
-    void buildSnapshotContextMenu(QMenu* menu, QTreeWidgetItem* item);
-    void buildTemplateContextMenu(QMenu* menu, QTreeWidgetItem* item);
-    void buildHostContextMenu(QMenu* menu, QTreeWidgetItem* item);
+    void buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm);
+    void buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM> snapshot);
+    void buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM> templateVM);
+    void buildHostContextMenu(QMenu* menu, QSharedPointer<Host> host);
     void buildDisconnectedHostContextMenu(QMenu* menu, QTreeWidgetItem* item);
-    void buildSRContextMenu(QMenu* menu, QTreeWidgetItem* item);
-    void buildPoolContextMenu(QMenu* menu, QTreeWidgetItem* item);
-    void buildNetworkContextMenu(QMenu* menu, QTreeWidgetItem* item);
+    void buildSRContextMenu(QMenu* menu, QSharedPointer<SR> sr);
+    void buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> pool);
+    void buildNetworkContextMenu(QMenu* menu, QSharedPointer<Network> network);
 
     // Helper methods
     void addCommand(QMenu* menu, Command* command);

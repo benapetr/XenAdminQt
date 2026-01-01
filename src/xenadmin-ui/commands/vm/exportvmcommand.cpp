@@ -28,7 +28,8 @@
 #include "exportvmcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/exportwizard.h"
-#include "xenlib.h"
+#include "xen/xenobject.h"
+#include "xen/vm.h"
 #include <QProgressDialog>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -37,24 +38,22 @@
 #include <QThread>
 
 ExportVMCommand::ExportVMCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent), m_exportWizard(nullptr)
+    : VMCommand(mainWindow, parent), m_exportWizard(nullptr)
 {
 }
 
-bool ExportVMCommand::canRun() const
+bool ExportVMCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
-    {
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
-    }
 
-    return this->isVMExportable(vmRef);
+    return this->isVMExportable();
 }
 
-void ExportVMCommand::run()
+void ExportVMCommand::Run()
 {
-    if (!this->canRun())
+    if (!this->CanRun())
     {
         return;
     }
@@ -114,45 +113,18 @@ void ExportVMCommand::onWizardFinished(int result)
     }
 }
 
-QString ExportVMCommand::menuText() const
+QString ExportVMCommand::MenuText() const
 {
     return "Export...";
 }
 
-QString ExportVMCommand::getSelectedVMRef() const
+bool ExportVMCommand::isVMExportable() const
 {
-    // Get currently selected VM from the server tree
-    QTreeWidget* serverTree = this->mainWindow()->getServerTreeWidget();
-    QTreeWidgetItem* currentItem = serverTree->currentItem();
-
-    if (currentItem && currentItem->data(0, Qt::UserRole + 1).toString() == "vm")
-    {
-        return currentItem->data(0, Qt::UserRole).toString();
-    }
-
-    return QString();
-}
-
-QString ExportVMCommand::getSelectedVMName() const
-{
-    QTreeWidget* serverTree = this->mainWindow()->getServerTreeWidget();
-    QTreeWidgetItem* currentItem = serverTree->currentItem();
-
-    if (currentItem && currentItem->data(0, Qt::UserRole + 1).toString() == "vm")
-    {
-        return currentItem->text(0);
-    }
-
-    return QString();
-}
-
-bool ExportVMCommand::isVMExportable(const QString& vmRef) const
-{
-    XenLib* xenLib = this->mainWindow()->xenLib();
-    if (!xenLib)
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
 
-    QVariantMap vmData = xenLib->getCachedObjectData("vm", vmRef);
+    QVariantMap vmData = vm->GetData();
     if (vmData.isEmpty())
         return false;
 

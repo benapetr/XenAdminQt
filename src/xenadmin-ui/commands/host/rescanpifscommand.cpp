@@ -27,49 +27,32 @@
 
 #include "rescanpifscommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
-#include "xencache.h"
 #include "operations/operationmanager.h"
 #include "xen/actions/network/rescanpifsaction.h"
+#include "xen/host.h"
 #include <QMessageBox>
 
-RescanPIFsCommand::RescanPIFsCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+RescanPIFsCommand::RescanPIFsCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
-bool RescanPIFsCommand::canRun() const
+bool RescanPIFsCommand::CanRun() const
 {
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return false;
-
-    return this->isHostSelected();
+    // Can run if a host is selected
+    return !this->getSelectedHostRef().isEmpty();
 }
 
-void RescanPIFsCommand::run()
+void RescanPIFsCommand::Run()
 {
-    if (!this->isHostSelected())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return;
 
-    QString hostRef = this->getSelectedObjectRef();
-    if (hostRef.isEmpty())
-        return;
-
-    QVariantMap hostData = this->xenLib()->getCache()->ResolveObjectData("host", hostRef);
-    if (hostData.isEmpty())
-    {
-        QMessageBox::warning(this->mainWindow(), tr("Error"),
-                             tr("Unable to retrieve host information."));
-        return;
-    }
-
-    QString hostName = hostData.value("name_label", "Host").toString();
+    QString hostRef = this->getSelectedHostRef();
+    QString hostName = host->GetName();
 
     // Create and run rescan action
-    RescanPIFsAction* action = new RescanPIFsAction(
-        this->xenLib()->getConnection(),
-        hostRef);
+    RescanPIFsAction* action = new RescanPIFsAction(host->GetConnection(), hostRef);
 
     action->setTitle(tr("Rescanning network interfaces"));
     action->setDescription(tr("Rescanning network interfaces on host '%1'...").arg(hostName));
@@ -81,17 +64,7 @@ void RescanPIFsCommand::run()
     this->mainWindow()->showStatusMessage(tr("Network interface rescan started for host '%1'").arg(hostName), 3000);
 }
 
-QString RescanPIFsCommand::menuText() const
+QString RescanPIFsCommand::MenuText() const
 {
     return tr("&Rescan Network Interfaces");
-}
-
-bool RescanPIFsCommand::isHostSelected() const
-{
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return false;
-
-    QString hostRef = this->getSelectedObjectRef();
-    return !hostRef.isEmpty();
 }

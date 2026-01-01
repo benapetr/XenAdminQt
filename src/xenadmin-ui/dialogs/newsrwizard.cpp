@@ -30,8 +30,8 @@
 
 #include "../mainwindow.h"
 #include "../widgets/wizardnavigationpane.h"
-#include "../../xenlib/xenlib.h"
 #include "../../xenlib/xencache.h"
+#include "xen/network/connection.h"
 #include "../../xenlib/xen/actions/sr/srcreateaction.h"
 #include "../../xenlib/xen/actions/sr/srreattachaction.h"
 #include "../../xenlib/xen/host.h"
@@ -51,9 +51,10 @@
 #include <QTextStream>
 #include <QVector>
 
-NewSRWizard::NewSRWizard(MainWindow* parent)
+NewSRWizard::NewSRWizard(XenConnection* connection, MainWindow* parent)
     : QWizard(parent),
       m_mainWindow(parent),
+      m_connection(connection),
       ui(new Ui::NewSRWizard),
       m_navigationPane(nullptr),
       m_typeButtonGroup(nullptr),
@@ -554,7 +555,7 @@ void NewSRWizard::onTestConnection()
     this->ui->connectionStatusLabel->setStyleSheet("QLabel { color: blue; }");
     this->ui->testConnectionButton->setEnabled(false);
 
-    if (!this->m_mainWindow || !this->m_mainWindow->xenLib())
+    if (!this->m_connection || !this->m_connection->GetCache())
     {
         this->ui->connectionStatusLabel->setText(tr("Error: Not connected to XenServer"));
         this->ui->connectionStatusLabel->setStyleSheet("QLabel { color: red; }");
@@ -562,8 +563,7 @@ void NewSRWizard::onTestConnection()
         return;
     }
 
-    XenLib* xenLib = this->m_mainWindow->xenLib();
-    QList<QVariantMap> pools = xenLib->getCache()->GetAllData("pool");
+    QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
     if (pools.isEmpty())
     {
         this->ui->connectionStatusLabel->setText(tr("Error: Failed to get pool information"));
@@ -605,7 +605,7 @@ void NewSRWizard::onTestConnection()
     try
     {
         QVariantList probeResult = XenAPI::SR::probe_ext(
-            xenLib->getConnection()->getSession(),
+            this->m_connection->GetSession(),
             masterRef,
             deviceConfig,
             srTypeStr,
@@ -738,18 +738,17 @@ void NewSRWizard::onScanISCSITarget()
 
     try
     {
-        if (!this->m_mainWindow || !this->m_mainWindow->xenLib() || !this->m_mainWindow->xenLib()->getConnection())
+        if (!this->m_connection || !this->m_connection->GetSession() || !this->m_connection->GetCache())
             throw std::runtime_error("Not connected to XenServer");
 
-        XenLib* xenLib = this->m_mainWindow->xenLib();
-        QList<QVariantMap> pools = xenLib->getCache()->GetAllData("pool");
+        QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
         if (pools.isEmpty())
             throw std::runtime_error("No pool found");
 
         QString masterRef = pools.first().value("master").toString();
 
         QVariantList probeResult = XenAPI::SR::probe_ext(
-            xenLib->getConnection()->getSession(),
+            this->m_connection->GetSession(),
             masterRef,
             deviceConfig,
             "lvmoiscsi",
@@ -836,18 +835,17 @@ void NewSRWizard::onISCSIIqnSelected(int index)
 
     try
     {
-        if (!this->m_mainWindow || !this->m_mainWindow->xenLib() || !this->m_mainWindow->xenLib()->getConnection())
+        if (!this->m_connection || !this->m_connection->GetSession() || !this->m_connection->GetCache())
             throw std::runtime_error("Not connected to XenServer");
 
-        XenLib* xenLib = this->m_mainWindow->xenLib();
-        QList<QVariantMap> pools = xenLib->getCache()->GetAllData("pool");
+        QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
         if (pools.isEmpty())
             throw std::runtime_error("No pool found");
 
         QString masterRef = pools.first().value("master").toString();
 
         QVariantList probeResult = XenAPI::SR::probe_ext(
-            xenLib->getConnection()->getSession(),
+            this->m_connection->GetSession(),
             masterRef,
             deviceConfig,
             "lvmoiscsi",
@@ -921,11 +919,10 @@ void NewSRWizard::onScanFibreDevices()
 
     try
     {
-        if (!this->m_mainWindow || !this->m_mainWindow->xenLib() || !this->m_mainWindow->xenLib()->getConnection())
+        if (!this->m_connection || !this->m_connection->GetSession() || !this->m_connection->GetCache())
             throw std::runtime_error("Not connected to XenServer");
 
-        XenLib* xenLib = this->m_mainWindow->xenLib();
-        QList<QVariantMap> pools = xenLib->getCache()->GetAllData("pool");
+        QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
         if (pools.isEmpty())
             throw std::runtime_error("No pool found");
 
@@ -937,7 +934,7 @@ void NewSRWizard::onScanFibreDevices()
             deviceConfig["provider"] = "fcoe";
 
         QVariantList probeResult = XenAPI::SR::probe_ext(
-            xenLib->getConnection()->getSession(),
+            this->m_connection->GetSession(),
             masterRef,
             deviceConfig,
             srTypeStr,
@@ -1119,14 +1116,13 @@ void NewSRWizard::accept()
     this->collectNameAndDescription();
     this->collectConfiguration();
 
-    if (!this->m_mainWindow || !this->m_mainWindow->xenLib() || !this->m_mainWindow->xenLib()->isConnected())
+    if (!this->m_connection || !this->m_connection->IsConnected() || !this->m_connection->GetCache())
     {
         QMessageBox::critical(this, tr("Error"), tr("Not connected to XenServer. Please reconnect and try again."));
         return;
     }
 
-    XenLib* xenLib = this->m_mainWindow->xenLib();
-    QList<QVariantMap> pools = xenLib->getCache()->GetAllData("pool");
+    QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
     if (pools.isEmpty())
     {
         QMessageBox::critical(this, tr("Error"), tr("Failed to get pool information. Connection may be lost."));
@@ -1139,13 +1135,13 @@ void NewSRWizard::accept()
     QString srTypeStr = this->getSRTypeString();
     QString contentType = this->getContentType();
 
-    Host* coordinatorHost = new Host(xenLib->getConnection(), masterRef, this);
+    Host* coordinatorHost = new Host(this->m_connection, masterRef, this);
 
     AsyncOperation* srAction = nullptr;
     if (this->m_selectedSRUuid.isEmpty())
     {
         srAction = new SrCreateAction(
-            xenLib->getConnection(),
+            this->m_connection,
             coordinatorHost,
             this->m_srName,
             this->m_srDescription,
@@ -1156,7 +1152,7 @@ void NewSRWizard::accept()
             this);
     } else
     {
-        SR* srToReattach = new SR(xenLib->getConnection(), this->m_selectedSRUuid, this);
+        SR* srToReattach = new SR(this->m_connection, this->m_selectedSRUuid, this);
         srAction = new SrReattachAction(
             srToReattach,
             this->m_srName,

@@ -29,6 +29,8 @@
 #include "../../xenapi/xenapi_SR.h"
 #include <QXmlStreamReader>
 
+using namespace XenAPI;
+
 SrProbeAction::SrProbeAction(XenConnection* connection,
                              Host* host,
                              const QString& srType,
@@ -89,7 +91,7 @@ void SrProbeAction::run()
             try
             {
                 m_discoveredSRs = XenAPI::SR::probe_ext(session(),
-                                                        m_host->opaqueRef(),
+                                                        m_host->OpaqueRef(),
                                                         m_deviceConfig,
                                                         m_srType,
                                                         m_smConfig);
@@ -114,7 +116,7 @@ void SrProbeAction::run()
         {
             // Other SR types use async_probe (returns XML)
             QString taskRef = XenAPI::SR::async_probe(session(),
-                                                      m_host->opaqueRef(),
+                                                      m_host->OpaqueRef(),
                                                       m_deviceConfig,
                                                       m_srType,
                                                       m_smConfig);

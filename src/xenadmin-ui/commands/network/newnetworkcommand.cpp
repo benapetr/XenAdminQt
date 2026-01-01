@@ -28,9 +28,7 @@
 #include "newnetworkcommand.h"
 #include <QDebug>
 #include "../../mainwindow.h"
-#include <QDebug>
 #include "../../dialogs/newnetworkwizard.h"
-#include <QDebug>
 #include <QtWidgets>
 
 NewNetworkCommand::NewNetworkCommand(MainWindow* mainWindow, QObject* parent)
@@ -39,11 +37,11 @@ NewNetworkCommand::NewNetworkCommand(MainWindow* mainWindow, QObject* parent)
     qDebug() << "NewNetworkCommand: Created with MainWindow";
 }
 
-void NewNetworkCommand::run()
+void NewNetworkCommand::Run()
 {
     qDebug() << "NewNetworkCommand: Executing New Network command";
 
-    if (!this->canRun())
+    if (!this->CanRun())
     {
         qWarning() << "NewNetworkCommand: Cannot execute - requirements not met";
         QMessageBox::warning(nullptr, tr("Cannot Create Network"),
@@ -55,14 +53,14 @@ void NewNetworkCommand::run()
     this->showNewNetworkWizard();
 }
 
-bool NewNetworkCommand::canRun() const
+bool NewNetworkCommand::CanRun() const
 {
     // For now, always allow network creation
     // TODO: Check if we have proper XenAPI connection and permissions
     return true;
 }
 
-QString NewNetworkCommand::menuText() const
+QString NewNetworkCommand::MenuText() const
 {
     return tr("New Network...");
 }

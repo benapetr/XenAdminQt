@@ -28,24 +28,19 @@
 #ifndef PAUSEVMCOMMAND_H
 #define PAUSEVMCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
-class PauseVMCommand : public Command
+class PauseVMCommand : public VMCommand
 {
     Q_OBJECT
 
-public:
-    explicit PauseVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit PauseVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool canRun() const override;
-    void run() override;
-    QString menuText() const override;
-
-private:
-    QString getSelectedVMRef() const;
-    QString getSelectedVMName() const;
-    bool isVMRunning(const QString& vmRef) const;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // PAUSEVMCOMMAND_H

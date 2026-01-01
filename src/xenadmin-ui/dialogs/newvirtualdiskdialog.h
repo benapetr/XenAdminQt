@@ -37,14 +37,14 @@ namespace Ui
     class NewVirtualDiskDialog;
 }
 
-class XenLib;
+class XenConnection;
 
 class NewVirtualDiskDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit NewVirtualDiskDialog(XenLib* xenLib, const QString& vmRef, QWidget* parent = nullptr);
+    explicit NewVirtualDiskDialog(XenConnection* connection, const QString& vmRef, QWidget* parent = nullptr);
     ~NewVirtualDiskDialog();
 
     QString getVDIName() const;
@@ -67,7 +67,7 @@ private:
     int findNextAvailableDevice();
 
     Ui::NewVirtualDiskDialog* ui;
-    XenLib* m_xenLib;
+    XenConnection* m_connection;
     QString m_vmRef;
     QVariantMap m_vmData;
 };

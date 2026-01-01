@@ -27,12 +27,12 @@
 
 #include "isodropdownbox.h"
 #include "../settingsmanager.h"
-#include "../../xenlib/xenlib.h"
-#include "../../xenlib/xencache.h"
-#include "../../xenlib/vmhelpers.h"
-#include "../../xenlib/xen/connection.h"
-#include "../../xenlib/xen/session.h"
-#include "../../xenlib/xen/apiversion.h"
+#include "xenlib/xenlib.h"
+#include "xenlib/xencache.h"
+#include "xenlib/vmhelpers.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/apiversion.h"
 #include <QStandardItemModel>
 #include <QSignalBlocker>
 #include <algorithm>
@@ -136,59 +136,55 @@ int naturalCompare(const QString& s1, const QString& s2)
 }
 }
 
-IsoDropDownBox::IsoDropDownBox(QWidget* parent)
-    : QComboBox(parent), m_xenLib(nullptr)
+IsoDropDownBox::IsoDropDownBox(QWidget* parent) : QComboBox(parent), m_connection(nullptr)
 {
-    setEditable(false);
-    setInsertPolicy(QComboBox::NoInsert);
-}
+    this->setEditable(false);
+    this->setInsertPolicy(QComboBox::NoInsert);
+} 
 
-void IsoDropDownBox::setXenLib(XenLib* xenLib)
+void IsoDropDownBox::setConnection(XenConnection* connection)
 {
-    m_xenLib = xenLib;
-}
+    this->m_connection = connection;
+} 
 
 void IsoDropDownBox::setVMRef(const QString& vmRef)
 {
-    m_vmRef = vmRef;
-}
+    this->m_vmRef = vmRef;
+} 
 
 void IsoDropDownBox::refresh()
 {
     QSignalBlocker blocker(this);
-    clear();
+    this->clear();
 
-    addItem(tr("<empty>"), QString());
+    this->addItem(tr("<empty>"), QString());
 
-    if (!m_xenLib)
+    if (!this->m_connection)
         return;
 
-    XenCache* cache = m_xenLib->getCache();
-    if (!cache)
-        return;
+    XenCache* cache = this->m_connection->GetCache();
 
     bool showHidden = SettingsManager::instance().getShowHiddenObjects();
 
     QString hostRef;
     QVariantMap vmData;
-    if (!m_vmRef.isEmpty())
+    if (!this->m_vmRef.isEmpty())
     {
-        vmData = cache->ResolveObjectData("vm", m_vmRef);
+        vmData = cache->ResolveObjectData("vm", this->m_vmRef);
         QString powerState = vmData.value("power_state").toString();
         if (powerState == "Running")
         {
             hostRef = vmData.value("resident_on").toString();
         } else
         {
-            hostRef = VMHelpers::getVMStorageHost(m_xenLib, vmData, true);
+            hostRef = VMHelpers::getVMStorageHost(this->m_connection, vmData, true);
         }
     }
 
     bool stockholmOrGreater = false;
-    XenConnection* connection = m_xenLib->getConnection();
-    if (connection && connection->getSession())
+    if (this->m_connection->GetSession())
     {
-        stockholmOrGreater = connection->getSession()->apiVersionMeets(APIVersion::API_2_11);
+        stockholmOrGreater = this->m_connection->GetSession()->apiVersionMeets(APIVersion::API_2_11);
     }
 
     struct SrEntry
@@ -204,7 +200,7 @@ void IsoDropDownBox::refresh()
         if (srData.value("content_type").toString() != "iso")
             continue;
 
-        if (srData.value("is_broken", false).toBool() && m_vmRef.isEmpty())
+        if (srData.value("is_broken", false).toBool() && this->m_vmRef.isEmpty())
             continue;
 
         if (!isSrVisibleToHost(srData, cache, hostRef))
@@ -230,10 +226,10 @@ void IsoDropDownBox::refresh()
 
     for (const SrEntry& srEntry : srEntries)
     {
-        addItem(srEntry.name, QString());
+        this->addItem(srEntry.name, QString());
         if (model)
         {
-            QStandardItem* item = model->item(count() - 1);
+            QStandardItem* item = model->item(this->count() - 1);
             if (item)
                 item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
         }
@@ -276,32 +272,32 @@ void IsoDropDownBox::refresh()
 
         for (const auto& vdiEntry : vdiEntries)
         {
-            addItem(QString("    %1").arg(vdiEntry.first), vdiEntry.second);
+            this->addItem(QString("    %1").arg(vdiEntry.first), vdiEntry.second);
         }
     }
 }
 
 QString IsoDropDownBox::selectedVdiRef() const
 {
-    return currentData().toString();
+    return this->currentData().toString();
 }
 
 void IsoDropDownBox::setSelectedVdiRef(const QString& vdiRef)
 {
     if (vdiRef.isEmpty())
     {
-        setCurrentIndex(0);
+        this->setCurrentIndex(0);
         return;
     }
 
-    for (int i = 0; i < count(); ++i)
+    for (int i = 0; i < this->count(); ++i)
     {
-        if (itemData(i).toString() == vdiRef)
+        if (this->itemData(i).toString() == vdiRef)
         {
-            setCurrentIndex(i);
+            this->setCurrentIndex(i);
             return;
         }
     }
 
-    setCurrentIndex(0);
+    this->setCurrentIndex(0);
 }

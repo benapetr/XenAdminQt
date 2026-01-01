@@ -56,39 +56,39 @@ class OperationLauncher : public QObject
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct an operation launcher
-     * @param operations List of operations to launch
-     * @param title Title for grouped operations
-     * @param startDescription Start description for grouped operations
-     * @param endDescription End description for grouped operations
-     * @param runInParallel If true, use ParallelOperation; otherwise MultipleOperation
-     * @param parent Parent QObject
-     */
-    explicit OperationLauncher(const QList<AsyncOperation*>& operations,
-                               const QString& title,
-                               const QString& startDescription,
-                               const QString& endDescription,
-                               bool runInParallel = true,
-                               QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct an operation launcher
+         * @param operations List of operations to launch
+         * @param title Title for grouped operations
+         * @param startDescription Start description for grouped operations
+         * @param endDescription End description for grouped operations
+         * @param runInParallel If true, use ParallelOperation; otherwise MultipleOperation
+         * @param parent Parent QObject
+         */
+        explicit OperationLauncher(const QList<AsyncOperation*>& operations,
+                                   const QString& title,
+                                   const QString& startDescription,
+                                   const QString& endDescription,
+                                   bool runInParallel = true,
+                                   QObject* parent = nullptr);
 
-    /**
-     * @brief Launch all operations with automatic grouping
-     *
-     * Operations are grouped by connection and launched appropriately:
-     * - Single ops run directly via runAsync()
-     * - Multiple ops per connection use MultipleOperation or ParallelOperation
-     * - Cross-connection ops are properly synchronized
-     */
-    void run();
+        /**
+         * @brief Launch all operations with automatic grouping
+         *
+         * Operations are grouped by connection and launched appropriately:
+         * - Single ops run directly via runAsync()
+         * - Multiple ops per connection use MultipleOperation or ParallelOperation
+         * - Cross-connection ops are properly synchronized
+         */
+        void run();
 
-private:
-    QList<AsyncOperation*> m_operations;
-    QString m_title;
-    QString m_startDescription;
-    QString m_endDescription;
-    bool m_runInParallel;
+    private:
+        QList<AsyncOperation*> m_operations;
+        QString m_title;
+        QString m_startDescription;
+        QString m_endDescription;
+        bool m_runInParallel;
 };
 
 #endif // OPERATIONLAUNCHER_H

@@ -28,7 +28,7 @@
 #ifndef RESCANPIFSCOMMAND_H
 #define RESCANPIFSCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 #include <QString>
 
 class MainWindow;
@@ -53,19 +53,16 @@ class MainWindow;
  *
  * C# Reference: XenAdmin/Commands/RescanPIFsCommand.cs
  */
-class RescanPIFsCommand : public Command
+class RescanPIFsCommand : public HostCommand
 {
     Q_OBJECT
 
     public:
         explicit RescanPIFsCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
-
-    private:
-        bool isHostSelected() const;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // RESCANPIFSCOMMAND_H

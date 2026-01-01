@@ -28,7 +28,9 @@
 #ifndef ACTIVATEVBDCOMMAND_H
 #define ACTIVATEVBDCOMMAND_H
 
-#include "../command.h"
+#include "vbdcommand.h"
+
+class VBD;
 
 /**
  * @brief Command to activate (plug) a VBD
@@ -37,20 +39,20 @@
  * a virtual disk to a running VM. Requires VM to be running and PV drivers
  * installed (for older hosts).
  */
-class ActivateVBDCommand : public Command
+class ActivateVBDCommand : public VBDCommand
 {
     Q_OBJECT
 
     public:
         explicit ActivateVBDCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        QString menuText() const override;
-        bool canRun() const override;
-        void run() override;
+        QString MenuText() const override;
+        bool CanRun() const override;
+        void Run() override;
 
     private:
         bool canRunVBD(const QString& vbdRef) const;
-        QString getCantRunReasonVBD(const QString& vbdRef) const;
+        QString getCantRunReasonVBD(QSharedPointer<VBD> vbd) const;
         bool areIODriversNeededAndMissing(const QVariantMap& vmData) const;
 };
 

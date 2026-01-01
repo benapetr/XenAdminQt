@@ -28,11 +28,11 @@
 #include "networkpropertiescommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/networkpropertiesdialog.h"
-#include "xenlib.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/network/connection.h"
 #include <QTreeWidgetItem>
 
-NetworkPropertiesCommand::NetworkPropertiesCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+NetworkPropertiesCommand::NetworkPropertiesCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
@@ -40,23 +40,27 @@ NetworkPropertiesCommand::~NetworkPropertiesCommand()
 {
 }
 
-bool NetworkPropertiesCommand::canRun() const
+bool NetworkPropertiesCommand::CanRun() const
 {
     QString networkUuid = this->getSelectedNetworkUuid();
-    return !networkUuid.isEmpty() && this->mainWindow()->xenLib()->isConnected();
+    QSharedPointer<XenObject> ob = this->GetObject();
+    XenConnection* connection = ob ? ob->GetConnection() : nullptr;
+    return !networkUuid.isEmpty() && connection && connection->IsConnected();
 }
 
-void NetworkPropertiesCommand::run()
+void NetworkPropertiesCommand::Run()
 {
     QString networkUuid = this->getSelectedNetworkUuid();
     if (networkUuid.isEmpty())
         return;
 
-    NetworkPropertiesDialog dialog(this->mainWindow()->xenLib(), networkUuid, this->mainWindow());
+    QSharedPointer<XenObject> ob = this->GetObject();
+    XenConnection* connection = ob ? ob->GetConnection() : nullptr;
+    NetworkPropertiesDialog dialog(connection, networkUuid, this->mainWindow());
     dialog.exec();
 }
 
-QString NetworkPropertiesCommand::menuText() const
+QString NetworkPropertiesCommand::MenuText() const
 {
     return "Properties";
 }
@@ -68,8 +72,11 @@ QString NetworkPropertiesCommand::getSelectedNetworkUuid() const
         return QString();
 
     // Check if this is a Network item
-    if (item->data(0, Qt::UserRole).toString() != "network")
+    QVariant data = item->data(0, Qt::UserRole);
+    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+    if (!obj || obj->GetObjectType() != "network")
         return QString();
 
-    return item->data(0, Qt::UserRole + 1).toString(); // UUID
+    return obj->GetUUID();
+    return QString();
 }

@@ -39,7 +39,11 @@
 #include <QtCore/QPointer>
 #include <QtCore/QTimer>
 
-class XenSession;
+namespace XenAPI
+{
+    class Session;
+}
+
 class XenConnection;
 class Pool;
 class Host;
@@ -52,213 +56,214 @@ class XENLIB_EXPORT AsyncOperation : public QObject
     Q_OBJECT
     friend class NetworkingActionHelpers; // Allow access to pollToCompletion
 
-public:
-    enum OperationState
-    {
-        NotStarted,
-        Running,
-        Completed,
-        Cancelled,
-        Failed
-    };
-    Q_ENUM(OperationState)
+    public:
+        enum OperationState
+        {
+            NotStarted,
+            Running,
+            Completed,
+            Cancelled,
+            Failed
+        };
+        Q_ENUM(OperationState)
 
-    explicit AsyncOperation(XenConnection* connection, const QString& title,
-                            const QString& description = QString(), QObject* parent = nullptr);
-    explicit AsyncOperation(const QString& title, const QString& description = QString(),
-                            QObject* parent = nullptr);
-    virtual ~AsyncOperation();
+        explicit AsyncOperation(XenConnection* connection, const QString& title,
+                                const QString& description = QString(), QObject* parent = nullptr);
+        explicit AsyncOperation(const QString& title, const QString& description = QString(),
+                                QObject* parent = nullptr);
+        virtual ~AsyncOperation();
 
-    // Core properties
-    QString title() const;
-    void setTitle(const QString& title);
+        // Core properties
+        QString title() const;
+        void setTitle(const QString& title);
 
-    QString description() const;
-    void setDescription(const QString& description);
+        QString description() const;
+        void setDescription(const QString& description);
 
-    XenConnection* connection() const;
-    void setConnection(XenConnection* connection);
+        XenConnection* connection() const;
+        void setConnection(XenConnection* connection);
 
-    XenSession* session() const;
+        XenAPI::Session* session() const;
 
-    // Progress tracking
-    int percentComplete() const;
-    void setPercentComplete(int percent);
+        // Progress tracking
+        int percentComplete() const;
+        void setPercentComplete(int percent);
 
-    // State management
-    OperationState state() const;
-    bool isRunning() const;
-    bool isCompleted() const;
-    bool isCancelled() const;
-    bool isFailed() const;
+        // State management
+        OperationState state() const;
+        bool isRunning() const;
+        bool isCompleted() const;
+        bool isCancelled() const;
+        bool isFailed() const;
 
-    // Error handling
-    QString errorMessage() const;
-    QString shortErrorMessage() const;
-    QStringList errorDetails() const;
-    bool hasError() const;
+        // Error handling
+        QString errorMessage() const;
+        QString shortErrorMessage() const;
+        QStringList errorDetails() const;
+        bool hasError() const;
 
-    // Cancellation
-    bool canCancel() const;
-    void setCanCancel(bool canCancel);
+        // Cancellation
+        bool canCancel() const;
+        void setCanCancel(bool canCancel);
 
-    // Result
-    QString result() const;
-    void setResult(const QString& result);
+        // Result
+        QString result() const;
+        void setResult(const QString& result);
 
-    // Timing
-    QDateTime startTime() const;
-    QDateTime endTime() const;
-    qint64 elapsedTime() const; // in milliseconds
+        // Timing
+        QDateTime startTime() const;
+        QDateTime endTime() const;
+        qint64 elapsedTime() const; // in milliseconds
 
-    // RBAC (Role-Based Access Control) support
-    QStringList apiMethodsToRoleCheck() const;
-    void addApiMethodToRoleCheck(const QString& method);
+        // RBAC (Role-Based Access Control) support
+        QStringList apiMethodsToRoleCheck() const;
+        void addApiMethodToRoleCheck(const QString& method);
 
-    // Task management (for XenAPI tasks)
-    QString relatedTaskRef() const;
-    void setRelatedTaskRef(const QString& taskRef);
+        // Task management (for XenAPI tasks)
+        QString relatedTaskRef() const;
+        void setRelatedTaskRef(const QString& taskRef);
 
-    // Operation UUID (for task rehydration after reconnect)
-    QString operationUuid() const;
-    void setOperationUuid(const QString& uuid);
+        // Operation UUID (for task rehydration after reconnect)
+        QString operationUuid() const;
+        void setOperationUuid(const QString& uuid);
 
-    // Cleanup for shutdown/reconnect - removes UUID from task.other_config
-    void prepareForEventReloadAfterRestart();
+        // Cleanup for shutdown/reconnect - removes UUID from task.other_config
+        void prepareForEventReloadAfterRestart();
 
-    // Object context (matches C# ActionBase Pool/Host/VM/SR/Template properties)
-    Pool* pool() const;
-    void setPool(Pool* pool);
+        // Object context (matches C# ActionBase Pool/Host/VM/SR/Template properties)
+        Pool* pool() const;
+        void setPool(Pool* pool);
 
-    Host* host() const;
-    void setHost(Host* host);
+        Host* host() const;
+        void setHost(Host* host);
 
-    VM* vm() const;
-    void setVM(VM* vm);
+        VM* vm() const;
+        void setVM(VM* vm);
 
-    SR* sr() const;
-    void setSR(SR* sr);
+        SR* sr() const;
+        void setSR(SR* sr);
 
-    VM* vmTemplate() const;
-    void setVMTemplate(VM* vmTemplate);
+        VM* vmTemplate() const;
+        void setVMTemplate(VM* vmTemplate);
 
-    // AppliesTo list - all object refs this operation applies to
-    QStringList appliesTo() const;
-    void addAppliesTo(const QString& opaqueRef);
-    void clearAppliesTo();
+        // AppliesTo list - all object refs this operation applies to
+        QStringList appliesTo() const;
+        void addAppliesTo(const QString& opaqueRef);
+        void clearAppliesTo();
 
-    // History suppression (for internal/composite operations)
-    bool suppressHistory() const;
-    void setSuppressHistory(bool suppress);
+        // History suppression (for internal/composite operations)
+        bool suppressHistory() const;
+        void setSuppressHistory(bool suppress);
 
-    // Safe exit flag (can XenCenter exit while this operation is running?)
-    bool safeToExit() const;
-    void setSafeToExit(bool safe);
+        // Safe exit flag (can XenCenter exit while this operation is running?)
+        bool safeToExit() const;
+        void setSafeToExit(bool safe);
 
-public slots:
-    // Execution control
-    virtual void runAsync();
-    virtual void runSync(XenSession* session = nullptr);
-    virtual void cancel();
+    public slots:
+        // Execution control
+        virtual void runAsync();
+        virtual void runSync(XenAPI::Session* session = nullptr);
+        virtual void cancel();
 
-signals:
-    // State change signals
-    void started();
-    void progressChanged(int percent);
-    void completed();
-    void cancelled();
-    void failed(const QString& error);
-    void stateChanged(AsyncOperation::OperationState state);
+    signals:
+        // State change signals
+        void started();
+        void progressChanged(int percent);
+        void completed();
+        void cancelled();
+        void failed(const QString& error);
+        void stateChanged(AsyncOperation::OperationState state);
 
-    // Progress detail signals
-    void titleChanged(const QString& title);
-    void descriptionChanged(const QString& description);
+        // Progress detail signals
+        void titleChanged(const QString& title);
+        void descriptionChanged(const QString& description);
 
-protected:
-    // Virtual methods to be implemented by subclasses
-    virtual void run() = 0;
-    virtual void onCancel()
-    {
-    }
+    protected:
+        // Virtual methods to be implemented by subclasses
+        virtual void run() = 0;
+        virtual void onCancel()
+        {
+        }
 
-    // Helper methods for subclasses
-    void setState(OperationState newState);
-    void setError(const QString& message, const QStringList& details = QStringList());
-    void clearError();
+        // Helper methods for subclasses
+        void setState(OperationState newState);
+        void setError(const QString& message, const QStringList& details = QStringList());
+        void clearError();
 
-    // Session management
-    XenSession* createSession();
-    void destroySession();
+        // Session management
+        XenAPI::Session* createSession();
+        void destroySession();
 
-    // Task polling (for XenAPI async calls)
-    void pollToCompletion(const QString& taskRef, double start = 0, double finish = 100, bool suppressFailures = false);
-    bool pollTask(const QString& taskRef, double start, double finish);
-    void destroyTask();
+        // Task polling (for XenAPI async calls)
+        void pollToCompletion(const QString& taskRef, double start = 0, double finish = 100, bool suppressFailures = false);
+        bool pollTask(const QString& taskRef, double start, double finish);
+        void destroyTask();
 
-    // Task cancellation (matches C# CancellingAction.CancelRelatedTask)
-    virtual void cancelRelatedTask();
+        // Task cancellation (matches C# CancellingAction.CancelRelatedTask)
+        virtual void cancelRelatedTask();
 
-    // Task tagging (for rehydration after reconnect)
-    void tagTaskWithUuid(const QString& taskRef);
-    void removeUuidFromTask(const QString& taskRef);
+        // Task tagging (for rehydration after reconnect)
+        void tagTaskWithUuid(const QString& taskRef);
+        void removeUuidFromTask(const QString& taskRef);
 
-    // Audit logging
-    void auditLogSuccess();
-    void auditLogCancelled();
-    void auditLogFailure(const QString& error);
+        // Audit logging
+        void auditLogSuccess();
+        void auditLogCancelled();
+        void auditLogFailure(const QString& error);
 
-    // Thread-safe property access
-    void setTitleSafe(const QString& title);
-    void setDescriptionSafe(const QString& description);
-    void setPercentCompleteSafe(int percent);
+        // Thread-safe property access
+        void setTitleSafe(const QString& title);
+        void setDescriptionSafe(const QString& description);
+        void setPercentCompleteSafe(int percent);
 
-    // AppliesTo helper - automatically adds object refs (matches C# SetAppliesTo)
-    void setAppliesToFromObject(QObject* xenObject);
+        // AppliesTo helper - automatically adds object refs (matches C# SetAppliesTo)
+        void setAppliesToFromObject(QObject* xenObject);
 
-private:
-    // Worker thread management
-    void runOnWorkerThread();
-    void startWorkerThread();
-    void waitForWorkerCompletion();
+        QPointer<XenConnection> m_connection;
 
-    // Private data
-    QString m_title;
-    QString m_description;
-    QPointer<XenConnection> m_connection;
-    QPointer<XenSession> m_session;
-    int m_percentComplete;
-    OperationState m_state;
-    QString m_errorMessage;
-    QString m_shortErrorMessage;
-    QStringList m_errorDetails;
-    bool m_canCancel;
-    QString m_result;
-    QDateTime m_startTime;
-    QDateTime m_endTime;
-    QStringList m_apiMethodsToRoleCheck;
-    QString m_relatedTaskRef;
-    QString m_operationUuid; ///< UUID for task rehydration (XenAdminQtUUID)
-    bool m_suppressHistory;
-    bool m_safeToExit;
+    private:
+        // Worker thread management
+        void runOnWorkerThread();
+        void startWorkerThread();
+        void waitForWorkerCompletion();
 
-    // Object context (C# ActionBase equivalents)
-    QPointer<Pool> m_pool;
-    QPointer<Host> m_host;
-    QPointer<VM> m_vm;
-    QPointer<SR> m_sr;
-    QPointer<VM> m_vmTemplate;
-    QStringList m_appliesTo;
+        // Private data
+        QString m_title;
+        QString m_description;
+        QPointer<XenAPI::Session> m_session;
+        int m_percentComplete;
+        OperationState m_state;
+        QString m_errorMessage;
+        QString m_shortErrorMessage;
+        QStringList m_errorDetails;
+        bool m_canCancel;
+        QString m_result;
+        QDateTime m_startTime;
+        QDateTime m_endTime;
+        QStringList m_apiMethodsToRoleCheck;
+        QString m_relatedTaskRef;
+        QString m_operationUuid; ///< UUID for task rehydration (XenAdminQtUUID)
+        bool m_suppressHistory;
+        bool m_safeToExit;
 
-    // Thread management
-    mutable QRecursiveMutex m_mutex;
-    QWaitCondition m_waitCondition;
-    bool m_syncExecution;
+        // Object context (C# ActionBase equivalents)
+        QPointer<Pool> m_pool;
+        QPointer<Host> m_host;
+        QPointer<VM> m_vm;
+        QPointer<SR> m_sr;
+        QPointer<VM> m_vmTemplate;
+        QStringList m_appliesTo;
 
-    // Session ownership
-    bool m_ownsSession;
+        // Thread management
+        mutable QRecursiveMutex m_mutex;
+        QWaitCondition m_waitCondition;
+        bool m_syncExecution;
 
-    static const int TASK_POLL_INTERVAL_MS = 900;
-    static const int DEFAULT_TIMEOUT_MS = 300000; // 5 minutes
+        // Session ownership
+        bool m_ownsSession;
+
+        static const int TASK_POLL_INTERVAL_MS = 900;
+        static const int DEFAULT_TIMEOUT_MS = 300000; // 5 minutes
 };
 
 #endif // ASYNCOPERATION_H

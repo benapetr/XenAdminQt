@@ -45,7 +45,8 @@
 #include <QVariantMap>
 #include <QStringList>
 
-class XenLib;
+class XenConnection;
+class XenCache;
 
 /**
  * @brief The HAWizard class provides a wizard for enabling High Availability on a pool.
@@ -62,104 +63,105 @@ class HAWizard : public QWizard
 {
     Q_OBJECT
 
-public:
-    explicit HAWizard(XenLib* xenLib, const QString& poolRef, QWidget* parent = nullptr);
+    public:
+        explicit HAWizard(XenConnection* connection, const QString& poolRef, QWidget* parent = nullptr);
 
-    // Page IDs
-    enum PageIds
-    {
-        Page_Intro = 0,
-        Page_ChooseSR = 1,
-        Page_AssignPriorities = 2,
-        Page_Finish = 3
-    };
+        // Page IDs
+        enum PageIds
+        {
+            Page_Intro = 0,
+            Page_ChooseSR = 1,
+            Page_AssignPriorities = 2,
+            Page_Finish = 3
+        };
 
-    // VM restart priority enumeration (matches C# VM.HaRestartPriority)
-    enum HaRestartPriority
-    {
-        AlwaysRestartHighPriority,
-        AlwaysRestart, // Also known as "Restart"
-        BestEffort,
-        DoNotRestart
-    };
+        // VM restart priority enumeration (matches C# VM.HaRestartPriority)
+        enum HaRestartPriority
+        {
+            AlwaysRestartHighPriority,
+            AlwaysRestart, // Also known as "Restart"
+            BestEffort,
+            DoNotRestart
+        };
 
-    // Get selected heartbeat SR ref
-    QString selectedHeartbeatSRRef() const
-    {
-        return m_selectedHeartbeatSR;
-    }
+        // Get selected heartbeat SR ref
+        QString selectedHeartbeatSRRef() const
+        {
+            return m_selectedHeartbeatSR;
+        }
 
-    // Get configured NTOL (number of host failures to tolerate)
-    qint64 ntol() const
-    {
-        return m_ntol;
-    }
+        // Get configured NTOL (number of host failures to tolerate)
+        qint64 ntol() const
+        {
+            return m_ntol;
+        }
 
-    // Get VM startup options map: VM ref -> {ha_restart_priority, order, start_delay}
-    QMap<QString, QVariantMap> vmStartupOptions() const
-    {
-        return m_vmStartupOptions;
-    }
+        // Get VM startup options map: VM ref -> {ha_restart_priority, order, start_delay}
+        QMap<QString, QVariantMap> vmStartupOptions() const
+        {
+            return m_vmStartupOptions;
+        }
 
-protected:
-    void initializePage(int id) override;
-    bool validateCurrentPage() override;
-    void accept() override;
+    protected:
+        void initializePage(int id) override;
+        bool validateCurrentPage() override;
+        void accept() override;
 
-private slots:
-    void onHeartbeatSRSelectionChanged();
-    void onPriorityChanged(int row, int column);
-    void onNtolChanged(int value);
-    void scanForHeartbeatSRs();
-    void updateFinishPage();
+    private slots:
+        void onHeartbeatSRSelectionChanged();
+        void onPriorityChanged(int row, int column);
+        void onNtolChanged(int value);
+        void scanForHeartbeatSRs();
+        void updateFinishPage();
 
-private:
-    QWizardPage* createIntroPage();
-    QWizardPage* createChooseSRPage();
-    QWizardPage* createAssignPrioritiesPage();
-    QWizardPage* createFinishPage();
+    private:
+        XenCache* cache() const;
+        QWizardPage* createIntroPage();
+        QWizardPage* createChooseSRPage();
+        QWizardPage* createAssignPrioritiesPage();
+        QWizardPage* createFinishPage();
 
-    void populateVMTable();
-    void updateNtolCalculation();
-    QString priorityToString(HaRestartPriority priority) const;
-    HaRestartPriority stringToPriority(const QString& str) const;
-    int countVMsByPriority(HaRestartPriority priority) const;
+        void populateVMTable();
+        void updateNtolCalculation();
+        QString priorityToString(HaRestartPriority priority) const;
+        HaRestartPriority stringToPriority(const QString& str) const;
+        int countVMsByPriority(HaRestartPriority priority) const;
 
-    XenLib* m_xenLib;
-    QString m_poolRef;
-    QString m_poolName;
+        XenConnection* m_connection;
+        QString m_poolRef;
+        QString m_poolName;
 
-    // ChooseSR page widgets
-    QTableWidget* m_srTable;
-    QLabel* m_noSRsLabel;
-    QProgressBar* m_scanProgress;
-    QPushButton* m_rescanButton;
+        // ChooseSR page widgets
+        QTableWidget* m_srTable;
+        QLabel* m_noSRsLabel;
+        QProgressBar* m_scanProgress;
+        QPushButton* m_rescanButton;
 
-    // AssignPriorities page widgets
-    QTableWidget* m_vmTable;
-    QSpinBox* m_ntolSpinBox;
-    QLabel* m_ntolStatusLabel;
-    QLabel* m_maxNtolLabel;
+        // AssignPriorities page widgets
+        QTableWidget* m_vmTable;
+        QSpinBox* m_ntolSpinBox;
+        QLabel* m_ntolStatusLabel;
+        QLabel* m_maxNtolLabel;
 
-    // Finish page widgets
-    QLabel* m_finishSRLabel;
-    QLabel* m_finishNtolLabel;
-    QLabel* m_finishRestartLabel;
-    QLabel* m_finishBestEffortLabel;
-    QLabel* m_finishDoNotRestartLabel;
-    QLabel* m_finishWarningLabel;
-    QLabel* m_finishWarningIcon;
+        // Finish page widgets
+        QLabel* m_finishSRLabel;
+        QLabel* m_finishNtolLabel;
+        QLabel* m_finishRestartLabel;
+        QLabel* m_finishBestEffortLabel;
+        QLabel* m_finishDoNotRestartLabel;
+        QLabel* m_finishWarningLabel;
+        QLabel* m_finishWarningIcon;
 
-    // State
-    QString m_selectedHeartbeatSR;
-    QString m_selectedHeartbeatSRName;
-    qint64 m_ntol;
-    qint64 m_maxNtol;
-    QMap<QString, QVariantMap> m_vmStartupOptions;
-    QMap<QString, HaRestartPriority> m_vmPriorities;
+        // State
+        QString m_selectedHeartbeatSR;
+        QString m_selectedHeartbeatSRName;
+        qint64 m_ntol;
+        qint64 m_maxNtol;
+        QMap<QString, QVariantMap> m_vmStartupOptions;
+        QMap<QString, HaRestartPriority> m_vmPriorities;
 
-    // SR list from scan
-    QList<QPair<QString, QString>> m_heartbeatSRs; // ref, name pairs
+        // SR list from scan
+        QList<QPair<QString, QString>> m_heartbeatSRs; // ref, name pairs
 };
 
 #endif // HAWIZARD_H

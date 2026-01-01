@@ -83,63 +83,83 @@ public:
     // List interface
     void append(const T& value)
     {
-        QMutexLocker locker(&m_mutex);
-        m_list.append(value);
+        {
+            QMutexLocker locker(&m_mutex);
+            m_list.append(value);
+        }
         emitCollectionChanged(Add);
     }
 
     void prepend(const T& value)
     {
-        QMutexLocker locker(&m_mutex);
-        m_list.prepend(value);
+        {
+            QMutexLocker locker(&m_mutex);
+            m_list.prepend(value);
+        }
         emitCollectionChanged(Add);
     }
 
     void insert(int index, const T& value)
     {
-        QMutexLocker locker(&m_mutex);
-        m_list.insert(index, value);
+        {
+            QMutexLocker locker(&m_mutex);
+            m_list.insert(index, value);
+        }
         emitCollectionChanged(Add);
     }
 
     bool removeOne(const T& value)
     {
-        QMutexLocker locker(&m_mutex);
-        bool removed = m_list.removeOne(value);
-        if (removed)
+        bool removed = false;
         {
-            emitCollectionChanged(Remove);
+            QMutexLocker locker(&m_mutex);
+            removed = m_list.removeOne(value);
         }
+        if (removed)
+            emitCollectionChanged(Remove);
         return removed;
     }
 
     void removeAt(int index)
     {
-        QMutexLocker locker(&m_mutex);
-        if (index >= 0 && index < m_list.size())
+        bool removed = false;
         {
-            m_list.removeAt(index);
+            QMutexLocker locker(&m_mutex);
+            if (index >= 0 && index < m_list.size())
+            {
+                m_list.removeAt(index);
+                removed = true;
+            }
+        }
+        if (removed)
+        {
             emitCollectionChanged(Remove);
         }
     }
 
     int removeAll(const T& value)
     {
-        QMutexLocker locker(&m_mutex);
-        int count = m_list.removeAll(value);
-        if (count > 0)
+        int count = 0;
         {
-            emitCollectionChanged(Remove);
+            QMutexLocker locker(&m_mutex);
+            count = m_list.removeAll(value);
         }
+        if (count > 0)
+            emitCollectionChanged(Remove);
         return count;
     }
 
     void clear()
     {
-        QMutexLocker locker(&m_mutex);
-        if (!m_list.isEmpty())
+        bool hadItems = false;
         {
-            m_list.clear();
+            QMutexLocker locker(&m_mutex);
+            hadItems = !m_list.isEmpty();
+            if (hadItems)
+                m_list.clear();
+        }
+        if (hadItems)
+        {
             emitCleared();
             emitCollectionChanged(Clear);
         }

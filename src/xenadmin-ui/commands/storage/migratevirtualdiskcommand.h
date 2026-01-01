@@ -28,11 +28,12 @@
 #ifndef MIGRATEVIRTUALDISKCOMMAND_H
 #define MIGRATEVIRTUALDISKCOMMAND_H
 
-#include "../command.h"
+#include "vdicommand.h"
 #include <QString>
 #include <QVariantMap>
 
 class MainWindow;
+class XenConnection;
 
 /**
  * @brief Command to migrate (live-move) one or more VDIs to a different SR
@@ -59,16 +60,16 @@ class MainWindow;
  *
  * C# Reference: XenAdmin/Commands/MigrateVirtualDiskCommand.cs
  */
-class MigrateVirtualDiskCommand : public Command
+class MigrateVirtualDiskCommand : public VDICommand
 {
     Q_OBJECT
 
     public:
         explicit MigrateVirtualDiskCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
     private:
         /**
@@ -86,7 +87,7 @@ class MigrateVirtualDiskCommand : public Command
          * - SR is not HBA LUN-per-VDI
          * - SR supports storage migration
          */
-        bool canBeMigrated(const QVariantMap& vdiData) const;
+        bool canBeMigrated(XenConnection *connection, const QVariantMap& vdiData) const;
 
         /**
          * @brief Check if VDI is HA type (statefile or redo log)

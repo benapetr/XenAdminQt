@@ -34,7 +34,7 @@
 #include "../settingspanels/hostpoweroneditpage.h"
 #include "../settingspanels/hostautostarteditpage.h"
 #include "../settingspanels/logdestinationeditpage.h"
-#include "xen/connection.h"
+#include "xen/network/connection.h"
 #include "xenlib.h"
 #include <QMessageBox>
 

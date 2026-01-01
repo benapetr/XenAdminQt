@@ -35,6 +35,7 @@
 #include "host/removehostcommand.h"
 #include "pool/joinpoolcommand.h"
 #include "pool/ejecthostfrompoolcommand.h"
+#include "pool/disconnectpoolcommand.h"
 #include "pool/poolpropertiescommand.h"
 #include "vm/startvmcommand.h"
 #include "vm/stopvmcommand.h"
@@ -69,6 +70,13 @@
 #include "../mainwindow.h"
 #include "xenlib.h"
 #include "xencache.h"
+#include "xen/xenobject.h"
+#include "xen/vm.h"
+#include "xen/host.h"
+#include "xen/pool.h"
+#include "xen/sr.h"
+#include "xen/network.h"
+#include "xen/network/connection.h"
 #include <QAction>
 #include <QDebug>
 
@@ -82,7 +90,24 @@ QMenu* ContextMenuBuilder::buildContextMenu(QTreeWidgetItem* item, QWidget* pare
     if (!item)
         return nullptr;
 
-    QString objectType = item->data(0, Qt::UserRole + 1).toString();
+    QVariant data = item->data(0, Qt::UserRole);
+    QString objectType;
+    QString objectRef;
+    
+    // Extract type and ref from QSharedPointer<XenObject>
+    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+    // TODO: check if it's even possible for obj to be nullptr here, I think we shouldn't really continue in such case
+    // because in theory such code path should be invalid / bug, so this code can be probably drastically simplified
+    if (obj)
+    {
+        objectType = obj->GetObjectType();
+        objectRef = obj->OpaqueRef();
+    } else if (data.canConvert<XenConnection*>())
+    {
+        objectType = "disconnected_host";
+        objectRef = QString();
+    }
+    
     if (objectType.isEmpty())
         return nullptr;
 
@@ -91,50 +116,54 @@ QMenu* ContextMenuBuilder::buildContextMenu(QTreeWidgetItem* item, QWidget* pare
 
     QMenu* menu = new QMenu(parent);
 
-    if (objectType == "vm")
-    {
-        // Check if this is a snapshot
-        QString vmRef = item->data(0, Qt::UserRole).toString();
-        QVariantMap vmData = this->m_mainWindow->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-        bool isSnapshot = vmData.value("is_a_snapshot", false).toBool();
-
-        if (isSnapshot)
-        {
-            this->buildSnapshotContextMenu(menu, item);
-        } else
-        {
-            this->buildVMContextMenu(menu, item);
-        }
-    } else if (objectType == "template")
-    {
-        this->buildTemplateContextMenu(menu, item);
-    } else if (objectType == "host")
-    {
-        this->buildHostContextMenu(menu, item);
-    } else if (objectType == "disconnected_host")
+    const QString itemType = item->data(0, Qt::UserRole + 1).toString();
+    if (objectType == "disconnected_host" || itemType == "disconnected_host")
     {
         // C# pattern: disconnected servers show Connect, Forget Password, Remove menu items
         this->buildDisconnectedHostContextMenu(menu, item);
+        return menu;
+    }
+
+    if (!obj)
+        return menu;
+
+    if (objectType == "vm")
+    {
+        QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
+
+        if (vm->IsSnapshot())
+            this->buildSnapshotContextMenu(menu, vm);
+        else
+            this->buildVMContextMenu(menu, vm);
+    } else if (objectType == "template")
+    {
+        QSharedPointer<VM> templateVM = qSharedPointerCast<VM>(obj);
+        this->buildTemplateContextMenu(menu, templateVM);
+    } else if (objectType == "host")
+    {
+        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
+        this->buildHostContextMenu(menu, host);
     } else if (objectType == "sr")
     {
-        this->buildSRContextMenu(menu, item);
+        QSharedPointer<SR> sr = qSharedPointerCast<SR>(obj);
+        this->buildSRContextMenu(menu, sr);
     } else if (objectType == "pool")
     {
-        this->buildPoolContextMenu(menu, item);
+        QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(obj);
+        this->buildPoolContextMenu(menu, pool);
     } else if (objectType == "network")
     {
-        this->buildNetworkContextMenu(menu, item);
+        QSharedPointer<Network> network = qSharedPointerCast<Network>(obj);
+        this->buildNetworkContextMenu(menu, network);
     }
 
     return menu;
 }
 
-void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QTreeWidgetItem* item)
+void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 {
-    QString vmRef = item->data(0, Qt::UserRole).toString();
-    // Use cache lookup instead of async API call to avoid spawning unhandled requests
-    QVariantMap vmData = this->m_mainWindow->xenLib()->getCache()->ResolveObjectData("vm", vmRef);
-    QString powerState = vmData.value("power_state", "Halted").toString();
+    QString powerState = vm->GetPowerState();
+    QString vmRef = vm->OpaqueRef();
 
     // Power operations based on VM state
     if (powerState == "Halted")
@@ -188,7 +217,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QTreeWidgetItem* item)
     this->addSeparator(menu);
 
     // Snapshot operations
-    TakeSnapshotCommand* takeSnapshotCmd = new TakeSnapshotCommand(vmRef, this->m_mainWindow, this);
+    TakeSnapshotCommand* takeSnapshotCmd = new TakeSnapshotCommand(vm->OpaqueRef(), this->m_mainWindow, this);
     this->addCommand(menu, takeSnapshotCmd);
 
     this->addSeparator(menu);
@@ -199,13 +228,13 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QTreeWidgetItem* item)
     this->addSeparator(menu);
 
     // Properties
-    VMPropertiesCommand* propertiesCmd = new VMPropertiesCommand(vmRef, this->m_mainWindow, this);
+    VMPropertiesCommand* propertiesCmd = new VMPropertiesCommand(vm->OpaqueRef(), this->m_mainWindow, this);
     this->addCommand(menu, propertiesCmd);
 }
 
-void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QTreeWidgetItem* item)
+void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM> snapshot)
 {
-    QString vmRef = item->data(0, Qt::UserRole).toString();
+    QString vmRef = snapshot->OpaqueRef();
 
     // C# SingleSnapshot builder pattern:
     // - NewVMFromSnapshotCommand (not implemented yet)
@@ -239,9 +268,9 @@ void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QTreeWidgetItem* 
     this->addCommand(menu, propertiesCmd);
 }
 
-void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QTreeWidgetItem* item)
+void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM> templateVM)
 {
-    QString templateRef = item->data(0, Qt::UserRole).toString();
+    QString templateRef = templateVM->OpaqueRef();
 
     // VM Creation from template
     NewVMFromTemplateCommand* newVMFromTemplateCmd = new NewVMFromTemplateCommand(this->m_mainWindow, this);
@@ -263,12 +292,9 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QTreeWidgetItem* 
     menu->addAction("Properties");
 }
 
-void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QTreeWidgetItem* item)
+void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> host)
 {
-    QString hostRef = item->data(0, Qt::UserRole).toString();
-    // Use cache lookup instead of async API call to avoid spawning unhandled requests
-    QVariantMap hostData = this->m_mainWindow->xenLib()->getCache()->ResolveObjectData("host", hostRef);
-    bool enabled = hostData.value("enabled", true).toBool();
+    bool enabled = host->IsEnabled();
 
     // New VM command (available for both pool and standalone hosts)
     NewVMCommand* newVMCmd = new NewVMCommand(this->m_mainWindow, this);
@@ -312,9 +338,9 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QTreeWidgetItem* item
     this->addCommand(menu, propertiesCmd);
 }
 
-void ContextMenuBuilder::buildSRContextMenu(QMenu* menu, QTreeWidgetItem* item)
+void ContextMenuBuilder::buildSRContextMenu(QMenu* menu, QSharedPointer<SR> sr)
 {
-    Q_UNUSED(item);
+    Q_UNUSED(sr);
 
     RepairSRCommand* repairCmd = new RepairSRCommand(this->m_mainWindow, this);
     this->addCommand(menu, repairCmd);
@@ -365,13 +391,18 @@ void ContextMenuBuilder::buildDisconnectedHostContextMenu(QMenu* menu, QTreeWidg
     this->addCommand(menu, removeCmd);
 }
 
-void ContextMenuBuilder::buildPoolContextMenu(QMenu* menu, QTreeWidgetItem* item)
+void ContextMenuBuilder::buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> pool)
 {
-    QString poolRef = item->data(0, Qt::UserRole).toString();
+    QString poolRef = pool->OpaqueRef();
 
     // VM Creation operations
     NewVMCommand* newVMCmd = new NewVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, newVMCmd);
+
+    this->addSeparator(menu);
+
+    DisconnectPoolCommand* disconnectCmd = new DisconnectPoolCommand(this->m_mainWindow, this);
+    this->addCommand(menu, disconnectCmd);
 
     this->addSeparator(menu);
 
@@ -380,9 +411,9 @@ void ContextMenuBuilder::buildPoolContextMenu(QMenu* menu, QTreeWidgetItem* item
     this->addCommand(menu, propertiesCmd);
 }
 
-void ContextMenuBuilder::buildNetworkContextMenu(QMenu* menu, QTreeWidgetItem* item)
+void ContextMenuBuilder::buildNetworkContextMenu(QMenu* menu, QSharedPointer<Network> network)
 {
-    Q_UNUSED(item);
+    Q_UNUSED(network);
 
     // Properties
     NetworkPropertiesCommand* propertiesCmd = new NetworkPropertiesCommand(this->m_mainWindow, this);
@@ -391,11 +422,11 @@ void ContextMenuBuilder::buildNetworkContextMenu(QMenu* menu, QTreeWidgetItem* i
 
 void ContextMenuBuilder::addCommand(QMenu* menu, Command* command)
 {
-    if (!command || !command->canRun())
+    if (!command || !command->CanRun())
         return;
 
-    QAction* action = menu->addAction(command->menuText());
-    connect(action, &QAction::triggered, command, &Command::run);
+    QAction* action = menu->addAction(command->MenuText());
+    connect(action, &QAction::triggered, command, &Command::Run);
 }
 
 void ContextMenuBuilder::addSeparator(QMenu* menu)

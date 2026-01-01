@@ -28,25 +28,25 @@
 #ifndef VMPROPERTIESCOMMAND_H
 #define VMPROPERTIESCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 
-class VMPropertiesCommand : public Command
+class VMPropertiesCommand : public VMCommand
 {
     Q_OBJECT
 
-public:
-    explicit VMPropertiesCommand(QObject* parent = nullptr);
-    explicit VMPropertiesCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit VMPropertiesCommand(QObject* parent = nullptr);
+        explicit VMPropertiesCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent = nullptr);
 
-    void run() override;
-    bool canRun() const override;
-    QString menuText() const override;
-    QString toolTip() const;
-    QIcon icon() const;
+        void Run() override;
+        bool CanRun() const override;
+        QString MenuText() const override;
+        QString toolTip() const;
+        QIcon icon() const;
 
-private:
-    QString m_vmUuid;
-    void showPropertiesDialog();
+    private:
+        QString m_vmUuid;
+        void showPropertiesDialog();
 };
 
 #endif // VMPROPERTIESCOMMAND_H

@@ -26,7 +26,7 @@
  */
 
 #include "hvmbootaction.h"
-#include "../../connection.h"
+#include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
 #include <QDebug>
@@ -38,7 +38,7 @@ HVMBootAction::HVMBootAction(XenConnection* connection, const QString& vmRef, QO
     // Get VM name for display purposes
     try
     {
-        QVariantMap vmRecord = XenAPI::VM::get_record(connection->getSession(), vmRef);
+        QVariantMap vmRecord = XenAPI::VM::get_record(connection->GetSession(), vmRef);
         m_vmName = vmRecord.value("name_label").toString();
         if (m_vmName.isEmpty())
         {
@@ -62,7 +62,7 @@ HVMBootAction::HVMBootAction(XenConnection* connection, const QString& vmRef, QO
 
 void HVMBootAction::run()
 {
-    XenSession* session = this->session();
+    XenAPI::Session* session = this->session();
     if (!session)
     {
         throw std::runtime_error("Not connected to XenServer");
@@ -137,7 +137,7 @@ void HVMBootAction::setBootOrder(QVariantMap& bootParams, const QString& order)
     }
 }
 
-void HVMBootAction::restoreBootSettings(XenSession* session)
+void HVMBootAction::restoreBootSettings(XenAPI::Session* session)
 {
     if (!session || m_vmRef.isEmpty())
     {

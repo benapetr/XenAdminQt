@@ -28,9 +28,9 @@
 #ifndef RECONNECTHOSTCOMMAND_H
 #define RECONNECTHOSTCOMMAND_H
 
-#include "../command.h"
+#include "hostcommand.h"
 
-class ReconnectHostCommand : public Command
+class ReconnectHostCommand : public HostCommand
 {
     Q_OBJECT
 
@@ -38,9 +38,9 @@ class ReconnectHostCommand : public Command
         explicit ReconnectHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
     private:
         bool isConnectionDisconnected() const;

@@ -28,23 +28,25 @@
 #ifndef SETDEFAULTSRCOMMAND_H
 #define SETDEFAULTSRCOMMAND_H
 
-#include "../command.h"
+#include "srcommand.h"
 
-class SetDefaultSRCommand : public Command
+/**
+ * @class SetDefaultSRCommand
+ * @brief Sets the selected SR as the default storage repository for the pool.
+ *
+ * The default SR is used as the default location for new virtual disks.
+ */
+class SetDefaultSRCommand : public SRCommand
 {
     Q_OBJECT
 
     public:
         explicit SetDefaultSRCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        // Inherited from Command
-        bool canRun() const override;
-        void run() override;
-        QString menuText() const override;
-
-    private:
-        QString getSelectedSRRef() const;
-        QString getSelectedSRName() const;
+        // Inherited from SRCommand
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // SETDEFAULTSRCOMMAND_H
