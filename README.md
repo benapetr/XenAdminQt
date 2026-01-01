@@ -4,23 +4,34 @@
 
 This is the C++/Qt6 rewrite of the original C# XenAdmin codebase, converted using AI assistance, but hand-fixed, manually reviewed and post-processed with many manual fixes. The fixes are still being done - the goal is to get this codebase into perfection.
 
-The idea is to first port the entire existing C# codebase preserving all naming and logic (same naming for easier verification of what we already ported) - once we get a 1:1 port that works same as original client, we will move to next phase where we add new future and modify existing functionality.
+The idea is to first port the entire existing C# codebase preserving all naming and logic (same naming for easier verification of what we already ported) - once we get a 1:1 port that works same as original client, we will move to next phase where we add new features and modify existing functionality.
 
 The goal of this project is to get original thick XenAdmin client to work on non-Microsoft platforms (Mostly macOS and GNU/Linux - but any platform supported by Qt might work).
 
-## Project Structure
+# Building
+See [packaging readme](packaging/README.md) for details
+
+There is a packaging folder that is used to create packages for Linux (.deb and .rpm) as well as macOS
+
+Both variants support similar arguments, most importantly the `--qt <path to qt's bin>`
+
+For example (macOS):
 
 ```
-src/
-├── xenlib/             # Shared library for low-level Xen functionality
-│   ├── xen/            # Xen API abstractions (connection, session, API calls)
-│   ├── utils/          # Utility classes (encryption, JSON helpers)
-│   └── xenlib.pro      # Library build configuration
-├── xenadmin-ui/        # Qt-based UI application
-│   ├── dialogs/        # UI dialogs (connect, debug console, etc.)
-│   ├── widgets/        # Custom widgets (empty currently)
-│   ├── commands/       # Command pattern implementation for operations
-│   └── xenadmin-ui.pro # UI application build configuration
-└── xenadminqt.pro      # Top-level project configuration
+cd packaging
+
+# Replace the Qt version with whatever you have installed
+./package-dmg.sh --qt ~/Qt/6.7.2/macos/bin/
 ```
+
+## Linux dependencies:
+
+```
+# EL based (rpm):
+sudo dnf install qt6-qtbase-devel rpm-build qt6-qtbase-devel freerdp2-devel libwinpr2-devel mesa-libGL-devel mesa-libGLU-devel mesa-libEGL mesa-libEGL-devel libxkbcommon qt6-qtcharts-devel rsync
+
+# Debian based:
+sudo apt-get install qt6-base-dev build-essential freerdp2-dev libwinpr2-dev mesa-common-dev libglu1-mesa-dev libegl1 libxkbcommon0
+```
+
 

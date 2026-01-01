@@ -12,8 +12,9 @@ source "$SCRIPT_DIR/config"
 # Default values
 QT_BIN_PATH=""
 NCPUS=$(sysctl -n hw.ncpu 2>/dev/null || echo 4)
-APP_BUNDLE="XenAdmin-Qt.app"
-DMG_NAME="XenAdmin-Qt-${APP_VERSION}"
+APP_DISPLAY_NAME="XenAdmin"
+APP_BUNDLE="${APP_DISPLAY_NAME}.app"
+DMG_NAME="${APP_DISPLAY_NAME}-${APP_VERSION}"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -24,7 +25,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --version)
             APP_VERSION="$2"
-            DMG_NAME="XenAdmin-Qt-${APP_VERSION}"
+            DMG_NAME="${APP_DISPLAY_NAME}-${APP_VERSION}"
             shift 2
             ;;
         *)
@@ -76,7 +77,7 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
 fi
 
 echo "============================="
-echo "Building XenAdmin Qt for macOS"
+echo "Building XenAdmin for macOS"
 echo "============================="
 echo "Qt command: $QMAKE_CMD ($(which $QMAKE_CMD | xargs dirname))"
 echo "CPUs: $NCPUS"
@@ -138,51 +139,14 @@ else
 fi
 
 chmod 755 "$BUNDLE_DIR/Contents/MacOS/xenadmin-qt"
-ICON_SOURCE="$PROJECT_ROOT/packaging/xenadmin.png"
+mkdir -p "$BUNDLE_DIR/Contents/Resources"
+ICON_SOURCE="$PROJECT_ROOT/packaging/macos/xenadmin.icns"
+ICON_BUNDLE_NAME="AppIcon"
+ICON_BUNDLE_PATH="$BUNDLE_DIR/Contents/Resources/${ICON_BUNDLE_NAME}.icns"
 if [ -f "$ICON_SOURCE" ]; then
-    if command -v sips &> /dev/null && command -v iconutil &> /dev/null; then
-        ICONSET="$TEMP_DIR/AppIcon.iconset"
-        mkdir -p "$ICONSET"
-        # Extract and resize icon to different sizes for .icns
-        sips -z 16 16     "$ICON_SOURCE" --out "$ICONSET/icon_16x16.png" 2>/dev/null || true
-        sips -z 32 32     "$ICON_SOURCE" --out "$ICONSET/icon_16x16@2x.png" 2>/dev/null || true
-        sips -z 32 32     "$ICON_SOURCE" --out "$ICONSET/icon_32x32.png" 2>/dev/null || true
-        sips -z 64 64     "$ICON_SOURCE" --out "$ICONSET/icon_32x32@2x.png" 2>/dev/null || true
-        sips -z 128 128   "$ICON_SOURCE" --out "$ICONSET/icon_128x128.png" 2>/dev/null || true
-        sips -z 256 256   "$ICON_SOURCE" --out "$ICONSET/icon_128x128@2x.png" 2>/dev/null || true
-        sips -z 256 256   "$ICON_SOURCE" --out "$ICONSET/icon_256x256.png" 2>/dev/null || true
-        sips -z 512 512   "$ICON_SOURCE" --out "$ICONSET/icon_256x256@2x.png" 2>/dev/null || true
-        sips -z 512 512   "$ICON_SOURCE" --out "$ICONSET/icon_512x512.png" 2>/dev/null || true
-        sips -z 1024 1024 "$ICON_SOURCE" --out "$ICONSET/icon_512x512@2x.png" 2>/dev/null || true
-        REQUIRED_ICONS=(
-            "icon_16x16.png"
-            "icon_16x16@2x.png"
-            "icon_32x32.png"
-            "icon_32x32@2x.png"
-            "icon_128x128.png"
-            "icon_128x128@2x.png"
-            "icon_256x256.png"
-            "icon_256x256@2x.png"
-            "icon_512x512.png"
-            "icon_512x512@2x.png"
-        )
-        MISSING_ICON=0
-        for icon in "${REQUIRED_ICONS[@]}"; do
-            if [ ! -f "$ICONSET/$icon" ]; then
-                MISSING_ICON=1
-                break
-            fi
-        done
-        if [ "$MISSING_ICON" -eq 0 ]; then
-            if ! iconutil -c icns "$ICONSET" -o "$BUNDLE_DIR/Contents/Resources/xenadmin.icns"; then
-                echo "Warning: iconutil failed to generate ICNS. Continuing without custom icon."
-            fi
-        else
-            echo "Warning: iconset is incomplete. Continuing without custom icon."
-        fi
-    else
-        echo "Warning: sips or iconutil not found. Icon will not be included."
-    fi
+    cp "$ICON_SOURCE" "$ICON_BUNDLE_PATH"
+else
+    echo "Warning: icon file not found at $ICON_SOURCE. Icon will not be included."
 fi
 
 echo ""
@@ -199,9 +163,9 @@ cat > "$BUNDLE_DIR/Contents/Info.plist" <<EOF
     <key>CFBundleIdentifier</key>
     <string>org.xenadmin.qt</string>
     <key>CFBundleName</key>
-    <string>$APP_NAME</string>
+    <string>$APP_DISPLAY_NAME</string>
     <key>CFBundleDisplayName</key>
-    <string>$APP_NAME</string>
+    <string>$APP_DISPLAY_NAME</string>
     <key>CFBundleVersion</key>
     <string>$APP_VERSION</string>
     <key>CFBundleShortVersionString</key>
@@ -211,7 +175,7 @@ cat > "$BUNDLE_DIR/Contents/Info.plist" <<EOF
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleIconFile</key>
-    <string>xenadmin.icns</string>
+    <string>${ICON_BUNDLE_NAME}</string>
     <key>LSMinimumSystemVersion</key>
     <string>10.15</string>
     <key>NSHighResolutionCapable</key>
@@ -245,11 +209,6 @@ cp -R "$BUNDLE_DIR" "$DMG_STAGING/"
 # Create Applications symlink for easy installation
 ln -s /Applications "$DMG_STAGING/Applications"
 
-# Copy README if available
-if [ -f "$PROJECT_ROOT/README.md" ]; then
-    cp "$PROJECT_ROOT/README.md" "$DMG_STAGING/README.txt"
-fi
-
 # Calculate DMG size (app size + 50MB overhead)
 APP_SIZE=$(du -sm "$DMG_STAGING" | awk '{print $1}')
 DMG_SIZE=$((APP_SIZE + 50))
@@ -257,7 +216,7 @@ DMG_SIZE=$((APP_SIZE + 50))
 # Create temporary read-write DMG
 TEMP_DMG="$TEMP_DIR/temp.dmg"
 hdiutil create -srcfolder "$DMG_STAGING" \
-    -volname "$APP_NAME" \
+    -volname "$APP_DISPLAY_NAME" \
     -fs HFS+ \
     -fsargs "-c c=64,a=16,e=16" \
     -format UDRW \
@@ -293,7 +252,7 @@ echo "Size: $(du -h "$OUTPUT_DMG" | awk '{print $1}')"
 echo ""
 echo "To install:"
 echo "  1. Double-click the DMG file"
-echo "  2. Drag '$APP_NAME' to Applications folder"
+echo "  2. Drag '$APP_DISPLAY_NAME' to Applications folder"
 echo "  3. Launch from Applications or Spotlight"
 echo ""
 echo "Note: On first launch, you may need to right-click the app"
