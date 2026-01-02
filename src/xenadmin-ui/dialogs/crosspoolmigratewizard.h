@@ -38,6 +38,7 @@ class MainWindow;
 class VM;
 class XenConnection;
 class QComboBox;
+class SrPicker;
 class QTableWidget;
 class QTextEdit;
 class QWizardPage;
@@ -111,7 +112,7 @@ class CrossPoolMigrateWizard : public QWizard
         QTableWidget* m_networkTable = nullptr;
         QComboBox* m_transferNetworkCombo = nullptr;
         QTextEdit* m_summaryText = nullptr;
-        QComboBox* m_copySrCombo = nullptr;
+        class SrPicker* m_copySrPicker = nullptr;
         class QLineEdit* m_copyNameEdit = nullptr;
         QTextEdit* m_copyDescriptionEdit = nullptr;
         class QRadioButton* m_copyIntraRadio = nullptr;

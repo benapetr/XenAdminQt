@@ -285,6 +285,24 @@ class XENLIB_EXPORT VM : public XenObject
         bool CanBeMoved() const;
 
         /**
+         * @brief Check if any disk supports fast clone on its SR
+         *
+         * Matches C# VM.AnyDiskFastClonable().
+         *
+         * @return true if any disk is fast-clonable
+         */
+        bool AnyDiskFastClonable() const;
+
+        /**
+         * @brief Check if VM has at least one disk VBD
+         *
+         * Matches C# VM.HasAtLeastOneDisk().
+         *
+         * @return true if VM has at least one disk VBD
+         */
+        bool HasAtLeastOneDisk() const;
+
+        /**
          * @brief Check if VM is running
          * @return true if power state is "Running"
          */

@@ -41,6 +41,7 @@
 #include "xen/actions/vm/vmmoveaction.h"
 #include "xen/actions/vm/vmcopyaction.h"
 #include "xen/actions/vm/vmcloneaction.h"
+#include "../controls/srpicker.h"
 #include "xen/network/connectionsmanager.h"
 #include "xen/xenapi/xenapi_Host.h"
 #include "xen/xenapi/xenapi_VM.h"
@@ -54,6 +55,7 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QRadioButton>
+#include <QPushButton>
 #include <QTableWidget>
 #include <QTextEdit>
 #include <QVBoxLayout>
@@ -72,7 +74,7 @@ namespace
 
             int nextId() const override
             {
-                if (wizard_ && wizard_->requiresRbacWarning())
+                if (this->wizard_ && this->wizard_->requiresRbacWarning())
                     return CrossPoolMigrateWizard::Page_RbacWarning;
                 return CrossPoolMigrateWizard::Page_Storage;
             }
@@ -125,11 +127,11 @@ namespace
 
             int nextId() const override
             {
-                if (!wizard_)
+                if (!this->wizard_)
                     return CrossPoolMigrateWizard::Page_Finish;
-                if (wizard_->shouldShowNetworkPage())
+                if (this->wizard_->shouldShowNetworkPage())
                     return CrossPoolMigrateWizard::Page_Network;
-                if (wizard_->shouldShowTransferNetworkPage())
+                if (this->wizard_->shouldShowTransferNetworkPage())
                     return CrossPoolMigrateWizard::Page_TransferNetwork;
                 return CrossPoolMigrateWizard::Page_Finish;
             }
@@ -148,7 +150,7 @@ namespace
 
             int nextId() const override
             {
-                if (wizard_ && wizard_->shouldShowTransferNetworkPage())
+                if (this->wizard_ && this->wizard_->shouldShowTransferNetworkPage())
                     return CrossPoolMigrateWizard::Page_TransferNetwork;
                 return CrossPoolMigrateWizard::Page_Finish;
             }
@@ -316,36 +318,36 @@ CrossPoolMigrateWizard::CrossPoolMigrateWizard(MainWindow* mainWindow,
       m_sourceConnection(vms.isEmpty() ? nullptr : vms.first()->GetConnection()),
       m_mode(mode)
 {
-    if (m_mode == WizardMode::Copy)
-        setWindowTitle(tr("Copy VM Wizard"));
-    else if (m_mode == WizardMode::Move)
-        setWindowTitle(tr("Move VM Wizard"));
+    if (this->m_mode == WizardMode::Copy)
+        this->setWindowTitle(tr("Copy VM Wizard"));
+    else if (this->m_mode == WizardMode::Move)
+        this->setWindowTitle(tr("Move VM Wizard"));
     else
-        setWindowTitle(tr("Cross Pool Migrate Wizard"));
-    setWizardStyle(QWizard::ModernStyle);
-    setOption(QWizard::HaveHelpButton, true);
-    setOption(QWizard::HelpButtonOnRight, false);
-    if (m_mode == WizardMode::Copy)
-        setStartId(Page_CopyMode);
+        this->setWindowTitle(tr("Cross Pool Migrate Wizard"));
+    this->setWizardStyle(QWizard::ModernStyle);
+    this->setOption(QWizard::HaveHelpButton, true);
+    this->setOption(QWizard::HelpButtonOnRight, false);
+    if (this->m_mode == WizardMode::Copy)
+        this->setStartId(Page_CopyMode);
     else
-        setStartId(Page_Destination);
+        this->setStartId(Page_Destination);
 
-    for (const QSharedPointer<VM>& vmItem : m_vms)
-        ensureMappingForVm(vmItem);
+    for (const QSharedPointer<VM>& vmItem : this->m_vms)
+        this->ensureMappingForVm(vmItem);
 
-    setupWizardPages();
+    this->setupWizardPages();
 }
 
 void CrossPoolMigrateWizard::setupWizardPages()
 {
-    setPage(Page_Destination, createDestinationPage());
-    setPage(Page_RbacWarning, createRbacWarningPage());
-    setPage(Page_Storage, createStoragePage());
-    setPage(Page_Network, createNetworkPage());
-    setPage(Page_TransferNetwork, createTransferNetworkPage());
-    setPage(Page_Finish, createFinishPage());
-    setPage(Page_CopyMode, createCopyModePage());
-    setPage(Page_IntraPoolCopy, createIntraPoolCopyPage());
+    this->setPage(Page_Destination, this->createDestinationPage());
+    this->setPage(Page_RbacWarning, this->createRbacWarningPage());
+    this->setPage(Page_Storage, this->createStoragePage());
+    this->setPage(Page_Network, this->createNetworkPage());
+    this->setPage(Page_TransferNetwork, this->createTransferNetworkPage());
+    this->setPage(Page_Finish, this->createFinishPage());
+    this->setPage(Page_CopyMode, this->createCopyModePage());
+    this->setPage(Page_IntraPoolCopy, this->createIntraPoolCopyPage());
 }
 
 QWizardPage* CrossPoolMigrateWizard::createDestinationPage()
@@ -356,11 +358,11 @@ QWizardPage* CrossPoolMigrateWizard::createDestinationPage()
     QLabel* info = new QLabel(tr("Select the destination host for the VM."));
     info->setWordWrap(true);
 
-    m_hostCombo = new QComboBox(page);
+    this->m_hostCombo = new QComboBox(page);
 
     QFormLayout* layout = new QFormLayout(page);
     layout->addRow(info);
-    layout->addRow(tr("Target host:"), m_hostCombo);
+    layout->addRow(tr("Target host:"), this->m_hostCombo);
 
     return page;
 }
@@ -373,17 +375,17 @@ QWizardPage* CrossPoolMigrateWizard::createStoragePage()
     QLabel* info = new QLabel(tr("Select storage repositories for each virtual disk."));
     info->setWordWrap(true);
 
-    m_storageTable = new QTableWidget(page);
-    m_storageTable->setColumnCount(3);
-    m_storageTable->setHorizontalHeaderLabels({tr("VM"), tr("Virtual disk"), tr("Target SR")});
-    m_storageTable->horizontalHeader()->setStretchLastSection(true);
-    m_storageTable->verticalHeader()->setVisible(false);
-    m_storageTable->setSelectionMode(QAbstractItemView::NoSelection);
-    m_storageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    this->m_storageTable = new QTableWidget(page);
+    this->m_storageTable->setColumnCount(3);
+    this->m_storageTable->setHorizontalHeaderLabels({tr("VM"), tr("Virtual disk"), tr("Target SR")});
+    this->m_storageTable->horizontalHeader()->setStretchLastSection(true);
+    this->m_storageTable->verticalHeader()->setVisible(false);
+    this->m_storageTable->setSelectionMode(QAbstractItemView::NoSelection);
+    this->m_storageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     QVBoxLayout* layout = new QVBoxLayout(page);
     layout->addWidget(info);
-    layout->addWidget(m_storageTable);
+    layout->addWidget(this->m_storageTable);
 
     return page;
 }
@@ -396,17 +398,17 @@ QWizardPage* CrossPoolMigrateWizard::createNetworkPage()
     QLabel* info = new QLabel(tr("Select networks for each virtual interface."));
     info->setWordWrap(true);
 
-    m_networkTable = new QTableWidget(page);
-    m_networkTable->setColumnCount(3);
-    m_networkTable->setHorizontalHeaderLabels({tr("VM"), tr("VIF (MAC)"), tr("Target Network")});
-    m_networkTable->horizontalHeader()->setStretchLastSection(true);
-    m_networkTable->verticalHeader()->setVisible(false);
-    m_networkTable->setSelectionMode(QAbstractItemView::NoSelection);
-    m_networkTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    this->m_networkTable = new QTableWidget(page);
+    this->m_networkTable->setColumnCount(3);
+    this->m_networkTable->setHorizontalHeaderLabels({tr("VM"), tr("VIF (MAC)"), tr("Target Network")});
+    this->m_networkTable->horizontalHeader()->setStretchLastSection(true);
+    this->m_networkTable->verticalHeader()->setVisible(false);
+    this->m_networkTable->setSelectionMode(QAbstractItemView::NoSelection);
+    this->m_networkTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     QVBoxLayout* layout = new QVBoxLayout(page);
     layout->addWidget(info);
-    layout->addWidget(m_networkTable);
+    layout->addWidget(this->m_networkTable);
 
     return page;
 }
@@ -419,11 +421,11 @@ QWizardPage* CrossPoolMigrateWizard::createTransferNetworkPage()
     QLabel* info = new QLabel(tr("Select the network used for transferring VM data."));
     info->setWordWrap(true);
 
-    m_transferNetworkCombo = new QComboBox(page);
+    this->m_transferNetworkCombo = new QComboBox(page);
 
     QFormLayout* layout = new QFormLayout(page);
     layout->addRow(info);
-    layout->addRow(tr("Transfer network:"), m_transferNetworkCombo);
+    layout->addRow(tr("Transfer network:"), this->m_transferNetworkCombo);
 
     return page;
 }
@@ -445,7 +447,7 @@ QWizardPage* CrossPoolMigrateWizard::createRbacWarningPage()
     layout->addWidget(info);
     layout->addWidget(confirm);
 
-    m_rbacPage = page;
+    this->m_rbacPage = page;
     page->setConfirmation(confirm);
     return page;
 }
@@ -455,11 +457,11 @@ QWizardPage* CrossPoolMigrateWizard::createFinishPage()
     QWizardPage* page = new QWizardPage(this);
     page->setTitle(tr("Finish"));
 
-    m_summaryText = new QTextEdit(page);
-    m_summaryText->setReadOnly(true);
+    this->m_summaryText = new QTextEdit(page);
+    this->m_summaryText->setReadOnly(true);
 
     QVBoxLayout* layout = new QVBoxLayout(page);
-    layout->addWidget(m_summaryText);
+    layout->addWidget(this->m_summaryText);
 
     return page;
 }
@@ -472,31 +474,31 @@ QWizardPage* CrossPoolMigrateWizard::createCopyModePage()
     QLabel* info = new QLabel(tr("Choose how to copy the VM."), page);
     info->setWordWrap(true);
 
-    m_copyIntraRadio = new QRadioButton(tr("Copy within the current pool"), page);
-    m_copyCrossRadio = new QRadioButton(tr("Copy to another pool"), page);
+    this->m_copyIntraRadio = new QRadioButton(tr("Copy within the current pool"), page);
+    this->m_copyCrossRadio = new QRadioButton(tr("Copy to another pool"), page);
 
-    bool canUseIntra = (m_vms.size() == 1);
-    m_copyIntraRadio->setEnabled(canUseIntra);
+    bool canUseIntra = (this->m_vms.size() == 1);
+    this->m_copyIntraRadio->setEnabled(canUseIntra);
     if (canUseIntra)
-        m_copyIntraRadio->setChecked(true);
+        this->m_copyIntraRadio->setChecked(true);
     else
-        m_copyCrossRadio->setChecked(true);
-    m_intraPoolCopySelected = canUseIntra;
+        this->m_copyCrossRadio->setChecked(true);
+    this->m_intraPoolCopySelected = canUseIntra;
 
-    connect(m_copyIntraRadio, &QRadioButton::toggled, this, [this](bool checked) {
+    connect(this->m_copyIntraRadio, &QRadioButton::toggled, this, [this](bool checked) {
         this->m_intraPoolCopySelected = checked;
     });
-    connect(m_copyCrossRadio, &QRadioButton::toggled, this, [this](bool checked) {
+    connect(this->m_copyCrossRadio, &QRadioButton::toggled, this, [this](bool checked) {
         if (checked)
             this->m_intraPoolCopySelected = false;
     });
 
     QVBoxLayout* layout = new QVBoxLayout(page);
     layout->addWidget(info);
-    layout->addWidget(m_copyIntraRadio);
-    layout->addWidget(m_copyCrossRadio);
+    layout->addWidget(this->m_copyIntraRadio);
+    layout->addWidget(this->m_copyCrossRadio);
 
-    m_copyModePage = page;
+    this->m_copyModePage = page;
     return page;
 }
 
@@ -508,34 +510,51 @@ QWizardPage* CrossPoolMigrateWizard::createIntraPoolCopyPage()
     QLabel* info = new QLabel(tr("Select copy type and target storage."), page);
     info->setWordWrap(true);
 
-    m_copyCloneRadio = new QRadioButton(tr("Fast clone (no storage selection)"), page);
-    m_copyFullRadio = new QRadioButton(tr("Full copy to selected SR"), page);
-    m_copyCloneRadio->setChecked(true);
+    this->m_copyCloneRadio = new QRadioButton(tr("Fast clone (no storage selection)"), page);
+    this->m_copyFullRadio = new QRadioButton(tr("Full copy to selected SR"), page);
+    this->m_copyCloneRadio->setChecked(true);
 
-    m_copyNameEdit = new QLineEdit(page);
-    m_copyDescriptionEdit = new QTextEdit(page);
-    m_copyDescriptionEdit->setFixedHeight(80);
+    this->m_copyNameEdit = new QLineEdit(page);
+    this->m_copyDescriptionEdit = new QTextEdit(page);
+    this->m_copyDescriptionEdit->setFixedHeight(80);
 
-    m_copySrCombo = new QComboBox(page);
-    m_copySrCombo->setEnabled(false);
+    this->m_copySrPicker = new SrPicker(page);
+    this->m_copySrPicker->setEnabled(false);
+    QPushButton* rescanButton = new QPushButton(tr("Rescan"), page);
+    rescanButton->setEnabled(false);
 
-    connect(m_copyCloneRadio, &QRadioButton::toggled, this, [this](bool checked) {
-        if (this->m_copySrCombo)
-            this->m_copySrCombo->setEnabled(!checked);
+    connect(this->m_copyCloneRadio, &QRadioButton::toggled, this, [this, rescanButton](bool checked) {
+        if (this->m_copySrPicker)
+            this->m_copySrPicker->setEnabled(!checked);
+        if (rescanButton)
+            rescanButton->setEnabled(!checked && this->m_copySrPicker && this->m_copySrPicker->canBeScanned());
+    });
+
+    connect(this->m_copySrPicker, &SrPicker::canBeScannedChanged, this, [this, rescanButton]() {
+        if (rescanButton && this->m_copySrPicker)
+            rescanButton->setEnabled(this->m_copySrPicker->canBeScanned() && this->m_copySrPicker->isEnabled());
+    });
+    connect(this->m_copySrPicker, &SrPicker::selectedIndexChanged, this, [this]() {
+        this->button(QWizard::NextButton)->setEnabled(true);
+    });
+    connect(rescanButton, &QPushButton::clicked, this, [this]() {
+        if (this->m_copySrPicker)
+            this->m_copySrPicker->scanSRs();
     });
 
     QFormLayout* formLayout = new QFormLayout();
-    formLayout->addRow(tr("Name:"), m_copyNameEdit);
-    formLayout->addRow(tr("Description:"), m_copyDescriptionEdit);
-    formLayout->addRow(tr("Target SR:"), m_copySrCombo);
+    formLayout->addRow(tr("Name:"), this->m_copyNameEdit);
+    formLayout->addRow(tr("Description:"), this->m_copyDescriptionEdit);
+    formLayout->addRow(tr("Target SR:"), this->m_copySrPicker);
+    formLayout->addRow(QString(), rescanButton);
 
     QVBoxLayout* layout = new QVBoxLayout(page);
     layout->addWidget(info);
-    layout->addWidget(m_copyCloneRadio);
-    layout->addWidget(m_copyFullRadio);
+    layout->addWidget(this->m_copyCloneRadio);
+    layout->addWidget(this->m_copyFullRadio);
     layout->addLayout(formLayout);
 
-    m_intraPoolCopyPage = page;
+    this->m_intraPoolCopyPage = page;
     return page;
 }
 
@@ -543,28 +562,62 @@ void CrossPoolMigrateWizard::initializePage(int id)
 {
     if (id == Page_CopyMode)
     {
-        m_intraPoolCopySelected = m_copyIntraRadio ? m_copyIntraRadio->isChecked() : false;
+        this->m_intraPoolCopySelected = this->m_copyIntraRadio ? this->m_copyIntraRadio->isChecked() : false;
     }
     else if (id == Page_IntraPoolCopy)
     {
-        if (m_copyNameEdit && !m_vms.isEmpty() && m_vms.first())
-            m_copyNameEdit->setText(tr("Copy of %1").arg(m_vms.first()->GetName()));
+        QSharedPointer<VM> vmItem = this->m_vms.isEmpty() ? QSharedPointer<VM>() : this->m_vms.first();
+        if (this->m_copyNameEdit && vmItem)
+            this->m_copyNameEdit->setText(tr("Copy of %1").arg(vmItem->GetName()));
 
-        if (m_copySrCombo)
+        if (this->m_copySrPicker && vmItem)
         {
-            m_copySrCombo->clear();
-            XenConnection* conn = m_sourceConnection;
+            XenConnection* conn = this->m_sourceConnection;
             XenCache* cache = conn ? conn->GetCache() : nullptr;
             if (cache)
             {
-                QStringList srRefs = cache->GetAllRefs("sr");
-                for (const QString& srRef : srRefs)
+                QStringList vdiRefs;
+                QStringList vbdRefs = vmItem->VBDRefs();
+                for (const QString& vbdRef : vbdRefs)
                 {
-                    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-                    QString srName = srData.value("name_label", "SR").toString();
-                    m_copySrCombo->addItem(srName, srRef);
+                    QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
+                    QString vdiRef = vbdData.value("VDI").toString();
+                    if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
+                        continue;
+                    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
+                    QString vdiType = vdiData.value("type").toString();
+                    if (vdiType == "iso")
+                        continue;
+                    vdiRefs.append(vdiRef);
                 }
+                this->m_copySrPicker->populate(SrPicker::Copy,
+                                               conn,
+                                               vmItem->HomeRef(),
+                                               QString(),
+                                               vdiRefs);
             }
+        }
+
+        if (vmItem)
+        {
+            bool allowCopy = !vmItem->IsTemplate() || vmItem->AllowedOperations().contains("copy");
+            bool anyFastClone = vmItem->AnyDiskFastClonable();
+            bool hasDisk = vmItem->HasAtLeastOneDisk();
+            bool copyEnabled = allowCopy && hasDisk;
+            bool cloneEnabled = (!allowCopy) || anyFastClone || !hasDisk;
+
+            if (this->m_copyFullRadio)
+                this->m_copyFullRadio->setEnabled(copyEnabled);
+            if (this->m_copyCloneRadio)
+                this->m_copyCloneRadio->setEnabled(cloneEnabled);
+
+            if (!cloneEnabled && this->m_copyFullRadio)
+                this->m_copyFullRadio->setChecked(true);
+            if (!copyEnabled && this->m_copyCloneRadio)
+                this->m_copyCloneRadio->setChecked(true);
+
+            if (this->m_copySrPicker)
+                this->m_copySrPicker->setEnabled(this->m_copyFullRadio && this->m_copyFullRadio->isChecked());
         }
     }
     else if (id == Page_Destination)
@@ -597,42 +650,42 @@ void CrossPoolMigrateWizard::initializePage(int id)
 
 bool CrossPoolMigrateWizard::validateCurrentPage()
 {
-    if (currentId() == Page_CopyMode)
+    if (this->currentId() == Page_CopyMode)
     {
-        if (m_mode == WizardMode::Copy && m_copyIntraRadio && m_copyIntraRadio->isChecked() && m_vms.size() != 1)
+        if (this->m_mode == WizardMode::Copy && this->m_copyIntraRadio && this->m_copyIntraRadio->isChecked() && this->m_vms.size() != 1)
         {
             QMessageBox::warning(this, tr("Copy VM"), tr("Intra-pool copy supports a single VM selection."));
             return false;
         }
     }
-    else if (currentId() == Page_IntraPoolCopy)
+    else if (this->currentId() == Page_IntraPoolCopy)
     {
-        if (!m_copyNameEdit || m_copyNameEdit->text().trimmed().isEmpty())
+        if (!this->m_copyNameEdit || this->m_copyNameEdit->text().trimmed().isEmpty())
         {
             QMessageBox::warning(this, tr("Copy VM"), tr("Please enter a name for the copied VM."));
             return false;
         }
-        if (m_copyFullRadio && m_copyFullRadio->isChecked())
+        if (this->m_copyFullRadio && this->m_copyFullRadio->isChecked())
         {
-            if (!m_copySrCombo || m_copySrCombo->currentIndex() < 0)
+            if (!this->m_copySrPicker || this->m_copySrPicker->selectedSR().isEmpty())
             {
                 QMessageBox::warning(this, tr("Copy VM"), tr("Please select a target SR."));
                 return false;
             }
         }
     }
-    else if (currentId() == Page_Destination)
+    else if (this->currentId() == Page_Destination)
     {
-        if (!m_hostCombo || m_hostCombo->currentIndex() < 0)
+        if (!this->m_hostCombo || this->m_hostCombo->currentIndex() < 0)
         {
             QMessageBox::warning(this, tr("Cross Pool Migrate"), tr("Please select a destination host."));
             return false;
         }
 
-        auto* model = qobject_cast<QStandardItemModel*>(m_hostCombo->model());
+        auto* model = qobject_cast<QStandardItemModel*>(this->m_hostCombo->model());
         if (model)
         {
-            QStandardItem* item = model->item(m_hostCombo->currentIndex());
+            QStandardItem* item = model->item(this->m_hostCombo->currentIndex());
             if (item && !item->isEnabled())
             {
                 QMessageBox::warning(this, tr("Cross Pool Migrate"),
@@ -641,9 +694,9 @@ bool CrossPoolMigrateWizard::validateCurrentPage()
             }
         }
     }
-    else if (currentId() == Page_TransferNetwork && requiresTransferNetwork())
+    else if (this->currentId() == Page_TransferNetwork && this->requiresTransferNetwork())
     {
-        if (!m_transferNetworkCombo || m_transferNetworkCombo->currentIndex() < 0)
+        if (!this->m_transferNetworkCombo || this->m_transferNetworkCombo->currentIndex() < 0)
         {
             QMessageBox::warning(this, tr("Cross Pool Migrate"), tr("Please select a transfer network."));
             return false;
@@ -655,39 +708,39 @@ bool CrossPoolMigrateWizard::validateCurrentPage()
 
 void CrossPoolMigrateWizard::accept()
 {
-    if (m_vms.isEmpty() || !m_sourceConnection)
+    if (this->m_vms.isEmpty() || !this->m_sourceConnection)
     {
         QWizard::accept();
         return;
     }
 
-    if (m_mode == WizardMode::Copy && isIntraPoolCopySelected())
+    if (this->m_mode == WizardMode::Copy && this->isIntraPoolCopySelected())
     {
-        QSharedPointer<VM> vmItem = m_vms.first();
+        QSharedPointer<VM> vmItem = this->m_vms.first();
         if (vmItem)
         {
-            if (isCopyCloneSelected())
+            if (this->isCopyCloneSelected())
             {
-                VMCloneAction* action = new VMCloneAction(m_sourceConnection,
+                VMCloneAction* action = new VMCloneAction(this->m_sourceConnection,
                                                           vmItem.data(),
-                                                          copyName(),
-                                                          copyDescription(),
+                                                          this->copyName(),
+                                                          this->copyDescription(),
                                                           this);
                 OperationManager::instance()->registerOperation(action);
                 action->runAsync();
             }
             else
             {
-                XenCache* cache = m_sourceConnection->GetCache();
-                QSharedPointer<SR> sr = cache ? cache->ResolveObject<SR>("sr", copyTargetSrRef()) : QSharedPointer<SR>();
+                XenCache* cache = this->m_sourceConnection->GetCache();
+                QSharedPointer<SR> sr = cache ? cache->ResolveObject<SR>("sr", this->copyTargetSrRef()) : QSharedPointer<SR>();
                 if (sr && sr->IsValid())
                 {
-                    VMCopyAction* action = new VMCopyAction(m_sourceConnection,
+                    VMCopyAction* action = new VMCopyAction(this->m_sourceConnection,
                                                             vmItem.data(),
                                                             nullptr,
                                                             sr.data(),
-                                                            copyName(),
-                                                            copyDescription(),
+                                                            this->copyName(),
+                                                            this->copyDescription(),
                                                             this);
                     OperationManager::instance()->registerOperation(action);
                     action->runAsync();
@@ -699,47 +752,47 @@ void CrossPoolMigrateWizard::accept()
         return;
     }
 
-    if (m_storageTable)
+    if (this->m_storageTable)
     {
-        for (int row = 0; row < m_storageTable->rowCount(); ++row)
+        for (int row = 0; row < this->m_storageTable->rowCount(); ++row)
         {
-            QTableWidgetItem* vmItem = m_storageTable->item(row, 0);
-            QTableWidgetItem* vdiItem = m_storageTable->item(row, 1);
+            QTableWidgetItem* vmItem = this->m_storageTable->item(row, 0);
+            QTableWidgetItem* vdiItem = this->m_storageTable->item(row, 1);
             QString vmRef = vmItem ? vmItem->data(Qt::UserRole).toString() : QString();
             QString vdiRef = vdiItem ? vdiItem->data(Qt::UserRole).toString() : QString();
-            QComboBox* combo = qobject_cast<QComboBox*>(m_storageTable->cellWidget(row, 2));
+            QComboBox* combo = qobject_cast<QComboBox*>(this->m_storageTable->cellWidget(row, 2));
             if (!combo || vmRef.isEmpty() || vdiRef.isEmpty())
                 continue;
 
             QString srRef = combo->currentData().toString();
             if (!srRef.isEmpty())
-                m_vmMappings[vmRef].storage.insert(vdiRef, srRef);
+                this->m_vmMappings[vmRef].storage.insert(vdiRef, srRef);
         }
     }
 
-    if (m_networkTable)
+    if (this->m_networkTable)
     {
-        for (int row = 0; row < m_networkTable->rowCount(); ++row)
+        for (int row = 0; row < this->m_networkTable->rowCount(); ++row)
         {
-            QTableWidgetItem* vmItem = m_networkTable->item(row, 0);
-            QTableWidgetItem* vifItem = m_networkTable->item(row, 1);
+            QTableWidgetItem* vmItem = this->m_networkTable->item(row, 0);
+            QTableWidgetItem* vifItem = this->m_networkTable->item(row, 1);
             QString vmRef = vmItem ? vmItem->data(Qt::UserRole).toString() : QString();
             QString vifRef = vifItem ? vifItem->data(Qt::UserRole).toString() : QString();
-            QComboBox* combo = qobject_cast<QComboBox*>(m_networkTable->cellWidget(row, 2));
+            QComboBox* combo = qobject_cast<QComboBox*>(this->m_networkTable->cellWidget(row, 2));
             if (!combo || vmRef.isEmpty() || vifRef.isEmpty())
                 continue;
 
             QString netRef = combo->currentData().toString();
             if (!netRef.isEmpty())
-                m_vmMappings[vmRef].vifs.insert(vifRef, netRef);
+                this->m_vmMappings[vmRef].vifs.insert(vifRef, netRef);
         }
     }
 
-    if (m_transferNetworkCombo)
-        m_transferNetworkRef = m_transferNetworkCombo->currentData().toString();
+    if (this->m_transferNetworkCombo)
+        this->m_transferNetworkRef = this->m_transferNetworkCombo->currentData().toString();
 
-    if (!m_targetConnection || m_targetHostRef.isEmpty() ||
-        (requiresTransferNetwork() && m_transferNetworkRef.isEmpty()))
+    if (!this->m_targetConnection || this->m_targetHostRef.isEmpty() ||
+        (this->requiresTransferNetwork() && this->m_transferNetworkRef.isEmpty()))
     {
         QMessageBox::warning(this, tr("Cross Pool Migrate"), tr("Missing destination or transfer network."));
         return;
@@ -768,19 +821,19 @@ void CrossPoolMigrateWizard::accept()
         return false;
     };
 
-    for (const QSharedPointer<VM>& vmItem : m_vms)
+    for (const QSharedPointer<VM>& vmItem : this->m_vms)
     {
         if (!vmItem)
             continue;
 
-        VmMapping mapping = m_vmMappings.value(vmItem->OpaqueRef());
-        mapping.targetRef = m_targetHostRef;
+        VmMapping mapping = this->m_vmMappings.value(vmItem->OpaqueRef());
+        mapping.targetRef = this->m_targetHostRef;
 
-        XenCache* sourceCache = m_sourceConnection ? m_sourceConnection->GetCache() : nullptr;
-        bool sameConnection = (m_sourceConnection == m_targetConnection);
+        XenCache* sourceCache = this->m_sourceConnection ? this->m_sourceConnection->GetCache() : nullptr;
+        bool sameConnection = (this->m_sourceConnection == this->m_targetConnection);
         bool hasStorageMotion = isStorageMotion(vmItem, mapping, sourceCache);
 
-        if (m_mode == WizardMode::Move && sameConnection && vmItem->CanBeMoved())
+        if (this->m_mode == WizardMode::Move && sameConnection && vmItem->CanBeMoved())
         {
             if (hasStorageMotion && sourceCache)
             {
@@ -797,10 +850,10 @@ void CrossPoolMigrateWizard::accept()
                         storageMap.insert(vdiRef, srObj.data());
                 }
 
-                QSharedPointer<Host> hostObj = sourceCache->ResolveObject<Host>("host", m_targetHostRef);
+                QSharedPointer<Host> hostObj = sourceCache->ResolveObject<Host>("host", this->m_targetHostRef);
                 Host* hostPtr = hostObj && hostObj->IsValid() ? hostObj.data() : nullptr;
 
-                VMMoveAction* action = new VMMoveAction(m_sourceConnection,
+                VMMoveAction* action = new VMMoveAction(this->m_sourceConnection,
                                                         vmItem.data(),
                                                         storageMap,
                                                         hostPtr,
@@ -811,17 +864,17 @@ void CrossPoolMigrateWizard::accept()
         }
         else
         {
-            bool useCrossPool = (m_mode == WizardMode::Copy) || hasStorageMotion || !sameConnection;
+            bool useCrossPool = (this->m_mode == WizardMode::Copy) || hasStorageMotion || !sameConnection;
             if (useCrossPool)
             {
                 VMCrossPoolMigrateAction* action = new VMCrossPoolMigrateAction(
-                    m_sourceConnection,
-                    m_targetConnection,
+                    this->m_sourceConnection,
+                    this->m_targetConnection,
                     vmItem->OpaqueRef(),
-                    m_targetHostRef,
-                    m_transferNetworkRef,
+                    this->m_targetHostRef,
+                    this->m_transferNetworkRef,
                     mapping,
-                    m_mode == WizardMode::Copy,
+                    this->m_mode == WizardMode::Copy,
                     this);
 
                 OperationManager::instance()->registerOperation(action);
@@ -829,9 +882,9 @@ void CrossPoolMigrateWizard::accept()
             }
             else
             {
-                VMMigrateAction* action = new VMMigrateAction(m_sourceConnection,
+                VMMigrateAction* action = new VMMigrateAction(this->m_sourceConnection,
                                                              vmItem->OpaqueRef(),
-                                                             m_targetHostRef,
+                                                             this->m_targetHostRef,
                                                              this);
                 OperationManager::instance()->registerOperation(action);
                 action->runAsync();
@@ -844,10 +897,10 @@ void CrossPoolMigrateWizard::accept()
 
 void CrossPoolMigrateWizard::populateDestinationHosts()
 {
-    if (!m_hostCombo)
+    if (!this->m_hostCombo)
         return;
 
-    m_hostCombo->clear();
+    this->m_hostCombo->clear();
 
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     if (!connMgr)
@@ -871,12 +924,12 @@ void CrossPoolMigrateWizard::populateDestinationHosts()
             QString failureReason;
             bool eligible = true;
 
-            for (const QSharedPointer<VM>& vmItem : m_vms)
+            for (const QSharedPointer<VM>& vmItem : this->m_vms)
             {
                 if (!vmItem)
                     continue;
 
-                if (!canMigrateVmToHost(vmItem, conn, hostRef, &failureReason))
+                if (!this->canMigrateVmToHost(vmItem, conn, hostRef, &failureReason))
                 {
                     eligible = false;
                     break;
@@ -884,11 +937,11 @@ void CrossPoolMigrateWizard::populateDestinationHosts()
             }
 
             QString label = eligible ? hostName : QString("%1 (%2)").arg(hostName, failureReason);
-            m_hostCombo->addItem(label, hostRef);
-            int index = m_hostCombo->count() - 1;
+            this->m_hostCombo->addItem(label, hostRef);
+            int index = this->m_hostCombo->count() - 1;
             if (!eligible)
             {
-                auto* model = qobject_cast<QStandardItemModel*>(m_hostCombo->model());
+                auto* model = qobject_cast<QStandardItemModel*>(this->m_hostCombo->model());
                 if (model)
                 {
                     QStandardItem* item = model->item(index);
@@ -899,7 +952,7 @@ void CrossPoolMigrateWizard::populateDestinationHosts()
         }
     }
 
-    connect(m_hostCombo, &QComboBox::currentIndexChanged, this, [this](int) {
+    connect(this->m_hostCombo, &QComboBox::currentIndexChanged, this, [this](int) {
         this->m_targetHostRef = this->m_hostCombo->currentData().toString();
         this->m_targetConnection = this->resolveTargetConnection(this->m_targetHostRef);
         this->updateRbacRequirement();
@@ -909,10 +962,10 @@ void CrossPoolMigrateWizard::populateDestinationHosts()
             it.value().targetName = targetName;
     }, Qt::UniqueConnection);
 
-    if (m_hostCombo->count() > 0)
+    if (this->m_hostCombo->count() > 0)
     {
         int firstEnabled = 0;
-        auto* model = qobject_cast<QStandardItemModel*>(m_hostCombo->model());
+        auto* model = qobject_cast<QStandardItemModel*>(this->m_hostCombo->model());
         if (model)
         {
             for (int i = 0; i < model->rowCount(); ++i)
@@ -926,26 +979,26 @@ void CrossPoolMigrateWizard::populateDestinationHosts()
             }
         }
 
-        m_hostCombo->setCurrentIndex(firstEnabled);
-        m_targetHostRef = m_hostCombo->currentData().toString();
-        m_targetConnection = resolveTargetConnection(m_targetHostRef);
-        updateRbacRequirement();
+        this->m_hostCombo->setCurrentIndex(firstEnabled);
+        this->m_targetHostRef = this->m_hostCombo->currentData().toString();
+        this->m_targetConnection = this->resolveTargetConnection(this->m_targetHostRef);
+        this->updateRbacRequirement();
 
-        QString targetName = m_hostCombo->currentText();
-        for (auto it = m_vmMappings.begin(); it != m_vmMappings.end(); ++it)
+        QString targetName = this->m_hostCombo->currentText();
+        for (auto it = this->m_vmMappings.begin(); it != this->m_vmMappings.end(); ++it)
             it.value().targetName = targetName;
     }
-}
+} 
 
 void CrossPoolMigrateWizard::populateStorageMappings()
 {
-    if (!m_storageTable || m_vms.isEmpty() || !m_sourceConnection)
+    if (!this->m_storageTable || this->m_vms.isEmpty() || !this->m_sourceConnection)
         return;
 
-    m_storageTable->setRowCount(0);
+    this->m_storageTable->setRowCount(0);
 
-    XenCache* sourceCache = m_sourceConnection->GetCache();
-    XenCache* targetCache = m_targetConnection ? m_targetConnection->GetCache() : nullptr;
+    XenCache* sourceCache = this->m_sourceConnection->GetCache();
+    XenCache* targetCache = this->m_targetConnection ? this->m_targetConnection->GetCache() : nullptr;
     if (!sourceCache || !targetCache)
         return;
 
@@ -956,7 +1009,7 @@ void CrossPoolMigrateWizard::populateStorageMappings()
         defaultSrRef = pools.first().value("default_SR").toString();
 
     int row = 0;
-    for (const QSharedPointer<VM>& vmItem : m_vms)
+    for (const QSharedPointer<VM>& vmItem : this->m_vms)
     {
         if (!vmItem)
             continue;
@@ -975,17 +1028,17 @@ void CrossPoolMigrateWizard::populateStorageMappings()
             if (vdiType == "iso")
                 continue;
 
-            m_storageTable->insertRow(row);
+            this->m_storageTable->insertRow(row);
 
             QTableWidgetItem* vmNameItem = new QTableWidgetItem(vmItem->GetName());
             vmNameItem->setData(Qt::UserRole, vmItem->OpaqueRef());
-            m_storageTable->setItem(row, 0, vmNameItem);
+            this->m_storageTable->setItem(row, 0, vmNameItem);
 
             QTableWidgetItem* vdiItem = new QTableWidgetItem(vdiName);
             vdiItem->setData(Qt::UserRole, vdiRef);
-            m_storageTable->setItem(row, 1, vdiItem);
+            this->m_storageTable->setItem(row, 1, vdiItem);
 
-            QComboBox* srCombo = new QComboBox(m_storageTable);
+            QComboBox* srCombo = new QComboBox(this->m_storageTable);
             for (const QString& srRef : srRefs)
             {
                 QVariantMap srData = targetCache->ResolveObjectData("sr", srRef);
@@ -1000,35 +1053,35 @@ void CrossPoolMigrateWizard::populateStorageMappings()
                     srCombo->setCurrentIndex(idx);
             }
 
-            m_storageTable->setCellWidget(row, 2, srCombo);
+            this->m_storageTable->setCellWidget(row, 2, srCombo);
             row++;
         }
     }
 
-    m_storageTable->resizeRowsToContents();
-}
+    this->m_storageTable->resizeRowsToContents();
+} 
 
 void CrossPoolMigrateWizard::populateNetworkMappings()
 {
-    if (!m_networkTable || m_vms.isEmpty() || !m_sourceConnection)
+    if (!this->m_networkTable || this->m_vms.isEmpty() || !this->m_sourceConnection)
         return;
 
-    m_networkTable->setRowCount(0);
+    this->m_networkTable->setRowCount(0);
 
-    XenCache* sourceCache = m_sourceConnection->GetCache();
-    XenCache* targetCache = m_targetConnection ? m_targetConnection->GetCache() : nullptr;
+    XenCache* sourceCache = this->m_sourceConnection->GetCache();
+    XenCache* targetCache = this->m_targetConnection ? this->m_targetConnection->GetCache() : nullptr;
     if (!sourceCache || !targetCache)
         return;
 
     QStringList networkRefs = targetCache->GetAllRefs("network");
     int row = 0;
-    for (const QSharedPointer<VM>& vmItem : m_vms)
+    for (const QSharedPointer<VM>& vmItem : this->m_vms)
     {
         if (!vmItem)
             continue;
 
         QStringList vifRefs = vmItem->VIFRefs();
-        QStringList snapVifRefs = collectSnapshotVifRefs(vmItem);
+        QStringList snapVifRefs = this->collectSnapshotVifRefs(vmItem);
         for (const QString& vifRef : vifRefs + snapVifRefs)
         {
             bool isSnapshotVif = !vifRefs.contains(vifRef);
@@ -1037,16 +1090,16 @@ void CrossPoolMigrateWizard::populateNetworkMappings()
             if (isSnapshotVif)
                 mac = QString("%1 (%2)").arg(mac, tr("snapshot"));
 
-            m_networkTable->insertRow(row);
+            this->m_networkTable->insertRow(row);
             QTableWidgetItem* vmNameItem = new QTableWidgetItem(vmItem->GetName());
             vmNameItem->setData(Qt::UserRole, vmItem->OpaqueRef());
-            m_networkTable->setItem(row, 0, vmNameItem);
+            this->m_networkTable->setItem(row, 0, vmNameItem);
 
             QTableWidgetItem* vifItem = new QTableWidgetItem(mac);
             vifItem->setData(Qt::UserRole, vifRef);
-            m_networkTable->setItem(row, 1, vifItem);
+            this->m_networkTable->setItem(row, 1, vifItem);
 
-            QComboBox* netCombo = new QComboBox(m_networkTable);
+            QComboBox* netCombo = new QComboBox(this->m_networkTable);
             for (const QString& netRef : networkRefs)
             {
                 QVariantMap netData = targetCache->ResolveObjectData("network", netRef);
@@ -1054,22 +1107,22 @@ void CrossPoolMigrateWizard::populateNetworkMappings()
                 netCombo->addItem(netName, netRef);
             }
 
-            m_networkTable->setCellWidget(row, 2, netCombo);
+            this->m_networkTable->setCellWidget(row, 2, netCombo);
             row++;
         }
     }
 
-    m_networkTable->resizeRowsToContents();
-}
+    this->m_networkTable->resizeRowsToContents();
+} 
 
 void CrossPoolMigrateWizard::populateTransferNetworks()
 {
-    if (!m_transferNetworkCombo || !m_targetConnection)
+    if (!this->m_transferNetworkCombo || !this->m_targetConnection)
         return;
 
-    m_transferNetworkCombo->clear();
+    this->m_transferNetworkCombo->clear();
 
-    XenCache* targetCache = m_targetConnection->GetCache();
+    XenCache* targetCache = this->m_targetConnection->GetCache();
     if (!targetCache)
         return;
 
@@ -1078,87 +1131,87 @@ void CrossPoolMigrateWizard::populateTransferNetworks()
     {
         QVariantMap netData = targetCache->ResolveObjectData("network", netRef);
         QString netName = netData.value("name_label", "Network").toString();
-        m_transferNetworkCombo->addItem(netName, netRef);
+        this->m_transferNetworkCombo->addItem(netName, netRef);
     }
 
-    if (m_transferNetworkCombo->count() > 0)
-        m_transferNetworkCombo->setCurrentIndex(0);
-}
+    if (this->m_transferNetworkCombo->count() > 0)
+        this->m_transferNetworkCombo->setCurrentIndex(0);
+} 
 
 void CrossPoolMigrateWizard::updateSummary()
 {
-    if (!m_summaryText)
+    if (!this->m_summaryText)
         return;
 
     QString summary;
-    if (!m_vms.isEmpty())
+    if (!this->m_vms.isEmpty())
     {
         summary += tr("VMs:\n");
-        for (const QSharedPointer<VM>& vmItem : m_vms)
+        for (const QSharedPointer<VM>& vmItem : this->m_vms)
         {
             if (vmItem)
                 summary += QString("  %1\n").arg(vmItem->GetName());
         }
         summary += "\n";
     }
-    summary += tr("Target host: %1\n").arg(m_hostCombo ? m_hostCombo->currentText() : tr("Unknown"));
-    if (requiresTransferNetwork())
-        summary += tr("Transfer network: %1\n").arg(m_transferNetworkCombo ? m_transferNetworkCombo->currentText() : tr("Unknown"));
+    summary += tr("Target host: %1\n").arg(this->m_hostCombo ? this->m_hostCombo->currentText() : tr("Unknown"));
+    if (this->requiresTransferNetwork())
+        summary += tr("Transfer network: %1\n").arg(this->m_transferNetworkCombo ? this->m_transferNetworkCombo->currentText() : tr("Unknown"));
     summary += "\n";
 
-    if (m_storageTable)
+    if (this->m_storageTable)
     {
         summary += tr("Storage mappings:\n");
-        for (int row = 0; row < m_storageTable->rowCount(); ++row)
+        for (int row = 0; row < this->m_storageTable->rowCount(); ++row)
         {
-            QString vmName = m_storageTable->item(row, 0)->text();
-            QString vdiName = m_storageTable->item(row, 1)->text();
-            QComboBox* combo = qobject_cast<QComboBox*>(m_storageTable->cellWidget(row, 2));
+            QString vmName = this->m_storageTable->item(row, 0)->text();
+            QString vdiName = this->m_storageTable->item(row, 1)->text();
+            QComboBox* combo = qobject_cast<QComboBox*>(this->m_storageTable->cellWidget(row, 2));
             QString srName = combo ? combo->currentText() : tr("Unknown");
             summary += QString("  %1: %2 -> %3\n").arg(vmName, vdiName, srName);
         }
         summary += "\n";
     }
 
-    if (m_networkTable)
+    if (this->m_networkTable)
     {
         summary += tr("Network mappings:\n");
-        for (int row = 0; row < m_networkTable->rowCount(); ++row)
+        for (int row = 0; row < this->m_networkTable->rowCount(); ++row)
         {
-            QString vmName = m_networkTable->item(row, 0)->text();
-            QString vifName = m_networkTable->item(row, 1)->text();
-            QComboBox* combo = qobject_cast<QComboBox*>(m_networkTable->cellWidget(row, 2));
+            QString vmName = this->m_networkTable->item(row, 0)->text();
+            QString vifName = this->m_networkTable->item(row, 1)->text();
+            QComboBox* combo = qobject_cast<QComboBox*>(this->m_networkTable->cellWidget(row, 2));
             QString netName = combo ? combo->currentText() : tr("Unknown");
             summary += QString("  %1: %2 -> %3\n").arg(vmName, vifName, netName);
         }
     }
 
-    m_summaryText->setPlainText(summary);
-}
+    this->m_summaryText->setPlainText(summary);
+} 
 
 void CrossPoolMigrateWizard::updateRbacRequirement()
 {
-    if (!m_sourceConnection || !m_targetConnection)
+    if (!this->m_sourceConnection || !this->m_targetConnection)
     {
-        m_requiresRbacWarning = false;
+        this->m_requiresRbacWarning = false;
         return;
     }
 
-    m_requiresRbacWarning = (m_sourceConnection != m_targetConnection);
+    this->m_requiresRbacWarning = (this->m_sourceConnection != this->m_targetConnection);
 }
 
 bool CrossPoolMigrateWizard::requiresRbacWarning() const
 {
-    return m_requiresRbacWarning;
+    return this->m_requiresRbacWarning;
 }
 
 bool CrossPoolMigrateWizard::isIntraPoolMigration() const
 {
-    if (!m_sourceConnection || !m_targetConnection)
+    if (!this->m_sourceConnection || !this->m_targetConnection)
         return false;
 
-    XenCache* sourceCache = m_sourceConnection->GetCache();
-    XenCache* targetCache = m_targetConnection->GetCache();
+    XenCache* sourceCache = this->m_sourceConnection->GetCache();
+    XenCache* targetCache = this->m_targetConnection->GetCache();
     if (!sourceCache || !targetCache)
         return false;
 
@@ -1172,58 +1225,58 @@ bool CrossPoolMigrateWizard::isIntraPoolMigration() const
 
 bool CrossPoolMigrateWizard::isIntraPoolMove() const
 {
-    if (m_mode != WizardMode::Move)
+    if (this->m_mode != WizardMode::Move)
         return false;
-    if (!isIntraPoolMigration())
+    if (!this->isIntraPoolMigration())
         return false;
 
-    for (const QSharedPointer<VM>& vmItem : m_vms)
+    for (const QSharedPointer<VM>& vmItem : this->m_vms)
     {
         if (!vmItem || !vmItem->CanBeMoved())
             return false;
     }
 
     return true;
-}
+} 
 
 bool CrossPoolMigrateWizard::shouldShowNetworkPage() const
 {
-    return !isIntraPoolMigration();
+    return !this->isIntraPoolMigration();
 }
 
 bool CrossPoolMigrateWizard::shouldShowTransferNetworkPage() const
 {
-    return !isIntraPoolMove();
+    return !this->isIntraPoolMove();
 }
 
 bool CrossPoolMigrateWizard::requiresTransferNetwork() const
 {
-    return shouldShowTransferNetworkPage();
+    return this->shouldShowTransferNetworkPage();
 }
 
 bool CrossPoolMigrateWizard::isIntraPoolCopySelected() const
 {
-    return m_mode == WizardMode::Copy && m_intraPoolCopySelected;
+    return this->m_mode == WizardMode::Copy && this->m_intraPoolCopySelected;
 }
 
 bool CrossPoolMigrateWizard::isCopyCloneSelected() const
 {
-    return m_copyCloneRadio && m_copyCloneRadio->isChecked();
+    return this->m_copyCloneRadio && this->m_copyCloneRadio->isChecked();
 }
 
 QString CrossPoolMigrateWizard::copyName() const
 {
-    return m_copyNameEdit ? m_copyNameEdit->text().trimmed() : QString();
+    return this->m_copyNameEdit ? this->m_copyNameEdit->text().trimmed() : QString();
 }
 
 QString CrossPoolMigrateWizard::copyDescription() const
 {
-    return m_copyDescriptionEdit ? m_copyDescriptionEdit->toPlainText().trimmed() : QString();
+    return this->m_copyDescriptionEdit ? this->m_copyDescriptionEdit->toPlainText().trimmed() : QString();
 }
 
 QString CrossPoolMigrateWizard::copyTargetSrRef() const
 {
-    return m_copySrCombo ? m_copySrCombo->currentData().toString() : QString();
+    return this->m_copySrPicker ? this->m_copySrPicker->selectedSR() : QString();
 }
 
 void CrossPoolMigrateWizard::ensureMappingForVm(const QSharedPointer<VM>& vm)
@@ -1231,12 +1284,12 @@ void CrossPoolMigrateWizard::ensureMappingForVm(const QSharedPointer<VM>& vm)
     if (!vm)
         return;
 
-    if (m_vmMappings.contains(vm->OpaqueRef()))
+    if (this->m_vmMappings.contains(vm->OpaqueRef()))
         return;
 
     VmMapping mapping(vm->OpaqueRef());
     mapping.vmNameLabel = vm->GetName();
-    m_vmMappings.insert(vm->OpaqueRef(), mapping);
+    this->m_vmMappings.insert(vm->OpaqueRef(), mapping);
 }
 
 bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm,
@@ -1252,7 +1305,7 @@ bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm,
     if (!sourceCache || !targetCache)
         return false;
 
-    if (m_mode == WizardMode::Move)
+    if (this->m_mode == WizardMode::Move)
     {
         QString sourcePoolRef = poolRefForConnection(sourceCache);
         QString targetPoolRef = poolRefForConnection(targetCache);
@@ -1308,11 +1361,11 @@ bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm,
         }
     }
 
-    if (canDoStorageMigration(vm, targetConnection, hostRef, reason))
+    if (this->canDoStorageMigration(vm, targetConnection, hostRef, reason))
         return true;
 
     // Allow intra-pool live migration when pool_migrate is available
-    if (m_mode == WizardMode::Migrate && vm->GetConnection() == targetConnection)
+    if (this->m_mode == WizardMode::Migrate && vm->GetConnection() == targetConnection)
     {
         QString ignored;
         if (VMOperationHelpers::VmCanBootOnHost(vm->GetConnection(), vm, hostRef, "pool_migrate", &ignored))

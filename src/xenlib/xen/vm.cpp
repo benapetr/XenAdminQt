@@ -544,6 +544,93 @@ bool VM::CanBeMoved() const
     return hasOwner;
 }
 
+bool VM::AnyDiskFastClonable() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return false;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return false;
+
+    QList<QVariantMap> smRecords = cache->GetAllData("sm");
+    if (smRecords.isEmpty())
+        return false;
+
+    QStringList vbdRefs = this->VBDRefs();
+    for (const QString& vbdRef : vbdRefs)
+    {
+        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+        if (!vbd || !vbd->IsValid())
+            continue;
+
+        QString vbdType = vbd->GetType();
+        if (vbdType.compare("Disk", Qt::CaseInsensitive) != 0)
+            continue;
+
+        QString vdiRef = vbd->VDIRef();
+        if (vdiRef.isEmpty())
+            continue;
+
+        QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>("vdi", vdiRef);
+        if (!vdi || !vdi->IsValid())
+            continue;
+
+        QString srRef = vdi->SRRef();
+        if (srRef.isEmpty())
+            continue;
+
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", srRef);
+        if (!sr || !sr->IsValid())
+            continue;
+
+        QString srType = sr->GetType();
+        if (srType.isEmpty())
+            continue;
+
+        for (const QVariantMap& smData : smRecords)
+        {
+            QString smType = smData.value("type").toString();
+            if (smType != srType)
+                continue;
+
+            QVariantList caps = smData.value("capabilities").toList();
+            for (const QVariant& cap : caps)
+            {
+                if (cap.toString() == "VDI_CLONE")
+                    return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool VM::HasAtLeastOneDisk() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return false;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return false;
+
+    QStringList vbdRefs = this->VBDRefs();
+    for (const QString& vbdRef : vbdRefs)
+    {
+        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+        if (!vbd || !vbd->IsValid())
+            continue;
+
+        if (vbd->GetType().compare("Disk", Qt::CaseInsensitive) == 0)
+            return true;
+    }
+
+    return false;
+}
+
 QString VM::HomeRef() const
 {
     // Return affinity host if set, otherwise resident host
