@@ -63,58 +63,17 @@ class XENLIB_EXPORT XenLib : public QObject
         bool isConnected() const;
 
         void setConnection(XenConnection* connection);
-        XenCertificateManager* getCertificateManager() const;
         // Cache is per-connection; each XenConnection owns its own XenCache instance.
         XenCache* GetCache() const;
 
         // Get full object data by type and reference
         QVariantMap getCachedObjectData(const QString& objectType, const QString& objectRef);
 
-        // Deprecated
-        void requestNetworks();
-        void requestPIFs();
-
-        // VM management operations
-        bool updateVM(const QString& vmRef, const QVariantMap& updates);
-
-        QString getGuestMetricsRef(const QString& vmRef);
         bool isControlDomainZero(const QString& vmRef, QString* outHostRef = nullptr);
         bool srHasDriverDomain(const QString& srRef, QString* outVMRef = nullptr);
 
         // VM migration operations
         bool canMigrateVM(const QString& vmRef, const QString& hostRef);
-
-        // Host management operations
-        bool setHostName(const QString& hostRef, const QString& name);
-        bool setHostDescription(const QString& hostRef, const QString& description);
-        bool setHostTags(const QString& hostRef, const QStringList& tags);
-        bool setHostOtherConfig(const QString& hostRef, const QString& key, const QString& value);
-        bool setHostIqn(const QString& hostRef, const QString& iqn);
-
-        // Generic object property setters (dispatches to specific type methods)
-        bool setObjectName(const QString& objectType, const QString& objectRef, const QString& name);
-        bool setObjectDescription(const QString& objectType, const QString& objectRef, const QString& description);
-        bool setObjectTags(const QString& objectType, const QString& objectRef, const QStringList& tags);
-        bool setObjectProperties(const QString& objectType, const QString& objectRef, const QVariantMap& properties);
-
-        // Pool management operations
-        bool setPoolName(const QString& poolRef, const QString& name);
-        bool setPoolDescription(const QString& poolRef, const QString& description);
-        bool setPoolTags(const QString& poolRef, const QStringList& tags);
-        bool setPoolMigrationCompression(const QString& poolRef, bool enabled);
-
-        // SR (Storage Repository) operations
-        bool setSRName(const QString& srRef, const QString& name);
-        bool setSRDescription(const QString& srRef, const QString& description);
-        bool setSRTags(const QString& srRef, const QStringList& tags);
-
-        // Network operations
-        bool destroyNetwork(const QString& networkRef);
-        bool setNetworkName(const QString& networkRef, const QString& name);
-        bool setNetworkDescription(const QString& networkRef, const QString& description);
-        bool setNetworkTags(const QString& networkRef, const QStringList& tags);
-        bool setNetworkMTU(const QString& networkRef, int mtu);
-        bool setNetworkOtherConfig(const QString& networkRef, const QVariantMap& otherConfig);
 
         // Status and information
         QString getConnectionInfo() const;
@@ -147,9 +106,6 @@ class XENLIB_EXPORT XenLib : public QObject
         void messageReceived(const QString& messageRef, const QVariantMap& messageData);
         void messageRemoved(const QString& messageRef);
 
-        // Cache population complete (emitted after EventPoller's initial cache load)
-        void cachePopulated();
-
     private slots:
         void handleConnectionStateChanged(bool connected);
         void handleConnectionError(const QString& error);
@@ -168,8 +124,6 @@ class XENLIB_EXPORT XenLib : public QObject
         void onHostsReceivedForPoolMembers(const QVariantList& hosts);
         void onPoolsReceivedForHATracking(const QVariantList& pools);
 
-        // EventPoller handlers
-        void onCachePopulated();
         void onEventPollerConnectionLost();
 
     private:
@@ -179,8 +133,6 @@ class XENLIB_EXPORT XenLib : public QObject
         void setupConnections();
         void clearError();
         void setError(const QString& error);
-        QString populateCache(); // Returns the event token from initial event.from
-        bool fetchAllRecordsForType(const QString& normalizedType, QVariantMap* outRecords);
 };
 
 #endif // XENLIB_H

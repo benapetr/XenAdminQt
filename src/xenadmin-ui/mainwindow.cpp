@@ -428,7 +428,6 @@ void MainWindow::connectToServer()
         return;
 
     XenConnection* connection = new XenConnection(nullptr);
-    connection->setCertificateManager(this->m_xenLib->getCertificateManager());
     connMgr->addConnection(connection);
 
     connection->SetHostname(hostname);
@@ -1761,7 +1760,6 @@ void MainWindow::restoreConnections()
         qDebug() << "XenAdmin Qt: Restoring connection to" << profile.displayName();
 
         XenConnection* connection = new XenConnection(nullptr);
-        connection->setCertificateManager(this->m_xenLib->getCertificateManager());
         connection->SetHostname(profile.hostname());
         connection->SetPort(profile.port());
         connection->SetUsername(profile.username());

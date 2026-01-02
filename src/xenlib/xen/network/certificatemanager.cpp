@@ -31,6 +31,10 @@
 #include <QtCore/QDir>
 #include <QtCore/QCryptographicHash>
 #include <QtNetwork/QSslSocket>
+#include <QtCore/QThread>
+#include <QtCore/QMutexLocker>
+
+XenCertificateManager *XenCertificateManager::s_instance = nullptr;
 
 class XenCertificateManager::Private
 {
@@ -41,6 +45,17 @@ class XenCertificateManager::Private
         bool allowExpired = false;
         QString certificateStorePath;
 };
+
+XenCertificateManager *XenCertificateManager::instance()
+{
+    static QMutex instanceMutex;
+    QMutexLocker locker(&instanceMutex);
+
+    if (!XenCertificateManager::s_instance)
+        XenCertificateManager::s_instance = new XenCertificateManager();
+
+    return XenCertificateManager::s_instance;
+}
 
 XenCertificateManager::XenCertificateManager(QObject* parent) : QObject(parent), d(new Private)
 {

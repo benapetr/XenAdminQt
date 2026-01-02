@@ -28,8 +28,34 @@
 #include "sr.h"
 #include "network/connection.h"
 #include "host.h"
-#include "../xenlib.h"
 #include "../xencache.h"
+
+namespace
+{
+    bool IsControlDomainZero(XenCache* cache, const QVariantMap& vmData, const QString& vmRef)
+    {
+        if (!cache || vmData.isEmpty())
+            return false;
+
+        if (!vmData.value("is_control_domain").toBool())
+            return false;
+
+        QString hostRef = vmData.value("resident_on").toString();
+        if (hostRef.isEmpty() || hostRef == "OpaqueRef:NULL")
+            return false;
+
+        QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
+        if (hostData.isEmpty())
+            return false;
+
+        QString hostControlDomain = hostData.value("control_domain").toString();
+        if (!hostControlDomain.isEmpty() && hostControlDomain != "OpaqueRef:NULL")
+            return hostControlDomain == vmRef;
+
+        qint64 domid = vmData.value("domid").toLongLong();
+        return domid == 0;
+    }
+}
 
 SR::SR(XenConnection* connection, const QString& opaqueRef, QObject* parent)
     : XenObject(connection, opaqueRef, parent)
@@ -186,4 +212,41 @@ Host* SR::GetFirstAttachedStorageHost() const
     }
 
     return nullptr;
+}
+
+bool SR::HasDriverDomain(QString* outVMRef) const
+{
+    XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
+    QString srRef = this->OpaqueRef();
+    if (srRef.isEmpty() || srRef == "OpaqueRef:NULL")
+        return false;
+
+    QStringList pbdRefs = this->PBDRefs();
+    for (const QString& pbdRef : pbdRefs)
+    {
+        if (pbdRef.isEmpty() || pbdRef == "OpaqueRef:NULL")
+            continue;
+
+        QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
+        if (pbdData.isEmpty())
+            continue;
+
+        QVariantMap otherConfig = pbdData.value("other_config").toMap();
+        QString vmRef = otherConfig.value("storage_driver_domain").toString();
+        if (vmRef.isEmpty() || vmRef == "OpaqueRef:NULL")
+            continue;
+
+        QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
+        if (!vmData.isEmpty() && !IsControlDomainZero(cache, vmData, vmRef))
+        {
+            if (outVMRef)
+                *outVMRef = vmRef;
+            return true;
+        }
+    }
+
+    return false;
 }

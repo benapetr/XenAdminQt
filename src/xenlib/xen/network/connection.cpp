@@ -79,7 +79,6 @@ class XenConnection::Private
         QString sessionId;
 
         Xen::ConnectionWorker* worker = nullptr;
-        XenCertificateManager* certManager = nullptr;
 
         // Session association
         Session* session = nullptr;
@@ -162,7 +161,7 @@ bool XenConnection::ConnectToHost(const QString& host, int port, const QString& 
     this->d->password = password;
 
     // Create worker thread with our certificate manager (no credentials - login happens separately)
-    this->d->worker = new Xen::ConnectionWorker(host, port, this->d->certManager, this);
+    this->d->worker = new Xen::ConnectionWorker(host, port, this);
 
     // Connect worker signals
     connect(this->d->worker, &Xen::ConnectionWorker::connectionProgress, this, &XenConnection::onWorkerProgress);
@@ -271,7 +270,6 @@ Session* XenConnection::GetNewSession(const QString& hostname,
     for (int attempt = 0; attempt < kMaxAttempts; ++attempt)
     {
         XenConnection* newConn = new XenConnection(this);
-        newConn->setCertificateManager(this->d->certManager);
 
         if (!newConn->ConnectToHost(hostname, port, currentUsername, currentPassword))
         {
@@ -1201,11 +1199,6 @@ int XenConnection::SendRequestAsync(const QByteArray& data)
 
     // Response will be delivered via apiResponse signal
     return requestId;
-}
-
-void XenConnection::setCertificateManager(XenCertificateManager* certManager)
-{
-    this->d->certManager = certManager;
 }
 
 // Worker signal handlers

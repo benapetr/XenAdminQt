@@ -88,7 +88,6 @@ namespace Xen
          * @param parent Parent QObject
          */
         explicit ConnectionWorker(const QString& hostname, int port,
-                                  XenCertificateManager* certManager = nullptr,
                                   QObject* parent = nullptr);
 
         ~ConnectionWorker() override;

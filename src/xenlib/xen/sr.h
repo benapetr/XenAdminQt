@@ -57,9 +57,7 @@ class XENLIB_EXPORT SR : public XenObject
     Q_PROPERTY(qint64 physicalUtilisation READ PhysicalUtilisation NOTIFY dataChanged)
 
     public:
-        explicit SR(XenConnection* connection,
-                    const QString& opaqueRef,
-                    QObject* parent = nullptr);
+        explicit SR(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~SR() override = default;
 
         /**
@@ -221,6 +219,19 @@ class XENLIB_EXPORT SR : public XenObject
          * @return Pointer to first attached Host, or nullptr if none
          */
         class Host* GetFirstAttachedStorageHost() const;
+
+        /**
+         * @brief Check if SR has a driver domain VM
+         *
+         * Checks PBDs for a "storage_driver_domain" entry in other_config and
+         * verifies the VM exists and is not dom0.
+         *
+         * C# reference: XenModel/XenAPI-Extensions/SR.cs HasDriverDomain
+         *
+         * @param outVMRef Optional output for driver domain VM reference
+         * @return true if a driver domain VM exists for this SR
+         */
+        bool HasDriverDomain(QString* outVMRef = nullptr) const;
 
     protected:
         QString GetObjectType() const override;

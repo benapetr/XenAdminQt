@@ -34,18 +34,10 @@
 
 namespace Xen
 {
-    ConnectionWorker::ConnectionWorker(const QString& hostname, int port, XenCertificateManager* certManager, QObject* parent)
-        : QThread(parent), m_hostname(hostname), m_port(port), m_socket(nullptr), m_certManager(certManager), m_stopped(0), m_nextRequestId(1)
+    ConnectionWorker::ConnectionWorker(const QString& hostname, int port, QObject* parent)
+        : QThread(parent), m_hostname(hostname), m_port(port), m_socket(nullptr), m_stopped(0), m_nextRequestId(1)
     {
-        // If no certificate manager provided, create our own
-        if (!this->m_certManager)
-        {
-            this->m_certManager = new XenCertificateManager(this);
-            // qDebug() << "ConnectionWorker: Created default certificate manager";
-        } else
-        {
-            // qDebug() << "ConnectionWorker: Using provided certificate manager";
-        }
+        this->m_certManager = XenCertificateManager::instance();
     }
 
     ConnectionWorker::~ConnectionWorker()

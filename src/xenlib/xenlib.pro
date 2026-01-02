@@ -56,6 +56,13 @@ SOURCES += \
     xen/sr.cpp \
     xen/vdi.cpp \
     xen/vbd.cpp \
+    xen/pbd.cpp \
+    xen/pif.cpp \
+    xen/vusb.cpp \
+    xen/vtpm.cpp \
+    xen/vmss.cpp \
+    xen/vmpp.cpp \
+    xen/vgpu.cpp \
     xen/network.cpp \
     xen/xenapi/xenapi_VM.cpp \
     xen/xenapi/xenapi_SR.cpp \
@@ -207,6 +214,13 @@ HEADERS += \
     xen/sr.h \
     xen/vdi.h \
     xen/vbd.h \
+    xen/pbd.h \
+    xen/pif.h \
+    xen/vusb.h \
+    xen/vtpm.h \
+    xen/vmss.h \
+    xen/vmpp.h \
+    xen/vgpu.h \
     xen/network.h \
     xen/xenapi/xenapi_VM.h \
     xen/xenapi/xenapi_SR.h \

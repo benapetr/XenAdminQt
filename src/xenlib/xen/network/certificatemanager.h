@@ -38,6 +38,8 @@ class XENLIB_EXPORT XenCertificateManager : public QObject
 {
     Q_OBJECT
     public:
+        static XenCertificateManager* instance();
+
         explicit XenCertificateManager(QObject* parent = nullptr);
         ~XenCertificateManager();
 
@@ -74,6 +76,8 @@ class XENLIB_EXPORT XenCertificateManager : public QObject
         void certificateExpiringSoon(const QString& hostname, const QDateTime& expiry);
 
     private:
+        static XenCertificateManager* s_instance;
+
         class Private;
         Private* d;
 

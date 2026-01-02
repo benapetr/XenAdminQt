@@ -164,9 +164,6 @@ class XENLIB_EXPORT XenConnection : public QObject
         qint64 GetServerTimeOffsetSeconds() const;
         void SetServerTimeOffsetSeconds(qint64 offsetSeconds);
 
-        // Certificate management
-        void setCertificateManager(XenCertificateManager* certManager);
-
         // Cache access (each connection owns its own cache, matching C# architecture)
         class XenCache* GetCache() const;
         MetricUpdater* GetMetricUpdater() const;
