@@ -25,43 +25,32 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VMMIGRATEACTION_H
-#define VMMIGRATEACTION_H
+#ifndef CROSSPOOLMIGRATECOMMAND_H
+#define CROSSPOOLMIGRATECOMMAND_H
 
-#include "../../asyncoperation.h"
-#include <QString>
+#include "vmcommand.h"
+#include "../../dialogs/crosspoolmigratewizard.h"
 
 /**
- * @brief Action to migrate a VM to another host in the same pool
+ * @brief Cross-pool migrate command
  *
- * Performs live migration of a running or suspended VM to a different
- * host within the same resource pool using VM.async_pool_migrate.
- *
- * Equivalent to C# XenAdmin VMMigrateAction.
+ * Qt equivalent of XenAdmin CrossPoolMigrateCommand.
  */
-class VMMigrateAction : public AsyncOperation
+class CrossPoolMigrateCommand : public VMCommand
 {
     Q_OBJECT
 
     public:
-        /**
-         * @brief Construct VM migration action
-         * @param connection XenServer connection
-         * @param vmRef VM opaque reference
-         * @param destinationHostRef Destination host opaque reference
-         * @param parent Parent QObject
-         */
-        explicit VMMigrateAction(XenConnection* connection,
-                                 const QString& vmRef,
-                                 const QString& destinationHostRef,
-                                 QObject* parent = nullptr);
+        explicit CrossPoolMigrateCommand(MainWindow* mainWindow,
+                                         CrossPoolMigrateWizard::WizardMode mode = CrossPoolMigrateWizard::WizardMode::Migrate,
+                                         QObject* parent = nullptr);
 
-    protected:
-        void run() override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
     private:
-        QString m_vmRef;
-        QString m_destinationHostRef;
+        CrossPoolMigrateWizard::WizardMode m_mode;
 };
 
-#endif // VMMIGRATEACTION_H
+#endif // CROSSPOOLMIGRATECOMMAND_H

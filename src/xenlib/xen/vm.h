@@ -265,6 +265,26 @@ class XENLIB_EXPORT VM : public XenObject
         QVariantMap CurrentOperations() const;
 
         /**
+         * @brief Check if VM can migrate to a host
+         *
+         * Mirrors basic C# migrate prechecks (allowed_operations, same-host).
+         *
+         * @param hostRef Destination host opaque reference
+         * @param error Optional output for failure reason
+         * @return true if migration is allowed
+         */
+        bool CanMigrateToHost(const QString& hostRef, QString* error = nullptr) const;
+
+        /**
+         * @brief Check if VM can be moved within the pool (VDI copy + destroy)
+         *
+         * Matches C# VM.CanBeMoved().
+         *
+         * @return true if VM is eligible for an intra-pool move
+         */
+        bool CanBeMoved() const;
+
+        /**
          * @brief Check if VM is running
          * @return true if power state is "Running"
          */

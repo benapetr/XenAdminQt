@@ -29,60 +29,41 @@
 #define VMCROSSPOOLMIGRATEACTION_H
 
 #include "../../asyncoperation.h"
-#include <QString>
-#include <QVariantMap>
+#include "../../mappings/vmmapping.h"
+
+class XenConnection;
 
 /**
- * @brief Action to migrate or copy a VM across pools
+ * @brief Cross-pool migrate action for a VM
  *
- * Performs cross-pool VM migration or copy using:
- * 1. Host.migrate_receive on destination to prepare
- * 2. VM.async_migrate_send with storage/network mappings
- *
- * Supports both migration (move) and copy operations.
- *
- * Equivalent to C# XenAdmin VMCrossPoolMigrateAction.
+ * Qt equivalent of C# VMCrossPoolMigrateAction.
  */
 class VMCrossPoolMigrateAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct cross-pool migration/copy action
-     * @param connection Source XenServer connection
-     * @param destConnection Destination XenServer connection
-     * @param vmRef VM opaque reference (source)
-     * @param destinationHostRef Destination host opaque reference
-     * @param transferNetworkRef Network opaque reference for data transfer (destination)
-     * @param vdiMap VDI to SR mapping (source VDI ref -> destination SR ref)
-     * @param vifMap VIF to Network mapping (VIF MAC -> destination network ref)
-     * @param copy true for copy operation, false for migrate
-     * @param parent Parent QObject
-     */
-    explicit VMCrossPoolMigrateAction(XenConnection* connection,
-                                      XenConnection* destConnection,
-                                      const QString& vmRef,
-                                      const QString& destinationHostRef,
-                                      const QString& transferNetworkRef,
-                                      const QVariantMap& vdiMap,
-                                      const QVariantMap& vifMap,
-                                      bool copy = false,
-                                      QObject* parent = nullptr);
+    public:
+        explicit VMCrossPoolMigrateAction(XenConnection* sourceConnection,
+                                          XenConnection* destinationConnection,
+                                          const QString& vmRef,
+                                          const QString& destinationHostRef,
+                                          const QString& transferNetworkRef,
+                                          const VmMapping& mapping,
+                                          bool copy,
+                                          QObject* parent = nullptr);
 
-protected:
-    void run() override;
+        static QString GetTitle(const QVariantMap& vmData, const QVariantMap& hostData, bool copy);
 
-private:
-    XenConnection* m_destConnection;
-    QString m_vmRef;
-    QString m_destinationHostRef;
-    QString m_transferNetworkRef;
-    QVariantMap m_vdiMap; // VDI ref -> SR ref
-    QVariantMap m_vifMap; // VIF MAC -> Network ref
-    bool m_copy;
+    protected:
+        void run() override;
 
-    QVariantMap convertVifMapToRefs(const QVariantMap& macToNetworkMap);
+    private:
+        XenConnection* m_destinationConnection;
+        QString m_vmRef;
+        QString m_destinationHostRef;
+        QString m_transferNetworkRef;
+        VmMapping m_mapping;
+        bool m_copy;
 };
 
 #endif // VMCROSSPOOLMIGRATEACTION_H

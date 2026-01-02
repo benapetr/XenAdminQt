@@ -45,6 +45,7 @@
 #include "vm/pausevmcommand.h"
 #include "vm/unpausevmcommand.h"
 #include "vm/migratevmcommand.h"
+#include "../controls/migratevmmenu.h"
 #include "vm/clonevmcommand.h"
 #include "vm/deletevmcommand.h"
 #include "vm/convertvmtotemplatecommand.h"
@@ -186,8 +187,8 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 
         menu->addSeparator();
 
-        MigrateVMCommand* migrateCmd = new MigrateVMCommand(this->m_mainWindow, this);
-        this->addCommand(menu, migrateCmd);
+        MigrateVMMenu* migrateMenu = new MigrateVMMenu(this->m_mainWindow, vm, menu);
+        menu->addMenu(migrateMenu);
     } else if (powerState == "Paused")
     {
         UnpauseVMCommand* unpauseCmd = new UnpauseVMCommand(this->m_mainWindow, this);

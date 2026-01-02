@@ -56,6 +56,11 @@ QString XenObject::GetDescription() const
     return stringProperty("name_description");
 }
 
+bool XenObject::IsLocked() const
+{
+    return boolProperty("locked", false);
+}
+
 bool XenObject::IsConnected() const
 {
     if (!this->m_connection)

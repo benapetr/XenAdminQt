@@ -32,12 +32,11 @@
 #include "xencache.h"
 #include "xen/network/connection.h"
 #include "xen/actions/vm/vmmigrateaction.h"
-#include "xenlib.h"
+#include "vmoperationhelpers.h"
 #include <QMessageBox>
 #include <QInputDialog>
 
-MigrateVMCommand::MigrateVMCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+MigrateVMCommand::MigrateVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 
@@ -47,15 +46,23 @@ bool MigrateVMCommand::CanRun() const
     if (!vm)
         return false;
 
-    // Only enable if VM is running (can only live migrate running VMs)
-    if (vm->GetPowerState() != "Running")
+    XenConnection* connection = vm->GetConnection();
+    if (!connection || !connection->IsConnected())
         return false;
 
-    // Check if there are other hosts available in the pool
-    QStringList hosts = this->getAvailableHosts();
-    QString currentHost = this->getCurrentHostRef();
+    // C# checks: not template, not locked, and migration allowed
+    if (vm->IsTemplate())
+        return false;
+
+    if (vm->IsLocked())
+        return false;
+
+    // TODO: FeatureForbidden (Host.RestrictIntraPoolMigrate) is not implemented yet.
+    if (!vm->AllowedOperations().contains("pool_migrate"))
+        return false;
 
     // Need at least one other host to migrate to
+    QStringList hosts = this->getAvailableHosts();
     return hosts.size() > 1;
 }
 
@@ -70,7 +77,7 @@ void MigrateVMCommand::Run()
         return;
 
     // Get current host
-    QString currentHostRef = this->getCurrentHostRef();
+    QString currentHostRef = vm->ResidentOnRef();
 
     // Get all available hosts
     QStringList hosts = this->getAvailableHosts();
@@ -97,6 +104,10 @@ void MigrateVMCommand::Run()
         // Use cache instead of async API call
         if (cache)
         {
+            QString cannotBootReason;
+            if (!VMOperationHelpers::VmCanBootOnHost(conn, vm, hostRef, "pool_migrate", &cannotBootReason))
+                continue;
+
             QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
             QString hostName = hostData.value("name_label", "Unknown Host").toString();
             hostMap[hostName] = hostRef;
@@ -107,7 +118,7 @@ void MigrateVMCommand::Run()
     if (hostNames.isEmpty())
     {
         QMessageBox::warning(this->mainWindow(), "Migrate VM",
-                             "No other hosts available for migration.");
+                             "No eligible hosts available for migration.");
         return;
     }
 
@@ -128,12 +139,23 @@ void MigrateVMCommand::Run()
     QString vmRef = vm->OpaqueRef();
 
     // Check if migration is possible
-    if (!this->mainWindow()->xenLib()->canMigrateVM(vmRef, destHostRef))
+    QString error;
+    if (!vm->CanMigrateToHost(destHostRef, &error))
     {
-        QString error = this->mainWindow()->xenLib()->getLastError();
         QMessageBox::warning(this->mainWindow(), "Migrate VM",
                              QString("Cannot migrate VM '%1' to host '%2'.\n\nReason: %3")
                                  .arg(vmName, selectedHostName, error));
+        return;
+    }
+
+    QString cannotBootReason;
+    if (!VMOperationHelpers::VmCanBootOnHost(vm->GetConnection(), vm, destHostRef, "pool_migrate", &cannotBootReason))
+    {
+        if (cannotBootReason.isEmpty())
+            cannotBootReason = tr("The VM cannot be migrated to the selected host.");
+        QMessageBox::warning(this->mainWindow(), "Migrate VM",
+                             QString("Cannot migrate VM '%1' to host '%2'.\n\nReason: %3")
+                                 .arg(vmName, selectedHostName, cannotBootReason));
         return;
     }
 
@@ -201,13 +223,4 @@ QStringList MigrateVMCommand::getAvailableHosts() const
     hostRefs = cache->GetAllRefs("host");
 
     return hostRefs;
-}
-
-QString MigrateVMCommand::getCurrentHostRef() const
-{
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return QString();
-
-    return vm->GetData().value("resident_on", QString()).toString();
 }

@@ -27,6 +27,7 @@
 
 #include "copyvmcommand.h"
 #include "../../mainwindow.h"
+#include "../../dialogs/crosspoolmigratewizard.h"
 #include "xen/vm.h"
 #include "xencache.h"
 #include <QMessageBox>
@@ -52,10 +53,8 @@ void CopyVMCommand::Run()
     if (!vm)
         return;
 
-    // TODO: Launch Copy VM wizard/dialog
-    QMessageBox::information(this->mainWindow(), "Not Implemented",
-                             "Copy VM to Shared Storage functionality will be implemented in future phase.\n\n"
-                             "This allows copying a VM to shared storage for migration purposes.");
+    CrossPoolMigrateWizard wizard(this->mainWindow(), vm, CrossPoolMigrateWizard::WizardMode::Copy);
+    wizard.exec();
 }
 
 QString CopyVMCommand::MenuText() const

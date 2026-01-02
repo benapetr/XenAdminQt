@@ -33,44 +33,44 @@ class VMPP : public XenObject
     Q_PROPERTY(QDateTime archiveLastRunTime READ ArchiveLastRunTime)
     Q_PROPERTY(bool isAlarmEnabled READ IsAlarmEnabled)
     
-public:
-    explicit VMPP(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
-    
-    QString GetObjectType() const override;
-    
-    // Basic properties
-    QString Uuid() const;
-    QString NameLabel() const;
-    QString NameDescription() const;
-    bool IsPolicyEnabled() const;
-    
-    // Backup configuration
-    QString BackupType() const;
-    qlonglong BackupRetentionValue() const;
-    QString BackupFrequency() const;
-    QVariantMap BackupSchedule() const;
-    bool IsBackupRunning() const;
-    QDateTime BackupLastRunTime() const;
-    
-    // Archive configuration
-    QString ArchiveTargetType() const;
-    QVariantMap ArchiveTargetConfig() const;
-    QString ArchiveFrequency() const;
-    QVariantMap ArchiveSchedule() const;
-    bool IsArchiveRunning() const;
-    QDateTime ArchiveLastRunTime() const;
-    
-    // VM and alarm configuration
-    QStringList VMRefs() const;
-    bool IsAlarmEnabled() const;
-    QVariantMap AlarmConfig() const;
-    QStringList RecentAlerts() const;
-    
-    // Helper methods
-    bool IsEnabled() const;
-    int VMCount() const;
-    bool HasBackupSchedule() const;
-    bool HasArchiveSchedule() const;
+    public:
+        explicit VMPP(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
+
+        QString GetObjectType() const override;
+
+        // Basic properties
+        QString Uuid() const;
+        QString NameLabel() const;
+        QString NameDescription() const;
+        bool IsPolicyEnabled() const;
+
+        // Backup configuration
+        QString BackupType() const;
+        qlonglong BackupRetentionValue() const;
+        QString BackupFrequency() const;
+        QVariantMap BackupSchedule() const;
+        bool IsBackupRunning() const;
+        QDateTime BackupLastRunTime() const;
+
+        // Archive configuration
+        QString ArchiveTargetType() const;
+        QVariantMap ArchiveTargetConfig() const;
+        QString ArchiveFrequency() const;
+        QVariantMap ArchiveSchedule() const;
+        bool IsArchiveRunning() const;
+        QDateTime ArchiveLastRunTime() const;
+
+        // VM and alarm configuration
+        QStringList VMRefs() const;
+        bool IsAlarmEnabled() const;
+        QVariantMap AlarmConfig() const;
+        QStringList RecentAlerts() const;
+
+        // Helper methods
+        bool IsEnabled() const;
+        int VMCount() const;
+        bool HasBackupSchedule() const;
+        bool HasArchiveSchedule() const;
 };
 
 #endif // VMPP_H

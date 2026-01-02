@@ -59,6 +59,7 @@
 #include "network/xenconnectionui.h"
 #include "xenlib/xenlib.h"
 #include "xenlib/xencache.h"
+#include "xenlib/xen/sr.h"
 #include "metricupdater.h"
 #include "xenlib/xensearch/search.h"
 #include "xenlib/xensearch/groupingtag.h"
@@ -987,8 +988,14 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType, const 
             newTabs.append(srStorageTab);
         // CVM Console only shown if SR has driver domain
         // C# Reference: xenadmin/XenAdmin/MainWindow.cs line 1376
-        if (cvmConsoleTab && this->m_xenLib && this->m_xenLib->srHasDriverDomain(objectRef))
-            newTabs.append(cvmConsoleTab);
+        if (cvmConsoleTab)
+        {
+            XenConnection* connection = this->m_currentObjectConn;
+            XenCache* cache = connection ? connection->GetCache() : nullptr;
+            QSharedPointer<SR> srObj = cache ? cache->ResolveObject<SR>("sr", objectRef) : QSharedPointer<SR>();
+            if (srObj && srObj->HasDriverDomain())
+                newTabs.append(cvmConsoleTab);
+        }
         // Note: Performance tab is NOT shown for SR in C#
     }
     // Network tab order: General, Network

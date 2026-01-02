@@ -57,6 +57,7 @@ class XENLIB_EXPORT XenObject : public QObject
     Q_PROPERTY(QString GetUUID READ GetUUID NOTIFY dataChanged)
     Q_PROPERTY(QString GetName READ GetName NOTIFY dataChanged)
     Q_PROPERTY(QString GetDescription READ GetDescription NOTIFY dataChanged)
+    Q_PROPERTY(bool IsLocked READ IsLocked NOTIFY dataChanged)
 
     public:
         explicit XenObject(XenConnection* connection,
@@ -90,6 +91,12 @@ class XENLIB_EXPORT XenObject : public QObject
          * @return Name description
          */
         QString GetDescription() const;
+
+        /**
+         * @brief Check if object is locked (operation in progress)
+         * @return true if locked flag is set in cache
+         */
+        bool IsLocked() const;
 
         /**
          * @brief Get GetConnection this object belongs to

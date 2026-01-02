@@ -29,6 +29,7 @@
 #include "../../../xen/network/connection.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../../xencache.h"
+#include "../../failure.h"
 #include <stdexcept>
 
 VMMigrateAction::VMMigrateAction(XenConnection* connection,
@@ -42,6 +43,7 @@ VMMigrateAction::VMMigrateAction(XenConnection* connection,
       m_vmRef(vmRef),
       m_destinationHostRef(destinationHostRef)
 {
+    addApiMethodToRoleCheck("VM.async_pool_migrate");
 }
 
 void VMMigrateAction::run()
@@ -99,6 +101,16 @@ void VMMigrateAction::run()
 
         setDescription(QString("VM migrated successfully to %1").arg(hostName));
 
+    } catch (const Failure& failure)
+    {
+        QStringList params = failure.errorDescription();
+        if (params.size() >= 5 && params[0] == "VM_MIGRATE_FAILED" && params[4].contains("VDI_MISSING"))
+        {
+            setError("Migration failed: Please eject any mounted ISOs (especially XenServer Tools) and try again");
+        } else
+        {
+            setError(QString("Failed to migrate VM: %1").arg(failure.message()));
+        }
     } catch (const std::exception& e)
     {
         QString errorMsg = QString::fromUtf8(e.what());

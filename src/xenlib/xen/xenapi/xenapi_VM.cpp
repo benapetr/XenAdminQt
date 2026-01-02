@@ -533,6 +533,29 @@ namespace XenAPI
         // Will throw exception if assertion fails
     }
 
+    void VM::assert_can_migrate(Session* session, const QString& self,
+                                const QVariantMap& dest, bool live,
+                                const QVariantMap& vdi_map, const QVariantMap& vif_map,
+                                const QVariantMap& options)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId();
+        params << self;
+        params << dest;
+        params << live;
+        params << vdi_map;
+        params << vif_map;
+        params << options;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.assert_can_migrate", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response);
+    }
+
     // VM.assert_agile - Used for HA protection checks
     void VM::assert_agile(Session* session, const QString& self)
     {
@@ -779,6 +802,20 @@ namespace XenAPI
 
         XenRpcAPI api(session);
         QByteArray request = api.buildJsonRpcCall("VM.set_tags", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.parseJsonRpcResponse(response); // Check for errors
+    }
+
+    void VM::set_suspend_SR(Session* session, const QString& vm, const QString& value)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("VM.set_suspend_SR", params);
         QByteArray response = session->sendApiRequest(request);
         api.parseJsonRpcResponse(response); // Check for errors
     }

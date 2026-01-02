@@ -69,12 +69,6 @@ class XENLIB_EXPORT XenLib : public QObject
         // Get full object data by type and reference
         QVariantMap getCachedObjectData(const QString& objectType, const QString& objectRef);
 
-        bool isControlDomainZero(const QString& vmRef, QString* outHostRef = nullptr);
-        bool srHasDriverDomain(const QString& srRef, QString* outVMRef = nullptr);
-
-        // VM migration operations
-        bool canMigrateVM(const QString& vmRef, const QString& hostRef);
-
         // Status and information
         QString getConnectionInfo() const;
         QString getLastError() const;

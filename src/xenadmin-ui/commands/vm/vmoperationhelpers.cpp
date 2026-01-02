@@ -28,15 +28,68 @@
 #include "vmoperationhelpers.h"
 #include "../../dialogs/commanderrordialog.h"
 #include "xenlib/xencache.h"
+#include "xenlib/xen/friendlyerrornames.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/vm.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 #include "xenlib/xen/failure.h"
 #include "xenlib/xen/xenapi/xenapi_VM.h"
-#include "xenlib/xen/xenapi/xenapi_Pool.h"
 #include <QMessageBox>
 #include <QDebug>
+#include <QRegularExpression>
 
-using namespace XenAPI;
+namespace
+{
+    QList<int> parseVersionParts(const QString& version)
+    {
+        QList<int> parts;
+        QStringList tokens = version.split(QRegularExpression("[^0-9]"), Qt::SkipEmptyParts);
+        for (const QString& token : tokens)
+        {
+            bool ok = false;
+            int value = token.toInt(&ok);
+            if (ok)
+                parts.append(value);
+        }
+        return parts;
+    }
+
+    int compareVersions(const QString& a, const QString& b)
+    {
+        QList<int> partsA = parseVersionParts(a);
+        QList<int> partsB = parseVersionParts(b);
+        int maxSize = qMax(partsA.size(), partsB.size());
+        for (int i = 0; i < maxSize; ++i)
+        {
+            int va = i < partsA.size() ? partsA[i] : 0;
+            int vb = i < partsB.size() ? partsB[i] : 0;
+            if (va < vb)
+                return -1;
+            if (va > vb)
+                return 1;
+        }
+        return 0;
+    }
+
+    bool vmCpuIncompatibleWithHost(const QSharedPointer<VM>& vm, const QSharedPointer<Host>& host)
+    {
+        if (!vm || !host)
+            return false;
+
+        QString powerState = vm->GetPowerState();
+        if (powerState != "Running" && powerState != "Suspended")
+            return false;
+
+        QVariantMap vmFlags = vm->LastBootCPUFlags();
+        QVariantMap hostCpuInfo = host->CPUInfo();
+        if (!vmFlags.contains("vendor") || !hostCpuInfo.contains("vendor"))
+            return false;
+
+        return vmFlags.value("vendor").toString() != hostCpuInfo.value("vendor").toString();
+    }
+}
 
 void VMOperationHelpers::startDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, QWidget* parent)
 {
@@ -46,7 +99,7 @@ void VMOperationHelpers::startDiagnosisForm(XenConnection* connection, const QSt
         return;
     }
 
-    Session* session = connection->GetSession();
+    XenAPI::Session* session = connection->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         qWarning() << "VMOperationHelpers::startDiagnosisForm: Session is not valid";
@@ -93,7 +146,7 @@ void VMOperationHelpers::startDiagnosisForm(XenConnection* connection, const QSt
 
         try
         {
-            VM::assert_can_boot_here(session, vmRef, hostRef);
+            XenAPI::VM::assert_can_boot_here(session, vmRef, hostRef);
             canBoot = true;
         }
         catch (const Failure& failure)
@@ -198,4 +251,131 @@ void VMOperationHelpers::startDiagnosisForm(XenConnection* connection, const QSt
                            .arg(vmName, isStart ? "started" : "resumed", failure.message());
         QMessageBox::critical(parent, title, text);
     }
+}
+
+bool VMOperationHelpers::VmCanBootOnHost(XenConnection* connection,
+                                         const QSharedPointer<VM>& vm,
+                                         const QString& hostRef,
+                                         const QString& operation,
+                                         QString* cannotBootReason)
+{
+    if (!vm)
+    {
+        if (cannotBootReason)
+            *cannotBootReason = QObject::tr("Unknown VM");
+        return false;
+    }
+
+    if (!connection || !connection->IsConnected())
+    {
+        if (cannotBootReason)
+            *cannotBootReason = QObject::tr("Not connected to server");
+        return false;
+    }
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+    {
+        if (cannotBootReason)
+            *cannotBootReason = QObject::tr("Cache is not available");
+        return false;
+    }
+
+    if (hostRef.isEmpty() || hostRef == "OpaqueRef:NULL")
+    {
+        if (cannotBootReason)
+            *cannotBootReason = QObject::tr("No home server");
+        return false;
+    }
+
+    QSharedPointer<Host> host = cache->ResolveObject<Host>("host", hostRef);
+    if (!host)
+    {
+        if (cannotBootReason)
+            *cannotBootReason = QObject::tr("No home server");
+        return false;
+    }
+
+    if (vm->GetPowerState() == "Running")
+    {
+        QString residentRef = vm->ResidentOnRef();
+        if (!residentRef.isEmpty() && residentRef != "OpaqueRef:NULL")
+        {
+            if (residentRef == hostRef)
+            {
+                if (cannotBootReason)
+                    *cannotBootReason = QObject::tr("The VM is already on the selected host.");
+                return false;
+            }
+
+            QSharedPointer<Host> residentHost = cache->ResolveObject<Host>("host", residentRef);
+            if (residentHost)
+            {
+                QString targetVersion = host->SoftwareVersion().value("product_version").toString();
+                QString residentVersion = residentHost->SoftwareVersion().value("product_version").toString();
+                if (!targetVersion.isEmpty() && !residentVersion.isEmpty() && compareVersions(targetVersion, residentVersion) < 0)
+                {
+                    if (cannotBootReason)
+                        *cannotBootReason = QObject::tr("The destination host is older than the current host.");
+                    return false;
+                }
+            }
+        }
+    }
+
+    if (operation == "pool_migrate" || operation == "resume_on")
+    {
+        if (vmCpuIncompatibleWithHost(vm, host))
+        {
+            if (cannotBootReason)
+            {
+                QString msg = FriendlyErrorNames::getString("VM_INCOMPATIBLE_WITH_THIS_HOST");
+                *cannotBootReason = msg.isEmpty() ? QObject::tr("VM is incompatible with this host.") : msg;
+            }
+            return false;
+        }
+    }
+
+    XenAPI::Session* session = connection->GetSession();
+    if (!session || !session->IsLoggedIn())
+    {
+        if (cannotBootReason)
+            *cannotBootReason = QObject::tr("Session is not valid");
+        return false;
+    }
+
+    try
+    {
+        XenAPI::VM::assert_can_boot_here(session, vm->OpaqueRef(), hostRef);
+    }
+    catch (const Failure& failure)
+    {
+        QStringList params = failure.errorDescription();
+        if (params.size() > 2 && params[0] == Failure::VM_REQUIRES_SR)
+        {
+            QString srRef = params[2];
+            QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", srRef);
+            if (sr && sr->ContentType() == "iso")
+            {
+                if (cannotBootReason)
+                    *cannotBootReason = QObject::tr("Please eject the CD/DVD from the VM and try again.");
+                return false;
+            }
+        }
+
+        if (cannotBootReason)
+            *cannotBootReason = failure.message();
+        return false;
+    }
+    catch (const std::exception&)
+    {
+        if (cannotBootReason)
+            *cannotBootReason = QObject::tr("Unknown error checking this server");
+        return false;
+    }
+
+    if (cannotBootReason)
+        *cannotBootReason = QString();
+
+    return true;
 }

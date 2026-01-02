@@ -30,9 +30,11 @@
 
 #include <QString>
 #include <QObject>
+#include <QSharedPointer>
 
 class XenConnection;
 class Failure;  // Forward declaration
+class VM;
 
 /*!
  * \brief Helper methods for VM operation commands
@@ -82,6 +84,24 @@ class VMOperationHelpers : public QObject
          * \param parent Parent widget for dialogs
          */
         static void startDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, const Failure& failure, QWidget* parent = nullptr);
+
+        /*!
+         * \brief Check if VM can boot/migrate on a host
+         *
+         * Mirrors C# VMOperationHostCommand.VmCanBootOnHost.
+         *
+         * \param connection XenServer connection
+         * \param vm VM object
+         * \param hostRef Host opaque reference
+         * \param operation Operation string ("pool_migrate", "resume_on")
+         * \param cannotBootReason Optional output for reason text
+         * \return true if the VM can boot on the host
+         */
+        static bool VmCanBootOnHost(XenConnection* connection,
+                                    const QSharedPointer<VM>& vm,
+                                    const QString& hostRef,
+                                    const QString& operation,
+                                    QString* cannotBootReason = nullptr);
 
     private:
         VMOperationHelpers() = delete;  // Static-only class

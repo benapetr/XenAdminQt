@@ -25,43 +25,34 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VMMIGRATEACTION_H
-#define VMMIGRATEACTION_H
+#ifndef VMMAPPING_H
+#define VMMAPPING_H
 
-#include "../../asyncoperation.h"
 #include <QString>
+#include <QMap>
 
 /**
- * @brief Action to migrate a VM to another host in the same pool
+ * @brief VM mapping for cross-pool migration
  *
- * Performs live migration of a running or suspended VM to a different
- * host within the same resource pool using VM.async_pool_migrate.
- *
- * Equivalent to C# XenAdmin VMMigrateAction.
+ * Qt equivalent of XenAdmin.Mappings.VmMapping.
+ * Stores target host/pool and storage/network mappings for a VM.
  */
-class VMMigrateAction : public AsyncOperation
+class VmMapping
 {
-    Q_OBJECT
-
     public:
-        /**
-         * @brief Construct VM migration action
-         * @param connection XenServer connection
-         * @param vmRef VM opaque reference
-         * @param destinationHostRef Destination host opaque reference
-         * @param parent Parent QObject
-         */
-        explicit VMMigrateAction(XenConnection* connection,
-                                 const QString& vmRef,
-                                 const QString& destinationHostRef,
-                                 QObject* parent = nullptr);
+        explicit VmMapping(const QString& vmRef = QString())
+            : vmRef(vmRef)
+        {
+        }
 
-    protected:
-        void run() override;
+        QString vmRef;
+        QString vmNameLabel;
 
-    private:
-        QString m_vmRef;
-        QString m_destinationHostRef;
+        QString targetRef;
+        QString targetName;
+
+        QMap<QString, QString> storage;   // VDI ref -> SR ref
+        QMap<QString, QString> vifs;      // VIF ref -> Network ref
 };
 
-#endif // VMMIGRATEACTION_H
+#endif // VMMAPPING_H

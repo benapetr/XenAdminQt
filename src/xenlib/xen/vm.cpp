@@ -28,7 +28,10 @@
 #include "vm.h"
 #include "network/connection.h"
 #include "network/comparableaddress.h"
-#include "../xenlib.h"
+#include "../xencache.h"
+#include "vbd.h"
+#include "vdi.h"
+#include "sr.h"
 #include "../xencache.h"
 #include "host.h"
 #include <QDomDocument>
@@ -443,6 +446,102 @@ QStringList VM::AllowedOperations() const
 QVariantMap VM::CurrentOperations() const
 {
     return property("current_operations").toMap();
+}
+
+bool VM::CanMigrateToHost(const QString& hostRef, QString* error) const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection || !connection->IsConnected())
+    {
+        if (error)
+            *error = "Not connected to server";
+        return false;
+    }
+
+    if (hostRef.isEmpty() || hostRef == "OpaqueRef:NULL")
+    {
+        if (error)
+            *error = "Invalid host reference";
+        return false;
+    }
+
+    if (!this->IsValid())
+    {
+        if (error)
+            *error = "VM not found in cache";
+        return false;
+    }
+
+    QStringList allowedOps = this->AllowedOperations();
+    if (!allowedOps.contains("pool_migrate"))
+    {
+        if (error)
+            *error = "VM does not allow migration";
+        return false;
+    }
+
+    QString residentOn = this->ResidentOnRef();
+    if (!residentOn.isEmpty() && residentOn == hostRef)
+    {
+        if (error)
+            *error = "VM is already on the selected host";
+        return false;
+    }
+
+    return true;
+}
+
+bool VM::CanBeMoved() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return false;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return false;
+
+    bool hasOwner = false;
+    QStringList vbdRefs = this->VBDRefs();
+    for (const QString& vbdRef : vbdRefs)
+    {
+        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+        if (!vbd || !vbd->IsValid())
+            continue;
+
+        QVariantMap otherConfig = vbd->OtherConfig();
+        if (otherConfig.contains("owner"))
+            hasOwner = true;
+
+        QString vdiRef = vbd->VDIRef();
+        if (vdiRef.isEmpty())
+            continue;
+
+        QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>("vdi", vdiRef);
+        if (!vdi || !vdi->IsValid())
+            continue;
+
+        QString srRef = vdi->SRRef();
+        if (srRef.isEmpty())
+            continue;
+
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", srRef);
+        if (sr && sr->IsValid() && sr->HBALunPerVDI())
+            return false;
+    }
+
+    if (this->IsTemplate())
+        return false;
+    if (this->IsLocked())
+        return false;
+
+    if (!this->AllowedOperations().contains("export"))
+        return false;
+
+    if (this->GetPowerState() == "Suspended")
+        return false;
+
+    return hasOwner;
 }
 
 QString VM::HomeRef() const

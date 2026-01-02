@@ -44,7 +44,6 @@ class MigrateVMCommand : public VMCommand
 
     private:
         QStringList getAvailableHosts() const;
-        QString getCurrentHostRef() const;
 };
 
 #endif // MIGRATEVMCOMMAND_H

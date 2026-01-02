@@ -50,6 +50,7 @@ SOURCES += \
     dialogs/optionsdialog.cpp \
     dialogs/verticallytabbeddialog.cpp \
     dialogs/customsearchdialog.cpp \
+    dialogs/crosspoolmigratewizard.cpp \
     dialogs/warningdialogs/closexencenterwarningdialog.cpp \
     controls/affinitypicker.cpp \
     controls/srpicker.cpp \
@@ -88,6 +89,7 @@ SOURCES += \
     dialogs/optionspages/saveandrestoreoptionspage.cpp \
     dialogs/optionspages/connectionoptionspage.cpp \
     operations/operationmanager.cpp \
+    controls/migratevmmenu.cpp \
     alerts/alert.cpp \
     alerts/alertmanager.cpp \
     alerts/messagealert.cpp \
@@ -125,6 +127,7 @@ SOURCES += \
     commands/vm/unpausevmcommand.cpp \
     commands/vm/forceshutdownvmcommand.cpp \
     commands/vm/forcerebootvmcommand.cpp \
+    commands/vm/crosspoolmigratecommand.cpp \
     commands/vm/migratevmcommand.cpp \
     commands/vm/clonevmcommand.cpp \
     commands/vm/vmlifecyclecommand.cpp \
@@ -275,11 +278,13 @@ HEADERS += \
     dialogs/optionsdialog.h \
     dialogs/verticallytabbeddialog.h \
     dialogs/customsearchdialog.h \
+    dialogs/crosspoolmigratewizard.h \
     dialogs/warningdialogs/closexencenterwarningdialog.h \
     network/xenconnectionui.h \
     controls/affinitypicker.h \
     controls/srpicker.h \
     controls/dropdownbutton.h \
+    controls/migratevmmenu.h \
     controls/snapshottreeview.h \
     controls/xensearch/querypanel.h \
     controls/xensearch/searchoutput.h \
@@ -353,6 +358,7 @@ HEADERS += \
     commands/vm/unpausevmcommand.h \
     commands/vm/forceshutdownvmcommand.h \
     commands/vm/forcerebootvmcommand.h \
+    commands/vm/crosspoolmigratecommand.h \
     commands/vm/migratevmcommand.h \
     commands/vm/clonevmcommand.h \
     commands/vm/vmlifecyclecommand.h \

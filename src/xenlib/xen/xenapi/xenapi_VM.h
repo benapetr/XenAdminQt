@@ -260,6 +260,10 @@ namespace XenAPI
              * @param session_to The session to which we want to recover the VM.
              */
             static void assert_can_migrate(Session* session, const QString& self, const QString& session_to);
+            static void assert_can_migrate(Session* session, const QString& self,
+                                           const QVariantMap& dest, bool live,
+                                           const QVariantMap& vdi_map, const QVariantMap& vif_map,
+                                           const QVariantMap& options);
 
             /**
              * @brief Assert whether the VM is agile (i.e. can be migrated without downtime).
@@ -411,6 +415,15 @@ namespace XenAPI
              * @param value New value for tags
              */
             static void set_tags(Session* session, const QString& vm, const QStringList& value);
+
+            /**
+             * @brief Set the suspend_SR field
+             * First published in XenServer 4.0.
+             * @param session The session
+             * @param vm The opaque_ref of the given VM
+             * @param value New value for suspend_SR (opaque_ref)
+             */
+            static void set_suspend_SR(Session* session, const QString& vm, const QString& value);
 
             // Snapshot operations
 

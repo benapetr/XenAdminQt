@@ -181,6 +181,18 @@ class XENLIB_EXPORT SR : public XenObject
         bool IsToolsSR() const;
 
         /**
+         * @brief Check if SR supports storage migration
+         * @return true if SR supports storage migration
+         */
+        bool SupportsStorageMigration() const;
+
+        /**
+         * @brief Check if SR is raw HBA LUN-per-VDI
+         * @return true if SR type is rawhba
+         */
+        bool HBALunPerVDI() const;
+
+        /**
          * @brief Check if SR is local (not shared)
          * @return true if SR is local to single host
          */

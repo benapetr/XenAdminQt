@@ -63,6 +63,8 @@ SOURCES += \
     xen/vmss.cpp \
     xen/vmpp.cpp \
     xen/vgpu.cpp \
+    xen/pci.cpp \
+    xen/pgpu.cpp \
     xen/network.cpp \
     xen/xenapi/xenapi_VM.cpp \
     xen/xenapi/xenapi_SR.cpp \
@@ -123,6 +125,7 @@ SOURCES += \
     xen/actions/vm/vmmigrateaction.cpp \
     xen/actions/vm/vmcrosspoolmigrateaction.cpp \
     xen/actions/vm/vmcopyaction.cpp \
+    xen/actions/vm/vmmoveaction.cpp \
     xen/actions/pool/addhosttopoolaction.cpp \
     xen/actions/pool/createpoolaction.cpp \
     xen/actions/pool/ejecthostfrompoolaction.cpp \
@@ -211,6 +214,7 @@ HEADERS += \
     xen/host.h \
     xen/hostmetrics.h \
     xen/vm.h \
+    xen/mappings/vmmapping.h \
     xen/sr.h \
     xen/vdi.h \
     xen/vbd.h \
@@ -221,6 +225,8 @@ HEADERS += \
     xen/vmss.h \
     xen/vmpp.h \
     xen/vgpu.h \
+    xen/pci.h \
+    xen/pgpu.h \
     xen/network.h \
     xen/xenapi/xenapi_VM.h \
     xen/xenapi/xenapi_SR.h \
@@ -279,6 +285,7 @@ HEADERS += \
     xen/actions/vm/vmmigrateaction.h \
     xen/actions/vm/vmcrosspoolmigrateaction.h \
     xen/actions/vm/vmcopyaction.h \
+    xen/actions/vm/vmmoveaction.h \
     xen/actions/pool/addhosttopoolaction.h \
     xen/actions/pool/createpoolaction.h \
     xen/actions/pool/ejecthostfrompoolaction.h \

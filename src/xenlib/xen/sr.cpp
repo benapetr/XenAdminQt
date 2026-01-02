@@ -169,6 +169,23 @@ bool SR::IsToolsSR() const
     return this->boolProperty("is_tools_sr", false);
 }
 
+bool SR::SupportsStorageMigration() const
+{
+    QString type = this->GetType();
+    if (this->ContentType() == "iso")
+        return false;
+
+    if (type == "tmpfs")
+        return false;
+
+    return true;
+}
+
+bool SR::HBALunPerVDI() const
+{
+    return this->GetType() == "rawhba";
+}
+
 QString SR::HomeRef() const
 {
     // For local SRs, find the host via PBD connections

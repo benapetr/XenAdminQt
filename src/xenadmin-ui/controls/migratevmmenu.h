@@ -25,43 +25,37 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VMMIGRATEACTION_H
-#define VMMIGRATEACTION_H
+#ifndef MIGRATEVMMENU_H
+#define MIGRATEVMMENU_H
 
-#include "../../asyncoperation.h"
-#include <QString>
+#include <QMenu>
+#include <QSharedPointer>
+
+class MainWindow;
+class VM;
 
 /**
- * @brief Action to migrate a VM to another host in the same pool
+ * @brief Migrate VM submenu
  *
- * Performs live migration of a running or suspended VM to a different
- * host within the same resource pool using VM.async_pool_migrate.
- *
- * Equivalent to C# XenAdmin VMMigrateAction.
+ * Qt equivalent of XenAdmin MigrateVMToolStripMenuItem.
+ * Builds a host submenu with per-host eligibility checks.
  */
-class VMMigrateAction : public AsyncOperation
+class MigrateVMMenu : public QMenu
 {
     Q_OBJECT
 
     public:
-        /**
-         * @brief Construct VM migration action
-         * @param connection XenServer connection
-         * @param vmRef VM opaque reference
-         * @param destinationHostRef Destination host opaque reference
-         * @param parent Parent QObject
-         */
-        explicit VMMigrateAction(XenConnection* connection,
-                                 const QString& vmRef,
-                                 const QString& destinationHostRef,
-                                 QObject* parent = nullptr);
-
-    protected:
-        void run() override;
+        explicit MigrateVMMenu(MainWindow* mainWindow,
+                               const QSharedPointer<VM>& vm,
+                               QWidget* parent = nullptr);
 
     private:
-        QString m_vmRef;
-        QString m_destinationHostRef;
+        MainWindow* m_mainWindow;
+        QSharedPointer<VM> m_vm;
+
+        void populate();
+        void addDisabledReason(const QString& reason);
+        void runMigrationToHost(const QString& hostRef, const QString& hostName);
 };
 
-#endif // VMMIGRATEACTION_H
+#endif // MIGRATEVMMENU_H

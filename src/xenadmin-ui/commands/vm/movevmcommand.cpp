@@ -27,8 +27,14 @@
 
 #include "movevmcommand.h"
 #include "../../mainwindow.h"
+#include "../../dialogs/crosspoolmigratewizard.h"
 #include "xen/vm.h"
+#include "xen/sr.h"
+#include "xen/actions/vm/vmmoveaction.h"
+#include "../../operations/operationmanager.h"
+#include "../vm/crosspoolmigratecommand.h"
 #include "xencache.h"
+#include <QInputDialog>
 #include <QMessageBox>
 
 MoveVMCommand::MoveVMCommand(MainWindow* mainWindow, QObject* parent)
@@ -42,6 +48,24 @@ bool MoveVMCommand::CanRun() const
     if (!vm)
         return false;
 
+    XenConnection* connection = vm->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
+    QStringList vbdRefs = vm->VBDRefs();
+    for (const QString& vbdRef : vbdRefs)
+    {
+        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
+        QString vdiRef = vbdData.value("VDI").toString();
+        if (vdiRef.isEmpty())
+            continue;
+
+        QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
+        if (vdiData.value("cbt_enabled", false).toBool())
+            return false;
+    }
+
     return this->canVMBeMoved();
 }
 
@@ -51,10 +75,68 @@ void MoveVMCommand::Run()
     if (!vm)
         return;
 
-    // TODO: Launch Move/Migrate VM wizard
-    QMessageBox::information(this->mainWindow(), "Not Implemented",
-                             "Move VM functionality will be implemented in future phase.\n\n"
-                             "This allows moving or migrating a VM to different storage or hosts.");
+    CrossPoolMigrateCommand crossPoolCmd(this->mainWindow(),
+                                         CrossPoolMigrateWizard::WizardMode::Move,
+                                         this->mainWindow());
+    if (crossPoolCmd.CanRun())
+    {
+        CrossPoolMigrateWizard wizard(this->mainWindow(), vm, CrossPoolMigrateWizard::WizardMode::Move);
+        wizard.exec();
+        return;
+    }
+
+    XenConnection* connection = vm->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return;
+
+    QStringList srRefs = cache->GetAllRefs("sr");
+    QStringList srNames;
+    QList<QString> eligibleRefs;
+    for (const QString& srRef : srRefs)
+    {
+        QVariantMap srData = cache->ResolveObjectData("sr", srRef);
+        QString type = srData.value("type").toString();
+        QString content = srData.value("content_type").toString();
+        if (type == "iso" || content == "iso")
+            continue;
+        srNames.append(srData.value("name_label", "SR").toString());
+        eligibleRefs.append(srRef);
+    }
+
+    if (eligibleRefs.isEmpty())
+    {
+        QMessageBox::warning(this->mainWindow(), tr("Move VM"), tr("No suitable SRs available for move."));
+        return;
+    }
+
+    bool ok = false;
+    QString selectedName = QInputDialog::getItem(this->mainWindow(),
+                                                 tr("Move VM"),
+                                                 tr("Select target SR:"),
+                                                 srNames,
+                                                 0,
+                                                 false,
+                                                 &ok);
+    if (!ok || selectedName.isEmpty())
+        return;
+
+    int idx = srNames.indexOf(selectedName);
+    if (idx < 0 || idx >= eligibleRefs.size())
+        return;
+
+    QString srRef = eligibleRefs.at(idx);
+    QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
+    if (!srObj || !srObj->IsValid())
+        return;
+
+    VMMoveAction* action = new VMMoveAction(connection,
+                                            vm.data(),
+                                            srObj.data(),
+                                            nullptr,
+                                            this->mainWindow());
+    OperationManager::instance()->registerOperation(action);
+    action->runAsync();
 }
 
 QString MoveVMCommand::MenuText() const
@@ -68,32 +150,5 @@ bool MoveVMCommand::canVMBeMoved() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->GetData();
-
-    // Check if VM is a template or snapshot
-    if (vmData.value("is_a_template", false).toBool())
-        return false;
-    if (vmData.value("is_a_snapshot", false).toBool())
-        return false;
-
-    // Check if VM has CBT (Changed Block Tracking) disabled
-    // VMs with CBT enabled cannot be moved
-    XenCache* cache = vm->GetConnection()->GetCache();
-
-    QVariantList vbds = vmData.value("VBDs", QVariantList()).toList();
-    for (const QVariant& vbdRefVar : vbds)
-    {
-        QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-        QString vdiRef = vbdData.value("VDI", "").toString();
-
-        if (!vdiRef.isEmpty())
-        {
-            QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-            if (vdiData.value("cbt_enabled", false).toBool())
-                return false; // CBT enabled, cannot move
-        }
-    }
-
-    return true;
+    return vm->CanBeMoved();
 }

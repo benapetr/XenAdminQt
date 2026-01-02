@@ -25,90 +25,91 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "vmss.h"
+#include "pci.h"
 #include "network/connection.h"
 #include "../xencache.h"
 
-VMSS::VMSS(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
+PCI::PCI(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
-QString VMSS::GetObjectType() const
+QString PCI::GetObjectType() const
 {
-    return "vmss";
+    return "pci";
 }
 
-QString VMSS::Uuid() const
+QString PCI::Uuid() const
 {
     return this->stringProperty("uuid");
 }
 
-QString VMSS::NameLabel() const
+QString PCI::ClassName() const
 {
-    return this->stringProperty("name_label");
+    return this->stringProperty("class_name");
 }
 
-QString VMSS::NameDescription() const
+QString PCI::VendorName() const
 {
-    return this->stringProperty("name_description");
+    return this->stringProperty("vendor_name");
 }
 
-bool VMSS::Enabled() const
+QString PCI::DeviceName() const
 {
-    return this->boolProperty("enabled");
+    return this->stringProperty("device_name");
 }
 
-QString VMSS::Type() const
+QString PCI::HostRef() const
 {
-    return this->stringProperty("type");
+    return this->stringProperty("host");
 }
 
-qlonglong VMSS::RetainedSnapshots() const
+QString PCI::PciId() const
 {
-    return this->longProperty("retained_snapshots");
+    return this->stringProperty("pci_id");
 }
 
-QString VMSS::Frequency() const
+QStringList PCI::DependencyRefs() const
 {
-    return this->stringProperty("frequency");
+    return this->property("dependencies").toStringList();
 }
 
-QVariantMap VMSS::Schedule() const
+QVariantMap PCI::OtherConfig() const
 {
-    return this->property("schedule").toMap();
+    return this->property("other_config").toMap();
 }
 
-QDateTime VMSS::LastRunTime() const
+QString PCI::SubsystemVendorName() const
 {
-    QVariant timeVariant = this->property("last_run_time");
-    if (timeVariant.canConvert<QDateTime>())
-        return timeVariant.toDateTime();
-    
-    // Try parsing as string if not already a QDateTime
-    QString timeStr = timeVariant.toString();
-    if (!timeStr.isEmpty())
-    {
-        QDateTime dt = QDateTime::fromString(timeStr, Qt::ISODate);
-        if (dt.isValid())
-            return dt;
-    }
-    
-    // Return epoch time if parsing fails
-    return QDateTime::fromSecsSinceEpoch(0);
+    return this->stringProperty("subsystem_vendor_name");
 }
 
-QStringList VMSS::VMRefs() const
+QString PCI::SubsystemDeviceName() const
 {
-    return this->property("VMs").toStringList();
+    return this->stringProperty("subsystem_device_name");
+}
+
+QString PCI::DriverName() const
+{
+    return this->stringProperty("driver_name");
 }
 
 // Helper methods
-bool VMSS::IsEnabled() const
+bool PCI::HasDependencies() const
 {
-    return this->Enabled();
+    return !this->DependencyRefs().isEmpty();
 }
 
-int VMSS::VMCount() const
+QString PCI::GetFullDeviceName() const
 {
-    return this->VMRefs().count();
+    QString vendor = this->VendorName();
+    QString device = this->DeviceName();
+    
+    if (!vendor.isEmpty() && !device.isEmpty())
+        return QString("%1 %2").arg(vendor, device);
+    else if (!device.isEmpty())
+        return device;
+    else if (!vendor.isEmpty())
+        return vendor;
+    else
+        return this->PciId();
 }

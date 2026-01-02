@@ -25,60 +25,58 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VGPU_H
-#define VGPU_H
+#ifndef PCI_H
+#define PCI_H
 
 #include "xenobject.h"
 #include <QString>
+#include <QStringList>
 #include <QVariantMap>
 
 /*!
- * \brief Virtual GPU device wrapper class
+ * \brief PCI device wrapper class
  * 
- * Represents a virtual GPU (vGPU) device attached to a VM.
- * Provides access to GPU group, type, physical GPU assignment, and configuration.
+ * Represents a physical PCI device on a XenServer host.
+ * Provides access to device identification, dependencies, and driver information.
  * First published in XenServer 6.0.
  */
-class VGPU : public XenObject
+class PCI : public XenObject
 {
     Q_OBJECT
     
     Q_PROPERTY(QString uuid READ Uuid)
-    Q_PROPERTY(QString VM READ VMRef)
-    Q_PROPERTY(QString gpuGroup READ GPUGroupRef)
-    Q_PROPERTY(QString device READ Device)
-    Q_PROPERTY(bool currentlyAttached READ CurrentlyAttached)
-    Q_PROPERTY(QString type READ TypeRef)
-    Q_PROPERTY(QString residentOn READ ResidentOnRef)
-    Q_PROPERTY(QString scheduledToBeResidentOn READ ScheduledToBeResidentOnRef)
-    Q_PROPERTY(QString extraArgs READ ExtraArgs)
-    Q_PROPERTY(QString PCI READ PCIRef)
+    Q_PROPERTY(QString className READ ClassName)
+    Q_PROPERTY(QString vendorName READ VendorName)
+    Q_PROPERTY(QString deviceName READ DeviceName)
+    Q_PROPERTY(QString host READ HostRef)
+    Q_PROPERTY(QString pciId READ PciId)
+    Q_PROPERTY(QString subsystemVendorName READ SubsystemVendorName)
+    Q_PROPERTY(QString subsystemDeviceName READ SubsystemDeviceName)
+    Q_PROPERTY(QString driverName READ DriverName)
     
     public:
-        explicit VGPU(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
+        explicit PCI(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
 
         QString GetObjectType() const override;
 
         // Basic properties
         QString Uuid() const;
-        QString VMRef() const;
-        QString GPUGroupRef() const;
-        QString Device() const;
-        bool CurrentlyAttached() const;
+        QString ClassName() const;
+        QString VendorName() const;
+        QString DeviceName() const;
+        QString HostRef() const;
+        QString PciId() const;
+        QStringList DependencyRefs() const;
         QVariantMap OtherConfig() const;
 
-        // GPU configuration
-        QString TypeRef() const;
-        QString ResidentOnRef() const;
-        QString ScheduledToBeResidentOnRef() const;
-        QVariantMap CompatibilityMetadata() const;
-        QString ExtraArgs() const;
-        QString PCIRef() const;
+        // Extended properties
+        QString SubsystemVendorName() const;
+        QString SubsystemDeviceName() const;
+        QString DriverName() const;
 
         // Helper methods
-        bool IsAttached() const;
-        bool IsResident() const;
-        bool HasScheduledLocation() const;
+        bool HasDependencies() const;
+        QString GetFullDeviceName() const;
 };
 
-#endif // VGPU_H
+#endif // PCI_H
