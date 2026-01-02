@@ -39,6 +39,7 @@ class VM;
 class XenConnection;
 class QComboBox;
 class SrPicker;
+class QPushButton;
 class QTableWidget;
 class QTextEdit;
 class QWizardPage;
@@ -120,6 +121,7 @@ class CrossPoolMigrateWizard : public QWizard
         class QRadioButton* m_copyCloneRadio = nullptr;
         class QRadioButton* m_copyFullRadio = nullptr;
         bool m_intraPoolCopySelected = false;
+        QPushButton* m_copyRescanButton = nullptr;
         QMap<QString, class VmMapping> m_vmMappings;
 
         void setupWizardPages();
@@ -158,6 +160,13 @@ class CrossPoolMigrateWizard : public QWizard
         QStringList collectSnapshotVifRefs(const QSharedPointer<VM>& vm) const;
 
         XenConnection* resolveTargetConnection(const QString& hostRef) const;
+
+        void onCopyIntraToggled(bool checked);
+        void onCopyCrossToggled(bool checked);
+        void onCopyCloneToggled(bool checked);
+        void onCopySrPickerCanBeScannedChanged();
+        void onCopySrPickerSelectionChanged();
+        void onCopyRescanClicked();
 };
 
 #endif // CROSSPOOLMIGRATEWIZARD_H

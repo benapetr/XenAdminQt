@@ -189,9 +189,7 @@ namespace
                 confirmBox_ = box;
                 if (confirmBox_)
                 {
-                    connect(confirmBox_, &QCheckBox::toggled, this, [this]() {
-                        emit completeChanged();
-                    });
+                    connect(confirmBox_, &QCheckBox::toggled, this, &RbacWizardPage::onConfirmationToggled);
                 }
             }
 
@@ -201,6 +199,11 @@ namespace
             }
 
         private:
+            void onConfirmationToggled(bool)
+            {
+                emit completeChanged();
+            }
+
             QCheckBox* confirmBox_ = nullptr;
     };
 
@@ -359,7 +362,6 @@ QWizardPage* CrossPoolMigrateWizard::createDestinationPage()
     info->setWordWrap(true);
 
     this->m_hostCombo = new QComboBox(page);
-
     QFormLayout* layout = new QFormLayout(page);
     layout->addRow(info);
     layout->addRow(tr("Target host:"), this->m_hostCombo);
@@ -485,13 +487,8 @@ QWizardPage* CrossPoolMigrateWizard::createCopyModePage()
         this->m_copyCrossRadio->setChecked(true);
     this->m_intraPoolCopySelected = canUseIntra;
 
-    connect(this->m_copyIntraRadio, &QRadioButton::toggled, this, [this](bool checked) {
-        this->m_intraPoolCopySelected = checked;
-    });
-    connect(this->m_copyCrossRadio, &QRadioButton::toggled, this, [this](bool checked) {
-        if (checked)
-            this->m_intraPoolCopySelected = false;
-    });
+    connect(this->m_copyIntraRadio, &QRadioButton::toggled, this, &CrossPoolMigrateWizard::onCopyIntraToggled);
+    connect(this->m_copyCrossRadio, &QRadioButton::toggled, this, &CrossPoolMigrateWizard::onCopyCrossToggled);
 
     QVBoxLayout* layout = new QVBoxLayout(page);
     layout->addWidget(info);
@@ -520,33 +517,19 @@ QWizardPage* CrossPoolMigrateWizard::createIntraPoolCopyPage()
 
     this->m_copySrPicker = new SrPicker(page);
     this->m_copySrPicker->setEnabled(false);
-    QPushButton* rescanButton = new QPushButton(tr("Rescan"), page);
-    rescanButton->setEnabled(false);
+    this->m_copyRescanButton = new QPushButton(tr("Rescan"), page);
+    this->m_copyRescanButton->setEnabled(false);
 
-    connect(this->m_copyCloneRadio, &QRadioButton::toggled, this, [this, rescanButton](bool checked) {
-        if (this->m_copySrPicker)
-            this->m_copySrPicker->setEnabled(!checked);
-        if (rescanButton)
-            rescanButton->setEnabled(!checked && this->m_copySrPicker && this->m_copySrPicker->canBeScanned());
-    });
-
-    connect(this->m_copySrPicker, &SrPicker::canBeScannedChanged, this, [this, rescanButton]() {
-        if (rescanButton && this->m_copySrPicker)
-            rescanButton->setEnabled(this->m_copySrPicker->canBeScanned() && this->m_copySrPicker->isEnabled());
-    });
-    connect(this->m_copySrPicker, &SrPicker::selectedIndexChanged, this, [this]() {
-        this->button(QWizard::NextButton)->setEnabled(true);
-    });
-    connect(rescanButton, &QPushButton::clicked, this, [this]() {
-        if (this->m_copySrPicker)
-            this->m_copySrPicker->scanSRs();
-    });
+    connect(this->m_copyCloneRadio, &QRadioButton::toggled, this, &CrossPoolMigrateWizard::onCopyCloneToggled);
+    connect(this->m_copySrPicker, &SrPicker::canBeScannedChanged, this, &CrossPoolMigrateWizard::onCopySrPickerCanBeScannedChanged);
+    connect(this->m_copySrPicker, &SrPicker::selectedIndexChanged, this, &CrossPoolMigrateWizard::onCopySrPickerSelectionChanged);
+    connect(this->m_copyRescanButton, &QPushButton::clicked, this, &CrossPoolMigrateWizard::onCopyRescanClicked);
 
     QFormLayout* formLayout = new QFormLayout();
     formLayout->addRow(tr("Name:"), this->m_copyNameEdit);
     formLayout->addRow(tr("Description:"), this->m_copyDescriptionEdit);
     formLayout->addRow(tr("Target SR:"), this->m_copySrPicker);
-    formLayout->addRow(QString(), rescanButton);
+    formLayout->addRow(QString(), this->m_copyRescanButton);
 
     QVBoxLayout* layout = new QVBoxLayout(page);
     layout->addWidget(info);
@@ -693,6 +676,14 @@ bool CrossPoolMigrateWizard::validateCurrentPage()
                 return false;
             }
         }
+
+        this->m_targetHostRef = this->m_hostCombo->currentData().toString();
+        this->m_targetConnection = this->resolveTargetConnection(this->m_targetHostRef);
+        this->updateRbacRequirement();
+
+        QString targetName = this->m_hostCombo->currentText();
+        for (auto it = this->m_vmMappings.begin(); it != this->m_vmMappings.end(); ++it)
+            it.value().targetName = targetName;
     }
     else if (this->currentId() == Page_TransferNetwork && this->requiresTransferNetwork())
     {
@@ -952,16 +943,6 @@ void CrossPoolMigrateWizard::populateDestinationHosts()
         }
     }
 
-    connect(this->m_hostCombo, &QComboBox::currentIndexChanged, this, [this](int) {
-        this->m_targetHostRef = this->m_hostCombo->currentData().toString();
-        this->m_targetConnection = this->resolveTargetConnection(this->m_targetHostRef);
-        this->updateRbacRequirement();
-
-        QString targetName = this->m_hostCombo->currentText();
-        for (auto it = this->m_vmMappings.begin(); it != this->m_vmMappings.end(); ++it)
-            it.value().targetName = targetName;
-    }, Qt::UniqueConnection);
-
     if (this->m_hostCombo->count() > 0)
     {
         int firstEnabled = 0;
@@ -1198,6 +1179,44 @@ void CrossPoolMigrateWizard::updateRbacRequirement()
     }
 
     this->m_requiresRbacWarning = (this->m_sourceConnection != this->m_targetConnection);
+}
+
+void CrossPoolMigrateWizard::onCopyIntraToggled(bool checked)
+{
+    this->m_intraPoolCopySelected = checked;
+}
+
+void CrossPoolMigrateWizard::onCopyCrossToggled(bool checked)
+{
+    if (checked)
+        this->m_intraPoolCopySelected = false;
+}
+
+void CrossPoolMigrateWizard::onCopyCloneToggled(bool checked)
+{
+    if (this->m_copySrPicker)
+        this->m_copySrPicker->setEnabled(!checked);
+    if (this->m_copyRescanButton && this->m_copySrPicker)
+        this->m_copyRescanButton->setEnabled(!checked && this->m_copySrPicker->canBeScanned());
+}
+
+void CrossPoolMigrateWizard::onCopySrPickerCanBeScannedChanged()
+{
+    if (this->m_copyRescanButton && this->m_copySrPicker)
+        this->m_copyRescanButton->setEnabled(this->m_copySrPicker->canBeScanned() && this->m_copySrPicker->isEnabled());
+}
+
+void CrossPoolMigrateWizard::onCopySrPickerSelectionChanged()
+{
+    QAbstractButton* nextButton = this->button(QWizard::NextButton);
+    if (nextButton)
+        nextButton->setEnabled(true);
+}
+
+void CrossPoolMigrateWizard::onCopyRescanClicked()
+{
+    if (this->m_copySrPicker)
+        this->m_copySrPicker->scanSRs();
 }
 
 bool CrossPoolMigrateWizard::requiresRbacWarning() const
