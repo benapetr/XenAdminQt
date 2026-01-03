@@ -27,6 +27,13 @@ This directory contains scripts to build native packages for different platforms
 - Xcode Command Line Tools
 - Qt6 for macOS with `macdeployqt`
 
+### Windows (.zip)
+- Windows 10 or later
+- PowerShell 5.1 or later
+- Qt6 for Windows (MSVC or MinGW build)
+- Visual Studio Build Tools 2019+ (for MSVC) or MinGW (bundled with Qt)
+- Optional: Qt static build for monolithic .exe
+
 ## Usage
 
 ### Build Debian Package
@@ -110,9 +117,46 @@ With custom version:
 
 **Note:** On first launch, you may need to right-click the app and select "Open" to bypass macOS Gatekeeper.
 
+### Build Windows Package
+
+```powershell
+cd packaging
+.\package-win.ps1 -QtPath C:\Qt\6.5.0\msvc2019_64
+```
+
+With static Qt build (creates monolithic .exe):
+```powershell
+.\package-win.ps1 -QtPath C:\Qt\6.5.0\msvc2019_64_static -Static
+```
+
+With custom version:
+```powershell
+.\package-win.ps1 -QtPath C:\Qt\6.5.0\msvc2019_64 -Version 0.2.0
+```
+
+Using MinGW compiler:
+```powershell
+.\package-win.ps1 -QtPath C:\Qt\6.5.0\mingw_64 -Compiler mingw
+```
+
+**Output:** `packaging/output/xenadmin-qt-0.1.0-windows.zip`
+
+**Installation:**
+1. Extract the ZIP file to a directory
+2. Run `xenadmin-qt.exe`
+
+**Notes:**
+- For static builds, ensure you have a static Qt build installed (e.g., from Qt official installer with static option)
+- MSVC builds require Visual Studio Build Tools or Visual Studio installed
+- MinGW builds use the MinGW toolchain bundled with Qt
+- Static builds create a single .exe file with all dependencies embedded (~20-40 MB)
+- Dynamic builds include Qt DLLs and are smaller (~5-10 MB exe + ~15-30 MB of DLLs)
+
 ## Script Options
 
-All scripts support the following options:
+### Linux/macOS Scripts
+
+All bash scripts support the following options:
 
 - `--qt <path>`: Path to Qt bin directory (e.g., `~/Qt/6.5.0/gcc_64/bin`)
   - If not specified, uses Qt from system PATH
@@ -121,6 +165,38 @@ All scripts support the following options:
 - `--version <x.y.z>`: Package version number
   - Default: `0.1.0`
   - Must follow semantic versioning (major.minor.patch)
+
+### Windows Script
+
+The PowerShell script supports the following options:
+
+- `-QtPath <path>`: Path to Qt installation directory (e.g., `C:\Qt\6.5.0\msvc2019_64`)
+  - **Required** - must be specified
+  - Must contain `bin\qmake.exe` and optionally `bin\windeployqt.exe`
+
+- `-Version <x.y.z>`: Package version number
+  - Default: `0.0.1`
+  - Must follow semantic versioning (major.minor.patch)
+
+- `-BuildType <type>`: Build type (Release or Debug)
+  - Default: `Release`
+  - Determines optimization level and debug symbols
+
+- `-Compiler <type>`: Compiler toolchain (msvc or mingw)
+  - Default: `msvc`
+  - MSVC requires Visual Studio Build Tools
+  - MinGW uses toolchain bundled with Qt
+
+- `-Jobs <n>`: Number of parallel build jobs
+  - Default: Number of CPU cores
+  - For MinGW builds (MSVC nmake doesn't support parallel builds)
+
+- `-Static`: Build static executable
+  - Requires Qt static build
+  - Creates monolithic .exe with all dependencies embedded
+  - Results in larger executable but no external DLL dependencies
+
+- `-Help`: Show help message with examples
 
 ## Build Process
 
@@ -137,10 +213,11 @@ All scripts follow this general workflow:
 
 ## Temporary Files
 
-All scripts use `/tmp` for temporary build artifacts:
+All scripts use temporary directories for temporary build artifacts:
 - Debian: `/tmp/xenadmin-deb-XXXXXX`
 - Fedora: `/tmp/xenadmin-rpm-XXXXXX`
 - macOS: `/tmp/xenadmin-dmg-XXXXXX`
+- Windows: `$env:TEMP\xenadmin-win-XXXXXX` (handled by .NET temp directory)
 
 Temporary directories are automatically cleaned up on exit.
 
@@ -149,7 +226,8 @@ Temporary directories are automatically cleaned up on exit.
 Scripts automatically detect CPU count and use parallel compilation:
 - Linux: Uses `nproc` to detect CPU count
 - macOS: Uses `sysctl -n hw.ncpu` to detect CPU count
-- Runs: `make -j<ncpus>`
+- Windows: Uses `Get-CimInstance` to detect CPU count
+- Runs: `make -j<ncpus>` (MinGW on Windows) or `nmake` (MSVC on Windows)
 
 ## Package Contents
 
@@ -181,7 +259,48 @@ The scripts automatically convert the application icon (`AppIcon.ico`) to the ap
 - Framework bundling: Qt frameworks embedded via `macdeployqt`
 - DMG presentation: Custom window layout with Applications symlink
 
+### Windows Package
+- Executable: `xenadmin-qt.exe`
+- Qt libraries: Bundled via `windeployqt` (dynamic build) or embedded (static build)
+- ZIP archive: Self-contained portable application
+- No installer required: Extract and run
+
 ## Troubleshooting
+
+### Windows-specific Issues
+
+#### Visual Studio not found
+```
+Error: nmake.exe not found
+```
+**Solution:** Run from Visual Studio Developer Command Prompt, or install Visual Studio Build Tools:
+- Download from: https://visualstudio.microsoft.com/downloads/
+- Select "Desktop development with C++" workload
+
+#### Qt static build not available
+**Solution:** Build Qt statically or use the Qt online installer:
+1. Run Qt installer
+2. Select Qt version (e.g., 6.5.0)
+3. Choose "MSVC 2019 64-bit (static)" or similar static option
+4. Complete installation
+5. Use `-QtPath C:\Qt\6.5.0\msvc2019_64_static -Static`
+
+#### windeployqt not found (dynamic builds)
+**Solution:** Ensure Qt bin directory is in PATH or specified via `-QtPath`:
+```powershell
+.\package-win.ps1 -QtPath C:\Qt\6.5.0\msvc2019_64
+```
+
+#### Build directory issues
+**Solution:** Clean the build directory:
+```powershell
+cd release
+nmake clean
+cd ..
+.\packaging\package-win.ps1 -QtPath C:\Qt\6.5.0\msvc2019_64
+```
+
+### Cross-platform Issues
 
 ### Qt not found
 ```bash
