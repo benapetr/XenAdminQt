@@ -27,7 +27,6 @@
 
 #include "VNCView.h"
 #include "VNCTabView.h"
-#include "xenlib.h"
 #include <QDebug>
 #include <QVBoxLayout>
 #include <QHBoxLayout>

@@ -27,9 +27,7 @@
 
 #include "vdipropertiesdialog.h"
 #include "ui_vdipropertiesdialog.h"
-#include "xenlib.h"
 #include "xencache.h"
-#include "xen/api.h"
 #include <QMessageBox>
 #include <QPushButton>
 #include <QDebug>

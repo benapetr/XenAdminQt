@@ -27,7 +27,6 @@
 
 #include "isodropdownbox.h"
 #include "../settingsmanager.h"
-#include "xenlib/xenlib.h"
 #include "xenlib/xencache.h"
 #include "xenlib/vmhelpers.h"
 #include "xenlib/xen/network/connection.h"

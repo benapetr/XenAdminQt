@@ -26,7 +26,6 @@
  */
 
 #include "migratevirtualdiskdialog.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/actions/vdi/migratevirtualdiskaction.h"
 #include "../operations/operationmanager.h"

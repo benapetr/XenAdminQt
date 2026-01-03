@@ -28,25 +28,16 @@
 #include "treewidgetgroupacceptor.h"
 #include "querypanel.h"
 #include "xenlib/xensearch/grouping.h"
-#include "xenlib/xenlib.h"
 
-TreeWidgetGroupAcceptor::TreeWidgetGroupAcceptor(QTreeWidget* treeWidget, QueryPanel* queryPanel)
-    : treeWidget_(treeWidget)
-    , parentItem_(nullptr)
-    , queryPanel_(queryPanel)
+TreeWidgetGroupAcceptor::TreeWidgetGroupAcceptor(QTreeWidget* treeWidget, QueryPanel* queryPanel) : treeWidget_(treeWidget), parentItem_(nullptr), queryPanel_(queryPanel)
 {
 }
 
-TreeWidgetGroupAcceptor::TreeWidgetGroupAcceptor(QTreeWidgetItem* parentItem, QueryPanel* queryPanel)
-    : treeWidget_(nullptr)
-    , parentItem_(parentItem)
-    , queryPanel_(queryPanel)
+TreeWidgetGroupAcceptor::TreeWidgetGroupAcceptor(QTreeWidgetItem* parentItem, QueryPanel* queryPanel) : treeWidget_(nullptr), parentItem_(parentItem), queryPanel_(queryPanel)
 {
 }
 
-IAcceptGroups* TreeWidgetGroupAcceptor::Add(Grouping* grouping, const QVariant& group,
-                                            const QString& objectType, const QVariantMap& objectData,
-                                            int indent, XenConnection *conn)
+IAcceptGroups* TreeWidgetGroupAcceptor::Add(Grouping* grouping, const QVariant& group, const QString& objectType, const QVariantMap& objectData, int indent, XenConnection *conn)
 {
     Q_UNUSED(indent);
 

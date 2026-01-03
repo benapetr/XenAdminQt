@@ -27,7 +27,6 @@
 
 #include "eventspage.h"
 #include "ui_eventspage.h"
-#include "xenlib.h"
 #include "operations/operationmanager.h"
 #include "xen/network/connection.h"
 #include <QDebug>
@@ -48,8 +47,7 @@
 // Register OperationRecord pointer as a metatype so it can be used in QVariant
 Q_DECLARE_METATYPE(OperationManager::OperationRecord*)
 
-EventsPage::EventsPage(QWidget* parent)
-    : NotificationsBasePage(parent), ui(new Ui::EventsPage)
+EventsPage::EventsPage(QWidget* parent) : NotificationsBasePage(parent), ui(new Ui::EventsPage)
 {
     // C# Reference: xenadmin/XenAdmin/TabPages/HistoryPage.cs line 56
     this->ui->setupUi(this);
@@ -65,35 +63,25 @@ EventsPage::EventsPage(QWidget* parent)
     this->ui->eventsTable->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
     // Connect toolbar actions
-    connect(this->ui->actionFilterStatus, &QAction::triggered,
-            this, &EventsPage::onFilterStatusChanged);
-    connect(this->ui->actionFilterLocation, &QAction::triggered,
-            this, &EventsPage::onFilterLocationChanged);
-    connect(this->ui->actionFilterDates, &QAction::triggered,
-            this, &EventsPage::onFilterDatesChanged);
-    connect(this->ui->actionDismiss, &QAction::triggered,
-            this, &EventsPage::onDismissAll);
+    connect(this->ui->actionFilterStatus, &QAction::triggered, this, &EventsPage::onFilterStatusChanged);
+    connect(this->ui->actionFilterLocation, &QAction::triggered, this, &EventsPage::onFilterLocationChanged);
+    connect(this->ui->actionFilterDates, &QAction::triggered, this, &EventsPage::onFilterDatesChanged);
+    connect(this->ui->actionDismiss, &QAction::triggered, this, &EventsPage::onDismissAll);
 
     // Connect Dismiss Selected action
-    connect(this->ui->actionDismissSelected, &QAction::triggered,
-            this, &EventsPage::onDismissSelected);
+    connect(this->ui->actionDismissSelected, &QAction::triggered, this, &EventsPage::onDismissSelected);
 
     // Connect table signals
-    connect(this->ui->eventsTable, &QTableWidget::cellClicked,
-            this, &EventsPage::onEventsTableCellClicked);
-    connect(this->ui->eventsTable, &QTableWidget::cellDoubleClicked,
-            this, &EventsPage::onEventsTableCellDoubleClicked);
-    connect(this->ui->eventsTable, &QTableWidget::itemSelectionChanged,
-            this, &EventsPage::onEventsTableSelectionChanged);
-    connect(this->ui->eventsTable->horizontalHeader(), &QHeaderView::sectionClicked,
-            this, &EventsPage::onEventsTableHeaderClicked);
+    connect(this->ui->eventsTable, &QTableWidget::cellClicked, this, &EventsPage::onEventsTableCellClicked);
+    connect(this->ui->eventsTable, &QTableWidget::cellDoubleClicked, this, &EventsPage::onEventsTableCellDoubleClicked);
+    connect(this->ui->eventsTable, &QTableWidget::itemSelectionChanged, this, &EventsPage::onEventsTableSelectionChanged);
+    connect(this->ui->eventsTable->horizontalHeader(), &QHeaderView::sectionClicked, this, &EventsPage::onEventsTableHeaderClicked);
 
     this->updateButtons();
 
     // Connect to OperationManager signals
     // C# Reference: HistoryPage constructor line 65 - ActionBase.NewAction += Action_NewAction
-    connect(OperationManager::instance(), &OperationManager::newOperation,
-            this, &EventsPage::onNewOperation);
+    connect(OperationManager::instance(), &OperationManager::newOperation, this, &EventsPage::onNewOperation);
 }
 
 EventsPage::~EventsPage()

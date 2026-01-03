@@ -27,7 +27,6 @@
 
 // query.cpp - Implementation of Query
 #include "query.h"
-#include "xenlib.h"
 #include <QDebug>
 
 Query::Query(QueryScope* scope, QueryFilter* filter) : m_scope(scope), m_filter(filter)

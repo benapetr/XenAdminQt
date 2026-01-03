@@ -27,11 +27,9 @@
 
 #include "pool.h"
 #include "network/connection.h"
-#include "../xenlib.h"
 #include "../xencache.h"
 
-Pool::Pool(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+Pool::Pool(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 

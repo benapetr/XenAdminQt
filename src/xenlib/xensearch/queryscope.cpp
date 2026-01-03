@@ -27,7 +27,6 @@
 
 // queryscope.cpp - Implementation of QueryScope
 #include "queryscope.h"
-#include "xenlib.h"
 #include <QDebug>
 
 QueryScope::QueryScope(ObjectTypes types)

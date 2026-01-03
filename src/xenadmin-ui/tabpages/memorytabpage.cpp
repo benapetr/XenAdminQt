@@ -27,7 +27,6 @@
 
 #include "memorytabpage.h"
 #include "ui_memorytabpage.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "../dialogs/ballooningdialog.h"
 #include <cmath>

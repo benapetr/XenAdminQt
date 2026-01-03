@@ -28,11 +28,9 @@
 #include "host.h"
 #include "network/connection.h"
 #include "network/comparableaddress.h"
-#include "../xenlib.h"
 #include "../xencache.h"
 
-Host::Host(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+Host::Host(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 

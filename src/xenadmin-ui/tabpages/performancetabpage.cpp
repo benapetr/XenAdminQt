@@ -27,7 +27,6 @@
 
 #include "performancetabpage.h"
 #include "ui_performancetabpage.h"
-#include "xenlib.h"
 #include "xen/xenapi/xenapi_VM.h"
 #include "xen/xenapi/xenapi_Host.h"
 #include "xen/session.h"
@@ -41,10 +40,8 @@
 #include <QtCharts/QChart>
 #include <QtCharts/QValueAxis>
 
-PerformanceTabPage::PerformanceTabPage(QWidget* parent)
-    : BaseTabPage(parent), ui(new Ui::PerformanceTabPage), m_updateTimer(new QTimer(this)), m_cpuChartView(nullptr), m_memoryChartView(nullptr), m_networkChartView(nullptr), m_diskChartView(nullptr), m_cpuChart(nullptr), m_memoryChart(nullptr), m_networkChart(nullptr), m_diskChart(nullptr), m_cpuSeries(nullptr), m_memorySeries(nullptr), m_networkReadSeries(nullptr), m_networkWriteSeries(nullptr), m_diskReadSeries(nullptr), m_diskWriteSeries(nullptr), m_cpuAxisX(nullptr), m_cpuAxisY(nullptr), m_memoryAxisX(nullptr), m_memoryAxisY(nullptr), m_networkAxisX(nullptr), m_networkAxisY(nullptr), m_diskAxisX(nullptr), m_diskAxisY(nullptr), m_maxDataPoints(60) // 60 data points = 1 minute at 1-second intervals
-      ,
-      m_startTime(QDateTime::currentMSecsSinceEpoch())
+PerformanceTabPage::PerformanceTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::PerformanceTabPage), m_updateTimer(new QTimer(this)), m_cpuChartView(nullptr), m_memoryChartView(nullptr), m_networkChartView(nullptr), m_diskChartView(nullptr), m_cpuChart(nullptr), m_memoryChart(nullptr), m_networkChart(nullptr), m_diskChart(nullptr), m_cpuSeries(nullptr), m_memorySeries(nullptr), m_networkReadSeries(nullptr), m_networkWriteSeries(nullptr), m_diskReadSeries(nullptr), m_diskWriteSeries(nullptr), m_cpuAxisX(nullptr), m_cpuAxisY(nullptr), m_memoryAxisX(nullptr), m_memoryAxisY(nullptr), m_networkAxisX(nullptr), m_networkAxisY(nullptr), m_diskAxisX(nullptr), m_diskAxisY(nullptr), m_maxDataPoints(60) // 60 data points = 1 minute at 1-second intervals
+      ,   m_startTime(QDateTime::currentMSecsSinceEpoch())
 {
     this->ui->setupUi(this);
 

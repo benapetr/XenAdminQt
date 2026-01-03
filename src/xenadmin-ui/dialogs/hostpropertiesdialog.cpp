@@ -35,12 +35,9 @@
 #include "../settingspanels/hostautostarteditpage.h"
 #include "../settingspanels/logdestinationeditpage.h"
 #include "xen/network/connection.h"
-#include "xenlib.h"
 #include <QMessageBox>
 
-HostPropertiesDialog::HostPropertiesDialog(XenConnection* connection,
-                                           const QString& hostRef,
-                                           QWidget* parent)
+HostPropertiesDialog::HostPropertiesDialog(XenConnection* connection, const QString& hostRef, QWidget* parent)
     : VerticallyTabbedDialog(connection, hostRef, "host", parent)
 {
     this->setWindowTitle(tr("Host Properties"));

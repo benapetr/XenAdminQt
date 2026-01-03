@@ -27,7 +27,6 @@
 
 // queryfilter.cpp - Implementation of QueryFilter
 #include "queryfilter.h"
-#include "xenlib.h"
 
 //==============================================================================
 // NullQuery - Matches all objects (no filtering)

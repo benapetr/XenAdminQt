@@ -28,12 +28,8 @@
 #include "xenobject.h"
 #include "network/connection.h"
 #include "../xencache.h"
-#include "../xenlib.h"
 
-XenObject::XenObject(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : QObject(parent),
-      m_connection(connection),
-      m_opaqueRef(opaqueRef)
+XenObject::XenObject(XenConnection* connection, const QString& opaqueRef, QObject* parent) : QObject(parent), m_connection(connection), m_opaqueRef(opaqueRef)
 {
 }
 

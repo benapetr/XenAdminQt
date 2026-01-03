@@ -28,7 +28,6 @@
 // grouping.cpp - Implementation of grouping algorithms
 #include "grouping.h"
 #include "queryfilter.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include <QDebug>
 

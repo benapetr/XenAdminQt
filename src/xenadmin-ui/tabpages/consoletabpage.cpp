@@ -28,7 +28,6 @@
 #include "consoletabpage.h"
 #include "ui_consoletabpage.h"
 #include "../ConsoleView/ConsolePanel.h"
-#include "xenlib.h"
 #include <QDebug>
 
 /**

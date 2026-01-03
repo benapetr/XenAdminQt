@@ -27,10 +27,8 @@
 
 #include "srstoragetabpage.h"
 #include "ui_srstoragetabpage.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
-#include "xen/api.h"
 #include "xen/xenapi/xenapi_VDI.h"
 #include "dialogs/movevirtualdiskdialog.h"
 #include "dialogs/vdipropertiesdialog.h"
@@ -43,10 +41,8 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QTimer>
-#include <stdexcept>
 
-SrStorageTabPage::SrStorageTabPage(QWidget* parent)
-    : BaseTabPage(parent), ui(new Ui::SrStorageTabPage)
+SrStorageTabPage::SrStorageTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::SrStorageTabPage)
 {
     this->ui->setupUi(this);
     this->ui->storageTable->horizontalHeader()->setStretchLastSection(true);

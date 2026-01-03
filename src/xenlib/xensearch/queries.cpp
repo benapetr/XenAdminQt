@@ -26,7 +26,6 @@
  */
 
 #include "queries.h"
-#include "../xenlib.h"
 #include "../xencache.h"
 
 // Helper function to get object type from property name

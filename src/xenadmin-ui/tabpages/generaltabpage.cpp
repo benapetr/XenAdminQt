@@ -27,15 +27,13 @@
 
 #include "generaltabpage.h"
 #include "ui_generaltabpage.h"
-#include "../../xenlib/xenlib.h"
-#include "../../xenlib/xencache.h"
-#include "../../xenlib/xen/vm.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/vm.h"
 #include <QLabel>
 #include <QDebug>
 #include <QDateTime>
 
-GeneralTabPage::GeneralTabPage(QWidget* parent)
-    : BaseTabPage(parent), ui(new Ui::GeneralTabPage)
+GeneralTabPage::GeneralTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::GeneralTabPage)
 {
     this->ui->setupUi(this);
 
@@ -194,7 +192,7 @@ void GeneralTabPage::populateVMProperties()
 
     bool isTemplate = this->m_objectData.value("is_a_template", false).toBool();
     bool isSnapshot = this->m_objectData.value("is_a_snapshot", false).toBool();
-    bool isControlDomain = this->m_objectData.value("is_control_domain", false).toBool();
+    //bool isControlDomain = this->m_objectData.value("is_control_domain", false).toBool();
 
     // OS Name / Guest Operating System
     if (this->m_objectData.contains("guest_metrics") && this->m_connection)

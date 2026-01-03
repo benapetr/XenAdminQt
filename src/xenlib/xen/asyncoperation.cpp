@@ -34,7 +34,6 @@
 #include "vm.h"
 #include "sr.h"
 #include "failure.h"
-#include "../xenlib.h"
 #include <QtCore/QDebug>
 #include <QtCore/QMutexLocker>
 #include <QtCore/QTimer>
@@ -50,8 +49,7 @@ const int AsyncOperation::DEFAULT_TIMEOUT_MS;
 
 // AsyncOperation Implementation
 
-AsyncOperation::AsyncOperation(XenConnection* connection, const QString& title,
-                               const QString& description, QObject* parent)
+AsyncOperation::AsyncOperation(XenConnection* connection, const QString& title, const QString& description, QObject* parent)
     : QObject(parent), m_title(title), m_description(description), m_connection(connection), m_session(nullptr), m_percentComplete(0), m_state(NotStarted), m_canCancel(true), m_suppressHistory(false), m_safeToExit(true), m_pool(nullptr), m_host(nullptr), m_vm(nullptr), m_sr(nullptr), m_vmTemplate(nullptr), m_syncExecution(false), m_ownsSession(false)
 {
 }

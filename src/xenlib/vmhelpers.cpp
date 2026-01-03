@@ -26,7 +26,6 @@
  */
 
 #include "vmhelpers.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
 #include <QtCore/QDebug>
