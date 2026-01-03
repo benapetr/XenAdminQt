@@ -8,6 +8,14 @@ The idea is to first port the entire existing C# codebase preserving all naming 
 
 The goal of this project is to get original thick XenAdmin client to work on non-Microsoft platforms (Mostly macOS and GNU/Linux - but any platform supported by Qt might work).
 
+## What is XenAdmin
+
+XenAdmin is a graphical desktop frontend for xapi - https://github.com/xapi-project which is a Xen API framework that is powering XCP-ng as well as Citrix Hypervisor platform (XenServer).
+
+It connects to xapi over HTTP/S protocol using JSON-RPC API calls, provides access to host and VM consoles via XSVNC as well as RRDP performance metrics provided by xapi.
+
+That means it can be used as a graphical frontend to directly manage standalone XCP-ng / XenServer hosts as well as clusters.
+
 # Building
 See [packaging readme](packaging/README.md) for details
 
@@ -33,5 +41,4 @@ sudo dnf install qt6-qtbase-devel rpm-build qt6-qtbase-devel freerdp2-devel libw
 # Debian based:
 sudo apt-get install qt6-base-dev build-essential freerdp2-dev libwinpr2-dev mesa-common-dev libglu1-mesa-dev libegl1 libxkbcommon0
 ```
-
 

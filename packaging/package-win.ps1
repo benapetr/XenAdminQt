@@ -28,7 +28,7 @@ param(
     [string]$BuildType = "Release",
     [string]$Compiler = "mingw",  # msvc or mingw
     [int]$Jobs = 0,
-    [switch]$Static = $false,
+    [switch]$Static = $true,
     [switch]$Help
 )
 
@@ -330,16 +330,19 @@ try {
     
     # Build with nmake or mingw32-make
     Write-Host "Building with $MakeCmd (using $Jobs parallel jobs)..." -ForegroundColor Yellow
+    Write-Host ""
     
+    # Redirect stderr to stdout and capture all output without truncation
     if ($Compiler -eq "msvc") {
         # nmake doesn't support -j directly, use /MAXCPUCOUNT for msbuild or just run nmake
-        & $MakeCmd
+        & cmd /c "$MakeCmd 2>&1"
     } else {
-        # MinGW make supports -j
-        & $MakeCmd -j $Jobs
+        # MinGW make and LLVM-MinGW support -j
+        & cmd /c "$MakeCmd -j $Jobs 2>&1"
     }
     
     if ($LASTEXITCODE -ne 0) {
+        Write-Host ""
         Write-Host "Error: Build failed with exit code $LASTEXITCODE" -ForegroundColor Red
         exit 1
     }
