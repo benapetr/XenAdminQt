@@ -545,7 +545,7 @@ void NavigationView::buildInfrastructureTree()
                     srItem->setData(0, Qt::UserRole + 1, QString("sr")); // Object type
 
                     // Set SR icon
-                    QIcon srIcon = IconManager::instance().getIconForSR(srData);
+                    QIcon srIcon = IconManager::instance().getIconForSR(srData, connection);
                     srItem->setIcon(0, srIcon);
                 }
             }
@@ -866,7 +866,7 @@ void NavigationView::buildObjectsTree()
         srItem->setData(0, Qt::UserRole + 1, QString("sr"));
 
         // Set SR icon
-        QIcon srIcon = IconManager::instance().getIconForSR(srData);
+        QIcon srIcon = IconManager::instance().getIconForSR(srData, connection);
         srItem->setIcon(0, srIcon);
     }
 

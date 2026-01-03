@@ -29,6 +29,7 @@
 #define SETDEFAULTSRCOMMAND_H
 
 #include "srcommand.h"
+#include <QPointer>
 
 /**
  * @class SetDefaultSRCommand
@@ -47,6 +48,13 @@ class SetDefaultSRCommand : public SRCommand
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
+
+    private slots:
+        void onSetDefaultCompleted();
+        void onSetDefaultFailed(const QString& error);
+
+    private:
+        QString m_pendingSrName;
 };
 
 #endif // SETDEFAULTSRCOMMAND_H

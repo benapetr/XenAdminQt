@@ -41,7 +41,59 @@ SetDefaultSRCommand::SetDefaultSRCommand(MainWindow* mainWindow, QObject* parent
 bool SetDefaultSRCommand::CanRun() const
 {
     QSharedPointer<SR> sr = this->getSR();
-    return sr != nullptr;
+    if (!sr)
+        return false;
+
+    XenConnection* connection = sr->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
+    QVariantMap srData = cache->ResolveObjectData("sr", sr->OpaqueRef());
+    if (srData.isEmpty())
+        return false;
+
+    // C# SR.HasPBDs()
+    if (srData.value("PBDs").toList().isEmpty())
+        return false;
+
+    // C# SR.IsDefaultSr(sr)
+    QStringList poolRefs = cache->GetAllRefs("pool");
+    if (!poolRefs.isEmpty())
+    {
+        QVariantMap poolData = cache->ResolveObjectData("pool", poolRefs.first());
+        if (poolData.value("default_SR").toString() == sr->OpaqueRef())
+            return false;
+    }
+
+    // C# SR.SupportsVdiCreate() (ISO SRs disallowed)
+    if (srData.value("content_type").toString() == "iso")
+        return false;
+    QVariantList allowedOps = srData.value("allowed_operations").toList();
+    bool supportsVdiCreate = false;
+    for (const QVariant& opVar : allowedOps)
+    {
+        if (opVar.toString() == "vdi_create")
+        {
+            supportsVdiCreate = true;
+            break;
+        }
+    }
+    if (!supportsVdiCreate)
+        return false;
+
+    // C# (sr.shared || HostCount <= 1)
+    int hostCount = cache->GetAllRefs("host").size();
+    if (!srData.value("shared", false).toBool() && hostCount > 1)
+        return false;
+
+    // C# !HelpersGUI.GetActionInProgress(sr)
+    if (!srData.value("current_operations").toMap().isEmpty())
+        return false;
+    if (srData.value("locked", false).toBool())
+        return false;
+
+    return true;
 }
 
 void SetDefaultSRCommand::Run()
@@ -80,21 +132,12 @@ void SetDefaultSRCommand::Run()
             return;
         }
 
-        SetSrAsDefaultAction* action = new SetSrAsDefaultAction(connection, poolRefs.first(), srRef, this);
+        SetSrAsDefaultAction* action = new SetSrAsDefaultAction(connection, poolRefs.first(), srRef, this->mainWindow());
         OperationManager::instance()->registerOperation(action);
 
-        connect(action, &AsyncOperation::completed, [this, srName, action]() {
-            this->mainWindow()->showStatusMessage(
-                QString("Storage repository '%1' set as default successfully").arg(srName), 5000);
-            action->deleteLater();
-        });
-
-        connect(action, &AsyncOperation::failed, [this, srName, action](const QString& error) {
-            QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
-                                 QString("Failed to set storage repository '%1' as default: %2").arg(srName, error));
-            this->mainWindow()->showStatusMessage("Set default SR failed", 5000);
-            action->deleteLater();
-        });
+        this->m_pendingSrName = srName;
+        connect(action, &AsyncOperation::completed, this, &SetDefaultSRCommand::onSetDefaultCompleted);
+        connect(action, &AsyncOperation::failed, this, &SetDefaultSRCommand::onSetDefaultFailed);
 
         action->runAsync();
     }
@@ -103,4 +146,29 @@ void SetDefaultSRCommand::Run()
 QString SetDefaultSRCommand::MenuText() const
 {
     return "Set as Default";
+}
+
+void SetDefaultSRCommand::onSetDefaultCompleted()
+{
+    if (this->mainWindow())
+    {
+        this->mainWindow()->showStatusMessage(QString("Storage repository '%1' set as default successfully").arg(m_pendingSrName), 5000);
+    }
+
+    if (auto* op = qobject_cast<AsyncOperation*>(sender()))
+        op->deleteLater();
+}
+
+void SetDefaultSRCommand::onSetDefaultFailed(const QString& error)
+{
+    if (this->mainWindow())
+    {
+        QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
+                             QString("Failed to set storage repository '%1' as default: %2")
+                                 .arg(m_pendingSrName, error));
+        this->mainWindow()->showStatusMessage("Set default SR failed", 5000);
+    }
+
+    if (auto* op = qobject_cast<AsyncOperation*>(sender()))
+        op->deleteLater();
 }

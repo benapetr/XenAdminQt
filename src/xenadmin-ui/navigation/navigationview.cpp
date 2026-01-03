@@ -629,7 +629,7 @@ void NavigationView::buildInfrastructureTree()
                     srItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(srObj));
 
                     // Set SR icon
-                    QIcon srIcon = IconManager::instance().getIconForSR(srData);
+                    QIcon srIcon = IconManager::instance().getIconForSR(srData, connection);
                     srItem->setIcon(0, srIcon);
                 }
             }
@@ -935,7 +935,7 @@ void NavigationView::buildObjectsTree()
             QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
             srItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(srObj));
 
-            QIcon srIcon = IconManager::instance().getIconForSR(srData);
+            QIcon srIcon = IconManager::instance().getIconForSR(srData, connection);
             srItem->setIcon(0, srIcon);
         }
     }

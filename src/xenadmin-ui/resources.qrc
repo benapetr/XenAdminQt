@@ -133,6 +133,7 @@
         
         <!-- Storage icons -->
         <file alias="storage.png">images/000_Storage_h32bit_16.png</file>
+        <file alias="storage_default.png">images/000_StorageDefault_h32bit_16.png</file>
         <file alias="storage_new.png">images/000_NewStorage_h32bit_16.png</file>
         
         <!-- Network icons -->

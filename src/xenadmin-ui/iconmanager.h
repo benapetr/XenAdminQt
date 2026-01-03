@@ -35,6 +35,7 @@
 #include <QMap>
 
 class XenObject;
+class XenConnection;
 
 /**
  * @brief Manages icons for different object types and states
@@ -44,42 +45,43 @@ class XenObject;
  */
 class IconManager
 {
-public:
-    static IconManager& instance();
+    public:
+        static IconManager& instance();
 
-    // Icon retrieval methods
-    QIcon getIconForObject(const QString& objectType, const QVariantMap& objectData) const;
-    QIcon getIconForObject(const XenObject* object) const;
-    QIcon getIconForVM(const QVariantMap& vmData) const;
-    QIcon getIconForHost(const QVariantMap& hostData) const;
-    QIcon getIconForPool(const QVariantMap& poolData) const;
-    QIcon getIconForSR(const QVariantMap& srData) const;
-    QIcon getIconForNetwork(const QVariantMap& networkData) const;
+        // Icon retrieval methods
+        QIcon getIconForObject(const QString& objectType, const QVariantMap& objectData) const;
+        QIcon getIconForObject(const XenObject* object) const;
+        QIcon getIconForVM(const QVariantMap& vmData) const;
+        QIcon getIconForHost(const QVariantMap& hostData) const;
+        QIcon getIconForPool(const QVariantMap& poolData) const;
+        QIcon getIconForSR(const QVariantMap& srData) const;
+        QIcon getIconForSR(const QVariantMap& srData, XenConnection* connection) const;
+        QIcon getIconForNetwork(const QVariantMap& networkData) const;
 
-    // Static icon getters
-    QIcon getConnectedIcon() const;
-    QIcon getDisconnectedIcon() const;
-    QIcon getConnectingIcon() const;
+        // Static icon getters
+        QIcon getConnectedIcon() const;
+        QIcon getDisconnectedIcon() const;
+        QIcon getConnectingIcon() const;
 
-private:
-    IconManager();
-    ~IconManager() = default;
-    IconManager(const IconManager&) = delete;
-    IconManager& operator=(const IconManager&) = delete;
+    private:
+        IconManager();
+        ~IconManager() = default;
+        IconManager(const IconManager&) = delete;
+        IconManager& operator=(const IconManager&) = delete;
 
-    // Helper methods
-    QIcon createStatusIcon(const QColor& color, const QString& symbol = QString()) const;
-    QIcon createTextIcon(const QString& text, const QColor& bgColor) const;
-    QString getVMPowerState(const QVariantMap& vmData) const;
-    bool isVMOperationInProgress(const QVariantMap& vmData) const;
+        // Helper methods
+        QIcon createStatusIcon(const QColor& color, const QString& symbol = QString()) const;
+        QIcon createTextIcon(const QString& text, const QColor& bgColor) const;
+        QString getVMPowerState(const QVariantMap& vmData) const;
+        bool isVMOperationInProgress(const QVariantMap& vmData) const;
 
-    // Icon cache
-    mutable QMap<QString, QIcon> m_iconCache;
+        // Icon cache
+        mutable QMap<QString, QIcon> m_iconCache;
 
-    // Preloaded icons
-    QIcon m_connectedIcon;
-    QIcon m_disconnectedIcon;
-    QIcon m_connectingIcon;
+        // Preloaded icons
+        QIcon m_connectedIcon;
+        QIcon m_disconnectedIcon;
+        QIcon m_connectingIcon;
 };
 
 #endif // ICONMANAGER_H

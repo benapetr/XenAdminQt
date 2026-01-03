@@ -91,6 +91,9 @@ QIcon IconManager::getIconForObject(const XenObject* object) const
         }
     }
 
+    if (objectType == "sr")
+        return this->getIconForSR(objectData, object->GetConnection());
+
     return this->getIconForObject(objectType, objectData);
 }
 
@@ -250,20 +253,46 @@ QIcon IconManager::getIconForPool(const QVariantMap& poolData) const
 
 QIcon IconManager::getIconForSR(const QVariantMap& srData) const
 {
+    return this->getIconForSR(srData, nullptr);
+}
+
+QIcon IconManager::getIconForSR(const QVariantMap& srData, XenConnection* connection) const
+{
     QString type = srData.value("type", "unknown").toString();
     bool shared = srData.value("shared", false).toBool();
 
-    QString cacheKey = QString("sr_%1_%2")
+    QString ref = srData.value("ref").toString();
+    if (ref.isEmpty())
+        ref = srData.value("opaqueRef").toString();
+    if (ref.isEmpty())
+        ref = srData.value("_ref").toString();
+
+    bool isDefault = false;
+    if (connection && connection->GetCache())
+    {
+        QStringList poolRefs = connection->GetCache()->GetAllRefs("pool");
+        if (!poolRefs.isEmpty())
+        {
+            QVariantMap poolData = connection->GetCache()->ResolveObjectData("pool", poolRefs.first());
+            QString defaultRef = poolData.value("default_SR").toString();
+            if (!defaultRef.isEmpty() && defaultRef == ref)
+                isDefault = true;
+        }
+    }
+
+    QString cacheKey = QString("sr_%1_%2_%3")
                            .arg(type)
-                           .arg(shared ? "shared" : "local");
+                           .arg(shared ? "shared" : "local")
+                           .arg(isDefault ? "default" : "regular");
 
     if (this->m_iconCache.contains(cacheKey))
     {
         return this->m_iconCache.value(cacheKey);
     }
 
-    // Matching C# Icons.Storage
-    QIcon icon = QIcon(":/tree-icons/storage.png");
+    QIcon icon = isDefault
+        ? QIcon(":/tree-icons/storage_default.png")
+        : QIcon(":/tree-icons/storage.png");
 
     this->m_iconCache.insert(cacheKey, icon);
     return icon;
