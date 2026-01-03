@@ -38,6 +38,8 @@ namespace Ui
 }
 QT_END_NAMESPACE
 
+class QTableWidgetItem;
+
 /**
  * Network tab page showing network configuration and interfaces.
  * Matches C# XenAdmin NetworkPage.cs with two sections:
@@ -122,6 +124,8 @@ class NetworkTabPage : public BaseTabPage
 
     private slots:
         void onConfigureClicked();
+        void onNetworksTableDoubleClicked(QTableWidgetItem* item);
+        void onIpConfigTableDoubleClicked(QTableWidgetItem* item);
         void onNetworksTableSelectionChanged();
         void onIPConfigTableSelectionChanged();
         void onNetworksDataUpdated(const QVariantList& networks);

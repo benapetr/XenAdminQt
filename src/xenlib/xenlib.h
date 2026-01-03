@@ -66,9 +66,6 @@ class XENLIB_EXPORT XenLib : public QObject
         // Cache is per-connection; each XenConnection owns its own XenCache instance.
         XenCache* GetCache() const;
 
-        // Get full object data by type and reference
-        QVariantMap getCachedObjectData(const QString& objectType, const QString& objectRef);
-
         // Status and information
         QString getConnectionInfo() const;
         QString getLastError() const;

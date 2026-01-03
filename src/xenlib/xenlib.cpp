@@ -51,7 +51,6 @@
 #include <QtCore/QMetaObject>
 #include <QtCore/QRegularExpression>
 #include <initializer_list>
-#include <exception>
 
 // Helper for timestamped debug output
 static QString timestamp()
@@ -346,38 +345,6 @@ XenCache* XenLib::GetCache() const
 {
     // Cache is now owned by connection (matching C# architecture)
     return this->d->connection ? this->d->connection->GetCache() : nullptr;
-}
-
-QVariantMap XenLib::getCachedObjectData(const QString& objectType, const QString& objectRef)
-{
-    // Reference: XenModel/Network/Cache.cs lines 438-448 (Resolve method)
-    // CRITICAL: This method must be synchronous and cache-only (no API calls)
-    // to match C# Connection.Resolve() behavior. All data must be pre-fetched
-    // asynchronously via requestObjectData() before calling this method.
-
-    if (!this->isConnected())
-    {
-        this->setError("Not connected to server");
-        return QVariantMap();
-    }
-
-    // Cache-only lookup - matches C# Cache.Resolve exactly
-    XenCache* cache = GetCache();
-    if (!cache)
-    {
-        qWarning() << "XenLib::getObjectData - Cache not initialized";
-        return QVariantMap();
-    }
-
-    if (!cache->Contains(objectType, objectRef))
-    {
-        // Cache miss - this is NOT an error, caller should use requestObjectData() first
-        qDebug() << "XenLib::getObjectData - Cache miss for" << objectType << objectRef
-                 << "(use requestObjectData() to fetch asynchronously)";
-        return QVariantMap();
-    }
-
-    return cache->ResolveObjectData(objectType, objectRef);
 }
 
 QString XenLib::getConnectionInfo() const

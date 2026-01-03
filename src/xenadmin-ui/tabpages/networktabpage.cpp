@@ -76,6 +76,10 @@ NetworkTabPage::NetworkTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui
     connect(this->ui->ipConfigTable, &QTableWidget::customContextMenuRequested, this, &NetworkTabPage::showIPConfigContextMenu);
     connect(this->ui->networksTable, &QTableWidget::itemSelectionChanged, this, &NetworkTabPage::onNetworksTableSelectionChanged);
     connect(this->ui->ipConfigTable, &QTableWidget::itemSelectionChanged, this, &NetworkTabPage::onIPConfigTableSelectionChanged);
+    connect(this->ui->networksTable, &QTableWidget::itemDoubleClicked,
+            this, &NetworkTabPage::onNetworksTableDoubleClicked);
+    connect(this->ui->ipConfigTable, &QTableWidget::itemDoubleClicked,
+            this, &NetworkTabPage::onIpConfigTableDoubleClicked);
 }
 
 NetworkTabPage::~NetworkTabPage()
@@ -831,6 +835,23 @@ void NetworkTabPage::onConfigureClicked()
         // Refresh the IP configuration display after changes
         this->populateIPConfigForHost();
     }
+}
+
+void NetworkTabPage::onNetworksTableDoubleClicked(QTableWidgetItem* item)
+{
+    if (!item)
+        return;
+    if (this->m_objectType == "vm")
+        this->onEditNetwork();
+    else
+        this->onConfigureClicked();
+}
+
+void NetworkTabPage::onIpConfigTableDoubleClicked(QTableWidgetItem* item)
+{
+    if (!item)
+        return;
+    this->onConfigureClicked();
 }
 
 QString NetworkTabPage::getSelectedNetworkRef() const
