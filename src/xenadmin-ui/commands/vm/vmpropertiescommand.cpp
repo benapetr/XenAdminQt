@@ -29,7 +29,6 @@
 #include <QDebug>
 #include "../../mainwindow.h"
 #include "../../dialogs/vmpropertiesdialog.h"
-#include "xenlib.h"
 #include <QtWidgets>
 #include "xen/vm.h"
 

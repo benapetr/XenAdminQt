@@ -27,7 +27,6 @@
 
 #include "deletetemplatecommand.h"
 #include "../../mainwindow.h"
-#include "xenlib.h"
 #include "xen/api.h"
 #include "xencache.h"
 #include <QMessageBox>

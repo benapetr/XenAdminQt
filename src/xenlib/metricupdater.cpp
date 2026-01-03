@@ -40,18 +40,17 @@
 // C# Equivalent: XenAdmin.XenSearch.MetricUpdater implementation
 // C# Reference: xenadmin/XenModel/XenSearch/MetricUpdater.cs
 
-MetricUpdater::MetricUpdater(XenConnection* connection, QObject* parent)
-    : QObject(parent), m_connection(connection), m_updateTimer(new QTimer(this)), m_networkManager(new QNetworkAccessManager(this)), m_running(false), m_paused(false), m_requestId(-1)
+MetricUpdater::MetricUpdater(XenConnection* connection)
+    : QObject(connection), m_connection(connection), m_updateTimer(new QTimer(this)), m_networkManager(new QNetworkAccessManager(this)), m_running(false), m_paused(false), m_requestId(-1)
 {
-    m_updateTimer->setInterval(UPDATE_INTERVAL_MS);
-    connect(m_updateTimer, &QTimer::timeout, this, &MetricUpdater::updateMetrics);
-    connect(m_networkManager, &QNetworkAccessManager::finished,
-            this, &MetricUpdater::onNetworkReplyFinished);
+    this->m_updateTimer->setInterval(UPDATE_INTERVAL_MS);
+    connect(this->m_updateTimer, &QTimer::timeout, this, &MetricUpdater::updateMetrics);
+    connect(this->m_networkManager, &QNetworkAccessManager::finished, this, &MetricUpdater::onNetworkReplyFinished);
 }
 
 MetricUpdater::~MetricUpdater()
 {
-    stop();
+    this->stop();
 }
 
 void MetricUpdater::start()
@@ -60,67 +59,67 @@ void MetricUpdater::start()
         return;
 
     qDebug() << "MetricUpdater: Starting metric updates";
-    m_running = true;
-    m_paused = false;
+    this->m_running = true;
+    this->m_paused = false;
 
     // Immediate first update
-    updateMetrics();
+    this->updateMetrics();
 
     // Start periodic updates
-    m_updateTimer->start();
+    this->m_updateTimer->start();
 }
 
 void MetricUpdater::stop()
 {
-    if (!m_running)
+    if (!this->m_running)
         return;
 
     qDebug() << "MetricUpdater: Stopping metric updates";
-    m_running = false;
-    m_paused = false;
-    m_updateTimer->stop();
+    this->m_running = false;
+    this->m_paused = false;
+    this->m_updateTimer->stop();
 
-    QMutexLocker locker(&m_metricsMutex);
-    m_metricsCache.clear();
+    QMutexLocker locker(&this->m_metricsMutex);
+    this->m_metricsCache.clear();
 }
 
 void MetricUpdater::pause()
 {
-    if (!m_running)
+    if (!this->m_running)
         return;
 
     qDebug() << "MetricUpdater: Pausing updates";
-    m_paused = true;
-    m_updateTimer->stop();
+    this->m_paused = true;
+    this->m_updateTimer->stop();
 }
 
 void MetricUpdater::resume()
 {
-    if (!m_running || !m_paused)
+    if (!this->m_running || !this->m_paused)
         return;
 
     qDebug() << "MetricUpdater: Resuming updates";
-    m_paused = false;
+    this->m_paused = false;
 
     // Immediate update after resume
-    updateMetrics();
+    this->updateMetrics();
 
-    m_updateTimer->start();
+    this->m_updateTimer->start();
 }
 
 void MetricUpdater::prod()
 {
-    if (!m_running)
+    if (!this->m_running)
         return;
 
     qDebug() << "MetricUpdater: Forcing immediate update";
 
     // Reset timer and trigger immediate update
-    m_updateTimer->stop();
-    updateMetrics();
+    this->m_updateTimer->stop();
+    this->updateMetrics();
 
-    if (!m_paused)
-        m_updateTimer->start();
+    if (!this->m_paused)
+        this->m_updateTimer->start();
 }
 
 double MetricUpdater::getValue(const QString& objectType, const QString& objectUuid,
@@ -130,10 +129,10 @@ double MetricUpdater::getValue(const QString& objectType, const QString& objectU
 
     QMutexLocker locker(&m_metricsMutex);
 
-    if (!m_metricsCache.contains(key))
+    if (!this->m_metricsCache.contains(key))
         return 0.0;
 
-    const MetricValues& metrics = m_metricsCache[key];
+    const MetricValues& metrics = this->m_metricsCache[key];
     return metrics.values.value(metricName, 0.0);
 }
 
@@ -141,22 +140,22 @@ bool MetricUpdater::hasMetrics(const QString& objectType, const QString& objectU
 {
     QString key = QString("%1:%2").arg(objectType, objectUuid);
 
-    QMutexLocker locker(&m_metricsMutex);
-    return m_metricsCache.contains(key) && !m_metricsCache[key].values.isEmpty();
+    QMutexLocker locker(&this->m_metricsMutex);
+    return this->m_metricsCache.contains(key) && !this->m_metricsCache[key].values.isEmpty();
 }
 
 void MetricUpdater::updateMetrics()
 {
-    if (!m_running || m_paused)
+    if (!this->m_running || this->m_paused)
         return;
 
-    if (!m_connection || !m_connection->IsConnected())
+    if (!this->m_connection || !this->m_connection->IsConnected())
     {
         qDebug() << "MetricUpdater: Connection not available, skipping update";
         return;
     }
 
-    fetchRrdData();
+    this->fetchRrdData();
 }
 
 void MetricUpdater::fetchRrdData()
@@ -166,7 +165,7 @@ void MetricUpdater::fetchRrdData()
     //
     // Builds URL: http(s)://host:port/rrd_updates?session_id=xxx&start=timestamp&cf=AVERAGE&interval=5&host=true
 
-    QString url = buildRrdUrl();
+    QString url = this->buildRrdUrl();
     if (url.isEmpty())
     {
         qDebug() << "MetricUpdater: Failed to build RRD URL";
@@ -188,7 +187,7 @@ void MetricUpdater::fetchRrdData()
     }
 
     // Send HTTP GET request
-    QNetworkReply* reply = m_networkManager->get(request);
+    QNetworkReply* reply = this->m_networkManager->get(request);
     reply->setProperty("requestTime", QDateTime::currentMSecsSinceEpoch());
 }
 
@@ -204,10 +203,10 @@ QString MetricUpdater::buildRrdUrl() const
     // - interval: Data point interval (5 seconds)
     // - host: Include host metrics (true)
 
-    if (!m_connection || !m_connection->GetSession())
+    if (!this->m_connection || !this->m_connection->GetSession())
         return QString();
 
-    QString sessionId = m_connection->GetSession()->getSessionId();
+    QString sessionId = this->m_connection->GetSession()->getSessionId();
     if (sessionId.isEmpty())
         return QString();
 
@@ -220,12 +219,12 @@ QString MetricUpdater::buildRrdUrl() const
                         .arg(startTime)
                         .arg(RRD_INTERVAL_SECONDS);
 
-    int port = m_connection->GetPort();
+    int port = this->m_connection->GetPort();
     bool useSSL = (port == 443); // Default XenServer SSL port
 
     QUrl url;
     url.setScheme(useSSL ? "https" : "http");
-    url.setHost(m_connection->GetHostname());
+    url.setHost(this->m_connection->GetHostname());
     url.setPort(port);
     url.setPath("/rrd_updates");
     url.setQuery(query);
@@ -242,8 +241,8 @@ qint64 MetricUpdater::getStartTimestamp() const
 
     QDateTime now = QDateTime::currentDateTimeUtc();
     qint64 offsetSeconds = 0;
-    if (m_connection)
-        offsetSeconds = m_connection->GetServerTimeOffsetSeconds();
+    if (this->m_connection)
+        offsetSeconds = this->m_connection->GetServerTimeOffsetSeconds();
 
     return now.toSecsSinceEpoch() - offsetSeconds - 10;
 }
@@ -351,7 +350,7 @@ void MetricUpdater::parseRrdXml(const QByteArray& xmlData)
     // Update cache with new metrics
     {
         QMutexLocker locker(&m_metricsMutex);
-        m_metricsCache = newMetrics;
+        this->m_metricsCache = newMetrics;
     }
 
     qDebug() << "MetricUpdater: Updated metrics for" << newMetrics.size() << "objects";
@@ -360,7 +359,7 @@ void MetricUpdater::parseRrdXml(const QByteArray& xmlData)
 
 void MetricUpdater::onRrdDataReceived(const QByteArray& data)
 {
-    parseRrdXml(data);
+    this->parseRrdXml(data);
 }
 
 void MetricUpdater::onRrdRequestFailed(const QString& error)
@@ -394,5 +393,5 @@ void MetricUpdater::onNetworkReplyFinished(QNetworkReply* reply)
 
     qDebug() << "MetricUpdater: RRD response head:" << QString::fromUtf8(data.left(200));
 
-    onRrdDataReceived(data);
+    this->onRrdDataReceived(data);
 }

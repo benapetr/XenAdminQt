@@ -28,7 +28,6 @@
 #include "ejecthostfrompoolcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib.h"
 #include "xen/network/connection.h"
 #include "xen/host.h"
 #include "xen/pool.h"

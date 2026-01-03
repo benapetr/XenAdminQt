@@ -31,8 +31,7 @@
 #include "xencache.h"
 #include <QMessageBox>
 
-CopyTemplateCommand::CopyTemplateCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+CopyTemplateCommand::CopyTemplateCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
@@ -50,9 +49,6 @@ bool CopyTemplateCommand::CanRun() const
     if (templateRef.isEmpty())
         return false;
 
-    if (!this->mainWindow()->xenLib())
-        return false;
-
     QVariantMap templateData = object->GetConnection()->GetCache()->ResolveObjectData("vm", templateRef);
 
     return this->canRunTemplate(templateData);
@@ -66,9 +62,6 @@ void CopyTemplateCommand::Run()
 
     QString templateRef = this->getSelectedObjectRef();
     if (templateRef.isEmpty())
-        return;
-
-    if (!this->mainWindow()->xenLib())
         return;
 
     XenCache* cache = object->GetConnection()->GetCache();

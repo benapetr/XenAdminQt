@@ -22,7 +22,6 @@ SOURCES += \
     xen/xenapi/xenapi_VDI.cpp \
     xen/xenapi/xenapi_VGPU.cpp \
     xen/xenapi/xenapi_VIF.cpp \
-    xenlib.cpp \
     xencache.cpp \
     vmhelpers.cpp \
     metricupdater.cpp \
@@ -41,7 +40,6 @@ SOURCES += \
     xen/api.cpp \
     xen/apiversion.cpp \
     xen/jsonrpcclient.cpp \
-    xen/asyncoperations.cpp \
     xen/eventpoller.cpp \
     xen/network/certificatemanager.cpp \
     xen/network/heartbeat.cpp \
@@ -180,7 +178,6 @@ HEADERS += \
     xen/xenapi/xenapi_VDI.h \
     xen/xenapi/xenapi_VGPU.h \
     xen/xenapi/xenapi_VIF.h \
-    xenlib.h \
     xenlib_global.h \
     xencache.h \
     vmhelpers.h \
@@ -202,7 +199,6 @@ HEADERS += \
     xen/api.h \
     xen/apiversion.h \
     xen/jsonrpcclient.h \
-    xen/asyncoperations.h \
     xen/eventpoller.h \
     xen/network/certificatemanager.h \
     xen/network/heartbeat.h \

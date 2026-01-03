@@ -57,72 +57,72 @@ class MetricUpdater : public QObject
 {
     Q_OBJECT
 
-public:
-    explicit MetricUpdater(XenConnection* connection, QObject* parent = nullptr);
-    ~MetricUpdater();
+    public:
+        explicit MetricUpdater(XenConnection* connection);
+        ~MetricUpdater();
 
-    // Start periodic metric updates (every 30 seconds)
-    void start();
+        // Start periodic metric updates (every 30 seconds)
+        void start();
 
-    // Stop metric updates
-    void stop();
+        // Stop metric updates
+        void stop();
 
-    // Pause updates temporarily
-    void pause();
+        // Pause updates temporarily
+        void pause();
 
-    // Resume paused updates
-    void resume();
+        // Resume paused updates
+        void resume();
 
-    // Force immediate update (skip wait)
-    void prod();
+        // Force immediate update (skip wait)
+        void prod();
 
-    // Get cached metric value for object
-    // objectType: "vm" or "host"
-    // objectUuid: UUID of VM/host
-    // metricName: "cpu0", "memory", "vif_0_rx", etc.
-    // Returns: Metric value, or 0.0 if not available
-    double getValue(const QString& objectType, const QString& objectUuid,
-                    const QString& metricName) const;
+        // Get cached metric value for object
+        // objectType: "vm" or "host"
+        // objectUuid: UUID of VM/host
+        // metricName: "cpu0", "memory", "vif_0_rx", etc.
+        // Returns: Metric value, or 0.0 if not available
+        double getValue(const QString& objectType, const QString& objectUuid,
+                        const QString& metricName) const;
 
-    // Check if metrics are available for object
-    bool hasMetrics(const QString& objectType, const QString& objectUuid) const;
+        // Check if metrics are available for object
+        bool hasMetrics(const QString& objectType, const QString& objectUuid) const;
 
-signals:
-    // Emitted after each successful metrics update
-    void metricsUpdated();
+    signals:
+        // Emitted after each successful metrics update
+        void metricsUpdated();
 
-private slots:
-    void updateMetrics();
-    void onRrdDataReceived(const QByteArray& data);
-    void onRrdRequestFailed(const QString& error);
-    void onNetworkReplyFinished(QNetworkReply* reply);
+    private slots:
+        void updateMetrics();
+        void onRrdDataReceived(const QByteArray& data);
+        void onRrdRequestFailed(const QString& error);
+        void onNetworkReplyFinished(QNetworkReply* reply);
 
-private:
-    struct MetricValues
-    {
-        QMap<QString, double> values; // metric_name -> value
-        qint64 lastUpdate;            // timestamp of last update
-    };
+    private:
+        struct MetricValues
+        {
+            QMap<QString, double> values; // metric_name -> value
+            qint64 lastUpdate;            // timestamp of last update
+        };
 
-    void fetchRrdData();
-    void parseRrdXml(const QByteArray& xmlData);
-    QString buildRrdUrl() const;
-    qint64 getStartTimestamp() const;
+        void fetchRrdData();
+        void parseRrdXml(const QByteArray& xmlData);
+        QString buildRrdUrl() const;
+        qint64 getStartTimestamp() const;
 
-    XenConnection* m_connection;
-    QTimer* m_updateTimer;
-    QNetworkAccessManager* m_networkManager;
+        XenConnection* m_connection;
+        QTimer* m_updateTimer;
+        QNetworkAccessManager* m_networkManager;
 
-    // Cache: objectType:uuid -> metrics
-    mutable QMutex m_metricsMutex;
-    QMap<QString, MetricValues> m_metricsCache; // "vm:uuid" or "host:uuid" -> values
+        // Cache: objectType:uuid -> metrics
+        mutable QMutex m_metricsMutex;
+        QMap<QString, MetricValues> m_metricsCache; // "vm:uuid" or "host:uuid" -> values
 
-    bool m_running;
-    bool m_paused;
-    int m_requestId;
+        bool m_running;
+        bool m_paused;
+        int m_requestId;
 
-    static const int UPDATE_INTERVAL_MS = 30000; // 30 seconds (matches C#)
-    static const int RRD_INTERVAL_SECONDS = 5;   // 5-second data points
+        static const int UPDATE_INTERVAL_MS = 30000; // 30 seconds (matches C#)
+        static const int RRD_INTERVAL_SECONDS = 5;   // 5-second data points
 };
 
 #endif // METRICUPDATER_H

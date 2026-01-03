@@ -27,7 +27,6 @@
 
 #include "physicalstoragetabpage.h"
 #include "ui_physicalstoragetabpage.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "../mainwindow.h"
 #include "../commands/storage/newsrcommand.h"

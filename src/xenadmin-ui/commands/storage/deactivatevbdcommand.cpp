@@ -27,7 +27,6 @@
 
 #include "deactivatevbdcommand.h"
 #include "xenlib/xencache.h"
-#include "xenlib/xenlib.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 #include "xenlib/xen/vbd.h"

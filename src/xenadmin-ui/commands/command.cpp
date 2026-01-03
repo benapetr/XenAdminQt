@@ -27,7 +27,6 @@
 
 #include "command.h"
 #include "../mainwindow.h"
-#include "xenlib/xenlib.h"
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/network/connection.h"
 #include <QTreeWidget>

@@ -26,14 +26,11 @@
  */
 
 #include "disablechangedblocktrackingcommand.h"
-#include "../../../xenlib/xen/actions/vdi/vdidisablecbtaction.h"
-#include "../../../xenlib/xen/xenapi/xenapi_VDI.h"
-#include "../../../xenlib/xen/xenapi/xenapi_VBD.h"
-#include "../../../xenlib/xen/network/connection.h"
-#include "../../../xenlib/xencache.h"
-#include "../../../xenlib/operations/paralleloperation.h"
-#include "../../../xenlib/xen/vm.h"
-#include "../../../xenlib/xenlib.h"
+#include "xenlib/xen/actions/vdi/vdidisablecbtaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xencache.h"
+#include "xenlib/operations/paralleloperation.h"
+#include "xenlib/xen/vm.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>

@@ -76,10 +76,7 @@ bool CopyVMCommand::isVMLocked() const
 bool CopyVMCommand::canVMBeCopied() const
 {
     QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return false;
-
-    if (!this->mainWindow()->xenLib())
+    if (!vm || !vm->GetConnection())
         return false;
 
     XenCache* cache = vm->GetConnection()->GetCache();

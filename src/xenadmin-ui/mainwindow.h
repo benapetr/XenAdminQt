@@ -48,7 +48,6 @@ class QProgressBar;
 class QLabel;
 class QToolButton;
 
-class XenLib;
 class DebugWindow;
 class AsyncOperation;
 
@@ -72,12 +71,6 @@ class MainWindow : public QMainWindow
     public:
         MainWindow(QWidget* parent = nullptr);
         ~MainWindow();
-
-        // Public interface for Command classes
-        XenLib* xenLib() const
-        {
-            return this->m_xenLib;
-        }
 
         // Console panel access for snapshot screenshots (C#: Program.MainWindow.ConsolePanel)
         ConsolePanel* consolePanel() const
@@ -292,9 +285,6 @@ class MainWindow : public QMainWindow
         void closeEvent(QCloseEvent* event) override;
 
         Ui::MainWindow* ui;
-
-        // Xen library
-        XenLib* m_xenLib;
 
         // Debug window
         DebugWindow* m_debugWindow;

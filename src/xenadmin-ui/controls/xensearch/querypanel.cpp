@@ -35,7 +35,6 @@
 #include "xenlib/xensearch/queryscope.h"
 #include "xen/network/connectionsmanager.h"
 #include "xen/network/connection.h"
-#include "xenlib.h"
 #include "xencache.h"
 #include "xen/xenobject.h"
 #include "iconmanager.h"

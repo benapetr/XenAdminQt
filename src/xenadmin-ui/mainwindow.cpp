@@ -57,7 +57,7 @@
 #include "navigation/navigationpane.h"
 #include "navigation/navigationview.h"
 #include "network/xenconnectionui.h"
-#include "xenlib/xenlib.h"
+#include "xen/network/certificatemanager.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/sr.h"
 #include "metricupdater.h"
@@ -172,7 +172,7 @@
 #include "titlebar.h"
 
 MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow), m_xenLib(nullptr), m_debugWindow(nullptr), m_titleBar(nullptr),
+    : QMainWindow(parent), ui(new Ui::MainWindow), m_debugWindow(nullptr), m_titleBar(nullptr),
       m_consolePanel(nullptr), m_cvmConsolePanel(nullptr), m_navigationPane(nullptr), m_tabContainer(nullptr), m_tabContainerLayout(nullptr),
       m_navigationHistory(nullptr), m_poolsTreeItem(nullptr), m_hostsTreeItem(nullptr), m_vmsTreeItem(nullptr), m_storageTreeItem(nullptr),
       m_currentObjectType(""), m_currentObjectRef("")
@@ -220,13 +220,12 @@ MainWindow::MainWindow(QWidget* parent)
     this->ui->statusbar->addPermanentWidget(this->m_statusLabel);
     this->ui->statusbar->addPermanentWidget(this->m_statusProgressBar);
 
+    XenCertificateManager::instance()->setValidationPolicy(true, false); // Allow self-signed, not expired
+
     // Connect to OperationManager for progress tracking (matches C# History_CollectionChanged)
     connect(OperationManager::instance(), &OperationManager::newOperation, this, &MainWindow::onNewOperation);
 
     this->m_titleBar->clear(); // Start with empty title
-
-    // Initialize XenLib (compatibility facade for legacy code paths)
-    this->m_xenLib = new XenLib(nullptr);
 
     // Wire UI to ConnectionsManager (C# model), keep XenLib only as active-connection facade.
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
@@ -361,8 +360,6 @@ MainWindow::MainWindow(QWidget* parent)
     // Show placeholder initially since we have no tabs yet
     this->updatePlaceholderVisibility();
 
-    this->m_xenLib->initialize();
-
     // Load saved settings
     this->loadSettings();
 
@@ -402,9 +399,6 @@ void MainWindow::updateActions()
 
 void MainWindow::connectToServer()
 {
-    if (!this->m_xenLib)
-        return;
-
     AddServerDialog dialog(nullptr, false, this);
     if (dialog.exec() != QDialog::Accepted)
         return;
@@ -593,7 +587,6 @@ void MainWindow::onConnectionAdded(XenConnection* connection)
     if (!connection)
         return;
 
-    this->m_xenLib->setConnection(connection);
     XenConnection *conn = connection;
 
     connect(connection, &XenConnection::connectionResult, this, [this, conn](bool connected, const QString&)
@@ -1743,7 +1736,7 @@ void MainWindow::restoreConnections()
 
     qDebug() << "XenAdmin Qt: Found" << profiles.size() << "saved connection profile(s)";
 
-    Xen::ConnectionsManager* connMgr = this->m_xenLib ? Xen::ConnectionsManager::instance() : nullptr;
+    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     if (!connMgr)
     {
         qWarning() << "XenAdmin Qt: ConnectionsManager not available, skipping restore";
@@ -1786,7 +1779,7 @@ void MainWindow::SaveServerList()
 {
     qDebug() << "XenAdmin Qt: Saving server list...";
 
-    Xen::ConnectionsManager* connMgr = this->m_xenLib ? Xen::ConnectionsManager::instance() : nullptr;
+    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     if (!connMgr)
     {
         qWarning() << "XenAdmin Qt: ConnectionsManager not available, skipping save";

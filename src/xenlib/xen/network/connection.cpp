@@ -35,6 +35,7 @@
 #include "../../utils/misc.h"
 #include "../session.h"
 #include "../../xencache.h"
+#include "metricupdater.h"
 #include <QtCore/QMutex>
 #include <QtCore/QMutexLocker>
 #include <QtCore/QQueue>
@@ -132,6 +133,7 @@ XenConnection::XenConnection(QObject* parent) : QObject(parent), d(new Private)
 {
     // Each connection owns its own cache (matching C# architecture)
     this->d->cache = new XenCache(this);
+    this->d->metricUpdater = new MetricUpdater(this);
 }
 
 XenConnection::~XenConnection()

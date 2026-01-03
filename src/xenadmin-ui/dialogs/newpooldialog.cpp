@@ -31,7 +31,6 @@
 #include "operationprogressdialog.h"
 #include "../mainwindow.h"
 
-#include <xenlib.h>
 #include <xen/network/connection.h>
 #include <xen/session.h>
 #include <xen/host.h>
