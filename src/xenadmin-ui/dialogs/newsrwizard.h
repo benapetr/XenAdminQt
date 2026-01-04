@@ -32,11 +32,13 @@
 #include <QButtonGroup>
 #include <QList>
 #include <QMap>
+#include <QSharedPointer>
 #include <QVariantMap>
 
 class MainWindow;
 class WizardNavigationPane;
 class XenConnection;
+class SR;
 
 namespace Ui
 {
@@ -96,6 +98,7 @@ class NewSRWizard : public QWizard
         };
 
         explicit NewSRWizard(XenConnection* connection, MainWindow* parent = nullptr);
+        explicit NewSRWizard(XenConnection* connection, const QSharedPointer<SR>& srToReattach, MainWindow* parent = nullptr);
         ~NewSRWizard() override;
 
         enum PageIds
@@ -201,6 +204,8 @@ class NewSRWizard : public QWizard
         void resetFibreState();
         void updateNetworkReattachUI(bool enabled);
         void hideAllConfigurations();
+        void applyReattachDefaults(const QSharedPointer<SR>& srToReattach);
+        void setSrTypeSelection(SRType srType, bool lockTypes);
         QList<FibreChannelDevice> getSelectedFibreDevices() const;
 
         QString getSRTypeString() const;
@@ -241,6 +246,9 @@ class NewSRWizard : public QWizard
         QList<ISCSILunInfo> m_discoveredLuns;
         QList<FibreChannelDevice> m_discoveredFibreDevices;
         QMap<QString, QString> m_foundSRs;
+
+        QString m_reattachSrRef;
+        bool m_forceReattach;
 };
 
 #endif // NEWSRWIZARD_H

@@ -60,7 +60,8 @@ NewSRWizard::NewSRWizard(XenConnection* connection, MainWindow* parent)
       m_typeButtonGroup(nullptr),
       m_selectedSRType(SRType::NFS),
       m_port(2049),
-      m_iscsiUseChap(false)
+      m_iscsiUseChap(false),
+      m_forceReattach(false)
 {
     this->ui->setupUi(this);
     this->setWindowTitle(tr("New Storage Repository"));
@@ -81,6 +82,12 @@ NewSRWizard::NewSRWizard(XenConnection* connection, MainWindow* parent)
 
     this->onSRTypeChanged();
     this->updateNavigationSelection();
+}
+
+NewSRWizard::NewSRWizard(XenConnection* connection, const QSharedPointer<SR>& srToReattach, MainWindow* parent)
+    : NewSRWizard(connection, parent)
+{
+    this->applyReattachDefaults(srToReattach);
 }
 
 NewSRWizard::~NewSRWizard()
@@ -175,7 +182,8 @@ void NewSRWizard::onPageChanged(int pageId)
 
     if (pageId == Page_NameDescription)
     {
-        this->generateDefaultName();
+        if (!this->m_forceReattach)
+            this->generateDefaultName();
         this->ui->nameLineEdit->setFocus();
         this->ui->nameLineEdit->selectAll();
     }
@@ -385,10 +393,16 @@ void NewSRWizard::collectConfiguration()
     this->m_iscsiChapUsername = this->ui->iscsiChapUsernameLineEdit->text().trimmed();
     this->m_iscsiChapPassword = this->ui->iscsiChapPasswordLineEdit->text();
 
-    if (this->ui->reattachExistingSRRadio->isChecked() && this->ui->existingSRsList->currentItem())
+    if (this->m_forceReattach && !this->m_reattachSrRef.isEmpty())
+    {
+        this->m_selectedSRUuid = this->m_reattachSrRef;
+    } else if (this->ui->reattachExistingSRRadio->isChecked() && this->ui->existingSRsList->currentItem())
+    {
         this->m_selectedSRUuid = this->ui->existingSRsList->currentItem()->data(Qt::UserRole).toString();
-    else
+    } else
+    {
         this->m_selectedSRUuid.clear();
+    }
 }
 
 void NewSRWizard::updateNavigationSelection()
@@ -547,6 +561,91 @@ void NewSRWizard::updateNetworkReattachUI(bool enabled)
         this->ui->createNewSRRadio->setChecked(true);
         this->ui->existingSRsList->clear();
     }
+}
+
+void NewSRWizard::applyReattachDefaults(const QSharedPointer<SR>& srToReattach)
+{
+    if (!srToReattach)
+        return;
+
+    this->m_forceReattach = true;
+    this->m_reattachSrRef = srToReattach->OpaqueRef();
+
+    this->setWindowTitle(tr("Attach Storage Repository"));
+
+    this->m_srName = srToReattach->GetName();
+    this->m_srDescription = srToReattach->GetDescription();
+    this->ui->nameLineEdit->setText(this->m_srName);
+    this->ui->descriptionTextEdit->setPlainText(this->m_srDescription);
+
+    if (this->ui->createNewSRRadio)
+        this->ui->createNewSRRadio->setEnabled(false);
+    if (this->ui->reattachExistingSRRadio)
+    {
+        this->ui->reattachExistingSRRadio->setChecked(true);
+        this->ui->reattachExistingSRRadio->setEnabled(false);
+    }
+    if (this->ui->existingSRsLabel)
+        this->ui->existingSRsLabel->setVisible(false);
+    if (this->ui->existingSRsList)
+    {
+        this->ui->existingSRsList->clear();
+        this->ui->existingSRsList->setVisible(false);
+    }
+
+    QString srType = srToReattach->GetType();
+    const QVariantMap smConfig = srToReattach->SMConfig();
+    if (srType == "iso")
+    {
+        const QString isoType = smConfig.value("iso_type").toString();
+        if (isoType == "cifs")
+            srType = "cifs_iso";
+        else if (isoType == "nfs_iso")
+            srType = "nfs_iso";
+    }
+
+    if (srType == "nfs")
+        setSrTypeSelection(SRType::NFS, true);
+    else if (srType == "lvmoiscsi")
+        setSrTypeSelection(SRType::iSCSI, true);
+    else if (srType == "cifs")
+        setSrTypeSelection(SRType::CIFS, true);
+    else if (srType == "lvmohba")
+        setSrTypeSelection(SRType::HBA, true);
+    else if (srType == "lvmofcoe")
+        setSrTypeSelection(SRType::FCoE, true);
+    else if (srType == "nfs_iso")
+        setSrTypeSelection(SRType::NFS_ISO, true);
+    else if (srType == "cifs_iso")
+        setSrTypeSelection(SRType::CIFS_ISO, true);
+    else
+        setSrTypeSelection(SRType::LocalStorage, false);
+}
+
+void NewSRWizard::setSrTypeSelection(SRType srType, bool lockTypes)
+{
+    this->m_selectedSRType = srType;
+
+    if (this->m_typeButtonGroup)
+    {
+        QAbstractButton* button = this->m_typeButtonGroup->button(static_cast<int>(srType));
+        if (button)
+            button->setChecked(true);
+    }
+    else
+    {
+        return;
+    }
+
+    if (lockTypes)
+    {
+        for (QAbstractButton* button : this->m_typeButtonGroup->buttons())
+        {
+            button->setEnabled(button->isChecked());
+        }
+    }
+
+    this->onSRTypeChanged();
 }
 
 void NewSRWizard::onTestConnection()

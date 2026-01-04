@@ -38,7 +38,8 @@
  * Opens the NewSR wizard in reattach mode to allow the user to
  * reattach a storage repository that has been detached from all hosts.
  *
- * The SR must have PBDs (not forgotten) but all PBDs must be unplugged.
+ * The SR must have no PBDs (detached), have no operations in progress,
+ * and have a valid SM backend.
  */
 class ReattachSRCommand : public SRCommand
 {
@@ -61,10 +62,10 @@ class ReattachSRCommand : public SRCommand
 
         /**
          * @brief Check if SR can be reattached
-         * @param srData SR data from cache
+         * @param sr SR object
          * @return true if SR can be reattached
          */
-        bool canSRBeReattached(const QVariantMap& srData) const;
+        bool canSRBeReattached(const QSharedPointer<SR>& sr) const;
 };
 
 #endif // REATTACHSRCOMMAND_H

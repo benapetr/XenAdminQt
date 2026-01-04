@@ -45,12 +45,7 @@ bool ReattachSRCommand::CanRun() const
     if (!sr)
         return false;
 
-    XenCache* cache = sr->GetConnection()->GetCache();
-    QVariantMap srData = sr->GetData();
-    if (srData.isEmpty())
-        return false;
-
-    return this->canSRBeReattached(srData);
+    return this->canSRBeReattached(sr);
 }
 
 void ReattachSRCommand::Run()
@@ -59,17 +54,17 @@ void ReattachSRCommand::Run()
     if (!sr)
         return;
 
+    if (!this->canSRBeReattached(sr))
+        return;
+
     QString srRef = sr->OpaqueRef();
     QString srName = sr->GetName();
 
     qDebug() << "ReattachSRCommand: Opening NewSR wizard for reattaching SR" << srName << "(" << srRef << ")";
 
-    // Open the New SR wizard which already supports reattach mode
-    // The wizard will detect that this SR is detached and allow user to reattach it
-    // TODO: Add constructor NewSRWizard(SR*) to pre-configure for reattach mode
     QSharedPointer<XenObject> ob = this->GetObject();
     XenConnection* connection = ob ? ob->GetConnection() : nullptr;
-    NewSRWizard* wizard = new NewSRWizard(connection, this->mainWindow());
+    NewSRWizard* wizard = new NewSRWizard(connection, sr, this->mainWindow());
     wizard->setAttribute(Qt::WA_DeleteOnClose);
     wizard->show();
 }
@@ -88,48 +83,26 @@ QString ReattachSRCommand::getSelectedSRRef() const
     return this->getSelectedObjectRef();
 }
 
-bool ReattachSRCommand::canSRBeReattached(const QVariantMap& srData) const
+bool ReattachSRCommand::canSRBeReattached(const QSharedPointer<SR>& sr) const
 {
-    if (srData.isEmpty())
-        return false;
-
-    // Check if SR has any PBDs
-    QVariantList pbds = srData.value("PBDs", QVariantList()).toList();
-    if (pbds.isEmpty())
-    {
-        // SR has no PBDs - cannot reattach (SR is forgotten, not just detached)
-        return false;
-    }
-
-    // Check if all PBDs are currently unplugged (SR is detached)
-    bool allUnplugged = true;
-
-    QSharedPointer<SR> sr = this->getSR();
     if (!sr)
         return false;
 
-    XenCache* cache = sr->GetConnection()->GetCache();
-
-    for (const QVariant& pbdRefVar : pbds)
-    {
-        QString pbdRef = pbdRefVar.toString();
-        QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
-
-        if (pbdData.value("currently_attached", false).toBool())
-        {
-            allUnplugged = false;
-            break;
-        }
-    }
-
-    if (!allUnplugged)
-    {
-        // SR is already attached - cannot reattach
+    if (sr->HasPBDs())
         return false;
-    }
 
-    // Get SR type
-    QString srType = srData.value("type", "").toString();
+    if (sr->IsLocked() || !sr->CurrentOperations().isEmpty())
+        return false;
+
+    XenConnection* connection = sr->GetConnection();
+    if (!connection)
+        return false;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return false;
+
+    const QString srType = sr->GetType();
     if (srType.isEmpty())
         return false;
 
@@ -139,24 +112,21 @@ bool ReattachSRCommand::canSRBeReattached(const QVariantMap& srData) const
     if (srType == "udev")
         return false;
 
-    // Check if SR is locked (operation in progress)
-    QVariantMap currentOps = srData.value("current_operations", QVariantMap()).toMap();
-    if (!currentOps.isEmpty())
-    {
-        // SR has operations in progress
-        return false;
-    }
+    // TODO: Feature check for cslg (C# uses Helpers.FeatureForbidden)
 
-    // Check if SM backend exists for this SR type
-    // For now, we allow common types
-    QStringList supportedTypes = {"nfs", "lvmoiscsi", "lvm", "ext", "iso",
-                                  "netapp", "lvmohba", "lvmofcoe", "smb", "cifs"};
-
-    if (!supportedTypes.contains(srType))
+    // Check if SM backend exists for this SR type (C#: SM.GetByType)
+    const QList<QVariantMap> smRecords = cache->GetAllData("SM");
+    bool smFound = false;
+    for (const QVariantMap& smData : smRecords)
     {
-        // Unknown or unsupported SR type
-        return false;
+        if (smData.value("type").toString() == srType)
+        {
+            smFound = true;
+            break;
+        }
     }
+    if (!smFound)
+        return false;
 
     return true;
 }

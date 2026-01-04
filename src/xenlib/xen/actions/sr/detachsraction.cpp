@@ -57,10 +57,10 @@ DetachSrAction::DetachSrAction(XenConnection* connection,
                      parent),
       m_srRef(srRef), m_srName(srName), m_destroyPbds(destroyPbds), m_currentPbdIndex(0)
 {
-    addApiMethodToRoleCheck("PBD.async_unplug");
+    addApiMethodToRoleCheck("Async.PBD.unplug");
     if (m_destroyPbds)
     {
-        addApiMethodToRoleCheck("PBD.async_destroy");
+        addApiMethodToRoleCheck("Async.PBD.destroy");
     }
 }
 
