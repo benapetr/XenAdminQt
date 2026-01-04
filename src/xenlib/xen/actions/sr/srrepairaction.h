@@ -56,23 +56,23 @@ class XENLIB_EXPORT SrRepairAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Repair a Storage Repository
-     * @param sr SR to repair
-     * @param isSharedAction true if explicitly sharing SR, false if just repairing
-     * @param parent Parent object
-     */
-    explicit SrRepairAction(SR* sr,
-                            bool isSharedAction = false,
-                            QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Repair a Storage Repository
+         * @param sr SR to repair
+         * @param isSharedAction true if explicitly sharing SR, false if just repairing
+         * @param parent Parent object
+         */
+        explicit SrRepairAction(SR* sr,
+                                bool isSharedAction = false,
+                                QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    SR* m_sr;
-    bool m_isSharedAction;
+    private:
+        SR* m_sr;
+        bool m_isSharedAction;
 };
 
 #endif // SRREPAIRACTION_H

@@ -267,3 +267,106 @@ bool SR::HasDriverDomain(QString* outVMRef) const
 
     return false;
 }
+
+bool SR::HasPBDs() const
+{
+    return !PBDRefs().isEmpty();
+}
+
+bool SR::IsBroken(bool checkAttached) const
+{
+    XenConnection* connection = GetConnection();
+    if (!connection)
+        return true;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return true;
+
+    QStringList pbdRefs = PBDRefs();
+    if (pbdRefs.isEmpty())
+        return true;
+
+    const bool shared = IsShared();
+    const int poolCount = cache->GetAllData("pool").size();
+    const int hostCount = cache->GetAllData("host").size();
+    int expectedPbdCount = 1;
+
+    if (poolCount > 0 && shared)
+        expectedPbdCount = hostCount;
+
+    if (pbdRefs.size() != expectedPbdCount)
+        return true;
+
+    if (checkAttached)
+    {
+        for (const QString& pbdRef : pbdRefs)
+        {
+            QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
+            if (pbdData.isEmpty() || !pbdData.value("currently_attached").toBool())
+                return true;
+        }
+    }
+
+    return false;
+}
+
+bool SR::MultipathAOK() const
+{
+    XenConnection* connection = GetConnection();
+    if (!connection)
+        return true;
+
+    const QVariantMap smConfig = SMConfig();
+    if (smConfig.value("multipathable", "false").toString() != "true")
+        return true;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return true;
+
+    QStringList pbdRefs = PBDRefs();
+    for (const QString& pbdRef : pbdRefs)
+    {
+        QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
+        if (pbdData.isEmpty())
+            continue;
+
+        const QVariantMap deviceConfig = pbdData.value("device_config").toMap();
+        if (deviceConfig.value("multipathed", "false").toString() != "true")
+            continue;
+
+        const QVariantMap otherConfig = pbdData.value("other_config").toMap();
+        const int currentPaths = otherConfig.value("multipath-current-paths", "0").toString().toInt();
+        const int maxPaths = otherConfig.value("multipath-maximum-paths", "0").toString().toInt();
+        if (maxPaths > 0 && currentPaths < maxPaths)
+            return false;
+    }
+
+    return true;
+}
+
+bool SR::CanRepairAfterUpgradeFromLegacySL() const
+{
+    if (GetType() != "cslg")
+        return true;
+
+    XenConnection* connection = GetConnection();
+    if (!connection)
+        return false;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return false;
+
+    QStringList pbdRefs = PBDRefs();
+    for (const QString& pbdRef : pbdRefs)
+    {
+        QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
+        const QVariantMap deviceConfig = pbdData.value("device_config").toMap();
+        if (deviceConfig.contains("adapterid"))
+            return true;
+    }
+
+    return false;
+}

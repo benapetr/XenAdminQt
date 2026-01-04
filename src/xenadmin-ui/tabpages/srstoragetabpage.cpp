@@ -35,6 +35,7 @@
 #include "dialogs/operationprogressdialog.h"
 #include "xen/actions/sr/srrefreshaction.h"
 #include "xen/actions/vdi/destroydiskaction.h"
+#include "xen/sr.h"
 #include "../operations/operationmanager.h"
 #include <QTableWidgetItem>
 #include <QHeaderView>
@@ -48,12 +49,9 @@ SrStorageTabPage::SrStorageTabPage(QWidget* parent) : BaseTabPage(parent), ui(ne
     this->ui->storageTable->horizontalHeader()->setStretchLastSection(true);
     this->ui->storageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
-    connect(this->ui->storageTable, &QTableWidget::customContextMenuRequested,
-            this, &SrStorageTabPage::onStorageTableCustomContextMenuRequested);
-    connect(this->ui->storageTable, &QTableWidget::itemSelectionChanged,
-            this, &SrStorageTabPage::onStorageTableSelectionChanged);
-    connect(this->ui->storageTable, &QTableWidget::doubleClicked,
-            this, &SrStorageTabPage::onStorageTableDoubleClicked);
+    connect(this->ui->storageTable, &QTableWidget::customContextMenuRequested, this, &SrStorageTabPage::onStorageTableCustomContextMenuRequested);
+    connect(this->ui->storageTable, &QTableWidget::itemSelectionChanged, this, &SrStorageTabPage::onStorageTableSelectionChanged);
+    connect(this->ui->storageTable, &QTableWidget::doubleClicked, this, &SrStorageTabPage::onStorageTableDoubleClicked);
 
     connect(this->ui->addButton, &QPushButton::clicked, this, &SrStorageTabPage::onAddButtonClicked);
     connect(this->ui->rescanButton, &QPushButton::clicked, this, &SrStorageTabPage::onRescanButtonClicked);
@@ -79,6 +77,11 @@ void SrStorageTabPage::SetXenObject(XenConnection *conn, const QString& objectTy
     BaseTabPage::SetXenObject(conn, objectType, objectRef, objectData);
 }
 
+QSharedPointer<SR> SrStorageTabPage::GetSR()
+{
+    return qSharedPointerCast<SR>(this->m_object);
+}
+
 void SrStorageTabPage::refreshContent()
 {
     this->ui->storageTable->setRowCount(0);
@@ -98,9 +101,7 @@ void SrStorageTabPage::populateSRStorage()
     this->ui->titleLabel->setText("Virtual Disks");
 
     if (!this->m_connection)
-    {
         return;
-    }
 
     QVariantList vdiRefs = this->m_objectData.value("VDIs").toList();
 

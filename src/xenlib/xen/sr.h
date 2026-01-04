@@ -245,6 +245,32 @@ class XENLIB_EXPORT SR : public XenObject
          */
         bool HasDriverDomain(QString* outVMRef = nullptr) const;
 
+        /**
+         * @brief Check if SR has any PBDs
+         */
+        bool HasPBDs() const;
+
+        /**
+         * @brief Check if SR is broken
+         *
+         * Mirrors C# SR.IsBroken(checkAttached).
+         */
+        bool IsBroken(bool checkAttached = true) const;
+
+        /**
+         * @brief Check if multipath is healthy
+         *
+         * Mirrors C# SR.MultipathAOK().
+         */
+        bool MultipathAOK() const;
+
+        /**
+         * @brief Check if SR can be repaired after legacy storage upgrade
+         *
+         * Mirrors C# SR.CanRepairAfterUpgradeFromLegacySL().
+         */
+        bool CanRepairAfterUpgradeFromLegacySL() const;
+
     protected:
         QString GetObjectType() const override;
 };

@@ -43,6 +43,7 @@ SOURCES += \
     dialogs/operationprogressdialog.cpp \
     dialogs/vmsnapshotdialog.cpp \
     dialogs/vdipropertiesdialog.cpp \
+    dialogs/repairsrdialog.cpp \
     dialogs/attachvirtualdiskdialog.cpp \
     dialogs/newvirtualdiskdialog.cpp \
     dialogs/movevirtualdiskdialog.cpp \
@@ -270,6 +271,7 @@ HEADERS += \
     dialogs/operationprogressdialog.h \
     dialogs/vmsnapshotdialog.h \
     dialogs/vdipropertiesdialog.h \
+    dialogs/repairsrdialog.h \
     dialogs/attachvirtualdiskdialog.h \
     widgets/isodropdownbox.h \
     dialogs/newvirtualdiskdialog.h \
@@ -472,6 +474,7 @@ FORMS += \
     dialogs/commanderrordialog.ui \
     dialogs/newpooldialog.ui \
     dialogs/bondpropertiesdialog.ui \
+    dialogs/repairsrdialog.ui \
     dialogs/networkingpropertiesdialog.ui \
     dialogs/vifdialog.ui \
     dialogs/vmsnapshotdialog.ui \

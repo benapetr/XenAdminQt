@@ -27,11 +27,9 @@
 
 #include "repairsrcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
+#include "../../dialogs/repairsrdialog.h"
 #include "xen/sr.h"
-#include "xen/actions/sr/srrefreshaction.h"
 #include <QMessageBox>
-#include <QTimer>
 
 RepairSRCommand::RepairSRCommand(MainWindow* mainWindow, QObject* parent)
     : SRCommand(mainWindow, parent)
@@ -41,7 +39,16 @@ RepairSRCommand::RepairSRCommand(MainWindow* mainWindow, QObject* parent)
 bool RepairSRCommand::CanRun() const
 {
     QSharedPointer<SR> sr = this->getSR();
-    return sr != nullptr;
+    if (!sr)
+        return false;
+
+    XenConnection* connection = sr->GetConnection();
+    if (!connection || !connection->IsConnected())
+        return false;
+
+    const bool noOps = sr->CurrentOperations().isEmpty();
+    return sr->HasPBDs() && (sr->IsBroken() || !sr->MultipathAOK()) && noOps &&
+           sr->CanRepairAfterUpgradeFromLegacySL();
 }
 
 void RepairSRCommand::Run()
@@ -50,47 +57,24 @@ void RepairSRCommand::Run()
     if (!sr)
         return;
 
-    QString srRef = sr->OpaqueRef();
-    QString srName = sr->GetName();
-
-    // Show confirmation dialog
-    int ret = QMessageBox::question(this->mainWindow(), "Repair Storage Repository",
-                                    QString("This will attempt to repair storage repository '%1'.\n\n"
-                                            "Are you sure you want to continue?")
-                                        .arg(srName),
-                                    QMessageBox::Yes | QMessageBox::No);
-
-    if (ret == QMessageBox::Yes)
+    XenConnection* connection = sr->GetConnection();
+    if (!connection || !connection->IsConnected())
     {
-        this->mainWindow()->showStatusMessage(QString("Repairing storage repository '%1'...").arg(srName));
-
-        XenConnection* connection = sr->GetConnection();
-        if (!connection || !connection->IsConnected())
-        {
-            QMessageBox::warning(this->mainWindow(), "Repair Storage Repository Failed",
-                                 "Not connected to XenServer.");
-            return;
-        }
-
-        SrRefreshAction* action = new SrRefreshAction(connection, srRef, this);
-        OperationManager::instance()->registerOperation(action);
-
-        connect(action, &AsyncOperation::completed, [this, srName, action]() {
-            this->mainWindow()->showStatusMessage(
-                QString("Storage repository '%1' repaired successfully").arg(srName), 5000);
-            QTimer::singleShot(2000, this->mainWindow(), &MainWindow::refreshServerTree);
-            action->deleteLater();
-        });
-
-        connect(action, &AsyncOperation::failed, [this, srName, action](const QString& error) {
-            QMessageBox::warning(this->mainWindow(), "Repair Storage Repository Failed",
-                                 QString("Failed to repair storage repository '%1': %2").arg(srName, error));
-            this->mainWindow()->showStatusMessage("SR repair failed", 5000);
-            action->deleteLater();
-        });
-
-        action->runAsync();
+        QMessageBox::warning(this->mainWindow(), "Repair Storage Repository Failed",
+                             "Not connected to XenServer.");
+        return;
     }
+
+    if (!sr->MultipathAOK())
+    {
+        QMessageBox::warning(this->mainWindow(), "Multipathing",
+                             "Multipathing has failed on this storage repository.");
+    }
+
+    // Show the RepairSRDialog which will handle the repair operation
+    RepairSRDialog* dialog = new RepairSRDialog(sr, true, this->mainWindow());
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
 }
 
 QString RepairSRCommand::MenuText() const

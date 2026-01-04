@@ -37,6 +37,8 @@ namespace Ui
 }
 QT_END_NAMESPACE
 
+class SR;
+
 class SrStorageTabPage : public BaseTabPage
 {
     Q_OBJECT
@@ -57,6 +59,7 @@ class SrStorageTabPage : public BaseTabPage
 
         bool IsApplicableForObjectType(const QString& objectType) const override;
         void SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
+        QSharedPointer<SR> GetSR();
 
     protected:
         void refreshContent() override;

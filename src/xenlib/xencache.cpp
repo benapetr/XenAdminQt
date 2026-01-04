@@ -461,6 +461,7 @@ QSharedPointer<XenObject> XenCache::createObjectForType(const QString& type, con
 
 void XenCache::refreshObject(const QString& type, const QString& ref)
 {
+    // TODO - consider migrating to QHash for better performance of lookups
     QSharedPointer<XenObject> obj;
     {
         QMutexLocker locker(&this->m_mutex);

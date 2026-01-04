@@ -55,26 +55,24 @@ class XENLIB_EXPORT SrRefreshAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection The connection to the XenServer
-     * @param srRef The SR to refresh/scan
-     * @param parent Parent QObject
-     *
-     * C# equivalent: SrRefreshAction(SR sr)
-     */
-    SrRefreshAction(XenConnection* connection, const QString& srRef,
-                    QObject* parent = nullptr);
-    QString srRef() const { return m_srRef; }
+    public:
+        /**
+         * @brief Constructor
+         * @param connection The connection to the XenServer
+         * @param srRef The SR to refresh/scan
+         * @param parent Parent QObject
+         *
+         * C# equivalent: SrRefreshAction(SR sr)
+         */
+        SrRefreshAction(XenConnection* connection, const QString& srRef, QObject* parent = nullptr);
+        QString srRef() const { return m_srRef; }
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_srRef;
-
-    QString getSRName() const;
+    private:
+        QString getSRName() const;
+        QString m_srRef;
 };
 
 #endif // SRREFRESHACTION_H
