@@ -35,6 +35,8 @@
 #include <QLabel>
 #include <QPushButton>
 
+using namespace XenSearch;
+
 // SearchFor static members
 const ObjectTypes SearchFor::CUSTOM;
 

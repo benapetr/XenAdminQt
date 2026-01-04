@@ -364,7 +364,7 @@ class Search
          * C# equivalent: DefaultObjectTypes() - Line 520 in Search.cs
          * @return ObjectTypes flags for default overview
          */
-        static ObjectTypes DefaultObjectTypes();
+        static XenSearch::ObjectTypes DefaultObjectTypes();
 
         /**
          * @brief Get the overview scope (default object types + templates)

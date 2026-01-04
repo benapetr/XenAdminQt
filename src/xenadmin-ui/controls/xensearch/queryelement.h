@@ -148,7 +148,7 @@ class QueryElement : public QWidget
         void clearSubQueryElements();
         void addSubQueryElement(QueryElement* element);
         void removeSubQueryElement(QueryElement* element);
-        bool wantQueryType(QueryType* queryType) const;
+        bool wantQueryType(XenSearch::QueryType* queryType) const;
 
         // UI widgets
         QComboBox* queryTypeCombo_;
@@ -167,7 +167,7 @@ class QueryElement : public QWidget
         Searcher* searcher_;
         QueryScope* queryScope_;
         QueryElement* parentQueryElement_;
-        QueryType* currentQueryType_;
+        XenSearch::QueryType* currentQueryType_;
         QList<QueryElement*> subQueryElements_;
         QueryFilter* lastQueryFilter_;
 

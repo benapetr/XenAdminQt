@@ -26,6 +26,7 @@
  */
 
 #include "common.h"
+#include "propertyaccessorhelper.h"
 #include "../xen/xenobject.h"
 #include "../xen/vm.h"
 #include "../xen/host.h"
@@ -332,51 +333,123 @@ QVariant PropertyAccessors::UptimeProperty(XenObject* o)
     return QVariant();
 }
 
-QVariant PropertyAccessors::CPUTextProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::CPUTextProperty(XenObject* o)
 {
-    // TODO: Implement CPU usage text
+    VM* vm = qobject_cast<VM*>(o);
+    if (vm && vm->IsRealVM() && vm->GetPowerState() == "Running")
+        return PropertyAccessorHelper::vmCpuUsageString(vm);
+    
+    Host* host = qobject_cast<Host*>(o);
+    if (host && host->GetConnection() && host->GetConnection()->IsConnected())
+        return PropertyAccessorHelper::hostCpuUsageString(host);
+    
     return QVariant();
 }
 
-QVariant PropertyAccessors::CPUValueProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::CPUValueProperty(XenObject* o)
 {
-    // TODO: Implement CPU usage value
+    VM* vm = qobject_cast<VM*>(o);
+    if (vm && vm->IsRealVM() && vm->GetPowerState() == "Running")
+        return PropertyAccessorHelper::vmCpuUsageRank(vm);
+    
+    Host* host = qobject_cast<Host*>(o);
+    if (host && host->GetConnection() && host->GetConnection()->IsConnected())
+        return PropertyAccessorHelper::hostCpuUsageRank(host);
+    
     return QVariant();
 }
 
-QVariant PropertyAccessors::MemoryTextProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::MemoryTextProperty(XenObject* o)
 {
-    // TODO: Implement memory usage text
+    VM* vm = qobject_cast<VM*>(o);
+    if (vm && vm->IsRealVM() && vm->GetPowerState() == "Running")
+        return PropertyAccessorHelper::vmMemoryUsageString(vm);
+    
+    Host* host = qobject_cast<Host*>(o);
+    if (host && host->GetConnection() && host->GetConnection()->IsConnected())
+        return PropertyAccessorHelper::hostMemoryUsageString(host);
+    
+    VDI* vdi = qobject_cast<VDI*>(o);
+    if (vdi)
+        return PropertyAccessorHelper::vdiMemoryUsageString(vdi);
+    
     return QVariant();
 }
 
-QVariant PropertyAccessors::MemoryValueProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::MemoryValueProperty(XenObject* o)
 {
-    // TODO: Implement memory usage value
+    VM* vm = qobject_cast<VM*>(o);
+    if (vm && vm->IsRealVM() && vm->GetPowerState() == "Running")
+        return PropertyAccessorHelper::vmMemoryUsageValue(vm);
+    
+    Host* host = qobject_cast<Host*>(o);
+    if (host && host->GetConnection() && host->GetConnection()->IsConnected())
+        return PropertyAccessorHelper::hostMemoryUsageValue(host);
+    
+    VDI* vdi = qobject_cast<VDI*>(o);
+    if (vdi)
+        return static_cast<double>(vdi->VirtualSize());
+    
     return QVariant();
 }
 
-QVariant PropertyAccessors::MemoryRankProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::MemoryRankProperty(XenObject* o)
 {
-    // TODO: Implement memory usage rank
+    VM* vm = qobject_cast<VM*>(o);
+    if (vm && vm->IsRealVM() && vm->GetPowerState() == "Running")
+        return PropertyAccessorHelper::vmMemoryUsageRank(vm);
+    
+    Host* host = qobject_cast<Host*>(o);
+    if (host && host->GetConnection() && host->GetConnection()->IsConnected())
+        return PropertyAccessorHelper::hostMemoryUsageRank(host);
+    
+    VDI* vdi = qobject_cast<VDI*>(o);
+    if (vdi && vdi->VirtualSize() > 0)
+    {
+        qint64 physicalUtil = vdi->PhysicalUtilisation();
+        qint64 virtualSize = vdi->VirtualSize();
+        return static_cast<int>((physicalUtil * 100) / virtualSize);
+    }
+    
     return QVariant();
 }
 
-QVariant PropertyAccessors::NetworkTextProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::NetworkTextProperty(XenObject* o)
 {
-    // TODO: Implement network usage text
+    VM* vm = qobject_cast<VM*>(o);
+    if (vm && vm->IsRealVM() && vm->GetPowerState() == "Running")
+        return PropertyAccessorHelper::vmNetworkUsageString(vm);
+    
+    Host* host = qobject_cast<Host*>(o);
+    if (host && host->GetConnection() && host->GetConnection()->IsConnected())
+        return PropertyAccessorHelper::hostNetworkUsageString(host);
+    
     return QVariant();
 }
 
-QVariant PropertyAccessors::DiskTextProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::DiskTextProperty(XenObject* o)
 {
-    // TODO: Implement disk usage text
+    VM* vm = qobject_cast<VM*>(o);
+    if (vm && vm->IsRealVM() && vm->GetPowerState() == "Running")
+        return PropertyAccessorHelper::vmDiskUsageString(vm);
+    
     return QVariant();
 }
 
-QVariant PropertyAccessors::HATextProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::HATextProperty(XenObject* o)
 {
-    // TODO: Implement HA status text
+    VM* vm = qobject_cast<VM*>(o);
+    if (vm)
+        return PropertyAccessorHelper::GetVMHAStatus(vm);
+    
+    Pool* pool = qobject_cast<Pool*>(o);
+    if (pool)
+        return PropertyAccessorHelper::GetPoolHAStatus(pool);
+    
+    SR* sr = qobject_cast<SR*>(o);
+    if (sr)
+        return PropertyAccessorHelper::GetSRHAStatus(sr);
+    
     return QVariant();
 }
 

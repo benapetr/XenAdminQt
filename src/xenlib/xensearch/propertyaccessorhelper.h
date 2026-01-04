@@ -29,72 +29,71 @@
 #define PROPERTYACCESSORHELPER_H
 
 #include <QString>
-#include <QStringList>
-#include <QMap>
-#include "queries.h"
 
-/**
- * PropertyAccessorHelper - Provides property value lookups and i18n mappings
- * 
- * C# Equivalent: PropertyAccessors in Common.cs + PropertyAccessorHelper.cs
- * 
- * This class provides:
- * - Property display name i18n strings
- * - Enum value i18n maps (power_state → "Running", etc.)
- * - Property value extraction from XenObjects
- */
-class PropertyAccessorHelper
+// Forward declarations
+class VM;
+class Host;
+class VDI;
+class Pool;
+class SR;
+
+namespace XenSearch
 {
-public:
-    static PropertyAccessorHelper* instance();
-    
-    // Get display name for property
-    QString getPropertyDisplayName(PropertyNames property) const;
-    QString getPropertyDisplayNameFalse(PropertyNames property) const;
-    
-    // Power state i18n
-    QString powerStateToString(const QString& powerState) const;
-    QString powerStateFromString(const QString& displayName) const;
-    QStringList getAllPowerStates() const;
-    
-    // Virtualization status i18n
-    QString virtualizationStatusToString(const QString& status) const;
-    QString virtualizationStatusFromString(const QString& displayName) const;
-    QStringList getAllVirtualizationStatuses() const;
-    
-    // Object type i18n
-    QString objectTypeToString(const QString& type) const;
-    QStringList getAllObjectTypes() const;
-    
-    // HA restart priority i18n
-    QString haRestartPriorityToString(const QString& priority) const;
-    QStringList getAllHARestartPriorities() const;
-    
-    // SR type i18n
-    QString srTypeToString(const QString& type) const;
-    QStringList getAllSRTypes() const;
+    /**
+     * PropertyAccessorHelper - Provides metric-based property accessors
+     *
+     * C# Equivalent: PropertyAccessorHelper.cs
+     *
+     * Provides utility methods for:
+     * - CPU usage strings and values (VM/Host)
+     * - Memory usage strings and values (VM/Host/VDI)
+     * - Network usage strings (VM/Host)
+     * - Disk usage strings (VM)
+     * - HA status strings (VM/Pool/SR)
+     *
+     * NOTE: Currently returns placeholder values since MetricUpdater is not yet ported.
+     *       In the future, this will integrate with the real-time metrics system.
+     */
+    class PropertyAccessorHelper
+    {
+        public:
+            // VM CPU usage
+            static QString vmCpuUsageString(VM* vm);
+            static int vmCpuUsageRank(VM* vm);
 
-private:
-    PropertyAccessorHelper();
-    ~PropertyAccessorHelper();
-    
-    void initializePropertyNames();
-    void initializePowerStates();
-    void initializeVirtualizationStatuses();
-    void initializeObjectTypes();
-    void initializeHARestartPriorities();
-    void initializeSRTypes();
-    
-    static PropertyAccessorHelper* instance_;
-    
-    QMap<PropertyNames, QString> propertyNamesI18n_;
-    QMap<PropertyNames, QString> propertyNamesI18nFalse_;
-    
-    QMap<QString, QString> powerStateI18n_;  // "Halted" → "Halted"
-    QMap<QString, QString> virtualizationStatusI18n_;  // "not_optimized" → "Not optimized"
-    QMap<QString, QString> objectTypeI18n_;  // "vm" → "VMs"
-    QMap<QString, QString> haRestartPriorityI18n_;  // "restart" → "Restart"
-    QMap<QString, QString> srTypeI18n_;  // "lvm" → "LVM"
-};
+            // VM Memory usage
+            static QString vmMemoryUsageString(VM* vm);
+            static int vmMemoryUsageRank(VM* vm);
+            static double vmMemoryUsageValue(VM* vm);
+
+            // VM Network usage
+            static QString vmNetworkUsageString(VM* vm);
+
+            // VM Disk usage
+            static QString vmDiskUsageString(VM* vm);
+
+            // Host CPU usage
+            static QString hostCpuUsageString(Host* host);
+            static int hostCpuUsageRank(Host* host);
+
+            // Host Memory usage
+            static QString hostMemoryUsageString(Host* host);
+            static int hostMemoryUsageRank(Host* host);
+            static double hostMemoryUsageValue(Host* host);
+
+            // Host Network usage
+            static QString hostNetworkUsageString(Host* host);
+
+            // VDI Memory usage
+            static QString vdiMemoryUsageString(VDI* vdi);
+
+            // HA Status
+            static QString GetPoolHAStatus(Pool* pool);
+            static QString GetSRHAStatus(SR* sr);
+            static QString GetVMHAStatus(VM* vm);
+        private:
+            PropertyAccessorHelper* instance_;
+    };
+} // namespace XenSearch
 
 #endif // PROPERTYACCESSORHELPER_H

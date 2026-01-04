@@ -56,26 +56,26 @@ class CustomSearchDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    explicit CustomSearchDialog(QWidget* parent = nullptr);
-    ~CustomSearchDialog();
+    public:
+        explicit CustomSearchDialog(QWidget* parent = nullptr);
+        ~CustomSearchDialog();
 
-    /**
-     * Get the selected object types as QueryScope
-     */
-    QueryScope* getQueryScope() const;
+        /**
+         * Get the selected object types as QueryScope
+         */
+        QueryScope* getQueryScope() const;
 
-    /**
-     * Set the initial object types
-     */
-    void setObjectTypes(ObjectTypes types);
+        /**
+         * Set the initial object types
+         */
+        void setObjectTypes(XenSearch::ObjectTypes types);
 
-private slots:
-    void onSelectAllClicked();
-    void onClearAllClicked();
+    private slots:
+        void onSelectAllClicked();
+        void onClearAllClicked();
 
-private:
-    Ui::CustomSearchDialog* ui;
+    private:
+        Ui::CustomSearchDialog* ui;
 };
 
 #endif // CUSTOMSEARCHDIALOG_H

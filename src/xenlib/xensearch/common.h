@@ -93,6 +93,28 @@ inline ObjectTypes operator~(ObjectTypes a)
     return static_cast<ObjectTypes>(~static_cast<int>(a));
 }
 
+inline ObjectTypes& operator|=(ObjectTypes& a, ObjectTypes b)
+{
+    a = a | b;
+    return a;
+}
+
+inline ObjectTypes& operator&=(ObjectTypes& a, ObjectTypes b)
+{
+    a = a & b;
+    return a;
+}
+
+inline bool operator==(ObjectTypes a, int b)
+{
+    return static_cast<int>(a) == b;
+}
+
+inline bool operator!=(ObjectTypes a, int b)
+{
+    return static_cast<int>(a) != b;
+}
+
 /**
  * @brief Property names for XenServer object properties
  * 

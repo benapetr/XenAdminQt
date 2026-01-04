@@ -29,8 +29,9 @@
 #include "queryscope.h"
 #include <QDebug>
 
-QueryScope::QueryScope(ObjectTypes types)
-    : m_types(types)
+using namespace XenSearch;
+
+QueryScope::QueryScope(ObjectTypes types) : m_types(types)
 {
     // C# equivalent: QueryScope constructor
 }

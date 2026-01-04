@@ -48,6 +48,8 @@
 #include <algorithm>
 #include <QDebug>
 
+using namespace XenSearch;
+
 /**
  * @brief Natural string comparison (matches C# StringUtility.NaturalCompare)
  *

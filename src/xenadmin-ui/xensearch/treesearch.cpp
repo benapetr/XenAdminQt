@@ -30,6 +30,8 @@
 #include "settingsmanager.h"
 #include "xen/xenobject.h"
 
+using namespace XenSearch;
+
 Search* TreeSearch::s_defaultTreeSearch = nullptr;
 
 Search* TreeSearch::DefaultTreeSearch()

@@ -40,7 +40,10 @@
 // Forward declarations
 class QueryElement;
 class GroupingControl;
-class SearchFor;
+namespace XenSearch
+{
+    class SearchFor;
+}
 
 /**
  * Searcher - Query builder UI combining filters, grouping, and search scope
@@ -140,56 +143,59 @@ class Searcher : public QWidget
 
         QueryElement* queryElement_;
         GroupingControl* groupingControl_;
-        SearchFor* searchFor_;
+        XenSearch::SearchFor* searchFor_;
         QPushButton* saveButton_;
         QPushButton* closeButton_;
         QLabel* groupsLabel_;
         int maxHeight_;
 };
 
-/**
- * SearchFor - Widget for selecting search scope (VMs, Hosts, etc.)
- * 
- * Port of C# xenadmin/XenAdmin/Controls/XenSearch/SearchFor.cs
- * 
- * Provides a dropdown to select which object types to search for.
- * Supports individual types, common combinations, and custom selections.
- */
-class SearchFor : public QWidget
+namespace XenSearch
 {
-    Q_OBJECT
+    /**
+     * SearchFor - Widget for selecting search scope (VMs, Hosts, etc.)
+     *
+     * Port of C# xenadmin/XenAdmin/Controls/XenSearch/SearchFor.cs
+     *
+     * Provides a dropdown to select which object types to search for.
+     * Supports individual types, common combinations, and custom selections.
+     */
+    class SearchFor : public QWidget
+    {
+        Q_OBJECT
 
-    public:
-        explicit SearchFor(QWidget* parent = nullptr);
+        public:
+            explicit SearchFor(QWidget* parent = nullptr);
 
-        QueryScope* GetQueryScope() const;
-        void SetQueryScope(QueryScope* scope);
-        void BlankSearch();
+            QueryScope* GetQueryScope() const;
+            void SetQueryScope(QueryScope* scope);
+            void BlankSearch();
 
-    signals:
-        void QueryChanged();
+        signals:
+            void QueryChanged();
 
-    private slots:
-        void onComboActivated(int index);
-        void onCustomDialogRequested();
+        private slots:
+            void onComboActivated(int index);
+            void onCustomDialogRequested();
 
-    private:
-        void initializeDictionaries();
-        void populateComboBox();
-        void setFromScope(QueryScope* scope);
-        void setFromScope(ObjectTypes types);
-        ObjectTypes getSelectedItemTag() const;
-        QueryScope* getAsScope() const;
-        QString getTypeName(ObjectTypes type) const;
+        private:
+            void initializeDictionaries();
+            void populateComboBox();
+            void setFromScope(QueryScope* scope);
+            void setFromScope(ObjectTypes types);
+            ObjectTypes getSelectedItemTag() const;
+            QueryScope* getAsScope() const;
+            QString getTypeName(ObjectTypes type) const;
 
-        QComboBox* comboBox_;
-        QMap<ObjectTypes, QString> typeNames_;
-        QMap<ObjectTypes, QIcon> typeIcons_;
-        ObjectTypes customValue_;
-        ObjectTypes savedTypes_;
-        bool autoSelecting_;
+            QComboBox* comboBox_;
+            QMap<ObjectTypes, QString> typeNames_;
+            QMap<ObjectTypes, QIcon> typeIcons_;
+            ObjectTypes customValue_;
+            ObjectTypes savedTypes_;
+            bool autoSelecting_;
 
-        static const ObjectTypes CUSTOM = ObjectTypes::None;  // Special value for "Custom..."
-};
+            static const ObjectTypes CUSTOM = ObjectTypes::None;  // Special value for "Custom..."
+    };
+}
 
 #endif // SEARCHER_H

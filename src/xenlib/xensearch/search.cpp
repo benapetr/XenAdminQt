@@ -36,6 +36,8 @@
 #include "../network/comparableaddress.h"
 #include <QDebug>
 
+using namespace XenSearch;
+
 Search::Search(Query* query, Grouping* grouping, const QString& name, const QString& uuid,
                bool defaultSearch, const QList<QPair<QString, int>>& columns, const QList<Sort>& sorting,
                bool ownsQuery, bool ownsGrouping)

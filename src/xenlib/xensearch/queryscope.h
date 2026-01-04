@@ -32,73 +32,7 @@
 
 #include <QString>
 #include <QVariantMap>
-
-/**
- * @brief Object types that can be searched
- *
- * Flags enum matching C# XenAdmin.XenSearch.ObjectTypes
- *
- * C# equivalent: xenadmin/XenModel/XenSearch/Common.cs lines 54-74
- * Note: Order determines tree order in Folder View (CA-28418)
- */
-enum class ObjectTypes
-{
-    None = 0,
-    Pool = 1 << 0,                           // 1
-    Server = 1 << 1,                         // 2 (Host)
-    DisconnectedServer = 1 << 2,             // 4
-    VM = 1 << 3,                             // 8
-    Snapshot = 1 << 4,                       // 16
-    UserTemplate = 1 << 5,                   // 32
-    DefaultTemplate = 1 << 6,                // 64
-    RemoteSR = 1 << 7,                       // 128
-    LocalSR = 1 << 8,                        // 256
-    VDI = 1 << 9,                            // 512
-    Network = 1 << 10,                       // 1024
-    Folder = 1 << 11,                        // 2048
-    AllIncFolders = (1 << 12) - 1,           // 4095 (all of the above)
-    AllExcFolders = AllIncFolders & ~Folder, // 2047 (all except folders)
-    Appliance = 1 << 13,                     // 8192
-    DockerContainer = 1 << 14                // 16384
-};
-
-// Bitwise operators for ObjectTypes flags
-inline ObjectTypes operator|(ObjectTypes a, ObjectTypes b)
-{
-    return static_cast<ObjectTypes>(static_cast<int>(a) | static_cast<int>(b));
-}
-
-inline ObjectTypes operator&(ObjectTypes a, ObjectTypes b)
-{
-    return static_cast<ObjectTypes>(static_cast<int>(a) & static_cast<int>(b));
-}
-
-inline ObjectTypes operator~(ObjectTypes a)
-{
-    return static_cast<ObjectTypes>(~static_cast<int>(a));
-}
-
-inline ObjectTypes& operator|=(ObjectTypes& a, ObjectTypes b)
-{
-    a = a | b;
-    return a;
-}
-
-inline ObjectTypes& operator&=(ObjectTypes& a, ObjectTypes b)
-{
-    a = a & b;
-    return a;
-}
-
-inline bool operator==(ObjectTypes a, int b)
-{
-    return static_cast<int>(a) == b;
-}
-
-inline bool operator!=(ObjectTypes a, int b)
-{
-    return static_cast<int>(a) != b;
-}
+#include "common.h"
 
 // Forward declaration
 class XenConnection;
@@ -116,14 +50,14 @@ class QueryScope
          * @param types ObjectTypes bitmask specifying included types
          * C# equivalent: QueryScope(ObjectTypes types)
          */
-        explicit QueryScope(ObjectTypes types);
+        explicit QueryScope(XenSearch::ObjectTypes types);
 
         /**
          * @brief Get the object types included in this scope
          * @return ObjectTypes bitmask
          * C# equivalent: ObjectTypes property
          */
-        ObjectTypes getObjectTypes() const
+        XenSearch::ObjectTypes getObjectTypes() const
         {
             return m_types;
         }
@@ -150,7 +84,7 @@ class QueryScope
          * @param t ObjectTypes to check
          * @return true if this scope includes all types in t
          */
-        bool wantType(ObjectTypes t) const;
+        bool wantType(XenSearch::ObjectTypes t) const;
 
         /**
          * @brief Check if this scope wants all types in another scope
@@ -168,7 +102,7 @@ class QueryScope
          * @param t ObjectTypes to compare against
          * @return true if this scope is a subset of t
          */
-        bool wantSubsetOf(ObjectTypes t) const;
+        bool wantSubsetOf(XenSearch::ObjectTypes t) const;
 
         /**
          * @brief Check if this scope is a subset of another scope
@@ -186,7 +120,7 @@ class QueryScope
          *
          * @return ObjectTypes flags included in this scope
          */
-        ObjectTypes GetObjectTypes() const
+        XenSearch::ObjectTypes GetObjectTypes() const
         {
             return this->m_types;
         }
@@ -199,7 +133,7 @@ class QueryScope
          * @param t ObjectTypes to test for overlap
          * @return true if any types overlap
          */
-        bool wantAnyOf(ObjectTypes t) const;
+        bool wantAnyOf(XenSearch::ObjectTypes t) const;
 
         /**
          * @brief Check if this scope wants any of the types in another scope
@@ -215,7 +149,7 @@ class QueryScope
          * @param t ObjectTypes to compare
          * @return true if exactly equal
          */
-        bool equals(ObjectTypes t) const;
+        bool equals(XenSearch::ObjectTypes t) const;
 
         /**
          * @brief Check if this scope exactly equals another scope
@@ -249,9 +183,9 @@ class QueryScope
          * @param xenLib XenLib instance for resolving references
          * @return ObjectTypes enum value for the object
          */
-        ObjectTypes objectTypeOf(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const;
+        XenSearch::ObjectTypes objectTypeOf(const QVariantMap& objectData, const QString& objectType, XenConnection* conn) const;
 
-        ObjectTypes m_types; // The object types included in this scope
+        XenSearch::ObjectTypes m_types; // The object types included in this scope
 };
 
 // Hash function for QHash support
