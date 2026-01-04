@@ -36,6 +36,7 @@
 #include "../xen/folder.h"
 #include "../xen/vmappliance.h"
 #include "../xen/network/connection.h"
+#include "../xencache.h"
 
 namespace XenSearch
 {
@@ -322,9 +323,12 @@ QVariant PropertyAccessors::DescriptionProperty(XenObject* o)
     return o ? o->GetDescription() : QVariant();
 }
 
-QVariant PropertyAccessors::UptimeProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::UptimeProperty(XenObject* o)
 {
     // TODO: Implement uptime calculation
+    // VM needs: GetStartTime() - DateTime.UtcNow - Connection.ServerTimeOffset
+    // Host needs: BootTime() converted from Unix time
+    Q_UNUSED(o);
     return QVariant();
 }
 
@@ -393,7 +397,10 @@ QVariant PropertyAccessors::ConnectionHostnameProperty(XenObject* o)
     if (!o || !o->GetConnection())
         return QVariant();
     
-    // TODO: Get hostname from connection
+    XenConnection* conn = o->GetConnection();
+    if (conn && conn->IsConnected())
+        return conn->GetHostname();
+    
     return QVariant();
 }
 
@@ -403,7 +410,29 @@ QVariant PropertyAccessors::SharedProperty(XenObject* o)
     if (sr)
         return sr->IsShared();
     
-    // TODO: Handle VDI shared property
+    VDI* vdi = qobject_cast<VDI*>(o);
+    if (vdi && vdi->GetConnection())
+    {
+        XenCache* cache = vdi->GetConnection()->GetCache();
+        if (!cache)
+            return QVariant();
+        
+        // VDI is shared if it's attached to 2 or more VMs
+        QStringList vbdRefs = vdi->VBDRefs();
+        int vmCount = 0;
+        for (const QString& vbdRef : vbdRefs)
+        {
+            QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+            QString vmRef = vbdData.value("VM").toString();
+            if (!vmRef.isEmpty())
+            {
+                if (++vmCount >= 2)
+                    return true;
+            }
+        }
+        return false;
+    }
+    
     return QVariant();
 }
 
@@ -455,40 +484,306 @@ QVariant PropertyAccessors::TypeProperty(XenObject* o)
     return QVariant();
 }
 
-QVariant PropertyAccessors::NetworksProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::NetworksProperty(XenObject* o)
 {
-    // TODO: Implement networks property
-    return QVariant();
+    QStringList networkRefs;
+    
+    VM* vm = qobject_cast<VM*>(o);
+    if (vm && vm->IsRealVM() && vm->GetConnection())
+    {
+        XenCache* cache = vm->GetConnection()->GetCache();
+        if (cache)
+        {
+            QStringList vifRefs = vm->VIFRefs();
+            for (const QString& vifRef : vifRefs)
+            {
+                QVariantMap vifData = cache->ResolveObjectData("VIF", vifRef);
+                QString networkRef = vifData.value("network").toString();
+                if (!networkRef.isEmpty() && !networkRefs.contains(networkRef))
+                    networkRefs.append(networkRef);
+            }
+        }
+    }
+    else if (qobject_cast<Network*>(o))
+    {
+        networkRefs.append(o->OpaqueRef());
+    }
+    
+    return networkRefs;
 }
 
-QVariant PropertyAccessors::VMProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::VMProperty(XenObject* o)
 {
-    // TODO: Implement VM list property
-    return QVariant();
+    QStringList vmRefs;
+    if (!o || !o->GetConnection())
+        return QVariant();
+    
+    XenCache* cache = o->GetConnection()->GetCache();
+    if (!cache)
+        return QVariant();
+    
+    Pool* pool = qobject_cast<Pool*>(o);
+    if (pool)
+    {
+        vmRefs = cache->GetAllRefs("VM");
+    }
+    else if (Host* host = qobject_cast<Host*>(o))
+    {
+        QStringList residentVMs = host->ResidentVMRefs();
+        vmRefs = residentVMs;
+    }
+    else if (SR* sr = qobject_cast<SR*>(o))
+    {
+        QStringList vdiRefs = sr->VDIRefs();
+        for (const QString& vdiRef : vdiRefs)
+        {
+            QVariantMap vdiData = cache->ResolveObjectData("VDI", vdiRef);
+            QVariantList vbdRefs = vdiData.value("VBDs").toList();
+            for (const QVariant& vbdRefVar : vbdRefs)
+            {
+                QString vbdRef = vbdRefVar.toString();
+                QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+                QString vmRef = vbdData.value("VM").toString();
+                if (!vmRef.isEmpty() && !vmRefs.contains(vmRef))
+                    vmRefs.append(vmRef);
+            }
+        }
+    }
+    else if (Network* network = qobject_cast<Network*>(o))
+    {
+        QStringList vifRefs = network->GetVIFRefs();
+        for (const QString& vifRef : vifRefs)
+        {
+            QVariantMap vifData = cache->ResolveObjectData("VIF", vifRef);
+            QString vmRef = vifData.value("VM").toString();
+            if (!vmRef.isEmpty() && !vmRefs.contains(vmRef))
+                vmRefs.append(vmRef);
+        }
+    }
+    else if (VDI* vdi = qobject_cast<VDI*>(o))
+    {
+        QStringList vbdRefs = vdi->VBDRefs();
+        for (const QString& vbdRef : vbdRefs)
+        {
+            QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+            QString vmRef = vbdData.value("VM").toString();
+            if (!vmRef.isEmpty() && !vmRefs.contains(vmRef))
+                vmRefs.append(vmRef);
+        }
+    }
+    else if (VM* vm = qobject_cast<VM*>(o))
+    {
+        if (vm->IsSnapshot())
+        {
+            QString snapshotOf = vm->SnapshotOfRef();
+            if (!snapshotOf.isEmpty())
+                vmRefs.append(snapshotOf);
+        }
+        else
+        {
+            vmRefs.append(vm->OpaqueRef());
+        }
+    }
+    
+    // Filter out non-real VMs
+    QStringList realVMs;
+    for (const QString& vmRef : vmRefs)
+    {
+        QVariantMap vmData = cache->ResolveObjectData("VM", vmRef);
+        bool isTemplate = vmData.value("is_a_template").toBool();
+        bool isSnapshot = vmData.value("is_a_snapshot").toBool();
+        bool isControlDomain = vmData.value("is_control_domain").toBool();
+        
+        if (!isTemplate && !isSnapshot && !isControlDomain)
+            realVMs.append(vmRef);
+    }
+    
+    return realVMs;
 }
 
-QVariant PropertyAccessors::HostProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::HostProperty(XenObject* o)
 {
-    // TODO: Implement host property
-    return QVariant();
+    QStringList hostRefs;
+    if (!o || !o->GetConnection())
+        return QVariant();
+    
+    XenCache* cache = o->GetConnection()->GetCache();
+    if (!cache)
+        return QVariant();
+    
+    // Get pool to check if we're in a pool
+    QStringList poolRefs = cache->GetAllRefs("pool");
+    bool inPool = !poolRefs.isEmpty();
+    
+    if (!inPool)
+    {
+        // Not in a pool - group everything under same host
+        hostRefs = cache->GetAllRefs("host");
+    }
+    else if (VM* vm = qobject_cast<VM*>(o))
+    {
+        QString homeHost = vm->HomeRef();
+        if (!homeHost.isEmpty())
+            hostRefs.append(homeHost);
+    }
+    else if (SR* sr = qobject_cast<SR*>(o))
+    {
+        QString homeHost = sr->HomeRef();
+        if (!homeHost.isEmpty())
+            hostRefs.append(homeHost);
+    }
+    else if (Network* network = qobject_cast<Network*>(o))
+    {
+        QStringList pifRefs = network->GetPIFRefs();
+        if (pifRefs.isEmpty())
+            hostRefs = cache->GetAllRefs("host");
+    }
+    else if (Host* host = qobject_cast<Host*>(o))
+    {
+        hostRefs.append(host->OpaqueRef());
+    }
+    else if (VDI* vdi = qobject_cast<VDI*>(o))
+    {
+        QString srRef = vdi->SRRef();
+        if (!srRef.isEmpty())
+        {
+            QVariantMap srData = cache->ResolveObjectData("SR", srRef);
+            // TODO: Get SR.Home() - for now just skip
+        }
+    }
+    
+    return hostRefs;
 }
 
-QVariant PropertyAccessors::StorageProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::StorageProperty(XenObject* o)
 {
-    // TODO: Implement storage property
-    return QVariant();
+    QStringList srRefs;
+    if (!o || !o->GetConnection())
+        return QVariant();
+    
+    XenCache* cache = o->GetConnection()->GetCache();
+    if (!cache)
+        return QVariant();
+    
+    VM* vm = qobject_cast<VM*>(o);
+    if (vm && vm->IsRealVM())
+    {
+        QStringList vbdRefs = vm->VBDRefs();
+        for (const QString& vbdRef : vbdRefs)
+        {
+            QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+            QString vdiRef = vbdData.value("VDI").toString();
+            if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
+            {
+                QVariantMap vdiData = cache->ResolveObjectData("VDI", vdiRef);
+                QString srRef = vdiData.value("SR").toString();
+                if (!srRef.isEmpty() && !srRefs.contains(srRef))
+                    srRefs.append(srRef);
+            }
+        }
+    }
+    else if (SR* sr = qobject_cast<SR*>(o))
+    {
+        srRefs.append(sr->OpaqueRef());
+    }
+    else if (VDI* vdi = qobject_cast<VDI*>(o))
+    {
+        QString srRef = vdi->SRRef();
+        if (!srRef.isEmpty())
+            srRefs.append(srRef);
+    }
+    
+    return srRefs;
 }
 
-QVariant PropertyAccessors::DisksProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::DisksProperty(XenObject* o)
 {
-    // TODO: Implement disks property
-    return QVariant();
+    QStringList vdiRefs;
+    if (!o || !o->GetConnection())
+        return QVariant();
+    
+    XenCache* cache = o->GetConnection()->GetCache();
+    if (!cache)
+        return QVariant();
+    
+    if (VDI* vdi = qobject_cast<VDI*>(o))
+    {
+        vdiRefs.append(vdi->OpaqueRef());
+    }
+    else if (VM* vm = qobject_cast<VM*>(o))
+    {
+        if (vm->IsRealVM())
+        {
+            QStringList vbdRefs = vm->VBDRefs();
+            for (const QString& vbdRef : vbdRefs)
+            {
+                QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+                QString vdiRef = vbdData.value("VDI").toString();
+                if (!vdiRef.isEmpty() && !vdiRefs.contains(vdiRef))
+                    vdiRefs.append(vdiRef);
+            }
+        }
+    }
+    
+    return vdiRefs;
 }
 
-QVariant PropertyAccessors::IPAddressProperty(XenObject* /*o*/)
+QVariant PropertyAccessors::IPAddressProperty(XenObject* o)
 {
-    // TODO: Implement IP address property
-    return QVariant();
+    QStringList addresses;
+    if (!o || !o->GetConnection())
+        return QVariant();
+    
+    XenCache* cache = o->GetConnection()->GetCache();
+    if (!cache)
+        return QVariant();
+    
+    VM* vm = qobject_cast<VM*>(o);
+    if (vm && vm->IsRealVM())
+    {
+        QString guestMetricsRef = vm->GuestMetricsRef();
+        if (guestMetricsRef.isEmpty())
+            return QVariant();
+        
+        QVariantMap metricsData = cache->ResolveObjectData("VM_guest_metrics", guestMetricsRef);
+        QVariantMap networks = metricsData.value("networks").toMap();
+        
+        QStringList vifRefs = vm->VIFRefs();
+        for (const QString& vifRef : vifRefs)
+        {
+            QVariantMap vifData = cache->ResolveObjectData("VIF", vifRef);
+            QString device = vifData.value("device").toString();
+            
+            // Look for IP addresses in guest metrics for this device
+            for (auto it = networks.begin(); it != networks.end(); ++it)
+            {
+                if (it.key().contains(device))
+                {
+                    QString ipAddr = it.value().toString();
+                    if (!ipAddr.isEmpty() && !addresses.contains(ipAddr))
+                        addresses.append(ipAddr);
+                }
+            }
+        }
+    }
+    else if (Host* host = qobject_cast<Host*>(o))
+    {
+        QStringList pifRefs = host->PIFRefs();
+        for (const QString& pifRef : pifRefs)
+        {
+            QVariantMap pifData = cache->ResolveObjectData("PIF", pifRef);
+            QString ipAddr = pifData.value("IP").toString();
+            if (!ipAddr.isEmpty() && !addresses.contains(ipAddr))
+                addresses.append(ipAddr);
+        }
+    }
+    else if (SR* sr = qobject_cast<SR*>(o))
+    {
+        // TODO: Get SR target IP address
+        // This requires implementing SR::Target() method
+    }
+    
+    return addresses.isEmpty() ? QVariant() : addresses;
 }
 
 // PropertyWrapper implementation
