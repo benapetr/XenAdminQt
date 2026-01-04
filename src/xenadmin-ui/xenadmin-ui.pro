@@ -9,6 +9,7 @@ SOURCES += \
     commands/vm/vmcommand.cpp \
     main.cpp \
     mainwindow.cpp \
+    mainwindowtreebuilder.cpp \
     tabpages/vmstoragetabpage.cpp \
     titlebar.cpp \
     placeholderwidget.cpp \
@@ -66,6 +67,10 @@ SOURCES += \
     controls/xensearch/searcher.cpp \
     controls/xensearch/resourceselectbutton.cpp \
     controls/xensearch/treewidgetgroupacceptor.cpp \
+    xensearch/treesearch.cpp \
+    xensearch/virtualtreenode.cpp \
+    xensearch/treenodegroupacceptor.cpp \
+    xensearch/treenodefactory.cpp \
     settingspanels/generaleditpage.cpp \
     settingspanels/hostautostarteditpage.cpp \
     settingspanels/hostmultipathpage.cpp \
@@ -237,6 +242,7 @@ HEADERS += \
     commands/vm/vmcommand.h \
     globals.h \
     mainwindow.h \
+    mainwindowtreebuilder.h \
     tabpages/vmstoragetabpage.h \
     titlebar.h \
     placeholderwidget.h \
@@ -297,6 +303,10 @@ HEADERS += \
     controls/xensearch/searcher.h \
     controls/xensearch/resourceselectbutton.h \
     controls/xensearch/treewidgetgroupacceptor.h \
+    xensearch/treesearch.h \
+    xensearch/virtualtreenode.h \
+    xensearch/treenodegroupacceptor.h \
+    xensearch/treenodefactory.h \
     settingspanels/ieditpage.h \
     settingspanels/generaleditpage.h \
     settingspanels/hostautostarteditpage.h \

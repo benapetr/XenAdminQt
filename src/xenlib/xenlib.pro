@@ -47,6 +47,7 @@ SOURCES += \
     xen/friendlyerrornames.cpp \
     xen/asyncoperation.cpp \
     xen/xenobject.cpp \
+    xen/vmappliance.cpp \
     xen/pool.cpp \
     xen/host.cpp \
     xen/hostmetrics.cpp \
@@ -224,6 +225,7 @@ HEADERS += \
     xen/pci.h \
     xen/pgpu.h \
     xen/network.h \
+    xen/vmappliance.h \
     xen/xenapi/xenapi_VM.h \
     xen/xenapi/xenapi_SR.h \
     xen/xenapi/xenapi_Pool.h \

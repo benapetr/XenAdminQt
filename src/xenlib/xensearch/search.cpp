@@ -219,74 +219,71 @@ Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& obje
     // C# equivalent: SearchFor(IXenObject value) and SearchFor(IEnumerable<IXenObject> objects)
     // Lines 465-472, 398-460 in Search.cs
 
+    return SearchFor(objectRefs, objectTypes, conn, GetOverviewScope());
+}
+
+static Search* buildOverviewSearch(QueryScope* scopeToUse)
+{
+    Grouping* hostGrouping = new HostGrouping(nullptr);
+    Grouping* poolGrouping = new PoolGrouping(hostGrouping);
+    Query* query = new Query(scopeToUse, nullptr);
+    return new Search(query, poolGrouping, "Overview", "", false);
+}
+
+Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& objectTypes,
+                          XenConnection* conn, QueryScope* scope)
+{
+    if (!scope)
+        scope = GetOverviewScope();
+
     if (objectRefs.isEmpty())
     {
-        // Default overview search
-        return SearchForAllTypes();
+        return buildOverviewSearch(scope);
     }
     else if (objectRefs.count() == 1)
     {
-        // Single object search
         QString objRef = objectRefs.first();
         QString objType = objectTypes.isEmpty() ? QString() : objectTypes.first();
 
-        // Get object data to determine grouping
         QVariantMap objectData;
         if (!objType.isEmpty() && conn)
         {
-            // Request object data from cache
             objectData = conn->GetCache()->ResolveObjectData(objType, objRef);
         }
 
         if (objType == "host")
         {
-            // Host search: group by host
             Grouping* hostGrouping = new HostGrouping(nullptr);
-
-            // Create UUID match query for this specific host
-            QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, objRef, 
+            QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, objRef,
                                                             StringPropertyQuery::MatchType::ExactMatch);
-            // Wrap in recursive query to match host and all descendants
             QueryFilter* hostQuery = uuidQuery; // TODO: Implement RecursiveXMOListPropertyQuery
 
-            QueryScope* scope = GetOverviewScope();
             Query* query = new Query(scope, hostQuery);
-
             QString name = QString("Host: %1").arg(objectData.value("name_label").toString());
             return new Search(query, hostGrouping, name, "", false);
         }
         else if (objType == "pool")
         {
-            // Pool search: group by pool → host
             Grouping* hostGrouping = new HostGrouping(nullptr);
             Grouping* poolGrouping = new PoolGrouping(hostGrouping);
 
-            // Create UUID match query for this specific pool
             QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, objRef,
                                                             StringPropertyQuery::MatchType::ExactMatch);
-            // Wrap in recursive query to match pool and all descendants
             QueryFilter* poolQuery = uuidQuery; // TODO: Implement RecursiveXMOPropertyQuery
 
-            QueryScope* scope = GetOverviewScope();
             Query* query = new Query(scope, poolQuery);
-
             QString name = QString("Pool: %1").arg(objectData.value("name_label").toString());
             return new Search(query, poolGrouping, name, "", false);
         }
         else
         {
-            // Generic object or unknown type - default overview
-            return SearchForAllTypes();
+            return buildOverviewSearch(scope);
         }
     }
     else
     {
-        // Multiple objects - create OR query for all objects
-        // C# creates RecursiveXMOPropertyQuery for each object and combines with GroupQuery.Or
-
-        // For now, just return default overview
         // TODO: Implement multi-object search with proper grouping
-        return SearchForAllTypes();
+        return buildOverviewSearch(scope);
     }
 }
 
