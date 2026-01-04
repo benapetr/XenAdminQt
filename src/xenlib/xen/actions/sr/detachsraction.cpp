@@ -31,6 +31,21 @@
 #include "../../xenapi/xenapi_PBD.h"
 #include <QDebug>
 
+namespace
+{
+QString getCoordinatorRef(XenConnection* connection)
+{
+    if (!connection || !connection->GetCache())
+        return QString();
+
+    QList<QVariantMap> pools = connection->GetCache()->GetAllData("pool");
+    if (pools.isEmpty())
+        return QString();
+
+    return pools.first().value("master").toString();
+}
+}
+
 DetachSrAction::DetachSrAction(XenConnection* connection,
                                const QString& srRef,
                                const QString& srName,
@@ -70,13 +85,26 @@ void DetachSrAction::run()
             return;
         }
 
-        // TODO: CA-176935, CA-173497 - Unplug coordinator PBD last for safety
-        // For now, just unplug all PBDs in order
+        // CA-176935, CA-173497 - Unplug coordinator PBD last for safety
         m_pbdRefs.clear();
+        QStringList coordinatorPbds;
+        QStringList supporterPbds;
+        const QString coordinatorRef = getCoordinatorRef(connection());
+
         for (const QVariant& pbdVar : pbds)
         {
-            m_pbdRefs.append(pbdVar.toString());
+            const QString pbdRef = pbdVar.toString();
+            QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
+            const QString hostRef = pbdData.value("host").toString();
+
+            if (!coordinatorRef.isEmpty() && hostRef == coordinatorRef)
+                coordinatorPbds.append(pbdRef);
+            else
+                supporterPbds.append(pbdRef);
         }
+
+        m_pbdRefs = supporterPbds;
+        m_pbdRefs.append(coordinatorPbds);
 
         qDebug() << "DetachSrAction: Will detach" << m_pbdRefs.count()
                  << "PBDs for SR" << m_srName
@@ -119,12 +147,22 @@ void DetachSrAction::unplugPBDs()
 
         try
         {
+            qDebug() << "DetachSrAction: Unplugging PBD" << pbdRef
+                     << "(" << (i + 1) << "of" << m_pbdRefs.count() << ")";
             setDescription(QString("Unplugging PBD %1 of %2...")
                                .arg(i + 1)
                                .arg(m_pbdRefs.count()));
 
             QString taskRef = XenAPI::PBD::async_unplug(session(), pbdRef);
+            qDebug() << "DetachSrAction: async_unplug task" << taskRef;
+            if (taskRef.isEmpty())
+            {
+                setError("PBD async_unplug failed (empty task reference)");
+                return;
+            }
             pollToCompletion(taskRef, basePercent + (i * inc), basePercent + ((i + 1) * inc));
+            qDebug() << "DetachSrAction: Unplug completed for" << pbdRef
+                     << "state" << state() << "error" << errorMessage();
 
             if (state() == Failed)
             {

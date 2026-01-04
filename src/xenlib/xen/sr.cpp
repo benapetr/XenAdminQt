@@ -370,3 +370,73 @@ bool SR::CanRepairAfterUpgradeFromLegacySL() const
 
     return false;
 }
+
+bool SR::IsDetached() const
+{
+    XenConnection* connection = GetConnection();
+    if (!connection)
+        return true;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return true;
+
+    QStringList pbdRefs = PBDRefs();
+    if (pbdRefs.isEmpty())
+        return true;
+
+    for (const QString& pbdRef : pbdRefs)
+    {
+        QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
+        if (!pbdData.isEmpty() && pbdData.value("currently_attached").toBool())
+            return false;
+    }
+
+    return true;
+}
+
+bool SR::HasRunningVMs() const
+{
+    XenConnection* connection = GetConnection();
+    if (!connection)
+        return false;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return false;
+
+    QStringList vdiRefs = VDIRefs();
+    for (const QString& vdiRef : vdiRefs)
+    {
+        QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
+        if (vdiData.isEmpty())
+            continue;
+
+        const QString vdiType = vdiData.value("type").toString();
+        const bool metadataVdi = (vdiType == "metadata");
+
+        QVariantList vbdRefs = vdiData.value("VBDs").toList();
+        for (const QVariant& vbdRefVar : vbdRefs)
+        {
+            const QString vbdRef = vbdRefVar.toString();
+            QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
+            const QString vmRef = vbdData.value("VM").toString();
+            if (vmRef.isEmpty())
+                continue;
+
+            QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
+            if (vmData.isEmpty())
+                continue;
+
+            const bool isControlDomain = vmData.value("is_control_domain").toBool();
+            if (metadataVdi && isControlDomain)
+                continue;
+
+            const QString powerState = vmData.value("power_state").toString();
+            if (powerState == "Running")
+                return true;
+        }
+    }
+
+    return false;
+}

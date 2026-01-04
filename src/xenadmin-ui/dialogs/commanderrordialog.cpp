@@ -27,6 +27,8 @@
 
 #include "commanderrordialog.h"
 #include "ui_commanderrordialog.h"
+#include "../iconmanager.h"
+#include "xen/xenobject.h"
 #include <QTableWidgetItem>
 #include <QHeaderView>
 #include <QIcon>
@@ -84,6 +86,45 @@ CommandErrorDialog::CommandErrorDialog(const QString& title,
     }
 
     // Sort by name column initially
+    this->ui->tableWidget->sortItems(this->m_currentSortColumn, this->m_currentSortOrder);
+}
+
+// Constructor with XenObject pointers (matches C# version)
+CommandErrorDialog::CommandErrorDialog(const QString& title,
+                                       const QString& text,
+                                       const QMap<QSharedPointer<XenObject>, QString>& cantRunReasons,
+                                       DialogMode mode,
+                                       QWidget* parent)
+    : QDialog(parent)
+    , ui(new Ui::CommandErrorDialog)
+    , m_mode(mode)
+    , m_currentSortColumn(1)  // Default sort by Name column
+    , m_currentSortOrder(Qt::AscendingOrder)
+{
+    this->ui->setupUi(this);
+    this->setupDialog(title, text, mode);
+
+    // Add rows with XenObject icons and names
+    // Sort objects by name first (matches C# RowComparer behavior)
+    QList<QSharedPointer<XenObject>> sortedObjects = cantRunReasons.keys();
+    std::sort(sortedObjects.begin(), sortedObjects.end(),
+              [](const QSharedPointer<XenObject>& a, const QSharedPointer<XenObject>& b) {
+                  return a->GetName() < b->GetName();
+              });
+
+    for (const auto& xenObject : sortedObjects)
+    {
+        if (!xenObject)
+            continue;
+
+        QIcon icon = IconManager::instance().getIconForObject(xenObject.data());
+        QString name = xenObject->GetName();
+        QString reason = cantRunReasons.value(xenObject);
+        
+        this->addRow(icon, name, reason);
+    }
+
+    // Sort by name column initially (already sorted in insertion order)
     this->ui->tableWidget->sortItems(this->m_currentSortColumn, this->m_currentSortOrder);
 }
 
@@ -151,6 +192,35 @@ void CommandErrorDialog::addRow(const QString& iconPath, const QString& name, co
     if (!iconPath.isEmpty())
     {
         QIcon icon(iconPath);
+        iconItem->setIcon(icon);
+    }
+    iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);  // Read-only
+    this->ui->tableWidget->setItem(row, 0, iconItem);
+
+    // Column 1: Name
+    QTableWidgetItem* nameItem = new QTableWidgetItem(name);
+    nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);  // Read-only
+    this->ui->tableWidget->setItem(row, 1, nameItem);
+
+    // Column 2: Reason
+    QTableWidgetItem* reasonItem = new QTableWidgetItem(reason);
+    reasonItem->setFlags(reasonItem->flags() & ~Qt::ItemIsEditable);  // Read-only
+    reasonItem->setTextAlignment(Qt::AlignTop | Qt::AlignLeft);
+    this->ui->tableWidget->setItem(row, 2, reasonItem);
+
+    // Auto-resize row height to fit content
+    this->ui->tableWidget->resizeRowToContents(row);
+}
+
+void CommandErrorDialog::addRow(const QIcon& icon, const QString& name, const QString& reason)
+{
+    int row = this->ui->tableWidget->rowCount();
+    this->ui->tableWidget->insertRow(row);
+
+    // Column 0: Icon
+    QTableWidgetItem* iconItem = new QTableWidgetItem();
+    if (!icon.isNull())
+    {
         iconItem->setIcon(icon);
     }
     iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);  // Read-only

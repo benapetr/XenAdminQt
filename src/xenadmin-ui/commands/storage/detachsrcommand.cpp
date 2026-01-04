@@ -28,9 +28,12 @@
 #include "detachsrcommand.h"
 #include "xen/actions/sr/detachsraction.h"
 #include "xen/sr.h"
+#include "xen/xenobject.h"
 #include "xencache.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
+#include "../../dialogs/commanderrordialog.h"
+#include "xenlib/operations/multipleoperation.h"
 #include <QMessageBox>
 #include <QDebug>
 
@@ -44,101 +47,126 @@ void DetachSRCommand::setTargetSR(const QString& srRef)
     this->m_overrideSRRef = srRef;
 }
 
-bool DetachSRCommand::CanRun() const
+QList<QSharedPointer<SR>> DetachSRCommand::selectedSRs() const
 {
-    QString srRef = this->currentSR();
-    if (srRef.isEmpty())
+    QList<QSharedPointer<SR>> srs;
+    QStringList selection = this->GetSelection();
+    QSharedPointer<SR> baseSr = this->getSR();
+
+    if (selection.isEmpty())
     {
-        return false;
+        if (baseSr)
+            srs.append(baseSr);
+        return srs;
     }
 
-    QSharedPointer<SR> sr = this->getSR();
+    XenConnection* conn = baseSr ? baseSr->GetConnection() : nullptr;
+    XenCache* cache = conn ? conn->GetCache() : nullptr;
+    if (!cache)
+        return srs;
+
+    for (const QString& ref : selection)
+    {
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", ref);
+        if (sr)
+            srs.append(sr);
+    }
+
+    return srs;
+}
+
+bool DetachSRCommand::canRunForSr(const QSharedPointer<SR>& sr, QString* reason) const
+{
     if (!sr)
+        return false;
+
+    if (sr->IsDetached())
     {
+        if (reason)
+            *reason = "Storage repository is already detached.";
         return false;
     }
 
-    XenCache* cache = sr->GetConnection()->GetCache();
-
-    QVariantMap srData = sr->GetData();
-
-    // Check if SR is already detached
-    QVariantList pbds = srData.value("PBDs").toList();
-    bool hasAttachedPBD = false;
-
-    for (const QVariant& pbdVar : pbds)
+    if (sr->HasRunningVMs())
     {
-        QString pbdRef = pbdVar.toString();
-        QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
-        if (pbdData.value("currently_attached").toBool())
-        {
-            hasAttachedPBD = true;
-            break;
-        }
-    }
-
-    if (!hasAttachedPBD)
-    {
-        qDebug() << "DetachSRCommand: SR" << srRef << "is already detached";
+        if (reason)
+            *reason = "Storage repository has running VMs.";
         return false;
     }
 
-    // Check if SR has running VMs
-    QVariantList vdis = srData.value("VDIs").toList();
-    for (const QVariant& vdiVar : vdis)
+    if (!sr->CurrentOperations().isEmpty() || sr->IsLocked())
     {
-        QString vdiRef = vdiVar.toString();
-        QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-        QVariantList vbds = vdiData.value("VBDs").toList();
-
-        for (const QVariant& vbdVar : vbds)
-        {
-            QString vbdRef = vbdVar.toString();
-            QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-            QString vmRef = vbdData.value("VM").toString();
-
-            if (!vmRef.isEmpty())
-            {
-                QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-                QString powerState = vmData.value("power_state").toString();
-
-                if (powerState == "Running" || powerState == "Paused")
-                {
-                    qDebug() << "DetachSRCommand: SR has running VM" << vmRef;
-                    return false;
-                }
-            }
-        }
+        if (reason)
+            *reason = "An action is already in progress for this storage repository.";
+        return false;
     }
 
     return true;
 }
 
+bool DetachSRCommand::CanRun() const
+{
+    QList<QSharedPointer<SR>> srs = selectedSRs();
+    for (const QSharedPointer<SR>& sr : srs)
+    {
+        if (canRunForSr(sr))
+            return true;
+    }
+
+    return false;
+}
+
 void DetachSRCommand::Run()
 {
-    QString srRef = this->currentSR();
-    if (srRef.isEmpty())
+    QList<QSharedPointer<SR>> srs = selectedSRs();
+    if (srs.isEmpty())
     {
         qWarning() << "DetachSRCommand: Cannot run";
         return;
     }
 
-    QSharedPointer<SR> sr = this->getSR();
-    if (!sr)
+    QList<QSharedPointer<SR>> runnable;
+    QMap<QSharedPointer<XenObject>, QString> cantRunReasons;
+    for (const QSharedPointer<SR>& sr : srs)
     {
-        return;
+        QString reason;
+        if (canRunForSr(sr, &reason))
+        {
+            runnable.append(sr);
+        }
+        else if (sr)
+        {
+            cantRunReasons.insert(sr, reason);
+        }
     }
 
-    QString srName = sr->GetName();
-    if (srName.isEmpty())
+    if (!cantRunReasons.isEmpty())
     {
-        srName = srRef;
+        CommandErrorDialog::DialogMode mode =
+            runnable.isEmpty() ? CommandErrorDialog::DialogMode::Close
+                               : CommandErrorDialog::DialogMode::OKCancel;
+        CommandErrorDialog dialog("Detach Storage Repository",
+                                  "Some storage repositories cannot be detached.",
+                                  cantRunReasons,
+                                  mode,
+                                  this->mainWindow());
+        if (dialog.exec() != QDialog::Accepted || runnable.isEmpty())
+            return;
     }
+
+    if (runnable.isEmpty())
+        return;
+
+    const int count = runnable.count();
+    QString confirmTitle = count == 1 ? "Detach Storage Repository" : "Detach Storage Repositories";
+    QString confirmText = count == 1
+        ? QString("Are you sure you want to detach SR '%1'?").arg(runnable.first()->GetName())
+        : "Are you sure you want to detach the selected storage repositories?";
 
     // Show confirmation dialog
     QMessageBox msgBox(this->mainWindow());
-    msgBox.setWindowTitle("Detach Storage Repository");
-    msgBox.setText(QString("Are you sure you want to detach SR '%1'?").arg(srName));
+    msgBox.setWindowTitle(confirmTitle);
+    msgBox.setText(confirmText);
     msgBox.setInformativeText("This will disconnect the storage repository from all hosts in the pool.\n"
                               "No data will be deleted, and the SR can be re-attached later.");
     msgBox.setIcon(QMessageBox::Warning);
@@ -152,46 +180,75 @@ void DetachSRCommand::Run()
         return;
     }
 
-    qDebug() << "DetachSRCommand: Detaching SR" << srName << "(" << srRef << ")";
-
-    // Get GetConnection from SR object for multi-GetConnection support
-    XenConnection* conn = sr->GetConnection();
-    if (!conn || !conn->IsConnected())
+    if (runnable.count() == 1)
     {
-        QMessageBox::warning(this->mainWindow(), "Not Connected",
-                             "Not connected to XenServer");
+        QSharedPointer<SR> sr = runnable.first();
+        QString srRef = sr->OpaqueRef();
+        QString srName = sr->GetName().isEmpty() ? srRef : sr->GetName();
+
+        qDebug() << "DetachSRCommand: Detaching SR" << srName << "(" << srRef << ")";
+
+        XenConnection* conn = sr->GetConnection();
+        if (!conn || !conn->IsConnected())
+        {
+            QMessageBox::warning(this->mainWindow(), "Not Connected",
+                                 "Not connected to XenServer");
+            return;
+        }
+
+        DetachSrAction* action = new DetachSrAction(
+            conn,
+            srRef,
+            srName,
+            false,
+            this->mainWindow());
+
+        OperationManager::instance()->registerOperation(action);
+
+        QPointer<MainWindow> mainWindow = this->mainWindow();
+        connect(action, &AsyncOperation::completed, mainWindow, [mainWindow, srName, action]() {
+            if (!mainWindow)
+                return;
+            if (action->state() == AsyncOperation::Completed && !action->isFailed())
+            {
+                mainWindow->showStatusMessage(QString("Successfully detached SR '%1'").arg(srName), 5000);
+            } else
+            {
+                QMessageBox::warning(
+                    mainWindow,
+                    "Detach SR Failed",
+                    QString("Failed to detach SR '%1'").arg(srName));
+            }
+            action->deleteLater();
+        }, Qt::QueuedConnection);
+
+        action->runAsync();
         return;
     }
 
-    // Create and run action
-    DetachSrAction* action = new DetachSrAction(
-        conn,
-        srRef,
-        srName,
-        false, // Don't destroy PBDs, just unplug
-        this);
+    QList<AsyncOperation*> actions;
+    for (const QSharedPointer<SR>& sr : runnable)
+    {
+        QString srRef = sr->OpaqueRef();
+        QString srName = sr->GetName().isEmpty() ? srRef : sr->GetName();
+        DetachSrAction* action = new DetachSrAction(sr->GetConnection(), srRef, srName, false, this->mainWindow());
+        actions.append(action);
+    }
 
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->registerOperation(action);
-
-    // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, [this, srName, action]() {
-        if (action->state() == AsyncOperation::Completed && !action->isFailed())
-        {
-            this->mainWindow()->showStatusMessage(QString("Successfully detached SR '%1'").arg(srName), 5000);
-        } else
-        {
-            QMessageBox::warning(
-                this->mainWindow(),
-                "Detach SR Failed",
-                QString("Failed to detach SR '%1'").arg(srName));
-        }
-        // Auto-delete when complete
-        action->deleteLater();
-    });
-
-    // Run action asynchronously
-    action->runAsync();
+    MultipleOperation* multi = new MultipleOperation(
+        nullptr,
+        "Detach Storage Repositories",
+        "Detaching storage repositories...",
+        "Storage repositories detached successfully",
+        actions,
+        true,
+        false,
+        false,
+        this->mainWindow());
+    OperationManager::instance()->registerOperation(multi);
+    connect(multi, &AsyncOperation::completed, multi, &QObject::deleteLater);
+    connect(multi, &AsyncOperation::failed, multi, &QObject::deleteLater);
+    multi->runAsync();
 }
 
 QString DetachSRCommand::currentSR() const

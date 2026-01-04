@@ -271,6 +271,20 @@ class XENLIB_EXPORT SR : public XenObject
          */
         bool CanRepairAfterUpgradeFromLegacySL() const;
 
+        /**
+         * @brief Check if SR is detached (no attached PBDs)
+         *
+         * Mirrors C# SR.IsDetached().
+         */
+        bool IsDetached() const;
+
+        /**
+         * @brief Check if SR has any running VMs
+         *
+         * Mirrors C# SR.HasRunningVMs().
+         */
+        bool HasRunningVMs() const;
+
     protected:
         QString GetObjectType() const override;
 };

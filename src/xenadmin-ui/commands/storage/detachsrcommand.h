@@ -29,6 +29,7 @@
 #define DETACHSRCOMMAND_H
 
 #include "srcommand.h"
+#include <QSharedPointer>
 
 /**
  * @brief DetachSRCommand - Detaches selected SRs
@@ -55,6 +56,8 @@ class DetachSRCommand : public SRCommand
         void Run() override;
 
     private:
+        QList<QSharedPointer<SR>> selectedSRs() const;
+        bool canRunForSr(const QSharedPointer<SR>& sr, QString* reason = nullptr) const;
         QString currentSR() const;
         QString m_overrideSRRef;
 };

@@ -31,12 +31,15 @@
 #include <QDialog>
 #include <QMap>
 #include <QString>
+#include <QSharedPointer>
+#include <QIcon>
 
 namespace Ui {
 class CommandErrorDialog;
 }
 
 class QTableWidgetItem;
+class XenObject;
 
 /*!
  * \brief Dialog for displaying command errors
@@ -88,6 +91,20 @@ public:
                                 DialogMode mode = DialogMode::Close,
                                 QWidget* parent = nullptr);
 
+    /*!
+     * \brief Construct CommandErrorDialog with XenObject pointers (matches C# version)
+     * \param title The title for the confirmation dialog
+     * \param text The text for the confirmation dialog
+     * \param cantRunReasons A map of XenObject pointers to reasons why they can't be actioned
+     * \param mode Whether the dialog should show a Close button, or OK and Cancel buttons
+     * \param parent Parent widget
+     */
+    explicit CommandErrorDialog(const QString& title,
+                                const QString& text,
+                                const QMap<QSharedPointer<XenObject>, QString>& cantRunReasons,
+                                DialogMode mode = DialogMode::Close,
+                                QWidget* parent = nullptr);
+
     ~CommandErrorDialog();
 
     DialogMode mode() const { return this->m_mode; }
@@ -103,6 +120,7 @@ private:
 
     void setupDialog(const QString& title, const QString& text, DialogMode mode);
     void addRow(const QString& iconPath, const QString& name, const QString& reason);
+    void addRow(const QIcon& icon, const QString& name, const QString& reason);
 };
 
 #endif // COMMANDERRORDIALOG_H
