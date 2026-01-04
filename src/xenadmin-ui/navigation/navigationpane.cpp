@@ -30,6 +30,7 @@
 #include "navigationbuttons.h"
 #include "navigationview.h"
 #include "../widgets/notificationsview.h"
+#include "../settingsmanager.h"
 #include <QVBoxLayout>
 #include <QResizeEvent>
 #include <QDebug>
@@ -438,10 +439,17 @@ void NavigationPane::updateSearch()
     // Update NavigationView's CurrentSearch based on current mode
     // TODO: Once Search infrastructure is ported from C#, this will set
     // navigationView->setCurrentSearch(getSearchForMode(m_currentMode))
-    // For now, just trigger a refresh
+    // For now, apply view filters and trigger a refresh
     NavigationView* navView = navigationView();
     if (navView)
     {
+        SettingsManager& settings = SettingsManager::instance();
+        NavigationView::ViewFilters filters;
+        filters.showDefaultTemplates = settings.getDefaultTemplatesVisible();
+        filters.showUserTemplates = settings.getUserTemplatesVisible();
+        filters.showLocalStorage = settings.getLocalSRsVisible();
+        filters.showHiddenObjects = settings.getShowHiddenObjects();
+        navView->setViewFilters(filters);
         navView->requestRefreshTreeView();
     }
 }

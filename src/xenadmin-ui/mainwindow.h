@@ -32,6 +32,7 @@
 #include <QList>
 #include <QMap>
 
+#include "navigation/navigationpane.h"
 #include "xen/asyncoperation.h"
 
 namespace Ui
@@ -126,6 +127,12 @@ class MainWindow : public QMainWindow
         void onNotificationsSubModeChanged(int subMode);
         void onNavigationPaneTreeViewSelectionChanged();
         void onNavigationPaneTreeNodeRightClicked();
+
+        // View menu filters (matches C# View menu toggles)
+        void onViewTemplatesToggled(bool checked);
+        void onViewCustomTemplatesToggled(bool checked);
+        void onViewLocalStorageToggled(bool checked);
+        void onViewShowHiddenObjectsToggled(bool checked);
 
         // Cache update handler for refreshing selected object
         void onCacheObjectChanged(XenConnection *connection, const QString& objectType, const QString& objectRef);
@@ -226,6 +233,9 @@ class MainWindow : public QMainWindow
 
     private:
         void updateActions();
+        void updateViewMenu(NavigationPane::NavigationMode mode);
+        void applyViewSettingsToMenu();
+        void onViewSettingsChanged();
         void initializeToolbar();                                        // Initialize toolbar buttons matching C# MainWindow.Designer.cs
         void updateToolbarsAndMenus();                                   // Update both toolbar buttons and menu items from Commands (matches C# UpdateToolbars pattern)
         void disableAllOperationButtons();                               // Disable all VM/Host/Container operation buttons

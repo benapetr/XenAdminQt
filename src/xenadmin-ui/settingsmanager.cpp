@@ -372,6 +372,39 @@ void SettingsManager::setShowHiddenObjects(bool show)
     emit settingsChanged("View/showHiddenObjects");
 }
 
+bool SettingsManager::getDefaultTemplatesVisible() const
+{
+    return m_settings->value("View/defaultTemplatesVisible", false).toBool();
+}
+
+void SettingsManager::setDefaultTemplatesVisible(bool visible)
+{
+    m_settings->setValue("View/defaultTemplatesVisible", visible);
+    emit settingsChanged("View/defaultTemplatesVisible");
+}
+
+bool SettingsManager::getUserTemplatesVisible() const
+{
+    return m_settings->value("View/userTemplatesVisible", true).toBool();
+}
+
+void SettingsManager::setUserTemplatesVisible(bool visible)
+{
+    m_settings->setValue("View/userTemplatesVisible", visible);
+    emit settingsChanged("View/userTemplatesVisible");
+}
+
+bool SettingsManager::getLocalSRsVisible() const
+{
+    return m_settings->value("View/localSRsVisible", true).toBool();
+}
+
+void SettingsManager::setLocalSRsVisible(bool visible)
+{
+    m_settings->setValue("View/localSRsVisible", visible);
+    emit settingsChanged("View/localSRsVisible");
+}
+
 int SettingsManager::getConsoleRefreshInterval() const
 {
     return m_settings->value("Console/refreshInterval", 5).toInt();

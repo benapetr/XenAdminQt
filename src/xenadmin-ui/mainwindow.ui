@@ -67,10 +67,16 @@
     <addaction name="separator"/>
     <addaction name="exitAction"/>
    </widget>
-   <widget class="QMenu" name="menuView">
-    <property name="title">
-     <string>&amp;View</string>
-    </property>
+  <widget class="QMenu" name="menuView">
+   <property name="title">
+    <string>&amp;View</string>
+   </property>
+    <addaction name="viewTemplatesAction"/>
+    <addaction name="viewCustomTemplatesAction"/>
+    <addaction name="viewLocalStorageAction"/>
+    <addaction name="viewMenuSeparator1"/>
+    <addaction name="viewShowHiddenObjectsAction"/>
+    <addaction name="viewMenuSeparator2"/>
     <addaction name="debugWindowAction"/>
    </widget>
    <widget class="QMenu" name="menuPool">
@@ -497,6 +503,48 @@
    </property>
    <property name="shortcut">
     <string>F12</string>
+   </property>
+  </action>
+  <action name="viewTemplatesAction">
+   <property name="text">
+    <string>Templates</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="viewCustomTemplatesAction">
+   <property name="text">
+    <string>Custom Templates</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="viewLocalStorageAction">
+   <property name="text">
+    <string>Local Storage</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="viewShowHiddenObjectsAction">
+   <property name="text">
+    <string>Show Hidden Objects</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="viewMenuSeparator1">
+   <property name="separator">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="viewMenuSeparator2">
+   <property name="separator">
+    <bool>true</bool>
    </property>
   </action>
   <action name="importAction">

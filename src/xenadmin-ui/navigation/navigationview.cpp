@@ -116,6 +116,17 @@ static int naturalCompare(const QString& s1, const QString& s2)
     return len1 - len2;
 }
 
+static bool isHiddenObject(const QVariantMap& record)
+{
+    const QString name = record.value("name_label").toString();
+    if (name.startsWith("__gui__"))
+        return true;
+
+    const QVariantMap otherConfig = record.value("other_config").toMap();
+    const QString hiddenFlag = otherConfig.value("hide_from_xencenter").toString().toLower();
+    return hiddenFlag == "true";
+}
+
 QSharedPointer<Host> buildDisconnectedHostObject(XenConnection* connection, XenCache* cache)
 {
     if (!connection)
@@ -180,6 +191,55 @@ static void sortTreeItemChildren(QTreeWidgetItem* parent)
     }
 }
 
+static int poolChildSortRank(QTreeWidgetItem* item)
+{
+    if (!item)
+        return 99;
+
+    QVariant data = item->data(0, Qt::UserRole);
+    if (!data.canConvert<QSharedPointer<XenObject>>())
+        return 99;
+
+    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+    if (!obj)
+        return 99;
+
+    const QString type = obj->GetObjectType().toLower();
+    if (type == "host")
+        return 0;
+    if (type == "sr")
+        return 1;
+    if (type == "vm")
+        return 2;
+    return 50;
+}
+
+static void sortPoolChildren(QTreeWidgetItem* parent)
+{
+    if (!parent || parent->childCount() == 0)
+        return;
+
+    QList<QTreeWidgetItem*> children;
+    while (parent->childCount() > 0)
+    {
+        children.append(parent->takeChild(0));
+    }
+
+    std::stable_sort(children.begin(), children.end(),
+              [](QTreeWidgetItem* a, QTreeWidgetItem* b) {
+                  const int rankA = poolChildSortRank(a);
+                  const int rankB = poolChildSortRank(b);
+                  if (rankA != rankB)
+                      return rankA < rankB;
+                  return naturalCompare(a->text(0), b->text(0)) < 0;
+              });
+
+    for (QTreeWidgetItem* child : children)
+    {
+        parent->addChild(child);
+    }
+}
+
 /**
  * @brief Sort top-level items in a tree widget using natural comparison
  */
@@ -212,6 +272,12 @@ NavigationView::NavigationView(QWidget* parent)
     : QWidget(parent), ui(new Ui::NavigationView), m_refreshTimer(new QTimer(this)), m_typeGrouping(new TypeGrouping()) // Create TypeGrouping for Objects view
 {
     this->ui->setupUi(this);
+
+    SettingsManager& settings = SettingsManager::instance();
+    this->m_viewFilters.showDefaultTemplates = settings.getDefaultTemplatesVisible();
+    this->m_viewFilters.showUserTemplates = settings.getUserTemplatesVisible();
+    this->m_viewFilters.showLocalStorage = settings.getLocalSRsVisible();
+    this->m_viewFilters.showHiddenObjects = settings.getShowHiddenObjects();
 
     // Setup debounce timer for cache updates (200ms delay)
     this->m_refreshTimer->setSingleShot(true);
@@ -317,6 +383,12 @@ void NavigationView::requestRefreshTreeView()
 
     emit this->treeViewRefreshResumed(); // Signal rebuild is complete
     emit this->treeViewRefreshed();
+}
+
+void NavigationView::setViewFilters(const ViewFilters& filters)
+{
+    this->m_viewFilters = filters;
+    this->requestRefreshTreeView();
 }
 
 void NavigationView::resetSearchBox()
@@ -562,6 +634,36 @@ void NavigationView::buildInfrastructureTree()
             // Get all hosts from cache (pool.hosts is just list of refs)
             QList<QVariantMap> allHosts = cache->GetAllData("host");
 
+            QHash<QString, QList<QVariantMap>> srsByHost;
+            QList<QVariantMap> poolSrs;
+            for (const QVariantMap& srData : cache->GetAllData("sr"))
+            {
+                QString srRef = srData.value("ref").toString();
+                if (srRef.isEmpty())
+                    continue;
+
+                QString contentType = srData.value("content_type").toString();
+                if (contentType == "iso")
+                    continue;
+
+                QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
+                if (!this->m_viewFilters.showLocalStorage)
+                {
+                    const bool isLocal = srObj ? srObj->IsLocal() : !srData.value("shared").toBool();
+                    if (isLocal)
+                        continue;
+                }
+
+                if (!this->m_viewFilters.showHiddenObjects && isHiddenObject(srData))
+                    continue;
+
+                QString homeRef = srObj ? srObj->HomeRef() : QString();
+                if (homeRef.isEmpty())
+                    poolSrs.append(srData);
+                else
+                    srsByHost[homeRef].append(srData);
+            }
+
             // Build map of hostRef -> QTreeWidgetItem* for VM placement
             QMap<QString, QTreeWidgetItem*> hostItems;
 
@@ -571,6 +673,9 @@ void NavigationView::buildInfrastructureTree()
                 QString hostName = hostData.value("name_label").toString();
                 if (hostName.isEmpty())
                     hostName = "(Unnamed Host)";
+
+                if (!this->m_viewFilters.showHiddenObjects && isHiddenObject(hostData))
+                    continue;
 
                 QTreeWidgetItem* hostItem = new QTreeWidgetItem(poolItem);
                 hostItem->setText(0, hostName);
@@ -589,49 +694,40 @@ void NavigationView::buildInfrastructureTree()
                 // Store in map for VM placement later
                 hostItems[hostRef] = hostItem;
 
-                // Get storage repositories (PBDs) for this host from CACHE
-                // In C# infrastructure, SRs are shown under hosts
-                QVariantList pbdRefs = hostData.value("PBDs").toList();
-
-                for (const QVariant& pbdRefVar : pbdRefs)
+                const QList<QVariantMap> hostSrs = srsByHost.value(hostRef);
+                for (const QVariantMap& srData : hostSrs)
                 {
-                    QString pbdRef = pbdRefVar.toString();
-                    QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
-
-                    if (pbdData.isEmpty())
-                        continue;
-
-                    QString srRef = pbdData.value("SR").toString();
-                    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-
-                    if (srData.isEmpty())
-                        continue;
-
-                    // Check if SR is shared (shows on multiple hosts)
-                    // Only show SR once in tree (on first host if shared)
-                    // TODO: Implement proper SR deduplication like C#
-
+                    QString srRef = srData.value("ref").toString();
                     QString srName = srData.value("name_label").toString();
                     if (srName.isEmpty())
                         srName = "(Unnamed Storage)";
 
-                    // Skip ISO and tools SRs in infrastructure view (C# behavior)
-                    QString contentType = srData.value("content_type").toString();
-                    if (contentType == "iso")
-                        continue;
-
                     QTreeWidgetItem* srItem = new QTreeWidgetItem(hostItem);
                     srItem->setText(0, srName);
-                    
-                    // Store QSharedPointer<SR>
+
                     QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
-                    // Upcast to base type so canConvert<QSharedPointer<XenObject>>() works
                     srItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(srObj));
 
-                    // Set SR icon
                     QIcon srIcon = IconManager::instance().getIconForSR(srData, connection);
                     srItem->setIcon(0, srIcon);
                 }
+            }
+
+            for (const QVariantMap& srData : poolSrs)
+            {
+                QString srRef = srData.value("ref").toString();
+                QString srName = srData.value("name_label").toString();
+                if (srName.isEmpty())
+                    srName = "(Unnamed Storage)";
+
+                QTreeWidgetItem* srItem = new QTreeWidgetItem(poolItem);
+                srItem->setText(0, srName);
+
+                QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
+                srItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(srObj));
+
+                QIcon srIcon = IconManager::instance().getIconForSR(srData, connection);
+                srItem->setIcon(0, srIcon);
             }
 
             // CRITICAL: Place VMs using VMHelpers::getVMHome() (matches C# VM.Home() behavior)
@@ -654,12 +750,33 @@ void NavigationView::buildInfrastructureTree()
                 bool isSnapshot = vmData.value("is_a_snapshot").toBool();
                 bool isTemplate = vmData.value("is_a_template").toBool();
 
-                if (isSnapshot || isTemplate)
+                if (isSnapshot)
+                    continue;
+
+                if (!this->m_viewFilters.showHiddenObjects && isHiddenObject(vmData))
                     continue;
 
                 QString vmName = vmData.value("name_label").toString();
                 if (vmName.isEmpty())
                     vmName = "(Unnamed VM)";
+
+                if (isTemplate)
+                {
+                    QSharedPointer<VM> vmObj = cache->ResolveObject<VM>("vm", vmRef);
+                    const bool isDefaultTemplate = vmObj ? vmObj->IsDefaultTemplate() : vmData.value("is_default_template").toBool();
+                    if (isDefaultTemplate && !this->m_viewFilters.showDefaultTemplates)
+                        continue;
+                    if (!isDefaultTemplate && !this->m_viewFilters.showUserTemplates)
+                        continue;
+
+                    QTreeWidgetItem* templateItem = new QTreeWidgetItem(poolItem);
+                    templateItem->setText(0, vmName);
+                    templateItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(vmObj));
+
+                    QIcon templateIcon = IconManager::instance().getIconForVM(vmData);
+                    templateItem->setIcon(0, templateIcon);
+                    continue;
+                }
 
                 // Use VMHelpers to determine where this VM should appear
                 QString vmHomeRef = VMHelpers::getVMHome(connection, vmData);
@@ -711,8 +828,8 @@ void NavigationView::buildInfrastructureTree()
                 sortTreeItemChildren(it.value());
             }
 
-            // Sort hosts under pool, and VMs directly under pool (offline VMs)
-            sortTreeItemChildren(poolItem);
+            // Sort pool children by group order: hosts, pool-level SRs, pool-level VMs
+            sortPoolChildren(poolItem);
         }
     }
 
@@ -828,6 +945,9 @@ void NavigationView::buildObjectsTree()
             if (hostName.isEmpty())
                 continue;
 
+            if (!this->m_viewFilters.showHiddenObjects && isHiddenObject(hostData))
+                continue;
+
             if (!hostsGroup)
             {
                 hostsGroup = new QTreeWidgetItem(this->ui->treeWidget);
@@ -864,6 +984,9 @@ void NavigationView::buildObjectsTree()
 
             QString vmName = vmData.value("name_label").toString();
             if (vmName.isEmpty())
+                continue;
+
+            if (!this->m_viewFilters.showHiddenObjects && isHiddenObject(vmData))
                 continue;
 
             if (isTemplate)
@@ -919,6 +1042,17 @@ void NavigationView::buildObjectsTree()
             if (srName.isEmpty())
                 continue;
 
+            QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
+            if (!this->m_viewFilters.showLocalStorage)
+            {
+                const bool isLocal = srObj ? srObj->IsLocal() : !srData.value("shared").toBool();
+                if (isLocal)
+                    continue;
+            }
+
+            if (!this->m_viewFilters.showHiddenObjects && isHiddenObject(srData))
+                continue;
+
             if (!storageGroup)
             {
                 storageGroup = new QTreeWidgetItem(this->ui->treeWidget);
@@ -932,7 +1066,6 @@ void NavigationView::buildObjectsTree()
             QTreeWidgetItem* srItem = new QTreeWidgetItem(storageGroup);
             srItem->setText(0, srName);
 
-            QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
             srItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(srObj));
 
             QIcon srIcon = IconManager::instance().getIconForSR(srData, connection);

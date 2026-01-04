@@ -28,6 +28,7 @@
 #include "iconmanager.h"
 #include "xen/xenobject.h"
 #include "xen/network/connection.h"
+#include "xen/sr.h"
 #include "xencache.h"
 #include <QPainter>
 #include <QDebug>
@@ -268,8 +269,22 @@ QIcon IconManager::getIconForSR(const QVariantMap& srData, XenConnection* connec
         ref = srData.value("_ref").toString();
 
     bool isDefault = false;
+    bool hasPbds = !srData.value("PBDs").toList().isEmpty();
+    bool isHidden = false;
+    bool isBroken = false;
     if (connection && connection->GetCache())
     {
+        QSharedPointer<SR> srObj = connection->GetCache()->ResolveObject<SR>("sr", ref);
+        if (srObj)
+        {
+            hasPbds = srObj->HasPBDs();
+            isBroken = srObj->IsDetached() || srObj->IsBroken() || !srObj->MultipathAOK();
+        }
+
+        const QVariantMap otherConfig = srData.value("other_config").toMap();
+        const QString hiddenFlag = otherConfig.value("hide_from_xencenter").toString().toLower();
+        isHidden = hiddenFlag == "true";
+
         QStringList poolRefs = connection->GetCache()->GetAllRefs("pool");
         if (!poolRefs.isEmpty())
         {
@@ -280,19 +295,35 @@ QIcon IconManager::getIconForSR(const QVariantMap& srData, XenConnection* connec
         }
     }
 
-    QString cacheKey = QString("sr_%1_%2_%3")
+    QString cacheKey = QString("sr_%1_%2_%3_%4_%5")
                            .arg(type)
                            .arg(shared ? "shared" : "local")
-                           .arg(isDefault ? "default" : "regular");
+                           .arg(isDefault ? "default" : "regular")
+                           .arg(hasPbds ? "attached" : "detached")
+                           .arg(isBroken ? "broken" : "ok");
 
     if (this->m_iconCache.contains(cacheKey))
     {
         return this->m_iconCache.value(cacheKey);
     }
 
-    QIcon icon = isDefault
-        ? QIcon(":/tree-icons/storage_default.png")
-        : QIcon(":/tree-icons/storage.png");
+    QIcon icon;
+    if (!hasPbds || isHidden)
+    {
+        icon = QIcon(":/tree-icons/storage_disabled.png");
+    }
+    else if (isBroken)
+    {
+        icon = QIcon(":/tree-icons/storage_broken.png");
+    }
+    else if (isDefault)
+    {
+        icon = QIcon(":/tree-icons/storage_default.png");
+    }
+    else
+    {
+        icon = QIcon(":/tree-icons/storage.png");
+    }
 
     this->m_iconCache.insert(cacheKey, icon);
     return icon;

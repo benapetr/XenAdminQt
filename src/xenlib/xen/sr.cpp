@@ -188,16 +188,19 @@ bool SR::HBALunPerVDI() const
 
 QString SR::HomeRef() const
 {
-    // For local SRs, find the host via PBD connections
-    // For shared SRs, could return any connected host or empty
-    QStringList pbds = this->PBDRefs();
-    if (pbds.isEmpty())
+    if (this->IsShared())
         return QString();
 
-    // Get first PBD and extract host reference from it
-    // TODO: Query cache for PBD.host
-    // For now, return empty - will be implemented when PBD class is added
-    return QString();
+    QStringList pbds = this->PBDRefs();
+    if (pbds.size() != 1)
+        return QString();
+
+    XenCache* cache = GetConnection()->GetCache();
+    if (!cache)
+        return QString();
+
+    QVariantMap pbdData = cache->ResolveObjectData("pbd", pbds.first());
+    return pbdData.value("host").toString();
 }
 
 Host* SR::GetFirstAttachedStorageHost() const

@@ -1429,6 +1429,12 @@ void MainWindow::loadSettings()
         this->m_debugWindow->show();
     }
 
+    this->applyViewSettingsToMenu();
+    if (this->m_navigationPane)
+    {
+        this->updateViewMenu(this->m_navigationPane->currentMode());
+    }
+
     qDebug() << "Settings loaded from:" << settings.getValue("").toString();
 }
 
@@ -1571,10 +1577,63 @@ void MainWindow::onNavigationModeChanged(int mode)
     this->m_navigationPane->updateSearch();
 
     // TODO: SetFiltersLabel() - update filters indicator in title bar
-    // TODO: UpdateViewMenu(mode) - show/hide menu items based on mode
+    this->updateViewMenu(navMode);
 
     // Update tree view for new mode
     this->refreshServerTree();
+}
+
+void MainWindow::onViewTemplatesToggled(bool checked)
+{
+    SettingsManager::instance().setDefaultTemplatesVisible(checked);
+    this->onViewSettingsChanged();
+}
+
+void MainWindow::onViewCustomTemplatesToggled(bool checked)
+{
+    SettingsManager::instance().setUserTemplatesVisible(checked);
+    this->onViewSettingsChanged();
+}
+
+void MainWindow::onViewLocalStorageToggled(bool checked)
+{
+    SettingsManager::instance().setLocalSRsVisible(checked);
+    this->onViewSettingsChanged();
+}
+
+void MainWindow::onViewShowHiddenObjectsToggled(bool checked)
+{
+    SettingsManager::instance().setShowHiddenObjects(checked);
+    this->onViewSettingsChanged();
+}
+
+void MainWindow::onViewSettingsChanged()
+{
+    this->m_navigationPane->updateSearch();
+}
+
+void MainWindow::applyViewSettingsToMenu()
+{
+    SettingsManager& settings = SettingsManager::instance();
+    this->ui->viewTemplatesAction->setChecked(settings.getDefaultTemplatesVisible());
+    this->ui->viewCustomTemplatesAction->setChecked(settings.getUserTemplatesVisible());
+    this->ui->viewLocalStorageAction->setChecked(settings.getLocalSRsVisible());
+    this->ui->viewShowHiddenObjectsAction->setChecked(settings.getShowHiddenObjects());
+}
+
+void MainWindow::updateViewMenu(NavigationPane::NavigationMode mode)
+{
+    const bool isInfrastructure = mode == NavigationPane::Infrastructure;
+    const bool isNotifications = mode == NavigationPane::Notifications;
+
+    this->ui->viewTemplatesAction->setVisible(isInfrastructure);
+    this->ui->viewCustomTemplatesAction->setVisible(isInfrastructure);
+    this->ui->viewLocalStorageAction->setVisible(isInfrastructure);
+    this->ui->viewMenuSeparator1->setVisible(isInfrastructure);
+
+    const bool showHiddenVisible = !isNotifications;
+    this->ui->viewShowHiddenObjectsAction->setVisible(showHiddenVisible);
+    this->ui->viewMenuSeparator2->setVisible(showHiddenVisible);
 }
 
 void MainWindow::onNotificationsSubModeChanged(int subMode)
@@ -3078,6 +3137,12 @@ void MainWindow::connectMenuActions()
 
     // Network menu actions
     connect(this->ui->newNetworkAction, &QAction::triggered, this, &MainWindow::onNewNetwork);
+
+    // View menu actions (filters)
+    connect(this->ui->viewTemplatesAction, &QAction::toggled, this, &MainWindow::onViewTemplatesToggled);
+    connect(this->ui->viewCustomTemplatesAction, &QAction::toggled, this, &MainWindow::onViewCustomTemplatesToggled);
+    connect(this->ui->viewLocalStorageAction, &QAction::toggled, this, &MainWindow::onViewLocalStorageToggled);
+    connect(this->ui->viewShowHiddenObjectsAction, &QAction::toggled, this, &MainWindow::onViewShowHiddenObjectsToggled);
 
     qDebug() << "Connected menu actions to command slots";
 }

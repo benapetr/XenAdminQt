@@ -110,6 +110,15 @@ class SettingsManager : public QObject
         bool getShowHiddenObjects() const;
         void setShowHiddenObjects(bool show);
 
+        bool getDefaultTemplatesVisible() const;
+        void setDefaultTemplatesVisible(bool visible);
+
+        bool getUserTemplatesVisible() const;
+        void setUserTemplatesVisible(bool visible);
+
+        bool getLocalSRsVisible() const;
+        void setLocalSRsVisible(bool visible);
+
         int getConsoleRefreshInterval() const;
         void setConsoleRefreshInterval(int seconds);
 

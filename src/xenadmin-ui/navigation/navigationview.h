@@ -96,6 +96,16 @@ class NavigationView : public QWidget
         QString searchText() const;
         void setSearchText(const QString& text);
 
+        struct ViewFilters
+        {
+            bool showDefaultTemplates = false;
+            bool showUserTemplates = true;
+            bool showLocalStorage = true;
+            bool showHiddenObjects = false;
+        };
+
+        void setViewFilters(const ViewFilters& filters);
+
     signals:
         // Events matching C# NavigationView
         void treeViewSelectionChanged();
@@ -140,6 +150,7 @@ class NavigationView : public QWidget
         Ui::NavigationView* ui;
         bool m_inSearchMode = false;
         NavigationPane::NavigationMode m_navigationMode = NavigationPane::Infrastructure;
+        ViewFilters m_viewFilters;
         Xen::ConnectionsManager* m_connectionsManager = nullptr;
         QTimer* m_refreshTimer; // Debounce timer for cache updates
         QHash<XenConnection*, QMetaObject::Connection> m_cacheChangedHandlers;
