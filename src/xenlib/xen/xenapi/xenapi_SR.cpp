@@ -143,7 +143,7 @@ namespace XenAPI
                << smConfig;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("SR.async_introduce", params);
+        QByteArray request = api.buildJsonRpcCall("Async.SR.introduce", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString();
     }
@@ -157,7 +157,7 @@ namespace XenAPI
         params << session->getSessionId() << sr;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("SR.async_forget", params);
+        QByteArray request = api.buildJsonRpcCall("Async.SR.forget", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString();
     }
@@ -185,7 +185,7 @@ namespace XenAPI
         params << session->getSessionId() << sr;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("SR.async_destroy", params);
+        QByteArray request = api.buildJsonRpcCall("Async.SR.destroy", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString();
     }
@@ -272,7 +272,7 @@ namespace XenAPI
         params << session->getSessionId() << host << device_config << type << sm_config;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("SR.async_probe", params);
+        QByteArray request = api.buildJsonRpcCall("Async.SR.probe", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
@@ -313,7 +313,7 @@ namespace XenAPI
                << name_label << name_description << type << content_type << shared << sm_config;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("SR.async_create", params);
+        QByteArray request = api.buildJsonRpcCall("Async.SR.create", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }

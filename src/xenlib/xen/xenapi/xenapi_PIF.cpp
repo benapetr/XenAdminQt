@@ -86,7 +86,7 @@ namespace XenAPI
         params << session->getSessionId() << pif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PIF.async_plug", params);
+        QByteArray request = api.buildJsonRpcCall("Async.PIF.plug", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString();
     }
@@ -145,7 +145,7 @@ namespace XenAPI
         params << session->getSessionId() << pif << mode << ip << netmask << gateway << dns;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PIF.async_reconfigure_ip", params);
+        QByteArray request = api.buildJsonRpcCall("Async.PIF.reconfigure_ip", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString();
     }

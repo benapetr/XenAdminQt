@@ -308,7 +308,7 @@ namespace XenAPI
         params << session->getSessionId() << QVariant(heartbeat_srs) << configuration;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.async_enable_ha", params);
+        QByteArray request = api.buildJsonRpcCall("Async.pool.enable_ha", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString();
     }
@@ -322,7 +322,7 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.async_disable_ha", params);
+        QByteArray request = api.buildJsonRpcCall("Async.pool.disable_ha", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString();
     }

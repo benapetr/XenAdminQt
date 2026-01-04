@@ -49,7 +49,7 @@ namespace XenAPI
         params << session->getSessionId() << network << memberRefs << mac << mode << properties;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Bond.async_create", params);
+        QByteArray request = api.buildJsonRpcCall("Async.Bond.create", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString();
     }
@@ -63,7 +63,7 @@ namespace XenAPI
         params << session->getSessionId() << bond;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Bond.async_destroy", params);
+        QByteArray request = api.buildJsonRpcCall("Async.Bond.destroy", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString();
     }

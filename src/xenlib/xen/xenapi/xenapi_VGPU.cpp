@@ -57,7 +57,7 @@ namespace XenAPI
         params << session->getSessionId() << vm << gpu_group << device << other_config;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VGPU.async_create", params);
+        QByteArray request = api.buildJsonRpcCall("Async.VGPU.create", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
@@ -73,7 +73,7 @@ namespace XenAPI
         params << session->getSessionId() << vm << gpu_group << device << other_config << vgpu_type;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VGPU.async_create", params);
+        QByteArray request = api.buildJsonRpcCall("Async.VGPU.create", params);
         QByteArray response = session->sendApiRequest(request);
         return api.parseJsonRpcResponse(response).toString(); // Returns task ref
     }
