@@ -148,9 +148,11 @@ QTreeWidgetItem* MainWindowTreeBuilder::createNewRootNode(Search* search, Naviga
     switch (mode)
     {
         case NavigationMode::Objects:
-            newRootNode = this->viewObjects_->rootNode();
+            Q_ASSERT(search);
+            newRootNode = new QTreeWidgetItem();
+            newRootNode->setText(0, "Objects");
             groupAcceptor = this->createGroupAcceptor(newRootNode);
-            // TODO: viewObjects_->populate(search, groupAcceptor);
+            search->PopulateAdapters(conn, QList<IAcceptGroups*>() << groupAcceptor);
             break;
             
         case NavigationMode::Tags:
@@ -188,7 +190,7 @@ QTreeWidgetItem* MainWindowTreeBuilder::createNewRootNode(Search* search, Naviga
         default: // Infrastructure and Notifications
             Q_ASSERT(search);
             newRootNode = new QTreeWidgetItem();
-            newRootNode->setText(0, "XenCenter"); // TODO: Use BrandManager
+            newRootNode->setText(0, "XenAdmin"); // TODO: Use BrandManager
             groupAcceptor = this->createGroupAcceptor(newRootNode);
             search->PopulateAdapters(conn, QList<IAcceptGroups*>() << groupAcceptor);
             break;

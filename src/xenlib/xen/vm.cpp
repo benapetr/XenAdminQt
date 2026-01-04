@@ -952,7 +952,7 @@ QStringList VM::PendingGuidances() const
 // Property getters for search/query functionality
 // C# equivalent: VM extensions in XenAPI-Extensions/VM.cs and Common.cs PropertyAccessors
 
-bool VM::IsRealVm() const
+bool VM::IsRealVM() const
 {
     // C# equivalent: VM.IsRealVm()
     // Returns true if VM is not a template, not a snapshot, and not a control domain
@@ -964,7 +964,7 @@ QString VM::GetOSName() const
     // C# equivalent: VM.GetOSName()
     // Gets OS name from guest_metrics.os_version["name"]
     
-    if (!this->IsRealVm())
+    if (!this->IsRealVM())
         return QString();
     
     QString guestMetricsRef = this->GuestMetricsRef();
@@ -999,7 +999,7 @@ int VM::GetVirtualizationStatus() const
     // 4 = IoDriversInstalled
     // 8 = ManagementInstalled
     
-    if (!this->IsRealVm())
+    if (!this->IsRealVM())
         return 0; // NotInstalled
     
     QString guestMetricsRef = this->GuestMetricsRef();
@@ -1058,7 +1058,7 @@ QList<ComparableAddress> VM::GetIPAddresses() const
     
     QList<ComparableAddress> addresses;
     
-    if (!this->IsRealVm())
+    if (!this->IsRealVM())
         return addresses;
     
     QString guestMetricsRef = this->GuestMetricsRef();

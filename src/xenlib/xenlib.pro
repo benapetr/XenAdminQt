@@ -25,6 +25,7 @@ SOURCES += \
     xencache.cpp \
     vmhelpers.cpp \
     metricupdater.cpp \
+    xensearch/common.cpp \
     xensearch/groupingtag.cpp \
     xensearch/grouping.cpp \
     xensearch/queryscope.cpp \
@@ -183,6 +184,7 @@ HEADERS += \
     xencache.h \
     vmhelpers.h \
     metricupdater.h \
+    xensearch/common.h \
     xensearch/groupingtag.h \
     xensearch/grouping.h \
     xensearch/queryscope.h \

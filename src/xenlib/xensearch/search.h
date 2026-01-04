@@ -60,17 +60,19 @@ class Search
          *
          * C# equivalent: Search(Query query, Grouping grouping, string name, string uuid, bool defaultSearch)
          *
-         * @param query The query (what objects to match). Takes ownership.
-         * @param grouping The grouping (how to organize results). Takes ownership.
+         * @param query The query (what objects to match). Takes ownership unless ownsQuery is false.
+         * @param grouping The grouping (how to organize results). Takes ownership unless ownsGrouping is false.
          * @param name The search name
          * @param uuid Optional UUID for saved searches
          * @param defaultSearch True if this is a built-in default search
          * @param columns Column configuration (name, width pairs). Default empty = use defaults.
          * @param sorting Sort configuration. Default empty = no sorting.
+         * @param ownsQuery Whether this Search owns (and deletes) the Query.
+         * @param ownsGrouping Whether this Search owns (and deletes) the Grouping.
          */
         Search(Query* query, Grouping* grouping, const QString& name, const QString& uuid = QString(), 
                bool defaultSearch = false, const QList<QPair<QString, int>>& columns = QList<QPair<QString, int>>(),
-               const QList<Sort>& sorting = QList<Sort>());
+               const QList<Sort>& sorting = QList<Sort>(), bool ownsQuery = true, bool ownsGrouping = true);
 
         ~Search();
 
@@ -311,6 +313,33 @@ class Search
         static Search* SearchForAllTypes();
 
         /**
+         * @brief Add a text filter that searches relevant fields
+         *
+         * C# equivalent: AddFullTextFilter(string s)
+         * @param text Search text
+         * @return New Search instance (owned by caller)
+         */
+        Search* AddFullTextFilter(const QString& text) const;
+
+        /**
+         * @brief Add an extra query filter to this search
+         *
+         * C# equivalent: AddFilter(QueryFilter addFilter)
+         * @param addFilter Filter to add
+         * @return New Search instance (owned by caller)
+         */
+        Search* AddFilter(QueryFilter* addFilter) const;
+
+        /**
+         * @brief Build a query filter for full-text search
+         *
+         * C# equivalent: FullQueryFor(string p)
+         * @param text Search text
+         * @return QueryFilter instance (owned by caller)
+         */
+        static QueryFilter* FullQueryFor(const QString& text);
+
+        /**
          * @brief Populate UI adapters with grouped results
          *
          * This is the key method for the overview panel - it groups all matching objects
@@ -364,8 +393,10 @@ class Search
          */
         bool populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping, const QList<QPair<QString, QString>>& objects, int indent, XenConnection *conn);
 
-        Query* m_query;              // The query (what to match) - owned
-        Grouping* m_grouping;        // The grouping (how to organize) - owned
+        Query* m_query;              // The query (what to match)
+        Grouping* m_grouping;        // The grouping (how to organize)
+        bool m_ownsQuery;            // Whether this Search owns m_query
+        bool m_ownsGrouping;         // Whether this Search owns m_grouping
         QString m_name;              // Search name
         QString m_uuid;              // UUID for saved searches
         bool m_defaultSearch;        // True if built-in default search

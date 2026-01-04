@@ -720,10 +720,10 @@ class XENLIB_EXPORT VM : public XenObject
         /**
          * @brief Check if this is a real VM (not template, not snapshot, not control domain)
          * @return true if real VM
-         * 
-         * C# equivalent: VM.IsRealVm() extension method
+         *
+         * C# equivalent: VM.IsRealVM() extension method
          */
-        bool IsRealVm() const;
+        bool IsRealVM() const;
 
         /**
          * @brief Get operating system name from guest_metrics

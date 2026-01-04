@@ -30,13 +30,18 @@
 #include "queryscope.h"
 #include "queryfilter.h"
 #include "queries.h"
+#include "grouping.h"
+#include "xen/network/connectionsmanager.h"
 #include "../xencache.h"
+#include "../network/comparableaddress.h"
 #include <QDebug>
 
-Search::Search(Query* query, Grouping* grouping, const QString& name, const QString& uuid, 
-               bool defaultSearch, const QList<QPair<QString, int>>& columns, const QList<Sort>& sorting)
-    : m_query(query), m_grouping(grouping), m_name(name), m_uuid(uuid), m_defaultSearch(defaultSearch), 
-      m_connection(nullptr), m_items(0), m_columns(columns), m_sorting(sorting)
+Search::Search(Query* query, Grouping* grouping, const QString& name, const QString& uuid,
+               bool defaultSearch, const QList<QPair<QString, int>>& columns, const QList<Sort>& sorting,
+               bool ownsQuery, bool ownsGrouping)
+    : m_query(query), m_grouping(grouping), m_ownsQuery(ownsQuery), m_ownsGrouping(ownsGrouping),
+      m_name(name), m_uuid(uuid), m_defaultSearch(defaultSearch), m_connection(nullptr),
+      m_items(0), m_columns(columns), m_sorting(sorting)
 {
     // C# equivalent: Search constructor (lines 67-83 in Search.cs)
 
@@ -45,6 +50,7 @@ Search::Search(Query* query, Grouping* grouping, const QString& name, const QStr
     {
         // C# code: this.query = new Query(null, null);
         this->m_query = new Query(nullptr, nullptr);
+        this->m_ownsQuery = true;
     }
 
     // grouping can be null (no grouping)
@@ -53,8 +59,10 @@ Search::Search(Query* query, Grouping* grouping, const QString& name, const QStr
 Search::~Search()
 {
     // Clean up owned pointers
-    delete this->m_query;
-    delete this->m_grouping;
+    if (this->m_ownsQuery)
+        delete this->m_query;
+    if (this->m_ownsGrouping)
+        delete this->m_grouping;
 }
 
 Grouping* Search::GetEffectiveGrouping() const
@@ -309,6 +317,58 @@ Search* Search::SearchForAllTypes()
     return new Search(query, poolGrouping, "Overview", "", false);
 }
 
+Search* Search::AddFullTextFilter(const QString& text) const
+{
+    if (text.isEmpty())
+        return const_cast<Search*>(this);
+
+    return AddFilter(FullQueryFor(text));
+}
+
+Search* Search::AddFilter(QueryFilter* addFilter) const
+{
+    QueryScope* scope = nullptr;
+    if (this->m_query && this->m_query->getQueryScope())
+        scope = new QueryScope(this->m_query->getQueryScope()->getObjectTypes());
+
+    QueryFilter* filter = nullptr;
+    if (!this->m_query || !this->m_query->getQueryFilter())
+        filter = addFilter;
+    else if (!addFilter)
+        filter = this->m_query->getQueryFilter();
+    else
+        filter = new GroupQuery(GroupQuery::GroupQueryType::And, QList<QueryFilter*>() << this->m_query->getQueryFilter() << addFilter);
+
+    return new Search(new Query(scope, filter), this->m_grouping, "", "", this->m_defaultSearch,
+                      this->m_columns, this->m_sorting, true, false);
+}
+
+QueryFilter* Search::FullQueryFor(const QString& text)
+{
+    const QStringList parts = text.split(' ', Qt::SkipEmptyParts);
+    QList<QueryFilter*> queries;
+
+    for (const QString& part : parts)
+    {
+        if (part.isEmpty())
+            continue;
+
+        queries.append(new StringPropertyQuery(PropertyNames::label, part, StringPropertyQuery::MatchType::Contains));
+        queries.append(new StringPropertyQuery(PropertyNames::description, part, StringPropertyQuery::MatchType::Contains));
+
+        ComparableAddress address;
+        if (ComparableAddress::TryParse(part, true, false, address))
+        {
+            queries.append(new IPAddressQuery(PropertyNames::ip_address, address.toString()));
+        }
+    }
+
+    if (queries.isEmpty())
+        queries.append(new StringPropertyQuery(PropertyNames::label, "", StringPropertyQuery::MatchType::Contains));
+
+    return new GroupQuery(GroupQuery::GroupQueryType::Or, queries);
+}
+
 bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& adapters)
 {
     // C# equivalent: PopulateAdapters(params IAcceptGroups[] adapters) - Line 205 in Search.cs
@@ -333,51 +393,101 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
         return false;
     }
 
-    // Get all objects matching the query scope and filter
-    QList<QPair<QString, QString>> matchedObjects = this->getMatchedObjects(conn);
-    
-    if (matchedObjects.isEmpty())
-    {
+    QList<XenConnection*> connections;
+    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
+    if (connMgr)
+        connections = connMgr->getAllConnections();
+    if (connections.isEmpty() && conn)
+        connections.append(conn);
+
+    if (connections.isEmpty())
         return false;
-    }
 
-    // Update item count
-    this->m_items = matchedObjects.count();
+    auto setGroupingConnection = [](Grouping* grouping, XenConnection* connection) {
+        while (grouping)
+        {
+            if (PoolGrouping* poolGrouping = dynamic_cast<PoolGrouping*>(grouping))
+                poolGrouping->SetConnection(connection);
+            if (HostGrouping* hostGrouping = dynamic_cast<HostGrouping*>(grouping))
+                hostGrouping->SetConnection(connection);
+            grouping = grouping->getSubgrouping(QVariant());
+        }
+    };
 
-    // If no grouping, add objects directly to adapters
-    if (!this->m_grouping)
+    int totalItems = 0;
+    bool addedAny = false;
+
+    for (XenConnection* connection : connections)
     {
-        bool addedAny = false;
+        if (!connection)
+            continue;
+
+        QList<QPair<QString, QString>> matchedObjects;
+        XenCache* cache = connection->GetCache();
+
+        if (connection->IsConnectedNewFlow() && cache && cache->Count("pool") > 0)
+        {
+            matchedObjects = this->getMatchedObjects(connection);
+        }
+        else
+        {
+            QString hostname = connection->GetHostname();
+            QString ref = connection->GetPort() == 443
+                ? hostname
+                : QString("%1:%2").arg(hostname).arg(connection->GetPort());
+
+            QVariantMap record;
+            record["ref"] = ref;
+            record["opaqueRef"] = ref;
+            record["name_label"] = hostname;
+            record["name_description"] = QString();
+            record["hostname"] = hostname;
+            record["address"] = hostname;
+            record["enabled"] = false;
+
+            if (cache)
+                cache->Update("host", ref, record);
+
+            if (!this->m_query || this->m_query->match(record, "host", connection))
+                matchedObjects.append(qMakePair(QString("host"), ref));
+        }
+
+        if (matchedObjects.isEmpty())
+            continue;
+
+        totalItems += matchedObjects.count();
+        setGroupingConnection(this->m_grouping, connection);
+
+        if (!this->m_grouping)
+        {
+            for (IAcceptGroups* adapter : adapters)
+            {
+                for (const auto& objPair : matchedObjects)
+                {
+                    QString objType = objPair.first;
+                    QString objRef = objPair.second;
+                    QVariantMap objectData = connection->GetCache()->ResolveObjectData(objType, objRef);
+
+                    IAcceptGroups* child = adapter->Add(nullptr, objRef, objType, objectData, 0, connection);
+                    if (child)
+                    {
+                        child->FinishedInThisGroup(false);
+                        addedAny = true;
+                    }
+                }
+                adapter->FinishedInThisGroup(true);
+            }
+            continue;
+        }
+
         for (IAcceptGroups* adapter : adapters)
         {
-            for (const auto& objPair : matchedObjects)
-            {
-                QString objType = objPair.first;
-                QString objRef = objPair.second;
-                QVariantMap objectData = conn->GetCache()->ResolveObjectData(objType, objRef);
-                
-                // Add object directly (no grouping)
-                IAcceptGroups* child = adapter->Add(nullptr, objRef, objType, objectData, 0, conn);
-                if (child)
-                {
-                    child->FinishedInThisGroup(false);
-                    addedAny = true;
-                }
-            }
+            addedAny |= this->populateGroupedObjects(adapter, this->m_grouping, matchedObjects, 0, connection);
             adapter->FinishedInThisGroup(true);
         }
-        return addedAny;
     }
 
-    // With grouping: organize objects into hierarchy
-    // Build group hierarchy: Pool -> Host -> (subgrouping)
-    bool addedAny = false;
-    for (IAcceptGroups* adapter : adapters)
-    {
-        addedAny |= this->populateGroupedObjects(adapter, this->m_grouping, matchedObjects, 0, conn);
-        adapter->FinishedInThisGroup(true);
-    }
-
+    this->m_items = totalItems;
     return addedAny;
 }
 
@@ -459,6 +569,7 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
     // Organize objects by group value (use string keys for QHash)
     QHash<QString, QList<QPair<QString, QString>>> groupedObjects;
     QHash<QString, QVariant> groupValueLookup; // Map string key back to original group value
+    QList<QPair<QString, QString>> ungroupedObjects;
 
     for (const auto& objPair : objects)
     {
@@ -470,7 +581,10 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
         QVariant groupValue = grouping->getGroup(objectData, objType);
         
         if (!groupValue.isValid())
+        {
+            ungroupedObjects.append(objPair);
             continue; // Object doesn't belong to any group
+        }
 
         // Use string representation as hash key
         QString groupKey = groupValue.toString();
@@ -482,6 +596,16 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
         return false;
 
     bool addedAny = false;
+    qDebug() << "Search::populateGroupedObjects"
+             << (grouping ? grouping->getGroupingName() : QString())
+             << "groups=" << groupedObjects.size()
+             << "ungrouped=" << ungroupedObjects.size();
+
+    QString groupObjectType;
+    if (dynamic_cast<PoolGrouping*>(grouping))
+        groupObjectType = "pool";
+    else if (dynamic_cast<HostGrouping*>(grouping))
+        groupObjectType = "host";
 
     // Add each group
     for (auto it = groupedObjects.begin(); it != groupedObjects.end(); ++it)
@@ -490,8 +614,25 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
         QVariant groupValue = groupValueLookup.value(groupKey); // Retrieve original group value
         QList<QPair<QString, QString>> groupObjects = it.value();
 
-        // Add group node to adapter (empty objectType/objectData = group header)
-        IAcceptGroups* childAdapter = adapter->Add(grouping, groupValue, QString(), QVariantMap(), indent, conn);
+        IAcceptGroups* childAdapter = nullptr;
+        if (!groupObjectType.isEmpty())
+        {
+            QVariantMap groupObjectData = conn->GetCache()->ResolveObjectData(groupObjectType, groupValue.toString());
+            if (!groupObjectData.isEmpty() && grouping->belongsAsGroupNotMember(groupObjectData, groupObjectType))
+            {
+                childAdapter = adapter->Add(grouping, groupValue, groupObjectType, groupObjectData, indent, conn);
+                groupObjects.erase(std::remove_if(groupObjects.begin(), groupObjects.end(),
+                    [&](const QPair<QString, QString>& objPair) {
+                        return objPair.first == groupObjectType && objPair.second == groupValue.toString();
+                    }), groupObjects.end());
+            }
+        }
+
+        if (!childAdapter)
+        {
+            // Add group node to adapter (empty objectType/objectData = group header)
+            childAdapter = adapter->Add(grouping, groupValue, QString(), QVariantMap(), indent, conn);
+        }
         
         if (!childAdapter)
             continue;
@@ -524,6 +665,28 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
         // Expand groups at top 2 levels by default
         bool defaultExpand = (indent < 2);
         childAdapter->FinishedInThisGroup(defaultExpand);
+    }
+
+    if (!ungroupedObjects.isEmpty())
+    {
+        Grouping* subgrouping = grouping ? grouping->getSubgrouping(QVariant()) : nullptr;
+        if (subgrouping)
+        {
+            this->populateGroupedObjects(adapter, subgrouping, ungroupedObjects, indent, conn);
+        }
+        else
+        {
+            for (const auto& objPair : ungroupedObjects)
+            {
+                QString objType = objPair.first;
+                QString objRef = objPair.second;
+                QVariantMap objectData = conn->GetCache()->ResolveObjectData(objType, objRef);
+
+                IAcceptGroups* objAdapter = adapter->Add(nullptr, objRef, objType, objectData, indent, conn);
+                if (objAdapter)
+                    objAdapter->FinishedInThisGroup(false);
+            }
+        }
     }
 
     return addedAny;
