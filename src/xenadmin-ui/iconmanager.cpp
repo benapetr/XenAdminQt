@@ -177,6 +177,7 @@ QIcon IconManager::getIconForHost(const QVariantMap& hostData) const
     // "_metrics_live" to the hostData map.
 
     bool enabled = hostData.value("enabled", true).toBool();
+    bool isDisconnected = hostData.value("is_disconnected").toBool();
 
     // Check if host is live (metrics.live in C#)
     // Caller should provide this via "_metrics_live" key after resolving host_metrics
@@ -189,9 +190,10 @@ QIcon IconManager::getIconForHost(const QVariantMap& hostData) const
     //         << "_metrics_live=" << isLive
     //         << "metrics_ref=" << hostData.value("metrics", "MISSING").toString();
 
-    QString cacheKey = QString("host_%1_%2")
+    QString cacheKey = QString("host_%1_%2_%3")
                            .arg(enabled ? "enabled" : "disabled")
-                           .arg(isLive ? "live" : "notlive");
+                           .arg(isLive ? "live" : "notlive")
+                           .arg(isDisconnected ? "disconnected" : "connected");
 
     if (this->m_iconCache.contains(cacheKey))
     {
@@ -207,7 +209,10 @@ QIcon IconManager::getIconForHost(const QVariantMap& hostData) const
     // 2. If connection.InProgress && !connection.IsConnected: Icons.HostConnecting
     // 3. Else: Icons.HostDisconnected
 
-    if (isLive)
+    if (isDisconnected)
+    {
+        icon = QIcon(":/tree-icons/host_disconnected.png");
+    } else if (isLive)
     {
         // Host is live
         if (!enabled)

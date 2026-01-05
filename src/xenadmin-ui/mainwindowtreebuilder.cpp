@@ -39,6 +39,8 @@
 #include "xensearch/search.h"
 #include "xensearch/grouping.h"
 #include "xencache.h"
+#include "settingsmanager.h"
+#include "connectionprofile.h"
 #include <QBrush>
 #include <QTreeWidgetItem>
 #include <QApplication>
@@ -414,7 +416,37 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addHostNode(const QSharedPoint
     if (!host)
         return nullptr;
     QIcon icon = IconManager::instance().getIconForObject(host.data());
-    return this->addNode(host->GetName(), icon, false, QVariant::fromValue<QSharedPointer<XenObject>>(host));
+
+    QString name = host->GetName();
+    bool isDisconnected = false;
+    XenConnection* connection = host->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (cache)
+    {
+        const QVariantMap record = cache->ResolveObjectData("host", host->OpaqueRef());
+        isDisconnected = record.value("is_disconnected").toBool();
+    }
+
+    if (isDisconnected && connection)
+    {
+        const QString hostname = connection->GetHostname();
+        const int port = connection->GetPort();
+        const QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+        for (const ConnectionProfile& profile : profiles)
+        {
+            if (profile.hostname() == hostname && profile.port() == port)
+            {
+                name = profile.displayName();
+                break;
+            }
+        }
+    }
+
+    QTreeWidgetItem* node = this->addNode(name, icon, false,
+                                          QVariant::fromValue<QSharedPointer<XenObject>>(host));
+    if (node && isDisconnected)
+        node->setData(0, Qt::UserRole + 1, QStringLiteral("disconnected_host"));
+    return node;
 }
 
 QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addVMNode(const QSharedPointer<VM>& vm)

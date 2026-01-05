@@ -427,6 +427,24 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
 
         QList<QPair<QString, QString>> matchedObjects;
         XenCache* cache = connection->GetCache();
+        const QString hostname = connection->GetHostname();
+        const QString hostRef = (hostname.isEmpty() || connection->GetPort() == 443)
+            ? hostname
+            : QString("%1:%2").arg(hostname).arg(connection->GetPort());
+
+        if (connection->IsConnected() && cache && cache->Count("host") > 0)
+        {
+            const QStringList hostRefs = cache->GetAllRefs("host");
+            for (const QString& ref : hostRefs)
+            {
+                const bool isOpaqueRef = ref.startsWith("OpaqueRef:");
+                QVariantMap record = cache->ResolveObjectData("host", ref);
+                const bool isDisconnected = record.value("is_disconnected").toBool();
+
+                if (!isOpaqueRef || isDisconnected)
+                    cache->Remove("host", ref);
+            }
+        }
 
         if (connection->IsConnected() && cache && cache->Count("pool") > 0)
         {
@@ -434,25 +452,24 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
         }
         else
         {
-            QString hostname = connection->GetHostname();
-            QString ref = connection->GetPort() == 443
-                ? hostname
-                : QString("%1:%2").arg(hostname).arg(connection->GetPort());
+            if (hostname.isEmpty())
+                continue;
 
             QVariantMap record;
-            record["ref"] = ref;
-            record["opaqueRef"] = ref;
+            record["ref"] = hostRef;
+            record["opaqueRef"] = hostRef;
             record["name_label"] = hostname;
             record["name_description"] = QString();
             record["hostname"] = hostname;
             record["address"] = hostname;
             record["enabled"] = false;
+            record["is_disconnected"] = true;
 
             if (cache)
-                cache->Update("host", ref, record);
+                cache->Update("host", hostRef, record);
 
             if (!this->m_query || this->m_query->match(record, "host", connection))
-                matchedObjects.append(qMakePair(QString("host"), ref));
+                matchedObjects.append(qMakePair(QString("host"), hostRef));
         }
 
         if (matchedObjects.isEmpty())

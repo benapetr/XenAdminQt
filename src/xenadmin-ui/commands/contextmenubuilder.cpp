@@ -68,6 +68,8 @@
 #include "template/exporttemplatecommand.h"
 #include "network/networkpropertiescommand.h"
 #include "../mainwindow.h"
+#include "../settingsmanager.h"
+#include "../connectionprofile.h"
 #include "xen/xenobject.h"
 #include "xen/vm.h"
 #include "xen/host.h"
@@ -75,6 +77,7 @@
 #include "xen/sr.h"
 #include "xen/network.h"
 #include "xen/network/connection.h"
+#include "xencache.h"
 #include <QAction>
 #include <QDebug>
 
@@ -115,7 +118,19 @@ QMenu* ContextMenuBuilder::buildContextMenu(QTreeWidgetItem* item, QWidget* pare
     QMenu* menu = new QMenu(parent);
 
     const QString itemType = item->data(0, Qt::UserRole + 1).toString();
-    if (objectType == "disconnected_host" || itemType == "disconnected_host")
+    bool isDisconnectedHost = (objectType == "disconnected_host" || itemType == "disconnected_host");
+    if (!isDisconnectedHost && obj && objectType == "host")
+    {
+        XenConnection* connection = obj->GetConnection();
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        if (cache)
+        {
+            const QVariantMap record = cache->ResolveObjectData("host", obj->OpaqueRef());
+            isDisconnectedHost = record.value("is_disconnected").toBool();
+        }
+    }
+
+    if (isDisconnectedHost)
     {
         // C# pattern: disconnected servers show Connect, Forget Password, Remove menu items
         this->buildDisconnectedHostContextMenu(menu, item);
@@ -373,16 +388,46 @@ void ContextMenuBuilder::buildDisconnectedHostContextMenu(QMenu* menu, QTreeWidg
     // - Forget Password (TODO: implement password management)
     // - Remove (RemoveHostCommand)
 
-    Q_UNUSED(item);
-
     // Connect command (matches C# ReconnectHostCommand for disconnected servers)
     ReconnectHostCommand* reconnectCmd = new ReconnectHostCommand(this->m_mainWindow, this);
     this->addCommand(menu, reconnectCmd);
 
     this->addSeparator(menu);
 
-    // TODO: Add "Forget Password" command when password management is implemented
-    // This would clear saved credentials for this connection
+    QAction* forgetPasswordAction = menu->addAction(tr("Forget Password"));
+    connect(forgetPasswordAction, &QAction::triggered, this, [item]() {
+        if (!item)
+            return;
+
+        XenConnection* connection = nullptr;
+        QVariant data = item->data(0, Qt::UserRole);
+        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+        if (obj)
+            connection = obj->GetConnection();
+        else if (data.canConvert<XenConnection*>())
+            connection = data.value<XenConnection*>();
+
+        if (!connection)
+            return;
+
+        QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+        bool updated = false;
+        for (ConnectionProfile& profile : profiles)
+        {
+            if (profile.hostname() == connection->GetHostname() &&
+                profile.port() == connection->GetPort())
+            {
+                profile.setPassword(QString());
+                profile.setRememberPassword(false);
+                SettingsManager::instance().saveConnectionProfile(profile);
+                updated = true;
+                break;
+            }
+        }
+
+        if (updated)
+            connection->SetPassword(QString());
+    });
 
     // Remove command (matches C# RemoveHostCommand for disconnected servers)
     RemoveHostCommand* removeCmd = new RemoveHostCommand(this->m_mainWindow, this);
