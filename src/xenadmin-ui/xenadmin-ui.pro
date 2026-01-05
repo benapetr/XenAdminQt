@@ -68,7 +68,6 @@ SOURCES += \
     controls/xensearch/resourceselectbutton.cpp \
     controls/xensearch/treewidgetgroupacceptor.cpp \
     xensearch/treesearch.cpp \
-    xensearch/virtualtreenode.cpp \
     xensearch/treenodegroupacceptor.cpp \
     xensearch/treenodefactory.cpp \
     settingspanels/generaleditpage.cpp \
@@ -304,7 +303,6 @@ HEADERS += \
     controls/xensearch/resourceselectbutton.h \
     controls/xensearch/treewidgetgroupacceptor.h \
     xensearch/treesearch.h \
-    xensearch/virtualtreenode.h \
     xensearch/treenodegroupacceptor.h \
     xensearch/treenodefactory.h \
     settingspanels/ieditpage.h \
