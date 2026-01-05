@@ -35,6 +35,7 @@
 #include "../xencache.h"
 #include "../network/comparableaddress.h"
 #include <QDebug>
+#include <QMetaType>
 
 using namespace XenSearch;
 
@@ -581,27 +582,65 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
 
         // Get group value for this object
         QVariant groupValue = grouping->getGroup(objectData, objType);
-        
+
         if (!groupValue.isValid())
         {
             ungroupedObjects.append(objPair);
             continue; // Object doesn't belong to any group
         }
 
-        // Use string representation as hash key
-        QString groupKey = groupValue.toString();
-        groupedObjects[groupKey].append(objPair);
-        groupValueLookup[groupKey] = groupValue; // Store original value
+        QList<QVariant> groupValues;
+        bool isVariantList = false;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        isVariantList = (groupValue.typeId() == QMetaType::QVariantList);
+#else
+        isVariantList = (groupValue.type() == QVariant::List);
+#endif
+
+        if (isVariantList)
+        {
+            const QVariantList values = groupValue.toList();
+            for (const QVariant& value : values)
+            {
+                if (value.isValid())
+                    groupValues.append(value);
+            }
+        }
+        else if (groupValue.canConvert<QStringList>())
+        {
+            const QStringList values = groupValue.toStringList();
+            for (const QString& value : values)
+            {
+                if (!value.isEmpty())
+                    groupValues.append(value);
+            }
+        }
+        else
+        {
+            groupValues.append(groupValue);
+        }
+
+        if (groupValues.isEmpty())
+        {
+            ungroupedObjects.append(objPair);
+            continue;
+        }
+
+        for (const QVariant& value : groupValues)
+        {
+            const QString groupKey = value.toString();
+            if (groupKey.isEmpty())
+                continue;
+            groupedObjects[groupKey].append(objPair);
+            groupValueLookup[groupKey] = value; // Store original value
+        }
     }
 
-    if (groupedObjects.isEmpty())
-        return false;
-
     bool addedAny = false;
-    qDebug() << "Search::populateGroupedObjects"
-             << (grouping ? grouping->getGroupingName() : QString())
-             << "groups=" << groupedObjects.size()
-             << "ungrouped=" << ungroupedObjects.size();
+    //qDebug() << "Search::populateGroupedObjects"
+    //         << (grouping ? grouping->getGroupingName() : QString())
+    //         << "groups=" << groupedObjects.size()
+    //         << "ungrouped=" << ungroupedObjects.size();
 
     QString groupObjectType;
     if (dynamic_cast<PoolGrouping*>(grouping))

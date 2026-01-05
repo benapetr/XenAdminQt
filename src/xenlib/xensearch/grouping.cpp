@@ -247,19 +247,11 @@ QVariant PoolGrouping::getGroup(const QVariantMap& objectData, const QString& ob
     if (!this->m_connection || !this->m_connection->GetCache())
         return QVariant();
 
-    const QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
-    if (pools.isEmpty())
+    const QStringList poolRefs = this->m_connection->GetCache()->GetAllRefs("pool");
+    if (poolRefs.isEmpty())
         return QVariant();
 
-    const bool isDisconnectedHost = (objectType == "host" && !objectData.value("enabled", true).toBool());
-    if (isDisconnectedHost)
-        return QVariant();
-
-    const QString singlePoolRef = valueForKeys(pools.first(), {"ref", "opaqueRef", "opaque_ref"});
-    if (singlePoolRef.isEmpty())
-        return QVariant();
-
-    return singlePoolRef;
+    return poolRefs.first();
 }
 
 bool PoolGrouping::belongsAsGroupNotMember(const QVariantMap& objectData, const QString& objectType) const
@@ -425,6 +417,20 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
             return homeRef;
 
         return QVariant();
+    } else if (objectType == "network")
+    {
+        if (!this->m_connection || !this->m_connection->GetCache())
+            return QVariant();
+
+        const QVariantList pifRefs = objectData.value("PIFs").toList();
+        if (pifRefs.isEmpty())
+        {
+            QVariantList hosts;
+            const QStringList hostRefs = this->m_connection->GetCache()->GetAllRefs("host");
+            for (const QString& hostRef : hostRefs)
+                hosts.append(hostRef);
+            return hosts;
+        }
     }
 
     return QVariant(); // Unknown type or no host

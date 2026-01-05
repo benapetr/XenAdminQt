@@ -146,7 +146,7 @@ XenConnection::~XenConnection()
 
 bool XenConnection::ConnectToHost(const QString& host, int port, const QString& username, const QString& password)
 {
-    // qDebug() << "XenConnection: Connecting to" << host << ":" << port;
+    qDebug() << "XenConnection: Connecting to" << host << ":" << port;
 
     // Disconnect any existing connection
     if (this->IsConnected())
@@ -180,7 +180,7 @@ bool XenConnection::ConnectToHost(const QString& host, int port, const QString& 
 
 void XenConnection::Disconnect()
 {
-    // qDebug() << "XenConnection: Disconnecting";
+    qDebug() << "XenConnection: Disconnecting";
 
     // Stop worker thread
     if (this->d->worker)
@@ -276,7 +276,7 @@ Session* XenConnection::GetNewSession(const QString& hostname,
             continue;
         }
 
-        if (!newConn->IsConnected())
+        if (!newConn->IsTransportConnected())
         {
             QEventLoop loop;
             QTimer timer;
@@ -288,7 +288,7 @@ Session* XenConnection::GetNewSession(const QString& hostname,
             loop.exec();
         }
 
-        if (!newConn->IsConnected())
+        if (!newConn->IsTransportConnected())
         {
             if (outError)
                 *outError = "Failed to establish transport connection";
@@ -1098,7 +1098,12 @@ bool XenConnection::InProgress() const
 
 bool XenConnection::IsConnected() const
 {
-    return this->d->connectTask && this->d->connectTask->Connected;
+    return this->d->connected || (this->d->connectTask && this->d->connectTask->Connected);
+}
+
+bool XenConnection::IsTransportConnected() const
+{
+    return this->d->connected;
 }
 
 Session* XenConnection::GetConnectSession() const
@@ -1173,7 +1178,7 @@ QByteArray XenConnection::SendRequest(const QByteArray& data)
     // This prevents spurious "Unknown request ID" warnings for sync calls like EventPoller
     int requestId = this->d->worker->queueRequest(data, false);
 
-    // qDebug() << "Created sync request with ID: " << requestId;
+    qDebug() << "Created sync request with ID: " << requestId;
 
     // Wait for response (blocking)
     // Use a 60s wait to accommodate long-poll calls like event.from (server timeout is 30s)
@@ -1200,7 +1205,7 @@ int XenConnection::SendRequestAsync(const QByteArray& data)
 // Worker signal handlers
 void XenConnection::onWorkerEstablished()
 {
-    // qDebug() << "XenConnection: Worker established TCP/SSL connection";
+    qDebug() << "XenConnection: Worker established TCP/SSL connection";
     this->d->connected = true;
     // Note: sessionId will be set after XenSession::login() succeeds
     emit this->connected();

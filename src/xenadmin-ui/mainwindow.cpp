@@ -766,6 +766,23 @@ void MainWindow::showSearchPage(XenConnection *connection, GroupingTag* grouping
     if (!groupingTag || !this->m_searchTabPage)
         return;
 
+    if (!connection)
+    {
+        Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
+        if (connMgr)
+        {
+            const QList<XenConnection*> connections = connMgr->getAllConnections();
+            for (XenConnection* candidate : connections)
+            {
+                if (candidate && candidate->GetCache())
+                {
+                    connection = candidate;
+                    break;
+                }
+            }
+        }
+    }
+
     // Create Search object for this grouping
     // Matches C# MainWindow.cs line 1771: SearchPage.Search = Search.SearchForNonVappGroup(gt.Grouping, gt.Parent, gt.Group);
     Search* search = Search::SearchForNonVappGroup(groupingTag->getGrouping(), groupingTag->getParent(), groupingTag->getGroup());

@@ -228,8 +228,8 @@ QList<QPair<QString, QString>> XenCache::GetAllObjectsData() const
 
     // Define searchable types matching C# Cache.XenSearchableObjects
     QStringList searchableTypes;
-    searchableTypes << "vm" << "host" << "sr" << "network" << "vdi" << "pool";
-    // Note: folder, vm_appliance, docker_container not yet implemented
+    searchableTypes << "vm" << "vm_appliance" << "host" << "sr" << "network"
+                    << "vdi" << "folder" << "dockercontainer" << "pool";
 
     // Iterate only searchable types
     foreach (const QString& type, searchableTypes)
