@@ -250,7 +250,7 @@ void ConnectionsManager::disconnectAll()
     {
         if (conn && conn->IsConnected())
         {
-            conn->Disconnect();
+            conn->EndConnect();
         }
     }
 }
@@ -259,9 +259,10 @@ void ConnectionsManager::cancelAllOperations(XenConnection* connection)
 {
     if (connection)
     {
+        // TODO this looks incorrect we are disconnecting here instead of just cancelling ops
         // Cancel operations for specific connection
         qDebug() << "Canceling operations for connection:" << connection->GetHostname();
-        connection->Disconnect();
+        connection->EndConnect();
     } else
     {
         // Cancel operations for all connections
@@ -478,7 +479,7 @@ void ConnectionsManager::cleanupConnection(XenConnection* connection)
     // Ensure connection is disconnected
     if (connection->IsConnected())
     {
-        connection->Disconnect();
+        connection->EndConnect();
     }
 }
 

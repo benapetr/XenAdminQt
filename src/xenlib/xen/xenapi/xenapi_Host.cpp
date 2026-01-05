@@ -55,6 +55,27 @@ namespace XenAPI
         return QVariantList();
     }
 
+    QVariantMap Host::get_record(Session* session, const QString& host)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("host.get_record", params);
+        QByteArray response = session->sendApiRequest(request);
+
+        QVariant result = api.parseJsonRpcResponse(response);
+        if (result.canConvert<QVariantMap>())
+        {
+            return result.toMap();
+        }
+
+        return QVariantMap();
+    }
+
     QVariant Host::get_servertime(Session* session, const QString& host)
     {
         if (!session || !session->IsLoggedIn())

@@ -77,6 +77,10 @@ SOURCES += \
     xen/xenapi/xenapi_Pool.cpp \
     xen/xenapi/xenapi_Host.cpp \
     xen/xenapi/xenapi_Task.cpp \
+    xen/xenapi/xenapi_Session.cpp \
+    xen/xenapi/xenapi_Role.cpp \
+    xen/xenapi/xenapi_UserDetails.cpp \
+    xen/xenapi/xenapi_Helper.cpp \
     xen/xenapi/vm_appliance.cpp \
     xen/actions/vm/changevmisoaction.cpp \
     xen/actions/vm/importvmaction.cpp \
@@ -262,6 +266,10 @@ HEADERS += \
     xen/xenapi/xenapi_Pool.h \
     xen/xenapi/xenapi_Host.h \
     xen/xenapi/xenapi_Task.h \
+    xen/xenapi/xenapi_Session.h \
+    xen/xenapi/xenapi_Role.h \
+    xen/xenapi/xenapi_UserDetails.h \
+    xen/xenapi/xenapi_Helper.h \
     xen/xenapi/vm_appliance.h \
     xen/actions/vm/changevmisoaction.h \
     xen/actions/vm/importvmaction.h \

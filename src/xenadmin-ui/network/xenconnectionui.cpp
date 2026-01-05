@@ -186,7 +186,7 @@ void XenConnectionUI::ShowConnectingDialogError(QWidget* owner, XenConnection* c
                                            .arg(masterHost);
                 if (QMessageBox::question(owner, "Connect to Server", prompt) == QMessageBox::Yes)
                 {
-                    connection->Disconnect();
+                    connection->EndConnect(false, false);
                     connection->setFindingNewCoordinator(false);
                     connection->setFindingNewCoordinatorStartedAt(QDateTime());
                     connection->SetHostname(masterHost);
@@ -223,7 +223,7 @@ void XenConnectionUI::ShowConnectingDialogError(QWidget* owner, XenConnection* c
                                    .arg(masterHost);
         if (QMessageBox::question(owner, "Connect to Server", prompt) == QMessageBox::Yes)
         {
-            connection->Disconnect();
+            connection->EndConnect(false, false);
             connection->setFindingNewCoordinator(false);
             connection->setFindingNewCoordinatorStartedAt(QDateTime());
             connection->SetHostname(masterHost);

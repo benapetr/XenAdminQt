@@ -29,6 +29,11 @@
 #include "network/connection.h"
 #include "jsonrpcclient.h"
 #include "failure.h"
+#include "xenapi/xenapi_Pool.h"
+#include "xenapi/xenapi_Host.h"
+#include "xenapi/xenapi_Session.h"
+#include "xenapi/xenapi_Role.h"
+#include "xenapi/xenapi_Helper.h"
 #include <QtNetwork/QNetworkReply>
 #include <QtCore/QByteArray>
 #include <QtCore/QDebug>
@@ -54,6 +59,10 @@ namespace XenAPI
             APIVersion apiVersion = APIVersion::UNKNOWN;
             bool ownsSessionToken = false;
             bool isDuplicate = false;
+            bool isLocalSuperuser = false;
+            QString sessionSubject;
+            QString userSid;
+            QStringList permissions;
 
             QString createLoginJsonRpc(const QString& username, const QString& password);
             bool parseLoginResponse(const QByteArray& response, QString& sessionId);
@@ -112,9 +121,6 @@ namespace XenAPI
             return;
 
         this->LogoutWithoutDisconnect();
-
-        if (this->d->connection)
-            this->d->connection->Disconnect();
     }
 
     void Session::LogoutWithoutDisconnect()
@@ -170,6 +176,26 @@ namespace XenAPI
     XenConnection* Session::getConnection() const
     {
         return this->d->connection;
+    }
+
+    bool Session::isLocalSuperuser() const
+    {
+        return this->d->isLocalSuperuser;
+    }
+
+    QString Session::getSessionSubject() const
+    {
+        return this->d->sessionSubject;
+    }
+
+    QString Session::getUserSid() const
+    {
+        return this->d->userSid;
+    }
+
+    QStringList Session::getPermissions() const
+    {
+        return this->d->permissions;
     }
 
     Session* Session::DuplicateSession(Session* originalSession, QObject* parent)
@@ -325,6 +351,7 @@ namespace XenAPI
             this->d->ownsSessionToken = true;
             this->d->isDuplicate = false;
             this->d->lastErrorDescription.clear();
+            this->SetupSessionDetails();
             qDebug() << "XenSession: Login successful, sessionId"
                      << this->d->sessionId.left(20) + "...";
             emit this->loginSuccessful();
@@ -443,6 +470,67 @@ namespace XenAPI
 
         QByteArray jsonRpcRequest = Xen::JsonRpcClient::buildJsonRpcCall("session.logout", params, 0);
         return QString::fromUtf8(jsonRpcRequest);
+    }
+
+    void Session::SetupSessionDetails()
+    {
+        this->SetAPIVersion();
+        this->SetADDetails();
+        this->SetRbacPermissions();
+    }
+
+    void Session::SetAPIVersion()
+    {
+        if (!this->d->loggedIn)
+            return;
+
+        const QVariantMap pools = XenAPI::Pool::get_all_records(this);
+        if (pools.isEmpty())
+            return;
+
+        const QString poolRef = pools.keys().first();
+        const QVariantMap pool = pools.value(poolRef).toMap();
+        const QString masterRef = pool.value("master").toString();
+        if (masterRef.isEmpty())
+            return;
+
+        const QVariantMap host = XenAPI::Host::get_record(this, masterRef);
+        const long major = host.value("API_version_major").toLongLong();
+        const long minor = host.value("API_version_minor").toLongLong();
+        this->d->apiVersion = APIVersionHelper::fromMajorMinor(major, minor);
+    }
+
+    void Session::SetADDetails()
+    {
+        if (this->d->apiVersion < APIVersion::API_1_6)
+        {
+            this->d->isLocalSuperuser = true;
+            return;
+        }
+
+        if (this->d->sessionId.isEmpty())
+            return;
+
+        this->d->isLocalSuperuser = XenAPI::SessionAPI::get_is_local_superuser(this, this->d->sessionId);
+        if (this->d->isLocalSuperuser)
+            return;
+
+        this->d->sessionSubject = XenAPI::SessionAPI::get_subject(this, this->d->sessionId);
+        this->d->userSid = XenAPI::SessionAPI::get_auth_user_sid(this, this->d->sessionId);
+        // TODO: Mirror C# UserDetails.UpdateDetails(userSid, session) for AD user caching.
+    }
+
+    void Session::SetRbacPermissions()
+    {
+        if (this->d->apiVersion < APIVersion::API_1_7)
+            return;
+
+        if (this->d->sessionId.isEmpty())
+            return;
+
+        this->d->permissions = XenAPI::SessionAPI::get_rbac_permissions(this, this->d->sessionId);
+        // TODO: Populate role objects by mapping permissions to Role.get_all_records(),
+        // mirroring C# Session.Roles behavior.
     }
 
     APIVersion Session::getAPIVersion() const

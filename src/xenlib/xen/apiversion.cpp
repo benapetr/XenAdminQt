@@ -38,24 +38,48 @@ QString APIVersionHelper::versionToString(APIVersion version)
         return "1.2";
     case APIVersion::API_1_3:
         return "1.3";
+    case APIVersion::API_1_4:
+        return "1.4";
+    case APIVersion::API_1_5:
+        return "1.5";
     case APIVersion::API_1_6:
         return "1.6";
+    case APIVersion::API_1_7:
+        return "1.7";
+    case APIVersion::API_1_8:
+        return "1.8";
     case APIVersion::API_1_9:
         return "1.9";
+    case APIVersion::API_1_10:
+        return "1.10";
     case APIVersion::API_2_0:
         return "2.0";
+    case APIVersion::API_2_1:
+        return "2.1";
+    case APIVersion::API_2_2:
+        return "2.2";
     case APIVersion::API_2_3:
         return "2.3";
+    case APIVersion::API_2_4:
+        return "2.4";
     case APIVersion::API_2_5:
         return "2.5";
     case APIVersion::API_2_6:
         return "2.6";
+    case APIVersion::API_2_7:
+        return "2.7";
     case APIVersion::API_2_8:
         return "2.8";
+    case APIVersion::API_2_9:
+        return "2.9";
+    case APIVersion::API_2_10:
+        return "2.10";
     case APIVersion::API_2_11:
         return "2.11";
     case APIVersion::API_2_12:
         return "2.12";
+    case APIVersion::API_2_13:
+        return "2.13";
     case APIVersion::API_2_14:
         return "2.14";
     case APIVersion::API_2_15:
@@ -83,24 +107,48 @@ APIVersion APIVersionHelper::fromMajorMinor(long major, long minor)
         return APIVersion::API_1_2;
     if (major == 1 && minor == 3)
         return APIVersion::API_1_3;
+    if (major == 1 && minor == 4)
+        return APIVersion::API_1_4;
+    if (major == 1 && minor == 5)
+        return APIVersion::API_1_5;
     if (major == 1 && minor == 6)
         return APIVersion::API_1_6;
+    if (major == 1 && minor == 7)
+        return APIVersion::API_1_7;
+    if (major == 1 && minor == 8)
+        return APIVersion::API_1_8;
     if (major == 1 && minor == 9)
         return APIVersion::API_1_9;
+    if (major == 1 && minor == 10)
+        return APIVersion::API_1_10;
     if (major == 2 && minor == 0)
         return APIVersion::API_2_0;
+    if (major == 2 && minor == 1)
+        return APIVersion::API_2_1;
+    if (major == 2 && minor == 2)
+        return APIVersion::API_2_2;
     if (major == 2 && minor == 3)
         return APIVersion::API_2_3;
+    if (major == 2 && minor == 4)
+        return APIVersion::API_2_4;
     if (major == 2 && minor == 5)
         return APIVersion::API_2_5;
     if (major == 2 && minor == 6)
         return APIVersion::API_2_6;
+    if (major == 2 && minor == 7)
+        return APIVersion::API_2_7;
     if (major == 2 && minor == 8)
         return APIVersion::API_2_8;
+    if (major == 2 && minor == 9)
+        return APIVersion::API_2_9;
+    if (major == 2 && minor == 10)
+        return APIVersion::API_2_10;
     if (major == 2 && minor == 11)
         return APIVersion::API_2_11;
     if (major == 2 && minor == 12)
         return APIVersion::API_2_12;
+    if (major == 2 && minor == 13)
+        return APIVersion::API_2_13;
     if (major == 2 && minor == 14)
         return APIVersion::API_2_14;
     if (major == 2 && minor == 15)

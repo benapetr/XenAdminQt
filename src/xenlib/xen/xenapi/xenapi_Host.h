@@ -62,6 +62,16 @@ namespace XenAPI
             static QVariantList get_all(Session* session);
 
             /**
+             * @brief Get single host record
+             * @param session XenServer session
+             * @param host Host opaque reference
+             * @return Host record as QVariantMap
+             *
+             * Matches C# Host.get_record()
+             */
+            static QVariantMap get_record(Session* session, const QString& host);
+
+            /**
              * @brief Get host server time
              * Matches C# Host.get_servertime()
              */

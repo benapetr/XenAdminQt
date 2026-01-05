@@ -47,6 +47,27 @@ namespace XenAPI
         return api.parseJsonRpcResponse(response);
     }
 
+    QVariantMap Pool::get_all_records(Session* session)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId();
+
+        XenRpcAPI api(session);
+        QByteArray request = api.buildJsonRpcCall("pool.get_all_records", params);
+        QByteArray response = session->sendApiRequest(request);
+
+        QVariant result = api.parseJsonRpcResponse(response);
+        if (result.canConvert<QVariantMap>())
+        {
+            return result.toMap();
+        }
+
+        return QVariantMap();
+    }
+
     void Pool::set_default_SR(Session* session, const QString& pool, const QString& sr)
     {
         if (!session || !session->IsLoggedIn())

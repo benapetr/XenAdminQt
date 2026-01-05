@@ -139,7 +139,7 @@ XenConnection::~XenConnection()
 {
     if (this->d->connectTask)
         this->EndConnect(false, true);
-    this->Disconnect();
+    this->DisconnectTransport();
     delete this->d->cache;
     delete this->d;
 }
@@ -150,7 +150,7 @@ bool XenConnection::ConnectToHost(const QString& host, int port, const QString& 
 
     // Disconnect any existing connection
     if (this->IsConnected())
-        this->Disconnect();
+        this->DisconnectTransport();
 
     this->d->host = host;
     this->d->port = port;
@@ -178,7 +178,7 @@ bool XenConnection::ConnectToHost(const QString& host, int port, const QString& 
     return true;
 }
 
-void XenConnection::Disconnect()
+void XenConnection::DisconnectTransport()
 {
     qDebug() << "XenConnection: Disconnecting";
 

@@ -66,7 +66,7 @@ class XENLIB_EXPORT XenConnection : public QObject
 
         // Connection management
         bool ConnectToHost(const QString& hostname, int port, const QString& username, const QString& password); // OBSOLETE: legacy direct connection flow (use BeginConnect)
-        void Disconnect(); // OBSOLETE: legacy direct disconnect (use EndConnect)
+        void DisconnectTransport();
         bool IsConnected() const;
         bool IsTransportConnected() const;
 

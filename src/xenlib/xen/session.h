@@ -59,6 +59,10 @@ namespace XenAPI
             QString getLastError() const;
             QStringList getLastErrorDescription() const;
             XenConnection* getConnection() const;
+            bool isLocalSuperuser() const;
+            QString getSessionSubject() const;
+            QString getUserSid() const;
+            QStringList getPermissions() const;
 
             // API version management
             APIVersion getAPIVersion() const;
@@ -83,6 +87,10 @@ namespace XenAPI
             QString extractAuthenticationError(const QByteArray& response);
             QString buildLoginRequest(const QString& username, const QString& password);
             QString buildLogoutRequest();
+            void SetupSessionDetails();
+            void SetAPIVersion();
+            void SetADDetails();
+            void SetRbacPermissions();
 
             class Private;
             Private* d;

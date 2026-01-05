@@ -56,6 +56,15 @@ namespace XenAPI
             static QVariant get_all(Session* session);
 
             /**
+             * @brief Get all pool records in a single call
+             * @param session Active XenSession
+             * @return QVariantMap mapping pool refs to pool records
+             *
+             * Matches C# Pool.get_all_records()
+             */
+            static QVariantMap get_all_records(Session* session);
+
+            /**
              * @brief Set default SR for pool
              * @param session Active XenSession
              * @param pool Pool opaque reference
