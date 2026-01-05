@@ -34,13 +34,13 @@ class NewPoolCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit NewPoolCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit NewPoolCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // NEWPOOLCOMMAND_H

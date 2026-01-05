@@ -53,74 +53,74 @@ class CommandErrorDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    /*!
-     * \brief Dialog mode - determines which buttons are shown
-     */
-    enum class DialogMode
-    {
-        Close,      ///< Show only Close button (default)
-        OKCancel    ///< Show OK and Cancel buttons
-    };
+    public:
+        /*!
+         * \brief Dialog mode - determines which buttons are shown
+         */
+        enum class DialogMode
+        {
+            Close,      ///< Show only Close button (default)
+            OKCancel    ///< Show OK and Cancel buttons
+        };
 
-    /*!
-     * \brief Construct CommandErrorDialog
-     * \param title The title for the confirmation dialog
-     * \param text The text for the confirmation dialog
-     * \param cantRunReasons A map of object names to reasons why they can't be actioned
-     * \param mode Whether the dialog should show a Close button, or OK and Cancel buttons
-     * \param parent Parent widget
-     */
-    explicit CommandErrorDialog(const QString& title,
-                                const QString& text,
-                                const QMap<QString, QString>& cantRunReasons,
-                                DialogMode mode = DialogMode::Close,
-                                QWidget* parent = nullptr);
+        /*!
+         * \brief Construct CommandErrorDialog
+         * \param title The title for the confirmation dialog
+         * \param text The text for the confirmation dialog
+         * \param cantRunReasons A map of object names to reasons why they can't be actioned
+         * \param mode Whether the dialog should show a Close button, or OK and Cancel buttons
+         * \param parent Parent widget
+         */
+        explicit CommandErrorDialog(const QString& title,
+                                    const QString& text,
+                                    const QMap<QString, QString>& cantRunReasons,
+                                    DialogMode mode = DialogMode::Close,
+                                    QWidget* parent = nullptr);
 
-    /*!
-     * \brief Construct CommandErrorDialog with icon data
-     * \param title The title for the confirmation dialog
-     * \param text The text for the confirmation dialog
-     * \param cantRunReasons A map of object names to reasons (with optional icon paths)
-     * \param mode Whether the dialog should show a Close button, or OK and Cancel buttons
-     * \param parent Parent widget
-     */
-    explicit CommandErrorDialog(const QString& title,
-                                const QString& text,
-                                const QMap<QString, QPair<QString, QString>>& cantRunReasons,
-                                DialogMode mode = DialogMode::Close,
-                                QWidget* parent = nullptr);
+        /*!
+         * \brief Construct CommandErrorDialog with icon data
+         * \param title The title for the confirmation dialog
+         * \param text The text for the confirmation dialog
+         * \param cantRunReasons A map of object names to reasons (with optional icon paths)
+         * \param mode Whether the dialog should show a Close button, or OK and Cancel buttons
+         * \param parent Parent widget
+         */
+        explicit CommandErrorDialog(const QString& title,
+                                    const QString& text,
+                                    const QMap<QString, QPair<QString, QString>>& cantRunReasons,
+                                    DialogMode mode = DialogMode::Close,
+                                    QWidget* parent = nullptr);
 
-    /*!
-     * \brief Construct CommandErrorDialog with XenObject pointers (matches C# version)
-     * \param title The title for the confirmation dialog
-     * \param text The text for the confirmation dialog
-     * \param cantRunReasons A map of XenObject pointers to reasons why they can't be actioned
-     * \param mode Whether the dialog should show a Close button, or OK and Cancel buttons
-     * \param parent Parent widget
-     */
-    explicit CommandErrorDialog(const QString& title,
-                                const QString& text,
-                                const QMap<QSharedPointer<XenObject>, QString>& cantRunReasons,
-                                DialogMode mode = DialogMode::Close,
-                                QWidget* parent = nullptr);
+        /*!
+         * \brief Construct CommandErrorDialog with XenObject pointers (matches C# version)
+         * \param title The title for the confirmation dialog
+         * \param text The text for the confirmation dialog
+         * \param cantRunReasons A map of XenObject pointers to reasons why they can't be actioned
+         * \param mode Whether the dialog should show a Close button, or OK and Cancel buttons
+         * \param parent Parent widget
+         */
+        explicit CommandErrorDialog(const QString& title,
+                                    const QString& text,
+                                    const QMap<QSharedPointer<XenObject>, QString>& cantRunReasons,
+                                    DialogMode mode = DialogMode::Close,
+                                    QWidget* parent = nullptr);
 
-    ~CommandErrorDialog();
+        ~CommandErrorDialog();
 
-    DialogMode mode() const { return this->m_mode; }
+        DialogMode mode() const { return this->m_mode; }
 
-private slots:
-    void onTableHeaderClicked(int logicalIndex);
+    private slots:
+        void onTableHeaderClicked(int logicalIndex);
 
-private:
-    Ui::CommandErrorDialog* ui;
-    DialogMode m_mode;
-    int m_currentSortColumn;
-    Qt::SortOrder m_currentSortOrder;
+    private:
+        Ui::CommandErrorDialog* ui;
+        DialogMode m_mode;
+        int m_currentSortColumn;
+        Qt::SortOrder m_currentSortOrder;
 
-    void setupDialog(const QString& title, const QString& text, DialogMode mode);
-    void addRow(const QString& iconPath, const QString& name, const QString& reason);
-    void addRow(const QIcon& icon, const QString& name, const QString& reason);
+        void setupDialog(const QString& title, const QString& text, DialogMode mode);
+        void addRow(const QString& iconPath, const QString& name, const QString& reason);
+        void addRow(const QIcon& icon, const QString& name, const QString& reason);
 };
 
 #endif // COMMANDERRORDIALOG_H

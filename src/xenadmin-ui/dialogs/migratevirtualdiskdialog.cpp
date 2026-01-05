@@ -66,7 +66,7 @@ void MigrateVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, c
         action->setTitle(QString("Migrating virtual disk '%1' to '%2'") .arg(vdiName) .arg(targetSRName));
         action->setDescription(QString("Migrating '%1'...").arg(vdiName));
 
-        opManager->registerOperation(action);
+        opManager->RegisterOperation(action);
         action->runAsync();
     } else
     {
@@ -82,7 +82,7 @@ void MigrateVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, c
             action->setTitle(QString("Migrating virtual disk '%1' to '%2'").arg(vdiName).arg(targetSRName));
             action->setDescription(QString("Migrating '%1'...").arg(vdiName));
 
-            opManager->registerOperation(action);
+            opManager->RegisterOperation(action);
             action->runAsync();
         }
     }

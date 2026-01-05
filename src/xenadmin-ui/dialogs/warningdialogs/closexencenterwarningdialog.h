@@ -41,22 +41,22 @@ class CloseXenCenterWarningDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    explicit CloseXenCenterWarningDialog(bool fromUpdate = false,
-                                         XenConnection* connection = nullptr,
-                                         QWidget* parent = nullptr);
-    ~CloseXenCenterWarningDialog() override;
+    public:
+        explicit CloseXenCenterWarningDialog(bool fromUpdate = false,
+                                             XenConnection* connection = nullptr,
+                                             QWidget* parent = nullptr);
+        ~CloseXenCenterWarningDialog() override;
 
-private slots:
-    void rebuildList();
+    private slots:
+        void rebuildList();
 
-private:
-    QString applicationName() const;
-    QString stateToText(int state) const;
-    bool shouldShowRecord(int state, bool isMeddling) const;
+    private:
+        QString applicationName() const;
+        QString stateToText(int state) const;
+        bool shouldShowRecord(int state, bool isMeddling) const;
 
-    Ui::CloseXenCenterWarningDialog* ui;
-    XenConnection* m_connection = nullptr;
+        Ui::CloseXenCenterWarningDialog* ui;
+        XenConnection* m_connection = nullptr;
 };
 
 #endif // CLOSEXENCENTERWARNINGDIALOG_H

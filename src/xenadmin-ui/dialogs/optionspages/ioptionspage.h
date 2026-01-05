@@ -38,23 +38,23 @@ class IOptionsPage : public QWidget
 {
     Q_OBJECT
 
-public:
-    explicit IOptionsPage(QWidget* parent = nullptr)
-        : QWidget(parent)
-    {}
-    virtual ~IOptionsPage() = default;
+    public:
+        explicit IOptionsPage(QWidget* parent = nullptr)
+            : QWidget(parent)
+        {}
+        virtual ~IOptionsPage() = default;
 
-    // IVerticalTab interface (C# VerticalTabs.IVerticalTab)
-    virtual QString text() const = 0;    // Main text for tab
-    virtual QString subText() const = 0; // Sub text for tab
-    virtual QIcon image() const = 0;     // Icon for tab
+        // IVerticalTab interface (C# VerticalTabs.IVerticalTab)
+        virtual QString GetText() const = 0;    // Main text for tab
+        virtual QString GetSubText() const = 0; // Sub text for tab
+        virtual QIcon GetImage() const = 0;     // Icon for tab
 
-    // IOptionsPage interface
-    virtual void build() = 0;                                                  // Load settings into UI
-    virtual bool isValidToSave(QWidget** control, QString& invalidReason) = 0; // Validate before saving
-    virtual void showValidationMessages(QWidget* control, const QString& message) = 0;
-    virtual void hideValidationMessages() = 0;
-    virtual void save() = 0; // Save settings from UI
+        // IOptionsPage interface
+        virtual void Build() = 0;                                                  // Load settings into UI
+        virtual bool IsValidToSave(QWidget** control, QString& invalidReason) = 0; // Validate before saving
+        virtual void ShowValidationMessages(QWidget* control, const QString& message) = 0;
+        virtual void HideValidationMessages() = 0;
+        virtual void Save() = 0; // Save settings from UI
 };
 
 #endif // IOPTIONSPAGE_H

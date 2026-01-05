@@ -52,12 +52,12 @@ CustomFieldsDisplayPage::~CustomFieldsDisplayPage()
     delete this->ui;
 }
 
-QString CustomFieldsDisplayPage::text() const
+QString CustomFieldsDisplayPage::GetText() const
 {
     return tr("Custom Fields");
 }
 
-QString CustomFieldsDisplayPage::subText() const
+QString CustomFieldsDisplayPage::GetSubText() const
 {
     QMap<QString, QString> fields = this->getCurrentFields();
     if (fields.isEmpty())
@@ -82,12 +82,12 @@ QString CustomFieldsDisplayPage::subText() const
     return fieldList.join(", ");
 }
 
-QIcon CustomFieldsDisplayPage::image() const
+QIcon CustomFieldsDisplayPage::GetImage() const
 {
     return QIcon(":/icons/fields_16.png");
 }
 
-void CustomFieldsDisplayPage::setXenObjects(const QString& objectRef,
+void CustomFieldsDisplayPage::SetXenObjects(const QString& objectRef,
                                             const QString& objectType,
                                             const QVariantMap& objectDataBefore,
                                             const QVariantMap& objectDataCopy)
@@ -114,9 +114,9 @@ void CustomFieldsDisplayPage::setXenObjects(const QString& objectRef,
     this->populateFields();
 }
 
-AsyncOperation* CustomFieldsDisplayPage::saveSettings()
+AsyncOperation* CustomFieldsDisplayPage::SaveSettings()
 {
-    if (!this->hasChanged())
+    if (!this->HasChanged())
     {
         return nullptr;
     }
@@ -192,27 +192,27 @@ AsyncOperation* CustomFieldsDisplayPage::saveSettings()
     return new CustomFieldsOperation(this->m_connection, this->m_objectRef, objectType, otherConfig, this);
 }
 
-bool CustomFieldsDisplayPage::isValidToSave() const
+bool CustomFieldsDisplayPage::IsValidToSave() const
 {
     return true;
 }
 
-void CustomFieldsDisplayPage::showLocalValidationMessages()
+void CustomFieldsDisplayPage::ShowLocalValidationMessages()
 {
     // No validation needed
 }
 
-void CustomFieldsDisplayPage::hideLocalValidationMessages()
+void CustomFieldsDisplayPage::HideLocalValidationMessages()
 {
     // No validation messages
 }
 
-void CustomFieldsDisplayPage::cleanup()
+void CustomFieldsDisplayPage::Cleanup()
 {
     // Nothing to clean up
 }
 
-bool CustomFieldsDisplayPage::hasChanged() const
+bool CustomFieldsDisplayPage::HasChanged() const
 {
     QMap<QString, QString> currentFields = this->getCurrentFields();
 

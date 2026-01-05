@@ -49,33 +49,33 @@ class NetworkOptionsEditPage : public IEditPage
 {
     Q_OBJECT
 
-public:
-    explicit NetworkOptionsEditPage(QWidget* parent = nullptr);
-    ~NetworkOptionsEditPage() override;
+    public:
+        explicit NetworkOptionsEditPage(QWidget* parent = nullptr);
+        ~NetworkOptionsEditPage() override;
 
-    // IEditPage interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
+        // IEditPage interface
+        QString GetText() const override;
+        QString GetSubText() const override;
+        QIcon GetImage() const override;
 
-    void setXenObjects(const QString& objectRef,
-                       const QString& objectType,
-                       const QVariantMap& objectDataBefore,
-                       const QVariantMap& objectDataCopy) override;
+        void SetXenObjects(const QString& objectRef,
+                           const QString& objectType,
+                           const QVariantMap& objectDataBefore,
+                           const QVariantMap& objectDataCopy) override;
 
-    AsyncOperation* saveSettings() override;
-    bool hasChanged() const override;
-    bool isValidToSave() const override;
-    void showLocalValidationMessages() override;
-    void hideLocalValidationMessages() override;
-    void cleanup() override;
+        AsyncOperation* SaveSettings() override;
+        bool HasChanged() const override;
+        bool IsValidToSave() const override;
+        void ShowLocalValidationMessages() override;
+        void HideLocalValidationMessages() override;
+        void Cleanup() override;
 
-private:
-    Ui::NetworkOptionsEditPage* ui;
+    private:
+        Ui::NetworkOptionsEditPage* ui;
 
-    QString m_poolRef_;
-    QVariantMap m_objectDataBefore_;
-    QVariantMap m_objectDataCopy_;
+        QString m_poolRef_;
+        QVariantMap m_objectDataBefore_;
+        QVariantMap m_objectDataCopy_;
 };
 
 #endif // NETWORKOPTIONSEDITPAGE_H

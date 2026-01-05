@@ -155,7 +155,7 @@ void RotatePoolSecretCommand::Run()
 
     if (!this->canRotateSecret(poolData, cache))
     {
-        QString reason = this->getCantRunReason();
+        QString reason = this->GetCantRunReason();
         QMessageBox::information(this->mainWindow(), tr("Cannot Rotate Pool Secret"), reason);
         return;
     }
@@ -207,7 +207,7 @@ void RotatePoolSecretCommand::Run()
     action->setDescription(tr("Rotating secret for pool '%1'...").arg(poolName));
 
     OperationManager* opManager = OperationManager::instance();
-    opManager->registerOperation(action);
+    opManager->RegisterOperation(action);
     action->runAsync();
 
     this->mainWindow()->showStatusMessage(tr("Pool secret rotation started"), 3000);
@@ -218,7 +218,7 @@ QString RotatePoolSecretCommand::MenuText() const
     return tr("&Rotate Pool Secret...");
 }
 
-QString RotatePoolSecretCommand::getCantRunReason() const
+QString RotatePoolSecretCommand::GetCantRunReason() const
 {
     QString objectType = this->getSelectedObjectType();
     XenCache* cache = nullptr;

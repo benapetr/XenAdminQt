@@ -76,7 +76,7 @@ void UnpauseVMCommand::Run()
     VMUnpause* action = new VMUnpause(vmForAction, this->mainWindow());
 
     // Register with OperationManager for history tracking
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup
     connect(action, &AsyncOperation::completed, this, [action]() {

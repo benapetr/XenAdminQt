@@ -192,7 +192,7 @@ void MigrateVMMenu::runMigrationToHost(const QString& hostRef, const QString& ho
     }
 
     VMMigrateAction* action = new VMMigrateAction(conn, m_vm->OpaqueRef(), hostRef, this->m_mainWindow);
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     connect(action, &AsyncOperation::completed, this, [this, vmName, hostName, action]()
     {

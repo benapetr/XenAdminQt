@@ -66,12 +66,12 @@ bool LogDestinationEditPage::eventFilter(QObject* obj, QEvent* event)
     return IEditPage::eventFilter(obj, event);
 }
 
-QString LogDestinationEditPage::text() const
+QString LogDestinationEditPage::GetText() const
 {
     return tr("Log Destination");
 }
 
-QString LogDestinationEditPage::subText() const
+QString LogDestinationEditPage::GetSubText() const
 {
     if (this->ui->checkBoxRemote->isChecked())
     {
@@ -85,13 +85,13 @@ QString LogDestinationEditPage::subText() const
     return tr("Local only");
 }
 
-QIcon LogDestinationEditPage::image() const
+QIcon LogDestinationEditPage::GetImage() const
 {
     // Matches C# Images.StaticImages.log_destination_16
     return QIcon(":/icons/log_destination_16.png");
 }
 
-void LogDestinationEditPage::setXenObjects(const QString& objectRef,
+void LogDestinationEditPage::SetXenObjects(const QString& objectRef,
                                            const QString& objectType,
                                            const QVariantMap& objectDataBefore,
                                            const QVariantMap& objectDataCopy)
@@ -151,9 +151,9 @@ void LogDestinationEditPage::revalidate()
     }
 }
 
-AsyncOperation* LogDestinationEditPage::saveSettings()
+AsyncOperation* LogDestinationEditPage::SaveSettings()
 {
-    if (!this->m_connection || this->m_hostRef.isEmpty() || !this->hasChanged())
+    if (!this->m_connection || this->m_hostRef.isEmpty() || !this->HasChanged())
     {
         return nullptr;
     }
@@ -232,12 +232,12 @@ AsyncOperation* LogDestinationEditPage::saveSettings()
     return new SyslogReconfigureOperation(this->m_connection, this->m_hostRef, this);
 }
 
-bool LogDestinationEditPage::isValidToSave() const
+bool LogDestinationEditPage::IsValidToSave() const
 {
     return this->m_validToSave;
 }
 
-void LogDestinationEditPage::showLocalValidationMessages()
+void LogDestinationEditPage::ShowLocalValidationMessages()
 {
     if (!this->m_validToSave && this->ui->checkBoxRemote->isChecked())
     {
@@ -248,17 +248,17 @@ void LogDestinationEditPage::showLocalValidationMessages()
     }
 }
 
-void LogDestinationEditPage::hideLocalValidationMessages()
+void LogDestinationEditPage::HideLocalValidationMessages()
 {
     QToolTip::hideText();
 }
 
-void LogDestinationEditPage::cleanup()
+void LogDestinationEditPage::Cleanup()
 {
     // Nothing to cleanup
 }
 
-bool LogDestinationEditPage::hasChanged() const
+bool LogDestinationEditPage::HasChanged() const
 {
     // C# logic:
     // if (checkBoxRemote.Checked)

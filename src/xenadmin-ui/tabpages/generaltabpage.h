@@ -47,59 +47,59 @@ class GeneralTabPage : public BaseTabPage
 {
     Q_OBJECT
 
-public:
-    explicit GeneralTabPage(QWidget* parent = nullptr);
-    ~GeneralTabPage();
+    public:
+        explicit GeneralTabPage(QWidget* parent = nullptr);
+        ~GeneralTabPage();
 
-    QString GetTitle() const override
-    {
-        return "General";
-    }
-    QString HelpID() const override
-    {
-        return "TabPageGeneral";
-    }
-    bool IsApplicableForObjectType(const QString& objectType) const override;
+        QString GetTitle() const override
+        {
+            return "General";
+        }
+        QString HelpID() const override
+        {
+            return "TabPageGeneral";
+        }
+        bool IsApplicableForObjectType(const QString& objectType) const override;
 
-protected:
-    void refreshContent() override;
+    protected:
+        void refreshContent() override;
 
-private:
-    Ui::GeneralTabPage* ui;
+    private:
+        Ui::GeneralTabPage* ui;
 
-    // Layout pointers for each section
-    QFormLayout* m_generalLayout;
-    QFormLayout* m_biosLayout;
-    QFormLayout* m_managementInterfacesLayout;
-    QFormLayout* m_memoryLayout;
-    QFormLayout* m_cpuLayout;
-    QFormLayout* m_versionLayout;
-    QFormLayout* m_statusLayout;
-    QFormLayout* m_multipathingLayout;
+        // Layout pointers for each section
+        QFormLayout* m_generalLayout;
+        QFormLayout* m_biosLayout;
+        QFormLayout* m_managementInterfacesLayout;
+        QFormLayout* m_memoryLayout;
+        QFormLayout* m_cpuLayout;
+        QFormLayout* m_versionLayout;
+        QFormLayout* m_statusLayout;
+        QFormLayout* m_multipathingLayout;
 
-    void clearProperties();
-    void addProperty(const QString& label, const QString& value);
-    void addPropertyToLayout(QFormLayout* layout, const QString& label, const QString& value);
-    void populateVMProperties();
-    void populateHostProperties();
-    void populatePoolProperties();
-    void populateSRProperties();
-    void populateNetworkProperties();
+        void clearProperties();
+        void addProperty(const QString& label, const QString& value);
+        void addPropertyToLayout(QFormLayout* layout, const QString& label, const QString& value);
+        void populateVMProperties();
+        void populateHostProperties();
+        void populatePoolProperties();
+        void populateSRProperties();
+        void populateNetworkProperties();
 
-    // Host section population methods
-    void populateGeneralSection();
-    void populateBIOSSection();
-    void populateManagementInterfacesSection();
-    void populateMemorySection();
-    void populateCPUSection();
-    void populateVersionSection();
+        // Host section population methods
+        void populateGeneralSection();
+        void populateBIOSSection();
+        void populateManagementInterfacesSection();
+        void populateMemorySection();
+        void populateCPUSection();
+        void populateVersionSection();
 
-    // SR section population methods (C# GenerateStatusBox, GenerateMultipathBox)
-    void populateStatusSection();
-    void populateMultipathingSection();
+        // SR section population methods (C# GenerateStatusBox, GenerateMultipathBox)
+        void populateStatusSection();
+        void populateMultipathingSection();
 
-    // Helper methods for formatting (matches C# PrettyTimeSpan)
-    QString formatUptime(qint64 seconds) const;
+        // Helper methods for formatting (matches C# PrettyTimeSpan)
+        QString formatUptime(qint64 seconds) const;
 };
 
 #endif // GENERALTABPAGE_H

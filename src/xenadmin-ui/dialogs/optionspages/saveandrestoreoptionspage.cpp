@@ -40,25 +40,25 @@ SaveAndRestoreOptionsPage::~SaveAndRestoreOptionsPage()
     delete this->ui;
 }
 
-QString SaveAndRestoreOptionsPage::text() const
+QString SaveAndRestoreOptionsPage::GetText() const
 {
     // Matches C# Messages.SAVE_AND_RESTORE
     return tr("Save and Restore");
 }
 
-QString SaveAndRestoreOptionsPage::subText() const
+QString SaveAndRestoreOptionsPage::GetSubText() const
 {
     // Matches C# Messages.SAVE_AND_RESTORE_DESC
     return tr("Configure session save and restore");
 }
 
-QIcon SaveAndRestoreOptionsPage::image() const
+QIcon SaveAndRestoreOptionsPage::GetImage() const
 {
     // Matches C# Images.StaticImages.save_16
     return QIcon(":/icons/save_16.png");
 }
 
-void SaveAndRestoreOptionsPage::build()
+void SaveAndRestoreOptionsPage::Build()
 {
     // Matches C# SaveAndRestoreOptionsPage.Build()
     // Simplified version - just handle save state checkbox
@@ -68,7 +68,7 @@ void SaveAndRestoreOptionsPage::build()
         settings.getValue("Session/SaveSession", false).toBool());
 }
 
-bool SaveAndRestoreOptionsPage::isValidToSave(QWidget** control, QString& invalidReason)
+bool SaveAndRestoreOptionsPage::IsValidToSave(QWidget** control, QString& invalidReason)
 {
     // Matches C# SaveAndRestoreOptionsPage.IsValidToSave()
     // No validation needed
@@ -77,19 +77,19 @@ bool SaveAndRestoreOptionsPage::isValidToSave(QWidget** control, QString& invali
     return true;
 }
 
-void SaveAndRestoreOptionsPage::showValidationMessages(QWidget* control, const QString& message)
+void SaveAndRestoreOptionsPage::ShowValidationMessages(QWidget* control, const QString& message)
 {
     // Matches C# SaveAndRestoreOptionsPage.ShowValidationMessages()
     Q_UNUSED(control);
     Q_UNUSED(message);
 }
 
-void SaveAndRestoreOptionsPage::hideValidationMessages()
+void SaveAndRestoreOptionsPage::HideValidationMessages()
 {
     // Matches C# SaveAndRestoreOptionsPage.HideValidationMessages()
 }
 
-void SaveAndRestoreOptionsPage::save()
+void SaveAndRestoreOptionsPage::Save()
 {
     // Matches C# SaveAndRestoreOptionsPage.Save()
     // Simplified version

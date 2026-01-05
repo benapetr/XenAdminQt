@@ -135,7 +135,7 @@ void MoveVMCommand::Run()
                                             srObj.data(),
                                             nullptr,
                                             this->mainWindow());
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
     action->runAsync();
 }
 

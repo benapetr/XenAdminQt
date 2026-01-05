@@ -42,23 +42,23 @@ HostAutostartEditPage::~HostAutostartEditPage()
     delete this->ui;
 }
 
-QString HostAutostartEditPage::text() const
+QString HostAutostartEditPage::GetText() const
 {
     return tr("Autostart");
 }
 
-QString HostAutostartEditPage::subText() const
+QString HostAutostartEditPage::GetSubText() const
 {
     return this->getAutostartEnabled() ? tr("Enabled") : tr("Disabled");
 }
 
-QIcon HostAutostartEditPage::image() const
+QIcon HostAutostartEditPage::GetImage() const
 {
     // Matches C# Properties.Resources._000_EnablePowerControl_h32bit_16
     return QIcon(":/icons/enable_power_control_16.png");
 }
 
-void HostAutostartEditPage::setXenObjects(const QString& objectRef,
+void HostAutostartEditPage::SetXenObjects(const QString& objectRef,
                                           const QString& objectType,
                                           const QVariantMap& objectDataBefore,
                                           const QVariantMap& objectDataCopy)
@@ -124,9 +124,9 @@ bool HostAutostartEditPage::getAutostartEnabled() const
     return this->ui->checkBoxEnableAutostart->isChecked();
 }
 
-AsyncOperation* HostAutostartEditPage::saveSettings()
+AsyncOperation* HostAutostartEditPage::SaveSettings()
 {
-    if (!this->hasChanged())
+    if (!this->HasChanged())
     {
         return nullptr;
     }
@@ -140,28 +140,28 @@ AsyncOperation* HostAutostartEditPage::saveSettings()
     );
 }
 
-bool HostAutostartEditPage::isValidToSave() const
+bool HostAutostartEditPage::IsValidToSave() const
 {
     // No validation needed - checkbox is always valid
     return true;
 }
 
-void HostAutostartEditPage::showLocalValidationMessages()
+void HostAutostartEditPage::ShowLocalValidationMessages()
 {
     // No validation messages needed
 }
 
-void HostAutostartEditPage::hideLocalValidationMessages()
+void HostAutostartEditPage::HideLocalValidationMessages()
 {
     // No validation messages needed
 }
 
-void HostAutostartEditPage::cleanup()
+void HostAutostartEditPage::Cleanup()
 {
     // No cleanup needed
 }
 
-bool HostAutostartEditPage::hasChanged() const
+bool HostAutostartEditPage::HasChanged() const
 {
     return this->ui->checkBoxEnableAutostart->isChecked() != this->m_originalAutostartEnabled;
 }

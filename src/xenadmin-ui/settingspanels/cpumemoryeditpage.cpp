@@ -98,22 +98,22 @@ CpuMemoryEditPage::~CpuMemoryEditPage()
     delete this->ui;
 }
 
-QString CpuMemoryEditPage::text() const
+QString CpuMemoryEditPage::GetText() const
 {
     return tr("CPU");
 }
 
-QString CpuMemoryEditPage::subText() const
+QString CpuMemoryEditPage::GetSubText() const
 {
     return tr("%1 vCPU(s)").arg(this->selectedVcpusAtStartup());
 }
 
-QIcon CpuMemoryEditPage::image() const
+QIcon CpuMemoryEditPage::GetImage() const
 {
     return QIcon(":/icons/cpu_16.png");
 }
 
-void CpuMemoryEditPage::setXenObjects(const QString& objectRef,
+void CpuMemoryEditPage::SetXenObjects(const QString& objectRef,
                                       const QString& objectType,
                                       const QVariantMap& objectDataBefore,
                                       const QVariantMap& objectDataCopy)
@@ -507,7 +507,7 @@ QString CpuMemoryEditPage::productBrand() const
     return tr("XenServer");
 }
 
-AsyncOperation* CpuMemoryEditPage::saveSettings()
+AsyncOperation* CpuMemoryEditPage::SaveSettings()
 {
     QList<AsyncOperation*> actions;
 
@@ -550,24 +550,24 @@ AsyncOperation* CpuMemoryEditPage::saveSettings()
                                  true);
 }
 
-bool CpuMemoryEditPage::isValidToSave() const
+bool CpuMemoryEditPage::IsValidToSave() const
 {
     return this->m_validToSave;
 }
 
-void CpuMemoryEditPage::showLocalValidationMessages()
+void CpuMemoryEditPage::ShowLocalValidationMessages()
 {
 }
 
-void CpuMemoryEditPage::hideLocalValidationMessages()
+void CpuMemoryEditPage::HideLocalValidationMessages()
 {
 }
 
-void CpuMemoryEditPage::cleanup()
+void CpuMemoryEditPage::Cleanup()
 {
 }
 
-bool CpuMemoryEditPage::hasChanged() const
+bool CpuMemoryEditPage::HasChanged() const
 {
     bool vcpuChanged = this->m_origVcpus != this->selectedVcpusMax();
     bool vcpuAtStartupChanged = this->m_isVcpuHotplugSupported &&
@@ -577,7 +577,7 @@ bool CpuMemoryEditPage::hasChanged() const
     return vcpuChanged || vcpuAtStartupChanged || topologyChanged || weightChanged;
 }
 
-QVariantMap CpuMemoryEditPage::getModifiedObjectData() const
+QVariantMap CpuMemoryEditPage::GetModifiedObjectData() const
 {
     return this->m_objectDataCopy;
 }

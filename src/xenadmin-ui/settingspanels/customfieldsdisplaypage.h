@@ -49,43 +49,43 @@ class CustomFieldsDisplayPage : public IEditPage
 {
     Q_OBJECT
 
-public:
-    explicit CustomFieldsDisplayPage(QWidget* parent = nullptr);
-    ~CustomFieldsDisplayPage() override;
+    public:
+        explicit CustomFieldsDisplayPage(QWidget* parent = nullptr);
+        ~CustomFieldsDisplayPage() override;
 
-    // IEditPage interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
+        // IEditPage interface
+        QString GetText() const override;
+        QString GetSubText() const override;
+        QIcon GetImage() const override;
 
-    void setXenObjects(const QString& objectRef,
-                       const QString& objectType,
-                       const QVariantMap& objectDataBefore,
-                       const QVariantMap& objectDataCopy) override;
+        void SetXenObjects(const QString& objectRef,
+                           const QString& objectType,
+                           const QVariantMap& objectDataBefore,
+                           const QVariantMap& objectDataCopy) override;
 
-    AsyncOperation* saveSettings() override;
-    bool isValidToSave() const override;
-    void showLocalValidationMessages() override;
-    void hideLocalValidationMessages() override;
-    void cleanup() override;
-    bool hasChanged() const override;
+        AsyncOperation* SaveSettings() override;
+        bool IsValidToSave() const override;
+        void ShowLocalValidationMessages() override;
+        void HideLocalValidationMessages() override;
+        void Cleanup() override;
+        bool HasChanged() const override;
 
-private slots:
-    void onAddFieldClicked();
-    void onDeleteFieldClicked();
+    private slots:
+        void onAddFieldClicked();
+        void onDeleteFieldClicked();
 
-private:
-    void populateFields();
-    QMap<QString, QString> getCurrentFields() const;
+    private:
+        void populateFields();
+        QMap<QString, QString> getCurrentFields() const;
 
-    Ui::CustomFieldsDisplayPage* ui;
-    QString m_objectRef;
-    QString m_objectType;
-    QVariantMap m_objectDataBefore;
-    QVariantMap m_objectDataCopy;
+        Ui::CustomFieldsDisplayPage* ui;
+        QString m_objectRef;
+        QString m_objectType;
+        QVariantMap m_objectDataBefore;
+        QVariantMap m_objectDataCopy;
 
-    // Original custom fields from other_config
-    QMap<QString, QString> m_origCustomFields;
+        // Original custom fields from other_config
+        QMap<QString, QString> m_origCustomFields;
 };
 
 #endif // CUSTOMFIELDSDISPLAYPAGE_H

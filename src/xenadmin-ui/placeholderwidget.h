@@ -34,12 +34,12 @@ class PlaceholderWidget : public QWidget
 {
     Q_OBJECT
 
-public:
-    explicit PlaceholderWidget(QWidget* parent = nullptr);
-    ~PlaceholderWidget();
+    public:
+        explicit PlaceholderWidget(QWidget* parent = nullptr);
+        ~PlaceholderWidget();
 
-protected:
-    void paintEvent(QPaintEvent* event) override;
+    protected:
+        void paintEvent(QPaintEvent* event) override;
 };
 
 #endif // PLACEHOLDERWIDGET_H

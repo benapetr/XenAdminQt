@@ -41,29 +41,29 @@ class ConsolesOptionsPage : public IOptionsPage
 {
     Q_OBJECT
 
-public:
-    explicit ConsolesOptionsPage(QWidget* parent = nullptr);
-    ~ConsolesOptionsPage();
+    public:
+        explicit ConsolesOptionsPage(QWidget* parent = nullptr);
+        ~ConsolesOptionsPage();
 
-    // IOptionsPage interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
-    void build() override;
-    bool isValidToSave(QWidget** control, QString& invalidReason) override;
-    void showValidationMessages(QWidget* control, const QString& message) override;
-    void hideValidationMessages() override;
-    void save() override;
+        // IOptionsPage interface
+        QString GetText() const override;
+        QString GetSubText() const override;
+        QIcon GetImage() const override;
+        void Build() override;
+        bool IsValidToSave(QWidget** control, QString& invalidReason) override;
+        void ShowValidationMessages(QWidget* control, const QString& message) override;
+        void HideValidationMessages() override;
+        void Save() override;
 
-private:
-    Ui::ConsolesOptionsPage* ui;
+    private:
+        Ui::ConsolesOptionsPage* ui;
 
-    void buildKeyCodeListBox();
-    void buildDockKeyCodeComboBox();
-    void buildUncaptureKeyCodeComboBox();
-    void selectKeyCombo();
-    void selectDockKeyCombo();
-    void selectUncaptureKeyCombo();
+        void buildKeyCodeListBox();
+        void buildDockKeyCodeComboBox();
+        void buildUncaptureKeyCodeComboBox();
+        void selectKeyCombo();
+        void selectDockKeyCombo();
+        void selectUncaptureKeyCombo();
 };
 
 #endif // CONSOLESOPTIONSPAGE_H

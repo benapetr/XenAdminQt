@@ -51,41 +51,41 @@ class HostMultipathPage : public IEditPage
 {
     Q_OBJECT
 
-public:
-    explicit HostMultipathPage(QWidget* parent = nullptr);
-    ~HostMultipathPage() override;
+    public:
+        explicit HostMultipathPage(QWidget* parent = nullptr);
+        ~HostMultipathPage() override;
 
-    // IEditPage interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
+        // IEditPage interface
+        QString GetText() const override;
+        QString GetSubText() const override;
+        QIcon GetImage() const override;
 
-    void setXenObjects(const QString& objectRef,
-                       const QString& objectType,
-                       const QVariantMap& objectDataBefore,
-                       const QVariantMap& objectDataCopy) override;
+        void SetXenObjects(const QString& objectRef,
+                           const QString& objectType,
+                           const QVariantMap& objectDataBefore,
+                           const QVariantMap& objectDataCopy) override;
 
-    AsyncOperation* saveSettings() override;
-    bool isValidToSave() const override;
-    void showLocalValidationMessages() override;
-    void hideLocalValidationMessages() override;
-    void cleanup() override;
-    bool hasChanged() const override;
+        AsyncOperation* SaveSettings() override;
+        bool IsValidToSave() const override;
+        void ShowLocalValidationMessages() override;
+        void HideLocalValidationMessages() override;
+        void Cleanup() override;
+        bool HasChanged() const override;
 
-private slots:
-    void onMultipathCheckBoxChanged(int state);
+    private slots:
+        void onMultipathCheckBoxChanged(int state);
 
-private:
-    void updateMaintenanceWarning();
-    bool isInMaintenanceMode() const;
+    private:
+        void updateMaintenanceWarning();
+        bool isInMaintenanceMode() const;
 
-    Ui::HostMultipathPage* ui;
-    
-    QString m_hostRef;
-    QVariantMap m_objectDataBefore;
-    QVariantMap m_objectDataCopy;
-    
-    bool m_originalMultipathEnabled;
+        Ui::HostMultipathPage* ui;
+
+        QString m_hostRef;
+        QVariantMap m_objectDataBefore;
+        QVariantMap m_objectDataCopy;
+
+        bool m_originalMultipathEnabled;
 };
 
 #endif // HOSTMULTIPATHPAGE_H

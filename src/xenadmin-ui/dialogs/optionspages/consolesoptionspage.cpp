@@ -40,25 +40,25 @@ ConsolesOptionsPage::~ConsolesOptionsPage()
     delete this->ui;
 }
 
-QString ConsolesOptionsPage::text() const
+QString ConsolesOptionsPage::GetText() const
 {
     // Matches C# Messages.CONSOLE
     return tr("Console");
 }
 
-QString ConsolesOptionsPage::subText() const
+QString ConsolesOptionsPage::GetSubText() const
 {
     // Matches C# Messages.CONSOLE_DESC
     return tr("Configure console settings");
 }
 
-QIcon ConsolesOptionsPage::image() const
+QIcon ConsolesOptionsPage::GetImage() const
 {
     // Matches C# Images.StaticImages.console_16
     return QIcon(":/icons/console_16.png");
 }
 
-void ConsolesOptionsPage::build()
+void ConsolesOptionsPage::Build()
 {
     // Matches C# ConsolesOptionsPage.Build()
 
@@ -149,7 +149,7 @@ void ConsolesOptionsPage::selectUncaptureKeyCombo()
         this->ui->UncaptureKeyComboBox->setCurrentIndex(index);
 }
 
-bool ConsolesOptionsPage::isValidToSave(QWidget** control, QString& invalidReason)
+bool ConsolesOptionsPage::IsValidToSave(QWidget** control, QString& invalidReason)
 {
     // Matches C# ConsolesOptionsPage.IsValidToSave()
     // No validation needed
@@ -158,19 +158,19 @@ bool ConsolesOptionsPage::isValidToSave(QWidget** control, QString& invalidReaso
     return true;
 }
 
-void ConsolesOptionsPage::showValidationMessages(QWidget* control, const QString& message)
+void ConsolesOptionsPage::ShowValidationMessages(QWidget* control, const QString& message)
 {
     // Matches C# ConsolesOptionsPage.ShowValidationMessages()
     Q_UNUSED(control);
     Q_UNUSED(message);
 }
 
-void ConsolesOptionsPage::hideValidationMessages()
+void ConsolesOptionsPage::HideValidationMessages()
 {
     // Matches C# ConsolesOptionsPage.HideValidationMessages()
 }
 
-void ConsolesOptionsPage::save()
+void ConsolesOptionsPage::Save()
 {
     // Matches C# ConsolesOptionsPage.Save()
     SettingsManager& settings = SettingsManager::instance();

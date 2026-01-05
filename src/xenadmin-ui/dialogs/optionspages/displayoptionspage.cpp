@@ -40,25 +40,25 @@ DisplayOptionsPage::~DisplayOptionsPage()
     delete this->ui;
 }
 
-QString DisplayOptionsPage::text() const
+QString DisplayOptionsPage::GetText() const
 {
     // Matches C# Messages.DISPLAY
     return tr("Display");
 }
 
-QString DisplayOptionsPage::subText() const
+QString DisplayOptionsPage::GetSubText() const
 {
     // Matches C# Messages.DISPLAY_DETAILS
     return tr("Configure display options");
 }
 
-QIcon DisplayOptionsPage::image() const
+QIcon DisplayOptionsPage::GetImage() const
 {
     // Matches C# Images.StaticImages._001_PerformanceGraph_h32bit_16
     return QIcon(":/icons/performance_graph_16.png");
 }
 
-void DisplayOptionsPage::build()
+void DisplayOptionsPage::Build()
 {
     // Matches C# DisplayOptionsPage.Build()
     SettingsManager& settings = SettingsManager::instance();
@@ -77,7 +77,7 @@ void DisplayOptionsPage::build()
         settings.getValue("Display/ShowTimestampsInUpdatesLog", true).toBool());
 }
 
-bool DisplayOptionsPage::isValidToSave(QWidget** control, QString& invalidReason)
+bool DisplayOptionsPage::IsValidToSave(QWidget** control, QString& invalidReason)
 {
     // Matches C# DisplayOptionsPage.IsValidToSave()
     // No validation needed
@@ -86,19 +86,19 @@ bool DisplayOptionsPage::isValidToSave(QWidget** control, QString& invalidReason
     return true;
 }
 
-void DisplayOptionsPage::showValidationMessages(QWidget* control, const QString& message)
+void DisplayOptionsPage::ShowValidationMessages(QWidget* control, const QString& message)
 {
     // Matches C# DisplayOptionsPage.ShowValidationMessages()
     Q_UNUSED(control);
     Q_UNUSED(message);
 }
 
-void DisplayOptionsPage::hideValidationMessages()
+void DisplayOptionsPage::HideValidationMessages()
 {
     // Matches C# DisplayOptionsPage.HideValidationMessages()
 }
 
-void DisplayOptionsPage::save()
+void DisplayOptionsPage::Save()
 {
     // Matches C# DisplayOptionsPage.Save()
     SettingsManager& settings = SettingsManager::instance();

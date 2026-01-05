@@ -51,87 +51,87 @@ class HTTPConnect : public QObject
 {
     Q_OBJECT
 
-public:
-    explicit HTTPConnect(QObject* parent = nullptr);
-    ~HTTPConnect();
+    public:
+        explicit HTTPConnect(QObject* parent = nullptr);
+        ~HTTPConnect();
 
-    /**
-     * @brief Start async connection to console (non-blocking)
-     * @param consoleUrl The console location URL (e.g., https://host:443/console?ref=...)
-     * @param sessionId The XenServer session ID for authentication
-     *
-     * This method returns immediately. Connect to connectedToConsole() signal
-     * to receive the ready socket, or error() signal on failure.
-     */
-    void connectToConsoleAsync(const QUrl& consoleUrl, const QString& sessionId);
+        /**
+         * @brief Start async connection to console (non-blocking)
+         * @param consoleUrl The console location URL (e.g., https://host:443/console?ref=...)
+         * @param sessionId The XenServer session ID for authentication
+         *
+         * This method returns immediately. Connect to connectedToConsole() signal
+         * to receive the ready socket, or error() signal on failure.
+         */
+        void connectToConsoleAsync(const QUrl& consoleUrl, const QString& sessionId);
 
-    /**
-     * @brief Get the last error message
-     */
-    QString lastError() const
-    {
-        return m_lastError;
-    }
+        /**
+         * @brief Get the last error message
+         */
+        QString lastError() const
+        {
+            return m_lastError;
+        }
 
-signals:
-    /**
-     * @brief Emitted when console connection is ready
-     * @param socket The QSslSocket ready for VNC/RDP communication
-     *
-     * The receiver takes ownership of the socket and must delete it when done.
-     */
-    void connectedToConsole(QSslSocket* socket);
+    signals:
+        /**
+         * @brief Emitted when console connection is ready
+         * @param socket The QSslSocket ready for VNC/RDP communication
+         *
+         * The receiver takes ownership of the socket and must delete it when done.
+         */
+        void connectedToConsole(QSslSocket* socket);
 
-    /**
-     * @brief Emitted on connection error
-     */
-    void error(const QString& errorMessage);
+        /**
+         * @brief Emitted on connection error
+         */
+        void error(const QString& errorMessage);
 
-private slots:
-    void onSslEncrypted();
-    void onSslError(const QList<QSslError>& errors);
-    void onSocketError(QAbstractSocket::SocketError socketError);
-    void onReadyRead();
-    void onConnectionTimeout();
+    private slots:
+        void onSslEncrypted();
+        void onSslError(const QList<QSslError>& errors);
+        void onSocketError(QAbstractSocket::SocketError socketError);
+        void onReadyRead();
+        void onConnectionTimeout();
 
-private:
-    /**
-     * @brief Send HTTP CONNECT request (async)
-     */
-    void sendConnectRequest();
+    private:
+        /**
+         * @brief Send HTTP CONNECT request (async)
+         */
+        void sendConnectRequest();
 
-    /**
-     * @brief Read and parse HTTP response headers
-     * @return HTTP status code (200 = success), or 0 if incomplete
-     */
-    int readHttpResponse();
+        /**
+         * @brief Read and parse HTTP response headers
+         * @return HTTP status code (200 = success), or 0 if incomplete
+         */
+        int readHttpResponse();
 
-    /**
-     * @brief Cleanup and emit error
-     */
-    void failWithError(const QString& error);
+        /**
+         * @brief Cleanup and emit error
+         */
+        void failWithError(const QString& error);
 
-    /**
-     * @brief Safely tear down the socket; guarded by QPointer
-     * @param closeConnection Whether to disconnectFromHost() first
-     */
-    void cleanupSocket(bool closeConnection = true);
+        /**
+         * @brief Safely tear down the socket; guarded by QPointer
+         * @param closeConnection Whether to disconnectFromHost() first
+         */
+        void cleanupSocket(bool closeConnection = true);
 
-    QString m_lastError;
-    QPointer<QSslSocket> m_socket;
-    QUrl m_consoleUrl;
-    QString m_sessionId;
-    QByteArray m_responseBuffer;
-    QTimer* m_timeoutTimer;
+        QString m_lastError;
+        QPointer<QSslSocket> m_socket;
+        QUrl m_consoleUrl;
+        QString m_sessionId;
+        QByteArray m_responseBuffer;
+        QTimer* m_timeoutTimer;
 
-    enum State
-    {
-        Idle,
-        ConnectingSSL,
-        SendingConnect,
-        ReadingResponse
-    };
-    State m_state;
+        enum State
+        {
+            Idle,
+            ConnectingSSL,
+            SendingConnect,
+            ReadingResponse
+        };
+        State m_state;
 };
 
 #endif // HTTPCONNECT_H

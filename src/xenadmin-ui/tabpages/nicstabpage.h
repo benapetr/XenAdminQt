@@ -50,35 +50,35 @@ class NICsTabPage : public BaseTabPage
 {
     Q_OBJECT
 
-public:
-    explicit NICsTabPage(QWidget* parent = nullptr);
-    ~NICsTabPage();
+    public:
+        explicit NICsTabPage(QWidget* parent = nullptr);
+        ~NICsTabPage();
 
-    QString GetTitle() const override
-    {
-        return "NICs";
-    }
-    QString HelpID() const override
-    {
-        return "TabPageNICs";
-    }
-    bool IsApplicableForObjectType(const QString& objectType) const override;
+        QString GetTitle() const override
+        {
+            return "NICs";
+        }
+        QString HelpID() const override
+        {
+            return "TabPageNICs";
+        }
+        bool IsApplicableForObjectType(const QString& objectType) const override;
 
-protected:
-    void refreshContent() override;
+    protected:
+        void refreshContent() override;
 
-private:
-    Ui::NICsTabPage* ui;
+    private:
+        Ui::NICsTabPage* ui;
 
-    void populateNICs();
-    void addNICRow(const QVariantMap& pifData);
-    void updateButtonStates();
+        void populateNICs();
+        void addNICRow(const QVariantMap& pifData);
+        void updateButtonStates();
 
-private slots:
-    void onSelectionChanged();
-    void onCreateBondClicked();
-    void onDeleteBondClicked();
-    void onRescanClicked();
+    private slots:
+        void onSelectionChanged();
+        void onCreateBondClicked();
+        void onDeleteBondClicked();
+        void onRescanClicked();
 };
 
 #endif // NICSTABPAGE_H

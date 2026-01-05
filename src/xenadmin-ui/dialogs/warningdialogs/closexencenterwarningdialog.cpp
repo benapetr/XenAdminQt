@@ -117,7 +117,7 @@ void CloseXenCenterWarningDialog::rebuildList()
     ui->actionsTable->setRowCount(0);
 
     OperationManager* manager = OperationManager::instance();
-    const QList<OperationManager::OperationRecord*>& records = manager->records();
+    const QList<OperationManager::OperationRecord*>& records = manager->GetRecords();
 
     int row = 0;
     for (OperationManager::OperationRecord* record : records)

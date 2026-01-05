@@ -717,7 +717,7 @@ void CrossPoolMigrateWizard::accept()
                                                           this->copyName(),
                                                           this->copyDescription(),
                                                           this);
-                OperationManager::instance()->registerOperation(action);
+                OperationManager::instance()->RegisterOperation(action);
                 action->runAsync();
             }
             else
@@ -733,7 +733,7 @@ void CrossPoolMigrateWizard::accept()
                                                             this->copyName(),
                                                             this->copyDescription(),
                                                             this);
-                    OperationManager::instance()->registerOperation(action);
+                    OperationManager::instance()->RegisterOperation(action);
                     action->runAsync();
                 }
             }
@@ -849,7 +849,7 @@ void CrossPoolMigrateWizard::accept()
                                                         storageMap,
                                                         hostPtr,
                                                         this);
-                OperationManager::instance()->registerOperation(action);
+                OperationManager::instance()->RegisterOperation(action);
                 action->runAsync();
             }
         }
@@ -868,7 +868,7 @@ void CrossPoolMigrateWizard::accept()
                     this->m_mode == WizardMode::Copy,
                     this);
 
-                OperationManager::instance()->registerOperation(action);
+                OperationManager::instance()->RegisterOperation(action);
                 action->runAsync();
             }
             else
@@ -877,7 +877,7 @@ void CrossPoolMigrateWizard::accept()
                                                              vmItem->OpaqueRef(),
                                                              this->m_targetHostRef,
                                                              this);
-                OperationManager::instance()->registerOperation(action);
+                OperationManager::instance()->RegisterOperation(action);
                 action->runAsync();
             }
         }

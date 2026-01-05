@@ -73,16 +73,16 @@ class NotificationsBasePage : public QWidget
          * Get the help ID for context-sensitive help.
          * C# Reference: NotificationsBasePage.HelpID line 65
          */
-        virtual QString helpID() const
+        virtual QString GetHelpID() const
         {
             return "";
         }
 
         /**
          * Check if any filters are currently active on this page.
-         * C# Reference: NotificationsBasePage.FilterIsOn line 67
+         * C# Reference: NotificationsBasePage.GetFilterIsOn line 67
          */
-        virtual bool filterIsOn() const
+        virtual bool GetFilterIsOn() const
         {
             return false;
         }

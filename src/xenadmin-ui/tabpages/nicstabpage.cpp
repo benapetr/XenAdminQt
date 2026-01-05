@@ -409,7 +409,7 @@ void NICsTabPage::onCreateBondClicked()
             hashingAlgorithm,
             this);
 
-        OperationManager::instance()->registerOperation(action);
+        OperationManager::instance()->RegisterOperation(action);
 
         connect(action, &AsyncOperation::completed, [this, bondMode, action]() {
             this->refreshContent();
@@ -480,7 +480,7 @@ void NICsTabPage::onDeleteBondClicked()
         }
 
         DestroyBondAction* action = new DestroyBondAction(connection, bondSlaveOf, this);
-        OperationManager::instance()->registerOperation(action);
+        OperationManager::instance()->RegisterOperation(action);
 
         connect(action, &AsyncOperation::completed, [this, action]() {
             this->refreshContent();

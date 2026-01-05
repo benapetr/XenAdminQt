@@ -156,7 +156,7 @@ void DisableChangedBlockTrackingCommand::Run()
     if (actions.count() == 1)
     {
         // Single action - register and run
-        OperationManager::instance()->registerOperation(actions.first());
+        OperationManager::instance()->RegisterOperation(actions.first());
         actions.first()->runAsync();
     } else
     {
@@ -171,7 +171,7 @@ void DisableChangedBlockTrackingCommand::Run()
             false, // runInParallel
             0,     // timeout
             this);
-        OperationManager::instance()->registerOperation(parallelOp);
+        OperationManager::instance()->RegisterOperation(parallelOp);
         parallelOp->runAsync();
     }
 }

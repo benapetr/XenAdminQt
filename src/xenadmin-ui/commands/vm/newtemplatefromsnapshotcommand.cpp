@@ -154,7 +154,7 @@ void NewTemplateFromSnapshotCommand::Run()
     VMCloneAction* action = new VMCloneAction(conn, vm, templateName, description, this->mainWindow());
 
     // Register with OperationManager
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal
     connect(action, &AsyncOperation::completed, this, [=]() {

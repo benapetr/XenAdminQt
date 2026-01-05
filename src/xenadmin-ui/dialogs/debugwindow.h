@@ -45,40 +45,40 @@ class DebugWindow : public QDialog
 {
     Q_OBJECT
 
-public:
-    explicit DebugWindow(QWidget* parent = nullptr);
-    ~DebugWindow();
+    public:
+        explicit DebugWindow(QWidget* parent = nullptr);
+        ~DebugWindow();
 
-    // Static method to install the custom message handler
-    static void installDebugHandler();
-    static void uninstallDebugHandler();
+        // Static method to install the custom message handler
+        static void installDebugHandler();
+        static void uninstallDebugHandler();
 
-    // Static method to get the singleton instance
-    static DebugWindow* getInstance();
+        // Static method to get the singleton instance
+        static DebugWindow* GetInstance();
 
-public slots:
-    void appendMessage(const QString& message);
-    void clearLog();
-    void saveLog();
-    void toggleAutoScroll(bool enabled);
-    void setLogLevel(int level);
+    public slots:
+        void appendMessage(const QString& message);
+        void clearLog();
+        void saveLog();
+        void toggleAutoScroll(bool enabled);
+        void setLogLevel(int level);
 
-signals:
-    void messageReceived(const QString& message);
+    signals:
+        void messageReceived(const QString& message);
 
-private:
-    static void messageHandler(QtMsgType type, const QMessageLogContext& context, const QString& msg);
-    static DebugWindow* s_instance;
-    static QtMessageHandler s_originalHandler;
-    static QMutex s_mutex;
+    private:
+        static void messageHandler(QtMsgType type, const QMessageLogContext& context, const QString& msg);
+        static DebugWindow* s_instance;
+        static QtMessageHandler s_originalHandler;
+        static QMutex s_mutex;
 
-    QString formatMessage(QtMsgType type, const QMessageLogContext& context, const QString& msg);
+        QString formatMessage(QtMsgType type, const QMessageLogContext& context, const QString& msg);
 
-    Ui::DebugWindow* ui;
+        Ui::DebugWindow* ui;
 
-    bool m_autoScroll;
-    int m_messageCount;
-    int m_currentLogLevel; // 0=Debug, 1=Info, 2=Warning, 3=Critical
+        bool m_autoScroll;
+        int m_messageCount;
+        int m_currentLogLevel; // 0=Debug, 1=Info, 2=Warning, 3=Critical
 };
 
 #endif // DEBUGWINDOW_H

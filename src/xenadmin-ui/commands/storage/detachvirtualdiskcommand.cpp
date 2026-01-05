@@ -307,7 +307,7 @@ void DetachVirtualDiskCommand::Run()
             this);
 
         // Register with OperationManager for history tracking
-        OperationManager::instance()->registerOperation(action);
+        OperationManager::instance()->RegisterOperation(action);
 
         // Connect completion signal
         connect(action, &AsyncOperation::completed, [this, vdiName, vmName, action]() {

@@ -43,24 +43,24 @@ NetworkOptionsEditPage::~NetworkOptionsEditPage()
     delete this->ui;
 }
 
-QString NetworkOptionsEditPage::text() const
+QString NetworkOptionsEditPage::GetText() const
 {
     return tr("Network Options");
 }
 
-QString NetworkOptionsEditPage::subText() const
+QString NetworkOptionsEditPage::GetSubText() const
 {
     return this->ui->radioButtonEnable->isChecked() 
         ? tr("IGMP snooping enabled") 
         : tr("IGMP snooping disabled");
 }
 
-QIcon NetworkOptionsEditPage::image() const
+QIcon NetworkOptionsEditPage::GetImage() const
 {
     return QIcon(":/icons/network_16.png");
 }
 
-void NetworkOptionsEditPage::setXenObjects(const QString& objectRef,
+void NetworkOptionsEditPage::SetXenObjects(const QString& objectRef,
                                            const QString& objectType,
                                            const QVariantMap& objectDataBefore,
                                            const QVariantMap& objectDataCopy)
@@ -109,7 +109,7 @@ void NetworkOptionsEditPage::setXenObjects(const QString& objectRef,
     }
 }
 
-AsyncOperation* NetworkOptionsEditPage::saveSettings()
+AsyncOperation* NetworkOptionsEditPage::SaveSettings()
 {
     bool enableValue = this->ui->radioButtonEnable->isChecked();
     
@@ -127,29 +127,29 @@ AsyncOperation* NetworkOptionsEditPage::saveSettings()
     );
 }
 
-bool NetworkOptionsEditPage::hasChanged() const
+bool NetworkOptionsEditPage::HasChanged() const
 {
     bool originalEnabled = this->m_objectDataBefore_.value("igmp_snooping_enabled", false).toBool();
     bool currentEnabled = this->ui->radioButtonEnable->isChecked();
     return originalEnabled != currentEnabled;
 }
 
-bool NetworkOptionsEditPage::isValidToSave() const
+bool NetworkOptionsEditPage::IsValidToSave() const
 {
     return true;
 }
 
-void NetworkOptionsEditPage::showLocalValidationMessages()
+void NetworkOptionsEditPage::ShowLocalValidationMessages()
 {
     // No validation needed
 }
 
-void NetworkOptionsEditPage::hideLocalValidationMessages()
+void NetworkOptionsEditPage::HideLocalValidationMessages()
 {
     // No validation needed
 }
 
-void NetworkOptionsEditPage::cleanup()
+void NetworkOptionsEditPage::Cleanup()
 {
     // Nothing to clean up
 }

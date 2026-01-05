@@ -48,31 +48,31 @@ class TitleBar : public QWidget
 {
     Q_OBJECT
 
-public:
-    explicit TitleBar(QWidget* parent = nullptr);
+    public:
+        explicit TitleBar(QWidget* parent = nullptr);
 
-    // Set the title information
-    void setTitle(const QString& text, const QIcon& icon = QIcon());
-    void setIcon(const QIcon& icon);
-    void setText(const QString& text);
+        // Set the title information
+        void SetTitle(const QString& text, const QIcon& icon = QIcon());
+        void SetIcon(const QIcon& icon);
+        void SetText(const QString& text);
 
-    // Clear the title
-    void clear();
+        // Clear the title
+        void Clear();
 
-    // Get current values
-    QString text() const;
-    QIcon icon() const;
+        // Get current values
+        QString GetText() const;
+        QIcon GetIcon() const;
 
-protected:
-    void paintEvent(QPaintEvent* event) override;
+    protected:
+        void paintEvent(QPaintEvent* event) override;
 
-private:
-    QLabel* m_iconLabel;
-    QLabel* m_textLabel;
-    QHBoxLayout* m_layout;
+    private:
+        QLabel* m_iconLabel;
+        QLabel* m_textLabel;
+        QHBoxLayout* m_layout;
 
-    QString m_text;
-    QIcon m_icon;
+        QString m_text;
+        QIcon m_icon;
 };
 
 #endif // TITLEBAR_H

@@ -45,24 +45,24 @@ SecurityEditPage::~SecurityEditPage()
     delete this->ui;
 }
 
-QString SecurityEditPage::text() const
+QString SecurityEditPage::GetText() const
 {
     return tr("Security");
 }
 
-QString SecurityEditPage::subText() const
+QString SecurityEditPage::GetSubText() const
 {
     return this->ui->radioButtonTLS->isChecked() 
         ? tr("TLS verification enabled") 
         : tr("SSL legacy protocol");
 }
 
-QIcon SecurityEditPage::image() const
+QIcon SecurityEditPage::GetImage() const
 {
     return QIcon(":/icons/padlock.png");
 }
 
-void SecurityEditPage::setXenObjects(const QString& objectRef,
+void SecurityEditPage::SetXenObjects(const QString& objectRef,
                                      const QString& objectType,
                                      const QVariantMap& objectDataBefore,
                                      const QVariantMap& objectDataCopy)
@@ -99,7 +99,7 @@ void SecurityEditPage::setXenObjects(const QString& objectRef,
     this->updateWarningVisibility();
 }
 
-AsyncOperation* SecurityEditPage::saveSettings()
+AsyncOperation* SecurityEditPage::SaveSettings()
 {
     bool enableSslLegacy = this->ui->radioButtonSSL->isChecked();
     
@@ -109,7 +109,7 @@ AsyncOperation* SecurityEditPage::saveSettings()
     );
 }
 
-bool SecurityEditPage::hasChanged() const
+bool SecurityEditPage::HasChanged() const
 {
     QVariantMap otherConfig = this->m_objectDataBefore_.value("other_config").toMap();
     bool originalSslLegacy = (otherConfig.value("ssl_legacy").toString() == "true");
@@ -118,22 +118,22 @@ bool SecurityEditPage::hasChanged() const
     return originalSslLegacy != currentSslLegacy;
 }
 
-bool SecurityEditPage::isValidToSave() const
+bool SecurityEditPage::IsValidToSave() const
 {
     return true;
 }
 
-void SecurityEditPage::showLocalValidationMessages()
+void SecurityEditPage::ShowLocalValidationMessages()
 {
     // No validation needed
 }
 
-void SecurityEditPage::hideLocalValidationMessages()
+void SecurityEditPage::HideLocalValidationMessages()
 {
     // No validation needed
 }
 
-void SecurityEditPage::cleanup()
+void SecurityEditPage::Cleanup()
 {
     // Nothing to clean up
 }
@@ -146,7 +146,7 @@ void SecurityEditPage::onRadioButtonChanged()
 void SecurityEditPage::updateWarningVisibility()
 {
     // Show warning only if settings have changed
-    bool showWarning = this->hasChanged();
+    bool showWarning = this->HasChanged();
     this->ui->labelDisruption->setVisible(showWarning);
     this->ui->pictureBoxDisruption->setVisible(showWarning);
 }

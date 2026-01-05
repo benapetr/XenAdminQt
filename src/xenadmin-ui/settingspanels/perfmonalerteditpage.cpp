@@ -43,12 +43,12 @@ PerfmonAlertEditPage::~PerfmonAlertEditPage()
     delete this->ui;
 }
 
-QString PerfmonAlertEditPage::text() const
+QString PerfmonAlertEditPage::GetText() const
 {
     return tr("Alerts");
 }
 
-QString PerfmonAlertEditPage::subText() const
+QString PerfmonAlertEditPage::GetSubText() const
 {
     QStringList alerts;
 
@@ -70,12 +70,12 @@ QString PerfmonAlertEditPage::subText() const
     return alerts.join(", ");
 }
 
-QIcon PerfmonAlertEditPage::image() const
+QIcon PerfmonAlertEditPage::GetImage() const
 {
     return QIcon(":/icons/alert_16.png");
 }
 
-void PerfmonAlertEditPage::setXenObjects(const QString& objectRef,
+void PerfmonAlertEditPage::SetXenObjects(const QString& objectRef,
                                          const QString& objectType,
                                          const QVariantMap& objectDataBefore,
                                          const QVariantMap& objectDataCopy)
@@ -100,9 +100,9 @@ void PerfmonAlertEditPage::setXenObjects(const QString& objectRef,
     this->ui->spinBoxMemoryDuration->setValue(this->m_origMemoryAlert.duration / 60);     // Convert seconds to minutes
 }
 
-AsyncOperation* PerfmonAlertEditPage::saveSettings()
+AsyncOperation* PerfmonAlertEditPage::SaveSettings()
 {
-    if (!this->hasChanged())
+    if (!this->HasChanged())
     {
         return nullptr;
     }
@@ -167,27 +167,27 @@ AsyncOperation* PerfmonAlertEditPage::saveSettings()
     return new PerfmonAlertOperation(this->m_connection, this->m_objectRef, this->m_objectType, otherConfig, nullptr);
 }
 
-bool PerfmonAlertEditPage::isValidToSave() const
+bool PerfmonAlertEditPage::IsValidToSave() const
 {
     return true;
 }
 
-void PerfmonAlertEditPage::showLocalValidationMessages()
+void PerfmonAlertEditPage::ShowLocalValidationMessages()
 {
     // No validation needed
 }
 
-void PerfmonAlertEditPage::hideLocalValidationMessages()
+void PerfmonAlertEditPage::HideLocalValidationMessages()
 {
     // No validation messages
 }
 
-void PerfmonAlertEditPage::cleanup()
+void PerfmonAlertEditPage::Cleanup()
 {
     // Nothing to clean up
 }
 
-bool PerfmonAlertEditPage::hasChanged() const
+bool PerfmonAlertEditPage::HasChanged() const
 {
     // Check CPU alert
     AlertConfig currentCPU;

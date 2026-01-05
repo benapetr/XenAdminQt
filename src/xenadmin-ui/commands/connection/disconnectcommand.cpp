@@ -40,7 +40,7 @@ namespace
 {
     bool allActionsFinished(XenConnection* connection)
     {
-        const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->records();
+        const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->GetRecords();
         for (OperationManager::OperationRecord* record : records)
         {
             AsyncOperation* operation = record ? record->operation.data() : nullptr;
@@ -58,7 +58,7 @@ namespace
 
     void cancelAllActions(XenConnection* connection)
     {
-        const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->records();
+        const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->GetRecords();
         for (OperationManager::OperationRecord* record : records)
         {
             AsyncOperation* operation = record ? record->operation.data() : nullptr;

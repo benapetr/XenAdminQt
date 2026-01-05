@@ -139,7 +139,7 @@ void DestroyBondCommand::Run()
         this);
 
     // Register with OperationManager for history tracking
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, [this, bondName, action]() {

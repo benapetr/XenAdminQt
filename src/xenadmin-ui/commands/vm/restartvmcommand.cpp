@@ -88,7 +88,7 @@ void RestartVMCommand::Run()
     VMCleanReboot* action = new VMCleanReboot(vmForAction, this->mainWindow());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup
     connect(action, &AsyncOperation::completed, this, [action]() {

@@ -35,8 +35,10 @@ class Host;
 class HostCommand : public Command
 {
         Q_OBJECT
+
     public:
         HostCommand(MainWindow* mainWindow, QObject* parent);
+
     protected:
         QSharedPointer<Host> getSelectedHost() const;
         QString getSelectedHostRef() const;

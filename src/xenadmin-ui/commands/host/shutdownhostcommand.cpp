@@ -81,7 +81,7 @@ void ShutdownHostCommand::Run()
         Host* host = new Host(conn, hostRef, this);
         ShutdownHostAction* action = new ShutdownHostAction(conn, host, this);
 
-        OperationManager::instance()->registerOperation(action);
+        OperationManager::instance()->RegisterOperation(action);
 
         connect(action, &AsyncOperation::completed, this, [this, hostName, action]() {
             if (action->state() == AsyncOperation::Completed && !action->isFailed())

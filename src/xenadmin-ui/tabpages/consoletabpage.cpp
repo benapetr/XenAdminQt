@@ -70,7 +70,7 @@ bool ConsoleTabPage::IsApplicableForObjectType(const QString& objectType) const
  * @brief Set the ConsolePanel instance (called by MainWindow)
  * Reference: MainWindow.cs AddTabContents() line 186
  */
-void ConsoleTabPage::setConsolePanel(ConsolePanel* consolePanel)
+void ConsoleTabPage::SetConsolePanel(ConsolePanel* consolePanel)
 {
     qDebug() << "ConsoleTabPage: setConsolePanel()";
 

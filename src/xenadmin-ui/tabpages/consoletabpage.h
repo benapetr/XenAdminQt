@@ -55,55 +55,55 @@ class ConsoleTabPage : public BaseTabPage
 {
     Q_OBJECT
 
-public:
-    explicit ConsoleTabPage(QWidget* parent = nullptr);
-    ~ConsoleTabPage();
+    public:
+        explicit ConsoleTabPage(QWidget* parent = nullptr);
+        ~ConsoleTabPage();
 
-    QString GetTitle() const override
-    {
-        return "Console";
-    }
-    QString HelpID() const override
-    {
-        return "TabPageConsole";
-    }
-    bool IsApplicableForObjectType(const QString& objectType) const override;
+        QString GetTitle() const override
+        {
+            return "Console";
+        }
+        QString HelpID() const override
+        {
+            return "TabPageConsole";
+        }
+        bool IsApplicableForObjectType(const QString& objectType) const override;
 
-    /**
-     * @brief Set the ConsolePanel instance (called by MainWindow)
-     * Reference: MainWindow.cs AddTabContents() line 186
-     */
-    void setConsolePanel(ConsolePanel* consolePanel);
+        /**
+         * @brief Set the ConsolePanel instance (called by MainWindow)
+         * Reference: MainWindow.cs AddTabContents() line 186
+         */
+        void SetConsolePanel(ConsolePanel* consolePanel);
 
-    /**
-     * @brief Get the ConsolePanel instance
-     */
-    ConsolePanel* consolePanel() const
-    {
-        return m_consolePanel;
-    }
+        /**
+         * @brief Get the ConsolePanel instance
+         */
+        ConsolePanel* GetConsolePanel() const
+        {
+            return m_consolePanel;
+        }
 
-    /**
-     * @brief Called when the console tab becomes visible
-     * Reference: MainWindow.cs TheTabControl_SelectedIndexChanged (lines 1653-1667)
-     */
-    void OnPageShown() override;
+        /**
+         * @brief Called when the console tab becomes visible
+         * Reference: MainWindow.cs TheTabControl_SelectedIndexChanged (lines 1653-1667)
+         */
+        void OnPageShown() override;
 
-    /**
-     * @brief Called when the console tab is hidden
-     * Reference: MainWindow.cs TheTabControl_Deselected (lines 1628-1636)
-     */
-    void OnPageHidden() override;
+        /**
+         * @brief Called when the console tab is hidden
+         * Reference: MainWindow.cs TheTabControl_Deselected (lines 1628-1636)
+         */
+        void OnPageHidden() override;
 
-protected:
-    /**
-     * @brief Refresh content - not used (ConsolePanel handles updates)
-     */
-    void refreshContent() override;
+    protected:
+        /**
+         * @brief Refresh content - not used (ConsolePanel handles updates)
+         */
+        void refreshContent() override;
 
-private:
-    Ui::ConsoleTabPage* ui;
-    ConsolePanel* m_consolePanel;
+    private:
+        Ui::ConsoleTabPage* ui;
+        ConsolePanel* m_consolePanel;
 };
 
 #endif // CONSOLETABPAGE_H

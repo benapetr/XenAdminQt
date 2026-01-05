@@ -43,28 +43,28 @@ class AttachVirtualDiskDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    explicit AttachVirtualDiskDialog(XenConnection* connection, const QString& vmRef, QWidget* parent = nullptr);
-    ~AttachVirtualDiskDialog();
+    public:
+        explicit AttachVirtualDiskDialog(XenConnection* connection, const QString& vmRef, QWidget* parent = nullptr);
+        ~AttachVirtualDiskDialog();
 
-    QString getSelectedVDIRef() const;
-    QString getDevicePosition() const;
-    QString getMode() const; // "RO" or "RW"
-    bool isBootable() const;
+        QString getSelectedVDIRef() const;
+        QString getDevicePosition() const;
+        QString getMode() const; // "RO" or "RW"
+        bool isBootable() const;
 
-private slots:
-    void onSRFilterChanged(int index);
-    void onVDISelectionChanged();
+    private slots:
+        void onSRFilterChanged(int index);
+        void onVDISelectionChanged();
 
-private:
-    void populateSRFilter();
-    void populateVDITable();
-    int findNextAvailableDevice();
+    private:
+        void populateSRFilter();
+        void populateVDITable();
+        int findNextAvailableDevice();
 
-    Ui::AttachVirtualDiskDialog* ui;
-    XenConnection* m_connection;
-    QString m_vmRef;
-    QVariantMap m_vmData;
+        Ui::AttachVirtualDiskDialog* ui;
+        XenConnection* m_connection;
+        QString m_vmRef;
+        QVariantMap m_vmData;
 };
 
 #endif // ATTACHVIRTUALDISKDIALOG_H

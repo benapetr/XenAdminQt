@@ -34,16 +34,16 @@ class ConnectAllHostsCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit ConnectAllHostsCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit ConnectAllHostsCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
-private:
-    bool hasDisconnectedConnections() const;
+    private:
+        bool hasDisconnectedConnections() const;
 };
 
 #endif // CONNECTALLHOSTSCOMMAND_H

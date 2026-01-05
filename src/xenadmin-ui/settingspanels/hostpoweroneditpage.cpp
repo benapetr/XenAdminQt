@@ -134,23 +134,23 @@ HostPowerONEditPage::~HostPowerONEditPage()
     delete this->ui;
 }
 
-QString HostPowerONEditPage::text() const
+QString HostPowerONEditPage::GetText() const
 {
     return tr("Power On");
 }
 
-QString HostPowerONEditPage::subText() const
+QString HostPowerONEditPage::GetSubText() const
 {
     return powerOnModeFriendlyName(this->m_currentMode);
 }
 
-QIcon HostPowerONEditPage::image() const
+QIcon HostPowerONEditPage::GetImage() const
 {
     // Matches C# Images.StaticImages._001_PowerOn_h32bit_16
     return QIcon(":/icons/power_on.png");
 }
 
-void HostPowerONEditPage::setXenObjects(const QString& objectRef,
+void HostPowerONEditPage::SetXenObjects(const QString& objectRef,
                                        const QString& objectType,
                                        const QVariantMap& objectDataBefore,
                                        const QVariantMap& objectDataCopy)
@@ -212,9 +212,9 @@ void HostPowerONEditPage::setXenObjects(const QString& objectRef,
     emit this->populated();
 }
 
-AsyncOperation* HostPowerONEditPage::saveSettings()
+AsyncOperation* HostPowerONEditPage::SaveSettings()
 {
-    if (!this->hasChanged())
+    if (!this->HasChanged())
         return nullptr;
     
     QList<QPair<QString, PowerOnMode>> changedHosts;
@@ -223,7 +223,7 @@ AsyncOperation* HostPowerONEditPage::saveSettings()
     return new SavePowerOnSettingsAction(this->connection(), changedHosts, this);
 }
 
-bool HostPowerONEditPage::hasChanged() const
+bool HostPowerONEditPage::HasChanged() const
 {
     if (!this->m_loaded)
         return false;
@@ -256,7 +256,7 @@ bool HostPowerONEditPage::hasHostChanged(const PowerOnMode& originalMode, const 
     return false;
 }
 
-bool HostPowerONEditPage::isValidToSave() const
+bool HostPowerONEditPage::IsValidToSave() const
 {
     if (!this->m_loaded)
         return true;
@@ -288,7 +288,7 @@ bool HostPowerONEditPage::isValidToSave() const
     return true;
 }
 
-void HostPowerONEditPage::cleanup()
+void HostPowerONEditPage::Cleanup()
 {
     // Nothing to cleanup
 }
@@ -456,7 +456,7 @@ void HostPowerONEditPage::updateUIForMode(PowerOnMode::Type type)
     }
 }
 
-void HostPowerONEditPage::showLocalValidationMessages()
+void HostPowerONEditPage::ShowLocalValidationMessages()
 {
     // Show validation errors as tooltip near the invalid widget
     // Matches C# HelpersGUI.ShowBalloonMessage(ctrl, _invalidParamToolTip)
@@ -473,7 +473,7 @@ void HostPowerONEditPage::showLocalValidationMessages()
     }
 }
 
-void HostPowerONEditPage::hideLocalValidationMessages()
+void HostPowerONEditPage::HideLocalValidationMessages()
 {
     // Hide tooltip
     // Matches C# _invalidParamToolTip.Hide(ctrl)

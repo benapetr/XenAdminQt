@@ -65,7 +65,7 @@ TitleBar::TitleBar(QWidget* parent)
     this->setLayout(this->m_layout);
 }
 
-void TitleBar::setTitle(const QString& text, const QIcon& icon)
+void TitleBar::SetTitle(const QString& text, const QIcon& icon)
 {
     this->m_text = text;
     this->m_icon = icon;
@@ -84,7 +84,7 @@ void TitleBar::setTitle(const QString& text, const QIcon& icon)
     this->update();
 }
 
-void TitleBar::setIcon(const QIcon& icon)
+void TitleBar::SetIcon(const QIcon& icon)
 {
     this->m_icon = icon;
 
@@ -98,13 +98,13 @@ void TitleBar::setIcon(const QIcon& icon)
     }
 }
 
-void TitleBar::setText(const QString& text)
+void TitleBar::SetText(const QString& text)
 {
     this->m_text = text;
     this->m_textLabel->setText(text);
 }
 
-void TitleBar::clear()
+void TitleBar::Clear()
 {
     this->m_text.clear();
     this->m_icon = QIcon();
@@ -114,12 +114,12 @@ void TitleBar::clear()
     this->update();
 }
 
-QString TitleBar::text() const
+QString TitleBar::GetText() const
 {
     return this->m_text;
 }
 
-QIcon TitleBar::icon() const
+QIcon TitleBar::GetIcon() const
 {
     return this->m_icon;
 }

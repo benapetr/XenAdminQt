@@ -122,12 +122,12 @@ class IEditPage : public QWidget
         // C# equivalent: Implements VerticalTabs.IVerticalTab
 
         /**
-         * @brief Main text for the tab
+         * @brief Main GetText for the tab
          * @return Tab title (e.g. "General", "CPU and Memory", "Storage")
          *
          * C# equivalent: string Text { get; }
          */
-        virtual QString text() const = 0;
+        virtual QString GetText() const = 0;
 
         /**
          * @brief Sub text for the tab (optional detail line)
@@ -135,7 +135,7 @@ class IEditPage : public QWidget
          *
          * C# equivalent: string SubText { get; }
          */
-        virtual QString subText() const = 0;
+        virtual QString GetSubText() const = 0;
 
         /**
          * @brief Icon for the tab
@@ -143,7 +143,7 @@ class IEditPage : public QWidget
          *
          * C# equivalent: Image Image { get; }
          */
-        virtual QIcon image() const = 0;
+        virtual QIcon GetImage() const = 0;
 
         // IEditPage interface
         // C# source: XenAdmin/SettingsPanels/IEditPage.cs
@@ -166,7 +166,7 @@ class IEditPage : public QWidget
          *
          * Example implementation:
          * ```cpp
-         * void GeneralEditPage::setXenObjects(const QString& objectRef,
+         * void GeneralEditPage::SetXenObjects(const QString& objectRef,
          *                                      const QString& objectType,
          *                                      const QVariantMap& objectDataBefore,
          *                                      const QVariantMap& objectDataCopy)
@@ -182,7 +182,7 @@ class IEditPage : public QWidget
          * }
          * ```
          */
-        virtual void setXenObjects(const QString& objectRef,
+        virtual void SetXenObjects(const QString& objectRef,
                                    const QString& objectType,
                                    const QVariantMap& objectDataBefore,
                                    const QVariantMap& objectDataCopy) = 0;
@@ -212,7 +212,7 @@ class IEditPage : public QWidget
          *
          * Example (matching C# GeneralEditPage.SaveSettings()):
          * ```cpp
-         * AsyncOperation* GeneralEditPage::saveSettings()
+         * AsyncOperation* GeneralEditPage::SaveSettings()
          * {
          *     // Simple edits to objectDataCopy (NOT API calls yet):
          *     if (m_nameChanged) {
@@ -239,7 +239,7 @@ class IEditPage : public QWidget
          * }
          * ```
          */
-        virtual AsyncOperation* saveSettings() = 0;
+        virtual AsyncOperation* SaveSettings() = 0;
 
         /**
          * @brief Check if all fields are valid for saving
@@ -252,7 +252,7 @@ class IEditPage : public QWidget
          *
          * Example:
          * ```cpp
-         * bool GeneralEditPage::isValidToSave() const
+         * bool GeneralEditPage::IsValidToSave() const
          * {
          *     if (ui->nameLineEdit->text().trimmed().isEmpty()) {
          *         return false;  // Name is required
@@ -261,7 +261,7 @@ class IEditPage : public QWidget
          * }
          * ```
          */
-        virtual bool isValidToSave() const = 0;
+        virtual bool IsValidToSave() const = 0;
 
         /**
          * @brief Show validation error messages to user
@@ -271,7 +271,7 @@ class IEditPage : public QWidget
          *
          * C# equivalent: void ShowLocalValidationMessages()
          */
-        virtual void showLocalValidationMessages() = 0;
+        virtual void ShowLocalValidationMessages() = 0;
 
         /**
          * @brief Hide validation error messages
@@ -281,7 +281,7 @@ class IEditPage : public QWidget
          *
          * C# equivalent: void HideLocalValidationMessages()
          */
-        virtual void hideLocalValidationMessages() = 0;
+        virtual void HideLocalValidationMessages() = 0;
 
         /**
          * @brief Clean up resources (unregister listeners, dispose tooltips, etc.)
@@ -291,7 +291,7 @@ class IEditPage : public QWidget
          *
          * C# equivalent: void Cleanup()
          */
-        virtual void cleanup() = 0;
+        virtual void Cleanup() = 0;
 
         /**
          * @brief Check if any fields have been modified
@@ -304,14 +304,14 @@ class IEditPage : public QWidget
          *
          * Example:
          * ```cpp
-         * bool GeneralEditPage::hasChanged() const
+         * bool GeneralEditPage::HasChanged() const
          * {
          *     return m_nameChanged || m_descriptionChanged ||
          *            m_folderChanged || m_tagsChanged;
          * }
          * ```
          */
-        virtual bool hasChanged() const = 0;
+        virtual bool HasChanged() const = 0;
 
         /**
          * @brief Get the modified object data copy after saveSettings() is called
@@ -325,7 +325,7 @@ class IEditPage : public QWidget
          * Default implementation returns empty map (no simple changes to apply).
          * Override in pages that modify objectDataCopy directly (like GeneralEditPage).
          */
-        virtual QVariantMap getModifiedObjectData() const
+        virtual QVariantMap GetModifiedObjectData() const
         {
             return QVariantMap(); // Default: no simple changes
         }

@@ -54,126 +54,126 @@ class EventsPage : public NotificationsBasePage
 {
     Q_OBJECT
 
-public:
-    explicit EventsPage(QWidget* parent = nullptr);
-    ~EventsPage();
+    public:
+        explicit EventsPage(QWidget* parent = nullptr);
+        ~EventsPage();
 
-    // NotificationsBasePage overrides
-    NavigationPane::NotificationsSubMode notificationsSubMode() const override
-    {
-        return NavigationPane::Events;
-    }
+        // NotificationsBasePage overrides
+        NavigationPane::NotificationsSubMode notificationsSubMode() const override
+        {
+            return NavigationPane::Events;
+        }
 
-    QString helpID() const override
-    {
-        // C# Reference: HistoryPage.HelpID line 81
-        return "EventsPane";
-    }
+        QString GetHelpID() const override
+        {
+            // C# Reference: HistoryPage.HelpID line 81
+            return "EventsPane";
+        }
 
-    bool filterIsOn() const override;
+        bool GetFilterIsOn() const override;
 
-protected:
-    // NotificationsBasePage overrides
-    void refreshPage() override;
-    void registerEventHandlers() override;
-    void deregisterEventHandlers() override;
+    protected:
+        // NotificationsBasePage overrides
+        void refreshPage() override;
+        void registerEventHandlers() override;
+        void deregisterEventHandlers() override;
 
-private slots:
-    void onFilterStatusChanged();
-    void onFilterLocationChanged();
-    void onFilterDatesChanged();
-    void onDismissAll();
-    void onDismissSelected();
-    void onEventsTableCellClicked(int row, int column);
-    void onEventsTableCellDoubleClicked(int row, int column);
-    void onEventsTableSelectionChanged();
-    void onEventsTableHeaderClicked(int logicalIndex);
+    private slots:
+        void onFilterStatusChanged();
+        void onFilterLocationChanged();
+        void onFilterDatesChanged();
+        void onDismissAll();
+        void onDismissSelected();
+        void onEventsTableCellClicked(int row, int column);
+        void onEventsTableCellDoubleClicked(int row, int column);
+        void onEventsTableSelectionChanged();
+        void onEventsTableHeaderClicked(int logicalIndex);
 
-private:
-    Ui::EventsPage* ui;
+    private:
+        Ui::EventsPage* ui;
 
-    static constexpr int MAX_HISTORY_ITEM = 1000;
+        static constexpr int MAX_HISTORY_ITEM = 1000;
 
-    /**
-     * Build the row list from OperationManager.
-     * C# Reference: HistoryPage.BuildRowList() line 178
-     */
-    void buildRowList();
+        /**
+         * Build the row list from OperationManager.
+         * C# Reference: HistoryPage.BuildRowList() line 178
+         */
+        void buildRowList();
 
-    /**
-     * Sort records based on date (descending by default).
-     * C# Reference: HistoryPage.SortActions() line 203
-     */
-    void sortRecords(QList<OperationManager::OperationRecord*>& records);
+        /**
+         * Sort records based on date (descending by default).
+         * C# Reference: HistoryPage.SortActions() line 203
+         */
+        void sortRecords(QList<OperationManager::OperationRecord*>& records);
 
-    /**
-     * Returns true if the record should be filtered out.
-     * C# Reference: HistoryPage.FilterAction() line 224
-     */
-    bool filterRecord(OperationManager::OperationRecord* record);
+        /**
+         * Returns true if the record should be filtered out.
+         * C# Reference: HistoryPage.FilterAction() line 224
+         */
+        bool filterRecord(OperationManager::OperationRecord* record);
 
-    /**
-     * Create a table row for the given record.
-     * C# Reference: HistoryPage.CreateActionRow() line 250
-     */
-    void createRecordRow(OperationManager::OperationRecord* record);
+        /**
+         * Create a table row for the given record.
+         * C# Reference: HistoryPage.CreateActionRow() line 250
+         */
+        void createRecordRow(OperationManager::OperationRecord* record);
 
-    /**
-     * Remove the row for the given record.
-     * C# Reference: HistoryPage.RemoveActionRow() line 268
-     */
-    void removeRecordRow(OperationManager::OperationRecord* record);
+        /**
+         * Remove the row for the given record.
+         * C# Reference: HistoryPage.RemoveActionRow() line 268
+         */
+        void removeRecordRow(OperationManager::OperationRecord* record);
 
-    /**
-     * Update the row for the given record.
-     * C# Reference: HistoryPage.action_Changed() line 122
-     */
-    void updateRecordRow(OperationManager::OperationRecord* record);
+        /**
+         * Update the row for the given record.
+         * C# Reference: HistoryPage.action_Changed() line 122
+         */
+        void updateRecordRow(OperationManager::OperationRecord* record);
 
-    /**
-     * Find the row corresponding to the given record.
-     * C# Reference: HistoryPage.FindRowFromAction() line 281
-     */
-    int findRowFromRecord(OperationManager::OperationRecord* record);
+        /**
+         * Find the row corresponding to the given record.
+         * C# Reference: HistoryPage.FindRowFromAction() line 281
+         */
+        int findRowFromRecord(OperationManager::OperationRecord* record);
 
-    /**
-     * Get status text for operation state.
-     */
-    QString getStatusText(AsyncOperation::OperationState state) const;
+        /**
+         * Get status text for operation state.
+         */
+        QString getStatusText(AsyncOperation::OperationState state) const;
 
-    /**
-     * Update button states based on selection.
-     * C# Reference: HistoryPage.UpdateButtons() line 292
-     */
-    void updateButtons();
+        /**
+         * Update button states based on selection.
+         * C# Reference: HistoryPage.UpdateButtons() line 292
+         */
+        void updateButtons();
 
-    /**
-     * Toggle the expanded/collapsed state of a row.
-     * C# Reference: HistoryPage.ToggleExpandedState() line 303
-     */
-    void toggleExpandedState(int row);
+        /**
+         * Toggle the expanded/collapsed state of a row.
+         * C# Reference: HistoryPage.ToggleExpandedState() line 303
+         */
+        void toggleExpandedState(int row);
 
-    QString buildRecordTitle(OperationManager::OperationRecord* record) const;
-    QString buildRecordDescription(OperationManager::OperationRecord* record) const;
-    QString buildRecordDetails(OperationManager::OperationRecord* record) const;
-    QString formatElapsedTime(OperationManager::OperationRecord* record) const;
+        QString buildRecordTitle(OperationManager::OperationRecord* record) const;
+        QString buildRecordDescription(OperationManager::OperationRecord* record) const;
+        QString buildRecordDetails(OperationManager::OperationRecord* record) const;
+        QString formatElapsedTime(OperationManager::OperationRecord* record) const;
 
-    // Slots for OperationManager events
-    void onOperationAdded(OperationManager::OperationRecord* record);
-    void onOperationUpdated(OperationManager::OperationRecord* record);
-    void onOperationRemoved(OperationManager::OperationRecord* record);
-    void onNewOperation(AsyncOperation* operation);
+        // Slots for OperationManager events
+        void onOperationAdded(OperationManager::OperationRecord* record);
+        void onOperationUpdated(OperationManager::OperationRecord* record);
+        void onOperationRemoved(OperationManager::OperationRecord* record);
+        void onNewOperation(AsyncOperation* operation);
 
-    // Filter state tracking
-    // C# Reference: HistoryPage has toolStripDdbFilterStatus, toolStripDdbFilterLocation, toolStripDdbFilterDates
-    QSet<AsyncOperation::OperationState> m_statusFilters;  // Which statuses to show
-    QStringList m_locationFilters;  // Which locations to show
-    QDateTime m_dateFilterFrom;     // Show operations after this date
-    QDateTime m_dateFilterTo;       // Show operations before this date
-    bool m_dateFilterEnabled = false;
+        // Filter state tracking
+        // C# Reference: HistoryPage has toolStripDdbFilterStatus, toolStripDdbFilterLocation, toolStripDdbFilterDates
+        QSet<AsyncOperation::OperationState> m_statusFilters;  // Which statuses to show
+        QStringList m_locationFilters;  // Which locations to show
+        QDateTime m_dateFilterFrom;     // Show operations after this date
+        QDateTime m_dateFilterTo;       // Show operations before this date
+        bool m_dateFilterEnabled = false;
 
-    // Row expanded state tracking
-    QSet<int> m_expandedRows;  // Set of row indices that are expanded
+        // Row expanded state tracking
+        QSet<int> m_expandedRows;  // Set of row indices that are expanded
 };
 
 #endif // EVENTSPAGE_H

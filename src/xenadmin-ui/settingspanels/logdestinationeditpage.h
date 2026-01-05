@@ -54,46 +54,46 @@ class LogDestinationEditPage : public IEditPage
 {
     Q_OBJECT
 
-public:
-    explicit LogDestinationEditPage(QWidget* parent = nullptr);
-    ~LogDestinationEditPage() override;
+    public:
+        explicit LogDestinationEditPage(QWidget* parent = nullptr);
+        ~LogDestinationEditPage() override;
 
-    // IVerticalTab interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
+        // IVerticalTab interface
+        QString GetText() const override;
+        QString GetSubText() const override;
+        QIcon GetImage() const override;
 
-    // IEditPage interface
-    void setXenObjects(const QString& objectRef,
-                       const QString& objectType,
-                       const QVariantMap& objectDataBefore,
-                       const QVariantMap& objectDataCopy) override;
-    AsyncOperation* saveSettings() override;
-    bool isValidToSave() const override;
-    void showLocalValidationMessages() override;
-    void hideLocalValidationMessages() override;
-    void cleanup() override;
-    bool hasChanged() const override;
+        // IEditPage interface
+        void SetXenObjects(const QString& objectRef,
+                           const QString& objectType,
+                           const QVariantMap& objectDataBefore,
+                           const QVariantMap& objectDataCopy) override;
+        AsyncOperation* SaveSettings() override;
+        bool IsValidToSave() const override;
+        void ShowLocalValidationMessages() override;
+        void HideLocalValidationMessages() override;
+        void Cleanup() override;
+        bool HasChanged() const override;
 
-protected:
-    bool eventFilter(QObject* obj, QEvent* event) override;
+    protected:
+        bool eventFilter(QObject* obj, QEvent* event) override;
 
-private slots:
-    void onCheckBoxRemoteToggled(bool checked);
-    void onServerTextChanged(const QString& text);
-    void onServerEditFocused();
+    private slots:
+        void onCheckBoxRemoteToggled(bool checked);
+        void onServerTextChanged(const QString& text);
+        void onServerEditFocused();
 
-private:
-    void repopulate();
-    void revalidate();
-    QString remoteServer() const;
+    private:
+        void repopulate();
+        void revalidate();
+        QString remoteServer() const;
 
-    Ui::LogDestinationEditPage* ui;
-    QString m_hostRef;
-    QVariantMap m_objectDataCopy; // Need this for modification
-    QString m_originalLocation;
-    bool m_validToSave;
-    QRegularExpression m_hostnameRegex;
+        Ui::LogDestinationEditPage* ui;
+        QString m_hostRef;
+        QVariantMap m_objectDataCopy; // Need this for modification
+        QString m_originalLocation;
+        bool m_validToSave;
+        QRegularExpression m_hostnameRegex;
 };
 
 #endif // LOGDESTINATIONEDITPAGE_H

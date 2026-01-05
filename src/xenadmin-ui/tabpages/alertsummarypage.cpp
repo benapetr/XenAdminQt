@@ -63,7 +63,7 @@ AlertSummaryPage::~AlertSummaryPage()
     delete this->ui;
 }
 
-bool AlertSummaryPage::filterIsOn() const
+bool AlertSummaryPage::GetFilterIsOn() const
 {
     // C# Reference: AlertSummaryPage.cs FilterAlert() line 283
     return !this->m_severityFilters.isEmpty() || 

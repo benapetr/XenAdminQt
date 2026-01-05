@@ -42,46 +42,46 @@ class MemoryBar : public QWidget
 {
     Q_OBJECT
 
-public:
-    struct Segment
-    {
-        QString name;
-        qint64 bytes;
-        QColor color;
-        QString tooltip;
-
-        Segment(const QString& n, qint64 b, const QColor& c, const QString& tt = QString())
-            : name(n), bytes(b), color(c), tooltip(tt)
+    public:
+        struct Segment
         {
-        }
-    };
+            QString name;
+            qint64 bytes;
+            QColor color;
+            QString tooltip;
 
-    explicit MemoryBar(QWidget* parent = nullptr);
+            Segment(const QString& n, qint64 b, const QColor& c, const QString& tt = QString())
+                : name(n), bytes(b), color(c), tooltip(tt)
+            {
+            }
+        };
 
-    void setTotalMemory(qint64 totalBytes);
-    void clearSegments();
-    void addSegment(const QString& name, qint64 bytes, const QColor& color, const QString& tooltip = QString());
+        explicit MemoryBar(QWidget* parent = nullptr);
 
-    QSize sizeHint() const override;
-    QSize minimumSizeHint() const override;
+        void setTotalMemory(qint64 totalBytes);
+        void clearSegments();
+        void addSegment(const QString& name, qint64 bytes, const QColor& color, const QString& tooltip = QString());
 
-protected:
-    void paintEvent(QPaintEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
-    bool event(QEvent* event) override;
+        QSize sizeHint() const override;
+        QSize minimumSizeHint() const override;
 
-private:
-    qint64 m_totalMemory;
-    QList<Segment> m_segments;
+    protected:
+        void paintEvent(QPaintEvent* event) override;
+        void mouseMoveEvent(QMouseEvent* event) override;
+        bool event(QEvent* event) override;
 
-    static constexpr int RADIUS = 5;
-    static constexpr int BAR_HEIGHT = 40;
-    static constexpr int TEXT_PAD = 3;
+    private:
+        qint64 m_totalMemory;
+        QList<Segment> m_segments;
 
-    void drawSegment(QPainter& painter, const QRect& barArea, const QRect& segmentRect,
-                     const QColor& color, const QString& text);
-    void drawGrid(QPainter& painter, const QRect& barArea);
-    QString formatMemorySize(qint64 bytes) const;
+        static constexpr int RADIUS = 5;
+        static constexpr int BAR_HEIGHT = 40;
+        static constexpr int TEXT_PAD = 3;
+
+        void drawSegment(QPainter& painter, const QRect& barArea, const QRect& segmentRect,
+                         const QColor& color, const QString& text);
+        void drawGrid(QPainter& painter, const QRect& barArea);
+        QString formatMemorySize(qint64 bytes) const;
 };
 
 #endif // MEMORYBAR_H

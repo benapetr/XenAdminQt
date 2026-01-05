@@ -65,34 +65,34 @@ class RotatePoolSecretCommand : public PoolCommand
 {
     Q_OBJECT
 
-public:
-    explicit RotatePoolSecretCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit RotatePoolSecretCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
-    QString getCantRunReason() const;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
+        QString GetCantRunReason() const;
 
-private:
-    /**
-     * @brief Check if any host in pool has rotation restriction
-     * @param poolRef Pool reference
-     * @return true if any host is restricted
-     */
-    bool hasRotationRestriction(const QString& poolRef, XenCache *cache) const;
+    private:
+        /**
+         * @brief Check if any host in pool has rotation restriction
+         * @param poolRef Pool reference
+         * @return true if any host is restricted
+         */
+        bool hasRotationRestriction(const QString& poolRef, XenCache *cache) const;
 
-    /**
-     * @brief Check if pool meets requirements for secret rotation
-     * @param poolData Pool data record
-     * @return true if rotation is allowed
-     */
-    bool canRotateSecret(const QVariantMap& poolData, XenCache *cache) const;
+        /**
+         * @brief Check if pool meets requirements for secret rotation
+         * @param poolData Pool data record
+         * @return true if rotation is allowed
+         */
+        bool canRotateSecret(const QVariantMap& poolData, XenCache *cache) const;
 
-    /**
-     * @brief Check if XenServer version supports secret rotation
-     * @return true if Stockholm or greater (8.0+)
-     */
-    bool isStockholmOrGreater(XenCache *cache) const;
+        /**
+         * @brief Check if XenServer version supports secret rotation
+         * @return true if Stockholm or greater (8.0+)
+         */
+        bool isStockholmOrGreater(XenCache *cache) const;
 };
 
 #endif // ROTATEPOOLSECRETCOMMAND_H

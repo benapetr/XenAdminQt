@@ -203,7 +203,7 @@ void DetachSRCommand::Run()
             false,
             this->mainWindow());
 
-        OperationManager::instance()->registerOperation(action);
+        OperationManager::instance()->RegisterOperation(action);
 
         QPointer<MainWindow> mainWindow = this->mainWindow();
         connect(action, &AsyncOperation::completed, mainWindow, [mainWindow, srName, action]() {
@@ -245,7 +245,7 @@ void DetachSRCommand::Run()
         false,
         false,
         this->mainWindow());
-    OperationManager::instance()->registerOperation(multi);
+    OperationManager::instance()->RegisterOperation(multi);
     connect(multi, &AsyncOperation::completed, multi, &QObject::deleteLater);
     connect(multi, &AsyncOperation::failed, multi, &QObject::deleteLater);
     multi->runAsync();

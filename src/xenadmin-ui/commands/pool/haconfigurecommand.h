@@ -34,18 +34,18 @@ class HAConfigureCommand : public PoolCommand
 {
     Q_OBJECT
 
-public:
-    explicit HAConfigureCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit HAConfigureCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
-private:
-    bool isPoolConnected() const;
-    bool hasCoordinator() const;
-    bool isPoolLocked() const;
+    private:
+        bool isPoolConnected() const;
+        bool hasCoordinator() const;
+        bool isPoolLocked() const;
 };
 
 #endif // HACONFIGURECOMMAND_H

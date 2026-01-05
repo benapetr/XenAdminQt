@@ -40,25 +40,25 @@ ConfirmationOptionsPage::~ConfirmationOptionsPage()
     delete this->ui;
 }
 
-QString ConfirmationOptionsPage::text() const
+QString ConfirmationOptionsPage::GetText() const
 {
     // Matches C# Messages.CONFIRMATIONS
     return tr("Confirmations");
 }
 
-QString ConfirmationOptionsPage::subText() const
+QString ConfirmationOptionsPage::GetSubText() const
 {
     // Matches C# Messages.CONFIRMATIONS_DETAIL
     return tr("Configure confirmation dialogs");
 }
 
-QIcon ConfirmationOptionsPage::image() const
+QIcon ConfirmationOptionsPage::GetImage() const
 {
     // Matches C# Images.StaticImages._075_TickRound_h32bit_16
     return QIcon(":/icons/tick_16.png");
 }
 
-void ConfirmationOptionsPage::build()
+void ConfirmationOptionsPage::Build()
 {
     // Matches C# ConfirmationOptionsPage.Build()
     SettingsManager& settings = SettingsManager::instance();
@@ -76,7 +76,7 @@ void ConfirmationOptionsPage::build()
         settings.getValue("Confirmation/IgnoreOvfValidationWarnings", false).toBool());
 }
 
-bool ConfirmationOptionsPage::isValidToSave(QWidget** control, QString& invalidReason)
+bool ConfirmationOptionsPage::IsValidToSave(QWidget** control, QString& invalidReason)
 {
     // Matches C# ConfirmationOptionsPage.IsValidToSave()
     // No validation needed
@@ -85,19 +85,19 @@ bool ConfirmationOptionsPage::isValidToSave(QWidget** control, QString& invalidR
     return true;
 }
 
-void ConfirmationOptionsPage::showValidationMessages(QWidget* control, const QString& message)
+void ConfirmationOptionsPage::ShowValidationMessages(QWidget* control, const QString& message)
 {
     // Matches C# ConfirmationOptionsPage.ShowValidationMessages()
     Q_UNUSED(control);
     Q_UNUSED(message);
 }
 
-void ConfirmationOptionsPage::hideValidationMessages()
+void ConfirmationOptionsPage::HideValidationMessages()
 {
     // Matches C# ConfirmationOptionsPage.HideValidationMessages()
 }
 
-void ConfirmationOptionsPage::save()
+void ConfirmationOptionsPage::Save()
 {
     // Matches C# ConfirmationOptionsPage.Save()
     SettingsManager& settings = SettingsManager::instance();

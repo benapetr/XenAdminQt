@@ -436,7 +436,7 @@ void EditVmHaPrioritiesDialog::accept()
         this);
 
     // Register with OperationManager
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     // Show progress dialog
     OperationProgressDialog* progressDialog = new OperationProgressDialog(action, this);

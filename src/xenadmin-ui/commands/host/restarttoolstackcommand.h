@@ -34,13 +34,13 @@ class RestartToolstackCommand : public HostCommand
 {
     Q_OBJECT
 
-public:
-    explicit RestartToolstackCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit RestartToolstackCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // RESTARTTOOLSTACKCOMMAND_H

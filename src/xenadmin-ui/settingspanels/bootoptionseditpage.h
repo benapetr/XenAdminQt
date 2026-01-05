@@ -52,47 +52,47 @@ class BootOptionsEditPage : public IEditPage
 {
     Q_OBJECT
 
-public:
-    explicit BootOptionsEditPage(QWidget* parent = nullptr);
-    ~BootOptionsEditPage() override;
+    public:
+        explicit BootOptionsEditPage(QWidget* parent = nullptr);
+        ~BootOptionsEditPage() override;
 
-    // IEditPage interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
+        // IEditPage interface
+        QString GetText() const override;
+        QString GetSubText() const override;
+        QIcon GetImage() const override;
 
-    void setXenObjects(const QString& objectRef,
-                       const QString& objectType,
-                       const QVariantMap& objectDataBefore,
-                       const QVariantMap& objectDataCopy) override;
+        void SetXenObjects(const QString& objectRef,
+                           const QString& objectType,
+                           const QVariantMap& objectDataBefore,
+                           const QVariantMap& objectDataCopy) override;
 
-    AsyncOperation* saveSettings() override;
-    bool isValidToSave() const override;
-    void showLocalValidationMessages() override;
-    void hideLocalValidationMessages() override;
-    void cleanup() override;
-    bool hasChanged() const override;
+        AsyncOperation* SaveSettings() override;
+        bool IsValidToSave() const override;
+        void ShowLocalValidationMessages() override;
+        void HideLocalValidationMessages() override;
+        void Cleanup() override;
+        bool HasChanged() const override;
 
-private slots:
-    void onMoveUpClicked();
-    void onMoveDownClicked();
-    void onSelectionChanged();
+    private slots:
+        void onMoveUpClicked();
+        void onMoveDownClicked();
+        void onSelectionChanged();
 
-private:
-    void populateBootOrder(const QString& bootOrder);
-    QString getBootOrder() const;
-    bool isHVM() const;
-    void updateButtonStates();
+    private:
+        void populateBootOrder(const QString& bootOrder);
+        QString getBootOrder() const;
+        bool isHVM() const;
+        void updateButtonStates();
 
-    Ui::BootOptionsEditPage* ui;
-    QString m_vmRef;
-    QVariantMap m_objectDataBefore;
-    QVariantMap m_objectDataCopy;
+        Ui::BootOptionsEditPage* ui;
+        QString m_vmRef;
+        QVariantMap m_objectDataBefore;
+        QVariantMap m_objectDataCopy;
 
-    // Original values
-    bool m_origAutoBoot;
-    QString m_origBootOrder;
-    QString m_origPVArgs;
+        // Original values
+        bool m_origAutoBoot;
+        QString m_origBootOrder;
+        QString m_origPVArgs;
 };
 
 #endif // BOOTOPTIONSEDITPAGE_H

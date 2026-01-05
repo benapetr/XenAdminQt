@@ -242,7 +242,7 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
         conn, this->m_vmUuid, name, description, actionType, screenshot, this->mainWindow());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, this, [this, action]() {

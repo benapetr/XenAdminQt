@@ -86,7 +86,7 @@ ContextMenuBuilder::ContextMenuBuilder(MainWindow* mainWindow, QObject* parent)
 {
 }
 
-QMenu* ContextMenuBuilder::buildContextMenu(QTreeWidgetItem* item, QWidget* parent)
+QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* parent)
 {
     if (!item)
         return nullptr;

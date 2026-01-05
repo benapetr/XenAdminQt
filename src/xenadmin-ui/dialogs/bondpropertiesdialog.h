@@ -43,26 +43,26 @@ class BondPropertiesDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    explicit BondPropertiesDialog(XenConnection* connection, const QString& hostRef, const QString& networkRef, QWidget* parent = nullptr);
-    ~BondPropertiesDialog();
+    public:
+        explicit BondPropertiesDialog(XenConnection* connection, const QString& hostRef, const QString& networkRef, QWidget* parent = nullptr);
+        ~BondPropertiesDialog();
 
-    QString getBondMode() const;
-    QString getMACAddress() const;
-    QStringList getSelectedPIFRefs() const;
+        QString getBondMode() const;
+        QString getMACAddress() const;
+        QStringList getSelectedPIFRefs() const;
 
-private slots:
-    void onSelectionChanged();
+    private slots:
+        void onSelectionChanged();
 
-private:
-    void loadAvailablePIFs();
-    void updateOkButtonState();
+    private:
+        void loadAvailablePIFs();
+        void updateOkButtonState();
 
-    Ui::BondPropertiesDialog* ui;
-    XenConnection* m_connection;
-    QString m_hostRef;
-    QString m_networkRef;
-    QMap<int, QString> m_rowToPIFRef;
+        Ui::BondPropertiesDialog* ui;
+        XenConnection* m_connection;
+        QString m_hostRef;
+        QString m_networkRef;
+        QMap<int, QString> m_rowToPIFRef;
 };
 
 #endif // BONDPROPERTIESDIALOG_H

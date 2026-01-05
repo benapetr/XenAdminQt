@@ -108,7 +108,7 @@ void HostMaintenanceModeCommand::Run()
             Host* host = new Host(conn, hostRef, this);
             EvacuateHostAction* action = new EvacuateHostAction(conn, host, nullptr, this);
 
-            OperationManager::instance()->registerOperation(action);
+            OperationManager::instance()->RegisterOperation(action);
 
             connect(action, &AsyncOperation::completed, this, [mw, hostName, action]() {
                 if (action->state() == AsyncOperation::Completed && !action->isFailed())
@@ -149,7 +149,7 @@ void HostMaintenanceModeCommand::Run()
             Host* host = new Host(conn, hostRef, this);
             EnableHostAction* action = new EnableHostAction(conn, host, false, this);
 
-            OperationManager::instance()->registerOperation(action);
+            OperationManager::instance()->RegisterOperation(action);
 
             connect(action, &AsyncOperation::completed, this, [mw, hostName, action]() {
                 if (action->state() == AsyncOperation::Completed && !action->isFailed())

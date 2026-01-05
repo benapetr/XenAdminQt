@@ -43,28 +43,28 @@ class VDICommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit VDICommand(MainWindow* mainWindow, QObject* parent = nullptr);
-    ~VDICommand() override = default;
+    public:
+        explicit VDICommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        ~VDICommand() override = default;
 
-protected:
-    /**
-     * @brief Get the currently selected VDI as a typed XenObject
-     * @return Shared pointer to VDI object, or nullptr if not a VDI
-     */
-    QSharedPointer<VDI> getVDI() const;
+    protected:
+        /**
+         * @brief Get the currently selected VDI as a typed XenObject
+         * @return Shared pointer to VDI object, or nullptr if not a VDI
+         */
+        QSharedPointer<VDI> getVDI() const;
 
-    /**
-     * @brief Get selected VDI opaque reference
-     * @return VDI reference or empty string
-     */
-    QString getSelectedVDIRef() const;
+        /**
+         * @brief Get selected VDI opaque reference
+         * @return VDI reference or empty string
+         */
+        QString getSelectedVDIRef() const;
 
-    /**
-     * @brief Get selected VDI name
-     * @return VDI name label or empty string
-     */
-    QString getSelectedVDIName() const;
+        /**
+         * @brief Get selected VDI name
+         * @return VDI name label or empty string
+         */
+        QString getSelectedVDIName() const;
 };
 
 #endif // VDICOMMAND_H

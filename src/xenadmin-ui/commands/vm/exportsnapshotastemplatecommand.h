@@ -56,10 +56,7 @@ class ExportSnapshotAsTemplateCommand : public Command
          * @param parent Parent QObject
          */
         explicit ExportSnapshotAsTemplateCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit ExportSnapshotAsTemplateCommand(const QString& snapshotRef,
-                                                 XenConnection* connection,
-                                                 MainWindow* mainWindow,
-                                                 QObject* parent = nullptr);
+        explicit ExportSnapshotAsTemplateCommand(const QString& snapshotRef, XenConnection* connection, MainWindow* mainWindow, QObject* parent = nullptr);
 
         /**
          * @brief Check if command can run with current selection

@@ -59,63 +59,63 @@ class HostPowerONEditPage : public IEditPage
 {
     Q_OBJECT
 
-public:
-    explicit HostPowerONEditPage(QWidget *parent = nullptr);
-    ~HostPowerONEditPage() override;
+    public:
+        explicit HostPowerONEditPage(QWidget *parent = nullptr);
+        ~HostPowerONEditPage() override;
 
-    // IEditPage interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
-    void setXenObjects(const QString& objectRef,
-                      const QString& objectType,
-                      const QVariantMap& objectDataBefore,
-                      const QVariantMap& objectDataCopy) override;
-    AsyncOperation* saveSettings() override;
-    bool hasChanged() const override;
-    bool isValidToSave() const override;
-    void cleanup() override;
-    
-    // IEditPage pure virtual methods
-    void showLocalValidationMessages() override;
-    void hideLocalValidationMessages() override;
+        // IEditPage interface
+        QString GetText() const override;
+        QString GetSubText() const override;
+        QIcon GetImage() const override;
+        void SetXenObjects(const QString& objectRef,
+                          const QString& objectType,
+                          const QVariantMap& objectDataBefore,
+                          const QVariantMap& objectDataCopy) override;
+        AsyncOperation* SaveSettings() override;
+        bool HasChanged() const override;
+        bool IsValidToSave() const override;
+        void Cleanup() override;
 
-signals:
-    void populated();
+        // IEditPage pure virtual methods
+        void ShowLocalValidationMessages() override;
+        void HideLocalValidationMessages() override;
 
-private slots:
-    void onRadioDisabledToggled(bool checked);
-    void onRadioWakeOnLANToggled(bool checked);
-    void onRadioILOToggled(bool checked);
-    void onRadioDRACToggled(bool checked);
-    void onRadioCustomToggled(bool checked);
-    void onTextInterfaceChanged(const QString& text);
-    void onTextUserChanged(const QString& text);
-    void onTextPasswordChanged(const QString& text);
-    void onTextCustomModeChanged(const QString& text);
-    void onCustomParamsCellChanged(int row, int column);
+    signals:
+        void populated();
 
-private:
-    void updateModeFromCredentials();
-    void updateModeFromCustom();
-    bool hasHostChanged(const PowerOnMode& originalMode, const PowerOnMode& currentMode) const;
-    void updateUIForMode(PowerOnMode::Type type);
+    private slots:
+        void onRadioDisabledToggled(bool checked);
+        void onRadioWakeOnLANToggled(bool checked);
+        void onRadioILOToggled(bool checked);
+        void onRadioDRACToggled(bool checked);
+        void onRadioCustomToggled(bool checked);
+        void onTextInterfaceChanged(const QString& text);
+        void onTextUserChanged(const QString& text);
+        void onTextPasswordChanged(const QString& text);
+        void onTextCustomModeChanged(const QString& text);
+        void onCustomParamsCellChanged(int row, int column);
 
-    Ui::HostPowerONEditPage *ui;
-    
-    QString m_hostRef;
-    QVariantMap m_objectDataBefore;
-    QVariantMap m_objectDataCopy;
-    
-    PowerOnMode m_currentMode;
-    PowerOnMode m_originalMode;
-    
-    bool m_programmaticUpdate;
-    bool m_loaded;
-    
-    // Validation
-    QString m_validationMessage;
-    QWidget* m_validationWidget;
+    private:
+        void updateModeFromCredentials();
+        void updateModeFromCustom();
+        bool hasHostChanged(const PowerOnMode& originalMode, const PowerOnMode& currentMode) const;
+        void updateUIForMode(PowerOnMode::Type type);
+
+        Ui::HostPowerONEditPage *ui;
+
+        QString m_hostRef;
+        QVariantMap m_objectDataBefore;
+        QVariantMap m_objectDataCopy;
+
+        PowerOnMode m_currentMode;
+        PowerOnMode m_originalMode;
+
+        bool m_programmaticUpdate;
+        bool m_loaded;
+
+        // Validation
+        QString m_validationMessage;
+        QWidget* m_validationWidget;
 };
 
 #endif // HOSTPOWERONEDITPAGE_H

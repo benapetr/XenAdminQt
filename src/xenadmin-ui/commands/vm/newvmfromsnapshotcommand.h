@@ -43,10 +43,7 @@ class NewVMFromSnapshotCommand : public Command
 
     public:
         explicit NewVMFromSnapshotCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit NewVMFromSnapshotCommand(const QString& snapshotRef,
-                                          XenConnection* connection,
-                                          MainWindow* mainWindow,
-                                          QObject* parent = nullptr);
+        explicit NewVMFromSnapshotCommand(const QString& snapshotRef, XenConnection* connection, MainWindow* mainWindow, QObject* parent = nullptr);
 
         bool CanRun() const override;
         void Run() override;

@@ -40,15 +40,15 @@
  */
 class INavigationItem
 {
-public:
-    virtual ~INavigationItem() = default;
+    public:
+        virtual ~INavigationItem() = default;
 
-    virtual void setPairedItem(INavigationItem* item) = 0;
-    virtual INavigationItem* pairedItem() const = 0;
-    virtual void setChecked(bool checked) = 0;
-    virtual bool isChecked() const = 0;
-    virtual void setTag(QVariant tag) = 0;
-    virtual QVariant tag() const = 0;
+        virtual void setPairedItem(INavigationItem* item) = 0;
+        virtual INavigationItem* pairedItem() const = 0;
+        virtual void setChecked(bool checked) = 0;
+        virtual bool isChecked() const = 0;
+        virtual void setTag(QVariant tag) = 0;
+        virtual QVariant tag() const = 0;
 };
 
 /**
@@ -61,41 +61,41 @@ class NavigationButtonBig : public QToolButton, public INavigationItem
 {
     Q_OBJECT
 
-public:
-    explicit NavigationButtonBig(QWidget* parent = nullptr);
+    public:
+        explicit NavigationButtonBig(QWidget* parent = nullptr);
 
-    // INavigationItem interface
-    void setPairedItem(INavigationItem* item) override
-    {
-        m_pairedItem = item;
-    }
-    INavigationItem* pairedItem() const override
-    {
-        return m_pairedItem;
-    }
-    void setChecked(bool checked) override;
-    bool isChecked() const override
-    {
-        return QToolButton::isChecked();
-    }
-    void setTag(QVariant tag) override
-    {
-        m_tag = tag;
-    }
-    QVariant tag() const override
-    {
-        return m_tag;
-    }
+        // INavigationItem interface
+        void setPairedItem(INavigationItem* item) override
+        {
+            m_pairedItem = item;
+        }
+        INavigationItem* pairedItem() const override
+        {
+            return m_pairedItem;
+        }
+        void setChecked(bool checked) override;
+        bool isChecked() const override
+        {
+            return QToolButton::isChecked();
+        }
+        void setTag(QVariant tag) override
+        {
+            m_tag = tag;
+        }
+        QVariant tag() const override
+        {
+            return m_tag;
+        }
 
-signals:
-    void navigationViewChanged();
+    signals:
+        void navigationViewChanged();
 
-protected:
-    void checkStateChanged();
+    protected:
+        void checkStateChanged();
 
-private:
-    INavigationItem* m_pairedItem;
-    QVariant m_tag;
+    private:
+        INavigationItem* m_pairedItem;
+        QVariant m_tag;
 };
 
 /**
@@ -108,41 +108,41 @@ class NavigationButtonSmall : public QToolButton, public INavigationItem
 {
     Q_OBJECT
 
-public:
-    explicit NavigationButtonSmall(QWidget* parent = nullptr);
+    public:
+        explicit NavigationButtonSmall(QWidget* parent = nullptr);
 
-    // INavigationItem interface
-    void setPairedItem(INavigationItem* item) override
-    {
-        m_pairedItem = item;
-    }
-    INavigationItem* pairedItem() const override
-    {
-        return m_pairedItem;
-    }
-    void setChecked(bool checked) override;
-    bool isChecked() const override
-    {
-        return QToolButton::isChecked();
-    }
-    void setTag(QVariant tag) override
-    {
-        m_tag = tag;
-    }
-    QVariant tag() const override
-    {
-        return m_tag;
-    }
+        // INavigationItem interface
+        void setPairedItem(INavigationItem* item) override
+        {
+            m_pairedItem = item;
+        }
+        INavigationItem* pairedItem() const override
+        {
+            return m_pairedItem;
+        }
+        void setChecked(bool checked) override;
+        bool isChecked() const override
+        {
+            return QToolButton::isChecked();
+        }
+        void setTag(QVariant tag) override
+        {
+            m_tag = tag;
+        }
+        QVariant tag() const override
+        {
+            return m_tag;
+        }
 
-signals:
-    void navigationViewChanged();
+    signals:
+        void navigationViewChanged();
 
-protected:
-    void checkStateChanged();
+    protected:
+        void checkStateChanged();
 
-private:
-    INavigationItem* m_pairedItem;
-    QVariant m_tag;
+    private:
+        INavigationItem* m_pairedItem;
+        QVariant m_tag;
 };
 
 /**
@@ -155,17 +155,17 @@ class NavigationDropDownButtonBig : public NavigationButtonBig
 {
     Q_OBJECT
 
-public:
-    explicit NavigationDropDownButtonBig(QWidget* parent = nullptr);
+    public:
+        explicit NavigationDropDownButtonBig(QWidget* parent = nullptr);
 
-    void setItemList(const QList<QAction*>& items);
-    QMenu* dropDownMenu() const
-    {
-        return m_menu;
-    }
+        void setItemList(const QList<QAction*>& items);
+        QMenu* dropDownMenu() const
+        {
+            return m_menu;
+        }
 
-private:
-    QMenu* m_menu;
+    private:
+        QMenu* m_menu;
 };
 
 /**
@@ -178,17 +178,17 @@ class NavigationDropDownButtonSmall : public NavigationButtonSmall
 {
     Q_OBJECT
 
-public:
-    explicit NavigationDropDownButtonSmall(QWidget* parent = nullptr);
+    public:
+        explicit NavigationDropDownButtonSmall(QWidget* parent = nullptr);
 
-    void setItemList(const QList<QAction*>& items);
-    QMenu* dropDownMenu() const
-    {
-        return m_menu;
-    }
+        void setItemList(const QList<QAction*>& items);
+        QMenu* dropDownMenu() const
+        {
+            return m_menu;
+        }
 
-private:
-    QMenu* m_menu;
+    private:
+        QMenu* m_menu;
 };
 
 /**
@@ -201,20 +201,20 @@ class NotificationButtonBig : public NavigationButtonBig
 {
     Q_OBJECT
 
-public:
-    explicit NotificationButtonBig(QWidget* parent = nullptr);
+    public:
+        explicit NotificationButtonBig(QWidget* parent = nullptr);
 
-    void setUnreadEntries(int count);
-    int unreadEntries() const
-    {
-        return m_unreadCount;
-    }
+        void setUnreadEntries(int count);
+        int unreadEntries() const
+        {
+            return m_unreadCount;
+        }
 
-protected:
-    void paintEvent(QPaintEvent* event) override;
+    protected:
+        void paintEvent(QPaintEvent* event) override;
 
-private:
-    int m_unreadCount;
+    private:
+        int m_unreadCount;
 };
 
 /**
@@ -227,20 +227,20 @@ class NotificationButtonSmall : public NavigationButtonSmall
 {
     Q_OBJECT
 
-public:
-    explicit NotificationButtonSmall(QWidget* parent = nullptr);
+    public:
+        explicit NotificationButtonSmall(QWidget* parent = nullptr);
 
-    void setUnreadEntries(int count);
-    int unreadEntries() const
-    {
-        return m_unreadCount;
-    }
+        void setUnreadEntries(int count);
+        int unreadEntries() const
+        {
+            return m_unreadCount;
+        }
 
-protected:
-    void paintEvent(QPaintEvent* event) override;
+    protected:
+        void paintEvent(QPaintEvent* event) override;
 
-private:
-    int m_unreadCount;
+    private:
+        int m_unreadCount;
 };
 
 #endif // NAVIGATIONBUTTONS_H

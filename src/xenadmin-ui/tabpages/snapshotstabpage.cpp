@@ -430,7 +430,7 @@ void SnapshotsTabPage::onDeleteSnapshot()
     for (const QString& ref : snapshotRefs)
     {
         VMSnapshotDeleteAction* action = new VMSnapshotDeleteAction(this->m_connection, ref, this);
-        OperationManager::instance()->registerOperation(action);
+        OperationManager::instance()->RegisterOperation(action);
         connect(action, &AsyncOperation::completed, action, &QObject::deleteLater);
         action->runAsync();
     }
@@ -880,7 +880,7 @@ void SnapshotsTabPage::updateSpinningIcon()
     bool spinning = false;
     QString message;
 
-    const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->records();
+    const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->GetRecords();
     for (OperationManager::OperationRecord* record : records)
     {
         if (!record || !record->operation)

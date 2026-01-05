@@ -43,24 +43,24 @@ PoolAdvancedEditPage::~PoolAdvancedEditPage()
     delete this->ui;
 }
 
-QString PoolAdvancedEditPage::text() const
+QString PoolAdvancedEditPage::GetText() const
 {
     return tr("Advanced Options");
 }
 
-QString PoolAdvancedEditPage::subText() const
+QString PoolAdvancedEditPage::GetSubText() const
 {
     return this->ui->checkBoxCompression->isChecked() 
         ? tr("Migration compression enabled") 
         : tr("Migration compression disabled");
 }
 
-QIcon PoolAdvancedEditPage::image() const
+QIcon PoolAdvancedEditPage::GetImage() const
 {
     return QIcon(":/icons/configure_16.png");
 }
 
-void PoolAdvancedEditPage::setXenObjects(const QString& objectRef,
+void PoolAdvancedEditPage::SetXenObjects(const QString& objectRef,
                                          const QString& objectType,
                                          const QVariantMap& objectDataBefore,
                                          const QVariantMap& objectDataCopy)
@@ -102,7 +102,7 @@ void PoolAdvancedEditPage::setXenObjects(const QString& objectRef,
     this->ui->checkBoxCompression->setChecked(compressionEnabled);
 }
 
-AsyncOperation* PoolAdvancedEditPage::saveSettings()
+AsyncOperation* PoolAdvancedEditPage::SaveSettings()
 {
     bool newValue = this->ui->checkBoxCompression->isChecked();
     
@@ -117,29 +117,29 @@ AsyncOperation* PoolAdvancedEditPage::saveSettings()
     );
 }
 
-bool PoolAdvancedEditPage::hasChanged() const
+bool PoolAdvancedEditPage::HasChanged() const
 {
     bool original = this->m_objectDataBefore_.value("migration_compression", false).toBool();
     bool current = this->ui->checkBoxCompression->isChecked();
     return original != current;
 }
 
-bool PoolAdvancedEditPage::isValidToSave() const
+bool PoolAdvancedEditPage::IsValidToSave() const
 {
     return true;
 }
 
-void PoolAdvancedEditPage::showLocalValidationMessages()
+void PoolAdvancedEditPage::ShowLocalValidationMessages()
 {
     // No validation needed
 }
 
-void PoolAdvancedEditPage::hideLocalValidationMessages()
+void PoolAdvancedEditPage::HideLocalValidationMessages()
 {
     // No validation needed
 }
 
-void PoolAdvancedEditPage::cleanup()
+void PoolAdvancedEditPage::Cleanup()
 {
     // Nothing to clean up
 }

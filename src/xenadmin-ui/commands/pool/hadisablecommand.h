@@ -34,17 +34,17 @@ class HADisableCommand : public PoolCommand
 {
     Q_OBJECT
 
-public:
-    explicit HADisableCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit HADisableCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
-private:
-    bool isPoolConnected() const;
-    bool isHAEnabled() const;
+    private:
+        bool isPoolConnected() const;
+        bool isHAEnabled() const;
 };
 
 #endif // HADISABLECOMMAND_H

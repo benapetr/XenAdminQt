@@ -55,21 +55,21 @@ class LivePatchingEditPage : public IEditPage
         ~LivePatchingEditPage() override;
 
         // IEditPage interface
-        QString text() const override;
-        QString subText() const override;
-        QIcon image() const override;
+        QString GetText() const override;
+        QString GetSubText() const override;
+        QIcon GetImage() const override;
 
-        void setXenObjects(const QString& objectRef,
+        void SetXenObjects(const QString& objectRef,
                         const QString& objectType,
                         const QVariantMap& objectDataBefore,
                         const QVariantMap& objectDataCopy) override;
 
-        AsyncOperation* saveSettings() override;
-        bool hasChanged() const override;
-        bool isValidToSave() const override;
-        void showLocalValidationMessages() override;
-        void hideLocalValidationMessages() override;
-        void cleanup() override;
+        AsyncOperation* SaveSettings() override;
+        bool HasChanged() const override;
+        bool IsValidToSave() const override;
+        void ShowLocalValidationMessages() override;
+        void HideLocalValidationMessages() override;
+        void Cleanup() override;
 
     private:
         Ui::LivePatchingEditPage* ui;

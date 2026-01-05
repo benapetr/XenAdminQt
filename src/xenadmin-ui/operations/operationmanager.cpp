@@ -42,7 +42,7 @@ OperationManager::OperationManager(QObject* parent)
 {
     // Connect rehydration manager's meddlingOperationCreated signal
     connect(m_rehydrationManager, &MeddlingActionManager::meddlingOperationCreated,
-            this, &OperationManager::registerOperation);
+            this, &OperationManager::RegisterOperation);
 }
 
 OperationManager* OperationManager::instance()
@@ -63,17 +63,17 @@ OperationManager::~OperationManager()
     m_lookup.clear();
 }
 
-const QList<OperationManager::OperationRecord*>& OperationManager::records() const
+const QList<OperationManager::OperationRecord*>& OperationManager::GetRecords() const
 {
     return m_records;
 }
 
-MeddlingActionManager* OperationManager::meddlingActionManager() const
+MeddlingActionManager* OperationManager::GetMeddlingActionManager() const
 {
     return m_rehydrationManager;
 }
 
-void OperationManager::registerOperation(AsyncOperation* operation)
+void OperationManager::RegisterOperation(AsyncOperation* operation)
 {
     if (!operation || m_lookup.contains(operation))
         return;
@@ -194,7 +194,7 @@ void OperationManager::updateRecordError(OperationRecord* record, const QString&
     emit recordUpdated(record);
 }
 
-void OperationManager::removeRecord(OperationRecord* record)
+void OperationManager::RemoveRecord(OperationRecord* record)
 {
     // C# Equivalent: ConnectionsManager.History.Remove()
     if (!record)
@@ -214,18 +214,18 @@ void OperationManager::removeRecord(OperationRecord* record)
     delete record;
 }
 
-void OperationManager::removeRecords(const QList<OperationRecord*>& records)
+void OperationManager::RemoveRecords(const QList<OperationRecord*>& records)
 {
     // C# Equivalent: ConnectionsManager.History.RemoveAll()
     for (auto* record : records)
     {
-        this->removeRecord(record);
+        this->RemoveRecord(record);
     }
 }
 
 // Cleanup for shutdown - removes UUIDs from all task.other_config
 // Matches C# MainWindow.OnClosing() calling PrepareForEventReloadAfterRestart()
-void OperationManager::prepareAllOperationsForRestart()
+void OperationManager::PrepareAllOperationsForRestart()
 {
     qDebug() << "OperationManager::prepareAllOperationsForRestart: Cleaning up" << m_records.count() << "operations";
 

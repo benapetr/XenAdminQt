@@ -46,33 +46,33 @@ class MemoryTabPage : public BaseTabPage
 {
     Q_OBJECT
 
-public:
-    explicit MemoryTabPage(QWidget* parent = nullptr);
-    ~MemoryTabPage();
+    public:
+        explicit MemoryTabPage(QWidget* parent = nullptr);
+        ~MemoryTabPage();
 
-    QString GetTitle() const override
-    {
-        return "Memory";
-    }
-    QString HelpID() const override
-    {
-        return "TabPageBallooning";
-    }
-    bool IsApplicableForObjectType(const QString& objectType) const override;
+        QString GetTitle() const override
+        {
+            return "Memory";
+        }
+        QString HelpID() const override
+        {
+            return "TabPageBallooning";
+        }
+        bool IsApplicableForObjectType(const QString& objectType) const override;
 
-protected:
-    void refreshContent() override;
+    protected:
+        void refreshContent() override;
 
-private slots:
-    void onEditButtonClicked();
+    private slots:
+        void onEditButtonClicked();
 
-private:
-    Ui::MemoryTabPage* ui;
+    private:
+        Ui::MemoryTabPage* ui;
 
-    void populateVMMemory();
-    void populateHostMemory();
-    QString formatMemorySize(qint64 bytes) const;
-    bool supportsBallooning() const;
+        void populateVMMemory();
+        void populateHostMemory();
+        QString formatMemorySize(qint64 bytes) const;
+        bool supportsBallooning() const;
 };
 
 #endif // MEMORYTABPAGE_H

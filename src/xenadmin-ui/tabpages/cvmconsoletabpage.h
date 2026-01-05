@@ -59,71 +59,71 @@ class CvmConsoleTabPage : public BaseTabPage
 {
     Q_OBJECT
 
-public:
-    explicit CvmConsoleTabPage(QWidget* parent = nullptr);
-    ~CvmConsoleTabPage() override;
+    public:
+        explicit CvmConsoleTabPage(QWidget* parent = nullptr);
+        ~CvmConsoleTabPage() override;
 
-    // ========== BaseTabPage Interface ==========
+        // ========== BaseTabPage Interface ==========
 
-    /**
-     * @brief Get user-visible tab label
-     * Reference: C# TabPageCvmConsole text property
-     */
-    QString GetTitle() const override
-    {
-        return tr("CVM Console");
-    }
+        /**
+         * @brief Get user-visible tab label
+         * Reference: C# TabPageCvmConsole text property
+         */
+        QString GetTitle() const override
+        {
+            return tr("CVM Console");
+        }
 
-    /**
-     * @brief Check if this tab is applicable for given object type
-     *
-     * CVM Console tab is shown for storage repositories that have
-     * a driver domain (HasDriverDomain == true).
-     *
-     * Reference: MainWindow.cs BuildTabList() line 1376
-     */
-    bool IsApplicableForObjectType(const QString& objectType) const override;
+        /**
+         * @brief Check if this tab is applicable for given object type
+         *
+         * CVM Console tab is shown for storage repositories that have
+         * a driver domain (HasDriverDomain == true).
+         *
+         * Reference: MainWindow.cs BuildTabList() line 1376
+         */
+        bool IsApplicableForObjectType(const QString& objectType) const override;
 
-    /**
-     * @brief Called when page is shown in tab widget
-     * Reference: C# TheTabControl_SelectedIndexChanged
-     */
-    void OnPageShown() override;
+        /**
+         * @brief Called when page is shown in tab widget
+         * Reference: C# TheTabControl_SelectedIndexChanged
+         */
+        void OnPageShown() override;
 
-    /**
-     * @brief Called when page is hidden (another tab selected)
-     */
-    void OnPageHidden() override;
+        /**
+         * @brief Called when page is hidden (another tab selected)
+         */
+        void OnPageHidden() override;
 
-    /**
-     * @brief Update page content when object data changes
-     */
-    void refreshContent() override;
+        /**
+         * @brief Update page content when object data changes
+         */
+        void refreshContent() override;
 
-    // ========== Console Panel Management ==========
+        // ========== Console Panel Management ==========
 
-    /**
-     * @brief Set the CvmConsolePanel widget to display
-     *
-     * This is called by MainWindow to inject the shared CvmConsolePanel instance.
-     * The panel is owned by MainWindow, not by this tab page.
-     *
-     * @param panel CvmConsolePanel instance (owned by MainWindow)
-     */
-    void setConsolePanel(ConsolePanel* panel);
+        /**
+         * @brief Set the CvmConsolePanel widget to display
+         *
+         * This is called by MainWindow to inject the shared CvmConsolePanel instance.
+         * The panel is owned by MainWindow, not by this tab page.
+         *
+         * @param panel CvmConsolePanel instance (owned by MainWindow)
+         */
+        void setConsolePanel(ConsolePanel* panel);
 
-    /**
-     * @brief Get current console panel
-     * @return CvmConsolePanel instance or nullptr
-     */
-    ConsolePanel* consolePanel() const
-    {
-        return m_consolePanel;
-    }
+        /**
+         * @brief Get current console panel
+         * @return CvmConsolePanel instance or nullptr
+         */
+        ConsolePanel* consolePanel() const
+        {
+            return m_consolePanel;
+        }
 
-private:
-    Ui::CvmConsoleTabPage* ui;
-    ConsolePanel* m_consolePanel; ///< CvmConsolePanel instance (not owned)
+    private:
+        Ui::CvmConsoleTabPage* ui;
+        ConsolePanel* m_consolePanel; ///< CvmConsolePanel instance (not owned)
 };
 
 #endif // CVMCONSOLETABPAGE_H

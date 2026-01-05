@@ -47,82 +47,82 @@ class ConsoleKeyHandler;
  */
 class IRemoteConsole
 {
-public:
-    virtual ~IRemoteConsole() = default;
+    public:
+        virtual ~IRemoteConsole() = default;
 
-    /**
-     * @brief Get the console key handler for managing keyboard shortcuts
-     */
-    virtual ConsoleKeyHandler* keyHandler() const = 0;
-    virtual void setKeyHandler(ConsoleKeyHandler* handler) = 0;
+        /**
+         * @brief Get the console key handler for managing keyboard shortcuts
+         */
+        virtual ConsoleKeyHandler* keyHandler() const = 0;
+        virtual void setKeyHandler(ConsoleKeyHandler* handler) = 0;
 
-    /**
-     * @brief Get the widget that displays the console
-     */
-    virtual QWidget* consoleControl() = 0;
+        /**
+         * @brief Get the widget that displays the console
+         */
+        virtual QWidget* consoleControl() = 0;
 
-    /**
-     * @brief Activate the console (focus and bring to front)
-     */
-    virtual void activate() = 0;
+        /**
+         * @brief Activate the console (focus and bring to front)
+         */
+        virtual void activate() = 0;
 
-    /**
-     * @brief Disconnect from the console and dispose resources
-     */
-    virtual void disconnectAndDispose() = 0;
+        /**
+         * @brief Disconnect from the console and dispose resources
+         */
+        virtual void disconnectAndDispose() = 0;
 
-    /**
-     * @brief Pause console updates (used when console is not visible)
-     */
-    virtual void pause() = 0;
+        /**
+         * @brief Pause console updates (used when console is not visible)
+         */
+        virtual void pause() = 0;
 
-    /**
-     * @brief Resume console updates
-     */
-    virtual void unpause() = 0;
+        /**
+         * @brief Resume console updates
+         */
+        virtual void unpause() = 0;
 
-    /**
-     * @brief Send Ctrl+Alt+Delete to the remote console
-     */
-    virtual void sendCAD() = 0;
+        /**
+         * @brief Send Ctrl+Alt+Delete to the remote console
+         */
+        virtual void sendCAD() = 0;
 
-    /**
-     * @brief Take a snapshot of the current console display
-     * @return QImage containing the snapshot
-     */
-    virtual QImage snapshot() = 0;
+        /**
+         * @brief Take a snapshot of the current console display
+         * @return QImage containing the snapshot
+         */
+        virtual QImage snapshot() = 0;
 
-    /**
-     * @brief Enable/disable scan code sending for keyboard input
-     * @param value true to send scan codes, false to send keysyms
-     */
-    virtual void setSendScanCodes(bool value) = 0;
+        /**
+         * @brief Enable/disable scan code sending for keyboard input
+         * @param value true to send scan codes, false to send keysyms
+         */
+        virtual void setSendScanCodes(bool value) = 0;
 
-    /**
-     * @brief Get/set scaling mode
-     * @param value true to scale console to fit window, false for 1:1 pixels
-     */
-    virtual bool scaling() const = 0;
-    virtual void setScaling(bool value) = 0;
+        /**
+         * @brief Get/set scaling mode
+         * @param value true to scale console to fit window, false for 1:1 pixels
+         */
+        virtual bool scaling() const = 0;
+        virtual void setScaling(bool value) = 0;
 
-    /**
-     * @brief Set whether to display border around console
-     * @param value true to show border, false to hide
-     */
-    virtual void setDisplayBorder(bool value) = 0;
+        /**
+         * @brief Set whether to display border around console
+         * @param value true to show border, false to hide
+         */
+        virtual void setDisplayBorder(bool value) = 0;
 
-    /**
-     * @brief Get/set the desktop size
-     * @return Size of the remote desktop in pixels
-     */
-    virtual QSize desktopSize() const = 0;
-    virtual void setDesktopSize(const QSize& size) = 0;
+        /**
+         * @brief Get/set the desktop size
+         * @return Size of the remote desktop in pixels
+         */
+        virtual QSize desktopSize() const = 0;
+        virtual void setDesktopSize(const QSize& size) = 0;
 
-    /**
-     * @brief Get the bounds of the console display area
-     * @return Rectangle containing console bounds
-     */
-    virtual QRect consoleBounds() const = 0;
+        /**
+         * @brief Get the bounds of the console display area
+         * @return Rectangle containing console bounds
+         */
+        virtual QRect consoleBounds() const = 0;
 };
 
 #endif // IREMOTECONSOLE_H

@@ -63,130 +63,130 @@ class ConsoleKeyHandler : public QObject
 {
     Q_OBJECT
 
-public:
-    // Scan code constants (match C# values)
-    static constexpr int CTRL_SCAN = 29;
-    static constexpr int ALT_SCAN = 56;
-    static constexpr int CTRL2_SCAN = 157;
-    static constexpr int ALT2_SCAN = 184;
-    static constexpr int GR_SCAN = 541;
-    static constexpr int DEL_SCAN = 211;
-    static constexpr int INS_SCAN = 210;
-    static constexpr int L_SHIFT_SCAN = 0x2A;
-    static constexpr int R_SHIFT_SCAN = 0x36;
-    static constexpr int F11_SCAN = 87;
-    static constexpr int F12_SCAN = 88;
-    static constexpr int F_SCAN = 33;
-    static constexpr int U_SCAN = 22;
-    static constexpr int ENTER_SCAN = 28;
+    public:
+        // Scan code constants (match C# values)
+        static constexpr int CTRL_SCAN = 29;
+        static constexpr int ALT_SCAN = 56;
+        static constexpr int CTRL2_SCAN = 157;
+        static constexpr int ALT2_SCAN = 184;
+        static constexpr int GR_SCAN = 541;
+        static constexpr int DEL_SCAN = 211;
+        static constexpr int INS_SCAN = 210;
+        static constexpr int L_SHIFT_SCAN = 0x2A;
+        static constexpr int R_SHIFT_SCAN = 0x36;
+        static constexpr int F11_SCAN = 87;
+        static constexpr int F12_SCAN = 88;
+        static constexpr int F_SCAN = 33;
+        static constexpr int U_SCAN = 22;
+        static constexpr int ENTER_SCAN = 28;
 
-    explicit ConsoleKeyHandler(QObject* parent = nullptr);
+        explicit ConsoleKeyHandler(QObject* parent = nullptr);
 
-    /**
-     * @brief Register a handler for a predefined shortcut key
-     * @param shortcutKey The shortcut key combination
-     * @param handler Function to call when shortcut is triggered
-     */
-    void addKeyHandler(ConsoleShortcutKey shortcutKey, std::function<void()> handler);
+        /**
+         * @brief Register a handler for a predefined shortcut key
+         * @param shortcutKey The shortcut key combination
+         * @param handler Function to call when shortcut is triggered
+         */
+        void addKeyHandler(ConsoleShortcutKey shortcutKey, std::function<void()> handler);
 
-    /**
-     * @brief Register a handler for a custom key list (Qt::Key codes)
-     * @param keyList List of Qt::Key codes that must be pressed together (order doesn't matter)
-     * @param handler Function to call when combination is triggered
-     */
-    void addKeyHandler(const QList<Qt::Key>& keyList, std::function<void()> handler);
+        /**
+         * @brief Register a handler for a custom key list (Qt::Key codes)
+         * @param keyList List of Qt::Key codes that must be pressed together (order doesn't matter)
+         * @param handler Function to call when combination is triggered
+         */
+        void addKeyHandler(const QList<Qt::Key>& keyList, std::function<void()> handler);
 
-    /**
-     * @brief Register a handler for a custom scan code list
-     * @param scanList List of scan codes that must be pressed together (order doesn't matter)
-     * @param handler Function to call when combination is triggered
-     */
-    void addKeyHandler(const QList<int>& scanList, std::function<void()> handler);
+        /**
+         * @brief Register a handler for a custom scan code list
+         * @param scanList List of scan codes that must be pressed together (order doesn't matter)
+         * @param handler Function to call when combination is triggered
+         */
+        void addKeyHandler(const QList<int>& scanList, std::function<void()> handler);
 
-    /**
-     * @brief Remove handler for a predefined shortcut key
-     */
-    void removeKeyHandler(ConsoleShortcutKey shortcutKey);
+        /**
+         * @brief Remove handler for a predefined shortcut key
+         */
+        void removeKeyHandler(ConsoleShortcutKey shortcutKey);
 
-    /**
-     * @brief Remove handler for a custom key list
-     */
-    void removeKeyHandler(const QList<Qt::Key>& keyList);
+        /**
+         * @brief Remove handler for a custom key list
+         */
+        void removeKeyHandler(const QList<Qt::Key>& keyList);
 
-    /**
-     * @brief Remove handler for a custom scan code list
-     */
-    void removeKeyHandler(const QList<int>& scanList);
+        /**
+         * @brief Remove handler for a custom scan code list
+         */
+        void removeKeyHandler(const QList<int>& scanList);
 
-    /**
-     * @brief Clear all registered key handlers
-     * Equivalent to C#: clearing all event subscriptions in Dispose()
-     */
-    void clearHandlers();
+        /**
+         * @brief Clear all registered key handlers
+         * Equivalent to C#: clearing all event subscriptions in Dispose()
+         */
+        void clearHandlers();
 
-    /**
-     * @brief Handle key press/release events (Qt::Key codes)
-     * @param key The Qt::Key code
-     * @param pressed true for press, false for release
-     * @return true if handled by a shortcut, false otherwise
-     */
-    bool handleKeyEvent(Qt::Key key, bool pressed);
+        /**
+         * @brief Handle key press/release events (Qt::Key codes)
+         * @param key The Qt::Key code
+         * @param pressed true for press, false for release
+         * @return true if handled by a shortcut, false otherwise
+         */
+        bool handleKeyEvent(Qt::Key key, bool pressed);
 
-    /**
-     * @brief Handle key press/release events (scan codes)
-     * @param scanCode The keyboard scan code
-     * @param pressed true for press, false for release
-     * @return true if handled by a shortcut, false otherwise
-     */
-    bool handleScanEvent(int scanCode, bool pressed);
+        /**
+         * @brief Handle key press/release events (scan codes)
+         * @param scanCode The keyboard scan code
+         * @param pressed true for press, false for release
+         * @return true if handled by a shortcut, false otherwise
+         */
+        bool handleScanEvent(int scanCode, bool pressed);
 
-    /**
-     * @brief Get list of modifier keys
-     */
-    const QList<Qt::Key>& modifierKeys() const
-    {
-        return m_modifierKeys;
-    }
+        /**
+         * @brief Get list of modifier keys
+         */
+        const QList<Qt::Key>& modifierKeys() const
+        {
+            return m_modifierKeys;
+        }
 
-    /**
-     * @brief Get list of modifier scan codes
-     */
-    const QList<int>& modifierScans() const
-    {
-        return m_modifierScans;
-    }
+        /**
+         * @brief Get list of modifier scan codes
+         */
+        const QList<int>& modifierScans() const
+        {
+            return m_modifierScans;
+        }
 
-private:
-    // Currently pressed keys (Qt::Key codes)
-    QSet<Qt::Key> m_depressedKeys;
+    private:
+        // Currently pressed keys (Qt::Key codes)
+        QSet<Qt::Key> m_depressedKeys;
 
-    // Currently pressed scan codes
-    QSet<int> m_depressedScans;
+        // Currently pressed scan codes
+        QSet<int> m_depressedScans;
 
-    // Registered key handlers (Qt::Key combinations) - use sorted QList for map keys
-    QMap<QList<Qt::Key>, std::function<void()>> m_extraKeys;
+        // Registered key handlers (Qt::Key combinations) - use sorted QList for map keys
+        QMap<QList<Qt::Key>, std::function<void()>> m_extraKeys;
 
-    // Registered scan code handlers - use sorted QList for map keys
-    QMap<QList<int>, std::function<void()>> m_extraScans;
+        // Registered scan code handlers - use sorted QList for map keys
+        QMap<QList<int>, std::function<void()>> m_extraScans;
 
-    // Modifier keys list
-    QList<Qt::Key> m_modifierKeys;
+        // Modifier keys list
+        QList<Qt::Key> m_modifierKeys;
 
-    // Modifier scan codes list
-    QList<int> m_modifierScans;
+        // Modifier scan codes list
+        QList<int> m_modifierScans;
 
-    // Flag to track if a modifier key was pressed alone
-    bool m_modifierKeyPressedAlone;
+        // Flag to track if a modifier key was pressed alone
+        bool m_modifierKeyPressedAlone;
 
-    /**
-     * @brief Generic handler for key/scan events
-     * @tparam T Either Qt::Key or int (for scan codes)
-     */
-    template <typename T>
-    bool handleExtras(bool pressed, QSet<T>& depressed,
-                      const QMap<QList<T>, std::function<void()>>& methods,
-                      T key, const QList<T>& modifierKeys,
-                      bool& modifierKeyPressedAlone);
+        /**
+         * @brief Generic handler for key/scan events
+         * @tparam T Either Qt::Key or int (for scan codes)
+         */
+        template <typename T>
+        bool handleExtras(bool pressed, QSet<T>& depressed,
+                          const QMap<QList<T>, std::function<void()>>& methods,
+                          T key, const QList<T>& modifierKeys,
+                          bool& modifierKeyPressedAlone);
 };
 
 #endif // CONSOLEKEYHANDLER_H

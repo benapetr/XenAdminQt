@@ -636,7 +636,7 @@ void VMStorageTabPage::onIsoComboBoxChanged(int index)
         this->m_currentVBDRef, // VBD ref
         this);
 
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     // Connect to completion signals
     connect(action, &AsyncOperation::completed, this, [this, action]() {

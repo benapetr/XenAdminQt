@@ -41,33 +41,33 @@ class ConnectionOptionsPage : public IOptionsPage
 {
     Q_OBJECT
 
-public:
-    explicit ConnectionOptionsPage(QWidget* parent = nullptr);
-    ~ConnectionOptionsPage();
+    public:
+        explicit ConnectionOptionsPage(QWidget* parent = nullptr);
+        ~ConnectionOptionsPage();
 
-    // IOptionsPage interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
-    void build() override;
-    bool isValidToSave(QWidget** control, QString& invalidReason) override;
-    void showValidationMessages(QWidget* control, const QString& message) override;
-    void hideValidationMessages() override;
-    void save() override;
+        // IOptionsPage interface
+        QString GetText() const override;
+        QString GetSubText() const override;
+        QIcon GetImage() const override;
+        void Build() override;
+        bool IsValidToSave(QWidget** control, QString& invalidReason) override;
+        void ShowValidationMessages(QWidget* control, const QString& message) override;
+        void HideValidationMessages() override;
+        void Save() override;
 
-private slots:
-    void onProxySettingChanged();
-    void onAuthenticationCheckBoxChanged(bool checked);
-    void onProxyFieldChanged();
+    private slots:
+        void onProxySettingChanged();
+        void onAuthenticationCheckBoxChanged(bool checked);
+        void onProxyFieldChanged();
 
-private:
-    Ui::ConnectionOptionsPage* ui;
-    QWidget* invalidControl;
-    bool eventsDisabled;
+    private:
+        Ui::ConnectionOptionsPage* ui;
+        QWidget* invalidControl;
+        bool eventsDisabled;
 
-    void selectUseThisProxyServer();
-    void selectProvideCredentials();
-    void updateControlStates();
+        void selectUseThisProxyServer();
+        void selectProvideCredentials();
+        void updateControlStates();
 };
 
 #endif // CONNECTIONOPTIONSPAGE_H

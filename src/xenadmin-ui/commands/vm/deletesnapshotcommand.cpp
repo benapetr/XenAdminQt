@@ -201,7 +201,7 @@ void DeleteSnapshotCommand::deleteSnapshot()
     VMSnapshotDeleteAction* action = new VMSnapshotDeleteAction(conn, this->m_snapshotUuid, this->mainWindow());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, this, [this, action]() {

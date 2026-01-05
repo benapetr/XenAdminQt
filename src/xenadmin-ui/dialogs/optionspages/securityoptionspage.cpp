@@ -40,25 +40,25 @@ SecurityOptionsPage::~SecurityOptionsPage()
     delete this->ui;
 }
 
-QString SecurityOptionsPage::text() const
+QString SecurityOptionsPage::GetText() const
 {
     // Matches C# Messages.SECURITY
     return tr("Security");
 }
 
-QString SecurityOptionsPage::subText() const
+QString SecurityOptionsPage::GetSubText() const
 {
     // Matches C# Messages.SECURITY_DESC
     return tr("Configure security settings");
 }
 
-QIcon SecurityOptionsPage::image() const
+QIcon SecurityOptionsPage::GetImage() const
 {
     // Matches C# Images.StaticImages.padlock
     return QIcon(":/icons/padlock.png");
 }
 
-void SecurityOptionsPage::build()
+void SecurityOptionsPage::Build()
 {
     // Matches C# SecurityOptionsPage.Build()
     // Load settings from SettingsManager
@@ -77,7 +77,7 @@ void SecurityOptionsPage::build()
         settings.getValue("Security/RemindChangePassword", false).toBool());
 }
 
-bool SecurityOptionsPage::isValidToSave(QWidget** control, QString& invalidReason)
+bool SecurityOptionsPage::IsValidToSave(QWidget** control, QString& invalidReason)
 {
     // Matches C# SecurityOptionsPage.IsValidToSave()
     // This page has no validation requirements
@@ -86,7 +86,7 @@ bool SecurityOptionsPage::isValidToSave(QWidget** control, QString& invalidReaso
     return true;
 }
 
-void SecurityOptionsPage::showValidationMessages(QWidget* control, const QString& message)
+void SecurityOptionsPage::ShowValidationMessages(QWidget* control, const QString& message)
 {
     // Matches C# SecurityOptionsPage.ShowValidationMessages()
     // This page doesn't show validation messages (no validation needed)
@@ -94,13 +94,13 @@ void SecurityOptionsPage::showValidationMessages(QWidget* control, const QString
     Q_UNUSED(message);
 }
 
-void SecurityOptionsPage::hideValidationMessages()
+void SecurityOptionsPage::HideValidationMessages()
 {
     // Matches C# SecurityOptionsPage.HideValidationMessages()
     // Nothing to hide for this page
 }
 
-void SecurityOptionsPage::save()
+void SecurityOptionsPage::Save()
 {
     // Matches C# SecurityOptionsPage.Save()
     SettingsManager& settings = SettingsManager::instance();

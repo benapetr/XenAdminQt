@@ -48,62 +48,62 @@ class DestroyBondCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit DestroyBondCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit DestroyBondCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
-private:
-    /**
-     * @brief Get selected network reference
-     * @return Network opaque reference or empty string
-     */
-    QString getSelectedNetworkRef() const;
+    private:
+        /**
+         * @brief Get selected network reference
+         * @return Network opaque reference or empty string
+         */
+        QString getSelectedNetworkRef() const;
 
-    /**
-     * @brief Get selected network data
-     * @return Network data from cache
-     */
-    QVariantMap getSelectedNetworkData() const;
+        /**
+         * @brief Get selected network data
+         * @return Network data from cache
+         */
+        QVariantMap getSelectedNetworkData() const;
 
-    /**
-     * @brief Check if network is a bond
-     * @param networkData Network data from cache
-     * @return true if network has a bond
-     */
-    bool isNetworkABond(const QVariantMap& networkData) const;
+        /**
+         * @brief Check if network is a bond
+         * @param networkData Network data from cache
+         * @return true if network has a bond
+         */
+        bool isNetworkABond(const QVariantMap& networkData) const;
 
-    /**
-     * @brief Get bond reference from network
-     * @param networkData Network data from cache
-     * @return Bond opaque reference or empty string
-     */
-    QString getBondRefFromNetwork(const QVariantMap& networkData) const;
+        /**
+         * @brief Get bond reference from network
+         * @param networkData Network data from cache
+         * @return Bond opaque reference or empty string
+         */
+        QString getBondRefFromNetwork(const QVariantMap& networkData) const;
 
-    /**
-     * @brief Check if bond affects management interfaces
-     * @param networkData Network data from cache
-     * @param affectsPrimary Output: true if affects primary management
-     * @param affectsSecondary Output: true if affects secondary management
-     */
-    void checkManagementImpact(const QVariantMap& networkData,
-                               bool& affectsPrimary,
-                               bool& affectsSecondary) const;
+        /**
+         * @brief Check if bond affects management interfaces
+         * @param networkData Network data from cache
+         * @param affectsPrimary Output: true if affects primary management
+         * @param affectsSecondary Output: true if affects secondary management
+         */
+        void checkManagementImpact(const QVariantMap& networkData,
+                                   bool& affectsPrimary,
+                                   bool& affectsSecondary) const;
 
-    /**
-     * @brief Check if pool has HA enabled
-     * @return true if HA is enabled
-     */
-    bool isHAEnabled() const;
+        /**
+         * @brief Check if pool has HA enabled
+         * @return true if HA is enabled
+         */
+        bool isHAEnabled() const;
 
-    /**
-     * @brief Get bond name for display
-     * @param networkData Network data from cache
-     * @return Bond name (typically PIF device name)
-     */
-    QString getBondName(const QVariantMap& networkData) const;
+        /**
+         * @brief Get bond name for display
+         * @param networkData Network data from cache
+         * @return Bond name (typically PIF device name)
+         */
+        QString getBondName(const QVariantMap& networkData) const;
 };
 
 #endif // DESTROYBONDCOMMAND_H

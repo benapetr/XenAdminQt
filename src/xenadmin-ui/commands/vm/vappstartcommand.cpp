@@ -152,7 +152,7 @@ void VappStartCommand::Run()
     StartApplianceAction* action = new StartApplianceAction(conn, applianceRef, this->mainWindow());
 
     // Register with OperationManager for history tracking
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and feedback
     connect(action, &AsyncOperation::completed, this, [=]() {

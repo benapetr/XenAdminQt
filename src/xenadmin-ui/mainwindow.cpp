@@ -225,7 +225,7 @@ MainWindow::MainWindow(QWidget* parent)
     // Connect to OperationManager for progress tracking (matches C# History_CollectionChanged)
     connect(OperationManager::instance(), &OperationManager::newOperation, this, &MainWindow::onNewOperation);
 
-    this->m_titleBar->clear(); // Start with empty title
+    this->m_titleBar->Clear(); // Start with empty title
 
     // Wire UI to ConnectionsManager (C# model), keep XenLib only as active-connection facade.
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
@@ -303,7 +303,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     // Create console tab and wire up ConsolePanel (matches C# AddTabContents line 186)
     ConsoleTabPage* consoleTab = new ConsoleTabPage();
-    consoleTab->setConsolePanel(this->m_consolePanel);
+    consoleTab->SetConsolePanel(this->m_consolePanel);
     this->m_tabPages.append(consoleTab);
 
     // Create CVM console tab and wire up CvmConsolePanel (matches C# AddTabContents line 187)
@@ -528,7 +528,7 @@ void MainWindow::onConnectionStateChanged(XenConnection *conn, bool connected)
         // Don't refresh here - cache is empty at this point
 
         // Trigger task rehydration after successful reconnect
-        auto* rehydrationMgr = OperationManager::instance()->meddlingActionManager();
+        auto* rehydrationMgr = OperationManager::instance()->GetMeddlingActionManager();
         if (rehydrationMgr && conn)
         {
             rehydrationMgr->rehydrateTasks(conn);
@@ -619,7 +619,7 @@ void MainWindow::onConnectionAdded(XenConnection* connection)
 
 void MainWindow::onConnectionTaskAdded(const QString& taskRef, const QVariantMap& taskData)
 {
-    auto* rehydrationMgr = OperationManager::instance()->meddlingActionManager();
+    auto* rehydrationMgr = OperationManager::instance()->GetMeddlingActionManager();
     XenConnection* connection = qobject_cast<XenConnection*>(sender());
     if (rehydrationMgr && connection)
         rehydrationMgr->handleTaskAdded(connection, taskRef, taskData);
@@ -627,7 +627,7 @@ void MainWindow::onConnectionTaskAdded(const QString& taskRef, const QVariantMap
 
 void MainWindow::onConnectionTaskModified(const QString& taskRef, const QVariantMap& taskData)
 {
-    auto* rehydrationMgr = OperationManager::instance()->meddlingActionManager();
+    auto* rehydrationMgr = OperationManager::instance()->GetMeddlingActionManager();
     XenConnection* connection = qobject_cast<XenConnection*>(sender());
     if (rehydrationMgr && connection)
         rehydrationMgr->handleTaskUpdated(connection, taskRef, taskData);
@@ -635,7 +635,7 @@ void MainWindow::onConnectionTaskModified(const QString& taskRef, const QVariant
 
 void MainWindow::onConnectionTaskDeleted(const QString& taskRef)
 {
-    auto* rehydrationMgr = OperationManager::instance()->meddlingActionManager();
+    auto* rehydrationMgr = OperationManager::instance()->GetMeddlingActionManager();
     XenConnection* connection = qobject_cast<XenConnection*>(sender());
     if (rehydrationMgr && connection)
         rehydrationMgr->handleTaskRemoved(connection, taskRef);
@@ -649,7 +649,7 @@ void MainWindow::onTreeItemSelected()
         this->ui->statusbar->showMessage("Ready", 2000);
         this->clearTabs();
         this->updatePlaceholderVisibility();
-        this->m_titleBar->clear();
+        this->m_titleBar->Clear();
         this->m_lastSelectedRef.clear(); // Clear selection tracking
 
         // Update both toolbar and menu from Commands (matches C# UpdateToolbars)
@@ -698,7 +698,7 @@ void MainWindow::onTreeItemSelected()
     }
 
     // Update title bar with selected object
-    this->m_titleBar->setTitle(itemText, itemIcon);
+    this->m_titleBar->SetTitle(itemText, itemIcon);
 
     if (!objectRef.isEmpty() && connection)
     {
@@ -1104,7 +1104,7 @@ void MainWindow::updateTabPages(XenConnection *connection, const QString& object
             // Handle console tabs specially - need to switch console to current object
             // Reference: C# TheTabControl_SelectedIndexChanged - console logic
             ConsoleTabPage* consoleTab = qobject_cast<ConsoleTabPage*>(currentPage);
-            if (consoleTab && consoleTab->consolePanel())
+            if (consoleTab && consoleTab->GetConsolePanel())
             {
                 // Pause CVM console
                 if (this->m_cvmConsolePanel)
@@ -1115,17 +1115,17 @@ void MainWindow::updateTabPages(XenConnection *connection, const QString& object
                 // Set current source based on object type
                 if (objectType == "vm")
                 {
-                    consoleTab->consolePanel()->SetCurrentSource(connection, objectRef);
-                    consoleTab->consolePanel()->UnpauseActiveView(true);
+                    consoleTab->GetConsolePanel()->SetCurrentSource(connection, objectRef);
+                    consoleTab->GetConsolePanel()->UnpauseActiveView(true);
                 }
                 else if (objectType == "host")
                 {
-                    consoleTab->consolePanel()->SetCurrentSourceHost(connection, objectRef);
-                    consoleTab->consolePanel()->UnpauseActiveView(true);
+                    consoleTab->GetConsolePanel()->SetCurrentSourceHost(connection, objectRef);
+                    consoleTab->GetConsolePanel()->UnpauseActiveView(true);
                 }
 
                 // Update RDP resolution
-                consoleTab->consolePanel()->UpdateRDPResolution();
+                consoleTab->GetConsolePanel()->UpdateRDPResolution();
             }
             else
             {
@@ -1228,7 +1228,7 @@ void MainWindow::onTabChanged(int index)
         // Reference: C# TheTabControl_SelectedIndexChanged lines 1652-1667
         ConsoleTabPage* consoleTab = qobject_cast<ConsoleTabPage*>(currentPage);
 
-        if (consoleTab && consoleTab->consolePanel())
+        if (consoleTab && consoleTab->GetConsolePanel())
         {
             // Console tab selected - handle console panel logic
             qDebug() << "MainWindow: Console tab selected";
@@ -1242,16 +1242,16 @@ void MainWindow::onTabChanged(int index)
             // Set current source based on selection
             if (this->m_currentObjectType == "vm")
             {
-                consoleTab->consolePanel()->SetCurrentSource(this->m_currentObjectConn, this->m_currentObjectRef);
-                consoleTab->consolePanel()->UnpauseActiveView(true); // Focus console
+                consoleTab->GetConsolePanel()->SetCurrentSource(this->m_currentObjectConn, this->m_currentObjectRef);
+                consoleTab->GetConsolePanel()->UnpauseActiveView(true); // Focus console
             } else if (this->m_currentObjectType == "host")
             {
-                consoleTab->consolePanel()->SetCurrentSourceHost(this->m_currentObjectConn, this->m_currentObjectRef);
-                consoleTab->consolePanel()->UnpauseActiveView(true); // Focus console
+                consoleTab->GetConsolePanel()->SetCurrentSourceHost(this->m_currentObjectConn, this->m_currentObjectRef);
+                consoleTab->GetConsolePanel()->UnpauseActiveView(true); // Focus console
             }
 
             // Update RDP resolution
-            consoleTab->consolePanel()->UpdateRDPResolution();
+            consoleTab->GetConsolePanel()->UpdateRDPResolution();
         } else
         {
             // Check if this is the CVM console tab (SR driver domain consoles)
@@ -1323,7 +1323,7 @@ void MainWindow::showTreeContextMenu(const QPoint& position)
 
     // Use ContextMenuBuilder to create the appropriate menu
     ContextMenuBuilder builder(this);
-    QMenu* contextMenu = builder.buildContextMenu(item, this);
+    QMenu* contextMenu = builder.BuildContextMenu(item, this);
 
     if (!contextMenu)
         return;
@@ -1460,7 +1460,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 {
     // Match C# behavior: prompt only when there are running operations
     bool hasRunningOperations = false;
-    const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->records();
+    const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->GetRecords();
     for (OperationManager::OperationRecord* record : records)
     {
         AsyncOperation* operation = record ? record->operation.data() : nullptr;
@@ -1492,7 +1492,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
     SaveServerList();
 
     // Clean up operation UUIDs before exit (matches C# MainWindow.OnClosing)
-    OperationManager::instance()->prepareAllOperationsForRestart();
+    OperationManager::instance()->PrepareAllOperationsForRestart();
 
     // Disconnect active connections (new flow via ConnectionsManager)
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
@@ -1704,8 +1704,8 @@ void MainWindow::onNotificationsSubModeChanged(int subMode)
     // Update the title bar with notification sub-mode info
     if (this->m_titleBar)
     {
-        this->m_titleBar->setTitle(title);
-        this->m_titleBar->setIcon(icon);
+        this->m_titleBar->SetTitle(title);
+        this->m_titleBar->SetIcon(icon);
     }
 
     // TODO: Update filters label in title bar

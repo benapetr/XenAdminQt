@@ -41,22 +41,22 @@ class ConfirmationOptionsPage : public IOptionsPage
 {
     Q_OBJECT
 
-public:
-    explicit ConfirmationOptionsPage(QWidget* parent = nullptr);
-    ~ConfirmationOptionsPage();
+    public:
+        explicit ConfirmationOptionsPage(QWidget* parent = nullptr);
+        ~ConfirmationOptionsPage();
 
-    // IOptionsPage interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
-    void build() override;
-    bool isValidToSave(QWidget** control, QString& invalidReason) override;
-    void showValidationMessages(QWidget* control, const QString& message) override;
-    void hideValidationMessages() override;
-    void save() override;
+        // IOptionsPage interface
+        QString GetText() const override;
+        QString GetSubText() const override;
+        QIcon GetImage() const override;
+        void Build() override;
+        bool IsValidToSave(QWidget** control, QString& invalidReason) override;
+        void ShowValidationMessages(QWidget* control, const QString& message) override;
+        void HideValidationMessages() override;
+        void Save() override;
 
-private:
-    Ui::ConfirmationOptionsPage* ui;
+    private:
+        Ui::ConfirmationOptionsPage* ui;
 };
 
 #endif // CONFIRMATIONOPTIONSPAGE_H

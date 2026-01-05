@@ -57,10 +57,7 @@ class NewTemplateFromSnapshotCommand : public Command
          * @param parent Parent QObject
          */
         explicit NewTemplateFromSnapshotCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit NewTemplateFromSnapshotCommand(const QString& snapshotRef,
-                                                XenConnection* connection,
-                                                MainWindow* mainWindow,
-                                                QObject* parent = nullptr);
+        explicit NewTemplateFromSnapshotCommand(const QString& snapshotRef, XenConnection* connection, MainWindow* mainWindow, QObject* parent = nullptr);
 
         /**
          * @brief Check if command can run with current selection

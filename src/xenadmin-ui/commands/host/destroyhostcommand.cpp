@@ -111,7 +111,7 @@ void DestroyHostCommand::Run()
     action->setTitle(tr("Destroying host '%1'...").arg(hostName));
 
     // Register with OperationManager for history tracking
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     // Run the action asynchronously
     action->runAsync();

@@ -47,12 +47,12 @@ HomeServerEditPage::~HomeServerEditPage()
     delete this->ui;
 }
 
-QString HomeServerEditPage::text() const
+QString HomeServerEditPage::GetText() const
 {
     return tr("Home Server");
 }
 
-QString HomeServerEditPage::subText() const
+QString HomeServerEditPage::GetSubText() const
 {
     if (!ui->picker->validState())
         return tr("None defined");
@@ -72,12 +72,12 @@ QString HomeServerEditPage::subText() const
     return tr("None defined");
 }
 
-QIcon HomeServerEditPage::image() const
+QIcon HomeServerEditPage::GetImage() const
 {
     return QIcon(":/icons/server_home_16.png");
 }
 
-void HomeServerEditPage::setXenObjects(const QString& objectRef,
+void HomeServerEditPage::SetXenObjects(const QString& objectRef,
                                        const QString& objectType,
                                        const QVariantMap& objectDataBefore,
                                        const QVariantMap& objectDataCopy)
@@ -94,9 +94,9 @@ void HomeServerEditPage::setXenObjects(const QString& objectRef,
     ui->picker->setAffinity(connection(), m_originalAffinityRef, QString());
 }
 
-AsyncOperation* HomeServerEditPage::saveSettings()
+AsyncOperation* HomeServerEditPage::SaveSettings()
 {
-    if (!hasChanged())
+    if (!HasChanged())
     {
         return nullptr;
     }
@@ -121,27 +121,27 @@ AsyncOperation* HomeServerEditPage::saveSettings()
     return op;
 }
 
-bool HomeServerEditPage::isValidToSave() const
+bool HomeServerEditPage::IsValidToSave() const
 {
     return ui->picker->validState();
 }
 
-void HomeServerEditPage::showLocalValidationMessages()
+void HomeServerEditPage::ShowLocalValidationMessages()
 {
     // Could show message if static selected but no host chosen
 }
 
-void HomeServerEditPage::hideLocalValidationMessages()
+void HomeServerEditPage::HideLocalValidationMessages()
 {
     // Nothing to hide
 }
 
-void HomeServerEditPage::cleanup()
+void HomeServerEditPage::Cleanup()
 {
     // Nothing to clean up
 }
 
-bool HomeServerEditPage::hasChanged() const
+bool HomeServerEditPage::HasChanged() const
 {
     QString currentAffinityRef = ui->picker->selectedAffinityRef();
     if (currentAffinityRef.isEmpty())

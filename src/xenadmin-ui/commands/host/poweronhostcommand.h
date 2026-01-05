@@ -40,17 +40,17 @@ class PowerOnHostCommand : public HostCommand
 {
     Q_OBJECT
 
-public:
-    explicit PowerOnHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit PowerOnHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    // Inherited from Command
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+        // Inherited from Command
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 
-private:
-    bool canPowerOn() const;
-    bool hasActiveHostAction() const;
+    private:
+        bool canPowerOn() const;
+        bool hasActiveHostAction() const;
 };
 
 #endif // POWERONHOSTCOMMAND_H

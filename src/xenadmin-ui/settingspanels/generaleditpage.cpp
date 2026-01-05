@@ -55,23 +55,23 @@ GeneralEditPage::~GeneralEditPage()
     delete this->ui;
 }
 
-QString GeneralEditPage::text() const
+QString GeneralEditPage::GetText() const
 {
     return tr("General");
 }
 
-QString GeneralEditPage::subText() const
+QString GeneralEditPage::GetSubText() const
 {
     return tr("Name, Description, Tags");
 }
 
-QIcon GeneralEditPage::image() const
+QIcon GeneralEditPage::GetImage() const
 {
     // Matches C# Images.StaticImages.edit_16
     return QIcon(":/icons/edit_16.png");
 }
 
-void GeneralEditPage::setXenObjects(const QString& objectRef,
+void GeneralEditPage::SetXenObjects(const QString& objectRef,
                                     const QString& objectType,
                                     const QVariantMap& objectDataBefore,
                                     const QVariantMap& objectDataCopy)
@@ -164,7 +164,7 @@ void GeneralEditPage::repopulate()
     this->ui->txtIQN->blockSignals(false);
 }
 
-AsyncOperation* GeneralEditPage::saveSettings()
+AsyncOperation* GeneralEditPage::SaveSettings()
 {
     // C# pattern: SaveSettings() does TWO things:
     // 1. Edit objectDataCopy directly for simple fields
@@ -222,7 +222,7 @@ AsyncOperation* GeneralEditPage::saveSettings()
     return nullptr;
 }
 
-bool GeneralEditPage::isValidToSave() const
+bool GeneralEditPage::IsValidToSave() const
 {
     // Name is required
     if (this->ui->txtName->text().trimmed().isEmpty())
@@ -247,7 +247,7 @@ bool GeneralEditPage::isValidToSave() const
     return true;
 }
 
-void GeneralEditPage::showLocalValidationMessages()
+void GeneralEditPage::ShowLocalValidationMessages()
 {
     if (this->ui->txtName->text().trimmed().isEmpty())
     {
@@ -267,14 +267,14 @@ void GeneralEditPage::showLocalValidationMessages()
     }
 }
 
-void GeneralEditPage::hideLocalValidationMessages()
+void GeneralEditPage::HideLocalValidationMessages()
 {
     this->ui->txtName->setStyleSheet("");
     this->ui->txtIQN->setStyleSheet("");
     // TODO: Hide balloon tooltips
 }
 
-void GeneralEditPage::cleanup()
+void GeneralEditPage::Cleanup()
 {
     // Disconnect signals, cleanup resources
     this->disconnect(this->ui->txtName, nullptr, this, nullptr);
@@ -284,7 +284,7 @@ void GeneralEditPage::cleanup()
     this->disconnect(this->ui->txtIQN, nullptr, this, nullptr);
 }
 
-bool GeneralEditPage::hasChanged() const
+bool GeneralEditPage::HasChanged() const
 {
     return this->nameChanged() || this->descriptionChanged() || this->folderChanged() ||
            this->tagsChanged() || this->iqnChanged();
@@ -292,7 +292,7 @@ bool GeneralEditPage::hasChanged() const
 
 void GeneralEditPage::onNameChanged()
 {
-    this->hideLocalValidationMessages();
+    this->HideLocalValidationMessages();
 }
 
 void GeneralEditPage::onDescriptionChanged()
@@ -312,7 +312,7 @@ void GeneralEditPage::onTagsChanged()
 
 void GeneralEditPage::onIQNChanged()
 {
-    this->hideLocalValidationMessages();
+    this->HideLocalValidationMessages();
 }
 
 QStringList GeneralEditPage::parseTagsFromText() const
@@ -365,7 +365,7 @@ bool GeneralEditPage::iqnChanged() const
     return this->ui->txtIQN->text() != this->m_originalIQN;
 }
 
-QVariantMap GeneralEditPage::getModifiedObjectData() const
+QVariantMap GeneralEditPage::GetModifiedObjectData() const
 {
     return this->m_objectDataCopy;
 }

@@ -43,22 +43,22 @@ VMEnlightenmentEditPage::~VMEnlightenmentEditPage()
     delete ui;
 }
 
-QString VMEnlightenmentEditPage::text() const
+QString VMEnlightenmentEditPage::GetText() const
 {
     return tr("Enlightenment");
 }
 
-QString VMEnlightenmentEditPage::subText() const
+QString VMEnlightenmentEditPage::GetSubText() const
 {
     return this->ui->checkBoxEnlightenment->isChecked() ? tr("Enabled") : tr("Disabled");
 }
 
-QIcon VMEnlightenmentEditPage::image() const
+QIcon VMEnlightenmentEditPage::GetImage() const
 {
     return QIcon(":/icons/dc_16.png");
 }
 
-void VMEnlightenmentEditPage::setXenObjects(const QString& objectRef,
+void VMEnlightenmentEditPage::SetXenObjects(const QString& objectRef,
                                             const QString& objectType,
                                             const QVariantMap& objectDataBefore,
                                             const QVariantMap& objectDataCopy)
@@ -74,9 +74,9 @@ void VMEnlightenmentEditPage::setXenObjects(const QString& objectRef,
     this->ui->checkBoxEnlightenment->setChecked(this->m_originalEnlightened);
 }
 
-AsyncOperation* VMEnlightenmentEditPage::saveSettings()
+AsyncOperation* VMEnlightenmentEditPage::SaveSettings()
 {
-    if (!hasChanged())
+    if (!HasChanged())
     {
         return nullptr;
     }
@@ -144,27 +144,27 @@ AsyncOperation* VMEnlightenmentEditPage::saveSettings()
     return new VMEnlightenmentOperation(this->m_connection, this->m_vmRef, enable, vmUuid, this);
 }
 
-bool VMEnlightenmentEditPage::isValidToSave() const
+bool VMEnlightenmentEditPage::IsValidToSave() const
 {
     return true;
 }
 
-void VMEnlightenmentEditPage::showLocalValidationMessages()
+void VMEnlightenmentEditPage::ShowLocalValidationMessages()
 {
     // No validation needed
 }
 
-void VMEnlightenmentEditPage::hideLocalValidationMessages()
+void VMEnlightenmentEditPage::HideLocalValidationMessages()
 {
     // No validation messages
 }
 
-void VMEnlightenmentEditPage::cleanup()
+void VMEnlightenmentEditPage::Cleanup()
 {
     // Nothing to clean up
 }
 
-bool VMEnlightenmentEditPage::hasChanged() const
+bool VMEnlightenmentEditPage::HasChanged() const
 {
     return this->ui->checkBoxEnlightenment->isChecked() != this->m_originalEnlightened;
 }

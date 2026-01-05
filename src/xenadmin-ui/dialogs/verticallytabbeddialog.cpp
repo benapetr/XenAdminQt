@@ -123,7 +123,7 @@ void VerticallyTabbedDialog::showTab(IEditPage* page)
     this->m_pages.append(page);
 
     // Add to vertical tabs
-    this->ui->verticalTabs->addTab(page->image(), page->text(), page->subText(), page);
+    this->ui->verticalTabs->addTab(page->GetImage(), page->GetText(), page->GetSubText(), page);
 
     // Add to content panel (stacked widget)
     this->ui->ContentPanel->addWidget(page);
@@ -133,7 +133,7 @@ void VerticallyTabbedDialog::showTab(IEditPage* page)
 
     // Initialize page with object data
     // C# equivalent: editPage.SetXenObjects(_xenObjectBefore, _xenObjectCopy);
-    page->setXenObjects(this->m_objectRef, this->m_objectType, this->m_objectDataBefore, this->m_objectDataCopy);
+    page->SetXenObjects(this->m_objectRef, this->m_objectType, this->m_objectDataBefore, this->m_objectDataCopy);
 
     // Connect populated signal to refresh tabs
     connect(page, &IEditPage::populated, [this]()
@@ -179,10 +179,10 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
     //              if (!editPage.ValidToSave) { ... }
     for (IEditPage* page : this->m_pages)
     {
-        if (!page->isValidToSave())
+        if (!page->IsValidToSave())
         {
             this->selectPage(page);
-            page->showLocalValidationMessages();
+            page->ShowLocalValidationMessages();
             return false; // Abort save
         }
     }
@@ -192,7 +192,7 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
     bool hasChanges = false;
     for (IEditPage* page : this->m_pages)
     {
-        if (page->hasChanged())
+        if (page->HasChanged())
         {
             hasChanges = true;
             break;
@@ -222,7 +222,7 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
             // Refresh all pages with new data
             for (IEditPage* page : this->m_pages)
             {
-                page->setXenObjects(this->m_objectRef, this->m_objectType, 
+                page->SetXenObjects(this->m_objectRef, this->m_objectType, 
                                    this->m_objectDataBefore, this->m_objectDataCopy);
             }
         }
@@ -285,7 +285,7 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
                 this->loadObjectData();
                 for (IEditPage* page : this->m_pages)
                 {
-                    page->setXenObjects(this->m_objectRef, this->m_objectType,
+                    page->SetXenObjects(this->m_objectRef, this->m_objectType,
                                        this->m_objectDataBefore, this->m_objectDataCopy);
                 }
             }
@@ -313,7 +313,7 @@ void VerticallyTabbedDialog::reject()
     // Cleanup pages
     for (IEditPage* page : m_pages)
     {
-        page->cleanup();
+        page->Cleanup();
     }
 
     QDialog::reject();
@@ -326,7 +326,7 @@ void VerticallyTabbedDialog::closeEvent(QCloseEvent* event)
     // Cleanup pages
     for (IEditPage* page : this->m_pages)
     {
-        page->cleanup();
+        page->Cleanup();
     }
 
     QDialog::closeEvent(event);
@@ -347,17 +347,17 @@ QList<AsyncOperation*> VerticallyTabbedDialog::collectActions()
 
     for (IEditPage* page : this->m_pages)
     {
-        if (!page->hasChanged())
+        if (!page->HasChanged())
         {
             continue;
         }
 
-        // Call saveSettings() - this updates the page's local m_objectDataCopy
-        AsyncOperation* action = page->saveSettings();
+        // Call SaveSettings() - this updates the page's local m_objectDataCopy
+        AsyncOperation* action = page->SaveSettings();
         
         // Copy the modified data back from the page to the dialog's copy
         // This ensures applySimpleChanges() sees the modifications
-        QVariantMap pageData = page->getModifiedObjectData();
+        QVariantMap pageData = page->GetModifiedObjectData();
         
         // Merge simple fields that pages modify directly
         if (pageData.contains("name_label"))
@@ -404,7 +404,7 @@ QList<AsyncOperation*> VerticallyTabbedDialog::collectActions()
             // The action will be owned by MultipleOperation, which is owned by OperationProgressDialog
             action->setParent(nullptr);
             actions.append(action);
-            qDebug() << "VerticallyTabbedDialog: Collected action from page:" << page->text();
+            qDebug() << "VerticallyTabbedDialog: Collected action from page:" << page->GetText();
         }
     }
 
@@ -749,8 +749,8 @@ void VerticallyTabbedDialog::onVerticalTabsCurrentChanged(int index)
     IEditPage* page = this->m_pages[index];
 
     // Update header to match selected page
-    this->ui->TabImage->setPixmap(page->image().pixmap(32, 32));
-    this->ui->TabTitle->setText(page->text());
+    this->ui->TabImage->setPixmap(page->GetImage().pixmap(32, 32));
+    this->ui->TabTitle->setText(page->GetText());
 
     // Show selected page in content panel
     this->ui->ContentPanel->setCurrentWidget(page);
@@ -760,7 +760,7 @@ void VerticallyTabbedDialog::onVerticalTabsCurrentChanged(int index)
     {
         if (otherPage != page)
         {
-            otherPage->hideLocalValidationMessages();
+            otherPage->HideLocalValidationMessages();
         }
     }
 }

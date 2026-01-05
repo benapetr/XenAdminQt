@@ -95,7 +95,7 @@ void DebugWindow::uninstallDebugHandler()
     }
 }
 
-DebugWindow* DebugWindow::getInstance()
+DebugWindow* DebugWindow::GetInstance()
 {
     return DebugWindow::s_instance;
 }

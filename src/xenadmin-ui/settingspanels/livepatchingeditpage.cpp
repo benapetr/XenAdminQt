@@ -43,22 +43,22 @@ LivePatchingEditPage::~LivePatchingEditPage()
     delete this->ui;
 }
 
-QString LivePatchingEditPage::text() const
+QString LivePatchingEditPage::GetText() const
 {
     return tr("Live Patching");
 }
 
-QString LivePatchingEditPage::subText() const
+QString LivePatchingEditPage::GetSubText() const
 {
     return this->ui->radioButtonEnable->isChecked() ? tr("Enabled") : tr("Disabled");
 }
 
-QIcon LivePatchingEditPage::image() const
+QIcon LivePatchingEditPage::GetImage() const
 {
     return QIcon(":/icons/patch_16.png");
 }
 
-void LivePatchingEditPage::setXenObjects(const QString& objectRef,
+void LivePatchingEditPage::SetXenObjects(const QString& objectRef,
                                          const QString& objectType,
                                          const QVariantMap& objectDataBefore,
                                          const QVariantMap& objectDataCopy)
@@ -108,7 +108,7 @@ void LivePatchingEditPage::setXenObjects(const QString& objectRef,
     }
 }
 
-AsyncOperation* LivePatchingEditPage::saveSettings()
+AsyncOperation* LivePatchingEditPage::SaveSettings()
 {
     // Server expects "disabled" flag, so invert the enable button state
     bool disableValue = this->ui->radioButtonDisable->isChecked();
@@ -127,29 +127,29 @@ AsyncOperation* LivePatchingEditPage::saveSettings()
     );
 }
 
-bool LivePatchingEditPage::hasChanged() const
+bool LivePatchingEditPage::HasChanged() const
 {
     bool originalDisabled = this->m_objectDataBefore_.value("live_patching_disabled", false).toBool();
     bool currentDisabled = this->ui->radioButtonDisable->isChecked();
     return originalDisabled != currentDisabled;
 }
 
-bool LivePatchingEditPage::isValidToSave() const
+bool LivePatchingEditPage::IsValidToSave() const
 {
     return true;
 }
 
-void LivePatchingEditPage::showLocalValidationMessages()
+void LivePatchingEditPage::ShowLocalValidationMessages()
 {
     // No validation needed
 }
 
-void LivePatchingEditPage::hideLocalValidationMessages()
+void LivePatchingEditPage::HideLocalValidationMessages()
 {
     // No validation needed
 }
 
-void LivePatchingEditPage::cleanup()
+void LivePatchingEditPage::Cleanup()
 {
     // Nothing to clean up
 }

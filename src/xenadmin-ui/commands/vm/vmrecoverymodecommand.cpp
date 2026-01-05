@@ -102,7 +102,7 @@ void VMRecoveryModeCommand::Run()
     HVMBootAction* action = new HVMBootAction(conn, vmRef, this->mainWindow());
 
     // Register with OperationManager for history tracking
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and user feedback
     connect(action, &AsyncOperation::completed, this, [=]() {

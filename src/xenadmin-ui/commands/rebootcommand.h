@@ -36,12 +36,12 @@ class RebootCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit RebootCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit RebootCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // REBOOTCOMMAND_H

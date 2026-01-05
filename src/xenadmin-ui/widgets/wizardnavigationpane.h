@@ -42,23 +42,23 @@ class WizardNavigationPane : public QWidget
 {
     Q_OBJECT
 
-public:
-    struct Step
-    {
-        QString title;
-        QIcon icon;
-    };
+    public:
+        struct Step
+        {
+            QString title;
+            QIcon icon;
+        };
 
-    explicit WizardNavigationPane(QWidget* parent = nullptr);
-    ~WizardNavigationPane() override;
+        explicit WizardNavigationPane(QWidget* parent = nullptr);
+        ~WizardNavigationPane() override;
 
-    void setSteps(const QVector<Step>& steps);
-    void setCurrentStep(int index);
-    void setBranding(const QString& text, const QPixmap& pixmap = QPixmap());
+        void setSteps(const QVector<Step>& steps);
+        void setCurrentStep(int index);
+        void setBranding(const QString& text, const QPixmap& pixmap = QPixmap());
 
-private:
-    Ui::WizardNavigationPane* ui;
-    QVector<Step> m_steps;
+    private:
+        Ui::WizardNavigationPane* ui;
+        QVector<Step> m_steps;
 };
 
 #endif // WIZARDNAVIGATIONPANE_H

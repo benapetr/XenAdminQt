@@ -61,233 +61,233 @@ class RdpClient : public QWidget, public IRemoteConsole
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param parent Parent widget (container for RDP display)
-     * @param size Initial size of RDP display
-     */
-    explicit RdpClient(QWidget* parent, const QSize& size);
+    public:
+        /**
+         * @brief Constructor
+         * @param parent Parent widget (container for RDP display)
+         * @param size Initial size of RDP display
+         */
+        explicit RdpClient(QWidget* parent, const QSize& size);
 
-    /**
-     * @brief Destructor
-     */
-    ~RdpClient() override;
+        /**
+         * @brief Destructor
+         */
+        ~RdpClient() override;
 
-    // ========== IRemoteConsole Interface Implementation ==========
+        // ========== IRemoteConsole Interface Implementation ==========
 
-    ConsoleKeyHandler* keyHandler() const override
-    {
-        return _keyHandler;
-    }
-    void setKeyHandler(ConsoleKeyHandler* handler) override
-    {
-        _keyHandler = handler;
-    }
-    QWidget* consoleControl() override
-    {
-        return this;
-    }
-    void activate() override;
-    void disconnectAndDispose() override;
-    void pause() override;
-    void unpause() override;
-    void sendCAD() override;
-    QImage snapshot() override;
-    void setSendScanCodes(bool value) override;
-    bool scaling() const override
-    {
-        return _scaling;
-    }
-    void setScaling(bool value) override;
-    void setDisplayBorder(bool value) override;
-    QSize desktopSize() const override;
-    void setDesktopSize(const QSize& size) override;
-    QRect consoleBounds() const override;
+        ConsoleKeyHandler* keyHandler() const override
+        {
+            return _keyHandler;
+        }
+        void setKeyHandler(ConsoleKeyHandler* handler) override
+        {
+            _keyHandler = handler;
+        }
+        QWidget* consoleControl() override
+        {
+            return this;
+        }
+        void activate() override;
+        void disconnectAndDispose() override;
+        void pause() override;
+        void unpause() override;
+        void sendCAD() override;
+        QImage snapshot() override;
+        void setSendScanCodes(bool value) override;
+        bool scaling() const override
+        {
+            return _scaling;
+        }
+        void setScaling(bool value) override;
+        void setDisplayBorder(bool value) override;
+        QSize desktopSize() const override;
+        void setDesktopSize(const QSize& size) override;
+        QRect consoleBounds() const override;
 
-    // ========== RDP-Specific Public Methods ==========
+        // ========== RDP-Specific Public Methods ==========
 
-    /**
-     * @brief Connect to RDP server
-     * @param rdpIP IP address or hostname of RDP server
-     * @param width Desired desktop width
-     * @param height Desired desktop height
-     *
-     * Reference: C# RdpClient.RDPConnect()
-     */
-    void connect(const QString& rdpIP, int width, int height);
+        /**
+         * @brief Connect to RDP server
+         * @param rdpIP IP address or hostname of RDP server
+         * @param width Desired desktop width
+         * @param height Desired desktop height
+         *
+         * Reference: C# RdpClient.RDPConnect()
+         */
+        void connect(const QString& rdpIP, int width, int height);
 
-    /**
-     * @brief Connect using default size
-     * @param rdpIP IP address or hostname
-     *
-     * Reference: C# RdpClient.Connect()
-     */
-    void connect(const QString& rdpIP);
+        /**
+         * @brief Connect using default size
+         * @param rdpIP IP address or hostname
+         *
+         * Reference: C# RdpClient.Connect()
+         */
+        void connect(const QString& rdpIP);
 
-    /**
-     * @brief Disconnect from RDP server
-     *
-     * Reference: C# RdpClient.Disconnect()
-     */
-    void disconnect();
+        /**
+         * @brief Disconnect from RDP server
+         *
+         * Reference: C# RdpClient.Disconnect()
+         */
+        void disconnect();
 
-    /**
-     * @brief Update display size (dynamic resolution)
-     * @param width New desktop width
-     * @param height New desktop height
-     * @param locationOffset Display offset for positioning
-     *
-     * Reference: C# RdpClient.UpdateDisplay()
-     */
-    void updateDisplay(int width, int height, const QPoint& locationOffset);
+        /**
+         * @brief Update display size (dynamic resolution)
+         * @param width New desktop width
+         * @param height New desktop height
+         * @param locationOffset Display offset for positioning
+         *
+         * Reference: C# RdpClient.UpdateDisplay()
+         */
+        void updateDisplay(int width, int height, const QPoint& locationOffset);
 
-    /**
-     * @brief Check if RDP is currently connected
-     * @return true if connected, false otherwise
-     */
-    bool isConnected() const
-    {
-        return _connected;
-    }
+        /**
+         * @brief Check if RDP is currently connected
+         * @return true if connected, false otherwise
+         */
+        bool isConnected() const
+        {
+            return _connected;
+        }
 
-    /**
-     * @brief Check if connection is in progress
-     * @return true if connecting or showing auth warning
-     *
-     * Reference: C# RdpClient.IsAttemptingConnection
-     */
-    bool isAttemptingConnection() const
-    {
-        return _connecting || _authWarningVisible;
-    }
+        /**
+         * @brief Check if connection is in progress
+         * @return true if connecting or showing auth warning
+         *
+         * Reference: C# RdpClient.IsAttemptingConnection
+         */
+        bool isAttemptingConnection() const
+        {
+            return _connecting || _authWarningVisible;
+        }
 
-    /**
-     * @brief Set credentials for RDP authentication
-     * @param username Username
-     * @param password Password
-     * @param domain Domain (optional)
-     */
-    void setCredentials(const QString& username, const QString& password, const QString& domain = QString());
+        /**
+         * @brief Set credentials for RDP authentication
+         * @param username Username
+         * @param password Password
+         * @param domain Domain (optional)
+         */
+        void setCredentials(const QString& username, const QString& password, const QString& domain = QString());
 
-signals:
-    /**
-     * @brief Emitted when RDP disconnects
-     *
-     * Reference: C# RdpClient.OnDisconnected event
-     */
-    void disconnected();
+    signals:
+        /**
+         * @brief Emitted when RDP disconnects
+         *
+         * Reference: C# RdpClient.OnDisconnected event
+         */
+        void disconnected();
 
-    /**
-     * @brief Emitted when connection succeeds
-     */
-    void connected();
+        /**
+         * @brief Emitted when connection succeeds
+         */
+        void connected();
 
-    /**
-     * @brief Emitted when desktop size changes
-     * @param newSize New desktop size
-     */
-    void desktopResized(QSize newSize);
+        /**
+         * @brief Emitted when desktop size changes
+         * @param newSize New desktop size
+         */
+        void desktopResized(QSize newSize);
 
-    /**
-     * @brief Emitted when an error occurs
-     * @param error Error message
-     */
-    void errorOccurred(const QString& error);
+        /**
+         * @brief Emitted when an error occurs
+         * @param error Error message
+         */
+        void errorOccurred(const QString& error);
 
-protected:
-    // Qt event handlers
-    void paintEvent(QPaintEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
-    void keyPressEvent(QKeyEvent* event) override;
-    void keyReleaseEvent(QKeyEvent* event) override;
-    void mousePressEvent(QMouseEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
-    void wheelEvent(QWheelEvent* event) override;
-    void focusInEvent(QFocusEvent* event) override;
-    void focusOutEvent(QFocusEvent* event) override;
+    protected:
+        // Qt event handlers
+        void paintEvent(QPaintEvent* event) override;
+        void resizeEvent(QResizeEvent* event) override;
+        void keyPressEvent(QKeyEvent* event) override;
+        void keyReleaseEvent(QKeyEvent* event) override;
+        void mousePressEvent(QMouseEvent* event) override;
+        void mouseReleaseEvent(QMouseEvent* event) override;
+        void mouseMoveEvent(QMouseEvent* event) override;
+        void wheelEvent(QWheelEvent* event) override;
+        void focusInEvent(QFocusEvent* event) override;
+        void focusOutEvent(QFocusEvent* event) override;
 
-private:
-    /**
-     * @brief Initialize FreeRDP context
-     * @return true if successful, false otherwise
-     */
-    bool initializeFreeRDP();
+    private:
+        /**
+         * @brief Initialize FreeRDP context
+         * @return true if successful, false otherwise
+         */
+        bool initializeFreeRDP();
 
-    /**
-     * @brief Cleanup FreeRDP resources
-     */
-    void cleanupFreeRDP();
+        /**
+         * @brief Cleanup FreeRDP resources
+         */
+        void cleanupFreeRDP();
 
-    /**
-     * @brief Configure RDP settings (NLA, audio, clipboard, etc.)
-     *
-     * Reference: C# RdpClient.RDPSetSettings()
-     */
-    void configureRDPSettings();
+        /**
+         * @brief Configure RDP settings (NLA, audio, clipboard, etc.)
+         *
+         * Reference: C# RdpClient.RDPSetSettings()
+         */
+        void configureRDPSettings();
 
-    /**
-     * @brief Run FreeRDP connection (on worker thread)
-     */
-    void runRDPConnection();
+        /**
+         * @brief Run FreeRDP connection (on worker thread)
+         */
+        void runRDPConnection();
 
-    /**
-     * @brief Update framebuffer image from RDP context
-     * @param x X coordinate of updated region
-     * @param y Y coordinate of updated region
-     * @param width Width of updated region
-     * @param height Height of updated region
-     */
-    void updateFramebuffer(int x, int y, int width, int height);
+        /**
+         * @brief Update framebuffer image from RDP context
+         * @param x X coordinate of updated region
+         * @param y Y coordinate of updated region
+         * @param width Width of updated region
+         * @param height Height of updated region
+         */
+        void updateFramebuffer(int x, int y, int width, int height);
 
-    /**
-     * @brief Translate Qt key to RDP scan code
-     * @param key Qt key code
-     * @param modifiers Qt key modifiers
-     * @return RDP scan code
-     */
-    uint32_t qtKeyToRDPScanCode(int key, Qt::KeyboardModifiers modifiers);
+        /**
+         * @brief Translate Qt key to RDP scan code
+         * @param key Qt key code
+         * @param modifiers Qt key modifiers
+         * @return RDP scan code
+         */
+        uint32_t qtKeyToRDPScanCode(int key, Qt::KeyboardModifiers modifiers);
 
-    // FreeRDP context and instance
-    freerdp* _rdpInstance;
-    rdpContext* _rdpContext;
+        // FreeRDP context and instance
+        freerdp* _rdpInstance;
+        rdpContext* _rdpContext;
 
-    // Connection state
-    QString _serverAddress;
-    int _desktopWidth;
-    int _desktopHeight;
-    volatile bool _connected;
-    volatile bool _connecting;
-    volatile bool _authWarningVisible;
-    volatile bool _terminated;
+        // Connection state
+        QString _serverAddress;
+        int _desktopWidth;
+        int _desktopHeight;
+        volatile bool _connected;
+        volatile bool _connecting;
+        volatile bool _authWarningVisible;
+        volatile bool _terminated;
 
-    // Credentials
-    QString _username;
-    QString _password;
-    QString _domain;
+        // Credentials
+        QString _username;
+        QString _password;
+        QString _domain;
 
-    // Display state
-    QImage _framebuffer;
-    QMutex _framebufferMutex;
-    bool _scaling;
-    QPoint _locationOffset;
-    bool _paused;
+        // Display state
+        QImage _framebuffer;
+        QMutex _framebufferMutex;
+        bool _scaling;
+        QPoint _locationOffset;
+        bool _paused;
 
-    // Keyboard/mouse state
-    ConsoleKeyHandler* _keyHandler;
-    QSet<int> _pressedScans;
-    bool _modifierKeyPressedAlone;
+        // Keyboard/mouse state
+        ConsoleKeyHandler* _keyHandler;
+        QSet<int> _pressedScans;
+        bool _modifierKeyPressedAlone;
 
-    // Worker thread for FreeRDP
-    QThread* _rdpThread;
+        // Worker thread for FreeRDP
+        QThread* _rdpThread;
 
-    // Disposal timer (deferred cleanup like C#)
-    QTimer* _disposalTimer;
-    int _disposalAttempts;
+        // Disposal timer (deferred cleanup like C#)
+        QTimer* _disposalTimer;
+        int _disposalAttempts;
 
-    // Thread synchronization
-    QMutex _connectionMutex;
+        // Thread synchronization
+        QMutex _connectionMutex;
 };
 
 #endif // RDPCLIENT_H

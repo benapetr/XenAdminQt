@@ -148,7 +148,7 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
         action->setTitle(QString("Moving virtual disk '%1' to '%2'").arg(vdiName).arg(targetSRName));
         action->setDescription(QString("Moving '%1'...").arg(vdiName));
 
-        opManager->registerOperation(action);
+        opManager->RegisterOperation(action);
         action->runAsync();
     } else
     {
@@ -164,7 +164,7 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
             action->setTitle(QString("Moving virtual disk '%1' to '%2'").arg(vdiName).arg(targetSRName));
             action->setDescription(QString("Moving '%1'...").arg(vdiName));
 
-            opManager->registerOperation(action);
+            opManager->RegisterOperation(action);
             action->runAsync();
         }
     }

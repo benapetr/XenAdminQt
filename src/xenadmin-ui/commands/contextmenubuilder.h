@@ -51,30 +51,30 @@ class ContextMenuBuilder : public QObject
 {
     Q_OBJECT
 
-public:
-    explicit ContextMenuBuilder(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit ContextMenuBuilder(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    /**
-     * @brief Build context menu for the given tree item
-     */
-    QMenu* buildContextMenu(QTreeWidgetItem* item, QWidget* parent = nullptr);
+        /**
+         * @brief Build context menu for the given tree item
+         */
+        QMenu* BuildContextMenu(QTreeWidgetItem* item, QWidget* parent = nullptr);
 
-private:
-    MainWindow* m_mainWindow;
+    private:
+        MainWindow* m_mainWindow;
 
-    // Builders for specific object types
-    void buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm);
-    void buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM> snapshot);
-    void buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM> templateVM);
-    void buildHostContextMenu(QMenu* menu, QSharedPointer<Host> host);
-    void buildDisconnectedHostContextMenu(QMenu* menu, QTreeWidgetItem* item);
-    void buildSRContextMenu(QMenu* menu, QSharedPointer<SR> sr);
-    void buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> pool);
-    void buildNetworkContextMenu(QMenu* menu, QSharedPointer<Network> network);
+        // Builders for specific object types
+        void buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm);
+        void buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM> snapshot);
+        void buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM> templateVM);
+        void buildHostContextMenu(QMenu* menu, QSharedPointer<Host> host);
+        void buildDisconnectedHostContextMenu(QMenu* menu, QTreeWidgetItem* item);
+        void buildSRContextMenu(QMenu* menu, QSharedPointer<SR> sr);
+        void buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> pool);
+        void buildNetworkContextMenu(QMenu* menu, QSharedPointer<Network> network);
 
-    // Helper methods
-    void addCommand(QMenu* menu, Command* command);
-    void addSeparator(QMenu* menu);
+        // Helper methods
+        void addCommand(QMenu* menu, Command* command);
+        void addSeparator(QMenu* menu);
 };
 
 #endif // CONTEXTMENUBUILDER_H

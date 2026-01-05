@@ -48,25 +48,25 @@ HostMultipathPage::~HostMultipathPage()
     delete this->ui;
 }
 
-QString HostMultipathPage::text() const
+QString HostMultipathPage::GetText() const
 {
     return tr("Multipathing");
 }
 
-QString HostMultipathPage::subText() const
+QString HostMultipathPage::GetSubText() const
 {
     return this->ui->multipathCheckBox->isChecked() 
         ? tr("Active") 
         : tr("Not active");
 }
 
-QIcon HostMultipathPage::image() const
+QIcon HostMultipathPage::GetImage() const
 {
     // Matches C# Images.StaticImages._000_Storage_h32bit_16
     return QIcon(":/icons/storage.png");
 }
 
-void HostMultipathPage::setXenObjects(const QString& objectRef,
+void HostMultipathPage::SetXenObjects(const QString& objectRef,
                                      const QString& objectType,
                                      const QVariantMap& objectDataBefore,
                                      const QVariantMap& objectDataCopy)
@@ -89,9 +89,9 @@ void HostMultipathPage::setXenObjects(const QString& objectRef,
     this->updateMaintenanceWarning();
 }
 
-AsyncOperation* HostMultipathPage::saveSettings()
+AsyncOperation* HostMultipathPage::SaveSettings()
 {
-    if (!this->hasChanged())
+    if (!this->HasChanged())
         return nullptr;
 
     // Create Host object
@@ -109,28 +109,28 @@ AsyncOperation* HostMultipathPage::saveSettings()
     return new EditMultipathAction(host, enableMultipath, this);
 }
 
-bool HostMultipathPage::isValidToSave() const
+bool HostMultipathPage::IsValidToSave() const
 {
     // Always valid - checkbox controls the setting
     return true;
 }
 
-void HostMultipathPage::showLocalValidationMessages()
+void HostMultipathPage::ShowLocalValidationMessages()
 {
     // No validation messages needed
 }
 
-void HostMultipathPage::hideLocalValidationMessages()
+void HostMultipathPage::HideLocalValidationMessages()
 {
     // No validation messages to hide
 }
 
-void HostMultipathPage::cleanup()
+void HostMultipathPage::Cleanup()
 {
     // No cleanup needed
 }
 
-bool HostMultipathPage::hasChanged() const
+bool HostMultipathPage::HasChanged() const
 {
     return this->ui->multipathCheckBox->isChecked() != this->m_originalMultipathEnabled;
 }

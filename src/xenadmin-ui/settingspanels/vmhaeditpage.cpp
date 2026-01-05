@@ -90,12 +90,12 @@ VMHAEditPage::~VMHAEditPage()
     delete ui;
 }
 
-QString VMHAEditPage::text() const
+QString VMHAEditPage::GetText() const
 {
     return tr("High Availability");
 }
 
-QString VMHAEditPage::subText() const
+QString VMHAEditPage::GetSubText() const
 {
     QVariantMap poolData = getPoolData();
     if (poolData.isEmpty())
@@ -110,12 +110,12 @@ QString VMHAEditPage::subText() const
     return restartPriorityDisplay(selectedPriority());
 }
 
-QIcon VMHAEditPage::image() const
+QIcon VMHAEditPage::GetImage() const
 {
     return QIcon(":/icons/reboot_vm_16.png");
 }
 
-void VMHAEditPage::setXenObjects(const QString& objectRef,
+void VMHAEditPage::SetXenObjects(const QString& objectRef,
                                  const QString& objectType,
                                  const QVariantMap& objectDataBefore,
                                  const QVariantMap& objectDataCopy)
@@ -157,9 +157,9 @@ void VMHAEditPage::setXenObjects(const QString& objectRef,
     emit populated();
 }
 
-AsyncOperation* VMHAEditPage::saveSettings()
+AsyncOperation* VMHAEditPage::SaveSettings()
 {
-    if (!this->hasChanged())
+    if (!this->HasChanged())
         return nullptr;
 
     bool haChanges = this->isHaEditable() &&
@@ -192,7 +192,7 @@ AsyncOperation* VMHAEditPage::saveSettings()
     return nullptr;
 }
 
-bool VMHAEditPage::isValidToSave() const
+bool VMHAEditPage::IsValidToSave() const
 {
     if (!this->poolHasHAEnabled())
         return true;
@@ -200,17 +200,17 @@ bool VMHAEditPage::isValidToSave() const
     return !this->m_ntolUpdateInProgress && this->m_ntol >= 0;
 }
 
-void VMHAEditPage::showLocalValidationMessages()
+void VMHAEditPage::ShowLocalValidationMessages()
 {
     // No validation messages to show
 }
 
-void VMHAEditPage::hideLocalValidationMessages()
+void VMHAEditPage::HideLocalValidationMessages()
 {
     // No validation messages to hide
 }
 
-void VMHAEditPage::cleanup()
+void VMHAEditPage::Cleanup()
 {
     if (this->connection() && this->connection()->GetCache())
     {
@@ -221,7 +221,7 @@ void VMHAEditPage::cleanup()
     }
 }
 
-bool VMHAEditPage::hasChanged() const
+bool VMHAEditPage::HasChanged() const
 {
     bool haChanges = this->isHaEditable() &&
         (this->selectedPriority() != this->m_origRestartPriority || this->m_ntol != this->m_origNtol);

@@ -59,25 +59,25 @@ ConnectionOptionsPage::~ConnectionOptionsPage()
     delete this->ui;
 }
 
-QString ConnectionOptionsPage::text() const
+QString ConnectionOptionsPage::GetText() const
 {
     // Matches C# Messages.CONNECTION
     return tr("Connection");
 }
 
-QString ConnectionOptionsPage::subText() const
+QString ConnectionOptionsPage::GetSubText() const
 {
     // Matches C# Messages.CONNECTION_DESC
     return tr("Configure connection and proxy settings");
 }
 
-QIcon ConnectionOptionsPage::image() const
+QIcon ConnectionOptionsPage::GetImage() const
 {
     // Matches C# Images.StaticImages._000_Network_h32bit_16
     return QIcon(":/icons/network_16.png");
 }
 
-void ConnectionOptionsPage::build()
+void ConnectionOptionsPage::Build()
 {
     // Matches C# ConnectionOptionsPage.Build()
     this->eventsDisabled = true;
@@ -206,7 +206,7 @@ void ConnectionOptionsPage::updateControlStates()
     this->ui->DigestRadioButton->setEnabled(useAuth);
 }
 
-bool ConnectionOptionsPage::isValidToSave(QWidget** control, QString& invalidReason)
+bool ConnectionOptionsPage::IsValidToSave(QWidget** control, QString& invalidReason)
 {
     // Matches C# ConnectionOptionsPage.IsValidToSave()
 
@@ -261,7 +261,7 @@ bool ConnectionOptionsPage::isValidToSave(QWidget** control, QString& invalidRea
     return true;
 }
 
-void ConnectionOptionsPage::showValidationMessages(QWidget* control, const QString& message)
+void ConnectionOptionsPage::ShowValidationMessages(QWidget* control, const QString& message)
 {
     // Matches C# ConnectionOptionsPage.ShowValidationMessages()
     if (control && !message.isEmpty())
@@ -272,7 +272,7 @@ void ConnectionOptionsPage::showValidationMessages(QWidget* control, const QStri
     }
 }
 
-void ConnectionOptionsPage::hideValidationMessages()
+void ConnectionOptionsPage::HideValidationMessages()
 {
     // Matches C# ConnectionOptionsPage.HideValidationMessages()
     if (this->invalidControl)
@@ -282,7 +282,7 @@ void ConnectionOptionsPage::hideValidationMessages()
     }
 }
 
-void ConnectionOptionsPage::save()
+void ConnectionOptionsPage::Save()
 {
     // Matches C# ConnectionOptionsPage.Save()
     SettingsManager& settings = SettingsManager::instance();

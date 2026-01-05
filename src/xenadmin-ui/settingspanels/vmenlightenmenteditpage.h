@@ -48,33 +48,33 @@ class VMEnlightenmentEditPage : public IEditPage
 {
     Q_OBJECT
 
-public:
-    explicit VMEnlightenmentEditPage(QWidget* parent = nullptr);
-    ~VMEnlightenmentEditPage() override;
+    public:
+        explicit VMEnlightenmentEditPage(QWidget* parent = nullptr);
+        ~VMEnlightenmentEditPage() override;
 
-    // IEditPage interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
+        // IEditPage interface
+        QString GetText() const override;
+        QString GetSubText() const override;
+        QIcon GetImage() const override;
 
-    void setXenObjects(const QString& objectRef,
-                       const QString& objectType,
-                       const QVariantMap& objectDataBefore,
-                       const QVariantMap& objectDataCopy) override;
+        void SetXenObjects(const QString& objectRef,
+                           const QString& objectType,
+                           const QVariantMap& objectDataBefore,
+                           const QVariantMap& objectDataCopy) override;
 
-    AsyncOperation* saveSettings() override;
-    bool isValidToSave() const override;
-    void showLocalValidationMessages() override;
-    void hideLocalValidationMessages() override;
-    void cleanup() override;
-    bool hasChanged() const override;
+        AsyncOperation* SaveSettings() override;
+        bool IsValidToSave() const override;
+        void ShowLocalValidationMessages() override;
+        void HideLocalValidationMessages() override;
+        void Cleanup() override;
+        bool HasChanged() const override;
 
-private:
-    bool isVMEnlightened(const QVariantMap& vmData) const;
+    private:
+        bool isVMEnlightened(const QVariantMap& vmData) const;
 
-    Ui::VMEnlightenmentEditPage* ui;
-    QString m_vmRef;
-    bool m_originalEnlightened;
+        Ui::VMEnlightenmentEditPage* ui;
+        QString m_vmRef;
+        bool m_originalEnlightened;
 };
 
 #endif // VMENLIGHTENMENTEDITPAGE_H

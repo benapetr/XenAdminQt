@@ -37,24 +37,24 @@ class SecurityOptionsPage : public IOptionsPage
 {
     Q_OBJECT
 
-public:
-    explicit SecurityOptionsPage(QWidget* parent = nullptr);
-    ~SecurityOptionsPage();
+    public:
+        explicit SecurityOptionsPage(QWidget* parent = nullptr);
+        ~SecurityOptionsPage();
 
-    // IVerticalTab interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
+        // IVerticalTab interface
+        QString GetText() const override;
+        QString GetSubText() const override;
+        QIcon GetImage() const override;
 
-    // IOptionsPage interface
-    void build() override;
-    bool isValidToSave(QWidget** control, QString& invalidReason) override;
-    void showValidationMessages(QWidget* control, const QString& message) override;
-    void hideValidationMessages() override;
-    void save() override;
+        // IOptionsPage interface
+        void Build() override;
+        bool IsValidToSave(QWidget** control, QString& invalidReason) override;
+        void ShowValidationMessages(QWidget* control, const QString& message) override;
+        void HideValidationMessages() override;
+        void Save() override;
 
-private:
-    Ui::SecurityOptionsPage* ui;
+    private:
+        Ui::SecurityOptionsPage* ui;
 };
 
 #endif // SECURITYOPTIONSPAGE_H

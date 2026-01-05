@@ -49,12 +49,12 @@ BootOptionsEditPage::~BootOptionsEditPage()
     delete ui;
 }
 
-QString BootOptionsEditPage::text() const
+QString BootOptionsEditPage::GetText() const
 {
     return tr("Boot Options");
 }
 
-QString BootOptionsEditPage::subText() const
+QString BootOptionsEditPage::GetSubText() const
 {
     if (this->isHVM())
     {
@@ -89,12 +89,12 @@ QString BootOptionsEditPage::subText() const
     return tr("No specific boot order");
 } 
 
-QIcon BootOptionsEditPage::image() const
+QIcon BootOptionsEditPage::GetImage() const
 {
     return QIcon(":/icons/power_on.png");
 }
 
-void BootOptionsEditPage::setXenObjects(const QString& objectRef,
+void BootOptionsEditPage::SetXenObjects(const QString& objectRef,
                                         const QString& objectType,
                                         const QVariantMap& objectDataBefore,
                                         const QVariantMap& objectDataCopy)
@@ -131,9 +131,9 @@ void BootOptionsEditPage::setXenObjects(const QString& objectRef,
     this->updateButtonStates();
 } 
 
-AsyncOperation* BootOptionsEditPage::saveSettings()
+AsyncOperation* BootOptionsEditPage::SaveSettings()
 {
-    if (!this->hasChanged())
+    if (!this->HasChanged())
     {
         return nullptr;
     }
@@ -234,27 +234,27 @@ AsyncOperation* BootOptionsEditPage::saveSettings()
                                     this->isHVM(), nullptr);
 } 
 
-bool BootOptionsEditPage::isValidToSave() const
+bool BootOptionsEditPage::IsValidToSave() const
 {
     return true;
 }
 
-void BootOptionsEditPage::showLocalValidationMessages()
+void BootOptionsEditPage::ShowLocalValidationMessages()
 {
     // No validation needed
 }
 
-void BootOptionsEditPage::hideLocalValidationMessages()
+void BootOptionsEditPage::HideLocalValidationMessages()
 {
     // No validation messages to hide
 }
 
-void BootOptionsEditPage::cleanup()
+void BootOptionsEditPage::Cleanup()
 {
     // Nothing to clean up
 }
 
-bool BootOptionsEditPage::hasChanged() const
+bool BootOptionsEditPage::HasChanged() const
 {
     bool autoBootChanged = (this->ui->checkBoxAutoBoot->isChecked() != this->m_origAutoBoot);
 

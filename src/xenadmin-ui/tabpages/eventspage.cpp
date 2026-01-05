@@ -91,7 +91,7 @@ EventsPage::~EventsPage()
     delete this->ui;
 }
 
-bool EventsPage::filterIsOn() const
+bool EventsPage::GetFilterIsOn() const
 {
     // C# Reference: HistoryPage.FilterIsOn line 175
     return !this->m_statusFilters.isEmpty() || 
@@ -143,7 +143,7 @@ void EventsPage::buildRowList()
 
     // Get all operations from OperationManager
     // C# equivalent: var actions = ConnectionsManager.History.Where(a => !FilterAction(a)).ToList();
-    const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->records();
+    const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->GetRecords();
     
     QList<OperationManager::OperationRecord*> filteredRecords;
     for (auto* record : records)
@@ -551,7 +551,7 @@ void EventsPage::onFilterLocationChanged()
     // C# Reference: HistoryPage.toolStripDdbFilterLocation_FilterChanged() line 498
     // Get list of all unique locations (hostnames) from operations
     QSet<QString> allLocations;
-    const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->records();
+    const QList<OperationManager::OperationRecord*>& records = OperationManager::instance()->GetRecords();
     
     for (auto* record : records)
     {
@@ -717,7 +717,7 @@ void EventsPage::onFilterDatesChanged()
 void EventsPage::onDismissAll()
 {
     // C# Reference: HistoryPage.tsmiDismissAll_Click() line 418
-    const QList<OperationManager::OperationRecord*>& allRecords = OperationManager::instance()->records();
+    const QList<OperationManager::OperationRecord*>& allRecords = OperationManager::instance()->GetRecords();
     
     if (allRecords.isEmpty())
         return;
@@ -725,7 +725,7 @@ void EventsPage::onDismissAll()
     // Determine which records to dismiss
     QList<OperationManager::OperationRecord*> recordsToDismiss;
     
-    if (this->filterIsOn())
+    if (this->GetFilterIsOn())
     {
         // If filter is active, ask user if they want to dismiss all or just filtered
         QMessageBox msgBox(this);
@@ -792,7 +792,7 @@ void EventsPage::onDismissAll()
     // Remove the records
     if (!recordsToDismiss.isEmpty())
     {
-        OperationManager::instance()->removeRecords(recordsToDismiss);
+        OperationManager::instance()->RemoveRecords(recordsToDismiss);
     }
 }
 
@@ -844,7 +844,7 @@ void EventsPage::onDismissSelected()
         return;
     
     // Remove the selected records
-    OperationManager::instance()->removeRecords(selectedRecords);
+    OperationManager::instance()->RemoveRecords(selectedRecords);
 }
 
 void EventsPage::onEventsTableCellClicked(int row, int column)

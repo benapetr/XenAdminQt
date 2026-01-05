@@ -36,12 +36,12 @@ class ShutdownCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit ShutdownCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit ShutdownCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-    bool CanRun() const override;
-    void Run() override;
-    QString MenuText() const override;
+        bool CanRun() const override;
+        void Run() override;
+        QString MenuText() const override;
 };
 
 #endif // SHUTDOWNCOMMAND_H

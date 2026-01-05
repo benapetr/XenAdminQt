@@ -48,28 +48,28 @@ class QMenu;
  */
 class HistoryItem
 {
-public:
-    virtual ~HistoryItem() = default;
+    public:
+        virtual ~HistoryItem() = default;
 
-    /**
-     * @brief Navigate to this history item
-     */
-    virtual void go() = 0;
+        /**
+         * @brief Navigate to this history item
+         */
+        virtual void go() = 0;
 
-    /**
-     * @brief Get display name for this history item
-     */
-    virtual QString name() const = 0;
+        /**
+         * @brief Get display name for this history item
+         */
+        virtual QString name() const = 0;
 
-    /**
-     * @brief Get icon for this history item
-     */
-    virtual QIcon icon() const = 0;
+        /**
+         * @brief Get icon for this history item
+         */
+        virtual QIcon icon() const = 0;
 
-    /**
-     * @brief Check equality with another history item
-     */
-    virtual bool equals(const HistoryItem* other) const = 0;
+        /**
+         * @brief Check equality with another history item
+         */
+        virtual bool equals(const HistoryItem* other) const = 0;
 };
 
 using HistoryItemPtr = QSharedPointer<HistoryItem>;
@@ -81,25 +81,25 @@ using HistoryItemPtr = QSharedPointer<HistoryItem>;
  */
 class XenModelObjectHistoryItem : public HistoryItem
 {
-public:
-    XenModelObjectHistoryItem(const QString& objectRef, const QString& objectType,
-                              const QString& objectName, const QIcon& objectIcon,
-                              const QString& tabName);
+    public:
+        XenModelObjectHistoryItem(const QString& objectRef, const QString& objectType,
+                                  const QString& objectName, const QIcon& objectIcon,
+                                  const QString& tabName);
 
-    void go() override;
-    QString name() const override;
-    QIcon icon() const override;
-    bool equals(const HistoryItem* other) const override;
+        void go() override;
+        QString name() const override;
+        QIcon icon() const override;
+        bool equals(const HistoryItem* other) const override;
 
-    // Allow NavigationHistory to access members for navigation
-    friend class NavigationHistory;
+        // Allow NavigationHistory to access members for navigation
+        friend class NavigationHistory;
 
-private:
-    QString m_objectRef;  // OpaqueRef or empty for home
-    QString m_objectType; // "vm", "host", "pool", etc.
-    QString m_objectName; // Display name
-    QIcon m_objectIcon;   // Icon for tree
-    QString m_tabName;    // Tab title (e.g., "General", "Console")
+    private:
+        QString m_objectRef;  // OpaqueRef or empty for home
+        QString m_objectType; // "vm", "host", "pool", etc.
+        QString m_objectName; // Display name
+        QIcon m_objectIcon;   // Icon for tree
+        QString m_tabName;    // Tab title (e.g., "General", "Console")
 };
 
 /**
@@ -109,18 +109,18 @@ private:
  */
 class SearchHistoryItem : public HistoryItem
 {
-public:
-    explicit SearchHistoryItem(const QString& searchQuery);
+    public:
+        explicit SearchHistoryItem(const QString& searchQuery);
 
-    void go() override;
-    QString name() const override;
-    QIcon icon() const override;
-    bool equals(const HistoryItem* other) const override;
+        void go() override;
+        QString name() const override;
+        QIcon icon() const override;
+        bool equals(const HistoryItem* other) const override;
 
-    friend class NavigationHistory;
+        friend class NavigationHistory;
 
-private:
-    QString m_searchQuery;
+    private:
+        QString m_searchQuery;
 };
 
 /**
@@ -131,61 +131,61 @@ private:
 template <typename T>
 class LimitedStack
 {
-public:
-    explicit LimitedStack(int maxSize)
-        : m_maxSize(maxSize)
-    {}
+    public:
+        explicit LimitedStack(int maxSize)
+            : m_maxSize(maxSize)
+        {}
 
-    void push(const T& item)
-    {
-        m_stack.push(item);
-        while (m_stack.size() > m_maxSize)
+        void push(const T& item)
         {
-            m_stack.removeFirst();
+            m_stack.push(item);
+            while (m_stack.size() > m_maxSize)
+            {
+                m_stack.removeFirst();
+            }
         }
-    }
 
-    T pop()
-    {
-        if (m_stack.isEmpty())
-            return T();
-        return m_stack.pop();
-    }
+        T pop()
+        {
+            if (m_stack.isEmpty())
+                return T();
+            return m_stack.pop();
+        }
 
-    T peek() const
-    {
-        if (m_stack.isEmpty())
-            return T();
-        return m_stack.top();
-    }
+        T peek() const
+        {
+            if (m_stack.isEmpty())
+                return T();
+            return m_stack.top();
+        }
 
-    void clear()
-    {
-        m_stack.clear();
-    }
+        void clear()
+        {
+            m_stack.clear();
+        }
 
-    bool isEmpty() const
-    {
-        return m_stack.isEmpty();
-    }
-    int size() const
-    {
-        return m_stack.size();
-    }
+        bool isEmpty() const
+        {
+            return m_stack.isEmpty();
+        }
+        int size() const
+        {
+            return m_stack.size();
+        }
 
-    // Iterator support for dropdown menu population
-    typename QStack<T>::const_iterator begin() const
-    {
-        return m_stack.begin();
-    }
-    typename QStack<T>::const_iterator end() const
-    {
-        return m_stack.end();
-    }
+        // Iterator support for dropdown menu population
+        typename QStack<T>::const_iterator begin() const
+        {
+            return m_stack.begin();
+        }
+        typename QStack<T>::const_iterator end() const
+        {
+            return m_stack.end();
+        }
 
-private:
-    QStack<T> m_stack;
-    int m_maxSize;
+    private:
+        QStack<T> m_stack;
+        int m_maxSize;
 };
 
 /**
@@ -198,72 +198,72 @@ class NavigationHistory : public QObject
 {
     Q_OBJECT
 
-public:
-    explicit NavigationHistory(MainWindow* mainWindow, QObject* parent = nullptr);
-    ~NavigationHistory();
+    public:
+        explicit NavigationHistory(MainWindow* mainWindow, QObject* parent = nullptr);
+        ~NavigationHistory();
 
-    /**
-     * @brief Add new history item (matches C# History.NewHistoryItem)
-     *
-     * Pushes current item to backward history and clears forward history.
-     * If item equals current item, does nothing.
-     */
-    void newHistoryItem(const HistoryItemPtr& historyItem);
+        /**
+         * @brief Add new history item (matches C# History.NewHistoryItem)
+         *
+         * Pushes current item to backward history and clears forward history.
+         * If item equals current item, does nothing.
+         */
+        void newHistoryItem(const HistoryItemPtr& historyItem);
 
-    /**
-     * @brief Replace current history item (matches C# History.ReplaceHistoryItem)
-     *
-     * Used when modifying current item (e.g., search refinement)
-     */
-    void replaceHistoryItem(const HistoryItemPtr& historyItem);
+        /**
+         * @brief Replace current history item (matches C# History.ReplaceHistoryItem)
+         *
+         * Used when modifying current item (e.g., search refinement)
+         */
+        void replaceHistoryItem(const HistoryItemPtr& historyItem);
 
-    /**
-     * @brief Navigate backward in history (matches C# History.Back)
-     * @param steps Number of steps to go back
-     */
-    void back(int steps = 1);
+        /**
+         * @brief Navigate backward in history (matches C# History.Back)
+         * @param steps Number of steps to go back
+         */
+        void back(int steps = 1);
 
-    /**
-     * @brief Navigate forward in history (matches C# History.Forward)
-     * @param steps Number of steps to go forward
-     */
-    void forward(int steps = 1);
+        /**
+         * @brief Navigate forward in history (matches C# History.Forward)
+         * @param steps Number of steps to go forward
+         */
+        void forward(int steps = 1);
 
-    /**
-     * @brief Enable/disable back and forward buttons (matches C# History.EnableHistoryButtons)
-     */
-    void enableHistoryButtons();
+        /**
+         * @brief Enable/disable back and forward buttons (matches C# History.EnableHistoryButtons)
+         */
+        void enableHistoryButtons();
 
-    /**
-     * @brief Populate back button dropdown menu (matches C# History.PopulateBackDropDown)
-     */
-    void populateBackDropDown(QMenu* menu);
+        /**
+         * @brief Populate back button dropdown menu (matches C# History.PopulateBackDropDown)
+         */
+        void populateBackDropDown(QMenu* menu);
 
-    /**
-     * @brief Populate forward button dropdown menu (matches C# History.PopulateForwardDropDown)
-     */
-    void populateForwardDropDown(QMenu* menu);
+        /**
+         * @brief Populate forward button dropdown menu (matches C# History.PopulateForwardDropDown)
+         */
+        void populateForwardDropDown(QMenu* menu);
 
-    /**
-     * @brief Check if currently in history navigation
-     *
-     * Used to prevent recursive history updates during Go() execution
-     */
-    bool isInHistoryNavigation() const
-    {
-        return m_inHistoryNavigation;
-    }
+        /**
+         * @brief Check if currently in history navigation
+         *
+         * Used to prevent recursive history updates during Go() execution
+         */
+        bool isInHistoryNavigation() const
+        {
+            return m_inHistoryNavigation;
+        }
 
-private:
-    void doHistoryItem(const HistoryItemPtr& item);
-    void populateMenuWith(QMenu* menu, const LimitedStack<HistoryItemPtr>& history,
-                          bool isBackward);
+    private:
+        void doHistoryItem(const HistoryItemPtr& item);
+        void populateMenuWith(QMenu* menu, const LimitedStack<HistoryItemPtr>& history,
+                              bool isBackward);
 
-    MainWindow* m_mainWindow;
-    LimitedStack<HistoryItemPtr> m_backwardHistory;
-    LimitedStack<HistoryItemPtr> m_forwardHistory;
-    HistoryItemPtr m_currentHistoryItem;
-    bool m_inHistoryNavigation;
+        MainWindow* m_mainWindow;
+        LimitedStack<HistoryItemPtr> m_backwardHistory;
+        LimitedStack<HistoryItemPtr> m_forwardHistory;
+        HistoryItemPtr m_currentHistoryItem;
+        bool m_inHistoryNavigation;
 };
 
 #endif // NAVIGATIONHISTORY_H

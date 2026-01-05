@@ -110,7 +110,7 @@ void CloneVMCommand::Run()
         VMCloneAction* action = new VMCloneAction(conn, vm, cloneName, "", this->mainWindow());
 
         // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-        OperationManager::instance()->registerOperation(action);
+        OperationManager::instance()->RegisterOperation(action);
 
         // Connect completion signal for cleanup and status update
         connect(action, &AsyncOperation::completed, this, [this, vmName, cloneName, action]() {

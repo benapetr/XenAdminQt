@@ -56,12 +56,12 @@ VMAdvancedEditPage::~VMAdvancedEditPage()
     delete ui;
 }
 
-QString VMAdvancedEditPage::text() const
+QString VMAdvancedEditPage::GetText() const
 {
     return tr("Advanced");
 }
 
-QString VMAdvancedEditPage::subText() const
+QString VMAdvancedEditPage::GetSubText() const
 {
     if (this->ui->GeneralOptimizationRadioButton->isChecked())
         return this->ui->GeneralOptimizationRadioButton->text().remove('&');
@@ -72,12 +72,12 @@ QString VMAdvancedEditPage::subText() const
     return tr("Shadow memory multiplier: %1").arg(this->ui->ShadowMultiplierTextBox->text());
 }
 
-QIcon VMAdvancedEditPage::image() const
+QIcon VMAdvancedEditPage::GetImage() const
 {
     return QIcon(":/icons/configure_16.png");
 }
 
-void VMAdvancedEditPage::setXenObjects(const QString& objectRef,
+void VMAdvancedEditPage::SetXenObjects(const QString& objectRef,
                                        const QString& objectType,
                                        const QVariantMap& objectDataBefore,
                                        const QVariantMap& objectDataCopy)
@@ -119,9 +119,9 @@ void VMAdvancedEditPage::setXenObjects(const QString& objectRef,
     this->ui->ShadowMultiplierTextBox->setValue(this->m_originalShadowMultiplier);
 }
 
-AsyncOperation* VMAdvancedEditPage::saveSettings()
+AsyncOperation* VMAdvancedEditPage::SaveSettings()
 {
-    if (!this->hasChanged())
+    if (!this->HasChanged())
         return nullptr;
 
     double newMultiplier = this->getCurrentShadowMultiplier();
@@ -148,14 +148,14 @@ AsyncOperation* VMAdvancedEditPage::saveSettings()
     return nullptr;
 }
 
-bool VMAdvancedEditPage::isValidToSave() const
+bool VMAdvancedEditPage::IsValidToSave() const
 {
     return this->getCurrentShadowMultiplier() >= 1.0;
 }
 
-void VMAdvancedEditPage::showLocalValidationMessages()
+void VMAdvancedEditPage::ShowLocalValidationMessages()
 {
-    if (!isValidToSave())
+    if (!IsValidToSave())
     {
         QToolTip::showText(
             this->ui->ShadowMultiplierTextBox->mapToGlobal(QPoint(0, this->ui->ShadowMultiplierTextBox->height())),
@@ -165,25 +165,25 @@ void VMAdvancedEditPage::showLocalValidationMessages()
     }
 }
 
-void VMAdvancedEditPage::hideLocalValidationMessages()
+void VMAdvancedEditPage::HideLocalValidationMessages()
 {
     QToolTip::hideText();
 }
 
-void VMAdvancedEditPage::cleanup()
+void VMAdvancedEditPage::Cleanup()
 {
     QToolTip::hideText();
 }
 
-bool VMAdvancedEditPage::hasChanged() const
+bool VMAdvancedEditPage::HasChanged() const
 {
     return qAbs(this->getCurrentShadowMultiplier() - this->m_originalShadowMultiplier) > 0.0001;
 }
 
-QVariantMap VMAdvancedEditPage::getModifiedObjectData() const
+QVariantMap VMAdvancedEditPage::GetModifiedObjectData() const
 {
     QVariantMap data;
-    if (this->m_powerState != "Running" && this->hasChanged())
+    if (this->m_powerState != "Running" && this->HasChanged())
         data["HVM_shadow_multiplier"] = this->getCurrentShadowMultiplier();
     return data;
 }

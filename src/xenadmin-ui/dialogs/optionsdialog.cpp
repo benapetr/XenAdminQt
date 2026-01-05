@@ -60,7 +60,7 @@ OptionsDialog::OptionsDialog(QWidget* parent) : QDialog(parent), ui(new Ui::Opti
     // Add pages to vertical tabs and stacked widget
     for (IOptionsPage* page : this->m_pages)
     {
-        this->ui->verticalTabs->addTab(page->image(), page->text(), page->subText(), page);
+        this->ui->verticalTabs->addTab(page->GetImage(), page->GetText(), page->GetSubText(), page);
         this->ui->ContentPanel->addWidget(page);
     }
 
@@ -72,8 +72,8 @@ OptionsDialog::OptionsDialog(QWidget* parent) : QDialog(parent), ui(new Ui::Opti
     {
         this->ui->verticalTabs->setCurrentRow(0);
         this->ui->ContentPanel->setCurrentWidget(this->m_pages.first());
-        this->ui->TabImage->setPixmap(this->m_pages.first()->image().pixmap(32, 32));
-        this->ui->TabTitle->setText(this->m_pages.first()->text());
+        this->ui->TabImage->setPixmap(this->m_pages.first()->GetImage().pixmap(32, 32));
+        this->ui->TabTitle->setText(this->m_pages.first()->GetText());
         this->m_pages.first()->show(); // Explicitly show the first page
     }
 
@@ -94,7 +94,7 @@ void OptionsDialog::buildPages()
     // Matches C# OptionsDialog.OnLoad()
     for (IOptionsPage* page : this->m_pages)
     {
-        page->build();
+        page->Build();
     }
 }
 
@@ -133,10 +133,10 @@ void OptionsDialog::accept()
         QWidget* control = nullptr;
         QString invalidReason;
 
-        if (!page->isValidToSave(&control, invalidReason))
+        if (!page->IsValidToSave(&control, invalidReason))
         {
             this->selectPage(page);
-            page->showValidationMessages(control, invalidReason);
+            page->ShowValidationMessages(control, invalidReason);
             return; // Don't close dialog
         }
     }
@@ -144,7 +144,7 @@ void OptionsDialog::accept()
     // Save all pages
     for (IOptionsPage* page : this->m_pages)
     {
-        page->save();
+        page->Save();
     }
 
     // Save settings (matches C# Settings.TrySaveSettings())
@@ -171,8 +171,8 @@ void OptionsDialog::onVerticalTabsCurrentChanged(int index)
     IOptionsPage* page = this->m_pages[index];
 
     // Update header
-    this->ui->TabImage->setPixmap(page->image().pixmap(32, 32));
-    this->ui->TabTitle->setText(page->text());
+    this->ui->TabImage->setPixmap(page->GetImage().pixmap(32, 32));
+    this->ui->TabTitle->setText(page->GetText());
 
     // Show selected page
     this->ui->ContentPanel->setCurrentWidget(page);
@@ -186,6 +186,6 @@ void OptionsDialog::hideValidationToolTips()
     // Matches C# HideValidationToolTips()
     for (IOptionsPage* page : this->m_pages)
     {
-        page->hideValidationMessages();
+        page->HideValidationMessages();
     }
 }

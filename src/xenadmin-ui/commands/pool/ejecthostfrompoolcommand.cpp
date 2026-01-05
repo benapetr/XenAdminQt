@@ -113,7 +113,7 @@ void EjectHostFromPoolCommand::Run()
         this);
 
     // Register with OperationManager for history tracking
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signals
     connect(action, &AsyncOperation::completed, [this, hostName, action]() {

@@ -79,7 +79,7 @@ void RebootHostCommand::Run()
         Host* host = new Host(conn, hostRef, this);
         RebootHostAction* action = new RebootHostAction(conn, host, this);
 
-        OperationManager::instance()->registerOperation(action);
+        OperationManager::instance()->RegisterOperation(action);
 
         connect(action, &AsyncOperation::completed, this, [this, hostName, action]()
         {

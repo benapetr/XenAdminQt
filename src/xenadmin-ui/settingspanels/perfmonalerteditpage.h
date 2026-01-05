@@ -48,47 +48,47 @@ class PerfmonAlertEditPage : public IEditPage
 {
     Q_OBJECT
 
-public:
-    explicit PerfmonAlertEditPage(QWidget* parent = nullptr);
-    ~PerfmonAlertEditPage() override;
+    public:
+        explicit PerfmonAlertEditPage(QWidget* parent = nullptr);
+        ~PerfmonAlertEditPage() override;
 
-    // IEditPage interface
-    QString text() const override;
-    QString subText() const override;
-    QIcon image() const override;
+        // IEditPage interface
+        QString GetText() const override;
+        QString GetSubText() const override;
+        QIcon GetImage() const override;
 
-    void setXenObjects(const QString& objectRef,
-                       const QString& objectType,
-                       const QVariantMap& objectDataBefore,
-                       const QVariantMap& objectDataCopy) override;
+        void SetXenObjects(const QString& objectRef,
+                           const QString& objectType,
+                           const QVariantMap& objectDataBefore,
+                           const QVariantMap& objectDataCopy) override;
 
-    AsyncOperation* saveSettings() override;
-    bool isValidToSave() const override;
-    void showLocalValidationMessages() override;
-    void hideLocalValidationMessages() override;
-    void cleanup() override;
-    bool hasChanged() const override;
+        AsyncOperation* SaveSettings() override;
+        bool IsValidToSave() const override;
+        void ShowLocalValidationMessages() override;
+        void HideLocalValidationMessages() override;
+        void Cleanup() override;
+        bool HasChanged() const override;
 
-private:
-    struct AlertConfig
-    {
-        bool enabled;
-        double threshold;
-        int duration;
-    };
+    private:
+        struct AlertConfig
+        {
+            bool enabled;
+            double threshold;
+            int duration;
+        };
 
-    AlertConfig getAlertConfig(const QVariantMap& otherConfig, const QString& prefix) const;
-    void setAlertConfig(QVariantMap& otherConfig, const QString& prefix, const AlertConfig& config);
+        AlertConfig getAlertConfig(const QVariantMap& otherConfig, const QString& prefix) const;
+        void setAlertConfig(QVariantMap& otherConfig, const QString& prefix, const AlertConfig& config);
 
-    Ui::PerfmonAlertEditPage* ui;
-    QString m_objectRef;
-    QString m_objectType;
-    QVariantMap m_objectDataBefore;
-    QVariantMap m_objectDataCopy;
+        Ui::PerfmonAlertEditPage* ui;
+        QString m_objectRef;
+        QString m_objectType;
+        QVariantMap m_objectDataBefore;
+        QVariantMap m_objectDataCopy;
 
-    // Original alert configurations
-    AlertConfig m_origCPUAlert;
-    AlertConfig m_origMemoryAlert;
+        // Original alert configurations
+        AlertConfig m_origCPUAlert;
+        AlertConfig m_origMemoryAlert;
 };
 
 #endif // PERFMONALERTEDITPAGE_H

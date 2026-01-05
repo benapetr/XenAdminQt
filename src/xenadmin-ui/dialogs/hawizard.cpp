@@ -381,7 +381,7 @@ void HAWizard::accept()
         this);
 
     // Register with OperationManager for history tracking
-    OperationManager::instance()->registerOperation(action);
+    OperationManager::instance()->RegisterOperation(action);
 
     // Show progress dialog
     OperationProgressDialog* progressDialog = new OperationProgressDialog(action, this);

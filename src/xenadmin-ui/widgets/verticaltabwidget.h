@@ -42,46 +42,42 @@ class VerticalTabDelegate : public QStyledItemDelegate
 {
     Q_OBJECT
 
-public:
-    explicit VerticalTabDelegate(QObject* parent = nullptr);
+    public:
+        explicit VerticalTabDelegate(QObject* parent = nullptr);
 
-    void paint(QPainter* painter, const QStyleOptionViewItem& option,
-               const QModelIndex& index) const override;
-    QSize sizeHint(const QStyleOptionViewItem& option,
-                   const QModelIndex& index) const override;
-
-private:
+        void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
+        QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 };
 
 class VerticalTabWidget : public QListWidget
 {
     Q_OBJECT
 
-public:
-    explicit VerticalTabWidget(QWidget* parent = nullptr);
+    public:
+        explicit VerticalTabWidget(QWidget* parent = nullptr);
 
-    // Add a tab with icon, main text, and subtext
-    void addTab(const QIcon& icon, const QString& text, const QString& subText, QWidget* page);
+        // Add a tab with icon, main text, and subtext
+        void addTab(const QIcon& icon, const QString& text, const QString& subText, QWidget* page);
 
-    // Get the widget associated with the selected tab
-    QWidget* currentPage() const;
+        // Get the widget associated with the selected tab
+        QWidget* currentPage() const;
 
-    // Get the widget at the specified index
-    QWidget* pageAt(int index) const;
+        // Get the widget at the specified index
+        QWidget* pageAt(int index) const;
 
-    // Set current page by widget
-    void setCurrentPage(QWidget* page);
+        // Set current page by widget
+        void setCurrentPage(QWidget* page);
 
-private:
-    struct TabData
-    {
-        QIcon icon;
-        QString text;
-        QString subText;
-        QWidget* page;
-    };
+    private:
+        struct TabData
+        {
+            QIcon icon;
+            QString text;
+            QString subText;
+            QWidget* page;
+        };
 
-    QList<TabData> m_tabs;
+        QList<TabData> m_tabs;
 };
 
 #endif // VERTICALTABWIDGET_H
