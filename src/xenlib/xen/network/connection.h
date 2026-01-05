@@ -96,7 +96,6 @@ class XENLIB_EXPORT XenConnection : public QObject
         void Interrupt();
         ConnectTask* GetConnectTask() const;
         bool InProgress() const;
-        bool IsConnectedNewFlow() const;
         XenAPI::Session* GetConnectSession() const;
         QStringList GetLastFailureDescription() const;
 

@@ -86,7 +86,7 @@ QWidget* ConnectingToServerDialog::GetOwnerWidget() const
 
 void ConnectingToServerDialog::closeEvent(QCloseEvent* event)
 {
-    if (m_connection && m_connection->InProgress() && !m_connection->IsConnectedNewFlow() && !m_endBegun)
+    if (m_connection && m_connection->InProgress() && !m_connection->IsConnected() && !m_endBegun)
     {
         m_endBegun = true;
         m_connection->EndConnect();

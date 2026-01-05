@@ -36,11 +36,10 @@
 #include "../xen/network.h"
 #include "../xen/folder.h"
 #include "../xen/vmappliance.h"
+#include "../xen/dockercontainer.h"
 #include "../xen/network/connection.h"
 #include "../xencache.h"
 
-// TODO refactor this so that we don't use class from UI layer here
-#include "../../xenadmin-ui/iconmanager.h"
 
 namespace XenSearch
 {
@@ -56,8 +55,6 @@ QMap<QString, int> PropertyAccessors::haRestartPriorityI18n_;
 QMap<QString, int> PropertyAccessors::srTypeI18n_;
 QMap<PropertyNames, QString> PropertyAccessors::propertyNamesI18n_;
 QMap<PropertyNames, QString> PropertyAccessors::propertyNamesI18nFalse_;
-QMap<int, QString> PropertyAccessors::vmPowerStateImages_;
-QMap<ObjectTypes, QString> PropertyAccessors::objectTypesImages_;
 QMap<ColumnNames, PropertyNames> PropertyAccessors::columnSortBy_;
 
 void PropertyAccessors::Initialize()
@@ -140,22 +137,6 @@ void PropertyAccessors::Initialize()
     objectTypesI18n_[QObject::tr("Folders")] = ObjectTypes::Folder;
     objectTypesI18n_[QObject::tr("VM Appliance")] = ObjectTypes::Appliance;
     
-    // Initialize object type icons (using icon names that will be resolved later)
-    objectTypesImages_[ObjectTypes::DefaultTemplate] = "template";
-    objectTypesImages_[ObjectTypes::UserTemplate] = "template-user";
-    objectTypesImages_[ObjectTypes::Pool] = "pool";
-    objectTypesImages_[ObjectTypes::Server] = "host";
-    objectTypesImages_[ObjectTypes::DisconnectedServer] = "host-disconnected";
-    objectTypesImages_[ObjectTypes::LocalSR] = "storage";
-    objectTypesImages_[ObjectTypes::RemoteSR] = "storage";
-    objectTypesImages_[ObjectTypes::LocalSR | ObjectTypes::RemoteSR] = "storage";
-    objectTypesImages_[ObjectTypes::VM] = "vm";
-    objectTypesImages_[ObjectTypes::Network] = "network";
-    objectTypesImages_[ObjectTypes::Snapshot] = "snapshot";
-    objectTypesImages_[ObjectTypes::VDI] = "vdi";
-    objectTypesImages_[ObjectTypes::Folder] = "folder";
-    objectTypesImages_[ObjectTypes::Appliance] = "vm-appliance";
-    
     // Initialize column sort mappings
     columnSortBy_[ColumnNames::name] = PropertyNames::label;
     columnSortBy_[ColumnNames::cpu] = PropertyNames::cpuValue;
@@ -219,8 +200,27 @@ void PropertyAccessors::Initialize()
         VM* vm = qobject_cast<VM*>(o);
         if (vm && vm->IsRealVM())
         {
-            // TODO: Get actual memory from metrics
-            return QVariant();
+            // C# reference: XenModel/XenSearch/Common.cs line 329-339
+            // Get memory_actual from VM metrics
+            XenConnection* conn = vm->GetConnection();
+            if (conn)
+            {
+                XenCache* cache = conn->GetCache();
+                if (cache)
+                {
+                    QString metricsRef = vm->MetricsRef();
+                    if (!metricsRef.isEmpty() && metricsRef != "OpaqueRef:NULL")
+                    {
+                        QVariantMap metrics = cache->ResolveObjectData("vm_metrics", metricsRef);
+                        if (!metrics.isEmpty())
+                        {
+                            qint64 memoryActual = metrics.value("memory_actual").toLongLong();
+                            if (memoryActual > 0)
+                                return memoryActual;
+                        }
+                    }
+                }
+            }
         }
         return QVariant();
     };
@@ -352,6 +352,19 @@ void PropertyAccessors::Initialize()
     // Misc properties
     properties_[PropertyNames::shared] = SharedProperty;
     properties_[PropertyNames::connection_hostname] = ConnectionHostnameProperty;
+    
+    // Docker container parent VM
+    // C# reference: XenModel/XenSearch/Common.cs line 315
+    // properties[PropertyNames.dockervm] = o => o is DockerContainer dc ? new ComparableList<VM> {dc.Parent} : new ComparableList<VM>();
+    properties_[PropertyNames::dockervm] = [](XenObject* o) -> QVariant {
+        DockerContainer* dc = qobject_cast<DockerContainer*>(o);
+        QVariantList result;
+        if (dc && dc->parent())
+        {
+            result.append(QVariant::fromValue(dc->parent()));
+        }
+        return result;
+    };
 }
 
 std::function<QVariant(XenObject*)> PropertyAccessors::Get(PropertyNames property)
@@ -378,54 +391,73 @@ QMap<QString, QVariant> PropertyAccessors::GetI18nFor(PropertyNames property)
                 result[it.key()] = QVariant::fromValue(it.value());
             break;
             
-        // TODO: Add other enum property i18n maps
+        case PropertyNames::virtualisation_status:
+            // Populate virtualisationStatusI18n_ on first use
+            if (virtualisationStatusI18n_.isEmpty())
+            {
+                virtualisationStatusI18n_[QObject::tr("Not optimized")] = 0; // VM.VirtualizationStatus.NotInstalled
+                virtualisationStatusI18n_[QObject::tr("Out of date")] = 1; // VM.VirtualizationStatus.PvDriversOutOfDate
+                virtualisationStatusI18n_[QObject::tr("Unknown")] = 2; // VM.VirtualizationStatus.Unknown
+                virtualisationStatusI18n_[QObject::tr("I/O optimized")] = 4; // VM.VirtualizationStatus.IoDriversInstalled
+                virtualisationStatusI18n_[QObject::tr("Management Agent installed")] = 8; // VM.VirtualizationStatus.ManagementInstalled
+                virtualisationStatusI18n_[QObject::tr("Optimized")] = 12; // IoDriversInstalled | ManagementInstalled
+            }
+            for (auto it = virtualisationStatusI18n_.begin(); it != virtualisationStatusI18n_.end(); ++it)
+                result[it.key()] = it.value();
+            break;
+            
+        case PropertyNames::power_state:
+            // Populate vmPowerStateI18n_ on first use
+            if (vmPowerStateI18n_.isEmpty())
+            {
+                vmPowerStateI18n_[QObject::tr("Halted")] = 0; // vm_power_state::Halted
+                vmPowerStateI18n_[QObject::tr("Paused")] = 1; // vm_power_state::Paused
+                vmPowerStateI18n_[QObject::tr("Running")] = 2; // vm_power_state::Running
+                vmPowerStateI18n_[QObject::tr("Suspended")] = 3; // vm_power_state::Suspended
+            }
+            for (auto it = vmPowerStateI18n_.begin(); it != vmPowerStateI18n_.end(); ++it)
+                result[it.key()] = it.value();
+            break;
+            
+        case PropertyNames::ha_restart_priority:
+            // Populate haRestartPriorityI18n_ on first use
+            if (haRestartPriorityI18n_.isEmpty())
+            {
+                haRestartPriorityI18n_[QObject::tr("Restart if possible")] = 0; // BestEffort
+                haRestartPriorityI18n_[QObject::tr("Always restart")] = 1; // Restart
+                haRestartPriorityI18n_[QObject::tr("Do not restart")] = 2; // DoNotRestart
+                haRestartPriorityI18n_[QObject::tr("Restart (order 1)")] = 3; // Priority 1
+                haRestartPriorityI18n_[QObject::tr("Restart (order 2)")] = 4; // Priority 2
+                haRestartPriorityI18n_[QObject::tr("Restart (order 3)")] = 5; // Priority 3
+            }
+            for (auto it = haRestartPriorityI18n_.begin(); it != haRestartPriorityI18n_.end(); ++it)
+                result[it.key()] = it.value();
+            break;
+            
+        case PropertyNames::sr_type:
+            // Populate srTypeI18n_ on first use
+            if (srTypeI18n_.isEmpty())
+            {
+                srTypeI18n_[QObject::tr("NFS VHD")] = 0; // nfs
+                srTypeI18n_[QObject::tr("iSCSI")] = 1; // lvmoiscsi
+                srTypeI18n_[QObject::tr("FC")] = 2; // lvmohba
+                srTypeI18n_[QObject::tr("Local")] = 3; // lvm
+                srTypeI18n_[QObject::tr("ISO")] = 4; // iso
+                srTypeI18n_[QObject::tr("CIFS")] = 5; // cifs
+                srTypeI18n_[QObject::tr("NetApp")] = 6; // netapp
+                srTypeI18n_[QObject::tr("EqualLogic")] = 7; // equal
+                srTypeI18n_[QObject::tr("Software iSCSI")] = 8; // lvmofcoe
+                srTypeI18n_[QObject::tr("Hardware HBA")] = 9; // udev
+            }
+            for (auto it = srTypeI18n_.begin(); it != srTypeI18n_.end(); ++it)
+                result[it.key()] = it.value();
+            break;
+            
         default:
             break;
     }
     
     return result;
-}
-
-std::function<QIcon(const QVariant&)> PropertyAccessors::GetImagesFor(PropertyNames property)
-{
-    Initialize();
-    
-    switch (property)
-    {
-        case PropertyNames::type:
-            return [](const QVariant& value) -> QIcon {
-                if (!value.isValid())
-                    return QIcon();
-                
-                ObjectTypes type = value.value<ObjectTypes>();
-                
-                // Use IconManager to get appropriate icon based on object type
-                // This is a simplified mapping - full implementation would need object data
-                QVariantMap dummyData;
-                
-                if (type == ObjectTypes::VM)
-                    return IconManager::instance().getIconForObject("vm", dummyData);
-                else if (type == ObjectTypes::Server || type == ObjectTypes::DisconnectedServer)
-                    return IconManager::instance().getIconForObject("host", dummyData);
-                else if (type == ObjectTypes::Pool)
-                    return IconManager::instance().getIconForObject("pool", dummyData);
-                else if (type == ObjectTypes::LocalSR || type == ObjectTypes::RemoteSR)
-                    return IconManager::instance().getIconForObject("sr", dummyData);
-                else if (type == ObjectTypes::Network)
-                    return IconManager::instance().getIconForObject("network", dummyData);
-                else if (type == ObjectTypes::VDI)
-                    return IconManager::instance().getIconForObject("vdi", dummyData);
-                else if (type == ObjectTypes::Snapshot)
-                    return IconManager::instance().getIconForVM({{"is_a_snapshot", true}});
-                else if (type == ObjectTypes::DefaultTemplate || type == ObjectTypes::UserTemplate)
-                    return IconManager::instance().getIconForVM({{"is_a_template", true}});
-                
-                return QIcon();
-            };
-            
-        default:
-            return nullptr;
-    }
 }
 
 PropertyNames PropertyAccessors::GetSortPropertyName(ColumnNames column)
@@ -455,37 +487,6 @@ QString PropertyAccessors::GetObjectTypeDisplayName(ObjectTypes type)
             return it.key();
     }
     return QString();
-}
-
-QIcon PropertyAccessors::GetObjectTypeIcon(ObjectTypes type)
-{
-    Initialize();
-    
-    // Use IconManager for proper icon lookup
-    QVariantMap dummyData;
-    
-    if (type == ObjectTypes::VM)
-        return IconManager::instance().getIconForObject("vm", dummyData);
-    else if (type == ObjectTypes::Server || type == ObjectTypes::DisconnectedServer)
-        return IconManager::instance().getIconForObject("host", dummyData);
-    else if (type == ObjectTypes::Pool)
-        return IconManager::instance().getIconForObject("pool", dummyData);
-    else if (type == ObjectTypes::LocalSR || type == ObjectTypes::RemoteSR)
-        return IconManager::instance().getIconForObject("sr", dummyData);
-    else if (type == ObjectTypes::Network)
-        return IconManager::instance().getIconForObject("network", dummyData);
-    else if (type == ObjectTypes::VDI)
-        return IconManager::instance().getIconForObject("vdi", dummyData);
-    else if (type == ObjectTypes::Snapshot)
-        return IconManager::instance().getIconForVM({{"is_a_snapshot", true}});
-    else if (type == ObjectTypes::DefaultTemplate || type == ObjectTypes::UserTemplate)
-        return IconManager::instance().getIconForVM({{"is_a_template", true}});
-    else if (type == ObjectTypes::Folder)
-        return QIcon::fromTheme("folder");
-    else if (type == ObjectTypes::Appliance)
-        return IconManager::instance().getIconForObject("vm_appliance", dummyData);
-    
-    return QIcon();
 }
 
 // Property accessor implementations (stubs for now)
@@ -1101,8 +1102,65 @@ QVariant PropertyAccessors::IPAddressProperty(XenObject* o)
     }
     else if (SR* sr = qobject_cast<SR*>(o))
     {
-        // TODO: Get SR target IP address
-        // This requires implementing SR::Target() method
+        // TODO move to SR class
+
+
+        // C# reference: XenModel/XenAPI-Extensions/SR.cs Target() method
+        // Get target IP from PBD device_config (iSCSI target, NFS server, etc.)
+        XenConnection* conn = sr->GetConnection();
+        if (conn)
+        {
+            XenCache* cache = conn->GetCache();
+            if (cache)
+            {
+                QVariantMap srData = sr->GetData();
+                QStringList pbdRefs = srData.value("PBDs").toStringList();
+                QString srType = sr->GetType();
+                
+                for (const QString& pbdRef : pbdRefs)
+                {
+                    QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
+                    if (pbdData.isEmpty())
+                        continue;
+                    
+                    QVariantMap deviceConfig = pbdData.value("device_config").toMap();
+                    QString target;
+                    
+                    if (srType == "lvmoiscsi" && deviceConfig.contains("target"))
+                    {
+                        // iSCSI target
+                        target = deviceConfig.value("target").toString();
+                    }
+                    else if (srType == "iso" && deviceConfig.contains("location"))
+                    {
+                        // CIFS or NFS ISO - extract hostname from location
+                        QString location = deviceConfig.value("location").toString();
+                        // Location has form //ip_address/path
+                        if (location.startsWith("//"))
+                        {
+                            int slashPos = location.indexOf('/', 2);
+                            if (slashPos > 0)
+                                target = location.mid(2, slashPos - 2);
+                            else
+                                target = location.mid(2);
+                        }
+                    }
+                    else if (srType == "nfs" && deviceConfig.contains("server"))
+                    {
+                        // NFS server
+                        target = deviceConfig.value("server").toString();
+                    }
+                    
+                    if (!target.isEmpty())
+                    {
+                        // Just add the target string directly (it's already an IP/hostname)
+                        if (!addresses.contains(target))
+                            addresses.append(target);
+                        break;  // Found target, no need to check other PBDs
+                    }
+                }
+            }
+        }
     }
     
     return addresses.isEmpty() ? QVariant() : addresses;

@@ -162,6 +162,7 @@ SOURCES += \
     operations/operationlauncher.cpp \
     customfields/customfielddefinition.cpp \
     customfields/customfieldsmanager.cpp \
+    xen/dockercontainer.cpp \
     xen/folder.cpp \
     otherconfig/otherconfigandtagswatcher.cpp
 
@@ -323,6 +324,7 @@ HEADERS += \
     operations/operationlauncher.h \
     customfields/customfielddefinition.h \
     customfields/customfieldsmanager.h \
+    xen/dockercontainer.h \
     xen/folder.h \
     otherconfig/otherconfigandtagswatcher.h
 

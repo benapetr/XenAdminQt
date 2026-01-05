@@ -27,7 +27,6 @@
 
 #include "connection.h"
 #include "connectionworker.h"
-#include "certificatemanager.h"
 #include "connecttask.h"
 #include "../api.h"
 #include "../eventpoller.h"
@@ -202,11 +201,6 @@ void XenConnection::Disconnect()
         this->d->sessionId.clear();
         emit this->disconnected();
     }
-}
-
-bool XenConnection::IsConnected() const
-{
-    return this->d->connected || this->IsConnectedNewFlow();
 }
 
 QString XenConnection::GetHostname() const
@@ -776,7 +770,7 @@ void XenConnection::startReconnectCoordinatorTimer(int timeoutMs)
 
 void XenConnection::reconnectSingleHostTimer()
 {
-    if (this->IsConnectedNewFlow() || this->InProgress())
+    if (this->IsConnected() || this->InProgress())
         return;
 
     if (!this->d->expectDisruption && this->d->reconnectionTimer)
@@ -788,7 +782,7 @@ void XenConnection::reconnectSingleHostTimer()
 
 void XenConnection::reconnectCoordinatorTimer()
 {
-    if (this->IsConnectedNewFlow() || this->InProgress())
+    if (this->IsConnected() || this->InProgress())
         return;
 
     const QDateTime startedAt = this->d->findingNewCoordinatorStartedAt;
@@ -1102,7 +1096,7 @@ bool XenConnection::InProgress() const
     return this->d->connectTask != nullptr;
 }
 
-bool XenConnection::IsConnectedNewFlow() const
+bool XenConnection::IsConnected() const
 {
     return this->d->connectTask && this->d->connectTask->Connected;
 }

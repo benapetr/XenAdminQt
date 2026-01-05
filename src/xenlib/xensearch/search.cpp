@@ -427,7 +427,7 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
         QList<QPair<QString, QString>> matchedObjects;
         XenCache* cache = connection->GetCache();
 
-        if (connection->IsConnectedNewFlow() && cache && cache->Count("pool") > 0)
+        if (connection->IsConnected() && cache && cache->Count("pool") > 0)
         {
             matchedObjects = this->getMatchedObjects(connection);
         }

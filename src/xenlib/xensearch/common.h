@@ -31,7 +31,6 @@
 #include <QString>
 #include <QMap>
 #include <QVariant>
-#include <QIcon>
 #include <functional>
 
 class XenObject;
@@ -249,13 +248,6 @@ class PropertyAccessors
          */
         static QMap<QString, QVariant> GetI18nFor(PropertyNames property);
         
-        /**
-         * @brief Get icon provider function for property values
-         * 
-         * @param property Property name
-         * @return Function that returns icon for a property value, or null if not applicable
-         */
-        static std::function<QIcon(const QVariant&)> GetImagesFor(PropertyNames property);
         
         /**
          * @brief Get property name used for sorting a column
@@ -291,13 +283,6 @@ class PropertyAccessors
          */
         static QString GetObjectTypeDisplayName(ObjectTypes type);
         
-        /**
-         * @brief Get icon for an object type
-         * 
-         * @param type Object type
-         * @return Icon for the object type
-         */
-        static QIcon GetObjectTypeIcon(ObjectTypes type);
         
     private:
         static bool initialized_;
@@ -319,8 +304,6 @@ class PropertyAccessors
         static QMap<PropertyNames, QString> propertyNamesI18nFalse_;
         
         // Icon mappings
-        static QMap<int, QString> vmPowerStateImages_;
-        static QMap<ObjectTypes, QString> objectTypesImages_;
         
         // Column sort mappings
         static QMap<ColumnNames, PropertyNames> columnSortBy_;

@@ -512,7 +512,7 @@ XenConnection* NavigationView::primaryConnection() const
     {
         if (!connection)
             continue;
-        if (connection->IsConnectedNewFlow() && connection->GetCache())
+        if (connection->IsConnected() && connection->GetCache())
             return connection;
     }
 
