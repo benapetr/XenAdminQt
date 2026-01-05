@@ -30,6 +30,7 @@
 
 #include <QString>
 #include <QMap>
+#include <QMetaType>
 #include <QVariant>
 #include <functional>
 
@@ -76,6 +77,12 @@ enum class ObjectTypes
     DockerContainer = 1 << 14
 };
 
+}
+
+Q_DECLARE_METATYPE(XenSearch::ObjectTypes)
+
+namespace XenSearch
+{
 // Enable bitwise operations for ObjectTypes
 inline ObjectTypes operator|(ObjectTypes a, ObjectTypes b)
 {
