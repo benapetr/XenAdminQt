@@ -340,6 +340,9 @@ class PropertyAccessors
         static QVariant ConnectionHostnameProperty(XenObject* o);
         static QVariant SharedProperty(XenObject* o);
         static QVariant TypeProperty(XenObject* o);
+        
+        // Helper methods
+        static QString FormatDuration(qint64 seconds);
         static QVariant NetworksProperty(XenObject* o);
         static QVariant VMProperty(XenObject* o);
         static QVariant HostProperty(XenObject* o);

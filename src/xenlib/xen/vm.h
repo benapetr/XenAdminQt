@@ -685,6 +685,22 @@ class XENLIB_EXPORT VM : public XenObject
         bool HasVendorDevice() const;
 
         /**
+         * @brief Check if vendor device state is present (Windows Update capable)
+         * @return true if VM has vendor device and is Windows
+         * 
+         * C# reference: XenModel/XenAPI-Extensions/VM.cs WindowsUpdateCapable()
+         */
+        bool HasVendorDeviceState() const;
+
+        /**
+         * @brief Check if read caching is enabled on any VDI
+         * @return true if any attached VDI has read caching enabled
+         * 
+         * C# reference: XenModel/XenAPI-Extensions/VM.cs ReadCachingEnabled()
+         */
+        bool ReadCachingEnabled() const;
+
+        /**
          * @brief Check if VM requires reboot
          * @return true if VM needs reboot to apply configuration changes
          */

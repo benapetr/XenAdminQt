@@ -39,6 +39,9 @@
 #include "../xen/network/connection.h"
 #include "../xencache.h"
 
+// TODO refactor this so that we don't use class from UI layer here
+#include "../../xenadmin-ui/iconmanager.h"
+
 namespace XenSearch
 {
 
@@ -177,8 +180,18 @@ void PropertyAccessors::Initialize()
     properties_[PropertyNames::pool] = [](XenObject* o) -> QVariant {
         if (!o || !o->GetConnection())
             return QVariant();
-        // TODO: Get pool from connection
-        return QVariant();
+        
+        XenCache* cache = o->GetConnection()->GetCache();
+        if (!cache)
+            return QVariant();
+        
+        // Get pool from cache - there's exactly one pool per connection
+        QStringList poolRefs = cache->GetAllRefs("pool");
+        if (poolRefs.isEmpty())
+            return QVariant();
+        
+        // Return the first (and only) pool ref
+        return poolRefs.first();
     };
     
     properties_[PropertyNames::host] = HostProperty;
@@ -214,6 +227,117 @@ void PropertyAccessors::Initialize()
     
     properties_[PropertyNames::uptime] = UptimeProperty;
     properties_[PropertyNames::ip_address] = IPAddressProperty;
+    
+    // VM-specific properties (continued)
+    properties_[PropertyNames::tags] = [](XenObject* o) -> QVariant {
+        return o ? o->GetTags().join(", ") : QVariant();
+    };
+    
+    properties_[PropertyNames::start_time] = [](XenObject* o) -> QVariant {
+        VM* vm = qobject_cast<VM*>(o);
+        if (vm && vm->IsRealVM())
+        {
+            qint64 startTime = vm->GetStartTime();
+            if (startTime > 0)
+                return QDateTime::fromSecsSinceEpoch(startTime);
+        }
+        return QVariant();
+    };
+    
+    properties_[PropertyNames::ha_restart_priority] = [](XenObject* o) -> QVariant {
+        VM* vm = qobject_cast<VM*>(o);
+        if (vm && vm->IsRealVM())
+            return vm->HARestartPriority();
+        return QVariant();
+    };
+    
+    properties_[PropertyNames::read_caching_enabled] = [](XenObject* o) -> QVariant {
+        VM* vm = qobject_cast<VM*>(o);
+        if (vm && vm->IsRealVM())
+            return vm->ReadCachingEnabled();
+        return QVariant();
+    };
+    
+    properties_[PropertyNames::vendor_device_state] = [](XenObject* o) -> QVariant {
+        VM* vm = qobject_cast<VM*>(o);
+        if (vm && vm->IsRealVM())
+            return vm->HasVendorDeviceState();
+        return QVariant();
+    };
+    
+    properties_[PropertyNames::appliance] = [](XenObject* o) -> QVariant {
+        VM* vm = qobject_cast<VM*>(o);
+        if (vm && vm->IsRealVM())
+        {
+            QString applianceRef = vm->ApplianceRef();
+            if (!applianceRef.isEmpty())
+                return applianceRef;
+        }
+        return QVariant();
+    };
+    
+    properties_[PropertyNames::in_any_appliance] = [](XenObject* o) -> QVariant {
+        VM* vm = qobject_cast<VM*>(o);
+        if (vm && vm->IsRealVM())
+        {
+            QString applianceRef = vm->ApplianceRef();
+            return !applianceRef.isEmpty();
+        }
+        return QVariant();
+    };
+    
+    // Pool/HA properties
+    properties_[PropertyNames::ha_enabled] = [](XenObject* o) -> QVariant {
+        Pool* pool = qobject_cast<Pool*>(o);
+        if (pool)
+            return pool->HAEnabled();
+        return QVariant();
+    };
+    
+    properties_[PropertyNames::isNotFullyUpgraded] = [](XenObject* o) -> QVariant {
+        Pool* pool = qobject_cast<Pool*>(o);
+        if (pool && pool->GetConnection())
+        {
+            XenCache* cache = pool->GetConnection()->GetCache();
+            if (!cache)
+                return QVariant();
+            
+            // Check if all hosts in pool have same product version
+            QStringList hostRefs = cache->GetAllRefs("host");
+            if (hostRefs.isEmpty())
+                return false;
+            
+            QString firstVersion;
+            for (const QString& hostRef : hostRefs)
+            {
+                QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
+                QVariantMap softwareVersion = hostData.value("software_version").toMap();
+                QString version = softwareVersion.value("product_version").toString();
+                
+                if (firstVersion.isEmpty())
+                    firstVersion = version;
+                else if (version != firstVersion)
+                    return true; // Mixed versions
+            }
+            return false; // All same version
+        }
+        return QVariant();
+    };
+    
+    // Storage properties
+    properties_[PropertyNames::sr_type] = [](XenObject* o) -> QVariant {
+        SR* sr = qobject_cast<SR*>(o);
+        if (sr)
+            return sr->GetType();
+        return QVariant();
+    };
+    
+    properties_[PropertyNames::size] = [](XenObject* o) -> QVariant {
+        VDI* vdi = qobject_cast<VDI*>(o);
+        if (vdi)
+            return static_cast<qint64>(vdi->VirtualSize());
+        return QVariant();
+    };
     
     // Display/UI properties
     properties_[PropertyNames::cpuText] = CPUTextProperty;
@@ -270,8 +394,32 @@ std::function<QIcon(const QVariant&)> PropertyAccessors::GetImagesFor(PropertyNa
     {
         case PropertyNames::type:
             return [](const QVariant& value) -> QIcon {
-                // TODO: Implement icon lookup
-                Q_UNUSED(value);
+                if (!value.isValid())
+                    return QIcon();
+                
+                ObjectTypes type = value.value<ObjectTypes>();
+                
+                // Use IconManager to get appropriate icon based on object type
+                // This is a simplified mapping - full implementation would need object data
+                QVariantMap dummyData;
+                
+                if (type == ObjectTypes::VM)
+                    return IconManager::instance().getIconForObject("vm", dummyData);
+                else if (type == ObjectTypes::Server || type == ObjectTypes::DisconnectedServer)
+                    return IconManager::instance().getIconForObject("host", dummyData);
+                else if (type == ObjectTypes::Pool)
+                    return IconManager::instance().getIconForObject("pool", dummyData);
+                else if (type == ObjectTypes::LocalSR || type == ObjectTypes::RemoteSR)
+                    return IconManager::instance().getIconForObject("sr", dummyData);
+                else if (type == ObjectTypes::Network)
+                    return IconManager::instance().getIconForObject("network", dummyData);
+                else if (type == ObjectTypes::VDI)
+                    return IconManager::instance().getIconForObject("vdi", dummyData);
+                else if (type == ObjectTypes::Snapshot)
+                    return IconManager::instance().getIconForVM({{"is_a_snapshot", true}});
+                else if (type == ObjectTypes::DefaultTemplate || type == ObjectTypes::UserTemplate)
+                    return IconManager::instance().getIconForVM({{"is_a_template", true}});
+                
                 return QIcon();
             };
             
@@ -312,8 +460,31 @@ QString PropertyAccessors::GetObjectTypeDisplayName(ObjectTypes type)
 QIcon PropertyAccessors::GetObjectTypeIcon(ObjectTypes type)
 {
     Initialize();
-    QString iconName = objectTypesImages_.value(type);
-    // TODO: Load actual icon from IconManager
+    
+    // Use IconManager for proper icon lookup
+    QVariantMap dummyData;
+    
+    if (type == ObjectTypes::VM)
+        return IconManager::instance().getIconForObject("vm", dummyData);
+    else if (type == ObjectTypes::Server || type == ObjectTypes::DisconnectedServer)
+        return IconManager::instance().getIconForObject("host", dummyData);
+    else if (type == ObjectTypes::Pool)
+        return IconManager::instance().getIconForObject("pool", dummyData);
+    else if (type == ObjectTypes::LocalSR || type == ObjectTypes::RemoteSR)
+        return IconManager::instance().getIconForObject("sr", dummyData);
+    else if (type == ObjectTypes::Network)
+        return IconManager::instance().getIconForObject("network", dummyData);
+    else if (type == ObjectTypes::VDI)
+        return IconManager::instance().getIconForObject("vdi", dummyData);
+    else if (type == ObjectTypes::Snapshot)
+        return IconManager::instance().getIconForVM({{"is_a_snapshot", true}});
+    else if (type == ObjectTypes::DefaultTemplate || type == ObjectTypes::UserTemplate)
+        return IconManager::instance().getIconForVM({{"is_a_template", true}});
+    else if (type == ObjectTypes::Folder)
+        return QIcon::fromTheme("folder");
+    else if (type == ObjectTypes::Appliance)
+        return IconManager::instance().getIconForObject("vm_appliance", dummyData);
+    
     return QIcon();
 }
 
@@ -326,11 +497,80 @@ QVariant PropertyAccessors::DescriptionProperty(XenObject* o)
 
 QVariant PropertyAccessors::UptimeProperty(XenObject* o)
 {
-    // TODO: Implement uptime calculation
-    // VM needs: GetStartTime() - DateTime.UtcNow - Connection.ServerTimeOffset
-    // Host needs: BootTime() converted from Unix time
-    Q_UNUSED(o);
+    if (!o || !o->GetConnection())
+        return QVariant();
+    
+    VM* vm = qobject_cast<VM*>(o);
+    if (vm && vm->IsRealVM())
+    {
+        QString powerState = vm->GetPowerState();
+        if (powerState != "Running" && powerState != "Paused" && powerState != "Suspended")
+            return QVariant();
+        
+        qint64 startTime = vm->GetStartTime();
+        if (startTime == 0)
+            return QVariant();
+        
+        // Calculate uptime: current time - start time - server time offset
+        QDateTime now = QDateTime::currentDateTimeUtc();
+        qint64 serverOffset = o->GetConnection()->GetServerTimeOffsetSeconds();
+        qint64 uptimeSeconds = now.toSecsSinceEpoch() - startTime - serverOffset;
+        
+        if (uptimeSeconds < 0)
+            return QVariant();
+        
+        // Format as human-readable duration
+        return FormatDuration(uptimeSeconds);
+    }
+    
+    Host* host = qobject_cast<Host*>(o);
+    if (host)
+    {
+        double bootTime = host->BootTime();
+        if (bootTime == 0.0)
+            return QVariant();
+        
+        // Calculate uptime: current time - boot time - server time offset
+        QDateTime now = QDateTime::currentDateTimeUtc();
+        qint64 serverOffset = o->GetConnection()->GetServerTimeOffsetSeconds();
+        qint64 uptimeSeconds = now.toSecsSinceEpoch() - static_cast<qint64>(bootTime) - serverOffset;
+        
+        if (uptimeSeconds < 0)
+            return QVariant();
+        
+        return FormatDuration(uptimeSeconds);
+    }
+    
     return QVariant();
+}
+
+QString PropertyAccessors::FormatDuration(qint64 seconds)
+{
+    if (seconds < 60)
+        return QString("%1 second%2").arg(seconds).arg(seconds == 1 ? "" : "s");
+    
+    qint64 minutes = seconds / 60;
+    if (minutes < 60)
+        return QString("%1 minute%2").arg(minutes).arg(minutes == 1 ? "" : "s");
+    
+    qint64 hours = minutes / 60;
+    if (hours < 24)
+    {
+        qint64 remainingMinutes = minutes % 60;
+        if (remainingMinutes == 0)
+            return QString("%1 hour%2").arg(hours).arg(hours == 1 ? "" : "s");
+        return QString("%1 hour%2, %3 minute%4")
+            .arg(hours).arg(hours == 1 ? "" : "s")
+            .arg(remainingMinutes).arg(remainingMinutes == 1 ? "" : "s");
+    }
+    
+    qint64 days = hours / 24;
+    qint64 remainingHours = hours % 24;
+    if (remainingHours == 0)
+        return QString("%1 day%2").arg(days).arg(days == 1 ? "" : "s");
+    return QString("%1 day%2, %3 hour%4")
+        .arg(days).arg(days == 1 ? "" : "s")
+        .arg(remainingHours).arg(remainingHours == 1 ? "" : "s");
 }
 
 QVariant PropertyAccessors::CPUTextProperty(XenObject* o)
@@ -519,7 +759,9 @@ QVariant PropertyAccessors::TypeProperty(XenObject* o)
         
         if (vm->IsTemplate())
         {
-            // TODO: Check if default template
+            // Distinguish default templates from user templates
+            if (vm->IsDefaultTemplate())
+                return QVariant::fromValue(ObjectTypes::DefaultTemplate);
             return QVariant::fromValue(ObjectTypes::UserTemplate);
         }
         
@@ -532,10 +774,13 @@ QVariant PropertyAccessors::TypeProperty(XenObject* o)
     if (qobject_cast<VMAppliance*>(o))
         return QVariant::fromValue(ObjectTypes::Appliance);
     
-    if (qobject_cast<Host*>(o))
+    Host* host = qobject_cast<Host*>(o);
+    if (host)
     {
-        // TODO: Check if connected
-        return QVariant::fromValue(ObjectTypes::Server);
+        // Check if host is connected
+        if (host->GetConnection() && host->GetConnection()->IsConnected())
+            return QVariant::fromValue(ObjectTypes::Server);
+        return QVariant::fromValue(ObjectTypes::DisconnectedServer);
     }
     
     if (qobject_cast<Pool*>(o))
@@ -721,9 +966,13 @@ QVariant PropertyAccessors::HostProperty(XenObject* o)
         if (!srRef.isEmpty())
         {
             QVariantMap srData = cache->ResolveObjectData("SR", srRef);
-            // TODO: Get SR.Home() - for now just skip
+            // Get SR.Home() - the host reference for storage repository
+            QString homeRef = srData.value("home").toString();
+            if (!homeRef.isEmpty() && homeRef != "OpaqueRef:NULL")
+                hostRefs.append(homeRef);
         }
     }
+    // Note: DockerContainer case not implemented yet as DockerContainer class not ported
     
     return hostRefs;
 }

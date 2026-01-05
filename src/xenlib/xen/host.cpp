@@ -116,6 +116,24 @@ QVariantMap Host::otherConfig() const
     return property("other_config").toMap();
 }
 
+double Host::BootTime() const
+{
+    // C# equivalent: Host.BootTime()
+    // Gets boot_time from other_config dictionary
+    
+    QVariantMap otherConfigMap = this->otherConfig();
+    if (otherConfigMap.isEmpty())
+        return 0.0;
+    
+    if (!otherConfigMap.contains("boot_time"))
+        return 0.0;
+    
+    bool ok = false;
+    double bootTime = otherConfigMap.value("boot_time").toDouble(&ok);
+    
+    return ok ? bootTime : 0.0;
+}
+
 QStringList Host::tags() const
 {
     return stringListProperty("tags");

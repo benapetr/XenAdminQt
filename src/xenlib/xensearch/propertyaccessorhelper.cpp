@@ -33,6 +33,7 @@
 #include "../xen/sr.h"
 #include "../xencache.h"
 #include "../xen/network/connection.h"
+#include "../metricupdater.h"
 
 namespace XenSearch
 {
@@ -40,104 +41,406 @@ namespace XenSearch
 // VM CPU usage
 QString PropertyAccessorHelper::vmCpuUsageString(VM* vm)
 {
-    // TODO: Implement with MetricUpdater once metrics system is ported
-    // For now return placeholder
-    Q_UNUSED(vm);
-    return "-";
+    if (!vm || !vm->GetConnection())
+        return "-";
+    
+    MetricUpdater* metricUpdater = vm->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return "-";
+    
+    // Sum CPU usage across all vCPUs
+    QString vmUuid = vm->GetUUID();
+    int numVCPUs = vm->VCPUsAtStartup();
+    if (numVCPUs == 0)
+        return "-";
+    
+    double sum = 0.0;
+    for (int i = 0; i < numVCPUs; i++)
+    {
+        QString metricName = QString("cpu%1").arg(i);
+        sum += metricUpdater->getValue("vm", vmUuid, metricName);
+    }
+    
+    if (numVCPUs == 1)
+        return QString("%1% of 1 CPU").arg(QString::number(sum * 100, 'f', 0));
+    
+    return QString("%1% of %2 CPUs").arg(QString::number((sum * 100) / numVCPUs, 'f', 0)).arg(numVCPUs);
 }
 
 int PropertyAccessorHelper::vmCpuUsageRank(VM* vm)
 {
-    // TODO: Implement with MetricUpdater
-    Q_UNUSED(vm);
-    return 0;
+    if (!vm || !vm->GetConnection())
+        return 0;
+    
+    MetricUpdater* metricUpdater = vm->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return 0;
+    
+    QString vmUuid = vm->GetUUID();
+    int numVCPUs = vm->VCPUsAtStartup();
+    if (numVCPUs == 0)
+        return 0;
+    
+    double sum = 0.0;
+    for (int i = 0; i < numVCPUs; i++)
+    {
+        QString metricName = QString("cpu%1").arg(i);
+        sum += metricUpdater->getValue("vm", vmUuid, metricName);
+    }
+    
+    return static_cast<int>(sum * 100);
 }
 
 // VM Memory usage
 QString PropertyAccessorHelper::vmMemoryUsageString(VM* vm)
 {
-    // TODO: Implement with MetricUpdater
-    // Should return format: "1.2 GB of 2.0 GB"
-    Q_UNUSED(vm);
-    return "-";
+    if (!vm || !vm->GetConnection())
+        return "-";
+    
+    MetricUpdater* metricUpdater = vm->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return "-";
+    
+    QString vmUuid = vm->GetUUID();
+    double memoryUsed = metricUpdater->getValue("vm", vmUuid, "memory");
+    double memoryFree = metricUpdater->getValue("vm", vmUuid, "memory_internal_free");
+    
+    if (memoryUsed == 0.0 && memoryFree == 0.0)
+        return "-";
+    
+    double totalMemory = memoryUsed + memoryFree;
+    
+    // Format as human-readable
+    auto formatBytes = [](double bytes) -> QString {
+        if (bytes < 1024)
+            return QString("%1 B").arg(QString::number(bytes, 'f', 0));
+        if (bytes < 1024 * 1024)
+            return QString("%1 KB").arg(QString::number(bytes / 1024, 'f', 1));
+        if (bytes < 1024 * 1024 * 1024)
+            return QString("%1 MB").arg(QString::number(bytes / (1024 * 1024), 'f', 1));
+        return QString("%1 GB").arg(QString::number(bytes / (1024 * 1024 * 1024), 'f', 1));
+    };
+    
+    return QString("%1 of %2").arg(formatBytes(memoryUsed)).arg(formatBytes(totalMemory));
 }
 
 int PropertyAccessorHelper::vmMemoryUsageRank(VM* vm)
 {
-    // TODO: Implement with MetricUpdater
-    Q_UNUSED(vm);
-    return 0;
+    if (!vm || !vm->GetConnection())
+        return 0;
+    
+    MetricUpdater* metricUpdater = vm->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return 0;
+    
+    QString vmUuid = vm->GetUUID();
+    double memoryUsed = metricUpdater->getValue("vm", vmUuid, "memory");
+    double memoryFree = metricUpdater->getValue("vm", vmUuid, "memory_internal_free");
+    
+    if (memoryUsed == 0.0 && memoryFree == 0.0)
+        return 0;
+    
+    double totalMemory = memoryUsed + memoryFree;
+    return static_cast<int>((memoryUsed / totalMemory) * 100);
 }
 
 double PropertyAccessorHelper::vmMemoryUsageValue(VM* vm)
 {
-    // TODO: Implement with MetricUpdater
-    Q_UNUSED(vm);
-    return 0.0;
+    if (!vm || !vm->GetConnection())
+        return 0.0;
+    
+    MetricUpdater* metricUpdater = vm->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return 0.0;
+    
+    QString vmUuid = vm->GetUUID();
+    return metricUpdater->getValue("vm", vmUuid, "memory");
 }
 
 // VM Network usage
 QString PropertyAccessorHelper::vmNetworkUsageString(VM* vm)
 {
-    // TODO: Implement with MetricUpdater
-    // Should return format: "Avg 12.3 KB/s, Max 45.6 KB/s"
-    Q_UNUSED(vm);
-    return "-";
+    if (!vm || !vm->GetConnection())
+        return "-";
+    
+    MetricUpdater* metricUpdater = vm->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return "-";
+    
+    XenCache* cache = vm->GetConnection()->GetCache();
+    if (!cache)
+        return "-";
+    
+    QString vmUuid = vm->GetUUID();
+    QStringList vifRefs = vm->VIFRefs();
+    
+    double sum = 0.0;
+    double max = 0.0;
+    int vifCount = 0;
+    
+    for (const QString& vifRef : vifRefs)
+    {
+        QVariantMap vifData = cache->ResolveObjectData("VIF", vifRef);
+        QString device = vifData.value("device").toString();
+        if (device.isEmpty())
+            continue;
+        
+        double rx = metricUpdater->getValue("vm", vmUuid, QString("vif_%1_rx").arg(device));
+        double tx = metricUpdater->getValue("vm", vmUuid, QString("vif_%1_tx").arg(device));
+        double total = rx + tx;
+        
+        sum += total;
+        if (total > max)
+            max = total;
+        vifCount++;
+    }
+    
+    if (vifCount == 0 || sum == 0.0)
+        return "-";
+    
+    double avg = sum / vifCount;
+    
+    auto formatBytesPerSec = [](double bytesPerSec) -> QString {
+        if (bytesPerSec < 1024)
+            return QString("%1 B/s").arg(QString::number(bytesPerSec, 'f', 1));
+        if (bytesPerSec < 1024 * 1024)
+            return QString("%1 KB/s").arg(QString::number(bytesPerSec / 1024, 'f', 1));
+        return QString("%1 MB/s").arg(QString::number(bytesPerSec / (1024 * 1024), 'f', 1));
+    };
+    
+    return QString("Avg %1, Max %2").arg(formatBytesPerSec(avg)).arg(formatBytesPerSec(max));
 }
 
 // VM Disk usage
 QString PropertyAccessorHelper::vmDiskUsageString(VM* vm)
 {
-    // TODO: Implement with MetricUpdater
-    // Should return format: "Avg 12.3 KB/s, Max 45.6 KB/s"
-    Q_UNUSED(vm);
-    return "-";
+    if (!vm || !vm->GetConnection())
+        return "-";
+    
+    MetricUpdater* metricUpdater = vm->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return "-";
+    
+    XenCache* cache = vm->GetConnection()->GetCache();
+    if (!cache)
+        return "-";
+    
+    QString vmUuid = vm->GetUUID();
+    QStringList vbdRefs = vm->VBDRefs();
+    
+    double sum = 0.0;
+    double max = 0.0;
+    int vbdCount = 0;
+    
+    for (const QString& vbdRef : vbdRefs)
+    {
+        QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+        QString device = vbdData.value("device").toString();
+        if (device.isEmpty())
+            continue;
+        
+        double read = metricUpdater->getValue("vm", vmUuid, QString("vbd_%1_read").arg(device));
+        double write = metricUpdater->getValue("vm", vmUuid, QString("vbd_%1_write").arg(device));
+        double total = read + write;
+        
+        sum += total;
+        if (total > max)
+            max = total;
+        vbdCount++;
+    }
+    
+    if (vbdCount == 0 || sum == 0.0)
+        return "-";
+    
+    double avg = sum / vbdCount;
+    
+    auto formatBytesPerSec = [](double bytesPerSec) -> QString {
+        if (bytesPerSec < 1024)
+            return QString("%1 B/s").arg(QString::number(bytesPerSec, 'f', 1));
+        if (bytesPerSec < 1024 * 1024)
+            return QString("%1 KB/s").arg(QString::number(bytesPerSec / 1024, 'f', 1));
+        return QString("%1 MB/s").arg(QString::number(bytesPerSec / (1024 * 1024), 'f', 1));
+    };
+    
+    return QString("Avg %1, Max %2").arg(formatBytesPerSec(avg)).arg(formatBytesPerSec(max));
 }
 
 // Host CPU usage
 QString PropertyAccessorHelper::hostCpuUsageString(Host* host)
 {
-    // TODO: Implement with MetricUpdater
-    Q_UNUSED(host);
-    return "-";
+    if (!host || !host->GetConnection())
+        return "-";
+    
+    MetricUpdater* metricUpdater = host->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return "-";
+    
+    QString hostUuid = host->GetUUID();
+    int numCPUs = host->cpuCount();
+    if (numCPUs == 0)
+        return "-";
+    
+    double sum = 0.0;
+    for (int i = 0; i < numCPUs; i++)
+    {
+        QString metricName = QString("cpu%1").arg(i);
+        sum += metricUpdater->getValue("host", hostUuid, metricName);
+    }
+    
+    if (numCPUs == 1)
+        return QString("%1%").arg(QString::number(sum * 100, 'f', 0));
+    
+    return QString("%1% (avg)").arg(QString::number((sum * 100) / numCPUs, 'f', 0));
 }
 
 int PropertyAccessorHelper::hostCpuUsageRank(Host* host)
 {
-    // TODO: Implement with MetricUpdater
-    Q_UNUSED(host);
-    return 0;
+    if (!host || !host->GetConnection())
+        return 0;
+    
+    MetricUpdater* metricUpdater = host->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return 0;
+    
+    QString hostUuid = host->GetUUID();
+    int numCPUs = host->cpuCount();
+    if (numCPUs == 0)
+        return 0;
+    
+    double sum = 0.0;
+    for (int i = 0; i < numCPUs; i++)
+    {
+        QString metricName = QString("cpu%1").arg(i);
+        sum += metricUpdater->getValue("host", hostUuid, metricName);
+    }
+    
+    return static_cast<int>(sum * 100);
 }
 
 // Host Memory usage
 QString PropertyAccessorHelper::hostMemoryUsageString(Host* host)
 {
-    // TODO: Implement with MetricUpdater
-    // Should return format: "12.3 GB of 64.0 GB"
-    Q_UNUSED(host);
-    return "-";
+    if (!host || !host->GetConnection())
+        return "-";
+    
+    MetricUpdater* metricUpdater = host->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return "-";
+    
+    QString hostUuid = host->GetUUID();
+    double memoryTotal = metricUpdater->getValue("host", hostUuid, "memory_total_kib") * 1024;
+    double memoryFree = metricUpdater->getValue("host", hostUuid, "memory_free_kib") * 1024;
+    
+    if (memoryTotal == 0.0)
+        return "-";
+    
+    double memoryUsed = memoryTotal - memoryFree;
+    
+    auto formatBytes = [](double bytes) -> QString {
+        if (bytes < 1024)
+            return QString("%1 B").arg(QString::number(bytes, 'f', 0));
+        if (bytes < 1024 * 1024)
+            return QString("%1 KB").arg(QString::number(bytes / 1024, 'f', 1));
+        if (bytes < 1024 * 1024 * 1024)
+            return QString("%1 MB").arg(QString::number(bytes / (1024 * 1024), 'f', 1));
+        return QString("%1 GB").arg(QString::number(bytes / (1024 * 1024 * 1024), 'f', 1));
+    };
+    
+    return QString("%1 of %2").arg(formatBytes(memoryUsed)).arg(formatBytes(memoryTotal));
 }
 
 int PropertyAccessorHelper::hostMemoryUsageRank(Host* host)
 {
-    // TODO: Implement with MetricUpdater
-    Q_UNUSED(host);
-    return 0;
+    if (!host || !host->GetConnection())
+        return 0;
+    
+    MetricUpdater* metricUpdater = host->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return 0;
+    
+    QString hostUuid = host->GetUUID();
+    double memoryTotal = metricUpdater->getValue("host", hostUuid, "memory_total_kib") * 1024;
+    double memoryFree = metricUpdater->getValue("host", hostUuid, "memory_free_kib") * 1024;
+    
+    if (memoryTotal == 0.0)
+        return 0;
+    
+    double memoryUsed = memoryTotal - memoryFree;
+    return static_cast<int>((memoryUsed / memoryTotal) * 100);
 }
 
 double PropertyAccessorHelper::hostMemoryUsageValue(Host* host)
 {
-    // TODO: Implement with MetricUpdater
-    Q_UNUSED(host);
-    return 0.0;
+    if (!host || !host->GetConnection())
+        return 0.0;
+    
+    MetricUpdater* metricUpdater = host->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return 0.0;
+    
+    QString hostUuid = host->GetUUID();
+    double memoryTotal = metricUpdater->getValue("host", hostUuid, "memory_total_kib") * 1024;
+    double memoryFree = metricUpdater->getValue("host", hostUuid, "memory_free_kib") * 1024;
+    
+    return memoryTotal - memoryFree;
 }
 
 // Host Network usage
 QString PropertyAccessorHelper::hostNetworkUsageString(Host* host)
 {
-    // TODO: Implement with MetricUpdater
-    Q_UNUSED(host);
-    return "-";
+    if (!host || !host->GetConnection())
+        return "-";
+    
+    MetricUpdater* metricUpdater = host->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return "-";
+    
+    XenCache* cache = host->GetConnection()->GetCache();
+    if (!cache)
+        return "-";
+    
+    QString hostUuid = host->GetUUID();
+    QStringList pifRefs = host->PIFRefs();
+    
+    double sum = 0.0;
+    double max = 0.0;
+    int pifCount = 0;
+    
+    for (const QString& pifRef : pifRefs)
+    {
+        QVariantMap pifData = cache->ResolveObjectData("PIF", pifRef);
+        bool physical = pifData.value("physical").toBool();
+        if (!physical)
+            continue;
+        
+        QString device = pifData.value("device").toString();
+        if (device.isEmpty())
+            continue;
+        
+        double rx = metricUpdater->getValue("host", hostUuid, QString("pif_%1_rx").arg(device));
+        double tx = metricUpdater->getValue("host", hostUuid, QString("pif_%1_tx").arg(device));
+        double total = rx + tx;
+        
+        sum += total;
+        if (total > max)
+            max = total;
+        pifCount++;
+    }
+    
+    if (pifCount == 0 || sum == 0.0)
+        return "-";
+    
+    double avg = sum / pifCount;
+    
+    auto formatBytesPerSec = [](double bytesPerSec) -> QString {
+        if (bytesPerSec < 1024)
+            return QString("%1 B/s").arg(QString::number(bytesPerSec, 'f', 1));
+        if (bytesPerSec < 1024 * 1024)
+            return QString("%1 KB/s").arg(QString::number(bytesPerSec / 1024, 'f', 1));
+        return QString("%1 MB/s").arg(QString::number(bytesPerSec / (1024 * 1024), 'f', 1));
+    };
+    
+    return QString("Avg %1, Max %2").arg(formatBytesPerSec(avg)).arg(formatBytesPerSec(max));
 }
 
 // VDI Memory usage

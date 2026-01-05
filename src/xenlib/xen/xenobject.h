@@ -93,6 +93,12 @@ class XENLIB_EXPORT XenObject : public QObject
         QString GetDescription() const;
 
         /**
+         * @brief Get the object's tags
+         * @return QStringList of tags
+         */
+        QStringList GetTags() const;
+
+        /**
          * @brief Check if object is locked (operation in progress)
          * @return true if locked flag is set in cache
          */
