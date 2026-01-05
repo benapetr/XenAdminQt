@@ -138,6 +138,7 @@ class NavigationPane : public QWidget
         void treeViewRefreshed();
         void treeViewRefreshSuspended();
         void treeViewRefreshResumed();
+        void connectToServerRequested();
 
         /**
          * Drag/drop command activation
@@ -167,6 +168,7 @@ class NavigationPane : public QWidget
         void onNavigationViewRefreshSuspended();
         void onNavigationViewRefreshResumed();
         void onNavigationViewDragDropCommand(const QString& commandKey);
+        void onNavigationViewConnectToServerRequested();
 
         // Slots for NotificationsView events
         void onNotificationsSubModeChanged(NotificationsSubMode subMode);

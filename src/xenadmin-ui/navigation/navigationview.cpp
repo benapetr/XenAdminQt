@@ -311,7 +311,7 @@ NavigationView::NavigationView(QWidget* parent)
             });
 
     connect(this->ui->treeWidget, &QTreeWidget::itemClicked, this, &NavigationView::treeNodeClicked);
-
+    connect(this->ui->treeWidget, &QTreeWidget::itemDoubleClicked, this, &NavigationView::onTreeItemDoubleClicked);
     connect(this->ui->treeWidget, &QTreeWidget::customContextMenuRequested, this, &NavigationView::treeNodeRightClicked);
 
     // Connect search box (matches C# searchTextBox_TextChanged line 215)
@@ -563,6 +563,7 @@ void NavigationView::buildInfrastructureTree()
 
     if (!this->m_connectionsManager || connections.isEmpty())
     {
+        this->ui->treeWidget->clear();
         QTreeWidgetItem* root = new QTreeWidgetItem(this->ui->treeWidget);
         root->setText(0, "XenAdmin");
         root->setExpanded(true);
@@ -571,6 +572,8 @@ void NavigationView::buildInfrastructureTree()
         placeholder->setText(0, connections.isEmpty()
             ? "Connect to a XenServer"
             : "(No connection manager available)");
+        if (connections.isEmpty())
+            placeholder->setData(0, Qt::UserRole + 4, QStringLiteral("connect"));
         return;
     }
 
@@ -606,6 +609,7 @@ void NavigationView::buildObjectsTree()
     {
         QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
         placeholder->setText(0, "Connect to a XenServer");
+        placeholder->setData(0, Qt::UserRole + 4, QStringLiteral("connect"));
         return;
     }
 
@@ -631,6 +635,17 @@ void NavigationView::buildObjectsTree()
 
     if (effectiveSearch != baseSearch)
         delete effectiveSearch;
+}
+
+void NavigationView::onTreeItemDoubleClicked(QTreeWidgetItem* item, int column)
+{
+    Q_UNUSED(column);
+    if (!item)
+        return;
+
+    const QVariant action = item->data(0, Qt::UserRole + 4);
+    if (action.toString() == QLatin1String("connect"))
+        emit this->connectToServerRequested();
 }
 
 void NavigationView::buildOrganizationTree()

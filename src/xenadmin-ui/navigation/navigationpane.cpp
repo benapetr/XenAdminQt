@@ -74,6 +74,7 @@ NavigationPane::NavigationPane(QWidget* parent)
     connect(navView, &NavigationView::treeViewRefreshSuspended, this, &NavigationPane::onNavigationViewRefreshSuspended);
     connect(navView, &NavigationView::treeViewRefreshResumed, this, &NavigationPane::onNavigationViewRefreshResumed);
     connect(navView, &NavigationView::dragDropCommandActivated, this, &NavigationPane::onNavigationViewDragDropCommand);
+    connect(navView, &NavigationView::connectToServerRequested, this, &NavigationPane::onNavigationViewConnectToServerRequested);
 
     // Wire up NotificationsView events
     connect(notifView, &NotificationsView::notificationsSubModeChanged, this, &NavigationPane::onNotificationsSubModeChanged);
@@ -361,6 +362,11 @@ void NavigationPane::onNavigationViewRefreshResumed()
 void NavigationPane::onNavigationViewDragDropCommand(const QString& commandKey)
 {
     emit dragDropCommandActivated(commandKey);
+}
+
+void NavigationPane::onNavigationViewConnectToServerRequested()
+{
+    emit connectToServerRequested();
 }
 
 void NavigationPane::onNotificationsSubModeChanged(NotificationsSubMode subMode)

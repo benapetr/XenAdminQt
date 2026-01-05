@@ -119,6 +119,7 @@ class NavigationView : public QWidget
         void treeViewRefreshSuspended();
         void treeViewRefreshResumed();
         void dragDropCommandActivated(const QString& commandKey);
+        void connectToServerRequested();
 
         /**
          * Emitted when a folder is selected in the tree
@@ -134,6 +135,7 @@ class NavigationView : public QWidget
         void onRefreshTimerTimeout();
         void onConnectionAdded(XenConnection* connection);
         void onConnectionRemoved(XenConnection* connection);
+        void onTreeItemDoubleClicked(QTreeWidgetItem* item, int column);
 
     private:
         void buildInfrastructureTree();

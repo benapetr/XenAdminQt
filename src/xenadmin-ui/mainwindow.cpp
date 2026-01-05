@@ -242,6 +242,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(this->m_navigationPane, &NavigationPane::notificationsSubModeChanged, this, &MainWindow::onNotificationsSubModeChanged);
     connect(this->m_navigationPane, &NavigationPane::treeViewSelectionChanged, this, &MainWindow::onNavigationPaneTreeViewSelectionChanged);
     connect(this->m_navigationPane, &NavigationPane::treeNodeRightClicked, this, &MainWindow::onNavigationPaneTreeNodeRightClicked);
+    connect(this->m_navigationPane, &NavigationPane::connectToServerRequested, this, &MainWindow::connectToServer);
 
     // Get tree widget from NavigationPane's NavigationView for legacy code compatibility
     // TODO: Refactor to use NavigationPane API instead of direct tree access
