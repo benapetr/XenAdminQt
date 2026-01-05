@@ -103,7 +103,7 @@ QList<DockerContainer::DockerContainerPort> DockerContainer::portList() const
         
         if (reader.isStartElement())
         {
-            if (reader.name() == "item")
+            if (reader.name() == QLatin1String("item"))
             {
                 inItem = true;
                 currentPort = DockerContainerPort(); // Reset
@@ -123,7 +123,7 @@ QList<DockerContainer::DockerContainerPort> DockerContainer::portList() const
                     currentPort.protocol = text;
             }
         }
-        else if (reader.isEndElement() && reader.name() == "item")
+        else if (reader.isEndElement() && reader.name() == QString("item"))
         {
             inItem = false;
             portList.append(currentPort);
