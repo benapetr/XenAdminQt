@@ -115,6 +115,8 @@ QString TypeGrouping::getGroupName(const QVariant& group) const
         return "Virtual Machines";
     else if (objectType == "host")
         return "Servers";
+    else if (objectType == "disconnected_host")
+        return "Disconnected Servers";
     else if (objectType == "sr")
         return "Storage";
     else if (objectType == "network")
@@ -136,6 +138,8 @@ QIcon TypeGrouping::getGroupIcon(const QVariant& group) const
         return QIcon(":/resources/vm_16.png");
     else if (objectType == "host")
         return QIcon(":/resources/server_16.png");
+    else if (objectType == "disconnected_host")
+        return QIcon(":/tree-icons/host_disconnected.png");
     else if (objectType == "sr")
         return QIcon(":/resources/storage_16.png");
     else if (objectType == "network")
@@ -150,8 +154,6 @@ QIcon TypeGrouping::getGroupIcon(const QVariant& group) const
 
 QVariant TypeGrouping::getGroup(const QVariantMap& objectData, const QString& objectType) const
 {
-    Q_UNUSED(objectData);
-
     // C# equivalent: PropertyAccessors.Get(PropertyNames.type)
     // Returns the ObjectTypes enum value
 
@@ -163,6 +165,13 @@ QVariant TypeGrouping::getGroup(const QVariantMap& objectData, const QString& ob
             return "template";
         else
             return "vm";
+    }
+
+    if (objectType == "host")
+    {
+        if (objectData.value("is_disconnected").toBool())
+            return "disconnected_host";
+        return "host";
     }
 
     return objectType;

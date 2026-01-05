@@ -542,6 +542,10 @@ QList<QPair<QString, QString>> Search::getMatchedObjects(XenConnection* connecti
             QVariantMap vmData = connection->GetCache()->ResolveObjectData(objType, objRef);
             bool isTemplate = vmData.value("is_a_template").toBool();
             bool isSnapshot = vmData.value("is_a_snapshot").toBool();
+            bool isControlDomain = vmData.value("is_control_domain").toBool();
+
+            if (isControlDomain)
+                continue;
 
             if (!isTemplate && !isSnapshot && (types & ObjectTypes::VM) != ObjectTypes::None)
                 typeMatches = true;
@@ -563,8 +567,6 @@ QList<QPair<QString, QString>> Search::getMatchedObjects(XenConnection* connecti
         if (filter)
         {
             QVariantMap objectData = connection->GetCache()->ResolveObjectData(objType, objRef);
-            if (objType == "vm" && objectData.value("is_control_domain").toBool())
-                continue;
             QVariant matchResult = filter->Match(objectData, objType, connection);
             if (!matchResult.toBool())
                 continue;
@@ -665,12 +667,96 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
     else if (dynamic_cast<HostGrouping*>(grouping))
         groupObjectType = "host";
 
+    auto naturalCompare = [](const QString& s1, const QString& s2) -> int {
+        if (s1.compare(s2, Qt::CaseInsensitive) == 0)
+            return 0;
+        if (s1.isEmpty())
+            return -1;
+        if (s2.isEmpty())
+            return 1;
+        int i = 0;
+        int len1 = s1.length();
+        int len2 = s2.length();
+        int minLen = qMin(len1, len2);
+        while (i < minLen)
+        {
+            QChar c1 = s1[i];
+            QChar c2 = s2[i];
+            bool c1IsDigit = c1.isDigit();
+            bool c2IsDigit = c2.isDigit();
+            if (!c1IsDigit && !c2IsDigit)
+            {
+                int cmp = s1.mid(i, 1).compare(s2.mid(i, 1), Qt::CaseInsensitive);
+                if (cmp != 0)
+                    return cmp;
+                i++;
+            }
+            else if (c1IsDigit && c2IsDigit)
+            {
+                int j = i + 1;
+                while (j < len1 && s1[j].isDigit())
+                    j++;
+                int k = i + 1;
+                while (k < len2 && s2[k].isDigit())
+                    k++;
+                int numLen1 = j - i;
+                int numLen2 = k - i;
+                if (numLen1 != numLen2)
+                    return numLen1 - numLen2;
+                QString num1 = s1.mid(i, numLen1);
+                QString num2 = s2.mid(i, numLen2);
+                int cmp = num1.compare(num2);
+                if (cmp != 0)
+                    return cmp;
+                i = j;
+            }
+            else
+            {
+                return c1IsDigit ? 1 : -1;
+            }
+        }
+        return len1 - len2;
+    };
+
+    auto groupSortKey = [&](const QString& key) -> int {
+        if (dynamic_cast<TypeGrouping*>(grouping))
+        {
+            static const QHash<QString, int> order = {
+                {"pool", 0},
+                {"host", 1},
+                {"disconnected_host", 2},
+                {"vm", 3},
+                {"snapshot", 4},
+                {"template", 5},
+                {"sr", 6},
+                {"vdi", 7},
+                {"network", 8},
+                {"folder", 9},
+                {"appliance", 10},
+                {"dockercontainer", 11},
+            };
+            return order.value(key, 100);
+        }
+        return 0;
+    };
+
     // Add each group
-    for (auto it = groupedObjects.begin(); it != groupedObjects.end(); ++it)
+    QList<QString> groupKeys = groupedObjects.keys();
+    std::sort(groupKeys.begin(), groupKeys.end(), [&](const QString& a, const QString& b) {
+        if (dynamic_cast<TypeGrouping*>(grouping))
+        {
+            int orderA = groupSortKey(a);
+            int orderB = groupSortKey(b);
+            if (orderA != orderB)
+                return orderA < orderB;
+        }
+        return naturalCompare(a, b) < 0;
+    });
+
+    for (const QString& groupKey : groupKeys)
     {
-        QString groupKey = it.key();
         QVariant groupValue = groupValueLookup.value(groupKey); // Retrieve original group value
-        QList<QPair<QString, QString>> groupObjects = it.value();
+        QList<QPair<QString, QString>> groupObjects = groupedObjects.value(groupKey);
 
         IAcceptGroups* childAdapter = nullptr;
         if (!groupObjectType.isEmpty())

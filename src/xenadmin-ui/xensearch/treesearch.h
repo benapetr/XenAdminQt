@@ -37,9 +37,10 @@ class TreeSearch
     public:
         static Search* DefaultTreeSearch();
         static Search* SearchFor(XenObject* value);
+        static void ResetDefaultTreeSearch();
+        static QueryScope* GetTreeSearchScope();
 
     private:
-        static QueryScope* GetTreeSearchScope();
         static Search* s_defaultTreeSearch;
 };
 

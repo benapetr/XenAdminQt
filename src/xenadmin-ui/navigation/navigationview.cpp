@@ -396,6 +396,7 @@ void NavigationView::requestRefreshTreeView()
 void NavigationView::setViewFilters(const ViewFilters& filters)
 {
     this->m_viewFilters = filters;
+    TreeSearch::ResetDefaultTreeSearch();
     this->requestRefreshTreeView();
 }
 
@@ -615,7 +616,12 @@ void NavigationView::buildObjectsTree()
 
     if (!this->m_objectsSearch)
     {
-        QueryScope* scope = this->buildTreeSearchScope();
+        ObjectTypes types = Search::DefaultObjectTypes();
+        types |= ObjectTypes::Pool;
+        types |= ObjectTypes::DefaultTemplate;
+        types |= ObjectTypes::UserTemplate;
+        types |= ObjectTypes::LocalSR;
+        QueryScope* scope = new QueryScope(types);
         Query* query = new Query(scope, nullptr);
         this->m_objectsSearch = new Search(query, new TypeGrouping(nullptr), "Objects", QString(), false);
     }

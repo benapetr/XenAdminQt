@@ -246,7 +246,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     // Get tree widget from NavigationPane's NavigationView for legacy code compatibility
     // TODO: Refactor to use NavigationPane API instead of direct tree access
-    auto* navView = this->m_navigationPane->navigationView();
+    auto* navView = this->m_navigationPane->GetNavigationView();
     if (navView)
     {
         QTreeWidget* treeWidget = navView->treeWidget();
@@ -540,7 +540,7 @@ void MainWindow::onConnectionStateChanged(XenConnection *conn, bool connected)
         this->clearTabs();
         if (this->m_navigationPane)
         {
-            this->m_navigationPane->requestRefreshTreeView();
+            this->m_navigationPane->RequestRefreshTreeView();
         }
         this->updatePlaceholderVisibility();
     }
@@ -569,7 +569,7 @@ void MainWindow::onCachePopulated()
     // Refresh tree now that cache has data
     if (this->m_navigationPane)
     {
-        this->m_navigationPane->requestRefreshTreeView();
+        this->m_navigationPane->RequestRefreshTreeView();
     }
 
     // Start MetricUpdater to begin fetching RRD performance metrics
@@ -1343,7 +1343,7 @@ QTreeWidget* MainWindow::getServerTreeWidget() const
     // Get tree widget from NavigationPane's NavigationView
     if (this->m_navigationPane)
     {
-        auto* navView = this->m_navigationPane->navigationView();
+        auto* navView = this->m_navigationPane->GetNavigationView();
         if (navView)
         {
             return navView->treeWidget();
@@ -1365,7 +1365,7 @@ void MainWindow::refreshServerTree()
     // Delegate tree building to NavigationView which respects current navigation mode
     if (this->m_navigationPane)
     {
-        this->m_navigationPane->requestRefreshTreeView();
+        this->m_navigationPane->RequestRefreshTreeView();
     }
 }
 
@@ -1450,7 +1450,7 @@ void MainWindow::loadSettings()
     this->applyViewSettingsToMenu();
     if (this->m_navigationPane)
     {
-        this->updateViewMenu(this->m_navigationPane->currentMode());
+        this->updateViewMenu(this->m_navigationPane->GetCurrentMode());
     }
 
     qDebug() << "Settings loaded from:" << settings.getValue("").toString();
@@ -1539,7 +1539,7 @@ void MainWindow::focusSearch()
     // Focus search box in NavigationPane
     if (this->m_navigationPane)
     {
-        this->m_navigationPane->focusTreeView();
+        this->m_navigationPane->FocusTreeView();
         // TODO: Also focus the search line edit when NavigationView exposes it
     }
 }
@@ -1560,7 +1560,7 @@ void MainWindow::onNavigationModeChanged(int mode)
         
         // Auto-select Alerts sub-mode when entering Notifications mode
         // This ensures something is displayed instead of showing empty area
-        this->m_navigationPane->switchToNotificationsView(NavigationPane::Alerts);
+        this->m_navigationPane->SwitchToNotificationsView(NavigationPane::Alerts);
         
         // Notification pages are shown via onNotificationsSubModeChanged
     } else
@@ -1592,7 +1592,7 @@ void MainWindow::onNavigationModeChanged(int mode)
     }
 
     // Update search for new mode (matches C# ViewSettingsChanged line 1981)
-    this->m_navigationPane->updateSearch();
+    this->m_navigationPane->UpdateSearch();
 
     // TODO: SetFiltersLabel() - update filters indicator in title bar
     this->updateViewMenu(navMode);
@@ -1627,7 +1627,7 @@ void MainWindow::onViewShowHiddenObjectsToggled(bool checked)
 
 void MainWindow::onViewSettingsChanged()
 {
-    this->m_navigationPane->updateSearch();
+    this->m_navigationPane->UpdateSearch();
 }
 
 void MainWindow::applyViewSettingsToMenu()
@@ -1718,7 +1718,7 @@ void MainWindow::onNavigationPaneTreeViewSelectionChanged()
 {
     // Ignore tree view selection changes when in Notifications mode
     // The title should show the notification sub-mode (Alerts/Events), not tree selection
-    if (this->m_navigationPane && this->m_navigationPane->currentMode() == NavigationPane::Notifications)
+    if (this->m_navigationPane && this->m_navigationPane->GetCurrentMode() == NavigationPane::Notifications)
         return;
     
     // Forward to existing tree selection handler
@@ -2055,7 +2055,7 @@ void MainWindow::handleConnectionSuccess(ConnectionContext* context, bool connec
     // Delegate tree building to NavigationView which respects current navigation mode
     if (this->m_navigationPane)
     {
-        this->m_navigationPane->requestRefreshTreeView();
+        this->m_navigationPane->RequestRefreshTreeView();
     }
 
     // Save profile if requested

@@ -38,10 +38,19 @@ Search* TreeSearch::DefaultTreeSearch()
 {
     if (!s_defaultTreeSearch)
     {
-        s_defaultTreeSearch = Search::SearchForAllTypes();
+        s_defaultTreeSearch = Search::SearchFor(QStringList(), QStringList(), nullptr, GetTreeSearchScope());
     }
 
     return s_defaultTreeSearch;
+}
+
+void TreeSearch::ResetDefaultTreeSearch()
+{
+    if (s_defaultTreeSearch)
+    {
+        delete s_defaultTreeSearch;
+        s_defaultTreeSearch = nullptr;
+    }
 }
 
 Search* TreeSearch::SearchFor(XenObject* value)

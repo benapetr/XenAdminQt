@@ -311,7 +311,7 @@ void NavigationPane::onNavigationModeChanged()
         this->ui->navigationViewPlaceholder->setVisible(true);
 
         // Update tree view for new mode
-        NavigationView* navView = this->navigationView();
+        NavigationView* navView = this->GetNavigationView();
         if (navView)
         {
             // Set the navigation mode so tree builder uses correct layout
@@ -376,19 +376,19 @@ void NavigationPane::onNotificationsSubModeChanged(NotificationsSubMode subMode)
 }
 
 // Public methods
-NavigationView* NavigationPane::navigationView() const
+NavigationView* NavigationPane::GetNavigationView() const
 {
     return this->findChild<NavigationView*>();
 }
 
-NotificationsView* NavigationPane::notificationsView() const
+NotificationsView* NavigationPane::GetNotificationsView() const
 {
     return this->findChild<NotificationsView*>();
 } 
 
-void NavigationPane::updateNotificationsButton(NotificationsSubMode mode, int entries)
+void NavigationPane::UpdateNotificationsButton(NotificationsSubMode mode, int entries)
 {
-    NotificationsView* notifView = this->notificationsView();
+    NotificationsView* notifView = this->GetNotificationsView();
     if (notifView)
     {
         notifView->updateEntries(mode, entries);
@@ -398,7 +398,7 @@ void NavigationPane::updateNotificationsButton(NotificationsSubMode mode, int en
     }
 } 
 
-void NavigationPane::switchToInfrastructureMode()
+void NavigationPane::SwitchToInfrastructureMode()
 {
     if (!this->m_buttonInfraBig->isChecked())
     {
@@ -406,7 +406,7 @@ void NavigationPane::switchToInfrastructureMode()
     }
 }
 
-void NavigationPane::switchToNotificationsView(NotificationsSubMode subMode)
+void NavigationPane::SwitchToNotificationsView(NotificationsSubMode subMode)
 {
     // Check the notification button if switching programmatically
     if (!this->m_buttonNotifyBig->isChecked())
@@ -414,39 +414,39 @@ void NavigationPane::switchToNotificationsView(NotificationsSubMode subMode)
         this->m_buttonNotifyBig->setChecked(true);
     }
 
-    NotificationsView* notifView = this->notificationsView();
+    NotificationsView* notifView = this->GetNotificationsView();
     if (notifView)
     {
         notifView->selectNotificationsSubMode(subMode);
     }
 }
 
-void NavigationPane::focusTreeView()
+void NavigationPane::FocusTreeView()
 {
-    NavigationView* navView = this->navigationView();
+    NavigationView* navView = this->GetNavigationView();
     if (navView)
     {
         navView->focusTreeView();
     }
 }
 
-void NavigationPane::requestRefreshTreeView()
+void NavigationPane::RequestRefreshTreeView()
 {
-    NavigationView* navView = this->navigationView();
+    NavigationView* navView = this->GetNavigationView();
     if (navView)
     {
         navView->requestRefreshTreeView();
     }
 }
 
-void NavigationPane::updateSearch()
+void NavigationPane::UpdateSearch()
 {
     // Matches C# NavigationPane.UpdateSearch (line 196)
     // Update NavigationView's CurrentSearch based on current mode
     // TODO: Once Search infrastructure is ported from C#, this will set
-    // navigationView->setCurrentSearch(getSearchForMode(m_currentMode))
+    // GetNavigationView->setCurrentSearch(getSearchForMode(m_currentMode))
     // For now, apply view filters and trigger a refresh
-    NavigationView* navView = navigationView();
+    NavigationView* navView = GetNavigationView();
     if (navView)
     {
         SettingsManager& settings = SettingsManager::instance();
@@ -460,15 +460,13 @@ void NavigationPane::updateSearch()
     }
 }
 
-void NavigationPane::setInSearchMode(bool enabled)
+void NavigationPane::SetInSearchMode(bool enabled)
 {
     // Matches C# NavigationPane.InSearchMode property
-    NavigationView* navView = this->navigationView();
+    NavigationView* navView = this->GetNavigationView();
     if (navView)
     {
-        // TODO: Implement when NavigationView gains InSearchMode property
-        // navView->setInSearchMode(enabled);
-        Q_UNUSED(enabled);
+        navView->setInSearchMode(enabled);
     }
 }
 
