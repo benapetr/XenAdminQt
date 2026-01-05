@@ -151,7 +151,7 @@ void AlertSummaryPage::buildAlertList()
         
         // Dismiss action (always available)
         QAction* dismissAction = actionMenu->addAction(tr("Dismiss"));
-        connect(dismissAction, &QAction::triggered, this, [this, alert]()
+        connect(dismissAction, &QAction::triggered, this, [alert]()
         {
             alert->dismiss();
             AlertManager::instance()->removeAlert(alert);

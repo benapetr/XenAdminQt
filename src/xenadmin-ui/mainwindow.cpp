@@ -3029,7 +3029,7 @@ void MainWindow::initializeCommands()
     this->m_commands["RebootHost"] = new RebootHostCommand(this, this);
     this->m_commands["ShutdownHost"] = new ShutdownHostCommand(this, this);
     this->m_commands["PowerOnHost"] = new PowerOnHostCommand(this, this);
-    this->m_commands["HostMaintenanceMode"] = new HostMaintenanceModeCommand(this, this);
+    this->m_commands["HostMaintenanceMode"] = new HostMaintenanceModeCommand(this, true, this);
     this->m_commands["HostProperties"] = new HostPropertiesCommand(this, this);
 
     // Pool commands

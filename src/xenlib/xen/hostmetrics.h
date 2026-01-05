@@ -66,7 +66,7 @@ public:
      * @brief Get unique identifier
      * @return UUID string
      */
-    QString GetUUID() const;
+    QString GetUUID() const override;
 
     /**
      * @brief Get total host memory

@@ -3,6 +3,10 @@ CONFIG += qt warn_on c++17
 QT += widgets network xml charts
 TARGET = xenadmin-qt
 
+greaterThan(QT_MAJOR_VERSION, 5) {
+    DEFINES += QT_NO_DEPRECATED_WARNINGS
+}
+
 # Source files
 SOURCES += \
     commands/host/hostcommand.cpp \

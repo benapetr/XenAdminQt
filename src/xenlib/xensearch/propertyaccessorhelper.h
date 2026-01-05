@@ -91,8 +91,6 @@ namespace XenSearch
             static QString GetPoolHAStatus(Pool* pool);
             static QString GetSRHAStatus(SR* sr);
             static QString GetVMHAStatus(VM* vm);
-        private:
-            PropertyAccessorHelper* instance_;
     };
 } // namespace XenSearch
 

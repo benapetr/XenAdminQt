@@ -4,6 +4,10 @@ QT += core network xml
 TARGET = xenlib
 DEFINES += XENLIB_LIBRARY
 
+greaterThan(QT_MAJOR_VERSION, 5) {
+    DEFINES += QT_NO_DEPRECATED_WARNINGS
+}
+
 # Windows: building/using static library; disable dllimport/export in headers
 win32:DEFINES += XENLIB_STATIC
 
