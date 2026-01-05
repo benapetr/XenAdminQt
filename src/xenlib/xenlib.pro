@@ -41,6 +41,7 @@ SOURCES += \
     xensearch/sort.cpp \
     xen/network/connection.cpp \
     xen/network/connectionworker.cpp \
+    xen/network/httpclient.cpp \
     xen/session.cpp \
     xen/api.cpp \
     xen/apiversion.cpp \
@@ -70,12 +71,16 @@ SOURCES += \
     xen/pci.cpp \
     xen/pgpu.cpp \
     xen/network.cpp \
+    xen/task.cpp \
     xen/xenapi/xenapi_VM.cpp \
     xen/xenapi/xenapi_SR.cpp \
     xen/xenapi/xenapi_Pool.cpp \
     xen/xenapi/xenapi_Host.cpp \
+    xen/xenapi/xenapi_Task.cpp \
     xen/xenapi/vm_appliance.cpp \
     xen/actions/vm/changevmisoaction.cpp \
+    xen/actions/vm/importvmaction.cpp \
+    xen/actions/vm/exportvmaction.cpp \
     xen/actions/vm/startapplianceaction.cpp \
     xen/actions/vm/shutdownapplianceaction.cpp \
     xen/actions/vm/hvmbootaction.cpp \
@@ -168,6 +173,23 @@ SOURCES += \
     customfields/customfieldsmanager.cpp \
     xen/dockercontainer.cpp \
     xen/folder.cpp \
+    xen/blob.cpp \
+    xen/bond.cpp \
+    xen/certificate.cpp \
+    xen/cluster.cpp \
+    xen/console.cpp \
+    xen/event.cpp \
+    xen/feature.cpp \
+    xen/gpugroup.cpp \
+    xen/hostcpu.cpp \
+    xen/hostcrashdump.cpp \
+    xen/hostpatch.cpp \
+    xen/poolpatch.cpp \
+    xen/poolupdate.cpp \
+    xen/pusb.cpp \
+    xen/sm.cpp \
+    xen/role.cpp \
+    xen/user.cpp \
     otherconfig/otherconfigandtagswatcher.cpp
 
 # Header files
@@ -202,6 +224,7 @@ HEADERS += \
     xensearch/iacceptgroups.h \
     xen/network/connection.h \
     xen/network/connectionworker.h \
+    xen/network/httpclient.h \
     xen/network/connecttask.h \
     xen/session.h \
     xen/api.h \
@@ -232,13 +255,17 @@ HEADERS += \
     xen/pci.h \
     xen/pgpu.h \
     xen/network.h \
+    xen/task.h \
     xen/vmappliance.h \
     xen/xenapi/xenapi_VM.h \
     xen/xenapi/xenapi_SR.h \
     xen/xenapi/xenapi_Pool.h \
     xen/xenapi/xenapi_Host.h \
+    xen/xenapi/xenapi_Task.h \
     xen/xenapi/vm_appliance.h \
     xen/actions/vm/changevmisoaction.h \
+    xen/actions/vm/importvmaction.h \
+    xen/actions/vm/exportvmaction.h \
     xen/actions/vm/startapplianceaction.h \
     xen/actions/vm/shutdownapplianceaction.h \
     xen/actions/vm/hvmbootaction.h \
@@ -330,6 +357,23 @@ HEADERS += \
     customfields/customfieldsmanager.h \
     xen/dockercontainer.h \
     xen/folder.h \
+    xen/blob.h \
+    xen/bond.h \
+    xen/certificate.h \
+    xen/cluster.h \
+    xen/console.h \
+    xen/event.h \
+    xen/feature.h \
+    xen/gpugroup.h \
+    xen/hostcpu.h \
+    xen/hostcrashdump.h \
+    xen/hostpatch.h \
+    xen/poolpatch.h \
+    xen/poolupdate.h \
+    xen/pusb.h \
+    xen/sm.h \
+    xen/role.h \
+    xen/user.h \
     otherconfig/otherconfigandtagswatcher.h
 
 # Installation

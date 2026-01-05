@@ -496,3 +496,26 @@ void XenCache::evictObject(const QString& type, const QString& ref)
     if (obj)
         obj->SetEvicted(true);
 }
+
+QString XenCache::GetPoolRef() const
+{
+    QMutexLocker locker(&this->m_mutex);
+    
+    // Get pool type (normalized)
+    QString poolType = this->normalizeType("pool");
+    
+    // Get all pool refs (there should be exactly one)
+    if (this->m_cache.contains(poolType) && !this->m_cache[poolType].isEmpty())
+        return this->m_cache[poolType].firstKey();
+    
+    return QString();
+}
+
+QSharedPointer<Pool> XenCache::GetPool()
+{
+    QString pool_ref = this->GetPoolRef();
+    if (pool_ref.isEmpty())
+        return QSharedPointer<Pool>();
+
+    return this->ResolveObject<Pool>("pool", pool_ref);
+}

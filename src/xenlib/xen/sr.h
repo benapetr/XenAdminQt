@@ -193,6 +193,14 @@ class XENLIB_EXPORT SR : public XenObject
         bool HBALunPerVDI() const;
 
         /**
+         * @brief Get the host for this SR (for shared SRs, returns pool coordinator)
+         * @return Shared pointer to Host, or null if none
+         * 
+         * C# equivalent: SR.Home() extension method
+         */
+        QSharedPointer<Host> GetHost(XenCache* cache = nullptr);
+
+        /**
          * @brief Check if SR is local (not shared)
          * @return true if SR is local to single host
          */

@@ -73,6 +73,31 @@ QString VM::ResidentOnRef() const
     return stringProperty("resident_on");
 }
 
+QSharedPointer<Host> VM::GetHost()
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection || this->ResidentOnRef().isEmpty())
+        return QSharedPointer<Host>();
+
+    XenCache* cache = connection->GetCache();
+
+    QString residentOn = this->ResidentOnRef();
+    if (!residentOn.isEmpty() && residentOn != "OpaqueRef:NULL")
+    {
+        QSharedPointer<Host> host = cache->ResolveObject<Host>("host", residentOn);
+        if (host)
+            return host;
+    }
+
+    // Fallback to pool coordinator if VM is not currently resident
+    const QVariantMap poolData = cache->ResolveObjectData("pool", QString());
+    const QString masterRef = poolData.value("master").toString();
+    if (!masterRef.isEmpty() && masterRef != "OpaqueRef:NULL")
+        return cache->ResolveObject<Host>("host", masterRef);
+
+    return QSharedPointer<Host>();
+}
+
 QString VM::AffinityRef() const
 {
     return stringProperty("affinity");

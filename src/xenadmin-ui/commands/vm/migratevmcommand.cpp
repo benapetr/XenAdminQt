@@ -84,8 +84,7 @@ void MigrateVMCommand::Run()
 
     if (hosts.isEmpty())
     {
-        QMessageBox::warning(this->mainWindow(), "Migrate VM",
-                             "No hosts available for migration.");
+        QMessageBox::warning(this->mainWindow(), "Migrate VM", "No hosts available for migration.");
         return;
     }
 
@@ -117,8 +116,7 @@ void MigrateVMCommand::Run()
 
     if (hostNames.isEmpty())
     {
-        QMessageBox::warning(this->mainWindow(), "Migrate VM",
-                             "No eligible hosts available for migration.");
+        QMessageBox::warning(this->mainWindow(), "Migrate VM", "No eligible hosts available for migration.");
         return;
     }
 
@@ -172,8 +170,7 @@ void MigrateVMCommand::Run()
         XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected",
-                                 "Not connected to XenServer");
+            QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
             return;
         }
 
@@ -213,14 +210,10 @@ QStringList MigrateVMCommand::getAvailableHosts() const
 {
     QStringList hostRefs;
     QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    if (!vm || !vm->GetConnection())
         return hostRefs;
 
-    XenCache* cache = vm->GetConnection()->GetCache();
-    if (!cache)
-        return hostRefs;
-
-    hostRefs = cache->GetAllRefs("host");
+    hostRefs = vm->GetConnection()->GetCache()->GetAllRefs("host");
 
     return hostRefs;
 }

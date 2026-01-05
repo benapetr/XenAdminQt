@@ -96,7 +96,47 @@ qint64 SR::FreeSpace() const
 {
     return PhysicalSize() - PhysicalUtilisation();
 }
+QSharedPointer<Host> SR::GetHost(XenCache* cache)
+{
+    if (!cache)
+    {
+        XenConnection* connection = this->GetConnection();
+        if (!connection)
+            return QSharedPointer<Host>();
+        cache = connection->GetCache();
+        if (!cache)
+            return QSharedPointer<Host>();
+    }
 
+    // For shared SRs, return pool coordinator
+    if (this->IsShared())
+    {
+        QString poolRef = cache->GetPoolRef();
+        if (!poolRef.isEmpty())
+        {
+            QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
+            QString masterRef = poolData.value("master").toString();
+            if (!masterRef.isEmpty() && masterRef != "OpaqueRef:NULL")
+                return cache->ResolveObject<Host>("host", masterRef);
+        }
+        return QSharedPointer<Host>();
+    }
+
+    // For local SRs, find the host it's connected to via PBD
+    QStringList pbdRefs = this->PBDRefs();
+    for (const QString& pbdRef : pbdRefs)
+    {
+        QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
+        if (!pbdData.isEmpty())
+        {
+            QString hostRef = pbdData.value("host").toString();
+            if (!hostRef.isEmpty() && hostRef != "OpaqueRef:NULL")
+                return cache->ResolveObject<Host>("host", hostRef);
+        }
+    }
+
+    return QSharedPointer<Host>();
+}
 QStringList SR::VDIRefs() const
 {
     return stringListProperty("VDIs");

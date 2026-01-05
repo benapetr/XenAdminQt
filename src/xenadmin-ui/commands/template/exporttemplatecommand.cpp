@@ -60,7 +60,11 @@ void ExportTemplateCommand::Run()
 
     if (wizard.exec() == QDialog::Accepted)
     {
-        this->mainWindow()->showStatusMessage(QString("Template '%1' export completed").arg(templateName), 5000);
+        // TODO: Launch ExportVmAction with wizard parameters
+        // For now, show a message that action will be implemented
+        this->mainWindow()->showStatusMessage(
+            QString("Export template '%1' - action pending HTTP infrastructure integration").arg(templateName), 
+            5000);
     }
 }
 

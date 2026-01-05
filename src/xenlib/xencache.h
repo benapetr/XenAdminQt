@@ -36,6 +36,8 @@
 #include <QSharedPointer>
 #include "xen/xenobject.h"
 
+class Pool;
+
 /**
  * @brief XenCache - Caches all XenServer objects locally for fast lookups
  *
@@ -160,6 +162,21 @@ class XenCache : public QObject
          * Used by SearchTabPage to iterate all objects and let Query do filtering.
          */
         QList<QPair<QString, QString>> GetAllObjectsData() const;
+
+        /**
+         * @brief Get the pool reference for this connection
+         * @return Pool opaque reference, or empty string if no pool cached
+         *
+         * C# equivalent: Cache.PoolOpaqueRef property
+         * There's always exactly one pool per connection in XenServer.
+         */
+        QString GetPoolRef() const;
+
+        /**
+         * @brief Get the pool object for this connection
+         * @return Pool object, or null if no pool cached
+         */
+        QSharedPointer<Pool> GetPool();
 
         /**
          * @brief Get all cached objects as shared pointers
