@@ -1794,13 +1794,8 @@ void MainWindow::restoreConnections()
 {
     qDebug() << "XenAdmin Qt: Restoring saved connections...";
 
-    // Check if auto-connect is enabled
+    // Always restore profiles into the ConnectionsManager; only auto-connect if enabled.
     bool autoConnect = SettingsManager::instance().getAutoConnect();
-    if (!autoConnect && !SettingsManager::instance().getSaveSession())
-    {
-        qDebug() << "XenAdmin Qt: Auto-connect and save session are disabled, skipping connection restoration";
-        return;
-    }
 
     // Load all saved connection profiles
     QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
@@ -1828,13 +1823,14 @@ void MainWindow::restoreConnections()
         bool shouldConnect = profile.autoConnect() ||
                              (SettingsManager::instance().getSaveSession() && !profile.saveDisconnected());
 
-        if (!shouldConnect)
+        if (shouldConnect)
         {
-            qDebug() << "XenAdmin Qt: Skipping profile" << profile.displayName() << "(auto-connect disabled)";
-            continue;
+            qDebug() << "XenAdmin Qt: Restoring connection to" << profile.displayName();
         }
-
-        qDebug() << "XenAdmin Qt: Restoring connection to" << profile.displayName();
+        else
+        {
+            qDebug() << "XenAdmin Qt: Adding disconnected profile" << profile.displayName();
+        }
 
         XenConnection* connection = new XenConnection(nullptr);
         connection->SetHostname(profile.hostname());
@@ -1848,7 +1844,8 @@ void MainWindow::restoreConnections()
 
         connMgr->addConnection(connection);
 
-        XenConnectionUI::BeginConnect(connection, true, this, true);
+        if (shouldConnect)
+            XenConnectionUI::BeginConnect(connection, true, this, true);
     }
 }
 
