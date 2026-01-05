@@ -29,6 +29,8 @@
 #include "query.h"
 #include <QDebug>
 
+using namespace XenSearch;
+
 Query::Query(QueryScope* scope, QueryFilter* filter) : m_scope(scope), m_filter(filter)
 {
     // C# equivalent: Query constructor

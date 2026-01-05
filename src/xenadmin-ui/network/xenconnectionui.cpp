@@ -112,7 +112,7 @@ void XenConnectionUI::RegisterEventHandlers(XenConnection* connection)
 
     s_errorHandlers.insert(connection,
         QObject::connect(connection, &XenConnection::connectionStateChanged, connection, [connection]() {
-            HandleConnectionStateChanged(connection, connection->IsConnectedNewFlow());
+            HandleConnectionStateChanged(connection, connection->IsConnected());
         }));
 
     s_disconnectedHandlers.insert(connection,

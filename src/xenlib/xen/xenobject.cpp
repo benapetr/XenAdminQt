@@ -52,6 +52,11 @@ QString XenObject::GetDescription() const
     return stringProperty("name_description");
 }
 
+QStringList XenObject::GetTags() const
+{
+    return stringListProperty("tags");
+}
+
 bool XenObject::IsLocked() const
 {
     return boolProperty("locked", false);

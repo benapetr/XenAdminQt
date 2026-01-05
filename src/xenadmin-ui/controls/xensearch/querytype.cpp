@@ -35,6 +35,8 @@
 #include <algorithm>
 #include <QSet>
 
+using namespace XenSearch;
+
 // Constants for binary sizes
 static const qint64 BINARY_MEGA = 1024 * 1024;
 static const qint64 BINARY_GIGA = 1024 * 1024 * 1024;

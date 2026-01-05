@@ -68,6 +68,7 @@ class XENLIB_EXPORT XenConnection : public QObject
         bool ConnectToHost(const QString& hostname, int port, const QString& username, const QString& password); // OBSOLETE: legacy direct connection flow (use BeginConnect)
         void Disconnect(); // OBSOLETE: legacy direct disconnect (use EndConnect)
         bool IsConnected() const;
+        bool IsTransportConnected() const;
 
         QString GetHostname() const;
         int GetPort() const;
@@ -90,13 +91,11 @@ class XENLIB_EXPORT XenConnection : public QObject
                                   QString* outError = nullptr,
                                   QString* redirectHostname = nullptr);
 
-        // C#-style connection flow scaffolding (not wired into current runtime).
         void BeginConnect(bool initiateCoordinatorSearch, const PasswordPrompt& promptForNewPassword = PasswordPrompt());
         void EndConnect(bool clearCache = true, bool exiting = false);
         void Interrupt();
         ConnectTask* GetConnectTask() const;
         bool InProgress() const;
-        bool IsConnectedNewFlow() const;
         XenAPI::Session* GetConnectSession() const;
         QStringList GetLastFailureDescription() const;
 

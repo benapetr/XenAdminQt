@@ -78,19 +78,25 @@ class XENLIB_EXPORT XenObject : public QObject
          * @brief Get the object's UUID
          * @return UUID string
          */
-        QString GetUUID() const;
+        virtual QString GetUUID() const;
 
         /**
          * @brief Get the object's human-readable name
          * @return Name label
          */
-        QString GetName() const;
+        virtual QString GetName() const;
 
         /**
          * @brief Get the object's description
          * @return Name description
          */
-        QString GetDescription() const;
+        virtual QString GetDescription() const;
+
+        /**
+         * @brief Get the object's tags
+         * @return QStringList of tags
+         */
+        QStringList GetTags() const;
 
         /**
          * @brief Check if object is locked (operation in progress)

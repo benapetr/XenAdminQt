@@ -924,6 +924,73 @@ bool VM::HasVendorDevice() const
     return this->boolProperty("has_vendor_device", false);
 }
 
+bool VM::HasVendorDeviceState() const
+{
+    // C# reference: XenModel/XenAPI-Extensions/VM.cs WindowsUpdateCapable()
+    // return has_vendor_device && IsWindows();
+    return this->HasVendorDevice() && this->IsWindows();
+}
+
+bool VM::ReadCachingEnabled() const
+{
+    // C# reference: XenModel/XenAPI-Extensions/VM.cs ReadCachingEnabled()
+    // Returns true if any attached VDI has read caching enabled
+    
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return false;
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return false;
+    
+    // Get resident host
+    QString residentHostRef = this->ResidentOnRef();
+    if (residentHostRef.isEmpty() || residentHostRef == "OpaqueRef:NULL")
+        return false;
+    
+    // Check all VBDs
+    QStringList vbdRefs = this->VBDRefs();
+    for (const QString& vbdRef : vbdRefs)
+    {
+        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+        if (!vbd || !vbd->IsValid())
+            continue;
+        
+        // Check if VBD is currently attached
+        QVariantMap vbdData = vbd->GetData();
+        bool currentlyAttached = vbdData.value("currently_attached", false).toBool();
+        if (!currentlyAttached)
+            continue;
+        
+        QString vdiRef = vbd->VDIRef();
+        if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
+            continue;
+        
+        QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>("vdi", vdiRef);
+        if (!vdi || !vdi->IsValid())
+            continue;
+        
+        // Check if VDI has read caching enabled for this host
+        // In C#, VDI.ReadCachingEnabled(host) checks SR's allowed_operations
+        QString srRef = vdi->SRRef();
+        if (srRef.isEmpty())
+            continue;
+        
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", srRef);
+        if (!sr || !sr->IsValid())
+            continue;
+        
+        // Check if SR allows read caching operations
+        QVariantMap srData = sr->GetData();
+        QStringList allowedOps = srData.value("allowed_operations").toStringList();
+        if (allowedOps.contains("vdi_read_caching"))
+            return true;
+    }
+    
+    return false;
+}
+
 bool VM::RequiresReboot() const
 {
     return this->boolProperty("requires_reboot", false);
@@ -952,7 +1019,7 @@ QStringList VM::PendingGuidances() const
 // Property getters for search/query functionality
 // C# equivalent: VM extensions in XenAPI-Extensions/VM.cs and Common.cs PropertyAccessors
 
-bool VM::IsRealVm() const
+bool VM::IsRealVM() const
 {
     // C# equivalent: VM.IsRealVm()
     // Returns true if VM is not a template, not a snapshot, and not a control domain
@@ -964,7 +1031,7 @@ QString VM::GetOSName() const
     // C# equivalent: VM.GetOSName()
     // Gets OS name from guest_metrics.os_version["name"]
     
-    if (!this->IsRealVm())
+    if (!this->IsRealVM())
         return QString();
     
     QString guestMetricsRef = this->GuestMetricsRef();
@@ -999,7 +1066,7 @@ int VM::GetVirtualizationStatus() const
     // 4 = IoDriversInstalled
     // 8 = ManagementInstalled
     
-    if (!this->IsRealVm())
+    if (!this->IsRealVM())
         return 0; // NotInstalled
     
     QString guestMetricsRef = this->GuestMetricsRef();
@@ -1058,7 +1125,7 @@ QList<ComparableAddress> VM::GetIPAddresses() const
     
     QList<ComparableAddress> addresses;
     
-    if (!this->IsRealVm())
+    if (!this->IsRealVM())
         return addresses;
     
     QString guestMetricsRef = this->GuestMetricsRef();

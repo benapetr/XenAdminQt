@@ -25,6 +25,7 @@ SOURCES += \
     xencache.cpp \
     vmhelpers.cpp \
     metricupdater.cpp \
+    xensearch/common.cpp \
     xensearch/groupingtag.cpp \
     xensearch/grouping.cpp \
     xensearch/queryscope.cpp \
@@ -47,6 +48,7 @@ SOURCES += \
     xen/friendlyerrornames.cpp \
     xen/asyncoperation.cpp \
     xen/xenobject.cpp \
+    xen/vmappliance.cpp \
     xen/pool.cpp \
     xen/host.cpp \
     xen/hostmetrics.cpp \
@@ -160,6 +162,7 @@ SOURCES += \
     operations/operationlauncher.cpp \
     customfields/customfielddefinition.cpp \
     customfields/customfieldsmanager.cpp \
+    xen/dockercontainer.cpp \
     xen/folder.cpp \
     otherconfig/otherconfigandtagswatcher.cpp
 
@@ -182,6 +185,7 @@ HEADERS += \
     xencache.h \
     vmhelpers.h \
     metricupdater.h \
+    xensearch/common.h \
     xensearch/groupingtag.h \
     xensearch/grouping.h \
     xensearch/queryscope.h \
@@ -224,6 +228,7 @@ HEADERS += \
     xen/pci.h \
     xen/pgpu.h \
     xen/network.h \
+    xen/vmappliance.h \
     xen/xenapi/xenapi_VM.h \
     xen/xenapi/xenapi_SR.h \
     xen/xenapi/xenapi_Pool.h \
@@ -319,6 +324,7 @@ HEADERS += \
     operations/operationlauncher.h \
     customfields/customfielddefinition.h \
     customfields/customfieldsmanager.h \
+    xen/dockercontainer.h \
     xen/folder.h \
     otherconfig/otherconfigandtagswatcher.h
 

@@ -34,6 +34,8 @@
 #include <QHBoxLayout>
 #include <QLabel>
 
+using namespace XenSearch;
+
 QueryElement::QueryElement(QWidget* parent)
     : QWidget(parent)
     , queryTypeCombo_(nullptr)

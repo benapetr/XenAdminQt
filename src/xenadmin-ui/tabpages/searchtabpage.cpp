@@ -31,6 +31,7 @@
 #include "../../xenlib/xensearch/search.h"
 #include "../../xenlib/xensearch/sort.h"
 #include "../../xenlib/xen/xenobject.h"
+#include <QTimer>
 #include <QVBoxLayout>
 
 SearchTabPage::SearchTabPage(QWidget* parent) : BaseTabPage(parent), m_ignoreSearchUpdate(false)
@@ -102,8 +103,14 @@ void SearchTabPage::setSearch(Search* search)
     const bool wasIgnoring = this->m_ignoreSearchUpdate;
     this->m_ignoreSearchUpdate = true;
 
-    delete this->m_search;
+    Search* oldSearch = this->m_search;
     this->m_search = search;
+    if (oldSearch)
+    {
+        QTimer::singleShot(0, this, [oldSearch]() {
+            delete oldSearch;
+        });
+    }
 
     if (this->m_searcher)
         this->m_searcher->SetSearch(this->m_search);

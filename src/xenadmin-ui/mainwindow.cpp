@@ -242,10 +242,11 @@ MainWindow::MainWindow(QWidget* parent)
     connect(this->m_navigationPane, &NavigationPane::notificationsSubModeChanged, this, &MainWindow::onNotificationsSubModeChanged);
     connect(this->m_navigationPane, &NavigationPane::treeViewSelectionChanged, this, &MainWindow::onNavigationPaneTreeViewSelectionChanged);
     connect(this->m_navigationPane, &NavigationPane::treeNodeRightClicked, this, &MainWindow::onNavigationPaneTreeNodeRightClicked);
+    connect(this->m_navigationPane, &NavigationPane::connectToServerRequested, this, &MainWindow::connectToServer);
 
     // Get tree widget from NavigationPane's NavigationView for legacy code compatibility
     // TODO: Refactor to use NavigationPane API instead of direct tree access
-    auto* navView = this->m_navigationPane->navigationView();
+    auto* navView = this->m_navigationPane->GetNavigationView();
     if (navView)
     {
         QTreeWidget* treeWidget = navView->treeWidget();
@@ -539,7 +540,7 @@ void MainWindow::onConnectionStateChanged(XenConnection *conn, bool connected)
         this->clearTabs();
         if (this->m_navigationPane)
         {
-            this->m_navigationPane->requestRefreshTreeView();
+            this->m_navigationPane->RequestRefreshTreeView();
         }
         this->updatePlaceholderVisibility();
     }
@@ -568,7 +569,7 @@ void MainWindow::onCachePopulated()
     // Refresh tree now that cache has data
     if (this->m_navigationPane)
     {
-        this->m_navigationPane->requestRefreshTreeView();
+        this->m_navigationPane->RequestRefreshTreeView();
     }
 
     // Start MetricUpdater to begin fetching RRD performance metrics
@@ -765,6 +766,23 @@ void MainWindow::showSearchPage(XenConnection *connection, GroupingTag* grouping
 {
     if (!groupingTag || !this->m_searchTabPage)
         return;
+
+    if (!connection)
+    {
+        Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
+        if (connMgr)
+        {
+            const QList<XenConnection*> connections = connMgr->getAllConnections();
+            for (XenConnection* candidate : connections)
+            {
+                if (candidate && candidate->GetCache())
+                {
+                    connection = candidate;
+                    break;
+                }
+            }
+        }
+    }
 
     // Create Search object for this grouping
     // Matches C# MainWindow.cs line 1771: SearchPage.Search = Search.SearchForNonVappGroup(gt.Grouping, gt.Parent, gt.Group);
@@ -1325,7 +1343,7 @@ QTreeWidget* MainWindow::getServerTreeWidget() const
     // Get tree widget from NavigationPane's NavigationView
     if (this->m_navigationPane)
     {
-        auto* navView = this->m_navigationPane->navigationView();
+        auto* navView = this->m_navigationPane->GetNavigationView();
         if (navView)
         {
             return navView->treeWidget();
@@ -1347,7 +1365,7 @@ void MainWindow::refreshServerTree()
     // Delegate tree building to NavigationView which respects current navigation mode
     if (this->m_navigationPane)
     {
-        this->m_navigationPane->requestRefreshTreeView();
+        this->m_navigationPane->RequestRefreshTreeView();
     }
 }
 
@@ -1432,7 +1450,7 @@ void MainWindow::loadSettings()
     this->applyViewSettingsToMenu();
     if (this->m_navigationPane)
     {
-        this->updateViewMenu(this->m_navigationPane->currentMode());
+        this->updateViewMenu(this->m_navigationPane->GetCurrentMode());
     }
 
     qDebug() << "Settings loaded from:" << settings.getValue("").toString();
@@ -1521,7 +1539,7 @@ void MainWindow::focusSearch()
     // Focus search box in NavigationPane
     if (this->m_navigationPane)
     {
-        this->m_navigationPane->focusTreeView();
+        this->m_navigationPane->FocusTreeView();
         // TODO: Also focus the search line edit when NavigationView exposes it
     }
 }
@@ -1542,7 +1560,7 @@ void MainWindow::onNavigationModeChanged(int mode)
         
         // Auto-select Alerts sub-mode when entering Notifications mode
         // This ensures something is displayed instead of showing empty area
-        this->m_navigationPane->switchToNotificationsView(NavigationPane::Alerts);
+        this->m_navigationPane->SwitchToNotificationsView(NavigationPane::Alerts);
         
         // Notification pages are shown via onNotificationsSubModeChanged
     } else
@@ -1574,7 +1592,7 @@ void MainWindow::onNavigationModeChanged(int mode)
     }
 
     // Update search for new mode (matches C# ViewSettingsChanged line 1981)
-    this->m_navigationPane->updateSearch();
+    this->m_navigationPane->UpdateSearch();
 
     // TODO: SetFiltersLabel() - update filters indicator in title bar
     this->updateViewMenu(navMode);
@@ -1609,7 +1627,7 @@ void MainWindow::onViewShowHiddenObjectsToggled(bool checked)
 
 void MainWindow::onViewSettingsChanged()
 {
-    this->m_navigationPane->updateSearch();
+    this->m_navigationPane->UpdateSearch();
 }
 
 void MainWindow::applyViewSettingsToMenu()
@@ -1700,7 +1718,7 @@ void MainWindow::onNavigationPaneTreeViewSelectionChanged()
 {
     // Ignore tree view selection changes when in Notifications mode
     // The title should show the notification sub-mode (Alerts/Events), not tree selection
-    if (this->m_navigationPane && this->m_navigationPane->currentMode() == NavigationPane::Notifications)
+    if (this->m_navigationPane && this->m_navigationPane->GetCurrentMode() == NavigationPane::Notifications)
         return;
     
     // Forward to existing tree selection handler
@@ -1776,13 +1794,8 @@ void MainWindow::restoreConnections()
 {
     qDebug() << "XenAdmin Qt: Restoring saved connections...";
 
-    // Check if auto-connect is enabled
+    // Always restore profiles into the ConnectionsManager; only auto-connect if enabled.
     bool autoConnect = SettingsManager::instance().getAutoConnect();
-    if (!autoConnect && !SettingsManager::instance().getSaveSession())
-    {
-        qDebug() << "XenAdmin Qt: Auto-connect and save session are disabled, skipping connection restoration";
-        return;
-    }
 
     // Load all saved connection profiles
     QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
@@ -1810,13 +1823,14 @@ void MainWindow::restoreConnections()
         bool shouldConnect = profile.autoConnect() ||
                              (SettingsManager::instance().getSaveSession() && !profile.saveDisconnected());
 
-        if (!shouldConnect)
+        if (shouldConnect)
         {
-            qDebug() << "XenAdmin Qt: Skipping profile" << profile.displayName() << "(auto-connect disabled)";
-            continue;
+            qDebug() << "XenAdmin Qt: Restoring connection to" << profile.displayName();
         }
-
-        qDebug() << "XenAdmin Qt: Restoring connection to" << profile.displayName();
+        else
+        {
+            qDebug() << "XenAdmin Qt: Adding disconnected profile" << profile.displayName();
+        }
 
         XenConnection* connection = new XenConnection(nullptr);
         connection->SetHostname(profile.hostname());
@@ -1830,7 +1844,8 @@ void MainWindow::restoreConnections()
 
         connMgr->addConnection(connection);
 
-        XenConnectionUI::BeginConnect(connection, true, this, true);
+        if (shouldConnect)
+            XenConnectionUI::BeginConnect(connection, true, this, true);
     }
 }
 
@@ -2040,7 +2055,7 @@ void MainWindow::handleConnectionSuccess(ConnectionContext* context, bool connec
     // Delegate tree building to NavigationView which respects current navigation mode
     if (this->m_navigationPane)
     {
-        this->m_navigationPane->requestRefreshTreeView();
+        this->m_navigationPane->RequestRefreshTreeView();
     }
 
     // Save profile if requested

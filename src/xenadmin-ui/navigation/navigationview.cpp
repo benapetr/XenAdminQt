@@ -35,6 +35,10 @@
 #include "xenlib/vmhelpers.h"
 #include "xenlib/xensearch/groupingtag.h"
 #include "xenlib/xensearch/grouping.h"
+#include "xenlib/xensearch/queryscope.h"
+#include "xenlib/xensearch/search.h"
+#include "xenlib/xensearch/query.h"
+#include "xenadmin-ui/xensearch/treesearch.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
@@ -43,6 +47,8 @@
 #include "../connectionprofile.h"
 #include <algorithm>
 #include <QDebug>
+
+using namespace XenSearch;
 
 /**
  * @brief Natural string comparison (matches C# StringUtility.NaturalCompare)
@@ -272,6 +278,7 @@ NavigationView::NavigationView(QWidget* parent)
     : QWidget(parent), ui(new Ui::NavigationView), m_refreshTimer(new QTimer(this)), m_typeGrouping(new TypeGrouping()) // Create TypeGrouping for Objects view
 {
     this->ui->setupUi(this);
+    this->m_treeBuilder = new MainWindowTreeBuilder(this->ui->treeWidget, this);
 
     SettingsManager& settings = SettingsManager::instance();
     this->m_viewFilters.showDefaultTemplates = settings.getDefaultTemplatesVisible();
@@ -304,7 +311,7 @@ NavigationView::NavigationView(QWidget* parent)
             });
 
     connect(this->ui->treeWidget, &QTreeWidget::itemClicked, this, &NavigationView::treeNodeClicked);
-
+    connect(this->ui->treeWidget, &QTreeWidget::itemDoubleClicked, this, &NavigationView::onTreeItemDoubleClicked);
     connect(this->ui->treeWidget, &QTreeWidget::customContextMenuRequested, this, &NavigationView::treeNodeRightClicked);
 
     // Connect search box (matches C# searchTextBox_TextChanged line 215)
@@ -322,6 +329,7 @@ NavigationView::NavigationView(QWidget* parent)
 NavigationView::~NavigationView()
 {
     delete this->m_typeGrouping;
+    delete this->m_objectsSearch;
     delete this->ui;
 }
 
@@ -388,6 +396,7 @@ void NavigationView::requestRefreshTreeView()
 void NavigationView::setViewFilters(const ViewFilters& filters)
 {
     this->m_viewFilters = filters;
+    TreeSearch::ResetDefaultTreeSearch();
     this->requestRefreshTreeView();
 }
 
@@ -494,6 +503,48 @@ void NavigationView::disconnectCacheSignals(XenConnection* connection)
         disconnect(this->m_cacheRemovedHandlers.take(connection));
 }
 
+XenConnection* NavigationView::primaryConnection() const
+{
+    if (!this->m_connectionsManager)
+        return nullptr;
+
+    const QList<XenConnection*> connections = this->m_connectionsManager->getAllConnections();
+    for (XenConnection* connection : connections)
+    {
+        if (!connection)
+            continue;
+        if (connection->IsConnected() && connection->GetCache())
+            return connection;
+    }
+
+    for (XenConnection* connection : connections)
+    {
+        if (connection && connection->GetCache())
+            return connection;
+    }
+
+    return connections.isEmpty() ? nullptr : connections.first();
+}
+
+QueryScope* NavigationView::buildTreeSearchScope() const
+{
+    ObjectTypes types = Search::DefaultObjectTypes();
+    types |= ObjectTypes::Pool;
+
+    SettingsManager& settings = SettingsManager::instance();
+
+    if (settings.getDefaultTemplatesVisible())
+        types |= ObjectTypes::DefaultTemplate;
+
+    if (settings.getUserTemplatesVisible())
+        types |= ObjectTypes::UserTemplate;
+
+    if (settings.getLocalSRsVisible())
+        types |= ObjectTypes::LocalSR;
+
+    return new QueryScope(types);
+}
+
 void NavigationView::onSearchTextChanged(const QString& text)
 {
     // Matches C# NavigationView.searchTextBox_TextChanged (line 215)
@@ -507,345 +558,46 @@ void NavigationView::onSearchTextChanged(const QString& text)
 
 void NavigationView::buildInfrastructureTree()
 {
-    // Matches C# MainWindowTreeBuilder.CreateNewRootNode for Infrastructure mode
-    // This creates hierarchical tree: Pool → Host → VM → SR
-    // Uses cache directly like C# connection.Cache.XenSearchableObjects
+    QList<XenConnection*> connections;
+    if (this->m_connectionsManager)
+        connections = this->m_connectionsManager->getAllConnections();
 
-    this->ui->treeWidget->clear();
-
-    if (!this->m_connectionsManager)
+    if (!this->m_connectionsManager || connections.isEmpty())
     {
-        // No XenLib - show placeholder
-        QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
-        placeholder->setText(0, "(No connection manager available)");
+        this->ui->treeWidget->clear();
+        QTreeWidgetItem* root = new QTreeWidgetItem(this->ui->treeWidget);
+        root->setText(0, "XenAdmin");
+        root->setExpanded(true);
+
+        QTreeWidgetItem* placeholder = new QTreeWidgetItem(root);
+        placeholder->setText(0, connections.isEmpty()
+            ? "Connect to a XenServer"
+            : "(No connection manager available)");
+        if (connections.isEmpty())
+            placeholder->setData(0, Qt::UserRole + 4, QStringLiteral("connect"));
         return;
     }
 
-    Xen::ConnectionsManager* connMgr = this->m_connectionsManager;
-    if (!connMgr)
-    {
-        QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
-        placeholder->setText(0, "(Connection manager not initialized)");
-        return;
-    }
+    Search* baseSearch = TreeSearch::DefaultTreeSearch();
+    Search* effectiveSearch = baseSearch->AddFullTextFilter(this->searchText());
 
-    // Get all connections (both connected and disconnected)
-    QList<XenConnection*> connections = connMgr->getAllConnections();
+    QTreeWidgetItem* root = this->m_treeBuilder->createNewRootNode(
+        effectiveSearch,
+        MainWindowTreeBuilder::NavigationMode::Infrastructure,
+        nullptr);
 
-    qDebug() << "NavigationView::buildInfrastructureTree: connections count=" << connections.size();
+    this->m_treeBuilder->refreshTreeView(
+        root,
+        this->searchText(),
+        MainWindowTreeBuilder::NavigationMode::Infrastructure);
 
-    if (connections.isEmpty())
-    {
-        // No connections - show connection prompt (matches C# behavior)
-        QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
-        placeholder->setText(0, "Connect to a XenServer");
-        placeholder->setData(0, Qt::UserRole, QVariant::fromValue<void*>(nullptr)); // No object data
-        return;
-    }
+    if (effectiveSearch != baseSearch)
+        delete effectiveSearch;
 
-    // Build tree for each connection
-    // In C#, infrastructure view shows: Pool → Hosts → VMs/SRs under each host
-    // Disconnected servers appear at root level just like pools (C# MainWindowTreeBuilder pattern)
-    for (XenConnection* connection : connections)
-    {
-        if (!connection)
-            continue;
-
-        qDebug() << "NavigationView::buildInfrastructureTree: connection"
-                 << connection->GetHostname()
-                 << "IsConnected=" << connection->IsConnected()
-                 << "IsConnectedNewFlow=" << connection->IsConnectedNewFlow();
-
-        // Check if connected
-        if (!connection->IsConnected())
-        {
-            // Show disconnected connection at ROOT LEVEL (matches C# behavior)
-            // C# creates a fake Host object with opaque_ref = HostnameWithPort (GroupAlg.cs line 97)
-            // This allows disconnected servers to appear in tree with context menu
-            QTreeWidgetItem* connItem = new QTreeWidgetItem(this->ui->treeWidget);
-            XenCache* cache = connection->GetCache();
-            QSharedPointer<Host> disconnectedHost = buildDisconnectedHostObject(connection, cache);
-            connItem->setText(0, disconnectedHost ? disconnectedHost->GetName() : connection->GetHostname());
-            // Store fake Host object (matches C# disconnected host behavior)
-            connItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(disconnectedHost));
-            connItem->setData(0, Qt::UserRole + 1, QString("disconnected_host")); // Object type for context menu
-
-            // Set disconnected host icon (C# uses HostDisconnected icon)
-            QIcon disconnectedIcon = IconManager::instance().getDisconnectedIcon();
-            connItem->setIcon(0, disconnectedIcon);
-            continue;
-        }
-
-        XenCache* cache = connection->GetCache();
-        if (!cache)
-            continue;
-
-        // For connected servers, get pool data from CACHE (not API)
-        qDebug() << "NavigationView::buildInfrastructureTree: cache counts"
-                 << "hosts=" << cache->Count("host")
-                 << "pools=" << cache->Count("pool")
-                 << "vms=" << cache->Count("vm")
-                 << "srs=" << cache->Count("sr");
-        // This matches C# connection.Cache.Resolve pattern
-        QList<QVariantMap> pools = cache->GetAllData("pool");
-
-        if (pools.isEmpty())
-        {
-            // Connection has no pool data yet
-            QTreeWidgetItem* connItem = new QTreeWidgetItem(this->ui->treeWidget);
-            connItem->setText(0, QString("%1 (connecting...) ").arg(connection->GetHostname()));
-            connItem->setData(0, Qt::UserRole, QVariant::fromValue(connection));
-            continue;
-        }
-
-        // Build pool node (normally only one pool per connection)
-        for (const QVariantMap& pool : pools)
-        {
-            QString poolRef = pool.value("ref").toString();
-            QString poolName = pool.value("name_label").toString();
-
-            if (poolName.isEmpty())
-            {
-                poolName = connection->GetHostname(); // Fallback to hostname
-            }
-
-            QTreeWidgetItem* poolItem = new QTreeWidgetItem(this->ui->treeWidget);
-            poolItem->setText(0, poolName);
-            
-            // Store QSharedPointer<Pool> instead of separate ref+type
-            QSharedPointer<Pool> poolObj = cache->ResolveObject<Pool>("pool", poolRef);
-            // Upcast to base type so canConvert<QSharedPointer<XenObject>>() works
-            poolItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(poolObj));
-            poolItem->setExpanded(true);                             // Expand pool by default
-
-            // Set pool icon
-            QIcon poolIcon = IconManager::instance().getIconForPool(pool);
-            poolItem->setIcon(0, poolIcon);
-            // TODO: Set appropriate pool icon
-
-            // Get hosts in this pool from CACHE
-            QVariantList hostRefs = pool.value("master").toList();
-            if (hostRefs.isEmpty())
-            {
-                // Try alternate field name
-                hostRefs = pool.value("hosts").toList();
-            }
-
-            // Get all hosts from cache (pool.hosts is just list of refs)
-            QList<QVariantMap> allHosts = cache->GetAllData("host");
-
-            QHash<QString, QList<QVariantMap>> srsByHost;
-            QList<QVariantMap> poolSrs;
-            for (const QVariantMap& srData : cache->GetAllData("sr"))
-            {
-                QString srRef = srData.value("ref").toString();
-                if (srRef.isEmpty())
-                    continue;
-
-                QString contentType = srData.value("content_type").toString();
-                if (contentType == "iso")
-                    continue;
-
-                QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
-                if (!this->m_viewFilters.showLocalStorage)
-                {
-                    const bool isLocal = srObj ? srObj->IsLocal() : !srData.value("shared").toBool();
-                    if (isLocal)
-                        continue;
-                }
-
-                if (!this->m_viewFilters.showHiddenObjects && isHiddenObject(srData))
-                    continue;
-
-                QString homeRef = srObj ? srObj->HomeRef() : QString();
-                if (homeRef.isEmpty())
-                    poolSrs.append(srData);
-                else
-                    srsByHost[homeRef].append(srData);
-            }
-
-            // Build map of hostRef -> QTreeWidgetItem* for VM placement
-            QMap<QString, QTreeWidgetItem*> hostItems;
-
-            for (const QVariantMap& hostData : allHosts)
-            {
-                QString hostRef = hostData.value("ref").toString();
-                QString hostName = hostData.value("name_label").toString();
-                if (hostName.isEmpty())
-                    hostName = "(Unnamed Host)";
-
-                if (!this->m_viewFilters.showHiddenObjects && isHiddenObject(hostData))
-                    continue;
-
-                QTreeWidgetItem* hostItem = new QTreeWidgetItem(poolItem);
-                hostItem->setText(0, hostName);
-                
-                // Store QSharedPointer<Host>
-                QSharedPointer<Host> hostObj = cache->ResolveObject<Host>("host", hostRef);
-                // Upcast to base type so canConvert<QSharedPointer<XenObject>>() works
-                hostItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(hostObj));
-                hostItem->setExpanded(true);                             // Expand host by default
-
-                QIcon hostIcon = hostObj
-                    ? IconManager::instance().getIconForObject(hostObj.data())
-                    : IconManager::instance().getIconForHost(hostData);
-                hostItem->setIcon(0, hostIcon);
-
-                // Store in map for VM placement later
-                hostItems[hostRef] = hostItem;
-
-                const QList<QVariantMap> hostSrs = srsByHost.value(hostRef);
-                for (const QVariantMap& srData : hostSrs)
-                {
-                    QString srRef = srData.value("ref").toString();
-                    QString srName = srData.value("name_label").toString();
-                    if (srName.isEmpty())
-                        srName = "(Unnamed Storage)";
-
-                    QTreeWidgetItem* srItem = new QTreeWidgetItem(hostItem);
-                    srItem->setText(0, srName);
-
-                    QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
-                    srItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(srObj));
-
-                    QIcon srIcon = IconManager::instance().getIconForSR(srData, connection);
-                    srItem->setIcon(0, srIcon);
-                }
-            }
-
-            for (const QVariantMap& srData : poolSrs)
-            {
-                QString srRef = srData.value("ref").toString();
-                QString srName = srData.value("name_label").toString();
-                if (srName.isEmpty())
-                    srName = "(Unnamed Storage)";
-
-                QTreeWidgetItem* srItem = new QTreeWidgetItem(poolItem);
-                srItem->setText(0, srName);
-
-                QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
-                srItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(srObj));
-
-                QIcon srIcon = IconManager::instance().getIconForSR(srData, connection);
-                srItem->setIcon(0, srIcon);
-            }
-
-            // CRITICAL: Place VMs using VMHelpers::getVMHome() (matches C# VM.Home() behavior)
-            // This handles:
-            // 1. Running/Paused VMs → placed under resident_on host
-            // 2. VMs with local storage → placed under storage host
-            // 3. VMs with affinity → placed under affinity host (if enabled)
-            // 4. Offline VMs with no affinity → placed at POOL LEVEL (not under any host)
-            //
-            // This is the KEY FIX for Issue 1: offline VMs were invisible because
-            // the old code only placed VMs under resident_on host.
-            QList<QVariantMap> allVMs = cache->GetAllData("vm");
-
-            for (const QVariantMap& vmData : allVMs)
-            {
-                QString vmRef = vmData.value("ref").toString();
-
-                // Skip control domain, snapshots, and templates
-                bool isControlDomain = vmData.value("is_control_domain").toBool();
-                bool isSnapshot = vmData.value("is_a_snapshot").toBool();
-                bool isTemplate = vmData.value("is_a_template").toBool();
-
-                if (isSnapshot)
-                    continue;
-
-                if (!this->m_viewFilters.showHiddenObjects && isHiddenObject(vmData))
-                    continue;
-
-                QString vmName = vmData.value("name_label").toString();
-                if (vmName.isEmpty())
-                    vmName = "(Unnamed VM)";
-
-                if (isTemplate)
-                {
-                    QSharedPointer<VM> vmObj = cache->ResolveObject<VM>("vm", vmRef);
-                    const bool isDefaultTemplate = vmObj ? vmObj->IsDefaultTemplate() : vmData.value("is_default_template").toBool();
-                    if (isDefaultTemplate && !this->m_viewFilters.showDefaultTemplates)
-                        continue;
-                    if (!isDefaultTemplate && !this->m_viewFilters.showUserTemplates)
-                        continue;
-
-                    QTreeWidgetItem* templateItem = new QTreeWidgetItem(poolItem);
-                    templateItem->setText(0, vmName);
-                    templateItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(vmObj));
-
-                    QIcon templateIcon = IconManager::instance().getIconForVM(vmData);
-                    templateItem->setIcon(0, templateIcon);
-                    continue;
-                }
-
-                // Use VMHelpers to determine where this VM should appear
-                QString vmHomeRef = VMHelpers::getVMHome(connection, vmData);
-
-                QTreeWidgetItem* parentItem = nullptr;
-
-                if (vmHomeRef.isEmpty())
-                {
-                    // VM has no home → place at pool level
-                    // This is the KEY behavior: offline VMs with no affinity appear
-                    // at the pool level (not under any host)
-                    parentItem = poolItem;
-                } else if (hostItems.contains(vmHomeRef))
-                {
-                    // VM belongs under a specific host
-                    parentItem = hostItems[vmHomeRef];
-                } else
-                {
-                    // Home ref doesn't match any host in this pool → skip
-                    // (VM might be in another pool)
-                    continue;
-                }
-
-                // Add VM to tree
-                QString displayName = vmName;
-                if (isControlDomain && parentItem != poolItem)
-                {
-                    // Add control domain indicator (but only if under a host, not pool)
-                    QString hostName = parentItem->text(0);
-                    displayName = QString("Control domain on %1").arg(hostName);
-                }
-
-                QTreeWidgetItem* vmItem = new QTreeWidgetItem(parentItem);
-                vmItem->setText(0, displayName);
-                
-                // Store QSharedPointer<VM>
-                QSharedPointer<VM> vmObj = cache->ResolveObject<VM>("vm", vmRef);
-                // Upcast to base type so canConvert<QSharedPointer<XenObject>>() works
-                vmItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(vmObj));
-
-                // Set VM icon based on power state
-                QIcon vmIcon = IconManager::instance().getIconForVM(vmData);
-                vmItem->setIcon(0, vmIcon);
-            }
-
-            // Sort VMs under each host naturally (alphabetically with number awareness)
-            for (auto it = hostItems.begin(); it != hostItems.end(); ++it)
-            {
-                sortTreeItemChildren(it.value());
-            }
-
-            // Sort pool children by group order: hosts, pool-level SRs, pool-level VMs
-            sortPoolChildren(poolItem);
-        }
-    }
-
-    // Sort top-level pool items
-    sortTreeTopLevel(this->ui->treeWidget);
 }
 
 void NavigationView::buildObjectsTree()
 {
-    // Matches C# OrganizationViewObjects.Populate
-    // This creates flat tree grouped by TYPE (not "All X" categories)
-    // Groups objects by PropertyNames.type: Pools, Hosts, VMs, SRs, Networks
-    // Uses cache directly like C# connection.Cache.XenSearchableObjects
-
-    this->ui->treeWidget->clear();
-
     if (!this->m_connectionsManager)
     {
         QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
@@ -853,276 +605,53 @@ void NavigationView::buildObjectsTree()
         return;
     }
 
-    Xen::ConnectionsManager* connMgr = this->m_connectionsManager;
-    if (!connMgr)
-    {
-        QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
-        placeholder->setText(0, "(Connection manager not initialized)");
-        return;
-    }
-
-    // Get all connections (both connected and disconnected)
-    // C# OrganizationViewObjects shows disconnected servers in a separate group
-    QList<XenConnection*> allConnections = connMgr->getAllConnections();
-    QList<XenConnection*> disconnectedConnections;
-
-    // Separate disconnected connections
-    for (XenConnection* conn : allConnections)
-    {
-        if (conn && !conn->IsConnected())
-        {
-            disconnectedConnections.append(conn);
-        }
-    }
-
-    // Check if we have ANY connections at all
-    if (allConnections.isEmpty())
+    const QList<XenConnection*> connections = this->m_connectionsManager->getAllConnections();
+    if (connections.isEmpty())
     {
         QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
         placeholder->setText(0, "Connect to a XenServer");
+        placeholder->setData(0, Qt::UserRole + 4, QStringLiteral("connect"));
         return;
     }
 
-    // In C# Objects view, items are grouped BY TYPE
-    // Create type group nodes
-    QTreeWidgetItem* poolsGroup = nullptr;
-    QTreeWidgetItem* hostsGroup = nullptr;
-    QTreeWidgetItem* disconnectedHostsGroup = nullptr; // NEW: For disconnected servers
-    QTreeWidgetItem* vmsGroup = nullptr;
-    QTreeWidgetItem* templatesGroup = nullptr;
-    QTreeWidgetItem* storageGroup = nullptr;
-    // TODO: Add networks when XenLib supports them
-    // QTreeWidgetItem* networksGroup = nullptr;
-
-    // Aggregate objects across all connections (each connection has its own cache)
-
-    for (XenConnection* connection : allConnections)
+    if (!this->m_objectsSearch)
     {
-        if (!connection)
-            continue;
-
-        XenCache* cache = connection->GetCache();
-        if (!cache)
-            continue;
-
-        // Pools from cache
-        QList<QVariantMap> pools = cache->GetAllData("pool");
-        for (const QVariantMap& pool : pools)
-        {
-            QString poolRef = pool.value("ref").toString();
-            QString poolName = pool.value("name_label").toString();
-
-            if (poolName.isEmpty())
-                continue;
-
-            if (!poolsGroup)
-            {
-                poolsGroup = new QTreeWidgetItem(this->ui->treeWidget);
-                poolsGroup->setText(0, "Pools");
-                poolsGroup->setExpanded(true);
-
-                GroupingTag* tag = new GroupingTag(this->m_typeGrouping, QVariant(), QVariant("pool"));
-                poolsGroup->setData(0, Qt::UserRole + 3, QVariant::fromValue(tag));
-            }
-
-            QTreeWidgetItem* poolItem = new QTreeWidgetItem(poolsGroup);
-            poolItem->setText(0, poolName);
-
-            QSharedPointer<Pool> poolObj = cache->ResolveObject<Pool>("pool", poolRef);
-            poolItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(poolObj));
-
-            QIcon poolIcon = IconManager::instance().getIconForPool(pool);
-            poolItem->setIcon(0, poolIcon);
-        }
-
-        // Hosts from cache
-        QList<QVariantMap> hosts = cache->GetAllData("host");
-        for (const QVariantMap& hostData : hosts)
-        {
-            QString hostRef = hostData.value("ref").toString();
-            QString hostName = hostData.value("name_label").toString();
-
-            if (hostName.isEmpty())
-                continue;
-
-            if (!this->m_viewFilters.showHiddenObjects && isHiddenObject(hostData))
-                continue;
-
-            if (!hostsGroup)
-            {
-                hostsGroup = new QTreeWidgetItem(this->ui->treeWidget);
-                hostsGroup->setText(0, "Hosts");
-                hostsGroup->setExpanded(true);
-
-                GroupingTag* tag = new GroupingTag(this->m_typeGrouping, QVariant(), QVariant("host"));
-                hostsGroup->setData(0, Qt::UserRole + 3, QVariant::fromValue(tag));
-            }
-
-            QTreeWidgetItem* hostItem = new QTreeWidgetItem(hostsGroup);
-            hostItem->setText(0, hostName);
-
-            QSharedPointer<Host> hostObj = cache->ResolveObject<Host>("host", hostRef);
-            hostItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(hostObj));
-
-            QIcon hostIcon = hostObj
-                ? IconManager::instance().getIconForObject(hostObj.data())
-                : IconManager::instance().getIconForHost(hostData);
-            hostItem->setIcon(0, hostIcon);
-        }
-
-        // VMs and Templates from cache
-        QList<QVariantMap> vms = cache->GetAllData("vm");
-        for (const QVariantMap& vmData : vms)
-        {
-            QString vmRef = vmData.value("ref").toString();
-            bool isTemplate = vmData.value("is_a_template").toBool();
-            bool isSnapshot = vmData.value("is_a_snapshot").toBool();
-            bool isControlDomain = vmData.value("is_control_domain").toBool();
-
-            if (isControlDomain || isSnapshot)
-                continue;
-
-            QString vmName = vmData.value("name_label").toString();
-            if (vmName.isEmpty())
-                continue;
-
-            if (!this->m_viewFilters.showHiddenObjects && isHiddenObject(vmData))
-                continue;
-
-            if (isTemplate)
-            {
-                if (!templatesGroup)
-                {
-                    templatesGroup = new QTreeWidgetItem(this->ui->treeWidget);
-                    templatesGroup->setText(0, "Templates");
-                    templatesGroup->setExpanded(false);
-
-                    GroupingTag* tag = new GroupingTag(this->m_typeGrouping, QVariant(), QVariant("template"));
-                    templatesGroup->setData(0, Qt::UserRole + 3, QVariant::fromValue(tag));
-                }
-
-                QTreeWidgetItem* templateItem = new QTreeWidgetItem(templatesGroup);
-                templateItem->setText(0, vmName);
-
-                QSharedPointer<VM> vmObj = cache->ResolveObject<VM>("vm", vmRef);
-                templateItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(vmObj));
-
-                QIcon templateIcon = IconManager::instance().getIconForVM(vmData);
-                templateItem->setIcon(0, templateIcon);
-            } else
-            {
-                if (!vmsGroup)
-                {
-                    vmsGroup = new QTreeWidgetItem(this->ui->treeWidget);
-                    vmsGroup->setText(0, "VMs");
-                    vmsGroup->setExpanded(true);
-
-                    GroupingTag* tag = new GroupingTag(this->m_typeGrouping, QVariant(), QVariant("vm"));
-                    vmsGroup->setData(0, Qt::UserRole + 3, QVariant::fromValue(tag));
-                }
-
-                QTreeWidgetItem* vmItem = new QTreeWidgetItem(vmsGroup);
-                vmItem->setText(0, vmName);
-
-                QSharedPointer<VM> vmObj = cache->ResolveObject<VM>("vm", vmRef);
-                vmItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(vmObj));
-
-                QIcon vmIcon = IconManager::instance().getIconForVM(vmData);
-                vmItem->setIcon(0, vmIcon);
-            }
-        }
-
-        // Storage Repositories from cache
-        QList<QVariantMap> srs = cache->GetAllData("sr");
-        for (const QVariantMap& srData : srs)
-        {
-            QString srRef = srData.value("ref").toString();
-            QString srName = srData.value("name_label").toString();
-
-            if (srName.isEmpty())
-                continue;
-
-            QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
-            if (!this->m_viewFilters.showLocalStorage)
-            {
-                const bool isLocal = srObj ? srObj->IsLocal() : !srData.value("shared").toBool();
-                if (isLocal)
-                    continue;
-            }
-
-            if (!this->m_viewFilters.showHiddenObjects && isHiddenObject(srData))
-                continue;
-
-            if (!storageGroup)
-            {
-                storageGroup = new QTreeWidgetItem(this->ui->treeWidget);
-                storageGroup->setText(0, "Storage");
-                storageGroup->setExpanded(true);
-
-                GroupingTag* tag = new GroupingTag(this->m_typeGrouping, QVariant(), QVariant("sr"));
-                storageGroup->setData(0, Qt::UserRole + 3, QVariant::fromValue(tag));
-            }
-
-            QTreeWidgetItem* srItem = new QTreeWidgetItem(storageGroup);
-            srItem->setText(0, srName);
-
-            srItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(srObj));
-
-            QIcon srIcon = IconManager::instance().getIconForSR(srData, connection);
-            srItem->setIcon(0, srIcon);
-        }
+        ObjectTypes types = Search::DefaultObjectTypes();
+        types |= ObjectTypes::Pool;
+        types |= ObjectTypes::DefaultTemplate;
+        types |= ObjectTypes::UserTemplate;
+        types |= ObjectTypes::LocalSR;
+        QueryScope* scope = new QueryScope(types);
+        Query* query = new Query(scope, nullptr);
+        this->m_objectsSearch = new Search(query, new TypeGrouping(nullptr), "Objects", QString(), false);
     }
 
-    // Disconnected Servers group (C# ObjectTypes.DisconnectedServer)
-    // C# creates fake Host objects for disconnected connections (GroupAlg.cs line 93-100)
-    // These appear in Objects view under "Disconnected Servers" group
-    if (!disconnectedConnections.isEmpty())
-    {
-        // Create Disconnected Servers group
-        disconnectedHostsGroup = new QTreeWidgetItem(this->ui->treeWidget);
-        disconnectedHostsGroup->setText(0, "Disconnected servers"); // Matches C# Messages.DISCONNECTED_SERVERS
-        disconnectedHostsGroup->setExpanded(true);
+    Search* baseSearch = this->m_objectsSearch;
+    Search* effectiveSearch = baseSearch->AddFullTextFilter(this->searchText());
 
-        // Attach GroupingTag (group value is "disconnected_host")
-        GroupingTag* tag = new GroupingTag(this->m_typeGrouping, QVariant(), QVariant("disconnected_host"));
-        disconnectedHostsGroup->setData(0, Qt::UserRole + 3, QVariant::fromValue(tag));
+    QTreeWidgetItem* root = this->m_treeBuilder->createNewRootNode(
+        effectiveSearch,
+        MainWindowTreeBuilder::NavigationMode::Objects,
+        nullptr);
 
-        // Set disconnected group icon
-        QIcon disconnectedGroupIcon = IconManager::instance().getDisconnectedIcon();
-        disconnectedHostsGroup->setIcon(0, disconnectedGroupIcon);
+    this->m_treeBuilder->refreshTreeView(
+        root,
+        this->searchText(),
+        MainWindowTreeBuilder::NavigationMode::Objects);
 
-        // Add each disconnected connection as a fake host
-        for (XenConnection* conn : disconnectedConnections)
-        {
-            QTreeWidgetItem* disconnectedItem = new QTreeWidgetItem(disconnectedHostsGroup);
-            XenCache* cache = conn ? conn->GetCache() : nullptr;
-            QSharedPointer<Host> disconnectedHost = buildDisconnectedHostObject(conn, cache);
-            disconnectedItem->setText(0, disconnectedHost ? disconnectedHost->GetName() : conn->GetHostname());
-            disconnectedItem->setData(0, Qt::UserRole, QVariant::fromValue<QSharedPointer<XenObject>>(disconnectedHost));
-            disconnectedItem->setData(0, Qt::UserRole + 1, QString("disconnected_host"));
+    if (effectiveSearch != baseSearch)
+        delete effectiveSearch;
+}
 
-            // Set disconnected host icon
-            QIcon disconnectedIcon = IconManager::instance().getDisconnectedIcon();
-            disconnectedItem->setIcon(0, disconnectedIcon);
-        }
+void NavigationView::onTreeItemDoubleClicked(QTreeWidgetItem* item, int column)
+{
+    Q_UNUSED(column);
+    if (!item)
+        return;
 
-        // Sort disconnected servers naturally
-        sortTreeItemChildren(disconnectedHostsGroup);
-    }
-
-    // Sort items within each group naturally
-    if (poolsGroup)
-        sortTreeItemChildren(poolsGroup);
-    if (hostsGroup)
-        sortTreeItemChildren(hostsGroup);
-    if (vmsGroup)
-        sortTreeItemChildren(vmsGroup);
-    if (templatesGroup)
-        sortTreeItemChildren(templatesGroup);
-    if (storageGroup)
-        sortTreeItemChildren(storageGroup);
-
-    // TODO: Add networks when XenLib supports them
+    const QVariant action = item->data(0, Qt::UserRole + 4);
+    if (action.toString() == QLatin1String("connect"))
+        emit this->connectToServerRequested();
 }
 
 void NavigationView::buildOrganizationTree()

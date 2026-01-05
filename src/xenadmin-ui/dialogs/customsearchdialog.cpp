@@ -28,9 +28,9 @@
 #include "customsearchdialog.h"
 #include "ui_customsearchdialog.h"
 
-CustomSearchDialog::CustomSearchDialog(QWidget* parent)
-    : QDialog(parent)
-    , ui(new Ui::CustomSearchDialog)
+using namespace XenSearch;
+
+CustomSearchDialog::CustomSearchDialog(QWidget* parent) : QDialog(parent), ui(new Ui::CustomSearchDialog)
 {
     this->ui->setupUi(this);
     

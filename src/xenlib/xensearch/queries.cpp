@@ -28,6 +28,8 @@
 #include "queries.h"
 #include "../xencache.h"
 
+using namespace XenSearch;
+
 // Helper function to get object type from property name
 static QString getObjectTypeFromPropertyName(PropertyNames property)
 {

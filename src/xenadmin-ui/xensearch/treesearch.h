@@ -25,57 +25,23 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CUSTOMSEARCHDIALOG_H
-#define CUSTOMSEARCHDIALOG_H
+#ifndef TREESEARCH_H
+#define TREESEARCH_H
 
-#include <QDialog>
-#include "../controls/xensearch/searcher.h"
+#include "xensearch/search.h"
 
-namespace Ui {
-class CustomSearchDialog;
-}
+class XenObject;
 
-/**
- * CustomSearchDialog - Custom object type selection for search scope
- * 
- * Allows users to select which object types to search for:
- * - Pool
- * - Host (Server)
- * - VM
- * - Storage Repository (Local SR, Remote SR)
- * - Virtual Disk Image (VDI)
- * - Network
- * - Folder
- * 
- * Returns a QueryScope with selected ObjectTypes.
- * 
- * NOTE: C# XenCenter doesn't have a visible CustomSearchDialog class,
- * but the functionality is referenced in SearchFor dropdown.
- */
-class CustomSearchDialog : public QDialog
+class TreeSearch
 {
-    Q_OBJECT
-
     public:
-        explicit CustomSearchDialog(QWidget* parent = nullptr);
-        ~CustomSearchDialog();
-
-        /**
-         * Get the selected object types as QueryScope
-         */
-        QueryScope* getQueryScope() const;
-
-        /**
-         * Set the initial object types
-         */
-        void setObjectTypes(XenSearch::ObjectTypes types);
-
-    private slots:
-        void onSelectAllClicked();
-        void onClearAllClicked();
+        static Search* DefaultTreeSearch();
+        static Search* SearchFor(XenObject* value);
+        static void ResetDefaultTreeSearch();
+        static QueryScope* GetTreeSearchScope();
 
     private:
-        Ui::CustomSearchDialog* ui;
+        static Search* s_defaultTreeSearch;
 };
 
-#endif // CUSTOMSEARCHDIALOG_H
+#endif // TREESEARCH_H

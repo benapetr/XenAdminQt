@@ -34,7 +34,9 @@
 #include <QSharedPointer>
 #include <QHash>
 #include <QMetaObject>
+#include "mainwindowtreebuilder.h"
 #include "navigationpane.h" // For NavigationMode enum
+#include "xensearch/search.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -45,6 +47,7 @@ QT_END_NAMESPACE
 
 class XenConnection;
 class XenCache;
+class QueryScope;
 namespace Xen
 {
     class ConnectionsManager;
@@ -116,6 +119,7 @@ class NavigationView : public QWidget
         void treeViewRefreshSuspended();
         void treeViewRefreshResumed();
         void dragDropCommandActivated(const QString& commandKey);
+        void connectToServerRequested();
 
         /**
          * Emitted when a folder is selected in the tree
@@ -131,6 +135,7 @@ class NavigationView : public QWidget
         void onRefreshTimerTimeout();
         void onConnectionAdded(XenConnection* connection);
         void onConnectionRemoved(XenConnection* connection);
+        void onTreeItemDoubleClicked(QTreeWidgetItem* item, int column);
 
     private:
         void buildInfrastructureTree();
@@ -139,6 +144,8 @@ class NavigationView : public QWidget
         void scheduleRefresh(); // Debounced refresh
         void connectCacheSignals(XenConnection* connection);
         void disconnectCacheSignals(XenConnection* connection);
+        XenConnection* primaryConnection() const;
+        QueryScope* buildTreeSearchScope() const;
 
         // Selection and expansion preservation (matches C# MainWindowTreeBuilder)
         void persistSelectionAndExpansion();
@@ -158,6 +165,8 @@ class NavigationView : public QWidget
 
         // Grouping instances for Objects view (matches C# OrganizationViewObjects)
         class TypeGrouping* m_typeGrouping;
+        MainWindowTreeBuilder* m_treeBuilder = nullptr;
+        Search* m_objectsSearch = nullptr;
 
         // State preservation for tree refresh (matches C# PersistExpandedNodes/RestoreExpandedNodes)
         QString m_savedSelectionType;

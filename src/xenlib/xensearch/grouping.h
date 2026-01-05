@@ -168,6 +168,7 @@ class PoolGrouping : public Grouping
         QString getGroupName(const QVariant& group) const override;
         QIcon getGroupIcon(const QVariant& group) const override;
         QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
+        bool belongsAsGroupNotMember(const QVariantMap& objectData, const QString& objectType) const override;
         bool equals(const Grouping* other) const override;
 
         void SetConnection(XenConnection* conn)
@@ -194,6 +195,7 @@ class HostGrouping : public Grouping
         QString getGroupName(const QVariant& group) const override;
         QIcon getGroupIcon(const QVariant& group) const override;
         QVariant getGroup(const QVariantMap& objectData, const QString& objectType) const override;
+        bool belongsAsGroupNotMember(const QVariantMap& objectData, const QString& objectType) const override;
         bool equals(const Grouping* other) const override;
 
         void SetConnection(XenConnection* conn)

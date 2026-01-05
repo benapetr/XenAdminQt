@@ -94,25 +94,25 @@ class NavigationPane : public QWidget
         ~NavigationPane();
 
         // Accessors matching C# NavigationPane properties
-        NavigationMode currentMode() const
+        NavigationMode GetCurrentMode() const
         {
             return this->m_currentMode;
         }
 
         // Access to internal views (for MainWindow to wire up signals)
-        NavigationView* navigationView() const;
-        NotificationsView* notificationsView() const;
+        NavigationView* GetNavigationView() const;
+        NotificationsView* GetNotificationsView() const;
 
         // Public methods matching C# NavigationPane interface
-        void updateNotificationsButton(NotificationsSubMode mode, int entries);
-        void switchToInfrastructureMode();
-        void switchToNotificationsView(NotificationsSubMode subMode);
-        void focusTreeView();
-        void requestRefreshTreeView();
-        void updateSearch(); // Matches C# NavigationPane.UpdateSearch (line 196)
+        void UpdateNotificationsButton(NotificationsSubMode mode, int entries);
+        void SwitchToInfrastructureMode();
+        void SwitchToNotificationsView(NotificationsSubMode subMode);
+        void FocusTreeView();
+        void RequestRefreshTreeView();
+        void UpdateSearch();
 
         // Search mode control (matches C# NavigationPane.InSearchMode property)
-        void setInSearchMode(bool enabled);
+        void SetInSearchMode(bool enabled);
 
     signals:
         /**
@@ -138,6 +138,7 @@ class NavigationPane : public QWidget
         void treeViewRefreshed();
         void treeViewRefreshSuspended();
         void treeViewRefreshResumed();
+        void connectToServerRequested();
 
         /**
          * Drag/drop command activation
@@ -167,6 +168,7 @@ class NavigationPane : public QWidget
         void onNavigationViewRefreshSuspended();
         void onNavigationViewRefreshResumed();
         void onNavigationViewDragDropCommand(const QString& commandKey);
+        void onNavigationViewConnectToServerRequested();
 
         // Slots for NotificationsView events
         void onNotificationsSubModeChanged(NotificationsSubMode subMode);

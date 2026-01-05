@@ -26,195 +26,508 @@
  */
 
 #include "propertyaccessorhelper.h"
+#include "../xen/vm.h"
+#include "../xen/host.h"
+#include "../xen/vdi.h"
+#include "../xen/pool.h"
+#include "../xen/sr.h"
+#include "../xencache.h"
+#include "../xen/network/connection.h"
+#include "../metricupdater.h"
 
-PropertyAccessorHelper* PropertyAccessorHelper::instance_ = nullptr;
-
-PropertyAccessorHelper::PropertyAccessorHelper()
+namespace XenSearch
 {
-    this->initializePropertyNames();
-    this->initializePowerStates();
-    this->initializeVirtualizationStatuses();
-    this->initializeObjectTypes();
-    this->initializeHARestartPriorities();
-    this->initializeSRTypes();
-}
 
-PropertyAccessorHelper::~PropertyAccessorHelper()
+// VM CPU usage
+QString PropertyAccessorHelper::vmCpuUsageString(VM* vm)
 {
-}
-
-PropertyAccessorHelper* PropertyAccessorHelper::instance()
-{
-    if (!instance_)
+    if (!vm || !vm->GetConnection())
+        return "-";
+    
+    MetricUpdater* metricUpdater = vm->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return "-";
+    
+    // Sum CPU usage across all vCPUs
+    QString vmUuid = vm->GetUUID();
+    int numVCPUs = vm->VCPUsAtStartup();
+    if (numVCPUs == 0)
+        return "-";
+    
+    double sum = 0.0;
+    for (int i = 0; i < numVCPUs; i++)
     {
-        instance_ = new PropertyAccessorHelper();
+        QString metricName = QString("cpu%1").arg(i);
+        sum += metricUpdater->getValue("vm", vmUuid, metricName);
     }
-    return instance_;
-}
-
-void PropertyAccessorHelper::initializePropertyNames()
-{
-    // Property display names (i18n)
-    this->propertyNamesI18n_[PropertyNames::label] = "Name";
-    this->propertyNamesI18n_[PropertyNames::description] = "Description";
-    this->propertyNamesI18n_[PropertyNames::uuid] = "UUID";
-    this->propertyNamesI18n_[PropertyNames::tags] = "Tags";
-    this->propertyNamesI18n_[PropertyNames::type] = "Type";
-    this->propertyNamesI18n_[PropertyNames::power_state] = "Power State";
-    this->propertyNamesI18n_[PropertyNames::virtualisation_status] = "Tools Status";
-    this->propertyNamesI18n_[PropertyNames::os_name] = "Operating System";
-    this->propertyNamesI18n_[PropertyNames::ha_restart_priority] = "HA Restart Priority";
-    this->propertyNamesI18n_[PropertyNames::start_time] = "Start Time";
-    this->propertyNamesI18n_[PropertyNames::memory] = "Memory";
-    this->propertyNamesI18n_[PropertyNames::size] = "Size";
-    this->propertyNamesI18n_[PropertyNames::shared] = "Shared";
-    this->propertyNamesI18n_[PropertyNames::ha_enabled] = "HA";
-    this->propertyNamesI18n_[PropertyNames::sr_type] = "Storage Type";
-    this->propertyNamesI18n_[PropertyNames::read_caching_enabled] = "Read caching enabled";
-    this->propertyNamesI18n_[PropertyNames::ip_address] = "IP Address";
-    this->propertyNamesI18n_[PropertyNames::vendor_device_state] = "Windows Update capable";
-    this->propertyNamesI18n_[PropertyNames::in_any_appliance] = "In any vApp";
-    this->propertyNamesI18n_[PropertyNames::isNotFullyUpgraded] = "Pool not fully upgraded";
-    this->propertyNamesI18n_[PropertyNames::pool] = "Pool";
-    this->propertyNamesI18n_[PropertyNames::host] = "Server";
-    this->propertyNamesI18n_[PropertyNames::vm] = "VM";
-    this->propertyNamesI18n_[PropertyNames::networks] = "Network";
-    this->propertyNamesI18n_[PropertyNames::storage] = "SR";
-    this->propertyNamesI18n_[PropertyNames::disks] = "Virtual Disk";
-    this->propertyNamesI18n_[PropertyNames::appliance] = "vApp";
-    this->propertyNamesI18n_[PropertyNames::folder] = "Parent Folder";
-    this->propertyNamesI18n_[PropertyNames::folders] = "Ancestor Folders";
-    this->propertyNamesI18n_[PropertyNames::has_custom_fields] = "Has custom fields";
     
-    // False values for boolean properties
-    this->propertyNamesI18nFalse_[PropertyNames::read_caching_enabled] = "Read caching disabled";
-    this->propertyNamesI18nFalse_[PropertyNames::vendor_device_state] = "Windows Update not capable";
-}
-
-void PropertyAccessorHelper::initializePowerStates()
-{
-    // Power state values
-    this->powerStateI18n_["Halted"] = "Halted";
-    this->powerStateI18n_["Running"] = "Running";
-    this->powerStateI18n_["Suspended"] = "Suspended";
-    this->powerStateI18n_["Paused"] = "Paused";
-    this->powerStateI18n_["unknown"] = "Unknown";
-}
-
-void PropertyAccessorHelper::initializeVirtualizationStatuses()
-{
-    // Virtualization status values
-    this->virtualizationStatusI18n_["not_optimized"] = "Not optimized";
-    this->virtualizationStatusI18n_["out_of_date"] = "Out of date";
-    this->virtualizationStatusI18n_["unknown"] = "Unknown";
-    this->virtualizationStatusI18n_["io_optimized"] = "I/O optimized";
-    this->virtualizationStatusI18n_["management_installed"] = "Management agent installed";
-    this->virtualizationStatusI18n_["optimized"] = "Optimized";
-}
-
-void PropertyAccessorHelper::initializeObjectTypes()
-{
-    // Object type values
-    this->objectTypeI18n_["vm"] = "VMs";
-    this->objectTypeI18n_["host"] = "Servers";
-    this->objectTypeI18n_["pool"] = "Pools";
-    this->objectTypeI18n_["sr"] = "Storage";
-    this->objectTypeI18n_["network"] = "Networks";
-    this->objectTypeI18n_["vdi"] = "Virtual Disks";
-    this->objectTypeI18n_["template"] = "Templates";
-    this->objectTypeI18n_["snapshot"] = "Snapshots";
-    this->objectTypeI18n_["folder"] = "Folders";
-}
-
-void PropertyAccessorHelper::initializeHARestartPriorities()
-{
-    // HA restart priority values
-    this->haRestartPriorityI18n_["Restart"] = "Restart";
-    this->haRestartPriorityI18n_["BestEffort"] = "Best-effort";
-    this->haRestartPriorityI18n_["DoNotRestart"] = "Do not restart";
-}
-
-void PropertyAccessorHelper::initializeSRTypes()
-{
-    // SR type values
-    this->srTypeI18n_["lvm"] = "LVM";
-    this->srTypeI18n_["ext"] = "EXT";
-    this->srTypeI18n_["nfs"] = "NFS";
-    this->srTypeI18n_["lvmoiscsi"] = "iSCSI";
-    this->srTypeI18n_["lvmohba"] = "HBA";
-    this->srTypeI18n_["iso"] = "ISO";
-    this->srTypeI18n_["udev"] = "DVD Drive";
-}
-
-QString PropertyAccessorHelper::getPropertyDisplayName(PropertyNames property) const
-{
-    return this->propertyNamesI18n_.value(property, "Unknown");
-}
-
-QString PropertyAccessorHelper::getPropertyDisplayNameFalse(PropertyNames property) const
-{
-    if (this->propertyNamesI18nFalse_.contains(property))
-        return this->propertyNamesI18nFalse_.value(property);
+    if (numVCPUs == 1)
+        return QString("%1% of 1 CPU").arg(QString::number(sum * 100, 'f', 0));
     
-    return "Not " + this->getPropertyDisplayName(property);
+    return QString("%1% of %2 CPUs").arg(QString::number((sum * 100) / numVCPUs, 'f', 0)).arg(numVCPUs);
 }
 
-QString PropertyAccessorHelper::powerStateToString(const QString& powerState) const
+int PropertyAccessorHelper::vmCpuUsageRank(VM* vm)
 {
-    return this->powerStateI18n_.value(powerState, powerState);
+    if (!vm || !vm->GetConnection())
+        return 0;
+    
+    MetricUpdater* metricUpdater = vm->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return 0;
+    
+    QString vmUuid = vm->GetUUID();
+    int numVCPUs = vm->VCPUsAtStartup();
+    if (numVCPUs == 0)
+        return 0;
+    
+    double sum = 0.0;
+    for (int i = 0; i < numVCPUs; i++)
+    {
+        QString metricName = QString("cpu%1").arg(i);
+        sum += metricUpdater->getValue("vm", vmUuid, metricName);
+    }
+    
+    return static_cast<int>(sum * 100);
 }
 
-QString PropertyAccessorHelper::powerStateFromString(const QString& displayName) const
+// VM Memory usage
+QString PropertyAccessorHelper::vmMemoryUsageString(VM* vm)
 {
-    return this->powerStateI18n_.key(displayName, displayName);
+    if (!vm || !vm->GetConnection())
+        return "-";
+    
+    MetricUpdater* metricUpdater = vm->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return "-";
+    
+    QString vmUuid = vm->GetUUID();
+    double memoryUsed = metricUpdater->getValue("vm", vmUuid, "memory");
+    double memoryFree = metricUpdater->getValue("vm", vmUuid, "memory_internal_free");
+    
+    if (memoryUsed == 0.0 && memoryFree == 0.0)
+        return "-";
+    
+    double totalMemory = memoryUsed + memoryFree;
+    
+    // Format as human-readable
+    auto formatBytes = [](double bytes) -> QString {
+        if (bytes < 1024)
+            return QString("%1 B").arg(QString::number(bytes, 'f', 0));
+        if (bytes < 1024 * 1024)
+            return QString("%1 KB").arg(QString::number(bytes / 1024, 'f', 1));
+        if (bytes < 1024 * 1024 * 1024)
+            return QString("%1 MB").arg(QString::number(bytes / (1024 * 1024), 'f', 1));
+        return QString("%1 GB").arg(QString::number(bytes / (1024 * 1024 * 1024), 'f', 1));
+    };
+    
+    return QString("%1 of %2").arg(formatBytes(memoryUsed)).arg(formatBytes(totalMemory));
 }
 
-QStringList PropertyAccessorHelper::getAllPowerStates() const
+int PropertyAccessorHelper::vmMemoryUsageRank(VM* vm)
 {
-    return this->powerStateI18n_.values();
+    if (!vm || !vm->GetConnection())
+        return 0;
+    
+    MetricUpdater* metricUpdater = vm->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return 0;
+    
+    QString vmUuid = vm->GetUUID();
+    double memoryUsed = metricUpdater->getValue("vm", vmUuid, "memory");
+    double memoryFree = metricUpdater->getValue("vm", vmUuid, "memory_internal_free");
+    
+    if (memoryUsed == 0.0 && memoryFree == 0.0)
+        return 0;
+    
+    double totalMemory = memoryUsed + memoryFree;
+    return static_cast<int>((memoryUsed / totalMemory) * 100);
 }
 
-QString PropertyAccessorHelper::virtualizationStatusToString(const QString& status) const
+double PropertyAccessorHelper::vmMemoryUsageValue(VM* vm)
 {
-    return this->virtualizationStatusI18n_.value(status, status);
+    if (!vm || !vm->GetConnection())
+        return 0.0;
+    
+    MetricUpdater* metricUpdater = vm->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return 0.0;
+    
+    QString vmUuid = vm->GetUUID();
+    return metricUpdater->getValue("vm", vmUuid, "memory");
 }
 
-QString PropertyAccessorHelper::virtualizationStatusFromString(const QString& displayName) const
+// VM Network usage
+QString PropertyAccessorHelper::vmNetworkUsageString(VM* vm)
 {
-    return this->virtualizationStatusI18n_.key(displayName, displayName);
+    if (!vm || !vm->GetConnection())
+        return "-";
+    
+    MetricUpdater* metricUpdater = vm->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return "-";
+    
+    XenCache* cache = vm->GetConnection()->GetCache();
+    if (!cache)
+        return "-";
+    
+    QString vmUuid = vm->GetUUID();
+    QStringList vifRefs = vm->VIFRefs();
+    
+    double sum = 0.0;
+    double max = 0.0;
+    int vifCount = 0;
+    
+    for (const QString& vifRef : vifRefs)
+    {
+        QVariantMap vifData = cache->ResolveObjectData("VIF", vifRef);
+        QString device = vifData.value("device").toString();
+        if (device.isEmpty())
+            continue;
+        
+        double rx = metricUpdater->getValue("vm", vmUuid, QString("vif_%1_rx").arg(device));
+        double tx = metricUpdater->getValue("vm", vmUuid, QString("vif_%1_tx").arg(device));
+        double total = rx + tx;
+        
+        sum += total;
+        if (total > max)
+            max = total;
+        vifCount++;
+    }
+    
+    if (vifCount == 0 || sum == 0.0)
+        return "-";
+    
+    double avg = sum / vifCount;
+    
+    auto formatBytesPerSec = [](double bytesPerSec) -> QString {
+        if (bytesPerSec < 1024)
+            return QString("%1 B/s").arg(QString::number(bytesPerSec, 'f', 1));
+        if (bytesPerSec < 1024 * 1024)
+            return QString("%1 KB/s").arg(QString::number(bytesPerSec / 1024, 'f', 1));
+        return QString("%1 MB/s").arg(QString::number(bytesPerSec / (1024 * 1024), 'f', 1));
+    };
+    
+    return QString("Avg %1, Max %2").arg(formatBytesPerSec(avg)).arg(formatBytesPerSec(max));
 }
 
-QStringList PropertyAccessorHelper::getAllVirtualizationStatuses() const
+// VM Disk usage
+QString PropertyAccessorHelper::vmDiskUsageString(VM* vm)
 {
-    return this->virtualizationStatusI18n_.values();
+    if (!vm || !vm->GetConnection())
+        return "-";
+    
+    MetricUpdater* metricUpdater = vm->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return "-";
+    
+    XenCache* cache = vm->GetConnection()->GetCache();
+    if (!cache)
+        return "-";
+    
+    QString vmUuid = vm->GetUUID();
+    QStringList vbdRefs = vm->VBDRefs();
+    
+    double sum = 0.0;
+    double max = 0.0;
+    int vbdCount = 0;
+    
+    for (const QString& vbdRef : vbdRefs)
+    {
+        QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+        QString device = vbdData.value("device").toString();
+        if (device.isEmpty())
+            continue;
+        
+        double read = metricUpdater->getValue("vm", vmUuid, QString("vbd_%1_read").arg(device));
+        double write = metricUpdater->getValue("vm", vmUuid, QString("vbd_%1_write").arg(device));
+        double total = read + write;
+        
+        sum += total;
+        if (total > max)
+            max = total;
+        vbdCount++;
+    }
+    
+    if (vbdCount == 0 || sum == 0.0)
+        return "-";
+    
+    double avg = sum / vbdCount;
+    
+    auto formatBytesPerSec = [](double bytesPerSec) -> QString {
+        if (bytesPerSec < 1024)
+            return QString("%1 B/s").arg(QString::number(bytesPerSec, 'f', 1));
+        if (bytesPerSec < 1024 * 1024)
+            return QString("%1 KB/s").arg(QString::number(bytesPerSec / 1024, 'f', 1));
+        return QString("%1 MB/s").arg(QString::number(bytesPerSec / (1024 * 1024), 'f', 1));
+    };
+    
+    return QString("Avg %1, Max %2").arg(formatBytesPerSec(avg)).arg(formatBytesPerSec(max));
 }
 
-QString PropertyAccessorHelper::objectTypeToString(const QString& type) const
+// Host CPU usage
+QString PropertyAccessorHelper::hostCpuUsageString(Host* host)
 {
-    return this->objectTypeI18n_.value(type, type);
+    if (!host || !host->GetConnection())
+        return "-";
+    
+    MetricUpdater* metricUpdater = host->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return "-";
+    
+    QString hostUuid = host->GetUUID();
+    int numCPUs = host->cpuCount();
+    if (numCPUs == 0)
+        return "-";
+    
+    double sum = 0.0;
+    for (int i = 0; i < numCPUs; i++)
+    {
+        QString metricName = QString("cpu%1").arg(i);
+        sum += metricUpdater->getValue("host", hostUuid, metricName);
+    }
+    
+    if (numCPUs == 1)
+        return QString("%1%").arg(QString::number(sum * 100, 'f', 0));
+    
+    return QString("%1% (avg)").arg(QString::number((sum * 100) / numCPUs, 'f', 0));
 }
 
-QStringList PropertyAccessorHelper::getAllObjectTypes() const
+int PropertyAccessorHelper::hostCpuUsageRank(Host* host)
 {
-    return this->objectTypeI18n_.values();
+    if (!host || !host->GetConnection())
+        return 0;
+    
+    MetricUpdater* metricUpdater = host->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return 0;
+    
+    QString hostUuid = host->GetUUID();
+    int numCPUs = host->cpuCount();
+    if (numCPUs == 0)
+        return 0;
+    
+    double sum = 0.0;
+    for (int i = 0; i < numCPUs; i++)
+    {
+        QString metricName = QString("cpu%1").arg(i);
+        sum += metricUpdater->getValue("host", hostUuid, metricName);
+    }
+    
+    return static_cast<int>(sum * 100);
 }
 
-QString PropertyAccessorHelper::haRestartPriorityToString(const QString& priority) const
+// Host Memory usage
+QString PropertyAccessorHelper::hostMemoryUsageString(Host* host)
 {
-    return this->haRestartPriorityI18n_.value(priority, priority);
+    if (!host || !host->GetConnection())
+        return "-";
+    
+    MetricUpdater* metricUpdater = host->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return "-";
+    
+    QString hostUuid = host->GetUUID();
+    double memoryTotal = metricUpdater->getValue("host", hostUuid, "memory_total_kib") * 1024;
+    double memoryFree = metricUpdater->getValue("host", hostUuid, "memory_free_kib") * 1024;
+    
+    if (memoryTotal == 0.0)
+        return "-";
+    
+    double memoryUsed = memoryTotal - memoryFree;
+    
+    auto formatBytes = [](double bytes) -> QString {
+        if (bytes < 1024)
+            return QString("%1 B").arg(QString::number(bytes, 'f', 0));
+        if (bytes < 1024 * 1024)
+            return QString("%1 KB").arg(QString::number(bytes / 1024, 'f', 1));
+        if (bytes < 1024 * 1024 * 1024)
+            return QString("%1 MB").arg(QString::number(bytes / (1024 * 1024), 'f', 1));
+        return QString("%1 GB").arg(QString::number(bytes / (1024 * 1024 * 1024), 'f', 1));
+    };
+    
+    return QString("%1 of %2").arg(formatBytes(memoryUsed)).arg(formatBytes(memoryTotal));
 }
 
-QStringList PropertyAccessorHelper::getAllHARestartPriorities() const
+int PropertyAccessorHelper::hostMemoryUsageRank(Host* host)
 {
-    return this->haRestartPriorityI18n_.values();
+    if (!host || !host->GetConnection())
+        return 0;
+    
+    MetricUpdater* metricUpdater = host->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return 0;
+    
+    QString hostUuid = host->GetUUID();
+    double memoryTotal = metricUpdater->getValue("host", hostUuid, "memory_total_kib") * 1024;
+    double memoryFree = metricUpdater->getValue("host", hostUuid, "memory_free_kib") * 1024;
+    
+    if (memoryTotal == 0.0)
+        return 0;
+    
+    double memoryUsed = memoryTotal - memoryFree;
+    return static_cast<int>((memoryUsed / memoryTotal) * 100);
 }
 
-QString PropertyAccessorHelper::srTypeToString(const QString& type) const
+double PropertyAccessorHelper::hostMemoryUsageValue(Host* host)
 {
-    return this->srTypeI18n_.value(type, type);
+    if (!host || !host->GetConnection())
+        return 0.0;
+    
+    MetricUpdater* metricUpdater = host->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return 0.0;
+    
+    QString hostUuid = host->GetUUID();
+    double memoryTotal = metricUpdater->getValue("host", hostUuid, "memory_total_kib") * 1024;
+    double memoryFree = metricUpdater->getValue("host", hostUuid, "memory_free_kib") * 1024;
+    
+    return memoryTotal - memoryFree;
 }
 
-QStringList PropertyAccessorHelper::getAllSRTypes() const
+// Host Network usage
+QString PropertyAccessorHelper::hostNetworkUsageString(Host* host)
 {
-    return this->srTypeI18n_.values();
+    if (!host || !host->GetConnection())
+        return "-";
+    
+    MetricUpdater* metricUpdater = host->GetConnection()->GetMetricUpdater();
+    if (!metricUpdater)
+        return "-";
+    
+    XenCache* cache = host->GetConnection()->GetCache();
+    if (!cache)
+        return "-";
+    
+    QString hostUuid = host->GetUUID();
+    QStringList pifRefs = host->PIFRefs();
+    
+    double sum = 0.0;
+    double max = 0.0;
+    int pifCount = 0;
+    
+    for (const QString& pifRef : pifRefs)
+    {
+        QVariantMap pifData = cache->ResolveObjectData("PIF", pifRef);
+        bool physical = pifData.value("physical").toBool();
+        if (!physical)
+            continue;
+        
+        QString device = pifData.value("device").toString();
+        if (device.isEmpty())
+            continue;
+        
+        double rx = metricUpdater->getValue("host", hostUuid, QString("pif_%1_rx").arg(device));
+        double tx = metricUpdater->getValue("host", hostUuid, QString("pif_%1_tx").arg(device));
+        double total = rx + tx;
+        
+        sum += total;
+        if (total > max)
+            max = total;
+        pifCount++;
+    }
+    
+    if (pifCount == 0 || sum == 0.0)
+        return "-";
+    
+    double avg = sum / pifCount;
+    
+    auto formatBytesPerSec = [](double bytesPerSec) -> QString {
+        if (bytesPerSec < 1024)
+            return QString("%1 B/s").arg(QString::number(bytesPerSec, 'f', 1));
+        if (bytesPerSec < 1024 * 1024)
+            return QString("%1 KB/s").arg(QString::number(bytesPerSec / 1024, 'f', 1));
+        return QString("%1 MB/s").arg(QString::number(bytesPerSec / (1024 * 1024), 'f', 1));
+    };
+    
+    return QString("Avg %1, Max %2").arg(formatBytesPerSec(avg)).arg(formatBytesPerSec(max));
 }
+
+// VDI Memory usage
+QString PropertyAccessorHelper::vdiMemoryUsageString(VDI* vdi)
+{
+    if (!vdi)
+        return "-";
+    
+    qint64 virtualSize = vdi->VirtualSize();
+    if (virtualSize == 0)
+        return "-";
+    
+    // Format size as human-readable
+    if (virtualSize < 1024)
+        return QString::number(virtualSize) + " B";
+    else if (virtualSize < 1024 * 1024)
+        return QString::number(virtualSize / 1024.0, 'f', 1) + " KB";
+    else if (virtualSize < 1024 * 1024 * 1024)
+        return QString::number(virtualSize / (1024.0 * 1024.0), 'f', 1) + " MB";
+    else
+        return QString::number(virtualSize / (1024.0 * 1024.0 * 1024.0), 'f', 1) + " GB";
+}
+
+// HA Status
+QString PropertyAccessorHelper::GetPoolHAStatus(Pool* pool)
+{
+    if (!pool)
+        return QString();
+    
+    bool haEnabled = pool->HAEnabled();
+    if (!haEnabled)
+        return "Disabled";
+    
+    qint64 planExistsFor = pool->HAPlanExistsFor();
+    if (planExistsFor == 1)
+        return QString("Tolerates %1 host failure").arg(planExistsFor);
+    else
+        return QString("Tolerates %1 host failures").arg(planExistsFor);
+}
+
+QString PropertyAccessorHelper::GetSRHAStatus(SR* sr)
+{
+    if (!sr || !sr->GetConnection())
+        return QString();
+    
+    XenCache* cache = sr->GetConnection()->GetCache();
+    if (!cache)
+        return QString();
+    
+    // Get pool
+    QStringList poolRefs = cache->GetAllRefs("pool");
+    if (poolRefs.isEmpty())
+        return QString();
+    
+    QVariantMap poolData = cache->ResolveObjectData("pool", poolRefs.first());
+    QStringList haStatefiles = poolData.value("ha_statefiles").toStringList();
+    
+    if (haStatefiles.isEmpty())
+        return QString();
+    
+    // Check if this SR contains HA statefile VDI
+    QStringList vdiRefs = sr->VDIRefs();
+    for (const QString& vdiRef : vdiRefs)
+    {
+        if (haStatefiles.contains(vdiRef))
+            return "HA Heartbeat SR";
+    }
+    
+    return QString();
+}
+
+QString PropertyAccessorHelper::GetVMHAStatus(VM* vm)
+{
+    if (!vm || !vm->IsRealVM())
+        return "-";
+    
+    QString priority = vm->HARestartPriority();
+    
+    // Map priorities to display strings
+    if (priority == "restart")
+        return "Restart";
+    else if (priority == "best-effort" || priority == "")
+        return "Best-effort";
+    else if (priority.isEmpty())
+        return "Do not restart";
+    else
+        return priority;  // Return as-is for unknown priorities
+}
+
+} // namespace XenSearch

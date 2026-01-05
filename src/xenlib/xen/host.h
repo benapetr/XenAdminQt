@@ -133,6 +133,14 @@ class XENLIB_EXPORT Host : public XenObject
          * @return Map of additional configuration
          */
         QVariantMap otherConfig() const;
+        
+        /**
+         * @brief Get boot time from other_config
+         * @return Unix timestamp of host boot time, or 0.0 if not available
+         * 
+         * C# equivalent: Host.BootTime() extension method
+         */
+        double BootTime() const;
 
         /**
          * @brief Get tags
