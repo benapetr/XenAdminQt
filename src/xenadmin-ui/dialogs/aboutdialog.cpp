@@ -34,6 +34,7 @@
 #include <QApplication>
 #include <QSysInfo>
 #include <QDateTime>
+#include "globals.h"
 
 AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent)
 {
@@ -97,7 +98,7 @@ void AboutDialog::setupUI()
 
 QString AboutDialog::getVersionInfo() const
 {
-    return QString("Version 0.1.0 (Development Build)");
+    return QString("Version " + QString(XENADMIN_VERSION));
 }
 
 QString AboutDialog::getSystemInfo() const

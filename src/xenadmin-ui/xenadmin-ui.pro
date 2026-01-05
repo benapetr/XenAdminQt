@@ -20,7 +20,6 @@ SOURCES += \
     settingsmanager.cpp \
     iconmanager.cpp \
     connectionprofile.cpp \
-    dialogs/connectdialog.cpp \
     dialogs/addserverdialog.cpp \
     dialogs/connectingtoserverdialog.cpp \
     dialogs/reconnectasdialog.cpp \
@@ -252,7 +251,6 @@ HEADERS += \
     settingsmanager.h \
     iconmanager.h \
     connectionprofile.h \
-    dialogs/connectdialog.h \
     dialogs/addserverdialog.h \
     dialogs/connectingtoserverdialog.h \
     dialogs/reconnectasdialog.h \
@@ -477,7 +475,6 @@ HEADERS += \
 # UI files
 FORMS += \
     mainwindow.ui \
-    dialogs/connectdialog.ui \
     dialogs/addserverdialog.ui \
     dialogs/connectingtoserverdialog.ui \
     dialogs/reconnectasdialog.ui \

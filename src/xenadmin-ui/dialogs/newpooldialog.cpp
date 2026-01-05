@@ -27,7 +27,6 @@
 
 #include "newpooldialog.h"
 #include "ui_newpooldialog.h"
-#include "connectdialog.h"
 #include "operationprogressdialog.h"
 #include "../mainwindow.h"
 
@@ -264,14 +263,14 @@ void NewPoolDialog::onPoolNameChanged(const QString& text)
 void NewPoolDialog::onAddServerClicked()
 {
     // Open connect dialog to add new server
-    ConnectDialog dialog(this);
+    /*ConnectDialog dialog(this);
     if (dialog.exec() == QDialog::Accepted)
     {
         // After successful connection, refresh the list
         // The new connection will be added through ConnectionsManager signals
         // For now, we just repopulate after a short delay
         QTimer::singleShot(1000, this, &NewPoolDialog::populateConnections);
-    }
+    }*/
 }
 
 /**
