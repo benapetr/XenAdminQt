@@ -48,4 +48,5 @@
 * Tree view (infrastructure / objects)
 * Events history
 * Network tab (VM)
+* Host command -> Restart toolstack
 

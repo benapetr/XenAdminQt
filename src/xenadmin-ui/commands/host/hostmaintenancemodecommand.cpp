@@ -171,8 +171,3 @@ QString HostMaintenanceModeCommand::MenuText() const
         return "Exit Maintenance Mode";
 }
 
-bool HostMaintenanceModeCommand::isHostInMaintenanceMode() const
-{
-    // In Xen, maintenance mode is indicated by the host being disabled
-    return !this->isHostEnabled();
-}

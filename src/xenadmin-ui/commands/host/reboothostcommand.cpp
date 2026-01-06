@@ -40,12 +40,12 @@ RebootHostCommand::RebootHostCommand(MainWindow* mainWindow, QObject* parent)
 
 bool RebootHostCommand::CanRun() const
 {
-    QString hostRef = this->getSelectedHostRef();
-    if (hostRef.isEmpty())
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (!host)
         return false;
 
     // Can reboot if host is enabled (not in maintenance mode)
-    return this->isHostEnabled();
+    return host->IsEnabled();
 }
 
 void RebootHostCommand::Run()

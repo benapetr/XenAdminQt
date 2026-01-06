@@ -264,6 +264,18 @@ namespace XenAPI
              * Used in cross-pool migration to set up destination
              */
             static QVariantMap migrate_receive(Session* session, const QString& host, const QString& network, const QVariantMap& options);
+
+            /**
+             * @brief Restart the XAPI toolstack (agent) on the host (async)
+             * @param session XenServer session
+             * @param host Host opaque reference
+             * @return Task reference
+             *
+             * Matches C# Host.async_restart_agent()
+             * Restarts the XAPI service without rebooting the host.
+             * VMs continue running during the restart.
+             */
+            static QString async_restart_agent(Session* session, const QString& host);
     };
 
 } // namespace XenAPI

@@ -43,8 +43,6 @@ class HostCommand : public Command
         QSharedPointer<Host> getSelectedHost() const;
         QString getSelectedHostRef() const;
         QString getSelectedHostName() const;
-        bool isHostEnabled() const;
-        bool isHostLive() const;
 };
 
 #endif // HOSTCOMMAND_H

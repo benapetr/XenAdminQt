@@ -363,4 +363,18 @@ namespace XenAPI
         return api.ParseJsonRpcResponse(response).toMap(); // Returns migration receive data
     }
 
+    QString Host::async_restart_agent(Session* session, const QString& host)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("Async.host.restart_agent", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
+    }
+
 } // namespace XenAPI

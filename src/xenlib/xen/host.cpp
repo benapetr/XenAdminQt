@@ -28,6 +28,7 @@
 #include "host.h"
 #include "network/connection.h"
 #include "network/comparableaddress.h"
+#include "hostmetrics.h"
 #include "../xencache.h"
 
 Host::Host(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
@@ -52,6 +53,24 @@ QString Host::GetAddress() const
 bool Host::IsEnabled() const
 {
     return boolProperty("enabled", true);
+}
+
+bool Host::IsLive() const
+{
+    XenConnection* connection = GetConnection();
+    if (!connection)
+        return false;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return false;
+
+    const QString metricsRef = MetricsRef();
+    if (metricsRef.isEmpty())
+        return false;
+
+    QSharedPointer<HostMetrics> metrics = cache->ResolveObject<HostMetrics>("host_metrics", metricsRef);
+    return metrics && metrics->live();
 }
 
 QStringList Host::ResidentVMRefs() const

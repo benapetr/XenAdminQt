@@ -63,26 +63,3 @@ QString HostCommand::getSelectedHostName() const
     return item->text(0);
 }
 
-bool HostCommand::isHostEnabled() const
-{
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
-        return false;
-
-    return host->IsEnabled();
-}
-
-bool HostCommand::isHostLive() const
-{
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
-        return false;
-
-    QVariantMap hostData = host->GetData();
-    if (hostData.isEmpty())
-        return false;
-
-    // Check if host is live (connected and responsive)
-    // This checks host_metrics.live status
-    return hostData.value("live", false).toBool();
-}

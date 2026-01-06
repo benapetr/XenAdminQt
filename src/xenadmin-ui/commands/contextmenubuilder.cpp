@@ -29,6 +29,7 @@
 #include "command.h"
 #include "host/hostmaintenancemodecommand.h"
 #include "host/reboothostcommand.h"
+#include "host/restarttoolstackcommand.h"
 #include "host/shutdownhostcommand.h"
 #include "host/hostpropertiescommand.h"
 #include "host/reconnecthostcommand.h"
@@ -321,6 +322,9 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> 
 
     ShutdownHostCommand* shutdownCmd = new ShutdownHostCommand(this->m_mainWindow, this);
     this->addCommand(menu, shutdownCmd);
+
+    RestartToolstackCommand* restartToolstackCmd = new RestartToolstackCommand(this->m_mainWindow, this);
+    this->addCommand(menu, restartToolstackCmd);
 
     this->addSeparator(menu);
 

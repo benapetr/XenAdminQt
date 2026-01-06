@@ -25,39 +25,53 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HOSTMAINTENANCEMODECOMMAND_H
-#define HOSTMAINTENANCEMODECOMMAND_H
+#ifndef RESTARTTOOLSTACKACTION_H
+#define RESTARTTOOLSTACKACTION_H
 
-#include "hostcommand.h"
+#include "../../asyncoperation.h"
+#include "../../host.h"
+#include <QSharedPointer>
 
 /**
- * @brief Command to enter/exit host maintenance mode
+ * @brief RestartToolstackAction - Restarts the XenServer toolstack (XAPI agent)
  *
- * Similar to the original C# HostMaintenanceModeCommand, this handles
- * putting hosts into and out of maintenance mode.
+ * Matches C# XenAdmin.Actions.RestartToolstackAction
+ *
+ * This action:
+ * 1. Calls Host.async_restart_agent to restart the toolstack on the host
+ * 2. Polls for completion
+ * 3. If host is pool coordinator, interrupts the connection to force reconnect
+ *
+ * The toolstack restart is useful for:
+ * - Applying certain configuration changes
+ * - Recovering from toolstack issues
+ * - Resetting agent state without rebooting the host
+ *
+ * Note: This restarts the XAPI service, NOT the physical host. VMs continue running.
+ *
+ * C# location: XenModel/Actions/Host/RestartToolstackAction.cs
  */
-class HostMaintenanceModeCommand : public HostCommand
+class XENLIB_EXPORT RestartToolstackAction : public AsyncOperation
 {
     Q_OBJECT
 
     public:
         /**
-         * @brief Enter maintenance mode constructor
+         * @brief Constructor
+         * @param connection XenConnection to use
+         * @param host Host object whose toolstack will be restarted
+         * @param parent Parent QObject
          */
-        explicit HostMaintenanceModeCommand(MainWindow* mainWindow, bool enterMode = true, QObject* parent = nullptr);
+        explicit RestartToolstackAction(XenConnection* connection,
+                                        QSharedPointer<Host> host,
+                                        QObject* parent = nullptr);
+        ~RestartToolstackAction();
 
-        /**
-         * @brief Constructor with selection
-         */
-        HostMaintenanceModeCommand(MainWindow* mainWindow, const QStringList& selection, bool enterMode = true, QObject* parent = nullptr);
-
-        // Command interface
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
+    protected:
+        void run() override;
 
     private:
-        bool m_enterMode; // true = enter maintenance mode, false = exit maintenance mode
+        QSharedPointer<Host> m_host;
 };
 
-#endif // HOSTMAINTENANCEMODECOMMAND_H
+#endif // RESTARTTOOLSTACKACTION_H

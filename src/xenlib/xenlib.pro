@@ -101,6 +101,7 @@ SOURCES += \
     xen/actions/sr/destroysraction.cpp \
     xen/actions/host/reboothostaction.cpp \
     xen/actions/host/shutdownhostaction.cpp \
+    xen/actions/host/restarttoolstackaction.cpp \
     xen/actions/host/enablehostaction.cpp \
     xen/actions/host/disablehostaction.cpp \
     xen/actions/host/evacuatehostaction.cpp \
@@ -288,6 +289,7 @@ HEADERS += \
     xen/actions/sr/destroysraction.h \
     xen/actions/host/reboothostaction.h \
     xen/actions/host/shutdownhostaction.h \
+    xen/actions/host/restarttoolstackaction.h \
     xen/actions/host/enablehostaction.h \
     xen/actions/host/disablehostaction.h \
     xen/actions/host/evacuatehostaction.h \

@@ -81,6 +81,14 @@ class XENLIB_EXPORT Host : public XenObject
         bool IsEnabled() const;
 
         /**
+         * @brief Check if host is live (pool master sees it as live)
+         * @return true if host_metrics.live is true
+         *
+         * C# equivalent: Host.IsLive()
+         */
+        bool IsLive() const;
+
+        /**
          * @brief Get list of VMs resident on this host
          * @return List of VM opaque references
          */

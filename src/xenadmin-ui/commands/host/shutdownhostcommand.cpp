@@ -43,8 +43,8 @@ bool ShutdownHostCommand::CanRun() const
     if (!host)
         return false;
 
-    // Can shutdown if host is enabled (not in maintenance mode)
-    return this->isHostEnabled();
+           // Can reboot if host is enabled (not in maintenance mode)
+    return host->IsEnabled();
 }
 
 void ShutdownHostCommand::Run()
