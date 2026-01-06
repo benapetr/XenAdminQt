@@ -80,10 +80,7 @@ void HADisableCommand::Run()
         return;
     }
 
-    DisableHAAction* action = new DisableHAAction(
-        connection,
-        poolRef,
-        this);
+    DisableHAAction* action = new DisableHAAction(connection, poolRef, nullptr);
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);

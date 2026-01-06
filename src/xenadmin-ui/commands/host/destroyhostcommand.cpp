@@ -92,7 +92,7 @@ void DestroyHostCommand::Run()
     }
 
     // Create and run the destroy host action
-    DestroyHostAction* action = new DestroyHostAction(conn, host, this);
+    DestroyHostAction* action = new DestroyHostAction(conn, host, nullptr);
 
     action->SetTitle(tr("Destroying host '%1'...").arg(hostName));
 
@@ -100,7 +100,7 @@ void DestroyHostCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Run the action asynchronously
-    action->RunAsync();
+    action->RunAsync(true);
 
     this->mainWindow()->ShowStatusMessage(tr("Destroying host: %1").arg(hostName), 5000);
 }

@@ -87,11 +87,7 @@ void DestroySRCommand::Run()
     }
 
     // Create and run destroy action
-    DestroySrAction* action = new DestroySrAction(
-        conn,
-        srRef,
-        srName,
-        this);
+    DestroySrAction* action = new DestroySrAction(conn, srRef, srName, nullptr);
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);

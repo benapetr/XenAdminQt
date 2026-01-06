@@ -133,10 +133,7 @@ void DestroyBondCommand::Run()
         return;
 
     // Create and run destroy bond action
-    DestroyBondAction* action = new DestroyBondAction(
-        connection,
-        bondRef,
-        this);
+    DestroyBondAction* action = new DestroyBondAction(connection, bondRef, nullptr);
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);

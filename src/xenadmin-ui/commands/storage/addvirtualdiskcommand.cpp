@@ -167,8 +167,7 @@ void AddVirtualDiskCommand::Run()
         vbdRecord["qos_algorithm_params"] = QVariantMap();
 
         qDebug() << "[AddVirtualDiskCommand] Creating VbdCreateAndPlugAction to attach VDI to VM...";
-        VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(
-            vm, vbdRecord, name, false, this);
+        VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(vm, vbdRecord, name, false, this);
 
         OperationProgressDialog* attachDialog = new OperationProgressDialog(attachAction, mainWindow());
         qDebug() << "[AddVirtualDiskCommand] Executing attach dialog...";

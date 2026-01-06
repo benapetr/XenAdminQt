@@ -92,13 +92,14 @@ void EjectHostFromPoolCommand::Run()
     }
 
     // Create and run the EjectHostFromPoolAction
-    EjectHostFromPoolAction* action = new EjectHostFromPoolAction(connection, host->GetPool(), host, this);
+    EjectHostFromPoolAction* action = new EjectHostFromPoolAction(connection, host->GetPool(), host, nullptr);
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signals
-    connect(action, &AsyncOperation::completed, [this, hostName, action]() {
+    connect(action, &AsyncOperation::completed, [this, hostName, action]()
+    {
         QMessageBox::information(this->mainWindow(), "Eject Host",
                                  QString("Successfully ejected '%1' from the pool.\n"
                                          "The host will now be rebooted.")
@@ -106,7 +107,8 @@ void EjectHostFromPoolCommand::Run()
         action->deleteLater();
     });
 
-    connect(action, &AsyncOperation::failed, [this, hostName, action](const QString& error) {
+    connect(action, &AsyncOperation::failed, [this, hostName, action](const QString& error)
+    {
         QMessageBox::critical(this->mainWindow(), "Eject Host",
                               QString("Failed to eject '%1' from the pool:\n%2")
                                   .arg(hostName, error));

@@ -97,11 +97,9 @@ void DeleteVirtualDiskCommand::Run()
 
     // Create and run destroy action
     // allowRunningVMDelete = true if VDI is attached, action will handle detaching first
-    DestroyDiskAction* action = new DestroyDiskAction(
-        vdiRef,
-        vdi->GetConnection(),
+    DestroyDiskAction* action = new DestroyDiskAction(vdiRef, vdi->GetConnection(),
         hasAttachedVBDs, // Allow deletion even if attached (action will detach first)
-        this);
+        nullptr);
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);

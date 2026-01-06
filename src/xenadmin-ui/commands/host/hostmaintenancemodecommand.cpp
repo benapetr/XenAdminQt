@@ -101,11 +101,12 @@ void HostMaintenanceModeCommand::Run()
                 return;
             }
 
-            EvacuateHostAction* action = new EvacuateHostAction(conn, host, QSharedPointer<Host>(), this);
+            EvacuateHostAction* action = new EvacuateHostAction(conn, host, QSharedPointer<Host>(), nullptr);
 
             OperationManager::instance()->RegisterOperation(action);
 
-            connect(action, &AsyncOperation::completed, this, [mw, hostName, action]() {
+            connect(action, &AsyncOperation::completed, this, [mw, hostName, action]()
+            {
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {
                     mw->ShowStatusMessage(QString("Host '%1' entered maintenance mode successfully").arg(hostName), 5000);
@@ -140,7 +141,7 @@ void HostMaintenanceModeCommand::Run()
                 return;
             }
 
-            EnableHostAction* action = new EnableHostAction(conn, host, false, this);
+            EnableHostAction* action = new EnableHostAction(conn, host, false, nullptr);
 
             OperationManager::instance()->RegisterOperation(action);
 

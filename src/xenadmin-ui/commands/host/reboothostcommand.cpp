@@ -75,7 +75,7 @@ void RebootHostCommand::Run()
             return;
         }
 
-        RebootHostAction* action = new RebootHostAction(conn, host, this);
+        RebootHostAction* action = new RebootHostAction(conn, host, nullptr);
 
         OperationManager::instance()->RegisterOperation(action);
 

@@ -196,19 +196,18 @@ void DetachSRCommand::Run()
             return;
         }
 
-        DetachSrAction* action = new DetachSrAction(
-            conn,
-            srRef,
-            srName,
-            false,
-            this->mainWindow());
+        DetachSrAction* action = new DetachSrAction(conn, srRef, srName, false, nullptr);
 
         OperationManager::instance()->RegisterOperation(action);
 
         QPointer<MainWindow> mainWindow = this->mainWindow();
         connect(action, &AsyncOperation::completed, mainWindow, [mainWindow, srName, action]() {
             if (!mainWindow)
+            {
+                action->deleteLater();
                 return;
+            }
+
             if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
                 mainWindow->ShowStatusMessage(QString("Successfully detached SR '%1'").arg(srName), 5000);
@@ -244,7 +243,7 @@ void DetachSRCommand::Run()
         true,
         false,
         false,
-        this->mainWindow());
+        nullptr);
     OperationManager::instance()->RegisterOperation(multi);
     connect(multi, &AsyncOperation::completed, multi, &QObject::deleteLater);
     connect(multi, &AsyncOperation::failed, multi, &QObject::deleteLater);

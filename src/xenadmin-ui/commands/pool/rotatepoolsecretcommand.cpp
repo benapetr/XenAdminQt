@@ -133,7 +133,6 @@ void RotatePoolSecretCommand::Run()
         if (!host || !host->GetConnection() || !host->IsValid())
             return;
 
-        QString hostRef = host->OpaqueRef();
         QVariantMap hostData = host->GetData();
         connection = host->GetConnection();
         cache = host->GetConnection()->GetCache();

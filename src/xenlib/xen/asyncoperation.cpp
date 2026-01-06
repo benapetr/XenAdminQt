@@ -471,9 +471,11 @@ void AsyncOperation::SetSafeToExit(bool safe)
 }
 
 // Execution control
-void AsyncOperation::RunAsync()
+void AsyncOperation::RunAsync(bool auto_delete)
 {
     QMutexLocker locker(&this->m_mutex);
+
+    this->m_autoDelete = auto_delete;
 
     if (this->m_state != NotStarted)
     {
@@ -555,6 +557,9 @@ void AsyncOperation::runOnWorkerThread()
     }
 
     qDebug() << "[AsyncOperation] runOnWorkerThread completed for:" << m_title;
+
+    if (this->m_autoDelete)
+        this->deleteLater();
 }
 
 void AsyncOperation::RunSync(XenAPI::Session* session)

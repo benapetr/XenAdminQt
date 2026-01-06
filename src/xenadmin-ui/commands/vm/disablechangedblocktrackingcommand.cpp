@@ -139,8 +139,7 @@ void DisableChangedBlockTrackingCommand::Run()
         if (cbtEnabled)
         {
             // Create action to disable CBT
-            VDIDisableCbtAction* action = new VDIDisableCbtAction(
-                conn, vmName, vdiRef, this);
+            VDIDisableCbtAction* action = new VDIDisableCbtAction(conn, vmName, vdiRef, nullptr);
             actions.append(action);
         }
     }

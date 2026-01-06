@@ -81,21 +81,20 @@ void HostReconnectAsCommand::Run()
     conn->SetPassword(dialog.password());
     conn->SetExpectPasswordIsCorrect(true);
 
-    if (m_disconnectHandler)
-        QObject::disconnect(m_disconnectHandler);
-    m_reconnectConnection = conn;
-    m_disconnectHandler = connect(conn, &XenConnection::ConnectionStateChanged,
-                                  this, &HostReconnectAsCommand::onReconnectConnectionStateChanged);
+    if (this->m_disconnectHandler)
+        QObject::disconnect(this->m_disconnectHandler);
+    this->m_reconnectConnection = conn;
+    this->m_disconnectHandler = connect(conn, &XenConnection::ConnectionStateChanged, this, &HostReconnectAsCommand::onReconnectConnectionStateChanged);
 
     DisconnectCommand disconnectCmd(this->mainWindow(), conn, true, this);
     disconnectCmd.Run();
 
     if (conn->IsConnected())
     {
-        if (m_disconnectHandler)
-            QObject::disconnect(m_disconnectHandler);
-        m_disconnectHandler = QMetaObject::Connection();
-        m_reconnectConnection.clear();
+        if (this->m_disconnectHandler)
+            QObject::disconnect(this->m_disconnectHandler);
+        this->m_disconnectHandler = QMetaObject::Connection();
+        this->m_reconnectConnection.clear();
     }
 }
 
@@ -106,24 +105,24 @@ QString HostReconnectAsCommand::MenuText() const
 
 void HostReconnectAsCommand::onReconnectConnectionStateChanged()
 {
-    if (!m_reconnectConnection)
+    if (!this->m_reconnectConnection)
         return;
 
-    if (m_reconnectConnection->IsConnected())
+    if (this->m_reconnectConnection->IsConnected())
         return;
 
-    if (m_disconnectHandler)
-        QObject::disconnect(m_disconnectHandler);
-    m_disconnectHandler = QMetaObject::Connection();
+    if (this->m_disconnectHandler)
+        QObject::disconnect(this->m_disconnectHandler);
+    this->m_disconnectHandler = QMetaObject::Connection();
 
     QTimer::singleShot(500, this, &HostReconnectAsCommand::startReconnect);
 }
 
 void HostReconnectAsCommand::startReconnect()
 {
-    if (!m_reconnectConnection)
+    if (!this->m_reconnectConnection)
         return;
 
     this->mainWindow()->ShowStatusMessage("Reconnecting as different user...");
-    XenConnectionUI::BeginConnect(m_reconnectConnection, true, this->mainWindow(), true);
+    XenConnectionUI::BeginConnect(this->m_reconnectConnection, true, this->mainWindow(), true);
 }

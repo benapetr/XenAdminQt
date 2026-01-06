@@ -79,11 +79,12 @@ void ShutdownHostCommand::Run()
         }
 
         QSharedPointer<Host> host = QSharedPointer<Host>(new Host(conn, hostRef, this));
-        ShutdownHostAction* action = new ShutdownHostAction(conn, host, this);
+        ShutdownHostAction* action = new ShutdownHostAction(conn, host, nullptr);
 
         OperationManager::instance()->RegisterOperation(action);
 
-        connect(action, &AsyncOperation::completed, this, [this, hostName, action]() {
+        connect(action, &AsyncOperation::completed, this, [this, hostName, action]()
+        {
             if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
                 this->mainWindow()->ShowStatusMessage(QString("Host '%1' shutdown initiated successfully").arg(hostName), 5000);

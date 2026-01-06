@@ -94,14 +94,8 @@ void TrimSRCommand::Run()
         return;
     }
 
-    // Create SR object for action (action owns it)
-    QSharedPointer<SR> srForAction = QSharedPointer<SR>(new SR(conn, srRef, this));
-
     // Create and run trim action
-    SrTrimAction* action = new SrTrimAction(
-        conn,
-        srForAction,
-        this);
+    SrTrimAction* action = new SrTrimAction(conn, sr, nullptr);
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);

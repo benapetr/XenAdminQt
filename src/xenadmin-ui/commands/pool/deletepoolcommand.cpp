@@ -129,10 +129,7 @@ void DeletePoolCommand::Run()
     qDebug() << "DeletePoolCommand: Deleting pool" << poolName << "(" << poolRef << ")";
 
     // Create and run destroy pool action
-    DestroyPoolAction* action = new DestroyPoolAction(
-        pool->GetConnection(),
-        poolRef,
-        this);
+    DestroyPoolAction* action = new DestroyPoolAction(pool->GetConnection(), poolRef, nullptr);
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);

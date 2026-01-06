@@ -132,7 +132,7 @@ void SetDefaultSRCommand::Run()
             return;
         }
 
-        SetSrAsDefaultAction* action = new SetSrAsDefaultAction(connection, poolRefs.first(), srRef, this->mainWindow());
+        SetSrAsDefaultAction* action = new SetSrAsDefaultAction(connection, poolRefs.first(), srRef, nullptr);
         OperationManager::instance()->RegisterOperation(action);
 
         this->m_pendingSrName = srName;

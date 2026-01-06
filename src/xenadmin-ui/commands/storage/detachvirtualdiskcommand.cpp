@@ -301,10 +301,7 @@ void DetachVirtualDiskCommand::Run()
         VM* vm = new VM(connection, vmRef, this);
 
         // Create detach action
-        DetachVirtualDiskAction* action = new DetachVirtualDiskAction(
-            vdiRef,
-            vm,
-            this);
+        DetachVirtualDiskAction* action = new DetachVirtualDiskAction(vdiRef, vm, nullptr);
 
         // Register with OperationManager for history tracking
         OperationManager::instance()->RegisterOperation(action);

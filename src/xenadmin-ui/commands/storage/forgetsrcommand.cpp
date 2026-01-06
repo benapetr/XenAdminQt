@@ -142,11 +142,7 @@ void ForgetSRCommand::Run()
     }
 
     // Create and run forget action
-    ForgetSrAction* action = new ForgetSrAction(
-        conn,
-        srRef,
-        srName,
-        this);
+    ForgetSrAction* action = new ForgetSrAction(conn, srRef, srName, nullptr);
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);
