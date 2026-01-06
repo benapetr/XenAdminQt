@@ -31,6 +31,10 @@
 
 XenObject::XenObject(XenConnection* connection, const QString& opaqueRef, QObject* parent) : QObject(parent), m_connection(connection), m_opaqueRef(opaqueRef)
 {
+    if (connection)
+        this->m_cache = connection->GetCache();
+    else
+        this->m_cache = nullptr;
 }
 
 XenObject::~XenObject()

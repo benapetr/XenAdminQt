@@ -123,7 +123,7 @@ bool HADisableCommand::isHAEnabled() const
         return false;
 
     QSharedPointer<Pool> pool = this->getPool();
-    XenCache* cache = pool && pool->GetConnection() ? pool->GetConnection()->GetCache() : nullptr;
+    XenCache* cache = pool->GetCache();
     if (!cache)
         return false;
 

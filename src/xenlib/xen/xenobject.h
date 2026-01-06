@@ -36,6 +36,8 @@
 #include <QPointer>
 #include "network/connection.h"
 
+class XenCache;
+
 /**
  * @brief Base class for all XenAPI objects (Pool, Host, VM, SR, etc.)
  *
@@ -161,6 +163,11 @@ class XENLIB_EXPORT XenObject : public QObject
             return this->m_evicted;
         }
 
+        XenCache *GetCache() const
+        {
+            return this->m_cache;
+        }
+
     signals:
         /**
          * @brief Emitted when object data changes
@@ -189,6 +196,8 @@ class XENLIB_EXPORT XenObject : public QObject
         QPointer<XenConnection> m_connection;
         QString m_opaqueRef;
         bool m_evicted = false;
+        // So that we don't need to call GetConnection() so much
+        XenCache *m_cache;
 };
 
 Q_DECLARE_METATYPE(QSharedPointer<XenObject>)

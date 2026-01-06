@@ -108,7 +108,7 @@ QSharedPointer<XenObject> XenCache::ResolveObject(const QString& type, const QSt
     if (ref.isEmpty())
         return QSharedPointer<XenObject>();
 
-    QString normalizedType = normalizeType(type);
+    QString normalizedType = this->normalizeType(type);
 
     QMutexLocker locker(&this->m_mutex);
 
@@ -122,9 +122,7 @@ QSharedPointer<XenObject> XenCache::ResolveObject(const QString& type, const QSt
     }
 
     if (!this->m_cache.contains(normalizedType) || !this->m_cache[normalizedType].contains(ref))
-    {
         return QSharedPointer<XenObject>();
-    }
 
     QSharedPointer<XenObject> created = this->createObjectForType(normalizedType, ref);
     if (!created)
@@ -140,9 +138,11 @@ QSharedPointer<XenObject> XenCache::ResolveObject(const QString& type, const QSt
 
 QString XenCache::CanonicalType(const QString& type) const
 {
-    return normalizeType(type);
+    return this->normalizeType(type);
 }
 
+// Note: don't work with m_objects in this because m_objects is dynamic cache of stuff
+// that was looked up explicitly, while m_cache contains everything
 bool XenCache::Contains(const QString& type, const QString& ref) const
 {
     if (ref.isEmpty())
@@ -497,6 +497,9 @@ void XenCache::evictObject(const QString& type, const QString& ref)
         obj->SetEvicted(true);
 }
 
+// NOTE: if you ever get the idea to cache this, keep in mind that pool ref changes when host leaves / joins a pool
+// so we might need to hook to such events and invalidate any cached reference.
+// Easy, but stupid solution is what we do now (and what C# version does) - always look it up from all cached data
 QString XenCache::GetPoolRef() const
 {
     QMutexLocker locker(&this->m_mutex);

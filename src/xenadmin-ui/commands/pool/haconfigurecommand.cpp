@@ -100,7 +100,7 @@ bool HAConfigureCommand::isPoolConnected() const
 bool HAConfigureCommand::hasCoordinator() const
 {
     QSharedPointer<Pool> pool = this->getPool();
-    XenCache* cache = pool && pool->GetConnection() ? pool->GetConnection()->GetCache() : nullptr;
+    XenCache* cache = pool->GetCache();
     if (!cache)
         return false;
 
@@ -123,7 +123,7 @@ bool HAConfigureCommand::isPoolLocked() const
         return false;
 
     QSharedPointer<Pool> pool = this->getPool();
-    XenCache* cache = pool && pool->GetConnection() ? pool->GetConnection()->GetCache() : nullptr;
+    XenCache* cache = pool->GetCache();
     if (!cache)
         return false;
 

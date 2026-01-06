@@ -135,7 +135,7 @@ bool DestroyHostCommand::isHostLive(QSharedPointer<Host> host) const
     QString metricsRef = host->GetData().value("metrics").toString();
     if (!metricsRef.isEmpty())
     {
-        QVariantMap metricsData = host->GetConnection()->GetCache()->ResolveObjectData("host_metrics", metricsRef);
+        QVariantMap metricsData = host->GetCache()->ResolveObjectData("host_metrics", metricsRef);
         if (!metricsData.isEmpty())
         {
             return metricsData.value("live", false).toBool();
