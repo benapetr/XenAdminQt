@@ -67,16 +67,6 @@ class GeneralTabPage : public BaseTabPage
     private:
         Ui::GeneralTabPage* ui;
 
-        // Layout pointers for each section
-        QFormLayout* m_generalLayout;
-        QFormLayout* m_biosLayout;
-        QFormLayout* m_managementInterfacesLayout;
-        QFormLayout* m_memoryLayout;
-        QFormLayout* m_cpuLayout;
-        QFormLayout* m_versionLayout;
-        QFormLayout* m_statusLayout;
-        QFormLayout* m_multipathingLayout;
-
         void clearProperties();
         void addProperty(const QString& label, const QString& value);
         void addPropertyToLayout(QFormLayout* layout, const QString& label, const QString& value);

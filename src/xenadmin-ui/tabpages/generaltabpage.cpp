@@ -37,16 +37,6 @@ GeneralTabPage::GeneralTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui
 {
     this->ui->setupUi(this);
 
-    // Initialize layout pointers from UI file
-    this->m_generalLayout = this->ui->generalGroup->findChild<QFormLayout*>("generalLayout");
-    this->m_biosLayout = this->ui->biosGroup->findChild<QFormLayout*>("biosLayout");
-    this->m_managementInterfacesLayout = this->ui->managementInterfacesGroup->findChild<QFormLayout*>("managementInterfacesLayout");
-    this->m_memoryLayout = this->ui->memoryGroup->findChild<QFormLayout*>("memoryLayout");
-    this->m_cpuLayout = this->ui->cpuGroup->findChild<QFormLayout*>("cpuLayout");
-    this->m_versionLayout = this->ui->versionGroup->findChild<QFormLayout*>("versionLayout");
-    this->m_statusLayout = this->ui->statusGroup->findChild<QFormLayout*>("statusLayout");
-    this->m_multipathingLayout = this->ui->multipathingGroup->findChild<QFormLayout*>("multipathingLayout");
-
     // Initially hide all sections (will be shown when populated)
     this->ui->generalGroup->setVisible(false);
     this->ui->biosGroup->setVisible(false);
@@ -112,14 +102,14 @@ void GeneralTabPage::clearProperties()
 {
     // Clear all section layouts
     QList<QFormLayout*> layouts = {
-        m_generalLayout,
-        m_biosLayout,
-        m_managementInterfacesLayout,
-        m_memoryLayout,
-        m_cpuLayout,
-        m_versionLayout,
-        m_statusLayout,
-        m_multipathingLayout};
+        this->ui->generalLayout,
+        this->ui->biosLayout,
+        this->ui->managementInterfacesLayout,
+        this->ui->memoryLayout,
+        this->ui->cpuLayout,
+        this->ui->versionLayout,
+        this->ui->statusLayout,
+        this->ui->multipathingLayout};
 
     for (QFormLayout* layout : layouts)
     {
@@ -152,9 +142,6 @@ void GeneralTabPage::clearProperties()
 void GeneralTabPage::addProperty(const QString& label, const QString& value)
 {
     // Legacy method - kept for VM/Pool/SR/Network types that don't use sections yet
-    if (!this->m_generalLayout)
-        return;
-
     QLabel* labelWidget = new QLabel(label + ":");
     QFont labelFont = labelWidget->font();
     labelFont.setBold(true);
@@ -164,7 +151,7 @@ void GeneralTabPage::addProperty(const QString& label, const QString& value)
     valueWidget->setTextInteractionFlags(Qt::LinksAccessibleByMouse | Qt::TextSelectableByMouse);
     valueWidget->setWordWrap(true);
 
-    this->m_generalLayout->addRow(labelWidget, valueWidget);
+    this->ui->generalLayout->addRow(labelWidget, valueWidget);
     this->ui->generalGroup->setVisible(true);
 }
 
@@ -546,12 +533,12 @@ void GeneralTabPage::populateGeneralSection()
 
     if (this->m_objectData.contains("address"))
     {
-        this->addPropertyToLayout(m_generalLayout, "Address", this->m_objectData.value("address").toString());
+        this->addPropertyToLayout(this->ui->generalLayout, "Address", this->m_objectData.value("address").toString());
     }
 
     if (this->m_objectData.contains("hostname"))
     {
-        this->addPropertyToLayout(m_generalLayout, "Hostname", this->m_objectData.value("hostname").toString());
+        this->addPropertyToLayout(this->ui->generalLayout, "Hostname", this->m_objectData.value("hostname").toString());
     }
 
     // Pool master status (shown as "Pool Coordinator" in C# but displays as "Pool master: Yes/No" in UI)
@@ -584,7 +571,7 @@ void GeneralTabPage::populateGeneralSection()
                 if (hasPoolName || hasMultipleHosts)
                 {
                     bool isCoordinator = this->m_objectData.value("is_pool_coordinator").toBool();
-                    this->addPropertyToLayout(m_generalLayout, "Pool master", isCoordinator ? "Yes" : "No");
+                    this->addPropertyToLayout(this->ui->generalLayout, "Pool master", isCoordinator ? "Yes" : "No");
                 }
             }
         }
@@ -604,7 +591,7 @@ void GeneralTabPage::populateGeneralSection()
         else
             enabledStr = "Yes";
 
-        this->addPropertyToLayout(m_generalLayout, "Enabled", enabledStr);
+        this->addPropertyToLayout(this->ui->generalLayout, "Enabled", enabledStr);
     }
 
     // Autoboot of VMs enabled
@@ -614,7 +601,7 @@ void GeneralTabPage::populateGeneralSection()
         QVariantMap otherConfig = this->m_objectData.value("other_config").toMap();
         // GetVmAutostartEnabled checks other_config["auto_poweron"] == "true"
         bool autoPowerOn = (otherConfig.value("auto_poweron").toString() == "true");
-        this->addPropertyToLayout(m_generalLayout, "Autoboot of VMs enabled", autoPowerOn ? "Yes" : "No");
+        this->addPropertyToLayout(this->ui->generalLayout, "Autoboot of VMs enabled", autoPowerOn ? "Yes" : "No");
     }
 
     // Log destination
@@ -630,7 +617,7 @@ void GeneralTabPage::populateGeneralSection()
         else
             logDisplay = QString("Local and %1").arg(syslogDest);
 
-        this->addPropertyToLayout(m_generalLayout, "Log destination", logDisplay);
+        this->addPropertyToLayout(this->ui->generalLayout, "Log destination", logDisplay);
     }
 
     // Server Uptime (calculated from boot time in host_metrics)
@@ -650,7 +637,7 @@ void GeneralTabPage::populateGeneralSection()
                     qint64 uptimeSeconds = startTime.secsTo(QDateTime::currentDateTimeUtc());
                     if (uptimeSeconds > 0)
                     {
-                        this->addPropertyToLayout(m_generalLayout, "Server Uptime", formatUptime(uptimeSeconds));
+                        this->addPropertyToLayout(this->ui->generalLayout, "Server Uptime", formatUptime(uptimeSeconds));
                     }
                 }
             }
@@ -672,7 +659,7 @@ void GeneralTabPage::populateGeneralSection()
                 qint64 uptimeSeconds = startTime.secsTo(QDateTime::currentDateTimeUtc());
                 if (uptimeSeconds > 0)
                 {
-                    this->addPropertyToLayout(m_generalLayout, "Toolstack Uptime", formatUptime(uptimeSeconds));
+                    this->addPropertyToLayout(this->ui->generalLayout, "Toolstack Uptime", formatUptime(uptimeSeconds));
                 }
             }
         }
@@ -683,11 +670,11 @@ void GeneralTabPage::populateGeneralSection()
     {
         QString iscsiIqn = this->m_objectData.value("iscsi_iqn").toString();
         if (!iscsiIqn.isEmpty())
-            this->addPropertyToLayout(m_generalLayout, "iSCSI IQN", iscsiIqn);
+            this->addPropertyToLayout(this->ui->generalLayout, "iSCSI IQN", iscsiIqn);
     }
 
     // Show section if it has content
-    if (m_generalLayout && m_generalLayout->count() > 0)
+    if (this->ui->generalLayout->count() > 0)
         this->ui->generalGroup->setVisible(true);
 }
 
@@ -705,32 +692,32 @@ void GeneralTabPage::populateBIOSSection()
     {
         QString biosVendor = biosStrings.value("bios-vendor").toString();
         if (!biosVendor.isEmpty())
-            this->addPropertyToLayout(m_biosLayout, "Vendor", biosVendor);
+            this->addPropertyToLayout(this->ui->biosLayout, "Vendor", biosVendor);
     }
 
     if (biosStrings.contains("bios-version"))
     {
         QString biosVersion = biosStrings.value("bios-version").toString();
         if (!biosVersion.isEmpty())
-            this->addPropertyToLayout(m_biosLayout, "Version", biosVersion);
+            this->addPropertyToLayout(this->ui->biosLayout, "Version", biosVersion);
     }
 
     if (biosStrings.contains("system-manufacturer"))
     {
         QString sysManufacturer = biosStrings.value("system-manufacturer").toString();
         if (!sysManufacturer.isEmpty())
-            this->addPropertyToLayout(m_biosLayout, "Manufacturer", sysManufacturer);
+            this->addPropertyToLayout(this->ui->biosLayout, "Manufacturer", sysManufacturer);
     }
 
     if (biosStrings.contains("system-product-name"))
     {
         QString sysProduct = biosStrings.value("system-product-name").toString();
         if (!sysProduct.isEmpty())
-            this->addPropertyToLayout(m_biosLayout, "Product", sysProduct);
+            this->addPropertyToLayout(this->ui->biosLayout, "Product", sysProduct);
     }
 
     // Show section if it has content
-    if (m_biosLayout && m_biosLayout->count() > 0)
+    if (this->ui->biosLayout->count() > 0)
         this->ui->biosGroup->setVisible(true);
 }
 
@@ -765,13 +752,13 @@ void GeneralTabPage::populateManagementInterfacesSection()
             if (!ipAddress.isEmpty())
             {
                 QString label = device.isEmpty() ? "IP Address" : device;
-                this->addPropertyToLayout(m_managementInterfacesLayout, label, ipAddress);
+                this->addPropertyToLayout(this->ui->managementInterfacesLayout, label, ipAddress);
             }
         }
     }
 
     // Show section if it has content
-    if (m_managementInterfacesLayout && m_managementInterfacesLayout->count() > 0)
+    if (this->ui->managementInterfacesLayout->count() > 0)
         this->ui->managementInterfacesGroup->setVisible(true);
 }
 
@@ -802,7 +789,7 @@ void GeneralTabPage::populateMemorySection()
                 QString serverMemStr = QString("%1 GB free of %2 GB total")
                                            .arg(memFreeGB, 0, 'f', 2)
                                            .arg(memTotalGB, 0, 'f', 2);
-                this->addPropertyToLayout(m_memoryLayout, "Server", serverMemStr);
+                this->addPropertyToLayout(this->ui->memoryLayout, "Server", serverMemStr);
             }
         }
     }
@@ -816,7 +803,7 @@ void GeneralTabPage::populateMemorySection()
         qint64 memFree = this->m_objectData.value("memory_free").toLongLong();
         qint64 memUsed = memTotal - memFree;
         double memUsedGB = memUsed / (1024.0 * 1024.0 * 1024.0);
-        this->addPropertyToLayout(m_memoryLayout, "VMs", QString("%1 GB").arg(memUsedGB, 0, 'f', 2));
+        this->addPropertyToLayout(this->ui->memoryLayout, "VMs", QString("%1 GB").arg(memUsedGB, 0, 'f', 2));
     }
 
     // XCP-ng/Xen Memory overhead
@@ -826,11 +813,11 @@ void GeneralTabPage::populateMemorySection()
         qint64 memOverhead = this->m_objectData.value("memory_overhead").toLongLong();
         double memOverheadMB = memOverhead / (1024.0 * 1024.0);
         // Use "XCP-ng" as label (C# uses product brand name)
-        this->addPropertyToLayout(m_memoryLayout, "XCP-ng", QString("%1 MB").arg(memOverheadMB, 0, 'f', 0));
+        this->addPropertyToLayout(this->ui->memoryLayout, "XCP-ng", QString("%1 MB").arg(memOverheadMB, 0, 'f', 0));
     }
 
     // Show section if it has content
-    if (m_memoryLayout && m_memoryLayout->count() > 0)
+    if (this->ui->memoryLayout->count() > 0)
         this->ui->memoryGroup->setVisible(true);
 }
 
@@ -847,32 +834,32 @@ void GeneralTabPage::populateCPUSection()
     if (cpuInfo.contains("cpu_count"))
     {
         int cpuCount = cpuInfo.value("cpu_count").toInt();
-        this->addPropertyToLayout(m_cpuLayout, "Count", QString::number(cpuCount));
+        this->addPropertyToLayout(this->ui->cpuLayout, "Count", QString::number(cpuCount));
     }
 
     if (cpuInfo.contains("modelname"))
     {
         QString cpuModel = cpuInfo.value("modelname").toString();
         if (!cpuModel.isEmpty())
-            this->addPropertyToLayout(m_cpuLayout, "Model", cpuModel);
+            this->addPropertyToLayout(this->ui->cpuLayout, "Model", cpuModel);
     }
 
     if (cpuInfo.contains("speed"))
     {
         QString cpuSpeed = cpuInfo.value("speed").toString();
         if (!cpuSpeed.isEmpty())
-            this->addPropertyToLayout(m_cpuLayout, "Speed", cpuSpeed + " MHz");
+            this->addPropertyToLayout(this->ui->cpuLayout, "Speed", cpuSpeed + " MHz");
     }
 
     if (cpuInfo.contains("vendor"))
     {
         QString cpuVendor = cpuInfo.value("vendor").toString();
         if (!cpuVendor.isEmpty())
-            this->addPropertyToLayout(m_cpuLayout, "Vendor", cpuVendor);
+            this->addPropertyToLayout(this->ui->cpuLayout, "Vendor", cpuVendor);
     }
 
     // Show section if it has content
-    if (m_cpuLayout && m_cpuLayout->count() > 0)
+    if (this->ui->cpuLayout->count() > 0)
         this->ui->cpuGroup->setVisible(true);
 }
 
@@ -891,30 +878,30 @@ void GeneralTabPage::populateVersionSection()
     {
         QString productVersion = swVersion.value("product_version").toString();
         QString productBrand = swVersion.value("product_brand", "XenServer").toString();
-        this->addPropertyToLayout(m_versionLayout, "Product Version", QString("%1 %2").arg(productBrand, productVersion));
+        this->addPropertyToLayout(this->ui->versionLayout, "Product Version", QString("%1 %2").arg(productBrand, productVersion));
     }
 
     // Build date
     if (swVersion.contains("date"))
     {
         QString buildDate = swVersion.value("date").toString();
-        this->addPropertyToLayout(m_versionLayout, "Build Date", buildDate);
+        this->addPropertyToLayout(this->ui->versionLayout, "Build Date", buildDate);
     }
 
     // Build number
     if (swVersion.contains("build_number"))
     {
-        this->addPropertyToLayout(m_versionLayout, "Build Number", swVersion.value("build_number").toString());
+        this->addPropertyToLayout(this->ui->versionLayout, "Build Number", swVersion.value("build_number").toString());
     }
 
     // DBV (Database Version)
     if (swVersion.contains("dbv"))
     {
-        this->addPropertyToLayout(m_versionLayout, "DBV", swVersion.value("dbv").toString());
+        this->addPropertyToLayout(this->ui->versionLayout, "DBV", swVersion.value("dbv").toString());
     }
 
     // Show section if it has content
-    if (m_versionLayout && m_versionLayout->count() > 0)
+    if (this->ui->versionLayout->count() > 0)
         this->ui->versionGroup->setVisible(true);
 }
 
@@ -1040,7 +1027,7 @@ void GeneralTabPage::populateStatusSection()
         stateValue->setPalette(palette);
     }
     stateValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    m_statusLayout->addRow(stateLabel, stateValue);
+    this->ui->statusLayout->addRow(stateLabel, stateValue);
 
     // Show per-host PBD status
     // C# iterates through all hosts and shows their PBD connection status
@@ -1119,11 +1106,11 @@ void GeneralTabPage::populateStatusSection()
         }
         hostValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
-        m_statusLayout->addRow(hostLabel, hostValue);
+        this->ui->statusLayout->addRow(hostLabel, hostValue);
     }
 
     // Show section if it has content
-    if (m_statusLayout && m_statusLayout->count() > 0)
+    if (this->ui->statusLayout->count() > 0)
         this->ui->statusGroup->setVisible(true);
 }
 
@@ -1148,7 +1135,7 @@ void GeneralTabPage::populateMultipathingSection()
 
     QLabel* capableValue = new QLabel(isMultipathCapable ? "Yes" : "No");
     capableValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    m_multipathingLayout->addRow(capableLabel, capableValue);
+    this->ui->multipathingLayout->addRow(capableLabel, capableValue);
 
     if (!isMultipathCapable)
     {
@@ -1233,10 +1220,10 @@ void GeneralTabPage::populateMultipathingSection()
         }
         hostValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
-        m_multipathingLayout->addRow(hostLabel, hostValue);
+        this->ui->multipathingLayout->addRow(hostLabel, hostValue);
     }
 
     // Show section if it has content
-    if (m_multipathingLayout && m_multipathingLayout->count() > 0)
+    if (this->ui->multipathingLayout->count() > 0)
         this->ui->multipathingGroup->setVisible(true);
 }

@@ -17,6 +17,9 @@
 * VM deleting
 * HA tab
 * NIC tab - bonding
+* Clone VM
+* Create template from VM
+* Create VM from template
 
 # Needs polish
 * General tab - shows data, but access to data is weird (should use native XenObjects and their properties instead of scrapping QVarianMaps), overall layout is also not good
