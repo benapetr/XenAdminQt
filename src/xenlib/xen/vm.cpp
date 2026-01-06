@@ -98,6 +98,14 @@ QSharedPointer<Host> VM::GetHost()
     return QSharedPointer<Host>();
 }
 
+QSharedPointer<Pool> VM::GetPool()
+{
+    if (!this->GetConnection())
+        return QSharedPointer<Pool>();
+
+    return this->GetConnection()->GetCache()->GetPool();
+}
+
 QString VM::AffinityRef() const
 {
     return stringProperty("affinity");

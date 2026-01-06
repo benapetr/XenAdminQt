@@ -188,6 +188,8 @@ class XENLIB_EXPORT Host : public XenObject
          */
         QString PoolRef() const;
 
+        QSharedPointer<Pool> GetPool();
+
         /**
          * @brief Get memory overhead required by host
          * @return Memory overhead in bytes

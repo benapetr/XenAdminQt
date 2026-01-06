@@ -32,27 +32,26 @@
 #include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
+#include "xencache.h"
 #include <QtCore/QDebug>
 
 // VMPauseAction implementation
 
-VMPauseAction::VMPauseAction(VM* vm, const QString& title, QObject* parent)
+VMPauseAction::VMPauseAction(QSharedPointer<VM> vm, const QString& title, QObject* parent)
     : AsyncOperation(vm ? vm->GetConnection() : nullptr, title, tr("Preparing..."), parent)
 {
-    setVM(vm);
+    this->SetVM(vm);
 
     if (vm)
     {
         // Set host to VM's home
-        // TODO: Implement VM::home() method
-        // setHost(vm->home());
+        this->SetHost(vm->GetHost());
 
         // Set pool
         XenConnection* conn = vm->GetConnection();
         if (conn)
         {
-            // TODO: Get pool from connection
-            // setPool(conn->pool());
+            this->SetPool(conn->GetCache()->GetPool());
         }
     }
 }
@@ -63,26 +62,26 @@ VMPauseAction::~VMPauseAction()
 
 // VMPause implementation
 
-VMPause::VMPause(VM* vm, QObject* parent)
+VMPause::VMPause(QSharedPointer<VM> vm, QObject* parent)
     : VMPauseAction(vm,
                     tr("Pausing '%1'...").arg(vm ? vm->GetName() : "VM"),
                     parent)
 {
-    addApiMethodToRoleCheck("VM.async_pause");
+    AddApiMethodToRoleCheck("VM.async_pause");
 }
 
 void VMPause::run()
 {
-    setDescription(tr("Pausing..."));
+    SetDescription(tr("Pausing..."));
 
-    VM* vmObj = vm();
+    QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)
     {
         setError("VM object is null");
         return;
     }
 
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -98,34 +97,34 @@ void VMPause::run()
         return;
     }
 
-    setRelatedTaskRef(taskRef);
+    SetRelatedTaskRef(taskRef);
     pollToCompletion(taskRef, 0, 100);
 
-    setDescription(tr("Paused"));
+    SetDescription(tr("Paused"));
 }
 
 // VMUnpause implementation
 
-VMUnpause::VMUnpause(VM* vm, QObject* parent)
+VMUnpause::VMUnpause(QSharedPointer<VM> vm, QObject* parent)
     : VMPauseAction(vm,
                     tr("Unpausing '%1'...").arg(vm ? vm->GetName() : "VM"),
                     parent)
 {
-    addApiMethodToRoleCheck("VM.async_unpause");
+    AddApiMethodToRoleCheck("VM.async_unpause");
 }
 
 void VMUnpause::run()
 {
-    setDescription(tr("Unpausing..."));
+    SetDescription(tr("Unpausing..."));
 
-    VM* vmObj = vm();
+    QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)
     {
         setError("VM object is null");
         return;
     }
 
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -141,8 +140,8 @@ void VMUnpause::run()
         return;
     }
 
-    setRelatedTaskRef(taskRef);
+    SetRelatedTaskRef(taskRef);
     pollToCompletion(taskRef, 0, 100);
 
-    setDescription(tr("Unpaused"));
+    SetDescription(tr("Unpaused"));
 }

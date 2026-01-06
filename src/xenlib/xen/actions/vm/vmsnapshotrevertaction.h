@@ -45,51 +45,51 @@ class XENLIB_EXPORT VMSnapshotRevertAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct snapshot revert action
-     * @param connection XenConnection
-     * @param snapshotRef Snapshot VM opaque_ref to revert to
-     * @param parent Parent QObject
-     */
-    VMSnapshotRevertAction(XenConnection* connection,
-                           const QString& snapshotRef,
-                           QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct snapshot revert action
+         * @param connection XenConnection
+         * @param snapshotRef Snapshot VM opaque_ref to revert to
+         * @param parent Parent QObject
+         */
+        VMSnapshotRevertAction(XenConnection* connection,
+                               const QString& snapshotRef,
+                               QObject* parent = nullptr);
 
-    QString vmRef() const
-    {
-        return m_vmRef;
-    }
+        QString vmRef() const
+        {
+            return m_vmRef;
+        }
 
-    QString snapshotRef() const
-    {
-        return m_snapshotRef;
-    }
+        QString snapshotRef() const
+        {
+            return m_snapshotRef;
+        }
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    /**
-     * @brief Restore the VM power state after revert
-     * @param vmRef VM reference
-     */
-    void revertPowerState(const QString& vmRef);
+    private:
+        /**
+         * @brief Restore the VM power state after revert
+         * @param vmRef VM reference
+         */
+        void revertPowerState(const QString& vmRef);
 
-    /**
-     * @brief Check if VM can boot on a specific host
-     * @param vmRef VM reference
-     * @param hostRef Host reference
-     * @return true if VM can boot on host
-     */
-    bool vmCanBootOnHost(const QString& vmRef, const QString& hostRef);
+        /**
+         * @brief Check if VM can boot on a specific host
+         * @param vmRef VM reference
+         * @param hostRef Host reference
+         * @return true if VM can boot on host
+         */
+        bool vmCanBootOnHost(const QString& vmRef, const QString& hostRef);
 
-    QString m_snapshotRef;
-    QString m_snapshotName;
-    QString m_vmRef;           // Parent VM reference
-    QString m_previousHostRef; // Host the VM was running on before snapshot
-    bool m_revertPowerState;   // Whether to restore power state
-    bool m_revertFinished;     // Track when revert phase is complete
+        QString m_snapshotRef;
+        QString m_snapshotName;
+        QString m_vmRef;           // Parent VM reference
+        QString m_previousHostRef; // Host the VM was running on before snapshot
+        bool m_revertPowerState;   // Whether to restore power state
+        bool m_revertFinished;     // Track when revert phase is complete
 };
 
 #endif // VMSNAPSHOTREVERTACTION_H

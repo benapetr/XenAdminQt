@@ -51,43 +51,43 @@ class XENLIB_EXPORT CreateDiskAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Create a new VDI without attaching to a VM
-     * @param vdiRecord VDI record with properties (name_label, virtual_size, SR, etc.)
-     * @param connection XenServer connection
-     * @param parent Parent object
-     */
-    explicit CreateDiskAction(const QVariantMap& vdiRecord,
-                              XenConnection* connection,
-                              QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Create a new VDI without attaching to a VM
+         * @param vdiRecord VDI record with properties (name_label, virtual_size, SR, etc.)
+         * @param connection XenServer connection
+         * @param parent Parent object
+         */
+        explicit CreateDiskAction(const QVariantMap& vdiRecord,
+                                  XenConnection* connection,
+                                  QObject* parent = nullptr);
 
-    /**
-     * @brief Create a new VDI and attach to a VM
-     * @param vdiRecord VDI record with properties
-     * @param vbdRecord VBD record with properties (device, mode, type, etc.)
-     * @param vm Parent VM to attach disk to
-     * @param parent Parent object
-     */
-    explicit CreateDiskAction(const QVariantMap& vdiRecord,
-                              const QVariantMap& vbdRecord,
-                              VM* vm,
-                              QObject* parent = nullptr);
+        /**
+         * @brief Create a new VDI and attach to a VM
+         * @param vdiRecord VDI record with properties
+         * @param vbdRecord VBD record with properties (device, mode, type, etc.)
+         * @param vm Parent VM to attach disk to
+         * @param parent Parent object
+         */
+        explicit CreateDiskAction(const QVariantMap& vdiRecord,
+                                  const QVariantMap& vbdRecord,
+                                  VM* vm,
+                                  QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    /**
-     * @brief Check if VM already has a bootable disk
-     * @return true if VM has at least one bootable VBD
-     */
-    bool hasBootableDisk();
+    private:
+        /**
+         * @brief Check if VM already has a bootable disk
+         * @return true if VM has at least one bootable VBD
+         */
+        bool hasBootableDisk();
 
-    QVariantMap m_vdiRecord;
-    QVariantMap m_vbdRecord;
-    VM* m_vm;
-    bool m_attachToVM;
+        QVariantMap m_vdiRecord;
+        QVariantMap m_vbdRecord;
+        VM* m_vm;
+        bool m_attachToVM;
 };
 
 #endif // CREATEDISKACTION_H

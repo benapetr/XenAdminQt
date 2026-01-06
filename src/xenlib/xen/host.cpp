@@ -164,17 +164,10 @@ bool Host::IsMaster() const
     // Check if this host is referenced as master in its pool
     // Query the pool and check if pool.master == this->opaqueRef()
     XenConnection* conn = this->GetConnection();
-    if (!conn || !conn->GetCache())
+    if (!conn)
         return false;
 
-    // Get the pool for this connection (there's always exactly one pool per connection)
-    QStringList poolRefs = conn->GetCache()->GetAllRefs("pool");
-    if (poolRefs.isEmpty())
-        return false;
-
-    // Get the first (and only) pool
-    QString poolRef = poolRefs.first();
-    QVariantMap poolData = conn->GetCache()->ResolveObjectData("pool", poolRef);
+    QVariantMap poolData = conn->GetCache()->ResolveObjectData("pool", this->PoolRef());
     
     // Compare pool's master reference with this host's opaque reference
     QString masterRef = poolData.value("master", "").toString();
@@ -186,16 +179,18 @@ QString Host::PoolRef() const
     // In XenAPI, there's always exactly one pool per GetConnection
     // Query the cache for the pool that contains this host
     XenConnection* conn = this->GetConnection();
-    if (!conn || !conn->GetCache())
+    if (!conn)
         return QString();
 
-    // Get all pool refs (there's always exactly one pool per connection)
-    QStringList poolRefs = conn->GetCache()->GetAllRefs("pool");
-    if (poolRefs.isEmpty())
-        return QString();
+    return conn->GetCache()->GetPoolRef();
+}
 
-    // Return the first (and only) pool reference
-    return poolRefs.first();
+QSharedPointer<Pool> Host::GetPool()
+{
+    if (!this->GetConnection())
+        return QSharedPointer<Pool>();
+
+    return this->GetConnection()->GetCache()->GetPool();
 }
 
 qint64 Host::MemoryOverhead() const

@@ -63,7 +63,7 @@ void CreateBondAction::run()
 {
     try
     {
-        connection()->setExpectDisruption(true);
+        GetConnection()->SetExpectDisruption(true);
 
         // Create the network first
         QVariantMap networkRecord;
@@ -77,20 +77,20 @@ void CreateBondAction::run()
         otherConfig[QString::fromUtf8("create_in_progress")] = "true";
         networkRecord["other_config"] = otherConfig;
 
-        setDescription(QString("Creating network '%1'").arg(m_networkName));
-        QString taskRef = XenAPI::Network::async_create(session(), networkRecord);
+        SetDescription(QString("Creating network '%1'").arg(m_networkName));
+        QString taskRef = XenAPI::Network::async_create(GetSession(), networkRecord);
         pollToCompletion(taskRef, 0, 10);
-        m_networkRef = result();
+        m_networkRef = GetResult();
 
         // Remove create_in_progress flag
-        XenAPI::Network::remove_from_other_config(session(), m_networkRef, "create_in_progress");
+        XenAPI::Network::remove_from_other_config(GetSession(), m_networkRef, "create_in_progress");
 
         // TODO: Set network.Locked = true (not yet implemented in Qt)
 
         try
         {
             // Get all hosts in pool
-            QList<QVariantMap> hosts = connection()->GetCache()->GetAllData("host");
+            QList<QVariantMap> hosts = GetConnection()->GetCache()->GetAllData("host");
 
             int inc = hosts.count() > 0 ? 90 / (hosts.count() * 2) : 90;
             int progress = 10;
@@ -112,7 +112,7 @@ void CreateBondAction::run()
                     continue;
                 }
 
-                setDescription(QString("Creating bond on host %1").arg(hostName));
+                SetDescription(QString("Creating bond on host %1").arg(hostName));
                 qDebug() << "Creating bond on" << hostName << "with" << hostPifRefs.count() << "PIFs";
 
                 // Build bond properties
@@ -122,17 +122,17 @@ void CreateBondAction::run()
                     bondProperties["hashing_algorithm"] = m_hashingAlgorithm;
                 }
 
-                QString bondTaskRef = XenAPI::Bond::async_create(session(), m_networkRef,
+                QString bondTaskRef = XenAPI::Bond::async_create(GetSession(), m_networkRef,
                                                                  hostPifRefs, "", m_bondMode,
                                                                  bondProperties);
 
                 pollToCompletion(bondTaskRef, progress, progress + inc);
-                QString bondRef = result();
+                QString bondRef = GetResult();
 
                 qDebug() << "Created bond on" << hostName << ":" << bondRef;
 
                 // Get bond interface PIF
-                QVariantMap bondData = connection()->GetCache()->ResolveObjectData("bond", bondRef);
+                QVariantMap bondData = GetConnection()->GetCache()->ResolveObjectData("bond", bondRef);
                 QString bondInterfaceRef = bondData.value("master").toString();
 
                 // Store bond info for management interface reconfiguration
@@ -158,12 +158,12 @@ void CreateBondAction::run()
                     NetworkingActionHelpers::moveManagementInterfaceName(
                         this, memberRef, newBond.bondInterfaceRef);
 
-                    setPercentComplete(progress);
+                    SetPercentComplete(progress);
                 }
             }
 
-            setDescription(QString("Bond '%1' created successfully").arg(m_networkName));
-            connection()->setExpectDisruption(false);
+            SetDescription(QString("Bond '%1' created successfully").arg(m_networkName));
+            GetConnection()->SetExpectDisruption(false);
 
         } catch (const std::exception& e)
         {
@@ -174,7 +174,7 @@ void CreateBondAction::run()
 
     } catch (const std::exception& e)
     {
-        connection()->setExpectDisruption(false);
+        GetConnection()->SetExpectDisruption(false);
         setError(QString("Failed to create bond: %1").arg(e.what()));
     }
 }
@@ -194,7 +194,7 @@ void CreateBondAction::cleanupOnError()
             try
             {
                 // Get bond data to find primary slave
-                QVariantMap bondData = connection()->GetCache()->ResolveObjectData("bond", newBond.bondRef);
+                QVariantMap bondData = GetConnection()->GetCache()->ResolveObjectData("bond", newBond.bondRef);
                 QString primarySlaveRef = bondData.value("primary_slave").toString();
 
                 if (!primarySlaveRef.isEmpty())
@@ -215,7 +215,7 @@ void CreateBondAction::cleanupOnError()
         {
             try
             {
-                QString taskRef = XenAPI::Bond::async_destroy(session(), newBond.bondRef);
+                QString taskRef = XenAPI::Bond::async_destroy(GetSession(), newBond.bondRef);
                 pollToCompletion(taskRef, 0, 100, true); // Suppress failures
             } catch (const std::exception& e)
             {
@@ -229,7 +229,7 @@ void CreateBondAction::cleanupOnError()
         {
             try
             {
-                XenAPI::Network::destroy(session(), m_networkRef);
+                XenAPI::Network::destroy(GetSession(), m_networkRef);
             } catch (const std::exception& e)
             {
                 qWarning() << "Failed to destroy network:" << e.what();
@@ -241,19 +241,19 @@ void CreateBondAction::cleanupOnError()
         // Nothrow guarantee - swallow all exceptions during cleanup
     }
 
-    connection()->setExpectDisruption(false);
+    GetConnection()->SetExpectDisruption(false);
 }
 
 QList<QVariantMap> CreateBondAction::getHostsCoordinatorLast() const
 {
-    QList<QVariantMap> hosts = connection()->GetCache()->GetAllData("host");
+    QList<QVariantMap> hosts = GetConnection()->GetCache()->GetAllData("host");
     if (hosts.isEmpty())
     {
         return hosts;
     }
 
     // Get the pool to find the coordinator
-    QList<QVariantMap> pools = connection()->GetCache()->GetAllData("pool");
+    QList<QVariantMap> pools = GetConnection()->GetCache()->GetAllData("pool");
     if (pools.isEmpty())
     {
         return hosts; // Not a pool, return as-is
@@ -294,7 +294,7 @@ QStringList CreateBondAction::findMatchingPIFsOnHost(const QString& hostRef) con
     QStringList deviceNames;
     for (const QString& pifRef : m_pifRefs)
     {
-        QVariantMap pifData = connection()->GetCache()->ResolveObjectData("pif", pifRef);
+        QVariantMap pifData = GetConnection()->GetCache()->ResolveObjectData("pif", pifRef);
         QString device = pifData.value("device").toString();
         if (!device.isEmpty() && !deviceNames.contains(device))
         {
@@ -304,7 +304,7 @@ QStringList CreateBondAction::findMatchingPIFsOnHost(const QString& hostRef) con
 
     // Find PIFs on the target host with matching device names
     QStringList result;
-    QList<QVariantMap> allPifs = connection()->GetCache()->GetAllData("pif");
+    QList<QVariantMap> allPifs = GetConnection()->GetCache()->GetAllData("pif");
 
     for (const QVariantMap& pif : allPifs)
     {

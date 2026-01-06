@@ -48,48 +48,48 @@ class EvacuateHostAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection to use
-     * @param host Host object to evacuate
-     * @param newCoordinator Optional new coordinator if evacuating current coordinator
-     * @param parent Parent QObject
-     */
-    explicit EvacuateHostAction(XenConnection* connection,
-                                Host* host,
-                                Host* newCoordinator = nullptr,
-                                QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection to use
+         * @param host Host object to evacuate
+         * @param newCoordinator Optional new coordinator if evacuating current coordinator
+         * @param parent Parent QObject
+         */
+        explicit EvacuateHostAction(XenConnection* connection,
+                                    QSharedPointer<Host> host,
+                                    QSharedPointer<Host> newCoordinator = QSharedPointer<Host>(),
+                                    QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    /**
-     * @brief Disable the host
-     * @param start Starting progress percentage
-     * @param finish Ending progress percentage
-     *
-     * Calls maybeReduceNtolBeforeOp, then Host.async_disable, then sets MAINTENANCE_MODE
-     */
-    void disable(int start, int finish);
+    private:
+        /**
+         * @brief Disable the host
+         * @param start Starting progress percentage
+         * @param finish Ending progress percentage
+         *
+         * Calls maybeReduceNtolBeforeOp, then Host.async_disable, then sets MAINTENANCE_MODE
+         */
+        void disable(int start, int finish);
 
-    /**
-     * @brief Enable the host (for error recovery)
-     * @param start Starting progress percentage
-     * @param finish Ending progress percentage
-     * @param queryNtolIncrease Unused in error recovery path
-     */
-    void enable(int start, int finish, bool queryNtolIncrease);
+        /**
+         * @brief Enable the host (for error recovery)
+         * @param start Starting progress percentage
+         * @param finish Ending progress percentage
+         * @param queryNtolIncrease Unused in error recovery path
+         */
+        void enable(int start, int finish, bool queryNtolIncrease);
 
-    /**
-     * @brief Check if host is pool coordinator
-     * @return True if host is coordinator
-     */
-    bool isCoordinator() const;
+        /**
+         * @brief Check if host is pool coordinator
+         * @return True if host is coordinator
+         */
+        bool isCoordinator() const;
 
-    Host* m_host;
-    Host* m_newCoordinator;
+        QSharedPointer<Host> m_host;
+        QSharedPointer<Host> m_newCoordinator;
 };
 
 #endif // EVACUATEHOSTACTION_H

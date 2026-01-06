@@ -32,7 +32,7 @@
 #include <QDebug>
 
 VMCloneAction::VMCloneAction(XenConnection* connection,
-                             VM* vm,
+                             QSharedPointer<VM> vm,
                              const QString& name,
                              const QString& description,
                              QObject* parent)
@@ -53,10 +53,10 @@ void VMCloneAction::run()
     try
     {
         // Clone the VM
-        QString taskRef = XenAPI::VM::async_clone(session(), m_vm->OpaqueRef(), m_cloneName);
+        QString taskRef = XenAPI::VM::async_clone(GetSession(), m_vm->OpaqueRef(), m_cloneName);
         pollToCompletion(taskRef, 0, 90);
 
-        QString createdVmRef = result();
+        QString createdVmRef = GetResult();
 
         // Wait for VM to appear in cache
         // TODO: Implement Connection.WaitForCache equivalent
@@ -65,12 +65,12 @@ void VMCloneAction::run()
         qDebug() << "VMCloneAction: Cloned VM ref:" << createdVmRef;
 
         // Set the description
-        XenAPI::VM::set_name_description(session(), createdVmRef, m_cloneDescription);
+        XenAPI::VM::set_name_description(GetSession(), createdVmRef, m_cloneDescription);
 
         // Store the created VM ref as result
-        setResult(createdVmRef);
+        SetResult(createdVmRef);
 
-        setDescription("VM cloned successfully");
+        SetDescription("VM cloned successfully");
 
     } catch (const std::exception& e)
     {

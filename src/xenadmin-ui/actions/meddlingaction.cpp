@@ -39,14 +39,14 @@ MeddlingAction::MeddlingAction(const QString& taskRef,
                                QObject* parent)
     : AsyncOperation(connection, "Task", QString(), parent), m_isOurTask(isOurTask)
 {
-    this->setRelatedTaskRef(taskRef);
-    this->setSuppressHistory(false); // Meddling operations appear in history
-    this->setCanCancel(isOurTask);   // Can only cancel our own tasks
-    this->setSafeToExit(true);       // Safe to exit - we're just monitoring
+    this->SetRelatedTaskRef(taskRef);
+    this->SetSuppressHistory(false); // Meddling operations appear in history
+    this->SetCanCancel(isOurTask);   // Can only cancel our own tasks
+    this->SetSafeToExit(true);       // Safe to exit - we're just monitoring
 
     // Mark as already running since we're monitoring existing task
     this->setState(Running);
-    this->setPercentComplete(0);
+    this->SetPercentComplete(0);
 }
 
 MeddlingAction::~MeddlingAction()
@@ -57,7 +57,7 @@ void MeddlingAction::run()
 {
     // MeddlingAction doesn't create tasks, it monitors existing ones
     // Poll the task that was passed to constructor
-    QString taskRef = this->relatedTaskRef();
+    QString taskRef = this->GetRelatedTaskRef();
 
     if (taskRef.isEmpty())
     {
@@ -73,12 +73,12 @@ void MeddlingAction::onCancel()
 {
     if (!this->m_isOurTask)
     {
-        qWarning() << "Cannot cancel task that doesn't belong to us:" << this->relatedTaskRef();
+        qWarning() << "Cannot cancel task that doesn't belong to us:" << this->GetRelatedTaskRef();
         return;
     }
 
     // Cancel the XenAPI task
-    XenAPI::Session* sess = this->session();
+    XenAPI::Session* sess = this->GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         qWarning() << "Cannot cancel task - no valid session";
@@ -86,12 +86,12 @@ void MeddlingAction::onCancel()
     }
 
     XenRpcAPI api(sess);
-    QString taskRef = this->relatedTaskRef();
+    QString taskRef = this->GetRelatedTaskRef();
 
     if (!taskRef.isEmpty())
     {
         qDebug() << "Cancelling meddling task:" << taskRef;
-        api.cancelTask(taskRef);
+        api.CancelTask(taskRef);
     }
 }
 
@@ -107,7 +107,7 @@ void MeddlingAction::updateFromTask(const QVariantMap& taskData, bool taskDeleti
     if (taskData.contains("progress"))
     {
         double progress = taskData.value("progress").toDouble();
-        this->setPercentComplete(static_cast<int>(progress * 100));
+        this->SetPercentComplete(static_cast<int>(progress * 100));
     }
 
     // Update state
@@ -115,7 +115,7 @@ void MeddlingAction::updateFromTask(const QVariantMap& taskData, bool taskDeleti
 
     if (taskDeleting || status == "success")
     {
-        this->setPercentComplete(100);
+        this->SetPercentComplete(100);
         this->setState(Completed);
     } else if (status == "failure")
     {
@@ -141,12 +141,12 @@ void MeddlingAction::updateTitleFromTask(const QVariantMap& taskData)
 
     if (!nameLabel.isEmpty())
     {
-        this->setTitle(nameLabel);
+        this->SetTitle(nameLabel);
     }
 
     if (!nameDescription.isEmpty())
     {
-        this->setDescription(nameDescription);
+        this->SetDescription(nameDescription);
     }
 
     // Try to enhance title with VM operation if available
@@ -156,7 +156,7 @@ void MeddlingAction::updateTitleFromTask(const QVariantMap& taskData)
         QString enhancedTitle = this->getVmOperationTitle(vmOp);
         if (!enhancedTitle.isEmpty())
         {
-            this->setTitle(enhancedTitle);
+            this->SetTitle(enhancedTitle);
         }
     }
 }

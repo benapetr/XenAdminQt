@@ -31,7 +31,7 @@
 #include "../../xenapi/xenapi_VM.h"
 
 VMToTemplateAction::VMToTemplateAction(XenConnection* connection,
-                                       VM* vm,
+                                       QSharedPointer<VM> vm,
                                        QObject* parent)
     : AsyncOperation(connection,
                      QString("Converting '%1' to template").arg(vm ? vm->GetName() : ""),
@@ -39,7 +39,7 @@ VMToTemplateAction::VMToTemplateAction(XenConnection* connection,
                      parent),
       m_vm(vm)
 {
-    if (!m_vm)
+    if (!this->m_vm)
         throw std::invalid_argument("VM cannot be null");
 }
 
@@ -47,12 +47,12 @@ void VMToTemplateAction::run()
 {
     try
     {
-        setDescription("Converting VM to template");
+        SetDescription("Converting VM to template");
 
         // Set is_a_template flag to true
-        XenAPI::VM::set_is_a_template(session(), m_vm->OpaqueRef(), true);
+        XenAPI::VM::set_is_a_template(GetSession(), m_vm->OpaqueRef(), true);
 
-        setDescription("VM converted to template");
+        SetDescription("VM converted to template");
 
     } catch (const std::exception& e)
     {

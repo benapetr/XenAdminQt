@@ -1234,7 +1234,7 @@ void NewSRWizard::accept()
     QString srTypeStr = this->getSRTypeString();
     QString contentType = this->getContentType();
 
-    Host* coordinatorHost = new Host(this->m_connection, masterRef, this);
+    QSharedPointer<Host> coordinatorHost(new Host(this->m_connection, masterRef, this));
 
     AsyncOperation* srAction = nullptr;
     if (this->m_selectedSRUuid.isEmpty())
@@ -1251,7 +1251,7 @@ void NewSRWizard::accept()
             this);
     } else
     {
-        SR* srToReattach = new SR(this->m_connection, this->m_selectedSRUuid, this);
+        QSharedPointer<SR> srToReattach = QSharedPointer<SR>(new SR(this->m_connection, this->m_selectedSRUuid, this));
         srAction = new SrReattachAction(
             srToReattach,
             this->m_srName,
@@ -1265,7 +1265,7 @@ void NewSRWizard::accept()
 
     this->connect(srAction, &AsyncOperation::completed, this, [this, srAction, progressDialog]()
     {
-        if (srAction->isCompleted() && !srAction->hasError())
+        if (srAction->IsCompleted() && !srAction->HasError())
         {
             QString successMsg = this->m_selectedSRUuid.isEmpty()
                                      ? tr("Storage Repository '%1' has been created successfully.")
@@ -1278,12 +1278,12 @@ void NewSRWizard::accept()
             QMessageBox::critical(this, tr("Error"),
                                   tr("Failed to %1 Storage Repository:\n\n%2")
                                       .arg(this->m_selectedSRUuid.isEmpty() ? tr("create") : tr("reattach"))
-                                      .arg(srAction->errorMessage()));
+                                      .arg(srAction->GetErrorMessage()));
             progressDialog->reject();
         }
     });
 
-    srAction->runAsync();
+    srAction->RunAsync();
     progressDialog->exec();
 }
 

@@ -1117,7 +1117,7 @@ void NetworkTabPage::onAddNetwork()
 
             // Matches C# NetworkList.cs createVIFAction_Completed (line 539)
             connect(action, &CreateVIFAction::completed, this, [this, action]() {
-                if (action->state() == AsyncOperation::OperationState::Completed)
+                if (action->GetState() == AsyncOperation::OperationState::Completed)
                 {
                     // Check if reboot is required for hot-plug (matches C# line 544)
                     if (action->rebootRequired())
@@ -1146,7 +1146,7 @@ void NetworkTabPage::onAddNetwork()
             progressDialog->show();
 
             // Start the action
-            action->runAsync();
+            action->RunAsync();
         }
     } else
     {
@@ -1311,7 +1311,7 @@ void NetworkTabPage::onEditNetwork()
                                                           this);
 
             connect(action, &UpdateVIFAction::completed, this, [this, action]() {
-                if (action->state() == AsyncOperation::OperationState::Completed)
+                if (action->GetState() == AsyncOperation::OperationState::Completed)
                 {
                     qDebug() << "VIF updated successfully";
                     // Refresh the tab to show updated VIF
@@ -1332,7 +1332,7 @@ void NetworkTabPage::onEditNetwork()
             progressDialog->show();
 
             // Start the action
-            action->runAsync();
+            action->RunAsync();
         }
     } else
     {
@@ -1401,7 +1401,7 @@ void NetworkTabPage::onRemoveNetwork()
             DeleteVIFAction* action = new DeleteVIFAction(this->m_connection, vifRef, this);
 
             connect(action, &DeleteVIFAction::completed, this, [this, action]() {
-                if (action->state() == AsyncOperation::OperationState::Completed)
+                if (action->GetState() == AsyncOperation::OperationState::Completed)
                 {
                     qDebug() << "VIF deleted successfully";
                     // Refresh the tab to show updated VIF list
@@ -1422,7 +1422,7 @@ void NetworkTabPage::onRemoveNetwork()
             progressDialog->show();
 
             // Start the action
-            action->runAsync();
+            action->RunAsync();
         }
     } else
     {
@@ -1473,7 +1473,7 @@ void NetworkTabPage::onActivateToggle()
         UnplugVIFAction* action = new UnplugVIFAction(this->m_connection, vifRef, this);
 
         connect(action, &UnplugVIFAction::completed, this, [this, action]() {
-            if (action->state() == AsyncOperation::OperationState::Completed)
+            if (action->GetState() == AsyncOperation::OperationState::Completed)
             {
                 qDebug() << "VIF unplugged successfully";
                 // Refresh the tab to show updated VIF status
@@ -1494,14 +1494,14 @@ void NetworkTabPage::onActivateToggle()
         progressDialog->show();
 
         // Start the action
-        action->runAsync();
+        action->RunAsync();
     } else
     {
         // C#: Use PlugVIFAction to activate (plug) VIF
         PlugVIFAction* action = new PlugVIFAction(this->m_connection, vifRef, this);
 
         connect(action, &PlugVIFAction::completed, this, [this, action]() {
-            if (action->state() == AsyncOperation::OperationState::Completed)
+            if (action->GetState() == AsyncOperation::OperationState::Completed)
             {
                 qDebug() << "VIF plugged successfully";
                 // Refresh the tab to show updated VIF status
@@ -1522,7 +1522,7 @@ void NetworkTabPage::onActivateToggle()
         progressDialog->show();
 
         // Start the action
-        action->runAsync();
+        action->RunAsync();
     }
 }
 

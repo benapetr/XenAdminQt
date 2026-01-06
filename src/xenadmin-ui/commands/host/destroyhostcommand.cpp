@@ -65,8 +65,6 @@ void DestroyHostCommand::Run()
     if (!host)
         return;
 
-    QString hostRef = host->OpaqueRef();
-    QVariantMap hostData = host->GetData();
     QString hostName = host->GetName();
 
     // Show confirmation dialog
@@ -93,30 +91,18 @@ void DestroyHostCommand::Run()
         return;
     }
 
-    // Get pool reference
-    QString poolRef = host->PoolRef();
-    if (poolRef.isEmpty())
-    {
-        QMessageBox::warning(this->mainWindow(), tr("Error"), tr("Host does not belong to a pool"));
-        return;
-    }
-
-    // Create Pool and Host objects
-    Pool* pool = new Pool(conn, poolRef, this);
-    Host* temp_host = new Host(conn, hostRef, this);
-
     // Create and run the destroy host action
-    DestroyHostAction* action = new DestroyHostAction(conn, pool, temp_host, this);
+    DestroyHostAction* action = new DestroyHostAction(conn, host, this);
 
-    action->setTitle(tr("Destroying host '%1'...").arg(hostName));
+    action->SetTitle(tr("Destroying host '%1'...").arg(hostName));
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);
 
     // Run the action asynchronously
-    action->runAsync();
+    action->RunAsync();
 
-    this->mainWindow()->showStatusMessage(tr("Destroying host: %1").arg(hostName), 5000);
+    this->mainWindow()->ShowStatusMessage(tr("Destroying host: %1").arg(hostName), 5000);
 }
 
 QString DestroyHostCommand::MenuText() const

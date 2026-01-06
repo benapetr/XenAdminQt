@@ -64,8 +64,8 @@ void VbdCreateAndPlugAction::run()
         qDebug() << "[VbdCreateAndPlugAction] Session valid, proceeding with VBD creation";
 
         // Step 1: Create the VBD record
-        setDescription(QString("Creating VBD for '%1'...").arg(m_vdiName));
-        setPercentComplete(10);
+        SetDescription(QString("Creating VBD for '%1'...").arg(m_vdiName));
+        SetPercentComplete(10);
 
         qDebug() << "[VbdCreateAndPlugAction] Calling XenAPI::VBD::create...";
         QString vbdRef = XenAPI::VBD::create(session, m_vbdRecord);
@@ -76,22 +76,22 @@ void VbdCreateAndPlugAction::run()
         }
 
         qDebug() << "[VbdCreateAndPlugAction] VBD created successfully:" << vbdRef;
-        setResult(vbdRef);
-        setPercentComplete(40);
+        SetResult(vbdRef);
+        SetPercentComplete(40);
 
         // Step 2: For PV VMs with empty VBDs (CD drives), we're done
         if (!isVMHVM() && isVBDEmpty())
         {
             qDebug() << "[VbdCreateAndPlugAction] PV VM with empty VBD - no plug required";
-            setDescription(QString("'%1' attached successfully").arg(m_vdiName));
-            setPercentComplete(100);
+            SetDescription(QString("'%1' attached successfully").arg(m_vdiName));
+            SetPercentComplete(100);
             qDebug() << "[VbdCreateAndPlugAction] Operation completed successfully (no plug needed)";
             return;
         }
 
         // Step 3: Check if we can hot-plug the VBD
-        setDescription(QString("Checking if hot-plug is possible..."));
-        setPercentComplete(50);
+        SetDescription(QString("Checking if hot-plug is possible..."));
+        SetPercentComplete(50);
 
         qDebug() << "[VbdCreateAndPlugAction] Checking allowed operations for VBD...";
         QVariantList allowedOps = XenAPI::VBD::get_allowed_operations(session, vbdRef);
@@ -113,8 +113,8 @@ void VbdCreateAndPlugAction::run()
         {
             // Hot-plug the VBD
             qDebug() << "[VbdCreateAndPlugAction] Attempting to hot-plug VBD:" << vbdRef;
-            setDescription(QString("Hot-plugging '%1'...").arg(m_vdiName));
-            setPercentComplete(60);
+            SetDescription(QString("Hot-plugging '%1'...").arg(m_vdiName));
+            SetPercentComplete(60);
 
             QString taskRef = XenAPI::VBD::async_plug(session, vbdRef);
             if (taskRef.isEmpty())
@@ -130,8 +130,8 @@ void VbdCreateAndPlugAction::run()
             pollToCompletion(taskRef, 60, 100);
 
             qDebug() << "[VbdCreateAndPlugAction] Task polling completed";
-            setDescription(QString("'%1' attached and plugged successfully").arg(m_vdiName));
-            setPercentComplete(100);
+            SetDescription(QString("'%1' attached and plugged successfully").arg(m_vdiName));
+            SetPercentComplete(100);
             qDebug() << "[VbdCreateAndPlugAction] Operation completed successfully (hot-plugged)";
         } else
         {
@@ -161,8 +161,8 @@ void VbdCreateAndPlugAction::run()
                 emit showUserInstruction(instruction);
             }
 
-            setDescription(QString("'%1' attached (reboot required)").arg(m_vdiName));
-            setPercentComplete(100);
+            SetDescription(QString("'%1' attached (reboot required)").arg(m_vdiName));
+            SetPercentComplete(100);
             qDebug() << "[VbdCreateAndPlugAction] Operation completed successfully (reboot required)";
         }
 

@@ -34,7 +34,7 @@
 
 AddHostToPoolAction::AddHostToPoolAction(XenConnection* poolConnection,
                                          XenConnection* hostConnection,
-                                         Host* joiningHost,
+                                         QSharedPointer<Host> joiningHost,
                                          QObject* parent)
     : AsyncOperation(hostConnection, // Use host connection as primary (matches C# pattern)
                      QString("Adding host to pool"),
@@ -44,7 +44,7 @@ AddHostToPoolAction::AddHostToPoolAction(XenConnection* poolConnection,
       m_hostConnection(hostConnection),
       m_joiningHost(joiningHost)
 {
-    // Note: We don't use the Host* object in this simplified version
+    // Note: We don't use the Host object in this simplified version
     // The C# version uses it for licensing and AD checks
 }
 
@@ -52,8 +52,8 @@ void AddHostToPoolAction::run()
 {
     try
     {
-        setPercentComplete(0);
-        setDescription("Preparing to join pool...");
+        SetPercentComplete(0);
+        SetDescription("Preparing to join pool...");
 
         // Get pool coordinator address and credentials from pool's session
         // In C# they get Pool.Connection.Hostname and Pool.Connection.Username/Password
@@ -73,19 +73,19 @@ void AddHostToPoolAction::run()
             throw std::runtime_error("Missing pool connection credentials");
         }
 
-        setPercentComplete(5);
-        setDescription("Joining pool...");
+        SetPercentComplete(5);
+        SetDescription("Joining pool...");
 
-        // Call Pool.async_join from the JOINING HOST's session (matches C# pattern where
+        // Call Pool.async_join from the JOINING HOST's GetSession (matches C# pattern where
         // the action's primary connection is the joining host)
         // This is critical - Pool.async_join must be called from the host being joined, not the pool
-        QString taskRef = XenAPI::Pool::async_join(session(), coordinatorAddress, username, password);
+        QString taskRef = XenAPI::Pool::async_join(GetSession(), coordinatorAddress, username, password);
 
         // Poll to completion using host's session (already our primary session)
         pollToCompletion(taskRef, 5, 90);
 
-        setPercentComplete(90);
-        setDescription("Join complete");
+        SetPercentComplete(90);
+        SetDescription("Join complete");
 
         // TODO: In full implementation:
         // 1. Create new session to coordinator and clear non-shared SRs on the joined host
@@ -93,13 +93,13 @@ void AddHostToPoolAction::run()
         // 3. Synchronize AD configuration (FixAd)
         // 4. Remove the host's connection from ConnectionsManager
 
-        setDescription("Host added to pool successfully");
+        SetDescription("Host added to pool successfully");
 
     } catch (const std::exception& e)
     {
-        if (isCancelled())
+        if (IsCancelled())
         {
-            setDescription("Join cancelled");
+            SetDescription("Join cancelled");
         } else
         {
             setError(QString("Failed to add host to pool: %1").arg(e.what()));

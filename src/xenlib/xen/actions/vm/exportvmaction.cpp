@@ -54,19 +54,19 @@ ExportVmAction::ExportVmAction(XenConnection* connection,
     , httpClient_(nullptr)
     , progressThread_(nullptr)
 {
-    this->setSafeToExit(false);
+    this->SetSafeToExit(false);
     
     // Get VM name for title
     QString vmName = "VM";
     
-    if (this->connection() && this->connection()->GetCache())
+    if (this->GetConnection() && this->GetConnection()->GetCache())
     {
-        QSharedPointer<VM> vm = this->connection()->GetCache()->ResolveObject<VM>("vm", vmRef);
+        QSharedPointer<VM> vm = this->GetConnection()->GetCache()->ResolveObject<VM>("vm", vmRef);
         if (vm && vm->IsValid())
             vmName = vm->GetName();
     }
     
-    this->setTitle(tr("Export %1 to backup file").arg(vmName));
+    this->SetTitle(tr("Export %1 to backup file").arg(vmName));
 }
 
 ExportVmAction::~ExportVmAction()
@@ -98,10 +98,10 @@ void ExportVmAction::progressPoll()
 
 void ExportVmAction::run()
 {
-    this->setSafeToExit(false);
-    this->setDescription(tr("Export in progress..."));
+    this->SetSafeToExit(false);
+    this->SetDescription(tr("Export in progress..."));
 
-    if (!this->connection() || !this->session())
+    if (!this->GetConnection() || !this->GetSession())
     {
         this->setError("No connection or session available");
         this->setState(OperationState::Failed);
@@ -114,7 +114,7 @@ void ExportVmAction::run()
     
     try
     {
-        QVariantMap vmRecord = XenAPI::VM::get_record(this->session(), this->vmRef_);
+        QVariantMap vmRecord = XenAPI::VM::get_record(this->GetSession(), this->vmRef_);
         vmName = vmRecord.value("name_label").toString();
         vmUuid = vmRecord.value("uuid").toString();
     }
@@ -126,10 +126,10 @@ void ExportVmAction::run()
     }
 
     // Determine target host
-    QString targetHost = this->connection()->GetHostname();
+    QString targetHost = this->GetConnection()->GetHostname();
     if (!this->hostRef_.isEmpty())
     {
-        QSharedPointer<Host> host = this->connection()->GetCache()->ResolveObject<Host>("host", this->hostRef_);
+        QSharedPointer<Host> host = this->GetConnection()->GetCache()->ResolveObject<Host>("host", this->hostRef_);
         if (host && host->IsValid())
             targetHost = host->GetAddress();
     }
@@ -140,10 +140,10 @@ void ExportVmAction::run()
     QString taskRef;
     try
     {
-        taskRef = XenAPI::Task::Create(this->session(),
+        taskRef = XenAPI::Task::Create(this->GetSession(),
                                        "export",
                                        QString("Exporting %1 to backup file").arg(vmName));
-        this->setRelatedTaskRef(taskRef);
+        this->SetRelatedTaskRef(taskRef);
         
         qDebug() << "ExportVmAction: Created task" << taskRef;
     }
@@ -161,7 +161,7 @@ void ExportVmAction::run()
     // Prepare query parameters
     QMap<QString, QString> params;
     params["task_id"] = taskRef;
-    params["session_id"] = this->session()->getSessionId();
+    params["session_id"] = this->GetSession()->getSessionId();
     params["uuid"] = vmUuid;
 
     // Create HTTP client
@@ -178,12 +178,12 @@ void ExportVmAction::run()
         [this, vmName](qint64 bytes) {
             // Convert bytes to megabytes for display
             double mb = bytes / (1024.0 * 1024.0);
-            this->setDescription(tr("Downloading %1 (%2 MB)")
+            this->SetDescription(tr("Downloading %1 (%2 MB)")
                                  .arg(vmName)
                                  .arg(mb, 0, 'f', 1));
         },
         [this]() -> bool {
-            return this->isCancelled();
+            return this->IsCancelled();
         }
     );
 
@@ -205,7 +205,7 @@ void ExportVmAction::run()
         return;
     }
 
-    if (this->isCancelled())
+    if (this->IsCancelled())
     {
         QFile::remove(tmpFile);
         this->setState(OperationState::Cancelled);
@@ -215,8 +215,8 @@ void ExportVmAction::run()
     // Verify file if requested
     if (this->verify_)
     {
-        this->setDescription(tr("Verifying export..."));
-        this->setPercentComplete(50);
+        this->SetDescription(tr("Verifying export..."));
+        this->SetPercentComplete(50);
         
         // TODO: Implement TAR verification (requires archive library)
         // For now, just check file exists and has size > 0
@@ -229,7 +229,7 @@ void ExportVmAction::run()
             return;
         }
         
-        this->setPercentComplete(95);
+        this->SetPercentComplete(95);
     }
 
     // Rename temp file to final name
@@ -244,7 +244,7 @@ void ExportVmAction::run()
         return;
     }
 
-    this->setDescription(tr("Export successful"));
-    this->setPercentComplete(100);
+    this->SetDescription(tr("Export successful"));
+    this->SetPercentComplete(100);
     this->setState(OperationState::Completed);
 }

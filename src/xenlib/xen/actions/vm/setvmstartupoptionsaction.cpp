@@ -56,33 +56,33 @@ void SetVMStartupOptionsAction::run()
             const QString& vmRef = it.key();
             const QVariantMap& options = it.value();
 
-            setDescription(QString("Setting VM startup options"));
+            SetDescription(QString("Setting VM startup options"));
 
             if (options.contains("order"))
-                XenAPI::VM::set_order(session(), vmRef, options.value("order").toLongLong());
+                XenAPI::VM::set_order(GetSession(), vmRef, options.value("order").toLongLong());
             if (options.contains("start_delay"))
-                XenAPI::VM::set_start_delay(session(), vmRef, options.value("start_delay").toLongLong());
+                XenAPI::VM::set_start_delay(GetSession(), vmRef, options.value("start_delay").toLongLong());
 
             processed++;
-            setPercentComplete(static_cast<int>(processed * (60.0 / qMax(totalVMs, 1))));
+            SetPercentComplete(static_cast<int>(processed * (60.0 / qMax(totalVMs, 1))));
 
-            if (isCancelled())
+            if (IsCancelled())
                 return;
         }
 
         if (!m_poolRef.isEmpty())
         {
-            QString taskRef = XenAPI::Pool::async_sync_database(session());
+            QString taskRef = XenAPI::Pool::async_sync_database(GetSession());
             pollToCompletion(taskRef, 60, 100);
         }
 
-        setDescription("Completed");
+        SetDescription("Completed");
     }
     catch (const std::exception& e)
     {
-        if (isCancelled())
+        if (IsCancelled())
         {
-            setDescription("Cancelled");
+            SetDescription("Cancelled");
         }
         else
         {

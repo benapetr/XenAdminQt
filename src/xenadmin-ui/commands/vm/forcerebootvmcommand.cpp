@@ -100,7 +100,7 @@ void ForceRebootVMCommand::Run()
     }
 
     // Create VM object for action (action will own and delete it)
-    VM* vmForAction = new VM(conn, vm->OpaqueRef());
+    QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vm->OpaqueRef()));
 
     // Create the hard reboot action
     VMHardReboot* action = new VMHardReboot(vmForAction, this->mainWindow());
@@ -114,7 +114,7 @@ void ForceRebootVMCommand::Run()
     });
 
     // Run action asynchronously (matches C# pattern)
-    action->runAsync();
+    action->RunAsync();
 }
 
 QString ForceRebootVMCommand::MenuText() const

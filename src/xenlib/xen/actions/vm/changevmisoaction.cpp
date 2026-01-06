@@ -54,10 +54,10 @@ ChangeVMISOAction::ChangeVMISOAction(XenConnection* connection,
     // Add RBAC methods to check
     // Check if we need to eject first by getting VBD status
     // For now, we'll always try to eject if VBD is not empty
-    addApiMethodToRoleCheck("VBD.eject");
+    AddApiMethodToRoleCheck("VBD.eject");
 
     if (!m_vdiRef.isEmpty())
-        addApiMethodToRoleCheck("VBD.insert");
+        AddApiMethodToRoleCheck("VBD.insert");
 }
 
 ChangeVMISOAction::~ChangeVMISOAction()
@@ -72,7 +72,7 @@ void ChangeVMISOAction::run()
         return;
     }
 
-    Session* session = this->session();
+    Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -84,7 +84,7 @@ void ChangeVMISOAction::run()
     params << session->getSessionId() << this->m_vbdRef;
 
     XenRpcAPI api(session);
-    QByteArray jsonRequest = api.buildJsonRpcCall("VBD.get_record", params);
+    QByteArray jsonRequest = api.BuildJsonRpcCall("VBD.get_record", params);
     QByteArray response = session->sendApiRequest(jsonRequest);
 
     if (response.isEmpty())
@@ -93,14 +93,14 @@ void ChangeVMISOAction::run()
         return;
     }
 
-    QVariant vbdData = api.parseJsonRpcResponse(response);
+    QVariant vbdData = api.ParseJsonRpcResponse(response);
     QVariantMap vbdRecord = vbdData.toMap();
     m_isEmpty = vbdRecord.value("empty", true).toBool();
 
     // Step 1: Eject if not empty
     if (!m_isEmpty)
     {
-        setDescription("Ejecting current ISO...");
+        SetDescription("Ejecting current ISO...");
 
         QString taskRefStr;
         try
@@ -113,17 +113,17 @@ void ChangeVMISOAction::run()
             return;
         }
 
-        setRelatedTaskRef(taskRefStr);
+        SetRelatedTaskRef(taskRefStr);
         pollToCompletion(taskRefStr, 0, m_vdiRef.isEmpty() ? 100 : 50);
 
-        if (hasError())
+        if (HasError())
             return;
     }
 
     // Step 2: Insert new ISO if specified
     if (!m_vdiRef.isEmpty())
     {
-        setDescription("Inserting ISO...");
+        SetDescription("Inserting ISO...");
 
         QString taskRefStr;
         try
@@ -136,17 +136,17 @@ void ChangeVMISOAction::run()
             return;
         }
 
-        setRelatedTaskRef(taskRefStr);
+        SetRelatedTaskRef(taskRefStr);
         pollToCompletion(taskRefStr, m_isEmpty ? 0 : 50, 100);
 
-        if (hasError())
+        if (HasError())
             return;
 
-        setDescription("ISO loaded successfully");
+        SetDescription("ISO loaded successfully");
     } else
     {
-        setDescription("ISO ejected successfully");
+        SetDescription("ISO ejected successfully");
     }
 
-    setPercentComplete(100);
+    SetPercentComplete(100);
 }

@@ -41,9 +41,9 @@ namespace XenAPI
         params << session->getSessionId() << sessionRef;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("session.get_is_local_superuser", params);
+        QByteArray request = api.BuildJsonRpcCall("session.get_is_local_superuser", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toBool();
+        return api.ParseJsonRpcResponse(response).toBool();
     }
 
     QString SessionAPI::get_subject(Session* session, const QString& sessionRef)
@@ -55,9 +55,9 @@ namespace XenAPI
         params << session->getSessionId() << sessionRef;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("session.get_subject", params);
+        QByteArray request = api.BuildJsonRpcCall("session.get_subject", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     QString SessionAPI::get_auth_user_sid(Session* session, const QString& sessionRef)
@@ -69,9 +69,9 @@ namespace XenAPI
         params << session->getSessionId() << sessionRef;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("session.get_auth_user_sid", params);
+        QByteArray request = api.BuildJsonRpcCall("session.get_auth_user_sid", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     QStringList SessionAPI::get_rbac_permissions(Session* session, const QString& sessionRef)
@@ -83,10 +83,10 @@ namespace XenAPI
         params << session->getSessionId() << sessionRef;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("session.get_rbac_permissions", params);
+        QByteArray request = api.BuildJsonRpcCall("session.get_rbac_permissions", params);
         QByteArray response = session->sendApiRequest(request);
         
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
         if (result.canConvert<QVariantList>())
         {
             QStringList permissions;

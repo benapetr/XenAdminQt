@@ -32,8 +32,8 @@
 #include "../../xenapi/xenapi_VM.h"
 #include <QtCore/QDebug>
 
-VMStartOnAction::VMStartOnAction(VM* vm,
-                                 Host* hostToStart,
+VMStartOnAction::VMStartOnAction(QSharedPointer<VM> vm,
+                                 QSharedPointer<Host> hostToStart,
                                  WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
                                  StartDiagnosisForm startDiagnosisForm,
                                  QObject* parent)
@@ -44,20 +44,20 @@ VMStartOnAction::VMStartOnAction(VM* vm,
                             parent),
       m_hostToStart(hostToStart)
 {
-    addApiMethodToRoleCheck("vm.start_on");
+    AddApiMethodToRoleCheck("vm.start_on");
 }
 
 void VMStartOnAction::run()
 {
-    setDescription(tr("Starting on host..."));
+    SetDescription(tr("Starting on host..."));
     startOrResumeVmWithHa(0, 100);
-    setDescription(tr("Started"));
+    SetDescription(tr("Started"));
 }
 
 void VMStartOnAction::doAction(int start, int end)
 {
     // Matches C# VM.async_start_on(Session, VM.opaque_ref, Host.opaque_ref, false, false)
-    VM* vmObj = vm();
+    QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)
     {
         setError("VM object is null");
@@ -70,7 +70,7 @@ void VMStartOnAction::doAction(int start, int end)
         return;
     }
 
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -86,11 +86,11 @@ void VMStartOnAction::doAction(int start, int end)
         return;
     }
 
-    setRelatedTaskRef(taskRef);
+    SetRelatedTaskRef(taskRef);
     pollToCompletion(taskRef, start, end);
 }
 
 VMStartAbstractAction* VMStartOnAction::clone()
 {
-    return new VMStartOnAction(vm(), m_hostToStart, m_warningDialogHAInvalidConfig, m_startDiagnosisForm);
+    return new VMStartOnAction(GetVM(), m_hostToStart, m_warningDialogHAInvalidConfig, m_startDiagnosisForm);
 }

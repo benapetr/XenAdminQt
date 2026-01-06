@@ -39,19 +39,19 @@ SrRefreshAction::SrRefreshAction(XenConnection* connection, const QString& srRef
     : AsyncOperation(connection, QString("Refreshing Storage Repository"), QString(), parent), m_srRef(srRef)
 {
     QString srName = getSRName();
-    setTitle(QString("Refreshing storage repository '%1'").arg(srName));
-    setDescription(QString("Scanning '%1' for changes...").arg(srName));
+    SetTitle(QString("Refreshing storage repository '%1'").arg(srName));
+    SetDescription(QString("Scanning '%1' for changes...").arg(srName));
 }
 
 QString SrRefreshAction::getSRName() const
 {
-    if (!connection())
+    if (!GetConnection())
         return "Storage Repository";
 
     // Try to get SR name from cache
-    if (connection()->GetCache())
+    if (GetConnection()->GetCache())
     {
-        QVariantMap srData = connection()->GetCache()->ResolveObjectData("sr", m_srRef);
+        QVariantMap srData = GetConnection()->GetCache()->ResolveObjectData("sr", m_srRef);
         QString name = srData.value("name_label", "").toString();
         if (!name.isEmpty())
             return name;
@@ -62,7 +62,7 @@ QString SrRefreshAction::getSRName() const
 
 void SrRefreshAction::run()
 {
-    if (!connection() || m_srRef.isEmpty())
+    if (!GetConnection() || m_srRef.isEmpty())
     {
         setError("Invalid connection or SR reference");
         return;
@@ -70,7 +70,7 @@ void SrRefreshAction::run()
 
     try
     {
-        Session* session = connection()->GetSession();
+        Session* session = GetConnection()->GetSession();
         if (!session)
         {
             throw std::runtime_error("No valid session");
@@ -80,7 +80,7 @@ void SrRefreshAction::run()
         // C# equivalent: SR.scan(Session, SR.opaque_ref);
         XenAPI::SR::scan(session, m_srRef);
 
-        setDescription("Completed");
+        SetDescription("Completed");
     } catch (const std::exception& e)
     {
         setError(QString("Failed to scan SR: %1").arg(e.what()));

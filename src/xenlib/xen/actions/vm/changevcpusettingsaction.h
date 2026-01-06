@@ -44,28 +44,28 @@ class ChangeVCPUSettingsAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct VCPU settings change action
-     * @param connection XenServer connection
-     * @param vmRef VM opaque reference
-     * @param vcpusMax Maximum number of VCPUs
-     * @param vcpusAtStartup Number of VCPUs to enable at startup
-     * @param parent Parent QObject
-     */
-    explicit ChangeVCPUSettingsAction(XenConnection* connection,
-                                      const QString& vmRef,
-                                      qint64 vcpusMax,
-                                      qint64 vcpusAtStartup,
-                                      QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct VCPU settings change action
+         * @param connection XenServer connection
+         * @param vmRef VM opaque reference
+         * @param vcpusMax Maximum number of VCPUs
+         * @param vcpusAtStartup Number of VCPUs to enable at startup
+         * @param parent Parent QObject
+         */
+        explicit ChangeVCPUSettingsAction(XenConnection* connection,
+                                          const QString& vmRef,
+                                          qint64 vcpusMax,
+                                          qint64 vcpusAtStartup,
+                                          QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_vmRef;
-    qint64 m_vcpusMax;
-    qint64 m_vcpusAtStartup;
+    private:
+        QString m_vmRef;
+        qint64 m_vcpusMax;
+        qint64 m_vcpusAtStartup;
 };
 
 #endif // CHANGEVCPUSETTINGSACTION_H

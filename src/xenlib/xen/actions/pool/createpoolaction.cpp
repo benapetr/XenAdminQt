@@ -58,8 +58,8 @@ void CreatePoolAction::run()
 {
     try
     {
-        setPercentComplete(0);
-        setDescription("Creating pool...");
+        SetPercentComplete(0);
+        SetDescription("Creating pool...");
 
         // Get pool reference from cache
         // There should be one pool reference for a standalone coordinator
@@ -70,19 +70,19 @@ void CreatePoolAction::run()
         }
         QString poolRef = poolRefs.first();
 
-        setPercentComplete(10);
-        setDescription("Setting pool name and description...");
+        SetPercentComplete(10);
+        SetDescription("Setting pool name and description...");
 
         // Set pool name and description on the coordinator
-        XenAPI::Pool::set_name_label(session(), poolRef, m_name);
-        XenAPI::Pool::set_name_description(session(), poolRef, m_description);
+        XenAPI::Pool::set_name_label(GetSession(), poolRef, m_name);
+        XenAPI::Pool::set_name_description(GetSession(), poolRef, m_description);
 
-        setPercentComplete(20);
+        SetPercentComplete(20);
 
         // If no members to add, we're done
         if (m_members.isEmpty())
         {
-            setDescription("Pool created successfully");
+            SetDescription("Pool created successfully");
             return;
         }
 
@@ -98,7 +98,7 @@ void CreatePoolAction::run()
             int progressStart = 20 + static_cast<int>(i * progressPerMember);
             int progressEnd = 20 + static_cast<int>((i + 1) * progressPerMember);
 
-            setDescription(QString("Adding member %1 of %2...").arg(i + 1).arg(m_members.size()));
+            SetDescription(QString("Adding member %1 of %2...").arg(i + 1).arg(m_members.size()));
 
             // Get coordinator credentials from session
             QString coordinatorAddress = m_coordinatorConnection->GetHostname();
@@ -112,31 +112,31 @@ void CreatePoolAction::run()
             QString password = coordinatorSession->getPassword();
 
             // Call Pool.async_join from the member's session
-            // We need to use member's connection temporarily to poll correctly
-            XenConnection* oldConnection = connection();
-            setConnection(memberConnection);
+            // We need to use member's GetConnection temporarily to poll correctly
+            XenConnection* oldConnection = GetConnection();
+            SetConnection(memberConnection);
 
-            QString taskRef = XenAPI::Pool::async_join(session(),
+            QString taskRef = XenAPI::Pool::async_join(GetSession(),
                                                        coordinatorAddress, username, password);
 
             // Poll using member's session
             pollToCompletion(taskRef, progressStart, progressEnd);
 
             // Restore original connection
-            setConnection(oldConnection);
+            SetConnection(oldConnection);
 
-            setDescription(QString("Member %1 of %2 joined successfully").arg(i + 1).arg(m_members.size()));
+            SetDescription(QString("Member %1 of %2 joined successfully").arg(i + 1).arg(m_members.size()));
 
             // TODO: Drop connection and remove from ConnectionsManager
         }
 
-        setDescription("Pool created successfully");
+        SetDescription("Pool created successfully");
 
     } catch (const std::exception& e)
     {
-        if (isCancelled())
+        if (IsCancelled())
         {
-            setDescription("Pool creation cancelled");
+            SetDescription("Pool creation cancelled");
         } else
         {
             setError(QString("Failed to create pool: %1").arg(e.what()));

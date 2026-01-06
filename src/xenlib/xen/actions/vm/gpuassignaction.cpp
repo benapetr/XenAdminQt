@@ -49,11 +49,11 @@ void GpuAssignAction::run()
 {
     try
     {
-        setPercentComplete(0);
-        setDescription("Retrieving VM configuration...");
+        SetPercentComplete(0);
+        SetDescription("Retrieving VM configuration...");
 
         // Get current VM data from cache
-        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         if (vmData.isEmpty())
         {
             throw std::runtime_error("VM not found in cache");
@@ -83,20 +83,20 @@ void GpuAssignAction::run()
         // Remove VGPUs that are no longer needed
         vgpusToRemove.subtract(vgpusToKeep);
 
-        setPercentComplete(20);
+        SetPercentComplete(20);
 
         int i = 0;
         int totalToRemove = vgpusToRemove.size();
 
         for (const QString& vgpuRef : vgpusToRemove)
         {
-            setDescription(QString("Removing VGPU %1 of %2...").arg(i + 1).arg(totalToRemove));
-            XenAPI::VGPU::destroy(session(), vgpuRef);
+            SetDescription(QString("Removing VGPU %1 of %2...").arg(i + 1).arg(totalToRemove));
+            XenAPI::VGPU::destroy(GetSession(), vgpuRef);
             i++;
-            setPercentComplete(20 + (30 * i / qMax(1, totalToRemove)));
+            SetPercentComplete(20 + (30 * i / qMax(1, totalToRemove)));
         }
 
-        setPercentComplete(50);
+        SetPercentComplete(50);
 
         // Add new VGPUs (those without opaque_ref)
         QList<QVariantMap> vgpusToAdd;
@@ -115,7 +115,7 @@ void GpuAssignAction::run()
 
         for (const QVariantMap& vgpuMap : vgpusToAdd)
         {
-            setDescription(QString("Adding VGPU %1 of %2...").arg(i + 1).arg(totalToAdd));
+            SetDescription(QString("Adding VGPU %1 of %2...").arg(i + 1).arg(totalToAdd));
 
             QString gpuGroupRef = vgpuMap.value("GPU_group").toString();
             QString vgpuTypeRef = vgpuMap.value("type").toString();
@@ -124,11 +124,11 @@ void GpuAssignAction::run()
             addGpu(gpuGroupRef, vgpuTypeRef, device);
 
             i++;
-            setPercentComplete(50 + (50 * i / qMax(1, totalToAdd)));
+            SetPercentComplete(50 + (50 * i / qMax(1, totalToAdd)));
         }
 
-        setPercentComplete(100);
-        setDescription("GPU configuration completed successfully");
+        SetPercentComplete(100);
+        SetDescription("GPU configuration completed successfully");
 
     } catch (const std::exception& e)
     {
@@ -149,13 +149,13 @@ void GpuAssignAction::addGpu(const QString& gpuGroupRef, const QString& vgpuType
     if (vgpuTypeRef.isEmpty() || vgpuTypeRef == "OpaqueRef:NULL")
     {
         // Create without type (basic VGPU)
-        taskRef = XenAPI::VGPU::async_create(session(), m_vmRef, gpuGroupRef, device, otherConfig);
+        taskRef = XenAPI::VGPU::async_create(GetSession(), m_vmRef, gpuGroupRef, device, otherConfig);
     } else
     {
         // Create with specific VGPU type
-        taskRef = XenAPI::VGPU::async_create(session(), m_vmRef, gpuGroupRef, device, otherConfig, vgpuTypeRef);
+        taskRef = XenAPI::VGPU::async_create(GetSession(), m_vmRef, gpuGroupRef, device, otherConfig, vgpuTypeRef);
     }
 
     // Poll the task to completion
-    pollToCompletion(taskRef, percentComplete(), percentComplete());
+    pollToCompletion(taskRef, GetPercentComplete(), GetPercentComplete());
 }

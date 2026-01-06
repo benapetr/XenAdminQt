@@ -53,10 +53,10 @@ VMCrossPoolMigrateAction::VMCrossPoolMigrateAction(XenConnection* sourceConnecti
       m_mapping(mapping),
       m_copy(copy)
 {
-    addApiMethodToRoleCheck("Host.migrate_receive");
-    addApiMethodToRoleCheck("VM.migrate_send");
-    addApiMethodToRoleCheck("VM.async_migrate_send");
-    addApiMethodToRoleCheck("VM.assert_can_migrate");
+    AddApiMethodToRoleCheck("Host.migrate_receive");
+    AddApiMethodToRoleCheck("VM.migrate_send");
+    AddApiMethodToRoleCheck("VM.async_migrate_send");
+    AddApiMethodToRoleCheck("VM.assert_can_migrate");
 }
 
 QString VMCrossPoolMigrateAction::GetTitle(const QVariantMap& vmData, const QVariantMap& hostData, bool copy)
@@ -72,7 +72,7 @@ QString VMCrossPoolMigrateAction::GetTitle(const QVariantMap& vmData, const QVar
 
 void VMCrossPoolMigrateAction::run()
 {
-    if (!connection() || !connection()->IsConnected())
+    if (!GetConnection() || !GetConnection()->IsConnected())
     {
         setError("Not connected to server");
         return;
@@ -86,10 +86,10 @@ void VMCrossPoolMigrateAction::run()
 
     try
     {
-        setPercentComplete(0);
-        setDescription("Preparing migration...");
+        SetPercentComplete(0);
+        SetDescription("Preparing migration...");
 
-        XenCache* sourceCache = connection()->GetCache();
+        XenCache* sourceCache = GetConnection()->GetCache();
         XenCache* destCache = m_destinationConnection->GetCache();
         if (!sourceCache || !destCache)
             throw std::runtime_error("Cache not available");
@@ -102,8 +102,8 @@ void VMCrossPoolMigrateAction::run()
         if (hostData.isEmpty())
             throw std::runtime_error("Destination host not found in cache");
 
-        setTitle(GetTitle(vmData, hostData, m_copy));
-        setDescription(m_copy ? "Copying VM..." : "Migrating VM...");
+        SetTitle(GetTitle(vmData, hostData, m_copy));
+        SetDescription(m_copy ? "Copying VM..." : "Migrating VM...");
 
         XenAPI::Session* destSession = XenAPI::Session::DuplicateSession(m_destinationConnection->GetSession(), nullptr);
         if (!destSession || !destSession->IsLoggedIn())
@@ -113,7 +113,7 @@ void VMCrossPoolMigrateAction::run()
                                                              m_destinationHostRef,
                                                              m_transferNetworkRef,
                                                              QVariantMap());
-        setPercentComplete(5);
+        SetPercentComplete(5);
 
         QVariantMap options;
         if (m_copy)
@@ -127,7 +127,7 @@ void VMCrossPoolMigrateAction::run()
         for (auto it = m_mapping.vifs.cbegin(); it != m_mapping.vifs.cend(); ++it)
             vifMap.insert(it.key(), it.value());
 
-        QString taskRef = XenAPI::VM::async_migrate_send(session(),
+        QString taskRef = XenAPI::VM::async_migrate_send(GetSession(),
                                                          m_vmRef,
                                                          sendData,
                                                          true,
@@ -137,7 +137,7 @@ void VMCrossPoolMigrateAction::run()
 
         pollToCompletion(taskRef, 5, 100);
 
-        setDescription(m_copy ? "VM copied successfully" : "VM migrated successfully");
+        SetDescription(m_copy ? "VM copied successfully" : "VM migrated successfully");
     }
     catch (const Failure& failure)
     {

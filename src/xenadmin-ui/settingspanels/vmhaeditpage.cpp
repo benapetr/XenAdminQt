@@ -172,10 +172,10 @@ AsyncOperation* VMHAEditPage::SaveSettings()
     {
         QMap<QString, QVariantMap> settings = this->buildVmStartupOptions(true);
         auto* action = new SetHaPrioritiesAction(this->m_connection, this->m_poolRef, settings, this->m_ntol, this);
-        action->addApiMethodToRoleCheck("pool.set_ha_host_failures_to_tolerate");
-        action->addApiMethodToRoleCheck("pool.sync_database");
-        action->addApiMethodToRoleCheck("vm.set_ha_restart_priority");
-        action->addApiMethodToRoleCheck("pool.ha_compute_hypothetical_max_host_failures_to_tolerate");
+        action->AddApiMethodToRoleCheck("pool.set_ha_host_failures_to_tolerate");
+        action->AddApiMethodToRoleCheck("pool.sync_database");
+        action->AddApiMethodToRoleCheck("vm.set_ha_restart_priority");
+        action->AddApiMethodToRoleCheck("pool.ha_compute_hypothetical_max_host_failures_to_tolerate");
         return action;
     }
 
@@ -183,9 +183,9 @@ AsyncOperation* VMHAEditPage::SaveSettings()
     {
         QMap<QString, QVariantMap> settings = this->buildVmStartupOptions(false);
         auto* action = new SetVMStartupOptionsAction(this->m_connection, this->m_poolRef, settings, this);
-        action->addApiMethodToRoleCheck("VM.set_order");
-        action->addApiMethodToRoleCheck("VM.set_start_delay");
-        action->addApiMethodToRoleCheck("Pool.async_sync_database");
+        action->AddApiMethodToRoleCheck("VM.set_order");
+        action->AddApiMethodToRoleCheck("VM.set_start_delay");
+        action->AddApiMethodToRoleCheck("Pool.async_sync_database");
         return action;
     }
 

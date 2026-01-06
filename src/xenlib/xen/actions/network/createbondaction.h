@@ -54,64 +54,64 @@ class CreateBondAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection
-     * @param networkName Name for the new bond network
-     * @param pifRefs List of PIF references on coordinator to bond
-     * @param autoplug Whether to mark network as AutoPlug
-     * @param mtu MTU for the bond
-     * @param bondMode Bond mode (e.g., "balance-slb", "lacp")
-     * @param hashingAlgorithm Hashing algorithm for LACP mode (e.g., "src_mac", "tcpudp_ports")
-     * @param parent Parent QObject
-     */
-    CreateBondAction(XenConnection* connection,
-                     const QString& networkName,
-                     const QStringList& pifRefs,
-                     bool autoplug,
-                     qint64 mtu,
-                     const QString& bondMode,
-                     const QString& hashingAlgorithm,
-                     QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection
+         * @param networkName Name for the new bond network
+         * @param pifRefs List of PIF references on coordinator to bond
+         * @param autoplug Whether to mark network as AutoPlug
+         * @param mtu MTU for the bond
+         * @param bondMode Bond mode (e.g., "balance-slb", "lacp")
+         * @param hashingAlgorithm Hashing algorithm for LACP mode (e.g., "src_mac", "tcpudp_ports")
+         * @param parent Parent QObject
+         */
+        CreateBondAction(XenConnection* connection,
+                         const QString& networkName,
+                         const QStringList& pifRefs,
+                         bool autoplug,
+                         qint64 mtu,
+                         const QString& bondMode,
+                         const QString& hashingAlgorithm,
+                         QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    struct NewBond
-    {
-        QString bondRef;
-        QString bondInterfaceRef;
-        QStringList memberRefs;
-    };
+    private:
+        struct NewBond
+        {
+            QString bondRef;
+            QString bondInterfaceRef;
+            QStringList memberRefs;
+        };
 
-    /**
-     * @brief Get hosts ordered with coordinator last
-     * @return List of host records
-     */
-    QList<QVariantMap> getHostsCoordinatorLast() const;
+        /**
+         * @brief Get hosts ordered with coordinator last
+         * @return List of host records
+         */
+        QList<QVariantMap> getHostsCoordinatorLast() const;
 
-    /**
-     * @brief Find PIFs on a host matching coordinator PIF device names
-     * @param hostRef Host opaque reference
-     * @return List of matching PIF references
-     */
-    QStringList findMatchingPIFsOnHost(const QString& hostRef) const;
+        /**
+         * @brief Find PIFs on a host matching coordinator PIF device names
+         * @param hostRef Host opaque reference
+         * @return List of matching PIF references
+         */
+        QStringList findMatchingPIFsOnHost(const QString& hostRef) const;
 
-    /**
-     * @brief Cleanup on error: revert management, destroy bonds, destroy network
-     */
-    void cleanupOnError();
+        /**
+         * @brief Cleanup on error: revert management, destroy bonds, destroy network
+         */
+        void cleanupOnError();
 
-    QString m_networkName;
-    QStringList m_pifRefs;
-    bool m_autoplug;
-    qint64 m_mtu;
-    QString m_bondMode;
-    QString m_hashingAlgorithm;
-    QString m_networkRef;
-    QList<NewBond> m_newBonds;
+        QString m_networkName;
+        QStringList m_pifRefs;
+        bool m_autoplug;
+        qint64 m_mtu;
+        QString m_bondMode;
+        QString m_hashingAlgorithm;
+        QString m_networkRef;
+        QList<NewBond> m_newBonds;
 };
 
 #endif // CREATEBONDACTION_H

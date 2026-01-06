@@ -87,30 +87,12 @@ void EjectHostFromPoolCommand::Run()
     XenConnection* connection = host->GetConnection();
     if (!connection)
     {
-        QMessageBox::critical(this->mainWindow(), "Eject Host",
-                              "No active connection.");
+        QMessageBox::critical(this->mainWindow(), "Eject Host", "No active connection.");
         return;
     }
-
-    QString poolRef = host->PoolRef();
-    if (poolRef.isEmpty())
-    {
-        QMessageBox::critical(this->mainWindow(), "Eject Host",
-                              "Could not find pool.");
-        return;
-    }
-
-    // Create Pool and Host objects for the action (action expects raw pointers)
-    // These will be owned by the action and deleted when action completes
-    Pool* poolObj = new Pool(connection, poolRef, nullptr);
-    Host* hostObj = new Host(connection, hostRef, nullptr);
 
     // Create and run the EjectHostFromPoolAction
-    EjectHostFromPoolAction* action = new EjectHostFromPoolAction(
-        connection,
-        poolObj,
-        hostObj,
-        this);
+    EjectHostFromPoolAction* action = new EjectHostFromPoolAction(connection, host->GetPool(), host, this);
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);
@@ -132,8 +114,8 @@ void EjectHostFromPoolCommand::Run()
     });
 
     // Run action asynchronously
-    action->runAsync();
-    this->mainWindow()->showStatusMessage(QString("Ejecting '%1' from pool...").arg(hostName), 0);
+    action->RunAsync();
+    this->mainWindow()->ShowStatusMessage(QString("Ejecting '%1' from pool...").arg(hostName), 0);
 }
 
 QString EjectHostFromPoolCommand::MenuText() const

@@ -58,35 +58,35 @@ namespace Xen
             ~ConnectionsManager();
 
             // Connection management
-            void addConnection(XenConnection* connection);
-            void removeConnection(XenConnection* connection);
-            bool containsConnection(XenConnection* connection) const;
+            void AddConnection(XenConnection* connection);
+            void RemoveConnection(XenConnection* connection);
+            bool ContainsConnection(XenConnection* connection) const;
 
             // Connection queries
-            XenConnection* findConnectionByHostname(const QString& hostname, int port = -1) const;
-            QList<XenConnection*> getConnectedConnections() const;
-            QList<XenConnection*> getAllConnections() const;
-            int connectionCount() const;
+            XenConnection* FindConnectionByHostname(const QString& hostname, int port = -1) const;
+            QList<XenConnection*> GetConnectedConnections() const;
+            QList<XenConnection*> GetAllConnections() const;
+            int ConnectionCount() const;
 
             // Session pooling - get or create duplicate session for long-running operations
-            XenAPI::Session *acquireSession(XenConnection* connection);
-            void releaseSession(XenAPI::Session *session);
+            XenAPI::Session *AcquireSession(XenConnection* connection);
+            void ReleaseSession(XenAPI::Session *session);
 
             // Connection state management
-            void connectAll();
-            void disconnectAll();
-            void cancelAllOperations(XenConnection* connection = nullptr);
+            void ConnectAll();
+            void DisconnectAll();
+            void CancelAllOperations(XenConnection* connection = nullptr);
 
             // Monitoring and health
-            void startConnectionMonitoring();
-            void stopConnectionMonitoring();
-            bool isMonitoring() const;
+            void StartConnectionMonitoring();
+            void StopConnectionMonitoring();
+            bool IsMonitoring() const;
 
             // Reconnection management
-            void enableAutoReconnection(bool enabled);
-            bool isAutoReconnectionEnabled() const;
-            void reconnectConnection(XenConnection* connection);
-            void reconnectAll();
+            void EnableAutoReconnection(bool enabled);
+            bool IsAutoReconnectionEnabled() const;
+            void ReconnectConnection(XenConnection* connection);
+            void ReconnectAll();
 
         signals:
             void connectionAdded(XenConnection* connection);

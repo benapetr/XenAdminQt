@@ -52,40 +52,40 @@ UnplugVIFAction::UnplugVIFAction(XenConnection* connection,
     QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", m_vmRef);
     m_vmName = vmData.value("name_label").toString();
 
-    setTitle(QString("Unplugging VIF on %1").arg(m_vmName));
-    setDescription(QString("Unplugging virtual network interface on %1").arg(m_vmName));
+    SetTitle(QString("Unplugging VIF on %1").arg(m_vmName));
+    SetDescription(QString("Unplugging virtual network interface on %1").arg(m_vmName));
 }
 
 void UnplugVIFAction::run()
 {
     try
     {
-        setDescription("Unplugging VIF...");
+        SetDescription("Unplugging VIF...");
 
         // Check if VM is running
-        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         QString powerState = vmData.value("power_state").toString();
 
         if (powerState != "Running")
         {
-            setDescription("VIF will be unplugged when VM stops");
-            setPercentComplete(100);
+            SetDescription("VIF will be unplugged when VM stops");
+            SetPercentComplete(100);
             return;
         }
 
         // Check if unplug operation is allowed
-        QStringList allowedOps = XenAPI::VIF::get_allowed_operations(session(), m_vifRef);
+        QStringList allowedOps = XenAPI::VIF::get_allowed_operations(GetSession(), m_vifRef);
 
         if (allowedOps.contains("unplug"))
         {
-            XenAPI::VIF::unplug(session(), m_vifRef);
-            setPercentComplete(100);
-            setDescription("VIF unplugged");
+            XenAPI::VIF::unplug(GetSession(), m_vifRef);
+            SetPercentComplete(100);
+            SetDescription("VIF unplugged");
             qDebug() << "VIF unplugged successfully";
         } else
         {
-            setDescription("Unplug operation not allowed");
-            setPercentComplete(100);
+            SetDescription("Unplug operation not allowed");
+            SetPercentComplete(100);
             qWarning() << "VIF unplug operation not in allowed operations";
         }
 

@@ -59,10 +59,10 @@ void VMSnapshotCreateAction::run()
 
     try
     {
-        setDescription("Creating snapshot...");
-        setPercentComplete(0);
+        SetDescription("Creating snapshot...");
+        SetPercentComplete(0);
 
-        if (!session())
+        if (!GetSession())
         {
             setError("No session available");
             qWarning() << "VMSnapshotCreateAction: No session available";
@@ -76,18 +76,18 @@ void VMSnapshotCreateAction::run()
         {
         case QUIESCED_DISK:
             qDebug() << "Creating quiesced disk snapshot:" << m_newName;
-            taskRef = XenAPI::VM::async_snapshot_with_quiesce(session(), m_vmRef, m_newName);
+            taskRef = XenAPI::VM::async_snapshot_with_quiesce(GetSession(), m_vmRef, m_newName);
             break;
 
         case DISK_AND_MEMORY:
             qDebug() << "Creating disk and memory checkpoint:" << m_newName;
-            taskRef = XenAPI::VM::async_checkpoint(session(), m_vmRef, m_newName);
+            taskRef = XenAPI::VM::async_checkpoint(GetSession(), m_vmRef, m_newName);
             break;
 
         case DISK:
         default:
             qDebug() << "Creating disk snapshot:" << m_newName;
-            taskRef = XenAPI::VM::async_snapshot(session(), m_vmRef, m_newName);
+            taskRef = XenAPI::VM::async_snapshot(GetSession(), m_vmRef, m_newName);
             break;
         }
 
@@ -105,7 +105,7 @@ void VMSnapshotCreateAction::run()
         pollToCompletion(taskRef, 0, 90);
 
         // Get the snapshot reference from task result
-        m_snapshotRef = result();
+        m_snapshotRef = GetResult();
 
         if (m_snapshotRef.isEmpty())
         {
@@ -116,27 +116,27 @@ void VMSnapshotCreateAction::run()
 
         qDebug() << "Snapshot created:" << m_snapshotRef;
 
-        setPercentComplete(90);
+        SetPercentComplete(90);
 
         // Set the description on the snapshot
         if (!m_newDescription.isEmpty())
         {
-            setDescription("Setting snapshot description...");
-            XenAPI::VM::set_name_description(session(), m_snapshotRef, m_newDescription);
+            SetDescription("Setting snapshot description...");
+            XenAPI::VM::set_name_description(GetSession(), m_snapshotRef, m_newDescription);
         }
 
-        setPercentComplete(95);
+        SetPercentComplete(95);
 
         // C#: SaveImageInBlob(Result, screenshot); (line 130)
         // Save screenshot as JPEG blob if available
         if (!m_screenshot.isNull())
         {
-            setDescription("Saving console screenshot...");
+            SetDescription("Saving console screenshot...");
             saveImageInBlob(m_snapshotRef, m_screenshot);
         }
 
-        setPercentComplete(100);
-        setDescription(QString("Snapshot '%1' created successfully").arg(m_newName));
+        SetPercentComplete(100);
+        SetDescription(QString("Snapshot '%1' created successfully").arg(m_newName));
         qDebug() << "VMSnapshotCreateAction::run() completed successfully";
 
     } catch (const std::exception& e)
@@ -176,14 +176,14 @@ void VMSnapshotCreateAction::saveImageInBlob(const QString& snapshotRef, const Q
         // XenRef<Blob> blobRef = VM.create_new_blob(Session, newVmRef, VNC_SNAPSHOT, "image/jpeg", false);
         // Blob blob = Connection.WaitForCache(blobRef);
         // blob.Save(saveStream, Session);
-        QString blobRef = XenAPI::VM::create_new_blob(session(), snapshotRef, VNC_SNAPSHOT_NAME, "image/jpeg", false);
+        QString blobRef = XenAPI::VM::create_new_blob(GetSession(), snapshotRef, VNC_SNAPSHOT_NAME, "image/jpeg", false);
         if (blobRef.isEmpty())
         {
             qWarning() << "VMSnapshotCreateAction: Failed to create blob for screenshot";
             return;
         }
 
-        XenAPI::Blob::save(session(), blobRef, jpegData);
+        XenAPI::Blob::save(GetSession(), blobRef, jpegData);
 
     } catch (const std::exception& e)
     {

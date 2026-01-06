@@ -48,7 +48,7 @@ namespace
                 continue;
             if (qobject_cast<MeddlingAction*>(operation))
                 continue;
-            if (operation->connection() != connection)
+            if (operation->GetConnection() != connection)
                 continue;
             if (record->state != AsyncOperation::Completed)
                 return false;
@@ -66,10 +66,10 @@ namespace
                 continue;
             if (qobject_cast<MeddlingAction*>(operation))
                 continue;
-            if (operation->connection() != connection)
+            if (operation->GetConnection() != connection)
                 continue;
-            if (operation->canCancel())
-                operation->cancel();
+            if (operation->CanCancel())
+                operation->Cancel();
         }
     }
 
@@ -152,7 +152,7 @@ void DisconnectCommand::doDisconnect()
     if (!m_connection)
         return;
 
-    this->mainWindow()->showStatusMessage("Disconnecting...");
+    this->mainWindow()->ShowStatusMessage("Disconnecting...");
 
     m_connection->EndConnect(true, false);
     QMetaObject::invokeMethod(this->mainWindow(), "SaveServerList", Qt::QueuedConnection);

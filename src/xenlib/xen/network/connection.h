@@ -99,16 +99,16 @@ class XENLIB_EXPORT XenConnection : public QObject
         XenAPI::Session* GetConnectSession() const;
         QStringList GetLastFailureDescription() const;
 
-        bool getSaveDisconnected() const;
-        void setSaveDisconnected(bool save);
-        bool getExpectPasswordIsCorrect() const;
-        void setExpectPasswordIsCorrect(bool expect);
-        bool getSuppressErrors() const;
-        void setSuppressErrors(bool suppress);
-        bool getPreventResettingPasswordPrompt() const;
-        void setPreventResettingPasswordPrompt(bool prevent);
-        bool getFromDialog() const;
-        void setFromDialog(bool fromDialog);
+        bool GetSaveDisconnected() const;
+        void SetSaveDisconnected(bool save);
+        bool GetExpectPasswordIsCorrect() const;
+        void SetExpectPasswordIsCorrect(bool expect);
+        bool GetSuppressErrors() const;
+        void SetSuppressErrors(bool suppress);
+        bool GetPreventResettingPasswordPrompt() const;
+        void SetPreventResettingPasswordPrompt(bool prevent);
+        bool GetFromDialog() const;
+        void SetFromDialog(bool fromDialog);
 
         /**
          * @brief Send an API request and BLOCK waiting for response
@@ -142,23 +142,23 @@ class XENLIB_EXPORT XenConnection : public QObject
         QStringList GetPoolMembers() const;
         int GetCurrentPoolMemberIndex() const;
         void SetCurrentPoolMemberIndex(int index);
-        bool hasMorePoolMembers() const;
-        QString getNextPoolMember();
-        void resetPoolMemberIndex(); // Reset to try all members again
+        bool HasMorePoolMembers() const;
+        QString GetNextPoolMember();
+        void ResetPoolMemberIndex(); // Reset to try all members again
 
         // Coordinator tracking for failover
-        QString getLastCoordinatorHostname() const;
-        void setLastCoordinatorHostname(const QString& hostname);
-        bool isFindingNewCoordinator() const;
-        void setFindingNewCoordinator(bool finding);
-        QDateTime getFindingNewCoordinatorStartedAt() const;
-        void setFindingNewCoordinatorStartedAt(const QDateTime& time);
+        QString GetLastCoordinatorHostname() const;
+        void SetLastCoordinatorHostname(const QString& hostname);
+        bool IsFindingNewCoordinator() const;
+        void SetFindingNewCoordinator(bool finding);
+        QDateTime GetFindingNewCoordinatorStartedAt() const;
+        void SetFindingNewCoordinatorStartedAt(const QDateTime& time);
 
         // Failover state
-        bool getExpectDisruption() const;
-        void setExpectDisruption(bool expect);
-        bool getCoordinatorMayChange() const;
-        void setCoordinatorMayChange(bool mayChange);
+        bool GetExpectDisruption() const;
+        void SetExpectDisruption(bool expect);
+        bool GetCoordinatorMayChange() const;
+        void SetCoordinatorMayChange(bool mayChange);
 
         qint64 GetServerTimeOffsetSeconds() const;
         void SetServerTimeOffsetSeconds(qint64 offsetSeconds);
@@ -169,35 +169,33 @@ class XENLIB_EXPORT XenConnection : public QObject
         void SetMetricUpdater(MetricUpdater* metricUpdater);
 
     signals:
-        void connected();
-        void disconnected();
-        void error(const QString& message);
-        void progressUpdate(const QString& message);
-        void cacheDataReceived(const QByteArray& data);
-        void cachePopulated();
-        void connectionResult(bool connected, const QString& reason);
-        void connectionStateChanged();
-        void connectionLost();
-        void connectionClosed();
-        void connectionReconnecting();
-        void beforeConnectionEnd();
-        void clearingCache();
-        void connectionMessageChanged(const QString& message);
-        void beforeMajorChange(bool background);
-        void afterMajorChange(bool background);
+        void Connected();
+        void Disconnected();
+        void Error(const QString& message);
+        void ProgressUpdate(const QString& message);
+        void CacheDataReceived(const QByteArray& data);
+        void CachePopulated();
+        void ConnectionResult(bool connected, const QString& reason);
+        void ConnectionStateChanged();
+        void ConnectionLost();
+        void ConnectionClosed();
+        void ConnectionReconnecting();
+        void BeforeConnectionEnd();
+        void ClearingCache();
+        void ConnectionMessageChanged(const QString& message);
         // These are just temporary for xenlib compat
-        void taskAdded(const QString& taskRef, const QVariantMap& taskData);
-        void taskModified(const QString& taskRef, const QVariantMap& taskData);
-        void taskDeleted(const QString& taskRef);
-        void messageReceived(const QString& messageRef, const QVariantMap& messageData);
-        void messageRemoved(const QString& messageRef);
+        void TaskAdded(const QString& taskRef, const QVariantMap& taskData);
+        void TaskModified(const QString& taskRef, const QVariantMap& taskData);
+        void TaskDeleted(const QString& taskRef);
+        void MessageReceived(const QString& messageRef, const QVariantMap& messageData);
+        void MessageRemoved(const QString& messageRef);
 
         /**
          * @brief Emitted when async API request completes
          * @param requestId The request ID returned by sendRequestAsync()
          * @param response API response body
          */
-        void apiResponse(int requestId, const QByteArray& response);
+        void ApiResponse(int requestId, const QByteArray& response);
 
     private slots:
         void onWorkerEstablished();

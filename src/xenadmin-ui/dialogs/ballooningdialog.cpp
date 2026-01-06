@@ -370,7 +370,7 @@ bool BallooningDialog::applyMemoryChanges()
     progressDialog.setWindowTitle(tr("Changing Memory Settings"));
 
     // Start the operation asynchronously
-    action->runAsync();
+    action->RunAsync();
 
     // Show modal progress dialog (blocks until operation completes)
     int result = progressDialog.exec();

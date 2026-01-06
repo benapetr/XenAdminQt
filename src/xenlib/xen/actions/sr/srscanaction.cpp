@@ -49,7 +49,7 @@ SrScanAction::SrScanAction(XenConnection* connection,
       m_password(password)
 {
     // Won't appear in history (matches C# SuppressHistory = true)
-    setSuppressHistory(true);
+    SetSuppressHistory(true);
 }
 
 void SrScanAction::run()
@@ -66,7 +66,7 @@ void SrScanAction::run()
 
         // Step 1: Probe for existing SRs
         // Get coordinator host
-        QVariantList hosts = XenAPI::Host::get_all(session());
+        QVariantList hosts = XenAPI::Host::get_all(GetSession());
         if (hosts.isEmpty())
         {
             setError("No hosts available for scanning");
@@ -74,11 +74,11 @@ void SrScanAction::run()
         }
         QString hostRef = hosts.first().toString();
 
-        QString probeTaskRef = XenAPI::SR::async_probe(session(), hostRef,
+        QString probeTaskRef = XenAPI::SR::async_probe(GetSession(), hostRef,
                                                        dconf, m_type, QVariantMap());
         pollToCompletion(probeTaskRef, 0, 50);
 
-        QString xmlResult = result();
+        QString xmlResult = GetResult();
         m_srs = parseSRListXML(xmlResult);
 
         qDebug() << "SrScanAction: Attempting to find aggregates on" << m_type << "filer" << m_hostname;
@@ -87,7 +87,7 @@ void SrScanAction::run()
         try
         {
             QString createTaskRef = XenAPI::SR::async_create(
-                session(),
+                GetSession(),
                 hostRef,
                 dconf,
                 0,                    // physical_size
@@ -151,7 +151,7 @@ void SrScanAction::run()
             return;
         }
 
-        setDescription(QString("Scan of %1 completed").arg(m_hostname));
+        SetDescription(QString("Scan of %1 completed").arg(m_hostname));
 
     } catch (const std::exception& e)
     {

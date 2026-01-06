@@ -44,9 +44,9 @@ namespace XenAPI
         params << session->getSessionId() << pif << mode << ip << netmask << gateway << dns;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PIF.reconfigure_ip", params);
+        QByteArray request = api.BuildJsonRpcCall("PIF.reconfigure_ip", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void PIF::plug(Session* session, const QString& pif)
@@ -58,9 +58,9 @@ namespace XenAPI
         params << session->getSessionId() << pif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PIF.plug", params);
+        QByteArray request = api.BuildJsonRpcCall("PIF.plug", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void PIF::unplug(Session* session, const QString& pif)
@@ -72,9 +72,9 @@ namespace XenAPI
         params << session->getSessionId() << pif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PIF.unplug", params);
+        QByteArray request = api.BuildJsonRpcCall("PIF.unplug", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     QString PIF::async_plug(Session* session, const QString& pif)
@@ -86,9 +86,9 @@ namespace XenAPI
         params << session->getSessionId() << pif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.PIF.plug", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.PIF.plug", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     QString PIF::async_unplug(Session* session, const QString& pif)
@@ -100,9 +100,9 @@ namespace XenAPI
         params << session->getSessionId() << pif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.PIF.unplug", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.PIF.unplug", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     void PIF::set_disallow_unplug(Session* session, const QString& pif, bool value)
@@ -114,9 +114,9 @@ namespace XenAPI
         params << session->getSessionId() << pif << value;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PIF.set_disallow_unplug", params);
+        QByteArray request = api.BuildJsonRpcCall("PIF.set_disallow_unplug", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void PIF::set_property(Session* session, const QString& pif, const QString& name, const QString& value)
@@ -128,9 +128,9 @@ namespace XenAPI
         params << session->getSessionId() << pif << name << value;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PIF.set_property", params);
+        QByteArray request = api.BuildJsonRpcCall("PIF.set_property", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     QString PIF::async_reconfigure_ip(Session* session, const QString& pif,
@@ -145,9 +145,9 @@ namespace XenAPI
         params << session->getSessionId() << pif << mode << ip << netmask << gateway << dns;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.PIF.reconfigure_ip", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.PIF.reconfigure_ip", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     void PIF::add_to_other_config(Session* session, const QString& pif, const QString& key, const QString& value)
@@ -159,9 +159,9 @@ namespace XenAPI
         params << session->getSessionId() << pif << key << value;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PIF.add_to_other_config", params);
+        QByteArray request = api.BuildJsonRpcCall("PIF.add_to_other_config", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void PIF::remove_from_other_config(Session* session, const QString& pif, const QString& key)
@@ -173,9 +173,9 @@ namespace XenAPI
         params << session->getSessionId() << pif << key;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PIF.remove_from_other_config", params);
+        QByteArray request = api.BuildJsonRpcCall("PIF.remove_from_other_config", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     QVariantMap PIF::get_record(Session* session, const QString& pif)
@@ -187,9 +187,9 @@ namespace XenAPI
         params << session->getSessionId() << pif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PIF.get_record", params);
+        QByteArray request = api.BuildJsonRpcCall("PIF.get_record", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toMap();
+        return api.ParseJsonRpcResponse(response).toMap();
     }
 
     QVariantList PIF::get_all(Session* session)
@@ -201,9 +201,9 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PIF.get_all", params);
+        QByteArray request = api.BuildJsonRpcCall("PIF.get_all", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toList();
+        return api.ParseJsonRpcResponse(response).toList();
     }
 
     QString PIF::get_network(Session* session, const QString& pif)
@@ -215,9 +215,9 @@ namespace XenAPI
         params << session->getSessionId() << pif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PIF.get_network", params);
+        QByteArray request = api.BuildJsonRpcCall("PIF.get_network", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     QString PIF::get_host(Session* session, const QString& pif)
@@ -229,9 +229,9 @@ namespace XenAPI
         params << session->getSessionId() << pif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PIF.get_host", params);
+        QByteArray request = api.BuildJsonRpcCall("PIF.get_host", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     void PIF::scan(Session* session, const QString& host)
@@ -243,9 +243,9 @@ namespace XenAPI
         params << session->getSessionId() << host;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("PIF.scan", params);
+        QByteArray request = api.BuildJsonRpcCall("PIF.scan", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
 } // namespace XenAPI

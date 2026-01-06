@@ -401,7 +401,7 @@ void HAWizard::accept()
         // Don't close wizard on failure - let user retry
     });
 
-    action->runAsync();
+    action->RunAsync();
     progressDialog->exec();
 }
 

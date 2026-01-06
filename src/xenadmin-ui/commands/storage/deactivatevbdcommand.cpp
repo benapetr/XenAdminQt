@@ -176,7 +176,7 @@ void DeactivateVBDCommand::Run()
     {
         XenAPI::VBD::unplug(vbd->GetConnection()->GetSession(), vbdRef);
 
-        this->mainWindow()->showStatusMessage(
+        this->mainWindow()->ShowStatusMessage(
             QString("Successfully deactivated virtual disk '%1' from VM '%2'").arg(vdiName, vmName),
             5000);
     } catch (const std::exception& e)

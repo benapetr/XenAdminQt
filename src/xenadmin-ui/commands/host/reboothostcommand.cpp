@@ -54,7 +54,6 @@ void RebootHostCommand::Run()
     if (!host)
         return;
 
-    QString hostRef = host->OpaqueRef();
     QString hostName = this->getSelectedHostName();
 
     // Show warning dialog
@@ -66,7 +65,7 @@ void RebootHostCommand::Run()
 
     if (ret == QMessageBox::Yes)
     {
-        this->mainWindow()->showStatusMessage(QString("Rebooting host '%1'...").arg(hostName));
+        this->mainWindow()->ShowStatusMessage(QString("Rebooting host '%1'...").arg(hostName));
 
         XenConnection* conn = host->GetConnection();
         if (!conn || !conn->IsConnected())
@@ -76,27 +75,26 @@ void RebootHostCommand::Run()
             return;
         }
 
-        Host* host = new Host(conn, hostRef, this);
         RebootHostAction* action = new RebootHostAction(conn, host, this);
 
         OperationManager::instance()->RegisterOperation(action);
 
         connect(action, &AsyncOperation::completed, this, [this, hostName, action]()
         {
-            if (action->state() == AsyncOperation::Completed && !action->isFailed())
+            if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
-                this->mainWindow()->showStatusMessage(QString("Host '%1' reboot initiated successfully").arg(hostName), 5000);
+                this->mainWindow()->ShowStatusMessage(QString("Host '%1' reboot initiated successfully").arg(hostName), 5000);
             }
             else
             {
                 QMessageBox::warning(this->mainWindow(), "Reboot Host Failed",
                                      QString("Failed to reboot host '%1'. Check the error log for details.").arg(hostName));
-                this->mainWindow()->showStatusMessage("Host reboot failed", 5000);
+                this->mainWindow()->ShowStatusMessage("Host reboot failed", 5000);
             }
             action->deleteLater();
         });
 
-        action->runAsync();
+        action->RunAsync();
     }
 }
 

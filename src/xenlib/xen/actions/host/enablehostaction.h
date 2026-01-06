@@ -48,35 +48,35 @@ class EnableHostAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection to use
-     * @param host Host object to enable
-     * @param resumeVMs If true, resume evacuated VMs after enabling
-     * @param parent Parent QObject
-     */
-    explicit EnableHostAction(XenConnection* connection,
-                              Host* host,
-                              bool resumeVMs = false,
-                              QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection to use
+         * @param host Host object to enable
+         * @param resumeVMs If true, resume evacuated VMs after enabling
+         * @param parent Parent QObject
+         */
+        explicit EnableHostAction(XenConnection* connection,
+                                  QSharedPointer<Host> host,
+                                  bool resumeVMs = false,
+                                  QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    /**
-     * @brief Enable the host
-     * @param start Starting progress percentage
-     * @param finish Ending progress percentage
-     * @param queryNtolIncrease If true, ask user about increasing HA ntol
-     *
-     * Matches C# HostAbstractAction.Enable()
-     */
-    void enable(int start, int finish, bool queryNtolIncrease);
+    private:
+        /**
+         * @brief Enable the host
+         * @param start Starting progress percentage
+         * @param finish Ending progress percentage
+         * @param queryNtolIncrease If true, ask user about increasing HA ntol
+         *
+         * Matches C# HostAbstractAction.Enable()
+         */
+        void enable(int start, int finish, bool queryNtolIncrease);
 
-    Host* m_host;
-    bool m_resumeVMs;
+        QSharedPointer<Host> m_host;
+        bool m_resumeVMs;
 };
 
 #endif // ENABLEHOSTACTION_H

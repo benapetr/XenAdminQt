@@ -34,14 +34,14 @@
 #include "../../xenapi/xenapi_VM.h"
 #include <QtCore/QDebug>
 
-VMStartAbstractAction::VMStartAbstractAction(VM* vm,
+VMStartAbstractAction::VMStartAbstractAction(QSharedPointer<VM> vm,
                                              const QString& title,
                                              WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
                                              StartDiagnosisForm startDiagnosisForm,
                                              QObject* parent)
     : AsyncOperation(vm ? vm->GetConnection() : nullptr, title, tr("Preparing..."), parent), m_warningDialogHAInvalidConfig(warningDialogHAInvalidConfig), m_startDiagnosisForm(startDiagnosisForm)
 {
-    setVM(vm);
+    SetVM(vm);
 
     if (vm)
     {
@@ -74,14 +74,14 @@ void VMStartAbstractAction::addCommonAPIMethodsToRoleCheck()
 void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
 {
     // Matches C# StartOrResumeVmWithHa
-    VM* vmObj = vm();
+    QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)
     {
         setError("VM object is null");
         return;
     }
 
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -90,8 +90,8 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
 
     try
     {
-        // Check if pool has HA enabled and VM is protected
-        Pool* poolObj = pool();
+        // Check if GetPool has HA enabled and VM is protected
+        QSharedPointer<Pool> poolObj = GetPool();
         if (poolObj)
         {
             bool haEnabled = poolObj->GetData().value("ha_enabled", false).toBool();
@@ -131,10 +131,10 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
             if (!this->m_startDiagnosisForm)
                 return;
 
-            QStringList description = this->errorDetails();
+            QStringList description = this->GetErrorDetails();
             if (description.isEmpty())
             {
-                QString message = this->errorMessage();
+                QString message = this->GetErrorMessage();
                 if (!message.isEmpty())
                     description << message;
             }
@@ -148,7 +148,7 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
         // Perform the actual start/resume operation
         doAction(start, end);
 
-        if (this->isFailed())
+        if (this->IsFailed())
             invokeDiagnosis();
     } catch (const Failure& failure)
     {
@@ -160,7 +160,7 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
         QString error = QString::fromLocal8Bit(e.what());
         if (m_startDiagnosisForm)
         {
-            QStringList description = this->errorDetails();
+            QStringList description = this->GetErrorDetails();
             if (description.isEmpty())
             {
                 if (!error.isEmpty())

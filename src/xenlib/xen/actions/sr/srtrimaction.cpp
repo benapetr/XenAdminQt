@@ -36,7 +36,7 @@
 #include <QDebug>
 
 SrTrimAction::SrTrimAction(XenConnection* connection,
-                           SR* sr,
+                           QSharedPointer<SR> sr,
                            QObject* parent)
     : AsyncOperation(connection,
                      QString("Trim SR '%1'").arg(sr->GetName()),
@@ -51,14 +51,14 @@ void SrTrimAction::run()
 {
     qDebug() << "SrTrimAction: Trimming SR" << m_sr->GetUUID();
 
-    XenAPI::Session* session = this->session();
+    XenAPI::Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
     }
 
-    setDescription("Reclaiming freed space from storage...");
+    SetDescription("Reclaiming freed space from storage...");
 
     // Find first attached storage host
     Host* host = m_sr->GetFirstAttachedStorageHost();
@@ -83,7 +83,7 @@ void SrTrimAction::run()
                                                    "do_trim",
                                                    args);
 
-        setResult(result);
+        SetResult(result);
 
         // Check result
         bool success = (result.toLower() == "true");
@@ -91,8 +91,8 @@ void SrTrimAction::run()
         if (success)
         {
             qDebug() << "SrTrimAction: Trim successful";
-            setDescription("Freed space reclaimed successfully");
-            setPercentComplete(100);
+            SetDescription("Freed space reclaimed successfully");
+            SetPercentComplete(100);
         } else
         {
             qWarning() << "SrTrimAction: Trim failed with result:" << result;

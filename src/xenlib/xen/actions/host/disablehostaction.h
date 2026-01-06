@@ -47,22 +47,22 @@ class DisableHostAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection to use
-     * @param host Host object to disable
-     * @param parent Parent QObject
-     */
-    explicit DisableHostAction(XenConnection* connection,
-                               Host* host,
-                               QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection to use
+         * @param host Host object to disable
+         * @param parent Parent QObject
+         */
+        explicit DisableHostAction(XenConnection* connection,
+                                   QSharedPointer<Host> host,
+                                   QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    Host* m_host;
+    private:
+        QSharedPointer<Host> m_host;
 };
 
 #endif // DISABLEHOSTACTION_H

@@ -46,25 +46,25 @@ class EjectHostFromPoolAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor for ejecting host from pool
-     * @param connection Connection to the pool
-     * @param pool Pool object
-     * @param hostToEject Host object to eject from pool
-     * @param parent Parent QObject
-     */
-    EjectHostFromPoolAction(XenConnection* connection,
-                            Pool* pool,
-                            Host* hostToEject,
-                            QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor for ejecting host from pool
+         * @param connection Connection to the pool
+         * @param pool Pool object
+         * @param hostToEject Host object to eject from pool
+         * @param parent Parent QObject
+         */
+        EjectHostFromPoolAction(XenConnection* connection,
+                                QSharedPointer<Pool> pool,
+                                QSharedPointer<Host> hostToEject,
+                                QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    Pool* m_pool;
-    Host* m_hostToEject;
+    private:
+        QSharedPointer<Pool> m_pool;
+        QSharedPointer<Host> m_hostToEject;
 };
 
 #endif // EJECTHOSTFROMPOOLACTION_H

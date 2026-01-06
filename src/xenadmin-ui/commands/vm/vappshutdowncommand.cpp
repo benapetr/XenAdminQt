@@ -170,15 +170,15 @@ void VappShutDownCommand::Run()
 
     // Connect completion signal for cleanup and feedback
     connect(action, &AsyncOperation::completed, this, [=]() {
-        if (action->state() == AsyncOperation::Completed)
+        if (action->GetState() == AsyncOperation::Completed)
         {
-            this->mainWindow()->showStatusMessage(
+            this->mainWindow()->ShowStatusMessage(
                 tr("vApp '%1' shut down successfully").arg(appName), 5000);
-        } else if (action->state() == AsyncOperation::Failed)
+        } else if (action->GetState() == AsyncOperation::Failed)
         {
             QMessageBox::critical(this->mainWindow(), tr("Error"),
                                   tr("Failed to shut down vApp '%1':\n%2")
-                                      .arg(appName, action->errorMessage()));
+                                      .arg(appName, action->GetErrorMessage()));
         }
 
         // Auto-delete when complete
@@ -186,7 +186,7 @@ void VappShutDownCommand::Run()
     });
 
     // Run action asynchronously
-    action->runAsync();
+    action->RunAsync();
 }
 
 QString VappShutDownCommand::MenuText() const

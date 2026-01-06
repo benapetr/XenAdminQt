@@ -47,28 +47,28 @@ class VMCloneAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection to use
-     * @param vm VM object to clone
-     * @param name Name for the cloned VM
-     * @param description Description for the cloned VM
-     * @param parent Parent QObject
-     */
-    explicit VMCloneAction(XenConnection* connection,
-                           VM* vm,
-                           const QString& name,
-                           const QString& description,
-                           QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection to use
+         * @param vm VM object to clone
+         * @param name Name for the cloned VM
+         * @param description Description for the cloned VM
+         * @param parent Parent QObject
+         */
+        explicit VMCloneAction(XenConnection* connection,
+                               QSharedPointer<VM> vm,
+                               const QString& name,
+                               const QString& description,
+                               QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    VM* m_vm;
-    QString m_cloneName;
-    QString m_cloneDescription;
+    private:
+        QSharedPointer<VM> m_vm;
+        QString m_cloneName;
+        QString m_cloneDescription;
 };
 
 #endif // VMCLONEACTION_H

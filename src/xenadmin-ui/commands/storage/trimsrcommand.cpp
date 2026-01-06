@@ -95,7 +95,7 @@ void TrimSRCommand::Run()
     }
 
     // Create SR object for action (action owns it)
-    SR* srForAction = new SR(conn, srRef, this);
+    QSharedPointer<SR> srForAction = QSharedPointer<SR>(new SR(conn, srRef, this));
 
     // Create and run trim action
     SrTrimAction* action = new SrTrimAction(
@@ -108,9 +108,9 @@ void TrimSRCommand::Run()
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, [this, srName, action, sr]() {
-        if (action->state() == AsyncOperation::Completed && !action->isFailed())
+        if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
-            this->mainWindow()->showStatusMessage(QString("Successfully trimmed SR '%1'").arg(srName), 5000);
+            this->mainWindow()->ShowStatusMessage(QString("Successfully trimmed SR '%1'").arg(srName), 5000);
 
             QMessageBox::information(
                 this->mainWindow(),
@@ -124,7 +124,7 @@ void TrimSRCommand::Run()
                 this->mainWindow(),
                 "Trim Failed",
                 QString("Failed to trim SR '%1'.\n\n%2")
-                    .arg(srName, action->errorMessage()));
+                    .arg(srName, action->GetErrorMessage()));
         }
         // Auto-delete when complete
         action->deleteLater();
@@ -132,7 +132,7 @@ void TrimSRCommand::Run()
     });
 
     // Run action asynchronously
-    action->runAsync();
+    action->RunAsync();
 }
 
 QString TrimSRCommand::MenuText() const

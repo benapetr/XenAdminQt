@@ -143,23 +143,23 @@ void DestroyBondCommand::Run()
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, [this, bondName, action]() {
-        if (action->state() == AsyncOperation::Completed && !action->isFailed())
+        if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
-            this->mainWindow()->showStatusMessage(QString("Successfully deleted bond '%1'").arg(bondName), 5000);
+            this->mainWindow()->ShowStatusMessage(QString("Successfully deleted bond '%1'").arg(bondName), 5000);
         } else
         {
             QMessageBox::warning(
                 this->mainWindow(),
                 "Delete Bond Failed",
                 QString("Failed to delete bond '%1'.\n\n%2")
-                    .arg(bondName, action->errorMessage()));
+                    .arg(bondName, action->GetErrorMessage()));
         }
         // Auto-delete when complete
         action->deleteLater();
     });
 
     // Run action asynchronously
-    action->runAsync();
+    action->RunAsync();
 }
 
 QString DestroyBondCommand::MenuText() const

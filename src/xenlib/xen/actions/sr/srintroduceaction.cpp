@@ -64,7 +64,7 @@ void SrIntroduceAction::run()
              << "name:" << m_srName
              << "type:" << m_srType;
 
-    Session* session = this->session();
+    Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -73,7 +73,7 @@ void SrIntroduceAction::run()
 
     // Step 1: Preemptive SR.forget() in case SR is in broken state
     qDebug() << "SrIntroduceAction: Performing preemptive SR.forget";
-    setDescription("Checking existing SR state...");
+    SetDescription("Checking existing SR state...");
 
     try
     {
@@ -92,7 +92,7 @@ void SrIntroduceAction::run()
 
     // Step 2: Introduce the SR
     qDebug() << "SrIntroduceAction: Introducing SR";
-    setDescription("Introducing storage repository...");
+    SetDescription("Introducing storage repository...");
 
     QString srRef;
     try
@@ -107,7 +107,7 @@ void SrIntroduceAction::run()
                                                       QVariantMap()); // Empty smconfig
 
         pollToCompletion(taskRef, 5, 10);
-        srRef = result();
+        srRef = GetResult();
 
         if (srRef.isEmpty())
         {
@@ -115,7 +115,7 @@ void SrIntroduceAction::run()
         }
 
         // Cache the result for later
-        setResult(srRef);
+        SetResult(srRef);
     } catch (const std::exception& e)
     {
         setError(QString("Failed to introduce SR: %1").arg(e.what()));
@@ -124,7 +124,7 @@ void SrIntroduceAction::run()
 
     // Step 3: Create and plug PBDs for each host
     qDebug() << "SrIntroduceAction: Creating PBDs for all hosts";
-    setDescription("Creating storage connections...");
+    SetDescription("Creating storage connections...");
 
     // Get host list from XenAPI (simple approach - just get all hosts)
     QVariant hostsVar;
@@ -162,7 +162,7 @@ void SrIntroduceAction::run()
     {
         // Create PBD
         qDebug() << "SrIntroduceAction: Creating PBD for host" << hostRef;
-        setDescription(QString("Creating storage connection for host..."));
+        SetDescription(QString("Creating storage connection for host..."));
 
         QVariantMap pbdRecord;
         pbdRecord["SR"] = srRef;
@@ -175,7 +175,7 @@ void SrIntroduceAction::run()
         {
             QString taskRef = XenAPI::PBD::async_create(session, pbdRecord);
             pollToCompletion(taskRef, currentProgress, currentProgress + progressPerHost);
-            pbdRef = result();
+            pbdRef = GetResult();
             currentProgress += progressPerHost;
         } catch (const std::exception& e)
         {
@@ -186,7 +186,7 @@ void SrIntroduceAction::run()
 
         // Plug PBD
         qDebug() << "SrIntroduceAction: Plugging PBD";
-        setDescription("Plugging storage on host...");
+        SetDescription("Plugging storage on host...");
 
         try
         {
@@ -236,8 +236,8 @@ void SrIntroduceAction::run()
         }
     }
 
-    setPercentComplete(100);
-    setDescription("Storage repository introduced successfully");
+    SetPercentComplete(100);
+    SetDescription("Storage repository introduced successfully");
 }
 
 bool SrIntroduceAction::isFirstSharedNonISOSR() const
@@ -249,7 +249,7 @@ bool SrIntroduceAction::isFirstSharedNonISOSR() const
     }
 
     // Check cache for existing shared non-ISO SRs
-    XenCache* cache = connection()->GetCache();
+    XenCache* cache = GetConnection()->GetCache();
     if (!cache)
     {
         return false;
@@ -261,7 +261,7 @@ bool SrIntroduceAction::isFirstSharedNonISOSR() const
         QString srRef = srData.value("ref").toString();
 
         // Skip the SR we just introduced (result() contains the new SR ref)
-        if (srRef == result())
+        if (srRef == GetResult())
         {
             continue;
         }

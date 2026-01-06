@@ -51,40 +51,40 @@ class UpdateVIFAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection
-     * @param vmRef VM opaque reference
-     * @param oldVifRef Existing VIF reference to replace
-     * @param newVifRecord New VIF record with updated properties
-     * @param parent Parent QObject
-     */
-    UpdateVIFAction(XenConnection* connection,
-                    const QString& vmRef,
-                    const QString& oldVifRef,
-                    const QVariantMap& newVifRecord,
-                    QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection
+         * @param vmRef VM opaque reference
+         * @param oldVifRef Existing VIF reference to replace
+         * @param newVifRecord New VIF record with updated properties
+         * @param parent Parent QObject
+         */
+        UpdateVIFAction(XenConnection* connection,
+                        const QString& vmRef,
+                        const QString& oldVifRef,
+                        const QVariantMap& newVifRecord,
+                        QObject* parent = nullptr);
 
-    /**
-     * @brief Check if VM reboot is required
-     * @return true if hot-plug was not possible and reboot is needed
-     */
-    bool rebootRequired() const
-    {
-        return m_rebootRequired;
-    }
+        /**
+         * @brief Check if VM reboot is required
+         * @return true if hot-plug was not possible and reboot is needed
+         */
+        bool rebootRequired() const
+        {
+            return m_rebootRequired;
+        }
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_vmRef;
-    QString m_vmName;
-    QString m_oldVifRef;
-    QVariantMap m_newVifRecord;
-    QString m_networkName;
-    bool m_rebootRequired;
+    private:
+        QString m_vmRef;
+        QString m_vmName;
+        QString m_oldVifRef;
+        QVariantMap m_newVifRecord;
+        QString m_networkName;
+        bool m_rebootRequired;
 };
 
 #endif // UPDATEVIFACTION_H

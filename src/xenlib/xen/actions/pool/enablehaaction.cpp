@@ -58,8 +58,8 @@ void EnableHAAction::run()
 {
     try
     {
-        setPercentComplete(0);
-        setDescription("Configuring HA settings...");
+        SetPercentComplete(0);
+        SetDescription("Configuring HA settings...");
 
         // Step 1: Set VM restart priorities if provided (matches C# pattern)
         if (!m_vmStartupOptions.isEmpty())
@@ -78,51 +78,51 @@ void EnableHAAction::run()
                 if (options.contains("ha_restart_priority"))
                 {
                     QString priority = options["ha_restart_priority"].toString();
-                    XenAPI::VM::set_ha_restart_priority(session(), vmRef, priority);
+                    XenAPI::VM::set_ha_restart_priority(GetSession(), vmRef, priority);
                 }
 
                 // Set start order
                 if (options.contains("order"))
                 {
                     qint64 order = options["order"].toLongLong();
-                    XenAPI::VM::set_order(session(), vmRef, order);
+                    XenAPI::VM::set_order(GetSession(), vmRef, order);
                 }
 
                 // Set start delay
                 if (options.contains("start_delay"))
                 {
                     qint64 delay = options["start_delay"].toLongLong();
-                    XenAPI::VM::set_start_delay(session(), vmRef, delay);
+                    XenAPI::VM::set_start_delay(GetSession(), vmRef, delay);
                 }
 
-                setPercentComplete(static_cast<int>(++i * increment));
+                SetPercentComplete(static_cast<int>(++i * increment));
             }
         }
 
-        setPercentComplete(10);
-        setDescription("Setting host failure tolerance...");
+        SetPercentComplete(10);
+        SetDescription("Setting host failure tolerance...");
 
         // Step 2: Set ha_host_failures_to_tolerate
-        XenAPI::Pool::set_ha_host_failures_to_tolerate(session(), m_poolRef, m_failuresToTolerate);
+        XenAPI::Pool::set_ha_host_failures_to_tolerate(GetSession(), m_poolRef, m_failuresToTolerate);
 
-        setPercentComplete(15);
-        setDescription("Enabling HA...");
+        SetPercentComplete(15);
+        SetDescription("Enabling HA...");
 
         // Step 3: Call async_enable_ha with heartbeat SRs
         // Empty configuration map (matches C# pattern - Dictionary<string, string>())
         QVariantMap configuration;
-        QString taskRef = XenAPI::Pool::async_enable_ha(session(), m_heartbeatSRRefs, configuration);
+        QString taskRef = XenAPI::Pool::async_enable_ha(GetSession(), m_heartbeatSRRefs, configuration);
 
         // Poll to completion (15% -> 100%)
         pollToCompletion(taskRef, 15, 100);
 
-        setDescription("HA enabled successfully");
+        SetDescription("HA enabled successfully");
 
     } catch (const std::exception& e)
     {
-        if (isCancelled())
+        if (IsCancelled())
         {
-            setDescription("HA enable cancelled");
+            SetDescription("HA enable cancelled");
         } else
         {
             // TODO: In C# there's special handling for VDI_NOT_AVAILABLE errors

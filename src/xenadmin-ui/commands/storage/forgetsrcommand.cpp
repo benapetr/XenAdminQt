@@ -153,9 +153,9 @@ void ForgetSRCommand::Run()
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, [this, srName, action]() {
-        if (action->state() == AsyncOperation::Completed && !action->isFailed())
+        if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
-            this->mainWindow()->showStatusMessage(QString("Successfully forgotten SR '%1'").arg(srName), 5000);
+            this->mainWindow()->ShowStatusMessage(QString("Successfully forgotten SR '%1'").arg(srName), 5000);
         } else
         {
             QMessageBox::warning(
@@ -168,5 +168,5 @@ void ForgetSRCommand::Run()
     });
 
     // Run action asynchronously
-    action->runAsync();
+    action->RunAsync();
 }

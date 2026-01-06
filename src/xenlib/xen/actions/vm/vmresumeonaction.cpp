@@ -32,8 +32,8 @@
 #include "../../xenapi/xenapi_VM.h"
 #include <QtCore/QDebug>
 
-VMResumeOnAction::VMResumeOnAction(VM* vm,
-                                   Host* hostToStart,
+VMResumeOnAction::VMResumeOnAction(QSharedPointer<VM> vm,
+                                   QSharedPointer<Host> hostToStart,
                                    WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
                                    StartDiagnosisForm startDiagnosisForm,
                                    QObject* parent)
@@ -44,20 +44,20 @@ VMResumeOnAction::VMResumeOnAction(VM* vm,
                             parent),
       m_hostToStart(hostToStart)
 {
-    addApiMethodToRoleCheck("vm.resume_on");
+    AddApiMethodToRoleCheck("vm.resume_on");
 }
 
 void VMResumeOnAction::run()
 {
-    setDescription(tr("Resuming on host..."));
+    SetDescription(tr("Resuming on host..."));
     startOrResumeVmWithHa(0, 100);
-    setDescription(tr("Resumed"));
+    SetDescription(tr("Resumed"));
 }
 
 void VMResumeOnAction::doAction(int start, int end)
 {
     // Matches C# VM.async_resume_on(Session, VM.opaque_ref, Host.opaque_ref, false, false)
-    VM* vmObj = vm();
+    QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)
     {
         setError("VM object is null");
@@ -70,7 +70,7 @@ void VMResumeOnAction::doAction(int start, int end)
         return;
     }
 
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -86,11 +86,11 @@ void VMResumeOnAction::doAction(int start, int end)
         return;
     }
 
-    setRelatedTaskRef(taskRef);
+    SetRelatedTaskRef(taskRef);
     pollToCompletion(taskRef, start, end);
 }
 
 VMStartAbstractAction* VMResumeOnAction::clone()
 {
-    return new VMResumeOnAction(vm(), m_hostToStart, m_warningDialogHAInvalidConfig, m_startDiagnosisForm);
+    return new VMResumeOnAction(GetVM(), m_hostToStart, m_warningDialogHAInvalidConfig, m_startDiagnosisForm);
 }

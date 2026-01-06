@@ -52,31 +52,31 @@ class EnableHAAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor for enabling HA
-     * @param connection Connection to the pool
-     * @param poolRef Pool opaque reference
-     * @param heartbeatSRRefs List of SR refs to use for heartbeat
-     * @param failuresToTolerate Number of host failures to tolerate (0-3 typically)
-     * @param vmStartupOptions Optional map of VM ref -> startup options (priority, order, delay)
-     * @param parent Parent QObject
-     */
-    EnableHAAction(XenConnection* connection,
-                   const QString& poolRef,
-                   const QStringList& heartbeatSRRefs,
-                   qint64 failuresToTolerate,
-                   const QMap<QString, QVariantMap>& vmStartupOptions = QMap<QString, QVariantMap>(),
-                   QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor for enabling HA
+         * @param connection Connection to the pool
+         * @param poolRef Pool opaque reference
+         * @param heartbeatSRRefs List of SR refs to use for heartbeat
+         * @param failuresToTolerate Number of host failures to tolerate (0-3 typically)
+         * @param vmStartupOptions Optional map of VM ref -> startup options (priority, order, delay)
+         * @param parent Parent QObject
+         */
+        EnableHAAction(XenConnection* connection,
+                       const QString& poolRef,
+                       const QStringList& heartbeatSRRefs,
+                       qint64 failuresToTolerate,
+                       const QMap<QString, QVariantMap>& vmStartupOptions = QMap<QString, QVariantMap>(),
+                       QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_poolRef;
-    QStringList m_heartbeatSRRefs;
-    qint64 m_failuresToTolerate;
-    QMap<QString, QVariantMap> m_vmStartupOptions; // VM ref -> {priority, order, delay}
+    private:
+        QString m_poolRef;
+        QStringList m_heartbeatSRRefs;
+        qint64 m_failuresToTolerate;
+        QMap<QString, QVariantMap> m_vmStartupOptions; // VM ref -> {priority, order, delay}
 };
 
 #endif // ENABLEHAACTION_H

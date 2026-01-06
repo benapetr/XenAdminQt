@@ -44,33 +44,33 @@ ChangeHostAutostartAction::ChangeHostAutostartAction(XenConnection* connection,
                      parent),
       m_hostRef(hostRef), m_enableAutostart(enable)
 {
-    setSuppressHistory(suppressHistory);
+    SetSuppressHistory(suppressHistory);
 }
 
 void ChangeHostAutostartAction::run()
 {
-    if (!connection() || !session())
+    if (!GetConnection() || !GetSession())
     {
         qWarning() << "ChangeHostAutostartAction: No connection or session";
         return;
     }
 
-    setPercentComplete(0);
-    setDescription(tr("Updating VM autostart setting..."));
+    SetPercentComplete(0);
+    SetDescription(tr("Updating VM autostart setting..."));
 
     try
     {
         // Get pool reference for this host
         // In C#: Pool p = Helpers.GetPoolOfOne(Connection);
-        XenRpcAPI api(session());
+        XenRpcAPI api(GetSession());
 
         // First, get the host's pool reference
         QVariantList hostPoolParams;
-        hostPoolParams << session()->getSessionId() << m_hostRef;
+        hostPoolParams << GetSession()->getSessionId() << m_hostRef;
 
-        QByteArray hostPoolRequest = api.buildJsonRpcCall("session.get_pool", hostPoolParams);
-        QByteArray hostPoolResponse = connection()->SendRequest(hostPoolRequest);
-        QVariant poolRefVariant = api.parseJsonRpcResponse(hostPoolResponse);
+        QByteArray hostPoolRequest = api.BuildJsonRpcCall("session.get_pool", hostPoolParams);
+        QByteArray hostPoolResponse = GetConnection()->SendRequest(hostPoolRequest);
+        QVariant poolRefVariant = api.ParseJsonRpcResponse(hostPoolResponse);
         QString poolRef = poolRefVariant.toString();
 
         if (poolRef.isEmpty())
@@ -79,38 +79,38 @@ void ChangeHostAutostartAction::run()
             return;
         }
 
-        setPercentComplete(30);
+        SetPercentComplete(30);
 
         // Get current other_config
         QVariantList getConfigParams;
-        getConfigParams << session()->getSessionId() << poolRef;
+        getConfigParams << GetSession()->getSessionId() << poolRef;
 
-        QByteArray getConfigRequest = api.buildJsonRpcCall("pool.get_other_config", getConfigParams);
-        QByteArray getConfigResponse = connection()->SendRequest(getConfigRequest);
-        QVariant otherConfigVariant = api.parseJsonRpcResponse(getConfigResponse);
+        QByteArray getConfigRequest = api.BuildJsonRpcCall("pool.get_other_config", getConfigParams);
+        QByteArray getConfigResponse = GetConnection()->SendRequest(getConfigRequest);
+        QVariant otherConfigVariant = api.ParseJsonRpcResponse(getConfigResponse);
         QVariantMap otherConfig = otherConfigVariant.toMap();
 
-        setPercentComplete(50);
+        SetPercentComplete(50);
 
         // Update auto_poweron value
         otherConfig["auto_poweron"] = m_enableAutostart ? "true" : "false";
 
         // Set the modified other_config back
         QVariantList setConfigParams;
-        setConfigParams << session()->getSessionId() << poolRef << otherConfig;
+        setConfigParams << GetSession()->getSessionId() << poolRef << otherConfig;
 
-        QByteArray setConfigRequest = api.buildJsonRpcCall("pool.set_other_config", setConfigParams);
-        QByteArray setConfigResponse = connection()->SendRequest(setConfigRequest);
+        QByteArray setConfigRequest = api.BuildJsonRpcCall("pool.set_other_config", setConfigParams);
+        QByteArray setConfigResponse = GetConnection()->SendRequest(setConfigRequest);
 
         // Parse response to check for errors
-        api.parseJsonRpcResponse(setConfigResponse);
+        api.ParseJsonRpcResponse(setConfigResponse);
 
-        setPercentComplete(100);
-        setDescription(tr("VM autostart setting updated successfully"));
+        SetPercentComplete(100);
+        SetDescription(tr("VM autostart setting updated successfully"));
 
     } catch (const std::exception& e)
     {
         qWarning() << "ChangeHostAutostartAction failed:" << e.what();
-        setDescription(tr("Failed to change VM autostart: %1").arg(e.what()));
+        SetDescription(tr("Failed to change VM autostart: %1").arg(e.what()));
     }
 }

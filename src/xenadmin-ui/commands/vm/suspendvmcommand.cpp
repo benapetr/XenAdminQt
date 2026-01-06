@@ -81,7 +81,7 @@ void SuspendVMCommand::Run()
         return;
 
     // Create VM object for action (action will own and delete it)
-    VM* vmForAction = new VM(conn, vm->OpaqueRef());
+    QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vm->OpaqueRef()));
 
     // Create VMSuspendAction (parent is MainWindow to prevent premature deletion)
     VMSuspendAction* action = new VMSuspendAction(vmForAction, this->mainWindow());
@@ -97,7 +97,7 @@ void SuspendVMCommand::Run()
 
     // Run action asynchronously (matches C# pattern - no modal dialog)
     // Progress shown in status bar via OperationManager signals
-    action->runAsync();
+    action->RunAsync();
 }
 
 QString SuspendVMCommand::MenuText() const

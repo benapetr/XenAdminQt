@@ -75,7 +75,7 @@ void MeddlingActionManager::rehydrateTasks(XenConnection* connection)
 
     // Get all task records (Dictionary<XenRef<Task>, Task> equivalent)
     XenRpcAPI api(session);
-    QVariantMap allTaskRecords = api.getAllTaskRecords();
+    QVariantMap allTaskRecords = api.GetAllTaskRecords();
 
     if (allTaskRecords.isEmpty())
     {

@@ -43,28 +43,28 @@ class StartApplianceAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct StartApplianceAction
-     * @param connection XenConnection
-     * @param applianceRef OpaqueRef of VM_appliance to start
-     * @param suspend If true, start VMs in paused/suspended state
-     * @param parent Parent QObject
-     */
-    explicit StartApplianceAction(XenConnection* connection, const QString& applianceRef,
-                                  bool suspend, QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct StartApplianceAction
+         * @param connection XenConnection
+         * @param applianceRef OpaqueRef of VM_appliance to start
+         * @param suspend If true, start VMs in paused/suspended state
+         * @param parent Parent QObject
+         */
+        explicit StartApplianceAction(XenConnection* connection, const QString& applianceRef,
+                                      bool suspend, QObject* parent = nullptr);
 
-protected:
-    /**
-     * @brief Execute the VM appliance start operation
-     *
-     * Calls XenAPI::VM_appliance::async_start() and polls task to completion.
-     */
-    void run() override;
+    protected:
+        /**
+         * @brief Execute the VM appliance start operation
+         *
+         * Calls XenAPI::VM_appliance::async_start() and polls task to completion.
+         */
+        void run() override;
 
-private:
-    QString m_applianceRef; ///< OpaqueRef of VM_appliance
-    bool m_suspend;         ///< Start in paused state?
+    private:
+        QString m_applianceRef; ///< OpaqueRef of VM_appliance
+        bool m_suspend;         ///< Start in paused state?
 };
 
 #endif // STARTAPPLIANCEACTION_H

@@ -36,10 +36,10 @@
 
 // VMRebootAction implementation
 
-VMRebootAction::VMRebootAction(VM* vm, const QString& title, QObject* parent)
+VMRebootAction::VMRebootAction(QSharedPointer<VM> vm, const QString& title, QObject* parent)
     : AsyncOperation(vm ? vm->GetConnection() : nullptr, title, tr("Preparing..."), parent)
 {
-    setVM(vm);
+    SetVM(vm);
 
     if (vm)
     {
@@ -63,26 +63,26 @@ VMRebootAction::~VMRebootAction()
 
 // VMCleanReboot implementation
 
-VMCleanReboot::VMCleanReboot(VM* vm, QObject* parent)
+VMCleanReboot::VMCleanReboot(QSharedPointer<VM> vm, QObject* parent)
     : VMRebootAction(vm,
                      tr("Rebooting '%1'...").arg(vm ? vm->GetName() : "VM"),
                      parent)
 {
-    addApiMethodToRoleCheck("VM.async_clean_reboot");
+    AddApiMethodToRoleCheck("VM.async_clean_reboot");
 }
 
 void VMCleanReboot::run()
 {
-    setDescription(tr("Rebooting..."));
+    SetDescription(tr("Rebooting..."));
 
-    VM* vmObj = vm();
+    QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)
     {
         setError("VM object is null");
         return;
     }
 
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -98,34 +98,34 @@ void VMCleanReboot::run()
         return;
     }
 
-    setRelatedTaskRef(taskRef);
+    SetRelatedTaskRef(taskRef);
     pollToCompletion(taskRef, 0, 100);
 
-    setDescription(tr("Rebooted"));
+    SetDescription(tr("Rebooted"));
 }
 
 // VMHardReboot implementation
 
-VMHardReboot::VMHardReboot(VM* vm, QObject* parent)
+VMHardReboot::VMHardReboot(QSharedPointer<VM> vm, QObject* parent)
     : VMRebootAction(vm,
                      tr("Rebooting '%1'...").arg(vm ? vm->GetName() : "VM"),
                      parent)
 {
-    addApiMethodToRoleCheck("VM.async_hard_reboot");
+    AddApiMethodToRoleCheck("VM.async_hard_reboot");
 }
 
 void VMHardReboot::run()
 {
-    setDescription(tr("Rebooting..."));
+    SetDescription(tr("Rebooting..."));
 
-    VM* vmObj = vm();
+    QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)
     {
         setError("VM object is null");
         return;
     }
 
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -141,8 +141,8 @@ void VMHardReboot::run()
         return;
     }
 
-    setRelatedTaskRef(taskRef);
+    SetRelatedTaskRef(taskRef);
     pollToCompletion(taskRef, 0, 100);
 
-    setDescription(tr("Rebooted"));
+    SetDescription(tr("Rebooted"));
 }

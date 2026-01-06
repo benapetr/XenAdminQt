@@ -39,9 +39,9 @@
 #include <QDebug>
 
 VMMoveAction::VMMoveAction(XenConnection* connection,
-                           VM* vm,
-                           const QMap<QString, SR*>& storageMapping,
-                           Host* host,
+                           QSharedPointer<VM> vm,
+                           const QMap<QString, QSharedPointer<SR>>& storageMapping,
+                           QSharedPointer<Host> host,
                            QObject* parent)
     : AsyncOperation(connection,
                      QString("Moving VM '%1'").arg(vm ? vm->GetName() : ""),
@@ -59,25 +59,25 @@ VMMoveAction::VMMoveAction(XenConnection* connection,
         this->m_sr = storageMapping.first();
 
     // Set context objects
-    setVM(this->m_vm);
+    SetVM(this->m_vm);
     if (this->m_host)
-        setHost(this->m_host);
+        SetHost(this->m_host);
     if (this->m_sr)
-        setSR(this->m_sr);
+        SetSR(this->m_sr);
 }
 
 VMMoveAction::VMMoveAction(XenConnection* connection,
-                           VM* vm,
-                           SR* sr,
-                           Host* host,
+                           QSharedPointer<VM> vm,
+                           QSharedPointer<SR> sr,
+                           QSharedPointer<Host> host,
                            QObject* parent)
     : VMMoveAction(connection, vm, getStorageMapping(vm, sr), host, parent)
 {
 }
 
-QMap<QString, SR*> VMMoveAction::getStorageMapping(VM* vm, SR* sr)
+QMap<QString, QSharedPointer<SR>> VMMoveAction::getStorageMapping(QSharedPointer<VM> vm, QSharedPointer<SR> sr)
 {
-    QMap<QString, SR*> storageMapping;
+    QMap<QString, QSharedPointer<SR>> storageMapping;
     
     if (!vm || !sr)
         return storageMapping;
@@ -122,13 +122,13 @@ void VMMoveAction::run()
     }
 
     // Move the progress bar above 0, it's more reassuring to see than a blank bar
-    this->setPercentComplete(this->percentComplete() + 10);
+    this->SetPercentComplete(this->GetPercentComplete() + 10);
 
     QStringList vbdRefs = this->m_vm->VBDRefs();
     if (vbdRefs.isEmpty())
     {
-        this->setPercentComplete(100);
-        this->setDescription("No disks to move");
+        this->SetPercentComplete(100);
+        this->SetDescription("No disks to move");
         return;
     }
 
@@ -137,7 +137,7 @@ void VMMoveAction::run()
 
     for (const QString& vbdRef : vbdRefs)
     {
-        if (this->isCancelled())
+        if (this->IsCancelled())
         {
             this->setError("Operation cancelled");
             return;
@@ -158,7 +158,7 @@ void VMMoveAction::run()
             continue;
 
         // Check if we have a target SR for this VDI
-        SR* targetSR = this->m_storageMapping.value(vdiRef, nullptr);
+        QSharedPointer<SR> targetSR = this->m_storageMapping.value(vdiRef, nullptr);
         if (!targetSR)
             continue;
 
@@ -177,13 +177,13 @@ void VMMoveAction::run()
         QString targetSRName = targetSR->GetName();
         QString vdiName = curVdi->GetName();
 
-        this->setDescription(QString("Moving VDI '%1' from '%2' to '%3'")
+        this->SetDescription(QString("Moving VDI '%1' from '%2' to '%3'")
                          .arg(vdiName)
                          .arg(currentSRName)
                          .arg(targetSRName));
 
         // Copy VDI to new SR
-        QString taskRef = XenAPI::VDI::async_copy(session(), vdiRef, targetSR->OpaqueRef());
+        QString taskRef = XenAPI::VDI::async_copy(GetSession(), vdiRef, targetSR->OpaqueRef());
         
         if (taskRef.isEmpty())
         {
@@ -191,10 +191,10 @@ void VMMoveAction::run()
             return;
         }
 
-        this->pollToCompletion(taskRef, this->percentComplete(), this->percentComplete() + halfstep);
+        this->pollToCompletion(taskRef, this->GetPercentComplete(), this->GetPercentComplete() + halfstep);
 
-        // Get the new VDI ref from the task result
-        QString newVDIRef = result();
+        // Get the new VDI ref from the task GetResult
+        QString newVDIRef = GetResult();
         if (newVDIRef.isEmpty())
         {
             setError("Failed to get new VDI reference");
@@ -221,7 +221,7 @@ void VMMoveAction::run()
         newVBDRecord["VM"] = this->m_vm->OpaqueRef();
 
         // Create the new VBD
-        QString newVBDRef = XenAPI::VBD::create(session(), newVBDRecord);
+        QString newVBDRef = XenAPI::VBD::create(GetSession(), newVBDRecord);
         if (newVBDRef.isEmpty())
         {
             setError("Failed to create new VBD");
@@ -233,7 +233,7 @@ void VMMoveAction::run()
         // Try to destroy the old VDI
         try
         {
-            XenAPI::VDI::destroy(session(), vdiRef);
+            XenAPI::VDI::destroy(GetSession(), vdiRef);
         }
         catch (...)
         {
@@ -241,17 +241,17 @@ void VMMoveAction::run()
             failedVDIDestroys.append(vdiRef);
         }
 
-        this->setPercentComplete(this->percentComplete() + halfstep);
+        this->SetPercentComplete(this->GetPercentComplete() + halfstep);
     }
 
-    this->setDescription(QString());
+    this->SetDescription(QString());
 
     // Set suspend SR if specified
     if (this->m_sr)
     {
         try
         {
-            XenAPI::VM::set_suspend_SR(session(), this->m_vm->OpaqueRef(), this->m_sr->OpaqueRef());
+            XenAPI::VM::set_suspend_SR(GetSession(), this->m_vm->OpaqueRef(), this->m_sr->OpaqueRef());
         }
         catch (...)
         {
@@ -265,6 +265,6 @@ void VMMoveAction::run()
         return;
     }
 
-    this->setPercentComplete(100);
-    this->setDescription("Moved");
+    this->SetPercentComplete(100);
+    this->SetDescription("Moved");
 }

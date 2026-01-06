@@ -172,51 +172,51 @@ AsyncOperation* BootOptionsEditPage::SaveSettings()
         protected:
             void run() override
             {
-                XenRpcAPI api(connection()->GetSession());
+                XenRpcAPI api(GetConnection()->GetSession());
 
-                setPercentComplete(10);
+                SetPercentComplete(10);
 
                 // Set auto-boot (via other_config.auto_poweron)
                 QVariantList getConfigParams;
-                getConfigParams << connection()->GetSessionId() << this->m_vmRef;
-                QByteArray getConfigRequest = api.buildJsonRpcCall("VM.get_other_config", getConfigParams);
-                QByteArray getConfigResponse = connection()->SendRequest(getConfigRequest);
-                QVariantMap otherConfig = api.parseJsonRpcResponse(getConfigResponse).toMap();
+                getConfigParams << GetConnection()->GetSessionId() << this->m_vmRef;
+                QByteArray getConfigRequest = api.BuildJsonRpcCall("VM.get_other_config", getConfigParams);
+                QByteArray getConfigResponse = GetConnection()->SendRequest(getConfigRequest);
+                QVariantMap otherConfig = api.ParseJsonRpcResponse(getConfigResponse).toMap();
 
                 otherConfig["auto_poweron"] = this->m_autoBoot ? "true" : "false";
 
                 QVariantList setConfigParams;
-                setConfigParams << connection()->GetSessionId() << this->m_vmRef << otherConfig;
-                QByteArray setConfigRequest = api.buildJsonRpcCall("VM.set_other_config", setConfigParams);
-                connection()->SendRequest(setConfigRequest);
+                setConfigParams << GetConnection()->GetSessionId() << this->m_vmRef << otherConfig;
+                QByteArray setConfigRequest = api.BuildJsonRpcCall("VM.set_other_config", setConfigParams);
+                GetConnection()->SendRequest(setConfigRequest);
 
-                setPercentComplete(40);
+                SetPercentComplete(40);
 
                 if (this->m_isHVM)
                 {
                     // Set boot order (via HVM_boot_params.order)
                     QVariantList getBootParams;
-                    getBootParams << connection()->GetSessionId() << this->m_vmRef;
-                    QByteArray getBootRequest = api.buildJsonRpcCall("VM.get_HVM_boot_params", getBootParams);
-                    QByteArray getBootResponse = connection()->SendRequest(getBootRequest);
-                    QVariantMap hvmBootParams = api.parseJsonRpcResponse(getBootResponse).toMap();
+                    getBootParams << GetConnection()->GetSessionId() << this->m_vmRef;
+                    QByteArray getBootRequest = api.BuildJsonRpcCall("VM.get_HVM_boot_params", getBootParams);
+                    QByteArray getBootResponse = GetConnection()->SendRequest(getBootRequest);
+                    QVariantMap hvmBootParams = api.ParseJsonRpcResponse(getBootResponse).toMap();
 
                     hvmBootParams["order"] = this->m_bootOrder.toLower();
 
                     QVariantList setBootParams;
-                    setBootParams << connection()->GetSessionId() << this->m_vmRef << hvmBootParams;
-                    QByteArray setBootRequest = api.buildJsonRpcCall("VM.set_HVM_boot_params", setBootParams);
-                    connection()->SendRequest(setBootRequest);
+                    setBootParams << GetConnection()->GetSessionId() << this->m_vmRef << hvmBootParams;
+                    QByteArray setBootRequest = api.BuildJsonRpcCall("VM.set_HVM_boot_params", setBootParams);
+                    GetConnection()->SendRequest(setBootRequest);
                 } else
                 {
                     // Set PV args
                     QVariantList setPVParams;
-                    setPVParams << connection()->GetSessionId() << this->m_vmRef << this->m_pvArgs;
-                    QByteArray setPVRequest = api.buildJsonRpcCall("VM.set_PV_args", setPVParams);
-                    connection()->SendRequest(setPVRequest);
+                    setPVParams << GetConnection()->GetSessionId() << this->m_vmRef << this->m_pvArgs;
+                    QByteArray setPVRequest = api.BuildJsonRpcCall("VM.set_PV_args", setPVParams);
+                    GetConnection()->SendRequest(setPVRequest);
                 }
 
-                setPercentComplete(100);
+                SetPercentComplete(100);
             }
 
         private:

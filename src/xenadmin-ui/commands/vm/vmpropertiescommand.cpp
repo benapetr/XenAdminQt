@@ -119,7 +119,7 @@ void VMPropertiesCommand::showPropertiesDialog()
     if (dialog.exec() == QDialog::Accepted)
     {
         qDebug() << "VMPropertiesCommand: VM Properties dialog completed with changes";
-        mainWindow()->refreshServerTree();
+        mainWindow()->RefreshServerTree();
         qDebug() << "VMPropertiesCommand: VM properties updated successfully";
     } else
     {

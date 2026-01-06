@@ -41,18 +41,18 @@ class SetSrAsDefaultAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    explicit SetSrAsDefaultAction(XenConnection* connection,
-                                  const QString& poolRef,
-                                  const QString& srRef,
-                                  QObject* parent = nullptr);
+    public:
+        explicit SetSrAsDefaultAction(XenConnection* connection,
+                                      const QString& poolRef,
+                                      const QString& srRef,
+                                      QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_poolRef;
-    QString m_srRef;
+    private:
+        QString m_poolRef;
+        QString m_srRef;
 };
 
 #endif // SETSRASDEFAULTACTION_H

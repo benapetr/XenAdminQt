@@ -46,33 +46,33 @@ class VMCopyAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor for VM copy action
-     * @param connection XenServer connection
-     * @param vm VM to copy
-     * @param host Host to place the copy on (can be nullptr)
-     * @param sr SR to copy VM to
-     * @param nameLabel Name for the copied VM
-     * @param description Description for the copied VM
-     */
-    VMCopyAction(XenConnection* connection,
-                 VM* vm,
-                 Host* host,
-                 SR* sr,
-                 const QString& nameLabel,
-                 const QString& description,
-                 QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor for VM copy action
+         * @param connection XenServer connection
+         * @param vm VM to copy
+         * @param host Host to place the copy on (can be nullptr)
+         * @param sr SR to copy VM to
+         * @param nameLabel Name for the copied VM
+         * @param description Description for the copied VM
+         */
+        VMCopyAction(XenConnection* connection,
+                     QSharedPointer<VM> vm,
+                     QSharedPointer<Host> host,
+                     QSharedPointer<SR> sr,
+                     const QString& nameLabel,
+                     const QString& description,
+                     QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    VM* m_vm;
-    Host* m_host;
-    SR* m_sr;
-    QString m_nameLabel;
-    QString m_description;
+    private:
+        QSharedPointer<VM> m_vm;
+        QSharedPointer<Host> m_host;
+        QSharedPointer<SR> m_sr;
+        QString m_nameLabel;
+        QString m_description;
 };
 
 #endif // VMCOPYACTION_H

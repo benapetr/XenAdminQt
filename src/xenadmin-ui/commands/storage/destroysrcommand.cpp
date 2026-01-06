@@ -98,22 +98,22 @@ void DestroySRCommand::Run()
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, [this, srName, action]() {
-        if (action->state() == AsyncOperation::Completed && !action->isFailed())
+        if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
-            mainWindow()->showStatusMessage(QString("Successfully destroyed SR '%1'").arg(srName), 5000);
+            mainWindow()->ShowStatusMessage(QString("Successfully destroyed SR '%1'").arg(srName), 5000);
         } else
         {
             QMessageBox::warning(
                 mainWindow(),
                 "Destroy SR Failed",
-                QString("Failed to destroy SR '%1'.\n\n%2").arg(srName, action->errorMessage()));
+                QString("Failed to destroy SR '%1'.\n\n%2").arg(srName, action->GetErrorMessage()));
         }
         // Auto-delete when complete
         action->deleteLater();
     });
 
     // Run action asynchronously
-    action->runAsync();
+    action->RunAsync();
 }
 
 QString DestroySRCommand::MenuText() const

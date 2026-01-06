@@ -98,7 +98,7 @@ void NewPoolDialog::populateConnections()
     }
 
     // Get all connected connections
-    QList<XenConnection*> allConnections = connMgr->getConnectedConnections();
+    QList<XenConnection*> allConnections = connMgr->GetConnectedConnections();
 
     // Filter to standalone servers only
     this->m_connections.clear();
@@ -371,6 +371,6 @@ void NewPoolDialog::createPool()
     });
 
     // Start the action - progress dialog handles display
-    action->runAsync();
+    action->RunAsync();
     progressDialog.exec();
 }

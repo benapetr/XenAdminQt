@@ -40,12 +40,12 @@ ShutDownApplianceAction::ShutDownApplianceAction(XenConnection* connection, cons
                                                  QObject* parent)
     : AsyncOperation(connection, tr("Shut down VM appliance"), QString(), parent), m_applianceRef(applianceRef)
 {
-    addApiMethodToRoleCheck("VM_appliance.shutdown");
+    AddApiMethodToRoleCheck("VM_appliance.shutdown");
 }
 
 void ShutDownApplianceAction::run()
 {
-    if (!session() || !session()->IsLoggedIn())
+    if (!GetSession() || !GetSession()->IsLoggedIn())
     {
         setError(tr("Not connected to XenServer"));
         return;
@@ -57,7 +57,7 @@ void ShutDownApplianceAction::run()
         QString applianceName = m_applianceRef;
         try
         {
-            QVariantMap record = XenAPI::VM_appliance::get_record(session(), m_applianceRef);
+            QVariantMap record = XenAPI::VM_appliance::get_record(GetSession(), m_applianceRef);
             if (record.contains("name_label"))
             {
                 applianceName = record["name_label"].toString();
@@ -67,15 +67,15 @@ void ShutDownApplianceAction::run()
             // Name lookup failed
         }
 
-        setDescription(tr("Shutting down appliance '%1'...").arg(applianceName));
+        SetDescription(tr("Shutting down appliance '%1'...").arg(applianceName));
 
         // Use shutdown method (tries clean, falls back to hard)
-        QString taskRef = XenAPI::VM_appliance::async_shutdown(session(), m_applianceRef);
+        QString taskRef = XenAPI::VM_appliance::async_shutdown(GetSession(), m_applianceRef);
 
         // Poll task to completion
         pollToCompletion(taskRef, 0, 100);
 
-        setDescription(tr("Successfully shut down appliance '%1'").arg(applianceName));
+        SetDescription(tr("Successfully shut down appliance '%1'").arg(applianceName));
 
     } catch (const std::exception& e)
     {
@@ -95,12 +95,12 @@ CleanShutDownApplianceAction::CleanShutDownApplianceAction(XenConnection* connec
                                                            QObject* parent)
     : AsyncOperation(connection, tr("Clean shut down VM appliance"), QString(), parent), m_applianceRef(applianceRef)
 {
-    addApiMethodToRoleCheck("VM_appliance.clean_shutdown");
+    AddApiMethodToRoleCheck("VM_appliance.clean_shutdown");
 }
 
 void CleanShutDownApplianceAction::run()
 {
-    if (!session() || !session()->IsLoggedIn())
+    if (!GetSession() || !GetSession()->IsLoggedIn())
     {
         setError(tr("Not connected to XenServer"));
         return;
@@ -112,7 +112,7 @@ void CleanShutDownApplianceAction::run()
         QString applianceName = m_applianceRef;
         try
         {
-            QVariantMap record = XenAPI::VM_appliance::get_record(session(), m_applianceRef);
+            QVariantMap record = XenAPI::VM_appliance::get_record(GetSession(), m_applianceRef);
             if (record.contains("name_label"))
             {
                 applianceName = record["name_label"].toString();
@@ -122,15 +122,15 @@ void CleanShutDownApplianceAction::run()
             // Name lookup failed
         }
 
-        setDescription(tr("Performing clean shutdown of appliance '%1'...").arg(applianceName));
+        SetDescription(tr("Performing clean shutdown of appliance '%1'...").arg(applianceName));
 
         // Clean shutdown
-        QString taskRef = XenAPI::VM_appliance::async_clean_shutdown(session(), m_applianceRef);
+        QString taskRef = XenAPI::VM_appliance::async_clean_shutdown(GetSession(), m_applianceRef);
 
         // Poll task to completion
         pollToCompletion(taskRef, 0, 100);
 
-        setDescription(tr("Successfully performed clean shutdown of appliance '%1'").arg(applianceName));
+        SetDescription(tr("Successfully performed clean shutdown of appliance '%1'").arg(applianceName));
 
     } catch (const std::exception& e)
     {
@@ -150,12 +150,12 @@ HardShutDownApplianceAction::HardShutDownApplianceAction(XenConnection* connecti
                                                          QObject* parent)
     : AsyncOperation(connection, tr("Force shut down VM appliance"), QString(), parent), m_applianceRef(applianceRef)
 {
-    addApiMethodToRoleCheck("VM_appliance.hard_shutdown");
+    AddApiMethodToRoleCheck("VM_appliance.hard_shutdown");
 }
 
 void HardShutDownApplianceAction::run()
 {
-    if (!session() || !session()->IsLoggedIn())
+    if (!GetSession() || !GetSession()->IsLoggedIn())
     {
         setError(tr("Not connected to XenServer"));
         return;
@@ -167,7 +167,7 @@ void HardShutDownApplianceAction::run()
         QString applianceName = m_applianceRef;
         try
         {
-            QVariantMap record = XenAPI::VM_appliance::get_record(session(), m_applianceRef);
+            QVariantMap record = XenAPI::VM_appliance::get_record(GetSession(), m_applianceRef);
             if (record.contains("name_label"))
             {
                 applianceName = record["name_label"].toString();
@@ -177,15 +177,15 @@ void HardShutDownApplianceAction::run()
             // Name lookup failed
         }
 
-        setDescription(tr("Forcing shutdown of appliance '%1'...").arg(applianceName));
+        SetDescription(tr("Forcing shutdown of appliance '%1'...").arg(applianceName));
 
         // Hard shutdown
-        QString taskRef = XenAPI::VM_appliance::async_hard_shutdown(session(), m_applianceRef);
+        QString taskRef = XenAPI::VM_appliance::async_hard_shutdown(GetSession(), m_applianceRef);
 
         // Poll task to completion
         pollToCompletion(taskRef, 0, 100);
 
-        setDescription(tr("Successfully forced shutdown of appliance '%1'").arg(applianceName));
+        SetDescription(tr("Successfully forced shutdown of appliance '%1'").arg(applianceName));
 
     } catch (const std::exception& e)
     {

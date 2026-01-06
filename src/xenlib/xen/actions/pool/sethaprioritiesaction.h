@@ -50,31 +50,31 @@ class SetHaPrioritiesAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection Connection to the pool
-     * @param poolRef Pool opaque reference
-     * @param vmStartupOptions Map of VM ref -> {ha_restart_priority, order, start_delay}
-     * @param ntol Number of host failures to tolerate
-     * @param parent Parent QObject
-     */
-    SetHaPrioritiesAction(XenConnection* connection,
-                          const QString& poolRef,
-                          const QMap<QString, QVariantMap>& vmStartupOptions,
-                          qint64 ntol,
-                          QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection Connection to the pool
+         * @param poolRef Pool opaque reference
+         * @param vmStartupOptions Map of VM ref -> {ha_restart_priority, order, start_delay}
+         * @param ntol Number of host failures to tolerate
+         * @param parent Parent QObject
+         */
+        SetHaPrioritiesAction(XenConnection* connection,
+                              const QString& poolRef,
+                              const QMap<QString, QVariantMap>& vmStartupOptions,
+                              qint64 ntol,
+                              QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_poolRef;
-    QMap<QString, QVariantMap> m_vmStartupOptions;
-    qint64 m_ntol;
+    private:
+        QString m_poolRef;
+        QMap<QString, QVariantMap> m_vmStartupOptions;
+        qint64 m_ntol;
 
-    // Helper to check if a priority is a "restart" priority
-    bool isRestartPriority(const QString& priority) const;
+        // Helper to check if a priority is a "restart" priority
+        bool isRestartPriority(const QString& priority) const;
 };
 
 #endif // SETHAPRIORITIESACTION_H

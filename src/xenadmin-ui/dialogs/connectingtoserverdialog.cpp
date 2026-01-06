@@ -105,11 +105,11 @@ void ConnectingToServerDialog::RegisterEventHandlers()
     if (!m_connection)
         return;
 
-    m_closedConn = connect(m_connection, &XenConnection::connectionClosed,
+    m_closedConn = connect(m_connection, &XenConnection::ConnectionClosed,
                            this, &ConnectingToServerDialog::Connection_ConnectionClosed);
-    m_beforeEndConn = connect(m_connection, &XenConnection::beforeConnectionEnd,
+    m_beforeEndConn = connect(m_connection, &XenConnection::BeforeConnectionEnd,
                               this, &ConnectingToServerDialog::Connection_BeforeConnectionEnd);
-    m_messageConn = connect(m_connection, &XenConnection::connectionMessageChanged,
+    m_messageConn = connect(m_connection, &XenConnection::ConnectionMessageChanged,
                             this, &ConnectingToServerDialog::Connection_ConnectionMessageChanged);
 }
 

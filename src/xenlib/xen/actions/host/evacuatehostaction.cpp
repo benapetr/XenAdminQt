@@ -34,8 +34,8 @@
 #include <QDebug>
 
 EvacuateHostAction::EvacuateHostAction(XenConnection* connection,
-                                       Host* host,
-                                       Host* newCoordinator,
+                                       QSharedPointer<Host> host,
+                                       QSharedPointer<Host> newCoordinator,
                                        QObject* parent)
     : AsyncOperation(connection,
                      "Evacuating host",
@@ -54,7 +54,7 @@ void EvacuateHostAction::run()
 
     try
     {
-        setDescription(QString("Evacuating '%1'").arg(m_host->GetName()));
+        SetDescription(QString("Evacuating '%1'").arg(m_host->GetName()));
 
         // Disable host (0-20%)
         disable(0, 20);
@@ -66,15 +66,15 @@ void EvacuateHostAction::run()
         qDebug() << "EvacuateHostAction: Using non-WLB evacuation";
 
         // Evacuate all VMs from the host (20-80% or 20-90% depending on coordinator)
-        QString taskRef = XenAPI::Host::async_evacuate(session(), m_host->OpaqueRef());
+        QString taskRef = XenAPI::Host::async_evacuate(GetSession(), m_host->OpaqueRef());
         pollToCompletion(taskRef, 20, coordinator ? 80 : 90);
 
-        setDescription(QString("Evacuated '%1'").arg(m_host->GetName()));
+        SetDescription(QString("Evacuated '%1'").arg(m_host->GetName()));
 
         // If this is the coordinator and we have a new coordinator, transition
         if (coordinator && m_newCoordinator)
         {
-            setDescription(QString("Transitioning to new coordinator '%1'")
+            SetDescription(QString("Transitioning to new coordinator '%1'")
                                .arg(m_newCoordinator->GetName()));
 
             // Signal to connection that coordinator is changing
@@ -83,7 +83,7 @@ void EvacuateHostAction::run()
 
             try
             {
-                QString taskRef = XenAPI::Pool::async_designate_new_master(session(),
+                QString taskRef = XenAPI::Pool::async_designate_new_master(GetSession(),
                                                                            m_newCoordinator->OpaqueRef());
                 pollToCompletion(taskRef, 80, 90);
             } catch (...)
@@ -93,11 +93,11 @@ void EvacuateHostAction::run()
                 throw;
             }
 
-            setDescription(QString("Transitioned to new coordinator '%1'")
+            SetDescription(QString("Transitioned to new coordinator '%1'")
                                .arg(m_newCoordinator->GetName()));
         }
 
-        setPercentComplete(100);
+        SetPercentComplete(100);
 
     } catch (const std::exception& e)
     {
@@ -124,12 +124,12 @@ void EvacuateHostAction::disable(int start, int finish)
     qDebug() << "EvacuateHostAction: TODO - HA ntol reduction check not yet implemented";
 
     // Disable the host
-    QString taskRef = XenAPI::Host::async_disable(session(), m_host->OpaqueRef());
+    QString taskRef = XenAPI::Host::async_disable(GetSession(), m_host->OpaqueRef());
     pollToCompletion(taskRef, start, finish);
 
     // Remove and then re-add MAINTENANCE_MODE flag
-    XenAPI::Host::remove_from_other_config(session(), m_host->OpaqueRef(), "MAINTENANCE_MODE");
-    XenAPI::Host::add_to_other_config(session(), m_host->OpaqueRef(), "MAINTENANCE_MODE", "true");
+    XenAPI::Host::remove_from_other_config(GetSession(), m_host->OpaqueRef(), "MAINTENANCE_MODE");
+    XenAPI::Host::add_to_other_config(GetSession(), m_host->OpaqueRef(), "MAINTENANCE_MODE", "true");
 }
 
 void EvacuateHostAction::enable(int start, int finish, bool queryNtolIncrease)
@@ -137,10 +137,10 @@ void EvacuateHostAction::enable(int start, int finish, bool queryNtolIncrease)
     Q_UNUSED(queryNtolIncrease);
 
     // Remove MAINTENANCE_MODE flag
-    XenAPI::Host::remove_from_other_config(session(), m_host->OpaqueRef(), "MAINTENANCE_MODE");
+    XenAPI::Host::remove_from_other_config(GetSession(), m_host->OpaqueRef(), "MAINTENANCE_MODE");
 
     // Enable the host
-    QString taskRef = XenAPI::Host::async_enable(session(), m_host->OpaqueRef());
+    QString taskRef = XenAPI::Host::async_enable(GetSession(), m_host->OpaqueRef());
     pollToCompletion(taskRef, start, finish);
 }
 
@@ -148,7 +148,7 @@ bool EvacuateHostAction::isCoordinator() const
 {
     // Check if this host is the pool coordinator
     // Get pool from cache
-    QList<QVariantMap> pools = connection()->GetCache()->GetAllData("pool");
+    QList<QVariantMap> pools = GetConnection()->GetCache()->GetAllData("pool");
     if (pools.isEmpty())
         return false;
 

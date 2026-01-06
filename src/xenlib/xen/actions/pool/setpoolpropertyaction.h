@@ -45,32 +45,32 @@ class SetPoolPropertyAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct pool property update action
-     * @param connection Connection to the pool
-     * @param poolRef Pool opaque reference
-     * @param propertyName Property name (e.g., "migration_compression")
-     * @param value Property value (bool, string, etc.)
-     * @param description Action description
-     * @param parent Parent QObject
-     */
-    SetPoolPropertyAction(XenConnection* connection,
-                          const QString& poolRef,
-                          const QString& propertyName,
-                          const QVariant& value,
-                          const QString& description,
-                          QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct pool property update action
+         * @param connection Connection to the pool
+         * @param poolRef Pool opaque reference
+         * @param propertyName Property name (e.g., "migration_compression")
+         * @param value Property value (bool, string, etc.)
+         * @param description Action description
+         * @param parent Parent QObject
+         */
+        SetPoolPropertyAction(XenConnection* connection,
+                              const QString& poolRef,
+                              const QString& propertyName,
+                              const QVariant& value,
+                              const QString& description,
+                              QObject* parent = nullptr);
 
-    ~SetPoolPropertyAction() override = default;
+        ~SetPoolPropertyAction() override = default;
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_poolRef;
-    QString m_propertyName;
-    QVariant m_value;
+    private:
+        QString m_poolRef;
+        QString m_propertyName;
+        QVariant m_value;
 };
 
 #endif // SETPOOLPROPERTYACTION_H

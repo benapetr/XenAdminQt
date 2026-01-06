@@ -311,7 +311,7 @@ void SrPicker::scanSRs()
         if (this->m_runningScans < MAX_SCANS_PER_CONNECTION)
         {
             this->m_runningScans++;
-            action->runAsync();
+            action->RunAsync();
         }
     }
 
@@ -513,10 +513,10 @@ void SrPicker::startNextScan()
     {
         for (SrRefreshAction* action : this->m_refreshQueue)
         {
-            if (!action->isRunning() && !action->isCompleted())
+            if (!action->IsRunning() && !action->IsCompleted())
             {
                 this->m_runningScans++;
-                action->runAsync();
+                action->RunAsync();
                 break;
             }
         }

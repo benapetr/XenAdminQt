@@ -36,10 +36,10 @@
 
 // VMShutdownAction implementation
 
-VMShutdownAction::VMShutdownAction(VM* vm, const QString& title, QObject* parent)
+VMShutdownAction::VMShutdownAction(QSharedPointer<VM> vm, const QString& title, QObject* parent)
     : AsyncOperation(vm ? vm->GetConnection() : nullptr, title, tr("Preparing..."), parent)
 {
-    setVM(vm);
+    SetVM(vm);
 
     if (vm)
     {
@@ -63,26 +63,26 @@ VMShutdownAction::~VMShutdownAction()
 
 // VMCleanShutdown implementation
 
-VMCleanShutdown::VMCleanShutdown(VM* vm, QObject* parent)
+VMCleanShutdown::VMCleanShutdown(QSharedPointer<VM> vm, QObject* parent)
     : VMShutdownAction(vm,
                        tr("Shutting down '%1'...").arg(vm ? vm->GetName() : "VM"),
                        parent)
 {
-    addApiMethodToRoleCheck("VM.async_clean_shutdown");
+    AddApiMethodToRoleCheck("VM.async_clean_shutdown");
 }
 
 void VMCleanShutdown::run()
 {
-    setDescription(tr("Shutting down..."));
+    SetDescription(tr("Shutting down..."));
 
-    VM* vmObj = vm();
+    QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)
     {
         setError("VM object is null");
         return;
     }
 
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -98,34 +98,34 @@ void VMCleanShutdown::run()
         return;
     }
 
-    setRelatedTaskRef(taskRef);
+    SetRelatedTaskRef(taskRef);
     pollToCompletion(taskRef, 0, 100);
 
-    setDescription(tr("Shut down"));
+    SetDescription(tr("Shut down"));
 }
 
 // VMHardShutdown implementation
 
-VMHardShutdown::VMHardShutdown(VM* vm, QObject* parent)
+VMHardShutdown::VMHardShutdown(QSharedPointer<VM> vm, QObject* parent)
     : VMShutdownAction(vm,
                        tr("Shutting down '%1'...").arg(vm ? vm->GetName() : "VM"),
                        parent)
 {
-    addApiMethodToRoleCheck("VM.async_hard_shutdown");
+    AddApiMethodToRoleCheck("VM.async_hard_shutdown");
 }
 
 void VMHardShutdown::run()
 {
-    setDescription(tr("Shutting down..."));
+    SetDescription(tr("Shutting down..."));
 
-    VM* vmObj = vm();
+    QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)
     {
         setError("VM object is null");
         return;
     }
 
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -141,34 +141,34 @@ void VMHardShutdown::run()
         return;
     }
 
-    setRelatedTaskRef(taskRef);
+    SetRelatedTaskRef(taskRef);
     pollToCompletion(taskRef, 0, 100);
 
-    setDescription(tr("Shut down"));
+    SetDescription(tr("Shut down"));
 }
 
 // VMSuspendAction implementation
 
-VMSuspendAction::VMSuspendAction(VM* vm, QObject* parent)
+VMSuspendAction::VMSuspendAction(QSharedPointer<VM> vm, QObject* parent)
     : VMShutdownAction(vm,
                        tr("Suspending '%1'...").arg(vm ? vm->GetName() : "VM"),
                        parent)
 {
-    addApiMethodToRoleCheck("VM.async_suspend");
+    AddApiMethodToRoleCheck("VM.async_suspend");
 }
 
 void VMSuspendAction::run()
 {
-    setDescription(tr("Suspending..."));
+    SetDescription(tr("Suspending..."));
 
-    VM* vmObj = vm();
+    QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)
     {
         setError("VM object is null");
         return;
     }
 
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -184,8 +184,8 @@ void VMSuspendAction::run()
         return;
     }
 
-    setRelatedTaskRef(taskRef);
+    SetRelatedTaskRef(taskRef);
     pollToCompletion(taskRef, 0, 100);
 
-    setDescription(tr("Suspended"));
+    SetDescription(tr("Suspended"));
 }

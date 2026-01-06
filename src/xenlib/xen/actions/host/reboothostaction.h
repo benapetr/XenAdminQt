@@ -31,6 +31,7 @@
 #include "../../asyncoperation.h"
 #include "../../host.h"
 #include <functional>
+#include <QSharedPointer>
 
 /**
  * @brief RebootHostAction - Reboot a physical host
@@ -63,61 +64,61 @@ class XENLIB_EXPORT RebootHostAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection
-     * @param host Host to reboot
-     * @param parent Parent QObject
-     *
-     * C# equivalent: RebootHostAction(Host, Func<...>)
-     * Note: acceptNTolChanges callback not yet implemented in Qt version
-     */
-    explicit RebootHostAction(XenConnection* connection,
-                              Host* host,
-                              QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection
+         * @param host Host to reboot
+         * @param parent Parent QObject
+         *
+         * C# equivalent: RebootHostAction(Host, Func<...>)
+         * Note: acceptNTolChanges callback not yet implemented in Qt version
+         */
+        explicit RebootHostAction(XenConnection* connection,
+                                  QSharedPointer<Host> host,
+                                  QObject* parent = nullptr);
 
-protected:
-    /**
-     * @brief Execute the reboot operation
-     *
-     * Steps:
-     * 1. MaybeReduceNtolBeforeOp() - Adjust HA settings if needed
-     * 2. ShutdownVMs(true) - Shutdown all resident VMs (for reboot)
-     * 3. Host.async_reboot() - Reboot the host
-     * 4. PollToCompletion() - Wait for reboot task
-     * 5. Host.enable() on error - Re-enable if reboot fails
-     * 6. Connection.Interrupt() - Close connection if coordinator
-     *
-     * C# equivalent: Run() override
-     */
-    void run() override;
+    protected:
+        /**
+         * @brief Execute the reboot operation
+         *
+         * Steps:
+         * 1. MaybeReduceNtolBeforeOp() - Adjust HA settings if needed
+         * 2. ShutdownVMs(true) - Shutdown all resident VMs (for reboot)
+         * 3. Host.async_reboot() - Reboot the host
+         * 4. PollToCompletion() - Wait for reboot task
+         * 5. Host.enable() on error - Re-enable if reboot fails
+         * 6. Connection.Interrupt() - Close connection if coordinator
+         *
+         * C# equivalent: Run() override
+         */
+        void run() override;
 
-private:
-    Host* m_host;
-    bool m_wasEnabled;
+    private:
+        QSharedPointer<Host> m_host;
+        bool m_wasEnabled;
 
-    /**
-     * @brief Shutdown all VMs on the host
-     * @param isForReboot true if shutting down for reboot, false for shutdown
-     *
-     * Disables host, then shuts down all non-control-domain VMs.
-     * Uses clean_shutdown if allowed, otherwise hard_shutdown.
-     *
-     * C# equivalent: ShutdownVMs(bool)
-     */
-    void shutdownVMs(bool isForReboot);
+        /**
+         * @brief Shutdown all VMs on the host
+         * @param isForReboot true if shutting down for reboot, false for shutdown
+         *
+         * Disables host, then shuts down all non-control-domain VMs.
+         * Uses clean_shutdown if allowed, otherwise hard_shutdown.
+         *
+         * C# equivalent: ShutdownVMs(bool)
+         */
+        void shutdownVMs(bool isForReboot);
 
-    /**
-     * @brief Check and reduce HA ntol if needed
-     *
-     * Ensures pool has at least 1 'slack' host failure tolerance.
-     * May throw exception if ntol reduction would be required but user declines.
-     *
-     * C# equivalent: MaybeReduceNtolBeforeOp()
-     * Note: Currently simplified - full HA logic not yet implemented
-     */
-    void maybeReduceNtolBeforeOp();
+        /**
+         * @brief Check and reduce HA ntol if needed
+         *
+         * Ensures pool has at least 1 'slack' host failure tolerance.
+         * May throw exception if ntol reduction would be required but user declines.
+         *
+         * C# equivalent: MaybeReduceNtolBeforeOp()
+         * Note: Currently simplified - full HA logic not yet implemented
+         */
+        void maybeReduceNtolBeforeOp();
 };
 
 #endif // REBOOTHOSTACTION_H

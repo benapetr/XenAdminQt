@@ -36,7 +36,7 @@
 #include "../../xenapi/xenapi_Host.h"
 #include <QDebug>
 
-SrReattachAction::SrReattachAction(SR* sr,
+SrReattachAction::SrReattachAction(QSharedPointer<SR> sr,
                                    const QString& name,
                                    const QString& description,
                                    const QVariantMap& deviceConfig,
@@ -65,14 +65,14 @@ void SrReattachAction::run()
              << "name:" << m_name
              << "description:" << m_description;
 
-    XenAPI::Session* session = this->session();
+    XenAPI::Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");
         return;
     }
 
-    setDescription("Reattaching storage repository...");
+    SetDescription("Reattaching storage repository...");
 
     QString srRef = m_sr->OpaqueRef();
 
@@ -113,7 +113,7 @@ void SrReattachAction::run()
     {
         // Create PBD
         qDebug() << "SrReattachAction: Creating PBD for host" << hostRef;
-        setDescription("Creating storage connection for host...");
+        SetDescription("Creating storage connection for host...");
 
         QVariantMap pbdRecord;
         pbdRecord["SR"] = srRef;
@@ -126,7 +126,7 @@ void SrReattachAction::run()
         {
             QString taskRef = XenAPI::PBD::async_create(session, pbdRecord);
             pollToCompletion(taskRef, currentProgress, currentProgress + progressPerHost);
-            pbdRef = result();
+            pbdRef = GetResult();
             currentProgress += progressPerHost;
         } catch (const std::exception& e)
         {
@@ -137,7 +137,7 @@ void SrReattachAction::run()
 
         // Plug PBD
         qDebug() << "SrReattachAction: Plugging PBD";
-        setDescription("Plugging storage on host...");
+        SetDescription("Plugging storage on host...");
 
         try
         {
@@ -154,7 +154,7 @@ void SrReattachAction::run()
 
     // Update SR name and description
     qDebug() << "SrReattachAction: Updating SR metadata";
-    setDescription("Updating storage repository properties...");
+    SetDescription("Updating storage repository properties...");
 
     try
     {
@@ -166,6 +166,6 @@ void SrReattachAction::run()
         // Non-fatal - SR is already reattached
     }
 
-    setDescription("Storage repository attached successfully");
-    setPercentComplete(100);
+    SetDescription("Storage repository attached successfully");
+    SetPercentComplete(100);
 }

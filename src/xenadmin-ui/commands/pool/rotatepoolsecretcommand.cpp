@@ -203,14 +203,14 @@ void RotatePoolSecretCommand::Run()
 
     RotatePoolSecretAction* action = new RotatePoolSecretAction(connection, poolRef);
 
-    action->setTitle(tr("Rotating pool secret"));
-    action->setDescription(tr("Rotating secret for pool '%1'...").arg(poolName));
+    action->SetTitle(tr("Rotating pool secret"));
+    action->SetDescription(tr("Rotating secret for pool '%1'...").arg(poolName));
 
     OperationManager* opManager = OperationManager::instance();
     opManager->RegisterOperation(action);
-    action->runAsync();
+    action->RunAsync();
 
-    this->mainWindow()->showStatusMessage(tr("Pool secret rotation started"), 3000);
+    this->mainWindow()->ShowStatusMessage(tr("Pool secret rotation started"), 3000);
 }
 
 QString RotatePoolSecretCommand::MenuText() const

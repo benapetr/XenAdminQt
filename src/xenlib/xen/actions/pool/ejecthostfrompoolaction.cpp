@@ -35,8 +35,8 @@
 #include <stdexcept>
 
 EjectHostFromPoolAction::EjectHostFromPoolAction(XenConnection* connection,
-                                                 Pool* pool,
-                                                 Host* hostToEject,
+                                                 QSharedPointer<Pool> pool,
+                                                 QSharedPointer<Host> hostToEject,
                                                  QObject* parent)
     : AsyncOperation(connection,
                      QString("Removing %1 from pool %2")
@@ -51,23 +51,23 @@ EjectHostFromPoolAction::EjectHostFromPoolAction(XenConnection* connection,
     if (!m_hostToEject)
         throw std::invalid_argument("Host to eject cannot be null");
 
-    setPool(m_pool);
-    setHost(m_hostToEject);
+    SetPool(m_pool);
+    SetHost(m_hostToEject);
 }
 
 void EjectHostFromPoolAction::run()
 {
     try
     {
-        setDescription("Removing host from pool...");
+        SetDescription("Removing host from pool...");
 
         qDebug() << "EjectHostFromPoolAction: Ejecting" << m_hostToEject->GetName()
                  << "from pool" << m_pool->GetName();
 
         // Call Pool.eject to remove the host
-        XenAPI::Pool::eject(session(), m_hostToEject->OpaqueRef());
+        XenAPI::Pool::eject(GetSession(), m_hostToEject->OpaqueRef());
 
-        setDescription("Host removed from pool");
+        SetDescription("Host removed from pool");
 
     } catch (const std::exception& e)
     {

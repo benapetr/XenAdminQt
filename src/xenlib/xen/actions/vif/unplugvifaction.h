@@ -43,24 +43,24 @@ class UnplugVIFAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection
-     * @param vifRef VIF opaque reference
-     * @param parent Parent QObject
-     */
-    UnplugVIFAction(XenConnection* connection,
-                    const QString& vifRef,
-                    QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection
+         * @param vifRef VIF opaque reference
+         * @param parent Parent QObject
+         */
+        UnplugVIFAction(XenConnection* connection,
+                        const QString& vifRef,
+                        QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_vifRef;
-    QString m_vmRef;
-    QString m_vmName;
+    private:
+        QString m_vifRef;
+        QString m_vmRef;
+        QString m_vmName;
 };
 
 #endif // UNPLUGVIFACTION_H

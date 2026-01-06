@@ -41,10 +41,10 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.get_all", params);
+        QByteArray request = api.BuildJsonRpcCall("host.get_all", params);
         QByteArray response = session->sendApiRequest(request);
 
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
 
         // Result should be a list of host refs
         if (result.canConvert<QVariantList>())
@@ -64,10 +64,10 @@ namespace XenAPI
         params << session->getSessionId() << host;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.get_record", params);
+        QByteArray request = api.BuildJsonRpcCall("host.get_record", params);
         QByteArray response = session->sendApiRequest(request);
 
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
         if (result.canConvert<QVariantMap>())
         {
             return result.toMap();
@@ -85,9 +85,9 @@ namespace XenAPI
         params << session->getSessionId() << host;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.get_servertime", params);
+        QByteArray request = api.BuildJsonRpcCall("host.get_servertime", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response);
+        return api.ParseJsonRpcResponse(response);
     }
 
     double Host::query_data_source(Session* session, const QString& host, const QString& data_source)
@@ -99,9 +99,9 @@ namespace XenAPI
         params << session->getSessionId() << host << data_source;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.query_data_source", params);
+        QByteArray request = api.BuildJsonRpcCall("host.query_data_source", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toDouble();
+        return api.ParseJsonRpcResponse(response).toDouble();
     }
 
     void Host::set_name_label(Session* session, const QString& host, const QString& value)
@@ -113,9 +113,9 @@ namespace XenAPI
         params << session->getSessionId() << host << value;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.set_name_label", params);
+        QByteArray request = api.BuildJsonRpcCall("host.set_name_label", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void Host::set_name_description(Session* session, const QString& host, const QString& value)
@@ -127,9 +127,9 @@ namespace XenAPI
         params << session->getSessionId() << host << value;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.set_name_description", params);
+        QByteArray request = api.BuildJsonRpcCall("host.set_name_description", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void Host::set_tags(Session* session, const QString& host, const QStringList& value)
@@ -141,9 +141,9 @@ namespace XenAPI
         params << session->getSessionId() << host << value;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.set_tags", params);
+        QByteArray request = api.BuildJsonRpcCall("host.set_tags", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void Host::set_other_config(Session* session, const QString& host, const QVariantMap& otherConfig)
@@ -155,9 +155,9 @@ namespace XenAPI
         params << session->getSessionId() << host << otherConfig;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.set_other_config", params);
+        QByteArray request = api.BuildJsonRpcCall("host.set_other_config", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void Host::set_iscsi_iqn(Session* session, const QString& host, const QString& value)
@@ -169,9 +169,9 @@ namespace XenAPI
         params << session->getSessionId() << host << value;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.set_iscsi_iqn", params);
+        QByteArray request = api.BuildJsonRpcCall("host.set_iscsi_iqn", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     QString Host::call_plugin(Session* session,
@@ -187,10 +187,10 @@ namespace XenAPI
         params << session->getSessionId() << host << plugin << function << args;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.call_plugin", params);
+        QByteArray request = api.BuildJsonRpcCall("host.call_plugin", params);
         QByteArray response = session->sendApiRequest(request);
 
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
         return result.toString();
     }
 
@@ -203,9 +203,9 @@ namespace XenAPI
         params << session->getSessionId() << host;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.host.disable", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.host.disable", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     void Host::enable(Session* session, const QString& host)
@@ -217,9 +217,9 @@ namespace XenAPI
         params << session->getSessionId() << host;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.enable", params);
+        QByteArray request = api.BuildJsonRpcCall("host.enable", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Void method - just check for errors
+        api.ParseJsonRpcResponse(response); // Void method - just check for errors
     }
 
     QString Host::async_enable(Session* session, const QString& host)
@@ -231,9 +231,9 @@ namespace XenAPI
         params << session->getSessionId() << host;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.host.enable", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.host.enable", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     QString Host::async_reboot(Session* session, const QString& host)
@@ -245,9 +245,9 @@ namespace XenAPI
         params << session->getSessionId() << host;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.host.reboot", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.host.reboot", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     QString Host::async_shutdown(Session* session, const QString& host)
@@ -259,9 +259,9 @@ namespace XenAPI
         params << session->getSessionId() << host;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.host.shutdown", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.host.shutdown", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     QString Host::async_evacuate(Session* session, const QString& host)
@@ -273,9 +273,9 @@ namespace XenAPI
         params << session->getSessionId() << host;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.host.evacuate", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.host.evacuate", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     QString Host::async_destroy(Session* session, const QString& host)
@@ -287,9 +287,9 @@ namespace XenAPI
         params << session->getSessionId() << host;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.host.destroy", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.host.destroy", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     void Host::remove_from_other_config(Session* session, const QString& host, const QString& key)
@@ -301,9 +301,9 @@ namespace XenAPI
         params << session->getSessionId() << host << key;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.remove_from_other_config", params);
+        QByteArray request = api.BuildJsonRpcCall("host.remove_from_other_config", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Void method - just check for errors
+        api.ParseJsonRpcResponse(response); // Void method - just check for errors
     }
 
     void Host::add_to_other_config(Session* session, const QString& host, const QString& key, const QString& value)
@@ -315,9 +315,9 @@ namespace XenAPI
         params << session->getSessionId() << host << key << value;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.add_to_other_config", params);
+        QByteArray request = api.BuildJsonRpcCall("host.add_to_other_config", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Void method - just check for errors
+        api.ParseJsonRpcResponse(response); // Void method - just check for errors
     }
 
     void Host::management_reconfigure(Session* session, const QString& pif)
@@ -329,9 +329,9 @@ namespace XenAPI
         params << session->getSessionId() << pif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.management_reconfigure", params);
+        QByteArray request = api.BuildJsonRpcCall("host.management_reconfigure", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Void method - just check for errors
+        api.ParseJsonRpcResponse(response); // Void method - just check for errors
     }
 
     QString Host::async_management_reconfigure(Session* session, const QString& pif)
@@ -343,9 +343,9 @@ namespace XenAPI
         params << session->getSessionId() << pif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.host.management_reconfigure", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.host.management_reconfigure", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     QVariantMap Host::migrate_receive(Session* session, const QString& host,
@@ -358,9 +358,9 @@ namespace XenAPI
         params << session->getSessionId() << host << network << options;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("host.migrate_receive", params);
+        QByteArray request = api.BuildJsonRpcCall("host.migrate_receive", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toMap(); // Returns migration receive data
+        return api.ParseJsonRpcResponse(response).toMap(); // Returns migration receive data
     }
 
 } // namespace XenAPI

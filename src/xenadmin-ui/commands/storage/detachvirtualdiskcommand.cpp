@@ -311,14 +311,14 @@ void DetachVirtualDiskCommand::Run()
 
         // Connect completion signal
         connect(action, &AsyncOperation::completed, [this, vdiName, vmName, action]() {
-            if (action->state() == AsyncOperation::Completed && !action->isFailed())
+            if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
-                this->mainWindow()->showStatusMessage(
+                this->mainWindow()->ShowStatusMessage(
                     QString("Successfully detached virtual disk '%1' from VM '%2'").arg(vdiName, vmName),
                     5000);
             } else
             {
-                this->mainWindow()->showStatusMessage(
+                this->mainWindow()->ShowStatusMessage(
                     QString("Failed to detach virtual disk '%1' from VM '%2'").arg(vdiName, vmName),
                     5000);
             }
@@ -342,6 +342,6 @@ void DetachVirtualDiskCommand::Run()
     // Run actions asynchronously
     for (AsyncOperation* action : actions)
     {
-        action->runAsync();
+        action->RunAsync();
     }
 }

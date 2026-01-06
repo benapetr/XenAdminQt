@@ -35,6 +35,7 @@ class Host;
 class VDI;
 class VBD;
 class VIF;
+class Pool;
 
 /**
  * @brief VM - A virtual machine (or 'guest')
@@ -99,6 +100,7 @@ class XENLIB_EXPORT VM : public XenObject
         QString ResidentOnRef() const;
 
         QSharedPointer<Host> GetHost();
+        QSharedPointer<Pool> GetPool();
 
         /**
          * @brief Get reference to affinity host

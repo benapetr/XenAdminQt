@@ -34,7 +34,7 @@
 #include "../../xenapi/xenapi_Host.h"
 #include <QDebug>
 
-SrRepairAction::SrRepairAction(SR* sr,
+SrRepairAction::SrRepairAction(QSharedPointer<SR> sr,
                                bool isSharedAction,
                                QObject* parent)
     : AsyncOperation(sr ? sr->GetConnection() : nullptr,
@@ -51,8 +51,8 @@ SrRepairAction::SrRepairAction(SR* sr,
     }
 
     // RBAC dependencies
-    addApiMethodToRoleCheck("PBD.plug");
-    addApiMethodToRoleCheck("PBD.create");
+    AddApiMethodToRoleCheck("PBD.plug");
+    AddApiMethodToRoleCheck("PBD.create");
 }
 
 void SrRepairAction::run()
@@ -63,7 +63,7 @@ void SrRepairAction::run()
         return;
     }
 
-    XenAPI::Session* session = this->session();
+    XenAPI::Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -174,7 +174,7 @@ void SrRepairAction::run()
         if (!hasPbd && srShared && !templateDeviceConfig.isEmpty())
         {
             qDebug() << "SrRepairAction: Creating PBD for host" << hostRef;
-            setDescription("Creating storage connection for host...");
+            SetDescription("Creating storage connection for host...");
 
             QVariantMap newPbdRecord;
             newPbdRecord["SR"] = srRef;
@@ -189,7 +189,7 @@ void SrRepairAction::run()
                 int progressEnd = ((current + 1) * 100) / max;
                 pollToCompletion(taskRef, progressStart, progressEnd);
 
-                existingPbdRef = result();
+                existingPbdRef = GetResult();
                 hasPbd = true;
                 pbdAttached = false;
 
@@ -197,7 +197,7 @@ void SrRepairAction::run()
             } catch (const std::exception& e)
             {
                 lastError = QString("Failed to create PBD: %1").arg(e.what());
-                lastErrorDescription = description();
+                lastErrorDescription = GetDescription();
                 qWarning() << "SrRepairAction:" << lastError;
                 current++;
                 continue; // Continue with other hosts
@@ -211,7 +211,7 @@ void SrRepairAction::run()
         if (hasPbd && !pbdAttached && !existingPbdRef.isEmpty())
         {
             qDebug() << "SrRepairAction: Plugging PBD" << existingPbdRef;
-            setDescription("Plugging storage on host...");
+            SetDescription("Plugging storage on host...");
 
             try
             {
@@ -224,7 +224,7 @@ void SrRepairAction::run()
             } catch (const std::exception& e)
             {
                 lastError = QString("Failed to plug PBD: %1").arg(e.what());
-                lastErrorDescription = description();
+                lastErrorDescription = GetDescription();
                 qWarning() << "SrRepairAction:" << lastError;
                 current++;
                 continue; // Continue with other hosts
@@ -238,16 +238,16 @@ void SrRepairAction::run()
     // Report last error if any occurred
     if (!lastError.isEmpty())
     {
-        setDescription(lastErrorDescription);
+        SetDescription(lastErrorDescription);
         throw std::runtime_error(lastError.toStdString());
     }
 
     // Success
-    setPercentComplete(100);
+    SetPercentComplete(100);
     if (m_isSharedAction)
-        setDescription(QString("SR '%1' shared successfully").arg(m_sr->GetName()));
+        SetDescription(QString("SR '%1' shared successfully").arg(m_sr->GetName()));
     else
-        setDescription(QString("SR '%1' repaired successfully").arg(m_sr->GetName()));
+        SetDescription(QString("SR '%1' repaired successfully").arg(m_sr->GetName()));
 
     qDebug() << "SrRepairAction: Repair complete";
 }

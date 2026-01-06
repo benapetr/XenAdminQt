@@ -43,31 +43,31 @@ class ChangeVMISOAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct a new ChangeVMISOAction
-     * @param connection XenServer connection
-     * @param vmRef VM reference
-     * @param vdiRef VDI reference (may be empty to just eject)
-     * @param vbdRef VBD reference (must not be empty)
-     * @param parent Parent object
-     */
-    explicit ChangeVMISOAction(XenConnection* connection,
-                               const QString& vmRef,
-                               const QString& vdiRef,
-                               const QString& vbdRef,
-                               QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct a new ChangeVMISOAction
+         * @param connection XenServer connection
+         * @param vmRef VM reference
+         * @param vdiRef VDI reference (may be empty to just eject)
+         * @param vbdRef VBD reference (must not be empty)
+         * @param parent Parent object
+         */
+        explicit ChangeVMISOAction(XenConnection* connection,
+                                   const QString& vmRef,
+                                   const QString& vdiRef,
+                                   const QString& vbdRef,
+                                   QObject* parent = nullptr);
 
-    ~ChangeVMISOAction() override;
+        ~ChangeVMISOAction() override;
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_vmRef;
-    QString m_vdiRef; // Empty means eject only
-    QString m_vbdRef;
-    bool m_isEmpty; // Whether the VBD is currently empty
+    private:
+        QString m_vmRef;
+        QString m_vdiRef; // Empty means eject only
+        QString m_vbdRef;
+        bool m_isEmpty; // Whether the VBD is currently empty
 };
 
 #endif // CHANGEVMISOACTION_H

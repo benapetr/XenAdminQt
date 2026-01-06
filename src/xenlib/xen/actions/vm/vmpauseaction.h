@@ -44,11 +44,11 @@ class XENLIB_EXPORT VMPauseAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    virtual ~VMPauseAction();
+    public:
+        virtual ~VMPauseAction();
 
-protected:
-    explicit VMPauseAction(VM* vm, const QString& title, QObject* parent = nullptr);
+    protected:
+        explicit VMPauseAction(QSharedPointer<VM> vm, const QString& title, QObject* parent = nullptr);
 };
 
 /**
@@ -61,11 +61,11 @@ class XENLIB_EXPORT VMPause : public VMPauseAction
 {
     Q_OBJECT
 
-public:
-    explicit VMPause(VM* vm, QObject* parent = nullptr);
+    public:
+        explicit VMPause(QSharedPointer<VM> vm, QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 };
 
 /**
@@ -78,11 +78,11 @@ class XENLIB_EXPORT VMUnpause : public VMPauseAction
 {
     Q_OBJECT
 
-public:
-    explicit VMUnpause(VM* vm, QObject* parent = nullptr);
+    public:
+        explicit VMUnpause(QSharedPointer<VM> vm, QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 };
 
 #endif // VMPAUSEACTION_H

@@ -53,8 +53,8 @@ void DisconnectAllHostsCommand::Run()
 
     if (ret == QMessageBox::Yes)
     {
-        this->mainWindow()->showStatusMessage("Disconnecting from all servers...");
-        manager->disconnectAll();
+        this->mainWindow()->ShowStatusMessage("Disconnecting from all servers...");
+        manager->DisconnectAll();
     }
 }
 
@@ -70,6 +70,6 @@ bool DisconnectAllHostsCommand::hasConnectedConnections() const
         return false;
 
     // Check if there are any connected connections
-    QList<XenConnection*> connectedConnections = manager->getConnectedConnections();
+    QList<XenConnection*> connectedConnections = manager->GetConnectedConnections();
     return !connectedConnections.isEmpty();
 }

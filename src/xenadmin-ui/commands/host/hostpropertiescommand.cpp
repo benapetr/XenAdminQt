@@ -31,8 +31,7 @@
 #include "xen/host.h"
 #include <QMessageBox>
 
-HostPropertiesCommand::HostPropertiesCommand(MainWindow* mainWindow, QObject* parent)
-    : HostCommand(mainWindow, parent)
+HostPropertiesCommand::HostPropertiesCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 

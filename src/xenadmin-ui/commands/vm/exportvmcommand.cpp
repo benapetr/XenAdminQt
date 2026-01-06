@@ -102,7 +102,7 @@ void ExportVMCommand::onWizardFinished(int result)
         QMessageBox::information(this->mainWindow(), tr("Export Started"),
                                  tr("Export operation has been started.\nDestination: %1").arg(fullPath));
 
-        this->mainWindow()->showStatusMessage(tr("Export started"), 3000);
+        this->mainWindow()->ShowStatusMessage(tr("Export started"), 3000);
     }
 
     // Clean up wizard

@@ -48,7 +48,7 @@ GeneralEditPageAction::GeneralEditPageAction(XenConnection* connection,
     m_oldTags.sort();
     m_newTags.sort();
 
-    setSuppressHistory(suppressHistory);
+    SetSuppressHistory(suppressHistory);
 
     // RBAC permission checks (matching C# implementation)
     // C# checks: folder operations + tag operations
@@ -60,15 +60,15 @@ void GeneralEditPageAction::run()
 {
     try
     {
-        setPercentComplete(0);
-        setDescription(tr("Updating properties..."));
+        SetPercentComplete(0);
+        SetDescription(tr("Updating properties..."));
 
         // Step 1: Handle folder changes
         // C# code: if (newFolder != xenObjectCopy.Path)
         if (m_oldFolder != m_newFolder)
         {
-            setPercentComplete(10);
-            setDescription(tr("Updating folder..."));
+            SetPercentComplete(10);
+            SetDescription(tr("Updating folder..."));
 
             if (!m_newFolder.isEmpty())
             {
@@ -120,8 +120,8 @@ void GeneralEditPageAction::run()
                 if (totalTagOps > 0)
                 {
                     tagProgress = 30 + (currentTagOp * 60 / totalTagOps);
-                    setPercentComplete(tagProgress);
-                    setDescription(tr("Removing tag '%1'...").arg(tag));
+                    SetPercentComplete(tagProgress);
+                    SetDescription(tr("Removing tag '%1'...").arg(tag));
                 }
 
                 removeTag(tag);
@@ -143,8 +143,8 @@ void GeneralEditPageAction::run()
                 if (totalTagOps > 0)
                 {
                     tagProgress = 30 + (currentTagOp * 60 / totalTagOps);
-                    setPercentComplete(tagProgress);
-                    setDescription(tr("Adding tag '%1'...").arg(tag));
+                    SetPercentComplete(tagProgress);
+                    SetDescription(tr("Adding tag '%1'...").arg(tag));
                 }
 
                 addTag(tag);
@@ -155,8 +155,8 @@ void GeneralEditPageAction::run()
             }
         }
 
-        setPercentComplete(100);
-        setDescription(tr("Properties updated successfully"));
+        SetPercentComplete(100);
+        SetDescription(tr("Properties updated successfully"));
 
     } catch (const std::exception& e)
     {
@@ -172,7 +172,7 @@ void GeneralEditPageAction::setFolderPath(const QString& folderPath)
     // - Move: Sets other_config["folder"] to new path
     // - Unfolder: Removes other_config["folder"] key
 
-    Session* sess = session();
+    Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
@@ -202,19 +202,19 @@ void GeneralEditPageAction::setFolderPath(const QString& folderPath)
 
     // Execute API call
     XenRpcAPI api(sess);
-    QByteArray request = api.buildJsonRpcCall(method, params);
-    QByteArray response = connection()->SendRequest(request);
+    QByteArray request = api.BuildJsonRpcCall(method, params);
+    QByteArray response = GetConnection()->SendRequest(request);
 
     // Parse response (will throw on error)
-    api.parseJsonRpcResponse(response);
+    api.ParseJsonRpcResponse(response);
 }
 
 void GeneralEditPageAction::removeTag(const QString& tag)
 {
-    // C# equivalent: Tags.RemoveTag(session, o, tag)
-    // Implementation: o.Do("remove_tags", session, o.opaque_ref, tag);
+    // C# equivalent: Tags.RemoveTag(GetSession, o, tag)
+    // Implementation: o.Do("remove_tags", GetSession, o.opaque_ref, tag);
 
-    Session* sess = session();
+    Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
@@ -226,19 +226,19 @@ void GeneralEditPageAction::removeTag(const QString& tag)
     params << sess->getSessionId() << m_objectRef << tag;
 
     XenRpcAPI api(sess);
-    QByteArray request = api.buildJsonRpcCall(method, params);
-    QByteArray response = connection()->SendRequest(request);
+    QByteArray request = api.BuildJsonRpcCall(method, params);
+    QByteArray response = GetConnection()->SendRequest(request);
 
     // Parse response (will throw on error)
-    api.parseJsonRpcResponse(response);
+    api.ParseJsonRpcResponse(response);
 }
 
 void GeneralEditPageAction::addTag(const QString& tag)
 {
-    // C# equivalent: Tags.AddTag(session, o, tag)
-    // Implementation: o.Do("add_tags", session, o.opaque_ref, tag);
+    // C# equivalent: Tags.AddTag(GetSession, o, tag)
+    // Implementation: o.Do("add_tags", GetSession, o.opaque_ref, tag);
 
-    Session* sess = session();
+    Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
@@ -250,9 +250,9 @@ void GeneralEditPageAction::addTag(const QString& tag)
     params << sess->getSessionId() << m_objectRef << tag;
 
     XenRpcAPI api(sess);
-    QByteArray request = api.buildJsonRpcCall(method, params);
-    QByteArray response = connection()->SendRequest(request);
+    QByteArray request = api.BuildJsonRpcCall(method, params);
+    QByteArray response = GetConnection()->SendRequest(request);
 
     // Parse response (will throw on error)
-    api.parseJsonRpcResponse(response);
+    api.ParseJsonRpcResponse(response);
 }

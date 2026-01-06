@@ -45,9 +45,9 @@ namespace XenAPI
         params << applianceRef;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VM_appliance.get_allowed_operations", params);
+        QByteArray request = api.BuildJsonRpcCall("VM_appliance.get_allowed_operations", params);
         QByteArray response = session->sendApiRequest(request);
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
 
         // Result is array of strings: ["start", "clean_shutdown", etc.]
         QStringList operations;
@@ -72,9 +72,9 @@ namespace XenAPI
         params << applianceRef;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VM_appliance.get_current_operations", params);
+        QByteArray request = api.BuildJsonRpcCall("VM_appliance.get_current_operations", params);
         QByteArray response = session->sendApiRequest(request);
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
 
         // Result is map: task_ref → operation_name
         return result.toMap();
@@ -91,9 +91,9 @@ namespace XenAPI
         params << applianceRef;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VM_appliance.get_VMs", params);
+        QByteArray request = api.BuildJsonRpcCall("VM_appliance.get_VMs", params);
         QByteArray response = session->sendApiRequest(request);
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
 
         // Result is array of VM OpaqueRefs
         QStringList vmRefs;
@@ -118,9 +118,9 @@ namespace XenAPI
         params << applianceRef;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VM_appliance.get_record", params);
+        QByteArray request = api.BuildJsonRpcCall("VM_appliance.get_record", params);
         QByteArray response = session->sendApiRequest(request);
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
 
         return result.toMap();
     }
@@ -135,9 +135,9 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VM_appliance.get_all_records", params);
+        QByteArray request = api.BuildJsonRpcCall("VM_appliance.get_all_records", params);
         QByteArray response = session->sendApiRequest(request);
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
 
         return result.toMap();
     }
@@ -154,9 +154,9 @@ namespace XenAPI
         params << label;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VM_appliance.set_name_label", params);
+        QByteArray request = api.BuildJsonRpcCall("VM_appliance.set_name_label", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Throws on error
+        api.ParseJsonRpcResponse(response); // Throws on error
     }
 
     // VM_appliance.set_name_description
@@ -171,9 +171,9 @@ namespace XenAPI
         params << description;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VM_appliance.set_name_description", params);
+        QByteArray request = api.BuildJsonRpcCall("VM_appliance.set_name_description", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Throws on error
+        api.ParseJsonRpcResponse(response); // Throws on error
     }
 
     // VM_appliance.async_start
@@ -188,9 +188,9 @@ namespace XenAPI
         params << paused;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.VM_appliance.start", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.VM_appliance.start", params);
         QByteArray response = session->sendApiRequest(request);
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
 
         return result.toString(); // Task ref
     }
@@ -207,9 +207,9 @@ namespace XenAPI
         params << paused;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VM_appliance.start", params);
+        QByteArray request = api.BuildJsonRpcCall("VM_appliance.start", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Throws on error
+        api.ParseJsonRpcResponse(response); // Throws on error
     }
 
     // VM_appliance.async_clean_shutdown
@@ -223,9 +223,9 @@ namespace XenAPI
         params << applianceRef;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.VM_appliance.clean_shutdown", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.VM_appliance.clean_shutdown", params);
         QByteArray response = session->sendApiRequest(request);
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
 
         return result.toString(); // Task ref
     }
@@ -241,9 +241,9 @@ namespace XenAPI
         params << applianceRef;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VM_appliance.clean_shutdown", params);
+        QByteArray request = api.BuildJsonRpcCall("VM_appliance.clean_shutdown", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Throws on error
+        api.ParseJsonRpcResponse(response); // Throws on error
     }
 
     // VM_appliance.async_hard_shutdown
@@ -257,9 +257,9 @@ namespace XenAPI
         params << applianceRef;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.VM_appliance.hard_shutdown", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.VM_appliance.hard_shutdown", params);
         QByteArray response = session->sendApiRequest(request);
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
 
         return result.toString(); // Task ref
     }
@@ -275,9 +275,9 @@ namespace XenAPI
         params << applianceRef;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VM_appliance.hard_shutdown", params);
+        QByteArray request = api.BuildJsonRpcCall("VM_appliance.hard_shutdown", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Throws on error
+        api.ParseJsonRpcResponse(response); // Throws on error
     }
 
     // VM_appliance.async_shutdown
@@ -291,9 +291,9 @@ namespace XenAPI
         params << applianceRef;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.VM_appliance.shutdown", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.VM_appliance.shutdown", params);
         QByteArray response = session->sendApiRequest(request);
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
 
         return result.toString(); // Task ref
     }
@@ -309,9 +309,9 @@ namespace XenAPI
         params << applianceRef;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VM_appliance.shutdown", params);
+        QByteArray request = api.BuildJsonRpcCall("VM_appliance.shutdown", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Throws on error
+        api.ParseJsonRpcResponse(response); // Throws on error
     }
 
 } // namespace XenAPI

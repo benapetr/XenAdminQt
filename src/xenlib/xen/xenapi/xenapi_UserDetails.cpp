@@ -90,10 +90,10 @@ namespace XenAPI
             params << session->getSessionId() << this->userSid_;
 
             XenRpcAPI api(session);
-            QByteArray request = api.buildJsonRpcCall("auth.get_subject_information_from_identifier", params);
+            QByteArray request = api.BuildJsonRpcCall("auth.get_subject_information_from_identifier", params);
             QByteArray response = session->sendApiRequest(request);
 
-            QVariant result = api.parseJsonRpcResponse(response);
+            QVariant result = api.ParseJsonRpcResponse(response);
             if (result.canConvert<QVariantMap>())
             {
                 QVariantMap info = result.toMap();
@@ -102,10 +102,10 @@ namespace XenAPI
             }
 
             // Get group membership
-            request = api.buildJsonRpcCall("auth.get_group_membership", params);
+            request = api.BuildJsonRpcCall("auth.get_group_membership", params);
             response = session->sendApiRequest(request);
 
-            result = api.parseJsonRpcResponse(response);
+            result = api.ParseJsonRpcResponse(response);
             if (result.canConvert<QVariantList>())
             {
                 QVariantList groups = result.toList();
@@ -140,10 +140,10 @@ namespace XenAPI
                 QVariantList params;
                 params << session->getSessionId() << sid;
 
-                QByteArray request = api.buildJsonRpcCall("auth.get_subject_information_from_identifier", params);
+                QByteArray request = api.BuildJsonRpcCall("auth.get_subject_information_from_identifier", params);
                 QByteArray response = session->sendApiRequest(request);
 
-                QVariant result = api.parseJsonRpcResponse(response);
+                QVariant result = api.ParseJsonRpcResponse(response);
                 if (result.canConvert<QVariantMap>())
                 {
                     QVariantMap info = result.toMap();

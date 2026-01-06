@@ -667,7 +667,7 @@ void VMStorageTabPage::onIsoComboBoxChanged(int index)
     });
 
     // Start the operation (runs on QThreadPool)
-    action->runAsync();
+    action->RunAsync();
 }
 
 void VMStorageTabPage::onEjectButtonClicked()
@@ -746,7 +746,7 @@ void VMStorageTabPage::onNewCDDriveLinkClicked(const QString& link)
         return;
     }
 
-    QString newVbdRef = createAction->result();
+    QString newVbdRef = createAction->GetResult();
     delete dialog;
 
     this->ui->noDrivesLabel->setEnabled(true);
@@ -1134,13 +1134,13 @@ void VMStorageTabPage::runVbdPlugOperations(const QStringList& vbdRefs, bool plu
             [vbdRef, plug](DelegatedAsyncOperation* operation) {
                 if (plug)
                 {
-                    XenAPI::VBD::plug(operation->session(), vbdRef);
+                    XenAPI::VBD::plug(operation->GetSession(), vbdRef);
                 }
                 else
                 {
-                    XenAPI::VBD::unplug(operation->session(), vbdRef);
+                    XenAPI::VBD::unplug(operation->GetSession(), vbdRef);
                 }
-                operation->setPercentComplete(100);
+                operation->SetPercentComplete(100);
             },
             this);
 
@@ -1557,7 +1557,7 @@ void VMStorageTabPage::onAddButtonClicked()
     }
 
     qDebug() << "[StorageTabPage] Dialog was accepted, getting VDI ref...";
-    QString vdiRef = createAction->result();
+    QString vdiRef = createAction->GetResult();
     delete createDialog;
 
     if (vdiRef.isEmpty())
@@ -1675,7 +1675,7 @@ void VMStorageTabPage::onAttachButtonClicked()
         return;
     }
 
-    QString vbdRef = attachAction->result();
+    QString vbdRef = attachAction->GetResult();
     delete attachDialog;
 
     if (vbdRef.isEmpty())

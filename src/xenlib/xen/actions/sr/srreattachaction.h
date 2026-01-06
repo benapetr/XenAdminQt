@@ -30,6 +30,7 @@
 
 #include "../../asyncoperation.h"
 #include <QVariantMap>
+#include <QSharedPointer>
 
 class SR;
 
@@ -60,29 +61,29 @@ class XENLIB_EXPORT SrReattachAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Reattach an existing Storage Repository
-     * @param sr Existing SR to reattach
-     * @param name New SR name
-     * @param description New SR description
-     * @param deviceConfig New device configuration map
-     * @param parent Parent object
-     */
-    explicit SrReattachAction(SR* sr,
-                              const QString& name,
-                              const QString& description,
-                              const QVariantMap& deviceConfig,
-                              QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Reattach an existing Storage Repository
+         * @param sr Existing SR to reattach
+         * @param name New SR name
+         * @param description New SR description
+         * @param deviceConfig New device configuration map
+         * @param parent Parent object
+         */
+        explicit SrReattachAction(QSharedPointer<SR> sr,
+                                  const QString& name,
+                                  const QString& description,
+                                  const QVariantMap& deviceConfig,
+                                  QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    SR* m_sr;
-    QString m_name;
-    QString m_description;
-    QVariantMap m_deviceConfig;
+    private:
+        QSharedPointer<SR> m_sr;
+        QString m_name;
+        QString m_description;
+        QVariantMap m_deviceConfig;
 };
 
 #endif // SRREATTACHACTION_H

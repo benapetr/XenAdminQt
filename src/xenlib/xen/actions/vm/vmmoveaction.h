@@ -58,9 +58,9 @@ class VMMoveAction : public AsyncOperation
          * @param host Target host (can be nullptr)
          */
         VMMoveAction(XenConnection* connection,
-                     VM* vm,
-                     const QMap<QString, SR*>& storageMapping,
-                     Host* host,
+                     QSharedPointer<VM> vm,
+                     const QMap<QString, QSharedPointer<SR>>& storageMapping,
+                     QSharedPointer<Host> host,
                      QObject* parent = nullptr);
 
         /**
@@ -71,21 +71,21 @@ class VMMoveAction : public AsyncOperation
          * @param host Target host (can be nullptr)
          */
         VMMoveAction(XenConnection* connection,
-                     VM* vm,
-                     SR* sr,
-                     Host* host,
+                     QSharedPointer<VM> vm,
+                     QSharedPointer<SR> sr,
+                     QSharedPointer<Host> host,
                      QObject* parent = nullptr);
 
     protected:
         void run() override;
 
     private:
-        static QMap<QString, SR*> getStorageMapping(VM* vm, SR* sr);
+        static QMap<QString, QSharedPointer<SR>> getStorageMapping(QSharedPointer<VM> vm, QSharedPointer<SR> sr);
 
-        VM* m_vm;
-        Host* m_host;
-        SR* m_sr;
-        QMap<QString, SR*> m_storageMapping;
+        QSharedPointer<VM> m_vm;
+        QSharedPointer<Host> m_host;
+        QSharedPointer<SR> m_sr;
+        QMap<QString, QSharedPointer<SR>> m_storageMapping;
 };
 
 #endif // VMMOVEACTION_H

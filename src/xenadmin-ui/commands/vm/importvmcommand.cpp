@@ -81,7 +81,7 @@ void ImportVMCommand::showImportWizard()
         
         // TODO: Launch ImportVmAction with wizard parameters
         // For now, show a message that action will be implemented
-        this->mainWindow()->showStatusMessage(tr("Import action not yet fully integrated - pending HTTP infrastructure"), 5000);
+        this->mainWindow()->ShowStatusMessage(tr("Import action not yet fully integrated - pending HTTP infrastructure"), 5000);
     } else
     {
         qDebug() << "ImportVMCommand: Import Wizard cancelled";

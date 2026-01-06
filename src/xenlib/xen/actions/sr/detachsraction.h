@@ -43,33 +43,33 @@ class DetachSrAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct DetachSrAction
-     * @param connection XenConnection
-     * @param srRef SR opaque reference
-     * @param srName SR name (for messages)
-     * @param destroyPbds Whether to destroy PBDs after unplugging
-     * @param parent Parent QObject
-     */
-    explicit DetachSrAction(XenConnection* connection,
-                            const QString& srRef,
-                            const QString& srName,
-                            bool destroyPbds = false,
-                            QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct DetachSrAction
+         * @param connection XenConnection
+         * @param srRef SR opaque reference
+         * @param srName SR name (for messages)
+         * @param destroyPbds Whether to destroy PBDs after unplugging
+         * @param parent Parent QObject
+         */
+        explicit DetachSrAction(XenConnection* connection,
+                                const QString& srRef,
+                                const QString& srName,
+                                bool destroyPbds = false,
+                                QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    void unplugPBDs();
-    void destroyPBDs();
+    private:
+        void unplugPBDs();
+        void destroyPBDs();
 
-    QString m_srRef;
-    QString m_srName;
-    bool m_destroyPbds;
-    QStringList m_pbdRefs;
-    int m_currentPbdIndex;
+        QString m_srRef;
+        QString m_srName;
+        bool m_destroyPbds;
+        QStringList m_pbdRefs;
+        int m_currentPbdIndex;
 };
 
 #endif // DETACHSRACTION_H

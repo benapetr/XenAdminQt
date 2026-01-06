@@ -99,7 +99,7 @@ void NewVMCommand::showNewVMWizard()
         Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
         if (connMgr)
         {
-            QList<XenConnection*> connections = connMgr->getConnectedConnections();
+            QList<XenConnection*> connections = connMgr->GetConnectedConnections();
             if (!connections.isEmpty())
                 connection = connections.first();
         }
@@ -161,7 +161,7 @@ bool NewVMCommand::hasEnabledHost() const
         Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
         if (connMgr)
         {
-            QList<XenConnection*> connections = connMgr->getConnectedConnections();
+            QList<XenConnection*> connections = connMgr->GetConnectedConnections();
             if (!connections.isEmpty())
                 connection = connections.first();
         }

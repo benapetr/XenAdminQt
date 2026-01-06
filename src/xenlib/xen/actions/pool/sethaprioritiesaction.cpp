@@ -58,8 +58,8 @@ void SetHaPrioritiesAction::run()
 {
     try
     {
-        setPercentComplete(0);
-        setDescription("Configuring HA priorities...");
+        SetPercentComplete(0);
+        SetDescription("Configuring HA priorities...");
 
         int totalVMs = m_vmStartupOptions.size();
         int processedVMs = 0;
@@ -79,42 +79,42 @@ void SetHaPrioritiesAction::run()
             if (isRestartPriority(priority))
                 continue;
 
-            setDescription(QString("Setting priority for VM..."));
+            SetDescription(QString("Setting priority for VM..."));
 
             // Set HA restart priority
-            XenAPI::VM::set_ha_restart_priority(session(), vmRef, priority);
+            XenAPI::VM::set_ha_restart_priority(GetSession(), vmRef, priority);
 
             // Set start order
             if (options.contains("order"))
             {
                 qint64 order = options["order"].toLongLong();
-                XenAPI::VM::set_order(session(), vmRef, order);
+                XenAPI::VM::set_order(GetSession(), vmRef, order);
             }
 
             // Set start delay
             if (options.contains("start_delay"))
             {
                 qint64 delay = options["start_delay"].toLongLong();
-                XenAPI::VM::set_start_delay(session(), vmRef, delay);
+                XenAPI::VM::set_start_delay(GetSession(), vmRef, delay);
             }
 
             processedVMs++;
-            setPercentComplete(static_cast<int>(processedVMs * 30.0 / qMax(totalVMs, 1)));
+            SetPercentComplete(static_cast<int>(processedVMs * 30.0 / qMax(totalVMs, 1)));
 
-            if (isCancelled())
+            if (IsCancelled())
             {
-                setDescription("Cancelled");
+                SetDescription("Cancelled");
                 return;
             }
         }
 
-        setPercentComplete(30);
-        setDescription("Setting failure tolerance...");
+        SetPercentComplete(30);
+        SetDescription("Setting failure tolerance...");
 
         // Set NTOL
-        XenAPI::Pool::set_ha_host_failures_to_tolerate(session(), m_poolRef, m_ntol);
+        XenAPI::Pool::set_ha_host_failures_to_tolerate(GetSession(), m_poolRef, m_ntol);
 
-        setPercentComplete(40);
+        SetPercentComplete(40);
 
         // Second pass: Move VMs from unprotected -> protected
         QMapIterator<QString, QVariantMap> it2(m_vmStartupOptions);
@@ -130,49 +130,49 @@ void SetHaPrioritiesAction::run()
             if (!isRestartPriority(priority))
                 continue;
 
-            setDescription(QString("Setting priority for VM..."));
+            SetDescription(QString("Setting priority for VM..."));
 
             // Set HA restart priority
-            XenAPI::VM::set_ha_restart_priority(session(), vmRef, priority);
+            XenAPI::VM::set_ha_restart_priority(GetSession(), vmRef, priority);
 
             // Set start order
             if (options.contains("order"))
             {
                 qint64 order = options["order"].toLongLong();
-                XenAPI::VM::set_order(session(), vmRef, order);
+                XenAPI::VM::set_order(GetSession(), vmRef, order);
             }
 
             // Set start delay
             if (options.contains("start_delay"))
             {
                 qint64 delay = options["start_delay"].toLongLong();
-                XenAPI::VM::set_start_delay(session(), vmRef, delay);
+                XenAPI::VM::set_start_delay(GetSession(), vmRef, delay);
             }
 
             processedVMs++;
-            setPercentComplete(40 + static_cast<int>((processedVMs - (totalVMs / 2)) * 30.0 / qMax(totalVMs, 1)));
+            SetPercentComplete(40 + static_cast<int>((processedVMs - (totalVMs / 2)) * 30.0 / qMax(totalVMs, 1)));
 
-            if (isCancelled())
+            if (IsCancelled())
             {
-                setDescription("Cancelled");
+                SetDescription("Cancelled");
                 return;
             }
         }
 
-        setPercentComplete(70);
-        setDescription("Synchronizing pool database...");
+        SetPercentComplete(70);
+        SetDescription("Synchronizing pool database...");
 
         // Sync database to ensure settings propagate to all hosts
-        QString taskRef = XenAPI::Pool::async_sync_database(session());
+        QString taskRef = XenAPI::Pool::async_sync_database(GetSession());
         pollToCompletion(taskRef, 70, 100);
 
-        setDescription("HA priorities updated successfully");
+        SetDescription("HA priorities updated successfully");
 
     } catch (const std::exception& e)
     {
-        if (isCancelled())
+        if (IsCancelled())
         {
-            setDescription("HA priority update cancelled");
+            SetDescription("HA priority update cancelled");
         } else
         {
             setError(QString("Failed to update HA priorities: %1").arg(e.what()));

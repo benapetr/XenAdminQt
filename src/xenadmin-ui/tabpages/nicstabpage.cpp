@@ -424,7 +424,7 @@ void NICsTabPage::onCreateBondClicked()
             action->deleteLater();
         });
 
-        action->runAsync();
+        action->RunAsync();
     }
 }
 
@@ -495,7 +495,7 @@ void NICsTabPage::onDeleteBondClicked()
             action->deleteLater();
         });
 
-        action->runAsync();
+        action->RunAsync();
     }
 }
 

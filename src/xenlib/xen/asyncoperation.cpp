@@ -66,13 +66,13 @@ AsyncOperation::~AsyncOperation()
 }
 
 // Property getters
-QString AsyncOperation::title() const
+QString AsyncOperation::GetTitle() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_title;
 }
 
-void AsyncOperation::setTitle(const QString& title)
+void AsyncOperation::SetTitle(const QString& title)
 {
     QMutexLocker locker(&this->m_mutex);
     if (this->m_title != title)
@@ -83,13 +83,13 @@ void AsyncOperation::setTitle(const QString& title)
     }
 }
 
-QString AsyncOperation::description() const
+QString AsyncOperation::GetDescription() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_description;
 }
 
-void AsyncOperation::setDescription(const QString& description)
+void AsyncOperation::SetDescription(const QString& description)
 {
     QMutexLocker locker(&this->m_mutex);
     if (this->m_description != description)
@@ -100,28 +100,28 @@ void AsyncOperation::setDescription(const QString& description)
     }
 }
 
-XenConnection* AsyncOperation::connection() const
+XenConnection* AsyncOperation::GetConnection() const
 {
     return this->m_connection;
 }
 
-void AsyncOperation::setConnection(XenConnection* connection)
+void AsyncOperation::SetConnection(XenConnection* connection)
 {
     this->m_connection = connection;
 }
 
-XenAPI::Session *AsyncOperation::session() const
+XenAPI::Session *AsyncOperation::GetSession() const
 {
     return this->m_session;
 }
 
-int AsyncOperation::percentComplete() const
+int AsyncOperation::GetPercentComplete() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_percentComplete;
 }
 
-void AsyncOperation::setPercentComplete(int percent)
+void AsyncOperation::SetPercentComplete(int percent)
 {
     QMutexLocker locker(&this->m_mutex);
     percent = qBound(0, percent, 100);
@@ -134,101 +134,101 @@ void AsyncOperation::setPercentComplete(int percent)
 }
 
 // State management
-AsyncOperation::OperationState AsyncOperation::state() const
+AsyncOperation::OperationState AsyncOperation::GetState() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_state;
 }
 
-bool AsyncOperation::isRunning() const
+bool AsyncOperation::IsRunning() const
 {
-    return this->state() == Running;
+    return this->GetState() == Running;
 }
 
-bool AsyncOperation::isCompleted() const
+bool AsyncOperation::IsCompleted() const
 {
-    return this->state() == Completed;
+    return this->GetState() == Completed;
 }
 
-bool AsyncOperation::isCancelled() const
+bool AsyncOperation::IsCancelled() const
 {
-    return this->state() == Cancelled;
+    return this->GetState() == Cancelled;
 }
 
-bool AsyncOperation::isFailed() const
+bool AsyncOperation::IsFailed() const
 {
-    return this->state() == Failed;
+    return this->GetState() == Failed;
 }
 
 // Error handling
-QString AsyncOperation::errorMessage() const
+QString AsyncOperation::GetErrorMessage() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_errorMessage;
 }
 
-QString AsyncOperation::shortErrorMessage() const
+QString AsyncOperation::GetShortErrorMessage() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_shortErrorMessage;
 }
 
-QStringList AsyncOperation::errorDetails() const
+QStringList AsyncOperation::GetErrorDetails() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_errorDetails;
 }
 
-bool AsyncOperation::hasError() const
+bool AsyncOperation::HasError() const
 {
     QMutexLocker locker(&this->m_mutex);
     return !this->m_errorMessage.isEmpty();
 }
 
 // Cancellation
-bool AsyncOperation::canCancel() const
+bool AsyncOperation::CanCancel() const
 {
     QMutexLocker locker(&this->m_mutex);
-    return this->m_canCancel && this->isRunning();
+    return this->m_canCancel && this->IsRunning();
 }
 
-void AsyncOperation::setCanCancel(bool canCancel)
+void AsyncOperation::SetCanCancel(bool canCancel)
 {
     QMutexLocker locker(&this->m_mutex);
     this->m_canCancel = canCancel;
 }
 
 // Result
-QString AsyncOperation::result() const
+QString AsyncOperation::GetResult() const
 {
     QMutexLocker locker(&this->m_mutex);
-    if (this->hasError())
+    if (this->HasError())
     {
         return QString();
     }
     return this->m_result;
 }
 
-void AsyncOperation::setResult(const QString& result)
+void AsyncOperation::SetResult(const QString& result)
 {
     QMutexLocker locker(&this->m_mutex);
     this->m_result = result;
 }
 
 // Timing
-QDateTime AsyncOperation::startTime() const
+QDateTime AsyncOperation::GetStartTime() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_startTime;
 }
 
-QDateTime AsyncOperation::endTime() const
+QDateTime AsyncOperation::GetEndTime() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_endTime;
 }
 
-qint64 AsyncOperation::elapsedTime() const
+qint64 AsyncOperation::GetElapsedTime() const
 {
     QMutexLocker locker(&this->m_mutex);
     if (!this->m_startTime.isValid())
@@ -241,13 +241,13 @@ qint64 AsyncOperation::elapsedTime() const
 }
 
 // RBAC support
-QStringList AsyncOperation::apiMethodsToRoleCheck() const
+QStringList AsyncOperation::GetApiMethodsToRoleCheck() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_apiMethodsToRoleCheck;
 }
 
-void AsyncOperation::addApiMethodToRoleCheck(const QString& method)
+void AsyncOperation::AddApiMethodToRoleCheck(const QString& method)
 {
     QMutexLocker locker(&this->m_mutex);
     if (!this->m_apiMethodsToRoleCheck.contains(method))
@@ -257,37 +257,37 @@ void AsyncOperation::addApiMethodToRoleCheck(const QString& method)
 }
 
 // Task management
-QString AsyncOperation::relatedTaskRef() const
+QString AsyncOperation::GetRelatedTaskRef() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_relatedTaskRef;
 }
 
-void AsyncOperation::setRelatedTaskRef(const QString& taskRef)
+void AsyncOperation::SetRelatedTaskRef(const QString& taskRef)
 {
     QMutexLocker locker(&this->m_mutex);
     this->m_relatedTaskRef = taskRef;
 }
 
-QString AsyncOperation::operationUuid() const
+QString AsyncOperation::GetOperationUUID() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_operationUuid;
 }
 
-void AsyncOperation::setOperationUuid(const QString& uuid)
+void AsyncOperation::SetOperationUUID(const QString& uuid)
 {
     QMutexLocker locker(&this->m_mutex);
     this->m_operationUuid = uuid;
 }
 
-Pool* AsyncOperation::pool() const
+QSharedPointer<Pool> AsyncOperation::GetPool() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_pool;
 }
 
-void AsyncOperation::setPool(Pool* pool)
+void AsyncOperation::SetPool(QSharedPointer<Pool> pool)
 {
     QMutexLocker locker(&this->m_mutex);
     this->m_pool = pool;
@@ -302,13 +302,13 @@ void AsyncOperation::setPool(Pool* pool)
     }
 }
 
-Host* AsyncOperation::host() const
+QSharedPointer<Host> AsyncOperation::GetHost() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_host;
 }
 
-void AsyncOperation::setHost(Host* host)
+void AsyncOperation::SetHost(QSharedPointer<Host> host)
 {
     QMutexLocker locker(&this->m_mutex);
     this->m_host = host;
@@ -326,13 +326,13 @@ void AsyncOperation::setHost(Host* host)
     }
 }
 
-VM* AsyncOperation::vm() const
+QSharedPointer<VM> AsyncOperation::GetVM() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_vm;
 }
 
-void AsyncOperation::setVM(VM* vm)
+void AsyncOperation::SetVM(QSharedPointer<VM> vm)
 {
     QMutexLocker locker(&this->m_mutex);
     this->m_vm = vm;
@@ -370,13 +370,13 @@ void AsyncOperation::setVM(VM* vm)
     }
 }
 
-SR* AsyncOperation::sr() const
+QSharedPointer<SR> AsyncOperation::GetSR() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_sr;
 }
 
-void AsyncOperation::setSR(SR* sr)
+void AsyncOperation::SetSR(QSharedPointer<SR> sr)
 {
     QMutexLocker locker(&this->m_mutex);
     this->m_sr = sr;
@@ -401,13 +401,13 @@ void AsyncOperation::setSR(SR* sr)
     }
 }
 
-VM* AsyncOperation::vmTemplate() const
+QSharedPointer<VM> AsyncOperation::GetTemplate() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_vmTemplate;
 }
 
-void AsyncOperation::setVMTemplate(VM* vmTemplate)
+void AsyncOperation::SetTemplate(QSharedPointer<VM> vmTemplate)
 {
     QMutexLocker locker(&this->m_mutex);
     this->m_vmTemplate = vmTemplate;
@@ -422,14 +422,14 @@ void AsyncOperation::setVMTemplate(VM* vmTemplate)
     }
 }
 
-// AppliesTo list management
-QStringList AsyncOperation::appliesTo() const
+// GetAppliesToList list management
+QStringList AsyncOperation::GetAppliesToList() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_appliesTo;
 }
 
-void AsyncOperation::addAppliesTo(const QString& opaqueRef)
+void AsyncOperation::AddAppliesTo(const QString& opaqueRef)
 {
     QMutexLocker locker(&this->m_mutex);
     if (!opaqueRef.isEmpty() && !this->m_appliesTo.contains(opaqueRef))
@@ -438,40 +438,40 @@ void AsyncOperation::addAppliesTo(const QString& opaqueRef)
     }
 }
 
-void AsyncOperation::clearAppliesTo()
+void AsyncOperation::ClearAppliesTo()
 {
     QMutexLocker locker(&this->m_mutex);
     this->m_appliesTo.clear();
 }
 
 // History suppression
-bool AsyncOperation::suppressHistory() const
+bool AsyncOperation::SuppressHistory() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_suppressHistory;
 }
 
-void AsyncOperation::setSuppressHistory(bool suppress)
+void AsyncOperation::SetSuppressHistory(bool suppress)
 {
     QMutexLocker locker(&this->m_mutex);
     this->m_suppressHistory = suppress;
 }
 
 // Safe exit flag
-bool AsyncOperation::safeToExit() const
+bool AsyncOperation::IsSafeToExit() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_safeToExit;
 }
 
-void AsyncOperation::setSafeToExit(bool safe)
+void AsyncOperation::SetSafeToExit(bool safe)
 {
     QMutexLocker locker(&this->m_mutex);
     this->m_safeToExit = safe;
 }
 
 // Execution control
-void AsyncOperation::runAsync()
+void AsyncOperation::RunAsync()
 {
     QMutexLocker locker(&this->m_mutex);
 
@@ -557,7 +557,7 @@ void AsyncOperation::runOnWorkerThread()
     qDebug() << "[AsyncOperation] runOnWorkerThread completed for:" << m_title;
 }
 
-void AsyncOperation::runSync(XenAPI::Session* session)
+void AsyncOperation::RunSync(XenAPI::Session* session)
 {
     QMutexLocker locker(&this->m_mutex);
 
@@ -620,7 +620,7 @@ void AsyncOperation::runSync(XenAPI::Session* session)
     }
 }
 
-void AsyncOperation::cancel()
+void AsyncOperation::Cancel()
 {
     QMutexLocker locker(&this->m_mutex);
 
@@ -763,7 +763,7 @@ void AsyncOperation::pollToCompletion(const QString& taskRef, double start, doub
         return;
     }
 
-    this->setRelatedTaskRef(taskRef);
+    this->SetRelatedTaskRef(taskRef);
 
     // Tag task with our UUID for rehydration after reconnect
     tagTaskWithUuid(taskRef);
@@ -771,7 +771,7 @@ void AsyncOperation::pollToCompletion(const QString& taskRef, double start, doub
     QDateTime startTime = QDateTime::currentDateTime();
     int lastDebug = 0;
     qInfo() << "Started polling task" << taskRef;
-    qDebug() << "Polling for action:" << description();
+    qDebug() << "Polling for action:" << GetDescription();
 
     try
     {
@@ -783,7 +783,7 @@ void AsyncOperation::pollToCompletion(const QString& taskRef, double start, doub
             if (currDebug > lastDebug)
             {
                 lastDebug = currDebug;
-                qDebug() << "Polling for action:" << description();
+                qDebug() << "Polling for action:" << GetDescription();
             }
 
             try
@@ -824,7 +824,7 @@ bool AsyncOperation::pollTask(const QString& taskRef, double start, double finis
         return true;
     }
 
-    XenAPI::Session* session = this->session();
+    XenAPI::Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer", QStringList());
@@ -838,14 +838,14 @@ bool AsyncOperation::pollTask(const QString& taskRef, double start, double finis
     QVariantMap taskRecord;
     try
     {
-        QVariant recordVariant = api.getTaskRecord(taskRef);
+        QVariant recordVariant = api.GetTaskRecord(taskRef);
         taskRecord = recordVariant.toMap();
     } catch (...)
     {
         // Check if this is a HANDLE_INVALID error (task finished and destroyed)
         // This matches C# catching Failure.HANDLE_INVALID
         qWarning() << "Invalid task handle" << taskRef << "- task is finished";
-        setPercentComplete(static_cast<int>(finish));
+        SetPercentComplete(static_cast<int>(finish));
         return true;
     }
 
@@ -853,7 +853,7 @@ bool AsyncOperation::pollTask(const QString& taskRef, double start, double finis
     {
         // Task not found - might have been destroyed already
         qDebug() << "AsyncOperation::pollTask: Task" << taskRef << "not found (might be complete)";
-        setPercentComplete(static_cast<int>(finish));
+        SetPercentComplete(static_cast<int>(finish));
         return true;
     }
 
@@ -863,13 +863,13 @@ bool AsyncOperation::pollTask(const QString& taskRef, double start, double finis
 
     // Update percent complete
     int currentPercent = static_cast<int>(start + taskProgress * (finish - start));
-    setPercentComplete(currentPercent);
+    SetPercentComplete(currentPercent);
 
     // Check task status
     if (status == "success")
     {
         qDebug() << "AsyncOperation::pollTask: Task" << taskRef << "completed successfully";
-        setPercentComplete(static_cast<int>(finish));
+        SetPercentComplete(static_cast<int>(finish));
 
         // Get result if available
         QVariant resultVariant = taskRecord.value("result");
@@ -889,7 +889,7 @@ bool AsyncOperation::pollTask(const QString& taskRef, double start, double finis
                 }
             }
 
-            setResult(resultStr);
+            SetResult(resultStr);
         }
 
         return true;
@@ -928,15 +928,15 @@ void AsyncOperation::destroyTask()
 {
     // Matches C# AsyncAction.DestroyTask()
     // Null or empty task ref can happen during RBAC dry-run
-    QString taskRef = relatedTaskRef();
+    QString taskRef = GetRelatedTaskRef();
 
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn() || taskRef.isEmpty())
     {
         // Clear task ref even if we can't destroy it
         if (!taskRef.isEmpty())
         {
-            this->setRelatedTaskRef(QString());
+            this->SetRelatedTaskRef(QString());
         }
         return;
     }
@@ -948,7 +948,7 @@ void AsyncOperation::destroyTask()
 
         // Destroy the task on the server
         XenRpcAPI api(sess);
-        bool destroyed = api.destroyTask(taskRef);
+        bool destroyed = api.DestroyTask(taskRef);
 
         if (destroyed)
         {
@@ -964,7 +964,7 @@ void AsyncOperation::destroyTask()
     }
 
     // Always clear task reference
-    this->setRelatedTaskRef(QString());
+    this->SetRelatedTaskRef(QString());
 }
 
 void AsyncOperation::cancelRelatedTask()
@@ -972,21 +972,21 @@ void AsyncOperation::cancelRelatedTask()
     // Matches C# CancellingAction.CancelRelatedTask()
     // Creates new session to cancel task since main session may be in use by worker thread
 
-    QString taskRef = relatedTaskRef();
+    QString taskRef = GetRelatedTaskRef();
     if (taskRef.isEmpty())
     {
         return;
     }
 
-    XenConnection* conn = connection();
+    XenConnection* conn = GetConnection();
     if (!conn || !conn->IsConnected())
     {
         qDebug() << "AsyncOperation::cancelRelatedTask: No connection available";
         return;
     }
 
-    // Get current session - if we don't have one, we can't cancel
-    XenAPI::Session* sess = session();
+    // Get current GetSession - if we don't have one, we can't cancel
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         qDebug() << "AsyncOperation::cancelRelatedTask: No session available";
@@ -996,7 +996,7 @@ void AsyncOperation::cancelRelatedTask()
     try
     {
         XenRpcAPI api(sess);
-        bool cancelled = api.cancelTask(taskRef);
+        bool cancelled = api.CancelTask(taskRef);
 
         if (cancelled)
         {
@@ -1017,7 +1017,7 @@ void AsyncOperation::tagTaskWithUuid(const QString& taskRef)
     if (taskRef.isEmpty() || m_operationUuid.isEmpty())
         return;
 
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
         return;
 
@@ -1026,10 +1026,10 @@ void AsyncOperation::tagTaskWithUuid(const QString& taskRef)
     try
     {
         // Remove old UUID if exists
-        api.removeFromTaskOtherConfig(taskRef, "XenAdminQtUUID");
+        api.RemoveFromTaskOtherConfig(taskRef, "XenAdminQtUUID");
 
         // Add our UUID to task.other_config
-        api.addToTaskOtherConfig(taskRef, "XenAdminQtUUID", m_operationUuid);
+        api.AddToTaskOtherConfig(taskRef, "XenAdminQtUUID", m_operationUuid);
 
         qDebug() << "Tagged task" << taskRef << "with UUID" << m_operationUuid;
     } catch (...)
@@ -1045,7 +1045,7 @@ void AsyncOperation::removeUuidFromTask(const QString& taskRef)
     if (taskRef.isEmpty())
         return;
 
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
         return;
 
@@ -1053,7 +1053,7 @@ void AsyncOperation::removeUuidFromTask(const QString& taskRef)
 
     try
     {
-        api.removeFromTaskOtherConfig(taskRef, "XenAdminQtUUID");
+        api.RemoveFromTaskOtherConfig(taskRef, "XenAdminQtUUID");
         qDebug() << "Removed UUID from task" << taskRef;
     } catch (...)
     {
@@ -1098,31 +1098,31 @@ void AsyncOperation::setPercentCompleteSafe(int percent)
 }
 
 // AppliesTo helper - automatically adds object refs (matches C# SetAppliesTo)
-void AsyncOperation::setAppliesToFromObject(QObject* xenObject)
+void AsyncOperation::setAppliesToFromObject(QSharedPointer<XenObject> xenObject)
 {
     if (!xenObject)
         return;
 
     // Check object type and call appropriate setter
-    if (Pool* pool = qobject_cast<Pool*>(xenObject))
+    if (QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(xenObject))
     {
-        setPool(pool);
-    } else if (Host* host = qobject_cast<Host*>(xenObject))
+        SetPool(pool);
+    } else if (QSharedPointer<Host> host = qSharedPointerCast<Host>(xenObject))
     {
-        setHost(host);
-    } else if (VM* vm = qobject_cast<VM*>(xenObject))
+        SetHost(host);
+    } else if (QSharedPointer<VM> vm = qSharedPointerCast<VM>(xenObject))
     {
         // Check if it's a template
         if (vm->IsTemplate())
         {
-            setVMTemplate(vm);
+            SetTemplate(vm);
         } else
         {
-            setVM(vm);
+            SetVM(vm);
         }
-    } else if (SR* sr = qobject_cast<SR*>(xenObject))
+    } else if (QSharedPointer<SR> sr = qSharedPointerCast<SR>(xenObject))
     {
-        setSR(sr);
+        SetSR(sr);
     } else
     {
         qWarning() << "AsyncOperation::setAppliesToFromObject: Unknown object type"
@@ -1132,7 +1132,7 @@ void AsyncOperation::setAppliesToFromObject(QObject* xenObject)
 
 // Cleanup for shutdown/reconnect - removes UUID from task.other_config
 // Matches C# AsyncAction.PrepareForEventReloadAfterRestart()
-void AsyncOperation::prepareForEventReloadAfterRestart()
+void AsyncOperation::PrepareForEventReloadAfterRestart()
 {
     if (!m_relatedTaskRef.isEmpty() && !m_operationUuid.isEmpty())
     {

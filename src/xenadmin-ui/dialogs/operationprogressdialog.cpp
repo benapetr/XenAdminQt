@@ -63,7 +63,7 @@ OperationProgressDialog::OperationProgressDialog(AsyncOperation* operation, QWid
     this->m_progressBar->setMinimum(0);
     this->m_progressBar->setMaximum(100);
     this->updateStatusLabel();
-    this->m_cancelButton->setEnabled(this->m_operation->canCancel());
+    this->m_cancelButton->setEnabled(this->m_operation->CanCancel());
 
     this->hideTitleBarIcons();
     this->setWindowTitle(qApp->applicationName());
@@ -160,7 +160,7 @@ void OperationProgressDialog::showEvent(QShowEvent* event)
     // Start operation when dialog is shown
     if (this->m_operation && !this->m_staticMode)
     {
-        this->m_operation->runAsync();
+        this->m_operation->RunAsync();
     }
 }
 
@@ -170,13 +170,13 @@ void OperationProgressDialog::onOperationChanged()
         return;
 
     // Update progress
-    this->m_progressBar->setValue(this->m_operation->percentComplete());
+    this->m_progressBar->setValue(this->m_operation->GetPercentComplete());
 
     // Update status
     this->updateStatusLabel();
 
     // Update cancel button state
-    this->m_cancelButton->setEnabled(this->m_operation->canCancel());
+    this->m_cancelButton->setEnabled(this->m_operation->CanCancel());
 }
 
 void OperationProgressDialog::onOperationCompleted()
@@ -188,14 +188,14 @@ void OperationProgressDialog::onOperationCompleted()
     }
 
     qDebug() << "[OperationProgressDialog] Operation completed:"
-             << "Title:" << this->m_operation->title()
-             << "hasError:" << this->m_operation->hasError()
-             << "isCancelled:" << this->m_operation->isCancelled()
-             << "errorMessage:" << this->m_operation->errorMessage()
-             << "state:" << this->m_operation->state();
+             << "Title:" << this->m_operation->GetTitle()
+             << "hasError:" << this->m_operation->HasError()
+             << "isCancelled:" << this->m_operation->IsCancelled()
+             << "errorMessage:" << this->m_operation->GetErrorMessage()
+             << "state:" << this->m_operation->GetState();
 
     // Check operation result
-    if (!this->m_operation->hasError() && !this->m_operation->isCancelled())
+    if (!this->m_operation->HasError() && !this->m_operation->IsCancelled())
     {
         // Success - close dialog
         qDebug() << "[OperationProgressDialog] Operation succeeded, calling accept()";
@@ -217,7 +217,7 @@ void OperationProgressDialog::onCancelClicked()
 
     if (this->m_operation)
     {
-        this->m_operation->cancel();
+        this->m_operation->Cancel();
     }
 }
 
@@ -231,10 +231,10 @@ void OperationProgressDialog::updateStatusLabel()
     if (!this->m_operation)
         return;
 
-    QString text = this->m_operation->description();
+    QString text = this->m_operation->GetDescription();
     if (text.isEmpty())
     {
-        text = this->m_operation->title();
+        text = this->m_operation->GetTitle();
     }
 
     this->m_statusLabel->setText(text);
@@ -292,10 +292,10 @@ void OperationProgressDialog::switchToErrorState()
     {
         QString errorText;
 
-        if (this->m_operation && !this->m_operation->errorMessage().isEmpty())
+        if (this->m_operation && !this->m_operation->GetErrorMessage().isEmpty())
         {
-            errorText = this->m_operation->errorMessage();
-        } else if (this->m_operation && this->m_operation->isCancelled())
+            errorText = this->m_operation->GetErrorMessage();
+        } else if (this->m_operation && this->m_operation->IsCancelled())
         {
             errorText = tr("Operation cancelled by user");
         } else

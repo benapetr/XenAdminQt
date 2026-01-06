@@ -44,22 +44,22 @@ DestroyDiskAction::DestroyDiskAction(const QString& vdiRef,
       m_vdiRef(vdiRef), m_allowRunningVMDelete(allowRunningVMDelete)
 {
     // Add RBAC method checks
-    addApiMethodToRoleCheck("VBD.unplug");
-    addApiMethodToRoleCheck("VBD.destroy");
-    addApiMethodToRoleCheck("VDI.destroy");
+    AddApiMethodToRoleCheck("VBD.unplug");
+    AddApiMethodToRoleCheck("VBD.destroy");
+    AddApiMethodToRoleCheck("VDI.destroy");
 }
 
 void DestroyDiskAction::run()
 {
-    Session* session = this->session();
+    Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
     }
 
     // Get VDI record
-    setPercentComplete(0);
-    setDescription(tr("Getting VDI information..."));
+    SetPercentComplete(0);
+    SetDescription(tr("Getting VDI information..."));
 
     QVariantMap vdiRecord = XenAPI::VDI::get_record(session, m_vdiRef);
     QString vdiName = vdiRecord.value("name_label").toString();
@@ -82,8 +82,8 @@ void DestroyDiskAction::run()
     // Detach from all VMs
     if (!vbdRefs.isEmpty())
     {
-        setPercentComplete(10);
-        setDescription(tr("Detaching disk from VMs..."));
+        SetPercentComplete(10);
+        SetDescription(tr("Detaching disk from VMs..."));
 
         int vbdIndex = 0;
         int totalVBDs = vbdRefs.size();
@@ -116,8 +116,8 @@ void DestroyDiskAction::run()
             // Detach the VBD directly (we're already in an async context, so don't nest actions)
             int startPercent = 10 + (vbdIndex * 70 / totalVBDs);
 
-            setPercentComplete(startPercent);
-            setDescription(tr("Detaching from VM '%1'...").arg(vmName));
+            SetPercentComplete(startPercent);
+            SetDescription(tr("Detaching from VM '%1'...").arg(vmName));
 
             // Unplug if currently attached
             if (currentlyAttached)
@@ -156,12 +156,12 @@ void DestroyDiskAction::run()
     }
 
     // Destroy the VDI
-    setPercentComplete(80);
-    setDescription(tr("Destroying VDI..."));
+    SetPercentComplete(80);
+    SetDescription(tr("Destroying VDI..."));
 
     QString taskRef = XenAPI::VDI::async_destroy(session, m_vdiRef);
     pollToCompletion(taskRef, 80, 100);
 
-    setPercentComplete(100);
-    setDescription(tr("Virtual disk deleted"));
+    SetPercentComplete(100);
+    SetDescription(tr("Virtual disk deleted"));
 }

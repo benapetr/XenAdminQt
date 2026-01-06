@@ -61,19 +61,19 @@ void VMLifeCycleCommand::Run()
     // TODO: Implement using existing VM commands (StartVMCommand, etc)
     if (powerState == "Halted")
     {
-        this->mainWindow()->showStatusMessage("Start VM not implemented yet");
+        this->mainWindow()->ShowStatusMessage("Start VM not implemented yet");
         QMessageBox::information(this->mainWindow(), "Not Implemented", "Start VM");
     } else if (powerState == "Running")
     {
-        this->mainWindow()->showStatusMessage("Shut Down VM not implemented yet");
+        this->mainWindow()->ShowStatusMessage("Shut Down VM not implemented yet");
         QMessageBox::information(this->mainWindow(), "Not Implemented", "Shut Down VM");
     } else if (powerState == "Paused")
     {
-        this->mainWindow()->showStatusMessage("Unpause VM not implemented yet");
+        this->mainWindow()->ShowStatusMessage("Unpause VM not implemented yet");
         QMessageBox::information(this->mainWindow(), "Not Implemented", "Unpause VM");
     } else if (powerState == "Suspended")
     {
-        this->mainWindow()->showStatusMessage("Resume VM not implemented yet");
+        this->mainWindow()->ShowStatusMessage("Resume VM not implemented yet");
         QMessageBox::information(this->mainWindow(), "Not Implemented", "Resume VM");
     }
 }

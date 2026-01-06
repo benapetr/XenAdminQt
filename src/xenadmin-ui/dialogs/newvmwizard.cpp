@@ -700,9 +700,9 @@ void NewVMWizard::createVirtualMachine()
     progressDialog->setAttribute(Qt::WA_DeleteOnClose);
 
     int result = progressDialog->exec();
-    if (result != QDialog::Accepted || action->hasError())
+    if (result != QDialog::Accepted || action->HasError())
     {
-        QString error = action->errorMessage();
+        QString error = action->GetErrorMessage();
         if (error.isEmpty())
             error = tr("Failed to create virtual machine '%1'.").arg(this->m_vmName);
         QMessageBox::critical(this, tr("Failed to Create VM"), error);

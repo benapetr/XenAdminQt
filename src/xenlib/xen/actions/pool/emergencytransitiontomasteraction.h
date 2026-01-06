@@ -45,15 +45,15 @@ class EmergencyTransitionToMasterAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /// @brief Constructor for emergency coordinator transition
-    /// @param slaveConnection Connection to the slave host being promoted
-    /// @param parent Parent QObject
-    EmergencyTransitionToMasterAction(XenConnection* slaveConnection,
-                                      QObject* parent = nullptr);
+    public:
+        /// @brief Constructor for emergency coordinator transition
+        /// @param slaveConnection Connection to the slave host being promoted
+        /// @param parent Parent QObject
+        EmergencyTransitionToMasterAction(XenConnection* slaveConnection,
+                                          QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 };
 
 #endif // EMERGENCYTRANSITIONTOMASTERACTION_H

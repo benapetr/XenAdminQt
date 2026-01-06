@@ -28,6 +28,7 @@
 #ifndef VMTOTEMPLATEACTION_H
 #define VMTOTEMPLATEACTION_H
 
+#include <QSharedPointer>
 #include "../../asyncoperation.h"
 #include "../../vm.h"
 
@@ -44,22 +45,22 @@ class VMToTemplateAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection to use
-     * @param vm VM object to convert to template
-     * @param parent Parent QObject
-     */
-    explicit VMToTemplateAction(XenConnection* connection,
-                                VM* vm,
-                                QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection to use
+         * @param vm VM object to convert to template
+         * @param parent Parent QObject
+         */
+        explicit VMToTemplateAction(XenConnection* connection,
+                                    QSharedPointer<VM> vm,
+                                    QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    VM* m_vm;
+    private:
+        QSharedPointer<VM> m_vm;
 };
 
 #endif // VMTOTEMPLATEACTION_H

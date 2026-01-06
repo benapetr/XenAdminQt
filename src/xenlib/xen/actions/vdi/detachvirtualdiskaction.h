@@ -49,24 +49,24 @@ class XENLIB_EXPORT DetachVirtualDiskAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Detach a virtual disk from a VM
-     * @param vdiRef VDI opaque reference
-     * @param vm VM to detach from
-     * @param parent Parent object
-     */
-    explicit DetachVirtualDiskAction(const QString& vdiRef,
-                                     VM* vm,
-                                     QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Detach a virtual disk from a VM
+         * @param vdiRef VDI opaque reference
+         * @param vm VM to detach from
+         * @param parent Parent object
+         */
+        explicit DetachVirtualDiskAction(const QString& vdiRef,
+                                         VM* vm,
+                                         QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_vdiRef;
-    QString m_vbdRef;
-    VM* m_vm;
+    private:
+        QString m_vdiRef;
+        QString m_vbdRef;
+        VM* m_vm;
 };
 
 #endif // DETACHVIRTUALDISKACTION_H

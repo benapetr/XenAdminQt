@@ -139,23 +139,23 @@ void DeletePoolCommand::Run()
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, [this, poolName, action]() {
-        if (action->state() == AsyncOperation::Completed && !action->isFailed())
+        if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
-            this->mainWindow()->showStatusMessage(QString("Successfully deleted pool '%1'").arg(poolName), 5000);
+            this->mainWindow()->ShowStatusMessage(QString("Successfully deleted pool '%1'").arg(poolName), 5000);
         } else
         {
             QMessageBox::warning(
                 this->mainWindow(),
                 "Delete Pool Failed",
                 QString("Failed to delete pool '%1'.\n\n%2")
-                    .arg(poolName, action->errorMessage()));
+                    .arg(poolName, action->GetErrorMessage()));
         }
         // Auto-delete when complete
         action->deleteLater();
     });
 
     // Run action asynchronously
-    action->runAsync();
+    action->RunAsync();
 }
 
 QString DeletePoolCommand::MenuText() const

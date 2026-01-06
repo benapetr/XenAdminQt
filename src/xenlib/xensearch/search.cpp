@@ -399,7 +399,7 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
     QList<XenConnection*> connections;
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     if (connMgr)
-        connections = connMgr->getAllConnections();
+        connections = connMgr->GetAllConnections();
     if (connections.isEmpty() && conn)
         connections.append(conn);
 
@@ -466,7 +466,11 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
             record["is_disconnected"] = true;
 
             if (cache)
-                cache->Update("host", hostRef, record);
+            {
+                const QVariantMap existing = cache->ResolveObjectData("host", hostRef);
+                if (existing.isEmpty() || existing != record)
+                    cache->Update("host", hostRef, record);
+            }
 
             if (!this->m_query || this->m_query->match(record, "host", connection))
                 matchedObjects.append(qMakePair(QString("host"), hostRef));

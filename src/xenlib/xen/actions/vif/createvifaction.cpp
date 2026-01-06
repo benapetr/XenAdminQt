@@ -52,18 +52,18 @@ CreateVIFAction::CreateVIFAction(XenConnection* connection,
     QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", m_vmRef);
     m_vmName = vmData.value("name_label").toString();
 
-    setTitle(QString("Creating VIF for %1").arg(m_vmName));
-    setDescription(QString("Creating virtual network interface for %1").arg(m_vmName));
+    SetTitle(QString("Creating VIF for %1").arg(m_vmName));
+    SetDescription(QString("Creating virtual network interface for %1").arg(m_vmName));
 }
 
 void CreateVIFAction::run()
 {
     try
     {
-        setDescription("Creating VIF...");
+        SetDescription("Creating VIF...");
 
         // Create the VIF asynchronously
-        QString taskRef = XenAPI::VIF::async_create(session(), m_vifRecord);
+        QString taskRef = XenAPI::VIF::async_create(GetSession(), m_vifRecord);
 
         QString newVifRef;
         if (taskRef.isEmpty())
@@ -73,13 +73,13 @@ void CreateVIFAction::run()
             qDebug() << "VIF created synchronously (no task reference)";
             // We'll need to find the new VIF by refreshing and looking for it
             // For now, complete successfully - the VIF list will refresh
-            setPercentComplete(100);
-            setDescription("VIF created");
+            SetPercentComplete(100);
+            SetDescription("VIF created");
             return;
         } else
         {
             pollToCompletion(taskRef, 0, 70);
-            newVifRef = result();
+            newVifRef = GetResult();
             qDebug() << "Created VIF:" << newVifRef;
         }
 
@@ -87,42 +87,42 @@ void CreateVIFAction::run()
         if (newVifRef.isEmpty())
         {
             qDebug() << "VIF created but reference not available";
-            setPercentComplete(100);
-            setDescription("VIF created");
+            SetPercentComplete(100);
+            SetDescription("VIF created");
             return;
         }
 
         // Check if VM is running and if we can hot-plug
-        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         QString powerState = vmData.value("power_state").toString();
 
         if (powerState == "Running")
         {
-            setDescription("Checking if hot-plug is possible...");
+            SetDescription("Checking if hot-plug is possible...");
 
-            QStringList allowedOps = XenAPI::VIF::get_allowed_operations(session(), newVifRef);
+            QStringList allowedOps = XenAPI::VIF::get_allowed_operations(GetSession(), newVifRef);
 
             if (allowedOps.contains("plug"))
             {
-                setDescription("Hot-plugging VIF...");
+                SetDescription("Hot-plugging VIF...");
 
                 // C# doesn't catch exceptions from VIF.plug - let it fail if it can't plug
                 // This matches CreateVIFAction.cs Run() method behavior
-                XenAPI::VIF::plug(session(), newVifRef);
-                setPercentComplete(100);
-                setDescription("VIF created and hot-plugged");
+                XenAPI::VIF::plug(GetSession(), newVifRef);
+                SetPercentComplete(100);
+                SetDescription("VIF created and hot-plugged");
                 qDebug() << "VIF hot-plugged successfully";
             } else
             {
                 m_rebootRequired = true;
-                setPercentComplete(100);
-                setDescription("VIF created (reboot required for activation)");
+                SetPercentComplete(100);
+                SetDescription("VIF created (reboot required for activation)");
                 qDebug() << "Hot-plug not allowed, reboot required";
             }
         } else
         {
-            setPercentComplete(100);
-            setDescription("VIF created");
+            SetPercentComplete(100);
+            SetDescription("VIF created");
         }
 
     } catch (const std::exception& e)

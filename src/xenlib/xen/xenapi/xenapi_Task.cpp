@@ -44,9 +44,9 @@ namespace XenAPI
         params << session->getSessionId() << label << description;
         
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("task.create", params);
+        QByteArray request = api.BuildJsonRpcCall("task.create", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
     
     void Task::Destroy(Session* session, const QString& taskRef)
@@ -58,7 +58,7 @@ namespace XenAPI
         params << session->getSessionId() << taskRef;
         
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("task.destroy", params);
+        QByteArray request = api.BuildJsonRpcCall("task.destroy", params);
         session->sendApiRequest(request);
     }
     
@@ -71,7 +71,7 @@ namespace XenAPI
         params << session->getSessionId() << taskRef;
         
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("task.cancel", params);
+        QByteArray request = api.BuildJsonRpcCall("task.cancel", params);
         session->sendApiRequest(request);
     }
 }

@@ -31,7 +31,7 @@
 #include "../../xenapi/xenapi_VM.h"
 #include <QtCore/QDebug>
 
-VMResumeAction::VMResumeAction(VM* vm,
+VMResumeAction::VMResumeAction(QSharedPointer<VM> vm,
                                WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
                                StartDiagnosisForm startDiagnosisForm,
                                QObject* parent)
@@ -41,27 +41,27 @@ VMResumeAction::VMResumeAction(VM* vm,
                             startDiagnosisForm,
                             parent)
 {
-    addApiMethodToRoleCheck("vm.resume");
+    AddApiMethodToRoleCheck("vm.resume");
 }
 
 void VMResumeAction::run()
 {
-    setDescription(tr("Resuming..."));
+    SetDescription(tr("Resuming..."));
     startOrResumeVmWithHa(0, 100);
-    setDescription(tr("Resumed"));
+    SetDescription(tr("Resumed"));
 }
 
 void VMResumeAction::doAction(int start, int end)
 {
     // Matches C# VM.async_resume(Session, VM.opaque_ref, false, false)
-    VM* vmObj = vm();
+    QSharedPointer<VM> vmObj = GetVM();
     if (!vmObj)
     {
         setError("VM object is null");
         return;
     }
 
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -77,11 +77,11 @@ void VMResumeAction::doAction(int start, int end)
         return;
     }
 
-    setRelatedTaskRef(taskRef);
+    SetRelatedTaskRef(taskRef);
     pollToCompletion(taskRef, start, end);
 }
 
 VMStartAbstractAction* VMResumeAction::clone()
 {
-    return new VMResumeAction(vm(), m_warningDialogHAInvalidConfig, m_startDiagnosisForm);
+    return new VMResumeAction(GetVM(), m_warningDialogHAInvalidConfig, m_startDiagnosisForm);
 }

@@ -37,9 +37,9 @@
 #include <stdexcept>
 
 VMCopyAction::VMCopyAction(XenConnection* connection,
-                           VM* vm,
-                           Host* host,
-                           SR* sr,
+                           QSharedPointer<VM> vm,
+                           QSharedPointer<Host> host,
+                           QSharedPointer<SR> sr,
                            const QString& nameLabel,
                            const QString& description,
                            QObject* parent)
@@ -58,14 +58,14 @@ VMCopyAction::VMCopyAction(XenConnection* connection,
         throw std::invalid_argument("SR cannot be null");
 
     // Set context objects
-    setVM(m_vm);
-    setSR(m_sr);
+    SetVM(m_vm);
+    SetSR(m_sr);
     if (this->m_host)
-        setHost(this->m_host);
+        SetHost(this->m_host);
 
     // If VM is a template, set template context
     if (this->m_vm->IsTemplate())
-        setVMTemplate(this->m_vm);
+        SetTemplate(this->m_vm);
 }
 
 void VMCopyAction::run()
@@ -74,7 +74,7 @@ void VMCopyAction::run()
     {
         // Call VM.async_copy
         QString taskRef = XenAPI::VM::async_copy(
-            session(),
+            GetSession(),
             this->m_vm->OpaqueRef(),
             this->m_nameLabel,
             this->m_sr->OpaqueRef());
@@ -82,8 +82,8 @@ void VMCopyAction::run()
         // Poll task to completion
         pollToCompletion(taskRef, 0, 90);
 
-        // Get the result (new VM ref)
-        QString newVmRef = result();
+        // Get the GetResult (new VM ref)
+        QString newVmRef = GetResult();
 
         if (newVmRef.isEmpty())
         {
@@ -98,7 +98,7 @@ void VMCopyAction::run()
         {
             try
             {
-                XenAPI::VM::set_name_description(session(), newVmRef, this->m_description);
+                XenAPI::VM::set_name_description(GetSession(), newVmRef, this->m_description);
             } catch (const std::exception& e)
             {
                 // Non-fatal - log but continue
@@ -106,13 +106,13 @@ void VMCopyAction::run()
             }
         }
 
-        setDescription("VM copied successfully");
+        SetDescription("VM copied successfully");
 
     } catch (const std::exception& e)
     {
-        if (isCancelled())
+        if (IsCancelled())
         {
-            setDescription("Copy cancelled");
+            SetDescription("Copy cancelled");
         } else
         {
             setError(QString("Failed to copy VM: %1").arg(e.what()));

@@ -59,48 +59,48 @@ class ChangeNetworkingAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection
-     * @param pifRefsToReconfigure List of PIF refs to bring up/reconfigure
-     * @param pifRefsToDisable List of PIF refs to bring down
-     * @param newManagementPifRef New management PIF ref (or empty if unchanged)
-     * @param oldManagementPifRef Old management PIF ref (or empty if unchanged)
-     * @param parent Parent QObject
-     */
-    ChangeNetworkingAction(XenConnection* connection,
-                           const QStringList& pifRefsToReconfigure,
-                           const QStringList& pifRefsToDisable,
-                           const QString& newManagementPifRef,
-                           const QString& oldManagementPifRef,
-                           QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection
+         * @param pifRefsToReconfigure List of PIF refs to bring up/reconfigure
+         * @param pifRefsToDisable List of PIF refs to bring down
+         * @param newManagementPifRef New management PIF ref (or empty if unchanged)
+         * @param oldManagementPifRef Old management PIF ref (or empty if unchanged)
+         * @param parent Parent QObject
+         */
+        ChangeNetworkingAction(XenConnection* connection,
+                               const QStringList& pifRefsToReconfigure,
+                               const QStringList& pifRefsToDisable,
+                               const QString& newManagementPifRef,
+                               const QString& oldManagementPifRef,
+                               QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    /**
-     * @brief Reconfigure a PIF (bring up or down) on appropriate hosts
-     * @param pifRef PIF reference
-     * @param up true to bring up, false to bring down
-     * @param thisHost true for coordinator, false for supporters
-     * @param hi Target progress percentage
-     */
-    void reconfigure(const QString& pifRef, bool up, bool thisHost, int hi);
+    private:
+        /**
+         * @brief Reconfigure a PIF (bring up or down) on appropriate hosts
+         * @param pifRef PIF reference
+         * @param up true to bring up, false to bring down
+         * @param thisHost true for coordinator, false for supporters
+         * @param hi Target progress percentage
+         */
+        void reconfigure(const QString& pifRef, bool up, bool thisHost, int hi);
 
-    /**
-     * @brief Bring up a PIF with IP configuration
-     * @param newPifRef Source PIF with configuration
-     * @param existingPifRef Target PIF to configure
-     * @param hi Target progress percentage
-     */
-    void bringUp(const QString& newPifRef, const QString& existingPifRef, int hi);
+        /**
+         * @brief Bring up a PIF with IP configuration
+         * @param newPifRef Source PIF with configuration
+         * @param existingPifRef Target PIF to configure
+         * @param hi Target progress percentage
+         */
+        void bringUp(const QString& newPifRef, const QString& existingPifRef, int hi);
 
-    QStringList m_pifRefsToReconfigure;
-    QStringList m_pifRefsToDisable;
-    QString m_newManagementPifRef;
-    QString m_oldManagementPifRef;
+        QStringList m_pifRefsToReconfigure;
+        QStringList m_pifRefsToDisable;
+        QString m_newManagementPifRef;
+        QString m_oldManagementPifRef;
 };
 
 #endif // CHANGENETWORKINGACTION_H

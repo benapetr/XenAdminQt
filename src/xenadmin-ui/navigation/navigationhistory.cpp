@@ -249,14 +249,14 @@ void NavigationHistory::doHistoryItem(const HistoryItemPtr& item)
         if (xenItem && this->m_mainWindow)
         {
             // Navigate to the object in the tree
-            this->m_mainWindow->selectObjectInTree(xenItem->m_objectRef, xenItem->m_objectType);
+            this->m_mainWindow->SelectObjectInTree(xenItem->m_objectRef, xenItem->m_objectType);
 
             // Switch to the correct tab (will happen after object data loads)
             // We need to delay this slightly to allow tree selection to trigger
             QTimer::singleShot(100, this, [this, xenItem]() {
                 if (this->m_mainWindow)
                 {
-                    this->m_mainWindow->setCurrentTab(xenItem->m_tabName);
+                    this->m_mainWindow->SetCurrentTab(xenItem->m_tabName);
                 }
             });
         } else
@@ -293,7 +293,7 @@ void NavigationHistory::enableHistoryButtons()
 
     if (this->m_mainWindow)
     {
-        this->m_mainWindow->updateHistoryButtons(canGoBack, canGoForward);
+        this->m_mainWindow->UpdateHistoryButtons(canGoBack, canGoForward);
     }
 }
 

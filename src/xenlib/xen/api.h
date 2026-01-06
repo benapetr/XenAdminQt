@@ -44,44 +44,36 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         explicit XenRpcAPI(XenAPI::Session* session, QObject* parent = nullptr);
         ~XenRpcAPI();
 
-        // Session info
-        QString getSessionId() const;
-
         // Task operations
-        QVariant getTaskRecord(const QString& taskRef);
-        QString getTaskStatus(const QString& taskRef);
-        double getTaskProgress(const QString& taskRef);
-        QString getTaskResult(const QString& taskRef);
-        QStringList getTaskErrorInfo(const QString& taskRef);
-        QVariantMap getAllTaskRecords(); // Returns Dictionary<XenRef<Task>, Task> equivalent
-        bool cancelTask(const QString& taskRef);
-        bool destroyTask(const QString& taskRef);
+        QVariant GetTaskRecord(const QString& taskRef);
+        QString GetTaskStatus(const QString& taskRef);
+        double GetTaskProgress(const QString& taskRef);
+        QString GetTaskResult(const QString& taskRef);
+        QStringList GetTaskErrorInfo(const QString& taskRef);
+        QVariantMap GetAllTaskRecords(); // Returns Dictionary<XenRef<Task>, Task> equivalent
+        bool CancelTask(const QString& taskRef);
+        bool DestroyTask(const QString& taskRef);
 
         // Task.other_config operations (for task rehydration)
-        bool addToTaskOtherConfig(const QString& taskRef, const QString& key, const QString& value);
-        bool removeFromTaskOtherConfig(const QString& taskRef, const QString& key);
-        QVariantMap getTaskOtherConfig(const QString& taskRef);
+        bool AddToTaskOtherConfig(const QString& taskRef, const QString& key, const QString& value);
+        bool RemoveFromTaskOtherConfig(const QString& taskRef, const QString& key);
+        QVariantMap GetTaskOtherConfig(const QString& taskRef);
 
         // Event operations
         // event.from - Get events since token (token="" for initial call, returns new token + events)
-        QVariantMap eventFrom(const QStringList& classes, const QString& token, double timeout);
+        QVariantMap EventFrom(const QStringList& classes, const QString& token, double timeout);
         // event.register - Register for specific event classes (legacy, not used in modern API)
-        bool eventRegister(const QStringList& classes);
+        bool EventRegister(const QStringList& classes);
         // event.unregister - Unregister from event classes (legacy, not used in modern API)
-        bool eventUnregister(const QStringList& classes);
+        bool EventUnregister(const QStringList& classes);
 
         // JSON-RPC helper methods
-        QByteArray buildJsonRpcCall(const QString& method, const QVariantList& params);
-        QVariant parseJsonRpcResponse(const QByteArray& response);
+        QByteArray BuildJsonRpcCall(const QString& method, const QVariantList& params);
+        QVariant ParseJsonRpcResponse(const QByteArray& response);
 
     signals:
         void apiCallCompleted(const QString& method, const QVariant& result);
         void apiCallFailed(const QString& method, const QString& error);
-        void eventReceived(const QVariant& event);
-        void taskProgressChanged(const QString& taskRef, double progress);
-
-    private slots:
-        void handleEventPolling();
 
     private:
         class Private;

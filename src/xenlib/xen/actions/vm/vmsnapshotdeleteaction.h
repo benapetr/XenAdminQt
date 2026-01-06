@@ -46,24 +46,24 @@ class XENLIB_EXPORT VMSnapshotDeleteAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct snapshot delete action
-     * @param connection XenConnection
-     * @param snapshotRef Snapshot VM opaque_ref to delete
-     * @param parent Parent QObject
-     */
-    VMSnapshotDeleteAction(XenConnection* connection,
-                           const QString& snapshotRef,
-                           QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct snapshot delete action
+         * @param connection XenConnection
+         * @param snapshotRef Snapshot VM opaque_ref to delete
+         * @param parent Parent QObject
+         */
+        VMSnapshotDeleteAction(XenConnection* connection,
+                               const QString& snapshotRef,
+                               QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_snapshotRef;
-    QString m_snapshotName;
-    QStringList m_vbdsToDestroy; // VBDs owned by the snapshot
+    private:
+        QString m_snapshotRef;
+        QString m_snapshotName;
+        QStringList m_vbdsToDestroy; // VBDs owned by the snapshot
 };
 
 #endif // VMSNAPSHOTDELETEACTION_H

@@ -186,42 +186,42 @@ AsyncOperation* LogDestinationEditPage::SaveSettings()
                              parent),
               m_hostRef(hostRef)
         {
-            setSuppressHistory(true);
+            SetSuppressHistory(true);
         }
 
     protected:
         void run() override
         {
-            if (!connection() || !session())
+            if (!GetConnection() || !GetSession())
             {
                 qWarning() << "SyslogReconfigureOperation: No connection or session";
                 return;
             }
 
-            setPercentComplete(0);
-            setDescription(tr("Reconfiguring syslog..."));
+            SetPercentComplete(0);
+            SetDescription(tr("Reconfiguring syslog..."));
 
             try
             {
-                // Call Host.syslog_reconfigure(session, host_ref)
-                XenRpcAPI api(session());
+                // Call Host.syslog_reconfigure(GetSession, host_ref)
+                XenRpcAPI api(GetSession());
 
                 QVariantList params;
-                params << session()->getSessionId() << m_hostRef;
+                params << GetSession()->getSessionId() << m_hostRef;
 
-                QByteArray request = api.buildJsonRpcCall("host.syslog_reconfigure", params);
-                QByteArray response = connection()->SendRequest(request);
+                QByteArray request = api.BuildJsonRpcCall("host.syslog_reconfigure", params);
+                QByteArray response = GetConnection()->SendRequest(request);
 
                 // Parse response to check for errors
-                api.parseJsonRpcResponse(response);
+                api.ParseJsonRpcResponse(response);
 
-                setPercentComplete(100);
-                setDescription(tr("Log destination updated successfully"));
+                SetPercentComplete(100);
+                SetDescription(tr("Log destination updated successfully"));
 
             } catch (const std::exception& e)
             {
                 qWarning() << "SyslogReconfigureOperation failed:" << e.what();
-                setDescription(tr("Failed to reconfigure syslog: %1").arg(e.what()));
+                SetDescription(tr("Failed to reconfigure syslog: %1").arg(e.what()));
             }
         }
 

@@ -29,6 +29,7 @@
 #define SRREPAIRACTION_H
 
 #include "../../asyncoperation.h"
+#include <QSharedPointer>
 
 class SR;
 
@@ -63,7 +64,7 @@ class XENLIB_EXPORT SrRepairAction : public AsyncOperation
          * @param isSharedAction true if explicitly sharing SR, false if just repairing
          * @param parent Parent object
          */
-        explicit SrRepairAction(SR* sr,
+        explicit SrRepairAction(QSharedPointer<SR> sr,
                                 bool isSharedAction = false,
                                 QObject* parent = nullptr);
 
@@ -71,7 +72,7 @@ class XENLIB_EXPORT SrRepairAction : public AsyncOperation
         void run() override;
 
     private:
-        SR* m_sr;
+        QSharedPointer<SR> m_sr;
         bool m_isSharedAction;
 };
 

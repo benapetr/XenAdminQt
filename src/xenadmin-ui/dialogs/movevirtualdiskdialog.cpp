@@ -145,11 +145,11 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
 
         MoveVirtualDiskAction* action = new MoveVirtualDiskAction(this->m_connection, this->m_vdiRefs.first(), targetSRRef);
 
-        action->setTitle(QString("Moving virtual disk '%1' to '%2'").arg(vdiName).arg(targetSRName));
-        action->setDescription(QString("Moving '%1'...").arg(vdiName));
+        action->SetTitle(QString("Moving virtual disk '%1' to '%2'").arg(vdiName).arg(targetSRName));
+        action->SetDescription(QString("Moving '%1'...").arg(vdiName));
 
         opManager->RegisterOperation(action);
-        action->runAsync();
+        action->RunAsync();
     } else
     {
         // Multiple VDI move - batch in parallel (max 3 at a time)
@@ -161,11 +161,11 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
 
             MoveVirtualDiskAction* action = new MoveVirtualDiskAction(this->m_connection, vdiRef, targetSRRef);
 
-            action->setTitle(QString("Moving virtual disk '%1' to '%2'").arg(vdiName).arg(targetSRName));
-            action->setDescription(QString("Moving '%1'...").arg(vdiName));
+            action->SetTitle(QString("Moving virtual disk '%1' to '%2'").arg(vdiName).arg(targetSRName));
+            action->SetDescription(QString("Moving '%1'...").arg(vdiName));
 
             opManager->RegisterOperation(action);
-            action->runAsync();
+            action->RunAsync();
         }
     }
 }

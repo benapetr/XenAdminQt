@@ -58,7 +58,7 @@ void RemoveHostCommand::Run()
     if (!connection)
         return;
 
-    QString hostname = connection->GetHostname();
+    QString connection_hostname = connection->GetHostname();
     QString hostName = host->GetName();
 
     // Show confirmation dialog
@@ -78,23 +78,23 @@ void RemoveHostCommand::Run()
         return;
     }
 
-    qDebug() << "RemoveHostCommand: Removing host connection" << hostName << "(" << hostname << ")";
+    qDebug() << "RemoveHostCommand: Removing host connection" << hostName << "(" << connection_hostname << ")";
 
     // Disconnect if still connected
     if (connection->IsConnected() || connection->InProgress())
     {
-        qDebug() << "RemoveHostCommand: Disconnecting from" << hostname;
+        qDebug() << "RemoveHostCommand: Disconnecting from" << connection_hostname;
         connection->EndConnect(true, false);
     }
 
     Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
     if (manager)
-        manager->removeConnection(connection);
+        manager->RemoveConnection(connection);
 
     QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
     for (const ConnectionProfile& profile : profiles)
     {
-        if (profile.hostname() == hostname && profile.port() == connection->GetPort())
+        if (profile.hostname() == connection_hostname && profile.port() == connection->GetPort())
         {
             if (!profile.name().isEmpty())
                 SettingsManager::instance().removeConnectionProfile(profile.name());
@@ -103,8 +103,8 @@ void RemoveHostCommand::Run()
 
     SettingsManager::instance().sync();
     this->mainWindow()->SaveServerList();
-    this->mainWindow()->showStatusMessage(QString("Removed connection to '%1'").arg(hostName), 5000);
-    this->mainWindow()->refreshServerTree();
+    this->mainWindow()->ShowStatusMessage(QString("Removed connection to '%1'").arg(hostName), 5000);
+    this->mainWindow()->RefreshServerTree();
 }
 
 QString RemoveHostCommand::MenuText() const

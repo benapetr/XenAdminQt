@@ -45,27 +45,27 @@ class SetSslLegacyAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct SSL legacy mode update action
-     * @param connection Connection to the pool
-     * @param poolRef Pool opaque reference
-     * @param enableSslLegacy True to enable SSL legacy mode, false for TLS only
-     * @param parent Parent QObject
-     */
-    SetSslLegacyAction(XenConnection* connection,
-                       const QString& poolRef,
-                       bool enableSslLegacy,
-                       QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct SSL legacy mode update action
+         * @param connection Connection to the pool
+         * @param poolRef Pool opaque reference
+         * @param enableSslLegacy True to enable SSL legacy mode, false for TLS only
+         * @param parent Parent QObject
+         */
+        SetSslLegacyAction(XenConnection* connection,
+                           const QString& poolRef,
+                           bool enableSslLegacy,
+                           QObject* parent = nullptr);
 
-    ~SetSslLegacyAction() override = default;
+        ~SetSslLegacyAction() override = default;
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_poolRef;
-    bool m_enableSslLegacy;
+    private:
+        QString m_poolRef;
+        bool m_enableSslLegacy;
 };
 
 #endif // SETSSLLEGACYACTION_H

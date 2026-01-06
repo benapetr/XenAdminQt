@@ -209,9 +209,9 @@ void DetachSRCommand::Run()
         connect(action, &AsyncOperation::completed, mainWindow, [mainWindow, srName, action]() {
             if (!mainWindow)
                 return;
-            if (action->state() == AsyncOperation::Completed && !action->isFailed())
+            if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
-                mainWindow->showStatusMessage(QString("Successfully detached SR '%1'").arg(srName), 5000);
+                mainWindow->ShowStatusMessage(QString("Successfully detached SR '%1'").arg(srName), 5000);
             } else
             {
                 QMessageBox::warning(
@@ -222,7 +222,7 @@ void DetachSRCommand::Run()
             action->deleteLater();
         }, Qt::QueuedConnection);
 
-        action->runAsync();
+        action->RunAsync();
         return;
     }
 
@@ -248,7 +248,7 @@ void DetachSRCommand::Run()
     OperationManager::instance()->RegisterOperation(multi);
     connect(multi, &AsyncOperation::completed, multi, &QObject::deleteLater);
     connect(multi, &AsyncOperation::failed, multi, &QObject::deleteLater);
-    multi->runAsync();
+    multi->RunAsync();
 }
 
 QString DetachSRCommand::currentSR() const

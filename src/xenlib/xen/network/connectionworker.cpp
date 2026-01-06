@@ -34,15 +34,13 @@
 
 namespace Xen
 {
-    ConnectionWorker::ConnectionWorker(const QString& hostname, int port, QObject* parent)
-        : QThread(parent), m_hostname(hostname), m_port(port), m_socket(nullptr), m_stopped(0), m_nextRequestId(1)
+    ConnectionWorker::ConnectionWorker(const QString& hostname, int port, QObject* parent) : QThread(parent), m_hostname(hostname), m_port(port)
     {
-        this->m_certManager = XenCertificateManager::instance();
     }
 
     ConnectionWorker::~ConnectionWorker()
     {
-        this->requestStop();
+        this->RequestStop();
 
         // Wait for thread to finish (max 5 seconds)
         if (!this->wait(5000))
@@ -53,7 +51,7 @@ namespace Xen
         }
     }
 
-    void ConnectionWorker::requestStop()
+    void ConnectionWorker::RequestStop()
     {
         this->m_stopped.storeRelaxed(1);
 
@@ -61,7 +59,7 @@ namespace Xen
         this->m_requestCondition.wakeAll();
     }
 
-    int ConnectionWorker::queueRequest(const QByteArray& data, bool emitSignal)
+    int ConnectionWorker::QueueRequest(const QByteArray& data, bool emitSignal)
     {
         QMutexLocker locker(&this->m_requestMutex);
 
@@ -83,7 +81,7 @@ namespace Xen
         return request->id;
     }
 
-    QByteArray ConnectionWorker::waitForResponse(int requestId, int timeoutMs)
+    QByteArray ConnectionWorker::WaitForResponse(int requestId, int timeoutMs)
     {
         QElapsedTimer timer;
         timer.start();
@@ -126,29 +124,29 @@ namespace Xen
             return;
         }
 
-        // qDebug() << "ConnectionWorker: SSL errors occurred, count:" << errors.size();
-        // qDebug() << "ConnectionWorker: Socket state:" << this->m_socket->state();
-        // qDebug() << "ConnectionWorker: Socket encrypted:" << this->m_socket->isEncrypted();
+        qDebug() << "ConnectionWorker: SSL errors occurred, count:" << errors.size();
+        qDebug() << "ConnectionWorker: Socket state:" << this->m_socket->state();
+        qDebug() << "ConnectionWorker: Socket encrypted:" << this->m_socket->isEncrypted();
 
-        // for (const QSslError& error : errors)
-        // {
-        //     qDebug() << "  - Error type:" << error.error() << "Message:" << error.errorString();
-        // }
+        for (const QSslError& error : errors)
+        {
+             qDebug() << "  - Error type:" << error.error() << "Message:" << error.errorString();
+         }
 
         // For XenServer/XCP-ng with self-signed certificates, we accept them
-        if (this->m_certManager->getAllowSelfSigned())
+        if (XenCertificateManager::instance()->getAllowSelfSigned())
         {
-            // qDebug() << "ConnectionWorker: Ignoring SSL errors due to allowSelfSigned policy";
-            // qDebug() << "ConnectionWorker: Calling ignoreSslErrors()...";
+            qDebug() << "ConnectionWorker: Ignoring SSL errors due to allowSelfSigned policy";
+            qDebug() << "ConnectionWorker: Calling ignoreSslErrors()...";
             this->m_socket->ignoreSslErrors();
-            // qDebug() << "ConnectionWorker: ignoreSslErrors() called, socket state:" << this->m_socket->state();
+            qDebug() << "ConnectionWorker: ignoreSslErrors() called, socket state:" << this->m_socket->state();
             return;
         }
 
         // Validate certificate if we're not accepting all self-signed
         if (!this->m_socket->peerCertificate().isNull())
         {
-            if (this->m_certManager->validateCertificate(this->m_socket->peerCertificate(), this->m_hostname))
+            if (XenCertificateManager::instance()->validateCertificate(this->m_socket->peerCertificate(), this->m_hostname))
             {
                 // qDebug() << "ConnectionWorker: Certificate validated, ignoring SSL errors";
                 this->m_socket->ignoreSslErrors();
@@ -178,7 +176,7 @@ namespace Xen
         // Step 1: TCP connection
         if (!this->connectToHostSync())
         {
-            emit connectionFailed("Failed to connect to " + this->m_hostname);
+            emit ConnectionFailed("Failed to connect to " + this->m_hostname);
             goto cleanup;
         }
 
@@ -204,7 +202,7 @@ namespace Xen
         // Notify main thread that TCP/SSL connection is ready
         // The caller (XenLib) will now use XenSession to login
         // qDebug() << timestamp() << "ConnectionWorker: TCP/SSL connection established, ready for login";
-        emit connectionEstablished();
+        emit ConnectionEstablished();
 
         // Enter event polling loop - this processes queued API requests (including login from XenSession)
         // qDebug() << timestamp() << "ConnectionWorker: Entering event poll loop";
@@ -224,13 +222,13 @@ namespace Xen
             this->m_socket = nullptr;
         }
 
-        emit workerFinished();
+        emit WorkerFinished();
         // qDebug() << "ConnectionWorker: Thread finished";
     }
 
     bool ConnectionWorker::connectToHostSync()
     {
-        emit connectionProgress("Connecting to " + this->m_hostname + ":" + QString::number(this->m_port) + "...");
+        emit ConnectionProgress("Connecting to " + this->m_hostname + ":" + QString::number(this->m_port) + "...");
 
         // Start encrypted connection
         this->m_socket->setPeerVerifyMode(QSslSocket::VerifyNone);
@@ -250,7 +248,7 @@ namespace Xen
 
     bool ConnectionWorker::sslHandshakeSync()
     {
-        emit connectionProgress("Performing SSL handshake...");
+        emit ConnectionProgress("Performing SSL handshake...");
 
         // qDebug() << "ConnectionWorker: Waiting for SSL handshake, socket state:" << this->m_socket->state();
         // qDebug() << "ConnectionWorker: Socket encrypted before wait:" << this->m_socket->isEncrypted();
@@ -317,7 +315,7 @@ namespace Xen
             // For blocking/sync calls, emitSignal is false to avoid spurious "Unknown request ID" warnings
             if (request->emitSignal)
             {
-                emit apiResponse(request->id, response);
+                emit ApiResponse(request->id, response);
             }
 
             // Wake up any threads waiting for this response
@@ -350,7 +348,10 @@ namespace Xen
         httpRequest += "\r\n";
         httpRequest += request;
 
-        // qDebug() << "ConnectionWorker: Sending request," << httpRequest.size() << "bytes - Method:" << methodName;
+        /*QString trimmed = request;
+        if (trimmed.length() > 100)
+            trimmed = trimmed.mid(0, 100);
+        qDebug() << "ConnectionWorker: Sending request," << httpRequest.size() << "bytes - Body:" << trimmed;*/
 
         // Write request to socket
         qint64 written = this->m_socket->write(httpRequest);

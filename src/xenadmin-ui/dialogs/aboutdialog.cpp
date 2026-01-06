@@ -117,7 +117,7 @@ QString AboutDialog::getConnectionInfo() const
 {
     // C# AboutDialog pattern: iterate through ConnectionsManager connections
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-    QList<XenConnection*> connections = connMgr->getConnectedConnections();
+    QList<XenConnection*> connections = connMgr->GetConnectedConnections();
 
     if (connections.isEmpty())
     {
@@ -167,7 +167,7 @@ QString AboutDialog::getLicenseDetails() const
 {
     // C# AboutDialog.GetLicenseDetails() pattern
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-    QList<XenConnection*> connections = connMgr->getConnectedConnections();
+    QList<XenConnection*> connections = connMgr->GetConnectedConnections();
 
     if (connections.isEmpty())
     {

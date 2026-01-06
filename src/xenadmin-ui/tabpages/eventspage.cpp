@@ -189,9 +189,9 @@ bool EventsPage::filterRecord(OperationManager::OperationRecord* record)
     }
 
     // Filter by location
-    if (!this->m_locationFilters.isEmpty() && record->operation && record->operation->connection())
+    if (!this->m_locationFilters.isEmpty() && record->operation && record->operation->GetConnection())
     {
-        QString location = record->operation->connection()->GetHostname();
+        QString location = record->operation->GetConnection()->GetHostname();
         if (!this->m_locationFilters.contains(location))
             return true;  // Hide this record
     }
@@ -239,8 +239,8 @@ void EventsPage::createRecordRow(OperationManager::OperationRecord* record)
 
     // Column 3: Location (connection name)
     QString location = "";
-    if (record->operation && record->operation->connection())
-        location = record->operation->connection()->GetHostname();
+    if (record->operation && record->operation->GetConnection())
+        location = record->operation->GetConnection()->GetHostname();
     QTableWidgetItem* locationItem = new QTableWidgetItem(location);
     locationItem->setData(Qt::UserRole, QVariant::fromValue(record));
     this->ui->eventsTable->setItem(row, 3, locationItem);
@@ -403,8 +403,8 @@ QString EventsPage::buildRecordTitle(OperationManager::OperationRecord* record) 
         return record->description;
 
     // Fall back to connection hostname if available
-    if (record->operation && record->operation->connection())
-        return record->operation->connection()->GetHostname();
+    if (record->operation && record->operation->GetConnection())
+        return record->operation->GetConnection()->GetHostname();
 
     return tr("Operation");
 }
@@ -555,9 +555,9 @@ void EventsPage::onFilterLocationChanged()
     
     for (auto* record : records)
     {
-        if (record && record->operation && record->operation->connection())
+        if (record && record->operation && record->operation->GetConnection())
         {
-            QString hostname = record->operation->connection()->GetHostname();
+            QString hostname = record->operation->GetConnection()->GetHostname();
             if (!hostname.isEmpty())
                 allLocations.insert(hostname);
         }

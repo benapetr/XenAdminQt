@@ -114,7 +114,7 @@ void SetDefaultSRCommand::Run()
 
     if (ret == QMessageBox::Yes)
     {
-        this->mainWindow()->showStatusMessage(QString("Setting '%1' as default storage repository...").arg(srName));
+        this->mainWindow()->ShowStatusMessage(QString("Setting '%1' as default storage repository...").arg(srName));
 
         XenConnection* connection = sr->GetConnection();
         if (!connection || !connection->IsConnected())
@@ -139,7 +139,7 @@ void SetDefaultSRCommand::Run()
         connect(action, &AsyncOperation::completed, this, &SetDefaultSRCommand::onSetDefaultCompleted);
         connect(action, &AsyncOperation::failed, this, &SetDefaultSRCommand::onSetDefaultFailed);
 
-        action->runAsync();
+        action->RunAsync();
     }
 }
 
@@ -152,7 +152,7 @@ void SetDefaultSRCommand::onSetDefaultCompleted()
 {
     if (this->mainWindow())
     {
-        this->mainWindow()->showStatusMessage(QString("Storage repository '%1' set as default successfully").arg(m_pendingSrName), 5000);
+        this->mainWindow()->ShowStatusMessage(QString("Storage repository '%1' set as default successfully").arg(m_pendingSrName), 5000);
     }
 
     if (auto* op = qobject_cast<AsyncOperation*>(sender()))
@@ -166,7 +166,7 @@ void SetDefaultSRCommand::onSetDefaultFailed(const QString& error)
         QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
                              QString("Failed to set storage repository '%1' as default: %2")
                                  .arg(m_pendingSrName, error));
-        this->mainWindow()->showStatusMessage("Set default SR failed", 5000);
+        this->mainWindow()->ShowStatusMessage("Set default SR failed", 5000);
     }
 
     if (auto* op = qobject_cast<AsyncOperation*>(sender()))

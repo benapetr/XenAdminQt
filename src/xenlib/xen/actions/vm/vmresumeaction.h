@@ -41,21 +41,21 @@ class XENLIB_EXPORT VMResumeAction : public VMStartAbstractAction
 {
     Q_OBJECT
 
-public:
-    explicit VMResumeAction(VM* vm,
-                            WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
-                            StartDiagnosisForm startDiagnosisForm,
-                            QObject* parent = nullptr);
+    public:
+        explicit VMResumeAction(QSharedPointer<VM> vm,
+                                WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
+                                StartDiagnosisForm startDiagnosisForm,
+                                QObject* parent = nullptr);
 
-    bool isStart() const override
-    {
-        return false;
-    }
-    VMStartAbstractAction* clone() override;
+        bool isStart() const override
+        {
+            return false;
+        }
+        VMStartAbstractAction* clone() override;
 
-protected:
-    void run() override;
-    void doAction(int start, int end) override;
+    protected:
+        void run() override;
+        void doAction(int start, int end) override;
 };
 
 #endif // VMRESUMEACTION_H

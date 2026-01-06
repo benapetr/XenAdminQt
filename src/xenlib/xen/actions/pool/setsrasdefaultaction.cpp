@@ -45,13 +45,13 @@ SetSrAsDefaultAction::SetSrAsDefaultAction(XenConnection* connection,
 
 void SetSrAsDefaultAction::run()
 {
-    if (!connection() || m_poolRef.isEmpty() || m_srRef.isEmpty())
+    if (!GetConnection() || m_poolRef.isEmpty() || m_srRef.isEmpty())
     {
         setError("Invalid connection or references");
         return;
     }
 
-    XenAPI::Session* session = connection()->GetSession();
+    XenAPI::Session* session = GetConnection()->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         setError("No valid session");
@@ -63,7 +63,7 @@ void SetSrAsDefaultAction::run()
         XenAPI::Pool::set_default_SR(session, m_poolRef, m_srRef);
         XenAPI::Pool::set_suspend_image_SR(session, m_poolRef, m_srRef);
         XenAPI::Pool::set_crash_dump_SR(session, m_poolRef, m_srRef);
-        setDescription("Completed");
+        SetDescription("Completed");
     }
     catch (const std::exception& e)
     {

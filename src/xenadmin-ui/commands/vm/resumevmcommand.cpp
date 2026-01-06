@@ -101,7 +101,7 @@ bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool
     }
 
     // Create VM object for action (action will own and delete it)
-    VM* vmForAction = new VM(conn, vmRef);
+    QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vmRef));
 
     // Create VMResumeAction with diagnosis callbacks (matches C# pattern)
     // Note: VMResumeAction is for resuming from Suspended state (from disk)
@@ -136,7 +136,7 @@ bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool
     });
 
     // Run action asynchronously
-    action->runAsync();
+    action->RunAsync();
     return true;
 }
 

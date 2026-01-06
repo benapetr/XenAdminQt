@@ -43,23 +43,23 @@ class RescanPIFsAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection
-     * @param hostRef Host opaque reference
-     * @param parent Parent QObject
-     */
-    RescanPIFsAction(XenConnection* connection,
-                     const QString& hostRef,
-                     QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection
+         * @param hostRef Host opaque reference
+         * @param parent Parent QObject
+         */
+        RescanPIFsAction(XenConnection* connection,
+                         const QString& hostRef,
+                         QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_hostRef;
-    QString m_hostName;
+    private:
+        QString m_hostRef;
+        QString m_hostName;
 };
 
 #endif // RESCANPIFSACTION_H

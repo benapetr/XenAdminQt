@@ -877,7 +877,7 @@ void ValuePropertyQueryType::populateCollectedValues()
     this->collectedValues_.clear();
     
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-    QList<XenConnection*> connections = connMgr->getAllConnections();
+    QList<XenConnection*> connections = connMgr->GetAllConnections();
     
     // C# only iterates VMs - see comment in C# code at line 1455
     for (XenConnection* conn : connections)
@@ -1108,7 +1108,7 @@ void RecursiveQueryTypeBase::onConnectionsChanged()
     // In Qt, we monitor cache changes per connection
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     
-    for (XenConnection* conn : connMgr->getAllConnections())
+    for (XenConnection* conn : connMgr->GetAllConnections())
     {
         if (conn && conn->GetCache())
         {
@@ -1254,7 +1254,7 @@ void XenModelObjectPropertyQueryType::onConnectionsChanged()
 {
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     
-    for (XenConnection* conn : connMgr->getAllConnections())
+    for (XenConnection* conn : connMgr->GetAllConnections())
     {
         if (conn && conn->GetCache())
         {
@@ -1357,7 +1357,7 @@ void XenModelObjectListContainsQueryType::onConnectionsChanged()
 {
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     
-    for (XenConnection* conn : connMgr->getAllConnections())
+    for (XenConnection* conn : connMgr->GetAllConnections())
     {
         if (conn && conn->GetCache())
         {

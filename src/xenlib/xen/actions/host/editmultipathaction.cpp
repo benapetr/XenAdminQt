@@ -35,7 +35,7 @@
 
 const char* EditMultipathAction::DEFAULT_MULTIPATH_HANDLE = "dmp";
 
-EditMultipathAction::EditMultipathAction(Host* host,
+EditMultipathAction::EditMultipathAction(QSharedPointer<Host> host,
                                          bool enableMultipath,
                                          QObject* parent)
     : AsyncOperation(host->GetConnection(),
@@ -57,7 +57,7 @@ void EditMultipathAction::run()
         return;
     }
 
-    XenAPI::Session* sess = this->session();
+    XenAPI::Session* sess = this->GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -77,7 +77,7 @@ void EditMultipathAction::run()
         QVariantList pbdRefs = hostRecord.value("PBDs").toList();
 
         // Step 1: Unplug all currently attached PBDs
-        setDescription("Unplugging storage connections...");
+        SetDescription("Unplugging storage connections...");
         foreach (const QVariant& pbdRefVar, pbdRefs)
         {
             QString pbdRef = pbdRefVar.toString();
@@ -93,7 +93,7 @@ void EditMultipathAction::run()
         }
 
         // Step 2: Set multipath configuration
-        setDescription("Configuring multipath setting...");
+        SetDescription("Configuring multipath setting...");
         
         // Use other_config method (works on all XenServer versions)
         // TODO: For XenServer 6.0+ (Kolkata), use Host.set_multipathing() instead
@@ -117,7 +117,7 @@ void EditMultipathAction::run()
         qWarning() << "EditMultipathAction: Error changing multipath setting:" << e.what();
         
         // Try to re-plug PBDs even if setting multipath failed
-        setDescription("Re-plugging storage connections...");
+        SetDescription("Re-plugging storage connections...");
         foreach (const QString& pbdRef, pluggedPBDs)
         {
             try
@@ -137,7 +137,7 @@ void EditMultipathAction::run()
     }
 
     // Step 3: Re-plug all PBDs that were previously plugged
-    setDescription("Re-plugging storage connections...");
+    SetDescription("Re-plugging storage connections...");
     QString plugErrors;
     foreach (const QString& pbdRef, pluggedPBDs)
     {
@@ -164,5 +164,5 @@ void EditMultipathAction::run()
     }
 
     qDebug() << "EditMultipathAction: All PBDs re-plugged successfully";
-    setDescription("Multipath setting changed successfully");
+    SetDescription("Multipath setting changed successfully");
 }

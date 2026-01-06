@@ -61,33 +61,33 @@ UpdateVIFAction::UpdateVIFAction(XenConnection* connection,
     QVariantMap networkData = connection->GetCache()->ResolveObjectData("network", networkRef);
     m_networkName = networkData.value("name_label").toString();
 
-    setTitle(QString("Updating VIF for %1").arg(m_vmName));
-    setDescription(QString("Updating %1 on %2").arg(m_networkName, m_vmName));
+    SetTitle(QString("Updating VIF for %1").arg(m_vmName));
+    SetDescription(QString("Updating %1 on %2").arg(m_networkName, m_vmName));
 }
 
 void UpdateVIFAction::run()
 {
     try
     {
-        setDescription("Updating VIF...");
+        SetDescription("Updating VIF...");
 
         // Step 1: Delete the old VIF (includes unplugging if needed)
-        setDescription("Removing old VIF configuration...");
+        SetDescription("Removing old VIF configuration...");
 
-        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         QString powerState = vmData.value("power_state").toString();
 
         if (powerState == "Running")
         {
-            QStringList allowedOps = XenAPI::VIF::get_allowed_operations(session(), m_oldVifRef);
+            QStringList allowedOps = XenAPI::VIF::get_allowed_operations(GetSession(), m_oldVifRef);
 
             if (allowedOps.contains("unplug"))
             {
-                setDescription("Unplugging old VIF...");
+                SetDescription("Unplugging old VIF...");
 
                 try
                 {
-                    XenAPI::VIF::unplug(session(), m_oldVifRef);
+                    XenAPI::VIF::unplug(GetSession(), m_oldVifRef);
                     qDebug() << "Old VIF unplugged successfully";
                 } catch (const std::exception& e)
                 {
@@ -105,62 +105,62 @@ void UpdateVIFAction::run()
             }
         }
 
-        setPercentComplete(30);
+        SetPercentComplete(30);
 
         // Destroy the old VIF
-        setDescription("Destroying old VIF...");
-        XenAPI::VIF::destroy(session(), m_oldVifRef);
+        SetDescription("Destroying old VIF...");
+        XenAPI::VIF::destroy(GetSession(), m_oldVifRef);
         qDebug() << "Old VIF destroyed successfully";
 
-        setPercentComplete(50);
+        SetPercentComplete(50);
 
         // Step 2: Create the new VIF
-        setDescription("Creating new VIF...");
-        QString taskRef = XenAPI::VIF::async_create(session(), m_newVifRecord);
+        SetDescription("Creating new VIF...");
+        QString taskRef = XenAPI::VIF::async_create(GetSession(), m_newVifRecord);
         pollToCompletion(taskRef, 50, 80);
-        QString newVifRef = result();
+        QString newVifRef = GetResult();
 
         qDebug() << "New VIF created:" << newVifRef;
 
         // Step 3: Attempt to hot-plug if VM is running
         // Refresh VM power state in case it changed
-        vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
+        vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         powerState = vmData.value("power_state").toString();
 
         if (powerState == "Running")
         {
-            setDescription("Checking if hot-plug is possible...");
+            SetDescription("Checking if hot-plug is possible...");
 
-            QStringList allowedOps = XenAPI::VIF::get_allowed_operations(session(), newVifRef);
+            QStringList allowedOps = XenAPI::VIF::get_allowed_operations(GetSession(), newVifRef);
 
             if (allowedOps.contains("plug"))
             {
-                setDescription("Hot-plugging new VIF...");
+                SetDescription("Hot-plugging new VIF...");
 
                 try
                 {
-                    XenAPI::VIF::plug(session(), newVifRef);
-                    setPercentComplete(100);
-                    setDescription("VIF updated and hot-plugged");
+                    XenAPI::VIF::plug(GetSession(), newVifRef);
+                    SetPercentComplete(100);
+                    SetDescription("VIF updated and hot-plugged");
                     qDebug() << "New VIF hot-plugged successfully";
                 } catch (const std::exception& e)
                 {
                     qWarning() << "Hot-plug failed:" << e.what();
                     m_rebootRequired = true;
-                    setPercentComplete(100);
-                    setDescription("VIF updated (reboot required for activation)");
+                    SetPercentComplete(100);
+                    SetDescription("VIF updated (reboot required for activation)");
                 }
             } else
             {
                 m_rebootRequired = true;
-                setPercentComplete(100);
-                setDescription("VIF updated (reboot required for activation)");
+                SetPercentComplete(100);
+                SetDescription("VIF updated (reboot required for activation)");
                 qDebug() << "Hot-plug not allowed, reboot required";
             }
         } else
         {
-            setPercentComplete(100);
-            setDescription("VIF updated");
+            SetPercentComplete(100);
+            SetDescription("VIF updated");
         }
 
     } catch (const std::exception& e)

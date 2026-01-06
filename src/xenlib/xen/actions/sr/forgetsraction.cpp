@@ -40,17 +40,17 @@ ForgetSrAction::ForgetSrAction(XenConnection* connection,
                      parent),
       m_srRef(srRef), m_srName(srName)
 {
-    addApiMethodToRoleCheck("SR.async_forget");
+    AddApiMethodToRoleCheck("SR.async_forget");
 }
 
 void ForgetSrAction::run()
 {
     try
     {
-        setDescription(QString("Forgetting SR '%1'...").arg(m_srName));
+        SetDescription(QString("Forgetting SR '%1'...").arg(m_srName));
 
         // Check if SR allows forget operation
-        XenCache* cache = connection()->GetCache();
+        XenCache* cache = GetConnection()->GetCache();
         QVariantMap srData = cache->ResolveObjectData("sr", m_srRef);
         if (srData.isEmpty())
         {
@@ -76,13 +76,13 @@ void ForgetSrAction::run()
         }
 
         // Forget SR
-        QString taskRef = XenAPI::SR::async_forget(session(), m_srRef);
+        QString taskRef = XenAPI::SR::async_forget(GetSession(), m_srRef);
         pollToCompletion(taskRef);
 
-        if (state() != Failed)
+        if (GetState() != Failed)
         {
             setState(Completed);
-            setDescription(QString("Successfully forgotten SR '%1'").arg(m_srName));
+            SetDescription(QString("Successfully forgotten SR '%1'").arg(m_srName));
         }
 
     } catch (const std::exception& e)

@@ -43,24 +43,24 @@ VMMigrateAction::VMMigrateAction(XenConnection* connection,
       m_vmRef(vmRef),
       m_destinationHostRef(destinationHostRef)
 {
-    addApiMethodToRoleCheck("VM.async_pool_migrate");
+    AddApiMethodToRoleCheck("VM.async_pool_migrate");
 }
 
 void VMMigrateAction::run()
 {
     try
     {
-        setPercentComplete(0);
-        setDescription("Preparing migration...");
+        SetPercentComplete(0);
+        SetDescription("Preparing migration...");
 
         // Get VM and host data from cache
-        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         if (vmData.isEmpty())
         {
             throw std::runtime_error("VM not found in cache");
         }
 
-        QVariantMap hostData = connection()->GetCache()->ResolveObjectData("host", m_destinationHostRef);
+        QVariantMap hostData = GetConnection()->GetCache()->ResolveObjectData("host", m_destinationHostRef);
         if (hostData.isEmpty())
         {
             throw std::runtime_error("Destination host not found in cache");
@@ -75,31 +75,31 @@ void VMMigrateAction::run()
 
         if (!residentOnRef.isEmpty() && residentOnRef != "OpaqueRef:NULL")
         {
-            QVariantMap residentHostData = connection()->GetCache()->ResolveObjectData("host", residentOnRef);
+            QVariantMap residentHostData = GetConnection()->GetCache()->ResolveObjectData("host", residentOnRef);
             sourceHostName = residentHostData.value("name_label").toString();
 
-            setTitle(QString("Migrating %1 from %2 to %3")
+            SetTitle(QString("Migrating %1 from %2 to %3")
                          .arg(vmName)
                          .arg(sourceHostName)
                          .arg(hostName));
         } else
         {
-            setTitle(QString("Migrating %1 to %2").arg(vmName).arg(hostName));
+            SetTitle(QString("Migrating %1 to %2").arg(vmName).arg(hostName));
         }
 
-        setPercentComplete(10);
-        setDescription(QString("Migrating %1 to %2...").arg(vmName).arg(hostName));
+        SetPercentComplete(10);
+        SetDescription(QString("Migrating %1 to %2...").arg(vmName).arg(hostName));
 
         // Start the migration with live migration enabled
         QVariantMap options;
         options["live"] = "true";
 
-        QString taskRef = XenAPI::VM::async_pool_migrate(session(), m_vmRef, m_destinationHostRef, options);
+        QString taskRef = XenAPI::VM::async_pool_migrate(GetSession(), m_vmRef, m_destinationHostRef, options);
 
         // Poll the task to completion
         pollToCompletion(taskRef, 10, 100);
 
-        setDescription(QString("VM migrated successfully to %1").arg(hostName));
+        SetDescription(QString("VM migrated successfully to %1").arg(hostName));
 
     } catch (const Failure& failure)
     {

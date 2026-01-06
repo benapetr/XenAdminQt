@@ -46,22 +46,22 @@ void DisableHAAction::run()
 {
     try
     {
-        setPercentComplete(0);
-        setDescription("Disabling HA...");
+        SetPercentComplete(0);
+        SetDescription("Disabling HA...");
 
         // Call Pool.async_disable_ha
-        QString taskRef = XenAPI::Pool::async_disable_ha(session());
+        QString taskRef = XenAPI::Pool::async_disable_ha(GetSession());
 
         // Poll to completion
         pollToCompletion(taskRef, 0, 100);
 
-        setDescription("HA disabled successfully");
+        SetDescription("HA disabled successfully");
 
     } catch (const std::exception& e)
     {
-        if (isCancelled())
+        if (IsCancelled())
         {
-            setDescription("HA disable cancelled");
+            SetDescription("HA disable cancelled");
         } else
         {
             setError(QString("Failed to disable HA: %1").arg(e.what()));

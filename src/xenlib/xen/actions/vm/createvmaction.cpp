@@ -109,7 +109,7 @@ CreateVMAction::CreateVMAction(XenConnection* connection,
 
 void CreateVMAction::run()
 {
-    XenAPI::Session* sess = session();
+    XenAPI::Session* sess = GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -118,22 +118,22 @@ void CreateVMAction::run()
 
     try
     {
-        setDescription(QString("Cloning template"));
+        SetDescription(QString("Cloning template"));
         QString hiddenName = makeHiddenName(m_nameLabel);
         QString cloneTask = XenAPI::VM::async_clone(sess, m_templateRef, hiddenName);
         pollToCompletion(cloneTask, 0, 10);
 
-        QString newVmRef = result();
+        QString newVmRef = GetResult();
         if (newVmRef.isEmpty())
             throw std::runtime_error("Clone returned empty VM ref");
 
-        setResult(newVmRef);
+        SetResult(newVmRef);
 
         QVariantMap templateRecord = XenAPI::VM::get_record(sess, m_templateRef);
         QVariantMap vmRecord = XenAPI::VM::get_record(sess, newVmRef);
         bool isHvm = isHvmVm(vmRecord);
 
-        setDescription(QString("Saving VM properties"));
+        SetDescription(QString("Saving VM properties"));
         XenAPI::VM::set_name_label(sess, newVmRef, m_nameLabel);
         XenAPI::VM::set_name_description(sess, newVmRef, m_nameDescription);
 
@@ -178,7 +178,7 @@ void CreateVMAction::run()
             XenAPI::VM::set_platform(sess, newVmRef, platform);
         }
 
-        setDescription(QString("Configuring CD/DVD drive"));
+        SetDescription(QString("Configuring CD/DVD drive"));
         vmRecord = XenAPI::VM::get_record(sess, newVmRef);
         QVariantList vbdRefs = vmRecord.value("VBDs").toList();
         QString cdVbdRef;
@@ -235,7 +235,7 @@ void CreateVMAction::run()
             }
         }
 
-        setDescription(QString("Configuring disks"));
+        SetDescription(QString("Configuring disks"));
         for (const DiskConfig& disk : m_disks)
         {
             QString vdiRef = disk.vdiRef;
@@ -270,7 +270,7 @@ void CreateVMAction::run()
             XenAPI::VBD::create(sess, vbdRecord);
         }
 
-        setDescription(QString("Configuring networks"));
+        SetDescription(QString("Configuring networks"));
         vmRecord = XenAPI::VM::get_record(sess, newVmRef);
         QVariantList vifRefs = vmRecord.value("VIFs").toList();
         for (const QVariant& vifRefVar : vifRefs)
@@ -300,12 +300,12 @@ void CreateVMAction::run()
 
         if (m_startAfter)
         {
-            VM* vmInstance = new VM(connection(), newVmRef);
-            VMStartAction* startAction = new VMStartAction(vmInstance, nullptr, nullptr, this);
-            startAction->runAsync();
+            VM* vmInstance = new VM(GetConnection(), newVmRef);
+            VMStartAction* startAction = new VMStartAction(QSharedPointer<VM>(vmInstance), nullptr, nullptr, this);
+            startAction->RunAsync();
         }
 
-        setDescription(QString("VM created successfully"));
+        SetDescription(QString("VM created successfully"));
     }
     catch (const std::exception& e)
     {

@@ -42,9 +42,9 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.get_all", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.get_all", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response);
+        return api.ParseJsonRpcResponse(response);
     }
 
     QVariantMap Pool::get_all_records(Session* session)
@@ -56,10 +56,10 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.get_all_records", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.get_all_records", params);
         QByteArray response = session->sendApiRequest(request);
 
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
         if (result.canConvert<QVariantMap>())
         {
             return result.toMap();
@@ -77,9 +77,9 @@ namespace XenAPI
         params << session->getSessionId() << pool << sr;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.set_default_SR", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.set_default_SR", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     void Pool::set_suspend_image_SR(Session* session, const QString& pool, const QString& sr)
@@ -91,9 +91,9 @@ namespace XenAPI
         params << session->getSessionId() << pool << sr;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.set_suspend_image_SR", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.set_suspend_image_SR", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     void Pool::set_crash_dump_SR(Session* session, const QString& pool, const QString& sr)
@@ -105,9 +105,9 @@ namespace XenAPI
         params << session->getSessionId() << pool << sr;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.set_crash_dump_SR", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.set_crash_dump_SR", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     QString Pool::async_designate_new_master(Session* session, const QString& host)
@@ -119,9 +119,9 @@ namespace XenAPI
         params << session->getSessionId() << host;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.pool.designate_new_master", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.pool.designate_new_master", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     QString Pool::async_management_reconfigure(Session* session, const QString& network)
@@ -133,9 +133,9 @@ namespace XenAPI
         params << session->getSessionId() << network;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.pool.management_reconfigure", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.pool.management_reconfigure", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     QVariantMap Pool::get_record(Session* session, const QString& pool)
@@ -147,9 +147,9 @@ namespace XenAPI
         params << session->getSessionId() << pool;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.get_record", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.get_record", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toMap();
+        return api.ParseJsonRpcResponse(response).toMap();
     }
 
     QString Pool::get_master(Session* session, const QString& pool)
@@ -161,9 +161,9 @@ namespace XenAPI
         params << session->getSessionId() << pool;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.get_master", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.get_master", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     QString Pool::async_join(Session* session, const QString& master_address,
@@ -176,9 +176,9 @@ namespace XenAPI
         params << session->getSessionId() << master_address << master_username << master_password;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.pool.join", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.pool.join", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     void Pool::eject(Session* session, const QString& host)
@@ -190,7 +190,7 @@ namespace XenAPI
         params << session->getSessionId() << host;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.eject", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.eject", params);
         session->sendApiRequest(request);
     }
 
@@ -203,7 +203,7 @@ namespace XenAPI
         params << session->getSessionId() << pool << label;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.set_name_label", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.set_name_label", params);
         session->sendApiRequest(request);
     }
 
@@ -216,7 +216,7 @@ namespace XenAPI
         params << session->getSessionId() << pool << description;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.set_name_description", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.set_name_description", params);
         session->sendApiRequest(request);
     }
 
@@ -229,7 +229,7 @@ namespace XenAPI
         params << session->getSessionId() << pool << tags;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.set_tags", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.set_tags", params);
         session->sendApiRequest(request);
     }
 
@@ -242,11 +242,11 @@ namespace XenAPI
         params << session->getSessionId() << pool << enabled;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.set_migration_compression", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.set_migration_compression", params);
         QByteArray response = session->sendApiRequest(request);
         if (response.isEmpty())
             throw std::runtime_error("Empty response from server");
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
         const QString error = Xen::JsonRpcClient::lastError();
         if (!error.isEmpty())
             throw std::runtime_error(error.toStdString());
@@ -261,9 +261,9 @@ namespace XenAPI
         params << session->getSessionId() << pool << value;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.set_live_patching_disabled", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.set_live_patching_disabled", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     void Pool::set_igmp_snooping_enabled(Session* session, const QString& pool, bool value)
@@ -275,9 +275,9 @@ namespace XenAPI
         params << session->getSessionId() << pool << value;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.set_igmp_snooping_enabled", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.set_igmp_snooping_enabled", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     void Pool::enable_ssl_legacy(Session* session, const QString& pool)
@@ -289,9 +289,9 @@ namespace XenAPI
         params << session->getSessionId() << pool;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.enable_ssl_legacy", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.enable_ssl_legacy", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     void Pool::disable_ssl_legacy(Session* session, const QString& pool)
@@ -303,9 +303,9 @@ namespace XenAPI
         params << session->getSessionId() << pool;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.disable_ssl_legacy", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.disable_ssl_legacy", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     void Pool::set_ssl_legacy(Session* session, const QString& pool, bool enable)
@@ -329,9 +329,9 @@ namespace XenAPI
         params << session->getSessionId() << QVariant(heartbeat_srs) << configuration;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.pool.enable_ha", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.pool.enable_ha", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     QString Pool::async_disable_ha(Session* session)
@@ -343,9 +343,9 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.pool.disable_ha", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.pool.disable_ha", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     void Pool::set_ha_host_failures_to_tolerate(Session* session, const QString& pool, qint64 value)
@@ -357,7 +357,7 @@ namespace XenAPI
         params << session->getSessionId() << pool << value;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.set_ha_host_failures_to_tolerate", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.set_ha_host_failures_to_tolerate", params);
         session->sendApiRequest(request);
     }
 
@@ -370,9 +370,9 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.ha_compute_max_host_failures_to_tolerate", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.ha_compute_max_host_failures_to_tolerate", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toLongLong();
+        return api.ParseJsonRpcResponse(response).toLongLong();
     }
 
     qint64 Pool::ha_compute_hypothetical_max_host_failures_to_tolerate(Session* session,
@@ -385,9 +385,9 @@ namespace XenAPI
         params << session->getSessionId() << configuration;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.ha_compute_hypothetical_max_host_failures_to_tolerate", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.ha_compute_hypothetical_max_host_failures_to_tolerate", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toLongLong();
+        return api.ParseJsonRpcResponse(response).toLongLong();
     }
 
     void Pool::emergency_transition_to_master(Session* session)
@@ -399,7 +399,7 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.emergency_transition_to_master", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.emergency_transition_to_master", params);
         session->sendApiRequest(request);
     }
 
@@ -412,9 +412,9 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.pool.sync_database", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.pool.sync_database", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     void Pool::rotate_secret(Session* session, const QString& pool)
@@ -426,9 +426,9 @@ namespace XenAPI
         params << session->getSessionId() << pool;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("pool.rotate_secret", params);
+        QByteArray request = api.BuildJsonRpcCall("pool.rotate_secret", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Parse to check for errors
+        api.ParseJsonRpcResponse(response); // Parse to check for errors
     }
 
 } // namespace XenAPI

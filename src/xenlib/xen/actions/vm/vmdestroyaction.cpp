@@ -35,7 +35,7 @@
 #include <QDebug>
 
 VMDestroyAction::VMDestroyAction(XenConnection* connection,
-                                 VM* vm,
+                                 QSharedPointer<VM> vm,
                                  const QStringList& vbdsToDelete,
                                  const QStringList& snapshotsToDelete,
                                  QObject* parent)
@@ -52,7 +52,7 @@ VMDestroyAction::VMDestroyAction(XenConnection* connection,
 }
 
 VMDestroyAction::VMDestroyAction(XenConnection* connection,
-                                 VM* vm,
+                                 QSharedPointer<VM> vm,
                                  bool deleteAllOwnerDisks,
                                  QObject* parent)
     : AsyncOperation(connection,
@@ -87,7 +87,7 @@ void VMDestroyAction::run()
     try
     {
         destroyVM(m_vm->OpaqueRef(), m_vbdsToDelete, m_snapshotsToDelete);
-        setDescription("VM destroyed");
+        SetDescription("VM destroyed");
 
     } catch (const std::exception& e)
     {
@@ -106,13 +106,13 @@ void VMDestroyAction::destroyVM(const QString& vmRef,
     {
         try
         {
-            QVariantMap snapshotData = connection()->GetCache()->ResolveObjectData("vm", snapshotRef);
+            QVariantMap snapshotData = GetConnection()->GetCache()->ResolveObjectData("vm", snapshotRef);
             QString powerState = snapshotData.value("power_state").toString();
 
             // If snapshot is suspended, hard shutdown first
             if (powerState == "Suspended")
             {
-                XenAPI::VM::hard_shutdown(session(), snapshotRef);
+                XenAPI::VM::hard_shutdown(GetSession(), snapshotRef);
             }
 
             // Recursively destroy snapshot (with all its disks)
@@ -131,7 +131,7 @@ void VMDestroyAction::destroyVM(const QString& vmRef,
     // Add VDIs from specified VBDs
     for (const QString& vbdRef : vbdRefsToDelete)
     {
-        QVariantMap vbdData = connection()->GetCache()->ResolveObjectData("vbd", vbdRef);
+        QVariantMap vbdData = GetConnection()->GetCache()->ResolveObjectData("vbd", vbdRef);
         QString vdiRef = vbdData.value("VDI").toString();
 
         if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
@@ -141,7 +141,7 @@ void VMDestroyAction::destroyVM(const QString& vmRef,
     }
 
     // Add suspend VDI if present
-    QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
     QString suspendVdiRef = vmData.value("suspend_VDI").toString();
     if (!suspendVdiRef.isEmpty() && suspendVdiRef != "OpaqueRef:NULL")
     {
@@ -149,14 +149,14 @@ void VMDestroyAction::destroyVM(const QString& vmRef,
     }
 
     // Step 3: Destroy the VM itself
-    XenAPI::VM::destroy(session(), vmRef);
+    XenAPI::VM::destroy(GetSession(), vmRef);
 
     // Step 4: Destroy VDIs
     for (const QString& vdiRef : vdiRefsToDelete)
     {
         try
         {
-            XenAPI::VDI::destroy(session(), vdiRef);
+            XenAPI::VDI::destroy(GetSession(), vdiRef);
 
         } catch (const std::exception& e)
         {

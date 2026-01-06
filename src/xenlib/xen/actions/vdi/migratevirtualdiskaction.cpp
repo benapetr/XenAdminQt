@@ -41,8 +41,8 @@ MigrateVirtualDiskAction::MigrateVirtualDiskAction(XenConnection* connection,
     QString oldSR = getSRName(QString()); // Get current SR from VDI
     QString newSR = getSRName(srRef);
 
-    setTitle(QString("Migrating Virtual Disk"));
-    setDescription(QString("Migrating '%1' from '%2' to '%3'...")
+    SetTitle(QString("Migrating Virtual Disk"));
+    SetDescription(QString("Migrating '%1' from '%2' to '%3'...")
                        .arg(vdiName)
                        .arg(oldSR)
                        .arg(newSR));
@@ -52,7 +52,7 @@ void MigrateVirtualDiskAction::run()
 {
     try
     {
-        XenAPI::Session* session = connection()->GetSession();
+        XenAPI::Session* session = GetConnection()->GetSession();
         if (!session)
         {
             throw std::runtime_error("No valid session");
@@ -61,7 +61,7 @@ void MigrateVirtualDiskAction::run()
         qDebug() << "Live migrating VDI" << m_vdiRef << "to SR" << m_srRef;
 
         // Perform live migration using VDI.pool_migrate
-        setDescription(QString("Migrating '%1'...").arg(getVDIName()));
+        SetDescription(QString("Migrating '%1'...").arg(getVDIName()));
 
         // Empty options map (can be used for advanced migration options)
         QVariantMap options;
@@ -75,8 +75,8 @@ void MigrateVirtualDiskAction::run()
         // Poll migration task to completion
         pollToCompletion(taskRef, 0, 100);
 
-        setDescription(QString("'%1' migrated successfully").arg(getVDIName()));
-        setPercentComplete(100);
+        SetDescription(QString("'%1' migrated successfully").arg(getVDIName()));
+        SetPercentComplete(100);
 
         qDebug() << "VDI migrated successfully";
 
@@ -91,7 +91,7 @@ QString MigrateVirtualDiskAction::getVDIName() const
 {
     try
     {
-        XenAPI::Session* session = connection()->GetSession();
+        XenAPI::Session* session = GetConnection()->GetSession();
         QString name = XenAPI::VDI::get_name_label(session, m_vdiRef);
         return name.isEmpty() ? m_vdiRef : name;
     } catch (...)
@@ -104,7 +104,7 @@ QString MigrateVirtualDiskAction::getSRName(const QString& srRef) const
 {
     try
     {
-        XenAPI::Session* session = connection()->GetSession();
+        XenAPI::Session* session = GetConnection()->GetSession();
         QString actualSrRef = srRef;
 
         // If no SR ref provided, get it from the VDI

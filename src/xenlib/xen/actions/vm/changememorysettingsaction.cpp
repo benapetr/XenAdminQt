@@ -56,11 +56,11 @@ void ChangeMemorySettingsAction::run()
 {
     try
     {
-        setPercentComplete(0);
-        setDescription("Checking VM state...");
+        SetPercentComplete(0);
+        SetDescription("Checking VM state...");
 
         // Get current VM data from cache
-        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", this->m_vmRef);
+        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", this->m_vmRef);
         if (vmData.isEmpty())
         {
             throw std::runtime_error("VM not found in cache");
@@ -91,12 +91,12 @@ void ChangeMemorySettingsAction::run()
             this->m_vmHost = residentOn;
         }
 
-        setPercentComplete(10);
+        SetPercentComplete(10);
 
         // Shutdown VM if needed
         if (this->m_needReboot)
         {
-            setDescription("Shutting down VM...");
+            SetDescription("Shutting down VM...");
 
             // Check allowed operations to determine clean vs hard shutdown
             QVariantList allowedOps = vmData.value("allowed_operations").toList();
@@ -105,20 +105,20 @@ void ChangeMemorySettingsAction::run()
             QString taskRef;
             if (canCleanShutdown)
             {
-                taskRef = XenAPI::VM::async_clean_shutdown(session(), this->m_vmRef);
+                taskRef = XenAPI::VM::async_clean_shutdown(GetSession(), this->m_vmRef);
             } else
             {
-                taskRef = XenAPI::VM::async_hard_shutdown(session(), this->m_vmRef);
+                taskRef = XenAPI::VM::async_hard_shutdown(GetSession(), this->m_vmRef);
             }
 
             pollToCompletion(taskRef, 10, 40);
 
             // Wait for VM to reach Halted state
-            setDescription("Waiting for VM to halt...");
+            SetDescription("Waiting for VM to halt...");
             bool halted = false;
             for (int i = 0; i < 60; ++i)
             { // Wait up to 60 seconds
-                vmData = connection()->GetCache()->ResolveObjectData("vm", this->m_vmRef);
+                vmData = GetConnection()->GetCache()->ResolveObjectData("vm", this->m_vmRef);
                 if (vmData.value("power_state").toString() == "Halted")
                 {
                     halted = true;
@@ -133,43 +133,43 @@ void ChangeMemorySettingsAction::run()
             }
         }
 
-        setPercentComplete(40);
+        SetPercentComplete(40);
 
         // Apply memory changes
         try
         {
-            setDescription("Changing memory settings...");
+            SetDescription("Changing memory settings...");
 
             if (m_staticChanged)
             {
                 // Change all memory limits
-                XenAPI::VM::set_memory_limits(session(), m_vmRef,
+                XenAPI::VM::set_memory_limits(GetSession(), m_vmRef,
                                               m_staticMin, m_staticMax,
                                               m_dynamicMin, m_dynamicMax);
             } else
             {
                 // Change only dynamic range
-                XenAPI::VM::set_memory_dynamic_range(session(), m_vmRef,
+                XenAPI::VM::set_memory_dynamic_range(GetSession(), m_vmRef,
                                                      m_dynamicMin, m_dynamicMax);
             }
 
-            setPercentComplete(70);
+            SetPercentComplete(70);
 
         } catch (const std::exception& e)
         {
             // Ensure VM restart even if memory change fails
             if (m_needReboot)
             {
-                setDescription("Restarting VM after error...");
+                SetDescription("Restarting VM after error...");
                 try
                 {
                     QString taskRef;
                     if (!m_vmHost.isEmpty())
                     {
-                        taskRef = XenAPI::VM::async_start_on(session(), m_vmRef, m_vmHost, false, false);
+                        taskRef = XenAPI::VM::async_start_on(GetSession(), m_vmRef, m_vmHost, false, false);
                     } else
                     {
-                        taskRef = XenAPI::VM::async_start(session(), m_vmRef, false, false);
+                        taskRef = XenAPI::VM::async_start(GetSession(), m_vmRef, false, false);
                     }
                     pollToCompletion(taskRef, 70, 100);
                 } catch (...)
@@ -183,22 +183,22 @@ void ChangeMemorySettingsAction::run()
         // Restart VM if we shut it down
         if (m_needReboot)
         {
-            setDescription("Restarting VM...");
+            SetDescription("Restarting VM...");
 
             QString taskRef;
             if (!m_vmHost.isEmpty())
             {
-                taskRef = XenAPI::VM::async_start_on(session(), m_vmRef, m_vmHost, false, false);
+                taskRef = XenAPI::VM::async_start_on(GetSession(), m_vmRef, m_vmHost, false, false);
             } else
             {
-                taskRef = XenAPI::VM::async_start(session(), m_vmRef, false, false);
+                taskRef = XenAPI::VM::async_start(GetSession(), m_vmRef, false, false);
             }
 
             pollToCompletion(taskRef, 70, 100);
         }
 
-        setPercentComplete(100);
-        setDescription("Memory settings changed successfully");
+        SetPercentComplete(100);
+        SetDescription("Memory settings changed successfully");
 
     } catch (const std::exception& e)
     {

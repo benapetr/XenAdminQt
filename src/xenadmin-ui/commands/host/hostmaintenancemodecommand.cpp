@@ -73,11 +73,7 @@ void HostMaintenanceModeCommand::Run()
     if (!host)
         return;
 
-    QString hostRef = host->OpaqueRef();
     QString hostName = this->getSelectedObjectName();
-
-    if (hostRef.isEmpty())
-        return;
 
     MainWindow* mw = this->mainWindow();
     if (!mw)
@@ -95,7 +91,7 @@ void HostMaintenanceModeCommand::Run()
 
         if (ret == QMessageBox::Yes)
         {
-            mw->showStatusMessage(QString("Entering maintenance mode for host '%1'...").arg(hostName));
+            mw->ShowStatusMessage(QString("Entering maintenance mode for host '%1'...").arg(hostName));
 
             XenConnection* conn = host->GetConnection();
             if (!conn || !conn->IsConnected())
@@ -105,27 +101,26 @@ void HostMaintenanceModeCommand::Run()
                 return;
             }
 
-            Host* host = new Host(conn, hostRef, this);
-            EvacuateHostAction* action = new EvacuateHostAction(conn, host, nullptr, this);
+            EvacuateHostAction* action = new EvacuateHostAction(conn, host, QSharedPointer<Host>(), this);
 
             OperationManager::instance()->RegisterOperation(action);
 
             connect(action, &AsyncOperation::completed, this, [mw, hostName, action]() {
-                if (action->state() == AsyncOperation::Completed && !action->isFailed())
+                if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {
-                    mw->showStatusMessage(QString("Host '%1' entered maintenance mode successfully").arg(hostName), 5000);
-                    QTimer::singleShot(2000, mw, &MainWindow::refreshServerTree);
+                    mw->ShowStatusMessage(QString("Host '%1' entered maintenance mode successfully").arg(hostName), 5000);
+                    QTimer::singleShot(2000, mw, &MainWindow::RefreshServerTree);
                 }
                 else
                 {
                     QMessageBox::warning(mw, "Enter Maintenance Mode Failed",
                                          QString("Failed to enter maintenance mode for host '%1'. Check the error log for details.").arg(hostName));
-                    mw->showStatusMessage("Enter maintenance mode failed", 5000);
+                    mw->ShowStatusMessage("Enter maintenance mode failed", 5000);
                 }
                 action->deleteLater();
             });
 
-            action->runAsync();
+            action->RunAsync();
         }
     } else
     {
@@ -136,37 +131,34 @@ void HostMaintenanceModeCommand::Run()
 
         if (ret == QMessageBox::Yes)
         {
-            mw->showStatusMessage(QString("Exiting maintenance mode for host '%1'...").arg(hostName));
+            mw->ShowStatusMessage(QString("Exiting maintenance mode for host '%1'...").arg(hostName));
 
             XenConnection* conn = host->GetConnection();
             if (!conn || !conn->IsConnected())
             {
-                QMessageBox::warning(mw, "Not Connected",
-                                     "Not connected to XenServer");
+                QMessageBox::warning(mw, "Not Connected", "Not connected to XenServer");
                 return;
             }
 
-            Host* host = new Host(conn, hostRef, this);
             EnableHostAction* action = new EnableHostAction(conn, host, false, this);
 
             OperationManager::instance()->RegisterOperation(action);
 
             connect(action, &AsyncOperation::completed, this, [mw, hostName, action]() {
-                if (action->state() == AsyncOperation::Completed && !action->isFailed())
+                if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {
-                    mw->showStatusMessage(QString("Host '%1' exited maintenance mode successfully").arg(hostName), 5000);
-                    QTimer::singleShot(2000, mw, &MainWindow::refreshServerTree);
+                    mw->ShowStatusMessage(QString("Host '%1' exited maintenance mode successfully").arg(hostName), 5000);
+                    QTimer::singleShot(2000, mw, &MainWindow::RefreshServerTree);
                 }
                 else
                 {
-                    QMessageBox::warning(mw, "Exit Maintenance Mode Failed",
-                                         QString("Failed to exit maintenance mode for host '%1'. Check the error log for details.").arg(hostName));
-                    mw->showStatusMessage("Exit maintenance mode failed", 5000);
+                    QMessageBox::warning(mw, "Exit Maintenance Mode Failed", QString("Failed to exit maintenance mode for host '%1'. Check the error log for details.").arg(hostName));
+                    mw->ShowStatusMessage("Exit maintenance mode failed", 5000);
                 }
                 action->deleteLater();
             });
 
-            action->runAsync();
+            action->RunAsync();
         }
     }
 }

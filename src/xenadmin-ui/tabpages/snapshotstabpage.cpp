@@ -432,7 +432,7 @@ void SnapshotsTabPage::onDeleteSnapshot()
         VMSnapshotDeleteAction* action = new VMSnapshotDeleteAction(this->m_connection, ref, this);
         OperationManager::instance()->RegisterOperation(action);
         connect(action, &AsyncOperation::completed, action, &QObject::deleteLater);
-        action->runAsync();
+        action->RunAsync();
     }
 }
 

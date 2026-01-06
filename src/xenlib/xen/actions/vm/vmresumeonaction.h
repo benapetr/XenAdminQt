@@ -42,25 +42,25 @@ class XENLIB_EXPORT VMResumeOnAction : public VMStartAbstractAction
 {
     Q_OBJECT
 
-public:
-    explicit VMResumeOnAction(VM* vm,
-                              Host* hostToStart,
-                              WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
-                              StartDiagnosisForm startDiagnosisForm,
-                              QObject* parent = nullptr);
+    public:
+        explicit VMResumeOnAction(QSharedPointer<VM> vm,
+                                  QSharedPointer<Host> hostToStart,
+                                  WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
+                                  StartDiagnosisForm startDiagnosisForm,
+                                  QObject* parent = nullptr);
 
-    bool isStart() const override
-    {
-        return false;
-    }
-    VMStartAbstractAction* clone() override;
+        bool isStart() const override
+        {
+            return false;
+        }
+        VMStartAbstractAction* clone() override;
 
-protected:
-    void run() override;
-    void doAction(int start, int end) override;
+    protected:
+        void run() override;
+        void doAction(int start, int end) override;
 
-private:
-    Host* m_hostToStart;
+    private:
+        QSharedPointer<Host> m_hostToStart;
 };
 
 #endif // VMRESUMEONACTION_H

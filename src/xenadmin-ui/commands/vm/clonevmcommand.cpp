@@ -104,7 +104,7 @@ void CloneVMCommand::Run()
         }
 
         // Create VM object (lightweight wrapper)
-        VM* vm = new VM(conn, vmRef);
+        QSharedPointer<VM> vm = QSharedPointer<VM>(new VM(conn, vmRef));
 
         // Create VMCloneAction (matches C# VMCloneAction pattern)
         VMCloneAction* action = new VMCloneAction(conn, vm, cloneName, "", this->mainWindow());
@@ -114,13 +114,13 @@ void CloneVMCommand::Run()
 
         // Connect completion signal for cleanup and status update
         connect(action, &AsyncOperation::completed, this, [this, vmName, cloneName, action]() {
-            if (action->state() == AsyncOperation::Completed && !action->isFailed())
+            if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
-                this->mainWindow()->showStatusMessage(QString("VM '%1' cloned successfully as '%2'").arg(vmName, cloneName), 5000);
+                this->mainWindow()->ShowStatusMessage(QString("VM '%1' cloned successfully as '%2'").arg(vmName, cloneName), 5000);
                 // Cache will be automatically refreshed via event polling
             } else
             {
-                this->mainWindow()->showStatusMessage(QString("Failed to clone VM '%1'").arg(vmName), 5000);
+                this->mainWindow()->ShowStatusMessage(QString("Failed to clone VM '%1'").arg(vmName), 5000);
             }
             // Auto-delete when complete (matches C# GC behavior)
             action->deleteLater();
@@ -128,7 +128,7 @@ void CloneVMCommand::Run()
 
         // Run action asynchronously (matches C# pattern - no modal dialog)
         // Progress shown in status bar via OperationManager signals
-        action->runAsync();
+        action->RunAsync();
     }
 }
 

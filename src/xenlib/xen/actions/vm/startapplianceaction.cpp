@@ -38,12 +38,12 @@ StartApplianceAction::StartApplianceAction(XenConnection* connection, const QStr
       m_applianceRef(applianceRef), m_suspend(suspend)
 {
     // Add RBAC permission check
-    addApiMethodToRoleCheck("VM_appliance.start");
+    AddApiMethodToRoleCheck("VM_appliance.start");
 }
 
 void StartApplianceAction::run()
 {
-    if (!session() || !session()->IsLoggedIn())
+    if (!GetSession() || !GetSession()->IsLoggedIn())
     {
         setError(tr("Not connected to XenServer"));
         return;
@@ -55,7 +55,7 @@ void StartApplianceAction::run()
         QString applianceName = this->m_applianceRef;
         try
         {
-            QVariantMap record = XenAPI::VM_appliance::get_record(session(), m_applianceRef);
+            QVariantMap record = XenAPI::VM_appliance::get_record(GetSession(), m_applianceRef);
             if (record.contains("name_label"))
             {
                 applianceName = record["name_label"].toString();
@@ -68,14 +68,14 @@ void StartApplianceAction::run()
         // Update description
         if (this->m_suspend)
         {
-            setDescription(tr("Starting appliance '%1' in paused state...").arg(applianceName));
+            SetDescription(tr("Starting appliance '%1' in paused state...").arg(applianceName));
         } else
         {
-            setDescription(tr("Starting appliance '%1'...").arg(applianceName));
+            SetDescription(tr("Starting appliance '%1'...").arg(applianceName));
         }
 
         // Start the VM appliance (async operation returns task ref)
-        QString taskRef = XenAPI::VM_appliance::async_start(session(), this->m_applianceRef, this->m_suspend);
+        QString taskRef = XenAPI::VM_appliance::async_start(GetSession(), this->m_applianceRef, this->m_suspend);
 
         // Poll task to completion with progress tracking
         pollToCompletion(taskRef, 0, 100);
@@ -83,10 +83,10 @@ void StartApplianceAction::run()
         // Success
         if (m_suspend)
         {
-            setDescription(tr("Successfully started appliance '%1' (paused)").arg(applianceName));
+            SetDescription(tr("Successfully started appliance '%1' (paused)").arg(applianceName));
         } else
         {
-            setDescription(tr("Successfully started appliance '%1'").arg(applianceName));
+            SetDescription(tr("Successfully started appliance '%1'").arg(applianceName));
         }
 
     } catch (const std::exception& e)

@@ -43,7 +43,7 @@ void SetPoolNameAndDescriptionAction::run()
 {
     try
     {
-        if (!session())
+        if (!GetSession())
         {
             throw std::runtime_error("Not connected to XenServer");
         }
@@ -53,25 +53,25 @@ void SetPoolNameAndDescriptionAction::run()
             throw std::runtime_error("Pool reference is empty");
         }
 
-        setPercentComplete(0);
+        SetPercentComplete(0);
 
         // Set pool name if provided
         if (!m_name.isNull())
         {
-            setDescription(QString("Setting pool name to '%1'...").arg(m_name));
-            XenAPI::Pool::set_name_label(session(), m_poolRef, m_name);
-            setPercentComplete(50);
+            SetDescription(QString("Setting pool name to '%1'...").arg(m_name));
+            XenAPI::Pool::set_name_label(GetSession(), m_poolRef, m_name);
+            SetPercentComplete(50);
         }
 
         // Set pool description if provided
         if (!m_description.isNull())
         {
-            setDescription(QString("Setting pool description..."));
-            XenAPI::Pool::set_name_description(session(), m_poolRef, m_description);
-            setPercentComplete(100);
+            SetDescription(QString("Setting pool description..."));
+            XenAPI::Pool::set_name_description(GetSession(), m_poolRef, m_description);
+            SetPercentComplete(100);
         }
 
-        setDescription("Pool properties updated successfully");
+        SetDescription("Pool properties updated successfully");
 
     } catch (const std::exception& e)
     {

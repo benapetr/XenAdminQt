@@ -205,7 +205,7 @@ void DeleteSnapshotCommand::deleteSnapshot()
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, this, [this, action]() {
-        bool success = (action->state() == AsyncOperation::Completed && !action->isFailed());
+        bool success = (action->GetState() == AsyncOperation::Completed && !action->IsFailed());
         if (success)
         {
             qDebug() << "DeleteSnapshotCommand: Snapshot deleted successfully:" << this->m_snapshotUuid;
@@ -220,5 +220,5 @@ void DeleteSnapshotCommand::deleteSnapshot()
 
     // Run action asynchronously (matches C# pattern - no modal dialog)
     // Progress shown in status bar via OperationManager signals
-    action->runAsync();
+    action->RunAsync();
 }

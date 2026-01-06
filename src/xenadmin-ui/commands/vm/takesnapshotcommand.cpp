@@ -143,9 +143,9 @@ void TakeSnapshotCommand::showSnapshotDialog()
 
         // C#: Program.Invoke(Program.MainWindow, () => Program.MainWindow.ConsolePanel.SetCurrentSource(vm));
         // Set console to this VM before snapshot (matches C# line 89)
-        if (this->mainWindow() && this->mainWindow()->consolePanel())
+        if (this->mainWindow() && this->mainWindow()->GetConsolePanel())
         {
-            this->mainWindow()->consolePanel()->SetCurrentSource(connection, this->m_vmUuid);
+            this->mainWindow()->GetConsolePanel()->SetCurrentSource(connection, this->m_vmUuid);
         }
 
         this->executeSnapshotOperation(name, description, type);
@@ -210,14 +210,14 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
             QVariantMap vmData = cache->ResolveObjectData("vm", this->m_vmUuid);
             QString powerState = vmData.value("power_state").toString();
 
-            if (powerState == "Running" && this->mainWindow()->consolePanel())
+            if (powerState == "Running" && this->mainWindow()->GetConsolePanel())
             {
                 qDebug() << "TakeSnapshotCommand: Capturing console screenshot for checkpoint";
                 try
                 {
                     // C#: screenshot = _screenShotProvider(VM, sudoUsername, sudoPassword);
                     // Note: We don't have sudo credentials yet - pass empty strings
-                    screenshot = this->mainWindow()->consolePanel()->Snapshot(this->m_vmUuid, QString(), QString());
+                    screenshot = this->mainWindow()->GetConsolePanel()->Snapshot(this->m_vmUuid, QString(), QString());
                     if (!screenshot.isNull())
                     {
                         qDebug() << "TakeSnapshotCommand: Screenshot captured, size:"
@@ -246,7 +246,7 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
 
     // Connect completion signal for cleanup and status update
     connect(action, &AsyncOperation::completed, this, [this, action]() {
-        bool success = (action->state() == AsyncOperation::Completed && !action->isFailed());
+        bool success = (action->GetState() == AsyncOperation::Completed && !action->IsFailed());
         if (success)
         {
             qDebug() << "TakeSnapshotCommand: Snapshot created successfully";
@@ -263,5 +263,5 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
 
     // Run action asynchronously (matches C# pattern - no modal dialog)
     // Progress shown in status bar via OperationManager signals
-    action->runAsync();
+    action->RunAsync();
 }

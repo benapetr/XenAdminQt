@@ -56,33 +56,33 @@ DeleteVIFAction::DeleteVIFAction(XenConnection* connection,
     QVariantMap networkData = connection->GetCache()->ResolveObjectData("network", networkRef);
     m_networkName = networkData.value("name_label").toString();
 
-    setTitle(QString("Deleting VIF for %1").arg(m_vmName));
-    setDescription(QString("Deleting %1 from %2").arg(m_networkName, m_vmName));
+    SetTitle(QString("Deleting VIF for %1").arg(m_vmName));
+    SetDescription(QString("Deleting %1 from %2").arg(m_networkName, m_vmName));
 }
 
 void DeleteVIFAction::run()
 {
     try
     {
-        setDescription("Deleting VIF...");
+        SetDescription("Deleting VIF...");
 
         // Check if VM is running and if we need to unplug first
-        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         QString powerState = vmData.value("power_state").toString();
 
         if (powerState == "Running")
         {
-            QStringList allowedOps = XenAPI::VIF::get_allowed_operations(session(), m_vifRef);
+            QStringList allowedOps = XenAPI::VIF::get_allowed_operations(GetSession(), m_vifRef);
 
             if (allowedOps.contains("unplug"))
             {
-                setDescription("Unplugging VIF...");
+                SetDescription("Unplugging VIF...");
 
                 try
                 {
-                    XenAPI::VIF::unplug(session(), m_vifRef);
+                    XenAPI::VIF::unplug(GetSession(), m_vifRef);
                     qDebug() << "VIF unplugged successfully";
-                    setPercentComplete(50);
+                    SetPercentComplete(50);
                 } catch (const std::exception& e)
                 {
                     QString error = e.what();
@@ -94,24 +94,24 @@ void DeleteVIFAction::run()
                     } else
                     {
                         qDebug() << "VIF already detached, continuing...";
-                        setPercentComplete(50);
+                        SetPercentComplete(50);
                     }
                 }
             } else
             {
                 qDebug() << "Unplug not allowed, destroying anyway";
-                setPercentComplete(50);
+                SetPercentComplete(50);
             }
         } else
         {
-            setPercentComplete(50);
+            SetPercentComplete(50);
         }
 
-        setDescription("Destroying VIF...");
-        XenAPI::VIF::destroy(session(), m_vifRef);
+        SetDescription("Destroying VIF...");
+        XenAPI::VIF::destroy(GetSession(), m_vifRef);
 
-        setPercentComplete(100);
-        setDescription("VIF deleted");
+        SetPercentComplete(100);
+        SetDescription("VIF deleted");
         qDebug() << "VIF destroyed successfully";
 
     } catch (const std::exception& e)

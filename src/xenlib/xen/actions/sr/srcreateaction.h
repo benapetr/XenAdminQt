@@ -30,6 +30,7 @@
 
 #include "../../asyncoperation.h"
 #include <QVariantMap>
+#include <QSharedPointer>
 
 class Host;
 
@@ -54,69 +55,69 @@ class XENLIB_EXPORT SrCreateAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Create a new Storage Repository
-     * @param connection XenServer connection
-     * @param host Host to create SR on (coordinator host for shared SRs)
-     * @param srName SR name
-     * @param srDescription SR description
-     * @param srType SR type (e.g., "nfs", "lvmoiscsi", "ext", "iso")
-     * @param srContentType Content type (e.g., "user", "iso")
-     * @param deviceConfig Device configuration map (server, serverpath, target, etc.)
-     * @param smConfig SM-specific configuration map (optional)
-     * @param parent Parent object
-     */
-    explicit SrCreateAction(XenConnection* connection,
-                            Host* host,
-                            const QString& srName,
-                            const QString& srDescription,
-                            const QString& srType,
-                            const QString& srContentType,
-                            const QVariantMap& deviceConfig,
-                            const QVariantMap& smConfig = QVariantMap(),
-                            QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Create a new Storage Repository
+         * @param connection XenServer connection
+         * @param host Host to create SR on (coordinator host for shared SRs)
+         * @param srName SR name
+         * @param srDescription SR description
+         * @param srType SR type (e.g., "nfs", "lvmoiscsi", "ext", "iso")
+         * @param srContentType Content type (e.g., "user", "iso")
+         * @param deviceConfig Device configuration map (server, serverpath, target, etc.)
+         * @param smConfig SM-specific configuration map (optional)
+         * @param parent Parent object
+         */
+        explicit SrCreateAction(XenConnection* connection,
+                                QSharedPointer<Host> host,
+                                const QString& srName,
+                                const QString& srDescription,
+                                const QString& srType,
+                                const QString& srContentType,
+                                const QVariantMap& deviceConfig,
+                                const QVariantMap& smConfig = QVariantMap(),
+                                QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    /**
-     * @brief Create a secret for password fields
-     * @param key The key name (e.g., "password", "cifspassword", "chappassword")
-     * @param value The password value
-     * @return Secret UUID
-     *
-     * Removes the key from device config and adds "<key>_secret" entry with UUID
-     */
-    QString createSecret(const QString& key, const QString& value);
+    private:
+        /**
+         * @brief Create a secret for password fields
+         * @param key The key name (e.g., "password", "cifspassword", "chappassword")
+         * @param value The password value
+         * @return Secret UUID
+         *
+         * Removes the key from device config and adds "<key>_secret" entry with UUID
+         */
+        QString createSecret(const QString& key, const QString& value);
 
-    /**
-     * @brief Attempt to forget an SR that failed to completely plug
-     * @param srRef SR reference
-     *
-     * Unplugs all PBDs and forgets the SR. Never throws exceptions.
-     */
-    void forgetFailedSR(const QString& srRef);
+        /**
+         * @brief Attempt to forget an SR that failed to completely plug
+         * @param srRef SR reference
+         *
+         * Unplugs all PBDs and forgets the SR. Never throws exceptions.
+         */
+        void forgetFailedSR(const QString& srRef);
 
-    /**
-     * @brief Check if this is the first shared non-ISO SR in the pool
-     * @return true if no other shared non-ISO SRs exist
-     *
-     * Used to determine whether to set this SR as the default SR.
-     * Queries the cache for all existing SRs.
-     */
-    bool isFirstSharedNonISOSR() const;
+        /**
+         * @brief Check if this is the first shared non-ISO SR in the pool
+         * @return true if no other shared non-ISO SRs exist
+         *
+         * Used to determine whether to set this SR as the default SR.
+         * Queries the cache for all existing SRs.
+         */
+        bool isFirstSharedNonISOSR() const;
 
-    Host* m_host;
-    QString m_srName;
-    QString m_srDescription;
-    QString m_srType;
-    QString m_srContentType;
-    bool m_srIsShared;
-    QVariantMap m_deviceConfig;
-    QVariantMap m_smConfig;
-    QString m_createdSecretUuid; // Track secret for cleanup
+        QSharedPointer<Host> m_host;
+        QString m_srName;
+        QString m_srDescription;
+        QString m_srType;
+        QString m_srContentType;
+        bool m_srIsShared;
+        QVariantMap m_deviceConfig;
+        QVariantMap m_smConfig;
+        QString m_createdSecretUuid; // Track secret for cleanup
 };
 
 #endif // SRCREATEACTION_H

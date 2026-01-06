@@ -44,10 +44,10 @@ namespace XenAPI
 
         XenRpcAPI api(session);
         // Use Async.VIF.create (matches C# JsonRpcClient.async_vif_create line 8271)
-        QByteArray request = api.buildJsonRpcCall("Async.VIF.create", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.VIF.create", params);
         QByteArray response = session->sendApiRequest(request);
 
-        QString taskRef = api.parseJsonRpcResponse(response).toString();
+        QString taskRef = api.ParseJsonRpcResponse(response).toString();
         qDebug() << "VIF.async_create returned task ref:" << taskRef;
         qDebug() << "Request was:" << QString::fromUtf8(request);
         qDebug() << "Response was:" << QString::fromUtf8(response);
@@ -64,9 +64,9 @@ namespace XenAPI
         params << session->getSessionId() << vifRecord;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VIF.create", params);
+        QByteArray request = api.BuildJsonRpcCall("VIF.create", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     QString VIF::async_destroy(Session* session, const QString& vif)
@@ -78,9 +78,9 @@ namespace XenAPI
         params << session->getSessionId() << vif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.VIF.destroy", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.VIF.destroy", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     void VIF::destroy(Session* session, const QString& vif)
@@ -92,9 +92,9 @@ namespace XenAPI
         params << session->getSessionId() << vif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VIF.destroy", params);
+        QByteArray request = api.BuildJsonRpcCall("VIF.destroy", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void VIF::plug(Session* session, const QString& vif)
@@ -106,9 +106,9 @@ namespace XenAPI
         params << session->getSessionId() << vif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VIF.plug", params);
+        QByteArray request = api.BuildJsonRpcCall("VIF.plug", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void VIF::unplug(Session* session, const QString& vif)
@@ -120,9 +120,9 @@ namespace XenAPI
         params << session->getSessionId() << vif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VIF.unplug", params);
+        QByteArray request = api.BuildJsonRpcCall("VIF.unplug", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     QStringList VIF::get_allowed_operations(Session* session, const QString& vif)
@@ -134,9 +134,9 @@ namespace XenAPI
         params << session->getSessionId() << vif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VIF.get_allowed_operations", params);
+        QByteArray request = api.BuildJsonRpcCall("VIF.get_allowed_operations", params);
         QByteArray response = session->sendApiRequest(request);
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
 
         QStringList operations;
         if (result.canConvert<QVariantList>())
@@ -160,9 +160,9 @@ namespace XenAPI
         params << session->getSessionId() << vif;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VIF.get_record", params);
+        QByteArray request = api.BuildJsonRpcCall("VIF.get_record", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toMap();
+        return api.ParseJsonRpcResponse(response).toMap();
     }
 
     QVariantList VIF::get_all(Session* session)
@@ -174,9 +174,9 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VIF.get_all", params);
+        QByteArray request = api.BuildJsonRpcCall("VIF.get_all", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toList();
+        return api.ParseJsonRpcResponse(response).toList();
     }
 
 } // namespace XenAPI

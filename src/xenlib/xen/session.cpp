@@ -237,8 +237,8 @@ namespace XenAPI
             QTimer timer;
             timer.setSingleShot(true);
             QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-            QObject::connect(newConn, &XenConnection::connected, &loop, &QEventLoop::quit);
-            QObject::connect(newConn, &XenConnection::error, &loop, &QEventLoop::quit);
+            QObject::connect(newConn, &XenConnection::Connected, &loop, &QEventLoop::quit);
+            QObject::connect(newConn, &XenConnection::Error, &loop, &QEventLoop::quit);
             timer.start(10000);
             loop.exec();
             if (!newConn->IsConnected())

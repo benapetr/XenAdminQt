@@ -171,11 +171,7 @@
 #include <QDockWidget>
 #include "titlebar.h"
 
-MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow), m_debugWindow(nullptr), m_titleBar(nullptr),
-      m_consolePanel(nullptr), m_cvmConsolePanel(nullptr), m_navigationPane(nullptr), m_tabContainer(nullptr), m_tabContainerLayout(nullptr),
-      m_navigationHistory(nullptr), m_poolsTreeItem(nullptr), m_hostsTreeItem(nullptr), m_vmsTreeItem(nullptr), m_storageTreeItem(nullptr),
-      m_currentObjectType(""), m_currentObjectRef("")
+MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWindow), m_currentObjectType(""), m_currentObjectRef("")
 {
     this->ui->setupUi(this);
 
@@ -220,6 +216,7 @@ MainWindow::MainWindow(QWidget* parent)
     this->ui->statusbar->addPermanentWidget(this->m_statusLabel);
     this->ui->statusbar->addPermanentWidget(this->m_statusProgressBar);
 
+    // TODO wire this to settings
     XenCertificateManager::instance()->setValidationPolicy(true, false); // Allow self-signed, not expired
 
     // Connect to OperationManager for progress tracking (matches C# History_CollectionChanged)
@@ -230,9 +227,6 @@ MainWindow::MainWindow(QWidget* parent)
     // Wire UI to ConnectionsManager (C# model), keep XenLib only as active-connection facade.
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     connect(connMgr, &Xen::ConnectionsManager::connectionAdded, this, &MainWindow::onConnectionAdded);
-
-    // Connect XenAPI message signals to AlertManager for alert system
-    // C# Reference: MainWindow.cs line 703 - connection.Cache.RegisterCollectionChanged<Message>
 
     // Get NavigationPane from UI (matches C# MainWindow.navigationPane)
     this->m_navigationPane = this->ui->navigationPane;
@@ -249,7 +243,7 @@ MainWindow::MainWindow(QWidget* parent)
     auto* navView = this->m_navigationPane->GetNavigationView();
     if (navView)
     {
-        QTreeWidget* treeWidget = navView->treeWidget();
+        QTreeWidget* treeWidget = navView->TreeWidget();
         if (treeWidget)
         {
             // Enable context menus
@@ -419,19 +413,15 @@ void MainWindow::connectToServer()
         }
     }
 
-    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-    if (!connMgr)
-        return;
-
     XenConnection* connection = new XenConnection(nullptr);
-    connMgr->addConnection(connection);
+    Xen::ConnectionsManager::instance()->AddConnection(connection);
 
     connection->SetHostname(hostname);
     connection->SetPort(port);
     connection->SetUsername(dialog.username());
     connection->SetPassword(dialog.password());
-    connection->setExpectPasswordIsCorrect(false);
-    connection->setFromDialog(true);
+    connection->SetExpectPasswordIsCorrect(false);
+    connection->SetFromDialog(true);
 
     XenConnectionUI::BeginConnect(connection, true, this, false);
 }
@@ -590,19 +580,19 @@ void MainWindow::onConnectionAdded(XenConnection* connection)
 
     XenConnection *conn = connection;
 
-    connect(connection, &XenConnection::connectionResult, this, [this, conn](bool connected, const QString&)
+    connect(connection, &XenConnection::ConnectionResult, this, [this, conn](bool connected, const QString&)
     {
         this->onConnectionStateChanged(conn, connected);
     });
-    connect(connection, &XenConnection::connectionClosed, this, [this, conn]()
+    connect(connection, &XenConnection::ConnectionClosed, this, [this, conn]()
     {
         this->onConnectionStateChanged(conn, false);
     });
-    connect(connection, &XenConnection::connectionLost, this, [this, conn]()
+    connect(connection, &XenConnection::ConnectionLost, this, [this, conn]()
     {
         this->onConnectionStateChanged(conn, false);
     });
-    connect(connection, &XenConnection::cachePopulated, this, &MainWindow::onCachePopulated);
+    connect(connection, &XenConnection::CachePopulated, this, &MainWindow::onCachePopulated);
 
     XenCache* cache = connection->GetCache();
     if (cache)
@@ -610,11 +600,11 @@ void MainWindow::onConnectionAdded(XenConnection* connection)
         connect(cache, &XenCache::objectChanged, this, &MainWindow::onCacheObjectChanged);
     }
 
-    connect(connection, &XenConnection::taskAdded, this, &MainWindow::onConnectionTaskAdded);
-    connect(connection, &XenConnection::taskModified, this, &MainWindow::onConnectionTaskModified);
-    connect(connection, &XenConnection::taskDeleted, this, &MainWindow::onConnectionTaskDeleted);
-    connect(connection, &XenConnection::messageReceived, this, &MainWindow::onMessageReceived);
-    connect(connection, &XenConnection::messageRemoved, this, &MainWindow::onMessageRemoved);
+    connect(connection, &XenConnection::TaskAdded, this, &MainWindow::onConnectionTaskAdded);
+    connect(connection, &XenConnection::TaskModified, this, &MainWindow::onConnectionTaskModified);
+    connect(connection, &XenConnection::TaskDeleted, this, &MainWindow::onConnectionTaskDeleted);
+    connect(connection, &XenConnection::MessageReceived, this, &MainWindow::onMessageReceived);
+    connect(connection, &XenConnection::MessageRemoved, this, &MainWindow::onMessageRemoved);
 }
 
 void MainWindow::onConnectionTaskAdded(const QString& taskRef, const QVariantMap& taskData)
@@ -643,7 +633,7 @@ void MainWindow::onConnectionTaskDeleted(const QString& taskRef)
 
 void MainWindow::onTreeItemSelected()
 {
-    QList<QTreeWidgetItem*> selectedItems = this->getServerTreeWidget()->selectedItems();
+    QList<QTreeWidgetItem*> selectedItems = this->GetServerTreeWidget()->selectedItems();
     if (selectedItems.isEmpty())
     {
         this->ui->statusbar->showMessage("Ready", 2000);
@@ -666,15 +656,14 @@ void MainWindow::onTreeItemSelected()
     // Extract object type and ref from QSharedPointer<XenObject>
     QString objectType;
     QString objectRef;
-    QSharedPointer<XenObject> xenObject;
     XenConnection *connection = nullptr;
     
-    xenObject = itemData.value<QSharedPointer<XenObject>>();
-    if (xenObject)
+    this->m_currentObject = itemData.value<QSharedPointer<XenObject>>();
+    if (this->m_currentObject)
     {
-        objectType = xenObject->GetObjectType();
-        objectRef = xenObject->OpaqueRef();
-        connection = xenObject->GetConnection();
+        objectType = this->m_currentObject->GetObjectType();
+        objectRef = this->m_currentObject->OpaqueRef();
+        connection = this->m_currentObject->GetConnection();
     } else if (itemData.canConvert<XenConnection*>())
     {
         // Disconnected server - handle specially
@@ -772,7 +761,7 @@ void MainWindow::showSearchPage(XenConnection *connection, GroupingTag* grouping
         Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
         if (connMgr)
         {
-            const QList<XenConnection*> connections = connMgr->getAllConnections();
+            const QList<XenConnection*> connections = connMgr->GetAllConnections();
             for (XenConnection* candidate : connections)
             {
                 if (candidate && candidate->GetCache())
@@ -807,7 +796,7 @@ void MainWindow::onSearchTabPageObjectSelected(const QString& objectType, const 
 {
     // Find the object in the tree and select it
     // This matches C# behavior where double-clicking in search results navigates to General tab
-    QTreeWidget* tree = this->getServerTreeWidget();
+    QTreeWidget* tree = this->GetServerTreeWidget();
     if (!tree)
         return;
 
@@ -1311,7 +1300,7 @@ void MainWindow::onTabChanged(int index)
 
 void MainWindow::showTreeContextMenu(const QPoint& position)
 {
-    QTreeWidget* tree = this->getServerTreeWidget();
+    QTreeWidget* tree = this->GetServerTreeWidget();
     if (!tree)
         return;
 
@@ -1331,14 +1320,14 @@ void MainWindow::showTreeContextMenu(const QPoint& position)
     // The context menu logic has been moved to ContextMenuBuilder
 
     // Show the context menu at the requested position
-    contextMenu->exec(this->getServerTreeWidget()->mapToGlobal(position));
+    contextMenu->exec(this->GetServerTreeWidget()->mapToGlobal(position));
 
     // Clean up the menu
     contextMenu->deleteLater();
 }
 
 // Public interface methods for Command classes
-QTreeWidget* MainWindow::getServerTreeWidget() const
+QTreeWidget* MainWindow::GetServerTreeWidget() const
 {
     // Get tree widget from NavigationPane's NavigationView
     if (this->m_navigationPane)
@@ -1346,13 +1335,13 @@ QTreeWidget* MainWindow::getServerTreeWidget() const
         auto* navView = this->m_navigationPane->GetNavigationView();
         if (navView)
         {
-            return navView->treeWidget();
+            return navView->TreeWidget();
         }
     }
     return nullptr;
 }
 
-void MainWindow::showStatusMessage(const QString& message, int timeout)
+void MainWindow::ShowStatusMessage(const QString& message, int timeout)
 {
     if (timeout > 0)
         this->ui->statusbar->showMessage(message, timeout);
@@ -1360,7 +1349,7 @@ void MainWindow::showStatusMessage(const QString& message, int timeout)
         this->ui->statusbar->showMessage(message);
 }
 
-void MainWindow::refreshServerTree()
+void MainWindow::RefreshServerTree()
 {
     // Delegate tree building to NavigationView which respects current navigation mode
     if (this->m_navigationPane)
@@ -1387,7 +1376,7 @@ void MainWindow::saveSettings()
 
     // Save expanded tree items
     QStringList expandedItems;
-    QTreeWidgetItemIterator it(this->getServerTreeWidget());
+    QTreeWidgetItemIterator it(this->GetServerTreeWidget());
     while (*it)
     {
         if ((*it)->isExpanded())
@@ -1415,7 +1404,7 @@ void MainWindow::SaveConnections()
 bool MainWindow::IsConnected()
 {
     Xen::ConnectionsManager *manager = Xen::ConnectionsManager::instance();
-    return manager && !manager->getConnectedConnections().isEmpty();
+    return manager && !manager->GetConnectedConnections().isEmpty();
 }
 
 void MainWindow::loadSettings()
@@ -1498,7 +1487,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     if (connMgr)
     {
-        const QList<XenConnection*> connections = connMgr->getAllConnections();
+        const QList<XenConnection*> connections = connMgr->GetAllConnections();
         for (XenConnection* connection : connections)
         {
             if (connection && (connection->IsConnected() || connection->InProgress()))
@@ -1512,7 +1501,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 // Search functionality
 void MainWindow::onSearchTextChanged(const QString& text)
 {
-    QTreeWidget* treeWidget = this->getServerTreeWidget();
+    QTreeWidget* treeWidget = this->GetServerTreeWidget();
     if (!treeWidget)
         return;
 
@@ -1598,7 +1587,7 @@ void MainWindow::onNavigationModeChanged(int mode)
     this->updateViewMenu(navMode);
 
     // Update tree view for new mode
-    this->refreshServerTree();
+    this->RefreshServerTree();
 }
 
 void MainWindow::onViewTemplatesToggled(bool checked)
@@ -1837,12 +1826,12 @@ void MainWindow::restoreConnections()
         connection->SetPort(profile.port());
         connection->SetUsername(profile.username());
         connection->SetPassword(profile.password());
-        connection->setSaveDisconnected(profile.saveDisconnected());
+        connection->SetSaveDisconnected(profile.saveDisconnected());
         connection->SetPoolMembers(profile.poolMembers());
-        connection->setExpectPasswordIsCorrect(!profile.password().isEmpty());
-        connection->setFromDialog(false);
+        connection->SetExpectPasswordIsCorrect(!profile.password().isEmpty());
+        connection->SetFromDialog(false);
 
-        connMgr->addConnection(connection);
+        connMgr->AddConnection(connection);
 
         if (shouldConnect)
             XenConnectionUI::BeginConnect(connection, true, this, true);
@@ -1872,7 +1861,7 @@ void MainWindow::SaveServerList()
             SettingsManager::instance().removeConnectionProfile(profile.name());
     }
 
-    const QList<XenConnection*> connections = connMgr->getAllConnections();
+    const QList<XenConnection*> connections = connMgr->GetAllConnections();
     for (XenConnection* connection : connections)
     {
         if (!connection)
@@ -2153,7 +2142,7 @@ void MainWindow::onNewOperation(AsyncOperation* operation)
     connect(operation, &AsyncOperation::cancelled, this, &MainWindow::onOperationCancelled);
 
     // Show initial status
-    this->m_statusLabel->setText(operation->title());
+    this->m_statusLabel->setText(operation->GetTitle());
     this->m_statusProgressBar->setValue(0);
     this->m_statusProgressBar->setVisible(true);
 }
@@ -2171,7 +2160,7 @@ void MainWindow::onOperationProgressChanged(int percent)
         percent = 100;
 
     this->m_statusProgressBar->setValue(percent);
-    this->m_statusLabel->setText(operation->title());
+    this->m_statusLabel->setText(operation->GetTitle());
 }
 
 void MainWindow::onOperationCompleted()
@@ -2209,7 +2198,7 @@ void MainWindow::finalizeOperation(AsyncOperation* operation, AsyncOperation::Op
     {
         this->m_statusProgressBar->setVisible(false);
 
-        QString title = operation->title();
+        QString title = operation->GetTitle();
         switch (state)
         {
             case AsyncOperation::Completed:
@@ -2218,10 +2207,10 @@ void MainWindow::finalizeOperation(AsyncOperation* operation, AsyncOperation::Op
                 break;
             case AsyncOperation::Failed:
             {
-                QString errorText = !errorMessage.isEmpty() ? errorMessage : operation->errorMessage();
+                QString errorText = !errorMessage.isEmpty() ? errorMessage : operation->GetErrorMessage();
                 if (errorText.isEmpty())
                     errorText = tr("Unknown error");
-                QString shortError = operation->shortErrorMessage();
+                QString shortError = operation->GetShortErrorMessage();
                 QString statusErrorText = shortError.isEmpty() ? errorText : shortError;
                 this->m_statusLabel->setText(QString("%1 failed").arg(title));
                 this->ui->statusbar->showMessage(QString("%1 failed: %2").arg(title, statusErrorText), 10000);
@@ -2318,13 +2307,13 @@ void MainWindow::updateToolbarsAndMenus()
     // Management buttons - driven by active connections (C# uses selection-based model)
     this->ui->addServerAction->setEnabled(true); // Always enabled
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-    const bool anyConnected = connMgr && !connMgr->getConnectedConnections().isEmpty();
+    const bool anyConnected = connMgr && !connMgr->GetConnectedConnections().isEmpty();
     this->ui->addPoolAction->setEnabled(anyConnected);
     this->ui->newStorageAction->setEnabled(anyConnected);
     this->ui->newVmAction->setEnabled(anyConnected);
 
     // Get current selection
-    QTreeWidgetItem* currentItem = this->getServerTreeWidget()->currentItem();
+    QTreeWidgetItem* currentItem = this->GetServerTreeWidget()->currentItem();
     if (!currentItem)
     {
         // No selection - disable all operation buttons and menu items
@@ -2567,7 +2556,7 @@ void MainWindow::onForwardButton()
     }
 }
 
-void MainWindow::updateHistoryButtons(bool canGoBack, bool canGoForward)
+void MainWindow::UpdateHistoryButtons(bool canGoBack, bool canGoForward)
 {
     // Update toolbar button enabled state based on history availability
     if (this->m_backButton)
@@ -2577,10 +2566,10 @@ void MainWindow::updateHistoryButtons(bool canGoBack, bool canGoForward)
 }
 
 // Navigation support for history (matches C# MainWindow)
-void MainWindow::selectObjectInTree(const QString& objectRef, const QString& objectType)
+void MainWindow::SelectObjectInTree(const QString& objectRef, const QString& objectType)
 {
     // Find and select the tree item with matching objectRef
-    QTreeWidgetItemIterator it(this->getServerTreeWidget());
+    QTreeWidgetItemIterator it(this->GetServerTreeWidget());
     while (*it)
     {
         QTreeWidgetItem* item = *it;
@@ -2590,8 +2579,8 @@ void MainWindow::selectObjectInTree(const QString& objectRef, const QString& obj
         if (obj && obj->OpaqueRef() == objectRef && obj->GetObjectType() == objectType)
         {
             // Found the item - select it
-            this->getServerTreeWidget()->setCurrentItem(item);
-            this->getServerTreeWidget()->scrollToItem(item);
+            this->GetServerTreeWidget()->setCurrentItem(item);
+            this->GetServerTreeWidget()->scrollToItem(item);
             return;
         }
         ++it;
@@ -2600,7 +2589,7 @@ void MainWindow::selectObjectInTree(const QString& objectRef, const QString& obj
     qWarning() << "NavigationHistory: Could not find object in tree:" << objectRef << "type:" << objectType;
 }
 
-void MainWindow::setCurrentTab(const QString& tabName)
+void MainWindow::SetCurrentTab(const QString& tabName)
 {
     // Find and activate tab by name
     for (int i = 0; i < this->ui->mainTabWidget->count(); ++i)
@@ -2992,7 +2981,7 @@ void MainWindow::onNewNetwork()
 
 QString MainWindow::getSelectedObjectRef() const
 {
-    QTreeWidgetItem* item = this->getServerTreeWidget()->currentItem();
+    QTreeWidgetItem* item = this->GetServerTreeWidget()->currentItem();
     if (!item)
         return QString();
 
@@ -3002,7 +2991,7 @@ QString MainWindow::getSelectedObjectRef() const
 
 QString MainWindow::getSelectedObjectName() const
 {
-    QTreeWidgetItem* item = this->getServerTreeWidget()->currentItem();
+    QTreeWidgetItem* item = this->GetServerTreeWidget()->currentItem();
     if (!item)
         return QString();
 

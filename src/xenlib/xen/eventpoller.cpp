@@ -269,7 +269,7 @@ void EventPoller::pollEvents()
     }
 
     // Call event.from with current token
-    QVariantMap result = this->d->api->eventFrom(this->d->classes, this->d->token, this->d->POLL_TIMEOUT);
+    QVariantMap result = this->d->api->EventFrom(this->d->classes, this->d->token, this->d->POLL_TIMEOUT);
 
     if (result.isEmpty())
     {

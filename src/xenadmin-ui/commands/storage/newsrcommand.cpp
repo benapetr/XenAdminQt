@@ -110,7 +110,7 @@ void NewSRCommand::showNewSRWizard()
         if (mainWindow())
         {
             // Refresh the tree view to show new SR
-            mainWindow()->refreshServerTree();
+            mainWindow()->RefreshServerTree();
             qDebug() << "NewSRCommand: SR operation completed, refreshing main window";
         }
     }

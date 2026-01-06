@@ -48,25 +48,25 @@ class VDIDisableCbtAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection to use
-     * @param vmName Name of the VM owning this VDI (for display)
-     * @param vdiRef VDI reference
-     * @param parent Parent QObject
-     */
-    explicit VDIDisableCbtAction(XenConnection* connection,
-                                 const QString& vmName,
-                                 const QString& vdiRef,
-                                 QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection to use
+         * @param vmName Name of the VM owning this VDI (for display)
+         * @param vdiRef VDI reference
+         * @param parent Parent QObject
+         */
+        explicit VDIDisableCbtAction(XenConnection* connection,
+                                     const QString& vmName,
+                                     const QString& vdiRef,
+                                     QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_vdiRef;
-    QString m_vmName;
+    private:
+        QString m_vdiRef;
+        QString m_vmName;
 };
 
 #endif // VDIDISABLECBTACTION_H

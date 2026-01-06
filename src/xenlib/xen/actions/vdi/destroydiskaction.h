@@ -48,25 +48,25 @@ class XENLIB_EXPORT DestroyDiskAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Destroy a virtual disk
-     * @param vdiRef VDI opaque reference
-     * @param connection XenServer connection
-     * @param allowRunningVMDelete Allow deletion even if attached to running VM
-     * @param parent Parent object
-     */
-    explicit DestroyDiskAction(const QString& vdiRef,
-                               XenConnection* connection,
-                               bool allowRunningVMDelete = false,
-                               QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Destroy a virtual disk
+         * @param vdiRef VDI opaque reference
+         * @param connection XenServer connection
+         * @param allowRunningVMDelete Allow deletion even if attached to running VM
+         * @param parent Parent object
+         */
+        explicit DestroyDiskAction(const QString& vdiRef,
+                                   XenConnection* connection,
+                                   bool allowRunningVMDelete = false,
+                                   QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_vdiRef;
-    bool m_allowRunningVMDelete;
+    private:
+        QString m_vdiRef;
+        bool m_allowRunningVMDelete;
 };
 
 #endif // DESTROYDISKACTION_H

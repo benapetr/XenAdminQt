@@ -55,47 +55,47 @@ class XENLIB_EXPORT SrIntroduceAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Introduce an existing Storage Repository
-     * @param connection XenServer connection
-     * @param srUuid UUID of existing SR
-     * @param srName SR name
-     * @param srDescription SR description
-     * @param srType SR type (e.g., "nfs", "lvmoiscsi", "ext")
-     * @param srContentType Content type (e.g., "user", "iso")
-     * @param deviceConfig Device configuration map for creating PBDs
-     * @param parent Parent object
-     */
-    explicit SrIntroduceAction(XenConnection* connection,
-                               const QString& srUuid,
-                               const QString& srName,
-                               const QString& srDescription,
-                               const QString& srType,
-                               const QString& srContentType,
-                               const QVariantMap& deviceConfig,
-                               QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Introduce an existing Storage Repository
+         * @param connection XenServer connection
+         * @param srUuid UUID of existing SR
+         * @param srName SR name
+         * @param srDescription SR description
+         * @param srType SR type (e.g., "nfs", "lvmoiscsi", "ext")
+         * @param srContentType Content type (e.g., "user", "iso")
+         * @param deviceConfig Device configuration map for creating PBDs
+         * @param parent Parent object
+         */
+        explicit SrIntroduceAction(XenConnection* connection,
+                                   const QString& srUuid,
+                                   const QString& srName,
+                                   const QString& srDescription,
+                                   const QString& srType,
+                                   const QString& srContentType,
+                                   const QVariantMap& deviceConfig,
+                                   QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    /**
-     * @brief Check if this is the first shared non-ISO SR in the pool
-     * @return true if no other shared non-ISO SRs exist
-     *
-     * Used to determine whether to set this SR as the default SR.
-     * Queries the cache for all existing SRs.
-     */
-    bool isFirstSharedNonISOSR() const;
+    private:
+        /**
+         * @brief Check if this is the first shared non-ISO SR in the pool
+         * @return true if no other shared non-ISO SRs exist
+         *
+         * Used to determine whether to set this SR as the default SR.
+         * Queries the cache for all existing SRs.
+         */
+        bool isFirstSharedNonISOSR() const;
 
-    QString m_srUuid;
-    QString m_srName;
-    QString m_srDescription;
-    QString m_srType;
-    QString m_srContentType;
-    bool m_srIsShared;
-    QVariantMap m_deviceConfig;
+        QString m_srUuid;
+        QString m_srName;
+        QString m_srDescription;
+        QString m_srType;
+        QString m_srContentType;
+        bool m_srIsShared;
+        QVariantMap m_deviceConfig;
 };
 
 #endif // SRINTRODUCEACTION_H

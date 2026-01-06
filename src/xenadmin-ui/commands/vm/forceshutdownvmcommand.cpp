@@ -99,7 +99,7 @@ void ForceShutdownVMCommand::Run()
     }
 
     // Create VM object for action (action will own and delete it)
-    VM* vmForAction = new VM(conn, vm->OpaqueRef());
+    QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vm->OpaqueRef()));
 
     // Create the hard shutdown action
     VMHardShutdown* action = new VMHardShutdown(vmForAction, this->mainWindow());
@@ -113,7 +113,7 @@ void ForceShutdownVMCommand::Run()
     });
 
     // Run action asynchronously (matches C# pattern)
-    action->runAsync();
+    action->RunAsync();
 }
 
 QString ForceShutdownVMCommand::MenuText() const

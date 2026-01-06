@@ -45,20 +45,20 @@ class SyncDatabaseAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct database synchronization action
-     * @param connection Connection to the pool
-     * @param poolRef Pool opaque reference
-     * @param parent Parent QObject
-     */
-    explicit SyncDatabaseAction(XenConnection* connection, const QString& poolRef, QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct database synchronization action
+         * @param connection Connection to the pool
+         * @param poolRef Pool opaque reference
+         * @param parent Parent QObject
+         */
+        explicit SyncDatabaseAction(XenConnection* connection, const QString& poolRef, QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_poolRef;
+    private:
+        QString m_poolRef;
 };
 
 #endif // SYNCDATABASEACTION_H

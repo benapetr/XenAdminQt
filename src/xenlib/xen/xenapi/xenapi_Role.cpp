@@ -41,10 +41,10 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("role.get_all_records", params);
+        QByteArray request = api.BuildJsonRpcCall("role.get_all_records", params);
         QByteArray response = session->sendApiRequest(request);
 
-        QVariant result = api.parseJsonRpcResponse(response);
+        QVariant result = api.ParseJsonRpcResponse(response);
         if (result.canConvert<QVariantMap>())
         {
             return result.toMap();

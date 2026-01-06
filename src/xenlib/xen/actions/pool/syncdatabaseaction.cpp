@@ -39,7 +39,7 @@ void SyncDatabaseAction::run()
 {
     try
     {
-        if (!session())
+        if (!GetSession())
         {
             throw std::runtime_error("Not connected to XenServer");
         }
@@ -49,17 +49,17 @@ void SyncDatabaseAction::run()
             throw std::runtime_error("Pool reference is empty");
         }
 
-        setPercentComplete(0);
-        setDescription("Synchronizing database across pool members...");
+        SetPercentComplete(0);
+        SetDescription("Synchronizing database across pool members...");
 
         // Kick off async database synchronization task
-        QString taskRef = XenAPI::Pool::async_sync_database(session());
+        QString taskRef = XenAPI::Pool::async_sync_database(GetSession());
 
         // Poll the task from 0% to 100%
         pollToCompletion(taskRef, 0, 100);
 
-        setPercentComplete(100);
-        setDescription("Database synchronized successfully");
+        SetPercentComplete(100);
+        SetDescription("Database synchronized successfully");
 
     } catch (const std::exception& e)
     {

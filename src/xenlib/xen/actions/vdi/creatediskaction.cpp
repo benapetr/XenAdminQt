@@ -61,14 +61,14 @@ CreateDiskAction::CreateDiskAction(const QVariantMap& vdiRecord,
       m_vdiRecord(vdiRecord), m_vbdRecord(vbdRecord), m_vm(vm), m_attachToVM(true)
 {
     // Add RBAC method checks
-    addApiMethodToRoleCheck("VM.get_allowed_VBD_devices");
-    addApiMethodToRoleCheck("VDI.create");
-    addApiMethodToRoleCheck("VBD.create");
+    AddApiMethodToRoleCheck("VM.get_allowed_VBD_devices");
+    AddApiMethodToRoleCheck("VDI.create");
+    AddApiMethodToRoleCheck("VBD.create");
 }
 
 void CreateDiskAction::run()
 {
-    XenAPI::Session* session = this->session();
+    XenAPI::Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
@@ -77,8 +77,8 @@ void CreateDiskAction::run()
     if (!m_attachToVM)
     {
         // Simple VDI creation without VM attachment
-        setPercentComplete(0);
-        setDescription(tr("Creating VDI..."));
+        SetPercentComplete(0);
+        SetDescription(tr("Creating VDI..."));
 
         QString vdiRef = XenAPI::VDI::create(session, m_vdiRecord);
 
@@ -88,10 +88,10 @@ void CreateDiskAction::run()
         }
 
         // Store the result so caller can get it via result()
-        setResult(vdiRef);
+        SetResult(vdiRef);
 
-        setPercentComplete(100);
-        setDescription(tr("Virtual disk created"));
+        SetPercentComplete(100);
+        SetDescription(tr("Virtual disk created"));
 
     } else
     {
@@ -102,8 +102,8 @@ void CreateDiskAction::run()
         }
 
         // Step 1: Get allowed VBD device numbers
-        setPercentComplete(10);
-        setDescription(tr("Getting available device numbers..."));
+        SetPercentComplete(10);
+        SetDescription(tr("Getting available device numbers..."));
 
         QVariant allowedDevicesVar = XenAPI::VM::get_allowed_VBD_devices(session, m_vm->OpaqueRef());
         QStringList allowedDevices;
@@ -127,8 +127,8 @@ void CreateDiskAction::run()
         QString userdevice = allowedDevices.first();
 
         // Step 2: Create VDI
-        setPercentComplete(30);
-        setDescription(tr("Creating VDI..."));
+        SetPercentComplete(30);
+        SetDescription(tr("Creating VDI..."));
 
         QString vdiRef = XenAPI::VDI::create(session, m_vdiRecord);
 
@@ -138,18 +138,18 @@ void CreateDiskAction::run()
         }
 
         // Store the result so caller can get it via result()
-        setResult(vdiRef);
+        SetResult(vdiRef);
 
         // Step 3: Check if VM already has bootable disk
-        setPercentComplete(50);
-        setDescription(tr("Checking VM disk configuration..."));
+        SetPercentComplete(50);
+        SetDescription(tr("Checking VM disk configuration..."));
 
         bool alreadyHasBootableDisk = hasBootableDisk();
         bool shouldBeBootable = (userdevice == "0") && !alreadyHasBootableDisk;
 
         // Step 4: Create VBD record
-        setPercentComplete(60);
-        setDescription(tr("Creating VBD..."));
+        SetPercentComplete(60);
+        SetDescription(tr("Creating VBD..."));
 
         QVariantMap vbdRecord = m_vbdRecord;
         vbdRecord["VDI"] = vdiRef;
@@ -185,8 +185,8 @@ void CreateDiskAction::run()
 
         QString vbdRef = XenAPI::VBD::create(session, vbdRecord);
 
-        setPercentComplete(100);
-        setDescription(tr("Virtual disk created and attached to VM"));
+        SetPercentComplete(100);
+        SetDescription(tr("Virtual disk created and attached to VM"));
     }
 }
 bool CreateDiskAction::hasBootableDisk()
@@ -198,7 +198,7 @@ bool CreateDiskAction::hasBootableDisk()
 
     try
     {
-        XenAPI::Session* session = this->session();
+        XenAPI::Session* session = this->GetSession();
         if (!session || !session->IsLoggedIn())
         {
             return false;

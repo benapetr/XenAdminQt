@@ -31,6 +31,7 @@
 #include "../../asyncoperation.h"
 #include <QString>
 #include <QVariantMap>
+#include <QSharedPointer>
 
 class SR;
 
@@ -54,35 +55,35 @@ class XENLIB_EXPORT SrTrimAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Trim (reclaim freed space) from an SR
-     * @param connection XenServer connection
-     * @param sr SR object to trim
-     * @param parent Parent object
-     */
-    explicit SrTrimAction(XenConnection* connection,
-                          SR* sr,
-                          QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Trim (reclaim freed space) from an SR
+         * @param connection XenServer connection
+         * @param sr SR object to trim
+         * @param parent Parent object
+         */
+        explicit SrTrimAction(XenConnection* connection,
+                              QSharedPointer<SR> sr,
+                              QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    /**
-     * @brief Parse trim error from XML response
-     * @param xml XML response from trim plugin
-     * @return Error message, or empty string if no error
-     *
-     * Parses XML like:
-     * <trim_response>
-     *   <key_value_pair><key>errcode</key><value>UnsupportedSRForTrim</value></key_value_pair>
-     *   <key_value_pair><key>errmsg</key><value>Trim on [uuid] not supported</value></key_value_pair>
-     * </trim_response>
-     */
-    QString getTrimError(const QString& xml);
+    private:
+        /**
+         * @brief Parse trim error from XML response
+         * @param xml XML response from trim plugin
+         * @return Error message, or empty string if no error
+         *
+         * Parses XML like:
+         * <trim_response>
+         *   <key_value_pair><key>errcode</key><value>UnsupportedSRForTrim</value></key_value_pair>
+         *   <key_value_pair><key>errmsg</key><value>Trim on [uuid] not supported</value></key_value_pair>
+         * </trim_response>
+         */
+        QString getTrimError(const QString& xml);
 
-    SR* m_sr;
+        QSharedPointer<SR> m_sr;
 };
 
 #endif // SRTRIMACTION_H

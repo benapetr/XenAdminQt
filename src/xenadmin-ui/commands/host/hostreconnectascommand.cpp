@@ -79,12 +79,12 @@ void HostReconnectAsCommand::Run()
 
     conn->SetUsername(dialog.username().trimmed());
     conn->SetPassword(dialog.password());
-    conn->setExpectPasswordIsCorrect(true);
+    conn->SetExpectPasswordIsCorrect(true);
 
     if (m_disconnectHandler)
         QObject::disconnect(m_disconnectHandler);
     m_reconnectConnection = conn;
-    m_disconnectHandler = connect(conn, &XenConnection::connectionStateChanged,
+    m_disconnectHandler = connect(conn, &XenConnection::ConnectionStateChanged,
                                   this, &HostReconnectAsCommand::onReconnectConnectionStateChanged);
 
     DisconnectCommand disconnectCmd(this->mainWindow(), conn, true, this);
@@ -124,6 +124,6 @@ void HostReconnectAsCommand::startReconnect()
     if (!m_reconnectConnection)
         return;
 
-    this->mainWindow()->showStatusMessage("Reconnecting as different user...");
+    this->mainWindow()->ShowStatusMessage("Reconnecting as different user...");
     XenConnectionUI::BeginConnect(m_reconnectConnection, true, this->mainWindow(), true);
 }

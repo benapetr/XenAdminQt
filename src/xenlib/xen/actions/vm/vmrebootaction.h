@@ -30,6 +30,7 @@
 
 #include "../../asyncoperation.h"
 #include "../../api.h"
+#include <QSharedPointer>
 
 class VM;
 class Host;
@@ -45,11 +46,11 @@ class XENLIB_EXPORT VMRebootAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    virtual ~VMRebootAction();
+    public:
+        virtual ~VMRebootAction();
 
-protected:
-    explicit VMRebootAction(VM* vm, const QString& title, QObject* parent = nullptr);
+    protected:
+        explicit VMRebootAction(QSharedPointer<VM> vm, const QString& title, QObject* parent = nullptr);
 };
 
 /**
@@ -62,11 +63,11 @@ class XENLIB_EXPORT VMCleanReboot : public VMRebootAction
 {
     Q_OBJECT
 
-public:
-    explicit VMCleanReboot(VM* vm, QObject* parent = nullptr);
+    public:
+        explicit VMCleanReboot(QSharedPointer<VM> vm, QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 };
 
 /**
@@ -79,11 +80,11 @@ class XENLIB_EXPORT VMHardReboot : public VMRebootAction
 {
     Q_OBJECT
 
-public:
-    explicit VMHardReboot(VM* vm, QObject* parent = nullptr);
+    public:
+        explicit VMHardReboot(QSharedPointer<VM> vm, QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 };
 
 #endif // VMREBOOTACTION_H

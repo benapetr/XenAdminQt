@@ -46,26 +46,26 @@ class MigrateVirtualDiskAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct a migrate VDI action
-     * @param connection The connection to the XenServer
-     * @param vdiRef The VDI to migrate
-     * @param srRef The target SR
-     * @param parent Parent QObject
-     */
-    MigrateVirtualDiskAction(XenConnection* connection, const QString& vdiRef,
-                             const QString& srRef, QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct a migrate VDI action
+         * @param connection The connection to the XenServer
+         * @param vdiRef The VDI to migrate
+         * @param srRef The target SR
+         * @param parent Parent QObject
+         */
+        MigrateVirtualDiskAction(XenConnection* connection, const QString& vdiRef,
+                                 const QString& srRef, QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_vdiRef;
-    QString m_srRef;
+    private:
+        QString m_vdiRef;
+        QString m_srRef;
 
-    QString getVDIName() const;
-    QString getSRName(const QString& srRef) const;
+        QString getVDIName() const;
+        QString getSRName(const QString& srRef) const;
 };
 
 #endif // MIGRATEVIRTUALDISKACTION_H

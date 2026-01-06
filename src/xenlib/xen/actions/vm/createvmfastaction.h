@@ -48,29 +48,29 @@ class CreateVMFastAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection to use
-     * @param templateVM Template VM to clone from
-     * @param parent Parent QObject
-     */
-    explicit CreateVMFastAction(XenConnection* connection,
-                                VM* templateVM,
-                                QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection to use
+         * @param templateVM Template VM to clone from
+         * @param parent Parent QObject
+         */
+        explicit CreateVMFastAction(XenConnection* connection,
+                                    QSharedPointer<VM> templateVM,
+                                    QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    /**
-     * @brief Generate a unique VM name based on template name
-     * @param baseName Base name from template
-     * @return Unique VM name
-     */
-    QString generateUniqueName(const QString& baseName);
+    private:
+        /**
+         * @brief Generate a unique VM name based on template name
+         * @param baseName Base name from template
+         * @return Unique VM name
+         */
+        QString generateUniqueName(const QString& baseName);
 
-    VM* m_template;
+        QSharedPointer<VM> m_template;
 };
 
 #endif // CREATEVMFASTACTION_H

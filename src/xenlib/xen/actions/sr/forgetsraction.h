@@ -43,25 +43,25 @@ class ForgetSrAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct ForgetSrAction
-     * @param connection XenConnection
-     * @param srRef SR opaque reference
-     * @param srName SR name (for messages)
-     * @param parent Parent QObject
-     */
-    explicit ForgetSrAction(XenConnection* connection,
-                            const QString& srRef,
-                            const QString& srName,
-                            QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct ForgetSrAction
+         * @param connection XenConnection
+         * @param srRef SR opaque reference
+         * @param srName SR name (for messages)
+         * @param parent Parent QObject
+         */
+        explicit ForgetSrAction(XenConnection* connection,
+                                const QString& srRef,
+                                const QString& srName,
+                                QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_srRef;
-    QString m_srName;
+    private:
+        QString m_srRef;
+        QString m_srName;
 };
 
 #endif // FORGETSRACTION_H

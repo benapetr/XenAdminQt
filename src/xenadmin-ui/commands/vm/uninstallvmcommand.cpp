@@ -62,7 +62,7 @@ void UninstallVMCommand::Run()
 
     if (ret == QMessageBox::Yes)
     {
-        this->mainWindow()->showStatusMessage(QString("Uninstalling VM '%1'...").arg(vmName));
+        this->mainWindow()->ShowStatusMessage(QString("Uninstalling VM '%1'...").arg(vmName));
 
         // TODO: Delete the VM and its VDIs using XenAPI
         // bool success = XenAPI::VM::destroy(session, vmRef);

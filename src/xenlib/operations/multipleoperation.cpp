@@ -95,8 +95,8 @@ void MultipleOperation::onSubOperationChanged()
     AsyncOperation* subOp = qobject_cast<AsyncOperation*>(sender());
     if (subOp)
     {
-        m_subOperationTitle = subOp->title();
-        m_subOperationDescription = subOp->description();
+        m_subOperationTitle = subOp->GetTitle();
+        m_subOperationDescription = subOp->GetDescription();
         recalculatePercentComplete();
         emit subOperationChanged(m_subOperationTitle, m_subOperationDescription);
     }
@@ -104,13 +104,13 @@ void MultipleOperation::onSubOperationChanged()
 
 void MultipleOperation::run()
 {
-    this->setPercentComplete(0);
+    this->SetPercentComplete(0);
     QStringList exceptions;
 
     this->runSubOperations(exceptions);
 
-    this->setPercentComplete(100);
-    this->setDescription(this->m_endDescription);
+    this->SetPercentComplete(100);
+    this->SetDescription(this->m_endDescription);
 
     // Handle multiple exceptions
     if (exceptions.size() > 1)
@@ -125,7 +125,7 @@ void MultipleOperation::run()
         // Single exception - already set in runSubOperations
     }
 
-    if (this->isCancelled())
+    if (this->IsCancelled())
     {
         this->setError(tr("Operation cancelled"));
     }
@@ -135,28 +135,28 @@ void MultipleOperation::runSubOperations(QStringList& exceptions)
 {
     for (AsyncOperation* subOp : m_subOperations)
     {
-        if (isCancelled())
+        if (IsCancelled())
         {
             break; // Don't start any more operations
         }
 
         try
         {
-            m_subOperationTitle = subOp->title();
+            m_subOperationTitle = subOp->GetTitle();
 
             // Run sub-operation synchronously
-            subOp->runSync(session());
+            subOp->RunSync(GetSession());
 
             // Check if sub-operation failed
-            if (subOp->hasError())
+            if (subOp->HasError())
             {
-                QString errorMsg = subOp->errorMessage();
+                QString errorMsg = subOp->GetErrorMessage();
                 if (!errorMsg.isEmpty())
                 {
                     exceptions.append(errorMsg);
 
                     // Record first exception
-                    if (!hasError())
+                    if (!HasError())
                     {
                         setError(errorMsg);
                     }
@@ -173,7 +173,7 @@ void MultipleOperation::runSubOperations(QStringList& exceptions)
             exceptions.append(errorMsg);
 
             // Record first exception
-            if (!hasError())
+            if (!HasError())
             {
                 setError(errorMsg);
             }
@@ -187,7 +187,7 @@ void MultipleOperation::runSubOperations(QStringList& exceptions)
             QString errorMsg = tr("Unknown error occurred");
             exceptions.append(errorMsg);
 
-            if (!hasError())
+            if (!HasError())
             {
                 setError(errorMsg);
             }
@@ -210,11 +210,11 @@ void MultipleOperation::recalculatePercentComplete()
     int total = 0;
     for (AsyncOperation* subOp : m_subOperations)
     {
-        total += subOp->percentComplete();
+        total += subOp->GetPercentComplete();
     }
 
     int avgProgress = total / m_subOperations.size();
-    setPercentComplete(avgProgress);
+    SetPercentComplete(avgProgress);
 }
 
 void MultipleOperation::onCancel()
@@ -222,9 +222,9 @@ void MultipleOperation::onCancel()
     // Cancel all incomplete sub-operations
     for (AsyncOperation* subOp : m_subOperations)
     {
-        if (!subOp->isCompleted())
+        if (!subOp->IsCompleted())
         {
-            subOp->cancel();
+            subOp->Cancel();
         }
     }
 }
@@ -240,9 +240,9 @@ void MultipleOperation::onMultipleOperationCompleted()
     // (in case MultipleOperation completed prematurely)
     for (AsyncOperation* subOp : m_subOperations)
     {
-        if (!subOp->isCompleted())
+        if (!subOp->IsCompleted())
         {
-            subOp->cancel();
+            subOp->Cancel();
         }
     }
 }

@@ -54,14 +54,14 @@ void RescanPIFsCommand::Run()
     // Create and run rescan action
     RescanPIFsAction* action = new RescanPIFsAction(host->GetConnection(), hostRef);
 
-    action->setTitle(tr("Rescanning network interfaces"));
-    action->setDescription(tr("Rescanning network interfaces on host '%1'...").arg(hostName));
+    action->SetTitle(tr("Rescanning network interfaces"));
+    action->SetDescription(tr("Rescanning network interfaces on host '%1'...").arg(hostName));
 
     OperationManager* opManager = OperationManager::instance();
     opManager->RegisterOperation(action);
-    action->runAsync();
+    action->RunAsync();
 
-    this->mainWindow()->showStatusMessage(tr("Network interface rescan started for host '%1'").arg(hostName), 3000);
+    this->mainWindow()->ShowStatusMessage(tr("Network interface rescan started for host '%1'").arg(hostName), 3000);
 }
 
 QString RescanPIFsCommand::MenuText() const

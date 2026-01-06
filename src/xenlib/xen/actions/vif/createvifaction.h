@@ -49,36 +49,36 @@ class CreateVIFAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection
-     * @param vmRef VM opaque reference
-     * @param vifRecord VIF record (VM, network, device, MAC, MTU, etc.)
-     * @param parent Parent QObject
-     */
-    CreateVIFAction(XenConnection* connection,
-                    const QString& vmRef,
-                    const QVariantMap& vifRecord,
-                    QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection
+         * @param vmRef VM opaque reference
+         * @param vifRecord VIF record (VM, network, device, MAC, MTU, etc.)
+         * @param parent Parent QObject
+         */
+        CreateVIFAction(XenConnection* connection,
+                        const QString& vmRef,
+                        const QVariantMap& vifRecord,
+                        QObject* parent = nullptr);
 
-    /**
-     * @brief Check if VM reboot is required
-     * @return true if hot-plug was not possible and reboot is needed
-     */
-    bool rebootRequired() const
-    {
-        return m_rebootRequired;
-    }
+        /**
+         * @brief Check if VM reboot is required
+         * @return true if hot-plug was not possible and reboot is needed
+         */
+        bool rebootRequired() const
+        {
+            return m_rebootRequired;
+        }
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_vmRef;
-    QString m_vmName;
-    QVariantMap m_vifRecord;
-    bool m_rebootRequired;
+    private:
+        QString m_vmRef;
+        QString m_vmName;
+        QVariantMap m_vifRecord;
+        bool m_rebootRequired;
 };
 
 #endif // CREATEVIFACTION_H

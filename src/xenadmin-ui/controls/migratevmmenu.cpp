@@ -196,17 +196,17 @@ void MigrateVMMenu::runMigrationToHost(const QString& hostRef, const QString& ho
 
     connect(action, &AsyncOperation::completed, this, [this, vmName, hostName, action]()
     {
-        if (action->state() == AsyncOperation::Completed && !action->isFailed())
+        if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
-            this->m_mainWindow->showStatusMessage(
+            this->m_mainWindow->ShowStatusMessage(
                 tr("VM '%1' migrated successfully to '%2'").arg(vmName, hostName), 5000);
         } else
         {
-            this->m_mainWindow->showStatusMessage(
+            this->m_mainWindow->ShowStatusMessage(
                 tr("Failed to migrate VM '%1'").arg(vmName), 5000);
         }
         action->deleteLater();
     });
 
-    action->runAsync();
+    action->RunAsync();
 }

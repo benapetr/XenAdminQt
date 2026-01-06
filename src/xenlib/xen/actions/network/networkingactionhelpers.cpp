@@ -40,7 +40,7 @@
 // Helper to get PIF record from cache
 static QVariantMap getPIFRecord(AsyncOperation* action, const QString& pifRef)
 {
-    QList<QVariantMap> pifs = action->connection()->GetCache()->GetAllData("pif");
+    QList<QVariantMap> pifs = action->GetConnection()->GetCache()->GetAllData("pif");
     for (const QVariantMap& pif : pifs)
     {
         if (pif.value("_ref").toString() == pifRef)
@@ -111,11 +111,11 @@ void NetworkingActionHelpers::moveManagementInterfaceName(AsyncOperation* action
     qDebug() << "Moving management interface name from" << fromPifRef << "to" << toPifRef;
 
     // Set management_purpose on destination PIF
-    XenAPI::PIF::add_to_other_config(action->session(), toPifRef,
+    XenAPI::PIF::add_to_other_config(action->GetSession(), toPifRef,
                                      "management_purpose", managementPurpose);
 
     // Remove management_purpose from source PIF
-    XenAPI::PIF::remove_from_other_config(action->session(), fromPifRef,
+    XenAPI::PIF::remove_from_other_config(action->GetSession(), fromPifRef,
                                           "management_purpose");
 
     qDebug() << "Moved management interface name from" << fromPifRef << "to" << toPifRef;
@@ -127,22 +127,22 @@ void NetworkingActionHelpers::depurpose(AsyncOperation* action, const QString& p
     QString pifName = pifRecord.value("device").toString();
 
     qDebug() << "Depurposing PIF" << pifName << pifRef;
-    action->setDescription(QString("Depurposing interface %1...").arg(pifName));
+    action->SetDescription(QString("Depurposing interface %1...").arg(pifName));
 
     // Clear disallow_unplug
-    XenAPI::PIF::set_disallow_unplug(action->session(), pifRef, false);
+    XenAPI::PIF::set_disallow_unplug(action->GetSession(), pifRef, false);
 
     // Remove management_purpose if it exists
     QVariantMap otherConfig = pifRecord.value("other_config").toMap();
     if (otherConfig.contains("management_purpose"))
     {
-        XenAPI::PIF::remove_from_other_config(action->session(), pifRef, "management_purpose");
+        XenAPI::PIF::remove_from_other_config(action->GetSession(), pifRef, "management_purpose");
     }
 
-    action->setPercentComplete(hi);
+    action->SetPercentComplete(hi);
 
     qDebug() << "Depurposed PIF" << pifName << pifRef;
-    action->setDescription(QString("Depurposed interface %1").arg(pifName));
+    action->SetDescription(QString("Depurposed interface %1").arg(pifName));
 }
 
 void NetworkingActionHelpers::reconfigureManagement_(AsyncOperation* action, const QString& pifRef, int hi)
@@ -151,27 +151,27 @@ void NetworkingActionHelpers::reconfigureManagement_(AsyncOperation* action, con
     QString pifName = pifRecord.value("device").toString();
 
     qDebug() << "Switching to PIF" << pifName << pifRef << "for management";
-    action->setDescription(QString("Reconfiguring management to interface %1...").arg(pifName));
+    action->SetDescription(QString("Reconfiguring management to interface %1...").arg(pifName));
 
-    int lo = action->percentComplete();
+    int lo = action->GetPercentComplete();
     int mid = (lo + hi) / 2;
 
     // First depurpose the PIF (clear disallow_unplug and management_purpose)
-    XenAPI::PIF::set_disallow_unplug(action->session(), pifRef, false);
+    XenAPI::PIF::set_disallow_unplug(action->GetSession(), pifRef, false);
     QVariantMap otherConfig = pifRecord.value("other_config").toMap();
     if (otherConfig.contains("management_purpose"))
     {
-        XenAPI::PIF::remove_from_other_config(action->session(), pifRef, "management_purpose");
+        XenAPI::PIF::remove_from_other_config(action->GetSession(), pifRef, "management_purpose");
     }
 
-    action->setPercentComplete(mid);
+    action->SetPercentComplete(mid);
 
     // Now reconfigure management
-    QString taskRef = XenAPI::Host::async_management_reconfigure(action->session(), pifRef);
+    QString taskRef = XenAPI::Host::async_management_reconfigure(action->GetSession(), pifRef);
     action->pollToCompletion(taskRef, mid, hi);
 
     qDebug() << "Switched to PIF" << pifName << pifRef << "for management";
-    action->setDescription(QString("Reconfigured management to interface %1").arg(pifName));
+    action->SetDescription(QString("Reconfigured management to interface %1").arg(pifName));
 }
 
 void NetworkingActionHelpers::poolManagementReconfigure_(AsyncOperation* action, const QString& pifRef, int hi)
@@ -181,22 +181,22 @@ void NetworkingActionHelpers::poolManagementReconfigure_(AsyncOperation* action,
     QString networkRef = getNetworkFromPIF(pifRecord);
 
     qDebug() << "Pool-wide switching to PIF" << pifName << pifRef << "for management";
-    action->setDescription(QString("Reconfiguring pool management to interface %1...").arg(pifName));
+    action->SetDescription(QString("Reconfiguring pool management to interface %1...").arg(pifName));
 
-    QString taskRef = XenAPI::Pool::async_management_reconfigure(action->session(), networkRef);
-    action->pollToCompletion(taskRef, action->percentComplete(), hi);
+    QString taskRef = XenAPI::Pool::async_management_reconfigure(action->GetSession(), networkRef);
+    action->pollToCompletion(taskRef, action->GetPercentComplete(), hi);
 
     qDebug() << "Pool-wide switched to PIF" << pifName << pifRef << "for management";
-    action->setDescription(QString("Reconfigured pool management to interface %1").arg(pifName));
+    action->SetDescription(QString("Reconfigured pool management to interface %1").arg(pifName));
 }
 
 void NetworkingActionHelpers::clearIP(AsyncOperation* action, const QString& pifRef, int hi)
 {
     // Don't clear IP if PIF is used by clustering
-    if (isUsedByClustering(action->connection(), pifRef))
+    if (isUsedByClustering(action->GetConnection(), pifRef))
     {
         qDebug() << "Skipping IP clear for clustering PIF" << pifRef;
-        action->setPercentComplete(hi);
+        action->SetPercentComplete(hi);
         return;
     }
 
@@ -204,14 +204,14 @@ void NetworkingActionHelpers::clearIP(AsyncOperation* action, const QString& pif
     QString pifName = pifRecord.value("device").toString();
 
     qDebug() << "Removing IP address from" << pifName << pifRef;
-    action->setDescription(QString("Bringing down interface %1...").arg(pifName));
+    action->SetDescription(QString("Bringing down interface %1...").arg(pifName));
 
-    QString taskRef = XenAPI::PIF::async_reconfigure_ip(action->session(), pifRef,
+    QString taskRef = XenAPI::PIF::async_reconfigure_ip(action->GetSession(), pifRef,
                                                         "None", "", "", "", "");
-    action->pollToCompletion(taskRef, action->percentComplete(), hi);
+    action->pollToCompletion(taskRef, action->GetPercentComplete(), hi);
 
     qDebug() << "Removed IP address from" << pifName << pifRef;
-    action->setDescription(QString("Brought down interface %1").arg(pifName));
+    action->SetDescription(QString("Brought down interface %1").arg(pifName));
 }
 
 void NetworkingActionHelpers::waitForMembersToRecover(XenConnection* connection, const QString& poolRef)
@@ -302,7 +302,7 @@ void NetworkingActionHelpers::reconfigureManagement(AsyncOperation* action,
         throw std::runtime_error("PIFs must be on same host for management reconfiguration");
     }
 
-    int lo = action->percentComplete();
+    int lo = action->GetPercentComplete();
     int inc = (hi - lo) / 3;
 
     // Phase 1: Depurpose down_pif if requested
@@ -311,7 +311,7 @@ void NetworkingActionHelpers::reconfigureManagement(AsyncOperation* action,
         forSomeHosts(action, downPifRef, thisHost, lockPif, lo + inc, depurpose);
     } else
     {
-        action->setPercentComplete(lo + inc);
+        action->SetPercentComplete(lo + inc);
     }
 
     // Phase 2: Reconfigure management to up_pif
@@ -323,7 +323,7 @@ void NetworkingActionHelpers::reconfigureManagement(AsyncOperation* action,
         forSomeHosts(action, downPifRef, thisHost, lockPif, hi, clearIP);
     } else
     {
-        action->setPercentComplete(hi);
+        action->SetPercentComplete(hi);
     }
 }
 
@@ -342,15 +342,15 @@ void NetworkingActionHelpers::poolReconfigureManagement(AsyncOperation* action,
         throw std::runtime_error("PIFs must be on same host for management reconfiguration");
     }
 
-    int lo = action->percentComplete();
+    int lo = action->GetPercentComplete();
     int inc = (hi - lo) / 3;
 
     // Phase 1: Pool management reconfigure
     poolManagementReconfigure_(action, upPifRef, lo + inc);
 
     // Phase 2: Wait for supporters to recover
-    action->setDescription("Waiting for pool members to recover...");
-    waitForMembersToRecover(action->connection(), poolRef);
+    action->SetDescription("Waiting for pool members to recover...");
+    waitForMembersToRecover(action->GetConnection(), poolRef);
 
     // Phase 3: Clear IP on supporters, then coordinator
     forSomeHosts(action, downPifRef, false, true, lo + 2 * inc, clearIP);
@@ -370,24 +370,24 @@ void NetworkingActionHelpers::bringUp(AsyncOperation* action,
     QString managementPurpose = getManagementPurpose(newPif);
     bool isPrimary = managementPurpose.isEmpty();
 
-    int lo = action->percentComplete();
+    int lo = action->GetPercentComplete();
     int inc = (hi - lo) / (isPrimary ? 2 : 3);
 
     qDebug() << "Bringing PIF" << pifName << existingPifRef << "up as"
              << newIp << "/" << newPif.value("netmask").toString()
              << newPif.value("gateway").toString() << newPif.value("DNS").toString();
-    action->setDescription(QString("Bringing up interface %1...").arg(pifName));
+    action->SetDescription(QString("Bringing up interface %1...").arg(pifName));
 
     // Set disallow_unplug and management_purpose
-    XenAPI::PIF::set_disallow_unplug(action->session(), existingPifRef, !isPrimary);
+    XenAPI::PIF::set_disallow_unplug(action->GetSession(), existingPifRef, !isPrimary);
 
     if (!managementPurpose.isEmpty())
     {
-        XenAPI::PIF::add_to_other_config(action->session(), existingPifRef,
+        XenAPI::PIF::add_to_other_config(action->GetSession(), existingPifRef,
                                          "management_purpose", managementPurpose);
     }
 
-    action->setPercentComplete(lo + inc);
+    action->SetPercentComplete(lo + inc);
 
     // Reconfigure IP
     reconfigureIP(action, newPifRef, existingPifRef, newIp, lo + 2 * inc);
@@ -398,11 +398,11 @@ void NetworkingActionHelpers::bringUp(AsyncOperation* action,
         plug(action, existingPifRef, hi);
     } else
     {
-        action->setPercentComplete(hi);
+        action->SetPercentComplete(hi);
     }
 
     qDebug() << "Brought PIF" << pifName << existingPifRef << "up";
-    action->setDescription(QString("Brought up interface %1").arg(pifName));
+    action->SetDescription(QString("Brought up interface %1").arg(pifName));
 }
 
 void NetworkingActionHelpers::bringUp(AsyncOperation* action,
@@ -430,7 +430,7 @@ void NetworkingActionHelpers::bringDown(AsyncOperation* action,
                                         const QString& pifRef,
                                         int hi)
 {
-    int lo = action->percentComplete();
+    int lo = action->GetPercentComplete();
     int mid = (lo + hi) / 2;
 
     depurpose(action, pifRef, mid);
@@ -453,10 +453,10 @@ void NetworkingActionHelpers::forSomeHosts(AsyncOperation* action,
 
     QString networkRef = getNetworkFromPIF(pifRecord);
     QString pifHostRef = getHostFromPIF(pifRecord);
-    QString coordinatorRef = getCoordinatorRef(action->connection());
+    QString coordinatorRef = getCoordinatorRef(action->GetConnection());
 
     // Find all PIFs in the same network
-    QList<QVariantMap> allPifs = action->connection()->GetCache()->GetAllData("pif");
+    QList<QVariantMap> allPifs = action->GetConnection()->GetCache()->GetAllData("pif");
     QList<QString> pifsToReconfigure;
 
     for (const QVariantMap& pif : allPifs)
@@ -481,12 +481,12 @@ void NetworkingActionHelpers::forSomeHosts(AsyncOperation* action,
 
     if (pifsToReconfigure.isEmpty())
     {
-        action->setPercentComplete(hi);
+        action->SetPercentComplete(hi);
         return;
     }
 
     // Execute method on each PIF
-    int lo = action->percentComplete();
+    int lo = action->GetPercentComplete();
     int inc = (hi - lo) / pifsToReconfigure.count();
 
     for (const QString& pRef : pifsToReconfigure)
@@ -512,7 +512,7 @@ void NetworkingActionHelpers::reconfigureSinglePrimaryManagement(AsyncOperation*
     // Copy IP config from src to dest (conceptually - we'll use src's values for dest)
     QVariantMap srcPif = getPIFRecord(action, srcPifRef);
 
-    int lo = action->percentComplete();
+    int lo = action->GetPercentComplete();
     int mid = (lo + hi) / 2;
 
     // Bring up destination with source's IP config
@@ -528,7 +528,7 @@ void NetworkingActionHelpers::reconfigurePrimaryManagement(AsyncOperation* actio
                                                            const QString& destPifRef,
                                                            int hi)
 {
-    int lo = action->percentComplete();
+    int lo = action->GetPercentComplete();
     int inc = (hi - lo) / 4;
 
     // Phase 1: Bring up bond members on supporters (without plugging)
@@ -561,9 +561,9 @@ void NetworkingActionHelpers::reconfigureIP(AsyncOperation* action,
     QString gateway = newPif.value("gateway").toString();
     QString dns = newPif.value("DNS").toString();
 
-    QString taskRef = XenAPI::PIF::async_reconfigure_ip(action->session(), existingPifRef,
+    QString taskRef = XenAPI::PIF::async_reconfigure_ip(action->GetSession(), existingPifRef,
                                                         mode, ip, netmask, gateway, dns);
-    action->pollToCompletion(taskRef, action->percentComplete(), hi);
+    action->pollToCompletion(taskRef, action->GetPercentComplete(), hi);
 
     qDebug() << "Reconfigured IP on" << pifName << existingPifRef;
 }
@@ -580,12 +580,12 @@ void NetworkingActionHelpers::plug(AsyncOperation* action,
         QString pifName = pifRecord.value("device").toString();
         qDebug() << "Plugging" << pifName << pifRef;
 
-        QString taskRef = XenAPI::PIF::async_plug(action->session(), pifRef);
-        action->pollToCompletion(taskRef, action->percentComplete(), hi);
+        QString taskRef = XenAPI::PIF::async_plug(action->GetSession(), pifRef);
+        action->pollToCompletion(taskRef, action->GetPercentComplete(), hi);
 
         qDebug() << "Plugged" << pifName << pifRef;
     } else
     {
-        action->setPercentComplete(hi);
+        action->SetPercentComplete(hi);
     }
 }

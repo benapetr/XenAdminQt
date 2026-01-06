@@ -47,34 +47,33 @@ class DestroyHostAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection to use
-     * @param pool Pool the host belongs to
-     * @param host Host object to destroy
-     * @param parent Parent QObject
-     */
-    explicit DestroyHostAction(XenConnection* connection,
-                               Pool* pool,
-                               Host* host,
-                               QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection to use
+         * @param pool Pool the host belongs to
+         * @param host Host object to destroy
+         * @param parent Parent QObject
+         */
+        explicit DestroyHostAction(XenConnection* connection,
+                                   QSharedPointer<Host> host,
+                                   QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    /**
-     * @brief Check if SR is detached (all PBDs gone)
-     * @param srRef SR opaque reference
-     * @return True if SR has no PBDs attached
-     *
-     * Waits up to 2 minutes for PBDs to detach
-     */
-    bool isSRDetached(const QString& srRef);
+    private:
+        /**
+         * @brief Check if SR is detached (all PBDs gone)
+         * @param srRef SR opaque reference
+         * @return True if SR has no PBDs attached
+         *
+         * Waits up to 2 minutes for PBDs to detach
+         */
+        bool isSRDetached(const QString& srRef);
 
-    Pool* m_pool;
-    Host* m_host;
+        QSharedPointer<Pool> m_pool;
+        QSharedPointer<Host> m_host;
 };
 
 #endif // DESTROYHOSTACTION_H

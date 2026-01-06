@@ -200,22 +200,22 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     qDebug() << "[AttachVirtualDiskCommand] Progress dialog result:" << dialogResult
              << "(Accepted=" << QDialog::Accepted << ")";
     qDebug() << "[AttachVirtualDiskCommand] Action state:"
-             << "hasError=" << action->hasError()
-             << "isCancelled=" << action->isCancelled()
-             << "errorMessage=" << action->errorMessage();
+             << "hasError=" << action->HasError()
+             << "isCancelled=" << action->IsCancelled()
+             << "errorMessage=" << action->GetErrorMessage();
 
     if (dialogResult == QDialog::Accepted)
     {
         qDebug() << "[AttachVirtualDiskCommand] Attachment succeeded";
-        mainWindow()->showStatusMessage(QString("Virtual disk '%1' attached successfully").arg(vdiName), 5000);
+        mainWindow()->ShowStatusMessage(QString("Virtual disk '%1' attached successfully").arg(vdiName), 5000);
     } else
     {
         qWarning() << "[AttachVirtualDiskCommand] Attachment failed or cancelled";
-        if (!action->errorMessage().isEmpty())
+        if (!action->GetErrorMessage().isEmpty())
         {
-            qWarning() << "[AttachVirtualDiskCommand] Error message:" << action->errorMessage();
+            qWarning() << "[AttachVirtualDiskCommand] Error message:" << action->GetErrorMessage();
             QMessageBox::warning(mainWindow(), "Attach Disk Failed",
-                                 QString("Failed to attach virtual disk:\n\n%1").arg(action->errorMessage()));
+                                 QString("Failed to attach virtual disk:\n\n%1").arg(action->GetErrorMessage()));
         } else
         {
             qWarning() << "[AttachVirtualDiskCommand] Dialog rejected but no error message";

@@ -183,13 +183,13 @@ void MigrateVMCommand::Run()
 
         // Connect completion signal for cleanup and status update
         connect(action, &AsyncOperation::completed, this, [this, vmName, selectedHostName, action]() {
-            if (action->state() == AsyncOperation::Completed && !action->isFailed())
+            if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
-                this->mainWindow()->showStatusMessage(QString("VM '%1' migrated successfully to '%2'").arg(vmName, selectedHostName), 5000);
+                this->mainWindow()->ShowStatusMessage(QString("VM '%1' migrated successfully to '%2'").arg(vmName, selectedHostName), 5000);
                 // Cache will be automatically refreshed via event polling
             } else
             {
-                this->mainWindow()->showStatusMessage(QString("Failed to migrate VM '%1'").arg(vmName), 5000);
+                this->mainWindow()->ShowStatusMessage(QString("Failed to migrate VM '%1'").arg(vmName), 5000);
             }
             // Auto-delete when complete (matches C# GC behavior)
             action->deleteLater();
@@ -197,7 +197,7 @@ void MigrateVMCommand::Run()
 
         // Run action asynchronously (matches C# pattern - no modal dialog)
         // Progress shown in status bar via OperationManager signals
-        action->runAsync();
+        action->RunAsync();
     }
 }
 

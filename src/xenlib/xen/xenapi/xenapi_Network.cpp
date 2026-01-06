@@ -41,9 +41,9 @@ namespace XenAPI
         params << session->getSessionId() << record;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network.create", params);
+        QByteArray request = api.BuildJsonRpcCall("network.create", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     QString Network::async_create(Session* session, const QVariantMap& record)
@@ -55,9 +55,9 @@ namespace XenAPI
         params << session->getSessionId() << record;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.network.create", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.network.create", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     void Network::destroy(Session* session, const QString& network)
@@ -69,9 +69,9 @@ namespace XenAPI
         params << session->getSessionId() << network;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network.destroy", params);
+        QByteArray request = api.BuildJsonRpcCall("network.destroy", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void Network::set_name_label(Session* session, const QString& network, const QString& label)
@@ -83,9 +83,9 @@ namespace XenAPI
         params << session->getSessionId() << network << label;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network.set_name_label", params);
+        QByteArray request = api.BuildJsonRpcCall("network.set_name_label", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void Network::set_name_description(Session* session, const QString& network, const QString& description)
@@ -97,9 +97,9 @@ namespace XenAPI
         params << session->getSessionId() << network << description;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network.set_name_description", params);
+        QByteArray request = api.BuildJsonRpcCall("network.set_name_description", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void Network::set_tags(Session* session, const QString& network, const QStringList& tags)
@@ -111,9 +111,9 @@ namespace XenAPI
         params << session->getSessionId() << network << tags;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network.set_tags", params);
+        QByteArray request = api.BuildJsonRpcCall("network.set_tags", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void Network::set_MTU(Session* session, const QString& network, qint64 mtu)
@@ -125,9 +125,9 @@ namespace XenAPI
         params << session->getSessionId() << network << QString::number(mtu);
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network.set_MTU", params);
+        QByteArray request = api.BuildJsonRpcCall("network.set_MTU", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void Network::set_other_config(Session* session, const QString& network, const QVariantMap& otherConfig)
@@ -139,9 +139,9 @@ namespace XenAPI
         params << session->getSessionId() << network << otherConfig;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network.set_other_config", params);
+        QByteArray request = api.BuildJsonRpcCall("network.set_other_config", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void Network::add_to_other_config(Session* session, const QString& network, const QString& key, const QString& value)
@@ -153,9 +153,9 @@ namespace XenAPI
         params << session->getSessionId() << network << key << value;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network.add_to_other_config", params);
+        QByteArray request = api.BuildJsonRpcCall("network.add_to_other_config", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void Network::remove_from_other_config(Session* session, const QString& network, const QString& key)
@@ -167,9 +167,9 @@ namespace XenAPI
         params << session->getSessionId() << network << key;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network.remove_from_other_config", params);
+        QByteArray request = api.BuildJsonRpcCall("network.remove_from_other_config", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     QVariantMap Network::get_record(Session* session, const QString& network)
@@ -181,9 +181,9 @@ namespace XenAPI
         params << session->getSessionId() << network;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network.get_record", params);
+        QByteArray request = api.BuildJsonRpcCall("network.get_record", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toMap();
+        return api.ParseJsonRpcResponse(response).toMap();
     }
 
     QVariantList Network::get_all(Session* session)
@@ -195,9 +195,9 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network.get_all", params);
+        QByteArray request = api.BuildJsonRpcCall("network.get_all", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toList();
+        return api.ParseJsonRpcResponse(response).toList();
     }
 
     QVariantList Network::get_PIFs(Session* session, const QString& network)
@@ -209,9 +209,9 @@ namespace XenAPI
         params << session->getSessionId() << network;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network.get_PIFs", params);
+        QByteArray request = api.BuildJsonRpcCall("network.get_PIFs", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toList();
+        return api.ParseJsonRpcResponse(response).toList();
     }
 
 } // namespace XenAPI

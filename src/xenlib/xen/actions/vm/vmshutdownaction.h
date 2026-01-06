@@ -30,6 +30,7 @@
 
 #include "../../asyncoperation.h"
 #include "../../api.h"
+#include <QSharedPointer>
 
 class VM;
 class Host;
@@ -45,11 +46,11 @@ class XENLIB_EXPORT VMShutdownAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    virtual ~VMShutdownAction();
+    public:
+        virtual ~VMShutdownAction();
 
-protected:
-    explicit VMShutdownAction(VM* vm, const QString& title, QObject* parent = nullptr);
+    protected:
+        explicit VMShutdownAction(QSharedPointer<VM> vm, const QString& title, QObject* parent = nullptr);
 };
 
 /**
@@ -62,11 +63,11 @@ class XENLIB_EXPORT VMCleanShutdown : public VMShutdownAction
 {
     Q_OBJECT
 
-public:
-    explicit VMCleanShutdown(VM* vm, QObject* parent = nullptr);
+    public:
+        explicit VMCleanShutdown(QSharedPointer<VM> vm, QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 };
 
 /**
@@ -79,11 +80,11 @@ class XENLIB_EXPORT VMHardShutdown : public VMShutdownAction
 {
     Q_OBJECT
 
-public:
-    explicit VMHardShutdown(VM* vm, QObject* parent = nullptr);
+    public:
+        explicit VMHardShutdown(QSharedPointer<VM> vm, QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 };
 
 /**
@@ -96,11 +97,11 @@ class XENLIB_EXPORT VMSuspendAction : public VMShutdownAction
 {
     Q_OBJECT
 
-public:
-    explicit VMSuspendAction(VM* vm, QObject* parent = nullptr);
+    public:
+        explicit VMSuspendAction(QSharedPointer<VM> vm, QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 };
 
 #endif // VMSHUTDOWNACTION_H

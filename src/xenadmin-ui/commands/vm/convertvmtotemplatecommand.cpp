@@ -80,7 +80,7 @@ void ConvertVMToTemplateCommand::Run()
         }
 
         // Create VM object for action (action will own and delete it)
-        VM* vmForAction = new VM(conn, vm->OpaqueRef());
+        QSharedPointer<VM> vmForAction(new VM(conn, vm->OpaqueRef()));
 
         // Create VMToTemplateAction (matches C# VMToTemplateAction pattern)
         // Action automatically sets other_config["instant"] = "true"
@@ -91,15 +91,15 @@ void ConvertVMToTemplateCommand::Run()
 
         // Connect completion signal for cleanup and status update
         connect(action, &AsyncOperation::completed, this, [this, vmName, action]() {
-            if (action->state() == AsyncOperation::Completed && !action->isFailed())
+            if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
-                this->mainWindow()->showStatusMessage(QString("VM '%1' converted to template successfully").arg(vmName), 5000);
+                this->mainWindow()->ShowStatusMessage(QString("VM '%1' converted to template successfully").arg(vmName), 5000);
                 QMessageBox::information(this->mainWindow(), tr("Conversion Complete"),
                                          tr("VM '%1' has been successfully converted to a template.").arg(vmName));
                 // Cache will be automatically refreshed via event polling
             } else
             {
-                this->mainWindow()->showStatusMessage(QString("Failed to convert VM '%1'").arg(vmName), 5000);
+                this->mainWindow()->ShowStatusMessage(QString("Failed to convert VM '%1'").arg(vmName), 5000);
             }
             // Auto-delete when complete (matches C# GC behavior)
             action->deleteLater();
@@ -107,7 +107,7 @@ void ConvertVMToTemplateCommand::Run()
 
         // Run action asynchronously (matches C# pattern - no modal dialog)
         // Progress shown in status bar via OperationManager signals
-        action->runAsync();
+        action->RunAsync();
     }
 }
 

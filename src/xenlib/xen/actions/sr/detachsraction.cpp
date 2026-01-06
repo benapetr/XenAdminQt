@@ -57,10 +57,10 @@ DetachSrAction::DetachSrAction(XenConnection* connection,
                      parent),
       m_srRef(srRef), m_srName(srName), m_destroyPbds(destroyPbds), m_currentPbdIndex(0)
 {
-    addApiMethodToRoleCheck("Async.PBD.unplug");
+    AddApiMethodToRoleCheck("Async.PBD.unplug");
     if (m_destroyPbds)
     {
-        addApiMethodToRoleCheck("Async.PBD.destroy");
+        AddApiMethodToRoleCheck("Async.PBD.destroy");
     }
 }
 
@@ -69,7 +69,7 @@ void DetachSrAction::run()
     try
     {
         // Get SR data to find PBDs
-        XenCache* cache = connection()->GetCache();
+        XenCache* cache = GetConnection()->GetCache();
         QVariantMap srData = cache->ResolveObjectData("sr", m_srRef);
         if (srData.isEmpty())
         {
@@ -81,7 +81,7 @@ void DetachSrAction::run()
         if (pbds.isEmpty())
         {
             setState(Completed);
-            setDescription(QString("SR '%1' has no PBDs to detach").arg(m_srName));
+            SetDescription(QString("SR '%1' has no PBDs to detach").arg(m_srName));
             return;
         }
 
@@ -89,7 +89,7 @@ void DetachSrAction::run()
         m_pbdRefs.clear();
         QStringList coordinatorPbds;
         QStringList supporterPbds;
-        const QString coordinatorRef = getCoordinatorRef(connection());
+        const QString coordinatorRef = getCoordinatorRef(GetConnection());
 
         for (const QVariant& pbdVar : pbds)
         {
@@ -114,15 +114,15 @@ void DetachSrAction::run()
         unplugPBDs();
 
         // Destroy PBDs if requested
-        if (m_destroyPbds && state() != Failed)
+        if (m_destroyPbds && GetState() != Failed)
         {
             destroyPBDs();
         }
 
-        if (state() != Failed)
+        if (GetState() != Failed)
         {
             setState(Completed);
-            setDescription(QString("Successfully detached SR '%1'").arg(m_srName));
+            SetDescription(QString("Successfully detached SR '%1'").arg(m_srName));
         }
 
     } catch (const std::exception& e)
@@ -138,7 +138,7 @@ void DetachSrAction::unplugPBDs()
         return;
     }
 
-    int basePercent = percentComplete();
+    int basePercent = GetPercentComplete();
     int inc = 50 / m_pbdRefs.count(); // First 50% for unplugging
 
     for (int i = 0; i < m_pbdRefs.count(); ++i)
@@ -149,11 +149,11 @@ void DetachSrAction::unplugPBDs()
         {
             qDebug() << "DetachSrAction: Unplugging PBD" << pbdRef
                      << "(" << (i + 1) << "of" << m_pbdRefs.count() << ")";
-            setDescription(QString("Unplugging PBD %1 of %2...")
+            SetDescription(QString("Unplugging PBD %1 of %2...")
                                .arg(i + 1)
                                .arg(m_pbdRefs.count()));
 
-            QString taskRef = XenAPI::PBD::async_unplug(session(), pbdRef);
+            QString taskRef = XenAPI::PBD::async_unplug(GetSession(), pbdRef);
             qDebug() << "DetachSrAction: async_unplug task" << taskRef;
             if (taskRef.isEmpty())
             {
@@ -162,9 +162,9 @@ void DetachSrAction::unplugPBDs()
             }
             pollToCompletion(taskRef, basePercent + (i * inc), basePercent + ((i + 1) * inc));
             qDebug() << "DetachSrAction: Unplug completed for" << pbdRef
-                     << "state" << state() << "error" << errorMessage();
+                     << "state" << GetState() << "error" << GetErrorMessage();
 
-            if (state() == Failed)
+            if (GetState() == Failed)
             {
                 return;
             }
@@ -193,14 +193,14 @@ void DetachSrAction::destroyPBDs()
 
         try
         {
-            setDescription(QString("Destroying PBD %1 of %2...")
+            SetDescription(QString("Destroying PBD %1 of %2...")
                                .arg(i + 1)
                                .arg(m_pbdRefs.count()));
 
-            QString taskRef = XenAPI::PBD::async_destroy(session(), pbdRef);
+            QString taskRef = XenAPI::PBD::async_destroy(GetSession(), pbdRef);
             pollToCompletion(taskRef, basePercent + (i * inc), basePercent + ((i + 1) * inc));
 
-            if (state() == Failed)
+            if (GetState() == Failed)
             {
                 return;
             }

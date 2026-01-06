@@ -44,6 +44,7 @@ namespace XenAPI
     class Session;
 }
 
+class XenObject;
 class XenConnection;
 class Pool;
 class Host;
@@ -74,96 +75,96 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         virtual ~AsyncOperation();
 
         // Core properties
-        QString title() const;
-        void setTitle(const QString& title);
+        QString GetTitle() const;
+        void SetTitle(const QString& title);
 
-        QString description() const;
-        void setDescription(const QString& description);
+        QString GetDescription() const;
+        void SetDescription(const QString& description);
 
-        XenConnection* connection() const;
-        void setConnection(XenConnection* connection);
+        XenConnection* GetConnection() const;
+        void SetConnection(XenConnection* connection);
 
-        XenAPI::Session* session() const;
+        XenAPI::Session* GetSession() const;
 
         // Progress tracking
-        int percentComplete() const;
-        void setPercentComplete(int percent);
+        int GetPercentComplete() const;
+        void SetPercentComplete(int percent);
 
         // State management
-        OperationState state() const;
-        bool isRunning() const;
-        bool isCompleted() const;
-        bool isCancelled() const;
-        bool isFailed() const;
+        OperationState GetState() const;
+        bool IsRunning() const;
+        bool IsCompleted() const;
+        bool IsCancelled() const;
+        bool IsFailed() const;
 
         // Error handling
-        QString errorMessage() const;
-        QString shortErrorMessage() const;
-        QStringList errorDetails() const;
-        bool hasError() const;
+        QString GetErrorMessage() const;
+        QString GetShortErrorMessage() const;
+        QStringList GetErrorDetails() const;
+        bool HasError() const;
 
         // Cancellation
-        bool canCancel() const;
-        void setCanCancel(bool canCancel);
+        bool CanCancel() const;
+        void SetCanCancel(bool canCancel);
 
         // Result
-        QString result() const;
-        void setResult(const QString& result);
+        QString GetResult() const;
+        void SetResult(const QString& result);
 
         // Timing
-        QDateTime startTime() const;
-        QDateTime endTime() const;
-        qint64 elapsedTime() const; // in milliseconds
+        QDateTime GetStartTime() const;
+        QDateTime GetEndTime() const;
+        qint64 GetElapsedTime() const; // in milliseconds
 
         // RBAC (Role-Based Access Control) support
-        QStringList apiMethodsToRoleCheck() const;
-        void addApiMethodToRoleCheck(const QString& method);
+        QStringList GetApiMethodsToRoleCheck() const;
+        void AddApiMethodToRoleCheck(const QString& method);
 
         // Task management (for XenAPI tasks)
-        QString relatedTaskRef() const;
-        void setRelatedTaskRef(const QString& taskRef);
+        QString GetRelatedTaskRef() const;
+        void SetRelatedTaskRef(const QString& taskRef);
 
         // Operation UUID (for task rehydration after reconnect)
-        QString operationUuid() const;
-        void setOperationUuid(const QString& uuid);
+        QString GetOperationUUID() const;
+        void SetOperationUUID(const QString& uuid);
 
         // Cleanup for shutdown/reconnect - removes UUID from task.other_config
-        void prepareForEventReloadAfterRestart();
+        void PrepareForEventReloadAfterRestart();
 
         // Object context (matches C# ActionBase Pool/Host/VM/SR/Template properties)
-        Pool* pool() const;
-        void setPool(Pool* pool);
+        QSharedPointer<Pool> GetPool() const;
+        void SetPool(QSharedPointer<Pool> pool);
 
-        Host* host() const;
-        void setHost(Host* host);
+        QSharedPointer<Host> GetHost() const;
+        void SetHost(QSharedPointer<Host> host);
 
-        VM* vm() const;
-        void setVM(VM* vm);
+        QSharedPointer<VM> GetVM() const;
+        void SetVM(QSharedPointer<VM> vm);
 
-        SR* sr() const;
-        void setSR(SR* sr);
+        QSharedPointer<SR> GetSR() const;
+        void SetSR(QSharedPointer<SR> sr);
 
-        VM* vmTemplate() const;
-        void setVMTemplate(VM* vmTemplate);
+        QSharedPointer<VM> GetTemplate() const;
+        void SetTemplate(QSharedPointer<VM> vmTemplate);
 
-        // AppliesTo list - all object refs this operation applies to
-        QStringList appliesTo() const;
-        void addAppliesTo(const QString& opaqueRef);
-        void clearAppliesTo();
+        // GetAppliesToList list - all object refs this operation applies to
+        QStringList GetAppliesToList() const;
+        void AddAppliesTo(const QString& opaqueRef);
+        void ClearAppliesTo();
 
         // History suppression (for internal/composite operations)
-        bool suppressHistory() const;
-        void setSuppressHistory(bool suppress);
+        bool SuppressHistory() const;
+        void SetSuppressHistory(bool suppress);
 
         // Safe exit flag (can XenCenter exit while this operation is running?)
-        bool safeToExit() const;
-        void setSafeToExit(bool safe);
+        bool IsSafeToExit() const;
+        void SetSafeToExit(bool safe);
 
     public slots:
         // Execution control
-        virtual void runAsync();
-        virtual void runSync(XenAPI::Session* session = nullptr);
-        virtual void cancel();
+        virtual void RunAsync();
+        virtual void RunSync(XenAPI::Session* session = nullptr);
+        virtual void Cancel();
 
     signals:
         // State change signals
@@ -217,7 +218,7 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         void setPercentCompleteSafe(int percent);
 
         // AppliesTo helper - automatically adds object refs (matches C# SetAppliesTo)
-        void setAppliesToFromObject(QObject* xenObject);
+        void setAppliesToFromObject(QSharedPointer<XenObject> xenObject);
 
         QPointer<XenConnection> m_connection;
 
@@ -247,11 +248,12 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         bool m_safeToExit;
 
         // Object context (C# ActionBase equivalents)
-        QPointer<Pool> m_pool;
-        QPointer<Host> m_host;
-        QPointer<VM> m_vm;
-        QPointer<SR> m_sr;
-        QPointer<VM> m_vmTemplate;
+        // TODO we can probably use single shared pointer for XenObject here instead
+        QSharedPointer<Pool> m_pool;
+        QSharedPointer<Host> m_host;
+        QSharedPointer<VM> m_vm;
+        QSharedPointer<SR> m_sr;
+        QSharedPointer<VM> m_vmTemplate;
         QStringList m_appliesTo;
 
         // Thread management

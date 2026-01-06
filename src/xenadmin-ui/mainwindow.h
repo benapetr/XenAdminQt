@@ -64,6 +64,7 @@ class NavigationHistory;
 class Command;
 class NavigationPane;
 class XenCache;
+class XenObject;
 
 class MainWindow : public QMainWindow
 {
@@ -74,21 +75,21 @@ class MainWindow : public QMainWindow
         ~MainWindow();
 
         // Console panel access for snapshot screenshots (C#: Program.MainWindow.ConsolePanel)
-        ConsolePanel* consolePanel() const
+        ConsolePanel* GetConsolePanel() const
         {
             return this->m_consolePanel;
         }
 
-        QTreeWidget* getServerTreeWidget() const;
-        void showStatusMessage(const QString& message, int timeout = 0);
-        void refreshServerTree();
+        QTreeWidget* GetServerTreeWidget() const;
+        void ShowStatusMessage(const QString& message, int timeout = 0);
+        void RefreshServerTree();
 
         // Navigation support for history (matches C# MainWindow methods called by History)
-        void selectObjectInTree(const QString& objectRef, const QString& objectType);
-        void setCurrentTab(const QString& tabName);
+        void SelectObjectInTree(const QString& objectRef, const QString& objectType);
+        void SetCurrentTab(const QString& tabName);
 
         // Update navigation button states (called by NavigationHistory)
-        void updateHistoryButtons(bool canGoBack, bool canGoForward);
+        void UpdateHistoryButtons(bool canGoBack, bool canGoForward);
         void SaveServerList();
         void SaveConnections(); // OBSOLETE: use SaveServerList (C# naming parity)
 
@@ -297,17 +298,17 @@ class MainWindow : public QMainWindow
         Ui::MainWindow* ui;
 
         // Debug window
-        DebugWindow* m_debugWindow;
+        DebugWindow* m_debugWindow = nullptr;
 
         // Title bar widget
-        TitleBar* m_titleBar;
+        TitleBar* m_titleBar = nullptr;
 
         // Console panels (matches C# MainWindow fields)
-        ConsolePanel* m_consolePanel;       // For VM/Host consoles
-        CvmConsolePanel* m_cvmConsolePanel; // For CVM consoles (XCP-ng)
+        ConsolePanel* m_consolePanel = nullptr;       // For VM/Host consoles
+        CvmConsolePanel* m_cvmConsolePanel = nullptr; // For CVM consoles (XCP-ng)
 
         // Navigation pane (matches C# MainWindow.navigationPane)
-        NavigationPane* m_navigationPane;
+        NavigationPane* m_navigationPane = nullptr;
 
         // Tab pages
         QList<BaseTabPage*> m_tabPages;
@@ -317,17 +318,14 @@ class MainWindow : public QMainWindow
         QList<class NotificationsBasePage*> m_notificationPages;
 
         // Tab container (for notification pages and tabs)
-        QWidget* m_tabContainer;
-        QVBoxLayout* m_tabContainerLayout;
+        QWidget* m_tabContainer = nullptr;
+        QVBoxLayout* m_tabContainerLayout = nullptr;
 
         // Search tab page (special handling for grouping tags)
         class SearchTabPage* m_searchTabPage;
 
         // Placeholder widget
         PlaceholderWidget* m_placeholderWidget;
-
-        // TODO deprecated should be replaced with ConnectionsManager call instead
-        bool m_connected;
 
         // Command map (matches C# CommandToolStripMenuItem pattern)
         QMap<QString, class Command*> m_commands;
@@ -336,24 +334,17 @@ class MainWindow : public QMainWindow
         void updateMenuItems();
 
         // Toolbar (matches C# ToolStrip)
-        QToolBar* m_toolBar;
-        QToolButton* m_backButton;    // QToolButton for dropdown menu support
-        QToolButton* m_forwardButton; // QToolButton for dropdown menu support
+        QToolBar* m_toolBar = nullptr;
+        QToolButton* m_backButton = nullptr;    // QToolButton for dropdown menu support
+        QToolButton* m_forwardButton = nullptr; // QToolButton for dropdown menu support
 
         // Navigation history (matches C# History static class)
-        NavigationHistory* m_navigationHistory;
+        NavigationHistory* m_navigationHistory = nullptr;
 
         // Status bar progress (matches C# MainWindow.statusProgressBar)
         QProgressBar* m_statusProgressBar;
         QLabel* m_statusLabel;
         AsyncOperation* m_statusBarAction; // Currently tracked action in status bar
-
-        // Tree items for async population
-        QTreeWidgetItem* m_poolsTreeItem;
-        QTreeWidgetItem* m_hostsTreeItem;
-        QTreeWidgetItem* m_vmsTreeItem;
-        QTreeWidgetItem* m_templatesTreeItem;
-        QTreeWidgetItem* m_storageTreeItem;
 
         // Object detail context for async loading
         QString m_currentObjectType;
@@ -361,6 +352,7 @@ class MainWindow : public QMainWindow
         QString m_currentObjectText;
         QIcon m_currentObjectIcon;
         XenConnection *m_currentObjectConn = nullptr;
+        QSharedPointer<XenObject> m_currentObject;
 
         // Selection deduplication - prevent multiple API calls for same selection
         QString m_lastSelectedRef;

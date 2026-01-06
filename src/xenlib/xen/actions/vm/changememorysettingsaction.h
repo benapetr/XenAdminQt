@@ -44,37 +44,37 @@ class ChangeMemorySettingsAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct memory settings change action
-     * @param connection XenServer connection
-     * @param vmRef VM opaque reference
-     * @param staticMin Minimum static memory (bytes)
-     * @param dynamicMin Minimum dynamic memory (bytes)
-     * @param dynamicMax Maximum dynamic memory (bytes)
-     * @param staticMax Maximum static memory (bytes)
-     * @param parent Parent QObject
-     */
-    explicit ChangeMemorySettingsAction(XenConnection* connection,
-                                        const QString& vmRef,
-                                        qint64 staticMin,
-                                        qint64 dynamicMin,
-                                        qint64 dynamicMax,
-                                        qint64 staticMax,
-                                        QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct memory settings change action
+         * @param connection XenServer connection
+         * @param vmRef VM opaque reference
+         * @param staticMin Minimum static memory (bytes)
+         * @param dynamicMin Minimum dynamic memory (bytes)
+         * @param dynamicMax Maximum dynamic memory (bytes)
+         * @param staticMax Maximum static memory (bytes)
+         * @param parent Parent QObject
+         */
+        explicit ChangeMemorySettingsAction(XenConnection* connection,
+                                            const QString& vmRef,
+                                            qint64 staticMin,
+                                            qint64 dynamicMin,
+                                            qint64 dynamicMax,
+                                            qint64 staticMax,
+                                            QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_vmRef;
-    qint64 m_staticMin;
-    qint64 m_dynamicMin;
-    qint64 m_dynamicMax;
-    qint64 m_staticMax;
-    bool m_staticChanged;
-    bool m_needReboot;
-    QString m_vmHost; // Host affinity for restart
+    private:
+        QString m_vmRef;
+        qint64 m_staticMin;
+        qint64 m_dynamicMin;
+        qint64 m_dynamicMax;
+        qint64 m_staticMax;
+        bool m_staticChanged;
+        bool m_needReboot;
+        QString m_vmHost; // Host affinity for restart
 };
 
 #endif // CHANGEMEMORYSETTINGSACTION_H

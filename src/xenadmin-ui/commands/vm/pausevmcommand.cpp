@@ -70,7 +70,7 @@ void PauseVMCommand::Run()
     }
 
     // Create VM object for action (action will own and delete it)
-    VM* vmForAction = new VM(conn, vm->OpaqueRef());
+    QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vm->OpaqueRef()));
 
     // Create VMPause action (parent is MainWindow to prevent premature deletion)
     VMPause* action = new VMPause(vmForAction, this->mainWindow());
@@ -85,7 +85,7 @@ void PauseVMCommand::Run()
     });
 
     // Run action asynchronously (no modal dialog for pause)
-    action->runAsync();
+    action->RunAsync();
 }
 
 QString PauseVMCommand::MenuText() const

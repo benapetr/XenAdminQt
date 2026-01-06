@@ -127,8 +127,8 @@ void AddVirtualDiskCommand::Run()
         qDebug() << "[AddVirtualDiskCommand] Create dialog result:" << createResult
                  << "(Accepted=" << QDialog::Accepted << ")";
         qDebug() << "[AddVirtualDiskCommand] CreateAction state:"
-                 << "hasError=" << createAction->hasError()
-                 << "errorMessage=" << createAction->errorMessage();
+                 << "hasError=" << createAction->HasError()
+                 << "errorMessage=" << createAction->GetErrorMessage();
 
         if (createResult != QDialog::Accepted)
         {
@@ -138,7 +138,7 @@ void AddVirtualDiskCommand::Run()
             return;
         }
 
-        QString vdiRef = createAction->result();
+        QString vdiRef = createAction->GetResult();
         qDebug() << "[AddVirtualDiskCommand] VDI created successfully, ref:" << vdiRef;
         delete createDialog;
 
@@ -176,9 +176,9 @@ void AddVirtualDiskCommand::Run()
         qDebug() << "[AddVirtualDiskCommand] Attach dialog result:" << attachResult
                  << "(Accepted=" << QDialog::Accepted << ")";
         qDebug() << "[AddVirtualDiskCommand] VbdCreateAndPlugAction state:"
-                 << "hasError=" << attachAction->hasError()
-                 << "isCancelled=" << attachAction->isCancelled()
-                 << "errorMessage=" << attachAction->errorMessage();
+                 << "hasError=" << attachAction->HasError()
+                 << "isCancelled=" << attachAction->IsCancelled()
+                 << "errorMessage=" << attachAction->GetErrorMessage();
 
         if (attachResult != QDialog::Accepted)
         {
@@ -193,7 +193,7 @@ void AddVirtualDiskCommand::Run()
         qDebug() << "[AddVirtualDiskCommand] VBD attached successfully";
         delete attachDialog;
 
-        mainWindow()->showStatusMessage(tr("Virtual disk created and attached successfully"), 5000);
+        mainWindow()->ShowStatusMessage(tr("Virtual disk created and attached successfully"), 5000);
     } else if (objectType == "sr")
     {
         // For SR, we need to create a disk without a specific VM

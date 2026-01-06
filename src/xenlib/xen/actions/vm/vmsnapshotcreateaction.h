@@ -49,61 +49,61 @@ class XENLIB_EXPORT VMSnapshotCreateAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    static const QString VNC_SNAPSHOT_NAME;
+    public:
+        static const QString VNC_SNAPSHOT_NAME;
 
-    enum SnapshotType
-    {
-        DISK,
-        DISK_AND_MEMORY,
-        QUIESCED_DISK
-    };
+        enum SnapshotType
+        {
+            DISK,
+            DISK_AND_MEMORY,
+            QUIESCED_DISK
+        };
 
-    /**
-     * @brief Construct snapshot create action
-     * @param connection XenConnection
-     * @param vmRef VM opaque_ref to snapshot
-     * @param newName Name for the snapshot
-     * @param newDescription Description for the snapshot
-     * @param type Type of snapshot to create
-     * @param screenshot Console screenshot (optional, for DISK_AND_MEMORY)
-     * @param parent Parent QObject
-     */
-    VMSnapshotCreateAction(XenConnection* connection,
-                           const QString& vmRef,
-                           const QString& newName,
-                           const QString& newDescription,
-                           SnapshotType type,
-                           const QImage& screenshot = QImage(),
-                           QObject* parent = nullptr);
+        /**
+         * @brief Construct snapshot create action
+         * @param connection XenConnection
+         * @param vmRef VM opaque_ref to snapshot
+         * @param newName Name for the snapshot
+         * @param newDescription Description for the snapshot
+         * @param type Type of snapshot to create
+         * @param screenshot Console screenshot (optional, for DISK_AND_MEMORY)
+         * @param parent Parent QObject
+         */
+        VMSnapshotCreateAction(XenConnection* connection,
+                               const QString& vmRef,
+                               const QString& newName,
+                               const QString& newDescription,
+                               SnapshotType type,
+                               const QImage& screenshot = QImage(),
+                               QObject* parent = nullptr);
 
-    /**
-     * @brief Get the opaque_ref of the created snapshot
-     * @return Snapshot VM reference (available after completion)
-     */
-    QString snapshotRef() const
-    {
-        return m_snapshotRef;
-    }
+        /**
+         * @brief Get the opaque_ref of the created snapshot
+         * @return Snapshot VM reference (available after completion)
+         */
+        QString snapshotRef() const
+        {
+            return m_snapshotRef;
+        }
 
-    QString vmRef() const
-    {
-        return m_vmRef;
-    }
+        QString vmRef() const
+        {
+            return m_vmRef;
+        }
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    void saveImageInBlob(const QString& snapshotRef, const QImage& image);
+    private:
+        void saveImageInBlob(const QString& snapshotRef, const QImage& image);
 
-    QString m_vmRef;
-    QString m_vmName;
-    QString m_newName;
-    QString m_newDescription;
-    SnapshotType m_type;
-    QString m_snapshotRef;
-    QImage m_screenshot;
+        QString m_vmRef;
+        QString m_vmName;
+        QString m_newName;
+        QString m_newDescription;
+        SnapshotType m_type;
+        QString m_snapshotRef;
+        QImage m_screenshot;
 };
 
 #endif // VMSNAPSHOTCREATEACTION_H

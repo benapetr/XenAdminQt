@@ -49,15 +49,15 @@ void OperationLauncher::run()
 
     for (AsyncOperation* op : m_operations)
     {
-        if (op->connection() != nullptr)
+        if (op->GetConnection() != nullptr)
         {
-            if (op->connection()->IsConnected())
+            if (op->GetConnection()->IsConnected())
             {
-                if (!operationsByConnection.contains(op->connection()))
+                if (!operationsByConnection.contains(op->GetConnection()))
                 {
-                    operationsByConnection[op->connection()] = QList<AsyncOperation*>();
+                    operationsByConnection[op->GetConnection()] = QList<AsyncOperation*>();
                 }
-                operationsByConnection[op->connection()].append(op);
+                operationsByConnection[op->GetConnection()].append(op);
             }
         } else
         {
@@ -73,7 +73,7 @@ void OperationLauncher::run()
         if (ops.size() == 1)
         {
             // Single operation - run directly
-            ops.first()->runAsync();
+            ops.first()->RunAsync();
         } else
         {
             // Multiple operations - use MultipleOperation or ParallelOperation
@@ -89,7 +89,7 @@ void OperationLauncher::run()
                     false, // showSubOperationDetails
                     ParallelOperation::DEFAULT_MAX_PARALLEL_OPERATIONS,
                     this);
-                parallel->runAsync();
+                parallel->RunAsync();
             } else
             {
                 MultipleOperation* multiple = new MultipleOperation(
@@ -102,7 +102,7 @@ void OperationLauncher::run()
                     false, // showSubOperationDetails
                     false, // stopOnFirstException
                     this);
-                multiple->runAsync();
+                multiple->RunAsync();
             }
         }
     }
@@ -111,7 +111,7 @@ void OperationLauncher::run()
     if (operationsWithNoConnection.size() == 1)
     {
         // Single operation - run directly
-        operationsWithNoConnection.first()->runAsync();
+        operationsWithNoConnection.first()->RunAsync();
     } else if (operationsWithNoConnection.size() > 1)
     {
         // Multiple operations - use MultipleOperation or ParallelOperation
@@ -127,7 +127,7 @@ void OperationLauncher::run()
                 false,   // showSubOperationDetails
                 ParallelOperation::DEFAULT_MAX_PARALLEL_OPERATIONS,
                 this);
-            parallel->runAsync();
+            parallel->RunAsync();
         } else
         {
             MultipleOperation* multiple = new MultipleOperation(
@@ -140,7 +140,7 @@ void OperationLauncher::run()
                 false, // showSubOperationDetails
                 false, // stopOnFirstException
                 this);
-            multiple->runAsync();
+            multiple->RunAsync();
         }
     }
 }

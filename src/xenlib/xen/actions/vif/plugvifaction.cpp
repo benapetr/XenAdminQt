@@ -52,8 +52,8 @@ PlugVIFAction::PlugVIFAction(XenConnection* connection,
     QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", m_vmRef);
     m_vmName = vmData.value("name_label").toString();
 
-    setTitle(QString("Plugging VIF on %1").arg(m_vmName));
-    setDescription(QString("Plugging virtual network interface on %1").arg(m_vmName));
+    SetTitle(QString("Plugging VIF on %1").arg(m_vmName));
+    SetDescription(QString("Plugging virtual network interface on %1").arg(m_vmName));
 }
 
 void PlugVIFAction::run()
@@ -61,31 +61,31 @@ void PlugVIFAction::run()
     try
     {
         // Check if VM is running
-        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         QString powerState = vmData.value("power_state").toString();
 
         if (powerState != "Running")
         {
-            setDescription("VIF will be plugged when VM starts");
-            setPercentComplete(100);
+            SetDescription("VIF will be plugged when VM starts");
+            SetPercentComplete(100);
             return;
         }
 
-        setDescription("Plugging VIF...");
+        SetDescription("Plugging VIF...");
 
         // Check if plug operation is allowed
-        QStringList allowedOps = XenAPI::VIF::get_allowed_operations(session(), m_vifRef);
+        QStringList allowedOps = XenAPI::VIF::get_allowed_operations(GetSession(), m_vifRef);
 
         if (allowedOps.contains("plug"))
         {
-            XenAPI::VIF::plug(session(), m_vifRef);
-            setPercentComplete(100);
-            setDescription("VIF plugged");
+            XenAPI::VIF::plug(GetSession(), m_vifRef);
+            SetPercentComplete(100);
+            SetDescription("VIF plugged");
             qDebug() << "VIF plugged successfully";
         } else
         {
-            setDescription("Plug operation not allowed");
-            setPercentComplete(100);
+            SetDescription("Plug operation not allowed");
+            SetPercentComplete(100);
             qWarning() << "VIF plug operation not in allowed operations";
         }
 

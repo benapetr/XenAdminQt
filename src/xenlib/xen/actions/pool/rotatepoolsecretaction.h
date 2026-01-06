@@ -45,14 +45,14 @@ class RotatePoolSecretAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    explicit RotatePoolSecretAction(XenConnection* connection, const QString& poolRef, QObject* parent = nullptr);
+    public:
+        explicit RotatePoolSecretAction(XenConnection* connection, const QString& poolRef, QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_poolRef;
+    private:
+        QString m_poolRef;
 };
 
 #endif // ROTATEPOOLSECRETACTION_H

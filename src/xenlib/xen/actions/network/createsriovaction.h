@@ -43,25 +43,25 @@ class CreateSriovAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection
-     * @param networkName Name for the new SR-IOV network
-     * @param pifRefs List of PIF references to enable SR-IOV on
-     * @param parent Parent QObject
-     */
-    CreateSriovAction(XenConnection* connection,
-                      const QString& networkName,
-                      const QStringList& pifRefs,
-                      QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection
+         * @param networkName Name for the new SR-IOV network
+         * @param pifRefs List of PIF references to enable SR-IOV on
+         * @param parent Parent QObject
+         */
+        CreateSriovAction(XenConnection* connection,
+                          const QString& networkName,
+                          const QStringList& pifRefs,
+                          QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_networkName;
-    QStringList m_pifRefs;
+    private:
+        QString m_networkName;
+        QStringList m_pifRefs;
 };
 
 #endif // CREATESRIOVACTION_H

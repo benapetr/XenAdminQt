@@ -41,9 +41,9 @@ namespace XenAPI
         params << session->getSessionId() << vgpu;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VGPU.destroy", params);
+        QByteArray request = api.BuildJsonRpcCall("VGPU.destroy", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Void method
+        api.ParseJsonRpcResponse(response); // Void method
     }
 
     QString VGPU::async_create(Session* session, const QString& vm,
@@ -57,9 +57,9 @@ namespace XenAPI
         params << session->getSessionId() << vm << gpu_group << device << other_config;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.VGPU.create", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.VGPU.create", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     QString VGPU::async_create(Session* session, const QString& vm,
@@ -73,9 +73,9 @@ namespace XenAPI
         params << session->getSessionId() << vm << gpu_group << device << other_config << vgpu_type;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.VGPU.create", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.VGPU.create", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
 } // namespace XenAPI

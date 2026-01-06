@@ -29,6 +29,7 @@
 #define EDITMULTIPATHACTION_H
 
 #include "../../asyncoperation.h"
+#include <QSharedPointer>
 
 class Host;
 
@@ -58,7 +59,7 @@ class XENLIB_EXPORT EditMultipathAction : public AsyncOperation
          * @param enableMultipath true to enable, false to disable
          * @param parent Parent object
          */
-        explicit EditMultipathAction(Host* host,
+        explicit EditMultipathAction(QSharedPointer<Host> host,
                                     bool enableMultipath,
                                     QObject* parent = nullptr);
 
@@ -66,7 +67,7 @@ class XENLIB_EXPORT EditMultipathAction : public AsyncOperation
         void run() override;
 
     private:
-        Host* m_host;
+        QSharedPointer<Host> m_host;
         bool m_enableMultipath;
         
         static const char* DEFAULT_MULTIPATH_HANDLE;

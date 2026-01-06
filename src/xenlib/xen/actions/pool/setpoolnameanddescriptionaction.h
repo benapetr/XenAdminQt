@@ -45,28 +45,28 @@ class SetPoolNameAndDescriptionAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct pool metadata update action
-     * @param connection Connection to the pool
-     * @param poolRef Pool opaque reference
-     * @param name New pool name (empty to leave unchanged)
-     * @param description New pool description (empty to leave unchanged)
-     * @param parent Parent QObject
-     */
-    explicit SetPoolNameAndDescriptionAction(XenConnection* connection,
-                                             const QString& poolRef,
-                                             const QString& name,
-                                             const QString& description,
-                                             QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct pool metadata update action
+         * @param connection Connection to the pool
+         * @param poolRef Pool opaque reference
+         * @param name New pool name (empty to leave unchanged)
+         * @param description New pool description (empty to leave unchanged)
+         * @param parent Parent QObject
+         */
+        explicit SetPoolNameAndDescriptionAction(XenConnection* connection,
+                                                 const QString& poolRef,
+                                                 const QString& name,
+                                                 const QString& description,
+                                                 QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_poolRef;
-    QString m_name;
-    QString m_description;
+    private:
+        QString m_poolRef;
+        QString m_name;
+        QString m_description;
 };
 
 #endif // SETPOOLNAMEANDDESCRIPTIONACTION_H

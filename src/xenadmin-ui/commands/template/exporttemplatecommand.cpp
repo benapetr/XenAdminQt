@@ -62,7 +62,7 @@ void ExportTemplateCommand::Run()
     {
         // TODO: Launch ExportVmAction with wizard parameters
         // For now, show a message that action will be implemented
-        this->mainWindow()->showStatusMessage(
+        this->mainWindow()->ShowStatusMessage(
             QString("Export template '%1' - action pending HTTP infrastructure integration").arg(templateName), 
             5000);
     }

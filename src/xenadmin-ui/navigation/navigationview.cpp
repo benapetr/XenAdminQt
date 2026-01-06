@@ -321,7 +321,7 @@ NavigationView::NavigationView(QWidget* parent)
     connect(this->m_connectionsManager, &Xen::ConnectionsManager::connectionAdded, this, &NavigationView::onConnectionAdded);
     connect(this->m_connectionsManager, &Xen::ConnectionsManager::connectionRemoved, this, &NavigationView::onConnectionRemoved);
 
-    const QList<XenConnection*> connections = this->m_connectionsManager->getAllConnections();
+    const QList<XenConnection*> connections = this->m_connectionsManager->GetAllConnections();
     for (XenConnection* connection : connections)
         this->connectCacheSignals(connection);
 }
@@ -333,17 +333,17 @@ NavigationView::~NavigationView()
     delete this->ui;
 }
 
-QTreeWidget* NavigationView::treeWidget() const
+QTreeWidget* NavigationView::TreeWidget() const
 {
     return this->ui->treeWidget;
 }
 
-void NavigationView::focusTreeView()
+void NavigationView::FocusTreeView()
 {
     this->ui->treeWidget->setFocus();
 }
 
-void NavigationView::requestRefreshTreeView()
+void NavigationView::RequestRefreshTreeView()
 {
     // Matches C# TreeView BeginUpdate/EndUpdate pattern with PersistExpandedNodes/RestoreExpandedNodes
     // Suppress selection signals while rebuilding to avoid clearing selection in MainWindow
@@ -393,42 +393,42 @@ void NavigationView::requestRefreshTreeView()
     emit this->treeViewRefreshed();
 }
 
-void NavigationView::setViewFilters(const ViewFilters& filters)
+void NavigationView::SetViewFilters(const ViewFilters& filters)
 {
     this->m_viewFilters = filters;
     TreeSearch::ResetDefaultTreeSearch();
-    this->requestRefreshTreeView();
+    this->RequestRefreshTreeView();
 }
 
-void NavigationView::resetSearchBox()
+void NavigationView::ResetSearchBox()
 {
     this->ui->searchLineEdit->clear();
 }
 
-void NavigationView::setInSearchMode(bool enabled)
+void NavigationView::SetInSearchMode(bool enabled)
 {
     // Matches C# NavigationView.InSearchMode property (line 120)
     this->m_inSearchMode = enabled;
     // TODO: Update UI based on search mode (show/hide search-related indicators)
 }
 
-void NavigationView::setNavigationMode(NavigationPane::NavigationMode mode)
+void NavigationView::SetNavigationMode(NavigationPane::NavigationMode mode)
 {
     // Matches C# NavigationView.NavigationMode property (line 114)
     if (this->m_navigationMode != mode)
     {
         this->m_navigationMode = mode;
         // Rebuild tree with new mode
-        this->requestRefreshTreeView();
+        this->RequestRefreshTreeView();
     }
 }
 
-QString NavigationView::searchText() const
+QString NavigationView::GetSearchText() const
 {
     return this->ui->searchLineEdit->text();
 }
 
-void NavigationView::setSearchText(const QString& text)
+void NavigationView::SetSearchText(const QString& text)
 {
     this->ui->searchLineEdit->setText(text);
 }
@@ -457,7 +457,7 @@ void NavigationView::scheduleRefresh()
 void NavigationView::onRefreshTimerTimeout()
 {
     // Timer fired - perform actual refresh
-    this->requestRefreshTreeView();
+    this->RequestRefreshTreeView();
 }
 
 void NavigationView::onConnectionAdded(XenConnection* connection)
@@ -508,7 +508,7 @@ XenConnection* NavigationView::primaryConnection() const
     if (!this->m_connectionsManager)
         return nullptr;
 
-    const QList<XenConnection*> connections = this->m_connectionsManager->getAllConnections();
+    const QList<XenConnection*> connections = this->m_connectionsManager->GetAllConnections();
     for (XenConnection* connection : connections)
     {
         if (!connection)
@@ -553,14 +553,14 @@ void NavigationView::onSearchTextChanged(const QString& text)
     // 1. Create filtered search: CurrentSearch.AddFullTextFilter(text)
     // 2. Call treeBuilder.RefreshTreeView(newRoot, text, mode)
     Q_UNUSED(text);
-    this->requestRefreshTreeView();
+    this->RequestRefreshTreeView();
 }
 
 void NavigationView::buildInfrastructureTree()
 {
     QList<XenConnection*> connections;
     if (this->m_connectionsManager)
-        connections = this->m_connectionsManager->getAllConnections();
+        connections = this->m_connectionsManager->GetAllConnections();
 
     if (!this->m_connectionsManager || connections.isEmpty())
     {
@@ -579,7 +579,7 @@ void NavigationView::buildInfrastructureTree()
     }
 
     Search* baseSearch = TreeSearch::DefaultTreeSearch();
-    Search* effectiveSearch = baseSearch->AddFullTextFilter(this->searchText());
+    Search* effectiveSearch = baseSearch->AddFullTextFilter(this->GetSearchText());
 
     QTreeWidgetItem* root = this->m_treeBuilder->createNewRootNode(
         effectiveSearch,
@@ -588,7 +588,7 @@ void NavigationView::buildInfrastructureTree()
 
     this->m_treeBuilder->refreshTreeView(
         root,
-        this->searchText(),
+        this->GetSearchText(),
         MainWindowTreeBuilder::NavigationMode::Infrastructure);
 
     if (effectiveSearch != baseSearch)
@@ -605,7 +605,7 @@ void NavigationView::buildObjectsTree()
         return;
     }
 
-    const QList<XenConnection*> connections = this->m_connectionsManager->getAllConnections();
+    const QList<XenConnection*> connections = this->m_connectionsManager->GetAllConnections();
     if (connections.isEmpty())
     {
         QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
@@ -627,7 +627,7 @@ void NavigationView::buildObjectsTree()
     }
 
     Search* baseSearch = this->m_objectsSearch;
-    Search* effectiveSearch = baseSearch->AddFullTextFilter(this->searchText());
+    Search* effectiveSearch = baseSearch->AddFullTextFilter(this->GetSearchText());
 
     QTreeWidgetItem* root = this->m_treeBuilder->createNewRootNode(
         effectiveSearch,
@@ -636,7 +636,7 @@ void NavigationView::buildObjectsTree()
 
     this->m_treeBuilder->refreshTreeView(
         root,
-        this->searchText(),
+        this->GetSearchText(),
         MainWindowTreeBuilder::NavigationMode::Objects);
 
     if (effectiveSearch != baseSearch)

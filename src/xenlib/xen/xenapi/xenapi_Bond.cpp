@@ -49,9 +49,9 @@ namespace XenAPI
         params << session->getSessionId() << network << memberRefs << mac << mode << properties;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.Bond.create", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.Bond.create", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     QString Bond::async_destroy(Session* session, const QString& bond)
@@ -63,9 +63,9 @@ namespace XenAPI
         params << session->getSessionId() << bond;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.Bond.destroy", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.Bond.destroy", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     void Bond::set_mode(Session* session, const QString& bond, const QString& mode)
@@ -77,9 +77,9 @@ namespace XenAPI
         params << session->getSessionId() << bond << mode;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Bond.set_mode", params);
+        QByteArray request = api.BuildJsonRpcCall("Bond.set_mode", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     void Bond::set_property(Session* session, const QString& bond, const QString& name, const QString& value)
@@ -91,9 +91,9 @@ namespace XenAPI
         params << session->getSessionId() << bond << name << value;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Bond.set_property", params);
+        QByteArray request = api.BuildJsonRpcCall("Bond.set_property", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response);
+        api.ParseJsonRpcResponse(response);
     }
 
     QVariantMap Bond::get_record(Session* session, const QString& bond)
@@ -105,9 +105,9 @@ namespace XenAPI
         params << session->getSessionId() << bond;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Bond.get_record", params);
+        QByteArray request = api.BuildJsonRpcCall("Bond.get_record", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toMap();
+        return api.ParseJsonRpcResponse(response).toMap();
     }
 
     QString Bond::get_master(Session* session, const QString& bond)
@@ -119,9 +119,9 @@ namespace XenAPI
         params << session->getSessionId() << bond;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Bond.get_master", params);
+        QByteArray request = api.BuildJsonRpcCall("Bond.get_master", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     QVariantList Bond::get_slaves(Session* session, const QString& bond)
@@ -133,9 +133,9 @@ namespace XenAPI
         params << session->getSessionId() << bond;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Bond.get_slaves", params);
+        QByteArray request = api.BuildJsonRpcCall("Bond.get_slaves", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toList();
+        return api.ParseJsonRpcResponse(response).toList();
     }
 
 } // namespace XenAPI

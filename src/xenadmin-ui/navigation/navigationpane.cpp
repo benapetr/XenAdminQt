@@ -315,10 +315,10 @@ void NavigationPane::onNavigationModeChanged()
         if (navView)
         {
             // Set the navigation mode so tree builder uses correct layout
-            navView->setNavigationMode(this->m_currentMode);
-            navView->resetSearchBox();
+            navView->SetNavigationMode(this->m_currentMode);
+            navView->ResetSearchBox();
             // requestRefreshTreeView() is called by setNavigationMode()
-            navView->focusTreeView();
+            navView->FocusTreeView();
         }
     }
 } 
@@ -426,7 +426,7 @@ void NavigationPane::FocusTreeView()
     NavigationView* navView = this->GetNavigationView();
     if (navView)
     {
-        navView->focusTreeView();
+        navView->FocusTreeView();
     }
 }
 
@@ -435,7 +435,7 @@ void NavigationPane::RequestRefreshTreeView()
     NavigationView* navView = this->GetNavigationView();
     if (navView)
     {
-        navView->requestRefreshTreeView();
+        navView->RequestRefreshTreeView();
     }
 }
 
@@ -455,8 +455,8 @@ void NavigationPane::UpdateSearch()
         filters.showUserTemplates = settings.getUserTemplatesVisible();
         filters.showLocalStorage = settings.getLocalSRsVisible();
         filters.showHiddenObjects = settings.getShowHiddenObjects();
-        navView->setViewFilters(filters);
-        navView->requestRefreshTreeView();
+        navView->SetViewFilters(filters);
+        navView->RequestRefreshTreeView();
     }
 }
 
@@ -466,7 +466,7 @@ void NavigationPane::SetInSearchMode(bool enabled)
     NavigationView* navView = this->GetNavigationView();
     if (navView)
     {
-        navView->setInSearchMode(enabled);
+        navView->SetInSearchMode(enabled);
     }
 }
 

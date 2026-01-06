@@ -50,28 +50,28 @@ void ChangeVCPUSettingsAction::run()
 {
     try
     {
-        setPercentComplete(0);
-        setDescription("Checking VM state...");
+        SetPercentComplete(0);
+        SetDescription("Checking VM state...");
 
         // Re-ResolveObjectData VM from cache (it may have been updated)
-        QVariantMap vmData = connection()->GetCache()->ResolveObjectData("vm", m_vmRef);
+        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
         if (vmData.isEmpty())
         {
             // VM disappeared - nothing to do
-            setDescription("VM no longer exists");
-            setPercentComplete(100);
+            SetDescription("VM no longer exists");
+            SetPercentComplete(100);
             return;
         }
 
         QString powerState = vmData.value("power_state").toString();
         qint64 currentVCPUsAtStartup = vmData.value("VCPUs_at_startup").toLongLong();
 
-        setPercentComplete(20);
+        SetPercentComplete(20);
 
         if (powerState == "Running")
         {
             // Running VM: can only hot-plug (increase) VCPUs
-            setDescription("Hot-plugging VCPUs...");
+            SetDescription("Hot-plugging VCPUs...");
 
             if (currentVCPUsAtStartup > m_vcpusAtStartup)
             {
@@ -81,34 +81,34 @@ void ChangeVCPUSettingsAction::run()
             }
 
             // Hot-plug VCPUs
-            XenAPI::VM::set_VCPUs_number_live(session(), m_vmRef, m_vcpusAtStartup);
+            XenAPI::VM::set_VCPUs_number_live(GetSession(), m_vmRef, m_vcpusAtStartup);
 
-            setPercentComplete(100);
-            setDescription("VCPUs hot-plugged successfully");
+            SetPercentComplete(100);
+            SetDescription("VCPUs hot-plugged successfully");
 
         } else
         {
             // Halted VM: can set both max and startup with proper ordering
-            setDescription("Changing VCPU configuration...");
+            SetDescription("Changing VCPU configuration...");
 
             // Order matters: must satisfy constraint VCPUs_at_startup <= VCPUs_max
             if (currentVCPUsAtStartup > m_vcpusAtStartup)
             {
                 // Reducing VCPUs: lower at_startup first, then max
-                XenAPI::VM::set_VCPUs_at_startup(session(), m_vmRef, m_vcpusAtStartup);
-                setPercentComplete(50);
-                XenAPI::VM::set_VCPUs_max(session(), m_vmRef, m_vcpusMax);
-                setPercentComplete(100);
+                XenAPI::VM::set_VCPUs_at_startup(GetSession(), m_vmRef, m_vcpusAtStartup);
+                SetPercentComplete(50);
+                XenAPI::VM::set_VCPUs_max(GetSession(), m_vmRef, m_vcpusMax);
+                SetPercentComplete(100);
             } else
             {
                 // Increasing VCPUs: raise max first, then at_startup
-                XenAPI::VM::set_VCPUs_max(session(), m_vmRef, m_vcpusMax);
-                setPercentComplete(50);
-                XenAPI::VM::set_VCPUs_at_startup(session(), m_vmRef, m_vcpusAtStartup);
-                setPercentComplete(100);
+                XenAPI::VM::set_VCPUs_max(GetSession(), m_vmRef, m_vcpusMax);
+                SetPercentComplete(50);
+                XenAPI::VM::set_VCPUs_at_startup(GetSession(), m_vmRef, m_vcpusAtStartup);
+                SetPercentComplete(100);
             }
 
-            setDescription("VCPU configuration changed successfully");
+            SetDescription("VCPU configuration changed successfully");
         }
 
     } catch (const std::exception& e)

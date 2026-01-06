@@ -46,18 +46,18 @@ namespace XenAPI
         params << session->getSessionId() << record;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("secret.create", params);
+        QByteArray request = api.BuildJsonRpcCall("secret.create", params);
         QByteArray response = session->sendApiRequest(request);
 
         // Returns secret reference, then get UUID from it
-        QString secretRef = api.parseJsonRpcResponse(response).toString();
+        QString secretRef = api.ParseJsonRpcResponse(response).toString();
 
         // Get the UUID
         QVariantList getUuidParams;
         getUuidParams << session->getSessionId() << secretRef;
-        QByteArray uuidRequest = api.buildJsonRpcCall("secret.get_uuid", getUuidParams);
+        QByteArray uuidRequest = api.BuildJsonRpcCall("secret.get_uuid", getUuidParams);
         QByteArray uuidResponse = session->sendApiRequest(uuidRequest);
-        return api.parseJsonRpcResponse(uuidResponse).toString();
+        return api.ParseJsonRpcResponse(uuidResponse).toString();
     }
 
     QString Secret::get_by_uuid(Session* session, const QString& uuid)
@@ -69,9 +69,9 @@ namespace XenAPI
         params << session->getSessionId() << uuid;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("secret.get_by_uuid", params);
+        QByteArray request = api.BuildJsonRpcCall("secret.get_by_uuid", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     void Secret::destroy(Session* session, const QString& secret)
@@ -83,9 +83,9 @@ namespace XenAPI
         params << session->getSessionId() << secret;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("secret.destroy", params);
+        QByteArray request = api.BuildJsonRpcCall("secret.destroy", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
 } // namespace XenAPI

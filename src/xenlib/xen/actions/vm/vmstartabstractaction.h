@@ -49,7 +49,7 @@ class XENLIB_EXPORT VMStartAbstractAction : public AsyncOperation
 
     public:
         // Callback types matching C# delegates
-        using WarningDialogHAInvalidConfig = std::function<void(VM*, bool)>;
+        using WarningDialogHAInvalidConfig = std::function<void(QSharedPointer<VM>, bool)>;
         using StartDiagnosisForm = std::function<void(VMStartAbstractAction*, const Failure&)>;
 
         virtual ~VMStartAbstractAction();
@@ -65,7 +65,7 @@ class XENLIB_EXPORT VMStartAbstractAction : public AsyncOperation
         virtual VMStartAbstractAction* clone() = 0;
 
     protected:
-        explicit VMStartAbstractAction(VM* vm,
+        explicit VMStartAbstractAction(QSharedPointer<VM> vm,
                                        const QString& title,
                                        WarningDialogHAInvalidConfig warningDialogHAInvalidConfig,
                                        StartDiagnosisForm startDiagnosisForm,

@@ -452,7 +452,7 @@ void EditVmHaPrioritiesDialog::accept()
                               tr("Failed to update HA priorities:\n\n%1").arg(error));
     });
 
-    action->runAsync();
+    action->RunAsync();
     progressDialog->exec();
 }
 

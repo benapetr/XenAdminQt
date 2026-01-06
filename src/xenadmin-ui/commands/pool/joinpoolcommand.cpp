@@ -130,7 +130,7 @@ void JoinPoolCommand::Run()
         return;
     }
 
-    this->mainWindow()->showStatusMessage(QString("Joining pool at %1...").arg(masterAddress), 0);
+    this->mainWindow()->ShowStatusMessage(QString("Joining pool at %1...").arg(masterAddress), 0);
 
     try
     {

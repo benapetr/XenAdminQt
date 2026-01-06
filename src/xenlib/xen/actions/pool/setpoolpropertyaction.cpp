@@ -48,7 +48,7 @@ void SetPoolPropertyAction::run()
 {
     try
     {
-        XenAPI::Session* session = this->session();
+        XenAPI::Session* session = this->GetSession();
         if (!session || !session->IsLoggedIn())
         {
             setError(tr("Not connected to XenServer"));

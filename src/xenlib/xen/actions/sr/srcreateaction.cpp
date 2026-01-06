@@ -41,7 +41,7 @@
 using namespace XenAPI;
 
 SrCreateAction::SrCreateAction(XenConnection* connection,
-                               Host* host,
+                               QSharedPointer<Host> host,
                                const QString& srName,
                                const QString& srDescription,
                                const QString& srType,
@@ -75,7 +75,7 @@ void SrCreateAction::run()
              << "contentType:" << m_srContentType
              << "shared:" << m_srIsShared;
 
-    Session* session = this->session();
+    Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
         setError("Not connected to XenServer");
@@ -95,7 +95,7 @@ void SrCreateAction::run()
         secretUuid = createSecret("chappassword", m_deviceConfig.value("chappassword").toString());
     }
 
-    setDescription("Creating storage repository...");
+    SetDescription("Creating storage repository...");
 
     QString srRef;
     try
@@ -117,7 +117,7 @@ void SrCreateAction::run()
             throw std::runtime_error("SR.create returned empty reference");
         }
 
-        setResult(srRef);
+        SetResult(srRef);
     } catch (const std::exception& e)
     {
         // Cleanup secret on failure
@@ -158,7 +158,7 @@ void SrCreateAction::run()
 
     // Verify all PBDs are attached
     qDebug() << "SrCreateAction: Verifying PBD attachment";
-    setDescription("Verifying storage connections...");
+    SetDescription("Verifying storage connections...");
 
     try
     {
@@ -173,7 +173,7 @@ void SrCreateAction::run()
             {
                 // Auto-plug failed, try manual plug
                 qDebug() << "SrCreateAction: PBD" << pbdRef << "not attached, attempting manual plug";
-                setDescription("Plugging storage on host...");
+                SetDescription("Plugging storage on host...");
 
                 try
                 {
@@ -249,8 +249,8 @@ void SrCreateAction::run()
         }
     }
 
-    setDescription("Storage repository created successfully");
-    setPercentComplete(100);
+    SetDescription("Storage repository created successfully");
+    SetPercentComplete(100);
 }
 
 QString SrCreateAction::createSecret(const QString& key, const QString& value)
@@ -259,7 +259,7 @@ QString SrCreateAction::createSecret(const QString& key, const QString& value)
     m_deviceConfig.remove(key);
 
     // Create secret and add <key>_secret entry
-    Session* session = this->session();
+    Session* session = this->GetSession();
     QString uuid = XenAPI::Secret::create(session, value);
 
     m_deviceConfig[key + "_secret"] = uuid;
@@ -274,7 +274,7 @@ void SrCreateAction::forgetFailedSR(const QString& srRef)
 
     try
     {
-        Session* session = this->session();
+        Session* session = this->GetSession();
 
         // Unplug all PBDs
         QVariantList pbdRefs = XenAPI::SR::get_PBDs(session, srRef);
@@ -312,7 +312,7 @@ bool SrCreateAction::isFirstSharedNonISOSR() const
     }
 
     // Check cache for existing shared non-ISO SRs
-    XenCache* cache = connection()->GetCache();
+    XenCache* cache = GetConnection()->GetCache();
     if (!cache)
     {
         return false;
@@ -324,7 +324,7 @@ bool SrCreateAction::isFirstSharedNonISOSR() const
         QString srRef = srData.value("ref").toString();
 
         // Skip the SR we just created (result() contains the new SR ref)
-        if (srRef == result())
+        if (srRef == GetResult())
         {
             continue;
         }

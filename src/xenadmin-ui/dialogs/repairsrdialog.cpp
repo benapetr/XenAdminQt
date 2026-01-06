@@ -300,7 +300,7 @@ void RepairSRDialog::buildTree()
 
 bool RepairSRDialog::actionInProgress() const
 {
-    return this->repairAction != nullptr && !this->repairAction->isCompleted();
+    return this->repairAction != nullptr && !this->repairAction->IsCompleted();
 }
 
 void RepairSRDialog::onRepairButtonClicked()
@@ -311,7 +311,7 @@ void RepairSRDialog::onRepairButtonClicked()
     if (this->srList.count() == 1)
     {
         // Single SR repair
-        this->repairAction = new SrRepairAction(this->srList[0].data(), false, this);
+        this->repairAction = new SrRepairAction(this->srList[0], false, this);
     } else
     {
         // Multiple SR repair
@@ -321,7 +321,7 @@ void RepairSRDialog::onRepairButtonClicked()
         {
             if (sr)
             {
-                SrRepairAction* action = new SrRepairAction(sr.data(), false, this);
+                SrRepairAction* action = new SrRepairAction(sr, false, this);
                 subActions.append(action);
             }
         }
@@ -345,7 +345,7 @@ void RepairSRDialog::onRepairButtonClicked()
         connect(this->repairAction, &AsyncOperation::failed, this, &RepairSRDialog::onActionCompleted);
         
         this->grow();
-        this->repairAction->runAsync();
+        this->repairAction->RunAsync();
     }
 }
 
@@ -475,8 +475,8 @@ void RepairSRDialog::updateProgressControls()
     if (!this->repairAction)
         return;
     
-    int progress = this->repairAction->percentComplete();
-    QString description = this->repairAction->description();
+    int progress = this->repairAction->GetPercentComplete();
+    QString description = this->repairAction->GetDescription();
     
     this->ui->progressBar->setValue(progress);
     this->ui->statusLabel->setText(description);
@@ -487,15 +487,15 @@ void RepairSRDialog::finalizeProgressControls()
     if (!this->repairAction)
         return;
     
-    bool success = !this->repairAction->hasError();
-    QString description = this->repairAction->description();
+    bool success = !this->repairAction->HasError();
+    QString description = this->repairAction->GetDescription();
     
     this->ui->progressBar->setValue(100);
     this->ui->statusLabel->setText(description);
     
     if (!success)
     {
-        QString error = this->repairAction->errorMessage();
+        QString error = this->repairAction->GetErrorMessage();
         QMessageBox::warning(this, "Repair Failed", 
                            QString("Failed to repair storage repository: %1").arg(error));
     } else if (this->succeededWithWarning)

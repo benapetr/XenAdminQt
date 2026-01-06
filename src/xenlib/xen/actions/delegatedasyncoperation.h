@@ -51,41 +51,41 @@ class XENLIB_EXPORT DelegatedAsyncOperation : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    using WorkCallback = std::function<void(DelegatedAsyncOperation*)>;
+    public:
+        using WorkCallback = std::function<void(DelegatedAsyncOperation*)>;
 
-    /**
-     * @brief Construct a delegated operation
-     * @param connection XenAPI connection
-     * @param title Operation title
-     * @param description Description
-     * @param workCallback Function to execute (receives 'this' as parameter)
-     * @param parent Parent QObject
-     */
-    explicit DelegatedAsyncOperation(XenConnection* connection,
-                                     const QString& title,
-                                     const QString& description,
-                                     WorkCallback workCallback,
-                                     QObject* parent = nullptr);
+        /**
+         * @brief Construct a delegated operation
+         * @param connection XenAPI connection
+         * @param title Operation title
+         * @param description Description
+         * @param workCallback Function to execute (receives 'this' as parameter)
+         * @param parent Parent QObject
+         */
+        explicit DelegatedAsyncOperation(XenConnection* connection,
+                                         const QString& title,
+                                         const QString& description,
+                                         WorkCallback workCallback,
+                                         QObject* parent = nullptr);
 
-    /**
-     * @brief Construct without connection (for non-XenAPI work)
-     */
-    explicit DelegatedAsyncOperation(const QString& title,
-                                     const QString& description,
-                                     WorkCallback workCallback,
-                                     QObject* parent = nullptr);
+        /**
+         * @brief Construct without connection (for non-XenAPI work)
+         */
+        explicit DelegatedAsyncOperation(const QString& title,
+                                         const QString& description,
+                                         WorkCallback workCallback,
+                                         QObject* parent = nullptr);
 
-    ~DelegatedAsyncOperation() override = default;
+        ~DelegatedAsyncOperation() override = default;
 
-protected:
-    /**
-     * @brief Execute the work callback
-     */
-    void run() override;
+    protected:
+        /**
+         * @brief Execute the work callback
+         */
+        void run() override;
 
-private:
-    WorkCallback m_workCallback;
+    private:
+        WorkCallback m_workCallback;
 };
 
 #endif // DELEGATEDASYNCOPERATION_H

@@ -80,20 +80,20 @@ class SavePowerOnSettingsAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    explicit SavePowerOnSettingsAction(XenConnection* connection,
-                                       const QList<QPair<QString, PowerOnMode>>& hostModes,
-                                       QObject* parent = nullptr);
+    public:
+        explicit SavePowerOnSettingsAction(XenConnection* connection,
+                                           const QList<QPair<QString, PowerOnMode>>& hostModes,
+                                           QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    void saveHostConfig(const QString& hostRef, const PowerOnMode& mode);
-    QString createSecret(const QString& value);
-    void destroySecret(const QString& secretRef);
-    
-    QList<QPair<QString, PowerOnMode>> m_hostModes;
+    private:
+        void saveHostConfig(const QString& hostRef, const PowerOnMode& mode);
+        QString createSecret(const QString& value);
+        void destroySecret(const QString& secretRef);
+
+        QList<QPair<QString, PowerOnMode>> m_hostModes;
 };
 
 #endif // SAVEPOWERONSETTINGSACTION_H

@@ -45,9 +45,9 @@ namespace XenAPI
         params << session->getSessionId() << vbdRecord;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.create", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.create", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     QString VBD::async_create(Session* session, const QVariantMap& vbdRecord)
@@ -59,9 +59,9 @@ namespace XenAPI
         params << session->getSessionId() << vbdRecord;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.VBD.create", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.VBD.create", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     // VBD.async_plug - Asynchronous plug
@@ -74,9 +74,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.VBD.plug", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.VBD.plug", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     // VBD.async_unplug - Asynchronous unplug
@@ -89,9 +89,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.VBD.unplug", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.VBD.unplug", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     // VBD.async_destroy - Asynchronous destroy
@@ -104,9 +104,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.VBD.destroy", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.VBD.destroy", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     // VBD.async_eject - Asynchronous eject
@@ -119,9 +119,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.VBD.eject", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.VBD.eject", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     // VBD.async_insert - Asynchronous insert
@@ -134,9 +134,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd << vdi;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.VBD.insert", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.VBD.insert", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString(); // Returns task ref
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
     // VBD.plug - Synchronous plug
@@ -149,9 +149,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.plug", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.plug", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     // VBD.unplug - Synchronous unplug
@@ -164,9 +164,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.unplug", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.unplug", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     // VBD.destroy - Destroy a VBD
@@ -179,9 +179,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.destroy", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.destroy", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     // VBD.eject - Synchronous eject
@@ -194,9 +194,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.eject", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.eject", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     // VBD.insert - Synchronous insert
@@ -209,9 +209,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd << vdi;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.insert", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.insert", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     // VBD.get_allowed_operations
@@ -224,9 +224,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.get_allowed_operations", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.get_allowed_operations", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toList();
+        return api.ParseJsonRpcResponse(response).toList();
     }
 
     // VBD.get_VM
@@ -239,9 +239,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.get_VM", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.get_VM", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     // VBD.get_VDI
@@ -254,9 +254,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.get_VDI", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.get_VDI", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     // VBD.get_device
@@ -269,9 +269,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.get_device", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.get_device", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     // VBD.get_userdevice
@@ -284,9 +284,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.get_userdevice", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.get_userdevice", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     // VBD.get_bootable
@@ -299,9 +299,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.get_bootable", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.get_bootable", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toBool();
+        return api.ParseJsonRpcResponse(response).toBool();
     }
 
     // VBD.get_mode
@@ -314,9 +314,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.get_mode", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.get_mode", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     // VBD.get_type
@@ -329,9 +329,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.get_type", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.get_type", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     // VBD.get_unpluggable
@@ -344,9 +344,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.get_unpluggable", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.get_unpluggable", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toBool();
+        return api.ParseJsonRpcResponse(response).toBool();
     }
 
     // VBD.get_currently_attached
@@ -359,9 +359,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.get_currently_attached", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.get_currently_attached", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toBool();
+        return api.ParseJsonRpcResponse(response).toBool();
     }
 
     // VBD.get_empty
@@ -374,9 +374,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.get_empty", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.get_empty", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toBool();
+        return api.ParseJsonRpcResponse(response).toBool();
     }
 
     // VBD.set_bootable
@@ -389,9 +389,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd << bootable;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.set_bootable", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.set_bootable", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     // VBD.set_mode
@@ -404,9 +404,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd << mode;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.set_mode", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.set_mode", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     // VBD.set_userdevice
@@ -419,9 +419,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd << userdevice;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.set_userdevice", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.set_userdevice", params);
         QByteArray response = session->sendApiRequest(request);
-        api.parseJsonRpcResponse(response); // Check for errors
+        api.ParseJsonRpcResponse(response); // Check for errors
     }
 
     // VBD.get_record
@@ -434,9 +434,9 @@ namespace XenAPI
         params << session->getSessionId() << vbd;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.get_record", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.get_record", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toMap();
+        return api.ParseJsonRpcResponse(response).toMap();
     }
 
     // VBD.get_all
@@ -449,9 +449,9 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.get_all", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.get_all", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toList();
+        return api.ParseJsonRpcResponse(response).toList();
     }
 
     // VBD.get_all_records
@@ -464,9 +464,9 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("VBD.get_all_records", params);
+        QByteArray request = api.BuildJsonRpcCall("VBD.get_all_records", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toMap();
+        return api.ParseJsonRpcResponse(response).toMap();
     }
 
 } // namespace XenAPI

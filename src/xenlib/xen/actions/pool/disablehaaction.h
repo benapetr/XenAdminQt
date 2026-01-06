@@ -44,22 +44,22 @@ class DisableHAAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor for disabling HA
-     * @param connection Connection to the pool
-     * @param poolRef Pool opaque reference
-     * @param parent Parent QObject
-     */
-    DisableHAAction(XenConnection* connection,
-                    const QString& poolRef,
-                    QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor for disabling HA
+         * @param connection Connection to the pool
+         * @param poolRef Pool opaque reference
+         * @param parent Parent QObject
+         */
+        DisableHAAction(XenConnection* connection,
+                        const QString& poolRef,
+                        QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_poolRef;
+    private:
+        QString m_poolRef;
 };
 
 #endif // DISABLEHAACTION_H

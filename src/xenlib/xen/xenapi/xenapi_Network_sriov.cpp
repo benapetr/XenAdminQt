@@ -41,9 +41,9 @@ namespace XenAPI
         params << session->getSessionId() << pif << network;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.network_sriov.create", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.network_sriov.create", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     QString Network_sriov::async_destroy(Session* session, const QString& network_sriov)
@@ -55,9 +55,9 @@ namespace XenAPI
         params << session->getSessionId() << network_sriov;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("Async.network_sriov.destroy", params);
+        QByteArray request = api.BuildJsonRpcCall("Async.network_sriov.destroy", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toString();
+        return api.ParseJsonRpcResponse(response).toString();
     }
 
     QVariantMap Network_sriov::get_record(Session* session, const QString& network_sriov)
@@ -69,9 +69,9 @@ namespace XenAPI
         params << session->getSessionId() << network_sriov;
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network_sriov.get_record", params);
+        QByteArray request = api.BuildJsonRpcCall("network_sriov.get_record", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toMap();
+        return api.ParseJsonRpcResponse(response).toMap();
     }
 
     QVariantList Network_sriov::get_all(Session* session)
@@ -83,9 +83,9 @@ namespace XenAPI
         params << session->getSessionId();
 
         XenRpcAPI api(session);
-        QByteArray request = api.buildJsonRpcCall("network_sriov.get_all", params);
+        QByteArray request = api.BuildJsonRpcCall("network_sriov.get_all", params);
         QByteArray response = session->sendApiRequest(request);
-        return api.parseJsonRpcResponse(response).toList();
+        return api.ParseJsonRpcResponse(response).toList();
     }
 
 } // namespace XenAPI

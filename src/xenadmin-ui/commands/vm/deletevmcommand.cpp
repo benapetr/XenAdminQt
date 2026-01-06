@@ -119,7 +119,7 @@ void DeleteVMCommand::Run()
         }
 
         // Create VM object for action (action will own and delete it)
-        VM* vmForAction = new VM(conn, vm->OpaqueRef());
+        QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vm->OpaqueRef()));
 
         // Create VMDestroyAction (matches C# VMDestroyAction pattern)
         // Action handles VDI cleanup, task polling, and error aggregation
@@ -130,13 +130,13 @@ void DeleteVMCommand::Run()
 
         // Connect completion signal for cleanup and status update
         connect(action, &AsyncOperation::completed, this, [this, vmName, action]() {
-            if (action->state() == AsyncOperation::Completed && !action->isFailed())
+            if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
-                this->mainWindow()->showStatusMessage(QString("VM '%1' deleted successfully").arg(vmName), 5000);
+                this->mainWindow()->ShowStatusMessage(QString("VM '%1' deleted successfully").arg(vmName), 5000);
                 // Cache will be automatically refreshed via event polling
             } else
             {
-                this->mainWindow()->showStatusMessage(QString("Failed to delete VM '%1'").arg(vmName), 5000);
+                this->mainWindow()->ShowStatusMessage(QString("Failed to delete VM '%1'").arg(vmName), 5000);
             }
             // Auto-delete when complete (matches C# GC behavior)
             action->deleteLater();
@@ -144,7 +144,7 @@ void DeleteVMCommand::Run()
 
         // Run action asynchronously (matches C# pattern - no modal dialog)
         // Progress shown in status bar via OperationManager signals
-        action->runAsync();
+        action->RunAsync();
     }
 }
 

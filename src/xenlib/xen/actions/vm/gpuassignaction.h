@@ -46,27 +46,27 @@ class GpuAssignAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct GPU assignment action
-     * @param connection XenServer connection
-     * @param vmRef VM opaque reference
-     * @param vgpuData List of VGPU configurations (each is a QVariantMap with keys: opaque_ref, GPU_group, type, device)
-     * @param parent Parent QObject
-     */
-    explicit GpuAssignAction(XenConnection* connection,
-                             const QString& vmRef,
-                             const QVariantList& vgpuData,
-                             QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct GPU assignment action
+         * @param connection XenServer connection
+         * @param vmRef VM opaque reference
+         * @param vgpuData List of VGPU configurations (each is a QVariantMap with keys: opaque_ref, GPU_group, type, device)
+         * @param parent Parent QObject
+         */
+        explicit GpuAssignAction(XenConnection* connection,
+                                 const QString& vmRef,
+                                 const QVariantList& vgpuData,
+                                 QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_vmRef;
-    QVariantList m_vgpuData; // List of VGPU specs
+    private:
+        QString m_vmRef;
+        QVariantList m_vgpuData; // List of VGPU specs
 
-    void addGpu(const QString& gpuGroupRef, const QString& vgpuTypeRef, const QString& device);
+        void addGpu(const QString& gpuGroupRef, const QString& vgpuTypeRef, const QString& device);
 };
 
 #endif // GPUASSIGNACTION_H

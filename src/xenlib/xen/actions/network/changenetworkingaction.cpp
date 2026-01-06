@@ -56,7 +56,7 @@ void ChangeNetworkingAction::run()
 {
     try
     {
-        connection()->setExpectDisruption(true);
+        GetConnection()->SetExpectDisruption(true);
 
         int totalOps = m_pifRefsToReconfigure.count() + m_pifRefsToDisable.count();
         if (!m_newManagementPifRef.isEmpty())
@@ -65,7 +65,7 @@ void ChangeNetworkingAction::run()
         }
 
         // Determine if we're operating on a pool or single host
-        QList<QVariantMap> pools = connection()->GetCache()->GetAllData("pool");
+        QList<QVariantMap> pools = GetConnection()->GetCache()->GetAllData("pool");
         bool isPool = !pools.isEmpty();
 
         int inc = totalOps > 0 ? (isPool ? 50 : 100) / totalOps : 100;
@@ -90,14 +90,14 @@ void ChangeNetworkingAction::run()
         // Phase 2: Reconfigure management interface if requested
         if (!m_newManagementPifRef.isEmpty() && !m_oldManagementPifRef.isEmpty())
         {
-            QVariantMap newPifData = connection()->GetCache()->ResolveObjectData("pif", m_newManagementPifRef);
-            QVariantMap oldPifData = connection()->GetCache()->ResolveObjectData("pif", m_oldManagementPifRef);
+            QVariantMap newPifData = GetConnection()->GetCache()->ResolveObjectData("pif", m_newManagementPifRef);
+            QVariantMap oldPifData = GetConnection()->GetCache()->ResolveObjectData("pif", m_oldManagementPifRef);
 
             // Check if we should clear the old management IP
             bool clearDownManagementIP = true;
             for (const QString& pifRef : m_pifRefsToReconfigure)
             {
-                QVariantMap pifData = connection()->GetCache()->ResolveObjectData("pif", pifRef);
+                QVariantMap pifData = GetConnection()->GetCache()->ResolveObjectData("pif", pifRef);
                 if (pifData.value("uuid").toString() == oldPifData.value("uuid").toString())
                 {
                     clearDownManagementIP = false;
@@ -117,8 +117,8 @@ void ChangeNetworkingAction::run()
                     NetworkingActionHelpers::poolReconfigureManagement(
                         this, poolRef, m_newManagementPifRef, m_oldManagementPifRef, progress);
 
-                    setDescription("Network configuration complete");
-                    connection()->setExpectDisruption(false);
+                    SetDescription("Network configuration complete");
+                    GetConnection()->SetExpectDisruption(false);
                     return; // Pool reconfiguration handles everything
 
                 } catch (const std::exception& e)
@@ -153,12 +153,12 @@ void ChangeNetworkingAction::run()
             reconfigure(pifRef, false, true, progress); // Coordinator (or single host)
         }
 
-        setDescription("Network configuration complete");
-        connection()->setExpectDisruption(false);
+        SetDescription("Network configuration complete");
+        GetConnection()->SetExpectDisruption(false);
 
     } catch (const std::exception& e)
     {
-        connection()->setExpectDisruption(false);
+        GetConnection()->SetExpectDisruption(false);
         setError(QString("Failed to change networking: %1").arg(e.what()));
     }
 }
@@ -190,7 +190,7 @@ void ChangeNetworkingAction::reconfigure(const QString& pifRef, bool up, bool th
 
 void ChangeNetworkingAction::bringUp(const QString& newPifRef, const QString& existingPifRef, int hi)
 {
-    QVariantMap newPifData = connection()->GetCache()->ResolveObjectData("pif", newPifRef);
+    QVariantMap newPifData = GetConnection()->GetCache()->ResolveObjectData("pif", newPifRef);
     QString ipMode = newPifData.value("ip_configuration_mode").toString();
     QString ip = newPifData.value("IP").toString();
 

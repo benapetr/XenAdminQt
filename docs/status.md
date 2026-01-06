@@ -35,6 +35,8 @@
 
 # Finished and tested
 * Add server
+* Connection to pool - redirect from slave to master
+* Connection persistence
 * Basic VM controls (start / reboot / shutdown)
 * Pause / Unpause
 * Suspend / Resume

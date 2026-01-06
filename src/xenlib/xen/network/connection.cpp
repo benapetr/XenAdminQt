@@ -139,6 +139,7 @@ XenConnection::~XenConnection()
 {
     if (this->d->connectTask)
         this->EndConnect(false, true);
+
     this->DisconnectTransport();
     delete this->d->cache;
     delete this->d;
@@ -154,8 +155,6 @@ bool XenConnection::ConnectToHost(const QString& host, int port, const QString& 
 
     this->d->host = host;
     this->d->port = port;
-    this->d->username = username;
-    this->d->password = password;
 
     // Store credentials for later login
     this->d->username = username;
@@ -165,12 +164,12 @@ bool XenConnection::ConnectToHost(const QString& host, int port, const QString& 
     this->d->worker = new Xen::ConnectionWorker(host, port, this);
 
     // Connect worker signals
-    connect(this->d->worker, &Xen::ConnectionWorker::connectionProgress, this, &XenConnection::onWorkerProgress);
-    connect(this->d->worker, &Xen::ConnectionWorker::connectionEstablished, this, &XenConnection::onWorkerEstablished);
-    connect(this->d->worker, &Xen::ConnectionWorker::connectionFailed, this, &XenConnection::onWorkerFailed);
-    connect(this->d->worker, &Xen::ConnectionWorker::cacheDataReceived, this, &XenConnection::onWorkerCacheData);
-    connect(this->d->worker, &Xen::ConnectionWorker::workerFinished, this, &XenConnection::onWorkerFinished);
-    connect(this->d->worker, &Xen::ConnectionWorker::apiResponse, this, &XenConnection::onWorkerApiResponse);
+    connect(this->d->worker, &Xen::ConnectionWorker::ConnectionProgress, this, &XenConnection::onWorkerProgress);
+    connect(this->d->worker, &Xen::ConnectionWorker::ConnectionEstablished, this, &XenConnection::onWorkerEstablished);
+    connect(this->d->worker, &Xen::ConnectionWorker::ConnectionFailed, this, &XenConnection::onWorkerFailed);
+    connect(this->d->worker, &Xen::ConnectionWorker::CacheDataReceived, this, &XenConnection::onWorkerCacheData);
+    connect(this->d->worker, &Xen::ConnectionWorker::WorkerFinished, this, &XenConnection::onWorkerFinished);
+    connect(this->d->worker, &Xen::ConnectionWorker::ApiResponse, this, &XenConnection::onWorkerApiResponse);
 
     // Start worker thread
     this->d->worker->start();
@@ -180,12 +179,12 @@ bool XenConnection::ConnectToHost(const QString& host, int port, const QString& 
 
 void XenConnection::DisconnectTransport()
 {
-    qDebug() << "XenConnection: Disconnecting";
+    qDebug() << "XenConnection: Disconnecting" << this->d->host;
 
     // Stop worker thread
     if (this->d->worker)
     {
-        this->d->worker->requestStop();
+        this->d->worker->RequestStop();
         this->d->worker->wait(5000); // Wait up to 5 seconds
         if (this->d->worker)
         {
@@ -199,7 +198,7 @@ void XenConnection::DisconnectTransport()
     {
         this->d->connected = false;
         this->d->sessionId.clear();
-        emit this->disconnected();
+        emit this->Disconnected();
     }
 }
 
@@ -282,8 +281,8 @@ Session* XenConnection::GetNewSession(const QString& hostname,
             QTimer timer;
             timer.setSingleShot(true);
             QObject::connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-            QObject::connect(newConn, &XenConnection::connected, &loop, &QEventLoop::quit);
-            QObject::connect(newConn, &XenConnection::error, &loop, &QEventLoop::quit);
+            QObject::connect(newConn, &XenConnection::Connected, &loop, &QEventLoop::quit);
+            QObject::connect(newConn, &XenConnection::Error, &loop, &QEventLoop::quit);
             timer.start(10000);
             loop.exec();
         }
@@ -371,7 +370,7 @@ void XenConnection::BeginConnect(bool initiateCoordinatorSearch,
     this->d->connectTask = new ConnectTask(this->d->host, this->d->port);
     this->d->promptForNewPassword = promptForNewPassword;
     this->d->cacheIsPopulated = false;
-    emit this->connectionMessageChanged(QString("Attempting to connect to %1...").arg(this->d->host));
+    emit this->ConnectionMessageChanged(QString("Attempting to connect to %1...").arg(this->d->host));
 
     this->d->connectThread = QThread::create([this]() {
         this->connectWorkerThread();
@@ -394,7 +393,7 @@ void XenConnection::EndConnect(bool clearCache, bool exiting)
     ConnectTask* task = this->d->connectTask;
     this->d->connectTask = nullptr;
 
-    emit this->beforeConnectionEnd();
+    emit this->BeforeConnectionEnd();
 
     const bool allowBlocking = QThread::currentThread() != this->thread();
     const Qt::ConnectionType stopConnectionType = allowBlocking
@@ -474,7 +473,7 @@ void XenConnection::EndConnect(bool clearCache, bool exiting)
 
     if (clearCache)
     {
-        emit this->clearingCache();
+        emit this->ClearingCache();
         {
             QMutexLocker locker(&this->d->eventQueueMutex);
             this->d->eventQueue.clear();
@@ -501,8 +500,8 @@ void XenConnection::EndConnect(bool clearCache, bool exiting)
 
     this->d->connected = false;
 
-    emit this->connectionClosed();
-    emit this->connectionStateChanged();
+    emit this->ConnectionClosed();
+    emit this->ConnectionStateChanged();
 }
 
 void XenConnection::Interrupt()
@@ -512,8 +511,8 @@ void XenConnection::Interrupt()
 
     this->d->connectTask->Cancelled = true;
     // TODO: port HandleConnectionLost behavior (cancel actions, cache clear, reconnection scheduling).
-    emit this->connectionLost();
-    emit this->connectionStateChanged();
+    emit this->ConnectionLost();
+    emit this->ConnectionStateChanged();
 }
 
 void XenConnection::onCacheUpdateTimer()
@@ -553,11 +552,11 @@ void XenConnection::onCacheUpdateTimer()
                 {
                     snapshot["ref"] = ref;
                     snapshot["opaqueRef"] = ref;
-                    emit this->messageReceived(ref, snapshot);
+                    emit this->MessageReceived(ref, snapshot);
                 }
             } else if (operation == "del")
             {
-                emit this->messageRemoved(ref);
+                emit this->MessageRemoved(ref);
             }
         }
 
@@ -591,7 +590,7 @@ void XenConnection::onCacheUpdateTimer()
     if (!this->d->cacheIsPopulated)
     {
         this->d->cacheIsPopulated = true;
-        emit this->cachePopulated();
+        emit this->CachePopulated();
     }
 
     {
@@ -626,12 +625,12 @@ QVariantMap XenConnection::fetchObjectRecord(const QString& cacheType, const QSt
     params.append(ref);
 
     const QString methodName = QString("%1.get_record").arg(apiClass);
-    QByteArray jsonRequest = api.buildJsonRpcCall(methodName, params);
+    QByteArray jsonRequest = api.BuildJsonRpcCall(methodName, params);
     QByteArray response = session->sendApiRequest(QString::fromUtf8(jsonRequest));
     if (response.isEmpty())
         return QVariantMap();
 
-    QVariant parsed = api.parseJsonRpcResponse(response);
+    QVariant parsed = api.ParseJsonRpcResponse(response);
     if (Misc::QVariantIsMap(parsed))
     {
         QVariantMap map = parsed.toMap();
@@ -668,7 +667,7 @@ void XenConnection::onEventPollerCachePopulated()
     if (!this->d->cacheIsPopulated)
     {
         this->d->cacheIsPopulated = true;
-        emit this->cachePopulated();
+        emit this->CachePopulated();
     }
 }
 
@@ -715,7 +714,7 @@ void XenConnection::handleConnectionLostNewFlow()
         this->startReconnectSingleHostTimer();
     }
 
-    emit this->connectionLost();
+    emit this->ConnectionLost();
 }
 
 int XenConnection::reconnectHostTimeoutMs() const
@@ -739,7 +738,7 @@ void XenConnection::startReconnectSingleHostTimer()
     const QString target = this->d->lastConnectionFullName.isEmpty()
         ? this->d->host
         : this->d->lastConnectionFullName;
-    emit this->connectionMessageChanged(
+    emit this->ConnectionMessageChanged(
         QString("Connection lost. Reconnecting to %1 in %2 seconds...")
             .arg(target)
             .arg(timeoutMs / 1000));
@@ -760,7 +759,7 @@ void XenConnection::startReconnectCoordinatorTimer(int timeoutMs)
     const QString target = this->d->lastConnectionFullName.isEmpty()
         ? this->d->host
         : this->d->lastConnectionFullName;
-    emit this->connectionMessageChanged(
+    emit this->ConnectionMessageChanged(
         QString("Searching for pool coordinator for %1. Retrying in %2 seconds...")
             .arg(target)
             .arg(timeoutMs / 1000));
@@ -776,7 +775,7 @@ void XenConnection::reconnectSingleHostTimer()
     if (!this->d->expectDisruption && this->d->reconnectionTimer)
         this->d->reconnectionTimer->stop();
 
-    emit this->connectionReconnecting();
+    emit this->ConnectionReconnecting();
     this->BeginConnect(false, this->d->promptForNewPassword);
 }
 
@@ -794,7 +793,7 @@ void XenConnection::reconnectCoordinatorTimer()
             this->d->findingNewCoordinator = false;
             if (!this->d->lastCoordinatorHostname.isEmpty())
                 this->SetHostname(this->d->lastCoordinatorHostname);
-            emit this->connectionReconnecting();
+            emit this->ConnectionReconnecting();
             this->BeginConnect(false, this->d->promptForNewPassword);
             return;
         }
@@ -802,19 +801,19 @@ void XenConnection::reconnectCoordinatorTimer()
 
     if (this->poolMemberRemaining())
     {
-        const QString nextMember = this->getNextPoolMember();
+        const QString nextMember = this->GetNextPoolMember();
         if (!nextMember.isEmpty())
             this->SetHostname(nextMember);
 
-        emit this->connectionMessageChanged(
+        emit this->ConnectionMessageChanged(
             QString("Retrying pool member %1...").arg(this->d->host));
 
-        emit this->connectionReconnecting();
+        emit this->ConnectionReconnecting();
         this->BeginConnect(false, this->d->promptForNewPassword);
         return;
     }
 
-    this->resetPoolMemberIndex();
+    this->ResetPoolMemberIndex();
     if (this->poolMemberRemaining())
     {
         this->startReconnectCoordinatorTimer(kSearchNextSupporterTimeoutMs);
@@ -916,8 +915,8 @@ void XenConnection::connectWorkerThread()
     if (!session || !this->d->connectTask || this->d->connectTask->Cancelled)
     {
         const QString reason = !error.isEmpty() ? error : QString("Connection failed");
-        emit this->connectionResult(false, reason);
-        emit this->connectionStateChanged();
+        emit this->ConnectionResult(false, reason);
+        emit this->ConnectionStateChanged();
         return;
     }
 
@@ -925,7 +924,7 @@ void XenConnection::connectWorkerThread()
     this->SetSession(session);
     this->d->connectTask->Connected = true;
     this->d->expectPasswordIsCorrect = true;
-    emit this->connectionMessageChanged(QString("Synchronizing with %1...").arg(this->d->host));
+    emit this->ConnectionMessageChanged(QString("Synchronizing with %1...").arg(this->d->host));
 
     XenRpcAPI api(session);
     QString token;
@@ -940,11 +939,11 @@ void XenConnection::connectWorkerThread()
         qDebug() << "XenConnection: Preloading roles via role.get_all_records";
         QVariantList roleParams;
         roleParams.append(session->getSessionId());
-        QByteArray roleRequest = api.buildJsonRpcCall("role.get_all_records", roleParams);
+        QByteArray roleRequest = api.BuildJsonRpcCall("role.get_all_records", roleParams);
         QByteArray roleResponse = session->sendApiRequest(QString::fromUtf8(roleRequest));
         if (!roleResponse.isEmpty())
         {
-            QVariant parsed = api.parseJsonRpcResponse(roleResponse);
+            QVariant parsed = api.ParseJsonRpcResponse(roleResponse);
             QVariant roleData = parsed;
             if (Misc::QVariantIsMap(parsed))
             {
@@ -974,7 +973,7 @@ void XenConnection::connectWorkerThread()
     }
 
     qDebug() << "XenConnection: Calling event.from for initial cache population";
-    QVariantMap eventBatch = api.eventFrom(QStringList() << "*", "", 30.0);
+    QVariantMap eventBatch = api.EventFrom(QStringList() << "*", "", 30.0);
     if (eventBatch.contains("token"))
         token = eventBatch.value("token").toString();
 
@@ -1014,11 +1013,11 @@ void XenConnection::connectWorkerThread()
         qDebug() << "XenConnection: Preloading console.get_all_records";
         QVariantList consoleParams;
         consoleParams.append(session->getSessionId());
-        QByteArray consoleRequest = api.buildJsonRpcCall("console.get_all_records", consoleParams);
+        QByteArray consoleRequest = api.BuildJsonRpcCall("console.get_all_records", consoleParams);
         QByteArray consoleResponse = session->sendApiRequest(QString::fromUtf8(consoleRequest));
         if (!consoleResponse.isEmpty())
         {
-            QVariant parsed = api.parseJsonRpcResponse(consoleResponse);
+            QVariant parsed = api.ParseJsonRpcResponse(consoleResponse);
             QVariant responseData = parsed;
             if (Misc::QVariantIsMap(parsed))
             {
@@ -1049,7 +1048,7 @@ void XenConnection::connectWorkerThread()
 
     this->d->cacheIsPopulated = true;
     qDebug() << "XenConnection: Cache populated, emitting cachePopulated";
-    emit this->cachePopulated();
+    emit this->CachePopulated();
 
     if (!this->d->eventPollerThread)
     {
@@ -1064,9 +1063,9 @@ void XenConnection::connectWorkerThread()
         connect(this->d->eventPoller, &EventPoller::eventReceived, this, &XenConnection::onEventPollerEventReceived);
         connect(this->d->eventPoller, &EventPoller::cachePopulated, this, &XenConnection::onEventPollerCachePopulated);
         connect(this->d->eventPoller, &EventPoller::connectionLost, this, &XenConnection::onEventPollerConnectionLost);
-        connect(this->d->eventPoller, &EventPoller::taskAdded, this, &XenConnection::taskAdded);
-        connect(this->d->eventPoller, &EventPoller::taskModified, this, &XenConnection::taskModified);
-        connect(this->d->eventPoller, &EventPoller::taskDeleted, this, &XenConnection::taskDeleted);
+        connect(this->d->eventPoller, &EventPoller::taskAdded, this, &XenConnection::TaskAdded);
+        connect(this->d->eventPoller, &EventPoller::taskModified, this, &XenConnection::TaskModified);
+        connect(this->d->eventPoller, &EventPoller::taskDeleted, this, &XenConnection::TaskDeleted);
     }
 
     const QStringList classes = {
@@ -1082,8 +1081,8 @@ void XenConnection::connectWorkerThread()
         this->d->eventPoller->start(classes, token);
     }, Qt::QueuedConnection);
 
-    emit this->connectionResult(true, QString());
-    emit this->connectionStateChanged();
+    emit this->ConnectionResult(true, QString());
+    emit this->ConnectionStateChanged();
 }
 
 ConnectTask* XenConnection::GetConnectTask() const
@@ -1116,52 +1115,52 @@ QStringList XenConnection::GetLastFailureDescription() const
     return this->d->lastFailureDescription;
 }
 
-bool XenConnection::getSaveDisconnected() const
+bool XenConnection::GetSaveDisconnected() const
 {
     return this->d->saveDisconnected;
 }
 
-void XenConnection::setSaveDisconnected(bool save)
+void XenConnection::SetSaveDisconnected(bool save)
 {
     this->d->saveDisconnected = save;
 }
 
-bool XenConnection::getExpectPasswordIsCorrect() const
+bool XenConnection::GetExpectPasswordIsCorrect() const
 {
     return this->d->expectPasswordIsCorrect;
 }
 
-void XenConnection::setExpectPasswordIsCorrect(bool expect)
+void XenConnection::SetExpectPasswordIsCorrect(bool expect)
 {
     this->d->expectPasswordIsCorrect = expect;
 }
 
-bool XenConnection::getSuppressErrors() const
+bool XenConnection::GetSuppressErrors() const
 {
     return this->d->suppressErrors;
 }
 
-void XenConnection::setSuppressErrors(bool suppress)
+void XenConnection::SetSuppressErrors(bool suppress)
 {
     this->d->suppressErrors = suppress;
 }
 
-bool XenConnection::getPreventResettingPasswordPrompt() const
+bool XenConnection::GetPreventResettingPasswordPrompt() const
 {
     return this->d->preventResettingPasswordPrompt;
 }
 
-void XenConnection::setPreventResettingPasswordPrompt(bool prevent)
+void XenConnection::SetPreventResettingPasswordPrompt(bool prevent)
 {
     this->d->preventResettingPasswordPrompt = prevent;
 }
 
-bool XenConnection::getFromDialog() const
+bool XenConnection::GetFromDialog() const
 {
     return this->d->fromDialog;
 }
 
-void XenConnection::setFromDialog(bool fromDialog)
+void XenConnection::SetFromDialog(bool fromDialog)
 {
     this->d->fromDialog = fromDialog;
 }
@@ -1176,13 +1175,13 @@ QByteArray XenConnection::SendRequest(const QByteArray& data)
 
     // Queue request to worker thread (emitSignal=false for blocking calls)
     // This prevents spurious "Unknown request ID" warnings for sync calls like EventPoller
-    int requestId = this->d->worker->queueRequest(data, false);
+    int requestId = this->d->worker->QueueRequest(data, false);
 
     qDebug() << "Created sync request with ID: " << requestId;
 
     // Wait for response (blocking)
     // Use a 60s wait to accommodate long-poll calls like event.from (server timeout is 30s)
-    QByteArray response = this->d->worker->waitForResponse(requestId, 60000);
+    QByteArray response = this->d->worker->WaitForResponse(requestId, 60000);
 
     return response;
 }
@@ -1196,7 +1195,7 @@ int XenConnection::SendRequestAsync(const QByteArray& data)
     }
 
     // Queue request to worker thread and return immediately (non-blocking)
-    int requestId = this->d->worker->queueRequest(data);
+    int requestId = this->d->worker->QueueRequest(data);
 
     // Response will be delivered via apiResponse signal
     return requestId;
@@ -1208,7 +1207,7 @@ void XenConnection::onWorkerEstablished()
     qDebug() << "XenConnection: Worker established TCP/SSL connection";
     this->d->connected = true;
     // Note: sessionId will be set after XenSession::login() succeeds
-    emit this->connected();
+    emit this->Connected();
 }
 
 void XenConnection::onWorkerFailed(const QString& error)
@@ -1216,7 +1215,7 @@ void XenConnection::onWorkerFailed(const QString& error)
     qWarning() << "XenConnection: Worker failed:" << error;
     this->d->connected = false;
     this->d->sessionId.clear();
-    emit this->error(error);
+    emit this->Error(error);
 }
 
 void XenConnection::onWorkerFinished()
@@ -1226,24 +1225,24 @@ void XenConnection::onWorkerFinished()
     {
         this->d->connected = false;
         this->d->sessionId.clear();
-        emit this->disconnected();
+        emit this->Disconnected();
     }
 }
 
 void XenConnection::onWorkerProgress(const QString& message)
 {
-    emit this->progressUpdate(message);
+    emit this->ProgressUpdate(message);
 }
 
 void XenConnection::onWorkerCacheData(const QByteArray& data)
 {
-    emit this->cacheDataReceived(data);
+    emit this->CacheDataReceived(data);
 }
 
 void XenConnection::onWorkerApiResponse(int requestId, const QByteArray& response)
 {
     // Forward the worker's apiResponse signal to our own apiResponse signal
-    emit this->apiResponse(requestId, response);
+    emit this->ApiResponse(requestId, response);
 }
 
 // Session association methods
@@ -1283,13 +1282,13 @@ void XenConnection::SetCurrentPoolMemberIndex(int index)
     this->d->poolMemberIndex = index;
 }
 
-bool XenConnection::hasMorePoolMembers() const
+bool XenConnection::HasMorePoolMembers() const
 {
     QMutexLocker locker(&this->d->poolMembersMutex);
     return this->d->poolMemberIndex < this->d->poolMembers.count();
 }
 
-QString XenConnection::getNextPoolMember()
+QString XenConnection::GetNextPoolMember()
 {
     QMutexLocker locker(&this->d->poolMembersMutex);
     if (this->d->poolMemberIndex < this->d->poolMembers.count())
@@ -1301,60 +1300,60 @@ QString XenConnection::getNextPoolMember()
     return QString();
 }
 
-void XenConnection::resetPoolMemberIndex()
+void XenConnection::ResetPoolMemberIndex()
 {
     QMutexLocker locker(&this->d->poolMembersMutex);
     this->d->poolMemberIndex = 0;
 }
 
 // Coordinator tracking methods
-QString XenConnection::getLastCoordinatorHostname() const
+QString XenConnection::GetLastCoordinatorHostname() const
 {
     return this->d->lastCoordinatorHostname;
 }
 
-void XenConnection::setLastCoordinatorHostname(const QString& hostname)
+void XenConnection::SetLastCoordinatorHostname(const QString& hostname)
 {
     this->d->lastCoordinatorHostname = hostname;
 }
 
-bool XenConnection::isFindingNewCoordinator() const
+bool XenConnection::IsFindingNewCoordinator() const
 {
     return this->d->findingNewCoordinator;
 }
 
-void XenConnection::setFindingNewCoordinator(bool finding)
+void XenConnection::SetFindingNewCoordinator(bool finding)
 {
     this->d->findingNewCoordinator = finding;
 }
 
-QDateTime XenConnection::getFindingNewCoordinatorStartedAt() const
+QDateTime XenConnection::GetFindingNewCoordinatorStartedAt() const
 {
     return this->d->findingNewCoordinatorStartedAt;
 }
 
-void XenConnection::setFindingNewCoordinatorStartedAt(const QDateTime& time)
+void XenConnection::SetFindingNewCoordinatorStartedAt(const QDateTime& time)
 {
     this->d->findingNewCoordinatorStartedAt = time;
 }
 
 // Failover state methods
-bool XenConnection::getExpectDisruption() const
+bool XenConnection::GetExpectDisruption() const
 {
     return this->d->expectDisruption;
 }
 
-void XenConnection::setExpectDisruption(bool expect)
+void XenConnection::SetExpectDisruption(bool expect)
 {
     this->d->expectDisruption = expect;
 }
 
-bool XenConnection::getCoordinatorMayChange() const
+bool XenConnection::GetCoordinatorMayChange() const
 {
     return this->d->coordinatorMayChange;
 }
 
-void XenConnection::setCoordinatorMayChange(bool mayChange)
+void XenConnection::SetCoordinatorMayChange(bool mayChange)
 {
     this->d->coordinatorMayChange = mayChange;
 }

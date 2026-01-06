@@ -61,7 +61,7 @@ void InstallToolsCommand::Run()
 
     if (ret == QMessageBox::Yes)
     {
-        this->mainWindow()->showStatusMessage("Mounting XenServer Tools ISO...");
+        this->mainWindow()->ShowStatusMessage("Mounting XenServer Tools ISO...");
 
         // TODO: Implement VM.assert_can_mount_tools and VM.mount_tools_iso
         QMessageBox::information(this->mainWindow(), "Not Implemented",

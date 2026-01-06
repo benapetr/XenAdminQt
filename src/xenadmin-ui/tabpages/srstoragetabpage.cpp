@@ -254,7 +254,7 @@ void SrStorageTabPage::onRescanButtonClicked()
 
     SrRefreshAction* action = new SrRefreshAction(this->m_connection, this->m_objectRef);
     OperationManager::instance()->RegisterOperation(action);
-    action->runAsync();
+    action->RunAsync();
 
     this->requestSrRefresh(2000);
 }
@@ -461,7 +461,7 @@ void SrStorageTabPage::requestSrRefresh(int delayMs)
     auto request = [this]() {
         SrRefreshAction* action = new SrRefreshAction(this->m_connection, this->m_objectRef);
         OperationManager::instance()->RegisterOperation(action);
-        action->runAsync();
+        action->RunAsync();
     };
 
     if (delayMs <= 0)

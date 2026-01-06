@@ -50,20 +50,20 @@ void DesignateNewMasterAction::run()
 {
     try
     {
-        setPercentComplete(0);
-        setDescription("Preparing to designate new coordinator...");
+        SetPercentComplete(0);
+        SetDescription("Preparing to designate new coordinator...");
 
         // Signal to the connection that the coordinator is going to change
         // This matches C# pattern: Connection.CoordinatorMayChange = true;
-        connection()->setCoordinatorMayChange(true);
+        GetConnection()->SetCoordinatorMayChange(true);
 
-        setPercentComplete(10);
-        setDescription("Designating new pool coordinator...");
+        SetPercentComplete(10);
+        SetDescription("Designating new pool coordinator...");
 
         try
         {
             // Call Pool.async_designate_new_master
-            QString taskRef = XenAPI::Pool::async_designate_new_master(session(), m_newMasterRef);
+            QString taskRef = XenAPI::Pool::async_designate_new_master(GetSession(), m_newMasterRef);
 
             // Poll to completion
             pollToCompletion(taskRef, 10, 100);
@@ -71,20 +71,20 @@ void DesignateNewMasterAction::run()
         } catch (...)
         {
             // If there's an error during designate, clear flag to prevent leak
-            connection()->setCoordinatorMayChange(false);
+            GetConnection()->SetCoordinatorMayChange(false);
             throw;
         }
 
-        setDescription("New coordinator designated successfully");
+        SetDescription("New coordinator designated successfully");
 
         // Note: The connection will automatically detect and reconnect to the new coordinator
         // via the failover mechanism in ConnectionWorker
 
     } catch (const std::exception& e)
     {
-        if (isCancelled())
+        if (IsCancelled())
         {
-            setDescription("Designate new coordinator cancelled");
+            SetDescription("Designate new coordinator cancelled");
         } else
         {
             setError(QString("Failed to designate new coordinator: %1").arg(e.what()));

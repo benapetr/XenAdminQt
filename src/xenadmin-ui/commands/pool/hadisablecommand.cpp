@@ -90,7 +90,7 @@ void HADisableCommand::Run()
 
     // Connect completion signals
     connect(action, &AsyncOperation::completed, [this, poolName, action]() {
-        this->mainWindow()->showStatusMessage(
+        this->mainWindow()->ShowStatusMessage(
             QString("High Availability disabled for pool '%1'").arg(poolName), 5000);
         action->deleteLater();
     });
@@ -103,8 +103,8 @@ void HADisableCommand::Run()
     });
 
     // Run action asynchronously
-    action->runAsync();
-    this->mainWindow()->showStatusMessage(QString("Disabling HA on pool '%1'...").arg(poolName), 0);
+    action->RunAsync();
+    this->mainWindow()->ShowStatusMessage(QString("Disabling HA on pool '%1'...").arg(poolName), 0);
 }
 
 QString HADisableCommand::MenuText() const

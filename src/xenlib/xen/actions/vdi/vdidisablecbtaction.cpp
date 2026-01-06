@@ -42,23 +42,23 @@ VDIDisableCbtAction::VDIDisableCbtAction(XenConnection* connection,
       m_vmName(vmName)
 {
     // Register RBAC method
-    addApiMethodToRoleCheck("VDI.async_disable_cbt");
+    AddApiMethodToRoleCheck("VDI.async_disable_cbt");
 }
 
 void VDIDisableCbtAction::run()
 {
-    if (!connection() || !session())
+    if (!GetConnection() || !GetSession())
     {
         setError("Connection lost");
         return;
     }
 
-    XenAPI::Session* xenSession = session();
+    XenAPI::Session* xenSession = GetSession();
 
     try
     {
         // Update description
-        setDescription(QString("Disabling changed block tracking for %1").arg(m_vmName));
+        SetDescription(QString("Disabling changed block tracking for %1").arg(m_vmName));
 
         // Call VDI.async_disable_cbt
         QString taskRef = XenAPI::VDI::async_disable_cbt(xenSession, m_vdiRef);
@@ -67,13 +67,13 @@ void VDIDisableCbtAction::run()
         pollToCompletion(taskRef);
 
         // Check if successful
-        if (state() == Failed)
+        if (GetState() == Failed)
         {
             return;
         }
 
         // Success
-        setDescription("Disabled");
+        SetDescription("Disabled");
         setState(Completed);
 
     } catch (const std::exception& e)

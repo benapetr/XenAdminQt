@@ -51,17 +51,17 @@ ParallelOperation::ParallelOperation(const QString& title,
         // Cross-connection operation - group by each operation's connection
         for (AsyncOperation* op : subOperations)
         {
-            if (op->connection() == nullptr)
+            if (op->GetConnection() == nullptr)
             {
                 m_operationsWithNoConnection.append(op);
                 m_totalOperationsCount++;
-            } else if (op->connection()->IsConnected())
+            } else if (op->GetConnection()->IsConnected())
             {
-                if (!m_operationsByConnection.contains(op->connection()))
+                if (!m_operationsByConnection.contains(op->GetConnection()))
                 {
-                    m_operationsByConnection[op->connection()] = QList<AsyncOperation*>();
+                    m_operationsByConnection[op->GetConnection()] = QList<AsyncOperation*>();
                 }
-                m_operationsByConnection[op->connection()].append(op);
+                m_operationsByConnection[op->GetConnection()].append(op);
                 m_totalOperationsCount++;
             }
         }
@@ -147,14 +147,14 @@ void ParallelOperation::enqueueOperation(AsyncOperation* operation,
 
     // Enqueue the operation
     queue->enqueueTask([this, operation, &exceptions]() {
-        if (isCancelled())
+        if (IsCancelled())
         {
             return; // Don't start any more operations
         }
 
         try
         {
-            operation->runSync(operation->session());
+            operation->RunSync(operation->GetSession());
         } catch (const std::exception& e)
         {
             QString errorMsg = QString::fromStdString(e.what());
@@ -163,7 +163,7 @@ void ParallelOperation::enqueueOperation(AsyncOperation* operation,
             exceptions.append(errorMsg);
 
             // Record the first exception
-            if (!hasError())
+            if (!HasError())
             {
                 setError(errorMsg);
             }
@@ -174,7 +174,7 @@ void ParallelOperation::enqueueOperation(AsyncOperation* operation,
             QMutexLocker locker(&m_completionMutex);
             exceptions.append(errorMsg);
 
-            if (!hasError())
+            if (!HasError())
             {
                 setError(errorMsg);
             }
@@ -197,7 +197,7 @@ void ParallelOperation::onOperationCompleted()
     if (m_completedOperationsCount == m_totalOperationsCount)
     {
         m_completionWaitCondition.wakeOne();
-        setPercentComplete(100);
+        SetPercentComplete(100);
     }
 }
 
@@ -215,18 +215,18 @@ void ParallelOperation::recalculatePercentComplete()
     {
         for (AsyncOperation* op : ops)
         {
-            total += op->percentComplete();
+            total += op->GetPercentComplete();
         }
     }
 
     // Add progress from operations with no connection
     for (AsyncOperation* op : m_operationsWithNoConnection)
     {
-        total += op->percentComplete();
+        total += op->GetPercentComplete();
     }
 
     int avgProgress = total / m_totalOperationsCount;
-    setPercentComplete(avgProgress);
+    SetPercentComplete(avgProgress);
 }
 
 void ParallelOperation::onMultipleOperationCompleted()

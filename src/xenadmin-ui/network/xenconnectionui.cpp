@@ -51,8 +51,8 @@ void XenConnectionUI::BeginConnect(XenConnection* connection,
 
     if (initiateCoordinatorSearch)
     {
-        connection->setFindingNewCoordinator(true);
-        connection->setFindingNewCoordinatorStartedAt(QDateTime::currentDateTimeUtc());
+        connection->SetFindingNewCoordinator(true);
+        connection->SetFindingNewCoordinatorStartedAt(QDateTime::currentDateTimeUtc());
     }
 
     RegisterEventHandlers(connection);
@@ -106,17 +106,17 @@ void XenConnectionUI::RegisterEventHandlers(XenConnection* connection)
     UnregisterEventHandlers(connection);
 
     s_connectedHandlers.insert(connection,
-        QObject::connect(connection, &XenConnection::connectionResult, connection, [connection](bool connected, const QString& error) {
+        QObject::connect(connection, &XenConnection::ConnectionResult, connection, [connection](bool connected, const QString& error) {
             HandleConnectionResult(connection, connected, error);
         }));
 
     s_errorHandlers.insert(connection,
-        QObject::connect(connection, &XenConnection::connectionStateChanged, connection, [connection]() {
+        QObject::connect(connection, &XenConnection::ConnectionStateChanged, connection, [connection]() {
             HandleConnectionStateChanged(connection, connection->IsConnected());
         }));
 
     s_disconnectedHandlers.insert(connection,
-        QObject::connect(connection, &XenConnection::connectionClosed, connection, [connection]() {
+        QObject::connect(connection, &XenConnection::ConnectionClosed, connection, [connection]() {
             HandleConnectionStateChanged(connection, false);
         }));
 }
@@ -187,8 +187,8 @@ void XenConnectionUI::ShowConnectingDialogError(QWidget* owner, XenConnection* c
                 if (QMessageBox::question(owner, "Connect to Server", prompt) == QMessageBox::Yes)
                 {
                     connection->EndConnect(false, false);
-                    connection->setFindingNewCoordinator(false);
-                    connection->setFindingNewCoordinatorStartedAt(QDateTime());
+                    connection->SetFindingNewCoordinator(false);
+                    connection->SetFindingNewCoordinatorStartedAt(QDateTime());
                     connection->SetHostname(masterHost);
                     connection->BeginConnect(false);
                     return;
@@ -224,8 +224,8 @@ void XenConnectionUI::ShowConnectingDialogError(QWidget* owner, XenConnection* c
         if (QMessageBox::question(owner, "Connect to Server", prompt) == QMessageBox::Yes)
         {
             connection->EndConnect(false, false);
-            connection->setFindingNewCoordinator(false);
-            connection->setFindingNewCoordinatorStartedAt(QDateTime());
+            connection->SetFindingNewCoordinator(false);
+            connection->SetFindingNewCoordinatorStartedAt(QDateTime());
             connection->SetHostname(masterHost);
             connection->BeginConnect(false);
             return;

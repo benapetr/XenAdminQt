@@ -713,12 +713,12 @@ void CrossPoolMigrateWizard::accept()
             if (this->isCopyCloneSelected())
             {
                 VMCloneAction* action = new VMCloneAction(this->m_sourceConnection,
-                                                          vmItem.data(),
+                                                          vmItem,
                                                           this->copyName(),
                                                           this->copyDescription(),
                                                           this);
                 OperationManager::instance()->RegisterOperation(action);
-                action->runAsync();
+                action->RunAsync();
             }
             else
             {
@@ -727,14 +727,14 @@ void CrossPoolMigrateWizard::accept()
                 if (sr && sr->IsValid())
                 {
                     VMCopyAction* action = new VMCopyAction(this->m_sourceConnection,
-                                                            vmItem.data(),
-                                                            nullptr,
-                                                            sr.data(),
+                                                            vmItem,
+                                                            QSharedPointer<Host>(),
+                                                            sr,
                                                             this->copyName(),
                                                             this->copyDescription(),
                                                             this);
                     OperationManager::instance()->RegisterOperation(action);
-                    action->runAsync();
+                    action->RunAsync();
                 }
             }
         }
@@ -828,7 +828,7 @@ void CrossPoolMigrateWizard::accept()
         {
             if (hasStorageMotion && sourceCache)
             {
-                QMap<QString, SR*> storageMap;
+                QMap<QString, QSharedPointer<SR>> storageMap;
                 for (auto it = mapping.storage.cbegin(); it != mapping.storage.cend(); ++it)
                 {
                     QString vdiRef = it.key();
@@ -838,19 +838,18 @@ void CrossPoolMigrateWizard::accept()
 
                     QSharedPointer<SR> srObj = sourceCache->ResolveObject<SR>("sr", srRef);
                     if (srObj && srObj->IsValid())
-                        storageMap.insert(vdiRef, srObj.data());
+                        storageMap.insert(vdiRef, srObj);
                 }
 
                 QSharedPointer<Host> hostObj = sourceCache->ResolveObject<Host>("host", this->m_targetHostRef);
-                Host* hostPtr = hostObj && hostObj->IsValid() ? hostObj.data() : nullptr;
 
                 VMMoveAction* action = new VMMoveAction(this->m_sourceConnection,
-                                                        vmItem.data(),
+                                                        vmItem,
                                                         storageMap,
-                                                        hostPtr,
+                                                        hostObj,
                                                         this);
                 OperationManager::instance()->RegisterOperation(action);
-                action->runAsync();
+                action->RunAsync();
             }
         }
         else
@@ -869,7 +868,7 @@ void CrossPoolMigrateWizard::accept()
                     this);
 
                 OperationManager::instance()->RegisterOperation(action);
-                action->runAsync();
+                action->RunAsync();
             }
             else
             {
@@ -878,7 +877,7 @@ void CrossPoolMigrateWizard::accept()
                                                              this->m_targetHostRef,
                                                              this);
                 OperationManager::instance()->RegisterOperation(action);
-                action->runAsync();
+                action->RunAsync();
             }
         }
     }
@@ -897,7 +896,7 @@ void CrossPoolMigrateWizard::populateDestinationHosts()
     if (!connMgr)
         return;
 
-    const QList<XenConnection*> connections = connMgr->getAllConnections();
+    const QList<XenConnection*> connections = connMgr->GetAllConnections();
     for (XenConnection* conn : connections)
     {
         if (!conn || !conn->IsConnected())
@@ -1590,7 +1589,7 @@ XenConnection* CrossPoolMigrateWizard::resolveTargetConnection(const QString& ho
     if (!connMgr)
         return nullptr;
 
-    const QList<XenConnection*> connections = connMgr->getAllConnections();
+    const QList<XenConnection*> connections = connMgr->GetAllConnections();
     for (XenConnection* conn : connections)
     {
         if (!conn || !conn->IsConnected())

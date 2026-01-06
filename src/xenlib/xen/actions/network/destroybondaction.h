@@ -54,39 +54,39 @@ class DestroyBondAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor
-     * @param connection XenConnection
-     * @param bondRef Bond reference to destroy (typically coordinator bond)
-     * @param parent Parent QObject
-     */
-    DestroyBondAction(XenConnection* connection,
-                      const QString& bondRef,
-                      QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor
+         * @param connection XenConnection
+         * @param bondRef Bond reference to destroy (typically coordinator bond)
+         * @param parent Parent QObject
+         */
+        DestroyBondAction(XenConnection* connection,
+                          const QString& bondRef,
+                          QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    struct BondInfo
-    {
-        QString bondRef;
-        QString bondInterfaceRef;
-        QString primarySlaveRef;
-        QString networkRef;
-        QString hostRef;
-        QString hostName;
-    };
+    private:
+        struct BondInfo
+        {
+            QString bondRef;
+            QString bondInterfaceRef;
+            QString primarySlaveRef;
+            QString networkRef;
+            QString hostRef;
+            QString hostName;
+        };
 
-    /**
-     * @brief Find all bonds equivalent to m_bondRef across all hosts
-     * @return List of bond information for all hosts
-     */
-    QList<BondInfo> findAllEquivalentBonds() const;
+        /**
+         * @brief Find all bonds equivalent to m_bondRef across all hosts
+         * @return List of bond information for all hosts
+         */
+        QList<BondInfo> findAllEquivalentBonds() const;
 
-    QString m_bondRef;
-    QString m_bondName;
+        QString m_bondRef;
+        QString m_bondName;
 };
 
 #endif // DESTROYBONDACTION_H

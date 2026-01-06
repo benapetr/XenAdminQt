@@ -130,7 +130,7 @@ void CloseXenCenterWarningDialog::rebuildList()
         if (!shouldShowRecord(record->state, isMeddling))
             continue;
 
-        if (m_connection && operation->connection() != m_connection)
+        if (m_connection && operation->GetConnection() != m_connection)
             continue;
 
         ui->actionsTable->insertRow(row);
@@ -138,7 +138,7 @@ void CloseXenCenterWarningDialog::rebuildList()
         QTableWidgetItem* statusItem = new QTableWidgetItem(stateToText(record->state));
         QTableWidgetItem* messageItem = new QTableWidgetItem(record->title);
         QTableWidgetItem* locationItem = new QTableWidgetItem(
-            operation->connection() ? operation->connection()->GetHostname() : QString());
+            operation->GetConnection() ? operation->GetConnection()->GetHostname() : QString());
         QTableWidgetItem* dateItem = new QTableWidgetItem(
             QLocale::system().toString(record->started, QLocale::ShortFormat));
 

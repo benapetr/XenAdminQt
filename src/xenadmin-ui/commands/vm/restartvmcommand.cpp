@@ -82,7 +82,7 @@ void RestartVMCommand::Run()
     }
 
     // Create VM object for action (action will own and delete it)
-    VM* vmForAction = new VM(conn, vm->OpaqueRef());
+    QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vm->OpaqueRef()));
 
     // Create VMCleanReboot action (parent is MainWindow to prevent premature deletion)
     VMCleanReboot* action = new VMCleanReboot(vmForAction, this->mainWindow());
@@ -98,7 +98,7 @@ void RestartVMCommand::Run()
 
     // Run action asynchronously (matches C# pattern - no modal dialog)
     // Progress shown in status bar via OperationManager signals
-    action->runAsync();
+    action->RunAsync();
 }
 
 QString RestartVMCommand::MenuText() const

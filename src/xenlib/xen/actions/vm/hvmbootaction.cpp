@@ -50,19 +50,19 @@ HVMBootAction::HVMBootAction(XenConnection* connection, const QString& vmRef, QO
     }
 
     // Update description with VM name
-    setDescription(tr("Booting '%1' with temporary recovery boot settings...").arg(m_vmName));
+    SetDescription(tr("Booting '%1' with temporary recovery boot settings...").arg(m_vmName));
 
     // Register API methods for RBAC checks
-    addApiMethodToRoleCheck("VM.get_HVM_boot_policy");
-    addApiMethodToRoleCheck("VM.get_HVM_boot_params");
-    addApiMethodToRoleCheck("VM.set_HVM_boot_policy");
-    addApiMethodToRoleCheck("VM.set_HVM_boot_params");
-    addApiMethodToRoleCheck("VM.start");
+    AddApiMethodToRoleCheck("VM.get_HVM_boot_policy");
+    AddApiMethodToRoleCheck("VM.get_HVM_boot_params");
+    AddApiMethodToRoleCheck("VM.set_HVM_boot_policy");
+    AddApiMethodToRoleCheck("VM.set_HVM_boot_params");
+    AddApiMethodToRoleCheck("VM.start");
 }
 
 void HVMBootAction::run()
 {
-    XenAPI::Session* session = this->session();
+    XenAPI::Session* session = this->GetSession();
     if (!session)
     {
         throw std::runtime_error("Not connected to XenServer");
@@ -71,14 +71,14 @@ void HVMBootAction::run()
     try
     {
         // Step 1: Save current boot policy and boot order
-        setPercentComplete(10);
+        SetPercentComplete(10);
 
         m_oldBootPolicy = XenAPI::VM::get_HVM_boot_policy(session, m_vmRef);
         QVariantMap oldBootParams = XenAPI::VM::get_HVM_boot_params(session, m_vmRef);
         m_oldBootOrder = getBootOrder(oldBootParams);
 
         // Step 2: Set temporary boot policy and order
-        setPercentComplete(30);
+        SetPercentComplete(30);
 
         // Set boot policy to "BIOS order" for manual boot device selection
         XenAPI::VM::set_HVM_boot_policy(session, m_vmRef, "BIOS order");
@@ -89,12 +89,12 @@ void HVMBootAction::run()
         XenAPI::VM::set_HVM_boot_params(session, m_vmRef, recoveryBootParams);
 
         // Step 3: Start the VM
-        setPercentComplete(50);
+        SetPercentComplete(50);
 
         QString taskRef = XenAPI::VM::async_start(session, m_vmRef, false, false);
         pollToCompletion(taskRef); // Wait for VM to start
 
-        if (state() == Failed)
+        if (GetState() == Failed)
         {
             // If start failed, restore boot settings before returning
             restoreBootSettings(session);
@@ -102,10 +102,10 @@ void HVMBootAction::run()
         }
 
         // Step 4: Restore original boot policy and order
-        setPercentComplete(80);
+        SetPercentComplete(80);
         restoreBootSettings(session);
 
-        setPercentComplete(100);
+        SetPercentComplete(100);
 
     } catch (const std::exception& e)
     {

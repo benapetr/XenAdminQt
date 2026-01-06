@@ -50,7 +50,6 @@ void RestartToolstackCommand::Run()
     if (!host)
         return;
 
-    QString hostRef = host->OpaqueRef();
     QString hostName = this->getSelectedHostName();
 
     // Show confirmation dialog
@@ -62,12 +61,11 @@ void RestartToolstackCommand::Run()
 
     if (ret == QMessageBox::Yes)
     {
-        this->mainWindow()->showStatusMessage(QString("Restarting toolstack on '%1'...").arg(hostName));
+        this->mainWindow()->ShowStatusMessage(QString("Restarting toolstack on '%1'...").arg(hostName));
 
         // TODO: Need to add Host.async_restart_agent to XenAPI bindings
         // For now, show a not-implemented message
-        QMessageBox::information(this->mainWindow(), "Not Implemented",
-                                 "Restart Toolstack functionality will be implemented with XenAPI Host bindings.");
+        QMessageBox::information(this->mainWindow(), "Not Implemented", "Restart Toolstack functionality will be implemented with XenAPI Host bindings.");
 
         /*
         bool success = this->mainWindow()->xenLib()->getAPI()->restartHostAgent(hostRef);

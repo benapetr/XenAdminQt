@@ -47,21 +47,21 @@ RescanPIFsAction::RescanPIFsAction(XenConnection* connection,
     QVariantMap hostData = connection->GetCache()->ResolveObjectData("host", m_hostRef);
     m_hostName = hostData.value("name_label").toString();
 
-    setTitle(QString("Scanning for NICs on %1").arg(m_hostName));
-    setDescription(QString("Scanning for physical network interfaces on %1").arg(m_hostName));
+    SetTitle(QString("Scanning for NICs on %1").arg(m_hostName));
+    SetDescription(QString("Scanning for physical network interfaces on %1").arg(m_hostName));
 }
 
 void RescanPIFsAction::run()
 {
     try
     {
-        setPercentComplete(40);
-        setDescription(QString("Scanning for NICs on %1...").arg(m_hostName));
+        SetPercentComplete(40);
+        SetDescription(QString("Scanning for NICs on %1...").arg(m_hostName));
 
-        XenAPI::PIF::scan(session(), m_hostRef);
+        XenAPI::PIF::scan(GetSession(), m_hostRef);
 
-        setPercentComplete(100);
-        setDescription(QString("Scan complete on %1").arg(m_hostName));
+        SetPercentComplete(100);
+        SetDescription(QString("Scan complete on %1").arg(m_hostName));
 
     } catch (const std::exception& e)
     {

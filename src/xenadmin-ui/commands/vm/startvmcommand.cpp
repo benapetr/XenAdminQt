@@ -94,7 +94,7 @@ bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
     }
 
     // Create VM object for action (action will own and delete it)
-    VM* vmForAction = new VM(conn, vmRef);
+    QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vmRef));
 
     // Create VMStartAction with diagnosis callbacks (matches C# pattern)
     // NOTE: The callbacks are called by the action when failures occur
@@ -128,7 +128,7 @@ bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
 
     // Run action asynchronously (matches C# pattern - no modal dialog)
     // Progress shown in status bar via OperationManager signals
-    action->runAsync();
+    action->RunAsync();
     return true;
 }
 

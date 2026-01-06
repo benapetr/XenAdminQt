@@ -269,7 +269,7 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
     bool saveSucceeded = false;
     connect(multiOp, &MultipleOperation::completed, this, [this, multiOp, progressDialog, closeOnSuccess, &saveSucceeded]()
     {
-        if (multiOp->isCompleted() && !multiOp->hasError())
+        if (multiOp->IsCompleted() && !multiOp->HasError())
         {
             progressDialog->accept();
             saveSucceeded = true;
@@ -299,7 +299,7 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
     });
 
     // Run the operation and show progress dialog modally
-    multiOp->runAsync();
+    multiOp->RunAsync();
     progressDialog->exec(); // Blocks until operation completes
     
     // Dialog and operation are automatically cleaned up when dialog closes

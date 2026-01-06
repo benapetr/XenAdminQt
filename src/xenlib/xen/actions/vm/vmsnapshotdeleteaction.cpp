@@ -47,7 +47,7 @@ VMSnapshotDeleteAction::VMSnapshotDeleteAction(XenConnection* connection,
     m_snapshotName = snapshotData.value("name_label").toString();
 
     // Update title with actual name
-    setTitle(QString("Delete snapshot '%1'").arg(m_snapshotName));
+    SetTitle(QString("Delete snapshot '%1'").arg(m_snapshotName));
 
     // Get VBDs to destroy (only owned disks)
     QVariantList vbdRefs = snapshotData.value("VBDs").toList();
@@ -70,43 +70,43 @@ void VMSnapshotDeleteAction::run()
 {
     try
     {
-        setDescription(QString("Deleting snapshot '%1'...").arg(m_snapshotName));
-        setPercentComplete(0);
+        SetDescription(QString("Deleting snapshot '%1'...").arg(m_snapshotName));
+        SetPercentComplete(0);
 
         // Check if snapshot is suspended - if so, hard shutdown first
-        QVariantMap snapshotData = connection()->GetCache()->ResolveObjectData("vm", m_snapshotRef);
+        QVariantMap snapshotData = GetConnection()->GetCache()->ResolveObjectData("vm", m_snapshotRef);
         QString powerState = snapshotData.value("power_state").toString();
 
         if (powerState == "Suspended")
         {
-            setDescription("Shutting down suspended snapshot...");
-            XenAPI::VM::hard_shutdown(session(), m_snapshotRef);
+            SetDescription("Shutting down suspended snapshot...");
+            XenAPI::VM::hard_shutdown(GetSession(), m_snapshotRef);
             qDebug() << "Snapshot hard shutdown completed";
         }
 
-        setPercentComplete(20);
+        SetPercentComplete(20);
 
         // Destroy owned VBDs
         if (!m_vbdsToDestroy.isEmpty())
         {
-            setDescription("Destroying snapshot disks...");
+            SetDescription("Destroying snapshot disks...");
 
             int vbdProgress = 0;
             for (const QString& vbdRef : m_vbdsToDestroy)
             {
                 try
                 {
-                    QVariantMap vbdData = connection()->GetCache()->ResolveObjectData("vbd", vbdRef);
+                    QVariantMap vbdData = GetConnection()->GetCache()->ResolveObjectData("vbd", vbdRef);
                     QString vdiRef = vbdData.value("VDI").toString();
 
                     if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
                     {
                         // Destroy the VBD first
-                        XenAPI::VBD::destroy(session(), vbdRef);
+                        XenAPI::VBD::destroy(GetSession(), vbdRef);
                         qDebug() << "Destroyed VBD:" << vbdRef;
 
                         // Then destroy the VDI
-                        XenAPI::VDI::destroy(session(), vdiRef);
+                        XenAPI::VDI::destroy(GetSession(), vdiRef);
                         qDebug() << "Destroyed VDI:" << vdiRef;
                     }
                 } catch (const std::exception& e)
@@ -116,20 +116,20 @@ void VMSnapshotDeleteAction::run()
                 }
 
                 vbdProgress++;
-                setPercentComplete(20 + (vbdProgress * 50 / m_vbdsToDestroy.size()));
+                SetPercentComplete(20 + (vbdProgress * 50 / m_vbdsToDestroy.size()));
             }
         }
 
-        setPercentComplete(70);
+        SetPercentComplete(70);
 
         // Finally, destroy the snapshot VM itself
-        setDescription("Destroying snapshot VM...");
-        XenAPI::VM::destroy(session(), m_snapshotRef);
+        SetDescription("Destroying snapshot VM...");
+        XenAPI::VM::destroy(GetSession(), m_snapshotRef);
 
         qDebug() << "Snapshot deleted successfully:" << m_snapshotName;
 
-        setPercentComplete(100);
-        setDescription(QString("Snapshot '%1' deleted").arg(m_snapshotName));
+        SetPercentComplete(100);
+        SetDescription(QString("Snapshot '%1' deleted").arg(m_snapshotName));
 
     } catch (const std::exception& e)
     {

@@ -69,10 +69,10 @@ SrProbeAction::SrProbeAction(XenConnection* connection,
         target = "server";
     }
 
-    setDescription(QString("Scanning %1 storage on %2").arg(srType).arg(target));
+    SetDescription(QString("Scanning %1 storage on %2").arg(srType).arg(target));
 
     // Won't appear in history (matches C# SuppressHistory = true)
-    setSuppressHistory(true);
+    SetSuppressHistory(true);
 }
 
 void SrProbeAction::run()
@@ -90,7 +90,7 @@ void SrProbeAction::run()
             // GFS2 uses probe_ext (synchronous, returns structured data)
             try
             {
-                m_discoveredSRs = XenAPI::SR::probe_ext(session(),
+                m_discoveredSRs = XenAPI::SR::probe_ext(GetSession(),
                                                         m_host->OpaqueRef(),
                                                         m_deviceConfig,
                                                         m_srType,
@@ -115,7 +115,7 @@ void SrProbeAction::run()
         } else
         {
             // Other SR types use async_probe (returns XML)
-            QString taskRef = XenAPI::SR::async_probe(session(),
+            QString taskRef = XenAPI::SR::async_probe(GetSession(),
                                                       m_host->OpaqueRef(),
                                                       m_deviceConfig,
                                                       m_srType,
@@ -124,12 +124,12 @@ void SrProbeAction::run()
             // Poll task to completion
             pollToCompletion(taskRef, 0, 100);
 
-            // Parse XML result
-            QString xmlResult = result();
+            // Parse XML GetResult
+            QString xmlResult = GetResult();
             m_discoveredSRs = parseSRListXML(xmlResult);
         }
 
-        setDescription("SR scan successful");
+        SetDescription("SR scan successful");
 
     } catch (const std::exception& e)
     {

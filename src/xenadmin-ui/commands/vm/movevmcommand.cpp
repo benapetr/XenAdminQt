@@ -131,12 +131,12 @@ void MoveVMCommand::Run()
         return;
 
     VMMoveAction* action = new VMMoveAction(connection,
-                                            vm.data(),
-                                            srObj.data(),
-                                            nullptr,
+                                            vm,
+                                            srObj,
+                                            QSharedPointer<Host>(),
                                             this->mainWindow());
     OperationManager::instance()->RegisterOperation(action);
-    action->runAsync();
+    action->RunAsync();
 }
 
 QString MoveVMCommand::MenuText() const

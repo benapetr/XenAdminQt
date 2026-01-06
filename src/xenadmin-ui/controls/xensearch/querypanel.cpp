@@ -210,7 +210,7 @@ void QueryPanel::buildListInternal()
     // Get XenLib instance from any connected connection
     // C# uses search.PopulateAdapters() which internally queries all connections
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-    QList<XenConnection*> connections = connMgr->getConnectedConnections();
+    QList<XenConnection*> connections = connMgr->GetConnectedConnections();
     
     if (connections.isEmpty())
     {

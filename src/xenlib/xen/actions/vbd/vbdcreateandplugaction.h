@@ -49,37 +49,37 @@ class VbdCreateAndPlugAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct a VBD create and plug action
-     * @param vm The VM to attach the VBD to
-     * @param vbdRecord The VBD record to create (should include VM, VDI, device, etc.)
-     * @param vdiName Name of the VDI being attached (for display purposes)
-     * @param suppress Suppress progress notifications
-     * @param parent Parent QObject
-     */
-    VbdCreateAndPlugAction(VM* vm, const QVariantMap& vbdRecord,
-                           const QString& vdiName, bool suppress = false,
-                           QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct a VBD create and plug action
+         * @param vm The VM to attach the VBD to
+         * @param vbdRecord The VBD record to create (should include VM, VDI, device, etc.)
+         * @param vdiName Name of the VDI being attached (for display purposes)
+         * @param suppress Suppress progress notifications
+         * @param parent Parent QObject
+         */
+        VbdCreateAndPlugAction(VM* vm, const QVariantMap& vbdRecord,
+                               const QString& vdiName, bool suppress = false,
+                               QObject* parent = nullptr);
 
-signals:
-    /**
-     * @brief Emitted when user action is required (e.g., reboot VM)
-     * @param instruction User instruction message
-     */
-    void showUserInstruction(const QString& instruction);
+    signals:
+        /**
+         * @brief Emitted when user action is required (e.g., reboot VM)
+         * @param instruction User instruction message
+         */
+        void showUserInstruction(const QString& instruction);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    VM* m_vm;
-    QVariantMap m_vbdRecord;
-    QString m_vdiName;
-    bool m_suppress;
+    private:
+        VM* m_vm;
+        QVariantMap m_vbdRecord;
+        QString m_vdiName;
+        bool m_suppress;
 
-    bool isVMHVM() const;
-    bool isVBDEmpty() const;
+        bool isVMHVM() const;
+        bool isVBDEmpty() const;
 };
 
 #endif // VBDCREATEANDPLUGACTION_H

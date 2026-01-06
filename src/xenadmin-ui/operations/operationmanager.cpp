@@ -79,22 +79,22 @@ void OperationManager::RegisterOperation(AsyncOperation* operation)
         return;
 
     // Honor SuppressHistory flag (C# ActionBase.SuppressHistory)
-    if (operation->suppressHistory())
+    if (operation->SuppressHistory())
         return;
 
     // Assign UUID to operation if not already set (for task rehydration)
-    if (operation->operationUuid().isEmpty())
+    if (operation->GetOperationUUID().isEmpty())
     {
         QString uuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
-        operation->setOperationUuid(uuid);
+        operation->SetOperationUUID(uuid);
     }
 
     auto* record = new OperationRecord();
     record->operation = operation;
-    record->title = operation->title();
-    record->description = operation->description();
-    record->progress = operation->percentComplete();
-    record->state = operation->state();
+    record->title = operation->GetTitle();
+    record->description = operation->GetDescription();
+    record->progress = operation->GetPercentComplete();
+    record->state = operation->GetState();
     record->started = QDateTime::currentDateTime();
 
     m_records.append(record);
@@ -188,7 +188,7 @@ void OperationManager::updateRecordError(OperationRecord* record, const QString&
 
     record->errorMessage = error;
     if (record->operation)
-        record->shortErrorMessage = record->operation->shortErrorMessage();
+        record->shortErrorMessage = record->operation->GetShortErrorMessage();
     else
         record->shortErrorMessage.clear();
     emit recordUpdated(record);
@@ -233,7 +233,7 @@ void OperationManager::PrepareAllOperationsForRestart()
     {
         if (record && record->operation)
         {
-            record->operation->prepareForEventReloadAfterRestart();
+            record->operation->PrepareForEventReloadAfterRestart();
         }
     }
 }

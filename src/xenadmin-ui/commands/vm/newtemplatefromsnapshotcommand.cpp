@@ -148,7 +148,7 @@ void NewTemplateFromSnapshotCommand::Run()
     QString description = tr("Template created from snapshot '%1'").arg(snapshotName);
 
     // Create VM object for the snapshot
-    VM* vm = new VM(conn, vmRef);
+    QSharedPointer<VM> vm = QSharedPointer<VM>(new VM(conn, vmRef));
 
     // Create VMCloneAction
     VMCloneAction* action = new VMCloneAction(conn, vm, templateName, description, this->mainWindow());
@@ -158,27 +158,27 @@ void NewTemplateFromSnapshotCommand::Run()
 
     // Connect completion signal
     connect(action, &AsyncOperation::completed, this, [=]() {
-        if (action->state() == AsyncOperation::Completed)
+        if (action->GetState() == AsyncOperation::Completed)
         {
             // Mark template as "instant" (created from snapshot)
             // In C#, this is done with SetVMOtherConfigAction
             // For now, we'll just show success message
             // TODO: Add VM.add_to_other_config call to mark as instant template
 
-            this->mainWindow()->showStatusMessage(
+            this->mainWindow()->ShowStatusMessage(
                 tr("Template '%1' created from snapshot").arg(templateName), 5000);
-        } else if (action->state() == AsyncOperation::Failed)
+        } else if (action->GetState() == AsyncOperation::Failed)
         {
             QMessageBox::critical(this->mainWindow(), tr("Error"),
                                   tr("Failed to create template from snapshot:\n%1")
-                                      .arg(action->errorMessage()));
+                                      .arg(action->GetErrorMessage()));
         }
 
         action->deleteLater();
     });
 
     // Run action asynchronously
-    action->runAsync();
+    action->RunAsync();
 }
 
 QString NewTemplateFromSnapshotCommand::MenuText() const

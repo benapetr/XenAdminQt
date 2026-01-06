@@ -33,7 +33,7 @@
 #include <QDebug>
 
 CreateVMFastAction::CreateVMFastAction(XenConnection* connection,
-                                       VM* templateVM,
+                                       QSharedPointer<VM> templateVM,
                                        QObject* parent)
     : AsyncOperation(connection,
                      QString("Creating VM from template '%1'").arg(templateVM ? templateVM->GetName() : ""),
@@ -52,29 +52,29 @@ void CreateVMFastAction::run()
         QString originalName = m_template->GetName();
 
         // Clone template with hidden name (matches C# MakeHiddenName)
-        setDescription(QString("Cloning template '%1'").arg(originalName));
+        SetDescription(QString("Cloning template '%1'").arg(originalName));
         QString hiddenName = QString("__gui__%1").arg(originalName);
 
-        QString taskRef = XenAPI::VM::async_clone(session(), m_template->OpaqueRef(), hiddenName);
+        QString taskRef = XenAPI::VM::async_clone(GetSession(), m_template->OpaqueRef(), hiddenName);
         pollToCompletion(taskRef, 0, 80);
 
-        QString newVmRef = result();
+        QString newVmRef = GetResult();
         qDebug() << "CreateVMFastAction: Cloned VM ref:" << newVmRef;
 
         // Provision the VM
-        setDescription("Provisioning VM");
-        taskRef = XenAPI::VM::async_provision(session(), newVmRef);
+        SetDescription("Provisioning VM");
+        taskRef = XenAPI::VM::async_provision(GetSession(), newVmRef);
         pollToCompletion(taskRef, 80, 90);
 
         // Generate unique name and set it
-        setDescription("Saving VM properties");
+        SetDescription("Saving VM properties");
         QString newName = generateUniqueName(originalName);
-        XenAPI::VM::set_name_label(session(), newVmRef, newName);
+        XenAPI::VM::set_name_label(GetSession(), newVmRef, newName);
 
         // Store the created VM ref as result
-        setResult(newVmRef);
+        SetResult(newVmRef);
 
-        setDescription(QString("VM '%1' created successfully").arg(newName));
+        SetDescription(QString("VM '%1' created successfully").arg(newName));
 
     } catch (const std::exception& e)
     {
@@ -85,7 +85,7 @@ void CreateVMFastAction::run()
 QString CreateVMFastAction::generateUniqueName(const QString& baseName)
 {
     // Get all existing VMs
-    QList<QVariantMap> allVMs = connection()->GetCache()->GetAllData("vm");
+    QList<QVariantMap> allVMs = GetConnection()->GetCache()->GetAllData("vm");
 
     // Build set of existing names
     QSet<QString> existingNames;

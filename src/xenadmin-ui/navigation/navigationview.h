@@ -74,30 +74,30 @@ class NavigationView : public QWidget
         ~NavigationView();
 
         // Access to tree widget
-        QTreeWidget* treeWidget() const;
+        QTreeWidget* TreeWidget() const;
 
         // Public methods matching C# NavigationView interface
-        void focusTreeView();
-        void requestRefreshTreeView();
-        void resetSearchBox();
+        void FocusTreeView();
+        void RequestRefreshTreeView();
+        void ResetSearchBox();
 
         // Navigation mode (matches C# NavigationView.NavigationMode property line 114)
-        void setNavigationMode(NavigationPane::NavigationMode mode);
-        NavigationPane::NavigationMode navigationMode() const
+        void SetNavigationMode(NavigationPane::NavigationMode mode);
+        NavigationPane::NavigationMode GetNavigationMode() const
         {
             return this->m_navigationMode;
         }
 
         // Search mode control (matches C# NavigationView.InSearchMode property line 120)
-        void setInSearchMode(bool enabled);
-        bool inSearchMode() const
+        void SetInSearchMode(bool enabled);
+        bool GetInSearchMode() const
         {
             return this->m_inSearchMode;
         }
 
         // Search text access (matches C# searchTextBox.Text)
-        QString searchText() const;
-        void setSearchText(const QString& text);
+        QString GetSearchText() const;
+        void SetSearchText(const QString& text);
 
         struct ViewFilters
         {
@@ -107,7 +107,7 @@ class NavigationView : public QWidget
             bool showHiddenObjects = false;
         };
 
-        void setViewFilters(const ViewFilters& filters);
+        void SetViewFilters(const ViewFilters& filters);
 
     signals:
         // Events matching C# NavigationView

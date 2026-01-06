@@ -102,9 +102,9 @@ AsyncOperation* VMEnlightenmentEditPage::SaveSettings()
     protected:
         void run() override
         {
-            XenRpcAPI api(connection()->GetSession());
+            XenRpcAPI api(GetConnection()->GetSession());
 
-            setPercentComplete(30);
+            SetPercentComplete(30);
 
             // Get coordinator host
             // For now, we'll use a simplified approach
@@ -117,19 +117,19 @@ AsyncOperation* VMEnlightenmentEditPage::SaveSettings()
             args["vmuuid"] = m_vmUuid;
 
             QVariantList params;
-            params << connection()->GetSessionId()
+            params << GetConnection()->GetSessionId()
                    << "coordinator_host_ref" // TODO: Get actual coordinator host ref
                    << "xscontainer"
                    << action
                    << args;
 
-            QByteArray request = api.buildJsonRpcCall("host.call_plugin", params);
+            QByteArray request = api.BuildJsonRpcCall("host.call_plugin", params);
 
             // NOTE: This will fail without proper coordinator host ref
             // Full implementation needs to query pool to get coordinator
-            connection()->SendRequest(request);
+            GetConnection()->SendRequest(request);
 
-            setPercentComplete(100);
+            SetPercentComplete(100);
         }
 
     private:

@@ -46,27 +46,27 @@ class XENLIB_EXPORT ChangeHostAutostartAction : public AsyncOperation
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct action to change host autostart setting
-     * @param connection XenServer connection
-     * @param hostRef Host opaque reference
-     * @param enable True to enable autostart, false to disable
-     * @param suppressHistory True to suppress operation history (default: true)
-     * @param parent Parent QObject
-     */
-    ChangeHostAutostartAction(XenConnection* connection,
-                              const QString& hostRef,
-                              bool enable,
-                              bool suppressHistory = true,
-                              QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct action to change host autostart setting
+         * @param connection XenServer connection
+         * @param hostRef Host opaque reference
+         * @param enable True to enable autostart, false to disable
+         * @param suppressHistory True to suppress operation history (default: true)
+         * @param parent Parent QObject
+         */
+        ChangeHostAutostartAction(XenConnection* connection,
+                                  const QString& hostRef,
+                                  bool enable,
+                                  bool suppressHistory = true,
+                                  QObject* parent = nullptr);
 
-protected:
-    void run() override;
+    protected:
+        void run() override;
 
-private:
-    QString m_hostRef;
-    bool m_enableAutostart;
+    private:
+        QString m_hostRef;
+        bool m_enableAutostart;
 };
 
 #endif // CHANGEHOSTAUTOSTARTACTION_H

@@ -61,7 +61,7 @@ class AddHostToPoolAction : public AsyncOperation
          */
         AddHostToPoolAction(XenConnection* poolConnection,
                             XenConnection* hostConnection,
-                            Host* joiningHost,
+                            QSharedPointer<Host> joiningHost,
                             QObject* parent = nullptr);
 
     protected:
@@ -70,7 +70,7 @@ class AddHostToPoolAction : public AsyncOperation
     private:
         XenConnection* m_poolConnection;
         XenConnection* m_hostConnection;
-        Host* m_joiningHost;
+        QSharedPointer<Host> m_joiningHost;
 };
 
 #endif // ADDHOSTTOPOOLACTION_H
