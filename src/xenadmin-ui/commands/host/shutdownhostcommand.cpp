@@ -53,10 +53,9 @@ void ShutdownHostCommand::Run()
     if (!host)
         return;
 
-    QString hostRef = this->getSelectedHostRef();
     QString hostName = this->getSelectedHostName();
 
-    if (hostRef.isEmpty() || hostName.isEmpty())
+    if (hostName.isEmpty())
         return;
 
     // Show warning dialog
@@ -78,7 +77,6 @@ void ShutdownHostCommand::Run()
             return;
         }
 
-        QSharedPointer<Host> host = QSharedPointer<Host>(new Host(conn, hostRef, this));
         ShutdownHostAction* action = new ShutdownHostAction(conn, host, nullptr);
 
         OperationManager::instance()->RegisterOperation(action);

@@ -98,11 +98,8 @@ void ForceShutdownVMCommand::Run()
         return;
     }
 
-    // Create VM object for action (action will own and delete it)
-    QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vm->OpaqueRef()));
-
     // Create the hard shutdown action
-    VMHardShutdown* action = new VMHardShutdown(vmForAction, this->mainWindow());
+    VMHardShutdown* action = new VMHardShutdown(vm, this->mainWindow());
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);

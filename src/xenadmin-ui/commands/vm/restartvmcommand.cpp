@@ -81,11 +81,8 @@ void RestartVMCommand::Run()
         return;
     }
 
-    // Create VM object for action (action will own and delete it)
-    QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vm->OpaqueRef()));
-
     // Create VMCleanReboot action (parent is MainWindow to prevent premature deletion)
-    VMCleanReboot* action = new VMCleanReboot(vmForAction, this->mainWindow());
+    VMCleanReboot* action = new VMCleanReboot(vm, this->mainWindow());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
     OperationManager::instance()->RegisterOperation(action);

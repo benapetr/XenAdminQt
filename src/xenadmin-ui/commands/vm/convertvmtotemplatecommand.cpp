@@ -79,12 +79,9 @@ void ConvertVMToTemplateCommand::Run()
             return;
         }
 
-        // Create VM object for action (action will own and delete it)
-        QSharedPointer<VM> vmForAction(new VM(conn, vm->OpaqueRef()));
-
         // Create VMToTemplateAction (matches C# VMToTemplateAction pattern)
         // Action automatically sets other_config["instant"] = "true"
-        VMToTemplateAction* action = new VMToTemplateAction(conn, vmForAction, this->mainWindow());
+        VMToTemplateAction* action = new VMToTemplateAction(conn, vm, this->mainWindow());
 
         // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
         OperationManager::instance()->RegisterOperation(action);

@@ -93,15 +93,12 @@ bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
         displayName = vm->GetName();
     }
 
-    // Create VM object for action (action will own and delete it)
-    QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vmRef));
-
     // Create VMStartAction with diagnosis callbacks (matches C# pattern)
     // NOTE: The callbacks are called by the action when failures occur
     QPointer<MainWindow> mainWindow = this->mainWindow();
 
     VMStartAction* action = new VMStartAction(
-        vmForAction,
+        vm,
         nullptr,  // WarningDialogHAInvalidConfig callback (TODO: implement if needed)
         [conn, vmRef, displayName, mainWindow](VMStartAbstractAction* abstractAction, const Failure& failure) {
             Q_UNUSED(abstractAction)

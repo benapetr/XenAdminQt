@@ -99,11 +99,8 @@ void ForceRebootVMCommand::Run()
         return;
     }
 
-    // Create VM object for action (action will own and delete it)
-    QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vm->OpaqueRef()));
-
     // Create the hard reboot action
-    VMHardReboot* action = new VMHardReboot(vmForAction, this->mainWindow());
+    VMHardReboot* action = new VMHardReboot(vm, this->mainWindow());
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);

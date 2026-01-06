@@ -118,12 +118,9 @@ void DeleteVMCommand::Run()
             return;
         }
 
-        // Create VM object for action (action will own and delete it)
-        QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vm->OpaqueRef()));
-
         // Create VMDestroyAction (matches C# VMDestroyAction pattern)
         // Action handles VDI cleanup, task polling, and error aggregation
-        VMDestroyAction* action = new VMDestroyAction(conn, vmForAction, deleteDisks, this->mainWindow());
+        VMDestroyAction* action = new VMDestroyAction(conn, vm, deleteDisks, this->mainWindow());
 
         // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
         OperationManager::instance()->RegisterOperation(action);

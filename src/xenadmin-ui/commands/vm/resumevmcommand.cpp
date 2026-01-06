@@ -100,16 +100,13 @@ bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool
         return false;
     }
 
-    // Create VM object for action (action will own and delete it)
-    QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vmRef));
-
     // Create VMResumeAction with diagnosis callbacks (matches C# pattern)
     // Note: VMResumeAction is for resuming from Suspended state (from disk)
     // For unpausing from Paused state (in memory), use VMUnpause instead
     QPointer<MainWindow> mainWindow = this->mainWindow();
 
     VMResumeAction* action = new VMResumeAction(
-        vmForAction,
+        vm,
         nullptr,  // WarningDialogHAInvalidConfig callback (TODO: implement if needed)
         [conn, vmRef, displayName, mainWindow](VMStartAbstractAction* abstractAction, const Failure& failure) {
             Q_UNUSED(abstractAction)

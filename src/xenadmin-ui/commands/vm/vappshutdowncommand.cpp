@@ -119,9 +119,11 @@ void VappShutDownCommand::Run()
         return;
 
     XenConnection* connection = selectedObject->GetConnection();
-    XenCache* cache = connection ? connection->GetCache() : nullptr;
-    if (!cache)
+
+    if (!connection)
         return;
+
+    XenCache* cache = connection->GetCache();
 
     QVariantMap appData = cache->ResolveObjectData("vm_appliance", applianceRef);
     QString appName = appData.value("name_label").toString();
@@ -154,8 +156,7 @@ void VappShutDownCommand::Run()
     }
 
     // Get connection
-    XenConnection* conn = connection;
-    if (!conn || !conn->IsConnected())
+    if (!connection->IsConnected())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
                              tr("Not connected to XenServer"));
@@ -163,7 +164,7 @@ void VappShutDownCommand::Run()
     }
 
     // Create and start action (uses clean shutdown by default)
-    ShutDownApplianceAction* action = new ShutDownApplianceAction(conn, applianceRef, this->mainWindow());
+    ShutDownApplianceAction* action = new ShutDownApplianceAction(connection, applianceRef, this->mainWindow());
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);

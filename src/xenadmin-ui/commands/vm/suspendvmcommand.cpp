@@ -80,11 +80,8 @@ void SuspendVMCommand::Run()
     if (ret != QMessageBox::Yes)
         return;
 
-    // Create VM object for action (action will own and delete it)
-    QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vm->OpaqueRef()));
-
     // Create VMSuspendAction (parent is MainWindow to prevent premature deletion)
-    VMSuspendAction* action = new VMSuspendAction(vmForAction, this->mainWindow());
+    VMSuspendAction* action = new VMSuspendAction(vm, this->mainWindow());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
     OperationManager::instance()->RegisterOperation(action);

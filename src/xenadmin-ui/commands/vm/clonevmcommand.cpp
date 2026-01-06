@@ -103,9 +103,6 @@ void CloneVMCommand::Run()
             return;
         }
 
-        // Create VM object (lightweight wrapper)
-        QSharedPointer<VM> vm = QSharedPointer<VM>(new VM(conn, vmRef));
-
         // Create VMCloneAction (matches C# VMCloneAction pattern)
         VMCloneAction* action = new VMCloneAction(conn, vm, cloneName, "", this->mainWindow());
 

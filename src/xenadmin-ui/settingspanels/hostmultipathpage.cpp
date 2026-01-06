@@ -102,10 +102,12 @@ AsyncOperation* HostMultipathPage::SaveSettings()
         return nullptr;
     }
 
-    QSharedPointer<Host> host = QSharedPointer<Host>(new Host(conn, this->m_hostRef, this));
+    QSharedPointer<Host> host = QSharedPointer<Host>(new Host(conn, this->m_hostRef));
     
     // Create and return action
     bool enableMultipath = this->ui->multipathCheckBox->isChecked();
+
+    // TODO check if this really works, the actions shouldn't be owned, this could lead to segfault
     return new EditMultipathAction(host, enableMultipath, this);
 }
 

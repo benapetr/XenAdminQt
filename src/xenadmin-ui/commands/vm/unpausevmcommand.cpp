@@ -69,11 +69,8 @@ void UnpauseVMCommand::Run()
         return;
     }
 
-    // Create VM object for action (action will own and delete it)
-    QSharedPointer<VM> vmForAction = QSharedPointer<VM>(new VM(conn, vm->OpaqueRef()));
-
     // Create VMUnpause action (parent is MainWindow to prevent premature deletion)
-    VMUnpause* action = new VMUnpause(vmForAction, this->mainWindow());
+    VMUnpause* action = new VMUnpause(vm, this->mainWindow());
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);
