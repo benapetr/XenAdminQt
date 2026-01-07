@@ -64,6 +64,7 @@ SOURCES += \
     xen/vbd.cpp \
     xen/pbd.cpp \
     xen/pif.cpp \
+    xen/vif.cpp \
     xen/vusb.cpp \
     xen/vtpm.cpp \
     xen/vmss.cpp \
@@ -254,6 +255,7 @@ HEADERS += \
     xen/vbd.h \
     xen/pbd.h \
     xen/pif.h \
+    xen/vif.h \
     xen/vusb.h \
     xen/vtpm.h \
     xen/vmss.h \

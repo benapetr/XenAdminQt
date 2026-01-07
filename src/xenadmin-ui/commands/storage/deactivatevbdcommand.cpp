@@ -37,8 +37,7 @@
 #include <QMessageBox>
 #include <QDebug>
 
-DeactivateVBDCommand::DeactivateVBDCommand(MainWindow* mainWindow, QObject* parent)
-    : VBDCommand(mainWindow, parent)
+DeactivateVBDCommand::DeactivateVBDCommand(MainWindow* mainWindow, QObject* parent) : VBDCommand(mainWindow, parent)
 {
 }
 
@@ -62,51 +61,42 @@ bool DeactivateVBDCommand::canRunVBD(const QString& vbdRef) const
     if (!vbd || !vbd->IsValid())
         return false;
 
-    XenCache* cache = vbd->GetConnection()->GetCache();
+    XenCache* cache = vbd->GetCache();
+
+    if (!cache)
+        return false;
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
         return false;
 
     // Check if VBD is locked
-    if (vbdData.value("Locked", false).toBool())
-    {
+    if (vbd->IsLocked())
         return false;
-    }
 
     // Get VM
     QString vmRef = vbdData.value("VM").toString();
     QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
     if (vmData.isEmpty() || vmData.value("is_a_template").toBool())
-    {
         return false;
-    }
 
     // Get VDI
     QString vdiRef = vbdData.value("VDI").toString();
     if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
-    {
         return false; // No VDI attached
-    }
 
     QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
     if (vdiData.isEmpty())
-    {
         return false;
-    }
 
     // Check if VDI is locked
-    if (vdiData.value("Locked", false).toBool())
-    {
+    if (vdiData.value("locked", false).toBool())
         return false;
-    }
 
     // Check VM is running
     QString powerState = vmData.value("power_state").toString();
     if (powerState != "Running")
-    {
         return false;
-    }
 
     // Check if system disk AND owner (boot disk cannot be unplugged)
     QString vdiType = vdiData.value("type").toString();
@@ -117,9 +107,7 @@ bool DeactivateVBDCommand::canRunVBD(const QString& vbdRef) const
         bool isOwner = vbdData.value("device", "").toString() == "0" ||
                        vbdData.value("bootable", false).toBool();
         if (isOwner)
-        {
             return false;
-        }
     }
 
     // Check if not currently attached

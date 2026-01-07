@@ -30,6 +30,8 @@
 
 #include "../command.h"
 
+class Network;
+
 /**
  * @brief DestroyBondCommand - Delete a network bond
  *
@@ -57,30 +59,18 @@ class DestroyBondCommand : public Command
 
     private:
         /**
-         * @brief Get selected network reference
-         * @return Network opaque reference or empty string
-         */
-        QString getSelectedNetworkRef() const;
-
-        /**
-         * @brief Get selected network data
-         * @return Network data from cache
-         */
-        QVariantMap getSelectedNetworkData() const;
-
-        /**
          * @brief Check if network is a bond
-         * @param networkData Network data from cache
+         * @param network Network data from cache
          * @return true if network has a bond
          */
-        bool isNetworkABond(const QVariantMap& networkData) const;
+        bool isNetworkABond(QSharedPointer<Network> network) const;
 
         /**
          * @brief Get bond reference from network
-         * @param networkData Network data from cache
+         * @param network Network data from cache
          * @return Bond opaque reference or empty string
          */
-        QString getBondRefFromNetwork(const QVariantMap& networkData) const;
+        QString getBondRefFromNetwork(QSharedPointer<Network> network) const;
 
         /**
          * @brief Check if bond affects management interfaces

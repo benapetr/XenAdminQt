@@ -31,7 +31,7 @@
 #include "xen/xenapi/xenapi_VM.h"
 #include <QDebug>
 
-VbdCreateAndPlugAction::VbdCreateAndPlugAction(VM* vm, const QVariantMap& vbdRecord,
+VbdCreateAndPlugAction::VbdCreateAndPlugAction(QSharedPointer<VM> vm, const QVariantMap& vbdRecord,
                                                const QString& vdiName, bool suppress,
                                                QObject* parent)
     : AsyncOperation(vm ? vm->GetConnection() : nullptr,

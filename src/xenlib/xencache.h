@@ -161,7 +161,7 @@ class XenCache : public QObject
          * all cached objects so they can be filtered by Query.Match().
          * Used by SearchTabPage to iterate all objects and let Query do filtering.
          */
-        QList<QPair<QString, QString>> GetAllObjectsData() const;
+        QList<QPair<QString, QString>> GetXenSearchableObjects() const;
 
         /**
          * @brief Get the pool reference for this connection

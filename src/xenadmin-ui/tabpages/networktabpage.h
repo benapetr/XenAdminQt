@@ -29,6 +29,7 @@
 #define NETWORKTABPAGE_H
 
 #include "basetabpage.h"
+#include "xen/vm.h"
 #include <QVariantMap>
 
 QT_BEGIN_NAMESPACE
@@ -97,7 +98,7 @@ class NetworkTabPage : public BaseTabPage
         QString getSelectedNetworkRef() const;
         QString getSelectedPifRef() const;
         QString getSelectedVifRef() const;  // For VM network interfaces
-        QVariantMap getSelectedVif() const; // Get full VIF record
+        QSharedPointer<VIF> getSelectedVif() const; // Get full VIF record
 
         // PIF/Network helper methods (matching C# XenAPI extension methods)
         QString getPifLinkStatus(const QVariantMap& pifData) const;     // PIF.LinkStatusString()
@@ -108,6 +109,8 @@ class NetworkTabPage : public BaseTabPage
 
         // Button enablement (matches C# UpdateEnablement)
         void updateButtonStates();
+
+        bool canEnterPropertiesWindow = false;
 
         // Context menu handlers
         void showNetworksContextMenu(const QPoint& pos);

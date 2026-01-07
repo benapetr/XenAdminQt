@@ -54,14 +54,19 @@ void AddVirtualDiskCommand::Run()
     QSharedPointer<XenObject> object = this->GetObject();
     if (!object || !object->GetConnection())
         return;
-    XenCache *cache = object->GetConnection()->GetCache();
+    XenCache *cache = object->GetCache();
 
     if (objectType == "vm")
     {
+        QSharedPointer<VM> vm = qSharedPointerCast<VM>(object);
+
+        if (!vm)
+            return;
+
         // Check VBD limit
-        QVariantMap vmData = cache->ResolveObjectData("vm", objectRef);
-        int maxVBDs = getMaxVBDsAllowed(vmData);
-        int currentVBDs = getCurrentVBDCount(cache, objectRef);
+        QVariantMap vmData = vm->GetData();
+        int maxVBDs = this->getMaxVBDsAllowed(vmData);
+        int currentVBDs = this->getCurrentVBDCount(cache, objectRef);
 
         if (currentVBDs >= maxVBDs)
         {
@@ -73,12 +78,6 @@ void AddVirtualDiskCommand::Run()
         }
 
         XenConnection* connection = object->GetConnection();
-        if (!connection)
-        {
-            qWarning() << "[AddVirtualDiskCommand] No connection available";
-            QMessageBox::warning(mainWindow(), tr("Error"), tr("No connection available."));
-            return;
-        }
 
         // Open NewVirtualDiskDialog for VM (modal)
         qDebug() << "[AddVirtualDiskCommand] Opening NewVirtualDiskDialog for VM:" << objectRef;
@@ -148,10 +147,6 @@ void AddVirtualDiskCommand::Run()
             QMessageBox::warning(mainWindow(), tr("Failed"), tr("Failed to create virtual disk."));
             return;
         }
-
-        // Create VBD and attach to VM using VbdCreateAndPlugAction
-        qDebug() << "[AddVirtualDiskCommand] Creating VM object for" << objectRef;
-        VM* vm = new VM(connection, objectRef, this);
 
         QVariantMap vbdRecord;
         vbdRecord["VM"] = objectRef;

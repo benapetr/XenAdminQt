@@ -43,27 +43,37 @@ XenObject::~XenObject()
 
 QString XenObject::GetUUID() const
 {
-    return stringProperty("uuid");
+    return this->stringProperty("uuid");
 }
 
 QString XenObject::GetName() const
 {
-    return stringProperty("name_label");
+    return this->stringProperty("name_label");
 }
 
 QString XenObject::GetDescription() const
 {
-    return stringProperty("name_description");
+    return this->stringProperty("name_description");
 }
 
 QStringList XenObject::GetTags() const
 {
-    return stringListProperty("tags");
+    return this->stringListProperty("tags");
 }
 
 bool XenObject::IsLocked() const
 {
-    return boolProperty("locked", false);
+    return this->m_locked;;
+}
+
+void XenObject::Lock()
+{
+    this->m_locked = true;
+}
+
+void XenObject::Unlock()
+{
+    this->m_locked = false;
 }
 
 bool XenObject::IsConnected() const
@@ -75,14 +85,10 @@ bool XenObject::IsConnected() const
 
 QVariantMap XenObject::GetData() const
 {
-    if (!this->m_connection || this->m_opaqueRef.isEmpty())
+    if (!this->m_cache || this->m_opaqueRef.isEmpty())
         return QVariantMap();
 
-    // Get cache from connection's XenLib
-    if (!this->m_connection->GetCache())
-        return QVariantMap();
-
-    return this->m_connection->GetCache()->ResolveObjectData(GetObjectType(), this->m_opaqueRef);
+    return this->m_cache->ResolveObjectData(this->GetObjectType(), this->m_opaqueRef);
 }
 
 void XenObject::Refresh()
@@ -92,12 +98,12 @@ void XenObject::Refresh()
 
 bool XenObject::IsValid() const
 {
-    return !GetData().isEmpty();
+    return !this->GetData().isEmpty();
 }
 
 QVariant XenObject::property(const QString& key, const QVariant& defaultValue) const
 {
-    QVariantMap d = GetData();
+    QVariantMap d = this->GetData();
     return d.value(key, defaultValue);
 }
 

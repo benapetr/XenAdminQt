@@ -528,7 +528,7 @@ QList<QPair<QString, QString>> Search::getMatchedObjects(XenConnection* connecti
     ObjectTypes types = scope->GetObjectTypes();
 
     // Get all objects from cache
-    QList<QPair<QString, QString>> allCached = connection->GetCache()->GetAllObjectsData();
+    QList<QPair<QString, QString>> allCached = connection->GetCache()->GetXenSearchableObjects();
 
     for (const auto& pair : allCached)
     {

@@ -34,8 +34,7 @@
 #include <QMessageBox>
 #include <QDebug>
 
-ReattachSRCommand::ReattachSRCommand(MainWindow* mainWindow, QObject* parent)
-    : SRCommand(mainWindow, parent)
+ReattachSRCommand::ReattachSRCommand(MainWindow* mainWindow, QObject* parent) : SRCommand(mainWindow, parent)
 {
 }
 

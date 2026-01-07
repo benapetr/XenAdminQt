@@ -43,48 +43,39 @@ AttachVirtualDiskCommand::AttachVirtualDiskCommand(MainWindow* mainWindow, QObje
 bool AttachVirtualDiskCommand::CanRun() const
 {
     // Can attach virtual disk if VM is selected and not a snapshot
-    if (!isVMSelected())
+    if (!this->isVMSelected())
         return false;
 
-    QSharedPointer<XenObject> object = this->GetObject();
+    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->GetObject());
 
-    QString vmRef = getSelectedVMRef();
-    if (vmRef.isEmpty())
+    if (!vm)
         return false;
-
-    if (!object || !object->GetConnection())
-        return false;
-
-    XenCache* cache = object->GetConnection()->GetCache();
-    if (!cache)
-        return false;
-
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
     // Cannot attach to snapshot or locked VM
-    if (vmData.value("is_a_snapshot", false).toBool())
+    if (vm->IsSnapshot())
         return false;
 
-    QVariantMap currentOps = vmData.value("current_operations", QVariantMap()).toMap();
-    return currentOps.isEmpty();
+    return vm->CurrentOperations().isEmpty();
 }
 
 void AttachVirtualDiskCommand::Run()
 {
-    QSharedPointer<XenObject> object = this->GetObject();
-    QString vmRef = getSelectedVMRef();
-    if (vmRef.isEmpty())
+    if (!this->isVMSelected())
         return;
 
-    if (!object || !object->GetConnection())
+    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->GetObject());
+
+    if (!vm)
         return;
 
-    XenCache* cache = object->GetConnection()->GetCache();
+    QString vmRef = vm->OpaqueRef();
+
+    XenCache* cache = vm->GetCache();
     if (!cache)
         return;
 
     // Check VBD limit
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = vm->GetData();
     int maxVBDs = this->getMaxVBDsAllowed(vmData);
     int currentVBDs = this->getCurrentVBDCount(vmRef, cache);
 
@@ -98,7 +89,7 @@ void AttachVirtualDiskCommand::Run()
     }
 
     // Launch attach dialog
-    AttachVirtualDiskDialog dialog(object->GetConnection(), vmRef, mainWindow());
+    AttachVirtualDiskDialog dialog(vm->GetConnection(), vmRef, mainWindow());
 
     qDebug() << "[AttachVirtualDiskCommand] Showing AttachVirtualDiskDialog modally...";
     if (dialog.exec() != QDialog::Accepted)
@@ -108,19 +99,19 @@ void AttachVirtualDiskCommand::Run()
     }
 
     qDebug() << "[AttachVirtualDiskCommand] Dialog accepted, proceeding with attachment";
-    performAttachment(&dialog, object->GetConnection(), vmRef);
+    this->performAttachment(&dialog, vm);
 }
 
-void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog, XenConnection* connection, const QString& vmRef)
+void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog, QSharedPointer<VM> vm)
 {
-    if (!connection)
+    if (!vm->IsConnected())
     {
         qWarning() << "[AttachVirtualDiskCommand] No connection available, aborting";
         QMessageBox::warning(mainWindow(), "Error", "No connection available");
         return;
     }
 
-    qDebug() << "[AttachVirtualDiskCommand] Starting attachment process for VM:" << vmRef;
+    qDebug() << "[AttachVirtualDiskCommand] Starting attachment process for VM:" << vm->OpaqueRef();
 
     QString vdiRef = dialog->getSelectedVDIRef();
     if (vdiRef.isEmpty())
@@ -138,12 +129,7 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     qDebug() << "[AttachVirtualDiskCommand] Device position:" << devicePosition
              << "Mode:" << mode << "Bootable:" << bootable;
 
-    XenCache* cache = connection->GetCache();
-    if (!cache)
-    {
-        qWarning() << "[AttachVirtualDiskCommand] No cache available, aborting";
-        return;
-    }
+    XenCache* cache = vm->GetCache();
 
     // Get VDI name for UI feedback
     QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
@@ -153,7 +139,7 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     // Build VBD record (matches C# AttachDiskDialog.cs lines 206-216)
     QVariantMap vbdRecord;
     vbdRecord["VDI"] = vdiRef;
-    vbdRecord["VM"] = vmRef;
+    vbdRecord["VM"] = vm->OpaqueRef();
     vbdRecord["bootable"] = bootable;
     vbdRecord["device"] = QString(""); // Will be filled by XenAPI
     vbdRecord["empty"] = false;
@@ -175,9 +161,6 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     }
     vbdRecord["owner"] = isOwner;
     qDebug() << "[AttachVirtualDiskCommand] VBD owner flag:" << isOwner;
-
-    qDebug() << "[AttachVirtualDiskCommand] Creating VM object for" << vmRef;
-    VM* vm = new VM(connection, vmRef, this);
 
     // Create and execute the action (matches C# AttachDiskDialog.cs lines 218-221)
     qDebug() << "[AttachVirtualDiskCommand] Creating VbdCreateAndPlugAction";
@@ -230,14 +213,14 @@ QString AttachVirtualDiskCommand::MenuText() const
 
 bool AttachVirtualDiskCommand::isVMSelected() const
 {
-    return getSelectedObjectType() == "vm";
+    return this->getSelectedObjectType() == "vm";
 }
 
 QString AttachVirtualDiskCommand::getSelectedVMRef() const
 {
-    if (!isVMSelected())
+    if (!this->isVMSelected())
         return QString();
-    return getSelectedObjectRef();
+    return this->getSelectedObjectRef();
 }
 
 int AttachVirtualDiskCommand::getMaxVBDsAllowed(const QVariantMap& vmData) const

@@ -28,6 +28,8 @@
 #include "networktabpage.h"
 #include "ui_networktabpage.h"
 #include "xen/session.h"
+#include "xen/vm.h"
+#include "xen/vif.h"
 #include "xencache.h"
 #include "xen/xenapi/xenapi_Network.h"
 #include "../dialogs/newnetworkwizard.h"
@@ -76,10 +78,8 @@ NetworkTabPage::NetworkTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui
     connect(this->ui->ipConfigTable, &QTableWidget::customContextMenuRequested, this, &NetworkTabPage::showIPConfigContextMenu);
     connect(this->ui->networksTable, &QTableWidget::itemSelectionChanged, this, &NetworkTabPage::onNetworksTableSelectionChanged);
     connect(this->ui->ipConfigTable, &QTableWidget::itemSelectionChanged, this, &NetworkTabPage::onIPConfigTableSelectionChanged);
-    connect(this->ui->networksTable, &QTableWidget::itemDoubleClicked,
-            this, &NetworkTabPage::onNetworksTableDoubleClicked);
-    connect(this->ui->ipConfigTable, &QTableWidget::itemDoubleClicked,
-            this, &NetworkTabPage::onIpConfigTableDoubleClicked);
+    connect(this->ui->networksTable, &QTableWidget::itemDoubleClicked, this, &NetworkTabPage::onNetworksTableDoubleClicked);
+    connect(this->ui->ipConfigTable, &QTableWidget::itemDoubleClicked, this, &NetworkTabPage::onIpConfigTableDoubleClicked);
 }
 
 NetworkTabPage::~NetworkTabPage()
@@ -839,7 +839,7 @@ void NetworkTabPage::onConfigureClicked()
 
 void NetworkTabPage::onNetworksTableDoubleClicked(QTableWidgetItem* item)
 {
-    if (!item)
+    if (!item || !this->canEnterPropertiesWindow)
         return;
     if (this->m_objectType == "vm")
         this->onEditNetwork();
@@ -1044,7 +1044,7 @@ void NetworkTabPage::copyToClipboard()
 void NetworkTabPage::onNetworksTableSelectionChanged()
 {
     // Match C# UpdateEnablement() - update button states based on selection
-    updateButtonStates();
+    this->updateButtonStates();
 }
 
 void NetworkTabPage::onIPConfigTableSelectionChanged()
@@ -1373,16 +1373,16 @@ void NetworkTabPage::onRemoveNetwork()
     if (this->m_objectType == "vm")
     {
         // C#: Use DeleteVIFAction for VMs
-        QVariantMap vif = getSelectedVif();
-        if (vif.isEmpty())
+        QSharedPointer<VIF> vif = getSelectedVif();
+        if (!vif || !vif->IsValid())
             return;
 
-        QString vifRef = vif.value("ref").toString();
-        QString device = vif.value("device").toString();
+        QString vifRef = vif->OpaqueRef();
+        QString device = vif->Device();
         QString networkName = "-";
 
         // Get network name
-        QString networkRef = vif.value("network").toString();
+        QString networkRef = vif->NetworkRef();
         if (!networkRef.isEmpty() && this->m_connection && this->m_connection->GetCache())
         {
             QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
@@ -1460,12 +1460,12 @@ void NetworkTabPage::onActivateToggle()
     if (this->m_objectType != "vm")
         return;
 
-    QVariantMap vif = getSelectedVif();
-    if (vif.isEmpty())
+    QSharedPointer<VIF> vif = getSelectedVif();
+    if (!vif || !vif->IsValid())
         return;
 
-    QString vifRef = vif.value("ref").toString();
-    bool currentlyAttached = vif.value("currently_attached", false).toBool();
+    QString vifRef = vif->OpaqueRef();
+    bool currentlyAttached = vif->CurrentlyAttached();
 
     if (currentlyAttached)
     {
@@ -1641,13 +1641,12 @@ QString NetworkTabPage::getSelectedVifRef() const
     return QString();
 }
 
-QVariantMap NetworkTabPage::getSelectedVif() const
+QSharedPointer<VIF> NetworkTabPage::getSelectedVif() const
 {
-    QString vifRef = getSelectedVifRef();
-    if (vifRef.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
-        return QVariantMap();
+    if (!this->m_connection)
+        return QSharedPointer<VIF>();
 
-    return this->m_connection->GetCache()->ResolveObjectData("VIF", vifRef);
+    return this->m_connection->GetCache()->ResolveObject<VIF>("vif", this->getSelectedVifRef());
 }
 
 void NetworkTabPage::updateButtonStates()
@@ -1656,23 +1655,22 @@ void NetworkTabPage::updateButtonStates()
 
     if (this->m_objectType == "vm")
     {
-        QVariantMap vif = getSelectedVif();
-        bool hasSelection = !vif.isEmpty();
-        bool locked = this->m_objectData.value("Locked", false).toBool();
+        QSharedPointer<VIF> vif = this->getSelectedVif();
+        bool hasSelection = !vif.isNull() && vif->IsValid();
+        bool locked = hasSelection && vif->IsLocked();
 
         this->ui->addButton->setEnabled(!locked);
 
         if (hasSelection)
         {
-            bool currentlyAttached = vif.value("currently_attached", false).toBool();
-            QVariantList allowedOps = vif.value("allowed_operations", QVariantList()).toList();
+            bool currentlyAttached = vif->CurrentlyAttached();
+            QStringList allowedOps = vif->AllowedOperations();
 
             // Check if unplug or plug is allowed
             bool canUnplug = false;
             bool canPlug = false;
-            for (const QVariant& op : allowedOps)
+            for (const QString& opStr : allowedOps)
             {
-                QString opStr = op.toString();
                 if (opStr == "unplug")
                     canUnplug = true;
                 if (opStr == "plug")
@@ -1681,11 +1679,11 @@ void NetworkTabPage::updateButtonStates()
 
             // C#: RemoveNetworkButton.Enabled = !locked && (vif.allowed_operations.Contains(vif_operations.unplug) || !vif.currently_attached);
             this->ui->removeButton->setEnabled(!locked && (canUnplug || !currentlyAttached));
-            this->ui->propertiesButton->setEnabled(!locked && (canUnplug || !currentlyAttached));
+            this->canEnterPropertiesWindow = !locked && (canUnplug || !currentlyAttached);
+            this->ui->propertiesButton->setEnabled(this->canEnterPropertiesWindow);
 
             // C#: buttonActivateToggle.Enabled = !locked && (currently_attached && canUnplug || !currently_attached && canPlug)
-            this->ui->activateButton->setEnabled(!locked &&
-                                                 ((currentlyAttached && canUnplug) || (!currentlyAttached && canPlug)));
+            this->ui->activateButton->setEnabled(!locked && ((currentlyAttached && canUnplug) || (!currentlyAttached && canPlug)));
 
             // Update button text based on state
             this->ui->activateButton->setText(currentlyAttached ? tr("Deacti&vate") : tr("Acti&vate"));
@@ -1711,6 +1709,7 @@ void NetworkTabPage::updateButtonStates()
 
         this->ui->addButton->setEnabled(!locked);
         this->ui->removeButton->setEnabled(hasSelection && !locked);
+        this->canEnterPropertiesWindow = hasSelection && !locked;
         this->ui->propertiesButton->setEnabled(hasSelection && !locked);
     }
 }

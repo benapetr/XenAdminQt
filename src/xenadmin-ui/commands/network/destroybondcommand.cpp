@@ -30,7 +30,7 @@
 #include "../../operations/operationmanager.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/actions/network/destroybondaction.h"
-#include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/network.h"
 #include <QMessageBox>
 #include <QDebug>
 
@@ -40,27 +40,28 @@ DestroyBondCommand::DestroyBondCommand(MainWindow* mainWindow, QObject* parent) 
 
 bool DestroyBondCommand::CanRun() const
 {
-    QString networkRef = this->getSelectedNetworkRef();
-    if (networkRef.isEmpty())
-        return false;
-
-    QVariantMap networkData = this->getSelectedNetworkData();
-    if (networkData.isEmpty())
+    QSharedPointer<Network> network = qSharedPointerCast<Network>(this->GetObject());
+    if (!network)
         return false;
 
     // Can only destroy if this is a bonded network
-    return this->isNetworkABond(networkData);
+    return this->isNetworkABond(network);
 }
 
 void DestroyBondCommand::Run()
 {
-    QString networkRef = this->getSelectedNetworkRef();
-    QVariantMap networkData = this->getSelectedNetworkData();
+    QSharedPointer<Network> network = qSharedPointerCast<Network>(this->GetObject());
+
+    if (!network)
+        return;
+
+    QString networkRef = network->OpaqueRef();
+    QVariantMap networkData = network->GetData();
 
     if (networkRef.isEmpty() || networkData.isEmpty())
         return;
 
-    QString bondRef = this->getBondRefFromNetwork(networkData);
+    QString bondRef = this->getBondRefFromNetwork(network);
     if (bondRef.isEmpty())
         return;
 
@@ -128,7 +129,7 @@ void DestroyBondCommand::Run()
 
     qDebug() << "DestroyBondCommand: Destroying bond" << bondName << "(" << bondRef << ")";
 
-    XenConnection* connection = this->GetObject() ? this->GetObject()->GetConnection() : nullptr;
+    XenConnection* connection = network->GetConnection();
     if (!connection)
         return;
 
@@ -164,25 +165,10 @@ QString DestroyBondCommand::MenuText() const
     return "Delete Bond";
 }
 
-QString DestroyBondCommand::getSelectedNetworkRef() const
+bool DestroyBondCommand::isNetworkABond(QSharedPointer<Network> network) const
 {
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "network")
-        return QString();
+    QVariantMap networkData = network->GetData();
 
-    return this->getSelectedObjectRef();
-}
-
-QVariantMap DestroyBondCommand::getSelectedNetworkData() const
-{
-    if (!this->GetObject())
-        return QVariantMap();
-
-    return this->GetObject()->GetData();
-}
-
-bool DestroyBondCommand::isNetworkABond(const QVariantMap& networkData) const
-{
     if (networkData.isEmpty())
         return false;
 
@@ -191,10 +177,10 @@ bool DestroyBondCommand::isNetworkABond(const QVariantMap& networkData) const
     if (pifs.isEmpty())
         return false;
 
-    if (!this->GetObject() || !this->GetObject()->GetConnection())
-        return false;
+    XenCache* cache = network->GetCache();
 
-    XenCache* cache = this->GetObject()->GetConnection()->GetCache();
+    if (!cache)
+        return false;
 
     // Check if any PIF is a bond interface
     for (const QVariant& pifRefVar : pifs)
@@ -214,8 +200,10 @@ bool DestroyBondCommand::isNetworkABond(const QVariantMap& networkData) const
     return false;
 }
 
-QString DestroyBondCommand::getBondRefFromNetwork(const QVariantMap& networkData) const
+QString DestroyBondCommand::getBondRefFromNetwork(QSharedPointer<Network> network) const
 {
+    QVariantMap networkData = network->GetData();
+
     if (networkData.isEmpty())
         return QString();
 
@@ -223,10 +211,7 @@ QString DestroyBondCommand::getBondRefFromNetwork(const QVariantMap& networkData
     if (pifs.isEmpty())
         return QString();
 
-    if (!this->GetObject() || !this->GetObject()->GetConnection())
-        return QString();
-
-    XenCache* cache = this->GetObject()->GetConnection()->GetCache();
+    XenCache* cache = network->GetCache();
     if (!cache)
         return QString();
 
@@ -304,7 +289,7 @@ bool DestroyBondCommand::isHAEnabled() const
         return false;
 
     // Get all objects and check pools
-    QList<QPair<QString, QString>> allObjects = cache->GetAllObjectsData();
+    QList<QPair<QString, QString>> allObjects = cache->GetXenSearchableObjects();
     for (const auto& obj : allObjects)
     {
         if (obj.first == "pool")

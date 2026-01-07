@@ -58,7 +58,7 @@ class VbdCreateAndPlugAction : public AsyncOperation
          * @param suppress Suppress progress notifications
          * @param parent Parent QObject
          */
-        VbdCreateAndPlugAction(VM* vm, const QVariantMap& vbdRecord,
+        VbdCreateAndPlugAction(QSharedPointer<VM> vm, const QVariantMap& vbdRecord,
                                const QString& vdiName, bool suppress = false,
                                QObject* parent = nullptr);
 
@@ -73,7 +73,7 @@ class VbdCreateAndPlugAction : public AsyncOperation
         void run() override;
 
     private:
-        VM* m_vm;
+        QSharedPointer<VM> m_vm;
         QVariantMap m_vbdRecord;
         QString m_vdiName;
         bool m_suppress;

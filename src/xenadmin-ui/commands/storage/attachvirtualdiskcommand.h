@@ -33,6 +33,7 @@
 class AttachVirtualDiskDialog;
 class XenConnection;
 class XenCache;
+class VM;
 
 class AttachVirtualDiskCommand : public Command
 {
@@ -52,7 +53,7 @@ class AttachVirtualDiskCommand : public Command
         int getMaxVBDsAllowed(const QVariantMap& vmData) const;
         int getCurrentVBDCount(const QString& vmRef, XenCache *cache) const;
 
-        void performAttachment(AttachVirtualDiskDialog* dialog, XenConnection *connection, const QString& vmRef);
+        void performAttachment(AttachVirtualDiskDialog* dialog, QSharedPointer<VM> vm);
 };
 
 #endif // ATTACHVIRTUALDISKCOMMAND_H

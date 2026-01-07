@@ -62,9 +62,7 @@ class XENLIB_EXPORT XenObject : public QObject
     Q_PROPERTY(bool IsLocked READ IsLocked NOTIFY dataChanged)
 
     public:
-        explicit XenObject(XenConnection* connection,
-                           const QString& opaqueRef,
-                           QObject* parent = nullptr);
+        explicit XenObject(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         virtual ~XenObject();
 
         /**
@@ -105,6 +103,8 @@ class XENLIB_EXPORT XenObject : public QObject
          * @return true if locked flag is set in cache
          */
         bool IsLocked() const;
+        void Lock();
+        void Unlock();
 
         /**
          * @brief Get GetConnection this object belongs to
@@ -198,6 +198,7 @@ class XENLIB_EXPORT XenObject : public QObject
         bool m_evicted = false;
         // So that we don't need to call GetConnection() so much
         XenCache *m_cache;
+        bool m_locked = false;
 };
 
 Q_DECLARE_METATYPE(QSharedPointer<XenObject>)

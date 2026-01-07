@@ -719,7 +719,7 @@ void VMStorageTabPage::onNewCDDriveLinkClicked(const QString& link)
         return;
     }
 
-    VM* vm = new VM(connection, m_objectRef, this);
+    QSharedPointer<VM> vm(new VM(connection, m_objectRef));
 
     // Build VBD record for CD/DVD drive (empty VDI)
     QVariantMap vbdRecord;
@@ -735,8 +735,7 @@ void VMStorageTabPage::onNewCDDriveLinkClicked(const QString& link)
     vbdRecord["qos_algorithm_type"] = "";
     vbdRecord["qos_algorithm_params"] = QVariantMap();
 
-    VbdCreateAndPlugAction* createAction = new VbdCreateAndPlugAction(
-        vm, vbdRecord, tr("CD/DVD Drive"), false, this);
+    VbdCreateAndPlugAction* createAction = new VbdCreateAndPlugAction(vm, vbdRecord, tr("CD/DVD Drive"), false, this);
 
     OperationProgressDialog* dialog = new OperationProgressDialog(createAction, this);
     if (dialog->exec() != QDialog::Accepted)
@@ -1569,8 +1568,9 @@ void VMStorageTabPage::onAddButtonClicked()
 
     qDebug() << "VDI created:" << vdiRef << "Now attaching to VM...";
 
+    // TODO refactor so that we pass the shared VM object directly to this tab from tree view, no need to create it again here
     // Create VBD and attach to VM using VbdCreateAndPlugAction
-    VM* vm = new VM(connection, this->m_objectRef, this);
+    QSharedPointer<VM> vm(new VM(connection, this->m_objectRef));
 
     QVariantMap vbdRecord;
     vbdRecord["VM"] = this->m_objectRef;
@@ -1585,8 +1585,7 @@ void VMStorageTabPage::onAddButtonClicked()
     vbdRecord["qos_algorithm_type"] = "";
     vbdRecord["qos_algorithm_params"] = QVariantMap();
 
-    VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(
-        vm, vbdRecord, name, false, this);
+    VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(vm, vbdRecord, name, false, this);
 
     OperationProgressDialog* attachDialog = new OperationProgressDialog(attachAction, this);
     if (attachDialog->exec() != QDialog::Accepted)
@@ -1641,7 +1640,7 @@ void VMStorageTabPage::onAttachButtonClicked()
         return;
     }
 
-    VM* vm = new VM(connection, m_objectRef, this);
+    QSharedPointer<VM> vm(new VM(connection, m_objectRef));
 
     // Build VBD record
     QVariantMap vbdRecord;

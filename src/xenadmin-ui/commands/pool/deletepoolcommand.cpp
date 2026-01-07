@@ -168,7 +168,7 @@ bool DeletePoolCommand::hasMultipleHosts(QSharedPointer<Pool> pool) const
     XenCache* cache = pool->GetConnection()->GetCache();
 
     // Get all hosts
-    QList<QPair<QString, QString>> allObjects = cache->GetAllObjectsData();
+    QList<QPair<QString, QString>> allObjects = cache->GetXenSearchableObjects();
     int hostCount = 0;
     for (const auto& obj : allObjects)
     {
