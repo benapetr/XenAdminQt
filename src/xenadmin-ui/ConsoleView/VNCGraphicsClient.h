@@ -143,6 +143,8 @@ class VNCGraphicsClient : public QWidget, public IRemoteConsole
         void requestFramebufferUpdate();
 
     private:
+        Qt::Key remapKey(Qt::Key input);
+
         // Protocol handling
         void handleProtocolVersion();
         void handleSecurityHandshake();

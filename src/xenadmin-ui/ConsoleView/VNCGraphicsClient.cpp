@@ -763,6 +763,20 @@ void VNCGraphicsClient::requestFramebufferUpdate()
     }
 }
 
+Qt::Key VNCGraphicsClient::remapKey(Qt::Key input)
+{
+    // macOS keyboard mapping fix: Qt maps Cmd→Control and Ctrl→Meta by default
+    // We need to swap them so physical Ctrl sends VNC Control
+    Qt::Key mappedKey = input;
+#ifdef Q_OS_MACOS
+    if (mappedKey == Qt::Key_Control)
+        mappedKey = Qt::Key_Meta;
+    else if (mappedKey == Qt::Key_Meta)
+        mappedKey = Qt::Key_Control;
+#endif
+    return mappedKey;
+}
+
 bool VNCGraphicsClient::handleFramebufferUpdate()
 {
     // FramebufferUpdate structure:
@@ -1349,18 +1363,20 @@ void VNCGraphicsClient::keyPressEvent(QKeyEvent* event)
     if (!this->_connected || event->isAutoRepeat())
         return;
 
+    Qt::Key mappedKey = this->remapKey((Qt::Key) event->key());
+
     // Let key handler process shortcuts first (matches C# ConsoleKeyHandler integration)
-    if (this->_keyHandler && this->_keyHandler->handleKeyEvent((Qt::Key) event->key(), true))
+    if (this->_keyHandler && this->_keyHandler->handleKeyEvent(mappedKey, true))
         return;
 
     if (this->_sendScanCodes)
     {
-        sendScanCodes((Qt::Key) event->key(), true);
+        sendScanCodes(mappedKey, true);
     } else
     {
         // Get the keysym by trying text first, then fallback to key mapping
         // This matches C# KeyMap.translateKey() behavior
-        quint32 keysym = qtKeyToKeysymWithModifiers((Qt::Key) event->key(), event->modifiers(), event->text());
+        quint32 keysym = qtKeyToKeysymWithModifiers(mappedKey, event->modifiers(), event->text());
 
         if (keysym > 0)
         {
@@ -1368,7 +1384,7 @@ void VNCGraphicsClient::keyPressEvent(QKeyEvent* event)
         }
     }
 
-    this->_pressedKeys.insert((Qt::Key) event->key());
+    this->_pressedKeys.insert(mappedKey);
 }
 
 void VNCGraphicsClient::keyReleaseEvent(QKeyEvent* event)
@@ -1376,17 +1392,19 @@ void VNCGraphicsClient::keyReleaseEvent(QKeyEvent* event)
     if (!this->_connected || event->isAutoRepeat())
         return;
 
-    if (this->_keyHandler && this->_keyHandler->handleKeyEvent((Qt::Key) event->key(), false))
+    Qt::Key mappedKey = this->remapKey((Qt::Key) event->key());
+
+    if (this->_keyHandler && this->_keyHandler->handleKeyEvent(mappedKey, false))
         return;
 
     if (this->_sendScanCodes)
     {
-        sendScanCodes((Qt::Key) event->key(), false);
+        sendScanCodes(mappedKey, false);
     } else
     {
         // Get the keysym by trying text first, then fallback to key mapping
         // This matches C# KeyMap.translateKey() behavior
-        quint32 keysym = qtKeyToKeysymWithModifiers((Qt::Key) event->key(), event->modifiers(), event->text());
+        quint32 keysym = qtKeyToKeysymWithModifiers(mappedKey, event->modifiers(), event->text());
 
         if (keysym > 0)
         {
@@ -1394,7 +1412,7 @@ void VNCGraphicsClient::keyReleaseEvent(QKeyEvent* event)
         }
     }
 
-    this->_pressedKeys.remove((Qt::Key) event->key());
+    this->_pressedKeys.remove(mappedKey);
 }
 
 void VNCGraphicsClient::focusInEvent(QFocusEvent* event)
