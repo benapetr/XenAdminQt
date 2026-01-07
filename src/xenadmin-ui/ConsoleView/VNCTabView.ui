@@ -250,12 +250,7 @@ QPushButton:disabled {
      <property name="visible">
       <bool>false</bool>
      </property>
-     <property name="styleSheet">
-      <string notr="true">QFrame#warningPanel {
-    background-color: #fff8dc;
-    border-bottom: 1px solid #ddd;
-}</string>
-     </property>
+
      <layout class="QHBoxLayout" name="warningLayout">
       <property name="spacing">
        <number>4</number>
@@ -341,12 +336,7 @@ QPushButton:disabled {
        <height>36</height>
       </size>
      </property>
-     <property name="styleSheet">
-      <string notr="true">QFrame#bottomToolbar {
-    background-color: #f0f0f0;
-    border-top: 1px solid #ccc;
-}</string>
-     </property>
+
      <layout class="QHBoxLayout" name="bottomToolbarLayout">
       <property name="spacing">
        <number>6</number>
