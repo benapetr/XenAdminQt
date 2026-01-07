@@ -159,20 +159,19 @@ bool VMStorageTabPage::IsApplicableForObjectType(const QString& objectType) cons
     return objectType == "vm";
 }
 
-void VMStorageTabPage::SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void VMStorageTabPage::SetObject(QSharedPointer<XenObject> object)
 {
     // Disconnect previous object updates
     if (this->m_connection && this->m_connection->GetCache())
     {
-        disconnect(this->m_connection->GetCache(), &XenCache::objectChanged,
-                   this, &VMStorageTabPage::onCacheObjectChanged);
+        disconnect(this->m_connection->GetCache(), &XenCache::objectChanged, this, &VMStorageTabPage::onCacheObjectChanged);
     }
 
     // Call base implementation
-    BaseTabPage::SetXenObject(conn, objectType, objectRef, objectData);
+    BaseTabPage::SetObject(object);
 
     // Connect to object updates for real-time CD/DVD changes
-    if (this->m_connection && objectType == "vm")
+    if (this->m_connection && object->GetObjectType() == "vm")
     {
         connect(this->m_connection->GetCache(), &XenCache::objectChanged, this, &VMStorageTabPage::onCacheObjectChanged, Qt::UniqueConnection);
     }

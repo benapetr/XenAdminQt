@@ -31,6 +31,7 @@
 #include "../../operations/operationmanager.h"
 #include "../../dialogs/vmsnapshotdialog.h"
 #include "../../ConsoleView/ConsolePanel.h"
+#include "xen/vm.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
 #include "xen/actions/vm/vmsnapshotcreateaction.h"
@@ -112,20 +113,15 @@ void TakeSnapshotCommand::showSnapshotDialog()
     }
 
     QSharedPointer<XenObject> selectedObject = this->GetObject();
-    XenConnection* connection = selectedObject ? selectedObject->GetConnection() : nullptr;
-    if (!connection)
-    {
-        qWarning() << "TakeSnapshotCommand: Connection not available";
-        return;
-    }
 
     // Get VM data from cache
-    XenCache* cache = connection->GetCache();
+    XenCache* cache = selectedObject->GetCache();
     if (!cache)
         return;
 
-    QVariantMap vmData = cache->ResolveObjectData("vm", this->m_vmUuid);
-    if (vmData.isEmpty())
+    QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", this->m_vmUuid);
+
+    if (!vm)
     {
         qWarning() << "TakeSnapshotCommand: Could not find VM data for" << this->m_vmUuid;
         QMessageBox::warning(this->mainWindow(), tr("Cannot Take Snapshot"),
@@ -134,7 +130,8 @@ void TakeSnapshotCommand::showSnapshotDialog()
     }
 
     // Show the snapshot dialog
-    VmSnapshotDialog dialog(vmData, this->mainWindow());
+    // TODO refactor this dialog to work with VM object not raw data
+    VmSnapshotDialog dialog(vm->GetData(), this->mainWindow());
     if (dialog.exec() == QDialog::Accepted)
     {
         QString name = dialog.snapshotName();
@@ -145,7 +142,7 @@ void TakeSnapshotCommand::showSnapshotDialog()
         // Set console to this VM before snapshot (matches C# line 89)
         if (this->mainWindow() && this->mainWindow()->GetConsolePanel())
         {
-            this->mainWindow()->GetConsolePanel()->SetCurrentSource(connection, this->m_vmUuid);
+            this->mainWindow()->GetConsolePanel()->SetCurrentSource(vm);
         }
 
         this->executeSnapshotOperation(name, description, type);
@@ -171,8 +168,7 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     if (!conn || !conn->IsConnected())
     {
         qWarning() << "TakeSnapshotCommand: Not connected";
-        QMessageBox::critical(this->mainWindow(), tr("Snapshot Error"),
-                              tr("Not connected to XenServer."));
+        QMessageBox::critical(this->mainWindow(), tr("Snapshot Error"), tr("Not connected to XenServer."));
         emit snapshotCompleted(false);
         return;
     }
@@ -181,17 +177,17 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     VMSnapshotCreateAction::SnapshotType actionType;
     switch (type)
     {
-    case VmSnapshotDialog::DISK:
-        actionType = VMSnapshotCreateAction::DISK;
-        break;
-    case VmSnapshotDialog::QUIESCED_DISK:
-        actionType = VMSnapshotCreateAction::QUIESCED_DISK;
-        break;
-    case VmSnapshotDialog::DISK_AND_MEMORY:
-        actionType = VMSnapshotCreateAction::DISK_AND_MEMORY;
-        break;
-    default:
-        actionType = VMSnapshotCreateAction::DISK;
+        case VmSnapshotDialog::DISK:
+            actionType = VMSnapshotCreateAction::DISK;
+            break;
+        case VmSnapshotDialog::QUIESCED_DISK:
+            actionType = VMSnapshotCreateAction::QUIESCED_DISK;
+            break;
+        case VmSnapshotDialog::DISK_AND_MEMORY:
+            actionType = VMSnapshotCreateAction::DISK_AND_MEMORY;
+            break;
+        default:
+            actionType = VMSnapshotCreateAction::DISK;
     }
 
     // C#: TakeSnapshotCommand.cs lines 89-92
@@ -201,36 +197,36 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     if (actionType == VMSnapshotCreateAction::DISK_AND_MEMORY)
     {
         // Get VM data to check power state
-        XenCache* cache = conn ? conn->GetCache() : nullptr;
-        if (!cache)
+        XenCache* cache = selectedObject->GetCache();
+        QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", this->m_vmUuid);
+        if (!vm)
         {
-            qWarning() << "TakeSnapshotCommand: Cache not available";
-        } else
-        {
-            QVariantMap vmData = cache->ResolveObjectData("vm", this->m_vmUuid);
-            QString powerState = vmData.value("power_state").toString();
+            qWarning() << "TakeSnapshotCommand: this->m_vmUuid resolved into null object";
+            return;
+        }
+        QVariantMap vmData = vm->GetData();
+        QString powerState = vmData.value("power_state").toString();
 
-            if (powerState == "Running" && this->mainWindow()->GetConsolePanel())
+        if (powerState == "Running" && this->mainWindow()->GetConsolePanel())
+        {
+            qDebug() << "TakeSnapshotCommand: Capturing console screenshot for checkpoint";
+            try
             {
-                qDebug() << "TakeSnapshotCommand: Capturing console screenshot for checkpoint";
-                try
+                // C#: screenshot = _screenShotProvider(VM, sudoUsername, sudoPassword);
+                // Note: We don't have sudo credentials yet - pass empty strings
+                screenshot = this->mainWindow()->GetConsolePanel()->Snapshot(vm, QString(), QString());
+                if (!screenshot.isNull())
                 {
-                    // C#: screenshot = _screenShotProvider(VM, sudoUsername, sudoPassword);
-                    // Note: We don't have sudo credentials yet - pass empty strings
-                    screenshot = this->mainWindow()->GetConsolePanel()->Snapshot(this->m_vmUuid, QString(), QString());
-                    if (!screenshot.isNull())
-                    {
-                        qDebug() << "TakeSnapshotCommand: Screenshot captured, size:"
-                                 << screenshot.width() << "x" << screenshot.height();
-                    } else
-                    {
-                        qDebug() << "TakeSnapshotCommand: Screenshot capture returned null image";
-                    }
-                } catch (...)
+                    qDebug() << "TakeSnapshotCommand: Screenshot captured, size:"
+                             << screenshot.width() << "x" << screenshot.height();
+                } else
                 {
-                    // C#: Ignore; the screenshot is optional, we will do without it (CA-37095/CA-37103)
-                    qWarning() << "TakeSnapshotCommand: Failed to capture screenshot (optional, continuing anyway)";
+                    qDebug() << "TakeSnapshotCommand: Screenshot capture returned null image";
                 }
+            } catch (...)
+            {
+                // C#: Ignore; the screenshot is optional, we will do without it (CA-37095/CA-37103)
+                qWarning() << "TakeSnapshotCommand: Failed to capture screenshot (optional, continuing anyway)";
             }
         }
     }
@@ -238,14 +234,14 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     // Create VMSnapshotCreateAction (matches C# VMSnapshotCreateAction pattern)
     // Action handles disk/quiesce/memory options and runs asynchronously
     // Pass screenshot for checkpoint snapshots
-    VMSnapshotCreateAction* action = new VMSnapshotCreateAction(
-        conn, this->m_vmUuid, name, description, actionType, screenshot, this->mainWindow());
+    VMSnapshotCreateAction* action = new VMSnapshotCreateAction(conn, this->m_vmUuid, name, description, actionType, screenshot, this->mainWindow());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, this, [this, action]() {
+    connect(action, &AsyncOperation::completed, this, [this, action]()
+    {
         bool success = (action->GetState() == AsyncOperation::Completed && !action->IsFailed());
         if (success)
         {

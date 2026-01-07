@@ -258,14 +258,14 @@ class MainWindow : public QMainWindow
         bool itemMatchesSearch(QTreeWidgetItem* item, const QString& searchText);
 
         // Tab management - new system
-        void showObjectTabs(XenConnection *connection, const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
+        void showObjectTabs(QSharedPointer<XenObject> xen_obj);
         void showSearchPage(XenConnection *connection, class GroupingTag* groupingTag);
         void clearTabs();
-        void updateTabPages(XenConnection *connection, const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
+        void updateTabPages(QSharedPointer<XenObject> xen_obj);
         void updatePlaceholderVisibility();
 
         // Get correct tab order for object type (C# GetNewTabPages equivalent)
-        QList<BaseTabPage*> getNewTabPages(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) const;
+        QList<BaseTabPage*> getNewTabPages(QSharedPointer<XenObject> xen_obj) const;
 
         // Settings management
         void saveSettings();

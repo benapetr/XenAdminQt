@@ -83,6 +83,11 @@ bool XenObject::IsConnected() const
     return this->m_connection->IsConnected();
 }
 
+QString XenObject::GetObjectType() const
+{
+    return "null";
+}
+
 QVariantMap XenObject::GetData() const
 {
     if (!this->m_cache || this->m_opaqueRef.isEmpty())

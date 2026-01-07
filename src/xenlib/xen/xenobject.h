@@ -123,7 +123,7 @@ class XENLIB_EXPORT XenObject : public QObject
          * Must be overridden by derived classes to return the XenAPI type
          * (e.g., "vm", "host", "sr", "pool", "network")
          */
-        virtual QString GetObjectType() const = 0;
+        virtual QString GetObjectType() const;
 
         /**
          * @brief Get all cached GetData for this object

@@ -240,6 +240,13 @@ public:
     /**
      * @brief Check if this VDI is a XenServer Tools ISO
      * @return true if this is a tools ISO image
+     * 
+     * Checks multiple indicators:
+     * - is_tools_iso API flag (XenServer 7.3+)
+     * - name_label matches known tools ISO names:
+     *   "xswindrivers.iso", "xs-tools.iso", "guest-tools.iso" (legacy)
+     * 
+     * C# equivalent: VDI.IsToolsIso() extension method
      */
     bool IsToolsIso() const;
 

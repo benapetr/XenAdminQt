@@ -689,7 +689,7 @@ void MainWindow::onTreeItemSelected()
     // Update title bar with selected object
     this->m_titleBar->SetTitle(itemText, itemIcon);
 
-    if (!objectRef.isEmpty() && connection)
+    if (this->m_currentObject && connection)
     {
         // Prevent duplicate API calls for same selection
         // This fixes the double-call issue when Qt emits itemSelectionChanged multiple times
@@ -713,9 +713,7 @@ void MainWindow::onTreeItemSelected()
         // Update both toolbar and menu from Commands (matches C# UpdateToolbars)
         this->updateToolbarsAndMenus();
 
-        // Now we have the data, show the tabs
-        auto objectData = connection->GetCache()->ResolveObjectData(objectType, objectRef);
-        this->showObjectTabs(connection, objectType, objectRef, objectData);
+        this->showObjectTabs(this->m_currentObject);
 
         // Add to navigation history (matches C# MainWindow.TreeView_SelectionsChanged)
         // Get current tab name (first tab is shown by default)
@@ -742,10 +740,10 @@ void MainWindow::onTreeItemSelected()
     }
 }
 
-void MainWindow::showObjectTabs(XenConnection *connection, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void MainWindow::showObjectTabs(QSharedPointer<XenObject> xen_obj)
 {
     this->clearTabs();
-    this->updateTabPages(connection, objectType, objectRef, objectData);
+    this->updateTabPages(xen_obj);
     this->updatePlaceholderVisibility();
 }
 
@@ -777,7 +775,7 @@ void MainWindow::showSearchPage(XenConnection *connection, GroupingTag* grouping
     // Matches C# MainWindow.cs line 1771: SearchPage.Search = Search.SearchForNonVappGroup(gt.Grouping, gt.Parent, gt.Group);
     Search* search = Search::SearchForNonVappGroup(groupingTag->getGrouping(), groupingTag->getParent(), groupingTag->getGroup());
 
-    this->m_searchTabPage->SetXenObject(connection, QString(), QString(), QVariantMap());
+    this->m_searchTabPage->SetObject(QSharedPointer<XenObject>(new XenObject(connection, QString())));
     this->m_searchTabPage->setSearch(search); // SearchTabPage takes ownership
 
     // Clear existing tabs and show only SearchTabPage
@@ -866,9 +864,11 @@ void MainWindow::clearTabs()
 
 // C# Equivalent: GetNewTabPages() - builds list of tabs based on object type
 // C# Reference: xenadmin/XenAdmin/MainWindow.cs lines 1293-1393
-QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType, const QString& objectRef, const QVariantMap& objectData) const
+QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj) const
 {
     QList<BaseTabPage*> newTabs;
+
+    QString objectType = xen_obj->GetObjectType();
 
     bool isHost = (objectType == "host");
     bool isVM = (objectType == "vm");
@@ -990,9 +990,7 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType, const 
         // C# Reference: xenadmin/XenAdmin/MainWindow.cs line 1376
         if (cvmConsoleTab)
         {
-            XenConnection* connection = this->m_currentObjectConn;
-            XenCache* cache = connection ? connection->GetCache() : nullptr;
-            QSharedPointer<SR> srObj = cache ? cache->ResolveObject<SR>("sr", objectRef) : QSharedPointer<SR>();
+            QSharedPointer<SR> srObj = qSharedPointerCast<SR>(xen_obj);
             if (srObj && srObj->HasDriverDomain())
                 newTabs.append(cvmConsoleTab);
         }
@@ -1024,15 +1022,17 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(const QString& objectType, const 
     return newTabs;
 }
 
-void MainWindow::updateTabPages(XenConnection *connection, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void MainWindow::updateTabPages(QSharedPointer<XenObject> xen_obj)
 {
+    QString objectType = xen_obj->GetObjectType();
+
     // Get the correct tabs in order for this object type
     // C# Reference: xenadmin/XenAdmin/MainWindow.cs line 1432 (ChangeToNewTabs)
-    QList<BaseTabPage*> newTabs = this->getNewTabPages(objectType, objectRef, objectData);
+    QList<BaseTabPage*> newTabs = this->getNewTabPages(xen_obj);
 
     // Get the last selected tab for this object (before adding tabs)
     // C# Reference: MainWindow.cs line 1434 - GetLastSelectedPage(SelectionManager.Selection.First)
-    QString rememberedTabTitle = this->m_selectedTabs.value(objectRef);
+    QString rememberedTabTitle = this->m_selectedTabs.value(xen_obj->OpaqueRef());
     int pageToSelectIndex = -1;
 
     // Block signals during tab reconstruction to prevent premature onTabChanged calls
@@ -1045,7 +1045,7 @@ void MainWindow::updateTabPages(XenConnection *connection, const QString& object
         BaseTabPage* tabPage = newTabs[i];
 
         // Set the object data on the tab page
-        tabPage->SetXenObject(connection, objectType, objectRef, objectData);
+        tabPage->SetObject(xen_obj);
 
         // Add the tab to the widget
         this->ui->mainTabWidget->addTab(tabPage, tabPage->GetTitle());
@@ -1079,7 +1079,7 @@ void MainWindow::updateTabPages(XenConnection *connection, const QString& object
     if (this->ui->mainTabWidget->currentIndex() >= 0)
     {
         QString currentTabTitle = this->ui->mainTabWidget->tabText(this->ui->mainTabWidget->currentIndex());
-        this->m_selectedTabs[objectRef] = currentTabTitle;
+        this->m_selectedTabs[xen_obj->OpaqueRef()] = currentTabTitle;
     }
 
     // Trigger onPageShown for the initially visible tab
@@ -1104,12 +1104,11 @@ void MainWindow::updateTabPages(XenConnection *connection, const QString& object
                 // Set current source based on object type
                 if (objectType == "vm")
                 {
-                    consoleTab->GetConsolePanel()->SetCurrentSource(connection, objectRef);
+                    consoleTab->GetConsolePanel()->SetCurrentSource(xen_obj);
                     consoleTab->GetConsolePanel()->UnpauseActiveView(true);
-                }
-                else if (objectType == "host")
+                } else if (objectType == "host")
                 {
-                    consoleTab->GetConsolePanel()->SetCurrentSourceHost(connection, objectRef);
+                    consoleTab->GetConsolePanel()->SetCurrentSourceHost(xen_obj);
                     consoleTab->GetConsolePanel()->UnpauseActiveView(true);
                 }
 
@@ -1131,7 +1130,7 @@ void MainWindow::updateTabPages(XenConnection *connection, const QString& object
                     // Set current source for SR
                     if (objectType == "sr")
                     {
-                        cvmConsoleTab->consolePanel()->SetCurrentSource(connection, objectRef);
+                        cvmConsoleTab->consolePanel()->SetCurrentSource(xen_obj);
                         cvmConsoleTab->consolePanel()->UnpauseActiveView(true);
                     }
                 }
@@ -1231,11 +1230,11 @@ void MainWindow::onTabChanged(int index)
             // Set current source based on selection
             if (this->m_currentObjectType == "vm")
             {
-                consoleTab->GetConsolePanel()->SetCurrentSource(this->m_currentObjectConn, this->m_currentObjectRef);
+                consoleTab->GetConsolePanel()->SetCurrentSource(this->m_currentObject);
                 consoleTab->GetConsolePanel()->UnpauseActiveView(true); // Focus console
             } else if (this->m_currentObjectType == "host")
             {
-                consoleTab->GetConsolePanel()->SetCurrentSourceHost(this->m_currentObjectConn, this->m_currentObjectRef);
+                consoleTab->GetConsolePanel()->SetCurrentSourceHost(this->m_currentObject);
                 consoleTab->GetConsolePanel()->UnpauseActiveView(true); // Focus console
             }
 
@@ -1263,7 +1262,7 @@ void MainWindow::onTabChanged(int index)
                 if (this->m_currentObjectType == "sr")
                 {
                     // CvmConsolePanel.setCurrentSource() will look up driver domain VM
-                    cvmConsoleTab->consolePanel()->SetCurrentSource(this->m_currentObjectConn, this->m_currentObjectRef);
+                    cvmConsoleTab->consolePanel()->SetCurrentSource(this->m_currentObject);
                     cvmConsoleTab->consolePanel()->UnpauseActiveView(true); // Focus console
                 }
             } else
@@ -1982,22 +1981,18 @@ void MainWindow::onCacheObjectChanged(XenConnection* connection, const QString& 
         return;
 
     // If the changed object is the currently displayed one, refresh the tabs
-    if (objectType == this->m_currentObjectType && objectRef == this->m_currentObjectRef)
+    if (objectType == this->m_currentObjectType && objectRef == this->m_currentObjectRef && !this->m_currentObject.isNull())
     {
-        // Get updated data from cache
-        QVariantMap objectData = connection->GetCache()->ResolveObjectData(objectType, objectRef);
-        if (!objectData.isEmpty())
+        // Update tab pages with new data
+        for (int i = 0; i < this->ui->mainTabWidget->count(); ++i)
         {
-            // Update tab pages with new data
-            for (int i = 0; i < this->ui->mainTabWidget->count(); ++i)
+            BaseTabPage* tabPage = qobject_cast<BaseTabPage*>(this->ui->mainTabWidget->widget(i));
+            if (tabPage)
             {
-                BaseTabPage* tabPage = qobject_cast<BaseTabPage*>(this->ui->mainTabWidget->widget(i));
-                if (tabPage)
-                {
-                    tabPage->SetXenObject(connection, objectType, objectRef, objectData);
-                }
+                tabPage->SetObject(this->m_currentObject);
             }
         }
+        this->updateToolbarsAndMenus();
     }
 }
 

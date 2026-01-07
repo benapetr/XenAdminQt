@@ -28,6 +28,7 @@
 #ifndef CONSOLEPANEL_H
 #define CONSOLEPANEL_H
 
+#include "xen/vm.h"
 #include <QWidget>
 #include <QMap>
 #include <QString>
@@ -36,6 +37,8 @@
 // Forward declarations
 class VNCView;
 class XenConnection;
+class XenObject;
+class VM;
 
 namespace Ui
 {
@@ -135,9 +138,9 @@ class ConsolePanel : public QWidget
          * - LRU eviction when cache full
          * - Active view switching
          *
-         * @param vmRef VM OpaqueRef to display console for
+         * @param vmRef XenObject to display console for
          */
-        void SetCurrentSource(XenConnection *connection, const QString& vmRef);
+        void SetCurrentSource(QSharedPointer<XenObject> xen_obj);
 
         /**
          * @brief Set current host source for console display
@@ -147,7 +150,7 @@ class ConsolePanel : public QWidget
          *
          * @param hostRef Host OpaqueRef to display console for
          */
-        virtual void SetCurrentSourceHost(XenConnection *connection, const QString& hostRef);
+        virtual void SetCurrentSourceHost(QSharedPointer<XenObject> xen_obj);
 
         /**
          * @brief Take Snapshot of VM console (for preview images)
@@ -161,9 +164,7 @@ class ConsolePanel : public QWidget
          * @param elevatedPassword Optional elevated credentials password
          * @return Console screenshot image (null if failed)
          */
-        QImage Snapshot(const QString& vmRef,
-                        const QString& elevatedUsername = QString(),
-                        const QString& elevatedPassword = QString());
+        QImage Snapshot(QSharedPointer<VM> vm, const QString& elevatedUsername = QString(), const QString& elevatedPassword = QString());
 
         /**
          * @brief Close VNC connection for specified VM
@@ -186,7 +187,7 @@ class ConsolePanel : public QWidget
          */
         QString CurrentVM() const
         {
-            return _currentVmRef;
+            return m_currentVmRef;
         }
 
         void SetConnection(XenConnection *connection)
@@ -221,7 +222,9 @@ class ConsolePanel : public QWidget
         QMap<QString, VNCView*> _vncViews;
 
         //! Current VM OpaqueRef
-        QString _currentVmRef;
+        QString m_currentVmRef;
+
+        QSharedPointer<XenObject> m_currentObject;
 
     private:
         // ========== Private Methods ==========
@@ -275,7 +278,7 @@ class CvmConsolePanel : public ConsolePanel
          *
          * Shows CVM console by finding "other control domain" instead of dom0.
          */
-        void SetCurrentSourceHost(XenConnection *connection, const QString& hostRef) override;
+        void SetCurrentSourceHost(QSharedPointer<XenObject> xen_obj) override;
 
     private:
         /**

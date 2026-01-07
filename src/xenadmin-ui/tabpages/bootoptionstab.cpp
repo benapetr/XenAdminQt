@@ -31,6 +31,7 @@
 #include <QGroupBox>
 #include <QMessageBox>
 #include <QDebug>
+#include "xen/xenobject.h"
 
 BootOptionsTab::BootOptionsTab(QWidget* parent)
     : BaseTabPage(parent), m_originalAutoBoot(false), m_originalPVBootFromCD(false)
@@ -129,23 +130,23 @@ void BootOptionsTab::createUI()
     mainLayout->addStretch();
 }
 
-void BootOptionsTab::SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void BootOptionsTab::SetObject(QSharedPointer<XenObject> object)
 {
-    BaseTabPage::SetXenObject(conn, objectType, objectRef, objectData);
+    BaseTabPage::SetObject(object);
 
-    this->m_vmRef = objectRef;
-    this->m_vmData = objectData;
-
-    if (objectType != "vm" || this->m_vmRef.isEmpty())
+    if (!object || object->GetObjectType() != "vm")
     {
-        setEnabled(false);
+        this->setEnabled(false);
         return;
     }
 
-    setEnabled(true);
+    this->m_vmRef = object->OpaqueRef();
+    this->m_vmData = object->GetData();
+
+    this->setEnabled(true);
 
     // Determine if VM is HVM or PV
-    bool hvmMode = isHVM();
+    bool hvmMode = this->isHVM();
 
     // Show/hide appropriate sections
     this->m_hvmWidget->setVisible(hvmMode);

@@ -46,14 +46,10 @@ NICsTabPage::NICsTabPage(QWidget* parent)
     this->ui->nicsTable->horizontalHeader()->setStretchLastSection(true);
 
     // Connect signals
-    connect(this->ui->nicsTable, &QTableWidget::itemSelectionChanged,
-            this, &NICsTabPage::onSelectionChanged);
-    connect(this->ui->createBondButton, &QPushButton::clicked,
-            this, &NICsTabPage::onCreateBondClicked);
-    connect(this->ui->deleteBondButton, &QPushButton::clicked,
-            this, &NICsTabPage::onDeleteBondClicked);
-    connect(this->ui->rescanButton, &QPushButton::clicked,
-            this, &NICsTabPage::onRescanClicked);
+    connect(this->ui->nicsTable, &QTableWidget::itemSelectionChanged, this, &NICsTabPage::onSelectionChanged);
+    connect(this->ui->createBondButton, &QPushButton::clicked, this, &NICsTabPage::onCreateBondClicked);
+    connect(this->ui->deleteBondButton, &QPushButton::clicked, this, &NICsTabPage::onDeleteBondClicked);
+    connect(this->ui->rescanButton, &QPushButton::clicked, this, &NICsTabPage::onRescanClicked);
 
     // Disable editing
     this->ui->nicsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);

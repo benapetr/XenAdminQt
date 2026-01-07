@@ -40,7 +40,7 @@
  * @brief Constructor
  * Reference: ConsolePanel.cs lines 49-54
  */
-ConsolePanel::ConsolePanel(QWidget* parent) : QWidget(parent), ui(new Ui::ConsolePanel), _currentVmRef()
+ConsolePanel::ConsolePanel(QWidget* parent) : QWidget(parent), ui(new Ui::ConsolePanel), m_currentVmRef()
 {
     qDebug() << "ConsolePanel: Constructor START - parent:" << parent << "this:" << this;
 
@@ -127,7 +127,7 @@ void ConsolePanel::ResetAllViews()
     }
 
     this->_vncViews.clear();
-    this->_currentVmRef.clear();
+    this->m_currentVmRef.clear();
 }
 
 void ConsolePanel::UnpauseActiveView(bool focus)
@@ -170,11 +170,27 @@ void ConsolePanel::UpdateRDPResolution(bool fullscreen)
     }
 }
 
-void ConsolePanel::SetCurrentSource(XenConnection *connection, const QString& vmRef)
+void ConsolePanel::SetCurrentSource(QSharedPointer<XenObject> xen_obj)
 {
+    this->m_currentObject = xen_obj;
+
+    if (!xen_obj || !xen_obj->GetConnection())
+    {
+        this->_connection = nullptr;
+        if (this->_activeVNCView)
+        {
+            this->ui->consoleLayout->removeWidget(this->_activeVNCView);
+            this->_activeVNCView = nullptr;
+        }
+        this->m_currentVmRef.clear();
+        return;
+    }
+
+    QString vmRef = xen_obj->OpaqueRef();
+
     qDebug() << "ConsolePanel: setCurrentSource() - vmRef:" << vmRef;
 
-    this->_connection = connection;
+    this->_connection = xen_obj->GetConnection();
 
     Q_ASSERT(QThread::currentThread() == QApplication::instance()->thread());
 
@@ -182,24 +198,12 @@ void ConsolePanel::SetCurrentSource(XenConnection *connection, const QString& vm
 
     this->ui->rbacWarningPanel->setVisible(false);
 
-    // Clear current view if vmRef is empty
-    if (vmRef.isEmpty())
-    {
-        if (this->_activeVNCView)
-        {
-            this->ui->consoleLayout->removeWidget(this->_activeVNCView);
-            this->_activeVNCView = nullptr;
-        }
-        this->_currentVmRef.clear();
-        return;
-    }
-
     // Verify connection is still valid before attempting console operations
     if (this->_connection && !this->_connection->IsConnected())
     {
         qWarning() << "ConsolePanel: XenLib connection lost, cannot set console source";
         setErrorMessage(tr("Connection to server lost"));
-        this->_currentVmRef.clear();
+        this->m_currentVmRef.clear();
         return;
     }
 
@@ -219,7 +223,7 @@ void ConsolePanel::SetCurrentSource(XenConnection *connection, const QString& vm
         QStringList userRoles; // Placeholder
 
         showRbacWarning(userRoles, allowedRoles);
-        this->_currentVmRef = vmRef;
+        this->m_currentVmRef = vmRef;
         return;
     }
 
@@ -267,53 +271,59 @@ void ConsolePanel::SetCurrentSource(XenConnection *connection, const QString& vm
     this->_activeVNCView->refreshIsoList();
 
     clearErrorMessage();
-    this->_currentVmRef = vmRef;
+    this->m_currentVmRef = vmRef;
 }
 
-void ConsolePanel::SetCurrentSourceHost(XenConnection *connection, const QString& hostRef)
+void ConsolePanel::SetCurrentSourceHost(QSharedPointer<XenObject> xen_obj)
 {
-    this->_connection = connection;
-
-    qDebug() << "ConsolePanel: setCurrentSourceHost() - hostRef:" << hostRef;
+    this->m_currentObject = xen_obj;
 
     // C#: Lines 157-170
 
-    if (hostRef.isEmpty())
+    if (!xen_obj)
     {
+        this->_connection = nullptr;
         qDebug() << "ConsolePanel: No host information when connecting to host VNC console";
         this->setErrorMessage(tr("Could not connect to console"));
         return;
     }
 
-    QString dom0Ref;
+    QString hostRef = xen_obj->OpaqueRef();
+
+    qDebug() << "ConsolePanel: setCurrentSourceHost() - hostRef:" << hostRef;
+
+    this->_connection = xen_obj->GetConnection();
+
+    QSharedPointer<XenObject> dom0;
 
     if (this->_connection)
     {
         qDebug() << "ConsolePanel: No connection available";
 
-        QSharedPointer<Host> host = this->_connection->GetCache()->ResolveObject<Host>("host", hostRef);
+        QSharedPointer<Host> host = qSharedPointerCast<Host>(xen_obj);
 
         if (!host)
         {
             qWarning() << "ConsolePanel: Failed to lookup host from ref: " << hostRef;
         } else
         {
-            dom0Ref = host->ControlDomainRef();
+            dom0 = host->GetCache()->ResolveObject<XenObject>("vm", host->ControlDomainRef());
         }
     }
 
-    if (dom0Ref.isEmpty())
+    if (!dom0)
     {
         qDebug() << "ConsolePanel: No dom0 on host when connecting to host VNC console";
         this->setErrorMessage(tr("Could not find console"));
     } else
     {
-        this->SetCurrentSource(connection, dom0Ref);
+        this->SetCurrentSource(dom0);
     }
 }
 
-QImage ConsolePanel::Snapshot(const QString& vmRef, const QString& elevatedUsername, const QString& elevatedPassword)
+QImage ConsolePanel::Snapshot(QSharedPointer<VM> vm, const QString& elevatedUsername, const QString& elevatedPassword)
 {
+    QString vmRef = vm->OpaqueRef();
     qDebug() << "ConsolePanel: snapshot() - vmRef:" << vmRef << "elevated:" << !elevatedUsername.isEmpty();
 
     // C#: Lines 197-234
@@ -335,7 +345,7 @@ QImage ConsolePanel::Snapshot(const QString& vmRef, const QString& elevatedUsern
         } else
         {
             // Create view normally and add to cache
-            this->SetCurrentSource(this->_connection, vmRef);
+            this->SetCurrentSource(vm);
             if (this->_vncViews.contains(vmRef))
                 view = this->_vncViews[vmRef];
         }
@@ -419,7 +429,7 @@ void ConsolePanel::setErrorMessage(const QString& message)
     this->ui->errorPanel->setVisible(true);
 
     // Clear current source
-    this->SetCurrentSource(nullptr, QString());
+    this->SetCurrentSource(QSharedPointer<XenObject>());
 }
 
 void ConsolePanel::clearErrorMessage()
@@ -536,31 +546,33 @@ CvmConsolePanel::CvmConsolePanel(QWidget* parent)
     qDebug() << "CvmConsolePanel: Constructor (derived class)";
 }
 
-void CvmConsolePanel::SetCurrentSourceHost(XenConnection *connection, const QString& hostRef)
+void CvmConsolePanel::SetCurrentSourceHost(QSharedPointer<XenObject> xen_obj)
 {
-    this->_connection = connection;
-
-    qDebug() << "CvmConsolePanel: setCurrentSourceHost() - hostRef:" << hostRef;
+    this->m_currentObject = xen_obj;
 
     // C#: Lines 273-286
 
-    if (hostRef.isEmpty())
+    if (!xen_obj)
     {
+        this->_connection = nullptr;
         qDebug() << "CvmConsolePanel: No host information when connecting to CVM console";
         setErrorMessage(tr("Could not connect to console"));
         return;
     }
 
-    // Find CVM (other control domain) for this host
-    QString cvmRef = getOtherControlDomainForHost(hostRef);
+    QString hostRef = xen_obj->OpaqueRef();
+    this->_connection = xen_obj->GetConnection();
 
-    if (cvmRef.isEmpty())
+    // Find CVM (other control domain) for this host
+    QSharedPointer<XenObject> cvm_obj = xen_obj->GetCache()->ResolveObject<XenObject>("vm", getOtherControlDomainForHost(hostRef));
+
+    if (!cvm_obj)
     {
         qDebug() << "CvmConsolePanel: Could not find CVM console on host";
         setErrorMessage(tr("Could not find console"));
     } else
     {
-        SetCurrentSource(connection, cvmRef);
+        SetCurrentSource(cvm_obj);
     }
 }
 

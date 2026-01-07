@@ -72,9 +72,9 @@ bool SrStorageTabPage::IsApplicableForObjectType(const QString& objectType) cons
     return objectType == "sr";
 }
 
-void SrStorageTabPage::SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
+void SrStorageTabPage::SetObject(QSharedPointer<XenObject> object)
 {
-    BaseTabPage::SetXenObject(conn, objectType, objectRef, objectData);
+    BaseTabPage::SetObject(object);
 }
 
 QSharedPointer<SR> SrStorageTabPage::GetSR()
@@ -261,8 +261,7 @@ void SrStorageTabPage::onRescanButtonClicked()
 
 void SrStorageTabPage::onAddButtonClicked()
 {
-    QMessageBox::information(this, tr("New Virtual Disk"),
-                             tr("New disk wizard should be triggered by MainWindow."));
+    QMessageBox::information(this, tr("New Virtual Disk"), tr("New disk wizard should be triggered by MainWindow."));
 }
 
 void SrStorageTabPage::onMoveButtonClicked()

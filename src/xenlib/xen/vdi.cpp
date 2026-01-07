@@ -212,7 +212,19 @@ bool VDI::MetadataLatest() const
 
 bool VDI::IsToolsIso() const
 {
-    return this->boolProperty("is_tools_iso", false);
+    // C# equivalent: VDI.IsToolsIso()
+    // Checks both is_tools_iso flag and known tools ISO filenames
+    if (this->boolProperty("is_tools_iso", false))
+        return true;
+    
+    // Check against known tools ISO names (legacy detection)
+    QString nameLabel = this->GetName();
+    QStringList toolsIsoNames = {"xswindrivers.iso", "xs-tools.iso", "guest-tools.iso"};
+    
+    if (toolsIsoNames.contains(nameLabel))
+        return true;
+    
+    return false;
 }
 
 bool VDI::CbtEnabled() const

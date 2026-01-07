@@ -37,17 +37,6 @@ BaseTabPage::~BaseTabPage()
 {
 }
 
-void BaseTabPage::SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData)
-{
-    this->removeObject();
-    this->m_connection = conn;
-    this->m_objectType = objectType;
-    this->m_objectRef = objectRef;
-    this->m_objectData = objectData;
-    this->updateObject();
-    this->refreshContent();
-}
-
 void BaseTabPage::SetObject(QSharedPointer<XenObject> object)
 {
     this->removeObject();

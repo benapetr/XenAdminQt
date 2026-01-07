@@ -72,23 +72,19 @@ bool SearchTabPage::IsApplicableForObjectType(const QString& type) const
     return true;
 }
 
-void SearchTabPage::SetXenObject(XenConnection* conn, const QString& type, const QString& ref, const QVariantMap& data)
+void SearchTabPage::SetObject(QSharedPointer<XenObject> object)
 {
-    Q_UNUSED(data);
-
-    this->m_connection = conn;
-    this->m_objectType = type;
-    this->m_objectRef = ref;
+    BaseTabPage::SetObject(object);
 
     if (!this->m_connection)
         return;
 
     QStringList refs;
     QStringList types;
-    if (!ref.isEmpty())
+    if (!object.isNull() && !object->OpaqueRef().isEmpty())
     {
-        refs.append(ref);
-        types.append(type);
+        refs.append(object->OpaqueRef());
+        types.append(object->GetObjectType());
     }
 
     Search* search = Search::SearchFor(refs, types, this->m_connection);

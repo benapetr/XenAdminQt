@@ -51,15 +51,6 @@ class BaseTabPage : public QWidget
         virtual ~BaseTabPage();
 
         /**
-         * Set the Xen object this tab page should display information about.
-         * DEPRECATED
-         * @param objectType The type of object ("vm", "host", "pool", "sr", "network", etc.)
-         * @param objectRef The object reference from XenAPI
-         * @param objectData Complete object data as a QVariantMap
-         */
-        virtual void SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData);
-
-        /**
          * Set the XenLib object for this tab page
          */
         virtual void SetObject(QSharedPointer<XenObject> object);

@@ -81,8 +81,7 @@ SnapshotsTabPage::SnapshotsTabPage(QWidget* parent)
     });
 
     this->ui->snapshotTable->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(this->ui->snapshotTable, &QTableWidget::customContextMenuRequested,
-            this, &SnapshotsTabPage::onSnapshotContextMenu);
+    connect(this->ui->snapshotTable, &QTableWidget::customContextMenuRequested, this, &SnapshotsTabPage::onSnapshotContextMenu);
 
     this->ui->snapshotTable->horizontalHeader()->setStretchLastSection(true);
     this->ui->snapshotTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
@@ -93,12 +92,9 @@ SnapshotsTabPage::SnapshotsTabPage(QWidget* parent)
     this->ui->snapshotTree->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     auto* operationManager = OperationManager::instance();
-    connect(operationManager, &OperationManager::recordAdded,
-            this, &SnapshotsTabPage::onOperationRecordUpdated);
-    connect(operationManager, &OperationManager::recordUpdated,
-            this, &SnapshotsTabPage::onOperationRecordUpdated);
-    connect(operationManager, &OperationManager::recordRemoved,
-            this, &SnapshotsTabPage::onOperationRecordUpdated);
+    connect(operationManager, &OperationManager::recordAdded, this, &SnapshotsTabPage::onOperationRecordUpdated);
+    connect(operationManager, &OperationManager::recordUpdated, this, &SnapshotsTabPage::onOperationRecordUpdated);
+    connect(operationManager, &OperationManager::recordRemoved, this, &SnapshotsTabPage::onOperationRecordUpdated);
 
     QMenu* viewMenu = new QMenu(this);
     this->m_treeViewAction = viewMenu->addAction(tr("Tree View"));
@@ -142,8 +138,8 @@ SnapshotsTabPage::SnapshotsTabPage(QWidget* parent)
         this->ui->snapshotTable->sortItems(3, Qt::AscendingOrder);
     });
 
-    updateButtonStates();
-    showDisabledDetails();
+    this->updateButtonStates();
+    this->showDisabledDetails();
 }
 
 SnapshotsTabPage::~SnapshotsTabPage()

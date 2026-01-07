@@ -53,7 +53,7 @@ class SearchTabPage : public BaseTabPage
         ~SearchTabPage() override;
 
         bool IsApplicableForObjectType(const QString& type) const override;
-        void SetXenObject(XenConnection* conn, const QString& type, const QString& ref, const QVariantMap& data) override;
+        void SetObject(QSharedPointer<XenObject> object) override;
         QString GetTitle() const override
         {
             return tr("Search");

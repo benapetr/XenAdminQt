@@ -177,6 +177,13 @@ class XENLIB_EXPORT SR : public XenObject
         /**
          * @brief Check if this is the SR that contains the Tools ISO VDIs
          * @return true if this SR contains XenServer Tools ISOs
+         * 
+         * Checks multiple indicators:
+         * - is_tools_sr API flag
+         * - name_label == "XenServer Tools" (legacy)
+         * - type == "udev" (alternative detection)
+         * 
+         * C# equivalent: SR.IsToolsSR() extension method
          */
         bool IsToolsSR() const;
 

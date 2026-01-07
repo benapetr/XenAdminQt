@@ -206,7 +206,15 @@ bool SR::Clustered() const
 
 bool SR::IsToolsSR() const
 {
-    return this->boolProperty("is_tools_sr", false);
+    // C# equivalent: SR.IsToolsSR() - checks both is_tools_sr flag and name_label
+    if (this->boolProperty("is_tools_sr", false))
+        return true;
+    
+    QString nameLabel = this->GetName();
+    if (nameLabel == "XenServer Tools")
+        return true;
+    
+    return false;
 }
 
 bool SR::SupportsStorageMigration() const

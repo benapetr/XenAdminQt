@@ -59,7 +59,7 @@ class BootOptionsTab : public BaseTabPage
         {
             return objectType == "vm";
         }
-        void SetXenObject(XenConnection* conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
+        void SetObject(QSharedPointer<XenObject> object) override;
 
         /**
          * Check if any boot settings have been modified.

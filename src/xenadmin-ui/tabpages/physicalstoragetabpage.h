@@ -72,8 +72,6 @@ class PhysicalStorageTabPage : public BaseTabPage
 
         bool IsApplicableForObjectType(const QString& objectType) const override;
 
-        void SetXenObject(XenConnection *conn, const QString& objectType, const QString& objectRef, const QVariantMap& objectData) override;
-
     protected:
         void refreshContent() override;
 
