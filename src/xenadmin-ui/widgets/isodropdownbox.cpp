@@ -34,6 +34,7 @@
 #include "xenlib/xen/apiversion.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/vdi.h"
+#include "xenlib/utils/misc.h"
 #include <QStandardItemModel>
 #include <QSignalBlocker>
 #include <algorithm>
@@ -71,66 +72,6 @@ bool isSrVisibleToHost(const QVariantMap& srData, XenCache* cache, const QString
     }
 
     return false;
-}
-
-int naturalCompare(const QString& s1, const QString& s2)
-{
-    if (s1.compare(s2, Qt::CaseInsensitive) == 0)
-        return 0;
-
-    if (s1.isEmpty())
-        return -1;
-    if (s2.isEmpty())
-        return 1;
-
-    int i = 0;
-    int len1 = s1.length();
-    int len2 = s2.length();
-    int minLen = qMin(len1, len2);
-
-    while (i < minLen)
-    {
-        QChar c1 = s1[i];
-        QChar c2 = s2[i];
-
-        bool c1IsDigit = c1.isDigit();
-        bool c2IsDigit = c2.isDigit();
-
-        if (!c1IsDigit && !c2IsDigit)
-        {
-            int cmp = s1.mid(i, 1).compare(s2.mid(i, 1), Qt::CaseInsensitive);
-            if (cmp != 0)
-                return cmp;
-            i++;
-        } else if (c1IsDigit && c2IsDigit)
-        {
-            int j = i + 1;
-            while (j < len1 && s1[j].isDigit())
-                j++;
-            int k = i + 1;
-            while (k < len2 && s2[k].isDigit())
-                k++;
-
-            int numLen1 = j - i;
-            int numLen2 = k - i;
-
-            if (numLen1 != numLen2)
-                return numLen1 - numLen2;
-
-            QString num1 = s1.mid(i, numLen1);
-            QString num2 = s2.mid(i, numLen2);
-            int cmp = num1.compare(num2);
-            if (cmp != 0)
-                return cmp;
-
-            i = j;
-        } else
-        {
-            return c1IsDigit ? 1 : -1;
-        }
-    }
-
-    return len1 - len2;
 }
 }
 
@@ -276,7 +217,7 @@ void IsoDropDownBox::refresh()
 
         std::sort(vdiEntries.begin(), vdiEntries.end(),
                   [](const QPair<QString, QString>& a, const QPair<QString, QString>& b) {
-                      return naturalCompare(a.first, b.first) < 0;
+                      return Misc::NaturalCompare(a.first, b.first) < 0;
                   });
 
         for (const auto& vdiEntry : vdiEntries)

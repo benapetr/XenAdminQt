@@ -43,84 +43,13 @@
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/sr.h"
+#include "xenlib/utils/misc.h"
 #include "../settingsmanager.h"
 #include "../connectionprofile.h"
 #include <algorithm>
 #include <QDebug>
 
 using namespace XenSearch;
-
-/**
- * @brief Natural string comparison (matches C# StringUtility.NaturalCompare)
- *
- * Compares strings in a way that handles embedded numbers naturally.
- * E.g., "VM2" < "VM10" (unlike alphabetical where "VM10" < "VM2")
- */
-static int naturalCompare(const QString& s1, const QString& s2)
-{
-    if (s1.compare(s2, Qt::CaseInsensitive) == 0)
-        return 0;
-
-    if (s1.isEmpty())
-        return -1;
-    if (s2.isEmpty())
-        return 1;
-
-    int i = 0;
-    int len1 = s1.length();
-    int len2 = s2.length();
-    int minLen = qMin(len1, len2);
-
-    while (i < minLen)
-    {
-        QChar c1 = s1[i];
-        QChar c2 = s2[i];
-
-        bool c1IsDigit = c1.isDigit();
-        bool c2IsDigit = c2.isDigit();
-
-        if (!c1IsDigit && !c2IsDigit)
-        {
-            // Two non-digits: alphabetical comparison
-            int cmp = s1.mid(i, 1).compare(s2.mid(i, 1), Qt::CaseInsensitive);
-            if (cmp != 0)
-                return cmp;
-            i++;
-        } else if (c1IsDigit && c2IsDigit)
-        {
-            // Both are digits: compare as numbers
-            int j = i + 1;
-            while (j < len1 && s1[j].isDigit())
-                j++;
-            int k = i + 1;
-            while (k < len2 && s2[k].isDigit())
-                k++;
-
-            int numLen1 = j - i;
-            int numLen2 = k - i;
-
-            // Shorter number (in digits) is smaller
-            if (numLen1 != numLen2)
-                return numLen1 - numLen2;
-
-            // Same length: compare digit by digit
-            QString num1 = s1.mid(i, numLen1);
-            QString num2 = s2.mid(i, numLen2);
-            int cmp = num1.compare(num2);
-            if (cmp != 0)
-                return cmp;
-
-            i = j;
-        } else
-        {
-            // One is digit, one is not: digits come after letters
-            return c1IsDigit ? 1 : -1;
-        }
-    }
-
-    // Strings are equal up to minLen, shorter one is smaller
-    return len1 - len2;
-}
 
 static bool isHiddenObject(const QVariantMap& record)
 {
@@ -187,7 +116,7 @@ static void sortTreeItemChildren(QTreeWidgetItem* parent)
     // Sort using natural compare
     std::sort(children.begin(), children.end(),
               [](QTreeWidgetItem* a, QTreeWidgetItem* b) {
-                  return naturalCompare(a->text(0), b->text(0)) < 0;
+                  return Misc::NaturalCompare(a->text(0), b->text(0)) < 0;
               });
 
     // Re-add in sorted order
@@ -237,7 +166,7 @@ static void sortPoolChildren(QTreeWidgetItem* parent)
                   const int rankB = poolChildSortRank(b);
                   if (rankA != rankB)
                       return rankA < rankB;
-                  return naturalCompare(a->text(0), b->text(0)) < 0;
+                  return Misc::NaturalCompare(a->text(0), b->text(0)) < 0;
               });
 
     for (QTreeWidgetItem* child : children)
@@ -264,7 +193,7 @@ static void sortTreeTopLevel(QTreeWidget* tree)
     // Sort using natural compare
     std::sort(items.begin(), items.end(),
               [](QTreeWidgetItem* a, QTreeWidgetItem* b) {
-                  return naturalCompare(a->text(0), b->text(0)) < 0;
+                  return Misc::NaturalCompare(a->text(0), b->text(0)) < 0;
               });
 
     // Re-add in sorted order

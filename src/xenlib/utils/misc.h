@@ -29,12 +29,25 @@
 #define MISC_H
 
 #include <QVariant>
+#include <QString>
 
 class Misc
 {
     public:
         // Needed to suppress compiler warnings
         static bool QVariantIsMap(const QVariant& v);
+        
+        /**
+         * @brief Natural string comparison (matches C# StringUtility.NaturalCompare)
+         *
+         * Compares strings in a way that handles embedded numbers naturally.
+         * E.g., "VM2" < "VM10" (unlike alphabetical where "VM10" < "VM2")
+         *
+         * @param s1 First string to compare
+         * @param s2 Second string to compare
+         * @return Negative if s1 < s2, 0 if equal, positive if s1 > s2
+         */
+        static int NaturalCompare(const QString& s1, const QString& s2);
 };
 
 #endif // MISC_H
