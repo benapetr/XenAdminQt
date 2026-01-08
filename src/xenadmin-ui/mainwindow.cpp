@@ -171,7 +171,7 @@
 #include <QDockWidget>
 #include "titlebar.h"
 
-MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWindow), m_currentObjectType(""), m_currentObjectRef("")
+MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     this->ui->setupUi(this);
 
@@ -703,13 +703,6 @@ void MainWindow::onTreeItemSelected()
 
         this->ui->statusbar->showMessage("Selected: " + itemText + " (Ref: " + objectRef + ")", 5000);
 
-        // Store context for async handler
-        this->m_currentObjectType = objectType;
-        this->m_currentObjectRef = objectRef;
-        this->m_currentObjectText = itemText;
-        this->m_currentObjectIcon = itemIcon;
-        this->m_currentObjectConn = connection;
-
         // Update both toolbar and menu from Commands (matches C# UpdateToolbars)
         this->updateToolbarsAndMenus();
 
@@ -725,7 +718,7 @@ void MainWindow::onTreeItemSelected()
 
         if (this->m_navigationHistory && !this->m_navigationHistory->isInHistoryNavigation())
         {
-            HistoryItemPtr historyItem(new XenModelObjectHistoryItem(objectRef, objectType, this->m_currentObjectText, this->m_currentObjectIcon, currentTabName));
+            HistoryItemPtr historyItem(new XenModelObjectHistoryItem(objectRef, objectType, itemText, itemIcon, currentTabName));
             this->m_navigationHistory->newHistoryItem(historyItem);
         }
     } else
@@ -1206,6 +1199,15 @@ void MainWindow::onTabChanged(int index)
         }
     }
 
+    QString current_ref;
+    QString current_type;
+
+    if (!this->m_currentObject.isNull())
+    {
+        current_ref = this->m_currentObject->OpaqueRef();
+        current_type = this->m_currentObject->GetObjectType();
+    }
+
     // Notify the new tab that it's being shown
     if (index >= 0 && index < this->ui->mainTabWidget->count())
     {
@@ -1228,11 +1230,11 @@ void MainWindow::onTabChanged(int index)
             }
 
             // Set current source based on selection
-            if (this->m_currentObjectType == "vm")
+            if (current_type == "vm")
             {
                 consoleTab->GetConsolePanel()->SetCurrentSource(this->m_currentObject);
                 consoleTab->GetConsolePanel()->UnpauseActiveView(true); // Focus console
-            } else if (this->m_currentObjectType == "host")
+            } else if (current_type == "host")
             {
                 consoleTab->GetConsolePanel()->SetCurrentSourceHost(this->m_currentObject);
                 consoleTab->GetConsolePanel()->UnpauseActiveView(true); // Focus console
@@ -1259,7 +1261,7 @@ void MainWindow::onTabChanged(int index)
 
                 // Set current source - CvmConsolePanel expects SR with driver domain
                 // The CvmConsolePanel will look up the driver domain VM internally
-                if (this->m_currentObjectType == "sr")
+                if (current_type == "sr")
                 {
                     // CvmConsolePanel.setCurrentSource() will look up driver domain VM
                     cvmConsoleTab->consolePanel()->SetCurrentSource(this->m_currentObject);
@@ -1288,10 +1290,10 @@ void MainWindow::onTabChanged(int index)
 
     // Save the selected tab for the current object (tab memory)
     // Reference: C# SetLastSelectedPage() - stores tab per object
-    if (index >= 0 && !this->m_currentObjectRef.isEmpty())
+    if (index >= 0 && !current_ref.isEmpty())
     {
         QString tabTitle = this->ui->mainTabWidget->tabText(index);
-        this->m_selectedTabs[this->m_currentObjectRef] = tabTitle;
+        this->m_selectedTabs[current_ref] = tabTitle;
     }
 
     previousIndex = index;
@@ -1393,11 +1395,6 @@ void MainWindow::saveSettings()
 
     settings.sync();
     qDebug() << "Settings saved to:" << settings.getValue("").toString();
-}
-
-void MainWindow::SaveConnections()
-{
-    SaveServerList();
 }
 
 bool MainWindow::IsConnected()
@@ -1808,8 +1805,7 @@ void MainWindow::restoreConnections()
     {
         // Only auto-connect if the profile has autoConnect enabled
         // or if save session is enabled and the connection wasn't explicitly disconnected
-        bool shouldConnect = profile.autoConnect() ||
-                             (SettingsManager::instance().getSaveSession() && !profile.saveDisconnected());
+        bool shouldConnect = autoConnect && (profile.autoConnect() || (SettingsManager::instance().getSaveSession() && !profile.saveDisconnected()));
 
         if (shouldConnect)
         {
@@ -1981,7 +1977,7 @@ void MainWindow::onCacheObjectChanged(XenConnection* connection, const QString& 
         return;
 
     // If the changed object is the currently displayed one, refresh the tabs
-    if (objectType == this->m_currentObjectType && objectRef == this->m_currentObjectRef && !this->m_currentObject.isNull())
+    if (!this->m_currentObject.isNull() && objectType == this->m_currentObject->GetObjectType() && objectRef == this->m_currentObject->OpaqueRef())
     {
         // Update tab pages with new data
         for (int i = 0; i < this->ui->mainTabWidget->count(); ++i)
@@ -2020,105 +2016,6 @@ void MainWindow::onMessageRemoved(const QString& messageRef)
     // Remove alert when XenAPI message is deleted
     
     MessageAlert::removeAlert(messageRef);
-}
-
-// Connection handler implementations
-void MainWindow::handleConnectionSuccess(ConnectionContext* context, bool connected)
-{
-    if (!connected)
-        return; // Ignore disconnection, wait for specific error signals
-
-    // Clean up connections
-    this->cleanupConnectionContext(context);
-
-    context->progressDialog->close();
-    context->progressDialog->deleteLater();
-
-    this->ui->statusbar->showMessage("Connected to " + context->hostname, 5000);
-
-    // Delegate tree building to NavigationView which respects current navigation mode
-    if (this->m_navigationPane)
-    {
-        this->m_navigationPane->RequestRefreshTreeView();
-    }
-
-    // Save profile if requested
-    if (context->saveProfile)
-    {
-        SettingsManager::instance().saveConnectionProfile(*context->profile);
-        SettingsManager::instance().setLastConnectionProfile(context->profile->name());
-        qDebug() << "XenAdmin Qt: Saved connection profile for" << context->hostname;
-    }
-
-    delete context->profile;
-    delete context;
-}
-
-void MainWindow::handleConnectionError(ConnectionContext* context, const QString& error)
-{
-    // Clean up connections
-    this->cleanupConnectionContext(context);
-
-    context->progressDialog->close();
-    context->progressDialog->deleteLater();
-
-    QString errorMsg = "Failed to connect to " + context->hostname + ".\n\nError: " + error +
-                       "\n\nPlease check your connection details and try again.";
-    QMessageBox::critical(this, "Connection Failed", errorMsg);
-    this->ui->statusbar->showMessage("Connection failed", 5000);
-
-    delete context->profile;
-    delete context;
-}
-
-void MainWindow::handleInitialAuthFailed(ConnectionContext* context)
-{
-    // Clean up these initial connection handlers
-    this->cleanupConnectionContext(context);
-
-    context->progressDialog->close();
-    context->progressDialog->deleteLater();
-
-    delete context->profile;
-    delete context;
-
-    // Don't show any error here - onAuthenticationFailed() will handle it
-}
-
-void MainWindow::handleRetryAuthFailed(ConnectionContext* context)
-{
-    // Clean up retry connections before showing retry dialog again
-    this->cleanupConnectionContext(context);
-
-    context->progressDialog->close();
-    context->progressDialog->deleteLater();
-
-    delete context->profile;
-    delete context;
-
-    // The signal will trigger onAuthenticationFailed() again, creating a new retry dialog
-}
-
-void MainWindow::cleanupConnectionContext(ConnectionContext* context)
-{
-    if (context->successConn)
-    {
-        disconnect(*context->successConn);
-        delete context->successConn;
-        context->successConn = nullptr;
-    }
-    if (context->errorConn)
-    {
-        disconnect(*context->errorConn);
-        delete context->errorConn;
-        context->errorConn = nullptr;
-    }
-    if (context->authFailedConn)
-    {
-        disconnect(*context->authFailedConn);
-        delete context->authFailedConn;
-        context->authFailedConn = nullptr;
-    }
 }
 
 // Operation progress tracking (matches C# History_CollectionChanged pattern)

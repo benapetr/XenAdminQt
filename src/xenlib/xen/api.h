@@ -72,15 +72,11 @@ class XENLIB_EXPORT XenRpcAPI : public QObject
         QVariant ParseJsonRpcResponse(const QByteArray& response);
 
     signals:
-        void apiCallCompleted(const QString& method, const QVariant& result);
         void apiCallFailed(const QString& method, const QString& error);
 
     private:
         class Private;
         Private* d;
-
-        void makeAsyncCall(const QString& method, const QVariantList& params,
-                           const QString& callId = QString());
 };
 
 #endif // XEN_API_H

@@ -251,6 +251,9 @@ static QString valueForKeys(const QVariantMap& map, std::initializer_list<const 
 
 QVariant PoolGrouping::getGroup(const QVariantMap& objectData, const QString& objectType) const
 {
+    Q_UNUSED(objectData);
+    Q_UNUSED(objectType);
+
     // C# equivalent: PropertyAccessors.Get(PropertyNames.pool)
     // This always returns the pool of the connection (if any), regardless of object.
     if (!this->m_connection || !this->m_connection->GetCache())

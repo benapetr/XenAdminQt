@@ -189,7 +189,7 @@ void AffinityPicker::loadServers()
             iconHostData["_metrics_live"] = isLive;
         }
         QTableWidgetItem* iconItem = new QTableWidgetItem();
-        iconItem->setIcon(IconManager::instance().getIconForHost(iconHostData));
+        iconItem->setIcon(IconManager::instance().GetIconForHost(iconHostData));
         iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
         this->ui->serversTable->setItem(row, 0, iconItem);
 

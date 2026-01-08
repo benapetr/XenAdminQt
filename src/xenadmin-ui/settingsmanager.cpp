@@ -288,241 +288,241 @@ ConnectionProfile SettingsManager::getLastConnectionProfile() const
 
 void SettingsManager::setLastConnectionProfile(const QString& name)
 {
-    m_settings->setValue("General/lastConnectionProfile", name);
+    this->m_settings->setValue("General/lastConnectionProfile", name);
     emit settingsChanged("General/lastConnectionProfile");
 }
 
 // Application preferences
 bool SettingsManager::getSaveSession() const
 {
-    return m_settings->value("General/saveSession", true).toBool();
+    return this->m_settings->value("General/saveSession", true).toBool();
 }
 
 void SettingsManager::setSaveSession(bool save)
 {
-    m_settings->setValue("General/saveSession", save);
+    this->m_settings->setValue("General/saveSession", save);
     emit settingsChanged("General/saveSession");
 }
 
 bool SettingsManager::getAutoConnect() const
 {
-    return m_settings->value("General/autoConnect", false).toBool();
+    return this->m_settings->value("General/autoConnect", true).toBool();
 }
 
 void SettingsManager::setAutoConnect(bool autoConnect)
 {
-    m_settings->setValue("General/autoConnect", autoConnect);
+    this->m_settings->setValue("General/autoConnect", autoConnect);
     emit settingsChanged("General/autoConnect");
 }
 
 bool SettingsManager::getCheckForUpdates() const
 {
-    return m_settings->value("General/checkForUpdates", true).toBool();
+    return this->m_settings->value("General/checkForUpdates", true).toBool();
 }
 
 void SettingsManager::setCheckForUpdates(bool check)
 {
-    m_settings->setValue("General/checkForUpdates", check);
+    this->m_settings->setValue("General/checkForUpdates", check);
     emit settingsChanged("General/checkForUpdates");
 }
 
 QString SettingsManager::getDefaultExportPath() const
 {
     QString defaultPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    return m_settings->value("Paths/defaultExport", defaultPath).toString();
+    return this->m_settings->value("Paths/defaultExport", defaultPath).toString();
 }
 
 void SettingsManager::setDefaultExportPath(const QString& path)
 {
-    m_settings->setValue("Paths/defaultExport", path);
+    this->m_settings->setValue("Paths/defaultExport", path);
     emit settingsChanged("Paths/defaultExport");
 }
 
 QString SettingsManager::getDefaultImportPath() const
 {
     QString defaultPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    return m_settings->value("Paths/defaultImport", defaultPath).toString();
+    return this->m_settings->value("Paths/defaultImport", defaultPath).toString();
 }
 
 void SettingsManager::setDefaultImportPath(const QString& path)
 {
-    m_settings->setValue("Paths/defaultImport", path);
+    this->m_settings->setValue("Paths/defaultImport", path);
     emit settingsChanged("Paths/defaultImport");
 }
 
 bool SettingsManager::getConfirmOnExit() const
 {
-    return m_settings->value("General/confirmOnExit", true).toBool();
+    return this->m_settings->value("General/confirmOnExit", true).toBool();
 }
 
 void SettingsManager::setConfirmOnExit(bool confirm)
 {
-    m_settings->setValue("General/confirmOnExit", confirm);
+    this->m_settings->setValue("General/confirmOnExit", confirm);
     emit settingsChanged("General/confirmOnExit");
 }
 
 bool SettingsManager::getShowHiddenObjects() const
 {
-    return m_settings->value("View/showHiddenObjects", false).toBool();
+    return this->m_settings->value("View/showHiddenObjects", false).toBool();
 }
 
 void SettingsManager::setShowHiddenObjects(bool show)
 {
-    m_settings->setValue("View/showHiddenObjects", show);
+    this->m_settings->setValue("View/showHiddenObjects", show);
     emit settingsChanged("View/showHiddenObjects");
 }
 
 bool SettingsManager::getDefaultTemplatesVisible() const
 {
-    return m_settings->value("View/defaultTemplatesVisible", false).toBool();
+    return this->m_settings->value("View/defaultTemplatesVisible", false).toBool();
 }
 
 void SettingsManager::setDefaultTemplatesVisible(bool visible)
 {
-    m_settings->setValue("View/defaultTemplatesVisible", visible);
+    this->m_settings->setValue("View/defaultTemplatesVisible", visible);
     emit settingsChanged("View/defaultTemplatesVisible");
 }
 
 bool SettingsManager::getUserTemplatesVisible() const
 {
-    return m_settings->value("View/userTemplatesVisible", true).toBool();
+    return this->m_settings->value("View/userTemplatesVisible", true).toBool();
 }
 
 void SettingsManager::setUserTemplatesVisible(bool visible)
 {
-    m_settings->setValue("View/userTemplatesVisible", visible);
+    this->m_settings->setValue("View/userTemplatesVisible", visible);
     emit settingsChanged("View/userTemplatesVisible");
 }
 
 bool SettingsManager::getLocalSRsVisible() const
 {
-    return m_settings->value("View/localSRsVisible", true).toBool();
+    return this->m_settings->value("View/localSRsVisible", true).toBool();
 }
 
 void SettingsManager::setLocalSRsVisible(bool visible)
 {
-    m_settings->setValue("View/localSRsVisible", visible);
+    this->m_settings->setValue("View/localSRsVisible", visible);
     emit settingsChanged("View/localSRsVisible");
 }
 
 int SettingsManager::getConsoleRefreshInterval() const
 {
-    return m_settings->value("Console/refreshInterval", 5).toInt();
+    return this->m_settings->value("Console/refreshInterval", 5).toInt();
 }
 
 void SettingsManager::setConsoleRefreshInterval(int seconds)
 {
-    m_settings->setValue("Console/refreshInterval", seconds);
+    this->m_settings->setValue("Console/refreshInterval", seconds);
     emit settingsChanged("Console/refreshInterval");
 }
 
 int SettingsManager::getGraphUpdateInterval() const
 {
-    return m_settings->value("Performance/graphUpdateInterval", 1).toInt();
+    return this->m_settings->value("Performance/graphUpdateInterval", 1).toInt();
 }
 
 void SettingsManager::setGraphUpdateInterval(int seconds)
 {
-    m_settings->setValue("Performance/graphUpdateInterval", seconds);
+    this->m_settings->setValue("Performance/graphUpdateInterval", seconds);
     emit settingsChanged("Performance/graphUpdateInterval");
 }
 
 // Tree view settings
 SettingsManager::TreeViewMode SettingsManager::getTreeViewMode() const
 {
-    int mode = m_settings->value("TreeView/mode", Infrastructure).toInt();
+    int mode = this->m_settings->value("TreeView/mode", Infrastructure).toInt();
     return static_cast<TreeViewMode>(mode);
 }
 
 void SettingsManager::setTreeViewMode(TreeViewMode mode)
 {
-    m_settings->setValue("TreeView/mode", static_cast<int>(mode));
+    this->m_settings->setValue("TreeView/mode", static_cast<int>(mode));
     emit settingsChanged("TreeView/mode");
 }
 
 QStringList SettingsManager::getExpandedTreeItems() const
 {
-    return m_settings->value("TreeView/expandedItems").toStringList();
+    return this->m_settings->value("TreeView/expandedItems").toStringList();
 }
 
 void SettingsManager::setExpandedTreeItems(const QStringList& items)
 {
-    m_settings->setValue("TreeView/expandedItems", items);
+    this->m_settings->setValue("TreeView/expandedItems", items);
     emit settingsChanged("TreeView/expandedItems");
 }
 
 // Debug settings
 bool SettingsManager::getDebugConsoleVisible() const
 {
-    return m_settings->value("Debug/consoleVisible", false).toBool();
+    return this->m_settings->value("Debug/consoleVisible", false).toBool();
 }
 
 void SettingsManager::setDebugConsoleVisible(bool visible)
 {
-    m_settings->setValue("Debug/consoleVisible", visible);
+    this->m_settings->setValue("Debug/consoleVisible", visible);
     emit settingsChanged("Debug/consoleVisible");
 }
 
 int SettingsManager::getLogLevel() const
 {
-    return m_settings->value("Debug/logLevel", 2).toInt(); // 2 = Info
+    return this->m_settings->value("Debug/logLevel", 2).toInt(); // 2 = Info
 }
 
 void SettingsManager::setLogLevel(int level)
 {
-    m_settings->setValue("Debug/logLevel", level);
+    this->m_settings->setValue("Debug/logLevel", level);
     emit settingsChanged("Debug/logLevel");
 }
 
 // Network settings
 QString SettingsManager::getProxyServer() const
 {
-    return m_settings->value("Network/proxyServer").toString();
+    return this->m_settings->value("Network/proxyServer").toString();
 }
 
 void SettingsManager::setProxyServer(const QString& server)
 {
-    m_settings->setValue("Network/proxyServer", server);
+    this->m_settings->setValue("Network/proxyServer", server);
     emit settingsChanged("Network/proxyServer");
 }
 
 int SettingsManager::getProxyPort() const
 {
-    return m_settings->value("Network/proxyPort", 8080).toInt();
+    return this->m_settings->value("Network/proxyPort", 8080).toInt();
 }
 
 void SettingsManager::setProxyPort(int port)
 {
-    m_settings->setValue("Network/proxyPort", port);
+    this->m_settings->setValue("Network/proxyPort", port);
     emit settingsChanged("Network/proxyPort");
 }
 
 bool SettingsManager::getUseProxy() const
 {
-    return m_settings->value("Network/useProxy", false).toBool();
+    return this->m_settings->value("Network/useProxy", false).toBool();
 }
 
 void SettingsManager::setUseProxy(bool use)
 {
-    m_settings->setValue("Network/useProxy", use);
+    this->m_settings->setValue("Network/useProxy", use);
     emit settingsChanged("Network/useProxy");
 }
 
 QString SettingsManager::getProxyUsername() const
 {
-    return m_settings->value("Network/proxyUsername").toString();
+    return this->m_settings->value("Network/proxyUsername").toString();
 }
 
 void SettingsManager::setProxyUsername(const QString& username)
 {
-    m_settings->setValue("Network/proxyUsername", username);
+    this->m_settings->setValue("Network/proxyUsername", username);
     emit settingsChanged("Network/proxyUsername");
 }
 
 // Recent files/paths
 QStringList SettingsManager::getRecentExportPaths() const
 {
-    return m_settings->value("Recent/exportPaths").toStringList();
+    return this->m_settings->value("Recent/exportPaths").toStringList();
 }
 
 void SettingsManager::addRecentExportPath(const QString& path)
@@ -532,7 +532,7 @@ void SettingsManager::addRecentExportPath(const QString& path)
 
 QStringList SettingsManager::getRecentImportPaths() const
 {
-    return m_settings->value("Recent/importPaths").toStringList();
+    return this->m_settings->value("Recent/importPaths").toStringList();
 }
 
 void SettingsManager::addRecentImportPath(const QString& path)
@@ -543,23 +543,23 @@ void SettingsManager::addRecentImportPath(const QString& path)
 // Miscellaneous
 QVariant SettingsManager::getValue(const QString& key, const QVariant& defaultValue) const
 {
-    return m_settings->value(key, defaultValue);
+    return this->m_settings->value(key, defaultValue);
 }
 
 void SettingsManager::setValue(const QString& key, const QVariant& value)
 {
-    m_settings->setValue(key, value);
+    this->m_settings->setValue(key, value);
     emit settingsChanged(key);
 }
 
 void SettingsManager::sync()
 {
-    m_settings->sync();
+    this->m_settings->sync();
 }
 
 void SettingsManager::clear()
 {
-    m_settings->clear();
+    this->m_settings->clear();
     emit settingsChanged("*");
 }
 
@@ -596,7 +596,7 @@ QString SettingsManager::decryptPassword(const QString& encrypted) const
 
 void SettingsManager::addToRecentList(const QString& settingsKey, const QString& path, int maxItems)
 {
-    QStringList recent = m_settings->value(settingsKey).toStringList();
+    QStringList recent = this->m_settings->value(settingsKey).toStringList();
 
     // Remove if already exists
     recent.removeAll(path);
@@ -610,6 +610,6 @@ void SettingsManager::addToRecentList(const QString& settingsKey, const QString&
         recent.removeLast();
     }
 
-    m_settings->setValue(settingsKey, recent);
+    this->m_settings->setValue(settingsKey, recent);
     emit settingsChanged(settingsKey);
 }

@@ -119,7 +119,7 @@ void SrPicker::populateSRList()
     for (const QVariantMap& srData : allSRs)
     {
         QString srRef = srData.value("ref").toString();
-        if (!srRef.isEmpty() && this->isValidSR(srRef, srData))
+        if (!srRef.isEmpty() && this->isValidSR(srData))
         {
             this->addSR(srRef);
         }
@@ -399,7 +399,7 @@ void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, co
         else
         {
             // SR is new and valid - add it
-            if (this->isValidSR(ref, srData))
+            if (this->isValidSR(srData))
             {
                 this->addSR(ref);
                 this->selectDefaultSR(); // Re-check default selection in case this is the default SR
@@ -523,7 +523,7 @@ void SrPicker::startNextScan()
     }
 }
 
-bool SrPicker::isValidSR(const QString& srRef, const QVariantMap& srData) const
+bool SrPicker::isValidSR(const QVariantMap& srData) const
 {
     // Don't show ISO SRs
     QString contentType = srData.value("content_type", "").toString();

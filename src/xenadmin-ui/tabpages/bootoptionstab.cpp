@@ -222,6 +222,7 @@ void BootOptionsTab::SetObject(QSharedPointer<XenObject> object)
         // Simple check - just see if any VBD type is "CD"
         for (const QVariant& vbdRef : vbds)
         {
+            // TODO unfinished logic
             // We would need API access here to check VBD details
             // For now, assume there might be a CD
             hasCD = true; // Placeholder

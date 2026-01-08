@@ -49,19 +49,19 @@ class IconManager
         static IconManager& instance();
 
         // Icon retrieval methods
-        QIcon getIconForObject(const QString& objectType, const QVariantMap& objectData) const;
-        QIcon getIconForObject(const XenObject* object) const;
-        QIcon getIconForVM(const QVariantMap& vmData) const;
-        QIcon getIconForHost(const QVariantMap& hostData) const;
-        QIcon getIconForPool(const QVariantMap& poolData) const;
-        QIcon getIconForSR(const QVariantMap& srData) const;
-        QIcon getIconForSR(const QVariantMap& srData, XenConnection* connection) const;
-        QIcon getIconForNetwork(const QVariantMap& networkData) const;
+        QIcon GetIconForObject(const QString& objectType, const QVariantMap& objectData) const;
+        QIcon GetIconForObject(const XenObject* object) const;
+        QIcon GetIconForVM(const QVariantMap& vmData) const;
+        QIcon GetIconForHost(const QVariantMap& hostData) const;
+        QIcon GetIconForPool(const QVariantMap& poolData) const;
+        QIcon GetIconForSR(const QVariantMap& srData) const;
+        QIcon GetIconForSR(const QVariantMap& srData, XenConnection* connection) const;
+        QIcon GetIconForNetwork(const QVariantMap& networkData) const;
 
         // Static icon getters
-        QIcon getConnectedIcon() const;
-        QIcon getDisconnectedIcon() const;
-        QIcon getConnectingIcon() const;
+        QIcon GetConnectedIcon() const;
+        QIcon GetDisconnectedIcon() const;
+        QIcon GetConnectingIcon() const;
 
     private:
         IconManager();

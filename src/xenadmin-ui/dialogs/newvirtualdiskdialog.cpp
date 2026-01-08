@@ -215,7 +215,7 @@ void NewVirtualDiskDialog::populateSRList()
         item->setData(Qt::UserRole, srRef);
 
         // Set icon
-        QIcon srIcon = IconManager::instance().getIconForSR(srData, this->m_connection);
+        QIcon srIcon = IconManager::instance().GetIconForSR(srData, this->m_connection);
         item->setIcon(srIcon);
 
         // Build description text (shown below SR name)

@@ -331,7 +331,7 @@ void QueryPanel::populateRow(QTreeWidgetItem* item, XenObject* xenObject)
         if (columnName == "name")
         {
             value = xenObject->GetName();
-            QIcon icon = IconManager::instance().getIconForObject(xenObject);
+            QIcon icon = IconManager::instance().GetIconForObject(xenObject);
             if (!icon.isNull())
                 item->setIcon(0, icon);
         }

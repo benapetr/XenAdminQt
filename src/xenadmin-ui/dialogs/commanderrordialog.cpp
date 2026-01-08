@@ -117,7 +117,7 @@ CommandErrorDialog::CommandErrorDialog(const QString& title,
         if (!xenObject)
             continue;
 
-        QIcon icon = IconManager::instance().getIconForObject(xenObject.data());
+        QIcon icon = IconManager::instance().GetIconForObject(xenObject.data());
         QString name = xenObject->GetName();
         QString reason = cantRunReasons.value(xenObject);
         

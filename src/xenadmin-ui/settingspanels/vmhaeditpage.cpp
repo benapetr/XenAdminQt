@@ -707,6 +707,7 @@ void VMHAEditPage::onLinkActivated(const QString& link)
 
 void VMHAEditPage::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
 {
+    Q_UNUSED(connection);
     Q_UNUSED(ref);
     if (type != "pool" && type != "host" && type != "host_metrics")
         return;

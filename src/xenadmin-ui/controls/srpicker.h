@@ -161,7 +161,7 @@ class SrPicker : public QWidget
         void addSR(const QString& srRef);
         void updateSRItem(const QString& srRef);
         void removeSR(const QString& srRef);
-        bool isValidSR(const QString& srRef, const QVariantMap& srData) const;
+        bool isValidSR(const QVariantMap& srData) const;
         bool canBeEnabled(const QString& srRef, const QVariantMap& srData, QString& reason) const;
         qint64 calculateFreeSpace(const QVariantMap& srData) const;
         QString formatSize(qint64 bytes) const;

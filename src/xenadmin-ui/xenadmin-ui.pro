@@ -216,7 +216,6 @@ SOURCES += \
     tabpages/notificationsbasepage.cpp \
     tabpages/alertsummarypage.cpp \
     tabpages/eventspage.cpp \
-    widgets/qvncclient.cpp \
     widgets/memorybar.cpp \
     widgets/progressbardelegate.cpp \
     widgets/verticaltabwidget.cpp \
@@ -451,7 +450,6 @@ HEADERS += \
     tabpages/notificationsbasepage.h \
     tabpages/alertsummarypage.h \
     tabpages/eventspage.h \
-    widgets/qvncclient.h \
     widgets/memorybar.h \
     widgets/progressbardelegate.h \
     widgets/verticaltabwidget.h \

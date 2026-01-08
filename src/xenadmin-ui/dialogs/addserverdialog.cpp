@@ -28,7 +28,6 @@
 #include "addserverdialog.h"
 #include "ui_addserverdialog.h"
 #include "../settingsmanager.h"
-#include "../connectionprofile.h"
 #include "../../xenlib/xen/network/connection.h"
 #include <QtWidgets/QStyle>
 
@@ -39,8 +38,6 @@ namespace
         "Enter the host name or IP address of the server you want to add and your user login credentials for that server.";
     const char* kTextConnectToServer = "Connect to Server";
     const char* kTextConnectToServerBlurb = "Enter your user name and password to connect to this server.";
-    const char* kTextAddServerPassNew =
-        "XenAdmin Qt can no longer authenticate with the existing credentials for this server. Enter new credentials to proceed.";
     const char* kTextErrorConnectingBlurb = "XenAdmin Qt has encountered a problem connecting to this server.";
     const char* kTextAddNewIncorrect = "Incorrect user name and/or password.";
 }
@@ -51,9 +48,9 @@ AddServerDialog::AddServerDialog(XenConnection* connection, bool changedPass, QW
       m_connection(connection),
       m_changedPass(changedPass)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
-    ui->ServerNameComboBox->setEditable(true);
+    this->ui->ServerNameComboBox->setEditable(true);
 
     QStringList history = SettingsManager::instance().getServerHistory();
     history.removeDuplicates();
@@ -61,137 +58,137 @@ AddServerDialog::AddServerDialog(XenConnection* connection, bool changedPass, QW
         return a.toLower() < b.toLower();
     });
 
-    ui->ServerNameComboBox->addItems(history);
+    this->ui->ServerNameComboBox->addItems(history);
 
-    if (m_connection)
+    if (this->m_connection)
     {
-        ui->ServerNameComboBox->setEditText(hostnameWithPort());
-        ui->UsernameTextBox->setText(m_connection->GetUsername());
-        ui->PasswordTextBox->setText(m_connection->GetPassword());
+        this->ui->ServerNameComboBox->setEditText(this->hostnameWithPort());
+        this->ui->UsernameTextBox->setText(this->m_connection->GetUsername());
+        this->ui->PasswordTextBox->setText(this->m_connection->GetPassword());
     }
 
-    connect(ui->ServerNameComboBox->lineEdit(), &QLineEdit::textChanged, this, &AddServerDialog::TextFields_TextChanged);
-    connect(ui->UsernameTextBox, &QLineEdit::textChanged, this, &AddServerDialog::TextFields_TextChanged);
-    connect(ui->PasswordTextBox, &QLineEdit::textChanged, this, &AddServerDialog::TextFields_TextChanged);
-    connect(ui->AddButton, &QPushButton::clicked, this, &AddServerDialog::AddButton_Click);
-    connect(ui->CancelButton2, &QPushButton::clicked, this, &AddServerDialog::CancelButton2_Click);
-    QIcon warnIcon = style()->standardIcon(QStyle::SP_MessageBoxWarning);
-    ui->pictureBoxError->setPixmap(warnIcon.pixmap(16, 16));
+    connect(this->ui->ServerNameComboBox->lineEdit(), &QLineEdit::textChanged, this, &AddServerDialog::TextFields_TextChanged);
+    connect(this->ui->UsernameTextBox, &QLineEdit::textChanged, this, &AddServerDialog::TextFields_TextChanged);
+    connect(this->ui->PasswordTextBox, &QLineEdit::textChanged, this, &AddServerDialog::TextFields_TextChanged);
+    connect(this->ui->AddButton, &QPushButton::clicked, this, &AddServerDialog::AddButton_Click);
+    connect(this->ui->CancelButton2, &QPushButton::clicked, this, &AddServerDialog::CancelButton2_Click);
+    QIcon warnIcon = this->style()->standardIcon(QStyle::SP_MessageBoxWarning);
+    this->ui->pictureBoxError->setPixmap(warnIcon.pixmap(16, 16));
 
-    AddServerDialog_Load();
-    labelError_TextChanged();
+    this->AddServerDialog_Load();
+    this->labelError_TextChanged();
 }
 
 AddServerDialog::~AddServerDialog()
 {
-    delete ui;
+    delete this->ui;
 }
 
 QString AddServerDialog::serverInput() const
 {
-    return ui->ServerNameComboBox->currentText().trimmed();
+    return this->ui->ServerNameComboBox->currentText().trimmed();
 }
 
 QString AddServerDialog::username() const
 {
-    return ui->UsernameTextBox->text().trimmed();
+    return this->ui->UsernameTextBox->text().trimmed();
 }
 
 QString AddServerDialog::password() const
 {
-    return ui->PasswordTextBox->text();
+    return this->ui->PasswordTextBox->text();
 }
 
 void AddServerDialog::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
-    AddServerDialog_Shown();
+    this->AddServerDialog_Shown();
 }
 
 void AddServerDialog::AddServerDialog_Load()
 {
-    UpdateText();
-    UpdateButtons();
+    this->UpdateText();
+    this->UpdateButtons();
 }
 
 void AddServerDialog::AddServerDialog_Shown()
 {
-    if (!ui->ServerNameComboBox->isEnabled() && m_connection && !m_connection->GetUsername().isEmpty())
-        ui->PasswordTextBox->setFocus();
+    if (!this->ui->ServerNameComboBox->isEnabled() && this->m_connection && !this->m_connection->GetUsername().isEmpty())
+        this->ui->PasswordTextBox->setFocus();
 }
 
 void AddServerDialog::UpdateText()
 {
-    if (!m_connection)
+    if (!this->m_connection)
     {
-        setWindowTitle(kTextAddNewConnectTo);
-        ui->labelInstructions->setText(kTextAddNewEnterCredentials);
-        ui->labelError->setText(QString());
-        ui->ServerNameComboBox->setEnabled(true);
-        ui->AddButton->setText(tr("&Add"));
+        this->setWindowTitle(kTextAddNewConnectTo);
+        this->ui->labelInstructions->setText(kTextAddNewEnterCredentials);
+        this->ui->labelError->setText(QString());
+        this->ui->ServerNameComboBox->setEnabled(true);
+        this->ui->AddButton->setText(this->tr("&Add"));
         return;
     }
 
-    if (!m_changedPass)
+    if (!this->m_changedPass)
         return;
 
-    if (m_connection->GetPassword().isEmpty())
+    if (this->m_connection->GetPassword().isEmpty())
     {
-        setWindowTitle(kTextConnectToServer);
-        ui->labelInstructions->setText(kTextConnectToServerBlurb);
-        ui->labelError->setText(QString());
-        ui->ServerNameComboBox->setEnabled(false);
-        ui->AddButton->setText(tr("Connect"));
+        this->setWindowTitle(kTextConnectToServer);
+        this->ui->labelInstructions->setText(kTextConnectToServerBlurb);
+        this->ui->labelError->setText(QString());
+        this->ui->ServerNameComboBox->setEnabled(false);
+        this->ui->AddButton->setText(this->tr("Connect"));
     } else
     {
-        setWindowTitle(kTextConnectToServer);
-        ui->labelInstructions->setText(kTextErrorConnectingBlurb);
-        ui->labelError->setText(kTextAddNewIncorrect);
-        ui->ServerNameComboBox->setEnabled(false);
-        ui->AddButton->setText(tr("Connect"));
+        this->setWindowTitle(kTextConnectToServer);
+        this->ui->labelInstructions->setText(kTextErrorConnectingBlurb);
+        this->ui->labelError->setText(kTextAddNewIncorrect);
+        this->ui->ServerNameComboBox->setEnabled(false);
+        this->ui->AddButton->setText(this->tr("Connect"));
     }
 }
 
 void AddServerDialog::AddButton_Click()
 {
-    accept();
+    this->accept();
 }
 
 void AddServerDialog::CancelButton2_Click()
 {
-    reject();
+    this->reject();
 }
 
 void AddServerDialog::TextFields_TextChanged()
 {
-    UpdateButtons();
+    this->UpdateButtons();
 }
 
 void AddServerDialog::UpdateButtons()
 {
-    ui->AddButton->setEnabled(OKButtonEnabled());
+    this->ui->AddButton->setEnabled(this->OKButtonEnabled());
 }
 
 bool AddServerDialog::OKButtonEnabled() const
 {
-    return !ui->ServerNameComboBox->currentText().trimmed().isEmpty() &&
-           !ui->UsernameTextBox->text().trimmed().isEmpty();
+    return !this->ui->ServerNameComboBox->currentText().trimmed().isEmpty() &&
+           !this->ui->UsernameTextBox->text().trimmed().isEmpty();
 }
 
 void AddServerDialog::labelError_TextChanged()
 {
-    const bool hasError = !ui->labelError->text().isEmpty();
-    ui->labelError->setVisible(hasError);
-    ui->pictureBoxError->setVisible(hasError);
+    const bool hasError = !this->ui->labelError->text().isEmpty();
+    this->ui->labelError->setVisible(hasError);
+    this->ui->pictureBoxError->setVisible(hasError);
 }
 
 QString AddServerDialog::hostnameWithPort() const
 {
-    if (!m_connection)
+    if (!this->m_connection)
         return QString();
 
-    const QString hostname = m_connection->GetHostname();
-    const int port = m_connection->GetPort();
+    const QString hostname = this->m_connection->GetHostname();
+    const int port = this->m_connection->GetPort();
     if (port == 443 || hostname.isEmpty())
         return hostname;
 

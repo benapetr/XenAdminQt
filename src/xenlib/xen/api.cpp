@@ -62,20 +62,6 @@ QVariant XenRpcAPI::ParseJsonRpcResponse(const QByteArray& response)
     return Xen::JsonRpcClient::parseJsonRpcResponse(response);
 }
 
-void XenRpcAPI::makeAsyncCall(const QString& method, const QVariantList& params, const QString& callId)
-{
-    Q_UNUSED(callId);
-
-    if (!this->d->session || !this->d->session->IsLoggedIn())
-    {
-        emit this->apiCallFailed(method, "Not logged in");
-        return;
-    }
-
-    // TODO: Implement async API calls
-    emit this->apiCallCompleted(method, QVariant());
-}
-
 QVariant XenRpcAPI::GetTaskRecord(const QString& taskRef)
 {
     if (!this->d->session || !this->d->session->IsLoggedIn())

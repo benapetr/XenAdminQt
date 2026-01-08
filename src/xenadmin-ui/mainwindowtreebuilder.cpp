@@ -369,7 +369,7 @@ IAcceptGroups* MainWindowTreeNodeGroupAcceptor::Add(Grouping* grouping,
             if (!node)
             {
                 const QString name = obj->GetName().isEmpty() ? obj->GetUUID() : obj->GetName();
-                QIcon icon = IconManager::instance().getIconForObject(obj.data());
+                QIcon icon = IconManager::instance().GetIconForObject(obj.data());
                 node = this->addNode(name, icon, false, QVariant::fromValue<QSharedPointer<XenObject>>(obj));
             }
         }
@@ -378,7 +378,7 @@ IAcceptGroups* MainWindowTreeNodeGroupAcceptor::Add(Grouping* grouping,
             QString name = objectData.value("name_label").toString();
             if (name.isEmpty())
                 name = objectData.value("uuid").toString();
-            QIcon icon = IconManager::instance().getIconForObject(objectType.toLower(), objectData);
+            QIcon icon = IconManager::instance().GetIconForObject(objectType.toLower(), objectData);
             node = this->addNode(name, icon, false, QVariant());
         }
     }
@@ -426,7 +426,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addPoolNode(const QSharedPoint
 {
     if (!pool)
         return nullptr;
-    QIcon icon = IconManager::instance().getIconForObject(pool.data());
+    QIcon icon = IconManager::instance().GetIconForObject(pool.data());
     return this->addNode(pool->GetName(), icon, false, QVariant::fromValue<QSharedPointer<XenObject>>(pool));
 }
 
@@ -434,7 +434,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addHostNode(const QSharedPoint
 {
     if (!host)
         return nullptr;
-    QIcon icon = IconManager::instance().getIconForObject(host.data());
+    QIcon icon = IconManager::instance().GetIconForObject(host.data());
 
     QString name = host->GetName();
     bool isDisconnected = false;
@@ -473,7 +473,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addVMNode(const QSharedPointer
     // TODO: Check for vTPM restriction and template status
     bool hidden = false; // TODO: vm->isHidden()
     QString name = hidden ? QString("(%1)").arg(vm->GetName()) : vm->GetName();
-    QIcon icon = IconManager::instance().getIconForObject(vm.data());
+    QIcon icon = IconManager::instance().GetIconForObject(vm.data());
     return this->addNode(name, icon, hidden, QVariant::fromValue<QSharedPointer<XenObject>>(vm));
 }
 
@@ -481,7 +481,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addVmApplianceNode(const QShar
 {
     if (!appliance)
         return nullptr;
-    QIcon icon = IconManager::instance().getIconForObject(appliance.data());
+    QIcon icon = IconManager::instance().GetIconForObject(appliance.data());
     return this->addNode(appliance->GetName(), icon, false, QVariant::fromValue<QSharedPointer<XenObject>>(appliance));
 }
 
@@ -489,7 +489,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addSRNode(const QSharedPointer
 {
     bool hidden = false; // TODO: sr->isHidden()
     QString name = hidden ? QString("(%1)").arg(sr->GetName()) : sr->GetName();
-    QIcon icon = IconManager::instance().getIconForObject(sr.data());
+    QIcon icon = IconManager::instance().GetIconForObject(sr.data());
     return this->addNode(name, icon, hidden, QVariant::fromValue<QSharedPointer<XenObject>>(sr));
 }
 
@@ -500,14 +500,14 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addNetworkNode(const QSharedPo
     QString rawName = network->GetName();
     QString name = supporter ? QString("NIC Bonded Member: %1").arg(rawName) :
                    hidden ? QString("(%1)").arg(rawName) : rawName;
-    QIcon icon = IconManager::instance().getIconForObject(network.data());
+    QIcon icon = IconManager::instance().GetIconForObject(network.data());
     return this->addNode(name, icon, supporter || hidden, QVariant::fromValue<QSharedPointer<XenObject>>(network));
 }
 
 QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addVDINode(const QSharedPointer<VDI>& vdi)
 {
     QString name = vdi->GetName().isEmpty() ? QObject::tr("(No name)") : vdi->GetName();
-    QIcon icon = IconManager::instance().getIconForObject(vdi.data());
+    QIcon icon = IconManager::instance().GetIconForObject(vdi.data());
     return this->addNode(name, icon, false, QVariant::fromValue<QSharedPointer<XenObject>>(vdi));
 }
 
@@ -515,7 +515,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addFolderNode(const QSharedPoi
 {
     if (!folder)
         return nullptr;
-    QIcon icon = IconManager::instance().getIconForObject(folder.data());
+    QIcon icon = IconManager::instance().GetIconForObject(folder.data());
     return this->addNode(folder->GetName(), icon, false, QVariant::fromValue<QSharedPointer<XenObject>>(folder));
 }
 

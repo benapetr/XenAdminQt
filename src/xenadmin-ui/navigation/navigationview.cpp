@@ -33,7 +33,6 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xencache.h"
 #include "xenlib/vmhelpers.h"
-#include "xenlib/xensearch/groupingtag.h"
 #include "xenlib/xensearch/grouping.h"
 #include "xenlib/xensearch/queryscope.h"
 #include "xenlib/xensearch/search.h"
@@ -43,24 +42,11 @@
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/sr.h"
-#include "xenlib/utils/misc.h"
 #include "../settingsmanager.h"
 #include "../connectionprofile.h"
-#include <algorithm>
 #include <QDebug>
 
 using namespace XenSearch;
-
-static bool isHiddenObject(const QVariantMap& record)
-{
-    const QString name = record.value("name_label").toString();
-    if (name.startsWith("__gui__"))
-        return true;
-
-    const QVariantMap otherConfig = record.value("other_config").toMap();
-    const QString hiddenFlag = otherConfig.value("hide_from_xencenter").toString().toLower();
-    return hiddenFlag == "true";
-}
 
 QSharedPointer<Host> buildDisconnectedHostObject(XenConnection* connection, XenCache* cache)
 {
@@ -98,113 +84,7 @@ QSharedPointer<Host> buildDisconnectedHostObject(XenConnection* connection, XenC
     return QSharedPointer<Host>(new Host(connection, ref));
 }
 
-/**
- * @brief Sort children of a tree widget item using natural comparison
- */
-static void sortTreeItemChildren(QTreeWidgetItem* parent)
-{
-    if (!parent || parent->childCount() == 0)
-        return;
-
-    // Collect children
-    QList<QTreeWidgetItem*> children;
-    while (parent->childCount() > 0)
-    {
-        children.append(parent->takeChild(0));
-    }
-
-    // Sort using natural compare
-    std::sort(children.begin(), children.end(),
-              [](QTreeWidgetItem* a, QTreeWidgetItem* b) {
-                  return Misc::NaturalCompare(a->text(0), b->text(0)) < 0;
-              });
-
-    // Re-add in sorted order
-    for (QTreeWidgetItem* child : children)
-    {
-        parent->addChild(child);
-    }
-}
-
-static int poolChildSortRank(QTreeWidgetItem* item)
-{
-    if (!item)
-        return 99;
-
-    QVariant data = item->data(0, Qt::UserRole);
-    if (!data.canConvert<QSharedPointer<XenObject>>())
-        return 99;
-
-    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-    if (!obj)
-        return 99;
-
-    const QString type = obj->GetObjectType().toLower();
-    if (type == "host")
-        return 0;
-    if (type == "sr")
-        return 1;
-    if (type == "vm")
-        return 2;
-    return 50;
-}
-
-static void sortPoolChildren(QTreeWidgetItem* parent)
-{
-    if (!parent || parent->childCount() == 0)
-        return;
-
-    QList<QTreeWidgetItem*> children;
-    while (parent->childCount() > 0)
-    {
-        children.append(parent->takeChild(0));
-    }
-
-    std::stable_sort(children.begin(), children.end(),
-              [](QTreeWidgetItem* a, QTreeWidgetItem* b) {
-                  const int rankA = poolChildSortRank(a);
-                  const int rankB = poolChildSortRank(b);
-                  if (rankA != rankB)
-                      return rankA < rankB;
-                  return Misc::NaturalCompare(a->text(0), b->text(0)) < 0;
-              });
-
-    for (QTreeWidgetItem* child : children)
-    {
-        parent->addChild(child);
-    }
-}
-
-/**
- * @brief Sort top-level items in a tree widget using natural comparison
- */
-static void sortTreeTopLevel(QTreeWidget* tree)
-{
-    if (!tree || tree->topLevelItemCount() == 0)
-        return;
-
-    // Collect top-level items
-    QList<QTreeWidgetItem*> items;
-    while (tree->topLevelItemCount() > 0)
-    {
-        items.append(tree->takeTopLevelItem(0));
-    }
-
-    // Sort using natural compare
-    std::sort(items.begin(), items.end(),
-              [](QTreeWidgetItem* a, QTreeWidgetItem* b) {
-                  return Misc::NaturalCompare(a->text(0), b->text(0)) < 0;
-              });
-
-    // Re-add in sorted order
-    for (QTreeWidgetItem* item : items)
-    {
-        tree->addTopLevelItem(item);
-    }
-}
-
-NavigationView::NavigationView(QWidget* parent)
-    : QWidget(parent), ui(new Ui::NavigationView), m_refreshTimer(new QTimer(this)), m_typeGrouping(new TypeGrouping()) // Create TypeGrouping for Objects view
+NavigationView::NavigationView(QWidget* parent)  : QWidget(parent), ui(new Ui::NavigationView), m_refreshTimer(new QTimer(this)), m_typeGrouping(new TypeGrouping()) // Create TypeGrouping for Objects view
 {
     this->ui->setupUi(this);
     this->m_treeBuilder = new MainWindowTreeBuilder(this->ui->treeWidget, this);
@@ -365,6 +245,7 @@ void NavigationView::SetSearchText(const QString& text)
 void NavigationView::onCacheObjectChanged(XenConnection* connection, const QString& type, const QString& ref)
 {
     Q_UNUSED(ref);
+    Q_UNUSED(connection);
 
     // Only refresh for object types that appear in the tree
     // This avoids unnecessary refreshes for metrics, tasks, etc.

@@ -122,7 +122,7 @@ void BondPropertiesDialog::loadAvailablePIFs()
         QString pifHost = pifData.value("host").toString();
         bool isPhysical = pifData.value("physical").toBool();
         QString bondMasterOf = pifData.value("bond_master_of").toString();
-        bool currentlyAttached = pifData.value("currently_attached").toBool();
+        //bool currentlyAttached = pifData.value("currently_attached").toBool();
 
         // Only show physical PIFs on this host that aren't already in a bond
         if (pifHost == m_hostRef && isPhysical && bondMasterOf.isEmpty())

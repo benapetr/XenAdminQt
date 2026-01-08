@@ -74,22 +74,15 @@ void ConsolesOptionsPage::Build()
     SettingsManager& settings = SettingsManager::instance();
 
     // Windows Remote Desktop console
-    this->ui->WindowsKeyCheckBox->setChecked(
-        settings.getValue("Console/WindowsShortcuts", true).toBool());
-    this->ui->SoundCheckBox->setChecked(
-        settings.getValue("Console/ReceiveSoundFromRDP", false).toBool());
-    this->ui->AutoSwitchCheckBox->setChecked(
-        settings.getValue("Console/AutoSwitchToRDP", true).toBool());
-    this->ui->ClipboardCheckBox->setChecked(
-        settings.getValue("Console/ClipboardAndPrinterRedirection", true).toBool());
-    this->ui->ConnectToServerConsoleCheckBox->setChecked(
-        settings.getValue("Console/ConnectToServerConsole", false).toBool());
+    this->ui->WindowsKeyCheckBox->setChecked(settings.getValue("Console/WindowsShortcuts", true).toBool());
+    this->ui->SoundCheckBox->setChecked(settings.getValue("Console/ReceiveSoundFromRDP", false).toBool());
+    this->ui->AutoSwitchCheckBox->setChecked(settings.getValue("Console/AutoSwitchToRDP", true).toBool());
+    this->ui->ClipboardCheckBox->setChecked(settings.getValue("Console/ClipboardAndPrinterRedirection", true).toBool());
+    this->ui->ConnectToServerConsoleCheckBox->setChecked(settings.getValue("Console/ConnectToServerConsole", false).toBool());
 
     // Console scaling
-    this->ui->PreserveUndockedScaleCheckBox->setChecked(
-        settings.getValue("Console/PreserveScaleWhenUndocked", false).toBool());
-    this->ui->PreserveVNCConsoleScalingCheckBox->setChecked(
-        settings.getValue("Console/PreserveScaleWhenSwitchBackToVNC", false).toBool());
+    this->ui->PreserveUndockedScaleCheckBox->setChecked(settings.getValue("Console/PreserveScaleWhenUndocked", false).toBool());
+    this->ui->PreserveVNCConsoleScalingCheckBox->setChecked(settings.getValue("Console/PreserveScaleWhenSwitchBackToVNC", false).toBool());
 }
 
 void ConsolesOptionsPage::buildKeyCodeListBox()

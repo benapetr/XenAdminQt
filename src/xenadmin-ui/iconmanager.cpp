@@ -47,29 +47,29 @@ IconManager& IconManager::instance()
     return instance;
 }
 
-QIcon IconManager::getIconForObject(const QString& objectType, const QVariantMap& objectData) const
+QIcon IconManager::GetIconForObject(const QString& objectType, const QVariantMap& objectData) const
 {
     if (objectType == "vm")
     {
-        return this->getIconForVM(objectData);
+        return this->GetIconForVM(objectData);
     } else if (objectType == "host")
     {
-        return this->getIconForHost(objectData);
+        return this->GetIconForHost(objectData);
     } else if (objectType == "pool")
     {
-        return this->getIconForPool(objectData);
+        return this->GetIconForPool(objectData);
     } else if (objectType == "sr")
     {
-        return this->getIconForSR(objectData);
+        return this->GetIconForSR(objectData);
     } else if (objectType == "network")
     {
-        return this->getIconForNetwork(objectData);
+        return this->GetIconForNetwork(objectData);
     }
 
     return QIcon(); // Empty icon for unknown types
 }
 
-QIcon IconManager::getIconForObject(const XenObject* object) const
+QIcon IconManager::GetIconForObject(const XenObject* object) const
 {
     if (!object)
         return QIcon();
@@ -93,12 +93,12 @@ QIcon IconManager::getIconForObject(const XenObject* object) const
     }
 
     if (objectType == "sr")
-        return this->getIconForSR(objectData, object->GetConnection());
+        return this->GetIconForSR(objectData, object->GetConnection());
 
-    return this->getIconForObject(objectType, objectData);
+    return this->GetIconForObject(objectType, objectData);
 }
 
-QIcon IconManager::getIconForVM(const QVariantMap& vmData) const
+QIcon IconManager::GetIconForVM(const QVariantMap& vmData) const
 {
     QString powerState = getVMPowerState(vmData);
     bool isTemplate = vmData.value("is_a_template", false).toBool();
@@ -166,7 +166,7 @@ QIcon IconManager::getIconForVM(const QVariantMap& vmData) const
     return icon;
 }
 
-QIcon IconManager::getIconForHost(const QVariantMap& hostData) const
+QIcon IconManager::GetIconForHost(const QVariantMap& hostData) const
 {
     // C# pattern from Images.cs GetIconFor(Host host):
     // 1. Resolve host_metrics: Host_metrics metrics = host.Connection.Resolve(host.metrics);
@@ -240,7 +240,7 @@ QIcon IconManager::getIconForHost(const QVariantMap& hostData) const
     return icon;
 }
 
-QIcon IconManager::getIconForPool(const QVariantMap& poolData) const
+QIcon IconManager::GetIconForPool(const QVariantMap& poolData) const
 {
     Q_UNUSED(poolData);
 
@@ -257,12 +257,12 @@ QIcon IconManager::getIconForPool(const QVariantMap& poolData) const
     return icon;
 }
 
-QIcon IconManager::getIconForSR(const QVariantMap& srData) const
+QIcon IconManager::GetIconForSR(const QVariantMap& srData) const
 {
-    return this->getIconForSR(srData, nullptr);
+    return this->GetIconForSR(srData, nullptr);
 }
 
-QIcon IconManager::getIconForSR(const QVariantMap& srData, XenConnection* connection) const
+QIcon IconManager::GetIconForSR(const QVariantMap& srData, XenConnection* connection) const
 {
     QString type = srData.value("type", "unknown").toString();
     bool shared = srData.value("shared", false).toBool();
@@ -334,7 +334,7 @@ QIcon IconManager::getIconForSR(const QVariantMap& srData, XenConnection* connec
     return icon;
 }
 
-QIcon IconManager::getIconForNetwork(const QVariantMap& networkData) const
+QIcon IconManager::GetIconForNetwork(const QVariantMap& networkData) const
 {
     Q_UNUSED(networkData);
 
@@ -355,17 +355,17 @@ QIcon IconManager::getIconForNetwork(const QVariantMap& networkData) const
     return icon;
 }
 
-QIcon IconManager::getConnectedIcon() const
+QIcon IconManager::GetConnectedIcon() const
 {
     return this->m_connectedIcon;
 }
 
-QIcon IconManager::getDisconnectedIcon() const
+QIcon IconManager::GetDisconnectedIcon() const
 {
     return this->m_disconnectedIcon;
 }
 
-QIcon IconManager::getConnectingIcon() const
+QIcon IconManager::GetConnectingIcon() const
 {
     return this->m_connectingIcon;
 }

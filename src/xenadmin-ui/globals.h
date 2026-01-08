@@ -28,6 +28,6 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#define XENADMIN_VERSION "0.0.1"
+#define XENADMIN_VERSION "0.0.2"
 
 #endif // GLOBALS_H

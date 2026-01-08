@@ -200,6 +200,7 @@ QString NewTemplateFromSnapshotCommand::generateUniqueName(const QString& snapsh
         return name;
     }
 
+    // TODO unfinished logic
     // Simple uniqueness check - just append numbers if needed
     // In production, should check against all VMs in connection
     // For now, this basic implementation should work

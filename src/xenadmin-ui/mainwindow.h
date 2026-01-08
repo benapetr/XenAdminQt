@@ -91,7 +91,6 @@ class MainWindow : public QMainWindow
         // Update navigation button states (called by NavigationHistory)
         void UpdateHistoryButtons(bool canGoBack, bool canGoForward);
         void SaveServerList();
-        void SaveConnections(); // OBSOLETE: use SaveServerList (C# naming parity)
 
         //! True if there is any open connection
         bool IsConnected();
@@ -107,6 +106,7 @@ class MainWindow : public QMainWindow
         void showNewStorageRepositoryWizard();
 
         // Console operations (Reference: C# MainWindow.cs line 2051)
+        // TODO should be wired or removed
         void sendCADToConsole();
 
         void onConnectionStateChanged(XenConnection *conn, bool connected);
@@ -247,12 +247,6 @@ class MainWindow : public QMainWindow
         QString getSelectedObjectRef() const;
         QString getSelectedObjectName() const;
 
-        void populateServerTree();
-        void populatePools(QTreeWidgetItem* poolsItem);
-        void populateHosts(QTreeWidgetItem* hostsItem);
-        void populateVMs(QTreeWidgetItem* vmsItem, QTreeWidgetItem* templatesItem);
-        void populateStorage(QTreeWidgetItem* storageItem);
-
         // Search functionality
         void filterTreeItems(QTreeWidgetItem* item, const QString& searchText);
         bool itemMatchesSearch(QTreeWidgetItem* item, const QString& searchText);
@@ -272,25 +266,6 @@ class MainWindow : public QMainWindow
         void loadSettings();
         void restoreConnections();
         void updateConnectionProfileFromCache(XenConnection* connection, XenCache* cache);
-
-        // Connection attempt context
-        struct ConnectionContext
-        {
-            QProgressDialog* progressDialog;
-            QString hostname;
-            bool saveProfile;
-            ConnectionProfile* profile;
-            QMetaObject::Connection* successConn;
-            QMetaObject::Connection* errorConn;
-            QMetaObject::Connection* authFailedConn;
-        };
-
-        // Connection handlers
-        void handleConnectionSuccess(ConnectionContext* context, bool connected);
-        void handleConnectionError(ConnectionContext* context, const QString& error);
-        void handleInitialAuthFailed(ConnectionContext* context);
-        void handleRetryAuthFailed(ConnectionContext* context);
-        void cleanupConnectionContext(ConnectionContext* context);
 
     protected:
         void closeEvent(QCloseEvent* event) override;
@@ -346,12 +321,6 @@ class MainWindow : public QMainWindow
         QLabel* m_statusLabel;
         AsyncOperation* m_statusBarAction; // Currently tracked action in status bar
 
-        // Object detail context for async loading
-        QString m_currentObjectType;
-        QString m_currentObjectRef;
-        QString m_currentObjectText;
-        QIcon m_currentObjectIcon;
-        XenConnection *m_currentObjectConn = nullptr;
         QSharedPointer<XenObject> m_currentObject;
 
         // Selection deduplication - prevent multiple API calls for same selection

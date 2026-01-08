@@ -33,8 +33,6 @@
 #include "xen/network/connection.h"
 #include "xen/session.h"
 #include "xen/xenapi/xenapi_VBD.h"
-#include "xen/actions/vm/vmstartaction.h"
-#include "xen/actions/vm/vmresumeaction.h"
 #include "../commands/vm/startvmcommand.h"
 #include "../commands/vm/resumevmcommand.h"
 #include "../mainwindow.h"
@@ -1232,6 +1230,7 @@ void VNCTabView::registerEventListeners()
     // Qt: Connect to cache objectChanged signal for this VM
     connect(cache, &XenCache::objectChanged, this, [this](XenConnection* connection, const QString& type, const QString& ref)
     {
+        Q_UNUSED(connection);
         if (type == "vm" && ref == this->_vmRef)
         {
             // Get updated VM data from cache
@@ -1253,6 +1252,7 @@ void VNCTabView::registerEventListeners()
     {
         connect(cache, &XenCache::objectChanged, this, [this, guestMetricsRef](XenConnection* connection, const QString& type, const QString& ref)
         {
+            Q_UNUSED(connection);
             if (type == "vm_guest_metrics" && ref == guestMetricsRef)
             {
                 // Guest metrics changed - update RDP/SSH availability
@@ -1281,6 +1281,7 @@ void VNCTabView::registerEventListeners()
         qDebug() << "VNCTabView: Registering host property listener for control domain on" << hostRef;
         connect(cache, &XenCache::objectChanged, this, [this, hostRef](XenConnection* connection, const QString& type, const QString& ref)
         {
+            Q_UNUSED(connection);
             if (type == "host" && ref == hostRef)
             {
                 // Host changed - update power state
@@ -1296,6 +1297,7 @@ void VNCTabView::registerEventListeners()
             qDebug() << "VNCTabView: Registering host_metrics listener for" << hostMetricsRef;
             connect(cache, &XenCache::objectChanged, this, [this, hostMetricsRef](XenConnection* connection, const QString& type, const QString& ref)
             {
+                Q_UNUSED(connection);
                 if (type == "host_metrics" && ref == hostMetricsRef)
                 {
                     // Host metrics changed - update power state (check 'live' field)
@@ -1314,6 +1316,7 @@ void VNCTabView::registerEventListeners()
         qDebug() << "VNCTabView: Registering SR property listener for SR driver domain on" << srRef;
         connect(cache, &XenCache::objectChanged, this, [this, srRef](XenConnection* connection, const QString& type, const QString& ref)
         {
+            Q_UNUSED(connection);
             if (type == "sr" && ref == srRef)
             {
                 // SR changed - may need to update labels

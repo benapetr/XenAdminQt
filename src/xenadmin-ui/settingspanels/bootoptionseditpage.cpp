@@ -99,6 +99,9 @@ void BootOptionsEditPage::SetXenObjects(const QString& objectRef,
                                         const QVariantMap& objectDataBefore,
                                         const QVariantMap& objectDataCopy)
 {
+    if (objectType != "vm")
+        return;
+
     this->m_vmRef = objectRef;
     this->m_objectDataBefore = objectDataBefore;
     this->m_objectDataCopy = objectDataCopy;
