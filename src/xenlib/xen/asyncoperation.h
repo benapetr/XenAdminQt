@@ -197,7 +197,7 @@ class XENLIB_EXPORT AsyncOperation : public QObject
 
         // Task polling (for XenAPI async calls)
         void pollToCompletion(const QString& taskRef, double start = 0, double finish = 100, bool suppressFailures = false);
-        bool pollTask(const QString& taskRef, double start, double finish);
+        bool pollTask(const QString& taskRef, double start, double finish, bool suppressFailures = false);
         void destroyTask();
 
         // Task cancellation (matches C# CancellingAction.CancelRelatedTask)
@@ -225,8 +225,6 @@ class XENLIB_EXPORT AsyncOperation : public QObject
     private:
         // Worker thread management
         void runOnWorkerThread();
-        void startWorkerThread();
-        void waitForWorkerCompletion();
 
         // Private data
         QString m_title;

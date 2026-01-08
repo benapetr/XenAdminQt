@@ -33,6 +33,7 @@
 * VM live migration
 * VM cross pool migration
 * Properties of Hosts, VMs and Pools
+* VM deleting
 * Options
 * Maintenance mode
 

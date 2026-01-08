@@ -39,12 +39,12 @@ class IsoDropDownBox : public QComboBox
     public:
         explicit IsoDropDownBox(QWidget* parent = nullptr);
 
-        void setConnection(XenConnection* connection);
-        void setVMRef(const QString& vmRef);
+        void SetConnection(XenConnection* connection);
+        void SetVMRef(const QString& vmRef);
 
-        void refresh();
-        QString selectedVdiRef() const;
-        void setSelectedVdiRef(const QString& vdiRef);
+        void Refresh();
+        QString SelectedVdiRef() const;
+        void SetSelectedVdiRef(const QString& vdiRef);
 
     private:
         XenConnection* m_connection;

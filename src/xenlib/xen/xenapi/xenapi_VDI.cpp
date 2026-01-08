@@ -50,6 +50,21 @@ namespace XenAPI
         return api.ParseJsonRpcResponse(response).toString();
     }
 
+    // VDI.async_create - Asynchronous create
+    QString VDI::async_create(Session* session, const QVariantMap& vdiRecord)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vdiRecord;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("Async.VDI.create", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
+    }
+
     // VDI.async_destroy - Asynchronous destroy
     QString VDI::async_destroy(Session* session, const QString& vdi)
     {
@@ -230,6 +245,21 @@ namespace XenAPI
         return api.ParseJsonRpcResponse(response).toBool();
     }
 
+    // VDI.get_sm_config
+    QVariantMap VDI::get_sm_config(Session* session, const QString& vdi)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vdi;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("VDI.get_sm_config", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toMap();
+    }
+
     // VDI.set_name_label
     void VDI::set_name_label(Session* session, const QString& vdi, const QString& label)
     {
@@ -256,6 +286,21 @@ namespace XenAPI
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.set_name_description", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.ParseJsonRpcResponse(response); // Check for errors
+    }
+
+    // VDI.set_sm_config
+    void VDI::set_sm_config(Session* session, const QString& vdi, const QVariantMap& smConfig)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vdi << smConfig;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("VDI.set_sm_config", params);
         QByteArray response = session->sendApiRequest(request);
         api.ParseJsonRpcResponse(response); // Check for errors
     }

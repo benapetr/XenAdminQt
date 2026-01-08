@@ -29,7 +29,7 @@
 #include "ui_newvirtualdiskdialog.h"
 #include "xen/network/connection.h"
 #include "xencache.h"
-#include "iconmanager.h"
+#include "controls/srpicker.h"
 #include <QMessageBox>
 #include <QPushButton>
 #include <QDebug>
@@ -44,20 +44,34 @@ NewVirtualDiskDialog::NewVirtualDiskDialog(XenConnection* connection, const QStr
         this->m_vmData = this->m_connection->GetCache()->ResolveObjectData("vm", this->m_vmRef);
 
     // Connect signals
-    connect(this->ui->srListWidget, &QListWidget::currentRowChanged, this, &NewVirtualDiskDialog::onSRChanged);
+    connect(this->ui->srPicker, &SrPicker::selectedIndexChanged, this, &NewVirtualDiskDialog::onSRChanged);
+    connect(this->ui->srPicker, &SrPicker::canBeScannedChanged, this, [this]()
+    {
+        this->ui->rescanButton->setEnabled(this->ui->srPicker->canBeScanned());
+    });
     connect(this->ui->sizeSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &NewVirtualDiskDialog::onSizeChanged);
     connect(this->ui->rescanButton, &QPushButton::clicked, this, &NewVirtualDiskDialog::onRescanClicked);
     connect(this->ui->addButton, &QPushButton::clicked, this, &NewVirtualDiskDialog::validateAndAccept);
 
+    if (!this->m_vmData.isEmpty())
+    {
+        this->m_vmNameOverride = this->m_vmData.value("name_label", "VM").toString();
+        QVariantList vbdRefs = this->m_vmData.value("VBDs", QVariantList()).toList();
+        for (const QVariant& vbdRefVar : vbdRefs)
+        {
+            QString vbdRef = vbdRefVar.toString();
+            QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
+            QString userdevice = vbdData.value("userdevice", "").toString();
+            if (!userdevice.isEmpty())
+                this->m_usedDevices.append(userdevice);
+        }
+    }
+
     // Populate SR list widget
     this->populateSRList();
 
-    // Find next available device position for default naming
-    int nextDevice = this->findNextAvailableDevice();
-
-    // Generate default name
-    QString vmName = this->m_vmData.value("name_label", "VM").toString();
-    this->ui->nameLineEdit->setText(QString("%1 Disk %2").arg(vmName).arg(nextDevice));
+    this->updateDefaultName();
+    this->applyInitialDisk();
 }
 
 NewVirtualDiskDialog::~NewVirtualDiskDialog()
@@ -67,200 +81,40 @@ NewVirtualDiskDialog::~NewVirtualDiskDialog()
 
 void NewVirtualDiskDialog::populateSRList()
 {
-    // C# pattern: SrPicker control shows detailed SR information with warnings
-    // Each item shows: SR name, free space, and availability warnings
-    this->ui->srListWidget->clear();
-
-    if (!this->m_connection || !this->m_connection->GetCache())
+    if (!this->m_connection)
         return;
 
-    // Get all SRs
-    QList<QVariantMap> allSRs = this->m_connection->GetCache()->GetAllData("sr");
-
-    // Get VM's resident host to check SR visibility
-    QString vmResidentOn = this->m_vmData.value("resident_on", "").toString();
-    QString vmAffinity = this->m_vmData.value("affinity", "").toString();
-    QString homeHost = vmResidentOn.isEmpty() ? vmAffinity : vmResidentOn;
-
-    // Get all hosts to check PBD connections
-    QList<QVariantMap> allHosts = this->m_connection->GetCache()->GetAllData("host");
-
-    for (const QVariantMap& srData : allSRs)
+    QString homeHost = this->m_homeHostRef;
+    if (homeHost.isEmpty())
     {
-        QString srRef = srData.value("ref", "").toString();
-        QString srName = srData.value("name_label", "Unknown").toString();
-        QString srType = srData.value("type", "").toString();
-        QString contentType = srData.value("content_type", "").toString();
-
-        // C# SR.SupportsVdiCreate() checks (SR.cs lines 443-457):
-        // 1. Skip ISO SRs (content_type == "iso")
-        if (contentType == "iso")
-        {
-            continue;
-        }
-
-        // 2. Skip tmpfs (memory) SRs
-        if (srType == "tmpfs")
-        {
-            continue;
-        }
-
-        // 3. Check if SM (Storage Manager) supports VDI_CREATE capability
-        QList<QVariantMap> allSMs = this->m_connection->GetCache()->GetAllData("SM");
-        bool supportsVdiCreate = false;
-
-        for (const QVariantMap& smData : allSMs)
-        {
-            QString smType = smData.value("type", "").toString();
-            if (smType == srType)
-            {
-                // Check if "VDI_CREATE" is in capabilities list
-                QVariantList capabilities = smData.value("capabilities", QVariantList()).toList();
-                for (const QVariant& cap : capabilities)
-                {
-                    if (cap.toString() == "VDI_CREATE")
-                    {
-                        supportsVdiCreate = true;
-                        break;
-                    }
-                }
-                break;
-            }
-        }
-
-        if (!supportsVdiCreate)
-        {
-            continue;
-        }
-
-        // Get size information
-        qint64 physicalSize = srData.value("physical_size", 0).toLongLong();
-        qint64 physicalUtilisation = srData.value("physical_utilisation", 0).toLongLong();
-        qint64 freeSpace = physicalSize - physicalUtilisation;
-
-        // Check allowed operations to detect broken SR
-        QVariantList allowedOps = srData.value("allowed_operations", QVariantList()).toList();
-        bool isBroken = allowedOps.isEmpty();
-
-        // Check if SR is full (less than 1MB free)
-        bool isFull = (physicalSize > 0 && freeSpace < 1024 * 1024);
-
-        // Check SR visibility from VM's home host (C# SrPickerItem pattern)
-        // Get PBD connections for this SR
-        QVariantList pbdRefs = srData.value("PBDs", QVariantList()).toList();
-        QStringList hostsWithAccess;
-        QStringList hostsWithoutAccess;
-
-        for (const QVariantMap& hostData : allHosts)
-        {
-            QString hostRef = hostData.value("ref", "").toString();
-            QString hostName = hostData.value("name_label", "").toString();
-
-            // Check if this host has a PBD to this SR that's attached
-            bool hasAttachedPBD = false;
-            for (const QVariant& pbdRefVar : pbdRefs)
-            {
-                QString pbdRef = pbdRefVar.toString();
-                QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
-
-                if (pbdData.value("host", "").toString() == hostRef &&
-                    pbdData.value("currently_attached", false).toBool())
-                {
-                    hasAttachedPBD = true;
-                    break;
-                }
-            }
-
-            if (hasAttachedPBD)
-            {
-                hostsWithAccess.append(hostName);
-            } else
-            {
-                hostsWithoutAccess.append(hostName);
-            }
-        }
-
-        // Determine if SR is available to the VM
-        bool isAvailable = true;
-        QString warningMessage;
-
-        if (isBroken)
-        {
-            isAvailable = false;
-            warningMessage = "This storage repository is broken";
-        } else if (isFull)
-        {
-            isAvailable = false;
-            warningMessage = "This storage repository is full";
-        } else if (!homeHost.isEmpty())
-        {
-            // Check if SR is visible from VM's home host
-            QVariantMap homeHostData = this->m_connection->GetCache()->ResolveObjectData("host", homeHost);
-            QString homeHostName = homeHostData.value("name_label", "").toString();
-
-            if (!hostsWithoutAccess.isEmpty() && hostsWithoutAccess.contains(homeHostName))
-            {
-                isAvailable = false;
-                warningMessage = QString("This storage repository cannot be seen from %1").arg(homeHostName);
-            } else if (!hostsWithoutAccess.isEmpty())
-            {
-                // SR is accessible but not from all hosts
-                warningMessage = QString("This storage repository cannot be seen from %1").arg(hostsWithoutAccess.join(", "));
-            }
-        }
-
-        // Create list item with SR name and detailed description
-        QListWidgetItem* item = new QListWidgetItem();
-        item->setText(srName);
-        item->setData(Qt::UserRole, srRef);
-
-        // Set icon
-        QIcon srIcon = IconManager::instance().GetIconForSR(srData, this->m_connection);
-        item->setIcon(srIcon);
-
-        // Build description text (shown below SR name)
-        QString description;
-        if (!warningMessage.isEmpty())
-        {
-            description = warningMessage;
-        } else if (physicalSize > 0)
-        {
-            double freeGB = freeSpace / (1024.0 * 1024.0 * 1024.0);
-            double totalGB = physicalSize / (1024.0 * 1024.0 * 1024.0);
-            description = QString("%1 GB free of %2 GB").arg(QString::number(freeGB, 'f', 2), QString::number(totalGB, 'f', 2));
-        }
-
-        // Store description as tooltip and use custom item text formatting
-        item->setToolTip(QString("%1\n%2").arg(srName, description));
-
-        // Format text to show name on first line, description on second line
-        item->setText(QString("%1\n%2").arg(srName, description));
-
-        // Disable item if not available
-        if (!isAvailable)
-        {
-            item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
-            // Use red color for warnings
-            item->setForeground(QColor(Qt::red));
-        }
-
-        this->ui->srListWidget->addItem(item);
+        QString vmResidentOn = this->m_vmData.value("resident_on", "").toString();
+        QString vmAffinity = this->m_vmData.value("affinity", "").toString();
+        homeHost = vmResidentOn.isEmpty() ? vmAffinity : vmResidentOn;
     }
 
-    // Select first available (enabled) SR
-    for (int i = 0; i < this->ui->srListWidget->count(); ++i)
-    {
-        QListWidgetItem* item = this->ui->srListWidget->item(i);
-        if (item->flags() & Qt::ItemIsEnabled)
-        {
-            this->ui->srListWidget->setCurrentRow(i);
-            break;
-        }
-    }
+    this->ui->srPicker->populate(SrPicker::VM,
+                                 this->m_connection,
+                                 homeHost,
+                                 this->m_initialSrRef,
+                                 QStringList());
+    this->ui->rescanButton->setEnabled(this->ui->srPicker->canBeScanned());
 }
 
-int NewVirtualDiskDialog::findNextAvailableDevice()
+int NewVirtualDiskDialog::findNextAvailableDevice() const
 {
+    if (!this->m_usedDevices.isEmpty())
+    {
+        int maxDevice = -1;
+        for (const QString& device : this->m_usedDevices)
+        {
+            bool ok = false;
+            int deviceNum = device.toInt(&ok);
+            if (ok && deviceNum > maxDevice)
+                maxDevice = deviceNum;
+        }
+        return maxDevice + 1;
+    }
+
     if (!this->m_connection || !this->m_connection->GetCache())
         return 0;
 
@@ -285,9 +139,8 @@ int NewVirtualDiskDialog::findNextAvailableDevice()
     return maxDevice + 1;
 }
 
-void NewVirtualDiskDialog::onSRChanged(int row)
+void NewVirtualDiskDialog::onSRChanged()
 {
-    Q_UNUSED(row);
     this->validateInput();
 }
 
@@ -299,8 +152,7 @@ void NewVirtualDiskDialog::onSizeChanged(double value)
 
 void NewVirtualDiskDialog::onRescanClicked()
 {
-    // Refresh the SR list
-    this->populateSRList();
+    this->ui->srPicker->scanSRs();
 }
 
 void NewVirtualDiskDialog::validateInput()
@@ -316,22 +168,14 @@ void NewVirtualDiskDialog::validateInput()
     }
 
     // Check if SR is selected
-    if (this->ui->srListWidget->currentRow() < 0)
+    if (this->ui->srPicker->selectedSR().isEmpty())
     {
         this->ui->warningLabel->setText("Error: Please select a storage repository.");
         this->ui->addButton->setEnabled(false);
         return;
     }
 
-    QListWidgetItem* selectedItem = this->ui->srListWidget->currentItem();
-    if (!selectedItem)
-    {
-        this->ui->warningLabel->setText("Error: Please select a storage repository.");
-        this->ui->addButton->setEnabled(false);
-        return;
-    }
-
-    QString srRef = selectedItem->data(Qt::UserRole).toString();
+    QString srRef = this->ui->srPicker->selectedSR();
     QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
 
     if (srData.isEmpty())
@@ -348,6 +192,15 @@ void NewVirtualDiskDialog::validateInput()
     if (requestedSize < (10 * 1024 * 1024)) // 10 MB minimum
     {
         this->ui->warningLabel->setText("Error: Minimum disk size is 10 MB.");
+        this->ui->addButton->setEnabled(false);
+        return;
+    }
+
+    if (this->m_minSizeBytes > 0 && requestedSize < this->m_minSizeBytes)
+    {
+        this->ui->warningLabel->setText(
+            QString("Error: Minimum disk size is %1 MB.")
+                .arg(QString::number(this->m_minSizeBytes / (1024.0 * 1024.0), 'f', 0)));
         this->ui->addButton->setEnabled(false);
         return;
     }
@@ -389,7 +242,7 @@ void NewVirtualDiskDialog::validateAndAccept()
     }
 
     // Validate SR selection
-    if (this->ui->srListWidget->currentRow() < 0)
+    if (this->ui->srPicker->selectedSR().isEmpty())
     {
         QMessageBox::warning(this, "Validation Error", "Please select a storage repository.");
         return;
@@ -410,6 +263,12 @@ void NewVirtualDiskDialog::validateAndAccept()
         return;
     }
 
+    if (this->m_minSizeBytes > 0 && size < this->m_minSizeBytes)
+    {
+        QMessageBox::warning(this, "Validation Error", "Selected size is below the template minimum.");
+        return;
+    }
+
     // All validation passed
     accept();
 }
@@ -426,12 +285,7 @@ QString NewVirtualDiskDialog::getVDIDescription() const
 
 QString NewVirtualDiskDialog::getSelectedSR() const
 {
-    QListWidgetItem* selectedItem = this->ui->srListWidget->currentItem();
-    if (selectedItem)
-    {
-        return selectedItem->data(Qt::UserRole).toString();
-    }
-    return QString();
+    return this->ui->srPicker->selectedSR();
 }
 
 qint64 NewVirtualDiskDialog::getSize() const
@@ -441,32 +295,84 @@ qint64 NewVirtualDiskDialog::getSize() const
     return static_cast<qint64>(sizeGB * 1024.0 * 1024.0 * 1024.0);
 }
 
+void NewVirtualDiskDialog::setDialogMode(DialogMode mode)
+{
+    this->m_mode = mode;
+    if (this->m_mode == DialogMode::Edit)
+    {
+        this->setWindowTitle(tr("Edit Virtual Disk"));
+        this->ui->addButton->setText(tr("OK"));
+    }
+    else
+    {
+        this->setWindowTitle(tr("Add Virtual Disk"));
+        this->ui->addButton->setText(tr("&Add"));
+    }
+}
+
+void NewVirtualDiskDialog::setWizardContext(const QString& vmName, const QStringList& usedDevices, const QString& homeHostRef)
+{
+    this->m_vmNameOverride = vmName;
+    this->m_usedDevices = usedDevices;
+    this->m_homeHostRef = homeHostRef;
+    this->updateDefaultName();
+}
+
+void NewVirtualDiskDialog::setInitialDisk(const QString& name,
+                                          const QString& description,
+                                          qint64 sizeBytes,
+                                          const QString& srRef)
+{
+    this->m_initialName = name;
+    this->m_initialDescription = description;
+    this->m_initialSizeBytes = sizeBytes;
+    this->m_initialSrRef = srRef;
+    this->applyInitialDisk();
+}
+
+void NewVirtualDiskDialog::setMinSizeBytes(qint64 minSizeBytes)
+{
+    this->m_minSizeBytes = minSizeBytes;
+    if (this->m_minSizeBytes > 0)
+        this->ui->sizeSpinBox->setMinimum(this->m_minSizeBytes / (1024.0 * 1024.0 * 1024.0));
+}
+
+void NewVirtualDiskDialog::setCanResize(bool canResize)
+{
+    this->m_canResize = canResize;
+    this->ui->sizeSpinBox->setEnabled(this->m_canResize);
+}
+
+void NewVirtualDiskDialog::updateDefaultName()
+{
+    if (!this->m_initialName.isEmpty())
+        return;
+
+    QString vmName = this->m_vmNameOverride.isEmpty() ? QStringLiteral("VM") : this->m_vmNameOverride;
+    int nextDevice = this->findNextAvailableDevice();
+    this->ui->nameLineEdit->setText(QString("%1 Disk %2").arg(vmName).arg(nextDevice));
+}
+
+void NewVirtualDiskDialog::applyInitialDisk()
+{
+    if (!this->m_initialName.isEmpty())
+        this->ui->nameLineEdit->setText(this->m_initialName);
+    if (!this->m_initialDescription.isEmpty())
+        this->ui->descriptionTextEdit->setText(this->m_initialDescription);
+    if (this->m_initialSizeBytes > 0)
+    {
+        double sizeGB = this->m_initialSizeBytes / (1024.0 * 1024.0 * 1024.0);
+        this->ui->sizeSpinBox->setValue(sizeGB);
+    }
+
+    Q_UNUSED(this->m_initialSrRef);
+}
+
 // Device position, mode, and bootable are determined by the calling command
 // These methods are kept for compatibility but return defaults
 QString NewVirtualDiskDialog::getDevicePosition() const
 {
-    if (!this->m_connection || !this->m_connection->GetCache())
-        return QString("0");
-
-    // Find next available device automatically
-    int maxDevice = -1;
-
-    QVariantList vbdRefs = this->m_vmData.value("VBDs", QVariantList()).toList();
-    for (const QVariant& vbdRefVar : vbdRefs)
-    {
-        QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
-
-        QString userdevice = vbdData.value("userdevice", "").toString();
-        bool ok;
-        int deviceNum = userdevice.toInt(&ok);
-        if (ok && deviceNum > maxDevice)
-        {
-            maxDevice = deviceNum;
-        }
-    }
-
-    return QString::number(maxDevice + 1);
+    return QString::number(findNextAvailableDevice());
 }
 
 QString NewVirtualDiskDialog::getMode() const

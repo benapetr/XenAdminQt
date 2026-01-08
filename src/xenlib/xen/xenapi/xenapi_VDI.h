@@ -50,6 +50,7 @@ namespace XenAPI
         public:
             // VDI lifecycle operations
             static QString create(Session* session, const QVariantMap& vdiRecord);
+            static QString async_create(Session* session, const QVariantMap& vdiRecord);
             static QString async_destroy(Session* session, const QString& vdi);
             static void destroy(Session* session, const QString& vdi);
             static QString async_copy(Session* session, const QString& vdi, const QString& sr);
@@ -64,12 +65,14 @@ namespace XenAPI
             static bool get_read_only(Session* session, const QString& vdi);
             static QString get_type(Session* session, const QString& vdi);
             static bool get_sharable(Session* session, const QString& vdi);
+            static QVariantMap get_sm_config(Session* session, const QString& vdi);
 
             // VDI modification operations
             static void set_name_label(Session* session, const QString& vdi, const QString& label);
             static void set_name_description(Session* session, const QString& vdi, const QString& description);
             static void resize(Session* session, const QString& vdi, qint64 size);
             static void resize_online(Session* session, const QString& vdi, qint64 size);
+            static void set_sm_config(Session* session, const QString& vdi, const QVariantMap& smConfig);
 
             // Changed Block Tracking (CBT) operations
             static QString async_disable_cbt(Session* session, const QString& vdi);

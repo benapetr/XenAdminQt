@@ -29,6 +29,7 @@
 #include "ui_mainwindow.h"
 #include "dialogs/addserverdialog.h"
 #include "dialogs/debugwindow.h"
+#include "dialogs/xencacheexplorer.h"
 #include "dialogs/aboutdialog.h"
 #include "dialogs/optionsdialog.h"
 #include "dialogs/warningdialogs/closexencenterwarningdialog.h"
@@ -440,6 +441,13 @@ void MainWindow::showDebugWindow()
         this->m_debugWindow->raise();
         this->m_debugWindow->activateWindow();
     }
+}
+
+void MainWindow::showXenCacheExplorer()
+{
+    XenCacheExplorer* explorer = new XenCacheExplorer(this);
+    explorer->setAttribute(Qt::WA_DeleteOnClose);
+    explorer->show();
 }
 
 /**

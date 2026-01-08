@@ -88,6 +88,26 @@ class XENLIB_EXPORT VM : public XenObject
         bool IsDefaultTemplate() const;
 
         /**
+         * @brief Check if this is a default template (C# DefaultTemplate)
+         */
+        bool DefaultTemplate() const;
+
+        /**
+         * @brief Check if this is an internal template (C# InternalTemplate)
+         */
+        bool InternalTemplate() const;
+
+        /**
+         * @brief Check if this object is hidden from the UI
+         */
+        bool IsHidden() const;
+
+        /**
+         * @brief Check if this object should be shown in the UI
+         */
+        bool Show(bool showHiddenVMs) const;
+
+        /**
          * @brief Check if this is a snapshot
          * @return true if snapshot
          */

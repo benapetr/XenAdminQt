@@ -2520,14 +2520,14 @@ void VNCTabView::refreshIsoList()
     if (!isoBox)
         return;
 
-    isoBox->setConnection(this->_connection);
-    isoBox->setVMRef(this->_vmRef);
-    isoBox->refresh();
+    isoBox->SetConnection(this->_connection);
+    isoBox->SetVMRef(this->_vmRef);
+    isoBox->Refresh();
 
     if (!isEmpty && !currentVdiRef.isEmpty())
-        isoBox->setSelectedVdiRef(currentVdiRef);
+        isoBox->SetSelectedVdiRef(currentVdiRef);
     else
-        isoBox->setSelectedVdiRef(QString());
+        isoBox->SetSelectedVdiRef(QString());
 }
 
 void VNCTabView::onCdDriveChanged(int index)

@@ -189,7 +189,7 @@
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QComboBox" name="isoComboBox">
+        <widget class="IsoDropDownBox" name="isoComboBox">
          <property name="enabled">
           <bool>true</bool>
          </property>
@@ -704,6 +704,13 @@
    </layout>
   </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>IsoDropDownBox</class>
+   <extends>QComboBox</extends>
+   <header>widgets/isodropdownbox.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

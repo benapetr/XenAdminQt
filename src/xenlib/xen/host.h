@@ -89,6 +89,13 @@ class XENLIB_EXPORT Host : public XenObject
         bool IsLive() const;
 
         /**
+         * @brief Check if vTPM is restricted by licensing
+         *
+         * C# equivalent: Host.RestrictVtpm (BoolKeyPreferTrue on license_params)
+         */
+        bool RestrictVtpm() const;
+
+        /**
          * @brief Get list of VMs resident on this host
          * @return List of VM opaque references
          */

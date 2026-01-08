@@ -769,6 +769,7 @@ void AsyncOperation::pollToCompletion(const QString& taskRef, double start, doub
     }
 
     this->SetRelatedTaskRef(taskRef);
+    SetResult(QString());
 
     // Tag task with our UUID for rehydration after reconnect
     tagTaskWithUuid(taskRef);
@@ -793,7 +794,7 @@ void AsyncOperation::pollToCompletion(const QString& taskRef, double start, doub
 
             try
             {
-                if (this->pollTask(taskRef, start, finish))
+                if (this->pollTask(taskRef, start, finish, suppressFailures))
                 {
                     break; // Task completed
                 }
@@ -820,7 +821,7 @@ void AsyncOperation::pollToCompletion(const QString& taskRef, double start, doub
     this->destroyTask();
 }
 
-bool AsyncOperation::pollTask(const QString& taskRef, double start, double finish)
+bool AsyncOperation::pollTask(const QString& taskRef, double start, double finish, bool suppressFailures)
 {
     // Matches C# AsyncAction.Poll()
     if (taskRef.isEmpty())
@@ -902,6 +903,13 @@ bool AsyncOperation::pollTask(const QString& taskRef, double start, double finis
     {
         qWarning() << "AsyncOperation::pollTask: Task" << taskRef << "failed";
 
+        if (suppressFailures)
+        {
+            qDebug() << "AsyncOperation::pollTask: suppressing task failure for" << taskRef;
+            SetPercentComplete(static_cast<int>(finish));
+            return true;
+        }
+
         // Get error info from task record
         QStringList errorInfo;
         QVariantList errorList = taskRecord.value("error_info").toList();
@@ -912,11 +920,13 @@ bool AsyncOperation::pollTask(const QString& taskRef, double start, double finis
 
         QString errorMsg = errorInfo.isEmpty() ? "Unknown error" : errorInfo.first();
         setError(errorMsg, errorInfo);
+        SetResult(QString());
         return true;
     } else if (status == "cancelled")
     {
         qDebug() << "AsyncOperation::pollTask: Task" << taskRef << "was cancelled";
         setState(Cancelled);
+        SetResult(QString());
         return true;
     } else if (status == "pending")
     {
@@ -1144,15 +1154,4 @@ void AsyncOperation::PrepareForEventReloadAfterRestart()
         qDebug() << "AsyncOperation::prepareForEventReloadAfterRestart: Removing UUID from task" << m_relatedTaskRef;
         removeUuidFromTask(m_relatedTaskRef);
     }
-}
-
-// Private worker thread management - simplified
-void AsyncOperation::startWorkerThread()
-{
-    // TODO
-}
-
-void AsyncOperation::waitForWorkerCompletion()
-{
-    // TODO
 }

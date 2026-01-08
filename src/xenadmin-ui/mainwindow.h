@@ -99,6 +99,7 @@ class MainWindow : public QMainWindow
         void connectToServer();
         void showAbout();
         void showDebugWindow();
+        void showXenCacheExplorer();
         void showOptions();
         void showImportWizard();
         void showExportWizard();

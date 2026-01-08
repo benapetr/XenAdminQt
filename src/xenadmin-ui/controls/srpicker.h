@@ -143,7 +143,7 @@ class SrPicker : public QWidget
         void onSrRefreshCompleted();
 
     private:
-        struct SRItem
+        struct SRItem // TODO replace with port of picker item
         {
             QString ref;
             QString name;

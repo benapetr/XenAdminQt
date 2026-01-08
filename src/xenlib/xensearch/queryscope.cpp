@@ -137,7 +137,8 @@ ObjectTypes QueryScope::objectTypeOf(const QVariantMap& objectData, const QStrin
         // Distinguish between VM, Snapshot, UserTemplate, DefaultTemplate
         bool isTemplate = objectData.value("is_a_template", false).toBool();
         bool isSnapshot = objectData.value("is_a_snapshot", false).toBool();
-        bool isDefaultTemplate = objectData.value("is_default_template", false).toBool();
+        const QVariantMap otherConfig = objectData.value("other_config").toMap();
+        bool isDefaultTemplate = otherConfig.contains("default_template");
 
         if (isSnapshot)
             return ObjectTypes::Snapshot;

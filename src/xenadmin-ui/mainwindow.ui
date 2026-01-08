@@ -78,6 +78,7 @@
     <addaction name="viewShowHiddenObjectsAction"/>
     <addaction name="viewMenuSeparator2"/>
     <addaction name="debugWindowAction"/>
+    <addaction name="xenCacheExplorerAction"/>
    </widget>
    <widget class="QMenu" name="menuPool">
     <property name="title">
@@ -503,6 +504,14 @@
    </property>
    <property name="shortcut">
     <string>F12</string>
+   </property>
+  </action>
+  <action name="xenCacheExplorerAction">
+   <property name="text">
+    <string>XenCache &amp;Explorer...</string>
+   </property>
+   <property name="statusTip">
+    <string>Open XenCache Explorer debug tool</string>
    </property>
   </action>
   <action name="viewTemplatesAction">
@@ -1155,6 +1164,22 @@
    </hints>
   </connection>
   <connection>
+   <sender>xenCacheExplorerAction</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>showXenCacheExplorer()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
    <sender>importAction</sender>
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
@@ -1232,6 +1257,7 @@
   <slot>disconnectFromServer()</slot>
   <slot>showAbout()</slot>
   <slot>showDebugWindow()</slot>
+  <slot>showXenCacheExplorer()</slot>
   <slot>onTreeItemSelected()</slot>
   <slot>showImportWizard()</slot>
   <slot>showExportWizard()</slot>

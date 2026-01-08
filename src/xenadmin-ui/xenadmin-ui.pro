@@ -24,6 +24,7 @@ SOURCES += \
     dialogs/connectingtoserverdialog.cpp \
     dialogs/reconnectasdialog.cpp \
     dialogs/debugwindow.cpp \
+    dialogs/xencacheexplorer.cpp \
     dialogs/aboutdialog.cpp \
     dialogs/ballooningdialog.cpp \
     dialogs/commanderrordialog.cpp \
@@ -254,6 +255,7 @@ HEADERS += \
     dialogs/connectingtoserverdialog.h \
     dialogs/reconnectasdialog.h \
     dialogs/debugwindow.h \
+    dialogs/xencacheexplorer.h \
     dialogs/aboutdialog.h \
     dialogs/ballooningdialog.h \
     dialogs/commanderrordialog.h \
@@ -477,6 +479,7 @@ FORMS += \
     dialogs/connectingtoserverdialog.ui \
     dialogs/reconnectasdialog.ui \
     dialogs/debugwindow.ui \
+    dialogs/xencacheexplorer.ui \
     dialogs/ballooningdialog.ui \
     dialogs/commanderrordialog.ui \
     dialogs/newpooldialog.ui \

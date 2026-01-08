@@ -30,6 +30,7 @@
 
 #include <QDialog>
 #include <QString>
+#include <QStringList>
 #include <QVariantMap>
 
 namespace Ui
@@ -44,8 +45,23 @@ class NewVirtualDiskDialog : public QDialog
     Q_OBJECT
 
 public:
+    enum class DialogMode
+    {
+        Add,
+        Edit
+    };
+
     explicit NewVirtualDiskDialog(XenConnection* connection, const QString& vmRef, QWidget* parent = nullptr);
     ~NewVirtualDiskDialog();
+
+    void setDialogMode(DialogMode mode);
+    void setWizardContext(const QString& vmName, const QStringList& usedDevices, const QString& homeHostRef);
+    void setInitialDisk(const QString& name,
+                        const QString& description,
+                        qint64 sizeBytes,
+                        const QString& srRef);
+    void setMinSizeBytes(qint64 minSizeBytes);
+    void setCanResize(bool canResize);
 
     QString getVDIName() const;
     QString getVDIDescription() const;
@@ -56,7 +72,7 @@ public:
     bool isBootable() const;
 
 private slots:
-    void onSRChanged(int row);
+    void onSRChanged();
     void onSizeChanged(double value);
     void onRescanClicked();
     void validateAndAccept();
@@ -64,12 +80,24 @@ private slots:
 private:
     void populateSRList();
     void validateInput();
-    int findNextAvailableDevice();
+    int findNextAvailableDevice() const;
+    void updateDefaultName();
+    void applyInitialDisk();
 
     Ui::NewVirtualDiskDialog* ui;
     XenConnection* m_connection;
     QString m_vmRef;
     QVariantMap m_vmData;
+    QString m_homeHostRef;
+    QString m_vmNameOverride;
+    QStringList m_usedDevices;
+    QString m_initialName;
+    QString m_initialDescription;
+    QString m_initialSrRef;
+    qint64 m_initialSizeBytes = 0;
+    qint64 m_minSizeBytes = 0;
+    bool m_canResize = true;
+    DialogMode m_mode = DialogMode::Add;
 };
 
 #endif // NEWVIRTUALDISKDIALOG_H

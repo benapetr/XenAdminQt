@@ -202,7 +202,10 @@ void OperationManager::RemoveRecord(OperationRecord* record)
 
     // Remove from lookup
     if (record->operation)
+    {
+        disconnect(record->operation, nullptr, this, nullptr);
         this->m_lookup.remove(record->operation);
+    }
 
     // Remove from list
     this->m_records.removeOne(record);

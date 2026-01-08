@@ -32,10 +32,18 @@
 #include "xen/xenapi/xenapi_VM.h"
 #include "operationprogressdialog.h"
 #include "xen/actions/vm/createvmaction.h"
+#include "xen/host.h"
+#include "xen/vm.h"
+#include "xen/sr.h"
+#include "vmhelpers.h"
+#include "newvirtualdiskdialog.h"
 #include "../widgets/wizardnavigationpane.h"
+#include "../widgets/isodropdownbox.h"
+#include "../settingsmanager.h"
 #include <QDebug>
 #include <QtWidgets>
 #include <QHeaderView>
+#include <QDomDocument>
 #include <algorithm>
 
 NewVMWizard::NewVMWizard(XenConnection* connection, QWidget* parent)
@@ -46,47 +54,30 @@ NewVMWizard::NewVMWizard(XenConnection* connection, QWidget* parent)
       m_memorySize(1024)
 {
     this->ui->setupUi(this);
-    setWindowTitle(tr("New Virtual Machine Wizard"));
-    setWindowIcon(QIcon(":/icons/vm-create-32.png"));
+    this->setWindowTitle(tr("New Virtual Machine Wizard"));
+    this->setWindowIcon(QIcon(":/icons/vm-create-32.png"));
 
     this->setupUiPages();
 
     connect(this, &QWizard::currentIdChanged, this, &NewVMWizard::onCurrentIdChanged);
     connect(this->ui->templateSearchEdit, &QLineEdit::textChanged, this, &NewVMWizard::filterTemplates);
-    connect(this->ui->templateTree, &QTreeWidget::itemSelectionChanged,
-            this, &NewVMWizard::handleTemplateSelectionChanged);
+    connect(this->ui->templateTree, &QTreeWidget::itemSelectionChanged, this, &NewVMWizard::handleTemplateSelectionChanged);
+    connect(this->ui->vmNameEdit, &QLineEdit::textChanged, this, &NewVMWizard::onVmNameChanged);
 
-    connect(this->ui->autoHomeServerRadio, &QRadioButton::toggled,
-            this, [this](bool checked) {
-                Q_UNUSED(checked)
-                this->updateHomeServerControls(this->ui->specificHomeServerRadio->isChecked());
-            });
-    connect(this->ui->specificHomeServerRadio, &QRadioButton::toggled,
-            this, [this](bool checked) { this->updateHomeServerControls(checked); });
-
-    connect(this->ui->isoRadioButton, &QRadioButton::toggled, this,
-            [this](bool /*checked*/) { this->updateIsoControls(); });
-    connect(this->ui->urlRadioButton, &QRadioButton::toggled, this,
-            [this](bool /*checked*/) { this->updateIsoControls(); });
-
-    connect(this->ui->defaultSrCombo,
-            qOverload<int>(&QComboBox::currentIndexChanged),
-            this, [this](int index) {
-                QString srRef = this->ui->defaultSrCombo->itemData(index).toString();
-                if (!srRef.isEmpty())
-                    this->applyDefaultSRToDisks(srRef);
-            });
-
-    connect(this->ui->diskTable, &QTableWidget::itemSelectionChanged, this, [this]() {
-        bool hasSelection = !this->ui->diskTable->selectedItems().isEmpty();
-        this->ui->editDiskButton->setEnabled(hasSelection);
-        this->ui->removeDiskButton->setEnabled(hasSelection);
-    });
-
-    connect(this->ui->networkTable, &QTableWidget::itemSelectionChanged, this, [this]() {
-        bool hasSelection = !this->ui->networkTable->selectedItems().isEmpty();
-        this->ui->removeNetworkButton->setEnabled(hasSelection);
-    });
+    connect(this->ui->autoHomeServerRadio, &QRadioButton::toggled, this, &NewVMWizard::onAutoHomeServerToggled);
+    connect(this->ui->specificHomeServerRadio, &QRadioButton::toggled, this, &NewVMWizard::onSpecificHomeServerToggled);
+    connect(this->ui->copyBiosStringsCheckBox, &QCheckBox::toggled, this, &NewVMWizard::onCopyBiosStringsToggled);
+    connect(this->ui->vcpusMaxSpin, qOverload<int>(&QSpinBox::valueChanged), this, &NewVMWizard::onVcpusMaxChanged);
+    connect(this->ui->memoryStaticMaxSpin, qOverload<int>(&QSpinBox::valueChanged), this, &NewVMWizard::onMemoryStaticMaxChanged);
+    connect(this->ui->memoryDynamicMaxSpin, qOverload<int>(&QSpinBox::valueChanged), this, &NewVMWizard::onMemoryDynamicMaxChanged);
+    connect(this->ui->isoRadioButton, &QRadioButton::toggled, this, &NewVMWizard::onIsoRadioToggled);
+    connect(this->ui->urlRadioButton, &QRadioButton::toggled, this, &NewVMWizard::onUrlRadioToggled);
+    connect(this->ui->defaultSrCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, &NewVMWizard::onDefaultSrChanged);
+    connect(this->ui->diskTable, &QTableWidget::itemSelectionChanged, this, &NewVMWizard::onDiskTableSelectionChanged);
+    connect(this->ui->addDiskButton, &QPushButton::clicked, this, &NewVMWizard::onAddDiskClicked);
+    connect(this->ui->editDiskButton, &QPushButton::clicked, this, &NewVMWizard::onEditDiskClicked);
+    connect(this->ui->removeDiskButton, &QPushButton::clicked, this, &NewVMWizard::onRemoveDiskClicked);
+    connect(this->ui->networkTable, &QTableWidget::itemSelectionChanged, this, &NewVMWizard::onNetworkTableSelectionChanged);
 
     this->updateIsoControls();
     this->updateHomeServerControls(false);
@@ -105,19 +96,19 @@ NewVMWizard::~NewVMWizard()
 
 void NewVMWizard::setupUiPages()
 {
-    setWizardStyle(QWizard::ModernStyle);
-    setOption(QWizard::HaveHelpButton, true);
-    setOption(QWizard::HelpButtonOnRight, false);
+    this->setWizardStyle(QWizard::ModernStyle);
+    this->setOption(QWizard::HaveHelpButton, true);
+    this->setOption(QWizard::HelpButtonOnRight, false);
 
-    setPage(Page_Template, this->ui->pageTemplate);
-    setPage(Page_Name, this->ui->pageName);
-    setPage(Page_InstallationMedia, this->ui->pageInstallation);
-    setPage(Page_HomeServer, this->ui->pageHomeServer);
-    setPage(Page_CpuMemory, this->ui->pageCpuMemory);
-    setPage(Page_Storage, this->ui->pageStorage);
-    setPage(Page_Network, this->ui->pageNetworking);
-    setPage(Page_Finish, this->ui->pageFinish);
-    setStartId(Page_Template);
+    this->setPage(Page_Template, this->ui->pageTemplate);
+    this->setPage(Page_Name, this->ui->pageName);
+    this->setPage(Page_InstallationMedia, this->ui->pageInstallation);
+    this->setPage(Page_HomeServer, this->ui->pageHomeServer);
+    this->setPage(Page_CpuMemory, this->ui->pageCpuMemory);
+    this->setPage(Page_Storage, this->ui->pageStorage);
+    this->setPage(Page_Network, this->ui->pageNetworking);
+    this->setPage(Page_Finish, this->ui->pageFinish);
+    this->setStartId(Page_Template);
 
     this->ui->templateTree->setHeaderLabels({tr("Template"), tr("Type")});
     this->ui->templateTree->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -153,8 +144,13 @@ void NewVMWizard::setupUiPages()
     this->ui->bootModeComboBox->addItem(tr("UEFI"), "uefi");
     this->ui->bootModeComboBox->addItem(tr("UEFI Secure Boot"), "secureboot");
 
-    if (this->ui->isoComboBox->count() == 0)
-        this->ui->isoComboBox->addItem(tr("No ISO images detected"), QString());
+    IsoDropDownBox* isoBox = qobject_cast<IsoDropDownBox*>(this->ui->isoComboBox);
+    if (isoBox)
+    {
+        isoBox->SetConnection(this->m_connection);
+        isoBox->SetVMRef(QString());
+        isoBox->Refresh();
+    }
 
     this->m_navigationPane = new WizardNavigationPane(this);
     QVector<WizardNavigationPane::Step> steps = {
@@ -180,21 +176,43 @@ void NewVMWizard::loadTemplates()
     this->ui->templateTree->clear();
     this->m_templateItems.clear();
 
-    QList<QVariantMap> allVMs = cache->GetAllData("vm");
-    for (const QVariant vmVar : allVMs)
+    const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
+    bool restrictVtpm = false;
+    const QList<QSharedPointer<Host>> allHosts = cache->GetAll<Host>("host");
+    for (const QSharedPointer<Host>& host : allHosts)
     {
-        QVariantMap vmRecord = vmVar.toMap();
-        bool isTemplate = vmRecord.value("is_a_template").toBool();
-        bool isSnapshot = vmRecord.value("is_a_snapshot").toBool();
-        if (!isTemplate || isSnapshot)
+        if (host && host->RestrictVtpm())
+        {
+            restrictVtpm = true;
+            break;
+        }
+    }
+
+    const QList<QSharedPointer<VM>> allVMs = cache->GetAll<VM>("vm");
+    for (const QSharedPointer<VM>& vm : allVMs)
+    {
+        if (!vm || !vm->IsValid())
             continue;
 
+        if (!vm->IsTemplate() || vm->IsSnapshot())
+            continue;
+
+        if (!vm->Show(showHidden))
+            continue;
+
+        if (restrictVtpm)
+        {
+            const QString vtpmFlag = vm->Platform().value("vtpm").toString().toLower();
+            if (vtpmFlag == "true")
+                continue;
+        }
+
         TemplateInfo info;
-        info.ref = vmRecord.value("ref").toString();
-        info.name = vmRecord.value("name_label").toString();
-        QString virtualizationType = vmRecord.value("HVM_boot_policy").toString().isEmpty() ? tr("PV") : tr("HVM");
+        info.ref = vm->OpaqueRef();
+        info.name = vm->GetName();
+        QString virtualizationType = vm->IsHvm() ? tr("HVM") : tr("PV");
         info.type = virtualizationType;
-        info.description = vmRecord.value("name_description").toString();
+        info.description = vm->GetDescription();
 
         QTreeWidgetItem* item = new QTreeWidgetItem(this->ui->templateTree);
         item->setText(0, info.name);
@@ -244,9 +262,16 @@ void NewVMWizard::handleTemplateSelectionChanged()
         if (desc.isEmpty())
             desc = tr("No description provided.");
         this->ui->templateDescriptionLabel->setText(desc);
-
-        if (this->ui->vmNameEdit->text().trimmed().isEmpty())
+        const QString currentName = this->ui->vmNameEdit->text().trimmed();
+        if (!this->m_vmNameDirty || currentName.isEmpty() || currentName == this->m_lastTemplateName)
+        {
+            QSignalBlocker blocker(this->ui->vmNameEdit);
+            this->m_settingVmName = true;
             this->ui->vmNameEdit->setText(it->name);
+            this->m_lastTemplateName = it->name;
+            this->m_vmNameDirty = false;
+            this->m_settingVmName = false;
+        }
     }
 
     XenCache* cache = this->cache();
@@ -258,6 +283,10 @@ void NewVMWizard::handleTemplateSelectionChanged()
         qint64 memStaticMax = this->m_selectedTemplateRecord.value("memory_static_max").toLongLong() / (1024 * 1024);
         qint64 memDynMax = this->m_selectedTemplateRecord.value("memory_dynamic_max").toLongLong() / (1024 * 1024);
         qint64 memDynMin = this->m_selectedTemplateRecord.value("memory_dynamic_min").toLongLong() / (1024 * 1024);
+        QVariantMap platform = this->m_selectedTemplateRecord.value("platform").toMap();
+        qint64 coresPerSocket = platform.value("cores-per-socket").toString().toLongLong();
+        if (coresPerSocket <= 0)
+            coresPerSocket = 1;
 
         this->ui->vcpusMaxSpin->setValue(int(vcpusMax));
         this->ui->vcpusStartupSpin->setMaximum(int(vcpusMax));
@@ -269,11 +298,40 @@ void NewVMWizard::handleTemplateSelectionChanged()
         this->ui->memoryDynamicMinSpin->setMaximum(int(memDynMax));
         this->ui->memoryDynamicMinSpin->setValue(int(memDynMin));
 
+        int coresIndex = this->ui->coresPerSocketCombo->findData(int(coresPerSocket));
+        if (coresIndex == -1)
+        {
+            this->ui->coresPerSocketCombo->addItem(QString::number(coresPerSocket), int(coresPerSocket));
+            coresIndex = this->ui->coresPerSocketCombo->findData(int(coresPerSocket));
+        }
+        if (coresIndex >= 0)
+            this->ui->coresPerSocketCombo->setCurrentIndex(coresIndex);
+
         this->m_vcpuCount = vcpusStartup;
+        this->m_vcpuMax = int(vcpusMax);
         this->m_memorySize = int(memStaticMax);
+        this->m_memoryDynamicMin = int(memDynMin);
+        this->m_memoryDynamicMax = int(memDynMax);
+        this->m_memoryStaticMax = int(memStaticMax);
+        this->m_coresPerSocket = int(coresPerSocket);
     }
 
     this->loadTemplateDevices();
+
+    const QVariantMap otherConfig = this->m_selectedTemplateRecord.value("other_config").toMap();
+    const bool isDefaultTemplate = otherConfig.contains("default_template");
+    if (isDefaultTemplate && this->ui->copyBiosStringsCheckBox->isChecked())
+    {
+        this->ui->autoHomeServerRadio->setChecked(true);
+        this->ui->specificHomeServerRadio->setEnabled(false);
+        this->ui->homeServerList->setEnabled(false);
+        this->ui->copyBiosStringsFromAffinityCheckBox->setEnabled(false);
+    }
+    else
+    {
+        this->ui->specificHomeServerRadio->setEnabled(true);
+        this->updateHomeServerControls(this->ui->specificHomeServerRadio->isChecked());
+    }
 }
 
 void NewVMWizard::loadTemplateDevices()
@@ -291,6 +349,17 @@ void NewVMWizard::loadTemplateDevices()
 
     // Get template record from cache
     QVariantMap templateRecord = cache->ResolveObjectData("vm", this->m_selectedTemplate);
+    if (templateRecord.value("provision_xml").toString().isEmpty() && this->m_connection && this->m_connection->GetSession())
+    {
+        try
+        {
+            templateRecord = XenAPI::VM::get_record(this->m_connection->GetSession(), this->m_selectedTemplate);
+        }
+        catch (const std::exception& exn)
+        {
+            qWarning() << "NewVMWizard: Failed to fetch VM record:" << exn.what();
+        }
+    }
     if (templateRecord.isEmpty())
     {
         this->updateDiskTable();
@@ -298,27 +367,93 @@ void NewVMWizard::loadTemplateDevices()
         return;
     }
 
-    // Get VBD references from template record
-    QVariantList vbdRefs = templateRecord.value("VBDs").toList();
-    for (const QVariant& vbdRefVar : vbdRefs)
+    QString provisionXml = templateRecord.value("provision_xml").toString();
+    if (!provisionXml.isEmpty())
     {
-        QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbd = cache->ResolveObjectData("vbd", vbdRef);
-        
-        QString vbdType = vbd.value("type").toString();
-        if (vbdType != "Disk")
-            continue;
+        QDomDocument doc;
+        if (doc.setContent(provisionXml))
+        {
+            QDomElement root = doc.documentElement();
+            QDomNodeList disks = root.elementsByTagName("disk");
+            QString namePrefix = this->ui->vmNameEdit->text().trimmed();
+            if (namePrefix.isEmpty())
+                namePrefix = templateRecord.value("name_label").toString();
 
-        QString vdiRef = vbd.value("VDI").toString();
-        QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
+            for (int i = 0; i < disks.count(); ++i)
+            {
+                QDomElement diskEl = disks.at(i).toElement();
+                if (diskEl.isNull())
+                    continue;
 
-        DiskConfig disk;
-        disk.vdiRef = vdiRef;
-        disk.srRef = vdiData.value("SR").toString();
-        disk.sizeBytes = vdiData.value("virtual_size").toLongLong();
-        disk.device = vbd.value("userdevice").toString();
-        disk.bootable = vbd.value("bootable").toBool();
-        this->m_disks.append(disk);
+                DiskConfig disk;
+                disk.device = diskEl.attribute("device");
+                disk.bootable = (diskEl.attribute("bootable").toLower() == "true");
+                disk.sizeBytes = diskEl.attribute("size").toLongLong();
+                disk.vdiType = diskEl.attribute("type").toLower();
+                if (disk.vdiType.isEmpty())
+                    disk.vdiType = "user";
+
+                disk.name = QString("%1 Disk %2").arg(namePrefix, disk.device);
+                disk.description = tr("Virtual disk");
+                disk.mode = "RW";
+                disk.canDelete = (disk.vdiType == "user");
+                disk.canResize = true;
+                disk.minSizeBytes = disk.sizeBytes;
+
+                QString srUuid = diskEl.attribute("sr");
+                if (!srUuid.isEmpty())
+                {
+                    QList<QVariantMap> srs = cache->GetAllData("sr");
+                    for (const QVariantMap& sr : srs)
+                    {
+                        if (sr.value("uuid").toString() == srUuid)
+                        {
+                            disk.srRef = sr.value("ref").toString();
+                            break;
+                        }
+                    }
+                }
+                if (disk.srRef.isEmpty())
+                    disk.srRef = this->ui->defaultSrCombo->currentData().toString();
+
+                this->m_disks.append(disk);
+            }
+        }
+    }
+
+    if (this->m_disks.isEmpty())
+    {
+        // Get VBD references from template record
+        QVariantList vbdRefs = templateRecord.value("VBDs").toList();
+        for (const QVariant& vbdRefVar : vbdRefs)
+        {
+            QString vbdRef = vbdRefVar.toString();
+            QVariantMap vbd = cache->ResolveObjectData("vbd", vbdRef);
+
+            QString vbdType = vbd.value("type").toString();
+            if (vbdType != "Disk")
+                continue;
+
+            QString vdiRef = vbd.value("VDI").toString();
+            QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
+
+            DiskConfig disk;
+            disk.vdiRef = vdiRef;
+            disk.srRef = vdiData.value("SR").toString();
+            disk.sizeBytes = vdiData.value("virtual_size").toLongLong();
+            disk.device = vbd.value("userdevice").toString();
+            disk.bootable = vbd.value("bootable").toBool();
+            disk.name = vdiData.value("name_label").toString();
+            disk.description = vdiData.value("name_description").toString();
+            disk.mode = vbd.value("mode").toString();
+            disk.vdiType = vdiData.value("type").toString().toLower();
+            disk.sharable = vdiData.value("sharable", false).toBool();
+            disk.readOnly = vdiData.value("read_only", false).toBool();
+            disk.canDelete = false;
+            disk.canResize = false;
+            disk.minSizeBytes = 0;
+            this->m_disks.append(disk);
+        }
     }
 
     // Get VIF references from template record
@@ -422,11 +557,16 @@ void NewVMWizard::updateDiskTable()
         QString srName = srRecord.value("name_label").toString();
         QString sizeGB = QString::number(double(disk.sizeBytes) / (1024.0 * 1024.0 * 1024.0), 'f', 1);
 
-        auto diskItem = new QTableWidgetItem(QString("Disk %1%2").arg(disk.device,
-                                                                      disk.bootable ? tr(" (boot)") : QString()));
+        QString diskLabel = disk.name.isEmpty()
+            ? QString("Disk %1").arg(disk.device)
+            : disk.name;
+        if (disk.bootable)
+            diskLabel += tr(" (boot)");
+
+        auto diskItem = new QTableWidgetItem(diskLabel);
         auto sizeItem = new QTableWidgetItem(tr("%1 GB").arg(sizeGB));
         auto srItem = new QTableWidgetItem(srName.isEmpty() ? tr("Unknown SR") : srName);
-        auto modeItem = new QTableWidgetItem(tr("Read/write"));
+        auto modeItem = new QTableWidgetItem(disk.mode.isEmpty() ? tr("RW") : disk.mode);
 
         this->ui->diskTable->setItem(row, 0, diskItem);
         this->ui->diskTable->setItem(row, 1, sizeItem);
@@ -459,6 +599,51 @@ void NewVMWizard::updateNetworkTable()
     }
 }
 
+void NewVMWizard::updateHomeServerPage()
+{
+    XenCache* cache = this->cache();
+    if (cache && !this->m_selectedTemplate.isEmpty())
+    {
+        QString suggestedHost;
+        bool usingCd = this->ui->isoRadioButton->isChecked();
+        QString isoVdiRef;
+        if (usingCd)
+        {
+            IsoDropDownBox* isoBox = qobject_cast<IsoDropDownBox*>(this->ui->isoComboBox);
+            isoVdiRef = isoBox ? isoBox->SelectedVdiRef() : this->ui->isoComboBox->currentData().toString();
+        }
+
+        if (!usingCd || isoVdiRef.isEmpty())
+        {
+            suggestedHost = VMHelpers::getVMStorageHost(this->m_connection, this->m_selectedTemplateRecord, true);
+        }
+        else
+        {
+            QVariantMap vdiData = cache->ResolveObjectData("vdi", isoVdiRef);
+            QString srRef = vdiData.value("SR").toString();
+            QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", srRef);
+            Host* host = sr ? sr->GetFirstAttachedStorageHost() : nullptr;
+            if (host)
+                suggestedHost = host->OpaqueRef();
+            if (suggestedHost.isEmpty())
+                suggestedHost = VMHelpers::getVMStorageHost(this->m_connection, this->m_selectedTemplateRecord, false);
+        }
+
+        if (!suggestedHost.isEmpty() && this->ui->homeServerList->selectedItems().isEmpty())
+        {
+            for (int i = 0; i < this->ui->homeServerList->count(); ++i)
+            {
+                QListWidgetItem* item = this->ui->homeServerList->item(i);
+                if (item && item->data(Qt::UserRole).toString() == suggestedHost)
+                {
+                    item->setSelected(true);
+                    break;
+                }
+            }
+        }
+    }
+}
+
 void NewVMWizard::updateSummaryPage()
 {
     QString templateName;
@@ -480,9 +665,14 @@ void NewVMWizard::updateSummaryPage()
     lines << tr("Disks: %1").arg(this->m_disks.size());
     lines << tr("Networks: %1").arg(this->m_networks.size());
 
-    QString installMethod = this->ui->isoRadioButton->isChecked()
-        ? this->ui->isoComboBox->currentText()
-        : this->ui->urlLineEdit->text().trimmed();
+    QString installMethod;
+    if (this->ui->isoRadioButton->isChecked())
+    {
+        installMethod = this->ui->isoComboBox->currentText();
+    } else
+    {
+        installMethod = this->ui->urlLineEdit->text().trimmed();
+    }
     lines << tr("Installation source: %1").arg(installMethod.isEmpty() ? tr("Not specified") : installMethod);
 
     this->ui->summaryTextBrowser->setPlainText(lines.join('\n'));
@@ -525,6 +715,8 @@ void NewVMWizard::initializePage(int id)
         this->updateDiskTable();
     else if (id == Page_Network)
         this->updateNetworkTable();
+    else if (id == Page_HomeServer)
+        this->updateHomeServerPage();
     else if (id == Page_Finish)
         this->updateSummaryPage();
 
@@ -569,6 +761,15 @@ bool NewVMWizard::validateCurrentPage()
         break;
     case Page_CpuMemory:
     {
+        int vcpusMax = this->ui->vcpusMaxSpin->value();
+        int coresPerSocket = this->ui->coresPerSocketCombo->currentData().toInt();
+        QString topologyError = VM::ValidVCPUConfiguration(vcpusMax, coresPerSocket);
+        if (!topologyError.isEmpty())
+        {
+            QMessageBox::warning(this, tr("CPU Topology"), topologyError);
+            return false;
+        }
+
         int dynMin = this->ui->memoryDynamicMinSpin->value();
         int dynMax = this->ui->memoryDynamicMaxSpin->value();
         int staticMax = this->ui->memoryStaticMaxSpin->value();
@@ -587,6 +788,15 @@ bool NewVMWizard::validateCurrentPage()
                                  tr("The selected template has no disks. Add a disk before proceeding."));
             return false;
         }
+        for (const DiskConfig& disk : this->m_disks)
+        {
+            if (disk.srRef.isEmpty())
+            {
+                QMessageBox::warning(this, tr("Storage Configuration"),
+                                     tr("One or more disks have no storage repository selected."));
+                return false;
+            }
+        }
         break;
     default:
         break;
@@ -600,13 +810,22 @@ void NewVMWizard::accept()
     this->m_vmName = this->ui->vmNameEdit->text().trimmed();
     this->m_vmDescription = this->ui->vmDescriptionEdit->toPlainText().trimmed();
     this->m_vcpuCount = this->ui->vcpusStartupSpin->value();
-    this->m_memorySize = this->ui->memoryStaticMaxSpin->value();
+    this->m_vcpuMax = this->ui->vcpusMaxSpin->value();
+    this->m_coresPerSocket = this->ui->coresPerSocketCombo->currentData().toInt();
+    this->m_memoryDynamicMin = this->ui->memoryDynamicMinSpin->value();
+    this->m_memoryDynamicMax = this->ui->memoryDynamicMaxSpin->value();
+    this->m_memoryStaticMax = this->ui->memoryStaticMaxSpin->value();
+    this->m_memorySize = this->m_memoryStaticMax;
     this->m_assignVtpm = this->ui->assignVtpmCheckBox->isChecked();
     this->m_installUrl = this->ui->urlRadioButton->isChecked() ? this->ui->urlLineEdit->text().trimmed() : QString();
-    this->m_selectedIso = this->ui->isoRadioButton->isChecked()
-        ? this->ui->isoComboBox->currentData().toString()
-        : QString();
+    this->m_selectedIso = QString();
+    if (this->ui->isoRadioButton->isChecked())
+    {
+        IsoDropDownBox* isoBox = qobject_cast<IsoDropDownBox*>(this->ui->isoComboBox);
+        this->m_selectedIso = isoBox ? isoBox->SelectedVdiRef() : this->ui->isoComboBox->currentData().toString();
+    }
     this->m_bootMode = this->ui->bootModeComboBox->currentData().toString();
+    this->m_pvArgs = this->ui->pvBootArgsEdit->toPlainText().trimmed();
 
     if (this->ui->specificHomeServerRadio->isChecked() && !this->ui->homeServerList->selectedItems().isEmpty())
         this->m_selectedHost = this->ui->homeServerList->selectedItems().first()->data(Qt::UserRole).toString();
@@ -664,6 +883,12 @@ void NewVMWizard::createVirtualMachine()
         config.sizeBytes = disk.sizeBytes;
         config.device = disk.device;
         config.bootable = disk.bootable;
+        config.nameLabel = disk.name;
+        config.nameDescription = disk.description;
+        config.mode = disk.mode;
+        config.vdiType = disk.vdiType;
+        config.sharable = disk.sharable;
+        config.readOnly = disk.readOnly;
         disks.append(config);
     }
 
@@ -683,13 +908,17 @@ void NewVMWizard::createVirtualMachine()
         this->m_vmName,
         this->m_vmDescription,
         installMethod,
-        QString(),
+        this->m_pvArgs,
         this->m_selectedIso,
         this->m_installUrl,
         bootMode,
         this->m_selectedHost,
+        this->m_vcpuMax,
         this->m_vcpuCount,
-        this->m_memorySize,
+        this->m_memoryDynamicMin,
+        this->m_memoryDynamicMax,
+        this->m_memoryStaticMax,
+        this->m_coresPerSocket,
         disks,
         vifs,
         startImmediately,
@@ -703,8 +932,14 @@ void NewVMWizard::createVirtualMachine()
     if (result != QDialog::Accepted || action->HasError())
     {
         QString error = action->GetErrorMessage();
+        QString step = action->GetDescription();
+        QStringList details = action->GetErrorDetails();
         if (error.isEmpty())
             error = tr("Failed to create virtual machine '%1'.").arg(this->m_vmName);
+        if (!step.isEmpty())
+            error += tr("\n\nStep: %1").arg(step);
+        if (!details.isEmpty())
+            error += tr("\n\nDetails:\n- %1").arg(details.join("\n- "));
         QMessageBox::critical(this, tr("Failed to Create VM"), error);
         action->deleteLater();
         return;
@@ -737,6 +972,205 @@ void NewVMWizard::onCurrentIdChanged(int id)
     if (id == Page_Finish)
         this->updateSummaryPage();
     this->updateNavigationSelection();
+}
+
+void NewVMWizard::onVmNameChanged(const QString& text)
+{
+    if (this->m_settingVmName)
+        return;
+
+    if (text.trimmed().isEmpty())
+    {
+        this->m_vmNameDirty = false;
+        return;
+    }
+
+    this->m_vmNameDirty = (text.trimmed() != this->m_lastTemplateName);
+}
+
+void NewVMWizard::onAutoHomeServerToggled(bool checked)
+{
+    Q_UNUSED(checked)
+    this->updateHomeServerControls(this->ui->specificHomeServerRadio->isChecked());
+}
+
+void NewVMWizard::onSpecificHomeServerToggled(bool checked)
+{
+    this->updateHomeServerControls(checked);
+}
+
+void NewVMWizard::onCopyBiosStringsToggled(bool checked)
+{
+    Q_UNUSED(checked)
+    const QVariantMap otherConfig = this->m_selectedTemplateRecord.value("other_config").toMap();
+    const bool isDefaultTemplate = otherConfig.contains("default_template");
+    if (isDefaultTemplate && this->ui->copyBiosStringsCheckBox->isChecked())
+    {
+        this->ui->autoHomeServerRadio->setChecked(true);
+        this->ui->specificHomeServerRadio->setEnabled(false);
+        this->ui->homeServerList->setEnabled(false);
+        this->ui->copyBiosStringsFromAffinityCheckBox->setEnabled(false);
+    } else
+    {
+        this->ui->specificHomeServerRadio->setEnabled(true);
+        this->updateHomeServerControls(this->ui->specificHomeServerRadio->isChecked());
+    }
+}
+
+void NewVMWizard::onVcpusMaxChanged(int value)
+{
+    this->ui->vcpusStartupSpin->setMaximum(value);
+    if (this->ui->vcpusStartupSpin->value() > value)
+        this->ui->vcpusStartupSpin->setValue(value);
+}
+
+void NewVMWizard::onMemoryStaticMaxChanged(int value)
+{
+    this->ui->memoryDynamicMaxSpin->setMaximum(value);
+    if (this->ui->memoryDynamicMaxSpin->value() > value)
+        this->ui->memoryDynamicMaxSpin->setValue(value);
+}
+
+void NewVMWizard::onMemoryDynamicMaxChanged(int value)
+{
+    this->ui->memoryDynamicMinSpin->setMaximum(value);
+    if (this->ui->memoryDynamicMinSpin->value() > value)
+        this->ui->memoryDynamicMinSpin->setValue(value);
+}
+
+void NewVMWizard::onIsoRadioToggled(bool checked)
+{
+    Q_UNUSED(checked)
+    this->updateIsoControls();
+}
+
+void NewVMWizard::onUrlRadioToggled(bool checked)
+{
+    Q_UNUSED(checked)
+    this->updateIsoControls();
+}
+
+void NewVMWizard::onDefaultSrChanged(int index)
+{
+    QString srRef = this->ui->defaultSrCombo->itemData(index).toString();
+    if (!srRef.isEmpty())
+        this->applyDefaultSRToDisks(srRef);
+}
+
+void NewVMWizard::onDiskTableSelectionChanged()
+{
+    bool hasSelection = !this->ui->diskTable->selectedItems().isEmpty();
+    this->ui->editDiskButton->setEnabled(hasSelection);
+    if (!hasSelection)
+    {
+        this->ui->removeDiskButton->setEnabled(false);
+        return;
+    }
+
+    int row = this->ui->diskTable->currentRow();
+    if (row >= 0 && row < this->m_disks.size())
+        this->ui->removeDiskButton->setEnabled(this->m_disks[row].canDelete);
+    else
+        this->ui->removeDiskButton->setEnabled(false);
+}
+
+void NewVMWizard::onAddDiskClicked()
+{
+    QStringList usedDevices;
+    usedDevices.reserve(this->m_disks.size());
+    for (const DiskConfig& disk : this->m_disks)
+        usedDevices.append(disk.device);
+
+    QString defaultName = this->ui->vmNameEdit->text().trimmed();
+    if (defaultName.isEmpty())
+        defaultName = this->m_selectedTemplateRecord.value("name_label").toString();
+
+    NewVirtualDiskDialog dialog(this->m_connection, QString(), this);
+    dialog.setDialogMode(NewVirtualDiskDialog::DialogMode::Add);
+    dialog.setWizardContext(defaultName, usedDevices, this->m_selectedHost);
+    dialog.setInitialDisk(QString(),
+                          QString(),
+                          static_cast<qint64>(8) * 1024 * 1024 * 1024,
+                          this->ui->defaultSrCombo->currentData().toString());
+    dialog.setMinSizeBytes(0);
+    dialog.setCanResize(true);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    DiskConfig disk;
+    disk.name = dialog.getVDIName();
+    disk.description = dialog.getVDIDescription();
+    disk.srRef = dialog.getSelectedSR();
+    disk.sizeBytes = dialog.getSize();
+    disk.device = dialog.getDevicePosition();
+    disk.bootable = false;
+    disk.mode = dialog.getMode();
+    disk.vdiType = "user";
+    disk.readOnly = false;
+    disk.sharable = false;
+    disk.canDelete = true;
+    disk.canResize = true;
+    disk.minSizeBytes = 0;
+    this->m_disks.append(disk);
+    this->updateDiskTable();
+}
+
+void NewVMWizard::onEditDiskClicked()
+{
+    int row = this->ui->diskTable->currentRow();
+    if (row < 0 || row >= this->m_disks.size())
+        return;
+
+    DiskConfig& disk = this->m_disks[row];
+
+    QStringList usedDevices;
+    usedDevices.reserve(this->m_disks.size());
+    for (const DiskConfig& entry : this->m_disks)
+    {
+        if (&entry != &disk)
+            usedDevices.append(entry.device);
+    }
+
+    QString defaultName = this->ui->vmNameEdit->text().trimmed();
+    if (defaultName.isEmpty())
+        defaultName = this->m_selectedTemplateRecord.value("name_label").toString();
+
+    NewVirtualDiskDialog dialog(this->m_connection, QString(), this);
+    dialog.setDialogMode(NewVirtualDiskDialog::DialogMode::Edit);
+    dialog.setWizardContext(defaultName, usedDevices, this->m_selectedHost);
+    dialog.setInitialDisk(disk.name, disk.description, disk.sizeBytes, disk.srRef);
+    dialog.setMinSizeBytes(disk.minSizeBytes);
+    dialog.setCanResize(disk.canResize);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    disk.name = dialog.getVDIName();
+    disk.description = dialog.getVDIDescription();
+    disk.srRef = dialog.getSelectedSR();
+    if (disk.canResize)
+        disk.sizeBytes = dialog.getSize();
+    disk.mode = dialog.getMode();
+
+    this->updateDiskTable();
+}
+
+void NewVMWizard::onRemoveDiskClicked()
+{
+    int row = this->ui->diskTable->currentRow();
+    if (row < 0 || row >= this->m_disks.size())
+        return;
+
+    if (!this->m_disks[row].canDelete)
+        return;
+
+    this->m_disks.removeAt(row);
+    this->updateDiskTable();
+}
+
+void NewVMWizard::onNetworkTableSelectionChanged()
+{
+    bool hasSelection = !this->ui->networkTable->selectedItems().isEmpty();
+    this->ui->removeNetworkButton->setEnabled(hasSelection);
 }
 
 XenCache* NewVMWizard::cache() const

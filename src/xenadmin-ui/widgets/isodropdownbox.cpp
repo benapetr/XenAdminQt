@@ -79,19 +79,19 @@ IsoDropDownBox::IsoDropDownBox(QWidget* parent) : QComboBox(parent), m_connectio
 {
     this->setEditable(false);
     this->setInsertPolicy(QComboBox::NoInsert);
-} 
+}
 
-void IsoDropDownBox::setConnection(XenConnection* connection)
+void IsoDropDownBox::SetConnection(XenConnection* connection)
 {
     this->m_connection = connection;
 } 
 
-void IsoDropDownBox::setVMRef(const QString& vmRef)
+void IsoDropDownBox::SetVMRef(const QString& vmRef)
 {
     this->m_vmRef = vmRef;
 } 
 
-void IsoDropDownBox::refresh()
+void IsoDropDownBox::Refresh()
 {
     QSignalBlocker blocker(this);
     this->clear();
@@ -172,6 +172,14 @@ void IsoDropDownBox::refresh()
 
     for (const SrEntry& srEntry : srEntries)
     {
+        QList<QPair<QString, QString>> vdiEntries;
+        const QVariantList vdiRefs = srEntry.data.value("VDIs").toList();
+        bool toolsSr = isToolsSr(cache, srEntry.data);
+        bool toolsIsoOnly = toolsSr && !stockholmOrGreater;
+
+        if (vdiRefs.isEmpty())
+            continue;
+
         this->addItem(srEntry.name, QString());
         if (model)
         {
@@ -179,11 +187,6 @@ void IsoDropDownBox::refresh()
             if (item)
                 item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
         }
-
-        QList<QPair<QString, QString>> vdiEntries;
-        const QVariantList vdiRefs = srEntry.data.value("VDIs").toList();
-        bool toolsSr = isToolsSr(cache, srEntry.data);
-        bool toolsIsoOnly = toolsSr && !stockholmOrGreater;
 
         for (const QVariant& vdiRefVar : vdiRefs)
         {
@@ -227,12 +230,12 @@ void IsoDropDownBox::refresh()
     }
 }
 
-QString IsoDropDownBox::selectedVdiRef() const
+QString IsoDropDownBox::SelectedVdiRef() const
 {
     return this->currentData().toString();
 }
 
-void IsoDropDownBox::setSelectedVdiRef(const QString& vdiRef)
+void IsoDropDownBox::SetSelectedVdiRef(const QString& vdiRef)
 {
     if (vdiRef.isEmpty())
     {

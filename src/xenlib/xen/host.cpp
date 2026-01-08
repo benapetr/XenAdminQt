@@ -73,6 +73,17 @@ bool Host::IsLive() const
     return metrics && metrics->live();
 }
 
+static bool boolKeyPreferTrue(const QVariantMap& map, const QString& key)
+{
+    const QString value = map.value(key).toString();
+    return value.isEmpty() || value.compare("false", Qt::CaseInsensitive) != 0;
+}
+
+bool Host::RestrictVtpm() const
+{
+    return boolKeyPreferTrue(LicenseParams(), "restrict_vtpm");
+}
+
 QStringList Host::ResidentVMRefs() const
 {
     return stringListProperty("resident_VMs");

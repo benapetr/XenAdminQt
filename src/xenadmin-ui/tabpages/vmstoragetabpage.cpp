@@ -551,9 +551,9 @@ void VMStorageTabPage::refreshISOList()
     if (!isoBox)
         return;
 
-    isoBox->setConnection(this->m_connection);
-    isoBox->setVMRef(this->m_objectRef);
-    isoBox->refresh();
+    isoBox->SetConnection(this->m_connection);
+    isoBox->SetVMRef(this->m_objectRef);
+    isoBox->Refresh();
 
     // Get current VBD data to see what's mounted
     QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", this->m_currentVBDRef);
@@ -569,8 +569,8 @@ void VMStorageTabPage::refreshISOList()
 
     if (!empty && !currentVdiRef.isEmpty())
     {
-        isoBox->setSelectedVdiRef(currentVdiRef);
-        if (isoBox->selectedVdiRef() != currentVdiRef)
+        isoBox->SetSelectedVdiRef(currentVdiRef);
+        if (isoBox->SelectedVdiRef() != currentVdiRef)
         {
             QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", currentVdiRef);
             if (!vdiData.isEmpty())
@@ -582,7 +582,7 @@ void VMStorageTabPage::refreshISOList()
         }
     } else
     {
-        isoBox->setSelectedVdiRef(QString());
+        isoBox->SetSelectedVdiRef(QString());
     }
 }
 

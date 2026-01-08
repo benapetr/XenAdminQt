@@ -60,7 +60,43 @@ bool VM::IsTemplate() const
 
 bool VM::IsDefaultTemplate() const
 {
-    return boolProperty("is_default_template", false);
+    return DefaultTemplate();
+}
+
+bool VM::DefaultTemplate() const
+{
+    return OtherConfig().contains("default_template");
+}
+
+bool VM::InternalTemplate() const
+{
+    return OtherConfig().contains("xensource_internal");
+}
+
+bool VM::IsHidden() const
+{
+    QVariantMap otherConfig = OtherConfig();
+    QVariant hiddenValue = otherConfig.value("HideFromXenCenter");
+    if (!hiddenValue.isValid())
+        hiddenValue = otherConfig.value("hide_from_xencenter");
+
+    const QString hidden = hiddenValue.toString().trimmed().toLower();
+    return hidden == "true" || hidden == "1";
+}
+
+bool VM::Show(bool showHiddenVMs) const
+{
+    if (InternalTemplate())
+        return false;
+
+    const QString name = GetName();
+    if (name.startsWith("__gui__"))
+        return false;
+
+    if (showHiddenVMs)
+        return true;
+
+    return !IsHidden();
 }
 
 bool VM::IsSnapshot() const

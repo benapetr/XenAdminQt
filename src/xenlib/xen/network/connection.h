@@ -33,12 +33,15 @@
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 #include <QtCore/QDateTime>
+#include <QtCore/QSharedPointer>
 #include <QtCore/QVariantMap>
+#include <QtCore/QWaitCondition>
 #include <functional>
 
 class XenCertificateManager;
 class ConnectTask;
 class MetricUpdater;
+class XenObject;
 
 namespace XenAPI
 {
@@ -167,6 +170,23 @@ class XENLIB_EXPORT XenConnection : public QObject
         class XenCache* GetCache() const;
         MetricUpdater* GetMetricUpdater() const;
         void SetMetricUpdater(MetricUpdater* metricUpdater);
+        QVariantMap WaitForCacheData(const QString& type,
+                                     const QString& ref,
+                                     int timeoutMs = 60000,
+                                     const std::function<bool()>& cancelling = std::function<bool()>()) const;
+        QSharedPointer<XenObject> WaitForCacheObject(const QString& type,
+                                                     const QString& ref,
+                                                     int timeoutMs = 60000,
+                                                     const std::function<bool()>& cancelling = std::function<bool()>()) const;
+
+        template <typename T>
+        QSharedPointer<T> WaitForCacheObject(const QString& type,
+                                             const QString& ref,
+                                             int timeoutMs = 60000,
+                                             const std::function<bool()>& cancelling = std::function<bool()>()) const
+        {
+            return qSharedPointerDynamicCast<T>(WaitForCacheObject(type, ref, timeoutMs, cancelling));
+        }
 
     signals:
         void Connected();
@@ -189,6 +209,7 @@ class XENLIB_EXPORT XenConnection : public QObject
         void TaskDeleted(const QString& taskRef);
         void MessageReceived(const QString& messageRef, const QVariantMap& messageData);
         void MessageRemoved(const QString& messageRef);
+        void XenObjectsUpdated();
 
         /**
          * @brief Emitted when async API request completes

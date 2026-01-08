@@ -33,6 +33,7 @@
 #include <QList>
 
 class XenConnection;
+namespace XenAPI { class Session; }
 
 class CreateVMAction : public AsyncOperation
 {
@@ -54,6 +55,8 @@ class CreateVMAction : public AsyncOperation
             SecureUefi
         };
 
+        // TODO consolidate these types, they are defined again similarly in UI code, like new VM wizard
+
         struct DiskConfig
         {
             QString vdiRef;
@@ -61,6 +64,12 @@ class CreateVMAction : public AsyncOperation
             qint64 sizeBytes = 0;
             QString device;
             bool bootable = false;
+            QString nameLabel;
+            QString nameDescription;
+            QString mode = "RW";
+            QString vdiType = "user";
+            bool sharable = false;
+            bool readOnly = false;
         };
 
         struct VifConfig
@@ -80,8 +89,12 @@ class CreateVMAction : public AsyncOperation
                        const QString& installUrl,
                        BootMode bootMode,
                        const QString& homeServerRef,
+                       qint64 vcpusMax,
                        qint64 vcpusAtStartup,
+                       qint64 memoryDynamicMinMb,
+                       qint64 memoryDynamicMaxMb,
                        qint64 memoryStaticMaxMb,
+                       qint64 coresPerSocket,
                        const QList<DiskConfig>& disks,
                        const QList<VifConfig>& vifs,
                        bool startAfter,
@@ -92,6 +105,17 @@ class CreateVMAction : public AsyncOperation
         void run() override;
 
     private:
+        void addDisks(XenAPI::Session* session, const QString& vmRef);
+        QString getDiskVbd(XenAPI::Session* session, const DiskConfig& disk, const QVariantList& vbds);
+        bool diskOk(XenAPI::Session* session, const DiskConfig& disk, const QString& vbdRef);
+        QString moveDisk(XenAPI::Session* session, const QString& vmRef, const DiskConfig& disk, const QString& vbdRef, double progress, double step);
+        QString createDisk(XenAPI::Session* session, const QString& vmRef, const DiskConfig& disk, double progress, double step);
+        void addVmHint(XenAPI::Session* session, const QString& vmRef, const QString& vdiRef);
+        QString createVdi(XenAPI::Session* session, const DiskConfig& disk, double progress1, double progress2);
+        void createVbd(XenAPI::Session* session, const QString& vmRef, const DiskConfig& disk, const QString& vdiRef, double progress1, double progress2, bool bootable);
+        bool isDeviceAtPositionZero(const DiskConfig& disk) const;
+        bool srIsHbaLunPerVdi(XenAPI::Session* session, const QString& srRef);
+
         QString m_templateRef;
         QString m_nameLabel;
         QString m_nameDescription;
@@ -101,8 +125,12 @@ class CreateVMAction : public AsyncOperation
         QString m_installUrl;
         BootMode m_bootMode;
         QString m_homeServerRef;
+        qint64 m_vcpusMax;
         qint64 m_vcpusAtStartup;
+        qint64 m_memoryDynamicMinMb;
+        qint64 m_memoryDynamicMaxMb;
         qint64 m_memoryStaticMaxMb;
+        qint64 m_coresPerSocket;
         QList<DiskConfig> m_disks;
         QList<VifConfig> m_vifs;
         bool m_startAfter;

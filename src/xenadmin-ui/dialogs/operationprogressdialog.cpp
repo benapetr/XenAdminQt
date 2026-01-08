@@ -55,6 +55,8 @@ OperationProgressDialog::OperationProgressDialog(AsyncOperation* operation, QWid
 
     // Connect operation signals
     connect(this->m_operation, &AsyncOperation::completed, this, &OperationProgressDialog::onOperationCompleted);
+    connect(this->m_operation, &AsyncOperation::failed, this, &OperationProgressDialog::onOperationCompleted);
+    connect(this->m_operation, &AsyncOperation::cancelled, this, &OperationProgressDialog::onOperationCompleted);
     connect(this->m_operation, &AsyncOperation::progressChanged, this, &OperationProgressDialog::onOperationChanged);
     connect(this->m_operation, &AsyncOperation::descriptionChanged, this, &OperationProgressDialog::onOperationChanged);
     connect(this->m_operation, &AsyncOperation::titleChanged, this, &OperationProgressDialog::onOperationChanged);
@@ -295,6 +297,9 @@ void OperationProgressDialog::switchToErrorState()
         if (this->m_operation && !this->m_operation->GetErrorMessage().isEmpty())
         {
             errorText = this->m_operation->GetErrorMessage();
+            QStringList details = this->m_operation->GetErrorDetails();
+            if (!details.isEmpty())
+                errorText += tr("\n\nDetails:\n- %1").arg(details.join("\n- "));
         } else if (this->m_operation && this->m_operation->IsCancelled())
         {
             errorText = tr("Operation cancelled by user");

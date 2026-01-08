@@ -141,34 +141,25 @@
       </widget>
      </item>
      <item row="3" column="0">
-      <widget class="QLabel" name="srLabel">
-       <property name="text">
-        <string>&amp;Location:</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
-       </property>
-       <property name="buddy">
-        <cstring>srListWidget</cstring>
-       </property>
-      </widget>
-     </item>
+     <widget class="QLabel" name="srLabel">
+      <property name="text">
+       <string>&amp;Location:</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
+      </property>
+      <property name="buddy">
+       <cstring>srPicker</cstring>
+      </property>
+     </widget>
+    </item>
      <item row="3" column="1">
-      <widget class="QListWidget" name="srListWidget">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
+      <widget class="SrPicker" name="srPicker">
        <property name="minimumSize">
         <size>
          <width>0</width>
          <height>150</height>
         </size>
-       </property>
-       <property name="alternatingRowColors">
-        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -247,11 +238,19 @@
   <tabstop>nameLineEdit</tabstop>
   <tabstop>descriptionTextEdit</tabstop>
   <tabstop>sizeSpinBox</tabstop>
-  <tabstop>srListWidget</tabstop>
+  <tabstop>srPicker</tabstop>
   <tabstop>rescanButton</tabstop>
   <tabstop>addButton</tabstop>
   <tabstop>cancelButton</tabstop>
  </tabstops>
+ <customwidgets>
+  <customwidget>
+   <class>SrPicker</class>
+   <extends>QWidget</extends>
+   <header>controls/srpicker.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>

@@ -41,6 +41,7 @@
 #include <QtCore/QPointer>
 #include <QtCore/QDebug>
 #include <QtCore/QDateTime>
+#include <QtCore/QElapsedTimer>
 #include <QtCore/QEventLoop>
 #include <QtCore/QThread>
 #include <QtCore/QTimer>
@@ -126,6 +127,9 @@ class XenConnection::Private
         bool updatesWaiting = false;
 
         QTimer* reconnectionTimer = nullptr;
+
+        mutable QMutex waitForCacheMutex;
+        mutable QWaitCondition waitForCacheCondition;
 };
 
 XenConnection::XenConnection(QObject* parent) : QObject(parent), d(new Private)
@@ -133,6 +137,25 @@ XenConnection::XenConnection(QObject* parent) : QObject(parent), d(new Private)
     // Each connection owns its own cache (matching C# architecture)
     this->d->cache = new XenCache(this);
     this->d->metricUpdater = new MetricUpdater(this);
+
+    auto wakeCacheWaiters = [this]() {
+        emit XenObjectsUpdated();
+        QMutexLocker locker(&this->d->waitForCacheMutex);
+        this->d->waitForCacheCondition.wakeAll();
+    };
+
+    connect(this->d->cache, &XenCache::objectChanged, this, [wakeCacheWaiters](XenConnection*, const QString&, const QString&) {
+        wakeCacheWaiters();
+    });
+    connect(this->d->cache, &XenCache::objectRemoved, this, [wakeCacheWaiters](XenConnection*, const QString&, const QString&) {
+        wakeCacheWaiters();
+    });
+    connect(this->d->cache, &XenCache::bulkUpdateComplete, this, [wakeCacheWaiters](const QString&, int) {
+        wakeCacheWaiters();
+    });
+    connect(this->d->cache, &XenCache::cacheCleared, this, [wakeCacheWaiters]() {
+        wakeCacheWaiters();
+    });
 }
 
 XenConnection::~XenConnection()
@@ -1383,4 +1406,70 @@ MetricUpdater* XenConnection::GetMetricUpdater() const
 void XenConnection::SetMetricUpdater(MetricUpdater* metricUpdater)
 {
     this->d->metricUpdater = metricUpdater;
+}
+
+QVariantMap XenConnection::WaitForCacheData(const QString& type,
+                                            const QString& ref,
+                                            int timeoutMs,
+                                            const std::function<bool()>& cancelling) const
+{
+    if (!this->d->cache || ref.isEmpty())
+        return QVariantMap();
+
+    QElapsedTimer timer;
+    timer.start();
+
+    QMutexLocker locker(&this->d->waitForCacheMutex);
+
+    while (timer.elapsed() < timeoutMs)
+    {
+        if (cancelling && cancelling())
+            return QVariantMap();
+
+        QVariantMap data = this->d->cache->ResolveObjectData(type, ref);
+        if (!data.isEmpty())
+            return data;
+
+        int remaining = timeoutMs - static_cast<int>(timer.elapsed());
+        int waitMs = qMin(500, remaining);
+        if (waitMs <= 0)
+            break;
+
+        this->d->waitForCacheCondition.wait(&this->d->waitForCacheMutex, waitMs);
+    }
+
+    return QVariantMap();
+}
+
+QSharedPointer<XenObject> XenConnection::WaitForCacheObject(const QString& type,
+                                                            const QString& ref,
+                                                            int timeoutMs,
+                                                            const std::function<bool()>& cancelling) const
+{
+    if (!this->d->cache || ref.isEmpty())
+        return QSharedPointer<XenObject>();
+
+    QElapsedTimer timer;
+    timer.start();
+
+    QMutexLocker locker(&this->d->waitForCacheMutex);
+
+    while (timer.elapsed() < timeoutMs)
+    {
+        if (cancelling && cancelling())
+            return QSharedPointer<XenObject>();
+
+        QSharedPointer<XenObject> obj = this->d->cache->ResolveObject(type, ref);
+        if (obj)
+            return obj;
+
+        int remaining = timeoutMs - static_cast<int>(timer.elapsed());
+        int waitMs = qMin(500, remaining);
+        if (waitMs <= 0)
+            break;
+
+        this->d->waitForCacheCondition.wait(&this->d->waitForCacheMutex, waitMs);
+    }
+
+    return QSharedPointer<XenObject>();
 }
