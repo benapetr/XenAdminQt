@@ -87,7 +87,13 @@ class NewVMWizard : public QWizard
         void onAddDiskClicked();
         void onEditDiskClicked();
         void onRemoveDiskClicked();
+        void onDisklessToggled(bool checked);
         void onNetworkTableSelectionChanged();
+        void onAddNetworkClicked();
+        void onEditNetworkClicked();
+        void onRemoveNetworkClicked();
+        void onNetworkContextMenuRequested(const QPoint& pos);
+        void onDiskContextMenuRequested(const QPoint& pos);
 
     private:
         XenCache* cache() const;

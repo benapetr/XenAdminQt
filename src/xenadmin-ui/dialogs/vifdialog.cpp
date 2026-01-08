@@ -42,22 +42,16 @@ VIFDialog::VIFDialog(XenConnection* connection, const QString& vmRef, int device
       m_deviceId(deviceId),
       m_isEditMode(false)
 {
-    ui->setupUi(this);
-    setWindowTitle(tr("Add Network Interface"));
+    this->ui->setupUi(this);
+    this->setWindowTitle(this->tr("Add Network Interface"));
 
     // Connect signals
-    connect(ui->comboBoxNetwork, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &VIFDialog::onNetworkChanged);
-    connect(ui->radioButtonAutogenerate, &QRadioButton::toggled,
-            this, &VIFDialog::onMACRadioChanged);
-    connect(ui->radioButtonManual, &QRadioButton::toggled,
-            this, &VIFDialog::onMACRadioChanged);
-    connect(ui->lineEditMAC, &QLineEdit::textChanged,
-            this, &VIFDialog::onMACTextChanged);
-    connect(ui->checkBoxQoS, &QCheckBox::toggled,
-            this, &VIFDialog::onQoSCheckboxChanged);
-    connect(ui->spinBoxQoS, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &VIFDialog::onQoSValueChanged);
+    connect(this->ui->comboBoxNetwork, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &VIFDialog::onNetworkChanged);
+    connect(this->ui->radioButtonAutogenerate, &QRadioButton::toggled, this, &VIFDialog::onMACRadioChanged);
+    connect(this->ui->radioButtonManual, &QRadioButton::toggled, this, &VIFDialog::onMACRadioChanged);
+    connect(this->ui->lineEditMAC, &QLineEdit::textChanged, this, &VIFDialog::onMACTextChanged);
+    connect(this->ui->checkBoxQoS, &QCheckBox::toggled, this, &VIFDialog::onQoSCheckboxChanged);
+    connect(this->ui->spinBoxQoS, QOverload<int>::of(&QSpinBox::valueChanged), this, &VIFDialog::onQoSValueChanged);
 }
 
 VIFDialog::VIFDialog(XenConnection* connection, const QString& vifRef, QWidget* parent)
@@ -68,59 +62,76 @@ VIFDialog::VIFDialog(XenConnection* connection, const QString& vifRef, QWidget* 
       m_deviceId(0),
       m_isEditMode(true)
 {
-    ui->setupUi(this);
-    setWindowTitle(tr("Virtual Interface Properties"));
+    this->ui->setupUi(this);
+    this->setWindowTitle(tr("Virtual Interface Properties"));
 
     // Get existing VIF data
-    if (m_connection && m_connection->GetCache() && !m_vifRef.isEmpty())
+    if (this->m_connection && this->m_connection->GetCache() && !this->m_vifRef.isEmpty())
     {
-        m_existingVif = m_connection->GetCache()->ResolveObjectData("VIF", m_vifRef);
-        m_vmRef = m_existingVif.value("VM").toString();
-        m_deviceId = m_existingVif.value("device").toInt();
+        this->m_existingVif = this->m_connection->GetCache()->ResolveObjectData("VIF", this->m_vifRef);
+        this->m_vmRef = this->m_existingVif.value("VM").toString();
+        this->m_deviceId = this->m_existingVif.value("device").toInt();
     }
 
     // Connect signals
-    connect(ui->comboBoxNetwork, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &VIFDialog::onNetworkChanged);
-    connect(ui->radioButtonAutogenerate, &QRadioButton::toggled,
-            this, &VIFDialog::onMACRadioChanged);
-    connect(ui->radioButtonManual, &QRadioButton::toggled,
-            this, &VIFDialog::onMACRadioChanged);
-    connect(ui->lineEditMAC, &QLineEdit::textChanged,
-            this, &VIFDialog::onMACTextChanged);
-    connect(ui->checkBoxQoS, &QCheckBox::toggled,
-            this, &VIFDialog::onQoSCheckboxChanged);
-    connect(ui->spinBoxQoS, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &VIFDialog::onQoSValueChanged);
+    connect(this->ui->comboBoxNetwork, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &VIFDialog::onNetworkChanged);
+    connect(this->ui->radioButtonAutogenerate, &QRadioButton::toggled, this, &VIFDialog::onMACRadioChanged);
+    connect(this->ui->radioButtonManual, &QRadioButton::toggled, this, &VIFDialog::onMACRadioChanged);
+    connect(this->ui->lineEditMAC, &QLineEdit::textChanged, this, &VIFDialog::onMACTextChanged);
+    connect(this->ui->checkBoxQoS, &QCheckBox::toggled, this, &VIFDialog::onQoSCheckboxChanged);
+    connect(this->ui->spinBoxQoS, QOverload<int>::of(&QSpinBox::valueChanged), this, &VIFDialog::onQoSValueChanged);
+}
+
+VIFDialog::VIFDialog(XenConnection* connection, const QVariantMap& existingVif, int deviceId, QWidget* parent)
+    : QDialog(parent),
+      ui(new Ui::VIFDialog),
+      m_connection(connection),
+      m_deviceId(deviceId),
+      m_existingVif(existingVif),
+      m_isEditMode(true)
+{
+    this->ui->setupUi(this);
+    this->setWindowTitle(tr("Virtual Interface Properties"));
+
+    if (this->m_existingVif.contains("VM"))
+        this->m_vmRef = this->m_existingVif.value("VM").toString();
+
+    // Connect signals
+    connect(this->ui->comboBoxNetwork, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &VIFDialog::onNetworkChanged);
+    connect(this->ui->radioButtonAutogenerate, &QRadioButton::toggled, this, &VIFDialog::onMACRadioChanged);
+    connect(this->ui->radioButtonManual, &QRadioButton::toggled, this, &VIFDialog::onMACRadioChanged);
+    connect(this->ui->lineEditMAC, &QLineEdit::textChanged, this, &VIFDialog::onMACTextChanged);
+    connect(this->ui->checkBoxQoS, &QCheckBox::toggled, this, &VIFDialog::onQoSCheckboxChanged);
+    connect(this->ui->spinBoxQoS, QOverload<int>::of(&QSpinBox::valueChanged), this, &VIFDialog::onQoSValueChanged);
 }
 
 VIFDialog::~VIFDialog()
 {
-    delete ui;
+    delete this->ui;
 }
 
 void VIFDialog::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
-    loadNetworks();
-    loadVifDetails();
-    validateInput();
+    this->loadNetworks();
+    this->loadVifDetails();
+    this->validateInput();
 }
 
 void VIFDialog::loadNetworks()
 {
     // C#: LoadNetworks() - loads all networks and filters them
-    ui->comboBoxNetwork->clear();
+    this->ui->comboBoxNetwork->clear();
 
-    if (!m_connection || !m_connection->GetCache())
+    if (!this->m_connection || !this->m_connection->GetCache())
         return;
 
-    QStringList networkRefs = m_connection->GetCache()->GetAllRefs("network");
+    QStringList networkRefs = this->m_connection->GetCache()->GetAllRefs("network");
     QList<QPair<QString, QString>> networks; // <ref, name>
 
     for (const QString& networkRef : networkRefs)
     {
-        QVariantMap networkData = m_connection->GetCache()->ResolveObjectData("network", networkRef);
+        QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
 
         // C#: if (!network.Show(Properties.Settings.Default.ShowHiddenVMs) || network.IsMember() || (network.IsSriov() && !allowSriov))
         //     continue;
@@ -149,63 +160,63 @@ void VIFDialog::loadNetworks()
     // Add to combobox
     for (const auto& network : networks)
     {
-        ui->comboBoxNetwork->addItem(network.second, network.first);
+        this->ui->comboBoxNetwork->addItem(network.second, network.first);
     }
 
-    if (ui->comboBoxNetwork->count() == 0)
+    if (this->ui->comboBoxNetwork->count() == 0)
     {
-        ui->comboBoxNetwork->addItem(tr("<None>"), QString());
+        this->ui->comboBoxNetwork->addItem(this->tr("<None>"), QString());
     }
 
-    ui->comboBoxNetwork->setCurrentIndex(0);
+    this->ui->comboBoxNetwork->setCurrentIndex(0);
 }
 
 void VIFDialog::loadVifDetails()
 {
     // C#: LoadDetails() - loads VIF settings if editing
 
-    if (!m_isEditMode || m_existingVif.isEmpty())
+    if (!this->m_isEditMode || this->m_existingVif.isEmpty())
     {
         // New VIF - use defaults
-        ui->radioButtonAutogenerate->setChecked(true);
-        ui->checkBoxQoS->setChecked(false);
+        this->ui->radioButtonAutogenerate->setChecked(true);
+        this->ui->checkBoxQoS->setChecked(false);
         return;
     }
 
     // Editing existing VIF - load its settings
 
     // Select the network
-    QString networkRef = m_existingVif.value("network").toString();
-    int networkIndex = ui->comboBoxNetwork->findData(networkRef);
+    QString networkRef = this->m_existingVif.value("network").toString();
+    int networkIndex = this->ui->comboBoxNetwork->findData(networkRef);
     if (networkIndex >= 0)
-        ui->comboBoxNetwork->setCurrentIndex(networkIndex);
+        this->ui->comboBoxNetwork->setCurrentIndex(networkIndex);
 
     // Load MAC address
-    QString mac = m_existingVif.value("MAC").toString();
+    QString mac = this->m_existingVif.value("MAC").toString();
     if (!mac.isEmpty())
     {
-        ui->radioButtonManual->setChecked(true);
-        ui->lineEditMAC->setText(mac);
+        this->ui->radioButtonManual->setChecked(true);
+        this->ui->lineEditMAC->setText(mac);
     } else
     {
-        ui->radioButtonAutogenerate->setChecked(true);
+        this->ui->radioButtonAutogenerate->setChecked(true);
     }
 
     // Load QoS settings
-    QString qosAlgorithm = m_existingVif.value("qos_algorithm_type").toString();
+    QString qosAlgorithm = this->m_existingVif.value("qos_algorithm_type").toString();
     if (qosAlgorithm == "ratelimit")
     {
-        ui->checkBoxQoS->setChecked(true);
+        this->ui->checkBoxQoS->setChecked(true);
 
-        QVariantMap qosParams = m_existingVif.value("qos_algorithm_params").toMap();
+        QVariantMap qosParams = this->m_existingVif.value("qos_algorithm_params").toMap();
         if (qosParams.contains("kbps"))
         {
             int kbps = qosParams.value("kbps").toInt();
-            ui->spinBoxQoS->setValue(kbps);
+            this->ui->spinBoxQoS->setValue(kbps);
         }
     } else
     {
-        ui->checkBoxQoS->setChecked(false);
+        this->ui->checkBoxQoS->setChecked(false);
     }
 }
 
@@ -216,23 +227,23 @@ QVariantMap VIFDialog::getVifSettings() const
     QVariantMap vif;
 
     // Copy existing VIF data if editing
-    if (m_isEditMode && !m_existingVif.isEmpty())
+    if (this->m_isEditMode && !this->m_existingVif.isEmpty())
     {
-        vif = m_existingVif;
+        vif = this->m_existingVif;
     }
 
     // Set/update fields
-    vif["network"] = getSelectedNetworkRef();
-    vif["MAC"] = getSelectedMAC();
-    vif["device"] = QString::number(m_deviceId);
-    vif["VM"] = m_vmRef;
+    vif["network"] = this->getSelectedNetworkRef();
+    vif["MAC"] = this->getSelectedMAC();
+    vif["device"] = QString::number(this->m_deviceId);
+    vif["VM"] = this->m_vmRef;
 
     // Set MTU from the network (XenServer requires this field)
     // C# Network class has default MTU of 1500 (Network.cs line 875)
-    QString networkRef = getSelectedNetworkRef();
-    if (!networkRef.isEmpty() && m_connection && m_connection->GetCache())
+    QString networkRef = this->getSelectedNetworkRef();
+    if (!networkRef.isEmpty() && this->m_connection && this->m_connection->GetCache())
     {
-        QVariantMap networkData = m_connection->GetCache()->ResolveObjectData("network", networkRef);
+        QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
         if (!networkData.isEmpty())
         {
             vif["MTU"] = networkData.value("MTU", 1500).toLongLong();
@@ -251,12 +262,12 @@ QVariantMap VIFDialog::getVifSettings() const
 
     // QoS settings - MUST set both qos_algorithm_type and qos_algorithm_params
     // C# VIFDialog.cs NewVif() method (lines 209-223)
-    if (ui->checkBoxQoS->isChecked())
+    if (this->ui->checkBoxQoS->isChecked())
     {
         vif["qos_algorithm_type"] = "ratelimit";
 
         QVariantMap qosParams;
-        qosParams["kbps"] = QString::number(ui->spinBoxQoS->value());
+        qosParams["kbps"] = QString::number(this->ui->spinBoxQoS->value());
         vif["qos_algorithm_params"] = qosParams;
     } else
     {
@@ -265,10 +276,10 @@ QVariantMap VIFDialog::getVifSettings() const
         vif["qos_algorithm_type"] = "";
 
         // Preserve the params even if QoS is disabled (C# behavior)
-        if (ui->spinBoxQoS->value() > 0)
+        if (this->ui->spinBoxQoS->value() > 0)
         {
             QVariantMap qosParams;
-            qosParams["kbps"] = QString::number(ui->spinBoxQoS->value());
+            qosParams["kbps"] = QString::number(this->ui->spinBoxQoS->value());
             vif["qos_algorithm_params"] = qosParams;
         } else
         {
@@ -284,40 +295,40 @@ bool VIFDialog::hasChanges() const
 {
     // C#: ChangesHaveBeenMade property
 
-    if (!m_isEditMode)
+    if (!this->m_isEditMode)
         return true;
 
-    if (m_existingVif.isEmpty())
+    if (this->m_existingVif.isEmpty())
         return true;
 
     // Check network
-    if (m_existingVif.value("network").toString() != getSelectedNetworkRef())
+    if (this->m_existingVif.value("network").toString() != this->getSelectedNetworkRef())
         return true;
 
     // Check MAC
-    if (m_existingVif.value("MAC").toString() != getSelectedMAC())
+    if (this->m_existingVif.value("MAC").toString() != this->getSelectedMAC())
         return true;
 
     // Check device
-    if (m_existingVif.value("device").toInt() != m_deviceId)
+    if (this->m_existingVif.value("device").toInt() != this->m_deviceId)
         return true;
 
     // Check QoS
-    QString existingQoS = m_existingVif.value("qos_algorithm_type").toString();
+    QString existingQoS = this->m_existingVif.value("qos_algorithm_type").toString();
     if (existingQoS == "ratelimit")
     {
-        if (!ui->checkBoxQoS->isChecked())
+        if (!this->ui->checkBoxQoS->isChecked())
             return true;
 
-        QVariantMap existingParams = m_existingVif.value("qos_algorithm_params").toMap();
+        QVariantMap existingParams = this->m_existingVif.value("qos_algorithm_params").toMap();
         QString existingKbps = existingParams.value("kbps").toString();
-        QString currentKbps = QString::number(ui->spinBoxQoS->value());
+        QString currentKbps = QString::number(this->ui->spinBoxQoS->value());
 
         if (existingKbps != currentKbps)
             return true;
     } else if (existingQoS.isEmpty())
     {
-        if (ui->checkBoxQoS->isChecked())
+        if (this->ui->checkBoxQoS->isChecked())
             return true;
     }
 
@@ -326,31 +337,31 @@ bool VIFDialog::hasChanges() const
 
 QString VIFDialog::getSelectedNetworkRef() const
 {
-    int index = ui->comboBoxNetwork->currentIndex();
+    int index = this->ui->comboBoxNetwork->currentIndex();
     if (index < 0)
         return QString();
 
-    return ui->comboBoxNetwork->itemData(index).toString();
+    return this->ui->comboBoxNetwork->itemData(index).toString();
 }
 
 QString VIFDialog::getSelectedMAC() const
 {
     // C#: SelectedMac property
-    if (ui->radioButtonAutogenerate->isChecked())
+    if (this->ui->radioButtonAutogenerate->isChecked())
         return QString(); // Empty string means autogenerate
 
-    return ui->lineEditMAC->text();
+    return this->ui->lineEditMAC->text();
 }
 
 bool VIFDialog::isValidNetwork(QString* error) const
 {
     // C#: IsValidNetwork()
-    QString networkRef = getSelectedNetworkRef();
+    QString networkRef = this->getSelectedNetworkRef();
 
     if (networkRef.isEmpty())
     {
         if (error)
-            *error = tr("Please select a network");
+            *error = this->tr("Please select a network");
         return false;
     }
 
@@ -361,15 +372,15 @@ bool VIFDialog::isValidMAC(QString* error) const
 {
     // C#: IsValidMAc()
 
-    if (ui->radioButtonAutogenerate->isChecked())
+    if (this->ui->radioButtonAutogenerate->isChecked())
         return true;
 
-    QString mac = ui->lineEditMAC->text().trimmed();
+    QString mac = this->ui->lineEditMAC->text().trimmed();
 
     if (mac.isEmpty())
     {
         if (error)
-            *error = tr("Please enter a MAC address or select autogenerate");
+            *error = this->tr("Please enter a MAC address or select autogenerate");
         return false;
     }
 
@@ -379,7 +390,7 @@ bool VIFDialog::isValidMAC(QString* error) const
     if (!macRegex.match(mac).hasMatch())
     {
         if (error)
-            *error = tr("Invalid MAC address format. Use format: aa:bb:cc:dd:ee:ff");
+            *error = this->tr("Invalid MAC address format. Use format: aa:bb:cc:dd:ee:ff");
         return false;
     }
 
@@ -390,14 +401,14 @@ bool VIFDialog::isValidQoS(QString* error) const
 {
     // C#: IsValidQoSLimit()
 
-    if (!ui->checkBoxQoS->isChecked())
+    if (!this->ui->checkBoxQoS->isChecked())
         return true;
 
-    int value = ui->spinBoxQoS->value();
+    int value = this->ui->spinBoxQoS->value();
     if (value <= 0)
     {
         if (error)
-            *error = tr("Please enter a valid QoS limit (must be greater than 0)");
+            *error = this->tr("Please enter a valid QoS limit (must be greater than 0)");
         return false;
     }
 
@@ -411,20 +422,20 @@ bool VIFDialog::isDuplicateMAC(const QString& mac) const
     if (mac.isEmpty())
         return false; // Autogenerated MACs won't conflict
 
-    if (!m_connection || !m_connection->GetCache())
+    if (!this->m_connection || !this->m_connection->GetCache())
         return false;
 
     QString normalizedMAC = mac.toLower().remove(':').remove('-');
 
     // Check all VIFs in the cache
-    QStringList vifRefs = m_connection->GetCache()->GetAllRefs("VIF");
+    QStringList vifRefs = this->m_connection->GetCache()->GetAllRefs("VIF");
     for (const QString& vifRef : vifRefs)
     {
         // Skip the VIF we're editing
-        if (m_isEditMode && vifRef == m_vifRef)
+        if (this->m_isEditMode && vifRef == this->m_vifRef)
             continue;
 
-        QVariantMap vifData = m_connection->GetCache()->ResolveObjectData("VIF", vifRef);
+        QVariantMap vifData = this->m_connection->GetCache()->ResolveObjectData("VIF", vifRef);
         QString existingMAC = vifData.value("MAC").toString();
         QString normalizedExisting = existingMAC.toLower().remove(':').remove('-');
 
@@ -432,7 +443,7 @@ bool VIFDialog::isDuplicateMAC(const QString& mac) const
         {
             // Check if the VM is a real VM (not a template)
             QString vmRef = vifData.value("VM").toString();
-            QVariantMap vmData = m_connection->GetCache()->ResolveObjectData("vm", vmRef);
+            QVariantMap vmData = this->m_connection->GetCache()->ResolveObjectData("vm", vmRef);
             bool isTemplate = vmData.value("is_a_template", false).toBool();
             bool isSnapshot = vmData.value("is_a_snapshot", false).toBool();
 
@@ -451,71 +462,71 @@ void VIFDialog::validateInput()
     QString error;
     bool valid = true;
 
-    if (!isValidNetwork(&error))
+    if (!this->isValidNetwork(&error))
     {
         valid = false;
-    } else if (!isValidMAC(&error))
+    } else if (!this->isValidMAC(&error))
     {
         valid = false;
-    } else if (!isValidQoS(&error))
+    } else if (!this->isValidQoS(&error))
     {
         valid = false;
     }
 
     // Update OK button and error display
-    ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(valid);
+    this->ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(valid);
 
     if (!valid && !error.isEmpty())
     {
-        ui->errorWidget->setVisible(true);
-        ui->labelError->setText(error);
+        this->ui->errorWidget->setVisible(true);
+        this->ui->labelError->setText(error);
     } else
     {
-        ui->errorWidget->setVisible(false);
+        this->ui->errorWidget->setVisible(false);
     }
 }
 
 void VIFDialog::onNetworkChanged()
 {
-    validateInput();
+    this->validateInput();
 }
 
 void VIFDialog::onMACRadioChanged()
 {
     // Enable/disable MAC text field based on radio selection
-    bool manualMode = ui->radioButtonManual->isChecked();
-    ui->lineEditMAC->setEnabled(manualMode);
+    bool manualMode = this->ui->radioButtonManual->isChecked();
+    this->ui->lineEditMAC->setEnabled(manualMode);
 
     if (manualMode)
-        ui->lineEditMAC->setFocus();
+        this->ui->lineEditMAC->setFocus();
 
-    validateInput();
+    this->validateInput();
 }
 
 void VIFDialog::onMACTextChanged()
 {
     // Auto-select manual radio when typing
-    if (!ui->lineEditMAC->text().isEmpty())
-        ui->radioButtonManual->setChecked(true);
+    if (!this->ui->lineEditMAC->text().isEmpty())
+        this->ui->radioButtonManual->setChecked(true);
 
-    validateInput();
+    this->validateInput();
 }
 
 void VIFDialog::onQoSCheckboxChanged()
 {
     // Enable/disable QoS fields based on checkbox
-    bool enabled = ui->checkBoxQoS->isChecked();
-    ui->labelQoS->setEnabled(enabled);
-    ui->spinBoxQoS->setEnabled(enabled);
+    bool enabled = this->ui->checkBoxQoS->isChecked();
+    this->ui->labelQoS->setEnabled(enabled);
+    this->ui->spinBoxQoS->setEnabled(enabled);
 
-    validateInput();
+    this->validateInput();
 }
 
 void VIFDialog::onQoSValueChanged()
 {
     // Auto-check QoS checkbox when changing value
-    if (ui->spinBoxQoS->value() > 0 && !ui->checkBoxQoS->isChecked())
-        ui->checkBoxQoS->setChecked(true);
+    if (this->ui->spinBoxQoS->value() > 0 && !this->ui->checkBoxQoS->isChecked())
+        this->ui->checkBoxQoS->setChecked(true);
 
-    validateInput();
+    this->validateInput();
 }

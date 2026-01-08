@@ -37,6 +37,7 @@
 #include "xen/sr.h"
 #include "vmhelpers.h"
 #include "newvirtualdiskdialog.h"
+#include "vifdialog.h"
 #include "../widgets/wizardnavigationpane.h"
 #include "../widgets/isodropdownbox.h"
 #include "../settingsmanager.h"
@@ -77,10 +78,22 @@ NewVMWizard::NewVMWizard(XenConnection* connection, QWidget* parent)
     connect(this->ui->addDiskButton, &QPushButton::clicked, this, &NewVMWizard::onAddDiskClicked);
     connect(this->ui->editDiskButton, &QPushButton::clicked, this, &NewVMWizard::onEditDiskClicked);
     connect(this->ui->removeDiskButton, &QPushButton::clicked, this, &NewVMWizard::onRemoveDiskClicked);
+    connect(this->ui->disklessCheckBox, &QCheckBox::toggled, this, &NewVMWizard::onDisklessToggled);
     connect(this->ui->networkTable, &QTableWidget::itemSelectionChanged, this, &NewVMWizard::onNetworkTableSelectionChanged);
+    connect(this->ui->addNetworkButton, &QPushButton::clicked, this, &NewVMWizard::onAddNetworkClicked);
+    connect(this->ui->editNetworkButton, &QPushButton::clicked, this, &NewVMWizard::onEditNetworkClicked);
+    connect(this->ui->removeNetworkButton, &QPushButton::clicked, this, &NewVMWizard::onRemoveNetworkClicked);
+
+    this->ui->networkTable->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(this->ui->networkTable, &QTableWidget::customContextMenuRequested,
+            this, &NewVMWizard::onNetworkContextMenuRequested);
+    this->ui->diskTable->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(this->ui->diskTable, &QTableWidget::customContextMenuRequested,
+            this, &NewVMWizard::onDiskContextMenuRequested);
 
     this->updateIsoControls();
     this->updateHomeServerControls(false);
+    this->onDisklessToggled(this->ui->disklessCheckBox->isChecked());
 
     this->loadStorageRepositories();
     this->loadNetworks();
@@ -782,6 +795,8 @@ bool NewVMWizard::validateCurrentPage()
         break;
     }
     case Page_Storage:
+        if (this->ui->disklessCheckBox->isChecked())
+            break;
         if (this->m_disks.isEmpty())
         {
             QMessageBox::warning(this, tr("Storage Configuration"),
@@ -875,21 +890,24 @@ void NewVMWizard::createVirtualMachine()
         bootMode = CreateVMAction::BootMode::SecureUefi;
 
     QList<CreateVMAction::DiskConfig> disks;
-    for (const DiskConfig& disk : this->m_disks)
+    if (!this->ui->disklessCheckBox->isChecked())
     {
-        CreateVMAction::DiskConfig config;
-        config.vdiRef = disk.vdiRef;
-        config.srRef = disk.srRef;
-        config.sizeBytes = disk.sizeBytes;
-        config.device = disk.device;
-        config.bootable = disk.bootable;
-        config.nameLabel = disk.name;
-        config.nameDescription = disk.description;
-        config.mode = disk.mode;
-        config.vdiType = disk.vdiType;
-        config.sharable = disk.sharable;
-        config.readOnly = disk.readOnly;
-        disks.append(config);
+        for (const DiskConfig& disk : this->m_disks)
+        {
+            CreateVMAction::DiskConfig config;
+            config.vdiRef = disk.vdiRef;
+            config.srRef = disk.srRef;
+            config.sizeBytes = disk.sizeBytes;
+            config.device = disk.device;
+            config.bootable = disk.bootable;
+            config.nameLabel = disk.name;
+            config.nameDescription = disk.description;
+            config.mode = disk.mode;
+            config.vdiType = disk.vdiType;
+            config.sharable = disk.sharable;
+            config.readOnly = disk.readOnly;
+            disks.append(config);
+        }
     }
 
     QList<CreateVMAction::VifConfig> vifs;
@@ -1057,8 +1075,25 @@ void NewVMWizard::onDefaultSrChanged(int index)
         this->applyDefaultSRToDisks(srRef);
 }
 
+void NewVMWizard::onDisklessToggled(bool checked)
+{
+    bool enableDisks = !checked;
+    this->ui->diskTable->setEnabled(enableDisks);
+    this->ui->addDiskButton->setEnabled(enableDisks);
+    this->ui->editDiskButton->setEnabled(enableDisks && !this->ui->diskTable->selectedItems().isEmpty());
+    this->ui->removeDiskButton->setEnabled(enableDisks && !this->ui->diskTable->selectedItems().isEmpty());
+    this->ui->storageOptionsGroup->setEnabled(enableDisks);
+}
+
 void NewVMWizard::onDiskTableSelectionChanged()
 {
+    if (this->ui->disklessCheckBox->isChecked())
+    {
+        this->ui->editDiskButton->setEnabled(false);
+        this->ui->removeDiskButton->setEnabled(false);
+        return;
+    }
+
     bool hasSelection = !this->ui->diskTable->selectedItems().isEmpty();
     this->ui->editDiskButton->setEnabled(hasSelection);
     if (!hasSelection)
@@ -1170,7 +1205,133 @@ void NewVMWizard::onRemoveDiskClicked()
 void NewVMWizard::onNetworkTableSelectionChanged()
 {
     bool hasSelection = !this->ui->networkTable->selectedItems().isEmpty();
+    this->ui->editNetworkButton->setEnabled(hasSelection);
     this->ui->removeNetworkButton->setEnabled(hasSelection);
+}
+
+void NewVMWizard::onAddNetworkClicked()
+{
+    if (!this->m_connection)
+        return;
+
+    int nextDeviceId = 0;
+    for (const NetworkConfig& network : this->m_networks)
+    {
+        bool ok = false;
+        int deviceId = network.device.toInt(&ok);
+        if (ok && deviceId >= nextDeviceId)
+            nextDeviceId = deviceId + 1;
+    }
+
+    VIFDialog dialog(this->m_connection, QString(), nextDeviceId, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    QVariantMap vif = dialog.getVifSettings();
+    NetworkConfig config;
+    config.networkRef = vif.value("network").toString();
+    config.device = vif.value("device").toString();
+    config.mac = vif.value("MAC").toString();
+
+    if (config.networkRef.isEmpty())
+    {
+        QMessageBox::warning(this, tr("Add NIC"), tr("Please select a network."));
+        return;
+    }
+
+    this->m_networks.append(config);
+    this->updateNetworkTable();
+}
+
+void NewVMWizard::onEditNetworkClicked()
+{
+    if (!this->m_connection)
+        return;
+
+    int row = this->ui->networkTable->currentRow();
+    if (row < 0 || row >= this->m_networks.size())
+        return;
+
+    NetworkConfig& existing = this->m_networks[row];
+    bool ok = false;
+    int deviceId = existing.device.toInt(&ok);
+    if (!ok)
+        deviceId = row;
+
+    QVariantMap vif;
+    vif["network"] = existing.networkRef;
+    vif["MAC"] = existing.mac;
+    vif["device"] = QString::number(deviceId);
+    vif["qos_algorithm_type"] = "";
+    vif["qos_algorithm_params"] = QVariantMap();
+
+    VIFDialog dialog(this->m_connection, vif, deviceId, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    QVariantMap updated = dialog.getVifSettings();
+    existing.networkRef = updated.value("network").toString();
+    existing.device = updated.value("device").toString();
+    existing.mac = updated.value("MAC").toString();
+
+    if (existing.networkRef.isEmpty())
+    {
+        QMessageBox::warning(this, tr("Edit NIC"), tr("Please select a network."));
+        return;
+    }
+
+    this->updateNetworkTable();
+}
+
+void NewVMWizard::onRemoveNetworkClicked()
+{
+    int row = this->ui->networkTable->currentRow();
+    if (row < 0 || row >= this->m_networks.size())
+        return;
+
+    this->m_networks.removeAt(row);
+    this->updateNetworkTable();
+}
+
+void NewVMWizard::onNetworkContextMenuRequested(const QPoint& pos)
+{
+    QMenu menu(this);
+    QAction* addAction = menu.addAction(tr("Add NIC..."));
+    QAction* editAction = menu.addAction(tr("Properties..."));
+    QAction* removeAction = menu.addAction(tr("Remove"));
+
+    bool hasSelection = !this->ui->networkTable->selectedItems().isEmpty();
+    editAction->setEnabled(hasSelection);
+    removeAction->setEnabled(hasSelection);
+
+    QAction* chosen = menu.exec(this->ui->networkTable->viewport()->mapToGlobal(pos));
+    if (chosen == addAction)
+        this->onAddNetworkClicked();
+    else if (chosen == editAction)
+        this->onEditNetworkClicked();
+    else if (chosen == removeAction)
+        this->onRemoveNetworkClicked();
+}
+
+void NewVMWizard::onDiskContextMenuRequested(const QPoint& pos)
+{
+    QMenu menu(this);
+    QAction* addAction = menu.addAction(tr("Add..."));
+    QAction* editAction = menu.addAction(tr("Edit..."));
+    QAction* removeAction = menu.addAction(tr("Remove"));
+
+    int row = this->ui->diskTable->currentRow();
+    bool hasSelection = row >= 0 && row < this->m_disks.size();
+    editAction->setEnabled(hasSelection);
+    removeAction->setEnabled(hasSelection && this->m_disks[row].canDelete);
+
+    QAction* chosen = menu.exec(this->ui->diskTable->viewport()->mapToGlobal(pos));
+    if (chosen == addAction)
+        this->onAddDiskClicked();
+    else if (chosen == editAction)
+        this->onEditDiskClicked();
+    else if (chosen == removeAction)
+        this->onRemoveDiskClicked();
 }
 
 XenCache* NewVMWizard::cache() const

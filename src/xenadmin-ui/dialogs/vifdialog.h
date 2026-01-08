@@ -59,74 +59,78 @@ class VIFDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Constructor for creating a new VIF
-     * @param xenLib XenLib instance
-     * @param vmRef VM opaque reference
-     * @param deviceId Device ID for the new VIF
-     * @param parent Parent widget
-     */
-    explicit VIFDialog(XenConnection* connection,
-                       const QString& vmRef,
-                       int deviceId,
-                       QWidget* parent = nullptr);
+    public:
+        /**
+         * @brief Constructor for creating a new VIF
+         * @param xenLib XenLib instance
+         * @param vmRef VM opaque reference
+         * @param deviceId Device ID for the new VIF
+         * @param parent Parent widget
+         */
+        explicit VIFDialog(XenConnection* connection, const QString& vmRef, int deviceId, QWidget* parent = nullptr);
 
-    /**
-     * @brief Constructor for editing an existing VIF
-     * @param xenLib XenLib instance
-     * @param vifRef VIF opaque reference to edit
-     * @param parent Parent widget
-     */
-    explicit VIFDialog(XenConnection* connection,
-                       const QString& vifRef,
-                       QWidget* parent = nullptr);
+        /**
+         * @brief Constructor for editing an existing VIF
+         * @param xenLib XenLib instance
+         * @param vifRef VIF opaque reference to edit
+         * @param parent Parent widget
+         */
+        explicit VIFDialog(XenConnection* connection, const QString& vifRef, QWidget* parent = nullptr);
 
-    ~VIFDialog();
+        /**
+         * @brief Constructor for editing a pending VIF settings map (wizard usage)
+         * @param connection XenConnection instance
+         * @param existingVif VIF settings map to prefill
+         * @param deviceId Device ID for the VIF
+         * @param parent Parent widget
+         */
+        explicit VIFDialog(XenConnection* connection, const QVariantMap& existingVif, int deviceId, QWidget* parent = nullptr);
 
-    /**
-     * @brief Get the configured VIF settings
-     * @return VIF record as QVariantMap
-     *
-     * For new VIFs: contains network, MAC, device, qos_algorithm_type, qos_algorithm_params
-     * For existing VIFs: contains all VIF fields with updated values
-     */
-    QVariantMap getVifSettings() const;
+        ~VIFDialog();
 
-    /**
-     * @brief Check if any changes were made (for edit mode)
-     * @return true if settings changed from original
-     */
-    bool hasChanges() const;
+        /**
+         * @brief Get the configured VIF settings
+         * @return VIF record as QVariantMap
+         *
+         * For new VIFs: contains network, MAC, device, qos_algorithm_type, qos_algorithm_params
+         * For existing VIFs: contains all VIF fields with updated values
+         */
+        QVariantMap getVifSettings() const;
 
-protected:
-    void showEvent(QShowEvent* event) override;
+        /**
+         * @brief Check if any changes were made (for edit mode)
+         * @return true if settings changed from original
+         */
+        bool hasChanges() const;
 
-private slots:
-    void onNetworkChanged();
-    void onMACRadioChanged();
-    void onMACTextChanged();
-    void onQoSCheckboxChanged();
-    void onQoSValueChanged();
-    void validateInput();
+    protected:
+        void showEvent(QShowEvent* event) override;
 
-private:
-    void loadNetworks();
-    void loadVifDetails();
-    bool isValidNetwork(QString* error = nullptr) const;
-    bool isValidMAC(QString* error = nullptr) const;
-    bool isValidQoS(QString* error = nullptr) const;
-    QString getSelectedNetworkRef() const;
-    QString getSelectedMAC() const;
-    bool isDuplicateMAC(const QString& mac) const;
+    private slots:
+        void onNetworkChanged();
+        void onMACRadioChanged();
+        void onMACTextChanged();
+        void onQoSCheckboxChanged();
+        void onQoSValueChanged();
+        void validateInput();
 
-    Ui::VIFDialog* ui;
-    XenConnection* m_connection;
-    QString m_vmRef;           // VM reference (for new VIFs)
-    QString m_vifRef;          // VIF reference (for editing)
-    int m_deviceId;            // Device ID for new VIF
-    QVariantMap m_existingVif; // Original VIF data (for editing)
-    bool m_isEditMode;         // true if editing existing VIF
+    private:
+        void loadNetworks();
+        void loadVifDetails();
+        bool isValidNetwork(QString* error = nullptr) const;
+        bool isValidMAC(QString* error = nullptr) const;
+        bool isValidQoS(QString* error = nullptr) const;
+        QString getSelectedNetworkRef() const;
+        QString getSelectedMAC() const;
+        bool isDuplicateMAC(const QString& mac) const;
+
+        Ui::VIFDialog* ui;
+        XenConnection* m_connection;
+        QString m_vmRef;           // VM reference (for new VIFs)
+        QString m_vifRef;          // VIF reference (for editing)
+        int m_deviceId;            // Device ID for new VIF
+        QVariantMap m_existingVif; // Original VIF data (for editing)
+        bool m_isEditMode;         // true if editing existing VIF
 };
 
 #endif // VIFDIALOG_H

@@ -538,6 +538,13 @@
      </layout>
     </item>
     <item>
+     <widget class="QCheckBox" name="disklessCheckBox">
+      <property name="text">
+       <string>Create VM without disks</string>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QGroupBox" name="storageOptionsGroup">
       <property name="title">
        <string>Storage options</string>
@@ -623,6 +630,16 @@
        <widget class="QPushButton" name="addNetworkButton">
         <property name="text">
          <string>Add NIC...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="editNetworkButton">
+        <property name="text">
+         <string>Properties...</string>
+        </property>
+        <property name="enabled">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
