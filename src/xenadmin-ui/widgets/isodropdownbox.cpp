@@ -204,7 +204,13 @@ void IsoDropDownBox::refresh()
         if (!isSrVisibleToHost(srData, cache, hostRef))
             continue;
 
-        // This is some weird broken logic ported over, when it's there guest tools never appear in picker
+        // NOTE: C# hides Tools SRs on Stockholm+ (Citrix Xen 8.0+) in the ISO picker.
+        // For XCP-ng, the tools SR is often named "XCP-ng Tools" and may not be flagged
+        // as tools in the same way as Citrix ("XenServer Tools"/is_tools_sr). When we
+        // treated this SR as tools, the Stockholm+ filter hid it entirely, so
+        // guest-tools.iso disappeared from the picker. We keep this disabled to
+        // preserve access to guest-tools.iso until this logic is fixed.
+
         //bool toolsSr = isToolsSr(cache, srData);
         //if (toolsSr && stockholmOrGreater)
         //    continue;
