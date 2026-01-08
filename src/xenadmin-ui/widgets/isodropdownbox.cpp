@@ -32,23 +32,22 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 #include "xenlib/xen/apiversion.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/vdi.h"
 #include <QStandardItemModel>
 #include <QSignalBlocker>
 #include <algorithm>
 
 namespace
 {
-bool isToolsSr(const QVariantMap& srData)
+bool isToolsSr(XenCache* cache, const QVariantMap& srData)
 {
     if (srData.value("is_tools_sr", false).toBool())
         return true;
-    return srData.value("type").toString() == "udev";
-}
 
-bool isToolsIsoName(const QString& name)
-{
-    QString lower = name.toLower();
-    return lower.contains("tools") && lower.endsWith(".iso");
+    const QString srRef = srData.value("ref").toString();
+    QSharedPointer<SR> sr = cache ? cache->ResolveObject<SR>("sr", srRef) : QSharedPointer<SR>();
+    return sr && sr->IsToolsSR();
 }
 
 bool isSrVisibleToHost(const QVariantMap& srData, XenCache* cache, const QString& hostRef)
@@ -205,9 +204,10 @@ void IsoDropDownBox::refresh()
         if (!isSrVisibleToHost(srData, cache, hostRef))
             continue;
 
-        bool toolsSr = isToolsSr(srData);
-        if (toolsSr && stockholmOrGreater)
-            continue;
+        // This is some weird broken logic ported over, when it's there guest tools never appear in picker
+        //bool toolsSr = isToolsSr(cache, srData);
+        //if (toolsSr && stockholmOrGreater)
+        //    continue;
 
         QString name = srData.value("name_label").toString();
         if (name.isEmpty())
@@ -235,7 +235,7 @@ void IsoDropDownBox::refresh()
 
         QList<QPair<QString, QString>> vdiEntries;
         const QVariantList vdiRefs = srEntry.data.value("VDIs").toList();
-        bool toolsSr = isToolsSr(srEntry.data);
+        bool toolsSr = isToolsSr(cache, srEntry.data);
         bool toolsIsoOnly = toolsSr && !stockholmOrGreater;
 
         for (const QVariant& vdiRefVar : vdiRefs)
@@ -258,8 +258,12 @@ void IsoDropDownBox::refresh()
             if (name.isEmpty())
                 continue;
 
-            if (toolsIsoOnly && !isToolsIsoName(name))
-                continue;
+            if (toolsIsoOnly)
+            {
+                QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>("vdi", vdiRef);
+                if (!vdi || !vdi->IsToolsIso())
+                    continue;
+            }
 
             vdiEntries.append({name, vdiRef});
         }
