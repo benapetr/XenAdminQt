@@ -152,12 +152,12 @@ QStringList VM::GetVBDRefs() const
     return stringListProperty("VBDs");
 }
 
-QStringList VM::VIFRefs() const
+QStringList VM::GetVIFRefs() const
 {
     return stringListProperty("VIFs");
 }
 
-QStringList VM::ConsoleRefs() const
+QStringList VM::GetConsoleRefs() const
 {
     return stringListProperty("consoles");
 }
@@ -167,12 +167,12 @@ QString VM::SnapshotOfRef() const
     return stringProperty("snapshot_of");
 }
 
-QStringList VM::SnapshotRefs() const
+QStringList VM::GetSnapshotRefs() const
 {
     return stringListProperty("snapshots");
 }
 
-QString VM::SuspendVDIRef() const
+QString VM::GetSuspendVDIRef() const
 {
     return stringProperty("suspend_VDI");
 }
@@ -854,7 +854,7 @@ QString VM::MetricsRef() const
     return this->stringProperty("metrics");
 }
 
-QString VM::GuestMetricsRef() const
+QString VM::GetGuestMetricsRef() const
 {
     return this->stringProperty("guest_metrics");
 }
@@ -1117,7 +1117,7 @@ QString VM::GetOSName() const
     if (!this->IsRealVM())
         return QString();
     
-    QString guestMetricsRef = this->GuestMetricsRef();
+    QString guestMetricsRef = this->GetGuestMetricsRef();
     if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
         return QString();
     
@@ -1152,7 +1152,7 @@ int VM::GetVirtualizationStatus() const
     if (!this->IsRealVM())
         return 0; // NotInstalled
     
-    QString guestMetricsRef = this->GuestMetricsRef();
+    QString guestMetricsRef = this->GetGuestMetricsRef();
     if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
         return 0; // NotInstalled
     
@@ -1211,7 +1211,7 @@ QList<ComparableAddress> VM::GetIPAddresses() const
     if (!this->IsRealVM())
         return addresses;
     
-    QString guestMetricsRef = this->GuestMetricsRef();
+    QString guestMetricsRef = this->GetGuestMetricsRef();
     if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
         return addresses;
     
@@ -1256,7 +1256,7 @@ qint64 VM::GetStartTime() const
     // C# equivalent: VM.GetStartTime()
     // Gets start_time from guest_metrics or metrics
     
-    QString guestMetricsRef = this->GuestMetricsRef();
+    QString guestMetricsRef = this->GetGuestMetricsRef();
     if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
     {
         XenConnection* conn = this->GetConnection();

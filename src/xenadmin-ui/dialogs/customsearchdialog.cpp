@@ -35,14 +35,10 @@ CustomSearchDialog::CustomSearchDialog(QWidget* parent) : QDialog(parent), ui(ne
     this->ui->setupUi(this);
     
     // Connect buttons
-    connect(this->ui->selectAllButton, &QPushButton::clicked,
-            this, &CustomSearchDialog::onSelectAllClicked);
-    connect(this->ui->clearAllButton, &QPushButton::clicked,
-            this, &CustomSearchDialog::onClearAllClicked);
-    connect(this->ui->buttonBox, &QDialogButtonBox::accepted,
-            this, &QDialog::accept);
-    connect(this->ui->buttonBox, &QDialogButtonBox::rejected,
-            this, &QDialog::reject);
+    connect(this->ui->selectAllButton, &QPushButton::clicked, this, &CustomSearchDialog::onSelectAllClicked);
+    connect(this->ui->clearAllButton, &QPushButton::clicked, this, &CustomSearchDialog::onClearAllClicked);
+    connect(this->ui->buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
+    connect(this->ui->buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }
 
 CustomSearchDialog::~CustomSearchDialog()

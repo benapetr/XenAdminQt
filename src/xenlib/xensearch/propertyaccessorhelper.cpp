@@ -172,7 +172,7 @@ QString PropertyAccessorHelper::vmNetworkUsageString(VM* vm)
         return "-";
     
     QString vmUuid = vm->GetUUID();
-    QStringList vifRefs = vm->VIFRefs();
+    QStringList vifRefs = vm->GetVIFRefs();
     
     double sum = 0.0;
     double max = 0.0;

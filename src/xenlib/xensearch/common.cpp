@@ -813,7 +813,7 @@ QVariant PropertyAccessors::NetworksProperty(XenObject* o)
         XenCache* cache = vm->GetConnection()->GetCache();
         if (cache)
         {
-            QStringList vifRefs = vm->VIFRefs();
+            QStringList vifRefs = vm->GetVIFRefs();
             for (const QString& vifRef : vifRefs)
             {
                 QVariantMap vifData = cache->ResolveObjectData("VIF", vifRef);
@@ -1064,14 +1064,14 @@ QVariant PropertyAccessors::IPAddressProperty(XenObject* o)
     VM* vm = qobject_cast<VM*>(o);
     if (vm && vm->IsRealVM())
     {
-        QString guestMetricsRef = vm->GuestMetricsRef();
+        QString guestMetricsRef = vm->GetGuestMetricsRef();
         if (guestMetricsRef.isEmpty())
             return QVariant();
         
         QVariantMap metricsData = cache->ResolveObjectData("VM_guest_metrics", guestMetricsRef);
         QVariantMap networks = metricsData.value("networks").toMap();
         
-        QStringList vifRefs = vm->VIFRefs();
+        QStringList vifRefs = vm->GetVIFRefs();
         for (const QString& vifRef : vifRefs)
         {
             QVariantMap vifData = cache->ResolveObjectData("VIF", vifRef);

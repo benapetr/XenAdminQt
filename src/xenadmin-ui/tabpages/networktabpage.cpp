@@ -27,21 +27,24 @@
 
 #include "networktabpage.h"
 #include "ui_networktabpage.h"
-#include "xen/session.h"
-#include "xen/vm.h"
-#include "xen/vif.h"
-#include "xencache.h"
-#include "xen/xenapi/xenapi_Network.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/vif.h"
+#include "xenlib/xen/network.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/xenapi/xenapi_Network.h"
 #include "../dialogs/newnetworkwizard.h"
 #include "../dialogs/networkpropertiesdialog.h"
 #include "../dialogs/networkingpropertiesdialog.h"
 #include "../dialogs/vifdialog.h"
 #include "../dialogs/operationprogressdialog.h"
-#include "xen/actions/vif/deletevifaction.h"
-#include "xen/actions/vif/plugvifaction.h"
-#include "xen/actions/vif/unplugvifaction.h"
-#include "xen/actions/vif/createvifaction.h"
-#include "xen/actions/vif/updatevifaction.h"
+#include "xenlib/xen/actions/vif/deletevifaction.h"
+#include "xenlib/xen/actions/vif/plugvifaction.h"
+#include "xenlib/xen/actions/vif/unplugvifaction.h"
+#include "xenlib/xen/actions/vif/createvifaction.h"
+#include "xenlib/xen/actions/vif/updatevifaction.h"
+#include "xen/pif.h"
 #include <QTableWidgetItem>
 #include <QMessageBox>
 #include <QDebug>
@@ -208,14 +211,22 @@ void NetworkTabPage::populateVIFsForVM()
     // Clear the table
     this->ui->networksTable->setRowCount(0);
 
-    if (!this->m_connection || !this->m_connection->GetCache())
+    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+
+    if (!vm)
     {
-        qDebug() << "NetworkTabPage::populateVIFsForVM - No connection/cache";
+        qDebug() << "NetworkTabPage::populateVIFsForVM - No object";
+        return;
+    }
+
+    if (!vm->GetConnection())
+    {
+        qDebug() << "NetworkTabPage::populateVIFsForVM - No connection";
         return;
     }
 
     // Get VM reference and record
-    QString vmRef = this->m_objectData.value("ref").toString();
+    QString vmRef = vm->OpaqueRef();
     if (vmRef.isEmpty())
     {
         qDebug() << "NetworkTabPage::populateVIFsForVM - No VM reference";
@@ -224,9 +235,7 @@ void NetworkTabPage::populateVIFsForVM()
 
     // Match C# logic: Get VIF refs from VM record, then resolve from cache
     // C#: List<VIF> vifs = vm.Connection.ResolveAll(vm.VIFs);
-    QVariantList vifRefs = this->m_objectData.value("VIFs", QVariantList()).toList();
-    //qDebug() << "NetworkTabPage::populateVIFsForVM - VM has" << vifRefs.size() << "VIFs";
-
+    QStringList vifRefs = vm->GetVIFRefs();
     if (vifRefs.isEmpty())
     {
         qDebug() << "NetworkTabPage::populateVIFsForVM - No VIFs found for VM";
@@ -235,11 +244,11 @@ void NetworkTabPage::populateVIFsForVM()
 
     // Get guest_metrics reference for IP addresses
     // C#: VM_guest_metrics vmGuestMetrics = vm.Connection.Resolve(vm.guest_metrics);
-    QString guestMetricsRef = this->m_objectData.value("guest_metrics").toString();
+    QString guestMetricsRef = vm->GetGuestMetricsRef();
     QVariantMap guestMetrics;
     QVariantMap networks;
 
-    XenCache* cache = this->m_connection->GetCache();
+    XenCache* cache = vm->GetCache();
 
     if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
     {
@@ -252,36 +261,32 @@ void NetworkTabPage::populateVIFsForVM()
         }
     }
 
-    // Resolve all VIF records from cache
-    QList<QVariantMap> vifRecords;
-    for (const QVariant& vifRefVar : vifRefs)
+    // Resolve all VIF objects from cache
+    QList<QSharedPointer<VIF>> vifs;
+    for (QString vifRef : vifRefs)
     {
-        QString vifRef = vifRefVar.toString();
         if (vifRef.isEmpty())
             continue;
 
         // Resolve VIF from cache (matches C# vm.Connection.Resolve(vifRef))
-        QVariantMap vifRecord = cache->ResolveObjectData("VIF", vifRef);
-        if (vifRecord.isEmpty())
+        QSharedPointer<VIF> vif = cache->ResolveObject<VIF>("vif", vifRef);
+        if (!vif || !vif->IsValid())
         {
             qDebug() << "NetworkTabPage::populateVIFsForVM - Failed to resolve VIF:" << vifRef;
             continue;
         }
 
-        // Store ref in record for later use
-        vifRecord["ref"] = vifRef;
-
         // C#: Check for guest installer network (CA-73056)
         // var network = vif.Connection.Resolve(vif.network);
         // if (network != null && network.IsGuestInstallerNetwork() && !ShowHiddenVMs) continue;
-        QString networkRef = vifRecord.value("network").toString();
+        QString networkRef = vif->NetworkRef();
         if (!networkRef.isEmpty())
         {
-            QVariantMap networkRecord = cache->ResolveObjectData("network", networkRef);
-            if (!networkRecord.isEmpty())
+            QSharedPointer<Network> network = cache->ResolveObject<Network>("network", networkRef);
+            if (network && network->IsValid())
             {
                 // Check for guest installer network (HIMN)
-                QVariantMap otherConfig = networkRecord.value("other_config").toMap();
+                QVariantMap otherConfig = network->OtherConfig();
                 bool isGuestInstallerNetwork = otherConfig.value("is_guest_installer_network", false).toBool();
 
                 // TODO: Check ShowHiddenVMs setting when implemented
@@ -294,36 +299,36 @@ void NetworkTabPage::populateVIFsForVM()
             }
         }
 
-        vifRecords.append(vifRecord);
+        vifs.append(vif);
     }
 
     // Sort VIFs by device number (matches C# vifs.Sort())
-    std::sort(vifRecords.begin(), vifRecords.end(),
-              [](const QVariantMap& a, const QVariantMap& b) {
-                  return a.value("device").toString().toInt() < b.value("device").toString().toInt();
+    std::sort(vifs.begin(), vifs.end(),
+              [](const QSharedPointer<VIF>& a, const QSharedPointer<VIF>& b) {
+                  return a->Device().toInt() < b->Device().toInt();
               });
 
-    //qDebug() << "NetworkTabPage::populateVIFsForVM - Displaying" << vifRecords.size() << "VIFs";
+    //qDebug() << "NetworkTabPage::populateVIFsForVM - Displaying" << vifs.size() << "VIFs";
 
     // Populate table with VIF information (matches C# VifRow structure)
-    for (const QVariantMap& vifRecord : vifRecords)
+    for (const QSharedPointer<VIF>& vif : vifs)
     {
         int row = this->ui->networksTable->rowCount();
         this->ui->networksTable->insertRow(row);
 
         // Store VIF ref for later retrieval (used by getSelectedVifRef)
-        QString vifRef = vifRecord.value("ref").toString();
+        QString vifRef = vif->OpaqueRef();
 
         // Column 0: Device (e.g., "0", "1", "2")
         // C#: DeviceCell.Value = Vif.device;
-        QString device = vifRecord.value("device").toString();
+        QString device = vif->Device();
         QTableWidgetItem* deviceItem = new QTableWidgetItem(device);
         deviceItem->setData(Qt::UserRole, vifRef); // Store ref as hidden data
         this->ui->networksTable->setItem(row, 0, deviceItem);
 
         // Column 1: MAC address
         // C#: MacCell.Value = Helpers.GetMacString(Vif.MAC);
-        QString mac = vifRecord.value("MAC").toString();
+        QString mac = vif->GetMAC();
         // Format MAC address like C# Helpers.GetMacString() - insert colons
         if (mac.length() == 12 && !mac.contains(":"))
         {
@@ -341,10 +346,10 @@ void NetworkTabPage::populateVIFsForVM()
         // Column 2: Limit (QoS bandwidth limit)
         // C#: LimitCell.Value = Vif.qos_algorithm_type != "" ? Vif.LimitString() : "";
         QString limit;
-        QString qosAlgorithm = vifRecord.value("qos_algorithm_type").toString();
+        QString qosAlgorithm = vif->QosAlgorithmType();
         if (!qosAlgorithm.isEmpty())
         {
-            QVariantMap qosParams = vifRecord.value("qos_algorithm_params").toMap();
+            QVariantMap qosParams = vif->QosAlgorithmParams();
             if (qosParams.contains("kbps"))
             {
                 // Format as "<value> kbps" like C# VIF.LimitString()
@@ -356,15 +361,15 @@ void NetworkTabPage::populateVIFsForVM()
 
         // Column 3: Network name
         // C#: NetworkCell.Value = Vif.NetworkName();
-        QString networkRef = vifRecord.value("network").toString();
+        QString networkRef = vif->NetworkRef();
         QString networkName = "-";
         if (!networkRef.isEmpty())
         {
             // Resolve network from cache (not API call!)
-            QVariantMap networkRecord = cache->ResolveObjectData("network", networkRef);
-            if (!networkRecord.isEmpty())
+            QSharedPointer<Network> network = cache->ResolveObject<Network>("network", networkRef);
+            if (network && network->IsValid())
             {
-                networkName = networkRecord.value("name_label", "-").toString();
+                networkName = network->GetName();
             }
         }
         this->ui->networksTable->setItem(row, 3, new QTableWidgetItem(networkName));
@@ -399,7 +404,7 @@ void NetworkTabPage::populateVIFsForVM()
 
         // Column 5: Active status (currently_attached)
         // C#: AttachedCell.Value = Vif.currently_attached ? Messages.YES : Messages.NO;
-        bool attached = vifRecord.value("currently_attached").toBool();
+        bool attached = vif->CurrentlyAttached();
         QString activeText = attached ? tr("Yes") : tr("No");
         this->ui->networksTable->setItem(row, 5, new QTableWidgetItem(activeText));
     }
@@ -434,7 +439,7 @@ void NetworkTabPage::populateNetworksForHost()
         }
 
         //qDebug() << "Adding network:" << networkData.value("name_label", "") << "ref:" << networkRef;
-        this->addNetworkRow(networkData);
+        this->addNetworkRow(networkRef, networkData);
     }
 
     //qDebug() << "NetworkTabPage::populateNetworksForHost - Added" << this->ui->networksTable->rowCount() << "rows";
@@ -478,21 +483,25 @@ void NetworkTabPage::populateNetworksForPool()
     this->populateNetworksForHost();
 }
 
-void NetworkTabPage::addNetworkRow(const QVariantMap& networkData)
+void NetworkTabPage::addNetworkRow(const QString& networkRef, const QVariantMap& networkData)
 {
     int row = this->ui->networksTable->rowCount();
     this->ui->networksTable->insertRow(row);
 
-    QString networkRef = networkData.value("ref", "").toString();
-    QString name = networkData.value("name_label", "").toString();
-    QString description = networkData.value("name_description", "").toString();
+    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
+    QSharedPointer<Network> network = cache ? cache->ResolveObject<Network>("network", networkRef) : QSharedPointer<Network>();
+    QString name = network && network->IsValid() ? network->GetName()
+                                                 : networkData.value("name_label", "").toString();
+    QString description = network && network->IsValid() ? network->GetDescription()
+                                                        : networkData.value("name_description", "").toString();
 
     // Find PIF for this network on the current host (matching C# Helpers.FindPIF logic)
     // C#: PIF Helpers.FindPIF(XenAPI.Network network, Host owner)
     QVariantMap pifData;
+    QString pifRef;
     QVariantList pifRefs = networkData.value("PIFs", QVariantList()).toList();
 
-    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
+    cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
     if (this->m_objectType == "host" && cache)
     {
         QString currentHostRef = this->m_objectData.value("ref", "").toString();
@@ -505,20 +514,22 @@ void NetworkTabPage::addNetworkRow(const QVariantMap& networkData)
         // Find the PIF that matches this host
         for (const QVariant& pifRefVar : pifRefs)
         {
-            QString pifRef = pifRefVar.toString();
-            QVariantMap tempPifData = cache->ResolveObjectData("PIF", pifRef);
-            QString pifHostRef = tempPifData.value("host", "").toString();
+            QString currentPifRef = pifRefVar.toString();
+            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", currentPifRef);
+            QVariantMap tempPifData = pif ? pif->GetData() : cache->ResolveObjectData("PIF", currentPifRef);
+            QString pifHostRef = pif ? pif->HostRef() : tempPifData.value("host", "").toString();
 
             if (pifHostRef == currentHostRef)
             {
                 pifData = tempPifData;
+                pifRef = currentPifRef;
                 break;
             }
         }
     } else if (this->m_objectType == "pool" && !pifRefs.isEmpty() && cache)
     {
         // For pools, get first PIF to display representative data
-        QString pifRef = pifRefs.first().toString();
+        pifRef = pifRefs.first().toString();
         pifData = cache->ResolveObjectData("PIF", pifRef);
     }
 
@@ -533,42 +544,17 @@ void NetworkTabPage::addNetworkRow(const QVariantMap& networkData)
     // C# NetworkRow.UpdateDetails() logic - build NIC name, VLAN, Link Status, etc.
     if (!pifData.isEmpty())
     {
-        // NIC name: For bonds, show "Bond X+Y+Z", otherwise show "eth0", "eth1", etc.
-        // C#: NicCell.Value = Helpers.GetName(Pif);
-        QString device = pifData.value("device", "").toString();
-        QVariantList bondMasterOfRefs = pifData.value("bond_master_of", QVariantList()).toList();
-
-        if (!bondMasterOfRefs.isEmpty())
+        // NIC name: Use C# PIF.Name() formatting ("NIC 0", "Bond 0+1").
+        if (!pifRef.isEmpty() && cache)
         {
-            // This PIF is a bond master (IsBondNIC)
-            // C# PIF.NICIdentifier() - builds "Bond 0+1" etc.
-            QString bondRef = bondMasterOfRefs.first().toString();
-            QVariantMap bondData = cache->ResolveObjectData("Bond", bondRef);
-            QVariantList slaveRefs = bondData.value("slaves", QVariantList()).toList();
-
-            QStringList memberDevices;
-            for (const QVariant& slaveRefVar : slaveRefs)
-            {
-                QString slaveRef = slaveRefVar.toString();
-                QVariantMap slavePif = cache->ResolveObjectData("PIF", slaveRef);
-                QString slaveDevice = slavePif.value("device", "").toString();
-                // Remove "eth" prefix to get number
-                QString deviceNum = slaveDevice;
-                deviceNum.remove("eth");
-                if (!deviceNum.isEmpty())
-                    memberDevices.append(deviceNum);
-            }
-
-            // Sort device numbers
-            memberDevices.sort();
-
-            // Build bond name like "Bond 0+1"
-            nicInfo = QString("Bond %1").arg(memberDevices.join("+"));
+            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+            if (pif && pif->IsValid())
+                nicInfo = pif->GetName();
+            else
+                nicInfo = pifData.value("device", "").toString();
         } else
         {
-            // Regular NIC or VLAN
-            // C# Helpers.GetName(pif) returns device name
-            nicInfo = device;
+            nicInfo = pifData.value("device", "").toString();
         }
 
         // VLAN: Check if this is a VLAN interface
@@ -660,41 +646,44 @@ void NetworkTabPage::populateIPConfigForHost()
         return;
 
     // Get all PIFs for this host
-    QVariantList pifRefs = this->m_objectData.value("PIFs", QVariantList()).toList();
+    XenCache* cache = this->m_connection->GetCache();
+    QStringList pifRefs = this->m_objectData.value("PIFs", QVariantList()).toStringList();
+    QSharedPointer<Host> host = cache->ResolveObject<Host>("host", this->m_objectRef);
 
-    QList<QVariantMap> managementPIFs;
+    QList<QSharedPointer<PIF>> managementPIFs;
 
-    for (const QVariant& pifRefVar : pifRefs)
+    for (const QString& pifRef : pifRefs)
     {
-        QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = this->m_connection->GetCache()->ResolveObjectData("PIF", pifRef);
+        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+        if (!pif || !pif->IsValid())
+            continue;
 
         // Only show management interfaces
-        bool isManagement = pifData.value("management", false).toBool();
+        bool isManagement = pif->Management();
 
         // Also check other_config for secondary management interfaces
-        QVariantMap otherConfig = pifData.value("other_config", QVariantMap()).toMap();
+        QVariantMap otherConfig = pif->OtherConfig();
         bool hasManagementPurpose = otherConfig.contains("management_purpose");
 
         if (isManagement || hasManagementPurpose)
         {
-            managementPIFs.append(pifData);
+            managementPIFs.append(pif);
         }
     }
 
     // Sort PIFs - primary management first
     std::sort(managementPIFs.begin(), managementPIFs.end(),
-              [](const QVariantMap& a, const QVariantMap& b) {
-                  bool aIsPrimary = a.value("management", false).toBool();
-                  bool bIsPrimary = b.value("management", false).toBool();
+              [](const QSharedPointer<PIF>& a, const QSharedPointer<PIF>& b) {
+                  bool aIsPrimary = a->Management();
+                  bool bIsPrimary = b->Management();
                   if (aIsPrimary != bIsPrimary)
                       return aIsPrimary;
-                  return a.value("device", "").toString() < b.value("device", "").toString();
+                  return a->Device() < b->Device();
               });
 
-    for (const QVariantMap& pifData : managementPIFs)
+    for (const QSharedPointer<PIF>& pif : managementPIFs)
     {
-        this->addIPConfigRow(pifData);
+        this->addIPConfigRow(pif, host);
     }
 }
 
@@ -706,99 +695,104 @@ void NetworkTabPage::populateIPConfigForPool()
         return;
 
     // For pools, show management interfaces from all hosts
+    XenCache* cache = this->m_connection->GetCache();
     QVariantList hostRefs = this->m_objectData.value("hosts", QVariantList()).toList();
 
     for (const QVariant& hostRefVar : hostRefs)
     {
         QString hostRef = hostRefVar.toString();
-        QVariantMap hostData = this->m_connection->GetCache()->ResolveObjectData("host", hostRef);
+        QSharedPointer<Host> host = cache->ResolveObject<Host>("host", hostRef);
+        if (!host || !host->IsValid())
+            continue;
 
-        QVariantList pifRefs = hostData.value("PIFs", QVariantList()).toList();
-
-        for (const QVariant& pifRefVar : pifRefs)
+        QStringList pifRefs = host->PIFRefs();
+        for (const QString& pifRef : pifRefs)
         {
-            QString pifRef = pifRefVar.toString();
-            QVariantMap pifData = this->m_connection->GetCache()->ResolveObjectData("PIF", pifRef);
+            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+            if (!pif || !pif->IsValid())
+                continue;
 
             // Only show management interfaces
-            bool isManagement = pifData.value("management", false).toBool();
-            QVariantMap otherConfig = pifData.value("other_config", QVariantMap()).toMap();
+            bool isManagement = pif->Management();
+            QVariantMap otherConfig = pif->OtherConfig();
             bool hasManagementPurpose = otherConfig.contains("management_purpose");
 
             if (isManagement || hasManagementPurpose)
             {
-                this->addIPConfigRow(pifData, hostData);
+                this->addIPConfigRow(pif, host);
             }
         }
     }
 }
 
-void NetworkTabPage::addIPConfigRow(const QVariantMap& pifData, const QVariantMap& hostData)
+void NetworkTabPage::addIPConfigRow(const QSharedPointer<PIF>& pif, const QSharedPointer<Host>& host)
 {
     if (!this->m_connection || !this->m_connection->GetCache())
+        return;
+
+    if (!pif || !pif->IsValid())
         return;
 
     int row = this->ui->ipConfigTable->rowCount();
     this->ui->ipConfigTable->insertRow(row);
 
-    QString pifRef = pifData.value("ref", "").toString();
+    QString pifRef = pif->OpaqueRef();
 
     // Server name
-    QString hostName;
-    if (hostData.isEmpty())
+    QString hostName = "Unknown";
+    if (host && host->IsValid())
+        hostName = host->GetName();
+    else
     {
-        // Get host from PIF
-        QString hostRef = pifData.value("host", "").toString();
-        QVariantMap hData = this->m_connection->GetCache()->ResolveObjectData("host", hostRef);
-        hostName = hData.value("name_label", "Unknown").toString();
-    } else
-    {
-        hostName = hostData.value("name_label", "Unknown").toString();
+        QSharedPointer<Host> resolvedHost = this->m_connection->GetCache()->ResolveObject<Host>("host", pif->HostRef());
+        if (resolvedHost && resolvedHost->IsValid())
+            hostName = resolvedHost->GetName();
     }
 
     // Icon column - TODO: Add proper icon
 
     // Interface (Management or other purpose)
     QString interfaceType;
-    bool isManagement = pifData.value("management", false).toBool();
+    bool isManagement = pif->Management();
     if (isManagement)
     {
         interfaceType = "Management";
     } else
     {
-        QVariantMap otherConfig = pifData.value("other_config", QVariantMap()).toMap();
+        QVariantMap otherConfig = pif->OtherConfig();
         interfaceType = otherConfig.value("management_purpose", "Unknown").toString();
     }
 
     // Network name
-    QString networkRef = pifData.value("network", "").toString();
-    QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
-    QString networkName = networkData.value("name_label", "").toString();
+    QString networkName = "-";
+    QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>("network", pif->NetworkRef());
+    if (network && network->IsValid())
+        networkName = network->GetName();
 
-    // NIC (device name)
-    QString nicName = pifData.value("device", "").toString();
+    // NIC (C# PIF.Name() formatting)
+    QString nicName = pif->GetName();
 
     // IP Setup (DHCP or Static)
-    QString ipMode = pifData.value("ip_configuration_mode", "None").toString();
+    QString ipMode = pif->IpConfigurationMode();
     QString ipSetup = ipMode;
-    if (ipMode == "DHCP")
+    if (ipMode.compare("DHCP", Qt::CaseInsensitive) == 0)
         ipSetup = "DHCP";
-    else if (ipMode == "Static")
+    else if (ipMode.compare("Static", Qt::CaseInsensitive) == 0)
         ipSetup = "Static";
-    else if (ipMode == "None")
+    else if (ipMode.compare("None", Qt::CaseInsensitive) == 0)
         ipSetup = "None";
 
     // IP Address
-    QString ipAddress = pifData.value("IP", "").toString();
+    QString ipAddress = pif->IP();
 
     // Subnet mask
-    QString netmask = pifData.value("netmask", "").toString();
+    QString netmask = pif->Netmask();
 
     // Gateway
-    QString gateway = pifData.value("gateway", "").toString();
+    QString gateway = pif->Gateway();
 
     // DNS
-    QString dns = pifData.value("DNS", "").toString();
+    QString dns = pif->DNS();
 
     // Create items and store PIF ref in first column as user data
     QTableWidgetItem* hostNameItem = new QTableWidgetItem(hostName);
@@ -841,10 +835,8 @@ void NetworkTabPage::onNetworksTableDoubleClicked(QTableWidgetItem* item)
 {
     if (!item || !this->canEnterPropertiesWindow)
         return;
-    if (this->m_objectType == "vm")
-        this->onEditNetwork();
-    else
-        this->onConfigureClicked();
+    this->ui->networksTable->setCurrentItem(item);
+    this->onEditNetwork();
 }
 
 void NetworkTabPage::onIpConfigTableDoubleClicked(QTableWidgetItem* item)

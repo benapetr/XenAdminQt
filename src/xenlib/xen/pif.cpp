@@ -26,6 +26,7 @@
  */
 
 #include "pif.h"
+#include <QSharedPointer>
 #include "network/connection.h"
 #include "../xencache.h"
 
@@ -36,6 +37,84 @@ PIF::PIF(XenConnection* connection, const QString& opaqueRef, QObject* parent) :
 QString PIF::GetObjectType() const
 {
     return "pif";
+}
+
+QString PIF::GetName() const
+{
+    QVariantMap pifData = this->GetData();
+    if (pifData.isEmpty())
+        return XenObject::GetName();
+
+    XenCache* cache = this->GetCache();
+    if (!cache)
+        return pifData.value("device", "").toString();
+
+    // Tunnel access PIFs: show the transport PIF's NIC name.
+    QVariantList tunnelAccessPifOf = pifData.value("tunnel_access_PIF_of", QVariantList()).toList();
+    if (!tunnelAccessPifOf.isEmpty())
+    {
+        QString tunnelRef = tunnelAccessPifOf.first().toString();
+        QVariantMap tunnelData = cache->ResolveObjectData("tunnel", tunnelRef);
+        QString transportPifRef = tunnelData.value("transport_PIF", "").toString();
+        QSharedPointer<PIF> transportPif = cache->ResolveObject<PIF>("pif", transportPifRef);
+        if (transportPif && transportPif->IsValid())
+            return transportPif->GetName();
+        return pifData.value("device", "").toString();
+    }
+
+    // SR-IOV logical PIFs: show the physical PIF's NIC name.
+    QVariantList sriovLogicalPifOf = pifData.value("sriov_logical_PIF_of", QVariantList()).toList();
+    if (!sriovLogicalPifOf.isEmpty())
+    {
+        QString sriovRef = sriovLogicalPifOf.first().toString();
+        QVariantMap sriovData = cache->ResolveObjectData("network_sriov", sriovRef);
+        QString physicalPifRef = sriovData.value("physical_PIF", "").toString();
+        QSharedPointer<PIF> physicalPif = cache->ResolveObject<PIF>("pif", physicalPifRef);
+        if (physicalPif && physicalPif->IsValid())
+            return physicalPif->GetName();
+        return pifData.value("device", "").toString();
+    }
+
+    // VLAN PIFs: show the tagged PIF's NIC name.
+    qint64 vlan = pifData.value("VLAN", -1).toLongLong();
+    if (vlan != -1)
+    {
+        QString vlanMasterOf = pifData.value("VLAN_master_of").toString();
+        QVariantMap vlanData = cache->ResolveObjectData("VLAN", vlanMasterOf);
+        QString taggedPifRef = vlanData.value("tagged_PIF", "").toString();
+        QSharedPointer<PIF> taggedPif = cache->ResolveObject<PIF>("pif", taggedPifRef);
+        if (taggedPif && taggedPif->IsValid())
+            return taggedPif->GetName();
+        return pifData.value("device", "").toString();
+    }
+
+    QVariantList bondMasterOfRefs = pifData.value("bond_master_of", QVariantList()).toList();
+    if (bondMasterOfRefs.isEmpty())
+    {
+        QString device = pifData.value("device", "").toString();
+        QString number = device;
+        number.remove("eth");
+        return QString("NIC %1").arg(number);
+    }
+
+    QString bondRef = bondMasterOfRefs.first().toString();
+    QVariantMap bondData = cache->ResolveObjectData("bond", bondRef);
+    QVariantList slaveRefs = bondData.value("slaves", QVariantList()).toList();
+
+    QStringList slaveNumbers;
+    for (const QVariant& slaveRefVar : slaveRefs)
+    {
+        QString slaveRef = slaveRefVar.toString();
+        QVariantMap slavePif = cache->ResolveObjectData("pif", slaveRef);
+        QString slaveDevice = slavePif.value("device", "").toString();
+        QString number = slaveDevice;
+        number.remove("eth");
+        if (!number.isEmpty())
+            slaveNumbers.append(number);
+    }
+
+    slaveNumbers.sort();
+    return QString("Bond %1").arg(slaveNumbers.join("+"));
 }
 
 // Basic properties

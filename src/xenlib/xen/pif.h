@@ -44,35 +44,11 @@ class PIF : public XenObject
 {
     Q_OBJECT
     
-    Q_PROPERTY(QString uuid READ Uuid)
-    Q_PROPERTY(QString device READ Device)
-    Q_PROPERTY(QString network READ NetworkRef)
-    Q_PROPERTY(QString host READ HostRef)
-    Q_PROPERTY(QString MAC READ MAC)
-    Q_PROPERTY(qlonglong MTU READ MTU)
-    Q_PROPERTY(qlonglong VLAN READ VLAN)
-    Q_PROPERTY(QString metrics READ MetricsRef)
-    Q_PROPERTY(bool physical READ Physical)
-    Q_PROPERTY(bool currentlyAttached READ CurrentlyAttached)
-    Q_PROPERTY(QString ipConfigurationMode READ IpConfigurationMode)
-    Q_PROPERTY(QString IP READ IP)
-    Q_PROPERTY(QString netmask READ Netmask)
-    Q_PROPERTY(QString gateway READ Gateway)
-    Q_PROPERTY(QString DNS READ DNS)
-    Q_PROPERTY(QString bondSlaveOf READ BondSlaveOfRef)
-    Q_PROPERTY(bool management READ Management)
-    Q_PROPERTY(bool disallowUnplug READ DisallowUnplug)
-    Q_PROPERTY(QString ipv6ConfigurationMode READ Ipv6ConfigurationMode)
-    Q_PROPERTY(QString ipv6Gateway READ Ipv6Gateway)
-    Q_PROPERTY(QString primaryAddressType READ PrimaryAddressType)
-    Q_PROPERTY(bool managed READ Managed)
-    Q_PROPERTY(QString igmpSnoopingStatus READ IgmpSnoopingStatus)
-    Q_PROPERTY(QString PCI READ PCIRef)
-    
     public:
         explicit PIF(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
 
         QString GetObjectType() const override;
+        QString GetName() const override;
 
         // Basic properties
         QString Uuid() const;

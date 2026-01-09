@@ -29,6 +29,7 @@
 #include "ui_nicstabpage.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
+#include "xen/pif.h"
 #include "xen/actions/network/createbondaction.h"
 #include "xen/actions/network/destroybondaction.h"
 #include "operations/operationmanager.h"
@@ -120,6 +121,7 @@ void NICsTabPage::populateNICs()
 
         if (isPhysical)
         {
+            pifData["ref"] = pifRef;
             physicalPIFs.append(pifData);
         }
     }
@@ -134,13 +136,14 @@ void NICsTabPage::populateNICs()
 
     for (const QVariantMap& pifData : physicalPIFs)
     {
-        this->addNICRow(pifData);
+        QString pifRef = pifData.value("ref", "").toString();
+        this->addNICRow(pifRef, pifData);
     }
 
     qDebug() << "NICsTabPage::populateNICs - Added" << this->ui->nicsTable->rowCount() << "rows";
 }
 
-void NICsTabPage::addNICRow(const QVariantMap& pifData)
+void NICsTabPage::addNICRow(const QString& pifRef, const QVariantMap& pifData)
 {
     if (!this->m_connection || !this->m_connection->GetCache())
         return;
@@ -148,44 +151,13 @@ void NICsTabPage::addNICRow(const QVariantMap& pifData)
     int row = this->ui->nicsTable->rowCount();
     this->ui->nicsTable->insertRow(row);
 
-    // NIC name - Implement C# PIF.Name() logic
-    // C# Name(): For physical PIFs, returns "NIC {number}" or "Bond {slaves}"
-    // C# NICIdentifier(): strips "eth" from device name, for bonds joins slave numbers with "+"
-    QString nicName;
-    QVariantList bondMasterOfRefs = pifData.value("bond_master_of", QVariantList()).toList();
-    
-    if (bondMasterOfRefs.isEmpty())
+    // NIC name - Use PIF.GetName() logic (matches C# PIF.Name()).
+    QString nicName = pifData.value("device", "").toString();
+    if (!pifRef.isEmpty())
     {
-        // Regular NIC: "eth0" -> "NIC 0"
-        QString device = pifData.value("device", "").toString();
-        QString number = device;
-        number.remove("eth"); // Remove "eth" prefix
-        nicName = QString("NIC %1").arg(number);
-    }
-    else
-    {
-        // Bond: Get all slave PIFs and format as "Bond 1+2+3"
-        QString bondRef = bondMasterOfRefs.first().toString();
-        QVariantMap bondData = this->m_connection->GetCache()->ResolveObjectData("bond", bondRef);
-        QVariantList slaveRefs = bondData.value("slaves", QVariantList()).toList();
-        
-        QStringList slaveNumbers;
-        for (const QVariant& slaveRefVar : slaveRefs)
-        {
-            QString slaveRef = slaveRefVar.toString();
-            QVariantMap slavePif = this->m_connection->GetCache()->ResolveObjectData("pif", slaveRef);
-            QString slaveDevice = slavePif.value("device", "").toString();
-            QString number = slaveDevice;
-            number.remove("eth");
-            if (!number.isEmpty())
-                slaveNumbers.append(number);
-        }
-        
-        // Sort numbers
-        slaveNumbers.sort();
-        
-        // Format as "Bond 0+1"
-        nicName = QString("Bond %1").arg(slaveNumbers.join("+"));
+        QSharedPointer<PIF> pif = this->m_connection->GetCache()->ResolveObject<PIF>("pif", pifRef);
+        if (pif && pif->IsValid())
+            nicName = pif->GetName();
     }
 
     // MAC Address

@@ -42,7 +42,7 @@ class WizardNavigationPane;
 
 namespace Ui
 {
-class NewVMWizard;
+    class NewVMWizard;
 }
 
 class NewVMWizard : public QWizard

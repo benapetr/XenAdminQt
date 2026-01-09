@@ -139,13 +139,13 @@ class XENLIB_EXPORT VM : public XenObject
          * @brief Get list of VIF (virtual network interface) references
          * @return List of VIF opaque references
          */
-        QStringList VIFRefs() const;
+        QStringList GetVIFRefs() const;
 
         /**
          * @brief Get list of console references
          * @return List of console opaque references
          */
-        QStringList ConsoleRefs() const;
+        QStringList GetConsoleRefs() const;
 
         /**
          * @brief Get snapshot parent reference (if this is a snapshot)
@@ -157,13 +157,13 @@ class XENLIB_EXPORT VM : public XenObject
          * @brief Get list of snapshot children (if this VM has snapshots)
          * @return List of VM opaque references
          */
-        QStringList SnapshotRefs() const;
+        QStringList GetSnapshotRefs() const;
 
         /**
          * @brief Get suspend VDI reference
          * @return VDI opaque reference
          */
-        QString SuspendVDIRef() const;
+        QString GetSuspendVDIRef() const;
 
         /**
          * @brief Get memory target (bytes)
@@ -537,7 +537,7 @@ class XENLIB_EXPORT VM : public XenObject
          * @brief Get guest metrics reference
          * @return Opaque reference to VM_guest_metrics object
          */
-        QString GuestMetricsRef() const;
+        QString GetGuestMetricsRef() const;
 
         /**
          * @brief Get last booted record

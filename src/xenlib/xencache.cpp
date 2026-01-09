@@ -35,6 +35,7 @@
 #include "xen/vdi.h"
 #include "xen/vbd.h"
 #include "xen/vif.h"
+#include "xen/pif.h"
 #include <QDebug>
 #include <QMutexLocker>
 
@@ -446,6 +447,8 @@ QSharedPointer<XenObject> XenCache::createObjectForType(const QString& type, con
         return QSharedPointer<XenObject>(new VBD(this->m_connection, ref));
     if (type == "vif")
         return QSharedPointer<XenObject>(new VIF(this->m_connection, ref));
+    if (type == "pif")
+        return QSharedPointer<XenObject>(new PIF(this->m_connection, ref));
 
     return QSharedPointer<XenObject>();
 }

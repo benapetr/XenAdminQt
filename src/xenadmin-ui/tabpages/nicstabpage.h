@@ -71,7 +71,7 @@ class NICsTabPage : public BaseTabPage
         Ui::NICsTabPage* ui;
 
         void populateNICs();
-        void addNICRow(const QVariantMap& pifData);
+        void addNICRow(const QString& pifRef, const QVariantMap& pifData);
         void updateButtonStates();
 
     private slots:

@@ -30,6 +30,7 @@
 
 #include "basetabpage.h"
 #include "xen/vm.h"
+#include <QSharedPointer>
 #include <QVariantMap>
 
 QT_BEGIN_NAMESPACE
@@ -40,6 +41,9 @@ namespace Ui
 QT_END_NAMESPACE
 
 class QTableWidgetItem;
+class Host;
+class Network;
+class PIF;
 
 /**
  * Network tab page showing network configuration and interfaces.
@@ -86,13 +90,13 @@ class NetworkTabPage : public BaseTabPage
         void populateVIFsForVM();
         void populateNetworksForHost();
         void populateNetworksForPool();
-        void addNetworkRow(const QVariantMap& networkData);
+        void addNetworkRow(const QString& networkRef, const QVariantMap& networkData);
         bool shouldShowNetwork(const QVariantMap& networkData);
 
         // IP Address Configuration section population
         void populateIPConfigForHost();
         void populateIPConfigForPool();
-        void addIPConfigRow(const QVariantMap& pifData, const QVariantMap& hostData = QVariantMap());
+        void addIPConfigRow(const QSharedPointer<PIF>& pif, const QSharedPointer<Host>& host = QSharedPointer<Host>());
 
         // Helper methods
         QString getSelectedNetworkRef() const;

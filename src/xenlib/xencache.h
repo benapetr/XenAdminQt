@@ -93,7 +93,7 @@ class XenCache : public QObject
         template <typename T>
         QSharedPointer<T> ResolveObject(const QString& type, const QString& ref)
         {
-            QSharedPointer<XenObject> base = ResolveObject(type, ref);
+            QSharedPointer<XenObject> base = this->ResolveObject(type, ref);
             return qSharedPointerDynamicCast<T>(base);
         }
 

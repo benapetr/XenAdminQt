@@ -1060,7 +1060,7 @@ void CrossPoolMigrateWizard::populateNetworkMappings()
         if (!vmItem)
             continue;
 
-        QStringList vifRefs = vmItem->VIFRefs();
+        QStringList vifRefs = vmItem->GetVIFRefs();
         QStringList snapVifRefs = this->collectSnapshotVifRefs(vmItem);
         for (const QString& vifRef : vifRefs + snapVifRefs)
         {
@@ -1501,7 +1501,7 @@ bool CrossPoolMigrateWizard::canDoStorageMigration(const QSharedPointer<VM>& vm,
     }
     if (!targetNetworkRef.isEmpty())
     {
-        QStringList vifRefs = vm->VIFRefs();
+        QStringList vifRefs = vm->GetVIFRefs();
         for (const QString& vifRef : vifRefs)
             vifMap.insert(vifRef, targetNetworkRef);
     }
@@ -1547,7 +1547,7 @@ bool CrossPoolMigrateWizard::snapshotsContainExtraVifs(const QSharedPointer<VM>&
     if (!vm)
         return false;
 
-    QStringList vmVifs = vm->VIFRefs();
+    QStringList vmVifs = vm->GetVIFRefs();
     QStringList snapVifs = collectSnapshotVifRefs(vm);
     for (const QString& vifRef : snapVifs)
     {
@@ -1567,7 +1567,7 @@ QStringList CrossPoolMigrateWizard::collectSnapshotVifRefs(const QSharedPointer<
     if (!cache)
         return result;
 
-    QStringList snapshots = vm->SnapshotRefs();
+    QStringList snapshots = vm->GetSnapshotRefs();
     for (const QString& snapRef : snapshots)
     {
         QVariantMap snapData = cache->ResolveObjectData("vm", snapRef);

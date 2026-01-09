@@ -105,7 +105,7 @@ XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenConnec
         {
             XenCache* cache = this->_connection->GetCache();
             QSharedPointer<VM> vm = cache ? cache->ResolveObject<VM>("vm", this->_sourceRef) : QSharedPointer<VM>();
-            QString guestMetricsRef = vm ? vm->GuestMetricsRef() : QString();
+            QString guestMetricsRef = vm ? vm->GetGuestMetricsRef() : QString();
 
             if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
             {
@@ -891,7 +891,7 @@ bool XSVNCScreen::hasRDP() const
     if (!vm)
         return false;
 
-    QString guestMetricsRef = vm->GuestMetricsRef();
+    QString guestMetricsRef = vm->GetGuestMetricsRef();
     if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
         return false;
 
@@ -1176,7 +1176,7 @@ QString XSVNCScreen::pollPort(int port, bool vnc)
             return QString();
 
         // Get guest_metrics reference
-        QString guestMetricsRef = vm->GuestMetricsRef();
+        QString guestMetricsRef = vm->GetGuestMetricsRef();
         if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
             return QString();
 
@@ -1197,7 +1197,7 @@ QString XSVNCScreen::pollPort(int port, bool vnc)
         QStringList ipv6AddressesNoPif; // IPv6 without PIFs
 
         // Get VIFs for this VM
-        QStringList vifs = vm->VIFRefs();
+        QStringList vifs = vm->GetVIFRefs();
         QString residentOnRef = vm->ResidentOnRef();
 
         // Process each VIF to extract IPs
@@ -1547,7 +1547,7 @@ void XSVNCScreen::connectNewHostedConsole()
         qDebug() << "XSVNCScreen: VM power_state=" << powerState;
 
         // Get consoles list (list of OpaqueRefs)
-        QStringList consoles = vm->ConsoleRefs();
+        QStringList consoles = vm->GetConsoleRefs();
         if (consoles.isEmpty())
         {
             qDebug() << "XSVNCScreen: No consoles found for VM (consoles list empty in cache)";

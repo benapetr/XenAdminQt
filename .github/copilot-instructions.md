@@ -6,7 +6,7 @@ This is a C++/Qt6 rewrite of XenAdmin (XenServer/XCP-ng management tool), portin
 
 ```
 src/
-├── xenlib/              # Shared library (XenServer API abstraction)
+├── xenlib/             # Shared library (XenServer API abstraction)
 │   ├── xen/            # Connection, Session, API, AsyncOperations, EventPoller
 │   └── operations/     # ParallelOperation, MultipleOperation framework
 └── xenadmin-ui/        # Qt GUI application
@@ -64,11 +64,11 @@ namespace XenAPI
 ```cpp
 QString VM::async_start(XenSession* session, const QString& vm, bool start_paused, bool force)
 {
-    if (!session || !session->isLoggedIn())
+    if (!session || !session->IsLoggedIn())
         throw std::runtime_error("Not connected to XenServer");
     
     QVariantList params;
-    params << session->getSessionId() << vm << start_paused << force;
+    params << session->GetSessionId() << vm << start_paused << force;
     
     XenRpcAPI api(session);  // Low-level JSON-RPC client
     QByteArray request = api.buildJsonRpcCall("VM.async_start", params);
@@ -80,7 +80,7 @@ QString VM::async_start(XenSession* session, const QString& vm, bool start_pause
 **DO:**
 - Add new XenAPI classes as separate files (`xenapi/Host.h`, `xenapi/Pool.h`)
 - Use XenAPI methods in actions: `XenAPI::VM::async_start(sess, vmRef, false, false)`
-- Match C# signatures exactly (use C# XML doc comments for documentation)
+- Match C# signatures exactly (use C# XML doc comments for documentation, but convert them to doxygen C++ format)
 - In all C++ source files give this-> prefix to every member-variable or member-function access that currently lacks it. Do not change non-member references. This makes the code easier to read as it's instantly obvious if we are working with some local scoped variable / function or a class member.
 
 **DON'T:**
@@ -157,7 +157,8 @@ QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
 - Use `ResolveObject<T>()` everywhere possible. Only fall back to `ResolveObjectData()` when a typed class does not exist yet.
 - Treat `opaque_ref` as the canonical ref key in cache data. Avoid guessing alternate keys (`ref`, `opaqueRef`, etc.).
 - Objects are lazy shells: they read current data from `XenCache` on demand.
-- On cache eviction, objects are marked `evicted` (check `isEvicted()` / `isValid()`).
+- On cache eviction, objects are marked `evicted` (check `IsEvicted()` / `IsValid()`).
+- Prefer typed XenObject methods for display logic (e.g. `PIF::GetName()` yields `NIC 0` / `Bond 0+1`) instead of re-implementing formatting in UI code.
 
 ### 3. API Call Patterns: Async vs Blocking
 
@@ -201,7 +202,7 @@ if (success)
 
 #### When to Use Async Pattern
 
-Use `sendRequestAsync()` for:
+Use `SendRequestAsync()` for:
 - Custom API calls not in `XenAPI` class
 - Bulk data fetching (VMs, hosts, pools) - **already used by XenLib internally**
 - Building custom high-level async wrappers
@@ -261,13 +262,13 @@ All user-initiated operations (menu items, context menu, toolbar) use the Comman
 ```cpp
 class StartVMCommand : public Command
 {
-    bool canRun() const override
+    bool CanRun() const override
     {
         return getSelectedObjectType() == "vm" && 
                xenLib()->getVMPowerState(getSelectedObjectRef()) == "Halted";
     }
     
-    void run() override
+    void Run() override
     {
         AsyncOperation* op = new AsyncOperation(xenLib()->getAPI(), this);
         op->startVirtualMachine(getSelectedObjectRef());
@@ -291,12 +292,12 @@ Object-specific tabs inherit from `BaseTabPage`. MainWindow shows applicable tab
 ```cpp
 class StorageTabPage : public BaseTabPage
 {
-    bool isApplicableForObjectType(const QString& type) const override
+    bool IsApplicableForObjectType(const QString& type) const override
     {
         return type == "vm" || type == "host" || type == "sr";
     }
     
-    void setXenObject(const QString& type, const QString& ref, const QVariantMap& data) override
+    void SetXenObject(const QString& type, const QString& ref, const QVariantMap& data) override
     {
         // Update display based on object type
     }

@@ -14,6 +14,7 @@ win32:DEFINES += XENLIB_STATIC
 # Source files
 SOURCES += \
     utils/misc.cpp \
+    vmhelpers.cpp \
     xen/actions/vm/vmstartaction.cpp \
     xen/xenapi/xenapi_Blob.cpp \
     xen/xenapi/xenapi_Bond.cpp \
@@ -27,7 +28,6 @@ SOURCES += \
     xen/xenapi/xenapi_VGPU.cpp \
     xen/xenapi/xenapi_VIF.cpp \
     xencache.cpp \
-    vmhelpers.cpp \
     metricupdater.cpp \
     xensearch/common.cpp \
     xensearch/group.cpp \
@@ -216,7 +216,6 @@ HEADERS += \
     xen/xenapi/xenapi_VIF.h \
     xenlib_global.h \
     xencache.h \
-    vmhelpers.h \
     metricupdater.h \
     xensearch/common.h \
     xensearch/group.h \
@@ -360,6 +359,7 @@ HEADERS += \
     xen/actions/vif/updatevifaction.h \
     xen/actions/delegatedasyncoperation.h \
     utils/encryption.h \
+    vmhelpers.h \
     network/comparableaddress.h \
     collections/observablelist.h \
     xen/network/connectionsmanager.h \
