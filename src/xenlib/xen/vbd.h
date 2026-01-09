@@ -54,10 +54,10 @@ class VDI;
 class XENLIB_EXPORT VBD : public XenObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString device READ Device NOTIFY dataChanged)
-    Q_PROPERTY(QString userdevice READ Userdevice NOTIFY dataChanged)
-    Q_PROPERTY(bool bootable READ Bootable NOTIFY dataChanged)
-    Q_PROPERTY(QString mode READ Mode NOTIFY dataChanged)
+    Q_PROPERTY(QString device READ GetDevice NOTIFY dataChanged)
+    Q_PROPERTY(QString userdevice READ GetUserdevice NOTIFY dataChanged)
+    Q_PROPERTY(bool bootable READ IsBootable NOTIFY dataChanged)
+    Q_PROPERTY(QString mode READ GetMode NOTIFY dataChanged)
     Q_PROPERTY(QString type READ GetType NOTIFY dataChanged)
     Q_PROPERTY(bool currentlyAttached READ CurrentlyAttached NOTIFY dataChanged)
 
@@ -69,37 +69,39 @@ class XENLIB_EXPORT VBD : public XenObject
          * @brief Get parent VM reference
          * @return VM opaque reference
          */
-        QString VMRef() const;
+        QString GetVMRef() const;
+
+        QSharedPointer<VM> GetVM();
 
         /**
          * @brief Get VDI reference
          * @return VDI opaque reference (empty if CD drive with no disc)
          */
-        QString VDIRef() const;
+        QString GetVDIRef() const;
 
         /**
          * @brief Get device name in guest
-         * @return Device name like "xvda", "hda", "xvdb", etc.
+         * @return GetDevice name like "xvda", "hda", "xvdb", etc.
          */
-        QString Device() const;
+        QString GetDevice() const;
 
         /**
          * @brief Get user device number
          * @return Device number like "0", "1", "2", etc.
          */
-        QString Userdevice() const;
+        QString GetUserdevice() const;
 
         /**
          * @brief Check if device is bootable
          * @return true if bootable
          */
-        bool Bootable() const;
+        bool IsBootable() const;
 
         /**
          * @brief Get device mode
          * @return "RO" (read-only) or "RW" (read-write)
          */
-        QString Mode() const;
+        QString GetMode() const;
 
         /**
          * @brief Check if device is read-only

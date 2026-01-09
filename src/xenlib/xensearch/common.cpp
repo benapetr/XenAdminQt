@@ -732,7 +732,7 @@ QVariant PropertyAccessors::SharedProperty(XenObject* o)
             return QVariant();
         
         // VDI is shared if it's attached to 2 or more VMs
-        QStringList vbdRefs = vdi->VBDRefs();
+        QStringList vbdRefs = vdi->GetVBDRefs();
         int vmCount = 0;
         for (const QString& vbdRef : vbdRefs)
         {
@@ -881,7 +881,7 @@ QVariant PropertyAccessors::VMProperty(XenObject* o)
     }
     else if (VDI* vdi = qobject_cast<VDI*>(o))
     {
-        QStringList vbdRefs = vdi->VBDRefs();
+        QStringList vbdRefs = vdi->GetVBDRefs();
         for (const QString& vbdRef : vbdRefs)
         {
             QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
@@ -991,7 +991,7 @@ QVariant PropertyAccessors::StorageProperty(XenObject* o)
     VM* vm = qobject_cast<VM*>(o);
     if (vm && vm->IsRealVM())
     {
-        QStringList vbdRefs = vm->VBDRefs();
+        QStringList vbdRefs = vm->GetVBDRefs();
         for (const QString& vbdRef : vbdRefs)
         {
             QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
@@ -1037,7 +1037,7 @@ QVariant PropertyAccessors::DisksProperty(XenObject* o)
     {
         if (vm->IsRealVM())
         {
-            QStringList vbdRefs = vm->VBDRefs();
+            QStringList vbdRefs = vm->GetVBDRefs();
             for (const QString& vbdRef : vbdRefs)
             {
                 QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);

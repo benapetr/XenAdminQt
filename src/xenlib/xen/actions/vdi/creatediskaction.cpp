@@ -205,7 +205,7 @@ bool CreateDiskAction::hasBootableDisk()
         }
 
         // Get all VBDs for this VM
-        QStringList vbdRefs = m_vm->VBDRefs();
+        QStringList vbdRefs = m_vm->GetVBDRefs();
 
         for (const QString& vbdRef : vbdRefs)
         {

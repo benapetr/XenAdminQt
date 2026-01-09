@@ -560,7 +560,7 @@ void CrossPoolMigrateWizard::initializePage(int id)
             if (cache)
             {
                 QStringList vdiRefs;
-                QStringList vbdRefs = vmItem->VBDRefs();
+                QStringList vbdRefs = vmItem->GetVBDRefs();
                 for (const QString& vbdRef : vbdRefs)
                 {
                     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
@@ -994,7 +994,7 @@ void CrossPoolMigrateWizard::populateStorageMappings()
         if (!vmItem)
             continue;
 
-        QStringList vbdRefs = vmItem->VBDRefs();
+        QStringList vbdRefs = vmItem->GetVBDRefs();
         for (const QString& vbdRef : vbdRefs)
         {
             QVariantMap vbdData = sourceCache->ResolveObjectData("vbd", vbdRef);
@@ -1454,7 +1454,7 @@ bool CrossPoolMigrateWizard::canDoStorageMigration(const QSharedPointer<VM>& vm,
         if (targetSr && targetSr->SupportsStorageMigration())
             targetSrRefs.append(targetSrRef);
     }
-    QStringList vbdRefs = vm->VBDRefs();
+    QStringList vbdRefs = vm->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
         QVariantMap vbdData = sourceCache->ResolveObjectData("vbd", vbdRef);

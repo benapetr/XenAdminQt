@@ -132,7 +132,7 @@ class XENLIB_EXPORT VM : public XenObject
          * @brief Get list of VBD (virtual block device) references
          * @return List of VBD opaque references
          */
-        QStringList VBDRefs() const;
+        QStringList GetVBDRefs() const;
 
         /**
          * @brief Get list of VIF (virtual network interface) references

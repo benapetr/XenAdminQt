@@ -147,7 +147,7 @@ QString VM::AffinityRef() const
     return stringProperty("affinity");
 }
 
-QStringList VM::VBDRefs() const
+QStringList VM::GetVBDRefs() const
 {
     return stringListProperty("VBDs");
 }
@@ -571,7 +571,7 @@ bool VM::CanBeMoved() const
         return false;
 
     bool hasOwner = false;
-    QStringList vbdRefs = this->VBDRefs();
+    QStringList vbdRefs = this->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
         QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
@@ -582,7 +582,7 @@ bool VM::CanBeMoved() const
         if (otherConfig.contains("owner"))
             hasOwner = true;
 
-        QString vdiRef = vbd->VDIRef();
+        QString vdiRef = vbd->GetVDIRef();
         if (vdiRef.isEmpty())
             continue;
 
@@ -627,7 +627,7 @@ bool VM::AnyDiskFastClonable() const
     if (smRecords.isEmpty())
         return false;
 
-    QStringList vbdRefs = this->VBDRefs();
+    QStringList vbdRefs = this->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
         QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
@@ -638,7 +638,7 @@ bool VM::AnyDiskFastClonable() const
         if (vbdType.compare("Disk", Qt::CaseInsensitive) != 0)
             continue;
 
-        QString vdiRef = vbd->VDIRef();
+        QString vdiRef = vbd->GetVDIRef();
         if (vdiRef.isEmpty())
             continue;
 
@@ -686,7 +686,7 @@ bool VM::HasAtLeastOneDisk() const
     if (!cache)
         return false;
 
-    QStringList vbdRefs = this->VBDRefs();
+    QStringList vbdRefs = this->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
         QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
@@ -1019,7 +1019,7 @@ bool VM::ReadCachingEnabled() const
         return false;
     
     // Check all VBDs
-    QStringList vbdRefs = this->VBDRefs();
+    QStringList vbdRefs = this->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
         QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
@@ -1032,7 +1032,7 @@ bool VM::ReadCachingEnabled() const
         if (!currentlyAttached)
             continue;
         
-        QString vdiRef = vbd->VDIRef();
+        QString vdiRef = vbd->GetVDIRef();
         if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
             continue;
         

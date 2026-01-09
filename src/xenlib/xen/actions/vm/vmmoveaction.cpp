@@ -91,14 +91,14 @@ QMap<QString, QSharedPointer<SR>> VMMoveAction::getStorageMapping(QSharedPointer
         return storageMapping;
 
     // Get all VBDs for this VM
-    QStringList vbdRefs = vm->VBDRefs();
+    QStringList vbdRefs = vm->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
         QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
         if (!vbd || !vbd->IsValid())
             continue;
 
-        QString vdiRef = vbd->VDIRef();
+        QString vdiRef = vbd->GetVDIRef();
         if (!vdiRef.isEmpty())
             storageMapping[vdiRef] = sr;
     }
@@ -124,7 +124,7 @@ void VMMoveAction::run()
     // Move the progress bar above 0, it's more reassuring to see than a blank bar
     this->SetPercentComplete(this->GetPercentComplete() + 10);
 
-    QStringList vbdRefs = this->m_vm->VBDRefs();
+    QStringList vbdRefs = this->m_vm->GetVBDRefs();
     if (vbdRefs.isEmpty())
     {
         this->SetPercentComplete(100);
@@ -153,7 +153,7 @@ void VMMoveAction::run()
         if (!isOwner)
             continue;
 
-        QString vdiRef = oldVBD->VDIRef();
+        QString vdiRef = oldVBD->GetVDIRef();
         if (vdiRef.isEmpty())
             continue;
 
@@ -211,9 +211,9 @@ void VMMoveAction::run()
 
         // Create a new VBD for the new VDI
         QVariantMap newVBDRecord;
-        newVBDRecord["userdevice"] = oldVBD->Userdevice();
-        newVBDRecord["bootable"] = oldVBD->Bootable();
-        newVBDRecord["mode"] = oldVBD->Mode();
+        newVBDRecord["userdevice"] = oldVBD->GetUserdevice();
+        newVBDRecord["bootable"] = oldVBD->IsBootable();
+        newVBDRecord["mode"] = oldVBD->GetMode();
         newVBDRecord["type"] = oldVBD->GetType();
         newVBDRecord["unpluggable"] = oldVBD->Unpluggable();
         newVBDRecord["other_config"] = oldVBD->OtherConfig();

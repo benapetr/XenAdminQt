@@ -83,7 +83,7 @@ bool CrossPoolMigrateCommand::CanRun() const
         if (!vmItem->AllowedOperations().contains("migrate_send"))
             return false;
 
-        QStringList vbdRefs = vmItem->VBDRefs();
+        QStringList vbdRefs = vmItem->GetVBDRefs();
         for (const QString& vbdRef : vbdRefs)
         {
             QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);

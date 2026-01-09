@@ -67,7 +67,7 @@ VMDestroyAction::VMDestroyAction(XenConnection* connection,
     // If deleteAllOwnerDisks is true, find all VBDs marked as owner
     if (deleteAllOwnerDisks)
     {
-        QStringList vbdRefs = m_vm->VBDRefs();
+        QStringList vbdRefs = m_vm->GetVBDRefs();
         for (const QString& vbdRef : vbdRefs)
         {
             QVariantMap vbdData = connection->GetCache()->ResolveObjectData("vbd", vbdRef);

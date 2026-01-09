@@ -226,7 +226,7 @@ QString PropertyAccessorHelper::vmDiskUsageString(VM* vm)
         return "-";
     
     QString vmUuid = vm->GetUUID();
-    QStringList vbdRefs = vm->VBDRefs();
+    QStringList vbdRefs = vm->GetVBDRefs();
     
     double sum = 0.0;
     double max = 0.0;

@@ -53,7 +53,7 @@ bool MoveVMCommand::CanRun() const
     if (!cache)
         return false;
 
-    QStringList vbdRefs = vm->VBDRefs();
+    QStringList vbdRefs = vm->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
         QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);

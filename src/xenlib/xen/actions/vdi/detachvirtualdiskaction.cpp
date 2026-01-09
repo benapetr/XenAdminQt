@@ -43,7 +43,7 @@ DetachVirtualDiskAction::DetachVirtualDiskAction(const QString& vdiRef,
       m_vdiRef(vdiRef), m_vm(vm)
 {
     // Find the VBD connecting this VDI to the VM
-    QStringList vbdRefs = vm->VBDRefs();
+    QStringList vbdRefs = vm->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
         // We'll check VDI reference in run() when we have session
@@ -74,7 +74,7 @@ void DetachVirtualDiskAction::run()
     SetDescription(tr("Finding VBD..."));
 
     QString vbdRef;
-    QStringList vbdRefs = m_vm->VBDRefs();
+    QStringList vbdRefs = m_vm->GetVBDRefs();
 
     for (const QString& ref : vbdRefs)
     {

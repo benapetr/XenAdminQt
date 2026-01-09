@@ -26,20 +26,28 @@
  */
 
 #include "vbd.h"
+#include "vm.h"
+#include "xencache.h"
 
-VBD::VBD(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+VBD::VBD(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
-QString VBD::VMRef() const
+QString VBD::GetVMRef() const
 {
-    return stringProperty("VM");
+    return this->stringProperty("VM");
 }
 
-QString VBD::VDIRef() const
+QSharedPointer<VM> VBD::GetVM()
 {
-    QString vdi = stringProperty("VDI");
+    if (!this->GetCache())
+        return QSharedPointer<VM>();
+    return this->GetCache()->ResolveObject<VM>("vm", this->GetVMRef());
+}
+
+QString VBD::GetVDIRef() const
+{
+    QString vdi = this->stringProperty("VDI");
     // Return empty string if VDI is NULL reference (CD drive with no disc)
     if (vdi == "OpaqueRef:NULL")
     {
@@ -48,76 +56,76 @@ QString VBD::VDIRef() const
     return vdi;
 }
 
-QString VBD::Device() const
+QString VBD::GetDevice() const
 {
-    return stringProperty("device");
+    return this->stringProperty("device");
 }
 
-QString VBD::Userdevice() const
+QString VBD::GetUserdevice() const
 {
-    return stringProperty("userdevice");
+    return this->stringProperty("userdevice");
 }
 
-bool VBD::Bootable() const
+bool VBD::IsBootable() const
 {
-    return boolProperty("bootable");
+    return this->boolProperty("bootable");
 }
 
-QString VBD::Mode() const
+QString VBD::GetMode() const
 {
-    return stringProperty("mode");
+    return this->stringProperty("mode");
 }
 
 bool VBD::IsReadOnly() const
 {
-    return Mode() == "RO";
+    return this->GetMode() == "RO";
 }
 
 QString VBD::GetType() const
 {
-    return stringProperty("type");
+    return this->stringProperty("type");
 }
 
 bool VBD::IsCD() const
 {
-    return GetType() == "CD";
+    return this->GetType() == "CD";
 }
 
 bool VBD::Unpluggable() const
 {
-    return boolProperty("unpluggable");
+    return this->boolProperty("unpluggable");
 }
 
 bool VBD::CurrentlyAttached() const
 {
-    return boolProperty("currently_attached");
+    return this->boolProperty("currently_attached");
 }
 
 bool VBD::Empty() const
 {
-    return boolProperty("empty");
+    return this->boolProperty("empty");
 }
 
 QStringList VBD::AllowedOperations() const
 {
-    return stringListProperty("allowed_operations");
+    return this->stringListProperty("allowed_operations");
 }
 
 bool VBD::CanPlug() const
 {
-    return AllowedOperations().contains("plug");
+    return this->AllowedOperations().contains("plug");
 }
 
 bool VBD::CanUnplug() const
 {
-    return AllowedOperations().contains("unplug");
+    return this->AllowedOperations().contains("unplug");
 }
 
 QString VBD::Description() const
 {
     QString typeStr = this->IsCD() ? "CD Drive" : "Disk";
-    QString deviceNum = this->Userdevice();
-    QString deviceName = this->Device();
+    QString deviceNum = this->GetUserdevice();
+    QString deviceName = this->GetDevice();
 
     if (deviceName.isEmpty())
     {

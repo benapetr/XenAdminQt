@@ -28,6 +28,7 @@ SOURCES += \
     dialogs/aboutdialog.cpp \
     dialogs/ballooningdialog.cpp \
     dialogs/commanderrordialog.cpp \
+    dialogs/confirmvmdeletedialog.cpp \
     dialogs/newvmwizard.cpp \
     dialogs/importwizard.cpp \
     dialogs/exportwizard.cpp \
@@ -259,6 +260,7 @@ HEADERS += \
     dialogs/aboutdialog.h \
     dialogs/ballooningdialog.h \
     dialogs/commanderrordialog.h \
+    dialogs/confirmvmdeletedialog.h \
     dialogs/newvmwizard.h \
     dialogs/importwizard.h \
     dialogs/exportwizard.h \
@@ -482,6 +484,7 @@ FORMS += \
     dialogs/xencacheexplorer.ui \
     dialogs/ballooningdialog.ui \
     dialogs/commanderrordialog.ui \
+    dialogs/confirmvmdeletedialog.ui \
     dialogs/newpooldialog.ui \
     dialogs/bondpropertiesdialog.ui \
     dialogs/repairsrdialog.ui \

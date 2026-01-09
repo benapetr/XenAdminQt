@@ -63,14 +63,14 @@ QString VDI::SRRef() const
     return stringProperty("SR");
 }
 
-QStringList VDI::VBDRefs() const
+QStringList VDI::GetVBDRefs() const
 {
     return stringListProperty("VBDs");
 }
 
 bool VDI::IsInUse() const
 {
-    return !VBDRefs().isEmpty();
+    return !GetVBDRefs().isEmpty();
 }
 
 QString VDI::SizeString() const
