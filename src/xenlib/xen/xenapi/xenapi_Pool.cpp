@@ -431,4 +431,34 @@ namespace XenAPI
         api.ParseJsonRpcResponse(response); // Parse to check for errors
     }
 
+    QVariantList Pool::create_VLAN_from_PIF(Session* session, const QString& pif,
+                                             const QString& network, qint64 vlan)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pif << network << vlan;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("pool.create_VLAN_from_PIF", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toList();
+    }
+
+    QString Pool::async_create_VLAN_from_PIF(Session* session, const QString& pif,
+                                              const QString& network, qint64 vlan)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pif << network << vlan;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("Async.pool.create_VLAN_from_PIF", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString();
+    }
+
 } // namespace XenAPI

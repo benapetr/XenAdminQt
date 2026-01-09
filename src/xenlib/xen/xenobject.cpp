@@ -88,6 +88,11 @@ bool XenObject::IsConnected() const
     return this->m_connection->IsConnected();
 }
 
+QVariantMap XenObject::GetOtherConfig() const
+{
+    return this->property("other_config").toMap();
+}
+
 QString XenObject::GetObjectType() const
 {
     return "null";

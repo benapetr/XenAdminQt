@@ -517,7 +517,7 @@ void NetworkTabPage::addNetworkRow(const QString& networkRef, const QVariantMap&
             QString currentPifRef = pifRefVar.toString();
             QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", currentPifRef);
             QVariantMap tempPifData = pif ? pif->GetData() : cache->ResolveObjectData("PIF", currentPifRef);
-            QString pifHostRef = pif ? pif->HostRef() : tempPifData.value("host", "").toString();
+            QString pifHostRef = pif ? pif->GetHostRef() : tempPifData.value("host", "").toString();
 
             if (pifHostRef == currentHostRef)
             {
@@ -678,7 +678,7 @@ void NetworkTabPage::populateIPConfigForHost()
                   bool bIsPrimary = b->Management();
                   if (aIsPrimary != bIsPrimary)
                       return aIsPrimary;
-                  return a->Device() < b->Device();
+                  return a->GetDevice() < b->GetDevice();
               });
 
     for (const QSharedPointer<PIF>& pif : managementPIFs)
@@ -744,7 +744,7 @@ void NetworkTabPage::addIPConfigRow(const QSharedPointer<PIF>& pif, const QShare
         hostName = host->GetName();
     else
     {
-        QSharedPointer<Host> resolvedHost = this->m_connection->GetCache()->ResolveObject<Host>("host", pif->HostRef());
+        QSharedPointer<Host> resolvedHost = pif->GetHost();
         if (resolvedHost && resolvedHost->IsValid())
             hostName = resolvedHost->GetName();
     }
@@ -765,7 +765,7 @@ void NetworkTabPage::addIPConfigRow(const QSharedPointer<PIF>& pif, const QShare
 
     // Network name
     QString networkName = "-";
-    QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>("network", pif->NetworkRef());
+    QSharedPointer<Network> network = pif->GetNetwork();
     if (network && network->IsValid())
         networkName = network->GetName();
 
@@ -1271,8 +1271,7 @@ void NetworkTabPage::onAddNetwork()
             } else
             {
                 // Show error message
-                QMessageBox::critical(this, tr("Failed to Create Network"),
-                                      tr("Failed to create network '%1'.").arg(networkName));
+                QMessageBox::critical(this, tr("Failed to Create Network"), tr("Failed to create network '%1'.").arg(networkName));
             }
         }
     }
@@ -1312,9 +1311,9 @@ void NetworkTabPage::onEditNetwork()
                 action->deleteLater();
             });
 
-            connect(action, &UpdateVIFAction::failed, this, [this, action](const QString& error) {
-                QMessageBox::critical(this, tr("Update VIF Failed"),
-                                      tr("Failed to update network interface.\n\nError: %1").arg(error));
+            connect(action, &UpdateVIFAction::failed, this, [this, action](const QString& error)
+            {
+                QMessageBox::critical(this, tr("Update VIF Failed"), tr("Failed to update network interface.\n\nError: %1").arg(error));
                 action->deleteLater();
             });
 
@@ -1330,22 +1329,11 @@ void NetworkTabPage::onEditNetwork()
     {
         // C#: launchHostOrPoolNetworkSettingsDialog()
         QString selectedNetworkRef = this->getSelectedNetworkRef();
-        if (selectedNetworkRef.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
-        {
+        if (selectedNetworkRef.isEmpty() || !this->m_connection)
             return;
-        }
-
-        QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", selectedNetworkRef);
-        QString networkUuid = networkData.value("uuid", "").toString();
-
-        if (networkUuid.isEmpty())
-        {
-            qWarning() << "NetworkTabPage::onEditNetwork - No UUID for network:" << selectedNetworkRef;
-            return;
-        }
 
         // Launch network properties dialog
-        NetworkPropertiesDialog dialog(this->m_connection, networkUuid, this);
+        NetworkPropertiesDialog dialog(this->m_connection, selectedNetworkRef, this);
 
         if (dialog.exec() == QDialog::Accepted)
         {

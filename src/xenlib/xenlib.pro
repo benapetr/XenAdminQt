@@ -19,6 +19,8 @@ SOURCES += \
     xen/xenapi/xenapi_Blob.cpp \
     xen/xenapi/xenapi_Bond.cpp \
     xen/xenapi/xenapi_Network.cpp \
+    xen/xenapi/xenapi_VLAN.cpp \
+    xen/xenapi/xenapi_Tunnel.cpp \
     xen/xenapi/xenapi_Network_sriov.cpp \
     xen/xenapi/xenapi_PBD.cpp \
     xen/xenapi/xenapi_PIF.cpp \
@@ -73,6 +75,8 @@ SOURCES += \
     xen/pci.cpp \
     xen/pgpu.cpp \
     xen/network.cpp \
+    xen/vlan.cpp \
+    xen/tunnel.cpp \
     xen/task.cpp \
     xen/xenapi/xenapi_VM.cpp \
     xen/xenapi/xenapi_SR.cpp \
@@ -161,6 +165,7 @@ SOURCES += \
     xen/actions/network/createbondaction.cpp \
     xen/actions/network/destroybondaction.cpp \
     xen/actions/network/createsriovaction.cpp \
+    xen/actions/network/networkaction.cpp \
     xen/actions/network/networkingactionhelpers.cpp \
     xen/actions/network/rescanpifsaction.cpp \
     xen/actions/vif/createvifaction.cpp \
@@ -206,6 +211,8 @@ HEADERS += \
     xen/xenapi/xenapi_Blob.h \
     xen/xenapi/xenapi_Bond.h \
     xen/xenapi/xenapi_Network.h \
+    xen/xenapi/xenapi_VLAN.h \
+    xen/xenapi/xenapi_Tunnel.h \
     xen/xenapi/xenapi_Network_sriov.h \
     xen/xenapi/xenapi_PBD.h \
     xen/xenapi/xenapi_PIF.h \
@@ -263,6 +270,8 @@ HEADERS += \
     xen/pci.h \
     xen/pgpu.h \
     xen/network.h \
+    xen/vlan.h \
+    xen/tunnel.h \
     xen/task.h \
     xen/vmappliance.h \
     xen/xenapi/xenapi_VM.h \
@@ -350,6 +359,7 @@ HEADERS += \
     xen/actions/network/createbondaction.h \
     xen/actions/network/destroybondaction.h \
     xen/actions/network/createsriovaction.h \
+    xen/actions/network/networkaction.h \
     xen/actions/network/networkingactionhelpers.h \
     xen/actions/network/rescanpifsaction.h \
     xen/actions/vif/createvifaction.h \

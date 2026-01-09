@@ -25,36 +25,36 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NETWORKPROPERTIESDIALOG_H
-#define NETWORKPROPERTIESDIALOG_H
+#include "tunnel.h"
 
-#include "verticallytabbeddialog.h"
-
-/**
- * @brief Network-specific properties dialog
- *
- * Qt equivalent of C# XenAdmin.Dialogs.PropertiesDialog for Network objects.
- * Uses VerticallyTabbedDialog pattern with IEditPage pages.
- *
- * Shows tabs (matching C# PropertiesDialog for Network objects):
- * 1. General (GeneralEditPage): Name, Description, Folder, Tags - universal for all objects
- * 2. Custom Fields (CustomFieldsDisplayPage): User-defined custom fields - universal
- * 3. Network Settings (NetworkGeneralEditPage): NIC, VLAN, MTU, Auto-add, Bond mode - network-specific
- *
- * C# Reference: xenadmin/XenAdmin/Dialogs/PropertiesDialog.cs (isNetwork = true, line 122)
- *               xenadmin/XenAdmin/SettingsPanels/EditNetworkPage.cs
- */
-class NetworkPropertiesDialog : public VerticallyTabbedDialog
+Tunnel::Tunnel(XenConnection* connection,
+               const QString& opaqueRef,
+               QObject* parent)
+    : XenObject(connection, opaqueRef, parent)
 {
-    Q_OBJECT
+}
 
-    public:
-        explicit NetworkPropertiesDialog(XenConnection* connection,
-                                         const QString& networkRef,
-                                         QWidget* parent = nullptr);
+QString Tunnel::GetAccessPIFRef() const
+{
+    return this->stringProperty("access_PIF");
+}
 
-    protected:
-        void build() override;
-};
+QString Tunnel::GetTransportPIFRef() const
+{
+    return this->stringProperty("transport_PIF");
+}
 
-#endif // NETWORKPROPERTIESDIALOG_H
+QVariantMap Tunnel::GetStatus() const
+{
+    return this->property("status").toMap();
+}
+
+QString Tunnel::GetProtocol() const
+{
+    return this->stringProperty("protocol");
+}
+
+QString Tunnel::GetObjectType() const
+{
+    return "tunnel";
+}

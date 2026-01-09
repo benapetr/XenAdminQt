@@ -25,36 +25,31 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NETWORKPROPERTIESDIALOG_H
-#define NETWORKPROPERTIESDIALOG_H
+#include "vlan.h"
 
-#include "verticallytabbeddialog.h"
-
-/**
- * @brief Network-specific properties dialog
- *
- * Qt equivalent of C# XenAdmin.Dialogs.PropertiesDialog for Network objects.
- * Uses VerticallyTabbedDialog pattern with IEditPage pages.
- *
- * Shows tabs (matching C# PropertiesDialog for Network objects):
- * 1. General (GeneralEditPage): Name, Description, Folder, Tags - universal for all objects
- * 2. Custom Fields (CustomFieldsDisplayPage): User-defined custom fields - universal
- * 3. Network Settings (NetworkGeneralEditPage): NIC, VLAN, MTU, Auto-add, Bond mode - network-specific
- *
- * C# Reference: xenadmin/XenAdmin/Dialogs/PropertiesDialog.cs (isNetwork = true, line 122)
- *               xenadmin/XenAdmin/SettingsPanels/EditNetworkPage.cs
- */
-class NetworkPropertiesDialog : public VerticallyTabbedDialog
+VLAN::VLAN(XenConnection* connection,
+           const QString& opaqueRef,
+           QObject* parent)
+    : XenObject(connection, opaqueRef, parent)
 {
-    Q_OBJECT
+}
 
-    public:
-        explicit NetworkPropertiesDialog(XenConnection* connection,
-                                         const QString& networkRef,
-                                         QWidget* parent = nullptr);
+QString VLAN::GetTaggedPIFRef() const
+{
+    return this->stringProperty("tagged_PIF");
+}
 
-    protected:
-        void build() override;
-};
+QString VLAN::GetUntaggedPIFRef() const
+{
+    return this->stringProperty("untagged_PIF");
+}
 
-#endif // NETWORKPROPERTIESDIALOG_H
+qint64 VLAN::GetTag() const
+{
+    return this->longProperty("tag", -1);
+}
+
+QString VLAN::GetObjectType() const
+{
+    return "vlan";
+}

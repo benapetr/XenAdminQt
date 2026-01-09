@@ -28,6 +28,8 @@
 #include "pif.h"
 #include <QSharedPointer>
 #include "network/connection.h"
+#include "host.h"
+#include "network.h"
 #include "../xencache.h"
 
 PIF::PIF(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
@@ -118,37 +120,46 @@ QString PIF::GetName() const
 }
 
 // Basic properties
-QString PIF::Uuid() const
-{
-    return this->stringProperty("uuid");
-}
-
-QString PIF::Device() const
+QString PIF::GetDevice() const
 {
     return this->stringProperty("device");
 }
 
-QString PIF::NetworkRef() const
+QString PIF::GetNetworkRef() const
 {
     return this->stringProperty("network");
 }
 
-QString PIF::HostRef() const
+QSharedPointer<Network> PIF::GetNetwork()
+{
+    if (!this->GetCache())
+        return QSharedPointer<Network>();
+    return this->GetCache()->ResolveObject<Network>("network", this->GetNetworkRef());
+}
+
+QString PIF::GetHostRef() const
 {
     return this->stringProperty("host");
 }
 
-QString PIF::MAC() const
+QSharedPointer<Host> PIF::GetHost()
+{
+    if (!this->GetCache())
+        return QSharedPointer<Host>();
+    return this->GetCache()->ResolveObject<Host>("host", this->GetHostRef());
+}
+
+QString PIF::GetMAC() const
 {
     return this->stringProperty("MAC");
 }
 
-qlonglong PIF::MTU() const
+qlonglong PIF::GetMTU() const
 {
     return this->longProperty("MTU");
 }
 
-qlonglong PIF::VLAN() const
+qlonglong PIF::GetVLAN() const
 {
     return this->longProperty("VLAN");
 }
@@ -158,12 +169,12 @@ QString PIF::MetricsRef() const
     return this->stringProperty("metrics");
 }
 
-bool PIF::Physical() const
+bool PIF::IsPhysical() const
 {
     return this->boolProperty("physical");
 }
 
-bool PIF::CurrentlyAttached() const
+bool PIF::IsCurrentlyAttached() const
 {
     return this->boolProperty("currently_attached");
 }
@@ -307,20 +318,14 @@ bool PIF::IsManagementInterface() const
     return this->Management();
 }
 
-bool PIF::IsPhysical() const
-{
-    return this->Physical();
-}
-
 bool PIF::IsVLAN() const
 {
-    return this->VLAN() != -1;
+    return this->GetVLAN() != -1;
 }
 
 bool PIF::IsBondSlave() const
 {
-    return !this->BondSlaveOfRef().isEmpty() && 
-           this->BondSlaveOfRef() != "OpaqueRef:NULL";
+    return !this->BondSlaveOfRef().isEmpty() && this->BondSlaveOfRef() != "OpaqueRef:NULL";
 }
 
 bool PIF::IsBondMaster() const

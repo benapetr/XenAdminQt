@@ -36,6 +36,9 @@
 #include "xen/vbd.h"
 #include "xen/vif.h"
 #include "xen/pif.h"
+#include "xen/bond.h"
+#include "xen/vlan.h"
+#include "xen/tunnel.h"
 #include <QDebug>
 #include <QMutexLocker>
 
@@ -76,6 +79,12 @@ QString XenCache::normalizeType(const QString& type) const
         return "pbd";
     if (normalized == "pif" || normalized == "pifs")
         return "pif";
+    if (normalized == "bond" || normalized == "bonds")
+        return "bond";
+    if (normalized == "vlan" || normalized == "vlans")
+        return "vlan";
+    if (normalized == "tunnel" || normalized == "tunnels")
+        return "tunnel";
 
     return normalized;
 }
@@ -449,6 +458,12 @@ QSharedPointer<XenObject> XenCache::createObjectForType(const QString& type, con
         return QSharedPointer<XenObject>(new VIF(this->m_connection, ref));
     if (type == "pif")
         return QSharedPointer<XenObject>(new PIF(this->m_connection, ref));
+    if (type == "bond")
+        return QSharedPointer<XenObject>(new Bond(this->m_connection, ref));
+    if (type == "vlan")
+        return QSharedPointer<XenObject>(new VLAN(this->m_connection, ref));
+    if (type == "tunnel")
+        return QSharedPointer<XenObject>(new Tunnel(this->m_connection, ref));
 
     return QSharedPointer<XenObject>();
 }

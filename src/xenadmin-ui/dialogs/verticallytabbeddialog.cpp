@@ -54,8 +54,7 @@ VerticallyTabbedDialog::VerticallyTabbedDialog(XenConnection* connection,
     this->ui->setupUi(this);
 
     // Connect vertical tabs selection changed
-    connect(this->ui->verticalTabs, &VerticalTabWidget::currentRowChanged,
-            this, &VerticallyTabbedDialog::onVerticalTabsCurrentChanged);
+    connect(this->ui->verticalTabs, &VerticalTabWidget::currentRowChanged, this, &VerticallyTabbedDialog::onVerticalTabsCurrentChanged);
 
     // Connect button box signals
     connect(this->ui->buttonBox, &QDialogButtonBox::accepted, this, &VerticallyTabbedDialog::accept);

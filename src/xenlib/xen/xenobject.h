@@ -134,6 +134,12 @@ class XENLIB_EXPORT XenObject : public QObject
         QVariantMap GetData() const;
 
         /**
+         * @brief Get other_config dictionary
+         * @return Additional configuration key-value pairs
+         */
+        QVariantMap GetOtherConfig() const;
+
+        /**
          * @brief Refresh object data from cache
          *
          * Call this after cache updates to emit dataChanged signal.

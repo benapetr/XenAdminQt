@@ -25,36 +25,62 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NETWORKPROPERTIESDIALOG_H
-#define NETWORKPROPERTIESDIALOG_H
+#ifndef TUNNEL_H
+#define TUNNEL_H
 
-#include "verticallytabbeddialog.h"
+#include "xenobject.h"
 
 /**
- * @brief Network-specific properties dialog
+ * @brief Tunnel - A tunnel for network traffic
  *
- * Qt equivalent of C# XenAdmin.Dialogs.PropertiesDialog for Network objects.
- * Uses VerticallyTabbedDialog pattern with IEditPage pages.
+ * Qt equivalent of C# XenAPI.Tunnel class. Represents a network tunnel.
  *
- * Shows tabs (matching C# PropertiesDialog for Network objects):
- * 1. General (GeneralEditPage): Name, Description, Folder, Tags - universal for all objects
- * 2. Custom Fields (CustomFieldsDisplayPage): User-defined custom fields - universal
- * 3. Network Settings (NetworkGeneralEditPage): NIC, VLAN, MTU, Auto-add, Bond mode - network-specific
+ * Key properties (from C# Tunnel class):
+ * - uuid
+ * - access_PIF (access PIF reference)
+ * - transport_PIF (transport PIF reference)
+ * - status (status map)
+ * - other_config (additional configuration)
+ * - protocol (tunnel protocol - gre/vxlan)
  *
- * C# Reference: xenadmin/XenAdmin/Dialogs/PropertiesDialog.cs (isNetwork = true, line 122)
- *               xenadmin/XenAdmin/SettingsPanels/EditNetworkPage.cs
+ * First published in XenServer 5.6 FP1.
  */
-class NetworkPropertiesDialog : public VerticallyTabbedDialog
+class XENLIB_EXPORT Tunnel : public XenObject
 {
     Q_OBJECT
 
     public:
-        explicit NetworkPropertiesDialog(XenConnection* connection,
-                                         const QString& networkRef,
-                                         QWidget* parent = nullptr);
+        explicit Tunnel(XenConnection* connection,
+                        const QString& opaqueRef,
+                        QObject* parent = nullptr);
+        ~Tunnel() override = default;
 
-    protected:
-        void build() override;
+        /**
+         * @brief Get access PIF reference
+         * @return Opaque reference to access PIF
+         */
+        QString GetAccessPIFRef() const;
+
+        /**
+         * @brief Get transport PIF reference
+         * @return Opaque reference to transport PIF
+         */
+        QString GetTransportPIFRef() const;
+
+        /**
+         * @brief Get status dictionary
+         * @return GetStatus key-value pairs
+         */
+        QVariantMap GetStatus() const;
+
+        /**
+         * @brief Get protocol
+         * @return Tunnel protocol (e.g., "gre", "vxlan")
+         */
+        QString GetProtocol() const;
+
+        // XenObject interface
+        QString GetObjectType() const override;
 };
 
-#endif // NETWORKPROPERTIESDIALOG_H
+#endif // TUNNEL_H

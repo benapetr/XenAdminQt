@@ -63,6 +63,13 @@ namespace XenAPI
             static QString async_plug(Session* session, const QString& pif);
             static QString async_unplug(Session* session, const QString& pif);
 
+            // PIF destruction
+            static void destroy(Session* session, const QString& pif);
+            static QString async_destroy(Session* session, const QString& pif);
+
+            static void forget(Session* session, const QString& pif);
+            static QString async_forget(Session* session, const QString& pif);
+
             // PIF properties
             static void set_disallow_unplug(Session* session, const QString& pif, bool value);
             static void set_property(Session* session, const QString& pif, const QString& name, const QString& value);

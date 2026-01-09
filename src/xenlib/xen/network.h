@@ -88,6 +88,18 @@ class XENLIB_EXPORT Network : public XenObject
         QStringList GetPIFRefs() const;
 
         /**
+         * @brief Get human-readable name
+         * @return Network name label
+         */
+        QString NameLabel() const;
+
+        /**
+         * @brief Get human-readable description
+         * @return Network description
+         */
+        QString Description() const;
+
+        /**
          * @brief Get other_config dictionary
          * @return Other configuration key-value pairs
          */

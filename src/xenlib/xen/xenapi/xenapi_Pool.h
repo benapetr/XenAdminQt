@@ -310,6 +310,37 @@ namespace XenAPI
              * First published in XenServer 8.0.
              */
             static void rotate_secret(Session* session, const QString& pool);
+
+            /**
+             * @brief Create pool-wide VLAN on all hosts
+             * @param session Active XenSession
+             * @param pif Physical interface on any host that identifies where to create VLAN
+             * @param network Network to connect VLAN interface to
+             * @param vlan VLAN tag for new interface
+             * @return List of created PIF references (one per host)
+             *
+             * Creates a pool-wide VLAN by taking the PIF. This creates a VLAN interface
+             * on the specified network with the given tag on all hosts in the pool.
+             *
+             * First published in XenServer 4.0.
+             */
+            static QVariantList create_VLAN_from_PIF(Session* session, const QString& pif, 
+                                                     const QString& network, qint64 vlan);
+
+            /**
+             * @brief Create pool-wide VLAN on all hosts (async)
+             * @param session Active XenSession
+             * @param pif Physical interface on any host that identifies where to create VLAN
+             * @param network Network to connect VLAN interface to
+             * @param vlan VLAN tag for new interface
+             * @return Task reference
+             *
+             * Asynchronous version of create_VLAN_from_PIF.
+             *
+             * First published in XenServer 4.0.
+             */
+            static QString async_create_VLAN_from_PIF(Session* session, const QString& pif,
+                                                      const QString& network, qint64 vlan);
     };
 
 } // namespace XenAPI

@@ -92,6 +92,7 @@ SOURCES += \
     settingspanels/securityeditpage.cpp \
     settingspanels/livepatchingeditpage.cpp \
     settingspanels/networkoptionseditpage.cpp \
+    settingspanels/networkgeneraleditpage.cpp \
     dialogs/optionspages/securityoptionspage.cpp \
     dialogs/optionspages/displayoptionspage.cpp \
     dialogs/optionspages/confirmationoptionspage.cpp \
@@ -328,6 +329,7 @@ HEADERS += \
     settingspanels/securityeditpage.h \
     settingspanels/livepatchingeditpage.h \
     settingspanels/networkoptionseditpage.h \
+    settingspanels/networkgeneraleditpage.h \
     dialogs/optionspages/ioptionspage.h \
     dialogs/optionspages/securityoptionspage.h \
     dialogs/optionspages/displayoptionspage.h \
@@ -520,6 +522,7 @@ FORMS += \
     settingspanels/securityeditpage.ui \
     settingspanels/livepatchingeditpage.ui \
     settingspanels/networkoptionseditpage.ui \
+    settingspanels/networkgeneraleditpage.ui \
     dialogs/optionspages/securityoptionspage.ui \
     dialogs/optionspages/displayoptionspage.ui \
     dialogs/optionspages/confirmationoptionspage.ui \

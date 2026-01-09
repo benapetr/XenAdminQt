@@ -33,6 +33,9 @@
 #include <QStringList>
 #include <QVariantMap>
 
+class Host;
+class Network;
+
 /*!
  * \brief Physical network interface (PIF) wrapper class
  * 
@@ -51,16 +54,17 @@ class PIF : public XenObject
         QString GetName() const override;
 
         // Basic properties
-        QString Uuid() const;
-        QString Device() const;
-        QString NetworkRef() const;
-        QString HostRef() const;
-        QString MAC() const;
-        qlonglong MTU() const;
-        qlonglong VLAN() const;
+        QString GetDevice() const;
+        QString GetNetworkRef() const;
+        QSharedPointer<Network> GetNetwork();
+        QString GetHostRef() const;
+        QSharedPointer<Host> GetHost();
+        QString GetMAC() const;
+        qlonglong GetMTU() const;
+        qlonglong GetVLAN() const;
         QString MetricsRef() const;
-        bool Physical() const;
-        bool CurrentlyAttached() const;
+        bool IsPhysical() const;
+        bool IsCurrentlyAttached() const;
 
         // IP configuration
         QString IpConfigurationMode() const;
@@ -105,7 +109,6 @@ class PIF : public XenObject
 
         // Helper methods
         bool IsManagementInterface() const;
-        bool IsPhysical() const;
         bool IsVLAN() const;
         bool IsBondSlave() const;
         bool IsBondMaster() const;

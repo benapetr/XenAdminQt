@@ -105,6 +105,62 @@ namespace XenAPI
         return api.ParseJsonRpcResponse(response).toString();
     }
 
+    void PIF::destroy(Session* session, const QString& pif)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pif;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("PIF.destroy", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.ParseJsonRpcResponse(response);
+    }
+
+    QString PIF::async_destroy(Session* session, const QString& pif)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pif;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("Async.PIF.destroy", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString();
+    }
+
+    void PIF::forget(Session* session, const QString& pif)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pif;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("PIF.forget", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.ParseJsonRpcResponse(response);
+    }
+
+    QString PIF::async_forget(Session* session, const QString& pif)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << pif;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("Async.PIF.forget", params);
+        QByteArray response = session->sendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString();
+    }
+
     void PIF::set_disallow_unplug(Session* session, const QString& pif, bool value)
     {
         if (!session || !session->IsLoggedIn())

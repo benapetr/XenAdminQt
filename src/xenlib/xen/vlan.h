@@ -25,36 +25,55 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NETWORKPROPERTIESDIALOG_H
-#define NETWORKPROPERTIESDIALOG_H
+#ifndef VLAN_H
+#define VLAN_H
 
-#include "verticallytabbeddialog.h"
+#include "xenobject.h"
 
 /**
- * @brief Network-specific properties dialog
+ * @brief VLAN - A VLAN mux/demux
  *
- * Qt equivalent of C# XenAdmin.Dialogs.PropertiesDialog for Network objects.
- * Uses VerticallyTabbedDialog pattern with IEditPage pages.
+ * Qt equivalent of C# XenAPI.VLAN class. Represents a VLAN configuration.
  *
- * Shows tabs (matching C# PropertiesDialog for Network objects):
- * 1. General (GeneralEditPage): Name, Description, Folder, Tags - universal for all objects
- * 2. Custom Fields (CustomFieldsDisplayPage): User-defined custom fields - universal
- * 3. Network Settings (NetworkGeneralEditPage): NIC, VLAN, MTU, Auto-add, Bond mode - network-specific
+ * Key properties (from C# VLAN class):
+ * - uuid
+ * - tagged_PIF (interface on which traffic is tagged)
+ * - untagged_PIF (interface on which traffic is untagged)
+ * - tag (VLAN tag in use)
+ * - other_config (additional configuration)
  *
- * C# Reference: xenadmin/XenAdmin/Dialogs/PropertiesDialog.cs (isNetwork = true, line 122)
- *               xenadmin/XenAdmin/SettingsPanels/EditNetworkPage.cs
+ * First published in XenServer 4.1.
  */
-class NetworkPropertiesDialog : public VerticallyTabbedDialog
+class XENLIB_EXPORT VLAN : public XenObject
 {
     Q_OBJECT
 
     public:
-        explicit NetworkPropertiesDialog(XenConnection* connection,
-                                         const QString& networkRef,
-                                         QWidget* parent = nullptr);
+        explicit VLAN(XenConnection* connection,
+                      const QString& opaqueRef,
+                      QObject* parent = nullptr);
+        ~VLAN() override = default;
 
-    protected:
-        void build() override;
+        /**
+         * @brief Get tagged PIF reference
+         * @return Opaque reference to interface on which traffic is tagged
+         */
+        QString GetTaggedPIFRef() const;
+
+        /**
+         * @brief Get untagged PIF reference
+         * @return Opaque reference to interface on which traffic is untagged
+         */
+        QString GetUntaggedPIFRef() const;
+
+        /**
+         * @brief Get VLAN tag
+         * @return VLAN tag in use
+         */
+        qint64 GetTag() const;
+
+        // XenObject interface
+        QString GetObjectType() const override;
 };
 
-#endif // NETWORKPROPERTIESDIALOG_H
+#endif // VLAN_H

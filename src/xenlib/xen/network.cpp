@@ -70,6 +70,16 @@ QStringList Network::GetPIFRefs() const
     return result;
 }
 
+QString Network::NameLabel() const
+{
+    return this->GetData().value("name_label").toString();
+}
+
+QString Network::Description() const
+{
+    return this->GetData().value("name_description").toString();
+}
+
 QVariantMap Network::OtherConfig() const
 {
     return this->GetData().value("other_config").toMap();

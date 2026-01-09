@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>NetworkGeneralEditPage</class>
+ <widget class="QWidget" name="NetworkGeneralEditPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>500</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Network Settings</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QGroupBox" name="networkSettingsGroupBox">
+     <property name="title">
+      <string>Network Configuration</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QLabel" name="warningLabel">
+        <property name="styleSheet">
+         <string notr="true">color: rgb(200, 0, 0); font-weight: bold;</string>
+        </property>
+        <property name="text">
+         <string>Warning: Cannot modify network settings</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QFormLayout" name="formLayout_2">
+        <item row="0" column="0">
+         <widget class="QLabel" name="nicLabel">
+          <property name="text">
+           <string>NIC:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QComboBox" name="nicComboBox"/>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="vlanLabel">
+          <property name="text">
+           <string>VLAN:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QSpinBox" name="vlanSpinBox">
+          <property name="minimum">
+           <number>0</number>
+          </property>
+          <property name="maximum">
+           <number>4094</number>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="mtuLabel">
+          <property name="text">
+           <string>MTU:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QSpinBox" name="mtuSpinBox">
+          <property name="minimum">
+           <number>1500</number>
+          </property>
+          <property name="maximum">
+           <number>9216</number>
+          </property>
+          <property name="value">
+           <number>1500</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QLabel" name="mtuWarningLabel">
+        <property name="styleSheet">
+         <string notr="true">color: rgb(150, 100, 0);</string>
+        </property>
+        <property name="text">
+         <string>MTU configuration warning</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="autoAddCheckBox">
+        <property name="text">
+         <string>Automatically add this network to new virtual machines</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="disruptionWarningLabel">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(255, 255, 200); padding: 8px; border: 1px solid rgb(200, 150, 0);</string>
+        </property>
+        <property name="text">
+         <string>⚠ Warning: Changing these settings will cause brief network disruption</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="bondModeGroupBox">
+     <property name="title">
+      <string>Bond Mode</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <widget class="QRadioButton" name="radioBalanceSlb">
+        <property name="text">
+         <string>Active-Active (balance-slb)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radioActiveBackup">
+        <property name="text">
+         <string>Active-Passive (active-backup)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="lacpLabel">
+        <property name="text">
+         <string>Link Aggregation (LACP):</string>
+        </property>
+        <property name="indent">
+         <number>20</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radioLacpSrcMac">
+        <property name="text">
+         <string>Source MAC address</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">margin-left: 20px;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radioLacpTcpUdp">
+        <property name="text">
+         <string>Source and destination IP, port</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">margin-left: 20px;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="lacpWarningLabel">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(255, 255, 200); padding: 6px; margin-top: 4px;</string>
+        </property>
+        <property name="text">
+         <string>Note: LACP bond mode requires switch configuration</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
