@@ -38,6 +38,8 @@
 #include "vmhelpers.h"
 #include "newvirtualdiskdialog.h"
 #include "vifdialog.h"
+#include "newsrwizard.h"
+#include "mainwindow.h"
 #include "../widgets/wizardnavigationpane.h"
 #include "../widgets/isodropdownbox.h"
 #include "../settingsmanager.h"
@@ -71,6 +73,7 @@ NewVMWizard::NewVMWizard(XenConnection* connection, QWidget* parent)
     connect(this->ui->vcpusMaxSpin, qOverload<int>(&QSpinBox::valueChanged), this, &NewVMWizard::onVcpusMaxChanged);
     connect(this->ui->memoryStaticMaxSpin, qOverload<int>(&QSpinBox::valueChanged), this, &NewVMWizard::onMemoryStaticMaxChanged);
     connect(this->ui->memoryDynamicMaxSpin, qOverload<int>(&QSpinBox::valueChanged), this, &NewVMWizard::onMemoryDynamicMaxChanged);
+    connect(this->ui->coresPerSocketCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, &NewVMWizard::onCoresPerSocketChanged);
     connect(this->ui->isoRadioButton, &QRadioButton::toggled, this, &NewVMWizard::onIsoRadioToggled);
     connect(this->ui->urlRadioButton, &QRadioButton::toggled, this, &NewVMWizard::onUrlRadioToggled);
     connect(this->ui->defaultSrCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, &NewVMWizard::onDefaultSrChanged);
@@ -83,6 +86,7 @@ NewVMWizard::NewVMWizard(XenConnection* connection, QWidget* parent)
     connect(this->ui->addNetworkButton, &QPushButton::clicked, this, &NewVMWizard::onAddNetworkClicked);
     connect(this->ui->editNetworkButton, &QPushButton::clicked, this, &NewVMWizard::onEditNetworkClicked);
     connect(this->ui->removeNetworkButton, &QPushButton::clicked, this, &NewVMWizard::onRemoveNetworkClicked);
+    connect(this->ui->attachIsoButton, &QPushButton::clicked, this, &NewVMWizard::onAttachIsoLibraryClicked);
 
     this->ui->networkTable->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this->ui->networkTable, &QTableWidget::customContextMenuRequested,
@@ -327,9 +331,12 @@ void NewVMWizard::handleTemplateSelectionChanged()
         this->m_memoryDynamicMax = int(memDynMax);
         this->m_memoryStaticMax = int(memStaticMax);
         this->m_coresPerSocket = int(coresPerSocket);
+        this->m_originalVcpuAtStartup = int(vcpusStartup);
+        this->m_originalCoresPerSocket = int(coresPerSocket);
     }
 
     this->loadTemplateDevices();
+    this->updateVcpuControls();
 
     const QVariantMap otherConfig = this->m_selectedTemplateRecord.value("other_config").toMap();
     const bool isDefaultTemplate = otherConfig.contains("default_template");
@@ -380,57 +387,71 @@ void NewVMWizard::loadTemplateDevices()
         return;
     }
 
-    QString provisionXml = templateRecord.value("provision_xml").toString();
-    if (!provisionXml.isEmpty())
+    QDomElement provisionRoot;
+    if (cache)
     {
-        QDomDocument doc;
-        if (doc.setContent(provisionXml))
+        QSharedPointer<VM> templateVm = cache->ResolveObject<VM>("vm", this->m_selectedTemplate);
+        if (templateVm)
+            provisionRoot = templateVm->ProvisionXml();
+    }
+
+    if (provisionRoot.isNull())
+    {
+        const QVariantMap otherConfig = templateRecord.value("other_config").toMap();
+        const QString provisionXml = otherConfig.value("disks").toString();
+        if (!provisionXml.isEmpty())
         {
-            QDomElement root = doc.documentElement();
-            QDomNodeList disks = root.elementsByTagName("disk");
-            QString namePrefix = this->ui->vmNameEdit->text().trimmed();
-            if (namePrefix.isEmpty())
-                namePrefix = templateRecord.value("name_label").toString();
+            QDomDocument doc;
+            if (doc.setContent(provisionXml))
+                provisionRoot = doc.documentElement();
+        }
+    }
 
-            for (int i = 0; i < disks.count(); ++i)
+    if (!provisionRoot.isNull())
+    {
+        QDomNodeList disks = provisionRoot.elementsByTagName("disk");
+        QString namePrefix = this->ui->vmNameEdit->text().trimmed();
+        if (namePrefix.isEmpty())
+            namePrefix = templateRecord.value("name_label").toString();
+
+        for (int i = 0; i < disks.count(); ++i)
+        {
+            QDomElement diskEl = disks.at(i).toElement();
+            if (diskEl.isNull())
+                continue;
+
+            DiskConfig disk;
+            disk.device = diskEl.attribute("device");
+            disk.bootable = (diskEl.attribute("bootable").toLower() == "true");
+            disk.sizeBytes = diskEl.attribute("size").toLongLong();
+            disk.vdiType = diskEl.attribute("type").toLower();
+            if (disk.vdiType.isEmpty())
+                disk.vdiType = "user";
+
+            disk.name = QString("%1 Disk %2").arg(namePrefix, disk.device);
+            disk.description = tr("Virtual disk");
+            disk.mode = "RW";
+            disk.canDelete = (disk.vdiType == "user");
+            disk.canResize = true;
+            disk.minSizeBytes = disk.sizeBytes;
+
+            QString srUuid = diskEl.attribute("sr");
+            if (!srUuid.isEmpty())
             {
-                QDomElement diskEl = disks.at(i).toElement();
-                if (diskEl.isNull())
-                    continue;
-
-                DiskConfig disk;
-                disk.device = diskEl.attribute("device");
-                disk.bootable = (diskEl.attribute("bootable").toLower() == "true");
-                disk.sizeBytes = diskEl.attribute("size").toLongLong();
-                disk.vdiType = diskEl.attribute("type").toLower();
-                if (disk.vdiType.isEmpty())
-                    disk.vdiType = "user";
-
-                disk.name = QString("%1 Disk %2").arg(namePrefix, disk.device);
-                disk.description = tr("Virtual disk");
-                disk.mode = "RW";
-                disk.canDelete = (disk.vdiType == "user");
-                disk.canResize = true;
-                disk.minSizeBytes = disk.sizeBytes;
-
-                QString srUuid = diskEl.attribute("sr");
-                if (!srUuid.isEmpty())
+                QList<QVariantMap> srs = cache->GetAllData("sr");
+                for (const QVariantMap& sr : srs)
                 {
-                    QList<QVariantMap> srs = cache->GetAllData("sr");
-                    for (const QVariantMap& sr : srs)
+                    if (sr.value("uuid").toString() == srUuid)
                     {
-                        if (sr.value("uuid").toString() == srUuid)
-                        {
-                            disk.srRef = sr.value("ref").toString();
-                            break;
-                        }
+                        disk.srRef = sr.value("ref").toString();
+                        break;
                     }
                 }
-                if (disk.srRef.isEmpty())
-                    disk.srRef = this->ui->defaultSrCombo->currentData().toString();
-
-                this->m_disks.append(disk);
             }
+            if (disk.srRef.isEmpty())
+                disk.srRef = this->ui->defaultSrCombo->currentData().toString();
+
+            this->m_disks.append(disk);
         }
     }
 
@@ -469,18 +490,59 @@ void NewVMWizard::loadTemplateDevices()
         }
     }
 
-    // Get VIF references from template record
-    QVariantList vifRefs = templateRecord.value("VIFs").toList();
-    for (const QVariant& vifRefVar : vifRefs)
+    bool isDefaultTemplate = false;
+    if (cache)
     {
-        QString vifRef = vifRefVar.toString();
-        QVariantMap vif = cache->ResolveObjectData("vif", vifRef);
-        
-        NetworkConfig network;
-        network.networkRef = vif.value("network").toString();
-        network.device = vif.value("device").toString();
-        network.mac = vif.value("MAC").toString();
-        this->m_networks.append(network);
+        QSharedPointer<VM> templateVm = cache->ResolveObject<VM>("vm", this->m_selectedTemplate);
+        if (templateVm)
+            isDefaultTemplate = templateVm->DefaultTemplate();
+    }
+
+    if (isDefaultTemplate)
+    {
+        const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
+        QStringList networkRefs = cache->GetAllRefs("network");
+        int deviceIndex = 0;
+
+        for (const QString& networkRef : networkRefs)
+        {
+            QVariantMap networkData = cache->ResolveObjectData("network", networkRef);
+            QVariantMap otherConfig = networkData.value("other_config", QVariantMap()).toMap();
+            const QString nameLabel = networkData.value("name_label").toString();
+
+            if (otherConfig.value("is_guest_installer_network", "false").toString() == "true")
+                continue;
+            if (!showHidden && otherConfig.value("HideFromXenCenter", "false").toString() == "true")
+                continue;
+            if (nameLabel.isEmpty())
+                continue;
+
+            const QString autoplug = otherConfig.value("automatic", "false").toString();
+            if (autoplug == "false")
+                continue;
+
+            NetworkConfig network;
+            network.networkRef = networkRef;
+            network.device = QString::number(deviceIndex++);
+            network.mac = QString();
+            this->m_networks.append(network);
+        }
+    }
+    else
+    {
+        // Get VIF references from template record
+        QVariantList vifRefs = templateRecord.value("VIFs").toList();
+        for (const QVariant& vifRefVar : vifRefs)
+        {
+            QString vifRef = vifRefVar.toString();
+            QVariantMap vif = cache->ResolveObjectData("vif", vifRef);
+            
+            NetworkConfig network;
+            network.networkRef = vif.value("network").toString();
+            network.device = vif.value("device").toString();
+            network.mac = vif.value("MAC").toString();
+            this->m_networks.append(network);
+        }
     }
 
     this->updateDiskTable();
@@ -668,9 +730,17 @@ void NewVMWizard::updateSummaryPage()
     QStringList lines;
     lines << tr("Template: %1").arg(templateName.isEmpty() ? tr("None selected") : templateName);
     lines << tr("Name: %1").arg(this->ui->vmNameEdit->text().trimmed());
-    lines << tr("vCPUs: %1 (max %2)")
-                 .arg(this->ui->vcpusStartupSpin->value())
-                 .arg(this->ui->vcpusMaxSpin->value());
+    if (this->m_supportsVcpuHotplug)
+    {
+        lines << tr("vCPUs: %1 (max %2)")
+                     .arg(this->ui->vcpusStartupSpin->value())
+                     .arg(this->ui->vcpusMaxSpin->value());
+    }
+    else
+    {
+        lines << tr("vCPUs: %1").arg(this->ui->vcpusMaxSpin->value());
+    }
+    lines << tr("Topology: %1").arg(this->ui->coresPerSocketCombo->currentText());
     lines << tr("Memory: %1 MiB (dynamic %2-%3)")
                  .arg(this->ui->memoryStaticMaxSpin->value())
                  .arg(this->ui->memoryDynamicMinSpin->value())
@@ -703,6 +773,121 @@ void NewVMWizard::updateIsoControls()
     this->ui->isoComboBox->setEnabled(isoMode);
     this->ui->attachIsoButton->setEnabled(isoMode);
     this->ui->urlLineEdit->setEnabled(!isoMode);
+}
+
+void NewVMWizard::updateVcpuControls()
+{
+    XenCache* cache = this->cache();
+    if (!cache || this->m_selectedTemplate.isEmpty())
+        return;
+
+    QSharedPointer<VM> templateVm = cache->ResolveObject<VM>("vm", this->m_selectedTemplate);
+    if (!templateVm)
+        return;
+
+    this->m_supportsVcpuHotplug = templateVm->SupportsVCPUHotplug();
+    this->m_minVcpus = qMax(1, templateVm->MinVCPUs());
+    this->m_maxVcpusAllowed = qMax(this->m_minVcpus, templateVm->MaxVCPUsAllowed());
+    this->m_maxCoresPerSocket = qMax(1, int(templateVm->MaxCoresPerSocket()));
+
+    this->ui->vcpusStartupLabel->setVisible(this->m_supportsVcpuHotplug);
+    this->ui->vcpusStartupSpin->setVisible(this->m_supportsVcpuHotplug);
+    this->ui->vcpusMaxLabel->setText(this->m_supportsVcpuHotplug
+        ? tr("Maximum vCPUs:")
+        : tr("vCPUs:"));
+
+    this->ui->vcpusMaxSpin->setMinimum(this->m_minVcpus);
+    this->ui->vcpusMaxSpin->setMaximum(this->m_maxVcpusAllowed);
+    this->ui->vcpusStartupSpin->setMinimum(this->m_minVcpus);
+    this->ui->vcpusStartupSpin->setMaximum(this->ui->vcpusMaxSpin->value());
+
+    this->updateTopologyOptions(this->ui->vcpusMaxSpin->value());
+    this->enforceVcpuTopology();
+}
+
+void NewVMWizard::enforceVcpuTopology()
+{
+    if (!this->isValidVcpu(this->ui->vcpusMaxSpin->value()))
+    {
+        int maxVcpus = this->ui->vcpusMaxSpin->maximum();
+        int minVcpus = this->ui->vcpusMaxSpin->minimum();
+        int candidate = this->ui->vcpusMaxSpin->value();
+
+        while (candidate <= maxVcpus && !this->isValidVcpu(candidate))
+            ++candidate;
+        if (candidate > maxVcpus)
+        {
+            candidate = this->ui->vcpusMaxSpin->value();
+            while (candidate >= minVcpus && !this->isValidVcpu(candidate))
+                --candidate;
+        }
+        if (candidate >= minVcpus && candidate <= maxVcpus)
+            this->ui->vcpusMaxSpin->setValue(candidate);
+    }
+
+    if (this->m_supportsVcpuHotplug)
+    {
+        this->ui->vcpusStartupSpin->setMaximum(this->ui->vcpusMaxSpin->value());
+        if (this->ui->vcpusStartupSpin->value() > this->ui->vcpusMaxSpin->value())
+            this->ui->vcpusStartupSpin->setValue(this->ui->vcpusMaxSpin->value());
+    }
+    else
+    {
+        this->ui->vcpusStartupSpin->setValue(this->ui->vcpusMaxSpin->value());
+    }
+}
+
+void NewVMWizard::updateTopologyOptions(int vcpusMax)
+{
+    QSignalBlocker blocker(this->ui->coresPerSocketCombo);
+    this->ui->coresPerSocketCombo->clear();
+
+    int maxCores = this->m_maxCoresPerSocket > 0 ? qMin(vcpusMax, this->m_maxCoresPerSocket) : vcpusMax;
+    for (int cores = 1; cores <= maxCores; ++cores)
+    {
+        if (vcpusMax % cores != 0)
+            continue;
+
+        int sockets = vcpusMax / cores;
+        if (sockets > VM::MAX_SOCKETS)
+            continue;
+
+        this->ui->coresPerSocketCombo->addItem(VM::GetTopology(sockets, cores), cores);
+    }
+
+    if (this->m_originalVcpuAtStartup == vcpusMax &&
+        this->ui->coresPerSocketCombo->findData(this->m_originalCoresPerSocket) == -1)
+    {
+        this->ui->coresPerSocketCombo->addItem(
+            VM::GetTopology(0, this->m_originalCoresPerSocket),
+            this->m_originalCoresPerSocket);
+    }
+
+    int currentCores = this->m_coresPerSocket;
+    int coresIndex = this->ui->coresPerSocketCombo->findData(currentCores);
+    if (coresIndex < 0)
+        coresIndex = 0;
+    if (coresIndex >= 0)
+        this->ui->coresPerSocketCombo->setCurrentIndex(coresIndex);
+
+    this->m_coresPerSocket = this->ui->coresPerSocketCombo->currentData().toInt();
+}
+
+bool NewVMWizard::isValidVcpu(int vcpus) const
+{
+    if (vcpus <= 0)
+        return false;
+
+    int maxCores = this->m_maxCoresPerSocket > 0 ? qMin(vcpus, this->m_maxCoresPerSocket) : vcpus;
+    for (int cores = 1; cores <= maxCores; ++cores)
+    {
+        if (vcpus % cores != 0)
+            continue;
+        int sockets = vcpus / cores;
+        if (sockets <= VM::MAX_SOCKETS)
+            return true;
+    }
+    return false;
 }
 
 void NewVMWizard::applyDefaultSRToDisks(const QString& srRef)
@@ -775,11 +960,10 @@ bool NewVMWizard::validateCurrentPage()
     case Page_CpuMemory:
     {
         int vcpusMax = this->ui->vcpusMaxSpin->value();
-        int coresPerSocket = this->ui->coresPerSocketCombo->currentData().toInt();
-        QString topologyError = VM::ValidVCPUConfiguration(vcpusMax, coresPerSocket);
-        if (!topologyError.isEmpty())
+        if (!this->isValidVcpu(vcpusMax))
         {
-            QMessageBox::warning(this, tr("CPU Topology"), topologyError);
+            QMessageBox::warning(this, tr("CPU Topology"),
+                                 tr("The selected vCPU count has no valid topology. Adjust the vCPU count."));
             return false;
         }
 
@@ -824,7 +1008,9 @@ void NewVMWizard::accept()
 {
     this->m_vmName = this->ui->vmNameEdit->text().trimmed();
     this->m_vmDescription = this->ui->vmDescriptionEdit->toPlainText().trimmed();
-    this->m_vcpuCount = this->ui->vcpusStartupSpin->value();
+    this->m_vcpuCount = this->m_supportsVcpuHotplug
+        ? this->ui->vcpusStartupSpin->value()
+        : this->ui->vcpusMaxSpin->value();
     this->m_vcpuMax = this->ui->vcpusMaxSpin->value();
     this->m_coresPerSocket = this->ui->coresPerSocketCombo->currentData().toInt();
     this->m_memoryDynamicMin = this->ui->memoryDynamicMinSpin->value();
@@ -1037,9 +1223,25 @@ void NewVMWizard::onCopyBiosStringsToggled(bool checked)
 
 void NewVMWizard::onVcpusMaxChanged(int value)
 {
-    this->ui->vcpusStartupSpin->setMaximum(value);
-    if (this->ui->vcpusStartupSpin->value() > value)
+    if (this->m_supportsVcpuHotplug)
+    {
+        this->ui->vcpusStartupSpin->setMaximum(value);
+        if (this->ui->vcpusStartupSpin->value() > value)
+            this->ui->vcpusStartupSpin->setValue(value);
+    }
+    else
+    {
         this->ui->vcpusStartupSpin->setValue(value);
+    }
+
+    this->enforceVcpuTopology();
+    this->updateTopologyOptions(this->ui->vcpusMaxSpin->value());
+}
+
+void NewVMWizard::onCoresPerSocketChanged(int index)
+{
+    Q_UNUSED(index);
+    this->m_coresPerSocket = this->ui->coresPerSocketCombo->currentData().toInt();
 }
 
 void NewVMWizard::onMemoryStaticMaxChanged(int value)
@@ -1291,6 +1493,27 @@ void NewVMWizard::onRemoveNetworkClicked()
 
     this->m_networks.removeAt(row);
     this->updateNetworkTable();
+}
+
+void NewVMWizard::onAttachIsoLibraryClicked()
+{
+    if (!this->m_connection)
+    {
+        QMessageBox::warning(this, tr("No Connection"),
+                             tr("Unable to open the ISO library wizard because there is no active connection."));
+        return;
+    }
+
+    MainWindow* mainWindow = qobject_cast<MainWindow*>(this->window());
+    NewSRWizard wizard(this->m_connection, mainWindow);
+    wizard.SetInitialSrType(SRType::NFS_ISO, false);
+
+    if (wizard.exec() == QDialog::Accepted)
+    {
+        IsoDropDownBox* isoBox = qobject_cast<IsoDropDownBox*>(this->ui->isoComboBox);
+        if (isoBox)
+            isoBox->Refresh();
+    }
 }
 
 void NewVMWizard::onNetworkContextMenuRequested(const QPoint& pos)

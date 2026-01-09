@@ -77,11 +77,9 @@ void AddVirtualDiskCommand::Run()
             return;
         }
 
-        XenConnection* connection = object->GetConnection();
-
         // Open NewVirtualDiskDialog for VM (modal)
         qDebug() << "[AddVirtualDiskCommand] Opening NewVirtualDiskDialog for VM:" << objectRef;
-        NewVirtualDiskDialog dialog(connection, objectRef, mainWindow());
+        NewVirtualDiskDialog dialog(vm, mainWindow());
         if (dialog.exec() != QDialog::Accepted)
         {
             qDebug() << "[AddVirtualDiskCommand] Dialog cancelled by user";
@@ -118,7 +116,7 @@ void AddVirtualDiskCommand::Run()
 
         // Create VDI using CreateDiskAction
         qDebug() << "[AddVirtualDiskCommand] Creating VDI with CreateDiskAction...";
-        CreateDiskAction* createAction = new CreateDiskAction(vdiRecord, connection, this);
+        CreateDiskAction* createAction = new CreateDiskAction(vdiRecord, vm->GetConnection(), this);
 
         OperationProgressDialog* createDialog = new OperationProgressDialog(createAction, mainWindow());
         qDebug() << "[AddVirtualDiskCommand] Executing create dialog...";

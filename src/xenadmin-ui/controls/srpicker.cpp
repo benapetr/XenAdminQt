@@ -63,10 +63,7 @@ SrPicker::~SrPicker()
     delete this->ui;
 }
 
-void SrPicker::populate(SRPickerType usage, XenConnection* connection,
-                        const QString& affinityRef,
-                        const QString& preselectedSRRef,
-                        const QStringList& existingVDIRefs)
+void SrPicker::Populate(SRPickerType usage, XenConnection* connection, const QString& affinityRef, const QString& preselectedSRRef, const QStringList& existingVDIRefs)
 {
     // Cleanup existing state
     for (SrRefreshAction* action : this->m_refreshQueue)
@@ -82,6 +79,8 @@ void SrPicker::populate(SRPickerType usage, XenConnection* connection,
     this->m_connection = connection;
     this->m_usage = usage;
     this->m_affinityRef = affinityRef;
+    if (!this->m_affinityRef.isEmpty() && XenObject::ValueIsNULL(this->m_affinityRef))
+        this->m_affinityRef.clear();
     this->m_preselectedSRRef = preselectedSRRef;
     this->m_existingVDIRefs = existingVDIRefs;
     this->m_srItems.clear();
@@ -270,7 +269,7 @@ void SrPicker::removeSR(const QString& srRef)
     }
 }
 
-void SrPicker::scanSRs()
+void SrPicker::ScanSRs()
 {
     if (!this->m_connection)
         return;
@@ -318,7 +317,7 @@ void SrPicker::scanSRs()
     this->onCanBeScannedChanged();
 }
 
-QString SrPicker::selectedSR() const
+QString SrPicker::GetSelectedSR() const
 {
     QList<QTableWidgetItem*> selectedItems = this->ui->srTable->selectedItems();
     if (selectedItems.isEmpty())
@@ -331,7 +330,7 @@ QString SrPicker::selectedSR() const
     return firstItem->data(Qt::UserRole).toString();
 }
 
-bool SrPicker::canBeScanned() const
+bool SrPicker::CanBeScanned() const
 {
     if (!this->m_connection)
         return false;

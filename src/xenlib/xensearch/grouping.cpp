@@ -340,7 +340,7 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
                 QSharedPointer<VM> vm = this->m_connection->GetCache()->ResolveObject<VM>("vm", snapshotOf);
                 if (vm)
                 {
-                    const QString home = vm->HomeRef();
+                    const QString home = vm->GetHomeRef();
                     if (!home.isEmpty() && home != "OpaqueRef:NULL")
                         return home;
                 }

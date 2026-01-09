@@ -89,7 +89,7 @@ class SrPicker : public QWidget
          * @param preselectedSRRef SR to auto-select after scanning (nullptr for pool default)
          * @param existingVDIRefs VDI references for existing disks (for space calculation)
          */
-        void populate(SRPickerType usage, XenConnection* connection,
+        void Populate(SRPickerType usage, XenConnection* connection,
                       const QString& affinityRef,
                       const QString& preselectedSRRef,
                       const QStringList& existingVDIRefs);
@@ -105,19 +105,19 @@ class SrPicker : public QWidget
          * 3. Queues actions and runs at most MAX_SCANS_PER_CONNECTION (3) in parallel
          * 4. Marks each SR as "Scanning..." until the action completes
          */
-        void scanSRs();
+        void ScanSRs();
 
         /**
          * @brief Get the currently selected SR reference
          * @return Selected SR reference, or empty string if none selected
          */
-        QString selectedSR() const;
+        QString GetSelectedSR() const;
 
         /**
          * @brief Check if any SR can be scanned (not already scanning and not detached)
          * @return True if at least one SR can be scanned
          */
-        bool canBeScanned() const;
+        bool CanBeScanned() const;
 
     signals:
         /**

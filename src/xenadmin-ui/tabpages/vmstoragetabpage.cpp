@@ -173,6 +173,7 @@ void VMStorageTabPage::SetObject(QSharedPointer<XenObject> object)
     // Connect to object updates for real-time CD/DVD changes
     if (this->m_connection && object->GetObjectType() == "vm")
     {
+        this->m_vm = qSharedPointerCast<VM>(object);
         connect(this->m_connection->GetCache(), &XenCache::objectChanged, this, &VMStorageTabPage::onCacheObjectChanged, Qt::UniqueConnection);
     }
 }
@@ -1499,18 +1500,17 @@ void VMStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& po
 
 void VMStorageTabPage::onAddButtonClicked()
 {
-    if (!this->m_connection || this->m_objectRef.isEmpty())
+    if (!this->m_vm)
         return;
 
-    XenConnection* connection = this->m_connection;
-    if (!connection)
+    if (!this->m_vm->GetConnection())
     {
         QMessageBox::warning(this, "Error", "No connection available.");
         return;
     }
 
     // Open New Virtual Disk Dialog
-    NewVirtualDiskDialog dialog(this->m_connection, this->m_objectRef, this);
+    NewVirtualDiskDialog dialog(this->m_vm, this);
     if (dialog.exec() != QDialog::Accepted)
         return;
 
@@ -1537,7 +1537,7 @@ void VMStorageTabPage::onAddButtonClicked()
     // Create VDI using CreateDiskAction
     qDebug() << "Creating VDI:" << name << "size:" << size << "in SR:" << srRef;
 
-    CreateDiskAction* createAction = new CreateDiskAction(vdiRecord, connection, this);
+    CreateDiskAction* createAction = new CreateDiskAction(vdiRecord, this->m_vm->GetConnection(), this);
 
     OperationProgressDialog* createDialog = new OperationProgressDialog(createAction, this);
     qDebug() << "[StorageTabPage] Executing create dialog for VDI...";
@@ -1567,9 +1567,7 @@ void VMStorageTabPage::onAddButtonClicked()
 
     qDebug() << "VDI created:" << vdiRef << "Now attaching to VM...";
 
-    // TODO refactor so that we pass the shared VM object directly to this tab from tree view, no need to create it again here
     // Create VBD and attach to VM using VbdCreateAndPlugAction
-    QSharedPointer<VM> vm(new VM(connection, this->m_objectRef));
 
     QVariantMap vbdRecord;
     vbdRecord["VM"] = this->m_objectRef;
@@ -1584,7 +1582,7 @@ void VMStorageTabPage::onAddButtonClicked()
     vbdRecord["qos_algorithm_type"] = "";
     vbdRecord["qos_algorithm_params"] = QVariantMap();
 
-    VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(vm, vbdRecord, name, false, this);
+    VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(this->m_vm, vbdRecord, name, false, this);
 
     OperationProgressDialog* attachDialog = new OperationProgressDialog(attachAction, this);
     if (attachDialog->exec() != QDialog::Accepted)

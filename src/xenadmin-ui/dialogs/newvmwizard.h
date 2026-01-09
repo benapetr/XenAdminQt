@@ -83,6 +83,7 @@ class NewVMWizard : public QWizard
         void onIsoRadioToggled(bool checked);
         void onUrlRadioToggled(bool checked);
         void onDefaultSrChanged(int index);
+        void onCoresPerSocketChanged(int index);
         void onDiskTableSelectionChanged();
         void onAddDiskClicked();
         void onEditDiskClicked();
@@ -92,6 +93,7 @@ class NewVMWizard : public QWizard
         void onAddNetworkClicked();
         void onEditNetworkClicked();
         void onRemoveNetworkClicked();
+        void onAttachIsoLibraryClicked();
         void onNetworkContextMenuRequested(const QPoint& pos);
         void onDiskContextMenuRequested(const QPoint& pos);
 
@@ -112,6 +114,10 @@ class NewVMWizard : public QWizard
         void updateSummaryPage();
         void updateHomeServerControls(bool enableSelection);
         void updateIsoControls();
+        void updateVcpuControls();
+        void updateTopologyOptions(int vcpusMax);
+        bool isValidVcpu(int vcpus) const;
+        void enforceVcpuTopology();
         void applyDefaultSRToDisks(const QString& srRef);
         void updateNavigationSelection();
 
@@ -158,6 +164,12 @@ class NewVMWizard : public QWizard
         int m_vcpuCount;
         int m_vcpuMax = 1;
         int m_coresPerSocket = 1;
+        int m_originalVcpuAtStartup = 1;
+        int m_originalCoresPerSocket = 1;
+        bool m_supportsVcpuHotplug = false;
+        int m_minVcpus = 1;
+        int m_maxVcpusAllowed = 1;
+        int m_maxCoresPerSocket = 1;
         long m_memorySize;
         int m_memoryDynamicMin = 0;
         int m_memoryDynamicMax = 0;

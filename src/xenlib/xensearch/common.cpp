@@ -941,7 +941,7 @@ QVariant PropertyAccessors::HostProperty(XenObject* o)
     }
     else if (VM* vm = qobject_cast<VM*>(o))
     {
-        QString homeHost = vm->HomeRef();
+        QString homeHost = vm->GetHomeRef();
         if (!homeHost.isEmpty())
             hostRefs.append(homeHost);
     }

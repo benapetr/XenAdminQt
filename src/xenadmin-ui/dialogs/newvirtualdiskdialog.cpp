@@ -28,26 +28,51 @@
 #include "newvirtualdiskdialog.h"
 #include "ui_newvirtualdiskdialog.h"
 #include "xen/network/connection.h"
+#include "xen/vm.h"
 #include "xencache.h"
 #include "controls/srpicker.h"
 #include <QMessageBox>
 #include <QPushButton>
 #include <QDebug>
 
-NewVirtualDiskDialog::NewVirtualDiskDialog(XenConnection* connection, const QString& vmRef, QWidget* parent)
-    : QDialog(parent), ui(new Ui::NewVirtualDiskDialog), m_connection(connection), m_vmRef(vmRef)
+NewVirtualDiskDialog::NewVirtualDiskDialog(XenConnection* connection, const QString& vmRef, QWidget* parent) : QDialog(parent), ui(new Ui::NewVirtualDiskDialog), m_connection(connection), m_vmRef(vmRef)
 {
-    this->ui->setupUi(this);
-
     // Get VM data
     if (this->m_connection && this->m_connection->GetCache())
-        this->m_vmData = this->m_connection->GetCache()->ResolveObjectData("vm", this->m_vmRef);
+    {
+        this->m_vm = this->m_connection->GetCache()->ResolveObject<VM>("vm", this->m_vmRef);
+        if (!this->m_vm.isNull())
+            this->m_vmData = this->m_vm->GetData();
+    }
+
+    this->init();
+}
+
+NewVirtualDiskDialog::NewVirtualDiskDialog(QSharedPointer<VM> vm, QWidget *parent) : QDialog(parent), ui(new Ui::NewVirtualDiskDialog)
+{
+    if (!vm)
+    {
+        this->m_connection = nullptr;
+    } else
+    {
+        this->m_vm = vm;
+        this->m_connection = vm->GetConnection();
+        this->m_vmRef = vm->OpaqueRef();
+        this->m_vmData = vm->GetData();
+    }
+
+    this->init();
+}
+
+void NewVirtualDiskDialog::init()
+{
+    this->ui->setupUi(this);
 
     // Connect signals
     connect(this->ui->srPicker, &SrPicker::selectedIndexChanged, this, &NewVirtualDiskDialog::onSRChanged);
     connect(this->ui->srPicker, &SrPicker::canBeScannedChanged, this, [this]()
     {
-        this->ui->rescanButton->setEnabled(this->ui->srPicker->canBeScanned());
+        this->ui->rescanButton->setEnabled(this->ui->srPicker->CanBeScanned());
     });
     connect(this->ui->sizeSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &NewVirtualDiskDialog::onSizeChanged);
     connect(this->ui->rescanButton, &QPushButton::clicked, this, &NewVirtualDiskDialog::onRescanClicked);
@@ -85,19 +110,11 @@ void NewVirtualDiskDialog::populateSRList()
         return;
 
     QString homeHost = this->m_homeHostRef;
-    if (homeHost.isEmpty())
-    {
-        QString vmResidentOn = this->m_vmData.value("resident_on", "").toString();
-        QString vmAffinity = this->m_vmData.value("affinity", "").toString();
-        homeHost = vmResidentOn.isEmpty() ? vmAffinity : vmResidentOn;
-    }
+    if (homeHost.isEmpty() && !this->m_vm.isNull())
+        homeHost = this->m_vm->GetHomeRef();
 
-    this->ui->srPicker->populate(SrPicker::VM,
-                                 this->m_connection,
-                                 homeHost,
-                                 this->m_initialSrRef,
-                                 QStringList());
-    this->ui->rescanButton->setEnabled(this->ui->srPicker->canBeScanned());
+    this->ui->srPicker->Populate(SrPicker::VM, this->m_connection, homeHost, this->m_initialSrRef, QStringList());
+    this->ui->rescanButton->setEnabled(this->ui->srPicker->CanBeScanned());
 }
 
 int NewVirtualDiskDialog::findNextAvailableDevice() const
@@ -152,7 +169,7 @@ void NewVirtualDiskDialog::onSizeChanged(double value)
 
 void NewVirtualDiskDialog::onRescanClicked()
 {
-    this->ui->srPicker->scanSRs();
+    this->ui->srPicker->ScanSRs();
 }
 
 void NewVirtualDiskDialog::validateInput()
@@ -168,14 +185,14 @@ void NewVirtualDiskDialog::validateInput()
     }
 
     // Check if SR is selected
-    if (this->ui->srPicker->selectedSR().isEmpty())
+    if (this->ui->srPicker->GetSelectedSR().isEmpty())
     {
         this->ui->warningLabel->setText("Error: Please select a storage repository.");
         this->ui->addButton->setEnabled(false);
         return;
     }
 
-    QString srRef = this->ui->srPicker->selectedSR();
+    QString srRef = this->ui->srPicker->GetSelectedSR();
     QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
 
     if (srData.isEmpty())
@@ -242,7 +259,7 @@ void NewVirtualDiskDialog::validateAndAccept()
     }
 
     // Validate SR selection
-    if (this->ui->srPicker->selectedSR().isEmpty())
+    if (this->ui->srPicker->GetSelectedSR().isEmpty())
     {
         QMessageBox::warning(this, "Validation Error", "Please select a storage repository.");
         return;
@@ -285,7 +302,7 @@ QString NewVirtualDiskDialog::getVDIDescription() const
 
 QString NewVirtualDiskDialog::getSelectedSR() const
 {
-    return this->ui->srPicker->selectedSR();
+    return this->ui->srPicker->GetSelectedSR();
 }
 
 qint64 NewVirtualDiskDialog::getSize() const

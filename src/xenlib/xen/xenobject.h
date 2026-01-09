@@ -62,6 +62,8 @@ class XENLIB_EXPORT XenObject : public QObject
     Q_PROPERTY(bool IsLocked READ IsLocked NOTIFY dataChanged)
 
     public:
+        static bool ValueIsNULL(const QString &value);
+
         explicit XenObject(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         virtual ~XenObject();
 

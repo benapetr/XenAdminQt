@@ -34,6 +34,7 @@
 #include "../../xenapi/xenapi_VIF.h"
 #include "../../xenapi/xenapi_SR.h"
 #include "../vm/vmstartaction.h"
+#include "../../jsonrpcclient.h"
 #include "../../vm.h"
 #include <QDebug>
 #include <stdexcept>
@@ -240,6 +241,7 @@ void CreateVMAction::run()
 
             QVariantMap vbdRecord;
             vbdRecord["VM"] = newVmRef;
+            vbdRecord["VDI"] = "OpaqueRef:NULL";
             vbdRecord["bootable"] = (this->m_installMethod == InstallMethod::CD);
             vbdRecord["device"] = "";
             vbdRecord["userdevice"] = device;
@@ -503,12 +505,17 @@ QString CreateVMAction::createVdi(XenAPI::Session* session, const DiskConfig& di
     vdiRecord["sharable"] = disk.sharable;
     vdiRecord["SR"] = disk.srRef;
     vdiRecord["type"] = disk.vdiType.isEmpty() ? "user" : disk.vdiType;
-    vdiRecord["virtual_size"] = QString::number(disk.sizeBytes);
+    vdiRecord["virtual_size"] = disk.sizeBytes;
     vdiRecord["sm_config"] = QVariantMap();
+    vdiRecord["other_config"] = QVariantMap();
 
+    qDebug() << "[CreateVMAction] VDI.create record:" << vdiRecord;
     QString createTask = XenAPI::VDI::async_create(session, vdiRecord);
     if (createTask.isEmpty())
+    {
+        qDebug() << "[CreateVMAction] VDI.async_create failed:" << Xen::JsonRpcClient::lastError();
         throw std::runtime_error("VDI.create returned empty task ref");
+    }
 
     this->pollToCompletion(createTask, progress1, progress2);
     QString vdiRef = this->GetResult();
@@ -541,9 +548,13 @@ void CreateVMAction::createVbd(XenAPI::Session* session, const QString& vmRef, c
     vbdRecord["qos_algorithm_type"] = "";
     vbdRecord["qos_algorithm_params"] = QVariantMap();
 
+    qDebug() << "[CreateVMAction] VBD.create record:" << vbdRecord;
     QString createTask = XenAPI::VBD::async_create(session, vbdRecord);
     if (createTask.isEmpty())
+    {
+        qDebug() << "[CreateVMAction] VBD.async_create failed:" << Xen::JsonRpcClient::lastError();
         throw std::runtime_error("VBD.create returned empty task ref");
+    }
 
     this->pollToCompletion(createTask, progress1, progress2);
 }

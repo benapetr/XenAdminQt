@@ -109,51 +109,53 @@ class NewSRWizard : public QWizard
             Page_Summary
         };
 
-        SRType getSelectedSRType() const
+        SRType GetSelectedSRType() const
         {
-            return m_selectedSRType;
+            return this->m_selectedSRType;
         }
-        QString getSRName() const
+        QString GetSRName() const
         {
-            return m_srName;
+            return this->m_srName;
         }
-        QString getSRDescription() const
+        QString GetSRDescription() const
         {
-            return m_srDescription;
-        }
-
-        MainWindow* mainWindow() const
-        {
-            return m_mainWindow;
+            return this->m_srDescription;
         }
 
-        QString getServer() const
+        void SetInitialSrType(SRType srType, bool lockTypes);
+
+        MainWindow* GetMainWindow() const
         {
-            return m_server;
+            return this->m_mainWindow;
         }
-        QString getServerPath() const
+
+        QString GetServer() const
         {
-            return m_serverPath;
+            return this->m_server;
         }
-        QString getUsername() const
+        QString GetServerPath() const
         {
-            return m_username;
+            return this->m_serverPath;
         }
-        QString getPassword() const
+        QString GetUsername() const
         {
-            return m_password;
+            return this->m_username;
         }
-        int getPort() const
+        QString GetPassword() const
         {
-            return m_port;
+            return this->m_password;
         }
-        QString getLocalPath() const
+        int GetPort() const
         {
-            return m_localPath;
+            return this->m_port;
         }
-        QString getLocalFilesystem() const
+        QString GetLocalPath() const
         {
-            return m_localFilesystem;
+            return this->m_localPath;
+        }
+        QString GetLocalFilesystem() const
+        {
+            return this->m_localFilesystem;
         }
 
     public slots:

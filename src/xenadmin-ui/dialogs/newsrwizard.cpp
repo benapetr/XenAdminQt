@@ -95,6 +95,11 @@ NewSRWizard::~NewSRWizard()
     delete this->ui;
 }
 
+void NewSRWizard::SetInitialSrType(SRType srType, bool lockTypes)
+{
+    setSrTypeSelection(srType, lockTypes);
+}
+
 void NewSRWizard::setupPages()
 {
     this->setPage(Page_Type, this->ui->pageType);

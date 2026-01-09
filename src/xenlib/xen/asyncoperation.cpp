@@ -362,7 +362,7 @@ void AsyncOperation::SetVM(QSharedPointer<VM> vm)
         }
 
         // Add home host if available
-        QString homeRef = vm->HomeRef();
+        QString homeRef = vm->GetHomeRef();
         if (!homeRef.isEmpty() && !this->m_appliesTo.contains(homeRef))
         {
             this->m_appliesTo.append(homeRef);

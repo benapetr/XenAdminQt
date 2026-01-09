@@ -68,7 +68,7 @@ void MoveVirtualDiskDialog::setupUI()
     }
 
     // Populate SR picker (C# OnLoad pattern)
-    this->ui->srPicker1->populate(this->srPickerType(), this->m_connection, QString(), QString(), this->m_vdiRefs);
+    this->ui->srPicker1->Populate(this->srPickerType(), this->m_connection, QString(), QString(), this->m_vdiRefs);
 
     // Update button states
     this->updateMoveButton();
@@ -98,26 +98,26 @@ void MoveVirtualDiskDialog::onSRDoubleClicked()
 void MoveVirtualDiskDialog::onRescanButtonClicked()
 {
     // C# buttonRescan_Click - delegate to SrPicker.ScanSRs()
-    this->ui->srPicker1->scanSRs();
+    this->ui->srPicker1->ScanSRs();
 }
 
 void MoveVirtualDiskDialog::onCanBeScannedChanged()
 {
     // C# srPicker1_CanBeScannedChanged - update Rescan button state
-    this->ui->rescanButton->setEnabled(this->ui->srPicker1->canBeScanned());
+    this->ui->rescanButton->setEnabled(this->ui->srPicker1->CanBeScanned());
     this->updateMoveButton();
 }
 
 void MoveVirtualDiskDialog::updateMoveButton()
 {
     // C# UpdateMoveButton - enable Move button only if SR is selected
-    this->ui->moveButton->setEnabled(!this->ui->srPicker1->selectedSR().isEmpty());
+    this->ui->moveButton->setEnabled(!this->ui->srPicker1->GetSelectedSR().isEmpty());
 }
 
 void MoveVirtualDiskDialog::onMoveButtonClicked()
 {
     // Get selected SR from SrPicker
-    QString targetSRRef = this->ui->srPicker1->selectedSR();
+    QString targetSRRef = this->ui->srPicker1->GetSelectedSR();
     if (targetSRRef.isEmpty())
         return;
 

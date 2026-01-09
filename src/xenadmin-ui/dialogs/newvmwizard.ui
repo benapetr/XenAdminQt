@@ -374,7 +374,7 @@
        <item row="2" column="0">
         <widget class="QLabel" name="coresPerSocketLabel">
          <property name="text">
-          <string>Cores per socket:</string>
+          <string>Topology:</string>
          </property>
         </widget>
        </item>

@@ -573,9 +573,9 @@ void CrossPoolMigrateWizard::initializePage(int id)
                         continue;
                     vdiRefs.append(vdiRef);
                 }
-                this->m_copySrPicker->populate(SrPicker::Copy,
+                this->m_copySrPicker->Populate(SrPicker::Copy,
                                                conn,
-                                               vmItem->HomeRef(),
+                                               vmItem->GetHomeRef(),
                                                QString(),
                                                vdiRefs);
             }
@@ -650,7 +650,7 @@ bool CrossPoolMigrateWizard::validateCurrentPage()
         }
         if (this->m_copyFullRadio && this->m_copyFullRadio->isChecked())
         {
-            if (!this->m_copySrPicker || this->m_copySrPicker->selectedSR().isEmpty())
+            if (!this->m_copySrPicker || this->m_copySrPicker->GetSelectedSR().isEmpty())
             {
                 QMessageBox::warning(this, tr("Copy VM"), tr("Please select a target SR."));
                 return false;
@@ -1196,13 +1196,13 @@ void CrossPoolMigrateWizard::onCopyCloneToggled(bool checked)
     if (this->m_copySrPicker)
         this->m_copySrPicker->setEnabled(!checked);
     if (this->m_copyRescanButton && this->m_copySrPicker)
-        this->m_copyRescanButton->setEnabled(!checked && this->m_copySrPicker->canBeScanned());
+        this->m_copyRescanButton->setEnabled(!checked && this->m_copySrPicker->CanBeScanned());
 }
 
 void CrossPoolMigrateWizard::onCopySrPickerCanBeScannedChanged()
 {
     if (this->m_copyRescanButton && this->m_copySrPicker)
-        this->m_copyRescanButton->setEnabled(this->m_copySrPicker->canBeScanned() && this->m_copySrPicker->isEnabled());
+        this->m_copyRescanButton->setEnabled(this->m_copySrPicker->CanBeScanned() && this->m_copySrPicker->isEnabled());
 }
 
 void CrossPoolMigrateWizard::onCopySrPickerSelectionChanged()
@@ -1215,7 +1215,7 @@ void CrossPoolMigrateWizard::onCopySrPickerSelectionChanged()
 void CrossPoolMigrateWizard::onCopyRescanClicked()
 {
     if (this->m_copySrPicker)
-        this->m_copySrPicker->scanSRs();
+        this->m_copySrPicker->ScanSRs();
 }
 
 bool CrossPoolMigrateWizard::requiresRbacWarning() const
@@ -1294,7 +1294,7 @@ QString CrossPoolMigrateWizard::copyDescription() const
 
 QString CrossPoolMigrateWizard::copyTargetSrRef() const
 {
-    return this->m_copySrPicker ? this->m_copySrPicker->selectedSR() : QString();
+    return this->m_copySrPicker ? this->m_copySrPicker->GetSelectedSR() : QString();
 }
 
 void CrossPoolMigrateWizard::ensureMappingForVm(const QSharedPointer<VM>& vm)
@@ -1331,7 +1331,7 @@ bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm,
             return true;
     }
 
-    QString homeRef = vm->HomeRef();
+    QString homeRef = vm->GetHomeRef();
     if (!homeRef.isEmpty() && homeRef == hostRef)
     {
         if (reason)

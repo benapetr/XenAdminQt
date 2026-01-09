@@ -438,7 +438,7 @@ long VM::MaxCoresPerSocket() const
     if (!cache)
         return 0;
 
-    QString home = this->HomeRef();
+    QString home = this->GetHomeRef();
     if (!home.isEmpty() && home != "OpaqueRef:NULL")
     {
         QSharedPointer<Host> host = cache->ResolveObject<Host>("host", home);
@@ -495,6 +495,20 @@ QString VM::GetTopology(long sockets, long cores)
 QVariantMap VM::OtherConfig() const
 {
     return property("other_config").toMap();
+}
+
+QDomElement VM::ProvisionXml() const
+{
+    const QVariantMap otherConfig = OtherConfig();
+    const QString xml = otherConfig.value("disks").toString();
+    if (xml.isEmpty())
+        return QDomElement();
+
+    QDomDocument doc;
+    if (!doc.setContent(xml))
+        return QDomElement();
+
+    return doc.documentElement();
 }
 
 QVariantMap VM::Platform() const
@@ -700,7 +714,7 @@ bool VM::HasAtLeastOneDisk() const
     return false;
 }
 
-QString VM::HomeRef() const
+QString VM::GetHomeRef() const
 {
     // Return affinity host if set, otherwise resident host
     QString affinity = this->AffinityRef();

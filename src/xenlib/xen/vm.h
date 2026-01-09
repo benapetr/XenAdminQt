@@ -30,6 +30,7 @@
 
 #include "xenobject.h"
 #include "network/comparableaddress.h"
+#include <QDomElement>
 
 class Host;
 class VDI;
@@ -263,6 +264,12 @@ class XENLIB_EXPORT VM : public XenObject
         QVariantMap OtherConfig() const;
 
         /**
+         * @brief Parse the provisioning XML from other_config["disks"]
+         * @return Root element or null element if missing/invalid
+         */
+        QDomElement ProvisionXml() const;
+
+        /**
          * @brief Get platform configuration
          * @return Map of platform settings
          */
@@ -368,7 +375,7 @@ class XENLIB_EXPORT VM : public XenObject
          *
          * @return Host opaque reference
          */
-        QString HomeRef() const;
+        QString GetHomeRef() const;
 
         /**
          * @brief Get user-defined version number

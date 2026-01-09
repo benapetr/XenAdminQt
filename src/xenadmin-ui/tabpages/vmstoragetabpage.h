@@ -31,6 +31,8 @@
 #include "basetabpage.h"
 #include <QSet>
 
+class VM;
+
 QT_BEGIN_NAMESPACE
 namespace Ui
 {
@@ -90,6 +92,7 @@ class VMStorageTabPage : public BaseTabPage
 
     private:
         Ui::VMStorageTabPage* ui;
+        QSharedPointer<VM> m_vm;
 
         void populateVMStorage();
         // CD/DVD drive management
