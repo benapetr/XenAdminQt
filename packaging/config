@@ -5,7 +5,7 @@
 
 # Application metadata
 APP_NAME="xenadmin-qt"
-APP_VERSION="0.0.1"
+APP_VERSION="0.0.2"
 MAINTAINER="Petr Bena <petr@bena.rocks>"
 DESCRIPTION="XenServer/XCP-ng management UI"
 
