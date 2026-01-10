@@ -644,6 +644,22 @@ void VerticallyTabbedDialog::applySimpleChanges()
             }
         }
     }
+    else if (this->m_objectType == "network")
+    {
+        if (oldOtherConfig != newOtherConfig)
+        {
+            qDebug() << "VerticallyTabbedDialog: Applying Network other_config changes";
+            try
+            {
+                XenAPI::Network::set_other_config(session, this->m_objectRef, newOtherConfig);
+                hasChanges = true;
+            }
+            catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set Network other_config:" << ex.what();
+            }
+        }
+    }
 
     // 4. Check if HVM_shadow_multiplier changed (VM only)
     if (this->m_objectType == "vm" && this->m_objectDataCopy.contains("HVM_shadow_multiplier"))

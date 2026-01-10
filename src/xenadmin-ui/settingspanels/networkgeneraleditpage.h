@@ -81,6 +81,7 @@ class NetworkGeneralEditPage : public IEditPage
                            const QVariantMap& objectDataCopy) override;
 
         AsyncOperation* SaveSettings() override;
+        QVariantMap GetModifiedObjectData() const override;
         bool HasChanged() const override;
         bool IsValidToSave() const override;
         void ShowLocalValidationMessages() override;
@@ -104,6 +105,7 @@ class NetworkGeneralEditPage : public IEditPage
         bool bondModeHasChanged() const;
         bool hashingAlgorithmHasChanged() const;
         bool nicOrVlanHasChanged() const;
+        bool isNicVlanEditable() const;
         QString getSelectedBondMode() const;
         QString getSelectedHashingAlgorithm() const;
         QString getNetworkPifRef() const;

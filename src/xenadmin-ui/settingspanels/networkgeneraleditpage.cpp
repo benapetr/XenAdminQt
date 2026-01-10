@@ -38,10 +38,7 @@
 #include "xenlib/xen/actions/network/networkaction.h"
 #include <QMessageBox>
 
-NetworkGeneralEditPage::NetworkGeneralEditPage(QWidget* parent)
-    : IEditPage(parent)
-    , ui(new Ui::NetworkGeneralEditPage)
-    , m_runningVMsWithoutTools_(false)
+NetworkGeneralEditPage::NetworkGeneralEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::NetworkGeneralEditPage), m_runningVMsWithoutTools_(false)
 {
     this->ui->setupUi(this);
 
@@ -151,6 +148,7 @@ void NetworkGeneralEditPage::SetXenObjects(const QString& objectRef,
     QVariantMap otherConfig = this->m_objectDataCopy_.value("other_config").toMap();
     QString automaticValue = otherConfig.value("automatic", "false").toString();
     bool autoAdd = (automaticValue != "false");
+    // TODO saving of this modified value doesn't seem to work right now
     this->ui->autoAddCheckBox->setChecked(autoAdd);
 
     // Check if this is guest installer network
@@ -239,8 +237,7 @@ void NetworkGeneralEditPage::populateNicList()
         this->ui->nicComboBox->setCurrentIndex(0);
         this->ui->vlanSpinBox->setValue(0);
         this->ui->vlanSpinBox->setEnabled(false);
-    }
-    else
+    } else
     {
         // External network - find the PIF for this host
         QString networkPifRef = this->getNetworkPifRef();
@@ -321,12 +318,10 @@ void NetworkGeneralEditPage::updateBondModeVisibility()
             if (mode == "balance-slb")
             {
                 this->ui->radioBalanceSlb->setChecked(true);
-            }
-            else if (mode == "active-backup")
+            } else if (mode == "active-backup")
             {
                 this->ui->radioActiveBackup->setChecked(true);
-            }
-            else if (mode == "lacp")
+            } else if (mode == "lacp")
             {
                 // Check hashing algorithm
                 QMap<QString, QString> properties = bond->Properties();
@@ -430,6 +425,19 @@ void NetworkGeneralEditPage::updateControlsEnablement()
 
     bool blockDueToAttached = vmsAttached || isManagement;
 
+    const bool nicVlanEditable = this->isNicVlanEditable();
+    this->ui->nicLabel->setVisible(nicVlanEditable);
+    this->ui->nicComboBox->setVisible(nicVlanEditable);
+    this->ui->vlanLabel->setVisible(nicVlanEditable);
+    this->ui->vlanSpinBox->setVisible(nicVlanEditable);
+
+    if (!nicVlanEditable)
+    {
+        this->ui->warningLabel->setVisible(false);
+        this->ui->disruptionWarningLabel->setVisible(this->willDisrupt());
+        return;
+    }
+
     // NIC/VLAN controls enabled only if no VMs attached and not management
     QVariantList pifRefs = this->m_objectDataCopy_.value("PIFs").toList();
     if (pifRefs.isEmpty())
@@ -465,6 +473,9 @@ void NetworkGeneralEditPage::updateControlsEnablement()
 
 bool NetworkGeneralEditPage::isSelectedInternal() const
 {
+    if (!this->isNicVlanEditable())
+        return this->m_objectDataCopy_.value("PIFs").toList().isEmpty();
+
     return this->ui->nicComboBox->currentIndex() == 0;
 }
 
@@ -620,7 +631,7 @@ bool NetworkGeneralEditPage::HasChanged() const
 
     // Check auto-add change
     QVariantMap origOtherConfig = this->m_objectDataBefore_.value("other_config").toMap();
-    QString origAutomatic = origOtherConfig.value("automatic", "true").toString();
+    QString origAutomatic = origOtherConfig.value("automatic", "false").toString();
     bool origAutoAdd = (origAutomatic != "false");
     bool newAutoAdd = this->ui->autoAddCheckBox->isChecked();
     if (origAutoAdd != newAutoAdd)
@@ -643,6 +654,11 @@ bool NetworkGeneralEditPage::HasChanged() const
         return true;
 
     return false;
+}
+
+QVariantMap NetworkGeneralEditPage::GetModifiedObjectData() const
+{
+    return this->m_objectDataCopy_;
 }
 
 bool NetworkGeneralEditPage::IsValidToSave() const
@@ -707,6 +723,9 @@ bool NetworkGeneralEditPage::nicOrVlanHasChanged() const
     if (this->m_networkRef_.isEmpty())
         return false;
 
+    if (!this->isNicVlanEditable())
+        return false;
+
     bool wasInternal = this->m_objectDataBefore_.value("PIFs").toList().isEmpty();
     bool isNowInternal = this->isSelectedInternal();
 
@@ -739,6 +758,19 @@ bool NetworkGeneralEditPage::nicOrVlanHasChanged() const
     QString selectedPifRef = this->ui->nicComboBox->currentData().toString();
 
     return originalPhysicalPifRef != selectedPifRef;
+}
+
+bool NetworkGeneralEditPage::isNicVlanEditable() const
+{
+    QString networkPifRef = this->getNetworkPifRef();
+    if (networkPifRef.isEmpty())
+        return true;
+
+    QSharedPointer<PIF> networkPif = this->connection()->GetCache()->ResolveObject<PIF>("pif", networkPifRef);
+    if (!networkPif || !networkPif->IsValid())
+        return false;
+
+    return !networkPif->IsPhysical() && !networkPif->IsTunnelAccessPIF() && !networkPif->IsSriovLogicalPIF();
 }
 
 QString NetworkGeneralEditPage::getSelectedBondMode() const
