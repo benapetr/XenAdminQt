@@ -38,19 +38,21 @@
 #include "xenlib/xen/xenapi/xenapi_SR.h"
 #include "xenlib/xen/xenapi/xenapi_Network.h"
 #include <QtGlobal>
-#include "xenlib/xencache.h"
 #include "xenlib/operations/multipleoperation.h"
 #include "xenlib/xen/asyncoperation.h"
+#include "xenlib/xen/xenobject.h"
 #include <QMessageBox>
 #include <QPushButton>
 #include <QDebug>
 
-VerticallyTabbedDialog::VerticallyTabbedDialog(XenConnection* connection,
-                                               const QString& objectRef,
-                                               const QString& objectType,
-                                               QWidget* parent)
-    : QDialog(parent), ui(new Ui::VerticallyTabbedDialog), m_connection(connection), m_objectRef(objectRef), m_objectType(objectType.toLower())
+VerticallyTabbedDialog::VerticallyTabbedDialog(QSharedPointer<XenObject> object, QWidget* parent) : QDialog(parent), ui(new Ui::VerticallyTabbedDialog)
 {
+    if (!object.isNull())
+    {
+        this->m_objectRef = object->OpaqueRef();
+        this->m_objectType = object->GetObjectType();
+    }
+
     this->ui->setupUi(this);
 
     // Connect vertical tabs selection changed
@@ -82,23 +84,20 @@ VerticallyTabbedDialog::~VerticallyTabbedDialog()
 void VerticallyTabbedDialog::loadObjectData()
 {
     // Load object data from XenCache
-    if (!this->m_connection)
+    if (!this->m_object || !this->m_object->GetConnection())
     {
         qWarning() << "VerticallyTabbedDialog: No connection available";
         this->m_objectDataBefore = QVariantMap();
         this->m_objectDataCopy = QVariantMap();
         return;
     }
-
-    XenCache* cache = this->m_connection->GetCache();
     
     // Resolve object data from cache (matches C# clone pattern)
-    QVariantMap objectData = cache->ResolveObjectData(this->m_objectType, this->m_objectRef);
+    QVariantMap objectData = this->m_object->GetData();
     
     if (objectData.isEmpty())
     {
-        qWarning() << "VerticallyTabbedDialog: Failed to load data for" 
-                   << this->m_objectType << this->m_objectRef;
+        qWarning() << "VerticallyTabbedDialog: Failed to load data for" << this->m_objectType << this->m_objectRef;
         this->m_objectDataBefore = QVariantMap();
         this->m_objectDataCopy = QVariantMap();
         return;
@@ -116,7 +115,7 @@ void VerticallyTabbedDialog::loadObjectData()
 
 void VerticallyTabbedDialog::showTab(IEditPage* page)
 {
-    if (!page)
+    if (!page || !this->m_object)
         return;
 
     this->m_pages.append(page);
@@ -128,11 +127,11 @@ void VerticallyTabbedDialog::showTab(IEditPage* page)
     this->ui->ContentPanel->addWidget(page);
 
     // Set connection so pages can create actions
-    page->setConnection(this->m_connection);
+    page->SetConnection(this->m_object->GetConnection());
 
     // Initialize page with object data
     // C# equivalent: editPage.SetXenObjects(_xenObjectBefore, _xenObjectCopy);
-    page->SetXenObjects(this->m_objectRef, this->m_objectType, this->m_objectDataBefore, this->m_objectDataCopy);
+    page->SetXenObject(this->m_object, this->m_objectDataBefore, this->m_objectDataCopy);
 
     // Connect populated signal to refresh tabs
     connect(page, &IEditPage::populated, [this]()
@@ -171,6 +170,9 @@ void VerticallyTabbedDialog::onApplyClicked()
 
 bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
 {
+    if (!this->m_object)
+        return false;
+
     // Shared save logic for both OK and Apply buttons
     
     // Step 1: Validate all pages
@@ -221,8 +223,7 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
             // Refresh all pages with new data
             for (IEditPage* page : this->m_pages)
             {
-                page->SetXenObjects(this->m_objectRef, this->m_objectType, 
-                                   this->m_objectDataBefore, this->m_objectDataCopy);
+                page->SetXenObject(this->m_object, this->m_objectDataBefore, this->m_objectDataCopy);
             }
         }
         
@@ -243,12 +244,12 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
     this->applySimpleChanges();
 
     // Create progress dialog - it will own the MultipleOperation and all sub-actions
-    QString objName = this->m_objectDataBefore.value("name_label", this->m_objectRef).toString();
+    QString objName = this->m_object->GetName();
     
     // Now create the MultipleOperation with progressDialog as parent
     // This ensures proper ownership: dialog owns operation, operation owns sub-actions
     MultipleOperation* multiOp = new MultipleOperation(
-        this->m_connection,
+        this->m_object->GetConnection(),
         tr("Update Properties - %1").arg(objName),
         tr("Updating properties..."),
         tr("Properties updated"),
@@ -284,8 +285,7 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
                 this->loadObjectData();
                 for (IEditPage* page : this->m_pages)
                 {
-                    page->SetXenObjects(this->m_objectRef, this->m_objectType,
-                                       this->m_objectDataBefore, this->m_objectDataCopy);
+                    page->SetXenObject(this->m_object, this->m_objectDataBefore, this->m_objectDataCopy);
                 }
             }
         }
@@ -412,6 +412,9 @@ QList<AsyncOperation*> VerticallyTabbedDialog::collectActions()
 
 void VerticallyTabbedDialog::applySimpleChanges()
 {
+    if (!this->m_object || !this->m_object->GetConnection())
+        return;
+
     // Apply simple property changes that pages made directly to objectDataCopy
     // C# equivalent: SaveChangesAction.Run() which calls xenObject.SaveChanges(Session, beforeObject)
     
@@ -424,7 +427,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
     // Complex operations (folder, tags, etc.) are handled by dedicated Actions.
     
 
-    XenAPI::Session* session = this->m_connection->GetSession();
+    XenAPI::Session* session = this->m_object->GetConnection()->GetSession();
 
     if (!session || !session->IsLoggedIn())
     {

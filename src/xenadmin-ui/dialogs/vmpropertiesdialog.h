@@ -30,6 +30,8 @@
 
 #include "verticallytabbeddialog.h"
 
+class VM;
+
 /**
  * @brief VM-specific properties dialog
  *
@@ -40,13 +42,14 @@ class VMPropertiesDialog : public VerticallyTabbedDialog
 {
     Q_OBJECT
 
-public:
-    explicit VMPropertiesDialog(XenConnection* connection,
-                                const QString& vmRef,
-                                QWidget* parent = nullptr);
+    public:
+        explicit VMPropertiesDialog(QSharedPointer<VM> vm, QWidget* parent = nullptr);
 
-protected:
-    void build() override;
+    protected:
+        void build() override;
+
+    private:
+        QSharedPointer<VM> m_vm;
 };
 
 #endif // VMPROPERTIESDIALOG_H

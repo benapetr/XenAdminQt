@@ -29,9 +29,9 @@
 #include "settingspanels/customfieldsdisplaypage.h"
 #include "settingspanels/generaleditpage.h"
 #include "ui_verticallytabbeddialog.h"
+#include "xenlib/xen/vm.h"
 
-SnapshotPropertiesDialog::SnapshotPropertiesDialog(XenConnection* connection, const QString& snapshotRef, QWidget* parent)
-    : VerticallyTabbedDialog(connection, snapshotRef, "vm", parent)
+SnapshotPropertiesDialog::SnapshotPropertiesDialog(QSharedPointer<VM> snapshot, QWidget* parent) : VerticallyTabbedDialog(snapshot, parent)
 {
     QString snapshotName = objectDataBefore().value("name_label", tr("Snapshot")).toString();
     this->setWindowTitle(tr("'%1' Properties").arg(snapshotName));

@@ -51,7 +51,7 @@ void HostPropertiesCommand::Run()
         return;
 
     // New signature: GetConnection, hostRef, parent
-    HostPropertiesDialog* dialog = new HostPropertiesDialog(host->GetConnection(), host->OpaqueRef(), this->mainWindow());
+    HostPropertiesDialog* dialog = new HostPropertiesDialog(host, this->mainWindow());
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setModal(true);
     dialog->exec();

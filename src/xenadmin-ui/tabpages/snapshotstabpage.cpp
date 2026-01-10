@@ -37,13 +37,14 @@
 #include "../dialogs/snapshotpropertiesdialog.h"
 #include "../controls/snapshottreeview.h"
 #include "../operations/operationmanager.h"
-#include "xen/actions/vm/vmsnapshotdeleteaction.h"
-#include "xen/actions/vm/vmsnapshotrevertaction.h"
-#include "xen/session.h"
-#include "xencache.h"
-#include "xen/actions/vm/vmsnapshotcreateaction.h"
-#include "xen/xenapi/xenapi_Blob.h"
-#include "xen/xenapi/xenapi_VM.h"
+#include "xenlib/xen/actions/vm/vmsnapshotdeleteaction.h"
+#include "xenlib/xen/actions/vm/vmsnapshotrevertaction.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/actions/vm/vmsnapshotcreateaction.h"
+#include "xenlib/xen/xenapi/xenapi_Blob.h"
+#include "xenlib/xen/xenapi/xenapi_VM.h"
+#include "xenlib/xen/vm.h"
 #include <QDateTime>
 #include <QDebug>
 #include <QMessageBox>
@@ -72,11 +73,13 @@ SnapshotsTabPage::SnapshotsTabPage(QWidget* parent)
     connect(this->ui->refreshButton, &QPushButton::clicked, this, &SnapshotsTabPage::refreshSnapshotList);
     connect(this->ui->snapshotTree, &QListWidget::itemSelectionChanged, this, &SnapshotsTabPage::onSnapshotSelectionChanged);
     connect(this->ui->snapshotTable, &QTableWidget::itemSelectionChanged, this, &SnapshotsTabPage::onSnapshotSelectionChanged);
-    connect(this->ui->propertiesButton, &QPushButton::clicked, this, [this]() {
+    connect(this->ui->propertiesButton, &QPushButton::clicked, this, [this]()
+    {
         QString snapshotRef = this->selectedSnapshotRef();
         if (snapshotRef.isEmpty() || !this->m_connection)
             return;
-        SnapshotPropertiesDialog dialog(this->m_connection, snapshotRef, this);
+        QSharedPointer<VM> snapshot = this->m_connection->GetCache()->ResolveObject<VM>("vm", snapshotRef);
+        SnapshotPropertiesDialog dialog(snapshot, this);
         dialog.exec();
     });
 
@@ -1085,8 +1088,7 @@ void SnapshotsTabPage::onSnapshotContextMenu(const QPoint& pos)
             }
             snapshotRef = icon->data(Qt::UserRole).toString();
         }
-    }
-    else
+    } else
     {
         QTableWidgetItem* item = this->ui->snapshotTable->itemAt(pos);
         if (item)
@@ -1098,6 +1100,7 @@ void SnapshotsTabPage::onSnapshotContextMenu(const QPoint& pos)
             snapshotRef = item->data(Qt::UserRole).toString();
         }
     }
+    QSharedPointer<VM> snapshot = this->m_connection->GetCache()->ResolveObject<VM>("vm", snapshotRef);
 
     QMenu menu(this);
     QAction* takeSnapshotAction = menu.addAction(tr("Take Snapshot..."));
@@ -1211,7 +1214,7 @@ void SnapshotsTabPage::onSnapshotContextMenu(const QPoint& pos)
     {
         if (!snapshotRef.isEmpty() && this->m_connection)
         {
-            SnapshotPropertiesDialog dialog(this->m_connection, snapshotRef, this->window());
+            SnapshotPropertiesDialog dialog(snapshot, this->window());
             dialog.exec();
         }
     }

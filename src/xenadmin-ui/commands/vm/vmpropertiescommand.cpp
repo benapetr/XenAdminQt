@@ -104,17 +104,7 @@ void VMPropertiesCommand::showPropertiesDialog()
     if (!vm)
         return;
 
-    // Get connection from xenLib
-    XenConnection* connection = vm->GetConnection();
-    if (!connection)
-    {
-        qWarning() << "VMPropertiesCommand: No connection available";
-        QMessageBox::warning(mainWindow(), tr("No Connection"),
-                             tr("Not connected to XenServer."));
-        return;
-    }
-
-    VMPropertiesDialog dialog(connection, vmRef, mainWindow());
+    VMPropertiesDialog dialog(vm, mainWindow());
 
     if (dialog.exec() == QDialog::Accepted)
     {

@@ -1334,17 +1334,21 @@ void NetworkTabPage::onEditNetwork()
     } else
     {
         // C#: launchHostOrPoolNetworkSettingsDialog()
-        QString selectedNetworkRef = this->getSelectedNetworkRef();
-        if (selectedNetworkRef.isEmpty() || !this->m_connection)
+        if (!this->m_connection)
+            return;
+
+        QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>("network", this->getSelectedNetworkRef());
+
+        if (!network)
             return;
 
         // Launch network properties dialog
-        NetworkPropertiesDialog dialog(this->m_connection, selectedNetworkRef, this);
+        NetworkPropertiesDialog dialog(network, this);
 
         if (dialog.exec() == QDialog::Accepted)
         {
             // Network properties were updated
-            qDebug() << "Network properties updated for:" << selectedNetworkRef;
+            qDebug() << "Network properties updated for:" << network->GetName();
 
             // Refresh the network list
             this->refreshContent();

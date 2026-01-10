@@ -30,16 +30,11 @@
 #include "../settingspanels/generaleditpage.h"
 #include "../settingspanels/customfieldsdisplaypage.h"
 #include "../settingspanels/networkgeneraleditpage.h"
-#include "xen/network/connection.h"
-#include "xencache.h"
+#include "xenlib/xen/network.h"
 
-NetworkPropertiesDialog::NetworkPropertiesDialog(XenConnection* connection,
-                                                 const QString& networkRef,
-                                                 QWidget* parent)
-    : VerticallyTabbedDialog(connection, networkRef, "network", parent)
+NetworkPropertiesDialog::NetworkPropertiesDialog(QSharedPointer<Network> network, QWidget* parent)  : VerticallyTabbedDialog(network, parent)
 {
-    QString networkName = this->objectDataBefore().value("name_label", tr("Network")).toString();
-    this->setWindowTitle(tr("'%1' Properties").arg(networkName));
+    this->setWindowTitle(tr("'%1' Properties").arg(network->GetName()));
     this->resize(700, 550);
     this->build();
 }

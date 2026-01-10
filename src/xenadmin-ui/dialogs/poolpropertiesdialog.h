@@ -30,6 +30,8 @@
 
 #include "verticallytabbeddialog.h"
 
+class Pool;
+
 /**
  * @brief PoolPropertiesDialog - Properties editor for resource pools
  *
@@ -42,13 +44,13 @@ class PoolPropertiesDialog : public VerticallyTabbedDialog
 {
     Q_OBJECT
 
-public:
-    explicit PoolPropertiesDialog(XenConnection* connection,
-                                  const QString& poolRef,
-                                  QWidget* parent = nullptr);
+    public:
+        explicit PoolPropertiesDialog(QSharedPointer<Pool> pool, QWidget* parent = nullptr);
 
-protected:
-    void build() override;
+    protected:
+        void build() override;
+    private:
+        QSharedPointer<Pool> m_pool;
 };
 
 #endif // POOLPROPERTIESDIALOG_H

@@ -90,6 +90,7 @@ class AsyncOperation;
  */
 
 class XenConnection; // Forward declaration
+class XenObject;
 
 class IEditPage : public QWidget
 {
@@ -105,7 +106,7 @@ class IEditPage : public QWidget
          * @brief Set the XenConnection for this page
          * Called by VerticallyTabbedDialog before setXenObjects
          */
-        void setConnection(XenConnection* connection)
+        void SetConnection(XenConnection* connection)
         {
             m_connection = connection;
         }
@@ -186,6 +187,8 @@ class IEditPage : public QWidget
                                    const QString& objectType,
                                    const QVariantMap& objectDataBefore,
                                    const QVariantMap& objectDataCopy) = 0;
+
+        virtual void SetXenObject(QSharedPointer<XenObject> object, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy);
 
         /**
          * @brief Save settings from this page
@@ -344,6 +347,8 @@ class IEditPage : public QWidget
 
     protected:
         XenConnection* m_connection; // Accessible to subclasses for creating actions
+        QSharedPointer<XenObject> m_object;
 };
 
 #endif // IEDITPAGE_H
+

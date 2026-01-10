@@ -51,19 +51,7 @@ void PoolPropertiesCommand::Run()
     if (!pool || !pool->IsValid())
         return;
 
-    QString poolRef = pool->OpaqueRef();
-
-    // Get GetConnection from pool object for multi-GetConnection support
-    XenConnection* connection = pool->GetConnection();
-    if (!connection)
-    {
-        qWarning() << "PoolPropertiesCommand: No connection available";
-        QMessageBox::warning(this->mainWindow(), tr("No Connection"),
-                             tr("Not connected to XenServer."));
-        return;
-    }
-
-    PoolPropertiesDialog* dialog = new PoolPropertiesDialog(connection, poolRef, this->mainWindow());
+    PoolPropertiesDialog* dialog = new PoolPropertiesDialog(pool, this->mainWindow());
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setModal(true);
     dialog->exec();

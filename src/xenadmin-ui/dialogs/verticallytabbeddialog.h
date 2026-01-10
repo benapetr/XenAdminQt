@@ -43,6 +43,7 @@ namespace Ui
 
 class XenConnection;
 class AsyncOperation;
+class XenObject;
 class MultipleOperation;
 
 /**
@@ -80,10 +81,7 @@ class VerticallyTabbedDialog : public QDialog
          *
          * C# equivalent: Constructor that takes IXenObject
          */
-        explicit VerticallyTabbedDialog(XenConnection* connection,
-                                        const QString& objectRef,
-                                        const QString& objectType,
-                                        QWidget* parent = nullptr);
+        explicit VerticallyTabbedDialog(QSharedPointer<XenObject> object, QWidget* parent = nullptr);
         ~VerticallyTabbedDialog();
 
     protected:
@@ -108,26 +106,13 @@ class VerticallyTabbedDialog : public QDialog
          */
         void selectPage(IEditPage* page);
 
-        // Accessors for subclasses
-        XenConnection* connection() const
-        {
-            return m_connection;
-        }
-        QString objectRef() const
-        {
-            return m_objectRef;
-        }
-        QString objectType() const
-        {
-            return m_objectType;
-        }
         QVariantMap objectDataBefore() const
         {
-            return m_objectDataBefore;
+            return this->m_objectDataBefore;
         }
         QVariantMap objectDataCopy() const
         {
-            return m_objectDataCopy;
+            return this->m_objectDataCopy;
         }
 
         /**
@@ -162,7 +147,7 @@ class VerticallyTabbedDialog : public QDialog
         void applySimpleChanges();
         bool performSave(bool closeOnSuccess);
 
-        XenConnection* m_connection;
+        QSharedPointer<XenObject> m_object;
         QString m_objectRef;
         QString m_objectType;
         QVariantMap m_objectDataBefore; // Original data (read-only)

@@ -67,18 +67,7 @@ void StoragePropertiesCommand::Run()
     if (!sr || !sr->IsValid())
         return;
 
-    QString srRef = sr->OpaqueRef();
-
-    // Get GetConnection from SR object for multi-GetConnection support
-    XenConnection* connection = sr->GetConnection();
-
-    if (!connection)
-    {
-        qWarning() << "StoragePropertiesCommand: No connection available";
-        return;
-    }
-
-    StoragePropertiesDialog dialog(connection, srRef, this->mainWindow());
+    StoragePropertiesDialog dialog(sr, this->mainWindow());
     dialog.exec();
 }
 

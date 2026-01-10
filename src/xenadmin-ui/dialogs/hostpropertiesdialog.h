@@ -30,6 +30,8 @@
 
 #include "verticallytabbeddialog.h"
 
+class Host;
+
 /**
  * @brief Host Properties Dialog
  *
@@ -43,9 +45,7 @@ class HostPropertiesDialog : public VerticallyTabbedDialog
     Q_OBJECT
 
     public:
-        explicit HostPropertiesDialog(XenConnection* connection,
-                                      const QString& hostRef,
-                                      QWidget* parent = nullptr);
+        explicit HostPropertiesDialog(QSharedPointer<Host> host, QWidget* parent = nullptr);
 
     protected:
         void build() override;

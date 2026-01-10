@@ -30,6 +30,7 @@
 #include "ui_generaleditpage.h"
 #include "../../xenlib/xen/actions/general/generaleditpageaction.h"
 #include "../../xenlib/xen/network/connection.h"
+#include "xen/xenobject.h"
 #include <QIcon>
 #include <QDebug>
 
@@ -96,11 +97,11 @@ void GeneralEditPage::repopulate()
     this->ui->txtIQN->blockSignals(true);
 
     // Populate name
-    this->m_originalName = this->m_objectDataCopy.value("name_label").toString();
+    this->m_originalName = this->m_object->GetName();
     this->ui->txtName->setText(this->m_originalName);
 
     // Populate description
-    this->m_originalDescription = this->m_objectDataCopy.value("name_description").toString();
+    this->m_originalDescription = this->m_object->GetDescription();
     this->ui->txtDescription->setPlainText(this->m_originalDescription);
 
     // Populate folder from other_config

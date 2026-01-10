@@ -31,6 +31,7 @@
 #include "verticallytabbeddialog.h"
 
 class XenConnection;
+class VM;
 
 /**
  * @brief Properties dialog for VM snapshots
@@ -43,9 +44,7 @@ class SnapshotPropertiesDialog : public VerticallyTabbedDialog
     Q_OBJECT
 
     public:
-        explicit SnapshotPropertiesDialog(XenConnection* connection,
-                                          const QString& snapshotRef,
-                                          QWidget* parent = nullptr);
+        explicit SnapshotPropertiesDialog(QSharedPointer<VM> snapshot, QWidget* parent = nullptr);
 
     protected:
         void build() override;

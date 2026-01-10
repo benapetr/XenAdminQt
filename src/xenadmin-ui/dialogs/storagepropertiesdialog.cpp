@@ -30,10 +30,7 @@
 #include "../settingspanels/customfieldsdisplaypage.h"
 #include "../settingspanels/perfmonalerteditpage.h"
 
-StoragePropertiesDialog::StoragePropertiesDialog(XenConnection* connection,
-                                                 const QString& srRef,
-                                                 QWidget* parent)
-    : VerticallyTabbedDialog(connection, srRef, "SR", parent)
+StoragePropertiesDialog::StoragePropertiesDialog(QSharedPointer<SR> sr, QWidget* parent) : VerticallyTabbedDialog(sr, parent)
 {
     setWindowTitle(tr("Storage Properties"));
     resize(700, 550);

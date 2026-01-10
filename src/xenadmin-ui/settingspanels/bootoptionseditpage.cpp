@@ -33,20 +33,18 @@
 #include "../../xenlib/xen/api.h"
 #include <QMessageBox>
 
-BootOptionsEditPage::BootOptionsEditPage(QWidget* parent)
-    : IEditPage(parent), ui(new Ui::BootOptionsEditPage), m_origAutoBoot(false)
+BootOptionsEditPage::BootOptionsEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::BootOptionsEditPage), m_origAutoBoot(false)
 {
     this->ui->setupUi(this);
 
     connect(this->ui->buttonUp, &QPushButton::clicked, this, &BootOptionsEditPage::onMoveUpClicked);
     connect(this->ui->buttonDown, &QPushButton::clicked, this, &BootOptionsEditPage::onMoveDownClicked);
-    connect(this->ui->listWidgetBootOrder, &QListWidget::currentRowChanged,
-            this, &BootOptionsEditPage::onSelectionChanged);
+    connect(this->ui->listWidgetBootOrder, &QListWidget::currentRowChanged, this, &BootOptionsEditPage::onSelectionChanged);
 }
 
 BootOptionsEditPage::~BootOptionsEditPage()
 {
-    delete ui;
+    delete this->ui;
 }
 
 QString BootOptionsEditPage::GetText() const

@@ -14,6 +14,7 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     mainwindowtreebuilder.cpp \
+    settingspanels/ieditpage.cpp \
     tabpages/vmstoragetabpage.cpp \
     titlebar.cpp \
     placeholderwidget.cpp \

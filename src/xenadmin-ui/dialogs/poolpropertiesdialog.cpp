@@ -81,14 +81,12 @@ namespace
     }
 }
 
-PoolPropertiesDialog::PoolPropertiesDialog(XenConnection* connection,
-                                           const QString& poolRef,
-                                           QWidget* parent)
-    : VerticallyTabbedDialog(connection, poolRef, "pool", parent)
+PoolPropertiesDialog::PoolPropertiesDialog(QSharedPointer<Pool> pool, QWidget* parent) : VerticallyTabbedDialog(pool, parent)
 {
-    setWindowTitle(tr("Pool Properties"));
-    resize(700, 550);
-    build();
+    this->m_pool = pool;
+    this->setWindowTitle(tr("Pool Properties"));
+    this->resize(700, 550);
+    this->build();
 }
 
 void PoolPropertiesDialog::build()
@@ -158,12 +156,17 @@ void PoolPropertiesDialog::build()
     // Advanced Pool Settings tab (Migration Compression)
     // C# line 188: if (isPool && Helpers.CloudOrGreater(connection)
     //                  && Helpers.XapiEqualOrGreater_22_33_0(connection))
-    XenCache* cache = this->connection() ? this->connection()->GetCache() : nullptr;
-    QSharedPointer<Pool> pool = cache ? cache->ResolveObject<Pool>("pool", this->objectRef()) : QSharedPointer<Pool>();
-    QSharedPointer<Host> coordinator;
-    if (pool && cache)
-        coordinator = cache->ResolveObject<Host>("host", pool->GetMasterHostRef());
 
-    if (pool && cloudOrGreater(coordinator) && xapiEqualOrGreater(coordinator, "22.33.0"))
+    if (!this->m_pool)
+        return;
+    XenCache* cache = this->m_pool->GetCache();
+    if (!cache)
+        return;
+
+    QSharedPointer<Host> coordinator;
+    if (this->m_pool && cache)
+        coordinator = cache->ResolveObject<Host>("host", this->m_pool->GetMasterHostRef());
+
+    if (cloudOrGreater(coordinator) && xapiEqualOrGreater(coordinator, "22.33.0"))
         this->showTab(new PoolAdvancedEditPage());
 }

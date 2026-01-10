@@ -30,6 +30,8 @@
 
 #include "verticallytabbeddialog.h"
 
+class Network;
+
 /**
  * @brief Network-specific properties dialog
  *
@@ -49,9 +51,7 @@ class NetworkPropertiesDialog : public VerticallyTabbedDialog
     Q_OBJECT
 
     public:
-        explicit NetworkPropertiesDialog(XenConnection* connection,
-                                         const QString& networkRef,
-                                         QWidget* parent = nullptr);
+        explicit NetworkPropertiesDialog(QSharedPointer<Network> network, QWidget* parent = nullptr);
 
     protected:
         void build() override;

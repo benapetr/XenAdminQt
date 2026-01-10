@@ -25,31 +25,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef STORAGEPROPERTIESDIALOG_H
-#define STORAGEPROPERTIESDIALOG_H
+#include "ieditpage.h"
+#include "xenlib/xen/xenobject.h"
 
-#include "verticallytabbeddialog.h"
-#include "xen/sr.h"
-
-class SR;
-
-/**
- * @brief StoragePropertiesDialog - Properties editor for Storage Repositories (SRs)
- *
- * Qt equivalent of C# XenAdmin.Dialogs.PropertiesDialog for SRs
- *
- * Displays property pages for XenServer storage repositories, following the
- * VerticallyTabbedDialog pattern.
- */
-class StoragePropertiesDialog : public VerticallyTabbedDialog
+void IEditPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap &objectDataBefore, const QVariantMap &objectDataCopy)
 {
-    Q_OBJECT
-
-    public:
-        explicit StoragePropertiesDialog(QSharedPointer<SR> sr, QWidget* parent = nullptr);
-
-    protected:
-        void build() override;
-};
-
-#endif // STORAGEPROPERTIESDIALOG_H
+    this->m_object = object;
+    this->SetXenObjects(object->OpaqueRef(), object->GetObjectType(), objectDataBefore, objectDataCopy);
+}
