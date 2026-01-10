@@ -471,7 +471,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addHostNode(const QSharedPoint
 QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addVMNode(const QSharedPointer<VM>& vm)
 {
     // TODO: Check for vTPM restriction and template status
-    bool hidden = false; // TODO: vm->isHidden()
+    bool hidden = vm->IsHidden();
     QString name = hidden ? QString("(%1)").arg(vm->GetName()) : vm->GetName();
     QIcon icon = IconManager::instance().GetIconForObject(vm.data());
     return this->addNode(name, icon, hidden, QVariant::fromValue<QSharedPointer<XenObject>>(vm));
@@ -487,7 +487,7 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addVmApplianceNode(const QShar
 
 QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addSRNode(const QSharedPointer<SR>& sr)
 {
-    bool hidden = false; // TODO: sr->isHidden()
+    bool hidden = sr->IsHidden();
     QString name = hidden ? QString("(%1)").arg(sr->GetName()) : sr->GetName();
     QIcon icon = IconManager::instance().GetIconForObject(sr.data());
     return this->addNode(name, icon, hidden, QVariant::fromValue<QSharedPointer<XenObject>>(sr));
@@ -495,8 +495,8 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addSRNode(const QSharedPointer
 
 QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addNetworkNode(const QSharedPointer<Network>& network)
 {
-    bool hidden = false; // TODO: network->isHidden()
-    bool supporter = false; // TODO: network->isMember()
+    bool hidden = network->IsHidden();
+    bool supporter = network->IsMember();
     QString rawName = network->GetName();
     QString name = supporter ? QString("NIC Bonded Member: %1").arg(rawName) :
                    hidden ? QString("(%1)").arg(rawName) : rawName;
