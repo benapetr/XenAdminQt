@@ -32,6 +32,7 @@
 
 class VIF;
 class PIF;
+class XenCache;
 
 /**
  * @brief Network - A virtual network
@@ -52,22 +53,29 @@ class XENLIB_EXPORT Network : public XenObject
     Q_OBJECT
 
     public:
-        explicit Network(XenConnection* connection,
-                         const QString& opaqueRef,
-                         QObject* parent = nullptr);
+        explicit Network(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Network() override = default;
 
         /**
-         * @brief Get Bridge name
-         * @return Linux Bridge name (e.g., "xenbr0")
+         * @brief Get GetBridge name
+         * @return Linux GetBridge name (e.g., "xenbr0")
          */
-        QString Bridge() const;
+        QString GetBridge() const;
 
         /**
          * @brief Check if bridge is IsManaged by xapi
          * @return true if IsManaged by xapi, false if external bridge
          */
         bool IsManaged() const;
+
+        //! If network should be automatically added to new VMs
+        bool IsAutomatic() const;
+
+        // Bond helpers (C# parity)
+        bool IsBond() const;
+        bool IsMember() const;
+        bool IsGuestInstallerNetwork() const;
+        bool Show(bool showHiddenObjects) const;
 
         /**
          * @brief Get MTU (Maximum Transmission Unit)
@@ -86,24 +94,6 @@ class XENLIB_EXPORT Network : public XenObject
          * @return List of PIF opaque references
          */
         QStringList GetPIFRefs() const;
-
-        /**
-         * @brief Get human-readable name
-         * @return Network name label
-         */
-        QString NameLabel() const;
-
-        /**
-         * @brief Get human-readable description
-         * @return Network description
-         */
-        QString Description() const;
-
-        /**
-         * @brief Get other_config dictionary
-         * @return Other configuration key-value pairs
-         */
-        QVariantMap OtherConfig() const;
 
         /**
          * @brief Get allowed operations

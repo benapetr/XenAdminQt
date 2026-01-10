@@ -99,11 +99,6 @@ class XENLIB_EXPORT VM : public XenObject
         bool InternalTemplate() const;
 
         /**
-         * @brief Check if this object is hidden from the UI
-         */
-        bool IsHidden() const;
-
-        /**
          * @brief Check if this object should be shown in the UI
          */
         bool Show(bool showHiddenVMs) const;

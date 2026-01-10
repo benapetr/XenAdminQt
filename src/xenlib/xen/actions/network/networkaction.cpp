@@ -45,7 +45,7 @@ NetworkAction::NetworkAction(QSharedPointer<Network> network,
                                QObject* parent)
     : AsyncOperation(network ? network->GetConnection() : nullptr,
                      "Creating Network",
-                     network ? QString("Creating network '%1'").arg(network->NameLabel())
+                     network ? QString("Creating network '%1'").arg(network->GetName())
                              : "Creating network",
                      parent),
       m_network(network),
@@ -68,7 +68,7 @@ NetworkAction::NetworkAction(QSharedPointer<Network> network,
     : AsyncOperation(network ? network->GetConnection() : nullptr,
                      create ? "Creating Network" : "Removing Network",
                      network ? QString(create ? "Creating network '%1'" : "Removing network '%1'")
-                                   .arg(network->NameLabel())
+                                   .arg(network->GetName())
                              : (create ? "Creating network" : "Removing network"),
                      parent),
       m_network(network),
@@ -103,7 +103,7 @@ NetworkAction::NetworkAction(QSharedPointer<Network> network,
                                QObject* parent)
     : AsyncOperation(network ? network->GetConnection() : nullptr,
                      "Updating Network",
-                     network ? QString("Updating network '%1'").arg(network->NameLabel())
+                     network ? QString("Updating network '%1'").arg(network->GetName())
                              : "Updating network",
                      parent),
       m_network(network),
@@ -270,7 +270,7 @@ void NetworkAction::run()
                     XenAPI::Network::destroy(this->GetSession(), this->m_network->OpaqueRef());
                 }
 
-                this->SetDescription(QString("Network '%1' removed").arg(this->m_network->NameLabel()));
+                this->SetDescription(QString("Network '%1' removed").arg(this->m_network->GetName()));
                 break;
             }
 
@@ -305,7 +305,7 @@ void NetworkAction::run()
                     }
                 }
 
-                this->SetDescription(QString("Network '%1' updated").arg(this->m_network->NameLabel()));
+                this->SetDescription(QString("Network '%1' updated").arg(this->m_network->GetName()));
                 break;
             }
 
@@ -321,9 +321,9 @@ void NetworkAction::run()
 
                 // Build network record for creation
                 QVariantMap networkRecord;
-                networkRecord["name_label"] = this->m_network->NameLabel();
-                networkRecord["name_description"] = this->m_network->Description();
-                networkRecord["other_config"] = this->m_network->OtherConfig();
+                networkRecord["name_label"] = this->m_network->GetName();
+                networkRecord["name_description"] = this->m_network->GetDescription();
+                networkRecord["other_config"] = this->m_network->GetOtherConfig();
                 networkRecord["tags"] = this->m_network->tags();
 
                 // Create the network
@@ -335,7 +335,7 @@ void NetworkAction::run()
                     this->createVLAN(networkRef);
                 }
 
-                this->SetDescription(QString("Network '%1' created").arg(this->m_network->NameLabel()));
+                this->SetDescription(QString("Network '%1' created").arg(this->m_network->GetName()));
                 break;
             }
         }

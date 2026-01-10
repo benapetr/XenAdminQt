@@ -110,12 +110,29 @@ void NetworkGeneralEditPage::SetXenObjects(const QString& objectRef,
     if (!conn || !conn->GetCache())
         return;
 
-    // Get coordinator host for this network
-    QList<QSharedPointer<Pool>> pools = conn->GetCache()->GetAll<Pool>("pool");
-    if (!pools.isEmpty() && pools.first())
+    // Get coordinator host for this network (matches C# Helpers.GetCoordinator)
+    QSharedPointer<Pool> pool = conn->GetCache()->GetPool();
+    if (!pool.isNull())
+        this->m_hostRef_ = pool->GetMasterHostRef();
+
+    if (this->m_hostRef_.isEmpty())
     {
-        QSharedPointer<Pool> pool = pools.first();
-        this->m_hostRef_ = pool->GetData().value("master").toString();
+        // Fall back to a host referenced by this network's PIFs
+        QVariantList pifRefs = this->m_objectDataCopy_.value("PIFs").toList();
+        for (const QVariant& pifRefVar : pifRefs)
+        {
+            QString pifRef = pifRefVar.toString();
+            QSharedPointer<PIF> pif = conn->GetCache()->ResolveObject<PIF>("pif", pifRef);
+            if (!pif || !pif->IsValid())
+                continue;
+
+            QString hostRef = pif->GetHostRef();
+            if (!hostRef.isEmpty())
+            {
+                this->m_hostRef_ = hostRef;
+                break;
+            }
+        }
     }
 
     if (this->m_hostRef_.isEmpty())
@@ -132,7 +149,7 @@ void NetworkGeneralEditPage::SetXenObjects(const QString& objectRef,
 
     // Auto-add to VMs checkbox
     QVariantMap otherConfig = this->m_objectDataCopy_.value("other_config").toMap();
-    QString automaticValue = otherConfig.value("automatic", "true").toString();
+    QString automaticValue = otherConfig.value("automatic", "false").toString();
     bool autoAdd = (automaticValue != "false");
     this->ui->autoAddCheckBox->setChecked(autoAdd);
 
@@ -194,21 +211,19 @@ void NetworkGeneralEditPage::populateNicList()
         if (!pif || !pif->IsValid())
             continue;
 
-        QVariantMap pifData = pif->GetData();
-        QString pifHost = pifData.value("host").toString();
+        QString pifHost = pif->GetHostRef();
         
         // Only PIFs from coordinator host
         if (pifHost != this->m_hostRef_)
             continue;
 
         // Only physical PIFs, not bond members
-        bool isPhysical = pifData.value("physical").toBool();
+        bool isPhysical = pif->IsPhysical();
         if (!isPhysical)
             continue;
 
         // Check if it's a bond member
-        QVariantList bondSlaveOf = pifData.value("bond_slave_of").toList();
-        if (!bondSlaveOf.isEmpty())
+        if (pif->IsBondSlave())
             continue;
 
         // Get PIF name
@@ -245,8 +260,12 @@ void NetworkGeneralEditPage::populateNicList()
                     QSharedPointer<PIF> physPif = cache->ResolveObject<PIF>("pif", physicalPifRef);
                     if (physPif && physPif->IsValid())
                     {
-                        QString pifName = physPif->GetName();
-                        int index = this->ui->nicComboBox->findText(pifName);
+                        int index = this->ui->nicComboBox->findData(physicalPifRef);
+                        if (index < 0)
+                        {
+                            QString pifName = physPif->GetName();
+                            index = this->ui->nicComboBox->findText(pifName);
+                        }
                         if (index >= 0)
                             this->ui->nicComboBox->setCurrentIndex(index);
                     }
@@ -562,7 +581,7 @@ AsyncOperation* NetworkGeneralEditPage::SaveSettings()
         
         // Use update constructor with changePIFs=true
         NetworkAction* action = new NetworkAction(network, true, true, basePif, vlan, false, this);
-        action->SetDescription(tr("Reconfiguring network '%1'").arg(network->NameLabel()));
+        action->SetDescription(tr("Reconfiguring network '%1'").arg(network->GetName()));
         return action;
     }
 
@@ -577,7 +596,7 @@ AsyncOperation* NetworkGeneralEditPage::SaveSettings()
         qint64 vlan = this->ui->vlanSpinBox->value();
         
         NetworkAction* action = new NetworkAction(network, basePif, vlan, this);
-        action->SetDescription(tr("Creating external network '%1'").arg(network->NameLabel()));
+        action->SetDescription(tr("Creating external network '%1'").arg(network->GetName()));
         return action;
     }
 
@@ -585,7 +604,7 @@ AsyncOperation* NetworkGeneralEditPage::SaveSettings()
     {
         // External -> Internal: destroy VLANs and convert to internal
         NetworkAction* action = new NetworkAction(network, true, false, nullptr, 0, false, this);
-        action->SetDescription(tr("Converting network '%1' to internal").arg(network->NameLabel()));
+        action->SetDescription(tr("Converting network '%1' to internal").arg(network->GetName()));
         return action;
     }
 

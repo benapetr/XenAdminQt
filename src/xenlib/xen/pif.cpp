@@ -171,7 +171,7 @@ QString PIF::MetricsRef() const
 
 bool PIF::IsPhysical() const
 {
-    return this->boolProperty("physical");
+    return this->GetVLAN() == -1 && !this->IsTunnelAccessPIF() && !this->IsSriovLogicalPIF();
 }
 
 bool PIF::IsCurrentlyAttached() const
@@ -333,6 +333,11 @@ bool PIF::IsBondMaster() const
     return !this->BondMasterOfRefs().isEmpty();
 }
 
+bool PIF::IsBondMember() const
+{
+    return this->IsBondSlave();
+}
+
 bool PIF::IsTunnelAccessPIF() const
 {
     return !this->TunnelAccessPIFOfRefs().isEmpty();
@@ -351,4 +356,15 @@ bool PIF::IsSriovPhysicalPIF() const
 bool PIF::IsSriovLogicalPIF() const
 {
     return !this->SriovLogicalPIFOfRefs().isEmpty();
+}
+
+bool PIF::Show(bool showHiddenObjects) const
+{
+    if (!this->Managed())
+        return false;
+
+    if (showHiddenObjects)
+        return true;
+
+    return !this->IsHidden();
 }

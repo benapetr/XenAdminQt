@@ -73,17 +73,6 @@ bool VM::InternalTemplate() const
     return OtherConfig().contains("xensource_internal");
 }
 
-bool VM::IsHidden() const
-{
-    QVariantMap otherConfig = OtherConfig();
-    QVariant hiddenValue = otherConfig.value("HideFromXenCenter");
-    if (!hiddenValue.isValid())
-        hiddenValue = otherConfig.value("hide_from_xencenter");
-
-    const QString hidden = hiddenValue.toString().trimmed().toLower();
-    return hidden == "true" || hidden == "1";
-}
-
 bool VM::Show(bool showHiddenVMs) const
 {
     if (InternalTemplate())

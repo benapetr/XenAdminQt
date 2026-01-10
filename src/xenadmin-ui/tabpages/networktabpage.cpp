@@ -34,6 +34,7 @@
 #include "xenlib/xen/host.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/xenapi/xenapi_Network.h"
+#include "../settingsmanager.h"
 #include "../dialogs/newnetworkwizard.h"
 #include "../dialogs/networkpropertiesdialog.h"
 #include "../dialogs/networkingpropertiesdialog.h"
@@ -286,7 +287,7 @@ void NetworkTabPage::populateVIFsForVM()
             if (network && network->IsValid())
             {
                 // Check for guest installer network (HIMN)
-                QVariantMap otherConfig = network->OtherConfig();
+                QVariantMap otherConfig = network->GetOtherConfig();
                 bool isGuestInstallerNetwork = otherConfig.value("is_guest_installer_network", false).toBool();
 
                 // TODO: Check ShowHiddenVMs setting when implemented
@@ -429,27 +430,30 @@ void NetworkTabPage::populateNetworksForHost()
 
     for (const QString& networkRef : allNetworkRefs)
     {
-        QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
+        QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>("network", networkRef);
+
+        if (!network)
+            continue;
 
         // Implement C# network.Show() filtering logic
-        if (!shouldShowNetwork(networkData))
+        if (!shouldShowNetwork(network))
         {
-            qDebug() << "Skipping network:" << networkData.value("name_label", "(no name)").toString();
+            qDebug() << "Skipping network:" << network->GetName();
             continue;
         }
 
         //qDebug() << "Adding network:" << networkData.value("name_label", "") << "ref:" << networkRef;
-        this->addNetworkRow(networkRef, networkData);
+        this->addNetworkRow(network);
     }
 
     //qDebug() << "NetworkTabPage::populateNetworksForHost - Added" << this->ui->networksTable->rowCount() << "rows";
 }
 
-bool NetworkTabPage::shouldShowNetwork(const QVariantMap& networkData)
+bool NetworkTabPage::shouldShowNetwork(QSharedPointer<Network> network)
 {
     // Matching C# Network.Show() logic
 
-    QVariantMap otherConfig = networkData.value("other_config", QVariantMap()).toMap();
+    QVariantMap otherConfig = network->GetOtherConfig();
 
     // 1. Check IsGuestInstallerNetwork - don't show guest installer networks
     if (otherConfig.value("is_guest_installer_network", "false").toString() == "true")
@@ -464,17 +468,14 @@ bool NetworkTabPage::shouldShowNetwork(const QVariantMap& networkData)
     }
 
     // 3. Check if network has name - networks without names are usually internal
-    QString name = networkData.value("name_label", "").toString();
+    QString name = network->GetName();
     if (name.isEmpty())
     {
         return false;
     }
 
-    // 4. Check IsMember - bond member networks
-    // A network is a bond member if it has "is-bonded" or similar flag
-    // For now, skip this check as it's complex
-
-    return true;
+    const bool showHiddenObjects = SettingsManager::instance().getShowHiddenObjects();
+    return network->Show(showHiddenObjects);
 }
 
 void NetworkTabPage::populateNetworksForPool()
@@ -483,17 +484,22 @@ void NetworkTabPage::populateNetworksForPool()
     this->populateNetworksForHost();
 }
 
-void NetworkTabPage::addNetworkRow(const QString& networkRef, const QVariantMap& networkData)
+void NetworkTabPage::addNetworkRow(QSharedPointer<Network> network)
 {
+    if (!network)
+        return;
+
+    XenCache* cache = network->GetCache();
+    if (!network->IsValid() || !cache)
+        return;
+
     int row = this->ui->networksTable->rowCount();
     this->ui->networksTable->insertRow(row);
 
-    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
-    QSharedPointer<Network> network = cache ? cache->ResolveObject<Network>("network", networkRef) : QSharedPointer<Network>();
-    QString name = network && network->IsValid() ? network->GetName()
-                                                 : networkData.value("name_label", "").toString();
-    QString description = network && network->IsValid() ? network->GetDescription()
-                                                        : networkData.value("name_description", "").toString();
+    QString name = network->GetName();
+    QString description = network->GetDescription();
+
+    QVariantMap networkData = network->GetData();
 
     // Find PIF for this network on the current host (matching C# Helpers.FindPIF logic)
     // C#: PIF Helpers.FindPIF(XenAPI.Network network, Host owner)
@@ -535,7 +541,7 @@ void NetworkTabPage::addNetworkRow(const QString& networkRef, const QVariantMap&
 
     QString nicInfo = "-";
     QString vlanInfo = "-";
-    QString autoInfo = networkData.value("other_config", QVariantMap()).toMap().value("automatic", "false").toString() == "true" ? "Yes" : "No";
+    QString autoInfo = network->IsAutomatic() == true ? "Yes" : "No";
     QString linkStatus = "-";
     QString macInfo = "-";
     QString mtuInfo = "-";
@@ -625,7 +631,7 @@ void NetworkTabPage::addNetworkRow(const QString& networkRef, const QVariantMap&
 
     // Create items and store network ref in first column as user data
     QTableWidgetItem* nameItem = new QTableWidgetItem(name);
-    nameItem->setData(Qt::UserRole, networkRef); // Store network ref for later use
+    nameItem->setData(Qt::UserRole, network->OpaqueRef()); // Store network ref for later use
 
     this->ui->networksTable->setItem(row, 0, nameItem);
     this->ui->networksTable->setItem(row, 1, new QTableWidgetItem(description));

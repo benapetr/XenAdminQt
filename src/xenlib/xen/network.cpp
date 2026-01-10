@@ -26,13 +26,14 @@
  */
 
 #include "network.h"
+#include "pif.h"
+#include "xencache.h"
 
-Network::Network(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+Network::Network(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
-QString Network::Bridge() const
+QString Network::GetBridge() const
 {
     return this->GetData().value("bridge").toString();
 }
@@ -41,6 +42,78 @@ bool Network::IsManaged() const
 {
     // Default to true (managed by xapi) if not specified
     return this->GetData().value("managed", true).toBool();
+}
+
+bool Network::IsAutomatic() const
+{
+    return this->GetData().value("other_config", QVariantMap()).toMap().value("automatic", "false").toString() == "true" ? true : false;
+}
+
+bool Network::IsBond() const
+{
+    XenCache* cache = this->GetCache();
+    if (!cache)
+        return false;
+
+    const QStringList pifRefs = this->GetPIFRefs();
+    for (const QString& pifRef : pifRefs)
+    {
+        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+        if (pif && pif->IsValid() && pif->IsBondMaster())
+            return true;
+    }
+
+    return false;
+}
+
+bool Network::IsMember() const
+{
+    XenCache* cache = this->GetCache();
+    if (!cache)
+        return false;
+
+    const QStringList pifRefs = this->GetPIFRefs();
+    for (const QString& pifRef : pifRefs)
+    {
+        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+        if (pif && pif->IsValid() && pif->IsBondMember())
+            return true;
+    }
+
+    return false;
+}
+
+bool Network::IsGuestInstallerNetwork() const
+{
+    QVariantMap otherConfig = this->GetOtherConfig();
+    const QString guestInstaller = otherConfig.value("is_guest_installer_network").toString().trimmed().toLower();
+    return guestInstaller == "true" || guestInstaller == "1";
+}
+
+bool Network::Show(bool showHiddenObjects) const
+{
+    if (this->IsGuestInstallerNetwork() && !showHiddenObjects)
+        return false;
+
+    XenCache* cache = this->GetCache();
+    if (cache)
+    {
+        const QStringList pifRefs = this->GetPIFRefs();
+        for (const QString& pifRef : pifRefs)
+        {
+            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+            if (pif && pif->IsValid() && !pif->Show(showHiddenObjects))
+                return false;
+        }
+    }
+
+    if (showHiddenObjects)
+        return true;
+
+    if (this->IsMember())
+        return false;
+
+    return !this->IsHidden();
 }
 
 qint64 Network::GetMTU() const
@@ -68,21 +141,6 @@ QStringList Network::GetPIFRefs() const
         result.append(pif.toString());
     }
     return result;
-}
-
-QString Network::NameLabel() const
-{
-    return this->GetData().value("name_label").toString();
-}
-
-QString Network::Description() const
-{
-    return this->GetData().value("name_description").toString();
-}
-
-QVariantMap Network::OtherConfig() const
-{
-    return this->GetData().value("other_config").toMap();
 }
 
 QStringList Network::AllowedOperations() const

@@ -90,8 +90,8 @@ class NetworkTabPage : public BaseTabPage
         void populateVIFsForVM();
         void populateNetworksForHost();
         void populateNetworksForPool();
-        void addNetworkRow(const QString& networkRef, const QVariantMap& networkData);
-        bool shouldShowNetwork(const QVariantMap& networkData);
+        void addNetworkRow(QSharedPointer<Network> network);
+        bool shouldShowNetwork(QSharedPointer<Network> network);
 
         // IP Address Configuration section population
         void populateIPConfigForHost();

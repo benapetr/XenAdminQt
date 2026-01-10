@@ -26,6 +26,7 @@
  */
 
 #include "xencache.h"
+#include "xen/network.h"
 #include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/host.h"
@@ -464,6 +465,8 @@ QSharedPointer<XenObject> XenCache::createObjectForType(const QString& type, con
         return QSharedPointer<XenObject>(new VLAN(this->m_connection, ref));
     if (type == "tunnel")
         return QSharedPointer<XenObject>(new Tunnel(this->m_connection, ref));
+    if (type == "network")
+        return QSharedPointer<XenObject>(new Network(this->m_connection, ref));
 
     return QSharedPointer<XenObject>();
 }

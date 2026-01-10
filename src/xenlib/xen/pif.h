@@ -112,10 +112,12 @@ class PIF : public XenObject
         bool IsVLAN() const;
         bool IsBondSlave() const;
         bool IsBondMaster() const;
+        bool IsBondMember() const;
         bool IsTunnelAccessPIF() const;
         bool IsTunnelTransportPIF() const;
         bool IsSriovPhysicalPIF() const;
         bool IsSriovLogicalPIF() const;
+        bool Show(bool showHiddenObjects) const;
 };
 
 #endif // PIF_H

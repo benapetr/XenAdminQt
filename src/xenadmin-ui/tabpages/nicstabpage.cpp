@@ -38,8 +38,7 @@
 #include <QMessageBox>
 #include <QDebug>
 
-NICsTabPage::NICsTabPage(QWidget* parent)
-    : BaseTabPage(parent), ui(new Ui::NICsTabPage)
+NICsTabPage::NICsTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::NICsTabPage)
 {
     this->ui->setupUi(this);
 
@@ -90,7 +89,7 @@ void NICsTabPage::populateNICs()
 
     // Get all PIFs for this host
     QVariantList pifRefs = this->m_objectData.value("PIFs", QVariantList()).toList();
-    qDebug() << "NICsTabPage::populateNICs - Host has" << pifRefs.size() << "PIFs";
+    //qDebug() << "NICsTabPage::populateNICs - Host has" << pifRefs.size() << "PIFs";
 
     QList<QVariantMap> physicalPIFs;
 
@@ -106,11 +105,11 @@ void NICsTabPage::populateNICs()
             continue;
         }
 
-        qDebug() << "  PIF" << pifRef << "has keys:" << pifData.keys();
-        qDebug() << "    physical:" << pifData.value("physical", false).toBool()
-                 << "device:" << pifData.value("device", "");
+        //qDebug() << "  PIF" << pifRef << "has keys:" << pifData.keys();
+        //qDebug() << "    physical:" << pifData.value("physical", false).toBool()
+        //         << "device:" << pifData.value("device", "");
 
-        // Implement C# PIF.IsPhysical() logic:
+        // TODO Implement C# PIF.IsPhysical() logic:
         // IsPhysical() = VLAN == -1 && !IsTunnelAccessPIF() && !IsSriovLogicalPIF()
         // This includes bonds (which have physical=false but are shown in NICs tab)
         qint64 vlan = pifData.value("VLAN", -1).toLongLong();
@@ -126,7 +125,7 @@ void NICsTabPage::populateNICs()
         }
     }
 
-    qDebug() << "Found" << physicalPIFs.size() << "physical/bond PIFs";
+    //qDebug() << "Found" << physicalPIFs.size() << "physical/bond PIFs";
 
     // Sort by device name
     std::sort(physicalPIFs.begin(), physicalPIFs.end(),
@@ -140,7 +139,7 @@ void NICsTabPage::populateNICs()
         this->addNICRow(pifRef, pifData);
     }
 
-    qDebug() << "NICsTabPage::populateNICs - Added" << this->ui->nicsTable->rowCount() << "rows";
+    //qDebug() << "NICsTabPage::populateNICs - Added" << this->ui->nicsTable->rowCount() << "rows";
 }
 
 void NICsTabPage::addNICRow(const QString& pifRef, const QVariantMap& pifData)

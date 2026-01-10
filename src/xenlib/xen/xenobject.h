@@ -138,6 +138,7 @@ class XENLIB_EXPORT XenObject : public QObject
          * @return Additional configuration key-value pairs
          */
         QVariantMap GetOtherConfig() const;
+        virtual bool IsHidden() const;
 
         /**
          * @brief Refresh object data from cache

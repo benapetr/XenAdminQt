@@ -93,6 +93,17 @@ QVariantMap XenObject::GetOtherConfig() const
     return this->property("other_config").toMap();
 }
 
+bool XenObject::IsHidden() const
+{
+    QVariantMap otherConfig = this->GetOtherConfig();
+    QVariant hiddenValue = otherConfig.value("HideFromXenCenter");
+    if (!hiddenValue.isValid())
+        hiddenValue = otherConfig.value("hide_from_xencenter");
+
+    const QString hidden = hiddenValue.toString().trimmed().toLower();
+    return hidden == "true" || hidden == "1";
+}
+
 QString XenObject::GetObjectType() const
 {
     return "null";
