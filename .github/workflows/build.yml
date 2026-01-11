@@ -113,20 +113,49 @@ jobs:
           Get-Command gcc,g++,mingw32-make,qmake -ErrorAction SilentlyContinue | Format-Table -AutoSize
           if (Get-Command qmake -ErrorAction SilentlyContinue) { qmake -v }
 
-      - name: Configure project (Windows)
+      - name: Force MinGW (matching Qt kit) on PATH (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
 
-          if ($env:Qt6_Dir) { $qtDir = $env:Qt6_Dir } else { $qtDir = $env:Qt5_Dir }
-          $env:PATH = "$(Join-Path $qtDir 'bin');$env:PATH"
+          # Qt bin
+          $qtDir = if ($env:Qt6_Dir) { $env:Qt6_Dir } else { $env:Qt5_Dir }
+          $qtBin = Join-Path $qtDir 'bin'
 
-          # Sanity check: make sure we're NOT using C:\mingw64 anymore
-          Get-Command g++ -ErrorAction Stop | Format-List
+          # Find Qt-installed MinGW toolchain under IQTA_TOOLS (set by install-qt-action)
+          if (-not $env:IQTA_TOOLS) { throw "IQTA_TOOLS is not set" }
+          $toolsRoot = $env:IQTA_TOOLS
+
+          # Most common layouts:
+          $candidates = @(
+            Join-Path $toolsRoot 'mingw810_64\bin',
+            Join-Path $toolsRoot 'mingw1120_64\bin',
+            Join-Path $toolsRoot 'mingw\bin'
+          ) + (Get-ChildItem -Path $toolsRoot -Directory -ErrorAction SilentlyContinue |
+              Where-Object { $_.Name -like 'mingw*64' } |
+              ForEach-Object { Join-Path $_.FullName 'bin' })
+
+          $mingwBin = $candidates | Where-Object { Test-Path (Join-Path $_ 'g++.exe') } | Select-Object -First 1
+          if (-not $mingwBin) {
+            throw "Could not find Qt toolchain g++.exe under $toolsRoot. Candidates tried: $($candidates -join ', ')"
+          }
+
+          # Remove the runner-provided C:\mingw64\bin if present, to avoid shadowing
+          $pathParts = $env:PATH -split ';' | Where-Object { $_ -and ($_ -ne 'C:\mingw64\bin') }
+          $env:PATH = ($qtBin, $mingwBin, $pathParts) -join ';'
+
+          "Using qtBin:    $qtBin"
+          "Using mingwBin: $mingwBin"
+          (Get-Command g++).Source
           g++ --version
           qmake -v
 
+      - name: Configure project (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Force build | Out-Null
           Push-Location build
           qmake ..\src\xenadminqt.pro
