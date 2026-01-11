@@ -99,7 +99,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: |
-          echo C:\msys64\mingw64\bin>> %GITHUB_PATH%
+          echo C:\msys64\mingw64\bin>> "%GITHUB_PATH%"
       - name: Show qmake version
         run: qmake -v
       - name: Configure project (Unix)
@@ -112,6 +112,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: |
+          set "PATH=C:\msys64\mingw64\bin;%PATH%"
           if not exist build mkdir build
           cd build
           qmake ..\src\xenadminqt.pro
@@ -128,5 +129,6 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: |
+          set "PATH=C:\msys64\mingw64\bin;%PATH%"
           cd build
           mingw32-make -j%NUMBER_OF_PROCESSORS%
