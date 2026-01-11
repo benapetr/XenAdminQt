@@ -127,8 +127,8 @@ jobs:
           fi
       - name: Build project (Windows)
         if: runner.os == 'Windows'
-        shell: cmd
+        shell: msys2 {0}
         run: |
-          set "PATH=C:\msys64\mingw64\bin;%PATH%"
+          mkdir -p build
           cd build
-          mingw32-make -j%NUMBER_OF_PROCESSORS%
+          qmake ../src/xenadminqt.pro
