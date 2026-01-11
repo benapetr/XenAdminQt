@@ -101,7 +101,7 @@ void HostMaintenanceModeCommand::Run()
                 return;
             }
 
-            EvacuateHostAction* action = new EvacuateHostAction(conn, host, QSharedPointer<Host>(), nullptr);
+            EvacuateHostAction* action = new EvacuateHostAction(host, QSharedPointer<Host>(), nullptr);
 
             OperationManager::instance()->RegisterOperation(action);
 
@@ -141,7 +141,7 @@ void HostMaintenanceModeCommand::Run()
                 return;
             }
 
-            EnableHostAction* action = new EnableHostAction(conn, host, false, nullptr);
+            EnableHostAction* action = new EnableHostAction(host, false, nullptr);
 
             OperationManager::instance()->RegisterOperation(action);
 

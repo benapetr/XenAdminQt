@@ -36,10 +36,8 @@
 #include "host.h"
 #include <QDomDocument>
 #include <algorithm>
-#include <cmath>
 
-VM::VM(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+VM::VM(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
@@ -510,7 +508,7 @@ QStringList VM::Tags() const
     return stringListProperty("tags");
 }
 
-QStringList VM::AllowedOperations() const
+QStringList VM::GetAllowedOperations() const
 {
     return stringListProperty("allowed_operations");
 }
@@ -544,7 +542,7 @@ bool VM::CanMigrateToHost(const QString& hostRef, QString* error) const
         return false;
     }
 
-    QStringList allowedOps = this->AllowedOperations();
+    QStringList allowedOps = this->GetAllowedOperations();
     if (!allowedOps.contains("pool_migrate"))
     {
         if (error)
@@ -607,7 +605,7 @@ bool VM::CanBeMoved() const
     if (this->IsLocked())
         return false;
 
-    if (!this->AllowedOperations().contains("export"))
+    if (!this->GetAllowedOperations().contains("export"))
         return false;
 
     if (this->GetPowerState() == "Suspended")

@@ -40,6 +40,8 @@ namespace Ui
 }
 QT_END_NAMESPACE
 
+class VM;
+
 class SnapshotsTabPage : public BaseTabPage
 {
     Q_OBJECT
@@ -113,6 +115,8 @@ class SnapshotsTabPage : public BaseTabPage
         QAction* m_sortByCreatedAction = nullptr;
         QAction* m_sortBySizeAction = nullptr;
         bool m_showScheduledSnapshots = true;
+
+        QSharedPointer<VM> m_vm;
 
         static QHash<QString, SnapshotsView> s_viewByVmRef;
 };

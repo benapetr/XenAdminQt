@@ -522,11 +522,14 @@ AsyncOperation* CpuMemoryEditPage::SaveSettings()
     if (this->m_origVcpus != this->selectedVcpusMax() ||
         (this->m_isVcpuHotplugSupported && this->m_origVCPUsAtStartup != this->selectedVcpusAtStartup()))
     {
-        actions.append(new ChangeVCPUSettingsAction(this->connection(),
-                                                    this->m_vmRef,
-                                                    this->selectedVcpusMax(),
-                                                    this->selectedVcpusAtStartup(),
-                                                    nullptr));
+        QSharedPointer<VM> vm = this->connection()->GetCache()->ResolveObject<VM>("vm", this->m_vmRef);
+        if (vm && vm->IsValid())
+        {
+            actions.append(new ChangeVCPUSettingsAction(vm,
+                                                        this->selectedVcpusMax(),
+                                                        this->selectedVcpusAtStartup(),
+                                                        nullptr));
+        }
     }
 
     if (this->m_origCoresPerSocket != this->selectedCoresPerSocket())

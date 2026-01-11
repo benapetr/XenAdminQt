@@ -58,7 +58,7 @@ bool MigrateVMCommand::CanRun() const
         return false;
 
     // TODO: FeatureForbidden (Host.RestrictIntraPoolMigrate) is not implemented yet.
-    if (!vm->AllowedOperations().contains("pool_migrate"))
+    if (!vm->GetAllowedOperations().contains("pool_migrate"))
         return false;
 
     // Need at least one other host to migrate to

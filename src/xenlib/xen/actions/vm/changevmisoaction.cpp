@@ -30,23 +30,24 @@
 #include "../../session.h"
 #include "../../api.h"
 #include "../../xenapi/xenapi_VBD.h"
+#include "xen/vm.h"
 #include <QDebug>
 
 using namespace XenAPI;
 
-ChangeVMISOAction::ChangeVMISOAction(XenConnection* connection,
-                                     const QString& vmRef,
+ChangeVMISOAction::ChangeVMISOAction(QSharedPointer<VM> vm,
                                      const QString& vdiRef,
                                      const QString& vbdRef,
                                      QObject* parent)
-    : AsyncOperation(connection,
+    : AsyncOperation(vm->GetConnection(),
                      vdiRef.isEmpty() ? "Ejecting ISO" : "Loading ISO",
-                     vdiRef.isEmpty() ? "Unloading ISO from VM" : "Loading ISO into VM",
+                     vdiRef.isEmpty() ? QString("Unloading ISO from '%1'").arg(vm ? vm->GetName() : "") 
+                                      : QString("Loading ISO into '%1'").arg(vm ? vm->GetName() : ""),
                      parent),
-      m_vmRef(vmRef), m_vdiRef(vdiRef), m_vbdRef(vbdRef), m_isEmpty(false)
+      m_vm(vm), m_vdiRef(vdiRef), m_vbdRef(vbdRef), m_isEmpty(false)
 {
-    if (this->m_vmRef.isEmpty())
-        qWarning() << "ChangeVMISOAction: VM reference is empty";
+    if (!this->m_vm || !this->m_vm->IsValid())
+        qWarning() << "ChangeVMISOAction: VM object is invalid";
 
     if (this->m_vbdRef.isEmpty())
         qWarning() << "ChangeVMISOAction: VBD reference is empty";

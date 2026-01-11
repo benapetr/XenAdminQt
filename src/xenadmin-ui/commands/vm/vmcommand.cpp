@@ -34,6 +34,8 @@ VMCommand::VMCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWind
 
 QSharedPointer<VM> VMCommand::getVM() const
 {
+    if (!this->m_overrideVM.isNull())
+        return this->m_overrideVM;
     return qSharedPointerCast<VM>(this->GetObject());
 }
 

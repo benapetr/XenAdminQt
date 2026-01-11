@@ -89,17 +89,8 @@ void VMRecoveryModeCommand::Run()
         return;
     }
 
-    // Get XenConnection
-    XenConnection* conn = vm->GetConnection();
-    if (!conn || !conn->IsConnected())
-    {
-        QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
-                             tr("Not connected to XenServer"));
-        return;
-    }
-
     // Create HVMBootAction
-    HVMBootAction* action = new HVMBootAction(conn, vmRef, this->mainWindow());
+    HVMBootAction* action = new HVMBootAction(vm, this->mainWindow());
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);

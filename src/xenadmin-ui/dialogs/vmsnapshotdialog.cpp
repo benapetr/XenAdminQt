@@ -27,46 +27,49 @@
 
 #include "vmsnapshotdialog.h"
 #include "ui_vmsnapshotdialog.h"
+#include "xen/host.h"
+#include "xen/vm.h"
 #include <QDateTime>
 #include <QPushButton>
 
-VmSnapshotDialog::VmSnapshotDialog(const QVariantMap& vmData, QWidget* parent)
-    : QDialog(parent), ui(new Ui::VmSnapshotDialog), m_vmData(vmData)
+VmSnapshotDialog::VmSnapshotDialog(QSharedPointer<VM> vm, QWidget* parent) : QDialog(parent), ui(new Ui::VmSnapshotDialog)
 {
-    ui->setupUi(this);
-    setupDialog();
+    this->m_vm = vm;
+
+    this->ui->setupUi(this);
+    this->setupDialog();
 
     // Connect signals
-    connect(ui->nameLineEdit, &QLineEdit::textChanged, this, &VmSnapshotDialog::onNameChanged);
-    connect(ui->diskRadioButton, &QRadioButton::toggled, this, &VmSnapshotDialog::onDiskRadioToggled);
-    connect(ui->memoryRadioButton, &QRadioButton::toggled, this, &VmSnapshotDialog::onMemoryRadioToggled);
-    connect(ui->quiesceCheckBox, &QCheckBox::toggled, this, &VmSnapshotDialog::onQuiesceCheckBoxToggled);
+    connect(this->ui->nameLineEdit, &QLineEdit::textChanged, this, &VmSnapshotDialog::onNameChanged);
+    connect(this->ui->diskRadioButton, &QRadioButton::toggled, this, &VmSnapshotDialog::onDiskRadioToggled);
+    connect(this->ui->memoryRadioButton, &QRadioButton::toggled, this, &VmSnapshotDialog::onMemoryRadioToggled);
+    connect(this->ui->quiesceCheckBox, &QCheckBox::toggled, this, &VmSnapshotDialog::onQuiesceCheckBoxToggled);
 
     // Set focus to name field
-    ui->nameLineEdit->setFocus();
+    this->ui->nameLineEdit->setFocus();
 }
 
 VmSnapshotDialog::~VmSnapshotDialog()
 {
-    delete ui;
+    delete this->ui;
 }
 
 QString VmSnapshotDialog::snapshotName() const
 {
-    return ui->nameLineEdit->text().trimmed();
+    return this->ui->nameLineEdit->text().trimmed();
 }
 
 QString VmSnapshotDialog::snapshotDescription() const
 {
-    return ui->descriptionTextEdit->toPlainText().trimmed();
+    return this->ui->descriptionTextEdit->toPlainText().trimmed();
 }
 
 VmSnapshotDialog::SnapshotType VmSnapshotDialog::snapshotType() const
 {
-    if (ui->quiesceCheckBox->isChecked())
+    if (this->ui->quiesceCheckBox->isChecked())
         return QUIESCED_DISK;
 
-    if (ui->diskRadioButton->isChecked())
+    if (this->ui->diskRadioButton->isChecked())
         return DISK;
 
     return DISK_AND_MEMORY;
@@ -79,61 +82,61 @@ void VmSnapshotDialog::setupDialog()
     // Set default snapshot name with timestamp
     QString defaultName = QString("Snapshot_%1")
                               .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_hh-mm-ss"));
-    ui->nameLineEdit->setText(defaultName);
+    this->ui->nameLineEdit->setText(defaultName);
 
     // Update warning messages
-    updateWarnings();
+    this->updateWarnings();
 
     // Check what snapshot operations are allowed
-    QVariantList allowedOps = m_vmData.value("allowed_operations").toList();
+    QStringList allowedOps = this->m_vm->GetAllowedOperations();
 
     bool canSnapshot = allowedOps.contains("snapshot");
     bool canCheckpoint = allowedOps.contains("checkpoint");
     bool canQuiesce = allowedOps.contains("snapshot_with_quiesce");
 
     // C#: diskRadioButton.Enabled = _VM.allowed_operations.Contains(vm_operations.snapshot);
-    ui->diskRadioButton->setEnabled(canSnapshot);
+    this->ui->diskRadioButton->setEnabled(canSnapshot);
 
     // C#: pictureBoxSnapshotsInfo.Visible = labelSnapshotInfo.Visible = !diskRadioButton.Enabled;
     // Show info label when disk snapshot is NOT available
-    ui->diskSnapshotInfoLabel->setVisible(!canSnapshot);
+    this->ui->diskSnapshotInfoLabel->setVisible(!canSnapshot);
 
     // C#: var quiesceAvailable = !Helpers.QuebecOrGreater(_VM.Connection);
     // For now, always show quiesce option (TODO: check server version)
     bool quiesceVisible = true;
 
     // C#: quiesceCheckBox.Visible = quiesceAvailable;
-    ui->quiesceCheckBox->setVisible(quiesceVisible);
+    this->ui->quiesceCheckBox->setVisible(quiesceVisible);
 
     // C#: quiesceCheckBox.Enabled = quiesceAvailable && _VM.allowed_operations.Contains(vm_operations.snapshot_with_quiesce)
     //     && !Helpers.FeatureForbidden(_VM, Host.RestrictVss);
     // TODO: Check Host.RestrictVss restriction
-    ui->quiesceCheckBox->setEnabled(quiesceVisible && canQuiesce);
+    this->ui->quiesceCheckBox->setEnabled(quiesceVisible && canQuiesce);
 
     // C#: pictureBoxQuiesceInfo.Visible = labelQuiesceInfo.Visible = quiesceAvailable && !quiesceCheckBox.Enabled;
     // Show quiesce info when quiesce is visible but not enabled
-    ui->quiesceInfoLabel->setVisible(quiesceVisible && !ui->quiesceCheckBox->isEnabled());
+    this->ui->quiesceInfoLabel->setVisible(quiesceVisible && !this->ui->quiesceCheckBox->isEnabled());
 
     // C#: memoryRadioButton.Enabled = _VM.allowed_operations.Contains(vm_operations.checkpoint)
     //     && !Helpers.FeatureForbidden(_VM, Host.RestrictCheckpoint);
     // TODO: Check Host.RestrictCheckpoint restriction
-    ui->memoryRadioButton->setEnabled(canCheckpoint);
+    this->ui->memoryRadioButton->setEnabled(canCheckpoint);
 
     // C#: CheckpointInfoPictureBox.Visible = labelCheckpointInfo.Visible = !memoryRadioButton.Enabled;
     // Show checkpoint info when memory snapshot is NOT available
-    ui->memorySnapshotInfoLabel->setVisible(!canCheckpoint);
+    this->ui->memorySnapshotInfoLabel->setVisible(!canCheckpoint);
 
     // C#: UpdateOK();
-    updateOkButton();
+    this->updateOkButton();
 }
 
 void VmSnapshotDialog::updateOkButton()
 {
-    bool hasName = !ui->nameLineEdit->text().trimmed().isEmpty();
-    bool hasValidType = ui->diskRadioButton->isEnabled() ||
-                        ui->memoryRadioButton->isEnabled();
+    bool hasName = !this->ui->nameLineEdit->text().trimmed().isEmpty();
+    bool hasValidType = this->ui->diskRadioButton->isEnabled() ||
+                        this->ui->memoryRadioButton->isEnabled();
 
-    QPushButton* okButton = ui->buttonBox->button(QDialogButtonBox::Ok);
+    QPushButton* okButton = this->ui->buttonBox->button(QDialogButtonBox::Ok);
     if (okButton)
     {
         okButton->setEnabled(hasName && hasValidType);
@@ -143,7 +146,7 @@ void VmSnapshotDialog::updateOkButton()
 void VmSnapshotDialog::updateWarnings()
 {
     // C#: VmSnapshotDialog.cs lines 135-156
-    QString powerState = m_vmData.value("power_state").toString();
+    QString powerState = this->m_vm->GetPowerState();
     bool isRunning = (powerState == "Running");
 
     // Get virtualization status
@@ -152,16 +155,16 @@ void VmSnapshotDialog::updateWarnings()
     bool hasIoDriversInstalled = true;  // Assume true for now
 
     // C#: labelSnapshotInfo.Text = Messages.INFO_DISK_MODE;
-    if (!ui->diskRadioButton->isEnabled())
+    if (!this->ui->diskRadioButton->isEnabled())
     {
-        ui->diskSnapshotInfoLabel->setText(tr("Disk-only snapshots are not supported for this VM."));
+        this->ui->diskSnapshotInfoLabel->setText(this->tr("Disk-only snapshots are not supported for this VM."));
     } else
     {
-        ui->diskSnapshotInfoLabel->clear();
+        this->ui->diskSnapshotInfoLabel->clear();
     }
 
     // Quiesce warning messages (C#: lines 138-145)
-    if (ui->quiesceInfoLabel->isVisible())
+    if (this->ui->quiesceInfoLabel->isVisible())
     {
         // C#: if (Helpers.FeatureForbidden(_VM, Host.RestrictVss))
         //     labelQuiesceInfo.Text = Messages.FIELD_DISABLED;
@@ -170,29 +173,29 @@ void VmSnapshotDialog::updateWarnings()
 
         if (vssRestricted)
         {
-            ui->quiesceInfoLabel->setText(tr("This feature is restricted."));
+            this->ui->quiesceInfoLabel->setText(this->tr("This feature is restricted."));
         }
         // C#: else if (_VM.power_state != vm_power_state.Running)
         //     labelQuiesceInfo.Text = Messages.INFO_QUIESCE_MODE_POWER_STATE;
         else if (!isRunning)
         {
-            ui->quiesceInfoLabel->setText(tr("Quiesced snapshots require the VM to be running."));
+            this->ui->quiesceInfoLabel->setText(this->tr("Quiesced snapshots require the VM to be running."));
         }
         // C#: else if (!_VM.GetVirtualizationStatus(out _).HasFlag(VM.VirtualizationStatus.ManagementInstalled))
         else if (!hasManagementInstalled)
         {
-            ui->quiesceInfoLabel->setText(tr("Quiesced snapshots require XenServer VM Tools to be installed."));
+            this->ui->quiesceInfoLabel->setText(this->tr("Quiesced snapshots require XenServer VM Tools to be installed."));
         }
         // C#: else
         //     labelQuiesceInfo.Text = Messages.INFO_QUIESCE_MODE; // This says that VSS must be enabled
         else
         {
-            ui->quiesceInfoLabel->setText(tr("Quiesced snapshots require VSS to be enabled in the VM."));
+            this->ui->quiesceInfoLabel->setText(this->tr("Quiesced snapshots require VSS to be enabled in the VM."));
         }
     }
 
     // Checkpoint warning messages (C#: lines 147-156)
-    if (ui->memorySnapshotInfoLabel->isVisible())
+    if (this->ui->memorySnapshotInfoLabel->isVisible())
     {
         // C#: if (Helpers.FeatureForbidden(_VM, Host.RestrictCheckpoint))
         //     labelCheckpointInfo.Text = Messages.FIELD_DISABLED;
@@ -201,31 +204,31 @@ void VmSnapshotDialog::updateWarnings()
 
         if (checkpointRestricted)
         {
-            ui->memorySnapshotInfoLabel->setText(tr("This feature is restricted."));
+            this->ui->memorySnapshotInfoLabel->setText(this->tr("This feature is restricted."));
         }
         // C#: else if (_VM.power_state != vm_power_state.Running)
         //     labelCheckpointInfo.Text = Messages.INFO_DISKMEMORY_MODE_POWER_STATE;
         else if (!isRunning)
         {
-            ui->memorySnapshotInfoLabel->setText(tr("Memory snapshots (checkpoints) require the VM to be running."));
+            this->ui->memorySnapshotInfoLabel->setText(this->tr("Memory snapshots (checkpoints) require the VM to be running."));
         }
         // C#: else if (!_VM.GetVirtualizationStatus(out _).HasFlag(VM.VirtualizationStatus.IoDriversInstalled))
         else if (!hasIoDriversInstalled)
         {
-            ui->memorySnapshotInfoLabel->setText(tr("Memory snapshots require XenServer VM Tools with I/O drivers installed."));
+            this->ui->memorySnapshotInfoLabel->setText(this->tr("Memory snapshots require XenServer VM Tools with I/O drivers installed."));
         }
         // C#: else
         //     labelCheckpointInfo.Text = Messages.INFO_DISKMEMORY_MODE_MISC;
         else
         {
-            ui->memorySnapshotInfoLabel->setText(tr("Memory snapshots capture the VM's current state including memory contents."));
+            this->ui->memorySnapshotInfoLabel->setText(this->tr("Memory snapshots capture the VM's current state including memory contents."));
         }
     }
 }
 
 void VmSnapshotDialog::onNameChanged()
 {
-    updateOkButton();
+    this->updateOkButton();
 }
 
 void VmSnapshotDialog::onDiskRadioToggled(bool checked)
@@ -233,9 +236,9 @@ void VmSnapshotDialog::onDiskRadioToggled(bool checked)
     if (checked)
     {
         // Disk mode selected, memory mode deselected
-        ui->memoryRadioButton->setChecked(false);
+        this->ui->memoryRadioButton->setChecked(false);
     }
-    updateOkButton();
+    this->updateOkButton();
 }
 
 void VmSnapshotDialog::onMemoryRadioToggled(bool checked)
@@ -243,10 +246,10 @@ void VmSnapshotDialog::onMemoryRadioToggled(bool checked)
     if (checked)
     {
         // Memory mode selected, disk mode and quiesce deselected
-        ui->diskRadioButton->setChecked(false);
-        ui->quiesceCheckBox->setChecked(false);
+        this->ui->diskRadioButton->setChecked(false);
+        this->ui->quiesceCheckBox->setChecked(false);
     }
-    updateOkButton();
+    this->updateOkButton();
 }
 
 void VmSnapshotDialog::onQuiesceCheckBoxToggled(bool checked)
@@ -254,24 +257,22 @@ void VmSnapshotDialog::onQuiesceCheckBoxToggled(bool checked)
     if (checked)
     {
         // Quiesce requires disk mode
-        ui->diskRadioButton->setChecked(true);
+        this->ui->diskRadioButton->setChecked(true);
     }
 }
 
 bool VmSnapshotDialog::canUseQuiesce() const
 {
-    QVariantList allowedOps = m_vmData.value("allowed_operations").toList();
-    QString powerState = m_vmData.value("power_state").toString();
+    QStringList allowedOps = this->m_vm->GetAllowedOperations();
+    QString powerState = this->m_vm->GetPowerState();
 
-    return allowedOps.contains("snapshot_with_quiesce") &&
-           powerState == "Running";
+    return allowedOps.contains("snapshot_with_quiesce") && powerState == "Running";
 }
 
 bool VmSnapshotDialog::canUseCheckpoint() const
 {
-    QVariantList allowedOps = m_vmData.value("allowed_operations").toList();
-    QString powerState = m_vmData.value("power_state").toString();
+    QStringList allowedOps = this->m_vm->GetAllowedOperations();
+    QString powerState = this->m_vm->GetPowerState();
 
-    return allowedOps.contains("checkpoint") &&
-           powerState == "Running";
+    return allowedOps.contains("checkpoint") && powerState == "Running";
 }

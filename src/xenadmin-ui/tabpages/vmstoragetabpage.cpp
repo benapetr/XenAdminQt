@@ -628,10 +628,18 @@ void VMStorageTabPage::onIsoComboBoxChanged(int index)
     this->ui->isoComboBox->setEnabled(false);
     this->ui->ejectButton->setEnabled(false);
 
+    // Get VM object from cache
+    QSharedPointer<VM> vm = conn->GetCache()->ResolveObject<VM>("vm", this->m_objectRef);
+    if (!vm || !vm->IsValid())
+    {
+        this->ui->isoComboBox->setEnabled(true);
+        this->ui->ejectButton->setEnabled(true);
+        return;
+    }
+
     // Create and run the AsyncOperation
     ChangeVMISOAction* action = new ChangeVMISOAction(
-        conn,
-        this->m_objectRef,     // VM ref
+        vm,                    // VM object
         vdiRef,                // VDI ref (empty for eject)
         this->m_currentVBDRef, // VBD ref
         this);
@@ -1188,22 +1196,13 @@ void VMStorageTabPage::runVbdPlugOperations(const QStringList& vbdRefs, bool plu
 
 void VMStorageTabPage::runDetachOperations(const QStringList& vdiRefs)
 {
-    if (vdiRefs.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
-    {
+    if (vdiRefs.isEmpty() || !this->m_vm || !this->m_vm->GetConnection())
         return;
-    }
-
-    XenConnection* connection = this->m_connection;
-    if (!connection)
-    {
-        QMessageBox::warning(this, tr("Error"), tr("No active connection."));
-        return;
-    }
 
     QString confirmText;
     if (vdiRefs.size() == 1)
     {
-        QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRefs.first());
+        QVariantMap vdiData = this->m_vm->GetCache()->ResolveObjectData("vdi", vdiRefs.first());
         QString vdiName = vdiData.value("name_label", tr("this virtual disk")).toString();
         confirmText = tr("Are you sure you want to detach '%1' from this VM?\n\n"
                          "The disk will not be deleted and can be attached again later.")
@@ -1222,7 +1221,8 @@ void VMStorageTabPage::runDetachOperations(const QStringList& vdiRefs)
     }
 
     QList<AsyncOperation*> operations;
-    VM* vm = new VM(connection, this->m_objectRef, this);
+    // TODO refactor to shared pointers
+    VM* vm = new VM(this->m_vm->GetConnection(), this->m_objectRef, this);
 
     for (const QString& vdiRef : vdiRefs)
     {
@@ -1240,7 +1240,7 @@ void VMStorageTabPage::runDetachOperations(const QStringList& vdiRefs)
     }
 
     MultipleOperation* multi = new MultipleOperation(
-        connection,
+        this->m_vm->GetConnection(),
         tr("Detaching Virtual Disks"),
         tr("Detaching disks..."),
         tr("Completed"),
@@ -1254,29 +1254,20 @@ void VMStorageTabPage::runDetachOperations(const QStringList& vdiRefs)
     dialog->exec();
     delete dialog;
 
-    refreshVmRecord(this->m_connection, this->m_objectRef);
+    refreshVmRecord(this->m_vm->GetConnection(), this->m_objectRef);
 
     delete multi;
 }
 
 void VMStorageTabPage::runDeleteOperations(const QStringList& vdiRefs)
 {
-    if (vdiRefs.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
-    {
+    if (vdiRefs.isEmpty() || !this->m_vm || !this->m_vm->GetConnection())
         return;
-    }
-
-    XenConnection* connection = this->m_connection;
-    if (!connection)
-    {
-        QMessageBox::warning(this, tr("Error"), tr("No active connection."));
-        return;
-    }
 
     QString confirmText;
     if (vdiRefs.size() == 1)
     {
-        QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRefs.first());
+        QVariantMap vdiData = this->m_vm->GetCache()->ResolveObjectData("vdi", vdiRefs.first());
         QString vdiName = vdiData.value("name_label", tr("this virtual disk")).toString();
         confirmText = tr("Are you sure you want to permanently delete '%1'?\n\n"
                          "This operation cannot be undone.")
@@ -1297,11 +1288,11 @@ void VMStorageTabPage::runDeleteOperations(const QStringList& vdiRefs)
     bool allowRunningVMDelete = false;
     for (const QString& vdiRef : vdiRefs)
     {
-        QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
+        QVariantMap vdiData = this->m_vm->GetCache()->ResolveObjectData("vdi", vdiRef);
         QVariantList vbdRefs = vdiData.value("VBDs").toList();
         for (const QVariant& vbdVar : vbdRefs)
         {
-            QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdVar.toString());
+            QVariantMap vbdData = this->m_vm->GetCache()->ResolveObjectData("vbd", vbdVar.toString());
             if (vbdData.value("currently_attached", false).toBool())
             {
                 allowRunningVMDelete = true;
@@ -1333,7 +1324,7 @@ void VMStorageTabPage::runDeleteOperations(const QStringList& vdiRefs)
             continue;
         }
 
-        operations.append(new DestroyDiskAction(vdiRef, connection, allowRunningVMDelete, this));
+        operations.append(new DestroyDiskAction(vdiRef, this->m_vm->GetConnection(), allowRunningVMDelete, this));
     }
 
     if (operations.isEmpty())
@@ -1342,7 +1333,7 @@ void VMStorageTabPage::runDeleteOperations(const QStringList& vdiRefs)
     }
 
     MultipleOperation* multi = new MultipleOperation(
-        connection,
+        this->m_vm->GetConnection(),
         tr("Deleting Virtual Disks"),
         tr("Deleting disks..."),
         tr("Completed"),
@@ -1607,7 +1598,7 @@ void VMStorageTabPage::onAddButtonClicked()
 
 void VMStorageTabPage::onAttachButtonClicked()
 {
-    if (!this->m_connection || this->m_objectRef.isEmpty())
+    if (!this->m_connection || !this->m_vm)
         return;
 
     // Open Attach Virtual Disk Dialog
@@ -1637,8 +1628,6 @@ void VMStorageTabPage::onAttachButtonClicked()
         return;
     }
 
-    QSharedPointer<VM> vm(new VM(connection, m_objectRef));
-
     // Build VBD record
     QVariantMap vbdRecord;
     vbdRecord["VM"] = m_objectRef;
@@ -1661,7 +1650,7 @@ void VMStorageTabPage::onAttachButtonClicked()
         vdiName = vdiData["name_label"].toString();
     }
 
-    VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(vm, vbdRecord, vdiName, false, this);
+    VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(this->m_vm, vbdRecord, vdiName, false, this);
     OperationProgressDialog* attachDialog = new OperationProgressDialog(attachAction, this);
 
     if (attachDialog->exec() != QDialog::Accepted)

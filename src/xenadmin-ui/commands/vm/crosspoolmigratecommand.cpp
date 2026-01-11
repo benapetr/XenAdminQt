@@ -80,7 +80,7 @@ bool CrossPoolMigrateCommand::CanRun() const
         if (!vmItem)
             return false;
 
-        if (!vmItem->AllowedOperations().contains("migrate_send"))
+        if (!vmItem->GetAllowedOperations().contains("migrate_send"))
             return false;
 
         QStringList vbdRefs = vmItem->GetVBDRefs();

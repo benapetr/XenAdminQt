@@ -30,39 +30,33 @@
 #include "../../session.h"
 #include "../../xenapi/xenapi_Host.h"
 #include "../../xenapi/xenapi_VM.h"
-#include "../../xenapi/xenapi_Pool.h"
 #include "../../../xencache.h"
 #include <QDebug>
 
-EnableHostAction::EnableHostAction(XenConnection* connection,
-                                   QSharedPointer<Host> host,
-                                   bool resumeVMs,
-                                   QObject* parent)
-    : AsyncOperation(connection,
+EnableHostAction::EnableHostAction(QSharedPointer<Host> host, bool resumeVMs, QObject* parent)
+    : AsyncOperation(host->GetConnection(),
                      "Enabling host",
                      QString("Exiting maintenance mode for '%1'").arg(host ? host->GetName() : ""),
                      parent),
-      m_host(host),
       m_resumeVMs(resumeVMs)
 {
-    if (!m_host)
-        throw std::invalid_argument("Host cannot be null");
+    this->m_host = host;
 }
 
 void EnableHostAction::run()
 {
     try
     {
-        SetDescription(QString("Exiting maintenance mode for '%1'").arg(m_host->GetName()));
+        this->SetDescription(QString("Exiting maintenance mode for '%1'").arg(this->m_host->GetName()));
 
         // Enable host (0-10% or 0-100% depending on whether we resume VMs)
-        enable(0, m_resumeVMs ? 10 : 100, true);
+        this->enable(0, this->m_resumeVMs ? 10 : 100, true);
 
-        if (m_resumeVMs)
+        if (this->m_resumeVMs)
         {
             // Get evacuated VMs from host's other_config
             // C# uses extension methods: GetMigratedEvacuatedVMs, GetHaltedEvacuatedVMs, GetSuspendedEvacuatedVMs
-            QVariantMap otherConfig = m_host->otherConfig();
+            QVariantMap otherConfig = this->m_host->otherConfig();
 
             QStringList migratedVMRefs = otherConfig.value("MAINTENANCE_MODE_MIGRATED_VMS", "").toString().split(',', Qt::SkipEmptyParts);
             QStringList haltedVMRefs = otherConfig.value("MAINTENANCE_MODE_HALTED_VMS", "").toString().split(',', Qt::SkipEmptyParts);
@@ -71,15 +65,15 @@ void EnableHostAction::run()
             // Clear evacuated VM lists from host's other_config
             if (!migratedVMRefs.isEmpty())
             {
-                XenAPI::Host::remove_from_other_config(GetSession(), m_host->OpaqueRef(), "MAINTENANCE_MODE_MIGRATED_VMS");
+                XenAPI::Host::remove_from_other_config(this->GetSession(), this->m_host->OpaqueRef(), "MAINTENANCE_MODE_MIGRATED_VMS");
             }
             if (!haltedVMRefs.isEmpty())
             {
-                XenAPI::Host::remove_from_other_config(GetSession(), m_host->OpaqueRef(), "MAINTENANCE_MODE_HALTED_VMS");
+                XenAPI::Host::remove_from_other_config(this->GetSession(), this->m_host->OpaqueRef(), "MAINTENANCE_MODE_HALTED_VMS");
             }
             if (!suspendedVMRefs.isEmpty())
             {
-                XenAPI::Host::remove_from_other_config(GetSession(), m_host->OpaqueRef(), "MAINTENANCE_MODE_SUSPENDED_VMS");
+                XenAPI::Host::remove_from_other_config(this->GetSession(), this->m_host->OpaqueRef(), "MAINTENANCE_MODE_SUSPENDED_VMS");
             }
 
             int totalVMs = migratedVMRefs.size() + haltedVMRefs.size() + suspendedVMRefs.size();
@@ -92,7 +86,7 @@ void EnableHostAction::run()
                 // Migrate VMs back to this host
                 for (const QString& vmRef : migratedVMRefs)
                 {
-                    QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
+                    QVariantMap vmData = this->GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
                     QString vmName = vmData.value("name_label").toString();
 
                     qDebug() << "EnableHostAction: Migrating VM" << vmName << "back to host";
@@ -101,61 +95,61 @@ void EnableHostAction::run()
                     QVariantMap options;
                     options["live"] = true;
 
-                    QString taskRef = XenAPI::VM::async_pool_migrate(GetSession(), vmRef,
-                                                                     m_host->OpaqueRef(),
+                    QString taskRef = XenAPI::VM::async_pool_migrate(this->GetSession(), vmRef,
+                                                                     this->m_host->OpaqueRef(),
                                                                      options);
-                    pollToCompletion(taskRef, start, start + each);
+                    this->pollToCompletion(taskRef, start, start + each);
                     start += each;
                 }
 
                 // Start halted VMs on this host
                 for (const QString& vmRef : haltedVMRefs)
                 {
-                    QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
+                    QVariantMap vmData = this->GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
                     QString vmName = vmData.value("name_label").toString();
 
                     qDebug() << "EnableHostAction: Starting VM" << vmName << "on host";
 
-                    QString taskRef = XenAPI::VM::async_start_on(GetSession(), vmRef,
-                                                                 m_host->OpaqueRef(),
+                    QString taskRef = XenAPI::VM::async_start_on(this->GetSession(), vmRef,
+                                                                 this->m_host->OpaqueRef(),
                                                                  false, false);
-                    pollToCompletion(taskRef, start, start + each);
+                    this->pollToCompletion(taskRef, start, start + each);
                     start += each;
                 }
 
                 // Resume suspended VMs on this host
                 for (const QString& vmRef : suspendedVMRefs)
                 {
-                    QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
+                    QVariantMap vmData = this->GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
                     QString vmName = vmData.value("name_label").toString();
 
                     qDebug() << "EnableHostAction: Resuming VM" << vmName << "on host";
 
-                    QString taskRef = XenAPI::VM::async_resume_on(GetSession(), vmRef,
-                                                                  m_host->OpaqueRef(),
+                    QString taskRef = XenAPI::VM::async_resume_on(this->GetSession(), vmRef,
+                                                                  this->m_host->OpaqueRef(),
                                                                   false, false);
-                    pollToCompletion(taskRef, start, start + each);
+                    this->pollToCompletion(taskRef, start, start + each);
                     start += each;
                 }
             }
         }
 
-        SetDescription(QString("Exited maintenance mode for '%1'").arg(m_host->GetName()));
+        this->SetDescription(QString("Exited maintenance mode for '%1'").arg(this->m_host->GetName()));
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to enable host: %1").arg(e.what()));
+        this->setError(QString("Failed to enable host: %1").arg(e.what()));
     }
 }
 
 void EnableHostAction::enable(int start, int finish, bool queryNtolIncrease)
 {
     // Remove MAINTENANCE_MODE flag from other_config
-    XenAPI::Host::remove_from_other_config(GetSession(), m_host->OpaqueRef(), "MAINTENANCE_MODE");
+    XenAPI::Host::remove_from_other_config(this->GetSession(), this->m_host->OpaqueRef(), "MAINTENANCE_MODE");
 
     // Enable the host
-    QString taskRef = XenAPI::Host::async_enable(GetSession(), m_host->OpaqueRef());
-    pollToCompletion(taskRef, start, finish);
+    QString taskRef = XenAPI::Host::async_enable(this->GetSession(), this->m_host->OpaqueRef());
+    this->pollToCompletion(taskRef, start, finish);
 
     // TODO: HA ntol increase query
     // In C#, this checks if HA is enabled, calculates max ntol, and asks user

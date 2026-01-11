@@ -74,9 +74,7 @@ class XENLIB_EXPORT RebootHostAction : public AsyncOperation
          * C# equivalent: RebootHostAction(Host, Func<...>)
          * Note: acceptNTolChanges callback not yet implemented in Qt version
          */
-        explicit RebootHostAction(XenConnection* connection,
-                                  QSharedPointer<Host> host,
-                                  QObject* parent = nullptr);
+        explicit RebootHostAction(QSharedPointer<Host> host, QObject* parent = nullptr);
 
     protected:
         /**

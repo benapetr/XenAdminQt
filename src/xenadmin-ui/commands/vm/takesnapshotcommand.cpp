@@ -38,22 +38,20 @@
 #include "xen/xenobject.h"
 #include <QtWidgets>
 
-TakeSnapshotCommand::TakeSnapshotCommand(QObject* parent)
-    : Command(nullptr, parent)
+TakeSnapshotCommand::TakeSnapshotCommand(QObject* parent) : VMCommand(nullptr, parent)
 {
     // qDebug() << "TakeSnapshotCommand: Created default constructor";
 }
 
-TakeSnapshotCommand::TakeSnapshotCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+TakeSnapshotCommand::TakeSnapshotCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
     // qDebug() << "TakeSnapshotCommand: Created with MainWindow";
 }
 
-TakeSnapshotCommand::TakeSnapshotCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent), m_vmUuid(vmUuid)
+TakeSnapshotCommand::TakeSnapshotCommand(QSharedPointer<VM> vm, MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
     // qDebug() << "TakeSnapshotCommand: Created with VM UUID:" << vmUuid;
+    this->m_overrideVM = vm;
 }
 
 void TakeSnapshotCommand::Run()
@@ -74,10 +72,8 @@ void TakeSnapshotCommand::Run()
 
 bool TakeSnapshotCommand::CanRun() const
 {
-    if (!this->mainWindow() || this->m_vmUuid.isEmpty())
-    {
+    if (!this->mainWindow())
         return false;
-    }
 
     return this->canTakeSnapshot();
 }
@@ -89,16 +85,21 @@ QString TakeSnapshotCommand::MenuText() const
 
 bool TakeSnapshotCommand::canTakeSnapshot() const
 {
-    if (this->m_vmUuid.isEmpty())
-    {
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
         return false;
-    }
 
-    // TODO: Replace with actual XenAPI VM snapshot capability check
-    // Should verify:
-    // - VM is not a template
-    // - VM is not locked
-    // - VM allowed operations include snapshot or checkpoint
+    if (vm->IsTemplate())
+        return false;
+
+    if (vm->IsLocked())
+        return false;
+
+    QStringList allowed_ops = vm->GetAllowedOperations();
+
+    if (!allowed_ops.contains("snapshot") && !allowed_ops.contains("checkpoint"))
+        return false;
+
     return true;
 }
 
@@ -112,26 +113,17 @@ void TakeSnapshotCommand::showSnapshotDialog()
         return;
     }
 
-    QSharedPointer<XenObject> selectedObject = this->GetObject();
-
-    // Get VM data from cache
-    XenCache* cache = selectedObject->GetCache();
-    if (!cache)
-        return;
-
-    QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", this->m_vmUuid);
+    QSharedPointer<VM> vm = this->getVM();
 
     if (!vm)
     {
-        qWarning() << "TakeSnapshotCommand: Could not find VM data for" << this->m_vmUuid;
-        QMessageBox::warning(this->mainWindow(), tr("Cannot Take Snapshot"),
-                             tr("Could not retrieve VM information."));
+        qWarning() << "TakeSnapshotCommand: Could not find VM data for vm";
+        QMessageBox::warning(this->mainWindow(), tr("Cannot Take Snapshot"), tr("Could not retrieve VM information."));
         return;
     }
 
     // Show the snapshot dialog
-    // TODO refactor this dialog to work with VM object not raw data
-    VmSnapshotDialog dialog(vm->GetData(), this->mainWindow());
+    VmSnapshotDialog dialog(vm, this->mainWindow());
     if (dialog.exec() == QDialog::Accepted)
     {
         QString name = dialog.snapshotName();
@@ -151,8 +143,6 @@ void TakeSnapshotCommand::showSnapshotDialog()
 
 void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QString& description, VmSnapshotDialog::SnapshotType type)
 {
-    qDebug() << "TakeSnapshotCommand: Creating snapshot" << name << "for VM" << this->m_vmUuid << "with type" << type;
-
     emit snapshotStarted();
 
     if (!this->mainWindow())
@@ -162,9 +152,11 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
         return;
     }
 
-    // Get connection for snapshot actions
-    QSharedPointer<XenObject> selectedObject = this->GetObject();
-    XenConnection* conn = selectedObject ? selectedObject->GetConnection() : nullptr;
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
+        return;
+
+    XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->IsConnected())
     {
         qWarning() << "TakeSnapshotCommand: Not connected";
@@ -196,16 +188,7 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     QImage screenshot;
     if (actionType == VMSnapshotCreateAction::DISK_AND_MEMORY)
     {
-        // Get VM data to check power state
-        XenCache* cache = selectedObject->GetCache();
-        QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", this->m_vmUuid);
-        if (!vm)
-        {
-            qWarning() << "TakeSnapshotCommand: this->m_vmUuid resolved into null object";
-            return;
-        }
-        QVariantMap vmData = vm->GetData();
-        QString powerState = vmData.value("power_state").toString();
+        QString powerState = vm->GetPowerState();
 
         if (powerState == "Running" && this->mainWindow()->GetConsolePanel())
         {
@@ -234,7 +217,7 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     // Create VMSnapshotCreateAction (matches C# VMSnapshotCreateAction pattern)
     // Action handles disk/quiesce/memory options and runs asynchronously
     // Pass screenshot for checkpoint snapshots
-    VMSnapshotCreateAction* action = new VMSnapshotCreateAction(conn, this->m_vmUuid, name, description, actionType, screenshot, this->mainWindow());
+    VMSnapshotCreateAction* action = new VMSnapshotCreateAction(conn, vm->OpaqueRef(), name, description, actionType, screenshot, this->mainWindow());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
     OperationManager::instance()->RegisterOperation(action);

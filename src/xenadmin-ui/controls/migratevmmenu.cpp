@@ -79,7 +79,7 @@ void MigrateVMMenu::populate()
         return;
     }
 
-    if (!m_vm->AllowedOperations().contains("pool_migrate"))
+    if (!m_vm->GetAllowedOperations().contains("pool_migrate"))
     {
         addDisabledReason(tr("VM does not allow migration."));
         return;

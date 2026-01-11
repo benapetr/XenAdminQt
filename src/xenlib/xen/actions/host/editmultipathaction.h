@@ -59,9 +59,7 @@ class XENLIB_EXPORT EditMultipathAction : public AsyncOperation
          * @param enableMultipath true to enable, false to disable
          * @param parent Parent object
          */
-        explicit EditMultipathAction(QSharedPointer<Host> host,
-                                    bool enableMultipath,
-                                    QObject* parent = nullptr);
+        explicit EditMultipathAction(QSharedPointer<Host> host, bool enableMultipath, QObject* parent = nullptr);
 
     protected:
         void run() override;

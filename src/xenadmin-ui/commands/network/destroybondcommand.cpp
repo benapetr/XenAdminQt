@@ -177,16 +177,11 @@ bool DestroyBondCommand::isNetworkABond(QSharedPointer<Network> network) const
     if (pifs.isEmpty())
         return false;
 
-    XenCache* cache = network->GetCache();
-
-    if (!cache)
-        return false;
-
     // Check if any PIF is a bond interface
     for (const QVariant& pifRefVar : pifs)
     {
         QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = cache->ResolveObjectData("pif", pifRef);
+        QVariantMap pifData = network->GetCache()->ResolveObjectData("pif", pifRef);
 
         // Check if PIF has a bond_master_of field (is a bond interface)
         QVariantList bondMasterOf = pifData.value("bond_master_of", QVariantList()).toList();
@@ -211,15 +206,11 @@ QString DestroyBondCommand::getBondRefFromNetwork(QSharedPointer<Network> networ
     if (pifs.isEmpty())
         return QString();
 
-    XenCache* cache = network->GetCache();
-    if (!cache)
-        return QString();
-
     // Find the first PIF that is a bond interface
     for (const QVariant& pifRefVar : pifs)
     {
         QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = cache->ResolveObjectData("pif", pifRef);
+        QVariantMap pifData = network->GetCache()->ResolveObjectData("pif", pifRef);
 
         QVariantList bondMasterOf = pifData.value("bond_master_of", QVariantList()).toList();
         if (!bondMasterOf.isEmpty())

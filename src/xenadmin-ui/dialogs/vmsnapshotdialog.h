@@ -36,6 +36,8 @@ namespace Ui
     class VmSnapshotDialog;
 }
 
+class VM;
+
 /**
  * @brief Dialog for creating VM snapshots
  *
@@ -49,36 +51,36 @@ class VmSnapshotDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    enum SnapshotType
-    {
-        DISK,           // Disk-only snapshot
-        QUIESCED_DISK,  // Disk snapshot with quiesce (VSS)
-        DISK_AND_MEMORY // Disk and memory snapshot (checkpoint)
-    };
+    public:
+        enum SnapshotType
+        {
+            DISK,           // Disk-only snapshot
+            QUIESCED_DISK,  // Disk snapshot with quiesce (VSS)
+            DISK_AND_MEMORY // Disk and memory snapshot (checkpoint)
+        };
 
-    explicit VmSnapshotDialog(const QVariantMap& vmData, QWidget* parent = nullptr);
-    ~VmSnapshotDialog();
+        explicit VmSnapshotDialog(QSharedPointer<VM> vm, QWidget* parent = nullptr);
+        ~VmSnapshotDialog();
 
-    QString snapshotName() const;
-    QString snapshotDescription() const;
-    SnapshotType snapshotType() const;
+        QString snapshotName() const;
+        QString snapshotDescription() const;
+        SnapshotType snapshotType() const;
 
-private slots:
-    void onNameChanged();
-    void onDiskRadioToggled(bool checked);
-    void onMemoryRadioToggled(bool checked);
-    void onQuiesceCheckBoxToggled(bool checked);
+    private slots:
+        void onNameChanged();
+        void onDiskRadioToggled(bool checked);
+        void onMemoryRadioToggled(bool checked);
+        void onQuiesceCheckBoxToggled(bool checked);
 
-private:
-    void setupDialog();
-    void updateOkButton();
-    void updateWarnings();
-    bool canUseQuiesce() const;
-    bool canUseCheckpoint() const;
+    private:
+        void setupDialog();
+        void updateOkButton();
+        void updateWarnings();
+        bool canUseQuiesce() const;
+        bool canUseCheckpoint() const;
 
-    Ui::VmSnapshotDialog* ui;
-    QVariantMap m_vmData;
+        Ui::VmSnapshotDialog* ui;
+        QSharedPointer<VM> m_vm;
 };
 
 #endif // VMSNAPSHOTDIALOG_H

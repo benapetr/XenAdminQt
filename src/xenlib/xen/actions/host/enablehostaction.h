@@ -56,10 +56,7 @@ class EnableHostAction : public AsyncOperation
          * @param resumeVMs If true, resume evacuated VMs after enabling
          * @param parent Parent QObject
          */
-        explicit EnableHostAction(XenConnection* connection,
-                                  QSharedPointer<Host> host,
-                                  bool resumeVMs = false,
-                                  QObject* parent = nullptr);
+        explicit EnableHostAction(QSharedPointer<Host> host, bool resumeVMs = false, QObject* parent = nullptr);
 
     protected:
         void run() override;

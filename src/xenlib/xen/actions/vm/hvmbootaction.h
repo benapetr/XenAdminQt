@@ -29,6 +29,7 @@
 #define HVMBOOTACTION_H
 
 #include "../../asyncoperation.h"
+#include "../../vm.h"
 #include <QString>
 #include <QVariantMap>
 
@@ -57,11 +58,10 @@ class HVMBootAction : public AsyncOperation
     public:
         /**
          * @brief Construct a new HVMBootAction
-         * @param connection XenServer connection
-         * @param vmRef VM opaque reference
+         * @param vm VM object to boot in recovery mode
          * @param parent Parent QObject
          */
-        explicit HVMBootAction(XenConnection* connection, const QString& vmRef, QObject* parent = nullptr);
+        explicit HVMBootAction(QSharedPointer<VM> vm, QObject* parent = nullptr);
 
     protected:
         /**
@@ -78,8 +78,7 @@ class HVMBootAction : public AsyncOperation
         void run() override;
 
     private:
-        QString m_vmRef;         ///< VM opaque reference
-        QString m_vmName;        ///< VM name (for display)
+        QSharedPointer<VM> m_vm;  ///< VM object
         QString m_oldBootPolicy; ///< Original boot policy to restore
         QString m_oldBootOrder;  ///< Original boot order to restore
 

@@ -26,19 +26,11 @@
  */
 
 #include "disablehaaction.h"
-#include "../../network/connection.h"
-#include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
-#include <stdexcept>
+#include "xen/pool.h"
 
-DisableHAAction::DisableHAAction(XenConnection* connection,
-                                 const QString& poolRef,
-                                 QObject* parent)
-    : AsyncOperation(connection,
-                     QString("Disabling HA on pool"),
-                     "Disabling HA",
-                     parent),
-      m_poolRef(poolRef)
+DisableHAAction::DisableHAAction(QSharedPointer<Pool> pool, QObject* parent)
+    : AsyncOperation(pool->GetConnection(), QString("Disabling HA on pool"), "Disabling HA", parent), m_pool(pool)
 {
 }
 
@@ -46,25 +38,25 @@ void DisableHAAction::run()
 {
     try
     {
-        SetPercentComplete(0);
-        SetDescription("Disabling HA...");
+        this->SetPercentComplete(0);
+        this->SetDescription("Disabling HA...");
 
         // Call Pool.async_disable_ha
-        QString taskRef = XenAPI::Pool::async_disable_ha(GetSession());
+        QString taskRef = XenAPI::Pool::async_disable_ha(this->GetSession());
 
         // Poll to completion
-        pollToCompletion(taskRef, 0, 100);
+        this->pollToCompletion(taskRef, 0, 100);
 
-        SetDescription("HA disabled successfully");
+        this->SetDescription("HA disabled successfully");
 
     } catch (const std::exception& e)
     {
-        if (IsCancelled())
+        if (this->IsCancelled())
         {
-            SetDescription("HA disable cancelled");
+            this->SetDescription("HA disable cancelled");
         } else
         {
-            setError(QString("Failed to disable HA: %1").arg(e.what()));
+            this->setError(QString("Failed to disable HA: %1").arg(e.what()));
         }
     }
 }

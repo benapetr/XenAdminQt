@@ -26,21 +26,19 @@
  */
 
 #include "changevcpusettingsaction.h"
-#include "../../../xen/network/connection.h"
 #include "../../xenapi/xenapi_VM.h"
-#include "../../../xencache.h"
+#include "xen/vm.h"
 #include <stdexcept>
 
-ChangeVCPUSettingsAction::ChangeVCPUSettingsAction(XenConnection* connection,
-                                                   const QString& vmRef,
+ChangeVCPUSettingsAction::ChangeVCPUSettingsAction(QSharedPointer<VM> vm,
                                                    qint64 vcpusMax,
                                                    qint64 vcpusAtStartup,
                                                    QObject* parent)
-    : AsyncOperation(connection,
+    : AsyncOperation(vm->GetConnection(),
                      QString("Changing VCPU settings"),
-                     QString("Changing VCPU settings for VM"),
+                     QString("Changing VCPU settings for '%1'").arg(vm ? vm->GetName() : ""),
                      parent),
-      m_vmRef(vmRef),
+      m_vm(vm),
       m_vcpusMax(vcpusMax),
       m_vcpusAtStartup(vcpusAtStartup)
 {
@@ -53,9 +51,8 @@ void ChangeVCPUSettingsAction::run()
         SetPercentComplete(0);
         SetDescription("Checking VM state...");
 
-        // Re-ResolveObjectData VM from cache (it may have been updated)
-        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
-        if (vmData.isEmpty())
+        // Check if VM is still valid
+        if (!this->m_vm || !this->m_vm->IsValid())
         {
             // VM disappeared - nothing to do
             SetDescription("VM no longer exists");
@@ -63,8 +60,8 @@ void ChangeVCPUSettingsAction::run()
             return;
         }
 
-        QString powerState = vmData.value("power_state").toString();
-        qint64 currentVCPUsAtStartup = vmData.value("VCPUs_at_startup").toLongLong();
+        QString powerState = this->m_vm->GetPowerState();
+        qint64 currentVCPUsAtStartup = this->m_vm->VCPUsAtStartup();
 
         SetPercentComplete(20);
 
@@ -73,7 +70,7 @@ void ChangeVCPUSettingsAction::run()
             // Running VM: can only hot-plug (increase) VCPUs
             SetDescription("Hot-plugging VCPUs...");
 
-            if (currentVCPUsAtStartup > m_vcpusAtStartup)
+            if (currentVCPUsAtStartup > this->m_vcpusAtStartup)
             {
                 // Trying to reduce VCPUs on running VM
                 throw std::runtime_error("Cannot reduce VCPUs on a running VM. "
@@ -81,7 +78,7 @@ void ChangeVCPUSettingsAction::run()
             }
 
             // Hot-plug VCPUs
-            XenAPI::VM::set_VCPUs_number_live(GetSession(), m_vmRef, m_vcpusAtStartup);
+            XenAPI::VM::set_VCPUs_number_live(GetSession(), this->m_vm->OpaqueRef(), this->m_vcpusAtStartup);
 
             SetPercentComplete(100);
             SetDescription("VCPUs hot-plugged successfully");
@@ -92,19 +89,19 @@ void ChangeVCPUSettingsAction::run()
             SetDescription("Changing VCPU configuration...");
 
             // Order matters: must satisfy constraint VCPUs_at_startup <= VCPUs_max
-            if (currentVCPUsAtStartup > m_vcpusAtStartup)
+            if (currentVCPUsAtStartup > this->m_vcpusAtStartup)
             {
                 // Reducing VCPUs: lower at_startup first, then max
-                XenAPI::VM::set_VCPUs_at_startup(GetSession(), m_vmRef, m_vcpusAtStartup);
+                XenAPI::VM::set_VCPUs_at_startup(GetSession(), this->m_vm->OpaqueRef(), this->m_vcpusAtStartup);
                 SetPercentComplete(50);
-                XenAPI::VM::set_VCPUs_max(GetSession(), m_vmRef, m_vcpusMax);
+                XenAPI::VM::set_VCPUs_max(GetSession(), this->m_vm->OpaqueRef(), this->m_vcpusMax);
                 SetPercentComplete(100);
             } else
             {
                 // Increasing VCPUs: raise max first, then at_startup
-                XenAPI::VM::set_VCPUs_max(GetSession(), m_vmRef, m_vcpusMax);
+                XenAPI::VM::set_VCPUs_max(GetSession(), this->m_vm->OpaqueRef(), this->m_vcpusMax);
                 SetPercentComplete(50);
-                XenAPI::VM::set_VCPUs_at_startup(GetSession(), m_vmRef, m_vcpusAtStartup);
+                XenAPI::VM::set_VCPUs_at_startup(GetSession(), this->m_vm->OpaqueRef(), this->m_vcpusAtStartup);
                 SetPercentComplete(100);
             }
 

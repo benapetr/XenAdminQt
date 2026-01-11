@@ -31,7 +31,7 @@
 #include "../../asyncoperation.h"
 #include <QString>
 
-class XenConnection;
+class VM;
 
 /**
  * @brief Change the ISO image attached to a VBD in a VM
@@ -46,14 +46,12 @@ class ChangeVMISOAction : public AsyncOperation
     public:
         /**
          * @brief Construct a new ChangeVMISOAction
-         * @param connection XenServer connection
-         * @param vmRef VM reference
+         * @param vm VM object
          * @param vdiRef VDI reference (may be empty to just eject)
          * @param vbdRef VBD reference (must not be empty)
          * @param parent Parent object
          */
-        explicit ChangeVMISOAction(XenConnection* connection,
-                                   const QString& vmRef,
+        explicit ChangeVMISOAction(QSharedPointer<VM> vm,
                                    const QString& vdiRef,
                                    const QString& vbdRef,
                                    QObject* parent = nullptr);
@@ -64,7 +62,7 @@ class ChangeVMISOAction : public AsyncOperation
         void run() override;
 
     private:
-        QString m_vmRef;
+        QSharedPointer<VM> m_vm;
         QString m_vdiRef; // Empty means eject only
         QString m_vbdRef;
         bool m_isEmpty; // Whether the VBD is currently empty

@@ -29,26 +29,27 @@
 #include "../../network/connection.h"
 #include "../../session.h"
 #include "../../api.h"
+#include "xen/xenobject.h"
 #include <QDebug>
 
 using namespace XenAPI;
 
-GeneralEditPageAction::GeneralEditPageAction(XenConnection* connection,
-                                             const QString& objectRef,
-                                             const QString& objectType,
+GeneralEditPageAction::GeneralEditPageAction(QSharedPointer<XenObject> object,
                                              const QString& oldFolder,
                                              const QString& newFolder,
                                              const QStringList& oldTags,
                                              const QStringList& newTags,
                                              bool suppressHistory,
                                              QObject* parent)
-    : AsyncOperation(connection, tr("Update Properties"), tr("Updating folder and tag properties..."), parent), m_objectRef(objectRef), m_objectType(objectType.toLower()), m_oldFolder(oldFolder), m_newFolder(newFolder), m_oldTags(oldTags), m_newTags(newTags)
+    : AsyncOperation(object->GetConnection(), tr("Update Properties"), tr("Updating folder and tag properties..."), parent), m_oldFolder(oldFolder), m_newFolder(newFolder), m_oldTags(oldTags), m_newTags(newTags)
 {
-    // Sort tags for efficient comparison (matches C# BinarySearch approach)
-    m_oldTags.sort();
-    m_newTags.sort();
+    this->m_object = object;
 
-    SetSuppressHistory(suppressHistory);
+    // Sort tags for efficient comparison (matches C# BinarySearch approach)
+    this->m_oldTags.sort();
+    this->m_newTags.sort();
+
+    this->SetSuppressHistory(suppressHistory);
 
     // RBAC permission checks (matching C# implementation)
     // C# checks: folder operations + tag operations
@@ -60,29 +61,29 @@ void GeneralEditPageAction::run()
 {
     try
     {
-        SetPercentComplete(0);
-        SetDescription(tr("Updating properties..."));
+        this->SetPercentComplete(0);
+        this->SetDescription(this->tr("Updating properties..."));
 
         // Step 1: Handle folder changes
         // C# code: if (newFolder != xenObjectCopy.Path)
-        if (m_oldFolder != m_newFolder)
+        if (this->m_oldFolder != this->m_newFolder)
         {
-            SetPercentComplete(10);
-            SetDescription(tr("Updating folder..."));
+            this->SetPercentComplete(10);
+            this->SetDescription(this->tr("Updating folder..."));
 
-            if (!m_newFolder.isEmpty())
+            if (!this->m_newFolder.isEmpty())
             {
                 // Move to new folder
                 // C# equivalent: Folders.Move(Session, xenObjectOrig, newFolder);
-                setFolderPath(m_newFolder);
-                qDebug() << "GeneralEditPageAction: Moved" << m_objectType << m_objectRef
-                         << "from folder" << m_oldFolder << "to" << m_newFolder;
+                this->setFolderPath(this->m_newFolder);
+                qDebug() << "GeneralEditPageAction: Moved" << this->m_object->GetObjectType() << this->m_object->OpaqueRef()
+                         << "from folder" << this->m_oldFolder << "to" << this->m_newFolder;
             } else
             {
                 // Unfolder (remove from folder)
                 // C# equivalent: Folders.Unfolder(Session, xenObjectOrig);
-                setFolderPath(QString()); // Empty string = remove folder key
-                qDebug() << "GeneralEditPageAction: Unfoldered" << m_objectType << m_objectRef;
+                this->setFolderPath(QString()); // Empty string = remove folder key
+                qDebug() << "GeneralEditPageAction: Unfoldered" << this->m_object->GetObjectType() << this->m_object->OpaqueRef();
             }
         }
 
@@ -94,17 +95,17 @@ void GeneralEditPageAction::run()
         int tagsToRemove = 0;
         int tagsToAdd = 0;
 
-        foreach (const QString& tag, m_oldTags)
+        foreach (const QString& tag, this->m_oldTags)
         {
-            if (!m_newTags.contains(tag))
+            if (!this->m_newTags.contains(tag))
             {
                 tagsToRemove++;
             }
         }
 
-        foreach (const QString& tag, m_newTags)
+        foreach (const QString& tag, this->m_newTags)
         {
-            if (!m_oldTags.contains(tag))
+            if (!this->m_oldTags.contains(tag))
             {
                 tagsToAdd++;
             }
@@ -113,20 +114,20 @@ void GeneralEditPageAction::run()
         int totalTagOps = tagsToRemove + tagsToAdd;
         int currentTagOp = 0;
 
-        foreach (const QString& tag, m_oldTags)
+        foreach (const QString& tag, this->m_oldTags)
         {
-            if (!m_newTags.contains(tag))
+            if (!this->m_newTags.contains(tag))
             {
                 if (totalTagOps > 0)
                 {
                     tagProgress = 30 + (currentTagOp * 60 / totalTagOps);
-                    SetPercentComplete(tagProgress);
-                    SetDescription(tr("Removing tag '%1'...").arg(tag));
+                    this->SetPercentComplete(tagProgress);
+                    this->SetDescription(this->tr("Removing tag '%1'...").arg(tag));
                 }
 
-                removeTag(tag);
+                this->removeTag(tag);
                 qDebug() << "GeneralEditPageAction: Removed tag" << tag
-                         << "from" << m_objectType << m_objectRef;
+                         << "from" << this->m_object->GetObjectType() << this->m_object->OpaqueRef();
 
                 currentTagOp++;
             }
@@ -136,31 +137,31 @@ void GeneralEditPageAction::run()
         // C# code: foreach (string tag in newTags)
         //              if (oldTags.BinarySearch(tag) < 0)
         //                  Tags.AddTag(Session, xenObjectOrig, tag);
-        foreach (const QString& tag, m_newTags)
+        foreach (const QString& tag, this->m_newTags)
         {
-            if (!m_oldTags.contains(tag))
+            if (!this->m_oldTags.contains(tag))
             {
                 if (totalTagOps > 0)
                 {
                     tagProgress = 30 + (currentTagOp * 60 / totalTagOps);
-                    SetPercentComplete(tagProgress);
-                    SetDescription(tr("Adding tag '%1'...").arg(tag));
+                    this->SetPercentComplete(tagProgress);
+                    this->SetDescription(this->tr("Adding tag '%1'...").arg(tag));
                 }
 
-                addTag(tag);
+                this->addTag(tag);
                 qDebug() << "GeneralEditPageAction: Added tag" << tag
-                         << "to" << m_objectType << m_objectRef;
+                         << "to" << this->m_object->GetObjectType() << this->m_object->OpaqueRef();
 
                 currentTagOp++;
             }
         }
 
-        SetPercentComplete(100);
-        SetDescription(tr("Properties updated successfully"));
+        this->SetPercentComplete(100);
+        this->SetDescription(this->tr("Properties updated successfully"));
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to update properties: %1").arg(e.what()));
+        this->setError(QString("Failed to update properties: %1").arg(e.what()));
         qWarning() << "GeneralEditPageAction: Error -" << e.what();
     }
 }
@@ -172,7 +173,7 @@ void GeneralEditPageAction::setFolderPath(const QString& folderPath)
     // - Move: Sets other_config["folder"] to new path
     // - Unfolder: Removes other_config["folder"] key
 
-    Session* sess = GetSession();
+    Session* sess = this->GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
@@ -185,15 +186,15 @@ void GeneralEditPageAction::setFolderPath(const QString& folderPath)
     if (folderPath.isEmpty())
     {
         // Remove folder key (unfolder)
-        method = QString("%1.remove_from_other_config").arg(m_objectType);
+        method = QString("%1.remove_from_other_config").arg(this->m_object->GetObjectType());
     } else
     {
         // Set folder key (move to folder)
-        method = QString("%1.add_to_other_config").arg(m_objectType);
+        method = QString("%1.add_to_other_config").arg(this->m_object->GetObjectType());
     }
 
     QVariantList params;
-    params << sess->getSessionId() << m_objectRef << "folder";
+    params << sess->getSessionId() << this->m_object->OpaqueRef() << "folder";
 
     if (!folderPath.isEmpty())
     {
@@ -203,7 +204,7 @@ void GeneralEditPageAction::setFolderPath(const QString& folderPath)
     // Execute API call
     XenRpcAPI api(sess);
     QByteArray request = api.BuildJsonRpcCall(method, params);
-    QByteArray response = GetConnection()->SendRequest(request);
+    QByteArray response = this->GetConnection()->SendRequest(request);
 
     // Parse response (will throw on error)
     api.ParseJsonRpcResponse(response);
@@ -214,20 +215,20 @@ void GeneralEditPageAction::removeTag(const QString& tag)
     // C# equivalent: Tags.RemoveTag(GetSession, o, tag)
     // Implementation: o.Do("remove_tags", GetSession, o.opaque_ref, tag);
 
-    Session* sess = GetSession();
+    Session* sess = this->GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
     }
 
-    QString method = QString("%1.remove_tags").arg(m_objectType);
+    QString method = QString("%1.remove_tags").arg(this->m_object->GetObjectType());
 
     QVariantList params;
-    params << sess->getSessionId() << m_objectRef << tag;
+    params << sess->getSessionId() << this->m_object->OpaqueRef() << tag;
 
     XenRpcAPI api(sess);
     QByteArray request = api.BuildJsonRpcCall(method, params);
-    QByteArray response = GetConnection()->SendRequest(request);
+    QByteArray response = this->GetConnection()->SendRequest(request);
 
     // Parse response (will throw on error)
     api.ParseJsonRpcResponse(response);
@@ -238,20 +239,20 @@ void GeneralEditPageAction::addTag(const QString& tag)
     // C# equivalent: Tags.AddTag(GetSession, o, tag)
     // Implementation: o.Do("add_tags", GetSession, o.opaque_ref, tag);
 
-    Session* sess = GetSession();
+    Session* sess = this->GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
         throw std::runtime_error("Not connected to XenServer");
     }
 
-    QString method = QString("%1.add_tags").arg(m_objectType);
+    QString method = QString("%1.add_tags").arg(this->m_object->GetObjectType());
 
     QVariantList params;
-    params << sess->getSessionId() << m_objectRef << tag;
+    params << sess->getSessionId() << this->m_object->OpaqueRef() << tag;
 
     XenRpcAPI api(sess);
     QByteArray request = api.BuildJsonRpcCall(method, params);
-    QByteArray response = GetConnection()->SendRequest(request);
+    QByteArray response = this->GetConnection()->SendRequest(request);
 
     // Parse response (will throw on error)
     api.ParseJsonRpcResponse(response);

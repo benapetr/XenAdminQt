@@ -28,17 +28,19 @@
 #ifndef TAKESNAPSHOTCOMMAND_H
 #define TAKESNAPSHOTCOMMAND_H
 
-#include "../command.h"
+#include "vmcommand.h"
 #include "../../dialogs/vmsnapshotdialog.h"
 
-class TakeSnapshotCommand : public Command
+class VM;
+
+class TakeSnapshotCommand : public VMCommand
 {
     Q_OBJECT
 
     public:
         explicit TakeSnapshotCommand(QObject* parent = nullptr);
         explicit TakeSnapshotCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit TakeSnapshotCommand(const QString& vmUuid, MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit TakeSnapshotCommand(QSharedPointer<VM> vm, MainWindow* mainWindow, QObject* parent = nullptr);
 
         void Run() override;
         bool CanRun() const override;
@@ -49,8 +51,6 @@ class TakeSnapshotCommand : public Command
         void snapshotCompleted(bool success);
 
     private:
-        QString m_vmUuid;
-
         // Check if VM supports snapshot operations
         bool canTakeSnapshot() const;
         void showSnapshotDialog();

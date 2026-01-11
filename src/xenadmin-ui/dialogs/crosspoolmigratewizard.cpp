@@ -583,7 +583,7 @@ void CrossPoolMigrateWizard::initializePage(int id)
 
         if (vmItem)
         {
-            bool allowCopy = !vmItem->IsTemplate() || vmItem->AllowedOperations().contains("copy");
+            bool allowCopy = !vmItem->IsTemplate() || vmItem->GetAllowedOperations().contains("copy");
             bool anyFastClone = vmItem->AnyDiskFastClonable();
             bool hasDisk = vmItem->HasAtLeastOneDisk();
             bool copyEnabled = allowCopy && hasDisk;

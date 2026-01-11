@@ -74,7 +74,7 @@ void RestartToolstackCommand::Run()
             return;
         }
 
-        RestartToolstackAction* action = new RestartToolstackAction(conn, host, nullptr);
+        RestartToolstackAction* action = new RestartToolstackAction(host, nullptr);
         OperationManager::instance()->RegisterOperation(action);
 
         connect(action, &AsyncOperation::completed, this, [this, hostName, action]()

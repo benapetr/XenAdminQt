@@ -40,15 +40,14 @@
 #include <QFileInfo>
 #include <QDebug>
 
-ExportVmAction::ExportVmAction(XenConnection* connection,
-                               const QString& hostRef,
-                               const QString& vmRef,
+ExportVmAction::ExportVmAction(QSharedPointer<VM> vm,
+                               QSharedPointer<Host> host,
                                const QString& filename,
                                bool verify,
                                QObject* parent)
-    : AsyncOperation(connection, tr("Exporting VM"), tr("Preparing export..."), parent)
-    , hostRef_(hostRef)
-    , vmRef_(vmRef)
+    : AsyncOperation(vm->GetConnection(), tr("Exporting VM"), tr("Preparing export..."), parent)
+    , m_vm(vm)
+    , m_host(host)
     , filename_(filename)
     , verify_(verify)
     , httpClient_(nullptr)
@@ -57,15 +56,7 @@ ExportVmAction::ExportVmAction(XenConnection* connection,
     this->SetSafeToExit(false);
     
     // Get VM name for title
-    QString vmName = "VM";
-    
-    if (this->GetConnection() && this->GetConnection()->GetCache())
-    {
-        QSharedPointer<VM> vm = this->GetConnection()->GetCache()->ResolveObject<VM>("vm", vmRef);
-        if (vm && vm->IsValid())
-            vmName = vm->GetName();
-    }
-    
+    QString vmName = this->m_vm && this->m_vm->IsValid() ? this->m_vm->GetName() : "VM";
     this->SetTitle(tr("Export %1 to backup file").arg(vmName));
 }
 
@@ -109,13 +100,12 @@ void ExportVmAction::run()
     }
 
     // Get VM name and UUID
-    QString vmName = "VM";
+    QString vmName = this->m_vm->GetName();
     QString vmUuid;
     
     try
     {
-        QVariantMap vmRecord = XenAPI::VM::get_record(this->GetSession(), this->vmRef_);
-        vmName = vmRecord.value("name_label").toString();
+        QVariantMap vmRecord = XenAPI::VM::get_record(this->GetSession(), this->m_vm->OpaqueRef());
         vmUuid = vmRecord.value("uuid").toString();
     }
     catch (const std::exception& e)
@@ -127,11 +117,9 @@ void ExportVmAction::run()
 
     // Determine target host
     QString targetHost = this->GetConnection()->GetHostname();
-    if (!this->hostRef_.isEmpty())
+    if (this->m_host && this->m_host->IsValid())
     {
-        QSharedPointer<Host> host = this->GetConnection()->GetCache()->ResolveObject<Host>("host", this->hostRef_);
-        if (host && host->IsValid())
-            targetHost = host->GetAddress();
+        targetHost = this->m_host->GetAddress();
     }
 
     qDebug() << "ExportVmAction: Downloading from" << targetHost;

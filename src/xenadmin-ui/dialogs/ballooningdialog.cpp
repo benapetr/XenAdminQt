@@ -356,9 +356,16 @@ bool BallooningDialog::applyMemoryChanges()
         return false;
     }
 
+    // Get VM object from cache
+    QSharedPointer<VM> vm = this->m_connection->GetCache()->ResolveObject<VM>("vm", this->m_vmRef);
+    if (!vm || !vm->IsValid())
+    {
+        QMessageBox::critical(this, tr("Error"), tr("VM not found in cache"));
+        return false;
+    }
+
     ChangeMemorySettingsAction* action = new ChangeMemorySettingsAction(
-        m_connection,
-        m_vmRef,
+        vm,
         staticMin,
         dynamicMin,
         dynamicMax,

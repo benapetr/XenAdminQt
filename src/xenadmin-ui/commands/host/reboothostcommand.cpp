@@ -33,8 +33,7 @@
 #include "xen/actions/host/reboothostaction.h"
 #include <QMessageBox>
 
-RebootHostCommand::RebootHostCommand(MainWindow* mainWindow, QObject* parent)
-    : HostCommand(mainWindow, parent)
+RebootHostCommand::RebootHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
@@ -75,7 +74,7 @@ void RebootHostCommand::Run()
             return;
         }
 
-        RebootHostAction* action = new RebootHostAction(conn, host, nullptr);
+        RebootHostAction* action = new RebootHostAction(host, nullptr);
 
         OperationManager::instance()->RegisterOperation(action);
 

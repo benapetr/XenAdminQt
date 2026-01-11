@@ -56,10 +56,7 @@ class EvacuateHostAction : public AsyncOperation
          * @param newCoordinator Optional new coordinator if evacuating current coordinator
          * @param parent Parent QObject
          */
-        explicit EvacuateHostAction(XenConnection* connection,
-                                    QSharedPointer<Host> host,
-                                    QSharedPointer<Host> newCoordinator = QSharedPointer<Host>(),
-                                    QObject* parent = nullptr);
+        explicit EvacuateHostAction(QSharedPointer<Host> host, QSharedPointer<Host> newCoordinator = QSharedPointer<Host>(), QObject* parent = nullptr);
 
     protected:
         void run() override;

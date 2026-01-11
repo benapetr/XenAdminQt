@@ -32,6 +32,7 @@
 #include <QString>
 
 class XenConnection;
+class Pool;
 
 /**
  * @brief DisableHAAction disables High Availability on a pool.
@@ -51,15 +52,13 @@ class DisableHAAction : public AsyncOperation
          * @param poolRef Pool opaque reference
          * @param parent Parent QObject
          */
-        DisableHAAction(XenConnection* connection,
-                        const QString& poolRef,
-                        QObject* parent = nullptr);
+        DisableHAAction(QSharedPointer<Pool> pool, QObject* parent = nullptr);
 
     protected:
         void run() override;
 
     private:
-        QString m_poolRef;
+        QSharedPointer<Pool> m_pool;
 };
 
 #endif // DISABLEHAACTION_H

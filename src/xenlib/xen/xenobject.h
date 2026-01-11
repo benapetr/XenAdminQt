@@ -172,6 +172,9 @@ class XENLIB_EXPORT XenObject : public QObject
             return this->m_evicted;
         }
 
+        //! Returns a pointer to cache of related connection, in case there is no connection associated with this XenObject
+        //! dummy cache pointer is returned instead
+        //! That means this is guaranteed to never return nullptr
         XenCache *GetCache() const
         {
             return this->m_cache;

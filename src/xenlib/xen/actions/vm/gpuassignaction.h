@@ -29,6 +29,7 @@
 #define GPUASSIGNACTION_H
 
 #include "../../asyncoperation.h"
+#include "../../vm.h"
 #include <QString>
 #include <QStringList>
 #include <QVariantList>
@@ -49,13 +50,11 @@ class GpuAssignAction : public AsyncOperation
     public:
         /**
          * @brief Construct GPU assignment action
-         * @param connection XenServer connection
-         * @param vmRef VM opaque reference
+         * @param vm VM object to configure
          * @param vgpuData List of VGPU configurations (each is a QVariantMap with keys: opaque_ref, GPU_group, type, device)
          * @param parent Parent QObject
          */
-        explicit GpuAssignAction(XenConnection* connection,
-                                 const QString& vmRef,
+        explicit GpuAssignAction(QSharedPointer<VM> vm,
                                  const QVariantList& vgpuData,
                                  QObject* parent = nullptr);
 
@@ -63,7 +62,7 @@ class GpuAssignAction : public AsyncOperation
         void run() override;
 
     private:
-        QString m_vmRef;
+        QSharedPointer<VM> m_vm;
         QVariantList m_vgpuData; // List of VGPU specs
 
         void addGpu(const QString& gpuGroupRef, const QString& vgpuTypeRef, const QString& device);

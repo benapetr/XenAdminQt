@@ -34,10 +34,8 @@
 #include <QDebug>
 #include <QThread>
 
-DestroyHostAction::DestroyHostAction(XenConnection* connection,
-                                     QSharedPointer<Host> host,
-                                     QObject* parent)
-    : AsyncOperation(connection,
+DestroyHostAction::DestroyHostAction(QSharedPointer<Host> host, QObject* parent)
+    : AsyncOperation(host->GetConnection(),
                      QString("Removing host '%1'").arg(host ? host->GetName() : ""),
                      "Removing host from pool",
                      parent),
@@ -57,7 +55,7 @@ void DestroyHostAction::run()
         SetDescription("Removing host from pool");
 
         // Get all local SRs belonging to this host
-        QList<QVariantMap> allSRs = GetConnection()->GetCache()->GetAllData("sr");
+        QList<QVariantMap> allSRs = this->m_host->GetCache()->GetAllData("sr");
         QStringList localSRRefs;
 
         for (const QVariantMap& srData : allSRs)

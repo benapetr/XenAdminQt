@@ -26,46 +26,41 @@
  */
 
 #include "disablehostaction.h"
-#include "../../network/connection.h"
-#include "../../session.h"
 #include "../../xenapi/xenapi_Host.h"
 #include <QDebug>
 
-DisableHostAction::DisableHostAction(XenConnection* connection,
-                                     QSharedPointer<Host> host,
-                                     QObject* parent)
-    : AsyncOperation(connection,
+DisableHostAction::DisableHostAction(QSharedPointer<Host> host, QObject* parent)
+    : AsyncOperation(host->GetConnection(),
                      "Disabling host",
                      QString("Evacuating '%1'").arg(host ? host->GetName() : ""),
                      parent),
       m_host(host)
 {
-    if (!m_host)
-        throw std::invalid_argument("Host cannot be null");
+    this->m_host = host;
 }
 
 void DisableHostAction::run()
 {
     try
     {
-        SetDescription(QString("Evacuating '%1'").arg(m_host->GetName()));
+        this->SetDescription(QString("Evacuating '%1'").arg(this->m_host->GetName()));
 
         try
         {
             // Disable the host (this will evacuate VMs)
-            QString taskRef = XenAPI::Host::async_disable(GetSession(), m_host->OpaqueRef());
-            pollToCompletion(taskRef, 0, 100);
+            QString taskRef = XenAPI::Host::async_disable(GetSession(), this->m_host->OpaqueRef());
+            this->pollToCompletion(taskRef, 0, 100);
         } catch (...)
         {
             // On error, remove MAINTENANCE_MODE flag
-            XenAPI::Host::remove_from_other_config(GetSession(), m_host->OpaqueRef(), "MAINTENANCE_MODE");
+            XenAPI::Host::remove_from_other_config(GetSession(), this->m_host->OpaqueRef(), "MAINTENANCE_MODE");
             throw;
         }
 
-        SetDescription(QString("Evacuated '%1'").arg(m_host->GetName()));
+        this->SetDescription(QString("Evacuated '%1'").arg(this->m_host->GetName()));
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to disable host: %1").arg(e.what()));
+        this->setError(QString("Failed to disable host: %1").arg(e.what()));
     }
 }

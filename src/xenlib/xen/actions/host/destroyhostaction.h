@@ -55,9 +55,7 @@ class DestroyHostAction : public AsyncOperation
          * @param host Host object to destroy
          * @param parent Parent QObject
          */
-        explicit DestroyHostAction(XenConnection* connection,
-                                   QSharedPointer<Host> host,
-                                   QObject* parent = nullptr);
+        explicit DestroyHostAction(QSharedPointer<Host> host, QObject* parent = nullptr);
 
     protected:
         void run() override;

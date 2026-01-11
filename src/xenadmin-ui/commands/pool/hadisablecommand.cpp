@@ -56,11 +56,7 @@ void HADisableCommand::Run()
     if (!pool || !pool->IsValid())
         return;
 
-    QString poolRef = pool->OpaqueRef();
     QString poolName = pool->GetName();
-
-    if (poolRef.isEmpty())
-        return;
 
     // Show confirmation dialog
     int ret = QMessageBox::question(this->mainWindow(), "Disable High Availability",
@@ -80,7 +76,7 @@ void HADisableCommand::Run()
         return;
     }
 
-    DisableHAAction* action = new DisableHAAction(connection, poolRef, nullptr);
+    DisableHAAction* action = new DisableHAAction(pool, nullptr);
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);
@@ -118,15 +114,9 @@ bool HADisableCommand::isPoolConnected() const
 
 bool HADisableCommand::isHAEnabled() const
 {
-    QString poolRef = this->getSelectedPoolRef();
-    if (poolRef.isEmpty())
-        return false;
-
     QSharedPointer<Pool> pool = this->getPool();
-    XenCache* cache = pool->GetCache();
-    if (!cache)
+    if (!pool)
         return false;
 
-    QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
-    return poolData.value("ha_enabled", false).toBool();
+    return pool->HAEnabled();
 }

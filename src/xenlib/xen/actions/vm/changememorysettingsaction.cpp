@@ -31,18 +31,17 @@
 #include "../../../xencache.h"
 #include <stdexcept>
 
-ChangeMemorySettingsAction::ChangeMemorySettingsAction(XenConnection* connection,
-                                                       const QString& vmRef,
+ChangeMemorySettingsAction::ChangeMemorySettingsAction(QSharedPointer<VM> vm,
                                                        qint64 staticMin,
                                                        qint64 dynamicMin,
                                                        qint64 dynamicMax,
                                                        qint64 staticMax,
                                                        QObject* parent)
-    : AsyncOperation(connection,
+    : AsyncOperation(vm->GetConnection(),
                      QString("Changing memory settings"),
-                     QString("Changing memory settings for VM"),
+                     QString("Changing memory settings for '%1'").arg(vm ? vm->GetName() : ""),
                      parent),
-      m_vmRef(vmRef),
+      m_vm(vm),
       m_staticMin(staticMin),
       m_dynamicMin(dynamicMin),
       m_dynamicMax(dynamicMax),
@@ -59,20 +58,13 @@ void ChangeMemorySettingsAction::run()
         SetPercentComplete(0);
         SetDescription("Checking VM state...");
 
-        // Get current VM data from cache
-        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", this->m_vmRef);
-        if (vmData.isEmpty())
-        {
-            throw std::runtime_error("VM not found in cache");
-        }
-
         // Check if static memory changed
-        qint64 currentStaticMin = vmData.value("memory_static_min").toLongLong();
-        qint64 currentStaticMax = vmData.value("memory_static_max").toLongLong();
+        qint64 currentStaticMin = this->m_vm->MemoryStaticMin();
+        qint64 currentStaticMax = this->m_vm->MemoryStaticMax();
         this->m_staticChanged = (this->m_staticMin != currentStaticMin || this->m_staticMax != currentStaticMax);
 
         // Get current power state
-        QString powerState = vmData.value("power_state").toString();
+        QString powerState = this->m_vm->GetPowerState();
 
         // Determine if reboot is needed
         if (this->m_staticChanged)
@@ -85,7 +77,7 @@ void ChangeMemorySettingsAction::run()
         }
 
         // Save host affinity for restart
-        QString residentOn = vmData.value("resident_on").toString();
+        QString residentOn = this->m_vm->ResidentOnRef();
         if (!residentOn.isEmpty() && residentOn != "OpaqueRef:NULL")
         {
             this->m_vmHost = residentOn;
@@ -99,16 +91,16 @@ void ChangeMemorySettingsAction::run()
             SetDescription("Shutting down VM...");
 
             // Check allowed operations to determine clean vs hard shutdown
-            QVariantList allowedOps = vmData.value("allowed_operations").toList();
+            QStringList allowedOps = this->m_vm->GetAllowedOperations();
             bool canCleanShutdown = allowedOps.contains("clean_shutdown");
 
             QString taskRef;
             if (canCleanShutdown)
             {
-                taskRef = XenAPI::VM::async_clean_shutdown(GetSession(), this->m_vmRef);
+                taskRef = XenAPI::VM::async_clean_shutdown(GetSession(), this->m_vm->OpaqueRef());
             } else
             {
-                taskRef = XenAPI::VM::async_hard_shutdown(GetSession(), this->m_vmRef);
+                taskRef = XenAPI::VM::async_hard_shutdown(GetSession(), this->m_vm->OpaqueRef());
             }
 
             pollToCompletion(taskRef, 10, 40);
@@ -118,8 +110,7 @@ void ChangeMemorySettingsAction::run()
             bool halted = false;
             for (int i = 0; i < 60; ++i)
             { // Wait up to 60 seconds
-                vmData = GetConnection()->GetCache()->ResolveObjectData("vm", this->m_vmRef);
-                if (vmData.value("power_state").toString() == "Halted")
+                if (this->m_vm->GetPowerState() == "Halted")
                 {
                     halted = true;
                     break;
@@ -140,17 +131,17 @@ void ChangeMemorySettingsAction::run()
         {
             SetDescription("Changing memory settings...");
 
-            if (m_staticChanged)
+            if (this->m_staticChanged)
             {
                 // Change all memory limits
-                XenAPI::VM::set_memory_limits(GetSession(), m_vmRef,
-                                              m_staticMin, m_staticMax,
-                                              m_dynamicMin, m_dynamicMax);
+                XenAPI::VM::set_memory_limits(GetSession(), this->m_vm->OpaqueRef(),
+                                              this->m_staticMin, this->m_staticMax,
+                                              this->m_dynamicMin, this->m_dynamicMax);
             } else
             {
                 // Change only dynamic range
-                XenAPI::VM::set_memory_dynamic_range(GetSession(), m_vmRef,
-                                                     m_dynamicMin, m_dynamicMax);
+                XenAPI::VM::set_memory_dynamic_range(GetSession(), this->m_vm->OpaqueRef(),
+                                                     this->m_dynamicMin, this->m_dynamicMax);
             }
 
             SetPercentComplete(70);
@@ -158,20 +149,20 @@ void ChangeMemorySettingsAction::run()
         } catch (const std::exception& e)
         {
             // Ensure VM restart even if memory change fails
-            if (m_needReboot)
+            if (this->m_needReboot)
             {
                 SetDescription("Restarting VM after error...");
                 try
                 {
                     QString taskRef;
-                    if (!m_vmHost.isEmpty())
+                    if (!this->m_vmHost.isEmpty())
                     {
-                        taskRef = XenAPI::VM::async_start_on(GetSession(), m_vmRef, m_vmHost, false, false);
+                        taskRef = XenAPI::VM::async_start_on(GetSession(), this->m_vm->OpaqueRef(), this->m_vmHost, false, false);
                     } else
                     {
-                        taskRef = XenAPI::VM::async_start(GetSession(), m_vmRef, false, false);
+                        taskRef = XenAPI::VM::async_start(GetSession(), this->m_vm->OpaqueRef(), false, false);
                     }
-                    pollToCompletion(taskRef, 70, 100);
+                    this->pollToCompletion(taskRef, 70, 100);
                 } catch (...)
                 {
                     // Ignore restart errors - report original error
@@ -181,20 +172,20 @@ void ChangeMemorySettingsAction::run()
         }
 
         // Restart VM if we shut it down
-        if (m_needReboot)
+        if (this->m_needReboot)
         {
             SetDescription("Restarting VM...");
 
             QString taskRef;
-            if (!m_vmHost.isEmpty())
+            if (!this->m_vmHost.isEmpty())
             {
-                taskRef = XenAPI::VM::async_start_on(GetSession(), m_vmRef, m_vmHost, false, false);
+                taskRef = XenAPI::VM::async_start_on(GetSession(), this->m_vm->OpaqueRef(), this->m_vmHost, false, false);
             } else
             {
-                taskRef = XenAPI::VM::async_start(GetSession(), m_vmRef, false, false);
+                taskRef = XenAPI::VM::async_start(GetSession(), this->m_vm->OpaqueRef(), false, false);
             }
 
-            pollToCompletion(taskRef, 70, 100);
+            this->pollToCompletion(taskRef, 70, 100);
         }
 
         SetPercentComplete(100);

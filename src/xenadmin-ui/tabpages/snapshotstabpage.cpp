@@ -57,8 +57,7 @@
 
 QHash<QString, SnapshotsTabPage::SnapshotsView> SnapshotsTabPage::s_viewByVmRef;
 
-SnapshotsTabPage::SnapshotsTabPage(QWidget* parent)
-    : BaseTabPage(parent), ui(new Ui::SnapshotsTabPage)
+SnapshotsTabPage::SnapshotsTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::SnapshotsTabPage)
 {
     this->ui->setupUi(this);
 
@@ -161,7 +160,10 @@ void SnapshotsTabPage::removeObject()
 
 void SnapshotsTabPage::updateObject()
 {
-    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
+    this->m_vm = qSharedPointerCast<VM>(this->m_object);
+    if (!this->m_vm)
+        return;
+    XenCache* cache = this->m_vm->GetCache();
     connect(cache, &XenCache::objectChanged, this, &SnapshotsTabPage::onCacheObjectChanged, Qt::UniqueConnection);
     if (!this->m_objectRef.isEmpty())
         this->setViewMode(this->s_viewByVmRef.value(this->m_objectRef, SnapshotsView::TreeView));
@@ -354,25 +356,19 @@ void SnapshotsTabPage::populateSnapshotTree()
 
 void SnapshotsTabPage::onTakeSnapshot()
 {
-    if (this->m_objectRef.isEmpty())
-    {
+    if (!this->m_vm)
         return;
-    }
 
     // Get main window to execute command
     QWidget* window = this->window();
     if (!window)
-    {
         return;
-    }
 
     MainWindow* mainWindow = qobject_cast<MainWindow*>(window);
     if (!mainWindow)
-    {
         return;
-    }
 
-    TakeSnapshotCommand* cmd = new TakeSnapshotCommand(this->m_objectRef, mainWindow);
+    TakeSnapshotCommand* cmd = new TakeSnapshotCommand(this->m_vm, mainWindow);
     cmd->Run();
 
     // No manual refresh needed - cache will be automatically updated via event polling
@@ -563,17 +559,16 @@ void SnapshotsTabPage::onCacheObjectChanged(XenConnection* connection, const QSt
 void SnapshotsTabPage::updateButtonStates()
 {
     const QList<QString> refs = this->selectedSnapshotRefs();
-    const bool hasVM = !m_objectRef.isEmpty() && m_objectType == "vm";
 
     MainWindow* mainWindow = qobject_cast<MainWindow*>(this->window());
 
     bool canTake = false;
-    if (hasVM)
+    if (!this->m_vm.isNull())
     {
         canTake = true;
         if (mainWindow)
         {
-            TakeSnapshotCommand takeCmd(this->m_objectRef, mainWindow);
+            TakeSnapshotCommand takeCmd(this->m_vm, mainWindow);
             canTake = takeCmd.CanRun();
         }
     }
@@ -592,9 +587,9 @@ void SnapshotsTabPage::updateButtonStates()
         canDelete = this->canDeleteSnapshots(refs);
     }
 
-    ui->takeSnapshotButton->setEnabled(canTake);
-    ui->deleteSnapshotButton->setEnabled(canDelete);
-    ui->revertButton->setEnabled(canRevert);
+    this->ui->takeSnapshotButton->setEnabled(canTake);
+    this->ui->deleteSnapshotButton->setEnabled(canDelete);
+    this->ui->revertButton->setEnabled(canRevert);
 }
 
 void SnapshotsTabPage::onOperationRecordUpdated(OperationManager::OperationRecord*)
@@ -1074,6 +1069,9 @@ QString SnapshotsTabPage::selectedSnapshotRef(QString* snapshotName) const
 
 void SnapshotsTabPage::onSnapshotContextMenu(const QPoint& pos)
 {
+    if (!this->m_vm)
+        return;
+
     const bool treeView = this->ui->viewStack->currentIndex() == 0;
     QString snapshotRef;
     if (treeView)
@@ -1100,7 +1098,7 @@ void SnapshotsTabPage::onSnapshotContextMenu(const QPoint& pos)
             snapshotRef = item->data(Qt::UserRole).toString();
         }
     }
-    QSharedPointer<VM> snapshot = this->m_connection->GetCache()->ResolveObject<VM>("vm", snapshotRef);
+    QSharedPointer<VM> snapshot = this->m_vm->GetCache()->ResolveObject<VM>("vm", snapshotRef);
 
     QMenu menu(this);
     QAction* takeSnapshotAction = menu.addAction(tr("Take Snapshot..."));
@@ -1151,9 +1149,9 @@ void SnapshotsTabPage::onSnapshotContextMenu(const QPoint& pos)
         canProperties = true;
     }
 
-    if (mainWindow && this->m_objectType == "vm" && !this->m_objectRef.isEmpty())
+    if (mainWindow)
     {
-        TakeSnapshotCommand takeCmd(this->m_objectRef, mainWindow);
+        TakeSnapshotCommand takeCmd(this->m_vm, mainWindow);
         canTake = takeCmd.CanRun();
     }
 
@@ -1298,22 +1296,14 @@ void SnapshotsTabPage::buildSnapshotTree(const QString& snapshotRef,
 
 void SnapshotsTabPage::refreshVmssPanel()
 {
-    if (!this->m_connection || this->m_objectType != "vm" || this->m_objectData.isEmpty())
+    if (!this->m_connection || !this->m_vm)
     {
         if (this->m_scheduledSnapshotsAction)
             this->m_scheduledSnapshotsAction->setVisible(false);
         return;
     }
 
-    XenCache* cache = this->m_connection->GetCache();
-    if (!cache)
-    {
-        if (this->m_scheduledSnapshotsAction)
-            this->m_scheduledSnapshotsAction->setVisible(false);
-        return;
-    }
-
-    const bool hasVmssSupport = !cache->GetAllData("vmss").isEmpty() || this->m_objectData.contains("snapshot_schedule");
+    const bool hasVmssSupport = !this->m_vm->GetCache()->GetAllData("vmss").isEmpty() || this->m_objectData.contains("snapshot_schedule");
 
     if (this->m_scheduledSnapshotsAction)
         this->m_scheduledSnapshotsAction->setVisible(hasVmssSupport);

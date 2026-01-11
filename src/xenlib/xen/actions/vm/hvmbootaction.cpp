@@ -32,27 +32,13 @@
 #include <QDebug>
 #include <stdexcept>
 
-HVMBootAction::HVMBootAction(XenConnection* connection, const QString& vmRef, QObject* parent)
-    : AsyncOperation(connection, tr("Booting VM in Recovery Mode"), QString(), parent), m_vmRef(vmRef)
-{
-    // Get VM name for display purposes
-    try
-    {
-        QVariantMap vmRecord = XenAPI::VM::get_record(connection->GetSession(), vmRef);
-        m_vmName = vmRecord.value("name_label").toString();
-        if (m_vmName.isEmpty())
-        {
-            m_vmName = vmRef; // Fallback to ref if name not available
-        }
-    } catch (...)
-    {
-        m_vmName = vmRef; // Use ref on error
-    }
-
-    // Update description with VM name
-    SetDescription(tr("Booting '%1' with temporary recovery boot settings...").arg(m_vmName));
-
-    // Register API methods for RBAC checks
+HVMBootAction::HVMBootAction(QSharedPointer<VM> vm, QObject* parent)
+    : AsyncOperation(vm->GetConnection(), 
+                     tr("Booting VM in Recovery Mode"), 
+                     tr("Booting '%1' with temporary recovery boot settings...").arg(vm ? vm->GetName() : ""),
+                     parent), 
+      m_vm(vm)
+{    // Register API methods for RBAC checks
     AddApiMethodToRoleCheck("VM.get_HVM_boot_policy");
     AddApiMethodToRoleCheck("VM.get_HVM_boot_params");
     AddApiMethodToRoleCheck("VM.set_HVM_boot_policy");
@@ -73,25 +59,25 @@ void HVMBootAction::run()
         // Step 1: Save current boot policy and boot order
         SetPercentComplete(10);
 
-        m_oldBootPolicy = XenAPI::VM::get_HVM_boot_policy(session, m_vmRef);
-        QVariantMap oldBootParams = XenAPI::VM::get_HVM_boot_params(session, m_vmRef);
+        m_oldBootPolicy = XenAPI::VM::get_HVM_boot_policy(session, this->m_vm->OpaqueRef());
+        QVariantMap oldBootParams = XenAPI::VM::get_HVM_boot_params(session, this->m_vm->OpaqueRef());
         m_oldBootOrder = getBootOrder(oldBootParams);
 
         // Step 2: Set temporary boot policy and order
         SetPercentComplete(30);
 
         // Set boot policy to "BIOS order" for manual boot device selection
-        XenAPI::VM::set_HVM_boot_policy(session, m_vmRef, "BIOS order");
+        XenAPI::VM::set_HVM_boot_policy(session, this->m_vm->OpaqueRef(), "BIOS order");
 
         // Set boot order to "DN" (DVD drive, then Network)
         QVariantMap recoveryBootParams = oldBootParams;
         setBootOrder(recoveryBootParams, "DN");
-        XenAPI::VM::set_HVM_boot_params(session, m_vmRef, recoveryBootParams);
+        XenAPI::VM::set_HVM_boot_params(session, this->m_vm->OpaqueRef(), recoveryBootParams);
 
         // Step 3: Start the VM
         SetPercentComplete(50);
 
-        QString taskRef = XenAPI::VM::async_start(session, m_vmRef, false, false);
+        QString taskRef = XenAPI::VM::async_start(session, this->m_vm->OpaqueRef(), false, false);
         pollToCompletion(taskRef); // Wait for VM to start
 
         if (GetState() == Failed)
@@ -139,7 +125,7 @@ void HVMBootAction::setBootOrder(QVariantMap& bootParams, const QString& order)
 
 void HVMBootAction::restoreBootSettings(XenAPI::Session* session)
 {
-    if (!session || m_vmRef.isEmpty())
+    if (!session || !this->m_vm || !this->m_vm->IsValid())
     {
         return;
     }
@@ -149,17 +135,17 @@ void HVMBootAction::restoreBootSettings(XenAPI::Session* session)
         // Restore boot policy
         if (!m_oldBootPolicy.isEmpty())
         {
-            XenAPI::VM::set_HVM_boot_policy(session, m_vmRef, m_oldBootPolicy);
+            XenAPI::VM::set_HVM_boot_policy(session, this->m_vm->OpaqueRef(), m_oldBootPolicy);
         }
 
         // Restore boot order
-        QVariantMap bootParams = XenAPI::VM::get_HVM_boot_params(session, m_vmRef);
+        QVariantMap bootParams = XenAPI::VM::get_HVM_boot_params(session, this->m_vm->OpaqueRef());
         setBootOrder(bootParams, m_oldBootOrder);
-        XenAPI::VM::set_HVM_boot_params(session, m_vmRef, bootParams);
+        XenAPI::VM::set_HVM_boot_params(session, this->m_vm->OpaqueRef(), bootParams);
 
     } catch (const std::exception& e)
     {
         // Log error but don't propagate (we're in cleanup)
-        qWarning() << "Failed to restore boot settings for VM" << m_vmRef << ":" << e.what();
+        qWarning() << "Failed to restore boot settings for VM" << this->m_vm->OpaqueRef() << ":" << e.what();
     }
 }

@@ -32,15 +32,14 @@
 #include <stdexcept>
 #include <QSet>
 
-GpuAssignAction::GpuAssignAction(XenConnection* connection,
-                                 const QString& vmRef,
+GpuAssignAction::GpuAssignAction(QSharedPointer<VM> vm,
                                  const QVariantList& vgpuData,
                                  QObject* parent)
-    : AsyncOperation(connection,
+    : AsyncOperation(vm->GetConnection(),
                      QString("Set GPU"),
-                     QString("Configuring GPU assignments for VM"),
+                     QString("Configuring GPU assignments for '%1'").arg(vm ? vm->GetName() : ""),
                      parent),
-      m_vmRef(vmRef),
+      m_vm(vm),
       m_vgpuData(vgpuData)
 {
 }
@@ -52,15 +51,19 @@ void GpuAssignAction::run()
         SetPercentComplete(0);
         SetDescription("Retrieving VM configuration...");
 
-        // Get current VM data from cache
-        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
-        if (vmData.isEmpty())
+        // Check if VM is still valid
+        if (!this->m_vm || !this->m_vm->IsValid())
         {
-            throw std::runtime_error("VM not found in cache");
+            throw std::runtime_error("VM is no longer valid");
         }
 
         // Get current VGPUs for the VM
-        QVariantList currentVGPUrefs = vmData.value("VGPUs").toList();
+        QVariantList currentVGPUrefs = QVariantList();
+        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", this->m_vm->OpaqueRef());
+        if (!vmData.isEmpty())
+        {
+            currentVGPUrefs = vmData.value("VGPUs").toList();
+        }
         QSet<QString> vgpusToRemove;
 
         for (const QVariant& ref : currentVGPUrefs)
@@ -149,11 +152,11 @@ void GpuAssignAction::addGpu(const QString& gpuGroupRef, const QString& vgpuType
     if (vgpuTypeRef.isEmpty() || vgpuTypeRef == "OpaqueRef:NULL")
     {
         // Create without type (basic VGPU)
-        taskRef = XenAPI::VGPU::async_create(GetSession(), m_vmRef, gpuGroupRef, device, otherConfig);
+        taskRef = XenAPI::VGPU::async_create(GetSession(), this->m_vm->OpaqueRef(), gpuGroupRef, device, otherConfig);
     } else
     {
         // Create with specific VGPU type
-        taskRef = XenAPI::VGPU::async_create(GetSession(), m_vmRef, gpuGroupRef, device, otherConfig, vgpuTypeRef);
+        taskRef = XenAPI::VGPU::async_create(GetSession(), this->m_vm->OpaqueRef(), gpuGroupRef, device, otherConfig, vgpuTypeRef);
     }
 
     // Poll the task to completion

@@ -280,7 +280,7 @@ class XENLIB_EXPORT VM : public XenObject
          * @brief Get allowed operations
          * @return List of allowed operation strings
          */
-        QStringList AllowedOperations() const;
+        QStringList GetAllowedOperations() const;
 
         /**
          * @brief Get current operations

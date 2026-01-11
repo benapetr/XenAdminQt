@@ -31,6 +31,8 @@
 #include "../../asyncoperation.h"
 #include <QString>
 
+class VM;
+
 /**
  * @brief Action to change VM VCPU configuration
  *
@@ -47,14 +49,12 @@ class ChangeVCPUSettingsAction : public AsyncOperation
     public:
         /**
          * @brief Construct VCPU settings change action
-         * @param connection XenServer connection
-         * @param vmRef VM opaque reference
+         * @param vm VM object to modify
          * @param vcpusMax Maximum number of VCPUs
          * @param vcpusAtStartup Number of VCPUs to enable at startup
          * @param parent Parent QObject
          */
-        explicit ChangeVCPUSettingsAction(XenConnection* connection,
-                                          const QString& vmRef,
+        explicit ChangeVCPUSettingsAction(QSharedPointer<VM> vm,
                                           qint64 vcpusMax,
                                           qint64 vcpusAtStartup,
                                           QObject* parent = nullptr);
@@ -63,7 +63,7 @@ class ChangeVCPUSettingsAction : public AsyncOperation
         void run() override;
 
     private:
-        QString m_vmRef;
+        QSharedPointer<VM> m_vm;
         qint64 m_vcpusMax;
         qint64 m_vcpusAtStartup;
 };

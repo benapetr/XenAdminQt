@@ -92,7 +92,7 @@ void DestroyHostCommand::Run()
     }
 
     // Create and run the destroy host action
-    DestroyHostAction* action = new DestroyHostAction(conn, host, nullptr);
+    DestroyHostAction* action = new DestroyHostAction(host, nullptr);
 
     action->SetTitle(tr("Destroying host '%1'...").arg(hostName));
 

@@ -32,6 +32,8 @@
 #include <QString>
 #include <QStringList>
 
+class XenObject;
+
 /**
  * @brief GeneralEditPageAction - Save folder and tag changes for any XenObject
  *
@@ -95,9 +97,7 @@ class XENLIB_EXPORT GeneralEditPageAction : public AsyncOperation
          * - Tags added: Call add_tags for each new tag not in oldTags
          * - Tags removed: Call remove_tags for each old tag not in newTags
          */
-        explicit GeneralEditPageAction(XenConnection* connection,
-                                       const QString& objectRef,
-                                       const QString& objectType,
+        explicit GeneralEditPageAction(QSharedPointer<XenObject> object,
                                        const QString& oldFolder,
                                        const QString& newFolder,
                                        const QStringList& oldTags,
@@ -142,8 +142,7 @@ class XENLIB_EXPORT GeneralEditPageAction : public AsyncOperation
         void run() override;
 
     private:
-        QString m_objectRef;   ///< OpaqueRef of object being edited
-        QString m_objectType;  ///< Type string ("vm", "host", "pool", "sr", etc.)
+        QSharedPointer<XenObject> m_object;
         QString m_oldFolder;   ///< Previous folder path
         QString m_newFolder;   ///< New folder path (empty = unfolder)
         QStringList m_oldTags; ///< Previous tags (sorted for efficient comparison)

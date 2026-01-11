@@ -43,9 +43,18 @@
 #include <QDebug>
 #include <QMutexLocker>
 
-XenCache::XenCache(QObject* parent) : QObject(parent)
+XenCache *XenCache::dummyCache = nullptr;
+
+XenCache *XenCache::GetDummy()
 {
-    this->m_connection = qobject_cast<XenConnection*>(parent);
+    if (!XenCache::dummyCache)
+        XenCache::dummyCache = new XenCache(nullptr);
+    return XenCache::dummyCache;
+}
+
+XenCache::XenCache(XenConnection* connection) : QObject(connection)
+{
+    this->m_connection = connection;
 }
 
 XenCache::~XenCache()

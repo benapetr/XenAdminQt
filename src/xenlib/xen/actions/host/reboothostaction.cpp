@@ -34,48 +34,47 @@
 #include "../../xenapi/xenapi_VM.h"
 #include <QDebug>
 
-RebootHostAction::RebootHostAction(XenConnection* connection,
-                                   QSharedPointer<Host> host,
+RebootHostAction::RebootHostAction(QSharedPointer<Host> host,
                                    QObject* parent)
-    : AsyncOperation(connection,
+    : AsyncOperation(host->GetConnection(),
                      QString("Rebooting %1").arg(host->GetName()),
                      "Waiting...",
                      parent),
       m_host(host),
       m_wasEnabled(false)
 {
-    setAppliesToFromObject(host);
+    this->setAppliesToFromObject(host);
 }
 
 void RebootHostAction::run()
 {
-    if (!m_host)
+    if (!this->m_host)
     {
-        setError("No host specified for reboot");
+        this->setError("No host specified for reboot");
         return;
     }
 
     try
     {
-        m_wasEnabled = m_host->IsEnabled();
-        SetDescription(QString("Rebooting %1...").arg(m_host->GetName()));
+        this->m_wasEnabled = this->m_host->IsEnabled();
+        this->SetDescription(QString("Rebooting %1...").arg(this->m_host->GetName()));
 
         // Step 1: Maybe reduce ntol before operation (HA support)
-        maybeReduceNtolBeforeOp();
+        this->maybeReduceNtolBeforeOp();
 
         // Step 2: Shutdown all VMs on the host
-        shutdownVMs(true); // true = for reboot
+        this->shutdownVMs(true); // true = for reboot
 
         // Step 3: Reboot the host
-        QString taskRef = XenAPI::Host::async_reboot(GetSession(), m_host->OpaqueRef());
-        pollToCompletion(taskRef, 95, 100);
+        QString taskRef = XenAPI::Host::async_reboot(this->GetSession(), this->m_host->OpaqueRef());
+        this->pollToCompletion(taskRef, 95, 100);
 
         // Step 4: Interrupt connection if this is the coordinator
         // Note: This will be handled by connection management in Qt
         // For now, just log it
         qDebug() << "RebootHostAction: Host rebooted successfully";
 
-        SetDescription(QString("%1 rebooted").arg(m_host->GetName()));
+        this->SetDescription(QString("%1 rebooted").arg(this->m_host->GetName()));
 
     } catch (const std::exception& e)
     {
@@ -83,11 +82,11 @@ void RebootHostAction::run()
         qWarning() << "RebootHostAction: Exception rebooting host:" << error;
 
         // Try to re-enable the host on error
-        if (m_wasEnabled)
+        if (this->m_wasEnabled)
         {
             try
             {
-                XenAPI::Host::enable(GetSession(), m_host->OpaqueRef());
+                XenAPI::Host::enable(this->GetSession(), this->m_host->OpaqueRef());
             } catch (const std::exception& e2)
             {
                 qWarning() << "RebootHostAction: Exception trying to re-enable host after error:" << e2.what();
@@ -97,10 +96,10 @@ void RebootHostAction::run()
         // Check for specific VM shutdown acknowledgment failure
         if (error.contains("VM_FAILED_SHUTDOWN_ACKNOWLEDGMENT"))
         {
-            setError("A VM did not acknowledge the need to shut down. Please shut down VMs manually and try again.");
+            this->setError("A VM did not acknowledge the need to shut down. Please shut down VMs manually and try again.");
         } else
         {
-            setError(QString("Failed to reboot host: %1").arg(error));
+            this->setError(QString("Failed to reboot host: %1").arg(error));
         }
     }
 }
@@ -120,17 +119,17 @@ void RebootHostAction::shutdownVMs(bool isForReboot)
     try
     {
         // Step 1: Disable the host
-        QString disableTaskRef = XenAPI::Host::async_disable(GetSession(), m_host->OpaqueRef());
-        pollToCompletion(disableTaskRef, 0, 1);
+        QString disableTaskRef = XenAPI::Host::async_disable(this->GetSession(), this->m_host->OpaqueRef());
+        this->pollToCompletion(disableTaskRef, 0, 1);
 
-        SetPercentComplete(1);
+        this->SetPercentComplete(1);
 
         // Step 2: Get all resident VMs
-        QStringList residentVMs = m_host->ResidentVMRefs();
+        QStringList residentVMs = this->m_host->ResidentVMRefs();
 
         // Count VMs that need shutdown (running, non-control-domain)
         QList<VM*> toShutdown;
-        XenCache* cache = GetConnection()->GetCache();
+        XenCache* cache = this->GetConnection()->GetCache();
 
         for (const QString& vmRef : residentVMs)
         {
@@ -143,7 +142,7 @@ void RebootHostAction::shutdownVMs(bool isForReboot)
 
             if (powerState == "Running" && !isControlDomain)
             {
-                VM* vm = new VM(GetConnection(), vmRef, this);
+                VM* vm = new VM(this->GetConnection(), vmRef, this);
                 toShutdown.append(vm);
             }
         }
@@ -161,7 +160,7 @@ void RebootHostAction::shutdownVMs(bool isForReboot)
         {
             VM* vm = toShutdown[i];
 
-            SetDescription(QString(isForReboot
+            this->SetDescription(QString(isForReboot
                                        ? "Rebooting: Shutting down VM %1 (%2/%3)"
                                        : "Shutting down VM %1 (%2/%3)")
                                .arg(vm->GetName())
@@ -169,20 +168,20 @@ void RebootHostAction::shutdownVMs(bool isForReboot)
                                .arg(n));
 
             // Check if clean shutdown is allowed
-            QStringList allowedOps = vm->AllowedOperations();
+            QStringList allowedOps = vm->GetAllowedOperations();
             bool canCleanShutdown = allowedOps.contains("clean_shutdown");
 
             QString taskRef;
             if (canCleanShutdown)
             {
-                taskRef = XenAPI::VM::async_clean_shutdown(GetSession(), vm->OpaqueRef());
+                taskRef = XenAPI::VM::async_clean_shutdown(this->GetSession(), vm->OpaqueRef());
             } else
             {
-                taskRef = XenAPI::VM::async_hard_shutdown(GetSession(), vm->OpaqueRef());
+                taskRef = XenAPI::VM::async_hard_shutdown(this->GetSession(), vm->OpaqueRef());
             }
 
-            int progressStart = GetPercentComplete();
-            pollToCompletion(taskRef, progressStart, progressStart + step);
+            int progressStart = this->GetPercentComplete();
+            this->pollToCompletion(taskRef, progressStart, progressStart + step);
         }
 
         // Clean up VM objects
@@ -195,7 +194,7 @@ void RebootHostAction::shutdownVMs(bool isForReboot)
         // Try to re-enable the host so user can manually shutdown VMs
         try
         {
-            XenAPI::Host::enable(GetSession(), m_host->OpaqueRef());
+            XenAPI::Host::enable(this->GetSession(), this->m_host->OpaqueRef());
         } catch (const std::exception& e2)
         {
             qWarning() << "RebootHostAction: Exception trying to re-enable host after VM shutdown error:" << e2.what();

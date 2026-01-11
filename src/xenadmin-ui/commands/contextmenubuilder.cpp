@@ -231,7 +231,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
     this->addSeparator(menu);
 
     // Snapshot operations
-    TakeSnapshotCommand* takeSnapshotCmd = new TakeSnapshotCommand(vm->OpaqueRef(), this->m_mainWindow, this);
+    TakeSnapshotCommand* takeSnapshotCmd = new TakeSnapshotCommand(vm, this->m_mainWindow, this);
     this->addCommand(menu, takeSnapshotCmd);
 
     this->addSeparator(menu);

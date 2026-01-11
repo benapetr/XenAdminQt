@@ -29,6 +29,7 @@
 #define CHANGEMEMORYSETTINGSACTION_H
 
 #include "../../asyncoperation.h"
+#include "../../vm.h"
 #include <QString>
 
 /**
@@ -47,16 +48,14 @@ class ChangeMemorySettingsAction : public AsyncOperation
     public:
         /**
          * @brief Construct memory settings change action
-         * @param connection XenServer connection
-         * @param vmRef VM opaque reference
+         * @param vm VM object to modify
          * @param staticMin Minimum static memory (bytes)
          * @param dynamicMin Minimum dynamic memory (bytes)
          * @param dynamicMax Maximum dynamic memory (bytes)
          * @param staticMax Maximum static memory (bytes)
          * @param parent Parent QObject
          */
-        explicit ChangeMemorySettingsAction(XenConnection* connection,
-                                            const QString& vmRef,
+        explicit ChangeMemorySettingsAction(QSharedPointer<VM> vm,
                                             qint64 staticMin,
                                             qint64 dynamicMin,
                                             qint64 dynamicMax,
@@ -67,7 +66,7 @@ class ChangeMemorySettingsAction : public AsyncOperation
         void run() override;
 
     private:
-        QString m_vmRef;
+        QSharedPointer<VM> m_vm;
         qint64 m_staticMin;
         qint64 m_dynamicMin;
         qint64 m_dynamicMax;

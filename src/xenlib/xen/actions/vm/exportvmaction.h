@@ -29,6 +29,8 @@
 #define EXPORTVMACTION_H
 
 #include "../../asyncoperation.h"
+#include "../../vm.h"
+#include "../../host.h"
 #include <QString>
 #include <QThread>
 
@@ -47,16 +49,14 @@ class ExportVmAction : public AsyncOperation
     public:
         /**
         * @brief Construct ExportVmAction
-        * @param connection XenServer connection
-        * @param hostRef Host reference (may be empty, uses pool master)
-        * @param vmRef VM or template reference to export
+        * @param vm VM or template to export
+        * @param host Host to export from (may be null, uses pool master)
         * @param filename Local file path to save export
         * @param verify Whether to verify the exported file
         * @param parent Parent object
         */
-        explicit ExportVmAction(XenConnection* connection,
-                                const QString& hostRef,
-                                const QString& vmRef,
+        explicit ExportVmAction(QSharedPointer<VM> vm,
+                                QSharedPointer<Host> host,
                                 const QString& filename,
                                 bool verify = false,
                                 QObject* parent = nullptr);
@@ -69,8 +69,8 @@ class ExportVmAction : public AsyncOperation
     private:
         void progressPoll();
         
-        QString hostRef_;
-        QString vmRef_;
+        QSharedPointer<VM> m_vm;
+        QSharedPointer<Host> m_host;
         QString filename_;
         bool verify_;
         

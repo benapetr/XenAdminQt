@@ -62,8 +62,6 @@ bool ActivateVBDCommand::canRunVBD(const QString& vbdRef) const
         return false;
 
     XenCache* cache = vbd->GetCache();
-    if (!cache)
-        return false;
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())
@@ -217,8 +215,6 @@ void ActivateVBDCommand::Run()
 
     QString vbdRef = vbd->OpaqueRef();
     XenCache* cache = vbd->GetCache();
-    if (!cache)
-        return;
 
     QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
     if (vbdData.isEmpty())

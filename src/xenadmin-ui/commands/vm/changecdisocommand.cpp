@@ -73,7 +73,7 @@ void ChangeCDISOCommand::run()
 
     // Create ChangeVMISOAction (matches C# ChangeVMISOAction pattern)
     // Action automatically handles VBD lookup, insert/eject logic
-    ChangeVMISOAction* action = new ChangeVMISOAction(conn, vmRef, this->m_isoRef, this->mainWindow());
+    ChangeVMISOAction* action = new ChangeVMISOAction(vmObj, this->m_isoRef, "" /*vbdRef*/, this->mainWindow());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
     OperationManager::instance()->registerOperation(action);

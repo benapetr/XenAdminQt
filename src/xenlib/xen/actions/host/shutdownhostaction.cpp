@@ -170,7 +170,7 @@ void ShutdownHostAction::shutdownVMs(bool isForReboot)
                                .arg(n));
 
             // Check if clean shutdown is allowed
-            QStringList allowedOps = vm->AllowedOperations();
+            QStringList allowedOps = vm->GetAllowedOperations();
             bool canCleanShutdown = allowedOps.contains("clean_shutdown");
 
             QString taskRef;

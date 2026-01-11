@@ -46,28 +46,28 @@ EditMultipathAction::EditMultipathAction(QSharedPointer<Host> host,
 {
     // Set applies-to context
     if (host)
-        setAppliesToFromObject(host);
+        this->setAppliesToFromObject(host);
 }
 
 void EditMultipathAction::run()
 {
-    if (!m_host)
+    if (!this->m_host)
     {
-        setError("No host specified");
+        this->setError("No host specified");
         return;
     }
 
     XenAPI::Session* sess = this->GetSession();
     if (!sess || !sess->IsLoggedIn())
     {
-        setError("Not connected to XenServer");
+        this->setError("Not connected to XenServer");
         return;
     }
 
-    qDebug() << "EditMultipathAction: Changing multipath setting on host" << m_host->GetName()
-             << "to" << m_enableMultipath;
+    qDebug() << "EditMultipathAction: Changing multipath setting on host" << this->m_host->GetName()
+             << "to" << this->m_enableMultipath;
 
-    QString hostRef = m_host->OpaqueRef();
+    QString hostRef = this->m_host->OpaqueRef();
     QStringList pluggedPBDs;
 
     try
@@ -77,7 +77,7 @@ void EditMultipathAction::run()
         QVariantList pbdRefs = hostRecord.value("PBDs").toList();
 
         // Step 1: Unplug all currently attached PBDs
-        SetDescription("Unplugging storage connections...");
+        this->SetDescription("Unplugging storage connections...");
         foreach (const QVariant& pbdRefVar, pbdRefs)
         {
             QString pbdRef = pbdRefVar.toString();
@@ -99,7 +99,7 @@ void EditMultipathAction::run()
         // TODO: For XenServer 6.0+ (Kolkata), use Host.set_multipathing() instead
         XenAPI::Host::remove_from_other_config(sess, hostRef, "multipathing");
         XenAPI::Host::add_to_other_config(sess, hostRef, "multipathing", 
-                                          m_enableMultipath ? "true" : "false");
+                                          this->m_enableMultipath ? "true" : "false");
 
         // Set multipath handle if enabling
         XenAPI::Host::remove_from_other_config(sess, hostRef, "multipath-handle");
@@ -117,7 +117,7 @@ void EditMultipathAction::run()
         qWarning() << "EditMultipathAction: Error changing multipath setting:" << e.what();
         
         // Try to re-plug PBDs even if setting multipath failed
-        SetDescription("Re-plugging storage connections...");
+        this->SetDescription("Re-plugging storage connections...");
         foreach (const QString& pbdRef, pluggedPBDs)
         {
             try
@@ -132,12 +132,12 @@ void EditMultipathAction::run()
             }
         }
 
-        setError(QString("Failed to change multipath setting: %1").arg(e.what()));
-        return;
+        this->setError(QString("Failed to change multipath setting: %1").arg(e.what()));
+        return; 
     }
 
     // Step 3: Re-plug all PBDs that were previously plugged
-    SetDescription("Re-plugging storage connections...");
+    this->SetDescription("Re-plugging storage connections...");
     QString plugErrors;
     foreach (const QString& pbdRef, pluggedPBDs)
     {
@@ -158,11 +158,11 @@ void EditMultipathAction::run()
 
     if (!plugErrors.isEmpty())
     {
-        setError(QString("Multipath setting changed but some storage connections could not be re-plugged:\n%1")
+        this->setError(QString("Multipath setting changed but some storage connections could not be re-plugged:\n%1")
                      .arg(plugErrors));
         return;
     }
 
     qDebug() << "EditMultipathAction: All PBDs re-plugged successfully";
-    SetDescription("Multipath setting changed successfully");
+    this->SetDescription("Multipath setting changed successfully");
 }

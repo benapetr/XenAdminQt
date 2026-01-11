@@ -37,6 +37,7 @@
 #include "xen/xenobject.h"
 
 class Pool;
+class XenConnection;
 
 /**
  * @brief XenCache - Caches all XenServer objects locally for fast lookups
@@ -68,7 +69,15 @@ class XenCache : public QObject
     Q_OBJECT
 
     public:
-        explicit XenCache(QObject* parent = nullptr);
+        /*
+         * @brief Gets a dummy xen cache
+         * This is mostly used in context of standalone or temporary XenObjects with nullptr connection
+         * so that we can ensure GetCache() can always return a valid pointer. Otherwise we would have to
+         * check if cache isn't nullptr which makes the code hard to read.
+         */
+        static XenCache *GetDummy();
+
+        explicit XenCache(XenConnection* connection = nullptr);
         virtual ~XenCache();
 
         /**
@@ -258,6 +267,8 @@ class XenCache : public QObject
         void bulkUpdateComplete(const QString& type, int count);
 
     private:
+        static XenCache *dummyCache;
+
         // Type -> (Ref -> ObjectData)
         mutable QMutex m_mutex;
         QMap<QString, QMap<QString, QVariantMap>> m_cache;

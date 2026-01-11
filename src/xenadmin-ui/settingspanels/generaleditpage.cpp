@@ -206,18 +206,9 @@ AsyncOperation* GeneralEditPage::SaveSettings()
         QString newFolder = this->ui->cmbFolder->currentText().trimmed();
         QStringList newTags = this->parseTagsFromText();
 
-        qDebug() << "GeneralEditPage: Creating GeneralEditPageAction - folder:" << newFolder
-                 << "tags:" << newTags;
+        qDebug() << "GeneralEditPage: Creating GeneralEditPageAction - folder:" << newFolder << "tags:" << newTags;
 
-        return new GeneralEditPageAction(
-             this->m_connection,
-             this->m_objectRef,
-             this->m_objectType,
-             this->m_originalFolder,
-             newFolder,
-             this->m_originalTags,
-             newTags,
-             true);
+        return new GeneralEditPageAction(this->m_object, this->m_originalFolder, newFolder, this->m_originalTags, newTags, true);
     }
 
     return nullptr;

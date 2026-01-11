@@ -39,7 +39,7 @@ XenObject::XenObject(XenConnection* connection, const QString& opaqueRef, QObjec
     if (connection)
         this->m_cache = connection->GetCache();
     else
-        this->m_cache = nullptr;
+        this->m_cache = XenCache::GetDummy();
 }
 
 XenObject::~XenObject()

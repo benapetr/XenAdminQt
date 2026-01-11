@@ -71,8 +71,6 @@ void AttachVirtualDiskCommand::Run()
     QString vmRef = vm->OpaqueRef();
 
     XenCache* cache = vm->GetCache();
-    if (!cache)
-        return;
 
     // Check VBD limit
     QVariantMap vmData = vm->GetData();

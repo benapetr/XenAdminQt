@@ -32,10 +32,8 @@
 #include "../../../xencache.h"
 #include <QDebug>
 
-RestartToolstackAction::RestartToolstackAction(XenConnection* connection,
-                                               QSharedPointer<Host> host,
-                                               QObject* parent)
-    : AsyncOperation(connection,
+RestartToolstackAction::RestartToolstackAction(QSharedPointer<Host> host, QObject* parent)
+    : AsyncOperation(host->GetConnection(),
                      QString("Restart toolstack on '%1'").arg(host ? host->GetName() : ""),
                      "",
                      parent),

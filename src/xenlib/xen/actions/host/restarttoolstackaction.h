@@ -62,9 +62,7 @@ class XENLIB_EXPORT RestartToolstackAction : public AsyncOperation
          * @param host Host object whose toolstack will be restarted
          * @param parent Parent QObject
          */
-        explicit RestartToolstackAction(XenConnection* connection,
-                                        QSharedPointer<Host> host,
-                                        QObject* parent = nullptr);
+        explicit RestartToolstackAction(QSharedPointer<Host> host, QObject* parent = nullptr);
         ~RestartToolstackAction();
 
     protected:

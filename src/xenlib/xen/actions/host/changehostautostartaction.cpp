@@ -49,27 +49,27 @@ ChangeHostAutostartAction::ChangeHostAutostartAction(XenConnection* connection,
 
 void ChangeHostAutostartAction::run()
 {
-    if (!GetConnection() || !GetSession())
+    if (!this->GetConnection() || !this->GetSession())
     {
         qWarning() << "ChangeHostAutostartAction: No connection or session";
         return;
     }
 
-    SetPercentComplete(0);
-    SetDescription(tr("Updating VM autostart setting..."));
+    this->SetPercentComplete(0);
+    this->SetDescription(this->tr("Updating VM autostart setting..."));
 
     try
     {
         // Get pool reference for this host
         // In C#: Pool p = Helpers.GetPoolOfOne(Connection);
-        XenRpcAPI api(GetSession());
+        XenRpcAPI api(this->GetSession());
 
         // First, get the host's pool reference
         QVariantList hostPoolParams;
-        hostPoolParams << GetSession()->getSessionId() << m_hostRef;
+        hostPoolParams << this->GetSession()->getSessionId() << this->m_hostRef;
 
         QByteArray hostPoolRequest = api.BuildJsonRpcCall("session.get_pool", hostPoolParams);
-        QByteArray hostPoolResponse = GetConnection()->SendRequest(hostPoolRequest);
+        QByteArray hostPoolResponse = this->GetConnection()->SendRequest(hostPoolRequest);
         QVariant poolRefVariant = api.ParseJsonRpcResponse(hostPoolResponse);
         QString poolRef = poolRefVariant.toString();
 
@@ -79,38 +79,38 @@ void ChangeHostAutostartAction::run()
             return;
         }
 
-        SetPercentComplete(30);
+        this->SetPercentComplete(30);
 
         // Get current other_config
         QVariantList getConfigParams;
-        getConfigParams << GetSession()->getSessionId() << poolRef;
+        getConfigParams << this->GetSession()->getSessionId() << poolRef;
 
         QByteArray getConfigRequest = api.BuildJsonRpcCall("pool.get_other_config", getConfigParams);
-        QByteArray getConfigResponse = GetConnection()->SendRequest(getConfigRequest);
+        QByteArray getConfigResponse = this->GetConnection()->SendRequest(getConfigRequest);
         QVariant otherConfigVariant = api.ParseJsonRpcResponse(getConfigResponse);
         QVariantMap otherConfig = otherConfigVariant.toMap();
 
-        SetPercentComplete(50);
+        this->SetPercentComplete(50);
 
         // Update auto_poweron value
-        otherConfig["auto_poweron"] = m_enableAutostart ? "true" : "false";
+        otherConfig["auto_poweron"] = this->m_enableAutostart ? "true" : "false";
 
         // Set the modified other_config back
         QVariantList setConfigParams;
         setConfigParams << GetSession()->getSessionId() << poolRef << otherConfig;
 
         QByteArray setConfigRequest = api.BuildJsonRpcCall("pool.set_other_config", setConfigParams);
-        QByteArray setConfigResponse = GetConnection()->SendRequest(setConfigRequest);
+        QByteArray setConfigResponse = this->GetConnection()->SendRequest(setConfigRequest);
 
         // Parse response to check for errors
         api.ParseJsonRpcResponse(setConfigResponse);
 
-        SetPercentComplete(100);
-        SetDescription(tr("VM autostart setting updated successfully"));
+        this->SetPercentComplete(100);
+        this->SetDescription(this->tr("VM autostart setting updated successfully"));
 
     } catch (const std::exception& e)
     {
         qWarning() << "ChangeHostAutostartAction failed:" << e.what();
-        SetDescription(tr("Failed to change VM autostart: %1").arg(e.what()));
+        this->SetDescription(this->tr("Failed to change VM autostart: %1").arg(e.what()));
     }
 }
