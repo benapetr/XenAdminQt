@@ -119,36 +119,53 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          # Pick the Qt directory (Qt 6 first, then Qt 5). Handle both *_DIR and *_Dir variants.
+          # Resolve Qt dir (Qt6 first, then Qt5) and Qt root (the folder that contains Tools/)
           $qtDir = $env:Qt6_DIR
           if (-not $qtDir) { $qtDir = $env:Qt6_Dir }
           if (-not $qtDir) { $qtDir = $env:Qt5_DIR }
           if (-not $qtDir) { $qtDir = $env:Qt5_Dir }
+          if (-not $qtDir) { throw "No Qt dir env var found." }
 
-          if (-not $qtDir) {
-            throw "No Qt dir env var found (Qt6_DIR/Qt6_Dir/Qt5_DIR/Qt5_Dir)."
+          $qtBin  = Join-Path $qtDir 'bin'
+          $qtRoot = Split-Path (Split-Path $qtDir -Parent) -Parent   # ...\Qt\<ver>\<kit> -> ...\Qt
+          if (-not (Test-Path $qtRoot)) { throw "Qt root not found: $qtRoot" }
+
+          # Prefer MinGW that matches the kit:
+          # - Qt5 mingw81_64 -> mingw810_64
+          # - Qt6 mingw_64   -> usually mingw1120_64 (or similar), but we auto-detect.
+          $toolsDir = Join-Path $qtRoot 'Tools'
+
+          $gpp = $null
+          if (Test-Path $toolsDir) {
+            # Find all MinGW toolchains under Tools, pick the newest by folder name (simple heuristic)
+            $gpps = Get-ChildItem -Path $toolsDir -Recurse -Filter 'g++.exe' -File -ErrorAction SilentlyContinue |
+                    Where-Object { $_.FullName -match '\\Tools\\mingw.*\\bin\\g\+\+\.exe$' }
+
+            if ($gpps) {
+              $gpp = $gpps |
+                Sort-Object { $_.FullName } -Descending |
+                Select-Object -First 1
+            }
           }
 
-          $qtBin = Join-Path $qtDir 'bin'
+          if (-not $gpp) {
+            throw "Could not find Qt Tools MinGW g++.exe under: $toolsDir (did you install tools_mingw?)"
+          }
 
-          # Find a matching MinGW toolchain under IQTA_TOOLS (Qt tools)
-          if (-not $env:IQTA_TOOLS) { throw "IQTA_TOOLS is not set" }
-          $toolsRoot = $env:IQTA_TOOLS
-
-          $gpp = Get-ChildItem -Path $toolsRoot -Recurse -Filter 'g++.exe' -File -ErrorAction SilentlyContinue |
-                Where-Object { $_.FullName -match '\\bin\\g\+\+\.exe$' } |
-                Select-Object -First 1
-
-          if (-not $gpp) { throw "Could not find g++.exe under IQTA_TOOLS=$toolsRoot" }
           $mingwBin = Split-Path $gpp.FullName -Parent
 
-          $env:PATH = "$qtBin;$mingwBin;$env:PATH"
+          # Remove conflicting runner toolchain path so it can't shadow
+          $pathParts = $env:PATH -split ';' | Where-Object { $_ -and ($_ -ne 'C:\mingw64\bin') }
+
+          # Prepend Qt + the Qt-tools MinGW bin
+          $env:PATH = ($qtBin, $mingwBin, $pathParts) -join ';'
 
           "Qt dir:   $qtDir"
           "Qt bin:   $qtBin"
+          "Qt root:  $qtRoot"
           "MinGW:    $mingwBin"
-          (Get-Command qmake).Source
-          (Get-Command g++).Source
+          "qmake:    " + (Get-Command qmake -ErrorAction Stop).Source
+          "g++:      " + (Get-Command g++ -ErrorAction Stop).Source
           g++ --version
           qmake -v
 
