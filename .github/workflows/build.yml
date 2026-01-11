@@ -113,47 +113,25 @@ jobs:
           Get-Command gcc,g++,mingw32-make,qmake -ErrorAction SilentlyContinue | Format-Table -AutoSize
           if (Get-Command qmake -ErrorAction SilentlyContinue) { qmake -v }
 
-      - name: Force MinGW (matching Qt kit) on PATH (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-
-          # Qt bin (qmake)
-          $qtDir = if ($env:Qt6_Dir) { $env:Qt6_Dir } else { $env:Qt5_Dir }
-          $qtBin = Join-Path $qtDir 'bin'
-
-          if (-not $env:IQTA_TOOLS) { throw "IQTA_TOOLS is not set" }
-          $toolsRoot = $env:IQTA_TOOLS
-
-          # Find a Qt-provided MinGW g++.exe under IQTA_TOOLS
-          $gpp = Get-ChildItem -Path $toolsRoot -Recurse -Filter 'g++.exe' -File -ErrorAction SilentlyContinue |
-                Where-Object { $_.FullName -match '\\bin\\g\+\+\.exe$' } |
-                Select-Object -First 1
-
-          if (-not $gpp) {
-            throw "Could not find g++.exe under IQTA_TOOLS=$toolsRoot"
-          }
-
-          $mingwBin = Split-Path $gpp.FullName -Parent
-
-          # Remove known conflicting toolchain path if present (runner's C:\mingw64\bin)
-          $pathParts = $env:PATH -split ';' | Where-Object { $_ -and ($_ -ne 'C:\mingw64\bin') }
-
-          # Prepend Qt + MinGW bins
-          $env:PATH = ($qtBin, $mingwBin, $pathParts) -join ';'
-
-          "Using qtBin:    $qtBin"
-          "Using mingwBin: $mingwBin"
-          "g++ resolved to: " + (Get-Command g++).Source
-          g++ --version
-          qmake -v
-
       - name: Configure project (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+
+          $qtDir = $env:Qt5_Dir
+          $qtBin = Join-Path $qtDir 'bin'
+          $toolsRoot = $env:IQTA_TOOLS
+          $gpp = Get-ChildItem -Path $toolsRoot -Recurse -Filter 'g++.exe' -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -match '\\bin\\g\+\+\.exe$' } |
+                Select-Object -First 1
+          $mingwBin = Split-Path $gpp.FullName -Parent
+
+          $env:PATH = "$qtBin;$mingwBin;$env:PATH"
+
+          g++ --version
+          qmake -v
+
           New-Item -ItemType Directory -Force build | Out-Null
           Push-Location build
           qmake ..\src\xenadminqt.pro
