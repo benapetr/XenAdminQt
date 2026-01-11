@@ -74,6 +74,14 @@ jobs:
           install: >-
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-make
+
+      - name: Add MSYS2 MinGW64 to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          "C:\msys64\usr\bin"     | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
       - name: Install Linux dependencies
         if: matrix.host == 'linux'
         run: |
@@ -85,6 +93,7 @@ jobs:
             apt-get update
             apt-get install -y build-essential pkg-config freerdp2-dev libwinpr2-dev mesa-common-dev libglu1-mesa-dev libegl1 libxkbcommon0
           fi
+
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
         with:
@@ -95,36 +104,54 @@ jobs:
           modules: qtcharts
           install-deps: false
           cache: true
-      - name: Add MSYS2 MinGW64 to PATH
-        if: runner.os == 'Windows'
-        shell: cmd
-        run: |
-          echo C:\msys64\mingw64\bin>> "%GITHUB_PATH%"
+
       - name: Show qmake version
         run: qmake -v
+
       - name: Configure project (Unix)
         if: runner.os != 'Windows'
         run: |
           mkdir -p build
           cd build
           qmake ../src/xenadminqt.pro
+
+      - name: Diagnose toolchain (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          "Qt5_Dir=$env:Qt5_Dir"
+          "Qt6_Dir=$env:Qt6_Dir"
+          "PATH=$env:PATH"
+          Get-Command gcc,g++,mingw32-make,qmake -ErrorAction SilentlyContinue | Format-Table -AutoSize
+          if (Get-Command qmake -ErrorAction SilentlyContinue) { qmake -v }
+
       - name: Configure project (Windows)
         if: runner.os == 'Windows'
-        shell: msys2 {0}
+        shell: pwsh
         run: |
-          mkdir -p build
-          cd build
-          QT_PATH=$(cygpath -u "$GITHUB_WORKSPACE")/../Qt/${{ matrix.qt_version }}/${{ matrix.qt_arch }}
-          echo "QT_PATH: $QT_PATH"
-          export PATH="$QT_PATH/bin:$PATH"
-          echo "PATH: $PATH"
-          echo "running ls on Qt bin directory"
-          ls "$QT_PATH/bin"
-          echo "running ls on Qt directory"
-          ls "$QT_PATH"
-          echo "running ls on GITHUB_WORKSPACE"
-          ls "$GITHUB_WORKSPACE"
-          qmake ../src/xenadminqt.pro
+          $ErrorActionPreference = 'Stop'
+
+          # Ensure Qt's qmake is on PATH for this shell, without guessing paths.
+          if ($env:Qt6_Dir) {
+            $qtDir = $env:Qt6_Dir
+          } elseif ($env:Qt5_Dir) {
+            $qtDir = $env:Qt5_Dir
+          } else {
+            throw "Neither Qt6_Dir nor Qt5_Dir is set. install-qt-action did not export Qt dir."
+          }
+
+          $qtBin = Join-Path $qtDir "bin"
+          $env:PATH = "$qtBin;$env:PATH"
+
+          Write-Host "Using Qt: $qtDir"
+          Get-Command qmake -ErrorAction Stop | Format-List
+          qmake -v
+
+          New-Item -ItemType Directory -Force -Path build | Out-Null
+          Push-Location build
+          qmake ..\src\xenadminqt.pro
+          Pop-Location
+
       - name: Build project (Unix)
         if: runner.os != 'Windows'
         run: |
@@ -136,9 +163,27 @@ jobs:
           fi
       - name: Build project (Windows)
         if: runner.os == 'Windows'
-        shell: msys2 {0}
+        shell: pwsh
         run: |
-          cd build
-          QT_PATH=$(cygpath -u "$GITHUB_WORKSPACE")/../Qt/${{ matrix.qt_version }}/${{ matrix.qt_arch }}
-          export PATH="$QT_PATH/bin:$PATH"
-          mingw32-make -j%NUMBER_OF_PROCESSORS%
+          $ErrorActionPreference = 'Stop'
+
+          # Ensure Qt bin is on PATH in this shell too.
+          if ($env:Qt6_Dir) {
+            $qtDir = $env:Qt6_Dir
+          } else {
+            $qtDir = $env:Qt5_Dir
+          }
+          $env:PATH = "$(Join-Path $qtDir 'bin');$env:PATH"
+
+          Push-Location build
+
+          # Prefer mingw32-make if present, fall back to make.
+          $make = (Get-Command mingw32-make -ErrorAction SilentlyContinue)?.Source
+          if (-not $make) { $make = (Get-Command make -ErrorAction SilentlyContinue)?.Source }
+          if (-not $make) { throw "Neither mingw32-make nor make found on PATH." }
+
+          $jobs = $env:NUMBER_OF_PROCESSORS
+          if (-not $jobs) { $jobs = 2 }
+
+          & $make "-j$jobs"
+          Pop-Location
