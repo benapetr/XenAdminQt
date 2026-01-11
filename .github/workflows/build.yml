@@ -118,6 +118,12 @@ jobs:
           echo "QT_PATH: $QT_PATH"
           export PATH="$QT_PATH/bin:$PATH"
           echo "PATH: $PATH"
+          echo "running ls on Qt bin directory"
+          ls "$QT_PATH/bin"
+          echo "running ls on Qt directory"
+          ls "$QT_PATH"
+          echo "running ls on GITHUB_WORKSPACE"
+          ls "$GITHUB_WORKSPACE"
           qmake ../src/xenadminqt.pro
       - name: Build project (Unix)
         if: runner.os != 'Windows'
