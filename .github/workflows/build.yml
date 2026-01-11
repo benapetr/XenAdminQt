@@ -115,7 +115,9 @@ jobs:
           mkdir -p build
           cd build
           QT_PATH=$(cygpath -u "$GITHUB_WORKSPACE")/../Qt/${{ matrix.qt_version }}/${{ matrix.qt_arch }}
+          echo "QT_PATH: $QT_PATH"
           export PATH="$QT_PATH/bin:$PATH"
+          echo "PATH: $PATH"
           qmake ../src/xenadminqt.pro
       - name: Build project (Unix)
         if: runner.os != 'Windows'
