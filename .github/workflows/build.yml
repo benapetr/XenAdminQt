@@ -65,6 +65,15 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+      - name: Setup MSYS2 (MinGW64)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-make
       - name: Install Linux dependencies
         if: matrix.host == 'linux'
         run: |
@@ -86,6 +95,11 @@ jobs:
           modules: qtcharts
           install-deps: false
           cache: true
+      - name: Add MSYS2 MinGW64 to PATH
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          echo C:\msys64\mingw64\bin>> %GITHUB_PATH%
       - name: Show qmake version
         run: qmake -v
       - name: Configure project (Unix)
