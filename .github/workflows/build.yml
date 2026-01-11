@@ -131,21 +131,42 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          # Ensure Qt's qmake is on PATH for this shell, without guessing paths.
-          if ($env:Qt6_Dir) {
-            $qtDir = $env:Qt6_Dir
-          } elseif ($env:Qt5_Dir) {
-            $qtDir = $env:Qt5_Dir
-          } else {
-            throw "Neither Qt6_Dir nor Qt5_Dir is set. install-qt-action did not export Qt dir."
-          }
-
+          # Pick Qt dir from env (set by install-qt-action)
+          if ($env:Qt6_Dir) { $qtDir = $env:Qt6_Dir } else { $qtDir = $env:Qt5_Dir }
           $qtBin = Join-Path $qtDir "bin"
           $env:PATH = "$qtBin;$env:PATH"
 
-          Write-Host "Using Qt: $qtDir"
-          Get-Command qmake -ErrorAction Stop | Format-List
+          # Try to locate MinGW that belongs to the Qt install (common layouts)
+          $candidates = @(
+            (Join-Path $qtDir "..\..\Tools\mingw*64\bin"),
+            (Join-Path $qtDir "..\..\..\Tools\mingw*64\bin"),
+            (Join-Path $qtDir "..\..\Tools\mingw*32\bin"),
+            (Join-Path $qtDir "..\..\..\Tools\mingw*32\bin")
+          )
+
+          $mingwBin = $null
+          foreach ($p in $candidates) {
+            $matches = Get-ChildItem -Path $p -Directory -ErrorAction SilentlyContinue
+            foreach ($m in $matches) {
+              $bin = Join-Path $m.FullName "bin"
+              if (Test-Path (Join-Path $bin "g++.exe")) { $mingwBin = $bin; break }
+            }
+            if ($mingwBin) { break }
+          }
+
+          if ($mingwBin) {
+            "Using Qt-bundled MinGW: $mingwBin"
+            $env:PATH = "$mingwBin;$env:PATH"
+          } else {
+            "Qt-bundled MinGW not found near Qt dir; will rely on system PATH."
+          }
+
+          # Prove toolchain visibility
+          Get-Command g++,gcc,mingw32-make -ErrorAction SilentlyContinue | Format-Table -AutoSize
+          if (-not (Get-Command g++ -ErrorAction SilentlyContinue)) { throw "g++ not found on PATH" }
+
           qmake -v
+          g++ --version
 
           New-Item -ItemType Directory -Force -Path build | Out-Null
           Push-Location build
