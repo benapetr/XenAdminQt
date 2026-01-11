@@ -65,22 +65,6 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
-      - name: Setup MSYS2 (MinGW64)
-        if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: true
-          install: >-
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-make
-
-      - name: Add MSYS2 MinGW64 to PATH (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          "C:\msys64\usr\bin"     | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install Linux dependencies
         if: matrix.host == 'linux'
@@ -104,6 +88,10 @@ jobs:
           modules: qtcharts
           install-deps: false
           cache: true
+
+          # Needed for windows
+          tools: ${{ runner.os == 'Windows' && matrix.qt_version == '5.15.2' && 'tools_mingw,qt.tools.win64_mingw810' || '' }}
+          add-tools-to-path: true
 
       - name: Show qmake version
         run: qmake -v
@@ -131,44 +119,15 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          # Pick Qt dir from env (set by install-qt-action)
           if ($env:Qt6_Dir) { $qtDir = $env:Qt6_Dir } else { $qtDir = $env:Qt5_Dir }
-          $qtBin = Join-Path $qtDir "bin"
-          $env:PATH = "$qtBin;$env:PATH"
+          $env:PATH = "$(Join-Path $qtDir 'bin');$env:PATH"
 
-          # Try to locate MinGW that belongs to the Qt install (common layouts)
-          $candidates = @(
-            (Join-Path $qtDir "..\..\Tools\mingw*64\bin"),
-            (Join-Path $qtDir "..\..\..\Tools\mingw*64\bin"),
-            (Join-Path $qtDir "..\..\Tools\mingw*32\bin"),
-            (Join-Path $qtDir "..\..\..\Tools\mingw*32\bin")
-          )
-
-          $mingwBin = $null
-          foreach ($p in $candidates) {
-            $matches = Get-ChildItem -Path $p -Directory -ErrorAction SilentlyContinue
-            foreach ($m in $matches) {
-              $bin = Join-Path $m.FullName "bin"
-              if (Test-Path (Join-Path $bin "g++.exe")) { $mingwBin = $bin; break }
-            }
-            if ($mingwBin) { break }
-          }
-
-          if ($mingwBin) {
-            "Using Qt-bundled MinGW: $mingwBin"
-            $env:PATH = "$mingwBin;$env:PATH"
-          } else {
-            "Qt-bundled MinGW not found near Qt dir; will rely on system PATH."
-          }
-
-          # Prove toolchain visibility
-          Get-Command g++,gcc,mingw32-make -ErrorAction SilentlyContinue | Format-Table -AutoSize
-          if (-not (Get-Command g++ -ErrorAction SilentlyContinue)) { throw "g++ not found on PATH" }
-
-          qmake -v
+          # Sanity check: make sure we're NOT using C:\mingw64 anymore
+          Get-Command g++ -ErrorAction Stop | Format-List
           g++ --version
+          qmake -v
 
-          New-Item -ItemType Directory -Force -Path build | Out-Null
+          New-Item -ItemType Directory -Force build | Out-Null
           Push-Location build
           qmake ..\src\xenadminqt.pro
           Pop-Location
