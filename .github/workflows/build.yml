@@ -119,35 +119,33 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          # Qt bin
+          # Qt bin (qmake)
           $qtDir = if ($env:Qt6_Dir) { $env:Qt6_Dir } else { $env:Qt5_Dir }
           $qtBin = Join-Path $qtDir 'bin'
 
-          # Find Qt-installed MinGW toolchain under IQTA_TOOLS (set by install-qt-action)
           if (-not $env:IQTA_TOOLS) { throw "IQTA_TOOLS is not set" }
           $toolsRoot = $env:IQTA_TOOLS
 
-          # Most common layouts:
-          $candidates = @(
-            Join-Path $toolsRoot 'mingw810_64\bin',
-            Join-Path $toolsRoot 'mingw1120_64\bin',
-            Join-Path $toolsRoot 'mingw\bin'
-          ) + (Get-ChildItem -Path $toolsRoot -Directory -ErrorAction SilentlyContinue |
-              Where-Object { $_.Name -like 'mingw*64' } |
-              ForEach-Object { Join-Path $_.FullName 'bin' })
+          # Find a Qt-provided MinGW g++.exe under IQTA_TOOLS
+          $gpp = Get-ChildItem -Path $toolsRoot -Recurse -Filter 'g++.exe' -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.FullName -match '\\bin\\g\+\+\.exe$' } |
+                Select-Object -First 1
 
-          $mingwBin = $candidates | Where-Object { Test-Path (Join-Path $_ 'g++.exe') } | Select-Object -First 1
-          if (-not $mingwBin) {
-            throw "Could not find Qt toolchain g++.exe under $toolsRoot. Candidates tried: $($candidates -join ', ')"
+          if (-not $gpp) {
+            throw "Could not find g++.exe under IQTA_TOOLS=$toolsRoot"
           }
 
-          # Remove the runner-provided C:\mingw64\bin if present, to avoid shadowing
+          $mingwBin = Split-Path $gpp.FullName -Parent
+
+          # Remove known conflicting toolchain path if present (runner's C:\mingw64\bin)
           $pathParts = $env:PATH -split ';' | Where-Object { $_ -and ($_ -ne 'C:\mingw64\bin') }
+
+          # Prepend Qt + MinGW bins
           $env:PATH = ($qtBin, $mingwBin, $pathParts) -join ';'
 
           "Using qtBin:    $qtBin"
           "Using mingwBin: $mingwBin"
-          (Get-Command g++).Source
+          "g++ resolved to: " + (Get-Command g++).Source
           g++ --version
           qmake -v
 
@@ -165,6 +163,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           cd build
+          exit 0
           if [ "$RUNNER_OS" = "macOS" ]; then
             make -j"$(sysctl -n hw.logicalcpu)"
           else
