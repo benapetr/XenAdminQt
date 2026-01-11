@@ -51,6 +51,16 @@ jobs:
             host: mac
             qt_version: "6.6.2"
             qt_arch: clang_64
+          - name: Windows / Qt 5.15.2 (MinGW)
+            runs_on: windows-latest
+            host: windows
+            qt_version: "5.15.2"
+            qt_arch: win64_mingw81
+          - name: Windows / Qt 6.6.2 (MinGW)
+            runs_on: windows-latest
+            host: windows
+            qt_version: "6.6.2"
+            qt_arch: win64_mingw
 
     steps:
       - name: Checkout sources
@@ -78,12 +88,21 @@ jobs:
           cache: true
       - name: Show qmake version
         run: qmake -v
-      - name: Configure project
+      - name: Configure project (Unix)
+        if: runner.os != 'Windows'
         run: |
           mkdir -p build
           cd build
           qmake ../src/xenadminqt.pro
-      - name: Build project
+      - name: Configure project (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if not exist build mkdir build
+          cd build
+          qmake ..\src\xenadminqt.pro
+      - name: Build project (Unix)
+        if: runner.os != 'Windows'
         run: |
           cd build
           if [ "$RUNNER_OS" = "macOS" ]; then
@@ -91,3 +110,9 @@ jobs:
           else
             make -j"$(nproc)"
           fi
+      - name: Build project (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          cd build
+          mingw32-make -j%NUMBER_OF_PROCESSORS%
