@@ -11,6 +11,12 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 # Windows: building/using static library; disable dllimport/export in headers
 win32:DEFINES += XENLIB_STATIC
 
+win32
+{
+    CONFIG += static
+    QMAKE_LFLAGS += -static -static-libstdc++ -static-libgcc
+}
+
 # Source files
 SOURCES += \
     utils/misc.cpp \

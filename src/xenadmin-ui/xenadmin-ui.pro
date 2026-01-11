@@ -550,7 +550,6 @@ FORMS += \
     ConsoleView/VNCTabView.ui \
     ConsoleView/ConsolePanel.ui
 
-# Resources (empty for now)
 RESOURCES += resources.qrc
 
 # Link with xenlib
@@ -559,9 +558,10 @@ INCLUDEPATH += .. ../xenlib
 # Windows: using xenlib as a static lib; avoid dllimport in headers
 win32:DEFINES += XENLIB_STATIC
 
-# On Windows (MinGW/MSVC), link against the sibling build output
-# so the linker finds libxenlib.a (debug) or the release variant.
+# On Windows (MinGW/MSVC), build completely statically, so that we can monolithic .exe file
 win32 {
+    CONFIG += static
+    QMAKE_LFLAGS += -static -static-libstdc++ -static-libgcc
     CONFIG(debug, debug|release) {
         LIBS += -L$$OUT_PWD/../xenlib/debug -lxenlib
         PRE_TARGETDEPS += $$OUT_PWD/../xenlib/debug/libxenlib.a
