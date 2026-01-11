@@ -89,8 +89,8 @@ jobs:
           install-deps: false
           cache: true
 
-          # Needed for windows
-          tools: ${{ runner.os == 'Windows' && matrix.qt_version == '5.15.2' && 'tools_mingw,qt.tools.win64_mingw810' || '' }}
+          # Needed for Windows (Qt MinGW)
+          tools: ${{ runner.os == 'Windows' && (startsWith(matrix.qt_version, '5.') && 'tools_mingw,qt.tools.win64_mingw810' || startsWith(matrix.qt_version, '6.') && 'tools_mingw,qt.tools.win64_mingw1120') }}
           add-tools-to-path: true
 
       - name: Show qmake version
