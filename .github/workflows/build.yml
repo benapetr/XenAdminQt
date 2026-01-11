@@ -114,6 +114,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
+          export PATH="/c/Qt/${{ matrix.qt_version }}/${{ matrix.qt_arch }}/bin:$PATH"
           qmake ../src/xenadminqt.pro
       - name: Build project (Unix)
         if: runner.os != 'Windows'
@@ -128,6 +129,6 @@ jobs:
         if: runner.os == 'Windows'
         shell: msys2 {0}
         run: |
-          mkdir -p build
           cd build
-          qmake ../src/xenadminqt.pro
+          export PATH="/c/Qt/${{ matrix.qt_version }}/${{ matrix.qt_arch }}/bin:$PATH"
+          mingw32-make -j%NUMBER_OF_PROCESSORS%
