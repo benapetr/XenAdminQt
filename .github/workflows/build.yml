@@ -119,16 +119,36 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          $qtDir = $env:Qt5_Dir
+          # Pick the Qt directory (Qt 6 first, then Qt 5). Handle both *_DIR and *_Dir variants.
+          $qtDir = $env:Qt6_DIR
+          if (-not $qtDir) { $qtDir = $env:Qt6_Dir }
+          if (-not $qtDir) { $qtDir = $env:Qt5_DIR }
+          if (-not $qtDir) { $qtDir = $env:Qt5_Dir }
+
+          if (-not $qtDir) {
+            throw "No Qt dir env var found (Qt6_DIR/Qt6_Dir/Qt5_DIR/Qt5_Dir)."
+          }
+
           $qtBin = Join-Path $qtDir 'bin'
+
+          # Find a matching MinGW toolchain under IQTA_TOOLS (Qt tools)
+          if (-not $env:IQTA_TOOLS) { throw "IQTA_TOOLS is not set" }
           $toolsRoot = $env:IQTA_TOOLS
+
           $gpp = Get-ChildItem -Path $toolsRoot -Recurse -Filter 'g++.exe' -File -ErrorAction SilentlyContinue |
                 Where-Object { $_.FullName -match '\\bin\\g\+\+\.exe$' } |
                 Select-Object -First 1
+
+          if (-not $gpp) { throw "Could not find g++.exe under IQTA_TOOLS=$toolsRoot" }
           $mingwBin = Split-Path $gpp.FullName -Parent
 
           $env:PATH = "$qtBin;$mingwBin;$env:PATH"
 
+          "Qt dir:   $qtDir"
+          "Qt bin:   $qtBin"
+          "MinGW:    $mingwBin"
+          (Get-Command qmake).Source
+          (Get-Command g++).Source
           g++ --version
           qmake -v
 
