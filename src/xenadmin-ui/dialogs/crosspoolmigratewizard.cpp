@@ -712,11 +712,7 @@ void CrossPoolMigrateWizard::accept()
         {
             if (this->isCopyCloneSelected())
             {
-                VMCloneAction* action = new VMCloneAction(this->m_sourceConnection,
-                                                          vmItem,
-                                                          this->copyName(),
-                                                          this->copyDescription(),
-                                                          this);
+                VMCloneAction* action = new VMCloneAction(vmItem, this->copyName(), this->copyDescription(), this);
                 OperationManager::instance()->RegisterOperation(action);
                 action->RunAsync();
             }
@@ -726,13 +722,7 @@ void CrossPoolMigrateWizard::accept()
                 QSharedPointer<SR> sr = cache ? cache->ResolveObject<SR>("sr", this->copyTargetSrRef()) : QSharedPointer<SR>();
                 if (sr && sr->IsValid())
                 {
-                    VMCopyAction* action = new VMCopyAction(this->m_sourceConnection,
-                                                            vmItem,
-                                                            QSharedPointer<Host>(),
-                                                            sr,
-                                                            this->copyName(),
-                                                            this->copyDescription(),
-                                                            this);
+                    VMCopyAction* action = new VMCopyAction(vmItem, QSharedPointer<Host>(), sr, this->copyName(), this->copyDescription(), this);
                     OperationManager::instance()->RegisterOperation(action);
                     action->RunAsync();
                 }
@@ -812,19 +802,19 @@ void CrossPoolMigrateWizard::accept()
         return false;
     };
 
-    for (const QSharedPointer<VM>& vmItem : this->m_vms)
+    for (const QSharedPointer<VM>& vm : this->m_vms)
     {
-        if (!vmItem)
+        if (!vm)
             continue;
 
-        VmMapping mapping = this->m_vmMappings.value(vmItem->OpaqueRef());
+        VmMapping mapping = this->m_vmMappings.value(vm->OpaqueRef());
         mapping.targetRef = this->m_targetHostRef;
 
         XenCache* sourceCache = this->m_sourceConnection ? this->m_sourceConnection->GetCache() : nullptr;
         bool sameConnection = (this->m_sourceConnection == this->m_targetConnection);
-        bool hasStorageMotion = isStorageMotion(vmItem, mapping, sourceCache);
+        bool hasStorageMotion = isStorageMotion(vm, mapping, sourceCache);
 
-        if (this->m_mode == WizardMode::Move && sameConnection && vmItem->CanBeMoved())
+        if (this->m_mode == WizardMode::Move && sameConnection && vm->CanBeMoved())
         {
             if (hasStorageMotion && sourceCache)
             {
@@ -843,16 +833,11 @@ void CrossPoolMigrateWizard::accept()
 
                 QSharedPointer<Host> hostObj = sourceCache->ResolveObject<Host>("host", this->m_targetHostRef);
 
-                VMMoveAction* action = new VMMoveAction(this->m_sourceConnection,
-                                                        vmItem,
-                                                        storageMap,
-                                                        hostObj,
-                                                        this);
+                VMMoveAction* action = new VMMoveAction(vm, storageMap, hostObj, this);
                 OperationManager::instance()->RegisterOperation(action);
                 action->RunAsync();
             }
-        }
-        else
+        } else
         {
             bool useCrossPool = (this->m_mode == WizardMode::Copy) || hasStorageMotion || !sameConnection;
             if (useCrossPool)
@@ -860,7 +845,7 @@ void CrossPoolMigrateWizard::accept()
                 VMCrossPoolMigrateAction* action = new VMCrossPoolMigrateAction(
                     this->m_sourceConnection,
                     this->m_targetConnection,
-                    vmItem->OpaqueRef(),
+                    vm->OpaqueRef(),
                     this->m_targetHostRef,
                     this->m_transferNetworkRef,
                     mapping,
@@ -869,13 +854,10 @@ void CrossPoolMigrateWizard::accept()
 
                 OperationManager::instance()->RegisterOperation(action);
                 action->RunAsync();
-            }
-            else
+            } else
             {
-                VMMigrateAction* action = new VMMigrateAction(this->m_sourceConnection,
-                                                             vmItem->OpaqueRef(),
-                                                             this->m_targetHostRef,
-                                                             this);
+                QSharedPointer<Host> host = vm->GetCache()->ResolveObject<Host>("host", this->m_targetHostRef);
+                VMMigrateAction* action = new VMMigrateAction(vm, host, this);
                 OperationManager::instance()->RegisterOperation(action);
                 action->RunAsync();
             }

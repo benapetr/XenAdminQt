@@ -30,32 +30,33 @@
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
 
-VMToTemplateAction::VMToTemplateAction(XenConnection* connection,
-                                       QSharedPointer<VM> vm,
+VMToTemplateAction::VMToTemplateAction(QSharedPointer<VM> vm,
                                        QObject* parent)
-    : AsyncOperation(connection,
-                     QString("Converting '%1' to template").arg(vm ? vm->GetName() : ""),
+    : AsyncOperation( QString("Converting '%1' to template").arg(vm ? vm->GetName() : ""),
                      "Preparing",
                      parent),
       m_vm(vm)
 {
     if (!this->m_vm)
         throw std::invalid_argument("VM cannot be null");
+
+
+    this->m_connection = vm->GetConnection();
 }
 
 void VMToTemplateAction::run()
 {
     try
     {
-        SetDescription("Converting VM to template");
+        this->SetDescription("Converting VM to template");
 
         // Set is_a_template flag to true
-        XenAPI::VM::set_is_a_template(GetSession(), m_vm->OpaqueRef(), true);
+        XenAPI::VM::set_is_a_template(GetSession(), this->m_vm->OpaqueRef(), true);
 
-        SetDescription("VM converted to template");
+        this->SetDescription("VM converted to template");
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to convert VM to template: %1").arg(e.what()));
+        this->setError(QString("Failed to convert VM to template: %1").arg(e.what()));
     }
 }

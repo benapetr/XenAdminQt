@@ -105,7 +105,7 @@ QSharedPointer<Host> VM::GetHost()
     XenCache* cache = connection->GetCache();
 
     QString residentOn = this->ResidentOnRef();
-    if (!residentOn.isEmpty() && residentOn != "OpaqueRef:NULL")
+    if (residentOn != "OpaqueRef:NULL")
     {
         QSharedPointer<Host> host = cache->ResolveObject<Host>("host", residentOn);
         if (host)
@@ -139,6 +139,37 @@ QStringList VM::GetVBDRefs() const
     return stringListProperty("VBDs");
 }
 
+QSharedPointer<VBD> VM::FindVMCDROM() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<VBD>();
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<VBD>();
+
+    QList<QSharedPointer<VBD>> cdroms;
+    const QStringList vbdRefs = this->GetVBDRefs();
+    for (const QString& vbdRef : vbdRefs)
+    {
+        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+        if (vbd && vbd->IsValid() && vbd->IsCD())
+            cdroms.append(vbd);
+    }
+
+    if (cdroms.isEmpty())
+        return QSharedPointer<VBD>();
+
+    std::sort(cdroms.begin(), cdroms.end(),
+              [](const QSharedPointer<VBD>& a, const QSharedPointer<VBD>& b)
+              {
+                  return a->GetUserdevice() < b->GetUserdevice();
+              });
+
+    return cdroms.first();
+}
+
 QStringList VM::GetVIFRefs() const
 {
     return stringListProperty("VIFs");
@@ -152,6 +183,14 @@ QStringList VM::GetConsoleRefs() const
 QString VM::SnapshotOfRef() const
 {
     return stringProperty("snapshot_of");
+}
+
+QSharedPointer<VM> VM::SnapshotOf()
+{
+    QString snapshot_of_ref = this->SnapshotOfRef();
+    if (snapshot_of_ref.isEmpty())
+        return QSharedPointer<VM>();
+    return this->GetCache()->ResolveObject<VM>("vm", snapshot_of_ref);
 }
 
 QStringList VM::GetSnapshotRefs() const
@@ -199,7 +238,7 @@ int VM::VCPUsAtStartup() const
     return intProperty("VCPUs_at_startup", 0);
 }
 
-bool VM::IsHvm() const
+bool VM::IsHVM() const
 {
     return !stringProperty("HVM_boot_policy").isEmpty();
 }
@@ -241,7 +280,7 @@ bool VM::IsWindows() const
         }
     }
 
-    if (this->IsHvm())
+    if (this->IsHVM())
     {
         QVariantMap platformMap = this->Platform();
         QString viridian = platformMap.value("viridian").toString();
@@ -262,6 +301,7 @@ bool VM::SupportsVCPUHotplug() const
 namespace
 {
     static const int DEFAULT_NUM_VCPUS_ALLOWED = 16;
+    static const int DEFAULT_NUM_VBDS_ALLOWED = 255;
 
     bool tryParseRestrictionValue(const QVariantMap& vmData,
                                   const QString& field,
@@ -373,6 +413,20 @@ int VM::MaxVCPUsAllowed() const
 
     QList<qint64> values = getRestrictionValuesAcrossTemplates(cache, "vcpus-max", "max");
     values.append(DEFAULT_NUM_VCPUS_ALLOWED);
+    return static_cast<int>(*std::max_element(values.begin(), values.end()));
+}
+
+int VM::MaxVBDsAllowed() const
+{
+    XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+    QVariantMap vmData = this->GetData();
+
+    qint64 value = 0;
+    if (tryGetMatchingTemplateRestriction(cache, vmData, "number-of-vbds", "max", value))
+        return static_cast<int>(value);
+
+    QList<qint64> values = getRestrictionValuesAcrossTemplates(cache, "number-of-vbds", "max");
+    values.append(DEFAULT_NUM_VBDS_ALLOWED);
     return static_cast<int>(*std::max_element(values.begin(), values.end()));
 }
 

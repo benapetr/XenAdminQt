@@ -92,7 +92,7 @@ void EjectHostFromPoolCommand::Run()
     }
 
     // Create and run the EjectHostFromPoolAction
-    EjectHostFromPoolAction* action = new EjectHostFromPoolAction(connection, host->GetPool(), host, nullptr);
+    EjectHostFromPoolAction* action = new EjectHostFromPoolAction(host->GetPool(), host, nullptr);
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);

@@ -29,19 +29,25 @@
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../session.h"
 #include "xen/network/connection.h"
+#include "xen/pool.h"
 #include <QDebug>
 
-SetPoolPropertyAction::SetPoolPropertyAction(XenConnection* connection,
-                                             const QString& poolRef,
+SetPoolPropertyAction::SetPoolPropertyAction(QSharedPointer<Pool> pool,
                                              const QString& propertyName,
                                              const QVariant& value,
                                              const QString& description,
                                              QObject* parent)
-    : AsyncOperation(connection, description, description, parent)
-    , m_poolRef(poolRef)
+    : AsyncOperation(description, description, parent)
+    , m_pool(pool)
     , m_propertyName(propertyName)
     , m_value(value)
 {
+    if (!this->m_pool || !this->m_pool->IsValid())
+    {
+        qWarning() << "SetPoolPropertyAction: Invalid pool object";
+    }
+
+    this->m_connection = pool->GetConnection();
 }
 
 void SetPoolPropertyAction::run()
@@ -54,33 +60,35 @@ void SetPoolPropertyAction::run()
             setError(tr("Not connected to XenServer"));
             return;
         }
+        if (!this->m_pool || !this->m_pool->IsValid())
+        {
+            setError(tr("Invalid pool object"));
+            return;
+        }
+
+        QString poolRef = this->m_pool->OpaqueRef();
         qDebug() << "SetPoolPropertyAction: Setting" << this->m_propertyName
-                 << "poolRef=" << this->m_poolRef
+                 << "poolRef=" << poolRef
                  << "value=" << this->m_value;
         if (!this->m_connection || !this->m_connection->IsConnected())
         {
             qWarning() << "SetPoolPropertyAction: Connection not ready for" << this->m_propertyName
-                       << "poolRef=" << this->m_poolRef
+                       << "poolRef=" << poolRef
                        << "connected=" << (this->m_connection ? this->m_connection->IsConnected() : false);
-        }
-        if (this->m_poolRef.isEmpty())
-        {
-            setError(tr("Pool reference is missing"));
-            return;
         }
 
         // Call the appropriate Pool.set_* method based on property name
         if (this->m_propertyName == "migration_compression")
         {
-            XenAPI::Pool::set_migration_compression(session, this->m_poolRef, this->m_value.toBool());
+            XenAPI::Pool::set_migration_compression(session, poolRef, this->m_value.toBool());
         }
         else if (this->m_propertyName == "live_patching_disabled")
         {
-            XenAPI::Pool::set_live_patching_disabled(session, this->m_poolRef, this->m_value.toBool());
+            XenAPI::Pool::set_live_patching_disabled(session, poolRef, this->m_value.toBool());
         }
         else if (this->m_propertyName == "igmp_snooping_enabled")
         {
-            XenAPI::Pool::set_igmp_snooping_enabled(session, this->m_poolRef, this->m_value.toBool());
+            XenAPI::Pool::set_igmp_snooping_enabled(session, poolRef, this->m_value.toBool());
         }
         else
         {

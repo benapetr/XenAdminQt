@@ -56,8 +56,7 @@ class VMCopyAction : public AsyncOperation
          * @param nameLabel Name for the copied VM
          * @param description Description for the copied VM
          */
-        VMCopyAction(XenConnection* connection,
-                     QSharedPointer<VM> vm,
+        VMCopyAction(QSharedPointer<VM> vm,
                      QSharedPointer<Host> host,
                      QSharedPointer<SR> sr,
                      const QString& nameLabel,

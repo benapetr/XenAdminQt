@@ -27,10 +27,10 @@
 
 #include "bootoptionseditpage.h"
 #include "ui_bootoptionseditpage.h"
-#include "../../xenlib/xen/asyncoperation.h"
-#include "../../xenlib/xen/network/connection.h"
-#include "../../xenlib/xen/session.h"
-#include "../../xenlib/xen/api.h"
+#include "xenlib/xen/asyncoperation.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/api.h"
 #include <QMessageBox>
 
 BootOptionsEditPage::BootOptionsEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::BootOptionsEditPage), m_origAutoBoot(false)

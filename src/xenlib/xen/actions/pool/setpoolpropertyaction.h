@@ -31,8 +31,6 @@
 #include "../../asyncoperation.h"
 #include <QVariant>
 
-class XenConnection;
-
 /**
  * @brief Generic action to set a pool property
  *
@@ -48,15 +46,13 @@ class SetPoolPropertyAction : public AsyncOperation
     public:
         /**
          * @brief Construct pool property update action
-         * @param connection Connection to the pool
-         * @param poolRef Pool opaque reference
+         * @param pool Pool object
          * @param propertyName Property name (e.g., "migration_compression")
          * @param value Property value (bool, string, etc.)
          * @param description Action description
          * @param parent Parent QObject
          */
-        SetPoolPropertyAction(XenConnection* connection,
-                              const QString& poolRef,
+        SetPoolPropertyAction(QSharedPointer<Pool> pool,
                               const QString& propertyName,
                               const QVariant& value,
                               const QString& description,
@@ -68,7 +64,7 @@ class SetPoolPropertyAction : public AsyncOperation
         void run() override;
 
     private:
-        QString m_poolRef;
+        QSharedPointer<Pool> m_pool;
         QString m_propertyName;
         QVariant m_value;
 };

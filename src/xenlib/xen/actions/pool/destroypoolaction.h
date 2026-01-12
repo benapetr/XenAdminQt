@@ -31,7 +31,7 @@
 #include "../../asyncoperation.h"
 #include <QString>
 
-class XenConnection;
+class Pool;
 
 /**
  * @brief DestroyPoolAction destroys a pool by clearing its name.
@@ -46,15 +46,14 @@ class DestroyPoolAction : public AsyncOperation
     Q_OBJECT
 
     public:
-        DestroyPoolAction(XenConnection* connection,
-                        const QString& poolRef,
+        DestroyPoolAction(QSharedPointer<Pool> pool,
                         QObject* parent = nullptr);
 
     protected:
         void run() override;
 
     private:
-        QString m_poolRef;
+        QSharedPointer<Pool> m_pool;
 };
 
 #endif // DESTROYPOOLACTION_H

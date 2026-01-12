@@ -28,9 +28,9 @@
 // generaleditpage.cpp - General properties edit page
 #include "generaleditpage.h"
 #include "ui_generaleditpage.h"
-#include "../../xenlib/xen/actions/general/generaleditpageaction.h"
-#include "../../xenlib/xen/network/connection.h"
-#include "xen/xenobject.h"
+#include "xenlib/xen/actions/general/generaleditpageaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/xenobject.h"
 #include <QIcon>
 #include <QDebug>
 

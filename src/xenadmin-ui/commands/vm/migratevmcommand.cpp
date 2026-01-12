@@ -28,10 +28,11 @@
 #include "migratevmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/vm.h"
-#include "xencache.h"
-#include "xen/network/connection.h"
-#include "xen/actions/vm/vmmigrateaction.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/actions/vm/vmmigrateaction.h"
 #include "vmoperationhelpers.h"
 #include <QMessageBox>
 #include <QInputDialog>
@@ -93,7 +94,14 @@ void MigrateVMCommand::Run()
     QStringList hostNames;
 
     XenConnection* conn = vm->GetConnection();
-    XenCache* cache = conn ? conn->GetCache() : nullptr;
+
+    if (!conn || !conn->IsConnected())
+    {
+        QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
+        return;
+    }
+
+    XenCache* cache = vm->GetCache();
 
     for (const QString& hostRef : hosts)
     {
@@ -166,17 +174,17 @@ void MigrateVMCommand::Run()
 
     if (ret == QMessageBox::Yes)
     {
-        // Get XenConnection from VM's GetConnection
-        XenConnection* conn = vm->GetConnection();
-        if (!conn || !conn->IsConnected())
+        QSharedPointer<Host> host = vm->GetCache()->ResolveObject<Host>("host", destHostRef);
+
+        if (!host)
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
+            QMessageBox::warning(this->mainWindow(), "Host not found", "Selected host was not found in Xen Cache");
             return;
         }
 
         // Create VMMigrateAction (matches C# VMMigrateAction pattern for within-pool migration)
         // Action handles HA pre-check failures and task polling
-        VMMigrateAction* action = new VMMigrateAction(conn, vmRef, destHostRef, this->mainWindow());
+        VMMigrateAction* action = new VMMigrateAction(vm, host, this->mainWindow());
 
         // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
         OperationManager::instance()->RegisterOperation(action);

@@ -29,16 +29,21 @@
 #include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
+#include "../../vm.h"
 #include <QDebug>
 #include <stdexcept>
 
 HVMBootAction::HVMBootAction(QSharedPointer<VM> vm, QObject* parent)
-    : AsyncOperation(vm->GetConnection(), 
-                     tr("Booting VM in Recovery Mode"), 
+    : AsyncOperation(tr("Booting VM in Recovery Mode"),
                      tr("Booting '%1' with temporary recovery boot settings...").arg(vm ? vm->GetName() : ""),
                      parent), 
       m_vm(vm)
-{    // Register API methods for RBAC checks
+{
+    if (!vm)
+        throw std::invalid_argument("VM cannot be null");
+    this->m_connection = vm->GetConnection();
+
+    // Register API methods for RBAC checks
     AddApiMethodToRoleCheck("VM.get_HVM_boot_policy");
     AddApiMethodToRoleCheck("VM.get_HVM_boot_params");
     AddApiMethodToRoleCheck("VM.set_HVM_boot_policy");

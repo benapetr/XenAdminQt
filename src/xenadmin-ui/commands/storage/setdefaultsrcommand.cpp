@@ -28,6 +28,7 @@
 #include "setdefaultsrcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
+#include "xen/pool.h"
 #include "xen/sr.h"
 #include "xen/actions/pool/setsrasdefaultaction.h"
 #include "xencache.h"
@@ -132,7 +133,15 @@ void SetDefaultSRCommand::Run()
             return;
         }
 
-        SetSrAsDefaultAction* action = new SetSrAsDefaultAction(connection, poolRefs.first(), srRef, nullptr);
+        QSharedPointer<Pool> pool = connection->GetCache()->ResolveObject<Pool>("pool", poolRefs.first());
+        if (!pool || !pool->IsValid())
+        {
+            QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
+                                 "Invalid pool object.");
+            return;
+        }
+
+        SetSrAsDefaultAction* action = new SetSrAsDefaultAction(pool, srRef, nullptr);
         OperationManager::instance()->RegisterOperation(action);
 
         this->m_pendingSrName = srName;

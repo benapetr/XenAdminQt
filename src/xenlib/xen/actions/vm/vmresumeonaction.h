@@ -49,11 +49,11 @@ class XENLIB_EXPORT VMResumeOnAction : public VMStartAbstractAction
                                   StartDiagnosisForm startDiagnosisForm,
                                   QObject* parent = nullptr);
 
-        bool isStart() const override
+        bool IsStart() const override
         {
             return false;
         }
-        VMStartAbstractAction* clone() override;
+        VMStartAbstractAction* Clone() override;
 
     protected:
         void run() override;

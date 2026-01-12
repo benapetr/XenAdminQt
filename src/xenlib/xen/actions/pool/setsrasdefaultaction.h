@@ -42,8 +42,7 @@ class SetSrAsDefaultAction : public AsyncOperation
     Q_OBJECT
 
     public:
-        explicit SetSrAsDefaultAction(XenConnection* connection,
-                                      const QString& poolRef,
+        explicit SetSrAsDefaultAction(QSharedPointer<Pool> pool,
                                       const QString& srRef,
                                       QObject* parent = nullptr);
 
@@ -51,7 +50,7 @@ class SetSrAsDefaultAction : public AsyncOperation
         void run() override;
 
     private:
-        QString m_poolRef;
+        QSharedPointer<Pool> m_pool;
         QString m_srRef;
 };
 

@@ -29,10 +29,11 @@
 #define GPUASSIGNACTION_H
 
 #include "../../asyncoperation.h"
-#include "../../vm.h"
 #include <QString>
 #include <QStringList>
 #include <QVariantList>
+
+class VM;
 
 /**
  * @brief Action to assign/configure virtual GPUs for a VM

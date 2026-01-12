@@ -62,7 +62,6 @@ void CloneVMCommand::Run()
         return;
 
     // Use cache instead of async API call
-    QVariantMap vmData = vm->GetData();
     QString powerState = vm->GetPowerState();
 
     // Check if VM is in a cloneable state
@@ -104,7 +103,7 @@ void CloneVMCommand::Run()
         }
 
         // Create VMCloneAction (matches C# VMCloneAction pattern)
-        VMCloneAction* action = new VMCloneAction(conn, vm, cloneName, "", this->mainWindow());
+        VMCloneAction* action = new VMCloneAction(vm, cloneName, "", this->mainWindow());
 
         // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
         OperationManager::instance()->RegisterOperation(action);

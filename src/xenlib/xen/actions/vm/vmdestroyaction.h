@@ -58,11 +58,7 @@ class VMDestroyAction : public AsyncOperation
          * @param snapshotsToDelete List of snapshot VM refs to delete
          * @param parent Parent QObject
          */
-        explicit VMDestroyAction(XenConnection* connection,
-                                 QSharedPointer<VM> vm,
-                                 const QStringList& vbdsToDelete,
-                                 const QStringList& snapshotsToDelete,
-                                 QObject* parent = nullptr);
+        explicit VMDestroyAction(QSharedPointer<VM> vm, const QStringList& vbdsToDelete, const QStringList& snapshotsToDelete, QObject* parent = nullptr);
 
         /**
          * @brief Convenience constructor - delete all owner disks
@@ -71,10 +67,7 @@ class VMDestroyAction : public AsyncOperation
          * @param deleteAllOwnerDisks If true, delete all VDIs marked as owner
          * @param parent Parent QObject
          */
-        explicit VMDestroyAction(XenConnection* connection,
-                                 QSharedPointer<VM> vm,
-                                 bool deleteAllOwnerDisks = false,
-                                 QObject* parent = nullptr);
+        explicit VMDestroyAction(QSharedPointer<VM> vm, bool deleteAllOwnerDisks = false, QObject* parent = nullptr);
 
     protected:
         void run() override;
@@ -86,9 +79,7 @@ class VMDestroyAction : public AsyncOperation
          * @param vbdRefsToDelete VBD refs to delete
          * @param snapshotRefsToDelete Snapshot VM refs to delete
          */
-        void destroyVM(const QString& vmRef,
-                       const QStringList& vbdRefsToDelete,
-                       const QStringList& snapshotRefsToDelete);
+        void destroyVM(const QString& vmRef, const QStringList& vbdRefsToDelete, const QStringList& snapshotRefsToDelete);
 
         QSharedPointer<VM> m_vm;
         QStringList m_vbdsToDelete;

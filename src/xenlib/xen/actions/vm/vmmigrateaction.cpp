@@ -30,20 +30,19 @@
 #include "../../xenapi/xenapi_VM.h"
 #include "../../../xencache.h"
 #include "../../failure.h"
+#include "xen/host.h"
+#include "xen/vm.h"
 #include <stdexcept>
 
-VMMigrateAction::VMMigrateAction(XenConnection* connection,
-                                 const QString& vmRef,
-                                 const QString& destinationHostRef,
-                                 QObject* parent)
-    : AsyncOperation(connection,
-                     QString("Migrating VM"),
-                     QString("Migrating VM to another host"),
-                     parent),
-      m_vmRef(vmRef),
-      m_destinationHostRef(destinationHostRef)
+VMMigrateAction::VMMigrateAction(QSharedPointer<VM> vm, QSharedPointer<Host> host, QObject* parent)
+    : AsyncOperation(QString("Migrating VM"), QString("Migrating VM to another host"), parent), m_vm(vm), m_host(host)
 {
-    AddApiMethodToRoleCheck("VM.async_pool_migrate");
+    if (!vm)
+        throw std::invalid_argument("VM cannot be null");
+
+    this->m_connection = vm->GetConnection();
+
+    this->AddApiMethodToRoleCheck("VM.async_pool_migrate");
 }
 
 void VMMigrateAction::run()
@@ -53,24 +52,11 @@ void VMMigrateAction::run()
         SetPercentComplete(0);
         SetDescription("Preparing migration...");
 
-        // Get VM and host data from cache
-        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
-        if (vmData.isEmpty())
-        {
-            throw std::runtime_error("VM not found in cache");
-        }
-
-        QVariantMap hostData = GetConnection()->GetCache()->ResolveObjectData("host", m_destinationHostRef);
-        if (hostData.isEmpty())
-        {
-            throw std::runtime_error("Destination host not found in cache");
-        }
-
-        QString vmName = vmData.value("name_label").toString();
-        QString hostName = hostData.value("name_label").toString();
+        QString vmName = this->m_vm->GetName();
+        QString hostName = this->m_host->GetName();
 
         // Check if VM is resident on a host
-        QString residentOnRef = vmData.value("resident_on").toString();
+        QString residentOnRef = this->m_vm->ResidentOnRef();
         QString sourceHostName;
 
         if (!residentOnRef.isEmpty() && residentOnRef != "OpaqueRef:NULL")
@@ -78,10 +64,7 @@ void VMMigrateAction::run()
             QVariantMap residentHostData = GetConnection()->GetCache()->ResolveObjectData("host", residentOnRef);
             sourceHostName = residentHostData.value("name_label").toString();
 
-            SetTitle(QString("Migrating %1 from %2 to %3")
-                         .arg(vmName)
-                         .arg(sourceHostName)
-                         .arg(hostName));
+            SetTitle(QString("Migrating %1 from %2 to %3").arg(vmName).arg(sourceHostName).arg(hostName));
         } else
         {
             SetTitle(QString("Migrating %1 to %2").arg(vmName).arg(hostName));
@@ -94,7 +77,7 @@ void VMMigrateAction::run()
         QVariantMap options;
         options["live"] = "true";
 
-        QString taskRef = XenAPI::VM::async_pool_migrate(GetSession(), m_vmRef, m_destinationHostRef, options);
+        QString taskRef = XenAPI::VM::async_pool_migrate(GetSession(), this->m_vm->OpaqueRef(), this->m_host->OpaqueRef(), options);
 
         // Poll the task to completion
         pollToCompletion(taskRef, 10, 100);

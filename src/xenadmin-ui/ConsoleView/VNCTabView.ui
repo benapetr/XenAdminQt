@@ -117,78 +117,7 @@ QPushButton:disabled {
       </item>
       <!-- CD/DVD ISO Controls (C#: multipleDvdIsoList1 in tableLayoutPanel2) -->
       <item>
-       <widget class="QLabel" name="cdDriveLabel">
-        <property name="visible">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>DVD Drive:</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QComboBox" name="cdDriveComboBox">
-        <property name="visible">
-         <bool>false</bool>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>100</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="toolTip">
-         <string>Select CD/DVD drive</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="IsoDropDownBox" name="cdIsoComboBox">
-        <property name="visible">
-         <bool>false</bool>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>200</width>
-          <height>0</height>
-         </size>
-        </property>
-        <property name="toolTip">
-         <string>Select ISO image</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="cdEjectButton">
-        <property name="visible">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>Eject</string>
-        </property>
-        <property name="toolTip">
-         <string>Eject CD/DVD</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="cdNewDriveLabel">
-        <property name="visible">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>&lt;a href=&quot;#&quot;&gt;New CD/DVD drive...&lt;/a&gt;</string>
-        </property>
-        <property name="textFormat">
-         <enum>Qt::RichText</enum>
-        </property>
-        <property name="openExternalLinks">
-         <bool>false</bool>
-        </property>
-        <property name="toolTip">
-         <string>Create a new virtual CD/DVD drive</string>
-        </property>
-       </widget>
+       <widget class="MultipleDvdIsoList" name="multipleDvdIsoList"/>
       </item>
       <item>
        <spacer name="horizontalSpacer2">
@@ -450,6 +379,11 @@ QPushButton:disabled {
  </layout>
 </widget>
  <customwidgets>
+  <customwidget>
+   <class>MultipleDvdIsoList</class>
+   <extends>QWidget</extends>
+   <header>controls/multipledvdisolist.h</header>
+  </customwidget>
   <customwidget>
    <class>IsoDropDownBox</class>
    <extends>QComboBox</extends>

@@ -177,20 +177,7 @@ void VbdCreateAndPlugAction::run()
 
 bool VbdCreateAndPlugAction::isVMHVM() const
 {
-    try
-    {
-        XenAPI::Session* session = m_vm->GetConnection()->GetSession();
-        QString vmRef = m_vm->OpaqueRef();
-        QVariantMap vmRecord = XenAPI::VM::get_record(session, vmRef);
-
-        // HVM mode is indicated by HVM_boot_policy field
-        return vmRecord.contains("HVM_boot_policy") &&
-               !vmRecord.value("HVM_boot_policy").toString().isEmpty();
-    } catch (...)
-    {
-        // If we can't determine, assume HVM (safer)
-        return true;
-    }
+    return m_vm && m_vm->IsHVM();
 }
 
 bool VbdCreateAndPlugAction::isVBDEmpty() const

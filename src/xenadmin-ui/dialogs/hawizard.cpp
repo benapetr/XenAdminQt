@@ -28,13 +28,14 @@
 #include "hawizard.h"
 #include "../operations/operationmanager.h"
 #include "../dialogs/operationprogressdialog.h"
-#include "xencache.h"
-#include "xen/network/connection.h"
-#include "xen/session.h"
-#include "xen/actions/pool/enablehaaction.h"
-#include "xen/xenapi/xenapi_Pool.h"
-#include "xen/xenapi/xenapi_SR.h"
-#include "xen/xenapi/xenapi_VM.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/actions/pool/enablehaaction.h"
+#include "xenlib/xen/xenapi/xenapi_Pool.h"
+#include "xenlib/xen/xenapi/xenapi_SR.h"
+#include "xenlib/xen/xenapi/xenapi_VM.h"
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QIcon>
@@ -371,10 +372,17 @@ void HAWizard::accept()
         this->m_vmStartupOptions[vmRef] = options;
     }
 
+    // Resolve Pool object from cache
+    QSharedPointer<Pool> pool = this->m_connection->GetCache()->ResolveObject<Pool>("pool", this->m_poolRef);
+    if (!pool || !pool->IsValid())
+    {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to resolve pool object"));
+        return;
+    }
+
     // Create and run EnableHAAction
     EnableHAAction* action = new EnableHAAction(
-        this->m_connection,
-        this->m_poolRef,
+        pool,
         QStringList{this->m_selectedHeartbeatSR},
         this->m_ntol,
         this->m_vmStartupOptions,

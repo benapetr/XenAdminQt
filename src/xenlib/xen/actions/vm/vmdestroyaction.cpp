@@ -34,29 +34,26 @@
 #include "../../../xencache.h"
 #include <QDebug>
 
-VMDestroyAction::VMDestroyAction(XenConnection* connection,
-                                 QSharedPointer<VM> vm,
+VMDestroyAction::VMDestroyAction(QSharedPointer<VM> vm,
                                  const QStringList& vbdsToDelete,
                                  const QStringList& snapshotsToDelete,
                                  QObject* parent)
-    : AsyncOperation(connection,
-                     "Destroying VM",
+    : AsyncOperation("Destroying VM",
                      QString("Destroying '%1'").arg(vm ? vm->GetName() : ""),
                      parent),
       m_vm(vm),
       m_vbdsToDelete(vbdsToDelete),
       m_snapshotsToDelete(snapshotsToDelete)
 {
-    if (!m_vm)
+    if (!vm)
         throw std::invalid_argument("VM cannot be null");
+    this->m_connection = vm->GetConnection();
 }
 
-VMDestroyAction::VMDestroyAction(XenConnection* connection,
-                                 QSharedPointer<VM> vm,
+VMDestroyAction::VMDestroyAction(QSharedPointer<VM> vm,
                                  bool deleteAllOwnerDisks,
                                  QObject* parent)
-    : AsyncOperation(connection,
-                     "Destroying VM",
+    : AsyncOperation("Destroying VM",
                      QString("Destroying '%1'").arg(vm ? vm->GetName() : ""),
                      parent),
       m_vm(vm)
@@ -64,13 +61,15 @@ VMDestroyAction::VMDestroyAction(XenConnection* connection,
     if (!m_vm)
         throw std::invalid_argument("VM cannot be null");
 
+    this->m_connection = vm->GetConnection();
+
     // If deleteAllOwnerDisks is true, find all VBDs marked as owner
     if (deleteAllOwnerDisks)
     {
         QStringList vbdRefs = m_vm->GetVBDRefs();
         for (const QString& vbdRef : vbdRefs)
         {
-            QVariantMap vbdData = connection->GetCache()->ResolveObjectData("vbd", vbdRef);
+            QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
 
             // Check if this VBD owns its VDI
             bool isOwner = vbdData.value("owner", false).toBool();

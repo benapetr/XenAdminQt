@@ -30,20 +30,20 @@
 #include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../../xencache.h"
+#include "../../pool.h"
 #include <stdexcept>
 
-DestroyPoolAction::DestroyPoolAction(XenConnection* connection,
-                                     const QString& poolRef,
+DestroyPoolAction::DestroyPoolAction(QSharedPointer<Pool> pool,
                                      QObject* parent)
-    : AsyncOperation(connection,
+    : AsyncOperation(pool ? pool->GetConnection() : nullptr,
                      QString("Destroying pool"),
                      "Destroying pool",
                      parent),
-      m_poolRef(poolRef)
+      m_pool(pool)
 {
-    if (m_poolRef.isEmpty())
+    if (!this->m_pool || !this->m_pool->IsValid())
     {
-        throw std::invalid_argument("Pool reference cannot be empty");
+        throw std::invalid_argument("Invalid pool object");
     }
 }
 
@@ -66,10 +66,10 @@ void DestroyPoolAction::run()
 
         // Clear pool name and description to "destroy" it
         // This effectively converts the pool back to a standalone host
-        XenAPI::Pool::set_name_label(GetSession(), m_poolRef, "");
+        XenAPI::Pool::set_name_label(GetSession(), this->m_pool->OpaqueRef(), "");
 
         SetPercentComplete(70);
-        XenAPI::Pool::set_name_description(GetSession(), m_poolRef, "");
+        XenAPI::Pool::set_name_description(GetSession(), this->m_pool->OpaqueRef(), "");
 
         SetPercentComplete(100);
         SetDescription("Pool destroyed successfully");

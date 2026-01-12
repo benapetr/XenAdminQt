@@ -31,6 +31,8 @@
 #include "../../asyncoperation.h"
 #include <QtCore/QString>
 
+class VM;
+
 /**
  * @brief Action to revert a VM to a snapshot
  *
@@ -48,23 +50,10 @@ class XENLIB_EXPORT VMSnapshotRevertAction : public AsyncOperation
     public:
         /**
          * @brief Construct snapshot revert action
-         * @param connection XenConnection
-         * @param snapshotRef Snapshot VM opaque_ref to revert to
+         * @param snapshot Snapshot VM to revert to
          * @param parent Parent QObject
          */
-        VMSnapshotRevertAction(XenConnection* connection,
-                               const QString& snapshotRef,
-                               QObject* parent = nullptr);
-
-        QString vmRef() const
-        {
-            return m_vmRef;
-        }
-
-        QString snapshotRef() const
-        {
-            return m_snapshotRef;
-        }
+        VMSnapshotRevertAction(QSharedPointer<VM> snapshot, QObject* parent = nullptr);
 
     protected:
         void run() override;
@@ -84,12 +73,11 @@ class XENLIB_EXPORT VMSnapshotRevertAction : public AsyncOperation
          */
         bool vmCanBootOnHost(const QString& vmRef, const QString& hostRef);
 
-        QString m_snapshotRef;
-        QString m_snapshotName;
-        QString m_vmRef;           // Parent VM reference
-        QString m_previousHostRef; // Host the VM was running on before snapshot
-        bool m_revertPowerState;   // Whether to restore power state
-        bool m_revertFinished;     // Track when revert phase is complete
+        QSharedPointer<VM> m_snapshot;
+        QSharedPointer<VM> m_vm;   // Parent VM (snapshot_of)
+        QString m_previousHostRef_; // Host the VM was running on before snapshot
+        bool m_revertPowerState_;   // Whether to restore power state
+        bool m_revertFinished_;     // Track when revert phase is complete
 };
 
 #endif // VMSNAPSHOTREVERTACTION_H

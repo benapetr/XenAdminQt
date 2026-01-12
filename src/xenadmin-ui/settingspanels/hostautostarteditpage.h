@@ -38,6 +38,7 @@ namespace Ui
 
 class XenConnection;
 class AsyncOperation;
+class Host;
 
 /**
  * @brief Host Autostart Settings Edit Page
@@ -75,10 +76,9 @@ class HostAutostartEditPage : public IEditPage
     private:
         void repopulate();
         bool getAutostartEnabled() const;
+        QSharedPointer<Host> m_host;
 
         Ui::HostAutostartEditPage* ui;
-        QString m_hostRef;
-        QString m_hostType;
         bool m_originalAutostartEnabled;
 };
 

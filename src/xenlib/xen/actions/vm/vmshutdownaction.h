@@ -29,7 +29,6 @@
 #define VMSHUTDOWNACTION_H
 
 #include "../../asyncoperation.h"
-#include "../../api.h"
 #include <QSharedPointer>
 
 class VM;

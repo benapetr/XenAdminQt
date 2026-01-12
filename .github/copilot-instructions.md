@@ -5,15 +5,43 @@ This is a C++/Qt6 rewrite of XenAdmin (XenServer/XCP-ng management tool), portin
 ## Project Structure & Architecture
 
 ```
-src/
-├── xenlib/             # Shared library (XenServer API abstraction)
-│   ├── xen/            # Connection, Session, API, AsyncOperations, EventPoller
-│   └── operations/     # ParallelOperation, MultipleOperation framework
-└── xenadmin-ui/        # Qt GUI application
-    ├── commands/       # Command pattern (VM start/stop, host ops, etc.)
-    ├── dialogs/        # UI dialogs with .ui files
-    ├── tabpages/       # BaseTabPage subclasses (General, Storage, Network, Console, Performance, Snapshots)
-    └── widgets/        # Custom widgets (QVncClient for VNC console)
+.
+├── docs/               # Architecture notes, testing, API references
+├── packaging/          # Packaging assets/scripts (macOS, icons, outputs)
+├── release/            # Pre-generated qmake build outputs (use for builds)
+├── src/                # Qt/C++ source
+│   ├── xenadmin-ui/    # Qt GUI application
+│   │   ├── actions/        # UI-facing actions (dialog flows, helpers)
+│   │   ├── alerts/         # Alert models and views
+│   │   ├── commands/       # Command pattern (vm/host/pool/network/storage/etc.)
+│   │   ├── ConsoleView/    # Console/VNC viewer widgets
+│   │   ├── controls/       # Reusable UI controls (incl. controls/xensearch)
+│   │   ├── dialogs/        # UI dialogs with .ui files
+│   │   │   ├── optionspages/
+│   │   │   └── warningdialogs/
+│   │   ├── images/         # UI image assets
+│   │   ├── navigation/     # Tree and navigation UI
+│   │   ├── network/        # Network UI + dialogs
+│   │   ├── operations/     # UI-side operations
+│   │   ├── settingspanels/ # Settings views/panels
+│   │   ├── tabpages/       # BaseTabPage subclasses
+│   │   ├── widgets/        # Custom widgets
+│   │   └── xensearch/      # Search UI
+│   ├── xenlib/         # Shared library (XenServer API abstraction)
+│   │   ├── collections/    # XenObject collection helpers
+│   │   ├── customfields/   # Custom field support
+│   │   ├── network/        # Networking helpers (non-UI)
+│   │   ├── operations/     # ParallelOperation, MultipleOperation framework
+│   │   ├── otherconfig/    # Other-config helpers
+│   │   ├── utils/          # Utility helpers
+│   │   ├── xensearch/      # Search model/services
+│   │   └── xen/            # Connection, Session, API, actions, mappings, xenapi
+│   │       ├── actions/
+│   │       ├── mappings/
+│   │       ├── network/
+│   │       └── xenapi/
+│   └── xenadminqt.pro  # qmake project
+└── xenadmin/           # Original C# XenAdmin source (reference for porting)
 ```
 
 **Critical Insight**: XenLib contains ALL Xen API business logic. The UI is a thin layer that invokes XenLib methods and displays results.
@@ -474,7 +502,7 @@ The `xenadmin/` folder contains the original C# implementation. When porting fea
 
 ## Project Context
 
-**Project folder name**: `xenadmin_qt` (note the underscore)
+**Project folder name**: `XenAdminQt`
 **Target platforms**: Linux (primary), Windows/macOS (secondary)
 **Qt version**: Qt6
 **Build system**: qmake (not CMake)

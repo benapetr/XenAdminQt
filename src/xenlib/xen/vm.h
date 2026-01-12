@@ -129,6 +129,7 @@ class XENLIB_EXPORT VM : public XenObject
          * @return List of VBD opaque references
          */
         QStringList GetVBDRefs() const;
+        QSharedPointer<VBD> FindVMCDROM() const;
 
         /**
          * @brief Get list of VIF (virtual network interface) references
@@ -147,6 +148,8 @@ class XENLIB_EXPORT VM : public XenObject
          * @return VM opaque reference of parent VM
          */
         QString SnapshotOfRef() const;
+
+        QSharedPointer<VM> SnapshotOf();
 
         /**
          * @brief Get list of snapshot children (if this VM has snapshots)
@@ -205,7 +208,7 @@ class XENLIB_EXPORT VM : public XenObject
         /**
          * @brief Check if VM is HVM
          */
-        bool IsHvm() const;
+        bool IsHVM() const;
 
         /**
          * @brief Check if VM is Windows
@@ -221,6 +224,11 @@ class XENLIB_EXPORT VM : public XenObject
          * @brief Get maximum allowed VCPUs
          */
         int MaxVCPUsAllowed() const;
+
+        /**
+         * @brief Get maximum allowed VBDs (virtual block devices)
+         */
+        int MaxVBDsAllowed() const;
 
         /**
          * @brief Get minimum recommended VCPUs

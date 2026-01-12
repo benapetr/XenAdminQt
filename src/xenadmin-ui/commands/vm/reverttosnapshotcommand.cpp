@@ -29,26 +29,24 @@
 #include <QDebug>
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xencache.h"
-#include "xen/network/connection.h"
-#include "xen/actions/vm/vmsnapshotrevertaction.h"
-#include "xen/xenobject.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/actions/vm/vmsnapshotrevertaction.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/vm.h"
 #include <QtWidgets>
 
-RevertToSnapshotCommand::RevertToSnapshotCommand(QObject* parent)
-    : Command(nullptr, parent)
+RevertToSnapshotCommand::RevertToSnapshotCommand(QObject* parent) : Command(nullptr, parent)
 {
     // qDebug() << "RevertToSnapshotCommand: Created default constructor";
 }
 
-RevertToSnapshotCommand::RevertToSnapshotCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+RevertToSnapshotCommand::RevertToSnapshotCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
     // qDebug() << "RevertToSnapshotCommand: Created with MainWindow";
 }
 
-RevertToSnapshotCommand::RevertToSnapshotCommand(const QString& snapshotUuid, MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent), m_snapshotUuid(snapshotUuid)
+RevertToSnapshotCommand::RevertToSnapshotCommand(const QString& snapshotUuid, MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent), m_snapshotUuid(snapshotUuid)
 {
     // qDebug() << "RevertToSnapshotCommand: Created with snapshot UUID:" << snapshotUuid;
 }
@@ -89,77 +87,56 @@ QString RevertToSnapshotCommand::MenuText() const
 
 bool RevertToSnapshotCommand::canRevertToSnapshot() const
 {
-    if (this->m_snapshotUuid.isEmpty())
-    {
-        return false;
-    }
-
-    if (!this->mainWindow())
-    {
-        return false;
-    }
-
-    QSharedPointer<XenObject> selectedObject = this->GetObject();
-    if (!selectedObject)
+    if (!this->mainWindow() || this->m_snapshotUuid.isEmpty())
         return false;
 
-    // Get snapshot data from cache
-    XenConnection* connection = selectedObject->GetConnection();
-    XenCache* cache = connection ? connection->GetCache() : nullptr;
-    if (!cache)
-        return false;
+    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>("vm", this->m_snapshotUuid);
 
-    QVariantMap snapshotData = cache->ResolveObjectData("vm", this->m_snapshotUuid);
-    if (snapshotData.isEmpty())
+    if (!snapshot)
     {
         qDebug() << "RevertToSnapshotCommand: Snapshot not found in cache:" << this->m_snapshotUuid;
         return false;
     }
 
     // Verify it's actually a snapshot
-    if (!snapshotData.value("is_a_snapshot").toBool())
+    if (!snapshot->IsSnapshot())
     {
         qDebug() << "RevertToSnapshotCommand: Object is not a snapshot:" << this->m_snapshotUuid;
         return false;
     }
 
     // Check if snapshot is being used by any operations
-    QVariantList currentOperations = snapshotData.value("current_operations").toList();
-    if (!currentOperations.isEmpty())
+    if (!snapshot->CurrentOperations().isEmpty())
     {
         qDebug() << "RevertToSnapshotCommand: Snapshot has active operations:" << this->m_snapshotUuid;
         return false;
     }
 
     // Check allowed operations
-    QVariantList allowedOps = snapshotData.value("allowed_operations").toList();
-    if (!allowedOps.contains("revert"))
+    QStringList allowed_ops = snapshot->GetAllowedOperations();
+    if (!allowed_ops.contains("revert"))
     {
         qDebug() << "RevertToSnapshotCommand: Revert operation not allowed for snapshot:" << this->m_snapshotUuid;
         return false;
     }
 
     // Get parent VM and check if it's locked
-    QString snapshotOf = snapshotData.value("snapshot_of").toString();
-    if (!snapshotOf.isEmpty())
+    QSharedPointer<VM> snapshot_of = snapshot->SnapshotOf();
+    if (!snapshot_of.isNull())
     {
-        QVariantMap vmData = cache->ResolveObjectData("vm", snapshotOf);
-        if (!vmData.isEmpty())
+        QVariantMap vmCurrentOps = snapshot_of->CurrentOperations();
+        // Allow revert if VM has no critical operations
+        // (Some operations like snapshot creation are allowed during revert)
+        for (const QVariant& op : vmCurrentOps)
         {
-            QVariantList vmCurrentOps = vmData.value("current_operations").toList();
-            // Allow revert if VM has no critical operations
-            // (Some operations like snapshot creation are allowed during revert)
-            for (const QVariant& op : vmCurrentOps)
+            QString operation = op.toString();
+            if (operation == "changing_VCPUs" ||
+                operation == "changing_memory" ||
+                operation == "migrating" ||
+                operation == "pool_migrate")
             {
-                QString operation = op.toString();
-                if (operation == "changing_VCPUs" ||
-                    operation == "changing_memory" ||
-                    operation == "migrating" ||
-                    operation == "pool_migrate")
-                {
-                    qDebug() << "RevertToSnapshotCommand: Parent VM has critical operation:" << operation;
-                    return false;
-                }
+                qDebug() << "RevertToSnapshotCommand: Parent VM has critical operation:" << operation;
+                return false;
             }
         }
     }
@@ -172,32 +149,16 @@ bool RevertToSnapshotCommand::showConfirmationDialog()
     QString snapshotName = this->m_snapshotUuid;
     QString snapshotTime;
 
-    // Try to get snapshot details from cache
-    QSharedPointer<XenObject> selectedObject = this->GetObject();
-    XenConnection* connection = selectedObject ? selectedObject->GetConnection() : nullptr;
-    XenCache* cache = connection ? connection->GetCache() : nullptr;
-    if (cache)
-    {
-        QVariantMap snapshotData = cache->ResolveObjectData("vm", this->m_snapshotUuid);
-        if (!snapshotData.isEmpty())
-        {
-            snapshotName = snapshotData.value("name_label").toString();
-            if (snapshotName.isEmpty())
-            {
-                snapshotName = this->m_snapshotUuid;
-            }
+    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>("vm", this->m_snapshotUuid);
 
-            QString timestamp = snapshotData.value("snapshot_time").toString();
-            if (!timestamp.isEmpty())
-            {
-                QDateTime dt = QDateTime::fromString(timestamp, Qt::ISODate);
-                if (dt.isValid())
-                {
-                    snapshotTime = dt.toString("yyyy-MM-dd HH:mm:ss");
-                }
-            }
-        }
-    }
+    if (!snapshot)
+        return false;
+
+    snapshotName = snapshot->GetName();
+    if (snapshotName.isEmpty())
+        snapshotName = this->m_snapshotUuid;
+
+    snapshotTime = snapshot->SnapshotTime().toString("yyyy-MM-dd HH:mm:ss");
 
     QString message = tr("Are you sure you want to revert to this snapshot?\n\n"
                          "This will undo all changes made to the VM since this snapshot was created.\n"
@@ -206,9 +167,7 @@ bool RevertToSnapshotCommand::showConfirmationDialog()
                           .arg(snapshotName);
 
     if (!snapshotTime.isEmpty())
-    {
         message += tr("\nCreated: %1").arg(snapshotTime);
-    }
 
     message += tr("\n\nThis action cannot be undone.");
 
@@ -232,25 +191,34 @@ void RevertToSnapshotCommand::revertToSnapshot()
         return;
     }
 
-    QSharedPointer<XenObject> selectedObject = this->GetObject();
-    XenConnection* conn = selectedObject ? selectedObject->GetConnection() : nullptr;
+    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>("vm", this->m_snapshotUuid);
+
+    XenConnection* conn = snapshot->GetConnection();
     if (!conn || !conn->IsConnected())
     {
         qWarning() << "RevertToSnapshotCommand: Not connected";
-        QMessageBox::critical(this->mainWindow(), tr("Revert Error"),
-                              tr("Not connected to XenServer."));
+        QMessageBox::critical(this->mainWindow(), tr("Revert Error"), tr("Not connected to XenServer."));
+        return;
+    }
+
+    // Resolve snapshot VM from cache
+    if (!snapshot || !snapshot->IsValid())
+    {
+        qWarning() << "RevertToSnapshotCommand: Failed to resolve snapshot VM";
+        QMessageBox::critical(this->mainWindow(), tr("Revert Error"), tr("Failed to resolve snapshot VM."));
         return;
     }
 
     // Create VMSnapshotRevertAction (matches C# VMSnapshotRevertAction pattern)
     // Action handles VM power cycle tracking and is cancellable
-    VMSnapshotRevertAction* action = new VMSnapshotRevertAction(conn, this->m_snapshotUuid, this->mainWindow());
+    VMSnapshotRevertAction* action = new VMSnapshotRevertAction(snapshot, this->mainWindow());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, this, [this, action]() {
+    connect(action, &AsyncOperation::completed, this, [this, action]()
+    {
         bool success = (action->GetState() == AsyncOperation::Completed && !action->IsFailed());
         if (success)
         {

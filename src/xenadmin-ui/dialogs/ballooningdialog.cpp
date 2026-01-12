@@ -28,6 +28,7 @@
 #include "ballooningdialog.h"
 #include "ui_ballooningdialog.h"
 #include "xen/network/connection.h"
+#include "xen/vm.h"
 #include "xencache.h"
 #include "operationprogressdialog.h"
 #include "xen/actions/vm/changememorysettingsaction.h"

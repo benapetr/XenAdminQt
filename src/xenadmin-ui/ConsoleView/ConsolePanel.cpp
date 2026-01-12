@@ -96,9 +96,9 @@ void ConsolePanel::PauseAllDockedViews()
     for (auto it = this->_vncViews.begin(); it != this->_vncViews.end(); ++it)
     {
         VNCView* vncView = it.value();
-        if (vncView && vncView->isDocked())
+        if (vncView && vncView->IsDocked())
         {
-            vncView->pause();
+            vncView->Pause();
         }
     }
 }
@@ -140,21 +140,21 @@ void ConsolePanel::UnpauseActiveView(bool focus)
     for (auto it = this->_vncViews.begin(); it != this->_vncViews.end(); ++it)
     {
         VNCView* vncView = it.value();
-        if (vncView != this->_activeVNCView && vncView->isDocked())
+        if (vncView != this->_activeVNCView && vncView->IsDocked())
         {
-            vncView->pause();
+            vncView->Pause();
         }
     }
 
     // Unpause the active view
     if (this->_activeVNCView)
     {
-        this->_activeVNCView->unpause();
+        this->_activeVNCView->Unpause();
 
         if (focus)
         {
-            this->_activeVNCView->focusConsole();
-            this->_activeVNCView->switchIfRequired();
+            this->_activeVNCView->FocusConsole();
+            this->_activeVNCView->SwitchIfRequired();
         }
     }
 }
@@ -166,7 +166,7 @@ void ConsolePanel::UpdateRDPResolution(bool fullscreen)
     // C#: Lines 93-97
     if (this->_activeVNCView)
     {
-        this->_activeVNCView->updateRDPResolution(fullscreen);
+        this->_activeVNCView->UpdateRDPResolution(fullscreen);
     }
 }
 
@@ -232,6 +232,14 @@ void ConsolePanel::SetCurrentSource(QSharedPointer<XenObject> xen_obj)
     {
         qDebug() << "ConsolePanel: Creating new VNCView for VM:" << vmRef;
 
+        QSharedPointer<VM> vm = qSharedPointerCast<VM>(xen_obj);
+
+        if (!vm)
+        {
+            qWarning() << "ConsolePanel: unable to cast vm object";
+            return;
+        }
+
         // Remove oldest view if cache is full
         if (this->_vncViews.count() >= MAX_ACTIVE_VM_CONSOLES)
         {
@@ -240,7 +248,7 @@ void ConsolePanel::SetCurrentSource(QSharedPointer<XenObject> xen_obj)
 
         // Create new VNCView
         // Note: Using empty elevated credentials (TODO: support elevated credentials)
-        VNCView* newView = new VNCView(vmRef, QString(), QString(), this->_connection, this);
+        VNCView* newView = new VNCView(vm, QString(), QString(), this);
         this->_vncViews[vmRef] = newView;
     }
 
@@ -256,7 +264,7 @@ void ConsolePanel::SetCurrentSource(QSharedPointer<XenObject> xen_obj)
         // Remove and hide old active view
         if (this->_activeVNCView)
         {
-            this->_activeVNCView->pause();
+            this->_activeVNCView->Pause();
             this->ui->consoleLayout->removeWidget(this->_activeVNCView);
             this->_activeVNCView->hide();
         }
@@ -268,7 +276,7 @@ void ConsolePanel::SetCurrentSource(QSharedPointer<XenObject> xen_obj)
     }
 
     // Refresh ISO list
-    this->_activeVNCView->refreshIsoList();
+    this->_activeVNCView->RefreshIsoList();
 
     clearErrorMessage();
     this->m_currentVmRef = vmRef;
@@ -341,7 +349,7 @@ QImage ConsolePanel::Snapshot(QSharedPointer<VM> vm, const QString& elevatedUser
         if (useElevatedCredentials)
         {
             qDebug() << "ConsolePanel: Creating temporary VNCView with elevated credentials";
-            view = new VNCView(vmRef, elevatedUsername, elevatedPassword, this->_connection, this);
+            view = new VNCView(vm, elevatedUsername, elevatedPassword, this);
         } else
         {
             // Create view normally and add to cache
@@ -360,8 +368,8 @@ QImage ConsolePanel::Snapshot(QSharedPointer<VM> vm, const QString& elevatedUser
         return QImage();
     }
 
-    // Take snapshot
-    QImage snapshot = view->snapshot();
+    // Take Snapshot
+    QImage snapshot = view->Snapshot();
 
     // TODO: Pause view if not currently active
     // view->pause();
@@ -389,7 +397,7 @@ void ConsolePanel::closeVncForSource(const QString& vmRef)
 
     VNCView* vncView = this->_vncViews[vmRef];
 
-    if (!vncView->isDocked())
+    if (!vncView->IsDocked())
     {
         qDebug() << "ConsolePanel: Not closing undocked view";
         return;
@@ -414,7 +422,7 @@ void ConsolePanel::SendCAD()
     // C#: Lines 259-263
     if (this->_activeVNCView)
     {
-        this->_activeVNCView->sendCAD();
+        this->_activeVNCView->SendCAD();
     }
 }
 
@@ -514,7 +522,7 @@ void ConsolePanel::evictOldestView()
     {
         VNCView* view = it.value();
 
-        if (view->isDocked())
+        if (view->IsDocked())
         {
             qDebug() << "ConsolePanel: Evicting view for VM:" << it.key();
 

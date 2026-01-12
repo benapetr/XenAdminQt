@@ -117,9 +117,15 @@ AsyncOperation* NetworkOptionsEditPage::SaveSettings()
         ? tr("Enabling IGMP snooping") 
         : tr("Disabling IGMP snooping");
     
+    QSharedPointer<Pool> pool = this->connection()->GetCache()->ResolveObject<Pool>("pool", this->m_poolRef_);
+    if (!pool || !pool->IsValid())
+    {
+        qWarning() << "NetworkOptionsEditPage::SaveSettings: Invalid pool" << this->m_poolRef_;
+        return nullptr;
+    }
+    
     return new SetPoolPropertyAction(
-        this->connection(),
-        this->m_poolRef_,
+        pool,
         "igmp_snooping_enabled",
         enableValue,
         title,

@@ -91,6 +91,14 @@ bool VBD::IsCD() const
     return this->GetType() == "CD";
 }
 
+bool VBD::IsFloppyDrive() const
+{
+    // TODO: If we get floppy disk support, extend the enum and fix this check
+    // For now, return false as XenAPI doesn't have floppy disk support yet
+    // This matches the C# implementation
+    return false;
+}
+
 bool VBD::Unpluggable() const
 {
     return this->boolProperty("unpluggable");

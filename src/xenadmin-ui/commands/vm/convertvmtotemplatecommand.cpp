@@ -81,7 +81,7 @@ void ConvertVMToTemplateCommand::Run()
 
         // Create VMToTemplateAction (matches C# VMToTemplateAction pattern)
         // Action automatically sets other_config["instant"] = "true"
-        VMToTemplateAction* action = new VMToTemplateAction(conn, vm, this->mainWindow());
+        VMToTemplateAction* action = new VMToTemplateAction(vm, this->mainWindow());
 
         // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
         OperationManager::instance()->RegisterOperation(action);

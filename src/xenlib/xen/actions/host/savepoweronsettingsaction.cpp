@@ -70,8 +70,10 @@ void SavePowerOnSettingsAction::run()
     int current = 0;
     int total = this->m_hostModes.size();
     
-    for (const QPair<QString, PowerOnMode>& pair : this->m_hostModes) {
-        if (this->IsCancelled()) {
+    for (const QPair<QString, PowerOnMode>& pair : this->m_hostModes)
+    {
+        if (this->IsCancelled())
+        {
             this->setError(tr("Cancelled"));
             return;
         }
@@ -79,7 +81,8 @@ void SavePowerOnSettingsAction::run()
         QString hostRef = pair.first;
         PowerOnMode mode = pair.second;
         
-        try {
+        try
+        {
             this->saveHostConfig(hostRef, mode);
         } catch (const std::exception& e) {
             this->setError(tr("Failed to set power-on mode: %1").arg(e.what()));
@@ -101,23 +104,28 @@ void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const Pow
     QMap<QString, QString> config;
     
     // Build configuration based on mode type
-    if (mode.type == PowerOnMode::iLO || mode.type == PowerOnMode::DRAC) {
+    if (mode.type == PowerOnMode::iLO || mode.type == PowerOnMode::DRAC)
+    {
         config["power_on_ip"] = mode.ipAddress;
         config["power_on_user"] = mode.username;
         
-        if (!mode.password.isEmpty()) {
+        if (!mode.password.isEmpty())
+        {
             // Create secret for password
             QString secretUuid = this->createSecret(mode.password);
             config["power_on_password_secret"] = secretUuid;
         }
-    } else if (mode.type == PowerOnMode::Custom) {
+    } else if (mode.type == PowerOnMode::Custom)
+    {
         // Copy custom config
-        for (auto it = mode.customConfig.begin(); it != mode.customConfig.end(); ++it) {
+        for (auto it = mode.customConfig.begin(); it != mode.customConfig.end(); ++it)
+        {
             config[it.key()] = it.value();
         }
         
         // Check if password secret is needed
-        if (config.contains("power_on_password_secret")) {
+        if (config.contains("power_on_password_secret"))
+        {
             QString password = config["power_on_password_secret"];
             QString secretUuid = this->createSecret(password);
             config["power_on_password_secret"] = secretUuid;
@@ -126,7 +134,8 @@ void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const Pow
     
     // Convert QMap to QVariantMap for API call
     QVariantMap configMap;
-    for (auto it = config.begin(); it != config.end(); ++it) {
+    for (auto it = config.begin(); it != config.end(); ++it)
+    {
         configMap[it.key()] = it.value();
     }
     
@@ -141,9 +150,11 @@ void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const Pow
     QByteArray response = conn->SendRequest(request);
     
     QVariant result = api.ParseJsonRpcResponse(response);
-    if (Misc::QVariantIsMap(result)) {
+    if (Misc::QVariantIsMap(result))
+    {
         QVariantMap resultMap = result.toMap();
-        if (resultMap.value("Status").toString() != "Success") {
+        if (resultMap.value("Status").toString() != "Success")
+        {
             QString error = resultMap.value("ErrorDescription").toStringList().join(": ");
             throw std::runtime_error(error.toStdString());
         }
@@ -169,9 +180,11 @@ QString SavePowerOnSettingsAction::createSecret(const QString& value)
     QByteArray response = conn->SendRequest(request);
     
     QVariant result = api.ParseJsonRpcResponse(response);
-    if (Misc::QVariantIsMap(result)) {
+    if (Misc::QVariantIsMap(result))
+    {
         QVariantMap resultMap = result.toMap();
-        if (resultMap.value("Status").toString() == "Success") {
+        if (resultMap.value("Status").toString() == "Success")
+        {
             QString secretRef = resultMap.value("Value").toString();
             
             // Get the UUID of the secret
@@ -183,11 +196,11 @@ QString SavePowerOnSettingsAction::createSecret(const QString& value)
             response = conn->SendRequest(request);
             
             result = api.ParseJsonRpcResponse(response);
-            if (Misc::QVariantIsMap(result)) {
+            if (Misc::QVariantIsMap(result))
+            {
                 resultMap = result.toMap();
-                if (resultMap.value("Status").toString() == "Success") {
+                if (resultMap.value("Status").toString() == "Success")
                     return resultMap.value("Value").toString();
-                }
             }
         }
     }

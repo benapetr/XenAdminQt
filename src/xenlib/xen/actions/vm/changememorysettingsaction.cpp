@@ -26,9 +26,9 @@
  */
 
 #include "changememorysettingsaction.h"
-#include "../../../xen/network/connection.h"
 #include "../../xenapi/xenapi_VM.h"
-#include "../../../xencache.h"
+#include "../../host.h"
+#include "../../vm.h"
 #include <stdexcept>
 
 ChangeMemorySettingsAction::ChangeMemorySettingsAction(QSharedPointer<VM> vm,
@@ -37,8 +37,7 @@ ChangeMemorySettingsAction::ChangeMemorySettingsAction(QSharedPointer<VM> vm,
                                                        qint64 dynamicMax,
                                                        qint64 staticMax,
                                                        QObject* parent)
-    : AsyncOperation(vm->GetConnection(),
-                     QString("Changing memory settings"),
+    : AsyncOperation(QString("Changing memory settings"),
                      QString("Changing memory settings for '%1'").arg(vm ? vm->GetName() : ""),
                      parent),
       m_vm(vm),
@@ -49,6 +48,9 @@ ChangeMemorySettingsAction::ChangeMemorySettingsAction(QSharedPointer<VM> vm,
       m_staticChanged(false),
       m_needReboot(false)
 {
+    if (!vm)
+        throw std::invalid_argument("VM cannot be null");
+    this->m_connection = vm->GetConnection();
 }
 
 void ChangeMemorySettingsAction::run()

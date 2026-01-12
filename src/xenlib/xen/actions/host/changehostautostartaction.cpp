@@ -28,23 +28,30 @@
 #include "changehostautostartaction.h"
 #include "../../network/connection.h"
 #include "../../session.h"
+#include "../../host.h"
 #include "../../api.h"
 #include <QDebug>
 
 using namespace XenAPI;
 
-ChangeHostAutostartAction::ChangeHostAutostartAction(XenConnection* connection,
-                                                     const QString& hostRef,
+ChangeHostAutostartAction::ChangeHostAutostartAction(QSharedPointer<Host> host,
                                                      bool enable,
                                                      bool suppressHistory,
                                                      QObject* parent)
-    : AsyncOperation(connection,
-                     QObject::tr("Change VM Autostart"),
+    : AsyncOperation(QObject::tr("Change VM Autostart"),
                      QObject::tr("Changing VM autostart setting..."),
                      parent),
-      m_hostRef(hostRef), m_enableAutostart(enable)
+      m_host(host), m_enableAutostart_(enable)
 {
-    SetSuppressHistory(suppressHistory);
+    if (!this->m_host || !this->m_host->IsValid())
+    {
+        qWarning() << "ChangeHostAutostartAction: Invalid host object";
+        this->m_connection = nullptr;
+    } else
+    {
+        this->m_connection = host->GetConnection();
+    }
+    this->SetSuppressHistory(suppressHistory);
 }
 
 void ChangeHostAutostartAction::run()
@@ -66,7 +73,7 @@ void ChangeHostAutostartAction::run()
 
         // First, get the host's pool reference
         QVariantList hostPoolParams;
-        hostPoolParams << this->GetSession()->getSessionId() << this->m_hostRef;
+        hostPoolParams << this->GetSession()->getSessionId() << this->m_host->OpaqueRef();
 
         QByteArray hostPoolRequest = api.BuildJsonRpcCall("session.get_pool", hostPoolParams);
         QByteArray hostPoolResponse = this->GetConnection()->SendRequest(hostPoolRequest);
@@ -93,7 +100,7 @@ void ChangeHostAutostartAction::run()
         this->SetPercentComplete(50);
 
         // Update auto_poweron value
-        otherConfig["auto_poweron"] = this->m_enableAutostart ? "true" : "false";
+        otherConfig["auto_poweron"] = this->m_enableAutostart_ ? "true" : "false";
 
         // Set the modified other_config back
         QVariantList setConfigParams;

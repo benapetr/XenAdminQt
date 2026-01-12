@@ -32,6 +32,8 @@
 #include <QtCore/QString>
 #include <QtGui/QImage>
 
+class VM;
+
 /**
  * @brief Action to create a VM snapshot
  *
@@ -61,16 +63,14 @@ class XENLIB_EXPORT VMSnapshotCreateAction : public AsyncOperation
 
         /**
          * @brief Construct snapshot create action
-         * @param connection XenConnection
-         * @param vmRef VM opaque_ref to snapshot
+         * @param vm VM to snapshot
          * @param newName Name for the snapshot
          * @param newDescription Description for the snapshot
          * @param type Type of snapshot to create
          * @param screenshot Console screenshot (optional, for DISK_AND_MEMORY)
          * @param parent Parent QObject
          */
-        VMSnapshotCreateAction(XenConnection* connection,
-                               const QString& vmRef,
+        VMSnapshotCreateAction(QSharedPointer<VM> vm,
                                const QString& newName,
                                const QString& newDescription,
                                SnapshotType type,
@@ -86,19 +86,13 @@ class XENLIB_EXPORT VMSnapshotCreateAction : public AsyncOperation
             return m_snapshotRef;
         }
 
-        QString vmRef() const
-        {
-            return m_vmRef;
-        }
-
     protected:
         void run() override;
 
     private:
         void saveImageInBlob(const QString& snapshotRef, const QImage& image);
 
-        QString m_vmRef;
-        QString m_vmName;
+        QSharedPointer<VM> m_vm;
         QString m_newName;
         QString m_newDescription;
         SnapshotType m_type;

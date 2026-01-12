@@ -27,7 +27,7 @@
 
 #include "pooladvancededitpage.h"
 #include "ui_pooladvancededitpage.h"
-#include "xencache.h"
+#include "xenlib/xencache.h"
 #include "xenlib/xen/actions/pool/setpoolpropertyaction.h"
 #include "xenlib/xen/pool.h"
 
@@ -106,10 +106,16 @@ AsyncOperation* PoolAdvancedEditPage::SaveSettings()
 {
     bool newValue = this->ui->checkBoxCompression->isChecked();
     
+    QSharedPointer<Pool> pool = this->connection()->GetCache()->ResolveObject<Pool>("pool", this->m_poolRef_);
+    if (!pool || !pool->IsValid())
+    {
+        qWarning() << "PoolAdvancedEditPage::SaveSettings: Invalid pool" << this->m_poolRef_;
+        return nullptr;
+    }
+    
     // Use SetPoolPropertyAction to set migration_compression
     return new SetPoolPropertyAction(
-        this->connection(),
-        this->m_poolRef_,
+        pool,
         "migration_compression",
         newValue,
         tr("Updating migration compression"),

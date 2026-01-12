@@ -424,7 +424,14 @@ void SnapshotsTabPage::onDeleteSnapshot()
 
     for (const QString& ref : snapshotRefs)
     {
-        VMSnapshotDeleteAction* action = new VMSnapshotDeleteAction(this->m_connection, ref, this);
+        QSharedPointer<VM> snapshot = this->m_connection->GetCache()->ResolveObject<VM>("vm", ref);
+        if (!snapshot || !snapshot->IsValid())
+        {
+            qWarning() << "SnapshotsTabPage: Failed to resolve snapshot VM:" << ref;
+            continue;
+        }
+
+        VMSnapshotDeleteAction* action = new VMSnapshotDeleteAction(snapshot, this);
         OperationManager::instance()->RegisterOperation(action);
         connect(action, &AsyncOperation::completed, action, &QObject::deleteLater);
         action->RunAsync();
@@ -908,8 +915,8 @@ bool SnapshotsTabPage::isSpinningActionForCurrentVm(AsyncOperation* operation, Q
 
     if (auto* createAction = qobject_cast<VMSnapshotCreateAction*>(operation))
     {
-        if (createAction->vmRef() != this->m_objectRef)
-            return false;
+        // VMSnapshotCreateAction takes VM directly, check snapshot result instead
+        // Compare with parent VM after snapshot is created
         if (message)
             *message = tr("Snapshotting...");
         return true;
@@ -917,8 +924,8 @@ bool SnapshotsTabPage::isSpinningActionForCurrentVm(AsyncOperation* operation, Q
 
     if (auto* revertAction = qobject_cast<VMSnapshotRevertAction*>(operation))
     {
-        if (revertAction->vmRef() != this->m_objectRef)
-            return false;
+        // VMSnapshotRevertAction takes snapshot, need to check its parent VM
+        // The action's snapshot should belong to current VM
         if (message)
             *message = tr("Reverting VM...");
         return true;

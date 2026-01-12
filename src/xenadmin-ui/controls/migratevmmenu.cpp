@@ -33,6 +33,7 @@
 #include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
+#include "xenlib/xen/host.h"
 #include "xenlib/xen/actions/vm/vmmigrateaction.h"
 #include <QMessageBox>
 
@@ -147,15 +148,15 @@ void MigrateVMMenu::populate()
 
 void MigrateVMMenu::runMigrationToHost(const QString& hostRef, const QString& hostName)
 {
-    if (!m_vm)
+    if (!this->m_vm)
         return;
 
-    QString vmName = m_vm->GetName();
+    QString vmName = this->m_vm->GetName();
     if (vmName.isEmpty())
         vmName = tr("VM");
 
     QString error;
-    if (!m_vm->CanMigrateToHost(hostRef, &error))
+    if (!this->m_vm->CanMigrateToHost(hostRef, &error))
     {
         QMessageBox::warning(this->m_mainWindow, tr("Migrate VM"),
                              tr("Cannot migrate VM '%1' to host '%2'.\n\nReason: %3")
@@ -183,15 +184,22 @@ void MigrateVMMenu::runMigrationToHost(const QString& hostRef, const QString& ho
     if (ret != QMessageBox::Yes)
         return;
 
-    XenConnection* conn = m_vm->GetConnection();
+    XenConnection* conn = this->m_vm->GetConnection();
     if (!conn || !conn->IsConnected())
     {
-        QMessageBox::warning(this->m_mainWindow, tr("Not Connected"),
-                             tr("Not connected to XenServer"));
+        QMessageBox::warning(this->m_mainWindow, tr("Not Connected"), tr("Not connected to XenServer"));
         return;
     }
 
-    VMMigrateAction* action = new VMMigrateAction(conn, m_vm->OpaqueRef(), hostRef, this->m_mainWindow);
+    QSharedPointer<Host> host = conn->GetCache()->ResolveObject<Host>("host", hostRef);
+
+    if (!host)
+    {
+        QMessageBox::warning(this->m_mainWindow, tr("Host not found"), tr("Host not found in xen cache"));
+        return;
+    }
+
+    VMMigrateAction* action = new VMMigrateAction(this->m_vm, host, this->m_mainWindow);
     OperationManager::instance()->RegisterOperation(action);
 
     connect(action, &AsyncOperation::completed, this, [this, vmName, hostName, action]()

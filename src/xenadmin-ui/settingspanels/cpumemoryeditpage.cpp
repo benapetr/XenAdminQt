@@ -27,11 +27,11 @@
 
 #include "cpumemoryeditpage.h"
 #include "ui_cpumemoryeditpage.h"
-#include "../../xenlib/xen/actions/vm/changevcpusettingsaction.h"
-#include "../../xenlib/operations/multipleoperation.h"
-#include "../../xenlib/xencache.h"
-#include "../../xenlib/xen/host.h"
-#include "../../xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/changevcpusettingsaction.h"
+#include "xenlib/operations/multipleoperation.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/vm.h"
 #include <QComboBox>
 #include <QSlider>
 #include <QStyle>

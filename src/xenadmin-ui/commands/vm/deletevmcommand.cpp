@@ -113,14 +113,13 @@ void DeleteVMCommand::Run()
         XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected",
-                                 "Not connected to XenServer");
+            QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
             return;
         }
 
         // Create VMDestroyAction (matches C# VMDestroyAction pattern)
         // Action handles VDI cleanup, task polling, and error aggregation
-        VMDestroyAction* action = new VMDestroyAction(conn, vm, deleteDisks, this->mainWindow());
+        VMDestroyAction* action = new VMDestroyAction(vm, deleteDisks, this->mainWindow());
 
         // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
         OperationManager::instance()->RegisterOperation(action);

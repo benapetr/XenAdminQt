@@ -28,10 +28,11 @@
 #include "editvmhaprioritiesdialog.h"
 #include "../operations/operationmanager.h"
 #include "../dialogs/operationprogressdialog.h"
-#include "xencache.h"
-#include "xen/network/connection.h"
-#include "xen/session.h"
-#include "xen/actions/pool/sethaprioritiesaction.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/actions/pool/sethaprioritiesaction.h"
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QDialogButtonBox>
@@ -424,13 +425,20 @@ void EditVmHaPrioritiesDialog::accept()
             return;
     }
 
+    // Resolve Pool object from cache
+    QSharedPointer<Pool> pool = this->m_connection->GetCache()->ResolveObject<Pool>("pool", this->m_poolRef);
+    if (!pool || !pool->IsValid())
+    {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to resolve pool object"));
+        return;
+    }
+
     // Build startup options
     QMap<QString, QVariantMap> vmOptions = buildVmStartupOptions();
 
     // Create and run SetHaPrioritiesAction
     SetHaPrioritiesAction* action = new SetHaPrioritiesAction(
-        m_connection,
-        m_poolRef,
+        pool,
         vmOptions,
         newNtol,
         this);

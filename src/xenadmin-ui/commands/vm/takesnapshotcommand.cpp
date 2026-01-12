@@ -217,7 +217,7 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     // Create VMSnapshotCreateAction (matches C# VMSnapshotCreateAction pattern)
     // Action handles disk/quiesce/memory options and runs asynchronously
     // Pass screenshot for checkpoint snapshots
-    VMSnapshotCreateAction* action = new VMSnapshotCreateAction(conn, vm->OpaqueRef(), name, description, actionType, screenshot, this->mainWindow());
+    VMSnapshotCreateAction* action = new VMSnapshotCreateAction(vm, name, description, actionType, screenshot, this->mainWindow());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
     OperationManager::instance()->RegisterOperation(action);

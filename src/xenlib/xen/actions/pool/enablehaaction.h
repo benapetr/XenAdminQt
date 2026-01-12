@@ -34,9 +34,9 @@
 #include <QVariantMap>
 #include <QMap>
 
-class XenConnection;
 class VM;
 class SR;
+class Pool;
 
 /**
  * @brief EnableHAAction enables High Availability on a pool.
@@ -55,15 +55,13 @@ class EnableHAAction : public AsyncOperation
     public:
         /**
          * @brief Constructor for enabling HA
-         * @param connection Connection to the pool
-         * @param poolRef Pool opaque reference
+         * @param pool Pool object
          * @param heartbeatSRRefs List of SR refs to use for heartbeat
          * @param failuresToTolerate Number of host failures to tolerate (0-3 typically)
          * @param vmStartupOptions Optional map of VM ref -> startup options (priority, order, delay)
          * @param parent Parent QObject
          */
-        EnableHAAction(XenConnection* connection,
-                       const QString& poolRef,
+        EnableHAAction(QSharedPointer<Pool> pool,
                        const QStringList& heartbeatSRRefs,
                        qint64 failuresToTolerate,
                        const QMap<QString, QVariantMap>& vmStartupOptions = QMap<QString, QVariantMap>(),
@@ -73,7 +71,7 @@ class EnableHAAction : public AsyncOperation
         void run() override;
 
     private:
-        QString m_poolRef;
+        QSharedPointer<Pool> m_pool;
         QStringList m_heartbeatSRRefs;
         qint64 m_failuresToTolerate;
         QMap<QString, QVariantMap> m_vmStartupOptions; // VM ref -> {priority, order, delay}

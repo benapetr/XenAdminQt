@@ -29,26 +29,24 @@
 #include <QDebug>
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
+#include "xen/vm.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
 #include "xen/actions/vm/vmsnapshotdeleteaction.h"
 #include "xen/xenobject.h"
 #include <QtWidgets>
 
-DeleteSnapshotCommand::DeleteSnapshotCommand(QObject* parent)
-    : Command(nullptr, parent)
+DeleteSnapshotCommand::DeleteSnapshotCommand(QObject* parent) : Command(nullptr, parent)
 {
     // qDebug() << "DeleteSnapshotCommand: Created default constructor";
 }
 
-DeleteSnapshotCommand::DeleteSnapshotCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+DeleteSnapshotCommand::DeleteSnapshotCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
     // qDebug() << "DeleteSnapshotCommand: Created with MainWindow";
 }
 
-DeleteSnapshotCommand::DeleteSnapshotCommand(const QString& snapshotUuid, MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent), m_snapshotUuid(snapshotUuid)
+DeleteSnapshotCommand::DeleteSnapshotCommand(const QString& snapshotUuid, MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent), m_snapshotUuid(snapshotUuid)
 {
     // qDebug() << "DeleteSnapshotCommand: Created with snapshot UUID:" << snapshotUuid;
 }
@@ -89,50 +87,39 @@ QString DeleteSnapshotCommand::MenuText() const
 
 bool DeleteSnapshotCommand::canDeleteSnapshot() const
 {
-    if (this->m_snapshotUuid.isEmpty())
-    {
+    if (this->m_snapshotUuid.isEmpty() || !this->mainWindow())
         return false;
-    }
-
-    if (!this->mainWindow())
-    {
-        return false;
-    }
 
     QSharedPointer<XenObject> selectedObject = this->GetObject();
     if (!selectedObject)
         return false;
 
     // Get snapshot data from cache
-    XenConnection* connection = selectedObject->GetConnection();
-    XenCache* cache = connection ? connection->GetCache() : nullptr;
-    if (!cache)
-        return false;
+    XenCache* cache = selectedObject->GetCache();
 
-    QVariantMap snapshotData = cache->ResolveObjectData("vm", this->m_snapshotUuid);
-    if (snapshotData.isEmpty())
+    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", this->m_snapshotUuid);
+    if (!snapshot)
     {
         qDebug() << "DeleteSnapshotCommand: Snapshot not found in cache:" << this->m_snapshotUuid;
         return false;
     }
 
     // Verify it's actually a snapshot
-    if (!snapshotData.value("is_a_snapshot").toBool())
+    if (!snapshot->IsSnapshot())
     {
         qDebug() << "DeleteSnapshotCommand: Object is not a snapshot:" << this->m_snapshotUuid;
         return false;
     }
 
     // Check if snapshot is being used by any operations
-    QVariantList currentOperations = snapshotData.value("current_operations").toList();
-    if (!currentOperations.isEmpty())
+    if (!snapshot->CurrentOperations().isEmpty())
     {
         qDebug() << "DeleteSnapshotCommand: Snapshot has active operations:" << this->m_snapshotUuid;
         return false;
     }
 
     // Check allowed operations
-    QVariantList allowedOps = snapshotData.value("allowed_operations").toList();
+    QStringList allowedOps = snapshot->GetAllowedOperations();
     if (!allowedOps.contains("destroy"))
     {
         qDebug() << "DeleteSnapshotCommand: Destroy operation not allowed for snapshot:" << this->m_snapshotUuid;
@@ -147,20 +134,12 @@ bool DeleteSnapshotCommand::showConfirmationDialog()
     QString snapshotName = this->m_snapshotUuid;
 
     // Try to get snapshot name from cache
-    QSharedPointer<XenObject> selectedObject = this->GetObject();
-    XenConnection* connection = selectedObject ? selectedObject->GetConnection() : nullptr;
-    XenCache* cache = connection ? connection->GetCache() : nullptr;
-    if (cache)
+    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>("vm", this->m_snapshotUuid);
+    if (!snapshot)
     {
-        QVariantMap snapshotData = cache->ResolveObjectData("vm", this->m_snapshotUuid);
-        if (!snapshotData.isEmpty())
-        {
-            snapshotName = snapshotData.value("name_label").toString();
-            if (snapshotName.isEmpty())
-            {
-                snapshotName = this->m_snapshotUuid;
-            }
-        }
+        snapshotName = snapshot->GetName();
+        if (snapshotName.isEmpty())
+            snapshotName = this->m_snapshotUuid;
     }
 
     QMessageBox::StandardButton reply = QMessageBox::question(
@@ -186,25 +165,32 @@ void DeleteSnapshotCommand::deleteSnapshot()
         return;
     }
 
-    QSharedPointer<XenObject> selectedObject = this->GetObject();
-    XenConnection* conn = selectedObject ? selectedObject->GetConnection() : nullptr;
+    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>("vm", this->m_snapshotUuid);
+    if (!snapshot || !snapshot->IsValid())
+    {
+        qWarning() << "DeleteSnapshotCommand: Failed to resolve snapshot VM";
+        QMessageBox::critical(this->mainWindow(), tr("Delete Error"), tr("Failed to resolve snapshot VM."));
+        return;
+    }
+
+    XenConnection* conn = snapshot->GetConnection();
     if (!conn || !conn->IsConnected())
     {
         qWarning() << "DeleteSnapshotCommand: Not connected";
-        QMessageBox::critical(this->mainWindow(), tr("Delete Error"),
-                              tr("Not connected to XenServer."));
+        QMessageBox::critical(this->mainWindow(), tr("Delete Error"), tr("Not connected to XenServer."));
         return;
     }
 
     // Create VMSnapshotDeleteAction (matches C# VMSnapshotDeleteAction pattern)
     // Action handles task polling, history tracking, and automatic cache refresh
-    VMSnapshotDeleteAction* action = new VMSnapshotDeleteAction(conn, this->m_snapshotUuid, this->mainWindow());
+    VMSnapshotDeleteAction* action = new VMSnapshotDeleteAction(snapshot, this->mainWindow());
 
     // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, this, [this, action]() {
+    connect(action, &AsyncOperation::completed, this, [this, action]()
+    {
         bool success = (action->GetState() == AsyncOperation::Completed && !action->IsFailed());
         if (success)
         {

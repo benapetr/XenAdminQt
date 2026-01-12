@@ -77,7 +77,7 @@ void ShutdownHostCommand::Run()
             return;
         }
 
-        ShutdownHostAction* action = new ShutdownHostAction(conn, host, nullptr);
+        ShutdownHostAction* action = new ShutdownHostAction(host, nullptr);
 
         OperationManager::instance()->RegisterOperation(action);
 
@@ -89,8 +89,7 @@ void ShutdownHostCommand::Run()
             }
             else
             {
-                QMessageBox::warning(this->mainWindow(), "Shutdown Host Failed",
-                                     QString("Failed to shutdown host '%1'. Check the error log for details.").arg(hostName));
+                QMessageBox::warning(this->mainWindow(), "Shutdown Host Failed", QString("Failed to shutdown host '%1'. Check the error log for details.").arg(hostName));
                 this->mainWindow()->ShowStatusMessage("Host shutdown failed", 5000);
             }
             action->deleteLater();

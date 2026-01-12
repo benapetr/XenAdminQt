@@ -227,7 +227,7 @@ void NewVMWizard::loadTemplates()
         TemplateInfo info;
         info.ref = vm->OpaqueRef();
         info.name = vm->GetName();
-        QString virtualizationType = vm->IsHvm() ? tr("HVM") : tr("PV");
+        QString virtualizationType = vm->IsHVM() ? tr("HVM") : tr("PV");
         info.type = virtualizationType;
         info.description = vm->GetDescription();
 

@@ -81,7 +81,7 @@ void VMResumeAction::doAction(int start, int end)
     pollToCompletion(taskRef, start, end);
 }
 
-VMStartAbstractAction* VMResumeAction::clone()
+VMStartAbstractAction* VMResumeAction::Clone()
 {
     return new VMResumeAction(GetVM(), m_warningDialogHAInvalidConfig, m_startDiagnosisForm);
 }

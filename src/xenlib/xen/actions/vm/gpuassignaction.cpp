@@ -29,19 +29,22 @@
 #include "../../../xen/network/connection.h"
 #include "../../xenapi/xenapi_VGPU.h"
 #include "../../../xencache.h"
+#include "../../vm.h"
 #include <stdexcept>
 #include <QSet>
 
 GpuAssignAction::GpuAssignAction(QSharedPointer<VM> vm,
                                  const QVariantList& vgpuData,
                                  QObject* parent)
-    : AsyncOperation(vm->GetConnection(),
-                     QString("Set GPU"),
+    : AsyncOperation(QString("Set GPU"),
                      QString("Configuring GPU assignments for '%1'").arg(vm ? vm->GetName() : ""),
                      parent),
       m_vm(vm),
       m_vgpuData(vgpuData)
 {
+    if (!vm)
+        throw std::invalid_argument("VM cannot be null");
+    this->m_connection = vm->GetConnection();
 }
 
 void GpuAssignAction::run()

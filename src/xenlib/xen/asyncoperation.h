@@ -68,10 +68,8 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         };
         Q_ENUM(OperationState)
 
-        explicit AsyncOperation(XenConnection* connection, const QString& title,
-                                const QString& description = QString(), QObject* parent = nullptr);
-        explicit AsyncOperation(const QString& title, const QString& description = QString(),
-                                QObject* parent = nullptr);
+        explicit AsyncOperation(XenConnection* connection, const QString& title, const QString& description = QString(), QObject* parent = nullptr);
+        explicit AsyncOperation(const QString& title, const QString& description = QString(), QObject* parent = nullptr);
         virtual ~AsyncOperation();
 
         // Core properties

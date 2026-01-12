@@ -31,24 +31,28 @@
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../../xencache.h"
+#include "../../pool.h"
 #include <stdexcept>
 
-EnableHAAction::EnableHAAction(XenConnection* connection,
-                               const QString& poolRef,
+EnableHAAction::EnableHAAction(QSharedPointer<Pool> pool,
                                const QStringList& heartbeatSRRefs,
                                qint64 failuresToTolerate,
                                const QMap<QString, QVariantMap>& vmStartupOptions,
                                QObject* parent)
-    : AsyncOperation(connection,
+    : AsyncOperation(pool ? pool->GetConnection() : nullptr,
                      QString("Enabling HA on pool"),
                      "Enabling HA",
                      parent),
-      m_poolRef(poolRef),
+      m_pool(pool),
       m_heartbeatSRRefs(heartbeatSRRefs),
       m_failuresToTolerate(failuresToTolerate),
       m_vmStartupOptions(vmStartupOptions)
 {
-    if (m_heartbeatSRRefs.isEmpty())
+    if (!this->m_pool || !this->m_pool->IsValid())
+    {
+        throw std::invalid_argument("Invalid pool object");
+    }
+    if (this->m_heartbeatSRRefs.isEmpty())
     {
         throw std::invalid_argument("You must specify at least 1 heartbeat SR");
     }
@@ -103,7 +107,7 @@ void EnableHAAction::run()
         SetDescription("Setting host failure tolerance...");
 
         // Step 2: Set ha_host_failures_to_tolerate
-        XenAPI::Pool::set_ha_host_failures_to_tolerate(GetSession(), m_poolRef, m_failuresToTolerate);
+        XenAPI::Pool::set_ha_host_failures_to_tolerate(GetSession(), this->m_pool->OpaqueRef(), this->m_failuresToTolerate);
 
         SetPercentComplete(15);
         SetDescription("Enabling HA...");

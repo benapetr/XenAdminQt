@@ -197,10 +197,19 @@ void RotatePoolSecretCommand::Run()
         }
     }
 
+    // Resolve Pool object from cache
+    QSharedPointer<Pool> pool = connection->GetCache()->ResolveObject<Pool>("pool", poolRef);
+    if (!pool || !pool->IsValid())
+    {
+        qWarning() << "RotatePoolSecretCommand: Failed to resolve pool" << poolRef;
+        QMessageBox::critical(nullptr, tr("Error"), tr("Failed to resolve pool object"));
+        return;
+    }
+
     // Create and run action
     QString poolName = poolData.value("name_label", "Pool").toString();
 
-    RotatePoolSecretAction* action = new RotatePoolSecretAction(connection, poolRef);
+    RotatePoolSecretAction* action = new RotatePoolSecretAction(pool);
 
     action->SetTitle(tr("Rotating pool secret"));
     action->SetDescription(tr("Rotating secret for pool '%1'...").arg(poolName));

@@ -57,8 +57,7 @@ class VMMoveAction : public AsyncOperation
          * @param storageMapping Map of old VDI refs to target SRs
          * @param host Target host (can be nullptr)
          */
-        VMMoveAction(XenConnection* connection,
-                     QSharedPointer<VM> vm,
+        VMMoveAction(QSharedPointer<VM> vm,
                      const QMap<QString, QSharedPointer<SR>>& storageMapping,
                      QSharedPointer<Host> host,
                      QObject* parent = nullptr);
@@ -70,8 +69,7 @@ class VMMoveAction : public AsyncOperation
          * @param sr Target SR for all VDIs
          * @param host Target host (can be nullptr)
          */
-        VMMoveAction(XenConnection* connection,
-                     QSharedPointer<VM> vm,
+        VMMoveAction(QSharedPointer<VM> vm,
                      QSharedPointer<SR> sr,
                      QSharedPointer<Host> host,
                      QObject* parent = nullptr);

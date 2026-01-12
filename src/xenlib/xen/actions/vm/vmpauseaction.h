@@ -29,7 +29,6 @@
 #define VMPAUSEACTION_H
 
 #include "../../asyncoperation.h"
-#include "../../api.h"
 
 class VM;
 class Host;

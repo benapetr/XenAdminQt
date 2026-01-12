@@ -39,15 +39,15 @@ ChangeVMISOAction::ChangeVMISOAction(QSharedPointer<VM> vm,
                                      const QString& vdiRef,
                                      const QString& vbdRef,
                                      QObject* parent)
-    : AsyncOperation(vm->GetConnection(),
-                     vdiRef.isEmpty() ? "Ejecting ISO" : "Loading ISO",
+    : AsyncOperation(vdiRef.isEmpty() ? "Ejecting ISO" : "Loading ISO",
                      vdiRef.isEmpty() ? QString("Unloading ISO from '%1'").arg(vm ? vm->GetName() : "") 
                                       : QString("Loading ISO into '%1'").arg(vm ? vm->GetName() : ""),
                      parent),
       m_vm(vm), m_vdiRef(vdiRef), m_vbdRef(vbdRef), m_isEmpty(false)
 {
-    if (!this->m_vm || !this->m_vm->IsValid())
-        qWarning() << "ChangeVMISOAction: VM object is invalid";
+    if (!vm)
+        throw std::invalid_argument("VM cannot be null");
+    this->m_connection = vm->GetConnection();
 
     if (this->m_vbdRef.isEmpty())
         qWarning() << "ChangeVMISOAction: VBD reference is empty";

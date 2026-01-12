@@ -57,11 +57,9 @@ class RdpClient;
  */
 XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenConnection *connection,
                          const QString& elevatedUsername, const QString& elevatedPassword)
-    : QWidget(nullptr), _sourceRef(sourceRef), _sourceIsPv(false), _connection(connection), _parentVNCTabView(parent), _keyHandler(nullptr) // TODO: Get from parent when VNCTabView exists
+    : QWidget(nullptr), _sourceRef(sourceRef), _sourceIsPv(false), _connection(connection), _parentVNCTabView(parent) // TODO: Get from parent when VNCTabView exists
       ,
-      _vncClient(nullptr), _rdpClient(nullptr), _remoteConsole(nullptr), _useVNC(true), _useSource(true) // Default to hosted/source console (C#: _useSource = true)
-      ,
-      _autoSwitchRDPLater(false), _connectionRetries(0), _wasPaused(true), _haveTriedLoginWithoutPassword(false), _ignoreNextError(false), _userWantsToSwitchProtocol(false), _elevatedUsername(elevatedUsername), _elevatedPassword(elevatedPassword), _connectionPoller(nullptr), _hostedConsoleConnectionPending(false), _pendingVNCConnection(nullptr), _autoCaptureKeyboardAndMouse(true), _focusColor(QApplication::palette().color(QPalette::Highlight))
+      _elevatedUsername(elevatedUsername), _elevatedPassword(elevatedPassword), _focusColor(QApplication::palette().color(QPalette::Highlight))
 {
     qDebug() << "XSVNCScreen: Constructor for source:" << this->_sourceRef;
 
@@ -82,7 +80,7 @@ XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenConnec
         QSharedPointer<VM> vm = cache ? cache->ResolveObject<VM>("vm", this->_sourceRef) : QSharedPointer<VM>();
         if (vm && vm->IsValid())
         {
-            this->_sourceIsPv = !vm->IsHvm();
+            this->_sourceIsPv = !vm->IsHVM();
             qDebug() << "XSVNCScreen: VM" << this->_sourceRef << "is" << (this->_sourceIsPv ? "PV" : "HVM");
         } else
         {

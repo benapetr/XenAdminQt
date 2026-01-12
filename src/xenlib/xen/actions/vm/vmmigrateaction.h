@@ -31,6 +31,9 @@
 #include "../../asyncoperation.h"
 #include <QString>
 
+class VM;
+class Host;
+
 /**
  * @brief Action to migrate a VM to another host in the same pool
  *
@@ -51,17 +54,14 @@ class VMMigrateAction : public AsyncOperation
          * @param destinationHostRef Destination host opaque reference
          * @param parent Parent QObject
          */
-        explicit VMMigrateAction(XenConnection* connection,
-                                 const QString& vmRef,
-                                 const QString& destinationHostRef,
-                                 QObject* parent = nullptr);
+        explicit VMMigrateAction(QSharedPointer<VM> vm, QSharedPointer<Host> host, QObject* parent = nullptr);
 
     protected:
         void run() override;
 
     private:
-        QString m_vmRef;
-        QString m_destinationHostRef;
+        QSharedPointer<VM> m_vm;
+        QSharedPointer<Host> m_host;
 };
 
 #endif // VMMIGRATEACTION_H

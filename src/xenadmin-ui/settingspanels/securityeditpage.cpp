@@ -27,7 +27,9 @@
 
 #include "securityeditpage.h"
 #include "ui_securityeditpage.h"
-#include "../../xenlib/xen/actions/pool/setssllegacyaction.h"
+#include "xenlib/xen/actions/pool/setssllegacyaction.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xencache.h"
 
 SecurityEditPage::SecurityEditPage(QWidget* parent)
     : IEditPage(parent)
@@ -103,7 +105,15 @@ AsyncOperation* SecurityEditPage::SaveSettings()
 {
     bool enableSslLegacy = this->ui->radioButtonSSL->isChecked();
     
-    return new SetSslLegacyAction(        this->connection(),        this->m_poolRef_,
+    QSharedPointer<Pool> pool = this->connection()->GetCache()->ResolveObject<Pool>("pool", this->m_poolRef_);
+    if (!pool || !pool->IsValid())
+    {
+        qWarning() << "SecurityEditPage::SaveSettings: Invalid pool" << this->m_poolRef_;
+        return nullptr;
+    }
+    
+    return new SetSslLegacyAction(
+        pool,
         enableSslLegacy,
         this
     );

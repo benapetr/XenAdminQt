@@ -89,36 +89,37 @@ void NewTemplateFromSnapshotCommand::Run()
     QString type = !this->m_snapshotRef.isEmpty() ? "vm" : this->getSelectedObjectType();
 
     if (vmRef.isEmpty() || type != "vm")
-    {
         return;
-    }
 
-    XenConnection* connection = this->m_connection;
-    if (!connection)
+    XenConnection* conn = this->m_connection;
+    if (!conn)
     {
         QSharedPointer<XenObject> selectedObject = this->GetObject();
-        connection = selectedObject ? selectedObject->GetConnection() : nullptr;
+        conn = selectedObject ? selectedObject->GetConnection() : nullptr;
     }
-    XenCache* cache = connection ? connection->GetCache() : nullptr;
-    if (!cache)
-        return;
 
-    // Get snapshot data
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-    if (vmData.isEmpty())
+    if (!conn || !conn->IsConnected())
     {
+        QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
         return;
     }
 
-    bool isSnapshot = vmData.value("is_a_snapshot").toBool();
-    if (!isSnapshot)
+    // Create VM object for the snapshot
+    QSharedPointer<VM> snapshot = conn->GetCache()->ResolveObject<VM>("vm", vmRef);
+
+    if (!snapshot)
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not a Snapshot"),
-                             tr("Selected item is not a VM snapshot"));
+        QMessageBox::warning(this->mainWindow(), tr("Snapshot not found"), tr("Snapshot not found in XenCache"));
         return;
     }
 
-    QString snapshotName = vmData.value("name_label").toString();
+    if (!snapshot->IsSnapshot())
+    {
+        QMessageBox::warning(this->mainWindow(), tr("Not a Snapshot"), tr("Selected item is not a VM snapshot"));
+        return;
+    }
+
+    QString snapshotName = snapshot->GetName();
     QString defaultName = this->generateUniqueName(snapshotName);
 
     // Prompt for template name
@@ -131,33 +132,20 @@ void NewTemplateFromSnapshotCommand::Run()
                                                  &ok);
 
     if (!ok || templateName.isEmpty())
-    {
         return;
-    }
-
-    // Get connection
-    XenConnection* conn = connection;
-    if (!conn || !conn->IsConnected())
-    {
-        QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
-                             tr("Not connected to XenServer"));
-        return;
-    }
 
     // Create description for the template
     QString description = tr("Template created from snapshot '%1'").arg(snapshotName);
 
-    // Create VM object for the snapshot
-    QSharedPointer<VM> vm = QSharedPointer<VM>(new VM(conn, vmRef));
-
     // Create VMCloneAction
-    VMCloneAction* action = new VMCloneAction(conn, vm, templateName, description, this->mainWindow());
+    VMCloneAction* action = new VMCloneAction(snapshot, templateName, description, this->mainWindow());
 
     // Register with OperationManager
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal
-    connect(action, &AsyncOperation::completed, this, [=]() {
+    connect(action, &AsyncOperation::completed, this, [=]()
+    {
         if (action->GetState() == AsyncOperation::Completed)
         {
             // Mark template as "instant" (created from snapshot)
@@ -169,9 +157,7 @@ void NewTemplateFromSnapshotCommand::Run()
                 tr("Template '%1' created from snapshot").arg(templateName), 5000);
         } else if (action->GetState() == AsyncOperation::Failed)
         {
-            QMessageBox::critical(this->mainWindow(), tr("Error"),
-                                  tr("Failed to create template from snapshot:\n%1")
-                                      .arg(action->GetErrorMessage()));
+            QMessageBox::critical(this->mainWindow(), tr("Error"), tr("Failed to create template from snapshot:\n%1").arg(action->GetErrorMessage()));
         }
 
         action->deleteLater();

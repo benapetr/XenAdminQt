@@ -29,8 +29,10 @@
 #define CHANGEMEMORYSETTINGSACTION_H
 
 #include "../../asyncoperation.h"
-#include "../../vm.h"
 #include <QString>
+
+class VM;
+class Host;
 
 /**
  * @brief Action to change VM memory settings with optional reboot

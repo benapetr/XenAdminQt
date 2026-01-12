@@ -50,8 +50,7 @@ class ShutDownApplianceAction : public AsyncOperation
          * @param applianceRef OpaqueRef of VM_appliance to shut down
          * @param parent Parent QObject
          */
-        explicit ShutDownApplianceAction(XenConnection* connection, const QString& applianceRef,
-                                         QObject* parent = nullptr);
+        explicit ShutDownApplianceAction(XenConnection* connection, const QString& applianceRef, QObject* parent = nullptr);
 
     protected:
         void run() override;

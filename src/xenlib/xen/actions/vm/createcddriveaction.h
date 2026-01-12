@@ -25,45 +25,49 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef STARTAPPLIANCEACTION_H
-#define STARTAPPLIANCEACTION_H
+#ifndef CREATECDDRIVEACTION_H
+#define CREATECDDRIVEACTION_H
 
-#include "../../asyncoperation.h"
-#include <QString>
+#include "xen/asyncoperation.h"
+#include <QSharedPointer>
+
+class VM;
 
 /**
- * @brief Action to start a VM appliance (vApp)
+ * @brief Creates a new CD/DVD drive (VBD) for a VM
  *
- * Starts all VMs in the appliance in the configured order.
+ * This action creates a new virtual CD/DVD drive for a VM if one doesn't already exist.
+ * It checks the maximum allowed VBDs, finds the next available device number (preferring "3"),
+ * and uses VbdCreateAndPlugAction to create and attach the drive.
  *
- * Port of C# StartApplianceAction from:
- * xenadmin/XenModel/Actions/VMAppliances/StartApplianceAction.cs
+ * C# reference: XenModel/Actions/VM/CreateCdDriveAction.cs
  */
-class StartApplianceAction : public AsyncOperation
+class XENLIB_EXPORT CreateCdDriveAction : public AsyncOperation
 {
     Q_OBJECT
 
     public:
         /**
-         * @brief Construct StartApplianceAction
-         * @param connection XenConnection
-         * @param applianceRef OpaqueRef of VM_appliance to start
-         * @param suspend If true, start VMs in paused/suspended state
+         * @brief Construct a create CD drive action
+         * @param vm The VM to create the CD drive for
          * @param parent Parent QObject
          */
-        explicit StartApplianceAction(XenConnection* connection, const QString& applianceRef, bool suspend, QObject* parent = nullptr);
+        explicit CreateCdDriveAction(QSharedPointer<VM> vm, QObject* parent = nullptr);
+
+    signals:
+        /**
+         * @brief Emitted when user action/instruction is required
+         * @param instruction User instruction message
+         * 
+         * Subscribe to this event unless installing tools
+         */
+        void showUserInstruction(const QString& instruction);
 
     protected:
-        /**
-         * @brief Execute the VM appliance start operation
-         *
-         * Calls XenAPI::VM_appliance::async_start() and polls task to completion.
-         */
         void run() override;
 
     private:
-        QString m_applianceRef; ///< OpaqueRef of VM_appliance
-        bool m_suspend;         ///< Start in paused state?
+        QSharedPointer<VM> vm_;
 };
 
-#endif // STARTAPPLIANCEACTION_H
+#endif // CREATECDDRIVEACTION_H

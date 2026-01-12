@@ -27,16 +27,15 @@
 
 #include "setpoolnameanddescriptionaction.h"
 #include "../../xenapi/xenapi_Pool.h"
-#include "../../session.h"
+#include "xen/pool.h"
 #include <stdexcept>
 
-SetPoolNameAndDescriptionAction::SetPoolNameAndDescriptionAction(XenConnection* connection,
-                                                                 const QString& poolRef,
-                                                                 const QString& name,
-                                                                 const QString& description,
-                                                                 QObject* parent)
-    : AsyncOperation(connection, "Setting Pool Properties", "Updating pool name and description...", parent), m_poolRef(poolRef), m_name(name), m_description(description)
+SetPoolNameAndDescriptionAction::SetPoolNameAndDescriptionAction(QSharedPointer<Pool> pool, const QString& name, const QString& description, QObject* parent)
+    : AsyncOperation("Setting Pool Properties", "Updating pool name and description...", parent), m_pool(pool), m_name(name), m_description(description)
 {
+    if (!this->m_pool || !this->m_pool->IsValid())
+        throw std::invalid_argument("Invalid pool object");
+    this->m_connection = pool->GetConnection();
 }
 
 void SetPoolNameAndDescriptionAction::run()
@@ -48,26 +47,21 @@ void SetPoolNameAndDescriptionAction::run()
             throw std::runtime_error("Not connected to XenServer");
         }
 
-        if (m_poolRef.isEmpty())
-        {
-            throw std::runtime_error("Pool reference is empty");
-        }
-
         SetPercentComplete(0);
 
         // Set pool name if provided
-        if (!m_name.isNull())
+        if (!this->m_name.isNull())
         {
-            SetDescription(QString("Setting pool name to '%1'...").arg(m_name));
-            XenAPI::Pool::set_name_label(GetSession(), m_poolRef, m_name);
+            SetDescription(QString("Setting pool name to '%1'...").arg(this->m_name));
+            XenAPI::Pool::set_name_label(GetSession(), this->m_pool->OpaqueRef(), this->m_name);
             SetPercentComplete(50);
         }
 
         // Set pool description if provided
-        if (!m_description.isNull())
+        if (!this->m_description.isNull())
         {
             SetDescription(QString("Setting pool description..."));
-            XenAPI::Pool::set_name_description(GetSession(), m_poolRef, m_description);
+            XenAPI::Pool::set_name_description(GetSession(), this->m_pool->OpaqueRef(), this->m_description);
             SetPercentComplete(100);
         }
 

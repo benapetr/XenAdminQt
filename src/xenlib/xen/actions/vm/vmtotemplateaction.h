@@ -52,9 +52,7 @@ class VMToTemplateAction : public AsyncOperation
          * @param vm VM object to convert to template
          * @param parent Parent QObject
          */
-        explicit VMToTemplateAction(XenConnection* connection,
-                                    QSharedPointer<VM> vm,
-                                    QObject* parent = nullptr);
+        explicit VMToTemplateAction(QSharedPointer<VM> vm, QObject* parent = nullptr);
 
     protected:
         void run() override;

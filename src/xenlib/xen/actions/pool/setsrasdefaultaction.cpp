@@ -29,25 +29,31 @@
 #include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
+#include "xen/pool.h"
 
-SetSrAsDefaultAction::SetSrAsDefaultAction(XenConnection* connection,
-                                           const QString& poolRef,
-                                           const QString& srRef,
-                                           QObject* parent)
-    : AsyncOperation(connection,
-                     QString("Setting default storage repository"),
+SetSrAsDefaultAction::SetSrAsDefaultAction(QSharedPointer<Pool> pool, const QString& srRef, QObject* parent)
+    : AsyncOperation(QString("Setting default storage repository"),
                      QString("Updating default SR"),
                      parent),
-      m_poolRef(poolRef),
+      m_pool(pool),
       m_srRef(srRef)
 {
+    if (!this->m_pool || !this->m_pool->IsValid())
+        qWarning() << "SetSrAsDefaultAction: Invalid pool object";
+    this->m_connection = pool->GetConnection();
 }
 
 void SetSrAsDefaultAction::run()
 {
-    if (!GetConnection() || m_poolRef.isEmpty() || m_srRef.isEmpty())
+    if (!this->m_pool || !this->m_pool->IsValid())
     {
-        setError("Invalid connection or references");
+        setError("Invalid pool object");
+        return;
+    }
+
+    if (!GetConnection() || this->m_srRef.isEmpty())
+    {
+        setError("Invalid connection or SR reference");
         return;
     }
 
@@ -60,9 +66,10 @@ void SetSrAsDefaultAction::run()
 
     try
     {
-        XenAPI::Pool::set_default_SR(session, m_poolRef, m_srRef);
-        XenAPI::Pool::set_suspend_image_SR(session, m_poolRef, m_srRef);
-        XenAPI::Pool::set_crash_dump_SR(session, m_poolRef, m_srRef);
+        QString poolRef = this->m_pool->OpaqueRef();
+        XenAPI::Pool::set_default_SR(session, poolRef, this->m_srRef);
+        XenAPI::Pool::set_suspend_image_SR(session, poolRef, this->m_srRef);
+        XenAPI::Pool::set_crash_dump_SR(session, poolRef, this->m_srRef);
         SetDescription("Completed");
     }
     catch (const std::exception& e)

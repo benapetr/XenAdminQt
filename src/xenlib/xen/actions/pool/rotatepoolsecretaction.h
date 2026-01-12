@@ -31,7 +31,7 @@
 #include "../../asyncoperation.h"
 #include <QString>
 
-class XenConnection;
+class Pool;
 
 /**
  * @brief Action to rotate the pool's shared secret
@@ -46,13 +46,13 @@ class RotatePoolSecretAction : public AsyncOperation
     Q_OBJECT
 
     public:
-        explicit RotatePoolSecretAction(XenConnection* connection, const QString& poolRef, QObject* parent = nullptr);
+        explicit RotatePoolSecretAction(QSharedPointer<Pool> pool, QObject* parent = nullptr);
 
     protected:
         void run() override;
 
     private:
-        QString m_poolRef;
+        QSharedPointer<Pool> m_pool;
 };
 
 #endif // ROTATEPOOLSECRETACTION_H

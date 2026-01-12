@@ -34,14 +34,16 @@ ChangeVCPUSettingsAction::ChangeVCPUSettingsAction(QSharedPointer<VM> vm,
                                                    qint64 vcpusMax,
                                                    qint64 vcpusAtStartup,
                                                    QObject* parent)
-    : AsyncOperation(vm->GetConnection(),
-                     QString("Changing VCPU settings"),
+    : AsyncOperation(QString("Changing VCPU settings"),
                      QString("Changing VCPU settings for '%1'").arg(vm ? vm->GetName() : ""),
                      parent),
       m_vm(vm),
       m_vcpusMax(vcpusMax),
       m_vcpusAtStartup(vcpusAtStartup)
 {
+    if (!vm)
+        throw std::invalid_argument("VM cannot be null");
+    this->m_connection = vm->GetConnection();
 }
 
 void ChangeVCPUSettingsAction::run()

@@ -28,70 +28,78 @@
 #include "vmsnapshotrevertaction.h"
 #include "../../../xen/network/connection.h"
 #include "../../../xencache.h"
+#include "../../vm.h"
 #include "../../xenapi/xenapi_VM.h"
 #include <QtCore/QDebug>
 
-VMSnapshotRevertAction::VMSnapshotRevertAction(XenConnection* connection,
-                                               const QString& snapshotRef,
-                                               QObject* parent)
-    : AsyncOperation(connection,
+VMSnapshotRevertAction::VMSnapshotRevertAction(QSharedPointer<VM> snapshot, QObject* parent)
+    : AsyncOperation(snapshot ? snapshot->GetConnection() : nullptr,
                      "Revert to snapshot",
                      "Reverting to snapshot...",
                      parent),
-      m_snapshotRef(snapshotRef), m_revertPowerState(false), m_revertFinished(false)
+      m_snapshot(snapshot), m_revertPowerState_(false), m_revertFinished_(false)
 {
-    // Get snapshot details
-    QVariantMap snapshotData = connection->GetCache()->ResolveObjectData("vm", snapshotRef);
-    m_snapshotName = snapshotData.value("name_label").toString();
+    if (!m_snapshot || !m_snapshot->IsValid())
+    {
+        qWarning() << "VMSnapshotRevertAction: Invalid snapshot VM object";
+        return;
+    }
 
     // Update title with actual name
-    SetTitle(QString("Revert to snapshot '%1'").arg(m_snapshotName));
+    SetTitle(QString("Revert to snapshot '%1'").arg(m_snapshot->GetName()));
 
     // Get parent VM reference
-    m_vmRef = snapshotData.value("snapshot_of").toString();
-
-    if (!m_vmRef.isEmpty())
+    QString vmRef = m_snapshot->SnapshotOfRef();
+    if (!vmRef.isEmpty() && vmRef != "OpaqueRef:NULL")
     {
-        QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", m_vmRef);
-
-        // Get the host the VM was running on
-        m_previousHostRef = vmData.value("resident_on").toString();
-
-        // Check if we should restore power state
-        QVariantMap snapshotInfo = snapshotData.value("snapshot_info").toMap();
-        QString powerStateAtSnapshot = snapshotInfo.value("power-state-at-snapshot").toString();
-
-        if (powerStateAtSnapshot == "Running")
+        m_vm = m_snapshot->GetConnection()->GetCache()->ResolveObject<VM>("vm", vmRef);
+        if (m_vm && m_vm->IsValid())
         {
-            m_revertPowerState = true;
+            // Get the host the VM was running on
+            this->m_previousHostRef_ = m_vm->ResidentOnRef();
+
+            // Check if we should restore power state
+            QVariantMap snapshotInfo = m_snapshot->SnapshotInfo();
+            QString powerStateAtSnapshot = snapshotInfo.value("power-state-at-snapshot").toString();
+
+            if (powerStateAtSnapshot == "Running")
+            {
+                this->m_revertPowerState_ = true;
+            }
         }
     }
 }
 
 void VMSnapshotRevertAction::run()
 {
+    if (!m_snapshot || !m_snapshot->IsValid())
+    {
+        setError("Invalid snapshot VM object");
+        return;
+    }
+
     try
     {
-        SetDescription(QString("Reverting to snapshot '%1'...").arg(m_snapshotName));
+        SetDescription(QString("Reverting to snapshot '%1'...").arg(m_snapshot->GetName()));
         SetPercentComplete(0);
 
         // Step 1: Revert the VM to snapshot state (0-90%)
-        QString taskRef = XenAPI::VM::async_revert(GetSession(), m_snapshotRef);
+        QString taskRef = XenAPI::VM::async_revert(GetSession(), m_snapshot->OpaqueRef());
         pollToCompletion(taskRef, 0, 90);
 
-        m_revertFinished = true;
+        this->m_revertFinished_ = true;
 
-        qDebug() << "VM reverted to snapshot:" << m_snapshotName;
+        qDebug() << "VM reverted to snapshot:" << m_snapshot->GetName();
 
         SetPercentComplete(90);
         SetDescription(QString("Restoring power state..."));
 
         // Step 2: Restore power state if needed (90-100%)
-        if (m_revertPowerState)
+        if (this->m_revertPowerState_ && m_vm && m_vm->IsValid())
         {
             try
             {
-                revertPowerState(m_vmRef);
+                revertPowerState(m_vm->OpaqueRef());
             } catch (const std::exception& e)
             {
                 qWarning() << "Failed to restore power state:" << e.what();
@@ -100,7 +108,7 @@ void VMSnapshotRevertAction::run()
         }
 
         SetPercentComplete(100);
-        SetDescription(QString("Reverted to snapshot '%1'").arg(m_snapshotName));
+        SetDescription(QString("Reverted to snapshot '%1'").arg(m_snapshot->GetName()));
 
     } catch (const std::exception& e)
     {
@@ -119,13 +127,13 @@ void VMSnapshotRevertAction::revertPowerState(const QString& vmRef)
     if (powerState == "Halted")
     {
         // Try to start on previous host if possible
-        if (!m_previousHostRef.isEmpty() &&
-            m_previousHostRef != "OpaqueRef:NULL" &&
-            vmCanBootOnHost(vmRef, m_previousHostRef))
+        if (!this->m_previousHostRef_.isEmpty() &&
+            this->m_previousHostRef_ != "OpaqueRef:NULL" &&
+            vmCanBootOnHost(vmRef, this->m_previousHostRef_))
         {
 
-            qDebug() << "Starting VM on previous host:" << m_previousHostRef;
-            taskRef = XenAPI::VM::async_start_on(GetSession(), vmRef, m_previousHostRef, false, false);
+            qDebug() << "Starting VM on previous host:" << this->m_previousHostRef_;
+            taskRef = XenAPI::VM::async_start_on(GetSession(), vmRef, this->m_previousHostRef_, false, false);
         } else
         {
             qDebug() << "Starting VM on any available host";
@@ -138,13 +146,13 @@ void VMSnapshotRevertAction::revertPowerState(const QString& vmRef)
     } else if (powerState == "Suspended")
     {
         // Try to resume on previous host if possible
-        if (!m_previousHostRef.isEmpty() &&
-            m_previousHostRef != "OpaqueRef:NULL" &&
-            vmCanBootOnHost(vmRef, m_previousHostRef))
+        if (!this->m_previousHostRef_.isEmpty() &&
+            this->m_previousHostRef_ != "OpaqueRef:NULL" &&
+            vmCanBootOnHost(vmRef, this->m_previousHostRef_))
         {
 
-            qDebug() << "Resuming VM on previous host:" << m_previousHostRef;
-            taskRef = XenAPI::VM::async_resume_on(GetSession(), vmRef, m_previousHostRef, false, false);
+            qDebug() << "Resuming VM on previous host:" << this->m_previousHostRef_;
+            taskRef = XenAPI::VM::async_resume_on(GetSession(), vmRef, this->m_previousHostRef_, false, false);
         } else
         {
             qDebug() << "Resuming VM on any available host";

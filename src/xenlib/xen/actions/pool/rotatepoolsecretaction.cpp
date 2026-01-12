@@ -29,18 +29,19 @@
 #include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
+#include "../../pool.h"
 #include <stdexcept>
 
-RotatePoolSecretAction::RotatePoolSecretAction(XenConnection* connection, const QString& poolRef, QObject* parent)
-    : AsyncOperation(connection,
+RotatePoolSecretAction::RotatePoolSecretAction(QSharedPointer<Pool> pool, QObject* parent)
+    : AsyncOperation(pool ? pool->GetConnection() : nullptr,
                      QString("Rotating pool secret"),
                      "Rotating pool secret",
                      parent),
-      m_poolRef(poolRef)
+      m_pool(pool)
 {
-    if (m_poolRef.isEmpty())
+    if (!this->m_pool || !this->m_pool->IsValid())
     {
-        throw std::invalid_argument("Pool reference cannot be empty");
+        throw std::invalid_argument("Invalid pool object");
     }
 }
 
@@ -52,7 +53,7 @@ void RotatePoolSecretAction::run()
         SetDescription("Rotating pool secret...");
 
         // Call Pool.rotate_secret API
-        XenAPI::Pool::rotate_secret(GetSession(), m_poolRef);
+        XenAPI::Pool::rotate_secret(GetSession(), this->m_pool->OpaqueRef());
 
         SetPercentComplete(100);
         SetDescription("Pool secret rotated successfully");

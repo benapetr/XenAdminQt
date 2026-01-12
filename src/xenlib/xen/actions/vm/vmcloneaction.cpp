@@ -31,21 +31,17 @@
 #include "../../xenapi/xenapi_VM.h"
 #include <QDebug>
 
-VMCloneAction::VMCloneAction(XenConnection* connection,
-                             QSharedPointer<VM> vm,
-                             const QString& name,
-                             const QString& description,
-                             QObject* parent)
-    : AsyncOperation(connection,
-                     QString("Cloning '%1' to '%2'").arg(vm ? vm->GetName() : "").arg(name),
+VMCloneAction::VMCloneAction(QSharedPointer<VM> vm, const QString& name, const QString& description, QObject* parent)
+    : AsyncOperation(QString("Cloning '%1' to '%2'").arg(vm ? vm->GetName() : "").arg(name),
                      QString("Cloning '%1'").arg(vm ? vm->GetName() : ""),
                      parent),
-      m_vm(vm),
       m_cloneName(name),
       m_cloneDescription(description)
 {
-    if (!m_vm)
+    if (!vm)
         throw std::invalid_argument("VM cannot be null");
+    this->m_connection = vm->GetConnection();
+    this->m_vm = vm;
 }
 
 void VMCloneAction::run()

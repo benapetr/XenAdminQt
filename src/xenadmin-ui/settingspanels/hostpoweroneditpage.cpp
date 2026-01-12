@@ -27,7 +27,7 @@
 
 #include "hostpoweroneditpage.h"
 #include "ui_hostpoweroneditpage.h"
-#include "xen/actions/host/savepoweronsettingsaction.h"
+#include "xenlib/xen/actions/host/savepoweronsettingsaction.h"
 #include <QMessageBox>
 #include <QHostAddress>
 #include <QTableWidgetItem>

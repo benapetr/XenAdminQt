@@ -45,7 +45,7 @@ ExportVmAction::ExportVmAction(QSharedPointer<VM> vm,
                                const QString& filename,
                                bool verify,
                                QObject* parent)
-    : AsyncOperation(vm->GetConnection(), tr("Exporting VM"), tr("Preparing export..."), parent)
+    : AsyncOperation(tr("Exporting VM"), tr("Preparing export..."), parent)
     , m_vm(vm)
     , m_host(host)
     , filename_(filename)
@@ -53,6 +53,9 @@ ExportVmAction::ExportVmAction(QSharedPointer<VM> vm,
     , httpClient_(nullptr)
     , progressThread_(nullptr)
 {
+    if (!vm)
+        throw std::invalid_argument("VM cannot be null");
+    this->m_connection = vm->GetConnection();
     this->SetSafeToExit(false);
     
     // Get VM name for title

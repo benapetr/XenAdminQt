@@ -27,10 +27,10 @@
 
 #include "customfieldsdisplaypage.h"
 #include "ui_customfieldsdisplaypage.h"
-#include "../../xenlib/xen/asyncoperation.h"
-#include "../../xenlib/xen/network/connection.h"
-#include "../../xenlib/xen/session.h"
-#include "../../xenlib/xen/api.h"
+#include "xenlib/xen/asyncoperation.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/api.h"
 #include <QInputDialog>
 #include <QPushButton>
 #include <QLineEdit>

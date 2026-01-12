@@ -130,11 +130,7 @@ void MoveVMCommand::Run()
     if (!srObj || !srObj->IsValid())
         return;
 
-    VMMoveAction* action = new VMMoveAction(connection,
-                                            vm,
-                                            srObj,
-                                            QSharedPointer<Host>(),
-                                            this->mainWindow());
+    VMMoveAction* action = new VMMoveAction(vm, srObj, QSharedPointer<Host>(), this->mainWindow());
     OperationManager::instance()->RegisterOperation(action);
     action->RunAsync();
 }

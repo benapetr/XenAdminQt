@@ -29,9 +29,10 @@
 #define HVMBOOTACTION_H
 
 #include "../../asyncoperation.h"
-#include "../../vm.h"
 #include <QString>
 #include <QVariantMap>
+
+class VM;
 
 namespace XenAPI
 {

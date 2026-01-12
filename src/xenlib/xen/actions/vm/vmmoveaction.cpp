@@ -38,13 +38,11 @@
 #include "../../xenapi/xenapi_VBD.h"
 #include <QDebug>
 
-VMMoveAction::VMMoveAction(XenConnection* connection,
-                           QSharedPointer<VM> vm,
+VMMoveAction::VMMoveAction(QSharedPointer<VM> vm,
                            const QMap<QString, QSharedPointer<SR>>& storageMapping,
                            QSharedPointer<Host> host,
                            QObject* parent)
-    : AsyncOperation(connection,
-                     QString("Moving VM '%1'").arg(vm ? vm->GetName() : ""),
+    : AsyncOperation(QString("Moving VM '%1'").arg(vm ? vm->GetName() : ""),
                      QString(""),
                      parent)
     , m_vm(vm)
@@ -54,6 +52,8 @@ VMMoveAction::VMMoveAction(XenConnection* connection,
 {
     if (!this->m_vm)
         throw std::invalid_argument("VM cannot be null");
+
+    this->m_connection = vm->GetConnection();
 
     if (!storageMapping.isEmpty())
         this->m_sr = storageMapping.first();
@@ -66,12 +66,11 @@ VMMoveAction::VMMoveAction(XenConnection* connection,
         SetSR(this->m_sr);
 }
 
-VMMoveAction::VMMoveAction(XenConnection* connection,
-                           QSharedPointer<VM> vm,
+VMMoveAction::VMMoveAction(QSharedPointer<VM> vm,
                            QSharedPointer<SR> sr,
                            QSharedPointer<Host> host,
                            QObject* parent)
-    : VMMoveAction(connection, vm, getStorageMapping(vm, sr), host, parent)
+    : VMMoveAction(vm, getStorageMapping(vm, sr), host, parent)
 {
 }
 

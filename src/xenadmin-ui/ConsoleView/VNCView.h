@@ -51,6 +51,7 @@ class VNCTabView;
 class XenConnection;
 class QMainWindow;
 class QPushButton;
+class VM;
 
 /**
  * @class VNCView
@@ -90,11 +91,7 @@ class VNCView : public QWidget
          * @param xenLib XenLib instance for XenAPI access
          * @param parent Qt parent widget
          */
-        explicit VNCView(const QString& vmRef,
-                         const QString& elevatedUsername,
-                         const QString& elevatedPassword,
-                         XenConnection* conn,
-                         QWidget* parent = nullptr);
+        explicit VNCView(QSharedPointer<VM> vm, const QString& elevatedUsername, const QString& elevatedPassword, QWidget* parent = nullptr);
 
         /**
          * @brief Destructor - cleanup undocked window, unregister listeners
@@ -107,19 +104,19 @@ class VNCView : public QWidget
          * Reference: VNCView.cs line 50
          * @return true if docked, false if undocked to separate window
          */
-        bool isDocked() const;
+        bool IsDocked() const;
 
         /**
          * @brief Pause console updates (when hidden or minimized)
          * Reference: VNCView.cs lines 52-55
          */
-        void pause();
+        void Pause();
 
         /**
          * @brief Resume console updates (when visible)
          * Reference: VNCView.cs lines 57-60
          */
-        void unpause();
+        void Unpause();
 
         /**
          * @brief Toggle between docked and undocked states
@@ -138,50 +135,50 @@ class VNCView : public QWidget
          * - Shows find/reattach buttons
          * - Sets up minimize/close handlers
          */
-        void dockUnDock();
+        void DockUnDock();
 
         /**
          * @brief Send Ctrl+Alt+Del to console
          * Reference: VNCView.cs lines 225-228
          */
-        void sendCAD();
+        void SendCAD();
 
         /**
          * @brief Focus the console widget
          * Reference: VNCView.cs lines 230-233
          */
-        void focusConsole();
+        void FocusConsole();
 
         /**
          * @brief Switch console protocol if required (auto-RDP)
          * Reference: VNCView.cs lines 235-238
          */
-        void switchIfRequired();
+        void SwitchIfRequired();
 
         /**
          * @brief Capture screenshot of console
          * Reference: VNCView.cs lines 240-243
          * @return QImage with current console display
          */
-        QImage snapshot();
+        QImage Snapshot();
 
         /**
          * @brief Refresh CD/DVD ISO list
          * Reference: VNCView.cs lines 245-248
          */
-        void refreshIsoList();
+        void RefreshIsoList();
 
         /**
          * @brief Update RDP resolution (for RDP protocol)
          * Reference: VNCView.cs lines 250-253
          * @param fullscreen Whether to use fullscreen resolution
          */
-        void updateRDPResolution(bool fullscreen = false);
+        void UpdateRDPResolution(bool fullscreen = false);
 
         /**
          * @brief Access to VNCTabView (for ConsolePanel integration)
          */
-        VNCTabView* vncTabView()
+        VNCTabView* GetVncTabView()
         {
             return _vncTabView;
         }
@@ -243,22 +240,23 @@ class VNCView : public QWidget
          */
         void setupUI();
 
-        QString _vmRef;  ///< VM OpaqueRef
-        XenConnection* _connection;
+        QSharedPointer<VM> m_vm;
 
-        VNCTabView* _vncTabView;    ///< Wrapped console UI
-        QMainWindow* _undockedForm; ///< Separate window when undocked
+        //! Wrapped console UI
+        VNCTabView* _vncTabView = nullptr;
+        //! Separate window when undocked
+        QMainWindow* _undockedForm = nullptr;
 
-        QPushButton* _findConsoleButton;     ///< "Find Console" button (shown when undocked)
-        QPushButton* _reattachConsoleButton; ///< "Reattach Console" button (shown when undocked)
+        QPushButton* _findConsoleButton = nullptr;     ///< "Find Console" button (shown when undocked)
+        QPushButton* _reattachConsoleButton = nullptr; ///< "Reattach Console" button (shown when undocked)
 
         // Geometry persistence (C#: oldUndockedSize, oldUndockedLocation, oldScaledSetting)
         QSize _oldUndockedSize;      ///< Last undocked window size
         QPoint _oldUndockedLocation; ///< Last undocked window position
-        bool _oldScaledSetting;      ///< Scale checkbox state before undocking
+        bool _oldScaledSetting = false;      ///< Scale checkbox state before undocking
 
         // Resize tracking (C#: undockedFormResized)
-        bool _undockedFormResized; ///< Helper to detect actual resize (not just move)
+        bool _undockedFormResized = false; ///< Helper to detect actual resize (not just move)
 };
 
 #endif // VNCVIEW_H

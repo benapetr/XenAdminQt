@@ -36,15 +36,13 @@
 #include <QDebug>
 #include <stdexcept>
 
-VMCopyAction::VMCopyAction(XenConnection* connection,
-                           QSharedPointer<VM> vm,
+VMCopyAction::VMCopyAction(QSharedPointer<VM> vm,
                            QSharedPointer<Host> host,
                            QSharedPointer<SR> sr,
                            const QString& nameLabel,
                            const QString& description,
                            QObject* parent)
-    : AsyncOperation(connection,
-                     QString("Copying '%1' to '%2' on '%3'")
+    : AsyncOperation(QString("Copying '%1' to '%2' on '%3'")
                          .arg(vm ? vm->GetName() : "")
                          .arg(nameLabel)
                          .arg(sr ? sr->GetName() : ""),
@@ -56,6 +54,8 @@ VMCopyAction::VMCopyAction(XenConnection* connection,
         throw std::invalid_argument("VM cannot be null");
     if (!m_sr)
         throw std::invalid_argument("SR cannot be null");
+
+    this->m_connection = vm->GetConnection();
 
     // Set context objects
     SetVM(m_vm);

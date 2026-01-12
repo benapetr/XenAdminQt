@@ -26,25 +26,25 @@
  */
 
 #include "sethaprioritiesaction.h"
-#include "../../network/connection.h"
-#include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../xenapi/xenapi_VM.h"
+#include "xen/pool.h"
 #include <stdexcept>
 
-SetHaPrioritiesAction::SetHaPrioritiesAction(XenConnection* connection,
-                                             const QString& poolRef,
+SetHaPrioritiesAction::SetHaPrioritiesAction(QSharedPointer<Pool> pool,
                                              const QMap<QString, QVariantMap>& vmStartupOptions,
                                              qint64 ntol,
                                              QObject* parent)
-    : AsyncOperation(connection,
-                     QString("Setting HA priorities"),
+    : AsyncOperation(QString("Setting HA priorities"),
                      "Configuring HA",
                      parent),
-      m_poolRef(poolRef),
+      m_pool(pool),
       m_vmStartupOptions(vmStartupOptions),
       m_ntol(ntol)
 {
+    if (!this->m_pool || !this->m_pool->IsValid())
+        throw std::invalid_argument("Invalid pool object");
+    this->m_connection = pool->GetConnection();
 }
 
 bool SetHaPrioritiesAction::isRestartPriority(const QString& priority) const
@@ -112,7 +112,7 @@ void SetHaPrioritiesAction::run()
         SetDescription("Setting failure tolerance...");
 
         // Set NTOL
-        XenAPI::Pool::set_ha_host_failures_to_tolerate(GetSession(), m_poolRef, m_ntol);
+        XenAPI::Pool::set_ha_host_failures_to_tolerate(GetSession(), this->m_pool->OpaqueRef(), this->m_ntol);
 
         SetPercentComplete(40);
 

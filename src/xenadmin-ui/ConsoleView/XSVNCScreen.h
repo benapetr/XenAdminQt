@@ -549,24 +549,24 @@ class XSVNCScreen : public QWidget
         // Core state
         QString _sourceRef;             // VM or Host ref (C#: VM Source)
         bool _sourceIsPv;               // Is source a PV VM? (C#: bool _sourceIsPv)
-        XenConnection* _connection;
-        VNCTabView* _parentVNCTabView;  // Parent view (C#: internal readonly VNCTabView)
-        ConsoleKeyHandler* _keyHandler; // Keyboard handler (C#: internal ConsoleKeyHandler)
+        XenConnection* _connection = nullptr;
+        VNCTabView* _parentVNCTabView = nullptr;  // Parent view (C#: internal readonly VNCTabView)
+        ConsoleKeyHandler* _keyHandler = nullptr; // Keyboard handler (C#: internal ConsoleKeyHandler)
 
         // Console clients
-        VNCGraphicsClient* _vncClient;  // VNC client instance (C#: volatile VNCGraphicsClient)
-        RdpClient* _rdpClient;          // RDP client instance (C#: RdpClient)
-        IRemoteConsole* _remoteConsole; // Active console (VNC or RDP) (C#: IRemoteConsole)
+        VNCGraphicsClient* _vncClient = nullptr;  // VNC client instance (C#: volatile VNCGraphicsClient)
+        RdpClient* _rdpClient = nullptr;          // RDP client instance (C#: RdpClient)
+        IRemoteConsole* _remoteConsole = nullptr; // Active console (VNC or RDP) (C#: IRemoteConsole)
 
         // Connection state
-        volatile bool _useVNC;               // Use VNC (true) or RDP (false) (C#: volatile bool)
-        volatile bool _useSource;            // Use hosted/source console (text) vs graphical (C#: volatile bool)
-        bool _autoSwitchRDPLater;            // Auto-switch to RDP later (C#: internal bool AutoSwitchRDPLater)
-        int _connectionRetries;              // Retry counter (C#: int _connectionRetries)
-        bool _wasPaused;                     // Was paused before last operation (C#: bool _wasPaused)
-        bool _haveTriedLoginWithoutPassword; // Tried passwordless login? (C#: bool)
-        bool _ignoreNextError;               // Ignore next error (C#: bool)
-        bool _userWantsToSwitchProtocol;     // User manually switching? (C#: bool)
+        volatile bool _useVNC = true;               // Use VNC (true) or RDP (false) (C#: volatile bool)
+        volatile bool _useSource = true;            // Use hosted/source console (text) vs graphical (C#: volatile bool)
+        bool _autoSwitchRDPLater = false;            // Auto-switch to RDP later (C#: internal bool AutoSwitchRDPLater)
+        int _connectionRetries = 0;              // Retry counter (C#: int _connectionRetries)
+        bool _wasPaused = true;                     // Was paused before last operation (C#: bool _wasPaused)
+        bool _haveTriedLoginWithoutPassword = false; // Tried passwordless login? (C#: bool)
+        bool _ignoreNextError = false;               // Ignore next error (C#: bool)
+        bool _userWantsToSwitchProtocol = false;     // User manually switching? (C#: bool)
         QString _lastPowerState;             // Track power state changes for proper reconnection
 
         // Credentials
@@ -575,10 +575,10 @@ class XSVNCScreen : public QWidget
         QByteArray _vncPassword;   // VNC password (C#: char[] _vncPassword)
 
         // Polling state
-        QTimer* _connectionPoller;            // Polling timer (C#: Timer _connectionPoller)
+        QTimer* _connectionPoller = nullptr;            // Polling timer (C#: Timer _connectionPoller)
         QString _rdpIp;                       // Detected RDP IP (C#: public string RdpIp)
         QString _vncIp;                       // Detected VNC IP (C#: public string VncIp)
-        bool _hostedConsoleConnectionPending; // Prevent concurrent hosted console attempts
+        bool _hostedConsoleConnectionPending = false; // Prevent concurrent hosted console attempts
 
         // Hosted consoles
         QMutex _hostedConsolesLock;     // Lock for console list (C#: object _hostedConsolesLock)
@@ -590,14 +590,14 @@ class XSVNCScreen : public QWidget
 
         // Pending VNC connection (reused between poll and actual connect)
         QMutex _pendingVNCConnectionLock;  // Lock for pending connection (C#: object)
-        QTcpSocket* _pendingVNCConnection; // Pending stream (C#: Stream _pendingVNCConnection)
+        QTcpSocket* _pendingVNCConnection = nullptr; // Pending stream (C#: Stream _pendingVNCConnection)
 
         // Cached guest metrics
         QString _guestMetricsRef;               // Guest metrics ref for this VM
         QMap<QString, QString> _cachedNetworks; // Cached network info (C#: Dictionary<string, string>)
 
         // UI settings
-        bool _autoCaptureKeyboardAndMouse; // Auto-capture input (C#: readonly bool)
+        bool _autoCaptureKeyboardAndMouse = true; // Auto-capture input (C#: readonly bool)
         QColor _focusColor;                // Focus highlight color (C#: readonly Color)
 };
 

@@ -53,14 +53,12 @@ class SetHaPrioritiesAction : public AsyncOperation
     public:
         /**
          * @brief Constructor
-         * @param connection Connection to the pool
-         * @param poolRef Pool opaque reference
+         * @param pool Pool object
          * @param vmStartupOptions Map of VM ref -> {ha_restart_priority, order, start_delay}
          * @param ntol Number of host failures to tolerate
          * @param parent Parent QObject
          */
-        SetHaPrioritiesAction(XenConnection* connection,
-                              const QString& poolRef,
+        SetHaPrioritiesAction(QSharedPointer<Pool> pool,
                               const QMap<QString, QVariantMap>& vmStartupOptions,
                               qint64 ntol,
                               QObject* parent = nullptr);
@@ -69,7 +67,7 @@ class SetHaPrioritiesAction : public AsyncOperation
         void run() override;
 
     private:
-        QString m_poolRef;
+        QSharedPointer<Pool> m_pool;
         QMap<QString, QVariantMap> m_vmStartupOptions;
         qint64 m_ntol;
 

@@ -31,8 +31,9 @@
 #include "../../asyncoperation.h"
 #include "../../../xenlib_global.h"
 #include <QString>
+#include <QSharedPointer>
 
-class XenConnection;
+class Host;
 
 /**
  * @brief Action to enable/disable VM autostart on host boot
@@ -49,24 +50,19 @@ class XENLIB_EXPORT ChangeHostAutostartAction : public AsyncOperation
     public:
         /**
          * @brief Construct action to change host autostart setting
-         * @param connection XenServer connection
-         * @param hostRef Host opaque reference
+         * @param host Host object
          * @param enable True to enable autostart, false to disable
          * @param suppressHistory True to suppress operation history (default: true)
          * @param parent Parent QObject
          */
-        ChangeHostAutostartAction(XenConnection* connection,
-                                  const QString& hostRef,
-                                  bool enable,
-                                  bool suppressHistory = true,
-                                  QObject* parent = nullptr);
+        ChangeHostAutostartAction(QSharedPointer<Host> host, bool enable, bool suppressHistory = true, QObject* parent = nullptr);
 
     protected:
         void run() override;
 
     private:
-        QString m_hostRef;
-        bool m_enableAutostart;
+        QSharedPointer<Host> m_host;
+        bool m_enableAutostart_;
 };
 
 #endif // CHANGEHOSTAUTOSTARTACTION_H

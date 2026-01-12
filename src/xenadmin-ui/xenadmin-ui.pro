@@ -64,6 +64,7 @@ SOURCES += \
     controls/srpicker.cpp \
     controls/dropdownbutton.cpp \
     controls/snapshottreeview.cpp \
+    controls/multipledvdisolist.cpp \
     controls/xensearch/querypanel.cpp \
     controls/xensearch/searchoutput.cpp \
     controls/xensearch/foldernavigator.cpp \
@@ -239,6 +240,7 @@ SOURCES += \
     ConsoleView/VNCView.cpp \
     ConsoleView/ConsolePanel.cpp \
     widgets/isodropdownbox.cpp \
+    widgets/cdchanger.cpp \
     navigation/navigationhistory.cpp
 
 # Header files
@@ -286,6 +288,7 @@ HEADERS += \
     dialogs/repairsrdialog.h \
     dialogs/attachvirtualdiskdialog.h \
     widgets/isodropdownbox.h \
+    widgets/cdchanger.h \
     dialogs/newvirtualdiskdialog.h \
     dialogs/movevirtualdiskdialog.h \
     dialogs/migratevirtualdiskdialog.h \
@@ -300,6 +303,7 @@ HEADERS += \
     controls/dropdownbutton.h \
     controls/migratevmmenu.h \
     controls/snapshottreeview.h \
+    controls/multipledvdisolist.h \
     controls/xensearch/querypanel.h \
     controls/xensearch/searchoutput.h \
     controls/xensearch/foldernavigator.h \
@@ -506,6 +510,7 @@ FORMS += \
     dialogs/warningdialogs/closexencenterwarningdialog.ui \
     controls/affinitypicker.ui \
     controls/srpicker.ui \
+    controls/multipledvdisolist.ui \
     settingspanels/generaleditpage.ui \
     settingspanels/hostautostarteditpage.ui \
     settingspanels/hostmultipathpage.ui \

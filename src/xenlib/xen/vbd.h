@@ -122,6 +122,13 @@ class XENLIB_EXPORT VBD : public XenObject
         bool IsCD() const;
 
         /**
+         * @brief Check if device is a floppy drive
+         * @return false (floppy drives not yet supported in XenAPI)
+         * @note C# version also returns false - floppy support is TODO
+         */
+        bool IsFloppyDrive() const;
+
+        /**
          * @brief Check if device can be unplugged
          * @return true if unpluggable
          */

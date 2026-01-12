@@ -56,11 +56,7 @@ class VMCloneAction : public AsyncOperation
          * @param description Description for the cloned VM
          * @param parent Parent QObject
          */
-        explicit VMCloneAction(XenConnection* connection,
-                               QSharedPointer<VM> vm,
-                               const QString& name,
-                               const QString& description,
-                               QObject* parent = nullptr);
+        explicit VMCloneAction(QSharedPointer<VM> vm, const QString& name, const QString& description, QObject* parent = nullptr);
 
     protected:
         void run() override;

@@ -75,9 +75,7 @@ class XENLIB_EXPORT ShutdownHostAction : public AsyncOperation
          * C# equivalent: ShutdownHostAction(Host, Func<...>)
          * Note: acceptNTolChanges callback not yet implemented in Qt version
          */
-        explicit ShutdownHostAction(XenConnection* connection,
-                                    QSharedPointer<Host> host,
-                                    QObject* parent = nullptr);
+        explicit ShutdownHostAction(QSharedPointer<Host> host, QObject* parent = nullptr);
 
     protected:
         /**

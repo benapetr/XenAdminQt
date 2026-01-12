@@ -95,6 +95,7 @@ SOURCES += \
     xen/xenapi/xenapi_Helper.cpp \
     xen/xenapi/vm_appliance.cpp \
     xen/actions/vm/changevmisoaction.cpp \
+    xen/actions/vm/createcddriveaction.cpp \
     xen/actions/vm/importvmaction.cpp \
     xen/actions/vm/exportvmaction.cpp \
     xen/actions/vm/startapplianceaction.cpp \
@@ -291,6 +292,7 @@ HEADERS += \
     xen/xenapi/xenapi_Helper.h \
     xen/xenapi/vm_appliance.h \
     xen/actions/vm/changevmisoaction.h \
+    xen/actions/vm/createcddriveaction.h \
     xen/actions/vm/importvmaction.h \
     xen/actions/vm/exportvmaction.h \
     xen/actions/vm/startapplianceaction.h \

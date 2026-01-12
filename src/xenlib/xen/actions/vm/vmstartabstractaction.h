@@ -57,12 +57,12 @@ class XENLIB_EXPORT VMStartAbstractAction : public AsyncOperation
         /**
          * @brief Check if this is a "start" action (vs "resume")
          */
-        virtual bool isStart() const = 0;
+        virtual bool IsStart() const = 0;
 
         /**
          * @brief Clone this action for retry purposes
          */
-        virtual VMStartAbstractAction* clone() = 0;
+        virtual VMStartAbstractAction* Clone() = 0;
 
     protected:
         explicit VMStartAbstractAction(QSharedPointer<VM> vm,

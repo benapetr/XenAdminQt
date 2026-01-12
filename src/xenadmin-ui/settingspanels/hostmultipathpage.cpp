@@ -27,11 +27,11 @@
 
 #include "hostmultipathpage.h"
 #include "ui_hostmultipathpage.h"
-#include "xen/host.h"
-#include "xen/network/connection.h"
-#include "xen/actions/host/editmultipathaction.h"
-#include "xencache.h"
-#include "xen/hostmetrics.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/actions/host/editmultipathaction.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/hostmetrics.h"
 #include <QDebug>
 #include <QSharedPointer>
 

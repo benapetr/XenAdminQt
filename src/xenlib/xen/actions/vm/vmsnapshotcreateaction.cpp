@@ -26,36 +26,39 @@
  */
 
 #include "vmsnapshotcreateaction.h"
-#include "../../../xen/network/connection.h"
-#include "../../../xencache.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../xenapi/xenapi_Blob.h"
+#include "../../vm.h"
 #include <QtCore/QDebug>
 #include <QtCore/QBuffer>
 
 const QString VMSnapshotCreateAction::VNC_SNAPSHOT_NAME = QStringLiteral("XenCenter.VNCSnapshot");
 
-VMSnapshotCreateAction::VMSnapshotCreateAction(XenConnection* connection,
-                                               const QString& vmRef,
+VMSnapshotCreateAction::VMSnapshotCreateAction(QSharedPointer<VM> vm,
                                                const QString& newName,
                                                const QString& newDescription,
                                                SnapshotType type,
                                                const QImage& screenshot,
                                                QObject* parent)
-    : AsyncOperation(connection,
+    : AsyncOperation(vm ? vm->GetConnection() : nullptr,
                      QString("Snapshot '%1'").arg(newName),
                      "Creating snapshot...",
                      parent),
-      m_vmRef(vmRef), m_newName(newName), m_newDescription(newDescription), m_type(type), m_screenshot(screenshot)
+      m_vm(vm), m_newName(newName), m_newDescription(newDescription), m_type(type), m_screenshot(screenshot)
 {
-    // Get VM name for display
-    QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", vmRef);
-    m_vmName = vmData.value("name_label").toString();
+    if (!m_vm || !m_vm->IsValid())
+        qWarning() << "VMSnapshotCreateAction: Invalid VM object";
 }
 
 void VMSnapshotCreateAction::run()
 {
-    qDebug() << "VMSnapshotCreateAction::run() starting - VM:" << m_vmRef << "Name:" << m_newName << "Type:" << m_type;
+    if (!m_vm || !m_vm->IsValid())
+    {
+        setError("Invalid VM object");
+        return;
+    }
+
+    qDebug() << "VMSnapshotCreateAction::run() starting - VM:" << m_vm->OpaqueRef() << "Name:" << m_newName << "Type:" << m_type;
 
     try
     {
@@ -76,18 +79,18 @@ void VMSnapshotCreateAction::run()
         {
         case QUIESCED_DISK:
             qDebug() << "Creating quiesced disk snapshot:" << m_newName;
-            taskRef = XenAPI::VM::async_snapshot_with_quiesce(GetSession(), m_vmRef, m_newName);
+            taskRef = XenAPI::VM::async_snapshot_with_quiesce(GetSession(), m_vm->OpaqueRef(), m_newName);
             break;
 
         case DISK_AND_MEMORY:
             qDebug() << "Creating disk and memory checkpoint:" << m_newName;
-            taskRef = XenAPI::VM::async_checkpoint(GetSession(), m_vmRef, m_newName);
+            taskRef = XenAPI::VM::async_checkpoint(GetSession(), m_vm->OpaqueRef(), m_newName);
             break;
 
         case DISK:
         default:
             qDebug() << "Creating disk snapshot:" << m_newName;
-            taskRef = XenAPI::VM::async_snapshot(GetSession(), m_vmRef, m_newName);
+            taskRef = XenAPI::VM::async_snapshot(GetSession(), m_vm->OpaqueRef(), m_newName);
             break;
         }
 

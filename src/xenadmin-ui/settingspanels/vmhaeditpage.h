@@ -103,15 +103,15 @@ class VMHAEditPage : public IEditPage
 
         // Original values
         QString m_origRestartPriority;
-        long m_origStartOrder;
-        long m_origStartDelay;
-        qint64 m_origNtol;
-        bool m_vmIsAgile;
-        bool m_agilityKnown;
-        bool m_ntolUpdateInProgress;
-        qint64 m_ntol;
-        qint64 m_ntolMax;
-        int m_ntolRequestId;
+        long m_origStartOrder = 0;
+        long m_origStartDelay = 0;
+        qint64 m_origNtol = 0;
+        bool m_vmIsAgile = false;
+        bool m_agilityKnown = false;
+        bool m_ntolUpdateInProgress = false;
+        qint64 m_ntol = -1;
+        qint64 m_ntolMax = -1;
+        int m_ntolRequestId = 0;
         QString m_poolRef;
 
     private slots:

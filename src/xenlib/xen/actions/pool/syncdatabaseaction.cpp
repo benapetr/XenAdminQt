@@ -27,26 +27,29 @@
 
 #include "syncdatabaseaction.h"
 #include "../../xenapi/xenapi_Pool.h"
-#include "../../session.h"
+#include "xen/pool.h"
 #include <stdexcept>
 
-SyncDatabaseAction::SyncDatabaseAction(XenConnection* connection, const QString& poolRef, QObject* parent)
-    : AsyncOperation(connection, "Synchronizing Database", "Synchronizing pool database across all members...", parent), m_poolRef(poolRef)
+SyncDatabaseAction::SyncDatabaseAction(QSharedPointer<Pool> pool, QObject* parent)
+    : AsyncOperation("Synchronizing Database", "Synchronizing pool database across all members...", parent), m_pool(pool)
 {
+    if (!this->m_pool || !this->m_pool->IsValid())
+        qWarning() << "SyncDatabaseAction: Invalid pool object";
+    this->m_connection = this->m_pool->GetConnection();
 }
 
 void SyncDatabaseAction::run()
 {
     try
     {
+        if (!this->m_pool || !this->m_pool->IsValid())
+        {
+            throw std::runtime_error("Invalid pool object");
+        }
+
         if (!GetSession())
         {
             throw std::runtime_error("Not connected to XenServer");
-        }
-
-        if (m_poolRef.isEmpty())
-        {
-            throw std::runtime_error("Pool reference is empty");
         }
 
         SetPercentComplete(0);

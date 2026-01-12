@@ -31,9 +31,7 @@
 #include "xenlib/xen/actions/pool/setpoolpropertyaction.h"
 #include "xenlib/xen/pool.h"
 
-LivePatchingEditPage::LivePatchingEditPage(QWidget* parent)
-    : IEditPage(parent)
-    , ui(new Ui::LivePatchingEditPage)
+LivePatchingEditPage::LivePatchingEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::LivePatchingEditPage)
 {
     this->ui->setupUi(this);
 }
@@ -117,9 +115,15 @@ AsyncOperation* LivePatchingEditPage::SaveSettings()
         ? tr("Disabling live patching") 
         : tr("Enabling live patching");
     
+    QSharedPointer<Pool> pool = this->connection()->GetCache()->ResolveObject<Pool>("pool", this->m_poolRef_);
+    if (!pool || !pool->IsValid())
+    {
+        qWarning() << "LivePatchingEditPage::SaveSettings: Invalid pool" << this->m_poolRef_;
+        return nullptr;
+    }
+    
     return new SetPoolPropertyAction(
-        this->connection(),
-        this->m_poolRef_,
+        pool,
         "live_patching_disabled",
         disableValue,
         title,

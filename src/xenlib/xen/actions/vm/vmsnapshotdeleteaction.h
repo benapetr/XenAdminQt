@@ -32,6 +32,8 @@
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 
+class VM;
+
 /**
  * @brief Action to delete a VM snapshot
  *
@@ -49,21 +51,17 @@ class XENLIB_EXPORT VMSnapshotDeleteAction : public AsyncOperation
     public:
         /**
          * @brief Construct snapshot delete action
-         * @param connection XenConnection
-         * @param snapshotRef Snapshot VM opaque_ref to delete
+         * @param snapshot Snapshot VM to delete
          * @param parent Parent QObject
          */
-        VMSnapshotDeleteAction(XenConnection* connection,
-                               const QString& snapshotRef,
-                               QObject* parent = nullptr);
+        VMSnapshotDeleteAction(QSharedPointer<VM> snapshot, QObject* parent = nullptr);
 
     protected:
         void run() override;
 
     private:
-        QString m_snapshotRef;
-        QString m_snapshotName;
-        QStringList m_vbdsToDestroy; // VBDs owned by the snapshot
+        QSharedPointer<VM> m_snapshot;
+        QStringList m_vbdsToDestroy_; // VBDs owned by the snapshot
 };
 
 #endif // VMSNAPSHOTDELETEACTION_H

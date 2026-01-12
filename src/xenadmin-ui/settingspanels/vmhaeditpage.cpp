@@ -30,13 +30,14 @@
 #include "../dialogs/hawizard.h"
 #include "../dialogs/editvmhaprioritiesdialog.h"
 #include "../mainwindow.h"
-#include "../../xenlib/xen/network/connection.h"
-#include "../../xenlib/xen/session.h"
-#include "../../xenlib/xencache.h"
-#include "../../xenlib/xen/xenapi/xenapi_VM.h"
-#include "../../xenlib/xen/xenapi/xenapi_Pool.h"
-#include "../../xenlib/xen/actions/pool/sethaprioritiesaction.h"
-#include "../../xenlib/xen/actions/vm/setvmstartupoptionsaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/xenapi/xenapi_VM.h"
+#include "xenlib/xen/xenapi/xenapi_Pool.h"
+#include "xenlib/xen/actions/pool/sethaprioritiesaction.h"
+#include "xenlib/xen/actions/vm/setvmstartupoptionsaction.h"
+#include "xenlib/xen/pool.h"
 #include <QComboBox>
 #include <QLabel>
 #include <QPointer>
@@ -51,18 +52,7 @@ namespace
     const char* kPriorityAlwaysRestartHigh = "always_restart_high_priority";
 }
 
-VMHAEditPage::VMHAEditPage(QWidget* parent)
-    : IEditPage(parent),
-      ui(new Ui::VMHAEditPage),
-      m_origStartOrder(0),
-      m_origStartDelay(0),
-      m_origNtol(0),
-      m_vmIsAgile(false),
-      m_agilityKnown(false),
-      m_ntolUpdateInProgress(false),
-      m_ntol(-1),
-      m_ntolMax(-1),
-      m_ntolRequestId(0)
+VMHAEditPage::VMHAEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::VMHAEditPage)
 {
     this->ui->setupUi(this);
 
@@ -78,16 +68,13 @@ VMHAEditPage::VMHAEditPage(QWidget* parent)
     this->ui->linkLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
     this->ui->linkLabel->setOpenExternalLinks(false);
 
-    connect(this->ui->comboBoxRestartPriority,
-            QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this,
-            &VMHAEditPage::onPriorityChanged);
+    connect(this->ui->comboBoxRestartPriority, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &VMHAEditPage::onPriorityChanged);
     connect(this->ui->linkLabel, &QLabel::linkActivated, this, &VMHAEditPage::onLinkActivated);
 }
 
 VMHAEditPage::~VMHAEditPage()
 {
-    delete ui;
+    delete this->ui;
 }
 
 QString VMHAEditPage::GetText() const
@@ -102,12 +89,12 @@ QString VMHAEditPage::GetSubText() const
         return tr("HA is not available on standalone servers.");
 
     bool haEnabled = poolData.value("ha_enabled", false).toBool();
-    QString poolName = ellipsiseName(poolData.value("name_label", "").toString(), 30);
+    QString poolName = this->ellipsiseName(poolData.value("name_label", "").toString(), 30);
 
     if (!haEnabled)
         return tr("HA is not currently configured on pool '%1'.").arg(poolName);
 
-    return restartPriorityDisplay(selectedPriority());
+    return this->restartPriorityDisplay(selectedPriority());
 }
 
 QIcon VMHAEditPage::GetImage() const
@@ -170,8 +157,15 @@ AsyncOperation* VMHAEditPage::SaveSettings()
 
     if (haChanges && this->poolHasHAEnabled())
     {
+        QSharedPointer<Pool> pool = this->m_connection->GetCache()->ResolveObject<Pool>("pool", this->m_poolRef);
+        if (!pool || !pool->IsValid())
+        {
+            qWarning() << "VMHAEditPage: Failed to resolve pool" << this->m_poolRef;
+            return nullptr;
+        }
+
         QMap<QString, QVariantMap> settings = this->buildVmStartupOptions(true);
-        auto* action = new SetHaPrioritiesAction(this->m_connection, this->m_poolRef, settings, this->m_ntol, this);
+        auto* action = new SetHaPrioritiesAction(pool, settings, this->m_ntol, this);
         action->AddApiMethodToRoleCheck("pool.set_ha_host_failures_to_tolerate");
         action->AddApiMethodToRoleCheck("pool.sync_database");
         action->AddApiMethodToRoleCheck("vm.set_ha_restart_priority");

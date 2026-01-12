@@ -116,7 +116,7 @@ void VMStartAbstractAction::startOrResumeVmWithHa(int start, int end)
                         // Warn user and ask if they want to fix it
                         if (m_warningDialogHAInvalidConfig)
                         {
-                            m_warningDialogHAInvalidConfig(vmObj, isStart());
+                            m_warningDialogHAInvalidConfig(vmObj, IsStart());
                         }
 
                         // TODO: Implement HAUnprotectVMAction equivalent

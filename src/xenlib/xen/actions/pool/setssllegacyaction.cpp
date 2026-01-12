@@ -28,25 +28,31 @@
 #include "setssllegacyaction.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../session.h"
+#include "xen/pool.h"
 #include <QDebug>
 
-SetSslLegacyAction::SetSslLegacyAction(XenConnection* connection,
-                                       const QString& poolRef,
-                                       bool enableSslLegacy,
-                                       QObject* parent)
-    : AsyncOperation(connection,
-                     enableSslLegacy ? "Enabling SSL legacy protocol" : "Enabling TLS verification",
+SetSslLegacyAction::SetSslLegacyAction(QSharedPointer<Pool> pool, bool enableSslLegacy, QObject* parent)
+    : AsyncOperation(enableSslLegacy ? "Enabling SSL legacy protocol" : "Enabling TLS verification",
                      enableSslLegacy ? "Enabling SSL legacy protocol..." : "Enabling TLS verification...",
                      parent)
-    , m_poolRef(poolRef)
-    , m_enableSslLegacy(enableSslLegacy)
+    , m_pool(pool)
+    , m_enableSslLegacy_(enableSslLegacy)
 {
+    if (!this->m_pool || !this->m_pool->IsValid())
+        qWarning() << "SetSslLegacyAction: Invalid pool object";
+    this->m_connection = pool->GetConnection();
 }
 
 void SetSslLegacyAction::run()
 {
     try
     {
+        if (!this->m_pool || !this->m_pool->IsValid())
+        {
+            setError(tr("Invalid pool object"));
+            return;
+        }
+
         XenAPI::Session* session = this->GetSession();
         if (!session || !session->IsLoggedIn())
         {
@@ -55,7 +61,7 @@ void SetSslLegacyAction::run()
         }
 
         // Set ssl-legacy in pool other_config
-        XenAPI::Pool::set_ssl_legacy(session, this->m_poolRef, this->m_enableSslLegacy);
+        XenAPI::Pool::set_ssl_legacy(session, this->m_pool->OpaqueRef(), this->m_enableSslLegacy_);
 
     }
     catch (const std::exception& e)
