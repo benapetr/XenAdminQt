@@ -55,6 +55,10 @@ class GeneralTabPage : public BaseTabPage
         {
             return "General";
         }
+        Type GetType() const override
+        {
+            return Type::General;
+        }
         QString HelpID() const override
         {
             return "TabPageGeneral";

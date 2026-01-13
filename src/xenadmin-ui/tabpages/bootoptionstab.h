@@ -55,6 +55,10 @@ class BootOptionsTab : public BaseTabPage
         {
             return "Boot Options";
         }
+        Type GetType() const override
+        {
+            return Type::BootOptions;
+        }
         bool IsApplicableForObjectType(const QString& objectType) const override
         {
             return objectType == "vm";

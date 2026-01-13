@@ -32,6 +32,7 @@
 #include <QList>
 #include <QMap>
 
+#include "tabpages/basetabpage.h"
 #include "navigation/navigationpane.h"
 #include "xen/asyncoperation.h"
 
@@ -52,7 +53,6 @@ class QToolButton;
 class DebugWindow;
 class AsyncOperation;
 
-class BaseTabPage;
 class PlaceholderWidget;
 class SettingsManager;
 class TitleBar;
@@ -331,8 +331,8 @@ class MainWindow : public QMainWindow
         // Selection deduplication - prevent multiple API calls for same selection
         QString m_lastSelectedRef;
 
-        // Tab memory - remember last selected tab per object (maps objectRef -> tab title)
-        QHash<QString, QString> m_selectedTabs;
+        // Tab memory - remember last selected tab per object (maps objectRef -> tab type)
+        QHash<QString, BaseTabPage::Type> m_selectedTabs;
 };
 
 #endif // MAINWINDOW_H

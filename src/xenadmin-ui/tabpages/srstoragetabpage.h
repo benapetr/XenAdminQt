@@ -51,6 +51,10 @@ class SrStorageTabPage : public BaseTabPage
         {
             return "Storage";
         }
+        Type GetType() const override
+        {
+            return Type::SrStorage;
+        }
 
         QString HelpID() const override
         {

@@ -66,6 +66,10 @@ class PerformanceTabPage : public BaseTabPage
         {
             return "Performance";
         }
+        Type GetType() const override
+        {
+            return Type::Performance;
+        }
         bool IsApplicableForObjectType(const QString& objectType) const override;
 
     protected:

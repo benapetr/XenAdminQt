@@ -63,6 +63,10 @@ class ConsoleTabPage : public BaseTabPage
         {
             return "Console";
         }
+        Type GetType() const override
+        {
+            return Type::Console;
+        }
         QString HelpID() const override
         {
             return "TabPageConsole";

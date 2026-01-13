@@ -67,6 +67,10 @@ class NetworkTabPage : public BaseTabPage
             // For simplicity in Qt, we use "Networking" to match C# tab name pattern
             return "Networking";
         }
+        Type GetType() const override
+        {
+            return Type::Network;
+        }
         QString HelpID() const override
         {
             return "TabPageNetwork";

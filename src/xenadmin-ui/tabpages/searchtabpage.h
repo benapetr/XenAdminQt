@@ -58,6 +58,10 @@ class SearchTabPage : public BaseTabPage
         {
             return tr("Search");
         }
+        Type GetType() const override
+        {
+            return Type::Search;
+        }
 
         void setSearch(Search* search);
         Search* getSearch() const { return m_search; }

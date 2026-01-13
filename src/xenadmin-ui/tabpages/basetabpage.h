@@ -47,6 +47,24 @@ class BaseTabPage : public QWidget
     Q_OBJECT
 
     public:
+        enum class Type
+        {
+            Unknown,
+            General,
+            Memory,
+            VmStorage,
+            SrStorage,
+            PhysicalStorage,
+            Network,
+            Nics,
+            Performance,
+            Snapshots,
+            BootOptions,
+            Console,
+            CvmConsole,
+            Search
+        };
+
         explicit BaseTabPage(QWidget* parent = nullptr);
         virtual ~BaseTabPage();
 
@@ -71,6 +89,11 @@ class BaseTabPage : public QWidget
          * Get the title for this tab page.
          */
         virtual QString GetTitle() const = 0;
+
+        /**
+         * Get a stable identifier for this tab page.
+         */
+        virtual Type GetType() const = 0;
 
         /**
          * Get the help ID for this tab page.

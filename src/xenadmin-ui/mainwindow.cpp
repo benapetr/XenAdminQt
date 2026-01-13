@@ -903,34 +903,51 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
 
     for (BaseTabPage* tab : this->m_tabPages)
     {
-        if (qobject_cast<VMStorageTabPage*>(tab))
-            vmStorageTab = tab;
-        else if (qobject_cast<SrStorageTabPage*>(tab))
-            srStorageTab = tab;
-        else if (qobject_cast<PhysicalStorageTabPage*>(tab))
-            physicalStorageTab = tab;
-
-        QString title = tab->GetTitle();
-        if (title == "General")
-            generalTab = tab;
-        else if (title == "Memory")
-            memoryTab = tab;
-        else if (title == "Networking")
-            networkTab = tab;
-        else if (title == "NICs")
-            nicsTab = tab;
-        else if (title == "Performance")
-            performanceTab = tab;
-        else if (title == "Snapshots")
-            snapshotsTab = tab;
-        else if (title == "Boot Options")
-            bootTab = tab;
-        else if (title == "Console")
-            consoleTab = tab;
-        else if (title == "CVM Console")
-            cvmConsoleTab = tab;
-        else if (title == "Search")
-            searchTab = tab;
+        switch (tab->GetType())
+        {
+            case BaseTabPage::Type::General:
+                generalTab = tab;
+                break;
+            case BaseTabPage::Type::Memory:
+                memoryTab = tab;
+                break;
+            case BaseTabPage::Type::VmStorage:
+                vmStorageTab = tab;
+                break;
+            case BaseTabPage::Type::SrStorage:
+                srStorageTab = tab;
+                break;
+            case BaseTabPage::Type::PhysicalStorage:
+                physicalStorageTab = tab;
+                break;
+            case BaseTabPage::Type::Network:
+                networkTab = tab;
+                break;
+            case BaseTabPage::Type::Nics:
+                nicsTab = tab;
+                break;
+            case BaseTabPage::Type::Performance:
+                performanceTab = tab;
+                break;
+            case BaseTabPage::Type::Snapshots:
+                snapshotsTab = tab;
+                break;
+            case BaseTabPage::Type::BootOptions:
+                bootTab = tab;
+                break;
+            case BaseTabPage::Type::Console:
+                consoleTab = tab;
+                break;
+            case BaseTabPage::Type::CvmConsole:
+                cvmConsoleTab = tab;
+                break;
+            case BaseTabPage::Type::Search:
+                searchTab = tab;
+                break;
+            case BaseTabPage::Type::Unknown:
+            default:
+                break;
+        }
     }
 
     // Host tab order: General, Memory, Storage, Networking, NICs, [GPU], Console, Performance
@@ -1042,7 +1059,8 @@ void MainWindow::updateTabPages(QSharedPointer<XenObject> xen_obj)
 
     // Get the last selected tab for this object (before adding tabs)
     // C# Reference: MainWindow.cs line 1434 - GetLastSelectedPage(SelectionManager.Selection.First)
-    QString rememberedTabTitle = this->m_selectedTabs.value(xen_obj->OpaqueRef());
+    BaseTabPage::Type rememberedTabType =
+        this->m_selectedTabs.value(xen_obj->OpaqueRef(), BaseTabPage::Type::Unknown);
     int pageToSelectIndex = -1;
 
     // Block signals during tab reconstruction to prevent premature onTabChanged calls
@@ -1062,7 +1080,8 @@ void MainWindow::updateTabPages(QSharedPointer<XenObject> xen_obj)
 
         // Check if this is the remembered tab
         // C# Reference: MainWindow.cs line 1460 - if (newTab == pageToSelect)
-        if (!rememberedTabTitle.isEmpty() && tabPage->GetTitle() == rememberedTabTitle)
+        if (rememberedTabType != BaseTabPage::Type::Unknown
+            && tabPage->GetType() == rememberedTabType)
         {
             pageToSelectIndex = i;
         }
@@ -1088,8 +1107,12 @@ void MainWindow::updateTabPages(QSharedPointer<XenObject> xen_obj)
     // C# Reference: MainWindow.cs line 1471 - SetLastSelectedPage(SelectionManager.Selection.First, TheTabControl.SelectedTab)
     if (this->ui->mainTabWidget->currentIndex() >= 0)
     {
-        QString currentTabTitle = this->ui->mainTabWidget->tabText(this->ui->mainTabWidget->currentIndex());
-        this->m_selectedTabs[xen_obj->OpaqueRef()] = currentTabTitle;
+        BaseTabPage* currentTab = qobject_cast<BaseTabPage*>(
+            this->ui->mainTabWidget->currentWidget());
+        if (currentTab)
+        {
+            this->m_selectedTabs[xen_obj->OpaqueRef()] = currentTab->GetType();
+        }
     }
 
     // Trigger onPageShown for the initially visible tab
@@ -1309,8 +1332,12 @@ void MainWindow::onTabChanged(int index)
     // Reference: C# SetLastSelectedPage() - stores tab per object
     if (index >= 0 && !current_ref.isEmpty())
     {
-        QString tabTitle = this->ui->mainTabWidget->tabText(index);
-        this->m_selectedTabs[current_ref] = tabTitle;
+        BaseTabPage* currentTab = qobject_cast<BaseTabPage*>(
+            this->ui->mainTabWidget->widget(index));
+        if (currentTab)
+        {
+            this->m_selectedTabs[current_ref] = currentTab->GetType();
+        }
     }
 
     previousIndex = index;

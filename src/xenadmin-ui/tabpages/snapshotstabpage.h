@@ -54,6 +54,10 @@ class SnapshotsTabPage : public BaseTabPage
         {
             return "Snapshots";
         }
+        Type GetType() const override
+        {
+            return Type::Snapshots;
+        }
         bool IsApplicableForObjectType(const QString& objectType) const override;
 
     protected:

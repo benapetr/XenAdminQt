@@ -64,6 +64,10 @@ class PhysicalStorageTabPage : public BaseTabPage
         {
             return "Storage";
         }
+        Type GetType() const override
+        {
+            return Type::PhysicalStorage;
+        }
 
         QString HelpID() const override
         {

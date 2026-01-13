@@ -57,6 +57,10 @@ class VMStorageTabPage : public BaseTabPage
             // Tab caption shown as "Storage" in original XenCenter client
             return "Storage";
         }
+        Type GetType() const override
+        {
+            return Type::VmStorage;
+        }
         QString HelpID() const override
         {
             return "TabPageStorage";

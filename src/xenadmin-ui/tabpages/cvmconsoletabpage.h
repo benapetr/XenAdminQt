@@ -73,6 +73,10 @@ class CvmConsoleTabPage : public BaseTabPage
         {
             return tr("CVM Console");
         }
+        Type GetType() const override
+        {
+            return Type::CvmConsole;
+        }
 
         /**
          * @brief Check if this tab is applicable for given object type

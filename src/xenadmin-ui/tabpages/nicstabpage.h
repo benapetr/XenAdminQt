@@ -58,6 +58,10 @@ class NICsTabPage : public BaseTabPage
         {
             return "NICs";
         }
+        Type GetType() const override
+        {
+            return Type::Nics;
+        }
         QString HelpID() const override
         {
             return "TabPageNICs";

@@ -54,6 +54,10 @@ class MemoryTabPage : public BaseTabPage
         {
             return "Memory";
         }
+        Type GetType() const override
+        {
+            return Type::Memory;
+        }
         QString HelpID() const override
         {
             return "TabPageBallooning";
