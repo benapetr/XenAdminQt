@@ -161,7 +161,7 @@ class NewVMWizard : public QWizard
         QString m_lastTemplateName;
         bool m_vmNameDirty = false;
         bool m_settingVmName = false;
-        int m_vcpuCount;
+        int m_vcpuCount = 1;
         int m_vcpuMax = 1;
         int m_coresPerSocket = 1;
         int m_originalVcpuAtStartup = 1;
@@ -170,7 +170,7 @@ class NewVMWizard : public QWizard
         int m_minVcpus = 1;
         int m_maxVcpusAllowed = 1;
         int m_maxCoresPerSocket = 1;
-        long m_memorySize;
+        long m_memorySize = 1024;
         int m_memoryDynamicMin = 0;
         int m_memoryDynamicMax = 0;
         int m_memoryStaticMax = 0;

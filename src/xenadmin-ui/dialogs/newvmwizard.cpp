@@ -49,12 +49,7 @@
 #include <QDomDocument>
 #include <algorithm>
 
-NewVMWizard::NewVMWizard(XenConnection* connection, QWidget* parent)
-    : QWizard(parent),
-      m_connection(connection),
-      ui(new Ui::NewVMWizard),
-      m_vcpuCount(1),
-      m_memorySize(1024)
+NewVMWizard::NewVMWizard(XenConnection* connection, QWidget* parent) : QWizard(parent), m_connection(connection), ui(new Ui::NewVMWizard)
 {
     this->ui->setupUi(this);
     this->setWindowTitle(tr("New Virtual Machine Wizard"));
@@ -89,11 +84,9 @@ NewVMWizard::NewVMWizard(XenConnection* connection, QWidget* parent)
     connect(this->ui->attachIsoButton, &QPushButton::clicked, this, &NewVMWizard::onAttachIsoLibraryClicked);
 
     this->ui->networkTable->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(this->ui->networkTable, &QTableWidget::customContextMenuRequested,
-            this, &NewVMWizard::onNetworkContextMenuRequested);
+    connect(this->ui->networkTable, &QTableWidget::customContextMenuRequested, this, &NewVMWizard::onNetworkContextMenuRequested);
     this->ui->diskTable->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(this->ui->diskTable, &QTableWidget::customContextMenuRequested,
-            this, &NewVMWizard::onDiskContextMenuRequested);
+    connect(this->ui->diskTable, &QTableWidget::customContextMenuRequested, this, &NewVMWizard::onDiskContextMenuRequested);
 
     this->updateIsoControls();
     this->updateHomeServerControls(false);
@@ -1168,7 +1161,7 @@ void NewVMWizard::createVirtualMachine()
     QString message = tr("Virtual machine '%1' has been created successfully.").arg(this->m_vmName);
     if (startImmediately)
         message += tr("\n\nThe VM has been started.");
-    QMessageBox::information(this, tr("VM Created"), message);
+    MainWindow::instance()->ShowStatusMessage(message);
 }
 
 void NewVMWizard::onCurrentIdChanged(int id)

@@ -74,6 +74,8 @@ class MainWindow : public QMainWindow
         MainWindow(QWidget* parent = nullptr);
         ~MainWindow();
 
+        static MainWindow *instance();
+
         // Console panel access for snapshot screenshots (C#: Program.MainWindow.ConsolePanel)
         ConsolePanel* GetConsolePanel() const
         {
@@ -234,6 +236,8 @@ class MainWindow : public QMainWindow
         void onNewNetwork();
 
     private:
+        static MainWindow *g_instance;
+
         void updateActions();
         void updateViewMenu(NavigationPane::NavigationMode mode);
         void applyViewSettingsToMenu();

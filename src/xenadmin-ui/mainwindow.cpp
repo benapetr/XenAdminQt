@@ -58,7 +58,7 @@
 #include "navigation/navigationpane.h"
 #include "navigation/navigationview.h"
 #include "network/xenconnectionui.h"
-#include "xen/network/certificatemanager.h"
+#include "xenlib/xen/network/certificatemanager.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/sr.h"
 #include "metricupdater.h"
@@ -172,8 +172,12 @@
 #include <QDockWidget>
 #include "titlebar.h"
 
+MainWindow *MainWindow::g_instance = nullptr;
+
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWindow)
 {
+    MainWindow::g_instance = this;
+
     this->ui->setupUi(this);
 
     // Set application icon
@@ -373,6 +377,11 @@ MainWindow::~MainWindow()
     this->m_tabPages.clear();
 
     delete this->ui;
+}
+
+MainWindow *MainWindow::instance()
+{
+    return MainWindow::g_instance;
 }
 
 void MainWindow::updateActions()
