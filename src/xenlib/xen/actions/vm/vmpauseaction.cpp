@@ -45,7 +45,7 @@ VMPauseAction::VMPauseAction(QSharedPointer<VM> vm, const QString& title, QObjec
     if (vm)
     {
         // Set host to VM's home
-        this->SetHost(vm->GetHost());
+        this->SetHost(vm->GetResidentOnHost());
 
         // Set pool
         XenConnection* conn = vm->GetConnection();

@@ -33,6 +33,7 @@
 class Host;
 class VDI;
 class PBD;
+class Blob;
 
 /**
  * @brief SR - A storage repository
@@ -51,127 +52,69 @@ class PBD;
 class XENLIB_EXPORT SR : public XenObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString type READ GetType NOTIFY dataChanged)
-    Q_PROPERTY(bool shared READ IsShared NOTIFY dataChanged)
-    Q_PROPERTY(qint64 physicalSize READ PhysicalSize NOTIFY dataChanged)
-    Q_PROPERTY(qint64 physicalUtilisation READ PhysicalUtilisation NOTIFY dataChanged)
 
     public:
         explicit SR(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~SR() override = default;
 
-        /**
-         * @brief Get SR type
-         * @return Type string (e.g., "nfs", "lvmoiscsi", "lvm", "ext", "iso")
-         */
+        //! Get SR type (e.g., "nfs", "lvmoiscsi", "lvm", "ext", "iso")
         QString GetType() const;
 
-        /**
-         * @brief Check if SR is shared
-         * @return true if SR is shared across multiple hosts
-         */
+        //! Check if SR is shared across multiple hosts
         bool IsShared() const;
 
-        /**
-         * @brief Get physical size (bytes)
-         * @return Total physical size in bytes
-         */
+        //! Get physical size (total physical size in bytes)
         qint64 PhysicalSize() const;
 
-        /**
-         * @brief Get physical utilisation (bytes)
-         * @return Used physical space in bytes
-         */
+        //! Get physical utilisation (used physical space in bytes)
         qint64 PhysicalUtilisation() const;
 
-        /**
-         * @brief Get virtual allocation (bytes)
-         * @return Total virtual allocation in bytes
-         */
+        //! Get virtual allocation (total virtual allocation in bytes)
         qint64 VirtualAllocation() const;
 
-        /**
-         * @brief Get free space (bytes)
-         * @return Free physical space in bytes
-         */
+        //! Get free space (free physical space in bytes)
         qint64 FreeSpace() const;
 
-        /**
-         * @brief Get list of VDI references
-         * @return List of VDI opaque references
-         */
-        QStringList VDIRefs() const;
+        //! Get list of VDI references (list of VDI opaque references)
+        QStringList GetVDIRefs() const;
 
-        /**
-         * @brief Get list of PBD references
-         * @return List of PBD opaque references
-         */
-        QStringList PBDRefs() const;
+        //! Get list of PBD references (list of PBD opaque references)
+        QStringList GetPBDRefs() const;
 
-        /**
-         * @brief Get content type
-         * @return Content type string ("user", "iso", "system", etc.)
-         */
+        //! Get content type ("user", "iso", "system", etc.)
         QString ContentType() const;
 
-        /**
-         * @brief Get other_config dictionary
-         * @return Map of additional configuration
-         */
-        QVariantMap OtherConfig() const;
-
-        /**
-         * @brief Get SM (storage manager) config
-         * @return Map of SM configuration
-         */
+        //! Get SM (storage manager) config (map of SM configuration)
         QVariantMap SMConfig() const;
 
-        /**
-         * @brief Get tags
-         * @return List of tag strings
-         */
-        QStringList Tags() const;
-
-        /**
-         * @brief Get allowed operations
-         * @return List of allowed operation strings
-         */
+        //! Get allowed operations (list of allowed operation strings)
         QStringList AllowedOperations() const;
 
-        /**
-         * @brief Get current operations
-         * @return Map of operation ID to operation type
-         */
+        //! Get current operations (map of operation ID to operation type)
         QVariantMap CurrentOperations() const;
 
-        /**
-         * @brief Check if SR supports trim/unmap
-         * @return true if SR supports trim
-         */
+        //! Check if SR supports trim/unmap
         bool SupportsTrim() const;
 
-        /**
-         * @brief Get binary blobs associated with this SR
-         * @return Map of blob name to blob reference
-         */
+        //! Get binary blobs associated with this SR (map of blob name to blob reference)
         QVariantMap Blobs() const;
 
-        /**
-         * @brief Check if SR is assigned as local cache for its host
-         * @return true if SR is assigned to be the local cache for its host
-         */
+        //! Get PBDs (physical block device connections to hosts)
+        QList<QSharedPointer<PBD>> GetPBDs() const;
+
+        //! Get VDIs (virtual disk images stored in this SR)
+        QList<QSharedPointer<VDI>> GetVDIs() const;
+
+        //! Get binary blobs associated with this SR (list of Blob objects)
+        QList<QSharedPointer<Blob>> GetBlobs() const;
+
+        //! Check if SR is assigned as local cache for its host
         bool LocalCacheEnabled() const;
 
-        /**
-         * @brief Get disaster recovery task which introduced this SR
-         * @return DR_task opaque reference, or empty string if none
-         */
+        //! Get disaster recovery task which introduced this SR (DR_task opaque reference, or empty if none)
         QString IntroducedBy() const;
 
-        /**
-         * @brief Check if SR is using aggregated local storage
-         * @return true if SR is using clustered local storage
-         */
+        //! Check if SR is using aggregated local storage (clustered local storage)
         bool Clustered() const;
 
         /**
@@ -187,16 +130,10 @@ class XENLIB_EXPORT SR : public XenObject
          */
         bool IsToolsSR() const;
 
-        /**
-         * @brief Check if SR supports storage migration
-         * @return true if SR supports storage migration
-         */
+        //! Check if SR supports storage migration
         bool SupportsStorageMigration() const;
 
-        /**
-         * @brief Check if SR is raw HBA LUN-per-VDI
-         * @return true if SR type is rawhba
-         */
+        //! Check if SR is raw HBA LUN-per-VDI (SR type is rawhba)
         bool HBALunPerVDI() const;
 
         /**
@@ -207,19 +144,13 @@ class XENLIB_EXPORT SR : public XenObject
          */
         QSharedPointer<Host> GetHost(XenCache* cache = nullptr);
 
-        /**
-         * @brief Check if SR is local (not shared)
-         * @return true if SR is local to single host
-         */
+        //! Check if SR is local (not shared, local to single host)
         bool IsLocal() const
         {
             return !IsShared();
         }
 
-        /**
-         * @brief Check if SR is an ISO library
-         * @return true if content type is "iso"
-         */
+        //! Check if SR is an ISO library (content type is "iso")
         bool IsISOLibrary() const
         {
             return ContentType() == "iso";
@@ -260,9 +191,7 @@ class XENLIB_EXPORT SR : public XenObject
          */
         bool HasDriverDomain(QString* outVMRef = nullptr) const;
 
-        /**
-         * @brief Check if SR has any PBDs
-         */
+        //! Check if SR has any PBDs
         bool HasPBDs() const;
 
         /**

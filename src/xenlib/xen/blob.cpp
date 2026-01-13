@@ -38,16 +38,6 @@ QString Blob::GetObjectType() const
     return "blob";
 }
 
-QString Blob::NameLabel() const
-{
-    return this->stringProperty("name_label");
-}
-
-QString Blob::NameDescription() const
-{
-    return this->stringProperty("name_description");
-}
-
 qint64 Blob::Size() const
 {
     return this->longProperty("size", 0);

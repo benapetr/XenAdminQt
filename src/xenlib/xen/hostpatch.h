@@ -44,22 +44,19 @@ class XENLIB_EXPORT HostPatch : public XenObject
 {
     Q_OBJECT
 
-public:
-    explicit HostPatch(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
-    virtual ~HostPatch();
+    public:
+        explicit HostPatch(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
+        virtual ~HostPatch();
 
-    QString GetObjectType() const override { return "host_patch"; }
+        QString GetObjectType() const override { return "host_patch"; }
 
-    // Property accessors
-    QString NameLabel() const;
-    QString NameDescription() const;
-    QString Version() const;
-    QString HostRef() const;
-    bool Applied() const;
-    QDateTime TimestampApplied() const;
-    qint64 Size() const;
-    QString PoolPatchRef() const;
-    QMap<QString, QString> OtherConfig() const;
+        // Property accessors
+        QString Version() const;
+        QString HostRef() const;
+        bool Applied() const;
+        QDateTime TimestampApplied() const;
+        qint64 Size() const;
+        QString PoolPatchRef() const;
 };
 
 #endif // HOSTPATCH_H

@@ -29,11 +29,11 @@
 #include "ui_VNCTabView.h"
 #include "XSVNCScreen.h"
 #include "../widgets/isodropdownbox.h"
-#include "xen/vm.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
-#include "xenlib/xen/xenapi/xenapi_VBD.h"
 #include "../commands/vm/startvmcommand.h"
 #include "../commands/vm/resumevmcommand.h"
 #include "../mainwindow.h"
@@ -99,19 +99,19 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
 
     // Check if VM is control domain zero or SR driver domain
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 127-159
-    QString hostRef = vm->ResidentOnRef();
+    QSharedPointer<Host> host = vm->GetResidentOnHost();
     QString srRef;
 
-    if (vm->IsControlDomain())
+    if (!host.isNull() && vm->IsControlDomain())
     {
         // This is dom0 (control domain zero)
-        qDebug() << "VNCTabView: VM is control domain zero for host:" << hostRef;
+        qDebug() << "VNCTabView: VM is control domain zero for host:" << host->OpaqueRef();
 
         // Get host data to show name
-        QVariantMap hostData = getCachedObjectData("host", hostRef);
-        if (!hostData.isEmpty())
+
+        if (!host.isNull())
         {
-            QString hostName = hostData.value("name_label").toString();
+            QString hostName = host->GetName();
             // C#: HostLabel.Text = string.Format(Messages.CONSOLE_HOST, host.Name());
             this->ui->hostLabel->setText(tr("Host: %1").arg(hostName));
             this->ui->hostLabel->setVisible(true);
@@ -1270,7 +1270,7 @@ void VNCTabView::registerEventListeners()
     // C#: For control domain, register host property changes
     // CRITICAL: Check isControlDomainZero() ONCE before creating connection, not inside lambda!
     // Otherwise it triggers API calls on every cache update → infinite loop
-    QString hostRef = this->m_vm->ResidentOnRef();
+    QString hostRef = this->m_vm->GetResidentOnRef();
     bool isControlDomain = this->m_vm->IsControlDomain();
     if (isControlDomain && !hostRef.isEmpty())
     {
@@ -1288,7 +1288,7 @@ void VNCTabView::registerEventListeners()
         // C#: Also register host_metrics property changes
         QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
         QString hostMetricsRef = hostData.value("metrics").toString();
-        if (!hostMetricsRef.isEmpty() && hostMetricsRef != "OpaqueRef:NULL")
+        if (!hostMetricsRef.isEmpty() && hostMetricsRef != XENOBJECT_NULL)
         {
             qDebug() << "VNCTabView: Registering host_metrics listener for" << hostMetricsRef;
             connect(cache, &XenCache::objectChanged, this, [this, hostMetricsRef](XenConnection* connection, const QString& type, const QString& ref)
@@ -1317,9 +1317,7 @@ void VNCTabView::registerEventListeners()
             {
                 // SR changed - may need to update labels
                 // Defer update to avoid calling cache queries inside cache callback
-                QTimer::singleShot(0, this, [this]() {
-                    updatePowerState();
-                });
+                QTimer::singleShot(0, this, [this]() { updatePowerState(); });
             }
         });
     }
@@ -1369,7 +1367,7 @@ void VNCTabView::updatePowerState()
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 623-660
     qDebug() << "VNCTabView: updatePowerState() - VM:" << this->_vmRef;
 
-    QString hostRef = this->m_vm->ResidentOnRef();
+    QString hostRef = this->m_vm->GetResidentOnRef();
     if (this->m_vm->IsControlDomain())
     {
         qDebug() << "VNCTabView: VM is control domain for host:" << hostRef;
@@ -1383,7 +1381,7 @@ void VNCTabView::updatePowerState()
         }
 
         QString metricsRef = hostData.value("metrics").toString();
-        if (!metricsRef.isEmpty() && metricsRef != "OpaqueRef:NULL")
+        if (!metricsRef.isEmpty() && metricsRef != XENOBJECT_NULL)
         {
             // Resolve host_metrics and check 'live' field
             QVariantMap metricsData = getCachedObjectData("host_metrics", metricsRef);
@@ -1647,7 +1645,7 @@ void VNCTabView::enableRDPIfCapable()
     qDebug() << "VNCTabView: enableRDPIfCapable()";
 
     // C#: var enable = source.CanUseRDP();
-    bool enable = canEnableRDPForVm(this->_vmRef);
+    bool enable = canEnableRDPForVm();
 
     if (enable)
     {
@@ -1735,7 +1733,7 @@ QString VNCTabView::guessNativeConsoleLabel() const
 
     // C#: XenRef<VM_guest_metrics> gm = source.guest_metrics;
     QString guestMetricsRef = this->m_vm->GetGuestMetricsRef();
-    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
         return label;
 
     // C#: VM_guest_metrics gmo = Connection.Resolve<VM_guest_metrics>(gm);
@@ -1900,12 +1898,12 @@ void VNCTabView::updateOpenSSHConsoleButtonState()
         QVariantMap vmData = getCachedObjectData("vm", this->_vmRef);
         QString hostRef = vmData.value("resident_on").toString();
 
-        if (!hostRef.isEmpty() && hostRef != "OpaqueRef:NULL")
+        if (!hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
         {
             QVariantMap hostData = getCachedObjectData("host", hostRef);
             QString metricsRef = hostData.value("metrics").toString();
 
-            if (!metricsRef.isEmpty() && metricsRef != "OpaqueRef:NULL")
+            if (!metricsRef.isEmpty() && metricsRef != XENOBJECT_NULL)
             {
                 QVariantMap metricsData = getCachedObjectData("host_metrics", metricsRef);
                 bool live = metricsData.value("live").toBool();
@@ -2086,7 +2084,7 @@ bool VNCTabView::isSRDriverDomain(const QString& vmRef, QString* outSRRef) const
         if (driverDomainRef == vmRef)
         {
             QString srRef = pbd.value("SR").toString();
-            if (!srRef.isEmpty() && srRef != "OpaqueRef:NULL")
+            if (!srRef.isEmpty() && srRef != XENOBJECT_NULL)
             {
                 if (outSRRef)
                     *outSRRef = srRef;
@@ -2101,7 +2099,7 @@ bool VNCTabView::isSRDriverDomain(const QString& vmRef, QString* outSRRef) const
 bool VNCTabView::hasRDP(const QString& vmRef) const
 {
     QString guestMetricsRef = this->m_vm->GetGuestMetricsRef();
-    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
         return false;
 
     return false;
@@ -2115,7 +2113,7 @@ bool VNCTabView::isRDPEnabled(const QString& vmRef) const
 bool VNCTabView::rdpControlEnabledForVm(const QString& vmRef) const
 {
     QString guestMetricsRef = this->m_vm->GetGuestMetricsRef();
-    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
         return false;
 
     QVariantMap metricsData = getCachedObjectData("vm_guest_metrics", guestMetricsRef);
@@ -2128,7 +2126,7 @@ bool VNCTabView::rdpControlEnabledForVm(const QString& vmRef) const
     return featureTs2 != 0;
 }
 
-bool VNCTabView::canEnableRDPForVm(const QString& vmRef) const
+bool VNCTabView::canEnableRDPForVm() const
 {
     if (!this->m_vm)
         return false;

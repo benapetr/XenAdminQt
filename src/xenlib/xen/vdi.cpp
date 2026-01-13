@@ -26,6 +26,10 @@
  */
 
 #include "vdi.h"
+#include "network/connection.h"
+#include "../xencache.h"
+#include "sr.h"
+#include "vbd.h"
 #include <QLocale>
 
 VDI::VDI(XenConnection* connection, const QString& opaqueRef, QObject* parent)
@@ -180,16 +184,6 @@ QDateTime VDI::SnapshotTime() const
     return QDateTime::fromString(dateStr, Qt::ISODate);
 }
 
-QStringList VDI::Tags() const
-{
-    return this->stringListProperty("tags");
-}
-
-QVariantMap VDI::OtherConfig() const
-{
-    return this->property("other_config").toMap();
-}
-
 bool VDI::AllowCaching() const
 {
     return this->boolProperty("allow_caching", false);
@@ -235,4 +229,45 @@ bool VDI::CbtEnabled() const
 QString VDI::GetObjectType() const
 {
     return "vdi";
+}
+
+QSharedPointer<SR> VDI::GetSR() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<SR>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<SR>();
+    
+    QString ref = this->SRRef();
+    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        return QSharedPointer<SR>();
+    
+    return cache->ResolveObject<SR>("sr", ref);
+}
+
+QList<QSharedPointer<VBD>> VDI::GetVBDs() const
+{
+    QList<QSharedPointer<VBD>> result;
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return result;
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return result;
+    
+    QStringList refs = this->GetVBDRefs();
+    for (const QString& ref : refs)
+    {
+        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        {
+            QSharedPointer<VBD> obj = cache->ResolveObject<VBD>("vbd", ref);
+            if (obj)
+                result.append(obj);
+        }
+    }
+    return result;
 }

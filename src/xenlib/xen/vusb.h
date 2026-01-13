@@ -32,6 +32,10 @@
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
+#include <QSharedPointer>
+
+class VM;
+class USBGroup;
 
 /*!
  * \brief Virtual USB device wrapper class
@@ -40,31 +44,28 @@
  * Provides access to USB group, attachment status, and operations.
  * First published in XenServer 7.3.
  */
-class VUSB : public XenObject
+class XENLIB_EXPORT VUSB : public XenObject
 {
     Q_OBJECT
-    
-    Q_PROPERTY(QString uuid READ Uuid)
-    Q_PROPERTY(QString VM READ VMRef)
-    Q_PROPERTY(QString usbGroup READ USBGroupRef)
-    Q_PROPERTY(bool currentlyAttached READ CurrentlyAttached)
-    
+
     public:
         explicit VUSB(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
 
         QString GetObjectType() const override;
 
         // Basic properties
-        QString Uuid() const;
         QStringList AllowedOperations() const;
         QVariantMap CurrentOperations() const;
-        QString VMRef() const;
+        QString GetVMRef() const;
         QString USBGroupRef() const;
-        QVariantMap OtherConfig() const;
         bool CurrentlyAttached() const;
 
         // Helper methods
         bool IsAttached() const;
+
+        // Object resolution getters
+        QSharedPointer<VM> GetVM() const;
+        QSharedPointer<USBGroup> GetUSBGroup() const;
 };
 
 #endif // VUSB_H

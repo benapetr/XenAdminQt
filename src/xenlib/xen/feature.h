@@ -50,16 +50,12 @@ class XENLIB_EXPORT Feature : public XenObject
     Q_OBJECT
 
     public:
-        explicit Feature(XenConnection* connection,
-                        const QString& opaqueRef,
-                        QObject* parent = nullptr);
+        explicit Feature(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Feature() override = default;
 
         QString GetObjectType() const override;
 
         // Property accessors (read from cache)
-        QString NameLabel() const;
-        QString NameDescription() const;
         bool IsEnabled() const;
         bool IsExperimental() const;
         QString Version() const;

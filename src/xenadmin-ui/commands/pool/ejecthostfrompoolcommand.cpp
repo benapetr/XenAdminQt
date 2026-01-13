@@ -49,7 +49,7 @@ bool EjectHostFromPoolCommand::CanRun() const
         return false;
 
     // Check if host is in a pool
-    if (host->PoolRef().isEmpty())
+    if (host->GetPoolRef().isEmpty())
         return false;
 
     return true;

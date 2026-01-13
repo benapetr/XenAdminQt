@@ -27,6 +27,8 @@
 
 #include "cluster.h"
 #include "network/connection.h"
+#include "../xencache.h"
+#include "clusterhost.h"
 #include <QMap>
 
 Cluster::Cluster(XenConnection* connection, const QString& opaqueRef, QObject* parent)
@@ -39,7 +41,7 @@ QString Cluster::GetObjectType() const
     return "cluster";
 }
 
-QStringList Cluster::ClusterHostRefs() const
+QStringList Cluster::GetClusterHostRefs() const
 {
     return this->property("cluster_hosts").toStringList();
 }
@@ -97,11 +99,23 @@ QMap<QString, QString> Cluster::ClusterConfig() const
     return result;
 }
 
-QMap<QString, QString> Cluster::OtherConfig() const
+QList<QSharedPointer<ClusterHost>> Cluster::GetClusterHosts() const
 {
-    QVariantMap map = this->property("other_config").toMap();
-    QMap<QString, QString> result;
-    for (auto it = map.begin(); it != map.end(); ++it)
-        result[it.key()] = it.value().toString();
-    return result;
+    QList<QSharedPointer<ClusterHost>> clusterHosts;
+    
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return clusterHosts;
+
+    XenCache* cache = connection->GetCache();
+
+    const QStringList hostRefs = this->GetClusterHostRefs();
+    for (const QString& hostRef : hostRefs)
+    {
+        QSharedPointer<ClusterHost> clusterHost = cache->ResolveObject<ClusterHost>("cluster_host", hostRef);
+        if (clusterHost && clusterHost->IsValid())
+            clusterHosts.append(clusterHost);
+    }
+
+    return clusterHosts;
 }

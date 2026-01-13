@@ -292,11 +292,6 @@ QString PIF::PCIRef() const
 }
 
 // Additional properties
-QVariantMap PIF::OtherConfig() const
-{
-    return this->property("other_config").toMap();
-}
-
 QVariantMap PIF::Properties() const
 {
     return this->property("properties").toMap();

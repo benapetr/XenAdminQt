@@ -27,6 +27,9 @@
 
 #include "pusb.h"
 #include "network/connection.h"
+#include "host.h"
+#include "usbgroup.h"
+#include "../xencache.h"
 #include <QMap>
 
 PUSB::PUSB(XenConnection* connection, const QString& opaqueRef, QObject* parent)
@@ -38,12 +41,12 @@ PUSB::~PUSB()
 {
 }
 
-QString PUSB::USBGroupRef() const
+QString PUSB::GetUSBGroupRef() const
 {
     return this->stringProperty("USB_group");
 }
 
-QString PUSB::HostRef() const
+QString PUSB::GetHostRef() const
 {
     return this->stringProperty("host");
 }
@@ -93,16 +96,41 @@ bool PUSB::PassthroughEnabled() const
     return this->boolProperty("passthrough_enabled", false);
 }
 
-QMap<QString, QString> PUSB::OtherConfig() const
-{
-    QVariantMap map = this->property("other_config").toMap();
-    QMap<QString, QString> result;
-    for (auto it = map.begin(); it != map.end(); ++it)
-        result[it.key()] = it.value().toString();
-    return result;
-}
-
 double PUSB::Speed() const
 {
     return this->property("speed").toDouble();
+}
+
+QSharedPointer<USBGroup> PUSB::GetUSBGroup() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<USBGroup>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<USBGroup>();
+    
+    QString ref = this->GetUSBGroupRef();
+    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        return QSharedPointer<USBGroup>();
+    
+    return cache->ResolveObject<USBGroup>("usb_group", ref);
+}
+
+QSharedPointer<Host> PUSB::GetHost() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<Host>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<Host>();
+    
+    QString ref = this->GetHostRef();
+    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        return QSharedPointer<Host>();
+    
+    return cache->ResolveObject<Host>("host", ref);
 }

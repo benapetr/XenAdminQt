@@ -26,7 +26,9 @@
  */
 
 #include "hostcpu.h"
+#include "host.h"
 #include "network/connection.h"
+#include "xencache.h"
 #include <QMap>
 
 HostCPU::HostCPU(XenConnection* connection, const QString& opaqueRef, QObject* parent)
@@ -38,7 +40,7 @@ HostCPU::~HostCPU()
 {
 }
 
-QString HostCPU::HostRef() const
+QString HostCPU::GetHostRef() const
 {
     return this->stringProperty("host");
 }
@@ -93,11 +95,19 @@ double HostCPU::Utilisation() const
     return this->property("utilisation").toDouble();
 }
 
-QMap<QString, QString> HostCPU::OtherConfig() const
+QSharedPointer<Host> HostCPU::GetHost() const
 {
-    QVariantMap map = this->property("other_config").toMap();
-    QMap<QString, QString> result;
-    for (auto it = map.begin(); it != map.end(); ++it)
-        result[it.key()] = it.value().toString();
-    return result;
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<Host>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<Host>();
+    
+    QString ref = this->GetHostRef();
+    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        return QSharedPointer<Host>();
+    
+    return cache->ResolveObject<Host>("host", ref);
 }

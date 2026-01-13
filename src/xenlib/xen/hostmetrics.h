@@ -50,50 +50,26 @@ class XENLIB_EXPORT HostMetrics : public XenObject
 {
     Q_OBJECT
 
-public:
-    explicit HostMetrics(XenConnection* connection,
-                        const QString& opaqueRef,
-                        QObject* parent = nullptr);
-    ~HostMetrics() override = default;
+    public:
+        explicit HostMetrics(XenConnection* connection,
+                            const QString& opaqueRef,
+                            QObject* parent = nullptr);
+        ~HostMetrics() override = default;
 
-    /**
-     * @brief Check if pool master thinks this host is live
-     * @return true if host is considered live by pool master
-     */
-    bool live() const;
+        //! Check if pool master thinks this host is live
+        bool live() const;
 
-    /**
-     * @brief Get unique identifier
-     * @return UUID string
-     */
-    QString GetUUID() const override;
+        //! Get total memory in bytes
+        qint64 memoryTotal() const;
 
-    /**
-     * @brief Get total host memory
-     * @return Total memory in bytes
-     */
-    qint64 memoryTotal() const;
+        //! Get free memory in bytes
+        qint64 memoryFree() const;
 
-    /**
-     * @brief Get free host memory
-     * @return Free memory in bytes
-     */
-    qint64 memoryFree() const;
+        //! Get timestamp of last update
+        QDateTime lastUpdated() const;
 
-    /**
-     * @brief Get time at which this information was last updated
-     * @return Timestamp of last update
-     */
-    QDateTime lastUpdated() const;
-
-    /**
-     * @brief Get additional configuration
-     * @return Map of additional configuration key-value pairs
-     */
-    QVariantMap otherConfig() const;
-
-protected:
-    QString GetObjectType() const override;
+    protected:
+        QString GetObjectType() const override;
 };
 
 #endif // HOSTMETRICS_H

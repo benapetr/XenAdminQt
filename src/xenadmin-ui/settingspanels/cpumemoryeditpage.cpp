@@ -353,10 +353,10 @@ void CpuMemoryEditPage::validateVcpuSettings()
     QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
     int maxPhysicalCpus = 0;
     for (const QSharedPointer<Host>& host : hosts)
-        maxPhysicalCpus = qMax(maxPhysicalCpus, host ? host->hostCpuCount() : 0);
+        maxPhysicalCpus = qMax(maxPhysicalCpus, host ? host->GetHostCpuCount() : 0);
 
     QSharedPointer<Host> homeHost = cache->ResolveObject<Host>("host", this->m_vm->GetHomeRef());
-    int homeHostPhysicalCpus = homeHost ? homeHost->hostCpuCount() : 0;
+    int homeHostPhysicalCpus = homeHost ? homeHost->GetHostCpuCount() : 0;
 
     QStringList warnings;
 

@@ -56,16 +56,10 @@ class XENLIB_EXPORT Network : public XenObject
         explicit Network(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Network() override = default;
 
-        /**
-         * @brief Get GetBridge name
-         * @return Linux GetBridge name (e.g., "xenbr0")
-         */
+        //! Get bridge name (Linux bridge name, e.g., "xenbr0")
         QString GetBridge() const;
 
-        /**
-         * @brief Check if bridge is IsManaged by xapi
-         * @return true if IsManaged by xapi, false if external bridge
-         */
+        //! Check if bridge is managed by xapi (false if external bridge)
         bool IsManaged() const;
 
         //! If network should be automatically added to new VMs
@@ -77,65 +71,38 @@ class XENLIB_EXPORT Network : public XenObject
         bool IsGuestInstallerNetwork() const;
         bool Show(bool showHiddenObjects) const;
 
-        /**
-         * @brief Get MTU (Maximum Transmission Unit)
-         * @return MTU in bytes
-         */
+        //! Get MTU (Maximum Transmission Unit) in bytes
         qint64 GetMTU() const;
 
-        /**
-         * @brief Get list of VIF references
-         * @return List of VIF opaque references
-         */
+        //! Get list of VIF references (list of VIF opaque references)
         QStringList GetVIFRefs() const;
 
-        /**
-         * @brief Get list of PIF references
-         * @return List of PIF opaque references
-         */
+        //! Get list of PIF references (list of PIF opaque references)
         QStringList GetPIFRefs() const;
 
-        /**
-         * @brief Get allowed operations
-         * @return List of allowed network operations
-         */
+        //! Get list of PIF objects
+        QList<QSharedPointer<PIF>> GetPIFs() const;
+
+        //! Get list of VIF objects
+        QList<QSharedPointer<VIF>> GetVIFs() const;
+
+        //! Get allowed operations (list of allowed network operations)
         QStringList AllowedOperations() const;
 
-        /**
-         * @brief Get current operations
-         * @return Map of task ID to operation type
-         */
+        //! Get current operations (map of task ID to operation type)
         QVariantMap CurrentOperations() const;
 
-        /**
-         * @brief Get binary blobs associated with this network
-         * @return Map of blob name to blob reference
-         */
-        QVariantMap blobs() const;
+        //! Get binary blobs associated with this network (map of blob name to blob reference)
+        QVariantMap GetBlobs() const;
 
-        /**
-         * @brief Get user-specified tags for categorization
-         * @return List of tag strings
-         */
-        QStringList tags() const;
+        //! Get default locking mode for VIFs ("locked", "unlocked", or "disabled")
+        QString GetDefaultLockingMode() const;
 
-        /**
-         * @brief Get default locking mode for VIFs
-         * @return Default locking mode string ("locked", "unlocked", or "disabled")
-         */
-        QString defaultLockingMode() const;
+        //! Get IP addresses assigned to VIFs (map of VIF reference to assigned IP for xapi-managed DHCP networks)
+        QVariantMap GetAssignedIPs() const;
 
-        /**
-         * @brief Get IP addresses assigned to VIFs on this network
-         * @return Map of VIF reference to assigned IP address (for xapi-managed DHCP networks)
-         */
-        QVariantMap assignedIPs() const;
-
-        /**
-         * @brief Get purposes for which the server will use this network
-         * @return List of network purpose strings ("nbd", "insecure_nbd", etc.)
-         */
-        QStringList purpose() const;
+        //! Get purposes for which the server will use this network (list of network purpose strings like "nbd", "insecure_nbd", etc.)
+        QStringList GetPurpose() const;
 
         // XenObject interface
         QString GetObjectType() const override { return "network"; }

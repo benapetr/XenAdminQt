@@ -6,6 +6,9 @@
 #include <QStringList>
 #include <QVariantMap>
 #include <QDateTime>
+#include <QSharedPointer>
+
+class VM;
 
 /*!
  * \brief VM Protection Policy wrapper class
@@ -14,34 +17,16 @@
  * Provides access to backup scheduling, archive settings, and alarm configuration.
  * First published in XenServer 5.6 FP1.
  */
-class VMPP : public XenObject
+class XENLIB_EXPORT VMPP : public XenObject
 {
     Q_OBJECT
-    
-    Q_PROPERTY(QString uuid READ Uuid)
-    Q_PROPERTY(QString nameLabel READ NameLabel)
-    Q_PROPERTY(QString nameDescription READ NameDescription)
-    Q_PROPERTY(bool isPolicyEnabled READ IsPolicyEnabled)
-    Q_PROPERTY(QString backupType READ BackupType)
-    Q_PROPERTY(qlonglong backupRetentionValue READ BackupRetentionValue)
-    Q_PROPERTY(QString backupFrequency READ BackupFrequency)
-    Q_PROPERTY(bool isBackupRunning READ IsBackupRunning)
-    Q_PROPERTY(QDateTime backupLastRunTime READ BackupLastRunTime)
-    Q_PROPERTY(QString archiveTargetType READ ArchiveTargetType)
-    Q_PROPERTY(QString archiveFrequency READ ArchiveFrequency)
-    Q_PROPERTY(bool isArchiveRunning READ IsArchiveRunning)
-    Q_PROPERTY(QDateTime archiveLastRunTime READ ArchiveLastRunTime)
-    Q_PROPERTY(bool isAlarmEnabled READ IsAlarmEnabled)
-    
+
     public:
         explicit VMPP(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
 
         QString GetObjectType() const override;
 
         // Basic properties
-        QString Uuid() const;
-        QString NameLabel() const;
-        QString NameDescription() const;
         bool IsPolicyEnabled() const;
 
         // Backup configuration
@@ -61,7 +46,7 @@ class VMPP : public XenObject
         QDateTime ArchiveLastRunTime() const;
 
         // VM and alarm configuration
-        QStringList VMRefs() const;
+        QStringList GetVMRefs() const;
         bool IsAlarmEnabled() const;
         QVariantMap AlarmConfig() const;
         QStringList RecentAlerts() const;
@@ -71,6 +56,9 @@ class VMPP : public XenObject
         int VMCount() const;
         bool HasBackupSchedule() const;
         bool HasArchiveSchedule() const;
+
+        // Object resolution getters
+        QList<QSharedPointer<VM>> GetVMs() const;
 };
 
 #endif // VMPP_H

@@ -26,11 +26,12 @@
  */
 
 #include "pbd.h"
+#include "host.h"
+#include "sr.h"
 #include "network/connection.h"
 #include "../xencache.h"
 
-PBD::PBD(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+PBD::PBD(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
@@ -39,19 +40,32 @@ QString PBD::GetObjectType() const
     return "pbd";
 }
 
-QString PBD::Uuid() const
-{
-    return this->stringProperty("uuid");
-}
-
-QString PBD::HostRef() const
+QString PBD::GetHostRef() const
 {
     return this->stringProperty("host");
 }
 
-QString PBD::SRRef() const
+QSharedPointer<Host> PBD::GetHost()
+{
+    QString host_ref = this->GetHostRef();
+    if (!this->GetConnection() || host_ref.isEmpty() || host_ref == XENOBJECT_NULL)
+        return QSharedPointer<Host>();
+
+    return this->GetCache()->ResolveObject<Host>("host", host_ref);
+}
+
+QString PBD::GetSRRef() const
 {
     return this->stringProperty("SR");
+}
+
+QSharedPointer<SR> PBD::GetSR()
+{
+    QString sr_ref = this->GetSRRef();
+    if (!this->GetConnection() || sr_ref.isEmpty() || sr_ref == XENOBJECT_NULL)
+        return QSharedPointer<SR>();
+
+    return this->GetCache()->ResolveObject<SR>("sr", sr_ref);
 }
 
 QVariantMap PBD::DeviceConfig() const
@@ -64,11 +78,6 @@ bool PBD::CurrentlyAttached() const
     return this->boolProperty("currently_attached", false);
 }
 
-QVariantMap PBD::OtherConfig() const
-{
-    return this->property("other_config").toMap();
-}
-
 QString PBD::GetDeviceConfigValue(const QString& key) const
 {
     QVariantMap config = this->DeviceConfig();
@@ -77,7 +86,7 @@ QString PBD::GetDeviceConfigValue(const QString& key) const
 
 QString PBD::GetOtherConfigValue(const QString& key) const
 {
-    QVariantMap config = this->OtherConfig();
+    QVariantMap config = this->GetOtherConfig();
     return config.value(key, QString()).toString();
 }
 
@@ -89,6 +98,6 @@ bool PBD::HasDeviceConfigKey(const QString& key) const
 
 bool PBD::HasOtherConfigKey(const QString& key) const
 {
-    QVariantMap config = this->OtherConfig();
+    QVariantMap config = this->GetOtherConfig();
     return config.contains(key);
 }

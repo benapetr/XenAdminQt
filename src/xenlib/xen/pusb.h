@@ -31,6 +31,10 @@
 #include "xenobject.h"
 #include <QString>
 #include <QMap>
+#include <QSharedPointer>
+
+class Host;
+class USBGroup;
 
 /**
  * @brief PUSB - A physical USB device
@@ -49,8 +53,8 @@ class XENLIB_EXPORT PUSB : public XenObject
         QString GetObjectType() const override { return "PUSB"; }
 
         // Property accessors
-        QString USBGroupRef() const;
-        QString HostRef() const;
+        QString GetUSBGroupRef() const;
+        QString GetHostRef() const;
         QString Path() const;
         QString VendorId() const;
         QString VendorDesc() const;
@@ -60,8 +64,11 @@ class XENLIB_EXPORT PUSB : public XenObject
         QString Version() const;
         QString Description() const;
         bool PassthroughEnabled() const;
-        QMap<QString, QString> OtherConfig() const;
         double Speed() const;
+
+        // Object resolution getters
+        QSharedPointer<USBGroup> GetUSBGroup() const;
+        QSharedPointer<Host> GetHost() const;
 };
 
 #endif // PUSB_H

@@ -29,6 +29,9 @@
 #include "network/connection.h"
 #include "host.h"
 #include "../xencache.h"
+#include "pbd.h"
+#include "vdi.h"
+#include "blob.h"
 
 namespace
 {
@@ -123,7 +126,7 @@ QSharedPointer<Host> SR::GetHost(XenCache* cache)
     }
 
     // For local SRs, find the host it's connected to via PBD
-    QStringList pbdRefs = this->PBDRefs();
+    QStringList pbdRefs = this->GetPBDRefs();
     for (const QString& pbdRef : pbdRefs)
     {
         QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
@@ -137,12 +140,12 @@ QSharedPointer<Host> SR::GetHost(XenCache* cache)
 
     return QSharedPointer<Host>();
 }
-QStringList SR::VDIRefs() const
+QStringList SR::GetVDIRefs() const
 {
     return stringListProperty("VDIs");
 }
 
-QStringList SR::PBDRefs() const
+QStringList SR::GetPBDRefs() const
 {
     return stringListProperty("PBDs");
 }
@@ -152,19 +155,9 @@ QString SR::ContentType() const
     return stringProperty("content_type", "user");
 }
 
-QVariantMap SR::OtherConfig() const
-{
-    return property("other_config").toMap();
-}
-
 QVariantMap SR::SMConfig() const
 {
     return property("sm_config").toMap();
-}
-
-QStringList SR::Tags() const
-{
-    return stringListProperty("tags");
 }
 
 QStringList SR::AllowedOperations() const
@@ -239,7 +232,7 @@ QString SR::HomeRef() const
     if (this->IsShared())
         return QString();
 
-    QStringList pbds = this->PBDRefs();
+    QStringList pbds = this->GetPBDRefs();
     if (pbds.size() != 1)
         return QString();
 
@@ -253,7 +246,7 @@ QString SR::HomeRef() const
 
 Host* SR::GetFirstAttachedStorageHost() const
 {
-    QStringList pbds = this->PBDRefs();
+    QStringList pbds = this->GetPBDRefs();
     if (pbds.isEmpty())
         return nullptr;
 
@@ -292,7 +285,7 @@ bool SR::HasDriverDomain(QString* outVMRef) const
     if (srRef.isEmpty() || srRef == "OpaqueRef:NULL")
         return false;
 
-    QStringList pbdRefs = this->PBDRefs();
+    QStringList pbdRefs = this->GetPBDRefs();
     for (const QString& pbdRef : pbdRefs)
     {
         if (pbdRef.isEmpty() || pbdRef == "OpaqueRef:NULL")
@@ -321,7 +314,7 @@ bool SR::HasDriverDomain(QString* outVMRef) const
 
 bool SR::HasPBDs() const
 {
-    return !PBDRefs().isEmpty();
+    return !GetPBDRefs().isEmpty();
 }
 
 bool SR::IsBroken(bool checkAttached) const
@@ -334,7 +327,7 @@ bool SR::IsBroken(bool checkAttached) const
     if (!cache)
         return true;
 
-    QStringList pbdRefs = PBDRefs();
+    QStringList pbdRefs = GetPBDRefs();
     if (pbdRefs.isEmpty())
         return true;
 
@@ -376,7 +369,7 @@ bool SR::MultipathAOK() const
     if (!cache)
         return true;
 
-    QStringList pbdRefs = PBDRefs();
+    QStringList pbdRefs = GetPBDRefs();
     for (const QString& pbdRef : pbdRefs)
     {
         QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
@@ -410,7 +403,7 @@ bool SR::CanRepairAfterUpgradeFromLegacySL() const
     if (!cache)
         return false;
 
-    QStringList pbdRefs = PBDRefs();
+    QStringList pbdRefs = GetPBDRefs();
     for (const QString& pbdRef : pbdRefs)
     {
         QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
@@ -432,7 +425,7 @@ bool SR::IsDetached() const
     if (!cache)
         return true;
 
-    QStringList pbdRefs = PBDRefs();
+    QStringList pbdRefs = GetPBDRefs();
     if (pbdRefs.isEmpty())
         return true;
 
@@ -446,6 +439,87 @@ bool SR::IsDetached() const
     return true;
 }
 
+QList<QSharedPointer<PBD>> SR::GetPBDs() const
+{
+    QList<QSharedPointer<PBD>> result;
+    
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return result;
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return result;
+    
+    QStringList pbdRefs = this->GetPBDRefs();
+    for (const QString& ref : pbdRefs)
+    {
+        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        {
+            QSharedPointer<PBD> pbd = cache->ResolveObject<PBD>("pbd", ref);
+            if (pbd)
+                result.append(pbd);
+        }
+    }
+    
+    return result;
+}
+
+QList<QSharedPointer<VDI>> SR::GetVDIs() const
+{
+    QList<QSharedPointer<VDI>> result;
+    
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return result;
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return result;
+    
+    QStringList vdiRefs = this->GetVDIRefs();
+    for (const QString& ref : vdiRefs)
+    {
+        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        {
+            QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>("vdi", ref);
+            if (vdi)
+                result.append(vdi);
+        }
+    }
+    
+    return result;
+}
+
+QList<QSharedPointer<Blob>> SR::GetBlobs() const
+{
+    QList<QSharedPointer<Blob>> result;
+    
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return result;
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return result;
+    
+    QVariantMap blobMap = this->Blobs();
+    QMapIterator<QString, QVariant> iter(blobMap);
+    while (iter.hasNext())
+    {
+        iter.next();
+        QString ref = iter.value().toString();
+        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        {
+            QSharedPointer<Blob> blob = cache->ResolveObject<Blob>("blob", ref);
+            if (blob)
+                result.append(blob);
+        }
+    }
+    
+    return result;
+}
+
 bool SR::HasRunningVMs() const
 {
     XenConnection* connection = GetConnection();
@@ -456,7 +530,7 @@ bool SR::HasRunningVMs() const
     if (!cache)
         return false;
 
-    QStringList vdiRefs = VDIRefs();
+    QStringList vdiRefs = GetVDIRefs();
     for (const QString& vdiRef : vdiRefs)
     {
         QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);

@@ -324,7 +324,7 @@ void NetworkAction::run()
                 networkRecord["name_label"] = this->m_network->GetName();
                 networkRecord["name_description"] = this->m_network->GetDescription();
                 networkRecord["other_config"] = this->m_network->GetOtherConfig();
-                networkRecord["tags"] = this->m_network->tags();
+                networkRecord["tags"] = this->m_network->GetTags();
 
                 // Create the network
                 QString networkRef = XenAPI::Network::create(this->GetSession(), networkRecord);

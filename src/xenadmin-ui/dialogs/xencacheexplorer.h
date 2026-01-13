@@ -63,10 +63,7 @@ class XenCacheExplorer : public QDialog
         void displayConnectionInfo(XenConnection* connection);
         QString formatVariantValue(const QVariant& value) const;
         QString getVariantTypeName(const QVariant& value) const;
-        QTreeWidgetItem* addPropertyItem(QTreeWidgetItem* parent,
-                                         const QString& name,
-                                         const QString& value,
-                                         const QString& type);
+        QTreeWidgetItem* addPropertyItem(QTreeWidgetItem* parent, const QString& name, const QString& value, const QString& type);
         void appendVariantChildren(QTreeWidgetItem* parent, const QVariant& value);
 
         enum ItemType

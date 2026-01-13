@@ -32,6 +32,10 @@
 #include <QString>
 #include <QStringList>
 #include <QMap>
+#include <QSharedPointer>
+
+class PGPU;
+class VGPU;
 
 /**
  * @brief GPU_group - A group of compatible GPUs across the resource pool
@@ -50,15 +54,16 @@ public:
     QString GetObjectType() const override { return "GPU_group"; }
 
     // Property accessors
-    QString NameLabel() const;
-    QString NameDescription() const;
-    QStringList PGPURefs() const;
-    QStringList VGPURefs() const;
+    QStringList GetPGPURefs() const;
+    QStringList GetVGPURefs() const;
     QStringList GPUTypes() const;
-    QMap<QString, QString> OtherConfig() const;
     QString AllocationAlgorithm() const;
     QStringList SupportedVGPUTypeRefs() const;
     QStringList EnabledVGPUTypeRefs() const;
+
+    // Object resolution getters
+    QList<QSharedPointer<PGPU>> GetPGPUs() const;
+    QList<QSharedPointer<VGPU>> GetVGPUs() const;
 };
 
 #endif // GPUGROUP_H

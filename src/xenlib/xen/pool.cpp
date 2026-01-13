@@ -28,6 +28,10 @@
 #include "pool.h"
 #include "network/connection.h"
 #include "../xencache.h"
+#include "host.h"
+#include "sr.h"
+#include "vm.h"
+#include "vdi.h"
 
 Pool::Pool(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -43,7 +47,7 @@ QString Pool::GetMasterHostRef() const
     return stringProperty("master");
 }
 
-QString Pool::DefaultSRRef() const
+QString Pool::GetDefaultSRRef() const
 {
     return stringProperty("default_SR");
 }
@@ -53,17 +57,12 @@ bool Pool::HAEnabled() const
     return boolProperty("ha_enabled", false);
 }
 
-QVariantMap Pool::HAConfiguration() const
+QVariantMap Pool::GetHAConfiguration() const
 {
     return property("ha_configuration").toMap();
 }
 
-QVariantMap Pool::OtherConfig() const
-{
-    return property("other_config").toMap();
-}
-
-QStringList Pool::HostRefs() const
+QStringList Pool::GetHostRefs() const
 {
     // In XenAPI, there's exactly one pool per GetConnection, so all hosts belong to this pool
     // Query the cache for all host references
@@ -77,30 +76,25 @@ QStringList Pool::HostRefs() const
 
 bool Pool::IsPoolOfOne() const
 {
-    return HostRefs().count() == 1;
+    return GetHostRefs().count() == 1;
 }
 
-QStringList Pool::Tags() const
-{
-    return stringListProperty("tags");
-}
-
-bool Pool::WLBEnabled() const
+bool Pool::IsWLBEnabled() const
 {
     return boolProperty("wlb_enabled", false);
 }
 
-bool Pool::LivePatchingDisabled() const
+bool Pool::IsLivePatchingDisabled() const
 {
     return boolProperty("live_patching_disabled", false);
 }
 
-QString Pool::SuspendImageSRRef() const
+QString Pool::GetSuspendImageSRRef() const
 {
     return stringProperty("suspend_image_SR");
 }
 
-QString Pool::CrashDumpSRRef() const
+QString Pool::GetCrashDumpSRRef() const
 {
     return stringProperty("crash_dump_SR");
 }
@@ -140,7 +134,7 @@ bool Pool::RedoLogEnabled() const
     return boolProperty("redo_log_enabled", false);
 }
 
-QString Pool::RedoLogVDIRef() const
+QString Pool::GetRedoLogVDIRef() const
 {
     return stringProperty("redo_log_vdi");
 }
@@ -170,7 +164,7 @@ QVariantMap Pool::Blobs() const
     return property("blobs").toMap();
 }
 
-QStringList Pool::MetadataVDIRefs() const
+QStringList Pool::GetMetadataVDIRefs() const
 {
     return stringListProperty("metadata_VDIs");
 }
@@ -335,12 +329,166 @@ QStringList Pool::GetAllVMRefs() const
     return cache->GetAllRefs("vm");
 }
 
+QList<QSharedPointer<VDI>> Pool::GetMetadataVDIs() const
+{
+    QList<QSharedPointer<VDI>> vdis;
+    
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return vdis;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return vdis;
+
+    const QStringList vdiRefs = this->GetMetadataVDIRefs();
+    for (const QString& vdiRef : vdiRefs)
+    {
+        QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>("vdi", vdiRef);
+        if (vdi && vdi->IsValid())
+            vdis.append(vdi);
+    }
+
+    return vdis;
+}
+
+QSharedPointer<SR> Pool::GetDefaultSR() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<SR>();
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<SR>();
+
+    QString srRef = this->GetDefaultSRRef();
+    if (srRef.isEmpty() || srRef == "OpaqueRef:NULL")
+        return QSharedPointer<SR>();
+
+    return cache->ResolveObject<SR>("SR", srRef);
+}
+
+QSharedPointer<SR> Pool::GetSuspendImageSR() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<SR>();
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<SR>();
+
+    QString srRef = this->GetSuspendImageSRRef();
+    if (srRef.isEmpty() || srRef == "OpaqueRef:NULL")
+        return QSharedPointer<SR>();
+
+    return cache->ResolveObject<SR>("SR", srRef);
+}
+
+QSharedPointer<SR> Pool::GetCrashDumpSR() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<SR>();
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<SR>();
+
+    QString srRef = this->GetCrashDumpSRRef();
+    if (srRef.isEmpty() || srRef == "OpaqueRef:NULL")
+        return QSharedPointer<SR>();
+
+    return cache->ResolveObject<SR>("SR", srRef);
+}
+
+QSharedPointer<VDI> Pool::GetRedoLogVDI() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<VDI>();
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<VDI>();
+
+    QString vdiRef = this->GetRedoLogVDIRef();
+    if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
+        return QSharedPointer<VDI>();
+
+    return cache->ResolveObject<VDI>("vdi", vdiRef);
+}
+
+QList<QSharedPointer<Host>> Pool::GetHosts() const
+{
+    QList<QSharedPointer<Host>> hosts;
+    
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return hosts;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return hosts;
+
+    const QStringList hostRefs = this->GetHostRefs();
+    for (const QString& hostRef : hostRefs)
+    {
+        QSharedPointer<Host> host = cache->ResolveObject<Host>("host", hostRef);
+        if (host && host->IsValid())
+            hosts.append(host);
+    }
+
+    return hosts;
+}
+
+QSharedPointer<Host> Pool::GetMasterHost() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<Host>();
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<Host>();
+
+    QString masterRef = this->GetMasterHostRef();
+    if (masterRef.isEmpty() || masterRef == "OpaqueRef:NULL")
+        return QSharedPointer<Host>();
+
+    return cache->ResolveObject<Host>("host", masterRef);
+}
+
+QList<QSharedPointer<VM>> Pool::GetAllVMs() const
+{
+    QList<QSharedPointer<VM>> vms;
+    
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return vms;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return vms;
+
+    const QStringList vmRefs = this->GetAllVMRefs();
+    for (const QString& vmRef : vmRefs)
+    {
+        QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", vmRef);
+        if (vm && vm->IsValid())
+            vms.append(vm);
+    }
+
+    return vms;
+}
+
 bool Pool::IsNotFullyUpgraded() const
 {
     // C# equivalent: PropertyNames.isNotFullyUpgraded
     // Returns true if hosts in pool have different software versions
     
-    QStringList hostRefs = this->HostRefs();
+    QStringList hostRefs = this->GetHostRefs();
     if (hostRefs.size() <= 1)
         return false; // Single host or no hosts, can't be mismatched
     

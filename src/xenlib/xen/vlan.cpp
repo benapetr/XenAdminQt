@@ -26,6 +26,9 @@
  */
 
 #include "vlan.h"
+#include "network/connection.h"
+#include "../xencache.h"
+#include "pif.h"
 
 VLAN::VLAN(XenConnection* connection,
            const QString& opaqueRef,
@@ -47,6 +50,40 @@ QString VLAN::GetUntaggedPIFRef() const
 qint64 VLAN::GetTag() const
 {
     return this->longProperty("tag", -1);
+}
+
+QSharedPointer<PIF> VLAN::GetTaggedPIF() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<PIF>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<PIF>();
+    
+    QString ref = this->GetTaggedPIFRef();
+    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        return QSharedPointer<PIF>();
+    
+    return cache->ResolveObject<PIF>("pif", ref);
+}
+
+QSharedPointer<PIF> VLAN::GetUntaggedPIF() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<PIF>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<PIF>();
+    
+    QString ref = this->GetUntaggedPIFRef();
+    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        return QSharedPointer<PIF>();
+    
+    return cache->ResolveObject<PIF>("pif", ref);
 }
 
 QString VLAN::GetObjectType() const

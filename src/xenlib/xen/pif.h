@@ -102,7 +102,6 @@ class PIF : public XenObject
         QString PCIRef() const;
 
         // Additional properties
-        QVariantMap OtherConfig() const;
         QVariantMap Properties() const;
         QStringList Capabilities() const;
         QString IgmpSnoopingStatus() const;

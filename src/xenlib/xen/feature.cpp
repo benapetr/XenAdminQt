@@ -28,24 +28,13 @@
 #include "feature.h"
 #include "network/connection.h"
 
-Feature::Feature(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+Feature::Feature(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
 QString Feature::GetObjectType() const
 {
     return "feature";
-}
-
-QString Feature::NameLabel() const
-{
-    return this->stringProperty("name_label");
-}
-
-QString Feature::NameDescription() const
-{
-    return this->stringProperty("name_description");
 }
 
 bool Feature::IsEnabled() const

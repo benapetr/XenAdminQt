@@ -47,12 +47,3 @@ QString User::Fullname() const
 {
     return this->stringProperty("fullname");
 }
-
-QMap<QString, QString> User::OtherConfig() const
-{
-    QVariantMap map = this->property("other_config").toMap();
-    QMap<QString, QString> result;
-    for (auto it = map.begin(); it != map.end(); ++it)
-        result[it.key()] = it.value().toString();
-    return result;
-}

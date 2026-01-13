@@ -27,10 +27,12 @@
 
 #include "gpugroup.h"
 #include "network/connection.h"
+#include "../xencache.h"
+#include "pgpu.h"
+#include "vgpu.h"
 #include <QMap>
 
-GPUGroup::GPUGroup(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+GPUGroup::GPUGroup(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
@@ -38,22 +40,12 @@ GPUGroup::~GPUGroup()
 {
 }
 
-QString GPUGroup::NameLabel() const
-{
-    return this->stringProperty("name_label");
-}
-
-QString GPUGroup::NameDescription() const
-{
-    return this->stringProperty("name_description");
-}
-
-QStringList GPUGroup::PGPURefs() const
+QStringList GPUGroup::GetPGPURefs() const
 {
     return this->property("PGPUs").toStringList();
 }
 
-QStringList GPUGroup::VGPURefs() const
+QStringList GPUGroup::GetVGPURefs() const
 {
     return this->property("VGPUs").toStringList();
 }
@@ -61,15 +53,6 @@ QStringList GPUGroup::VGPURefs() const
 QStringList GPUGroup::GPUTypes() const
 {
     return this->property("GPU_types").toStringList();
-}
-
-QMap<QString, QString> GPUGroup::OtherConfig() const
-{
-    QVariantMap map = this->property("other_config").toMap();
-    QMap<QString, QString> result;
-    for (auto it = map.begin(); it != map.end(); ++it)
-        result[it.key()] = it.value().toString();
-    return result;
 }
 
 QString GPUGroup::AllocationAlgorithm() const
@@ -85,4 +68,50 @@ QStringList GPUGroup::SupportedVGPUTypeRefs() const
 QStringList GPUGroup::EnabledVGPUTypeRefs() const
 {
     return this->property("enabled_VGPU_types").toStringList();
+}
+
+QList<QSharedPointer<PGPU>> GPUGroup::GetPGPUs() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QList<QSharedPointer<PGPU>>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QList<QSharedPointer<PGPU>>();
+    
+    QStringList refs = this->GetPGPURefs();
+    QList<QSharedPointer<PGPU>> result;
+    for (const QString& ref : refs)
+    {
+        if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+            continue;
+        QSharedPointer<PGPU> obj = cache->ResolveObject<PGPU>("pgpu", ref);
+        if (obj)
+            result.append(obj);
+    }
+    return result;
+}
+
+QList<QSharedPointer<VGPU>> GPUGroup::GetVGPUs() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QList<QSharedPointer<VGPU>>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QList<QSharedPointer<VGPU>>();
+    
+    QStringList refs = this->GetVGPURefs();
+    QList<QSharedPointer<VGPU>> result;
+    for (const QString& ref : refs)
+    {
+        if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+            continue;
+        QSharedPointer<VGPU> obj = cache->ResolveObject<VGPU>("vgpu", ref);
+        if (obj)
+            result.append(obj);
+    }
+    return result;
 }

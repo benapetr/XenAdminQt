@@ -49,9 +49,7 @@ class XENLIB_EXPORT Event : public XenObject
     Q_OBJECT
 
     public:
-        explicit Event(XenConnection* connection,
-                      const QString& opaqueRef,
-                      QObject* parent = nullptr);
+        explicit Event(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Event() override = default;
 
         QString GetObjectType() const override;

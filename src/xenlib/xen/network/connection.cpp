@@ -452,8 +452,8 @@ void XenConnection::EndConnect(bool clearCache, bool exiting)
     if (this->d->eventPoller)
     {
         QMetaObject::invokeMethod(this->d->eventPoller, [this]() {
-            this->d->eventPoller->stop();
-            this->d->eventPoller->reset();
+            this->d->eventPoller->Stop();
+            this->d->eventPoller->Reset();
         }, stopConnectionType);
     }
 
@@ -1099,9 +1099,9 @@ void XenConnection::connectWorkerThread()
 
     QMetaObject::invokeMethod(this->d->eventPoller, [this, session, classes, token]()
     {
-        this->d->eventPoller->reset();
-        this->d->eventPoller->initialize(session);
-        this->d->eventPoller->start(classes, token);
+        this->d->eventPoller->Reset();
+        this->d->eventPoller->Initialize(session);
+        this->d->eventPoller->Start(classes, token);
     }, Qt::QueuedConnection);
 
     emit this->ConnectionResult(true, QString());

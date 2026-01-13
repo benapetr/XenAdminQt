@@ -50,33 +50,19 @@ class XENLIB_EXPORT Tunnel : public XenObject
     Q_OBJECT
 
     public:
-        explicit Tunnel(XenConnection* connection,
-                        const QString& opaqueRef,
-                        QObject* parent = nullptr);
+        explicit Tunnel(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Tunnel() override = default;
 
-        /**
-         * @brief Get access PIF reference
-         * @return Opaque reference to access PIF
-         */
+        //! Get opaque reference to access PIF
         QString GetAccessPIFRef() const;
 
-        /**
-         * @brief Get transport PIF reference
-         * @return Opaque reference to transport PIF
-         */
+        //! Get opaque reference to transport PIF
         QString GetTransportPIFRef() const;
 
-        /**
-         * @brief Get status dictionary
-         * @return GetStatus key-value pairs
-         */
+        //! Get status key-value pairs
         QVariantMap GetStatus() const;
 
-        /**
-         * @brief Get protocol
-         * @return Tunnel protocol (e.g., "gre", "vxlan")
-         */
+        //! Get tunnel protocol (e.g., "gre", "vxlan")
         QString GetProtocol() const;
 
         // XenObject interface

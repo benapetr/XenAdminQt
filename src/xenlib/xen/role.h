@@ -49,8 +49,6 @@ class XENLIB_EXPORT Role : public XenObject
         QString GetObjectType() const override { return "role"; }
 
         // Property accessors
-        QString NameLabel() const;
-        QString NameDescription() const;
         QStringList SubroleRefs() const;
         bool IsInternal() const;
 };

@@ -37,6 +37,7 @@
 #include <QPalette>
 #include <QApplication>
 #include <QVBoxLayout>
+#include "xen/console.h"
 #include "xen/network/connection.h"
 #include "xen/session.h"
 #include "xencache.h"
@@ -823,7 +824,7 @@ bool XSVNCScreen::isControlDomainZero(const QString& vmRef, QString* outHostRef)
     if (!vm->IsControlDomain())
         return false;
 
-    QString hostRef = vm->ResidentOnRef();
+    QString hostRef = vm->GetResidentOnRef();
     if (hostRef.isEmpty() || hostRef == "OpaqueRef:NULL")
         return false;
 
@@ -1196,7 +1197,7 @@ QString XSVNCScreen::pollPort(int port, bool vnc)
 
         // Get VIFs for this VM
         QStringList vifs = vm->GetVIFRefs();
-        QString residentOnRef = vm->ResidentOnRef();
+        QString residentOnRef = vm->GetResidentOnRef();
 
         // Process each VIF to extract IPs
         foreach (const QString& vifRef, vifs)
@@ -1545,7 +1546,8 @@ void XSVNCScreen::connectNewHostedConsole()
         qDebug() << "XSVNCScreen: VM power_state=" << powerState;
 
         // Get consoles list (list of OpaqueRefs)
-        QStringList consoles = vm->GetConsoleRefs();
+        //QStringList consoles = vm->GetConsoleRefs();
+        QList<QSharedPointer<Console>> consoles = vm->GetConsoles();
         if (consoles.isEmpty())
         {
             qDebug() << "XSVNCScreen: No consoles found for VM (consoles list empty in cache)";
@@ -1556,11 +1558,9 @@ void XSVNCScreen::connectNewHostedConsole()
         qDebug() << "XSVNCScreen: Found" << consoles.size() << "console refs";
 
         // Search for RFB (VNC) console
-        foreach (const QString& consoleRef, consoles)
+        foreach (QSharedPointer<Console> console, consoles)
         {
-            if (consoleRef.isEmpty())
-                continue;
-            qDebug() << "XSVNCScreen: Inspecting console" << consoleRef;
+            qDebug() << "XSVNCScreen: Inspecting console" << console->OpaqueRef();
 
             // Check if VNC client has been replaced
             if (!this->_vncClient)
@@ -1569,16 +1569,8 @@ void XSVNCScreen::connectNewHostedConsole()
                 return;
             }
 
-            // Get console record
-            QVariantMap consoleRecord = cache->ResolveObjectData("console", consoleRef);
-            if (consoleRecord.isEmpty())
-            {
-                qWarning() << "XSVNCScreen: Console record missing in cache for" << consoleRef;
-                continue;
-            }
-
             // Check protocol - we want "rfb" for VNC
-            QString protocol = consoleRecord.value("protocol").toString();
+            QString protocol = console->GetProtocol();
             if (protocol != "rfb")
             {
                 qDebug() << "XSVNCScreen: Skipping console with protocol:" << protocol;
@@ -1586,11 +1578,11 @@ void XSVNCScreen::connectNewHostedConsole()
             }
 
             // Found VNC console! Try to connect
-            qDebug() << "XSVNCScreen: Found RFB console:" << consoleRef;
-            qDebug() << "XSVNCScreen: Console location:" << consoleRecord.value("location").toString();
+            qDebug() << "XSVNCScreen: Found RFB console:" << console->OpaqueRef();
+            qDebug() << "XSVNCScreen: Console location:" << console->GetLocation();
             try
             {
-                if (this->connectHostedConsole(this->_vncClient, consoleRef))
+                if (this->connectHostedConsole(this->_vncClient, console->OpaqueRef()))
                     return; // Success!
             } catch (const std::exception& e)
             {
@@ -1665,7 +1657,7 @@ bool XSVNCScreen::connectHostedConsole(VNCGraphicsClient* vncClient, const QStri
 
         // Get VM record to check resident_on (host where VM is running)
         QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", this->_sourceRef);
-        QString residentOnRef = vm ? vm->ResidentOnRef() : QString();
+        QString residentOnRef = vm ? vm->GetResidentOnRef() : QString();
 
         if (residentOnRef.isEmpty() || residentOnRef == "OpaqueRef:NULL")
         {

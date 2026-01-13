@@ -117,7 +117,7 @@ void XenCacheExplorer::populateTree()
             this->populateConnectionNode(connectionItem, connection);
     }
 
-    this->ui->cacheTree->expandAll();
+    this->ui->cacheTree->collapseAll();
 }
 
 void XenCacheExplorer::populateConnectionNode(QTreeWidgetItem* connectionNode, XenConnection* connection)
@@ -129,8 +129,8 @@ void XenCacheExplorer::populateConnectionNode(QTreeWidgetItem* connectionNode, X
     if (!cache)
         return;
 
-    // Get all types from cache by querying different object types
-    QStringList types = {"vm", "host", "pool", "sr", "vdi", "vbd", "pbd", "pci", "vif", "network", "task", "pif", "console"};
+    // Get all types from cache itself
+    QStringList types = cache->GetKnownTypes();
     
     for (const QString& type : types)
     {
@@ -243,7 +243,7 @@ void XenCacheExplorer::displayConnectionInfo(XenConnection* connection)
     XenCache* cache = connection->GetCache();
     if (cache)
     {
-        QStringList types = {"vm", "host", "pool", "sr", "vdi", "vbd", "pbd", "pci", "vif", "network", "task", "pif", "console"};
+        QStringList types = cache->GetKnownTypes();
         int nonEmptyTypes = 0;
         for (const QString& type : types)
         {

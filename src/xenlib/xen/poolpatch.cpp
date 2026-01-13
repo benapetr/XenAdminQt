@@ -37,16 +37,6 @@ PoolPatch::~PoolPatch()
 {
 }
 
-QString PoolPatch::NameLabel() const
-{
-    return this->stringProperty("name_label");
-}
-
-QString PoolPatch::NameDescription() const
-{
-    return this->stringProperty("name_description");
-}
-
 QString PoolPatch::Version() const
 {
     return this->stringProperty("version");

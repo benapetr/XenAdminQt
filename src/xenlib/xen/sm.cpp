@@ -38,16 +38,6 @@ SM::~SM()
 {
 }
 
-QString SM::NameLabel() const
-{
-    return this->stringProperty("name_label");
-}
-
-QString SM::NameDescription() const
-{
-    return this->stringProperty("name_description");
-}
-
 QString SM::Type() const
 {
     return this->stringProperty("type");

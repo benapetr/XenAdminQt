@@ -56,7 +56,7 @@ void EnableHostAction::run()
         {
             // Get evacuated VMs from host's other_config
             // C# uses extension methods: GetMigratedEvacuatedVMs, GetHaltedEvacuatedVMs, GetSuspendedEvacuatedVMs
-            QVariantMap otherConfig = this->m_host->otherConfig();
+            QVariantMap otherConfig = this->m_host->GetOtherConfig();
 
             QStringList migratedVMRefs = otherConfig.value("MAINTENANCE_MODE_MIGRATED_VMS", "").toString().split(',', Qt::SkipEmptyParts);
             QStringList haltedVMRefs = otherConfig.value("MAINTENANCE_MODE_HALTED_VMS", "").toString().split(',', Qt::SkipEmptyParts);

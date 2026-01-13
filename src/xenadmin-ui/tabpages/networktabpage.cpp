@@ -280,7 +280,7 @@ void NetworkTabPage::populateVIFsForVM()
         // C#: Check for guest installer network (CA-73056)
         // var network = vif.Connection.Resolve(vif.network);
         // if (network != null && network.IsGuestInstallerNetwork() && !ShowHiddenVMs) continue;
-        QString networkRef = vif->NetworkRef();
+        QString networkRef = vif->GetNetworkRef();
         if (!networkRef.isEmpty())
         {
             QSharedPointer<Network> network = cache->ResolveObject<Network>("network", networkRef);
@@ -362,7 +362,7 @@ void NetworkTabPage::populateVIFsForVM()
 
         // Column 3: Network name
         // C#: NetworkCell.Value = Vif.NetworkName();
-        QString networkRef = vif->NetworkRef();
+        QString networkRef = vif->GetNetworkRef();
         QString networkName = "-";
         if (!networkRef.isEmpty())
         {
@@ -668,7 +668,7 @@ void NetworkTabPage::populateIPConfigForHost()
         bool isManagement = pif->Management();
 
         // Also check other_config for secondary management interfaces
-        QVariantMap otherConfig = pif->OtherConfig();
+        QVariantMap otherConfig = pif->GetOtherConfig();
         bool hasManagementPurpose = otherConfig.contains("management_purpose");
 
         if (isManagement || hasManagementPurpose)
@@ -711,7 +711,7 @@ void NetworkTabPage::populateIPConfigForPool()
         if (!host || !host->IsValid())
             continue;
 
-        QStringList pifRefs = host->PIFRefs();
+        QStringList pifRefs = host->GetPIFRefs();
         for (const QString& pifRef : pifRefs)
         {
             QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
@@ -720,7 +720,7 @@ void NetworkTabPage::populateIPConfigForPool()
 
             // Only show management interfaces
             bool isManagement = pif->Management();
-            QVariantMap otherConfig = pif->OtherConfig();
+            QVariantMap otherConfig = pif->GetOtherConfig();
             bool hasManagementPurpose = otherConfig.contains("management_purpose");
 
             if (isManagement || hasManagementPurpose)
@@ -765,7 +765,7 @@ void NetworkTabPage::addIPConfigRow(const QSharedPointer<PIF>& pif, const QShare
         interfaceType = "Management";
     } else
     {
-        QVariantMap otherConfig = pif->OtherConfig();
+        QVariantMap otherConfig = pif->GetOtherConfig();
         interfaceType = otherConfig.value("management_purpose", "Unknown").toString();
     }
 
@@ -1372,7 +1372,7 @@ void NetworkTabPage::onRemoveNetwork()
         QString networkName = "-";
 
         // Get network name
-        QString networkRef = vif->NetworkRef();
+        QString networkRef = vif->GetNetworkRef();
         if (!networkRef.isEmpty() && this->m_connection && this->m_connection->GetCache())
         {
             QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);

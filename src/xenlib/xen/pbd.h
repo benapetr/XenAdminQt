@@ -52,81 +52,52 @@ class SR;
 class XENLIB_EXPORT PBD : public XenObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString hostRef READ HostRef NOTIFY dataChanged)
-    Q_PROPERTY(QString srRef READ SRRef NOTIFY dataChanged)
-    Q_PROPERTY(bool currentlyAttached READ CurrentlyAttached NOTIFY dataChanged)
 
     public:
-        explicit PBD(XenConnection* connection,
-                     const QString& opaqueRef,
-                     QObject* parent = nullptr);
+        explicit PBD(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~PBD() override = default;
 
         // XenObject interface
         QString GetObjectType() const override;
 
-        /**
-         * @brief Get UUID of this PBD
-         * @return UUID string
-         */
-        QString Uuid() const;
+        //! @brief Get reference to the host this PBD is on
+        //! @return Host opaque reference
+        QString GetHostRef() const;
 
-        /**
-         * @brief Get reference to the host this PBD is on
-         * @return Host opaque reference
-         */
-        QString HostRef() const;
+        QSharedPointer<Host> GetHost();
 
-        /**
-         * @brief Get reference to the SR this PBD provides access to
-         * @return SR opaque reference
-         */
-        QString SRRef() const;
+        //! @brief Get reference to the SR this PBD provides access to
+        //! @return SR opaque reference
+        QString GetSRRef() const;
 
-        /**
-         * @brief Get device configuration map
-         * @return Device config dictionary (string->string)
-         */
+        QSharedPointer<SR> GetSR();
+
+        //! @brief Get device configuration map
+        //! @return Device config dictionary (string->string)
         QVariantMap DeviceConfig() const;
 
-        /**
-         * @brief Check if SR is currently attached via this PBD
-         * @return true if currently attached
-         */
+        //! @brief Check if SR is currently attached via this PBD
+        //! @return true if currently attached
         bool CurrentlyAttached() const;
 
-        /**
-         * @brief Get other configuration map
-         * @return Other config dictionary (string->string)
-         */
-        QVariantMap OtherConfig() const;
-
-        /**
-         * @brief Get a specific device config value
-         * @param key Config key
-         * @return Config value (empty if not found)
-         */
+        //! @brief Get a specific device config value
+        //! @param key Config key
+        //! @return Config value (empty if not found)
         QString GetDeviceConfigValue(const QString& key) const;
 
-        /**
-         * @brief Get a specific other config value
-         * @param key Config key
-         * @return Config value (empty if not found)
-         */
+        //! @brief Get a specific other config value
+        //! @param key Config key
+        //! @return Config value (empty if not found)
         QString GetOtherConfigValue(const QString& key) const;
 
-        /**
-         * @brief Check if device config contains a key
-         * @param key Config key
-         * @return true if key exists
-         */
+        //! @brief Check if device config contains a key
+        //! @param key Config key
+        //! @return true if key exists
         bool HasDeviceConfigKey(const QString& key) const;
 
-        /**
-         * @brief Check if other config contains a key
-         * @param key Config key
-         * @return true if key exists
-         */
+        //! @brief Check if other config contains a key
+        //! @param key Config key
+        //! @return true if key exists
         bool HasOtherConfigKey(const QString& key) const;
 };
 

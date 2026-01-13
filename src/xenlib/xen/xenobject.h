@@ -36,6 +36,8 @@
 #include <QPointer>
 #include "network/connection.h"
 
+#define XENOBJECT_NULL "OpaqueRef:NULL"
+
 class XenCache;
 
 /**
@@ -55,11 +57,6 @@ class XenCache;
 class XENLIB_EXPORT XenObject : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString opaqueRef READ OpaqueRef CONSTANT)
-    Q_PROPERTY(QString GetUUID READ GetUUID NOTIFY dataChanged)
-    Q_PROPERTY(QString GetName READ GetName NOTIFY dataChanged)
-    Q_PROPERTY(QString GetDescription READ GetDescription NOTIFY dataChanged)
-    Q_PROPERTY(bool IsLocked READ IsLocked NOTIFY dataChanged)
 
     public:
         static bool ValueIsNULL(const QString &value);

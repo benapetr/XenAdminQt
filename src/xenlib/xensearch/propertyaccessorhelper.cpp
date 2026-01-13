@@ -276,7 +276,7 @@ QString PropertyAccessorHelper::hostCpuUsageString(Host* host)
         return "-";
     
     QString hostUuid = host->GetUUID();
-    int numCPUs = host->cpuCount();
+    int numCPUs = host->GetCPUCount();
     if (numCPUs == 0)
         return "-";
     
@@ -303,7 +303,7 @@ int PropertyAccessorHelper::hostCpuUsageRank(Host* host)
         return 0;
     
     QString hostUuid = host->GetUUID();
-    int numCPUs = host->cpuCount();
+    int numCPUs = host->GetCPUCount();
     if (numCPUs == 0)
         return 0;
     
@@ -400,7 +400,7 @@ QString PropertyAccessorHelper::hostNetworkUsageString(Host* host)
         return "-";
     
     QString hostUuid = host->GetUUID();
-    QStringList pifRefs = host->PIFRefs();
+    QStringList pifRefs = host->GetPIFRefs();
     
     double sum = 0.0;
     double max = 0.0;
@@ -502,7 +502,7 @@ QString PropertyAccessorHelper::GetSRHAStatus(SR* sr)
         return QString();
     
     // Check if this SR contains HA statefile VDI
-    QStringList vdiRefs = sr->VDIRefs();
+    QStringList vdiRefs = sr->GetVDIRefs();
     for (const QString& vdiRef : vdiRefs)
     {
         if (haStatefiles.contains(vdiRef))

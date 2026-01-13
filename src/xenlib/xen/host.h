@@ -34,6 +34,8 @@
 class Pool;
 class SR;
 class VM;
+class PBD;
+class PIF;
 
 /**
  * @brief Host - A physical host
@@ -52,32 +54,18 @@ class VM;
 class XENLIB_EXPORT Host : public XenObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString GetHostname READ GetHostname NOTIFY dataChanged)
-    Q_PROPERTY(QString GetAddress READ GetAddress NOTIFY dataChanged)
-    Q_PROPERTY(bool IsEnabled READ IsEnabled NOTIFY dataChanged)
 
     public:
-        explicit Host(XenConnection* connection,
-                      const QString& opaqueRef,
-                      QObject* parent = nullptr);
+        explicit Host(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Host() override = default;
 
-        /**
-         * @brief Get GetHostname
-         * @return GetHostname string
-         */
+        //! Get hostname string
         QString GetHostname() const;
 
-        /**
-         * @brief Get IP GetAddress
-         * @return IP GetAddress string
-         */
+        //! Get IP address string
         QString GetAddress() const;
 
-        /**
-         * @brief Check if host is IsEnabled (not in maintenance mode)
-         * @return true if IsEnabled
-         */
+        //! Check if host is enabled (not in maintenance mode)
         bool IsEnabled() const;
 
         /**
@@ -95,59 +83,29 @@ class XENLIB_EXPORT Host : public XenObject
          */
         bool RestrictVtpm() const;
 
-        /**
-         * @brief Get list of VMs resident on this host
-         * @return List of VM opaque references
-         */
-        QStringList ResidentVMRefs() const;
+        //! Get list of VMs resident on this host (list of VM opaque references)
+        QStringList GetResidentVMRefs() const;
 
-        /**
-         * @brief Get software version info
-         * @return Map of version keys/values
-         */
+        //! Get software version info (map of version keys/values)
         QVariantMap SoftwareVersion() const;
 
-        /**
-         * @brief Get host Capabilities
-         * @return List of capability strings
-         */
-        QStringList Capabilities() const;
+        //! Get capabilities (list of capability strings)
+        QStringList GetCapabilities() const;
 
-        /**
-         * @brief Get CPU info
-         * @return Map of CPU information
-         */
-        QVariantMap CPUInfo() const;
+        //! Get CPU info (map of CPU information)
+        QVariantMap GetCPUInfo() const;
 
-        /**
-         * @brief Get number of CPU sockets
-         * @return Socket count or 0 if unknown
-         */
-        int cpuSockets() const;
+        //! Get number of CPU sockets (or 0 if unknown)
+        int GetCPUSockets() const;
 
-        /**
-         * @brief Get total CPU count
-         * @return CPU count or 0 if unknown
-         */
-        int cpuCount() const;
+        //! Get total CPU count (or 0 if unknown)
+        int GetCPUCount() const;
 
-        /**
-         * @brief Get cores per socket
-         * @return Cores per socket or 0 if unknown
-         */
-        int coresPerSocket() const;
+        //! Get cores per socket (or 0 if unknown)
+        int GetCoresPerSocket() const;
 
-        /**
-         * @brief Get physical CPU count from host_CPUs list
-         * @return Count of host CPUs
-         */
-        int hostCpuCount() const;
-
-        /**
-         * @brief Get other_config dictionary
-         * @return Map of additional configuration
-         */
-        QVariantMap otherConfig() const;
+        //! Get physical CPU count from host_CPUs list
+        int GetHostCpuCount() const;
         
         /**
          * @brief Get boot time from other_config
@@ -157,40 +115,28 @@ class XENLIB_EXPORT Host : public XenObject
          */
         double BootTime() const;
 
-        /**
-         * @brief Get tags
-         * @return List of tag strings
-         */
-        QStringList tags() const;
+        //! Get suspend image SR reference (SR opaque reference)
+        QString GetSuspendImageSRRef() const;
 
-        /**
-         * @brief Get suspend image SR reference
-         * @return SR opaque reference
-         */
-        QString suspendImageSRRef() const;
+        //! Get crash dump SR reference (SR opaque reference)
+        QString GetCrashDumpSRRef() const;
 
-        /**
-         * @brief Get crash dump SR reference
-         * @return SR opaque reference
-         */
-        QString crashDumpSRRef() const;
+        //! Get list of PBD (storage connection) references
+        QStringList GetPBDRefs() const;
 
-        /**
-         * @brief Get list of PBD (storage connection) references
-         * @return List of PBD opaque references
-         */
-        QStringList PBDRefs() const;
+        //! Get list of PIF (network interface) references
+        QStringList GetPIFRefs() const;
 
-        /**
-         * @brief Get list of PIF (network interface) references
-         * @return List of PIF opaque references
-         */
-        QStringList PIFRefs() const;
+        //! Get resident VMs (VMs running on this host)
+        QList<QSharedPointer<VM>> GetResidentVMs() const;
 
-        /**
-         * @brief Check if host is pool master
-         * @return true if this host is the pool master
-         */
+        //! Get PBDs (physical block devices/storage connections)
+        QList<QSharedPointer<PBD>> GetPBDs() const;
+
+        //! Get PIFs (physical network interfaces)
+        QList<QSharedPointer<PIF>> GetPIFs() const;
+
+        //! Check if host is pool master
         bool IsMaster() const;
 
         /**
@@ -201,302 +147,155 @@ class XENLIB_EXPORT Host : public XenObject
          *
          * @return Pool opaque reference
          */
-        QString PoolRef() const;
+        QString GetPoolRef() const;
 
         QSharedPointer<Pool> GetPool();
 
-        /**
-         * @brief Get memory overhead required by host
-         * @return Memory overhead in bytes
-         */
+        //! Get memory overhead required by host in bytes
         qint64 MemoryOverhead() const;
 
-        /**
-         * @brief Get API version major number
-         * @return Major version number
-         */
+        //! Get API version major number
         qint64 APIVersionMajor() const;
 
-        /**
-         * @brief Get API version minor number
-         * @return Minor version number
-         */
+        //! Get API version minor number
         qint64 APIVersionMinor() const;
 
-        /**
-         * @brief Get API version vendor string
-         * @return Vendor name (e.g., "XenSource", "Citrix")
-         */
+        //! Get API version vendor string (e.g., "XenSource", "Citrix")
         QString APIVersionVendor() const;
 
-        /**
-         * @brief Get vendor-specific API implementation details
-         * @return Map of vendor implementation parameters
-         */
+        //! Get vendor-specific API implementation details (map of vendor implementation parameters)
         QVariantMap APIVersionVendorImplementation() const;
 
-        /**
-         * @brief Get CPU configuration parameters
-         * @return Map of CPU configuration settings
-         */
+        //! Get CPU configuration parameters (map of CPU configuration settings)
         QVariantMap CPUConfiguration() const;
 
-        /**
-         * @brief Get scheduling policy
-         * @return Scheduling policy string (e.g., "credit", "credit2")
-         */
+        //! Get scheduling policy (e.g., "credit", "credit2")
         QString SchedPolicy() const;
 
-        /**
-         * @brief Get list of host CPU references
-         * @return List of host_cpu opaque references
-         */
-        QStringList HostCPURefs() const;
+        //! Get list of host CPU references (list of host_cpu opaque references)
+        QStringList GetHostCPURefs() const;
 
-        /**
-         * @brief Get allowed operations for this host
-         * @return List of allowed operation strings
-         */
+        //! Get allowed operations for this host (list of allowed operation strings)
         QStringList AllowedOperations() const;
 
-        /**
-         * @brief Get current operations being performed on this host
-         * @return Map of task ID to operation type
-         */
+        //! Get current operations being performed on this host (map of task ID to operation type)
         QVariantMap CurrentOperations() const;
 
-        /**
-         * @brief Get list of supported bootloaders
-         * @return List of bootloader names (e.g., "pygrub", "eliloader")
-         */
+        //! Get list of supported bootloaders (e.g., "pygrub", "eliloader")
         QStringList SupportedBootloaders() const;
 
-        /**
-         * @brief Get logging configuration
-         * @return Map of logging parameters
-         */
+        //! Get logging configuration (map of logging parameters)
         QVariantMap Logging() const;
 
-        /**
-         * @brief Get host metrics reference
-         * @return Host_metrics opaque reference
-         */
+        //! Get host metrics reference (Host_metrics opaque reference)
         QString MetricsRef() const;
 
-        /**
-         * @brief Get HA state file locations
-         * @return List of state file paths for HA
-         */
+        //! Get HA state file locations (list of state file paths for HA)
         QStringList HAStatefiles() const;
 
-        /**
-         * @brief Get HA network peer addresses
-         * @return List of network addresses of HA peers
-         */
+        //! Get HA network peer addresses (list of network addresses of HA peers)
         QStringList HANetworkPeers() const;
 
-        /**
-         * @brief Get BIOS strings from host
-         * @return Map of BIOS version and other BIOS information
-         */
+        //! Get BIOS strings from host (map of BIOS version and other BIOS information)
         QVariantMap BIOSStrings() const;
 
-        /**
-         * @brief Get chipset information
-         * @return Map of chipset details
-         */
+        //! Get chipset information (map of chipset details)
         QVariantMap ChipsetInfo() const;
 
-        /**
-         * @brief Get external authentication type
-         * @return Authentication type string (e.g., "AD" for Active Directory)
-         */
+        //! Get external authentication type (e.g., "AD" for Active Directory)
         QString ExternalAuthType() const;
 
-        /**
-         * @brief Get external authentication service name
-         * @return Service name for external authentication
-         */
+        //! Get external authentication service name for external authentication
         QString ExternalAuthServiceName() const;
 
-        /**
-         * @brief Get external authentication configuration
-         * @return Map of authentication configuration parameters
-         */
+        //! Get external authentication configuration (map of authentication configuration parameters)
         QVariantMap ExternalAuthConfiguration() const;
 
-        /**
-         * @brief Get power-on mode
-         * @return Power-on mode string (e.g., "wake-on-lan", "iLO", "DRAC")
-         */
+        //! Get power-on mode (e.g., "wake-on-lan", "iLO", "DRAC")
         QString PowerOnMode() const;
 
-        /**
-         * @brief Get power-on configuration
-         * @return Map of power-on configuration parameters
-         */
+        //! Get power-on configuration (map of power-on configuration parameters)
         QVariantMap PowerOnConfig() const;
 
-        /**
-         * @brief Get local cache SR reference
-         * @return SR opaque reference used for local caching
-         */
+        //! Get local cache SR reference used for local caching
         QString LocalCacheSRRef() const;
 
-        /**
-         * @brief Get list of PCI device references
-         * @return List of PCI opaque references
-         */
+        //! Get list of PCI device references (list of PCI opaque references)
         QStringList PCIRefs() const;
 
-        /**
-         * @brief Get list of physical GPU references
-         * @return List of PGPU opaque references
-         */
+        //! Get list of physical GPU references (list of PGPU opaque references)
         QStringList PGPURefs() const;
 
-        /**
-         * @brief Get list of physical USB device references
-         * @return List of PUSB opaque references
-         */
+        //! Get list of physical USB device references (list of PUSB opaque references)
         QStringList PUSBRefs() const;
 
-        /**
-         * @brief Get list of patch references (legacy)
-         * @return List of pool_patch opaque references
-         */
+        //! Get list of patch references (legacy, list of pool_patch opaque references)
         QStringList PatchRefs() const;
 
-        /**
-         * @brief Get list of update references
-         * @return List of pool_update opaque references
-         */
+        //! Get list of update references (list of pool_update opaque references)
         QStringList UpdateRefs() const;
 
-        /**
-         * @brief Get list of updates requiring host reboot
-         * @return List of pool_update opaque references that require reboot
-         */
+        //! Get list of updates requiring host reboot (list of pool_update opaque references that require reboot)
         QStringList UpdatesRequiringRebootRefs() const;
 
-        /**
-         * @brief Get list of feature references
-         * @return List of Feature opaque references
-         */
+        //! Get list of feature references (list of Feature opaque references)
         QStringList FeatureRefs() const;
 
-        /**
-         * @brief Get pending update guidances
-         * @return List of guidance strings for pending updates
-         */
+        //! Get pending update guidances (list of guidance strings for pending updates)
         QStringList PendingGuidances() const;
 
-        /**
-         * @brief Check if SSL legacy support is enabled
-         * @return true if legacy SSL/TLS versions are allowed
-         */
+        //! Check if SSL legacy support is enabled (legacy SSL/TLS versions are allowed)
         bool SSLLegacy() const;
 
-        /**
-         * @brief Check if TLS certificate verification is enabled
-         * @return true if TLS verification is enabled
-         */
+        //! Check if TLS certificate verification is enabled
         bool TLSVerificationEnabled() const;
 
-        /**
-         * @brief Check if HTTPS-only mode is enabled
-         * @return true if only HTTPS connections are allowed
-         */
+        //! Check if HTTPS-only mode is enabled (only HTTPS connections are allowed)
         bool HTTPSOnly() const;
 
-        /**
-         * @brief Get guest VCPU parameters
-         * @return Map of VCPU configuration parameters for guests
-         */
+        //! Get guest VCPU parameters (map of VCPU configuration parameters for guests)
         QVariantMap GuestVCPUsParams() const;
 
-        /**
-         * @brief Get display mode setting
-         * @return Display configuration string
-         */
+        //! Get display mode setting
         QString Display() const;
 
-        /**
-         * @brief Get supported virtual hardware platform versions
-         * @return List of platform version numbers
-         */
+        //! Get supported virtual hardware platform versions (list of platform version numbers)
         QList<qint64> VirtualHardwarePlatformVersions() const;
 
-        /**
-         * @brief Get control domain (dom0) VM reference
-         * @return VM opaque reference for domain 0
-         */
+        //! Get control domain (dom0) VM reference
         QString ControlDomainRef() const;
 
-        /**
-         * @brief Get iSCSI IQN (iSCSI Qualified Name)
-         * @return iSCSI IQN string for this host
-         */
+        //! Get iSCSI IQN (iSCSI Qualified Name) for this host
         QString IscsiIQN() const;
 
-        /**
-         * @brief Check if multipathing is enabled
-         * @return true if storage multipathing is enabled
-         */
+        //! Check if multipathing is enabled (storage multipathing is enabled)
         bool Multipathing() const;
 
-        /**
-         * @brief Get UEFI certificates
-         * @return UEFI certificate data
-         */
+        //! Get UEFI certificates data
         QString UEFICertificates() const;
 
-        /**
-         * @brief Get list of certificate references
-         * @return List of Certificate opaque references
-         */
+        //! Get list of certificate references (list of Certificate opaque references)
         QStringList CertificateRefs() const;
 
-        /**
-         * @brief Get available product editions
-         * @return List of edition strings available for this host
-         */
+        //! Get available product editions (list of edition strings available for this host)
         QStringList Editions() const;
 
-        /**
-         * @brief Get list of crash dump references
-         * @return List of host_crashdump opaque references
-         */
+        //! Get list of crash dump references (list of host_crashdump opaque references)
         QStringList CrashdumpRefs() const;
 
-        /**
-         * @brief Get timestamp of last software update
-         * @return DateTime of last update installation
-         */
+        //! Get timestamp of last software update
         QDateTime LastSoftwareUpdate() const;
 
-        /**
-         * @brief Get latest synced updates applied state
-         * @return String indicating latest synced update status
-         */
+        //! Get latest synced updates applied state
         QString LatestSyncedUpdatesApplied() const;
 
-        /**
-         * @brief Get license parameters
-         * @return Map of license configuration parameters
-         */
+        //! Get license parameters (map of license configuration parameters)
         QVariantMap LicenseParams() const;
 
-        /**
-         * @brief Get current product edition
-         * @return Edition string (e.g., "free", "per-socket", "xendesktop")
-         */
+        //! Get current product edition (e.g., "free", "per-socket", "xendesktop")
         QString Edition() const;
 
-        /**
-         * @brief Get license server configuration
-         * @return Map of license server address and port
-         */
+        //! Get license server configuration (map of license server address and port)
         QVariantMap LicenseServer() const;
 
         // Property getters for search/query functionality

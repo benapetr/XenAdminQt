@@ -28,23 +28,12 @@
 #include "role.h"
 #include "network/connection.h"
 
-Role::Role(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+Role::Role(XenConnection* connection, const QString& opaqueRef, QObject* parent)  : XenObject(connection, opaqueRef, parent)
 {
 }
 
 Role::~Role()
 {
-}
-
-QString Role::NameLabel() const
-{
-    return this->stringProperty("name_label");
-}
-
-QString Role::NameDescription() const
-{
-    return this->stringProperty("name_description");
 }
 
 QStringList Role::SubroleRefs() const

@@ -93,7 +93,7 @@ void MigrateVMMenu::populate()
         return;
     }
 
-    QString currentHostRef = m_vm->ResidentOnRef();
+    QString currentHostRef = m_vm->GetResidentOnRef();
     QStringList hosts = cache->GetAllRefs("host");
 
     bool anyEnabled = false;

@@ -38,21 +38,6 @@ QString VMSS::GetObjectType() const
     return "vmss";
 }
 
-QString VMSS::Uuid() const
-{
-    return this->stringProperty("uuid");
-}
-
-QString VMSS::NameLabel() const
-{
-    return this->stringProperty("name_label");
-}
-
-QString VMSS::NameDescription() const
-{
-    return this->stringProperty("name_description");
-}
-
 bool VMSS::Enabled() const
 {
     return this->boolProperty("enabled");
@@ -97,7 +82,7 @@ QDateTime VMSS::LastRunTime() const
     return QDateTime::fromSecsSinceEpoch(0);
 }
 
-QStringList VMSS::VMRefs() const
+QStringList VMSS::GetVMRefs() const
 {
     return this->property("VMs").toStringList();
 }
@@ -110,5 +95,5 @@ bool VMSS::IsEnabled() const
 
 int VMSS::VMCount() const
 {
-    return this->VMRefs().count();
+    return this->GetVMRefs().count();
 }

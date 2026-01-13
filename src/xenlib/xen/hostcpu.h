@@ -31,6 +31,9 @@
 #include "xenobject.h"
 #include <QString>
 #include <QMap>
+#include <QSharedPointer>
+
+class Host;
 
 /**
  * @brief HostCPU - A physical CPU
@@ -42,25 +45,27 @@ class XENLIB_EXPORT HostCPU : public XenObject
 {
     Q_OBJECT
 
-public:
-    explicit HostCPU(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
-    virtual ~HostCPU();
+    public:
+        explicit HostCPU(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
+        virtual ~HostCPU();
 
-    QString GetObjectType() const override { return "host_cpu"; }
+        QString GetObjectType() const override { return "host_cpu"; }
 
-    // Property accessors
-    QString HostRef() const;
-    qint64 Number() const;
-    QString Vendor() const;
-    qint64 Speed() const;
-    QString ModelName() const;
-    qint64 Family() const;
-    qint64 Model() const;
-    QString Stepping() const;
-    QString Flags() const;
-    QString Features() const;
-    double Utilisation() const;
-    QMap<QString, QString> OtherConfig() const;
+        // Property accessors
+        QString GetHostRef() const;
+        qint64 Number() const;
+        QString Vendor() const;
+        qint64 Speed() const;
+        QString ModelName() const;
+        qint64 Family() const;
+        qint64 Model() const;
+        QString Stepping() const;
+        QString Flags() const;
+        QString Features() const;
+        double Utilisation() const;
+
+        // Object resolution getters
+        QSharedPointer<Host> GetHost() const;
 };
 
 #endif // HOSTCPU_H

@@ -1331,7 +1331,7 @@ bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm,
         if (!poolMasterRef.isEmpty())
             sourceHostRef = poolMasterRef;
         else
-            sourceHostRef = vm->ResidentOnRef();
+            sourceHostRef = vm->GetResidentOnRef();
     }
     if (!sourceHostRef.isEmpty())
     {

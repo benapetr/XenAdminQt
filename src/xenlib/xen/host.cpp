@@ -30,6 +30,9 @@
 #include "network/comparableaddress.h"
 #include "hostmetrics.h"
 #include "../xencache.h"
+#include "vm.h"
+#include "pbd.h"
+#include "pif.h"
 
 Host::Host(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -84,7 +87,7 @@ bool Host::RestrictVtpm() const
     return boolKeyPreferTrue(LicenseParams(), "restrict_vtpm");
 }
 
-QStringList Host::ResidentVMRefs() const
+QStringList Host::GetResidentVMRefs() const
 {
     return stringListProperty("resident_VMs");
 }
@@ -94,19 +97,19 @@ QVariantMap Host::SoftwareVersion() const
     return property("software_version").toMap();
 }
 
-QStringList Host::Capabilities() const
+QStringList Host::GetCapabilities() const
 {
     return stringListProperty("capabilities");
 }
 
-QVariantMap Host::CPUInfo() const
+QVariantMap Host::GetCPUInfo() const
 {
     return property("cpu_info").toMap();
 }
 
-int Host::cpuSockets() const
+int Host::GetCPUSockets() const
 {
-    QVariantMap cpuInfoMap = this->CPUInfo();
+    QVariantMap cpuInfoMap = this->GetCPUInfo();
     if (!cpuInfoMap.contains("socket_count"))
         return 0;
 
@@ -115,9 +118,9 @@ int Host::cpuSockets() const
     return ok ? sockets : 0;
 }
 
-int Host::cpuCount() const
+int Host::GetCPUCount() const
 {
-    QVariantMap cpuInfoMap = this->CPUInfo();
+    QVariantMap cpuInfoMap = this->GetCPUInfo();
     if (!cpuInfoMap.contains("cpu_count"))
         return 0;
 
@@ -126,24 +129,19 @@ int Host::cpuCount() const
     return ok ? cpuCount : 0;
 }
 
-int Host::coresPerSocket() const
+int Host::GetCoresPerSocket() const
 {
-    int sockets = this->cpuSockets();
-    int cpuCount = this->cpuCount();
+    int sockets = this->GetCPUSockets();
+    int cpuCount = this->GetCPUCount();
     if (sockets > 0 && cpuCount > 0)
         return cpuCount / sockets;
 
     return 0;
 }
 
-int Host::hostCpuCount() const
+int Host::GetHostCpuCount() const
 {
     return stringListProperty("host_CPUs").size();
-}
-
-QVariantMap Host::otherConfig() const
-{
-    return property("other_config").toMap();
 }
 
 double Host::BootTime() const
@@ -151,7 +149,7 @@ double Host::BootTime() const
     // C# equivalent: Host.BootTime()
     // Gets boot_time from other_config dictionary
     
-    QVariantMap otherConfigMap = this->otherConfig();
+    QVariantMap otherConfigMap = this->GetOtherConfig();
     if (otherConfigMap.isEmpty())
         return 0.0;
     
@@ -164,27 +162,22 @@ double Host::BootTime() const
     return ok ? bootTime : 0.0;
 }
 
-QStringList Host::tags() const
-{
-    return stringListProperty("tags");
-}
-
-QString Host::suspendImageSRRef() const
+QString Host::GetSuspendImageSRRef() const
 {
     return stringProperty("suspend_image_sr");
 }
 
-QString Host::crashDumpSRRef() const
+QString Host::GetCrashDumpSRRef() const
 {
     return stringProperty("crash_dump_sr");
 }
 
-QStringList Host::PBDRefs() const
+QStringList Host::GetPBDRefs() const
 {
     return stringListProperty("PBDs");
 }
 
-QStringList Host::PIFRefs() const
+QStringList Host::GetPIFRefs() const
 {
     return stringListProperty("PIFs");
 }
@@ -197,14 +190,14 @@ bool Host::IsMaster() const
     if (!conn)
         return false;
 
-    QVariantMap poolData = conn->GetCache()->ResolveObjectData("pool", this->PoolRef());
+    QVariantMap poolData = conn->GetCache()->ResolveObjectData("pool", this->GetPoolRef());
     
     // Compare pool's master reference with this host's opaque reference
     QString masterRef = poolData.value("master", "").toString();
     return masterRef == this->OpaqueRef();
 }
 
-QString Host::PoolRef() const
+QString Host::GetPoolRef() const
 {
     // In XenAPI, there's always exactly one pool per GetConnection
     // Query the cache for the pool that contains this host
@@ -258,7 +251,7 @@ QString Host::SchedPolicy() const
     return this->stringProperty("sched_policy");
 }
 
-QStringList Host::HostCPURefs() const
+QStringList Host::GetHostCPURefs() const
 {
     return this->stringListProperty("host_CPUs");
 }
@@ -479,6 +472,84 @@ QVariantMap Host::LicenseServer() const
 
 // Property getters for search/query functionality
 
+QList<QSharedPointer<VM>> Host::GetResidentVMs() const
+{
+    QList<QSharedPointer<VM>> result;
+    
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return result;
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return result;
+    
+    QStringList vmRefs = this->GetResidentVMRefs();
+    for (const QString& ref : vmRefs)
+    {
+        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        {
+            QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", ref);
+            if (vm)
+                result.append(vm);
+        }
+    }
+    
+    return result;
+}
+
+QList<QSharedPointer<PBD>> Host::GetPBDs() const
+{
+    QList<QSharedPointer<PBD>> result;
+    
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return result;
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return result;
+    
+    QStringList pbdRefs = this->GetPBDRefs();
+    for (const QString& ref : pbdRefs)
+    {
+        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        {
+            QSharedPointer<PBD> pbd = cache->ResolveObject<PBD>("pbd", ref);
+            if (pbd)
+                result.append(pbd);
+        }
+    }
+    
+    return result;
+}
+
+QList<QSharedPointer<PIF>> Host::GetPIFs() const
+{
+    QList<QSharedPointer<PIF>> result;
+    
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return result;
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return result;
+    
+    QStringList pifRefs = this->GetPIFRefs();
+    for (const QString& ref : pifRefs)
+    {
+        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        {
+            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", ref);
+            if (pif)
+                result.append(pif);
+        }
+    }
+    
+    return result;
+}
+
 QList<ComparableAddress> Host::GetIPAddresses() const
 {
     // C# equivalent: PropertyAccessors IP address property for Host
@@ -486,7 +557,7 @@ QList<ComparableAddress> Host::GetIPAddresses() const
     
     QList<ComparableAddress> addresses;
     
-    QStringList pifRefs = this->PIFRefs();
+    QStringList pifRefs = this->GetPIFRefs();
     if (pifRefs.isEmpty())
         return addresses;
     

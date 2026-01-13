@@ -43,7 +43,7 @@ class VM;
  *
  * First published in XenServer 6.0.
  */
-class VMAppliance : public XenObject
+class XENLIB_EXPORT VMAppliance : public XenObject
 {
     Q_OBJECT
 
@@ -60,23 +60,19 @@ class VMAppliance : public XenObject
         
         // Extension methods (from VM_appliance.cs extensions)
         
-        /**
-         * @brief Get VMs that share storage with VMs in this appliance
-         * 
-         * Finds VMs not in this appliance that share SRs with VMs in the appliance.
-         * These are "fate sharing" VMs that could be affected by operations on the appliance.
-         *
-         * @return List of VM opaque refs
-         */
+        //! @brief Get VMs that share storage with VMs in this appliance
+        //!
+        //! Finds VMs not in this appliance that share SRs with VMs in the appliance.
+        //! These are "fate sharing" VMs that could be affected by operations on the appliance.
+        //!
+        //! @return List of VM opaque refs
         QStringList GetFateSharingVMs() const;
 
-        /**
-         * @brief Check if the appliance is running
-         * 
-         * Returns true if any VM in the appliance is in Running, Paused, or Suspended state.
-         *
-         * @return true if at least one VM is running
-         */
+        //! @brief Check if the appliance is running
+        //!
+        //! Returns true if any VM in the appliance is in Running, Paused, or Suspended state.
+        //!
+        //! @return true if at least one VM is running
         bool IsRunning() const;
 };
 

@@ -48,10 +48,6 @@
 class XENLIB_EXPORT Task : public XenObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString status READ GetStatus NOTIFY dataChanged)
-    Q_PROPERTY(double progress READ GetProgress NOTIFY dataChanged)
-    Q_PROPERTY(QDateTime created READ GetCreated NOTIFY dataChanged)
-    Q_PROPERTY(QDateTime finished READ GetFinished NOTIFY dataChanged)
 
     public:
         explicit Task(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
@@ -59,71 +55,40 @@ class XENLIB_EXPORT Task : public XenObject
 
         QString GetObjectType() const override;
 
-        /**
-         * @brief Get task status
-         * @return Status string ("pending", "success", "failure", "cancelling", "cancelled")
-         */
+        //! Get task status (Status string: "pending", "success", "failure", "cancelling", "cancelled")
         QString GetStatus() const;
 
-        /**
-         * @brief Get task progress
-         * @return Progress value from 0.0 to 1.0
-         */
+        //! Get task progress (Progress value from 0.0 to 1.0)
         double GetProgress() const;
 
-        /**
-         * @brief Get creation timestamp
-         * @return When task was created
-         */
+        //! Get creation timestamp (When task was created)
         QDateTime GetCreated() const;
 
-        /**
-         * @brief Get finish timestamp
-         * @return When task finished (or null if still running)
-         */
+        //! Get finish timestamp (When task finished or null if still running)
         QDateTime GetFinished() const;
 
-        /**
-         * @brief Get task result
-         * @return Result value (valid only if status is "success")
-         */
+        //! Get task result (Result value, valid only if status is "success")
         QString GetResult() const;
 
-        /**
-         * @brief Get error information
-         * @return Error details (valid only if status is "failure")
-         */
+        //! Get error information (Error details, valid only if status is "failure")
         QStringList GetErrorInfo() const;
 
-        /**
-         * @brief Get resident host reference
-         * @return Reference to host where task is running
-         */
+        //! Get resident host reference (Reference to host where task is running)
         QString ResidentOnRef() const;
 
-        /**
-         * @brief Check if task is pending
-         */
+        //! Check if task is pending
         bool IsPending() const;
 
-        /**
-         * @brief Check if task completed successfully
-         */
+        //! Check if task completed successfully
         bool IsSuccess() const;
 
-        /**
-         * @brief Check if task failed
-         */
+        //! Check if task failed
         bool IsFailed() const;
 
-        /**
-         * @brief Check if task is cancelled or cancelling
-         */
+        //! Check if task is cancelled or cancelling
         bool IsCancelled() const;
 
-        /**
-         * @brief Check if task is still running
-         */
+        //! Check if task is still running
         bool IsRunning() const;
 };
 

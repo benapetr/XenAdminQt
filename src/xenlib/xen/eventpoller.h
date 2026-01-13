@@ -69,41 +69,37 @@ class EventPoller : public QObject
          * Creates a separate connection stack to avoid blocking main API
          * @param originalSession Session to duplicate (must be logged in)
          */
-        void initialize(XenAPI::Session* originalSession);
+        void Initialize(XenAPI::Session* originalSession);
 
         /**
          * @brief Reset state and drop duplicated session/connection so a fresh session can be used.
          * Should be invoked on the EventPoller thread (use invokeMethod).
          */
-        void reset();
+        void Reset();
 
         /**
          * @brief Initialize EventPoller with connection credentials (deprecated)
-         * @deprecated Use initialize(XenSession*) instead
+         * @deprecated Use Initialize(XenSession*) instead
          */
-        void initialize(const QString& hostname, int port, const QString& sessionId);
+        void Initialize(const QString& hostname, int port, const QString& sessionId);
 
         /**
          * @brief Start polling for events
          * @param classes List of event classes to monitor (e.g., "VM", "host", "*" for all)
-         * @param initialToken Token from initial event.from (empty to start fresh)
+         * @param initialToken Token from initial event.from (empty to Start fresh)
          */
-        void start(const QStringList& classes = QStringList() << "*", const QString& initialToken = QString());
+        void Start(const QStringList& classes = QStringList() << "*", const QString& initialToken = QString());
 
         /**
          * @brief Stop polling for events
          */
-        void stop();
+        void Stop();
 
-        /**
-         * @brief Check if poller is currently running
-         */
-        bool isRunning() const;
+        //! Check if poller is currently running
+        bool IsRunning() const;
 
-        /**
-         * @brief Get the current event token
-         */
-        QString currentToken() const;
+        //! Get the current event token
+        QString CurrentToken() const;
 
     signals:
         /**

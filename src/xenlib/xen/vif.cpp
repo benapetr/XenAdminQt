@@ -26,6 +26,10 @@
  */
 
 #include "vif.h"
+#include "network/connection.h"
+#include "../xencache.h"
+#include "network.h"
+#include "vm.h"
 
 VIF::VIF(XenConnection* connection, const QString& opaqueRef, QObject* parent)
     : XenObject(connection, opaqueRef, parent)
@@ -47,12 +51,12 @@ QString VIF::Device() const
     return this->stringProperty("device");
 }
 
-QString VIF::NetworkRef() const
+QString VIF::GetNetworkRef() const
 {
     return this->stringProperty("network");
 }
 
-QString VIF::VMRef() const
+QString VIF::GetVMRef() const
 {
     return this->stringProperty("VM");
 }
@@ -65,11 +69,6 @@ QString VIF::GetMAC() const
 qint64 VIF::GetMTU() const
 {
     return this->longProperty("MTU", 1500);
-}
-
-QVariantMap VIF::OtherConfig() const
-{
-    return this->property("other_config").toMap();
 }
 
 bool VIF::CurrentlyAttached() const
@@ -160,4 +159,38 @@ QStringList VIF::Ipv6Addresses() const
 QString VIF::Ipv6Gateway() const
 {
     return this->stringProperty("ipv6_gateway");
+}
+
+QSharedPointer<Network> VIF::GetNetwork() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<Network>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<Network>();
+    
+    QString ref = this->GetNetworkRef();
+    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        return QSharedPointer<Network>();
+    
+    return cache->ResolveObject<Network>("network", ref);
+}
+
+QSharedPointer<VM> VIF::GetVM() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<VM>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<VM>();
+    
+    QString ref = this->GetVMRef();
+    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        return QSharedPointer<VM>();
+    
+    return cache->ResolveObject<VM>("vm", ref);
 }

@@ -56,7 +56,7 @@ VMSnapshotRevertAction::VMSnapshotRevertAction(QSharedPointer<VM> snapshot, QObj
         if (m_vm && m_vm->IsValid())
         {
             // Get the host the VM was running on
-            this->m_previousHostRef_ = m_vm->ResidentOnRef();
+            this->m_previousHostRef_ = m_vm->GetResidentOnRef();
 
             // Check if we should restore power state
             QVariantMap snapshotInfo = m_snapshot->SnapshotInfo();

@@ -239,6 +239,12 @@ class XenCache : public QObject
          */
         bool IsEmpty() const;
 
+        /**
+         * @brief Get list of all object types known to the cache system
+         * @return List of type names that can be created via createObjectForType()
+         */
+        QStringList GetKnownTypes() const;
+
     signals:
         /**
          * @brief Emitted when an object is added or updated

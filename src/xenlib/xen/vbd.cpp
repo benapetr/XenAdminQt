@@ -154,11 +154,6 @@ bool VBD::StorageLock() const
     return this->boolProperty("storage_lock", false);
 }
 
-QVariantMap VBD::OtherConfig() const
-{
-    return this->property("other_config").toMap();
-}
-
 qint64 VBD::StatusCode() const
 {
     return this->intProperty("status_code", 0);

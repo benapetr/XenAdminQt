@@ -78,7 +78,7 @@ void MigrateVMCommand::Run()
         return;
 
     // Get current host
-    QString currentHostRef = vm->ResidentOnRef();
+    QString currentHostRef = vm->GetResidentOnRef();
 
     // Get all available hosts
     QStringList hosts = this->getAvailableHosts();

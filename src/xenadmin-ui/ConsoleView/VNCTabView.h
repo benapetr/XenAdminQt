@@ -509,7 +509,7 @@ class VNCTabView : public QWidget
         bool hasRDP(const QString& vmRef) const;
         bool isRDPEnabled(const QString& vmRef) const;
         bool rdpControlEnabledForVm(const QString& vmRef) const;
-        bool canEnableRDPForVm(const QString& vmRef) const;
+        bool canEnableRDPForVm() const;
         bool isVMWindows(const QString& vmRef) const;
         QString getVMIPAddressForSSH(const QString& vmRef) const;
 

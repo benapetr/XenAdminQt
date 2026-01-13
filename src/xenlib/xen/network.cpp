@@ -27,6 +27,7 @@
 
 #include "network.h"
 #include "pif.h"
+#include "vif.h"
 #include "xencache.h"
 
 Network::Network(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
@@ -159,33 +160,22 @@ QVariantMap Network::CurrentOperations() const
     return this->GetData().value("current_operations").toMap();
 }
 
-QVariantMap Network::blobs() const
+QVariantMap Network::GetBlobs() const
 {
     return this->GetData().value("blobs").toMap();
 }
 
-QStringList Network::tags() const
-{
-    QVariantList tagList = this->GetData().value("tags").toList();
-    QStringList result;
-    for (const QVariant& tag : tagList)
-    {
-        result.append(tag.toString());
-    }
-    return result;
-}
-
-QString Network::defaultLockingMode() const
+QString Network::GetDefaultLockingMode() const
 {
     return this->GetData().value("default_locking_mode", "unlocked").toString();
 }
 
-QVariantMap Network::assignedIPs() const
+QVariantMap Network::GetAssignedIPs() const
 {
     return this->GetData().value("assigned_ips").toMap();
 }
 
-QStringList Network::purpose() const
+QStringList Network::GetPurpose() const
 {
     QVariantList purposeList = this->GetData().value("purpose").toList();
     QStringList result;
@@ -194,4 +184,42 @@ QStringList Network::purpose() const
         result.append(p.toString());
     }
     return result;
+}
+
+QList<QSharedPointer<PIF>> Network::GetPIFs() const
+{
+    QList<QSharedPointer<PIF>> pifs;
+    
+    XenCache* cache = this->GetCache();
+    if (!cache)
+        return pifs;
+
+    const QStringList pifRefs = this->GetPIFRefs();
+    for (const QString& pifRef : pifRefs)
+    {
+        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+        if (pif && pif->IsValid())
+            pifs.append(pif);
+    }
+
+    return pifs;
+}
+
+QList<QSharedPointer<VIF>> Network::GetVIFs() const
+{
+    QList<QSharedPointer<VIF>> vifs;
+    
+    XenCache* cache = this->GetCache();
+    if (!cache)
+        return vifs;
+
+    const QStringList vifRefs = this->GetVIFRefs();
+    for (const QString& vifRef : vifRefs)
+    {
+        QSharedPointer<VIF> vif = cache->ResolveObject<VIF>("vif", vifRef);
+        if (vif && vif->IsValid())
+            vifs.append(vif);
+    }
+
+    return vifs;
 }

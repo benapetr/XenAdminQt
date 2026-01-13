@@ -31,6 +31,8 @@
 #include "xenobject.h"
 #include <QMap>
 
+class VM;
+
 /**
  * @brief Console - A console for accessing a VM
  *
@@ -49,18 +51,18 @@ class XENLIB_EXPORT Console : public XenObject
     Q_OBJECT
 
     public:
-        explicit Console(XenConnection* connection,
-                        const QString& opaqueRef,
-                        QObject* parent = nullptr);
+        explicit Console(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Console() override = default;
 
         QString GetObjectType() const override;
 
         // Property accessors (read from cache)
-        QString Protocol() const;
-        QString Location() const;
-        QString VMRef() const;
-        QMap<QString, QString> OtherConfig() const;
+        QString GetProtocol() const;
+        QString GetLocation() const;
+        QString GetVMRef() const;
+
+        //! Get VM that owns this console
+        QSharedPointer<VM> GetVM() const;
 };
 
 #endif // CONSOLE_H

@@ -29,6 +29,7 @@
 #define APIVERSION_H
 
 #include <QString>
+#include "../xenlib_global.h"
 
 /**
  * @brief XenServer API version enumeration
@@ -74,7 +75,7 @@ enum class APIVersion
 /**
  * @brief Helper functions for API version handling
  */
-class APIVersionHelper
+class XENLIB_EXPORT APIVersionHelper
 {
     public:
         /**

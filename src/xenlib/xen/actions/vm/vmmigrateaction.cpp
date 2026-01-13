@@ -56,7 +56,7 @@ void VMMigrateAction::run()
         QString hostName = this->m_host->GetName();
 
         // Check if VM is resident on a host
-        QString residentOnRef = this->m_vm->ResidentOnRef();
+        QString residentOnRef = this->m_vm->GetResidentOnRef();
         QString sourceHostName;
 
         if (!residentOnRef.isEmpty() && residentOnRef != "OpaqueRef:NULL")

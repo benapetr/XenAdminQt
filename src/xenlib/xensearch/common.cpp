@@ -848,12 +848,12 @@ QVariant PropertyAccessors::VMProperty(XenObject* o)
     }
     else if (Host* host = qobject_cast<Host*>(o))
     {
-        QStringList residentVMs = host->ResidentVMRefs();
+        QStringList residentVMs = host->GetResidentVMRefs();
         vmRefs = residentVMs;
     }
     else if (SR* sr = qobject_cast<SR*>(o))
     {
-        QStringList vdiRefs = sr->VDIRefs();
+        QStringList vdiRefs = sr->GetVDIRefs();
         for (const QString& vdiRef : vdiRefs)
         {
             QVariantMap vdiData = cache->ResolveObjectData("VDI", vdiRef);
@@ -1091,7 +1091,7 @@ QVariant PropertyAccessors::IPAddressProperty(XenObject* o)
     }
     else if (Host* host = qobject_cast<Host*>(o))
     {
-        QStringList pifRefs = host->PIFRefs();
+        QStringList pifRefs = host->GetPIFRefs();
         for (const QString& pifRef : pifRefs)
         {
             QVariantMap pifData = cache->ResolveObjectData("PIF", pifRef);

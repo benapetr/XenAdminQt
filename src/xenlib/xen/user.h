@@ -51,7 +51,6 @@ class XENLIB_EXPORT User : public XenObject
         // Property accessors
         QString ShortName() const;
         QString Fullname() const;
-        QMap<QString, QString> OtherConfig() const;
 };
 
 #endif // USER_H

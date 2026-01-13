@@ -28,6 +28,10 @@
 #include "pgpu.h"
 #include "network/connection.h"
 #include "../xencache.h"
+#include "pci.h"
+#include "gpugroup.h"
+#include "host.h"
+#include "vgpu.h"
 
 PGPU::PGPU(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -38,29 +42,19 @@ QString PGPU::GetObjectType() const
     return "pgpu";
 }
 
-QString PGPU::Uuid() const
-{
-    return this->stringProperty("uuid");
-}
-
-QString PGPU::PCIRef() const
+QString PGPU::GetPCIRef() const
 {
     return this->stringProperty("PCI");
 }
 
-QString PGPU::GPUGroupRef() const
+QString PGPU::GetGPUGroupRef() const
 {
     return this->stringProperty("GPU_group");
 }
 
-QString PGPU::HostRef() const
+QString PGPU::GetHostRef() const
 {
     return this->stringProperty("host");
-}
-
-QVariantMap PGPU::OtherConfig() const
-{
-    return this->property("other_config").toMap();
 }
 
 // VGPU type support
@@ -120,4 +114,79 @@ bool PGPU::IsAccessibleFromDom0() const
 {
     QString access = this->Dom0Access();
     return access == "enabled" || access == "enabled_on_reboot";
+}
+
+QSharedPointer<PCI> PGPU::GetPCI() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<PCI>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<PCI>();
+    
+    QString ref = this->GetPCIRef();
+    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        return QSharedPointer<PCI>();
+    
+    return cache->ResolveObject<PCI>("pci", ref);
+}
+
+QSharedPointer<GPUGroup> PGPU::GetGPUGroup() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<GPUGroup>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<GPUGroup>();
+    
+    QString ref = this->GetGPUGroupRef();
+    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        return QSharedPointer<GPUGroup>();
+    
+    return cache->ResolveObject<GPUGroup>("gpu_group", ref);
+}
+
+QSharedPointer<Host> PGPU::GetHost() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<Host>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<Host>();
+    
+    QString ref = this->GetHostRef();
+    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        return QSharedPointer<Host>();
+    
+    return cache->ResolveObject<Host>("host", ref);
+}
+
+QList<QSharedPointer<VGPU>> PGPU::GetResidentVGPUs() const
+{
+    QList<QSharedPointer<VGPU>> result;
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return result;
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return result;
+    
+    QStringList refs = this->ResidentVGPURefs();
+    for (const QString& ref : refs)
+    {
+        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        {
+            QSharedPointer<VGPU> obj = cache->ResolveObject<VGPU>("vgpu", ref);
+            if (obj)
+                result.append(obj);
+        }
+    }
+    return result;
 }

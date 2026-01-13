@@ -40,7 +40,7 @@ Folder::~Folder()
 {
 }
 
-Folder* Folder::create(XenConnection* connection, const QString& name, Folder* parent)
+Folder* Folder::Create(XenConnection* connection, const QString& name, Folder* parent)
 {
     // Generate a unique opaque ref for client-side folder
     QString opaqueRef = QString("OpaqueRef:folder-%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
@@ -52,21 +52,21 @@ Folder* Folder::create(XenConnection* connection, const QString& name, Folder* p
     return folder;
 }
 
-Folder* Folder::getParent() const
+Folder* Folder::GetParent() const
 {
     return this->parent_;
 }
 
-QString Folder::getPath() const
+QString Folder::GetPath() const
 {
-    if (this->isRootFolder())
+    if (this->IsRootFolder())
     {
         return "/";
     }
 
     if (this->parent_)
     {
-        QString parentPath = this->parent_->getPath();
+        QString parentPath = this->parent_->GetPath();
         if (parentPath == "/")
         {
             return "/" + this->nameLabel_;
@@ -77,12 +77,12 @@ QString Folder::getPath() const
     return "/" + this->nameLabel_;
 }
 
-bool Folder::isRootFolder() const
+bool Folder::IsRootFolder() const
 {
     return this->parent_ == nullptr;
 }
 
-void Folder::addObject(XenObject* obj)
+void Folder::AddObject(XenObject* obj)
 {
     if (!obj)
     {
@@ -96,7 +96,7 @@ void Folder::addObject(XenObject* obj)
     }
 }
 
-bool Folder::removeObject(XenObject* obj)
+bool Folder::RemoveObject(XenObject* obj)
 {
     if (!obj)
     {
@@ -107,13 +107,13 @@ bool Folder::removeObject(XenObject* obj)
     return this->xenObjects_.removeOne(obj);
 }
 
-QList<XenObject*> Folder::getXenObjects() const
+QList<XenObject*> Folder::GetXenObjects() const
 {
     QMutexLocker locker(&this->mutex_);
     return this->xenObjects_;
 }
 
-QList<XenObject*> Folder::getRecursiveXenObjects() const
+QList<XenObject*> Folder::GetRecursiveXenObjects() const
 {
     QList<XenObject*> objects;
 
@@ -123,7 +123,7 @@ QList<XenObject*> Folder::getRecursiveXenObjects() const
         Folder* folder = qobject_cast<Folder*>(obj);
         if (folder)
         {
-            objects.append(folder->getRecursiveXenObjects());
+            objects.append(folder->GetRecursiveXenObjects());
         }
         else
         {
@@ -134,7 +134,7 @@ QList<XenObject*> Folder::getRecursiveXenObjects() const
     return objects;
 }
 
-int Folder::getXenObjectsCount() const
+int Folder::GetXenObjectsCount() const
 {
     QMutexLocker locker(&this->mutex_);
     return this->xenObjects_.count();
@@ -152,7 +152,7 @@ bool Folder::operator==(const Folder& other) const
 
 QString Folder::getFullPath() const
 {
-    QString path = this->getPath();
+    QString path = this->GetPath();
     if (path != "/")
     {
         return QString("%1/%2").arg(path, this->nameLabel_);

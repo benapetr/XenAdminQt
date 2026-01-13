@@ -45,7 +45,7 @@ bool DestroyHostCommand::CanRun() const
         return false;
 
     // Host must be in a pool
-    if (host->PoolRef().isEmpty())
+    if (host->GetPoolRef().isEmpty())
         return false;
 
     // Host must not be the pool coordinator

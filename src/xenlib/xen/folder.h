@@ -43,7 +43,7 @@ class XenConnection;
  *
  * C# equivalent: XenAdmin/Model/Folder.cs
  */
-class Folder : public XenObject
+class XENLIB_EXPORT Folder : public XenObject
 {
     Q_OBJECT
 
@@ -52,22 +52,22 @@ class Folder : public XenObject
         virtual ~Folder();
 
         // Factory method
-        static Folder* create(XenConnection* connection, const QString& name, Folder* parent = nullptr);
+        static Folder* Create(XenConnection* connection, const QString& name, Folder* parent = nullptr);
 
         // XenObject overrides
         QString GetObjectType() const override { return "folder"; }
 
         // Folder-specific properties
-        Folder* getParent() const;
-        QString getPath() const;
-        bool isRootFolder() const;
+        Folder* GetParent() const;
+        QString GetPath() const;
+        bool IsRootFolder() const;
 
         // Folder contents management
-        void addObject(XenObject* obj);
-        bool removeObject(XenObject* obj);
-        QList<XenObject*> getXenObjects() const;
-        QList<XenObject*> getRecursiveXenObjects() const;
-        int getXenObjectsCount() const;
+        void AddObject(XenObject* obj);
+        bool RemoveObject(XenObject* obj);
+        QList<XenObject*> GetXenObjects() const;
+        QList<XenObject*> GetRecursiveXenObjects() const;
+        int GetXenObjectsCount() const;
 
         // Display
         QString ToString() const;

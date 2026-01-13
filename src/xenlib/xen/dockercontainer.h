@@ -33,71 +33,74 @@
 
 class VM;
 
+/**
+ * @brief DockerContainer - A Docker container running in a VM
+ *
+ * Qt equivalent of C# XenAdmin.Model.DockerContainer class.
+ * Represents a Docker container with its configuration and runtime state.
+ *
+ * Note: Docker containers don't have opaque_ref at server side.
+ * We use parent.opaque_ref + uuid as a unique identifier per connection.
+ */
 class XENLIB_EXPORT DockerContainer : public XenObject
 {
     Q_OBJECT
     
-public:
-    struct DockerContainerPort
-    {
-        QString address;
-        QString publicPort;
-        QString privatePort;
-        QString protocol;
-        
-        QString description() const;
-    };
-    
-    DockerContainer(QObject* parent = nullptr);
-    DockerContainer(VM* parent, const QString& uuid, const QString& name, 
-                   const QString& description, const QString& status,
-                   const QString& container, const QString& created,
-                   const QString& image, const QString& command,
-                   const QString& ports, QObject* qparent = nullptr);
-    
-    // Property getters
-    QString uuid() const { return this->uuid_; }
-    QString nameLabel() const { return this->nameLabel_; }
-    QString nameDescription() const { return this->nameDescription_; }
-    QString status() const { return this->status_; }
-    QString container() const { return this->container_; }
-    QString created() const { return this->created_; }
-    QString image() const { return this->image_; }
-    QString command() const { return this->command_; }
-    QString ports() const { return this->ports_; }
-    
-    VM* parent() const { return this->parent_; }
-    int powerState() const;
-    QList<DockerContainerPort> portList() const;
-    
-    // XenObject overrides
-    QString GetObjectType() const override { return "dockercontainer"; }
-    
-    void updateFrom(const DockerContainer& update);
-    
-    // Property setters
-    void setUuid(const QString& value);
-    void setNameLabel(const QString& value);
-    void setNameDescription(const QString& value);
-    void setStatus(const QString& value);
-    void setContainer(const QString& value);
-    void setCreated(const QString& value);
-    void setImage(const QString& value);
-    void setCommand(const QString& value);
-    void setPorts(const QString& value);
-    
-signals:
-    void propertyChanged(const QString& propertyName);
-    
-private:
-    VM* parent_;
-    QString uuid_;
-    QString nameLabel_;
-    QString nameDescription_;
-    QString status_;
-    QString container_;
-    QString created_;
-    QString image_;
-    QString command_;
-    QString ports_;
+    public:
+        struct DockerContainerPort
+        {
+            QString address;
+            QString publicPort;
+            QString privatePort;
+            QString protocol;
+
+            QString description() const;
+        };
+
+        explicit DockerContainer(XenConnection* connection,
+                                const QString& opaqueRef,
+                                QObject* parent = nullptr);
+
+        // XenObject overrides
+        QString GetObjectType() const override;
+
+        //! @brief Get parent VM reference
+        //! @return VM opaque reference that hosts this container
+        QString ParentRef() const;
+
+        //! @brief Get parent VM object
+        //! @return Shared pointer to parent VM
+        QSharedPointer<VM> GetParent() const;
+
+        //! @brief Get container status
+        //! @return Status string (e.g., "Up", "Paused", "Exited")
+        QString Status() const;
+
+        //! @brief Get container ID
+        //! @return Container ID
+        QString Container() const;
+
+        //! @brief Get creation timestamp
+        //! @return Creation time string
+        QString Created() const;
+
+        //! @brief Get image name
+        //! @return Docker image name
+        QString Image() const;
+
+        //! @brief Get command
+        //! @return Command that container is running
+        QString Command() const;
+
+        //! @brief Get ports XML
+        //! @return XML string containing port mappings
+        QString Ports() const;
+
+        //! @brief Get power state based on status
+        //! @return 0=Halted, 1=Paused, 2=Running
+        int PowerState() const;
+
+        //! @brief Parse port mappings from XML
+        //! @return List of parsed port configurations
+        QList<DockerContainerPort> PortList() const;
 };

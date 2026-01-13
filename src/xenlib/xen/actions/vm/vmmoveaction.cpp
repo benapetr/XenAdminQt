@@ -147,7 +147,7 @@ void VMMoveAction::run()
             continue;
 
         // Only move VBDs that are owned by this VM (check other_config["owner"])
-        QVariantMap otherConfig = oldVBD->OtherConfig();
+        QVariantMap otherConfig = oldVBD->GetOtherConfig();
         bool isOwner = otherConfig.contains("owner");
         if (!isOwner)
             continue;
@@ -215,7 +215,7 @@ void VMMoveAction::run()
         newVBDRecord["mode"] = oldVBD->GetMode();
         newVBDRecord["type"] = oldVBD->GetType();
         newVBDRecord["unpluggable"] = oldVBD->Unpluggable();
-        newVBDRecord["other_config"] = oldVBD->OtherConfig();
+        newVBDRecord["other_config"] = oldVBD->GetOtherConfig();
         newVBDRecord["VDI"] = newVDIRef;
         newVBDRecord["VM"] = this->m_vm->OpaqueRef();
 

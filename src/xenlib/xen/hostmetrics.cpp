@@ -44,11 +44,6 @@ bool HostMetrics::live() const
     return this->boolProperty("live", false);
 }
 
-QString HostMetrics::GetUUID() const
-{
-    return this->stringProperty("uuid");
-}
-
 qint64 HostMetrics::memoryTotal() const
 {
     return this->longProperty("memory_total", 0);
@@ -72,7 +67,3 @@ QDateTime HostMetrics::lastUpdated() const
     return dt;
 }
 
-QVariantMap HostMetrics::otherConfig() const
-{
-    return this->property("other_config").toMap();
-}

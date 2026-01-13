@@ -28,6 +28,7 @@
 #include "vmpp.h"
 #include "network/connection.h"
 #include "../xencache.h"
+#include "vm.h"
 
 VMPP::VMPP(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -36,21 +37,6 @@ VMPP::VMPP(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 QString VMPP::GetObjectType() const
 {
     return "vmpp";
-}
-
-QString VMPP::Uuid() const
-{
-    return this->stringProperty("uuid");
-}
-
-QString VMPP::NameLabel() const
-{
-    return this->stringProperty("name_label");
-}
-
-QString VMPP::NameDescription() const
-{
-    return this->stringProperty("name_description");
 }
 
 bool VMPP::IsPolicyEnabled() const
@@ -145,7 +131,7 @@ QDateTime VMPP::ArchiveLastRunTime() const
 }
 
 // VM and alarm configuration
-QStringList VMPP::VMRefs() const
+QStringList VMPP::GetVMRefs() const
 {
     return this->property("VMs").toStringList();
 }
@@ -173,7 +159,7 @@ bool VMPP::IsEnabled() const
 
 int VMPP::VMCount() const
 {
-    return this->VMRefs().count();
+    return this->GetVMRefs().count();
 }
 
 bool VMPP::HasBackupSchedule() const
@@ -184,4 +170,28 @@ bool VMPP::HasBackupSchedule() const
 bool VMPP::HasArchiveSchedule() const
 {
     return !this->ArchiveSchedule().isEmpty();
+}
+
+QList<QSharedPointer<VM>> VMPP::GetVMs() const
+{
+    QList<QSharedPointer<VM>> result;
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return result;
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return result;
+    
+    QStringList refs = this->GetVMRefs();
+    for (const QString& ref : refs)
+    {
+        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        {
+            QSharedPointer<VM> obj = cache->ResolveObject<VM>("vm", ref);
+            if (obj)
+                result.append(obj);
+        }
+    }
+    return result;
 }

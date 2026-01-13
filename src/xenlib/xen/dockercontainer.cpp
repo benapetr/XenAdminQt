@@ -27,6 +27,8 @@
 
 #include "dockercontainer.h"
 #include "vm.h"
+#include "network/connection.h"
+#include "../xencache.h"
 #include <QXmlStreamReader>
 
 QString DockerContainer::DockerContainerPort::description() const
@@ -45,53 +47,89 @@ QString DockerContainer::DockerContainerPort::description() const
     return list.join("; ");
 }
 
-DockerContainer::DockerContainer(QObject* parent)
-    : XenObject(nullptr, QString(), parent)
-    , parent_(nullptr)
+DockerContainer::DockerContainer(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
-DockerContainer::DockerContainer(VM* parent, const QString& uuid, const QString& name,
-                               const QString& description, const QString& status,
-                               const QString& container, const QString& created,
-                               const QString& image, const QString& command,
-                               const QString& ports, QObject* qparent)
-    : XenObject(parent ? parent->GetConnection() : nullptr, 
-                parent ? parent->OpaqueRef() + uuid : QString(), 
-                qparent)
-    , parent_(parent)
-    , uuid_(uuid)
-    , nameLabel_(name)
-    , nameDescription_(description)
-    , status_(status)
-    , container_(container)
-    , created_(created)
-    , image_(image)
-    , command_(command)
-    , ports_(ports)
+QString DockerContainer::GetObjectType() const
 {
+    return "dockercontainer";
 }
 
-int DockerContainer::powerState() const
+QString DockerContainer::ParentRef() const
+{
+    return this->stringProperty("parent");
+}
+
+QSharedPointer<VM> DockerContainer::GetParent() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<VM>();
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<VM>();
+
+    QString parentRef = this->ParentRef();
+    if (parentRef.isEmpty())
+        return QSharedPointer<VM>();
+
+    return cache->ResolveObject<VM>("vm", parentRef);
+}
+
+QString DockerContainer::Status() const
+{
+    return this->stringProperty("status");
+}
+
+QString DockerContainer::Container() const
+{
+    return this->stringProperty("container");
+}
+
+QString DockerContainer::Created() const
+{
+    return this->stringProperty("created");
+}
+
+QString DockerContainer::Image() const
+{
+    return this->stringProperty("image");
+}
+
+QString DockerContainer::Command() const
+{
+    return this->stringProperty("command");
+}
+
+QString DockerContainer::Ports() const
+{
+    return this->stringProperty("ports");
+}
+
+int DockerContainer::PowerState() const
 {
     // C# code: status.Contains("Paused") ? vm_power_state.Paused : status.StartsWith("Up") ? vm_power_state.Running : vm_power_state.Halted;
-    if (this->status_.contains("Paused"))
+    QString status = this->Status();
+    if (status.contains("Paused"))
         return 1; // vm_power_state::Paused
-    else if (this->status_.startsWith("Up"))
+    else if (status.startsWith("Up"))
         return 2; // vm_power_state::Running
     else
         return 0; // vm_power_state::Halted
 }
 
-QList<DockerContainer::DockerContainerPort> DockerContainer::portList() const
+QList<DockerContainer::DockerContainerPort> DockerContainer::PortList() const
 {
     QList<DockerContainerPort> portList;
     
-    if (this->ports_.isEmpty())
+    QString portsXml = this->Ports();
+    if (portsXml.isEmpty())
         return portList;
     
     // Parse XML: wrap the ports into a root node
-    QString xml = "<items>" + this->ports_ + "</items>";
+    QString xml = "<items>" + portsXml + "</items>";
     QXmlStreamReader reader(xml);
     
     DockerContainerPort currentPort;
@@ -137,102 +175,4 @@ QList<DockerContainer::DockerContainerPort> DockerContainer::portList() const
     }
     
     return portList;
-}
-
-void DockerContainer::updateFrom(const DockerContainer& update)
-{
-    this->parent_ = update.parent_;
-    // Note: connection and opaqueRef are immutable after construction
-    // They are set in XenObject constructor and shouldn't be changed
-    
-    this->setUuid(update.uuid_);
-    this->setNameLabel(update.nameLabel_);
-    this->setNameDescription(update.nameDescription_);
-    this->setStatus(update.status_);
-    this->setContainer(update.container_);
-    this->setCreated(update.created_);
-    this->setImage(update.image_);
-    this->setCommand(update.command_);
-    this->setPorts(update.ports_);
-}
-
-void DockerContainer::setUuid(const QString& value)
-{
-    if (this->uuid_ != value)
-    {
-        this->uuid_ = value;
-        emit this->propertyChanged("uuid");
-    }
-}
-
-void DockerContainer::setNameLabel(const QString& value)
-{
-    if (this->nameLabel_ != value)
-    {
-        this->nameLabel_ = value;
-        emit this->propertyChanged("name_label");
-    }
-}
-
-void DockerContainer::setNameDescription(const QString& value)
-{
-    if (this->nameDescription_ != value)
-    {
-        this->nameDescription_ = value;
-        emit this->propertyChanged("name_description");
-    }
-}
-
-void DockerContainer::setStatus(const QString& value)
-{
-    if (this->status_ != value)
-    {
-        this->status_ = value;
-        emit this->propertyChanged("status");
-    }
-}
-
-void DockerContainer::setContainer(const QString& value)
-{
-    if (this->container_ != value)
-    {
-        this->container_ = value;
-        emit this->propertyChanged("container");
-    }
-}
-
-void DockerContainer::setCreated(const QString& value)
-{
-    if (this->created_ != value)
-    {
-        this->created_ = value;
-        emit this->propertyChanged("created");
-    }
-}
-
-void DockerContainer::setImage(const QString& value)
-{
-    if (this->image_ != value)
-    {
-        this->image_ = value;
-        emit this->propertyChanged("image");
-    }
-}
-
-void DockerContainer::setCommand(const QString& value)
-{
-    if (this->command_ != value)
-    {
-        this->command_ = value;
-        emit this->propertyChanged("command");
-    }
-}
-
-void DockerContainer::setPorts(const QString& value)
-{
-    if (this->ports_ != value)
-    {
-        this->ports_ = value;
-        emit this->propertyChanged("ports");
-    }
 }

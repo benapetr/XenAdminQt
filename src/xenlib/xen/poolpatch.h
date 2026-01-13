@@ -50,8 +50,6 @@ class XENLIB_EXPORT PoolPatch : public XenObject
         QString GetObjectType() const override { return "pool_patch"; }
 
         // Property accessors
-        QString NameLabel() const;
-        QString NameDescription() const;
         QString Version() const;
         qint64 Size() const;
         bool PoolApplied() const;

@@ -50,16 +50,12 @@ class XENLIB_EXPORT Blob : public XenObject
     Q_OBJECT
 
     public:
-        explicit Blob(XenConnection* connection,
-                     const QString& opaqueRef,
-                     QObject* parent = nullptr);
+        explicit Blob(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Blob() override = default;
 
         QString GetObjectType() const override;
 
         // Property accessors (read from cache)
-        QString NameLabel() const;
-        QString NameDescription() const;
         qint64 Size() const;
         bool IsPublic() const;
         QDateTime LastUpdated() const;

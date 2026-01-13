@@ -32,6 +32,12 @@
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
+#include <QSharedPointer>
+
+class PCI;
+class GPUGroup;
+class Host;
+class VGPU;
 
 /*!
  * \brief Physical GPU device wrapper class
@@ -44,24 +50,15 @@ class PGPU : public XenObject
 {
     Q_OBJECT
     
-    Q_PROPERTY(QString uuid READ Uuid)
-    Q_PROPERTY(QString PCI READ PCIRef)
-    Q_PROPERTY(QString gpuGroup READ GPUGroupRef)
-    Q_PROPERTY(QString host READ HostRef)
-    Q_PROPERTY(QString dom0Access READ Dom0Access)
-    Q_PROPERTY(bool isSystemDisplayDevice READ IsSystemDisplayDevice)
-    
     public:
         explicit PGPU(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
 
         QString GetObjectType() const override;
 
         // Basic properties
-        QString Uuid() const;
-        QString PCIRef() const;
-        QString GPUGroupRef() const;
-        QString HostRef() const;
-        QVariantMap OtherConfig() const;
+        QString GetPCIRef() const;
+        QString GetGPUGroupRef() const;
+        QString GetHostRef() const;
 
         // VGPU type support
         QStringList SupportedVGPUTypeRefs() const;
@@ -79,6 +76,13 @@ class PGPU : public XenObject
         bool HasResidentVGPUs() const;
         int ResidentVGPUCount() const;
         bool IsAccessibleFromDom0() const;
+
+        // Object resolution getters
+        QSharedPointer<PCI> GetPCI() const;
+        QSharedPointer<GPUGroup> GetGPUGroup() const;
+        QSharedPointer<Host> GetHost() const;
+        // TODO: Add GetSupportedVGPUTypes() and GetEnabledVGPUTypes() when VGPUType class is ported
+        QList<QSharedPointer<VGPU>> GetResidentVGPUs() const;
 };
 
 #endif // PGPU_H

@@ -27,6 +27,8 @@
 
 #include "console.h"
 #include "network/connection.h"
+#include "../xencache.h"
+#include "vm.h"
 #include <QMap>
 
 Console::Console(XenConnection* connection, const QString& opaqueRef, QObject* parent)
@@ -39,26 +41,34 @@ QString Console::GetObjectType() const
     return "console";
 }
 
-QString Console::Protocol() const
+QString Console::GetProtocol() const
 {
     return this->stringProperty("protocol");
 }
 
-QString Console::Location() const
+QString Console::GetLocation() const
 {
     return this->stringProperty("location");
 }
 
-QString Console::VMRef() const
+QString Console::GetVMRef() const
 {
     return this->stringProperty("VM");
 }
 
-QMap<QString, QString> Console::OtherConfig() const
+QSharedPointer<VM> Console::GetVM() const
 {
-    QVariantMap map = this->property("other_config").toMap();
-    QMap<QString, QString> result;
-    for (auto it = map.begin(); it != map.end(); ++it)
-        result[it.key()] = it.value().toString();
-    return result;
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<VM>();
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<VM>();
+
+    QString vmRef = this->GetVMRef();
+    if (vmRef.isEmpty() || vmRef == "OpaqueRef:NULL")
+        return QSharedPointer<VM>();
+
+    return cache->ResolveObject<VM>("vm", vmRef);
 }

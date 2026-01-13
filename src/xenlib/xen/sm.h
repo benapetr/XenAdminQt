@@ -50,8 +50,6 @@ class XENLIB_EXPORT SM : public XenObject
         QString GetObjectType() const override { return "SM"; }
 
         // Property accessors
-        QString NameLabel() const;
-        QString NameDescription() const;
         QString Type() const;
         QString Vendor() const;
         QString Copyright() const;

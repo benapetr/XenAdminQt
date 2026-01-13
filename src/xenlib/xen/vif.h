@@ -54,228 +54,92 @@ class VM;
 class XENLIB_EXPORT VIF : public XenObject
 {
     Q_OBJECT
-    Q_PROPERTY(QString device READ Device NOTIFY dataChanged)
-    Q_PROPERTY(QString MAC READ GetMAC NOTIFY dataChanged)
-    Q_PROPERTY(qint64 MTU READ GetMTU NOTIFY dataChanged)
-    Q_PROPERTY(bool currentlyAttached READ CurrentlyAttached NOTIFY dataChanged)
 
-public:
-    explicit VIF(XenConnection* connection,
-                 const QString& opaqueRef,
-                 QObject* parent = nullptr);
-    ~VIF() override = default;
+    public:
+        explicit VIF(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
+        ~VIF() override = default;
 
-    /**
-     * @brief Get allowed operations
-     * @return List of allowed VIF operations
-     *
-     * First published in XenServer 4.0.
-     */
-    QStringList AllowedOperations() const;
+        //! Get allowed VIF operations (first published in XenServer 4.0)
+        QStringList AllowedOperations() const;
 
-    /**
-     * @brief Get current operations
-     * @return Map of task ID to operation type
-     *
-     * First published in XenServer 4.0.
-     */
-    QVariantMap CurrentOperations() const;
+        //! Get current operations (map of task ID to operation type, first published in XenServer 4.0)
+        QVariantMap CurrentOperations() const;
 
-    /**
-     * @brief Get device order
-     * @return Order in which VIF backends are created by xapi (e.g., "0", "1", "2")
-     *
-     * First published in XenServer 4.0.
-     */
-    QString Device() const;
+        //! Get device order in which VIF backends are created by xapi (e.g., "0", "1", "2", first published in XenServer 4.0)
+        QString Device() const;
 
-    /**
-     * @brief Get network reference
-     * @return Opaque reference to network this VIF is connected to
-     *
-     * First published in XenServer 4.0.
-     */
-    QString NetworkRef() const;
+        //! Get network opaque reference this VIF is connected to (first published in XenServer 4.0)
+        QString GetNetworkRef() const;
 
-    /**
-     * @brief Get VM reference
-     * @return Opaque reference to VM this VIF is connected to
-     *
-     * First published in XenServer 4.0.
-     */
-    QString VMRef() const;
+        //! Get VM opaque reference this VIF is connected to (first published in XenServer 4.0)
+        QString GetVMRef() const;
 
-    /**
-     * @brief Get MAC address
-     * @return Ethernet MAC address of virtual interface, as exposed to guest
-     *
-     * First published in XenServer 4.0.
-     */
-    QString GetMAC() const;
+        //! Get ethernet MAC address as exposed to guest (first published in XenServer 4.0)
+        QString GetMAC() const;
 
-    /**
-     * @brief Get MTU (Maximum Transmission Unit)
-     * @return MTU in octets
-     *
-     * First published in XenServer 4.0.
-     */
-    qint64 GetMTU() const;
+        //! Get MTU in octets (first published in XenServer 4.0)
+        qint64 GetMTU() const;
 
-    /**
-     * @brief Get other_config dictionary
-     * @return Additional configuration key-value pairs
-     *
-     * First published in XenServer 4.0.
-     */
-    QVariantMap OtherConfig() const;
+        //! Check if device is currently attached (erased on reboot, first published in XenServer 4.0)
+        bool CurrentlyAttached() const;
 
-    /**
-     * @brief Check if device is currently attached
-     * @return true if device is currently attached (erased on reboot)
-     *
-     * First published in XenServer 4.0.
-     */
-    bool CurrentlyAttached() const;
+        //! Get error/success code from last attach-operation (erased on reboot, first published in XenServer 4.0)
+        qint64 StatusCode() const;
 
-    /**
-     * @brief Get status code
-     * @return Error/success code associated with last attach-operation (erased on reboot)
-     *
-     * First published in XenServer 4.0.
-     */
-    qint64 StatusCode() const;
+        //! Get error/success information from last attach-operation status (first published in XenServer 4.0)
+        QString StatusDetail() const;
 
-    /**
-     * @brief Get status detail
-     * @return Error/success information associated with last attach-operation status
-     *
-     * First published in XenServer 4.0.
-     */
-    QString StatusDetail() const;
+        //! Get device runtime properties (first published in XenServer 4.0)
+        QVariantMap RuntimeProperties() const;
 
-    /**
-     * @brief Get runtime properties
-     * @return Device runtime properties
-     *
-     * First published in XenServer 4.0.
-     */
-    QVariantMap RuntimeProperties() const;
+        //! Get QoS algorithm to use (first published in XenServer 4.0)
+        QString QosAlgorithmType() const;
 
-    /**
-     * @brief Get QoS algorithm type
-     * @return QoS algorithm to use
-     *
-     * First published in XenServer 4.0.
-     */
-    QString QosAlgorithmType() const;
+        //! Get parameters for chosen QoS algorithm (first published in XenServer 4.0)
+        QVariantMap QosAlgorithmParams() const;
 
-    /**
-     * @brief Get QoS algorithm parameters
-     * @return Parameters for chosen QoS algorithm
-     *
-     * First published in XenServer 4.0.
-     */
-    QVariantMap QosAlgorithmParams() const;
+        //! Get supported QoS algorithms for this VIF (first published in XenServer 4.0)
+        QStringList QosSupportedAlgorithms() const;
 
-    /**
-     * @brief Get supported QoS algorithms
-     * @return List of supported QoS algorithms for this VIF
-     *
-     * First published in XenServer 4.0.
-     */
-    QStringList QosSupportedAlgorithms() const;
+        //! Get VIF_metrics opaque reference (first published in XenServer 4.0, deprecated since XenServer 6.1)
+        QString MetricsRef() const;
 
-    /**
-     * @brief Get VIF metrics reference
-     * @return Opaque reference to VIF_metrics object
-     *
-     * First published in XenServer 4.0.
-     * Deprecated since XenServer 6.1.
-     */
-    QString MetricsRef() const;
+        //! Check if MAC was autogenerated (first published in XenServer 5.5)
+        bool MACAutogenerated() const;
 
-    /**
-     * @brief Check if MAC was autogenerated
-     * @return true if MAC was autogenerated; false if set manually
-     *
-     * First published in XenServer 5.5.
-     */
-    bool MACAutogenerated() const;
+        //! Get current locking mode ("network_default", "locked", "unlocked", "disabled", first published in XenServer 6.1)
+        QString LockingMode() const;
 
-    /**
-     * @brief Get locking mode
-     * @return Current locking mode of the VIF ("network_default", "locked", "unlocked", "disabled")
-     *
-     * First published in XenServer 6.1.
-     */
-    QString LockingMode() const;
+        //! Get IPv4 addresses for traffic filtering (first published in XenServer 6.1)
+        QStringList Ipv4Allowed() const;
 
-    /**
-     * @brief Get IPv4 allowed addresses
-     * @return List of IPv4 addresses which can be used to filter traffic
-     *
-     * First published in XenServer 6.1.
-     */
-    QStringList Ipv4Allowed() const;
+        //! Get IPv6 addresses for traffic filtering (first published in XenServer 6.1)
+        QStringList Ipv6Allowed() const;
 
-    /**
-     * @brief Get IPv6 allowed addresses
-     * @return List of IPv6 addresses which can be used to filter traffic
-     *
-     * First published in XenServer 6.1.
-     */
-    QStringList Ipv6Allowed() const;
+        //! Get IPv4 configuration mode ("None", "Static", first published in XenServer 7.0)
+        QString Ipv4ConfigurationMode() const;
 
-    /**
-     * @brief Get IPv4 configuration mode
-     * @return Determines whether IPv4 addresses are configured on the VIF ("None", "Static")
-     *
-     * First published in XenServer 7.0.
-     */
-    QString Ipv4ConfigurationMode() const;
+        //! Get IPv4 addresses in CIDR format (first published in XenServer 7.0)
+        QStringList Ipv4Addresses() const;
 
-    /**
-     * @brief Get IPv4 addresses
-     * @return List of IPv4 addresses in CIDR format
-     *
-     * First published in XenServer 7.0.
-     */
-    QStringList Ipv4Addresses() const;
+        //! Get IPv4 gateway (empty string means no gateway is set, first published in XenServer 7.0)
+        QString Ipv4Gateway() const;
 
-    /**
-     * @brief Get IPv4 gateway
-     * @return IPv4 gateway (empty string means no gateway is set)
-     *
-     * First published in XenServer 7.0.
-     */
-    QString Ipv4Gateway() const;
+        //! Get IPv6 configuration mode ("None", "Static", first published in XenServer 7.0)
+        QString Ipv6ConfigurationMode() const;
 
-    /**
-     * @brief Get IPv6 configuration mode
-     * @return Determines whether IPv6 addresses are configured on the VIF ("None", "Static")
-     *
-     * First published in XenServer 7.0.
-     */
-    QString Ipv6ConfigurationMode() const;
+        //! Get IPv6 addresses in CIDR format (first published in XenServer 7.0)
+        QStringList Ipv6Addresses() const;
 
-    /**
-     * @brief Get IPv6 addresses
-     * @return List of IPv6 addresses in CIDR format
-     *
-     * First published in XenServer 7.0.
-     */
-    QStringList Ipv6Addresses() const;
+        //! Get IPv6 gateway (empty string means no gateway is set, first published in XenServer 7.0)
+        QString Ipv6Gateway() const;
 
-    /**
-     * @brief Get IPv6 gateway
-     * @return IPv6 gateway (empty string means no gateway is set)
-     *
-     * First published in XenServer 7.0.
-     */
-    QString Ipv6Gateway() const;
+        // Object resolution getters
+        QSharedPointer<Network> GetNetwork() const;
+        QSharedPointer<VM> GetVM() const;
 
-    // XenObject interface
-    QString GetObjectType() const override { return "vif"; }
+        // XenObject interface
+        QString GetObjectType() const override { return "vif"; }
 };
 
 #endif // VIF_H

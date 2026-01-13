@@ -125,7 +125,7 @@ void RebootHostAction::shutdownVMs(bool isForReboot)
         this->SetPercentComplete(1);
 
         // Step 2: Get all resident VMs
-        QStringList residentVMs = this->m_host->ResidentVMRefs();
+        QStringList residentVMs = this->m_host->GetResidentVMRefs();
 
         // Count VMs that need shutdown (running, non-control-domain)
         QList<VM*> toShutdown;

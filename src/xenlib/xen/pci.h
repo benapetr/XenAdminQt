@@ -32,6 +32,9 @@
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
+#include <QSharedPointer>
+
+class Host;
 
 /*!
  * \brief PCI device wrapper class
@@ -44,30 +47,18 @@ class PCI : public XenObject
 {
     Q_OBJECT
     
-    Q_PROPERTY(QString uuid READ Uuid)
-    Q_PROPERTY(QString className READ ClassName)
-    Q_PROPERTY(QString vendorName READ VendorName)
-    Q_PROPERTY(QString deviceName READ DeviceName)
-    Q_PROPERTY(QString host READ HostRef)
-    Q_PROPERTY(QString pciId READ PciId)
-    Q_PROPERTY(QString subsystemVendorName READ SubsystemVendorName)
-    Q_PROPERTY(QString subsystemDeviceName READ SubsystemDeviceName)
-    Q_PROPERTY(QString driverName READ DriverName)
-    
     public:
         explicit PCI(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
 
         QString GetObjectType() const override;
 
         // Basic properties
-        QString Uuid() const;
         QString ClassName() const;
         QString VendorName() const;
         QString DeviceName() const;
-        QString HostRef() const;
+        QString GetHostRef() const;
         QString PciId() const;
         QStringList DependencyRefs() const;
-        QVariantMap OtherConfig() const;
 
         // Extended properties
         QString SubsystemVendorName() const;
@@ -77,6 +68,9 @@ class PCI : public XenObject
         // Helper methods
         bool HasDependencies() const;
         QString GetFullDeviceName() const;
+
+        // Object resolution getters
+        QSharedPointer<Host> GetHost() const;
 };
 
 #endif // PCI_H

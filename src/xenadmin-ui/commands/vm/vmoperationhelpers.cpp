@@ -83,7 +83,7 @@ namespace
             return false;
 
         QVariantMap vmFlags = vm->LastBootCPUFlags();
-        QVariantMap hostCpuInfo = host->CPUInfo();
+        QVariantMap hostCpuInfo = host->GetCPUInfo();
         if (!vmFlags.contains("vendor") || !hostCpuInfo.contains("vendor"))
             return false;
 
@@ -298,7 +298,7 @@ bool VMOperationHelpers::VmCanBootOnHost(XenConnection* connection,
 
     if (vm->GetPowerState() == "Running")
     {
-        QString residentRef = vm->ResidentOnRef();
+        QString residentRef = vm->GetResidentOnRef();
         if (!residentRef.isEmpty() && residentRef != "OpaqueRef:NULL")
         {
             if (residentRef == hostRef)

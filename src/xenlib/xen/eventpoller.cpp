@@ -85,11 +85,11 @@ EventPoller::EventPoller(QObject* parent) : QObject(parent), d(new Private())
 
 EventPoller::~EventPoller()
 {
-    stop();
+    Stop();
     delete d;
 }
 
-void EventPoller::reset()
+void EventPoller::Reset()
 {
     // Drop duplicated stack so a fresh session can be created on next initialize()
     if (this->d->running)
@@ -131,7 +131,7 @@ void EventPoller::reset()
     qDebug() << "EventPoller: Reset duplicated session/connection";
 }
 
-void EventPoller::initialize(Session* originalSession)
+void EventPoller::Initialize(Session* originalSession)
 {
     if (!originalSession)
     {
@@ -147,7 +147,7 @@ void EventPoller::initialize(Session* originalSession)
         {
             qWarning() << "EventPoller: Reinitializing with new session. Old="
                        << existing << "new=" << incoming;
-            this->reset();
+            this->Reset();
         } else
         {
             qWarning() << "EventPoller: Already initialized with same session";
@@ -182,7 +182,7 @@ void EventPoller::initialize(Session* originalSession)
     qDebug() << "EventPoller: Initialized with dedicated connection stack";
 }
 
-void EventPoller::initialize(const QString& hostname, int port, const QString& sessionId)
+void EventPoller::Initialize(const QString& hostname, int port, const QString& sessionId)
 {
     Q_UNUSED(hostname);
     Q_UNUSED(port);
@@ -192,7 +192,7 @@ void EventPoller::initialize(const QString& hostname, int port, const QString& s
     qWarning() << "Use initialize(XenSession*) instead";
 }
 
-void EventPoller::start(const QStringList& classes, const QString& initialToken)
+void EventPoller::Start(const QStringList& classes, const QString& initialToken)
 {
     if (!this->d->initialized)
     {
@@ -233,7 +233,7 @@ void EventPoller::start(const QStringList& classes, const QString& initialToken)
     this->pollEvents();
 }
 
-void EventPoller::stop()
+void EventPoller::Stop()
 {
     if (!this->d->running)
         return;
@@ -246,12 +246,12 @@ void EventPoller::stop()
     this->d->initialCachePopulated = false;
 }
 
-bool EventPoller::isRunning() const
+bool EventPoller::IsRunning() const
 {
     return this->d->running;
 }
 
-QString EventPoller::currentToken() const
+QString EventPoller::CurrentToken() const
 {
     return this->d->token;
 }
@@ -264,7 +264,7 @@ void EventPoller::pollEvents()
     if (!this->d->api)
     {
         emit errorOccurred("XenAPI instance is null");
-        this->stop();
+        this->Stop();
         return;
     }
 
@@ -287,7 +287,7 @@ void EventPoller::pollEvents()
         {
             qCritical() << "EventPoller: Too many consecutive errors, stopping";
             emit connectionLost();
-            this->stop();
+            this->Stop();
             return;
         }
 

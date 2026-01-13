@@ -29,6 +29,9 @@
 #define VLAN_H
 
 #include "xenobject.h"
+#include <QSharedPointer>
+
+class PIF;
 
 /**
  * @brief VLAN - A VLAN mux/demux
@@ -49,28 +52,21 @@ class XENLIB_EXPORT VLAN : public XenObject
     Q_OBJECT
 
     public:
-        explicit VLAN(XenConnection* connection,
-                      const QString& opaqueRef,
-                      QObject* parent = nullptr);
+        explicit VLAN(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~VLAN() override = default;
 
-        /**
-         * @brief Get tagged PIF reference
-         * @return Opaque reference to interface on which traffic is tagged
-         */
+        //! Get opaque reference to interface on which traffic is tagged
         QString GetTaggedPIFRef() const;
 
-        /**
-         * @brief Get untagged PIF reference
-         * @return Opaque reference to interface on which traffic is untagged
-         */
+        //! Get opaque reference to interface on which traffic is untagged
         QString GetUntaggedPIFRef() const;
 
-        /**
-         * @brief Get VLAN tag
-         * @return VLAN tag in use
-         */
+        //! Get VLAN tag in use
         qint64 GetTag() const;
+
+        // Object resolution getters
+        QSharedPointer<PIF> GetTaggedPIF() const;
+        QSharedPointer<PIF> GetUntaggedPIF() const;
 
         // XenObject interface
         QString GetObjectType() const override;

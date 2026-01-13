@@ -32,6 +32,8 @@
 #include <QMap>
 #include <QStringList>
 
+class ClusterHost;
+
 /**
  * @brief Cluster - Cluster-wide cluster metadata
  *
@@ -57,15 +59,13 @@ class XENLIB_EXPORT Cluster : public XenObject
     Q_OBJECT
 
     public:
-        explicit Cluster(XenConnection* connection,
-                        const QString& opaqueRef,
-                        QObject* parent = nullptr);
+        explicit Cluster(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Cluster() override = default;
 
         QString GetObjectType() const override;
 
         // Property accessors (read from cache)
-        QStringList ClusterHostRefs() const;
+        QStringList GetClusterHostRefs() const;
         QStringList PendingForget() const;
         QString ClusterToken() const;
         QString ClusterStack() const;
@@ -75,7 +75,9 @@ class XENLIB_EXPORT Cluster : public XenObject
         double TokenTimeout() const;
         double TokenTimeoutCoefficient() const;
         QMap<QString, QString> ClusterConfig() const;
-        QMap<QString, QString> OtherConfig() const;
+
+        //! Get list of ClusterHost shared pointers
+        QList<QSharedPointer<ClusterHost>> GetClusterHosts() const;
 };
 
 #endif // CLUSTER_H

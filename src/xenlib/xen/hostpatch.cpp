@@ -39,16 +39,6 @@ HostPatch::~HostPatch()
 {
 }
 
-QString HostPatch::NameLabel() const
-{
-    return this->stringProperty("name_label");
-}
-
-QString HostPatch::NameDescription() const
-{
-    return this->stringProperty("name_description");
-}
-
 QString HostPatch::Version() const
 {
     return this->stringProperty("version");
@@ -80,13 +70,4 @@ qint64 HostPatch::Size() const
 QString HostPatch::PoolPatchRef() const
 {
     return this->stringProperty("pool_patch");
-}
-
-QMap<QString, QString> HostPatch::OtherConfig() const
-{
-    QVariantMap map = this->property("other_config").toMap();
-    QMap<QString, QString> result;
-    for (auto it = map.begin(); it != map.end(); ++it)
-        result[it.key()] = it.value().toString();
-    return result;
 }

@@ -28,6 +28,8 @@
 #include "vusb.h"
 #include "network/connection.h"
 #include "../xencache.h"
+#include "vm.h"
+#include "usbgroup.h"
 
 VUSB::VUSB(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -36,11 +38,6 @@ VUSB::VUSB(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 QString VUSB::GetObjectType() const
 {
     return "vusb";
-}
-
-QString VUSB::Uuid() const
-{
-    return this->stringProperty("uuid");
 }
 
 QStringList VUSB::AllowedOperations() const
@@ -53,7 +50,7 @@ QVariantMap VUSB::CurrentOperations() const
     return this->property("current_operations").toMap();
 }
 
-QString VUSB::VMRef() const
+QString VUSB::GetVMRef() const
 {
     return this->stringProperty("VM");
 }
@@ -61,11 +58,6 @@ QString VUSB::VMRef() const
 QString VUSB::USBGroupRef() const
 {
     return this->stringProperty("USB_group");
-}
-
-QVariantMap VUSB::OtherConfig() const
-{
-    return this->property("other_config").toMap();
 }
 
 bool VUSB::CurrentlyAttached() const
@@ -77,4 +69,38 @@ bool VUSB::CurrentlyAttached() const
 bool VUSB::IsAttached() const
 {
     return this->CurrentlyAttached();
+}
+
+QSharedPointer<VM> VUSB::GetVM() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<VM>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<VM>();
+    
+    QString ref = this->GetVMRef();
+    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        return QSharedPointer<VM>();
+    
+    return cache->ResolveObject<VM>("vm", ref);
+}
+
+QSharedPointer<USBGroup> VUSB::GetUSBGroup() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<USBGroup>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<USBGroup>();
+    
+    QString ref = this->USBGroupRef();
+    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        return QSharedPointer<USBGroup>();
+    
+    return cache->ResolveObject<USBGroup>("usb_group", ref);
 }

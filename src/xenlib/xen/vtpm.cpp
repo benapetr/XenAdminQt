@@ -38,11 +38,6 @@ QString VTPM::GetObjectType() const
     return "vtpm";
 }
 
-QString VTPM::Uuid() const
-{
-    return this->stringProperty("uuid");
-}
-
 QStringList VTPM::AllowedOperations() const
 {
     return this->property("allowed_operations").toStringList();
@@ -53,7 +48,7 @@ QVariantMap VTPM::CurrentOperations() const
     return this->property("current_operations").toMap();
 }
 
-QString VTPM::VMRef() const
+QString VTPM::GetVMRef() const
 {
     return this->stringProperty("VM");
 }

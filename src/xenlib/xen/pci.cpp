@@ -28,6 +28,7 @@
 #include "pci.h"
 #include "network/connection.h"
 #include "../xencache.h"
+#include "host.h"
 
 PCI::PCI(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -36,11 +37,6 @@ PCI::PCI(XenConnection* connection, const QString& opaqueRef, QObject* parent) :
 QString PCI::GetObjectType() const
 {
     return "pci";
-}
-
-QString PCI::Uuid() const
-{
-    return this->stringProperty("uuid");
 }
 
 QString PCI::ClassName() const
@@ -58,7 +54,7 @@ QString PCI::DeviceName() const
     return this->stringProperty("device_name");
 }
 
-QString PCI::HostRef() const
+QString PCI::GetHostRef() const
 {
     return this->stringProperty("host");
 }
@@ -71,11 +67,6 @@ QString PCI::PciId() const
 QStringList PCI::DependencyRefs() const
 {
     return this->property("dependencies").toStringList();
-}
-
-QVariantMap PCI::OtherConfig() const
-{
-    return this->property("other_config").toMap();
 }
 
 QString PCI::SubsystemVendorName() const
@@ -112,4 +103,21 @@ QString PCI::GetFullDeviceName() const
         return vendor;
     else
         return this->PciId();
+}
+
+QSharedPointer<Host> PCI::GetHost() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QSharedPointer<Host>();
+    
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<Host>();
+    
+    QString ref = this->GetHostRef();
+    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+        return QSharedPointer<Host>();
+    
+    return cache->ResolveObject<Host>("host", ref);
 }

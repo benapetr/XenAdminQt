@@ -28,18 +28,30 @@
 #include "xencache.h"
 #include "xen/network.h"
 #include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/host.h"
-#include "xen/hostmetrics.h"
-#include "xen/pool.h"
-#include "xen/sr.h"
-#include "xen/vdi.h"
-#include "xen/vbd.h"
-#include "xen/vif.h"
-#include "xen/pif.h"
 #include "xen/bond.h"
-#include "xen/vlan.h"
+#include "xen/certificate.h"
+#include "xen/console.h"
+#include "xen/gpugroup.h"
+#include "xen/host.h"
+#include "xen/hostcpu.h"
+#include "xen/hostmetrics.h"
+#include "xen/message.h"
+#include "xen/pbd.h"
+#include "xen/pci.h"
+#include "xen/pgpu.h"
+#include "xen/pif.h"
+#include "xen/pifmetrics.h"
+#include "xen/pool.h"
+#include "xen/role.h"
+#include "xen/sr.h"
+#include "xen/task.h"
 #include "xen/tunnel.h"
+#include "xen/vbd.h"
+#include "xen/vbdmetrics.h"
+#include "xen/vdi.h"
+#include "xen/vif.h"
+#include "xen/vlan.h"
+#include "xen/vm.h"
 #include <QDebug>
 #include <QMutexLocker>
 
@@ -66,35 +78,60 @@ QString XenCache::normalizeType(const QString& type) const
 {
     // Normalize type names to lowercase for consistency
     // C# uses capitalized names, we'll use lowercase internally
+    // Types are sorted alphabetically for easier maintenance
     QString normalized = type.toLower();
 
-    // Handle variations
-    if (normalized == "vm" || normalized == "vms")
-        return "vm";
-    if (normalized == "host" || normalized == "hosts")
-        return "host";
-    if (normalized == "sr" || normalized == "srs")
-        return "sr";
-    if (normalized == "network" || normalized == "networks")
-        return "network";
-    if (normalized == "pool" || normalized == "pools")
-        return "pool";
-    if (normalized == "vdi" || normalized == "vdis")
-        return "vdi";
-    if (normalized == "vbd" || normalized == "vbds")
-        return "vbd";
-    if (normalized == "vif" || normalized == "vifs")
-        return "vif";
-    if (normalized == "pbd" || normalized == "pbds")
-        return "pbd";
-    if (normalized == "pif" || normalized == "pifs")
-        return "pif";
+    // Handle variations (alphabetically sorted)
     if (normalized == "bond" || normalized == "bonds")
         return "bond";
-    if (normalized == "vlan" || normalized == "vlans")
-        return "vlan";
+    if (normalized == "certificate" || normalized == "certificates")
+        return "certificate";
+    if (normalized == "console" || normalized == "consoles")
+        return "console";
+    if (normalized == "gpu_group" || normalized == "gpu_groups")
+        return "gpu_group";
+    if (normalized == "host" || normalized == "hosts")
+        return "host";
+    if (normalized == "host_cpu" || normalized == "host_cpus")
+        return "host_cpu";
+    if (normalized == "host_metrics")
+        return "host_metrics";
+    if (normalized == "message" || normalized == "messages")
+        return "message";
+    if (normalized == "network" || normalized == "networks")
+        return "network";
+    if (normalized == "pbd" || normalized == "pbds")
+        return "pbd";
+    if (normalized == "pci" || normalized == "pcis")
+        return "pci";
+    if (normalized == "pgpu" || normalized == "pgpus")
+        return "pgpu";
+    if (normalized == "pif" || normalized == "pifs")
+        return "pif";
+    if (normalized == "pif_metrics")
+        return "pif_metrics";
+    if (normalized == "pool" || normalized == "pools")
+        return "pool";
+    if (normalized == "role" || normalized == "roles")
+        return "role";
+    if (normalized == "sr" || normalized == "srs")
+        return "sr";
+    if (normalized == "task" || normalized == "tasks")
+        return "task";
     if (normalized == "tunnel" || normalized == "tunnels")
         return "tunnel";
+    if (normalized == "vbd" || normalized == "vbds")
+        return "vbd";
+    if (normalized == "vbd_metrics")
+        return "vbd_metrics";
+    if (normalized == "vdi" || normalized == "vdis")
+        return "vdi";
+    if (normalized == "vif" || normalized == "vifs")
+        return "vif";
+    if (normalized == "vlan" || normalized == "vlans")
+        return "vlan";
+    if (normalized == "vm" || normalized == "vms")
+        return "vm";
 
     return normalized;
 }
@@ -445,37 +482,95 @@ bool XenCache::IsEmpty() const
     return this->m_cache.isEmpty();
 }
 
+QStringList XenCache::GetKnownTypes() const
+{
+    // Return all types that createObjectForType() can instantiate
+    // Keep alphabetically sorted to match createObjectForType() and normalizeType()
+    return QStringList{
+        "bond",
+        "certificate",
+        "console",
+        "gpu_group",
+        "host",
+        "host_cpu",
+        "host_metrics",
+        "message",
+        "network",
+        "pbd",
+        "pci",
+        "pgpu",
+        "pif",
+        "pif_metrics",
+        "pool",
+        "role",
+        "sr",
+        "task",
+        "tunnel",
+        "vbd",
+        "vbd_metrics",
+        "vdi",
+        "vif",
+        "vlan",
+        "vm"
+    };
+}
+
 QSharedPointer<XenObject> XenCache::createObjectForType(const QString& type, const QString& ref)
 {
     if (!this->m_connection)
         return QSharedPointer<XenObject>();
 
-    if (type == "vm")
-        return QSharedPointer<XenObject>(new VM(this->m_connection, ref));
-    if (type == "host")
-        return QSharedPointer<XenObject>(new Host(this->m_connection, ref));
-    if (type == "host_metrics")
-        return QSharedPointer<XenObject>(new HostMetrics(this->m_connection, ref));
-    if (type == "pool")
-        return QSharedPointer<XenObject>(new Pool(this->m_connection, ref));
-    if (type == "sr")
-        return QSharedPointer<XenObject>(new SR(this->m_connection, ref));
-    if (type == "vdi")
-        return QSharedPointer<XenObject>(new VDI(this->m_connection, ref));
-    if (type == "vbd")
-        return QSharedPointer<XenObject>(new VBD(this->m_connection, ref));
-    if (type == "vif")
-        return QSharedPointer<XenObject>(new VIF(this->m_connection, ref));
-    if (type == "pif")
-        return QSharedPointer<XenObject>(new PIF(this->m_connection, ref));
+    // Alphabetically sorted for easier maintenance
     if (type == "bond")
         return QSharedPointer<XenObject>(new Bond(this->m_connection, ref));
-    if (type == "vlan")
-        return QSharedPointer<XenObject>(new VLAN(this->m_connection, ref));
-    if (type == "tunnel")
-        return QSharedPointer<XenObject>(new Tunnel(this->m_connection, ref));
+    if (type == "certificate")
+        return QSharedPointer<XenObject>(new Certificate(this->m_connection, ref));
+    if (type == "console")
+        return QSharedPointer<XenObject>(new Console(this->m_connection, ref));
+    if (type == "gpu_group")
+        return QSharedPointer<XenObject>(new GPUGroup(this->m_connection, ref));
+    if (type == "host")
+        return QSharedPointer<XenObject>(new Host(this->m_connection, ref));
+    if (type == "host_cpu")
+        return QSharedPointer<XenObject>(new HostCPU(this->m_connection, ref));
+    if (type == "host_metrics")
+        return QSharedPointer<XenObject>(new HostMetrics(this->m_connection, ref));
+    if (type == "message")
+        return QSharedPointer<XenObject>(new Message(this->m_connection, ref));
     if (type == "network")
         return QSharedPointer<XenObject>(new Network(this->m_connection, ref));
+    if (type == "pbd")
+        return QSharedPointer<XenObject>(new PBD(this->m_connection, ref));
+    if (type == "pci")
+        return QSharedPointer<XenObject>(new PCI(this->m_connection, ref));
+    if (type == "pgpu")
+        return QSharedPointer<XenObject>(new PGPU(this->m_connection, ref));
+    if (type == "pif")
+        return QSharedPointer<XenObject>(new PIF(this->m_connection, ref));
+    if (type == "pif_metrics")
+        return QSharedPointer<XenObject>(new PIFMetrics(this->m_connection, ref));
+    if (type == "pool")
+        return QSharedPointer<XenObject>(new Pool(this->m_connection, ref));
+    if (type == "role")
+        return QSharedPointer<XenObject>(new Role(this->m_connection, ref));
+    if (type == "sr")
+        return QSharedPointer<XenObject>(new SR(this->m_connection, ref));
+    if (type == "task")
+        return QSharedPointer<XenObject>(new Task(this->m_connection, ref));
+    if (type == "tunnel")
+        return QSharedPointer<XenObject>(new Tunnel(this->m_connection, ref));
+    if (type == "vbd")
+        return QSharedPointer<XenObject>(new VBD(this->m_connection, ref));
+    if (type == "vbd_metrics")
+        return QSharedPointer<XenObject>(new VBDMetrics(this->m_connection, ref));
+    if (type == "vdi")
+        return QSharedPointer<XenObject>(new VDI(this->m_connection, ref));
+    if (type == "vif")
+        return QSharedPointer<XenObject>(new VIF(this->m_connection, ref));
+    if (type == "vlan")
+        return QSharedPointer<XenObject>(new VLAN(this->m_connection, ref));
+    if (type == "vm")
+        return QSharedPointer<XenObject>(new VM(this->m_connection, ref));
 
     return QSharedPointer<XenObject>();
 }

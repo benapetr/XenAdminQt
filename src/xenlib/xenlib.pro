@@ -196,6 +196,7 @@ SOURCES += \
     xen/bond.cpp \
     xen/certificate.cpp \
     xen/cluster.cpp \
+    xen/clusterhost.cpp \
     xen/console.cpp \
     xen/event.cpp \
     xen/feature.cpp \
@@ -203,12 +204,16 @@ SOURCES += \
     xen/hostcpu.cpp \
     xen/hostcrashdump.cpp \
     xen/hostpatch.cpp \
+    xen/message.cpp \
+    xen/pifmetrics.cpp \
     xen/poolpatch.cpp \
     xen/poolupdate.cpp \
     xen/pusb.cpp \
+    xen/usbgroup.cpp \
     xen/sm.cpp \
     xen/role.cpp \
     xen/user.cpp \
+    xen/vbdmetrics.cpp \
     otherconfig/otherconfigandtagswatcher.cpp
 
 # Header files
@@ -393,6 +398,7 @@ HEADERS += \
     xen/bond.h \
     xen/certificate.h \
     xen/cluster.h \
+    xen/clusterhost.h \
     xen/console.h \
     xen/event.h \
     xen/feature.h \
@@ -400,12 +406,16 @@ HEADERS += \
     xen/hostcpu.h \
     xen/hostcrashdump.h \
     xen/hostpatch.h \
+    xen/message.h \
+    xen/pifmetrics.h \
     xen/poolpatch.h \
     xen/poolupdate.h \
     xen/pusb.h \
+    xen/usbgroup.h \
     xen/sm.h \
     xen/role.h \
     xen/user.h \
+    xen/vbdmetrics.h \
     otherconfig/otherconfigandtagswatcher.h
 
 # Installation
