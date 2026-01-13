@@ -25,9 +25,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <QDebug>
 #include "livepatchingeditpage.h"
 #include "ui_livepatchingeditpage.h"
-#include "xencache.h"
+#include "xenlib/xencache.h"
 #include "xenlib/xen/actions/pool/setpoolpropertyaction.h"
 #include "xenlib/xen/pool.h"
 

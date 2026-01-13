@@ -28,6 +28,7 @@
 #include "syncdatabaseaction.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "xen/pool.h"
+#include <QDebug>
 #include <stdexcept>
 
 SyncDatabaseAction::SyncDatabaseAction(QSharedPointer<Pool> pool, QObject* parent)

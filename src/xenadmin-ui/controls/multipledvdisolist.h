@@ -31,6 +31,7 @@
 #include <QWidget>
 #include <QSharedPointer>
 #include <QVariantMap>
+#include <QMetaType>
 
 namespace Ui
 {
@@ -84,7 +85,7 @@ class MultipleDvdIsoList : public QWidget
         void onLinkLabelEjectClicked();
         void onCreateDriveActionCompleted();
 
-    private:
+    public:
         /**
          * @brief Internal item class for combo box
          */
@@ -99,6 +100,7 @@ class MultipleDvdIsoList : public QWidget
                 QString toString() const { return this->name; }
         };
 
+    private:
         void refreshDrives();
         void setupConnections();
         void updateCdChangerDrive(const QSharedPointer<VBD>& drive);
@@ -110,5 +112,7 @@ class MultipleDvdIsoList : public QWidget
         QMetaObject::Connection cacheConnection_;
         QMetaObject::Connection vmConnection_;
 };
+
+Q_DECLARE_METATYPE(MultipleDvdIsoList::VbdCombiItem*)
 
 #endif // MULTIPLEDVDISOLIST_H

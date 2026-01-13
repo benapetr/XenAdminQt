@@ -114,7 +114,13 @@ void CreateCdDriveAction::run()
             for (const QVariant& device : deviceList)
                 allowedDevices.append(device.toString());
         }
-        else if (devicesVariant.typeId() == QMetaType::QString)
+        else if (
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            devicesVariant.typeId() == QMetaType::QString
+#else
+            devicesVariant.type() == QVariant::String
+#endif
+        )
         {
             allowedDevices.append(devicesVariant.toString());
         }

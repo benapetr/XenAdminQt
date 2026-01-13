@@ -43,6 +43,7 @@
 #include <QPointer>
 #include <QThread>
 #include <limits>
+#include <QDebug>
 
 namespace
 {

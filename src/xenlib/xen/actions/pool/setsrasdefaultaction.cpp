@@ -30,6 +30,8 @@
 #include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "xen/pool.h"
+#include <QDebug>
+#include <stdexcept>
 
 SetSrAsDefaultAction::SetSrAsDefaultAction(QSharedPointer<Pool> pool, const QString& srRef, QObject* parent)
     : AsyncOperation(QString("Setting default storage repository"),

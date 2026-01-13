@@ -30,11 +30,9 @@
 #include "xenlib/xen/actions/pool/setssllegacyaction.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xencache.h"
+#include <QDebug>
 
-SecurityEditPage::SecurityEditPage(QWidget* parent)
-    : IEditPage(parent)
-    , ui(new Ui::SecurityEditPage)
-    , m_isHost_(false)
+SecurityEditPage::SecurityEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::SecurityEditPage), m_isHost_(false)
 {
     this->ui->setupUi(this);
 

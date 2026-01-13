@@ -25,15 +25,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <QDebug>
 #include "pooladvancededitpage.h"
 #include "ui_pooladvancededitpage.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/actions/pool/setpoolpropertyaction.h"
 #include "xenlib/xen/pool.h"
 
-PoolAdvancedEditPage::PoolAdvancedEditPage(QWidget* parent)
-    : IEditPage(parent)
-    , ui(new Ui::PoolAdvancedEditPage)
+PoolAdvancedEditPage::PoolAdvancedEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::PoolAdvancedEditPage)
 {
     this->ui->setupUi(this);
 }

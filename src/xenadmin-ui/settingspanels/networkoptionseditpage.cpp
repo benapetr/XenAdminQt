@@ -25,15 +25,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <QDebug>
 #include "networkoptionseditpage.h"
 #include "ui_networkoptionseditpage.h"
 #include "xencache.h"
 #include "xenlib/xen/actions/pool/setpoolpropertyaction.h"
 #include "xenlib/xen/pool.h"
 
-NetworkOptionsEditPage::NetworkOptionsEditPage(QWidget* parent)
-    : IEditPage(parent)
-    , ui(new Ui::NetworkOptionsEditPage)
+NetworkOptionsEditPage::NetworkOptionsEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::NetworkOptionsEditPage)
 {
     this->ui->setupUi(this);
 }
