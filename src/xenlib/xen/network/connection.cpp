@@ -448,12 +448,16 @@ void XenConnection::EndConnect(bool clearCache, bool exiting)
             }
         }
     }
+    
+    // This function may be entered simultaneously by signals from event thread, we need to ensure this is done atomically
+    EventPoller *event_poller = this->d->eventPoller;
+    this->d->eventPoller = nullptr;
 
-    if (this->d->eventPoller)
+    if (event_poller)
     {
-        QMetaObject::invokeMethod(this->d->eventPoller, [this]() {
-            this->d->eventPoller->Stop();
-            this->d->eventPoller->Reset();
+        QMetaObject::invokeMethod(event_poller, [event_poller]() {
+            event_poller->Stop();
+            event_poller->Reset();
         }, stopConnectionType);
     }
 
@@ -464,10 +468,10 @@ void XenConnection::EndConnect(bool clearCache, bool exiting)
             this->d->eventPollerThread->wait(5000);
     }
 
-    if (this->d->eventPoller)
+    if (event_poller)
     {
-        this->d->eventPoller->deleteLater();
-        this->d->eventPoller = nullptr;
+        event_poller->deleteLater();
+        event_poller = nullptr;
     }
 
     if (this->d->eventPollerThread)

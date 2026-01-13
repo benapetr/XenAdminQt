@@ -33,6 +33,8 @@
 #include <functional>
 #include <QSharedPointer>
 
+class Pool;
+
 /**
  * @brief RebootHostAction - Reboot a physical host
  *
@@ -69,12 +71,14 @@ class XENLIB_EXPORT RebootHostAction : public AsyncOperation
          * @brief Constructor
          * @param connection XenConnection
          * @param host Host to reboot
+         * @param acceptNtolChanges Callback to confirm ntol reduction (return true to cancel)
          * @param parent Parent QObject
          *
          * C# equivalent: RebootHostAction(Host, Func<...>)
-         * Note: acceptNTolChanges callback not yet implemented in Qt version
          */
-        explicit RebootHostAction(QSharedPointer<Host> host, QObject* parent = nullptr);
+        explicit RebootHostAction(QSharedPointer<Host> host,
+                                  std::function<bool(QSharedPointer<Pool>, qint64, qint64)> acceptNtolChanges = nullptr,
+                                  QObject* parent = nullptr);
 
     protected:
         /**
@@ -95,6 +99,7 @@ class XENLIB_EXPORT RebootHostAction : public AsyncOperation
     private:
         QSharedPointer<Host> m_host;
         bool m_wasEnabled;
+        std::function<bool(QSharedPointer<Pool>, qint64, qint64)> m_acceptNtolChanges;
 
         /**
          * @brief Shutdown all VMs on the host

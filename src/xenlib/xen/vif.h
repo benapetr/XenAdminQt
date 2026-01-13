@@ -66,7 +66,7 @@ class XENLIB_EXPORT VIF : public XenObject
         QVariantMap CurrentOperations() const;
 
         //! Get device order in which VIF backends are created by xapi (e.g., "0", "1", "2", first published in XenServer 4.0)
-        QString Device() const;
+        QString GetDevice() const;
 
         //! Get network opaque reference this VIF is connected to (first published in XenServer 4.0)
         QString GetNetworkRef() const;

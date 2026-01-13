@@ -498,6 +498,18 @@ QList<QSharedPointer<VM>> Host::GetResidentVMs() const
     return result;
 }
 
+bool Host::HasRunningVMs() const
+{
+    const QList<QSharedPointer<VM>> vms = GetResidentVMs();
+    for (const QSharedPointer<VM>& vm : vms)
+    {
+        if (vm && vm->IsRunning())
+            return true;
+    }
+
+    return false;
+}
+
 QList<QSharedPointer<PBD>> Host::GetPBDs() const
 {
     QList<QSharedPointer<PBD>> result;

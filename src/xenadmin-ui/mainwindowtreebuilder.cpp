@@ -453,9 +453,9 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addHostNode(const QSharedPoint
         const QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
         for (const ConnectionProfile& profile : profiles)
         {
-            if (profile.hostname() == hostname && profile.port() == port)
+            if (profile.GetHostname() == hostname && profile.GetPort() == port)
             {
-                name = profile.displayName();
+                name = profile.DisplayName();
                 break;
             }
         }

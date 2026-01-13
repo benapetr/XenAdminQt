@@ -418,11 +418,11 @@ void ContextMenuBuilder::buildDisconnectedHostContextMenu(QMenu* menu, QTreeWidg
         bool updated = false;
         for (ConnectionProfile& profile : profiles)
         {
-            if (profile.hostname() == connection->GetHostname() &&
-                profile.port() == connection->GetPort())
+            if (profile.GetHostname() == connection->GetHostname() &&
+                profile.GetPort() == connection->GetPort())
             {
-                profile.setPassword(QString());
-                profile.setRememberPassword(false);
+                profile.SetPassword(QString());
+                profile.SetRememberPassword(false);
                 SettingsManager::instance().saveConnectionProfile(profile);
                 updated = true;
                 break;

@@ -29,17 +29,30 @@
 #include <QDateTime>
 
 ConnectionProfile::ConnectionProfile()
-    : m_port(443), m_rememberPassword(false), m_useSSL(true), m_saveDisconnected(false), m_autoConnect(false), m_lastConnected(0)
+    : m_lastConnected(0),
+      m_port(443),
+      m_rememberPassword(false),
+      m_useSSL(true),
+      m_saveDisconnected(false),
+      m_autoConnect(false)
 {
 }
 
 ConnectionProfile::ConnectionProfile(const QString& name, const QString& hostname,
                                      int port, const QString& username, bool rememberPassword)
-    : m_name(name), m_hostname(hostname), m_port(port), m_username(username), m_rememberPassword(rememberPassword), m_useSSL(true), m_saveDisconnected(false), m_autoConnect(false), m_lastConnected(0)
+    : m_lastConnected(0),
+      m_name(name),
+      m_hostname(hostname),
+      m_username(username),
+      m_port(port),
+      m_rememberPassword(rememberPassword),
+      m_useSSL(true),
+      m_saveDisconnected(false),
+      m_autoConnect(false)
 {
 }
 
-QVariantMap ConnectionProfile::toVariantMap() const
+QVariantMap ConnectionProfile::ToVariantMap() const
 {
     QVariantMap map;
     map["name"] = this->m_name;
@@ -57,24 +70,24 @@ QVariantMap ConnectionProfile::toVariantMap() const
     return map;
 }
 
-ConnectionProfile ConnectionProfile::fromVariantMap(const QVariantMap& map)
+ConnectionProfile ConnectionProfile::FromVariantMap(const QVariantMap& map)
 {
     ConnectionProfile profile;
-    profile.setName(map.value("name").toString());
-    profile.setHostname(map.value("hostname").toString());
-    profile.setPort(map.value("port", 443).toInt());
-    profile.setUsername(map.value("username").toString());
-    profile.setRememberPassword(map.value("rememberPassword", false).toBool());
-    profile.setUseSSL(map.value("useSSL", true).toBool());
-    profile.setFriendlyName(map.value("friendlyName").toString());
-    profile.setSaveDisconnected(map.value("saveDisconnected", false).toBool());
-    profile.setPoolMembers(map.value("poolMembers").toStringList());
-    profile.setAutoConnect(map.value("autoConnect", false).toBool());
-    profile.setLastConnected(map.value("lastConnected", 0).toLongLong());
+    profile.SetName(map.value("name").toString());
+    profile.SetHostname(map.value("hostname").toString());
+    profile.SetPort(map.value("port", 443).toInt());
+    profile.SetUsername(map.value("username").toString());
+    profile.SetRememberPassword(map.value("rememberPassword", false).toBool());
+    profile.SetUseSSL(map.value("useSSL", true).toBool());
+    profile.SetFriendlyName(map.value("friendlyName").toString());
+    profile.SetSaveDisconnected(map.value("saveDisconnected", false).toBool());
+    profile.SetPoolMembers(map.value("poolMembers").toStringList());
+    profile.SetAutoConnect(map.value("autoConnect", false).toBool());
+    profile.SetLastConnected(map.value("lastConnected", 0).toLongLong());
     return profile;
 }
 
-QString ConnectionProfile::displayName() const
+QString ConnectionProfile::DisplayName() const
 {
     // Return friendly name if set
     if (!this->m_friendlyName.isEmpty())
@@ -95,7 +108,7 @@ QString ConnectionProfile::displayName() const
     return display;
 }
 
-bool ConnectionProfile::isValid() const
+bool ConnectionProfile::IsValid() const
 {
     return !this->m_hostname.isEmpty();
 }

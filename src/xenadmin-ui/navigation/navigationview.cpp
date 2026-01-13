@@ -62,9 +62,9 @@ QSharedPointer<Host> buildDisconnectedHostObject(XenConnection* connection, XenC
     const QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
     for (const ConnectionProfile& profile : profiles)
     {
-        if (profile.hostname() == hostname && profile.port() == connection->GetPort())
+        if (profile.GetHostname() == hostname && profile.GetPort() == connection->GetPort())
         {
-            displayName = profile.displayName();
+            displayName = profile.DisplayName();
             break;
         }
     }

@@ -31,11 +31,7 @@
 #include <QTimer>
 #include <QDebug>
 
-HTTPConnect::HTTPConnect(QObject* parent)
-    : QObject(parent),
-      m_socket(nullptr),
-      m_timeoutTimer(nullptr),
-      m_state(Idle)
+HTTPConnect::HTTPConnect(QObject* parent) : QObject(parent), m_state(Idle)
 {
 }
 
@@ -103,14 +99,10 @@ void HTTPConnect::connectToConsoleAsync(const QUrl& consoleUrl, const QString& s
     this->m_socket->setReadBufferSize(0); // Unlimited read buffer
 
     // Connect signals (async)
-    connect(this->m_socket, &QSslSocket::encrypted,
-            this, &HTTPConnect::onSslEncrypted);
-    connect(this->m_socket, QOverload<const QList<QSslError>&>::of(&QSslSocket::sslErrors),
-            this, &HTTPConnect::onSslError);
-    connect(this->m_socket, QOverload<QAbstractSocket::SocketError>::of(&QSslSocket::errorOccurred),
-            this, &HTTPConnect::onSocketError);
-    connect(this->m_socket, &QSslSocket::readyRead,
-            this, &HTTPConnect::onReadyRead);
+    connect(this->m_socket, &QSslSocket::encrypted, this, &HTTPConnect::onSslEncrypted);
+    connect(this->m_socket, QOverload<const QList<QSslError>&>::of(&QSslSocket::sslErrors), this, &HTTPConnect::onSslError);
+    connect(this->m_socket, QOverload<QAbstractSocket::SocketError>::of(&QSslSocket::errorOccurred), this, &HTTPConnect::onSocketError);
+    connect(this->m_socket, &QSslSocket::readyRead, this, &HTTPConnect::onReadyRead);
 
     // Create timeout timer (30 seconds for SSL connection)
     if (!this->m_timeoutTimer)
@@ -191,6 +183,10 @@ void HTTPConnect::sendConnectRequest()
         return;
     }
 
+    // After write() or flush() error signal may be triggered calling cleanup, so m_socket might be gone by now
+    if (!this->m_socket)
+        return;
+
     this->m_socket->flush();
 
     // Start reading response
@@ -204,7 +200,7 @@ void HTTPConnect::sendConnectRequest()
     }
 
     // If data is already available, process it
-    if (this->m_socket->bytesAvailable() > 0)
+    if (this->m_socket && this->m_socket->bytesAvailable() > 0)
     {
         this->onReadyRead();
     }

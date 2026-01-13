@@ -122,7 +122,7 @@ class HTTPConnect : public QObject
         QUrl m_consoleUrl;
         QString m_sessionId;
         QByteArray m_responseBuffer;
-        QTimer* m_timeoutTimer;
+        QTimer* m_timeoutTimer = nullptr;
 
         enum State
         {

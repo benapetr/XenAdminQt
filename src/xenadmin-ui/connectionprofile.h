@@ -40,127 +40,127 @@ class ConnectionProfile
                           const QString& username = QString(), bool rememberPassword = false);
 
         // Getters
-        QString name() const
+        QString GetName() const
         {
-            return m_name;
+            return this->m_name;
         }
-        QString hostname() const
+        QString GetHostname() const
         {
-            return m_hostname;
+            return this->m_hostname;
         }
-        int port() const
+        int GetPort() const
         {
-            return m_port;
+            return this->m_port;
         }
-        QString username() const
+        QString GetUsername() const
         {
-            return m_username;
+            return this->m_username;
         }
-        bool rememberPassword() const
+        bool RememberPassword() const
         {
-            return m_rememberPassword;
+            return this->m_rememberPassword;
         }
-        QString password() const
+        QString GetPassword() const
         {
-            return m_password;
+            return this->m_password;
         }
-        bool useSSL() const
+        bool UseSSL() const
         {
-            return m_useSSL;
+            return this->m_useSSL;
         }
-        QString friendlyName() const
+        QString GetFriendlyName() const
         {
-            return m_friendlyName;
+            return this->m_friendlyName;
         }
-        bool saveDisconnected() const
+        bool SaveDisconnected() const
         {
-            return m_saveDisconnected;
+            return this->m_saveDisconnected;
         }
-        QStringList poolMembers() const
+        QStringList GetPoolMembers() const
         {
-            return m_poolMembers;
+            return this->m_poolMembers;
         }
-        bool autoConnect() const
+        bool GetAutoConnect() const
         {
-            return m_autoConnect;
+            return this->m_autoConnect;
         }
-        qint64 lastConnected() const
+        qint64 GetLastConnected() const
         {
-            return m_lastConnected;
+            return this->m_lastConnected;
         }
 
         // Setters
-        void setName(const QString& name)
+        void SetName(const QString& name)
         {
-            m_name = name;
+            this->m_name = name;
         }
-        void setHostname(const QString& hostname)
+        void SetHostname(const QString& hostname)
         {
-            m_hostname = hostname;
+            this->m_hostname = hostname;
         }
-        void setPort(int port)
+        void SetPort(int port)
         {
-            m_port = port;
+            this->m_port = port;
         }
-        void setUsername(const QString& username)
+        void SetUsername(const QString& username)
         {
-            m_username = username;
+            this->m_username = username;
         }
-        void setRememberPassword(bool remember)
+        void SetRememberPassword(bool remember)
         {
-            m_rememberPassword = remember;
+            this->m_rememberPassword = remember;
         }
-        void setPassword(const QString& password)
+        void SetPassword(const QString& password)
         {
-            m_password = password;
+            this->m_password = password;
         }
-        void setUseSSL(bool useSSL)
+        void SetUseSSL(bool useSSL)
         {
-            m_useSSL = useSSL;
+            this->m_useSSL = useSSL;
         }
-        void setFriendlyName(const QString& name)
+        void SetFriendlyName(const QString& name)
         {
-            m_friendlyName = name;
+            this->m_friendlyName = name;
         }
-        void setSaveDisconnected(bool save)
+        void SetSaveDisconnected(bool save)
         {
-            m_saveDisconnected = save;
+            this->m_saveDisconnected = save;
         }
-        void setPoolMembers(const QStringList& members)
+        void SetPoolMembers(const QStringList& members)
         {
-            m_poolMembers = members;
+            this->m_poolMembers = members;
         }
-        void setAutoConnect(bool autoConnect)
+        void SetAutoConnect(bool autoConnect)
         {
-            m_autoConnect = autoConnect;
+            this->m_autoConnect = autoConnect;
         }
-        void setLastConnected(qint64 timestamp)
+        void SetLastConnected(qint64 timestamp)
         {
-            m_lastConnected = timestamp;
+            this->m_lastConnected = timestamp;
         }
 
         // Serialization
-        QVariantMap toVariantMap() const;
-        static ConnectionProfile fromVariantMap(const QVariantMap& map);
+        QVariantMap ToVariantMap() const;
+        static ConnectionProfile FromVariantMap(const QVariantMap& map);
 
         // Display name for UI
-        QString displayName() const;
+        QString DisplayName() const;
 
-        bool isValid() const;
+        bool IsValid() const;
 
     private:
+        qint64 m_lastConnected;    // Timestamp of last successful connection
         QString m_name;
         QString m_hostname;
-        int m_port;
         QString m_username;
-        bool m_rememberPassword;
         QString m_password; // Note: will be encrypted in storage
-        bool m_useSSL;
         QString m_friendlyName;
-        bool m_saveDisconnected;
         QStringList m_poolMembers; // List of pool member hostnames for failover
+        int m_port;
+        bool m_rememberPassword;
+        bool m_useSSL;
+        bool m_saveDisconnected;
         bool m_autoConnect;        // Auto-connect on startup
-        qint64 m_lastConnected;    // Timestamp of last successful connection
 };
 
 #endif // CONNECTIONPROFILE_H

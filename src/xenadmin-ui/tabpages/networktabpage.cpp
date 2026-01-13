@@ -306,7 +306,7 @@ void NetworkTabPage::populateVIFsForVM()
     // Sort VIFs by device number (matches C# vifs.Sort())
     std::sort(vifs.begin(), vifs.end(),
               [](const QSharedPointer<VIF>& a, const QSharedPointer<VIF>& b) {
-                  return a->Device().toInt() < b->Device().toInt();
+                  return a->GetDevice().toInt() < b->GetDevice().toInt();
               });
 
     //qDebug() << "NetworkTabPage::populateVIFsForVM - Displaying" << vifs.size() << "VIFs";
@@ -320,9 +320,9 @@ void NetworkTabPage::populateVIFsForVM()
         // Store VIF ref for later retrieval (used by getSelectedVifRef)
         QString vifRef = vif->OpaqueRef();
 
-        // Column 0: Device (e.g., "0", "1", "2")
+        // Column 0: GetDevice (e.g., "0", "1", "2")
         // C#: DeviceCell.Value = Vif.device;
-        QString device = vif->Device();
+        QString device = vif->GetDevice();
         QTableWidgetItem* deviceItem = new QTableWidgetItem(device);
         deviceItem->setData(Qt::UserRole, vifRef); // Store ref as hidden data
         this->ui->networksTable->setItem(row, 0, deviceItem);
@@ -1368,7 +1368,7 @@ void NetworkTabPage::onRemoveNetwork()
             return;
 
         QString vifRef = vif->OpaqueRef();
-        QString device = vif->Device();
+        QString device = vif->GetDevice();
         QString networkName = "-";
 
         // Get network name

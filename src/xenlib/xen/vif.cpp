@@ -46,7 +46,7 @@ QVariantMap VIF::CurrentOperations() const
     return this->property("current_operations").toMap();
 }
 
-QString VIF::Device() const
+QString VIF::GetDevice() const
 {
     return this->stringProperty("device");
 }

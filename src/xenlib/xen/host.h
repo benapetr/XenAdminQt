@@ -130,6 +130,13 @@ class XENLIB_EXPORT Host : public XenObject
         //! Get resident VMs (VMs running on this host)
         QList<QSharedPointer<VM>> GetResidentVMs() const;
 
+        /**
+         * @brief Check if host has any running VMs.
+         *
+         * C# equivalent: Host.HasRunningVMs()
+         */
+        bool HasRunningVMs() const;
+
         //! Get PBDs (physical block devices/storage connections)
         QList<QSharedPointer<PBD>> GetPBDs() const;
 

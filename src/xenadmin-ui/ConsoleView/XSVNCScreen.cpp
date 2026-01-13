@@ -39,7 +39,9 @@
 #include <QVBoxLayout>
 #include "xen/console.h"
 #include "xen/network/connection.h"
+#include "xen/pif.h"
 #include "xen/session.h"
+#include "xen/vif.h"
 #include "xencache.h"
 #include "xen/vm.h"
 #include "xen/host.h"
@@ -1196,43 +1198,30 @@ QString XSVNCScreen::pollPort(int port, bool vnc)
         QStringList ipv6AddressesNoPif; // IPv6 without PIFs
 
         // Get VIFs for this VM
-        QStringList vifs = vm->GetVIFRefs();
-        QString residentOnRef = vm->GetResidentOnRef();
+        QList<QSharedPointer<VIF>> vifs = vm->GetVIFs();
+        //QStringList vifs = vm->GetVIFRefs();
+        QSharedPointer<Host> resident_on = vm->GetResidentOnHost();
 
         // Process each VIF to extract IPs
-        foreach (const QString& vifRef, vifs)
+        foreach (QSharedPointer<VIF> vif, vifs)
         {
-            if (vifRef.isEmpty())
-                continue;
-
-            QVariantMap vif = cache->ResolveObjectData("vif", vifRef);
-            if (vif.isEmpty())
-                continue;
-
-            QString vifDevice = vif.value("device").toString();
-            QString networkRef = vif.value("network").toString();
+            QString vifDevice = vif->GetDevice();
+            QSharedPointer<Network> network = vif->GetNetwork();
 
             // Find PIF for this network on the host where VM is running
-            QVariantMap pif;
             bool hasPif = false;
             bool pifConnected = false;
 
-            if (!networkRef.isEmpty() && !residentOnRef.isEmpty())
+            if (!network.isNull() && !resident_on.isNull())
             {
-                QSharedPointer<Network> network = cache->ResolveObject<Network>("network", networkRef);
-                if (network && network->IsValid())
+                QList<QSharedPointer<PIF>> pifs = network->GetPIFs();
+                foreach (QSharedPointer<PIF> pif, pifs)
                 {
-                    QStringList pifs = network->GetPIFRefs();
-                    foreach (const QString& pifRef, pifs)
+                    if (pif->GetHost() == resident_on)
                     {
-                        QVariantMap pifRecord = cache->ResolveObjectData("pif", pifRef);
-                        if (pifRecord.value("host").toString() == residentOnRef)
-                        {
-                            pif = pifRecord;
-                            hasPif = true;
-                            pifConnected = pifRecord.value("currently_attached", false).toBool();
-                            break;
-                        }
+                        hasPif = true;
+                        pifConnected = pif->IsCurrentlyAttached();
+                        break;
                     }
                 }
             }
@@ -1370,17 +1359,12 @@ void XSVNCScreen::connectToRemoteConsole()
             }
 
             // Wire up VNC client signals
-            QObject::connect(this->_vncClient, &VNCGraphicsClient::connectionSuccess,
-                             this, &XSVNCScreen::onVncClientConnected);
-            QObject::connect(this->_vncClient, &VNCGraphicsClient::errorOccurred,
-                             this, &XSVNCScreen::onVncClientError);
-            QObject::connect(this->_vncClient, &VNCGraphicsClient::desktopResized,
-                             this, &XSVNCScreen::onDesktopResized);
+            QObject::connect(this->_vncClient, &VNCGraphicsClient::connectionSuccess, this, &XSVNCScreen::onVncClientConnected);
+            QObject::connect(this->_vncClient, &VNCGraphicsClient::errorOccurred, this, &XSVNCScreen::onVncClientError);
+            QObject::connect(this->_vncClient, &VNCGraphicsClient::desktopResized, this, &XSVNCScreen::onDesktopResized);
         }
 
-        QThreadPool::globalInstance()->start([this]() {
-            this->connect();
-        });
+        QThreadPool::globalInstance()->start([this]() { this->connect(); });
 #endif
     }
 }

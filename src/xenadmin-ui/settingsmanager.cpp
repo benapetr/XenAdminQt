@@ -197,22 +197,22 @@ void SettingsManager::updateServerHistory(const QString& hostnameWithPort)
 // Connection profiles
 void SettingsManager::saveConnectionProfile(const ConnectionProfile& profile)
 {
-    if (!profile.isValid())
+    if (!profile.IsValid())
         return;
 
     this->m_settings->beginGroup("ConnectionProfiles");
-    this->m_settings->beginGroup(profile.name());
+    this->m_settings->beginGroup(profile.GetName());
 
-    QVariantMap profileData = profile.toVariantMap();
+    QVariantMap profileData = profile.ToVariantMap();
     for (auto it = profileData.begin(); it != profileData.end(); ++it)
     {
         this->m_settings->setValue(it.key(), it.value());
     }
 
     // Store password separately if remember password is enabled
-    if (profile.rememberPassword() && !profile.password().isEmpty())
+    if (profile.RememberPassword() && !profile.GetPassword().isEmpty())
     {
-        QString encryptedPassword = this->encryptPassword(profile.password());
+        QString encryptedPassword = this->encryptPassword(profile.GetPassword());
         this->m_settings->setValue("password", encryptedPassword);
     } else
     {
@@ -243,14 +243,14 @@ QList<ConnectionProfile> SettingsManager::loadConnectionProfiles() const
                 profileData[key] = this->m_settings->value(key);
         }
 
-        ConnectionProfile profile = ConnectionProfile::fromVariantMap(profileData);
+        ConnectionProfile profile = ConnectionProfile::FromVariantMap(profileData);
 
         // Load password if it was saved
         if (this->m_settings->contains("password"))
         {
             QString encryptedPassword = this->m_settings->value("password").toString();
             QString decryptedPassword = this->decryptPassword(encryptedPassword);
-            profile.setPassword(decryptedPassword);
+            profile.SetPassword(decryptedPassword);
         }
 
         profiles.append(profile);
@@ -278,7 +278,7 @@ ConnectionProfile SettingsManager::getLastConnectionProfile() const
     QList<ConnectionProfile> profiles = this->loadConnectionProfiles();
     for (const ConnectionProfile& profile : profiles)
     {
-        if (profile.name() == lastName)
+        if (profile.GetName() == lastName)
             return profile;
     }
 

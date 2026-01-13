@@ -94,10 +94,10 @@ void RemoveHostCommand::Run()
     QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
     for (const ConnectionProfile& profile : profiles)
     {
-        if (profile.hostname() == connection_hostname && profile.port() == connection->GetPort())
+        if (profile.GetHostname() == connection_hostname && profile.GetPort() == connection->GetPort())
         {
-            if (!profile.name().isEmpty())
-                SettingsManager::instance().removeConnectionProfile(profile.name());
+            if (!profile.GetName().isEmpty())
+                SettingsManager::instance().removeConnectionProfile(profile.GetName());
         }
     }
 
