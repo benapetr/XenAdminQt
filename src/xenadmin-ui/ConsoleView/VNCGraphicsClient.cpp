@@ -1360,13 +1360,14 @@ void VNCGraphicsClient::mouseMoveEvent(QMouseEvent* event)
 
 void VNCGraphicsClient::keyPressEvent(QKeyEvent* event)
 {
-    if (!this->_connected || event->isAutoRepeat())
+    if (!this->_connected)
         return;
 
+    bool isRepeat = event->isAutoRepeat();
     Qt::Key mappedKey = this->remapKey((Qt::Key) event->key());
 
     // Let key handler process shortcuts first (matches C# ConsoleKeyHandler integration)
-    if (this->_keyHandler && this->_keyHandler->handleKeyEvent(mappedKey, true))
+    if (!isRepeat && this->_keyHandler && this->_keyHandler->handleKeyEvent(mappedKey, true))
         return;
 
     if (this->_sendScanCodes)
@@ -1384,7 +1385,8 @@ void VNCGraphicsClient::keyPressEvent(QKeyEvent* event)
         }
     }
 
-    this->_pressedKeys.insert(mappedKey);
+    if (!isRepeat)
+        this->_pressedKeys.insert(mappedKey);
 }
 
 void VNCGraphicsClient::keyReleaseEvent(QKeyEvent* event)
