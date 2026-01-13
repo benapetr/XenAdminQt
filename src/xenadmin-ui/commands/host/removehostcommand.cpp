@@ -101,7 +101,7 @@ void RemoveHostCommand::Run()
         }
     }
 
-    SettingsManager::instance().sync();
+    SettingsManager::instance().Sync();
     this->mainWindow()->SaveServerList();
     this->mainWindow()->ShowStatusMessage(QString("Removed connection to '%1'").arg(hostName), 5000);
     this->mainWindow()->RefreshServerTree();

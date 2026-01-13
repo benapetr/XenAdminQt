@@ -167,11 +167,11 @@ class SettingsManager : public QObject
         void addRecentImportPath(const QString& path);
 
         // Miscellaneous
-        QVariant getValue(const QString& key, const QVariant& defaultValue = QVariant()) const;
-        void setValue(const QString& key, const QVariant& value);
+        QVariant GetValue(const QString& key, const QVariant& defaultValue = QVariant()) const;
+        void SetValue(const QString& key, const QVariant& value);
 
-        void sync();  // Force write to disk
-        void clear(); // Clear all settings
+        void Sync();  // Force write to disk
+        void Clear(); // Clear all settings
 
     signals:
         void settingsChanged(const QString& key);

@@ -34,20 +34,22 @@
 
 class XENLIB_EXPORT EncryptionUtils
 {
-public:
-    static QString hashPassword(const QString& password);
-    static QByteArray encrypt(const QByteArray& data, const QString& key);
-    static QByteArray decrypt(const QByteArray& data, const QString& key);
-    static QString generateSessionKey();
+    public:
+        static QString HashPassword(const QString& password);
+        static QByteArray Encrypt(const QByteArray& data, const QString& key);
+        static QByteArray Decrypt(const QByteArray& data, const QString& key);
+        static QString GenerateSessionKey();
 
-    // Additional utility methods
-    static QString encryptString(const QString& text, const QString& key);
-    static QString decryptString(const QString& encryptedText, const QString& key);
-    static QString generateSalt(int length = 32);
-    static QString hashPasswordWithSalt(const QString& password, const QString& salt);
+        // Additional utility methods
+        static QString EncryptString(const QString& text, const QString& key);
+        static QString DecryptString(const QString& encryptedText, const QString& key);
+        static QString ProtectString(const QString& text);
+        static QString UnprotectString(const QString& protectedText);
+        static QString GenerateSalt(int length = 32);
+        static QString HashPasswordWithSalt(const QString& password, const QString& salt);
 
-private:
-    EncryptionUtils() = delete;
+    private:
+        EncryptionUtils() = delete;
 };
 
 #endif // ENCRYPTION_H

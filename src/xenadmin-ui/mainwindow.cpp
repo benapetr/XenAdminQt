@@ -1437,8 +1437,8 @@ void MainWindow::saveSettings()
     }
     settings.setExpandedTreeItems(expandedItems);
 
-    settings.sync();
-    qDebug() << "Settings saved to:" << settings.getValue("").toString();
+    settings.Sync();
+    qDebug() << "Settings saved to:" << settings.GetValue("").toString();
 }
 
 bool MainWindow::IsConnected()
@@ -1482,7 +1482,7 @@ void MainWindow::loadSettings()
         this->updateViewMenu(this->m_navigationPane->GetCurrentMode());
     }
 
-    qDebug() << "Settings loaded from:" << settings.getValue("").toString();
+    qDebug() << "Settings loaded from:" << settings.GetValue("").toString();
 }
 
 void MainWindow::closeEvent(QCloseEvent* event)
@@ -1950,7 +1950,7 @@ void MainWindow::SaveServerList()
     }
 
     qDebug() << "XenAdmin Qt: Saved" << connections.size() << "connection profile(s)";
-    SettingsManager::instance().sync();
+    SettingsManager::instance().Sync();
 }
 
 void MainWindow::updateConnectionProfileFromCache(XenConnection* connection, XenCache* cache)
@@ -2012,7 +2012,7 @@ void MainWindow::updateConnectionProfileFromCache(XenConnection* connection, Xen
 
     SettingsManager::instance().saveConnectionProfile(targetProfile);
     SettingsManager::instance().updateServerHistory(profileName);
-    SettingsManager::instance().sync();
+    SettingsManager::instance().Sync();
 }
 
 void MainWindow::onCacheObjectChanged(XenConnection* connection, const QString& objectType, const QString& objectRef)

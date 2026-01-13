@@ -27,17 +27,39 @@
 
 #include "encryption.h"
 #include <QtCore/QCryptographicHash>
+#include <QtCore/QSettings>
 #include <QtCore/QUuid>
 #include <QtCore/QRandomGenerator>
 
-QString EncryptionUtils::hashPassword(const QString& password)
+namespace
+{
+    const QString kProtectedPrefix = QStringLiteral("enc:");
+
+    QString getOrCreateLocalKey()
+    {
+        QSettings settings;
+        const QString keyName = QStringLiteral("Security/LocalKey");
+        QString key = settings.value(keyName).toString();
+
+        if (key.isEmpty())
+        {
+            key = EncryptionUtils::GenerateSessionKey();
+            settings.setValue(keyName, key);
+            settings.sync();
+        }
+
+        return key;
+    }
+}
+
+QString EncryptionUtils::HashPassword(const QString& password)
 {
     QByteArray data = password.toUtf8();
     QByteArray hash = QCryptographicHash::hash(data, QCryptographicHash::Sha256);
     return hash.toHex();
 }
 
-QByteArray EncryptionUtils::encrypt(const QByteArray& data, const QString& key)
+QByteArray EncryptionUtils::Encrypt(const QByteArray& data, const QString& key)
 {
     if (data.isEmpty() || key.isEmpty())
     {
@@ -57,7 +79,7 @@ QByteArray EncryptionUtils::encrypt(const QByteArray& data, const QString& key)
     return encrypted.toBase64();
 }
 
-QByteArray EncryptionUtils::decrypt(const QByteArray& data, const QString& key)
+QByteArray EncryptionUtils::Decrypt(const QByteArray& data, const QString& key)
 {
     if (data.isEmpty() || key.isEmpty())
     {
@@ -83,12 +105,12 @@ QByteArray EncryptionUtils::decrypt(const QByteArray& data, const QString& key)
     return decrypted;
 }
 
-QString EncryptionUtils::generateSessionKey()
+QString EncryptionUtils::GenerateSessionKey()
 {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
 
-QString EncryptionUtils::encryptString(const QString& text, const QString& key)
+QString EncryptionUtils::EncryptString(const QString& text, const QString& key)
 {
     if (text.isEmpty() || key.isEmpty())
     {
@@ -96,11 +118,11 @@ QString EncryptionUtils::encryptString(const QString& text, const QString& key)
     }
 
     QByteArray textBytes = text.toUtf8();
-    QByteArray encrypted = encrypt(textBytes, key);
+    QByteArray encrypted = Encrypt(textBytes, key);
     return QString::fromLatin1(encrypted);
 }
 
-QString EncryptionUtils::decryptString(const QString& encryptedText, const QString& key)
+QString EncryptionUtils::DecryptString(const QString& encryptedText, const QString& key)
 {
     if (encryptedText.isEmpty() || key.isEmpty())
     {
@@ -108,11 +130,54 @@ QString EncryptionUtils::decryptString(const QString& encryptedText, const QStri
     }
 
     QByteArray encryptedBytes = encryptedText.toLatin1();
-    QByteArray decrypted = decrypt(encryptedBytes, key);
+    QByteArray decrypted = Decrypt(encryptedBytes, key);
     return QString::fromUtf8(decrypted);
 }
 
-QString EncryptionUtils::generateSalt(int length)
+QString EncryptionUtils::ProtectString(const QString& text)
+{
+    if (text.isEmpty())
+    {
+        return QString();
+    }
+
+#ifdef _WIN32
+    // TODO: replace with DPAPI-backed protect/unprotect.
+#elif defined(Q_OS_MACOS)
+    // TODO: replace with Keychain-backed protect/unprotect.
+#endif
+    const QString key = getOrCreateLocalKey();
+    return kProtectedPrefix + EncryptString(text, key);
+}
+
+QString EncryptionUtils::UnprotectString(const QString& protectedText)
+{
+    if (protectedText.isEmpty())
+    {
+        return QString();
+    }
+
+    if (!protectedText.startsWith(kProtectedPrefix))
+    {
+        return protectedText;
+    }
+
+#ifdef _WIN32
+    // TODO: replace with DPAPI-backed protect/unprotect.
+#elif defined(Q_OS_MACOS)
+    // TODO: replace with Keychain-backed protect/unprotect.
+#endif
+    const QString key = getOrCreateLocalKey();
+    QString decrypted = DecryptString(protectedText.mid(kProtectedPrefix.size()), key);
+    if (decrypted.isEmpty())
+    {
+        return QString();
+    }
+
+    return decrypted;
+}
+
+QString EncryptionUtils::GenerateSalt(int length)
 {
     const QString chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     QString salt;
@@ -126,7 +191,7 @@ QString EncryptionUtils::generateSalt(int length)
     return salt;
 }
 
-QString EncryptionUtils::hashPasswordWithSalt(const QString& password, const QString& salt)
+QString EncryptionUtils::HashPasswordWithSalt(const QString& password, const QString& salt)
 {
     QString saltedPassword = password + salt;
     QByteArray data = saltedPassword.toUtf8();

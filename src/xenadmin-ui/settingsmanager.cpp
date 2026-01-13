@@ -27,14 +27,14 @@
 
 #include "settingsmanager.h"
 #include "connectionprofile.h"
+#include "xenlib/utils/encryption.h"
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDebug>
 #include <QDir>
 #include <QStandardPaths>
 
-SettingsManager::SettingsManager(QObject* parent)
-    : QObject(parent), m_settings(nullptr)
+SettingsManager::SettingsManager(QObject* parent) : QObject(parent), m_settings(nullptr)
 {
     // Set application details for QSettings
     QCoreApplication::setOrganizationName("XenAdmin");
@@ -42,8 +42,7 @@ SettingsManager::SettingsManager(QObject* parent)
     QCoreApplication::setApplicationName("XenAdmin Qt");
 
     // Create settings object (uses platform-specific location)
-    this->m_settings = new QSettings(QSettings::IniFormat, QSettings::UserScope,
-                                     "XenAdmin", "XenAdminQt", this);
+    this->m_settings = new QSettings(QSettings::IniFormat, QSettings::UserScope, "XenAdmin", "XenAdminQt", this);
 
     qDebug() << "Settings file location:" << this->m_settings->fileName();
 }
@@ -191,7 +190,7 @@ void SettingsManager::updateServerHistory(const QString& hostnameWithPort)
         history.append(hostnameWithPort);
         this->m_settings->setValue("General/serverHistory", history);
         emit settingsChanged("General/serverHistory");
-        this->sync();
+        this->Sync();
     }
 }
 
@@ -541,23 +540,23 @@ void SettingsManager::addRecentImportPath(const QString& path)
 }
 
 // Miscellaneous
-QVariant SettingsManager::getValue(const QString& key, const QVariant& defaultValue) const
+QVariant SettingsManager::GetValue(const QString& key, const QVariant& defaultValue) const
 {
     return this->m_settings->value(key, defaultValue);
 }
 
-void SettingsManager::setValue(const QString& key, const QVariant& value)
+void SettingsManager::SetValue(const QString& key, const QVariant& value)
 {
     this->m_settings->setValue(key, value);
     emit settingsChanged(key);
 }
 
-void SettingsManager::sync()
+void SettingsManager::Sync()
 {
     this->m_settings->sync();
 }
 
-void SettingsManager::clear()
+void SettingsManager::Clear()
 {
     this->m_settings->clear();
     emit settingsChanged("*");
@@ -566,22 +565,18 @@ void SettingsManager::clear()
 // Helper methods
 QString SettingsManager::encryptPassword(const QString& password) const
 {
-    // Simple XOR-based obfuscation (NOT secure encryption!)
-    // For production, use proper encryption like QCA or OpenSSL
-    QByteArray data = password.toUtf8();
-    QByteArray key = "XenAdminQtKey2024"; // Static key for obfuscation
-
-    QByteArray result;
-    for (int i = 0; i < data.size(); ++i)
-    {
-        result.append(data[i] ^ key[i % key.size()]);
-    }
-
-    return result.toBase64();
+    return EncryptionUtils::ProtectString(password);
 }
 
 QString SettingsManager::decryptPassword(const QString& encrypted) const
 {
+    if (encrypted.startsWith("enc:"))
+    {
+        return EncryptionUtils::UnprotectString(encrypted);
+    }
+
+    // TODO in few versions later we can safely remove this (introduced in 0.0.3)
+    // Legacy XOR-based obfuscation fallback for older stored passwords.
     QByteArray data = QByteArray::fromBase64(encrypted.toUtf8());
     QByteArray key = "XenAdminQtKey2024";
 

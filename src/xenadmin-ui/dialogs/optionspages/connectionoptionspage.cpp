@@ -28,6 +28,7 @@
 // connectionoptionspage.cpp - Connection and proxy settings options page
 #include "connectionoptionspage.h"
 #include "../../settingsmanager.h"
+#include "xenlib/utils/encryption.h"
 #include <QRegularExpression>
 #include <QToolTip>
 
@@ -85,7 +86,7 @@ void ConnectionOptionsPage::Build()
     SettingsManager& settings = SettingsManager::instance();
 
     // Proxy server settings
-    int proxyStyle = settings.getValue("Connection/ProxySetting", 0).toInt();
+    int proxyStyle = settings.GetValue("Connection/ProxySetting", 0).toInt();
     switch (proxyStyle)
     {
     case 0: // DirectConnection
@@ -102,14 +103,14 @@ void ConnectionOptionsPage::Build()
         break;
     }
 
-    this->ui->ProxyAddressTextBox->setText(settings.getValue("Connection/ProxyAddress", "").toString());
-    this->ui->ProxyPortTextBox->setText(settings.getValue("Connection/ProxyPort", "80").toString());
-    this->ui->BypassForServersCheckbox->setChecked(settings.getValue("Connection/BypassProxyForServers", false).toBool());
+    this->ui->ProxyAddressTextBox->setText(settings.GetValue("Connection/ProxyAddress", "").toString());
+    this->ui->ProxyPortTextBox->setText(settings.GetValue("Connection/ProxyPort", "80").toString());
+    this->ui->BypassForServersCheckbox->setChecked(settings.GetValue("Connection/BypassProxyForServers", false).toBool());
 
-    this->ui->AuthenticationCheckBox->setChecked(settings.getValue("Connection/ProvideProxyAuthentication", false).toBool());
+    this->ui->AuthenticationCheckBox->setChecked(settings.GetValue("Connection/ProvideProxyAuthentication", false).toBool());
 
     // Authentication method
-    int authMethod = settings.getValue("Connection/ProxyAuthenticationMethod", 1).toInt(); // 1 = Digest
+    int authMethod = settings.GetValue("Connection/ProxyAuthenticationMethod", 1).toInt(); // 1 = Digest
     if (authMethod == 0)
     { // Basic
         this->ui->BasicRadioButton->setChecked(true);
@@ -119,11 +120,13 @@ void ConnectionOptionsPage::Build()
     }
 
     // Credentials (stored encrypted in C#, plain in Qt for now)
-    this->ui->ProxyUsernameTextBox->setText(settings.getValue("Connection/ProxyUsername", "").toString());
-    this->ui->ProxyPasswordTextBox->setText(settings.getValue("Connection/ProxyPassword", "").toString());
+    const QString protectedUsername = settings.GetValue("Connection/ProxyUsername", "").toString();
+    const QString protectedPassword = settings.GetValue("Connection/ProxyPassword", "").toString();
+    this->ui->ProxyUsernameTextBox->setText(EncryptionUtils::UnprotectString(protectedUsername));
+    this->ui->ProxyPasswordTextBox->setText(EncryptionUtils::UnprotectString(protectedPassword));
 
     // Connection timeout (C# stores in milliseconds)
-    int timeoutMs = settings.getValue("Connection/ConnectionTimeout", 20000).toInt();
+    int timeoutMs = settings.GetValue("Connection/ConnectionTimeout", 20000).toInt();
     this->ui->ConnectionTimeoutSpinBox->setValue(timeoutMs / 1000);
 
     this->eventsDisabled = false;
@@ -296,12 +299,12 @@ void ConnectionOptionsPage::Save()
     {
         proxyStyle = 2; // SpecifiedProxy
     }
-    settings.setValue("Connection/ProxySetting", proxyStyle);
+    settings.SetValue("Connection/ProxySetting", proxyStyle);
 
     QString address = this->ui->ProxyAddressTextBox->text().trimmed();
     if (!address.isEmpty())
     {
-        settings.setValue("Connection/ProxyAddress", address);
+        settings.SetValue("Connection/ProxyAddress", address);
     }
 
     QString portText = this->ui->ProxyPortTextBox->text().trimmed();
@@ -309,27 +312,27 @@ void ConnectionOptionsPage::Save()
     int port = portText.toInt(&ok);
     if (ok && port > 0 && port <= 65535)
     {
-        settings.setValue("Connection/ProxyPort", port);
+        settings.SetValue("Connection/ProxyPort", port);
     } else
     {
-        settings.setValue("Connection/ProxyPort", 80);
+        settings.SetValue("Connection/ProxyPort", 80);
     }
 
-    settings.setValue("Connection/BypassProxyForServers", this->ui->BypassForServersCheckbox->isChecked());
+    settings.SetValue("Connection/BypassProxyForServers", this->ui->BypassForServersCheckbox->isChecked());
 
     // Authentication settings
-    settings.setValue("Connection/ProvideProxyAuthentication", this->ui->AuthenticationCheckBox->isChecked());
+    settings.SetValue("Connection/ProvideProxyAuthentication", this->ui->AuthenticationCheckBox->isChecked());
 
-    // TODO: In C# these are encrypted with EncryptionUtils.Protect()
-    // For now, store plain text (will implement encryption later)
-    settings.setValue("Connection/ProxyUsername", this->ui->ProxyUsernameTextBox->text());
-    settings.setValue("Connection/ProxyPassword", this->ui->ProxyPasswordTextBox->text());
+    settings.SetValue("Connection/ProxyUsername",
+                      EncryptionUtils::ProtectString(this->ui->ProxyUsernameTextBox->text()));
+    settings.SetValue("Connection/ProxyPassword",
+                      EncryptionUtils::ProtectString(this->ui->ProxyPasswordTextBox->text()));
 
     // Authentication method
     int authMethod = this->ui->BasicRadioButton->isChecked() ? 0 : 1; // 0 = Basic, 1 = Digest
-    settings.setValue("Connection/ProxyAuthenticationMethod", authMethod);
+    settings.SetValue("Connection/ProxyAuthenticationMethod", authMethod);
 
     // Connection timeout (store in milliseconds like C#)
     int timeoutSeconds = this->ui->ConnectionTimeoutSpinBox->value();
-    settings.setValue("Connection/ConnectionTimeout", timeoutSeconds * 1000);
+    settings.SetValue("Connection/ConnectionTimeout", timeoutSeconds * 1000);
 }

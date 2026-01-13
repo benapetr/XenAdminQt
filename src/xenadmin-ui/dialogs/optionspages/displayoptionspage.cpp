@@ -64,17 +64,17 @@ void DisplayOptionsPage::Build()
     SettingsManager& settings = SettingsManager::instance();
 
     // Graph display type
-    bool fillAreas = settings.getValue("Display/FillAreaUnderGraphs", true).toBool();
+    bool fillAreas = settings.GetValue("Display/FillAreaUnderGraphs", true).toBool();
     this->ui->GraphAreasRadioButton->setChecked(fillAreas);
     this->ui->GraphLinesRadioButton->setChecked(!fillAreas);
 
     // Remember last selected tab
     this->ui->checkBoxStoreTab->setChecked(
-        settings.getValue("Display/RememberLastSelectedTab", false).toBool());
+        settings.GetValue("Display/RememberLastSelectedTab", false).toBool());
 
     // Show timestamps in updates log
     this->ui->showTimestampsCheckBox->setChecked(
-        settings.getValue("Display/ShowTimestampsInUpdatesLog", true).toBool());
+        settings.GetValue("Display/ShowTimestampsInUpdatesLog", true).toBool());
 }
 
 bool DisplayOptionsPage::IsValidToSave(QWidget** control, QString& invalidReason)
@@ -104,11 +104,11 @@ void DisplayOptionsPage::Save()
     SettingsManager& settings = SettingsManager::instance();
 
     // Graph display type
-    settings.setValue("Display/FillAreaUnderGraphs", this->ui->GraphAreasRadioButton->isChecked());
+    settings.SetValue("Display/FillAreaUnderGraphs", this->ui->GraphAreasRadioButton->isChecked());
 
     // Remember last selected tab
-    settings.setValue("Display/RememberLastSelectedTab", this->ui->checkBoxStoreTab->isChecked());
+    settings.SetValue("Display/RememberLastSelectedTab", this->ui->checkBoxStoreTab->isChecked());
 
     // Show timestamps in updates log
-    settings.setValue("Display/ShowTimestampsInUpdatesLog", this->ui->showTimestampsCheckBox->isChecked());
+    settings.SetValue("Display/ShowTimestampsInUpdatesLog", this->ui->showTimestampsCheckBox->isChecked());
 }

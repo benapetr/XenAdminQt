@@ -65,7 +65,7 @@ void SaveAndRestoreOptionsPage::Build()
     SettingsManager& settings = SettingsManager::instance();
 
     this->ui->saveStateCheckBox->setChecked(
-        settings.getValue("Session/SaveSession", false).toBool());
+        settings.GetValue("Session/SaveSession", false).toBool());
 }
 
 bool SaveAndRestoreOptionsPage::IsValidToSave(QWidget** control, QString& invalidReason)
@@ -95,5 +95,5 @@ void SaveAndRestoreOptionsPage::Save()
     // Simplified version
     SettingsManager& settings = SettingsManager::instance();
 
-    settings.setValue("Session/SaveSession", this->ui->saveStateCheckBox->isChecked());
+    settings.SetValue("Session/SaveSession", this->ui->saveStateCheckBox->isChecked());
 }

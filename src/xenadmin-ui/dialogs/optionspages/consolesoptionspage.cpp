@@ -74,15 +74,15 @@ void ConsolesOptionsPage::Build()
     SettingsManager& settings = SettingsManager::instance();
 
     // Windows Remote Desktop console
-    this->ui->WindowsKeyCheckBox->setChecked(settings.getValue("Console/WindowsShortcuts", true).toBool());
-    this->ui->SoundCheckBox->setChecked(settings.getValue("Console/ReceiveSoundFromRDP", false).toBool());
-    this->ui->AutoSwitchCheckBox->setChecked(settings.getValue("Console/AutoSwitchToRDP", true).toBool());
-    this->ui->ClipboardCheckBox->setChecked(settings.getValue("Console/ClipboardAndPrinterRedirection", true).toBool());
-    this->ui->ConnectToServerConsoleCheckBox->setChecked(settings.getValue("Console/ConnectToServerConsole", false).toBool());
+    this->ui->WindowsKeyCheckBox->setChecked(settings.GetValue("Console/WindowsShortcuts", true).toBool());
+    this->ui->SoundCheckBox->setChecked(settings.GetValue("Console/ReceiveSoundFromRDP", false).toBool());
+    this->ui->AutoSwitchCheckBox->setChecked(settings.GetValue("Console/AutoSwitchToRDP", true).toBool());
+    this->ui->ClipboardCheckBox->setChecked(settings.GetValue("Console/ClipboardAndPrinterRedirection", true).toBool());
+    this->ui->ConnectToServerConsoleCheckBox->setChecked(settings.GetValue("Console/ConnectToServerConsole", false).toBool());
 
     // Console scaling
-    this->ui->PreserveUndockedScaleCheckBox->setChecked(settings.getValue("Console/PreserveScaleWhenUndocked", false).toBool());
-    this->ui->PreserveVNCConsoleScalingCheckBox->setChecked(settings.getValue("Console/PreserveScaleWhenSwitchBackToVNC", false).toBool());
+    this->ui->PreserveUndockedScaleCheckBox->setChecked(settings.GetValue("Console/PreserveScaleWhenUndocked", false).toBool());
+    this->ui->PreserveVNCConsoleScalingCheckBox->setChecked(settings.GetValue("Console/PreserveScaleWhenSwitchBackToVNC", false).toBool());
 }
 
 void ConsolesOptionsPage::buildKeyCodeListBox()
@@ -110,7 +110,7 @@ void ConsolesOptionsPage::selectDockKeyCombo()
 {
     // Matches C# selectDockKeyCombo
     SettingsManager& settings = SettingsManager::instance();
-    int index = settings.getValue("Console/DockShortcutKey", 0).toInt();
+    int index = settings.GetValue("Console/DockShortcutKey", 0).toInt();
     if (index >= 0 && index < this->ui->DockKeyComboBox->count())
         this->ui->DockKeyComboBox->setCurrentIndex(index);
 }
@@ -119,7 +119,7 @@ void ConsolesOptionsPage::selectKeyCombo()
 {
     // Matches C# selectKeyCombo
     SettingsManager& settings = SettingsManager::instance();
-    int index = settings.getValue("Console/FullScreenShortcutKey", 0).toInt();
+    int index = settings.GetValue("Console/FullScreenShortcutKey", 0).toInt();
     if (index >= 0 && index < this->ui->KeyComboListBox->count())
         this->ui->KeyComboListBox->setCurrentIndex(index);
 }
@@ -137,7 +137,7 @@ void ConsolesOptionsPage::selectUncaptureKeyCombo()
 {
     // Matches C# selectUncaptureKeyCombo
     SettingsManager& settings = SettingsManager::instance();
-    int index = settings.getValue("Console/UncaptureShortcutKey", 0).toInt();
+    int index = settings.GetValue("Console/UncaptureShortcutKey", 0).toInt();
     if (index >= 0 && index < this->ui->UncaptureKeyComboBox->count())
         this->ui->UncaptureKeyComboBox->setCurrentIndex(index);
 }
@@ -169,18 +169,18 @@ void ConsolesOptionsPage::Save()
     SettingsManager& settings = SettingsManager::instance();
 
     // Keyboard shortcuts
-    settings.setValue("Console/FullScreenShortcutKey", this->ui->KeyComboListBox->currentIndex());
-    settings.setValue("Console/DockShortcutKey", this->ui->DockKeyComboBox->currentIndex());
-    settings.setValue("Console/UncaptureShortcutKey", this->ui->UncaptureKeyComboBox->currentIndex());
+    settings.SetValue("Console/FullScreenShortcutKey", this->ui->KeyComboListBox->currentIndex());
+    settings.SetValue("Console/DockShortcutKey", this->ui->DockKeyComboBox->currentIndex());
+    settings.SetValue("Console/UncaptureShortcutKey", this->ui->UncaptureKeyComboBox->currentIndex());
 
     // Windows Remote Desktop
-    settings.setValue("Console/WindowsShortcuts", this->ui->WindowsKeyCheckBox->isChecked());
-    settings.setValue("Console/ReceiveSoundFromRDP", this->ui->SoundCheckBox->isChecked());
-    settings.setValue("Console/AutoSwitchToRDP", this->ui->AutoSwitchCheckBox->isChecked());
-    settings.setValue("Console/ClipboardAndPrinterRedirection", this->ui->ClipboardCheckBox->isChecked());
-    settings.setValue("Console/ConnectToServerConsole", this->ui->ConnectToServerConsoleCheckBox->isChecked());
+    settings.SetValue("Console/WindowsShortcuts", this->ui->WindowsKeyCheckBox->isChecked());
+    settings.SetValue("Console/ReceiveSoundFromRDP", this->ui->SoundCheckBox->isChecked());
+    settings.SetValue("Console/AutoSwitchToRDP", this->ui->AutoSwitchCheckBox->isChecked());
+    settings.SetValue("Console/ClipboardAndPrinterRedirection", this->ui->ClipboardCheckBox->isChecked());
+    settings.SetValue("Console/ConnectToServerConsole", this->ui->ConnectToServerConsoleCheckBox->isChecked());
 
     // Console scaling
-    settings.setValue("Console/PreserveScaleWhenUndocked", this->ui->PreserveUndockedScaleCheckBox->isChecked());
-    settings.setValue("Console/PreserveScaleWhenSwitchBackToVNC", this->ui->PreserveVNCConsoleScalingCheckBox->isChecked());
+    settings.SetValue("Console/PreserveScaleWhenUndocked", this->ui->PreserveUndockedScaleCheckBox->isChecked());
+    settings.SetValue("Console/PreserveScaleWhenSwitchBackToVNC", this->ui->PreserveVNCConsoleScalingCheckBox->isChecked());
 }

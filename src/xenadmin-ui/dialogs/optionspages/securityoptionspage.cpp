@@ -68,13 +68,13 @@ void SecurityOptionsPage::Build()
     // In C# this checks Registry.SSLCertificateTypes and Properties.Settings
     // For now, we'll use QSettings through SettingsManager
     this->ui->CertificateFoundCheckBox->setChecked(
-        settings.getValue("Security/WarnUnrecognizedCertificate", true).toBool());
+        settings.GetValue("Security/WarnUnrecognizedCertificate", true).toBool());
     this->ui->CertificateChangedCheckBox->setChecked(
-        settings.getValue("Security/WarnChangedCertificate", true).toBool());
+        settings.GetValue("Security/WarnChangedCertificate", true).toBool());
 
     // Password reminder
     this->ui->checkBoxReminder->setChecked(
-        settings.getValue("Security/RemindChangePassword", false).toBool());
+        settings.GetValue("Security/RemindChangePassword", false).toBool());
 }
 
 bool SecurityOptionsPage::IsValidToSave(QWidget** control, QString& invalidReason)
@@ -106,12 +106,12 @@ void SecurityOptionsPage::Save()
     SettingsManager& settings = SettingsManager::instance();
 
     // SSL Certificates
-    settings.setValue("Security/WarnUnrecognizedCertificate",
+    settings.SetValue("Security/WarnUnrecognizedCertificate",
                       this->ui->CertificateFoundCheckBox->isChecked());
-    settings.setValue("Security/WarnChangedCertificate",
+    settings.SetValue("Security/WarnChangedCertificate",
                       this->ui->CertificateChangedCheckBox->isChecked());
 
     // Password reminder
-    settings.setValue("Security/RemindChangePassword",
+    settings.SetValue("Security/RemindChangePassword",
                       this->ui->checkBoxReminder->isChecked());
 }

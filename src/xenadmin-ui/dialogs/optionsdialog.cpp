@@ -148,7 +148,7 @@ void OptionsDialog::accept()
     }
 
     // Save settings (matches C# Settings.TrySaveSettings())
-    SettingsManager::instance().sync();
+    SettingsManager::instance().Sync();
 
     // Close dialog
     QDialog::accept();

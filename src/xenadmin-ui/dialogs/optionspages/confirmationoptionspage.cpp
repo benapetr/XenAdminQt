@@ -65,15 +65,15 @@ void ConfirmationOptionsPage::Build()
 
     // Dismissing notifications
     this->ui->checkBoxDontConfirmDismissAlerts->setChecked(
-        settings.getValue("Confirmation/DoNotConfirmDismissAlerts", false).toBool());
+        settings.GetValue("Confirmation/DoNotConfirmDismissAlerts", false).toBool());
     this->ui->checkBoxDontConfirmDismissUpdates->setChecked(
-        settings.getValue("Confirmation/DoNotConfirmDismissUpdates", false).toBool());
+        settings.GetValue("Confirmation/DoNotConfirmDismissUpdates", false).toBool());
     this->ui->checkBoxDontConfirmDismissEvents->setChecked(
-        settings.getValue("Confirmation/DoNotConfirmDismissEvents", false).toBool());
+        settings.GetValue("Confirmation/DoNotConfirmDismissEvents", false).toBool());
 
     // Import/Export warnings
     this->ui->checkBoxIgnoreOvfWarnings->setChecked(
-        settings.getValue("Confirmation/IgnoreOvfValidationWarnings", false).toBool());
+        settings.GetValue("Confirmation/IgnoreOvfValidationWarnings", false).toBool());
 }
 
 bool ConfirmationOptionsPage::IsValidToSave(QWidget** control, QString& invalidReason)
@@ -103,14 +103,14 @@ void ConfirmationOptionsPage::Save()
     SettingsManager& settings = SettingsManager::instance();
 
     // Dismissing notifications
-    settings.setValue("Confirmation/DoNotConfirmDismissAlerts",
+    settings.SetValue("Confirmation/DoNotConfirmDismissAlerts",
                       this->ui->checkBoxDontConfirmDismissAlerts->isChecked());
-    settings.setValue("Confirmation/DoNotConfirmDismissUpdates",
+    settings.SetValue("Confirmation/DoNotConfirmDismissUpdates",
                       this->ui->checkBoxDontConfirmDismissUpdates->isChecked());
-    settings.setValue("Confirmation/DoNotConfirmDismissEvents",
+    settings.SetValue("Confirmation/DoNotConfirmDismissEvents",
                       this->ui->checkBoxDontConfirmDismissEvents->isChecked());
 
     // Import/Export warnings
-    settings.setValue("Confirmation/IgnoreOvfValidationWarnings",
+    settings.SetValue("Confirmation/IgnoreOvfValidationWarnings",
                       this->ui->checkBoxIgnoreOvfWarnings->isChecked());
 }
