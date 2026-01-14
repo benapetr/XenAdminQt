@@ -82,6 +82,7 @@
 #include <QAction>
 #include <QDebug>
 #include <QTreeWidget>
+#include <QMap>
 
 ContextMenuBuilder::ContextMenuBuilder(MainWindow* mainWindow, QObject* parent)
     : QObject(parent), m_mainWindow(mainWindow)
@@ -179,6 +180,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 {
     QString powerState = vm->GetPowerState();
     QList<QSharedPointer<VM>> selectedVms;
+    QMap<QString, QSharedPointer<Host>> vmHostAncestors;
     QTreeWidget* tree = this->m_mainWindow->GetServerTreeWidget();
 
     if (tree)
@@ -200,6 +202,26 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
             QSharedPointer<VM> selectedVm = qSharedPointerCast<VM>(obj);
             if (!selectedVm || selectedVm->IsSnapshot() || selectedVm->IsTemplate())
                 continue;
+
+            QSharedPointer<Host> hostAncestor;
+            QTreeWidgetItem* parent = item->parent();
+            while (parent)
+            {
+                QVariant parentData = parent->data(0, Qt::UserRole);
+                if (parentData.canConvert<QSharedPointer<XenObject>>())
+                {
+                    QSharedPointer<XenObject> parentObj = parentData.value<QSharedPointer<XenObject>>();
+                    if (parentObj && parentObj->GetObjectType() == "host")
+                    {
+                        hostAncestor = qSharedPointerCast<Host>(parentObj);
+                        break;
+                    }
+                }
+                parent = parent->parent();
+            }
+
+            if (hostAncestor)
+                vmHostAncestors.insert(selectedVm->OpaqueRef(), hostAncestor);
 
             selectedVms.append(selectedVm);
         }
@@ -238,17 +260,25 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
         return false;
     };
 
+    auto enabledTargetExists = [&](const QSharedPointer<VM>& item, XenConnection* connection) -> bool {
+        QSharedPointer<Host> hostAncestor = vmHostAncestors.value(item->OpaqueRef());
+        if (hostAncestor)
+            return hostAncestor->IsEnabled();
+
+        return anyEnabledHost(connection);
+    };
+
     auto canShowStartOn = [&]() -> bool {
         XenConnection* connection = selectionConnection();
-        if (!connection || hostCount(connection) <= 1 || !anyEnabledHost(connection))
+        if (!connection || hostCount(connection) <= 1)
             return false;
 
         for (const QSharedPointer<VM>& item : selectedVms)
         {
-            if (!item || item->IsTemplate() || item->IsLocked())
-                return false;
+            if (!item || item->IsLocked())
+                continue;
 
-            if (item->GetAllowedOperations().contains("start"))
+            if (item->GetAllowedOperations().contains("start") && enabledTargetExists(item, connection))
                 return true;
         }
         return false;
@@ -256,19 +286,19 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 
     auto canShowResumeOn = [&]() -> bool {
         XenConnection* connection = selectionConnection();
-        if (!connection || hostCount(connection) <= 1 || !anyEnabledHost(connection))
+        if (!connection || hostCount(connection) <= 1)
             return false;
 
         bool atLeastOne = false;
         for (const QSharedPointer<VM>& item : selectedVms)
         {
-            if (!item || item->IsTemplate() || item->IsLocked())
-                return false;
+            if (!item || item->IsLocked())
+                continue;
 
             if (item->GetAllowedOperations().contains("suspend"))
-                return false;
+                continue;
 
-            if (item->GetAllowedOperations().contains("resume"))
+            if (item->GetAllowedOperations().contains("resume") && enabledTargetExists(item, connection))
                 atLeastOne = true;
         }
         return atLeastOne;
@@ -292,8 +322,8 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 
         for (const QSharedPointer<VM>& item : selectedVms)
         {
-            if (!item || item->IsTemplate() || item->IsLocked())
-                return false;
+            if (!item || item->IsLocked())
+                continue;
 
             if (item->GetAllowedOperations().contains("pool_migrate"))
                 return true;
