@@ -30,6 +30,8 @@
 
 #include "messagealert.h"
 
+namespace XenLib
+{
 /**
  * Alert types for VMSS (VM Snapshot Schedule) policy messages
  * C# Reference: XenAdmin/Alerts/Types/PolicyAlert.cs enum PolicyAlertType
@@ -53,7 +55,7 @@ enum class PolicyAlertType
  * 
  * C# Reference: XenAdmin/Alerts/Types/PolicyAlert.cs
  */
-class PolicyAlert : public MessageAlert
+class XENLIB_EXPORT PolicyAlert : public MessageAlert
 {
     Q_OBJECT
 
@@ -73,5 +75,6 @@ class PolicyAlert : public MessageAlert
         QString m_description;
         QString m_policyName;
 };
+} // XenLib
 
 #endif // POLICYALERT_H

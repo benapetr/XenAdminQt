@@ -29,6 +29,8 @@
 #include <QXmlStreamReader>
 #include <QDebug>
 
+using namespace XenLib;
+
 CertificateAlert::CertificateAlert(XenConnection* connection, const QVariantMap& messageData) : MessageAlert(connection, messageData),
       m_certType(CertificateType::Unknown),
       m_isExpired(false),

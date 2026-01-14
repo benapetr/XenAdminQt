@@ -28,6 +28,8 @@
 #include "alert.h"
 #include "../xen/network/connection.h"
 
+using namespace XenLib;
+
 Alert::Alert(XenConnection* connection) : QObject(nullptr)
     , m_connection(connection)
     , m_dismissing(false)

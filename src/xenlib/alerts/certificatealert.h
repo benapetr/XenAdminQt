@@ -31,6 +31,8 @@
 #include "messagealert.h"
 #include <QDateTime>
 
+namespace XenLib
+{
 /**
  * Certificate types for alert messages
  */
@@ -53,7 +55,7 @@ enum class CertificateType
  * 
  * C# Reference: XenAdmin/Alerts/Types/CertificateAlert.cs
  */
-class CertificateAlert : public MessageAlert
+class XENLIB_EXPORT CertificateAlert : public MessageAlert
 {
     Q_OBJECT
 
@@ -73,5 +75,6 @@ class CertificateAlert : public MessageAlert
         bool m_isExpired;
         int m_daysUntilExpiry;
 };
+} // XenLib
 
 #endif // CERTIFICATEALERT_H

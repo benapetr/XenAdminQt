@@ -29,6 +29,8 @@
 #include <QXmlStreamReader>
 #include <QDebug>
 
+using namespace XenLib;
+
 AlarmMessageAlert::AlarmMessageAlert(XenConnection* connection, const QVariantMap& messageData) : MessageAlert(connection, messageData),
       m_alarmType(AlarmType::None),
       m_currentValue(0.0),

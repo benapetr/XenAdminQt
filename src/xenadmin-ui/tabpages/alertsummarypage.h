@@ -71,7 +71,7 @@ class AlertSummaryPage : public NotificationsBasePage
         Ui::AlertSummaryPage* ui;
 
         // Filter state (C# Reference: AlertSummaryPage.cs FilterAlert() line 283)
-        QSet<AlertPriority> m_severityFilters;  // Empty = show all
+        QSet<XenLib::AlertPriority> m_severityFilters;  // Empty = show all
         QStringList m_serverFilters;            // Empty = show all
         bool m_dateFilterEnabled;
         QDateTime m_dateFilterFrom;
@@ -81,7 +81,7 @@ class AlertSummaryPage : public NotificationsBasePage
         QSet<QString> m_expandedAlerts;  // Set of alert UUIDs that are expanded
 
         void buildAlertList();
-        bool filterAlert(Alert* alert) const;
+        bool filterAlert(XenLib::Alert* alert) const;
         QIcon getExpanderIcon(const QString& alertUuid) const;
 };
 

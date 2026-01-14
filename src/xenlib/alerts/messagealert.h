@@ -33,6 +33,8 @@
 
 class XenConnection;
 
+namespace XenLib
+{
 /**
  * Alert based on XenAPI Message object.
  * C# Reference: XenAdmin/Alerts/Types/MessageAlert.cs
@@ -40,7 +42,7 @@ class XenConnection;
  * This is the primary alert type representing XenServer/XCP-ng
  * messages (notifications, warnings, errors) from the XenAPI.
  */
-class MessageAlert : public Alert
+class XENLIB_EXPORT MessageAlert : public Alert
 {
     public:
         explicit MessageAlert(XenConnection* connection, const QVariantMap& messageData);
@@ -79,5 +81,6 @@ class MessageAlert : public Alert
         virtual void parseMessageData();
         virtual QString getFriendlyDescription();
 };
+} // XenLib
 
 #endif // MESSAGEALERT_H

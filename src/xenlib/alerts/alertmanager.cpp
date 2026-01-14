@@ -29,6 +29,8 @@
 #include <QMutexLocker>
 #include <QDebug>
 
+using namespace XenLib;
+
 AlertManager* AlertManager::s_instance = nullptr;
 
 AlertManager* AlertManager::instance()

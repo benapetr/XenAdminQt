@@ -30,6 +30,8 @@
 
 #include "messagealert.h"
 
+namespace XenLib
+{
 /**
  * Alarm types for performance monitoring alerts
  * C# Reference: XenAdmin/Alerts/Types/AlarmMessageAlert.cs enum AlarmType
@@ -57,7 +59,7 @@ enum class AlarmType
  * 
  * C# Reference: XenAdmin/Alerts/Types/AlarmMessageAlert.cs
  */
-class AlarmMessageAlert : public MessageAlert
+class XENLIB_EXPORT AlarmMessageAlert : public MessageAlert
 {
     Q_OBJECT
 
@@ -94,5 +96,6 @@ class AlarmMessageAlert : public MessageAlert
         QString dataRateString(double bytesPerSecond) const;
         QString memorySizeString(double bytes) const;
 };
+} // XenLib
 
 #endif // ALARMMESSAGEALERT_H

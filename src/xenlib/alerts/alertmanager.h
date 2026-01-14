@@ -33,6 +33,8 @@
 #include <QMutex>
 #include "alert.h"
 
+namespace XenLib
+{
 /**
  * Singleton manager for the alert collection.
  * C# Reference: XenModel/Alerts/Types/Alert.cs (static methods and XenCenterAlerts collection)
@@ -40,7 +42,7 @@
  * Manages the global collection of alerts, provides thread-safe access,
  * and emits signals when the collection changes.
  */
-class AlertManager : public QObject
+class XENLIB_EXPORT AlertManager : public QObject
 {
     Q_OBJECT
 
@@ -87,5 +89,6 @@ class AlertManager : public QObject
         QList<Alert*> m_alerts;
         mutable QMutex m_mutex;
 };
+} // XenLib
 
 #endif // ALERTMANAGER_H

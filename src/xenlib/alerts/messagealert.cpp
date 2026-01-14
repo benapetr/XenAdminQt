@@ -33,6 +33,8 @@
 #include "../xen/network/connection.h"
 #include <QDateTime>
 
+using namespace XenLib;
+
 MessageAlert::MessageAlert(XenConnection* connection, const QVariantMap& messageData) : Alert(connection), m_messageData(messageData), m_priority(AlertPriority::Unknown)
 {
     this->parseMessageData();

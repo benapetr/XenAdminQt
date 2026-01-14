@@ -43,6 +43,8 @@
 #include <QDialogButtonBox>
 #include <QMessageBox>
 
+using namespace XenLib;
+
 AlertSummaryPage::AlertSummaryPage(QWidget* parent) : NotificationsBasePage(parent), ui(new Ui::AlertSummaryPage), m_dateFilterEnabled(false)
 {
     this->ui->setupUi(this);

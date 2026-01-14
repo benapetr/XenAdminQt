@@ -29,6 +29,8 @@
 #include <QRegularExpression>
 #include <QDebug>
 
+using namespace XenLib;
+
 PolicyAlert::PolicyAlert(XenConnection* connection, const QVariantMap& messageData) : MessageAlert(connection, messageData),
       m_policyType(PolicyAlertType::Info)
 {

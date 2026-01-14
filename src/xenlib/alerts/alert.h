@@ -32,9 +32,12 @@
 #include <QString>
 #include <QDateTime>
 #include <QUuid>
+#include "../xenlib_global.h"
 
 class XenConnection;
 
+namespace XenLib
+{
 /**
  * Alert priority levels matching XenAPI message priority
  * C# Reference: XenModel/Alerts/Types/Alert.cs line 349 - AlertPriority enum
@@ -57,7 +60,7 @@ enum class AlertPriority
  * warnings, and errors. This is an abstract base class that must be
  * subclassed for specific alert types (MessageAlert, etc.)
  */
-class Alert : public QObject
+class XENLIB_EXPORT Alert : public QObject
 {
     Q_OBJECT
 
@@ -110,13 +113,14 @@ class Alert : public QObject
         bool m_dismissing = false;
 };
 
-// Declare metatype for QVariant storage
-Q_DECLARE_METATYPE(Alert*)
-
 // qHash function for AlertPriority enum to allow use in QSet
 inline uint qHash(AlertPriority priority, uint seed = 0)
 {
     return ::qHash(static_cast<int>(priority), seed);
 }
+} // XenLib
+
+// Declare metatype for QVariant storage
+Q_DECLARE_METATYPE(XenLib::Alert*)
 
 #endif // ALERT_H
