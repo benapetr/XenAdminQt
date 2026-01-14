@@ -703,8 +703,15 @@ void MainWindow::onTreeItemSelected()
         }
     }
 
-    // Update title bar with selected object
-    this->m_titleBar->SetTitle(itemText, itemIcon);
+    // Update title bar with selected object (matches C# NameWithLocation)
+    QString titleText = itemText;
+    if (this->m_currentObject)
+    {
+        const QString nameWithLocation = this->m_currentObject->NameWithLocation();
+        if (!nameWithLocation.isEmpty())
+            titleText = nameWithLocation;
+    }
+    this->m_titleBar->SetTitle(titleText, itemIcon);
 
     if (this->m_currentObject && connection)
     {

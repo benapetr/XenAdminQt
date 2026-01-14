@@ -248,6 +248,21 @@ QSharedPointer<SR> VDI::GetSR() const
     return cache->ResolveObject<SR>("sr", ref);
 }
 
+QString VDI::NameWithLocation() const
+{
+    if (this->GetConnection())
+    {
+        QSharedPointer<SR> sr = GetSR();
+        if (sr)
+        {
+            return QString("%1 on '%2' %3")
+                .arg(GetName(), sr->GetName(), sr->LocationString());
+        }
+    }
+
+    return XenObject::NameWithLocation();
+}
+
 QList<QSharedPointer<VBD>> VDI::GetVBDs() const
 {
     QList<QSharedPointer<VBD>> result;

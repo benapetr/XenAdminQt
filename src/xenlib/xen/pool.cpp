@@ -42,6 +42,25 @@ QString Pool::GetObjectType() const
     return "pool";
 }
 
+QString Pool::GetName() const
+{
+    QString name = XenObject::GetName();
+    if (!name.isEmpty())
+        return name;
+
+    XenConnection* connection = this->GetConnection();
+    if (!connection || !connection->GetCache())
+        return QString();
+
+    QSharedPointer<Host> master = connection->GetCache()->ResolveObject<Host>("host", GetMasterHostRef());
+    return master ? master->GetName() : QString();
+}
+
+QString Pool::LocationString() const
+{
+    return QString();
+}
+
 QString Pool::GetMasterHostRef() const
 {
     return stringProperty("master");

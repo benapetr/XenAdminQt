@@ -99,7 +99,7 @@ qint64 SR::FreeSpace() const
 {
     return PhysicalSize() - PhysicalUtilisation();
 }
-QSharedPointer<Host> SR::GetHost(XenCache* cache)
+QSharedPointer<Host> SR::GetHost(XenCache* cache) const
 {
     if (!cache)
     {
@@ -139,6 +139,24 @@ QSharedPointer<Host> SR::GetHost(XenCache* cache)
     }
 
     return QSharedPointer<Host>();
+}
+
+QString SR::NameWithLocation() const
+{
+    // Return only the name for local SRs (matches C#)
+    if (this->GetConnection() && !this->IsShared())
+        return GetName();
+
+    return XenObject::NameWithLocation();
+}
+
+QString SR::LocationString() const
+{
+    QSharedPointer<Host> home = GetHost();
+    if (home)
+        return home->LocationString();
+
+    return XenObject::LocationString();
 }
 QStringList SR::GetVDIRefs() const
 {

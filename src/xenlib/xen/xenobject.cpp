@@ -27,6 +27,7 @@
 
 #include "xenobject.h"
 #include "network/connection.h"
+#include "pool.h"
 #include "../xencache.h"
 
 bool XenObject::ValueIsNULL(const QString &value)
@@ -54,6 +55,39 @@ QString XenObject::GetUUID() const
 QString XenObject::GetName() const
 {
     return this->stringProperty("name_label");
+}
+
+QString XenObject::NameWithLocation() const
+{
+    const QString name = this->GetName();
+    const QString location = this->LocationString();
+
+    if (location.isEmpty())
+        return name;
+    if (name.isEmpty())
+        return location;
+
+    return QString("%1 %2").arg(name, location);
+}
+
+QString XenObject::LocationString() const
+{
+    if (!this->m_connection)
+        return QString();
+
+    XenCache* cache = this->m_connection->GetCache();
+    if (cache)
+    {
+        QSharedPointer<Pool> pool = cache->GetPool();
+        if (pool && !pool->GetName().isEmpty())
+            return QString("in '%1'").arg(pool->GetName());
+    }
+
+    const QString hostname = this->m_connection->GetHostname();
+    if (hostname.isEmpty())
+        return QString();
+
+    return QString("on '%1'").arg(hostname);
 }
 
 QString XenObject::GetDescription() const

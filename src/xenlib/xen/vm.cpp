@@ -35,6 +35,7 @@
 #include "sr.h"
 #include "../xencache.h"
 #include "host.h"
+#include "pool.h"
 #include "console.h"
 #include "vusb.h"
 #include "vtpm.h"
@@ -55,6 +56,47 @@ QString VM::GetObjectType() const
 QString VM::GetPowerState() const
 {
     return stringProperty("power_state");
+}
+
+QString VM::NameWithLocation() const
+{
+    if (this->GetConnection())
+    {
+        if (IsRealVM())
+            return XenObject::NameWithLocation();
+
+        if (IsSnapshot())
+        {
+            QSharedPointer<VM> snapshotOf = this->SnapshotOf();
+            if (snapshotOf)
+            {
+                return QString("%1 (snapshot of '%2' %3)").arg(GetName(), snapshotOf->GetName(), LocationString());
+            }
+        }
+    }
+
+    return XenObject::NameWithLocation();
+}
+
+QString VM::LocationString() const
+{
+    QSharedPointer<Host> server = GetHome();
+    if (server)
+        return QString("on '%1'").arg(server->GetName());
+
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return QString();
+
+    XenCache* cache = connection->GetCache();
+    if (cache)
+    {
+        QSharedPointer<Pool> pool = cache->GetPool();
+        if (pool && !pool->GetName().isEmpty())
+            return QString("in '%1'").arg(pool->GetName());
+    }
+
+    return QString();
 }
 
 bool VM::IsTemplate() const
@@ -398,7 +440,7 @@ QList<QSharedPointer<PCI>> VM::GetAttachedPCIDevices() const
     return result;
 }
 
-QSharedPointer<SR> VM::GetSuspendSR() const
+QSharedPointer<SR> VM::GetSuspendSR()
 {
     XenConnection* connection = this->GetConnection();
     if (!connection)
@@ -418,7 +460,7 @@ QString VM::SnapshotOfRef() const
     return stringProperty("snapshot_of");
 }
 
-QSharedPointer<VM> VM::SnapshotOf()
+QSharedPointer<VM> VM::SnapshotOf() const
 {
     QString snapshot_of_ref = this->SnapshotOfRef();
     if (snapshot_of_ref.isEmpty())

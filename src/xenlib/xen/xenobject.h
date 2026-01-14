@@ -86,6 +86,16 @@ class XENLIB_EXPORT XenObject : public QObject
         virtual QString GetName() const;
 
         /**
+         * @brief Get the object's name with location suffix (e.g. "VM on 'host'")
+         */
+        virtual QString NameWithLocation() const;
+
+        /**
+         * @brief Get the location suffix for this object (e.g. "on 'host'", "in 'pool'")
+         */
+        virtual QString LocationString() const;
+
+        /**
          * @brief Get the object's description
          * @return Name description
          */

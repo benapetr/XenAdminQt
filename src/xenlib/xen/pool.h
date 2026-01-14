@@ -55,6 +55,9 @@ class XENLIB_EXPORT Pool : public XenObject
         explicit Pool(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Pool() override = default;
 
+        QString GetName() const override;
+        QString LocationString() const override;
+
         //! Get reference to pool master host (Host opaque reference)
         QString GetMasterHostRef() const;
 

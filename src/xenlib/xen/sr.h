@@ -142,7 +142,10 @@ class XENLIB_EXPORT SR : public XenObject
          * 
          * C# equivalent: SR.Home() extension method
          */
-        QSharedPointer<Host> GetHost(XenCache* cache = nullptr);
+        QSharedPointer<Host> GetHost(XenCache* cache = nullptr) const;
+
+        QString NameWithLocation() const override;
+        QString LocationString() const override;
 
         //! Check if SR is local (not shared, local to single host)
         bool IsLocal() const
