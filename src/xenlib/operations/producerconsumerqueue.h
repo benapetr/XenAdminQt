@@ -53,51 +53,51 @@ class ProducerConsumerQueue : public QObject
 {
     Q_OBJECT
 
-public:
-    /**
-     * @brief Construct a new producer-consumer queue
-     * @param workerCount Number of worker threads to create
-     * @param parent Parent QObject
-     */
-    explicit ProducerConsumerQueue(int workerCount, QObject* parent = nullptr);
+    public:
+        /**
+         * @brief Construct a new producer-consumer queue
+         * @param workerCount Number of worker threads to create
+         * @param parent Parent QObject
+         */
+        explicit ProducerConsumerQueue(int workerCount, QObject* parent = nullptr);
 
-    /**
-     * @brief Destructor - stops all workers
-     */
-    ~ProducerConsumerQueue();
+        /**
+         * @brief Destructor - stops all workers
+         */
+        ~ProducerConsumerQueue();
 
-    /**
-     * @brief Enqueue a task for execution
-     * @param task Function to execute (can be lambda, function pointer, etc.)
-     */
-    void enqueueTask(std::function<void()> task);
+        /**
+         * @brief Enqueue a task for execution
+         * @param task Function to execute (can be lambda, function pointer, etc.)
+         */
+        void EnqueueTask(std::function<void()> task);
 
-    /**
-     * @brief Stop all worker threads gracefully
-     * @param waitForWorkers If true, blocks until all workers finish
-     */
-    void stopWorkers(bool waitForWorkers);
+        /**
+         * @brief Stop all worker threads gracefully
+         * @param waitForWorkers If true, blocks until all workers finish
+         */
+        void StopWorkers(bool waitForWorkers);
 
-    /**
-     * @brief Cancel all pending tasks and stop workers
-     * @param waitForWorkers If true, blocks until all workers finish
-     */
-    void cancelWorkers(bool waitForWorkers);
+        /**
+         * @brief Cancel all pending tasks and stop workers
+         * @param waitForWorkers If true, blocks until all workers finish
+         */
+        void CancelWorkers(bool waitForWorkers);
 
-    /**
-     * @brief Get the number of pending tasks in the queue
-     * @return Number of tasks waiting to be executed
-     */
-    int pendingTaskCount() const;
+        /**
+         * @brief Get the number of pending tasks in the queue
+         * @return Number of tasks waiting to be executed
+         */
+        int GetPendingTaskCount() const;
 
-private:
-    QVector<ProducerConsumerWorker*> m_workers;
-    QQueue<std::function<void()>> m_taskQueue;
-    mutable QMutex m_mutex;
-    QWaitCondition m_waitCondition;
-    bool m_stopping;
+    private:
+        QVector<ProducerConsumerWorker*> m_workers;
+        QQueue<std::function<void()>> m_taskQueue;
+        mutable QMutex m_mutex;
+        QWaitCondition m_waitCondition;
+        bool m_stopping;
 
-    friend class ProducerConsumerWorker;
+        friend class ProducerConsumerWorker;
 };
 
 /**

@@ -82,9 +82,20 @@ static bool boolKeyPreferTrue(const QVariantMap& map, const QString& key)
     return value.isEmpty() || value.compare("false", Qt::CaseInsensitive) != 0;
 }
 
+static bool boolKey(const QVariantMap& map, const QString& key)
+{
+    const QString value = map.value(key).toString();
+    return value.compare("true", Qt::CaseInsensitive) == 0;
+}
+
 bool Host::RestrictVtpm() const
 {
     return boolKeyPreferTrue(LicenseParams(), "restrict_vtpm");
+}
+
+bool Host::RestrictIntraPoolMigrate() const
+{
+    return boolKey(LicenseParams(), "restrict_xen_motion");
 }
 
 QStringList Host::GetResidentVMRefs() const

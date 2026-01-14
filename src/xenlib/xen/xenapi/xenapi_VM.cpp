@@ -1196,4 +1196,51 @@ namespace XenAPI
         return result.toString();
     }
 
+    QMap<QString, QStringList> VM::retrieve_wlb_recommendations(Session* session, const QString& vm)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << vm;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("VM.retrieve_wlb_recommendations", params);
+        QByteArray response = session->sendApiRequest(request);
+        
+        maybeThrowFailureFromResponse(response);
+        
+        QVariant result = api.ParseJsonRpcResponse(response);
+
+        // Result is a Map<XenRef<Host>, string[]>
+        // Parse into QMap<QString, QStringList>
+        QMap<QString, QStringList> recommendations;
+        
+        if (result.type() == QVariant::Map)
+        {
+            QVariantMap map = result.toMap();
+            QMapIterator<QString, QVariant> it(map);
+            while (it.hasNext())
+            {
+                it.next();
+                QString hostRef = it.key();
+                QVariant value = it.value();
+                
+                QStringList recArray;
+                if (value.type() == QVariant::List)
+                {
+                    QVariantList list = value.toList();
+                    foreach (const QVariant& item, list)
+                    {
+                        recArray.append(item.toString());
+                    }
+                }
+                
+                recommendations[hostRef] = recArray;
+            }
+        }
+
+        return recommendations;
+    }
+
 } // namespace XenAPI

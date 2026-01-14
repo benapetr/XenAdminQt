@@ -44,7 +44,7 @@ ProducerConsumerQueue::ProducerConsumerQueue(int workerCount, QObject* parent)
 ProducerConsumerQueue::~ProducerConsumerQueue()
 {
     // Ensure workers are stopped
-    cancelWorkers(true);
+    CancelWorkers(true);
 
     // Workers are QObject children (parent = this), so they will be destroyed
     // automatically when this queue is destroyed. Avoid manual deletion to
@@ -52,7 +52,7 @@ ProducerConsumerQueue::~ProducerConsumerQueue()
     m_workers.clear();
 }
 
-void ProducerConsumerQueue::enqueueTask(std::function<void()> task)
+void ProducerConsumerQueue::EnqueueTask(std::function<void()> task)
 {
     QMutexLocker locker(&m_mutex);
 
@@ -63,7 +63,7 @@ void ProducerConsumerQueue::enqueueTask(std::function<void()> task)
     m_waitCondition.wakeOne();
 }
 
-void ProducerConsumerQueue::stopWorkers(bool waitForWorkers)
+void ProducerConsumerQueue::StopWorkers(bool waitForWorkers)
 {
     {
         QMutexLocker locker(&m_mutex);
@@ -73,7 +73,7 @@ void ProducerConsumerQueue::stopWorkers(bool waitForWorkers)
     // Enqueue null tasks to signal workers to stop (one per worker)
     for (int i = 0; i < m_workers.size(); ++i)
     {
-        enqueueTask(nullptr);
+        EnqueueTask(nullptr);
     }
 
     // Wait for workers to finish if requested
@@ -86,7 +86,7 @@ void ProducerConsumerQueue::stopWorkers(bool waitForWorkers)
     }
 }
 
-void ProducerConsumerQueue::cancelWorkers(bool waitForWorkers)
+void ProducerConsumerQueue::CancelWorkers(bool waitForWorkers)
 {
     {
         QMutexLocker locker(&m_mutex);
@@ -95,10 +95,10 @@ void ProducerConsumerQueue::cancelWorkers(bool waitForWorkers)
     }
 
     // Stop workers
-    stopWorkers(waitForWorkers);
+    StopWorkers(waitForWorkers);
 }
 
-int ProducerConsumerQueue::pendingTaskCount() const
+int ProducerConsumerQueue::GetPendingTaskCount() const
 {
     QMutexLocker locker(&m_mutex);
     return m_taskQueue.size();

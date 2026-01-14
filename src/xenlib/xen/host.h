@@ -83,6 +83,13 @@ class XENLIB_EXPORT Host : public XenObject
          */
         bool RestrictVtpm() const;
 
+        /**
+         * @brief Check if intra-pool migration is restricted by licensing
+         *
+         * C# equivalent: Host.RestrictIntraPoolMigrate (BoolKey on license_params)
+         */
+        bool RestrictIntraPoolMigrate() const;
+
         //! Get list of VMs resident on this host (list of VM opaque references)
         QStringList GetResidentVMRefs() const;
 
