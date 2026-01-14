@@ -29,8 +29,7 @@
 #include <QRegularExpression>
 #include <QDebug>
 
-PolicyAlert::PolicyAlert(XenConnection* connection, const QVariantMap& messageData)
-    : MessageAlert(connection, messageData),
+PolicyAlert::PolicyAlert(XenConnection* connection, const QVariantMap& messageData) : MessageAlert(connection, messageData),
       m_policyType(PolicyAlertType::Info)
 {
     this->parsePolicyMessage();
@@ -48,8 +47,8 @@ void PolicyAlert::parsePolicyMessage()
     this->m_policyType = this->policyTypeFromPriority(
         this->m_messageData.value("priority").toInt());
     
-    QString msgType = this->messageType();
-    QString body = this->messageBody();
+    QString msgType = this->GetMessageType();
+    QString body = this->GetMessageBody();
     
     // For non-error types, use simple formatting
     if (this->m_policyType != PolicyAlertType::Error)
@@ -131,12 +130,12 @@ PolicyAlertType PolicyAlert::policyTypeFromPriority(int priority) const
     return PolicyAlertType::Info;
 }
 
-QString PolicyAlert::title() const
+QString PolicyAlert::GetTitle() const
 {
     return this->m_title;
 }
 
-QString PolicyAlert::description() const
+QString PolicyAlert::GetDescription() const
 {
     return this->m_description;
 }

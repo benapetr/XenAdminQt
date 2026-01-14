@@ -27,8 +27,8 @@
 
 #include "alertsummarypage.h"
 #include "ui_alertsummarypage.h"
-#include "../alerts/alertmanager.h"
-#include "../alerts/alert.h"
+#include "xenlib/alerts/alertmanager.h"
+#include "xenlib/alerts/alert.h"
 #include <QDebug>
 #include <QPushButton>
 #include <QToolButton>
@@ -95,7 +95,7 @@ void AlertSummaryPage::buildAlertList()
     this->ui->alertsTable->setRowCount(0);
     
     // Get alerts from AlertManager
-    QList<Alert*> alerts = AlertManager::instance()->nonDismissingAlerts();
+    QList<Alert*> alerts = AlertManager::instance()->GetNonDismissingAlerts();
     
     // Apply filters (C# Reference: FilterAlert() line 283)
     QList<Alert*> filteredAlerts;
@@ -112,34 +112,34 @@ void AlertSummaryPage::buildAlertList()
         
         // Column 0: Expand/collapse icon (C# Reference: GridViewAlerts_CellClick)
         QTableWidgetItem* expandItem = new QTableWidgetItem();
-        expandItem->setIcon(this->getExpanderIcon(alert->uuid()));
+        expandItem->setIcon(this->getExpanderIcon(alert->GetUUID()));
         expandItem->setData(Qt::UserRole, QVariant::fromValue(alert));
         this->ui->alertsTable->setItem(row, 0, expandItem);
         
-        // Column 1: Severity (priority)
-        QString severity = Alert::priorityToString(alert->priority());
+        // Column 1: Severity (GetPriority)
+        QString severity = Alert::PriorityToString(alert->GetPriority());
         QTableWidgetItem* severityItem = new QTableWidgetItem(severity);
         this->ui->alertsTable->setItem(row, 1, severityItem);
         
-        // Column 2: Message (title + description if expanded)
-        QString message = alert->title();
-        bool isExpanded = this->m_expandedAlerts.contains(alert->uuid());
-        if (isExpanded && !alert->description().isEmpty() && alert->description() != alert->title())
+        // Column 2: Message (GetTitle + description if expanded)
+        QString message = alert->GetTitle();
+        bool isExpanded = this->m_expandedAlerts.contains(alert->GetUUID());
+        if (isExpanded && !alert->GetDescription().isEmpty() && alert->GetDescription() != alert->GetTitle())
         {
-            message += "\n" + alert->description();
+            message += "\n" + alert->GetDescription();
         }
         QTableWidgetItem* messageItem = new QTableWidgetItem(message);
         this->ui->alertsTable->setItem(row, 2, messageItem);
         
-        // Column 3: Location (appliesTo)
-        QString location = alert->appliesTo();
+        // Column 3: Location (AppliesTo)
+        QString location = alert->AppliesTo();
         QTableWidgetItem* locationItem = new QTableWidgetItem(location);
         this->ui->alertsTable->setItem(row, 3, locationItem);
         
         // Column 4: Date
-        QString dateStr = alert->timestamp().toString("yyyy-MM-dd HH:mm:ss");
+        QString dateStr = alert->GetTimestamp().toString("yyyy-MM-dd HH:mm:ss");
         QTableWidgetItem* dateItem = new QTableWidgetItem(dateStr);
-        dateItem->setData(Qt::UserRole, alert->timestamp());
+        dateItem->setData(Qt::UserRole, alert->GetTimestamp());
         this->ui->alertsTable->setItem(row, 4, dateItem);
         
         // Column 5: Actions dropdown (C# Reference: GetAlertActionItems() line 200)
@@ -153,8 +153,8 @@ void AlertSummaryPage::buildAlertList()
         QAction* dismissAction = actionMenu->addAction(tr("Dismiss"));
         connect(dismissAction, &QAction::triggered, this, [alert]()
         {
-            alert->dismiss();
-            AlertManager::instance()->removeAlert(alert);
+            alert->Dismiss();
+            AlertManager::instance()->RemoveAlert(alert);
         });
         
         // TODO: Add Fix/Help/Web Console actions based on alert type
@@ -178,14 +178,14 @@ bool AlertSummaryPage::filterAlert(Alert* alert) const
     // Filter by severity
     if (!this->m_severityFilters.isEmpty())
     {
-        if (!this->m_severityFilters.contains(alert->priority()))
+        if (!this->m_severityFilters.contains(alert->GetPriority()))
             return true;  // Hide this alert
     }
     
     // Filter by server (appliesTo location)
     if (!this->m_serverFilters.isEmpty())
     {
-        QString location = alert->appliesTo();
+        QString location = alert->AppliesTo();
         bool found = false;
         for (const QString& filter : this->m_serverFilters)
         {
@@ -202,7 +202,7 @@ bool AlertSummaryPage::filterAlert(Alert* alert) const
     // Filter by date range
     if (this->m_dateFilterEnabled)
     {
-        QDateTime timestamp = alert->timestamp();
+        QDateTime timestamp = alert->GetTimestamp();
         if (timestamp < this->m_dateFilterFrom || timestamp > this->m_dateFilterTo)
             return true;  // Hide this alert
     }
@@ -237,7 +237,7 @@ void AlertSummaryPage::onExpanderClicked(int row, int column)
         return;
     
     // Toggle expanded state
-    QString uuid = alert->uuid();
+    QString uuid = alert->GetUUID();
     if (this->m_expandedAlerts.contains(uuid))
         this->m_expandedAlerts.remove(uuid);
     else
@@ -320,11 +320,11 @@ void AlertSummaryPage::onFilterByServer()
     // C# Reference: toolStripDropDownButtonServerFilter similar to EventsPage location filter
     // Get list of all unique locations from alerts
     QSet<QString> allLocations;
-    const QList<Alert*> alerts = AlertManager::instance()->nonDismissingAlerts();
+    const QList<Alert*> alerts = AlertManager::instance()->GetNonDismissingAlerts();
     
     for (Alert* alert : alerts)
     {
-        QString location = alert->appliesTo();
+        QString location = alert->AppliesTo();
         if (!location.isEmpty())
             allLocations.insert(location);
     }
@@ -482,7 +482,7 @@ void AlertSummaryPage::onFilterByDate()
 void AlertSummaryPage::onDismissAll()
 {
     // C# Reference: tsbtnDismissAll_Click
-    const QList<Alert*> alerts = AlertManager::instance()->nonDismissingAlerts();
+    const QList<Alert*> alerts = AlertManager::instance()->GetNonDismissingAlerts();
     
     if (alerts.isEmpty())
         return;
@@ -498,8 +498,8 @@ void AlertSummaryPage::onDismissAll()
     {
         for (Alert* alert : alerts)
         {
-            alert->dismiss();
-            AlertManager::instance()->removeAlert(alert);
+            alert->Dismiss();
+            AlertManager::instance()->RemoveAlert(alert);
         }
     }
 }
@@ -544,8 +544,8 @@ void AlertSummaryPage::onDismissSelected()
         
         for (Alert* alert : alertsToDismiss)
         {
-            alert->dismiss();
-            AlertManager::instance()->removeAlert(alert);
+            alert->Dismiss();
+            AlertManager::instance()->RemoveAlert(alert);
         }
     }
 }

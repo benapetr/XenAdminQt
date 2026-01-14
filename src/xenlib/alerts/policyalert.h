@@ -57,21 +57,21 @@ class PolicyAlert : public MessageAlert
 {
     Q_OBJECT
 
-public:
-    explicit PolicyAlert(XenConnection* connection, const QVariantMap& messageData);
+    public:
+        explicit PolicyAlert(XenConnection* connection, const QVariantMap& messageData);
 
-    // Override alert properties
-    QString title() const override;
-    QString description() const override;
+        // Override alert properties
+        QString GetTitle() const override;
+        QString GetDescription() const override;
 
-private:
-    void parsePolicyMessage();
-    PolicyAlertType policyTypeFromPriority(int priority) const;
-    
-    PolicyAlertType m_policyType;
-    QString m_title;
-    QString m_description;
-    QString m_policyName;
+    private:
+        void parsePolicyMessage();
+        PolicyAlertType policyTypeFromPriority(int priority) const;
+
+        PolicyAlertType m_policyType;
+        QString m_title;
+        QString m_description;
+        QString m_policyName;
 };
 
 #endif // POLICYALERT_H

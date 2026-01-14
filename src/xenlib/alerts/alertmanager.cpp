@@ -44,10 +44,10 @@ AlertManager::AlertManager(QObject* parent) : QObject(parent)
 
 AlertManager::~AlertManager()
 {
-    this->clearAllAlerts();
+    this->ClearAllAlerts();
 }
 
-void AlertManager::addAlert(Alert* alert)
+void AlertManager::AddAlert(Alert* alert)
 {
     if (!alert)
         return;
@@ -61,7 +61,7 @@ void AlertManager::addAlert(Alert* alert)
     emit this->collectionChanged();
 }
 
-void AlertManager::addAlerts(const QList<Alert*>& alerts)
+void AlertManager::AddAlerts(const QList<Alert*>& alerts)
 {
     if (alerts.isEmpty())
         return;
@@ -77,7 +77,7 @@ void AlertManager::addAlerts(const QList<Alert*>& alerts)
     emit this->collectionChanged();
 }
 
-void AlertManager::removeAlert(Alert* alert)
+void AlertManager::RemoveAlert(Alert* alert)
 {
     if (!alert)
         return;
@@ -92,7 +92,7 @@ void AlertManager::removeAlert(Alert* alert)
     }
 }
 
-void AlertManager::removeAlerts(const std::function<bool(Alert*)>& predicate)
+void AlertManager::RemoveAlerts(const std::function<bool(Alert*)>& predicate)
 {
     // TODO This can cause a deadlock, need to figure it out
     //QMutexLocker locker(&this->m_mutex);
@@ -115,12 +115,12 @@ void AlertManager::removeAlerts(const std::function<bool(Alert*)>& predicate)
         emit this->collectionChanged();
 }
 
-Alert* AlertManager::findAlert(const QString& uuid) const
+Alert* AlertManager::FindAlert(const QString& uuid) const
 {
     QMutexLocker locker(&this->m_mutex);
     for (Alert* alert : this->m_alerts)
     {
-        if (alert && alert->uuid() == uuid)
+        if (alert && alert->GetUUID() == uuid)
             return alert;
     }
     return nullptr;
@@ -137,7 +137,7 @@ Alert* AlertManager::findAlert(const std::function<bool(Alert*)>& predicate) con
     return nullptr;
 }
 
-int AlertManager::findAlertIndex(const std::function<bool(Alert*)>& predicate) const
+int AlertManager::FindAlertIndex(const std::function<bool(Alert*)>& predicate) const
 {
     QMutexLocker locker(&this->m_mutex);
     for (int i = 0; i < this->m_alerts.size(); ++i)
@@ -148,43 +148,43 @@ int AlertManager::findAlertIndex(const std::function<bool(Alert*)>& predicate) c
     return -1;
 }
 
-int AlertManager::alertCount() const
+int AlertManager::AlertCount() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_alerts.count();
 }
 
-int AlertManager::nonDismissingAlertCount() const
+int AlertManager::NonDismissingAlertCount() const
 {
     QMutexLocker locker(&this->m_mutex);
     int count = 0;
     for (Alert* alert : this->m_alerts)
     {
-        if (alert && !alert->dismissing())
+        if (alert && !alert->IsDismissing())
             count++;
     }
     return count;
 }
 
-QList<Alert*> AlertManager::nonDismissingAlerts() const
+QList<Alert*> AlertManager::GetNonDismissingAlerts() const
 {
     QMutexLocker locker(&this->m_mutex);
     QList<Alert*> result;
     for (Alert* alert : this->m_alerts)
     {
-        if (alert && !alert->dismissing())
+        if (alert && !alert->IsDismissing())
             result.append(alert);
     }
     return result;
 }
 
-QList<Alert*> AlertManager::allAlerts() const
+QList<Alert*> AlertManager::GetAllAlerts() const
 {
     QMutexLocker locker(&this->m_mutex);
     return this->m_alerts;
 }
 
-void AlertManager::clearAllAlerts()
+void AlertManager::ClearAllAlerts()
 {
     {
         QMutexLocker locker(&this->m_mutex);

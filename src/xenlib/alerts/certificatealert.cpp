@@ -29,8 +29,7 @@
 #include <QXmlStreamReader>
 #include <QDebug>
 
-CertificateAlert::CertificateAlert(XenConnection* connection, const QVariantMap& messageData)
-    : MessageAlert(connection, messageData),
+CertificateAlert::CertificateAlert(XenConnection* connection, const QVariantMap& messageData) : MessageAlert(connection, messageData),
       m_certType(CertificateType::Unknown),
       m_isExpired(false),
       m_daysUntilExpiry(0)
@@ -43,8 +42,8 @@ void CertificateAlert::parseCertificateMessage()
     // C# Reference: CertificateAlert.cs constructor line 44
     // Parse XML body: <date>2024-12-31T23:59:59Z</date>
     
-    QString body = this->messageBody();
-    QString msgType = this->messageType();
+    QString body = this->GetMessageBody();
+    QString msgType = this->GetMessageType();
     
     // Determine certificate type
     if (msgType.startsWith("POOL_CA_CERTIFICATE"))
@@ -87,10 +86,10 @@ void CertificateAlert::parseCertificateMessage()
     }
 }
 
-QString CertificateAlert::title() const
+QString CertificateAlert::GetTitle() const
 {
     // C# Reference: CertificateAlert.cs Title property line 58
-    QString objectName = this->appliesTo();
+    QString objectName = this->AppliesTo();
     if (objectName.isEmpty())
         objectName = tr("Unknown");
     
@@ -121,10 +120,10 @@ QString CertificateAlert::title() const
     }
 }
 
-QString CertificateAlert::description() const
+QString CertificateAlert::GetDescription() const
 {
     // C# Reference: CertificateAlert.cs Description property line 149
-    QString objectName = this->appliesTo();
+    QString objectName = this->AppliesTo();
     if (objectName.isEmpty())
         objectName = tr("Unknown");
     
@@ -163,7 +162,7 @@ QString CertificateAlert::description() const
                     .arg(objectName, timeStr);
             
         default:
-            return MessageAlert::description();
+            return MessageAlert::GetDescription();
     }
 }
 

@@ -30,7 +30,7 @@
 #include "policyalert.h"
 #include "certificatealert.h"
 #include "alertmanager.h"
-#include "../../xenlib/xen/network/connection.h"
+#include "../xen/network/connection.h"
 #include <QDateTime>
 
 MessageAlert::MessageAlert(XenConnection* connection, const QVariantMap& messageData) : Alert(connection), m_messageData(messageData), m_priority(AlertPriority::Unknown)
@@ -38,59 +38,59 @@ MessageAlert::MessageAlert(XenConnection* connection, const QVariantMap& message
     this->parseMessageData();
 }
 
-QString MessageAlert::title() const
+QString MessageAlert::GetTitle() const
 {
     return this->m_title;
 }
 
-QString MessageAlert::description() const
+QString MessageAlert::GetDescription() const
 {
     return this->m_description;
 }
 
-AlertPriority MessageAlert::priority() const
+AlertPriority MessageAlert::GetPriority() const
 {
     return this->m_priority;
 }
 
-QString MessageAlert::appliesTo() const
+QString MessageAlert::AppliesTo() const
 {
     return this->m_appliesTo;
 }
 
-QString MessageAlert::name() const
+QString MessageAlert::GetName() const
 {
     return this->m_name;
 }
 
-void MessageAlert::dismiss()
+void MessageAlert::Dismiss()
 {
     // TODO: Call XenAPI Message.destroy to remove the message
     // For now, just mark as dismissing
     this->m_dismissing = true;
 }
 
-QString MessageAlert::messageType() const
+QString MessageAlert::GetMessageType() const
 {
     return this->m_messageData.value("name").toString();
 }
 
-QString MessageAlert::messageBody() const
+QString MessageAlert::GetMessageBody() const
 {
     return this->m_messageData.value("body").toString();
 }
 
-QString MessageAlert::objUuid() const
+QString MessageAlert::GetObjUUID() const
 {
     return this->m_messageData.value("obj_uuid").toString();
 }
 
-QString MessageAlert::opaqueRef() const
+QString MessageAlert::GetOpaqueRef() const
 {
     return this->m_messageData.value("ref").toString();
 }
 
-Alert* MessageAlert::parseMessage(XenConnection* connection, const QVariantMap& messageData)
+Alert* MessageAlert::ParseMessage(XenConnection* connection, const QVariantMap& messageData)
 {
     // C# Reference: MessageAlert.cs line 462 - ParseMessage()
     // Factory method that creates the appropriate alert type based on message type
@@ -140,7 +140,7 @@ Alert* MessageAlert::parseMessage(XenConnection* connection, const QVariantMap& 
     return new MessageAlert(connection, messageData);
 }
 
-void MessageAlert::removeAlert(const QString& messageRef)
+void MessageAlert::RemoveAlert(const QString& messageRef)
 {
     // C# Reference: MessageAlert.cs line 447 - RemoveWithMessage()
     // Find and remove alert associated with this message opaque_ref
@@ -150,12 +150,12 @@ void MessageAlert::removeAlert(const QString& messageRef)
         MessageAlert* msgAlert = dynamic_cast<MessageAlert*>(a);
         if (!msgAlert)
             return false;
-        return msgAlert->opaqueRef() == messageRef;
+        return msgAlert->GetOpaqueRef() == messageRef;
     });
     
     if (alert)
     {
-        AlertManager::instance()->removeAlert(alert);
+        AlertManager::instance()->RemoveAlert(alert);
     }
 }
 
@@ -177,8 +177,8 @@ void MessageAlert::parseMessageData()
     }
     
     // Extract name and body
-    QString msgType = this->messageType();
-    QString msgBody = this->messageBody();
+    QString msgType = this->GetMessageType();
+    QString msgBody = this->GetMessageBody();
     
     // Set title to message type
     this->m_title = msgType;
@@ -188,7 +188,7 @@ void MessageAlert::parseMessageData()
     this->m_description = this->getFriendlyDescription();
     
     // Extract obj_uuid for appliesTo
-    QString objUuid = this->objUuid();
+    QString objUuid = this->GetObjUUID();
     if (!objUuid.isEmpty()) {
         this->m_appliesTo = objUuid;
     } else {
@@ -198,8 +198,8 @@ void MessageAlert::parseMessageData()
 
 QString MessageAlert::getFriendlyDescription()
 {
-    QString msgType = this->messageType();
-    QString msgBody = this->messageBody();
+    QString msgType = this->GetMessageType();
+    QString msgBody = this->GetMessageBody();
     
     // C# MessageAlert has detailed switch statement for each message type
     // TODO: Port full message type handling from MessageAlert.cs lines 132-300

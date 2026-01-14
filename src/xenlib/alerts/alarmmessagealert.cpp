@@ -28,10 +28,8 @@
 #include "alarmmessagealert.h"
 #include <QXmlStreamReader>
 #include <QDebug>
-#include <cmath>
 
-AlarmMessageAlert::AlarmMessageAlert(XenConnection* connection, const QVariantMap& messageData)
-    : MessageAlert(connection, messageData),
+AlarmMessageAlert::AlarmMessageAlert(XenConnection* connection, const QVariantMap& messageData) : MessageAlert(connection, messageData),
       m_alarmType(AlarmType::None),
       m_currentValue(0.0),
       m_triggerLevel(0.0),
@@ -54,7 +52,7 @@ void AlarmMessageAlert::parseAlarmMessage()
      * </variable>
      */
     
-    QString body = this->messageBody();
+    QString body = this->GetMessageBody();
     QStringList lines = body.split('\n');
     
     if (lines.count() < 2)
@@ -145,7 +143,7 @@ void AlarmMessageAlert::parseAlarmMessage()
     }
 }
 
-AlertPriority AlarmMessageAlert::priority() const
+AlertPriority AlarmMessageAlert::GetPriority() const
 {
     // C# Reference: AlarmMessageAlert.cs Priority property line 144
     switch (this->m_alarmType)
@@ -155,11 +153,11 @@ AlertPriority AlarmMessageAlert::priority() const
         case AlarmType::LogFileSystem:
             return AlertPriority::Priority3;  // Service degraded
         default:
-            return MessageAlert::priority();  // Use base class priority from message
+            return MessageAlert::GetPriority();  // Use base class priority from message
     }
 }
 
-QString AlarmMessageAlert::description() const
+QString AlarmMessageAlert::GetDescription() const
 {
     // C# Reference: AlarmMessageAlert.cs Description property line 155
     switch (this->m_alarmType)
@@ -183,7 +181,7 @@ QString AlarmMessageAlert::description() const
         case AlarmType::SrPhysicalUtilisation:
             return this->formatSrPhysicalDescription();
         default:
-            return MessageAlert::description();  // Fallback to base class
+            return MessageAlert::GetDescription();  // Fallback to base class
     }
 }
 
@@ -192,7 +190,7 @@ QString AlarmMessageAlert::description() const
 QString AlarmMessageAlert::formatCpuDescription() const
 {
     return tr("CPU usage on %1 was %2 for %3 (trigger level %4)")
-        .arg(this->appliesTo())
+        .arg(this->AppliesTo())
         .arg(this->percentageString(this->m_currentValue))
         .arg(this->timeString(this->m_triggerPeriod))
         .arg(this->percentageString(this->m_triggerLevel));
@@ -201,7 +199,7 @@ QString AlarmMessageAlert::formatCpuDescription() const
 QString AlarmMessageAlert::formatNetDescription() const
 {
     return tr("Network usage on %1 was %2 for %3 (trigger level %4)")
-        .arg(this->appliesTo())
+        .arg(this->AppliesTo())
         .arg(this->dataRateString(this->m_currentValue))
         .arg(this->timeString(this->m_triggerPeriod))
         .arg(this->dataRateString(this->m_triggerLevel));
@@ -210,7 +208,7 @@ QString AlarmMessageAlert::formatNetDescription() const
 QString AlarmMessageAlert::formatDiskDescription() const
 {
     return tr("Disk usage on %1 was %2 for %3 (trigger level %4)")
-        .arg(this->appliesTo())
+        .arg(this->AppliesTo())
         .arg(this->dataRateString(this->m_currentValue))
         .arg(this->timeString(this->m_triggerPeriod))
         .arg(this->dataRateString(this->m_triggerLevel));
@@ -219,7 +217,7 @@ QString AlarmMessageAlert::formatDiskDescription() const
 QString AlarmMessageAlert::formatFileSystemDescription() const
 {
     return tr("Filesystem usage on %1 was %2 (trigger level %3). This may cause XenServer to stop working.")
-        .arg(this->appliesTo())
+        .arg(this->AppliesTo())
         .arg(this->percentageString(this->m_currentValue))
         .arg(this->percentageString(this->m_triggerLevel));
 }
@@ -228,7 +226,7 @@ QString AlarmMessageAlert::formatMemoryDescription() const
 {
     // m_currentValue and m_triggerLevel are in KiB (C# comment line 173)
     return tr("Free memory on %1 was %2 for %3 (trigger level %4)")
-        .arg(this->appliesTo())
+        .arg(this->AppliesTo())
         .arg(this->memorySizeString(this->m_currentValue * 1024.0))  // KiB to bytes
         .arg(this->timeString(this->m_triggerPeriod))
         .arg(this->memorySizeString(this->m_triggerLevel * 1024.0));
@@ -237,7 +235,7 @@ QString AlarmMessageAlert::formatMemoryDescription() const
 QString AlarmMessageAlert::formatDom0MemoryDescription() const
 {
     return tr("Dom0 memory demand on %1 was %2 (trigger level %3)")
-        .arg(this->appliesTo())
+        .arg(this->AppliesTo())
         .arg(this->percentageString(this->m_currentValue))
         .arg(this->percentageString(this->m_triggerLevel));
 }
@@ -245,7 +243,7 @@ QString AlarmMessageAlert::formatDom0MemoryDescription() const
 QString AlarmMessageAlert::formatLogFileSystemDescription() const
 {
     return tr("Log filesystem usage on %1 was %2 (trigger level %3)")
-        .arg(this->appliesTo())
+        .arg(this->AppliesTo())
         .arg(this->percentageString(this->m_currentValue))
         .arg(this->percentageString(this->m_triggerLevel));
 }
@@ -264,7 +262,7 @@ QString AlarmMessageAlert::formatStorageDescription() const
 QString AlarmMessageAlert::formatSrPhysicalDescription() const
 {
     return tr("Physical utilization of SR on %1 was %2 (trigger level %3)")
-        .arg(this->appliesTo())
+        .arg(this->AppliesTo())
         .arg(this->percentageString(this->m_currentValue))
         .arg(this->percentageString(this->m_triggerLevel));
 }

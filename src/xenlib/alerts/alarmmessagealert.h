@@ -61,38 +61,38 @@ class AlarmMessageAlert : public MessageAlert
 {
     Q_OBJECT
 
-public:
-    explicit AlarmMessageAlert(XenConnection* connection, const QVariantMap& messageData);
+    public:
+        explicit AlarmMessageAlert(XenConnection* connection, const QVariantMap& messageData);
 
-    // Override alert properties for alarm-specific formatting
-    AlertPriority priority() const override;
-    QString description() const override;
+        // Override alert properties for alarm-specific formatting
+        AlertPriority GetPriority() const override;
+        QString GetDescription() const override;
 
-private:
-    void parseAlarmMessage();
-    
-    AlarmType m_alarmType;
-    double m_currentValue;
-    double m_triggerLevel;
-    int m_triggerPeriod;
-    QString m_srUuid;  // For storage alarms
-    
-    // Helper methods
-    QString formatCpuDescription() const;
-    QString formatNetDescription() const;
-    QString formatDiskDescription() const;
-    QString formatFileSystemDescription() const;
-    QString formatMemoryDescription() const;
-    QString formatDom0MemoryDescription() const;
-    QString formatStorageDescription() const;
-    QString formatSrPhysicalDescription() const;
-    QString formatLogFileSystemDescription() const;
-    
-    // Formatting helpers
-    QString percentageString(double value) const;
-    QString timeString(int seconds) const;
-    QString dataRateString(double bytesPerSecond) const;
-    QString memorySizeString(double bytes) const;
+    private:
+        void parseAlarmMessage();
+
+        AlarmType m_alarmType;
+        double m_currentValue;
+        double m_triggerLevel;
+        int m_triggerPeriod;
+        QString m_srUuid;  // For storage alarms
+
+        // Helper methods
+        QString formatCpuDescription() const;
+        QString formatNetDescription() const;
+        QString formatDiskDescription() const;
+        QString formatFileSystemDescription() const;
+        QString formatMemoryDescription() const;
+        QString formatDom0MemoryDescription() const;
+        QString formatStorageDescription() const;
+        QString formatSrPhysicalDescription() const;
+        QString formatLogFileSystemDescription() const;
+
+        // Formatting helpers
+        QString percentageString(double value) const;
+        QString timeString(int seconds) const;
+        QString dataRateString(double bytesPerSecond) const;
+        QString memorySizeString(double bytes) const;
 };
 
 #endif // ALARMMESSAGEALERT_H

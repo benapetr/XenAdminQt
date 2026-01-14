@@ -26,10 +26,9 @@
  */
 
 #include "alert.h"
-#include "../../xenlib/xen/network/connection.h"
+#include "../xen/network/connection.h"
 
-Alert::Alert(XenConnection* connection)
-    : QObject(nullptr)
+Alert::Alert(XenConnection* connection) : QObject(nullptr)
     , m_connection(connection)
     , m_dismissing(false)
 {
@@ -38,30 +37,30 @@ Alert::Alert(XenConnection* connection)
 }
 
 // C# Reference: Alert.cs line 272 - CompareOnDate
-int Alert::compareOnDate(const Alert* a1, const Alert* a2)
+int Alert::CompareOnDate(const Alert* a1, const Alert* a2)
 {
     if (!a1 || !a2)
         return 0;
     
-    int result = a1->timestamp() < a2->timestamp() ? -1 : 
-                 a1->timestamp() > a2->timestamp() ? 1 : 0;
+    int result = a1->GetTimestamp() < a2->GetTimestamp() ? -1 :
+                 a1->GetTimestamp() > a2->GetTimestamp() ? 1 : 0;
     
     if (result == 0)
-        result = QString::compare(a1->name(), a2->name(), Qt::CaseInsensitive);
+        result = QString::compare(a1->GetName(), a2->GetName(), Qt::CaseInsensitive);
     if (result == 0)
-        result = QString::compare(a1->uuid(), a2->uuid());
+        result = QString::compare(a1->GetUUID(), a2->GetUUID());
     
     return result;
 }
 
 // C# Reference: Alert.cs line 283 - CompareOnPriority
-int Alert::compareOnPriority(const Alert* a1, const Alert* a2)
+int Alert::CompareOnPriority(const Alert* a1, const Alert* a2)
 {
     if (!a1 || !a2)
         return 0;
     
-    int p1 = static_cast<int>(a1->priority());
-    int p2 = static_cast<int>(a2->priority());
+    int p1 = static_cast<int>(a1->GetPriority());
+    int p2 = static_cast<int>(a2->GetPriority());
     
     // Unknown (0) is the lowest priority
     if (p1 < p2)
@@ -69,56 +68,56 @@ int Alert::compareOnPriority(const Alert* a1, const Alert* a2)
     if (p1 > p2)
         return p2 == 0 ? -1 : 1;
     
-    return QString::compare(a1->uuid(), a2->uuid());
+    return QString::compare(a1->GetUUID(), a2->GetUUID());
 }
 
 // C# Reference: Alert.cs line 295 - CompareOnTitle
-int Alert::compareOnTitle(const Alert* a1, const Alert* a2)
+int Alert::CompareOnTitle(const Alert* a1, const Alert* a2)
 {
     if (!a1 || !a2)
         return 0;
     
-    int result = QString::compare(a1->title(), a2->title(), Qt::CaseInsensitive);
+    int result = QString::compare(a1->GetTitle(), a2->GetTitle(), Qt::CaseInsensitive);
     if (result == 0)
-        result = QString::compare(a1->name(), a2->name(), Qt::CaseInsensitive);
+        result = QString::compare(a1->GetName(), a2->GetName(), Qt::CaseInsensitive);
     if (result == 0)
-        result = QString::compare(a1->uuid(), a2->uuid());
+        result = QString::compare(a1->GetUUID(), a2->GetUUID());
     
     return result;
 }
 
 // C# Reference: Alert.cs line 305 - CompareOnAppliesTo
-int Alert::compareOnAppliesTo(const Alert* a1, const Alert* a2)
+int Alert::CompareOnAppliesTo(const Alert* a1, const Alert* a2)
 {
     if (!a1 || !a2)
         return 0;
     
-    int result = QString::compare(a1->appliesTo(), a2->appliesTo(), Qt::CaseInsensitive);
+    int result = QString::compare(a1->AppliesTo(), a2->AppliesTo(), Qt::CaseInsensitive);
     if (result == 0)
-        result = QString::compare(a1->name(), a2->name(), Qt::CaseInsensitive);
+        result = QString::compare(a1->GetName(), a2->GetName(), Qt::CaseInsensitive);
     if (result == 0)
-        result = QString::compare(a1->uuid(), a2->uuid());
+        result = QString::compare(a1->GetUUID(), a2->GetUUID());
     
     return result;
 }
 
 // C# Reference: Alert.cs line 316 - CompareOnDescription
-int Alert::compareOnDescription(const Alert* a1, const Alert* a2)
+int Alert::CompareOnDescription(const Alert* a1, const Alert* a2)
 {
     if (!a1 || !a2)
         return 0;
     
-    int result = QString::compare(a1->description(), a2->description(), Qt::CaseInsensitive);
+    int result = QString::compare(a1->GetDescription(), a2->GetDescription(), Qt::CaseInsensitive);
     if (result == 0)
-        result = QString::compare(a1->name(), a2->name(), Qt::CaseInsensitive);
+        result = QString::compare(a1->GetName(), a2->GetName(), Qt::CaseInsensitive);
     if (result == 0)
-        result = QString::compare(a1->uuid(), a2->uuid());
+        result = QString::compare(a1->GetUUID(), a2->GetUUID());
     
     return result;
 }
 
 // C# Reference: Alert.cs line 369 - GetString extension
-QString Alert::priorityToString(AlertPriority priority)
+QString Alert::PriorityToString(AlertPriority priority)
 {
     switch (priority)
     {

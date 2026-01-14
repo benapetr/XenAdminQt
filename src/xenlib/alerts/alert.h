@@ -61,53 +61,53 @@ class Alert : public QObject
 {
     Q_OBJECT
 
-public:
-    virtual ~Alert() = default;
+    public:
+        virtual ~Alert() = default;
 
-    // Core alert properties
-    QString uuid() const { return this->m_uuid; }
-    virtual QString title() const = 0;
-    virtual QString description() const = 0;
-    virtual AlertPriority priority() const = 0;
-    QDateTime timestamp() const { return this->m_timestamp; }
-    virtual QString appliesTo() const = 0;
-    
-    // Additional properties
-    virtual QString name() const { return QString(); }
-    virtual QString webPageLabel() const { return QString(); }
-    virtual QString fixLinkText() const { return QString(); }
-    virtual QString helpLinkText() const { return tr("Click here for help"); }
-    
-    // State management
-    virtual bool allowedToDismiss() const { return !this->m_dismissing; }
-    virtual bool isDismissed() const { return false; }
-    virtual void dismiss() = 0;
-    
-    bool dismissing() const { return this->m_dismissing; }
-    void setDismissing(bool dismissing) { this->m_dismissing = dismissing; }
-    
-    // Connection tracking
-    XenConnection* connection() const { return this->m_connection; }
-    QString hostUuid() const { return this->m_hostUuid; }
-    
-    // Comparison functions for sorting
-    static int compareOnDate(const Alert* a1, const Alert* a2);
-    static int compareOnPriority(const Alert* a1, const Alert* a2);
-    static int compareOnTitle(const Alert* a1, const Alert* a2);
-    static int compareOnAppliesTo(const Alert* a1, const Alert* a2);
-    static int compareOnDescription(const Alert* a1, const Alert* a2);
-    
-    // Helper to get priority as string
-    static QString priorityToString(AlertPriority priority);
+        // Core alert properties
+        QString GetUUID() const { return this->m_uuid; }
+        virtual QString GetTitle() const = 0;
+        virtual QString GetDescription() const = 0;
+        virtual AlertPriority GetPriority() const = 0;
+        QDateTime GetTimestamp() const { return this->m_timestamp; }
+        virtual QString AppliesTo() const = 0;
 
-protected:
-    explicit Alert(XenConnection* connection = nullptr);
-    
-    QString m_uuid;
-    QDateTime m_timestamp;
-    QString m_hostUuid;
-    XenConnection* m_connection = nullptr;
-    bool m_dismissing = false;
+        // Additional properties
+        virtual QString GetName() const { return QString(); }
+        virtual QString GetWebPageLabel() const { return QString(); }
+        virtual QString GetFixLinkText() const { return QString(); }
+        virtual QString GetHelpLinkText() const { return tr("Click here for help"); }
+
+        // State management
+        virtual bool IsAllowedToDismiss() const { return !this->m_dismissing; }
+        virtual bool IsDismissed() const { return false; }
+        virtual void Dismiss() = 0;
+
+        bool IsDismissing() const { return this->m_dismissing; }
+        void SetDismissing(bool dismissing) { this->m_dismissing = dismissing; }
+
+        // Connection tracking
+        XenConnection* GetConnection() const { return this->m_connection; }
+        QString GetHostUuid() const { return this->m_hostUuid; }
+
+        // Comparison functions for sorting
+        static int CompareOnDate(const Alert* a1, const Alert* a2);
+        static int CompareOnPriority(const Alert* a1, const Alert* a2);
+        static int CompareOnTitle(const Alert* a1, const Alert* a2);
+        static int CompareOnAppliesTo(const Alert* a1, const Alert* a2);
+        static int CompareOnDescription(const Alert* a1, const Alert* a2);
+
+        // Helper to get priority as string
+        static QString PriorityToString(AlertPriority priority);
+
+    protected:
+        explicit Alert(XenConnection* connection = nullptr);
+
+        QString m_uuid;
+        QDateTime m_timestamp;
+        QString m_hostUuid;
+        XenConnection* m_connection = nullptr;
+        bool m_dismissing = false;
 };
 
 // Declare metatype for QVariant storage

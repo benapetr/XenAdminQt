@@ -2047,10 +2047,10 @@ void MainWindow::onMessageReceived(const QString& messageRef, const QVariantMap&
     if (!connection)
         return;
 
-    Alert* alert = MessageAlert::parseMessage(connection, messageData);
+    Alert* alert = MessageAlert::ParseMessage(connection, messageData);
     if (alert)
     {
-        AlertManager::instance()->addAlert(alert);
+        AlertManager::instance()->AddAlert(alert);
     }
 }
 
@@ -2059,7 +2059,7 @@ void MainWindow::onMessageRemoved(const QString& messageRef)
     // C# Reference: MainWindow.cs line 1013 - MessageAlert.RemoveAlert(m)
     // Remove alert when XenAPI message is deleted
     
-    MessageAlert::removeAlert(messageRef);
+    MessageAlert::RemoveAlert(messageRef);
 }
 
 // Operation progress tracking (matches C# History_CollectionChanged pattern)

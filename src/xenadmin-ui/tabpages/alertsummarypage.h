@@ -29,7 +29,7 @@
 #define ALERTSUMMARYPAGE_H
 
 #include "notificationsbasepage.h"
-#include "../alerts/alert.h"
+#include "xenlib/alerts/alert.h"
 #include <QDateTime>
 #include <QSet>
 #include <QStringList>

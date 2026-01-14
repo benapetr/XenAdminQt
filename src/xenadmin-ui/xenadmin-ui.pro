@@ -103,12 +103,6 @@ SOURCES += \
     dialogs/optionspages/connectionoptionspage.cpp \
     operations/operationmanager.cpp \
     controls/migratevmmenu.cpp \
-    alerts/alert.cpp \
-    alerts/alertmanager.cpp \
-    alerts/messagealert.cpp \
-    alerts/alarmmessagealert.cpp \
-    alerts/policyalert.cpp \
-    alerts/certificatealert.cpp \
     actions/meddlingaction.cpp \
     actions/meddlingactionmanager.cpp \
     commands/command.cpp \
@@ -343,12 +337,6 @@ HEADERS += \
     dialogs/optionspages/saveandrestoreoptionspage.h \
     dialogs/optionspages/connectionoptionspage.h \
     operations/operationmanager.h \
-    alerts/alert.h \
-    alerts/alertmanager.h \
-    alerts/messagealert.h \
-    alerts/alarmmessagealert.h \
-    alerts/policyalert.h \
-    alerts/certificatealert.h \
     actions/meddlingaction.h \
     actions/meddlingactionmanager.h \
     commands/command.h \

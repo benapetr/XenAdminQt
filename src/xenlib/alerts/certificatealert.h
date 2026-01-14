@@ -57,21 +57,21 @@ class CertificateAlert : public MessageAlert
 {
     Q_OBJECT
 
-public:
-    explicit CertificateAlert(XenConnection* connection, const QVariantMap& messageData);
+    public:
+        explicit CertificateAlert(XenConnection* connection, const QVariantMap& messageData);
 
-    // Override alert properties
-    QString title() const override;
-    QString description() const override;
+        // Override alert properties
+        QString GetTitle() const override;
+        QString GetDescription() const override;
 
-private:
-    void parseCertificateMessage();
-    QString formatExpiryTime() const;
-    
-    CertificateType m_certType;
-    QDateTime m_expiryDate;
-    bool m_isExpired;
-    int m_daysUntilExpiry;
+    private:
+        void parseCertificateMessage();
+        QString formatExpiryTime() const;
+
+        CertificateType m_certType;
+        QDateTime m_expiryDate;
+        bool m_isExpired;
+        int m_daysUntilExpiry;
 };
 
 #endif // CERTIFICATEALERT_H

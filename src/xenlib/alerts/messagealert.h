@@ -42,42 +42,42 @@ class XenConnection;
  */
 class MessageAlert : public Alert
 {
-public:
-    explicit MessageAlert(XenConnection* connection, const QVariantMap& messageData);
-    ~MessageAlert() override = default;
+    public:
+        explicit MessageAlert(XenConnection* connection, const QVariantMap& messageData);
+        ~MessageAlert() override = default;
 
-    // Alert interface implementation
-    QString title() const override;
-    QString description() const override;
-    AlertPriority priority() const override;
-    QString appliesTo() const override;
-    QString name() const override;
-    void dismiss() override;
-    
-    // Access to underlying message data
-    QVariantMap messageData() const { return this->m_messageData; }
-    QString messageType() const;
-    QString messageBody() const;
-    QString objUuid() const;
-    QString opaqueRef() const;
-    
-    // Factory method to create appropriate alert type based on message type
-    // C# Reference: MessageAlert.cs line 462 - ParseMessage()
-    static Alert* parseMessage(XenConnection* connection, const QVariantMap& messageData);
-    
-    // Remove alert when message is destroyed
-    static void removeAlert(const QString& messageRef);
+        // Alert interface implementation
+        QString GetTitle() const override;
+        QString GetDescription() const override;
+        AlertPriority GetPriority() const override;
+        QString AppliesTo() const override;
+        QString GetName() const override;
+        void Dismiss() override;
 
-protected:
-    QVariantMap m_messageData;
-    QString m_title;
-    QString m_description;
-    AlertPriority m_priority;
-    QString m_appliesTo;
-    QString m_name;
-    
-    virtual void parseMessageData();
-    virtual QString getFriendlyDescription();
+        // Access to underlying message data
+        QVariantMap GetMessageData() const { return this->m_messageData; }
+        QString GetMessageType() const;
+        QString GetMessageBody() const;
+        QString GetObjUUID() const;
+        QString GetOpaqueRef() const;
+
+        // Factory method to create appropriate alert type based on message type
+        // C# Reference: MessageAlert.cs line 462 - ParseMessage()
+        static Alert* ParseMessage(XenConnection* connection, const QVariantMap& messageData);
+
+        // Remove alert when message is destroyed
+        static void RemoveAlert(const QString& messageRef);
+
+    protected:
+        QVariantMap m_messageData;
+        QString m_title;
+        QString m_description;
+        AlertPriority m_priority;
+        QString m_appliesTo;
+        QString m_name;
+
+        virtual void parseMessageData();
+        virtual QString getFriendlyDescription();
 };
 
 #endif // MESSAGEALERT_H
