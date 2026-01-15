@@ -51,6 +51,7 @@ VerticallyTabbedDialog::VerticallyTabbedDialog(QSharedPointer<XenObject> object,
     {
         this->m_objectRef = object->OpaqueRef();
         this->m_objectType = object->GetObjectType();
+        this->m_object = object;
     }
 
     this->ui->setupUi(this);

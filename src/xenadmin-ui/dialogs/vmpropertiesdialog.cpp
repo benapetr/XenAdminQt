@@ -36,9 +36,9 @@
 #include "../settingspanels/homeservereditpage.h"
 #include "../settingspanels/vmadvancededitpage.h"
 #include "../settingspanels/vmenlightenmenteditpage.h"
-#include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xencache.h"
 
 VMPropertiesDialog::VMPropertiesDialog(QSharedPointer<VM> vm, QWidget* parent) : VerticallyTabbedDialog(vm, parent)
 {
