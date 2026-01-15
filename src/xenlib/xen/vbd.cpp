@@ -27,6 +27,7 @@
 
 #include "vbd.h"
 #include "vm.h"
+#include "vdi.h"
 #include "xencache.h"
 
 VBD::VBD(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
@@ -43,6 +44,18 @@ QSharedPointer<VM> VBD::GetVM()
     if (!this->GetCache())
         return QSharedPointer<VM>();
     return this->GetCache()->ResolveObject<VM>("vm", this->GetVMRef());
+}
+
+QSharedPointer<VDI> VBD::GetVDI()
+{
+    if (!this->GetCache())
+        return QSharedPointer<VDI>();
+    return this->GetCache()->ResolveObject<VDI>("vdi", this->GetVDIRef());
+}
+
+bool VBD::IsOwner() const
+{
+    return this->GetOtherConfig().contains("owner");
 }
 
 QString VBD::GetVDIRef() const

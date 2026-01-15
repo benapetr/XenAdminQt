@@ -82,7 +82,7 @@ void RebootHostCommand::Run()
         return;
 
     QList<QSharedPointer<Host>> runnable;
-    QMap<QSharedPointer<XenObject>, QString> cantRunReasons;
+    QHash<QSharedPointer<XenObject>, QString> cantRunReasons;
 
     const QList<QTreeWidgetItem*> selectedItems = treeWidget->selectedItems();
     for (QTreeWidgetItem* item : selectedItems)
@@ -116,11 +116,7 @@ void RebootHostCommand::Run()
         CommandErrorDialog::DialogMode mode =
             runnable.isEmpty() ? CommandErrorDialog::DialogMode::Close
                                : CommandErrorDialog::DialogMode::OKCancel;
-        CommandErrorDialog dialog("Reboot Host",
-                                  "Some hosts cannot be rebooted.",
-                                  cantRunReasons,
-                                  mode,
-                                  this->mainWindow());
+        CommandErrorDialog dialog("Reboot Host", "Some hosts cannot be rebooted.", cantRunReasons, mode, this->mainWindow());
         if (dialog.exec() != QDialog::Accepted || runnable.isEmpty())
             return;
     }

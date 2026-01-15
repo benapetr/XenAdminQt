@@ -45,7 +45,7 @@
 #include "vm/resumevmcommand.h"
 #include "vm/pausevmcommand.h"
 #include "vm/unpausevmcommand.h"
-#include "../controls/migratevmmenu.h"
+#include "../controls/vmoperationmenu.h"
 #include "vm/clonevmcommand.h"
 #include "vm/deletevmcommand.h"
 #include "vm/convertvmtotemplatecommand.h"
@@ -81,9 +81,10 @@
 #include "xencache.h"
 #include <QAction>
 #include <QDebug>
+#include <QTreeWidget>
+#include <QMap>
 
-ContextMenuBuilder::ContextMenuBuilder(MainWindow* mainWindow, QObject* parent)
-    : QObject(parent), m_mainWindow(mainWindow)
+ContextMenuBuilder::ContextMenuBuilder(MainWindow* mainWindow, QObject* parent) : QObject(parent), m_mainWindow(mainWindow)
 {
 }
 
@@ -122,13 +123,8 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
     bool isDisconnectedHost = (objectType == "disconnected_host" || itemType == "disconnected_host");
     if (!isDisconnectedHost && obj && objectType == "host")
     {
-        XenConnection* connection = obj->GetConnection();
-        XenCache* cache = connection ? connection->GetCache() : nullptr;
-        if (cache)
-        {
-            const QVariantMap record = cache->ResolveObjectData("host", obj->OpaqueRef());
-            isDisconnectedHost = record.value("is_disconnected").toBool();
-        }
+        const QVariantMap record = obj->GetCache()->ResolveObjectData("host", obj->OpaqueRef());
+        isDisconnectedHost = record.value("is_disconnected").toBool();
     }
 
     if (isDisconnectedHost)
@@ -176,55 +172,221 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
 
 void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 {
+    if (!vm)
+        return;
+
     QString powerState = vm->GetPowerState();
-    QString vmRef = vm->OpaqueRef();
+    QList<QSharedPointer<VM>> selectedVms;
+    QMap<QString, QSharedPointer<Host>> vmHostAncestors;
+    QTreeWidget* tree = this->m_mainWindow->GetServerTreeWidget();
+
+    if (tree)
+    {
+        const QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
+        for (QTreeWidgetItem* item : selectedItems)
+        {
+            if (!item)
+                continue;
+
+            QVariant data = item->data(0, Qt::UserRole);
+            if (!data.canConvert<QSharedPointer<XenObject>>())
+                continue;
+
+            QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+            if (!obj || obj->GetObjectType() != "vm")
+                continue;
+
+            QSharedPointer<VM> selectedVm = qSharedPointerCast<VM>(obj);
+            if (!selectedVm || selectedVm->IsSnapshot() || selectedVm->IsTemplate())
+                continue;
+
+            QSharedPointer<Host> hostAncestor;
+            QTreeWidgetItem* parent = item->parent();
+            while (parent)
+            {
+                QVariant parentData = parent->data(0, Qt::UserRole);
+                if (parentData.canConvert<QSharedPointer<XenObject>>())
+                {
+                    QSharedPointer<XenObject> parentObj = parentData.value<QSharedPointer<XenObject>>();
+                    if (parentObj && parentObj->GetObjectType() == "host")
+                    {
+                        hostAncestor = qSharedPointerCast<Host>(parentObj);
+                        break;
+                    }
+                }
+                parent = parent->parent();
+            }
+
+            if (hostAncestor)
+                vmHostAncestors.insert(selectedVm->OpaqueRef(), hostAncestor);
+
+            selectedVms.append(selectedVm);
+        }
+    }
+
+    if (selectedVms.isEmpty() && vm)
+        selectedVms.append(vm);
+
+    auto selectionConnection = [&selectedVms]() -> XenConnection* {
+        if (selectedVms.isEmpty())
+            return nullptr;
+        XenConnection* connection = selectedVms.first()->GetConnection();
+        for (const QSharedPointer<VM>& item : selectedVms)
+        {
+            if (item->GetConnection() != connection)
+                return nullptr;
+        }
+        return connection;
+    };
+
+    auto hostCount = [](XenConnection* connection) -> int {
+        if (!connection || !connection->GetCache())
+            return 0;
+        return connection->GetCache()->GetAllRefs("host").size();
+    };
+
+    auto anyEnabledHost = [](XenConnection* connection) -> bool {
+        if (!connection || !connection->GetCache())
+            return false;
+        const QList<QSharedPointer<Host>> hosts = connection->GetCache()->GetAll<Host>("host");
+        for (const QSharedPointer<Host>& host : hosts)
+        {
+            if (host && host->IsEnabled())
+                return true;
+        }
+        return false;
+    };
+
+    auto enabledTargetExists = [&](const QSharedPointer<VM>& item, XenConnection* connection) -> bool {
+        QSharedPointer<Host> hostAncestor = vmHostAncestors.value(item->OpaqueRef());
+        if (hostAncestor)
+            return hostAncestor->IsEnabled();
+
+        return anyEnabledHost(connection);
+    };
+
+    auto canShowStartOn = [&]() -> bool {
+        XenConnection* connection = selectionConnection();
+        if (!connection || hostCount(connection) <= 1)
+            return false;
+
+        for (const QSharedPointer<VM>& item : selectedVms)
+        {
+            if (item->IsLocked())
+                continue;
+
+            if (item->GetAllowedOperations().contains("start") && enabledTargetExists(item, connection))
+                return true;
+        }
+        return false;
+    };
+
+    auto canShowResumeOn = [&]() -> bool {
+        XenConnection* connection = selectionConnection();
+        if (!connection || hostCount(connection) <= 1)
+            return false;
+
+        bool atLeastOne = false;
+        for (const QSharedPointer<VM>& item : selectedVms)
+        {
+            if (item->IsLocked())
+                continue;
+
+            if (item->GetAllowedOperations().contains("suspend"))
+                continue;
+
+            if (item->GetAllowedOperations().contains("resume") && enabledTargetExists(item, connection))
+                atLeastOne = true;
+        }
+        return atLeastOne;
+    };
+
+    auto canShowMigrate = [&]() -> bool {
+        XenConnection* connection = selectionConnection();
+        if (!connection)
+            return false;
+
+        XenCache* cache = connection->GetCache();
+
+        const QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+        for (const QSharedPointer<Host>& host : hosts)
+        {
+            if (host->RestrictIntraPoolMigrate())
+                return false;
+        }
+
+        for (const QSharedPointer<VM>& item : selectedVms)
+        {
+            if (item->IsLocked())
+                continue;
+
+            if (item->GetAllowedOperations().contains("pool_migrate"))
+                return true;
+        }
+        return false;
+    };
 
     // Power operations based on VM state
     if (powerState == "Halted")
     {
-        StartVMCommand* startCmd = new StartVMCommand(this->m_mainWindow, this);
+        StartVMCommand* startCmd = new StartVMCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, startCmd);
     } else if (powerState == "Running")
     {
-        StopVMCommand* stopCmd = new StopVMCommand(this->m_mainWindow, this);
+        StopVMCommand* stopCmd = new StopVMCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, stopCmd);
 
-        RestartVMCommand* restartCmd = new RestartVMCommand(this->m_mainWindow, this);
+        RestartVMCommand* restartCmd = new RestartVMCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, restartCmd);
 
-        PauseVMCommand* pauseCmd = new PauseVMCommand(this->m_mainWindow, this);
+        PauseVMCommand* pauseCmd = new PauseVMCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, pauseCmd);
 
-        SuspendVMCommand* suspendCmd = new SuspendVMCommand(this->m_mainWindow, this);
+        SuspendVMCommand* suspendCmd = new SuspendVMCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, suspendCmd);
-
-        menu->addSeparator();
-
-        MigrateVMMenu* migrateMenu = new MigrateVMMenu(this->m_mainWindow, vm, menu);
-        menu->addMenu(migrateMenu);
     } else if (powerState == "Paused")
     {
-        UnpauseVMCommand* unpauseCmd = new UnpauseVMCommand(this->m_mainWindow, this);
+        UnpauseVMCommand* unpauseCmd = new UnpauseVMCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, unpauseCmd);
     } else if (powerState == "Suspended")
     {
-        ResumeVMCommand* resumeCmd = new ResumeVMCommand(this->m_mainWindow, this);
+        ResumeVMCommand* resumeCmd = new ResumeVMCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, resumeCmd);
     }
 
     this->addSeparator(menu);
 
+    if (canShowStartOn())
+    {
+        VMOperationMenu* startOnMenu = new VMOperationMenu(this->m_mainWindow, selectedVms, VMOperationMenu::Operation::StartOn, menu);
+        menu->addMenu(startOnMenu);
+    }
+
+    if (canShowResumeOn())
+    {
+        VMOperationMenu* resumeOnMenu = new VMOperationMenu(this->m_mainWindow, selectedVms, VMOperationMenu::Operation::ResumeOn, menu);
+        menu->addMenu(resumeOnMenu);
+    }
+
+    if (canShowMigrate())
+    {
+        VMOperationMenu* migrateMenu = new VMOperationMenu(this->m_mainWindow, selectedVms, VMOperationMenu::Operation::Migrate, menu);
+        menu->addMenu(migrateMenu);
+    }
+
+    this->addSeparator(menu);
+
     // VM management operations
-    CloneVMCommand* cloneCmd = new CloneVMCommand(this->m_mainWindow, this);
+    CloneVMCommand* cloneCmd = new CloneVMCommand(selectedVms, this->m_mainWindow, this);
     this->addCommand(menu, cloneCmd);
 
-    ExportVMCommand* exportCmd = new ExportVMCommand(this->m_mainWindow, this);
+    ExportVMCommand* exportCmd = new ExportVMCommand(selectedVms, this->m_mainWindow, this);
     this->addCommand(menu, exportCmd);
 
     // Convert to template (only for halted VMs)
     if (powerState == "Halted")
     {
-        ConvertVMToTemplateCommand* convertCmd = new ConvertVMToTemplateCommand(this->m_mainWindow, this);
+        ConvertVMToTemplateCommand* convertCmd = new ConvertVMToTemplateCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, convertCmd);
     }
 
@@ -236,7 +398,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 
     this->addSeparator(menu);
 
-    DeleteVMCommand* deleteCmd = new DeleteVMCommand(this->m_mainWindow, this);
+    DeleteVMCommand* deleteCmd = new DeleteVMCommand(selectedVms, this->m_mainWindow, this);
     this->addCommand(menu, deleteCmd);
 
     this->addSeparator(menu);
@@ -248,6 +410,9 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 
 void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM> snapshot)
 {
+    if (!snapshot)
+        return;
+
     QString vmRef = snapshot->OpaqueRef();
 
     // C# SingleSnapshot builder pattern:
@@ -284,6 +449,9 @@ void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM
 
 void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM> templateVM)
 {
+    if (!templateVM)
+        return;
+
     QString templateRef = templateVM->OpaqueRef();
 
     // VM Creation from template
@@ -308,6 +476,9 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM
 
 void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> host)
 {
+    if (!host)
+        return;
+
     bool enabled = host->IsEnabled();
 
     // New VM command (available for both pool and standalone hosts)

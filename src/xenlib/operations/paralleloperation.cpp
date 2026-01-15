@@ -146,7 +146,7 @@ void ParallelOperation::enqueueOperation(AsyncOperation* operation,
             this, &ParallelOperation::onOperationCompleted);
 
     // Enqueue the operation
-    queue->enqueueTask([this, operation, &exceptions]() {
+    queue->EnqueueTask([this, operation, &exceptions]() {
         if (IsCancelled())
         {
             return; // Don't start any more operations
@@ -237,11 +237,11 @@ void ParallelOperation::onMultipleOperationCompleted()
     // Stop all worker queues
     for (ProducerConsumerQueue* queue : m_queuesByConnection.values())
     {
-        queue->stopWorkers(false);
+        queue->StopWorkers(false);
     }
 
     if (m_queueWithNoConnection)
     {
-        m_queueWithNoConnection->stopWorkers(false);
+        m_queueWithNoConnection->StopWorkers(false);
     }
 }

@@ -175,7 +175,7 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
         // Control domain zero never has RDP
         hideToggleButton = true;
         qDebug() << "VNCTabView: Hiding toggle console button (control domain zero)";
-    } else if (vm->IsHVM() && !hasRDP(vm->OpaqueRef()))
+    } else if (vm->IsHVM() && !this->hasRDP(vm))
     {
         // Linux HVM without RDP (only VNC available)
         hideToggleButton = true;
@@ -239,7 +239,7 @@ VNCTabView::VNCTabView(VNCView* parent, QSharedPointer<VM> vm, const QString& el
     //         vncScreen.AutoSwitchRDPLater = true;
     QSettings settings;
     bool autoSwitchToRDP = settings.value("Console/AutoSwitchToRDP", false).toBool();
-    if (autoSwitchToRDP && isRDPEnabled(vm->OpaqueRef()))
+    if (autoSwitchToRDP && this->hasRDP(vm))
     {
         this->m_vncScreen->setAutoSwitchRDPLater(true);
         qDebug() << "VNCTabView: Auto-switch to RDP enabled";
@@ -298,10 +298,10 @@ bool VNCTabView::IsRDPControlEnabled() const
     // C#: private bool RDPControlEnabled => source != null && source.RDPControlEnabled();
     // C#: public bool IsRDPControlEnabled() { return RDPControlEnabled; }
 
-    if (!this->m_connection || this->_vmRef.isEmpty())
+    if (!this->m_connection || this->m_vm)
         return false;
 
-    return rdpControlEnabledForVm(this->_vmRef);
+    return rdpControlEnabledForVm(this->m_vm);
 }
 
 void VNCTabView::Pause()
@@ -545,7 +545,7 @@ void VNCTabView::onGuestMetricsPropertyChanged(const QString& propertyName)
     // C#: Handle "other" property (RDP status changes)
     if (propertyName == "other")
     {
-        if (this->m_connection && isRDPEnabled(this->_vmRef))
+        if (this->m_connection && this->hasRDP(this->m_vm))
         {
             // RDP is enabled - maybe auto-switch
             // C#: if (vncScreen.UseVNC && (tryToConnectRDP || (!vncScreen.UserWantsToSwitchProtocol && AutoSwitchToRDP)))
@@ -925,7 +925,7 @@ void VNCTabView::onPowerStateLabelClicked()
 
             MainWindow* mainWin = qobject_cast<MainWindow*>(this->window());
             StartVMCommand startCmd(mainWin);
-            if (!startCmd.runForVm(this->_vmRef))
+            if (!startCmd.RunForVm(this->m_vm))
             {
                 enablePowerStateLabel(tr("Failed to start VM"));
             }
@@ -935,13 +935,12 @@ void VNCTabView::onPowerStateLabelClicked()
         // C#: if (source.allowed_operations.Contains(vm_operations.resume))
         //         new ResumeVMCommand(Program.MainWindow, source).Run();
 
-        QVariantMap vmData = getCachedObjectData("vm", this->_vmRef);
-        QVariantList allowedOps = vmData.value("allowed_operations").toList();
+        QStringList allowedOps = this->m_vm->GetAllowedOperations();
 
         bool canResume = false;
-        for (const QVariant& op : allowedOps)
+        foreach (QString op, allowedOps)
         {
-            if (op.toString() == "resume")
+            if (op == "resume")
             {
                 canResume = true;
                 break;
@@ -995,7 +994,7 @@ void VNCTabView::onDetectRDP()
             QSettings settings;
             bool autoSwitchToRDP = settings.value("Console/AutoSwitchToRDP", true).toBool();
             
-            if (autoSwitchToRDP && this->m_connection && isRDPEnabled(this->_vmRef))
+            if (autoSwitchToRDP && this->m_connection && this->hasRDP(this->m_vm))
             {
                 qDebug() << "VNCTabView: Auto-switching to RDP (setting enabled)";
                 // Switch to RDP automatically
@@ -1633,10 +1632,10 @@ bool VNCTabView::canEnableRDP() const
     // Reference: XenAdmin/ConsoleView/VNCTabView.cs lines 784-788
     // C#: return RDPControlEnabled && !RDPEnabled;
 
-    if (!this->m_connection || this->_vmRef.isEmpty())
+    if (!this->m_connection || this->m_vm)
         return false;
 
-    return rdpControlEnabledForVm(this->_vmRef) && !isRDPEnabled(this->_vmRef);
+    return rdpControlEnabledForVm(this->m_vm) && !this->hasRDP(this->m_vm);
 }
 
 void VNCTabView::enableRDPIfCapable()
@@ -1853,7 +1852,7 @@ void VNCTabView::updateTooltipOfToggleButton()
     // C#: if (RDPEnabled || RDPControlEnabled)
     //         tip.SetToolTip(toggleConsoleButton, null);
 
-    if (isRDPEnabled(this->_vmRef) || rdpControlEnabledForVm(this->_vmRef))
+    if (this->hasRDP(this->m_vm) || rdpControlEnabledForVm(this->m_vm))
     {
         // Clear tooltip when RDP is available
         ui->toggleConsoleButton->setToolTip("");
@@ -2096,23 +2095,24 @@ bool VNCTabView::isSRDriverDomain(const QString& vmRef, QString* outSRRef) const
     return false;
 }
 
-bool VNCTabView::hasRDP(const QString& vmRef) const
+bool VNCTabView::hasRDP(QSharedPointer<VM> vm) const
 {
-    QString guestMetricsRef = this->m_vm->GetGuestMetricsRef();
+    if (!vm)
+        return false;
+
+    QString guestMetricsRef = vm->GetGuestMetricsRef();
     if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
         return false;
 
     return false;
 }
 
-bool VNCTabView::isRDPEnabled(const QString& vmRef) const
+bool VNCTabView::rdpControlEnabledForVm(QSharedPointer<VM> vm) const
 {
-    return hasRDP(vmRef);
-}
+    if (!vm)
+        return false;
 
-bool VNCTabView::rdpControlEnabledForVm(const QString& vmRef) const
-{
-    QString guestMetricsRef = this->m_vm->GetGuestMetricsRef();
+    QString guestMetricsRef = vm->GetGuestMetricsRef();
     if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
         return false;
 

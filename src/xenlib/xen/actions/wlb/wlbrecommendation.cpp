@@ -25,26 +25,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UNPAUSEVMCOMMAND_H
-#define UNPAUSEVMCOMMAND_H
+#include "wlbrecommendation.h"
 
-#include "vmcommand.h"
-
-class UnpauseVMCommand : public VMCommand
+WlbRecommendation::WlbRecommendation() : StarRating(0.0)
 {
-    Q_OBJECT
-
-    public:
-        explicit UnpauseVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit UnpauseVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent = nullptr);
-
-        // Inherited from Command
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
-
-    private:
-        bool isVMPaused() const;
-};
-
-#endif // UNPAUSEVMCOMMAND_H
+}

@@ -1369,8 +1369,6 @@ void MainWindow::showTreeContextMenu(const QPoint& position)
     if (!contextMenu)
         return;
 
-    // The context menu logic has been moved to ContextMenuBuilder
-
     // Show the context menu at the requested position
     contextMenu->exec(this->GetServerTreeWidget()->mapToGlobal(position));
 

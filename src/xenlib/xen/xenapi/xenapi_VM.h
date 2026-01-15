@@ -29,6 +29,7 @@
 #define XENAPI_VM_H
 
 #include "../../xenlib_global.h"
+#include <QtCore/QHash>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 #include <QtCore/QVariant>
@@ -686,11 +687,24 @@ namespace XenAPI
              * @param isPublic Whether the blob should be public
              * @return The opaque_ref of the created blob
              */
-            static QString create_new_blob(Session* session,
-                                           const QString& vm,
-                                           const QString& name,
-                                           const QString& mimeType,
-                                           bool isPublic);
+            static QString create_new_blob(Session* session, const QString& vm, const QString& name, const QString& mimeType, bool isPublic);
+
+            /**
+             * @brief Retrieve WLB (Workload Balancing) recommendations for VM placement.
+             *
+             * Returns a map of host refs to recommendation arrays. Each recommendation is a string array:
+             * - ["WLB", "star_rating"] - Success with star rating (0.0-5.0)
+             * - ["WLB", "0.0", "reason"] - Zero rating with reason
+             * - [error_code, detail, detail] - XenAPI error
+             *
+             * First published in XenServer 5.5.
+             * @param session The session
+             * @param vm The opaque_ref of the given VM
+             * @return Map of host opaque_ref -> recommendation string array
+             *
+             * Matches C# VM.retrieve_wlb_recommendations()
+             */
+            static QHash<QString, QStringList> retrieve_wlb_recommendations(Session* session, const QString& vm);
 
             // TODO: Add more VM methods as needed (pause, unpause, reboot, etc.)
             // See xenadmin/XenModel/XenAPI/VM.cs for complete list

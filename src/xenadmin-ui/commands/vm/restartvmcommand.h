@@ -36,6 +36,7 @@ class RestartVMCommand : public VMCommand
 
     public:
         explicit RestartVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit RestartVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;

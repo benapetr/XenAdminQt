@@ -42,6 +42,11 @@ ResumeVMCommand::ResumeVMCommand(MainWindow* mainWindow, QObject* parent) : VMCo
 {
 }
 
+ResumeVMCommand::ResumeVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent)
+    : VMCommand(selectedVms, mainWindow, parent)
+{
+}
+
 bool ResumeVMCommand::CanRun() const
 {
     QSharedPointer<VM> vm = this->getVM();

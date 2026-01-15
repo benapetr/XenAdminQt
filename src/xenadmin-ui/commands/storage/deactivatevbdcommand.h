@@ -49,7 +49,7 @@ class DeactivateVBDCommand : public VBDCommand
         void Run() override;
 
     private:
-        bool canRunVBD(const QString& vbdRef) const;
+        bool canRunVBD(QSharedPointer<VBD> vbd) const;
         bool areIODriversNeededAndMissing(const QVariantMap& vmData) const;
 };
 

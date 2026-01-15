@@ -38,8 +38,11 @@
 #include <QMetaObject>
 #include <QPointer>
 
-StartVMCommand::StartVMCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+StartVMCommand::StartVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
+{
+}
+
+StartVMCommand::StartVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
 {
 }
 
@@ -61,37 +64,32 @@ bool StartVMCommand::CanRun() const
 
 void StartVMCommand::Run()
 {
+    if (!this->m_vms.isEmpty())
+    {
+        foreach (QSharedPointer<VM> vm, this->m_vms)
+            this->RunForVm(vm);
+        return;
+    }
+
     QSharedPointer<VM> vm = this->getVM();
     if (!vm)
         return;
 
-    runForVm(vm->OpaqueRef(), this->getSelectedVMName());
+    this->RunForVm(vm);
 }
 
-bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
+bool StartVMCommand::RunForVm(QSharedPointer<VM> vm)
 {
-    if (vmRef.isEmpty())
-        return false;
-
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return false;
-
     // Get XenConnection from VM
     XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), "Not Connected",
-                             "Not connected to XenServer");
+        QMessageBox::warning(this->mainWindow(), "Not Connected",  "Not connected to XenServer");
         return false;
     }
 
     // Determine name if not provided
-    QString displayName = vmName;
-    if (displayName.isEmpty())
-    {
-        displayName = vm->GetName();
-    }
+    QString displayName = vm->GetName();
 
     // Create VMStartAction with diagnosis callbacks (matches C# pattern)
     // NOTE: The callbacks are called by the action when failures occur
@@ -100,16 +98,16 @@ bool StartVMCommand::runForVm(const QString& vmRef, const QString& vmName)
     VMStartAction* action = new VMStartAction(
         vm,
         nullptr,  // WarningDialogHAInvalidConfig callback (TODO: implement if needed)
-        [conn, vmRef, displayName, mainWindow](VMStartAbstractAction* abstractAction, const Failure& failure) {
+        [conn, displayName, mainWindow, vm](VMStartAbstractAction* abstractAction, const Failure& failure) {
             Q_UNUSED(abstractAction)
             if (!mainWindow)
                 return;
 
             Failure failureCopy = failure;
-            QMetaObject::invokeMethod(mainWindow, [mainWindow, conn, vmRef, displayName, failureCopy]() {
+            QMetaObject::invokeMethod(mainWindow, [mainWindow, conn, vm, displayName, failureCopy]() {
                 if (!mainWindow)
                     return;
-                VMOperationHelpers::startDiagnosisForm(conn, vmRef, displayName, true, failureCopy, mainWindow);
+                VMOperationHelpers::startDiagnosisForm(conn, vm->OpaqueRef(), displayName, true, failureCopy, mainWindow);
             }, Qt::QueuedConnection);
         },
         this->mainWindow());

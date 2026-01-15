@@ -25,37 +25,43 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MIGRATEVMMENU_H
-#define MIGRATEVMMENU_H
+#ifndef WLBRECOMMENDATION_H
+#define WLBRECOMMENDATION_H
 
-#include <QMenu>
+#include <QHash>
 #include <QSharedPointer>
+#include <QString>
 
-class MainWindow;
 class VM;
 
 /**
- * @brief Migrate VM submenu
- *
- * Qt equivalent of XenAdmin MigrateVMToolStripMenuItem.
- * Builds a host submenu with per-host eligibility checks.
+ * @brief WLB recommendation for a specific host
+ * 
+ * Contains information about whether VMs can run on a host,
+ * the star rating (0.0-5.0), and reasons why VMs cannot run.
  */
-class MigrateVMMenu : public QMenu
+class WlbRecommendation
 {
-    Q_OBJECT
-
     public:
-        explicit MigrateVMMenu(MainWindow* mainWindow,
-                               const QSharedPointer<VM>& vm,
-                               QWidget* parent = nullptr);
+        /**
+         * @brief Construct an empty recommendation
+         */
+        WlbRecommendation();
 
-    private:
-        MainWindow* m_mainWindow;
-        QSharedPointer<VM> m_vm;
+        /**
+         * @brief Map of VM -> whether it can run on this host
+         */
+        QHash<QSharedPointer<VM>, bool> CanRunByVM;
 
-        void populate();
-        void addDisabledReason(const QString& reason);
-        void runMigrationToHost(const QString& hostRef, const QString& hostName);
+        /**
+         * @brief Average star rating across all VMs (0.0-5.0)
+         */
+        double StarRating;
+
+        /**
+         * @brief Map of VM -> reason why it cannot run (if CanRunByVM[vm] == false)
+         */
+        QHash<QSharedPointer<VM>, QString> CantRunReasons;
 };
 
-#endif // MIGRATEVMMENU_H
+#endif // WLBRECOMMENDATION_H

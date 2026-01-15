@@ -36,6 +36,7 @@ class SuspendVMCommand : public VMCommand
 
     public:
         explicit SuspendVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit SuspendVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;

@@ -36,6 +36,7 @@ class CloneVMCommand : public VMCommand
 
     public:
         explicit CloneVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit CloneVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;

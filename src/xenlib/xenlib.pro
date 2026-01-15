@@ -103,6 +103,9 @@ HEADERS += \
     xen/xenapi/xenapi_UserDetails.h \
     xen/xenapi/xenapi_Helper.h \
     xen/xenapi/vm_appliance.h \
+    xen/actions/wlb/wlbretrievevmrecommendationsaction.h \
+    xen/actions/wlb/wlbrecommendation.h \
+    xen/actions/wlb/wlbrecommendations.h \
     xen/actions/vm/changevmisoaction.h \
     xen/actions/vm/createcddriveaction.h \
     xen/actions/vm/importvmaction.h \
@@ -236,6 +239,9 @@ SOURCES += \
     utils/misc.cpp \
     vmhelpers.cpp \
     xen/actions/vm/vmstartaction.cpp \
+    xen/actions/wlb/wlbretrievevmrecommendationsaction.cpp \
+    xen/actions/wlb/wlbrecommendation.cpp \
+    xen/actions/wlb/wlbrecommendations.cpp \
     xen/xenapi/xenapi_Blob.cpp \
     xen/xenapi/xenapi_Bond.cpp \
     xen/xenapi/xenapi_Network.cpp \

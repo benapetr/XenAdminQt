@@ -65,6 +65,7 @@ SOURCES += \
     controls/dropdownbutton.cpp \
     controls/snapshottreeview.cpp \
     controls/multipledvdisolist.cpp \
+    controls/vmoperationmenu.cpp \
     controls/xensearch/querypanel.cpp \
     controls/xensearch/searchoutput.cpp \
     controls/xensearch/foldernavigator.cpp \
@@ -102,7 +103,6 @@ SOURCES += \
     dialogs/optionspages/saveandrestoreoptionspage.cpp \
     dialogs/optionspages/connectionoptionspage.cpp \
     operations/operationmanager.cpp \
-    controls/migratevmmenu.cpp \
     actions/meddlingaction.cpp \
     actions/meddlingactionmanager.cpp \
     commands/command.cpp \
@@ -295,7 +295,7 @@ HEADERS += \
     controls/affinitypicker.h \
     controls/srpicker.h \
     controls/dropdownbutton.h \
-    controls/migratevmmenu.h \
+    controls/vmoperationmenu.h \
     controls/snapshottreeview.h \
     controls/multipledvdisolist.h \
     controls/xensearch/querypanel.h \
