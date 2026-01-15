@@ -29,10 +29,13 @@
 #define COMMANDERRORDIALOG_H
 
 #include <QDialog>
+#include <QHash>
 #include <QMap>
 #include <QString>
 #include <QSharedPointer>
 #include <QIcon>
+
+#include "xenlib/utils/qhashsharedpointer.h"
 
 namespace Ui {
 class CommandErrorDialog;
@@ -101,7 +104,7 @@ class CommandErrorDialog : public QDialog
          */
         explicit CommandErrorDialog(const QString& title,
                                     const QString& text,
-                                    const QMap<QSharedPointer<XenObject>, QString>& cantRunReasons,
+                                    const QHash<QSharedPointer<XenObject>, QString>& cantRunReasons,
                                     DialogMode mode = DialogMode::Close,
                                     QWidget* parent = nullptr);
 

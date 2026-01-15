@@ -32,7 +32,7 @@
 #include <QSharedPointer>
 #include <QMutex>
 #include <QList>
-#include <QMap>
+#include <QHash>
 
 class MainWindow;
 class VM;
@@ -83,7 +83,7 @@ class VMOperationMenu : public QMenu
             bool isHomeServer;
             bool isOptimalServer;
             double starRating;  // WLB star rating (if WLB enabled)
-            QMap<QSharedPointer<VM>, QString> cantRunReasons;
+            QHash<QSharedPointer<VM>, QString> cantRunReasons;
             bool canRunAny;
         };
 
@@ -119,7 +119,7 @@ class VMOperationMenu : public QMenu
         QStringList getSelectionRefs() const;
         QString getErrorDialogTitle() const;
         QString getErrorDialogText() const;
-        bool showCantRunDialog(const QMap<QSharedPointer<VM>, QString>& cantRunReasons, bool allowProceed);
+        bool showCantRunDialog(const QHash<QSharedPointer<VM>, QString>& cantRunReasons, bool allowProceed);
 };
 
 #endif // VMOPERATIONMENU_H

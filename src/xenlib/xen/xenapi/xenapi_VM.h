@@ -29,6 +29,7 @@
 #define XENAPI_VM_H
 
 #include "../../xenlib_global.h"
+#include <QtCore/QHash>
 #include <QtCore/QString>
 #include <QtCore/QStringList>
 #include <QtCore/QVariant>
@@ -703,7 +704,7 @@ namespace XenAPI
              *
              * Matches C# VM.retrieve_wlb_recommendations()
              */
-            static QMap<QString, QStringList> retrieve_wlb_recommendations(Session* session, const QString& vm);
+            static QHash<QString, QStringList> retrieve_wlb_recommendations(Session* session, const QString& vm);
 
             // TODO: Add more VM methods as needed (pause, unpause, reboot, etc.)
             // See xenadmin/XenModel/XenAPI/VM.cs for complete list

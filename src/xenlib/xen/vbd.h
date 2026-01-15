@@ -67,6 +67,12 @@ class XENLIB_EXPORT VBD : public XenObject
         //! Get VDI opaque reference (empty if CD drive with no disc)
         QString GetVDIRef() const;
 
+        //! Get VDI object (nullptr if CD drive with no disc)
+        QSharedPointer<VDI> GetVDI();
+
+        //! Check if this VBD is owned by its VM (other_config["owner"] present)
+        bool IsOwner() const;
+
         //! Get device name in guest (e.g., "xvda", "hda", "xvdb")
         QString GetDevice() const;
 

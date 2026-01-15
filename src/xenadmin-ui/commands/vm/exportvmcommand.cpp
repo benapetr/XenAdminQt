@@ -42,6 +42,11 @@ ExportVMCommand::ExportVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
+ExportVMCommand::ExportVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent)
+    : VMCommand(selectedVms, mainWindow, parent), m_exportWizard(nullptr)
+{
+}
+
 bool ExportVMCommand::CanRun() const
 {
     QSharedPointer<VM> vm = this->getVM();

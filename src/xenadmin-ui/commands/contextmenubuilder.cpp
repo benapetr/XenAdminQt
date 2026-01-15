@@ -84,8 +84,7 @@
 #include <QTreeWidget>
 #include <QMap>
 
-ContextMenuBuilder::ContextMenuBuilder(MainWindow* mainWindow, QObject* parent)
-    : QObject(parent), m_mainWindow(mainWindow)
+ContextMenuBuilder::ContextMenuBuilder(MainWindow* mainWindow, QObject* parent) : QObject(parent), m_mainWindow(mainWindow)
 {
 }
 
@@ -173,6 +172,9 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
 
 void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 {
+    if (!vm)
+        return;
+
     QString powerState = vm->GetPowerState();
     QList<QSharedPointer<VM>> selectedVms;
     QMap<QString, QSharedPointer<Host>> vmHostAncestors;
@@ -231,7 +233,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
         XenConnection* connection = selectedVms.first()->GetConnection();
         for (const QSharedPointer<VM>& item : selectedVms)
         {
-            if (!item || item->GetConnection() != connection)
+            if (item->GetConnection() != connection)
                 return nullptr;
         }
         return connection;
@@ -270,7 +272,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 
         for (const QSharedPointer<VM>& item : selectedVms)
         {
-            if (!item || item->IsLocked())
+            if (item->IsLocked())
                 continue;
 
             if (item->GetAllowedOperations().contains("start") && enabledTargetExists(item, connection))
@@ -287,7 +289,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
         bool atLeastOne = false;
         for (const QSharedPointer<VM>& item : selectedVms)
         {
-            if (!item || item->IsLocked())
+            if (item->IsLocked())
                 continue;
 
             if (item->GetAllowedOperations().contains("suspend"))
@@ -305,19 +307,17 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
             return false;
 
         XenCache* cache = connection->GetCache();
-        if (!cache)
-            return false;
 
         const QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
         for (const QSharedPointer<Host>& host : hosts)
         {
-            if (host && host->RestrictIntraPoolMigrate())
+            if (host->RestrictIntraPoolMigrate())
                 return false;
         }
 
         for (const QSharedPointer<VM>& item : selectedVms)
         {
-            if (!item || item->IsLocked())
+            if (item->IsLocked())
                 continue;
 
             if (item->GetAllowedOperations().contains("pool_migrate"))
@@ -329,28 +329,28 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
     // Power operations based on VM state
     if (powerState == "Halted")
     {
-        StartVMCommand* startCmd = new StartVMCommand(this->m_mainWindow, this);
+        StartVMCommand* startCmd = new StartVMCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, startCmd);
     } else if (powerState == "Running")
     {
-        StopVMCommand* stopCmd = new StopVMCommand(this->m_mainWindow, this);
+        StopVMCommand* stopCmd = new StopVMCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, stopCmd);
 
-        RestartVMCommand* restartCmd = new RestartVMCommand(this->m_mainWindow, this);
+        RestartVMCommand* restartCmd = new RestartVMCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, restartCmd);
 
-        PauseVMCommand* pauseCmd = new PauseVMCommand(this->m_mainWindow, this);
+        PauseVMCommand* pauseCmd = new PauseVMCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, pauseCmd);
 
-        SuspendVMCommand* suspendCmd = new SuspendVMCommand(this->m_mainWindow, this);
+        SuspendVMCommand* suspendCmd = new SuspendVMCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, suspendCmd);
     } else if (powerState == "Paused")
     {
-        UnpauseVMCommand* unpauseCmd = new UnpauseVMCommand(this->m_mainWindow, this);
+        UnpauseVMCommand* unpauseCmd = new UnpauseVMCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, unpauseCmd);
     } else if (powerState == "Suspended")
     {
-        ResumeVMCommand* resumeCmd = new ResumeVMCommand(this->m_mainWindow, this);
+        ResumeVMCommand* resumeCmd = new ResumeVMCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, resumeCmd);
     }
 
@@ -377,16 +377,16 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
     this->addSeparator(menu);
 
     // VM management operations
-    CloneVMCommand* cloneCmd = new CloneVMCommand(this->m_mainWindow, this);
+    CloneVMCommand* cloneCmd = new CloneVMCommand(selectedVms, this->m_mainWindow, this);
     this->addCommand(menu, cloneCmd);
 
-    ExportVMCommand* exportCmd = new ExportVMCommand(this->m_mainWindow, this);
+    ExportVMCommand* exportCmd = new ExportVMCommand(selectedVms, this->m_mainWindow, this);
     this->addCommand(menu, exportCmd);
 
     // Convert to template (only for halted VMs)
     if (powerState == "Halted")
     {
-        ConvertVMToTemplateCommand* convertCmd = new ConvertVMToTemplateCommand(this->m_mainWindow, this);
+        ConvertVMToTemplateCommand* convertCmd = new ConvertVMToTemplateCommand(selectedVms, this->m_mainWindow, this);
         this->addCommand(menu, convertCmd);
     }
 
@@ -398,7 +398,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 
     this->addSeparator(menu);
 
-    DeleteVMCommand* deleteCmd = new DeleteVMCommand(this->m_mainWindow, this);
+    DeleteVMCommand* deleteCmd = new DeleteVMCommand(selectedVms, this->m_mainWindow, this);
     this->addCommand(menu, deleteCmd);
 
     this->addSeparator(menu);
@@ -410,6 +410,9 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 
 void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM> snapshot)
 {
+    if (!snapshot)
+        return;
+
     QString vmRef = snapshot->OpaqueRef();
 
     // C# SingleSnapshot builder pattern:
@@ -446,6 +449,9 @@ void ContextMenuBuilder::buildSnapshotContextMenu(QMenu* menu, QSharedPointer<VM
 
 void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM> templateVM)
 {
+    if (!templateVM)
+        return;
+
     QString templateRef = templateVM->OpaqueRef();
 
     // VM Creation from template
@@ -470,6 +476,9 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM
 
 void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> host)
 {
+    if (!host)
+        return;
+
     bool enabled = host->IsEnabled();
 
     // New VM command (available for both pool and standalone hosts)

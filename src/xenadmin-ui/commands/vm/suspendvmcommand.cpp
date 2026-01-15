@@ -38,6 +38,11 @@ SuspendVMCommand::SuspendVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
+SuspendVMCommand::SuspendVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent)
+    : VMCommand(selectedVms, mainWindow, parent)
+{
+}
+
 bool SuspendVMCommand::CanRun() const
 {
     QSharedPointer<VM> vm = this->getVM();

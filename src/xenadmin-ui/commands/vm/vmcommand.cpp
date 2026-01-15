@@ -32,6 +32,11 @@ VMCommand::VMCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWind
 {
 }
 
+VMCommand::VMCommand(QList<QSharedPointer<VM>> vms, MainWindow *mainWindow, QObject *parent) : Command(mainWindow, parent)
+{
+    this->m_vms = vms;
+}
+
 QSharedPointer<VM> VMCommand::getVM() const
 {
     if (!this->m_overrideVM.isNull())

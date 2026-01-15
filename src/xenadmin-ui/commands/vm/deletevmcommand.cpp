@@ -44,6 +44,11 @@ DeleteVMCommand::DeleteVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
+DeleteVMCommand::DeleteVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent)
+    : VMCommand(selectedVms, mainWindow, parent)
+{
+}
+
 bool DeleteVMCommand::CanRun() const
 {
     QSharedPointer<VM> vm = this->getVM();

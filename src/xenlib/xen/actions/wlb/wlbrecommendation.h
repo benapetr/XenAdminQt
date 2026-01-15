@@ -28,7 +28,8 @@
 #ifndef WLBRECOMMENDATION_H
 #define WLBRECOMMENDATION_H
 
-#include <QMap>
+#include <QHash>
+#include <QSharedPointer>
 #include <QString>
 
 class VM;
@@ -50,7 +51,7 @@ class WlbRecommendation
         /**
          * @brief Map of VM -> whether it can run on this host
          */
-        QMap<VM*, bool> CanRunByVM;
+        QHash<QSharedPointer<VM>, bool> CanRunByVM;
 
         /**
          * @brief Average star rating across all VMs (0.0-5.0)
@@ -60,7 +61,7 @@ class WlbRecommendation
         /**
          * @brief Map of VM -> reason why it cannot run (if CanRunByVM[vm] == false)
          */
-        QMap<VM*, QString> CantRunReasons;
+        QHash<QSharedPointer<VM>, QString> CantRunReasons;
 };
 
 #endif // WLBRECOMMENDATION_H

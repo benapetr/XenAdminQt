@@ -31,6 +31,7 @@
 #include "../failure.h"
 #include <QtCore/QVariantList>
 #include <QtCore/QStringList>
+#include <QHash>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -1196,7 +1197,7 @@ namespace XenAPI
         return result.toString();
     }
 
-    QMap<QString, QStringList> VM::retrieve_wlb_recommendations(Session* session, const QString& vm)
+    QHash<QString, QStringList> VM::retrieve_wlb_recommendations(Session* session, const QString& vm)
     {
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("Not connected to XenServer");
@@ -1213,16 +1214,14 @@ namespace XenAPI
         QVariant result = api.ParseJsonRpcResponse(response);
 
         // Result is a Map<XenRef<Host>, string[]>
-        // Parse into QMap<QString, QStringList>
-        QMap<QString, QStringList> recommendations;
+        // Parse into QHash<QString, QStringList>
+        QHash<QString, QStringList> recommendations;
         
         if (result.type() == QVariant::Map)
         {
             QVariantMap map = result.toMap();
-            QMapIterator<QString, QVariant> it(map);
-            while (it.hasNext())
+            for (auto it = map.constBegin(); it != map.constEnd(); ++it)
             {
-                it.next();
                 QString hostRef = it.key();
                 QVariant value = it.value();
                 

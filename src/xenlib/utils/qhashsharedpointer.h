@@ -25,26 +25,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UNPAUSEVMCOMMAND_H
-#define UNPAUSEVMCOMMAND_H
+#ifndef XENLIB_UTILS_QHASHSHAREDPOINTER_H
+#define XENLIB_UTILS_QHASHSHAREDPOINTER_H
 
-#include "vmcommand.h"
+#include <QSharedPointer>
+#include <QtGlobal>
 
-class UnpauseVMCommand : public VMCommand
+template <typename T>
+inline uint qHash(const QSharedPointer<T>& key, uint seed = 0) noexcept
 {
-    Q_OBJECT
+    return qHash(key.data(), seed);
+}
 
-    public:
-        explicit UnpauseVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit UnpauseVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent = nullptr);
-
-        // Inherited from Command
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
-
-    private:
-        bool isVMPaused() const;
-};
-
-#endif // UNPAUSEVMCOMMAND_H
+#endif // XENLIB_UTILS_QHASHSHAREDPOINTER_H

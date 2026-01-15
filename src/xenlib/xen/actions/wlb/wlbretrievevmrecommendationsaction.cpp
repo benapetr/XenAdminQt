@@ -33,16 +33,17 @@
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../../xencache.h"
+#include <QHash>
 #include <QDebug>
 
-WlbRetrieveVmRecommendationsAction::WlbRetrieveVmRecommendationsAction(XenConnection* connection, const QList<VM*>& vms, QObject* parent)
+WlbRetrieveVmRecommendationsAction::WlbRetrieveVmRecommendationsAction(XenConnection* connection, const QList<QSharedPointer<VM>>& vms, QObject* parent)
     : AsyncOperation(connection, "Retrieving WLB VM recommendations", "", parent), m_vms(vms)
 {
     // Add required API role
     this->AddApiMethodToRoleCheck("vm.retrieve_wlb_recommendations");
 }
 
-QMap<VM*, QMap<Host*, QStringList>> WlbRetrieveVmRecommendationsAction::GetRecommendations() const
+QHash<QSharedPointer<VM>, QHash<QSharedPointer<Host>, QStringList>> WlbRetrieveVmRecommendationsAction::GetRecommendations() const
 {
     return this->m_recommendations;
 }
@@ -77,7 +78,7 @@ void WlbRetrieveVmRecommendationsAction::run()
 
     try
     {
-        foreach (VM* vm, this->m_vms)
+        for (const QSharedPointer<VM>& vm : this->m_vms)
         {
             if (!vm || !vm->IsValid())
                 continue;
@@ -89,19 +90,18 @@ void WlbRetrieveVmRecommendationsAction::run()
             SetDescription(QString("Retrieving WLB recommendations for VM '%1'").arg(vm->GetName()));
 
             // Call XenAPI to retrieve recommendations
-            QMap<QString, QStringList> hostRecommendations =
-                XenAPI::VM::retrieve_wlb_recommendations(session, vmRef);
+            QHash<QString, QStringList> hostRecommendations = XenAPI::VM::retrieve_wlb_recommendations(session, vmRef);
 
             // Convert host refs to Host* objects
-            QMap<Host*, QStringList> recommendations;
-            QMapIterator<QString, QStringList> it(hostRecommendations);
+            QHash<QSharedPointer<Host>, QStringList> recommendations;
+            QHashIterator<QString, QStringList> it(hostRecommendations);
             while (it.hasNext())
             {
                 it.next();
                 QSharedPointer<Host> host = GetConnection()->GetCache()->ResolveObject<Host>("host", it.key());
                 if (host && host->IsValid())
                 {
-                    recommendations[host.data()] = it.value();
+                    recommendations[host] = it.value();
                 }
             }
 

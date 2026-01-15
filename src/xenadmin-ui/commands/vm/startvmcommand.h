@@ -36,6 +36,7 @@ class StartVMCommand : public VMCommand
 
     public:
         explicit StartVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit StartVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;
@@ -45,11 +46,11 @@ class StartVMCommand : public VMCommand
         /**
          * @brief Run the command for a specific VM reference.
          * Matches C# StartVMCommand.Run() overloads used by console power controls.
-         * @param vmRef XenAPI opaque ref of the VM to start.
+         * @param vm XenAPI opaque ref of the VM to start.
          * @param vmName Optional name (used for prompts/logging); if empty it will be looked up.
          * @return true if the action was scheduled.
          */
-        bool runForVm(const QString& vmRef, const QString& vmName = QString());
+        bool RunForVm(QSharedPointer<VM> vm);
 };
 
 #endif // STARTVMCOMMAND_H

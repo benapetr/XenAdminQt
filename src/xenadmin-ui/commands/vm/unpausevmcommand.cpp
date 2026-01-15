@@ -39,6 +39,11 @@ UnpauseVMCommand::UnpauseVMCommand(MainWindow* mainWindow, QObject* parent)
 {
 }
 
+UnpauseVMCommand::UnpauseVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent)
+    : VMCommand(selectedVms, mainWindow, parent)
+{
+}
+
 bool UnpauseVMCommand::CanRun() const
 {
     QSharedPointer<VM> vm = this->getVM();

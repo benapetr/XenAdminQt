@@ -29,7 +29,7 @@
 #define WLBRECOMMENDATIONS_H
 
 #include "wlbrecommendation.h"
-#include <QMap>
+#include <QHash>
 #include <QList>
 #include <QStringList>
 
@@ -57,7 +57,7 @@ class WlbRecommendations
          * - ["WLB", "0.0", "reason"] - Zero rating with reason
          * - [error_code, detail, detail] - XenAPI error
          */
-        WlbRecommendations(const QList<VM*>& vms, const QMap<VM*, QMap<Host*, QStringList>>& recommendations);
+        WlbRecommendations(const QList<QSharedPointer<VM>>& vms, const QHash<QSharedPointer<VM>, QHash<QSharedPointer<Host>, QStringList>>& recommendations);
 
         /**
          * @brief Check if the WLB API call failed
@@ -70,7 +70,7 @@ class WlbRecommendations
          * @param vm The VM to find optimal placement for
          * @return Host with highest star rating (excluding VM's current resident host), or nullptr
          */
-        Host* GetOptimalServer(VM* vm) const;
+        QSharedPointer<Host> GetOptimalServer(const QSharedPointer<VM>& vm) const;
 
         /**
          * @brief Get star rating and eligibility for a specific host
@@ -83,7 +83,7 @@ class WlbRecommendations
          * 2. XenAPI failure: Parsed error message, CanRun=false
          * 3. Host not live: "Host not live", CanRun=false
          */
-        WlbRecommendation GetStarRating(Host* host) const;
+        WlbRecommendation GetStarRating(const QSharedPointer<Host>& host) const;
 
     private:
         /**
@@ -94,8 +94,8 @@ class WlbRecommendations
          */
         static bool parseStarRating(const QStringList& rec, double& starRating);
 
-        QList<VM*> m_vms;
-        QMap<VM*, QMap<Host*, QStringList>> m_recommendations;
+        QList<QSharedPointer<VM>> m_vms;
+        QHash<QSharedPointer<VM>, QHash<QSharedPointer<Host>, QStringList>> m_recommendations;
         bool m_isError = false;
 };
 

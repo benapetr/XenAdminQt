@@ -171,8 +171,7 @@ QStringList VMOperationMenu::getSelectionRefs() const
     QStringList refs;
     for (const QSharedPointer<VM>& vm : this->m_vms)
     {
-        if (vm)
-            refs.append(vm->OpaqueRef());
+        refs.append(vm->OpaqueRef());
     }
     return refs;
 }
@@ -207,12 +206,12 @@ QString VMOperationMenu::getErrorDialogText() const
     return tr("The following VMs could not be processed:");
 }
 
-bool VMOperationMenu::showCantRunDialog(const QMap<QSharedPointer<VM>, QString>& cantRunReasons, bool allowProceed)
+bool VMOperationMenu::showCantRunDialog(const QHash<QSharedPointer<VM>, QString>& cantRunReasons, bool allowProceed)
 {
     if (cantRunReasons.isEmpty())
         return false;
 
-    QMap<QSharedPointer<XenObject>, QString> dialogReasons;
+    QHash<QSharedPointer<XenObject>, QString> dialogReasons;
     for (auto it = cantRunReasons.begin(); it != cantRunReasons.end(); ++it)
     {
         if (!it.key())
@@ -224,11 +223,7 @@ bool VMOperationMenu::showCantRunDialog(const QMap<QSharedPointer<VM>, QString>&
         ? CommandErrorDialog::DialogMode::OKCancel
         : CommandErrorDialog::DialogMode::Close;
 
-    CommandErrorDialog dialog(this->getErrorDialogTitle(),
-                              this->getErrorDialogText(),
-                              dialogReasons,
-                              mode,
-                              this->m_mainWindow);
+    CommandErrorDialog dialog(this->getErrorDialogTitle(), this->getErrorDialogText(), dialogReasons, mode, this->m_mainWindow);
     int result = dialog.exec();
     if (!allowProceed)
         return false;
@@ -274,7 +269,7 @@ void VMOperationMenu::populate()
 
     for (const QSharedPointer<VM>& vm : this->m_vms)
     {
-        if (!vm || vm->GetConnection() != connection)
+        if (vm->GetConnection() != connection)
         {
             this->addDisabledReason(tr("Selected VMs must be on the same server."));
             this->menuAction()->setEnabled(false);
@@ -286,7 +281,7 @@ void VMOperationMenu::populate()
     bool atLeastOneAllowed = false;
     for (const QSharedPointer<VM>& vm : this->m_vms)
     {
-        if (vm && vm->GetAllowedOperations().contains(this->m_operationName))
+        if (vm->GetAllowedOperations().contains(this->m_operationName))
         {
             atLeastOneAllowed = true;
             break;
@@ -469,14 +464,7 @@ void VMOperationMenu::enableAppropriateHostsWlb()
         return;
 
     // Retrieve WLB recommendations for this VM
-    QList<VM*> vmList;
-    for (const QSharedPointer<VM>& vm : this->m_vms)
-    {
-        if (vm)
-            vmList.append(vm.data());
-    }
-
-    WlbRetrieveVmRecommendationsAction* wlbAction = new WlbRetrieveVmRecommendationsAction(connection, vmList, this);
+    WlbRetrieveVmRecommendationsAction* wlbAction = new WlbRetrieveVmRecommendationsAction(connection, this->m_vms, this);
 
     connect(wlbAction, &AsyncOperation::completed, this, [this, wlbAction]()
     {
@@ -494,14 +482,8 @@ void VMOperationMenu::enableAppropriateHostsWlb()
         }
 
         // Get recommendations
-        QMap<VM*, QMap<Host*, QStringList>> recommendations = wlbAction->GetRecommendations();
-        QList<VM*> vmList;
-        for (const QSharedPointer<VM>& vm : this->m_vms)
-        {
-            if (vm)
-                vmList.append(vm.data());
-        }
-        WlbRecommendations wlbRecs(vmList, recommendations);
+        QHash<QSharedPointer<VM>, QHash<QSharedPointer<Host>, QStringList>> recommendations = wlbAction->GetRecommendations();
+        WlbRecommendations wlbRecs(this->m_vms, recommendations);
 
         if (wlbRecs.IsError())
         {
@@ -521,7 +503,7 @@ void VMOperationMenu::enableAppropriateHostsWlb()
             bool anyOptimal = false;
             for (const QSharedPointer<VM>& vm : this->m_vms)
             {
-                if (vm && wlbRecs.GetOptimalServer(vm.data()) != nullptr)
+                if (wlbRecs.GetOptimalServer(vm))
                 {
                     anyOptimal = true;
                     break;
@@ -540,7 +522,7 @@ void VMOperationMenu::enableAppropriateHostsWlb()
             if (!item->host)
                 continue;
 
-            WlbRecommendation rec = wlbRecs.GetStarRating(item->host.data());
+            WlbRecommendation rec = wlbRecs.GetStarRating(item->host);
             
             QString label = item->host->GetName();
             bool canRunAny = false;
@@ -548,16 +530,13 @@ void VMOperationMenu::enableAppropriateHostsWlb()
             item->cantRunReasons.clear();
             for (const QSharedPointer<VM>& vm : this->m_vms)
             {
-                if (!vm)
-                    continue;
-                bool canRun = rec.CanRunByVM.value(vm.data(), false);
+                bool canRun = rec.CanRunByVM.value(vm, false);
                 if (canRun)
                 {
                     canRunAny = true;
-                }
-                else
+                } else
                 {
-                    QString reason = rec.CantRunReasons.value(vm.data(), QString());
+                    QString reason = rec.CantRunReasons.value(vm, QString());
                     if (!reason.isEmpty())
                         reasons.insert(reason);
                     item->cantRunReasons.insert(vm, reason);
@@ -589,16 +568,13 @@ void VMOperationMenu::enableAppropriateHostsWlb()
             {
                 if (!qFuzzyCompare(a->starRating, b->starRating))
                     return a->starRating > b->starRating;
-            }
-            else if (!a->action->isEnabled() && !b->action->isEnabled())
+            } else if (!a->action->isEnabled() && !b->action->isEnabled())
             {
                 return a->host && b->host ? a->host->GetName() < b->host->GetName() : false;
-            }
-            else if (!a->action->isEnabled())
+            } else if (!a->action->isEnabled())
             {
                 return false;
-            }
-            else if (!b->action->isEnabled())
+            } else if (!b->action->isEnabled())
             {
                 return true;
             }
@@ -641,19 +617,12 @@ void VMOperationMenu::enqueueHostMenuItem(const QSharedPointer<Host>& host, Host
             // Home server operation
             for (const QSharedPointer<VM>& vm : this->m_vms)
             {
-                if (!vm)
-                    continue;
-
                 QString reason;
                 bool canRun = false;
                 if (host)
                 {
-                    canRun = VMOperationHelpers::VmCanBootOnHost(connection, vm,
-                                                                 host->OpaqueRef(),
-                                                                 this->m_operationName,
-                                                                 &reason);
-                }
-                else
+                    canRun = VMOperationHelpers::VmCanBootOnHost(connection, vm, host->OpaqueRef(), this->m_operationName, &reason);
+                } else
                 {
                     reason = tr("No home server");
                 }
@@ -661,8 +630,7 @@ void VMOperationMenu::enqueueHostMenuItem(const QSharedPointer<Host>& host, Host
                 if (canRun)
                 {
                     canRunAny = true;
-                }
-                else
+                } else
                 {
                     menuItem->cantRunReasons.insert(vm, reason);
                     if (!reason.isEmpty())
@@ -687,15 +655,11 @@ void VMOperationMenu::enqueueHostMenuItem(const QSharedPointer<Host>& host, Host
                 menuItem->action->setEnabled(canRunAny);
                 menuItem->canRunAny = canRunAny;
             }, Qt::QueuedConnection);
-        }
-        else if (host)
+        } else if (host)
         {
             // Regular host operation
             for (const QSharedPointer<VM>& vm : this->m_vms)
             {
-                if (!vm)
-                    continue;
-
                 QString reason;
                 bool canRun = VMOperationHelpers::VmCanBootOnHost(connection, vm,
                                                                  host->OpaqueRef(),
@@ -704,8 +668,7 @@ void VMOperationMenu::enqueueHostMenuItem(const QSharedPointer<Host>& host, Host
                 if (canRun)
                 {
                     canRunAny = true;
-                }
-                else
+                } else
                 {
                     menuItem->cantRunReasons.insert(vm, reason);
                     if (!reason.isEmpty())
@@ -741,16 +704,14 @@ void VMOperationMenu::runHomeServerOperation()
     if (!connection)
         return;
 
-    QString affinityRef = this->m_vms.first()->GetData().value("affinity").toString();
-    QSharedPointer<Host> affinityHost = connection->GetCache()->ResolveObject<Host>("host", affinityRef);
+    QSharedPointer<Host> affinityHost = this->m_vms.first()->GetAffinityHost();
 
     if (!affinityHost)
     {
-        QMap<QSharedPointer<VM>, QString> reasons;
+        QHash<QSharedPointer<VM>, QString> reasons;
         for (const QSharedPointer<VM>& vm : this->m_vms)
         {
-            if (vm)
-                reasons.insert(vm, tr("Home server not found."));
+            reasons.insert(vm, tr("Home server not found."));
         }
         this->showCantRunDialog(reasons, false);
         return;
@@ -764,29 +725,19 @@ void VMOperationMenu::runOptimalServerOperation()
     if (this->m_vms.isEmpty() || !this->m_wlbRecommendations)
         return;
 
-    QMap<QSharedPointer<VM>, QString> cantRun;
+    QHash<QSharedPointer<VM>, QString> cantRun;
     QList<QPair<QSharedPointer<VM>, QSharedPointer<Host>>> targets;
 
     for (const QSharedPointer<VM>& vm : this->m_vms)
     {
-        if (!vm)
-            continue;
-
-        Host* optimalHost = this->m_wlbRecommendations->GetOptimalServer(vm.data());
+        QSharedPointer<Host> optimalHost = this->m_wlbRecommendations->GetOptimalServer(vm);
         if (!optimalHost)
         {
             cantRun.insert(vm, tr("No optimal server available."));
             continue;
         }
 
-        QSharedPointer<Host> host = vm->GetConnection()->GetCache()->ResolveObject<Host>("host", optimalHost->OpaqueRef());
-        if (!host)
-        {
-            cantRun.insert(vm, tr("Optimal server not found."));
-            continue;
-        }
-
-        targets.append(qMakePair(vm, host));
+        targets.append(qMakePair(vm, optimalHost));
     }
 
     if (!cantRun.isEmpty())
@@ -814,31 +765,25 @@ void VMOperationMenu::runOperationOnHostForVms(const QSharedPointer<Host>& host,
     XenConnection* connection = vms.first()->GetConnection();
     if (!connection || !connection->IsConnected())
     {
-        QMap<QSharedPointer<VM>, QString> reasons;
+        QHash<QSharedPointer<VM>, QString> reasons;
         for (const QSharedPointer<VM>& vm : vms)
         {
-            if (vm)
-                reasons.insert(vm, tr("Not connected to server."));
+            reasons.insert(vm, tr("Not connected to server."));
         }
         this->showCantRunDialog(reasons, false);
         return;
     }
 
     // Verify operation is still allowed
-    QMap<QSharedPointer<VM>, QString> cantRun;
+    QHash<QSharedPointer<VM>, QString> cantRun;
     QList<QSharedPointer<VM>> runnable;
     for (const QSharedPointer<VM>& vm : vms)
     {
-        if (!vm)
-            continue;
-
         QString reason;
-        if (VMOperationHelpers::VmCanBootOnHost(connection, vm, host->OpaqueRef(),
-                                                this->m_operationName, &reason))
+        if (VMOperationHelpers::VmCanBootOnHost(connection, vm, host->OpaqueRef(), this->m_operationName, &reason))
         {
             runnable.append(vm);
-        }
-        else
+        } else
         {
             cantRun.insert(vm, reason);
         }

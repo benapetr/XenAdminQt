@@ -28,24 +28,22 @@
 #include "wlbrecommendations.h"
 #include "../../vm.h"
 #include "../../host.h"
+#include <QHash>
 #include <QDebug>
 
 // Message constants (TODO: Move to Messages class when implemented)
 static const QString HOST_MENU_CURRENT_SERVER = "Current server";
 static const QString HOST_NOT_LIVE_SHORT = "Host not live";
 
-WlbRecommendations::WlbRecommendations(const QList<VM*>& vms, const QMap<VM*, QMap<Host*, QStringList>>& recommendations)
+WlbRecommendations::WlbRecommendations(const QList<QSharedPointer<VM>>& vms, const QHash<QSharedPointer<VM>, QHash<QSharedPointer<Host>, QStringList>>& recommendations)
     : m_vms(vms), m_recommendations(recommendations)
 {
     // Check if any recommendations contain errors
-    QMapIterator<VM*, QMap<Host*, QStringList>> vmIt(recommendations);
-    while (vmIt.hasNext())
+    for (auto vmIt = recommendations.constBegin(); vmIt != recommendations.constEnd(); ++vmIt)
     {
-        vmIt.next();
-        QMapIterator<Host*, QStringList> hostIt(vmIt.value());
-        while (hostIt.hasNext())
+        const QHash<QSharedPointer<Host>, QStringList>& hostRecs = vmIt.value();
+        for (auto hostIt = hostRecs.constBegin(); hostIt != hostRecs.constEnd(); ++hostIt)
         {
-            hostIt.next();
             const QStringList& rec = hostIt.value();
             if (rec.size() > 0 && rec[0].compare("WLB", Qt::CaseInsensitive) != 0)
             {
@@ -61,21 +59,19 @@ bool WlbRecommendations::IsError() const
     return this->m_isError;
 }
 
-Host* WlbRecommendations::GetOptimalServer(VM* vm) const
+QSharedPointer<Host> WlbRecommendations::GetOptimalServer(const QSharedPointer<VM>& vm) const
 {
     if (!this->m_recommendations.contains(vm))
-        return nullptr;
+        return QSharedPointer<Host>();
 
-    const QMap<Host*, QStringList>& hostRecs = this->m_recommendations[vm];
+    const QHash<QSharedPointer<Host>, QStringList>& hostRecs = this->m_recommendations[vm];
     
-    Host* bestHost = nullptr;
+    QSharedPointer<Host> bestHost;
     double bestStars = -1.0;
 
-    QMapIterator<Host*, QStringList> it(hostRecs);
-    while (it.hasNext())
+    for (auto it = hostRecs.constBegin(); it != hostRecs.constEnd(); ++it)
     {
-        it.next();
-        Host* host = it.key();
+        QSharedPointer<Host> host = it.key();
         const QStringList& rec = it.value();
 
         double stars = 0.0;
@@ -83,7 +79,7 @@ Host* WlbRecommendations::GetOptimalServer(VM* vm) const
             continue;
 
         // Exclude VM's current resident host
-        if (vm->GetResidentOnHost() == host)
+        if (vm->GetResidentOnHost() == host.data())
             continue;
 
         if (stars > bestStars)
@@ -96,26 +92,26 @@ Host* WlbRecommendations::GetOptimalServer(VM* vm) const
     return bestHost;
 }
 
-WlbRecommendation WlbRecommendations::GetStarRating(Host* host) const
+WlbRecommendation WlbRecommendations::GetStarRating(const QSharedPointer<Host>& host) const
 {
     WlbRecommendation result;
     
     double totalStars = 0.0;
     int count = 0;
 
-    foreach (VM* vm, this->m_vms)
+    for (const QSharedPointer<VM>& vm : this->m_vms)
     {
         if (!this->m_recommendations.contains(vm))
             continue;
 
-        const QMap<Host*, QStringList>& hostRecs = this->m_recommendations[vm];
+        const QHash<QSharedPointer<Host>, QStringList>& hostRecs = this->m_recommendations[vm];
         if (!hostRecs.contains(host))
             continue;
 
         const QStringList& rec = hostRecs[host];
 
         // Check if VM is already on this host
-        if (vm->GetResidentOnHost() == host)
+        if (vm->GetResidentOnHost() == host.data())
         {
             result.CanRunByVM[vm] = false;
             result.CantRunReasons[vm] = HOST_MENU_CURRENT_SERVER;

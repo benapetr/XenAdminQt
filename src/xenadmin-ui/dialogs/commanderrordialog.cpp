@@ -92,7 +92,7 @@ CommandErrorDialog::CommandErrorDialog(const QString& title,
 // Constructor with XenObject pointers (matches C# version)
 CommandErrorDialog::CommandErrorDialog(const QString& title,
                                        const QString& text,
-                                       const QMap<QSharedPointer<XenObject>, QString>& cantRunReasons,
+                                       const QHash<QSharedPointer<XenObject>, QString>& cantRunReasons,
                                        DialogMode mode,
                                        QWidget* parent)
     : QDialog(parent)

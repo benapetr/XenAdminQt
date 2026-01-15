@@ -126,15 +126,14 @@ void DetachSRCommand::Run()
     }
 
     QList<QSharedPointer<SR>> runnable;
-    QMap<QSharedPointer<XenObject>, QString> cantRunReasons;
+    QHash<QSharedPointer<XenObject>, QString> cantRunReasons;
     for (const QSharedPointer<SR>& sr : srs)
     {
         QString reason;
         if (canRunForSr(sr, &reason))
         {
             runnable.append(sr);
-        }
-        else if (sr)
+        } else if (sr)
         {
             cantRunReasons.insert(sr, reason);
         }

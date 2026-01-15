@@ -52,74 +52,45 @@ bool DeactivateVBDCommand::CanRun() const
     if (!vbd || !vbd->IsValid())
         return false;
 
-    return this->canRunVBD(vbd->OpaqueRef());
+    return this->canRunVBD(vbd);
 }
 
-bool DeactivateVBDCommand::canRunVBD(const QString& vbdRef) const
+bool DeactivateVBDCommand::canRunVBD(QSharedPointer<VBD> vbd) const
 {
-    QSharedPointer<VBD> vbd = this->getVBD();
     if (!vbd || !vbd->IsValid())
         return false;
 
-    XenCache* cache = vbd->GetCache();
-
-    QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-    if (vbdData.isEmpty())
-        return false;
-
-    // Check if VBD is locked
     if (vbd->IsLocked())
         return false;
 
-    // Get VM
-    QString vmRef = vbdData.value("VM").toString();
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-    if (vmData.isEmpty() || vmData.value("is_a_template").toBool())
+    QSharedPointer<VM> vm = vbd->GetVM();
+    if (!vm || vm->IsTemplate())
         return false;
 
-    // Get VDI
-    QString vdiRef = vbdData.value("VDI").toString();
-    if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
+    QSharedPointer<VDI> vdi = vbd->GetVDI();
+    if (!vdi)
         return false; // No VDI attached
 
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-    if (vdiData.isEmpty())
-        return false;
-
-    // Check if VDI is locked
-    if (vdiData.value("locked", false).toBool())
+    if (vdi->IsLocked())
         return false;
 
     // Check VM is running
-    QString powerState = vmData.value("power_state").toString();
+    QString powerState = vm->GetPowerState();
     if (powerState != "Running")
         return false;
 
     // Check if system disk AND owner (boot disk cannot be unplugged)
-    QString vdiType = vdiData.value("type").toString();
-    if (vdiType == "system")
-    {
-        // C# checks GetIsOwner() - for now we'll block all system disks
-        // TODO: Implement proper VBD.GetIsOwner() check
-        bool isOwner = vbdData.value("device", "").toString() == "0" ||
-                       vbdData.value("bootable", false).toBool();
-        if (isOwner)
-            return false;
-    }
-
-    // Check if not currently attached
-    bool currentlyAttached = vbdData.value("currently_attached").toBool();
-    if (!currentlyAttached)
-    {
+    QString vdiType = vdi->GetType();
+    if (vdiType == "system" && vbd->IsOwner())
         return false;
-    }
+
+    if (!vbd->CurrentlyAttached())
+        return false;
 
     // Check allowed operations
-    QVariantList allowedOps = vbdData.value("allowed_operations").toList();
+    QStringList allowedOps = vbd->AllowedOperations();
     if (!allowedOps.contains("unplug"))
-    {
         return false;
-    }
 
     return true;
 }
@@ -139,37 +110,26 @@ void DeactivateVBDCommand::Run()
     if (!vbd || !vbd->IsValid())
         return;
 
-    QString vbdRef = vbd->OpaqueRef();
-    XenCache* cache = vbd->GetConnection()->GetCache();
+    QSharedPointer<VDI> vdi = vbd->GetVDI();
+    QSharedPointer<VM> vm = vbd->GetVM();
 
-    QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-    if (vbdData.isEmpty())
+    if (!vm || !vdi)
         return;
 
-    // Get VDI and VM names for status message
-    QString vdiRef = vbdData.value("VDI").toString();
-    QString vmRef = vbdData.value("VM").toString();
-
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-
-    QString vdiName = vdiData.value("name_label", "disk").toString();
-    QString vmName = vmData.value("name_label", "VM").toString();
+    QString vdiName = vdi->GetName();
+    QString vmName = vm->GetName();
 
     // Execute unplug operation directly (matches C# DelegatedAsyncAction pattern)
     try
     {
-        XenAPI::VBD::unplug(vbd->GetConnection()->GetSession(), vbdRef);
+        XenAPI::VBD::unplug(vbd->GetConnection()->GetSession(), vbd->OpaqueRef());
 
-        this->mainWindow()->ShowStatusMessage(
-            QString("Successfully deactivated virtual disk '%1' from VM '%2'").arg(vdiName, vmName),
-            5000);
+        this->mainWindow()->ShowStatusMessage(QString("Successfully deactivated virtual disk '%1' from VM '%2'").arg(vdiName, vmName), 5000);
     } catch (const std::exception& e)
     {
         QMessageBox::warning(
             this->mainWindow(),
             "Deactivate Virtual Disk Failed",
-            QString("Failed to deactivate virtual disk '%1' from VM '%2': %3")
-                .arg(vdiName, vmName, e.what()));
+            QString("Failed to deactivate virtual disk '%1' from VM '%2': %3").arg(vdiName, vmName, e.what()));
     }
 }

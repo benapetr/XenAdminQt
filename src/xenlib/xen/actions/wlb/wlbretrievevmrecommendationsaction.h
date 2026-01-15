@@ -29,7 +29,7 @@
 #define WLBRETRIEVEVMRECOMMENDATIONSACTION_H
 
 #include "../../asyncoperation.h"
-#include <QMap>
+#include <QHash>
 #include <QStringList>
 
 class VM;
@@ -54,7 +54,7 @@ class WlbRetrieveVmRecommendationsAction : public AsyncOperation
          * @param vms List of VMs to retrieve recommendations for
          * @param parent Optional parent QObject
          */
-        explicit WlbRetrieveVmRecommendationsAction(XenConnection* connection, const QList<VM*>& vms, QObject* parent = nullptr);
+        explicit WlbRetrieveVmRecommendationsAction(XenConnection* connection, const QList<QSharedPointer<VM>>& vms, QObject* parent = nullptr);
 
         /**
      * @brief Get the WLB recommendations
@@ -62,7 +62,7 @@ class WlbRetrieveVmRecommendationsAction : public AsyncOperation
      *
      * String array format: ["WLB", "star_rating"] or ["WLB", "0.0", "reason"] or [error_code, detail, detail]
      */
-    QMap<VM*, QMap<Host*, QStringList>> GetRecommendations() const;
+        QHash<QSharedPointer<VM>, QHash<QSharedPointer<Host>, QStringList>> GetRecommendations() const;
 
     protected:
         /**
@@ -71,8 +71,8 @@ class WlbRetrieveVmRecommendationsAction : public AsyncOperation
         void run() override;
 
     private:
-        QList<VM*> m_vms;
-        QMap<VM*, QMap<Host*, QStringList>> m_recommendations;
+        QList<QSharedPointer<VM>> m_vms;
+        QHash<QSharedPointer<VM>, QHash<QSharedPointer<Host>, QStringList>> m_recommendations;
 };
 
 #endif // WLBRETRIEVEVMRECOMMENDATIONSACTION_H

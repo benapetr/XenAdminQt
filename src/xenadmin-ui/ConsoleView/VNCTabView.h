@@ -506,9 +506,8 @@ class VNCTabView : public QWidget
         XenCache* cache() const;
         QVariantMap getCachedObjectData(const QString& type, const QString& ref) const;
         bool isSRDriverDomain(const QString& vmRef, QString* outSRRef = nullptr) const;
-        bool hasRDP(const QString& vmRef) const;
-        bool isRDPEnabled(const QString& vmRef) const;
-        bool rdpControlEnabledForVm(const QString& vmRef) const;
+        bool hasRDP(QSharedPointer<VM> vm) const;
+        bool rdpControlEnabledForVm(QSharedPointer<VM> vm) const;
         bool canEnableRDPForVm() const;
         bool isVMWindows(const QString& vmRef) const;
         QString getVMIPAddressForSSH(const QString& vmRef) const;
