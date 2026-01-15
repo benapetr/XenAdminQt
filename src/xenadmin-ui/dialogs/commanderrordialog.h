@@ -35,8 +35,6 @@
 #include <QSharedPointer>
 #include <QIcon>
 
-#include "xenlib/utils/qhashsharedpointer.h"
-
 namespace Ui {
 class CommandErrorDialog;
 }
