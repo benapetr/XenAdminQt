@@ -26,7 +26,6 @@
  */
 
 #include "activatevbdcommand.h"
-#include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 #include "xenlib/xen/vbd.h"
@@ -35,7 +34,6 @@
 #include "xenlib/xen/xenapi/xenapi_VBD.h"
 #include "../../mainwindow.h"
 #include <QMessageBox>
-#include <QDebug>
 
 ActivateVBDCommand::ActivateVBDCommand(MainWindow* mainWindow, QObject* parent) : VBDCommand(mainWindow, parent)
 {
@@ -52,158 +50,84 @@ bool ActivateVBDCommand::CanRun() const
     if (!vbd || !vbd->IsValid())
         return false;
 
-    return this->canRunVBD(vbd->OpaqueRef());
+    return this->canRunVBD(vbd);
 }
 
-bool ActivateVBDCommand::canRunVBD(const QString& vbdRef) const
+bool ActivateVBDCommand::canRunVBD(const QSharedPointer<VBD> &vbd) const
 {
-    QSharedPointer<VBD> vbd = this->getVBD();
     if (!vbd || !vbd->IsValid())
         return false;
 
-    XenCache* cache = vbd->GetCache();
-
-    QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-    if (vbdData.isEmpty())
+    QSharedPointer<VM> vm = vbd->GetVM();
+    if (!vm || !vm->IsRealVM() || vm->GetPowerState() != "Running")
         return false;
 
-    // Get VM
-    QString vmRef = vbdData.value("VM").toString();
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-    if (vmData.isEmpty() || vmData.value("is_a_template").toBool())
-    {
-        return false;
-    }
-
-    // Get VDI
-    QString vdiRef = vbdData.value("VDI").toString();
-    if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
-    {
-        return false; // No VDI attached
-    }
-
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-    if (vdiData.isEmpty())
-    {
-        return false;
-    }
-
-    // Check VM is running
-    QString powerState = vmData.value("power_state").toString();
-    if (powerState != "Running")
-    {
-        return false;
-    }
-
+    QSharedPointer<VDI> vdi = vbd->GetVDI();
     // Check if system disk
-    QString vdiType = vdiData.value("type").toString();
-    if (vdiType == "system")
-    {
+    if (!vdi || vdi->GetType() == "system")
         return false;
-    }
 
     // Check for IO drivers (simplified - C# has complex version checking)
     // For now, we'll assume IO drivers are available
+    if (areIODriversNeededAndMissing(vm))
+        return false;
 
     // Check if already attached
-    bool currentlyAttached = vbdData.value("currently_attached").toBool();
-    if (currentlyAttached)
-    {
+    if (vbd->CurrentlyAttached())
         return false;
-    }
 
     // Check allowed operations
-    QVariantList allowedOps = vbdData.value("allowed_operations").toList();
-    if (!allowedOps.contains("plug"))
-    {
+    if (!vbd->AllowedOperations().contains("plug"))
         return false;
-    }
 
     return true;
 }
 
-QString ActivateVBDCommand::getCantRunReasonVBD(QSharedPointer<VBD> vbd) const
+QString ActivateVBDCommand::getCantRunReasonVBD(const QSharedPointer<VBD> &vbd) const
 {
     if (!vbd || !vbd->IsConnected())
-    {
         return "VBD not found";
-    }
 
-    XenCache* cache = vbd->GetConnection()->GetCache();
-    QVariantMap vbdData = vbd->GetData();
-
-    // Get VM
-    QString vmRef = vbdData.value("VM").toString();
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-    {
+    QSharedPointer<VM> vm = vbd->GetVM();
+    if (!vm)
         return "VM not found";
-    }
 
-    if (vmData.value("is_a_template").toBool())
-    {
+    if (vm->IsTemplate())
         return "Cannot activate disk on template";
-    }
 
-    // Get VDI
-    QString vdiRef = vbdData.value("VDI").toString();
-    if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
-    {
-        return "No VDI attached to this VBD";
-    }
-
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-    if (vdiData.isEmpty())
-    {
+    QSharedPointer<VDI> vdi = vbd->GetVDI();
+    if (!vdi)
         return "VDI not found";
-    }
 
     // Get SR to check if contactable
-    QString srRef = vdiData.value("SR").toString();
-    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-    if (srData.isEmpty())
-    {
+    if (!vdi->GetSR())
         return "SR could not be contacted";
-    }
 
     // Check if VDI is locked
-    if (vdiData.value("Locked", false).toBool())
-    {
+    if (vdi->IsLocked())
         return "Virtual disk is in use";
-    }
 
     // Check VM power state
-    QString powerState = vmData.value("power_state").toString();
-    if (powerState != "Running")
-    {
-        QString vmName = vmData.value("name_label").toString();
-        return QString("VM '%1' is not running").arg(vmName);
-    }
+    if (vm->GetPowerState() != "Running")
+        return QString("VM '%1' is not running").arg(vm->GetName());
 
     // Check if system disk
-    QString vdiType = vdiData.value("type").toString();
-    if (vdiType == "system")
-    {
+    if (vdi->GetType() == "system")
         return "Cannot hot-plug system disk";
-    }
 
     // Check if already attached
-    bool currentlyAttached = vbdData.value("currently_attached").toBool();
-    if (currentlyAttached)
-    {
-        QString vmName = vmData.value("name_label").toString();
-        return QString("Virtual disk is already active on %1").arg(vmName);
-    }
+    if (vbd->CurrentlyAttached())
+        return QString("Virtual disk is already active on %1").arg(vm->GetName());
 
     return "Unknown reason";
 }
 
-bool ActivateVBDCommand::areIODriversNeededAndMissing(const QVariantMap& vmData) const
+bool ActivateVBDCommand::areIODriversNeededAndMissing(const QSharedPointer<VM> &vm) const
 {
     // Simplified check - C# has complex API version checking (Ely or greater)
     // For modern XenServer, IO drivers are not strictly required for hot-plug
     // TODO: Implement full virtualization status checking
-    Q_UNUSED(vmData);
+    Q_UNUSED(vm);
     return false;
 }
 
@@ -213,27 +137,19 @@ void ActivateVBDCommand::Run()
     if (!vbd || !vbd->IsValid())
         return;
 
-    QString vbdRef = vbd->OpaqueRef();
-    XenCache* cache = vbd->GetCache();
+    QSharedPointer<VDI> vdi = vbd->GetVDI();
+    QSharedPointer<VM> vm = vbd->GetVM();
 
-    QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-    if (vbdData.isEmpty())
+    if (!vm || !vdi)
         return;
 
-    // Get VDI and VM names for status message
-    QString vdiRef = vbdData.value("VDI").toString();
-    QString vmRef = vbdData.value("VM").toString();
-
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-
-    QString vdiName = vdiData.value("name_label", "disk").toString();
-    QString vmName = vmData.value("name_label", "VM").toString();
+    QString vdiName = vdi->GetName();
+    QString vmName = vm->GetName();
 
     // Execute plug operation directly (matches C# DelegatedAsyncAction pattern)
     try
     {
-        XenAPI::VBD::plug(vbd->GetConnection()->GetSession(), vbdRef);
+        XenAPI::VBD::plug(vbd->GetConnection()->GetSession(), vbd->OpaqueRef());
 
         this->mainWindow()->ShowStatusMessage(
             QString("Successfully activated virtual disk '%1' on VM '%2'").arg(vdiName, vmName),

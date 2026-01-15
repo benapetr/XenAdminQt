@@ -27,16 +27,13 @@
 
 #include "detachvirtualdiskcommand.h"
 #include "deactivatevbdcommand.h"
-#include "xencache.h"
-#include "xen/network/connection.h"
+#include "xen/vbd.h"
 #include "xen/vdi.h"
 #include "xen/vm.h"
 #include "xen/actions/vdi/detachvirtualdiskaction.h"
-#include "xen/xenobject.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>
-#include <QDebug>
 
 DetachVirtualDiskCommand::DetachVirtualDiskCommand(MainWindow* mainWindow, QObject* parent)
     : VDICommand(mainWindow, parent)
@@ -54,89 +51,60 @@ bool DetachVirtualDiskCommand::CanRun() const
     if (!vdi || !vdi->IsValid())
         return false;
 
-    return this->canRunVDI(vdi->OpaqueRef());
+    return this->canRunVDI(vdi);
 }
 
-bool DetachVirtualDiskCommand::canRunVDI(const QString& vdiRef) const
+bool DetachVirtualDiskCommand::canRunVDI(QSharedPointer<VDI> vdi) const
 {
-    QSharedPointer<VDI> vdi = this->getVDI();
     if (!vdi || !vdi->IsValid())
         return false;
 
-    XenCache* cache = vdi->GetConnection()->GetCache();
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-    if (vdiData.isEmpty())
-        return false;
-
     // Check if VDI is locked
-    if (vdiData.value("Locked", false).toBool())
+    if (vdi->IsLocked())
         return false;
 
     // Get all VBDs attached to this VDI
-    QVariantList vbds = vdiData.value("VBDs").toList();
+    QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();
     if (vbds.isEmpty())
         return false; // No VBDs - nothing to detach
 
     // Check each VBD - at least one must be detachable
     bool hasDetachableVBD = false;
 
-    for (const QVariant& vbdVar : vbds)
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        QString vbdRef = vbdVar.toString();
-        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-
-        if (vbdData.isEmpty())
-        {
+        if (!vbd || !vbd->IsValid())
             continue;
-        }
 
         // If VBD is currently attached, check if we can deactivate it
-        bool currentlyAttached = vbdData.value("currently_attached").toBool();
-        if (currentlyAttached)
+        if (vbd->CurrentlyAttached())
         {
             // Check if this VBD can be deactivated (using DeactivateVBDCommand logic)
             // For simplicity, we'll check basic conditions here
 
             // Get VM
-            QString vmRef = vbdData.value("VM").toString();
-            QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-
-            if (vmData.isEmpty() || vmData.value("is_a_template").toBool())
-            {
+            QSharedPointer<VM> vm = vbd->GetVM();
+            if (!vm || vm->IsTemplate())
                 continue;
-            }
 
             // Check VM is running
-            QString powerState = vmData.value("power_state").toString();
-            if (powerState != "Running")
-            {
+            if (vm->GetPowerState() != "Running")
                 continue; // Can't hot-unplug if VM is not running
-            }
 
             // Check if VBD or VDI is locked
-            if (vbdData.value("Locked", false).toBool())
-            {
+            if (vbd->IsLocked())
                 continue;
-            }
 
             // Check if system boot disk
-            QString vdiType = vdiData.value("type").toString();
-            if (vdiType == "system")
+            if (vdi->GetType() == "system")
             {
-                bool isOwner = vbdData.value("device", "").toString() == "0" ||
-                               vbdData.value("bootable", false).toBool();
-                if (isOwner)
-                {
+                if (vbd->IsOwner())
                     continue; // Can't detach system boot disk
-                }
             }
 
             // Check allowed operations
-            QVariantList allowedOps = vbdData.value("allowed_operations").toList();
-            if (!allowedOps.contains("unplug"))
-            {
+            if (!vbd->AllowedOperations().contains("unplug"))
                 continue;
-            }
         }
 
         // If we reach here, this VBD can be detached
@@ -146,76 +114,47 @@ bool DetachVirtualDiskCommand::canRunVDI(const QString& vdiRef) const
     return hasDetachableVBD;
 }
 
-QString DetachVirtualDiskCommand::getCantRunReasonVDI(const QString& vdiRef) const
+QString DetachVirtualDiskCommand::getCantRunReasonVDI(QSharedPointer<VDI> vdi) const
 {
-    QSharedPointer<VDI> vdi = this->getVDI();
-    XenCache* cache = vdi ? vdi->GetConnection()->GetCache() : nullptr;
-    if (!cache)
-    {
-        return "Cache not available";
-    }
-
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-    if (vdiData.isEmpty())
-    {
+    if (!vdi || !vdi->IsValid())
         return "VDI not found";
-    }
 
-    if (vdiData.value("Locked", false).toBool())
-    {
+    if (vdi->IsLocked())
         return "Virtual disk is in use";
-    }
 
-    QVariantList vbds = vdiData.value("VBDs").toList();
+    QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();
     if (vbds.isEmpty())
     {
         return "Virtual disk is not attached to any VM";
     }
 
     // Check each VBD for detailed reason
-    for (const QVariant& vbdVar : vbds)
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        QString vbdRef = vbdVar.toString();
-        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-
-        if (vbdData.isEmpty())
-        {
+        if (!vbd || !vbd->IsValid())
             continue;
-        }
 
-        bool currentlyAttached = vbdData.value("currently_attached").toBool();
-        if (currentlyAttached)
+        if (vbd->CurrentlyAttached())
         {
-            QString vmRef = vbdData.value("VM").toString();
-            QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-            QString vmName = vmData.value("name_label").toString();
+            QSharedPointer<VM> vm = vbd->GetVM();
+            QString vmName = vm ? vm->GetName() : QString("VM");
 
-            if (vmData.value("is_a_template").toBool())
+            if (vm && vm->IsTemplate())
             {
                 return "Cannot detach disk from template";
             }
 
-            QString powerState = vmData.value("power_state").toString();
-            if (powerState != "Running")
-            {
+            if (vm && vm->GetPowerState() != "Running")
                 return QString("Cannot hot-detach from halted VM '%1'").arg(vmName);
-            }
 
-            if (vbdData.value("Locked", false).toBool())
-            {
+            if (vbd->IsLocked())
                 return "Virtual disk is locked";
-            }
 
             // Check if system boot disk
-            QString vdiType = vdiData.value("type").toString();
-            if (vdiType == "system")
+            if (vdi->GetType() == "system")
             {
-                bool isOwner = vbdData.value("device", "").toString() == "0" ||
-                               vbdData.value("bootable", false).toBool();
-                if (isOwner)
-                {
+                if (vbd->IsOwner())
                     return QString("Cannot detach system boot disk from '%1'").arg(vmName);
-                }
             }
         }
     }
@@ -225,28 +164,12 @@ QString DetachVirtualDiskCommand::getCantRunReasonVDI(const QString& vdiRef) con
 
 void DetachVirtualDiskCommand::Run()
 {
-    QString vdiRef = this->getSelectedObjectRef();
-    if (vdiRef.isEmpty())
-    {
-        return;
-    }
-
     QSharedPointer<VDI> vdi = this->getVDI();
-    XenConnection* connection = vdi ? vdi->GetConnection() : nullptr;
-    XenCache* cache = connection ? connection->GetCache() : nullptr;
-    if (!cache)
-    {
+    if (!vdi || !vdi->IsValid())
         return;
-    }
 
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-    if (vdiData.isEmpty())
-    {
-        return;
-    }
-
-    QString vdiName = vdiData.value("name_label", "disk").toString();
-    QString vdiType = vdiData.value("type").toString();
+    QString vdiName = vdi->GetName();
+    QString vdiType = vdi->GetType();
 
     // Show confirmation dialog
     QString confirmText;
@@ -278,35 +201,27 @@ void DetachVirtualDiskCommand::Run()
     }
 
     // Get all VBDs and create detach actions
-    QVariantList vbds = vdiData.value("VBDs").toList();
+    QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();
 
     QList<AsyncOperation*> actions;
 
-    for (const QVariant& vbdVar : vbds)
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        QString vbdRef = vbdVar.toString();
-        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-
-        if (vbdData.isEmpty())
-        {
+        if (!vbd || !vbd->IsValid())
             continue;
-        }
 
-        // Get VM
-        QString vmRef = vbdData.value("VM").toString();
-        QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-        QString vmName = vmData.value("name_label", "VM").toString();
-
-        // Create VM object for the action
-        VM* vm = new VM(connection, vmRef, this);
+        QSharedPointer<VM> vm = vbd->GetVM();
+        if (!vm)
+            continue;
 
         // Create detach action
-        DetachVirtualDiskAction* action = new DetachVirtualDiskAction(vdiRef, vm, nullptr);
+        DetachVirtualDiskAction* action = new DetachVirtualDiskAction(vdi->OpaqueRef(), vm.data(), nullptr);
 
         // Register with OperationManager for history tracking
         OperationManager::instance()->RegisterOperation(action);
 
         // Connect completion signal
+        QString vmName = vm->GetName();
         connect(action, &AsyncOperation::completed, [this, vdiName, vmName, action]() {
             if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {

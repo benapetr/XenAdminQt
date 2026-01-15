@@ -28,8 +28,10 @@
 #include "movevirtualdiskcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/movevirtualdiskdialog.h"
-#include "xencache.h"
 #include "xen/vdi.h"
+#include "xen/vbd.h"
+#include "xen/vm.h"
+#include "xen/sr.h"
 #include <QMessageBox>
 
 MoveVirtualDiskCommand::MoveVirtualDiskCommand(MainWindow* mainWindow, QObject* parent) : VDICommand(mainWindow, parent)
@@ -42,12 +44,7 @@ bool MoveVirtualDiskCommand::CanRun() const
     if (!vdi || !vdi->IsValid())
         return false;
 
-    XenCache* cache = vdi->GetConnection()->GetCache();
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->OpaqueRef());
-    if (vdiData.isEmpty())
-        return false;
-
-    return this->canBeMoved(vdi->GetConnection(), vdiData);
+    return this->canBeMoved(vdi);
 }
 
 void MoveVirtualDiskCommand::Run()
@@ -68,54 +65,50 @@ QString MoveVirtualDiskCommand::MenuText() const
     return tr("Move...");
 }
 
-bool MoveVirtualDiskCommand::canBeMoved(XenConnection *conn, const QVariantMap& vdiData) const
+bool MoveVirtualDiskCommand::canBeMoved(QSharedPointer<VDI> vdi) const
 {
     // Check if VDI is a snapshot
-    if (vdiData.value("is_a_snapshot", false).toBool())
+    if (!vdi || !vdi->IsValid())
+        return false;
+
+    if (vdi->IsSnapshot())
     {
         return false;
     }
 
     // Check if VDI is locked (in use)
-    if (vdiData.value("locked", false).toBool() ||
-        vdiData.value("currently_attached", false).toBool())
-    {
+    if (vdi->IsLocked())
         return false;
-    }
+
+    for (const QSharedPointer<VBD>& vbd : vdi->GetVBDs())
+        if (vbd && vbd->CurrentlyAttached())
+            return false;
 
     // Check if VDI is HA type
-    if (this->isHAType(vdiData))
+    if (this->isHAType(vdi))
     {
         return false;
     }
 
     // Check if VDI has CBT enabled
-    if (vdiData.value("cbt_enabled", false).toBool())
+    if (vdi->CbtEnabled())
     {
         return false;
     }
 
     // Check if VDI is DR metadata
-    if (this->isMetadataForDR(vdiData))
+    if (this->isMetadataForDR(vdi))
     {
         return false;
     }
 
     // Get SR
-    QString srRef = vdiData.value("SR").toString();
-    if (srRef.isEmpty())
-    {
+    QSharedPointer<SR> sr = vdi->GetSR();
+    if (!sr)
         return false;
-    }
-
-    QVariantMap srData = conn->GetCache()->ResolveObjectData("sr", srRef);
-    if (srData.isEmpty())
-    {
-        return false;
-    }
 
     // Check if SR is HBA LUN-per-VDI type
-    QString srType = srData.value("type").toString();
+    QString srType = sr->GetType();
 
     // HBA type SRs (lvmohba, lvmoiscsi with LUN-per-VDI) don't support move
     if (srType == "lvmohba")
@@ -124,8 +117,7 @@ bool MoveVirtualDiskCommand::canBeMoved(XenConnection *conn, const QVariantMap& 
     }
 
     // Check if any VMs using this VDI are running
-    QString vdiUuid = vdiData.value("uuid").toString();
-    if (!vdiUuid.isEmpty() && this->isVDIInUseByRunningVM(conn, vdiUuid))
+    if (this->isVDIInUseByRunningVM(vdi))
     {
         return false;
     }
@@ -133,66 +125,52 @@ bool MoveVirtualDiskCommand::canBeMoved(XenConnection *conn, const QVariantMap& 
     return true;
 }
 
-bool MoveVirtualDiskCommand::isVDIInUseByRunningVM(XenConnection *conn, const QString& vdiRef) const
+bool MoveVirtualDiskCommand::isVDIInUseByRunningVM(QSharedPointer<VDI> vdi) const
 {
-    // Get all VBDs
-    QList<QVariantMap> vbds = conn->GetCache()->GetAllData("vbd");
+    if (!vdi)
+        return false;
 
-    for (const QVariantMap& vbdData : vbds)
+    QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        // Check if this VBD references our VDI
-        QString vbdVDIRef = vbdData.value("VDI").toString();
-        if (vbdVDIRef != vdiRef)
-        {
+        if (!vbd || !vbd->IsValid())
             continue;
-        }
 
-        // Get the VM
-        QString vmRef = vbdData.value("VM").toString();
-        if (vmRef.isEmpty())
-        {
+        QSharedPointer<VM> vm = vbd->GetVM();
+        if (!vm)
             continue;
-        }
-
-        QVariantMap vmData = conn->GetCache()->ResolveObjectData("vm", vmRef);
-        if (vmData.isEmpty())
-        {
-            continue;
-        }
 
         // Check VM power state
-        QString powerState = vmData.value("power_state").toString();
-        if (powerState != "Halted")
-        {
+        if (vm->GetPowerState() != "Halted")
             return true; // VM is running
-        }
     }
 
     return false;
 }
 
-bool MoveVirtualDiskCommand::isHAType(const QVariantMap& vdiData) const
+bool MoveVirtualDiskCommand::isHAType(QSharedPointer<VDI> vdi) const
 {
-    QString type = vdiData.value("type").toString();
+    if (!vdi)
+        return false;
+
+    QString type = vdi->GetType();
     return type == "ha";
 }
 
-bool MoveVirtualDiskCommand::isMetadataForDR(const QVariantMap& vdiData) const
+bool MoveVirtualDiskCommand::isMetadataForDR(QSharedPointer<VDI> vdi) const
 {
     // Check if VDI is DR metadata
     // DR metadata VDIs have specific tags or sm_config entries
-    QVariantMap smConfig = vdiData.value("sm_config").toMap();
+    if (!vdi)
+        return false;
+
+    QVariantMap smConfig = vdi->SMConfig();
 
     // Check for DR-related tags
-    QVariantList tags = vdiData.value("tags").toList();
-    for (const QVariant& tag : tags)
-    {
-        QString tagStr = tag.toString();
-        if (tagStr.contains("disaster_recovery", Qt::CaseInsensitive))
-        {
+    QStringList tags = vdi->GetTags();
+    for (const QString& tag : tags)
+        if (tag.contains("disaster_recovery", Qt::CaseInsensitive))
             return true;
-        }
-    }
 
     // Check sm_config for DR markers
     if (smConfig.contains("dr_metadata") ||

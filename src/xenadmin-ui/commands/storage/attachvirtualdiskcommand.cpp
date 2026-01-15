@@ -28,10 +28,9 @@
 #include "attachvirtualdiskcommand.h"
 #include <QDebug>
 #include "../../mainwindow.h"
-#include "xencache.h"
-#include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/actions/vbd/vbdcreateandplugaction.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vbd/vbdcreateandplugaction.h"
 #include "../../dialogs/attachvirtualdiskdialog.h"
 #include "../../dialogs/operationprogressdialog.h"
 #include <QMessageBox>

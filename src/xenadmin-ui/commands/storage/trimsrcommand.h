@@ -68,24 +68,17 @@ class TrimSRCommand : public SRCommand
     private:
         /**
          * @brief Check if SR supports trim
-         * @param srData SR data from cache
+         * @param sr SR data from cache
          * @return true if SR supports trim
          */
-        bool supportsTrim(const QVariantMap& srData) const;
+        bool supportsTrim(const QSharedPointer<SR> &sr) const;
 
         /**
          * @brief Check if SR is attached to any host
-         * @param srData SR data from cache
+         * @param sr SR data from cache
          * @return true if at least one PBD is currently attached
          */
-        bool isAttachedToHost(const QVariantMap& srData) const;
-
-        /**
-         * @brief Get SR name for display
-         * @param srData SR data from cache
-         * @return SR name
-         */
-        QString getSRName(const QVariantMap& srData) const;
+        bool isAttachedToHost(const QSharedPointer<SR> &sr) const;
 
         QString m_overrideSRRef;
 };

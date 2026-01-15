@@ -190,10 +190,7 @@ void AddVirtualDiskCommand::Run()
     {
         // For SR, we need to create a disk without a specific VM
         // This is typically not used in the Qt version, but we show a message
-        QMessageBox::information(
-            mainWindow(),
-            tr("Add Virtual Disk"),
-            tr("To add a virtual disk, please select a VM first."));
+        QMessageBox::information(mainWindow(), tr("Add Virtual Disk"), tr("To add a virtual disk, please select a VM first."));
     }
 }
 

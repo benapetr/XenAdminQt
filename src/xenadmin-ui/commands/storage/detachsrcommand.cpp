@@ -26,10 +26,10 @@
  */
 
 #include "detachsrcommand.h"
-#include "xen/actions/sr/detachsraction.h"
-#include "xen/sr.h"
-#include "xen/xenobject.h"
-#include "xencache.h"
+#include "xenlib/xen/actions/sr/detachsraction.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xencache.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include "../../dialogs/commanderrordialog.h"
@@ -37,8 +37,7 @@
 #include <QMessageBox>
 #include <QDebug>
 
-DetachSRCommand::DetachSRCommand(MainWindow* mainWindow, QObject* parent)
-    : SRCommand(mainWindow, parent)
+DetachSRCommand::DetachSRCommand(MainWindow* mainWindow, QObject* parent) : SRCommand(mainWindow, parent)
 {
 }
 

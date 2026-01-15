@@ -26,70 +26,50 @@
  */
 
 #include "forgetsrcommand.h"
-#include "../../../xenlib/xen/actions/sr/forgetsraction.h"
-#include "../../../xenlib/xen/sr.h"
-#include "../../../xenlib/xencache.h"
+#include "xenlib/xen/actions/sr/forgetsraction.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/xen/vbd.h"
+#include "xenlib/xen/vm.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>
-#include <QDebug>
 
-ForgetSRCommand::ForgetSRCommand(MainWindow* mainWindow, QObject* parent)
-    : SRCommand(mainWindow, parent)
+ForgetSRCommand::ForgetSRCommand(MainWindow* mainWindow, QObject* parent) : SRCommand(mainWindow, parent)
 {
 }
 
 bool ForgetSRCommand::CanRun() const
 {
     QSharedPointer<SR> sr = this->getSR();
-    if (!sr)
-    {
+    if (!sr || !sr->IsValid())
         return false;
-    }
-
-    XenCache* cache = sr->GetConnection()->GetCache();
-    QVariantMap srData = sr->GetData();
 
     // Check if SR has running VMs
-    QVariantList vdis = srData.value("VDIs").toList();
-    for (const QVariant& vdiVar : vdis)
+    QList<QSharedPointer<VDI>> vdis = sr->GetVDIs();
+    for (const QSharedPointer<VDI>& vdi : vdis)
     {
-        QString vdiRef = vdiVar.toString();
-        QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-        QVariantList vbds = vdiData.value("VBDs").toList();
+        if (!vdi || !vdi->IsValid())
+            continue;
 
-        for (const QVariant& vbdVar : vbds)
+        QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();
+        for (const QSharedPointer<VBD>& vbd : vbds)
         {
-            QString vbdRef = vbdVar.toString();
-            QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-            QString vmRef = vbdData.value("VM").toString();
+            if (!vbd || !vbd->IsValid())
+                continue;
 
-            if (!vmRef.isEmpty())
-            {
-                QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-                QString powerState = vmData.value("power_state").toString();
+            QSharedPointer<VM> vm = vbd->GetVM();
+            if (!vm)
+                continue;
 
-                if (powerState == "Running" || powerState == "Paused")
-                {
-                    qDebug() << "ForgetSRCommand: SR has running VM" << vmRef;
-                    return false;
-                }
-            }
+            QString powerState = vm->GetPowerState();
+            if (powerState == "Running" || powerState == "Paused")
+                return false;
         }
     }
 
     // Check if SR allows forget operation
-    QVariantList allowedOps = srData.value("allowed_operations").toList();
-    for (const QVariant& op : allowedOps)
-    {
-        if (op.toString() == "forget")
-        {
-            return true;
-        }
-    }
-
-    qDebug() << "ForgetSRCommand: SR doesn't allow 'forget' operation";
-    return false;
+    return sr->AllowedOperations().contains("forget");
 }
 
 void ForgetSRCommand::Run()
@@ -101,7 +81,7 @@ void ForgetSRCommand::Run()
     }
 
     QSharedPointer<SR> sr = this->getSR();
-    if (!sr)
+    if (!sr || !sr->IsValid())
         return;
 
     QString srRef = sr->OpaqueRef();
@@ -129,8 +109,6 @@ void ForgetSRCommand::Run()
     {
         return;
     }
-
-    qDebug() << "ForgetSRCommand: Forgetting SR" << srName << "(" << srRef << ")";
 
     // Get GetConnection from SR object for multi-GetConnection support
     XenConnection* conn = sr->GetConnection();

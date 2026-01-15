@@ -27,8 +27,9 @@
 
 #include "migratevirtualdiskcommand.h"
 #include "mainwindow.h"
-#include "xencache.h"
 #include "xen/vdi.h"
+#include "xen/vbd.h"
+#include "xen/sr.h"
 #include "dialogs/migratevirtualdiskdialog.h"
 #include <QMessageBox>
 
@@ -42,12 +43,7 @@ bool MigrateVirtualDiskCommand::CanRun() const
     if (!vdi || !vdi->IsValid())
         return false;
 
-    XenCache* cache = vdi->GetConnection()->GetCache();
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdi->OpaqueRef());
-    if (vdiData.isEmpty())
-        return false;
-
-    return this->canBeMigrated(vdi->GetConnection(), vdiData);
+    return this->canBeMigrated(vdi);
 }
 
 void MigrateVirtualDiskCommand::Run()
@@ -56,52 +52,39 @@ void MigrateVirtualDiskCommand::Run()
     if (!vdi || !vdi->IsValid())
         return;
 
-    XenCache* cache = vdi->GetConnection()->GetCache();
-    QString vdiRef = vdi->OpaqueRef();
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-    if (vdiData.isEmpty())
-    {
-        QMessageBox::warning(this->mainWindow(), tr("Error"), tr("Unable to retrieve VDI information."));
-        return;
-    }
-
     // Double-check migration eligibility with detailed error messages
-    if (!this->canBeMigrated(vdi->GetConnection(), vdiData))
+    if (!this->canBeMigrated(vdi))
     {
         QString reason;
 
-        if (vdiData.value("is_a_snapshot", false).toBool())
+        if (vdi->IsSnapshot())
             reason = tr("Cannot migrate: VDI is a snapshot.");
-        else if (vdiData.value("Locked", false).toBool())
+        else if (vdi->IsLocked())
             reason = tr("Cannot migrate: VDI is locked (in use).");
-        else if (this->isHAType(vdiData))
+        else if (this->isHAType(vdi))
             reason = tr("Cannot migrate: VDI is an HA type (statefile or redo log).");
-        else if (vdiData.value("cbt_enabled", false).toBool())
+        else if (vdi->CbtEnabled())
             reason = tr("Cannot migrate: VDI has changed block tracking (CBT) enabled.");
-        else if (this->isMetadataForDR(vdiData))
+        else if (this->isMetadataForDR(vdi))
             reason = tr("Cannot migrate: VDI is metadata for disaster recovery.");
         else
         {
             // Check VBD count
-            QList<QString> vbdRefs = vdiData.value("VBDs", QVariantList()).toStringList();
-            if (vbdRefs.isEmpty())
+            if (vdi->GetVBDs().isEmpty())
             {
                 reason = tr("Cannot migrate: VDI has no VBDs attached.");
             } else
             {
                 // Check SR
-                QString srRef = vdiData.value("SR", "").toString();
-                if (srRef.isEmpty())
+                QSharedPointer<SR> sr = vdi->GetSR();
+                if (!sr)
                 {
                     reason = tr("Cannot migrate: VDI has no SR reference.");
                 } else
                 {
-                    QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-                    if (srData.isEmpty())
-                        reason = tr("Cannot migrate: Unable to retrieve SR information.");
-                    else if (this->isHBALunPerVDI(srData))
+                    if (this->isHBALunPerVDI(sr))
                         reason = tr("Cannot migrate: Unsupported SR type (HBA LUN-per-VDI).");
-                    else if (!this->supportsStorageMigration(srData))
+                    else if (!this->supportsStorageMigration(sr))
                         reason = tr("Cannot migrate: SR does not support storage migration.");
                     else
                         reason = tr("Cannot migrate: Unknown reason.");
@@ -114,7 +97,7 @@ void MigrateVirtualDiskCommand::Run()
     }
 
     // Open migrate dialog
-    MigrateVirtualDiskDialog* dialog = new MigrateVirtualDiskDialog(vdi->GetConnection(), vdiRef, this->mainWindow());
+    MigrateVirtualDiskDialog* dialog = new MigrateVirtualDiskDialog(vdi->GetConnection(), vdi->OpaqueRef(), this->mainWindow());
 
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
@@ -125,70 +108,77 @@ QString MigrateVirtualDiskCommand::MenuText() const
     return tr("&Migrate Virtual Disk...");
 }
 
-bool MigrateVirtualDiskCommand::canBeMigrated(XenConnection *connection, const QVariantMap& vdiData) const
+bool MigrateVirtualDiskCommand::canBeMigrated(const QSharedPointer<VDI> &vdi) const
 {
     // Check basic VDI properties
-    if (vdiData.value("is_a_snapshot", false).toBool())
+    if (!vdi || !vdi->IsValid())
         return false;
 
-    if (vdiData.value("Locked", false).toBool())
+    if (vdi->IsSnapshot())
         return false;
 
-    if (this->isHAType(vdiData))
+    if (vdi->IsLocked())
         return false;
 
-    if (vdiData.value("cbt_enabled", false).toBool())
+    if (this->isHAType(vdi))
         return false;
 
-    if (this->isMetadataForDR(vdiData))
+    if (vdi->CbtEnabled())
+        return false;
+
+    if (this->isMetadataForDR(vdi))
         return false;
 
     // Check that VDI has at least one VBD
-    QList<QVariant> vbdList = vdiData.value("VBDs", QVariantList()).toList();
-    if (vbdList.isEmpty())
+    if (vdi->GetVBDs().isEmpty())
         return false;
 
     // Check SR properties
-    QString srRef = vdiData.value("SR", "").toString();
-    if (srRef.isEmpty())
+    QSharedPointer<SR> sr = vdi->GetSR();
+    if (!sr)
         return false;
 
-    QVariantMap srData = connection->GetCache()->ResolveObjectData("sr", srRef);
-    if (srData.isEmpty())
+    if (this->isHBALunPerVDI(sr))
         return false;
 
-    if (this->isHBALunPerVDI(srData))
-        return false;
-
-    if (!this->supportsStorageMigration(srData))
+    if (!this->supportsStorageMigration(sr))
         return false;
 
     return true;
 }
 
-bool MigrateVirtualDiskCommand::isHAType(const QVariantMap& vdiData) const
+bool MigrateVirtualDiskCommand::isHAType(const QSharedPointer<VDI> &vdi) const
 {
-    QString type = vdiData.value("type", "").toString();
+    if (!vdi)
+        return false;
+
+    QString type = vdi->GetType();
     return (type == "ha_statefile" || type == "redo_log");
 }
 
-bool MigrateVirtualDiskCommand::isMetadataForDR(const QVariantMap& vdiData) const
+bool MigrateVirtualDiskCommand::isMetadataForDR(const QSharedPointer<VDI> &vdi) const
 {
     // Check if VDI has metadata_of_pool set (indicates DR metadata)
-    QString metadataOfPool = vdiData.value("metadata_of_pool", "").toString();
-    return !metadataOfPool.isEmpty() && metadataOfPool != "OpaqueRef:NULL";
+    if (!vdi)
+        return false;
+
+    QString metadataOfPool = vdi->MetadataOfPoolRef();
+    return !metadataOfPool.isEmpty() && metadataOfPool != XENOBJECT_NULL;
 }
 
-bool MigrateVirtualDiskCommand::isHBALunPerVDI(const QVariantMap& srData) const
+bool MigrateVirtualDiskCommand::isHBALunPerVDI(const QSharedPointer<SR> &sr) const
 {
     // HBA SRs have is_tools_sr = false and type = "lvmohba"
     // Additionally check sm_config for "allocation" = "thick"
-    QString srType = srData.value("type", "").toString();
+    if (!sr)
+        return false;
+
+    QString srType = sr->GetType();
 
     if (srType == "lvmohba" || srType == "lvmofc")
     {
         // These are HBA types - check if LUN-per-VDI
-        QVariantMap smConfig = srData.value("sm_config", QVariantMap()).toMap();
+        QVariantMap smConfig = sr->SMConfig();
         QString allocation = smConfig.value("allocation", "").toString();
 
         // LUN-per-VDI uses thick allocation
@@ -198,20 +188,20 @@ bool MigrateVirtualDiskCommand::isHBALunPerVDI(const QVariantMap& srData) const
     return false;
 }
 
-bool MigrateVirtualDiskCommand::supportsStorageMigration(const QVariantMap& srData) const
+bool MigrateVirtualDiskCommand::supportsStorageMigration(const QSharedPointer<SR> &sr) const
 {
+    if (!sr)
+        return false;
+
     // Check SR capabilities for storage migration support
-    QVariantList capabilities = srData.value("capabilities", QVariantList()).toList();
+    QStringList capabilities = sr->GetCapabilities();
 
     // Look for "VDI_MIRROR" capability which indicates migration support
-    for (const QVariant& cap : capabilities)
-    {
-        if (cap.toString() == "VDI_MIRROR")
-            return true;
-    }
+    if (capabilities.contains("VDI_MIRROR"))
+        return true;
 
     // Also check if SR type is known to support migration
-    QString srType = srData.value("type", "").toString();
+    QString srType = sr->GetType();
     QStringList supportedTypes = {
         "lvm", "ext", "nfs", "lvmoiscsi", "lvmohba",
         "smb", "cifs", "cslg", "gfs2"};

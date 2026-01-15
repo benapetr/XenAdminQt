@@ -98,8 +98,6 @@ bool ReattachSRCommand::canSRBeReattached(const QSharedPointer<SR>& sr) const
         return false;
 
     XenCache* cache = connection->GetCache();
-    if (!cache)
-        return false;
 
     const QString srType = sr->GetType();
     if (srType.isEmpty())

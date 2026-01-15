@@ -111,7 +111,7 @@ class XENLIB_EXPORT XenObject : public QObject
          * @brief Check if object is locked (operation in progress)
          * @return true if locked flag is set in cache
          */
-        bool IsLocked() const;
+        virtual bool IsLocked() const;
         void Lock();
         void Unlock();
 

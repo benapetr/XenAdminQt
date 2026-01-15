@@ -28,14 +28,14 @@
 #include "trimsrcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xencache.h"
-#include "xen/sr.h"
-#include "xen/actions/sr/srtrimaction.h"
+#include "xenlib/xen/pbd.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/actions/sr/srtrimaction.h"
 #include <QMessageBox>
 #include <QDebug>
 
-TrimSRCommand::TrimSRCommand(MainWindow* mainWindow, QObject* parent)
-    : SRCommand(mainWindow, parent)
+TrimSRCommand::TrimSRCommand(MainWindow* mainWindow, QObject* parent) : SRCommand(mainWindow, parent)
 {
 }
 
@@ -55,7 +55,7 @@ bool TrimSRCommand::CanRun() const
         return false;
 
     // Can trim if SR supports it and is attached to a host
-    return this->supportsTrim(srData) && this->isAttachedToHost(srData);
+    return this->supportsTrim(sr) && this->isAttachedToHost(sr);
 }
 
 void TrimSRCommand::Run()
@@ -134,9 +134,9 @@ QString TrimSRCommand::MenuText() const
     return "Trim SR...";
 }
 
-bool TrimSRCommand::supportsTrim(const QVariantMap& srData) const
+bool TrimSRCommand::supportsTrim(const QSharedPointer<SR> &sr) const
 {
-    if (srData.isEmpty())
+    if (!sr)
         return false;
 
     // Check if SR supports trim operation
@@ -144,7 +144,7 @@ bool TrimSRCommand::supportsTrim(const QVariantMap& srData) const
     // Trim is supported for thin-provisioned SRs
     // Check sm_config for "use_vhd" = "true" or SR type supports it
 
-    QVariantMap smConfig = srData.value("sm_config", QVariantMap()).toMap();
+    QVariantMap smConfig = sr->GetData().value("sm_config", QVariantMap()).toMap();
 
     // Check if this is a VHD-based SR (thin-provisioned)
     bool useVhd = smConfig.value("use_vhd", false).toBool();
@@ -152,7 +152,7 @@ bool TrimSRCommand::supportsTrim(const QVariantMap& srData) const
         return true;
 
     // Check SR type - certain types support trim
-    QString srType = srData.value("type", "").toString();
+    QString srType = sr->GetType();
 
     // Types that typically support trim:
     // - lvm over iSCSI with thin provisioning
@@ -175,27 +175,17 @@ bool TrimSRCommand::supportsTrim(const QVariantMap& srData) const
     return false;
 }
 
-bool TrimSRCommand::isAttachedToHost(const QVariantMap& srData) const
+bool TrimSRCommand::isAttachedToHost(const QSharedPointer<SR> &sr) const
 {
-    if (srData.isEmpty())
-        return false;
-
-    QSharedPointer<SR> sr = this->getSR();
     if (!sr)
         return false;
 
-    XenCache* cache = sr->GetConnection()->GetCache();
-
     // Check if any PBD is currently attached
-    QVariantList pbds = srData.value("PBDs", QVariantList()).toList();
+    QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
 
-    for (const QVariant& pbdRefVar : pbds)
+    foreach (QSharedPointer<PBD> pbd, pbds)
     {
-        QString pbdRef = pbdRefVar.toString();
-        QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
-
-        bool currentlyAttached = pbdData.value("currently_attached", false).toBool();
-        if (currentlyAttached)
+        if (pbd->CurrentlyAttached())
         {
             // At least one PBD is attached
             return true;
@@ -203,13 +193,4 @@ bool TrimSRCommand::isAttachedToHost(const QVariantMap& srData) const
     }
 
     return false;
-}
-
-QString TrimSRCommand::getSRName(const QVariantMap& srData) const
-{
-    if (srData.isEmpty())
-        return "Storage Repository";
-
-    QString name = srData.value("name_label", "").toString();
-    return name.isEmpty() ? "Storage Repository" : name;
 }

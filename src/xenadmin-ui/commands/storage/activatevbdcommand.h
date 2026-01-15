@@ -31,6 +31,7 @@
 #include "vbdcommand.h"
 
 class VBD;
+class VM;
 
 /**
  * @brief Command to activate (plug) a VBD
@@ -51,9 +52,9 @@ class ActivateVBDCommand : public VBDCommand
         void Run() override;
 
     private:
-        bool canRunVBD(const QString& vbdRef) const;
-        QString getCantRunReasonVBD(QSharedPointer<VBD> vbd) const;
-        bool areIODriversNeededAndMissing(const QVariantMap& vmData) const;
+        bool canRunVBD(const QSharedPointer<VBD> &vbd) const;
+        QString getCantRunReasonVBD(const QSharedPointer<VBD> &vbd) const;
+        bool areIODriversNeededAndMissing(const QSharedPointer<VM> &vm) const;
 };
 
 #endif // ACTIVATEVBDCOMMAND_H

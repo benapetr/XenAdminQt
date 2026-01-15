@@ -28,14 +28,14 @@
 #include "destroysrcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/sr.h"
-#include "xencache.h"
-#include "xen/actions/sr/destroysraction.h"
+#include "xenlib/xen/pbd.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/actions/sr/destroysraction.h"
 #include <QMessageBox>
 #include <QDebug>
 
-DestroySRCommand::DestroySRCommand(MainWindow* mainWindow, QObject* parent)
-    : SRCommand(mainWindow, parent)
+DestroySRCommand::DestroySRCommand(MainWindow* mainWindow, QObject* parent) : SRCommand(mainWindow, parent)
 {
 }
 
@@ -123,31 +123,23 @@ bool DestroySRCommand::canSRBeDestroyed() const
     if (!sr)
         return false;
 
-    QVariantMap srData = sr->GetData();
-
     // Cannot destroy if SR has VDIs (contains data)
-    QVariantList vdis = srData.value("VDIs", QVariantList()).toList();
-    if (!vdis.isEmpty())
+    if (!sr->GetVDIRefs().isEmpty())
         return false;
 
     // Cannot destroy shared SRs (must be detached first)
-    bool shared = srData.value("shared", false).toBool();
-    if (shared)
+    if (sr->IsShared())
     {
-        XenCache* cache = sr->GetConnection()->GetCache();
-        QVariantList pbds = srData.value("PBDs", QVariantList()).toList();
-        for (const QVariant& pbdRefVar : pbds)
+        QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
+        foreach (QSharedPointer<PBD> pbd, pbds)
         {
-            QString pbdRef = pbdRefVar.toString();
-            QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
-
-            if (pbdData.value("currently_attached", false).toBool())
+            if (pbd->CurrentlyAttached())
                 return false; // SR is still attached
         }
     }
 
     // Cannot destroy ISO or tools SR
-    QString contentType = srData.value("content_type", "").toString();
+    QString contentType = sr->ContentType();
     if (contentType == "iso" || contentType == "tools")
         return false;
 

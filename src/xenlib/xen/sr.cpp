@@ -60,8 +60,7 @@ namespace
     }
 }
 
-SR::SR(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+SR::SR(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
@@ -72,32 +71,37 @@ QString SR::GetObjectType() const
 
 QString SR::GetType() const
 {
-    return stringProperty("type");
+    return this->stringProperty("type");
 }
 
 bool SR::IsShared() const
 {
-    return boolProperty("shared", false);
+    return this->boolProperty("shared", false);
+}
+
+bool SR::IsLocked() const
+{
+    return this->boolProperty("locked", false);
 }
 
 qint64 SR::PhysicalSize() const
 {
-    return longProperty("physical_size", 0);
+    return this->longProperty("physical_size", 0);
 }
 
 qint64 SR::PhysicalUtilisation() const
 {
-    return longProperty("physical_utilisation", 0);
+    return this->longProperty("physical_utilisation", 0);
 }
 
 qint64 SR::VirtualAllocation() const
 {
-    return longProperty("virtual_allocation", 0);
+    return this->longProperty("virtual_allocation", 0);
 }
 
 qint64 SR::FreeSpace() const
 {
-    return PhysicalSize() - PhysicalUtilisation();
+    return this->PhysicalSize() - this->PhysicalUtilisation();
 }
 QSharedPointer<Host> SR::GetHost(XenCache* cache) const
 {
@@ -181,6 +185,11 @@ QVariantMap SR::SMConfig() const
 QStringList SR::AllowedOperations() const
 {
     return stringListProperty("allowed_operations");
+}
+
+QStringList SR::GetCapabilities() const
+{
+    return stringListProperty("capabilities");
 }
 
 QVariantMap SR::CurrentOperations() const

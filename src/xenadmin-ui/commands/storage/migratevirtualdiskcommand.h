@@ -30,10 +30,9 @@
 
 #include "vdicommand.h"
 #include <QString>
-#include <QVariantMap>
 
-class MainWindow;
-class XenConnection;
+class SR;
+class VDI;
 
 /**
  * @brief Command to migrate (live-move) one or more VDIs to a different SR
@@ -74,7 +73,7 @@ class MigrateVirtualDiskCommand : public VDICommand
     private:
         /**
          * @brief Check if VDI can be migrated
-         * @param vdiData VDI data record from cache
+         * @param vdi VDI object
          * @return true if VDI can be migrated
          *
          * Checks:
@@ -87,35 +86,35 @@ class MigrateVirtualDiskCommand : public VDICommand
          * - SR is not HBA LUN-per-VDI
          * - SR supports storage migration
          */
-        bool canBeMigrated(XenConnection *connection, const QVariantMap& vdiData) const;
+        bool canBeMigrated(const QSharedPointer<VDI> &vdi) const;
 
         /**
          * @brief Check if VDI is HA type (statefile or redo log)
-         * @param vdiData VDI data record
+         * @param vdi VDI object
          * @return true if VDI is HA type
          */
-        bool isHAType(const QVariantMap& vdiData) const;
+        bool isHAType(const QSharedPointer<VDI> &vdi) const;
 
         /**
          * @brief Check if VDI is metadata for DR
-         * @param vdiData VDI data record
+         * @param vdi VDI object
          * @return true if VDI is DR metadata
          */
-        bool isMetadataForDR(const QVariantMap& vdiData) const;
+        bool isMetadataForDR(const QSharedPointer<VDI> &vdi) const;
 
         /**
          * @brief Check if SR is HBA LUN-per-VDI type
-         * @param srData SR data record
+         * @param sr SR object
          * @return true if SR is HBA LUN-per-VDI
          */
-        bool isHBALunPerVDI(const QVariantMap& srData) const;
+        bool isHBALunPerVDI(const QSharedPointer<SR> &sr) const;
 
         /**
          * @brief Check if SR supports storage migration
-         * @param srData SR data record
+         * @param sr SR object
          * @return true if SR supports migration
          */
-        bool supportsStorageMigration(const QVariantMap& srData) const;
+        bool supportsStorageMigration(const QSharedPointer<SR> &sr) const;
 };
 
 #endif // MIGRATEVIRTUALDISKCOMMAND_H

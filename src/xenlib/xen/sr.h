@@ -63,6 +63,8 @@ class XENLIB_EXPORT SR : public XenObject
         //! Check if SR is shared across multiple hosts
         bool IsShared() const;
 
+        bool IsLocked() const override;
+
         //! Get physical size (total physical size in bytes)
         qint64 PhysicalSize() const;
 
@@ -89,6 +91,8 @@ class XENLIB_EXPORT SR : public XenObject
 
         //! Get allowed operations (list of allowed operation strings)
         QStringList AllowedOperations() const;
+
+        QStringList GetCapabilities() const;
 
         //! Get current operations (map of operation ID to operation type)
         QVariantMap CurrentOperations() const;

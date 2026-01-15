@@ -29,9 +29,6 @@
 #define MOVEVIRTUALDISKCOMMAND_H
 
 #include "vdicommand.h"
-#include <QVariantMap>
-
-class XenConnection;
 
 /**
  * @brief Command to move a virtual disk (VDI) to a different storage repository
@@ -67,31 +64,31 @@ class MoveVirtualDiskCommand : public VDICommand
     private:
         /**
          * @brief Check if a VDI can be moved
-         * @param vdiData VDI data record
+         * @param vdi VDI object
          * @return true if VDI can be moved
          */
-        bool canBeMoved(XenConnection *conn, const QVariantMap& vdiData) const;
+        bool canBeMoved(QSharedPointer<VDI> vdi) const;
 
         /**
          * @brief Check if any VM using this VDI is running
-         * @param vdiRef VDI reference
+         * @param vdi VDI object
          * @return true if any attached VM is not halted
          */
-        bool isVDIInUseByRunningVM(XenConnection *conn, const QString& vdiRef) const;
+        bool isVDIInUseByRunningVM(QSharedPointer<VDI> vdi) const;
 
         /**
          * @brief Check if VDI is HA metadata disk
-         * @param vdiData VDI data record
+         * @param vdi VDI object
          * @return true if VDI type is "ha"
          */
-        bool isHAType(const QVariantMap& vdiData) const;
+        bool isHAType(QSharedPointer<VDI> vdi) const;
 
         /**
          * @brief Check if VDI is DR metadata
-         * @param vdiData VDI data record
+         * @param vdi VDI object
          * @return true if VDI is metadata for disaster recovery
          */
-        bool isMetadataForDR(const QVariantMap& vdiData) const;
+        bool isMetadataForDR(QSharedPointer<VDI> vdi) const;
 };
 
 #endif // MOVEVIRTUALDISKCOMMAND_H

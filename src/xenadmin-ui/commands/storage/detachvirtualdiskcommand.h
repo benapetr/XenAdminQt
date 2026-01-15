@@ -52,8 +52,8 @@ class DetachVirtualDiskCommand : public VDICommand
         void Run() override;
 
     private:
-        bool canRunVDI(const QString& vdiRef) const;
-        QString getCantRunReasonVDI(const QString& vdiRef) const;
+        bool canRunVDI(QSharedPointer<VDI> vdi) const;
+        QString getCantRunReasonVDI(QSharedPointer<VDI> vdi) const;
 };
 
 #endif // DETACHVIRTUALDISKCOMMAND_H

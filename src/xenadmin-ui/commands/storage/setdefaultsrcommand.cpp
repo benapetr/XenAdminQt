@@ -50,48 +50,34 @@ bool SetDefaultSRCommand::CanRun() const
     if (!cache)
         return false;
 
-    QVariantMap srData = cache->ResolveObjectData("sr", sr->OpaqueRef());
-    if (srData.isEmpty())
-        return false;
-
     // C# SR.HasPBDs()
-    if (srData.value("PBDs").toList().isEmpty())
+    if (sr->GetPBDs().isEmpty())
         return false;
 
     // C# SR.IsDefaultSr(sr)
-    QStringList poolRefs = cache->GetAllRefs("pool");
+    QStringList poolRefs = cache ? cache->GetAllRefs("pool") : QStringList();
     if (!poolRefs.isEmpty())
     {
-        QVariantMap poolData = cache->ResolveObjectData("pool", poolRefs.first());
-        if (poolData.value("default_SR").toString() == sr->OpaqueRef())
+        QSharedPointer<Pool> pool = cache->ResolveObject<Pool>("pool", poolRefs.first());
+        if (pool && pool->GetDefaultSRRef() == sr->OpaqueRef())
             return false;
     }
 
     // C# SR.SupportsVdiCreate() (ISO SRs disallowed)
-    if (srData.value("content_type").toString() == "iso")
+    if (sr->ContentType() == "iso")
         return false;
-    QVariantList allowedOps = srData.value("allowed_operations").toList();
-    bool supportsVdiCreate = false;
-    for (const QVariant& opVar : allowedOps)
-    {
-        if (opVar.toString() == "vdi_create")
-        {
-            supportsVdiCreate = true;
-            break;
-        }
-    }
-    if (!supportsVdiCreate)
+    if (!sr->AllowedOperations().contains("vdi_create"))
         return false;
 
     // C# (sr.shared || HostCount <= 1)
     int hostCount = cache->GetAllRefs("host").size();
-    if (!srData.value("shared", false).toBool() && hostCount > 1)
+    if (!sr->IsShared() && hostCount > 1)
         return false;
 
     // C# !HelpersGUI.GetActionInProgress(sr)
-    if (!srData.value("current_operations").toMap().isEmpty())
+    if (!sr->CurrentOperations().isEmpty())
         return false;
-    if (srData.value("locked", false).toBool())
+    if (sr->IsLocked())
         return false;
 
     return true;
