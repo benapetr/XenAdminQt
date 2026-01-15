@@ -26,9 +26,9 @@
  */
 
 #include "vmrecoverymodecommand.h"
-#include "../../../xenlib/xen/actions/vm/hvmbootaction.h"
-#include "../../../xenlib/xen/network/connection.h"
-#include "../../../xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/hvmbootaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>

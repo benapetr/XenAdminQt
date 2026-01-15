@@ -26,10 +26,10 @@
  */
 
 #include "vappshutdowncommand.h"
-#include "../../../xenlib/xen/actions/vm/shutdownapplianceaction.h"
-#include "../../../xenlib/xen/network/connection.h"
-#include "../../../xenlib/xen/xenobject.h"
-#include "../../../xenlib/xencache.h"
+#include "xenlib/xen/actions/vm/shutdownapplianceaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xencache.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>

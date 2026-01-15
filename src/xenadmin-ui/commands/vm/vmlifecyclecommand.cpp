@@ -27,9 +27,11 @@
 
 #include "vmlifecyclecommand.h"
 #include "../../mainwindow.h"
-#include "xencache.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/vm.h"
 #include <QMessageBox>
 #include <QMessageBox>
+#include <QTreeWidget>
 
 VMLifeCycleCommand::VMLifeCycleCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
@@ -37,17 +39,32 @@ VMLifeCycleCommand::VMLifeCycleCommand(MainWindow* mainWindow, QObject* parent) 
 
 bool VMLifeCycleCommand::CanRun() const
 {
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
+    if (selectedVms.isEmpty())
         return false;
 
-    QString powerState = this->getVMPowerState();
+    for (const QSharedPointer<VM>& vm : selectedVms)
+    {
+        if (!vm)
+            continue;
 
-    // Can run if VM is in Halted, Running, Paused, or Suspended state
-    return (powerState == "Halted" && this->isVMOperationAllowed("start")) ||
-           (powerState == "Running" && this->isVMOperationAllowed("clean_shutdown")) ||
-           (powerState == "Paused" && this->isVMOperationAllowed("unpause")) ||
-           (powerState == "Suspended" && this->isVMOperationAllowed("resume"));
+        if (vm->IsSnapshot() || vm->IsTemplate())
+            return false;
+
+        QVariantList allowedOps = vm->GetData().value("allowed_operations").toList();
+        const QString powerState = vm->GetPowerState();
+
+        if (powerState == "Halted" && allowedOps.contains("start"))
+            return true;
+        if (powerState == "Running" && allowedOps.contains("clean_shutdown"))
+            return true;
+        if (powerState == "Paused" && allowedOps.contains("unpause"))
+            return true;
+        if (powerState == "Suspended" && allowedOps.contains("resume"))
+            return true;
+    }
+
+    return false;
 }
 
 void VMLifeCycleCommand::Run()
@@ -93,6 +110,50 @@ QString VMLifeCycleCommand::MenuText() const
         return "Resume";
 
     return "Start/Shut Down";
+}
+
+QList<QSharedPointer<VM>> VMLifeCycleCommand::getSelectedVMs() const
+{
+    QList<QSharedPointer<VM>> selectedVms;
+
+    if (!this->mainWindow())
+        return selectedVms;
+
+    QTreeWidget* treeWidget = this->mainWindow()->GetServerTreeWidget();
+    if (!treeWidget)
+        return selectedVms;
+
+    const QList<QTreeWidgetItem*> selectedItems = treeWidget->selectedItems();
+    for (QTreeWidgetItem* item : selectedItems)
+    {
+        if (!item)
+            continue;
+
+        QVariant data = item->data(0, Qt::UserRole);
+        if (!data.canConvert<QSharedPointer<XenObject>>())
+            continue;
+
+        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+        if (!obj || obj->GetObjectType() != "vm")
+            continue;
+
+        QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
+        if (vm)
+            selectedVms.append(vm);
+    }
+
+    if (selectedVms.isEmpty())
+    {
+        QSharedPointer<XenObject> obj = this->GetObject();
+        if (obj && obj->GetObjectType() == "vm")
+        {
+            QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
+            if (vm)
+                selectedVms.append(vm);
+        }
+    }
+
+    return selectedVms;
 }
 
 QString VMLifeCycleCommand::getSelectedVMRef() const

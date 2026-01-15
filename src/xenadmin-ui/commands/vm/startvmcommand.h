@@ -42,6 +42,7 @@ class StartVMCommand : public VMCommand
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
+        QIcon GetIcon() const override;
 
         /**
          * @brief Run the command for a specific VM reference.

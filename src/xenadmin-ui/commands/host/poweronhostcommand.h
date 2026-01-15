@@ -47,6 +47,7 @@ class PowerOnHostCommand : public HostCommand
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
+        QIcon GetIcon() const override;
 
     private:
         bool canPowerOn() const;

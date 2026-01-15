@@ -36,8 +36,7 @@
 #include <QMessageBox>
 #include <QVariantList>
 
-DisableChangedBlockTrackingCommand::DisableChangedBlockTrackingCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+DisableChangedBlockTrackingCommand::DisableChangedBlockTrackingCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 
@@ -47,15 +46,10 @@ bool DisableChangedBlockTrackingCommand::CanRun() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->GetData();
-    if (vmData.isEmpty())
+    if (vm->IsTemplate())
         return false;
 
-    // Skip templates
-    if (vmData.value("is_a_template", false).toBool())
-        return false;
-
-    QString connRef = vmData.value("$connection").toString();
+    QString connRef = vm->GetData().value("$connection").toString();
 
     // Check if CBT is licensed
     if (!this->isCbtLicensed(connRef))
@@ -95,8 +89,7 @@ void DisableChangedBlockTrackingCommand::Run()
     XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
-                             tr("Not connected to XenServer"));
+        QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
         return;
     }
 

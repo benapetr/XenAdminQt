@@ -28,18 +28,16 @@
 #include "convertvmtotemplatecommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/actions/vm/vmtotemplateaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/vmtotemplateaction.h"
 #include <QMessageBox>
 
-ConvertVMToTemplateCommand::ConvertVMToTemplateCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+ConvertVMToTemplateCommand::ConvertVMToTemplateCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 
-ConvertVMToTemplateCommand::ConvertVMToTemplateCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent)
-    : VMCommand(selectedVms, mainWindow, parent)
+ConvertVMToTemplateCommand::ConvertVMToTemplateCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
 {
 }
 

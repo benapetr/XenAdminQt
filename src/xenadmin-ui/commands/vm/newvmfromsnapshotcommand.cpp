@@ -28,9 +28,9 @@
 #include "newvmfromsnapshotcommand.h"
 #include "../../dialogs/newvmwizard.h"
 #include "../../mainwindow.h"
-#include "xencache.h"
-#include "xen/xenobject.h"
-#include "xen/network/connection.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/network/connection.h"
 #include <QMessageBox>
 
 NewVMFromSnapshotCommand::NewVMFromSnapshotCommand(MainWindow* mainWindow, QObject* parent)

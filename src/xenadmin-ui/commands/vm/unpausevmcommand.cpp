@@ -28,11 +28,26 @@
 #include "unpausevmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/actions/vm/vmpauseaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/vmpauseaction.h"
 #include <QMessageBox>
 #include <QTimer>
+
+namespace
+{
+bool canUnpauseVm(const QSharedPointer<VM>& vm)
+{
+    if (!vm)
+        return false;
+
+    if (vm->GetPowerState() != "Paused")
+        return false;
+
+    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
+    return allowedOperations.contains("unpause");
+}
+} // namespace
 
 UnpauseVMCommand::UnpauseVMCommand(MainWindow* mainWindow, QObject* parent)
     : VMCommand(mainWindow, parent)
@@ -46,51 +61,73 @@ UnpauseVMCommand::UnpauseVMCommand(const QList<QSharedPointer<VM>>& selectedVms,
 
 bool UnpauseVMCommand::CanRun() const
 {
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    if (!this->m_vms.isEmpty())
+    {
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canUnpauseVm(vm))
+                return true;
+        }
         return false;
+    }
 
-    // Check if VM is paused AND unpause is allowed (matches C# UnpauseVMCommand.CanRun)
-    if (vm->GetPowerState() != "Paused")
-        return false;
-
-    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
-
-    return allowedOperations.contains("unpause");
+    return canUnpauseVm(this->getVM());
 }
 
 void UnpauseVMCommand::Run()
 {
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return;
+    auto runForVm = [this](const QSharedPointer<VM>& vm) {
+        if (!vm)
+            return;
 
-    // Get XenConnection from VM
-    XenConnection* conn = vm->GetConnection();
-    if (!conn || !conn->IsConnected())
+        // Get XenConnection from VM
+        XenConnection* conn = vm->GetConnection();
+        if (!conn || !conn->IsConnected())
+        {
+            QMessageBox::warning(this->mainWindow(), "Not Connected",
+                                 "Not connected to XenServer");
+            return;
+        }
+
+        // Create VMUnpause action (parent is MainWindow to prevent premature deletion)
+        VMUnpause* action = new VMUnpause(vm, this->mainWindow());
+
+        // Register with OperationManager for history tracking
+        OperationManager::instance()->RegisterOperation(action);
+
+        // Connect completion signal for cleanup
+        connect(action, &AsyncOperation::completed, this, [action]() {
+            // Auto-delete when complete
+            action->deleteLater();
+        });
+
+        // Run action asynchronously (no modal dialog for unpause)
+        action->RunAsync();
+    };
+
+    if (!this->m_vms.isEmpty())
     {
-        QMessageBox::warning(this->mainWindow(), "Not Connected",
-                             "Not connected to XenServer");
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canUnpauseVm(vm))
+                runForVm(vm);
+        }
         return;
     }
 
-    // Create VMUnpause action (parent is MainWindow to prevent premature deletion)
-    VMUnpause* action = new VMUnpause(vm, this->mainWindow());
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm || !canUnpauseVm(vm))
+        return;
 
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
-
-    // Connect completion signal for cleanup
-    connect(action, &AsyncOperation::completed, this, [action]() {
-        // Auto-delete when complete
-        action->deleteLater();
-    });
-
-    // Run action asynchronously (no modal dialog for unpause)
-    action->RunAsync();
+    runForVm(vm);
 }
 
 QString UnpauseVMCommand::MenuText() const
 {
     return "Unpause VM";
+}
+
+QIcon UnpauseVMCommand::GetIcon() const
+{
+    return QIcon(":/icons/unpause.png");
 }

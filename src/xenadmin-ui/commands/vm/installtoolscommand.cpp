@@ -27,12 +27,11 @@
 
 #include "installtoolscommand.h"
 #include "../../mainwindow.h"
-#include "xen/vm.h"
-#include "xencache.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
 
-InstallToolsCommand::InstallToolsCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+InstallToolsCommand::InstallToolsCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 

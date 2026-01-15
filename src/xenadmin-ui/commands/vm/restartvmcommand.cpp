@@ -28,48 +28,101 @@
 #include "restartvmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/actions/vm/vmrebootaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/vmrebootaction.h"
 #include <QMessageBox>
 #include <QTimer>
 
-RestartVMCommand::RestartVMCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+namespace
+{
+    bool canRestartVm(const QSharedPointer<VM>& vm)
+    {
+        if (!vm)
+            return false;
+
+        if (vm->GetPowerState() != "Running")
+            return false;
+
+        return vm->GetAllowedOperations().contains("clean_reboot");
+    }
+} // namespace
+
+RestartVMCommand::RestartVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 
-RestartVMCommand::RestartVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent)
-    : VMCommand(selectedVms, mainWindow, parent)
+RestartVMCommand::RestartVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
 {
 }
 
 bool RestartVMCommand::CanRun() const
 {
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    if (!this->m_vms.isEmpty())
+    {
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canRestartVm(vm))
+                return true;
+        }
         return false;
+    }
 
-    // Check if VM is running AND clean_reboot is allowed (matches C# RebootVMCommand.CanRun)
-    if (vm->GetPowerState() != "Running")
-        return false;
-
-    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
-
-    return allowedOperations.contains("clean_reboot");
+    return canRestartVm(this->getVM());
 }
 
 void RestartVMCommand::Run()
 {
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    auto runForVm = [this](const QSharedPointer<VM>& vm) {
+        if (!vm)
+            return;
+
+        // Get XenConnection from VM
+        XenConnection* conn = vm->GetConnection();
+        if (!conn || !conn->IsConnected())
+        {
+            QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
+            return;
+        }
+
+        // Create VMCleanReboot action (parent is MainWindow to prevent premature deletion)
+        VMCleanReboot* action = new VMCleanReboot(vm, this->mainWindow());
+
+        // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
+        OperationManager::instance()->RegisterOperation(action);
+
+        // Connect completion signal for cleanup
+        connect(action, &AsyncOperation::completed, this, [action]() {
+            // Auto-delete when complete (matches C# GC behavior)
+            action->deleteLater();
+        });
+
+        // Run action asynchronously (matches C# pattern - no modal dialog)
+        // Progress shown in status bar via OperationManager signals
+        action->RunAsync();
+    };
+
+    if (this->m_vms.size() > 1)
+    {
+        int ret = QMessageBox::question(this->mainWindow(), "Restart VMs", "Are you sure you want to restart the selected VMs?", QMessageBox::Yes | QMessageBox::No);
+        if (ret != QMessageBox::Yes)
+            return;
+
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canRestartVm(vm))
+                runForVm(vm);
+        }
+        return;
+    }
+    QSharedPointer<VM> vm = this->m_vms.size() == 1 ? this->m_vms.first() : this->getVM();
+    if (!vm || !canRestartVm(vm))
         return;
 
-    QString vmName = this->getSelectedVMName();
+    QString vmName = vm->GetName();
     if (vmName.isEmpty())
         return;
 
-    // Show confirmation dialog
     int ret = QMessageBox::question(this->mainWindow(), "Restart VM",
                                     QString("Are you sure you want to restart VM '%1'?").arg(vmName),
                                     QMessageBox::Yes | QMessageBox::No);
@@ -77,33 +130,15 @@ void RestartVMCommand::Run()
     if (ret != QMessageBox::Yes)
         return;
 
-    // Get XenConnection from VM
-    XenConnection* conn = vm->GetConnection();
-    if (!conn || !conn->IsConnected())
-    {
-        QMessageBox::warning(this->mainWindow(), "Not Connected",
-                             "Not connected to XenServer");
-        return;
-    }
-
-    // Create VMCleanReboot action (parent is MainWindow to prevent premature deletion)
-    VMCleanReboot* action = new VMCleanReboot(vm, this->mainWindow());
-
-    // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-    OperationManager::instance()->RegisterOperation(action);
-
-    // Connect completion signal for cleanup
-    connect(action, &AsyncOperation::completed, this, [action]() {
-        // Auto-delete when complete (matches C# GC behavior)
-        action->deleteLater();
-    });
-
-    // Run action asynchronously (matches C# pattern - no modal dialog)
-    // Progress shown in status bar via OperationManager signals
-    action->RunAsync();
+    runForVm(vm);
 }
 
 QString RestartVMCommand::MenuText() const
 {
-    return "Restart VM";
+    return "Reboot";
+}
+
+QIcon RestartVMCommand::GetIcon() const
+{
+    return QIcon(":/icons/reboot.png");
 }

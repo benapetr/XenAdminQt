@@ -29,14 +29,31 @@
 #include "vmoperationhelpers.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/actions/vm/vmstartaction.h"
-#include "xen/failure.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/vmstartaction.h"
+#include "xenlib/xen/failure.h"
 #include <QMessageBox>
 #include <QTimer>
 #include <QMetaObject>
 #include <QPointer>
+
+namespace
+{
+    bool canStartVm(const QSharedPointer<VM>& vm)
+    {
+        if (!vm)
+            return false;
+
+        // Check VM is not running (Halted or Suspended) AND start is allowed (matches C# StartVMCommand.CanRun)
+        QString powerState = vm->GetPowerState();
+
+        if (powerState == "Running")
+            return false;
+
+        return vm->GetAllowedOperations().contains("start");
+    }
+} // namespace
 
 StartVMCommand::StartVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
@@ -48,18 +65,17 @@ StartVMCommand::StartVMCommand(const QList<QSharedPointer<VM>>& selectedVms, Mai
 
 bool StartVMCommand::CanRun() const
 {
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    if (!this->m_vms.isEmpty())
+    {
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canStartVm(vm))
+                return true;
+        }
         return false;
+    }
 
-    // Check VM is not running (Halted or Suspended) AND start is allowed (matches C# StartVMCommand.CanRun)
-    QString powerState = vm->GetPowerState();
-
-    if (powerState == "Running")
-        return false;
-
-    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
-    return allowedOperations.contains("start");
+    return canStartVm(this->getVM());
 }
 
 void StartVMCommand::Run()
@@ -67,7 +83,10 @@ void StartVMCommand::Run()
     if (!this->m_vms.isEmpty())
     {
         foreach (QSharedPointer<VM> vm, this->m_vms)
-            this->RunForVm(vm);
+        {
+            if (canStartVm(vm))
+                this->RunForVm(vm);
+        }
         return;
     }
 
@@ -130,4 +149,9 @@ bool StartVMCommand::RunForVm(QSharedPointer<VM> vm)
 QString StartVMCommand::MenuText() const
 {
     return "Start VM";
+}
+
+QIcon StartVMCommand::GetIcon() const
+{
+    return QIcon(":/icons/start_vm.png");
 }

@@ -43,6 +43,7 @@ class ShutdownHostCommand : public HostCommand
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
+        QIcon GetIcon() const override;
 };
 
 #endif // SHUTDOWNHOSTCOMMAND_H

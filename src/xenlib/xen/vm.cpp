@@ -55,7 +55,7 @@ QString VM::GetObjectType() const
 
 QString VM::GetPowerState() const
 {
-    return stringProperty("power_state");
+    return this->stringProperty("power_state");
 }
 
 QString VM::NameWithLocation() const
@@ -101,27 +101,32 @@ QString VM::LocationString() const
 
 bool VM::IsTemplate() const
 {
-    return boolProperty("is_a_template", false);
+    return this->boolProperty("is_a_template", false);
+}
+
+bool VM::IsLocked() const
+{
+    return this->boolProperty("locked", false);
 }
 
 bool VM::IsDefaultTemplate() const
 {
-    return DefaultTemplate();
+    return this->DefaultTemplate();
 }
 
 bool VM::DefaultTemplate() const
 {
-    return GetOtherConfig().contains("default_template");
+    return this->GetOtherConfig().contains("default_template");
 }
 
 bool VM::InternalTemplate() const
 {
-    return GetOtherConfig().contains("xensource_internal");
+    return this->GetOtherConfig().contains("xensource_internal");
 }
 
 bool VM::Show(bool showHiddenVMs) const
 {
-    if (InternalTemplate())
+    if (this->InternalTemplate())
         return false;
 
     const QString name = GetName();
@@ -136,12 +141,12 @@ bool VM::Show(bool showHiddenVMs) const
 
 bool VM::IsSnapshot() const
 {
-    return boolProperty("is_a_snapshot", false);
+    return this->boolProperty("is_a_snapshot", false);
 }
 
 QString VM::GetResidentOnRef() const
 {
-    return stringProperty("resident_on");
+    return this->stringProperty("resident_on");
 }
 
 QSharedPointer<Host> VM::GetResidentOnHost()
@@ -179,12 +184,12 @@ QSharedPointer<Pool> VM::GetPool()
 
 QString VM::GetAffinityRef() const
 {
-    return stringProperty("affinity");
+    return this->stringProperty("affinity");
 }
 
 QStringList VM::GetVBDRefs() const
 {
-    return stringListProperty("VBDs");
+    return this->stringListProperty("VBDs");
 }
 
 QSharedPointer<VBD> VM::FindVMCDROM() const
@@ -239,7 +244,7 @@ QList<QSharedPointer<VBD>> VM::GetVBDs() const
 
 QStringList VM::GetVIFRefs() const
 {
-    return stringListProperty("VIFs");
+    return this->stringListProperty("VIFs");
 }
 
 QList<QSharedPointer<VIF>> VM::GetVIFs() const
@@ -265,7 +270,7 @@ QList<QSharedPointer<VIF>> VM::GetVIFs() const
 
 QStringList VM::GetConsoleRefs() const
 {
-    return stringListProperty("consoles");
+    return this->stringListProperty("consoles");
 }
 
 QString VM::GetSuspendVDIRef() const

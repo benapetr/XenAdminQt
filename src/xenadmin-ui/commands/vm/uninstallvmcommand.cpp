@@ -27,7 +27,7 @@
 
 #include "uninstallvmcommand.h"
 #include "../../mainwindow.h"
-#include "xen/vm.h"
+#include "xenlib/xen/vm.h"
 #include <QMessageBox>
 
 UninstallVMCommand::UninstallVMCommand(MainWindow* mainWindow, QObject* parent)

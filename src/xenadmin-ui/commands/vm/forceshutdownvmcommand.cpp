@@ -28,56 +28,130 @@
 #include "forceshutdownvmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/actions/vm/vmshutdownaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/vmshutdownaction.h"
 #include <QMessageBox>
 
-ForceShutdownVMCommand::ForceShutdownVMCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+namespace
+{
+    bool canForceShutdownVm(const QSharedPointer<VM>& vm)
+    {
+        if (!vm)
+            return false;
+
+        if (vm->IsTemplate() || vm->IsLocked())
+            return false;
+
+        if (vm->GetPowerState() == "Running" && !vm->CurrentOperations().isEmpty())
+            return true;
+
+        if (!vm->GetAllowedOperations().contains("hard_shutdown"))
+            return false;
+
+        return true;
+    }
+} // namespace
+
+ForceShutdownVMCommand::ForceShutdownVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
+{
+}
+
+ForceShutdownVMCommand::ForceShutdownVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
 {
 }
 
 bool ForceShutdownVMCommand::CanRun() const
 {
-    // Matches C# ForceVMShutDownCommand.CanRun() logic
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    if (!this->m_vms.isEmpty())
+    {
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canForceShutdownVm(vm))
+                return true;
+        }
         return false;
+    }
 
-    return this->canForceShutdown();
+    return canForceShutdownVm(this->getVM());
 }
 
 void ForceShutdownVMCommand::Run()
 {
-    // Matches C# ForceVMShutDownCommand.Run() with confirmation dialog
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    auto runForVm = [this](const QSharedPointer<VM>& vm)
+    {
+        if (!vm)
+            return;
+
+        XenConnection* conn = vm->GetConnection();
+        if (!conn || !conn->IsConnected())
+        {
+            QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
+            return;
+        }
+
+        VMHardShutdown* action = new VMHardShutdown(vm, this->mainWindow());
+        OperationManager::instance()->RegisterOperation(action);
+        connect(action, &AsyncOperation::completed, this, [action]() {
+            action->deleteLater();
+        });
+        action->RunAsync();
+    };
+
+    if (this->m_vms.size() > 1)
+    {
+        bool anyRunningTasks = false;
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (!vm->CurrentOperations().isEmpty())
+            {
+                anyRunningTasks = true;
+                break;
+            }
+        }
+
+        QString message = anyRunningTasks
+                              ? "Some selected VMs have tasks in progress that will be cancelled. "
+                                "Are you sure you want to force them to shut down?\n\n"
+                                "This is equivalent to pulling the power cable out and may cause data loss."
+                              : "Are you sure you want to force the selected VMs to shut down?\n\n"
+                                "This is equivalent to pulling the power cable out and may cause data loss.";
+
+        QMessageBox::StandardButton reply = QMessageBox::warning(
+            this->mainWindow(),
+            "Force Shutdown VMs",
+            message,
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+
+        if (reply != QMessageBox::Yes)
+            return;
+
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canForceShutdownVm(vm))
+                runForVm(vm);
+        }
+        return;
+    }
+
+    QSharedPointer<VM> vm = this->m_vms.size() == 1 ? this->m_vms.first() : this->getVM();
+    if (!vm || !canForceShutdownVm(vm))
         return;
 
-    QString vmName = this->getSelectedVMName();
+    QString vmName = vm->GetName();
     if (vmName.isEmpty())
         return;
 
-    // Check if VM has running tasks (matches C# HelpersGUI.HasRunningTasks logic)
-    bool hasRunningTasks = this->hasRunningTasks();
+    QString message = !vm->CurrentOperations().isEmpty()
+                          ? QString("'%1' has tasks in progress that will be cancelled. "
+                                    "Are you sure you want to force it to shut down?\n\n"
+                                    "This is equivalent to pulling the power cable out and may cause data loss.")
+                                .arg(vmName)
+                          : QString("Are you sure you want to force '%1' to shut down?\n\n"
+                                    "This is equivalent to pulling the power cable out and may cause data loss.")
+                                .arg(vmName);
 
-    // Build confirmation message (matches C# ConfirmationDialogText logic)
-    QString message;
-    if (hasRunningTasks)
-    {
-        message = QString("'%1' has tasks in progress that will be cancelled. "
-                          "Are you sure you want to force it to shut down?\n\n"
-                          "This is equivalent to pulling the power cable out and may cause data loss.")
-                      .arg(vmName);
-    } else
-    {
-        message = QString("Are you sure you want to force '%1' to shut down?\n\n"
-                          "This is equivalent to pulling the power cable out and may cause data loss.")
-                      .arg(vmName);
-    }
-
-    // Show confirmation dialog (matches C# ConfirmationRequired pattern)
     QMessageBox::StandardButton reply = QMessageBox::warning(
         this->mainWindow(),
         "Force Shutdown VM",
@@ -88,29 +162,7 @@ void ForceShutdownVMCommand::Run()
     if (reply != QMessageBox::Yes)
         return;
 
-    // Get XenConnection from VM
-    XenConnection* conn = vm->GetConnection();
-    if (!conn || !conn->IsConnected())
-    {
-        QMessageBox::warning(this->mainWindow(),
-                             tr("Not Connected"),
-                             tr("Not connected to XenServer"));
-        return;
-    }
-
-    // Create the hard shutdown action
-    VMHardShutdown* action = new VMHardShutdown(vm, this->mainWindow());
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
-
-    // Connect completion signal for cleanup
-    connect(action, &AsyncOperation::completed, this, [action]() {
-        action->deleteLater();
-    });
-
-    // Run action asynchronously (matches C# pattern)
-    action->RunAsync();
+    runForVm(vm);
 }
 
 QString ForceShutdownVMCommand::MenuText() const
@@ -119,57 +171,7 @@ QString ForceShutdownVMCommand::MenuText() const
     return "Force Shutdown";
 }
 
-bool ForceShutdownVMCommand::canForceShutdown() const
+QIcon ForceShutdownVMCommand::GetIcon() const
 {
-    // Matches C# ForceVMShutDownCommand.CanRun() logic:
-    // if (vm != null && !vm.Locked && !vm.is_a_template)
-    // {
-    //     if (vm.power_state == vm_power_state.Running && HelpersGUI.HasRunningTasks(vm))
-    //         return true;
-    //     else
-    //         return vm.allowed_operations != null && vm.allowed_operations.Contains(vm_operations.hard_shutdown);
-    // }
-
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return false;
-
-    QVariantMap vmData = vm->GetData();
-    if (vmData.isEmpty())
-        return false;
-
-    bool isTemplate = vmData.value("is_a_template", false).toBool();
-    bool isLocked = vmData.value("locked", false).toBool();
-
-    if (isTemplate || isLocked)
-        return false;
-
-    QString powerState = vm->GetPowerState();
-
-    // CA-16960: If the VM is up and has a running task, we will disregard the allowed_operations
-    // and always allow forced options.
-    if (powerState == "Running" && this->hasRunningTasks())
-        return true;
-
-    // Otherwise check allowed_operations
-    QVariantList allowedOps = vmData.value("allowed_operations", QVariantList()).toList();
-    for (const QVariant& op : allowedOps)
-    {
-        if (op.toString() == "hard_shutdown")
-            return true;
-    }
-
-    return false;
-}
-
-bool ForceShutdownVMCommand::hasRunningTasks() const
-{
-    // Matches C# HelpersGUI.HasRunningTasks(vm) logic
-    // Check if VM has current_operations (running tasks)
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return false;
-
-    QVariantMap currentOps = vm->GetData().value("current_operations", QVariantMap()).toMap();
-    return !currentOps.isEmpty();
+    return QIcon(":/icons/force_shutdown.png");
 }

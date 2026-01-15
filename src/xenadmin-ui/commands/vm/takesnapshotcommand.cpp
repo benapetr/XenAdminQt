@@ -31,11 +31,10 @@
 #include "../../operations/operationmanager.h"
 #include "../../dialogs/vmsnapshotdialog.h"
 #include "../../ConsoleView/ConsolePanel.h"
-#include "xen/vm.h"
-#include "xencache.h"
-#include "xen/network/connection.h"
-#include "xen/actions/vm/vmsnapshotcreateaction.h"
-#include "xen/xenobject.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/actions/vm/vmsnapshotcreateaction.h"
 #include <QtWidgets>
 
 TakeSnapshotCommand::TakeSnapshotCommand(QObject* parent) : VMCommand(nullptr, parent)

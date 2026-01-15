@@ -28,17 +28,16 @@
 #include "movevmcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/crosspoolmigratewizard.h"
-#include "xen/vm.h"
-#include "xen/sr.h"
-#include "xen/actions/vm/vmmoveaction.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/actions/vm/vmmoveaction.h"
 #include "../../operations/operationmanager.h"
 #include "../vm/crosspoolmigratecommand.h"
-#include "xencache.h"
+#include "xenlib/xencache.h"
 #include <QInputDialog>
 #include <QMessageBox>
 
-MoveVMCommand::MoveVMCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+MoveVMCommand::MoveVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 

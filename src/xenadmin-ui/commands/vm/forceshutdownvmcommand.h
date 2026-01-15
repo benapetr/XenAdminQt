@@ -42,15 +42,13 @@ class ForceShutdownVMCommand : public VMCommand
 
     public:
         explicit ForceShutdownVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit ForceShutdownVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
-
-    private:
-        bool canForceShutdown() const;
-        bool hasRunningTasks() const;
+        QIcon GetIcon() const override;
 };
 
 #endif // FORCESHUTDOWNVMCOMMAND_H

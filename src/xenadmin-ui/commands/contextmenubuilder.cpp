@@ -31,6 +31,7 @@
 #include "host/reboothostcommand.h"
 #include "host/restarttoolstackcommand.h"
 #include "host/shutdownhostcommand.h"
+#include "host/poweronhostcommand.h"
 #include "host/hostpropertiescommand.h"
 #include "host/reconnecthostcommand.h"
 #include "host/removehostcommand.h"
@@ -45,6 +46,8 @@
 #include "vm/resumevmcommand.h"
 #include "vm/pausevmcommand.h"
 #include "vm/unpausevmcommand.h"
+#include "vm/forceshutdownvmcommand.h"
+#include "vm/forcerebootvmcommand.h"
 #include "../controls/vmoperationmenu.h"
 #include "vm/clonevmcommand.h"
 #include "vm/deletevmcommand.h"
@@ -326,32 +329,35 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
         return false;
     };
 
-    // Power operations based on VM state
-    if (powerState == "Halted")
-    {
-        StartVMCommand* startCmd = new StartVMCommand(selectedVms, this->m_mainWindow, this);
-        this->addCommand(menu, startCmd);
-    } else if (powerState == "Running")
-    {
-        StopVMCommand* stopCmd = new StopVMCommand(selectedVms, this->m_mainWindow, this);
-        this->addCommand(menu, stopCmd);
+    // Power operations are always present; enablement depends on selected VMs.
+    StartVMCommand* startCmd = new StartVMCommand(selectedVms, this->m_mainWindow, this);
+    this->addCommand(menu, startCmd);
 
-        RestartVMCommand* restartCmd = new RestartVMCommand(selectedVms, this->m_mainWindow, this);
-        this->addCommand(menu, restartCmd);
+    StopVMCommand* stopCmd = new StopVMCommand(selectedVms, this->m_mainWindow, this);
+    this->addCommand(menu, stopCmd);
 
-        PauseVMCommand* pauseCmd = new PauseVMCommand(selectedVms, this->m_mainWindow, this);
-        this->addCommand(menu, pauseCmd);
+    SuspendVMCommand* suspendCmd = new SuspendVMCommand(selectedVms, this->m_mainWindow, this);
+    this->addCommand(menu, suspendCmd);
 
-        SuspendVMCommand* suspendCmd = new SuspendVMCommand(selectedVms, this->m_mainWindow, this);
-        this->addCommand(menu, suspendCmd);
-    } else if (powerState == "Paused")
+    RestartVMCommand* restartCmd = new RestartVMCommand(selectedVms, this->m_mainWindow, this);
+    this->addCommand(menu, restartCmd);
+
+    PauseVMCommand* pauseCmd = new PauseVMCommand(selectedVms, this->m_mainWindow, this);
+    this->addCommand(menu, pauseCmd);
+
+    UnpauseVMCommand* unpauseCmd = new UnpauseVMCommand(selectedVms, this->m_mainWindow, this);
+    this->addCommand(menu, unpauseCmd);
+
+    ResumeVMCommand* resumeCmd = new ResumeVMCommand(selectedVms, this->m_mainWindow, this);
+    this->addCommand(menu, resumeCmd);
+
+    ForceShutdownVMCommand* forceShutdownCmd = new ForceShutdownVMCommand(selectedVms, this->m_mainWindow, this);
+    ForceRebootVMCommand* forceRebootCmd = new ForceRebootVMCommand(selectedVms, this->m_mainWindow, this);
+    if (forceShutdownCmd->CanRun() || forceRebootCmd->CanRun())
     {
-        UnpauseVMCommand* unpauseCmd = new UnpauseVMCommand(selectedVms, this->m_mainWindow, this);
-        this->addCommand(menu, unpauseCmd);
-    } else if (powerState == "Suspended")
-    {
-        ResumeVMCommand* resumeCmd = new ResumeVMCommand(selectedVms, this->m_mainWindow, this);
-        this->addCommand(menu, resumeCmd);
+        this->addSeparator(menu);
+        this->addCommand(menu, forceShutdownCmd);
+        this->addCommand(menu, forceRebootCmd);
     }
 
     this->addSeparator(menu);
@@ -644,6 +650,9 @@ void ContextMenuBuilder::addCommand(QMenu* menu, Command* command)
         return;
 
     QAction* action = menu->addAction(command->MenuText());
+    QIcon icon = command->GetIcon();
+    if (!icon.isNull())
+        action->setIcon(icon);
     connect(action, &QAction::triggered, command, &Command::Run);
 }
 

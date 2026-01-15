@@ -28,8 +28,7 @@
 #include "exportvmcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/exportwizard.h"
-#include "xen/xenobject.h"
-#include "xen/vm.h"
+#include "xenlib/xen/vm.h"
 #include <QProgressDialog>
 #include <QFileDialog>
 #include <QMessageBox>

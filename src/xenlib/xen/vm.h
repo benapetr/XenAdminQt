@@ -79,6 +79,8 @@ class XENLIB_EXPORT VM : public XenObject
         //! Check if this is a template
         bool IsTemplate() const;
 
+        bool IsLocked() const override;
+
         //! Check if this is a default template
         bool IsDefaultTemplate() const;
 

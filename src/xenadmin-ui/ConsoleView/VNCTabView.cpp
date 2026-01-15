@@ -955,7 +955,7 @@ void VNCTabView::onPowerStateLabelClicked()
 
             MainWindow* mainWin = qobject_cast<MainWindow*>(this->window());
             ResumeVMCommand resumeCmd(mainWin);
-            if (!resumeCmd.runForVm(this->_vmRef))
+            if (!resumeCmd.runForVm(this->m_vm, this->m_vm ? this->m_vm->GetName() : QString(), false))
             {
                 enablePowerStateLabel(tr("Failed to resume VM"));
             }

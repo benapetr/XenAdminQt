@@ -30,7 +30,7 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/vmpropertiesdialog.h"
 #include <QtWidgets>
-#include "xen/vm.h"
+#include "xenlib/xen/vm.h"
 
 VMPropertiesCommand::VMPropertiesCommand(QObject* parent) : VMCommand(nullptr, parent)
 {

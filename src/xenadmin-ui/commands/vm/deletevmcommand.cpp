@@ -28,9 +28,9 @@
 #include "deletevmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/actions/vm/vmdestroyaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/vmdestroyaction.h"
 #include <QMessageBox>
 #include <QCheckBox>
 #include <QVBoxLayout>
@@ -39,13 +39,11 @@
 #include <QPushButton>
 #include <QDialogButtonBox>
 
-DeleteVMCommand::DeleteVMCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+DeleteVMCommand::DeleteVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 
-DeleteVMCommand::DeleteVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent)
-    : VMCommand(selectedVms, mainWindow, parent)
+DeleteVMCommand::DeleteVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
 {
 }
 

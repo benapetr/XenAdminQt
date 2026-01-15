@@ -27,15 +27,12 @@
 
 #include "crosspoolmigratecommand.h"
 #include "../../dialogs/crosspoolmigratewizard.h"
-#include "xen/sr.h"
-#include "xen/vm.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
 
-CrossPoolMigrateCommand::CrossPoolMigrateCommand(MainWindow* mainWindow,
-                                                 CrossPoolMigrateWizard::WizardMode mode,
-                                                 QObject* parent)
-    : VMCommand(mainWindow, parent),
-      m_mode(mode)
+CrossPoolMigrateCommand::CrossPoolMigrateCommand(MainWindow* mainWindow, CrossPoolMigrateWizard::WizardMode mode, QObject* parent)
+    : VMCommand(mainWindow, parent), m_mode(mode)
 {
 }
 
@@ -48,8 +45,7 @@ bool CrossPoolMigrateCommand::CanRun() const
     {
         if (baseVm)
             vms.append(baseVm);
-    }
-    else
+    } else
     {
         XenConnection* conn = baseVm ? baseVm->GetConnection() : nullptr;
         XenCache* cache = conn ? conn->GetCache() : nullptr;

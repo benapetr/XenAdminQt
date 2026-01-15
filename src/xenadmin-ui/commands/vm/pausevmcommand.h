@@ -42,6 +42,7 @@ class PauseVMCommand : public VMCommand
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
+        QIcon GetIcon() const override;
 };
 
 #endif // PAUSEVMCOMMAND_H

@@ -103,3 +103,8 @@ QString ShutdownHostCommand::MenuText() const
 {
     return "Shutdown Host";
 }
+
+QIcon ShutdownHostCommand::GetIcon() const
+{
+    return QIcon(":/icons/shutdown.png");
+}

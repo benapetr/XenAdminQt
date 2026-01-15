@@ -42,14 +42,15 @@ class ResumeVMCommand : public VMCommand
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
+        QIcon GetIcon() const override;
 
         /**
          * @brief Run the command for a specific suspended VM.
-         * @param vmRef VM opaque ref.
+         * @param vm Suspended VM.
          * @param vmName Optional display name.
          * @return true if action scheduled.
          */
-        bool runForVm(const QString& vmRef, const QString& vmName = QString(), bool promptUser = false);
+        bool runForVm(const QSharedPointer<VM>& vm, const QString& vmName = QString(), bool promptUser = false);
 };
 
 #endif // RESUMEVMCOMMAND_H

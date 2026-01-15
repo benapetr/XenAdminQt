@@ -28,57 +28,161 @@
 #include "forcerebootvmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/actions/vm/vmrebootaction.h"
-#include "xencache.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/vmrebootaction.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
 
-ForceRebootVMCommand::ForceRebootVMCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+namespace
+{
+    // Matches C# EnabledTargetExists(host, connection) logic:
+    // If the vm has a home server check it's enabled, otherwise check if any host is enabled
+    bool enabledTargetExistsForVm(const QSharedPointer<VM>& vm)
+    {
+        QVariantMap vmData = vm->GetData();
+        if (vmData.isEmpty())
+            return false;
+
+        QSharedPointer<Host> host = vm->GetResidentOnHost();
+        if (!host.isNull())
+            return host->IsEnabled();
+
+        XenCache* cache = vm->GetConnection()->GetCache();
+        QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+        foreach (QSharedPointer host, hosts)
+        {
+            if (host->IsEnabled())
+                return true;
+        }
+
+        return false;
+    }
+
+    // Matches C# ForceVMRebootCommand.CanRun() logic:  // if (vm != null && !vm.is_a_template && !vm.Locked)
+    // {
+    //     if (vm.power_state == vm_power_state.Running && HelpersGUI.HasRunningTasks(vm))
+    //         return true;
+    //     else
+    //         return vm.allowed_operations != null && vm.allowed_operations.Contains(vm_operations.hard_reboot)
+    //                && EnabledTargetExists(vm.Home(), vm.Connection);
+    // }
+    bool canForceRebootVm(const QSharedPointer<VM>& vm)
+    {
+        if (!vm)
+            return false;
+
+        if (vm->IsTemplate() || vm->IsLocked())
+            return false;
+
+        if (vm->GetPowerState() == "Running" && !vm->CurrentOperations().isEmpty())
+            return true;
+
+        if (!vm->GetAllowedOperations().contains("hard_reboot"))
+            return false;
+
+        return enabledTargetExistsForVm(vm);
+    }
+} // namespace
+
+ForceRebootVMCommand::ForceRebootVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
+{
+}
+
+ForceRebootVMCommand::ForceRebootVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
 {
 }
 
 bool ForceRebootVMCommand::CanRun() const
 {
-    // Matches C# ForceVMRebootCommand.CanRun() logic
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    if (!this->m_vms.isEmpty())
+    {
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canForceRebootVm(vm))
+                return true;
+        }
         return false;
+    }
 
-    return this->canForceReboot();
+    return canForceRebootVm(this->getVM());
 }
 
 void ForceRebootVMCommand::Run()
 {
-    // Matches C# ForceVMRebootCommand.Run() with confirmation dialog
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    auto runForVm = [this](const QSharedPointer<VM>& vm)
+    {
+        if (!vm)
+            return;
+
+        XenConnection* conn = vm->GetConnection();
+        if (!conn || !conn->IsConnected())
+        {
+            QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
+            return;
+        }
+
+        VMHardReboot* action = new VMHardReboot(vm, this->mainWindow());
+        OperationManager::instance()->RegisterOperation(action);
+        connect(action, &AsyncOperation::completed, this, [action]() { action->deleteLater(); });
+        action->RunAsync();
+    };
+
+    if (this->m_vms.size() > 1)
+    {
+        bool anyRunningTasks = false;
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (!vm->CurrentOperations().isEmpty())
+            {
+                anyRunningTasks = true;
+                break;
+            }
+        }
+
+        QString message = anyRunningTasks
+                              ? "Some selected VMs have tasks in progress that will be cancelled. "
+                                "Are you sure you want to force them to reboot?\n\n"
+                                "This is equivalent to pressing the reset button and may cause data loss."
+                              : "Are you sure you want to force the selected VMs to reboot?\n\n"
+                                "This is equivalent to pressing the reset button and may cause data loss.";
+
+        QMessageBox::StandardButton reply = QMessageBox::warning(
+            this->mainWindow(),
+            "Force Reboot VMs",
+            message,
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+
+        if (reply != QMessageBox::Yes)
+            return;
+
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canForceRebootVm(vm))
+                runForVm(vm);
+        }
+        return;
+    }
+
+    QSharedPointer<VM> vm = this->m_vms.size() == 1 ? this->m_vms.first() : this->getVM();
+    if (!vm || !canForceRebootVm(vm))
         return;
 
-    QString vmName = this->getSelectedVMName();
+    QString vmName = vm->GetName();
     if (vmName.isEmpty())
         return;
 
-    // Check if VM has running tasks (matches C# HelpersGUI.HasRunningTasks logic)
-    bool hasRunningTasks = this->hasRunningTasks();
+    QString message = !vm->CurrentOperations().isEmpty()
+                          ? QString("'%1' has tasks in progress that will be cancelled. "
+                                    "Are you sure you want to force it to reboot?\n\n"
+                                    "This is equivalent to pressing the reset button and may cause data loss.")
+                                .arg(vmName)
+                          : QString("Are you sure you want to force '%1' to reboot?\n\n"
+                                    "This is equivalent to pressing the reset button and may cause data loss.")
+                                .arg(vmName);
 
-    // Build confirmation message (matches C# ConfirmationDialogText logic)
-    QString message;
-    if (hasRunningTasks)
-    {
-        message = QString("'%1' has tasks in progress that will be cancelled. "
-                          "Are you sure you want to force it to reboot?\n\n"
-                          "This is equivalent to pressing the reset button and may cause data loss.")
-                      .arg(vmName);
-    } else
-    {
-        message = QString("Are you sure you want to force '%1' to reboot?\n\n"
-                          "This is equivalent to pressing the reset button and may cause data loss.")
-                      .arg(vmName);
-    }
-
-    // Show confirmation dialog (matches C# ConfirmationRequired pattern)
     QMessageBox::StandardButton reply = QMessageBox::warning(
         this->mainWindow(),
         "Force Reboot VM",
@@ -89,29 +193,7 @@ void ForceRebootVMCommand::Run()
     if (reply != QMessageBox::Yes)
         return;
 
-    // Get XenConnection from VM
-    XenConnection* conn = vm->GetConnection();
-    if (!conn || !conn->IsConnected())
-    {
-        QMessageBox::warning(this->mainWindow(),
-                             tr("Not Connected"),
-                             tr("Not connected to XenServer"));
-        return;
-    }
-
-    // Create the hard reboot action
-    VMHardReboot* action = new VMHardReboot(vm, this->mainWindow());
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
-
-    // Connect completion signal for cleanup
-    connect(action, &AsyncOperation::completed, this, [action]() {
-        action->deleteLater();
-    });
-
-    // Run action asynchronously (matches C# pattern)
-    action->RunAsync();
+    runForVm(vm);
 }
 
 QString ForceRebootVMCommand::MenuText() const
@@ -120,103 +202,7 @@ QString ForceRebootVMCommand::MenuText() const
     return "Force Reboot";
 }
 
-bool ForceRebootVMCommand::canForceReboot() const
+QIcon ForceRebootVMCommand::GetIcon() const
 {
-    // Matches C# ForceVMRebootCommand.CanRun() logic:  // if (vm != null && !vm.is_a_template && !vm.Locked)
-    // {
-    //     if (vm.power_state == vm_power_state.Running && HelpersGUI.HasRunningTasks(vm))
-    //         return true;
-    //     else
-    //         return vm.allowed_operations != null && vm.allowed_operations.Contains(vm_operations.hard_reboot)
-    //                && EnabledTargetExists(vm.Home(), vm.Connection);
-    // }
-
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return false;
-
-    QVariantMap vmData = vm->GetData();
-    if (vmData.isEmpty())
-        return false;
-
-    bool isTemplate = vmData.value("is_a_template", false).toBool();
-    bool isLocked = vmData.value("locked", false).toBool();
-
-    if (isTemplate || isLocked)
-        return false;
-
-    QString powerState = vm->GetPowerState();
-
-    // CA-16960: If the VM is up and has a running task, we will disregard the allowed_operations
-    // and always allow forced options.
-    if (powerState == "Running" && this->hasRunningTasks())
-        return true;
-
-    // Otherwise check allowed_operations and enabled target
-    QVariantList allowedOps = vmData.value("allowed_operations", QVariantList()).toList();
-    bool hasHardReboot = false;
-    for (const QVariant& op : allowedOps)
-    {
-        if (op.toString() == "hard_reboot")
-        {
-            hasHardReboot = true;
-            break;
-        }
-    }
-
-    if (!hasHardReboot)
-        return false;
-
-    // Check if an enabled target host exists (matches C# EnabledTargetExists logic)
-    return this->enabledTargetExists();
-}
-
-bool ForceRebootVMCommand::hasRunningTasks() const
-{
-    // Matches C# HelpersGUI.HasRunningTasks(vm) logic
-    // Check if VM has current_operations (running tasks)
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return false;
-
-    QVariantMap currentOps = vm->GetData().value("current_operations", QVariantMap()).toMap();
-    return !currentOps.isEmpty();
-}
-
-bool ForceRebootVMCommand::enabledTargetExists() const
-{
-    // Matches C# EnabledTargetExists(host, connection) logic:
-    // If the vm has a home server check it's enabled, otherwise check if any host is enabled
-
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return false;
-
-    QVariantMap vmData = vm->GetData();
-    if (vmData.isEmpty())
-        return false;
-
-    // Check if VM has a resident_on (home server)
-    QString residentOn = vmData.value("resident_on", "").toString();
-    if (!residentOn.isEmpty() && residentOn != "OpaqueRef:NULL")
-    {
-        // VM has a home server - check if it's enabled
-        XenCache* cache = vm->GetConnection()->GetCache();
-        QVariantMap hostData = cache->ResolveObjectData("host", residentOn);
-        if (!hostData.isEmpty())
-        {
-            return hostData.value("enabled", false).toBool();
-        }
-    }
-
-    // No home server or home server not found - check if any host is enabled
-    XenCache* cache = vm->GetConnection()->GetCache();
-    QList<QVariantMap> hosts = cache->GetAllData("host");
-    for (const QVariantMap& host : hosts)
-    {
-        if (host.value("enabled", false).toBool())
-            return true;
-    }
-
-    return false;
+    return QIcon(":/icons/force_reboot.png");
 }

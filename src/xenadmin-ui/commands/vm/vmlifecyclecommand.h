@@ -29,6 +29,9 @@
 #define VMLIFECYCLECOMMAND_H
 
 #include "../command.h"
+#include <QSharedPointer>
+
+class VM;
 
 // This command provides dynamic text based on VM power state
 // It delegates to the appropriate lifecycle command (Start, Shutdown, etc.)
@@ -45,6 +48,7 @@ class VMLifeCycleCommand : public Command
         QString MenuText() const override;
 
     private:
+        QList<QSharedPointer<VM>> getSelectedVMs() const;
         QString getSelectedVMRef() const;
         QString getVMPowerState() const;
         bool isVMOperationAllowed(const QString& operation) const;

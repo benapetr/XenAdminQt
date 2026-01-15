@@ -109,6 +109,11 @@ QString PowerOnHostCommand::MenuText() const
     return "Power On";
 }
 
+QIcon PowerOnHostCommand::GetIcon() const
+{
+    return QIcon(":/icons/power_on.png");
+}
+
 bool PowerOnHostCommand::canPowerOn() const
 {
     // Matches C# PowerOnHostCommand.CanRun() logic:

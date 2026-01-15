@@ -28,69 +28,103 @@
 #include "pausevmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/actions/vm/vmpauseaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/vmpauseaction.h"
 #include <QMessageBox>
 #include <QTimer>
 
-PauseVMCommand::PauseVMCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+namespace
+{
+    bool canPauseVm(const QSharedPointer<VM>& vm)
+    {
+        if (!vm)
+            return false;
+
+        if (vm->GetPowerState() != "Running")
+            return false;
+
+        return vm->GetAllowedOperations().contains("pause");
+    }
+} // namespace
+
+PauseVMCommand::PauseVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 
-PauseVMCommand::PauseVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent)
-    : VMCommand(selectedVms, mainWindow, parent)
+PauseVMCommand::PauseVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
 {
 }
 
 bool PauseVMCommand::CanRun() const
 {
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    if (!this->m_vms.isEmpty())
+    {
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canPauseVm(vm))
+                return true;
+        }
         return false;
+    }
 
-    // Check if VM is running AND pause is allowed (matches C# PauseVMCommand.CanRun)
-    if (vm->GetPowerState() != "Running")
-        return false;
-
-    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
-
-    return allowedOperations.contains("pause");
+    return canPauseVm(this->getVM());
 }
 
 void PauseVMCommand::Run()
 {
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return;
-
-    // Get XenConnection from VM
-    XenConnection* conn = vm->GetConnection();
-    if (!conn || !conn->IsConnected())
+    auto runForVm = [this](const QSharedPointer<VM>& vm)
     {
-        QMessageBox::warning(this->mainWindow(), "Not Connected",
-                             "Not connected to XenServer");
+        if (!vm)
+            return;
+
+        // Get XenConnection from VM
+        XenConnection* conn = vm->GetConnection();
+        if (!conn || !conn->IsConnected())
+        {
+            QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
+            return;
+        }
+
+        // Create VMPause action (parent is MainWindow to prevent premature deletion)
+        VMPause* action = new VMPause(vm, this->mainWindow());
+
+        // Register with OperationManager for history tracking
+        OperationManager::instance()->RegisterOperation(action);
+
+        // Connect completion signal for cleanup
+        connect(action, &AsyncOperation::completed, this, [action]() {
+            // Auto-delete when complete
+            action->deleteLater();
+        });
+
+        // Run action asynchronously (no modal dialog for pause)
+        action->RunAsync();
+    };
+
+    if (!this->m_vms.isEmpty())
+    {
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canPauseVm(vm))
+                runForVm(vm);
+        }
         return;
     }
 
-    // Create VMPause action (parent is MainWindow to prevent premature deletion)
-    VMPause* action = new VMPause(vm, this->mainWindow());
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm || !canPauseVm(vm))
+        return;
 
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
-
-    // Connect completion signal for cleanup
-    connect(action, &AsyncOperation::completed, this, [action]() {
-        // Auto-delete when complete
-        action->deleteLater();
-    });
-
-    // Run action asynchronously (no modal dialog for pause)
-    action->RunAsync();
+    runForVm(vm);
 }
 
 QString PauseVMCommand::MenuText() const
 {
     return "Pause VM";
+}
+
+QIcon PauseVMCommand::GetIcon() const
+{
+    return QIcon(":/icons/pause.png");
 }

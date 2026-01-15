@@ -388,6 +388,9 @@ void VMOperationMenu::AddAdditionalMenuItems()
     cmd->SetSelection(this->getSelectionRefs());
 
     QAction* action = this->addAction(cmd->MenuText());
+    QIcon icon = cmd->GetIcon();
+    if (!icon.isNull())
+        action->setIcon(icon);
     action->setEnabled(cmd->CanRun());
     this->m_additionalActions.append(action);
 

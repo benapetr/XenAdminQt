@@ -238,3 +238,8 @@ QString RebootHostCommand::MenuText() const
 {
     return "Reboot Host";
 }
+
+QIcon RebootHostCommand::GetIcon() const
+{
+    return QIcon(":/icons/reboot.png");
+}

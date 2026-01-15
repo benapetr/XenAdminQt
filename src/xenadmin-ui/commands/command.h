@@ -32,6 +32,7 @@
 #include <QString>
 #include <QStringList>
 #include <QTreeWidgetItem>
+#include <QIcon>
 
 class MainWindow;
 class XenObject;
@@ -74,6 +75,7 @@ class Command : public QObject
          * @brief Get the menu text for this command
          */
         virtual QString MenuText() const = 0;
+        virtual QIcon GetIcon() const { return QIcon(); }
 
         /**
          * @brief Get the current selection

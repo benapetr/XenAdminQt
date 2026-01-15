@@ -28,58 +28,104 @@
 #include "stopvmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/actions/vm/vmshutdownaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/vmshutdownaction.h"
 #include <QMessageBox>
 #include <QTimer>
 
-StopVMCommand::StopVMCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+namespace
+{
+    bool canShutdownVm(const QSharedPointer<VM>& vm)
+    {
+        if (!vm)
+            return false;
+
+        if (vm->GetPowerState() != "Running")
+            return false;
+
+        return vm->GetAllowedOperations().contains("clean_shutdown");
+    }
+} // namespace
+
+StopVMCommand::StopVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 
-StopVMCommand::StopVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent)
-    : VMCommand(selectedVms, mainWindow, parent)
+StopVMCommand::StopVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
 {
 }
 
 bool StopVMCommand::CanRun() const
 {
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    if (!this->m_vms.isEmpty())
+    {
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canShutdownVm(vm))
+                return true;
+        }
         return false;
+    }
 
-    // Check if VM is running AND clean_shutdown is allowed
-    if (vm->GetPowerState() != "Running")
-        return false;
-
-    // Check allowed_operations contains clean_shutdown (matches C# ShutDownVMCommand.CanRun)
-    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
-
-    return allowedOperations.contains("clean_shutdown");
+    return canShutdownVm(this->getVM());
 }
 
 void StopVMCommand::Run()
 {
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    auto runForVm = [this](const QSharedPointer<VM>& vm) {
+        if (!vm)
+            return;
+
+        // Get XenConnection from VM
+        XenConnection* conn = vm->GetConnection();
+        if (!conn || !conn->IsConnected())
+        {
+            QMessageBox::warning(this->mainWindow(), "Not Connected",
+                                 "Not connected to XenServer");
+            return;
+        }
+
+        // Create VMCleanShutdown action (parent is MainWindow to prevent premature deletion)
+        VMCleanShutdown* action = new VMCleanShutdown(vm, this->mainWindow());
+
+        // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
+        OperationManager::instance()->RegisterOperation(action);
+
+        // Connect completion signal for cleanup
+        connect(action, &AsyncOperation::completed, this, [action]() {
+            // Auto-delete when complete (matches C# GC behavior)
+            action->deleteLater();
+        });
+
+        // Run action asynchronously (matches C# pattern - no modal dialog)
+        // Progress shown in status bar via OperationManager signals
+        action->RunAsync();
+    };
+
+    if (this->m_vms.size() > 1)
+    {
+        int ret = QMessageBox::question(this->mainWindow(), "Shutdown VMs",
+                                        "Are you sure you want to shutdown the selected VMs?",
+                                        QMessageBox::Yes | QMessageBox::No);
+        if (ret != QMessageBox::Yes)
+            return;
+
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canShutdownVm(vm))
+                runForVm(vm);
+        }
+        return;
+    }
+    QSharedPointer<VM> vm = this->m_vms.size() == 1 ? this->m_vms.first() : this->getVM();
+    if (!vm || !canShutdownVm(vm))
         return;
 
-    QString vmName = this->getSelectedVMName();
+    QString vmName = vm->GetName();
     if (vmName.isEmpty())
         return;
 
-    // Get XenConnection from VM
-    XenConnection* conn = vm->GetConnection();
-    if (!conn || !conn->IsConnected())
-    {
-        QMessageBox::warning(this->mainWindow(), "Not Connected",
-                             "Not connected to XenServer");
-        return;
-    }
-
-    // Show confirmation dialog
     int ret = QMessageBox::question(this->mainWindow(), "Shutdown VM",
                                     QString("Are you sure you want to shutdown VM '%1'?").arg(vmName),
                                     QMessageBox::Yes | QMessageBox::No);
@@ -87,24 +133,15 @@ void StopVMCommand::Run()
     if (ret != QMessageBox::Yes)
         return;
 
-    // Create VMCleanShutdown action (parent is MainWindow to prevent premature deletion)
-    VMCleanShutdown* action = new VMCleanShutdown(vm, this->mainWindow());
-
-    // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-    OperationManager::instance()->RegisterOperation(action);
-
-    // Connect completion signal for cleanup
-    connect(action, &AsyncOperation::completed, this, [action]() {
-        // Auto-delete when complete (matches C# GC behavior)
-        action->deleteLater();
-    });
-
-    // Run action asynchronously (matches C# pattern - no modal dialog)
-    // Progress shown in status bar via OperationManager signals
-    action->RunAsync();
+    runForVm(vm);
 }
 
 QString StopVMCommand::MenuText() const
 {
     return "Shutdown VM";
+}
+
+QIcon StopVMCommand::GetIcon() const
+{
+    return QIcon(":/icons/shutdown.png");
 }

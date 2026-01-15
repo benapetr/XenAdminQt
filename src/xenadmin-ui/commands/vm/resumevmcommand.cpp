@@ -29,56 +29,80 @@
 #include "vmoperationhelpers.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/actions/vm/vmresumeaction.h"
-#include "xen/failure.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/vmresumeaction.h"
+#include "xenlib/xen/failure.h"
 #include <QMessageBox>
 #include <QTimer>
 #include <QMetaObject>
 #include <QPointer>
 
+namespace
+{
+    bool canResumeVm(const QSharedPointer<VM>& vm)
+    {
+        if (!vm)
+            return false;
+
+        if (vm->GetPowerState() != "Suspended")
+            return false;
+
+        return vm->GetAllowedOperations().contains("resume");
+    }
+} // namespace
+
 ResumeVMCommand::ResumeVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 
-ResumeVMCommand::ResumeVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent)
-    : VMCommand(selectedVms, mainWindow, parent)
+ResumeVMCommand::ResumeVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
 {
 }
 
 bool ResumeVMCommand::CanRun() const
 {
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    if (!this->m_vms.isEmpty())
+    {
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canResumeVm(vm))
+                return true;
+        }
         return false;
+    }
 
-    // Check if VM is suspended AND resume is allowed (matches C# ResumeVMCommand.CanRun)
-    if (vm->GetPowerState() != "Suspended")
-        return false;
-
-    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
-
-    return allowedOperations.contains("resume");
+    return canResumeVm(this->getVM());
 }
 
 void ResumeVMCommand::Run()
 {
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    if (this->m_vms.size() > 1)
+    {
+        int ret = QMessageBox::question(this->mainWindow(), tr("Resume VMs"), tr("Are you sure you want to resume the selected VMs?"), QMessageBox::Yes | QMessageBox::No);
+        if (ret != QMessageBox::Yes)
+            return;
+
+        for (const QSharedPointer<VM>& vm : this->m_vms)
+        {
+            if (canResumeVm(vm))
+                runForVm(vm, vm->GetName(), false);
+        }
+        return;
+    }
+    QSharedPointer<VM> vm = this->m_vms.size() == 1 ? this->m_vms.first() : this->getVM();
+    if (!vm || !canResumeVm(vm))
         return;
 
-    runForVm(vm->OpaqueRef(), this->getSelectedVMName(), true);
+    runForVm(vm, vm->GetName(), true);
 }
 
-bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool promptUser)
+bool ResumeVMCommand::runForVm(const QSharedPointer<VM>& vm, const QString& vmName, bool promptUser)
 {
-    if (vmRef.isEmpty())
-        return false;
-
-    QSharedPointer<VM> vm = this->getVM();
     if (!vm)
         return false;
+
+    QString vmRef = vm->OpaqueRef();
 
     QString displayName = vmName;
     if (displayName.isEmpty())
@@ -88,9 +112,7 @@ bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool
 
     if (promptUser)
     {
-        int ret = QMessageBox::question(this->mainWindow(), tr("Resume VM"),
-                                        tr("Are you sure you want to resume VM '%1'?").arg(displayName),
-                                        QMessageBox::Yes | QMessageBox::No);
+        int ret = QMessageBox::question(this->mainWindow(), tr("Resume VM"), tr("Are you sure you want to resume VM '%1'?").arg(displayName), QMessageBox::Yes | QMessageBox::No);
 
         if (ret != QMessageBox::Yes)
             return false;
@@ -100,8 +122,7 @@ bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool
     XenConnection* conn = vm->GetConnection();
     if (!conn || !conn->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), "Not Connected",
-                             "Not connected to XenServer");
+        QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
         return false;
     }
 
@@ -145,4 +166,9 @@ bool ResumeVMCommand::runForVm(const QString& vmRef, const QString& vmName, bool
 QString ResumeVMCommand::MenuText() const
 {
     return "Resume VM";
+}
+
+QIcon ResumeVMCommand::GetIcon() const
+{
+    return QIcon(":/icons/resume.png");
 }

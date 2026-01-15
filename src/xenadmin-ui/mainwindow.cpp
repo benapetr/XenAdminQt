@@ -153,6 +153,7 @@
 #include <QProgressBar>
 #include <QLabel>
 #include <QTreeWidgetItem>
+#include <QItemSelectionModel>
 #include <QHeaderView>
 #include <QProgressDialog>
 #include <QTimer>
@@ -1359,7 +1360,10 @@ void MainWindow::showTreeContextMenu(const QPoint& position)
     if (!item)
         return;
 
-    tree->setCurrentItem(item);
+    if (item->isSelected())
+        tree->setCurrentItem(item, 0, QItemSelectionModel::NoUpdate);
+    else
+        tree->setCurrentItem(item, 0, QItemSelectionModel::ClearAndSelect);
 
     // Use ContextMenuBuilder to create the appropriate menu
     ContextMenuBuilder builder(this);

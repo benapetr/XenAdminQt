@@ -28,8 +28,8 @@
 #include "copyvmcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/crosspoolmigratewizard.h"
-#include "xen/vm.h"
-#include "xencache.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
 
 CopyVMCommand::CopyVMCommand(MainWindow* mainWindow, QObject* parent)

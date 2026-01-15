@@ -27,8 +27,8 @@
 
 #include "deletevmsandtemplatescommand.h"
 #include "../../mainwindow.h"
-#include "xen/xenobject.h"
-#include "xencache.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xencache.h"
 
 DeleteVMsAndTemplatesCommand::DeleteVMsAndTemplatesCommand(MainWindow* mainWindow, QObject* parent) : DeleteVMCommand(mainWindow, parent)
 {

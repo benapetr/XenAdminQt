@@ -28,24 +28,18 @@
 #include "exportsnapshotastemplatecommand.h"
 #include "exportvmcommand.h"
 #include "../../dialogs/exportwizard.h"
-#include "../../../xenlib/xen/xenobject.h"
-#include "../../../xenlib/xencache.h"
-#include "../../../xenlib/xen/network/connection.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
 #include "../../mainwindow.h"
 #include <QMessageBox>
 
-ExportSnapshotAsTemplateCommand::ExportSnapshotAsTemplateCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+ExportSnapshotAsTemplateCommand::ExportSnapshotAsTemplateCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
-ExportSnapshotAsTemplateCommand::ExportSnapshotAsTemplateCommand(const QString& snapshotRef,
-                                                                 XenConnection* connection,
-                                                                 MainWindow* mainWindow,
-                                                                 QObject* parent)
-    : Command(mainWindow, parent),
-      m_snapshotRef(snapshotRef),
-      m_connection(connection)
+ExportSnapshotAsTemplateCommand::ExportSnapshotAsTemplateCommand(const QString& snapshotRef, XenConnection* connection, MainWindow* mainWindow, QObject* parent)
+    : Command(mainWindow, parent), m_snapshotRef(snapshotRef), m_connection(connection)
 {
 }
 

@@ -26,7 +26,7 @@
  */
 
 #include "vmcommand.h"
-#include "xen/vm.h"
+#include "xenlib/xen/vm.h"
 
 VMCommand::VMCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {

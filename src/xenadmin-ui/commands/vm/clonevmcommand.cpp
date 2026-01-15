@@ -28,10 +28,10 @@
 #include "clonevmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/vm.h"
-#include "xen/actions/vm/vmcloneaction.h"
-#include "xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/actions/vm/vmcloneaction.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
 #include <QInputDialog>
 
@@ -39,8 +39,7 @@ CloneVMCommand::CloneVMCommand(MainWindow* mainWindow, QObject* parent) : VMComm
 {
 }
 
-CloneVMCommand::CloneVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent)
-    : VMCommand(selectedVms, mainWindow, parent)
+CloneVMCommand::CloneVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
 {
 }
 

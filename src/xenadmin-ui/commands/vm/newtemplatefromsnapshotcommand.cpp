@@ -26,11 +26,10 @@
  */
 
 #include "newtemplatefromsnapshotcommand.h"
-#include "../../../xenlib/xen/actions/vm/vmcloneaction.h"
-#include "../../../xenlib/xen/xenapi/xenapi_VM.h"
-#include "../../../xenlib/xen/network/connection.h"
-#include "../../../xenlib/xen/vm.h"
-#include "../../../xenlib/xencache.h"
+#include "xenlib/xen/actions/vm/vmcloneaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xencache.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>

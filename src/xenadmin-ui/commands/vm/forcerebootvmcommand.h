@@ -42,16 +42,13 @@ class ForceRebootVMCommand : public VMCommand
 
     public:
         explicit ForceRebootVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit ForceRebootVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
-
-    private:
-        bool canForceReboot() const;
-        bool hasRunningTasks() const;
-        bool enabledTargetExists() const;
+        QIcon GetIcon() const override;
 };
 
 #endif // FORCEREBOOTVMCOMMAND_H

@@ -29,10 +29,10 @@
 #include <QDebug>
 #include "../../mainwindow.h"
 #include "../../dialogs/newvmwizard.h"
-#include "xencache.h"
-#include "xen/network/connectionsmanager.h"
-#include "xen/network/connection.h"
-#include "xen/xenobject.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/xenobject.h"
 #include <QtWidgets>
 
 NewVMCommand::NewVMCommand(QObject* parent)

@@ -31,14 +31,12 @@
 #include "../../dialogs/importwizard.h"
 #include <QtWidgets>
 
-ImportVMCommand::ImportVMCommand(QObject* parent)
-    : Command(nullptr, parent)
+ImportVMCommand::ImportVMCommand(QObject* parent) : Command(nullptr, parent)
 {
     // qDebug() << "ImportVMCommand: Created default constructor";
 }
 
-ImportVMCommand::ImportVMCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+ImportVMCommand::ImportVMCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
     // qDebug() << "ImportVMCommand: Created with MainWindow";
 }
@@ -50,8 +48,7 @@ void ImportVMCommand::Run()
     if (!this->CanRun())
     {
         qWarning() << "ImportVMCommand: Cannot execute - conditions not met";
-        QMessageBox::warning(nullptr, tr("Cannot Import VM"),
-                             tr("Import functionality is not available at this time."));
+        QMessageBox::warning(nullptr, tr("Cannot Import VM"), tr("Import functionality is not available at this time."));
         return;
     }
 
