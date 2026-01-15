@@ -27,13 +27,12 @@
 
 #include "perfmonalerteditpage.h"
 #include "ui_perfmonalerteditpage.h"
-#include "../../xenlib/xen/asyncoperation.h"
-#include "../../xenlib/xen/network/connection.h"
-#include "../../xenlib/xen/session.h"
-#include "../../xenlib/xen/api.h"
+#include "xenlib/xen/asyncoperation.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/api.h"
 
-PerfmonAlertEditPage::PerfmonAlertEditPage(QWidget* parent)
-    : IEditPage(parent), ui(new Ui::PerfmonAlertEditPage)
+PerfmonAlertEditPage::PerfmonAlertEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::PerfmonAlertEditPage)
 {
     this->ui->setupUi(this);
 }
@@ -75,10 +74,7 @@ QIcon PerfmonAlertEditPage::GetImage() const
     return QIcon(":/icons/alert_16.png");
 }
 
-void PerfmonAlertEditPage::SetXenObjects(const QString& objectRef,
-                                         const QString& objectType,
-                                         const QVariantMap& objectDataBefore,
-                                         const QVariantMap& objectDataCopy)
+void PerfmonAlertEditPage::SetXenObjects(const QString& objectRef, const QString& objectType, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
     this->m_objectRef = objectRef;
     this->m_objectType = objectType;
@@ -129,39 +125,39 @@ AsyncOperation* PerfmonAlertEditPage::SaveSettings()
     // Return inline AsyncOperation
     class PerfmonAlertOperation : public AsyncOperation
     {
-    public:
-        PerfmonAlertOperation(XenConnection* conn,
-                              const QString& objectRef,
-                              const QString& objectType,
-                              const QVariantMap& otherConfig,
-                              QObject* parent)
-            : AsyncOperation(conn, tr("Update Performance Alerts"),
-                             tr("Updating performance alert configuration..."), parent),
-              m_objectRef(objectRef), m_objectType(objectType), m_otherConfig(otherConfig)
-        {}
+        public:
+            PerfmonAlertOperation(XenConnection* conn,
+                                  const QString& objectRef,
+                                  const QString& objectType,
+                                  const QVariantMap& otherConfig,
+                                  QObject* parent)
+                : AsyncOperation(conn, tr("Update Performance Alerts"),
+                                 tr("Updating performance alert configuration..."), parent),
+                  m_objectRef(objectRef), m_objectType(objectType), m_otherConfig(otherConfig)
+            {}
 
-    protected:
-        void run() override
-        {
-            XenRpcAPI api(GetConnection()->GetSession());
+        protected:
+            void run() override
+            {
+                XenRpcAPI api(GetConnection()->GetSession());
 
-            SetPercentComplete(30);
+                SetPercentComplete(30);
 
-            // Build method name based on object type
-            QString methodName = m_objectType + ".set_other_config";
+                // Build method name based on object type
+                QString methodName = m_objectType + ".set_other_config";
 
-            QVariantList params;
-            params << GetConnection()->GetSessionId() << this->m_objectRef << this->m_otherConfig;
-            QByteArray request = api.BuildJsonRpcCall(methodName, params);
-            GetConnection()->SendRequest(request);
+                QVariantList params;
+                params << GetConnection()->GetSessionId() << this->m_objectRef << this->m_otherConfig;
+                QByteArray request = api.BuildJsonRpcCall(methodName, params);
+                GetConnection()->SendRequest(request);
 
-            SetPercentComplete(100);
-        }
+                SetPercentComplete(100);
+            }
 
-    private:
-        QString m_objectRef;
-        QString m_objectType;
-        QVariantMap m_otherConfig;
+        private:
+            QString m_objectRef;
+            QString m_objectType;
+            QVariantMap m_otherConfig;
     };
 
     return new PerfmonAlertOperation(this->m_connection, this->m_objectRef, this->m_objectType, otherConfig, nullptr);

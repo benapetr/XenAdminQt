@@ -109,7 +109,6 @@
 #include "commands/vm/unpausevmcommand.h"
 #include "commands/vm/forceshutdownvmcommand.h"
 #include "commands/vm/forcerebootvmcommand.h"
-#include "commands/vm/migratevmcommand.h"
 #include "commands/vm/clonevmcommand.h"
 #include "commands/vm/vmlifecyclecommand.h"
 #include "commands/vm/copyvmcommand.h"
@@ -2981,7 +2980,6 @@ void MainWindow::initializeCommands()
     this->m_commands["UnpauseVM"] = new UnpauseVMCommand(this, this);
     this->m_commands["ForceShutdownVM"] = new ForceShutdownVMCommand(this, this);
     this->m_commands["ForceRebootVM"] = new ForceRebootVMCommand(this, this);
-    this->m_commands["MigrateVM"] = new MigrateVMCommand(this, this);
     this->m_commands["CloneVM"] = new CloneVMCommand(this, this);
     this->m_commands["VMLifeCycle"] = new VMLifeCycleCommand(this, this);
     this->m_commands["CopyVM"] = new CopyVMCommand(this, this);

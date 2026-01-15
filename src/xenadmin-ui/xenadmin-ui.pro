@@ -135,7 +135,6 @@ SOURCES += \
     commands/vm/forceshutdownvmcommand.cpp \
     commands/vm/forcerebootvmcommand.cpp \
     commands/vm/crosspoolmigratecommand.cpp \
-    commands/vm/migratevmcommand.cpp \
     commands/vm/clonevmcommand.cpp \
     commands/vm/vmlifecyclecommand.cpp \
     commands/vm/copyvmcommand.cpp \
@@ -369,7 +368,6 @@ HEADERS += \
     commands/vm/forceshutdownvmcommand.h \
     commands/vm/forcerebootvmcommand.h \
     commands/vm/crosspoolmigratecommand.h \
-    commands/vm/migratevmcommand.h \
     commands/vm/clonevmcommand.h \
     commands/vm/vmlifecyclecommand.h \
     commands/vm/copyvmcommand.h \
