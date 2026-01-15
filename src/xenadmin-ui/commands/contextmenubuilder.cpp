@@ -124,13 +124,8 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
     bool isDisconnectedHost = (objectType == "disconnected_host" || itemType == "disconnected_host");
     if (!isDisconnectedHost && obj && objectType == "host")
     {
-        XenConnection* connection = obj->GetConnection();
-        XenCache* cache = connection ? connection->GetCache() : nullptr;
-        if (cache)
-        {
-            const QVariantMap record = cache->ResolveObjectData("host", obj->OpaqueRef());
-            isDisconnectedHost = record.value("is_disconnected").toBool();
-        }
+        const QVariantMap record = obj->GetCache()->ResolveObjectData("host", obj->OpaqueRef());
+        isDisconnectedHost = record.value("is_disconnected").toBool();
     }
 
     if (isDisconnectedHost)

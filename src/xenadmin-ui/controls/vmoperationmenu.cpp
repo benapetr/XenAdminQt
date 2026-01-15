@@ -54,8 +54,6 @@ namespace
             return false;
 
         XenCache* cache = connection->GetCache();
-        if (!cache)
-            return false;
 
         QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
         for (const QSharedPointer<Host>& host : hosts)
@@ -75,16 +73,8 @@ namespace
     }
 }
 
-VMOperationMenu::VMOperationMenu(MainWindow* mainWindow,
-                                 const QList<QSharedPointer<VM>>& vms,
-                                 Operation operation,
-                                 QWidget* parent)
-    : QMenu(parent),
-      m_mainWindow(mainWindow),
-      m_vms(vms),
-      m_operation(operation),
-      m_stopped(false),
-      m_workerQueue(nullptr)
+VMOperationMenu::VMOperationMenu(MainWindow* main_window, const QList<QSharedPointer<VM>>& vms, Operation operation, QWidget* parent) : QMenu(parent),
+      m_mainWindow(main_window), m_vms(vms), m_operation(operation)
 {
     this->m_operationName = this->getOperationName();
     this->setTitle(this->getMenuText());
@@ -272,6 +262,7 @@ void VMOperationMenu::populate()
     }
 
     XenConnection* connection = this->getConnection();
+
     if (!connection || !connection->IsConnected())
     {
         this->addDisabledReason(tr("Not connected to server."));
@@ -280,12 +271,6 @@ void VMOperationMenu::populate()
     }
 
     XenCache* cache = connection->GetCache();
-    if (!cache)
-    {
-        this->addDisabledReason(tr("Cache is not available."));
-        this->menuAction()->setEnabled(false);
-        return;
-    }
 
     for (const QSharedPointer<VM>& vm : this->m_vms)
     {
@@ -330,6 +315,7 @@ void VMOperationMenu::populate()
 
     if (this->m_operation == Operation::Migrate && isIntraPoolMigrationRestricted(connection))
     {
+        // TODO verify if this licensing is even applicable to XCP-ng, it sounds like some historic stuff
         this->addDisabledReason(tr("Migration is restricted by licensing."));
         this->menuAction()->setEnabled(false);
         return;
@@ -340,9 +326,8 @@ void VMOperationMenu::populate()
     QSharedPointer<Pool> pool = cache->GetPool();
     if (pool && pool->IsValid())
     {
-        QVariantMap poolData = pool->GetData();
-        QString wlbUrl = poolData.value("wlb_url").toString();
-        wlbEnabled = poolData.value("wlb_enabled").toBool() && !wlbUrl.isEmpty();
+        QString wlbUrl = pool->WLBUrl();
+        wlbEnabled = pool->IsWLBEnabled() && !wlbUrl.isEmpty();
     }
 
     // Add home/optimal server item first
@@ -358,8 +343,7 @@ void VMOperationMenu::populate()
     if (wlbEnabled)
     {
         connect(firstItem->action, &QAction::triggered, this, &VMOperationMenu::runOptimalServerOperation);
-    }
-    else
+    } else
     {
         connect(firstItem->action, &QAction::triggered, this, &VMOperationMenu::runHomeServerOperation);
     }
@@ -405,9 +389,7 @@ void VMOperationMenu::AddAdditionalMenuItems()
     QAction* separator = this->addSeparator();
     this->m_additionalActions.append(separator);
 
-    CrossPoolMigrateCommand* cmd = new CrossPoolMigrateCommand(this->m_mainWindow,
-                                                               CrossPoolMigrateWizard::WizardMode::Migrate,
-                                                               this);
+    CrossPoolMigrateCommand* cmd = new CrossPoolMigrateCommand(this->m_mainWindow, CrossPoolMigrateWizard::WizardMode::Migrate, this);
     cmd->SetSelection(this->getSelectionRefs());
 
     QAction* action = this->addAction(cmd->MenuText());
@@ -429,23 +411,17 @@ void VMOperationMenu::updateHostList()
 
     // Check for WLB and call enableAppropriateHostsWlb() if enabled
     bool wlbEnabled = false;
-    XenCache* cache = connection->GetCache();
-    if (cache)
+    QSharedPointer<Pool> pool = connection->GetCache()->GetPool();
+    if (pool && pool->IsValid())
     {
-        QSharedPointer<Pool> pool = cache->GetPool();
-        if (pool && pool->IsValid())
-        {
-            QVariantMap poolData = pool->GetData();
-            QString wlbUrl = poolData.value("wlb_url").toString();
-            wlbEnabled = poolData.value("wlb_enabled").toBool() && !wlbUrl.isEmpty();
-        }
+        QString wlbUrl = pool->WLBUrl();
+        wlbEnabled = pool->IsWLBEnabled() && !wlbUrl.isEmpty();
     }
 
     if (wlbEnabled)
     {
         this->enableAppropriateHostsWlb();
-    }
-    else
+    } else
     {
         this->enableAppropriateHostsNoWlb();
     }
@@ -460,13 +436,8 @@ void VMOperationMenu::enableAppropriateHostsNoWlb()
     this->clearWorkerQueue();
     this->m_workerQueue = new ProducerConsumerQueue(25);
 
-    XenConnection* connection = this->getConnection();
-    if (!connection)
-        return;
-
     // Get affinity host (home server)
-    QString affinityRef = this->m_vms.first()->GetData().value("affinity").toString();
-    QSharedPointer<Host> affinityHost = connection->GetCache()->ResolveObject<Host>("host", affinityRef);
+    QSharedPointer<Host> affinityHost = this->m_vms.first()->GetAffinityHost();
 
     // Process home server item
     if (!this->m_hostMenuItems.isEmpty() && this->m_hostMenuItems.first()->isHomeServer)
@@ -505,10 +476,10 @@ void VMOperationMenu::enableAppropriateHostsWlb()
             vmList.append(vm.data());
     }
 
-    WlbRetrieveVmRecommendationsAction* wlbAction = 
-        new WlbRetrieveVmRecommendationsAction(connection, vmList, this);
+    WlbRetrieveVmRecommendationsAction* wlbAction = new WlbRetrieveVmRecommendationsAction(connection, vmList, this);
 
-    connect(wlbAction, &AsyncOperation::completed, this, [this, wlbAction]() {
+    connect(wlbAction, &AsyncOperation::completed, this, [this, wlbAction]()
+    {
         if (this->isStopped())
         {
             wlbAction->deleteLater();

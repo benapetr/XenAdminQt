@@ -67,11 +67,7 @@ class VMOperationMenu : public QMenu
             Migrate       // vm_operations.pool_migrate
         };
 
-        explicit VMOperationMenu(MainWindow* mainWindow,
-                                 const QList<QSharedPointer<VM>>& vms,
-                                 Operation operation,
-                                 QWidget* parent = nullptr);
-
+        explicit VMOperationMenu(MainWindow* main_window, const QList<QSharedPointer<VM>>& vms, Operation operation, QWidget* parent = nullptr);
         ~VMOperationMenu() override;
 
     protected:
@@ -95,9 +91,9 @@ class VMOperationMenu : public QMenu
         QList<QSharedPointer<VM>> m_vms;
         Operation m_operation;
         QString m_operationName;  // "start_on", "resume_on", or "pool_migrate"
-        bool m_stopped;
+        bool m_stopped = false;
         mutable QMutex m_stopMutex;
-        ProducerConsumerQueue* m_workerQueue;
+        ProducerConsumerQueue* m_workerQueue = nullptr;
         QList<HostMenuItem*> m_hostMenuItems;
         QList<QAction*> m_additionalActions;
         QSharedPointer<WlbRecommendations> m_wlbRecommendations;

@@ -686,11 +686,7 @@ namespace XenAPI
              * @param isPublic Whether the blob should be public
              * @return The opaque_ref of the created blob
              */
-            static QString create_new_blob(Session* session,
-                                           const QString& vm,
-                                           const QString& name,
-                                           const QString& mimeType,
-                                           bool isPublic);
+            static QString create_new_blob(Session* session, const QString& vm, const QString& name, const QString& mimeType, bool isPublic);
 
             /**
              * @brief Retrieve WLB (Workload Balancing) recommendations for VM placement.

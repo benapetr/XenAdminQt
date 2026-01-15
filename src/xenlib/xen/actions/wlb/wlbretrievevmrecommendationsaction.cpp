@@ -1,3 +1,30 @@
+/*
+ * Copyright (c) 2025, Petr Bena <petr@bena.rocks>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "wlbretrievevmrecommendationsaction.h"
 #include "../../network/connection.h"
 #include "../../vm.h"
@@ -8,20 +35,16 @@
 #include "../../../xencache.h"
 #include <QDebug>
 
-WlbRetrieveVmRecommendationsAction::WlbRetrieveVmRecommendationsAction(
-    XenConnection* connection,
-    const QList<VM*>& vms,
-    QObject* parent)
-    : AsyncOperation(connection, "Retrieving WLB VM recommendations", "", parent)
-    , vms_(vms)
+WlbRetrieveVmRecommendationsAction::WlbRetrieveVmRecommendationsAction(XenConnection* connection, const QList<VM*>& vms, QObject* parent)
+    : AsyncOperation(connection, "Retrieving WLB VM recommendations", "", parent), m_vms(vms)
 {
     // Add required API role
-    AddApiMethodToRoleCheck("vm.retrieve_wlb_recommendations");
+    this->AddApiMethodToRoleCheck("vm.retrieve_wlb_recommendations");
 }
 
 QMap<VM*, QMap<Host*, QStringList>> WlbRetrieveVmRecommendationsAction::GetRecommendations() const
 {
-    return this->recommendations_;
+    return this->m_recommendations;
 }
 
 void WlbRetrieveVmRecommendationsAction::run()
@@ -29,7 +52,7 @@ void WlbRetrieveVmRecommendationsAction::run()
     XenAPI::Session* session = GetSession();
     if (!session || !session->IsLoggedIn())
     {
-        setError("Not connected to XenServer");
+        this->setError("Not connected to XenServer");
         return;
     }
 
@@ -42,9 +65,8 @@ void WlbRetrieveVmRecommendationsAction::run()
     QSharedPointer<Pool> pool = GetConnection()->GetCache()->GetPool();
     if (pool && pool->IsValid())
     {
-        QVariantMap poolData = pool->GetData();
-        QString wlbUrl = poolData.value("wlb_url").toString();
-        wlbEnabled = poolData.value("wlb_enabled").toBool() && !wlbUrl.isEmpty();
+        QString wlbUrl = pool->WLBUrl();
+        wlbEnabled = pool->IsWLBEnabled() && !wlbUrl.isEmpty();
     }
 
     if (!wlbEnabled)
@@ -55,7 +77,7 @@ void WlbRetrieveVmRecommendationsAction::run()
 
     try
     {
-        foreach (VM* vm, this->vms_)
+        foreach (VM* vm, this->m_vms)
         {
             if (!vm || !vm->IsValid())
                 continue;
@@ -67,7 +89,7 @@ void WlbRetrieveVmRecommendationsAction::run()
             SetDescription(QString("Retrieving WLB recommendations for VM '%1'").arg(vm->GetName()));
 
             // Call XenAPI to retrieve recommendations
-            QMap<QString, QStringList> hostRecommendations = 
+            QMap<QString, QStringList> hostRecommendations =
                 XenAPI::VM::retrieve_wlb_recommendations(session, vmRef);
 
             // Convert host refs to Host* objects
@@ -83,7 +105,7 @@ void WlbRetrieveVmRecommendationsAction::run()
                 }
             }
 
-            this->recommendations_[vm] = recommendations;
+            this->m_recommendations[vm] = recommendations;
         }
     }
     catch (const std::exception& e)
