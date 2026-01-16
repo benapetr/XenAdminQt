@@ -85,7 +85,10 @@ void ProgressBarDelegate::paint(QPainter* painter, const QStyleOptionViewItem& o
     // Draw text below the bar (centered)
     QRect textRect(option.rect.x(), barY + BAR_HEIGHT + 2,
                    option.rect.width(), option.rect.height() - BAR_HEIGHT - 4);
-    drawText(painter, textRect, text);
+    const QColor textColor = (option.state & QStyle::State_Selected)
+        ? option.palette.color(QPalette::HighlightedText)
+        : option.palette.color(QPalette::Text);
+    drawText(painter, textRect, text, textColor);
 
     painter->restore();
 }
@@ -159,12 +162,12 @@ void ProgressBarDelegate::drawProgressBar(QPainter* painter, const QRect& barRec
 }
 
 void ProgressBarDelegate::drawText(QPainter* painter, const QRect& textRect,
-                                   const QString& text) const
+                                   const QString& text, const QColor& textColor) const
 {
     // C# uses QueryPanel.TextBrush (black) and Program.DefaultFont
     // Text is centered below the bar
 
-    painter->setPen(Qt::black);
+    painter->setPen(textColor);
     painter->setFont(QApplication::font());
     painter->drawText(textRect, Qt::AlignHCenter | Qt::AlignTop, text);
 }

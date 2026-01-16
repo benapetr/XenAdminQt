@@ -1545,7 +1545,7 @@ void GeneralTabPage::populateStatusSection()
 
         // Find PBD for this host
         QString pbdStatus = "Connected";
-        QColor statusColor = Qt::black;
+        QColor statusColor;
 
         bool foundPBD = false;
         for (const QVariant& pbdRefVar : pbdRefs)
@@ -1565,7 +1565,7 @@ void GeneralTabPage::populateStatusSection()
                 if (attached)
                 {
                     pbdStatus = "Connected";
-                    statusColor = Qt::black;
+                    statusColor = QColor();
                 } else
                 {
                     pbdStatus = "Disconnected";
@@ -1637,7 +1637,7 @@ void GeneralTabPage::populateMultipathingSection()
 
         // Find PBD for this host
         QString multipathStatus = "Not active";
-        QColor statusColor = Qt::black;
+        QColor statusColor;
 
         for (const QVariant& pbdRefVar : pbdRefs)
         {
@@ -1677,11 +1677,11 @@ void GeneralTabPage::populateMultipathingSection()
 
                     // Red if degraded (current < max or max < iscsi sessions)
                     bool degraded = (currentPaths < maxPaths) || (iscsiSessions > 0 && maxPaths < iscsiSessions);
-                    statusColor = degraded ? Qt::red : Qt::black;
+                    statusColor = degraded ? Qt::red : QColor();
                 } else
                 {
                     multipathStatus = "Not active";
-                    statusColor = Qt::black;
+                    statusColor = QColor();
                 }
 
                 break;

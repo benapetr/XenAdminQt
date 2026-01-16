@@ -80,7 +80,8 @@ class ProgressBarDelegate : public QStyledItemDelegate
         void drawProgressBar(QPainter* painter, const QRect& barRect, int percent) const;
 
         // Helper: Draw the text overlay centered on the bar
-        void drawText(QPainter* painter, const QRect& textRect, const QString& text) const;
+        void drawText(QPainter* painter, const QRect& textRect, const QString& text,
+                      const QColor& textColor) const;
 
         // Visual constants matching C# usagebar images (70x8 pixels)
         static constexpr int BAR_HEIGHT = 8;
