@@ -108,6 +108,12 @@ class XENLIB_EXPORT XenObject : public QObject
         QStringList GetTags() const;
 
         /**
+         * @brief Get folder path (other_config["folder"])
+         * @return Folder path or empty string if not set
+         */
+        QString GetFolderPath() const;
+
+        /**
          * @brief Check if object is locked (operation in progress)
          * @return true if locked flag is set in cache
          */

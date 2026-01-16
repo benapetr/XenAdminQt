@@ -50,8 +50,7 @@ PerformanceTabPage::PerformanceTabPage(QWidget* parent) : BaseTabPage(parent), u
     connect(this->m_updateTimer, &QTimer::timeout, this, &PerformanceTabPage::updateMetrics);
 
     // Connect time range selector
-    connect(this->ui->timeRangeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &PerformanceTabPage::onTimeRangeChanged);
+    connect(this->ui->timeRangeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &PerformanceTabPage::onTimeRangeChanged);
 
     this->setupCharts();
 }

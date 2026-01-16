@@ -127,6 +127,12 @@ QVariantMap XenObject::GetOtherConfig() const
     return this->property("other_config").toMap();
 }
 
+QString XenObject::GetFolderPath() const
+{
+    QVariantMap otherConfig = this->GetOtherConfig();
+    return otherConfig.value("folder").toString();
+}
+
 bool XenObject::IsHidden() const
 {
     QVariantMap otherConfig = this->GetOtherConfig();

@@ -29,23 +29,80 @@
 #include "ui_generaltabpage.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/vm.h"
-#include <QLabel>
-#include <QDebug>
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/network.h"
+#include "xenlib/xen/pif.h"
+#include "xenlib/xen/dockercontainer.h"
+#include "dialogs/vmpropertiesdialog.h"
+#include "dialogs/hostpropertiesdialog.h"
+#include "dialogs/poolpropertiesdialog.h"
+#include "dialogs/storagepropertiesdialog.h"
+#include "dialogs/networkpropertiesdialog.h"
 #include <QDateTime>
 
 GeneralTabPage::GeneralTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::GeneralTabPage)
 {
     this->ui->setupUi(this);
 
-    // Initially hide all sections (will be shown when populated)
-    this->ui->generalGroup->setVisible(false);
-    this->ui->biosGroup->setVisible(false);
-    this->ui->managementInterfacesGroup->setVisible(false);
-    this->ui->memoryGroup->setVisible(false);
-    this->ui->cpuGroup->setVisible(false);
-    this->ui->versionGroup->setVisible(false);
-    this->ui->statusGroup->setVisible(false);
-    this->ui->multipathingGroup->setVisible(false);
+    this->ui->pdSectionGeneral->SetSectionTitle(tr("General"));
+    this->ui->pdSectionBios->SetSectionTitle(tr("BIOS Information"));
+    this->ui->pdSectionCustomFields->SetSectionTitle(tr("Custom Fields"));
+    this->ui->pdSectionManagementInterfaces->SetSectionTitle(tr("Management Interfaces"));
+    this->ui->pdSectionMemory->SetSectionTitle(tr("Memory"));
+    this->ui->pdSectionCpu->SetSectionTitle(tr("Processor"));
+    this->ui->pdSectionVersion->SetSectionTitle(tr("Software Version"));
+    this->ui->pdSectionBootOptions->SetSectionTitle(tr("Boot Options"));
+    this->ui->pdSectionHighAvailability->SetSectionTitle(tr("High Availability"));
+    this->ui->pdSectionStatus->SetSectionTitle(tr("Status"));
+    this->ui->pdSectionMultipathing->SetSectionTitle(tr("Multipathing"));
+    this->ui->pdSectionMultipathBoot->SetSectionTitle(tr("Multipath Boot"));
+    this->ui->pdSectionVcpus->SetSectionTitle(tr("vCPUs"));
+    this->ui->pdSectionDockerInfo->SetSectionTitle(tr("Docker Info"));
+    this->ui->pdSectionReadCaching->SetSectionTitle(tr("Read Caching"));
+    this->ui->pdSectionDeviceSecurity->SetSectionTitle(tr("Device Security"));
+
+    this->ui->pdSectionGeneral->Expand();
+
+    QFont linkFont = this->ui->expandAllButton->font();
+    linkFont.setUnderline(true);
+    this->ui->expandAllButton->setFont(linkFont);
+    this->ui->collapseAllButton->setFont(linkFont);
+    this->ui->expandAllButton->setAutoRaise(true);
+    this->ui->collapseAllButton->setAutoRaise(true);
+    this->ui->expandAllButton->setCursor(Qt::PointingHandCursor);
+    this->ui->collapseAllButton->setCursor(Qt::PointingHandCursor);
+
+    this->propertiesAction_ = new QAction(tr("Properties"), this);
+    this->connect(this->propertiesAction_, &QAction::triggered, this, &GeneralTabPage::openPropertiesDialog);
+
+    this->sections_ = {
+        this->ui->pdSectionGeneral,
+        this->ui->pdSectionBios,
+        this->ui->pdSectionCustomFields,
+        this->ui->pdSectionManagementInterfaces,
+        this->ui->pdSectionMemory,
+        this->ui->pdSectionVersion,
+        this->ui->pdSectionCpu,
+        this->ui->pdSectionBootOptions,
+        this->ui->pdSectionHighAvailability,
+        this->ui->pdSectionStatus,
+        this->ui->pdSectionMultipathing,
+        this->ui->pdSectionMultipathBoot,
+        this->ui->pdSectionVcpus,
+        this->ui->pdSectionDockerInfo,
+        this->ui->pdSectionReadCaching,
+        this->ui->pdSectionDeviceSecurity
+    };
+
+    for (PDSection* section : this->sections_)
+    {
+        connect(section, &PDSection::ExpandedChanged, this, &GeneralTabPage::onSectionExpandedChanged);
+    }
+
+    connect(this->ui->expandAllButton, &QToolButton::clicked, this, &GeneralTabPage::onExpandAllClicked);
+    connect(this->ui->collapseAllButton, &QToolButton::clicked, this, &GeneralTabPage::onCollapseAllClicked);
 }
 
 GeneralTabPage::~GeneralTabPage()
@@ -64,21 +121,40 @@ void GeneralTabPage::refreshContent()
 {
     if (this->m_objectData.isEmpty())
     {
-        this->ui->nameValue->setText("N/A");
-        this->ui->descriptionValue->setText("N/A");
-        this->ui->uuidValue->setText("N/A");
         this->clearProperties();
         return;
     }
 
-    // Set basic information
-    this->ui->nameValue->setText(this->m_objectData.value("name_label", "N/A").toString());
-    this->ui->descriptionValue->setText(this->m_objectData.value("name_description", "N/A").toString());
-    this->ui->uuidValue->setText(this->m_objectData.value("uuid", "N/A").toString());
-
     // Clear previous properties
     this->clearProperties();
 
+    QList<QAction*> propertiesMenu;
+    propertiesMenu.append(this->propertiesAction_);
+
+    this->addPropertyByKey(this->ui->pdSectionGeneral, "host.name_label",
+                           this->m_objectData.value("name_label", "N/A").toString(),
+                           propertiesMenu);
+    this->addPropertyByKey(this->ui->pdSectionGeneral, "host.name_description",
+                           this->m_objectData.value("name_description", "N/A").toString(),
+                           propertiesMenu);
+    if (this->m_object)
+    {
+        QStringList tags = this->m_object->GetTags();
+        QString tagsValue = tags.isEmpty() ? tr("None") : tags.join(", ");
+        this->addProperty(this->ui->pdSectionGeneral, tr("Tags"), tagsValue);
+
+        QString folderValue = this->m_object->GetFolderPath();
+        if (folderValue.isEmpty())
+            folderValue = tr("None");
+        this->addProperty(this->ui->pdSectionGeneral, tr("Folder"), folderValue);
+        // TODO: Add "View tag" and "View folder" context menu actions once search helpers are ported.
+    }
+    this->addPropertyByKey(this->ui->pdSectionGeneral, "host.uuid",
+                           this->m_objectData.value("uuid", "N/A").toString());
+
+    this->populateCustomFieldsSection();
+
+    // TODO refactor to enum switch
     // Add type-specific properties
     if (this->m_objectType == "vm")
     {
@@ -95,81 +171,297 @@ void GeneralTabPage::refreshContent()
     } else if (this->m_objectType == "network")
     {
         this->populateNetworkProperties();
+    } else if (this->m_objectType == "dockercontainer")
+    {
+        this->populateDockerInfoSection();
     }
+
+    this->showSectionIfNotEmpty(this->ui->pdSectionGeneral);
+    this->showSectionIfNotEmpty(this->ui->pdSectionBios);
+    this->showSectionIfNotEmpty(this->ui->pdSectionCustomFields);
+    this->showSectionIfNotEmpty(this->ui->pdSectionManagementInterfaces);
+    this->showSectionIfNotEmpty(this->ui->pdSectionMemory);
+    this->showSectionIfNotEmpty(this->ui->pdSectionVersion);
+    this->showSectionIfNotEmpty(this->ui->pdSectionCpu);
+    this->showSectionIfNotEmpty(this->ui->pdSectionBootOptions);
+    this->showSectionIfNotEmpty(this->ui->pdSectionHighAvailability);
+    this->showSectionIfNotEmpty(this->ui->pdSectionStatus);
+    this->showSectionIfNotEmpty(this->ui->pdSectionMultipathing);
+    this->showSectionIfNotEmpty(this->ui->pdSectionMultipathBoot);
+    this->showSectionIfNotEmpty(this->ui->pdSectionVcpus);
+    this->showSectionIfNotEmpty(this->ui->pdSectionDockerInfo);
+    this->showSectionIfNotEmpty(this->ui->pdSectionReadCaching);
+    this->showSectionIfNotEmpty(this->ui->pdSectionDeviceSecurity);
+
+    this->applyExpandedState();
+    this->updateExpandCollapseButtons();
 }
 
 void GeneralTabPage::clearProperties()
 {
-    // Clear all section layouts
-    QList<QFormLayout*> layouts = {
-        this->ui->generalLayout,
-        this->ui->biosLayout,
-        this->ui->managementInterfacesLayout,
-        this->ui->memoryLayout,
-        this->ui->cpuLayout,
-        this->ui->versionLayout,
-        this->ui->statusLayout,
-        this->ui->multipathingLayout};
+    this->ui->pdSectionGeneral->ClearData();
+    this->ui->pdSectionBios->ClearData();
+    this->ui->pdSectionCustomFields->ClearData();
+    this->ui->pdSectionManagementInterfaces->ClearData();
+    this->ui->pdSectionMemory->ClearData();
+    this->ui->pdSectionCpu->ClearData();
+    this->ui->pdSectionVersion->ClearData();
+    this->ui->pdSectionBootOptions->ClearData();
+    this->ui->pdSectionHighAvailability->ClearData();
+    this->ui->pdSectionStatus->ClearData();
+    this->ui->pdSectionMultipathing->ClearData();
+    this->ui->pdSectionMultipathBoot->ClearData();
+    this->ui->pdSectionVcpus->ClearData();
+    this->ui->pdSectionDockerInfo->ClearData();
+    this->ui->pdSectionReadCaching->ClearData();
+    this->ui->pdSectionDeviceSecurity->ClearData();
 
-    for (QFormLayout* layout : layouts)
-    {
-        if (!layout)
-            continue;
-
-        // Remove all dynamically added widgets
-        while (layout->count() > 0)
-        {
-            QLayoutItem* item = layout->takeAt(0);
-            if (item->widget())
-            {
-                delete item->widget();
-            }
-            delete item;
-        }
-    }
-
-    // Hide all sections initially
-    this->ui->generalGroup->setVisible(false);
-    this->ui->biosGroup->setVisible(false);
-    this->ui->managementInterfacesGroup->setVisible(false);
-    this->ui->memoryGroup->setVisible(false);
-    this->ui->cpuGroup->setVisible(false);
-    this->ui->versionGroup->setVisible(false);
-    this->ui->statusGroup->setVisible(false);
-    this->ui->multipathingGroup->setVisible(false);
+    this->ui->pdSectionGeneral->setVisible(false);
+    this->ui->pdSectionBios->setVisible(false);
+    this->ui->pdSectionCustomFields->setVisible(false);
+    this->ui->pdSectionManagementInterfaces->setVisible(false);
+    this->ui->pdSectionMemory->setVisible(false);
+    this->ui->pdSectionCpu->setVisible(false);
+    this->ui->pdSectionVersion->setVisible(false);
+    this->ui->pdSectionBootOptions->setVisible(false);
+    this->ui->pdSectionHighAvailability->setVisible(false);
+    this->ui->pdSectionStatus->setVisible(false);
+    this->ui->pdSectionMultipathing->setVisible(false);
+    this->ui->pdSectionMultipathBoot->setVisible(false);
+    this->ui->pdSectionVcpus->setVisible(false);
+    this->ui->pdSectionDockerInfo->setVisible(false);
+    this->ui->pdSectionReadCaching->setVisible(false);
+    this->ui->pdSectionDeviceSecurity->setVisible(false);
 }
 
-void GeneralTabPage::addProperty(const QString& label, const QString& value)
+void GeneralTabPage::addProperty(PDSection* section, const QString& label, const QString& value,
+                                 const QList<QAction*>& contextMenuItems)
 {
-    // Legacy method - kept for VM/Pool/SR/Network types that don't use sections yet
-    QLabel* labelWidget = new QLabel(label + ":");
-    QFont labelFont = labelWidget->font();
-    labelFont.setBold(true);
-    labelWidget->setFont(labelFont);
-
-    QLabel* valueWidget = new QLabel(value);
-    valueWidget->setTextInteractionFlags(Qt::LinksAccessibleByMouse | Qt::TextSelectableByMouse);
-    valueWidget->setWordWrap(true);
-
-    this->ui->generalLayout->addRow(labelWidget, valueWidget);
-    this->ui->generalGroup->setVisible(true);
-}
-
-void GeneralTabPage::addPropertyToLayout(QFormLayout* layout, const QString& label, const QString& value)
-{
-    if (!layout)
+    if (!section)
         return;
 
-    QLabel* labelWidget = new QLabel(label + ":");
-    QFont labelFont = labelWidget->font();
-    labelFont.setBold(true);
-    labelWidget->setFont(labelFont);
+    section->AddEntry(label, value, contextMenuItems);
+}
 
-    QLabel* valueWidget = new QLabel(value);
-    valueWidget->setTextInteractionFlags(Qt::LinksAccessibleByMouse | Qt::TextSelectableByMouse);
-    valueWidget->setWordWrap(true);
+void GeneralTabPage::addPropertyByKey(PDSection* section, const QString& key, const QString& value,
+                                      const QList<QAction*>& contextMenuItems)
+{
+    this->addProperty(section, this->friendlyName(key), value, contextMenuItems);
+}
 
-    layout->addRow(labelWidget, valueWidget);
+void GeneralTabPage::showSectionIfNotEmpty(PDSection* section)
+{
+    if (!section)
+        return;
+
+    section->setVisible(!section->IsEmpty());
+}
+
+QString GeneralTabPage::friendlyName(const QString& key) const
+{
+    static QHash<QString, QString> labels;
+    if (labels.isEmpty())
+    {
+        labels.insert("host.name_label", tr("Name"));
+        labels.insert("host.name_description", tr("Description"));
+        labels.insert("host.uuid", tr("UUID"));
+        labels.insert("host.address", tr("Address"));
+        labels.insert("host.hostname", tr("Hostname"));
+        labels.insert("host.enabled", tr("Enabled"));
+        labels.insert("host.iscsi_iqn", tr("iSCSI IQN"));
+        labels.insert("host.log_destination", tr("Log destination"));
+        labels.insert("host.uptime", tr("Server Uptime"));
+        labels.insert("host.agentUptime", tr("Toolstack Uptime"));
+        labels.insert("host.external_auth_service_name", tr("External Auth Service"));
+        labels.insert("host.ServerMemory", tr("Server"));
+        labels.insert("host.VMMemory", tr("VMs"));
+        labels.insert("host.XenMemory", tr("XCP-ng"));
+        labels.insert("pool.master", tr("Master"));
+        labels.insert("pool.default_SR", tr("Default SR"));
+        labels.insert("pool.ha_enabled", tr("HA Enabled"));
+        labels.insert("VM.OSName", tr("Operating system"));
+        labels.insert("VM.OperatingMode", tr("Operating mode"));
+        labels.insert("VM.Appliance", tr("vApp"));
+        labels.insert("VM.snapshot_of", tr("Snapshot of"));
+        labels.insert("VM.snapshot_time", tr("Creation time"));
+        labels.insert("VM.uptime", tr("Uptime"));
+        labels.insert("VM.memory", tr("Memory"));
+        labels.insert("VM.auto_boot", tr("Auto boot"));
+        labels.insert("VM.BootOrder", tr("Boot order"));
+        labels.insert("VM.BootMode", tr("Boot mode"));
+        labels.insert("VM.PV_args", tr("Boot parameters"));
+        labels.insert("VM.ha_restart_priority", tr("HA restart priority"));
+        labels.insert("VM.P2V_SourceMachine", tr("P2V source machine"));
+        labels.insert("VM.P2V_ImportDate", tr("P2V import date"));
+        labels.insert("VM.affinity", tr("Home server"));
+        labels.insert("VM.VCPUs", tr("vCPUs at startup"));
+        labels.insert("VM.MaxVCPUs", tr("vCPUs maximum"));
+        labels.insert("VM.Topology", tr("Topology"));
+        labels.insert("VM.VirtualizationState", tr("Virtualization state"));
+        labels.insert("VM.read_caching_status", tr("Read caching status"));
+        labels.insert("VM.read_caching_disks", tr("Read caching disks"));
+        labels.insert("VM.read_caching_reason", tr("Read caching reason"));
+        labels.insert("VM.pvs_read_caching_status", tr("PVS read caching status"));
+        labels.insert("host.pool_master", tr("Pool master"));
+        labels.insert("host.auto_poweron", tr("Autoboot of VMs enabled"));
+        labels.insert("host.bios_vendor", tr("Vendor"));
+        labels.insert("host.bios_version", tr("Version"));
+        labels.insert("host.system_manufacturer", tr("Manufacturer"));
+        labels.insert("host.system_product", tr("Product"));
+        labels.insert("host.cpu_count", tr("Count"));
+        labels.insert("host.cpu_model", tr("Model"));
+        labels.insert("host.cpu_speed", tr("Speed"));
+        labels.insert("host.cpu_vendor", tr("Vendor"));
+        labels.insert("host.product_version", tr("Product Version"));
+        labels.insert("host.build_date", tr("Build Date"));
+        labels.insert("host.build_number", tr("Build Number"));
+        labels.insert("host.dbv", tr("DBV"));
+        labels.insert("SR.type", tr("Type"));
+        labels.insert("SR.size", tr("Total Size"));
+        labels.insert("SR.utilisation", tr("Used Space"));
+        labels.insert("SR.shared", tr("Shared"));
+        labels.insert("network.bridge", tr("Bridge"));
+        labels.insert("network.MTU", tr("MTU"));
+        labels.insert("network.managed", tr("Managed"));
+        labels.insert("SR.state", tr("State"));
+        labels.insert("multipath.capable", tr("Multipath capable"));
+    }
+
+    return labels.value(key, key);
+}
+
+void GeneralTabPage::openPropertiesDialog()
+{
+    if (!this->m_object)
+        return;
+
+    if (this->m_objectType == "vm")
+    {
+        QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+        if (!vm)
+            return;
+        VMPropertiesDialog dialog(vm, this);
+        dialog.exec();
+    } else if (this->m_objectType == "host")
+    {
+        QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
+        if (!host)
+            return;
+        HostPropertiesDialog dialog(host, this);
+        dialog.exec();
+    } else if (this->m_objectType == "pool")
+    {
+        QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(this->m_object);
+        if (!pool)
+            return;
+        PoolPropertiesDialog dialog(pool, this);
+        dialog.exec();
+    } else if (this->m_objectType == "sr")
+    {
+        QSharedPointer<SR> sr = qSharedPointerCast<SR>(this->m_object);
+        if (!sr)
+            return;
+        StoragePropertiesDialog dialog(sr, this);
+        dialog.exec();
+    } else if (this->m_objectType == "network")
+    {
+        QSharedPointer<Network> network = qSharedPointerCast<Network>(this->m_object);
+        if (!network)
+            return;
+        NetworkPropertiesDialog dialog(network, this);
+        dialog.exec();
+    }
+}
+
+void GeneralTabPage::updateExpandCollapseButtons()
+{
+    bool canExpand = false;
+    bool canCollapse = false;
+
+    for (PDSection* section : this->sections_)
+    {
+        if (!section || section->IsEmpty())
+            continue;
+
+        if (section->IsExpanded())
+            canCollapse = true;
+        else
+            canExpand = true;
+    }
+
+    this->ui->expandAllButton->setEnabled(canExpand);
+    this->ui->collapseAllButton->setEnabled(canCollapse);
+}
+
+void GeneralTabPage::toggleExpandedState(bool expandAll)
+{
+    for (PDSection* section : this->sections_)
+    {
+        if (!section || !section->isVisible())
+            continue;
+
+        section->SetDisableFocusEvent(true);
+        if (expandAll)
+            section->Expand();
+        else
+            section->Collapse();
+        section->SetDisableFocusEvent(false);
+    }
+}
+
+void GeneralTabPage::applyExpandedState()
+{
+    const QString key = this->m_objectType;
+    if (key.isEmpty())
+        return;
+
+    QList<PDSection*> expanded = expandedSections_.value(key);
+    if (expanded.isEmpty())
+        expanded = { this->ui->pdSectionGeneral };
+
+    for (PDSection* section : this->sections_)
+    {
+        if (!section || !section->isVisible())
+            continue;
+
+        section->SetDisableFocusEvent(true);
+        if (expanded.contains(section))
+            section->Expand();
+        else
+            section->Collapse();
+        section->SetDisableFocusEvent(false);
+    }
+}
+
+void GeneralTabPage::onExpandAllClicked()
+{
+    this->toggleExpandedState(true);
+    this->updateExpandCollapseButtons();
+}
+
+void GeneralTabPage::onCollapseAllClicked()
+{
+    this->toggleExpandedState(false);
+    this->updateExpandCollapseButtons();
+}
+
+void GeneralTabPage::onSectionExpandedChanged(PDSection* section)
+{
+    Q_UNUSED(section);
+
+    const QString key = this->m_objectType;
+    if (!key.isEmpty())
+    {
+        QList<PDSection*> expanded;
+        for (PDSection* s : this->sections_)
+        {
+            if (s && s->isVisible() && s->IsExpanded())
+                expanded.append(s);
+        }
+        expandedSections_.insert(key, expanded);
+    }
+
+    this->updateExpandCollapseButtons();
 }
 
 void GeneralTabPage::populateVMProperties()
@@ -194,7 +486,7 @@ void GeneralTabPage::populateVMProperties()
                 QString osName = osVersion.value("name").toString();
                 if (osName.isEmpty())
                     osName = "Unknown";
-                this->addProperty("Operating system", osName);
+                this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.OSName", osName);
             }
         }
     }
@@ -204,7 +496,7 @@ void GeneralTabPage::populateVMProperties()
     {
         QString bootPolicy = this->m_objectData.value("HVM_boot_policy").toString();
         bool isHVM = !bootPolicy.isEmpty();
-        this->addProperty("Operating mode", isHVM ? "HVM" : "Paravirtualized");
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.OperatingMode", isHVM ? tr("HVM") : tr("Paravirtualized"));
     }
 
     // BIOS strings copied (for templates) - C# line 1052
@@ -212,7 +504,7 @@ void GeneralTabPage::populateVMProperties()
     {
         QVariantMap biosStrings = this->m_objectData.value("bios_strings").toMap();
         bool biosStringsCopied = !biosStrings.isEmpty() && biosStrings.contains("bios-vendor");
-        this->addProperty("BIOS strings copied", biosStringsCopied ? "Yes" : "No");
+        this->addProperty(this->ui->pdSectionGeneral, tr("BIOS strings copied"), biosStringsCopied ? tr("Yes") : tr("No"));
     }
 
     // vApp / VM Appliance - C# lines 1056-1065
@@ -225,7 +517,7 @@ void GeneralTabPage::populateVMProperties()
             if (!appliance.isEmpty())
             {
                 QString applianceName = appliance.value("name_label", "Unknown").toString();
-                this->addProperty("vApp", applianceName);
+                this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.Appliance", applianceName);
             }
         }
     }
@@ -242,7 +534,7 @@ void GeneralTabPage::populateVMProperties()
                 if (!snapshotOfVM.isEmpty())
                 {
                     QString vmName = snapshotOfVM.value("name_label", "Unknown").toString();
-                    this->addProperty("Snapshot of", vmName);
+                    this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.snapshot_of", vmName);
                 }
             }
         }
@@ -253,7 +545,7 @@ void GeneralTabPage::populateVMProperties()
             QDateTime snapshotTime = QDateTime::fromString(snapshotTimeStr, Qt::ISODate);
             if (snapshotTime.isValid())
             {
-                this->addProperty("Creation time", snapshotTime.toLocalTime().toString("dd/MM/yyyy HH:mm:ss"));
+                this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.snapshot_time", snapshotTime.toLocalTime().toString("dd/MM/yyyy HH:mm:ss"));
             }
         }
     }
@@ -300,7 +592,7 @@ void GeneralTabPage::populateVMProperties()
                         statusLines << "Not receiving Windows Update";
 
                     virtStatus = statusLines.join("\n");
-                    this->addProperty("Virtualization state", virtStatus);
+                    this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.VirtualizationState", virtStatus);
                 }
             }
         }
@@ -333,7 +625,7 @@ void GeneralTabPage::populateVMProperties()
                             else
                                 uptimeStr = QString("%1 minutes").arg(minutes);
 
-                            this->addProperty("Uptime", uptimeStr);
+                            this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.uptime", uptimeStr);
                         }
                     }
                 }
@@ -349,7 +641,7 @@ void GeneralTabPage::populateVMProperties()
             if (otherConfig.contains("p2v_source_machine"))
             {
                 QString sourceMachine = otherConfig.value("p2v_source_machine").toString();
-                this->addProperty("P2V source machine", sourceMachine);
+                this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.P2V_SourceMachine", sourceMachine);
             }
 
             // P2V import date
@@ -359,7 +651,7 @@ void GeneralTabPage::populateVMProperties()
                 QDateTime dt = QDateTime::fromString(importDate, Qt::ISODate);
                 if (dt.isValid())
                 {
-                    this->addProperty("P2V import date", dt.toLocalTime().toString("dd/MM/yyyy HH:mm:ss"));
+                    this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.P2V_ImportDate", dt.toLocalTime().toString("dd/MM/yyyy HH:mm:ss"));
                 }
             }
         }
@@ -380,7 +672,7 @@ void GeneralTabPage::populateVMProperties()
                 }
             }
 
-            this->addProperty("Home server", affinityDisplay);
+            this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.affinity", affinityDisplay);
         }
     }
 
@@ -397,41 +689,14 @@ void GeneralTabPage::populateVMProperties()
         else
             memoryStr = QString("%1 MB").arg(memoryMB, 0, 'f', 0);
 
-        this->addProperty("Memory", memoryStr);
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.memory", memoryStr);
     }
 
-    // vCPUs - C# GenerateVCPUsBox lines 851-861
-    if (this->m_objectData.contains("VCPUs_at_startup"))
-    {
-        int vcpusAtStartup = this->m_objectData.value("VCPUs_at_startup").toInt();
-        qint64 vcpusMax = this->m_objectData.value("VCPUs_max", vcpusAtStartup).toLongLong();
-
-        this->addProperty("vCPUs at startup", QString::number(vcpusAtStartup));
-
-        // Show max vCPUs if different from startup or if hotplug is supported
-        // For now, show if different (hotplug detection would require more context)
-        if (vcpusMax != vcpusAtStartup)
-        {
-            this->addProperty("vCPUs maximum", QString::number(vcpusMax));
-        }
-
-        // Topology (matches C# VM.Topology())
-        qint64 coresPerSocket = 1;
-        QVariantMap platform = this->m_objectData.value("platform").toMap();
-        if (platform.contains("cores-per-socket"))
-        {
-            bool ok = false;
-            qint64 parsed = platform.value("cores-per-socket").toString().toLongLong(&ok);
-            if (ok && parsed > 0)
-                coresPerSocket = parsed;
-        }
-
-        QString topologyWarning = VM::ValidVCPUConfiguration(vcpusMax, coresPerSocket);
-        qint64 sockets = topologyWarning.isEmpty() && coresPerSocket > 0
-            ? (vcpusMax / coresPerSocket)
-            : 0;
-        this->addProperty("Topology", VM::GetTopology(sockets, coresPerSocket));
-    }
+    this->populateBootOptionsSection();
+    this->populateHighAvailabilitySection();
+    this->populateVcpusSection();
+    this->populateReadCachingSection();
+    this->populateDeviceSecuritySection();
 }
 
 void GeneralTabPage::populateHostProperties()
@@ -439,12 +704,13 @@ void GeneralTabPage::populateHostProperties()
     // Host-specific properties organized into sections
     // C# Reference: xenadmin/XenAdmin/TabPages/GeneralTabPage.cs lines 953-1032
 
-    populateGeneralSection();
-    populateBIOSSection();
-    populateManagementInterfacesSection();
-    populateMemorySection();
-    populateCPUSection();
-    populateVersionSection();
+    this->populateGeneralSection();
+    this->populateBIOSSection();
+    this->populateManagementInterfacesSection();
+    this->populateMemorySection();
+    this->populateCPUSection();
+    this->populateVersionSection();
+    this->populateMultipathBootSection();
 }
 
 void GeneralTabPage::populatePoolProperties()
@@ -452,18 +718,18 @@ void GeneralTabPage::populatePoolProperties()
     // Pool-specific properties
     if (this->m_objectData.contains("master"))
     {
-        this->addProperty("Master", this->m_objectData.value("master").toString());
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.master", this->m_objectData.value("master").toString());
     }
 
     if (this->m_objectData.contains("default_SR"))
     {
-        this->addProperty("Default SR", this->m_objectData.value("default_SR").toString());
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.default_SR", this->m_objectData.value("default_SR").toString());
     }
 
     if (this->m_objectData.contains("ha_enabled"))
     {
         bool haEnabled = this->m_objectData.value("ha_enabled").toBool();
-        this->addProperty("HA Enabled", haEnabled ? "Yes" : "No");
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.ha_enabled", haEnabled ? tr("Yes") : tr("No"));
     }
 }
 
@@ -475,27 +741,27 @@ void GeneralTabPage::populateSRProperties()
 
     if (this->m_objectData.contains("type"))
     {
-        this->addProperty("Type", this->m_objectData.value("type").toString());
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.type", this->m_objectData.value("type").toString());
     }
 
     if (this->m_objectData.contains("physical_size"))
     {
         qint64 sizeBytes = this->m_objectData.value("physical_size").toLongLong();
         double sizeGB = sizeBytes / (1024.0 * 1024.0 * 1024.0);
-        this->addProperty("Total Size", QString("%1 GB").arg(sizeGB, 0, 'f', 2));
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.size", QString("%1 GB").arg(sizeGB, 0, 'f', 2));
     }
 
     if (this->m_objectData.contains("physical_utilisation"))
     {
         qint64 usedBytes = this->m_objectData.value("physical_utilisation").toLongLong();
         double usedGB = usedBytes / (1024.0 * 1024.0 * 1024.0);
-        this->addProperty("Used Space", QString("%1 GB").arg(usedGB, 0, 'f', 2));
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.utilisation", QString("%1 GB").arg(usedGB, 0, 'f', 2));
     }
 
     if (this->m_objectData.contains("shared"))
     {
         bool shared = this->m_objectData.value("shared").toBool();
-        this->addProperty("Shared", shared ? "Yes" : "No");
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.shared", shared ? tr("Yes") : tr("No"));
     }
 
     // Populate SR-specific sections (Status and Multipathing)
@@ -508,20 +774,247 @@ void GeneralTabPage::populateNetworkProperties()
     // Network-specific properties
     if (this->m_objectData.contains("bridge"))
     {
-        this->addProperty("Bridge", this->m_objectData.value("bridge").toString());
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "network.bridge", this->m_objectData.value("bridge").toString());
     }
 
     if (this->m_objectData.contains("MTU"))
     {
         int mtu = this->m_objectData.value("MTU").toInt();
-        this->addProperty("MTU", QString::number(mtu));
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "network.MTU", QString::number(mtu));
     }
 
     if (this->m_objectData.contains("managed"))
     {
         bool managed = this->m_objectData.value("managed").toBool();
-        this->addProperty("Managed", managed ? "Yes" : "No");
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "network.managed", managed ? tr("Yes") : tr("No"));
     }
+}
+
+void GeneralTabPage::populateCustomFieldsSection()
+{
+    if (this->m_objectData.isEmpty())
+        return;
+
+    QVariantMap otherConfig = this->m_objectData.value("other_config").toMap();
+    if (otherConfig.isEmpty())
+        return;
+
+    // TODO: Use CustomFieldsManager definitions once gui_config parsing is implemented.
+    QStringList keys = otherConfig.keys();
+    keys.sort();
+
+    const QString prefix = "XenCenter.CustomFields.";
+    for (const QString& key : keys)
+    {
+        if (!key.startsWith(prefix))
+            continue;
+
+        QString fieldName = key.mid(prefix.length());
+        QString value = otherConfig.value(key).toString();
+        if (value.isEmpty())
+            value = tr("None");
+
+        this->addProperty(this->ui->pdSectionCustomFields, fieldName, value);
+    }
+}
+
+void GeneralTabPage::populateBootOptionsSection()
+{
+    if (this->m_objectType != "vm")
+        return;
+
+    // TODO: Add Boot Mode/UEFI/Secure Boot display once VM helpers are ported.
+    QVariantMap otherConfig = this->m_objectData.value("other_config").toMap();
+    bool autoPowerOn = (otherConfig.value("auto_poweron", "false").toString() == "true");
+    this->addPropertyByKey(this->ui->pdSectionBootOptions, "VM.auto_boot", autoPowerOn ? tr("Yes") : tr("No"));
+
+    bool isHvm = !this->m_objectData.value("HVM_boot_policy").toString().isEmpty();
+    if (isHvm)
+    {
+        QVariantMap bootParams = this->m_objectData.value("HVM_boot_params").toMap();
+        QString order = bootParams.value("order", "cd").toString().toUpper();
+
+        QStringList devices;
+        for (int i = 0; i < order.length(); ++i)
+        {
+            const QString device = order.mid(i, 1);
+            if (device == "C")
+                devices.append(tr("Hard Disk"));
+            else if (device == "D")
+                devices.append(tr("DVD Drive"));
+            else if (device == "N")
+                devices.append(tr("Network"));
+        }
+
+        QString orderDisplay = devices.isEmpty() ? tr("None") : devices.join(", ");
+        this->addPropertyByKey(this->ui->pdSectionBootOptions, "VM.BootOrder", orderDisplay);
+    } else
+    {
+        QString pvArgs = this->m_objectData.value("PV_args").toString();
+        if (pvArgs.isEmpty())
+            pvArgs = tr("None");
+        this->addPropertyByKey(this->ui->pdSectionBootOptions, "VM.PV_args", pvArgs);
+    }
+}
+
+void GeneralTabPage::populateHighAvailabilitySection()
+{
+    if (this->m_objectType != "vm" || !this->m_connection)
+        return;
+
+    XenCache* cache = this->m_connection->GetCache();
+    if (!cache)
+        return;
+
+    QStringList poolRefs = cache->GetAllRefs("pool");
+    if (poolRefs.isEmpty())
+        return;
+
+    QVariantMap poolData = cache->ResolveObjectData("pool", poolRefs.first());
+    if (poolData.isEmpty() || !poolData.value("ha_enabled", false).toBool())
+        return;
+
+    QString restartPriority = this->m_objectData.value("ha_restart_priority").toString();
+    if (restartPriority.isEmpty())
+        return;
+
+    // TODO: Map restart priority values to friendly display strings (C# Helpers.RestartPriorityI18n).
+    this->addPropertyByKey(this->ui->pdSectionHighAvailability, "VM.ha_restart_priority", restartPriority);
+}
+
+void GeneralTabPage::populateMultipathBootSection()
+{
+    if (this->m_objectType != "host")
+        return;
+
+    // Boot path counts are not currently exposed in the Qt port.
+    // TODO: Add Host::GetBootPathCounts() and populate Multipath Boot status.
+}
+
+void GeneralTabPage::populateVcpusSection()
+{
+    if (this->m_objectType != "vm")
+        return;
+
+    if (!this->m_objectData.contains("VCPUs_at_startup"))
+        return;
+
+    int vcpusAtStartup = this->m_objectData.value("VCPUs_at_startup").toInt();
+    qint64 vcpusMax = this->m_objectData.value("VCPUs_max", vcpusAtStartup).toLongLong();
+
+    this->addPropertyByKey(this->ui->pdSectionVcpus, "VM.VCPUs", QString::number(vcpusAtStartup));
+
+    if (vcpusMax != vcpusAtStartup)
+        this->addPropertyByKey(this->ui->pdSectionVcpus, "VM.MaxVCPUs", QString::number(vcpusMax));
+
+    qint64 coresPerSocket = 1;
+    QVariantMap platform = this->m_objectData.value("platform").toMap();
+    if (platform.contains("cores-per-socket"))
+    {
+        bool ok = false;
+        qint64 parsed = platform.value("cores-per-socket").toString().toLongLong(&ok);
+        if (ok && parsed > 0)
+            coresPerSocket = parsed;
+    }
+
+    QString topologyWarning = VM::ValidVCPUConfiguration(vcpusMax, coresPerSocket);
+    qint64 sockets = topologyWarning.isEmpty() && coresPerSocket > 0
+        ? (vcpusMax / coresPerSocket)
+        : 0;
+    this->addPropertyByKey(this->ui->pdSectionVcpus, "VM.Topology", VM::GetTopology(sockets, coresPerSocket));
+}
+
+void GeneralTabPage::populateDockerInfoSection()
+{
+    if (this->m_objectType != "dockercontainer")
+        return;
+
+    QSharedPointer<DockerContainer> container = qSharedPointerCast<DockerContainer>(this->m_object);
+    if (!container)
+        return;
+
+    QString name = this->m_objectData.value("name_label").toString();
+    if (name.isEmpty())
+        name = tr("None");
+    this->addProperty(this->ui->pdSectionDockerInfo, tr("Name"), name);
+
+    QString status = container->Status();
+    this->addProperty(this->ui->pdSectionDockerInfo, tr("Status"), status.isEmpty() ? tr("None") : status);
+
+    QString created = container->Created();
+    if (!created.isEmpty())
+    {
+        bool ok = false;
+        double createdSeconds = created.toDouble(&ok);
+        if (ok)
+        {
+            QDateTime dt = QDateTime::fromSecsSinceEpoch(static_cast<qint64>(createdSeconds)).toLocalTime();
+            created = dt.toString("dd/MM/yyyy HH:mm:ss");
+        }
+    }
+    this->addProperty(this->ui->pdSectionDockerInfo, tr("Created"), created.isEmpty() ? tr("None") : created);
+
+    QString image = container->Image();
+    this->addProperty(this->ui->pdSectionDockerInfo, tr("Image"), image.isEmpty() ? tr("None") : image);
+
+    QString containerId = container->Container();
+    this->addProperty(this->ui->pdSectionDockerInfo, tr("Container"), containerId.isEmpty() ? tr("None") : containerId);
+
+    QString command = container->Command();
+    this->addProperty(this->ui->pdSectionDockerInfo, tr("Command"), command.isEmpty() ? tr("None") : command);
+
+    QString ports;
+    QList<DockerContainer::DockerContainerPort> portList = container->PortList();
+    if (!portList.isEmpty())
+    {
+        QStringList portDescriptions;
+        for (const DockerContainer::DockerContainerPort& port : portList)
+            portDescriptions.append(port.description());
+        ports = portDescriptions.join("\n");
+    }
+    this->addProperty(this->ui->pdSectionDockerInfo, tr("Ports"), ports.isEmpty() ? tr("None") : ports);
+
+    QString uuid = this->m_objectData.value("uuid").toString();
+    this->addProperty(this->ui->pdSectionDockerInfo, tr("UUID"), uuid.isEmpty() ? tr("None") : uuid);
+}
+
+void GeneralTabPage::populateReadCachingSection()
+{
+    if (this->m_objectType != "vm")
+        return;
+
+    QString powerState = this->m_objectData.value("power_state").toString();
+    if (powerState != "Running")
+        return;
+
+    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+    if (!vm)
+        return;
+
+    bool enabled = vm->ReadCachingEnabled();
+    this->addPropertyByKey(this->ui->pdSectionReadCaching, "VM.read_caching_status",
+                           enabled ? tr("Enabled") : tr("Disabled"));
+    // TODO: Add read caching disk list and disabled reason (VM::ReadCachingVDIs/ReadCachingDisabledReason).
+}
+
+void GeneralTabPage::populateDeviceSecuritySection()
+{
+    if (this->m_objectType != "vm")
+        return;
+
+    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+    if (!vm)
+        return;
+
+    QList<QSharedPointer<VTPM>> vtpms = vm->GetVTPMs();
+    if (vtpms.isEmpty())
+        return;
+
+    QString value = vtpms.count() == 1
+        ? tr("1 attached")
+        : tr("%1 attached").arg(vtpms.count());
+    this->addProperty(this->ui->pdSectionDeviceSecurity, tr("vTPM"), value);
+    // TODO: Add VTPM command actions and feature gating once Helpers.FeatureForbidden is ported.
 }
 
 // === Host Section Population Methods ===
@@ -533,12 +1026,12 @@ void GeneralTabPage::populateGeneralSection()
 
     if (this->m_objectData.contains("address"))
     {
-        this->addPropertyToLayout(this->ui->generalLayout, "Address", this->m_objectData.value("address").toString());
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.address", this->m_objectData.value("address").toString());
     }
 
     if (this->m_objectData.contains("hostname"))
     {
-        this->addPropertyToLayout(this->ui->generalLayout, "Hostname", this->m_objectData.value("hostname").toString());
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.hostname", this->m_objectData.value("hostname").toString());
     }
 
     // Pool master status (shown as "Pool Coordinator" in C# but displays as "Pool master: Yes/No" in UI)
@@ -571,7 +1064,7 @@ void GeneralTabPage::populateGeneralSection()
                 if (hasPoolName || hasMultipleHosts)
                 {
                     bool isCoordinator = this->m_objectData.value("is_pool_coordinator").toBool();
-                    this->addPropertyToLayout(this->ui->generalLayout, "Pool master", isCoordinator ? "Yes" : "No");
+                    this->addPropertyByKey(this->ui->pdSectionGeneral, "host.pool_master", isCoordinator ? tr("Yes") : tr("No"));
                 }
             }
         }
@@ -591,7 +1084,7 @@ void GeneralTabPage::populateGeneralSection()
         else
             enabledStr = "Yes";
 
-        this->addPropertyToLayout(this->ui->generalLayout, "Enabled", enabledStr);
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.enabled", enabledStr);
     }
 
     // Autoboot of VMs enabled
@@ -601,7 +1094,7 @@ void GeneralTabPage::populateGeneralSection()
         QVariantMap otherConfig = this->m_objectData.value("other_config").toMap();
         // GetVmAutostartEnabled checks other_config["auto_poweron"] == "true"
         bool autoPowerOn = (otherConfig.value("auto_poweron").toString() == "true");
-        this->addPropertyToLayout(this->ui->generalLayout, "Autoboot of VMs enabled", autoPowerOn ? "Yes" : "No");
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.auto_poweron", autoPowerOn ? tr("Yes") : tr("No"));
     }
 
     // Log destination
@@ -617,7 +1110,7 @@ void GeneralTabPage::populateGeneralSection()
         else
             logDisplay = QString("Local and %1").arg(syslogDest);
 
-        this->addPropertyToLayout(this->ui->generalLayout, "Log destination", logDisplay);
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.log_destination", logDisplay);
     }
 
     // Server Uptime (calculated from boot time in host_metrics)
@@ -637,7 +1130,7 @@ void GeneralTabPage::populateGeneralSection()
                     qint64 uptimeSeconds = startTime.secsTo(QDateTime::currentDateTimeUtc());
                     if (uptimeSeconds > 0)
                     {
-                        this->addPropertyToLayout(this->ui->generalLayout, "Server Uptime", formatUptime(uptimeSeconds));
+                        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.uptime", formatUptime(uptimeSeconds));
                     }
                 }
             }
@@ -659,7 +1152,7 @@ void GeneralTabPage::populateGeneralSection()
                 qint64 uptimeSeconds = startTime.secsTo(QDateTime::currentDateTimeUtc());
                 if (uptimeSeconds > 0)
                 {
-                    this->addPropertyToLayout(this->ui->generalLayout, "Toolstack Uptime", formatUptime(uptimeSeconds));
+                    this->addPropertyByKey(this->ui->pdSectionGeneral, "host.agentUptime", formatUptime(uptimeSeconds));
                 }
             }
         }
@@ -670,12 +1163,11 @@ void GeneralTabPage::populateGeneralSection()
     {
         QString iscsiIqn = this->m_objectData.value("iscsi_iqn").toString();
         if (!iscsiIqn.isEmpty())
-            this->addPropertyToLayout(this->ui->generalLayout, "iSCSI IQN", iscsiIqn);
+            this->addPropertyByKey(this->ui->pdSectionGeneral, "host.iscsi_iqn", iscsiIqn);
     }
 
     // Show section if it has content
-    if (this->ui->generalLayout->count() > 0)
-        this->ui->generalGroup->setVisible(true);
+    this->showSectionIfNotEmpty(this->ui->pdSectionGeneral);
 }
 
 void GeneralTabPage::populateBIOSSection()
@@ -692,33 +1184,32 @@ void GeneralTabPage::populateBIOSSection()
     {
         QString biosVendor = biosStrings.value("bios-vendor").toString();
         if (!biosVendor.isEmpty())
-            this->addPropertyToLayout(this->ui->biosLayout, "Vendor", biosVendor);
+            this->addPropertyByKey(this->ui->pdSectionBios, "host.bios_vendor", biosVendor);
     }
 
     if (biosStrings.contains("bios-version"))
     {
         QString biosVersion = biosStrings.value("bios-version").toString();
         if (!biosVersion.isEmpty())
-            this->addPropertyToLayout(this->ui->biosLayout, "Version", biosVersion);
+            this->addPropertyByKey(this->ui->pdSectionBios, "host.bios_version", biosVersion);
     }
 
     if (biosStrings.contains("system-manufacturer"))
     {
         QString sysManufacturer = biosStrings.value("system-manufacturer").toString();
         if (!sysManufacturer.isEmpty())
-            this->addPropertyToLayout(this->ui->biosLayout, "Manufacturer", sysManufacturer);
+            this->addPropertyByKey(this->ui->pdSectionBios, "host.system_manufacturer", sysManufacturer);
     }
 
     if (biosStrings.contains("system-product-name"))
     {
         QString sysProduct = biosStrings.value("system-product-name").toString();
         if (!sysProduct.isEmpty())
-            this->addPropertyToLayout(this->ui->biosLayout, "Product", sysProduct);
+            this->addPropertyByKey(this->ui->pdSectionBios, "host.system_product", sysProduct);
     }
 
     // Show section if it has content
-    if (this->ui->biosLayout->count() > 0)
-        this->ui->biosGroup->setVisible(true);
+    this->showSectionIfNotEmpty(this->ui->pdSectionBios);
 }
 
 void GeneralTabPage::populateManagementInterfacesSection()
@@ -726,40 +1217,67 @@ void GeneralTabPage::populateManagementInterfacesSection()
     // Management Interfaces Section
     // C# Reference: GenerateInterfaceBox lines 396-461 (fillInterfacesForHost)
 
-    if (!this->m_objectData.contains("PIFs") || !this->m_connection)
+    if (!this->m_connection)
         return;
 
-    QVariantList pifRefs = this->m_objectData.value("PIFs").toList();
+    XenCache* cache = this->m_connection->GetCache();
+    if (!cache)
+        return;
 
-    // Resolve each PIF reference from cache
-    for (const QVariant& pifRefVar : pifRefs)
+    auto addInterfacesForHost = [&](const QSharedPointer<Host>& host, bool includeHostName)
     {
-        QString pifRef = pifRefVar.toString();
-        if (pifRef.isEmpty())
-            continue;
+        if (!host)
+            return;
 
-        QVariantMap pif = this->m_connection->GetCache()->ResolveObjectData("PIF", pifRef);
-        if (pif.isEmpty())
-            continue;
+        QVariantMap hostData = host->GetData();
+        QVariantList pifRefs = hostData.value("PIFs").toList();
 
-        // Check if this is a management interface
-        bool isManagement = pif.value("management", false).toBool();
-        if (isManagement)
+        for (const QVariant& pifRefVar : pifRefs)
         {
-            QString ipAddress = pif.value("IP", "").toString();
-            QString device = pif.value("device", "").toString();
+            QString pifRef = pifRefVar.toString();
+            if (pifRef.isEmpty())
+                continue;
 
-            if (!ipAddress.isEmpty())
+            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+            if (!pif || !pif->IsValid())
+                continue;
+
+            if (!pif->IsManagementInterface())
+                continue;
+
+            QString ipAddress = pif->IP();
+            if (ipAddress.isEmpty())
+                continue;
+
+            QString label = tr("Management interface");
+            if (includeHostName)
             {
-                QString label = device.isEmpty() ? "IP Address" : device;
-                this->addPropertyToLayout(this->ui->managementInterfacesLayout, label, ipAddress);
+                QString hostName = host->GetName();
+                if (!hostName.isEmpty())
+                    label = tr("%1 (%2)").arg(label, hostName);
             }
+
+            this->addProperty(this->ui->pdSectionManagementInterfaces, label, ipAddress);
         }
+    };
+
+    if (this->m_objectType == "host")
+    {
+        QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
+        addInterfacesForHost(host, false);
+    } else if (this->m_objectType == "pool")
+    {
+        QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(this->m_object);
+        if (!pool)
+            return;
+
+        QList<QSharedPointer<Host>> hosts = pool->GetHosts();
+        for (const QSharedPointer<Host>& host : hosts)
+            addInterfacesForHost(host, true);
     }
 
     // Show section if it has content
-    if (this->ui->managementInterfacesLayout->count() > 0)
-        this->ui->managementInterfacesGroup->setVisible(true);
+    this->showSectionIfNotEmpty(this->ui->pdSectionManagementInterfaces);
 }
 
 void GeneralTabPage::populateMemorySection()
@@ -789,7 +1307,7 @@ void GeneralTabPage::populateMemorySection()
                 QString serverMemStr = QString("%1 GB free of %2 GB total")
                                            .arg(memFreeGB, 0, 'f', 2)
                                            .arg(memTotalGB, 0, 'f', 2);
-                this->addPropertyToLayout(this->ui->memoryLayout, "Server", serverMemStr);
+                this->addPropertyByKey(this->ui->pdSectionMemory, "host.ServerMemory", serverMemStr);
             }
         }
     }
@@ -803,7 +1321,7 @@ void GeneralTabPage::populateMemorySection()
         qint64 memFree = this->m_objectData.value("memory_free").toLongLong();
         qint64 memUsed = memTotal - memFree;
         double memUsedGB = memUsed / (1024.0 * 1024.0 * 1024.0);
-        this->addPropertyToLayout(this->ui->memoryLayout, "VMs", QString("%1 GB").arg(memUsedGB, 0, 'f', 2));
+        this->addPropertyByKey(this->ui->pdSectionMemory, "host.VMMemory", QString("%1 GB").arg(memUsedGB, 0, 'f', 2));
     }
 
     // XCP-ng/Xen Memory overhead
@@ -813,12 +1331,11 @@ void GeneralTabPage::populateMemorySection()
         qint64 memOverhead = this->m_objectData.value("memory_overhead").toLongLong();
         double memOverheadMB = memOverhead / (1024.0 * 1024.0);
         // Use "XCP-ng" as label (C# uses product brand name)
-        this->addPropertyToLayout(this->ui->memoryLayout, "XCP-ng", QString("%1 MB").arg(memOverheadMB, 0, 'f', 0));
+        this->addPropertyByKey(this->ui->pdSectionMemory, "host.XenMemory", QString("%1 MB").arg(memOverheadMB, 0, 'f', 0));
     }
 
     // Show section if it has content
-    if (this->ui->memoryLayout->count() > 0)
-        this->ui->memoryGroup->setVisible(true);
+    this->showSectionIfNotEmpty(this->ui->pdSectionMemory);
 }
 
 void GeneralTabPage::populateCPUSection()
@@ -834,33 +1351,32 @@ void GeneralTabPage::populateCPUSection()
     if (cpuInfo.contains("cpu_count"))
     {
         int cpuCount = cpuInfo.value("cpu_count").toInt();
-        this->addPropertyToLayout(this->ui->cpuLayout, "Count", QString::number(cpuCount));
+        this->addPropertyByKey(this->ui->pdSectionCpu, "host.cpu_count", QString::number(cpuCount));
     }
 
     if (cpuInfo.contains("modelname"))
     {
         QString cpuModel = cpuInfo.value("modelname").toString();
         if (!cpuModel.isEmpty())
-            this->addPropertyToLayout(this->ui->cpuLayout, "Model", cpuModel);
+            this->addPropertyByKey(this->ui->pdSectionCpu, "host.cpu_model", cpuModel);
     }
 
     if (cpuInfo.contains("speed"))
     {
         QString cpuSpeed = cpuInfo.value("speed").toString();
         if (!cpuSpeed.isEmpty())
-            this->addPropertyToLayout(this->ui->cpuLayout, "Speed", cpuSpeed + " MHz");
+            this->addPropertyByKey(this->ui->pdSectionCpu, "host.cpu_speed", cpuSpeed + " MHz");
     }
 
     if (cpuInfo.contains("vendor"))
     {
         QString cpuVendor = cpuInfo.value("vendor").toString();
         if (!cpuVendor.isEmpty())
-            this->addPropertyToLayout(this->ui->cpuLayout, "Vendor", cpuVendor);
+            this->addPropertyByKey(this->ui->pdSectionCpu, "host.cpu_vendor", cpuVendor);
     }
 
     // Show section if it has content
-    if (this->ui->cpuLayout->count() > 0)
-        this->ui->cpuGroup->setVisible(true);
+    this->showSectionIfNotEmpty(this->ui->pdSectionCpu);
 }
 
 void GeneralTabPage::populateVersionSection()
@@ -878,31 +1394,30 @@ void GeneralTabPage::populateVersionSection()
     {
         QString productVersion = swVersion.value("product_version").toString();
         QString productBrand = swVersion.value("product_brand", "XenServer").toString();
-        this->addPropertyToLayout(this->ui->versionLayout, "Product Version", QString("%1 %2").arg(productBrand, productVersion));
+        this->addPropertyByKey(this->ui->pdSectionVersion, "host.product_version", QString("%1 %2").arg(productBrand, productVersion));
     }
 
     // Build date
     if (swVersion.contains("date"))
     {
         QString buildDate = swVersion.value("date").toString();
-        this->addPropertyToLayout(this->ui->versionLayout, "Build Date", buildDate);
+        this->addPropertyByKey(this->ui->pdSectionVersion, "host.build_date", buildDate);
     }
 
     // Build number
     if (swVersion.contains("build_number"))
     {
-        this->addPropertyToLayout(this->ui->versionLayout, "Build Number", swVersion.value("build_number").toString());
+        this->addPropertyByKey(this->ui->pdSectionVersion, "host.build_number", swVersion.value("build_number").toString());
     }
 
     // DBV (Database Version)
     if (swVersion.contains("dbv"))
     {
-        this->addPropertyToLayout(this->ui->versionLayout, "DBV", swVersion.value("dbv").toString());
+        this->addPropertyByKey(this->ui->pdSectionVersion, "host.dbv", swVersion.value("dbv").toString());
     }
 
     // Show section if it has content
-    if (this->ui->versionLayout->count() > 0)
-        this->ui->versionGroup->setVisible(true);
+    this->showSectionIfNotEmpty(this->ui->pdSectionVersion);
 }
 
 // Helper method to format uptime in human-readable format
@@ -1014,20 +1529,9 @@ void GeneralTabPage::populateStatusSection()
     }
 
     // Show overall status
-    QLabel* stateLabel = new QLabel("State:");
-    QFont labelFont = stateLabel->font();
-    labelFont.setBold(true);
-    stateLabel->setFont(labelFont);
-
-    QLabel* stateValue = new QLabel(statusString);
-    if (broken)
-    {
-        QPalette palette = stateValue->palette();
-        palette.setColor(QPalette::WindowText, Qt::red);
-        stateValue->setPalette(palette);
-    }
-    stateValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    this->ui->statusLayout->addRow(stateLabel, stateValue);
+    this->ui->pdSectionStatus->AddEntry(this->friendlyName("SR.state"),
+                                        statusString,
+                                        broken ? QColor(Qt::red) : QColor());
 
     // Show per-host PBD status
     // C# iterates through all hosts and shows their PBD connection status
@@ -1092,26 +1596,10 @@ void GeneralTabPage::populateStatusSection()
             displayName = displayName.left(27) + "...";
         }
 
-        QLabel* hostLabel = new QLabel(displayName + ":");
-        labelFont = hostLabel->font();
-        labelFont.setBold(true);
-        hostLabel->setFont(labelFont);
-
-        QLabel* hostValue = new QLabel(pbdStatus);
-        if (statusColor != Qt::black)
-        {
-            QPalette palette = hostValue->palette();
-            palette.setColor(QPalette::WindowText, statusColor);
-            hostValue->setPalette(palette);
-        }
-        hostValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
-
-        this->ui->statusLayout->addRow(hostLabel, hostValue);
+        this->ui->pdSectionStatus->AddEntry(displayName, pbdStatus, statusColor);
     }
 
-    // Show section if it has content
-    if (this->ui->statusLayout->count() > 0)
-        this->ui->statusGroup->setVisible(true);
+    this->showSectionIfNotEmpty(this->ui->pdSectionStatus);
 }
 
 void GeneralTabPage::populateMultipathingSection()
@@ -1128,18 +1616,12 @@ void GeneralTabPage::populateMultipathingSection()
     QString multipathable = smConfig.value("multipathable", "false").toString();
     bool isMultipathCapable = (multipathable == "true");
 
-    QLabel* capableLabel = new QLabel("Multipath capable:");
-    QFont labelFont = capableLabel->font();
-    labelFont.setBold(true);
-    capableLabel->setFont(labelFont);
-
-    QLabel* capableValue = new QLabel(isMultipathCapable ? "Yes" : "No");
-    capableValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    this->ui->multipathingLayout->addRow(capableLabel, capableValue);
+    this->addPropertyByKey(this->ui->pdSectionMultipathing, "multipath.capable",
+                           isMultipathCapable ? tr("Yes") : tr("No"));
 
     if (!isMultipathCapable)
     {
-        this->ui->multipathingGroup->setVisible(true);
+        this->showSectionIfNotEmpty(this->ui->pdSectionMultipathing);
         return;
     }
 
@@ -1206,24 +1688,8 @@ void GeneralTabPage::populateMultipathingSection()
             }
         }
 
-        QLabel* hostLabel = new QLabel(hostName + ":");
-        labelFont = hostLabel->font();
-        labelFont.setBold(true);
-        hostLabel->setFont(labelFont);
-
-        QLabel* hostValue = new QLabel(multipathStatus);
-        if (statusColor != Qt::black)
-        {
-            QPalette palette = hostValue->palette();
-            palette.setColor(QPalette::WindowText, statusColor);
-            hostValue->setPalette(palette);
-        }
-        hostValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
-
-        this->ui->multipathingLayout->addRow(hostLabel, hostValue);
+        this->ui->pdSectionMultipathing->AddEntry(hostName, multipathStatus, statusColor);
     }
 
-    // Show section if it has content
-    if (this->ui->multipathingLayout->count() > 0)
-        this->ui->multipathingGroup->setVisible(true);
+    this->showSectionIfNotEmpty(this->ui->pdSectionMultipathing);
 }

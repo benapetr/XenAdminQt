@@ -75,7 +75,7 @@ class Command : public QObject
          * @brief Get the menu text for this command
          */
         virtual QString MenuText() const = 0;
-        virtual QIcon GetIcon() const { return QIcon(); }
+        virtual QIcon GetIcon() const;
 
         /**
          * @brief Get the current selection

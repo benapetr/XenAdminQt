@@ -33,80 +33,50 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
-        <widget class="QGroupBox" name="generalInfoGroup">
-         <property name="title">
-          <string>General Information</string>
-         </property>
-         <layout class="QFormLayout" name="formLayout">
-          <item row="0" column="0">
-           <widget class="QLabel" name="nameLabel">
-            <property name="text">
-             <string>Name:</string>
+        <widget class="QWidget" name="sectionControlsWidget">
+         <layout class="QHBoxLayout" name="sectionControlsLayout">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <spacer name="sectionControlsSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
             </property>
-            <property name="font">
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QToolButton" name="expandAllButton">
+            <property name="text">
+             <string>Expand All</string>
+            </property>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextOnly</enum>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QLabel" name="nameValue">
+          <item>
+           <widget class="QToolButton" name="collapseAllButton">
             <property name="text">
-             <string>N/A</string>
+             <string>Collapse All</string>
             </property>
-            <property name="textInteractionFlags">
-             <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="descriptionLabel">
-            <property name="text">
-             <string>Description:</string>
-            </property>
-            <property name="font">
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLabel" name="descriptionValue">
-            <property name="text">
-             <string>N/A</string>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-            <property name="textInteractionFlags">
-             <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="uuidLabel">
-            <property name="text">
-             <string>UUID:</string>
-            </property>
-            <property name="font">
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLabel" name="uuidValue">
-            <property name="text">
-             <string>N/A</string>
-            </property>
-            <property name="textInteractionFlags">
-             <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+            <property name="toolButtonStyle">
+             <enum>Qt::ToolButtonTextOnly</enum>
             </property>
            </widget>
           </item>
@@ -114,100 +84,52 @@
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="generalGroup">
-         <property name="title">
-          <string>General</string>
-         </property>
-         <layout class="QFormLayout" name="generalLayout">
-          <property name="fieldGrowthPolicy">
-           <enum>QFormLayout::ExpandingFieldsGrow</enum>
-          </property>
-         </layout>
-        </widget>
+        <widget class="PDSection" name="pdSectionGeneral"/>
        </item>
        <item>
-        <widget class="QGroupBox" name="biosGroup">
-         <property name="title">
-          <string>BIOS Information</string>
-         </property>
-         <layout class="QFormLayout" name="biosLayout">
-          <property name="fieldGrowthPolicy">
-           <enum>QFormLayout::ExpandingFieldsGrow</enum>
-          </property>
-         </layout>
-        </widget>
+        <widget class="PDSection" name="pdSectionBios"/>
        </item>
        <item>
-        <widget class="QGroupBox" name="managementInterfacesGroup">
-         <property name="title">
-          <string>Management Interfaces</string>
-         </property>
-         <layout class="QFormLayout" name="managementInterfacesLayout">
-          <property name="fieldGrowthPolicy">
-           <enum>QFormLayout::ExpandingFieldsGrow</enum>
-          </property>
-         </layout>
-        </widget>
+        <widget class="PDSection" name="pdSectionCustomFields"/>
        </item>
        <item>
-        <widget class="QGroupBox" name="memoryGroup">
-         <property name="title">
-          <string>Memory</string>
-         </property>
-         <layout class="QFormLayout" name="memoryLayout">
-          <property name="fieldGrowthPolicy">
-           <enum>QFormLayout::ExpandingFieldsGrow</enum>
-          </property>
-         </layout>
-        </widget>
+        <widget class="PDSection" name="pdSectionManagementInterfaces"/>
        </item>
        <item>
-        <widget class="QGroupBox" name="cpuGroup">
-         <property name="title">
-          <string>Processor</string>
-         </property>
-         <layout class="QFormLayout" name="cpuLayout">
-          <property name="fieldGrowthPolicy">
-           <enum>QFormLayout::ExpandingFieldsGrow</enum>
-          </property>
-         </layout>
-        </widget>
+        <widget class="PDSection" name="pdSectionMemory"/>
        </item>
        <item>
-        <widget class="QGroupBox" name="versionGroup">
-         <property name="title">
-          <string>Software Version</string>
-         </property>
-         <layout class="QFormLayout" name="versionLayout">
-          <property name="fieldGrowthPolicy">
-           <enum>QFormLayout::ExpandingFieldsGrow</enum>
-          </property>
-         </layout>
-        </widget>
+        <widget class="PDSection" name="pdSectionVersion"/>
        </item>
        <item>
-        <widget class="QGroupBox" name="statusGroup">
-         <property name="title">
-          <string>Status</string>
-         </property>
-         <layout class="QFormLayout" name="statusLayout">
-          <property name="fieldGrowthPolicy">
-           <enum>QFormLayout::ExpandingFieldsGrow</enum>
-          </property>
-         </layout>
-        </widget>
+        <widget class="PDSection" name="pdSectionCpu"/>
        </item>
        <item>
-        <widget class="QGroupBox" name="multipathingGroup">
-         <property name="title">
-          <string>Multipathing</string>
-         </property>
-         <layout class="QFormLayout" name="multipathingLayout">
-          <property name="fieldGrowthPolicy">
-           <enum>QFormLayout::ExpandingFieldsGrow</enum>
-          </property>
-         </layout>
-        </widget>
+        <widget class="PDSection" name="pdSectionBootOptions"/>
+       </item>
+       <item>
+        <widget class="PDSection" name="pdSectionHighAvailability"/>
+       </item>
+       <item>
+        <widget class="PDSection" name="pdSectionStatus"/>
+       </item>
+       <item>
+        <widget class="PDSection" name="pdSectionMultipathing"/>
+       </item>
+       <item>
+        <widget class="PDSection" name="pdSectionMultipathBoot"/>
+       </item>
+       <item>
+        <widget class="PDSection" name="pdSectionVcpus"/>
+       </item>
+       <item>
+        <widget class="PDSection" name="pdSectionDockerInfo"/>
+       </item>
+       <item>
+        <widget class="PDSection" name="pdSectionReadCaching"/>
+       </item>
+       <item>
+        <widget class="PDSection" name="pdSectionDeviceSecurity"/>
        </item>
        <item>
         <spacer name="verticalSpacer">
@@ -228,6 +150,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PDSection</class>
+   <extends>QWidget</extends>
+   <header>controls/pdsection.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

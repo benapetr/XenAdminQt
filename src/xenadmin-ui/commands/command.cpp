@@ -40,6 +40,11 @@ Command::Command(MainWindow* mainWindow, const QStringList& selection, QObject* 
 {
 }
 
+QIcon Command::GetIcon() const
+{
+    return QIcon(":/icons/empty_icon.png");
+}
+
 QSharedPointer<XenObject> Command::GetObject() const
 {
     QTreeWidgetItem* item = this->getSelectedItem();

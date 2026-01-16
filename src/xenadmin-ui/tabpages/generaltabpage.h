@@ -29,7 +29,10 @@
 #define GENERALTABPAGE_H
 
 #include "basetabpage.h"
-#include <QFormLayout>
+#include "controls/pdsection.h"
+#include <QAction>
+#include <QHash>
+#include <QList>
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -70,15 +73,35 @@ class GeneralTabPage : public BaseTabPage
 
     private:
         Ui::GeneralTabPage* ui;
+        QList<PDSection*> sections_;
+        QHash<QString, QList<PDSection*>> expandedSections_;
+        QAction* propertiesAction_;
 
         void clearProperties();
-        void addProperty(const QString& label, const QString& value);
-        void addPropertyToLayout(QFormLayout* layout, const QString& label, const QString& value);
+        void addProperty(PDSection* section, const QString& label, const QString& value,
+                         const QList<QAction*>& contextMenuItems = QList<QAction*>());
+        void addPropertyByKey(PDSection* section, const QString& key, const QString& value,
+                              const QList<QAction*>& contextMenuItems = QList<QAction*>());
+        void showSectionIfNotEmpty(PDSection* section);
+        void updateExpandCollapseButtons();
+        void toggleExpandedState(bool expandAll);
+        void applyExpandedState();
+        QString friendlyName(const QString& key) const;
+        void openPropertiesDialog();
         void populateVMProperties();
         void populateHostProperties();
         void populatePoolProperties();
         void populateSRProperties();
         void populateNetworkProperties();
+
+        void populateCustomFieldsSection();
+        void populateBootOptionsSection();
+        void populateHighAvailabilitySection();
+        void populateMultipathBootSection();
+        void populateVcpusSection();
+        void populateDockerInfoSection();
+        void populateReadCachingSection();
+        void populateDeviceSecuritySection();
 
         // Host section population methods
         void populateGeneralSection();
@@ -94,6 +117,11 @@ class GeneralTabPage : public BaseTabPage
 
         // Helper methods for formatting (matches C# PrettyTimeSpan)
         QString formatUptime(qint64 seconds) const;
+
+    private slots:
+        void onExpandAllClicked();
+        void onCollapseAllClicked();
+        void onSectionExpandedChanged(PDSection* section);
 };
 
 #endif // GENERALTABPAGE_H

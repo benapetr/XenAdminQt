@@ -66,6 +66,7 @@ SOURCES += \
     controls/snapshottreeview.cpp \
     controls/multipledvdisolist.cpp \
     controls/vmoperationmenu.cpp \
+    controls/pdsection.cpp \
     controls/xensearch/querypanel.cpp \
     controls/xensearch/searchoutput.cpp \
     controls/xensearch/foldernavigator.cpp \
@@ -297,6 +298,7 @@ HEADERS += \
     controls/vmoperationmenu.h \
     controls/snapshottreeview.h \
     controls/multipledvdisolist.h \
+    controls/pdsection.h \
     controls/xensearch/querypanel.h \
     controls/xensearch/searchoutput.h \
     controls/xensearch/foldernavigator.h \
