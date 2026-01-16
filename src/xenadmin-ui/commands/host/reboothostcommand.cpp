@@ -29,11 +29,11 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/commanderrordialog.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/xenobject.h"
-#include "xen/host.h"
-#include "xen/pool.h"
-#include "xen/actions/host/reboothostaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/actions/host/reboothostaction.h"
 #include <QMessageBox>
 #include <QTreeWidget>
 
@@ -41,30 +41,19 @@ RebootHostCommand::RebootHostCommand(MainWindow* mainWindow, QObject* parent) : 
 {
 }
 
+RebootHostCommand::RebootHostCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent)
+    : HostCommand(hosts, mainWindow, parent)
+{
+}
+
 bool RebootHostCommand::CanRun() const
 {
-    if (!this->mainWindow())
+    const QList<QSharedPointer<Host>> hosts = this->getHosts();
+    if (hosts.isEmpty())
         return false;
 
-    QTreeWidget* treeWidget = this->mainWindow()->GetServerTreeWidget();
-    if (!treeWidget)
-        return false;
-
-    const QList<QTreeWidgetItem*> selectedItems = treeWidget->selectedItems();
-    for (QTreeWidgetItem* item : selectedItems)
+    for (const QSharedPointer<Host>& host : hosts)
     {
-        if (!item)
-            continue;
-
-        QVariant data = item->data(0, Qt::UserRole);
-        if (!data.canConvert<QSharedPointer<XenObject>>())
-            continue;
-
-        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (!obj || obj->GetObjectType() != "host")
-            continue;
-
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
         if (host && host->IsLive())
             return true;
     }
@@ -74,31 +63,12 @@ bool RebootHostCommand::CanRun() const
 
 void RebootHostCommand::Run()
 {
-    if (!this->mainWindow())
-        return;
-
-    QTreeWidget* treeWidget = this->mainWindow()->GetServerTreeWidget();
-    if (!treeWidget)
-        return;
-
     QList<QSharedPointer<Host>> runnable;
     QHash<QSharedPointer<XenObject>, QString> cantRunReasons;
 
-    const QList<QTreeWidgetItem*> selectedItems = treeWidget->selectedItems();
-    for (QTreeWidgetItem* item : selectedItems)
+    const QList<QSharedPointer<Host>> hosts = this->getHosts();
+    for (const QSharedPointer<Host>& host : hosts)
     {
-        if (!item)
-            continue;
-
-        QVariant data = item->data(0, Qt::UserRole);
-        if (!data.canConvert<QSharedPointer<XenObject>>())
-            continue;
-
-        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (!obj || obj->GetObjectType() != "host")
-            continue;
-
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
         if (!host)
             continue;
 

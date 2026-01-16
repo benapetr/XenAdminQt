@@ -143,15 +143,10 @@ bool CloneVMCommand::isVMCloneable() const
     if (!vm)
         return false;
 
-    // Use cache instead of async API call
-    QVariantMap vmData = vm->GetData();
-
     // Check if it's not a template
-    bool isTemplate = vmData.value("is_a_template", false).toBool();
-    if (isTemplate)
+    if (vm->IsTemplate())
         return false;
 
     // Check if VM is halted (required for clone)
-    QString powerState = vmData.value("power_state", "Unknown").toString();
-    return (powerState == "Halted");
+    return (vm->GetPowerState() == "Halted");
 }

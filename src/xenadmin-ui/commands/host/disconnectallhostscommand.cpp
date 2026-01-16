@@ -27,7 +27,7 @@
 
 #include "disconnectallhostscommand.h"
 #include "../../mainwindow.h"
-#include "xen/network/connectionsmanager.h"
+#include "xenlib/xen/network/connectionsmanager.h"
 #include <QMessageBox>
 
 DisconnectAllHostsCommand::DisconnectAllHostsCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)

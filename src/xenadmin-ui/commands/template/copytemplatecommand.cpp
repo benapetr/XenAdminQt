@@ -28,6 +28,7 @@
 #include "copytemplatecommand.h"
 #include "../../mainwindow.h"
 #include "xen/xenobject.h"
+#include "xenlib/xen/vm.h"
 #include "xencache.h"
 #include <QMessageBox>
 
@@ -49,9 +50,8 @@ bool CopyTemplateCommand::CanRun() const
     if (templateRef.isEmpty())
         return false;
 
-    QVariantMap templateData = object->GetConnection()->GetCache()->ResolveObjectData("vm", templateRef);
-
-    return this->canRunTemplate(templateData);
+    QSharedPointer<VM> templateVm = object->GetConnection()->GetCache()->ResolveObject<VM>("vm", templateRef);
+    return this->canRunTemplate(templateVm);
 }
 
 void CopyTemplateCommand::Run()
@@ -68,9 +68,8 @@ void CopyTemplateCommand::Run()
     if (!cache)
         return;
 
-    QVariantMap templateData = cache->ResolveObjectData("vm", templateRef);
-
-    if (!this->canRunTemplate(templateData))
+    QSharedPointer<VM> templateVm = cache->ResolveObject<VM>("vm", templateRef);
+    if (!this->canRunTemplate(templateVm))
     {
         QMessageBox::warning(this->mainWindow(), "Cannot Copy Template",
                              "The selected template cannot be copied.");
@@ -102,78 +101,76 @@ QString CopyTemplateCommand::getSelectedTemplateRef() const
     return this->getSelectedObjectRef();
 }
 
-bool CopyTemplateCommand::canRunTemplate(const QVariantMap& templateData) const
+bool CopyTemplateCommand::canRunTemplate(const QSharedPointer<VM>& templateVm) const
 {
-    if (templateData.isEmpty())
+    if (!templateVm)
         return false;
 
     // Must be a template
-    if (!templateData.value("is_a_template", false).toBool())
+    if (!templateVm->IsTemplate())
         return false;
 
     // Must not be a snapshot
-    if (templateData.value("is_a_snapshot", false).toBool())
+    if (templateVm->IsSnapshot())
         return false;
 
     // Must not be locked
-    QVariantMap currentOps = templateData.value("current_operations", QVariantMap()).toMap();
-    if (!currentOps.isEmpty())
+    if (!templateVm->CurrentOperations().isEmpty())
         return false;
 
     // Check allowed_operations is not null
-    QVariantList allowedOps = templateData.value("allowed_operations", QVariantList()).toList();
+    const QStringList allowedOps = templateVm->GetAllowedOperations();
     if (allowedOps.isEmpty())
         return false;
 
     // Must not be an internal template
-    if (this->isInternalTemplate(templateData))
+    if (this->isInternalTemplate(templateVm))
         return false;
 
     // Can launch migrate wizard, OR template supports clone/copy
-    if (this->canLaunchMigrateWizard(templateData))
+    if (this->canLaunchMigrateWizard(templateVm))
         return true;
 
     // Check if clone or copy operations are allowed
     bool cloneAllowed = false;
     bool copyAllowed = false;
 
-    for (const QVariant& op : allowedOps)
+    for (const QString& op : allowedOps)
     {
-        QString opStr = op.toString();
-        if (opStr == "clone")
+        if (op == "clone")
             cloneAllowed = true;
-        if (opStr == "copy")
+        if (op == "copy")
             copyAllowed = true;
     }
 
     return cloneAllowed || copyAllowed;
 }
 
-bool CopyTemplateCommand::isInternalTemplate(const QVariantMap& templateData) const
+bool CopyTemplateCommand::isInternalTemplate(const QSharedPointer<VM>& templateVm) const
 {
     // Check if template is internal (built-in XenServer template)
     // In C#: vm.InternalTemplate()
     // Usually checks other_config["default_template"] or similar
 
-    QVariantMap otherConfig = templateData.value("other_config", QVariantMap()).toMap();
+    QVariantMap otherConfig = templateVm->GetOtherConfig();
     return otherConfig.value("default_template", false).toBool() ||
            otherConfig.value("base_template_name", "").toString().isEmpty() == false;
 }
 
-bool CopyTemplateCommand::isDefaultTemplate(const QVariantMap& templateData) const
+bool CopyTemplateCommand::isDefaultTemplate(const QSharedPointer<VM>& templateVm) const
 {
     // Check if template is a default template
-    QVariantMap otherConfig = templateData.value("other_config", QVariantMap()).toMap();
+    QVariantMap otherConfig = templateVm->GetOtherConfig();
     return otherConfig.value("default_template", false).toBool();
 }
 
-bool CopyTemplateCommand::canLaunchMigrateWizard(const QVariantMap& templateData) const
+bool CopyTemplateCommand::canLaunchMigrateWizard(const QSharedPointer<VM>& templateVm) const
 {
     // Can launch migrate wizard if:
     // 1. Not a default template
     // 2. CrossPoolMigrateCommand can run
 
-    if (this->isDefaultTemplate(templateData))
+    if (this->isDefaultTemplate(templateVm))
         return false;
 
     // TODO: Implement CrossPoolMigrateCommand.CanRun check

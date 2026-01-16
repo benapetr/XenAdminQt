@@ -174,7 +174,7 @@ bool HostMultipathPage::isInMaintenanceMode() const
         if (cache)
         {
             QSharedPointer<HostMetrics> metrics = cache->ResolveObject<HostMetrics>("host_metrics", metricsRef);
-            if (metrics && !metrics->live())
+            if (metrics && !metrics->IsLive())
                 return true; // Host metrics indicate not live (equivalent to maintenance)
         }
     }

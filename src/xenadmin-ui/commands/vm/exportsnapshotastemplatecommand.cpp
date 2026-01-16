@@ -31,6 +31,7 @@
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vm.h"
 #include "../../mainwindow.h"
 #include <QMessageBox>
 
@@ -63,16 +64,11 @@ bool ExportSnapshotAsTemplateCommand::CanRun() const
     if (!cache)
         return false;
 
-    // Get VM data from cache
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-    {
+    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", vmRef);
+    if (!snapshot)
         return false;
-    }
 
-    // VM must be a snapshot
-    bool isSnapshot = vmData.value("is_a_snapshot").toBool();
-    return isSnapshot;
+    return snapshot->IsSnapshot();
 }
 
 void ExportSnapshotAsTemplateCommand::Run()
@@ -95,15 +91,11 @@ void ExportSnapshotAsTemplateCommand::Run()
     if (!cache)
         return;
 
-    // Get VM data to verify it's a snapshot
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-    {
+    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", vmRef);
+    if (!snapshot)
         return;
-    }
 
-    bool isSnapshot = vmData.value("is_a_snapshot").toBool();
-    if (!isSnapshot)
+    if (!snapshot->IsSnapshot())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not a Snapshot"),
                              tr("Selected item is not a VM snapshot"));

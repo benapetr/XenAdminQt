@@ -28,74 +28,122 @@
 #include "shutdownhostcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/host.h"
-#include "xen/actions/host/shutdownhostaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/actions/host/shutdownhostaction.h"
 #include <QMessageBox>
 
 ShutdownHostCommand::ShutdownHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
+ShutdownHostCommand::ShutdownHostCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent) : HostCommand(hosts, mainWindow, parent)
+{
+}
+
+namespace
+{
+    bool canShutdownHost(const QSharedPointer<Host>& host)
+    {
+        if (!host)
+            return false;
+
+        if (!host->IsLive())
+            return false;
+
+        return host->CurrentOperations().isEmpty();
+    }
+}
+
 bool ShutdownHostCommand::CanRun() const
 {
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
+    const QList<QSharedPointer<Host>> hosts = this->getHosts();
+    if (hosts.isEmpty())
         return false;
 
-           // Can reboot if host is enabled (not in maintenance mode)
-    return host->IsEnabled();
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (canShutdownHost(host))
+            return true;
+    }
+
+    return false;
 }
 
 void ShutdownHostCommand::Run()
 {
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
-        return;
+    QList<QSharedPointer<Host>> runnable;
+    const QList<QSharedPointer<Host>> hosts = this->getHosts();
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (canShutdownHost(host))
+            runnable.append(host);
+    }
 
-    QString hostName = this->getSelectedHostName();
-
-    if (hostName.isEmpty())
+    if (runnable.isEmpty())
         return;
 
     // Show warning dialog
-    int ret = QMessageBox::warning(this->mainWindow(), "Shutdown Host",
-                                   QString("Shutting down host '%1' will shut down all VMs running on it.\n\n"
-                                           "Are you sure you want to continue?")
-                                       .arg(hostName),
+    const int count = runnable.count();
+    const QString confirmTitle = count == 1 ? "Shutdown Host" : "Shutdown Hosts";
+    const QString confirmText = count == 1
+        ? QString("Shutting down host '%1' will shut down all VMs running on it.\n\n"
+                  "Are you sure you want to continue?")
+              .arg(runnable.first()->GetName())
+        : "Shutting down these hosts will shut down all VMs running on them.\n\n"
+          "Are you sure you want to continue?";
+
+    int ret = QMessageBox::warning(this->mainWindow(), confirmTitle, confirmText,
                                    QMessageBox::Yes | QMessageBox::No);
 
     if (ret == QMessageBox::Yes)
     {
-        this->mainWindow()->ShowStatusMessage(QString("Shutting down host '%1'...").arg(hostName));
-
-        XenConnection* conn = host->GetConnection();
-        if (!conn || !conn->IsConnected())
+        if (count == 1)
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected",
-                                 "Not connected to XenServer");
-            return;
+            this->mainWindow()->ShowStatusMessage(
+                QString("Shutting down host '%1'...").arg(runnable.first()->GetName()));
+        }
+        else
+        {
+            this->mainWindow()->ShowStatusMessage(QString("Shutting down %1 hosts...").arg(count));
         }
 
-        ShutdownHostAction* action = new ShutdownHostAction(host, nullptr);
-
-        OperationManager::instance()->RegisterOperation(action);
-
-        connect(action, &AsyncOperation::completed, this, [this, hostName, action]()
+        for (const QSharedPointer<Host>& host : runnable)
         {
-            if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
-            {
-                this->mainWindow()->ShowStatusMessage(QString("Host '%1' shutdown initiated successfully").arg(hostName), 5000);
-            }
-            else
-            {
-                QMessageBox::warning(this->mainWindow(), "Shutdown Host Failed", QString("Failed to shutdown host '%1'. Check the error log for details.").arg(hostName));
-                this->mainWindow()->ShowStatusMessage("Host shutdown failed", 5000);
-            }
-            action->deleteLater();
-        });
+            if (!host)
+                continue;
 
-        action->RunAsync();
+            XenConnection* conn = host->GetConnection();
+            if (!conn || !conn->IsConnected())
+            {
+                QMessageBox::warning(this->mainWindow(), "Not Connected",
+                                     QString("Not connected to XenServer for host '%1'.")
+                                         .arg(host->GetName()));
+                continue;
+            }
+
+            const QString hostName = host->GetName();
+            ShutdownHostAction* action = new ShutdownHostAction(host, nullptr);
+
+            OperationManager::instance()->RegisterOperation(action);
+
+            connect(action, &AsyncOperation::completed, this, [this, hostName, action]()
+            {
+                if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
+                {
+                    this->mainWindow()->ShowStatusMessage(QString("Host '%1' shutdown initiated successfully").arg(hostName), 5000);
+                }
+                else
+                {
+                    QMessageBox::warning(this->mainWindow(), "Shutdown Host Failed",
+                                         QString("Failed to shutdown host '%1'. Check the error log for details.").arg(hostName));
+                    this->mainWindow()->ShowStatusMessage("Host shutdown failed", 5000);
+                }
+                action->deleteLater();
+            });
+
+            action->RunAsync();
+        }
     }
 }
 

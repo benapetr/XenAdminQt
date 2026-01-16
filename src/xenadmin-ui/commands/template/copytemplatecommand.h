@@ -29,6 +29,9 @@
 #define COPYTEMPLATECOMMAND_H
 
 #include "../command.h"
+#include <QSharedPointer>
+
+class VM;
 
 // Duplicate template (clone/copy to same or different SR)
 class CopyTemplateCommand : public Command
@@ -45,10 +48,10 @@ class CopyTemplateCommand : public Command
 
     private:
         QString getSelectedTemplateRef() const;
-        bool canRunTemplate(const QVariantMap& templateData) const;
-        bool isInternalTemplate(const QVariantMap& templateData) const;
-        bool isDefaultTemplate(const QVariantMap& templateData) const;
-        bool canLaunchMigrateWizard(const QVariantMap& templateData) const;
+        bool canRunTemplate(const QSharedPointer<VM>& templateVm) const;
+        bool isInternalTemplate(const QSharedPointer<VM>& templateVm) const;
+        bool isDefaultTemplate(const QSharedPointer<VM>& templateVm) const;
+        bool canLaunchMigrateWizard(const QSharedPointer<VM>& templateVm) const;
 };
 
 #endif // COPYTEMPLATECOMMAND_H

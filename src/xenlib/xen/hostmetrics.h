@@ -51,22 +51,20 @@ class XENLIB_EXPORT HostMetrics : public XenObject
     Q_OBJECT
 
     public:
-        explicit HostMetrics(XenConnection* connection,
-                            const QString& opaqueRef,
-                            QObject* parent = nullptr);
+        explicit HostMetrics(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~HostMetrics() override = default;
 
-        //! Check if pool master thinks this host is live
-        bool live() const;
+        //! Check if pool master thinks this host is IsLive
+        bool IsLive() const;
 
         //! Get total memory in bytes
-        qint64 memoryTotal() const;
+        qint64 GetMemoryTotal() const;
 
         //! Get free memory in bytes
-        qint64 memoryFree() const;
+        qint64 GetMemoryFree() const;
 
         //! Get timestamp of last update
-        QDateTime lastUpdated() const;
+        QDateTime LastUpdated() const;
 
     protected:
         QString GetObjectType() const override;

@@ -29,9 +29,12 @@
 #include "../../mainwindow.h"
 #include "../../settingsmanager.h"
 #include "../../connectionprofile.h"
-#include "xen/network/connection.h"
-#include "xen/network/connectionsmanager.h"
-#include "xen/host.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
 #include <QDebug>
 
@@ -39,27 +42,65 @@ RemoveHostCommand::RemoveHostCommand(MainWindow* mainWindow, QObject* parent) : 
 {
 }
 
+RemoveHostCommand::RemoveHostCommand(const QList<XenConnection*>& connections, MainWindow* mainWindow, QObject* parent)
+    : HostCommand(mainWindow, parent)
+    , m_connections(connections)
+{
+}
+
 bool RemoveHostCommand::CanRun() const
 {
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
-        return false;
+    QList<XenConnection*> connections = this->getConnections();
+    if (!connections.isEmpty())
+    {
+        for (XenConnection* connection : connections)
+        {
+            if (!connection)
+                continue;
 
+            if (!connection->IsConnected())
+                return true;
+
+            XenCache* cache = connection->GetCache();
+            if (cache)
+            {
+                QSharedPointer<Pool> pool = cache->GetPool();
+                if (pool)
+                {
+                    QSharedPointer<Host> master = pool->GetMasterHost();
+                    if (master && master->GetConnection() == connection)
+                        return true;
+                }
+            }
+        }
+    }
+
+    QSharedPointer<Host> host = this->getSelectedHost();
     return this->canHostBeRemoved(host);
 }
 
 void RemoveHostCommand::Run()
 {
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
+    QList<XenConnection*> connections = this->getConnections();
+    if (connections.isEmpty())
+    {
+        QSharedPointer<Host> host = this->getSelectedHost();
+        if (host && host->GetConnection())
+            connections.append(host->GetConnection());
+    }
+
+    if (connections.isEmpty())
         return;
 
-    XenConnection* connection = host->GetConnection();
+    XenConnection* connection = connections.first();
     if (!connection)
         return;
 
     QString connection_hostname = connection->GetHostname();
-    QString hostName = host->GetName();
+    QString hostName = connection_hostname;
+    QSharedPointer<Pool> pool = connection->GetCache() ? connection->GetCache()->GetPool() : QSharedPointer<Pool>();
+    if (pool && pool->GetMasterHost())
+        hostName = pool->GetMasterHost()->GetName();
 
     // Show confirmation dialog
     QMessageBox msgBox(this->mainWindow());
@@ -142,4 +183,27 @@ bool RemoveHostCommand::isHostCoordinator(QSharedPointer<Host> host) const
 
     // Use the isMaster() method from Host class
     return host->IsMaster();
+}
+
+QList<XenConnection*> RemoveHostCommand::getConnections() const
+{
+    if (!this->m_connections.isEmpty())
+        return this->m_connections;
+
+    QList<XenConnection*> connections;
+    const QList<QSharedPointer<Host>> hosts = this->getHosts();
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (host && host->GetConnection())
+            connections.append(host->GetConnection());
+    }
+
+    if (!connections.isEmpty())
+        return connections;
+
+    QSharedPointer<XenObject> obj = this->getSelectedObject();
+    if (obj && obj->GetConnection())
+        connections.append(obj->GetConnection());
+
+    return connections;
 }

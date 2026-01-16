@@ -36,6 +36,7 @@ class SR;
 class VM;
 class PBD;
 class PIF;
+class HostMetrics;
 
 /**
  * @brief Host - A physical host
@@ -202,7 +203,10 @@ class XENLIB_EXPORT Host : public XenObject
         QVariantMap Logging() const;
 
         //! Get host metrics reference (Host_metrics opaque reference)
-        QString MetricsRef() const;
+        QString GetMetricsRef() const;
+
+        //! Get host metrics object (null if not available)
+        QSharedPointer<HostMetrics> GetMetrics() const;
 
         //! Get HA state file locations (list of state file paths for HA)
         QStringList HAStatefiles() const;

@@ -68,12 +68,12 @@ bool Host::IsLive() const
     if (!cache)
         return false;
 
-    const QString metricsRef = MetricsRef();
+    const QString metricsRef = GetMetricsRef();
     if (metricsRef.isEmpty())
         return false;
 
     QSharedPointer<HostMetrics> metrics = cache->ResolveObject<HostMetrics>("host_metrics", metricsRef);
-    return metrics && metrics->live();
+    return metrics && metrics->IsLive();
 }
 
 static bool boolKeyPreferTrue(const QVariantMap& map, const QString& key)
@@ -287,9 +287,26 @@ QVariantMap Host::Logging() const
     return this->property("logging").toMap();
 }
 
-QString Host::MetricsRef() const
+QString Host::GetMetricsRef() const
 {
     return this->stringProperty("metrics");
+}
+
+QSharedPointer<HostMetrics> Host::GetMetrics() const
+{
+    XenConnection* connection = GetConnection();
+    if (!connection)
+        return QSharedPointer<HostMetrics>();
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return QSharedPointer<HostMetrics>();
+
+    const QString metricsRef = GetMetricsRef();
+    if (metricsRef.isEmpty())
+        return QSharedPointer<HostMetrics>();
+
+    return cache->ResolveObject<HostMetrics>("host_metrics", metricsRef);
 }
 
 QStringList Host::HAStatefiles() const

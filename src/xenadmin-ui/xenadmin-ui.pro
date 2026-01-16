@@ -108,6 +108,9 @@ SOURCES += \
     actions/meddlingactionmanager.cpp \
     commands/command.cpp \
     commands/contextmenubuilder.cpp \
+    commands/connection/cancelhostconnectioncommand.cpp \
+    commands/connection/disconnecthostsandpoolscommand.cpp \
+    commands/connection/forgetsavedpasswordcommand.cpp \
     commands/connection/disconnectcommand.cpp \
     commands/host/hostmaintenancemodecommand.cpp \
     commands/host/reboothostcommand.cpp \
@@ -123,6 +126,7 @@ SOURCES += \
     commands/host/hostreconnectascommand.cpp \
     commands/host/removehostcommand.cpp \
     commands/host/rescanpifscommand.cpp \
+    commands/host/certificatecommand.cpp \
     commands/shutdowncommand.cpp \
     commands/rebootcommand.cpp \
     commands/vm/startvmcommand.cpp \
@@ -186,6 +190,10 @@ SOURCES += \
     commands/storage/trimsrcommand.cpp \
     commands/storage/vdieditsizelocationcommand.cpp \
     commands/storage/migratevirtualdiskcommand.cpp \
+    commands/pool/addhosttopoolcommand.cpp \
+    commands/pool/addnewhosttopoolcommand.cpp \
+    commands/pool/addhosttoselectedpoolmenu.cpp \
+    commands/pool/addselectedhosttopoolmenu.cpp \
     commands/pool/poolcommand.cpp \
     commands/pool/poolpropertiescommand.cpp \
     commands/pool/joinpoolcommand.cpp \
@@ -343,6 +351,10 @@ HEADERS += \
     commands/command.h \
     commands/contextmenubuilder.h \
     commands/connection/disconnectcommand.h \
+    commands/connection/cancelhostconnectioncommand.h \
+    commands/connection/disconnecthostsandpoolscommand.h \
+    commands/connection/forgetsavedpasswordcommand.h \
+    commands/host/certificatecommand.h \
     commands/host/hostmaintenancemodecommand.h \
     commands/host/reboothostcommand.h \
     commands/host/shutdownhostcommand.h \
@@ -420,6 +432,10 @@ HEADERS += \
     commands/storage/trimsrcommand.h \
     commands/storage/vdieditsizelocationcommand.h \
     commands/storage/migratevirtualdiskcommand.h \
+    commands/pool/addhosttopoolcommand.h \
+    commands/pool/addnewhosttopoolcommand.h \
+    commands/pool/addhosttoselectedpoolmenu.h \
+    commands/pool/addselectedhosttopoolmenu.h \
     commands/pool/poolcommand.h \
     commands/pool/poolpropertiescommand.h \
     commands/pool/joinpoolcommand.h \

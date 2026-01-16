@@ -36,6 +36,7 @@ class RestartToolstackCommand : public HostCommand
 
     public:
         explicit RestartToolstackCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit RestartToolstackCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;

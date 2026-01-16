@@ -27,65 +27,78 @@
 
 #include "poweronhostcommand.h"
 #include "../../mainwindow.h"
-#include "xen/host.h"
-#include "xen/network/connection.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/network/connection.h"
 #include <QMessageBox>
 
 PowerOnHostCommand::PowerOnHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
+PowerOnHostCommand::PowerOnHostCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent) : HostCommand(hosts, mainWindow, parent)
+{
+}
+
 bool PowerOnHostCommand::CanRun() const
 {
-    // Matches C# PowerOnHostCommand.CanRunCore() logic
-    QString hostRef = this->getSelectedHostRef();
-    if (hostRef.isEmpty())
+    const QList<QSharedPointer<Host>> hosts = this->getHosts();
+    if (hosts.isEmpty())
         return false;
 
-    return this->canPowerOn();
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (this->canPowerOn(host))
+            return true;
+    }
+
+    return false;
 }
 
 void PowerOnHostCommand::Run()
 {
     // Matches C# PowerOnHostCommand.RunCore() logic
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
-        return;
-
-    QString hostName = this->getSelectedHostName();
-    if (hostName.isEmpty())
-        return;
-
-    QString powerOnMode = host->GetData().value("power_on_mode", "").toString();
-
-    // Check if power_on_mode is set (matches C# GetCantRunReasonCore logic)
-    if (powerOnMode.isEmpty())
+    const QList<QSharedPointer<Host>> hosts = this->getHosts();
+    QList<QSharedPointer<Host>> runnable;
+    for (const QSharedPointer<Host>& host : hosts)
     {
-        QMessageBox::warning(this->mainWindow(), "Cannot Power On Host",
-                             QString("Cannot power on host '%1' because its power-on mode is not set.\n\n"
-                                     "Configure the host's management interface in the host properties.")
-                                 .arg(hostName));
-        return;
+        if (this->canPowerOn(host))
+            runnable.append(host);
     }
 
-    // Get XenConnection from XenLib
-    XenConnection* conn = host->GetConnection();
-    if (!conn || !conn->IsConnected())
-    {
-        QMessageBox::warning(this->mainWindow(), "Not Connected",
-                             "Not connected to XenServer");
+    if (runnable.isEmpty())
         return;
+
+    for (const QSharedPointer<Host>& host : runnable)
+    {
+        const QString hostName = host->GetName();
+        const QString powerOnMode = host->PowerOnMode();
+
+        // Check if power_on_mode is set (matches C# GetCantRunReasonCore logic)
+        if (powerOnMode.isEmpty())
+        {
+            QMessageBox::warning(this->mainWindow(), "Cannot Power On Host",
+                                 QString("Cannot power on host '%1' because its power-on mode is not set.\n\n"
+                                         "Configure the host's management interface in the host properties.")
+                                     .arg(hostName));
+            continue;
+        }
+
+        // Get XenConnection from XenLib
+        XenConnection* conn = host->GetConnection();
+        if (!conn || !conn->IsConnected())
+        {
+            QMessageBox::warning(this->mainWindow(), "Not Connected",
+                                 QString("Not connected to XenServer for host '%1'.").arg(hostName));
+            continue;
+        }
+
+        // TODO: Create HostPowerOnAction when implemented
+        QMessageBox::information(this->mainWindow(), "Power On Host",
+                                 QString("Power on host '%1' will be implemented when HostPowerOnAction is added.\n\n"
+                                         "This will use %2 to power on the host.")
+                                     .arg(hostName)
+                                     .arg(powerOnMode.isEmpty() ? "the configured power-on method" : powerOnMode));
     }
-
-    // TODO: Create HostPowerOnAction when implemented
-    // For now, call the XenAPI directly
-    // Matches C# HostPowerOnAction(host)
-
-    QMessageBox::information(this->mainWindow(), "Power On Host",
-                             QString("Power on host '%1' will be implemented when HostPowerOnAction is added.\n\n"
-                                     "This will use %2 to power on the host.")
-                                 .arg(hostName)
-                                 .arg(powerOnMode.isEmpty() ? "the configured power-on method" : powerOnMode));
 
     /* When HostPowerOnAction is implemented:
     HostPowerOnAction* action = new HostPowerOnAction(conn, hostRef, this->mainWindow());
@@ -124,10 +137,13 @@ bool PowerOnHostCommand::canPowerOn() const
     //     && host.power_on_mode != "";
 
     QSharedPointer<Host> host = this->getSelectedHost();
+    return this->canPowerOn(host);
+}
+
+bool PowerOnHostCommand::canPowerOn(const QSharedPointer<Host>& host) const
+{
     if (!host)
         return false;
-
-    QVariantMap hostData = host->GetData();
 
     // Check if host is not live (not running)
     // Note: PowerOn uses enabled field, not live field (different from isHostLive base class)
@@ -135,26 +151,15 @@ bool PowerOnHostCommand::canPowerOn() const
         return false;
 
     // Check if power_on is in allowed_operations
-    QVariantList allowedOps = hostData.value("allowed_operations", QVariantList()).toList();
-    bool hasPowerOn = false;
-    for (const QVariant& op : allowedOps)
-    {
-        if (op.toString() == "power_on")
-        {
-            hasPowerOn = true;
-            break;
-        }
-    }
-
-    if (!hasPowerOn)
+    if (!host->AllowedOperations().contains("power_on"))
         return false;
 
     // Check if host has active actions (matches C# HelpersGUI.HasActiveHostAction)
-    if (this->hasActiveHostAction())
+    if (this->hasActiveHostAction(host))
         return false;
 
     // Check if power_on_mode is set
-    QString powerOnMode = hostData.value("power_on_mode", "").toString();
+    QString powerOnMode = host->PowerOnMode();
     if (powerOnMode.isEmpty())
         return false;
 
@@ -163,16 +168,16 @@ bool PowerOnHostCommand::canPowerOn() const
 
 bool PowerOnHostCommand::hasActiveHostAction() const
 {
+    QSharedPointer<Host> host = this->getSelectedHost();
+    return this->hasActiveHostAction(host);
+}
+
+bool PowerOnHostCommand::hasActiveHostAction(const QSharedPointer<Host>& host) const
+{
     // Matches C# HelpersGUI.HasActiveHostAction(host) logic
     // Check if host has current_operations (active tasks)
-    QSharedPointer<Host> host = this->getSelectedHost();
     if (!host)
         return false;
 
-    QVariantMap hostData = host->GetData();
-    if (hostData.isEmpty())
-        return false;
-
-    QVariantMap currentOps = hostData.value("current_operations", QVariantMap()).toMap();
-    return !currentOps.isEmpty();
+    return !host->CurrentOperations().isEmpty();
 }

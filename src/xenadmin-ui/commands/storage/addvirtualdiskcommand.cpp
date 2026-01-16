@@ -35,6 +35,7 @@
 #include "xen/vm.h"
 #include "xen/actions/vdi/creatediskaction.h"
 #include "xen/actions/vbd/vbdcreateandplugaction.h"
+#include "xen/sr.h"
 #include <QMessageBox>
 
 AddVirtualDiskCommand::AddVirtualDiskCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
@@ -226,18 +227,22 @@ bool AddVirtualDiskCommand::canAddDisk() const
 
     if (objectType == "sr")
     {
-        QVariantMap srData = cache->ResolveObjectData("sr", objectRef);
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", objectRef);
+        if (!sr)
+            return false;
+
         // Check if SR is locked
-        QVariantMap currentOps = srData.value("current_operations", QVariantMap()).toMap();
-        return currentOps.isEmpty();
+        return sr->CurrentOperations().isEmpty();
     } else if (objectType == "vm")
     {
-        QVariantMap vmData = cache->ResolveObjectData("vm", objectRef);
-        // Cannot add disk to snapshot or locked VM
-        if (vmData.value("is_a_snapshot", false).toBool())
+        QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", objectRef);
+        if (!vm)
             return false;
-        QVariantMap currentOps = vmData.value("current_operations", QVariantMap()).toMap();
-        return currentOps.isEmpty();
+
+        // Cannot add disk to snapshot or locked VM
+        if (vm->IsSnapshot())
+            return false;
+        return vm->CurrentOperations().isEmpty();
     }
 
     return false;

@@ -44,8 +44,7 @@ bool canUnpauseVm(const QSharedPointer<VM>& vm)
     if (vm->GetPowerState() != "Paused")
         return false;
 
-    QVariantList allowedOperations = vm->GetData().value("allowed_operations").toList();
-    return allowedOperations.contains("unpause");
+    return vm->GetAllowedOperations().contains("unpause");
 }
 } // namespace
 

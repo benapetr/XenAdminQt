@@ -28,6 +28,7 @@
 #include "vappshutdowncommand.h"
 #include "xenlib/xen/actions/vm/shutdownapplianceaction.h"
 #include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vmappliance.h"
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xencache.h"
 #include "../../mainwindow.h"
@@ -61,8 +62,8 @@ bool VappShutDownCommand::CanRun() const
         if (!cache)
             return false;
 
-        QVariantMap appData = cache->ResolveObjectData(type, objRef);
-        return this->canShutDownAppliance(appData);
+        QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>(type, objRef);
+        return this->canShutDownAppliance(appliance);
     }
 
     // Case 2: VM selected - check if it belongs to an appliance
@@ -83,8 +84,8 @@ bool VappShutDownCommand::CanRun() const
         if (!cache)
             return false;
 
-        QVariantMap appData = cache->ResolveObjectData("vm_appliance", applianceRef);
-        return this->canShutDownAppliance(appData);
+        QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+        return this->canShutDownAppliance(appliance);
     }
 
     return false;
@@ -125,8 +126,11 @@ void VappShutDownCommand::Run()
 
     XenCache* cache = connection->GetCache();
 
-    QVariantMap appData = cache->ResolveObjectData("vm_appliance", applianceRef);
-    QString appName = appData.value("name_label").toString();
+    QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+    if (!appliance)
+        return;
+
+    QString appName = appliance->GetName();
 
     if (appName.isEmpty())
     {
@@ -134,7 +138,7 @@ void VappShutDownCommand::Run()
     }
 
     // Validate before shutting down
-    if (!this->canShutDownAppliance(appData))
+    if (!this->canShutDownAppliance(appliance))
     {
         QMessageBox::warning(this->mainWindow(), tr("Cannot Shut Down vApp"),
                              tr("VM appliance '%1' cannot be shut down").arg(appName));
@@ -195,25 +199,14 @@ QString VappShutDownCommand::MenuText() const
     return tr("Shut Down v&App");
 }
 
-bool VappShutDownCommand::canShutDownAppliance(const QVariantMap& applianceData) const
+bool VappShutDownCommand::canShutDownAppliance(const QSharedPointer<VMAppliance>& appliance) const
 {
-    if (applianceData.isEmpty())
-    {
+    if (!appliance)
         return false;
-    }
 
     // Check if "clean_shutdown" or "hard_shutdown" operation is allowed
-    QVariantList allowedOps = applianceData.value("allowed_operations").toList();
-    for (const QVariant& op : allowedOps)
-    {
-        QString opStr = op.toString();
-        if (opStr == "clean_shutdown" || opStr == "hard_shutdown")
-        {
-            return true;
-        }
-    }
-
-    return false;
+    const QStringList allowedOps = appliance->AllowedOperations();
+    return allowedOps.contains("clean_shutdown") || allowedOps.contains("hard_shutdown");
 }
 
 QString VappShutDownCommand::getApplianceRefFromVM(const QString& vmRef) const

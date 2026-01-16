@@ -124,6 +124,12 @@ class Command : public QObject
          */
         QString getSelectedObjectType() const;
 
+        /**
+         * @brief Get the selected XenObject
+         // remove - GetObject() does same
+         */
+        QSharedPointer<XenObject> getSelectedObject() const;
+
     private:
         MainWindow* m_mainWindow;
         QStringList m_selection;

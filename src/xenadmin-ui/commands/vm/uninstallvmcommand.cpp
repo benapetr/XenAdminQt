@@ -82,12 +82,10 @@ bool UninstallVMCommand::canVMBeUninstalled() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->GetData();
-
     // Cannot uninstall templates or snapshots
-    if (vmData.value("is_a_template", false).toBool())
+    if (vm->IsTemplate())
         return false;
-    if (vmData.value("is_a_snapshot", false).toBool())
+    if (vm->IsSnapshot())
         return false;
 
     // Cannot uninstall if VM is running
@@ -95,8 +93,7 @@ bool UninstallVMCommand::canVMBeUninstalled() const
         return false;
 
     // Check if VM has any current operations
-    QVariantMap currentOps = vmData.value("current_operations", QVariantMap()).toMap();
-    if (!currentOps.isEmpty())
+    if (!vm->CurrentOperations().isEmpty())
         return false;
 
     return true;

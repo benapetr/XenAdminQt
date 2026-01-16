@@ -27,11 +27,18 @@
 
 #include "reconnecthostcommand.h"
 #include "../../mainwindow.h"
-#include "xen/network/connection.h"
-#include "xen/host.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/xenobject.h"
 #include "../../network/xenconnectionui.h"
 
 ReconnectHostCommand::ReconnectHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
+{
+}
+
+ReconnectHostCommand::ReconnectHostCommand(const QList<XenConnection*>& connections, MainWindow* mainWindow, QObject* parent)
+    : HostCommand(mainWindow, parent)
+    , m_connections(connections)
 {
 }
 
@@ -43,16 +50,15 @@ bool ReconnectHostCommand::CanRun() const
 
 void ReconnectHostCommand::Run()
 {
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
-        return;
+    QList<XenConnection*> connections = this->getConnections();
+    for (XenConnection* conn : connections)
+    {
+        if (!conn || conn->IsConnected())
+            continue;
 
-    XenConnection* conn = host->GetConnection();
-    if (!conn)
-        return;
-
-    this->mainWindow()->ShowStatusMessage("Reconnecting...");
-    XenConnectionUI::BeginConnect(conn, true, this->mainWindow(), false);
+        this->mainWindow()->ShowStatusMessage("Reconnecting...");
+        XenConnectionUI::BeginConnect(conn, true, this->mainWindow(), false);
+    }
 }
 
 QString ReconnectHostCommand::MenuText() const
@@ -62,13 +68,35 @@ QString ReconnectHostCommand::MenuText() const
 
 bool ReconnectHostCommand::isConnectionDisconnected() const
 {
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
-        return false;
+    QList<XenConnection*> connections = this->getConnections();
+    for (XenConnection* conn : connections)
+    {
+        if (conn && !conn->IsConnected())
+            return true;
+    }
 
-    XenConnection* conn = host->GetConnection();
-    if (!conn)
-        return false;
+    return false;
+}
 
-    return !conn->IsConnected();
+QList<XenConnection*> ReconnectHostCommand::getConnections() const
+{
+    if (!this->m_connections.isEmpty())
+        return this->m_connections;
+
+    QList<XenConnection*> connections;
+    const QList<QSharedPointer<Host>> hosts = this->getHosts();
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (host && host->GetConnection())
+            connections.append(host->GetConnection());
+    }
+
+    if (!connections.isEmpty())
+        return connections;
+
+    QSharedPointer<XenObject> obj = this->getSelectedObject();
+    if (obj && obj->GetConnection())
+        connections.append(obj->GetConnection());
+
+    return connections;
 }

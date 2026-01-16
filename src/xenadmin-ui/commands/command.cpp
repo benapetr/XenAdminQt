@@ -115,3 +115,16 @@ QString Command::getSelectedObjectType() const
     
     return QString();
 }
+
+QSharedPointer<XenObject> Command::getSelectedObject() const
+{
+    QTreeWidgetItem* item = this->getSelectedItem();
+    if (!item)
+        return QSharedPointer<XenObject>();
+
+    QVariant data = item->data(0, Qt::UserRole);
+    if (data.canConvert<QSharedPointer<XenObject>>())
+        return data.value<QSharedPointer<XenObject>>();
+
+    return QSharedPointer<XenObject>();
+}

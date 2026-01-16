@@ -44,20 +44,16 @@ bool VMRecoveryModeCommand::CanRun() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->GetData();
-    if (vmData.isEmpty())
-        return false;
-
     // VM must be halted
     if (vm->GetPowerState() != "Halted")
         return false;
 
     // Check if is_a_template is false (templates can't be started)
-    if (vmData.value("is_a_template").toBool())
+    if (vm->IsTemplate())
         return false;
 
     // Check if VM is HVM (has HVM_boot_policy)
-    QString bootPolicy = vmData.value("HVM_boot_policy").toString();
+    QString bootPolicy = vm->GetData().value("HVM_boot_policy").toString();
     // Empty boot policy means PV VM (paravirtualized), which doesn't support HVM boot
     if (bootPolicy.isEmpty())
         return false;

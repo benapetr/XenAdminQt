@@ -70,16 +70,11 @@ bool NewTemplateFromSnapshotCommand::CanRun() const
     if (!cache)
         return false;
 
-    // Get VM data from cache
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-    if (vmData.isEmpty())
-    {
+    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", vmRef);
+    if (!snapshot)
         return false;
-    }
 
-    // VM must be a snapshot
-    bool isSnapshot = vmData.value("is_a_snapshot").toBool();
-    return isSnapshot;
+    return snapshot->IsSnapshot();
 }
 
 void NewTemplateFromSnapshotCommand::Run()

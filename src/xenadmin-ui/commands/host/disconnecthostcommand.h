@@ -36,6 +36,7 @@ class DisconnectHostCommand : public HostCommand
 
     public:
         explicit DisconnectHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit DisconnectHostCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;

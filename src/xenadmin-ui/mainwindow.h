@@ -251,6 +251,8 @@ class MainWindow : public QMainWindow
         // Helper methods for toolbar button handlers
         QString getSelectedObjectRef() const;
         QString getSelectedObjectName() const;
+        QList<QSharedPointer<class VM>> getSelectedVMs() const;
+        QList<QSharedPointer<class Host>> getSelectedHosts() const;
 
         // Search functionality
         void filterTreeItems(QTreeWidgetItem* item, const QString& searchText);

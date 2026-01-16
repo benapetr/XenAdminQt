@@ -27,10 +27,7 @@
 
 #include "hostmetrics.h"
 
-HostMetrics::HostMetrics(XenConnection* connection,
-                        const QString& opaqueRef,
-                        QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+HostMetrics::HostMetrics(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
@@ -39,22 +36,22 @@ QString HostMetrics::GetObjectType() const
     return QStringLiteral("host_metrics");
 }
 
-bool HostMetrics::live() const
+bool HostMetrics::IsLive() const
 {
     return this->boolProperty("live", false);
 }
 
-qint64 HostMetrics::memoryTotal() const
+qint64 HostMetrics::GetMemoryTotal() const
 {
     return this->longProperty("memory_total", 0);
 }
 
-qint64 HostMetrics::memoryFree() const
+qint64 HostMetrics::GetMemoryFree() const
 {
     return this->longProperty("memory_free", 0);
 }
 
-QDateTime HostMetrics::lastUpdated() const
+QDateTime HostMetrics::LastUpdated() const
 {
     QString dateStr = this->stringProperty("last_updated");
     if (dateStr.isEmpty())

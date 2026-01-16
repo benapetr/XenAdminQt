@@ -40,6 +40,7 @@ class Host;
 class Pool;
 class SR;
 class Network;
+class XenConnection;
 
 /**
  * @brief Builds context menus for different XenObject types
@@ -71,6 +72,10 @@ class ContextMenuBuilder : public QObject
         void buildSRContextMenu(QMenu* menu, QSharedPointer<SR> sr);
         void buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> pool);
         void buildNetworkContextMenu(QMenu* menu, QSharedPointer<Network> network);
+
+        QList<QSharedPointer<VM>> getSelectedVMs() const;
+        QList<QSharedPointer<Host>> getSelectedHosts() const;
+        QList<XenConnection*> getSelectedConnections() const;
 
         // Helper methods
         void addCommand(QMenu* menu, Command* command);

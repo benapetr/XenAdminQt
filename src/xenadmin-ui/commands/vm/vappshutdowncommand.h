@@ -29,6 +29,9 @@
 #define VAPPSHUTDOWNCOMMAND_H
 
 #include "../command.h"
+#include <QSharedPointer>
+
+class VMAppliance;
 
 class MainWindow;
 
@@ -86,10 +89,10 @@ class VappShutDownCommand : public Command
     private:
         /**
          * @brief Check if appliance can be shut down
-         * @param applianceData VM_appliance record data
+         * @param appliance VM appliance object
          * @return true if "clean_shutdown" or "hard_shutdown" in allowed_operations
          */
-        bool canShutDownAppliance(const QVariantMap& applianceData) const;
+        bool canShutDownAppliance(const QSharedPointer<VMAppliance>& appliance) const;
 
         /**
          * @brief Get appliance ref from selected VM

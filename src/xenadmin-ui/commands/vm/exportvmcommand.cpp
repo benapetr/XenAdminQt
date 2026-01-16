@@ -128,20 +128,12 @@ bool ExportVMCommand::isVMExportable() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->GetData();
-    if (vmData.isEmpty())
+    if (vm->IsTemplate() || vm->IsLocked())
         return false;
 
-    bool isTemplate = vmData.value("is_a_template", false).toBool();
-    bool isLocked = vmData.value("Locked", false).toBool();
-    QVariantList allowedOps = vmData.value("allowed_operations").toList();
-
-    if (isTemplate || isLocked)
-        return false;
-
-    for (const QVariant& op : allowedOps)
+    for (const QString& op : vm->GetAllowedOperations())
     {
-        if (op.toString() == "export")
+        if (op == "export")
             return true;
     }
 

@@ -100,32 +100,18 @@ bool HAConfigureCommand::isPoolConnected() const
 bool HAConfigureCommand::hasCoordinator() const
 {
     QSharedPointer<Pool> pool = this->getPool();
-    XenCache* cache = pool->GetCache();
+    if (!pool)
+        return false;
 
-    // Get all hosts and check if any is coordinator
-    QStringList hosts = cache->GetAllRefs("host");
-    for (const QString& hostRef : hosts)
-    {
-        QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
-        if (hostData.value("master", false).toBool())
-            return true;
-    }
-
-    return false;
+    return !pool->GetMasterHost().isNull();
 }
 
 bool HAConfigureCommand::isPoolLocked() const
 {
-    QString poolRef = this->getSelectedPoolRef();
-    if (poolRef.isEmpty())
+    QSharedPointer<Pool> pool = this->getPool();
+    if (!pool)
         return false;
 
-    QSharedPointer<Pool> pool = this->getPool();
-    XenCache* cache = pool->GetCache();
-
-    QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
-
     // Check if pool has any operations in progress that would lock it
-    QVariantMap currentOps = poolData.value("current_operations", QVariantMap()).toMap();
-    return !currentOps.isEmpty();
+    return !pool->CurrentOperations().isEmpty();
 }

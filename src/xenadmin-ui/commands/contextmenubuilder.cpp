@@ -33,12 +33,20 @@
 #include "host/shutdownhostcommand.h"
 #include "host/poweronhostcommand.h"
 #include "host/hostpropertiescommand.h"
+#include "host/destroyhostcommand.h"
+#include "host/certificatecommand.h"
+#include "host/disconnecthostcommand.h"
 #include "host/reconnecthostcommand.h"
 #include "host/removehostcommand.h"
+#include "host/hostreconnectascommand.h"
+#include "connection/cancelhostconnectioncommand.h"
+#include "connection/disconnecthostsandpoolscommand.h"
+#include "connection/forgetsavedpasswordcommand.h"
 #include "pool/joinpoolcommand.h"
 #include "pool/ejecthostfrompoolcommand.h"
 #include "pool/disconnectpoolcommand.h"
 #include "pool/poolpropertiescommand.h"
+#include "pool/addselectedhosttopoolmenu.h"
 #include "vm/startvmcommand.h"
 #include "vm/stopvmcommand.h"
 #include "vm/restartvmcommand.h"
@@ -62,6 +70,7 @@
 #include "vm/exportsnapshotastemplatecommand.h"
 #include "vm/newtemplatefromsnapshotcommand.h"
 #include "storage/repairsrcommand.h"
+#include "storage/newsrcommand.h"
 #include "storage/detachsrcommand.h"
 #include "storage/setdefaultsrcommand.h"
 #include "storage/reattachsrcommand.h"
@@ -72,20 +81,19 @@
 #include "template/exporttemplatecommand.h"
 #include "network/networkpropertiescommand.h"
 #include "../mainwindow.h"
-#include "../settingsmanager.h"
-#include "../connectionprofile.h"
-#include "xen/xenobject.h"
-#include "xen/vm.h"
-#include "xen/host.h"
-#include "xen/pool.h"
-#include "xen/sr.h"
-#include "xen/network.h"
-#include "xen/network/connection.h"
-#include "xencache.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/network.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xencache.h"
 #include <QAction>
 #include <QDebug>
 #include <QTreeWidget>
 #include <QMap>
+#include <QSet>
 
 ContextMenuBuilder::ContextMenuBuilder(MainWindow* mainWindow, QObject* parent) : QObject(parent), m_mainWindow(mainWindow)
 {
@@ -140,6 +148,7 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
     if (!obj)
         return menu;
 
+    // TODO replace this with some enum switch
     if (objectType == "vm")
     {
         QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
@@ -179,12 +188,29 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
         return;
 
     QString powerState = vm->GetPowerState();
-    QList<QSharedPointer<VM>> selectedVms;
+    QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
+    QList<QSharedPointer<VM>> filteredVms;
     QMap<QString, QSharedPointer<Host>> vmHostAncestors;
     QTreeWidget* tree = this->m_mainWindow->GetServerTreeWidget();
 
+    for (const QSharedPointer<VM>& selectedVm : selectedVms)
+    {
+        if (!selectedVm || selectedVm->IsSnapshot() || selectedVm->IsTemplate())
+            continue;
+        filteredVms.append(selectedVm);
+    }
+
+    selectedVms = filteredVms;
+
+    if (selectedVms.isEmpty() && vm)
+        selectedVms.append(vm);
+
     if (tree)
     {
+        QSet<QString> selectedRefs;
+        for (const QSharedPointer<VM>& selectedVm : selectedVms)
+            selectedRefs.insert(selectedVm->OpaqueRef());
+
         const QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
         for (QTreeWidgetItem* item : selectedItems)
         {
@@ -199,8 +225,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
             if (!obj || obj->GetObjectType() != "vm")
                 continue;
 
-            QSharedPointer<VM> selectedVm = qSharedPointerCast<VM>(obj);
-            if (!selectedVm || selectedVm->IsSnapshot() || selectedVm->IsTemplate())
+            if (!selectedRefs.contains(obj->OpaqueRef()))
                 continue;
 
             QSharedPointer<Host> hostAncestor;
@@ -221,14 +246,9 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
             }
 
             if (hostAncestor)
-                vmHostAncestors.insert(selectedVm->OpaqueRef(), hostAncestor);
-
-            selectedVms.append(selectedVm);
+                vmHostAncestors.insert(obj->OpaqueRef(), hostAncestor);
         }
     }
-
-    if (selectedVms.isEmpty() && vm)
-        selectedVms.append(vm);
 
     auto selectionConnection = [&selectedVms]() -> XenConnection* {
         if (selectedVms.isEmpty())
@@ -485,32 +505,123 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> 
     if (!host)
         return;
 
-    bool enabled = host->IsEnabled();
+    QList<QSharedPointer<Host>> selectedHosts = this->getSelectedHosts();
+    if (selectedHosts.isEmpty())
+        selectedHosts.append(host);
+
+    const int count = selectedHosts.size();
+    bool anyLive = false;
+    bool anyDead = false;
+    for (const QSharedPointer<Host>& item : selectedHosts)
+    {
+        if (!item)
+            continue;
+
+        if (item->IsLive())
+            anyLive = true;
+        else
+            anyDead = true;
+    }
+
+    if (count > 1)
+    {
+        if (anyLive && anyDead)
+        {
+            ShutdownHostCommand* shutdownCmd = new ShutdownHostCommand(selectedHosts, this->m_mainWindow, this);
+            this->addCommand(menu, shutdownCmd);
+
+            PowerOnHostCommand* powerOnCmd = new PowerOnHostCommand(selectedHosts, this->m_mainWindow, this);
+            this->addCommand(menu, powerOnCmd);
+
+            RestartToolstackCommand* restartToolstackCmd =
+                new RestartToolstackCommand(selectedHosts, this->m_mainWindow, this);
+            this->addCommand(menu, restartToolstackCmd);
+        } else if (anyLive)
+        {
+            AddSelectedHostToPoolMenu* addToPoolMenu = new AddSelectedHostToPoolMenu(this->m_mainWindow, menu);
+            if (addToPoolMenu->CanRun())
+                menu->addMenu(addToPoolMenu);
+
+            DisconnectHostCommand* disconnectCmd = new DisconnectHostCommand(selectedHosts, this->m_mainWindow, this);
+            this->addCommand(menu, disconnectCmd);
+
+            RebootHostCommand* rebootCmd = new RebootHostCommand(selectedHosts, this->m_mainWindow, this);
+            this->addCommand(menu, rebootCmd);
+
+            ShutdownHostCommand* shutdownCmd = new ShutdownHostCommand(selectedHosts, this->m_mainWindow, this);
+            this->addCommand(menu, shutdownCmd);
+
+            RestartToolstackCommand* restartToolstackCmd =
+                new RestartToolstackCommand(selectedHosts, this->m_mainWindow, this);
+            this->addCommand(menu, restartToolstackCmd);
+        } else
+        {
+            PowerOnHostCommand* powerOnCmd = new PowerOnHostCommand(selectedHosts, this->m_mainWindow, this);
+            this->addCommand(menu, powerOnCmd);
+
+            DestroyHostCommand* destroyCmd = new DestroyHostCommand(selectedHosts, this->m_mainWindow, this);
+            this->addCommand(menu, destroyCmd);
+        }
+        return;
+    }
+
+    QSharedPointer<Host> selectedHost = selectedHosts.first();
+    if (!selectedHost)
+        return;
+
+    if (!selectedHost->IsLive())
+    {
+        PowerOnHostCommand* powerOnCmd = new PowerOnHostCommand(selectedHosts, this->m_mainWindow, this);
+        this->addCommand(menu, powerOnCmd);
+
+        DestroyHostCommand* destroyCmd = new DestroyHostCommand(selectedHosts, this->m_mainWindow, this);
+        this->addCommand(menu, destroyCmd);
+
+        this->addSeparator(menu);
+
+        HostPropertiesCommand* propertiesCmd = new HostPropertiesCommand(this->m_mainWindow, this);
+        this->addCommand(menu, propertiesCmd);
+        return;
+    }
+
+    const bool inPool = !selectedHost->GetPoolRef().isEmpty();
 
     // New VM command (available for both pool and standalone hosts)
     NewVMCommand* newVMCmd = new NewVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, newVMCmd);
+    NewSRCommand* newSRCmd = new NewSRCommand(this->m_mainWindow, this);
+    this->addCommand(menu, newSRCmd);
 
     this->addSeparator(menu);
 
-    // Power operations
-    RebootHostCommand* rebootCmd = new RebootHostCommand(this->m_mainWindow, this);
-    this->addCommand(menu, rebootCmd);
+    if (!inPool)
+    {
+        AddSelectedHostToPoolMenu* addToPoolMenu = new AddSelectedHostToPoolMenu(this->m_mainWindow, menu);
+        if (addToPoolMenu->CanRun())
+            menu->addMenu(addToPoolMenu);
+        this->addSeparator(menu);
+    }
 
-    ShutdownHostCommand* shutdownCmd = new ShutdownHostCommand(this->m_mainWindow, this);
-    this->addCommand(menu, shutdownCmd);
-
-    RestartToolstackCommand* restartToolstackCmd = new RestartToolstackCommand(this->m_mainWindow, this);
-    this->addCommand(menu, restartToolstackCmd);
-
-    this->addSeparator(menu);
+    CertificateCommand* certCmd = new CertificateCommand(this->m_mainWindow, selectedHosts, menu);
+    if (certCmd->CanRun())
+    {
+        QMenu* certMenu = menu->addMenu(certCmd->MenuText());
+        InstallCertificateCommand* installCmd =
+            new InstallCertificateCommand(this->m_mainWindow, selectedHosts, certMenu);
+        this->addCommand(certMenu, installCmd);
+        ResetCertificateCommand* resetCmd =
+            new ResetCertificateCommand(this->m_mainWindow, selectedHosts, certMenu);
+        this->addCommand(certMenu, resetCmd);
+        this->addSeparator(menu);
+    }
 
     // Maintenance mode commands
-    if (enabled)
+    if (selectedHost->IsEnabled())
     {
         HostMaintenanceModeCommand* enterMaintenanceCmd = new HostMaintenanceModeCommand(this->m_mainWindow, true, this);
         this->addCommand(menu, enterMaintenanceCmd);
-    } else
+    }
+    else
     {
         HostMaintenanceModeCommand* exitMaintenanceCmd = new HostMaintenanceModeCommand(this->m_mainWindow, false, this);
         this->addCommand(menu, exitMaintenanceCmd);
@@ -518,17 +629,42 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> 
 
     this->addSeparator(menu);
 
-    // Pool management
-    JoinPoolCommand* joinPoolCmd = new JoinPoolCommand(this->m_mainWindow, this);
-    this->addCommand(menu, joinPoolCmd);
+    // Power operations
+    RebootHostCommand* rebootCmd = new RebootHostCommand(selectedHosts, this->m_mainWindow, this);
+    this->addCommand(menu, rebootCmd);
 
-    EjectHostFromPoolCommand* ejectCmd = new EjectHostFromPoolCommand(this->m_mainWindow, this);
-    this->addCommand(menu, ejectCmd);
+    ShutdownHostCommand* shutdownCmd = new ShutdownHostCommand(selectedHosts, this->m_mainWindow, this);
+    this->addCommand(menu, shutdownCmd);
+
+    if (!inPool)
+    {
+        PowerOnHostCommand* powerOnCmd = new PowerOnHostCommand(selectedHosts, this->m_mainWindow, this);
+        this->addCommand(menu, powerOnCmd);
+    }
+
+    RestartToolstackCommand* restartToolstackCmd =
+        new RestartToolstackCommand(selectedHosts, this->m_mainWindow, this);
+    this->addCommand(menu, restartToolstackCmd);
 
     this->addSeparator(menu);
 
-    // Properties
-    HostPropertiesCommand* propertiesCmd = new HostPropertiesCommand(this->m_mainWindow);
+    if (inPool)
+    {
+        EjectHostFromPoolCommand* ejectCmd = new EjectHostFromPoolCommand(this->m_mainWindow, this);
+        this->addCommand(menu, ejectCmd);
+    }
+    else
+    {
+        DisconnectHostCommand* disconnectCmd = new DisconnectHostCommand(selectedHosts, this->m_mainWindow, this);
+        this->addCommand(menu, disconnectCmd);
+
+        HostReconnectAsCommand* reconnectAsCmd = new HostReconnectAsCommand(this->m_mainWindow, this);
+        this->addCommand(menu, reconnectAsCmd);
+    }
+
+    this->addSeparator(menu);
+
+    HostPropertiesCommand* propertiesCmd = new HostPropertiesCommand(this->m_mainWindow, this);
     this->addCommand(menu, propertiesCmd);
 }
 
@@ -568,51 +704,52 @@ void ContextMenuBuilder::buildDisconnectedHostContextMenu(QMenu* menu, QTreeWidg
     // - Connect (ReconnectHostCommand)
     // - Forget Password (TODO: implement password management)
     // - Remove (RemoveHostCommand)
+    QList<XenConnection*> connections = this->getSelectedConnections();
+    if (connections.isEmpty())
+    {
+        QVariant data = item ? item->data(0, Qt::UserRole) : QVariant();
+        if (data.canConvert<XenConnection*>())
+            connections.append(data.value<XenConnection*>());
+    }
 
-    // Connect command (matches C# ReconnectHostCommand for disconnected servers)
-    ReconnectHostCommand* reconnectCmd = new ReconnectHostCommand(this->m_mainWindow, this);
-    this->addCommand(menu, reconnectCmd);
-
-    this->addSeparator(menu);
-
-    QAction* forgetPasswordAction = menu->addAction(tr("Forget Password"));
-    connect(forgetPasswordAction, &QAction::triggered, this, [item]() {
-        if (!item)
-            return;
-
-        XenConnection* connection = nullptr;
-        QVariant data = item->data(0, Qt::UserRole);
-        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (obj)
-            connection = obj->GetConnection();
-        else if (data.canConvert<XenConnection*>())
-            connection = data.value<XenConnection*>();
-
-        if (!connection)
-            return;
-
-        QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
-        bool updated = false;
-        for (ConnectionProfile& profile : profiles)
+    bool anyInProgress = false;
+    for (XenConnection* connection : connections)
+    {
+        if (connection && connection->InProgress() && !connection->IsConnected())
         {
-            if (profile.GetHostname() == connection->GetHostname() &&
-                profile.GetPort() == connection->GetPort())
-            {
-                profile.SetPassword(QString());
-                profile.SetRememberPassword(false);
-                SettingsManager::instance().saveConnectionProfile(profile);
-                updated = true;
-                break;
-            }
+            anyInProgress = true;
+            break;
         }
+    }
 
-        if (updated)
-            connection->SetPassword(QString());
-    });
+    if (anyInProgress)
+    {
+        CancelHostConnectionCommand* cancelCmd =
+            new CancelHostConnectionCommand(connections, this->m_mainWindow, this);
+        this->addCommand(menu, cancelCmd);
+    }
+    else
+    {
+        DisconnectHostsAndPoolsCommand* disconnectCmd =
+            new DisconnectHostsAndPoolsCommand(connections, this->m_mainWindow, this);
+        this->addCommand(menu, disconnectCmd);
 
-    // Remove command (matches C# RemoveHostCommand for disconnected servers)
-    RemoveHostCommand* removeCmd = new RemoveHostCommand(this->m_mainWindow, this);
-    this->addCommand(menu, removeCmd);
+        ReconnectHostCommand* reconnectCmd =
+            new ReconnectHostCommand(connections, this->m_mainWindow, this);
+        this->addCommand(menu, reconnectCmd);
+
+        ForgetSavedPasswordCommand* forgetCmd =
+            new ForgetSavedPasswordCommand(connections, this->m_mainWindow, this);
+        this->addCommand(menu, forgetCmd);
+
+        RemoveHostCommand* removeCmd =
+            new RemoveHostCommand(connections, this->m_mainWindow, this);
+        this->addCommand(menu, removeCmd);
+
+        RestartToolstackCommand* restartToolstackCmd =
+            new RestartToolstackCommand(this->m_mainWindow, this);
+        this->addCommand(menu, restartToolstackCmd);
+    }
 }
 
 void ContextMenuBuilder::buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> pool)
@@ -659,4 +796,104 @@ void ContextMenuBuilder::addCommand(QMenu* menu, Command* command)
 void ContextMenuBuilder::addSeparator(QMenu* menu)
 {
     menu->addSeparator();
+}
+
+QList<QSharedPointer<VM>> ContextMenuBuilder::getSelectedVMs() const
+{
+    QList<QSharedPointer<VM>> vms;
+    if (!this->m_mainWindow)
+        return vms;
+
+    QTreeWidget* tree = this->m_mainWindow->GetServerTreeWidget();
+    if (!tree)
+        return vms;
+
+    const QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
+    for (QTreeWidgetItem* item : selectedItems)
+    {
+        if (!item)
+            continue;
+
+        QVariant data = item->data(0, Qt::UserRole);
+        if (!data.canConvert<QSharedPointer<XenObject>>())
+            continue;
+
+        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+        if (!obj || obj->GetObjectType() != "vm")
+            continue;
+
+        QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
+        if (vm)
+            vms.append(vm);
+    }
+
+    return vms;
+}
+
+QList<QSharedPointer<Host>> ContextMenuBuilder::getSelectedHosts() const
+{
+    QList<QSharedPointer<Host>> hosts;
+    if (!this->m_mainWindow)
+        return hosts;
+
+    QTreeWidget* tree = this->m_mainWindow->GetServerTreeWidget();
+    if (!tree)
+        return hosts;
+
+    const QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
+    for (QTreeWidgetItem* item : selectedItems)
+    {
+        if (!item)
+            continue;
+
+        QVariant data = item->data(0, Qt::UserRole);
+        if (!data.canConvert<QSharedPointer<XenObject>>())
+            continue;
+
+        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+        if (!obj || obj->GetObjectType() != "host")
+            continue;
+
+        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
+        if (host)
+            hosts.append(host);
+    }
+
+    return hosts;
+}
+
+QList<XenConnection*> ContextMenuBuilder::getSelectedConnections() const
+{
+    QList<XenConnection*> connections;
+    if (!this->m_mainWindow)
+        return connections;
+
+    QTreeWidget* tree = this->m_mainWindow->GetServerTreeWidget();
+    if (!tree)
+        return connections;
+
+    const QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
+    for (QTreeWidgetItem* item : selectedItems)
+    {
+        if (!item)
+            continue;
+
+        QVariant data = item->data(0, Qt::UserRole);
+        if (data.canConvert<XenConnection*>())
+        {
+            XenConnection* connection = data.value<XenConnection*>();
+            if (connection)
+                connections.append(connection);
+            continue;
+        }
+
+        if (!data.canConvert<QSharedPointer<XenObject>>())
+            continue;
+
+        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+        if (obj && obj->GetConnection())
+            connections.append(obj->GetConnection());
+    }
+
+    return connections;
 }

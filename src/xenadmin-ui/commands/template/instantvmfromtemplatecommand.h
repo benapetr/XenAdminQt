@@ -29,6 +29,9 @@
 #define INSTANTVMFROMTEMPLATECOMMAND_H
 
 #include "../command.h"
+#include <QSharedPointer>
+
+class VM;
 
 // Fast VM creation from instant template (auto-starts)
 class InstantVMFromTemplateCommand : public Command
@@ -45,8 +48,8 @@ class InstantVMFromTemplateCommand : public Command
 
     private:
         QString getSelectedTemplateRef() const;
-        bool canRunTemplate(const QVariantMap& templateData) const;
-        bool isInstantTemplate(const QVariantMap& templateData) const;
+        bool canRunTemplate(const QSharedPointer<VM>& templateVm) const;
+        bool isInstantTemplate(const QSharedPointer<VM>& templateVm) const;
 };
 
 #endif // INSTANTVMFROMTEMPLATECOMMAND_H

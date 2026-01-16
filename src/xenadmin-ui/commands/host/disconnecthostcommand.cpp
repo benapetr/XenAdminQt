@@ -28,10 +28,35 @@
 #include "disconnecthostcommand.h"
 #include "../../mainwindow.h"
 #include "../connection/disconnectcommand.h"
-#include "xen/network/connection.h"
-#include "xen/host.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/host.h"
+
+namespace
+{
+    bool canDisconnectHost(const QSharedPointer<Host>& host)
+    {
+        if (!host)
+            return false;
+
+        XenConnection* conn = host->GetConnection();
+        if (!conn)
+            return false;
+
+        if (conn->IsConnected() && host->IsMaster())
+            return true;
+
+        if (conn->InProgress() && !conn->IsConnected())
+            return true;
+
+        return false;
+    }
+}
 
 DisconnectHostCommand::DisconnectHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
+{
+}
+
+DisconnectHostCommand::DisconnectHostCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent) : HostCommand(hosts, mainWindow, parent)
 {
 }
 
@@ -41,36 +66,34 @@ bool DisconnectHostCommand::CanRun() const
     // 1. Connection is connected AND selected object is pool coordinator (host)
     // 2. OR connection is in progress (to cancel connection attempt)
 
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
+    const QList<QSharedPointer<Host>> hosts = this->getHosts();
+    if (hosts.isEmpty())
         return false;
 
-    XenConnection* conn = host->GetConnection();
-    if (!conn)
-        return false;
-
-    // Can disconnect if connected and selected host is coordinator
-    if (conn->IsConnected() && host->IsMaster())
-        return true;
-
-    // Can also disconnect if connection is in progress (to cancel)
-    // TODO: Need to add inProgress() method to XenConnection
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (canDisconnectHost(host))
+            return true;
+    }
 
     return false;
 }
 
 void DisconnectHostCommand::Run()
 {
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
-        return;
+    const QList<QSharedPointer<Host>> hosts = this->getHosts();
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (!canDisconnectHost(host))
+            continue;
 
-    XenConnection* conn = host->GetConnection();
-    if (!conn)
-        return;
+        XenConnection* conn = host->GetConnection();
+        if (!conn)
+            continue;
 
-    DisconnectCommand disconnectCmd(this->mainWindow(), conn, true, this);
-    disconnectCmd.Run();
+        DisconnectCommand disconnectCmd(this->mainWindow(), conn, true, this);
+        disconnectCmd.Run();
+    }
 }
 
 QString DisconnectHostCommand::MenuText() const

@@ -27,6 +27,7 @@
 
 #include "createvmfromtemplatecommand.h"
 #include "../../mainwindow.h"
+#include "xenlib/xen/vm.h"
 #include "xencache.h"
 
 CreateVMFromTemplateCommand::CreateVMFromTemplateCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
@@ -63,10 +64,12 @@ QString CreateVMFromTemplateCommand::getSelectedTemplateRef() const
     if (vmRef.isEmpty())
         return QString();
 
-    QVariantMap vmData = object->GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
+    QSharedPointer<VM> vm = object->GetConnection()->GetCache()->ResolveObject<VM>("vm", vmRef);
+    if (!vm)
+        return QString();
 
     // Check if it's a template
-    if (!vmData.value("is_a_template", false).toBool())
+    if (!vm->IsTemplate())
         return QString();
 
     return vmRef;

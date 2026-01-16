@@ -122,16 +122,12 @@ bool ConvertVMToTemplateCommand::canConvertToTemplate() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->GetData();
-
     // Check if it's already a template
-    bool isTemplate = vmData.value("is_a_template", false).toBool();
-    if (isTemplate)
+    if (vm->IsTemplate())
         return false;
 
     // Check if it's a snapshot
-    bool isSnapshot = vmData.value("is_a_snapshot", false).toBool();
-    if (isSnapshot)
+    if (vm->IsSnapshot())
         return false;
 
     // Check power state - must be halted
@@ -139,12 +135,5 @@ bool ConvertVMToTemplateCommand::canConvertToTemplate() const
         return false;
 
     // Check if the operation is allowed
-    QVariantList allowedOps = vmData.value("allowed_operations", QVariantList()).toList();
-    QStringList allowedOpsStrings;
-    for (const QVariant& op : allowedOps)
-    {
-        allowedOpsStrings << op.toString();
-    }
-
-    return allowedOpsStrings.contains("make_into_template");
+    return vm->GetAllowedOperations().contains("make_into_template");
 }

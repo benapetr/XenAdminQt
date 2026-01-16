@@ -341,7 +341,7 @@ bool AffinityPicker::isHostLive(const QSharedPointer<Host>& host) const
         QSharedPointer<HostMetrics> metrics =
             this->m_connection->GetCache()->ResolveObject<HostMetrics>("host_metrics", metricsRef);
         if (metrics && metrics->IsValid())
-            return metrics->live();
+            return metrics->IsLive();
     }
 
     return host->IsEnabled();

@@ -28,10 +28,10 @@
 #include "hostmaintenancemodecommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/host.h"
-#include "xen/actions/host/evacuatehostaction.h"
-#include "xen/actions/host/enablehostaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/actions/host/evacuatehostaction.h"
+#include "xenlib/xen/actions/host/enablehostaction.h"
 #include <QMessageBox>
 #include <QTimer>
 

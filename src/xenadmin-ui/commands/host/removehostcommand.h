@@ -30,6 +30,8 @@
 
 #include "hostcommand.h"
 
+class XenConnection;
+
 /**
  * @brief RemoveHostCommand - Remove host connection from server list
  *
@@ -51,6 +53,7 @@ class RemoveHostCommand : public HostCommand
 
     public:
         explicit RemoveHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit RemoveHostCommand(const QList<XenConnection*>& connections, MainWindow* mainWindow, QObject* parent = nullptr);
 
         bool CanRun() const override;
         void Run() override;
@@ -70,6 +73,8 @@ class RemoveHostCommand : public HostCommand
          * @return true if host is pool coordinator
          */
         bool isHostCoordinator(QSharedPointer<Host> host) const;
+        QList<XenConnection*> getConnections() const;
+        QList<XenConnection*> m_connections;
 };
 
 #endif // REMOVEHOSTCOMMAND_H

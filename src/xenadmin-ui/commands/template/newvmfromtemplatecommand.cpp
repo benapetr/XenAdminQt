@@ -31,6 +31,7 @@
 #include "../../../xenlib/xencache.h"
 #include "../../../xenlib/xen/network/connection.h"
 #include "../../../xenlib/xen/xenobject.h"
+#include "../../../xenlib/xen/vm.h"
 #include <QMessageBox>
 
 NewVMFromTemplateCommand::NewVMFromTemplateCommand(MainWindow* mainWindow, QObject* parent)
@@ -57,9 +58,8 @@ bool NewVMFromTemplateCommand::CanRun() const
     if (!cache)
         return false;
 
-    QVariantMap templateData = cache->ResolveObjectData("vm", templateRef);
-
-    return this->canRunTemplate(templateData);
+    QSharedPointer<VM> templateVm = cache->ResolveObject<VM>("vm", templateRef);
+    return this->canRunTemplate(templateVm);
 }
 
 void NewVMFromTemplateCommand::Run()
@@ -77,9 +77,8 @@ void NewVMFromTemplateCommand::Run()
     if (!cache)
         return;
 
-    QVariantMap templateData = cache->ResolveObjectData("vm", templateRef);
-
-    if (!this->canRunTemplate(templateData))
+    QSharedPointer<VM> templateVm = cache->ResolveObject<VM>("vm", templateRef);
+    if (!this->canRunTemplate(templateVm))
     {
         QMessageBox::warning(this->mainWindow(), "Cannot Create VM",
                              "The selected template cannot be used to create a VM.");
@@ -110,22 +109,21 @@ QString NewVMFromTemplateCommand::getSelectedTemplateRef() const
     return this->getSelectedObjectRef();
 }
 
-bool NewVMFromTemplateCommand::canRunTemplate(const QVariantMap& templateData) const
+bool NewVMFromTemplateCommand::canRunTemplate(const QSharedPointer<VM>& templateVm) const
 {
-    if (templateData.isEmpty())
+    if (!templateVm)
         return false;
 
     // Must be a template
-    if (!templateData.value("is_a_template", false).toBool())
+    if (!templateVm->IsTemplate())
         return false;
 
     // Must not be a snapshot
-    if (templateData.value("is_a_snapshot", false).toBool())
+    if (templateVm->IsSnapshot())
         return false;
 
     // Must not be locked
-    QVariantMap currentOps = templateData.value("current_operations", QVariantMap()).toMap();
-    if (!currentOps.isEmpty())
+    if (!templateVm->CurrentOperations().isEmpty())
         return false;
 
     // Connection must be connected

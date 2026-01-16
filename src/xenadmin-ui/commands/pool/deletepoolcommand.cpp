@@ -55,15 +55,11 @@ void DeletePoolCommand::Run()
     if (!pool || !pool->IsValid())
         return;
 
-    QString poolRef = pool->OpaqueRef();
-    XenCache* cache = pool->GetConnection()->GetCache();
-
-    QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
     QString poolName = pool->GetName();
 
     // Check if HA is enabled or enabling
-    bool haEnabled = poolData.value("ha_enabled", false).toBool();
-    QVariantMap currentOps = poolData.value("current_operations", QVariantMap()).toMap();
+    bool haEnabled = pool->HAEnabled();
+    QVariantMap currentOps = pool->CurrentOperations();
 
     bool haEnabling = false;
     for (const QVariant& opVar : currentOps.values())
@@ -126,7 +122,7 @@ void DeletePoolCommand::Run()
     if (ret != QMessageBox::Yes)
         return;
 
-    qDebug() << "DeletePoolCommand: Deleting pool" << poolName << "(" << poolRef << ")";
+    qDebug() << "DeletePoolCommand: Deleting pool" << poolName << "(" << pool->OpaqueRef() << ")";
 
     // Create and run destroy pool action
     DestroyPoolAction* action = new DestroyPoolAction(pool, nullptr);

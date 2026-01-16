@@ -28,8 +28,8 @@
 #include "rescanpifscommand.h"
 #include "../../mainwindow.h"
 #include "operations/operationmanager.h"
-#include "xen/actions/network/rescanpifsaction.h"
-#include "xen/host.h"
+#include "xenlib/xen/actions/network/rescanpifsaction.h"
+#include "xenlib/xen/host.h"
 #include <QMessageBox>
 
 RescanPIFsCommand::RescanPIFsCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)

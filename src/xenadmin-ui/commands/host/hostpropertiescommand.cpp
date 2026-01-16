@@ -28,7 +28,7 @@
 #include "hostpropertiescommand.h"
 #include "../../dialogs/hostpropertiesdialog.h"
 #include "../../mainwindow.h"
-#include "xen/host.h"
+#include "xenlib/xen/host.h"
 #include <QMessageBox>
 
 HostPropertiesCommand::HostPropertiesCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)

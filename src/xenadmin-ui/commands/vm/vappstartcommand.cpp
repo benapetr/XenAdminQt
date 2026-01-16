@@ -28,6 +28,7 @@
 #include "vappstartcommand.h"
 #include "xenlib/xen/actions/vm/startapplianceaction.h"
 #include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/vmappliance.h"
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xencache.h"
 #include "../../mainwindow.h"
@@ -61,8 +62,8 @@ bool VappStartCommand::CanRun() const
         if (!cache)
             return false;
 
-        QVariantMap appData = cache->ResolveObjectData(type, objRef);
-        return this->canStartAppliance(appData);
+        QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>(type, objRef);
+        return this->canStartAppliance(appliance);
     }
 
     // Case 2: VM selected - check if it belongs to an appliance
@@ -83,8 +84,8 @@ bool VappStartCommand::CanRun() const
         if (!cache)
             return false;
 
-        QVariantMap appData = cache->ResolveObjectData("vm_appliance", applianceRef);
-        return this->canStartAppliance(appData);
+        QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+        return this->canStartAppliance(appliance);
     }
 
     return false;
@@ -123,8 +124,11 @@ void VappStartCommand::Run()
     if (!cache)
         return;
 
-    QVariantMap appData = cache->ResolveObjectData("vm_appliance", applianceRef);
-    QString appName = appData.value("name_label").toString();
+    QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+    if (!appliance)
+        return;
+
+    QString appName = appliance->GetName();
 
     if (appName.isEmpty())
     {
@@ -132,7 +136,7 @@ void VappStartCommand::Run()
     }
 
     // Validate before starting
-    if (!this->canStartAppliance(appData))
+    if (!this->canStartAppliance(appliance))
     {
         QMessageBox::warning(this->mainWindow(), tr("Cannot Start vApp"),
                              tr("VM appliance '%1' cannot be started").arg(appName));
@@ -180,24 +184,13 @@ QString VappStartCommand::MenuText() const
     return tr("Start v&App");
 }
 
-bool VappStartCommand::canStartAppliance(const QVariantMap& applianceData) const
+bool VappStartCommand::canStartAppliance(const QSharedPointer<VMAppliance>& appliance) const
 {
-    if (applianceData.isEmpty())
-    {
+    if (!appliance)
         return false;
-    }
 
     // Check if "start" operation is allowed
-    QVariantList allowedOps = applianceData.value("allowed_operations").toList();
-    for (const QVariant& op : allowedOps)
-    {
-        if (op.toString() == "start")
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return appliance->AllowedOperations().contains("start");
 }
 
 QString VappStartCommand::getApplianceRefFromVM(const QString& vmRef) const

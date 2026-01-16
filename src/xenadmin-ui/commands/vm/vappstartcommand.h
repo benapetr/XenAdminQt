@@ -29,6 +29,9 @@
 #define VAPPSTARTCOMMAND_H
 
 #include "../command.h"
+#include <QSharedPointer>
+
+class VMAppliance;
 
 class MainWindow;
 
@@ -84,10 +87,10 @@ class VappStartCommand : public Command
     private:
         /**
          * @brief Check if appliance can be started
-         * @param applianceData VM_appliance record data
+         * @param appliance VM appliance object
          * @return true if "start" in allowed_operations
          */
-        bool canStartAppliance(const QVariantMap& applianceData) const;
+        bool canStartAppliance(const QSharedPointer<VMAppliance>& appliance) const;
 
         /**
          * @brief Get appliance ref from selected VM

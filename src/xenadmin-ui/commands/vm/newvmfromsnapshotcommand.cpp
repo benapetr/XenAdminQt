@@ -29,6 +29,7 @@
 #include "../../dialogs/newvmwizard.h"
 #include "../../mainwindow.h"
 #include "xenlib/xencache.h"
+#include "xenlib/xen/vm.h"
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/network/connection.h"
 #include <QMessageBox>
@@ -66,8 +67,8 @@ bool NewVMFromSnapshotCommand::CanRun() const
     if (!cache)
         return false;
 
-    QVariantMap snapshotData = cache->ResolveObjectData("vm", snapshotRef);
-    return snapshotData.value("is_a_snapshot").toBool();
+    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", snapshotRef);
+    return snapshot && snapshot->IsSnapshot();
 }
 
 void NewVMFromSnapshotCommand::Run()
@@ -91,8 +92,8 @@ void NewVMFromSnapshotCommand::Run()
     if (!cache)
         return;
 
-    QVariantMap snapshotData = cache->ResolveObjectData("vm", snapshotRef);
-    if (!snapshotData.value("is_a_snapshot").toBool())
+    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", snapshotRef);
+    if (!snapshot || !snapshot->IsSnapshot())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not a Snapshot"),
                              tr("Selected item is not a VM snapshot"));

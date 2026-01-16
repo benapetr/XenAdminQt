@@ -28,6 +28,7 @@
 #include "deletetemplatecommand.h"
 #include "../../mainwindow.h"
 #include "xen/api.h"
+#include "xenlib/xen/vm.h"
 #include "xencache.h"
 #include <QMessageBox>
 #include <QTimer>
@@ -56,26 +57,18 @@ bool DeleteTemplateCommand::canDeleteTemplate(const QString& templateRef) const
     if (!object || !object->GetConnection())
         return false;
 
-    // Use cache instead of async API call
-    QVariantMap vmData = object->GetConnection()->GetCache()->ResolveObjectData("vm", templateRef);
+    QSharedPointer<VM> vm = object->GetConnection()->GetCache()->ResolveObject<VM>("vm", templateRef);
+    if (!vm)
+        return false;
 
     // Check if it's a template
-    bool isTemplate = vmData.value("is_a_template", false).toBool();
-    if (!isTemplate)
+    if (!vm->IsTemplate())
         return false;
 
     // Check if it's a snapshot
-    bool isSnapshot = vmData.value("is_a_snapshot", false).toBool();
-    if (isSnapshot)
+    if (vm->IsSnapshot())
         return false;
 
     // Check if the operation is allowed
-    QVariantList allowedOps = vmData.value("allowed_operations", QVariantList()).toList();
-    QStringList allowedOpsStrings;
-    for (const QVariant& op : allowedOps)
-    {
-        allowedOpsStrings << op.toString();
-    }
-
-    return allowedOpsStrings.contains("destroy");
+    return vm->GetAllowedOperations().contains("destroy");
 }

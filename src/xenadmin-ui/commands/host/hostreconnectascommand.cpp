@@ -30,8 +30,8 @@
 #include "../../dialogs/reconnectasdialog.h"
 #include "../connection/disconnectcommand.h"
 #include "../../network/xenconnectionui.h"
-#include "xen/network/connection.h"
-#include "xen/host.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/host.h"
 #include <QtCore/QTimer>
 
 HostReconnectAsCommand::HostReconnectAsCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)

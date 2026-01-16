@@ -158,11 +158,8 @@ bool DeleteVMCommand::isVMDeletable() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->GetData();
-
     // Check if it's not a template (templates handled separately)
-    bool isTemplate = vmData.value("is_a_template", false).toBool();
-    if (isTemplate)
+    if (vm->IsTemplate())
         return false;
 
     // Check if VM is halted (required for deletion in most cases)

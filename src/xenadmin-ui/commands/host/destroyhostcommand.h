@@ -48,6 +48,7 @@ class DestroyHostCommand : public HostCommand
 
     public:
         explicit DestroyHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit DestroyHostCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent = nullptr);
 
         bool CanRun() const override;
         void Run() override;

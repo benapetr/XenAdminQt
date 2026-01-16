@@ -27,7 +27,7 @@
 
 #include "connectallhostscommand.h"
 #include "../../mainwindow.h"
-#include "xen/network/connectionsmanager.h"
+#include "xenlib/xen/network/connectionsmanager.h"
 #include "../../network/xenconnectionui.h"
 
 ConnectAllHostsCommand::ConnectAllHostsCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)

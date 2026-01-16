@@ -51,7 +51,7 @@ bool VMLifeCycleCommand::CanRun() const
         if (vm->IsSnapshot() || vm->IsTemplate())
             return false;
 
-        QVariantList allowedOps = vm->GetData().value("allowed_operations").toList();
+        const QStringList allowedOps = vm->GetAllowedOperations();
         const QString powerState = vm->GetPowerState();
 
         if (powerState == "Halted" && allowedOps.contains("start"))
@@ -167,30 +167,23 @@ QString VMLifeCycleCommand::getSelectedVMRef() const
 
 QString VMLifeCycleCommand::getVMPowerState() const
 {
-    QSharedPointer<XenObject> object = this->GetObject();
-    if (!object || !object->GetConnection())
+    const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
+    if (selectedVms.isEmpty())
         return QString();
 
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
-        return QString();
-
-    QVariantMap vmData = object->GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
-    return vmData.value("power_state", "").toString();
+    const QSharedPointer<VM> vm = selectedVms.first();
+    return vm ? vm->GetPowerState() : QString();
 }
 
 bool VMLifeCycleCommand::isVMOperationAllowed(const QString& operation) const
 {
-    QSharedPointer<XenObject> object = this->GetObject();
-    if (!object || !object->GetConnection())
+    const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
+    if (selectedVms.isEmpty())
         return false;
 
-    QString vmRef = this->getSelectedVMRef();
-    if (vmRef.isEmpty())
+    const QSharedPointer<VM> vm = selectedVms.first();
+    if (!vm)
         return false;
 
-    QVariantMap vmData = object->GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
-    QVariantList allowedOps = vmData.value("allowed_operations", QVariantList()).toList();
-
-    return allowedOps.contains(operation);
+    return vm->GetAllowedOperations().contains(operation);
 }

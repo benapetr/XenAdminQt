@@ -30,12 +30,15 @@
 
 #include "hostcommand.h"
 
+class XenConnection;
+
 class ReconnectHostCommand : public HostCommand
 {
     Q_OBJECT
 
     public:
         explicit ReconnectHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit ReconnectHostCommand(const QList<XenConnection*>& connections, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;
@@ -44,6 +47,8 @@ class ReconnectHostCommand : public HostCommand
 
     private:
         bool isConnectionDisconnected() const;
+        QList<XenConnection*> getConnections() const;
+        QList<XenConnection*> m_connections;
 };
 
 #endif // RECONNECTHOSTCOMMAND_H

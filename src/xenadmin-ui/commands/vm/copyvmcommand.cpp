@@ -29,7 +29,6 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/crosspoolmigratewizard.h"
 #include "xenlib/xen/vm.h"
-#include "xenlib/xencache.h"
 #include <QMessageBox>
 
 CopyVMCommand::CopyVMCommand(MainWindow* mainWindow, QObject* parent)
@@ -69,28 +68,22 @@ bool CopyVMCommand::isVMLocked() const
         return true;
 
     // Check if VM has current operations that would lock it
-    QVariantMap currentOps = vm->GetData().value("current_operations", QVariantMap()).toMap();
-    return !currentOps.isEmpty();
+    return !vm->CurrentOperations().isEmpty();
 }
 
 bool CopyVMCommand::canVMBeCopied() const
 {
     QSharedPointer<VM> vm = this->getVM();
-    if (!vm || !vm->GetConnection())
+    if (!vm)
         return false;
-
-    XenCache* cache = vm->GetConnection()->GetCache();
-
-    QString vmRef = vm->OpaqueRef();
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 
     // Check if VM is a template or snapshot
-    if (vmData.value("is_a_template", false).toBool())
+    if (vm->IsTemplate())
         return false;
-    if (vmData.value("is_a_snapshot", false).toBool())
+    if (vm->IsSnapshot())
         return false;
 
     // Check if clone operation is allowed
-    QVariantList allowedOps = vmData.value("allowed_operations", QVariantList()).toList();
+    const QStringList allowedOps = vm->GetAllowedOperations();
     return allowedOps.contains("clone") || allowedOps.contains("copy");
 }

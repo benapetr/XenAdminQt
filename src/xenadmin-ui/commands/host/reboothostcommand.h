@@ -36,6 +36,7 @@ class RebootHostCommand : public HostCommand
 
     public:
         explicit RebootHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit RebootHostCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;

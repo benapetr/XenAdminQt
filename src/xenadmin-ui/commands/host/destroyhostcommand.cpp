@@ -28,81 +28,104 @@
 #include "destroyhostcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/actions/host/destroyhostaction.h"
-#include "xen/pool.h"
-#include "xen/host.h"
-#include "xencache.h"
+#include "xenlib/xen/actions/host/destroyhostaction.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/hostmetrics.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
+
+namespace
+{
+    bool canDestroyHost(const QSharedPointer<Host>& host)
+    {
+        if (!host)
+            return false;
+
+        if (host->GetPoolRef().isEmpty())
+            return false;
+
+        if (host->IsMaster())
+            return false;
+
+        if (host->IsConnected())
+        {
+            QSharedPointer<HostMetrics> metrics = host->GetMetrics();
+            if (metrics && metrics->IsLive())
+                return false;
+        }
+
+        return true;
+    }
+}
 
 DestroyHostCommand::DestroyHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
 }
 
+DestroyHostCommand::DestroyHostCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent) : HostCommand(hosts, mainWindow, parent)
+{
+}
+
 bool DestroyHostCommand::CanRun() const
 {
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
+    const QList<QSharedPointer<Host>> hosts = this->getHosts();
+    if (hosts.isEmpty())
         return false;
 
-    // Host must be in a pool
-    if (host->GetPoolRef().isEmpty())
-        return false;
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (canDestroyHost(host))
+            return true;
+    }
 
-    // Host must not be the pool coordinator
-    if (host->IsMaster())
-        return false;
-
-    // Host must not be live (running)
-    if (this->isHostLive(host))
-        return false;
-
-    return true;
+    return false;
 }
 
 void DestroyHostCommand::Run()
 {
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
+    QList<QSharedPointer<Host>> runnable;
+    const QList<QSharedPointer<Host>> hosts = this->getHosts();
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (canDestroyHost(host))
+            runnable.append(host);
+    }
+
+    if (runnable.isEmpty())
         return;
 
-    QString hostName = host->GetName();
-
-    // Show confirmation dialog
-    QString message = this->buildConfirmationMessage(host);
-    QString title = this->buildConfirmationTitle();
-
+    const QString title = this->buildConfirmationTitle();
     QMessageBox msgBox(this->mainWindow());
     msgBox.setIcon(QMessageBox::Warning);
     msgBox.setWindowTitle(title);
-    msgBox.setText(message);
+    msgBox.setText(runnable.count() == 1
+                       ? this->buildConfirmationMessage(runnable.first())
+                       : tr("Are you sure you want to destroy the selected hosts?\n\n"
+                            "This will permanently remove the hosts from the pool. "
+                            "This operation cannot be undone."));
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgBox.setDefaultButton(QMessageBox::No);
 
     if (msgBox.exec() != QMessageBox::Yes)
-    {
         return;
-    }
 
-    // Get GetConnection
-    XenConnection* conn = host->GetConnection();
-    if (!conn || !conn->IsConnected())
+    for (const QSharedPointer<Host>& host : runnable)
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
-        return;
+        const QString hostName = host->GetName();
+        XenConnection* conn = host->GetConnection();
+        if (!conn || !conn->IsConnected())
+        {
+            QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer for host '%1'.").arg(hostName));
+            continue;
+        }
+
+        DestroyHostAction* action = new DestroyHostAction(host, nullptr);
+        action->SetTitle(tr("Destroying host '%1'...").arg(hostName));
+        OperationManager::instance()->RegisterOperation(action);
+        action->RunAsync(true);
+        this->mainWindow()->ShowStatusMessage(tr("Destroying host: %1").arg(hostName), 5000);
     }
-
-    // Create and run the destroy host action
-    DestroyHostAction* action = new DestroyHostAction(host, nullptr);
-
-    action->SetTitle(tr("Destroying host '%1'...").arg(hostName));
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->RegisterOperation(action);
-
-    // Run the action asynchronously
-    action->RunAsync(true);
-
-    this->mainWindow()->ShowStatusMessage(tr("Destroying host: %1").arg(hostName), 5000);
 }
 
 QString DestroyHostCommand::MenuText() const
@@ -112,8 +135,7 @@ QString DestroyHostCommand::MenuText() const
 
 QString DestroyHostCommand::buildConfirmationMessage(QSharedPointer<Host> host) const
 {
-    QVariantMap hostData = host->GetData();
-    QString hostName = hostData.value("name_label").toString();
+    QString hostName = host ? host->GetName() : QString();
 
     return tr("Are you sure you want to destroy host '%1'?\n\n"
               "This will permanently remove the host from the pool. "
@@ -132,15 +154,9 @@ bool DestroyHostCommand::isHostLive(QSharedPointer<Host> host) const
         return false;
 
     // Check if host is live (has a metrics object with live flag)
-    QString metricsRef = host->GetData().value("metrics").toString();
-    if (!metricsRef.isEmpty())
-    {
-        QVariantMap metricsData = host->GetCache()->ResolveObjectData("host_metrics", metricsRef);
-        if (!metricsData.isEmpty())
-        {
-            return metricsData.value("live", false).toBool();
-        }
-    }
+    QSharedPointer<HostMetrics> metrics = host->GetMetrics();
+    if (metrics)
+        return metrics->IsLive();
 
     // If no metrics, assume host is live to be safe
     return true;

@@ -27,6 +27,7 @@
 
 #include "instantvmfromtemplatecommand.h"
 #include "../../mainwindow.h"
+#include "xenlib/xen/vm.h"
 #include "xencache.h"
 #include <QMessageBox>
 
@@ -48,9 +49,8 @@ bool InstantVMFromTemplateCommand::CanRun() const
     if (templateRef.isEmpty())
         return false;
 
-    QVariantMap templateData = object->GetConnection()->GetCache()->ResolveObjectData("vm", templateRef);
-
-    return this->canRunTemplate(templateData);
+    QSharedPointer<VM> templateVm = object->GetConnection()->GetCache()->ResolveObject<VM>("vm", templateRef);
+    return this->canRunTemplate(templateVm);
 }
 
 void InstantVMFromTemplateCommand::Run()
@@ -63,9 +63,8 @@ void InstantVMFromTemplateCommand::Run()
     if (templateRef.isEmpty())
         return;
 
-    QVariantMap templateData = object->GetConnection()->GetCache()->ResolveObjectData("vm", templateRef);
-
-    if (!this->canRunTemplate(templateData))
+    QSharedPointer<VM> templateVm = object->GetConnection()->GetCache()->ResolveObject<VM>("vm", templateRef);
+    if (!this->canRunTemplate(templateVm))
     {
         QMessageBox::warning(this->mainWindow(), "Cannot Create VM",
                              "The selected template cannot be used for instant VM creation.");
@@ -100,38 +99,37 @@ QString InstantVMFromTemplateCommand::getSelectedTemplateRef() const
     return this->getSelectedObjectRef();
 }
 
-bool InstantVMFromTemplateCommand::canRunTemplate(const QVariantMap& templateData) const
+bool InstantVMFromTemplateCommand::canRunTemplate(const QSharedPointer<VM>& templateVm) const
 {
-    if (templateData.isEmpty())
+    if (!templateVm)
         return false;
 
     // Must be a template
-    if (!templateData.value("is_a_template", false).toBool())
+    if (!templateVm->IsTemplate())
         return false;
 
     // Must not be locked
-    QVariantMap currentOps = templateData.value("current_operations", QVariantMap()).toMap();
-    if (!currentOps.isEmpty())
+    if (!templateVm->CurrentOperations().isEmpty())
         return false;
 
     // Must not be a snapshot
-    if (templateData.value("is_a_snapshot", false).toBool())
+    if (templateVm->IsSnapshot())
         return false;
 
     // Must be an instant template
-    if (!this->isInstantTemplate(templateData))
+    if (!this->isInstantTemplate(templateVm))
         return false;
 
     return true;
 }
 
-bool InstantVMFromTemplateCommand::isInstantTemplate(const QVariantMap& templateData) const
+bool InstantVMFromTemplateCommand::isInstantTemplate(const QSharedPointer<VM>& templateVm) const
 {
     // TODO: Check if template has InstantTemplate flag
     // In C#: vm.InstantTemplate()
     // May need to check other_config["instant"] or similar field
 
     // For now, check if template has provisions field
-    QVariantMap provisions = templateData.value("provisions", QVariantMap()).toMap();
+    QVariantMap provisions = templateVm->GetData().value("provisions", QVariantMap()).toMap();
     return !provisions.isEmpty();
 }

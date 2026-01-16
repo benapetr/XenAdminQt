@@ -28,6 +28,7 @@
 #include "deletevmsandtemplatescommand.h"
 #include "../../mainwindow.h"
 #include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
 
 DeleteVMsAndTemplatesCommand::DeleteVMsAndTemplatesCommand(MainWindow* mainWindow, QObject* parent) : DeleteVMCommand(mainWindow, parent)
@@ -56,21 +57,20 @@ bool DeleteVMsAndTemplatesCommand::canRunForVM(const QString& vmRef) const
     if (!ob)
         return false;
 
-    QVariantMap vmData = ob->GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
-    if (vmData.isEmpty())
+    QSharedPointer<VM> vm = ob->GetConnection()->GetCache()->ResolveObject<VM>("vm", vmRef);
+    if (!vm)
         return false;
 
     // Check if VM/template is locked
-    if (vmData.value("locked", false).toBool())
+    if (vm->IsLocked())
         return false;
 
     // Don't allow deletion of snapshots
-    if (vmData.value("is_a_snapshot", false).toBool())
+    if (vm->IsSnapshot())
         return false;
 
     // Check allowed operations
-    QVariantList allowedOps = vmData.value("allowed_operations").toList();
-    return allowedOps.contains("destroy");
+    return vm->GetAllowedOperations().contains("destroy");
 }
 
 QString DeleteVMsAndTemplatesCommand::MenuText() const

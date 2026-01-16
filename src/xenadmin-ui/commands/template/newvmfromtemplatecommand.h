@@ -29,6 +29,9 @@
 #define NEWVMFROMTEMPLATECOMMAND_H
 
 #include "../command.h"
+#include <QSharedPointer>
+
+class VM;
 
 // Launch full VM creation wizard with template as source
 class NewVMFromTemplateCommand : public Command
@@ -45,7 +48,7 @@ class NewVMFromTemplateCommand : public Command
 
     private:
         QString getSelectedTemplateRef() const;
-        bool canRunTemplate(const QVariantMap& templateData) const;
+        bool canRunTemplate(const QSharedPointer<VM>& templateVm) const;
         bool poolHasEnabledHosts() const;
 };
 
