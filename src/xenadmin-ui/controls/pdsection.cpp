@@ -505,6 +505,7 @@ void PDSection::toggleExpandedState(bool expand)
 
 void PDSection::refreshHeight()
 {
+    const int headerHeight = this->headerPanel_->sizeHint().height();
     if (this->isExpanded_)
     {
         int contentHeight = 0;
@@ -515,11 +516,11 @@ void PDSection::refreshHeight()
         }
         
         // Add small padding for scrollbar if needed
-        int totalHeight = this->headerPanel_->height() + contentHeight + 3; // 3px for borders
+        int totalHeight = headerHeight + contentHeight + 3; // 3px for borders
         this->setFixedHeight(totalHeight);
     } else
     {
-        this->setFixedHeight(this->headerPanel_->height() + 2); // 2px for borders
+        this->setFixedHeight(headerHeight + 2); // 2px for borders
     }
 }
 
