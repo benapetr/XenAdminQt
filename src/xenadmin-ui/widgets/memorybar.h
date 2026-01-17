@@ -77,10 +77,13 @@ class MemoryBar : public QWidget
         static constexpr int RADIUS = 5;
         static constexpr int BAR_HEIGHT = 40;
         static constexpr int TEXT_PAD = 3;
+        static constexpr int RULER_HEIGHT = 18;
+        static constexpr int RULER_TICK_HEIGHT = 6;
 
         void drawSegment(QPainter& painter, const QRect& barArea, const QRect& segmentRect,
                          const QColor& color, const QString& text);
         void drawGrid(QPainter& painter, const QRect& barArea);
+        void drawRuler(QPainter& painter, const QRect& barArea);
         QString formatMemorySize(qint64 bytes) const;
 };
 

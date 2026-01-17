@@ -1351,9 +1351,9 @@ bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm,
     if (restrictDmc &&
         (powerState == "Running" || powerState == "Paused" || powerState == "Suspended"))
     {
-        if (vm->MemoryStaticMin() > vm->MemoryDynamicMin() ||
-            vm->MemoryDynamicMin() != vm->MemoryDynamicMax() ||
-            vm->MemoryDynamicMax() != vm->MemoryStaticMax())
+        if (vm->GetMemoryStaticMin() > vm->GetMemoryDynamicMin() ||
+            vm->GetMemoryDynamicMin() != vm->GetMemoryDynamicMax() ||
+            vm->GetMemoryDynamicMax() != vm->GetMemoryStaticMax())
         {
             if (reason)
                 *reason = FriendlyErrorNames::getString(Failure::DYNAMIC_MEMORY_CONTROL_UNAVAILABLE);

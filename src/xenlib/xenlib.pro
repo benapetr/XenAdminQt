@@ -79,6 +79,7 @@ HEADERS += \
     xen/vm.h \
     xen/mappings/vmmapping.h \
     xen/sr.h \
+    xen/vmmetrics.h \
     xen/vdi.h \
     xen/vbd.h \
     xen/pbd.h \
@@ -440,6 +441,7 @@ SOURCES += \
     xen/role.cpp \
     xen/user.cpp \
     xen/vbdmetrics.cpp \
+    xen/vmmetrics.cpp \
     otherconfig/otherconfigandtagswatcher.cpp
 
 # Installation

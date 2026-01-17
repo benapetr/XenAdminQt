@@ -62,6 +62,7 @@ class ChangeMemorySettingsAction : public AsyncOperation
                                             qint64 dynamicMin,
                                             qint64 dynamicMax,
                                             qint64 staticMax,
+                                            bool deferReboot,
                                             QObject* parent = nullptr);
 
     protected:
@@ -75,6 +76,7 @@ class ChangeMemorySettingsAction : public AsyncOperation
         qint64 m_staticMax;
         bool m_staticChanged;
         bool m_needReboot;
+        bool m_deferReboot;
         QString m_vmHost; // Host affinity for restart
 };
 

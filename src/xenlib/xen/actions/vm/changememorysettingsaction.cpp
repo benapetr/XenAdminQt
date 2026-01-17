@@ -36,6 +36,7 @@ ChangeMemorySettingsAction::ChangeMemorySettingsAction(QSharedPointer<VM> vm,
                                                        qint64 dynamicMin,
                                                        qint64 dynamicMax,
                                                        qint64 staticMax,
+                                                       bool deferReboot,
                                                        QObject* parent)
     : AsyncOperation(QString("Changing memory settings"),
                      QString("Changing memory settings for '%1'").arg(vm ? vm->GetName() : ""),
@@ -46,7 +47,8 @@ ChangeMemorySettingsAction::ChangeMemorySettingsAction(QSharedPointer<VM> vm,
       m_dynamicMax(dynamicMax),
       m_staticMax(staticMax),
       m_staticChanged(false),
-      m_needReboot(false)
+      m_needReboot(false),
+      m_deferReboot(deferReboot)
 {
     if (!vm)
         throw std::invalid_argument("VM cannot be null");
@@ -61,8 +63,8 @@ void ChangeMemorySettingsAction::run()
         SetDescription("Checking VM state...");
 
         // Check if static memory changed
-        qint64 currentStaticMin = this->m_vm->MemoryStaticMin();
-        qint64 currentStaticMax = this->m_vm->MemoryStaticMax();
+        qint64 currentStaticMin = this->m_vm->GetMemoryStaticMin();
+        qint64 currentStaticMax = this->m_vm->GetMemoryStaticMax();
         this->m_staticChanged = (this->m_staticMin != currentStaticMin || this->m_staticMax != currentStaticMax);
 
         // Get current power state
@@ -71,7 +73,7 @@ void ChangeMemorySettingsAction::run()
         // Determine if reboot is needed
         if (this->m_staticChanged)
         {
-            this->m_needReboot = (powerState != "Halted");
+            this->m_needReboot = (powerState != "Halted" && !this->m_deferReboot);
         } else
         {
             // Dynamic-only changes require VM to be running or halted

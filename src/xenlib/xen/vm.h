@@ -43,6 +43,7 @@ class VTPM;
 class Blob;
 class PCI;
 class SR;
+class VMMetrics;
 
 /**
  * @brief VM - A virtual machine (or 'guest')
@@ -148,16 +149,16 @@ class XENLIB_EXPORT VM : public XenObject
         qint64 MemoryTarget() const;
 
         //! Get memory static max in bytes
-        qint64 MemoryStaticMax() const;
+        qint64 GetMemoryStaticMax() const;
 
         //! Get memory dynamic max in bytes
-        qint64 MemoryDynamicMax() const;
+        qint64 GetMemoryDynamicMax() const;
 
         //! Get memory dynamic min in bytes
-        qint64 MemoryDynamicMin() const;
+        qint64 GetMemoryDynamicMin() const;
 
         //! Get memory static min in bytes
-        qint64 MemoryStaticMin() const;
+        qint64 GetMemoryStaticMin() const;
 
         //! Get maximum number of VCPUs
         int VCPUsMax() const;
@@ -362,6 +363,8 @@ class XENLIB_EXPORT VM : public XenObject
 
         //! Get VM metrics reference (opaque reference to VM_metrics object)
         QString MetricsRef() const;
+
+        QSharedPointer<VMMetrics> GetMetrics();
 
         //! Get guest metrics reference (opaque reference to VM_guest_metrics object)
         QString GetGuestMetricsRef() const;

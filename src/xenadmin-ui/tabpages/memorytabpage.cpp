@@ -27,7 +27,11 @@
 
 #include "memorytabpage.h"
 #include "ui_memorytabpage.h"
+#include "xen/host.h"
+#include "xen/hostmetrics.h"
+#include "xen/vmmetrics.h"
 #include "xencache.h"
+#include "xenlib/xen/vm.h"
 #include "../dialogs/ballooningdialog.h"
 #include <cmath>
 #include <QDebug>
@@ -55,6 +59,11 @@ bool MemoryTabPage::IsApplicableForObjectType(const QString& objectType) const
     return objectType == "vm" || objectType == "host";
 }
 
+QSharedPointer<VM> MemoryTabPage::GetVM()
+{
+    return qSharedPointerCast<VM>(this->m_object);
+}
+
 void MemoryTabPage::refreshContent()
 {
     if (this->m_objectData.isEmpty())
@@ -78,19 +87,31 @@ void MemoryTabPage::refreshContent()
 
 void MemoryTabPage::populateVMMemory()
 {
+    QSharedPointer<VM> vm = this->GetVM();
+    if (!vm)
+        return;
+
     // Get memory values
-    qint64 memoryStaticMin = this->m_objectData.value("memory_static_min", 0).toLongLong();
-    qint64 memoryStaticMax = this->m_objectData.value("memory_static_max", 0).toLongLong();
-    qint64 memoryDynamicMin = this->m_objectData.value("memory_dynamic_min", 0).toLongLong();
-    qint64 memoryDynamicMax = this->m_objectData.value("memory_dynamic_max", 0).toLongLong();
+    qint64 memoryStaticMin = vm->GetMemoryStaticMin();
+    qint64 memoryStaticMax = vm->GetMemoryStaticMax();
+    qint64 memoryDynamicMin = vm->GetMemoryDynamicMin();
+    qint64 memoryDynamicMax = vm->GetMemoryDynamicMax();
 
     // Set total memory for the bar
     this->ui->memoryBar->setTotalMemory(memoryStaticMax);
     this->ui->memoryBar->clearSegments();
 
     // Add memory segment for the VM
-    QString vmName = this->m_objectData.value("name_label", "VM").toString();
-    QString powerState = this->m_objectData.value("power_state", "unknown").toString();
+    QString vmName = vm->GetName();
+    QString powerState = vm->GetPowerState();
+
+    qint64 memoryActual = 0;
+    if (powerState == "Running" || powerState == "Paused")
+    {
+        QSharedPointer<VMMetrics> metrics = vm->GetMetrics();
+        if (!metrics.isNull())
+            memoryActual = metrics->GetMemoryActual();
+    }
 
     // Use different colors based on power state
     QColor vmColor;
@@ -102,16 +123,18 @@ void MemoryTabPage::populateVMMemory()
         vmColor = QColor(169, 169, 169); // DarkGray
     }
 
-    QString tooltip = vmName + "\n";
-    if (this->supportsBallooning())
+    QString tooltip = vmName + "\n" + QString("Current memory usage: %1").arg(this->formatMemorySize(memoryActual));
+    bool hasBallooning = this->supportsBallooning(vm);
+    if (hasBallooning)
     {
-        tooltip += QString("Dynamic Min: %1\n").arg(formatMemorySize(memoryDynamicMin));
-        tooltip += QString("Dynamic Max: %1\n").arg(formatMemorySize(memoryDynamicMax));
+        tooltip += QString("\nDynamic Min: %1").arg(this->formatMemorySize(memoryDynamicMin));
+        tooltip += QString("\nDynamic Max: %1").arg(this->formatMemorySize(memoryDynamicMax));
+        if (memoryDynamicMax != memoryStaticMax)
+            tooltip += QString("\nStatic Max: %1").arg(this->formatMemorySize(memoryStaticMax));
     }
-    tooltip += QString("Static Max: %1").arg(formatMemorySize(memoryStaticMax));
 
-    // For VMs, show allocated memory
-    this->ui->memoryBar->addSegment(vmName, memoryStaticMax, vmColor, tooltip);
+    // For VMs, show current usage against static max
+    this->ui->memoryBar->addSegment(vmName, memoryActual, vmColor, tooltip);
 
     // Display memory information in labels
     this->ui->totalMemoryLabel->setVisible(false);
@@ -120,6 +143,10 @@ void MemoryTabPage::populateVMMemory()
     this->ui->usedMemoryValue->setVisible(false);
     this->ui->availableMemoryLabel->setVisible(false);
     this->ui->availableMemoryValue->setVisible(false);
+    this->ui->controlDomainMemoryLabel->setVisible(false);
+    this->ui->controlDomainMemoryValue->setVisible(false);
+    this->ui->totalMaxMemoryLabel->setVisible(false);
+    this->ui->totalMaxMemoryValue->setVisible(false);
 
     this->ui->staticMinValue->setText(this->formatMemorySize(memoryStaticMin));
     this->ui->staticMaxValue->setText(this->formatMemorySize(memoryStaticMax));
@@ -127,16 +154,42 @@ void MemoryTabPage::populateVMMemory()
     this->ui->dynamicMaxValue->setText(this->formatMemorySize(memoryDynamicMax));
 
     // Show/hide dynamic memory based on ballooning support
-    bool hasBallooning = this->supportsBallooning();
     this->ui->dynamicMinLabel->setVisible(hasBallooning);
     this->ui->dynamicMinValue->setVisible(hasBallooning);
     this->ui->dynamicMaxLabel->setVisible(hasBallooning);
     this->ui->dynamicMaxValue->setVisible(hasBallooning);
+    this->ui->staticMinLabel->setVisible(hasBallooning && memoryStaticMin != memoryDynamicMin);
+    this->ui->staticMinValue->setVisible(hasBallooning && memoryStaticMin != memoryDynamicMin);
+    this->ui->staticMaxLabel->setVisible(hasBallooning && memoryDynamicMax != memoryStaticMax);
+    this->ui->staticMaxValue->setVisible(hasBallooning && memoryDynamicMax != memoryStaticMax);
+
+    if (!hasBallooning)
+    {
+        this->ui->dynamicMinLabel->setText(tr("Memory:"));
+        this->ui->dynamicMinValue->setText(this->formatMemorySize(memoryStaticMax));
+        this->ui->dynamicMinLabel->setVisible(true);
+        this->ui->dynamicMinValue->setVisible(true);
+        this->ui->staticMinLabel->setVisible(false);
+        this->ui->staticMinValue->setVisible(false);
+        this->ui->dynamicMaxLabel->setVisible(false);
+        this->ui->dynamicMaxValue->setVisible(false);
+        this->ui->staticMaxLabel->setVisible(false);
+        this->ui->staticMaxValue->setVisible(false);
+    } else
+    {
+        this->ui->dynamicMinLabel->setText(tr("Dynamic Minimum:"));
+    }
 
     // C# Reference: VMMemoryControlsNoEdit.cs OnPaint (line 91-96)
     // Edit button: don't show if VM has just been rebooted (unknown virtualization status)
     // or if VM is suspended (can't be edited). Show for halted or running VMs.
-    bool showEditButton = (powerState == "Halted" || powerState == "Running");
+    bool hasUnknownVirtualizationStatus = false;
+    {
+        int status = vm->GetVirtualizationStatus();
+        hasUnknownVirtualizationStatus = (status & 1) != 0;
+    }
+
+    bool showEditButton = (powerState == "Halted") || (powerState == "Running" && !hasUnknownVirtualizationStatus);
     this->ui->editButton->setVisible(showEditButton);
 
     // Hide VM list for VM view (only shown for hosts)
@@ -145,40 +198,38 @@ void MemoryTabPage::populateVMMemory()
 
 void MemoryTabPage::populateHostMemory()
 {
-    if (!this->m_connection)
+    QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
+    if (!this->m_connection || !host)
         return;
 
-    // Get host metrics
-    QString metricsRef = this->m_objectData.value("metrics", "OpaqueRef:NULL").toString();
-    QVariantMap metricsData;
+    auto vmSupportsBallooning = [this](const QSharedPointer<VM>& vm) -> bool {
+        return this->supportsBallooning(vm);
+    };
 
-    if (metricsRef != "OpaqueRef:NULL")
-    {
-        metricsData = this->m_connection->GetCache()->ResolveObjectData("host_metrics", metricsRef);
-    }
-
-    qint64 totalMemory = metricsData.value("memory_total", 0).toLongLong();
-    qint64 freeMemory = metricsData.value("memory_free", 0).toLongLong();
-    qint64 usedMemory = totalMemory - freeMemory;
+    QSharedPointer<HostMetrics> metrics = host->GetMetrics();
+    qint64 totalMemory = metrics ? metrics->GetMemoryTotal() : 0;
+    qint64 hostMemoryOverhead = host->MemoryOverhead();
 
     // Set up memory bar
     this->ui->memoryBar->setTotalMemory(totalMemory);
     this->ui->memoryBar->clearSegments();
 
     // Get all VMs resident on this host
-    QVariantList residentVMs = this->m_objectData.value("resident_VMs", QVariantList()).toList();
+    QList<QSharedPointer<VM>> residentVMs = host->GetResidentVMs();
 
-    qint64 xenMemory = 0;  // Memory used by Xen hypervisor
+    qint64 xenMemory = hostMemoryOverhead;  // Memory used by Xen hypervisor (includes host overhead)
     qint64 dom0Memory = 0; // Control domain memory
-    qint64 vmsTotalMemory = 0;
+    qint64 totalVmOverhead = 0;
+    qint64 totalVmActual = 0;
     qint64 totalDynMax = 0; // Total dynamic max for all VMs
+    qint64 totalDynMin = 0;
     int vmCount = 0;
 
     // Structure to hold VM info for display
     struct VMInfo
     {
         QString name;
-        QString ref;
+        QSharedPointer<VM> vm;
         qint64 memoryActual;
         qint64 memoryDynamicMin;
         qint64 memoryDynamicMax;
@@ -187,49 +238,60 @@ void MemoryTabPage::populateHostMemory()
     QList<VMInfo> vmInfoList;
 
     // First pass: collect all VM data
-    for (const QVariant& vmRefVar : residentVMs)
+    for (const QSharedPointer<VM>& vm : residentVMs)
     {
-        QString vmRef = vmRefVar.toString();
-        QVariantMap vmData = this->m_connection->GetCache()->ResolveObjectData("vm", vmRef);
+        if (!vm)
+            continue;
 
-        bool isControlDomain = vmData.value("is_control_domain", false).toBool();
-        QString vmName = vmData.value("name_label", "VM").toString();
-        qint64 memoryOverhead = vmData.value("memory_overhead", 0).toLongLong();
-        qint64 memoryDynamicMin = vmData.value("memory_dynamic_min", 0).toLongLong();
-        qint64 memoryDynamicMax = vmData.value("memory_dynamic_max", 0).toLongLong();
-        qint64 memoryStaticMax = vmData.value("memory_static_max", 0).toLongLong();
+        bool isControlDomain = vm->IsControlDomain();
+        QString vmName = vm->GetName();
+        qint64 memoryOverhead = vm->MemoryOverhead();
+        qint64 memoryDynamicMin = vm->GetMemoryDynamicMin();
+        qint64 memoryDynamicMax = vm->GetMemoryDynamicMax();
+        qint64 memoryStaticMax = vm->GetMemoryStaticMax();
 
         // Get VM metrics for actual memory usage
-        QString vmMetricsRef = vmData.value("metrics", "OpaqueRef:NULL").toString();
         qint64 memoryActual = 0;
-
-        if (vmMetricsRef != "OpaqueRef:NULL")
-        {
-            QVariantMap vmMetricsData = this->m_connection->GetCache()->ResolveObjectData("vm_metrics", vmMetricsRef);
-            memoryActual = vmMetricsData.value("memory_actual", 0).toLongLong();
-        }
+        QSharedPointer<VMMetrics> vmMetrics = vm->GetMetrics();
+        if (vmMetrics)
+            memoryActual = vmMetrics->GetMemoryActual();
 
         // Accumulate Xen overhead
         xenMemory += memoryOverhead;
+        totalVmOverhead += memoryOverhead;
+        totalVmActual += memoryActual;
 
         if (isControlDomain)
         {
             // Control domain (dom0)
-            dom0Memory = memoryActual;
-        } else if (memoryActual > 0)
+            dom0Memory = (memoryActual > 0) ? memoryActual : memoryDynamicMin;
+            if (memoryActual > 0)
+                xenMemory += memoryActual;
+        } else
         {
-            // Regular VM - add to list for display
-            VMInfo info;
-            info.name = vmName;
-            info.ref = vmRef;
-            info.memoryActual = memoryActual;
-            info.memoryDynamicMin = memoryDynamicMin;
-            info.memoryDynamicMax = memoryDynamicMax;
-            info.memoryStaticMax = memoryStaticMax;
-            vmInfoList.append(info);
+            if (vmSupportsBallooning(vm))
+            {
+                totalDynMax += memoryDynamicMax;
+                totalDynMin += memoryDynamicMin;
+            } else
+            {
+                totalDynMax += memoryStaticMax;
+                totalDynMin += memoryStaticMax;
+            }
 
-            vmsTotalMemory += memoryActual;
-            totalDynMax += memoryDynamicMax;
+            if (memoryActual > 0)
+            {
+                // Regular VM - add to list for display
+                VMInfo info;
+                info.name = vmName;
+                info.vm = vm;
+                info.memoryActual = memoryActual;
+                info.memoryDynamicMin = memoryDynamicMin;
+                info.memoryDynamicMax = memoryDynamicMax;
+                info.memoryStaticMax = memoryStaticMax;
+                vmInfoList.append(info);
+
+            }
         }
     }
 
@@ -241,7 +303,7 @@ void MemoryTabPage::populateHostMemory()
     {
         this->ui->memoryBar->addSegment("XCP-ng", xenOverhead,
                                         QColor(169, 169, 169), // DarkGray
-                                        QString("XCP-ng\n%1").arg(formatMemorySize(xenOverhead)));
+                                        QString("XCP-ng\n%1").arg(this->formatMemorySize(xenOverhead)));
     }
 
     // 2. Control domain segment
@@ -249,7 +311,7 @@ void MemoryTabPage::populateHostMemory()
     {
         this->ui->memoryBar->addSegment("Control domain", dom0Memory,
                                         QColor(105, 105, 105), // DimGray
-                                        QString("Control domain\n%1").arg(formatMemorySize(dom0Memory)));
+                                        QString("Control domain\n%1").arg(this->formatMemorySize(dom0Memory)));
     }
 
     // 3. VM segments (alternate colors)
@@ -257,16 +319,36 @@ void MemoryTabPage::populateHostMemory()
     for (const VMInfo& vmInfo : vmInfoList)
     {
         QColor vmColor = (vmCount % 2 == 0) ? QColor(25, 25, 112) : QColor(70, 130, 180); // MidnightBlue / SteelBlue
-        this->ui->memoryBar->addSegment(vmInfo.name, vmInfo.memoryActual, vmColor,
-                                        QString("%1\n%2").arg(vmInfo.name, formatMemorySize(vmInfo.memoryActual)));
+        QString vmTooltip = QString("%1\nCurrent memory usage: %2")
+                                .arg(vmInfo.name, this->formatMemorySize(vmInfo.memoryActual));
+
+        if (vmInfo.vm && vmSupportsBallooning(vmInfo.vm))
+        {
+            qint64 vmDynamicMin = vmInfo.vm->GetMemoryDynamicMin();
+            qint64 vmDynamicMax = vmInfo.vm->GetMemoryDynamicMax();
+            qint64 vmStaticMax = vmInfo.vm->GetMemoryStaticMax();
+            vmTooltip += QString("\nDynamic Min: %1").arg(this->formatMemorySize(vmDynamicMin));
+            vmTooltip += QString("\nDynamic Max: %1").arg(this->formatMemorySize(vmDynamicMax));
+            if (vmDynamicMax != vmStaticMax)
+                vmTooltip += QString("\nStatic Max: %1").arg(this->formatMemorySize(vmStaticMax));
+        }
+
+        this->ui->memoryBar->addSegment(vmInfo.name, vmInfo.memoryActual, vmColor, vmTooltip);
         vmCount++;
     }
+
+    qint64 freeMemory = totalMemory - (hostMemoryOverhead + totalVmOverhead + totalVmActual);
+    if (freeMemory < 0)
+        freeMemory = 0;
+    qint64 usedMemory = totalMemory - freeMemory;
 
     // Calculate total dynamic max including Xen memory (matches C# logic)
     qint64 totDynMaxWithXen = totalDynMax + xenMemory;
 
     // Calculate available memory (matches C# Host.memory_available_calc)
-    qint64 availableMemory = freeMemory;
+    qint64 availableMemory = totalMemory - totalDynMin - xenMemory;
+    if (availableMemory < 0)
+        availableMemory = 0;
 
     // Display memory statistics
     this->ui->totalMemoryLabel->setVisible(true);
@@ -280,17 +362,17 @@ void MemoryTabPage::populateHostMemory()
     this->ui->totalMaxMemoryLabel->setVisible(true);
     this->ui->totalMaxMemoryValue->setVisible(true);
 
-    this->ui->totalMemoryValue->setText(formatMemorySize(totalMemory));
-    this->ui->usedMemoryValue->setText(formatMemorySize(usedMemory));
-    this->ui->controlDomainMemoryValue->setText(formatMemorySize(dom0Memory));
-    this->ui->availableMemoryValue->setText(formatMemorySize(availableMemory));
+    this->ui->totalMemoryValue->setText(this->formatMemorySize(totalMemory));
+    this->ui->usedMemoryValue->setText(this->formatMemorySize(usedMemory));
+    this->ui->controlDomainMemoryValue->setText(this->formatMemorySize(dom0Memory));
+    this->ui->availableMemoryValue->setText(this->formatMemorySize(availableMemory));
 
     // Show total max memory with overcommit percentage
     qint64 overcommit = totalMemory > 0
                             ? (qint64) std::round((double) totDynMaxWithXen / (double) totalMemory * 100.0)
                             : 0;
     this->ui->totalMaxMemoryValue->setText(
-        QString("%1 (%2% of total memory)").arg(formatMemorySize(totDynMaxWithXen)).arg(overcommit));
+        QString("%1 (%2% of total memory)").arg(this->formatMemorySize(totDynMaxWithXen)).arg(overcommit));
 
     // Hide VM-specific labels for hosts
     this->ui->staticMinLabel->setVisible(false);
@@ -330,25 +412,25 @@ void MemoryTabPage::populateHostMemory()
         QFont boldFont;
         boldFont.setBold(true);
         actualLabel->setFont(boldFont);
-        QLabel* actualValue = new QLabel(formatMemorySize(vmInfo.memoryActual));
+        QLabel* actualValue = new QLabel(this->formatMemorySize(vmInfo.memoryActual));
         vmLayout->addRow(actualLabel, actualValue);
 
         // Dynamic min
         QLabel* dynMinLabel = new QLabel("Dynamic minimum:");
         dynMinLabel->setFont(boldFont);
-        QLabel* dynMinValue = new QLabel(formatMemorySize(vmInfo.memoryDynamicMin));
+        QLabel* dynMinValue = new QLabel(this->formatMemorySize(vmInfo.memoryDynamicMin));
         vmLayout->addRow(dynMinLabel, dynMinValue);
 
         // Dynamic max
         QLabel* dynMaxLabel = new QLabel("Dynamic maximum:");
         dynMaxLabel->setFont(boldFont);
-        QLabel* dynMaxValue = new QLabel(formatMemorySize(vmInfo.memoryDynamicMax));
+        QLabel* dynMaxValue = new QLabel(this->formatMemorySize(vmInfo.memoryDynamicMax));
         vmLayout->addRow(dynMaxLabel, dynMaxValue);
 
         // Static max
         QLabel* statMaxLabel = new QLabel("Static maximum:");
         statMaxLabel->setFont(boldFont);
-        QLabel* statMaxValue = new QLabel(formatMemorySize(vmInfo.memoryStaticMax));
+        QLabel* statMaxValue = new QLabel(this->formatMemorySize(vmInfo.memoryStaticMax));
         vmLayout->addRow(statMaxLabel, statMaxValue);
 
         this->ui->vmListLayout->addWidget(vmGroup);
@@ -387,16 +469,29 @@ QString MemoryTabPage::formatMemorySize(qint64 bytes) const
 
 bool MemoryTabPage::supportsBallooning() const
 {
-    // Check if VM supports memory ballooning
-    // In XenServer, ballooning is supported if dynamic min/max differ from static min/max
-    qint64 memoryStaticMin = this->m_objectData.value("memory_static_min", 0).toLongLong();
-    qint64 memoryStaticMax = this->m_objectData.value("memory_static_max", 0).toLongLong();
-    qint64 memoryDynamicMin = this->m_objectData.value("memory_dynamic_min", 0).toLongLong();
-    qint64 memoryDynamicMax = this->m_objectData.value("memory_dynamic_max", 0).toLongLong();
+    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+    return this->supportsBallooning(vm);
+}
 
-    // If dynamic values are set and differ from static, ballooning is supported
-    return (memoryDynamicMin > 0 || memoryDynamicMax > 0) &&
-           (memoryDynamicMin != memoryStaticMin || memoryDynamicMax != memoryStaticMax);
+bool MemoryTabPage::supportsBallooning(const QSharedPointer<VM>& vm) const
+{
+    if (!vm || !this->m_connection || !this->m_connection->GetCache())
+        return false;
+
+    if (vm->IsTemplate())
+        return vm->GetMemoryDynamicMin() != vm->GetMemoryStaticMax();
+
+    QString guestMetricsRef = vm->GetGuestMetricsRef();
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+        return false;
+
+    QVariantMap guestMetrics = this->m_connection->GetCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+    QVariantMap other = guestMetrics.value("other").toMap();
+    if (!other.contains("feature-balloon"))
+        return false;
+
+    QString value = other.value("feature-balloon").toString().toLower();
+    return value == "1" || value == "true" || value == "yes";
 }
 
 void MemoryTabPage::onEditButtonClicked()
@@ -404,16 +499,13 @@ void MemoryTabPage::onEditButtonClicked()
     // C# Reference: VMMemoryControlsNoEdit.cs editButton_Click (line 140-144)
     // Opens BallooningDialog for single VM or BallooningWizard for multiple VMs
 
-    if (this->m_objectType != "vm" || !this->m_connection)
-        return;
-
     // Open ballooning dialog
-    BallooningDialog dialog(this->m_objectRef, this->m_connection, this);
+    BallooningDialog dialog(this->GetVM(), this->m_connection, this);
     dialog.exec();
 
     // Refresh the tab to show updated values
     if (dialog.result() == QDialog::Accepted)
     {
-        refreshContent();
+        this->refreshContent();
     }
 }

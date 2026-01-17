@@ -39,6 +39,7 @@
 #include "console.h"
 #include "vusb.h"
 #include "vtpm.h"
+#include "vmmetrics.h"
 #include "blob.h"
 #include "pci.h"
 #include <QDomDocument>
@@ -483,22 +484,22 @@ qint64 VM::MemoryTarget() const
     return longProperty("memory_target", 0);
 }
 
-qint64 VM::MemoryStaticMax() const
+qint64 VM::GetMemoryStaticMax() const
 {
     return longProperty("memory_static_max", 0);
 }
 
-qint64 VM::MemoryDynamicMax() const
+qint64 VM::GetMemoryDynamicMax() const
 {
     return longProperty("memory_dynamic_max", 0);
 }
 
-qint64 VM::MemoryDynamicMin() const
+qint64 VM::GetMemoryDynamicMin() const
 {
     return longProperty("memory_dynamic_min", 0);
 }
 
-qint64 VM::MemoryStaticMin() const
+qint64 VM::GetMemoryStaticMin() const
 {
     return longProperty("memory_static_min", 0);
 }
@@ -1158,6 +1159,16 @@ bool VM::IsControlDomain() const
 QString VM::MetricsRef() const
 {
     return this->stringProperty("metrics");
+}
+
+QSharedPointer<VMMetrics> VM::GetMetrics()
+{
+    XenCache* cache = this->GetCache();
+    QString ref = this->MetricsRef();
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
+        return QSharedPointer<VMMetrics>();
+
+    return cache->ResolveObject<VMMetrics>("vm_metrics", ref);
 }
 
 QString VM::GetGuestMetricsRef() const

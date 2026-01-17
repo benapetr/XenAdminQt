@@ -107,61 +107,80 @@
        </widget>
       </item>
       <item>
-       <widget class="QWidget" name="dynamicWidget" native="true">
-        <layout class="QFormLayout" name="dynamicFormLayout">
+       <widget class="QWidget" name="dynamicDetailsWidget" native="true">
+        <layout class="QVBoxLayout" name="dynamicDetailsLayout">
          <property name="leftMargin">
           <number>20</number>
          </property>
-         <item row="0" column="0">
-          <widget class="QLabel" name="labelDynMin">
-           <property name="text">
-            <string>Minimum:</string>
+         <item>
+          <widget class="VMShinyBar" name="vmShinyBar" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>200</width>
+             <height>80</height>
+            </size>
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
-          <widget class="QDoubleSpinBox" name="spinnerDynMin">
-           <property name="suffix">
-            <string> MB</string>
-           </property>
-           <property name="minimum">
-            <double>128.000000000000000</double>
-           </property>
-           <property name="maximum">
-            <double>999999.000000000000000</double>
-           </property>
-           <property name="singleStep">
-            <double>128.000000000000000</double>
-           </property>
-           <property name="value">
-            <double>512.000000000000000</double>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="labelDynMax">
-           <property name="text">
-            <string>Maximum:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QDoubleSpinBox" name="spinnerDynMax">
-           <property name="suffix">
-            <string> MB</string>
-           </property>
-           <property name="minimum">
-            <double>128.000000000000000</double>
-           </property>
-           <property name="maximum">
-            <double>999999.000000000000000</double>
-           </property>
-           <property name="singleStep">
-            <double>128.000000000000000</double>
-           </property>
-           <property name="value">
-            <double>2048.000000000000000</double>
-           </property>
+         <item>
+          <widget class="QWidget" name="dynamicWidget" native="true">
+           <layout class="QFormLayout" name="dynamicFormLayout">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <item row="0" column="0">
+             <widget class="QLabel" name="labelDynMin">
+              <property name="text">
+               <string>Minimum:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QDoubleSpinBox" name="spinnerDynMin">
+              <property name="suffix">
+               <string> MB</string>
+              </property>
+              <property name="minimum">
+               <double>128.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>999999.000000000000000</double>
+              </property>
+              <property name="singleStep">
+               <double>128.000000000000000</double>
+              </property>
+              <property name="value">
+               <double>512.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="labelDynMax">
+              <property name="text">
+               <string>Maximum:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QDoubleSpinBox" name="spinnerDynMax">
+              <property name="suffix">
+               <string> MB</string>
+              </property>
+              <property name="minimum">
+               <double>128.000000000000000</double>
+              </property>
+              <property name="maximum">
+               <double>999999.000000000000000</double>
+              </property>
+              <property name="singleStep">
+               <double>128.000000000000000</double>
+              </property>
+              <property name="value">
+               <double>2048.000000000000000</double>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </item>
         </layout>
@@ -174,6 +193,16 @@
         </property>
         <property name="wordWrap">
          <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="checkBoxDeferReboot">
+        <property name="text">
+         <string>Apply changes on next reboot (do not restart now)</string>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
@@ -205,6 +234,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VMShinyBar</class>
+   <extends>QWidget</extends>
+   <header>widgets/vmshinybar.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>

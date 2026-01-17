@@ -225,6 +225,7 @@ SOURCES += \
     tabpages/alertsummarypage.cpp \
     tabpages/eventspage.cpp \
     widgets/memorybar.cpp \
+    widgets/vmshinybar.cpp \
     widgets/progressbardelegate.cpp \
     widgets/verticaltabwidget.cpp \
     navigation/navigationpane.cpp \
@@ -468,6 +469,7 @@ HEADERS += \
     tabpages/alertsummarypage.h \
     tabpages/eventspage.h \
     widgets/memorybar.h \
+    widgets/vmshinybar.h \
     widgets/progressbardelegate.h \
     widgets/verticaltabwidget.h \
     navigation/navigationpane.h \

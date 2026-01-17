@@ -35,6 +35,7 @@
 #include "xen/host.h"
 #include "xen/hostcpu.h"
 #include "xen/hostmetrics.h"
+#include "xen/vmmetrics.h"
 #include "xen/message.h"
 #include "xen/pbd.h"
 #include "xen/pci.h"
@@ -132,6 +133,8 @@ QString XenCache::normalizeType(const QString& type) const
         return "vlan";
     if (normalized == "vm" || normalized == "vms")
         return "vm";
+    if (normalized == "vm_metrics")
+        return "vm_metrics";
 
     return normalized;
 }
@@ -511,7 +514,8 @@ QStringList XenCache::GetKnownTypes() const
         "vdi",
         "vif",
         "vlan",
-        "vm"
+        "vm",
+        "vm_metrics"
     };
 }
 
@@ -571,6 +575,8 @@ QSharedPointer<XenObject> XenCache::createObjectForType(const QString& type, con
         return QSharedPointer<XenObject>(new VLAN(this->m_connection, ref));
     if (type == "vm")
         return QSharedPointer<XenObject>(new VM(this->m_connection, ref));
+    if (type == "vm_metrics")
+        return QSharedPointer<XenObject>(new VMMetrics(this->m_connection, ref));
 
     return QSharedPointer<XenObject>();
 }

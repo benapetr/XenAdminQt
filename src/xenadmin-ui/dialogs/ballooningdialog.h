@@ -29,10 +29,11 @@
 #define BALLOONINGDIALOG_H
 
 #include <QDialog>
-#include <QVariantMap>
+#include <QSharedPointer>
 
 class XenConnection;
 class ChangeMemorySettingsAction;
+class VM;
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -62,7 +63,7 @@ class BallooningDialog : public QDialog
          * @param connection XenConnection instance for API access
          * @param parent Parent widget
          */
-        explicit BallooningDialog(const QString& vmRef, XenConnection* connection, QWidget* parent = nullptr);
+        explicit BallooningDialog(const QSharedPointer<VM> &vm, XenConnection* connection, QWidget* parent = nullptr);
         ~BallooningDialog();
 
     private slots:
@@ -71,16 +72,20 @@ class BallooningDialog : public QDialog
         void onFixedValueChanged(double value);
         void onDynMinValueChanged(double value);
         void onDynMaxValueChanged(double value);
+        void onShinyBarSliderDragged();
         void onAccepted();
 
     private:
         Ui::BallooningDialog* ui;
-        QString m_vmRef;
         XenConnection* m_connection;
-        QVariantMap m_vmData;
+        QSharedPointer<VM> m_vm;
+        // workaround for Qt bug - isVisible returns false even when it's true
+        bool checkboxDeferVisible = false;
 
-        bool m_hasBallooning; // Whether VM supports DMC
+        bool m_hasBallooning; // Whether VM supports DMC (Dynamic Memory Control)
         bool m_isTemplate;
+        double m_maxDynMin;
+        qint64 m_memorySpinnerMax;
 
         qint64 m_originalStaticMin;
         qint64 m_originalStaticMax;
@@ -90,7 +95,18 @@ class BallooningDialog : public QDialog
         void populateControls();
         void updateDMCAvailability();
         void updateSpinnerRanges();
+        void updateShinyBar();
+        void setIncrements();
         void setSpinnerEnabled(bool fixed, bool dynamic);
+        double currentDynamicMinMB() const;
+        double currentDynamicMaxMB() const;
+        double currentStaticMaxMB() const;
+        double getMemoryRatio() const;
+        double calcMaxDynMin() const;
+        bool vmSupportsBallooning() const;
+        bool vmUsesBallooning() const;
+        qint64 getMemorySpinnerMax() const;
+        double calcIncrementMB(double staticMaxMB) const;
 
         qint64 bytesToMB(qint64 bytes) const;
         qint64 mbToBytes(double mb) const;

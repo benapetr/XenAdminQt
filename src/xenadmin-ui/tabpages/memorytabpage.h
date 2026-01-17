@@ -29,6 +29,9 @@
 #define MEMORYTABPAGE_H
 
 #include "basetabpage.h"
+#include <QSharedPointer>
+
+class VM;
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -36,6 +39,9 @@ namespace Ui
     class MemoryTabPage;
 }
 QT_END_NAMESPACE
+
+// TODO this tab doesn't refresh automatically when VM power state of memory settings change (eg. changing memory - it will be stuck showing old value in memory bar until reopening)
+//      we probably need to hook to some xencache events and force refresh the values on change
 
 /**
  * Memory tab page showing memory configuration and usage for VMs and Hosts.
@@ -63,6 +69,7 @@ class MemoryTabPage : public BaseTabPage
             return "TabPageBallooning";
         }
         bool IsApplicableForObjectType(const QString& objectType) const override;
+        QSharedPointer<VM> GetVM();
 
     protected:
         void refreshContent() override;
@@ -77,6 +84,7 @@ class MemoryTabPage : public BaseTabPage
         void populateHostMemory();
         QString formatMemorySize(qint64 bytes) const;
         bool supportsBallooning() const;
+        bool supportsBallooning(const QSharedPointer<VM>& vm) const;
 };
 
 #endif // MEMORYTABPAGE_H

@@ -28,72 +28,69 @@
 #include "ballooningdialog.h"
 #include "ui_ballooningdialog.h"
 #include "xen/network/connection.h"
+#include "xen/host.h"
+#include "xen/hostmetrics.h"
 #include "xen/vm.h"
+#include "xen/vmmetrics.h"
 #include "xencache.h"
 #include "operationprogressdialog.h"
 #include "xen/actions/vm/changememorysettingsaction.h"
 #include <QMessageBox>
 #include <QDebug>
+#include <QDomDocument>
 
-BallooningDialog::BallooningDialog(const QString& vmRef, XenConnection* connection, QWidget* parent)
+BallooningDialog::BallooningDialog(const QSharedPointer<VM> &vm, XenConnection* connection, QWidget* parent)
     : QDialog(parent),
       ui(new Ui::BallooningDialog),
-      m_vmRef(vmRef),
       m_connection(connection),
       m_hasBallooning(false),
-      m_isTemplate(false)
+      m_isTemplate(false),
+      m_maxDynMin(-1.0),
+      m_memorySpinnerMax(0)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
-    // Get VM data from cache
-    if (m_connection && m_connection->GetCache())
-    {
-        m_vmData = m_connection->GetCache()->ResolveObjectData("vm", m_vmRef);
-    }
+    this->m_vm = vm;
 
-    if (m_vmData.isEmpty())
+    if (!this->m_vm || !this->m_vm->IsValid())
     {
         QMessageBox::critical(this, tr("Error"), tr("Failed to load VM data"));
         return;
     }
 
     // Store original memory settings
-    m_originalStaticMin = m_vmData.value("memory_static_min").toLongLong();
-    m_originalStaticMax = m_vmData.value("memory_static_max").toLongLong();
-    m_originalDynamicMin = m_vmData.value("memory_dynamic_min").toLongLong();
-    m_originalDynamicMax = m_vmData.value("memory_dynamic_max").toLongLong();
+    this->m_originalStaticMin = this->m_vm->GetMemoryStaticMin();
+    this->m_originalStaticMax = this->m_vm->GetMemoryStaticMax();
+    this->m_originalDynamicMin = this->m_vm->GetMemoryDynamicMin();
+    this->m_originalDynamicMax = this->m_vm->GetMemoryDynamicMax();
 
-    m_isTemplate = m_vmData.value("is_a_template", false).toBool();
+    this->m_isTemplate = this->m_vm->IsTemplate();
 
     // Check if VM supports ballooning (DMC)
     // C# Reference: BallooningDialog.cs line 52 - vm.UsesBallooning()
-    m_hasBallooning = (m_originalDynamicMin != m_originalStaticMin ||
-                       m_originalDynamicMax != m_originalStaticMax);
+    this->m_hasBallooning = this->vmSupportsBallooning();
+    this->m_memorySpinnerMax = this->getMemorySpinnerMax();
 
     // Connect signals
-    connect(ui->radioFixed, &QRadioButton::toggled,
-            this, &BallooningDialog::onFixedRadioToggled);
-    connect(ui->radioDynamic, &QRadioButton::toggled,
-            this, &BallooningDialog::onDynamicRadioToggled);
+    connect(this->ui->radioFixed, &QRadioButton::toggled, this, &BallooningDialog::onFixedRadioToggled);
+    connect(this->ui->radioDynamic, &QRadioButton::toggled, this, &BallooningDialog::onDynamicRadioToggled);
 
-    connect(ui->spinnerFixed, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &BallooningDialog::onFixedValueChanged);
-    connect(ui->spinnerDynMin, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &BallooningDialog::onDynMinValueChanged);
-    connect(ui->spinnerDynMax, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &BallooningDialog::onDynMaxValueChanged);
+    connect(this->ui->spinnerFixed, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &BallooningDialog::onFixedValueChanged);
+    connect(this->ui->spinnerDynMin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &BallooningDialog::onDynMinValueChanged);
+    connect(this->ui->spinnerDynMax, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &BallooningDialog::onDynMaxValueChanged);
 
-    connect(ui->buttonBox, &QDialogButtonBox::accepted,
-            this, &BallooningDialog::onAccepted);
+    connect(this->ui->vmShinyBar, &VMShinyBar::sliderDragged, this, &BallooningDialog::onShinyBarSliderDragged);
+
+    connect(this->ui->buttonBox, &QDialogButtonBox::accepted, this, &BallooningDialog::onAccepted);
 
     // Populate controls with current values
-    populateControls();
-    updateDMCAvailability();
+    this->populateControls();
+    this->updateDMCAvailability();
 }
 
 BallooningDialog::~BallooningDialog()
 {
-    delete ui;
+    delete this->ui;
 }
 
 void BallooningDialog::populateControls()
@@ -101,33 +98,48 @@ void BallooningDialog::populateControls()
     // C# Reference: VMMemoryControlsBasic.cs Populate() method
 
     // Set rubric text based on template status
-    if (m_isTemplate)
+    if (this->m_isTemplate)
     {
-        ui->labelRubric->setText(tr("Specify memory allocation for this template. "
-                                    "Dynamic Memory Control allows you to specify a minimum and maximum memory value."));
+        this->ui->labelRubric->setText(tr("Specify memory allocation for this template. Dynamic Memory Control allows you to specify a minimum and maximum memory value."));
     }
 
     // Convert bytes to MB for spinners
-    double staticMaxMB = bytesToMB(m_originalStaticMax);
-    double dynamicMinMB = bytesToMB(m_originalDynamicMin);
-    double dynamicMaxMB = bytesToMB(m_originalDynamicMax);
+    double staticMaxMB = this->bytesToMB(this->m_originalStaticMax);
+    double dynamicMinMB = this->bytesToMB(this->m_originalDynamicMin);
+    double dynamicMaxMB = this->bytesToMB(this->m_originalDynamicMax);
 
     // Set spinner values
-    ui->spinnerFixed->setValue(staticMaxMB);
-    ui->spinnerDynMin->setValue(dynamicMinMB);
-    ui->spinnerDynMax->setValue(dynamicMaxMB);
+    this->ui->spinnerFixed->setValue(staticMaxMB);
+    this->ui->spinnerDynMin->setValue(dynamicMinMB);
+    this->ui->spinnerDynMax->setValue(dynamicMaxMB);
 
     // Set initial radio button state
     // C# Reference: VMMemoryControlsBasic.cs line 63-68
-    if (m_hasBallooning && m_originalDynamicMin != m_originalStaticMax)
+    if (this->m_hasBallooning && this->m_originalDynamicMin != this->m_originalStaticMax)
     {
-        ui->radioDynamic->setChecked(true);
+        this->ui->radioDynamic->setChecked(true);
     } else
     {
-        ui->radioFixed->setChecked(true);
+        this->ui->radioFixed->setChecked(true);
     }
 
-    updateSpinnerRanges();
+    if (this->m_vm)
+        this->ui->vmShinyBar->Populate({ this->m_vm }, true);
+
+    QString powerState = this->m_vm ? this->m_vm->GetPowerState() : QString();
+    //bool vmRunning = powerState != "Halted";
+    this->ui->checkBoxDeferReboot->setVisible(false);
+
+    // This feature doesn't work due to lack of support from xapi side
+    /*
+    this->checkboxDeferVisible = vmRunning;
+    if (!vmRunning)
+        this->ui->checkBoxDeferReboot->setChecked(false);
+    */
+
+    this->setIncrements();
+    this->updateSpinnerRanges();
+    this->updateShinyBar();
 }
 
 void BallooningDialog::updateDMCAvailability()
@@ -135,23 +147,23 @@ void BallooningDialog::updateDMCAvailability()
     // C# Reference: VMMemoryControlsBasic.cs Populate() line 59-149
 
     // Check if DMC (Dynamic Memory Control) is available
-    bool dmcAvailable = m_hasBallooning;
+    bool dmcAvailable = this->m_hasBallooning;
 
     // Disable dynamic radio if DMC not supported
     if (!dmcAvailable)
     {
-        ui->radioDynamic->setEnabled(false);
-        ui->dynamicWidget->setEnabled(false);
+        this->ui->radioDynamic->setEnabled(false);
+        this->ui->dynamicDetailsWidget->setEnabled(false);
 
         QString reason;
-        if (m_isTemplate)
+        if (this->m_isTemplate)
         {
             reason = tr("Dynamic Memory Control is not available for templates.");
         } else
         {
             // Check virtualization status from VM data
             // This is simplified - C# does more detailed checking
-            QString powerState = m_vmData.value("power_state").toString();
+            QString powerState = this->m_vm->GetPowerState();
             if (powerState == "Halted")
             {
                 reason = tr("Dynamic Memory Control requires the VM to have Xen VM Tools installed. "
@@ -162,11 +174,12 @@ void BallooningDialog::updateDMCAvailability()
             }
         }
 
-        ui->labelDMCUnavailable->setText(reason);
-        ui->labelDMCUnavailable->setVisible(true);
+        this->ui->labelDMCUnavailable->setText(reason);
+        this->ui->labelDMCUnavailable->setVisible(true);
     } else
     {
-        ui->labelDMCUnavailable->setVisible(false);
+        this->ui->dynamicDetailsWidget->setEnabled(true);
+        this->ui->labelDMCUnavailable->setVisible(false);
     }
 }
 
@@ -178,32 +191,107 @@ void BallooningDialog::updateSpinnerRanges()
     const double minMemoryMB = 128.0;
 
     // Get maximum allowed from VM or use reasonable default
-    double maxMemoryMB = 999999.0; // Very large default
+    double maxMemoryMB = this->bytesToMB(this->m_memorySpinnerMax > 0 ? this->m_memorySpinnerMax : this->m_originalStaticMax);
 
     // Update ranges for all spinners
-    ui->spinnerFixed->setMinimum(minMemoryMB);
-    ui->spinnerFixed->setMaximum(maxMemoryMB);
+    this->ui->spinnerFixed->setMinimum(minMemoryMB);
+    this->ui->spinnerFixed->setMaximum(maxMemoryMB);
 
-    ui->spinnerDynMin->setMinimum(minMemoryMB);
-    ui->spinnerDynMin->setMaximum(maxMemoryMB);
+    this->ui->spinnerDynMin->setMinimum(minMemoryMB);
+    this->ui->spinnerDynMin->setMaximum(maxMemoryMB);
 
-    ui->spinnerDynMax->setMinimum(minMemoryMB);
-    ui->spinnerDynMax->setMaximum(maxMemoryMB);
+    this->ui->spinnerDynMax->setMinimum(minMemoryMB);
+    this->ui->spinnerDynMax->setMaximum(maxMemoryMB);
 
-    // Ensure dynamic min <= dynamic max
-    if (ui->spinnerDynMin->value() > ui->spinnerDynMax->value())
+    this->m_maxDynMin = this->calcMaxDynMin();
+
+    double staticMaxMB = this->currentStaticMaxMB();
+    double dynamicMinMB = this->currentDynamicMinMB();
+    double dynamicMaxMB = this->currentDynamicMaxMB();
+    double ratio = this->getMemoryRatio();
+
+    double maxFixedMB = maxMemoryMB;
+    if (this->m_maxDynMin >= 0 && this->bytesToMB(this->m_maxDynMin) <= maxMemoryMB)
+        maxFixedMB = this->bytesToMB(this->m_maxDynMin);
+
+    double staticMinMB = this->bytesToMB(this->m_originalStaticMin);
+    this->ui->spinnerFixed->setMinimum(staticMinMB > minMemoryMB ? staticMinMB : minMemoryMB);
+    this->ui->spinnerFixed->setMaximum(maxFixedMB);
+
+    if (!this->m_hasBallooning)
+        return;
+
+    double maxDynMinMB = dynamicMaxMB;
+    if (this->m_maxDynMin >= 0 && this->bytesToMB(this->m_maxDynMin) < maxDynMinMB)
     {
-        ui->spinnerDynMin->setValue(ui->spinnerDynMax->value());
+        maxDynMinMB = this->bytesToMB(this->m_maxDynMin);
+        if (maxDynMinMB < staticMinMB)
+            maxDynMinMB = staticMinMB;
     }
+    if (maxDynMinMB < dynamicMinMB)
+        maxDynMinMB = dynamicMinMB;
+
+    double minDynMinMB = staticMinMB;
+    double ratioLimitMB = staticMaxMB * ratio;
+    if (ratioLimitMB > minDynMinMB)
+        minDynMinMB = ratioLimitMB;
+    if (minDynMinMB > dynamicMinMB)
+        minDynMinMB = dynamicMinMB;
+
+    double maxStaticMaxMB = maxMemoryMB;
+    if (this->m_maxDynMin >= 0 && maxMemoryMB * ratio > this->bytesToMB(this->m_maxDynMin))
+        maxStaticMaxMB = this->bytesToMB(this->m_maxDynMin) / ratio;
+    if (maxStaticMaxMB < staticMaxMB)
+        maxStaticMaxMB = staticMaxMB;
+
+    this->ui->spinnerDynMin->setMinimum(minDynMinMB);
+    this->ui->spinnerDynMin->setMaximum(maxDynMinMB);
+
+    double dynMaxMinMB = dynamicMinMB > minMemoryMB ? dynamicMinMB : minMemoryMB;
+    this->ui->spinnerDynMax->setMinimum(dynMaxMinMB);
+    this->ui->spinnerDynMax->setMaximum(maxStaticMaxMB);
+
+    this->ui->vmShinyBar->SetRanges(this->mbToBytes(minDynMinMB), this->mbToBytes(maxDynMinMB),
+                              this->mbToBytes(dynamicMinMB), this->mbToBytes(maxStaticMaxMB),
+                              "MB");
+
+    if (this->ui->spinnerDynMin->value() > this->ui->spinnerDynMax->value())
+        this->ui->spinnerDynMin->setValue(this->ui->spinnerDynMax->value());
+}
+
+void BallooningDialog::updateShinyBar()
+{
+    if (!this->m_vm)
+        return;
+
+    double staticMaxMB = this->currentStaticMaxMB();
+    double dynamicMinMB = this->currentDynamicMinMB();
+    double dynamicMaxMB = this->currentDynamicMaxMB();
+
+    this->ui->vmShinyBar->ChangeSettings(this->m_originalStaticMin,
+                                   this->mbToBytes(dynamicMinMB),
+                                   this->mbToBytes(dynamicMaxMB),
+                                   this->mbToBytes(staticMaxMB));
+}
+
+void BallooningDialog::setIncrements()
+{
+    double staticMaxMB = this->currentStaticMaxMB();
+    double incrementMB = this->calcIncrementMB(staticMaxMB);
+    this->ui->spinnerFixed->setSingleStep(incrementMB);
+    this->ui->spinnerDynMin->setSingleStep(incrementMB);
+    this->ui->spinnerDynMax->setSingleStep(incrementMB);
+    this->ui->vmShinyBar->SetIncrement(this->mbToBytes(incrementMB));
 }
 
 void BallooningDialog::setSpinnerEnabled(bool fixed, bool dynamic)
 {
-    ui->spinnerFixed->setEnabled(fixed);
-    ui->spinnerDynMin->setEnabled(dynamic);
-    ui->spinnerDynMax->setEnabled(dynamic);
-    ui->labelDynMin->setEnabled(dynamic);
-    ui->labelDynMax->setEnabled(dynamic);
+    this->ui->spinnerFixed->setEnabled(fixed);
+    this->ui->spinnerDynMin->setEnabled(dynamic);
+    this->ui->spinnerDynMax->setEnabled(dynamic);
+    this->ui->labelDynMin->setEnabled(dynamic);
+    this->ui->labelDynMax->setEnabled(dynamic);
+    this->ui->dynamicDetailsWidget->setEnabled(dynamic);
 }
 
 void BallooningDialog::onFixedRadioToggled(bool checked)
@@ -211,7 +299,10 @@ void BallooningDialog::onFixedRadioToggled(bool checked)
     // C# Reference: VMMemoryControlsBasic.cs radioFixed.CheckedChanged
     if (checked)
     {
-        setSpinnerEnabled(true, false);
+        this->setSpinnerEnabled(true, false);
+        this->setIncrements();
+        this->updateSpinnerRanges();
+        this->updateShinyBar();
     }
 }
 
@@ -220,43 +311,66 @@ void BallooningDialog::onDynamicRadioToggled(bool checked)
     // C# Reference: VMMemoryControlsBasic.cs radioDynamic.CheckedChanged
     if (checked)
     {
-        setSpinnerEnabled(false, true);
+        this->setSpinnerEnabled(false, true);
+        this->setIncrements();
+        this->updateSpinnerRanges();
+        this->updateShinyBar();
     }
 }
 
 void BallooningDialog::onFixedValueChanged(double /*value*/)
 {
     // C# Reference: VMMemoryControlsBasic.cs FixedSpinner_ValueChanged
-    ui->radioFixed->setChecked(true);
-    updateSpinnerRanges();
+    this->ui->radioFixed->setChecked(true);
+    this->setIncrements();
+    this->updateSpinnerRanges();
+    this->updateShinyBar();
 }
 
 void BallooningDialog::onDynMinValueChanged(double value)
 {
     // C# Reference: VMMemoryControlsBasic.cs DynamicSpinners_ValueChanged
-    ui->radioDynamic->setChecked(true);
+    this->ui->radioDynamic->setChecked(true);
 
     // Ensure min <= max
-    if (value > ui->spinnerDynMax->value())
+    if (value > this->ui->spinnerDynMax->value())
     {
-        ui->spinnerDynMax->setValue(value);
+        this->ui->spinnerDynMax->setValue(value);
     }
 
-    updateSpinnerRanges();
+    this->setIncrements();
+    this->updateSpinnerRanges();
+    this->updateShinyBar();
 }
 
 void BallooningDialog::onDynMaxValueChanged(double value)
 {
     // C# Reference: VMMemoryControlsBasic.cs DynamicSpinners_ValueChanged
-    ui->radioDynamic->setChecked(true);
+    this->ui->radioDynamic->setChecked(true);
 
     // Ensure min <= max
-    if (value < ui->spinnerDynMin->value())
+    if (value < this->ui->spinnerDynMin->value())
     {
-        ui->spinnerDynMin->setValue(value);
+        this->ui->spinnerDynMin->setValue(value);
     }
 
-    updateSpinnerRanges();
+    this->setIncrements();
+    this->updateSpinnerRanges();
+    this->updateShinyBar();
+}
+
+void BallooningDialog::onShinyBarSliderDragged()
+{
+    this->ui->radioDynamic->setChecked(true);
+
+    double minMB = this->bytesToMB(static_cast<qint64>(this->ui->vmShinyBar->DynamicMin()));
+    double maxMB = this->bytesToMB(static_cast<qint64>(this->ui->vmShinyBar->DynamicMax()));
+
+    this->ui->spinnerDynMin->setValue(minMB);
+    this->ui->spinnerDynMax->setValue(maxMB);
+
+    this->setIncrements();
+    this->updateSpinnerRanges();
 }
 
 qint64 BallooningDialog::bytesToMB(qint64 bytes) const
@@ -269,30 +383,195 @@ qint64 BallooningDialog::mbToBytes(double mb) const
     return static_cast<qint64>(mb * 1024 * 1024);
 }
 
+double BallooningDialog::currentDynamicMinMB() const
+{
+    if (this->ui->radioDynamic->isChecked())
+        return this->ui->spinnerDynMin->value();
+
+    return this->ui->spinnerFixed->value();
+}
+
+double BallooningDialog::currentDynamicMaxMB() const
+{
+    if (this->ui->radioDynamic->isChecked())
+        return this->ui->spinnerDynMax->value();
+
+    return this->ui->spinnerFixed->value();
+}
+
+double BallooningDialog::currentStaticMaxMB() const
+{
+    if (this->ui->radioDynamic->isChecked())
+        return this->ui->spinnerDynMax->value();
+
+    return this->ui->spinnerFixed->value();
+}
+
+double BallooningDialog::calcIncrementMB(double staticMaxMB) const
+{
+    int increment = 1;
+    while (increment < static_cast<int>(staticMaxMB / 8.0) && increment < 128)
+        increment *= 2;
+
+    return increment;
+}
+
+double BallooningDialog::getMemoryRatio() const
+{
+    const double defaultRatio = 0.25;
+    if (!this->m_connection || !this->m_connection->GetCache())
+        return defaultRatio;
+
+    QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
+    if (pools.isEmpty())
+        return defaultRatio;
+
+    QVariantMap otherConfig = pools.first().value("other_config").toMap();
+    QString key = "memory-ratio-pv";
+    if (this->m_vm && this->m_vm->IsHVM())
+        key = "memory-ratio-hvm";
+
+    bool ok = false;
+    double ratio = otherConfig.value(key).toString().toDouble(&ok);
+    if (!ok || ratio <= 0.0 || ratio > 1.0)
+        return defaultRatio;
+
+    return ratio;
+}
+
+double BallooningDialog::calcMaxDynMin() const
+{
+    if (!this->m_connection || !this->m_connection->GetCache() || !this->m_vm)
+        return -1.0;
+
+    QString powerState = this->m_vm->GetPowerState();
+    if (powerState != "Running" && powerState != "Paused")
+        return -1.0;
+
+    QSharedPointer<Host> host = this->m_vm->GetResidentOnHost();
+    if (!host || !host->IsValid())
+        return -1.0;
+
+    QSharedPointer<HostMetrics> hostMetrics = host->GetMetrics();
+    qint64 totalMemory = hostMetrics ? hostMetrics->GetMemoryTotal() : 0;
+    if (totalMemory == 0)
+        return -1.0;
+
+    qint64 sumDynMin = host->MemoryOverhead();
+    QList<QSharedPointer<VM>> residentVMs = host->GetResidentVMs();
+    for (const QSharedPointer<VM>& vm : residentVMs)
+    {
+        if (!vm || !vm->IsValid())
+            continue;
+
+        sumDynMin += vm->MemoryOverhead();
+
+        if (vm->IsControlDomain())
+        {
+            QSharedPointer<VMMetrics> vmMetrics = vm->GetMetrics();
+            if (vmMetrics)
+                sumDynMin += vmMetrics->GetMemoryActual();
+        } else if (vm->OpaqueRef() != this->m_vm->OpaqueRef())
+        {
+            sumDynMin += vm->GetMemoryDynamicMin();
+        }
+    }
+
+    qint64 maxDynMin = totalMemory - sumDynMin;
+    if (maxDynMin < 0)
+        maxDynMin = 0;
+
+    return static_cast<double>(maxDynMin);
+}
+
+bool BallooningDialog::vmSupportsBallooning() const
+{
+    if (!this->m_connection || !this->m_connection->GetCache() || !this->m_vm)
+        return false;
+
+    if (this->m_vm->IsTemplate())
+        return this->m_vm->GetMemoryDynamicMin() != this->m_vm->GetMemoryStaticMax();
+
+    QString guestMetricsRef = this->m_vm->GetGuestMetricsRef();
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL")
+        return false;
+
+    QVariantMap guestMetrics = this->m_connection->GetCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+    QVariantMap other = guestMetrics.value("other").toMap();
+    if (!other.contains("feature-balloon"))
+        return false;
+
+    QString value = other.value("feature-balloon").toString().toLower();
+    return value == "1" || value == "true" || value == "yes";
+}
+
+bool BallooningDialog::vmUsesBallooning() const
+{
+    return this->m_originalDynamicMax != this->m_originalStaticMax && this->vmSupportsBallooning();
+}
+
+qint64 BallooningDialog::getMemorySpinnerMax() const
+{
+    qint64 maxAllowed = 0;
+    QString recommendations = this->m_vm ? this->m_vm->Recommendations() : QString();
+    if (!recommendations.isEmpty())
+    {
+        QDomDocument doc;
+        if (doc.setContent(recommendations))
+        {
+            QDomNodeList restrictions = doc.elementsByTagName("restriction");
+            for (int i = 0; i < restrictions.count(); ++i)
+            {
+                QDomElement element = restrictions.at(i).toElement();
+                if (element.isNull())
+                    continue;
+
+                if (element.attribute("field") != "memory-static-max")
+                    continue;
+
+                QString valueText = element.attribute("max");
+                bool ok = false;
+                qint64 value = valueText.toLongLong(&ok);
+                if (ok)
+                {
+                    maxAllowed = value;
+                    break;
+                }
+            }
+        }
+    }
+
+    qint64 maxValue = this->m_originalStaticMax;
+    if (maxAllowed > maxValue)
+        maxValue = maxAllowed;
+
+    return maxValue;
+}
+
 bool BallooningDialog::validateMemorySettings() const
 {
     // C# Reference: VMMemoryControlsEdit.cs ChangeMemorySettings()
 
-    if (ui->radioFixed->isChecked())
+    if (this->ui->radioFixed->isChecked())
     {
         // Fixed mode: all values are the same
-        qint64 memoryBytes = mbToBytes(ui->spinnerFixed->value());
-        if (memoryBytes < mbToBytes(128))
+        qint64 memoryBytes = this->mbToBytes(this->ui->spinnerFixed->value());
+        if (memoryBytes < this->mbToBytes(128))
         {
             return false;
         }
     } else
     {
         // Dynamic mode: validate range
-        qint64 dynMin = mbToBytes(ui->spinnerDynMin->value());
-        qint64 dynMax = mbToBytes(ui->spinnerDynMax->value());
+        qint64 dynMin = this->mbToBytes(this->ui->spinnerDynMin->value());
+        qint64 dynMax = this->mbToBytes(this->ui->spinnerDynMax->value());
 
         if (dynMin > dynMax)
         {
             return false;
         }
 
-        if (dynMin < mbToBytes(128) || dynMax < mbToBytes(128))
+        if (dynMin < this->mbToBytes(128) || dynMax < this->mbToBytes(128))
         {
             return false;
         }
@@ -306,7 +585,7 @@ bool BallooningDialog::applyMemoryChanges()
     // C# Reference: VMMemoryControlsEdit.cs ChangeMemorySettings()
     // C# Reference: BallooningDialog.cs buttonOK_Click line 78
 
-    if (!validateMemorySettings())
+    if (!this->validateMemorySettings())
     {
         QMessageBox::warning(this, tr("Invalid Memory Settings"),
                              tr("Please ensure memory values are valid."));
@@ -315,10 +594,10 @@ bool BallooningDialog::applyMemoryChanges()
 
     qint64 staticMin, staticMax, dynamicMin, dynamicMax;
 
-    if (ui->radioFixed->isChecked())
+    if (this->ui->radioFixed->isChecked())
     {
         // Fixed allocation: all limits set to same value
-        qint64 fixedBytes = mbToBytes(ui->spinnerFixed->value());
+        qint64 fixedBytes = this->mbToBytes(this->ui->spinnerFixed->value());
         staticMin = fixedBytes;
         staticMax = fixedBytes;
         dynamicMin = fixedBytes;
@@ -326,51 +605,76 @@ bool BallooningDialog::applyMemoryChanges()
     } else
     {
         // Dynamic allocation
-        dynamicMin = mbToBytes(ui->spinnerDynMin->value());
-        dynamicMax = mbToBytes(ui->spinnerDynMax->value());
+        dynamicMin = this->mbToBytes(this->ui->spinnerDynMin->value());
+        dynamicMax = this->mbToBytes(this->ui->spinnerDynMax->value());
 
         // Static max = dynamic max
         staticMax = dynamicMax;
 
-        // Static min stays as original or use dynamic min
-        staticMin = m_originalStaticMin;
-        if (dynamicMin < staticMin)
-        {
-            staticMin = dynamicMin;
-        }
+        // Static min stays as original for dynamic allocation
+        staticMin = this->m_originalStaticMin;
+    }
+
+    if (this->bytesToMB(this->m_originalStaticMax) == this->bytesToMB(staticMax))
+    {
+        // Avoid false changes from rounding
+        if (dynamicMin == staticMax)
+            dynamicMin = this->m_originalStaticMax;
+        if (dynamicMax == staticMax)
+            dynamicMax = this->m_originalStaticMax;
+        staticMax = this->m_originalStaticMax;
     }
 
     // Check if anything actually changed
-    if (staticMin == m_originalStaticMin &&
-        staticMax == m_originalStaticMax &&
-        dynamicMin == m_originalDynamicMin &&
-        dynamicMax == m_originalDynamicMax)
+    if (staticMin == this->m_originalStaticMin &&
+        staticMax == this->m_originalStaticMax &&
+        dynamicMin == this->m_originalDynamicMin &&
+        dynamicMax == this->m_originalDynamicMax)
     {
         // No changes
         return true;
     }
 
+    bool staticChanged = staticMin != this->m_originalStaticMin || staticMax != this->m_originalStaticMax;
+    bool deferReboot = false; // this->checkboxDeferVisible && this->ui->checkBoxDeferReboot->isChecked();
+
+    if (staticChanged && !deferReboot)
+    {
+        QString powerState = this->m_vm ? this->m_vm->GetPowerState() : QString();
+        if (powerState != "Halted")
+        {
+            QMessageBox::StandardButton reply = QMessageBox::question(
+                this,
+                tr("Confirm Memory Change"),
+                tr("Changing the maximum memory for this VM requires it to be shut down and restarted. Continue?"),
+                QMessageBox::Yes | QMessageBox::No,
+                QMessageBox::No);
+
+            if (reply != QMessageBox::Yes)
+                return false;
+        }
+    }
+
     // Create and execute the memory settings action
-    if (!m_connection)
+    if (!this->m_connection)
     {
         QMessageBox::critical(this, tr("Error"), tr("No connection available"));
         return false;
     }
 
-    // Get VM object from cache
-    QSharedPointer<VM> vm = this->m_connection->GetCache()->ResolveObject<VM>("vm", this->m_vmRef);
-    if (!vm || !vm->IsValid())
+    if (!this->m_vm || !this->m_vm->IsValid())
     {
         QMessageBox::critical(this, tr("Error"), tr("VM not found in cache"));
         return false;
     }
 
     ChangeMemorySettingsAction* action = new ChangeMemorySettingsAction(
-        vm,
+        this->m_vm,
         staticMin,
         dynamicMin,
         dynamicMax,
         staticMax,
+        deferReboot,
         this);
 
     // Show progress dialog with the action
@@ -390,7 +694,7 @@ void BallooningDialog::onAccepted()
 {
     // C# Reference: BallooningDialog.cs buttonOK_Click
 
-    if (applyMemoryChanges())
+    if (this->applyMemoryChanges())
     {
         accept();
     } else

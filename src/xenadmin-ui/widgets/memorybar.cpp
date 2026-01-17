@@ -60,12 +60,12 @@ void MemoryBar::addSegment(const QString& name, qint64 bytes, const QColor& colo
 
 QSize MemoryBar::sizeHint() const
 {
-    return QSize(600, BAR_HEIGHT);
+    return QSize(600, BAR_HEIGHT + RULER_HEIGHT + 8);
 }
 
 QSize MemoryBar::minimumSizeHint() const
 {
-    return QSize(200, BAR_HEIGHT);
+    return QSize(200, BAR_HEIGHT + RULER_HEIGHT + 8);
 }
 
 void MemoryBar::paintEvent(QPaintEvent* event)
@@ -78,10 +78,11 @@ void MemoryBar::paintEvent(QPaintEvent* event)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    QRect barArea = rect().adjusted(2, 2, -2, -2);
+    QRect fullArea = rect().adjusted(2, 2, -2, -2);
+    int barTop = fullArea.top() + RULER_HEIGHT + 4;
+    QRect barArea(fullArea.left(), barTop, fullArea.width(), BAR_HEIGHT);
 
-    // Draw grid
-    drawGrid(painter, barArea);
+    drawRuler(painter, barArea);
 
     // Calculate bytes per pixel
     double bytesPerPixel = static_cast<double>(m_totalMemory) / static_cast<double>(barArea.width());
@@ -185,12 +186,66 @@ void MemoryBar::drawGrid(QPainter& painter, const QRect& barArea)
     painter.restore();
 }
 
+void MemoryBar::drawRuler(QPainter& painter, const QRect& barArea)
+{
+    if (m_totalMemory <= 0 || barArea.width() < 100)
+        return;
+
+    const int MIN_GAP = 40;
+    const qint64 BINARY_MEGA = 1024LL * 1024LL;
+    const qint64 BINARY_GIGA = 1024LL * 1024LL * 1024LL;
+
+    painter.save();
+    painter.setPen(QPen(QColor(120, 120, 120), 1));
+
+    QFont font = painter.font();
+    font.setPointSize(8);
+    painter.setFont(font);
+    QFontMetrics fm(font);
+
+    QString maxLabel = formatMemorySize(m_totalMemory);
+    int longest = fm.horizontalAdvance(maxLabel);
+
+    double bytesPerPixel = static_cast<double>(m_totalMemory) / static_cast<double>(barArea.width());
+    double incr = BINARY_MEGA / 2.0;
+    while (incr / bytesPerPixel * 2 < MIN_GAP + longest)
+        incr *= 2;
+
+    int rulerBottom = barArea.top() - 4;
+    int tickTop = rulerBottom - RULER_TICK_HEIGHT;
+    int textBottom = tickTop - 2;
+    int textTop = textBottom - fm.height();
+
+    bool withLabel = true;
+    for (double x = 0.0; x <= m_totalMemory; x += incr)
+    {
+        int pos = barArea.left() + static_cast<int>(x / bytesPerPixel);
+        painter.drawLine(pos, tickTop, pos, rulerBottom);
+
+        if (withLabel)
+        {
+            if (m_totalMemory <= BINARY_GIGA || static_cast<qint64>(x) % (BINARY_GIGA / 2) == 0)
+            {
+                QString label = formatMemorySize(static_cast<qint64>(x));
+                QSize size = fm.size(Qt::TextSingleLine, label);
+                QRect textRect(QPoint(pos - size.width() / 2, textTop), size);
+                painter.drawText(textRect, Qt::AlignCenter, label);
+            }
+        }
+        withLabel = !withLabel;
+    }
+
+    painter.restore();
+}
+
 void MemoryBar::mouseMoveEvent(QMouseEvent* event)
 {
     if (m_totalMemory <= 0)
         return;
 
-    QRect barArea = rect().adjusted(2, 2, -2, -2);
+    QRect fullArea = rect().adjusted(2, 2, -2, -2);
+    int barTop = fullArea.top() + RULER_HEIGHT + 4;
+    QRect barArea(fullArea.left(), barTop, fullArea.width(), BAR_HEIGHT);
     double bytesPerPixel = static_cast<double>(m_totalMemory) / static_cast<double>(barArea.width());
 
     double left = barArea.left();
