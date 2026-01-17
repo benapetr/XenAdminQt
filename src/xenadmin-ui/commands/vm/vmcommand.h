@@ -36,17 +36,13 @@ class VMCommand : public Command
 {
     public:
         VMCommand(MainWindow* mainWindow, QObject* parent);
-        VMCommand(QList<QSharedPointer<VM>> vms, MainWindow* mainWindow, QObject* parent);
 
     protected:
         QSharedPointer<VM> getVM() const;
+        QList<QSharedPointer<VM>> getVMs() const;
         QString getSelectedVMRef() const;
         QString getSelectedVMName() const;
-        bool isVMRunning() const;
         QSharedPointer<VM> m_overrideVM;
-
-        //! In case this command is meant to run over multiple VMs this is list to their references
-        QList<QSharedPointer<VM>> m_vms;
 };
 
 #endif // VMCOMMAND_H

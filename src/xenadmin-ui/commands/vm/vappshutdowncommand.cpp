@@ -30,9 +30,11 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vmappliance.h"
 #include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
+#include "../../selectionmanager.h"
 #include <QMessageBox>
 
 VappShutDownCommand::VappShutDownCommand(MainWindow* mainWindow, QObject* parent)
@@ -42,6 +44,80 @@ VappShutDownCommand::VappShutDownCommand(MainWindow* mainWindow, QObject* parent
 
 bool VappShutDownCommand::CanRun() const
 {
+    SelectionManager* selection = this->GetSelectionManager();
+    if (selection)
+    {
+        const QList<QTreeWidgetItem*> items = selection->SelectedItems();
+        const QList<QSharedPointer<XenObject>> objects = selection->SelectedObjects();
+        if (objects.isEmpty() || objects.size() != items.size())
+            return false;
+
+        bool allAppliances = true;
+        QList<QSharedPointer<VMAppliance>> appliances;
+        for (const QSharedPointer<XenObject>& obj : objects)
+        {
+            if (!obj)
+                return false;
+            const QString type = obj->GetObjectType();
+            if (type == "vm_appliance" || type == "appliance")
+            {
+                QSharedPointer<VMAppliance> appliance = qSharedPointerCast<VMAppliance>(obj);
+                if (appliance)
+                    appliances.append(appliance);
+                else
+                    allAppliances = false;
+            } else
+            {
+                allAppliances = false;
+            }
+        }
+
+        if (allAppliances && !appliances.isEmpty())
+        {
+            for (const QSharedPointer<VMAppliance>& appliance : appliances)
+            {
+                if (this->canShutDownAppliance(appliance))
+                    return true;
+            }
+            return false;
+        }
+
+        bool allVms = true;
+        for (const QSharedPointer<XenObject>& obj : objects)
+        {
+            if (!obj || obj->GetObjectType() != "vm")
+            {
+                allVms = false;
+                break;
+            }
+        }
+
+        if (allVms)
+        {
+            const QList<QSharedPointer<VM>> vms = selection->SelectedVMs();
+            if (vms.isEmpty())
+                return false;
+
+            QString applianceRef = vms.first()->ApplianceRef();
+            if (applianceRef.isEmpty() || applianceRef == "OpaqueRef:NULL")
+                return false;
+
+            for (const QSharedPointer<VM>& vm : vms)
+            {
+                if (!vm || vm->ApplianceRef() != applianceRef)
+                    return false;
+            }
+
+            XenConnection* connection = vms.first()->GetConnection();
+            XenCache* cache = connection ? connection->GetCache() : nullptr;
+            if (!cache)
+                return false;
+
+            QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+            return this->canShutDownAppliance(appliance);
+        }
+    }
+
     QString objRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
 
@@ -93,6 +169,148 @@ bool VappShutDownCommand::CanRun() const
 
 void VappShutDownCommand::Run()
 {
+    SelectionManager* selection = this->GetSelectionManager();
+    if (selection)
+    {
+        const QList<QTreeWidgetItem*> items = selection->SelectedItems();
+        const QList<QSharedPointer<XenObject>> objects = selection->SelectedObjects();
+        if (!objects.isEmpty() && objects.size() == items.size())
+        {
+            bool allAppliances = true;
+            QList<QSharedPointer<VMAppliance>> appliances;
+            for (const QSharedPointer<XenObject>& obj : objects)
+            {
+                if (!obj)
+                    return;
+                const QString type = obj->GetObjectType();
+                if (type == "vm_appliance" || type == "appliance")
+                {
+                    QSharedPointer<VMAppliance> appliance = qSharedPointerCast<VMAppliance>(obj);
+                    if (appliance)
+                        appliances.append(appliance);
+                    else
+                        allAppliances = false;
+                } else
+                {
+                    allAppliances = false;
+                }
+            }
+
+            if (allAppliances && !appliances.isEmpty())
+            {
+                QStringList appNames;
+                for (const QSharedPointer<VMAppliance>& appliance : appliances)
+                    appNames.append(appliance ? appliance->GetName() : QString());
+
+                QMessageBox::StandardButton reply = QMessageBox::question(
+                    this->mainWindow(),
+                    tr("Shut Down vApp"),
+                    tr("Are you sure you want to shut down vApp(s): %1?\n\n"
+                       "All VMs in the appliance will be shut down gracefully.")
+                        .arg(appNames.join(", ")),
+                    QMessageBox::Yes | QMessageBox::No);
+
+                if (reply != QMessageBox::Yes)
+                    return;
+
+                for (const QSharedPointer<VMAppliance>& appliance : appliances)
+                {
+                    if (!this->canShutDownAppliance(appliance))
+                        continue;
+
+                    XenConnection* connection = appliance->GetConnection();
+                    if (!connection || !connection->IsConnected())
+                        continue;
+
+                    ShutDownApplianceAction* action = new ShutDownApplianceAction(connection, appliance->OpaqueRef(), this->mainWindow());
+                    OperationManager::instance()->RegisterOperation(action);
+                    connect(action, &AsyncOperation::completed, this, [=]() {
+                        if (action->GetState() == AsyncOperation::Completed)
+                        {
+                            this->mainWindow()->ShowStatusMessage(
+                                tr("vApp '%1' shut down successfully").arg(appliance->GetName()), 5000);
+                        } else if (action->GetState() == AsyncOperation::Failed)
+                        {
+                            QMessageBox::critical(this->mainWindow(), tr("Error"),
+                                                  tr("Failed to shut down vApp '%1':\n%2")
+                                                      .arg(appliance->GetName(), action->GetErrorMessage()));
+                        }
+
+                        action->deleteLater();
+                    });
+                    action->RunAsync();
+                }
+                return;
+            }
+
+            bool allVms = true;
+            for (const QSharedPointer<XenObject>& obj : objects)
+            {
+                if (!obj || obj->GetObjectType() != "vm")
+                {
+                    allVms = false;
+                    break;
+                }
+            }
+
+            if (allVms)
+            {
+                const QList<QSharedPointer<VM>> vms = selection->SelectedVMs();
+                if (vms.isEmpty())
+                    return;
+
+                QString applianceRef = vms.first()->ApplianceRef();
+                if (applianceRef.isEmpty() || applianceRef == "OpaqueRef:NULL")
+                    return;
+
+                for (const QSharedPointer<VM>& vm : vms)
+                {
+                    if (!vm || vm->ApplianceRef() != applianceRef)
+                        return;
+                }
+
+                XenConnection* connection = vms.first()->GetConnection();
+                XenCache* cache = connection ? connection->GetCache() : nullptr;
+                if (!cache)
+                    return;
+
+                QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+                if (!appliance || !this->canShutDownAppliance(appliance))
+                    return;
+
+                QMessageBox::StandardButton reply = QMessageBox::question(
+                    this->mainWindow(),
+                    tr("Shut Down vApp"),
+                    tr("Are you sure you want to shut down vApp '%1'?\n\n"
+                       "All VMs in the appliance will be shut down gracefully.")
+                        .arg(appliance->GetName()),
+                    QMessageBox::Yes | QMessageBox::No);
+
+                if (reply != QMessageBox::Yes)
+                    return;
+
+                ShutDownApplianceAction* action = new ShutDownApplianceAction(connection, applianceRef, this->mainWindow());
+                OperationManager::instance()->RegisterOperation(action);
+                connect(action, &AsyncOperation::completed, this, [=]() {
+                    if (action->GetState() == AsyncOperation::Completed)
+                    {
+                        this->mainWindow()->ShowStatusMessage(
+                            tr("vApp '%1' shut down successfully").arg(appliance->GetName()), 5000);
+                    } else if (action->GetState() == AsyncOperation::Failed)
+                    {
+                        QMessageBox::critical(this->mainWindow(), tr("Error"),
+                                              tr("Failed to shut down vApp '%1':\n%2")
+                                                  .arg(appliance->GetName(), action->GetErrorMessage()));
+                    }
+
+                    action->deleteLater();
+                });
+                action->RunAsync();
+                return;
+            }
+        }
+    }
+
     QString objRef = this->getSelectedObjectRef();
     QString type = this->getSelectedObjectType();
     QString applianceRef;

@@ -49,8 +49,7 @@ void VMPropertiesCommand::Run()
     if (!this->CanRun())
     {
         qWarning() << "VMPropertiesCommand: Cannot execute - no VM selected or invalid state";
-        QMessageBox::warning(nullptr, tr("Cannot Show Properties"),
-                             tr("No VM is selected or the VM is in an invalid state."));
+        QMessageBox::warning(nullptr, tr("Cannot Show Properties"), tr("No VM is selected or the VM is in an invalid state."));
         return;
     }
 

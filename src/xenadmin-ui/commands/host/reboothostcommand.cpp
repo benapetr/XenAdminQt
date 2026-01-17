@@ -41,11 +41,6 @@ RebootHostCommand::RebootHostCommand(MainWindow* mainWindow, QObject* parent) : 
 {
 }
 
-RebootHostCommand::RebootHostCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent)
-    : HostCommand(hosts, mainWindow, parent)
-{
-}
-
 bool RebootHostCommand::CanRun() const
 {
     const QList<QSharedPointer<Host>> hosts = this->getHosts();

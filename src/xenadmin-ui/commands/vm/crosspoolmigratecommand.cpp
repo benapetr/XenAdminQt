@@ -31,8 +31,7 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
 
-CrossPoolMigrateCommand::CrossPoolMigrateCommand(MainWindow* mainWindow, CrossPoolMigrateWizard::WizardMode mode, QObject* parent)
-    : VMCommand(mainWindow, parent), m_mode(mode)
+CrossPoolMigrateCommand::CrossPoolMigrateCommand(MainWindow* mainWindow, CrossPoolMigrateWizard::WizardMode mode, QObject* parent) : VMCommand(mainWindow, parent), m_mode(mode)
 {
 }
 

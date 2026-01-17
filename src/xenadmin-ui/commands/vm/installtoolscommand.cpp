@@ -42,7 +42,7 @@ bool InstallToolsCommand::CanRun() const
         return false;
 
     // Can install tools if VM is running and tools are not already installed/current
-    return this->isVMRunning() && this->canInstallTools();
+    return vm->IsRunning() && this->canInstallTools();
 }
 
 void InstallToolsCommand::Run()

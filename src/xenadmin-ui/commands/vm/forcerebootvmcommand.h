@@ -42,7 +42,6 @@ class ForceRebootVMCommand : public VMCommand
 
     public:
         explicit ForceRebootVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit ForceRebootVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;

@@ -1368,7 +1368,7 @@ bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm,
     if (this->m_mode == WizardMode::Migrate && vm->GetConnection() == targetConnection)
     {
         QString ignored;
-        if (VMOperationHelpers::VmCanBootOnHost(vm->GetConnection(), vm, hostRef, "pool_migrate", &ignored))
+        if (VMOperationHelpers::VMCanBootOnHost(vm->GetConnection(), vm, hostRef, "pool_migrate", &ignored))
             return true;
     }
 

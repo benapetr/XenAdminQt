@@ -39,10 +39,6 @@ CloneVMCommand::CloneVMCommand(MainWindow* mainWindow, QObject* parent) : VMComm
 {
 }
 
-CloneVMCommand::CloneVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
-{
-}
-
 bool CloneVMCommand::CanRun() const
 {
     QSharedPointer<VM> vm = this->getVM();

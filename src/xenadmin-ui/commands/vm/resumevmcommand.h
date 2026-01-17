@@ -36,7 +36,6 @@ class ResumeVMCommand : public VMCommand
 
     public:
         explicit ResumeVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit ResumeVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;
@@ -50,7 +49,7 @@ class ResumeVMCommand : public VMCommand
          * @param vmName Optional display name.
          * @return true if action scheduled.
          */
-        bool runForVm(const QSharedPointer<VM>& vm, const QString& vmName = QString(), bool promptUser = false);
+        bool RunForVm(const QSharedPointer<VM>& vm, const QString& vmName = QString(), bool promptUser = false);
 };
 
 #endif // RESUMEVMCOMMAND_H

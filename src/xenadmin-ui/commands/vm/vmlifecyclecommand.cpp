@@ -27,6 +27,7 @@
 
 #include "vmlifecyclecommand.h"
 #include "../../mainwindow.h"
+#include "../../selectionmanager.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/vm.h"
 #include <QMessageBox>
@@ -39,6 +40,21 @@ VMLifeCycleCommand::VMLifeCycleCommand(MainWindow* mainWindow, QObject* parent) 
 
 bool VMLifeCycleCommand::CanRun() const
 {
+    SelectionManager* selection = this->GetSelectionManager();
+    if (selection)
+    {
+        const QList<QTreeWidgetItem*> items = selection->SelectedItems();
+        const QList<QSharedPointer<XenObject>> objects = selection->SelectedObjects();
+        if (objects.isEmpty() || objects.size() != items.size())
+            return false;
+
+        for (const QSharedPointer<XenObject>& obj : objects)
+        {
+            if (!obj || obj->GetObjectType() != "vm")
+                return false;
+        }
+    }
+
     const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
     if (selectedVms.isEmpty())
         return false;
@@ -114,55 +130,32 @@ QString VMLifeCycleCommand::MenuText() const
 
 QList<QSharedPointer<VM>> VMLifeCycleCommand::getSelectedVMs() const
 {
-    QList<QSharedPointer<VM>> selectedVms;
-
-    if (!this->mainWindow())
-        return selectedVms;
-
-    QTreeWidget* treeWidget = this->mainWindow()->GetServerTreeWidget();
-    if (!treeWidget)
-        return selectedVms;
-
-    const QList<QTreeWidgetItem*> selectedItems = treeWidget->selectedItems();
-    for (QTreeWidgetItem* item : selectedItems)
+    SelectionManager* selection = this->GetSelectionManager();
+    if (selection)
     {
-        if (!item)
-            continue;
+        const QList<QSharedPointer<VM>> vms = selection->SelectedVMs();
+        if (!vms.isEmpty())
+            return vms;
+    }
 
-        QVariant data = item->data(0, Qt::UserRole);
-        if (!data.canConvert<QSharedPointer<XenObject>>())
-            continue;
-
-        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (!obj || obj->GetObjectType() != "vm")
-            continue;
-
+    QSharedPointer<XenObject> obj = this->GetObject();
+    if (obj && obj->GetObjectType() == "vm")
+    {
         QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
         if (vm)
-            selectedVms.append(vm);
+            return { vm };
     }
 
-    if (selectedVms.isEmpty())
-    {
-        QSharedPointer<XenObject> obj = this->GetObject();
-        if (obj && obj->GetObjectType() == "vm")
-        {
-            QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
-            if (vm)
-                selectedVms.append(vm);
-        }
-    }
-
-    return selectedVms;
+    return {};
 }
 
 QString VMLifeCycleCommand::getSelectedVMRef() const
 {
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
+    const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
+    if (selectedVms.isEmpty())
         return QString();
 
-    return this->getSelectedObjectRef();
+    return selectedVms.first()->OpaqueRef();
 }
 
 QString VMLifeCycleCommand::getVMPowerState() const

@@ -49,7 +49,6 @@ class DeleteVMCommand : public VMCommand
 
     public:
         explicit DeleteVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit DeleteVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;

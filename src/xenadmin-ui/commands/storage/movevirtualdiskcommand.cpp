@@ -91,7 +91,7 @@ bool MoveVirtualDiskCommand::canBeMoved(QSharedPointer<VDI> vdi) const
     }
 
     // Check if VDI has CBT enabled
-    if (vdi->CbtEnabled())
+    if (vdi->IsCBTEnabled())
     {
         return false;
     }

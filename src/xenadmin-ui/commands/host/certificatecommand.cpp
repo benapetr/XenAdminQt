@@ -48,10 +48,6 @@ CertificateCommand::CertificateCommand(MainWindow* mainWindow, QObject* parent) 
 {
 }
 
-CertificateCommand::CertificateCommand(MainWindow* mainWindow, const QList<QSharedPointer<Host>>& hosts, QObject* parent) : Command(mainWindow, parent), m_hosts(hosts)
-{
-}
-
 bool CertificateCommand::CanRun() const
 {
     QList<QSharedPointer<Host>> hosts = this->getHosts();
@@ -88,24 +84,26 @@ bool CertificateCommand::CanRun() const
 
 QList<QSharedPointer<Host>> CertificateCommand::getHosts() const
 {
-    if (!this->m_hosts.isEmpty())
-        return this->m_hosts;
-    
-    // TODO: Get from main window selection
-    // For now, return empty list
     QList<QSharedPointer<Host>> hosts;
-    
-    QString type = this->getSelectedObjectType();
-    if (type == "host")
+    const QList<QSharedPointer<XenObject>> objects = this->getSelectedObjects();
+    for (const QSharedPointer<XenObject>& obj : objects)
     {
-        QSharedPointer<Host> host = this->getSelectedObject().dynamicCast<Host>();
+        if (!obj || obj->GetObjectType() != "host")
+            continue;
+
+        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
         if (host && host->IsValid())
-        {
             hosts.append(host);
-        }
     }
-    
-    return hosts;
+
+    if (!hosts.isEmpty())
+        return hosts;
+
+    QSharedPointer<Host> host = this->getSelectedObject().dynamicCast<Host>();
+    if (host && host->IsValid())
+        return { host };
+
+    return {};
 }
 
 bool CertificateCommand::isVersionSupported(XenConnection* connection) const
@@ -122,11 +120,6 @@ bool CertificateCommand::isVersionSupported(XenConnection* connection) const
 
 InstallCertificateCommand::InstallCertificateCommand(MainWindow* mainWindow, QObject* parent)
     : CertificateCommand(mainWindow, parent)
-{
-}
-
-InstallCertificateCommand::InstallCertificateCommand(MainWindow* mainWindow, const QList<QSharedPointer<Host>>& hosts, QObject* parent)
-    : CertificateCommand(mainWindow, hosts, parent)
 {
 }
 
@@ -170,11 +163,6 @@ void InstallCertificateCommand::Run()
 
 ResetCertificateCommand::ResetCertificateCommand(MainWindow* mainWindow, QObject* parent)
     : CertificateCommand(mainWindow, parent)
-{
-}
-
-ResetCertificateCommand::ResetCertificateCommand(MainWindow* mainWindow, const QList<QSharedPointer<Host>>& hosts, QObject* parent)
-    : CertificateCommand(mainWindow, hosts, parent)
 {
 }
 

@@ -25,8 +25,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-
 #ifndef NEWVMCOMMAND_H
 #define NEWVMCOMMAND_H
 

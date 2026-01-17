@@ -104,6 +104,7 @@ SOURCES += \
     dialogs/optionspages/saveandrestoreoptionspage.cpp \
     dialogs/optionspages/connectionoptionspage.cpp \
     operations/operationmanager.cpp \
+    selectionmanager.cpp \
     actions/meddlingaction.cpp \
     actions/meddlingactionmanager.cpp \
     commands/command.cpp \
@@ -252,6 +253,7 @@ HEADERS += \
     globals.h \
     mainwindow.h \
     mainwindowtreebuilder.h \
+    selectionmanager.h \
     tabpages/vmstoragetabpage.h \
     titlebar.h \
     placeholderwidget.h \

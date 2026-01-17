@@ -221,7 +221,7 @@ bool VDI::IsToolsIso() const
     return false;
 }
 
-bool VDI::CbtEnabled() const
+bool VDI::IsCBTEnabled() const
 {
     return this->boolProperty("cbt_enabled", false);
 }

@@ -37,10 +37,6 @@ ConvertVMToTemplateCommand::ConvertVMToTemplateCommand(MainWindow* mainWindow, Q
 {
 }
 
-ConvertVMToTemplateCommand::ConvertVMToTemplateCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
-{
-}
-
 bool ConvertVMToTemplateCommand::CanRun() const
 {
     QSharedPointer<VM> vm = this->getVM();

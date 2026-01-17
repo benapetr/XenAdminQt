@@ -27,6 +27,7 @@
 
 #include "shutdowncommand.h"
 #include "../mainwindow.h"
+#include "../selectionmanager.h"
 #include "host/shutdownhostcommand.h"
 #include "vm/stopvmcommand.h"
 #include <QMessageBox>
@@ -38,19 +39,20 @@ ShutdownCommand::ShutdownCommand(MainWindow* mainWindow, QObject* parent)
 
 bool ShutdownCommand::CanRun() const
 {
-    // Matches C# ShutDownCommand.CanRunCore: try host first, then VM
-    // This allows the button to be enabled if EITHER a shutdownable host OR VM is selected
+    // Matches C# ShutDownCommand.CanRunCore: use selection type.
+    SelectionManager* selection = this->GetSelectionManager();
+    if (!selection)
+        return false;
 
-    QString objectType = this->getSelectedObjectType();
-
-    if (objectType == "host")
+    const QString selectionType = selection->SelectionType();
+    if (selectionType == "host")
     {
-        // Check if host can be shut down
         ShutdownHostCommand hostCmd(this->mainWindow(), nullptr);
         return hostCmd.CanRun();
-    } else if (objectType == "vm")
+    }
+
+    if (selectionType == "vm")
     {
-        // Check if VM can be shut down
         StopVMCommand vmCmd(this->mainWindow(), nullptr);
         return vmCmd.CanRun();
     }
@@ -60,34 +62,31 @@ bool ShutdownCommand::CanRun() const
 
 void ShutdownCommand::Run()
 {
-    // Matches C# ShutDownCommand.RunCore: try host first, then VM
-    QString objectType = this->getSelectedObjectType();
+    SelectionManager* selection = this->GetSelectionManager();
+    if (!selection)
+        return;
 
-    if (objectType == "host")
+    const QString selectionType = selection->SelectionType();
+    if (selectionType == "host")
     {
-        ShutdownHostCommand* hostCmd = new ShutdownHostCommand(this->mainWindow(), this);
-        if (hostCmd->CanRun())
+        ShutdownHostCommand hostCmd(this->mainWindow(), this);
+        if (hostCmd.CanRun())
         {
-            hostCmd->Run();
-            hostCmd->deleteLater();
+            hostCmd.Run();
             return;
         }
-        hostCmd->deleteLater();
     }
 
-    if (objectType == "vm")
+    if (selectionType == "vm")
     {
-        StopVMCommand* vmCmd = new StopVMCommand(this->mainWindow(), this);
-        if (vmCmd->CanRun())
+        StopVMCommand vmCmd(this->mainWindow(), this);
+        if (vmCmd.CanRun())
         {
-            vmCmd->Run();
-            vmCmd->deleteLater();
+            vmCmd.Run();
             return;
         }
-        vmCmd->deleteLater();
     }
 
-    // If we get here, neither command could run
     QMessageBox::warning(this->mainWindow(), "Cannot Shutdown",
                          "The selected object cannot be shut down.");
 }

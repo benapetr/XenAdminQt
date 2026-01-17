@@ -151,7 +151,7 @@ class XENLIB_EXPORT VDI : public XenObject
         bool IsToolsIso() const;
 
         //! Check if Changed Block Tracking is enabled for this VDI
-        bool CbtEnabled() const;
+        bool IsCBTEnabled() const;
 
         // Object resolution getters
         QSharedPointer<SR> GetSR() const;

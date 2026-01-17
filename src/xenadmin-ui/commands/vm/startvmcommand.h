@@ -36,7 +36,6 @@ class StartVMCommand : public VMCommand
 
     public:
         explicit StartVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit StartVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;

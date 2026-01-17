@@ -56,10 +56,6 @@ DisconnectHostCommand::DisconnectHostCommand(MainWindow* mainWindow, QObject* pa
 {
 }
 
-DisconnectHostCommand::DisconnectHostCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent) : HostCommand(hosts, mainWindow, parent)
-{
-}
-
 bool DisconnectHostCommand::CanRun() const
 {
     // Can disconnect if:

@@ -36,7 +36,6 @@ class UnpauseVMCommand : public VMCommand
 
     public:
         explicit UnpauseVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit UnpauseVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;

@@ -42,6 +42,7 @@
 #include "connection/cancelhostconnectioncommand.h"
 #include "connection/disconnecthostsandpoolscommand.h"
 #include "connection/forgetsavedpasswordcommand.h"
+#include "../selectionmanager.h"
 #include "pool/joinpoolcommand.h"
 #include "pool/ejecthostfrompoolcommand.h"
 #include "pool/disconnectpoolcommand.h"
@@ -350,29 +351,29 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
     };
 
     // Power operations are always present; enablement depends on selected VMs.
-    StartVMCommand* startCmd = new StartVMCommand(selectedVms, this->m_mainWindow, this);
+    StartVMCommand* startCmd = new StartVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, startCmd);
 
-    StopVMCommand* stopCmd = new StopVMCommand(selectedVms, this->m_mainWindow, this);
+    StopVMCommand* stopCmd = new StopVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, stopCmd);
 
-    SuspendVMCommand* suspendCmd = new SuspendVMCommand(selectedVms, this->m_mainWindow, this);
+    SuspendVMCommand* suspendCmd = new SuspendVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, suspendCmd);
 
-    RestartVMCommand* restartCmd = new RestartVMCommand(selectedVms, this->m_mainWindow, this);
+    RestartVMCommand* restartCmd = new RestartVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, restartCmd);
 
-    PauseVMCommand* pauseCmd = new PauseVMCommand(selectedVms, this->m_mainWindow, this);
+    PauseVMCommand* pauseCmd = new PauseVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, pauseCmd);
 
-    UnpauseVMCommand* unpauseCmd = new UnpauseVMCommand(selectedVms, this->m_mainWindow, this);
+    UnpauseVMCommand* unpauseCmd = new UnpauseVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, unpauseCmd);
 
-    ResumeVMCommand* resumeCmd = new ResumeVMCommand(selectedVms, this->m_mainWindow, this);
+    ResumeVMCommand* resumeCmd = new ResumeVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, resumeCmd);
 
-    ForceShutdownVMCommand* forceShutdownCmd = new ForceShutdownVMCommand(selectedVms, this->m_mainWindow, this);
-    ForceRebootVMCommand* forceRebootCmd = new ForceRebootVMCommand(selectedVms, this->m_mainWindow, this);
+    ForceShutdownVMCommand* forceShutdownCmd = new ForceShutdownVMCommand(this->m_mainWindow, this);
+    ForceRebootVMCommand* forceRebootCmd = new ForceRebootVMCommand(this->m_mainWindow, this);
     if (forceShutdownCmd->CanRun() || forceRebootCmd->CanRun())
     {
         this->addSeparator(menu);
@@ -403,16 +404,16 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
     this->addSeparator(menu);
 
     // VM management operations
-    CloneVMCommand* cloneCmd = new CloneVMCommand(selectedVms, this->m_mainWindow, this);
+    CloneVMCommand* cloneCmd = new CloneVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, cloneCmd);
 
-    ExportVMCommand* exportCmd = new ExportVMCommand(selectedVms, this->m_mainWindow, this);
+    ExportVMCommand* exportCmd = new ExportVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, exportCmd);
 
     // Convert to template (only for halted VMs)
     if (powerState == "Halted")
     {
-        ConvertVMToTemplateCommand* convertCmd = new ConvertVMToTemplateCommand(selectedVms, this->m_mainWindow, this);
+        ConvertVMToTemplateCommand* convertCmd = new ConvertVMToTemplateCommand(this->m_mainWindow, this);
         this->addCommand(menu, convertCmd);
     }
 
@@ -424,7 +425,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 
     this->addSeparator(menu);
 
-    DeleteVMCommand* deleteCmd = new DeleteVMCommand(selectedVms, this->m_mainWindow, this);
+    DeleteVMCommand* deleteCmd = new DeleteVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, deleteCmd);
 
     this->addSeparator(menu);
@@ -527,14 +528,14 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> 
     {
         if (anyLive && anyDead)
         {
-            ShutdownHostCommand* shutdownCmd = new ShutdownHostCommand(selectedHosts, this->m_mainWindow, this);
+            ShutdownHostCommand* shutdownCmd = new ShutdownHostCommand(this->m_mainWindow, this);
             this->addCommand(menu, shutdownCmd);
 
-            PowerOnHostCommand* powerOnCmd = new PowerOnHostCommand(selectedHosts, this->m_mainWindow, this);
+            PowerOnHostCommand* powerOnCmd = new PowerOnHostCommand(this->m_mainWindow, this);
             this->addCommand(menu, powerOnCmd);
 
             RestartToolstackCommand* restartToolstackCmd =
-                new RestartToolstackCommand(selectedHosts, this->m_mainWindow, this);
+                new RestartToolstackCommand(this->m_mainWindow, this);
             this->addCommand(menu, restartToolstackCmd);
         } else if (anyLive)
         {
@@ -542,24 +543,24 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> 
             if (addToPoolMenu->CanRun())
                 menu->addMenu(addToPoolMenu);
 
-            DisconnectHostCommand* disconnectCmd = new DisconnectHostCommand(selectedHosts, this->m_mainWindow, this);
+            DisconnectHostCommand* disconnectCmd = new DisconnectHostCommand(this->m_mainWindow, this);
             this->addCommand(menu, disconnectCmd);
 
-            RebootHostCommand* rebootCmd = new RebootHostCommand(selectedHosts, this->m_mainWindow, this);
+            RebootHostCommand* rebootCmd = new RebootHostCommand(this->m_mainWindow, this);
             this->addCommand(menu, rebootCmd);
 
-            ShutdownHostCommand* shutdownCmd = new ShutdownHostCommand(selectedHosts, this->m_mainWindow, this);
+            ShutdownHostCommand* shutdownCmd = new ShutdownHostCommand(this->m_mainWindow, this);
             this->addCommand(menu, shutdownCmd);
 
             RestartToolstackCommand* restartToolstackCmd =
-                new RestartToolstackCommand(selectedHosts, this->m_mainWindow, this);
+                new RestartToolstackCommand(this->m_mainWindow, this);
             this->addCommand(menu, restartToolstackCmd);
         } else
         {
-            PowerOnHostCommand* powerOnCmd = new PowerOnHostCommand(selectedHosts, this->m_mainWindow, this);
+            PowerOnHostCommand* powerOnCmd = new PowerOnHostCommand(this->m_mainWindow, this);
             this->addCommand(menu, powerOnCmd);
 
-            DestroyHostCommand* destroyCmd = new DestroyHostCommand(selectedHosts, this->m_mainWindow, this);
+            DestroyHostCommand* destroyCmd = new DestroyHostCommand(this->m_mainWindow, this);
             this->addCommand(menu, destroyCmd);
         }
         return;
@@ -571,10 +572,10 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> 
 
     if (!selectedHost->IsLive())
     {
-        PowerOnHostCommand* powerOnCmd = new PowerOnHostCommand(selectedHosts, this->m_mainWindow, this);
+        PowerOnHostCommand* powerOnCmd = new PowerOnHostCommand(this->m_mainWindow, this);
         this->addCommand(menu, powerOnCmd);
 
-        DestroyHostCommand* destroyCmd = new DestroyHostCommand(selectedHosts, this->m_mainWindow, this);
+        DestroyHostCommand* destroyCmd = new DestroyHostCommand(this->m_mainWindow, this);
         this->addCommand(menu, destroyCmd);
 
         this->addSeparator(menu);
@@ -602,15 +603,15 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> 
         this->addSeparator(menu);
     }
 
-    CertificateCommand* certCmd = new CertificateCommand(this->m_mainWindow, selectedHosts, menu);
+    CertificateCommand* certCmd = new CertificateCommand(this->m_mainWindow, menu);
     if (certCmd->CanRun())
     {
         QMenu* certMenu = menu->addMenu(certCmd->MenuText());
         InstallCertificateCommand* installCmd =
-            new InstallCertificateCommand(this->m_mainWindow, selectedHosts, certMenu);
+            new InstallCertificateCommand(this->m_mainWindow, certMenu);
         this->addCommand(certMenu, installCmd);
         ResetCertificateCommand* resetCmd =
-            new ResetCertificateCommand(this->m_mainWindow, selectedHosts, certMenu);
+            new ResetCertificateCommand(this->m_mainWindow, certMenu);
         this->addCommand(certMenu, resetCmd);
         this->addSeparator(menu);
     }
@@ -630,20 +631,20 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> 
     this->addSeparator(menu);
 
     // Power operations
-    RebootHostCommand* rebootCmd = new RebootHostCommand(selectedHosts, this->m_mainWindow, this);
+    RebootHostCommand* rebootCmd = new RebootHostCommand(this->m_mainWindow, this);
     this->addCommand(menu, rebootCmd);
 
-    ShutdownHostCommand* shutdownCmd = new ShutdownHostCommand(selectedHosts, this->m_mainWindow, this);
+    ShutdownHostCommand* shutdownCmd = new ShutdownHostCommand(this->m_mainWindow, this);
     this->addCommand(menu, shutdownCmd);
 
     if (!inPool)
     {
-        PowerOnHostCommand* powerOnCmd = new PowerOnHostCommand(selectedHosts, this->m_mainWindow, this);
+        PowerOnHostCommand* powerOnCmd = new PowerOnHostCommand(this->m_mainWindow, this);
         this->addCommand(menu, powerOnCmd);
     }
 
     RestartToolstackCommand* restartToolstackCmd =
-        new RestartToolstackCommand(selectedHosts, this->m_mainWindow, this);
+        new RestartToolstackCommand(this->m_mainWindow, this);
     this->addCommand(menu, restartToolstackCmd);
 
     this->addSeparator(menu);
@@ -655,7 +656,7 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> 
     }
     else
     {
-        DisconnectHostCommand* disconnectCmd = new DisconnectHostCommand(selectedHosts, this->m_mainWindow, this);
+        DisconnectHostCommand* disconnectCmd = new DisconnectHostCommand(this->m_mainWindow, this);
         this->addCommand(menu, disconnectCmd);
 
         HostReconnectAsCommand* reconnectAsCmd = new HostReconnectAsCommand(this->m_mainWindow, this);
@@ -800,100 +801,21 @@ void ContextMenuBuilder::addSeparator(QMenu* menu)
 
 QList<QSharedPointer<VM>> ContextMenuBuilder::getSelectedVMs() const
 {
-    QList<QSharedPointer<VM>> vms;
-    if (!this->m_mainWindow)
-        return vms;
-
-    QTreeWidget* tree = this->m_mainWindow->GetServerTreeWidget();
-    if (!tree)
-        return vms;
-
-    const QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
-    for (QTreeWidgetItem* item : selectedItems)
-    {
-        if (!item)
-            continue;
-
-        QVariant data = item->data(0, Qt::UserRole);
-        if (!data.canConvert<QSharedPointer<XenObject>>())
-            continue;
-
-        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (!obj || obj->GetObjectType() != "vm")
-            continue;
-
-        QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
-        if (vm)
-            vms.append(vm);
-    }
-
-    return vms;
+    return this->m_mainWindow && this->m_mainWindow->GetSelectionManager()
+        ? this->m_mainWindow->GetSelectionManager()->SelectedVMs()
+        : QList<QSharedPointer<VM>>();
 }
 
 QList<QSharedPointer<Host>> ContextMenuBuilder::getSelectedHosts() const
 {
-    QList<QSharedPointer<Host>> hosts;
-    if (!this->m_mainWindow)
-        return hosts;
-
-    QTreeWidget* tree = this->m_mainWindow->GetServerTreeWidget();
-    if (!tree)
-        return hosts;
-
-    const QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
-    for (QTreeWidgetItem* item : selectedItems)
-    {
-        if (!item)
-            continue;
-
-        QVariant data = item->data(0, Qt::UserRole);
-        if (!data.canConvert<QSharedPointer<XenObject>>())
-            continue;
-
-        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (!obj || obj->GetObjectType() != "host")
-            continue;
-
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
-        if (host)
-            hosts.append(host);
-    }
-
-    return hosts;
+    return this->m_mainWindow && this->m_mainWindow->GetSelectionManager()
+        ? this->m_mainWindow->GetSelectionManager()->SelectedHosts()
+        : QList<QSharedPointer<Host>>();
 }
 
 QList<XenConnection*> ContextMenuBuilder::getSelectedConnections() const
 {
-    QList<XenConnection*> connections;
-    if (!this->m_mainWindow)
-        return connections;
-
-    QTreeWidget* tree = this->m_mainWindow->GetServerTreeWidget();
-    if (!tree)
-        return connections;
-
-    const QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
-    for (QTreeWidgetItem* item : selectedItems)
-    {
-        if (!item)
-            continue;
-
-        QVariant data = item->data(0, Qt::UserRole);
-        if (data.canConvert<XenConnection*>())
-        {
-            XenConnection* connection = data.value<XenConnection*>();
-            if (connection)
-                connections.append(connection);
-            continue;
-        }
-
-        if (!data.canConvert<QSharedPointer<XenObject>>())
-            continue;
-
-        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (obj && obj->GetConnection())
-            connections.append(obj->GetConnection());
-    }
-
-    return connections;
+    return this->m_mainWindow && this->m_mainWindow->GetSelectionManager()
+        ? this->m_mainWindow->GetSelectionManager()->SelectedConnections()
+        : QList<XenConnection*>();
 }

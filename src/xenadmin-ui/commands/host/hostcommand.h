@@ -38,14 +38,12 @@ class HostCommand : public Command
 
     public:
         HostCommand(MainWindow* mainWindow, QObject* parent);
-        HostCommand(QList<QSharedPointer<Host>> hosts, MainWindow* mainWindow, QObject* parent);
 
     protected:
         QSharedPointer<Host> getSelectedHost() const;
         QString getSelectedHostRef() const;
         QString getSelectedHostName() const;
         QList<QSharedPointer<Host>> getHosts() const;
-        QList<QSharedPointer<Host>> m_hosts;
 };
 
 #endif // HOSTCOMMAND_H

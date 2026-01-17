@@ -52,15 +52,12 @@ PauseVMCommand::PauseVMCommand(MainWindow* mainWindow, QObject* parent) : VMComm
 {
 }
 
-PauseVMCommand::PauseVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
-{
-}
-
 bool PauseVMCommand::CanRun() const
 {
-    if (!this->m_vms.isEmpty())
+    const QList<QSharedPointer<VM>> vms = this->getVMs();
+    if (!vms.isEmpty())
     {
-        for (const QSharedPointer<VM>& vm : this->m_vms)
+        for (const QSharedPointer<VM>& vm : vms)
         {
             if (canPauseVm(vm))
                 return true;
@@ -102,9 +99,10 @@ void PauseVMCommand::Run()
         action->RunAsync();
     };
 
-    if (!this->m_vms.isEmpty())
+    const QList<QSharedPointer<VM>> vms = this->getVMs();
+    if (!vms.isEmpty())
     {
-        for (const QSharedPointer<VM>& vm : this->m_vms)
+        for (const QSharedPointer<VM>& vm : vms)
         {
             if (canPauseVm(vm))
                 runForVm(vm);

@@ -37,11 +37,6 @@ RestartToolstackCommand::RestartToolstackCommand(MainWindow* mainWindow, QObject
 {
 }
 
-RestartToolstackCommand::RestartToolstackCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent)
-    : HostCommand(hosts, mainWindow, parent)
-{
-}
-
 bool RestartToolstackCommand::CanRun() const
 {
     const QList<QSharedPointer<Host>> hosts = this->getHosts();

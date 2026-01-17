@@ -36,7 +36,6 @@ class ConvertVMToTemplateCommand : public VMCommand
 
     public:
         explicit ConvertVMToTemplateCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit ConvertVMToTemplateCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;

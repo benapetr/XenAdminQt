@@ -90,15 +90,12 @@ ForceRebootVMCommand::ForceRebootVMCommand(MainWindow* mainWindow, QObject* pare
 {
 }
 
-ForceRebootVMCommand::ForceRebootVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
-{
-}
-
 bool ForceRebootVMCommand::CanRun() const
 {
-    if (!this->m_vms.isEmpty())
+    const QList<QSharedPointer<VM>> vms = this->getVMs();
+    if (!vms.isEmpty())
     {
-        for (const QSharedPointer<VM>& vm : this->m_vms)
+        for (const QSharedPointer<VM>& vm : vms)
         {
             if (canForceRebootVm(vm))
                 return true;
@@ -129,10 +126,11 @@ void ForceRebootVMCommand::Run()
         action->RunAsync();
     };
 
-    if (this->m_vms.size() > 1)
+    const QList<QSharedPointer<VM>> vms = this->getVMs();
+    if (vms.size() > 1)
     {
         bool anyRunningTasks = false;
-        for (const QSharedPointer<VM>& vm : this->m_vms)
+        for (const QSharedPointer<VM>& vm : vms)
         {
             if (!vm->CurrentOperations().isEmpty())
             {
@@ -158,7 +156,7 @@ void ForceRebootVMCommand::Run()
         if (reply != QMessageBox::Yes)
             return;
 
-        for (const QSharedPointer<VM>& vm : this->m_vms)
+        for (const QSharedPointer<VM>& vm : vms)
         {
             if (canForceRebootVm(vm))
                 runForVm(vm);
@@ -166,7 +164,7 @@ void ForceRebootVMCommand::Run()
         return;
     }
 
-    QSharedPointer<VM> vm = this->m_vms.size() == 1 ? this->m_vms.first() : this->getVM();
+    QSharedPointer<VM> vm = vms.size() == 1 ? vms.first() : this->getVM();
     if (!vm || !canForceRebootVm(vm))
         return;
 

@@ -32,49 +32,49 @@ VMCommand::VMCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWind
 {
 }
 
-VMCommand::VMCommand(QList<QSharedPointer<VM>> vms, MainWindow *mainWindow, QObject *parent) : Command(mainWindow, parent)
-{
-    this->m_vms = vms;
-}
-
 QSharedPointer<VM> VMCommand::getVM() const
 {
-    if (!this->m_overrideVM.isNull())
-        return this->m_overrideVM;
+    const QList<QSharedPointer<VM>> vms = this->getVMs();
+    if (!vms.isEmpty())
+        return vms.first();
     return qSharedPointerCast<VM>(this->GetObject());
+}
+
+QList<QSharedPointer<VM>> VMCommand::getVMs() const
+{
+    if (!this->m_overrideVM.isNull())
+        return { this->m_overrideVM };
+
+    QList<QSharedPointer<VM>> vms;
+    const QList<QSharedPointer<XenObject>> objects = this->getSelectedObjects();
+    for (const QSharedPointer<XenObject>& obj : objects)
+    {
+        if (!obj || obj->GetObjectType() != "vm")
+            continue;
+
+        QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
+        if (vm)
+            vms.append(vm);
+    }
+
+    if (!vms.isEmpty())
+        return vms;
+
+    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->GetObject());
+    if (vm)
+        return { vm };
+
+    return {};
 }
 
 QString VMCommand::getSelectedVMRef() const
 {
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return this->getSelectedObjectRef();
+    const QList<QSharedPointer<VM>> vms = this->getVMs();
+    return vms.isEmpty() ? QString() : vms.first()->OpaqueRef();
 }
 
 QString VMCommand::getSelectedVMName() const
 {
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
-        return QString();
-
-    return item->text(0);
-}
-
-bool VMCommand::isVMRunning() const
-{
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return false;
-
-    return (vm->GetPowerState() == "Running");
+    const QList<QSharedPointer<VM>> vms = this->getVMs();
+    return vms.isEmpty() ? QString() : vms.first()->GetName();
 }

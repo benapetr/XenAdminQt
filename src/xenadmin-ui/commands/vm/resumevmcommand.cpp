@@ -56,15 +56,12 @@ ResumeVMCommand::ResumeVMCommand(MainWindow* mainWindow, QObject* parent) : VMCo
 {
 }
 
-ResumeVMCommand::ResumeVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
-{
-}
-
 bool ResumeVMCommand::CanRun() const
 {
-    if (!this->m_vms.isEmpty())
+    const QList<QSharedPointer<VM>> vms = this->getVMs();
+    if (!vms.isEmpty())
     {
-        for (const QSharedPointer<VM>& vm : this->m_vms)
+        for (const QSharedPointer<VM>& vm : vms)
         {
             if (canResumeVm(vm))
                 return true;
@@ -77,27 +74,28 @@ bool ResumeVMCommand::CanRun() const
 
 void ResumeVMCommand::Run()
 {
-    if (this->m_vms.size() > 1)
+    const QList<QSharedPointer<VM>> vms = this->getVMs();
+    if (vms.size() > 1)
     {
         int ret = QMessageBox::question(this->mainWindow(), tr("Resume VMs"), tr("Are you sure you want to resume the selected VMs?"), QMessageBox::Yes | QMessageBox::No);
         if (ret != QMessageBox::Yes)
             return;
 
-        for (const QSharedPointer<VM>& vm : this->m_vms)
+        for (const QSharedPointer<VM>& vm : vms)
         {
             if (canResumeVm(vm))
-                runForVm(vm, vm->GetName(), false);
+                RunForVm(vm, vm->GetName(), false);
         }
         return;
     }
-    QSharedPointer<VM> vm = this->m_vms.size() == 1 ? this->m_vms.first() : this->getVM();
+    QSharedPointer<VM> vm = vms.size() == 1 ? vms.first() : this->getVM();
     if (!vm || !canResumeVm(vm))
         return;
 
-    runForVm(vm, vm->GetName(), true);
+    RunForVm(vm, vm->GetName(), true);
 }
 
-bool ResumeVMCommand::runForVm(const QSharedPointer<VM>& vm, const QString& vmName, bool promptUser)
+bool ResumeVMCommand::RunForVm(const QSharedPointer<VM>& vm, const QString& vmName, bool promptUser)
 {
     if (!vm)
         return false;
@@ -144,7 +142,7 @@ bool ResumeVMCommand::runForVm(const QSharedPointer<VM>& vm, const QString& vmNa
                 if (!mainWindow)
                     return;
 
-                VMOperationHelpers::startDiagnosisForm(conn, vmRef, displayName, false, failureCopy, mainWindow);
+                VMOperationHelpers::StartDiagnosisForm(conn, vmRef, displayName, false, failureCopy, mainWindow);
             }, Qt::QueuedConnection);
         },
         this->mainWindow());

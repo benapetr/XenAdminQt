@@ -39,8 +39,7 @@ ExportSnapshotAsTemplateCommand::ExportSnapshotAsTemplateCommand(MainWindow* mai
 {
 }
 
-ExportSnapshotAsTemplateCommand::ExportSnapshotAsTemplateCommand(const QString& snapshotRef, XenConnection* connection, MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent), m_snapshotRef(snapshotRef), m_connection(connection)
+ExportSnapshotAsTemplateCommand::ExportSnapshotAsTemplateCommand(const QString& snapshotRef, XenConnection* connection, MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent), m_snapshotRef(snapshotRef), m_connection(connection)
 {
 }
 

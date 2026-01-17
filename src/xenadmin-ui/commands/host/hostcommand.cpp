@@ -27,17 +27,11 @@
 
 #include "hostcommand.h"
 #include "xenlib/xen/host.h"
-#include "xenlib/xen/xenobject.h"
 #include "../../mainwindow.h"
 #include <QTreeWidget>
 
 HostCommand::HostCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
-}
-
-HostCommand::HostCommand(QList<QSharedPointer<Host> > hosts, MainWindow *mainWindow, QObject *parent) : Command(mainWindow, parent)
-{
-    this->m_hosts = hosts;
 }
 
 QSharedPointer<Host> HostCommand::getSelectedHost() const
@@ -51,54 +45,22 @@ QSharedPointer<Host> HostCommand::getSelectedHost() const
 
 QString HostCommand::getSelectedHostRef() const
 {
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return this->getSelectedObjectRef();
+    QSharedPointer<Host> host = this->getSelectedHost();
+    return host ? host->OpaqueRef() : QString();
 }
 
 QString HostCommand::getSelectedHostName() const
 {
-    QTreeWidgetItem* item = this->getSelectedItem();
-    if (!item)
-        return QString();
-
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "host")
-        return QString();
-
-    return item->text(0);
+    QSharedPointer<Host> host = this->getSelectedHost();
+    return host ? host->GetName() : QString();
 }
 
 QList<QSharedPointer<Host>> HostCommand::getHosts() const
 {
-    if (!this->m_hosts.isEmpty())
-        return this->m_hosts;
-
     QList<QSharedPointer<Host>> hosts;
-    if (!this->mainWindow())
-        return hosts;
-
-    QTreeWidget* treeWidget = this->mainWindow()->GetServerTreeWidget();
-    if (!treeWidget)
-        return hosts;
-
-    const QList<QTreeWidgetItem*> selectedItems = treeWidget->selectedItems();
-    for (QTreeWidgetItem* item : selectedItems)
+    const QList<QSharedPointer<XenObject>> objects = this->getSelectedObjects();
+    for (const QSharedPointer<XenObject>& obj : objects)
     {
-        if (!item)
-            continue;
-
-        QVariant data = item->data(0, Qt::UserRole);
-        if (!data.canConvert<QSharedPointer<XenObject>>())
-            continue;
-
-        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
         if (!obj || obj->GetObjectType() != "host")
             continue;
 
@@ -107,5 +69,12 @@ QList<QSharedPointer<Host>> HostCommand::getHosts() const
             hosts.append(host);
     }
 
-    return hosts;
+    if (!hosts.isEmpty())
+        return hosts;
+
+    QSharedPointer<Host> host = qSharedPointerCast<Host>(this->GetObject());
+    if (host)
+        return { host };
+
+    return {};
 }

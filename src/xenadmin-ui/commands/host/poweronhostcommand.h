@@ -42,7 +42,6 @@ class PowerOnHostCommand : public HostCommand
 
     public:
         explicit PowerOnHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit PowerOnHostCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;

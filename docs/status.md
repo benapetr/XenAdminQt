@@ -22,7 +22,6 @@
 * Create VM from template
 
 # Needs polish
-* General tab - shows data, but access to data is weird (should use native XenObjects and their properties instead of scrapping QVarianMaps), overall layout is also not good
 * Memory tabs - they already work, but could look better
 * Console - it works most of the time, but there are random scaling issues during boot, RDP not supported
 * UI - menus and toolbar buttons sometime don't refresh on events (unpause -> still shows force shutdown)
@@ -30,7 +29,6 @@
 # Needs testing
 * VM disk resize
 * VM disk move
-* VM live migration
 * VM cross pool migration
 * Properties of Hosts, VMs and Pools
 * VM deleting
@@ -42,6 +40,7 @@
 * Connection to pool - redirect from slave to master
 * Connection persistence
 * Basic VM controls (start / reboot / shutdown)
+* VM live migration
 * Pause / Unpause
 * Suspend / Resume
 * Snapshots
@@ -52,5 +51,6 @@
 * Tree view (infrastructure / objects)
 * Events history
 * Network tab (VM)
+* General tab
 * Host command -> Restart toolstack
 

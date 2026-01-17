@@ -64,7 +64,7 @@ class VMOperationHelpers : public QObject
          * \param isStart true if this is a start operation, false for resume
          * \param parent Parent widget for dialogs
          */
-        static void startDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, QWidget* parent = nullptr);
+        static void StartDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, QWidget* parent = nullptr);
 
         /*!
          * \brief Show diagnosis form after catching a Failure
@@ -83,12 +83,12 @@ class VMOperationHelpers : public QObject
          * \param failure The Failure exception that was caught
          * \param parent Parent widget for dialogs
          */
-        static void startDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, const Failure& failure, QWidget* parent = nullptr);
+        static void StartDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, const Failure& failure, QWidget* parent = nullptr);
 
         /*!
          * \brief Check if VM can boot/migrate on a host
          *
-         * Mirrors C# VMOperationHostCommand.VmCanBootOnHost.
+         * Mirrors C# VMOperationHostCommand.VMCanBootOnHost.
          *
          * \param connection XenServer connection
          * \param vm VM object
@@ -97,11 +97,7 @@ class VMOperationHelpers : public QObject
          * \param cannotBootReason Optional output for reason text
          * \return true if the VM can boot on the host
          */
-        static bool VmCanBootOnHost(XenConnection* connection,
-                                    const QSharedPointer<VM>& vm,
-                                    const QString& hostRef,
-                                    const QString& operation,
-                                    QString* cannotBootReason = nullptr);
+        static bool VMCanBootOnHost(XenConnection* connection, const QSharedPointer<VM>& vm, const QString& hostRef, const QString& operation, QString* cannotBootReason = nullptr);
 
     private:
         VMOperationHelpers() = delete;  // Static-only class

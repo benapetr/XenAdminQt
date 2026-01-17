@@ -25,38 +25,61 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DESTROYHOSTCOMMAND_H
-#define DESTROYHOSTCOMMAND_H
+#ifndef SELECTIONMANAGER_H
+#define SELECTIONMANAGER_H
 
-#include "hostcommand.h"
+#include <QObject>
+#include <QSharedPointer>
+#include <QList>
 
-/**
- * @brief Destroys the selected hosts.
- *
- * Qt port of C# DestroyHostCommand. Destroys hosts that are not live
- * and are not pool coordinators. Requires confirmation from user.
- *
- * Can run if:
- * - Single or multiple hosts selected
- * - Host is not live (not running)
- * - Host is not the pool coordinator
- * - Host belongs to a pool
- */
-class DestroyHostCommand : public HostCommand
+class MainWindow;
+class QTreeWidget;
+class QTreeWidgetItem;
+class XenObject;
+class VM;
+class Host;
+class XenConnection;
+
+class SelectionManager : public QObject
 {
     Q_OBJECT
 
     public:
-        explicit DestroyHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        enum class SelectionKind
+        {
+            None,
+            Single,
+            Multiple
+        };
 
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
+        explicit SelectionManager(MainWindow* mainWindow, QObject* parent = nullptr);
+
+        QTreeWidgetItem* PrimaryItem() const;
+        QList<QTreeWidgetItem*> SelectedItems() const;
+
+        QSharedPointer<XenObject> PrimaryObject() const;
+        QString PrimaryType() const;
+        QString SelectionType() const;
+        QList<QSharedPointer<XenObject>> SelectedObjects() const;
+        QList<QSharedPointer<XenObject>> SelectedObjectsByType(const QString& objectType) const;
+        QStringList SelectedTypes() const;
+        SelectionKind SelectionKindValue() const;
+        bool HasSelection() const;
+        bool HasMultipleSelection() const;
+
+        QList<QSharedPointer<VM>> SelectedVMs() const;
+        QList<QSharedPointer<Host>> SelectedHosts() const;
+        QList<XenConnection*> SelectedConnections() const;
+
+    signals:
+        void SelectionChanged();
+
+    private slots:
+        void onSelectionChanged();
 
     private:
-        bool isHostLive(QSharedPointer<Host> host) const;
-        QString buildConfirmationMessage(QSharedPointer<Host> host) const;
-        QString buildConfirmationTitle() const;
+        QTreeWidget* treeWidget() const;
+        MainWindow* m_mainWindow = nullptr;
 };
 
-#endif // DESTROYHOSTCOMMAND_H
+#endif // SELECTIONMANAGER_H

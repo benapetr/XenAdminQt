@@ -259,6 +259,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         }
     }
 
+    this->m_selectionManager = new SelectionManager(this, this);
+    connect(this->m_selectionManager, &SelectionManager::SelectionChanged, this, &MainWindow::updateToolbarsAndMenus);
+
     // Connect tab change signal to notify tab pages
     connect(this->ui->mainTabWidget, &QTabWidget::currentChanged, this, &MainWindow::onTabChanged);
 
@@ -2555,15 +2558,6 @@ void MainWindow::SetCurrentTab(const QString& tabName)
 void MainWindow::onStartVMButton()
 {
     // Matches C# StartVMCommand execution from toolbar
-    const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
-    if (!selectedVms.isEmpty())
-    {
-        StartVMCommand cmd(selectedVms, this);
-        if (cmd.CanRun())
-            cmd.Run();
-        return;
-    }
-
     StartVMCommand cmd(this);
     if (cmd.CanRun())
         cmd.Run();
@@ -2572,21 +2566,17 @@ void MainWindow::onStartVMButton()
 void MainWindow::onShutDownButton()
 {
     // Use polymorphic Shutdown command (handles both VMs and Hosts - matches C# ShutDownCommand)
-    const QList<QSharedPointer<Host>> selectedHosts = this->getSelectedHosts();
-    if (!selectedHosts.isEmpty())
+    ShutdownHostCommand hostCmd(this, this);
+    if (hostCmd.CanRun())
     {
-        ShutdownHostCommand cmd(selectedHosts, this, this);
-        if (cmd.CanRun())
-            cmd.Run();
+        hostCmd.Run();
         return;
     }
 
-    const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
-    if (!selectedVms.isEmpty())
+    StopVMCommand vmCmd(this, this);
+    if (vmCmd.CanRun())
     {
-        StopVMCommand cmd(selectedVms, this, this);
-        if (cmd.CanRun())
-            cmd.Run();
+        vmCmd.Run();
         return;
     }
 
@@ -2597,21 +2587,17 @@ void MainWindow::onShutDownButton()
 void MainWindow::onRebootButton()
 {
     // Use polymorphic Reboot command (handles both VMs and Hosts - matches C# RebootCommand pattern)
-    const QList<QSharedPointer<Host>> selectedHosts = this->getSelectedHosts();
-    if (!selectedHosts.isEmpty())
+    RebootHostCommand hostCmd(this, this);
+    if (hostCmd.CanRun())
     {
-        RebootHostCommand cmd(selectedHosts, this, this);
-        if (cmd.CanRun())
-            cmd.Run();
+        hostCmd.Run();
         return;
     }
 
-    const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
-    if (!selectedVms.isEmpty())
+    RestartVMCommand vmCmd(this, this);
+    if (vmCmd.CanRun())
     {
-        RestartVMCommand cmd(selectedVms, this, this);
-        if (cmd.CanRun())
-            cmd.Run();
+        vmCmd.Run();
         return;
     }
 
@@ -2622,15 +2608,6 @@ void MainWindow::onRebootButton()
 void MainWindow::onResumeButton()
 {
     // Matches C# ResumeVMCommand execution from toolbar
-    const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
-    if (!selectedVms.isEmpty())
-    {
-        ResumeVMCommand cmd(selectedVms, this);
-        if (cmd.CanRun())
-            cmd.Run();
-        return;
-    }
-
     ResumeVMCommand cmd(this);
     if (cmd.CanRun())
         cmd.Run();
@@ -2639,15 +2616,6 @@ void MainWindow::onResumeButton()
 void MainWindow::onSuspendButton()
 {
     // Matches C# SuspendVMCommand execution from toolbar
-    const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
-    if (!selectedVms.isEmpty())
-    {
-        SuspendVMCommand cmd(selectedVms, this);
-        if (cmd.CanRun())
-            cmd.Run();
-        return;
-    }
-
     SuspendVMCommand cmd(this);
     if (cmd.CanRun())
         cmd.Run();
@@ -2656,15 +2624,6 @@ void MainWindow::onSuspendButton()
 void MainWindow::onPauseButton()
 {
     // Matches C# PauseVMCommand execution from toolbar
-    const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
-    if (!selectedVms.isEmpty())
-    {
-        PauseVMCommand cmd(selectedVms, this);
-        if (cmd.CanRun())
-            cmd.Run();
-        return;
-    }
-
     PauseVMCommand cmd(this);
     if (cmd.CanRun())
         cmd.Run();
@@ -2673,15 +2632,6 @@ void MainWindow::onPauseButton()
 void MainWindow::onUnpauseButton()
 {
     // Matches C# UnPauseVMCommand execution from toolbar
-    const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
-    if (!selectedVms.isEmpty())
-    {
-        UnpauseVMCommand cmd(selectedVms, this);
-        if (cmd.CanRun())
-            cmd.Run();
-        return;
-    }
-
     UnpauseVMCommand cmd(this);
     if (cmd.CanRun())
         cmd.Run();
@@ -2690,15 +2640,6 @@ void MainWindow::onUnpauseButton()
 void MainWindow::onForceShutdownButton()
 {
     // Matches C# ForceVMShutDownCommand execution from toolbar
-    const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
-    if (!selectedVms.isEmpty())
-    {
-        ForceShutdownVMCommand cmd(selectedVms, this);
-        if (cmd.CanRun())
-            cmd.Run();
-        return;
-    }
-
     ForceShutdownVMCommand cmd(this);
     if (cmd.CanRun())
         cmd.Run();
@@ -2707,15 +2648,6 @@ void MainWindow::onForceShutdownButton()
 void MainWindow::onForceRebootButton()
 {
     // Matches C# ForceVMRebootCommand execution from toolbar
-    const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
-    if (!selectedVms.isEmpty())
-    {
-        ForceRebootVMCommand cmd(selectedVms, this);
-        if (cmd.CanRun())
-            cmd.Run();
-        return;
-    }
-
     ForceRebootVMCommand cmd(this);
     if (cmd.CanRun())
         cmd.Run();
@@ -2725,15 +2657,6 @@ void MainWindow::onForceRebootButton()
 void MainWindow::onPowerOnHostButton()
 {
     // Matches C# PowerOnHostCommand execution from toolbar
-    const QList<QSharedPointer<Host>> selectedHosts = this->getSelectedHosts();
-    if (!selectedHosts.isEmpty())
-    {
-        PowerOnHostCommand cmd(selectedHosts, this);
-        if (cmd.CanRun())
-            cmd.Run();
-        return;
-    }
-
     PowerOnHostCommand cmd(this);
     if (cmd.CanRun())
         cmd.Run();
@@ -3054,60 +2977,12 @@ QString MainWindow::getSelectedObjectName() const
 
 QList<QSharedPointer<VM>> MainWindow::getSelectedVMs() const
 {
-    QList<QSharedPointer<VM>> vms;
-    QTreeWidget* tree = this->GetServerTreeWidget();
-    if (!tree)
-        return vms;
-
-    const QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
-    for (QTreeWidgetItem* item : selectedItems)
-    {
-        if (!item)
-            continue;
-
-        QVariant data = item->data(0, Qt::UserRole);
-        if (!data.canConvert<QSharedPointer<XenObject>>())
-            continue;
-
-        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (!obj || obj->GetObjectType() != "vm")
-            continue;
-
-        QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
-        if (vm)
-            vms.append(vm);
-    }
-
-    return vms;
+    return this->m_selectionManager ? this->m_selectionManager->SelectedVMs() : QList<QSharedPointer<VM>>();
 }
 
 QList<QSharedPointer<Host>> MainWindow::getSelectedHosts() const
 {
-    QList<QSharedPointer<Host>> hosts;
-    QTreeWidget* tree = this->GetServerTreeWidget();
-    if (!tree)
-        return hosts;
-
-    const QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
-    for (QTreeWidgetItem* item : selectedItems)
-    {
-        if (!item)
-            continue;
-
-        QVariant data = item->data(0, Qt::UserRole);
-        if (!data.canConvert<QSharedPointer<XenObject>>())
-            continue;
-
-        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (!obj || obj->GetObjectType() != "host")
-            continue;
-
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
-        if (host)
-            hosts.append(host);
-    }
-
-    return hosts;
+    return this->m_selectionManager ? this->m_selectionManager->SelectedHosts() : QList<QSharedPointer<Host>>();
 }
 
 // ============================================================================

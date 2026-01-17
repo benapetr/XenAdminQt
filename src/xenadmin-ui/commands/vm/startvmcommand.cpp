@@ -59,15 +59,12 @@ StartVMCommand::StartVMCommand(MainWindow* mainWindow, QObject* parent) : VMComm
 {
 }
 
-StartVMCommand::StartVMCommand(const QList<QSharedPointer<VM>>& selectedVms, MainWindow* mainWindow, QObject* parent) : VMCommand(selectedVms, mainWindow, parent)
-{
-}
-
 bool StartVMCommand::CanRun() const
 {
-    if (!this->m_vms.isEmpty())
+    const QList<QSharedPointer<VM>> vms = this->getVMs();
+    if (!vms.isEmpty())
     {
-        for (const QSharedPointer<VM>& vm : this->m_vms)
+        for (const QSharedPointer<VM>& vm : vms)
         {
             if (canStartVm(vm))
                 return true;
@@ -80,9 +77,10 @@ bool StartVMCommand::CanRun() const
 
 void StartVMCommand::Run()
 {
-    if (!this->m_vms.isEmpty())
+    const QList<QSharedPointer<VM>> vms = this->getVMs();
+    if (!vms.isEmpty())
     {
-        foreach (QSharedPointer<VM> vm, this->m_vms)
+        for (const QSharedPointer<VM>& vm : vms)
         {
             if (canStartVm(vm))
                 this->RunForVm(vm);
@@ -126,7 +124,7 @@ bool StartVMCommand::RunForVm(QSharedPointer<VM> vm)
             QMetaObject::invokeMethod(mainWindow, [mainWindow, conn, vm, displayName, failureCopy]() {
                 if (!mainWindow)
                     return;
-                VMOperationHelpers::startDiagnosisForm(conn, vm->OpaqueRef(), displayName, true, failureCopy, mainWindow);
+                VMOperationHelpers::StartDiagnosisForm(conn, vm->OpaqueRef(), displayName, true, failureCopy, mainWindow);
             }, Qt::QueuedConnection);
         },
         this->mainWindow());

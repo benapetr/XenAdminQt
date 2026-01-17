@@ -33,6 +33,7 @@
 #include <QStringList>
 #include <QTreeWidgetItem>
 #include <QIcon>
+#include <QSharedPointer>
 
 class MainWindow;
 class XenObject;
@@ -94,6 +95,7 @@ class Command : public QObject
         }
 
         QSharedPointer<XenObject> GetObject() const;
+        class SelectionManager* GetSelectionManager() const;
 
     protected:
         /**
@@ -130,9 +132,20 @@ class Command : public QObject
          */
         QSharedPointer<XenObject> getSelectedObject() const;
 
+        /**
+         * @brief Override selection for this command (used for explicit selections)
+         */
+        void SetSelectionOverride(const QList<QSharedPointer<XenObject>>& objects);
+
+        /**
+         * @brief Get selected objects (override or SelectionManager)
+         */
+        QList<QSharedPointer<XenObject>> getSelectedObjects() const;
+
     private:
         MainWindow* m_mainWindow;
         QStringList m_selection;
+        QList<QSharedPointer<XenObject>> m_selectionOverride;
 };
 
 #endif // COMMAND_H

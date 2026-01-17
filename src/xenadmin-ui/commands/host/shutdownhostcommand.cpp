@@ -37,10 +37,6 @@ ShutdownHostCommand::ShutdownHostCommand(MainWindow* mainWindow, QObject* parent
 {
 }
 
-ShutdownHostCommand::ShutdownHostCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent) : HostCommand(hosts, mainWindow, parent)
-{
-}
-
 namespace
 {
     bool canShutdownHost(const QSharedPointer<Host>& host)

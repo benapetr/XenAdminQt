@@ -28,6 +28,8 @@
 #include "movevmcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/crosspoolmigratewizard.h"
+#include "xen/vbd.h"
+#include "xen/vdi.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/actions/vm/vmmoveaction.h"
@@ -52,16 +54,14 @@ bool MoveVMCommand::CanRun() const
     if (!cache)
         return false;
 
-    QStringList vbdRefs = vm->GetVBDRefs();
-    for (const QString& vbdRef : vbdRefs)
+    QList<QSharedPointer<VBD>> vbds = vm->GetVBDs();
+    foreach (QSharedPointer<VBD> vbd, vbds)
     {
-        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-        QString vdiRef = vbdData.value("VDI").toString();
-        if (vdiRef.isEmpty())
+        QSharedPointer<VDI> vdi = vbd->GetVDI();
+        if (!vdi)
             continue;
 
-        QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-        if (vdiData.value("cbt_enabled", false).toBool())
+        if (vdi->IsCBTEnabled())
             return false;
     }
 
@@ -74,9 +74,7 @@ void MoveVMCommand::Run()
     if (!vm)
         return;
 
-    CrossPoolMigrateCommand crossPoolCmd(this->mainWindow(),
-                                         CrossPoolMigrateWizard::WizardMode::Move,
-                                         this->mainWindow());
+    CrossPoolMigrateCommand crossPoolCmd(this->mainWindow(), CrossPoolMigrateWizard::WizardMode::Move, this->mainWindow());
     if (crossPoolCmd.CanRun())
     {
         CrossPoolMigrateWizard wizard(this->mainWindow(), vm, CrossPoolMigrateWizard::WizardMode::Move);
@@ -110,13 +108,7 @@ void MoveVMCommand::Run()
     }
 
     bool ok = false;
-    QString selectedName = QInputDialog::getItem(this->mainWindow(),
-                                                 tr("Move VM"),
-                                                 tr("Select target SR:"),
-                                                 srNames,
-                                                 0,
-                                                 false,
-                                                 &ok);
+    QString selectedName = QInputDialog::getItem(this->mainWindow(), tr("Move VM"), tr("Select target SR:"), srNames, 0, false, &ok);
     if (!ok || selectedName.isEmpty())
         return;
 

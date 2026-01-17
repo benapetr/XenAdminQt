@@ -34,18 +34,12 @@
 #include "xenlib/xen/network/connection.h"
 #include <QMessageBox>
 
-NewVMFromSnapshotCommand::NewVMFromSnapshotCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+NewVMFromSnapshotCommand::NewVMFromSnapshotCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
-NewVMFromSnapshotCommand::NewVMFromSnapshotCommand(const QString& snapshotRef,
-                                                   XenConnection* connection,
-                                                   MainWindow* mainWindow,
-                                                   QObject* parent)
-    : Command(mainWindow, parent),
-      m_snapshotRef(snapshotRef),
-      m_connection(connection)
+NewVMFromSnapshotCommand::NewVMFromSnapshotCommand(const QString& snapshotRef, XenConnection* connection, MainWindow* mainWindow, QObject* parent)
+    : Command(mainWindow, parent), m_snapshotRef(snapshotRef), m_connection(connection)
 {
 }
 
@@ -95,8 +89,7 @@ void NewVMFromSnapshotCommand::Run()
     QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", snapshotRef);
     if (!snapshot || !snapshot->IsSnapshot())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not a Snapshot"),
-                             tr("Selected item is not a VM snapshot"));
+        QMessageBox::warning(this->mainWindow(), tr("Not a Snapshot"), tr("Selected item is not a VM snapshot"));
         return;
     }
 

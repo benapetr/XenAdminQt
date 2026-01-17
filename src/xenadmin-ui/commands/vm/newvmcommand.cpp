@@ -35,20 +35,17 @@
 #include "xenlib/xen/xenobject.h"
 #include <QtWidgets>
 
-NewVMCommand::NewVMCommand(QObject* parent)
-    : Command(nullptr, parent)
+NewVMCommand::NewVMCommand(QObject* parent) : Command(nullptr, parent)
 {
     // qDebug() << "NewVMCommand: Created default constructor";
 }
 
-NewVMCommand::NewVMCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+NewVMCommand::NewVMCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
     // qDebug() << "NewVMCommand: Created with MainWindow";
 }
 
-NewVMCommand::NewVMCommand(const QString& templateUuid, MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent), m_defaultTemplateUuid(templateUuid)
+NewVMCommand::NewVMCommand(const QString& templateUuid, MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent), m_defaultTemplateUuid(templateUuid)
 {
     // qDebug() << "NewVMCommand: Created with template UUID:" << templateUuid;
 }

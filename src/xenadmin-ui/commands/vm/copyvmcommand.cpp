@@ -31,8 +31,7 @@
 #include "xenlib/xen/vm.h"
 #include <QMessageBox>
 
-CopyVMCommand::CopyVMCommand(MainWindow* mainWindow, QObject* parent)
-    : VMCommand(mainWindow, parent)
+CopyVMCommand::CopyVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
 }
 

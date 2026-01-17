@@ -91,11 +91,11 @@ namespace
     }
 }
 
-void VMOperationHelpers::startDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, QWidget* parent)
+void VMOperationHelpers::StartDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, QWidget* parent)
 {
-    if (connection)
+    if (!connection)
     {
-        qWarning() << "VMOperationHelpers::startDiagnosisForm: Invalid xenLib or connection";
+        qWarning() << "VMOperationHelpers::startDiagnosisForm: Invalid connection";
         return;
     }
 
@@ -107,18 +107,13 @@ void VMOperationHelpers::startDiagnosisForm(XenConnection* connection, const QSt
     }
 
     XenCache* cache = connection->GetCache();
-    if (!cache)
-    {
-        qWarning() << "VMOperationHelpers::startDiagnosisForm: XenCache is not available";
-        return;
-    }
 
     QString title = isStart ? QObject::tr("Error Starting VM") : QObject::tr("Error Resuming VM");
     QString text = QObject::tr("The VM '%1' could not be %2. The following servers cannot run this VM:")
                        .arg(vmName, isStart ? "started" : "resumed");
 
     QMap<QString, QPair<QString, QString>> reasons;
-    QList<QVariantMap> hosts = cache->GetAllData("host");
+    QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
     
     if (hosts.isEmpty())
     {
@@ -130,17 +125,10 @@ void VMOperationHelpers::startDiagnosisForm(XenConnection* connection, const QSt
 
     qDebug() << "VMOperationHelpers: Checking" << hosts.size() << "hosts for VM" << vmName;
 
-    for (const QVariantMap& hostData : hosts)
+    foreach (const QSharedPointer<Host> &host, hosts)
     {
-        QString hostRef = hostData.value("ref").toString();
-        QString hostName = hostData.value("name_label", "Unknown Host").toString();
-
-        if (hostRef.isEmpty())
-        {
-            qWarning() << "VMOperationHelpers: Host with no ref, skipping";
-            continue;
-        }
-
+        QString hostRef = host->OpaqueRef();
+        QString hostName = host->GetName();
         QString reason;
         bool canBoot = false;
 
@@ -177,14 +165,12 @@ void VMOperationHelpers::startDiagnosisForm(XenConnection* connection, const QSt
     }
     else
     {
-        CommandErrorDialog dialog(title, text, reasons, 
-                                 CommandErrorDialog::DialogMode::Close, 
-                                 parent);
+        CommandErrorDialog dialog(title, text, reasons, CommandErrorDialog::DialogMode::Close, parent);
         dialog.exec();
     }
 }
 
-void VMOperationHelpers::startDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, const Failure& failure, QWidget* parent)
+void VMOperationHelpers::StartDiagnosisForm(XenConnection* connection, const QString& vmRef, const QString& vmName, bool isStart, const Failure& failure, QWidget* parent)
 {
     QString errorCode = failure.errorCode();
     
@@ -194,7 +180,7 @@ void VMOperationHelpers::startDiagnosisForm(XenConnection* connection, const QSt
     if (errorCode == Failure::NO_HOSTS_AVAILABLE)
     {
         qDebug() << "VMOperationHelpers: NO_HOSTS_AVAILABLE - starting host diagnosis";
-        startDiagnosisForm(connection, vmRef, vmName, isStart, parent);
+        StartDiagnosisForm(connection, vmRef, vmName, isStart, parent);
     }
     else if (errorCode == Failure::HA_OPERATION_WOULD_BREAK_FAILOVER_PLAN)
     {
@@ -253,11 +239,7 @@ void VMOperationHelpers::startDiagnosisForm(XenConnection* connection, const QSt
     }
 }
 
-bool VMOperationHelpers::VmCanBootOnHost(XenConnection* connection,
-                                         const QSharedPointer<VM>& vm,
-                                         const QString& hostRef,
-                                         const QString& operation,
-                                         QString* cannotBootReason)
+bool VMOperationHelpers::VMCanBootOnHost(XenConnection* connection, const QSharedPointer<VM>& vm, const QString& hostRef, const QString& operation, QString* cannotBootReason)
 {
     if (!vm)
     {

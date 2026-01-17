@@ -63,7 +63,7 @@ void MigrateVirtualDiskCommand::Run()
             reason = tr("Cannot migrate: VDI is locked (in use).");
         else if (this->isHAType(vdi))
             reason = tr("Cannot migrate: VDI is an HA type (statefile or redo log).");
-        else if (vdi->CbtEnabled())
+        else if (vdi->IsCBTEnabled())
             reason = tr("Cannot migrate: VDI has changed block tracking (CBT) enabled.");
         else if (this->isMetadataForDR(vdi))
             reason = tr("Cannot migrate: VDI is metadata for disaster recovery.");
@@ -123,7 +123,7 @@ bool MigrateVirtualDiskCommand::canBeMigrated(const QSharedPointer<VDI> &vdi) co
     if (this->isHAType(vdi))
         return false;
 
-    if (vdi->CbtEnabled())
+    if (vdi->IsCBTEnabled())
         return false;
 
     if (this->isMetadataForDR(vdi))

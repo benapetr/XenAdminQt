@@ -31,16 +31,12 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/xenobject.h"
 
-CancelHostConnectionCommand::CancelHostConnectionCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+CancelHostConnectionCommand::CancelHostConnectionCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
-CancelHostConnectionCommand::CancelHostConnectionCommand(const QList<XenConnection*>& connections,
-                                                         MainWindow* mainWindow,
-                                                         QObject* parent)
-    : Command(mainWindow, parent)
-    , m_connections(connections)
+CancelHostConnectionCommand::CancelHostConnectionCommand(const QList<XenConnection*>& connections, MainWindow* mainWindow, QObject* parent)
+    : Command(mainWindow, parent), m_connections(connections)
 {
 }
 

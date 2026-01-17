@@ -34,13 +34,8 @@
 
 using namespace XenAPI;
 
-ChangeHostAutostartAction::ChangeHostAutostartAction(QSharedPointer<Host> host,
-                                                     bool enable,
-                                                     bool suppressHistory,
-                                                     QObject* parent)
-    : AsyncOperation(QObject::tr("Change VM Autostart"),
-                     QObject::tr("Changing VM autostart setting..."),
-                     parent),
+ChangeHostAutostartAction::ChangeHostAutostartAction(QSharedPointer<Host> host, bool enable, bool suppressHistory, QObject* parent)
+    : AsyncOperation(QObject::tr("Change VM Autostart"), QObject::tr("Changing VM autostart setting..."), parent),
       m_host(host), m_enableAutostart_(enable)
 {
     if (!this->m_host || !this->m_host->IsValid())

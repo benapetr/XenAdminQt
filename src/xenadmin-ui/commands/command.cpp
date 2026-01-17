@@ -27,6 +27,7 @@
 
 #include "command.h"
 #include "../mainwindow.h"
+#include "../selectionmanager.h"
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/network/connection.h"
 #include <QTreeWidget>
@@ -47,6 +48,13 @@ QIcon Command::GetIcon() const
 
 QSharedPointer<XenObject> Command::GetObject() const
 {
+    if (!this->m_selectionOverride.isEmpty())
+        return this->m_selectionOverride.first();
+
+    SelectionManager* selection = this->GetSelectionManager();
+    if (selection)
+        return selection->PrimaryObject();
+
     QTreeWidgetItem* item = this->getSelectedItem();
     if (!item)
         return QSharedPointer<XenObject>();
@@ -55,8 +63,20 @@ QSharedPointer<XenObject> Command::GetObject() const
     return data.value<QSharedPointer<XenObject>>();
 }
 
+SelectionManager* Command::GetSelectionManager() const
+{
+    return this->m_mainWindow ? this->m_mainWindow->GetSelectionManager() : nullptr;
+}
+
 QTreeWidgetItem* Command::getSelectedItem() const
 {
+    if (!this->m_selectionOverride.isEmpty())
+        return nullptr;
+
+    SelectionManager* selection = this->GetSelectionManager();
+    if (selection)
+        return selection->PrimaryItem();
+
     if (!this->m_mainWindow)
         return nullptr;
 
@@ -74,6 +94,19 @@ QTreeWidgetItem* Command::getSelectedItem() const
 
 QString Command::getSelectedObjectRef() const
 {
+    if (!this->m_selectionOverride.isEmpty())
+    {
+        QSharedPointer<XenObject> obj = this->m_selectionOverride.first();
+        return obj ? obj->OpaqueRef() : QString();
+    }
+
+    SelectionManager* selection = this->GetSelectionManager();
+    if (selection)
+    {
+        QSharedPointer<XenObject> obj = selection->PrimaryObject();
+        return obj ? obj->OpaqueRef() : QString();
+    }
+
     QTreeWidgetItem* item = this->getSelectedItem();
     if (!item)
         return QString();
@@ -82,12 +115,18 @@ QString Command::getSelectedObjectRef() const
     QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
     if (obj)
         return obj->OpaqueRef();
-    
+
     return QString();
 }
 
 QString Command::getSelectedObjectName() const
 {
+    if (!this->m_selectionOverride.isEmpty())
+    {
+        QSharedPointer<XenObject> obj = this->m_selectionOverride.first();
+        return obj ? obj->GetName() : QString();
+    }
+
     QTreeWidgetItem* item = this->getSelectedItem();
     if (!item)
         return QString();
@@ -97,6 +136,16 @@ QString Command::getSelectedObjectName() const
 
 QString Command::getSelectedObjectType() const
 {
+    if (!this->m_selectionOverride.isEmpty())
+    {
+        QSharedPointer<XenObject> obj = this->m_selectionOverride.first();
+        return obj ? obj->GetObjectType() : QString();
+    }
+
+    SelectionManager* selection = this->GetSelectionManager();
+    if (selection)
+        return selection->SelectionType();
+
     QTreeWidgetItem* item = this->getSelectedItem();
     if (!item)
         return QString();
@@ -112,12 +161,19 @@ QString Command::getSelectedObjectType() const
     {
         return "disconnected_host";
     }
-    
+
     return QString();
 }
 
 QSharedPointer<XenObject> Command::getSelectedObject() const
 {
+    if (!this->m_selectionOverride.isEmpty())
+        return this->m_selectionOverride.first();
+
+    SelectionManager* selection = this->GetSelectionManager();
+    if (selection)
+        return selection->PrimaryObject();
+
     QTreeWidgetItem* item = this->getSelectedItem();
     if (!item)
         return QSharedPointer<XenObject>();
@@ -127,4 +183,25 @@ QSharedPointer<XenObject> Command::getSelectedObject() const
         return data.value<QSharedPointer<XenObject>>();
 
     return QSharedPointer<XenObject>();
+}
+
+void Command::SetSelectionOverride(const QList<QSharedPointer<XenObject>>& objects)
+{
+    this->m_selectionOverride = objects;
+}
+
+QList<QSharedPointer<XenObject>> Command::getSelectedObjects() const
+{
+    if (!this->m_selectionOverride.isEmpty())
+        return this->m_selectionOverride;
+
+    SelectionManager* selection = this->GetSelectionManager();
+    if (selection)
+        return selection->SelectedObjects();
+
+    QSharedPointer<XenObject> obj = this->getSelectedObject();
+    if (obj)
+        return { obj };
+
+    return {};
 }

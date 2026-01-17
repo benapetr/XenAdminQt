@@ -63,10 +63,6 @@ DestroyHostCommand::DestroyHostCommand(MainWindow* mainWindow, QObject* parent) 
 {
 }
 
-DestroyHostCommand::DestroyHostCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent) : HostCommand(hosts, mainWindow, parent)
-{
-}
-
 bool DestroyHostCommand::CanRun() const
 {
     const QList<QSharedPointer<Host>> hosts = this->getHosts();

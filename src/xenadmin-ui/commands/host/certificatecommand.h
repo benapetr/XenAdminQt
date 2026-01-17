@@ -51,7 +51,6 @@ class CertificateCommand : public Command
 
     public:
         explicit CertificateCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit CertificateCommand(MainWindow* mainWindow, const QList<QSharedPointer<Host>>& hosts, QObject* parent = nullptr);
         ~CertificateCommand() override = default;
 
         bool CanRun() const override;
@@ -71,7 +70,6 @@ class CertificateCommand : public Command
         bool isVersionSupported(XenConnection* connection) const;
 
     private:
-        QList<QSharedPointer<Host>> m_hosts;
 };
 
 /**
@@ -86,7 +84,6 @@ class InstallCertificateCommand : public CertificateCommand
 
     public:
         explicit InstallCertificateCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit InstallCertificateCommand(MainWindow* mainWindow, const QList<QSharedPointer<Host>>& hosts, QObject* parent = nullptr);
         ~InstallCertificateCommand() override = default;
 
         void Run() override;
@@ -106,7 +103,6 @@ class ResetCertificateCommand : public CertificateCommand
 
     public:
         explicit ResetCertificateCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit ResetCertificateCommand(MainWindow* mainWindow, const QList<QSharedPointer<Host>>& hosts, QObject* parent = nullptr);
         ~ResetCertificateCommand() override = default;
 
         bool CanRun() const override;

@@ -624,7 +624,7 @@ void VMOperationMenu::enqueueHostMenuItem(const QSharedPointer<Host>& host, Host
                 bool canRun = false;
                 if (host)
                 {
-                    canRun = VMOperationHelpers::VmCanBootOnHost(connection, vm, host->OpaqueRef(), this->m_operationName, &reason);
+                    canRun = VMOperationHelpers::VMCanBootOnHost(connection, vm, host->OpaqueRef(), this->m_operationName, &reason);
                 } else
                 {
                     reason = tr("No home server");
@@ -664,7 +664,7 @@ void VMOperationMenu::enqueueHostMenuItem(const QSharedPointer<Host>& host, Host
             for (const QSharedPointer<VM>& vm : this->m_vms)
             {
                 QString reason;
-                bool canRun = VMOperationHelpers::VmCanBootOnHost(connection, vm,
+                bool canRun = VMOperationHelpers::VMCanBootOnHost(connection, vm,
                                                                  host->OpaqueRef(),
                                                                  this->m_operationName,
                                                                  &reason);
@@ -783,7 +783,7 @@ void VMOperationMenu::runOperationOnHostForVms(const QSharedPointer<Host>& host,
     for (const QSharedPointer<VM>& vm : vms)
     {
         QString reason;
-        if (VMOperationHelpers::VmCanBootOnHost(connection, vm, host->OpaqueRef(), this->m_operationName, &reason))
+        if (VMOperationHelpers::VMCanBootOnHost(connection, vm, host->OpaqueRef(), this->m_operationName, &reason))
         {
             runnable.append(vm);
         } else
@@ -811,7 +811,7 @@ void VMOperationMenu::runOperationOnHostForVms(const QSharedPointer<Host>& host,
                 action = new VMStartOnAction(vm, host, 
                                              nullptr,  // WarningDialogHAInvalidConfig
                                              [this, vm](VMStartAbstractAction*, const Failure& failure) {
-                                                 VMOperationHelpers::startDiagnosisForm(vm->GetConnection(),
+                                                 VMOperationHelpers::StartDiagnosisForm(vm->GetConnection(),
                                                                                         vm->OpaqueRef(),
                                                                                         vm->GetName(),
                                                                                         true,
@@ -824,7 +824,7 @@ void VMOperationMenu::runOperationOnHostForVms(const QSharedPointer<Host>& host,
                 action = new VMResumeOnAction(vm, host,
                                               nullptr,  // WarningDialogHAInvalidConfig
                                               [this, vm](VMStartAbstractAction*, const Failure& failure) {
-                                                  VMOperationHelpers::startDiagnosisForm(vm->GetConnection(),
+                                                  VMOperationHelpers::StartDiagnosisForm(vm->GetConnection(),
                                                                                          vm->OpaqueRef(),
                                                                                          vm->GetName(),
                                                                                          false,

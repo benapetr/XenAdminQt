@@ -35,18 +35,12 @@
 #include <QMessageBox>
 #include <QInputDialog>
 
-NewTemplateFromSnapshotCommand::NewTemplateFromSnapshotCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+NewTemplateFromSnapshotCommand::NewTemplateFromSnapshotCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
-NewTemplateFromSnapshotCommand::NewTemplateFromSnapshotCommand(const QString& snapshotRef,
-                                                               XenConnection* connection,
-                                                               MainWindow* mainWindow,
-                                                               QObject* parent)
-    : Command(mainWindow, parent),
-      m_snapshotRef(snapshotRef),
-      m_connection(connection)
+NewTemplateFromSnapshotCommand::NewTemplateFromSnapshotCommand(const QString& snapshotRef, XenConnection* connection, MainWindow* mainWindow, QObject* parent)
+    : Command(mainWindow, parent), m_snapshotRef(snapshotRef), m_connection(connection)
 {
 }
 

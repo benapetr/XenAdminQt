@@ -38,7 +38,6 @@ class ShutdownHostCommand : public HostCommand
 
     public:
         explicit ShutdownHostCommand(MainWindow* mainWindow, QObject* parent = nullptr);
-        explicit ShutdownHostCommand(const QList<QSharedPointer<Host>>& hosts, MainWindow* mainWindow, QObject* parent = nullptr);
 
         // Inherited from Command
         bool CanRun() const override;

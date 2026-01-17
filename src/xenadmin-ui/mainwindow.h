@@ -35,6 +35,7 @@
 #include "tabpages/basetabpage.h"
 #include "navigation/navigationpane.h"
 #include "xen/asyncoperation.h"
+#include "selectionmanager.h"
 
 namespace Ui
 {
@@ -75,6 +76,7 @@ class MainWindow : public QMainWindow
         ~MainWindow();
 
         static MainWindow *instance();
+        SelectionManager* GetSelectionManager() const { return m_selectionManager; }
 
         // Console panel access for snapshot screenshots (C#: Program.MainWindow.ConsolePanel)
         ConsolePanel* GetConsolePanel() const
@@ -319,6 +321,8 @@ class MainWindow : public QMainWindow
         QToolBar* m_toolBar = nullptr;
         QToolButton* m_backButton = nullptr;    // QToolButton for dropdown menu support
         QToolButton* m_forwardButton = nullptr; // QToolButton for dropdown menu support
+
+        SelectionManager* m_selectionManager = nullptr;
 
         // Navigation history (matches C# History static class)
         NavigationHistory* m_navigationHistory = nullptr;

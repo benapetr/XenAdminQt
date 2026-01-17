@@ -27,25 +27,30 @@
 
 #include "rebootcommand.h"
 #include "../mainwindow.h"
+#include "../selectionmanager.h"
 #include "host/reboothostcommand.h"
 #include "vm/restartvmcommand.h"
 #include <QMessageBox>
 
-RebootCommand::RebootCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+RebootCommand::RebootCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
 bool RebootCommand::CanRun() const
 {
-    // Try host first, then VM (matches C# pattern)
-    QString objectType = this->getSelectedObjectType();
+    // Matches C# RebootCommand.CanRunCore: use selection type.
+    SelectionManager* selection = this->GetSelectionManager();
+    if (!selection)
+        return false;
 
-    if (objectType == "host")
+    const QString selectionType = selection->SelectionType();
+    if (selectionType == "host")
     {
         RebootHostCommand hostCmd(this->mainWindow(), nullptr);
         return hostCmd.CanRun();
-    } else if (objectType == "vm")
+    }
+
+    if (selectionType == "vm")
     {
         RestartVMCommand vmCmd(this->mainWindow(), nullptr);
         return vmCmd.CanRun();
@@ -56,34 +61,32 @@ bool RebootCommand::CanRun() const
 
 void RebootCommand::Run()
 {
-    QString objectType = this->getSelectedObjectType();
+    SelectionManager* selection = this->GetSelectionManager();
+    if (!selection)
+        return;
 
-    if (objectType == "host")
+    const QString selectionType = selection->SelectionType();
+    if (selectionType == "host")
     {
-        RebootHostCommand* hostCmd = new RebootHostCommand(this->mainWindow(), this);
-        if (hostCmd->CanRun())
+        RebootHostCommand hostCmd(this->mainWindow(), this);
+        if (hostCmd.CanRun())
         {
-            hostCmd->Run();
-            hostCmd->deleteLater();
+            hostCmd.Run();
             return;
         }
-        hostCmd->deleteLater();
     }
 
-    if (objectType == "vm")
+    if (selectionType == "vm")
     {
-        RestartVMCommand* vmCmd = new RestartVMCommand(this->mainWindow(), this);
-        if (vmCmd->CanRun())
+        RestartVMCommand vmCmd(this->mainWindow(), this);
+        if (vmCmd.CanRun())
         {
-            vmCmd->Run();
-            vmCmd->deleteLater();
+            vmCmd.Run();
             return;
         }
-        vmCmd->deleteLater();
     }
 
-    QMessageBox::warning(this->mainWindow(), "Cannot Reboot",
-                         "The selected object cannot be rebooted.");
+    QMessageBox::warning(this->mainWindow(), "Cannot Reboot", "The selected object cannot be rebooted, make sure you only selected hosts or VMs that are running.");
 }
 
 QString RebootCommand::MenuText() const
