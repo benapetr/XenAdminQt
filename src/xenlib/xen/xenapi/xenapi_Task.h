@@ -66,6 +66,15 @@ namespace XenAPI
         /// <param name="session">The session</param>
         /// <param name="_task">The opaque_ref of the given task</param>
         static void Cancel(Session* session, const QString& taskRef);
+
+        /// <summary>
+        /// Add a key/value to task.other_config
+        /// </summary>
+        /// <param name="session">The session</param>
+        /// <param name="_task">Task opaque ref</param>
+        /// <param name="key">Key</param>
+        /// <param name="value">Value</param>
+        static void add_to_other_config(Session* session, const QString& taskRef, const QString& key, const QString& value);
     };
 }
 

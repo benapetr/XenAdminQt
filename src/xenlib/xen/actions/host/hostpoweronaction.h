@@ -25,41 +25,29 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "disablehostaction.h"
-#include "xenlib/xen/xenapi/xenapi_Host.h"
-#include <QDebug>
+#ifndef HOSTPOWERONACTION_H
+#define HOSTPOWERONACTION_H
 
-DisableHostAction::DisableHostAction(QSharedPointer<Host> host, QObject* parent)
-    : AsyncOperation(host->GetConnection(), "Disabling host", QString("Evacuating '%1'").arg(host ? host->GetName() : ""), parent),
-      m_host(host)
+#include "../../asyncoperation.h"
+#include "../../host.h"
+
+/**
+ * @brief HostPowerOnAction - Power on a host via host.power_on
+ *
+ * Matches C# XenAdmin.Actions.HostActions.HostPowerOnAction
+ */
+class XENLIB_EXPORT HostPowerOnAction : public AsyncOperation
 {
-    this->m_host = host;
-    this->AddApiMethodToRoleCheck("host.disable");
-    this->AddApiMethodToRoleCheck("host.remove_from_other_config");
-}
+    Q_OBJECT
 
-void DisableHostAction::run()
-{
-    try
-    {
-        this->SetDescription(QString("Evacuating '%1'").arg(this->m_host->GetName()));
+    public:
+        explicit HostPowerOnAction(QSharedPointer<Host> host, QObject* parent = nullptr);
 
-        try
-        {
-            // Disable the host (this will evacuate VMs)
-            QString taskRef = XenAPI::Host::async_disable(GetSession(), this->m_host->OpaqueRef());
-            this->pollToCompletion(taskRef, 0, 100);
-        } catch (...)
-        {
-            // On error, remove MAINTENANCE_MODE flag
-            XenAPI::Host::remove_from_other_config(GetSession(), this->m_host->OpaqueRef(), "MAINTENANCE_MODE");
-            throw;
-        }
+    protected:
+        void run() override;
 
-        this->SetDescription(QString("Evacuated '%1'").arg(this->m_host->GetName()));
+    private:
+        QSharedPointer<Host> m_host;
+};
 
-    } catch (const std::exception& e)
-    {
-        this->setError(QString("Failed to disable host: %1").arg(e.what()));
-    }
-}
+#endif // HOSTPOWERONACTION_H

@@ -28,22 +28,36 @@
 #include "shutdownhostaction.h"
 #include "../../network/connection.h"
 #include "../../session.h"
+#include "../../pool.h"
 #include "../../vm.h"
+#include "../host/hahelpers.h"
 #include "../../../xencache.h"
 #include "../../xenapi/xenapi_Host.h"
+#include "../../xenapi/xenapi_Pool.h"
 #include "../../xenapi/xenapi_VM.h"
+#include "../../xenapi/xenapi_Task.h"
 #include <QDebug>
 
 ShutdownHostAction::ShutdownHostAction(QSharedPointer<Host> host,
+                                       std::function<bool(QSharedPointer<Pool>, qint64, qint64)> acceptNtolChanges,
                                        QObject* parent)
     : AsyncOperation(QString("Shutting down %1").arg(host->GetName()),
                      "Waiting...",
                      parent),
       m_host(host),
-      m_wasEnabled(false)
+      m_wasEnabled(false),
+      m_acceptNtolChanges(std::move(acceptNtolChanges))
 {
     this->m_connection = host->GetConnection();
     this->setAppliesToFromObject(host);
+    AddApiMethodToRoleCheck("host.disable");
+    AddApiMethodToRoleCheck("host.enable");
+    AddApiMethodToRoleCheck("host.shutdown");
+    AddApiMethodToRoleCheck("vm.clean_shutdown");
+    AddApiMethodToRoleCheck("vm.hard_shutdown");
+    AddApiMethodToRoleCheck("pool.ha_compute_hypothetical_max_host_failures_to_tolerate");
+    AddApiMethodToRoleCheck("pool.set_ha_host_failures_to_tolerate");
+    AddApiMethodToRoleCheck("task.add_to_other_config");
 }
 
 void ShutdownHostAction::run()
@@ -68,12 +82,20 @@ void ShutdownHostAction::run()
         // Step 3: Shutdown the host
         QString taskRef = XenAPI::Host::async_shutdown(this->GetSession(), this->m_host->OpaqueRef());
 
-        // TODO: Add WLB task metadata if WLB is enabled
-        // C# code adds:
-        // - wlb_advised (recommendation ID)
-        // - wlb_action = "host_poweroff"
-        // - wlb_action_obj_ref = host ref
-        // - wlb_action_obj_type = "host"
+        // WLB task metadata (C# adds this when available)
+        QSharedPointer<Pool> pool = this->m_host->GetPool();
+        if (pool && pool->IsWLBEnabled() && !pool->WLBUrl().isEmpty())
+        {
+            QVariantMap otherConfig = this->m_host->GetOtherConfig();
+            const QString wlbRecId = otherConfig.value("wlb_optimizing_pool").toString();
+            if (!wlbRecId.isEmpty())
+            {
+                XenAPI::Task::add_to_other_config(this->GetSession(), taskRef, "wlb_advised", wlbRecId);
+                XenAPI::Task::add_to_other_config(this->GetSession(), taskRef, "wlb_action", "host_poweroff");
+                XenAPI::Task::add_to_other_config(this->GetSession(), taskRef, "wlb_action_obj_ref", this->m_host->OpaqueRef());
+                XenAPI::Task::add_to_other_config(this->GetSession(), taskRef, "wlb_action_obj_type", "host");
+            }
+        }
 
         this->pollToCompletion(taskRef, 95, 100);
 
@@ -83,6 +105,13 @@ void ShutdownHostAction::run()
         qDebug() << "ShutdownHostAction: Host shutdown successfully";
 
         this->SetDescription(QString("%1 shut down").arg(this->m_host->GetName()));
+
+        if (this->m_host->IsMaster())
+        {
+            XenConnection* connection = this->GetConnection();
+            if (connection)
+                connection->EndConnect(true, false);
+        }
 
     } catch (const std::exception& e)
     {
@@ -223,7 +252,33 @@ void ShutdownHostAction::maybeReduceNtolBeforeOp()
      * This is a placeholder that can be expanded later.
      */
 
-    // TODO: Implement full HA ntol logic when HA support is added
-    // For now, this is a no-op
-    qDebug() << "ShutdownHostAction: HA ntol adjustment not yet implemented";
+    QSharedPointer<Pool> pool = this->m_host ? this->m_host->GetPool() : QSharedPointer<Pool>();
+    if (!pool || !pool->HAEnabled())
+        return;
+
+    XenConnection* connection = this->GetConnection();
+    if (!connection || !connection->GetCache())
+        return;
+
+    const QVariantMap configuration = HostHaHelpers::BuildHaConfiguration(connection);
+    const qint64 maxFailures =
+        XenAPI::Pool::ha_compute_hypothetical_max_host_failures_to_tolerate(this->GetSession(), configuration);
+    const qint64 currentNtol = pool->HAHostFailuresToTolerate();
+    const qint64 targetNtol = qMax<qint64>(0, maxFailures - 1);
+
+    if (currentNtol > targetNtol)
+    {
+        bool cancel = false;
+        if (this->m_acceptNtolChanges)
+            cancel = this->m_acceptNtolChanges(pool, currentNtol, targetNtol);
+
+        if (cancel)
+        {
+            this->setError("Cancelled");
+            this->setState(Cancelled);
+            return;
+        }
+
+        XenAPI::Pool::set_ha_host_failures_to_tolerate(this->GetSession(), pool->OpaqueRef(), targetNtol);
+    }
 }

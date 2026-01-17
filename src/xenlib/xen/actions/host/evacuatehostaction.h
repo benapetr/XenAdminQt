@@ -30,6 +30,7 @@
 
 #include "../../asyncoperation.h"
 #include "../../host.h"
+#include <functional>
 
 /**
  * @brief EvacuateHostAction - Evacuates all VMs from a host
@@ -56,7 +57,14 @@ class EvacuateHostAction : public AsyncOperation
          * @param newCoordinator Optional new coordinator if evacuating current coordinator
          * @param parent Parent QObject
          */
-        explicit EvacuateHostAction(QSharedPointer<Host> host, QSharedPointer<Host> newCoordinator = QSharedPointer<Host>(), QObject* parent = nullptr);
+        explicit EvacuateHostAction(QSharedPointer<Host> host,
+                                    QSharedPointer<Host> newCoordinator = QSharedPointer<Host>(),
+                                    QObject* parent = nullptr);
+        EvacuateHostAction(QSharedPointer<Host> host,
+                           QSharedPointer<Host> newCoordinator,
+                           std::function<bool(QSharedPointer<Pool>, qint64, qint64)> acceptNtolChanges,
+                           std::function<bool(QSharedPointer<Pool>, QSharedPointer<Host>, qint64, qint64)> acceptNtolChangesOnEnable,
+                           QObject* parent = nullptr);
 
     protected:
         void run() override;
@@ -87,6 +95,8 @@ class EvacuateHostAction : public AsyncOperation
 
         QSharedPointer<Host> m_host;
         QSharedPointer<Host> m_newCoordinator;
+        std::function<bool(QSharedPointer<Pool>, qint64, qint64)> m_acceptNtolChanges;
+        std::function<bool(QSharedPointer<Pool>, QSharedPointer<Host>, qint64, qint64)> m_acceptNtolChangesOnEnable;
 };
 
 #endif // EVACUATEHOSTACTION_H

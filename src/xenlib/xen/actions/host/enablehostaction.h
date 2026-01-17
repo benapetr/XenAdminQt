@@ -30,6 +30,7 @@
 
 #include "../../asyncoperation.h"
 #include "../../host.h"
+#include <functional>
 
 /**
  * @brief EnableHostAction - Exits maintenance mode and enables a host
@@ -56,7 +57,10 @@ class EnableHostAction : public AsyncOperation
          * @param resumeVMs If true, resume evacuated VMs after enabling
          * @param parent Parent QObject
          */
-        explicit EnableHostAction(QSharedPointer<Host> host, bool resumeVMs = false, QObject* parent = nullptr);
+        explicit EnableHostAction(QSharedPointer<Host> host,
+                                  bool resumeVMs = false,
+                                  std::function<bool(QSharedPointer<Pool>, QSharedPointer<Host>, qint64, qint64)> acceptNtolChangesOnEnable = nullptr,
+                                  QObject* parent = nullptr);
 
     protected:
         void run() override;
@@ -74,6 +78,7 @@ class EnableHostAction : public AsyncOperation
 
         QSharedPointer<Host> m_host;
         bool m_resumeVMs;
+        std::function<bool(QSharedPointer<Pool>, QSharedPointer<Host>, qint64, qint64)> m_acceptNtolChangesOnEnable;
 };
 
 #endif // ENABLEHOSTACTION_H

@@ -32,6 +32,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVariant>
+#include <QHash>
 
 namespace XenAPI
 {
@@ -199,6 +200,35 @@ namespace XenAPI
              * Migrates all VMs off the host
              */
             static QString async_evacuate(Session* session, const QString& host);
+
+            /**
+             * @brief Power on a host (sync)
+             * @param session XenServer session
+             * @param host Host opaque reference
+             *
+             * Matches C# Host.power_on()
+             */
+            static void power_on(Session* session, const QString& host);
+
+            /**
+             * @brief Retrieve WLB evacuate recommendations
+             * @param session XenServer session
+             * @param host Host opaque reference
+             * @return Map of VM ref -> recommendation string list
+             *
+             * Matches C# Host.retrieve_wlb_evacuate_recommendations()
+             */
+            static QHash<QString, QStringList> retrieve_wlb_evacuate_recommendations(Session* session, const QString& host);
+
+            /**
+             * @brief Get VMs which prevent evacuation
+             * @param session XenServer session
+             * @param host Host opaque reference
+             * @return Map of VM ref -> reason string list
+             *
+             * Matches C# Host.get_vms_which_prevent_evacuation()
+             */
+            static QHash<QString, QStringList> get_vms_which_prevent_evacuation(Session* session, const QString& host);
 
             /**
              * @brief Destroy host (async)

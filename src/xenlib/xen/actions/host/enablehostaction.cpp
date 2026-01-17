@@ -26,21 +26,28 @@
  */
 
 #include "enablehostaction.h"
-#include "../../network/connection.h"
-#include "../../session.h"
-#include "../../xenapi/xenapi_Host.h"
-#include "../../xenapi/xenapi_VM.h"
-#include "../../../xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/xenapi/xenapi_Host.h"
+#include "xenlib/xen/xenapi/xenapi_Pool.h"
+#include "xenlib/xen/xenapi/xenapi_VM.h"
+#include "xenlib/xencache.h"
+#include "../host/hahelpers.h"
 #include <QDebug>
 
-EnableHostAction::EnableHostAction(QSharedPointer<Host> host, bool resumeVMs, QObject* parent)
-    : AsyncOperation(host->GetConnection(),
-                     "Enabling host",
-                     QString("Exiting maintenance mode for '%1'").arg(host ? host->GetName() : ""),
-                     parent),
-      m_resumeVMs(resumeVMs)
+EnableHostAction::EnableHostAction(QSharedPointer<Host> host, bool resumeVMs, std::function<bool(QSharedPointer<Pool>, QSharedPointer<Host>, qint64, qint64)> acceptNtolChangesOnEnable, QObject* parent)
+    : AsyncOperation(host->GetConnection(), "Enabling host", QString("Exiting maintenance mode for '%1'").arg(host ? host->GetName() : ""), parent),
+      m_resumeVMs(resumeVMs), m_acceptNtolChangesOnEnable(std::move(acceptNtolChangesOnEnable))
 {
     this->m_host = host;
+    this->AddApiMethodToRoleCheck("host.remove_from_other_config");
+    this->AddApiMethodToRoleCheck("host.enable");
+    this->AddApiMethodToRoleCheck("vm.pool_migrate");
+    this->AddApiMethodToRoleCheck("vm.start_on");
+    this->AddApiMethodToRoleCheck("vm.resume_on");
+    this->AddApiMethodToRoleCheck("pool.ha_compute_hypothetical_max_host_failures_to_tolerate");
+    this->AddApiMethodToRoleCheck("pool.set_ha_host_failures_to_tolerate");
 }
 
 void EnableHostAction::run()
@@ -151,12 +158,21 @@ void EnableHostAction::enable(int start, int finish, bool queryNtolIncrease)
     QString taskRef = XenAPI::Host::async_enable(this->GetSession(), this->m_host->OpaqueRef());
     this->pollToCompletion(taskRef, start, finish);
 
-    // TODO: HA ntol increase query
-    // In C#, this checks if HA is enabled, calculates max ntol, and asks user
-    // if they want to increase ntol back up after enabling the host.
-    // For now, we'll skip this (HA not fully implemented yet)
     if (queryNtolIncrease)
     {
-        qDebug() << "EnableHostAction: TODO - HA ntol increase query not yet implemented";
+        QSharedPointer<Pool> pool = this->m_host ? this->m_host->GetPool() : QSharedPointer<Pool>();
+        if (pool && pool->HAEnabled() && this->m_acceptNtolChangesOnEnable)
+        {
+            const QVariantMap configuration = HostHaHelpers::BuildHaConfiguration(this->GetConnection());
+            const qint64 maxFailures =
+                XenAPI::Pool::ha_compute_hypothetical_max_host_failures_to_tolerate(this->GetSession(), configuration);
+            const qint64 currentNtol = pool->HAHostFailuresToTolerate();
+
+            if (currentNtol < maxFailures &&
+                this->m_acceptNtolChangesOnEnable(pool, this->m_host, currentNtol, maxFailures))
+            {
+                XenAPI::Pool::set_ha_host_failures_to_tolerate(this->GetSession(), pool->OpaqueRef(), maxFailures);
+            }
+        }
     }
 }

@@ -28,11 +28,31 @@
 #include "savepoweronsettingsaction.h"
 #include "../../network/connection.h"
 #include "../../session.h"
+#include "../../pool.h"
+#include "../../host.h"
 #include "../../api.h"
+#include "../../xenapi/xenapi_Pool.h"
+#include "../../../xencache.h"
 #include "../../../utils/misc.h"
 #include <QDebug>
 
 using namespace XenAPI;
+
+namespace
+{
+    bool isWlbEnabled(const QSharedPointer<::Pool>& pool)
+    {
+        return pool && pool->IsWLBEnabled() && !pool->WLBUrl().isEmpty();
+    }
+
+    QVariantMap buildWlbHostPowerManagementConfig(const QString& hostUuid, bool participate)
+    {
+        QVariantMap config;
+        const QString base = QString("host_%1_").arg(hostUuid);
+        config.insert(base + "ParticipatesInPowerManagement", participate ? "true" : "false");
+        return config;
+    }
+}
 
 // PowerOnMode toString implementation
 QString PowerOnMode::toString() const
@@ -57,6 +77,11 @@ SavePowerOnSettingsAction::SavePowerOnSettingsAction(XenConnection* connection,
                      parent)
     , m_hostModes(hostModes)
 {
+    AddApiMethodToRoleCheck("host.set_power_on_mode");
+    AddApiMethodToRoleCheck("pool.send_wlb_configuration");
+    AddApiMethodToRoleCheck("secret.create");
+    AddApiMethodToRoleCheck("secret.get_uuid");
+    AddApiMethodToRoleCheck("secret.destroy");
 }
 
 void SavePowerOnSettingsAction::run()
@@ -157,6 +182,17 @@ void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const Pow
         {
             QString error = resultMap.value("ErrorDescription").toStringList().join(": ");
             throw std::runtime_error(error.toStdString());
+        }
+    }
+
+    if (modeString.isEmpty() && conn->GetCache())
+    {
+        QSharedPointer<::Host> host = conn->GetCache()->ResolveObject<::Host>("host", hostRef);
+        QSharedPointer<::Pool> pool = host ? host->GetPool() : QSharedPointer<::Pool>();
+        if (host && isWlbEnabled(pool))
+        {
+            QVariantMap config = buildWlbHostPowerManagementConfig(host->GetUUID(), false);
+            XenAPI::Pool::send_wlb_configuration(session, config);
         }
     }
 }

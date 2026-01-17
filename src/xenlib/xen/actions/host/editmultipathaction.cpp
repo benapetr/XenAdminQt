@@ -26,18 +26,16 @@
  */
 
 #include "editmultipathaction.h"
-#include "../../host.h"
-#include "../../session.h"
-#include "../../network/connection.h"
-#include "../../xenapi/xenapi_Host.h"
-#include "../../xenapi/xenapi_PBD.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/xenapi/xenapi_Host.h"
+#include "xenlib/xen/xenapi/xenapi_PBD.h"
 #include <QDebug>
 
 const char* EditMultipathAction::DEFAULT_MULTIPATH_HANDLE = "dmp";
 
-EditMultipathAction::EditMultipathAction(QSharedPointer<Host> host,
-                                         bool enableMultipath,
-                                         QObject* parent)
+EditMultipathAction::EditMultipathAction(QSharedPointer<Host> host, bool enableMultipath, QObject* parent)
     : AsyncOperation(host->GetConnection(),
                      QString("Changing multipath setting on %1").arg(host->GetName()),
                      QString("Changing multipath..."),
@@ -47,6 +45,10 @@ EditMultipathAction::EditMultipathAction(QSharedPointer<Host> host,
     // Set applies-to context
     if (host)
         this->setAppliesToFromObject(host);
+    this->AddApiMethodToRoleCheck("PBD.plug");
+    this->AddApiMethodToRoleCheck("PBD.unplug");
+    this->AddApiMethodToRoleCheck("host.add_to_other_config");
+    this->AddApiMethodToRoleCheck("host.remove_from_other_config");
 }
 
 void EditMultipathAction::run()

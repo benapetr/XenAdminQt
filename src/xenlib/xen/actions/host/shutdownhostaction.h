@@ -75,7 +75,9 @@ class XENLIB_EXPORT ShutdownHostAction : public AsyncOperation
          * C# equivalent: ShutdownHostAction(Host, Func<...>)
          * Note: acceptNTolChanges callback not yet implemented in Qt version
          */
-        explicit ShutdownHostAction(QSharedPointer<Host> host, QObject* parent = nullptr);
+        explicit ShutdownHostAction(QSharedPointer<Host> host,
+                                    std::function<bool(QSharedPointer<Pool>, qint64, qint64)> acceptNtolChanges = nullptr,
+                                    QObject* parent = nullptr);
 
     protected:
         /**
@@ -96,6 +98,7 @@ class XENLIB_EXPORT ShutdownHostAction : public AsyncOperation
     private:
         QSharedPointer<Host> m_host;
         bool m_wasEnabled;
+        std::function<bool(QSharedPointer<Pool>, qint64, qint64)> m_acceptNtolChanges;
 
         /**
          * @brief Shutdown all VMs on the host

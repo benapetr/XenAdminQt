@@ -25,41 +25,37 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "disablehostaction.h"
-#include "xenlib/xen/xenapi/xenapi_Host.h"
-#include <QDebug>
+#ifndef HAHELPERS_H
+#define HAHELPERS_H
 
-DisableHostAction::DisableHostAction(QSharedPointer<Host> host, QObject* parent)
-    : AsyncOperation(host->GetConnection(), "Disabling host", QString("Evacuating '%1'").arg(host ? host->GetName() : ""), parent),
-      m_host(host)
-{
-    this->m_host = host;
-    this->AddApiMethodToRoleCheck("host.disable");
-    this->AddApiMethodToRoleCheck("host.remove_from_other_config");
-}
+#include "../../network/connection.h"
+#include "../../vm.h"
+#include "../../../xencache.h"
+#include <QVariantMap>
 
-void DisableHostAction::run()
+namespace HostHaHelpers
 {
-    try
+    inline QVariantMap BuildHaConfiguration(XenConnection* connection)
     {
-        this->SetDescription(QString("Evacuating '%1'").arg(this->m_host->GetName()));
+        QVariantMap configuration;
+        if (!connection || !connection->GetCache())
+            return configuration;
 
-        try
+        const QList<QSharedPointer<VM>> vms = connection->GetCache()->GetAll<VM>("vm");
+        for (const QSharedPointer<VM>& vm : vms)
         {
-            // Disable the host (this will evacuate VMs)
-            QString taskRef = XenAPI::Host::async_disable(GetSession(), this->m_host->OpaqueRef());
-            this->pollToCompletion(taskRef, 0, 100);
-        } catch (...)
-        {
-            // On error, remove MAINTENANCE_MODE flag
-            XenAPI::Host::remove_from_other_config(GetSession(), this->m_host->OpaqueRef(), "MAINTENANCE_MODE");
-            throw;
+            if (!vm || vm->IsControlDomain() || vm->IsTemplate() || vm->IsSnapshot())
+                continue;
+
+            const QString priority = vm->HARestartPriority();
+            if (priority.isEmpty() || priority == "best-effort" || priority == "best_effort")
+                continue;
+
+            configuration.insert(vm->OpaqueRef(), priority);
         }
 
-        this->SetDescription(QString("Evacuated '%1'").arg(this->m_host->GetName()));
-
-    } catch (const std::exception& e)
-    {
-        this->setError(QString("Failed to disable host: %1").arg(e.what()));
+        return configuration;
     }
 }
+
+#endif // HAHELPERS_H

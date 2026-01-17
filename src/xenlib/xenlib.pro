@@ -4,6 +4,9 @@ QT += core network xml
 TARGET = xenlib
 DEFINES += XENLIB_LIBRARY
 
+# This allows us to use absolute include path instead of hard-to-read relative paths
+INCLUDEPATH += ..
+
 greaterThan(QT_MAJOR_VERSION, 5) {
     DEFINES += QT_NO_DEPRECATED_WARNINGS
 }
@@ -125,12 +128,14 @@ HEADERS += \
     xen/actions/host/reboothostaction.h \
     xen/actions/host/shutdownhostaction.h \
     xen/actions/host/restarttoolstackaction.h \
+    xen/actions/host/hostpoweronaction.h \
     xen/actions/host/enablehostaction.h \
     xen/actions/host/disablehostaction.h \
     xen/actions/host/evacuatehostaction.h \
     xen/actions/host/destroyhostaction.h \
     xen/actions/host/changehostautostartaction.h \
     xen/actions/host/editmultipathaction.h \
+    xen/actions/host/hahelpers.h \
     xen/actions/host/savepoweronsettingsaction.h \
     xen/actions/vdi/creatediskaction.h \
     xen/actions/vdi/detachvirtualdiskaction.h \
@@ -335,6 +340,7 @@ SOURCES += \
     xen/actions/host/reboothostaction.cpp \
     xen/actions/host/shutdownhostaction.cpp \
     xen/actions/host/restarttoolstackaction.cpp \
+    xen/actions/host/hostpoweronaction.cpp \
     xen/actions/host/enablehostaction.cpp \
     xen/actions/host/disablehostaction.cpp \
     xen/actions/host/evacuatehostaction.cpp \

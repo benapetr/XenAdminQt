@@ -26,10 +26,10 @@
  */
 
 #include "changehostautostartaction.h"
-#include "../../network/connection.h"
-#include "../../session.h"
-#include "../../host.h"
-#include "../../api.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/api.h"
 #include <QDebug>
 
 using namespace XenAPI;
@@ -46,6 +46,9 @@ ChangeHostAutostartAction::ChangeHostAutostartAction(QSharedPointer<Host> host, 
     {
         this->m_connection = host->GetConnection();
     }
+    this->AddApiMethodToRoleCheck("session.get_pool");
+    this->AddApiMethodToRoleCheck("pool.get_other_config");
+    this->AddApiMethodToRoleCheck("pool.set_other_config");
     this->SetSuppressHistory(suppressHistory);
 }
 

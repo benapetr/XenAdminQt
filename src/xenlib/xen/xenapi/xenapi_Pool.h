@@ -279,6 +279,15 @@ namespace XenAPI
             static qint64 ha_compute_hypothetical_max_host_failures_to_tolerate(Session* session, const QVariantMap& configuration);
 
             /**
+             * @brief Send WLB configuration to the pool
+             * @param session Active XenSession
+             * @param config WLB configuration key/value map
+             *
+             * Matches C# Pool.send_wlb_configuration()
+             */
+            static void send_wlb_configuration(Session* session, const QVariantMap& config);
+
+            /**
              * @brief Emergency transition to master (synchronous)
              * @param session Active XenSession
              *

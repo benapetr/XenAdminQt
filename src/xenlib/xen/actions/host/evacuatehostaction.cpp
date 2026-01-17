@@ -28,23 +28,84 @@
 #include "evacuatehostaction.h"
 #include "../../network/connection.h"
 #include "../../session.h"
+#include "../../pool.h"
+#include "../../vm.h"
 #include "../../xenapi/xenapi_Host.h"
 #include "../../xenapi/xenapi_Pool.h"
+#include "../../xenapi/xenapi_VM.h"
 #include "../../../xencache.h"
+#include "../../failure.h"
+#include "../host/hahelpers.h"
+#include "hostpoweronaction.h"
 #include <QDebug>
+#include <QThread>
+
+namespace
+{
+    constexpr int kRecToHost = 1;
+
+    bool isWlbEnabled(const QSharedPointer<Pool>& pool)
+    {
+        return pool && pool->IsWLBEnabled() && !pool->WLBUrl().isEmpty();
+    }
+
+    QSharedPointer<Host> findHostByUuid(XenConnection* connection, const QString& uuid)
+    {
+        if (!connection || !connection->GetCache())
+            return QSharedPointer<Host>();
+
+        const QList<QSharedPointer<Host>> hosts = connection->GetCache()->GetAll<Host>("host");
+        for (const QSharedPointer<Host>& host : hosts)
+        {
+            if (host && host->GetUUID() == uuid)
+                return host;
+        }
+
+        return QSharedPointer<Host>();
+    }
+
+    bool noRecommendationError(const QHash<QString, QStringList>& recommendations, QStringList& error)
+    {
+        for (auto it = recommendations.constBegin(); it != recommendations.constEnd(); ++it)
+        {
+            const QStringList rec = it.value();
+            if (!rec.isEmpty() && rec.first().trimmed().compare("wlb", Qt::CaseInsensitive) != 0)
+            {
+                error = rec;
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
+
+EvacuateHostAction::EvacuateHostAction(QSharedPointer<Host> host, QSharedPointer<Host> newCoordinator, QObject* parent)
+    : EvacuateHostAction(host, newCoordinator, nullptr, nullptr, parent)
+{
+}
 
 EvacuateHostAction::EvacuateHostAction(QSharedPointer<Host> host,
                                        QSharedPointer<Host> newCoordinator,
+                                       std::function<bool(QSharedPointer<Pool>, qint64, qint64)> acceptNtolChanges,
+                                       std::function<bool(QSharedPointer<Pool>, QSharedPointer<Host>, qint64, qint64)> acceptNtolChangesOnEnable,
                                        QObject* parent)
-    : AsyncOperation(host->GetConnection(),
-                     "Evacuating host",
-                     QString("Evacuating '%1'").arg(host ? host->GetName() : ""),
-                     parent),
+    : AsyncOperation(host->GetConnection(), "Evacuating host", QString("Evacuating '%1'").arg(host ? host->GetName() : ""), parent),
       m_host(host),
-      m_newCoordinator(newCoordinator)
+      m_newCoordinator(newCoordinator),
+      m_acceptNtolChanges(std::move(acceptNtolChanges)),
+      m_acceptNtolChangesOnEnable(std::move(acceptNtolChangesOnEnable))
 {
     if (!m_host)
         throw std::invalid_argument("Host cannot be null");
+    this->AddApiMethodToRoleCheck("host.disable");
+    this->AddApiMethodToRoleCheck("host.evacuate");
+    this->AddApiMethodToRoleCheck("host.remove_from_other_config");
+    this->AddApiMethodToRoleCheck("host.add_to_other_config");
+    this->AddApiMethodToRoleCheck("host.enable");
+    this->AddApiMethodToRoleCheck("pool.designate_new_master");
+    this->AddApiMethodToRoleCheck("pool.ha_compute_hypothetical_max_host_failures_to_tolerate");
+    this->AddApiMethodToRoleCheck("pool.set_ha_host_failures_to_tolerate");
 }
 
 void EvacuateHostAction::run()
@@ -58,15 +119,123 @@ void EvacuateHostAction::run()
         // Disable host (0-20%)
         this->disable(0, 20);
 
-        // WLB evacuation is not yet implemented in Qt version
-        // For now, use simple Host.async_evacuate
-        // TODO: Implement WLB evacuation recommendations when WLB is ported
+        bool tryAgain = false;
+        const QSharedPointer<Pool> pool = this->m_host->GetPool();
 
-        qDebug() << "EvacuateHostAction: Using non-WLB evacuation";
+        if (isWlbEnabled(pool))
+        {
+            QHash<QString, QStringList> hostRecommendations =
+                XenAPI::Host::retrieve_wlb_evacuate_recommendations(this->GetSession(), this->m_host->OpaqueRef());
 
-        // Evacuate all VMs from the host (20-80% or 20-90% depending on coordinator)
-        QString taskRef = XenAPI::Host::async_evacuate(this->GetSession(), this->m_host->OpaqueRef());
-        this->pollToCompletion(taskRef, 20, coordinator ? 80 : 90);
+            if (!hostRecommendations.isEmpty())
+            {
+                QStringList error;
+                if (!noRecommendationError(hostRecommendations, error))
+                {
+                    throw Failure(error.join(": "));
+                }
+
+                struct RecItem
+                {
+                    QString vmRef;
+                    QStringList rec;
+                };
+
+                QList<RecItem> hostPowerOnRecs;
+                QList<RecItem> vmMoveRecs;
+
+                for (auto it = hostRecommendations.constBegin(); it != hostRecommendations.constEnd(); ++it)
+                {
+                    const QString vmRef = it.key();
+                    const QStringList rec = it.value();
+                    if (rec.size() <= kRecToHost)
+                        continue;
+
+                    QSharedPointer<VM> vm = this->GetConnection()->GetCache()->ResolveObject<VM>("vm", vmRef);
+                    if (!vm)
+                        continue;
+
+                    const QString toHostUuid = rec[kRecToHost];
+                    QSharedPointer<Host> toHost = findHostByUuid(this->GetConnection(), toHostUuid);
+                    if (!toHost)
+                        continue;
+
+                    if (vm->IsControlDomain() && !toHost->IsLive())
+                        hostPowerOnRecs.append({vmRef, rec});
+                    else
+                        vmMoveRecs.append({vmRef, rec});
+                }
+
+                const int total = hostPowerOnRecs.size() + vmMoveRecs.size();
+                if (total > 0)
+                {
+                    int start = 20;
+                    int each = (coordinator ? 80 : 90) / total;
+
+                    for (const RecItem& rec : hostPowerOnRecs)
+                    {
+                        const QString toHostUuid = rec.rec.value(kRecToHost);
+                        QSharedPointer<Host> toHost = findHostByUuid(this->GetConnection(), toHostUuid);
+                        if (!toHost)
+                            continue;
+
+                        if (!toHost->IsLive())
+                        {
+                            HostPowerOnAction powerOnAction(toHost, nullptr);
+                            powerOnAction.RunSync(this->GetSession());
+                        }
+
+                        if (!toHost->IsEnabled())
+                        {
+                            QString enableTaskRef = XenAPI::Host::async_enable(this->GetSession(), toHost->OpaqueRef());
+                            this->pollToCompletion(enableTaskRef, start, start);
+                        }
+                    }
+
+                    for (const RecItem& rec : vmMoveRecs)
+                    {
+                        const QString vmRef = rec.vmRef;
+                        const QString toHostUuid = rec.rec.value(kRecToHost);
+                        QSharedPointer<Host> toHost = findHostByUuid(this->GetConnection(), toHostUuid);
+                        if (!toHost)
+                            continue;
+
+                        int retry = 3;
+                        while (retry > 0)
+                        {
+                            try
+                            {
+                                QVariantMap options;
+                                options["live"] = "true";
+                                QString taskRef = XenAPI::VM::async_pool_migrate(this->GetSession(), vmRef,
+                                                                                 toHost->OpaqueRef(), options);
+                                this->pollToCompletion(taskRef, start, start + each);
+                                start += each;
+                                break;
+                            } catch (...)
+                            {
+                                QThread::sleep(10);
+                                retry--;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    tryAgain = true;
+                }
+            }
+            else
+            {
+                tryAgain = true;
+            }
+        }
+
+        if (!isWlbEnabled(pool) || tryAgain)
+        {
+            QString taskRef = XenAPI::Host::async_evacuate(this->GetSession(), this->m_host->OpaqueRef());
+            this->pollToCompletion(taskRef, 20, coordinator ? 80 : 90);
+        }
 
         this->SetDescription(QString("Evacuated '%1'").arg(this->m_host->GetName()));
 
@@ -77,8 +246,7 @@ void EvacuateHostAction::run()
                                .arg(this->m_newCoordinator->GetName()));
 
             // Signal to connection that coordinator is changing
-            // C# sets Connection.CoordinatorMayChange = true
-            // TODO: Add this flag to XenConnection when needed
+            this->GetConnection()->SetCoordinatorMayChange(true);
 
             try
             {
@@ -88,7 +256,7 @@ void EvacuateHostAction::run()
             } catch (...)
             {
                 // If designate new master fails, clear the flag
-                // TODO: Clear CoordinatorMayChange flag
+                this->GetConnection()->SetCoordinatorMayChange(false);
                 throw;
             }
 
@@ -117,10 +285,31 @@ void EvacuateHostAction::run()
 
 void EvacuateHostAction::disable(int start, int finish)
 {
-    // TODO: maybeReduceNtolBeforeOp() - HA ntol reduction
-    // This asks users whether to decrease ntol since disable will fail if it would cause HA overcommit
-    // For now, skip this check (HA not fully implemented)
-    qDebug() << "EvacuateHostAction: TODO - HA ntol reduction check not yet implemented";
+    QSharedPointer<Pool> pool = this->m_host ? this->m_host->GetPool() : QSharedPointer<Pool>();
+    if (pool && pool->HAEnabled())
+    {
+        const QVariantMap configuration = HostHaHelpers::BuildHaConfiguration(this->GetConnection());
+        const qint64 maxFailures =
+            XenAPI::Pool::ha_compute_hypothetical_max_host_failures_to_tolerate(this->GetSession(), configuration);
+        const qint64 currentNtol = pool->HAHostFailuresToTolerate();
+        const qint64 targetNtol = qMax<qint64>(0, maxFailures - 1);
+
+        if (currentNtol > targetNtol)
+        {
+            bool cancel = false;
+            if (this->m_acceptNtolChanges)
+                cancel = this->m_acceptNtolChanges(pool, currentNtol, targetNtol);
+
+            if (cancel)
+            {
+                this->setError("Cancelled");
+                this->setState(Cancelled);
+                return;
+            }
+
+            XenAPI::Pool::set_ha_host_failures_to_tolerate(this->GetSession(), pool->OpaqueRef(), targetNtol);
+        }
+    }
 
     // Disable the host
     QString taskRef = XenAPI::Host::async_disable(this->GetSession(), this->m_host->OpaqueRef());
@@ -133,14 +322,30 @@ void EvacuateHostAction::disable(int start, int finish)
 
 void EvacuateHostAction::enable(int start, int finish, bool queryNtolIncrease)
 {
-    Q_UNUSED(queryNtolIncrease);
-
     // Remove MAINTENANCE_MODE flag
     XenAPI::Host::remove_from_other_config(this->GetSession(), this->m_host->OpaqueRef(), "MAINTENANCE_MODE");
 
     // Enable the host
     QString taskRef = XenAPI::Host::async_enable(this->GetSession(), this->m_host->OpaqueRef());
     this->pollToCompletion(taskRef, start, finish);
+
+    if (queryNtolIncrease)
+    {
+        QSharedPointer<Pool> pool = this->m_host ? this->m_host->GetPool() : QSharedPointer<Pool>();
+        if (pool && pool->HAEnabled() && this->m_acceptNtolChangesOnEnable)
+        {
+            const QVariantMap configuration = HostHaHelpers::BuildHaConfiguration(this->GetConnection());
+            const qint64 maxFailures =
+                XenAPI::Pool::ha_compute_hypothetical_max_host_failures_to_tolerate(this->GetSession(), configuration);
+            const qint64 currentNtol = pool->HAHostFailuresToTolerate();
+
+            if (currentNtol < maxFailures &&
+                this->m_acceptNtolChangesOnEnable(pool, this->m_host, currentNtol, maxFailures))
+            {
+                XenAPI::Pool::set_ha_host_failures_to_tolerate(this->GetSession(), pool->OpaqueRef(), maxFailures);
+            }
+        }
+    }
 }
 
 bool EvacuateHostAction::isCoordinator() const

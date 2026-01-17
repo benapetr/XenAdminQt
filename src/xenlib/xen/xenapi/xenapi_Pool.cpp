@@ -390,6 +390,20 @@ namespace XenAPI
         return api.ParseJsonRpcResponse(response).toLongLong();
     }
 
+    void Pool::send_wlb_configuration(Session* session, const QVariantMap& config)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << config;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("pool.send_wlb_configuration", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.ParseJsonRpcResponse(response);
+    }
+
     void Pool::emergency_transition_to_master(Session* session)
     {
         if (!session || !session->IsLoggedIn())

@@ -30,6 +30,7 @@
 #include "../../operations/operationmanager.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
 #include "xenlib/xen/actions/host/shutdownhostaction.h"
 #include <QMessageBox>
 
@@ -119,7 +120,25 @@ void ShutdownHostCommand::Run()
             }
 
             const QString hostName = host->GetName();
-            ShutdownHostAction* action = new ShutdownHostAction(host, nullptr);
+            auto ntolPrompt = [this](QSharedPointer<Pool> pool, qint64 current, qint64 target) {
+                const QString poolName = pool ? pool->GetName() : QString();
+                const QString poolLabel = poolName.isEmpty() ? "pool" : QString("pool '%1'").arg(poolName);
+                const QString text = QString("HA is enabled for %1.\n\n"
+                                             "To shut down this host, the pool's host failures to tolerate must be "
+                                             "reduced from %2 to %3.\n\n"
+                                             "Do you want to continue?")
+                                         .arg(poolLabel)
+                                         .arg(current)
+                                         .arg(target);
+
+                return QMessageBox::question(this->mainWindow(),
+                                             "Adjust HA Failures to Tolerate",
+                                             text,
+                                             QMessageBox::Yes | QMessageBox::No,
+                                             QMessageBox::No) != QMessageBox::Yes;
+            };
+
+            ShutdownHostAction* action = new ShutdownHostAction(host, ntolPrompt, nullptr);
 
             OperationManager::instance()->RegisterOperation(action);
 

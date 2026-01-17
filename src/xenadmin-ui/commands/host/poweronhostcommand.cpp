@@ -27,9 +27,12 @@
 
 #include "poweronhostcommand.h"
 #include "../../mainwindow.h"
+#include "../../operations/operationmanager.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/actions/host/hostpoweronaction.h"
 #include "xenlib/xen/network/connection.h"
 #include <QMessageBox>
+#include <QPointer>
 
 PowerOnHostCommand::PowerOnHostCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
 {
@@ -88,28 +91,34 @@ void PowerOnHostCommand::Run()
             continue;
         }
 
-        // TODO: Create HostPowerOnAction when implemented
-        QMessageBox::information(this->mainWindow(), "Power On Host",
-                                 QString("Power on host '%1' will be implemented when HostPowerOnAction is added.\n\n"
-                                         "This will use %2 to power on the host.")
-                                     .arg(hostName)
-                                     .arg(powerOnMode.isEmpty() ? "the configured power-on method" : powerOnMode));
+        HostPowerOnAction* action = new HostPowerOnAction(host, nullptr);
+
+        OperationManager::instance()->RegisterOperation(action);
+
+        QPointer<MainWindow> mainWindow = this->mainWindow();
+        connect(action, &AsyncOperation::completed, mainWindow, [mainWindow, hostName, action]()
+        {
+            if (!mainWindow)
+            {
+                action->deleteLater();
+                return;
+            }
+
+            if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
+            {
+                mainWindow->ShowStatusMessage(QString("Host '%1' power on initiated successfully").arg(hostName), 5000);
+            }
+            else
+            {
+                QMessageBox::warning(mainWindow, "Power On Host Failed",
+                                     QString("Failed to power on host '%1'. Check the error log for details.").arg(hostName));
+                mainWindow->ShowStatusMessage("Host power on failed", 5000);
+            }
+            action->deleteLater();
+        });
+
+        action->RunAsync();
     }
-
-    /* When HostPowerOnAction is implemented:
-    HostPowerOnAction* action = new HostPowerOnAction(conn, hostRef, this->mainWindow());
-
-    // Register with OperationManager for history tracking
-    OperationManager::instance()->registerOperation(action);
-
-    // Connect completion signal for cleanup
-    connect(action, &AsyncOperation::completed, this, [action]() {
-        action->deleteLater();
-    });
-
-    // Run action asynchronously
-    action->runAsync();
-    */
 }
 
 QString PowerOnHostCommand::MenuText() const

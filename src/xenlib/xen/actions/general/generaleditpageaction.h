@@ -28,7 +28,7 @@
 #ifndef GENERALEDITPAGEACTION_H
 #define GENERALEDITPAGEACTION_H
 
-#include "../../asyncoperation.h"
+#include "xenlib/xen/asyncoperation.h"
 #include <QString>
 #include <QStringList>
 

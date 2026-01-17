@@ -26,21 +26,15 @@
  */
 
 #include "generaleditpageaction.h"
-#include "../../network/connection.h"
-#include "../../session.h"
-#include "../../api.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/api.h"
 #include "xen/xenobject.h"
 #include <QDebug>
 
 using namespace XenAPI;
 
-GeneralEditPageAction::GeneralEditPageAction(QSharedPointer<XenObject> object,
-                                             const QString& oldFolder,
-                                             const QString& newFolder,
-                                             const QStringList& oldTags,
-                                             const QStringList& newTags,
-                                             bool suppressHistory,
-                                             QObject* parent)
+GeneralEditPageAction::GeneralEditPageAction(QSharedPointer<XenObject> object, const QString& oldFolder, const QString& newFolder, const QStringList& oldTags, const QStringList& newTags, bool suppressHistory, QObject* parent)
     : AsyncOperation(object->GetConnection(), tr("Update Properties"), tr("Updating folder and tag properties..."), parent), m_oldFolder(oldFolder), m_newFolder(newFolder), m_oldTags(oldTags), m_newTags(newTags)
 {
     this->m_object = object;

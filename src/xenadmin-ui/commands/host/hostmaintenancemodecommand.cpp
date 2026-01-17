@@ -30,6 +30,7 @@
 #include "../../operations/operationmanager.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
 #include "xenlib/xen/actions/host/evacuatehostaction.h"
 #include "xenlib/xen/actions/host/enablehostaction.h"
 #include <QMessageBox>
@@ -96,12 +97,30 @@ void HostMaintenanceModeCommand::Run()
             XenConnection* conn = host->GetConnection();
             if (!conn || !conn->IsConnected())
             {
-                QMessageBox::warning(mw, "Not Connected",
-                                     "Not connected to XenServer");
+                QMessageBox::warning(mw, "Not Connected", "Not connected to XenServer");
                 return;
             }
 
-            EvacuateHostAction* action = new EvacuateHostAction(host, QSharedPointer<Host>(), nullptr);
+            auto ntolPrompt = [this](QSharedPointer<Pool> pool, qint64 current, qint64 target) {
+                const QString poolName = pool ? pool->GetName() : QString();
+                const QString poolLabel = poolName.isEmpty() ? "pool" : QString("pool '%1'").arg(poolName);
+                const QString text = QString("HA is enabled for %1.\n\n"
+                                             "To enter maintenance mode, the pool's host failures to tolerate must be "
+                                             "reduced from %2 to %3.\n\n"
+                                             "Do you want to continue?")
+                                         .arg(poolLabel)
+                                         .arg(current)
+                                         .arg(target);
+
+                return QMessageBox::question(this->mainWindow(),
+                                             "Adjust HA Failures to Tolerate",
+                                             text,
+                                             QMessageBox::Yes | QMessageBox::No,
+                                             QMessageBox::No) != QMessageBox::Yes;
+            };
+
+            EvacuateHostAction* action = new EvacuateHostAction(host, QSharedPointer<Host>(),
+                                                               ntolPrompt, nullptr, nullptr);
 
             OperationManager::instance()->RegisterOperation(action);
 
@@ -114,8 +133,7 @@ void HostMaintenanceModeCommand::Run()
                 }
                 else
                 {
-                    QMessageBox::warning(mw, "Enter Maintenance Mode Failed",
-                                         QString("Failed to enter maintenance mode for host '%1'. Check the error log for details.").arg(hostName));
+                    QMessageBox::warning(mw, "Enter Maintenance Mode Failed", QString("Failed to enter maintenance mode for host '%1'. Check the error log for details.").arg(hostName));
                     mw->ShowStatusMessage("Enter maintenance mode failed", 5000);
                 }
                 action->deleteLater();
@@ -126,9 +144,7 @@ void HostMaintenanceModeCommand::Run()
     } else
     {
         // Exiting maintenance mode
-        int ret = QMessageBox::question(mw, "Exit Maintenance Mode",
-                                        QString("Are you sure you want to exit maintenance mode for host '%1'?").arg(hostName),
-                                        QMessageBox::Yes | QMessageBox::No);
+        int ret = QMessageBox::question(mw, "Exit Maintenance Mode", QString("Are you sure you want to exit maintenance mode for host '%1'?").arg(hostName), QMessageBox::Yes | QMessageBox::No);
 
         if (ret == QMessageBox::Yes)
         {
@@ -141,11 +157,34 @@ void HostMaintenanceModeCommand::Run()
                 return;
             }
 
-            EnableHostAction* action = new EnableHostAction(host, false, nullptr);
+            auto ntolIncreasePrompt = [this](QSharedPointer<Pool> pool, QSharedPointer<Host> targetHost,
+                                             qint64 current, qint64 target) {
+                const QString poolName = pool ? pool->GetName() : QString();
+                const QString hostNameLocal = targetHost ? targetHost->GetName() : QString();
+                const QString poolLabel = poolName.isEmpty() ? "pool" : QString("pool '%1'").arg(poolName);
+                const QString hostLabel = hostNameLocal.isEmpty() ? "the host" : QString("host '%1'").arg(hostNameLocal);
+                const QString text = QString("HA is enabled for %1.\n\n"
+                                             "Now that %2 is enabled, the pool's host failures to tolerate can be "
+                                             "increased from %3 to %4.\n\n"
+                                             "Do you want to increase it?")
+                                         .arg(poolLabel)
+                                         .arg(hostLabel)
+                                         .arg(current)
+                                         .arg(target);
+
+                return QMessageBox::question(this->mainWindow(),
+                                             "Increase HA Failures to Tolerate",
+                                             text,
+                                             QMessageBox::Yes | QMessageBox::No,
+                                             QMessageBox::No) == QMessageBox::Yes;
+            };
+
+            EnableHostAction* action = new EnableHostAction(host, false, ntolIncreasePrompt, nullptr);
 
             OperationManager::instance()->RegisterOperation(action);
 
-            connect(action, &AsyncOperation::completed, this, [mw, hostName, action]() {
+            connect(action, &AsyncOperation::completed, this, [mw, hostName, action]()
+            {
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {
                     mw->ShowStatusMessage(QString("Host '%1' exited maintenance mode successfully").arg(hostName), 5000);
@@ -171,4 +210,3 @@ QString HostMaintenanceModeCommand::MenuText() const
     else
         return "Exit Maintenance Mode";
 }
-

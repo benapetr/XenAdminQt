@@ -33,14 +33,11 @@
 #include <QDebug>
 
 RestartToolstackAction::RestartToolstackAction(QSharedPointer<Host> host, QObject* parent)
-    : AsyncOperation(host->GetConnection(),
-                     QString("Restart toolstack on '%1'").arg(host ? host->GetName() : ""),
-                     "",
-                     parent),
-      m_host(host)
+    : AsyncOperation(host->GetConnection(), QString("Restart toolstack on '%1'").arg(host ? host->GetName() : ""), "", parent), m_host(host)
 {
     if (!this->m_host)
         throw std::invalid_argument("Host cannot be null");
+    this->AddApiMethodToRoleCheck("host.restart_agent");
 }
 
 RestartToolstackAction::~RestartToolstackAction()

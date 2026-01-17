@@ -26,11 +26,11 @@
  */
 
 #include "destroyhostaction.h"
-#include "../../network/connection.h"
-#include "../../session.h"
-#include "../../xenapi/xenapi_Host.h"
-#include "../../xenapi/xenapi_SR.h"
-#include "../../../xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/xenapi/xenapi_Host.h"
+#include "xenlib/xen/xenapi/xenapi_SR.h"
+#include "xenlib/xencache.h"
 #include <QDebug>
 #include <QThread>
 
@@ -46,6 +46,8 @@ DestroyHostAction::DestroyHostAction(QSharedPointer<Host> host, QObject* parent)
     this->m_pool = this->m_host->GetPool();
     if (!this->m_pool)
         throw std::invalid_argument("Pool cannot be null");
+    this->AddApiMethodToRoleCheck("host.destroy");
+    this->AddApiMethodToRoleCheck("sr.forget");
 }
 
 void DestroyHostAction::run()

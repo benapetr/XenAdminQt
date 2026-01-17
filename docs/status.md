@@ -13,7 +13,6 @@
 * Network tab (host) - needs finish and test, especially wizards and properties
 * New pool wizard
 * New storage wizard
-* New VM wizard
 * VM deleting
 * HA tab
 * NIC tab - bonding
@@ -40,6 +39,7 @@
 * Connection to pool - redirect from slave to master
 * Connection persistence
 * Basic VM controls (start / reboot / shutdown)
+* New VM wizard
 * VM live migration
 * Pause / Unpause
 * Suspend / Resume

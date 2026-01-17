@@ -40,22 +40,19 @@
 RebootHostAction::RebootHostAction(QSharedPointer<Host> host,
                                    std::function<bool(QSharedPointer<Pool>, qint64, qint64)> acceptNtolChanges,
                                    QObject* parent)
-    : AsyncOperation(host->GetConnection(),
-                     QString("Rebooting %1").arg(host->GetName()),
-                     "Waiting...",
-                     parent),
+    : AsyncOperation(host->GetConnection(), QString("Rebooting %1").arg(host->GetName()), "Waiting...", parent),
       m_host(host),
       m_wasEnabled(false),
       m_acceptNtolChanges(std::move(acceptNtolChanges))
 {
     this->setAppliesToFromObject(host);
-    AddApiMethodToRoleCheck("Async.host.disable");
-    AddApiMethodToRoleCheck("host.enable");
-    AddApiMethodToRoleCheck("Async.host.reboot");
-    AddApiMethodToRoleCheck("VM.async_clean_shutdown");
-    AddApiMethodToRoleCheck("VM.async_hard_shutdown");
-    AddApiMethodToRoleCheck("pool.ha_compute_hypothetical_max_host_failures_to_tolerate");
-    AddApiMethodToRoleCheck("pool.set_ha_host_failures_to_tolerate");
+    this->AddApiMethodToRoleCheck("host.disable");
+    this->AddApiMethodToRoleCheck("host.enable");
+    this->AddApiMethodToRoleCheck("host.reboot");
+    this->AddApiMethodToRoleCheck("vm.clean_shutdown");
+    this->AddApiMethodToRoleCheck("vm.hard_shutdown");
+    this->AddApiMethodToRoleCheck("pool.ha_compute_hypothetical_max_host_failures_to_tolerate");
+    this->AddApiMethodToRoleCheck("pool.set_ha_host_failures_to_tolerate");
 }
 
 void RebootHostAction::run()

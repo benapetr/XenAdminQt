@@ -28,10 +28,68 @@
 #include "xenapi_Host.h"
 #include "../session.h"
 #include "../api.h"
+#include "../failure.h"
 #include <stdexcept>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 namespace XenAPI
 {
+    namespace
+    {
+        void maybeThrowFailureFromResponse(const QByteArray& response)
+        {
+            QJsonParseError parseError;
+            QJsonDocument doc = QJsonDocument::fromJson(response, &parseError);
+            if (parseError.error != QJsonParseError::NoError || !doc.isObject())
+                return;
+
+            QJsonObject root = doc.object();
+
+            auto throwFromArray = [](const QJsonArray& array)
+            {
+                QStringList errors;
+                for (const QJsonValue& val : array)
+                    errors << val.toString();
+                if (!errors.isEmpty())
+                    throw Failure(errors);
+            };
+
+            if (root.contains("result"))
+            {
+                QJsonValue resultVal = root.value("result");
+                if (resultVal.isObject())
+                {
+                    QJsonObject resultObj = resultVal.toObject();
+                    if (resultObj.value("Status").toString() == "Failure")
+                    {
+                        QJsonValue errorDesc = resultObj.value("ErrorDescription");
+                        if (errorDesc.isArray())
+                            throwFromArray(errorDesc.toArray());
+                    }
+                }
+            }
+
+            if (root.contains("error"))
+            {
+                QJsonObject errorObj = root.value("error").toObject();
+                QStringList errors;
+                QString message = errorObj.value("message").toString();
+                errors << message;
+                QJsonValue dataVal = errorObj.value("data");
+                if (dataVal.isArray())
+                {
+                    QJsonArray dataArray = dataVal.toArray();
+                    for (const QJsonValue& val : dataArray)
+                        errors << val.toString();
+                }
+                if (!errors.isEmpty())
+                    throw Failure(errors);
+            }
+        }
+    }
+
     QVariantList Host::get_all(Session* session)
     {
         if (!session || !session->IsLoggedIn())
@@ -276,6 +334,100 @@ namespace XenAPI
         QByteArray request = api.BuildJsonRpcCall("Async.host.evacuate", params);
         QByteArray response = session->sendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
+    }
+
+    void Host::power_on(Session* session, const QString& host)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("host.power_on", params);
+        QByteArray response = session->sendApiRequest(request);
+        api.ParseJsonRpcResponse(response); // Void method - just check for errors
+    }
+
+    QHash<QString, QStringList> Host::retrieve_wlb_evacuate_recommendations(Session* session, const QString& host)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("host.retrieve_wlb_evacuate_recommendations", params);
+        QByteArray response = session->sendApiRequest(request);
+
+        maybeThrowFailureFromResponse(response);
+
+        QVariant result = api.ParseJsonRpcResponse(response);
+
+        QHash<QString, QStringList> recommendations;
+        if (result.type() == QVariant::Map)
+        {
+            QVariantMap map = result.toMap();
+            for (auto it = map.constBegin(); it != map.constEnd(); ++it)
+            {
+                QString vmRef = it.key();
+                QVariant value = it.value();
+
+                QStringList recArray;
+                if (value.type() == QVariant::List)
+                {
+                    QVariantList list = value.toList();
+                    for (const QVariant& item : list)
+                        recArray.append(item.toString());
+                }
+
+                recommendations[vmRef] = recArray;
+            }
+        }
+
+        return recommendations;
+    }
+
+    QHash<QString, QStringList> Host::get_vms_which_prevent_evacuation(Session* session, const QString& host)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << host;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("host.get_vms_which_prevent_evacuation", params);
+        QByteArray response = session->sendApiRequest(request);
+
+        maybeThrowFailureFromResponse(response);
+
+        QVariant result = api.ParseJsonRpcResponse(response);
+
+        QHash<QString, QStringList> reasons;
+        if (result.type() == QVariant::Map)
+        {
+            QVariantMap map = result.toMap();
+            for (auto it = map.constBegin(); it != map.constEnd(); ++it)
+            {
+                QString vmRef = it.key();
+                QVariant value = it.value();
+
+                QStringList reasonArray;
+                if (value.type() == QVariant::List)
+                {
+                    QVariantList list = value.toList();
+                    for (const QVariant& item : list)
+                        reasonArray.append(item.toString());
+                }
+
+                reasons[vmRef] = reasonArray;
+            }
+        }
+
+        return reasons;
     }
 
     QString Host::async_destroy(Session* session, const QString& host)

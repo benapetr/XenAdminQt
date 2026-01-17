@@ -74,4 +74,17 @@ namespace XenAPI
         QByteArray request = api.BuildJsonRpcCall("task.cancel", params);
         session->sendApiRequest(request);
     }
+
+    void Task::add_to_other_config(Session* session, const QString& taskRef, const QString& key, const QString& value)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->getSessionId() << taskRef << key << value;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("task.add_to_other_config", params);
+        session->sendApiRequest(request);
+    }
 }
