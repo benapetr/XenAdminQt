@@ -63,7 +63,7 @@ GeneralTabPage::GeneralTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui
     this->ui->pdSectionReadCaching->SetSectionTitle(tr("Read Caching"));
     this->ui->pdSectionDeviceSecurity->SetSectionTitle(tr("Device Security"));
 
-    this->ui->pdSectionGeneral->Expand();
+    //this->ui->pdSectionGeneral->Expand();
 
     QFont linkFont = this->ui->expandAllButton->font();
     linkFont.setUnderline(true);
@@ -98,6 +98,7 @@ GeneralTabPage::GeneralTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui
 
     for (PDSection* section : this->sections_)
     {
+        section->Expand();
         connect(section, &PDSection::ExpandedChanged, this, &GeneralTabPage::onSectionExpandedChanged);
     }
 
