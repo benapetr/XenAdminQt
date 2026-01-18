@@ -27,10 +27,11 @@
 
 #include "hostmemoryrow.h"
 #include "ui_hostmemoryrow.h"
-#include "xen/host.h"
-#include "xen/hostmetrics.h"
-#include "xen/vm.h"
-#include "xen/vmmetrics.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/hostmetrics.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/vmmetrics.h"
+#include "xenlib/utils/misc.h"
 #include <cmath>
 #include <QDebug>
 
@@ -141,12 +142,12 @@ void HostMemoryRow::Refresh()
         : 0;
     
     // Set the text values
-    this->ui->valueTotal->setText(this->formatMemorySize(total));
-    this->ui->valueUsed->setText(this->formatMemorySize(used));
-    this->ui->valueAvailable->setText(this->formatMemorySize(avail));
-    this->ui->valueTotDynMax->setText(this->formatMemorySize(totDynMax));
+    this->ui->valueTotal->setText(Misc::FormatMemorySize(total));
+    this->ui->valueUsed->setText(Misc::FormatMemorySize(used));
+    this->ui->valueAvailable->setText(Misc::FormatMemorySize(avail));
+    this->ui->valueTotDynMax->setText(Misc::FormatMemorySize(totDynMax));
     this->ui->labelOvercommitValue->setText(QString("%1%").arg(overcommit));
-    this->ui->valueControlDomain->setText(this->formatMemorySize(dom0));
+    this->ui->valueControlDomain->setText(Misc::FormatMemorySize(dom0));
     
     // Initialize the shiny bar
     this->ui->hostShinyBar->Initialize(this->host_, xenOverhead, dom0);
@@ -172,30 +173,4 @@ void HostMemoryRow::onMetricsDataChanged()
     // C# equivalent: vm_metrics_PropertyChanged handler
     // Refresh when VM_metrics.memory_actual changes
     this->Refresh();
-}
-
-QString HostMemoryRow::formatMemorySize(qint64 bytes) const
-{
-    // Format memory size with appropriate units (KB, MB, GB, TB)
-    const qint64 KB = 1024;
-    const qint64 MB = 1024 * KB;
-    const qint64 GB = 1024 * MB;
-    const qint64 TB = 1024 * GB;
-
-    if (bytes >= TB)
-    {
-        return QString("%1 TB").arg(bytes / static_cast<double>(TB), 0, 'f', 2);
-    } else if (bytes >= GB)
-    {
-        return QString("%1 GB").arg(bytes / static_cast<double>(GB), 0, 'f', 2);
-    } else if (bytes >= MB)
-    {
-        return QString("%1 MB").arg(bytes / static_cast<double>(MB), 0, 'f', 2);
-    } else if (bytes >= KB)
-    {
-        return QString("%1 KB").arg(bytes / static_cast<double>(KB), 0, 'f', 2);
-    } else
-    {
-        return QString("%1 B").arg(bytes);
-    }
 }

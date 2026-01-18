@@ -101,8 +101,6 @@ class HostMemoryRow : public QWidget
     private:
         Ui::HostMemoryRow* ui;
         QSharedPointer<Host> host_;
-        
-        QString formatMemorySize(qint64 bytes) const;
 };
 
 #endif // HOSTMEMORYROW_H
