@@ -313,7 +313,7 @@
   <customwidget>
    <class>MemoryBar</class>
    <extends>QWidget</extends>
-   <header>widgets/memorybar.h</header>
+   <header>controls/memorybar.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

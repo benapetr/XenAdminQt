@@ -224,9 +224,10 @@ SOURCES += \
     tabpages/notificationsbasepage.cpp \
     tabpages/alertsummarypage.cpp \
     tabpages/eventspage.cpp \
-    widgets/memorybar.cpp \
-    widgets/vmshinybar.cpp \
-    widgets/hostshinybar.cpp \
+    controls/memorybar.cpp \
+    controls/shinybar.cpp \
+    controls/vmshinybar.cpp \
+    controls/hostshinybar.cpp \
     widgets/vmmemorycontrols.cpp \
     widgets/vmmemoryrow.cpp \
     controls/hostmemoryrow.cpp \
@@ -472,9 +473,10 @@ HEADERS += \
     tabpages/notificationsbasepage.h \
     tabpages/alertsummarypage.h \
     tabpages/eventspage.h \
-    widgets/memorybar.h \
-    widgets/vmshinybar.h \
-    widgets/hostshinybar.h \
+    controls/memorybar.h \
+    controls/shinybar.h \
+    controls/vmshinybar.h \
+    controls/hostshinybar.h \
     widgets/vmmemorycontrols.h \
     widgets/vmmemoryrow.h \
     controls/hostmemoryrow.h \

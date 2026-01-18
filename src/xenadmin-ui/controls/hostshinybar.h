@@ -28,7 +28,7 @@
 #ifndef HOSTSHINYBAR_H
 #define HOSTSHINYBAR_H
 
-#include <QWidget>
+#include "shinybar.h"
 #include <QSharedPointer>
 #include <QVector>
 #include <QRect>
@@ -46,7 +46,7 @@
  *
  * Qt port of C# XenAdmin HostShinyBar control.
  */
-class HostShinyBar : public QWidget
+class HostShinyBar : public ShinyBar
 {
     Q_OBJECT
 
@@ -69,6 +69,10 @@ class HostShinyBar : public QWidget
         void mouseMoveEvent(QMouseEvent* event) override;
         bool event(QEvent* event) override;
 
+        // ShinyBar interface implementation
+        QRect BarRect() const override;
+        int GetBarHeight() const override { return BAR_HEIGHT; }
+
     private:
         struct SegmentInfo
         {
@@ -82,28 +86,17 @@ class HostShinyBar : public QWidget
         qint64 dom0Memory_;
         QVector<SegmentInfo> segments_;
 
-        void DrawSegment(QPainter& painter, qint64 mem, double bytesPerPixel,
-                         const QString& name, const QColor& color, double& left);
-        void DrawRuler(QPainter& painter, const QRect& barArea, qint64 totalMemory);
-        void DrawSegmentFill(QPainter& painter, const QRect& barArea, const QRect& segmentRect,
-                             const QColor& color, const QString& text);
-        QRect BarRect() const;
+        void DrawHostSegment(QPainter& painter, qint64 mem, double bytesPerPixel,
+                             const QString& name, const QColor& color, double& left);
 
         // Constants
-        static constexpr int RADIUS = 5;
-        static constexpr int PAD = 2;
-        static constexpr int TEXT_PAD = 3;
         static constexpr int BAR_HEIGHT = 40;
-        static constexpr int RULER_HEIGHT = 18;
-        static constexpr int RULER_TICK_HEIGHT = 6;
-        static constexpr int MIN_GAP = 40;
 
         // Colors
         static const QColor COLOR_XEN;
         static const QColor COLOR_CONTROL_DOMAIN;
         static const QColor COLOR_VM1;
         static const QColor COLOR_VM2;
-        static const QColor COLOR_UNUSED;
 };
 
 #endif // HOSTSHINYBAR_H

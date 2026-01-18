@@ -33,7 +33,7 @@
 #include <QGridLayout>
 #include <QSharedPointer>
 #include "xen/vm.h"
-#include "vmshinybar.h"
+#include "../controls/vmshinybar.h"
 
 /**
  * @brief Displays VM memory statistics and visualization

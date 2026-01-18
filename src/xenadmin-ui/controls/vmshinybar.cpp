@@ -33,6 +33,7 @@
 #include <QDebug>
 #include <cmath>
 #include "vmshinybar.h"
+#include "shinybar.h"
 #include "xenlib/utils/misc.h"
 #include "xenlib/xencache.h"
 
@@ -63,13 +64,11 @@ namespace
 
 // Color constants
 const QColor VMShinyBar::COLOR_USED = QColor(34, 139, 34);      // ForestGreen
-const QColor VMShinyBar::COLOR_UNUSED = QColor(0, 0, 0);        // Black
 const QColor VMShinyBar::COLOR_TEXT = QColor(255, 255, 255);    // White
-const QColor VMShinyBar::COLOR_GRID = QColor(169, 169, 169);    // DarkGray
 const QColor VMShinyBar::COLOR_SLIDER_LIMITS = QColor(211, 211, 211);  // LightGray
 
 VMShinyBar::VMShinyBar(QWidget* parent)
-    : QWidget(parent),
+    : ShinyBar(parent),
       memoryUsed_(0),
       staticMin_(0),
       staticMax_(0),
@@ -295,10 +294,10 @@ void VMShinyBar::paintEvent(QPaintEvent* event)
     QString toolTip = this->multiple_ ?
         QString("Current memory usage (average): %1").arg(bytesString) :
         QString("Current memory usage: %1").arg(bytesString);
-    DrawToTarget(painter, barArea, usedRect, COLOR_USED, bytesString, COLOR_TEXT, Qt::AlignRight, toolTip);
+    this->DrawSegment(painter, barArea, usedRect, COLOR_USED, bytesString, COLOR_TEXT, Qt::AlignRight);
     
     QRect unusedRect(barArea.left() + leftWidth, barArea.top(), barArea.width() - leftWidth, barArea.height());
-    DrawToTarget(painter, barArea, unusedRect, COLOR_UNUSED);
+    this->DrawSegment(painter, barArea, unusedRect, COLOR_UNUSED);
     
     // Draw sliders if ballooning is supported
     if (this->hasBallooning_)
@@ -507,74 +506,6 @@ void VMShinyBar::DrawGrid(QPainter& painter, const QRect& barArea, double bytesP
         }
         withLabel = !withLabel;
     }
-}
-
-void VMShinyBar::DrawToTarget(QPainter& painter, const QRect& barArea, const QRect& segmentBounds,
-                              const QColor& color, const QString& text, const QColor& textColor,
-                              Qt::Alignment alignment, const QString& toolTipText)
-{
-    Q_UNUSED(toolTipText);  // TODO: Implement tooltip regions
-    
-    if (segmentBounds.width() <= 0)
-        return;
-    
-    // Save state and set clipping
-    painter.save();
-    painter.setClipRect(segmentBounds);
-    
-    // Create rounded rectangle path
-    QPainterPath outerPath;
-    outerPath.addRoundedRect(barArea, RADIUS, RADIUS);
-    
-    // Outer rounded rectangle with gradient
-    QLinearGradient outerBrush(barArea.topLeft(), barArea.bottomLeft());
-    outerBrush.setColorAt(0, color);
-    outerBrush.setColorAt(1, color.lighter(120));
-    painter.fillPath(outerPath, outerBrush);
-    
-    // Render text if provided
-    if (!text.isEmpty() && textColor.isValid())
-    {
-        painter.setPen(textColor);
-        QFont font = painter.font();
-        font.setPointSize(9);
-        painter.setFont(font);
-        
-        QFontMetrics fm(font);
-        QSize textSize = fm.size(Qt::TextSingleLine, text);
-        
-        float horizPos;
-        if (alignment & Qt::AlignRight)
-            horizPos = segmentBounds.right() - textSize.width() - TEXT_PAD;
-        else if (alignment & Qt::AlignHCenter)
-            horizPos = segmentBounds.left() + (segmentBounds.width() - textSize.width()) / 2;
-        else
-            horizPos = segmentBounds.left() + TEXT_PAD;
-        
-        QRectF textRect(horizPos,
-                        segmentBounds.top() + (segmentBounds.height() - textSize.height() * 0.9f) / 2,
-                        textSize.width(),
-                        textSize.height());
-        
-        if (textRect.x() < segmentBounds.x() + TEXT_PAD)
-            textRect.moveLeft(segmentBounds.x() + TEXT_PAD);
-        
-        painter.drawText(textRect, Qt::AlignLeft, text);
-    }
-    
-    // Inner rounded rectangle for highlight effect
-    QRectF innerRect(barArea.x() + PAD, barArea.y() + PAD,
-                     barArea.width() - (2.0 * PAD), barArea.height() * 0.49);
-    QPainterPath innerPath;
-    innerPath.addRoundedRect(innerRect, RADIUS - PAD, RADIUS - PAD);
-    
-    QLinearGradient lighterBrush(innerRect.topLeft(), innerRect.bottomLeft());
-    lighterBrush.setColorAt(0, QColor(255, 255, 255, 120));
-    lighterBrush.setColorAt(1, QColor(255, 255, 255, 30));
-    painter.fillPath(innerPath, lighterBrush);
-    
-    // Restore state
-    painter.restore();
 }
 
 QRect VMShinyBar::BarRect() const

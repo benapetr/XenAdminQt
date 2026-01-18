@@ -238,7 +238,7 @@
   <customwidget>
    <class>VMShinyBar</class>
    <extends>QWidget</extends>
-   <header>widgets/vmshinybar.h</header>
+   <header>controls/vmshinybar.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

@@ -28,7 +28,7 @@
 #ifndef VMSHINYBAR_H
 #define VMSHINYBAR_H
 
-#include <QWidget>
+#include "shinybar.h"
 #include <QPixmap>
 #include <QPoint>
 #include <QRect>
@@ -42,7 +42,7 @@
  * 
  * Based on C# XenAdmin VMShinyBar control.
  */
-class VMShinyBar : public QWidget
+class VMShinyBar : public ShinyBar
 {
     Q_OBJECT
 
@@ -114,6 +114,10 @@ class VMShinyBar : public QWidget
         void mousePressEvent(QMouseEvent* event) override;
         void mouseReleaseEvent(QMouseEvent* event) override;
 
+        // ShinyBar interface implementation
+        QRect BarRect() const override;
+        int GetBarHeight() const override { return BAR_HEIGHT; }
+
     private:
         enum class Slider
         {
@@ -161,25 +165,14 @@ class VMShinyBar : public QWidget
         void DrawSliderRanges(QPainter& painter);
         void DrawSliders(QPainter& painter, double min, double max);
         void DrawGrid(QPainter& painter, const QRect& barArea, double bytesPerPixel, double max);
-        void DrawToTarget(QPainter& painter, const QRect& barArea, const QRect& segmentBounds,
-                          const QColor& color, const QString& text = QString(),
-                          const QColor& textColor = QColor(), Qt::Alignment alignment = Qt::AlignLeft,
-                          const QString& toolTipText = QString());
-        QRect BarRect() const;
 
         // Constants
-        static constexpr int RADIUS = 5;
-        static constexpr int PAD = 2;
-        static constexpr int TEXT_PAD = 3;
-        static constexpr int TEXT_FADE = 8;
         static constexpr int BAR_HEIGHT = 20;
         static constexpr int SLIDER_RANGE_HEIGHT = 10;
 
         // Colors
         static const QColor COLOR_USED;
-        static const QColor COLOR_UNUSED;
         static const QColor COLOR_TEXT;
-        static const QColor COLOR_GRID;
         static const QColor COLOR_SLIDER_LIMITS;
 };
 
