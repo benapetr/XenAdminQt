@@ -197,6 +197,65 @@
        </widget>
       </item>
       <item>
+       <widget class="QCheckBox" name="checkBoxAdvanced">
+        <property name="text">
+         <string>Show advanced controls</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="advancedWidget" native="true">
+        <layout class="QVBoxLayout" name="advancedLayout">
+         <property name="leftMargin">
+          <number>20</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="labelAdvancedWarning">
+           <property name="text">
+            <string>Advanced: Changing static minimum can make memory settings invalid. Proceed at your own risk.</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QFormLayout" name="advancedFormLayout">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="QLabel" name="labelStaticMin">
+             <property name="text">
+              <string>Static minimum:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QDoubleSpinBox" name="spinnerStaticMin">
+             <property name="suffix">
+              <string> MB</string>
+             </property>
+             <property name="minimum">
+              <double>128.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>999999.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>128.000000000000000</double>
+             </property>
+             <property name="value">
+              <double>128.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
        <widget class="QCheckBox" name="checkBoxDeferReboot">
         <property name="text">
          <string>Apply changes on next reboot (do not restart now)</string>

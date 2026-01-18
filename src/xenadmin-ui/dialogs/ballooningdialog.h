@@ -73,6 +73,8 @@ class BallooningDialog : public QDialog
         void onDynMinValueChanged(double value);
         void onDynMaxValueChanged(double value);
         void onShinyBarSliderDragged();
+        void onAdvancedToggled(bool checked);
+        void onStaticMinValueChanged(double value);
         void onAccepted();
 
     private:
@@ -101,9 +103,9 @@ class BallooningDialog : public QDialog
         double currentDynamicMinMB() const;
         double currentDynamicMaxMB() const;
         double currentStaticMaxMB() const;
+        double currentStaticMinMB() const;
         double getMemoryRatio() const;
         double calcMaxDynMin() const;
-        bool vmSupportsBallooning() const;
         bool vmUsesBallooning() const;
         qint64 getMemorySpinnerMax() const;
         double calcIncrementMB(double staticMaxMB) const;
