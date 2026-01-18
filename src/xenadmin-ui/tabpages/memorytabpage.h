@@ -82,9 +82,6 @@ class MemoryTabPage : public BaseTabPage
 
         void populateVMMemory();
         void populateHostMemory();
-        QString formatMemorySize(qint64 bytes) const;
-        bool supportsBallooning() const;
-        bool supportsBallooning(const QSharedPointer<VM>& vm) const;
 };
 
 #endif // MEMORYTABPAGE_H

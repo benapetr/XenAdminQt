@@ -25,8 +25,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "vmshinybar.h"
-#include "xencache.h"
 #include <QPainter>
 #include <QPainterPath>
 #include <QLinearGradient>
@@ -34,6 +32,9 @@
 #include <QToolTip>
 #include <QDebug>
 #include <cmath>
+#include "vmshinybar.h"
+#include "xenlib/utils/misc.h"
+#include "xenlib/xencache.h"
 
 namespace
 {
@@ -290,7 +291,7 @@ void VMShinyBar::paintEvent(QPaintEvent* event)
         leftWidth = barArea.width();
     
     QRect usedRect(barArea.left(), barArea.top(), leftWidth, barArea.height());
-    QString bytesString = FormatMemorySize(this->memoryUsed_);
+    QString bytesString = Misc::FormatMemorySize(this->memoryUsed_);
     QString toolTip = this->multiple_ ?
         QString("Current memory usage (average): %1").arg(bytesString) :
         QString("Current memory usage: %1").arg(bytesString);
@@ -494,7 +495,7 @@ void VMShinyBar::DrawGrid(QPainter& painter, const QRect& barArea, double bytesP
         // Label
         if (withLabel)
         {
-            label = FormatMemorySize(static_cast<qint64>(x));
+            label = Misc::FormatMemorySize(static_cast<qint64>(x));
             QSize size = fm.size(Qt::TextSingleLine, label);
             QRect textRect(QPoint(pos - size.width() / 2, textTop), size);
             
@@ -579,20 +580,4 @@ void VMShinyBar::DrawToTarget(QPainter& painter, const QRect& barArea, const QRe
 QRect VMShinyBar::BarRect() const
 {
     return QRect(20, 30, width() - 45, BAR_HEIGHT);
-}
-
-QString VMShinyBar::FormatMemorySize(qint64 bytes) const
-{
-    const qint64 BINARY_KILO = 1024;
-    const qint64 BINARY_MEGA = 1024 * 1024;
-    const qint64 BINARY_GIGA = 1024 * 1024 * 1024;
-    
-    if (bytes >= BINARY_GIGA)
-        return QString("%1 GB").arg(static_cast<double>(bytes) / BINARY_GIGA, 0, 'f', 1);
-    else if (bytes >= BINARY_MEGA)
-        return QString("%1 MB").arg(bytes / BINARY_MEGA);
-    else if (bytes >= BINARY_KILO)
-        return QString("%1 KB").arg(bytes / BINARY_KILO);
-    else
-        return QString("%1 B").arg(bytes);
 }

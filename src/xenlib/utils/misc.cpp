@@ -108,3 +108,34 @@ int Misc::NaturalCompare(const QString& s1, const QString& s2)
     // Strings are equal up to minLen, shorter one is smaller
     return len1 - len2;
 }
+
+QString Misc::FormatMemorySize(qint64 bytes)
+{
+    const qint64 KB = 1024;
+    const qint64 MB = KB * 1024;
+    const qint64 GB = MB * 1024;
+    const qint64 TB = GB * 1024;
+
+    if (bytes >= TB)
+    {
+        double tb = static_cast<double>(bytes) / TB;
+        return QString::number(tb, 'f', 2) + " TB";
+    }
+    else if (bytes >= GB)
+    {
+        double gb = static_cast<double>(bytes) / GB;
+        return QString::number(gb, 'f', 2) + " GB";
+    }
+    else if (bytes >= MB)
+    {
+        double mb = static_cast<double>(bytes) / MB;
+        return QString::number(mb, 'f', 1) + " MB";
+    }
+    else if (bytes >= KB)
+    {
+        double kb = static_cast<double>(bytes) / KB;
+        return QString::number(kb, 'f', 1) + " KB";
+    }
+
+    return QString::number(bytes) + " B";
+}

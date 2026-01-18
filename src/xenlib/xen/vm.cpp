@@ -504,6 +504,40 @@ qint64 VM::GetMemoryStaticMin() const
     return longProperty("memory_static_min", 0);
 }
 
+bool VM::SupportsBallooning() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return false;
+
+    // C# equivalent: VM.SupportsBallooning()
+    // For templates: ballooning supported if dynamic_min != static_max
+    if (this->IsTemplate())
+        return this->GetMemoryDynamicMin() != this->GetMemoryStaticMax();
+
+    // For VMs: check if guest_metrics.other["feature-balloon"] exists
+    QString guestMetricsRef = this->GetGuestMetricsRef();
+    if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL)
+        return false;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return false;
+
+    QVariantMap guestMetricsData = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+    if (guestMetricsData.isEmpty())
+        return false;
+
+    QVariantMap otherConfig = guestMetricsData.value("other", QVariantMap()).toMap();
+    return otherConfig.contains("feature-balloon");
+}
+
+bool VM::UsesBallooning() const
+{
+    // C# equivalent: VM.UsesBallooning()
+    return this->GetMemoryDynamicMax() != this->GetMemoryStaticMax() && this->SupportsBallooning();
+}
+
 int VM::VCPUsMax() const
 {
     return intProperty("VCPUs_max", 0);

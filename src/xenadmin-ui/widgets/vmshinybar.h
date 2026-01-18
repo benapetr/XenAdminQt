@@ -166,7 +166,6 @@ class VMShinyBar : public QWidget
                           const QColor& textColor = QColor(), Qt::Alignment alignment = Qt::AlignLeft,
                           const QString& toolTipText = QString());
         QRect BarRect() const;
-        QString FormatMemorySize(qint64 bytes) const;
 
         // Constants
         static constexpr int RADIUS = 5;

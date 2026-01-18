@@ -160,6 +160,27 @@ class XENLIB_EXPORT VM : public XenObject
         //! Get memory static min in bytes
         qint64 GetMemoryStaticMin() const;
 
+        /**
+         * @brief Check if VM supports memory ballooning
+         * 
+         * C# equivalent: VM.SupportsBallooning()
+         * For templates: ballooning supported if dynamic_min != static_max
+         * For VMs: ballooning supported if guest_metrics.other["feature-balloon"] exists
+         * 
+         * @return true if ballooning is supported
+         */
+        bool SupportsBallooning() const;
+
+        /**
+         * @brief Check if VM uses memory ballooning
+         * 
+         * C# equivalent: VM.UsesBallooning()
+         * VM uses ballooning if dynamic_max != static_max AND ballooning is supported
+         * 
+         * @return true if ballooning is in use
+         */
+        bool UsesBallooning() const;
+
         //! Get maximum number of VCPUs
         int VCPUsMax() const;
 

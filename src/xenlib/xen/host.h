@@ -328,6 +328,62 @@ class XENLIB_EXPORT Host : public XenObject
          */
         QList<ComparableAddress> GetIPAddresses() const;
 
+        /**
+         * @brief Calculate free memory on host
+         * 
+         * C# equivalent: Host.memory_free_calc()
+         * Uses conservative calculation from xapi: memory_total - (host_overhead + sum of VM overheads + VM memory_actual)
+         */
+        qint64 MemoryFreeCalc() const;
+
+        /**
+         * @brief Calculate total dynamic minimum of all resident VMs
+         * 
+         * C# equivalent: Host.tot_dyn_min()
+         * Sum of memory_dynamic_min for ballooning VMs, memory_static_max for non-ballooning VMs (excluding dom0)
+         */
+        qint64 TotDynMin() const;
+
+        /**
+         * @brief Calculate total dynamic maximum of all resident VMs
+         * 
+         * C# equivalent: Host.tot_dyn_max()
+         * Sum of memory_dynamic_max for ballooning VMs, memory_static_max for non-ballooning VMs (excluding dom0)
+         */
+        qint64 TotDynMax() const;
+
+        /**
+         * @brief Calculate available memory on host
+         * 
+         * C# equivalent: Host.memory_available_calc()
+         * Memory that could be available if all VMs were reduced to their dynamic_minimum
+         */
+        qint64 MemoryAvailableCalc() const;
+
+        /**
+         * @brief Calculate memory used by Xen (hypervisor + control domain)
+         * 
+         * C# equivalent: Host.xen_memory_calc()
+         * Includes host overhead + VM overheads + control domain memory_actual
+         */
+        qint64 XenMemoryCalc() const;
+
+        /**
+         * @brief Get control domain (dom0) memory
+         * 
+         * C# equivalent: Host.dom0_memory()
+         * Returns memory_actual from dom0 VM_metrics, or memory_dynamic_min if metrics unavailable
+         */
+        qint64 Dom0Memory() const;
+
+        /**
+         * @brief Get control domain zero VM
+         * 
+         * C# equivalent: Host.ControlDomainZero()
+         * Finds the first resident VM where is_control_domain is true
+         */
+        QSharedPointer<VM> ControlDomainZero() const;
+
     protected:
         QString GetObjectType() const override;
 };

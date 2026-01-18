@@ -39,12 +39,9 @@
 #include <QDebug>
 #include <QDomDocument>
 
-BallooningDialog::BallooningDialog(const QSharedPointer<VM> &vm, XenConnection* connection, QWidget* parent)
+BallooningDialog::BallooningDialog(const QSharedPointer<VM> &vm, QWidget* parent)
     : QDialog(parent),
       ui(new Ui::BallooningDialog),
-      m_connection(connection),
-      m_hasBallooning(false),
-      m_isTemplate(false),
       m_maxDynMin(-1.0),
       m_memorySpinnerMax(0)
 {
@@ -57,6 +54,8 @@ BallooningDialog::BallooningDialog(const QSharedPointer<VM> &vm, XenConnection* 
         QMessageBox::critical(this, tr("Error"), tr("Failed to load VM data"));
         return;
     }
+
+    this->m_connection = vm->GetConnection();
 
     // Store original memory settings
     this->m_originalStaticMin = this->m_vm->GetMemoryStaticMin();
@@ -74,13 +73,10 @@ BallooningDialog::BallooningDialog(const QSharedPointer<VM> &vm, XenConnection* 
     // Connect signals
     connect(this->ui->radioFixed, &QRadioButton::toggled, this, &BallooningDialog::onFixedRadioToggled);
     connect(this->ui->radioDynamic, &QRadioButton::toggled, this, &BallooningDialog::onDynamicRadioToggled);
-
     connect(this->ui->spinnerFixed, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &BallooningDialog::onFixedValueChanged);
     connect(this->ui->spinnerDynMin, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &BallooningDialog::onDynMinValueChanged);
     connect(this->ui->spinnerDynMax, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &BallooningDialog::onDynMaxValueChanged);
-
     connect(this->ui->vmShinyBar, &VMShinyBar::sliderDragged, this, &BallooningDialog::onShinyBarSliderDragged);
-
     connect(this->ui->buttonBox, &QDialogButtonBox::accepted, this, &BallooningDialog::onAccepted);
 
     // Populate controls with current values

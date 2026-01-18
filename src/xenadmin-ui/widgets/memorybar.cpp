@@ -26,6 +26,7 @@
  */
 
 #include "memorybar.h"
+#include "xenlib/utils/misc.h"
 #include <QPainter>
 #include <QPainterPath>
 #include <QLinearGradient>
@@ -33,8 +34,7 @@
 #include <QMouseEvent>
 #include <QDebug>
 
-MemoryBar::MemoryBar(QWidget* parent)
-    : QWidget(parent), m_totalMemory(0)
+MemoryBar::MemoryBar(QWidget* parent) : QWidget(parent), m_totalMemory(0)
 {
     setMouseTracking(true);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -99,7 +99,7 @@ void MemoryBar::paintEvent(QPaintEvent* event)
                           static_cast<int>(left + width) - static_cast<int>(left),
                           barArea.height());
 
-        QString text = segment.name + "\n" + formatMemorySize(segment.bytes);
+        QString text = segment.name + "\n" + Misc::FormatMemorySize(segment.bytes);
         drawSegment(painter, barArea, segmentRect, segment.color, text);
 
         left += width;
@@ -203,7 +203,7 @@ void MemoryBar::drawRuler(QPainter& painter, const QRect& barArea)
     painter.setFont(font);
     QFontMetrics fm(font);
 
-    QString maxLabel = formatMemorySize(m_totalMemory);
+    QString maxLabel = Misc::FormatMemorySize(m_totalMemory);
     int longest = fm.horizontalAdvance(maxLabel);
 
     double bytesPerPixel = static_cast<double>(m_totalMemory) / static_cast<double>(barArea.width());
@@ -226,7 +226,7 @@ void MemoryBar::drawRuler(QPainter& painter, const QRect& barArea)
         {
             if (m_totalMemory <= BINARY_GIGA || static_cast<qint64>(x) % (BINARY_GIGA / 2) == 0)
             {
-                QString label = formatMemorySize(static_cast<qint64>(x));
+                QString label = Misc::FormatMemorySize(static_cast<qint64>(x));
                 QSize size = fm.size(Qt::TextSingleLine, label);
                 QRect textRect(QPoint(pos - size.width() / 2, textTop), size);
                 painter.drawText(textRect, Qt::AlignCenter, label);
@@ -262,7 +262,7 @@ void MemoryBar::mouseMoveEvent(QMouseEvent* event)
         if (segmentRect.contains(event->pos()))
         {
             QString tooltip = segment.tooltip.isEmpty()
-                                  ? (segment.name + "\n" + formatMemorySize(segment.bytes))
+                                  ? (segment.name + "\n" + Misc::FormatMemorySize(segment.bytes))
                                   : segment.tooltip;
             // Qt5 compatibility: use globalPos() instead of globalPosition()
             QToolTip::showText(event->globalPos(), tooltip, this);
@@ -285,26 +285,3 @@ bool MemoryBar::event(QEvent* event)
     return QWidget::event(event);
 }
 
-QString MemoryBar::formatMemorySize(qint64 bytes) const
-{
-    const qint64 KB = 1024;
-    const qint64 MB = KB * 1024;
-    const qint64 GB = MB * 1024;
-
-    if (bytes >= GB)
-    {
-        double gb = bytes / static_cast<double>(GB);
-        return QString("%1 GB").arg(gb, 0, 'f', 2);
-    } else if (bytes >= MB)
-    {
-        double mb = bytes / static_cast<double>(MB);
-        return QString("%1 MB").arg(mb, 0, 'f', 0);
-    } else if (bytes >= KB)
-    {
-        double kb = bytes / static_cast<double>(KB);
-        return QString("%1 KB").arg(kb, 0, 'f', 0);
-    } else
-    {
-        return QString("%1 B").arg(bytes);
-    }
-}

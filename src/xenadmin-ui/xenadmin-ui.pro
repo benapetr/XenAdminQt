@@ -226,6 +226,10 @@ SOURCES += \
     tabpages/eventspage.cpp \
     widgets/memorybar.cpp \
     widgets/vmshinybar.cpp \
+    widgets/hostshinybar.cpp \
+    widgets/vmmemorycontrols.cpp \
+    widgets/vmmemoryrow.cpp \
+    controls/hostmemoryrow.cpp \
     widgets/progressbardelegate.cpp \
     widgets/verticaltabwidget.cpp \
     navigation/navigationpane.cpp \
@@ -470,6 +474,10 @@ HEADERS += \
     tabpages/eventspage.h \
     widgets/memorybar.h \
     widgets/vmshinybar.h \
+    widgets/hostshinybar.h \
+    widgets/vmmemorycontrols.h \
+    widgets/vmmemoryrow.h \
+    controls/hostmemoryrow.h \
     widgets/progressbardelegate.h \
     widgets/verticaltabwidget.h \
     navigation/navigationpane.h \
@@ -556,6 +564,7 @@ FORMS += \
     tabpages/vmstoragetabpage.ui \
     tabpages/alertsummarypage.ui \
     tabpages/eventspage.ui \
+    controls/hostmemoryrow.ui \
     navigation/navigationpane.ui \
     navigation/navigationview.ui \
     widgets/notificationsview.ui \

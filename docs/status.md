@@ -21,7 +21,7 @@
 * Create VM from template
 
 # Needs polish
-* Memory tabs - they already work, but could look better
+* Memory tabs - they already work, but could look better, especially list of VMs
 * Console - it works most of the time, but there are random scaling issues during boot, RDP not supported
 * UI - menus and toolbar buttons sometime don't refresh on events (unpause -> still shows force shutdown)
 

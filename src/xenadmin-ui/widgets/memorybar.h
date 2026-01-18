@@ -84,7 +84,6 @@ class MemoryBar : public QWidget
                          const QColor& color, const QString& text);
         void drawGrid(QPainter& painter, const QRect& barArea);
         void drawRuler(QPainter& painter, const QRect& barArea);
-        QString formatMemorySize(qint64 bytes) const;
 };
 
 #endif // MEMORYBAR_H

@@ -63,7 +63,7 @@ class BallooningDialog : public QDialog
          * @param connection XenConnection instance for API access
          * @param parent Parent widget
          */
-        explicit BallooningDialog(const QSharedPointer<VM> &vm, XenConnection* connection, QWidget* parent = nullptr);
+        explicit BallooningDialog(const QSharedPointer<VM> &vm, QWidget* parent = nullptr);
         ~BallooningDialog();
 
     private slots:
@@ -82,8 +82,8 @@ class BallooningDialog : public QDialog
         // workaround for Qt bug - isVisible returns false even when it's true
         bool checkboxDeferVisible = false;
 
-        bool m_hasBallooning; // Whether VM supports DMC (Dynamic Memory Control)
-        bool m_isTemplate;
+        bool m_hasBallooning = false; // Whether VM supports DMC (Dynamic Memory Control)
+        bool m_isTemplate = false;
         double m_maxDynMin;
         qint64 m_memorySpinnerMax;
 

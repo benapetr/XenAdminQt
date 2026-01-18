@@ -29,6 +29,7 @@
 #include "network/connection.h"
 #include "network/comparableaddress.h"
 #include "hostmetrics.h"
+#include "vmmetrics.h"
 #include "../xencache.h"
 #include "vm.h"
 #include "pbd.h"
@@ -630,4 +631,128 @@ QList<ComparableAddress> Host::GetIPAddresses() const
     }
     
     return addresses;
+}
+qint64 Host::MemoryFreeCalc() const
+{
+    QSharedPointer<HostMetrics> metrics = this->GetMetrics();
+    if (metrics.isNull())
+        return 0;
+
+    qint64 used = this->MemoryOverhead();
+    
+    QList<QSharedPointer<VM>> residentVMs = this->GetResidentVMs();
+    for (const QSharedPointer<VM>& vm : residentVMs)
+    {
+        if (vm.isNull())
+            continue;
+            
+        used += vm->MemoryOverhead();
+        
+        QSharedPointer<VMMetrics> vmMetrics = vm->GetMetrics();
+        if (!vmMetrics.isNull())
+        {
+            used += vmMetrics->GetMemoryActual();
+        }
+    }
+
+    // This hack is needed because of bug CA-32509. xapi uses a deliberately generous
+    // estimate of VM.memory_overhead: but the low-level squeezer code doesn't (and can't)
+    // know about the same calculation, and so uses some of this memory_overhead for the
+    // VM's memory_actual. This causes up to 1MB of double-counting per VM.
+    qint64 totalMemory = metrics->GetMemoryTotal();
+    return (totalMemory > used) ? (totalMemory - used) : 0;
+}
+
+qint64 Host::TotDynMin() const
+{
+    qint64 total = 0;
+    
+    QList<QSharedPointer<VM>> residentVMs = this->GetResidentVMs();
+    for (const QSharedPointer<VM>& vm : residentVMs)
+    {
+        if (vm.isNull() || vm->IsControlDomain())
+            continue;
+            
+        total += vm->SupportsBallooning() ? vm->GetMemoryDynamicMin() : vm->GetMemoryStaticMax();
+    }
+    
+    return total;
+}
+
+qint64 Host::TotDynMax() const
+{
+    qint64 total = 0;
+    
+    QList<QSharedPointer<VM>> residentVMs = this->GetResidentVMs();
+    for (const QSharedPointer<VM>& vm : residentVMs)
+    {
+        if (vm.isNull() || vm->IsControlDomain())
+            continue;
+            
+        total += vm->SupportsBallooning() ? vm->GetMemoryDynamicMax() : vm->GetMemoryStaticMax();
+    }
+    
+    return total;
+}
+
+qint64 Host::MemoryAvailableCalc() const
+{
+    QSharedPointer<HostMetrics> metrics = this->GetMetrics();
+    if (metrics.isNull())
+        return 0;
+
+    qint64 avail = metrics->GetMemoryTotal() - this->TotDynMin() - this->XenMemoryCalc();
+    
+    // Don't return negative values (shouldn't happen, but play it safe per CA-32509)
+    if (avail < 0)
+        avail = 0;
+        
+    return avail;
+}
+
+qint64 Host::XenMemoryCalc() const
+{
+    qint64 xenMem = this->MemoryOverhead();
+    
+    QList<QSharedPointer<VM>> residentVMs = this->GetResidentVMs();
+    for (const QSharedPointer<VM>& vm : residentVMs)
+    {
+        if (vm.isNull())
+            continue;
+            
+        xenMem += vm->MemoryOverhead();
+        
+        if (vm->IsControlDomain())
+        {
+            QSharedPointer<VMMetrics> vmMetrics = vm->GetMetrics();
+            if (!vmMetrics.isNull())
+            {
+                xenMem += vmMetrics->GetMemoryActual();
+            }
+        }
+    }
+    
+    return xenMem;
+}
+
+qint64 Host::Dom0Memory() const
+{
+    QSharedPointer<VM> dom0 = this->ControlDomainZero();
+    if (dom0.isNull())
+        return 0;
+
+    QSharedPointer<VMMetrics> metrics = dom0->GetMetrics();
+    return metrics.isNull() ? dom0->GetMemoryDynamicMin() : metrics->GetMemoryActual();
+}
+
+QSharedPointer<VM> Host::ControlDomainZero() const
+{
+    QList<QSharedPointer<VM>> residentVMs = this->GetResidentVMs();
+    for (const QSharedPointer<VM>& vm : residentVMs)
+    {
+        if (!vm.isNull() && vm->IsControlDomain())
+            return vm;
+    }
+    
+    return QSharedPointer<VM>();
 }

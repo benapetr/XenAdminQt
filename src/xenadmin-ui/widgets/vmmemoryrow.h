@@ -25,31 +25,56 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MISC_H
-#define MISC_H
+#ifndef VMMEMORYROW_H
+#define VMMEMORYROW_H
 
-#include <QVariant>
-#include <QString>
+#include <QWidget>
+#include <QFrame>
+#include <QSharedPointer>
+#include "xen/vm.h"
+#include "vmmemorycontrols.h"
 
-class Misc
+/**
+ * @brief Container widget for VM memory display
+ *
+ * Combines a VM label/icon with memory controls in a bordered panel.
+ * Used in memory management UI to show memory statistics for VMs.
+ *
+ * Qt port of C# XenAdmin VMMemoryRow control.
+ */
+class VMMemoryRow : public QWidget
 {
-    public:
-        // Needed to suppress compiler warnings
-        static bool QVariantIsMap(const QVariant& v);
-        
-        /**
-         * @brief Natural string comparison (matches C# StringUtility.NaturalCompare)
-         *
-         * Compares strings in a way that handles embedded numbers naturally.
-         * E.g., "VM2" < "VM10" (unlike alphabetical where "VM10" < "VM2")
-         *
-         * @param s1 First string to compare
-         * @param s2 Second string to compare
-         * @return Negative if s1 < s2, 0 if equal, positive if s1 > s2
-         */
-        static int NaturalCompare(const QString& s1, const QString& s2);
+    Q_OBJECT
 
-        static QString FormatMemorySize(qint64 bytes);
+    public:
+        explicit VMMemoryRow(const QList<QSharedPointer<VM>>& vms, bool expanded, QWidget* parent = nullptr);
+        ~VMMemoryRow();
+
+        /**
+         * @brief Get the VMs this row displays
+         * @return List of VM objects
+         */
+        QList<QSharedPointer<VM>> GetVMs() const { return this->vms_; }
+
+        /**
+         * @brief Check if row is in expanded mode
+         * @return True if expanded
+         */
+        bool IsExpanded() const { return this->expanded_; }
+
+        /**
+         * @brief Unregister all event handlers
+         */
+        void UnregisterHandlers();
+
+    private:
+        QList<QSharedPointer<VM>> vms_;
+        bool expanded_;
+        QFrame* panelLabel_;
+        QFrame* panelControls_;
+        VMMemoryControls* vmMemoryControls_;
+        
+        void SetupUi();
 };
 
-#endif // MISC_H
+#endif // VMMEMORYROW_H
