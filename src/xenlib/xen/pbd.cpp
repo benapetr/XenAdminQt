@@ -73,7 +73,7 @@ QVariantMap PBD::DeviceConfig() const
     return this->property("device_config").toMap();
 }
 
-bool PBD::CurrentlyAttached() const
+bool PBD::IsCurrentlyAttached() const
 {
     return this->boolProperty("currently_attached", false);
 }

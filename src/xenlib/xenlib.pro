@@ -93,6 +93,8 @@ HEADERS += \
     xen/pci.h \
     xen/pgpu.h \
     xen/network.h \
+    xen/network_sriov.h \
+    xen/sriov_configuration_mode.h \
     xen/vlan.h \
     xen/tunnel.h \
     xen/task.h \
@@ -307,6 +309,7 @@ SOURCES += \
     xen/pci.cpp \
     xen/pgpu.cpp \
     xen/network.cpp \
+    xen/network_sriov.cpp \
     xen/vlan.cpp \
     xen/tunnel.cpp \
     xen/task.cpp \

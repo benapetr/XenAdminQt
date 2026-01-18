@@ -27,6 +27,7 @@
 
 #include "generaltabpage.h"
 #include "ui_generaltabpage.h"
+#include "xen/pbd.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/host.h"
@@ -35,6 +36,8 @@
 #include "xenlib/xen/network.h"
 #include "xenlib/xen/pif.h"
 #include "xenlib/xen/dockercontainer.h"
+#include "xenlib/xen/vmappliance.h"
+#include "xenlib/utils/misc.h"
 #include "dialogs/vmpropertiesdialog.h"
 #include "dialogs/hostpropertiesdialog.h"
 #include "dialogs/poolpropertiesdialog.h"
@@ -470,226 +473,146 @@ void GeneralTabPage::populateVMProperties()
     // VM-specific properties - comprehensive implementation matching C# GenerateGeneralBox
     // C# Reference: xenadmin/XenAdmin/TabPages/GeneralTabPage.cs lines 943-1095
 
-    bool isTemplate = this->m_objectData.value("is_a_template", false).toBool();
-    bool isSnapshot = this->m_objectData.value("is_a_snapshot", false).toBool();
-    //bool isControlDomain = this->m_objectData.value("is_control_domain", false).toBool();
+    if (!this->m_object || this->m_object->GetObjectType() != "vm")
+        return;
+
+    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+    if (!vm)
+        return;
+
+    bool isTemplate = vm->IsTemplate();
+    bool isSnapshot = vm->IsSnapshot();
 
     // OS Name / Guest Operating System
-    if (this->m_objectData.contains("guest_metrics") && this->m_connection)
-    {
-        QString guestMetricsRef = this->m_objectData.value("guest_metrics").toString();
-        if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
-        {
-            QVariantMap guestMetrics = this->m_connection->GetCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
-            if (!guestMetrics.isEmpty())
-            {
-                QVariantMap osVersion = guestMetrics.value("os_version").toMap();
-                QString osName = osVersion.value("name").toString();
-                if (osName.isEmpty())
-                    osName = "Unknown";
-                this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.OSName", osName);
-            }
-        }
-    }
+    QString osName = vm->GetOSName();
+    if (osName.isEmpty())
+        osName = "Unknown";
+    this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.OSName", osName);
 
     // Operating Mode (HVM vs PV)
-    if (this->m_objectData.contains("HVM_boot_policy"))
-    {
-        QString bootPolicy = this->m_objectData.value("HVM_boot_policy").toString();
-        bool isHVM = !bootPolicy.isEmpty();
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.OperatingMode", isHVM ? tr("HVM") : tr("Paravirtualized"));
-    }
+    bool isHVM = vm->IsHVM();
+    this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.OperatingMode", isHVM ? tr("HVM") : tr("Paravirtualized"));
 
     // BIOS strings copied (for templates) - C# line 1052
-    if (isTemplate && this->m_objectData.contains("bios_strings"))
+    if (isTemplate)
     {
-        QVariantMap biosStrings = this->m_objectData.value("bios_strings").toMap();
+        QVariantMap biosStrings = vm->BIOSStrings();
         bool biosStringsCopied = !biosStrings.isEmpty() && biosStrings.contains("bios-vendor");
         this->addProperty(this->ui->pdSectionGeneral, tr("BIOS strings copied"), biosStringsCopied ? tr("Yes") : tr("No"));
     }
 
     // vApp / VM Appliance - C# lines 1056-1065
-    if (this->m_objectData.contains("appliance") && this->m_connection)
+    if (this->m_connection)
     {
-        QString applianceRef = this->m_objectData.value("appliance").toString();
-        if (!applianceRef.isEmpty() && applianceRef != "OpaqueRef:NULL")
+        QString applianceRef = vm->ApplianceRef();
+        if (!applianceRef.isEmpty() && applianceRef != XENOBJECT_NULL)
         {
-            QVariantMap appliance = this->m_connection->GetCache()->ResolveObjectData("vm_appliance", applianceRef);
-            if (!appliance.isEmpty())
-            {
-                QString applianceName = appliance.value("name_label", "Unknown").toString();
-                this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.Appliance", applianceName);
-            }
+            QSharedPointer<VMAppliance> appliance = this->m_connection->GetCache()->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+            QString applianceName = appliance ? appliance->GetName() : "Unknown";
+            this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.Appliance", applianceName);
         }
     }
 
     // Snapshot information - C# lines 1067-1070
     if (isSnapshot)
     {
-        if (this->m_objectData.contains("snapshot_of") && this->m_connection)
-        {
-            QString snapshotOfRef = this->m_objectData.value("snapshot_of").toString();
-            if (!snapshotOfRef.isEmpty())
-            {
-                QVariantMap snapshotOfVM = this->m_connection->GetCache()->ResolveObjectData("vm", snapshotOfRef);
-                if (!snapshotOfVM.isEmpty())
-                {
-                    QString vmName = snapshotOfVM.value("name_label", "Unknown").toString();
-                    this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.snapshot_of", vmName);
-                }
-            }
-        }
+        QSharedPointer<VM> snapshotOf = vm->SnapshotOf();
+        if (snapshotOf)
+            this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.snapshot_of", snapshotOf->GetName());
 
-        if (this->m_objectData.contains("snapshot_time"))
-        {
-            QString snapshotTimeStr = this->m_objectData.value("snapshot_time").toString();
-            QDateTime snapshotTime = QDateTime::fromString(snapshotTimeStr, Qt::ISODate);
-            if (snapshotTime.isValid())
-            {
-                this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.snapshot_time", snapshotTime.toLocalTime().toString("dd/MM/yyyy HH:mm:ss"));
-            }
-        }
+        QDateTime snapshotTime = vm->SnapshotTime();
+        if (snapshotTime.isValid())
+            this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.snapshot_time", snapshotTime.toLocalTime().toString("dd/MM/yyyy HH:mm:ss"));
     }
 
     // Properties for running VMs (not templates)
     if (!isTemplate)
     {
         // Virtualization Status - C# lines 1066 GenerateVirtualisationStatusForGeneralBox
-        QString powerState = this->m_objectData.value("power_state", "unknown").toString();
-        if (powerState == "Running" && this->m_objectData.contains("guest_metrics") && this->m_connection)
+        QString powerState = vm->GetPowerState();
+        if (powerState == "Running")
         {
-            QString guestMetricsRef = this->m_objectData.value("guest_metrics").toString();
-            if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
-            {
-                QVariantMap guestMetrics = this->m_connection->GetCache()->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
-                if (!guestMetrics.isEmpty())
-                {
-                    QVariantMap pvDriversVersion = guestMetrics.value("PV_drivers_version").toMap();
-                    QVariantMap osVersion = guestMetrics.value("os_version").toMap();
+            int status = vm->GetVirtualizationStatus();
+            bool hasIODrivers = (status & 4) != 0;
+            bool hasManagementAgent = (status & 8) != 0;
+            bool hasVendorDevice = vm->HasVendorDeviceState();
 
-                    QString virtStatus;
-                    bool hasIODrivers = pvDriversVersion.contains("major");
-                    bool hasManagementAgent = osVersion.contains("major");
-                    bool hasVendorDevice = this->m_objectData.value("has_vendor_device", false).toBool();
+            QStringList statusLines;
 
-                    QStringList statusLines;
+            if (hasIODrivers)
+                statusLines << "I/O drivers: optimized";
+            else
+                statusLines << "I/O drivers: not optimized";
 
-                    // I/O Drivers
-                    if (hasIODrivers)
-                        statusLines << "I/O drivers: optimized";
-                    else
-                        statusLines << "I/O drivers: not optimized";
+            if (hasManagementAgent)
+                statusLines << "Management agent: installed";
+            else
+                statusLines << "Management agent: not installed";
 
-                    // Management Agent
-                    if (hasManagementAgent)
-                        statusLines << "Management agent: installed";
-                    else
-                        statusLines << "Management agent: not installed";
+            if (hasVendorDevice)
+                statusLines << "Receiving Windows Update";
+            else
+                statusLines << "Not receiving Windows Update";
 
-                    // Windows Update / vendor device
-                    if (hasVendorDevice)
-                        statusLines << "Receiving Windows Update";
-                    else
-                        statusLines << "Not receiving Windows Update";
-
-                    virtStatus = statusLines.join("\n");
-                    this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.VirtualizationState", virtStatus);
-                }
-            }
+            this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.VirtualizationState", statusLines.join("\n"));
         }
 
         // VM Uptime - C# line 1069 vm.RunningTime()
-        if (powerState == "Running" && this->m_objectData.contains("metrics") && this->m_connection)
+        if (powerState == "Running")
         {
-            QString metricsRef = this->m_objectData.value("metrics").toString();
-            if (!metricsRef.isEmpty())
+            qint64 startTime = vm->GetStartTime();
+            if (startTime > 0)
             {
-                QVariantMap metrics = this->m_connection->GetCache()->ResolveObjectData("vm_metrics", metricsRef);
-                if (!metrics.isEmpty() && metrics.contains("start_time"))
+                qint64 uptimeSeconds = QDateTime::fromSecsSinceEpoch(startTime, Qt::UTC)
+                                           .secsTo(QDateTime::currentDateTimeUtc());
+                if (uptimeSeconds > 0)
                 {
-                    QString startTimeStr = metrics.value("start_time").toString();
-                    QDateTime startTime = QDateTime::fromString(startTimeStr, Qt::ISODate);
-                    if (startTime.isValid())
-                    {
-                        qint64 uptimeSeconds = startTime.secsTo(QDateTime::currentDateTimeUtc());
-                        if (uptimeSeconds > 0)
-                        {
-                            int days = uptimeSeconds / 86400;
-                            int hours = (uptimeSeconds % 86400) / 3600;
-                            int minutes = (uptimeSeconds % 3600) / 60;
+                    int days = uptimeSeconds / 86400;
+                    int hours = (uptimeSeconds % 86400) / 3600;
+                    int minutes = (uptimeSeconds % 3600) / 60;
 
-                            QString uptimeStr;
-                            if (days > 0)
-                                uptimeStr = QString("%1 days, %2 hours, %3 minutes").arg(days).arg(hours).arg(minutes);
-                            else if (hours > 0)
-                                uptimeStr = QString("%1 hours, %2 minutes").arg(hours).arg(minutes);
-                            else
-                                uptimeStr = QString("%1 minutes").arg(minutes);
+                    QString uptimeStr;
+                    if (days > 0)
+                        uptimeStr = QString("%1 days, %2 hours, %3 minutes").arg(days).arg(hours).arg(minutes);
+                    else if (hours > 0)
+                        uptimeStr = QString("%1 hours, %2 minutes").arg(hours).arg(minutes);
+                    else
+                        uptimeStr = QString("%1 minutes").arg(minutes);
 
-                            this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.uptime", uptimeStr);
-                        }
-                    }
+                    this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.uptime", uptimeStr);
                 }
             }
         }
 
         // P2V Source information - C# lines 1072-1075
-        if (this->m_objectData.contains("other_config"))
+        QVariantMap otherConfig = vm->GetOtherConfig();
+
+        if (otherConfig.contains("p2v_source_machine"))
         {
-            QVariantMap otherConfig = this->m_objectData.value("other_config").toMap();
+            QString sourceMachine = otherConfig.value("p2v_source_machine").toString();
+            this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.P2V_SourceMachine", sourceMachine);
+        }
 
-            // P2V source machine
-            if (otherConfig.contains("p2v_source_machine"))
-            {
-                QString sourceMachine = otherConfig.value("p2v_source_machine").toString();
-                this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.P2V_SourceMachine", sourceMachine);
-            }
-
-            // P2V import date
-            if (otherConfig.contains("p2v_import_date"))
-            {
-                QString importDate = otherConfig.value("p2v_import_date").toString();
-                QDateTime dt = QDateTime::fromString(importDate, Qt::ISODate);
-                if (dt.isValid())
-                {
-                    this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.P2V_ImportDate", dt.toLocalTime().toString("dd/MM/yyyy HH:mm:ss"));
-                }
-            }
+        if (otherConfig.contains("p2v_import_date"))
+        {
+            QString importDate = otherConfig.value("p2v_import_date").toString();
+            QDateTime dt = QDateTime::fromString(importDate, Qt::ISODate);
+            if (dt.isValid())
+                this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.P2V_ImportDate", dt.toLocalTime().toString("dd/MM/yyyy HH:mm:ss"));
         }
 
         // Home Server / Affinity - C# lines 1078-1083 (if WLB not enabled)
         // Show if VM can choose home server (has affinity field and is not managed by WLB)
-        if (this->m_objectData.contains("affinity") && this->m_connection)
-        {
-            QString affinityRef = this->m_objectData.value("affinity").toString();
-            QString affinityDisplay = "None";
-
-            if (!affinityRef.isEmpty() && affinityRef != "OpaqueRef:NULL")
-            {
-                QVariantMap affinityHost = this->m_connection->GetCache()->ResolveObjectData("host", affinityRef);
-                if (!affinityHost.isEmpty())
-                {
-                    affinityDisplay = affinityHost.value("name_label", "Unknown").toString();
-                }
-            }
-
-            this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.affinity", affinityDisplay);
-        }
+        QSharedPointer<Host> affinityHost = vm->GetAffinityHost();
+        QString affinityDisplay = affinityHost ? affinityHost->GetName() : "None";
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.affinity", affinityDisplay);
     }
 
     // Memory (for all VM types)
-    if (this->m_objectData.contains("memory_dynamic_max"))
+    qint64 memoryBytes = vm->GetMemoryDynamicMax();
+    if (memoryBytes > 0)
     {
-        qint64 memoryBytes = this->m_objectData.value("memory_dynamic_max").toLongLong();
-        double memoryMB = memoryBytes / (1024.0 * 1024.0);
-        double memoryGB = memoryBytes / (1024.0 * 1024.0 * 1024.0);
-
-        QString memoryStr;
-        if (memoryGB >= 1.0)
-            memoryStr = QString("%1 GB").arg(memoryGB, 0, 'f', 2);
-        else
-            memoryStr = QString("%1 MB").arg(memoryMB, 0, 'f', 0);
-
+        QString memoryStr = Misc::FormatMemorySize(memoryBytes);
         this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.memory", memoryStr);
     }
 
@@ -740,30 +663,32 @@ void GeneralTabPage::populateSRProperties()
     // C# Reference: GeneralTabPage.cs lines 360-390
     // Calls GenerateStatusBox() and GenerateMultipathBox() for SR
 
-    if (this->m_objectData.contains("type"))
+    if (!this->m_object || this->m_object->GetObjectType() != "sr")
+        return;
+
+    QSharedPointer<SR> sr = qSharedPointerCast<SR>(this->m_object);
+    if (!sr)
+        return;
+
+    QString type = sr->GetType();
+    if (!type.isEmpty())
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.type", type);
+
+    qint64 sizeBytes = sr->PhysicalSize();
+    if (sizeBytes > 0)
     {
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.type", this->m_objectData.value("type").toString());
+        QString sizeValue = Misc::FormatMemorySize(sizeBytes);
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.size", sizeValue);
     }
 
-    if (this->m_objectData.contains("physical_size"))
+    qint64 usedBytes = sr->PhysicalUtilisation();
+    if (usedBytes > 0)
     {
-        qint64 sizeBytes = this->m_objectData.value("physical_size").toLongLong();
-        double sizeGB = sizeBytes / (1024.0 * 1024.0 * 1024.0);
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.size", QString("%1 GB").arg(sizeGB, 0, 'f', 2));
+        QString usedValue = Misc::FormatMemorySize(usedBytes);
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.utilisation", usedValue);
     }
 
-    if (this->m_objectData.contains("physical_utilisation"))
-    {
-        qint64 usedBytes = this->m_objectData.value("physical_utilisation").toLongLong();
-        double usedGB = usedBytes / (1024.0 * 1024.0 * 1024.0);
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.utilisation", QString("%1 GB").arg(usedGB, 0, 'f', 2));
-    }
-
-    if (this->m_objectData.contains("shared"))
-    {
-        bool shared = this->m_objectData.value("shared").toBool();
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.shared", shared ? tr("Yes") : tr("No"));
-    }
+    this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.shared", sr->IsShared() ? tr("Yes") : tr("No"));
 
     // Populate SR-specific sections (Status and Multipathing)
     this->populateStatusSection();
@@ -860,12 +785,14 @@ void GeneralTabPage::populateBootOptionsSection()
 
 void GeneralTabPage::populateHighAvailabilitySection()
 {
-    if (this->m_objectType != "vm" || !this->m_connection)
+    if (!this->m_object || this->m_object->GetObjectType() != "vm")
         return;
 
-    XenCache* cache = this->m_connection->GetCache();
-    if (!cache)
+    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+    if (!vm)
         return;
+
+    XenCache* cache = vm->GetCache();
 
     QStringList poolRefs = cache->GetAllRefs("pool");
     if (poolRefs.isEmpty())
@@ -894,14 +821,20 @@ void GeneralTabPage::populateMultipathBootSection()
 
 void GeneralTabPage::populateVcpusSection()
 {
-    if (this->m_objectType != "vm")
+    if (!this->m_object || this->m_object->GetObjectType() != "vm")
         return;
 
-    if (!this->m_objectData.contains("VCPUs_at_startup"))
+    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+    if (!vm)
         return;
 
-    int vcpusAtStartup = this->m_objectData.value("VCPUs_at_startup").toInt();
-    qint64 vcpusMax = this->m_objectData.value("VCPUs_max", vcpusAtStartup).toLongLong();
+    QVariantMap object_data = vm->GetData();
+
+    if (!object_data.contains("VCPUs_at_startup"))
+        return;
+
+    int vcpusAtStartup = object_data.value("VCPUs_at_startup").toInt();
+    qint64 vcpusMax = object_data.value("VCPUs_max", vcpusAtStartup).toLongLong();
 
     this->addPropertyByKey(this->ui->pdSectionVcpus, "VM.VCPUs", QString::number(vcpusAtStartup));
 
@@ -909,7 +842,7 @@ void GeneralTabPage::populateVcpusSection()
         this->addPropertyByKey(this->ui->pdSectionVcpus, "VM.MaxVCPUs", QString::number(vcpusMax));
 
     qint64 coresPerSocket = 1;
-    QVariantMap platform = this->m_objectData.value("platform").toMap();
+    QVariantMap platform = object_data.value("platform").toMap();
     if (platform.contains("cores-per-socket"))
     {
         bool ok = false;
@@ -981,15 +914,14 @@ void GeneralTabPage::populateDockerInfoSection()
 
 void GeneralTabPage::populateReadCachingSection()
 {
-    if (this->m_objectType != "vm")
-        return;
-
-    QString powerState = this->m_objectData.value("power_state").toString();
-    if (powerState != "Running")
+    if (!this->m_object || this->m_object->GetObjectType() != "vm")
         return;
 
     QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
     if (!vm)
+        return;
+
+    if (vm->GetPowerState() != "Running")
         return;
 
     bool enabled = vm->ReadCachingEnabled();
@@ -1000,7 +932,7 @@ void GeneralTabPage::populateReadCachingSection()
 
 void GeneralTabPage::populateDeviceSecuritySection()
 {
-    if (this->m_objectType != "vm")
+    if (!this->m_object || this->m_object->GetObjectType() != "vm")
         return;
 
     QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
@@ -1458,7 +1390,11 @@ void GeneralTabPage::populateStatusSection()
     // SR Status Section
     // C# Reference: GeneralTabPage.cs GenerateStatusBox() lines 505-588
 
-    if (!this->m_connection || this->m_objectRef.isEmpty() || this->m_objectType != "sr")
+    if (!this->m_object || this->m_object->GetObjectType() != "sr")
+        return;
+
+    QSharedPointer<SR> sr = qSharedPointerCast<SR>(this->m_object);
+    if (!sr)
         return;
 
     // Determine SR status (OK, Detached, Broken, Multipath Failure)
@@ -1468,20 +1404,17 @@ void GeneralTabPage::populateStatusSection()
     // Check if SR is detached (no PBDs currently attached)
     // C# SR.IsDetached() checks if any PBD is currently_attached
     bool hasAttachedPBD = false;
-    QVariantList pbdRefs = this->m_objectData.value("PBDs").toList();
-
-    for (const QVariant& pbdRefVar : pbdRefs)
+    QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
+    foreach (QSharedPointer<PBD> pbd, pbds)
     {
-        QString pbdRef = pbdRefVar.toString();
-        QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
-        if (!pbdData.isEmpty() && pbdData.value("currently_attached").toBool())
+        if (pbd->IsCurrentlyAttached())
         {
             hasAttachedPBD = true;
             break;
         }
     }
 
-    if (pbdRefs.isEmpty())
+    if (pbds.isEmpty())
     {
         broken = true;
         statusString = "Detached (No PBDs)";
@@ -1493,8 +1426,8 @@ void GeneralTabPage::populateStatusSection()
     {
         // Check if SR is broken (wrong number of PBDs or not all attached)
         // C# SR.IsBroken() checks: standalone = 1 PBD, pooled = PBD per host
-        bool isShared = this->m_objectData.value("shared", false).toBool();
-        int pbdCount = pbdRefs.size();
+        bool isShared = sr->IsShared();
+        int pbdCount = pbds.size();
 
         // Get host count to check if we have correct PBD count for pooled SR
         int expectedPBDCount = 1; // standalone default
@@ -1512,11 +1445,9 @@ void GeneralTabPage::populateStatusSection()
         } else
         {
             // Check if all PBDs are attached
-            for (const QVariant& pbdRefVar : pbdRefs)
+            foreach (QSharedPointer<PBD> pbd, pbds)
             {
-                QString pbdRef = pbdRefVar.toString();
-                QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
-                if (pbdData.isEmpty() || !pbdData.value("currently_attached").toBool())
+                if (!pbd->IsCurrentlyAttached())
                 {
                     broken = true;
                     statusString = "Broken (PBD not attached)";
@@ -1530,13 +1461,12 @@ void GeneralTabPage::populateStatusSection()
     }
 
     // Show overall status
-    this->ui->pdSectionStatus->AddEntry(this->friendlyName("SR.state"),
-                                        statusString,
-                                        broken ? QColor(Qt::red) : QColor());
+    this->ui->pdSectionStatus->AddEntry(this->friendlyName("SR.state"), statusString, broken ? QColor(Qt::red) : QColor());
 
     // Show per-host PBD status
     // C# iterates through all hosts and shows their PBD connection status
-    bool isShared = this->m_objectData.value("shared", false).toBool();
+    bool isShared = sr->IsShared();
+
     QList<QVariantMap> allHosts = this->m_connection->GetCache()->GetAllData("host");
 
     for (const QVariantMap& hostData : allHosts)
@@ -1549,21 +1479,13 @@ void GeneralTabPage::populateStatusSection()
         QColor statusColor;
 
         bool foundPBD = false;
-        for (const QVariant& pbdRefVar : pbdRefs)
+        foreach (QSharedPointer<PBD> pbd, pbds)
         {
-            QString pbdRef = pbdRefVar.toString();
-            QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
-
-            if (pbdData.isEmpty())
-                continue;
-
-            QString pbdHost = pbdData.value("host").toString();
+            QString pbdHost = pbd->GetHostRef();
             if (pbdHost == hostRef)
             {
                 foundPBD = true;
-                bool attached = pbdData.value("currently_attached", false).toBool();
-
-                if (attached)
+                if (pbd->IsCurrentlyAttached())
                 {
                     pbdStatus = "Connected";
                     statusColor = QColor();
@@ -1608,12 +1530,16 @@ void GeneralTabPage::populateMultipathingSection()
     // SR Multipathing Section
     // C# Reference: GeneralTabPage.cs GenerateMultipathBox() lines 589-717
 
-    if (!this->m_connection || this->m_objectRef.isEmpty() || this->m_objectType != "sr")
+    if (!this->m_object || this->m_object->GetObjectType() != "sr")
+        return;
+
+    QSharedPointer<SR> sr = qSharedPointerCast<SR>(this->m_object);
+    if (!sr)
         return;
 
     // Check if SR is multipath capable
     // C# SR.MultipathCapable() checks sm_config["multipathable"] == "true"
-    QVariantMap smConfig = this->m_objectData.value("sm_config").toMap();
+    QVariantMap smConfig = sr->SMConfig();
     QString multipathable = smConfig.value("multipathable", "false").toString();
     bool isMultipathCapable = (multipathable == "true");
 
@@ -1626,47 +1552,45 @@ void GeneralTabPage::populateMultipathingSection()
         return;
     }
 
-    // Check each host for multipath status
-    // C# iterates through hosts and checks PBD multipath active status
-    QVariantList pbdRefs = this->m_objectData.value("PBDs").toList();
-    QList<QVariantMap> allHosts = this->m_connection->GetCache()->GetAllData("host");
+    if (!this->m_connection || !this->m_connection->GetCache())
+        return;
 
-    for (const QVariantMap& hostData : allHosts)
+    QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
+    QList<QSharedPointer<Host>> allHosts = this->m_connection->GetCache()->GetAll<Host>("host");
+
+    for (const QSharedPointer<Host>& host : allHosts)
     {
-        QString hostRef = hostData.value("ref").toString();
-        QString hostName = hostData.value("name_label", "Unknown").toString();
+        if (!host || host->IsEvicted())
+            continue;
+
+        QString hostRef = host->OpaqueRef();
+        QString hostName = host->GetName();
 
         // Find PBD for this host
         QString multipathStatus = "Not active";
         QColor statusColor;
 
-        for (const QVariant& pbdRefVar : pbdRefs)
+        for (const QSharedPointer<PBD>& pbd : pbds)
         {
-            QString pbdRef = pbdRefVar.toString();
-            QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
-
-            if (pbdData.isEmpty())
+            if (!pbd || pbd->IsEvicted())
                 continue;
 
-            QString pbdHost = pbdData.value("host").toString();
-            if (pbdHost == hostRef)
+            if (pbd->GetHostRef() == hostRef)
             {
                 // Check if multipath is active on this PBD
                 // C# PBD.MultipathActive() checks device_config["multipathed"] == "true"
-                QVariantMap deviceConfig = pbdData.value("device_config").toMap();
-                QString multipathed = deviceConfig.value("multipathed", "false").toString();
+                QString multipathed = pbd->GetDeviceConfigValue("multipathed");
                 bool multipathActive = (multipathed == "true");
 
                 if (multipathActive)
                 {
                     // Parse path counts from other_config
                     // C# PBD.ParsePathCounts() extracts "multipath-current-paths" and "multipath-maximum-paths"
-                    QVariantMap otherConfig = pbdData.value("other_config").toMap();
-                    int currentPaths = otherConfig.value("multipath-current-paths", "0").toInt();
-                    int maxPaths = otherConfig.value("multipath-maximum-paths", "0").toInt();
+                    int currentPaths = pbd->GetOtherConfigValue("multipath-current-paths").toInt();
+                    int maxPaths = pbd->GetOtherConfigValue("multipath-maximum-paths").toInt();
 
                     // Get iSCSI session count if applicable
-                    int iscsiSessions = otherConfig.value("iscsi_sessions", "-1").toInt();
+                    int iscsiSessions = pbd->GetOtherConfigValue("iscsi_sessions").toInt();
 
                     // Format status string: "X of Y paths active"
                     multipathStatus = QString("%1 of %2 paths active").arg(currentPaths).arg(maxPaths);

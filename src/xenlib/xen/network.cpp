@@ -186,6 +186,65 @@ QStringList Network::GetPurpose() const
     return result;
 }
 
+QString Network::GetLinkStatusString() const
+{
+    QList<QSharedPointer<PIF>> pifs = this->GetPIFs();
+    if (pifs.isEmpty())
+        return "None";
+
+    bool hasConnected = false;
+    bool hasDisconnected = false;
+    bool hasUnknown = false;
+
+    for (const QSharedPointer<PIF>& pif : pifs)
+    {
+        if (!pif || !pif->IsValid())
+        {
+            hasUnknown = true;
+            continue;
+        }
+
+        QString status = pif->GetLinkStatusString();
+        if (status == "Connected")
+            hasConnected = true;
+        else if (status == "Disconnected")
+            hasDisconnected = true;
+        else
+            hasUnknown = true;
+    }
+
+    if (hasConnected)
+    {
+        if (hasDisconnected || hasUnknown)
+            return "Partially connected";
+        return "Connected";
+    }
+
+    if (hasDisconnected)
+    {
+        if (hasUnknown)
+            return "Unknown";
+        return "Disconnected";
+    }
+
+    return "Unknown";
+}
+
+bool Network::CanUseJumboFrames() const
+{
+    QList<QSharedPointer<PIF>> pifs = this->GetPIFs();
+    if (pifs.isEmpty())
+        return false;
+
+    for (const QSharedPointer<PIF>& pif : pifs)
+    {
+        if (pif && pif->IsTunnelAccessPIF())
+            return false;
+    }
+
+    return true;
+}
+
 QList<QSharedPointer<PIF>> Network::GetPIFs() const
 {
     QList<QSharedPointer<PIF>> pifs;

@@ -30,6 +30,9 @@
 #include "network/connection.h"
 #include "host.h"
 #include "network.h"
+#include "pifmetrics.h"
+#include "tunnel.h"
+#include "vlan.h"
 #include "../xencache.h"
 
 PIF::PIF(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
@@ -203,6 +206,74 @@ QString PIF::Gateway() const
 QString PIF::DNS() const
 {
     return this->stringProperty("DNS");
+}
+
+QString PIF::GetLinkStatusString() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return "Unknown";
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return "Unknown";
+
+    QStringList tunnelAccessRefs = this->TunnelAccessPIFOfRefs();
+    if (!tunnelAccessRefs.isEmpty())
+    {
+        QSharedPointer<Tunnel> tunnel = cache->ResolveObject<Tunnel>("tunnel", tunnelAccessRefs.first());
+        QVariantMap status = tunnel ? tunnel->GetStatus() : QVariantMap();
+        bool active = status.value("active", "false").toString() == "true";
+        return active ? "Connected" : "Disconnected";
+    }
+
+    QString metricsRef = this->MetricsRef();
+    if (metricsRef.isEmpty() || metricsRef == XENOBJECT_NULL)
+        return "Unknown";
+
+    QSharedPointer<PIFMetrics> metrics = cache->ResolveObject<PIFMetrics>("pif_metrics", metricsRef);
+    if (!metrics || !metrics->IsValid())
+        return "Unknown";
+
+    bool carrier = metrics->Carrier();
+
+    if (this->IsSriovLogicalPIF() || this->IsVLAN())
+    {
+        QString networkSriovRef;
+
+        if (this->IsSriovLogicalPIF())
+        {
+            QStringList sriovLogicalRefs = this->SriovLogicalPIFOfRefs();
+            if (!sriovLogicalRefs.isEmpty())
+                networkSriovRef = sriovLogicalRefs.first();
+        } else
+        {
+            QString vlanRef = this->VLANMasterOfRef();
+            if (!vlanRef.isEmpty())
+            {
+                QSharedPointer<VLAN> vlan = cache->ResolveObject<VLAN>("vlan", vlanRef);
+                QSharedPointer<PIF> taggedPif = vlan ? vlan->GetTaggedPIF() : QSharedPointer<PIF>();
+                if (taggedPif && taggedPif->IsValid())
+                {
+                    QStringList taggedSriovRefs = taggedPif->SriovLogicalPIFOfRefs();
+                    if (!taggedSriovRefs.isEmpty())
+                        networkSriovRef = taggedSriovRefs.first();
+                }
+            }
+        }
+
+        if (!networkSriovRef.isEmpty())
+        {
+            QVariantMap sriovData = cache->ResolveObjectData("network_sriov", networkSriovRef);
+            QString configMode = sriovData.value("configuration_mode", "unknown").toString();
+            bool requiresReboot = sriovData.value("requires_reboot", false).toBool();
+
+            if (!carrier || configMode == "unknown" || requiresReboot)
+                return "Disconnected";
+        }
+    }
+
+    return carrier ? "Connected" : "Disconnected";
 }
 
 // IPv6 configuration

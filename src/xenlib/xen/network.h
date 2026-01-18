@@ -103,6 +103,12 @@ class XENLIB_EXPORT Network : public XenObject
 
         //! Get purposes for which the server will use this network (list of network purpose strings like "nbd", "insecure_nbd", etc.)
         QStringList GetPurpose() const;
+        
+        //! Get aggregated link status across all PIFs
+        QString GetLinkStatusString() const;
+
+        //! Check if network can use jumbo frames
+        bool CanUseJumboFrames() const;
 
         // XenObject interface
         QString GetObjectType() const override { return "network"; }

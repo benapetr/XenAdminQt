@@ -78,7 +78,7 @@ class XENLIB_EXPORT PBD : public XenObject
 
         //! @brief Check if SR is currently attached via this PBD
         //! @return true if currently attached
-        bool CurrentlyAttached() const;
+        bool IsCurrentlyAttached() const;
 
         //! @brief Get a specific device config value
         //! @param key Config key

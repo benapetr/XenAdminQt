@@ -65,7 +65,7 @@ QSharedPointer<VM> MemoryTabPage::GetVM()
 
 void MemoryTabPage::refreshContent()
 {
-    if (this->m_objectData.isEmpty())
+    if (!this->m_object)
     {
         this->ui->memoryBar->clearSegments();
         this->ui->memoryBar->setTotalMemory(0);
@@ -75,10 +75,10 @@ void MemoryTabPage::refreshContent()
 
     this->ui->memoryStatsGroup->setVisible(true);
 
-    if (this->m_objectType == "vm")
+    if (this->m_object->GetObjectType() == "vm")
     {
         this->populateVMMemory();
-    } else if (this->m_objectType == "host")
+    } else if (this->m_object->GetObjectType() == "host")
     {
         this->populateHostMemory();
     }

@@ -185,7 +185,7 @@ bool TrimSRCommand::isAttachedToHost(const QSharedPointer<SR> &sr) const
 
     foreach (QSharedPointer<PBD> pbd, pbds)
     {
-        if (pbd->CurrentlyAttached())
+        if (pbd->IsCurrentlyAttached())
         {
             // At least one PBD is attached
             return true;

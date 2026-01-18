@@ -37,6 +37,7 @@
 #include "xen/hostmetrics.h"
 #include "xen/vmmetrics.h"
 #include "xen/message.h"
+#include "xen/network_sriov.h"
 #include "xen/pbd.h"
 #include "xen/pci.h"
 #include "xen/pgpu.h"
@@ -101,6 +102,8 @@ QString XenCache::normalizeType(const QString& type) const
         return "message";
     if (normalized == "network" || normalized == "networks")
         return "network";
+    if (normalized == "network_sriov" || normalized == "network_sriovs")
+        return "network_sriov";
     if (normalized == "pbd" || normalized == "pbds")
         return "pbd";
     if (normalized == "pci" || normalized == "pcis")
@@ -499,6 +502,7 @@ QStringList XenCache::GetKnownTypes() const
         "host_metrics",
         "message",
         "network",
+        "network_sriov",
         "pbd",
         "pci",
         "pgpu",
@@ -543,6 +547,8 @@ QSharedPointer<XenObject> XenCache::createObjectForType(const QString& type, con
         return QSharedPointer<XenObject>(new Message(this->m_connection, ref));
     if (type == "network")
         return QSharedPointer<XenObject>(new Network(this->m_connection, ref));
+    if (type == "network_sriov")
+        return QSharedPointer<XenObject>(new NetworkSriov(this->m_connection, ref));
     if (type == "pbd")
         return QSharedPointer<XenObject>(new PBD(this->m_connection, ref));
     if (type == "pci")

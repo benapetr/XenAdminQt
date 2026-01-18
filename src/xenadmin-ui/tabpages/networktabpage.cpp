@@ -32,6 +32,10 @@
 #include "xenlib/xen/vif.h"
 #include "xenlib/xen/network.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/pifmetrics.h"
+#include "xenlib/xen/tunnel.h"
+#include "xenlib/xen/vlan.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/xenapi/xenapi_Network.h"
 #include "../settingsmanager.h"
@@ -226,18 +230,10 @@ void NetworkTabPage::populateVIFsForVM()
         return;
     }
 
-    // Get VM reference and record
-    QString vmRef = vm->OpaqueRef();
-    if (vmRef.isEmpty())
-    {
-        qDebug() << "NetworkTabPage::populateVIFsForVM - No VM reference";
-        return;
-    }
-
-    // Match C# logic: Get VIF refs from VM record, then resolve from cache
+    // Match C# logic: Resolve VIF objects from VM
     // C#: List<VIF> vifs = vm.Connection.ResolveAll(vm.VIFs);
-    QStringList vifRefs = vm->GetVIFRefs();
-    if (vifRefs.isEmpty())
+    QList<QSharedPointer<VIF>> vifs = vm->GetVIFs();
+    if (vifs.isEmpty())
     {
         qDebug() << "NetworkTabPage::populateVIFsForVM - No VIFs found for VM";
         return;
@@ -262,49 +258,35 @@ void NetworkTabPage::populateVIFsForVM()
         }
     }
 
-    // Resolve all VIF objects from cache
-    QList<QSharedPointer<VIF>> vifs;
-    for (QString vifRef : vifRefs)
+    QList<QSharedPointer<VIF>> visibleVifs;
+    visibleVifs.reserve(vifs.size());
+    for (const QSharedPointer<VIF>& vif : vifs)
     {
-        if (vifRef.isEmpty())
-            continue;
-
-        // Resolve VIF from cache (matches C# vm.Connection.Resolve(vifRef))
-        QSharedPointer<VIF> vif = cache->ResolveObject<VIF>("vif", vifRef);
         if (!vif || !vif->IsValid())
         {
-            qDebug() << "NetworkTabPage::populateVIFsForVM - Failed to resolve VIF:" << vifRef;
             continue;
         }
 
         // C#: Check for guest installer network (CA-73056)
         // var network = vif.Connection.Resolve(vif.network);
         // if (network != null && network.IsGuestInstallerNetwork() && !ShowHiddenVMs) continue;
-        QString networkRef = vif->GetNetworkRef();
-        if (!networkRef.isEmpty())
+        QSharedPointer<Network> network = vif->GetNetwork();
+        if (network && network->IsValid())
         {
-            QSharedPointer<Network> network = cache->ResolveObject<Network>("network", networkRef);
-            if (network && network->IsValid())
+            bool isGuestInstallerNetwork = network->IsGuestInstallerNetwork();
+            // TODO: Check ShowHiddenVMs setting when implemented
+            if (isGuestInstallerNetwork)
             {
-                // Check for guest installer network (HIMN)
-                QVariantMap otherConfig = network->GetOtherConfig();
-                bool isGuestInstallerNetwork = otherConfig.value("is_guest_installer_network", false).toBool();
-
-                // TODO: Check ShowHiddenVMs setting when implemented
-                // For now, always hide guest installer network
-                if (isGuestInstallerNetwork)
-                {
-                    qDebug() << "NetworkTabPage::populateVIFsForVM - Skipping guest installer network VIF";
-                    continue;
-                }
+                qDebug() << "NetworkTabPage::populateVIFsForVM - Skipping guest installer network VIF";
+                continue;
             }
         }
 
-        vifs.append(vif);
+        visibleVifs.append(vif);
     }
 
     // Sort VIFs by device number (matches C# vifs.Sort())
-    std::sort(vifs.begin(), vifs.end(),
+    std::sort(visibleVifs.begin(), visibleVifs.end(),
               [](const QSharedPointer<VIF>& a, const QSharedPointer<VIF>& b) {
                   return a->GetDevice().toInt() < b->GetDevice().toInt();
               });
@@ -312,7 +294,7 @@ void NetworkTabPage::populateVIFsForVM()
     //qDebug() << "NetworkTabPage::populateVIFsForVM - Displaying" << vifs.size() << "VIFs";
 
     // Populate table with VIF information (matches C# VifRow structure)
-    for (const QSharedPointer<VIF>& vif : vifs)
+    for (const QSharedPointer<VIF>& vif : visibleVifs)
     {
         int row = this->ui->networksTable->rowCount();
         this->ui->networksTable->insertRow(row);
@@ -362,17 +344,10 @@ void NetworkTabPage::populateVIFsForVM()
 
         // Column 3: Network name
         // C#: NetworkCell.Value = Vif.NetworkName();
-        QString networkRef = vif->GetNetworkRef();
         QString networkName = "-";
-        if (!networkRef.isEmpty())
-        {
-            // Resolve network from cache (not API call!)
-            QSharedPointer<Network> network = cache->ResolveObject<Network>("network", networkRef);
-            if (network && network->IsValid())
-            {
-                networkName = network->GetName();
-            }
-        }
+        QSharedPointer<Network> network = vif->GetNetwork();
+        if (network && network->IsValid())
+            networkName = network->GetName();
         this->ui->networksTable->setItem(row, 3, new QTableWidgetItem(networkName));
 
         // Column 4: IP Address(es) from guest_metrics
@@ -424,25 +399,20 @@ void NetworkTabPage::populateNetworksForHost()
         return;
     }
 
-    // Get ALL networks from the cache (matching C# logic)
-    QStringList allNetworkRefs = this->m_connection->GetCache()->GetAllRefs("network");
-    //qDebug() << "NetworkTabPage::populateNetworksForHost - Total networks in cache:" << allNetworkRefs.size();
+    XenCache* cache = this->m_connection->GetCache();
+    QList<QSharedPointer<Network>> networks = cache->GetAll<Network>("network");
 
-    for (const QString& networkRef : allNetworkRefs)
+    for (const QSharedPointer<Network>& network : networks)
     {
-        QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>("network", networkRef);
-
-        if (!network)
+        if (!network || !network->IsValid())
             continue;
 
-        // Implement C# network.Show() filtering logic
         if (!shouldShowNetwork(network))
         {
             qDebug() << "Skipping network:" << network->GetName();
             continue;
         }
 
-        //qDebug() << "Adding network:" << networkData.value("name_label", "") << "ref:" << networkRef;
         this->addNetworkRow(network);
     }
 
@@ -499,44 +469,29 @@ void NetworkTabPage::addNetworkRow(QSharedPointer<Network> network)
     QString name = network->GetName();
     QString description = network->GetDescription();
 
-    QVariantMap networkData = network->GetData();
+    QSharedPointer<PIF> pif;
+    QList<QSharedPointer<PIF>> pifs = network->GetPIFs();
 
-    // Find PIF for this network on the current host (matching C# Helpers.FindPIF logic)
-    // C#: PIF Helpers.FindPIF(XenAPI.Network network, Host owner)
-    QVariantMap pifData;
-    QString pifRef;
-    QVariantList pifRefs = networkData.value("PIFs", QVariantList()).toList();
-
-    cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
-    if (this->m_objectType == "host" && cache)
+    if (this->m_objectType == "host")
     {
-        QString currentHostRef = this->m_objectData.value("ref", "").toString();
-        if (currentHostRef.isEmpty())
-        {
-            // If no ref in data, use the object ref from base class
-            currentHostRef = this->m_objectRef;
-        }
+        QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
+        if (!host && this->m_connection)
+            host = this->m_connection->GetCache()->ResolveObject<Host>("host", this->m_objectRef);
 
-        // Find the PIF that matches this host
-        for (const QVariant& pifRefVar : pifRefs)
+        QString hostRef = host ? host->OpaqueRef() : QString();
+        for (const QSharedPointer<PIF>& currentPif : pifs)
         {
-            QString currentPifRef = pifRefVar.toString();
-            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", currentPifRef);
-            QVariantMap tempPifData = pif ? pif->GetData() : cache->ResolveObjectData("PIF", currentPifRef);
-            QString pifHostRef = pif ? pif->GetHostRef() : tempPifData.value("host", "").toString();
-
-            if (pifHostRef == currentHostRef)
+            if (!currentPif || !currentPif->IsValid())
+                continue;
+            if (!hostRef.isEmpty() && currentPif->GetHostRef() == hostRef)
             {
-                pifData = tempPifData;
-                pifRef = currentPifRef;
+                pif = currentPif;
                 break;
             }
         }
-    } else if (this->m_objectType == "pool" && !pifRefs.isEmpty() && cache)
+    } else if (this->m_objectType == "pool" && !pifs.isEmpty())
     {
-        // For pools, get first PIF to display representative data
-        pifRef = pifRefs.first().toString();
-        pifData = cache->ResolveObjectData("PIF", pifRef);
+        pif = pifs.first();
     }
 
     QString nicInfo = "-";
@@ -548,24 +503,14 @@ void NetworkTabPage::addNetworkRow(QSharedPointer<Network> network)
     QString sriovInfo = "No";
 
     // C# NetworkRow.UpdateDetails() logic - build NIC name, VLAN, Link Status, etc.
-    if (!pifData.isEmpty())
+    if (pif && pif->IsValid())
     {
         // NIC name: Use C# PIF.Name() formatting ("NIC 0", "Bond 0+1").
-        if (!pifRef.isEmpty() && cache)
-        {
-            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
-            if (pif && pif->IsValid())
-                nicInfo = pif->GetName();
-            else
-                nicInfo = pifData.value("device", "").toString();
-        } else
-        {
-            nicInfo = pifData.value("device", "").toString();
-        }
+        nicInfo = pif->GetName();
 
         // VLAN: Check if this is a VLAN interface
         // C#: VlanCell.Value = Helpers.VlanString(Pif);
-        qint64 vlan = pifData.value("VLAN", -1).toLongLong();
+        qint64 vlan = pif->GetVLAN();
         if (vlan >= 0)
         {
             vlanInfo = QString::number(vlan);
@@ -579,21 +524,20 @@ void NetworkTabPage::addNetworkRow(QSharedPointer<Network> network)
         if (this->m_objectType == "pool")
         {
             // For pools, aggregate link status across all PIFs (C# Network.LinkStatusString())
-            linkStatus = this->getNetworkLinkStatus(networkData);
+            linkStatus = network->GetLinkStatusString();
         } else
         {
             // For hosts, use PIF.LinkStatusString() - check PIF_metrics.carrier
-            linkStatus = this->getPifLinkStatus(pifData);
+            linkStatus = pif->GetLinkStatusString();
         }
         
         //qDebug() << "NetworkTabPage: Network" << name << "linkStatus:" << linkStatus;
 
         // MAC: Only show for physical NICs, not VLANs or tunnels
         // C#: MacCell.Value = Pif != null && Pif.IsPhysical() ? Pif.MAC : Messages.SPACED_HYPHEN;
-        bool isPhysical = this->isPifPhysical(pifData);
-        if (isPhysical)
+        if (pif->IsPhysical())
         {
-            macInfo = pifData.value("MAC", "-").toString();
+            macInfo = pif->GetMAC();
         } else
         {
             macInfo = "-";
@@ -601,17 +545,17 @@ void NetworkTabPage::addNetworkRow(QSharedPointer<Network> network)
 
         // MTU: Network-level property
         // C#: MtuCell.Value = Network.CanUseJumboFrames() ? Network.MTU.ToString() : Messages.SPACED_HYPHEN;
-        bool canUseJumboFrames = this->networkCanUseJumboFrames(networkData);
+        bool canUseJumboFrames = network->CanUseJumboFrames();
         if (canUseJumboFrames)
         {
-            qint64 mtu = networkData.value("MTU", 0).toLongLong();
+            qint64 mtu = network->GetMTU();
             if (mtu > 0)
                 mtuInfo = QString::number(mtu);
         }
 
         // SR-IOV: Check if PIF has network_sriov
         // C# NetworkRow.UpdateDetails() checks PIF.NetworkSriov()
-        QString networkSriovRef = this->getPifNetworkSriov(pifData);
+        QString networkSriovRef = this->getPifNetworkSriov(pif);
         if (!networkSriovRef.isEmpty())
         {
             QVariantMap sriovData = cache->ResolveObjectData("network_sriov", networkSriovRef);
@@ -648,19 +592,16 @@ void NetworkTabPage::populateIPConfigForHost()
 {
     this->ui->ipConfigTable->setRowCount(0);
 
-    if (!this->m_connection || !this->m_connection->GetCache())
+    QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
+    if (!this->m_connection || !this->m_connection->GetCache() || !host)
         return;
 
     // Get all PIFs for this host
-    XenCache* cache = this->m_connection->GetCache();
-    QStringList pifRefs = this->m_objectData.value("PIFs", QVariantList()).toStringList();
-    QSharedPointer<Host> host = cache->ResolveObject<Host>("host", this->m_objectRef);
-
+    QList<QSharedPointer<PIF>> pifs = host->GetPIFs();
     QList<QSharedPointer<PIF>> managementPIFs;
 
-    for (const QString& pifRef : pifRefs)
+    for (const QSharedPointer<PIF>& pif : pifs)
     {
-        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
         if (!pif || !pif->IsValid())
             continue;
 
@@ -697,24 +638,20 @@ void NetworkTabPage::populateIPConfigForPool()
 {
     this->ui->ipConfigTable->setRowCount(0);
 
-    if (!this->m_connection || !this->m_connection->GetCache())
+    QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(this->m_object);
+    if (!this->m_connection || !this->m_connection->GetCache() || !pool)
         return;
 
     // For pools, show management interfaces from all hosts
-    XenCache* cache = this->m_connection->GetCache();
-    QVariantList hostRefs = this->m_objectData.value("hosts", QVariantList()).toList();
-
-    for (const QVariant& hostRefVar : hostRefs)
+    QList<QSharedPointer<Host>> hosts = pool->GetHosts();
+    for (const QSharedPointer<Host>& host : hosts)
     {
-        QString hostRef = hostRefVar.toString();
-        QSharedPointer<Host> host = cache->ResolveObject<Host>("host", hostRef);
         if (!host || !host->IsValid())
             continue;
 
-        QStringList pifRefs = host->GetPIFRefs();
-        for (const QString& pifRef : pifRefs)
+        QList<QSharedPointer<PIF>> pifs = host->GetPIFs();
+        for (const QSharedPointer<PIF>& pif : pifs)
         {
-            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
             if (!pif || !pif->IsValid())
                 continue;
 
@@ -1372,12 +1309,9 @@ void NetworkTabPage::onRemoveNetwork()
         QString networkName = "-";
 
         // Get network name
-        QString networkRef = vif->GetNetworkRef();
-        if (!networkRef.isEmpty() && this->m_connection && this->m_connection->GetCache())
-        {
-            QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
-            networkName = networkData.value("name_label", "-").toString();
-        }
+        QSharedPointer<Network> network = vif->GetNetwork();
+        if (network && network->IsValid())
+            networkName = network->GetName();
 
         // C#: Show confirmation dialog, then use DeleteVIFAction
         int ret = QMessageBox::question(this, tr("Remove Network Interface"),
@@ -1423,8 +1357,8 @@ void NetworkTabPage::onRemoveNetwork()
             return;
         }
 
-        QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", selectedNetworkRef);
-        QString networkName = networkData.value("name_label", tr("Unknown")).toString();
+        QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>("network", selectedNetworkRef);
+        QString networkName = network ? network->GetName() : tr("Unknown");
 
         // Confirm removal
         QMessageBox::StandardButton reply = QMessageBox::question(
@@ -1524,13 +1458,16 @@ void NetworkTabPage::removeNetwork(const QString& networkRef)
         return;
     }
 
-    QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
-    QString networkName = networkData.value("name_label", tr("Unknown")).toString();
+    QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>("network", networkRef);
+    if (!network || !network->IsValid())
+        return;
+
+    QString networkName = network->GetName();
 
     qDebug() << "Removing network:" << networkName << "ref:" << networkRef;
 
     // Check if network has any PIFs attached
-    QVariantList pifs = networkData.value("PIFs", QVariantList()).toList();
+    QList<QSharedPointer<PIF>> pifs = network->GetPIFs();
 
     if (!pifs.isEmpty())
     {
@@ -1706,205 +1643,38 @@ void NetworkTabPage::updateButtonStates()
 
 // ===== PIF/Network Helper Methods (matching C# XenAPI extension methods) =====
 
-QString NetworkTabPage::getPifLinkStatus(const QVariantMap& pifData) const
-{
-    // Matches C# PIF.LinkStatusString() and PIF.LinkStatus()
-    // Key insight: Must check PIF_metrics.carrier, NOT currently_attached!
-
-    if (pifData.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
-        return "Unknown";
-
-    // Check if this is a tunnel access PIF
-    // C#: if (IsTunnelAccessPIF()) { check tunnel.status["active"] }
-    QVariantList tunnelAccessPifOf = pifData.value("tunnel_access_PIF_of", QVariantList()).toList();
-    if (!tunnelAccessPifOf.isEmpty())
-    {
-        QString tunnelRef = tunnelAccessPifOf.first().toString();
-        QVariantMap tunnelData = this->m_connection->GetCache()->ResolveObjectData("tunnel", tunnelRef);
-        QVariantMap status = tunnelData.value("status", QVariantMap()).toMap();
-        bool active = status.value("active", "false").toString() == "true";
-        return active ? "Connected" : "Disconnected";
-    }
-
-    // Get PIF_metrics to check carrier status
-    // C#: PIF_metrics pifMetrics = PIFMetrics(); ... return pifMetrics.carrier ? LinkState.Connected : LinkState.Disconnected;
-    QString metricsRef = pifData.value("metrics").toString();
-    
-    if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL")
-    {
-        qDebug() << "  -> metrics ref is empty or NULL";
-        return "Unknown";
-    }
-
-    QVariantMap metricsData = this->m_connection->GetCache()->ResolveObjectData("pif_metrics", metricsRef);
-    
-    if (metricsData.isEmpty())
-    {
-        qDebug() << "  -> PIF_metrics not found in cache for ref:" << metricsRef;
-        return "Unknown";
-    }
-
-    // Check carrier status - this is the key!
-    bool carrier = metricsData.value("carrier", false).toBool();
-
-    // Also check for SR-IOV logical PIF or VLAN on SR-IOV
-    // C# PIF.LinkStatus() lines 332-355
-    qint64 vlan = pifData.value("VLAN", -1).toLongLong();
-    QVariantList sriovLogicalPifOf = pifData.value("sriov_logical_PIF_of", QVariantList()).toList();
-
-    if (!sriovLogicalPifOf.isEmpty() || vlan >= 0)
-    {
-        QString networkSriovRef = this->getPifNetworkSriov(pifData);
-        if (!networkSriovRef.isEmpty())
-        {
-            QVariantMap sriovData = this->m_connection->GetCache()->ResolveObjectData("network_sriov", networkSriovRef);
-            QString configMode = sriovData.value("configuration_mode", "unknown").toString();
-            bool requiresReboot = sriovData.value("requires_reboot", false).toBool();
-
-            if (!carrier || configMode == "unknown" || requiresReboot)
-                return "Disconnected";
-        }
-    }
-
-    return carrier ? "Connected" : "Disconnected";
-}
-
-QString NetworkTabPage::getNetworkLinkStatus(const QVariantMap& networkData) const
-{
-    // Matches C# Network.LinkStatusString() - aggregates link status across all PIFs
-    if (networkData.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
-        return "Unknown";
-    
-    QVariantList pifRefs = networkData.value("PIFs", QVariantList()).toList();
-    
-    if (pifRefs.isEmpty())
-        return "None";
-
-    // Collect link states from all PIFs
-    bool hasConnected = false;
-    bool hasDisconnected = false;
-    bool hasUnknown = false;
-
-    for (const QVariant& pifRefVar : pifRefs)
-    {
-        QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = this->m_connection->GetCache()->ResolveObjectData("PIF", pifRef);
-
-        QString status = this->getPifLinkStatus(pifData);
-
-        if (status == "Connected")
-            hasConnected = true;
-        else if (status == "Disconnected")
-            hasDisconnected = true;
-        else
-            hasUnknown = true;
-    }
-
-    // C# Network.LinkStatusString() logic:
-    // if (Connected) { if (Disconnected || Unknown) return "Partially connected"; else return "Connected"; }
-    // else if (Disconnected) { if (Unknown) return "Unknown"; else return "Disconnected"; }
-    // else return "Unknown";
-
-    if (hasConnected)
-    {
-        if (hasDisconnected || hasUnknown)
-            return "Partially connected";
-        else
-            return "Connected";
-    } else if (hasDisconnected)
-    {
-        if (hasUnknown)
-            return "Unknown";
-        else
-            return "Disconnected";
-    } else
-    {
-        return "Unknown";
-    }
-}
-
-bool NetworkTabPage::isPifPhysical(const QVariantMap& pifData) const
-{
-    // Matches C# PIF.IsPhysical()
-    // C#: return VLAN == -1 && !IsTunnelAccessPIF() && !IsSriovLogicalPIF();
-
-    if (pifData.isEmpty())
-        return false;
-
-    qint64 vlan = pifData.value("VLAN", -1).toLongLong();
-    if (vlan != -1)
-        return false; // This is a VLAN interface
-
-    QVariantList tunnelAccessPifOf = pifData.value("tunnel_access_PIF_of", QVariantList()).toList();
-    if (!tunnelAccessPifOf.isEmpty())
-        return false; // This is a tunnel access PIF
-
-    QVariantList sriovLogicalPifOf = pifData.value("sriov_logical_PIF_of", QVariantList()).toList();
-    if (!sriovLogicalPifOf.isEmpty())
-        return false; // This is an SR-IOV logical PIF
-
-    return true;
-}
-
-bool NetworkTabPage::networkCanUseJumboFrames(const QVariantMap& networkData) const
-{
-    // Matches C# Network.CanUseJumboFrames()
-    // Returns false for CHINs (tunnel access PIFs)
-
-    if (networkData.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
-        return false;
-
-    QVariantList pifRefs = networkData.value("PIFs", QVariantList()).toList();
-
-    // C#: not supported on CHINs (tunnel access PIFs)
-    for (const QVariant& pifRefVar : pifRefs)
-    {
-        QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = this->m_connection->GetCache()->ResolveObjectData("PIF", pifRef);
-
-        QVariantList tunnelAccessPifOf = pifData.value("tunnel_access_PIF_of", QVariantList()).toList();
-        if (!tunnelAccessPifOf.isEmpty())
-            return false; // Has a tunnel access PIF - no jumbo frames
-    }
-
-    return true;
-}
-
-QString NetworkTabPage::getPifNetworkSriov(const QVariantMap& pifData) const
+QString NetworkTabPage::getPifNetworkSriov(const QSharedPointer<PIF>& pif) const
 {
     // Matches C# PIF.NetworkSriov()
     // Returns XenRef<Network_sriov> if this PIF has SR-IOV
 
-    if (pifData.isEmpty())
+    if (!pif || !this->m_connection || !this->m_connection->GetCache())
         return QString();
 
     // Check if this is an SR-IOV logical PIF
-    QVariantList sriovLogicalPifOf = pifData.value("sriov_logical_PIF_of", QVariantList()).toList();
+    QStringList sriovLogicalPifOf = pif->SriovLogicalPIFOfRefs();
     if (!sriovLogicalPifOf.isEmpty())
-        return sriovLogicalPifOf.first().toString();
+        return sriovLogicalPifOf.first();
 
     // Check if this is a VLAN on an SR-IOV network
-    qint64 vlan = pifData.value("VLAN", -1).toLongLong();
-    if (vlan < 0)
+    if (!pif->IsVLAN())
         return QString(); // Not a VLAN
 
     // Resolve VLAN to get tagged_PIF
-    QString vlanMasterOf = pifData.value("VLAN_master_of").toString();
-    if (vlanMasterOf.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
+    QString vlanMasterOf = pif->VLANMasterOfRef();
+    if (vlanMasterOf.isEmpty())
         return QString();
 
-    QVariantMap vlanData = this->m_connection->GetCache()->ResolveObjectData("VLAN", vlanMasterOf);
-    QString taggedPifRef = vlanData.value("tagged_PIF").toString();
+    QSharedPointer<VLAN> vlan = this->m_connection->GetCache()->ResolveObject<VLAN>("vlan", vlanMasterOf);
+    QSharedPointer<PIF> taggedPif = vlan ? vlan->GetTaggedPIF() : QSharedPointer<PIF>();
 
-    if (taggedPifRef.isEmpty())
+    if (!taggedPif || !taggedPif->IsValid())
         return QString();
-
-    QVariantMap taggedPifData = this->m_connection->GetCache()->ResolveObjectData("PIF", taggedPifRef);
 
     // Check if tagged PIF is SR-IOV logical PIF
-    QVariantList taggedSriovLogicalPifOf = taggedPifData.value("sriov_logical_PIF_of", QVariantList()).toList();
+    QStringList taggedSriovLogicalPifOf = taggedPif->SriovLogicalPIFOfRefs();
     if (!taggedSriovLogicalPifOf.isEmpty())
-        return taggedSriovLogicalPifOf.first().toString();
+        return taggedSriovLogicalPifOf.first();
 
     return QString();
 }

@@ -109,11 +109,7 @@ class NetworkTabPage : public BaseTabPage
         QSharedPointer<VIF> getSelectedVif() const; // Get full VIF record
 
         // PIF/Network helper methods (matching C# XenAPI extension methods)
-        QString getPifLinkStatus(const QVariantMap& pifData) const;     // PIF.LinkStatusString()
-        QString getNetworkLinkStatus(const QVariantMap& networkData) const; // Network.LinkStatusString()
-        bool isPifPhysical(const QVariantMap& pifData) const;            // PIF.IsPhysical()
-        bool networkCanUseJumboFrames(const QVariantMap& networkData) const; // Network.CanUseJumboFrames()
-        QString getPifNetworkSriov(const QVariantMap& pifData) const;    // PIF.NetworkSriov()
+        QString getPifNetworkSriov(const QSharedPointer<PIF>& pif) const;    // PIF.NetworkSriov()
 
         // Button enablement (matches C# UpdateEnablement)
         void updateButtonStates();

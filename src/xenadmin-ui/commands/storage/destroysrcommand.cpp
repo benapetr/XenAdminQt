@@ -133,7 +133,7 @@ bool DestroySRCommand::canSRBeDestroyed() const
         QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
         foreach (QSharedPointer<PBD> pbd, pbds)
         {
-            if (pbd->CurrentlyAttached())
+            if (pbd->IsCurrentlyAttached())
                 return false; // SR is still attached
         }
     }

@@ -117,6 +117,7 @@ class PIF : public XenObject
         bool IsSriovPhysicalPIF() const;
         bool IsSriovLogicalPIF() const;
         bool Show(bool showHiddenObjects) const;
+        QString GetLinkStatusString() const;
 };
 
 #endif // PIF_H
