@@ -36,6 +36,7 @@
 
 class XenObject;
 class XenConnection;
+class Host;
 
 /**
  * @brief Manages icons for different object types and states
@@ -52,7 +53,7 @@ class IconManager
         QIcon GetIconForObject(const QString& objectType, const QVariantMap& objectData) const;
         QIcon GetIconForObject(const XenObject* object) const;
         QIcon GetIconForVM(const QVariantMap& vmData) const;
-        QIcon GetIconForHost(const QVariantMap& hostData) const;
+        QIcon GetIconForHost(const Host *host) const;
         QIcon GetIconForPool(const QVariantMap& poolData) const;
         QIcon GetIconForSR(const QVariantMap& srData) const;
         QIcon GetIconForSR(const QVariantMap& srData, XenConnection* connection) const;

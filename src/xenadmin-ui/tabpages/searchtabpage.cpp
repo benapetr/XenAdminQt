@@ -28,9 +28,9 @@
 #include "../controls/xensearch/searcher.h"
 #include "../controls/xensearch/searchoutput.h"
 #include "../controls/xensearch/querypanel.h"
-#include "../../xenlib/xensearch/search.h"
-#include "../../xenlib/xensearch/sort.h"
-#include "../../xenlib/xen/xenobject.h"
+#include "xenlib/xensearch/search.h"
+#include "xenlib/xensearch/sort.h"
+#include "xenlib/xen/xenobject.h"
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -112,12 +112,9 @@ void SearchTabPage::setSearch(Search* search)
         this->m_searcher->SetSearch(this->m_search);
 
     if (this->m_output)
-    {
         this->m_output->SetSearch(this->m_search);
-    }
 
     this->buildList();
-
     this->m_ignoreSearchUpdate = wasIgnoring;
 }
 
@@ -136,9 +133,7 @@ void SearchTabPage::onSearchChanged()
 
     Search* search = this->m_searcher ? this->m_searcher->GetSearch() : nullptr;
     if (search)
-    {
         this->setSearch(search);
-    }
 
     this->m_ignoreSearchUpdate = false;
 }

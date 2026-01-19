@@ -58,9 +58,9 @@ class MemoryBar : public QWidget
 
         explicit MemoryBar(QWidget* parent = nullptr);
 
-        void setTotalMemory(qint64 totalBytes);
-        void clearSegments();
-        void addSegment(const QString& name, qint64 bytes, const QColor& color, const QString& tooltip = QString());
+        void SetTotalMemory(qint64 totalBytes);
+        void ClearSegments();
+        void AddSegment(const QString& name, qint64 bytes, const QColor& color, const QString& tooltip = QString());
 
         QSize sizeHint() const override;
         QSize minimumSizeHint() const override;

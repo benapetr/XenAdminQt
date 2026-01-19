@@ -82,13 +82,6 @@ class ShinyBar : public QWidget
         void DrawRuler(QPainter& painter, const QRect& barArea, qint64 totalValue, double bytesPerPixel);
 
         /**
-         * @brief Format a memory size in bytes to human-readable string
-         * @param bytes Memory size in bytes
-         * @return Formatted string (e.g., "1.5 GB", "512 MB")
-         */
-        QString FormatMemorySize(qint64 bytes) const;
-
-        /**
          * @brief Draw rounded rectangle segment with gradient and highlight
          * @param painter The QPainter to draw with
          * @param barArea The full bar area (for rounded corners context)

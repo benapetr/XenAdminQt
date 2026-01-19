@@ -30,8 +30,7 @@
 #include <QVBoxLayout>
 #include <QLabel>
 
-PlaceholderWidget::PlaceholderWidget(QWidget* parent)
-    : QWidget(parent)
+PlaceholderWidget::PlaceholderWidget(QWidget* parent) : QWidget(parent)
 {
     // Set a light gray background color
     this->setAutoFillBackground(true);

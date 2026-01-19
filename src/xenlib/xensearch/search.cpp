@@ -35,6 +35,7 @@
 #include "../xencache.h"
 #include "../network/comparableaddress.h"
 #include "../utils/misc.h"
+#include "xenlib/xen/host.h"
 #include <QDebug>
 #include <QMetaType>
 
@@ -251,8 +252,7 @@ Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& obje
     if (objectRefs.isEmpty())
     {
         return buildOverviewSearch(scope);
-    }
-    else if (objectRefs.count() == 1)
+    } else if (objectRefs.count() == 1)
     {
         QString objRef = objectRefs.first();
         QString objType = objectTypes.isEmpty() ? QString() : objectTypes.first();
@@ -273,8 +273,7 @@ Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& obje
             Query* query = new Query(scope, hostQuery);
             QString name = QString("Host: %1").arg(objectData.value("name_label").toString());
             return new Search(query, hostGrouping, name, "", false);
-        }
-        else if (objType == "pool")
+        } else if (objType == "pool")
         {
             Grouping* hostGrouping = new HostGrouping(nullptr);
             Grouping* poolGrouping = new PoolGrouping(hostGrouping);
@@ -286,13 +285,11 @@ Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& obje
             Query* query = new Query(scope, poolQuery);
             QString name = QString("Pool: %1").arg(objectData.value("name_label").toString());
             return new Search(query, poolGrouping, name, "", false);
-        }
-        else
+        } else
         {
             return buildOverviewSearch(scope);
         }
-    }
-    else
+    } else
     {
         // TODO: Implement multi-object search with proper grouping
         return buildOverviewSearch(scope);
@@ -435,23 +432,21 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
 
         if (connection->IsConnected() && cache && cache->Count("host") > 0)
         {
-            const QStringList hostRefs = cache->GetAllRefs("host");
-            for (const QString& ref : hostRefs)
+            QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+            foreach (QSharedPointer<Host> host, hosts)
             {
-                const bool isOpaqueRef = ref.startsWith("OpaqueRef:");
-                QVariantMap record = cache->ResolveObjectData("host", ref);
-                const bool isDisconnected = record.value("is_disconnected").toBool();
+                const bool isOpaqueRef = host->OpaqueRef().startsWith("OpaqueRef:");
+                const bool isDisconnected = !host->IsConnected();
 
                 if (!isOpaqueRef || isDisconnected)
-                    cache->Remove("host", ref);
+                    cache->Remove("host", host->OpaqueRef());
             }
         }
 
         if (connection->IsConnected() && cache && cache->Count("pool") > 0)
         {
             matchedObjects = this->getMatchedObjects(connection);
-        }
-        else
+        } else
         {
             if (hostname.isEmpty())
                 continue;
@@ -464,7 +459,6 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
             record["hostname"] = hostname;
             record["address"] = hostname;
             record["enabled"] = false;
-            record["is_disconnected"] = true;
 
             if (cache)
             {
@@ -539,10 +533,12 @@ QList<QPair<QString, QString>> Search::getMatchedObjects(XenConnection* connecti
         // Check if object type is in scope
         bool typeMatches = false;
         if (objType == "pool" && (types & ObjectTypes::Pool) != ObjectTypes::None)
+        {
             typeMatches = true;
-        else if (objType == "host" && (types & ObjectTypes::Server) != ObjectTypes::None)
+        } else if (objType == "host" && (types & ObjectTypes::Server) != ObjectTypes::None)
+        {
             typeMatches = true;
-        else if (objType == "vm")
+        } else if (objType == "vm")
         {
             QVariantMap vmData = connection->GetCache()->ResolveObjectData(objType, objRef);
             bool isTemplate = vmData.value("is_a_template").toBool();
@@ -558,12 +554,13 @@ QList<QPair<QString, QString>> Search::getMatchedObjects(XenConnection* connecti
                 typeMatches = true;
             else if (isSnapshot && (types & ObjectTypes::Snapshot) != ObjectTypes::None)
                 typeMatches = true;
+        } else if (objType == "sr" && ((types & ObjectTypes::RemoteSR) != ObjectTypes::None || (types & ObjectTypes::LocalSR) != ObjectTypes::None))
+        {
+            typeMatches = true;
+        } else if (objType == "network" && (types & ObjectTypes::Network) != ObjectTypes::None)
+        {
+            typeMatches = true;
         }
-        else if (objType == "sr" && ((types & ObjectTypes::RemoteSR) != ObjectTypes::None || 
-                                      (types & ObjectTypes::LocalSR) != ObjectTypes::None))
-            typeMatches = true;
-        else if (objType == "network" && (types & ObjectTypes::Network) != ObjectTypes::None)
-            typeMatches = true;
 
         if (!typeMatches)
             continue;
@@ -629,8 +626,7 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
                 if (value.isValid())
                     groupValues.append(value);
             }
-        }
-        else if (groupValue.canConvert<QStringList>())
+        } else if (groupValue.canConvert<QStringList>())
         {
             const QStringList values = groupValue.toStringList();
             for (const QString& value : values)
@@ -638,8 +634,7 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
                 if (!value.isEmpty())
                     groupValues.append(value);
             }
-        }
-        else
+        } else
         {
             groupValues.append(groupValue);
         }

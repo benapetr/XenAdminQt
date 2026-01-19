@@ -55,9 +55,7 @@ class AffinityPicker : public QWidget
         explicit AffinityPicker(QWidget* parent = nullptr);
         ~AffinityPicker() override;
 
-        void setAffinity(XenConnection* connection,
-                         const QString& affinityRef,
-                         const QString& srHostRef);
+        void setAffinity(XenConnection* connection, const QString& affinityRef, const QString& srHostRef);
 
         QString selectedAffinityRef() const;
         bool validState() const;

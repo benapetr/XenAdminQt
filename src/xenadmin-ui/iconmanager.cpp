@@ -26,9 +26,11 @@
  */
 
 #include "iconmanager.h"
-#include "xen/xenobject.h"
-#include "xen/network/connection.h"
-#include "xen/sr.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/hostmetrics.h"
 #include "xencache.h"
 #include <QPainter>
 #include <QDebug>
@@ -54,7 +56,8 @@ QIcon IconManager::GetIconForObject(const QString& objectType, const QVariantMap
         return this->GetIconForVM(objectData);
     } else if (objectType == "host")
     {
-        return this->GetIconForHost(objectData);
+        return QIcon();
+        //return this->GetIconForHost(objectData);
     } else if (objectType == "pool")
     {
         return this->GetIconForPool(objectData);
@@ -79,17 +82,8 @@ QIcon IconManager::GetIconForObject(const XenObject* object) const
 
     if (objectType == "host")
     {
-        XenConnection* connection = object->GetConnection();
-        if (connection && connection->GetCache())
-        {
-            QString metricsRef = objectData.value("metrics", "").toString();
-            if (!metricsRef.isEmpty() && metricsRef != "OpaqueRef:NULL")
-            {
-                QVariantMap metricsData = connection->GetCache()->ResolveObjectData("host_metrics", metricsRef);
-                if (!metricsData.isEmpty())
-                    objectData["_metrics_live"] = metricsData.value("live", false);
-            }
-        }
+        const Host *host = dynamic_cast<const Host*>(object);
+        return this->GetIconForHost(host);
     }
 
     if (objectType == "sr")
@@ -166,29 +160,19 @@ QIcon IconManager::GetIconForVM(const QVariantMap& vmData) const
     return icon;
 }
 
-QIcon IconManager::GetIconForHost(const QVariantMap& hostData) const
+QIcon IconManager::GetIconForHost(const Host *host) const
 {
+    if (!host)
+        return QIcon();
+
     // C# pattern from Images.cs GetIconFor(Host host):
     // 1. Resolve host_metrics: Host_metrics metrics = host.Connection.Resolve(host.metrics);
     // 2. Check if live: if (metrics != null && metrics.live) { ... }
     // 3. Check enabled: if (host.enabled) for maintenance mode
-    //
-    // The caller (NavigationView) should have resolved host_metrics and added
-    // "_metrics_live" to the hostData map.
 
-    bool enabled = hostData.value("enabled", true).toBool();
-    bool isDisconnected = hostData.value("is_disconnected").toBool();
-
-    // Check if host is live (metrics.live in C#)
-    // Caller should provide this via "_metrics_live" key after resolving host_metrics
-    bool isLive = hostData.value("_metrics_live", false).toBool();
-
-    // Debug logging to help troubleshoot
-    // qDebug() << "IconManager::getIconForHost:"
-    //         << "name=" << hostData.value("name_label", "?").toString()
-    //         << "enabled=" << enabled
-    //         << "_metrics_live=" << isLive
-    //         << "metrics_ref=" << hostData.value("metrics", "MISSING").toString();
+    bool enabled = host->IsEnabled();
+    bool isDisconnected = !host->IsConnected();
+    bool isLive = host->IsLive();
 
     QString cacheKey = QString("host_%1_%2_%3")
                            .arg(enabled ? "enabled" : "disabled")

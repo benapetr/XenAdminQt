@@ -169,8 +169,9 @@ QVariant TypeGrouping::getGroup(const QVariantMap& objectData, const QString& ob
 
     if (objectType == "host")
     {
-        if (objectData.value("is_disconnected").toBool())
-            return "disconnected_host";
+        // TODO integrate IsConnected here
+        //if (objectData.value("is_disconnected").toBool())
+        //    return "disconnected_host";
         return "host";
     }
 

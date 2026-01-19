@@ -25,19 +25,18 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "xenlib/utils/misc.h"
 #include "shinybar.h"
 #include <QPainterPath>
 #include <QLinearGradient>
 #include <QFontMetrics>
 #include <QPen>
-#include <cmath>
 
 // Color definitions
 const QColor ShinyBar::COLOR_UNUSED = QColor(0, 0, 0);      // Black
 const QColor ShinyBar::COLOR_GRID = QColor(169, 169, 169);  // DarkGray
 
-ShinyBar::ShinyBar(QWidget* parent)
-    : QWidget(parent)
+ShinyBar::ShinyBar(QWidget* parent) : QWidget(parent)
 {
     this->setMouseTracking(true);
     this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -134,10 +133,7 @@ void ShinyBar::DrawSegment(QPainter& painter, const QRect& barArea, const QRect&
         else
             horizPos = segmentRect.left() + TEXT_PAD;
 
-        QRectF textRect(horizPos,
-                        segmentRect.top() + (segmentRect.height() - textSize.height() * 0.9f) / 2,
-                        textSize.width(),
-                        textSize.height());
+        QRectF textRect(horizPos, segmentRect.top() + (segmentRect.height() - textSize.height() * 0.9f) / 2, textSize.width(), textSize.height());
 
         if (textRect.x() < segmentRect.x() + TEXT_PAD)
             textRect.moveLeft(segmentRect.x() + TEXT_PAD);
@@ -176,7 +172,7 @@ void ShinyBar::DrawRuler(QPainter& painter, const QRect& barArea, qint64 totalVa
     QFontMetrics fm(font);
 
     // Find the size of the longest label
-    QString maxLabel = this->FormatMemorySize(totalValue);
+    QString maxLabel = Misc::FormatMemorySize(totalValue);
     int longest = fm.horizontalAdvance(maxLabel);
 
     // Calculate a suitable increment
@@ -204,7 +200,7 @@ void ShinyBar::DrawRuler(QPainter& painter, const QRect& barArea, qint64 totalVa
         // Draw label
         if (withLabel)
         {
-            QString label = this->FormatMemorySize(static_cast<qint64>(x));
+            QString label = Misc::FormatMemorySize(static_cast<qint64>(x));
             int textWidth = fm.horizontalAdvance(label);
             int textLeft = px - textWidth / 2;
             QRect textRect(textLeft, textTop, textWidth, fm.height());
@@ -215,35 +211,4 @@ void ShinyBar::DrawRuler(QPainter& painter, const QRect& barArea, qint64 totalVa
     }
 
     painter.restore();
-}
-
-QString ShinyBar::FormatMemorySize(qint64 bytes) const
-{
-    const qint64 KB = 1024;
-    const qint64 MB = KB * 1024;
-    const qint64 GB = MB * 1024;
-    const qint64 TB = GB * 1024;
-
-    if (bytes >= TB)
-    {
-        double tb = static_cast<double>(bytes) / TB;
-        return QString::number(tb, 'f', 1) + " TB";
-    }
-    else if (bytes >= GB)
-    {
-        double gb = static_cast<double>(bytes) / GB;
-        return QString::number(gb, 'f', 1) + " GB";
-    }
-    else if (bytes >= MB)
-    {
-        double mb = static_cast<double>(bytes) / MB;
-        return QString::number(mb, 'f', 1) + " MB";
-    }
-    else if (bytes >= KB)
-    {
-        double kb = static_cast<double>(bytes) / KB;
-        return QString::number(kb, 'f', 1) + " KB";
-    }
-
-    return QString::number(bytes) + " B";
 }

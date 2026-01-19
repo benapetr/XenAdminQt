@@ -436,15 +436,9 @@ QTreeWidgetItem* MainWindowTreeNodeGroupAcceptor::addHostNode(const QSharedPoint
         return nullptr;
     QIcon icon = IconManager::instance().GetIconForObject(host.data());
 
-    QString name = host->GetName();
-    bool isDisconnected = false;
     XenConnection* connection = host->GetConnection();
-    XenCache* cache = connection ? connection->GetCache() : nullptr;
-    if (cache)
-    {
-        const QVariantMap record = cache->ResolveObjectData("host", host->OpaqueRef());
-        isDisconnected = record.value("is_disconnected").toBool();
-    }
+    QString name = host->GetName();
+    bool isDisconnected = !host->IsConnected();
 
     if (isDisconnected && connection)
     {

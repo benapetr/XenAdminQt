@@ -67,8 +67,8 @@ void MemoryTabPage::refreshContent()
 {
     if (!this->m_object)
     {
-        this->ui->memoryBar->clearSegments();
-        this->ui->memoryBar->setTotalMemory(0);
+        this->ui->memoryBar->ClearSegments();
+        this->ui->memoryBar->SetTotalMemory(0);
         this->ui->memoryStatsGroup->setVisible(false);
         return;
     }
@@ -100,8 +100,8 @@ void MemoryTabPage::populateVMMemory()
     qint64 memoryDynamicMax = vm->GetMemoryDynamicMax();
 
     // Set total memory for the bar
-    this->ui->memoryBar->setTotalMemory(memoryStaticMax);
-    this->ui->memoryBar->clearSegments();
+    this->ui->memoryBar->SetTotalMemory(memoryStaticMax);
+    this->ui->memoryBar->ClearSegments();
 
     // Add memory segment for the VM
     QString vmName = vm->GetName();
@@ -136,7 +136,7 @@ void MemoryTabPage::populateVMMemory()
     }
 
     // For VMs, show current usage against static max
-    this->ui->memoryBar->addSegment(vmName, memoryActual, vmColor, tooltip);
+    this->ui->memoryBar->AddSegment(vmName, memoryActual, vmColor, tooltip);
 
     // Display memory information in labels
     this->ui->totalMemoryLabel->setVisible(false);

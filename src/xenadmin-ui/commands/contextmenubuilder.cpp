@@ -135,8 +135,9 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
     bool isDisconnectedHost = (objectType == "disconnected_host" || itemType == "disconnected_host");
     if (!isDisconnectedHost && obj && objectType == "host")
     {
-        const QVariantMap record = obj->GetCache()->ResolveObjectData("host", obj->OpaqueRef());
-        isDisconnectedHost = record.value("is_disconnected").toBool();
+        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
+        if (host)
+            isDisconnectedHost = !host->IsConnected();
     }
 
     if (isDisconnectedHost)
@@ -621,8 +622,7 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> 
     {
         HostMaintenanceModeCommand* enterMaintenanceCmd = new HostMaintenanceModeCommand(this->m_mainWindow, true, this);
         this->addCommand(menu, enterMaintenanceCmd);
-    }
-    else
+    } else
     {
         HostMaintenanceModeCommand* exitMaintenanceCmd = new HostMaintenanceModeCommand(this->m_mainWindow, false, this);
         this->addCommand(menu, exitMaintenanceCmd);
@@ -653,8 +653,7 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> 
     {
         EjectHostFromPoolCommand* ejectCmd = new EjectHostFromPoolCommand(this->m_mainWindow, this);
         this->addCommand(menu, ejectCmd);
-    }
-    else
+    } else
     {
         DisconnectHostCommand* disconnectCmd = new DisconnectHostCommand(this->m_mainWindow, this);
         this->addCommand(menu, disconnectCmd);
@@ -725,38 +724,29 @@ void ContextMenuBuilder::buildDisconnectedHostContextMenu(QMenu* menu, QTreeWidg
 
     if (anyInProgress)
     {
-        CancelHostConnectionCommand* cancelCmd =
-            new CancelHostConnectionCommand(connections, this->m_mainWindow, this);
+        CancelHostConnectionCommand* cancelCmd = new CancelHostConnectionCommand(connections, this->m_mainWindow, this);
         this->addCommand(menu, cancelCmd);
-    }
-    else
+    } else
     {
-        DisconnectHostsAndPoolsCommand* disconnectCmd =
-            new DisconnectHostsAndPoolsCommand(connections, this->m_mainWindow, this);
+        DisconnectHostsAndPoolsCommand* disconnectCmd = new DisconnectHostsAndPoolsCommand(connections, this->m_mainWindow, this);
         this->addCommand(menu, disconnectCmd);
 
-        ReconnectHostCommand* reconnectCmd =
-            new ReconnectHostCommand(connections, this->m_mainWindow, this);
+        ReconnectHostCommand* reconnectCmd = new ReconnectHostCommand(connections, this->m_mainWindow, this);
         this->addCommand(menu, reconnectCmd);
 
-        ForgetSavedPasswordCommand* forgetCmd =
-            new ForgetSavedPasswordCommand(connections, this->m_mainWindow, this);
+        ForgetSavedPasswordCommand* forgetCmd = new ForgetSavedPasswordCommand(connections, this->m_mainWindow, this);
         this->addCommand(menu, forgetCmd);
 
-        RemoveHostCommand* removeCmd =
-            new RemoveHostCommand(connections, this->m_mainWindow, this);
+        RemoveHostCommand* removeCmd = new RemoveHostCommand(connections, this->m_mainWindow, this);
         this->addCommand(menu, removeCmd);
 
-        RestartToolstackCommand* restartToolstackCmd =
-            new RestartToolstackCommand(this->m_mainWindow, this);
+        RestartToolstackCommand* restartToolstackCmd = new RestartToolstackCommand(this->m_mainWindow, this);
         this->addCommand(menu, restartToolstackCmd);
     }
 }
 
 void ContextMenuBuilder::buildPoolContextMenu(QMenu* menu, QSharedPointer<Pool> pool)
 {
-    QString poolRef = pool->OpaqueRef();
-
     // VM Creation operations
     NewVMCommand* newVMCmd = new NewVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, newVMCmd);

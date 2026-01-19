@@ -40,19 +40,19 @@ MemoryBar::MemoryBar(QWidget* parent) : QWidget(parent), m_totalMemory(0)
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 }
 
-void MemoryBar::setTotalMemory(qint64 totalBytes)
+void MemoryBar::SetTotalMemory(qint64 totalBytes)
 {
     m_totalMemory = totalBytes;
     update();
 }
 
-void MemoryBar::clearSegments()
+void MemoryBar::ClearSegments()
 {
     m_segments.clear();
     update();
 }
 
-void MemoryBar::addSegment(const QString& name, qint64 bytes, const QColor& color, const QString& tooltip)
+void MemoryBar::AddSegment(const QString& name, qint64 bytes, const QColor& color, const QString& tooltip)
 {
     m_segments.append(Segment(name, bytes, color, tooltip));
     update();
