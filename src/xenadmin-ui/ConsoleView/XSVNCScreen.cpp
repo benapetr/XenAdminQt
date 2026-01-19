@@ -1659,7 +1659,7 @@ bool XSVNCScreen::connectHostedConsole(VNCGraphicsClient* vncClient, const QStri
 
         // Get current session ID
         // C#: Uses elevated credentials if available (CA-91132), otherwise duplicates session
-        QString sessionId = this->_connection->GetSession() ? this->_connection->GetSession()->getSessionId() : QString();
+        QString sessionId = this->_connection->GetSession() ? this->_connection->GetSession()->GetSessionID() : QString();
         if (sessionId.isEmpty())
         {
             throw std::runtime_error("No active session");

@@ -346,7 +346,7 @@ Session* XenConnection::GetNewSession(const QString& hostname,
             return nullptr;
         }
 
-        const QString lastError = session->getLastError();
+        const QString lastError = session->GetLastError();
         if (!isElevated && promptForNewPassword)
         {
             QString newPassword;
@@ -369,7 +369,7 @@ Session* XenConnection::GetNewSession(const QString& hostname,
         if (outError)
             *outError = lastError.isEmpty() ? "Authentication failed" : lastError;
 
-        this->d->lastFailureDescription = session->getLastErrorDescription();
+        this->d->lastFailureDescription = session->GetLastErrorDescription();
 
         delete newConn;
         QThread::msleep(kDelayMs);
@@ -648,12 +648,12 @@ QVariantMap XenConnection::fetchObjectRecord(const QString& cacheType, const QSt
 
     XenRpcAPI api(session);
     QVariantList params;
-    params.append(session->getSessionId());
+    params.append(session->GetSessionID());
     params.append(ref);
 
     const QString methodName = QString("%1.get_record").arg(apiClass);
     QByteArray jsonRequest = api.BuildJsonRpcCall(methodName, params);
-    QByteArray response = session->sendApiRequest(QString::fromUtf8(jsonRequest));
+    QByteArray response = session->SendApiRequest(QString::fromUtf8(jsonRequest));
     if (response.isEmpty())
         return QVariantMap();
 
@@ -965,9 +965,9 @@ void XenConnection::connectWorkerThread()
     {
         qDebug() << "XenConnection: Preloading roles via role.get_all_records";
         QVariantList roleParams;
-        roleParams.append(session->getSessionId());
+        roleParams.append(session->GetSessionID());
         QByteArray roleRequest = api.BuildJsonRpcCall("role.get_all_records", roleParams);
-        QByteArray roleResponse = session->sendApiRequest(QString::fromUtf8(roleRequest));
+        QByteArray roleResponse = session->SendApiRequest(QString::fromUtf8(roleRequest));
         if (!roleResponse.isEmpty())
         {
             QVariant parsed = api.ParseJsonRpcResponse(roleResponse);
@@ -1039,9 +1039,9 @@ void XenConnection::connectWorkerThread()
     {
         qDebug() << "XenConnection: Preloading console.get_all_records";
         QVariantList consoleParams;
-        consoleParams.append(session->getSessionId());
+        consoleParams.append(session->GetSessionID());
         QByteArray consoleRequest = api.BuildJsonRpcCall("console.get_all_records", consoleParams);
-        QByteArray consoleResponse = session->sendApiRequest(QString::fromUtf8(consoleRequest));
+        QByteArray consoleResponse = session->SendApiRequest(QString::fromUtf8(consoleRequest));
         if (!consoleResponse.isEmpty())
         {
             QVariant parsed = api.ParseJsonRpcResponse(consoleResponse);

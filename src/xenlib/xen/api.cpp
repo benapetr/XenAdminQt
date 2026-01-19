@@ -71,11 +71,11 @@ QVariant XenRpcAPI::GetTaskRecord(const QString& taskRef)
     }
 
     QVariantList params;
-    params << this->d->session->getSessionId();
+    params << this->d->session->GetSessionID();
     params << taskRef;
 
     QByteArray jsonRpcRequest = this->BuildJsonRpcCall("task.get_record", params);
-    QByteArray response = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
+    QByteArray response = this->d->session->SendApiRequest(QString::fromUtf8(jsonRpcRequest));
 
     if (response.isEmpty())
     {
@@ -95,11 +95,11 @@ QString XenRpcAPI::GetTaskStatus(const QString& taskRef)
     }
 
     QVariantList params;
-    params << this->d->session->getSessionId();
+    params << this->d->session->GetSessionID();
     params << taskRef;
 
     QByteArray jsonRpcRequest = this->BuildJsonRpcCall("task.get_status", params);
-    QByteArray response = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
+    QByteArray response = this->d->session->SendApiRequest(QString::fromUtf8(jsonRpcRequest));
 
     if (response.isEmpty())
     {
@@ -118,11 +118,11 @@ double XenRpcAPI::GetTaskProgress(const QString& taskRef)
     }
 
     QVariantList params;
-    params << this->d->session->getSessionId();
+    params << this->d->session->GetSessionID();
     params << taskRef;
 
     QByteArray jsonRpcRequest = this->BuildJsonRpcCall("task.get_progress", params);
-    QByteArray response = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
+    QByteArray response = this->d->session->SendApiRequest(QString::fromUtf8(jsonRpcRequest));
 
     if (response.isEmpty())
     {
@@ -141,11 +141,11 @@ QString XenRpcAPI::GetTaskResult(const QString& taskRef)
     }
 
     QVariantList params;
-    params << this->d->session->getSessionId();
+    params << this->d->session->GetSessionID();
     params << taskRef;
 
     QByteArray jsonRpcRequest = this->BuildJsonRpcCall("task.get_result", params);
-    QByteArray response = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
+    QByteArray response = this->d->session->SendApiRequest(QString::fromUtf8(jsonRpcRequest));
 
     if (response.isEmpty())
     {
@@ -164,11 +164,11 @@ QStringList XenRpcAPI::GetTaskErrorInfo(const QString& taskRef)
     }
 
     QVariantList params;
-    params << this->d->session->getSessionId();
+    params << this->d->session->GetSessionID();
     params << taskRef;
 
     QByteArray jsonRpcRequest = this->BuildJsonRpcCall("task.get_error_info", params);
-    QByteArray response = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
+    QByteArray response = this->d->session->SendApiRequest(QString::fromUtf8(jsonRpcRequest));
 
     if (response.isEmpty())
     {
@@ -199,10 +199,10 @@ QVariantMap XenRpcAPI::GetAllTaskRecords()
     }
 
     QVariantList params;
-    params << this->d->session->getSessionId();
+    params << this->d->session->GetSessionID();
 
     QByteArray jsonRpcRequest = this->BuildJsonRpcCall("task.get_all_records", params);
-    QByteArray response = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
+    QByteArray response = this->d->session->SendApiRequest(QString::fromUtf8(jsonRpcRequest));
 
     if (response.isEmpty())
     {
@@ -229,11 +229,11 @@ bool XenRpcAPI::CancelTask(const QString& taskRef)
     }
 
     QVariantList params;
-    params << this->d->session->getSessionId();
+    params << this->d->session->GetSessionID();
     params << taskRef;
 
     QByteArray jsonRpcRequest = this->BuildJsonRpcCall("task.cancel", params);
-    QByteArray response = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
+    QByteArray response = this->d->session->SendApiRequest(QString::fromUtf8(jsonRpcRequest));
 
     if (response.isEmpty())
     {
@@ -255,11 +255,11 @@ bool XenRpcAPI::DestroyTask(const QString& taskRef)
     }
 
     QVariantList params;
-    params << this->d->session->getSessionId();
+    params << this->d->session->GetSessionID();
     params << taskRef;
 
     QByteArray jsonRpcRequest = this->BuildJsonRpcCall("task.destroy", params);
-    QByteArray response = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
+    QByteArray response = this->d->session->SendApiRequest(QString::fromUtf8(jsonRpcRequest));
 
     if (response.isEmpty())
     {
@@ -280,13 +280,13 @@ bool XenRpcAPI::AddToTaskOtherConfig(const QString& taskRef, const QString& key,
     }
 
     QVariantList params;
-    params << this->d->session->getSessionId();
+    params << this->d->session->GetSessionID();
     params << taskRef;
     params << key;
     params << value;
 
     QByteArray jsonRpcRequest = this->BuildJsonRpcCall("task.add_to_other_config", params);
-    QByteArray response = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
+    QByteArray response = this->d->session->SendApiRequest(QString::fromUtf8(jsonRpcRequest));
 
     if (response.isEmpty())
     {
@@ -305,12 +305,12 @@ bool XenRpcAPI::RemoveFromTaskOtherConfig(const QString& taskRef, const QString&
     }
 
     QVariantList params;
-    params << this->d->session->getSessionId();
+    params << this->d->session->GetSessionID();
     params << taskRef;
     params << key;
 
     QByteArray jsonRpcRequest = this->BuildJsonRpcCall("task.remove_from_other_config", params);
-    QByteArray response = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
+    QByteArray response = this->d->session->SendApiRequest(QString::fromUtf8(jsonRpcRequest));
 
     if (response.isEmpty())
     {
@@ -329,11 +329,11 @@ QVariantMap XenRpcAPI::GetTaskOtherConfig(const QString& taskRef)
     }
 
     QVariantList params;
-    params << this->d->session->getSessionId();
+    params << this->d->session->GetSessionID();
     params << taskRef;
 
     QByteArray jsonRpcRequest = this->BuildJsonRpcCall("task.get_other_config", params);
-    QByteArray response = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
+    QByteArray response = this->d->session->SendApiRequest(QString::fromUtf8(jsonRpcRequest));
 
     if (response.isEmpty())
     {
@@ -362,13 +362,13 @@ QVariantMap XenRpcAPI::EventFrom(const QStringList& classes, const QString& toke
 
     // Build parameters: session_id, classes, token, timeout
     QVariantList params;
-    params << this->d->session->getSessionId();
+    params << this->d->session->GetSessionID();
     params << classes;
     params << token;
     params << timeout;
 
     QByteArray jsonRpcRequest = this->BuildJsonRpcCall("event.from", params);
-    QByteArray response = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
+    QByteArray response = this->d->session->SendApiRequest(QString::fromUtf8(jsonRpcRequest));
 
     if (response.isEmpty())
     {
@@ -399,11 +399,11 @@ bool XenRpcAPI::EventRegister(const QStringList& classes)
     }
 
     QVariantList params;
-    params << this->d->session->getSessionId();
+    params << this->d->session->GetSessionID();
     params << classes;
 
     QByteArray jsonRpcRequest = this->BuildJsonRpcCall("event.register", params);
-    QByteArray response = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
+    QByteArray response = this->d->session->SendApiRequest(QString::fromUtf8(jsonRpcRequest));
 
     return !response.isEmpty();
 }
@@ -418,11 +418,11 @@ bool XenRpcAPI::EventUnregister(const QStringList& classes)
     }
 
     QVariantList params;
-    params << this->d->session->getSessionId();
+    params << this->d->session->GetSessionID();
     params << classes;
 
     QByteArray jsonRpcRequest = this->BuildJsonRpcCall("event.unregister", params);
-    QByteArray response = this->d->session->sendApiRequest(QString::fromUtf8(jsonRpcRequest));
+    QByteArray response = this->d->session->SendApiRequest(QString::fromUtf8(jsonRpcRequest));
 
     return !response.isEmpty();
 }

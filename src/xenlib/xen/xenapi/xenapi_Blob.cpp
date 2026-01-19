@@ -46,11 +46,11 @@ namespace XenAPI
             if (!session || !session->IsLoggedIn())
                 return QUrl();
 
-            XenConnection* connection = session->getConnection();
+            XenConnection* connection = session->GetConnection();
             if (!connection)
                 return QUrl();
 
-            const QString sessionId = session->getSessionId();
+            const QString sessionId = session->GetSessionID();
             if (sessionId.isEmpty() || blobRef.isEmpty())
                 return QUrl();
 

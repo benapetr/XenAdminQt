@@ -38,11 +38,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vlan;
+        params << session->GetSessionID() << vlan;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VLAN.destroy", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         api.ParseJsonRpcResponse(response);
     }
 
@@ -52,11 +52,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vlan;
+        params << session->GetSessionID() << vlan;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("Async.VLAN.destroy", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString();
     }
 
@@ -66,11 +66,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId();
+        params << session->GetSessionID();
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VLAN.get_all", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toList();
     }
 
@@ -80,11 +80,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId();
+        params << session->GetSessionID();
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VLAN.get_all_records", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toMap();
     }
 

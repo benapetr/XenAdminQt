@@ -29,7 +29,7 @@
 #define NICSTABPAGE_H
 
 #include "basetabpage.h"
-#include <QVariantMap>
+#include <QSharedPointer>
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -37,6 +37,8 @@ namespace Ui
     class NICsTabPage;
 }
 QT_END_NAMESPACE
+
+class PIF;
 
 /**
  * NICs tab page showing physical network interfaces (PIFs).
@@ -75,7 +77,7 @@ class NICsTabPage : public BaseTabPage
         Ui::NICsTabPage* ui;
 
         void populateNICs();
-        void addNICRow(const QString& pifRef, const QVariantMap& pifData);
+        void addNICRow(const QSharedPointer<PIF>& pif);
         void updateButtonStates();
 
     private slots:

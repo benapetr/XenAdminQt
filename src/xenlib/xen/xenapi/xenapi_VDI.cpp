@@ -42,11 +42,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdiRecord;
+        params << session->GetSessionID() << vdiRecord;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.create", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString();
     }
 
@@ -57,11 +57,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdiRecord;
+        params << session->GetSessionID() << vdiRecord;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("Async.VDI.create", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
@@ -72,11 +72,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi;
+        params << session->GetSessionID() << vdi;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("Async.VDI.destroy", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
@@ -87,11 +87,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi;
+        params << session->GetSessionID() << vdi;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.destroy", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         api.ParseJsonRpcResponse(response); // Check for errors
     }
 
@@ -102,11 +102,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi << sr;
+        params << session->GetSessionID() << vdi << sr;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("Async.VDI.copy", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
@@ -117,11 +117,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi << sr << options;
+        params << session->GetSessionID() << vdi << sr << options;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("Async.VDI.pool_migrate", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
@@ -132,11 +132,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi;
+        params << session->GetSessionID() << vdi;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.get_VBDs", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toList();
     }
 
@@ -147,11 +147,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi;
+        params << session->GetSessionID() << vdi;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.get_SR", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString();
     }
 
@@ -162,11 +162,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi;
+        params << session->GetSessionID() << vdi;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.get_name_label", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString();
     }
 
@@ -177,11 +177,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi;
+        params << session->GetSessionID() << vdi;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.get_name_description", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString();
     }
 
@@ -192,11 +192,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi;
+        params << session->GetSessionID() << vdi;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.get_virtual_size", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toLongLong();
     }
 
@@ -207,11 +207,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi;
+        params << session->GetSessionID() << vdi;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.get_read_only", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toBool();
     }
 
@@ -222,11 +222,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi;
+        params << session->GetSessionID() << vdi;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.get_type", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString();
     }
 
@@ -237,11 +237,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi;
+        params << session->GetSessionID() << vdi;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.get_sharable", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toBool();
     }
 
@@ -252,11 +252,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi;
+        params << session->GetSessionID() << vdi;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.get_sm_config", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toMap();
     }
 
@@ -267,11 +267,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi << label;
+        params << session->GetSessionID() << vdi << label;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.set_name_label", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         api.ParseJsonRpcResponse(response); // Check for errors
     }
 
@@ -282,11 +282,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi << description;
+        params << session->GetSessionID() << vdi << description;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.set_name_description", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         api.ParseJsonRpcResponse(response); // Check for errors
     }
 
@@ -297,11 +297,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi << smConfig;
+        params << session->GetSessionID() << vdi << smConfig;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.set_sm_config", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         api.ParseJsonRpcResponse(response); // Check for errors
     }
 
@@ -312,11 +312,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi << size;
+        params << session->GetSessionID() << vdi << size;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.resize", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         api.ParseJsonRpcResponse(response); // Check for errors
     }
 
@@ -327,11 +327,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi << size;
+        params << session->GetSessionID() << vdi << size;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.resize_online", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         api.ParseJsonRpcResponse(response); // Check for errors
     }
 
@@ -342,11 +342,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi;
+        params << session->GetSessionID() << vdi;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.get_record", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toMap();
     }
 
@@ -357,11 +357,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi;
+        params << session->GetSessionID() << vdi;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("Async.VDI.disable_cbt", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
@@ -372,11 +372,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vdi;
+        params << session->GetSessionID() << vdi;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.get_cbt_enabled", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toBool();
     }
 
@@ -387,11 +387,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId();
+        params << session->GetSessionID();
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.get_all", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toList();
     }
 
@@ -402,11 +402,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId();
+        params << session->GetSessionID();
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VDI.get_all_records", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toMap();
     }
 

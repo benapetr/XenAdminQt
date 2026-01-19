@@ -38,11 +38,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << pif << network;
+        params << session->GetSessionID() << pif << network;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("Async.network_sriov.create", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString();
     }
 
@@ -52,11 +52,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << network_sriov;
+        params << session->GetSessionID() << network_sriov;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("Async.network_sriov.destroy", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString();
     }
 
@@ -66,11 +66,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << network_sriov;
+        params << session->GetSessionID() << network_sriov;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("network_sriov.get_record", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toMap();
     }
 
@@ -80,11 +80,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId();
+        params << session->GetSessionID();
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("network_sriov.get_all", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toList();
     }
 

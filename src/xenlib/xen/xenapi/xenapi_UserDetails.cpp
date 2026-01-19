@@ -87,11 +87,11 @@ namespace XenAPI
         {
             // Call Auth.get_subject_information_from_identifier
             QVariantList params;
-            params << session->getSessionId() << this->userSid_;
+            params << session->GetSessionID() << this->userSid_;
 
             XenRpcAPI api(session);
             QByteArray request = api.BuildJsonRpcCall("auth.get_subject_information_from_identifier", params);
-            QByteArray response = session->sendApiRequest(request);
+            QByteArray response = session->SendApiRequest(request);
 
             QVariant result = api.ParseJsonRpcResponse(response);
             if (result.canConvert<QVariantMap>())
@@ -103,7 +103,7 @@ namespace XenAPI
 
             // Get group membership
             request = api.BuildJsonRpcCall("auth.get_group_membership", params);
-            response = session->sendApiRequest(request);
+            response = session->SendApiRequest(request);
 
             result = api.ParseJsonRpcResponse(response);
             if (result.canConvert<QVariantList>())
@@ -138,10 +138,10 @@ namespace XenAPI
             for (const QString& sid : this->groupMembershipSids_)
             {
                 QVariantList params;
-                params << session->getSessionId() << sid;
+                params << session->GetSessionID() << sid;
 
                 QByteArray request = api.BuildJsonRpcCall("auth.get_subject_information_from_identifier", params);
-                QByteArray response = session->sendApiRequest(request);
+                QByteArray response = session->SendApiRequest(request);
 
                 QVariant result = api.ParseJsonRpcResponse(response);
                 if (result.canConvert<QVariantMap>())

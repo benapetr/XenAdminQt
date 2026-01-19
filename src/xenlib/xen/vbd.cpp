@@ -202,6 +202,16 @@ QString VBD::MetricsRef() const
     return this->stringProperty("metrics");
 }
 
+int VBD::GetIoNice() const
+{
+    QVariantMap qosParams = this->QosAlgorithmParams();
+    if (qosParams.contains("class"))
+    {
+        return qosParams["class"].toInt();
+    }
+    return 0;
+}
+
 QString VBD::GetObjectType() const
 {
     return "vbd";

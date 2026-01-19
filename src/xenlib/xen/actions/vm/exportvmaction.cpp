@@ -152,7 +152,7 @@ void ExportVmAction::run()
     // Prepare query parameters
     QMap<QString, QString> params;
     params["task_id"] = taskRef;
-    params["session_id"] = this->GetSession()->getSessionId();
+    params["session_id"] = this->GetSession()->GetSessionID();
     params["uuid"] = vmUuid;
 
     // Create HTTP client

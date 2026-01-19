@@ -41,11 +41,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
         
         QVariantList params;
-        params << session->getSessionId() << label << description;
+        params << session->GetSessionID() << label << description;
         
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("task.create", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString();
     }
     
@@ -55,11 +55,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
         
         QVariantList params;
-        params << session->getSessionId() << taskRef;
+        params << session->GetSessionID() << taskRef;
         
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("task.destroy", params);
-        session->sendApiRequest(request);
+        session->SendApiRequest(request);
     }
     
     void Task::Cancel(Session* session, const QString& taskRef)
@@ -68,11 +68,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
         
         QVariantList params;
-        params << session->getSessionId() << taskRef;
+        params << session->GetSessionID() << taskRef;
         
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("task.cancel", params);
-        session->sendApiRequest(request);
+        session->SendApiRequest(request);
     }
 
     void Task::add_to_other_config(Session* session, const QString& taskRef, const QString& key, const QString& value)
@@ -81,10 +81,10 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << taskRef << key << value;
+        params << session->GetSessionID() << taskRef << key << value;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("task.add_to_other_config", params);
-        session->sendApiRequest(request);
+        session->SendApiRequest(request);
     }
 }

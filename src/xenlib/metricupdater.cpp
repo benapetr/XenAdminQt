@@ -206,7 +206,7 @@ QString MetricUpdater::buildRrdUrl() const
     if (!this->m_connection || !this->m_connection->GetSession())
         return QString();
 
-    QString sessionId = this->m_connection->GetSession()->getSessionId();
+    QString sessionId = this->m_connection->GetSession()->GetSessionID();
     if (sessionId.isEmpty())
         return QString();
 

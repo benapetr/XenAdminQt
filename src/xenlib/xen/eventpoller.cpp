@@ -141,8 +141,8 @@ void EventPoller::Initialize(Session* originalSession)
 
     if (this->d->initialized)
     {
-        QString existing = this->d->session ? this->d->session->getSessionId().left(20) + "..." : "null";
-        QString incoming = originalSession->getSessionId().left(20) + "...";
+        QString existing = this->d->session ? this->d->session->GetSessionID().left(20) + "..." : "null";
+        QString incoming = originalSession->GetSessionID().left(20) + "...";
         if (existing != incoming)
         {
             qWarning() << "EventPoller: Reinitializing with new session. Old="
@@ -168,7 +168,7 @@ void EventPoller::Initialize(Session* originalSession)
     } else
     {
         qDebug() << "EventPoller: Using duplicated session"
-                 << this->d->session->getSessionId().left(20) + "...";
+                 << this->d->session->GetSessionID().left(20) + "...";
     }
 
     // The duplicated session owns its own XenConnection internally
@@ -274,7 +274,7 @@ void EventPoller::pollEvents()
     if (result.isEmpty())
     {
         this->d->consecutiveErrors++;
-        QString sessionIdPrefix = this->d->session ? this->d->session->getSessionId().left(12) + "..." : "null";
+        QString sessionIdPrefix = this->d->session ? this->d->session->GetSessionID().left(12) + "..." : "null";
         QString tokenPrefix = this->d->token.left(16) + "...";
         // Surface more context, especially SESSION_INVALID occurrences
         qWarning() << "EventPoller: event.from returned empty result (error"

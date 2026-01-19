@@ -184,7 +184,7 @@ QString ImportVmAction::uploadFile()
     // Prepare query parameters
     QMap<QString, QString> params;
     params["task_id"] = this->importTaskRef_;
-    params["session_id"] = this->GetSession()->getSessionId();
+    params["session_id"] = this->GetSession()->GetSessionID();
     params["sr_id"] = this->srRef_;
     params["restore"] = "false";
     params["force"] = "false";

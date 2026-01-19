@@ -82,11 +82,11 @@ void ChangeVMISOAction::run()
 
     // Get the VBD record to check if it's empty
     QVariantList params;
-    params << session->getSessionId() << this->m_vbdRef;
+    params << session->GetSessionID() << this->m_vbdRef;
 
     XenRpcAPI api(session);
     QByteArray jsonRequest = api.BuildJsonRpcCall("VBD.get_record", params);
-    QByteArray response = session->sendApiRequest(jsonRequest);
+    QByteArray response = session->SendApiRequest(jsonRequest);
 
     if (response.isEmpty())
     {

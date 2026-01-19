@@ -94,7 +94,7 @@ void ReconnectAsDialog::updateBlurb()
     {
         hostname = m_connection->GetHostname();
         if (auto* session = m_connection->GetSession())
-            username = session->getUsername();
+            username = session->GetUsername();
         if (username.isEmpty())
             username = m_connection->GetUsername();
     }

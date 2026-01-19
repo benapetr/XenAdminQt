@@ -83,18 +83,20 @@ namespace XenAPI
             static bool get_unpluggable(Session* session, const QString& vbd);
             static bool get_currently_attached(Session* session, const QString& vbd);
             static bool get_empty(Session* session, const QString& vbd);
+            static QVariantMap get_qos_algorithm_params(Session* session, const QString& vbd);
 
             // VBD modification operations
             static void set_bootable(Session* session, const QString& vbd, bool bootable);
             static void set_mode(Session* session, const QString& vbd, const QString& mode);
             static void set_userdevice(Session* session, const QString& vbd, const QString& userdevice);
+            static void set_qos_algorithm_type(Session* session, const QString& vbd, const QString& algorithmType);
+            static void set_qos_algorithm_params(Session* session, const QString& vbd, const QVariantMap& params);
 
             // Bulk query operations
             static QVariantMap get_record(Session* session, const QString& vbd);
             static QVariantList get_all(Session* session);
             static QVariantMap get_all_records(Session* session);
     };
-
 } // namespace XenAPI
 
 #endif // XENAPI_VBD_H

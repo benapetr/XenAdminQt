@@ -65,8 +65,8 @@ void AddHostToPoolAction::run()
         {
             throw std::runtime_error("Pool connection has no session");
         }
-        QString username = poolSession->getUsername();
-        QString password = poolSession->getPassword();
+        QString username = poolSession->GetUsername();
+        QString password = poolSession->GetPassword();
 
         if (coordinatorAddress.isEmpty() || username.isEmpty() || password.isEmpty())
         {

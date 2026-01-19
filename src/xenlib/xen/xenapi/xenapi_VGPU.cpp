@@ -38,11 +38,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vgpu;
+        params << session->GetSessionID() << vgpu;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("VGPU.destroy", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         api.ParseJsonRpcResponse(response); // Void method
     }
 
@@ -54,11 +54,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vm << gpu_group << device << other_config;
+        params << session->GetSessionID() << vm << gpu_group << device << other_config;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("Async.VGPU.create", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 
@@ -70,11 +70,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << vm << gpu_group << device << other_config << vgpu_type;
+        params << session->GetSessionID() << vm << gpu_group << device << other_config << vgpu_type;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("Async.VGPU.create", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString(); // Returns task ref
     }
 

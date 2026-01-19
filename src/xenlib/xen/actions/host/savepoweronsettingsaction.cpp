@@ -166,7 +166,7 @@ void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const Pow
     
     // Call Host.set_power_on_mode
     QVariantList params;
-    params << session->getSessionId();
+    params << session->GetSessionID();
     params << hostRef;
     params << modeString;
     params << configMap;
@@ -209,7 +209,7 @@ QString SavePowerOnSettingsAction::createSecret(const QString& value)
     secretRecord["other_config"] = QVariantMap();
     
     QVariantList params;
-    params << session->getSessionId();
+    params << session->GetSessionID();
     params << secretRecord;
     
     QByteArray request = api.BuildJsonRpcCall("secret.create", params);
@@ -225,7 +225,7 @@ QString SavePowerOnSettingsAction::createSecret(const QString& value)
             
             // Get the UUID of the secret
             params.clear();
-            params << session->getSessionId();
+            params << session->GetSessionID();
             params << secretRef;
             
             request = api.BuildJsonRpcCall("secret.get_uuid", params);
@@ -251,7 +251,7 @@ void SavePowerOnSettingsAction::destroySecret(const QString& secretRef)
     XenRpcAPI api(session);
     
     QVariantList params;
-    params << session->getSessionId();
+    params << session->GetSessionID();
     params << secretRef;
     
     QByteArray request = api.BuildJsonRpcCall("secret.destroy", params);

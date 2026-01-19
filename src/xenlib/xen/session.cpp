@@ -148,52 +148,52 @@ namespace XenAPI
         return this->d->loggedIn;
     }
 
-    QString Session::getSessionId() const
+    QString Session::GetSessionID() const
     {
         return this->d->sessionId;
     }
 
-    QString Session::getUsername() const
+    QString Session::GetUsername() const
     {
         return this->d->username;
     }
 
-    QString Session::getPassword() const
+    QString Session::GetPassword() const
     {
         return this->d->password;
     }
 
-    QString Session::getLastError() const
+    QString Session::GetLastError() const
     {
         return this->d->lastError;
     }
 
-    QStringList Session::getLastErrorDescription() const
+    QStringList Session::GetLastErrorDescription() const
     {
         return this->d->lastErrorDescription;
     }
 
-    XenConnection* Session::getConnection() const
+    XenConnection* Session::GetConnection() const
     {
         return this->d->connection;
     }
 
-    bool Session::isLocalSuperuser() const
+    bool Session::IsLocalSuperuser() const
     {
         return this->d->isLocalSuperuser;
     }
 
-    QString Session::getSessionSubject() const
+    QString Session::GetSessionSubject() const
     {
         return this->d->sessionSubject;
     }
 
-    QString Session::getUserSid() const
+    QString Session::GetUserSid() const
     {
         return this->d->userSid;
     }
 
-    QStringList Session::getPermissions() const
+    QStringList Session::GetPermissions() const
     {
         return this->d->permissions;
     }
@@ -268,7 +268,7 @@ namespace XenAPI
         return newSession;
     }
 
-    QByteArray Session::sendApiRequest(const QString& jsonRequest)
+    QByteArray Session::SendApiRequest(const QString& jsonRequest)
     {
         if (!this->d->connection || !this->d->loggedIn)
         {
@@ -289,17 +289,17 @@ namespace XenAPI
         return response;
     }
 
-    bool Session::ownsSessionToken() const
+    bool Session::GetOwnsSessionToken() const
     {
         return this->d->ownsSessionToken;
     }
 
-    void Session::setOwnsSessionToken(bool ownsToken)
+    void Session::SetOwnsSessionToken(bool ownsToken)
     {
         this->d->ownsSessionToken = ownsToken;
     }
 
-    void Session::detachConnection()
+    void Session::DetachConnection()
     {
         this->d->connection = nullptr;
     }
@@ -533,17 +533,17 @@ namespace XenAPI
         // mirroring C# Session.Roles behavior.
     }
 
-    APIVersion Session::getAPIVersion() const
+    APIVersion Session::GetAPIVersion() const
     {
         return this->d->apiVersion;
     }
 
-    void Session::setAPIVersion(APIVersion version)
+    void Session::SetAPIVersion(APIVersion version)
     {
         this->d->apiVersion = version;
     }
 
-    bool Session::apiVersionMeets(APIVersion required) const
+    bool Session::ApiVersionMeets(APIVersion required) const
     {
         return APIVersionHelper::versionMeets(this->d->apiVersion, required);
     }

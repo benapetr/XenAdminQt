@@ -29,7 +29,12 @@
 #include "ui_nicstabpage.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
+#include "xen/host.h"
+#include "xen/network.h"
 #include "xen/pif.h"
+#include "xen/pifmetrics.h"
+#include "xen/network_sriov.h"
+#include "xen/bond.h"
 #include "xen/actions/network/createbondaction.h"
 #include "xen/actions/network/destroybondaction.h"
 #include "operations/operationmanager.h"
@@ -87,95 +92,64 @@ void NICsTabPage::populateNICs()
         return;
     }
 
-    // Get all PIFs for this host
-    QVariantList pifRefs = this->m_objectData.value("PIFs", QVariantList()).toList();
-    //qDebug() << "NICsTabPage::populateNICs - Host has" << pifRefs.size() << "PIFs";
-
-    QList<QVariantMap> physicalPIFs;
-
-    for (const QVariant& pifRefVar : pifRefs)
+    QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
+    if (!host)
     {
-        QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = this->m_connection->GetCache()->ResolveObjectData("PIF", pifRef);
-
-        // Debug: print all keys in pifData
-        if (pifData.isEmpty())
-        {
-            qDebug() << "  PIF" << pifRef << "- EMPTY DATA from cache!";
-            continue;
-        }
-
-        //qDebug() << "  PIF" << pifRef << "has keys:" << pifData.keys();
-        //qDebug() << "    physical:" << pifData.value("physical", false).toBool()
-        //         << "device:" << pifData.value("device", "");
-
-        // TODO Implement C# PIF.IsPhysical() logic:
-        // IsPhysical() = VLAN == -1 && !IsTunnelAccessPIF() && !IsSriovLogicalPIF()
-        // This includes bonds (which have physical=false but are shown in NICs tab)
-        qint64 vlan = pifData.value("VLAN", -1).toLongLong();
-        QVariantList tunnelAccessPifOf = pifData.value("tunnel_access_PIF_of", QVariantList()).toList();
-        QVariantList sriovLogicalPifOf = pifData.value("sriov_logical_PIF_of", QVariantList()).toList();
-        
-        bool isPhysical = (vlan == -1) && tunnelAccessPifOf.isEmpty() && sriovLogicalPifOf.isEmpty();
-
-        if (isPhysical)
-        {
-            pifData["ref"] = pifRef;
-            physicalPIFs.append(pifData);
-        }
+        qDebug() << "NICsTabPage::populateNICs - Host object missing";
+        return;
     }
 
-    //qDebug() << "Found" << physicalPIFs.size() << "physical/bond PIFs";
+    QList<QSharedPointer<PIF>> pifs = host->GetPIFs();
+    QList<QSharedPointer<PIF>> physicalPifs;
+
+    for (const QSharedPointer<PIF>& pif : pifs)
+    {
+        if (!pif || !pif->IsValid())
+            continue;
+
+        if (!pif->IsPhysical())
+            continue;
+
+        physicalPifs.append(pif);
+    }
 
     // Sort by device name
-    std::sort(physicalPIFs.begin(), physicalPIFs.end(),
-              [](const QVariantMap& a, const QVariantMap& b) {
-                  return a.value("device", "").toString() < b.value("device", "").toString();
+    std::sort(physicalPifs.begin(), physicalPifs.end(),
+              [](const QSharedPointer<PIF>& a, const QSharedPointer<PIF>& b) {
+                  QString left = a ? a->GetDevice() : QString();
+                  QString right = b ? b->GetDevice() : QString();
+                  return left < right;
               });
 
-    for (const QVariantMap& pifData : physicalPIFs)
+    for (const QSharedPointer<PIF>& pif : physicalPifs)
     {
-        QString pifRef = pifData.value("ref", "").toString();
-        this->addNICRow(pifRef, pifData);
+        this->addNICRow(pif);
     }
 
     //qDebug() << "NICsTabPage::populateNICs - Added" << this->ui->nicsTable->rowCount() << "rows";
 }
 
-void NICsTabPage::addNICRow(const QString& pifRef, const QVariantMap& pifData)
+void NICsTabPage::addNICRow(const QSharedPointer<PIF>& pif)
 {
     if (!this->m_connection || !this->m_connection->GetCache())
+        return;
+
+    if (!pif || !pif->IsValid())
         return;
 
     int row = this->ui->nicsTable->rowCount();
     this->ui->nicsTable->insertRow(row);
 
     // NIC name - Use PIF.GetName() logic (matches C# PIF.Name()).
-    QString nicName = pifData.value("device", "").toString();
-    if (!pifRef.isEmpty())
-    {
-        QSharedPointer<PIF> pif = this->m_connection->GetCache()->ResolveObject<PIF>("pif", pifRef);
-        if (pif && pif->IsValid())
-            nicName = pif->GetName();
-    }
+    QString nicName = pif->GetName();
 
     // MAC Address
-    QString mac = pifData.value("MAC", "").toString();
+    QString mac = pif->GetMAC();
 
     // Link Status - Must check PIF_metrics.carrier, NOT pifData.carrier
     // C# PIFRow.Update(): _cellConnected.Value = Pif.Carrier() ? Messages.CONNECTED : Messages.DISCONNECTED;
     // C# PIF.Carrier() resolves PIF_metrics and checks carrier field
-    QString linkStatus = "Unknown";
-    QString pifMetricsRef = pifData.value("metrics", "").toString();
-    if (!pifMetricsRef.isEmpty() && pifMetricsRef != "OpaqueRef:NULL")
-    {
-        QVariantMap metricsData = this->m_connection->GetCache()->ResolveObjectData("pif_metrics", pifMetricsRef);
-        if (!metricsData.isEmpty())
-        {
-            bool carrier = metricsData.value("carrier", false).toBool();
-            linkStatus = carrier ? "Connected" : "Disconnected";
-        }
-    }
+    QString linkStatus = pif->GetLinkStatusString();
 
     // Speed (only if connected) - Also from PIF_metrics
     // C# PIFRow.Update(): _cellSpeed.Value = Pif.Carrier() ? Pif.Speed() : Messages.HYPHEN;
@@ -184,71 +158,60 @@ void NICsTabPage::addNICRow(const QString& pifRef, const QVariantMap& pifData)
     
     if (linkStatus == "Connected")
     {
-        // Re-ResolveObjectData metrics for speed/duplex (we already have it above but let's be consistent)
-        QVariantMap metricsData = this->m_connection->GetCache()->ResolveObjectData("pif_metrics", pifMetricsRef);
-        if (!metricsData.isEmpty())
+        QSharedPointer<PIFMetrics> metrics = this->m_connection->GetCache()->ResolveObject<PIFMetrics>("pif_metrics", pif->MetricsRef());
+        if (metrics && metrics->IsValid())
         {
-            qint64 speedValue = metricsData.value("speed", -1).toLongLong();
+            qint64 speedValue = metrics->Speed();
             if (speedValue > 0)
-            {
                 speed = QString::number(speedValue) + " Mbit/s";
-            }
-            
-            // Duplex from metrics
-            bool duplexFull = metricsData.value("duplex", false).toBool();
-            duplex = duplexFull ? "Full" : "Half";
+
+            duplex = metrics->Duplex() ? "Full" : "Half";
         }
     }
 
     // Get PIF_metrics for vendor/device/bus info (reuse the same metricsRef and resolve again)
-    QVariantMap metricsData;
-    if (!pifMetricsRef.isEmpty())
+    QString vendor = "-";
+    QString device = "-";
+    QString busPath = "-";
+    QSharedPointer<PIFMetrics> metrics = this->m_connection->GetCache()->ResolveObject<PIFMetrics>("pif_metrics", pif->MetricsRef());
+    if (metrics && metrics->IsValid())
     {
-        metricsData = this->m_connection->GetCache()->ResolveObjectData("pif_metrics", pifMetricsRef);
+        vendor = metrics->VendorName();
+        device = metrics->DeviceName();
+        busPath = metrics->PciBusPath();
     }
 
-    QString vendor = metricsData.value("vendor_name", "-").toString();
-    QString device = metricsData.value("device_name", "-").toString();
-    QString busPath = metricsData.value("pci_bus_path", "-").toString();
-
     // FCoE Capable
-    QVariantMap capabilities = pifData.value("capabilities", QVariantMap()).toMap();
+    QStringList capabilities = pif->Capabilities();
     bool fcoeCapable = capabilities.contains("fcoe");
     QString fcoeText = fcoeCapable ? "Yes" : "No";
 
     // SR-IOV
     QString sriovText = "No";
-    QVariantList sriovPhysicalPIFOf = pifData.value("sriov_physical_PIF_of", QVariantList()).toList();
+    QStringList sriovPhysicalPIFOf = pif->SriovPhysicalPIFOfRefs();
 
     if (!sriovPhysicalPIFOf.isEmpty())
     {
         // This PIF has SR-IOV capability
-        QString networkSriovRef = sriovPhysicalPIFOf.first().toString();
-        QVariantMap networkSriov = this->m_connection->GetCache()->ResolveObjectData("network_sriov", networkSriovRef);
+        QString networkSriovRef = sriovPhysicalPIFOf.first();
+        QSharedPointer<NetworkSriov> networkSriov = this->m_connection->GetCache()->ResolveObject<NetworkSriov>("network_sriov", networkSriovRef);
 
-        if (!networkSriov.isEmpty())
+        if (networkSriov && networkSriov->IsValid())
         {
-            bool requiresReboot = networkSriov.value("requires_reboot", false).toBool();
+            bool requiresReboot = networkSriov->RequiresReboot();
             if (requiresReboot)
             {
                 sriovText = "Host needs reboot to enable SR-IOV";
             } else
             {
                 // Check logical PIF
-                QString logicalPifRef = networkSriov.value("logical_PIF", "").toString();
-                if (!logicalPifRef.isEmpty())
+                QSharedPointer<PIF> logicalPif = networkSriov->GetLogicalPIF();
+                if (logicalPif && logicalPif->IsValid())
                 {
-                    QVariantMap logicalPif = this->m_connection->GetCache()->ResolveObjectData("pif", logicalPifRef);
-                    bool currentlyAttached = logicalPif.value("currently_attached", false).toBool();
-
-                    if (currentlyAttached)
-                    {
+                    if (logicalPif->IsCurrentlyAttached())
                         sriovText = "Yes";
-                        // Could query remaining capacity here via API call
-                    } else
-                    {
+                    else
                         sriovText = "SR-IOV logical PIF unplugged";
-                    }
                 }
             }
         }
@@ -275,7 +238,7 @@ void NICsTabPage::addNICRow(const QString& pifRef, const QVariantMap& pifData)
     this->ui->nicsTable->setItem(row, 9, new QTableWidgetItem(sriovText));
 
     // Store PIF ref in first column for later retrieval
-    this->ui->nicsTable->item(row, 0)->setData(Qt::UserRole, pifData.value("ref", "").toString());
+    this->ui->nicsTable->item(row, 0)->setData(Qt::UserRole, pif->OpaqueRef());
 }
 
 void NICsTabPage::updateButtonStates()
@@ -298,13 +261,23 @@ void NICsTabPage::updateButtonStates()
         return;
     }
 
-    QVariantMap pifData = this->m_connection->GetCache()->ResolveObjectData("pif", pifRef);
+    QSharedPointer<PIF> pif = this->m_connection->GetCache()->ResolveObject<PIF>("pif", pifRef);
+    if (!pif || !pif->IsValid())
+    {
+        this->ui->deleteBondButton->setEnabled(false);
+        return;
+    }
 
-    // Check if this PIF is a bond interface
-    QVariantList bondInterfaceOf = pifData.value("bond_slave_of", QVariantList()).toList();
+    QStringList bondRefs = pif->BondMasterOfRefs();
+    if (bondRefs.isEmpty())
+    {
+        this->ui->deleteBondButton->setEnabled(false);
+        return;
+    }
 
-    // Enable delete bond button only if this is part of a bond
-    this->ui->deleteBondButton->setEnabled(!bondInterfaceOf.isEmpty());
+    QSharedPointer<Bond> bond = this->m_connection->GetCache()->ResolveObject<Bond>("bond", bondRefs.first());
+    bool bondLocked = bond && bond->IsLocked();
+    this->ui->deleteBondButton->setEnabled(!bondLocked);
 }
 
 void NICsTabPage::onSelectionChanged()
@@ -321,11 +294,12 @@ void NICsTabPage::onCreateBondClicked()
 
     // Get the network ref - use the first available network or create a bond network
     QString networkRef;
-    QList<QVariantMap> networks = this->m_connection->GetCache()->GetAllData("network");
+    QList<QSharedPointer<Network>> networks = this->m_connection->GetCache()->GetAll<Network>("network");
     if (!networks.isEmpty())
     {
         // Use the first network (typically the management network)
-        networkRef = networks.first().value("ref").toString();
+        QSharedPointer<Network> network = networks.first();
+        networkRef = network ? network->OpaqueRef() : QString();
     } else
     {
         QMessageBox::warning(this, "Create Bond",
@@ -355,12 +329,12 @@ void NICsTabPage::onCreateBondClicked()
             return;
         }
 
-        QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
-        QString networkName = networkData.value("name_label").toString();
+        QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>("network", networkRef);
+        QString networkName = network ? network->GetName() : QString();
         if (networkName.isEmpty())
             networkName = "Bond Network";
 
-        qint64 mtu = networkData.value("MTU").toLongLong();
+        qint64 mtu = network ? network->GetMTU() : 0;
         if (mtu <= 0)
             mtu = 1500;
 
@@ -415,14 +389,12 @@ void NICsTabPage::onDeleteBondClicked()
         return;
 
     // Get PIF data to check if it's a bond
-    QVariant pifDataVar = this->m_connection->GetCache()->ResolveObjectData("pif", pifRef);
-    if (pifDataVar.isNull())
+    QSharedPointer<PIF> pif = this->m_connection->GetCache()->ResolveObject<PIF>("pif", pifRef);
+    if (!pif || !pif->IsValid())
         return;
 
-    QVariantMap pifData = pifDataVar.value<QVariantMap>();
-    QString bondSlaveOf = pifData.value("bond_slave_of").toString();
-
-    if (bondSlaveOf.isEmpty())
+    QStringList bondRefs = pif->BondMasterOfRefs();
+    if (bondRefs.isEmpty())
     {
         QMessageBox::information(this, "Delete Bond",
                                  "Selected interface is not a bonded interface.");
@@ -430,7 +402,7 @@ void NICsTabPage::onDeleteBondClicked()
     }
 
     // Confirm deletion
-    QString device = pifData.value("device").toString();
+    QString device = pif->GetDevice();
     QMessageBox::StandardButton reply = QMessageBox::question(this, "Delete Bond",
                                                               QString("Are you sure you want to delete the bond on %1?\n\n"
                                                                       "This will separate the bonded interfaces.")
@@ -446,7 +418,7 @@ void NICsTabPage::onDeleteBondClicked()
             return;
         }
 
-        DestroyBondAction* action = new DestroyBondAction(connection, bondSlaveOf, this);
+        DestroyBondAction* action = new DestroyBondAction(connection, bondRefs.first(), this);
         OperationManager::instance()->RegisterOperation(action);
 
         connect(action, &AsyncOperation::completed, [this, action]() {

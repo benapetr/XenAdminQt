@@ -188,7 +188,7 @@ void GeneralEditPageAction::setFolderPath(const QString& folderPath)
     }
 
     QVariantList params;
-    params << sess->getSessionId() << this->m_object->OpaqueRef() << "folder";
+    params << sess->GetSessionID() << this->m_object->OpaqueRef() << "folder";
 
     if (!folderPath.isEmpty())
     {
@@ -218,7 +218,7 @@ void GeneralEditPageAction::removeTag(const QString& tag)
     QString method = QString("%1.remove_tags").arg(this->m_object->GetObjectType());
 
     QVariantList params;
-    params << sess->getSessionId() << this->m_object->OpaqueRef() << tag;
+    params << sess->GetSessionID() << this->m_object->OpaqueRef() << tag;
 
     XenRpcAPI api(sess);
     QByteArray request = api.BuildJsonRpcCall(method, params);
@@ -242,7 +242,7 @@ void GeneralEditPageAction::addTag(const QString& tag)
     QString method = QString("%1.add_tags").arg(this->m_object->GetObjectType());
 
     QVariantList params;
-    params << sess->getSessionId() << this->m_object->OpaqueRef() << tag;
+    params << sess->GetSessionID() << this->m_object->OpaqueRef() << tag;
 
     XenRpcAPI api(sess);
     QByteArray request = api.BuildJsonRpcCall(method, params);

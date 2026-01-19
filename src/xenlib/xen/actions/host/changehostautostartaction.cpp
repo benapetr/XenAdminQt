@@ -71,7 +71,7 @@ void ChangeHostAutostartAction::run()
 
         // First, get the host's pool reference
         QVariantList hostPoolParams;
-        hostPoolParams << this->GetSession()->getSessionId() << this->m_host->OpaqueRef();
+        hostPoolParams << this->GetSession()->GetSessionID() << this->m_host->OpaqueRef();
 
         QByteArray hostPoolRequest = api.BuildJsonRpcCall("session.get_pool", hostPoolParams);
         QByteArray hostPoolResponse = this->GetConnection()->SendRequest(hostPoolRequest);
@@ -88,7 +88,7 @@ void ChangeHostAutostartAction::run()
 
         // Get current other_config
         QVariantList getConfigParams;
-        getConfigParams << this->GetSession()->getSessionId() << poolRef;
+        getConfigParams << this->GetSession()->GetSessionID() << poolRef;
 
         QByteArray getConfigRequest = api.BuildJsonRpcCall("pool.get_other_config", getConfigParams);
         QByteArray getConfigResponse = this->GetConnection()->SendRequest(getConfigRequest);
@@ -102,7 +102,7 @@ void ChangeHostAutostartAction::run()
 
         // Set the modified other_config back
         QVariantList setConfigParams;
-        setConfigParams << GetSession()->getSessionId() << poolRef << otherConfig;
+        setConfigParams << GetSession()->GetSessionID() << poolRef << otherConfig;
 
         QByteArray setConfigRequest = api.BuildJsonRpcCall("pool.set_other_config", setConfigParams);
         QByteArray setConfigResponse = this->GetConnection()->SendRequest(setConfigRequest);

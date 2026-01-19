@@ -236,7 +236,7 @@ void XenCacheExplorer::displayConnectionInfo(XenConnection* connection)
     
     if (connection->GetSession())
     {
-        info << qMakePair(tr("Session ID"), connection->GetSession()->getSessionId());
+        info << qMakePair(tr("Session ID"), connection->GetSession()->GetSessionID());
         info << qMakePair(tr("Logged In"), connection->GetSession()->IsLoggedIn() ? tr("Yes") : tr("No"));
     }
 

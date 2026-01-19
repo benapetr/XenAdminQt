@@ -629,6 +629,15 @@ namespace XenAPI
             static QVariantMap get_HVM_boot_params(Session* session, const QString& vm);
 
             /**
+             * @brief Get the power state of the VM
+             * @param session The session
+             * @param vm The opaque_ref of the given VM
+             * @return Power state string (e.g., "Running", "Halted", etc.)
+             *
+             * Matches C# VM.get_power_state()
+             */
+            static QString get_power_state(Session* session, const QString& vm);
+            /**
              * @brief Set PV args
              * @param session The session
              * @param vm The opaque_ref of the given VM
@@ -713,7 +722,6 @@ namespace XenAPI
             VM() = delete; // Static class, no instances
             ~VM() = delete;
     };
-
 } // namespace XenAPI
 
 #endif // XENAPI_VM_H

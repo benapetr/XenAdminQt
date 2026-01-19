@@ -207,7 +207,7 @@ AsyncOperation* LogDestinationEditPage::SaveSettings()
                 XenRpcAPI api(GetSession());
 
                 QVariantList params;
-                params << GetSession()->getSessionId() << m_hostRef;
+                params << GetSession()->GetSessionID() << m_hostRef;
 
                 QByteArray request = api.BuildJsonRpcCall("host.syslog_reconfigure", params);
                 QByteArray response = GetConnection()->SendRequest(request);

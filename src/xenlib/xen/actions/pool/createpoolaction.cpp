@@ -108,8 +108,8 @@ void CreatePoolAction::run()
             {
                 throw std::runtime_error("Coordinator connection has no session");
             }
-            QString username = coordinatorSession->getUsername();
-            QString password = coordinatorSession->getPassword();
+            QString username = coordinatorSession->GetUsername();
+            QString password = coordinatorSession->GetPassword();
 
             // Call Pool.async_join from the member's session
             // We need to use member's GetConnection temporarily to poll correctly

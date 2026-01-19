@@ -37,6 +37,7 @@ HEADERS += \
     xen/xenapi/xenapi_Tunnel.h \
     xen/xenapi/xenapi_Network_sriov.h \
     xen/xenapi/xenapi_PBD.h \
+    xen/xenapi/xenapi_PGPU.h \
     xen/xenapi/xenapi_PIF.h \
     xen/xenapi/xenapi_Secret.h \
     xen/xenapi/xenapi_VBD.h \
@@ -119,6 +120,7 @@ HEADERS += \
     xen/actions/vm/startapplianceaction.h \
     xen/actions/vm/shutdownapplianceaction.h \
     xen/actions/vm/hvmbootaction.h \
+    xen/actions/gpu/vgpuconfigurationaction.h \
     xen/actions/sr/srcreateaction.h \
     xen/actions/sr/srintroduceaction.h \
     xen/actions/sr/srreattachaction.h \
@@ -147,6 +149,7 @@ HEADERS += \
     xen/actions/vdi/migratevirtualdiskaction.h \
     xen/actions/vdi/vdidisablecbtaction.h \
     xen/actions/vbd/vbdcreateandplugaction.h \
+    xen/actions/vbd/vbdeditaction.h \
     xen/actions/general/generaleditpageaction.h \
     xen/actions/vm/vmstartabstractaction.h \
     xen/actions/vm/vmstartonaction.h \
@@ -257,6 +260,7 @@ SOURCES += \
     xen/xenapi/xenapi_Tunnel.cpp \
     xen/xenapi/xenapi_Network_sriov.cpp \
     xen/xenapi/xenapi_PBD.cpp \
+    xen/xenapi/xenapi_PGPU.cpp \
     xen/xenapi/xenapi_PIF.cpp \
     xen/xenapi/xenapi_Secret.cpp \
     xen/xenapi/xenapi_VBD.cpp \
@@ -330,6 +334,7 @@ SOURCES += \
     xen/actions/vm/startapplianceaction.cpp \
     xen/actions/vm/shutdownapplianceaction.cpp \
     xen/actions/vm/hvmbootaction.cpp \
+    xen/actions/gpu/vgpuconfigurationaction.cpp \
     xen/actions/sr/srcreateaction.cpp \
     xen/actions/sr/srintroduceaction.cpp \
     xen/actions/sr/srreattachaction.cpp \
@@ -359,6 +364,7 @@ SOURCES += \
     xen/actions/vdi/migratevirtualdiskaction.cpp \
     xen/actions/vdi/vdidisablecbtaction.cpp \
     xen/actions/vbd/vbdcreateandplugaction.cpp \
+    xen/actions/vbd/vbdeditaction.cpp \
     xen/actions/general/generaleditpageaction.cpp \
     xen/actions/vm/vmstartabstractaction.cpp \
     xen/actions/vm/vmstartonaction.cpp \

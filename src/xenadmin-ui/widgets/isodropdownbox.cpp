@@ -123,7 +123,7 @@ void IsoDropDownBox::Refresh()
     bool stockholmOrGreater = false;
     if (this->m_connection->GetSession())
     {
-        stockholmOrGreater = this->m_connection->GetSession()->apiVersionMeets(APIVersion::API_2_11);
+        stockholmOrGreater = this->m_connection->GetSession()->ApiVersionMeets(APIVersion::API_2_11);
     }
 
     struct SrEntry

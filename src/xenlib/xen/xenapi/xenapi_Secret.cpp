@@ -43,20 +43,20 @@ namespace XenAPI
         record["value"] = value;
 
         QVariantList params;
-        params << session->getSessionId() << record;
+        params << session->GetSessionID() << record;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("secret.create", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
 
         // Returns secret reference, then get UUID from it
         QString secretRef = api.ParseJsonRpcResponse(response).toString();
 
         // Get the UUID
         QVariantList getUuidParams;
-        getUuidParams << session->getSessionId() << secretRef;
+        getUuidParams << session->GetSessionID() << secretRef;
         QByteArray uuidRequest = api.BuildJsonRpcCall("secret.get_uuid", getUuidParams);
-        QByteArray uuidResponse = session->sendApiRequest(uuidRequest);
+        QByteArray uuidResponse = session->SendApiRequest(uuidRequest);
         return api.ParseJsonRpcResponse(uuidResponse).toString();
     }
 
@@ -66,11 +66,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << uuid;
+        params << session->GetSessionID() << uuid;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("secret.get_by_uuid", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString();
     }
 
@@ -80,11 +80,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << secret;
+        params << session->GetSessionID() << secret;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("secret.destroy", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         api.ParseJsonRpcResponse(response); // Check for errors
     }
 

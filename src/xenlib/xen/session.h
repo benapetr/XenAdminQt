@@ -53,28 +53,28 @@ namespace XenAPI
             // Session duplication for separate TCP streams
             static Session* DuplicateSession(Session* originalSession, QObject* parent = nullptr);
 
-            QString getSessionId() const;
-            QString getUsername() const;
-            QString getPassword() const;
-            QString getLastError() const;
-            QStringList getLastErrorDescription() const;
-            XenConnection* getConnection() const;
-            bool isLocalSuperuser() const;
-            QString getSessionSubject() const;
-            QString getUserSid() const;
-            QStringList getPermissions() const;
+            QString GetSessionID() const;
+            QString GetUsername() const;
+            QString GetPassword() const;
+            QString GetLastError() const;
+            QStringList GetLastErrorDescription() const;
+            XenConnection* GetConnection() const;
+            bool IsLocalSuperuser() const;
+            QString GetSessionSubject() const;
+            QString GetUserSid() const;
+            QStringList GetPermissions() const;
 
             // API version management
-            APIVersion getAPIVersion() const;
-            void setAPIVersion(APIVersion version);
-            bool apiVersionMeets(APIVersion required) const;
+            APIVersion GetAPIVersion() const;
+            void SetAPIVersion(APIVersion version);
+            bool ApiVersionMeets(APIVersion required) const;
 
             // API communication - this is always synchronous, despite it's also using the worker thread, it waits for it to finish
-            QByteArray sendApiRequest(const QString& jsonRequest);
+            QByteArray SendApiRequest(const QString& jsonRequest);
 
-            bool ownsSessionToken() const;
-            void setOwnsSessionToken(bool ownsToken);
-            void detachConnection();
+            bool GetOwnsSessionToken() const;
+            void SetOwnsSessionToken(bool ownsToken);
+            void DetachConnection();
 
         signals:
             void loginSuccessful();

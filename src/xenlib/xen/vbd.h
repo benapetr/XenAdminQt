@@ -148,6 +148,18 @@ class XENLIB_EXPORT VBD : public XenObject
 
         //! Get VBD metrics opaque reference
         QString MetricsRef() const;
+        
+        /**
+        * @brief Get IO scheduling priority
+        *
+        * Returns the IO priority (ionice class) from QoS algorithm params.
+        * Returns 0 if not set.
+        *
+        * @return IO priority (0-7, where 7 is highest)
+        *
+        * C# equivalent: VBD.GetIoNice()
+        */
+        int GetIoNice() const;
 
     protected:
         QString GetObjectType() const override;

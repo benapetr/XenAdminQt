@@ -38,11 +38,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << sessionRef;
+        params << session->GetSessionID() << sessionRef;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("session.get_is_local_superuser", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toBool();
     }
 
@@ -52,11 +52,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << sessionRef;
+        params << session->GetSessionID() << sessionRef;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("session.get_subject", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString();
     }
 
@@ -66,11 +66,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << sessionRef;
+        params << session->GetSessionID() << sessionRef;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("session.get_auth_user_sid", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         return api.ParseJsonRpcResponse(response).toString();
     }
 
@@ -80,11 +80,11 @@ namespace XenAPI
             throw std::runtime_error("Not connected to XenServer");
 
         QVariantList params;
-        params << session->getSessionId() << sessionRef;
+        params << session->GetSessionID() << sessionRef;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("session.get_rbac_permissions", params);
-        QByteArray response = session->sendApiRequest(request);
+        QByteArray response = session->SendApiRequest(request);
         
         QVariant result = api.ParseJsonRpcResponse(response);
         if (result.canConvert<QVariantList>())
