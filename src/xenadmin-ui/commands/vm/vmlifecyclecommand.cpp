@@ -28,10 +28,12 @@
 #include "vmlifecyclecommand.h"
 #include "../../mainwindow.h"
 #include "../../selectionmanager.h"
+#include "startvmcommand.h"
+#include "stopvmcommand.h"
+#include "resumevmcommand.h"
+#include "unpausevmcommand.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/vm.h"
-#include <QMessageBox>
-#include <QMessageBox>
 #include <QTreeWidget>
 
 VMLifeCycleCommand::VMLifeCycleCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
@@ -91,23 +93,26 @@ void VMLifeCycleCommand::Run()
 
     QString powerState = this->getVMPowerState();
 
-    // TODO: Implement using existing VM commands (StartVMCommand, etc)
     if (powerState == "Halted")
     {
-        this->mainWindow()->ShowStatusMessage("Start VM not implemented yet");
-        QMessageBox::information(this->mainWindow(), "Not Implemented", "Start VM");
+        StartVMCommand cmd(this->mainWindow());
+        if (cmd.CanRun())
+            cmd.Run();
     } else if (powerState == "Running")
     {
-        this->mainWindow()->ShowStatusMessage("Shut Down VM not implemented yet");
-        QMessageBox::information(this->mainWindow(), "Not Implemented", "Shut Down VM");
+        StopVMCommand cmd(this->mainWindow());
+        if (cmd.CanRun())
+            cmd.Run();
     } else if (powerState == "Paused")
     {
-        this->mainWindow()->ShowStatusMessage("Unpause VM not implemented yet");
-        QMessageBox::information(this->mainWindow(), "Not Implemented", "Unpause VM");
+        UnpauseVMCommand cmd(this->mainWindow());
+        if (cmd.CanRun())
+            cmd.Run();
     } else if (powerState == "Suspended")
     {
-        this->mainWindow()->ShowStatusMessage("Resume VM not implemented yet");
-        QMessageBox::information(this->mainWindow(), "Not Implemented", "Resume VM");
+        ResumeVMCommand cmd(this->mainWindow());
+        if (cmd.CanRun())
+            cmd.Run();
     }
 }
 

@@ -98,6 +98,7 @@
 #include "commands/pool/poolpropertiescommand.h"
 #include "commands/pool/joinpoolcommand.h"
 #include "commands/pool/ejecthostfrompoolcommand.h"
+#include "commands/pool/addhosttoselectedpoolmenu.h"
 
 // VM commands
 #include "commands/vm/importvmcommand.h"
@@ -172,6 +173,7 @@
 #include <QLineEdit>
 #include <QDateTime>
 #include <QDockWidget>
+#include <QCursor>
 #include "titlebar.h"
 
 MainWindow *MainWindow::g_instance = nullptr;
@@ -346,12 +348,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     // Create placeholder widget
     this->m_placeholderWidget = new PlaceholderWidget();
 
+    // Initialize commands (matches C# SelectionManager.BindTo pattern)
+    this->initializeCommands();
+
     // Initialize toolbar (matches C# MainWindow.Designer.cs ToolStrip)
     this->initializeToolbar();
 
-    // Initialize commands (matches C# SelectionManager.BindTo pattern)
-    this->initializeCommands();
     this->connectMenuActions();
+
     this->updateToolbarsAndMenus(); // Set initial toolbar and menu states (matches C# UpdateToolbars)
 
     // Initialize navigation history (matches C# History static class)
@@ -391,18 +395,6 @@ MainWindow *MainWindow::instance()
 
 void MainWindow::updateActions()
 {
-    bool is_connected = this->IsConnected();
-
-    // Actions available only when connected
-    this->ui->disconnectAction->setEnabled(is_connected);
-    this->ui->importAction->setEnabled(is_connected);
-    this->ui->exportAction->setEnabled(is_connected);
-    this->ui->newNetworkAction->setEnabled(is_connected);
-    this->ui->newStorageRepositoryAction->setEnabled(is_connected);
-
-    // Connect action available only when not connected
-    this->ui->connectAction->setEnabled(!is_connected);
-
     // Update toolbar and menu states (matches C# UpdateToolbars)
     this->updateToolbarsAndMenus();
 }
@@ -2261,44 +2253,34 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->newStorageAction->setEnabled(anyConnected);
     this->ui->newVmAction->setEnabled(anyConnected);
 
-    // Get current selection
+    // Get current selection (if any)
     QTreeWidgetItem* currentItem = this->GetServerTreeWidget()->currentItem();
-    if (!currentItem)
-    {
-        // No selection - disable all operation buttons and menu items
-        this->disableAllOperationButtons();
-        this->disableAllOperationMenus();
-        return;
-    }
-
     QString objectType;
     QString objectRef;
     XenConnection* connection = nullptr;
-    QVariant data = currentItem->data(0, Qt::UserRole);
-    if (data.canConvert<QSharedPointer<XenObject>>())
+    if (currentItem)
     {
-        QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (obj)
+        QVariant data = currentItem->data(0, Qt::UserRole);
+        if (data.canConvert<QSharedPointer<XenObject>>())
         {
-            objectType = obj->GetObjectType();
-            objectRef = obj->OpaqueRef();
-            connection = obj->GetConnection();
+            QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+            if (obj)
+            {
+                objectType = obj->GetObjectType();
+                objectRef = obj->OpaqueRef();
+                connection = obj->GetConnection();
+            }
+        }
+        else if (data.canConvert<XenConnection*>())
+        {
+            objectType = "disconnected_host";
+            objectRef = QString();
         }
     }
-    else if (data.canConvert<XenConnection*>())
-    {
-        objectType = "disconnected_host";
-        objectRef = QString();
-    }
-    else
-    {
-        this->disableAllOperationButtons();
-        this->disableAllOperationMenus();
-        return;
-    }
+    const bool hasToolbarSelection = currentItem && !objectType.isEmpty() && objectType != "disconnected_host";
 
     // ========================================================================
-    // TOOLBAR BUTTONS - Read from Command.canRun() (matches C# CommandToolStripButton.Update)
+    // COMMAND STATES - Read from Command.canRun() (matches C# CommandToolStripButton.Update)
     // ========================================================================
 
     // Polymorphic commands (work for both VMs and Hosts)
@@ -2319,6 +2301,94 @@ void MainWindow::updateToolbarsAndMenus()
 
     // Container buttons availability (for future Docker support)
     bool containerButtonsAvailable = false; // TODO: Docker support
+
+    // ========================================================================
+    // MENU ITEMS - Read from Command.canRun() (matches C# MainMenuBar_MenuActivate)
+    // ========================================================================
+
+    // File menu
+    this->ui->connectAction->setEnabled(true);
+    this->ui->disconnectAction->setEnabled(this->m_commands["DisconnectHost"]->CanRun());
+    this->ui->importAction->setEnabled(this->m_commands["ImportVM"]->CanRun());
+    this->ui->exportAction->setEnabled(this->m_commands["ExportVM"]->CanRun());
+
+    // Server menu - use the polymorphic Shutdown/Reboot commands
+    this->ui->ReconnectToolStripMenuItem1->setEnabled(this->m_commands["ReconnectHost"]->CanRun());
+    this->ui->DisconnectToolStripMenuItem->setEnabled(this->m_commands["DisconnectHost"]->CanRun());
+    this->ui->connectAllToolStripMenuItem->setEnabled(this->m_commands["ConnectAllHosts"]->CanRun());
+    this->ui->disconnectAllToolStripMenuItem->setEnabled(this->m_commands["DisconnectAllHosts"]->CanRun());
+    this->ui->restartToolstackAction->setEnabled(this->m_commands["RestartToolstack"]->CanRun());
+    this->ui->reconnectAsToolStripMenuItem->setEnabled(this->m_commands["HostReconnectAs"]->CanRun());
+    this->ui->rebootAction->setEnabled(canReboot);           // Use same variable as toolbar
+    this->ui->shutDownAction->setEnabled(canShutdown);       // Use same variable as toolbar
+    this->ui->powerOnHostAction->setEnabled(canPowerOnHost); // Use same variable as toolbar
+    this->ui->maintenanceModeToolStripMenuItem1->setEnabled(this->m_commands["HostMaintenanceMode"]->CanRun());
+    this->ui->ServerPropertiesToolStripMenuItem->setEnabled(this->m_commands["HostProperties"]->CanRun());
+
+    // Pool menu
+    AddHostToSelectedPoolCommand addHostToPoolCmd(this);
+    this->ui->AddPoolToolStripMenuItem->setEnabled(this->m_commands["NewPool"]->CanRun());
+    this->ui->addServerToolStripMenuItem->setEnabled(addHostToPoolCmd.CanRun());
+    this->ui->removeServerToolStripMenuItem->setEnabled(this->m_commands["EjectHostFromPool"]->CanRun());
+    this->ui->deleteToolStripMenuItem->setEnabled(this->m_commands["DeletePool"]->CanRun());
+    this->ui->toolStripMenuItemHaConfigure->setEnabled(this->m_commands["HAConfigure"]->CanRun());
+    this->ui->toolStripMenuItemHaDisable->setEnabled(this->m_commands["HADisable"]->CanRun());
+    this->ui->PoolPropertiesToolStripMenuItem->setEnabled(this->m_commands["PoolProperties"]->CanRun());
+    this->ui->addServerToPoolMenuItem->setEnabled(this->m_commands["JoinPool"]->CanRun());
+    this->ui->menuItemRemoveFromPool->setEnabled(this->m_commands["EjectHostFromPool"]->CanRun());
+
+    // VM menu
+    this->ui->newVmAction->setEnabled(this->m_commands["NewVM"]->CanRun());
+    this->ui->startShutdownToolStripMenuItem->setEnabled(this->m_commands["VMLifeCycle"]->CanRun());
+    this->ui->copyVMtoSharedStorageMenuItem->setEnabled(this->m_commands["CopyVM"]->CanRun());
+    this->ui->MoveVMToolStripMenuItem->setEnabled(this->m_commands["MoveVM"]->CanRun());
+    this->ui->installToolsToolStripMenuItem->setEnabled(this->m_commands["InstallTools"]->CanRun());
+    this->ui->uninstallToolStripMenuItem->setEnabled(this->m_commands["UninstallVM"]->CanRun());
+    this->ui->VMPropertiesToolStripMenuItem->setEnabled(this->m_commands["VMProperties"]->CanRun());
+    this->ui->snapshotToolStripMenuItem->setEnabled(this->m_commands["TakeSnapshot"]->CanRun());
+    this->ui->convertToTemplateToolStripMenuItem->setEnabled(this->m_commands["ConvertVMToTemplate"]->CanRun());
+    this->ui->exportToolStripMenuItem->setEnabled(this->m_commands["ExportVM"]->CanRun());
+
+    QString lifecycleText = this->m_commands["VMLifeCycle"]->MenuText();
+    this->ui->startShutdownToolStripMenuItem->setText(lifecycleText);
+    QIcon lifecycleIcon = this->ui->startVMAction->icon();
+    if (lifecycleText == "Shut Down")
+        lifecycleIcon = this->ui->shutDownAction->icon();
+    else if (lifecycleText == "Resume")
+        lifecycleIcon = this->ui->resumeAction->icon();
+    else if (lifecycleText == "Unpause")
+        lifecycleIcon = this->ui->unpauseAction->icon();
+    this->ui->startShutdownToolStripMenuItem->setIcon(lifecycleIcon);
+
+    // Template menu
+    this->ui->CreateVmFromTemplateToolStripMenuItem->setEnabled(this->m_commands["CreateVMFromTemplate"]->CanRun());
+    this->ui->newVMFromTemplateToolStripMenuItem->setEnabled(this->m_commands["NewVMFromTemplate"]->CanRun());
+    this->ui->InstantVmToolStripMenuItem->setEnabled(this->m_commands["InstantVMFromTemplate"]->CanRun());
+    this->ui->exportTemplateToolStripMenuItem->setEnabled(this->m_commands["ExportTemplate"]->CanRun());
+    this->ui->duplicateTemplateToolStripMenuItem->setEnabled(this->m_commands["CopyTemplate"]->CanRun());
+    this->ui->uninstallTemplateToolStripMenuItem->setEnabled(this->m_commands["DeleteTemplate"]->CanRun());
+    this->ui->templatePropertiesToolStripMenuItem->setEnabled(this->m_commands["VMProperties"]->CanRun());
+
+    // Storage menu
+    this->ui->addVirtualDiskToolStripMenuItem->setEnabled(this->m_commands["AddVirtualDisk"]->CanRun());
+    this->ui->attachVirtualDiskToolStripMenuItem->setEnabled(this->m_commands["AttachVirtualDisk"]->CanRun());
+    this->ui->DetachStorageToolStripMenuItem->setEnabled(this->m_commands["DetachSR"]->CanRun());
+    this->ui->ReattachStorageRepositoryToolStripMenuItem->setEnabled(this->m_commands["ReattachSR"]->CanRun());
+    this->ui->ForgetStorageRepositoryToolStripMenuItem->setEnabled(this->m_commands["ForgetSR"]->CanRun());
+    this->ui->DestroyStorageRepositoryToolStripMenuItem->setEnabled(this->m_commands["DestroySR"]->CanRun());
+    this->ui->RepairStorageToolStripMenuItem->setEnabled(this->m_commands["RepairSR"]->CanRun());
+    this->ui->DefaultSRToolStripMenuItem->setEnabled(this->m_commands["SetDefaultSR"]->CanRun());
+    this->ui->newStorageRepositoryAction->setEnabled(this->m_commands["NewSR"]->CanRun());
+    this->ui->SRPropertiesToolStripMenuItem->setEnabled(this->m_commands["StorageProperties"]->CanRun());
+
+    // Network menu
+    this->ui->newNetworkAction->setEnabled(this->m_commands["NewNetwork"]->CanRun());
+
+    if (!hasToolbarSelection)
+    {
+        this->disableAllOperationButtons();
+        return;
+    }
 
     // Update button states (matches C# UpdateToolbarsCore visibility logic)
 
@@ -2387,69 +2457,6 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->forceRebootAction->setEnabled(canForceReboot);
     this->ui->forceRebootAction->setVisible(showForceReboot);
 
-    // ========================================================================
-    // MENU ITEMS - Read from Command.canRun() (matches C# MainMenuBar_MenuActivate)
-    // ========================================================================
-
-    // Server menu - use the polymorphic Shutdown/Reboot commands
-    this->ui->ReconnectToolStripMenuItem1->setEnabled(this->m_commands["ReconnectHost"]->CanRun());
-    this->ui->DisconnectToolStripMenuItem->setEnabled(this->m_commands["DisconnectHost"]->CanRun());
-    this->ui->connectAllToolStripMenuItem->setEnabled(this->m_commands["ConnectAllHosts"]->CanRun());
-    this->ui->disconnectAllToolStripMenuItem->setEnabled(this->m_commands["DisconnectAllHosts"]->CanRun());
-    this->ui->restartToolstackAction->setEnabled(this->m_commands["RestartToolstack"]->CanRun());
-    this->ui->reconnectAsToolStripMenuItem->setEnabled(this->m_commands["HostReconnectAs"]->CanRun());
-    this->ui->rebootAction->setEnabled(canReboot);           // Use same variable as toolbar
-    this->ui->shutDownAction->setEnabled(canShutdown);       // Use same variable as toolbar
-    this->ui->powerOnHostAction->setEnabled(canPowerOnHost); // Use same variable as toolbar
-    this->ui->maintenanceModeToolStripMenuItem1->setEnabled(this->m_commands["HostMaintenanceMode"]->CanRun());
-    this->ui->ServerPropertiesToolStripMenuItem->setEnabled(this->m_commands["HostProperties"]->CanRun());
-
-    // Pool menu
-    this->ui->AddPoolToolStripMenuItem->setEnabled(this->m_commands["NewPool"]->CanRun());
-    this->ui->deleteToolStripMenuItem->setEnabled(this->m_commands["DeletePool"]->CanRun());
-    this->ui->toolStripMenuItemHaConfigure->setEnabled(this->m_commands["HAConfigure"]->CanRun());
-    this->ui->toolStripMenuItemHaDisable->setEnabled(this->m_commands["HADisable"]->CanRun());
-    this->ui->PoolPropertiesToolStripMenuItem->setEnabled(this->m_commands["PoolProperties"]->CanRun());
-    this->ui->addServerToPoolMenuItem->setEnabled(this->m_commands["JoinPool"]->CanRun());
-    this->ui->menuItemRemoveFromPool->setEnabled(this->m_commands["EjectHostFromPool"]->CanRun());
-
-    // VM menu
-    this->ui->newVmAction->setEnabled(this->m_commands["NewVM"]->CanRun());
-    this->ui->startShutdownToolStripMenuItem->setEnabled(this->m_commands["VMLifeCycle"]->CanRun());
-    this->ui->copyVMtoSharedStorageMenuItem->setEnabled(this->m_commands["CopyVM"]->CanRun());
-    this->ui->MoveVMToolStripMenuItem->setEnabled(this->m_commands["MoveVM"]->CanRun());
-    this->ui->installToolsToolStripMenuItem->setEnabled(this->m_commands["InstallTools"]->CanRun());
-    this->ui->uninstallToolStripMenuItem->setEnabled(this->m_commands["UninstallVM"]->CanRun());
-    this->ui->VMPropertiesToolStripMenuItem->setEnabled(this->m_commands["VMProperties"]->CanRun());
-    this->ui->snapshotToolStripMenuItem->setEnabled(this->m_commands["TakeSnapshot"]->CanRun());
-    this->ui->convertToTemplateToolStripMenuItem->setEnabled(this->m_commands["ConvertVMToTemplate"]->CanRun());
-    this->ui->exportToolStripMenuItem->setEnabled(this->m_commands["ExportVM"]->CanRun());
-
-    // Update dynamic menu text for VMLifeCycle command
-    this->ui->startShutdownToolStripMenuItem->setText(this->m_commands["VMLifeCycle"]->MenuText());
-
-    // Template menu
-    this->ui->newVMFromTemplateToolStripMenuItem->setEnabled(this->m_commands["NewVMFromTemplate"]->CanRun());
-    this->ui->InstantVmToolStripMenuItem->setEnabled(this->m_commands["InstantVMFromTemplate"]->CanRun());
-    this->ui->exportTemplateToolStripMenuItem->setEnabled(this->m_commands["ExportTemplate"]->CanRun());
-    this->ui->duplicateTemplateToolStripMenuItem->setEnabled(this->m_commands["CopyTemplate"]->CanRun());
-    this->ui->uninstallTemplateToolStripMenuItem->setEnabled(this->m_commands["DeleteTemplate"]->CanRun());
-    this->ui->templatePropertiesToolStripMenuItem->setEnabled(this->m_commands["VMProperties"]->CanRun());
-
-    // Storage menu
-    this->ui->addVirtualDiskToolStripMenuItem->setEnabled(this->m_commands["AddVirtualDisk"]->CanRun());
-    this->ui->attachVirtualDiskToolStripMenuItem->setEnabled(this->m_commands["AttachVirtualDisk"]->CanRun());
-    this->ui->DetachStorageToolStripMenuItem->setEnabled(this->m_commands["DetachSR"]->CanRun());
-    this->ui->ReattachStorageRepositoryToolStripMenuItem->setEnabled(this->m_commands["ReattachSR"]->CanRun());
-    this->ui->ForgetStorageRepositoryToolStripMenuItem->setEnabled(this->m_commands["ForgetSR"]->CanRun());
-    this->ui->DestroyStorageRepositoryToolStripMenuItem->setEnabled(this->m_commands["DestroySR"]->CanRun());
-    this->ui->RepairStorageToolStripMenuItem->setEnabled(this->m_commands["RepairSR"]->CanRun());
-    this->ui->DefaultSRToolStripMenuItem->setEnabled(this->m_commands["SetDefaultSR"]->CanRun());
-    this->ui->newStorageRepositoryAction->setEnabled(this->m_commands["NewSR"]->CanRun());
-    this->ui->virtualDisksToolStripMenuItem->setEnabled(this->m_commands["StorageProperties"]->CanRun());
-
-    // Network menu
-    this->ui->newNetworkAction->setEnabled(this->m_commands["NewNetwork"]->CanRun());
 }
 
 void MainWindow::disableAllOperationButtons()
@@ -2790,6 +2797,15 @@ void MainWindow::onEjectFromPool()
         this->m_commands["EjectHostFromPool"]->Run();
 }
 
+void MainWindow::onAddServerToPool()
+{
+    AddHostToSelectedPoolMenu menu(this, this);
+    if (!menu.CanRun())
+        return;
+
+    menu.exec(QCursor::pos());
+}
+
 // VM menu slots
 void MainWindow::onNewVM()
 {
@@ -3072,6 +3088,19 @@ void MainWindow::initializeCommands()
 
 void MainWindow::connectMenuActions()
 {
+    // File menu actions (connectAction/importAction/exportAction/exitAction are wired in mainwindow.ui)
+    connect(this->ui->disconnectAction, &QAction::triggered, this, &MainWindow::onDisconnectHost);
+
+    if (!this->m_createVmFromTemplateMenu)
+    {
+        this->m_createVmFromTemplateMenu = new QMenu(this);
+        this->m_createVmFromTemplateMenu->addAction(this->ui->newVMFromTemplateToolStripMenuItem);
+        this->m_createVmFromTemplateMenu->addAction(this->ui->InstantVmToolStripMenuItem);
+        this->ui->CreateVmFromTemplateToolStripMenuItem->setMenu(this->m_createVmFromTemplateMenu);
+        this->ui->menuTemplates->removeAction(this->ui->newVMFromTemplateToolStripMenuItem);
+        this->ui->menuTemplates->removeAction(this->ui->InstantVmToolStripMenuItem);
+    }
+
     // Server menu actions
     connect(this->ui->ReconnectToolStripMenuItem1, &QAction::triggered, this, &MainWindow::onReconnectHost);
     connect(this->ui->DisconnectToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDisconnectHost);
@@ -3086,6 +3115,8 @@ void MainWindow::connectMenuActions()
 
     // Pool menu actions
     connect(this->ui->AddPoolToolStripMenuItem, &QAction::triggered, this, &MainWindow::onNewPool);
+    connect(this->ui->addServerToolStripMenuItem, &QAction::triggered, this, &MainWindow::onAddServerToPool);
+    connect(this->ui->removeServerToolStripMenuItem, &QAction::triggered, this, &MainWindow::onEjectFromPool);
     connect(this->ui->deleteToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDeletePool);
     connect(this->ui->toolStripMenuItemHaConfigure, &QAction::triggered, this, &MainWindow::onHAConfigure);
     connect(this->ui->toolStripMenuItemHaDisable, &QAction::triggered, this, &MainWindow::onHADisable);
@@ -3123,7 +3154,7 @@ void MainWindow::connectMenuActions()
     connect(this->ui->RepairStorageToolStripMenuItem, &QAction::triggered, this, &MainWindow::onRepairSR);
     connect(this->ui->DefaultSRToolStripMenuItem, &QAction::triggered, this, &MainWindow::onSetDefaultSR);
     connect(this->ui->newStorageRepositoryAction, &QAction::triggered, this, &MainWindow::onNewSR);
-    connect(this->ui->virtualDisksToolStripMenuItem, &QAction::triggered, this, &MainWindow::onStorageProperties);
+    connect(this->ui->SRPropertiesToolStripMenuItem, &QAction::triggered, this, &MainWindow::onStorageProperties);
 
     // Network menu actions
     connect(this->ui->newNetworkAction, &QAction::triggered, this, &MainWindow::onNewNetwork);

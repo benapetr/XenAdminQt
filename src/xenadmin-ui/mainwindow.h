@@ -37,6 +37,8 @@
 #include "xen/asyncoperation.h"
 #include "selectionmanager.h"
 
+class QMenu;
+
 namespace Ui
 {
     class MainWindow;
@@ -201,6 +203,7 @@ class MainWindow : public QMainWindow
         void onPoolProperties();
         void onJoinPool();
         void onEjectFromPool();
+        void onAddServerToPool();
 
         // Menu action slots (VM menu)
         void onNewVM();
@@ -321,6 +324,7 @@ class MainWindow : public QMainWindow
         QToolBar* m_toolBar = nullptr;
         QToolButton* m_backButton = nullptr;    // QToolButton for dropdown menu support
         QToolButton* m_forwardButton = nullptr; // QToolButton for dropdown menu support
+        QMenu* m_createVmFromTemplateMenu = nullptr;
 
         SelectionManager* m_selectionManager = nullptr;
 
