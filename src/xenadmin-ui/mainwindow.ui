@@ -21,13 +21,13 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
-    <property name="margin">
+    <property name="margin" stdset="0">
      <number>0</number>
     </property>
     <item>
      <widget class="QSplitter" name="centralSplitter">
       <property name="orientation">
-       <enum>Qt::Horizontal</enum>
+       <enum>Qt::Orientation::Horizontal</enum>
       </property>
       <widget class="NavigationPane" name="navigationPane" native="true">
        <property name="minimumSize">
@@ -52,7 +52,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -67,10 +67,10 @@
     <addaction name="separator"/>
     <addaction name="exitAction"/>
    </widget>
-  <widget class="QMenu" name="menuView">
-   <property name="title">
-    <string>&amp;View</string>
-   </property>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>&amp;View</string>
+    </property>
     <addaction name="viewTemplatesAction"/>
     <addaction name="viewCustomTemplatesAction"/>
     <addaction name="viewLocalStorageAction"/>
@@ -84,11 +84,6 @@
     <property name="title">
      <string>&amp;Pool</string>
     </property>
-    <addaction name="AddPoolToolStripMenuItem"/>
-    <addaction name="separator"/>
-    <addaction name="addServerToolStripMenuItem"/>
-    <addaction name="removeServerToolStripMenuItem"/>
-    <addaction name="separator"/>
     <widget class="QMenu" name="menuHighAvailability">
      <property name="title">
       <string>High Availability</string>
@@ -96,6 +91,11 @@
      <addaction name="toolStripMenuItemHaConfigure"/>
      <addaction name="toolStripMenuItemHaDisable"/>
     </widget>
+    <addaction name="AddPoolToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="addServerToolStripMenuItem"/>
+    <addaction name="removeServerToolStripMenuItem"/>
+    <addaction name="separator"/>
     <addaction name="menuHighAvailability"/>
     <addaction name="separator"/>
     <addaction name="deleteToolStripMenuItem"/>
@@ -106,13 +106,6 @@
     <property name="title">
      <string>&amp;Server</string>
     </property>
-    <addaction name="addServerAction"/>
-    <addaction name="separator"/>
-    <addaction name="rebootAction"/>
-    <addaction name="powerOnHostAction"/>
-    <addaction name="shutDownAction"/>
-    <addaction name="restartToolstackAction"/>
-    <addaction name="separator"/>
     <widget class="QMenu" name="connectDisconnectToolStripMenuItem">
      <property name="title">
       <string>Connect/Disconnect</string>
@@ -124,6 +117,13 @@
      <addaction name="connectAllToolStripMenuItem"/>
      <addaction name="disconnectAllToolStripMenuItem"/>
     </widget>
+    <addaction name="addServerAction"/>
+    <addaction name="separator"/>
+    <addaction name="rebootAction"/>
+    <addaction name="powerOnHostAction"/>
+    <addaction name="shutDownAction"/>
+    <addaction name="restartToolstackAction"/>
+    <addaction name="separator"/>
     <addaction name="connectDisconnectToolStripMenuItem"/>
     <addaction name="addServerToPoolMenuItem"/>
     <addaction name="menuItemRemoveFromPool"/>
@@ -155,12 +155,6 @@
     <property name="title">
      <string>&amp;Storage</string>
     </property>
-    <addaction name="newStorageRepositoryAction"/>
-    <addaction name="separator"/>
-    <addaction name="RepairStorageToolStripMenuItem"/>
-    <addaction name="DefaultSRToolStripMenuItem"/>
-    <addaction name="reclaimFreedSpaceToolStripMenuItem"/>
-    <addaction name="separator"/>
     <widget class="QMenu" name="menuVirtualDisks">
      <property name="title">
       <string>Virtual Disks</string>
@@ -168,7 +162,13 @@
      <addaction name="addVirtualDiskToolStripMenuItem"/>
      <addaction name="attachVirtualDiskToolStripMenuItem"/>
     </widget>
+    <addaction name="newStorageRepositoryAction"/>
+    <addaction name="separator"/>
+    <addaction name="RepairStorageToolStripMenuItem"/>
+    <addaction name="DefaultSRToolStripMenuItem"/>
+    <addaction name="separator"/>
     <addaction name="menuVirtualDisks"/>
+    <addaction name="reclaimFreedSpaceToolStripMenuItem"/>
     <addaction name="separator"/>
     <addaction name="DetachStorageToolStripMenuItem"/>
     <addaction name="ReattachStorageRepositoryToolStripMenuItem"/>
@@ -229,7 +229,7 @@
     </size>
    </property>
    <property name="toolButtonStyle">
-    <enum>Qt::ToolButtonTextBesideIcon</enum>
+    <enum>Qt::ToolButtonStyle::ToolButtonTextBesideIcon</enum>
    </property>
    <attribute name="toolBarArea">
     <enum>TopToolBarArea</enum>
@@ -257,8 +257,7 @@
   <action name="addServerAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/add_server.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/add_server.png</normaloff>:/icons/add_server.png</iconset>
    </property>
    <property name="text">
     <string>Add New Server</string>
@@ -270,8 +269,7 @@
   <action name="addPoolAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/pool_new.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/pool_new.png</normaloff>:/icons/pool_new.png</iconset>
    </property>
    <property name="text">
     <string>New Pool</string>
@@ -283,8 +281,7 @@
   <action name="newStorageAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/new_storage.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/new_storage.png</normaloff>:/icons/new_storage.png</iconset>
    </property>
    <property name="text">
     <string>New Storage</string>
@@ -296,8 +293,7 @@
   <action name="newVmAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/new_vm.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/new_vm.png</normaloff>:/icons/new_vm.png</iconset>
    </property>
    <property name="text">
     <string>New VM</string>
@@ -309,8 +305,7 @@
   <action name="shutDownAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/shutdown.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/shutdown.png</normaloff>:/icons/shutdown.png</iconset>
    </property>
    <property name="text">
     <string>Shut Down</string>
@@ -322,8 +317,7 @@
   <action name="powerOnHostAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/power_on.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/power_on.png</normaloff>:/icons/power_on.png</iconset>
    </property>
    <property name="text">
     <string>Power On</string>
@@ -335,8 +329,7 @@
   <action name="startVMAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/start_vm.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/start_vm.png</normaloff>:/icons/start_vm.png</iconset>
    </property>
    <property name="text">
     <string>Start</string>
@@ -348,8 +341,7 @@
   <action name="rebootAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/reboot.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/reboot.png</normaloff>:/icons/reboot.png</iconset>
    </property>
    <property name="text">
     <string>Reboot</string>
@@ -361,8 +353,7 @@
   <action name="resumeAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/resume.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/resume.png</normaloff>:/icons/resume.png</iconset>
    </property>
    <property name="text">
     <string>Resume</string>
@@ -374,8 +365,7 @@
   <action name="suspendAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/suspend.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/suspend.png</normaloff>:/icons/suspend.png</iconset>
    </property>
    <property name="text">
     <string>Suspend</string>
@@ -387,8 +377,7 @@
   <action name="pauseAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/pause.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/pause.png</normaloff>:/icons/pause.png</iconset>
    </property>
    <property name="text">
     <string>Pause</string>
@@ -400,8 +389,7 @@
   <action name="unpauseAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/unpause.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/unpause.png</normaloff>:/icons/unpause.png</iconset>
    </property>
    <property name="text">
     <string>Unpause</string>
@@ -413,8 +401,7 @@
   <action name="forceShutdownAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/force_shutdown.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/force_shutdown.png</normaloff>:/icons/force_shutdown.png</iconset>
    </property>
    <property name="text">
     <string>Force Shut Down</string>
@@ -426,8 +413,7 @@
   <action name="forceRebootAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/force_reboot.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/force_reboot.png</normaloff>:/icons/force_reboot.png</iconset>
    </property>
    <property name="text">
     <string>Force Reboot</string>
@@ -436,12 +422,10 @@
     <string>Force Reboot</string>
    </property>
   </action>
-  <!-- Old connect/disconnect actions below -->
   <action name="connectAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/connect-16.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/connect-16.png</normaloff>:/icons/connect-16.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Connect...</string>
@@ -456,8 +440,7 @@
   <action name="disconnectAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/disconnect-16.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/disconnect-16.png</normaloff>:/icons/disconnect-16.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Disconnect</string>
@@ -516,52 +499,51 @@
    </property>
   </action>
   <action name="viewTemplatesAction">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Templates</string>
    </property>
+  </action>
+  <action name="viewCustomTemplatesAction">
    <property name="checkable">
     <bool>true</bool>
    </property>
-  </action>
-  <action name="viewCustomTemplatesAction">
    <property name="text">
     <string>Custom Templates</string>
    </property>
+  </action>
+  <action name="viewLocalStorageAction">
    <property name="checkable">
     <bool>true</bool>
    </property>
-  </action>
-  <action name="viewLocalStorageAction">
    <property name="text">
     <string>Local Storage</string>
    </property>
+  </action>
+  <action name="viewShowHiddenObjectsAction">
    <property name="checkable">
     <bool>true</bool>
    </property>
-  </action>
-  <action name="viewShowHiddenObjectsAction">
    <property name="text">
     <string>Show Hidden Objects</string>
    </property>
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
   </action>
   <action name="viewMenuSeparator1">
-   <property name="separator">
+   <property name="separator" stdset="0">
     <bool>true</bool>
    </property>
   </action>
   <action name="viewMenuSeparator2">
-   <property name="separator">
+   <property name="separator" stdset="0">
     <bool>true</bool>
    </property>
   </action>
   <action name="importAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/vm-import-32.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/vm-import-32.png</normaloff>:/icons/vm-import-32.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Import VM...</string>
@@ -576,8 +558,7 @@
   <action name="exportAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/export-16.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/export-16.png</normaloff>:/icons/export-16.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Export VM...</string>
@@ -592,8 +573,7 @@
   <action name="newNetworkAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/network-16.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/network-16.png</normaloff>:/icons/network-16.png</iconset>
    </property>
    <property name="text">
     <string>&amp;New Network...</string>
@@ -608,8 +588,7 @@
   <action name="newStorageRepositoryAction">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/storage-16.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/storage-16.png</normaloff>:/icons/storage-16.png</iconset>
    </property>
    <property name="text">
     <string>&amp;New Storage Repository...</string>
@@ -621,7 +600,6 @@
     <string>Ctrl+Shift+S</string>
    </property>
   </action>
-  <!-- Server Menu Actions (C#: HostMenuItem) -->
   <action name="restartToolstackAction">
    <property name="text">
     <string>Restart Toolstac&amp;k</string>
@@ -633,8 +611,7 @@
   <action name="ReconnectToolStripMenuItem1">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/connect-16.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/connect-16.png</normaloff>:/icons/connect-16.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Reconnect</string>
@@ -646,8 +623,7 @@
   <action name="DisconnectToolStripMenuItem">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/disconnect-16.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/disconnect-16.png</normaloff>:/icons/disconnect-16.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Disconnect</string>
@@ -700,21 +676,20 @@
    </property>
   </action>
   <action name="maintenanceModeToolStripMenuItem1">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>&amp;Maintenance Mode</string>
    </property>
    <property name="statusTip">
     <string>Enter or exit maintenance mode</string>
    </property>
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
   </action>
   <action name="ServerPropertiesToolStripMenuItem">
    <property name="icon">
-    <iconset resource="resources.qrc">
-     <normaloff>:/icons/edit-16.png</normaloff>
-    </iconset>
+    <iconset>
+     <normaloff>:/icons/edit-16.png</normaloff>:/icons/edit-16.png</iconset>
    </property>
    <property name="text">
     <string>P&amp;roperties</string>
@@ -726,12 +701,10 @@
     <string>Alt+Return</string>
    </property>
   </action>
-  <!-- Pool Menu Actions (C#: poolToolStripMenuItem) -->
   <action name="AddPoolToolStripMenuItem">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/pool_new.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/pool_new.png</normaloff>:/icons/pool_new.png</iconset>
    </property>
    <property name="text">
     <string>&amp;New Pool...</string>
@@ -790,9 +763,8 @@
   </action>
   <action name="PoolPropertiesToolStripMenuItem">
    <property name="icon">
-    <iconset resource="resources.qrc">
-     <normaloff>:/icons/edit-16.png</normaloff>
-    </iconset>
+    <iconset>
+     <normaloff>:/icons/edit-16.png</normaloff>:/icons/edit-16.png</iconset>
    </property>
    <property name="text">
     <string>P&amp;roperties</string>
@@ -804,12 +776,10 @@
     <string>Alt+Return</string>
    </property>
   </action>
-  <!-- VM Menu Actions (C#: VMToolStripMenuItem) -->
   <action name="startShutdownToolStripMenuItem">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/start_vm.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/start_vm.png</normaloff>:/icons/start_vm.png</iconset>
    </property>
    <property name="text">
     <string>S&amp;tart</string>
@@ -839,9 +809,8 @@
   </action>
   <action name="snapshotToolStripMenuItem">
    <property name="icon">
-    <iconset resource="resources.qrc">
-     <normaloff>:/icons/snapshot-16.png</normaloff>
-    </iconset>
+    <iconset>
+     <normaloff>:/icons/snapshot-16.png</normaloff>:/icons/snapshot-16.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Snapshot...</string>
@@ -864,8 +833,7 @@
   <action name="exportToolStripMenuItem">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/export-16.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/export-16.png</normaloff>:/icons/export-16.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Export...</string>
@@ -895,9 +863,8 @@
   </action>
   <action name="VMPropertiesToolStripMenuItem">
    <property name="icon">
-    <iconset resource="resources.qrc">
-     <normaloff>:/icons/edit-16.png</normaloff>
-    </iconset>
+    <iconset>
+     <normaloff>:/icons/edit-16.png</normaloff>:/icons/edit-16.png</iconset>
    </property>
    <property name="text">
     <string>P&amp;roperties</string>
@@ -909,7 +876,6 @@
     <string>Alt+Return</string>
    </property>
   </action>
-  <!-- Storage Menu Actions (C#: StorageToolStripMenuItem) -->
   <action name="RepairStorageToolStripMenuItem">
    <property name="text">
     <string>&amp;Repair...</string>
@@ -989,9 +955,8 @@
   </action>
   <action name="SRPropertiesToolStripMenuItem">
    <property name="icon">
-    <iconset resource="resources.qrc">
-     <normaloff>:/icons/edit-16.png</normaloff>
-    </iconset>
+    <iconset>
+     <normaloff>:/icons/edit-16.png</normaloff>:/icons/edit-16.png</iconset>
    </property>
    <property name="text">
     <string>P&amp;roperties</string>
@@ -1003,7 +968,6 @@
     <string>Alt+Return</string>
    </property>
   </action>
-  <!-- Templates Menu Actions (C#: templatesToolStripMenuItem) -->
   <action name="CreateVmFromTemplateToolStripMenuItem">
    <property name="text">
     <string>&amp;Create VM from Template...</string>
@@ -1031,8 +995,7 @@
   <action name="exportTemplateToolStripMenuItem">
    <property name="icon">
     <iconset resource="resources.qrc">
-     <normaloff>:/icons/export-16.png</normaloff>
-    </iconset>
+     <normaloff>:/icons/export-16.png</normaloff>:/icons/export-16.png</iconset>
    </property>
    <property name="text">
     <string>&amp;Export...</string>
@@ -1059,9 +1022,8 @@
   </action>
   <action name="templatePropertiesToolStripMenuItem">
    <property name="icon">
-    <iconset resource="resources.qrc">
-     <normaloff>:/icons/edit-16.png</normaloff>
-    </iconset>
+    <iconset>
+     <normaloff>:/icons/edit-16.png</normaloff>:/icons/edit-16.png</iconset>
    </property>
    <property name="text">
     <string>P&amp;roperties</string>
@@ -1074,7 +1036,17 @@
    </property>
   </action>
  </widget>
- <resources/>
+ <customwidgets>
+  <customwidget>
+   <class>NavigationPane</class>
+   <extends>QWidget</extends>
+   <header>navigation/navigationpane.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>connectAction</sender>
@@ -1133,22 +1105,6 @@
     <hint type="sourcelabel">
      <x>-1</x>
      <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>serverTreeWidget</sender>
-   <signal>itemSelectionChanged()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>onTreeItemSelected()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>125</x>
-     <y>334</y>
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
@@ -1253,14 +1209,6 @@
    </hints>
   </connection>
  </connections>
- <customwidgets>
-  <customwidget>
-   <class>NavigationPane</class>
-   <extends>QWidget</extends>
-   <header>navigation/navigationpane.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <slots>
   <slot>connectToServer()</slot>
   <slot>disconnectFromServer()</slot>
