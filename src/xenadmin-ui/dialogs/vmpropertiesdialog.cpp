@@ -54,11 +54,12 @@ void VMPropertiesDialog::build()
     // Reference: xenadmin/XenAdmin/Dialogs/PropertiesDialog.cs lines 133-234
 
     // Get VM data to check conditional page requirements
-    QVariantMap vmData = objectDataBefore();
-    bool isSnapshot = vmData.value("is_a_snapshot").toBool();
+    if (!this->m_vm)
+        return;
+    bool isSnapshot = this->m_vm->IsSnapshot();
     bool isVm = !isSnapshot;
-    bool isTemplate = vmData.value("is_a_template").toBool();
-    bool isHVM = vmData.value("HVM_boot_policy", "").toString() != "";
+    bool isTemplate = this->m_vm->IsTemplate();
+    bool isHVM = this->m_vm->IsHVM();
 
     // Tab 1: General
     this->showTab(new GeneralEditPage());

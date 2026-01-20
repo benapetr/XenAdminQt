@@ -77,7 +77,8 @@ CpuMemoryEditPage::CpuMemoryEditPage(QWidget* parent)
     QPixmap infoPixmap = this->style()->standardIcon(QStyle::SP_MessageBoxInformation).pixmap(16, 16);
     this->ui->infoIcon->setPixmap(infoPixmap);
 
-    this->ui->infoPanel->setVisible(false);
+    this->ui->infoIcon->setVisible(false);
+    this->ui->labelInfo->setVisible(false);
     this->ui->cpuWarningIcon->setVisible(false);
     this->ui->cpuWarningLabel->setVisible(false);
     this->ui->topologyWarningIcon->setVisible(false);
@@ -125,14 +126,12 @@ void CpuMemoryEditPage::SetXenObjects(const QString& objectRef,
     if (this->connection() && objectType.toLower() == "vm")
     {
         this->m_vm = this->connection()->GetCache()->ResolveObject<VM>("vm", objectRef);
-    }
-    else
+    } else
     {
         this->m_vm.reset();
     }
 
     this->repopulate();
-
     emit populated();
 }
 
@@ -171,17 +170,17 @@ void CpuMemoryEditPage::repopulate()
             if (this->m_vm->GetPowerState() != "Running")
                 infoText += tr("The current number of vCPUs can only be changed when the VM is running or shut down. ");
             this->ui->labelInfo->setText(infoText);
-        }
-        else
+        } else
         {
             this->ui->labelInfo->setText(tr("The vCPUs can only be changed when the VM is shut down."));
         }
 
-        this->ui->infoPanel->setVisible(true);
-    }
-    else
+        this->ui->infoIcon->setVisible(true);
+        this->ui->labelInfo->setVisible(true);
+    } else
     {
-        this->ui->infoPanel->setVisible(false);
+        this->ui->infoIcon->setVisible(false);
+        this->ui->labelInfo->setVisible(false);
     }
 
     this->m_origVCPUsMax = this->m_vm->VCPUsMax() > 0 ? this->m_vm->VCPUsMax() : 1;
@@ -234,11 +233,13 @@ void CpuMemoryEditPage::initializeVCpuControls()
 
     double weight = this->m_vm->GetVCPUWeight();
     int sliderValue = qRound(std::log(weight) / std::log(4.0));
-    sliderValue = qBound(this->ui->cpuPrioritySlider->minimum(),
-                         sliderValue,
-                         this->ui->cpuPrioritySlider->maximum());
+    sliderValue = qBound(this->ui->cpuPrioritySlider->minimum(), sliderValue, this->ui->cpuPrioritySlider->maximum());
     this->ui->cpuPrioritySlider->setValue(sliderValue);
-    this->ui->priorityPanel->setEnabled(this->m_vm->IsHalted());
+
+    this->ui->cpuPrioritySlider->setEnabled(this->m_vm->IsHalted());
+    this->ui->labelPriorityHighest->setEnabled(this->m_vm->IsHalted());
+    this->ui->labelPriorityLowest->setEnabled(this->m_vm->IsHalted());
+    this->ui->lblPriority->setEnabled(this->m_vm->IsHalted());
 }
 
 void CpuMemoryEditPage::populateVCpuComboBox(QComboBox* comboBox,
@@ -274,10 +275,7 @@ void CpuMemoryEditPage::populateVcpusAtStartup(qint64 maxVcpus, qint64 currentVa
                                [](qint64) { return true; });
 }
 
-void CpuMemoryEditPage::populateTopology(qint64 vcpusAtStartup,
-                                         qint64 vcpusMax,
-                                         qint64 coresPerSocket,
-                                         qint64 maxCoresPerSocket)
+void CpuMemoryEditPage::populateTopology(qint64 vcpusAtStartup, qint64 vcpusMax, qint64 coresPerSocket, qint64 maxCoresPerSocket)
 {
     this->m_topologyOrigVcpus = vcpusAtStartup;
     this->m_topologyOrigCoresPerSocket = coresPerSocket;

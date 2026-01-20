@@ -44,6 +44,7 @@ ChangeVCPUSettingsAction::ChangeVCPUSettingsAction(QSharedPointer<VM> vm,
     if (!vm)
         throw std::invalid_argument("VM cannot be null");
     this->m_connection = vm->GetConnection();
+    // TODO: Add RBAC method checks (C# adds VM.set_VCPUs_number_live and VM.set_VCPUs_at_startup/VM.set_VCPUs_max).
 }
 
 void ChangeVCPUSettingsAction::run()
@@ -75,6 +76,7 @@ void ChangeVCPUSettingsAction::run()
             if (currentVCPUsAtStartup > this->m_vcpusAtStartup)
             {
                 // Trying to reduce VCPUs on running VM
+                // TODO: Match C# error message (Messages.VM_VCPU_CANNOT_UNPLUG_LIVE) for parity.
                 throw std::runtime_error("Cannot reduce VCPUs on a running VM. "
                                          "Please shut down the VM first.");
             }

@@ -34,13 +34,11 @@
 #include <QWidget>
 
 // VerticalTabDelegate implementation
-VerticalTabDelegate::VerticalTabDelegate(QObject* parent)
-    : QStyledItemDelegate(parent)
+VerticalTabDelegate::VerticalTabDelegate(QObject* parent) : QStyledItemDelegate(parent)
 {
 }
 
-void VerticalTabDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
-                                const QModelIndex& index) const
+void VerticalTabDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing);
@@ -98,8 +96,7 @@ void VerticalTabDelegate::paint(QPainter* painter, const QStyleOptionViewItem& o
                       painter->fontMetrics().elidedText(text, Qt::ElideRight, topRect.width()));
 
     // Draw subtext (bottom half)
-    QRect bottomRect(rect.x() + 36, rect.y() + rect.height() / 2,
-                     rect.width() - 38, rect.height() / 2 - 2);
+    QRect bottomRect(rect.x() + 36, rect.y() + rect.height() / 2, rect.width() - 38, rect.height() / 2 - 2);
     painter->setPen(subTextColor);
     QFont smallerFont = option.font;
     smallerFont.setPointSize(8);
@@ -110,8 +107,7 @@ void VerticalTabDelegate::paint(QPainter* painter, const QStyleOptionViewItem& o
     painter->restore();
 }
 
-QSize VerticalTabDelegate::sizeHint(const QStyleOptionViewItem& option,
-                                    const QModelIndex& index) const
+QSize VerticalTabDelegate::sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     Q_UNUSED(option);
     Q_UNUSED(index);
@@ -119,8 +115,7 @@ QSize VerticalTabDelegate::sizeHint(const QStyleOptionViewItem& option,
 }
 
 // VerticalTabWidget implementation
-VerticalTabWidget::VerticalTabWidget(QWidget* parent)
-    : QListWidget(parent)
+VerticalTabWidget::VerticalTabWidget(QWidget* parent) : QListWidget(parent)
 {
     // Set delegate for custom painting
     this->setItemDelegate(new VerticalTabDelegate(this));
@@ -155,7 +150,7 @@ VerticalTabWidget::VerticalTabWidget(QWidget* parent)
     )");
 }
 
-void VerticalTabWidget::addTab(const QIcon& icon, const QString& text, const QString& subText, QWidget* page)
+void VerticalTabWidget::AddTab(const QIcon& icon, const QString& text, const QString& subText, QWidget* page)
 {
     TabData data;
     data.icon = icon;
@@ -181,7 +176,30 @@ void VerticalTabWidget::addTab(const QIcon& icon, const QString& text, const QSt
     }
 }
 
-QWidget* VerticalTabWidget::currentPage() const
+void VerticalTabWidget::UpdateTabSubText(QWidget* page, const QString& subText)
+{
+    if (!page)
+        return;
+
+    for (int i = 0; i < this->m_tabs.size(); ++i)
+    {
+        if (this->m_tabs[i].page != page)
+            continue;
+
+        if (this->m_tabs[i].subText == subText)
+            return;
+
+        this->m_tabs[i].subText = subText;
+        QListWidgetItem* item = this->item(i);
+        if (item)
+            item->setData(Qt::UserRole + 1, subText);
+
+        this->viewport()->update();
+        return;
+    }
+}
+
+QWidget* VerticalTabWidget::GetCurrentPage() const
 {
     int index = this->currentRow();
     if (index >= 0 && index < this->m_tabs.size())
@@ -191,7 +209,7 @@ QWidget* VerticalTabWidget::currentPage() const
     return nullptr;
 }
 
-QWidget* VerticalTabWidget::pageAt(int index) const
+QWidget* VerticalTabWidget::PageAt(int index) const
 {
     if (index >= 0 && index < this->m_tabs.size())
     {
@@ -200,7 +218,7 @@ QWidget* VerticalTabWidget::pageAt(int index) const
     return nullptr;
 }
 
-void VerticalTabWidget::setCurrentPage(QWidget* page)
+void VerticalTabWidget::SetCurrentPage(QWidget* page)
 {
     for (int i = 0; i < this->m_tabs.size(); ++i)
     {

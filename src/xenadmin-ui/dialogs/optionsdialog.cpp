@@ -60,7 +60,7 @@ OptionsDialog::OptionsDialog(QWidget* parent) : QDialog(parent), ui(new Ui::Opti
     // Add pages to vertical tabs and stacked widget
     for (IOptionsPage* page : this->m_pages)
     {
-        this->ui->verticalTabs->addTab(page->GetImage(), page->GetText(), page->GetSubText(), page);
+        this->ui->verticalTabs->AddTab(page->GetImage(), page->GetText(), page->GetSubText(), page);
         this->ui->ContentPanel->addWidget(page);
     }
 

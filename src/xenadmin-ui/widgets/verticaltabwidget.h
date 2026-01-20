@@ -57,16 +57,19 @@ class VerticalTabWidget : public QListWidget
         explicit VerticalTabWidget(QWidget* parent = nullptr);
 
         // Add a tab with icon, main text, and subtext
-        void addTab(const QIcon& icon, const QString& text, const QString& subText, QWidget* page);
+        void AddTab(const QIcon& icon, const QString& text, const QString& subText, QWidget* page);
+
+        // Update subtext for an existing tab
+        void UpdateTabSubText(QWidget* page, const QString& subText);
 
         // Get the widget associated with the selected tab
-        QWidget* currentPage() const;
+        QWidget* GetCurrentPage() const;
 
         // Get the widget at the specified index
-        QWidget* pageAt(int index) const;
+        QWidget* PageAt(int index) const;
 
         // Set current page by widget
-        void setCurrentPage(QWidget* page);
+        void SetCurrentPage(QWidget* page);
 
     private:
         struct TabData

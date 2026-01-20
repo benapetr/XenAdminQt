@@ -122,7 +122,7 @@ void VerticallyTabbedDialog::showTab(IEditPage* page)
     this->m_pages.append(page);
 
     // Add to vertical tabs
-    this->ui->verticalTabs->addTab(page->GetImage(), page->GetText(), page->GetSubText(), page);
+    this->ui->verticalTabs->AddTab(page->GetImage(), page->GetText(), page->GetSubText(), page);
 
     // Add to content panel (stacked widget)
     this->ui->ContentPanel->addWidget(page);
@@ -133,11 +133,12 @@ void VerticallyTabbedDialog::showTab(IEditPage* page)
     // Initialize page with object data
     // C# equivalent: editPage.SetXenObjects(_xenObjectBefore, _xenObjectCopy);
     page->SetXenObject(this->m_object, this->m_objectDataBefore, this->m_objectDataCopy);
+    this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
 
     // Connect populated signal to refresh tabs
-    connect(page, &IEditPage::populated, [this]()
+    connect(page, &IEditPage::populated, [this, page]()
     {
-        this->ui->verticalTabs->viewport()->update();
+        this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
     });
 }
 
@@ -225,6 +226,7 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
             for (IEditPage* page : this->m_pages)
             {
                 page->SetXenObject(this->m_object, this->m_objectDataBefore, this->m_objectDataCopy);
+                this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
             }
         }
         
@@ -287,6 +289,7 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
                 for (IEditPage* page : this->m_pages)
                 {
                     page->SetXenObject(this->m_object, this->m_objectDataBefore, this->m_objectDataCopy);
+                    this->ui->verticalTabs->UpdateTabSubText(page, page->GetSubText());
                 }
             }
         }

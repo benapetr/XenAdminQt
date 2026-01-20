@@ -22,32 +22,30 @@
     </widget>
    </item>
    <item row="1" column="0" colspan="3">
-    <widget class="QWidget" name="infoPanel">
-     <layout class="QHBoxLayout" name="infoLayout">
-      <item>
-       <widget class="QLabel" name="infoIcon">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="labelInfo">
-        <property name="text">
-         <string/>
-        </property>
-        <property name="wordWrap">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
+    <layout class="QHBoxLayout" name="infoLayout">
+     <item>
+      <widget class="QLabel" name="infoIcon">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="labelInfo">
+       <property name="text">
+        <string/>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item row="2" column="0">
     <widget class="QLabel" name="lblVCPUs">
      <property name="text">
-      <string>&amp;Number of vCPUs:</string>
+      <string>Number of vCPUs:</string>
      </property>
     </widget>
    </item>
@@ -67,7 +65,7 @@
    <item row="4" column="0">
     <widget class="QLabel" name="labelInitialVCPUs">
      <property name="text">
-      <string>Initial number of v&amp;CPUs:</string>
+      <string>Initial number of vCPUs:</string>
      </property>
     </widget>
    </item>
@@ -82,111 +80,107 @@
     </widget>
    </item>
    <item row="6" column="0" colspan="3">
-    <widget class="QWidget" name="priorityPanel">
-     <layout class="QVBoxLayout" name="priorityLayout">
-      <item>
-       <widget class="QSlider" name="cpuPrioritySlider">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="tickPosition">
-         <enum>QSlider::TicksBelow</enum>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="priorityLabelsLayout">
-        <item>
-         <widget class="QLabel" name="labelPriorityLowest">
-          <property name="text">
-           <string>Lowest</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="prioritySpacerLeft">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QLabel" name="labelPriorityNormal">
-          <property name="text">
-           <string>Normal</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="prioritySpacerRight">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QLabel" name="labelPriorityHighest">
-          <property name="text">
-           <string>Highest</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-     </layout>
-    </widget>
+    <layout class="QVBoxLayout" name="priorityLayout">
+     <item>
+      <widget class="QSlider" name="cpuPrioritySlider">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="tickPosition">
+        <enum>QSlider::TickPosition::TicksBelow</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="priorityLabelsLayout">
+       <item>
+        <widget class="QLabel" name="labelPriorityLowest">
+         <property name="text">
+          <string>Lowest</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="prioritySpacerLeft">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelPriorityNormal">
+         <property name="text">
+          <string>Normal</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="prioritySpacerRight">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelPriorityHighest">
+         <property name="text">
+          <string>Highest</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
    </item>
    <item row="7" column="0" colspan="3">
-    <widget class="QWidget" name="warningsPanel">
-     <layout class="QGridLayout" name="warningsLayout">
-      <item row="0" column="0">
-       <widget class="QLabel" name="cpuWarningIcon">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QLabel" name="cpuWarningLabel">
-        <property name="text">
-         <string/>
-        </property>
-        <property name="wordWrap">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="topologyWarningIcon">
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLabel" name="topologyWarningLabel">
-        <property name="text">
-         <string/>
-        </property>
-        <property name="wordWrap">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
+    <layout class="QGridLayout" name="warningsLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="cpuWarningIcon">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLabel" name="cpuWarningLabel">
+       <property name="text">
+        <string/>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="topologyWarningIcon">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLabel" name="topologyWarningLabel">
+       <property name="text">
+        <string/>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
