@@ -236,6 +236,7 @@ class MainWindow : public QMainWindow
         void onSetDefaultSR();
         void onNewSR();
         void onStorageProperties();
+        void onTrimSR();
 
         // Menu action slots (Network menu)
         void onNewNetwork();

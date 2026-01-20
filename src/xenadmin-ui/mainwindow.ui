@@ -159,6 +159,7 @@
     <addaction name="separator"/>
     <addaction name="RepairStorageToolStripMenuItem"/>
     <addaction name="DefaultSRToolStripMenuItem"/>
+    <addaction name="reclaimFreedSpaceToolStripMenuItem"/>
     <addaction name="separator"/>
     <widget class="QMenu" name="menuVirtualDisks">
      <property name="title">
@@ -923,6 +924,14 @@
    </property>
    <property name="statusTip">
     <string>Set this storage repository as the pool default</string>
+   </property>
+  </action>
+  <action name="reclaimFreedSpaceToolStripMenuItem">
+   <property name="text">
+    <string>Re&amp;claim Freed Space...</string>
+   </property>
+   <property name="statusTip">
+    <string>Reclaim freed space from this storage repository</string>
    </property>
   </action>
   <action name="virtualDisksToolStripMenuItem">

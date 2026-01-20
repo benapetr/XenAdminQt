@@ -145,6 +145,7 @@
 #include "commands/storage/reattachsrcommand.h"
 #include "commands/storage/forgetsrcommand.h"
 #include "commands/storage/destroysrcommand.h"
+#include "commands/storage/trimsrcommand.h"
 
 // Network commands
 #include "commands/network/newnetworkcommand.h"
@@ -2377,6 +2378,7 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->ForgetStorageRepositoryToolStripMenuItem->setEnabled(this->m_commands["ForgetSR"]->CanRun());
     this->ui->DestroyStorageRepositoryToolStripMenuItem->setEnabled(this->m_commands["DestroySR"]->CanRun());
     this->ui->RepairStorageToolStripMenuItem->setEnabled(this->m_commands["RepairSR"]->CanRun());
+    this->ui->reclaimFreedSpaceToolStripMenuItem->setEnabled(this->m_commands["TrimSR"]->CanRun());
     this->ui->DefaultSRToolStripMenuItem->setEnabled(this->m_commands["SetDefaultSR"]->CanRun());
     this->ui->newStorageRepositoryAction->setEnabled(this->m_commands["NewSR"]->CanRun());
     this->ui->SRPropertiesToolStripMenuItem->setEnabled(this->m_commands["StorageProperties"]->CanRun());
@@ -2953,6 +2955,12 @@ void MainWindow::onSetDefaultSR()
         this->m_commands["SetDefaultSR"]->Run();
 }
 
+void MainWindow::onTrimSR()
+{
+    if (this->m_commands.contains("TrimSR"))
+        this->m_commands["TrimSR"]->Run();
+}
+
 void MainWindow::onNewSR()
 {
     if (this->m_commands.contains("NewSR"))
@@ -3078,6 +3086,7 @@ void MainWindow::initializeCommands()
     this->m_commands["ReattachSR"] = new ReattachSRCommand(this, this);
     this->m_commands["ForgetSR"] = new ForgetSRCommand(this, this);
     this->m_commands["DestroySR"] = new DestroySRCommand(this, this);
+    this->m_commands["TrimSR"] = new TrimSRCommand(this, this);
 
     // Network commands
     this->m_commands["NewNetwork"] = new NewNetworkCommand(this, this);
@@ -3152,6 +3161,7 @@ void MainWindow::connectMenuActions()
     connect(this->ui->ForgetStorageRepositoryToolStripMenuItem, &QAction::triggered, this, &MainWindow::onForgetSR);
     connect(this->ui->DestroyStorageRepositoryToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDestroySR);
     connect(this->ui->RepairStorageToolStripMenuItem, &QAction::triggered, this, &MainWindow::onRepairSR);
+    connect(this->ui->reclaimFreedSpaceToolStripMenuItem, &QAction::triggered, this, &MainWindow::onTrimSR);
     connect(this->ui->DefaultSRToolStripMenuItem, &QAction::triggered, this, &MainWindow::onSetDefaultSR);
     connect(this->ui->newStorageRepositoryAction, &QAction::triggered, this, &MainWindow::onNewSR);
     connect(this->ui->SRPropertiesToolStripMenuItem, &QAction::triggered, this, &MainWindow::onStorageProperties);
