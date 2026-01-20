@@ -64,6 +64,12 @@ VMMoveAction::VMMoveAction(QSharedPointer<VM> vm,
         SetHost(this->m_host);
     if (this->m_sr)
         SetSR(this->m_sr);
+
+    AddApiMethodToRoleCheck("VM.copy");
+    AddApiMethodToRoleCheck("VM.set_name_description");
+    AddApiMethodToRoleCheck("VM.set_suspend_SR");
+    AddApiMethodToRoleCheck("VM.destroy");
+    AddApiMethodToRoleCheck("VDI.destroy");
 }
 
 VMMoveAction::VMMoveAction(QSharedPointer<VM> vm,

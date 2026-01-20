@@ -59,6 +59,8 @@
 #include "vm/forcerebootvmcommand.h"
 #include "../controls/vmoperationmenu.h"
 #include "vm/clonevmcommand.h"
+#include "vm/copyvmcommand.h"
+#include "vm/movevmcommand.h"
 #include "vm/deletevmcommand.h"
 #include "vm/convertvmtotemplatecommand.h"
 #include "vm/exportvmcommand.h"
@@ -404,9 +406,12 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 
     this->addSeparator(menu);
 
-    // VM management operations
-    CloneVMCommand* cloneCmd = new CloneVMCommand(this->m_mainWindow, this);
-    this->addCommand(menu, cloneCmd);
+    // VM management operations (match C# context menu)
+    CopyVMCommand* copyCmd = new CopyVMCommand(this->m_mainWindow, this);
+    this->addCommand(menu, copyCmd);
+
+    MoveVMCommand* moveCmd = new MoveVMCommand(this->m_mainWindow, this);
+    this->addCommand(menu, moveCmd);
 
     ExportVMCommand* exportCmd = new ExportVMCommand(this->m_mainWindow, this);
     this->addCommand(menu, exportCmd);

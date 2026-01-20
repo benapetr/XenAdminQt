@@ -25,25 +25,57 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef COPYVMCOMMAND_H
-#define COPYVMCOMMAND_H
+// copyvmdialog.h - Dialog for copying VMs and templates
+// Matches C# XenAdmin.Dialogs.CopyVMDialog
+#ifndef COPYVMDIALOG_H
+#define COPYVMDIALOG_H
 
-#include "vmcommand.h"
+#include <QDialog>
+#include <QSharedPointer>
 
-class CopyVMCommand : public VMCommand
+namespace Ui
+{
+    class CopyVMDialog;
+}
+
+class VM;
+class XenConnection;
+
+class CopyVMDialog : public QDialog
 {
     Q_OBJECT
 
     public:
-        explicit CopyVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit CopyVMDialog(QSharedPointer<VM> vm, QWidget* parent = nullptr);
+        ~CopyVMDialog();
 
-        // Inherited from VMCommand
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
+        QString getName() const;
+        QString getDescription() const;
+        bool isFastClone() const;
+        QString getSelectedSR() const;
+
+    protected:
+        void showEvent(QShowEvent* event) override;
+
+    private slots:
+        void onNameTextChanged();
+        void onDescriptionTextChanged();
+        void onCloneRadioToggled(bool checked);
+        void onCopyRadioToggled(bool checked);
+        void onRescanClicked();
+        void onSrPickerSelectionChanged();
+        void onSrPickerCanBeScannedChanged();
+        void accept() override;
 
     private:
-        bool canLaunchCrossPoolWizard() const;
+        Ui::CopyVMDialog* ui;
+        QSharedPointer<VM> m_vm;
+        XenConnection* m_connection;
+        
+        void initialize();
+        void enableMoveButton();
+        void enableRescanButton();
+        QString getDefaultCopyName(QSharedPointer<VM> vmToCopy);
 };
 
-#endif // COPYVMCOMMAND_H
+#endif // COPYVMDIALOG_H

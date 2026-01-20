@@ -28,16 +28,11 @@
 #include "movevmcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/crosspoolmigratewizard.h"
+#include "../../dialogs/movevmdialog.h"
+#include "../vm/crosspoolmovevmcommand.h"
 #include "xen/vbd.h"
 #include "xen/vdi.h"
 #include "xenlib/xen/vm.h"
-#include "xenlib/xen/sr.h"
-#include "xenlib/xen/actions/vm/vmmoveaction.h"
-#include "../../operations/operationmanager.h"
-#include "../vm/crosspoolmigratecommand.h"
-#include "xenlib/xencache.h"
-#include <QInputDialog>
-#include <QMessageBox>
 
 MoveVMCommand::MoveVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
@@ -49,23 +44,13 @@ bool MoveVMCommand::CanRun() const
     if (!vm)
         return false;
 
-    XenConnection* connection = vm->GetConnection();
-    XenCache* cache = connection ? connection->GetCache() : nullptr;
-    if (!cache)
+    if (!this->isCBTDisabled())
         return false;
 
-    QList<QSharedPointer<VBD>> vbds = vm->GetVBDs();
-    foreach (QSharedPointer<VBD> vbd, vbds)
-    {
-        QSharedPointer<VDI> vdi = vbd->GetVDI();
-        if (!vdi)
-            continue;
+    if (this->canLaunchCrossPoolWizard())
+        return true;
 
-        if (vdi->IsCBTEnabled())
-            return false;
-    }
-
-    return this->canVMBeMoved();
+    return vm->CanBeMoved();
 }
 
 void MoveVMCommand::Run()
@@ -74,68 +59,50 @@ void MoveVMCommand::Run()
     if (!vm)
         return;
 
-    CrossPoolMigrateCommand crossPoolCmd(this->mainWindow(), CrossPoolMigrateWizard::WizardMode::Move, this->mainWindow());
-    if (crossPoolCmd.CanRun())
+    if (this->canLaunchCrossPoolWizard())
     {
-        CrossPoolMigrateWizard wizard(this->mainWindow(), vm, CrossPoolMigrateWizard::WizardMode::Move);
+        CrossPoolMigrateWizard::WizardMode mode = CrossPoolMoveVMCommand::GetWizardMode(vm);
+        CrossPoolMigrateWizard wizard(this->mainWindow(), vm, mode);
         wizard.exec();
         return;
     }
 
-    XenConnection* connection = vm->GetConnection();
-    XenCache* cache = connection ? connection->GetCache() : nullptr;
-    if (!cache)
-        return;
-
-    QStringList srRefs = cache->GetAllRefs("sr");
-    QStringList srNames;
-    QList<QString> eligibleRefs;
-    for (const QString& srRef : srRefs)
-    {
-        QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-        QString type = srData.value("type").toString();
-        QString content = srData.value("content_type").toString();
-        if (type == "iso" || content == "iso")
-            continue;
-        srNames.append(srData.value("name_label", "SR").toString());
-        eligibleRefs.append(srRef);
-    }
-
-    if (eligibleRefs.isEmpty())
-    {
-        QMessageBox::warning(this->mainWindow(), tr("Move VM"), tr("No suitable SRs available for move."));
-        return;
-    }
-
-    bool ok = false;
-    QString selectedName = QInputDialog::getItem(this->mainWindow(), tr("Move VM"), tr("Select target SR:"), srNames, 0, false, &ok);
-    if (!ok || selectedName.isEmpty())
-        return;
-
-    int idx = srNames.indexOf(selectedName);
-    if (idx < 0 || idx >= eligibleRefs.size())
-        return;
-
-    QString srRef = eligibleRefs.at(idx);
-    QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
-    if (!srObj || !srObj->IsValid())
-        return;
-
-    VMMoveAction* action = new VMMoveAction(vm, srObj, QSharedPointer<Host>(), this->mainWindow());
-    OperationManager::instance()->RegisterOperation(action);
-    action->RunAsync();
+    MoveVMDialog dialog(vm, this->mainWindow());
+    dialog.exec();
 }
 
 QString MoveVMCommand::MenuText() const
 {
+    QSharedPointer<VM> vm = this->getVM();
+    if (this->canLaunchCrossPoolWizard() && CrossPoolMoveVMCommand::GetWizardMode(vm) == CrossPoolMigrateWizard::WizardMode::Migrate)
+        return "Migrate VM...";
+
     return "Move VM...";
 }
 
-bool MoveVMCommand::canVMBeMoved() const
+bool MoveVMCommand::isCBTDisabled() const
 {
     QSharedPointer<VM> vm = this->getVM();
     if (!vm)
         return false;
 
-    return vm->CanBeMoved();
+    QList<QSharedPointer<VBD>> vbds = vm->GetVBDs();
+    for (const QSharedPointer<VBD>& vbd : vbds)
+    {
+        QSharedPointer<VDI> vdi = vbd ? vbd->GetVDI() : QSharedPointer<VDI>();
+        if (vdi && vdi->IsCBTEnabled())
+            return false;
+    }
+
+    return true;
+}
+
+bool MoveVMCommand::canLaunchCrossPoolWizard() const
+{
+    QSharedPointer<VM> vm = this->getVM();
+    if (!vm)
+        return false;
+
+    CrossPoolMoveVMCommand crossPoolCmd(this->mainWindow(), this->mainWindow());
+    return crossPoolCmd.CanRun();
 }

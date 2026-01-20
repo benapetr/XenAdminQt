@@ -1,7 +1,6 @@
 # Status of code migration from original C#
 
 # Needs work
-* Menu items
 * Tree view - should show Virtual Disks, Networks in objects view
 * Pool HA tab missing
 * Templates are being displayed in same way as VMs (all tabs, including console)
@@ -24,6 +23,7 @@
 * Memory tabs - they already work, but could look better, especially list of VMs
 * Console - it works most of the time, but there are random scaling issues during boot, RDP not supported
 * UI - menus and toolbar buttons sometime don't refresh on events (unpause -> still shows force shutdown)
+* Menu items - some of them may still be missing, but they are mostly fine now
 
 # Needs testing
 * VM disk resize
@@ -54,3 +54,5 @@
 * General tab
 * Host command -> Restart toolstack
 
+# Known issues
+* When quitting the app sometimes the "pending ops" window appears that's empty

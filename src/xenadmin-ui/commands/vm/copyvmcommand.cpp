@@ -28,6 +28,8 @@
 #include "copyvmcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/crosspoolmigratewizard.h"
+#include "../../dialogs/copyvmdialog.h"
+#include "../vm/crosspoolmigratecommand.h"
 #include "xenlib/xen/vm.h"
 #include <QMessageBox>
 
@@ -41,8 +43,17 @@ bool CopyVMCommand::CanRun() const
     if (!vm)
         return false;
 
-    // Can copy if VM is not locked and copy/clone operation is allowed
-    return !this->isVMLocked() && this->canVMBeCopied();
+    if (vm->IsTemplate() || vm->IsSnapshot() || !vm->CurrentOperations().isEmpty())
+        return false;
+
+    if (this->canLaunchCrossPoolWizard())
+        return true;
+
+    const QStringList allowedOps = vm->GetAllowedOperations();
+    if (!allowedOps.contains("export"))
+        return false;
+
+    return vm->GetPowerState() != "Suspended";
 }
 
 void CopyVMCommand::Run()
@@ -51,38 +62,31 @@ void CopyVMCommand::Run()
     if (!vm)
         return;
 
-    CrossPoolMigrateWizard wizard(this->mainWindow(), vm, CrossPoolMigrateWizard::WizardMode::Copy);
-    wizard.exec();
+    if (this->canLaunchCrossPoolWizard())
+    {
+        CrossPoolMigrateWizard wizard(this->mainWindow(), vm, CrossPoolMigrateWizard::WizardMode::Copy);
+        wizard.exec();
+        return;
+    }
+
+    CopyVMDialog dialog(vm, this->mainWindow());
+    dialog.exec();
 }
 
 QString CopyVMCommand::MenuText() const
 {
-    return "Copy VM to Shared Storage...";
+    return "Copy VM...";
 }
 
-bool CopyVMCommand::isVMLocked() const
-{
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return true;
-
-    // Check if VM has current operations that would lock it
-    return !vm->CurrentOperations().isEmpty();
-}
-
-bool CopyVMCommand::canVMBeCopied() const
+bool CopyVMCommand::canLaunchCrossPoolWizard() const
 {
     QSharedPointer<VM> vm = this->getVM();
     if (!vm)
         return false;
 
-    // Check if VM is a template or snapshot
-    if (vm->IsTemplate())
-        return false;
-    if (vm->IsSnapshot())
+    if (vm->GetPowerState() != "Halted")
         return false;
 
-    // Check if clone operation is allowed
-    const QStringList allowedOps = vm->GetAllowedOperations();
-    return allowedOps.contains("clone") || allowedOps.contains("copy");
+    CrossPoolMigrateCommand crossPoolCmd(this->mainWindow(), CrossPoolMigrateWizard::WizardMode::Copy, false, this->mainWindow());
+    return crossPoolCmd.CanRun();
 }

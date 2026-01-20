@@ -43,7 +43,8 @@ class MoveVMCommand : public VMCommand
         QString MenuText() const override;
 
     private:
-        bool canVMBeMoved() const;
+        bool isCBTDisabled() const;
+        bool canLaunchCrossPoolWizard() const;
 };
 
 #endif // MOVEVMCOMMAND_H

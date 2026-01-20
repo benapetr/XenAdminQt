@@ -41,7 +41,10 @@ class CrossPoolMigrateCommand : public VMCommand
     Q_OBJECT
 
     public:
-        explicit CrossPoolMigrateCommand(MainWindow* mainWindow, CrossPoolMigrateWizard::WizardMode mode = CrossPoolMigrateWizard::WizardMode::Migrate, QObject* parent = nullptr);
+        explicit CrossPoolMigrateCommand(MainWindow* mainWindow,
+                                         CrossPoolMigrateWizard::WizardMode mode = CrossPoolMigrateWizard::WizardMode::Migrate,
+                                         bool resumeAfterMigrate = false,
+                                         QObject* parent = nullptr);
 
         bool CanRun() const override;
         void Run() override;
@@ -49,6 +52,7 @@ class CrossPoolMigrateCommand : public VMCommand
 
     private:
         CrossPoolMigrateWizard::WizardMode m_mode;
+        bool m_resumeAfterMigrate = false;
 };
 
 #endif // CROSSPOOLMIGRATECOMMAND_H

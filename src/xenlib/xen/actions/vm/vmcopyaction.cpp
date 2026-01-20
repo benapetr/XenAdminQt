@@ -63,6 +63,9 @@ VMCopyAction::VMCopyAction(QSharedPointer<VM> vm,
     if (this->m_host)
         SetHost(this->m_host);
 
+    AddApiMethodToRoleCheck("VM.copy");
+    AddApiMethodToRoleCheck("VM.set_name_description");
+
     // If VM is a template, set template context
     if (this->m_vm->IsTemplate())
         SetTemplate(this->m_vm);

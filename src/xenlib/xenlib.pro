@@ -155,6 +155,7 @@ HEADERS += \
     xen/actions/vm/vmstartonaction.h \
     xen/actions/vm/vmresumeaction.h \
     xen/actions/vm/vmresumeonaction.h \
+    xen/actions/vm/resumeandstartvmsaction.h \
     xen/actions/vm/vmshutdownaction.h \
     xen/actions/vm/vmrebootaction.h \
     xen/actions/vm/vmpauseaction.h \
@@ -370,6 +371,7 @@ SOURCES += \
     xen/actions/vm/vmstartonaction.cpp \
     xen/actions/vm/vmresumeaction.cpp \
     xen/actions/vm/vmresumeonaction.cpp \
+    xen/actions/vm/resumeandstartvmsaction.cpp \
     xen/actions/vm/vmshutdownaction.cpp \
     xen/actions/vm/vmrebootaction.cpp \
     xen/actions/vm/vmpauseaction.cpp \

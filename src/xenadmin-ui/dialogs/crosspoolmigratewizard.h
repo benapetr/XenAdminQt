@@ -64,11 +64,13 @@ class CrossPoolMigrateWizard : public QWizard
         explicit CrossPoolMigrateWizard(MainWindow* mainWindow,
                                         const QSharedPointer<VM>& vm,
                                         WizardMode mode,
+                                        bool resumeAfterMigrate = false,
                                         QWidget* parent = nullptr);
 
         explicit CrossPoolMigrateWizard(MainWindow* mainWindow,
                                         const QList<QSharedPointer<VM>>& vms,
                                         WizardMode mode,
+                                        bool resumeAfterMigrate = false,
                                         QWidget* parent = nullptr);
 
         bool requiresRbacWarning() const;
@@ -101,6 +103,7 @@ class CrossPoolMigrateWizard : public QWizard
         XenConnection* m_targetConnection = nullptr;
         WizardMode m_mode;
         bool m_requiresRbacWarning = false;
+        bool m_resumeAfterMigrate = false;
 
         QString m_targetHostRef;
         QString m_transferNetworkRef;

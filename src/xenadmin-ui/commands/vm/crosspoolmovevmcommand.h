@@ -25,25 +25,49 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef COPYVMCOMMAND_H
-#define COPYVMCOMMAND_H
+#ifndef CROSSPOOLMOVEVMCOMMAND_H
+#define CROSSPOOLMOVEVMCOMMAND_H
 
-#include "vmcommand.h"
+#include "crosspoolmigratecommand.h"
 
-class CopyVMCommand : public VMCommand
+/**
+ * @brief Cross-pool move VM command
+ *
+ * Qt port of C# XenAdmin.Commands.CrossPoolMoveVMCommand
+ *
+ * This command moves a halted or suspended VM to a different pool.
+ * It inherits from CrossPoolMigrateCommand but with different restrictions:
+ * - Only works on halted or suspended VMs (not running)
+ * - Uses WizardMode::Move
+ * - Different menu text
+ *
+ * C# location: XenAdmin/Commands/CrossPoolMoveVMCommand.cs
+ */
+class CrossPoolMoveVMCommand : public CrossPoolMigrateCommand
 {
     Q_OBJECT
 
     public:
-        explicit CopyVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit CrossPoolMoveVMCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
-        // Inherited from VMCommand
+        // Inherited from Command
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
 
-    private:
-        bool canLaunchCrossPoolWizard() const;
+        /**
+         * @brief Check if a specific VM can be moved cross-pool
+         * @param vm VM to check
+         * @return true if VM can be moved
+         */
+        static bool CanRunOnVM(QSharedPointer<VM> vm);
+
+        /**
+         * @brief Get the appropriate wizard mode based on VM power state
+         * @param vm VM to check
+         * @return WizardMode::Migrate if suspended, WizardMode::Move otherwise
+         */
+        static CrossPoolMigrateWizard::WizardMode GetWizardMode(QSharedPointer<VM> vm);
 };
 
-#endif // COPYVMCOMMAND_H
+#endif // CROSSPOOLMOVEVMCOMMAND_H

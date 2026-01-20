@@ -41,6 +41,8 @@
 #include "xen/actions/vm/vmmoveaction.h"
 #include "xen/actions/vm/vmcopyaction.h"
 #include "xen/actions/vm/vmcloneaction.h"
+#include "xen/actions/vm/resumeandstartvmsaction.h"
+#include "xenlib/operations/multipleoperation.h"
 #include "../controls/srpicker.h"
 #include "xen/network/connectionsmanager.h"
 #include "xen/xenapi/xenapi_Host.h"
@@ -303,10 +305,12 @@ namespace
 CrossPoolMigrateWizard::CrossPoolMigrateWizard(MainWindow* mainWindow,
                                                const QSharedPointer<VM>& vm,
                                                WizardMode mode,
+                                               bool resumeAfterMigrate,
                                                QWidget* parent)
     : CrossPoolMigrateWizard(mainWindow,
                              vm ? QList<QSharedPointer<VM>>{vm} : QList<QSharedPointer<VM>>(),
                              mode,
+                             resumeAfterMigrate,
                              parent)
 {
 }
@@ -314,12 +318,14 @@ CrossPoolMigrateWizard::CrossPoolMigrateWizard(MainWindow* mainWindow,
 CrossPoolMigrateWizard::CrossPoolMigrateWizard(MainWindow* mainWindow,
                                                const QList<QSharedPointer<VM>>& vms,
                                                WizardMode mode,
+                                               bool resumeAfterMigrate,
                                                QWidget* parent)
     : QWizard(parent),
       m_mainWindow(mainWindow),
       m_vms(vms),
       m_sourceConnection(vms.isEmpty() ? nullptr : vms.first()->GetConnection()),
-      m_mode(mode)
+      m_mode(mode),
+      m_resumeAfterMigrate(resumeAfterMigrate)
 {
     if (this->m_mode == WizardMode::Copy)
         this->setWindowTitle(tr("Copy VM Wizard"));
@@ -840,9 +846,10 @@ void CrossPoolMigrateWizard::accept()
         } else
         {
             bool useCrossPool = (this->m_mode == WizardMode::Copy) || hasStorageMotion || !sameConnection;
+            AsyncOperation* migrateAction = nullptr;
             if (useCrossPool)
             {
-                VMCrossPoolMigrateAction* action = new VMCrossPoolMigrateAction(
+                migrateAction = new VMCrossPoolMigrateAction(
                     this->m_sourceConnection,
                     this->m_targetConnection,
                     vm->OpaqueRef(),
@@ -851,15 +858,47 @@ void CrossPoolMigrateWizard::accept()
                     mapping,
                     this->m_mode == WizardMode::Copy,
                     this);
-
-                OperationManager::instance()->RegisterOperation(action);
-                action->RunAsync();
             } else
             {
                 QSharedPointer<Host> host = vm->GetCache()->ResolveObject<Host>("host", this->m_targetHostRef);
-                VMMigrateAction* action = new VMMigrateAction(vm, host, this);
-                OperationManager::instance()->RegisterOperation(action);
-                action->RunAsync();
+                migrateAction = new VMMigrateAction(vm, host, this);
+            }
+
+            if (this->m_resumeAfterMigrate && this->m_mode == WizardMode::Migrate && migrateAction)
+            {
+                QSharedPointer<Host> host = vm->GetCache()->ResolveObject<Host>("host", this->m_targetHostRef);
+                QList<QSharedPointer<VM>> resumeList;
+                resumeList.append(vm);
+                ResumeAndStartVMsAction* resumeAction = new ResumeAndStartVMsAction(
+                    vm->GetConnection(),
+                    host,
+                    resumeList,
+                    QList<QSharedPointer<VM>>(),
+                    nullptr,
+                    nullptr,
+                    this);
+
+                QList<AsyncOperation*> actions;
+                actions.append(migrateAction);
+                actions.append(resumeAction);
+
+                MultipleOperation* multi = new MultipleOperation(
+                    vm->GetConnection(),
+                    migrateAction->GetTitle(),
+                    tr("Migrating VM..."),
+                    tr("VM migrated"),
+                    actions,
+                    true,
+                    false,
+                    true,
+                    this);
+
+                OperationManager::instance()->RegisterOperation(multi);
+                multi->RunAsync();
+            } else if (migrateAction)
+            {
+                OperationManager::instance()->RegisterOperation(migrateAction);
+                migrateAction->RunAsync();
             }
         }
     }

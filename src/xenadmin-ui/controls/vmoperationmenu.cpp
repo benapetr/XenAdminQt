@@ -384,7 +384,7 @@ void VMOperationMenu::AddAdditionalMenuItems()
     QAction* separator = this->addSeparator();
     this->m_additionalActions.append(separator);
 
-    CrossPoolMigrateCommand* cmd = new CrossPoolMigrateCommand(this->m_mainWindow, CrossPoolMigrateWizard::WizardMode::Migrate, this);
+    CrossPoolMigrateCommand* cmd = new CrossPoolMigrateCommand(this->m_mainWindow, CrossPoolMigrateWizard::WizardMode::Migrate, false, this);
     cmd->SetSelection(this->getSelectionRefs());
 
     QAction* action = this->addAction(cmd->MenuText());

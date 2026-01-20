@@ -30,6 +30,8 @@ SOURCES += \
     dialogs/ballooningdialog.cpp \
     dialogs/commanderrordialog.cpp \
     dialogs/confirmvmdeletedialog.cpp \
+    dialogs/copyvmdialog.cpp \
+    dialogs/movevmdialog.cpp \
     dialogs/newvmwizard.cpp \
     dialogs/importwizard.cpp \
     dialogs/exportwizard.cpp \
@@ -141,6 +143,7 @@ SOURCES += \
     commands/vm/forceshutdownvmcommand.cpp \
     commands/vm/forcerebootvmcommand.cpp \
     commands/vm/crosspoolmigratecommand.cpp \
+    commands/vm/crosspoolmovevmcommand.cpp \
     commands/vm/clonevmcommand.cpp \
     commands/vm/vmlifecyclecommand.cpp \
     commands/vm/copyvmcommand.cpp \
@@ -275,6 +278,8 @@ HEADERS += \
     dialogs/ballooningdialog.h \
     dialogs/commanderrordialog.h \
     dialogs/confirmvmdeletedialog.h \
+    dialogs/copyvmdialog.h \
+    dialogs/movevmdialog.h \
     dialogs/newvmwizard.h \
     dialogs/importwizard.h \
     dialogs/exportwizard.h \
@@ -390,6 +395,7 @@ HEADERS += \
     commands/vm/forceshutdownvmcommand.h \
     commands/vm/forcerebootvmcommand.h \
     commands/vm/crosspoolmigratecommand.h \
+    commands/vm/crosspoolmovevmcommand.h \
     commands/vm/clonevmcommand.h \
     commands/vm/vmlifecyclecommand.h \
     commands/vm/copyvmcommand.h \
@@ -510,6 +516,8 @@ FORMS += \
     dialogs/ballooningdialog.ui \
     dialogs/commanderrordialog.ui \
     dialogs/confirmvmdeletedialog.ui \
+    dialogs/copyvmdialog.ui \
+    dialogs/movevmdialog.ui \
     dialogs/newpooldialog.ui \
     dialogs/bondpropertiesdialog.ui \
     dialogs/repairsrdialog.ui \

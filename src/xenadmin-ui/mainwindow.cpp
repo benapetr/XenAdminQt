@@ -2343,6 +2343,7 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->startShutdownToolStripMenuItem->setEnabled(this->m_commands["VMLifeCycle"]->CanRun());
     this->ui->copyVMtoSharedStorageMenuItem->setEnabled(this->m_commands["CopyVM"]->CanRun());
     this->ui->MoveVMToolStripMenuItem->setEnabled(this->m_commands["MoveVM"]->CanRun());
+    this->ui->MoveVMToolStripMenuItem->setText(this->m_commands["MoveVM"]->MenuText());
     this->ui->installToolsToolStripMenuItem->setEnabled(this->m_commands["InstallTools"]->CanRun());
     this->ui->uninstallToolStripMenuItem->setEnabled(this->m_commands["UninstallVM"]->CanRun());
     this->ui->VMPropertiesToolStripMenuItem->setEnabled(this->m_commands["VMProperties"]->CanRun());
