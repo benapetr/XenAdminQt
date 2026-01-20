@@ -36,7 +36,6 @@
 #include "../controls/hostmemoryrow.h"
 #include "../widgets/vmmemoryrow.h"
 #include "../dialogs/ballooningdialog.h"
-#include <cmath>
 #include <algorithm>
 
 MemoryTabPage::MemoryTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::MemoryTabPage)
@@ -77,9 +76,17 @@ void MemoryTabPage::refreshContent()
 
     if (this->m_object->GetObjectType() == "vm")
     {
+        this->ui->horizontalSpacer->changeSize(0, 0, QSizePolicy::Expanding, QSizePolicy::Minimum);
+        this->ui->editButton->setVisible(true);
+        this->ui->verticalSpacer->changeSize(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        this->ui->verticalLayout->invalidate();
         this->populateVMMemory();
     } else if (this->m_object->GetObjectType() == "host")
     {
+        this->ui->editButton->setVisible(false);
+        this->ui->horizontalSpacer->changeSize(0, 0, QSizePolicy::Minimum, QSizePolicy::Minimum);
+        this->ui->verticalSpacer->changeSize(0, 0, QSizePolicy::Minimum, QSizePolicy::Minimum);
+        this->ui->verticalLayout->invalidate();
         this->populateHostMemory();
     }
 }
