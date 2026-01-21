@@ -75,9 +75,7 @@ void PauseVMCommand::Run()
         if (!vm)
             return;
 
-        // Get XenConnection from VM
-        XenConnection* conn = vm->GetConnection();
-        if (!conn || !conn->IsConnected())
+        if (!vm->IsConnected())
         {
             QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
             return;
@@ -90,7 +88,7 @@ void PauseVMCommand::Run()
         OperationManager::instance()->RegisterOperation(action);
 
         // Connect completion signal for cleanup
-        connect(action, &AsyncOperation::completed, this, [action]() {
+        connect(action, &AsyncOperation::completed, action, [action]() {
             // Auto-delete when complete
             action->deleteLater();
         });

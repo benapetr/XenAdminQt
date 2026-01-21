@@ -32,6 +32,7 @@
 #include <QSharedPointer>
 #include <QMap>
 #include <QList>
+#include <QVector>
 #include "xen/mappings/vmmapping.h"
 
 class MainWindow;
@@ -43,6 +44,10 @@ class QPushButton;
 class QTableWidget;
 class QTextEdit;
 class QWizardPage;
+class QLabel;
+class QCheckBox;
+class WizardNavigationPane;
+namespace Ui { class CrossPoolMigrateWizard; }
 
 /**
  * @brief Cross pool migration wizard
@@ -61,17 +66,10 @@ class CrossPoolMigrateWizard : public QWizard
             Copy
         };
 
-        explicit CrossPoolMigrateWizard(MainWindow* mainWindow,
-                                        const QSharedPointer<VM>& vm,
-                                        WizardMode mode,
-                                        bool resumeAfterMigrate = false,
-                                        QWidget* parent = nullptr);
+        explicit CrossPoolMigrateWizard(MainWindow* mainWindow, const QSharedPointer<VM>& vm, WizardMode mode, bool resumeAfterMigrate = false, QWidget* parent = nullptr);
 
-        explicit CrossPoolMigrateWizard(MainWindow* mainWindow,
-                                        const QList<QSharedPointer<VM>>& vms,
-                                        WizardMode mode,
-                                        bool resumeAfterMigrate = false,
-                                        QWidget* parent = nullptr);
+        explicit CrossPoolMigrateWizard(MainWindow* mainWindow, const QList<QSharedPointer<VM>>& vms, WizardMode mode, bool resumeAfterMigrate = false, QWidget* parent = nullptr);
+        ~CrossPoolMigrateWizard() override;
 
         bool requiresRbacWarning() const;
         bool isIntraPoolCopySelected() const;
@@ -97,6 +95,7 @@ class CrossPoolMigrateWizard : public QWizard
         };
 
     private:
+        Ui::CrossPoolMigrateWizard* ui;
         MainWindow* m_mainWindow;
         QList<QSharedPointer<VM>> m_vms;
         XenConnection* m_sourceConnection = nullptr;
@@ -106,28 +105,35 @@ class CrossPoolMigrateWizard : public QWizard
         bool m_resumeAfterMigrate = false;
 
         QString m_targetHostRef;
+        QString m_targetPoolRef;
         QString m_transferNetworkRef;
 
         QWizardPage* m_rbacPage = nullptr;
+        QLabel* m_rbacInfoLabel = nullptr;
+        QCheckBox* m_rbacConfirm = nullptr;
         QWizardPage* m_copyModePage = nullptr;
         QWizardPage* m_intraPoolCopyPage = nullptr;
+        QWizardPage* m_destinationPage = nullptr;
+        QWizardPage* m_storagePage = nullptr;
+        QWizardPage* m_networkPage = nullptr;
+        QWizardPage* m_transferPage = nullptr;
+        QWizardPage* m_finishPage = nullptr;
+        QComboBox* m_poolCombo = nullptr;
         QComboBox* m_hostCombo = nullptr;
         QTableWidget* m_storageTable = nullptr;
         QTableWidget* m_networkTable = nullptr;
         QComboBox* m_transferNetworkCombo = nullptr;
         QTextEdit* m_summaryText = nullptr;
-        class SrPicker* m_copySrPicker = nullptr;
-        class QLineEdit* m_copyNameEdit = nullptr;
-        QTextEdit* m_copyDescriptionEdit = nullptr;
-        class QRadioButton* m_copyIntraRadio = nullptr;
-        class QRadioButton* m_copyCrossRadio = nullptr;
-        class QRadioButton* m_copyCloneRadio = nullptr;
-        class QRadioButton* m_copyFullRadio = nullptr;
-        bool m_intraPoolCopySelected = false;
-        QPushButton* m_copyRescanButton = nullptr;
         QMap<QString, class VmMapping> m_vmMappings;
+        WizardNavigationPane* m_navigationPane = nullptr;
+        QVector<int> m_navigationSteps;
 
         void setupWizardPages();
+        void setupNavigationPane();
+        void updateNavigationPane();
+        void updateNavigationSelection();
+        void updateWizardPages();
+        void updateNextButtonVisibility();
         QWizardPage* createDestinationPage();
         QWizardPage* createStoragePage();
         QWizardPage* createNetworkPage();
@@ -138,11 +144,19 @@ class CrossPoolMigrateWizard : public QWizard
         QWizardPage* createIntraPoolCopyPage();
 
         void populateDestinationHosts();
+        void populateDestinationPools();
+        void populateHostsForPool(const QString& poolRef, XenConnection* connection, const QString& standaloneHostRef);
+        void updateDestinationMapping();
+        void updateStorageMapping();
+        void updateNetworkMapping();
         void populateStorageMappings();
         void populateNetworkMappings();
         void populateTransferNetworks();
         void updateSummary();
         void updateRbacRequirement();
+        QStringList requiredRbacMethods() const;
+        bool hasRbacPermissions(XenConnection* connection, const QStringList& methods) const;
+        bool allVMsAvailable() const;
         bool isIntraPoolMigration() const;
         bool isIntraPoolMove() const;
         bool requiresTransferNetwork() const;
@@ -163,13 +177,6 @@ class CrossPoolMigrateWizard : public QWizard
         QStringList collectSnapshotVifRefs(const QSharedPointer<VM>& vm) const;
 
         XenConnection* resolveTargetConnection(const QString& hostRef) const;
-
-        void onCopyIntraToggled(bool checked);
-        void onCopyCrossToggled(bool checked);
-        void onCopyCloneToggled(bool checked);
-        void onCopySrPickerCanBeScannedChanged();
-        void onCopySrPickerSelectionChanged();
-        void onCopyRescanClicked();
 };
 
 #endif // CROSSPOOLMIGRATEWIZARD_H

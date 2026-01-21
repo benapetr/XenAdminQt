@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>CrossPoolMigrateWizard</class>
+ <widget class="QWizard" name="CrossPoolMigrateWizard">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Cross Pool Migrate Wizard</string>
+  </property>
+  <widget class="DestinationWizardPage" name="pageDestination">
+   <property name="title">
+    <string>Destination</string>
+   </property>
+   <layout class="QFormLayout" name="destinationLayout">
+    <item row="0" column="0" colspan="2">
+     <widget class="QLabel" name="destinationIntroLabel">
+      <property name="text">
+       <string>Select the destination pool and host for the VM.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="poolLabel">
+      <property name="text">
+       <string>Target pool:</string>
+      </property>
+      <property name="buddy">
+       <cstring>poolComboBox</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QComboBox" name="poolComboBox"/>
+    </item>
+    <item row="2" column="0">
+     <widget class="QLabel" name="hostLabel">
+      <property name="text">
+       <string>Target host:</string>
+      </property>
+      <property name="buddy">
+       <cstring>hostComboBox</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QComboBox" name="hostComboBox"/>
+    </item>
+   </layout>
+  </widget>
+  <widget class="StorageWizardPage" name="pageStorage">
+   <property name="title">
+    <string>Storage</string>
+   </property>
+   <layout class="QVBoxLayout" name="storageLayout">
+    <item>
+     <widget class="QLabel" name="storageIntroLabel">
+      <property name="text">
+       <string>Select storage repositories for each virtual disk.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTableWidget" name="storageTable">
+      <property name="columnCount">
+       <number>3</number>
+      </property>
+      <column>
+       <property name="text">
+        <string>VM</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Virtual disk</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Target SR</string>
+       </property>
+      </column>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="NetworkWizardPage" name="pageNetwork">
+   <property name="title">
+    <string>Networking</string>
+   </property>
+   <layout class="QVBoxLayout" name="networkLayout">
+    <item>
+     <widget class="QLabel" name="networkIntroLabel">
+      <property name="text">
+       <string>Select networks for each virtual interface.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTableWidget" name="networkTable">
+      <property name="columnCount">
+       <number>3</number>
+      </property>
+      <column>
+       <property name="text">
+        <string>VM</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>VIF (MAC)</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Target Network</string>
+       </property>
+      </column>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="TransferWizardPage" name="pageTransfer">
+   <property name="title">
+    <string>Transfer Network</string>
+   </property>
+   <layout class="QFormLayout" name="transferLayout">
+    <item row="0" column="0" colspan="2">
+     <widget class="QLabel" name="transferIntroLabel">
+      <property name="text">
+       <string>Select the network used for transferring VM data.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="transferLabel">
+      <property name="text">
+       <string>Transfer network:</string>
+      </property>
+      <property name="buddy">
+       <cstring>transferNetworkComboBox</cstring>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QComboBox" name="transferNetworkComboBox"/>
+    </item>
+   </layout>
+  </widget>
+  <widget class="RbacWizardPage" name="pageRbac">
+   <property name="title">
+    <string>Permissions</string>
+   </property>
+   <layout class="QVBoxLayout" name="rbacLayout">
+    <item>
+     <widget class="QLabel" name="rbacInfoLabel">
+      <property name="text">
+       <string>The target connection may require permissions to perform cross-pool migration. If you do not have the required role, the operation will fail.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="rbacConfirmCheckBox">
+      <property name="text">
+       <string>I have the required permissions to continue.</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageFinish">
+   <property name="title">
+    <string>Finish</string>
+   </property>
+   <layout class="QVBoxLayout" name="finishLayout">
+    <item>
+     <widget class="QTextEdit" name="summaryTextEdit">
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>DestinationWizardPage</class>
+   <extends>QWizardPage</extends>
+   <header>dialogs/crosspoolmigratewizardpages.h</header>
+  </customwidget>
+  <customwidget>
+   <class>StorageWizardPage</class>
+   <extends>QWizardPage</extends>
+   <header>dialogs/crosspoolmigratewizardpages.h</header>
+  </customwidget>
+  <customwidget>
+   <class>NetworkWizardPage</class>
+   <extends>QWizardPage</extends>
+   <header>dialogs/crosspoolmigratewizardpages.h</header>
+  </customwidget>
+  <customwidget>
+   <class>TransferWizardPage</class>
+   <extends>QWizardPage</extends>
+   <header>dialogs/crosspoolmigratewizardpages.h</header>
+  </customwidget>
+  <customwidget>
+   <class>RbacWizardPage</class>
+   <extends>QWizardPage</extends>
+   <header>dialogs/crosspoolmigratewizardpages.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

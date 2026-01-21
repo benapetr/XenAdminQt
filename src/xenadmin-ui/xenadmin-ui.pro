@@ -61,9 +61,14 @@ SOURCES += \
     dialogs/verticallytabbeddialog.cpp \
     dialogs/customsearchdialog.cpp \
     dialogs/crosspoolmigratewizard.cpp \
+    dialogs/crosspoolmigratewizardpages.cpp \
+    dialogs/crosspoolmigratewizard_copymodepage.cpp \
+    dialogs/crosspoolmigratewizard_intrapoolcopypage.cpp \
     dialogs/warningdialogs/closexencenterwarningdialog.cpp \
     controls/affinitypicker.cpp \
     controls/srpicker.cpp \
+    controls/tooltipcontainer.cpp \
+    controls/decentgroupbox.cpp \
     controls/dropdownbutton.cpp \
     controls/snapshottreeview.cpp \
     controls/multipledvdisolist.cpp \
@@ -311,10 +316,15 @@ HEADERS += \
     dialogs/verticallytabbeddialog.h \
     dialogs/customsearchdialog.h \
     dialogs/crosspoolmigratewizard.h \
+    dialogs/crosspoolmigratewizardpages.h \
+    dialogs/crosspoolmigratewizard_copymodepage.h \
+    dialogs/crosspoolmigratewizard_intrapoolcopypage.h \
     dialogs/warningdialogs/closexencenterwarningdialog.h \
     network/xenconnectionui.h \
     controls/affinitypicker.h \
     controls/srpicker.h \
+    controls/tooltipcontainer.h \
+    controls/decentgroupbox.h \
     controls/dropdownbutton.h \
     controls/vmoperationmenu.h \
     controls/snapshottreeview.h \
@@ -531,6 +541,9 @@ FORMS += \
     dialogs/optionsdialog.ui \
     dialogs/newvmwizard.ui \
     dialogs/newsrwizard.ui \
+    dialogs/crosspoolmigratewizard.ui \
+    dialogs/crosspoolmigratewizard_copymodepage.ui \
+    dialogs/crosspoolmigratewizard_intrapoolcopypage.ui \
     dialogs/verticallytabbeddialog.ui \
     dialogs/customsearchdialog.ui \
     dialogs/warningdialogs/closexencenterwarningdialog.ui \

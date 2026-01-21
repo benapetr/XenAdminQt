@@ -35,8 +35,7 @@ CancelHostConnectionCommand::CancelHostConnectionCommand(MainWindow* mainWindow,
 {
 }
 
-CancelHostConnectionCommand::CancelHostConnectionCommand(const QList<XenConnection*>& connections, MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent), m_connections(connections)
+CancelHostConnectionCommand::CancelHostConnectionCommand(const QList<XenConnection*>& connections, MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent), m_connections(connections)
 {
 }
 

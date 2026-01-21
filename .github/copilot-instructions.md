@@ -49,7 +49,7 @@ This is a C++/Qt6 rewrite of XenAdmin (XenServer/XCP-ng management tool), portin
 
 ## Action Framework Expectations
 - Prefer deriving from `AsyncOperation` (and companions under `src/xenlib/xen/actions/`) for any XenAPI workflow.
-- Launch actions from commands/wizards and surface progress through `OperationProgressDialog`; do **not** add new direct `xenLib()->getAPI()->...` calls in UI code.
+- Launch actions from commands/wizards and surface progress through `OperationProgressDialog`; do **not** add new direct API calls in UI code.
 - When an action is missing, add a new C++ action mirroring the C# equivalent instead of inlining API logic.
 
 ## XenAPI Namespace (Static API Bindings)
@@ -150,17 +150,20 @@ XenConnection::sendRequest(xmlData) {
 All XenServer objects (VMs, Hosts, Pools, SRs) are cached for instant access. Cache is populated on connection and kept synchronized:
 
 ```cpp
-// Cache is checked automatically - you don't check it manually
-xenLib->requestObjectData("vm", vmRef);  
-// Signal emitted instantly if cached, or after API call if not
+// Get cache from connection
+XenConnection* connection = /* ... */;
+XenCache* cache = connection->GetCache();
 
-connect(xenLib, &XenLib::objectDataReceived, 
-    [](QString type, QString ref, QVariantMap data) {
-        // Data came from cache or API - you don't need to care which
-    });
+// Access objects directly from cache
+QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", vmRef);
+if (vm && vm->IsValid())
+    qDebug() << vm->GetNameLabel();
+
+// Or get raw data
+QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
 ```
 
-**Never** manually check cache before making requests. The request methods handle cache lookups transparently.
+**Prefer** `ResolveObject<T>()` for typed access. Cache automatically updates from XenServer events.
 
 **Key files**: `src/xenlib/xencache.{h,cpp}`
 
@@ -236,15 +239,15 @@ Use `SendRequestAsync()` for:
 - Building custom high-level async wrappers
 
 ```cpp
-// XenLib uses async pattern internally for data fetching:
+// Example async pattern for bulk data fetching:
 QString xmlRequest = api->buildXmlRpcCall("VM.get_all_records", params);
 int requestId = connection->sendRequestAsync(xmlRequest.toUtf8());
 pendingRequests[requestId] = RequestType::GetVirtualMachines;
 
 // Handle response via signal
-connect(connection, &XenConnection::apiResponse, this, &XenLib::onConnectionApiResponse);
+connect(connection, &XenConnection::apiResponse, this, &MyClass::onApiResponse);
 
-void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
+void MyClass::onApiResponse(int requestId, const QByteArray& response)
 {
     if (!pendingRequests.contains(requestId))
         return;
@@ -264,7 +267,11 @@ void XenLib::onConnectionApiResponse(int requestId, const QByteArray& response)
 For operations with progress tracking (migration, import/export, snapshots):
 
 ```cpp
-AsyncOperation* op = new AsyncOperation(xenLib->getAPI(), this);
+// Get session from connection context
+XenConnection* connection = /* ... */;
+XenSession* session = connection->GetSession();
+
+AsyncOperation* op = new AsyncOperation(session, this);
 connect(op, &AsyncOperation::progress, [](int percent) { 
     progressBar->setValue(percent); 
 });

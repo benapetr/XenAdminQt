@@ -24,6 +24,7 @@
 * Console - it works most of the time, but there are random scaling issues during boot, RDP not supported
 * UI - menus and toolbar buttons sometime don't refresh on events (unpause -> still shows force shutdown)
 * Menu items - some of them may still be missing, but they are mostly fine now
+* Events not showing progress bar for each item
 
 # Needs testing
 * VM disk resize
