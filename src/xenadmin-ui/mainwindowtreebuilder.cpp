@@ -26,6 +26,7 @@
  */
 
 #include "mainwindowtreebuilder.h"
+#include "globals.h"
 #include "iconmanager.h"
 #include "xen/pool.h"
 #include "xen/host.h"
@@ -87,19 +88,17 @@ MainWindowTreeBuilder::~MainWindowTreeBuilder()
     delete this->viewVapps_;
 }
 
-QObject* MainWindowTreeBuilder::highlightedDragTarget() const
+QObject* MainWindowTreeBuilder::GetHighlightedDragTarget() const
 {
     return this->highlightedDragTarget_;
 }
 
-void MainWindowTreeBuilder::setHighlightedDragTarget(QObject* target)
+void MainWindowTreeBuilder::SetHighlightedDragTarget(QObject* target)
 {
     this->highlightedDragTarget_ = target;
 }
 
-void MainWindowTreeBuilder::refreshTreeView(QTreeWidgetItem* newRootNode, 
-                                            const QString& searchText, 
-                                            NavigationMode searchMode)
+void MainWindowTreeBuilder::RefreshTreeView(QTreeWidgetItem* newRootNode, const QString& searchText, NavigationMode searchMode)
 {
     Q_ASSERT(newRootNode);
     
@@ -108,8 +107,7 @@ void MainWindowTreeBuilder::refreshTreeView(QTreeWidgetItem* newRootNode,
     this->persistExpandedNodes(searchText);
     
     this->treeView_->clear();
-    if (newRootNode)
-        this->treeView_->addTopLevelItem(newRootNode);
+    this->treeView_->addTopLevelItem(newRootNode);
     
     this->restoreExpandedNodes(searchText, searchMode);
     
@@ -122,9 +120,7 @@ void MainWindowTreeBuilder::refreshTreeView(QTreeWidgetItem* newRootNode,
     
     // Ensure selected nodes are visible when search text is cleared (CA-102127)
     if (searchTextCleared)
-    {
         this->expandSelection();
-    }
 }
 
 void MainWindowTreeBuilder::expandSelection()
@@ -143,7 +139,7 @@ void MainWindowTreeBuilder::expandSelection()
     }
 }
 
-QTreeWidgetItem* MainWindowTreeBuilder::createNewRootNode(Search* search, NavigationMode mode, XenConnection* conn)
+QTreeWidgetItem* MainWindowTreeBuilder::CreateNewRootNode(Search* search, NavigationMode mode, XenConnection* conn)
 {
     MainWindowTreeNodeGroupAcceptor* groupAcceptor = nullptr;
     QTreeWidgetItem* newRootNode = nullptr;
@@ -193,7 +189,7 @@ QTreeWidgetItem* MainWindowTreeBuilder::createNewRootNode(Search* search, Naviga
         default: // Infrastructure and Notifications
             Q_ASSERT(search);
             newRootNode = new QTreeWidgetItem();
-            newRootNode->setText(0, "XenAdmin"); // TODO: Use BrandManager
+            newRootNode->setText(0, XENADMIN_BRANDING_NAME); // TODO: Use BrandManager
             groupAcceptor = this->createGroupAcceptor(newRootNode);
             search->PopulateAdapters(conn, QList<IAcceptGroups*>() << groupAcceptor);
             break;
@@ -205,10 +201,7 @@ QTreeWidgetItem* MainWindowTreeBuilder::createNewRootNode(Search* search, Naviga
 
 MainWindowTreeNodeGroupAcceptor* MainWindowTreeBuilder::createGroupAcceptor(QTreeWidgetItem* parent)
 {
-    return new MainWindowTreeNodeGroupAcceptor(this->highlightedDragTarget_,
-                                           this->treeViewForeColor_,
-                                           this->treeViewBackColor_,
-                                           parent);
+    return new MainWindowTreeNodeGroupAcceptor(this->highlightedDragTarget_, this->treeViewForeColor_, this->treeViewBackColor_, parent);
 }
 
 QList<MainWindowTreeBuilder::PersistenceInfo>& MainWindowTreeBuilder::assignList(NavigationMode mode)

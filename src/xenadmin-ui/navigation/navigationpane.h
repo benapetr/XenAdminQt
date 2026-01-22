@@ -136,8 +136,6 @@ class NavigationPane : public QWidget
         void treeNodeClicked();
         void treeNodeRightClicked();
         void treeViewRefreshed();
-        void treeViewRefreshSuspended();
-        void treeViewRefreshResumed();
         void connectToServerRequested();
 
         /**
@@ -165,8 +163,6 @@ class NavigationPane : public QWidget
         void onNavigationViewClicked();
         void onNavigationViewRightClicked();
         void onNavigationViewRefreshed();
-        void onNavigationViewRefreshSuspended();
-        void onNavigationViewRefreshResumed();
         void onNavigationViewDragDropCommand(const QString& commandKey);
         void onNavigationViewConnectToServerRequested();
 
@@ -181,6 +177,9 @@ class NavigationPane : public QWidget
         void onNavigationModeChanged();
 
         Ui::NavigationPane* ui;
+
+        NavigationView* m_currentNavigationView = nullptr;
+        NotificationsView* m_currentNotificationsView = nullptr;
 
         NavigationMode m_currentMode;
         NotificationsSubMode m_lastNotificationsMode;

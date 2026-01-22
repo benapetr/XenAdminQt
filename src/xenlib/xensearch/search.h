@@ -84,7 +84,7 @@ class Search
          */
         Query* GetQuery() const
         {
-            return m_query;
+            return this->m_query;
         }
 
         /**
@@ -95,7 +95,7 @@ class Search
          */
         Grouping* GetGrouping() const
         {
-            return m_grouping;
+            return this->m_grouping;
         }
 
         /**
@@ -181,7 +181,7 @@ class Search
          */
         void SetConnection(XenConnection* connection)
         {
-            m_connection = connection;
+            this->m_connection = connection;
         }
 
         /**
@@ -201,7 +201,7 @@ class Search
          */
         void SetItems(int items)
         {
-            m_items = items;
+            this->m_items = items;
         }
 
         /**

@@ -116,8 +116,6 @@ class NavigationView : public QWidget
         void treeNodeClicked();
         void treeNodeRightClicked();
         void treeViewRefreshed();
-        void treeViewRefreshSuspended();
-        void treeViewRefreshResumed();
         void dragDropCommandActivated(const QString& commandKey);
         void connectToServerRequested();
 
@@ -158,7 +156,6 @@ class NavigationView : public QWidget
         bool m_inSearchMode = false;
         NavigationPane::NavigationMode m_navigationMode = NavigationPane::Infrastructure;
         ViewFilters m_viewFilters;
-        Xen::ConnectionsManager* m_connectionsManager = nullptr;
         QTimer* m_refreshTimer; // Debounce timer for cache updates
         QHash<XenConnection*, QMetaObject::Connection> m_cacheChangedHandlers;
         QHash<XenConnection*, QMetaObject::Connection> m_cacheRemovedHandlers;

@@ -35,27 +35,26 @@
 #include <QResizeEvent>
 #include <QDebug>
 
-NavigationPane::NavigationPane(QWidget* parent)
-    : QWidget(parent), ui(new Ui::NavigationPane), m_currentMode(Infrastructure), m_lastNotificationsMode(Alerts), m_buttonInfraBig(nullptr), m_buttonObjectsBig(nullptr), m_buttonOrganizationBig(nullptr), m_buttonSearchesBig(nullptr), m_buttonNotifyBig(nullptr), m_buttonInfraSmall(nullptr), m_buttonObjectsSmall(nullptr), m_buttonOrganizationSmall(nullptr), m_buttonSearchesSmall(nullptr), m_buttonNotifySmall(nullptr)
+NavigationPane::NavigationPane(QWidget* parent) : QWidget(parent), ui(new Ui::NavigationPane), m_currentMode(Infrastructure), m_lastNotificationsMode(Alerts), m_buttonInfraBig(nullptr), m_buttonObjectsBig(nullptr), m_buttonOrganizationBig(nullptr), m_buttonSearchesBig(nullptr), m_buttonNotifyBig(nullptr), m_buttonInfraSmall(nullptr), m_buttonObjectsSmall(nullptr), m_buttonOrganizationSmall(nullptr), m_buttonSearchesSmall(nullptr), m_buttonNotifySmall(nullptr)
 {
     this->ui->setupUi(this);
 
     // Create NavigationView and NotificationsView
     // These replace the placeholders in the UI
-    NavigationView* navView = new NavigationView(this);
-    NotificationsView* notifView = new NotificationsView(this);
+    this->m_currentNavigationView = new NavigationView(this);
+    this->m_currentNotificationsView = new NotificationsView(this);
 
     // Replace placeholder widgets with actual views
     QVBoxLayout* navPlaceholderLayout = qobject_cast<QVBoxLayout*>(this->ui->navigationViewPlaceholder->layout());
     if (navPlaceholderLayout)
     {
-        navPlaceholderLayout->addWidget(navView);
+        navPlaceholderLayout->addWidget(this->m_currentNavigationView);
     }
 
     QVBoxLayout* notifPlaceholderLayout = qobject_cast<QVBoxLayout*>(this->ui->notificationsViewPlaceholder->layout());
     if (notifPlaceholderLayout)
     {
-        notifPlaceholderLayout->addWidget(notifView);
+        notifPlaceholderLayout->addWidget(this->m_currentNotificationsView);
     }
 
     // Initially show navigation view, hide notifications view
@@ -66,18 +65,16 @@ NavigationPane::NavigationPane(QWidget* parent)
     this->setupNavigationButtons();
 
     // Wire up NavigationView events to forward them
-    connect(navView, &NavigationView::treeViewSelectionChanged, this, &NavigationPane::onNavigationViewSelectionChanged);
-    connect(navView, &NavigationView::treeNodeBeforeSelected, this, &NavigationPane::onNavigationViewBeforeSelected);
-    connect(navView, &NavigationView::treeNodeClicked, this, &NavigationPane::onNavigationViewClicked);
-    connect(navView, &NavigationView::treeNodeRightClicked, this, &NavigationPane::onNavigationViewRightClicked);
-    connect(navView, &NavigationView::treeViewRefreshed, this, &NavigationPane::onNavigationViewRefreshed);
-    connect(navView, &NavigationView::treeViewRefreshSuspended, this, &NavigationPane::onNavigationViewRefreshSuspended);
-    connect(navView, &NavigationView::treeViewRefreshResumed, this, &NavigationPane::onNavigationViewRefreshResumed);
-    connect(navView, &NavigationView::dragDropCommandActivated, this, &NavigationPane::onNavigationViewDragDropCommand);
-    connect(navView, &NavigationView::connectToServerRequested, this, &NavigationPane::onNavigationViewConnectToServerRequested);
+    connect(this->m_currentNavigationView, &NavigationView::treeViewSelectionChanged, this, &NavigationPane::onNavigationViewSelectionChanged);
+    connect(this->m_currentNavigationView, &NavigationView::treeNodeBeforeSelected, this, &NavigationPane::onNavigationViewBeforeSelected);
+    connect(this->m_currentNavigationView, &NavigationView::treeNodeClicked, this, &NavigationPane::onNavigationViewClicked);
+    connect(this->m_currentNavigationView, &NavigationView::treeNodeRightClicked, this, &NavigationPane::onNavigationViewRightClicked);
+    connect(this->m_currentNavigationView, &NavigationView::treeViewRefreshed, this, &NavigationPane::onNavigationViewRefreshed);
+    connect(this->m_currentNavigationView, &NavigationView::dragDropCommandActivated, this, &NavigationPane::onNavigationViewDragDropCommand);
+    connect(this->m_currentNavigationView, &NavigationView::connectToServerRequested, this, &NavigationPane::onNavigationViewConnectToServerRequested);
 
     // Wire up NotificationsView events
-    connect(notifView, &NotificationsView::notificationsSubModeChanged, this, &NavigationPane::onNotificationsSubModeChanged);
+    connect(this->m_currentNotificationsView, &NotificationsView::notificationsSubModeChanged, this, &NavigationPane::onNotificationsSubModeChanged);
 
     // Set initial mode
     this->m_buttonInfraBig->setChecked(true);
@@ -146,8 +143,7 @@ void NavigationPane::setupNavigationButtons()
     this->addNavigationItemPair(this->m_buttonNotifyBig, this->m_buttonNotifySmall);
 
     // Add big buttons to toolStripBig placeholder
-    QVBoxLayout* bigButtonLayout = qobject_cast<QVBoxLayout*>(
-        this->ui->toolStripBigPlaceholder->layout());
+    QVBoxLayout* bigButtonLayout = qobject_cast<QVBoxLayout*>(this->ui->toolStripBigPlaceholder->layout());
     if (bigButtonLayout)
     {
         bigButtonLayout->addWidget(this->m_buttonInfraBig);
@@ -159,8 +155,7 @@ void NavigationPane::setupNavigationButtons()
     }
 
     // Add small buttons to toolStripSmall placeholder
-    QHBoxLayout* smallButtonLayout = qobject_cast<QHBoxLayout*>(
-        this->ui->toolStripSmallPlaceholder->layout());
+    QHBoxLayout* smallButtonLayout = qobject_cast<QHBoxLayout*>(this->ui->toolStripSmallPlaceholder->layout());
     if (smallButtonLayout)
     {
         smallButtonLayout->addStretch(); // Push buttons to right
@@ -311,15 +306,11 @@ void NavigationPane::onNavigationModeChanged()
         this->ui->navigationViewPlaceholder->setVisible(true);
 
         // Update tree view for new mode
-        NavigationView* navView = this->GetNavigationView();
-        if (navView)
-        {
-            // Set the navigation mode so tree builder uses correct layout
-            navView->SetNavigationMode(this->m_currentMode);
-            navView->ResetSearchBox();
-            // requestRefreshTreeView() is called by setNavigationMode()
-            navView->FocusTreeView();
-        }
+        // Set the navigation mode so tree builder uses correct layout
+        this->m_currentNavigationView->SetNavigationMode(this->m_currentMode);
+        this->m_currentNavigationView->ResetSearchBox();
+        // requestRefreshTreeView() is called by setNavigationMode()
+        this->m_currentNavigationView->FocusTreeView();
     }
 } 
 
@@ -349,16 +340,6 @@ void NavigationPane::onNavigationViewRefreshed()
     emit treeViewRefreshed();
 }
 
-void NavigationPane::onNavigationViewRefreshSuspended()
-{
-    emit treeViewRefreshSuspended();
-}
-
-void NavigationPane::onNavigationViewRefreshResumed()
-{
-    emit treeViewRefreshResumed();
-}
-
 void NavigationPane::onNavigationViewDragDropCommand(const QString& commandKey)
 {
     emit dragDropCommandActivated(commandKey);
@@ -378,24 +359,20 @@ void NavigationPane::onNotificationsSubModeChanged(NotificationsSubMode subMode)
 // Public methods
 NavigationView* NavigationPane::GetNavigationView() const
 {
-    return this->findChild<NavigationView*>();
+    return this->m_currentNavigationView;
 }
 
 NotificationsView* NavigationPane::GetNotificationsView() const
 {
-    return this->findChild<NotificationsView*>();
+    return this->m_currentNotificationsView;
 } 
 
 void NavigationPane::UpdateNotificationsButton(NotificationsSubMode mode, int entries)
 {
-    NotificationsView* notifView = this->GetNotificationsView();
-    if (notifView)
-    {
-        notifView->updateEntries(mode, entries);
-        int totalEntries = notifView->getTotalEntries();
-        this->m_buttonNotifyBig->setUnreadEntries(totalEntries);
-        this->m_buttonNotifySmall->setUnreadEntries(totalEntries);
-    }
+    this->m_currentNotificationsView->updateEntries(mode, entries);
+    int totalEntries = this->m_currentNotificationsView->getTotalEntries();
+    this->m_buttonNotifyBig->setUnreadEntries(totalEntries);
+    this->m_buttonNotifySmall->setUnreadEntries(totalEntries);
 } 
 
 void NavigationPane::SwitchToInfrastructureMode()
@@ -414,29 +391,17 @@ void NavigationPane::SwitchToNotificationsView(NotificationsSubMode subMode)
         this->m_buttonNotifyBig->setChecked(true);
     }
 
-    NotificationsView* notifView = this->GetNotificationsView();
-    if (notifView)
-    {
-        notifView->selectNotificationsSubMode(subMode);
-    }
+    this->m_currentNotificationsView->selectNotificationsSubMode(subMode);
 }
 
 void NavigationPane::FocusTreeView()
 {
-    NavigationView* navView = this->GetNavigationView();
-    if (navView)
-    {
-        navView->FocusTreeView();
-    }
+    this->m_currentNavigationView->FocusTreeView();
 }
 
 void NavigationPane::RequestRefreshTreeView()
 {
-    NavigationView* navView = this->GetNavigationView();
-    if (navView)
-    {
-        navView->RequestRefreshTreeView();
-    }
+    this->m_currentNavigationView->RequestRefreshTreeView();
 }
 
 void NavigationPane::UpdateSearch()
@@ -446,28 +411,20 @@ void NavigationPane::UpdateSearch()
     // TODO: Once Search infrastructure is ported from C#, this will set
     // GetNavigationView->setCurrentSearch(getSearchForMode(m_currentMode))
     // For now, apply view filters and trigger a refresh
-    NavigationView* navView = GetNavigationView();
-    if (navView)
-    {
-        SettingsManager& settings = SettingsManager::instance();
-        NavigationView::ViewFilters filters;
-        filters.showDefaultTemplates = settings.getDefaultTemplatesVisible();
-        filters.showUserTemplates = settings.getUserTemplatesVisible();
-        filters.showLocalStorage = settings.getLocalSRsVisible();
-        filters.showHiddenObjects = settings.getShowHiddenObjects();
-        navView->SetViewFilters(filters);
-        navView->RequestRefreshTreeView();
-    }
+    SettingsManager& settings = SettingsManager::instance();
+    NavigationView::ViewFilters filters;
+    filters.showDefaultTemplates = settings.getDefaultTemplatesVisible();
+    filters.showUserTemplates = settings.getUserTemplatesVisible();
+    filters.showLocalStorage = settings.getLocalSRsVisible();
+    filters.showHiddenObjects = settings.getShowHiddenObjects();
+    this->m_currentNavigationView->SetViewFilters(filters);
+    this->m_currentNavigationView->RequestRefreshTreeView();
 }
 
 void NavigationPane::SetInSearchMode(bool enabled)
 {
     // Matches C# NavigationPane.InSearchMode property
-    NavigationView* navView = this->GetNavigationView();
-    if (navView)
-    {
-        navView->SetInSearchMode(enabled);
-    }
+    this->m_currentNavigationView->SetInSearchMode(enabled);
 }
 
 void NavigationPane::resizeEvent(QResizeEvent* event)

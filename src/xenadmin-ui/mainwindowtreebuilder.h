@@ -75,8 +75,8 @@ class MainWindowTreeBuilder : public QObject
         /**
          * @brief Gets or sets an object that should be highlighted
          */
-        QObject* highlightedDragTarget() const;
-        void setHighlightedDragTarget(QObject* target);
+        QObject* GetHighlightedDragTarget() const;
+        void SetHighlightedDragTarget(QObject* target);
 
         /**
          * @brief Updates the tree view with a new root node
@@ -87,7 +87,7 @@ class MainWindowTreeBuilder : public QObject
          * @param searchText Current search text
          * @param searchMode Current navigation mode
          */
-        void refreshTreeView(QTreeWidgetItem* newRootNode, const QString& searchText, NavigationMode searchMode);
+        void RefreshTreeView(QTreeWidgetItem* newRootNode, const QString& searchText, NavigationMode searchMode);
 
         /**
          * @brief Creates a new root node based on search and mode
@@ -97,7 +97,7 @@ class MainWindowTreeBuilder : public QObject
          * @param conn XenConnection for resolving objects
          * @return New root node
          */
-        QTreeWidgetItem* createNewRootNode(Search* search, NavigationMode mode, XenConnection* conn);
+        QTreeWidgetItem* CreateNewRootNode(Search* search, NavigationMode mode, XenConnection* conn);
 
     private:
         struct PersistenceInfo

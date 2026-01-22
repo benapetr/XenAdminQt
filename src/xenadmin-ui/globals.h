@@ -30,4 +30,6 @@
 
 #define XENADMIN_VERSION "0.0.3"
 
+#define XENADMIN_BRANDING_NAME "XenAdmin"
+
 #endif // GLOBALS_H

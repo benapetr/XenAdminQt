@@ -243,8 +243,7 @@ static Search* buildOverviewSearch(QueryScope* scopeToUse)
     return new Search(query, poolGrouping, "Overview", "", false);
 }
 
-Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& objectTypes,
-                          XenConnection* conn, QueryScope* scope)
+Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& objectTypes, XenConnection* conn, QueryScope* scope)
 {
     if (!scope)
         scope = GetOverviewScope();
@@ -266,8 +265,7 @@ Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& obje
         if (objType == "host")
         {
             Grouping* hostGrouping = new HostGrouping(nullptr);
-            QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, objRef,
-                                                            StringPropertyQuery::MatchType::ExactMatch);
+            QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, objRef, StringPropertyQuery::MatchType::ExactMatch);
             QueryFilter* hostQuery = uuidQuery; // TODO: Implement RecursiveXMOListPropertyQuery
 
             Query* query = new Query(scope, hostQuery);
@@ -278,8 +276,7 @@ Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& obje
             Grouping* hostGrouping = new HostGrouping(nullptr);
             Grouping* poolGrouping = new PoolGrouping(hostGrouping);
 
-            QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, objRef,
-                                                            StringPropertyQuery::MatchType::ExactMatch);
+            QueryFilter* uuidQuery = new StringPropertyQuery(PropertyNames::uuid, objRef, StringPropertyQuery::MatchType::ExactMatch);
             QueryFilter* poolQuery = uuidQuery; // TODO: Implement RecursiveXMOPropertyQuery
 
             Query* query = new Query(scope, poolQuery);
@@ -460,12 +457,9 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
             record["address"] = hostname;
             record["enabled"] = false;
 
-            if (cache)
-            {
-                const QVariantMap existing = cache->ResolveObjectData("host", hostRef);
-                if (existing.isEmpty() || existing != record)
-                    cache->Update("host", hostRef, record);
-            }
+            const QVariantMap existing = cache->ResolveObjectData("host", hostRef);
+            if (existing.isEmpty() || existing != record)
+                cache->Update("host", hostRef, record);
 
             if (!this->m_query || this->m_query->match(record, "host", connection))
                 matchedObjects.append(qMakePair(QString("host"), hostRef));

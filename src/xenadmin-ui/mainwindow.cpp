@@ -573,9 +573,7 @@ void MainWindow::onCachePopulated()
 
     // Refresh tree now that cache has data
     if (this->m_navigationPane)
-    {
         this->m_navigationPane->RequestRefreshTreeView();
-    }
 
     // Start MetricUpdater to begin fetching RRD performance metrics
     // C# Equivalent: MetricUpdater.Start() called after connection established
@@ -607,14 +605,9 @@ void MainWindow::onConnectionAdded(XenConnection* connection)
     {
         this->onConnectionStateChanged(conn, false);
     });
+
     connect(connection, &XenConnection::CachePopulated, this, &MainWindow::onCachePopulated);
-
-    XenCache* cache = connection->GetCache();
-    if (cache)
-    {
-        connect(cache, &XenCache::objectChanged, this, &MainWindow::onCacheObjectChanged);
-    }
-
+    connect(connection->GetCache(), &XenCache::objectChanged, this, &MainWindow::onCacheObjectChanged);
     connect(connection, &XenConnection::TaskAdded, this, &MainWindow::onConnectionTaskAdded);
     connect(connection, &XenConnection::TaskModified, this, &MainWindow::onConnectionTaskModified);
     connect(connection, &XenConnection::TaskDeleted, this, &MainWindow::onConnectionTaskDeleted);
@@ -659,7 +652,6 @@ void MainWindow::onTreeItemSelected()
 
         // Update both toolbar and menu from Commands (matches C# UpdateToolbars)
         this->updateToolbarsAndMenus();
-
         return;
     }
 

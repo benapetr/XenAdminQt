@@ -26,7 +26,7 @@
  */
 
 #include "navigationview.h"
-
+#include "globals.h"
 #include "ui_navigationview.h"
 #include "../iconmanager.h"
 #include "xenlib/xen/network/connectionsmanager.h"
@@ -126,11 +126,11 @@ NavigationView::NavigationView(QWidget* parent)  : QWidget(parent), ui(new Ui::N
     // Connect search box (matches C# searchTextBox_TextChanged line 215)
     connect(this->ui->searchLineEdit, &QLineEdit::textChanged, this, &NavigationView::onSearchTextChanged);
 
-    this->m_connectionsManager = Xen::ConnectionsManager::instance();
-    connect(this->m_connectionsManager, &Xen::ConnectionsManager::connectionAdded, this, &NavigationView::onConnectionAdded);
-    connect(this->m_connectionsManager, &Xen::ConnectionsManager::connectionRemoved, this, &NavigationView::onConnectionRemoved);
+    Xen::ConnectionsManager *connection_manager = Xen::ConnectionsManager::instance();
+    connect(connection_manager, &Xen::ConnectionsManager::connectionAdded, this, &NavigationView::onConnectionAdded);
+    connect(connection_manager, &Xen::ConnectionsManager::connectionRemoved, this, &NavigationView::onConnectionRemoved);
 
-    const QList<XenConnection*> connections = this->m_connectionsManager->GetAllConnections();
+    const QList<XenConnection*> connections = connection_manager->GetAllConnections();
     for (XenConnection* connection : connections)
         this->connectCacheSignals(connection);
 }
@@ -157,8 +157,6 @@ void NavigationView::RequestRefreshTreeView()
     // Matches C# TreeView BeginUpdate/EndUpdate pattern with PersistExpandedNodes/RestoreExpandedNodes
     // Suppress selection signals while rebuilding to avoid clearing selection in MainWindow
     this->m_suppressSelectionSignals = true;
-
-    emit this->treeViewRefreshSuspended(); // Signal that we're about to rebuild
 
     this->ui->treeWidget->setUpdatesEnabled(false); // Suspend painting
 
@@ -198,7 +196,6 @@ void NavigationView::RequestRefreshTreeView()
         emit this->treeViewSelectionChanged();
     }
 
-    emit this->treeViewRefreshResumed(); // Signal rebuild is complete
     emit this->treeViewRefreshed();
 }
 
@@ -315,21 +312,16 @@ void NavigationView::disconnectCacheSignals(XenConnection* connection)
 
 XenConnection* NavigationView::primaryConnection() const
 {
-    if (!this->m_connectionsManager)
-        return nullptr;
-
-    const QList<XenConnection*> connections = this->m_connectionsManager->GetAllConnections();
+    const QList<XenConnection*> connections = Xen::ConnectionsManager::instance()->GetAllConnections();
     for (XenConnection* connection : connections)
     {
-        if (!connection)
-            continue;
         if (connection->IsConnected() && connection->GetCache())
             return connection;
     }
 
     for (XenConnection* connection : connections)
     {
-        if (connection && connection->GetCache())
+        if (connection->GetCache())
             return connection;
     }
 
@@ -368,15 +360,13 @@ void NavigationView::onSearchTextChanged(const QString& text)
 
 void NavigationView::buildInfrastructureTree()
 {
-    QList<XenConnection*> connections;
-    if (this->m_connectionsManager)
-        connections = this->m_connectionsManager->GetAllConnections();
+    QList<XenConnection*> connections = Xen::ConnectionsManager::instance()->GetAllConnections();
 
-    if (!this->m_connectionsManager || connections.isEmpty())
+    if (connections.isEmpty())
     {
         this->ui->treeWidget->clear();
         QTreeWidgetItem* root = new QTreeWidgetItem(this->ui->treeWidget);
-        root->setText(0, "XenAdmin");
+        root->setText(0, XENADMIN_BRANDING_NAME);
         root->setExpanded(true);
 
         QTreeWidgetItem* placeholder = new QTreeWidgetItem(root);
@@ -391,12 +381,12 @@ void NavigationView::buildInfrastructureTree()
     Search* baseSearch = TreeSearch::DefaultTreeSearch();
     Search* effectiveSearch = baseSearch->AddFullTextFilter(this->GetSearchText());
 
-    QTreeWidgetItem* root = this->m_treeBuilder->createNewRootNode(
+    QTreeWidgetItem* root = this->m_treeBuilder->CreateNewRootNode(
         effectiveSearch,
         MainWindowTreeBuilder::NavigationMode::Infrastructure,
         nullptr);
 
-    this->m_treeBuilder->refreshTreeView(
+    this->m_treeBuilder->RefreshTreeView(
         root,
         this->GetSearchText(),
         MainWindowTreeBuilder::NavigationMode::Infrastructure);
@@ -408,14 +398,7 @@ void NavigationView::buildInfrastructureTree()
 
 void NavigationView::buildObjectsTree()
 {
-    if (!this->m_connectionsManager)
-    {
-        QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
-        placeholder->setText(0, "(No connection manager available)");
-        return;
-    }
-
-    const QList<XenConnection*> connections = this->m_connectionsManager->GetAllConnections();
+    const QList<XenConnection*> connections = Xen::ConnectionsManager::instance()->GetAllConnections();
     if (connections.isEmpty())
     {
         QTreeWidgetItem* placeholder = new QTreeWidgetItem(this->ui->treeWidget);
@@ -439,12 +422,12 @@ void NavigationView::buildObjectsTree()
     Search* baseSearch = this->m_objectsSearch;
     Search* effectiveSearch = baseSearch->AddFullTextFilter(this->GetSearchText());
 
-    QTreeWidgetItem* root = this->m_treeBuilder->createNewRootNode(
+    QTreeWidgetItem* root = this->m_treeBuilder->CreateNewRootNode(
         effectiveSearch,
         MainWindowTreeBuilder::NavigationMode::Objects,
         nullptr);
 
-    this->m_treeBuilder->refreshTreeView(
+    this->m_treeBuilder->RefreshTreeView(
         root,
         this->GetSearchText(),
         MainWindowTreeBuilder::NavigationMode::Objects);
