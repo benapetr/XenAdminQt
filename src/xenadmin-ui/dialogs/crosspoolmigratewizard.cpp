@@ -433,7 +433,10 @@ QWizardPage* CrossPoolMigrateWizard::createDestinationPage()
 
     if (this->m_poolCombo)
     {
-        connect(this->m_poolCombo, &QComboBox::currentIndexChanged, this, [this](int) {
+        connect(this->m_poolCombo,
+                static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+                this,
+                [this](int) {
             QVariantMap data = this->m_poolCombo->currentData().toMap();
             QString poolRef = data.value("poolRef").toString();
             QString hostRef = data.value("hostRef").toString();
@@ -458,7 +461,10 @@ QWizardPage* CrossPoolMigrateWizard::createDestinationPage()
 
     if (this->m_hostCombo)
     {
-        connect(this->m_hostCombo, &QComboBox::currentIndexChanged, this, [this](int) {
+        connect(this->m_hostCombo,
+                static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+                this,
+                [this](int) {
             this->updateDestinationMapping();
             this->updateNavigationPane();
         });
