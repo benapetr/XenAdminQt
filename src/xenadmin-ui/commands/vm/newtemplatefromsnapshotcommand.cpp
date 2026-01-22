@@ -132,7 +132,7 @@ void NewTemplateFromSnapshotCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal
-    connect(action, &AsyncOperation::completed, this, [=]()
+    connect(action, &AsyncOperation::completed, action, [=]()
     {
         if (action->GetState() == AsyncOperation::Completed)
         {

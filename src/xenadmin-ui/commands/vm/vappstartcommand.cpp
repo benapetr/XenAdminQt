@@ -209,7 +209,8 @@ void VappStartCommand::Run()
 
                     StartApplianceAction* action = new StartApplianceAction(connection, appliance->OpaqueRef(), this->mainWindow());
                     OperationManager::instance()->RegisterOperation(action);
-                    connect(action, &AsyncOperation::completed, this, [=]() {
+                    connect(action, &AsyncOperation::completed, action, [=]()
+                    {
                         if (action->GetState() == AsyncOperation::Completed)
                         {
                             this->mainWindow()->ShowStatusMessage(
@@ -265,7 +266,8 @@ void VappStartCommand::Run()
 
                 StartApplianceAction* action = new StartApplianceAction(connection, applianceRef, this->mainWindow());
                 OperationManager::instance()->RegisterOperation(action);
-                connect(action, &AsyncOperation::completed, this, [=]() {
+                connect(action, &AsyncOperation::completed, action, [=]()
+                {
                     if (action->GetState() == AsyncOperation::Completed)
                     {
                         this->mainWindow()->ShowStatusMessage(
@@ -339,8 +341,7 @@ void VappStartCommand::Run()
     XenConnection* conn = connection;
     if (!conn || !conn->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
-                             tr("Not connected to XenServer"));
+        QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
         return;
     }
 
@@ -351,16 +352,14 @@ void VappStartCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and feedback
-    connect(action, &AsyncOperation::completed, this, [=]() {
+    connect(action, &AsyncOperation::completed, action, [=]()
+    {
         if (action->GetState() == AsyncOperation::Completed)
         {
-            this->mainWindow()->ShowStatusMessage(
-                tr("vApp '%1' started successfully").arg(appName), 5000);
+            this->mainWindow()->ShowStatusMessage(tr("vApp '%1' started successfully").arg(appName), 5000);
         } else if (action->GetState() == AsyncOperation::Failed)
         {
-            QMessageBox::critical(this->mainWindow(), tr("Error"),
-                                  tr("Failed to start vApp '%1':\n%2")
-                                      .arg(appName, action->GetErrorMessage()));
+            QMessageBox::critical(this->mainWindow(), tr("Error"), tr("Failed to start vApp '%1':\n%2").arg(appName, action->GetErrorMessage()));
         }
 
         // Auto-delete when complete

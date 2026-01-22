@@ -89,15 +89,9 @@ void StopVMCommand::Run()
         // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
         OperationManager::instance()->RegisterOperation(action);
 
-        // Connect completion signal for cleanup
-        connect(action, &AsyncOperation::completed, this, [action]() {
-            // Auto-delete when complete (matches C# GC behavior)
-            action->deleteLater();
-        });
-
         // Run action asynchronously (matches C# pattern - no modal dialog)
         // Progress shown in status bar via OperationManager signals
-        action->RunAsync();
+        action->RunAsync(true);
     };
 
     const QList<QSharedPointer<VM>> vms = this->getVMs();

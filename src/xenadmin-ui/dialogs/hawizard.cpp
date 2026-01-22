@@ -394,7 +394,8 @@ void HAWizard::accept()
     // Show progress dialog
     OperationProgressDialog* progressDialog = new OperationProgressDialog(action, this);
 
-    connect(action, &AsyncOperation::completed, [this, progressDialog]() {
+    connect(action, &AsyncOperation::completed, [this, progressDialog]()
+    {
         progressDialog->close();
         QMessageBox::information(this, tr("HA Enabled"),
                                  tr("High Availability has been successfully enabled on pool '%1'.")
@@ -402,7 +403,8 @@ void HAWizard::accept()
         QWizard::accept();
     });
 
-    connect(action, &AsyncOperation::failed, [this, progressDialog](const QString& error) {
+    connect(action, &AsyncOperation::failed, [this, progressDialog](const QString& error)
+    {
         progressDialog->close();
         QMessageBox::critical(this, tr("Failed to Enable HA"),
                               tr("Failed to enable High Availability:\n\n%1").arg(error));

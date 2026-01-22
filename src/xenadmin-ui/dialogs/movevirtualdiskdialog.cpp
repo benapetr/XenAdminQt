@@ -149,7 +149,7 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
         action->SetDescription(QString("Moving '%1'...").arg(vdiName));
 
         opManager->RegisterOperation(action);
-        action->RunAsync();
+        action->RunAsync(true);
     } else
     {
         // Multiple VDI move - batch in parallel (max 3 at a time)
@@ -165,7 +165,7 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
             action->SetDescription(QString("Moving '%1'...").arg(vdiName));
 
             opManager->RegisterOperation(action);
-            action->RunAsync();
+            action->RunAsync(true);
         }
     }
 }

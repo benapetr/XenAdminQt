@@ -87,14 +87,8 @@ void PauseVMCommand::Run()
         // Register with OperationManager for history tracking
         OperationManager::instance()->RegisterOperation(action);
 
-        // Connect completion signal for cleanup
-        connect(action, &AsyncOperation::completed, action, [action]() {
-            // Auto-delete when complete
-            action->deleteLater();
-        });
-
         // Run action asynchronously (no modal dialog for pause)
-        action->RunAsync();
+        action->RunAsync(true);
     };
 
     const QList<QSharedPointer<VM>> vms = this->getVMs();

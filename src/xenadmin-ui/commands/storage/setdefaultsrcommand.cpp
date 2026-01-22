@@ -134,7 +134,7 @@ void SetDefaultSRCommand::Run()
         connect(action, &AsyncOperation::completed, this, &SetDefaultSRCommand::onSetDefaultCompleted);
         connect(action, &AsyncOperation::failed, this, &SetDefaultSRCommand::onSetDefaultFailed);
 
-        action->RunAsync();
+        action->RunAsync(true);
     }
 }
 

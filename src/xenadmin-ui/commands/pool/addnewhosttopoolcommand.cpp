@@ -28,15 +28,12 @@
 #include "addnewhosttopoolcommand.h"
 #include "addhosttopoolcommand.h"
 #include "../../mainwindow.h"
-#include "xen/pool.h"
-#include "xen/host.h"
-#include "xencache.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
 
-AddNewHostToPoolCommand::AddNewHostToPoolCommand(MainWindow* mainWindow, 
-                                                 QSharedPointer<Pool> pool)
-    : Command(mainWindow)
-    , pool_(pool)
+AddNewHostToPoolCommand::AddNewHostToPoolCommand(MainWindow* mainWindow,  QSharedPointer<Pool> pool) : Command(mainWindow), pool_(pool)
 {
 }
 

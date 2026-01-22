@@ -27,10 +27,10 @@
 
 #include "joinpoolcommand.h"
 #include "../../mainwindow.h"
-#include "xen/network/connection.h"
-#include "xen/session.h"
-#include "xen/host.h"
-#include "xen/xenapi/xenapi_Pool.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/xenapi/xenapi_Pool.h"
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QDialog>
@@ -38,8 +38,7 @@
 #include <QFormLayout>
 #include <QLineEdit>
 
-JoinPoolCommand::JoinPoolCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+JoinPoolCommand::JoinPoolCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
@@ -58,11 +57,6 @@ void JoinPoolCommand::Run()
 {
     QSharedPointer<Host> host = this->getSelectedHost();
     if (!host)
-        return;
-
-    QString hostRef = host->OpaqueRef();
-
-    if (hostRef.isEmpty())
         return;
 
     // Create a dialog to get pool master details
@@ -98,8 +92,7 @@ void JoinPoolCommand::Run()
 
     if (masterAddress.isEmpty() || username.isEmpty() || password.isEmpty())
     {
-        QMessageBox::warning(this->mainWindow(), "Join Pool",
-                             "Please provide all required information.");
+        QMessageBox::warning(this->mainWindow(), "Join Pool", "Please provide all required information.");
         return;
     }
 
@@ -125,8 +118,7 @@ void JoinPoolCommand::Run()
     XenAPI::Session* session = hostConnection->GetSession();
     if (!session || !session->IsLoggedIn())
     {
-        QMessageBox::critical(this->mainWindow(), "Join Pool",
-                              "Host session is not active.");
+        QMessageBox::critical(this->mainWindow(), "Join Pool", "Host session is not active.");
         return;
     }
 

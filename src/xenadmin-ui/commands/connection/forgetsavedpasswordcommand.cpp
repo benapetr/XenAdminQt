@@ -27,20 +27,14 @@
 
 #include "forgetsavedpasswordcommand.h"
 #include "../../mainwindow.h"
-#include "../../settingsmanager.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/xenobject.h"
 
-ForgetSavedPasswordCommand::ForgetSavedPasswordCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+ForgetSavedPasswordCommand::ForgetSavedPasswordCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
-ForgetSavedPasswordCommand::ForgetSavedPasswordCommand(const QList<XenConnection*>& connections,
-                                                      MainWindow* mainWindow,
-                                                      QObject* parent)
-    : Command(mainWindow, parent)
-    , m_connections(connections)
+ForgetSavedPasswordCommand::ForgetSavedPasswordCommand(const QList<XenConnection*>& connections, MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent), m_connections(connections)
 {
 }
 
@@ -85,7 +79,6 @@ void ForgetSavedPasswordCommand::Run()
         }
     }
 
-    // Save server list
     this->mainWindow()->SaveServerList();
 }
 

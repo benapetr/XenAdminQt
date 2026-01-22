@@ -94,8 +94,7 @@ void HostMaintenanceModeCommand::Run()
         {
             mw->ShowStatusMessage(QString("Entering maintenance mode for host '%1'...").arg(hostName));
 
-            XenConnection* conn = host->GetConnection();
-            if (!conn || !conn->IsConnected())
+            if (!host->IsConnected())
             {
                 QMessageBox::warning(mw, "Not Connected", "Not connected to XenServer");
                 return;
@@ -119,19 +118,17 @@ void HostMaintenanceModeCommand::Run()
                                              QMessageBox::No) != QMessageBox::Yes;
             };
 
-            EvacuateHostAction* action = new EvacuateHostAction(host, QSharedPointer<Host>(),
-                                                               ntolPrompt, nullptr, nullptr);
+            EvacuateHostAction* action = new EvacuateHostAction(host, QSharedPointer<Host>(), ntolPrompt, nullptr, nullptr);
 
             OperationManager::instance()->RegisterOperation(action);
 
-            connect(action, &AsyncOperation::completed, this, [mw, hostName, action]()
+            connect(action, &AsyncOperation::completed, action, [mw, hostName, action]()
             {
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {
                     mw->ShowStatusMessage(QString("Host '%1' entered maintenance mode successfully").arg(hostName), 5000);
                     QTimer::singleShot(2000, mw, &MainWindow::RefreshServerTree);
-                }
-                else
+                } else
                 {
                     QMessageBox::warning(mw, "Enter Maintenance Mode Failed", QString("Failed to enter maintenance mode for host '%1'. Check the error log for details.").arg(hostName));
                     mw->ShowStatusMessage("Enter maintenance mode failed", 5000);
@@ -150,8 +147,7 @@ void HostMaintenanceModeCommand::Run()
         {
             mw->ShowStatusMessage(QString("Exiting maintenance mode for host '%1'...").arg(hostName));
 
-            XenConnection* conn = host->GetConnection();
-            if (!conn || !conn->IsConnected())
+            if (!host->IsConnected())
             {
                 QMessageBox::warning(mw, "Not Connected", "Not connected to XenServer");
                 return;
@@ -183,14 +179,13 @@ void HostMaintenanceModeCommand::Run()
 
             OperationManager::instance()->RegisterOperation(action);
 
-            connect(action, &AsyncOperation::completed, this, [mw, hostName, action]()
+            connect(action, &AsyncOperation::completed, action, [mw, hostName, action]()
             {
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {
                     mw->ShowStatusMessage(QString("Host '%1' exited maintenance mode successfully").arg(hostName), 5000);
                     QTimer::singleShot(2000, mw, &MainWindow::RefreshServerTree);
-                }
-                else
+                } else
                 {
                     QMessageBox::warning(mw, "Exit Maintenance Mode Failed", QString("Failed to exit maintenance mode for host '%1'. Check the error log for details.").arg(hostName));
                     mw->ShowStatusMessage("Exit maintenance mode failed", 5000);

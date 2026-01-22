@@ -29,14 +29,12 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/hawizard.h"
 #include "../../dialogs/editvmhaprioritiesdialog.h"
-#include "xen/network/connection.h"
-#include "xen/pool.h"
-#include "xencache.h"
-#include "xen/xenobject.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
 
-HAConfigureCommand::HAConfigureCommand(MainWindow* mainWindow, QObject* parent)
-    : PoolCommand(mainWindow, parent)
+HAConfigureCommand::HAConfigureCommand(MainWindow* mainWindow, QObject* parent) : PoolCommand(mainWindow, parent)
 {
 }
 

@@ -29,11 +29,11 @@
 #include "addhosttopoolcommand.h"
 #include "addnewhosttopoolcommand.h"
 #include "../../mainwindow.h"
-#include "xen/host.h"
-#include "xen/pool.h"
-#include "xen/network/connection.h"
-#include "xen/network/connectionsmanager.h"
-#include "xencache.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/xencache.h"
 #include <QAction>
 #include <algorithm>
 
@@ -70,7 +70,7 @@ void AddHostToSelectedPoolMenu::onAboutToShow()
         if (!host)
             continue;
         
-        QString hostName = host->GetConnection() ? host->GetConnection()->GetHostname() : host->GetName();
+        QString hostName = host->GetName();
         
         // TODO: Check Host::RestrictPooling when ported
         // If restricted, show different text format

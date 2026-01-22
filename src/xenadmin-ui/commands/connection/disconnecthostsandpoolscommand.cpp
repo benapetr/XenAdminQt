@@ -35,16 +35,12 @@
 #include "xenlib/xen/pool.h"
 #include "xenlib/xencache.h"
 
-DisconnectHostsAndPoolsCommand::DisconnectHostsAndPoolsCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+DisconnectHostsAndPoolsCommand::DisconnectHostsAndPoolsCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
-DisconnectHostsAndPoolsCommand::DisconnectHostsAndPoolsCommand(const QList<XenConnection*>& connections,
-                                                               MainWindow* mainWindow,
-                                                               QObject* parent)
-    : Command(mainWindow, parent)
-    , m_connections(connections)
+DisconnectHostsAndPoolsCommand::DisconnectHostsAndPoolsCommand(const QList<XenConnection*>& connections, MainWindow* mainWindow, QObject* parent)
+    : Command(mainWindow, parent), m_connections(connections)
 {
 }
 

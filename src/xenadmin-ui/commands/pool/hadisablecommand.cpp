@@ -28,15 +28,13 @@
 #include "hadisablecommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/pool.h"
-#include "xen/actions/pool/disablehaaction.h"
-#include "xencache.h"
-#include "xen/xenobject.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/actions/pool/disablehaaction.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
 
-HADisableCommand::HADisableCommand(MainWindow* mainWindow, QObject* parent)
-    : PoolCommand(mainWindow, parent)
+HADisableCommand::HADisableCommand(MainWindow* mainWindow, QObject* parent) : PoolCommand(mainWindow, parent)
 {
 }
 

@@ -61,16 +61,12 @@ bool RemoveHostCommand::CanRun() const
             if (!connection->IsConnected())
                 return true;
 
-            XenCache* cache = connection->GetCache();
-            if (cache)
+            QSharedPointer<Pool> pool = connection->GetCache()->GetPool();
+            if (pool)
             {
-                QSharedPointer<Pool> pool = cache->GetPool();
-                if (pool)
-                {
-                    QSharedPointer<Host> master = pool->GetMasterHost();
-                    if (master && master->GetConnection() == connection)
-                        return true;
-                }
+                QSharedPointer<Host> master = pool->GetMasterHost();
+                if (master && master->GetConnection() == connection)
+                    return true;
             }
         }
     }
@@ -115,9 +111,7 @@ void RemoveHostCommand::Run()
     int ret = msgBox.exec();
 
     if (ret != QMessageBox::Yes)
-    {
         return;
-    }
 
     qDebug() << "RemoveHostCommand: Removing host connection" << hostName << "(" << connection_hostname << ")";
 

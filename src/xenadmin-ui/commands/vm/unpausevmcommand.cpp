@@ -90,14 +90,8 @@ void UnpauseVMCommand::Run()
         // Register with OperationManager for history tracking
         OperationManager::instance()->RegisterOperation(action);
 
-        // Connect completion signal for cleanup
-        connect(action, &AsyncOperation::completed, this, [action]() {
-            // Auto-delete when complete
-            action->deleteLater();
-        });
-
         // Run action asynchronously (no modal dialog for unpause)
-        action->RunAsync();
+        action->RunAsync(true);
     };
 
     const QList<QSharedPointer<VM>> vms = this->getVMs();

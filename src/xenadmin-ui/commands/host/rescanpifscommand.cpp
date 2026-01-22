@@ -59,7 +59,7 @@ void RescanPIFsCommand::Run()
 
     OperationManager* opManager = OperationManager::instance();
     opManager->RegisterOperation(action);
-    action->RunAsync();
+    action->RunAsync(true);
 
     this->mainWindow()->ShowStatusMessage(tr("Network interface rescan started for host '%1'").arg(hostName), 3000);
 }

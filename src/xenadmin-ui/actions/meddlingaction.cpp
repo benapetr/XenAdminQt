@@ -33,11 +33,7 @@
 #include <QtCore/QDebug>
 #include <QtCore/QDateTime>
 
-MeddlingAction::MeddlingAction(const QString& taskRef,
-                               XenConnection* connection,
-                               bool isOurTask,
-                               QObject* parent)
-    : AsyncOperation(connection, "Task", QString(), parent), m_isOurTask(isOurTask)
+MeddlingAction::MeddlingAction(const QString& taskRef, XenConnection* connection, bool isOurTask, QObject* parent) : AsyncOperation(connection, "Task", QString(), parent), m_isOurTask(isOurTask)
 {
     this->SetRelatedTaskRef(taskRef);
     this->SetSuppressHistory(false); // Meddling operations appear in history

@@ -469,7 +469,7 @@ void VMOperationMenu::enableAppropriateHostsWlb()
     // Retrieve WLB recommendations for this VM
     WlbRetrieveVmRecommendationsAction* wlbAction = new WlbRetrieveVmRecommendationsAction(connection, this->m_vms, this);
 
-    connect(wlbAction, &AsyncOperation::completed, this, [this, wlbAction]()
+    connect(wlbAction, &AsyncOperation::completed, wlbAction, [this, wlbAction]()
     {
         if (this->isStopped())
         {
@@ -842,6 +842,6 @@ void VMOperationMenu::runOperationOnHostForVms(const QSharedPointer<Host>& host,
             continue;
 
         OperationManager::instance()->RegisterOperation(action);
-        action->RunAsync();
+        action->RunAsync(true);
     }
 }

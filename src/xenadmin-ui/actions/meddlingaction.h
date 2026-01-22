@@ -58,10 +58,7 @@ class MeddlingAction : public AsyncOperation
          * @param isOurTask True if this task was created by us (has our UUID)
          * @param parent Parent QObject
          */
-        explicit MeddlingAction(const QString& taskRef,
-                                XenConnection* connection,
-                                bool isOurTask = false,
-                                QObject* parent = nullptr);
+        explicit MeddlingAction(const QString& taskRef, XenConnection* connection, bool isOurTask = false, QObject* parent = nullptr);
 
         ~MeddlingAction() override;
 

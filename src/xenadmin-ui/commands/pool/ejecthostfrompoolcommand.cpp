@@ -28,10 +28,10 @@
 #include "ejecthostfrompoolcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/network/connection.h"
-#include "xen/host.h"
-#include "xen/pool.h"
-#include "xen/actions/pool/ejecthostfrompoolaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/actions/pool/ejecthostfrompoolaction.h"
 #include <QMessageBox>
 
 EjectHostFromPoolCommand::EjectHostFromPoolCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
@@ -61,7 +61,6 @@ void EjectHostFromPoolCommand::Run()
     if (!host || !host->IsValid())
         return;
 
-    QString hostRef = host->OpaqueRef();
     QString hostName = host->GetName();
 
     if (host->IsMaster())

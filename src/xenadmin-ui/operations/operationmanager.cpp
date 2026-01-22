@@ -28,8 +28,8 @@
 #include "operationmanager.h"
 #include <QDebug>
 #include "../actions/meddlingactionmanager.h"
-#include <QDebug>
 #include "../actions/meddlingaction.h"
+#include <QDebug>
 #include <QDebug>
 #include <QCoreApplication>
 #include <QUuid>
@@ -37,12 +37,10 @@
 
 OperationManager* OperationManager::s_instance = nullptr;
 
-OperationManager::OperationManager(QObject* parent)
-    : QObject(parent), m_rehydrationManager(new MeddlingActionManager(this))
+OperationManager::OperationManager(QObject* parent) : QObject(parent), m_rehydrationManager(new MeddlingActionManager(this))
 {
     // Connect rehydration manager's meddlingOperationCreated signal
-    connect(m_rehydrationManager, &MeddlingActionManager::meddlingOperationCreated,
-            this, &OperationManager::RegisterOperation);
+    connect(this->m_rehydrationManager, &MeddlingActionManager::meddlingOperationCreated, this, &OperationManager::RegisterOperation);
 }
 
 OperationManager* OperationManager::instance()
@@ -57,25 +55,25 @@ OperationManager* OperationManager::instance()
 
 OperationManager::~OperationManager()
 {
-    for (auto* record : std::as_const(m_records))
+    for (auto* record : std::as_const(this->m_records))
         delete record;
-    m_records.clear();
-    m_lookup.clear();
+    this->m_records.clear();
+    this->m_lookup.clear();
 }
 
 const QList<OperationManager::OperationRecord*>& OperationManager::GetRecords() const
 {
-    return m_records;
+    return this->m_records;
 }
 
 MeddlingActionManager* OperationManager::GetMeddlingActionManager() const
 {
-    return m_rehydrationManager;
+    return this->m_rehydrationManager;
 }
 
 void OperationManager::RegisterOperation(AsyncOperation* operation)
 {
-    if (!operation || m_lookup.contains(operation))
+    if (!operation || this->m_lookup.contains(operation))
         return;
 
     // Honor SuppressHistory flag (C# ActionBase.SuppressHistory)
@@ -97,8 +95,8 @@ void OperationManager::RegisterOperation(AsyncOperation* operation)
     record->state = operation->GetState();
     record->started = QDateTime::currentDateTime();
 
-    m_records.append(record);
-    m_lookup.insert(operation, record);
+    this->m_records.append(record);
+    this->m_lookup.insert(operation, record);
 
     connectOperationSignals(operation, record);
 
@@ -109,27 +107,13 @@ void OperationManager::RegisterOperation(AsyncOperation* operation)
 
 void OperationManager::connectOperationSignals(AsyncOperation* operation, OperationRecord* record)
 {
-    connect(operation, &AsyncOperation::stateChanged, this, [this, record](AsyncOperation::OperationState state) {
-        updateRecordState(record, state);
-    });
-
-    connect(operation, &AsyncOperation::progressChanged, this, [this, record](int percent) {
-        updateRecordProgress(record, percent);
-    });
-
-    connect(operation, &AsyncOperation::titleChanged, this, [this, record](const QString& title) {
-        updateRecordTitle(record, title);
-    });
-
-    connect(operation, &AsyncOperation::descriptionChanged, this, [this, record](const QString& description) {
-        updateRecordDescription(record, description);
-    });
-
-    connect(operation, &AsyncOperation::failed, this, [this, record](const QString& error) {
-        updateRecordError(record, error);
-    });
-
-    connect(operation, &QObject::destroyed, this, [this, record](QObject* obj) {
+    connect(operation, &AsyncOperation::stateChanged, this, [this, record](AsyncOperation::OperationState state) { updateRecordState(record, state); });
+    connect(operation, &AsyncOperation::progressChanged, this, [this, record](int percent) { updateRecordProgress(record, percent); });
+    connect(operation, &AsyncOperation::titleChanged, this, [this, record](const QString& title) { updateRecordTitle(record, title); });
+    connect(operation, &AsyncOperation::descriptionChanged, this, [this, record](const QString& description) { updateRecordDescription(record, description); });
+    connect(operation, &AsyncOperation::failed, this, [this, record](const QString& error) { updateRecordError(record, error); });
+    connect(operation, &QObject::destroyed, this, [this, record](QObject* obj)
+    {
         auto* asyncOp = qobject_cast<AsyncOperation*>(obj);
         if (asyncOp)
             m_lookup.remove(asyncOp);
@@ -151,7 +135,7 @@ void OperationManager::updateRecordState(OperationRecord* record, AsyncOperation
         record->finished = QDateTime::currentDateTime();
     }
 
-    emit recordUpdated(record);
+    emit this->recordUpdated(record);
 }
 
 void OperationManager::updateRecordProgress(OperationRecord* record, int percent)
@@ -160,7 +144,7 @@ void OperationManager::updateRecordProgress(OperationRecord* record, int percent
         return;
 
     record->progress = percent;
-    emit recordUpdated(record);
+    emit this->recordUpdated(record);
 }
 
 void OperationManager::updateRecordTitle(OperationRecord* record, const QString& title)
@@ -169,7 +153,7 @@ void OperationManager::updateRecordTitle(OperationRecord* record, const QString&
         return;
 
     record->title = title;
-    emit recordUpdated(record);
+    emit this->recordUpdated(record);
 }
 
 void OperationManager::updateRecordDescription(OperationRecord* record, const QString& description)
@@ -178,7 +162,7 @@ void OperationManager::updateRecordDescription(OperationRecord* record, const QS
         return;
 
     record->description = description;
-    emit recordUpdated(record);
+    emit this->recordUpdated(record);
 }
 
 void OperationManager::updateRecordError(OperationRecord* record, const QString& error)
@@ -191,7 +175,7 @@ void OperationManager::updateRecordError(OperationRecord* record, const QString&
         record->shortErrorMessage = record->operation->GetShortErrorMessage();
     else
         record->shortErrorMessage.clear();
-    emit recordUpdated(record);
+    emit this->recordUpdated(record);
 }
 
 void OperationManager::RemoveRecord(OperationRecord* record)
@@ -230,9 +214,9 @@ void OperationManager::RemoveRecords(const QList<OperationRecord*>& records)
 // Matches C# MainWindow.OnClosing() calling PrepareForEventReloadAfterRestart()
 void OperationManager::PrepareAllOperationsForRestart()
 {
-    qDebug() << "OperationManager::prepareAllOperationsForRestart: Cleaning up" << m_records.count() << "operations";
+    qDebug() << "OperationManager::prepareAllOperationsForRestart: Cleaning up" << this->m_records.count() << "operations";
 
-    for (OperationRecord* record : m_records)
+    for (OperationRecord* record : this->m_records)
     {
         if (record && record->operation)
         {

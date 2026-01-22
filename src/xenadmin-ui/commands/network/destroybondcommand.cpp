@@ -55,11 +55,7 @@ void DestroyBondCommand::Run()
     if (!network)
         return;
 
-    QString networkRef = network->OpaqueRef();
     QVariantMap networkData = network->GetData();
-
-    if (networkRef.isEmpty() || networkData.isEmpty())
-        return;
 
     QString bondRef = this->getBondRefFromNetwork(network);
     if (bondRef.isEmpty())
@@ -140,7 +136,8 @@ void DestroyBondCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, [this, bondName, action]() {
+    connect(action, &AsyncOperation::completed, [this, bondName, action]()
+    {
         if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
             this->mainWindow()->ShowStatusMessage(QString("Successfully deleted bond '%1'").arg(bondName), 5000);
@@ -223,9 +220,7 @@ QString DestroyBondCommand::getBondRefFromNetwork(QSharedPointer<Network> networ
     return QString();
 }
 
-void DestroyBondCommand::checkManagementImpact(const QVariantMap& networkData,
-                                               bool& affectsPrimary,
-                                               bool& affectsSecondary) const
+void DestroyBondCommand::checkManagementImpact(const QVariantMap& networkData, bool& affectsPrimary, bool& affectsSecondary) const
 {
     affectsPrimary = false;
     affectsSecondary = false;
@@ -309,15 +304,11 @@ QString DestroyBondCommand::getBondName(const QVariantMap& networkData) const
     QVariantList pifs = networkData.value("PIFs", QVariantList()).toList();
     if (!pifs.isEmpty() && this->GetObject() && this->GetObject()->GetConnection())
     {
-        XenCache* cache = this->GetObject()->GetConnection()->GetCache();
-        if (cache)
-        {
-            QString pifRef = pifs.first().toString();
-            QVariantMap pifData = cache->ResolveObjectData("pif", pifRef);
-            QString device = pifData.value("device", "").toString();
-            if (!device.isEmpty())
-                return device;
-        }
+        QString pifRef = pifs.first().toString();
+        QVariantMap pifData = this->GetObject()->GetCache()->ResolveObjectData("pif", pifRef);
+        QString device = pifData.value("device", "").toString();
+        if (!device.isEmpty())
+            return device;
     }
 
     return "Bond";

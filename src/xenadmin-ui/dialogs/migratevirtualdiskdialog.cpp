@@ -67,7 +67,7 @@ void MigrateVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, c
         action->SetDescription(QString("Migrating '%1'...").arg(vdiName));
 
         opManager->RegisterOperation(action);
-        action->RunAsync();
+        action->RunAsync(true);
     } else
     {
         // Multiple VDI migration - batch in parallel (max 3 at a time)
@@ -83,7 +83,7 @@ void MigrateVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, c
             action->SetDescription(QString("Migrating '%1'...").arg(vdiName));
 
             opManager->RegisterOperation(action);
-            action->RunAsync();
+            action->RunAsync(true);
         }
     }
 }

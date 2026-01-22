@@ -150,14 +150,8 @@ bool ResumeVMCommand::RunForVm(const QSharedPointer<VM>& vm, const QString& vmNa
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);
 
-    // Connect completion signal for cleanup
-    connect(action, &AsyncOperation::completed, this, [action]() {
-        // Auto-delete when complete
-        action->deleteLater();
-    });
-
     // Run action asynchronously
-    action->RunAsync();
+    action->RunAsync(true);
     return true;
 }
 

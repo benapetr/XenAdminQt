@@ -772,9 +772,8 @@ void CrossPoolMigrateWizard::accept()
             if (this->isCopyCloneSelected())
             {
                 VMCloneAction* action = new VMCloneAction(vmItem, this->copyName(), this->copyDescription(), nullptr);
-                connect(action, &AsyncOperation::completed, action, &QObject::deleteLater);
                 OperationManager::instance()->RegisterOperation(action);
-                action->RunAsync();
+                action->RunAsync(true);
             }
             else
             {
@@ -783,9 +782,8 @@ void CrossPoolMigrateWizard::accept()
                 if (sr && sr->IsValid())
                 {
                     VMCopyAction* action = new VMCopyAction(vmItem, QSharedPointer<Host>(), sr, this->copyName(), this->copyDescription(), nullptr);
-                    connect(action, &AsyncOperation::completed, action, &QObject::deleteLater);
                     OperationManager::instance()->RegisterOperation(action);
-                    action->RunAsync();
+                    action->RunAsync(true);
                 }
             }
         }
@@ -873,9 +871,8 @@ void CrossPoolMigrateWizard::accept()
                 QSharedPointer<Host> hostObj = sourceCache->ResolveObject<Host>("host", this->m_targetHostRef);
 
                 VMMoveAction* action = new VMMoveAction(vm, storageMap, hostObj, nullptr);
-                connect(action, &AsyncOperation::completed, action, &QObject::deleteLater);
                 OperationManager::instance()->RegisterOperation(action);
-                action->RunAsync();
+                action->RunAsync(true);
             }
         } else
         {
@@ -927,18 +924,15 @@ void CrossPoolMigrateWizard::accept()
                     true,
                     nullptr);
 
-                connect(multi, &AsyncOperation::completed, multi, &QObject::deleteLater);
                 OperationManager::instance()->RegisterOperation(multi);
-                multi->RunAsync();
+                multi->RunAsync(true);
             } else if (migrateAction)
             {
-                connect(migrateAction, &AsyncOperation::completed, migrateAction, &QObject::deleteLater);
                 OperationManager::instance()->RegisterOperation(migrateAction);
-                migrateAction->RunAsync();
+                migrateAction->RunAsync(true);
             }
         }
     }
-
     QWizard::accept();
 }
 
@@ -957,14 +951,22 @@ void CrossPoolMigrateWizard::populateDestinationPools()
     this->m_targetPoolRef.clear();
     this->m_targetHostRef.clear();
 
-    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-    if (!connMgr)
-        return;
+    QSet<XenConnection*> ignoredConnections;
+    if (this->m_mode == WizardMode::Copy)
+    {
+        for (const QSharedPointer<VM>& vmItem : this->m_vms)
+        {
+            if (vmItem)
+                ignoredConnections.insert(vmItem->GetConnection());
+        }
+    }
 
-    const QList<XenConnection*> connections = connMgr->GetAllConnections();
+    const QList<XenConnection*> connections = Xen::ConnectionsManager::instance()->GetAllConnections();
     for (XenConnection* conn : connections)
     {
         if (!conn || !conn->IsConnected())
+            continue;
+        if (ignoredConnections.contains(conn))
             continue;
 
         XenCache* cache = conn->GetCache();
@@ -1018,8 +1020,7 @@ void CrossPoolMigrateWizard::populateDestinationPools()
                         item->setEnabled(false);
                 }
             }
-        }
-        else
+        } else
         {
             QStringList hostRefs = cache->GetAllRefs("host");
             for (const QString& hostRef : hostRefs)
@@ -1082,9 +1083,7 @@ void CrossPoolMigrateWizard::populateDestinationPools()
     }
 }
 
-void CrossPoolMigrateWizard::populateHostsForPool(const QString& poolRef,
-                                                  XenConnection* connection,
-                                                  const QString& standaloneHostRef)
+void CrossPoolMigrateWizard::populateHostsForPool(const QString& poolRef, XenConnection* connection, const QString& standaloneHostRef)
 {
     this->m_hostCombo->clear();
     this->m_targetHostRef.clear();

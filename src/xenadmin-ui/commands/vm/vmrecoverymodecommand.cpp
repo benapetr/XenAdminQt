@@ -101,7 +101,8 @@ void VMRecoveryModeCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and user feedback
-    connect(action, &AsyncOperation::completed, this, [=]() {
+    connect(action, &AsyncOperation::completed, action, [=]()
+    {
         if (action->GetState() == AsyncOperation::Completed)
         {
             this->mainWindow()->ShowStatusMessage(

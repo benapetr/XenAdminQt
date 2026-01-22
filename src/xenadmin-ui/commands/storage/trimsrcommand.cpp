@@ -101,7 +101,8 @@ void TrimSRCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, [this, srName, action, sr]() {
+    connect(action, &AsyncOperation::completed, [this, srName, action, sr]()
+    {
         if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
             this->mainWindow()->ShowStatusMessage(QString("Successfully trimmed SR '%1'").arg(srName), 5000);

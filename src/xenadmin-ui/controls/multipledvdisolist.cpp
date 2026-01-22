@@ -427,7 +427,8 @@ void MultipleDvdIsoList::onLinkLabelEjectClicked()
         this
     );
     
-    connect(action, &AsyncOperation::completed, this, [this, action]() {
+    connect(action, &AsyncOperation::completed, action, [this, action]()
+    {
         qDebug() << "MultipleDvdIsoList: CD/DVD eject operation completed";
         // Refresh drives list to show updated state
         QTimer::singleShot(500, this, [this]() {
@@ -436,7 +437,8 @@ void MultipleDvdIsoList::onLinkLabelEjectClicked()
         action->deleteLater();
     });
     
-    connect(action, &AsyncOperation::failed, this, [action](const QString& error) {
+    connect(action, &AsyncOperation::failed, action, [action](const QString& error)
+    {
         qWarning() << "MultipleDvdIsoList: Failed to eject CD/DVD:" << error;
         action->deleteLater();
     });

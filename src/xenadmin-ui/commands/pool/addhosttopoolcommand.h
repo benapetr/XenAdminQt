@@ -62,7 +62,7 @@ class AddHostToPoolCommand : public Command
 
     private:
         QList<QSharedPointer<Host>> hosts_;
-        QSharedPointer<Pool> pool_;
+        QSharedPointer<Pool> m_pool;
         bool confirm_;
         
         /**

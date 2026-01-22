@@ -82,12 +82,9 @@ void PowerOnHostCommand::Run()
             continue;
         }
 
-        // Get XenConnection from XenLib
-        XenConnection* conn = host->GetConnection();
-        if (!conn || !conn->IsConnected())
+        if (!host->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected",
-                                 QString("Not connected to XenServer for host '%1'.").arg(hostName));
+            QMessageBox::warning(this->mainWindow(), "Not Connected", QString("Not connected to XenServer for host '%1'.").arg(hostName));
             continue;
         }
 
@@ -107,8 +104,7 @@ void PowerOnHostCommand::Run()
             if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
                 mainWindow->ShowStatusMessage(QString("Host '%1' power on initiated successfully").arg(hostName), 5000);
-            }
-            else
+            } else
             {
                 QMessageBox::warning(mainWindow, "Power On Host Failed",
                                      QString("Failed to power on host '%1'. Check the error log for details.").arg(hostName));

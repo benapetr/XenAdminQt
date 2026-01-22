@@ -189,7 +189,7 @@ void DeleteSnapshotCommand::deleteSnapshot()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, this, [this, action]()
+    connect(action, &AsyncOperation::completed, action, [this, action]()
     {
         bool success = (action->GetState() == AsyncOperation::Completed && !action->IsFailed());
         if (success)

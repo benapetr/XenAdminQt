@@ -109,7 +109,8 @@ void CloneVMCommand::Run()
         OperationManager::instance()->RegisterOperation(action);
 
         // Connect completion signal for cleanup and status update
-        connect(action, &AsyncOperation::completed, this, [this, vmName, cloneName, action]() {
+        connect(action, &AsyncOperation::completed, action, [this, vmName, cloneName, action]()
+        {
             if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
                 this->mainWindow()->ShowStatusMessage(QString("VM '%1' cloned successfully as '%2'").arg(vmName, cloneName), 5000);

@@ -114,8 +114,7 @@ void ForgetSRCommand::Run()
     XenConnection* conn = sr->GetConnection();
     if (!conn || !conn->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), "Not Connected",
-                             "Not connected to XenServer");
+        QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
         return;
     }
 

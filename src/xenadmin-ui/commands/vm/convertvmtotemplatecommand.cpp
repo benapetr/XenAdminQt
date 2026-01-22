@@ -86,7 +86,8 @@ void ConvertVMToTemplateCommand::Run()
         OperationManager::instance()->RegisterOperation(action);
 
         // Connect completion signal for cleanup and status update
-        connect(action, &AsyncOperation::completed, this, [this, vmName, action]() {
+        connect(action, &AsyncOperation::completed, action, [this, vmName, action]()
+        {
             if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
                 this->mainWindow()->ShowStatusMessage(QString("VM '%1' converted to template successfully").arg(vmName), 5000);

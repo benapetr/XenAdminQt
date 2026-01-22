@@ -99,8 +99,7 @@ void ShutdownHostCommand::Run()
         {
             this->mainWindow()->ShowStatusMessage(
                 QString("Shutting down host '%1'...").arg(runnable.first()->GetName()));
-        }
-        else
+        } else
         {
             this->mainWindow()->ShowStatusMessage(QString("Shutting down %1 hosts...").arg(count));
         }
@@ -110,12 +109,9 @@ void ShutdownHostCommand::Run()
             if (!host)
                 continue;
 
-            XenConnection* conn = host->GetConnection();
-            if (!conn || !conn->IsConnected())
+            if (!host->IsConnected())
             {
-                QMessageBox::warning(this->mainWindow(), "Not Connected",
-                                     QString("Not connected to XenServer for host '%1'.")
-                                         .arg(host->GetName()));
+                QMessageBox::warning(this->mainWindow(), "Not Connected", QString("Not connected to XenServer for host '%1'.").arg(host->GetName()));
                 continue;
             }
 
@@ -142,13 +138,12 @@ void ShutdownHostCommand::Run()
 
             OperationManager::instance()->RegisterOperation(action);
 
-            connect(action, &AsyncOperation::completed, this, [this, hostName, action]()
+            connect(action, &AsyncOperation::completed, action, [this, hostName, action]()
             {
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {
                     this->mainWindow()->ShowStatusMessage(QString("Host '%1' shutdown initiated successfully").arg(hostName), 5000);
-                }
-                else
+                } else
                 {
                     QMessageBox::warning(this->mainWindow(), "Shutdown Host Failed",
                                          QString("Failed to shutdown host '%1'. Check the error log for details.").arg(hostName));

@@ -95,9 +95,7 @@ namespace
 }
 
 DisconnectCommand::DisconnectCommand(MainWindow* mainWindow, XenConnection* connection, bool prompt, QObject* parent)
-    : Command(mainWindow, parent),
-      m_connection(connection),
-      m_prompt(prompt)
+    : Command(mainWindow, parent), m_connection(connection), m_prompt(prompt)
 {
 }
 

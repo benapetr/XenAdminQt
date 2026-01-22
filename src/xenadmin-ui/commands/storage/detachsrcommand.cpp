@@ -199,7 +199,8 @@ void DetachSRCommand::Run()
         OperationManager::instance()->RegisterOperation(action);
 
         QPointer<MainWindow> mainWindow = this->mainWindow();
-        connect(action, &AsyncOperation::completed, mainWindow, [mainWindow, srName, action]() {
+        connect(action, &AsyncOperation::completed, mainWindow, [mainWindow, srName, action]()
+        {
             if (!mainWindow)
             {
                 action->deleteLater();

@@ -81,22 +81,17 @@ void RestartToolstackCommand::Run()
     {
         if (count == 1)
         {
-            this->mainWindow()->ShowStatusMessage(
-                QString("Restarting toolstack on '%1'...").arg(runnable.first()->GetName()));
-        }
-        else
+            this->mainWindow()->ShowStatusMessage(QString("Restarting toolstack on '%1'...").arg(runnable.first()->GetName()));
+        } else
         {
             this->mainWindow()->ShowStatusMessage(QString("Restarting toolstack on %1 hosts...").arg(count));
         }
 
         for (const QSharedPointer<Host>& host : runnable)
         {
-            XenConnection* conn = host->GetConnection();
-            if (!conn || !conn->IsConnected())
+            if (!host->IsConnected())
             {
-                QMessageBox::warning(this->mainWindow(), "Not Connected",
-                                     QString("Not connected to XenServer for host '%1'.")
-                                         .arg(host->GetName()));
+                QMessageBox::warning(this->mainWindow(), "Not Connected", QString("Not connected to XenServer for host '%1'.").arg(host->GetName()));
                 continue;
             }
 
@@ -104,7 +99,7 @@ void RestartToolstackCommand::Run()
             RestartToolstackAction* action = new RestartToolstackAction(host, nullptr);
             OperationManager::instance()->RegisterOperation(action);
 
-            connect(action, &AsyncOperation::completed, this, [this, hostName, action]()
+            connect(action, &AsyncOperation::completed, action, [this, hostName, action]()
             {
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {

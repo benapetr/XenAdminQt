@@ -89,10 +89,7 @@ void ForceShutdownVMCommand::Run()
 
         VMHardShutdown* action = new VMHardShutdown(vm, this->mainWindow());
         OperationManager::instance()->RegisterOperation(action);
-        connect(action, &AsyncOperation::completed, this, [action]() {
-            action->deleteLater();
-        });
-        action->RunAsync();
+        action->RunAsync(true);
     };
 
     const QList<QSharedPointer<VM>> vms = this->getVMs();

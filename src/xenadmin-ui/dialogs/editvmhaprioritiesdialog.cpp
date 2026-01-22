@@ -437,11 +437,7 @@ void EditVmHaPrioritiesDialog::accept()
     QMap<QString, QVariantMap> vmOptions = buildVmStartupOptions();
 
     // Create and run SetHaPrioritiesAction
-    SetHaPrioritiesAction* action = new SetHaPrioritiesAction(
-        pool,
-        vmOptions,
-        newNtol,
-        this);
+    SetHaPrioritiesAction* action = new SetHaPrioritiesAction(pool, vmOptions, newNtol, this);
 
     // Register with OperationManager
     OperationManager::instance()->RegisterOperation(action);
@@ -449,12 +445,14 @@ void EditVmHaPrioritiesDialog::accept()
     // Show progress dialog
     OperationProgressDialog* progressDialog = new OperationProgressDialog(action, this);
 
-    connect(action, &AsyncOperation::completed, [this, progressDialog]() {
+    connect(action, &AsyncOperation::completed, [this, progressDialog]()
+    {
         progressDialog->close();
         QDialog::accept();
     });
 
-    connect(action, &AsyncOperation::failed, [this, progressDialog](const QString& error) {
+    connect(action, &AsyncOperation::failed, [this, progressDialog](const QString& error)
+    {
         progressDialog->close();
         QMessageBox::critical(this, tr("Failed to Update HA Priorities"),
                               tr("Failed to update HA priorities:\n\n%1").arg(error));

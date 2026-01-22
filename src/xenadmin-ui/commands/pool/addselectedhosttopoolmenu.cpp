@@ -29,12 +29,12 @@
 #include "addhosttopoolcommand.h"
 #include "newpoolcommand.h"
 #include "../../mainwindow.h"
-#include "xen/host.h"
-#include "xen/pool.h"
-#include "xen/network/connection.h"
-#include "xen/network/connectionsmanager.h"
-#include "xen/xenobject.h"
-#include "xencache.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xencache.h"
 #include <QAction>
 #include <QTreeWidget>
 

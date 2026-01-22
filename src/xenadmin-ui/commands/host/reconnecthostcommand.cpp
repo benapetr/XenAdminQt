@@ -36,9 +36,7 @@ ReconnectHostCommand::ReconnectHostCommand(MainWindow* mainWindow, QObject* pare
 {
 }
 
-ReconnectHostCommand::ReconnectHostCommand(const QList<XenConnection*>& connections, MainWindow* mainWindow, QObject* parent)
-    : HostCommand(mainWindow, parent)
-    , m_connections(connections)
+ReconnectHostCommand::ReconnectHostCommand(const QList<XenConnection*>& connections, MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent), m_connections(connections)
 {
 }
 

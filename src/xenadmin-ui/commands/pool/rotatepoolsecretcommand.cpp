@@ -216,7 +216,7 @@ void RotatePoolSecretCommand::Run()
 
     OperationManager* opManager = OperationManager::instance();
     opManager->RegisterOperation(action);
-    action->RunAsync();
+    action->RunAsync(true);
 
     this->mainWindow()->ShowStatusMessage(tr("Pool secret rotation started"), 3000);
 }
