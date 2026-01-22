@@ -391,7 +391,11 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
                 if (srData.isEmpty())
                     continue;
 
+                const bool srShared = srData.value("shared", false).toBool();
                 const QVariantList pbds = srData.value("PBDs").toList();
+                if (srShared || pbds.size() != 1)
+                    continue;
+
                 for (const QVariant& pbdRefVar : pbds)
                 {
                     const QString pbdRef = pbdRefVar.toString();
