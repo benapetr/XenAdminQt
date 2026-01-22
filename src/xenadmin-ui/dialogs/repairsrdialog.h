@@ -34,10 +34,11 @@
 #include <QTreeWidgetItem>
 
 class SR;
+class Host;
+class PBD;
 class AsyncOperation;
 class MultipleOperation;
 class XenConnection;
-class XenObject;
 
 namespace Ui
 {
@@ -115,15 +116,12 @@ class RepairSRDialog : public QDialog
         struct RepairTreeNode
         {
             QSharedPointer<SR> sr;
-            QSharedPointer<XenObject> host; // Can be null for SR-level nodes
-            QVariantMap pbdData; // Can be empty if PBD missing
+            QSharedPointer<Host> host; // Can be null for SR-level nodes
+            QSharedPointer<PBD> pbd; // Can be null if PBD missing
             QTreeWidgetItem* item;
 
             RepairTreeNode() : item(nullptr) {}
         };
-
-        void createTreeNode(RepairTreeNode& node);
-        void updateTreeNodeStatus(RepairTreeNode& node);
 
         Ui::RepairSRDialog* ui;
         QList<QSharedPointer<SR>> srList;

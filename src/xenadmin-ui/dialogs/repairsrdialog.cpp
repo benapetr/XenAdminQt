@@ -29,6 +29,7 @@
 #include "ui_repairsrdialog.h"
 #include "xen/sr.h"
 #include "xen/host.h"
+#include "xen/pbd.h"
 #include "xen/xenobject.h"
 #include "xen/actions/sr/srrepairaction.h"
 #include "operations/multipleoperation.h"
@@ -153,13 +154,8 @@ void RepairSRDialog::buildTree()
         if (!sr || !sr->GetConnection())
             continue;
         
-        XenConnection* conn = sr->GetConnection();
-        XenCache* cache = conn->GetCache();
-        if (!cache)
-            continue;
+        XenCache* cache = sr->GetCache();
         
-        QVariantMap srData = sr->GetData();
-
         const bool srBroken = sr->IsBroken();
         const bool multipathOk = sr->MultipathAOK();
         
@@ -179,66 +175,52 @@ void RepairSRDialog::buildTree()
         
         this->treeNodes.append(srNode);
         
-        struct HostEntry
-        {
-            QString ref;
-            QString name;
-        };
-
-        QList<HostEntry> hosts;
-        QList<QVariantMap> allHosts = cache->GetAllData("host");
-        for (const QVariantMap& hostData : allHosts)
-        {
-            QString hostRef = hostData.value("opaqueRef").toString();
-            if (hostRef.isEmpty())
-                hostRef = hostData.value("ref").toString();
-            if (hostRef.isEmpty())
-                hostRef = hostData.value("_ref").toString();
-            if (hostRef.isEmpty())
-                continue;
-
-            HostEntry entry;
-            entry.ref = hostRef;
-            entry.name = hostData.value("name_label").toString();
-            hosts.append(entry);
-        }
-
-        std::sort(hosts.begin(), hosts.end(), [](const HostEntry& a, const HostEntry& b) {
-            return a.name.toLower() < b.name.toLower();
+        QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+        std::sort(hosts.begin(), hosts.end(), [](const QSharedPointer<Host>& a, const QSharedPointer<Host>& b) {
+            return a->GetName().toLower() < b->GetName().toLower();
         });
         
         // Find storage host if not shared
         QString storageHostRef;
-        QVariantList pbdRefs = srData.value("PBDs").toList();
-        bool isShared = srData.value("shared", false).toBool();
+        bool isShared = sr->IsShared();
+        QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
         
-        if (!isShared && !pbdRefs.isEmpty())
+        if (!isShared && !pbds.isEmpty())
         {
             // For non-shared SRs, find the storage host from existing PBD
-            QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRefs.first().toString());
-            storageHostRef = pbdData.value("host").toString();
+            for (const QSharedPointer<PBD>& pbd : pbds)
+            {
+                if (pbd && pbd->IsValid())
+                {
+                    storageHostRef = pbd->GetHostRef();
+                    if (!storageHostRef.isEmpty())
+                        break;
+                }
+            }
         }
         
         // Add host nodes
-        for (const HostEntry& entry : hosts)
+        for (const QSharedPointer<Host>& host : hosts)
         {
-            const QString hostRef = entry.ref;
-            QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
-            if (hostData.isEmpty())
+            if (!host || !host->IsValid())
                 continue;
             
+            const QString hostRef = host->OpaqueRef();
+
             // For non-shared SRs, only show the storage host
             if (!isShared && !storageHostRef.isEmpty() && hostRef != storageHostRef)
                 continue;
             
             // Find PBD for this host
-            QVariantMap pbdData;
-            for (const QVariant& pbdRefVar : pbdRefs)
+            QSharedPointer<PBD> pbdForHost;
+            for (const QSharedPointer<PBD>& pbd : pbds)
             {
-                QVariantMap pbd = cache->ResolveObjectData("pbd", pbdRefVar.toString());
-                if (pbd.value("host").toString() == hostRef)
+                if (!pbd || !pbd->IsValid())
+                    continue;
+
+                if (pbd->GetHostRef() == hostRef)
                 {
-                    pbdData = pbd;
+                    pbdForHost = pbd;
                     break;
                 }
             }
@@ -246,10 +228,10 @@ void RepairSRDialog::buildTree()
             // Create host node
             RepairTreeNode hostNode;
             hostNode.sr = sr;
-            hostNode.host = cache->ResolveObject("host", hostRef);
-            hostNode.pbdData = pbdData;
+            hostNode.host = host;
+            hostNode.pbd = pbdForHost;
             hostNode.item = new QTreeWidgetItem(srNode.item);
-            hostNode.item->setText(0, hostData.value("name_label").toString());
+            hostNode.item->setText(0, host->GetName());
             
             // Set host icon
             QIcon hostIcon(":/images/host.png");
@@ -260,14 +242,14 @@ void RepairSRDialog::buildTree()
             QColor statusColor;
             QFont font = hostNode.item->font(1);
             
-            if (pbdData.isEmpty())
+            if (!pbdForHost || !pbdForHost->IsValid())
             {
                 status = "Connection missing";
                 statusColor = Qt::red;
                 font.setBold(true);
             } else
             {
-                bool currentlyAttached = pbdData.value("currently_attached", false).toBool();
+                bool currentlyAttached = pbdForHost->IsCurrentlyAttached();
                 if (currentlyAttached)
                 {
                     status = "Connected";
