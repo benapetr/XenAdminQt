@@ -173,6 +173,22 @@ if [ ! -d "$DEBIAN_DIR" ]; then
     exit 1
 fi
 
+DISTRO_TAG=""
+if [ -r /etc/os-release ]; then
+    . /etc/os-release
+    if [ "${ID:-}" = "debian" ] && [ -n "${VERSION_ID:-}" ]; then
+        DISTRO_TAG="deb${VERSION_ID}"
+    elif [ "${ID:-}" = "ubuntu" ] && [ -n "${VERSION_ID:-}" ]; then
+        DISTRO_TAG="ubuntu${VERSION_ID}"
+    fi
+fi
+
+if [ -n "$DISTRO_TAG" ]; then
+    DEB_VERSION="${APP_VERSION}-1~${DISTRO_TAG}"
+else
+    DEB_VERSION="${APP_VERSION}"
+fi
+
 BACKUP_CHANGELOG=""
 if [ -f "$CHANGELOG_PATH" ]; then
     BACKUP_CHANGELOG=$(mktemp)
@@ -182,7 +198,7 @@ fi
 trap 'if [ -n "$BACKUP_CHANGELOG" ] && [ -f "$BACKUP_CHANGELOG" ]; then cp "$BACKUP_CHANGELOG" "$CHANGELOG_PATH"; rm -f "$BACKUP_CHANGELOG"; fi' EXIT
 
 cat > "$CHANGELOG_PATH" <<EOF
-${APP_NAME} (${APP_VERSION}) unstable; urgency=medium
+${APP_NAME} (${DEB_VERSION}) unstable; urgency=medium
 
   * Automated build.
 
@@ -207,8 +223,8 @@ collect_debs() {
     local base_dir="$1"
     local arch
     for arch in amd64 all; do
-        [ -f "$base_dir/${APP_NAME}_${APP_VERSION}_${arch}.deb" ] && DEB_FILES+=("$base_dir/${APP_NAME}_${APP_VERSION}_${arch}.deb")
-        [ -f "$base_dir/${APP_NAME}-dbgsym_${APP_VERSION}_${arch}.deb" ] && DEB_FILES+=("$base_dir/${APP_NAME}-dbgsym_${APP_VERSION}_${arch}.deb")
+        [ -f "$base_dir/${APP_NAME}_${DEB_VERSION}_${arch}.deb" ] && DEB_FILES+=("$base_dir/${APP_NAME}_${DEB_VERSION}_${arch}.deb")
+        [ -f "$base_dir/${APP_NAME}-dbgsym_${DEB_VERSION}_${arch}.deb" ] && DEB_FILES+=("$base_dir/${APP_NAME}-dbgsym_${DEB_VERSION}_${arch}.deb")
     done
     return 0
 }
@@ -217,15 +233,15 @@ collect_debs "$OUTPUT_PARENT"
 collect_debs "$PROJECT_ROOT"
 
 if [ ${#DEB_FILES[@]} -eq 0 ]; then
-    mapfile -t DEB_FILES < <(find "$OUTPUT_PARENT" -maxdepth 1 -type f -name "${APP_NAME}_${APP_VERSION}_*.deb") || true
+    mapfile -t DEB_FILES < <(find "$OUTPUT_PARENT" -maxdepth 1 -type f -name "${APP_NAME}_${DEB_VERSION}_*.deb") || true
 fi
 if [ ${#DEB_FILES[@]} -eq 0 ]; then
-    mapfile -t DEB_FILES < <(find "$PROJECT_ROOT" -maxdepth 1 -type f -name "${APP_NAME}_${APP_VERSION}_*.deb") || true
+    mapfile -t DEB_FILES < <(find "$PROJECT_ROOT" -maxdepth 1 -type f -name "${APP_NAME}_${DEB_VERSION}_*.deb") || true
 fi
 
 if [ ${#DEB_FILES[@]} -eq 0 ]; then
     echo "Error: No .deb artifacts found in $OUTPUT_PARENT or $PROJECT_ROOT"
-    echo "Expected pattern: ${APP_NAME}_${APP_VERSION}_*.deb"
+    echo "Expected pattern: ${APP_NAME}_${DEB_VERSION}_*.deb"
     echo "Available .deb files in $OUTPUT_PARENT:"
     find "$OUTPUT_PARENT" -maxdepth 1 -type f -name "*.deb" -print
     exit 1
@@ -240,7 +256,7 @@ echo "================================"
 echo "Build complete!"
 echo "================================"
 shopt -s nullglob
-OUTPUT_DEBS=("$OUTPUT_DIR"/${APP_NAME}_${APP_VERSION}_*.deb)
+OUTPUT_DEBS=("$OUTPUT_DIR"/${APP_NAME}_${DEB_VERSION}_*.deb)
 shopt -u nullglob
 
 echo "Package(s):"
