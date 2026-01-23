@@ -119,6 +119,7 @@
 #include "commands/vm/installtoolscommand.h"
 #include "commands/vm/uninstallvmcommand.h"
 #include "commands/vm/deletevmcommand.h"
+#include "commands/vm/deletevmsandtemplatescommand.h"
 #include "commands/vm/convertvmtotemplatecommand.h"
 #include "commands/vm/newvmcommand.h"
 #include "commands/vm/vmpropertiescommand.h"
@@ -398,6 +399,15 @@ void MainWindow::updateActions()
 {
     // Update toolbar and menu states (matches C# UpdateToolbars)
     this->updateToolbarsAndMenus();
+}
+
+bool MainWindow::mixedVmTemplateSelection() const
+{
+    if (!this->m_selectionManager)
+        return false;
+
+    const QStringList types = this->m_selectionManager->SelectedTypes();
+    return types.contains("vm") && types.contains("template");
 }
 
 void MainWindow::connectToServer()
@@ -2289,6 +2299,8 @@ void MainWindow::updateToolbarsAndMenus()
     bool canForceShutdown = this->m_commands["ForceShutdownVM"]->CanRun();
     bool canForceReboot = this->m_commands["ForceRebootVM"]->CanRun();
 
+    const bool mixedVmTemplateSelection = this->mixedVmTemplateSelection();
+
     // Host-specific commands
     bool canPowerOnHost = this->m_commands["PowerOnHost"]->CanRun();
 
@@ -2360,7 +2372,10 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->InstantVmToolStripMenuItem->setEnabled(this->m_commands["InstantVMFromTemplate"]->CanRun());
     this->ui->exportTemplateToolStripMenuItem->setEnabled(this->m_commands["ExportTemplate"]->CanRun());
     this->ui->duplicateTemplateToolStripMenuItem->setEnabled(this->m_commands["CopyTemplate"]->CanRun());
-    this->ui->uninstallTemplateToolStripMenuItem->setEnabled(this->m_commands["DeleteTemplate"]->CanRun());
+    if (mixedVmTemplateSelection)
+        this->ui->uninstallTemplateToolStripMenuItem->setEnabled(this->m_commands["DeleteVMsAndTemplates"]->CanRun());
+    else
+        this->ui->uninstallTemplateToolStripMenuItem->setEnabled(this->m_commands["DeleteTemplate"]->CanRun());
     this->ui->templatePropertiesToolStripMenuItem->setEnabled(this->m_commands["VMProperties"]->CanRun());
 
     // Storage menu
@@ -2889,6 +2904,15 @@ void MainWindow::onDuplicateTemplate()
 
 void MainWindow::onDeleteTemplate()
 {
+    const bool mixedVmTemplateSelection = this->mixedVmTemplateSelection();
+
+    if (mixedVmTemplateSelection)
+    {
+        if (this->m_commands.contains("DeleteVMsAndTemplates"))
+            this->m_commands["DeleteVMsAndTemplates"]->Run();
+        return;
+    }
+
     if (this->m_commands.contains("DeleteTemplate"))
         this->m_commands["DeleteTemplate"]->Run();
 }
@@ -3051,6 +3075,7 @@ void MainWindow::initializeCommands()
     this->m_commands["InstallTools"] = new InstallToolsCommand(this, this);
     this->m_commands["UninstallVM"] = new UninstallVMCommand(this, this);
     this->m_commands["DeleteVM"] = new DeleteVMCommand(this, this);
+    this->m_commands["DeleteVMsAndTemplates"] = new DeleteVMsAndTemplatesCommand(this, this);
     this->m_commands["ConvertVMToTemplate"] = new ConvertVMToTemplateCommand(this, this);
     this->m_commands["ExportVM"] = new ExportVMCommand(this, this);
     this->m_commands["NewVM"] = new NewVMCommand(this);
@@ -3175,6 +3200,7 @@ void MainWindow::updateMenuItems()
 {
     // Update menu items based on command canRun() state
     // This matches C# CommandToolStripMenuItem.Update() pattern
+    const bool mixedVmTemplateSelection = this->mixedVmTemplateSelection();
 
     // Server menu
     this->ui->ReconnectToolStripMenuItem1->setEnabled(this->m_commands["ReconnectHost"]->CanRun());
@@ -3218,7 +3244,10 @@ void MainWindow::updateMenuItems()
     this->ui->InstantVmToolStripMenuItem->setEnabled(this->m_commands["InstantVMFromTemplate"]->CanRun());
     this->ui->exportTemplateToolStripMenuItem->setEnabled(this->m_commands["ExportTemplate"]->CanRun());
     this->ui->duplicateTemplateToolStripMenuItem->setEnabled(this->m_commands["CopyTemplate"]->CanRun());
-    this->ui->uninstallTemplateToolStripMenuItem->setEnabled(this->m_commands["DeleteTemplate"]->CanRun());
+    if (mixedVmTemplateSelection)
+        this->ui->uninstallTemplateToolStripMenuItem->setEnabled(this->m_commands["DeleteVMsAndTemplates"]->CanRun());
+    else
+        this->ui->uninstallTemplateToolStripMenuItem->setEnabled(this->m_commands["DeleteTemplate"]->CanRun());
     this->ui->templatePropertiesToolStripMenuItem->setEnabled(this->m_commands["VMProperties"]->CanRun());
 
     // Storage menu

@@ -50,6 +50,7 @@ class DeleteVMsAndTemplatesCommand : public DeleteVMCommand
         explicit DeleteVMsAndTemplatesCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
         bool CanRun() const override;
+        void Run() override;
         QString MenuText() const override;
 
     protected:

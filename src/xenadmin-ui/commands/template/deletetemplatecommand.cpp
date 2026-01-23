@@ -39,11 +39,17 @@ DeleteTemplateCommand::DeleteTemplateCommand(MainWindow* mainWindow, QObject* pa
 
 bool DeleteTemplateCommand::CanRun() const
 {
-    QString templateRef = this->getSelectedVMRef();
-    if (templateRef.isEmpty())
-        return false;
+    const QList<QSharedPointer<VM>> vms = this->collectSelectedVMs(true);
+    for (const QSharedPointer<VM>& vm : vms)
+    {
+        if (!vm || !vm->IsTemplate())
+            continue;
 
-    return this->canDeleteTemplate(templateRef);
+        if (this->canDeleteVm(vm, true))
+            return true;
+    }
+
+    return false;
 }
 
 QString DeleteTemplateCommand::MenuText() const
@@ -71,4 +77,17 @@ bool DeleteTemplateCommand::canDeleteTemplate(const QString& templateRef) const
 
     // Check if the operation is allowed
     return vm->GetAllowedOperations().contains("destroy");
+}
+
+void DeleteTemplateCommand::Run()
+{
+    QList<QSharedPointer<VM>> templates;
+    const QList<QSharedPointer<VM>> vms = this->collectSelectedVMs(true);
+    for (const QSharedPointer<VM>& vm : vms)
+    {
+        if (vm && vm->IsTemplate())
+            templates.append(vm);
+    }
+
+    this->runDeleteFlow(templates, true, tr("Delete Templates"), tr("Some templates cannot be deleted."));
 }

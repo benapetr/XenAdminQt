@@ -117,7 +117,9 @@ bool VM::IsDefaultTemplate() const
 
 bool VM::DefaultTemplate() const
 {
-    return this->GetOtherConfig().contains("default_template");
+    const QVariantMap otherConfig = this->GetOtherConfig();
+    const QVariant value = otherConfig.value("default_template");
+    return value.isValid() && value.toBool();
 }
 
 bool VM::InternalTemplate() const

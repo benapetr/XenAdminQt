@@ -57,3 +57,4 @@
 
 # Known issues
 * When quitting the app sometimes the "pending ops" window appears that's empty
+* SR in list of VDI we see "base copy" which is hidden in original version

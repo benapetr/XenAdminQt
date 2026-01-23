@@ -90,8 +90,6 @@ void ConfirmVMDeleteDialog::initialize(const QList<QSharedPointer<VM>> &vms)
     QTreeWidgetItem* attachedDisksGroup = new QTreeWidgetItem(this->ui->listView);
     attachedDisksGroup->setText(0, tr("Attached virtual disks"));
     attachedDisksGroup->setFlags(Qt::ItemIsEnabled);
-    attachedDisksGroup->setBackground(0, QColor(240, 240, 240));
-    attachedDisksGroup->setBackground(1, QColor(240, 240, 240));
 
     QFont groupFont = attachedDisksGroup->font(0);
     groupFont.setBold(true);
@@ -101,8 +99,6 @@ void ConfirmVMDeleteDialog::initialize(const QList<QSharedPointer<VM>> &vms)
     QTreeWidgetItem* snapshotsGroup = new QTreeWidgetItem(this->ui->listView);
     snapshotsGroup->setText(0, tr("Snapshots"));
     snapshotsGroup->setFlags(Qt::ItemIsEnabled);
-    snapshotsGroup->setBackground(0, QColor(240, 240, 240));
-    snapshotsGroup->setBackground(1, QColor(240, 240, 240));
     snapshotsGroup->setFont(0, groupFont);
     snapshotsGroup->setFont(1, groupFont);
 

@@ -39,6 +39,7 @@ class DeleteTemplateCommand : public DeleteVMCommand
 
         // Inherited from Command
         bool CanRun() const override;
+        void Run() override;
         QString MenuText() const override;
 
     private:

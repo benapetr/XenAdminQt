@@ -57,6 +57,12 @@ class DeleteVMCommand : public VMCommand
 
     protected:
         bool isVMDeletable() const;
+        QList<QSharedPointer<VM>> collectSelectedVMs(bool includeTemplates) const;
+        bool canDeleteVm(const QSharedPointer<VM>& vm, bool allowTemplates, QString* reason = nullptr) const;
+        void runDeleteFlow(const QList<QSharedPointer<VM>>& selected,
+                           bool allowTemplates,
+                           const QString& errorDialogTitle,
+                           const QString& errorDialogText);
 };
 
 #endif // DELETEVMCOMMAND_H

@@ -62,6 +62,7 @@
 #include "vm/copyvmcommand.h"
 #include "vm/movevmcommand.h"
 #include "vm/deletevmcommand.h"
+#include "vm/deletevmsandtemplatescommand.h"
 #include "vm/convertvmtotemplatecommand.h"
 #include "vm/exportvmcommand.h"
 #include "vm/newvmcommand.h"
@@ -192,6 +193,12 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
         return;
 
     QString powerState = vm->GetPowerState();
+    bool mixedVmTemplateSelection = false;
+    if (this->m_mainWindow && this->m_mainWindow->GetSelectionManager())
+    {
+        const QStringList types = this->m_mainWindow->GetSelectionManager()->SelectedTypes();
+        mixedVmTemplateSelection = types.contains("vm") && types.contains("template");
+    }
     QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
     QList<QSharedPointer<VM>> filteredVms;
     QMap<QString, QSharedPointer<Host>> vmHostAncestors;
@@ -431,7 +438,9 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
 
     this->addSeparator(menu);
 
-    DeleteVMCommand* deleteCmd = new DeleteVMCommand(this->m_mainWindow, this);
+    Command* deleteCmd = mixedVmTemplateSelection
+        ? static_cast<Command*>(new DeleteVMsAndTemplatesCommand(this->m_mainWindow, this))
+        : static_cast<Command*>(new DeleteVMCommand(this->m_mainWindow, this));
     this->addCommand(menu, deleteCmd);
 
     this->addSeparator(menu);
@@ -486,6 +495,12 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM
         return;
 
     QString templateRef = templateVM->OpaqueRef();
+    bool mixedVmTemplateSelection = false;
+    if (this->m_mainWindow && this->m_mainWindow->GetSelectionManager())
+    {
+        const QStringList types = this->m_mainWindow->GetSelectionManager()->SelectedTypes();
+        mixedVmTemplateSelection = types.contains("vm") && types.contains("template");
+    }
 
     // VM Creation from template
     NewVMFromTemplateCommand* newVMFromTemplateCmd = new NewVMFromTemplateCommand(this->m_mainWindow, this);
@@ -499,7 +514,9 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM
 
     this->addSeparator(menu);
 
-    DeleteTemplateCommand* deleteCmd = new DeleteTemplateCommand(this->m_mainWindow, this);
+    Command* deleteCmd = mixedVmTemplateSelection
+        ? static_cast<Command*>(new DeleteVMsAndTemplatesCommand(this->m_mainWindow, this))
+        : static_cast<Command*>(new DeleteTemplateCommand(this->m_mainWindow, this));
     this->addCommand(menu, deleteCmd);
 
     this->addSeparator(menu);

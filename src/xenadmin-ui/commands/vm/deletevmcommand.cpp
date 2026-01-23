@@ -28,16 +28,52 @@
 #include "deletevmcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
+#include "../../dialogs/confirmvmdeletedialog.h"
+#include "../../dialogs/commanderrordialog.h"
+#include "xencache.h"
+#include "xenlib/operations/multipleoperation.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
+#include "xenlib/xen/vbd.h"
 #include "xenlib/xen/actions/vm/vmdestroyaction.h"
-#include <QMessageBox>
-#include <QCheckBox>
-#include <QVBoxLayout>
-#include <QLabel>
-#include <QDialog>
-#include <QPushButton>
-#include <QDialogButtonBox>
+#include <QPointer>
+
+namespace
+{
+    QStringList filterVbdsForVm(const QStringList& selectedVbds, const QSharedPointer<VM>& vm)
+    {
+        QStringList filtered;
+        if (!vm || selectedVbds.isEmpty())
+            return filtered;
+
+        const QString vmRef = vm->OpaqueRef();
+        for (const QString& vbdRef : selectedVbds)
+        {
+            QSharedPointer<VBD> vbd = vm->GetCache()->ResolveObject<VBD>("vbd", vbdRef);
+            if (vbd && vbd->GetVMRef() == vmRef)
+                filtered.append(vbdRef);
+        }
+
+        return filtered;
+    }
+
+    QStringList filterSnapshotsForVm(const QStringList& selectedSnapshots, const QSharedPointer<VM>& vm)
+    {
+        QStringList filtered;
+        if (!vm || selectedSnapshots.isEmpty())
+            return filtered;
+
+        const QString vmRef = vm->OpaqueRef();
+        for (const QString& snapshotRef : selectedSnapshots)
+        {
+            QVariantMap snapshotData = vm->GetCache()->ResolveObjectData("vm", snapshotRef);
+            if (snapshotData.value("snapshot_of").toString() == vmRef)
+                filtered.append(snapshotRef);
+        }
+
+        return filtered;
+    }
+} // namespace
 
 DeleteVMCommand::DeleteVMCommand(MainWindow* mainWindow, QObject* parent) : VMCommand(mainWindow, parent)
 {
@@ -45,103 +81,24 @@ DeleteVMCommand::DeleteVMCommand(MainWindow* mainWindow, QObject* parent) : VMCo
 
 bool DeleteVMCommand::CanRun() const
 {
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
+    const QList<QSharedPointer<VM>> vms = this->collectSelectedVMs(false);
+    if (!vms.isEmpty())
+    {
+        for (const QSharedPointer<VM>& vm : vms)
+        {
+            if (this->canDeleteVm(vm, false))
+                return true;
+        }
         return false;
+    }
 
-    // Only enable if VM can be deleted
-    return this->isVMDeletable();
+    return this->canDeleteVm(this->getVM(), false);
 }
 
 void DeleteVMCommand::Run()
 {
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return;
-
-    QString vmName = this->getSelectedVMName();
-    if (vmName.isEmpty())
-        return;
-
-    // Use VM GetPowerState method
-    QString powerState = vm->GetPowerState();
-
-    // Check if VM is in a deletable state
-    if (powerState != "Halted")
-    {
-        QMessageBox::warning(this->mainWindow(), "Delete VM",
-                             QString("VM '%1' must be shut down before it can be deleted.\n\n"
-                                     "Current state: %2")
-                                 .arg(vmName, powerState));
-        return;
-    }
-
-    // Create custom confirmation dialog following original XenAdmin pattern
-    QDialog confirmDialog(this->mainWindow());
-    confirmDialog.setWindowTitle("Confirm VM Deletion");
-    confirmDialog.setModal(true);
-    confirmDialog.resize(400, 200);
-
-    QVBoxLayout* layout = new QVBoxLayout(&confirmDialog);
-
-    // Warning message
-    QLabel* warningLabel = new QLabel(QString("Are you sure you want to delete VM '%1'?\n\n"
-                                              "This action cannot be undone.")
-                                          .arg(vmName));
-    warningLabel->setWordWrap(true);
-    layout->addWidget(warningLabel);
-
-    // Option to delete disks (following original XenAdmin pattern)
-    QCheckBox* deleteDisksCheckbox = new QCheckBox("Delete associated virtual disk files");
-    deleteDisksCheckbox->setChecked(true); // Default to checked like original
-    deleteDisksCheckbox->setToolTip("Remove the VM's virtual disk files from storage.\n"
-                                    "Uncheck to keep disks for potential reuse.");
-    layout->addWidget(deleteDisksCheckbox);
-
-    // Buttons
-    QDialogButtonBox* buttonBox = new QDialogButtonBox(QDialogButtonBox::Yes | QDialogButtonBox::No);
-    connect(buttonBox, &QDialogButtonBox::accepted, &confirmDialog, &QDialog::accept);
-    connect(buttonBox, &QDialogButtonBox::rejected, &confirmDialog, &QDialog::reject);
-    layout->addWidget(buttonBox);
-
-    if (confirmDialog.exec() == QDialog::Accepted)
-    {
-        bool deleteDisks = deleteDisksCheckbox->isChecked();
-
-        // Get XenConnection from VM
-        XenConnection* conn = vm->GetConnection();
-        if (!conn || !conn->IsConnected())
-        {
-            QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
-            return;
-        }
-
-        // Create VMDestroyAction (matches C# VMDestroyAction pattern)
-        // Action handles VDI cleanup, task polling, and error aggregation
-        VMDestroyAction* action = new VMDestroyAction(vm, deleteDisks, this->mainWindow());
-
-        // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-        OperationManager::instance()->RegisterOperation(action);
-
-        // Connect completion signal for cleanup and status update
-        connect(action, &AsyncOperation::completed, action, [this, vmName, action]()
-        {
-            if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
-            {
-                this->mainWindow()->ShowStatusMessage(QString("VM '%1' deleted successfully").arg(vmName), 5000);
-                // Cache will be automatically refreshed via event polling
-            } else
-            {
-                this->mainWindow()->ShowStatusMessage(QString("Failed to delete VM '%1'").arg(vmName), 5000);
-            }
-            // Auto-delete when complete (matches C# GC behavior)
-            action->deleteLater();
-        });
-
-        // Run action asynchronously (matches C# pattern - no modal dialog)
-        // Progress shown in status bar via OperationManager signals
-        action->RunAsync();
-    }
+    const QList<QSharedPointer<VM>> vms = this->collectSelectedVMs(false);
+    this->runDeleteFlow(vms, false, tr("Delete VMs"), tr("Some VMs cannot be deleted."));
 }
 
 QString DeleteVMCommand::MenuText() const
@@ -151,14 +108,186 @@ QString DeleteVMCommand::MenuText() const
 
 bool DeleteVMCommand::isVMDeletable() const
 {
-    QSharedPointer<VM> vm = this->getVM();
+    return this->canDeleteVm(this->getVM(), false);
+}
+
+QList<QSharedPointer<VM>> DeleteVMCommand::collectSelectedVMs(bool includeTemplates) const
+{
+    QList<QSharedPointer<VM>> vms;
+    const QList<QSharedPointer<XenObject>> objects = this->getSelectedObjects();
+    for (const QSharedPointer<XenObject>& obj : objects)
+    {
+        if (!obj)
+            continue;
+
+        const QString type = obj->GetObjectType();
+        if (type != "vm" && !(includeTemplates && type == "template"))
+            continue;
+
+        QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
+        if (vm)
+            vms.append(vm);
+    }
+
+    if (!vms.isEmpty())
+        return vms;
+
+    QSharedPointer<VM> singleVm = qSharedPointerCast<VM>(this->GetObject());
+    if (singleVm)
+    {
+        if (!singleVm->IsTemplate() || includeTemplates)
+            return { singleVm };
+    }
+
+    return {};
+}
+
+bool DeleteVMCommand::canDeleteVm(const QSharedPointer<VM>& vm, bool allowTemplates, QString* reason) const
+{
     if (!vm)
+    {
+        if (reason)
+            *reason = tr("Invalid selection.");
         return false;
+    }
 
-    // Check if it's not a template (templates handled separately)
-    if (vm->IsTemplate())
+    if (vm->IsSnapshot())
+    {
+        if (reason)
+            *reason = tr("Snapshots cannot be deleted here.");
         return false;
+    }
 
-    // Check if VM is halted (required for deletion in most cases)
-    return (vm->GetPowerState() == "Halted");
+    if (vm->IsTemplate() && !allowTemplates)
+    {
+        if (reason)
+            *reason = tr("Templates cannot be deleted here.");
+        return false;
+    }
+
+    if (vm->IsTemplate() && vm->DefaultTemplate())
+    {
+        if (reason)
+            *reason = tr("Default templates cannot be deleted.");
+        return false;
+    }
+
+    if (vm->IsLocked())
+    {
+        if (reason)
+            *reason = tr("VM is locked.");
+        return false;
+    }
+
+    if (!vm->GetAllowedOperations().contains("destroy"))
+    {
+        if (reason)
+            *reason = tr("Operation is not allowed.");
+        return false;
+    }
+
+    if (!vm->IsTemplate() && vm->GetPowerState() != "Halted")
+    {
+        if (reason)
+            *reason = tr("VM must be shut down.");
+        return false;
+    }
+
+    if (reason)
+        reason->clear();
+    return true;
+}
+
+void DeleteVMCommand::runDeleteFlow(const QList<QSharedPointer<VM>>& selected,
+                                   bool allowTemplates,
+                                   const QString& errorDialogTitle,
+                                   const QString& errorDialogText)
+{
+    if (selected.isEmpty())
+        return;
+
+    QList<QSharedPointer<VM>> deletableVms;
+    QHash<QSharedPointer<XenObject>, QString> cantRunReasons;
+    for (const QSharedPointer<VM>& vm : selected)
+    {
+        QString reason;
+        if (this->canDeleteVm(vm, allowTemplates, &reason))
+        {
+            deletableVms.append(vm);
+        } else if (vm)
+        {
+            cantRunReasons.insert(vm, reason);
+        }
+    }
+
+    if (deletableVms.isEmpty())
+    {
+        CommandErrorDialog dialog(errorDialogTitle, errorDialogText, cantRunReasons, CommandErrorDialog::DialogMode::Close, this->mainWindow());
+        dialog.exec();
+        return;
+    }
+
+    ConfirmVMDeleteDialog dialog(selected, this->mainWindow());
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    const QStringList selectedVbds = dialog.GetDeleteDisks();
+    const QStringList selectedSnapshots = dialog.GetDeleteSnapshots();
+
+    QList<AsyncOperation*> actions;
+    actions.reserve(deletableVms.size());
+
+    for (const QSharedPointer<VM>& vm : deletableVms)
+    {
+        QStringList vbdRefs = filterVbdsForVm(selectedVbds, vm);
+        QStringList snapshotRefs = filterSnapshotsForVm(selectedSnapshots, vm);
+        actions.append(new VMDestroyAction(vm, vbdRefs, snapshotRefs, nullptr));
+    }
+
+    if (actions.size() == 1)
+    {
+        VMDestroyAction* action = qobject_cast<VMDestroyAction*>(actions.first());
+        if (!action)
+            return;
+
+        QPointer<MainWindow> mw = this->mainWindow();
+        const QString vmName = deletableVms.first()->GetName();
+
+        OperationManager::instance()->RegisterOperation(action);
+        connect(action, &AsyncOperation::completed, action, [action, mw, vmName]()
+        {
+            if (mw)
+            {
+                if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
+                    mw->ShowStatusMessage(QString("VM '%1' deleted successfully").arg(vmName), 5000);
+                else
+                    mw->ShowStatusMessage(QString("Failed to delete VM '%1'").arg(vmName), 5000);
+            }
+            action->deleteLater();
+        });
+        action->RunAsync();
+    } else
+    {
+        XenConnection* connection = deletableVms.first() ? deletableVms.first()->GetConnection() : nullptr;
+        MultipleOperation* multi = new MultipleOperation(
+            connection,
+            tr("Deleting VMs"),
+            tr("Deleting selected VMs..."),
+            tr("VM deletion complete"),
+            actions,
+            false,
+            true,
+            false,
+            nullptr);
+
+        OperationManager::instance()->RegisterOperation(multi);
+        connect(multi, &AsyncOperation::completed, multi, &QObject::deleteLater);
+        multi->RunAsync();
+    }
+
+    if (!cantRunReasons.isEmpty())
+    {
+        CommandErrorDialog dialog(errorDialogTitle, errorDialogText, cantRunReasons, CommandErrorDialog::DialogMode::Close, this->mainWindow());
+        dialog.exec();
+    }
 }

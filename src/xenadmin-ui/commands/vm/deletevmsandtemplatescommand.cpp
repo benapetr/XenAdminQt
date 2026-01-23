@@ -37,14 +37,17 @@ DeleteVMsAndTemplatesCommand::DeleteVMsAndTemplatesCommand(MainWindow* mainWindo
 
 bool DeleteVMsAndTemplatesCommand::CanRun() const
 {
-    QString objectType = this->getSelectedObjectType();
-
-    // Allow both VMs and templates
-    if (objectType != "vm" && objectType != "template")
+    const QList<QSharedPointer<VM>> vms = this->collectSelectedVMs(true);
+    if (vms.isEmpty())
         return false;
 
-    QString vmRef = this->getSelectedObjectRef();
-    return this->canRunForVM(vmRef);
+    for (const QSharedPointer<VM>& vm : vms)
+    {
+        if (this->canDeleteVm(vm, true))
+            return true;
+    }
+
+    return false;
 }
 
 bool DeleteVMsAndTemplatesCommand::canRunForVM(const QString& vmRef) const
@@ -71,6 +74,12 @@ bool DeleteVMsAndTemplatesCommand::canRunForVM(const QString& vmRef) const
 
     // Check allowed operations
     return vm->GetAllowedOperations().contains("destroy");
+}
+
+void DeleteVMsAndTemplatesCommand::Run()
+{
+    const QList<QSharedPointer<VM>> vms = this->collectSelectedVMs(true);
+    this->runDeleteFlow(vms, true, tr("Delete Items"), tr("Some VMs or templates cannot be deleted."));
 }
 
 QString DeleteVMsAndTemplatesCommand::MenuText() const

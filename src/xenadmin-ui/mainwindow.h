@@ -248,6 +248,7 @@ class MainWindow : public QMainWindow
         void updateViewMenu(NavigationPane::NavigationMode mode);
         void applyViewSettingsToMenu();
         void onViewSettingsChanged();
+        bool mixedVmTemplateSelection() const;
         void initializeToolbar();                                        // Initialize toolbar buttons matching C# MainWindow.Designer.cs
         void updateToolbarsAndMenus();                                   // Update both toolbar buttons and menu items from Commands (matches C# UpdateToolbars pattern)
         void disableAllOperationButtons();                               // Disable all VM/Host/Container operation buttons
