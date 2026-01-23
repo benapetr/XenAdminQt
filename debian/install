@@ -1,0 +1,3 @@
+debian/build/xenadmin-ui/xenadmin-qt usr/bin/
+packaging/xenadmin.png usr/share/pixmaps/xenadmin-qt.png
+debian/xenadmin-qt.desktop usr/share/applications/

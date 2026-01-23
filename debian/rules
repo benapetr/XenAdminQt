@@ -1,0 +1,23 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+QMAKE ?= $(shell command -v qmake6 >/dev/null 2>&1 && echo qmake6 || command -v qmake >/dev/null 2>&1 && echo qmake)
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	mkdir -p debian/build
+	if [ -z "$(QMAKE)" ]; then echo "Error: qmake not found in PATH" >&2; exit 1; fi
+	cd debian/build && $(QMAKE) ../../src/xenadminqt.pro
+
+override_dh_auto_build:
+	$(MAKE) -C debian/build -j$(shell nproc)
+
+override_dh_auto_install:
+	:
+
+override_dh_clean:
+	rm -rf debian/build
+	dh_clean

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=XenAdmin Qt
+Comment=XenServer/XCP-ng Management Tool
+Exec=xenadmin-qt
+Icon=xenadmin-qt
+Categories=System;Network;RemoteAccess;
+Terminal=false

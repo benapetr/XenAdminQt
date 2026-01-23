@@ -177,3 +177,11 @@ local.pri
 # Test configuration (contains passwords)
 test/test-config.json
 src/testconn/test-config.json
+
+# Debian packaging artifacts
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/*.substvars
+debian/build/
+debian/xenadmin-qt/

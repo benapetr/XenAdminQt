@@ -1,0 +1,23 @@
+Source: xenadmin-qt
+Section: net
+Priority: optional
+Maintainer: Petr Bena <petr@bena.rocks>
+Build-Depends: debhelper-compat (= 12),
+ pkg-config,
+ qtbase5-dev | qt6-base-dev,
+ libqt5charts5-dev | qt6-charts-dev,
+ libegl1-mesa-dev,
+ libglu1-mesa-dev,
+ libxkbcommon-dev
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+
+Package: xenadmin-qt
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: XenServer/XCP-ng management UI
+ XenAdmin Qt is a C++/Qt rewrite of the original XenAdmin client,
+ providing XenServer and XCP-ng management capabilities on Linux,
+ macOS, and other Qt-supported platforms.
+ .
+ This package includes the main application and required libraries.

@@ -9,11 +9,25 @@ This directory contains scripts to build native packages for different platforms
 - C++ compiler toolchain
 
 ### Debian/Ubuntu (.deb)
-- `dpkg-deb` (usually pre-installed)
+- `dpkg-buildpackage`/debhelper
 - Build dependencies:
   ```bash
-  sudo apt-get install qt6-base-dev build-essential freerdp2-dev libwinpr2-dev mesa-common-dev libglu1-mesa-dev libegl1 libxkbcommon0
+  sudo apt-get install build-essential debhelper dpkg-dev pkg-config \
+    qtbase5-dev qt6-base-dev libqt5charts5-dev qt6-charts-dev \
+    libfreerdp2-dev libfreerdp-dev libwinpr2-dev libwinpr-dev \
+    libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
   ```
+
+### Ubuntu Notes
+On Ubuntu 22.04/24.04 the Qt dev packages may be in `universe`. If you see
+missing `qtbase5-dev`/`qt6-base-dev`/`qt6-charts-dev`, enable `universe` first:
+```bash
+sudo apt-get install software-properties-common
+sudo add-apt-repository universe
+sudo apt-get update
+```
+If `qt6-charts-dev` is still unavailable on Ubuntu 22.04, build with Qt5
+(`qtbase5-dev` + `libqt5charts5-dev`) or install Qt6/Qt6 Charts from a PPA.
 
 ### Fedora/RHEL/CentOS (.rpm)
 - `rpmbuild` and related tools
@@ -54,6 +68,10 @@ With custom version:
 ```
 
 **Output:** `packaging/output/xenadmin-qt_0.1.0_amd64.deb`
+
+**Notes:**
+- Uses `debhelper`/`dpkg-shlibdeps` so runtime dependencies are auto-detected via `${shlibs:Depends}` and `${misc:Depends}`
+- The build selects `qmake6` when available, otherwise `qmake`
 
 **Installation:**
 ```bash

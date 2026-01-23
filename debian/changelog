@@ -1,0 +1,5 @@
+xenadmin-qt (0.0.2) unstable; urgency=medium
+
+  * Initial debhelper-based packaging.
+
+ -- Petr Bena <petr@bena.rocks>  Thu, 01 Jan 1970 00:00:00 +0000

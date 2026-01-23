@@ -37,20 +37,121 @@ if [ -n "$QT_BIN_PATH" ]; then
     export PATH="$QT_BIN_PATH:$PATH"
 fi
 
-# Detect qmake (try qmake6 first for newer Debian, then qmake)
+# Build header (qmake resolved after dependency preflight)
+echo "================================"
+echo "Building XenAdmin Qt for Debian"
+echo "================================"
+echo "CPUs: $NCPUS"
+echo "Version: $APP_VERSION"
+echo ""
+
+# Preflight: check build dependencies and print install command if missing
+if command -v dpkg-query >/dev/null 2>&1; then
+    missing=()
+    missing_groups=()
+
+    require_pkg() {
+        local pkg="$1"
+        if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+            missing+=("$pkg")
+        fi
+    }
+
+    require_one_of() {
+        local group=("$@")
+        local found=""
+        local pkg
+        for pkg in "${group[@]}"; do
+            if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+                found="yes"
+                break
+            fi
+        done
+        if [ -z "$found" ]; then
+            missing_groups+=("${group[*]}")
+        fi
+    }
+
+    require_pkg build-essential
+    require_pkg debhelper
+    require_pkg dpkg-dev
+    require_pkg pkg-config
+    require_one_of qtbase5-dev qt6-base-dev
+    require_one_of libqt5charts5-dev qt6-charts-dev
+    optional_groups=()
+    optional_one_of() {
+        local group=("$@")
+        local found=""
+        local pkg
+        for pkg in "${group[@]}"; do
+            if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+                found="yes"
+                break
+            fi
+        done
+        if [ -z "$found" ]; then
+            optional_groups+=("${group[*]}")
+        fi
+    }
+
+    optional_one_of libfreerdp3-dev libfreerdp2-dev libfreerdp-dev
+    optional_one_of libwinpr3-dev libwinpr2-dev libwinpr-dev
+    require_pkg libglu1-mesa-dev
+    require_pkg libegl1-mesa-dev
+    require_pkg libxkbcommon-dev
+
+    if [ ${#missing[@]} -gt 0 ] || [ ${#missing_groups[@]} -gt 0 ]; then
+        echo "Missing build dependencies detected."
+        echo ""
+        echo "Install the following packages (or equivalent) and re-run:"
+        if command -v apt-get >/dev/null 2>&1; then
+            if [ ${#missing[@]} -gt 0 ]; then
+                echo "  sudo apt-get install ${missing[*]}"
+            fi
+            if [ ${#missing_groups[@]} -gt 0 ]; then
+                echo ""
+                echo "Choose one package from each group:"
+                for group in "${missing_groups[@]}"; do
+                    for pkg in $group; do
+                        echo "  sudo apt-get install $pkg"
+                    done
+                    echo ""
+                done
+            fi
+        else
+            for pkg in "${missing[@]}"; do
+                echo "  - $pkg"
+            done
+            for group in "${missing_groups[@]}"; do
+                echo "  - one of: $group"
+            done
+        fi
+        echo ""
+        exit 1
+    fi
+
+    if [ ${#optional_groups[@]} -gt 0 ]; then
+        echo "Optional build dependencies missing (RDP support will be disabled):"
+        for group in "${optional_groups[@]}"; do
+            echo "  - one of: $group"
+        done
+        echo ""
+    fi
+fi
+
+# Resolve qmake (prefer qmake6, fallback to qmake)
 if [ -z "$QT_BIN_PATH" ]; then
-    if command -v qmake6 &> /dev/null; then
+    if command -v qmake6 >/dev/null 2>&1; then
         QMAKE_CMD="qmake6"
-    elif command -v qmake &> /dev/null; then
+    elif command -v qmake >/dev/null 2>&1; then
         QMAKE_CMD="qmake"
     else
-        echo "Error: Neither qmake nor qmake6 found in PATH"
-        echo "Please install Qt6 (qt6-base-dev) or use --qt to specify Qt bin path"
+        echo "Error: qmake not found in PATH."
+        echo "Install the Qt development packages noted above or use --qt to specify Qt bin path."
         exit 1
     fi
 else
-    # If Qt path explicitly specified, prefer qmake from that path
-    if command -v qmake &> /dev/null; then
+    if command -v qmake >/dev/null 2>&1; then
         QMAKE_CMD="qmake"
     else
         echo "Error: qmake not found in specified Qt path: $QT_BIN_PATH"
@@ -58,125 +159,98 @@ else
     fi
 fi
 
-echo "================================"
-echo "Building XenAdmin Qt for Debian"
-echo "================================"
 echo "Qt command: $QMAKE_CMD ($(which $QMAKE_CMD | xargs dirname))"
-echo "CPUs: $NCPUS"
-echo "Version: $APP_VERSION"
 echo ""
 
 # Get project root directory (parent of packaging/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-BUILD_DIR="$PROJECT_ROOT/release"
+DEBIAN_DIR="$PROJECT_ROOT/debian"
+CHANGELOG_PATH="$DEBIAN_DIR/changelog"
 
-# Create temp directory for packaging
-TEMP_DIR=$(mktemp -d -t xenadmin-deb-XXXXXX)
-trap "rm -rf $TEMP_DIR" EXIT
-
-echo "Step 1: Building application..."
-mkdir -p "$BUILD_DIR"
-cd "$BUILD_DIR"
-
-# Run qmake to generate Makefiles
-echo "Running $QMAKE_CMD..."
-cd "$PROJECT_ROOT/src"
-$QMAKE_CMD xenadminqt.pro -o "$BUILD_DIR/Makefile"
-
-cd "$BUILD_DIR"
-
-# Clean and build
-make clean || true
-make -j$NCPUS
-
-if [ ! -f "$BUILD_DIR/xenadmin-ui/xenadmin-qt" ]; then
-    echo "Error: Build failed - xenadmin-qt binary not found"
+if [ ! -d "$DEBIAN_DIR" ]; then
+    echo "Error: debian packaging metadata not found at $DEBIAN_DIR"
     exit 1
 fi
 
-echo ""
-echo "Step 2: Creating package structure..."
-
-# Create debian package structure
-PKG_DIR="$TEMP_DIR/${APP_NAME}_${APP_VERSION}_amd64"
-mkdir -p "$PKG_DIR/DEBIAN"
-mkdir -p "$PKG_DIR/usr/bin"
-mkdir -p "$PKG_DIR/usr/share/applications"
-mkdir -p "$PKG_DIR/usr/share/pixmaps"
-mkdir -p "$PKG_DIR/usr/share/doc/$APP_NAME"
-
-# Copy binary
-cp "$BUILD_DIR/xenadmin-ui/xenadmin-qt" "$PKG_DIR/usr/bin/"
-chmod 755 "$PKG_DIR/usr/bin/xenadmin-qt"
-if [ -f "$PROJECT_ROOT/README.md" ]; then
-    cp "$PROJECT_ROOT/README.md" "$PKG_DIR/usr/share/doc/$APP_NAME/"
-fi
-if [ -f "$PROJECT_ROOT/LICENSE" ]; then
-    cp "$PROJECT_ROOT/LICENSE" "$PKG_DIR/usr/share/doc/$APP_NAME/copyright"
+BACKUP_CHANGELOG=""
+if [ -f "$CHANGELOG_PATH" ]; then
+    BACKUP_CHANGELOG=$(mktemp)
+    cp "$CHANGELOG_PATH" "$BACKUP_CHANGELOG"
 fi
 
-# Copy icon (pre-rendered PNG)
-ICON_SOURCE="$PROJECT_ROOT/packaging/xenadmin.png"
-if [ -f "$ICON_SOURCE" ]; then
-    cp "$ICON_SOURCE" "$PKG_DIR/usr/share/pixmaps/$APP_NAME.png"
-else
-    echo "Warning: $ICON_SOURCE not found. Icon will not be included."
-fi
+trap 'if [ -n "$BACKUP_CHANGELOG" ] && [ -f "$BACKUP_CHANGELOG" ]; then cp "$BACKUP_CHANGELOG" "$CHANGELOG_PATH"; rm -f "$BACKUP_CHANGELOG"; fi' EXIT
 
-# Create desktop file
-cat > "$PKG_DIR/usr/share/applications/$APP_NAME.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=XenAdmin Qt
-Comment=XenServer/XCP-ng Management Tool
-Exec=$APP_NAME
-Icon=$APP_NAME
-Categories=System;Network;RemoteAccess;
-Terminal=false
+cat > "$CHANGELOG_PATH" <<EOF
+${APP_NAME} (${APP_VERSION}) unstable; urgency=medium
+
+  * Automated build.
+
+ -- ${MAINTAINER}  $(date -R)
 EOF
 
 echo ""
-echo "Step 3: Creating control file..."
-
-# Create control file
-cat > "$PKG_DIR/DEBIAN/control" <<EOF
-Package: $APP_NAME
-Version: $APP_VERSION
-Section: net
-Priority: optional
-Architecture: amd64
-Depends: libc6 (>= 2.27), libstdc++6 (>= 8), libqt6core6, libqt6gui6, \
- libqt6widgets6, libqt6network6, libqt6charts6, libfreerdp3-3 | libfreerdp2-2, \
- libfreerdp-client3-3 | libfreerdp-client2-2, libwinpr3-3 | libwinpr2-2, \
- libglu1-mesa, libegl1, libxkbcommon0
-Maintainer: $MAINTAINER
-Description: $DESCRIPTION
- XenAdmin Qt is a C++/Qt6 rewrite of the original XenAdmin client,
- providing XenServer and XCP-ng management capabilities on Linux,
- macOS, and other Qt-supported platforms.
- .
- This package includes the main application and required libraries.
-EOF
+echo "Step 1: Building package with debhelper..."
+cd "$PROJECT_ROOT"
+export QMAKE="$QMAKE_CMD"
+dpkg-buildpackage -b -us -uc
 
 echo ""
-echo "Step 4: Building .deb package..."
+echo "Step 2: Collecting .deb output..."
 
-# Build the package (force root ownership metadata for rootless builds)
-dpkg-deb --build --root-owner-group "$PKG_DIR"
-
-# Move package to project packaging directory
 OUTPUT_DIR="$PROJECT_ROOT/packaging/output"
+OUTPUT_PARENT="$(cd "$PROJECT_ROOT/.." && pwd)"
 mkdir -p "$OUTPUT_DIR"
-mv "$TEMP_DIR/${APP_NAME}_${APP_VERSION}_amd64.deb" "$OUTPUT_DIR/"
+
+DEB_FILES=()
+collect_debs() {
+    local base_dir="$1"
+    local arch
+    for arch in amd64 all; do
+        [ -f "$base_dir/${APP_NAME}_${APP_VERSION}_${arch}.deb" ] && DEB_FILES+=("$base_dir/${APP_NAME}_${APP_VERSION}_${arch}.deb")
+        [ -f "$base_dir/${APP_NAME}-dbgsym_${APP_VERSION}_${arch}.deb" ] && DEB_FILES+=("$base_dir/${APP_NAME}-dbgsym_${APP_VERSION}_${arch}.deb")
+    done
+    return 0
+}
+
+collect_debs "$OUTPUT_PARENT"
+collect_debs "$PROJECT_ROOT"
+
+if [ ${#DEB_FILES[@]} -eq 0 ]; then
+    mapfile -t DEB_FILES < <(find "$OUTPUT_PARENT" -maxdepth 1 -type f -name "${APP_NAME}_${APP_VERSION}_*.deb") || true
+fi
+if [ ${#DEB_FILES[@]} -eq 0 ]; then
+    mapfile -t DEB_FILES < <(find "$PROJECT_ROOT" -maxdepth 1 -type f -name "${APP_NAME}_${APP_VERSION}_*.deb") || true
+fi
+
+if [ ${#DEB_FILES[@]} -eq 0 ]; then
+    echo "Error: No .deb artifacts found in $OUTPUT_PARENT or $PROJECT_ROOT"
+    echo "Expected pattern: ${APP_NAME}_${APP_VERSION}_*.deb"
+    echo "Available .deb files in $OUTPUT_PARENT:"
+    find "$OUTPUT_PARENT" -maxdepth 1 -type f -name "*.deb" -print
+    exit 1
+fi
+
+for DEB_FILE in "${DEB_FILES[@]}"; do
+    mv "$DEB_FILE" "$OUTPUT_DIR/"
+done
 
 echo ""
 echo "================================"
 echo "Build complete!"
 echo "================================"
-echo "Package: $OUTPUT_DIR/${APP_NAME}_${APP_VERSION}_amd64.deb"
+shopt -s nullglob
+OUTPUT_DEBS=("$OUTPUT_DIR"/${APP_NAME}_${APP_VERSION}_*.deb)
+shopt -u nullglob
+
+echo "Package(s):"
+for DEB_FILE in "${OUTPUT_DEBS[@]}"; do
+    echo "  $DEB_FILE"
+done
 echo ""
 echo "To install:"
-echo "  sudo dpkg -i $OUTPUT_DIR/${APP_NAME}_${APP_VERSION}_amd64.deb"
+if [ ${#OUTPUT_DEBS[@]} -gt 0 ]; then
+    echo "  sudo dpkg -i ${OUTPUT_DEBS[0]}"
+fi
 echo "  sudo apt-get install -f  # Install dependencies if needed"
 echo ""
