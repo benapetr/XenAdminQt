@@ -38,21 +38,165 @@ if [ -n "$QT_BIN_PATH" ]; then
     export PATH="$QT_BIN_PATH:$PATH"
 fi
 
-# Detect qmake (try qmake6 first, then qmake)
+# Resolve distro info for dependency hints
+DISTRO_ID=""
+DISTRO_VERSION=""
+if [ -r /etc/os-release ]; then
+    . /etc/os-release
+    DISTRO_ID="${ID:-}"
+    DISTRO_VERSION="${VERSION_ID:-}"
+fi
+
+echo "==============================="
+echo "Building XenAdmin Qt for RPM"
+echo "==============================="
+echo "CPUs: $NCPUS"
+echo "Version: $APP_VERSION-$RELEASE"
+echo ""
+
+# Preflight dependency check (prints install command but does not install)
+if command -v rpm >/dev/null 2>&1; then
+    missing=()
+    missing_groups=()
+    optional_groups=()
+
+    require_pkg() {
+        local pkg="$1"
+        if ! rpm -q "$pkg" >/dev/null 2>&1; then
+            missing+=("$pkg")
+        fi
+    }
+
+    require_one_of() {
+        local group=("$@")
+        local found=""
+        local pkg
+        for pkg in "${group[@]}"; do
+            if rpm -q "$pkg" >/dev/null 2>&1; then
+                found="yes"
+                break
+            fi
+        done
+        if [ -z "$found" ]; then
+            missing_groups+=("${group[*]}")
+        fi
+    }
+
+    optional_one_of() {
+        local group=("$@")
+        local found=""
+        local pkg
+        for pkg in "${group[@]}"; do
+            if rpm -q "$pkg" >/dev/null 2>&1; then
+                found="yes"
+                break
+            fi
+        done
+        if [ -z "$found" ]; then
+            optional_groups+=("${group[*]}")
+        fi
+    }
+
+    require_pkg rpm-build
+    require_pkg rsync
+    require_pkg pkgconf-pkg-config
+    require_pkg mesa-libGL-devel
+    require_pkg mesa-libGLU-devel
+    require_pkg mesa-libEGL-devel
+    require_pkg libxkbcommon-devel
+
+    if [ "$DISTRO_ID" = "rhel" ] || [ "$DISTRO_ID" = "almalinux" ] || [ "$DISTRO_ID" = "rocky" ]; then
+        if [ -n "$DISTRO_VERSION" ] && [ "${DISTRO_VERSION%%.*}" -lt 9 ]; then
+            require_pkg qt5-qtbase-devel
+            require_pkg qt5-qtcharts-devel
+        else
+            require_pkg qt6-qtbase-devel
+            require_pkg qt6-qtcharts-devel
+        fi
+    else
+        require_pkg qt6-qtbase-devel
+        require_pkg qt6-qtcharts-devel
+    fi
+
+    optional_one_of freerdp-devel freerdp2-devel
+    optional_one_of winpr-devel libwinpr2-devel
+
+    if [ ${#missing[@]} -gt 0 ] || [ ${#missing_groups[@]} -gt 0 ]; then
+        echo "Missing build dependencies detected."
+        echo ""
+        if command -v dnf >/dev/null 2>&1; then
+            echo "Install the following packages and re-run:"
+            if [ ${#missing[@]} -gt 0 ]; then
+                echo "  sudo dnf install ${missing[*]}"
+            fi
+            if [ ${#missing_groups[@]} -gt 0 ]; then
+                echo ""
+                echo "Choose one package from each group:"
+                for group in "${missing_groups[@]}"; do
+                    for pkg in $group; do
+                        echo "  sudo dnf install $pkg"
+                    done
+                    echo ""
+                done
+            fi
+        elif command -v yum >/dev/null 2>&1; then
+            echo "Install the following packages and re-run:"
+            if [ ${#missing[@]} -gt 0 ]; then
+                echo "  sudo yum install ${missing[*]}"
+            fi
+            if [ ${#missing_groups[@]} -gt 0 ]; then
+                echo ""
+                echo "Choose one package from each group:"
+                for group in "${missing_groups[@]}"; do
+                    for pkg in $group; do
+                        echo "  sudo yum install $pkg"
+                    done
+                    echo ""
+                done
+            fi
+        else
+            echo "Install the following packages (or equivalent) and re-run:"
+            for pkg in "${missing[@]}"; do
+                echo "  - $pkg"
+            done
+            for group in "${missing_groups[@]}"; do
+                echo "  - one of: $group"
+            done
+        fi
+        echo ""
+        exit 1
+    fi
+
+    if [ ${#optional_groups[@]} -gt 0 ]; then
+        echo "Optional build dependencies missing (RDP support will be disabled):"
+        for group in "${optional_groups[@]}"; do
+            echo "  - one of: $group"
+        done
+        echo ""
+    fi
+fi
+
+# Detect qmake (prefer Qt6, then Qt5)
 if [ -z "$QT_BIN_PATH" ]; then
-    if command -v qmake6 &> /dev/null; then
+    if command -v qmake6 >/dev/null 2>&1; then
         QMAKE_CMD="qmake6"
-    elif command -v qmake &> /dev/null; then
+    elif command -v qmake-qt5 >/dev/null 2>&1; then
+        QMAKE_CMD="qmake-qt5"
+    elif command -v qmake >/dev/null 2>&1; then
         QMAKE_CMD="qmake"
     else
-        echo "Error: Neither qmake nor qmake6 found in PATH"
-        echo "Please install Qt6 (qt6-qtbase-devel) or use --qt to specify Qt bin path"
+        echo "Error: qmake not found in PATH."
+        echo "Install the Qt development packages noted above or use --qt to specify Qt bin path."
         exit 1
     fi
 else
     # If Qt path explicitly specified, prefer qmake from that path
-    if command -v qmake &> /dev/null; then
+    if command -v qmake6 >/dev/null 2>&1; then
+        QMAKE_CMD="qmake6"
+    elif command -v qmake >/dev/null 2>&1; then
         QMAKE_CMD="qmake"
+    elif command -v qmake-qt5 >/dev/null 2>&1; then
+        QMAKE_CMD="qmake-qt5"
     else
         echo "Error: qmake not found in specified Qt path: $QT_BIN_PATH"
         exit 1
@@ -62,26 +206,7 @@ fi
 # Resolve absolute qmake path for use inside rpmbuild
 QMAKE_PATH="$(command -v "$QMAKE_CMD")"
 
-# Verify rpmbuild is installed
-if ! command -v rpmbuild &> /dev/null; then
-    echo "Error: rpmbuild not found"
-    echo "Please install rpm-build: sudo dnf install rpm-build"
-    exit 1
-fi
-
-# Require rsync for staging the source archive
-if ! command -v rsync &> /dev/null; then
-    echo "Error: rsync not found"
-    echo "Please install rsync before running this script."
-    exit 1
-fi
-
-echo "==============================="
-echo "Building XenAdmin Qt for Fedora"
-echo "==============================="
 echo "Qt command: $QMAKE_CMD ($(dirname "$QMAKE_PATH"))"
-echo "CPUs: $NCPUS"
-echo "Version: $APP_VERSION-$RELEASE"
 echo ""
 
 # Get project root directory (parent of packaging/)
@@ -133,17 +258,18 @@ License:        GPLv2+
 URL:            https://github.com/xenadmin/xenadmin-qt
 Source0:        %{name}-%{version}.tar.gz
 
+%if 0%{?rhel} && 0%{?rhel} < 9
+BuildRequires:  qt5-qtbase-devel
+BuildRequires:  qt5-qtcharts-devel
+%else
 BuildRequires:  qt6-qtbase-devel
 BuildRequires:  qt6-qtcharts-devel
-BuildRequires:  freerdp2-devel
-BuildRequires:  libwinpr2-devel
+%endif
 BuildRequires:  mesa-libGL-devel
 BuildRequires:  mesa-libGLU-devel
 BuildRequires:  mesa-libEGL-devel
 BuildRequires:  libxkbcommon-devel
-Requires:       qt6-qtbase >= 6.0
-Requires:       qt6-qtbase-gui >= 6.0
-Requires:       qt6-qtcharts >= 6.0
+BuildRequires:  pkgconf-pkg-config
 
 %description
 XenAdmin Qt is a C++/Qt6 rewrite of the original XenAdmin client,

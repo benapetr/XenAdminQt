@@ -33,8 +33,12 @@ If `qt6-charts-dev` is still unavailable on Ubuntu 22.04, build with Qt5
 - `rpmbuild` and related tools
 - Build dependencies:
   ```bash
-  sudo dnf install rpm-build qt6-qtbase-devel freerdp2-devel libwinpr2-devel mesa-libGL-devel mesa-libGLU-devel mesa-libEGL mesa-libEGL-devel libxkbcommon qt6-qtcharts-devel rsync
+  sudo dnf install rpm-build rsync pkgconf-pkg-config \
+    qt6-qtbase-devel qt6-qtcharts-devel \
+    mesa-libGL-devel mesa-libGLU-devel mesa-libEGL-devel libxkbcommon-devel
   ```
+  - Alma/Rocky/RHEL 8: use Qt5 (`qt5-qtbase-devel` + `qt5-qtcharts-devel`)
+  - FreeRDP/WinPR support is optional (`freerdp-devel` + `winpr-devel`)
 
 ### macOS (.dmg) (includes `sips` and `iconutil` for icon conversion)
 - macOS 10.15 or later
