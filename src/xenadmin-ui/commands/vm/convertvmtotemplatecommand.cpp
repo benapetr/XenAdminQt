@@ -86,7 +86,7 @@ void ConvertVMToTemplateCommand::Run()
         OperationManager::instance()->RegisterOperation(action);
 
         // Connect completion signal for cleanup and status update
-        connect(action, &AsyncOperation::completed, action, [this, vmName, action]()
+        connect(action, &AsyncOperation::completed, this->mainWindow(), [this, vmName, action]()
         {
             if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {

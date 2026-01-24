@@ -292,7 +292,7 @@ void VappShutDownCommand::Run()
 
                 ShutDownApplianceAction* action = new ShutDownApplianceAction(connection, applianceRef, this->mainWindow());
                 OperationManager::instance()->RegisterOperation(action);
-                connect(action, &AsyncOperation::completed, action, [=]()
+                connect(action, &AsyncOperation::completed, this->mainWindow(), [=]()
                 {
                     if (action->GetState() == AsyncOperation::Completed)
                     {
@@ -394,7 +394,7 @@ void VappShutDownCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and feedback
-    connect(action, &AsyncOperation::completed, action, [=]()
+    connect(action, &AsyncOperation::completed, this->mainWindow(), [=]()
     {
         if (action->GetState() == AsyncOperation::Completed)
         {

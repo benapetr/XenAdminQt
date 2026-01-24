@@ -65,11 +65,7 @@ void HAConfigureCommand::Run()
     if (haEnabled)
     {
         // HA is already enabled - show edit dialog to modify priorities
-        XenConnection* connection = pool->GetConnection();
-        if (!connection)
-            return;
-
-        EditVmHaPrioritiesDialog dialog(connection, poolRef, this->mainWindow());
+        EditVmHaPrioritiesDialog dialog(pool, this->mainWindow());
         dialog.exec();
         return;
     }

@@ -86,7 +86,7 @@ void AttachVirtualDiskCommand::Run()
     }
 
     // Launch attach dialog
-    AttachVirtualDiskDialog dialog(vm->GetConnection(), vmRef, mainWindow());
+    AttachVirtualDiskDialog dialog(vm, mainWindow());
 
     qDebug() << "[AttachVirtualDiskCommand] Showing AttachVirtualDiskDialog modally...";
     if (dialog.exec() != QDialog::Accepted)

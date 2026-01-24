@@ -30,7 +30,6 @@
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include "xenlib/xen/actions/host/restarttoolstackaction.h"
-#include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/host.h"
 
 RestartToolstackCommand::RestartToolstackCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
@@ -99,13 +98,12 @@ void RestartToolstackCommand::Run()
             RestartToolstackAction* action = new RestartToolstackAction(host, nullptr);
             OperationManager::instance()->RegisterOperation(action);
 
-            connect(action, &AsyncOperation::completed, action, [this, hostName, action]()
+            connect(action, &AsyncOperation::completed, this->mainWindow(), [this, hostName, action]()
             {
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {
                     this->mainWindow()->ShowStatusMessage(QString("Toolstack restarted on '%1'").arg(hostName), 5000);
-                }
-                else
+                } else
                 {
                     QMessageBox::warning(this->mainWindow(), "Restart Toolstack Failed",
                                          QString("Failed to restart toolstack on '%1'. Check the error log for details.").arg(hostName));

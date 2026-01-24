@@ -31,8 +31,7 @@
 #include "../../dialogs/newnetworkwizard.h"
 #include <QtWidgets>
 
-NewNetworkCommand::NewNetworkCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+NewNetworkCommand::NewNetworkCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
     qDebug() << "NewNetworkCommand: Created with MainWindow";
 }

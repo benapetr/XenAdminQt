@@ -122,7 +122,7 @@ void HostMaintenanceModeCommand::Run()
 
             OperationManager::instance()->RegisterOperation(action);
 
-            connect(action, &AsyncOperation::completed, action, [mw, hostName, action]()
+            connect(action, &AsyncOperation::completed, mw, [mw, hostName, action]()
             {
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {
@@ -179,7 +179,7 @@ void HostMaintenanceModeCommand::Run()
 
             OperationManager::instance()->RegisterOperation(action);
 
-            connect(action, &AsyncOperation::completed, action, [mw, hostName, action]()
+            connect(action, &AsyncOperation::completed, mw, [mw, hostName, action]()
             {
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {

@@ -28,7 +28,6 @@
 #include "shutdownhostcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/actions/host/shutdownhostaction.h"
@@ -138,7 +137,7 @@ void ShutdownHostCommand::Run()
 
             OperationManager::instance()->RegisterOperation(action);
 
-            connect(action, &AsyncOperation::completed, action, [this, hostName, action]()
+            connect(action, &AsyncOperation::completed, this->mainWindow(), [this, hostName, action]()
             {
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {

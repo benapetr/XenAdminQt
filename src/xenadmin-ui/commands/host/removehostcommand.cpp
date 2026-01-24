@@ -42,9 +42,7 @@ RemoveHostCommand::RemoveHostCommand(MainWindow* mainWindow, QObject* parent) : 
 {
 }
 
-RemoveHostCommand::RemoveHostCommand(const QList<XenConnection*>& connections, MainWindow* mainWindow, QObject* parent)
-    : HostCommand(mainWindow, parent)
-    , m_connections(connections)
+RemoveHostCommand::RemoveHostCommand(const QList<XenConnection*>& connections, MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent), m_connections(connections)
 {
 }
 
@@ -121,10 +119,6 @@ void RemoveHostCommand::Run()
         qDebug() << "RemoveHostCommand: Disconnecting from" << connection_hostname;
         connection->EndConnect(true, false);
     }
-
-    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
-    if (manager)
-        manager->RemoveConnection(connection);
 
     QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
     for (const ConnectionProfile& profile : profiles)

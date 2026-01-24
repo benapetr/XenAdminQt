@@ -38,9 +38,7 @@
 #include <QAction>
 #include <QTreeWidget>
 
-AddSelectedHostToPoolMenu::AddSelectedHostToPoolMenu(MainWindow* mainWindow, QWidget* parent)
-    : QMenu(parent)
-    , mainWindow_(mainWindow)
+AddSelectedHostToPoolMenu::AddSelectedHostToPoolMenu(MainWindow* mainWindow, QWidget* parent) : QMenu(parent), mainWindow_(mainWindow)
 {
     this->setTitle(tr("Add to Pool"));
     

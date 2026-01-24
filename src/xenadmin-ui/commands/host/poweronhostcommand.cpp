@@ -30,7 +30,6 @@
 #include "../../operations/operationmanager.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/actions/host/hostpoweronaction.h"
-#include "xenlib/xen/network/connection.h"
 #include <QMessageBox>
 #include <QPointer>
 

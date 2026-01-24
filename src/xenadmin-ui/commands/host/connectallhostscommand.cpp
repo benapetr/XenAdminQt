@@ -43,11 +43,8 @@ bool ConnectAllHostsCommand::CanRun() const
 void ConnectAllHostsCommand::Run()
 {
     this->mainWindow()->ShowStatusMessage("Connecting to all servers...");
-    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
-    if (!manager)
-        return;
 
-    QList<XenConnection*> allConnections = manager->GetAllConnections();
+    QList<XenConnection*> allConnections = Xen::ConnectionsManager::instance()->GetAllConnections();
     for (XenConnection* conn : allConnections)
     {
         if (conn && !conn->IsConnected() && !conn->InProgress())
@@ -62,12 +59,8 @@ QString ConnectAllHostsCommand::MenuText() const
 
 bool ConnectAllHostsCommand::hasDisconnectedConnections() const
 {
-    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
-    if (!manager)
-        return false;
-
     // Check if there are any disconnected connections
-    QList<XenConnection*> allConnections = manager->GetAllConnections();
+    QList<XenConnection*> allConnections = Xen::ConnectionsManager::instance()->GetAllConnections();
     for (XenConnection* conn : allConnections)
     {
         if (conn && !conn->IsConnected())

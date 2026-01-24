@@ -29,8 +29,7 @@
 #include "../../mainwindow.h"
 #include "../../dialogs/newpooldialog.h"
 
-NewPoolCommand::NewPoolCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+NewPoolCommand::NewPoolCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 

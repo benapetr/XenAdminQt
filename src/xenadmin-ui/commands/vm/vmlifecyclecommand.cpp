@@ -32,7 +32,6 @@
 #include "stopvmcommand.h"
 #include "resumevmcommand.h"
 #include "unpausevmcommand.h"
-#include "xenlib/xencache.h"
 #include "xenlib/xen/vm.h"
 #include <QTreeWidget>
 

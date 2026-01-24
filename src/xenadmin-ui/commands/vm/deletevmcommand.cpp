@@ -254,7 +254,7 @@ void DeleteVMCommand::runDeleteFlow(const QList<QSharedPointer<VM>>& selected,
         const QString vmName = deletableVms.first()->GetName();
 
         OperationManager::instance()->RegisterOperation(action);
-        connect(action, &AsyncOperation::completed, action, [action, mw, vmName]()
+        connect(action, &AsyncOperation::completed, mw, [action, mw, vmName]()
         {
             if (mw)
             {

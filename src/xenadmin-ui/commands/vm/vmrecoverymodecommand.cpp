@@ -101,7 +101,7 @@ void VMRecoveryModeCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and user feedback
-    connect(action, &AsyncOperation::completed, action, [=]()
+    connect(action, &AsyncOperation::completed, this->mainWindow(), [=]()
     {
         if (action->GetState() == AsyncOperation::Completed)
         {
@@ -109,8 +109,7 @@ void VMRecoveryModeCommand::Run()
                 tr("VM '%1' has been started in recovery mode").arg(vmName), 5000);
         } else if (action->GetState() == AsyncOperation::Failed)
         {
-            QMessageBox::critical(this->mainWindow(), tr("Error"),
-                                  tr("Failed to boot VM in recovery mode:\n%1").arg(action->GetErrorMessage()));
+            QMessageBox::critical(this->mainWindow(), tr("Error"), tr("Failed to boot VM in recovery mode:\n%1").arg(action->GetErrorMessage()));
         }
 
         // Auto-delete when complete
