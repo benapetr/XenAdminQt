@@ -100,21 +100,13 @@ void SetDefaultSRCommand::Run()
     {
         MainWindow::instance()->ShowStatusMessage(QString("Setting '%1' as default storage repository...").arg(srName));
 
-        XenConnection* connection = sr->GetConnection();
-        if (!connection || !connection->IsConnected())
+        if (!sr->IsConnected())
         {
             QMessageBox::warning(MainWindow::instance(), "Set Default Storage Repository Failed", "Not connected to XenServer.");
             return;
         }
 
-        QStringList poolRefs = connection->GetCache()->GetAllRefs("pool");
-        if (poolRefs.isEmpty())
-        {
-            QMessageBox::warning(MainWindow::instance(), "Set Default Storage Repository Failed", "No pool found.");
-            return;
-        }
-
-        QSharedPointer<Pool> pool = connection->GetCache()->ResolveObject<Pool>("pool", poolRefs.first());
+        QSharedPointer<Pool> pool = sr->GetCache()->GetPool();
         if (!pool || !pool->IsValid())
         {
             QMessageBox::warning(MainWindow::instance(), "Set Default Storage Repository Failed", "Invalid pool object.");
