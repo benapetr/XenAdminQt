@@ -92,7 +92,7 @@ void DestroyHostCommand::Run()
         return;
 
     const QString title = this->buildConfirmationTitle();
-    QMessageBox msgBox(this->mainWindow());
+    QMessageBox msgBox(MainWindow::instance());
     msgBox.setIcon(QMessageBox::Warning);
     msgBox.setWindowTitle(title);
     msgBox.setText(runnable.count() == 1
@@ -112,7 +112,7 @@ void DestroyHostCommand::Run()
         XenConnection* conn = host->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer for host '%1'.").arg(hostName));
+            QMessageBox::warning(MainWindow::instance(), tr("Not Connected"), tr("Not connected to XenServer for host '%1'.").arg(hostName));
             continue;
         }
 
@@ -120,7 +120,7 @@ void DestroyHostCommand::Run()
         action->SetTitle(tr("Destroying host '%1'...").arg(hostName));
         OperationManager::instance()->RegisterOperation(action);
         action->RunAsync(true);
-        this->mainWindow()->ShowStatusMessage(tr("Destroying host: %1").arg(hostName), 5000);
+        MainWindow::instance()->ShowStatusMessage(tr("Destroying host: %1").arg(hostName), 5000);
     }
 }
 

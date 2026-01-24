@@ -94,8 +94,7 @@ namespace
     }
 }
 
-DisconnectCommand::DisconnectCommand(MainWindow* mainWindow, XenConnection* connection, bool prompt, QObject* parent)
-    : Command(mainWindow, parent), m_connection(connection), m_prompt(prompt)
+DisconnectCommand::DisconnectCommand(MainWindow* mainWindow, XenConnection* connection, bool prompt, QObject* parent) : Command(mainWindow, parent), m_connection(connection), m_prompt(prompt)
 {
 }
 
@@ -130,12 +129,12 @@ bool DisconnectCommand::confirmDisconnect() const
 
     if (!allActionsFinished(m_connection))
     {
-        CloseXenCenterWarningDialog dlg(false, m_connection, this->mainWindow());
+        CloseXenCenterWarningDialog dlg(false, m_connection, MainWindow::instance());
         if (dlg.exec() != QDialog::Accepted)
             return false;
 
         cancelAllActions(m_connection);
-        waitForCancel(this->mainWindow(), m_connection);
+        waitForCancel(MainWindow::instance(), m_connection);
         return true;
     }
 
@@ -144,11 +143,11 @@ bool DisconnectCommand::confirmDisconnect() const
 
 void DisconnectCommand::doDisconnect()
 {
-    if (!m_connection)
+    if (!this->m_connection)
         return;
 
-    this->mainWindow()->ShowStatusMessage("Disconnecting...");
+    MainWindow::instance()->ShowStatusMessage("Disconnecting...");
 
-    m_connection->EndConnect(true, false);
-    QMetaObject::invokeMethod(this->mainWindow(), "SaveServerList", Qt::QueuedConnection);
+    this->m_connection->EndConnect(true, false);
+    QMetaObject::invokeMethod(MainWindow::instance(), "SaveServerList", Qt::QueuedConnection);
 }

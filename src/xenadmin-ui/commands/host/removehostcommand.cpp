@@ -97,7 +97,7 @@ void RemoveHostCommand::Run()
         hostName = pool->GetMasterHost()->GetName();
 
     // Show confirmation dialog
-    QMessageBox msgBox(this->mainWindow());
+    QMessageBox msgBox(MainWindow::instance());
     msgBox.setWindowTitle("Remove Host Connection");
     msgBox.setText(QString("Are you sure you want to remove the connection to '%1'?").arg(hostName));
     msgBox.setInformativeText("This will remove the host from your server list.\n"
@@ -131,9 +131,9 @@ void RemoveHostCommand::Run()
     }
 
     SettingsManager::instance().Sync();
-    this->mainWindow()->SaveServerList();
-    this->mainWindow()->ShowStatusMessage(QString("Removed connection to '%1'").arg(hostName), 5000);
-    this->mainWindow()->RefreshServerTree();
+    MainWindow::instance()->SaveServerList();
+    MainWindow::instance()->ShowStatusMessage(QString("Removed connection to '%1'").arg(hostName), 5000);
+    MainWindow::instance()->RefreshServerTree();
 }
 
 QString RemoveHostCommand::MenuText() const

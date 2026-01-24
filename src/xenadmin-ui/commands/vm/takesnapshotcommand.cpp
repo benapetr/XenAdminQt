@@ -36,6 +36,7 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/actions/vm/vmsnapshotcreateaction.h"
 #include <QtWidgets>
+#include <QPointer>
 
 TakeSnapshotCommand::TakeSnapshotCommand(QObject* parent) : VMCommand(nullptr, parent)
 {
@@ -222,7 +223,8 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, action, [this, action]()
+    QPointer<TakeSnapshotCommand> self(this);
+    connect(action, &AsyncOperation::completed, action, [self, action]()
     {
         bool success = (action->GetState() == AsyncOperation::Completed && !action->IsFailed());
         if (success)
@@ -234,7 +236,8 @@ void TakeSnapshotCommand::executeSnapshotOperation(const QString& name, const QS
         {
             qWarning() << "TakeSnapshotCommand: Failed to create snapshot";
         }
-        emit snapshotCompleted(success);
+        if (self)
+            emit self->snapshotCompleted(success);
         // Auto-delete when complete (matches C# GC behavior)
         action->deleteLater();
     });

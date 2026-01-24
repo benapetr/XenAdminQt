@@ -87,7 +87,7 @@ void DisconnectHostCommand::Run()
         if (!conn)
             continue;
 
-        DisconnectCommand disconnectCmd(this->mainWindow(), conn, true, this);
+        DisconnectCommand disconnectCmd(MainWindow::instance(), conn, true, this);
         disconnectCmd.Run();
     }
 }

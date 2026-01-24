@@ -61,7 +61,7 @@ void RescanPIFsCommand::Run()
     opManager->RegisterOperation(action);
     action->RunAsync(true);
 
-    this->mainWindow()->ShowStatusMessage(tr("Network interface rescan started for host '%1'").arg(hostName), 3000);
+    MainWindow::instance()->ShowStatusMessage(tr("Network interface rescan started for host '%1'").arg(hostName), 3000);
 }
 
 QString RescanPIFsCommand::MenuText() const

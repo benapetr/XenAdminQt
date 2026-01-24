@@ -86,7 +86,7 @@ bool DisconnectHostsAndPoolsCommand::CanRun() const
         {
             // This is a pool connection
             QSharedPointer<Host> host = pool->GetMasterHost();
-            DisconnectPoolCommand poolCmd(this->mainWindow());
+            DisconnectPoolCommand poolCmd(MainWindow::instance());
             // TODO: Need to check if this specific pool connection can run
             if (connection->IsConnected())
                 oneIsConnected = true;
@@ -95,7 +95,7 @@ bool DisconnectHostsAndPoolsCommand::CanRun() const
         else
         {
             // This is a standalone host connection
-            DisconnectHostCommand hostCmd(this->mainWindow());
+            DisconnectHostCommand hostCmd(MainWindow::instance());
             // TODO: Need to check if this specific host connection can run
             if (connection->IsConnected())
                 oneIsConnected = true;
@@ -114,8 +114,7 @@ void DisconnectHostsAndPoolsCommand::Run()
     {
         if (connection)
         {
-            DisconnectCommand* disconnectCmd = new DisconnectCommand(
-                this->mainWindow(), connection, false, this);
+            DisconnectCommand* disconnectCmd = new DisconnectCommand(MainWindow::instance(), connection, false, this);
             disconnectCmd->Run();
             disconnectCmd->deleteLater();
         }

@@ -189,12 +189,13 @@ void DeleteSnapshotCommand::deleteSnapshot()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, action, [this, action]()
+    QString snapshotUuid = this->m_snapshotUuid;
+    connect(action, &AsyncOperation::completed, action, [snapshotUuid, action]()
     {
         bool success = (action->GetState() == AsyncOperation::Completed && !action->IsFailed());
         if (success)
         {
-            qDebug() << "DeleteSnapshotCommand: Snapshot deleted successfully:" << this->m_snapshotUuid;
+            qDebug() << "DeleteSnapshotCommand: Snapshot deleted successfully:" << snapshotUuid;
             // Cache will be automatically refreshed via event polling
         } else
         {

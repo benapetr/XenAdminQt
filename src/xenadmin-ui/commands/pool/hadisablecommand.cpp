@@ -80,16 +80,17 @@ void HADisableCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signals
-    connect(action, &AsyncOperation::completed, [this, poolName, action]() {
-        this->mainWindow()->ShowStatusMessage(
-            QString("High Availability disabled for pool '%1'").arg(poolName), 5000);
+    connect(action, &AsyncOperation::completed, [poolName, action]()
+    {
+        MainWindow* mainWindow = MainWindow::instance();
+        if (mainWindow)
+            mainWindow->ShowStatusMessage(QString("High Availability disabled for pool '%1'").arg(poolName), 5000);
         action->deleteLater();
     });
 
-    connect(action, &AsyncOperation::failed, [this, poolName, action](const QString& error) {
-        QMessageBox::critical(this->mainWindow(), "Disable HA Failed",
-                              QString("Failed to disable HA for pool '%1':\n%2")
-                                  .arg(poolName, error));
+    connect(action, &AsyncOperation::failed, [poolName, action](const QString& error)
+    {
+        QMessageBox::critical(MainWindow::instance(), "Disable HA Failed", QString("Failed to disable HA for pool '%1':\n%2").arg(poolName, error));
         action->deleteLater();
     });
 

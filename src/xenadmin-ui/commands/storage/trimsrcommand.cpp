@@ -50,10 +50,6 @@ bool TrimSRCommand::CanRun() const
     if (!sr)
         return false;
 
-    QVariantMap srData = sr->GetData();
-    if (srData.isEmpty())
-        return false;
-
     // Can trim if SR supports it and is attached to a host
     return this->supportsTrim(sr) && this->isAttachedToHost(sr);
 }
@@ -71,9 +67,7 @@ void TrimSRCommand::Run()
     QMessageBox msgBox(this->mainWindow());
     msgBox.setWindowTitle("Trim Storage Repository");
     msgBox.setText(QString("Are you sure you want to trim storage repository '%1'?").arg(srName));
-    msgBox.setInformativeText("Trimming will reclaim freed space from the storage repository.\n\n"
-                              "This operation may take some time depending on the amount of space to reclaim.\n\n"
-                              "Do you want to continue?");
+    msgBox.setInformativeText("Trimming will reclaim freed space from the storage repository.\n\nThis operation may take some time depending on the amount of space to reclaim.\n\nDo you want to continue?");
     msgBox.setIcon(QMessageBox::Question);
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgBox.setDefaultButton(QMessageBox::Yes);
@@ -89,8 +83,7 @@ void TrimSRCommand::Run()
     XenConnection* conn = sr->GetConnection();
     if (!conn || !conn->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), "Not Connected",
-                             "Not connected to XenServer");
+        QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
         return;
     }
 
@@ -101,25 +94,23 @@ void TrimSRCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, [this, srName, action, sr]()
+    connect(action, &AsyncOperation::completed, [srName, action, sr]()
     {
+        MainWindow* mainWindow = MainWindow::instance();
         if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
-            this->mainWindow()->ShowStatusMessage(QString("Successfully trimmed SR '%1'").arg(srName), 5000);
+            if (mainWindow)
+                mainWindow->ShowStatusMessage(QString("Successfully trimmed SR '%1'").arg(srName), 5000);
 
             QMessageBox::information(
-                this->mainWindow(),
+                mainWindow,
                 "Trim Completed",
                 QString("Successfully reclaimed freed space from storage repository '%1'.\n\n"
                         "The storage has been trimmed and space returned to the underlying storage.")
                     .arg(srName));
         } else
         {
-            QMessageBox::warning(
-                this->mainWindow(),
-                "Trim Failed",
-                QString("Failed to trim SR '%1'.\n\n%2")
-                    .arg(srName, action->GetErrorMessage()));
+            QMessageBox::warning(mainWindow, "Trim Failed", QString("Failed to trim SR '%1'.\n\n%2").arg(srName, action->GetErrorMessage()));
         }
         // Auto-delete when complete
         action->deleteLater();

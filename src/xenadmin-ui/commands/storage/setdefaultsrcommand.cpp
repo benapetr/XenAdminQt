@@ -45,10 +45,7 @@ bool SetDefaultSRCommand::CanRun() const
     if (!sr)
         return false;
 
-    XenConnection* connection = sr->GetConnection();
-    XenCache* cache = connection ? connection->GetCache() : nullptr;
-    if (!cache)
-        return false;
+    XenCache* cache = sr->GetCache();
 
     // C# SR.HasPBDs()
     if (sr->GetPBDs().isEmpty())
@@ -93,7 +90,7 @@ void SetDefaultSRCommand::Run()
     QString srName = sr->GetName();
 
     // Show confirmation dialog
-    int ret = QMessageBox::question(this->mainWindow(), "Set as Default Storage Repository",
+    int ret = QMessageBox::question(MainWindow::instance(), "Set as Default Storage Repository",
                                     QString("Set storage repository '%1' as the default storage repository?\n\n"
                                             "This will be used as the default location for new virtual disks.")
                                         .arg(srName),
@@ -101,29 +98,26 @@ void SetDefaultSRCommand::Run()
 
     if (ret == QMessageBox::Yes)
     {
-        this->mainWindow()->ShowStatusMessage(QString("Setting '%1' as default storage repository...").arg(srName));
+        MainWindow::instance()->ShowStatusMessage(QString("Setting '%1' as default storage repository...").arg(srName));
 
         XenConnection* connection = sr->GetConnection();
         if (!connection || !connection->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
-                                 "Not connected to XenServer.");
+            QMessageBox::warning(MainWindow::instance(), "Set Default Storage Repository Failed", "Not connected to XenServer.");
             return;
         }
 
         QStringList poolRefs = connection->GetCache()->GetAllRefs("pool");
         if (poolRefs.isEmpty())
         {
-            QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
-                                 "No pool found.");
+            QMessageBox::warning(MainWindow::instance(), "Set Default Storage Repository Failed", "No pool found.");
             return;
         }
 
         QSharedPointer<Pool> pool = connection->GetCache()->ResolveObject<Pool>("pool", poolRefs.first());
         if (!pool || !pool->IsValid())
         {
-            QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
-                                 "Invalid pool object.");
+            QMessageBox::warning(MainWindow::instance(), "Set Default Storage Repository Failed", "Invalid pool object.");
             return;
         }
 
@@ -145,10 +139,8 @@ QString SetDefaultSRCommand::MenuText() const
 
 void SetDefaultSRCommand::onSetDefaultCompleted()
 {
-    if (this->mainWindow())
-    {
-        this->mainWindow()->ShowStatusMessage(QString("Storage repository '%1' set as default successfully").arg(m_pendingSrName), 5000);
-    }
+    if (MainWindow::instance())
+        MainWindow::instance()->ShowStatusMessage(QString("Storage repository '%1' set as default successfully").arg(m_pendingSrName), 5000);
 
     if (auto* op = qobject_cast<AsyncOperation*>(sender()))
         op->deleteLater();
@@ -156,12 +148,10 @@ void SetDefaultSRCommand::onSetDefaultCompleted()
 
 void SetDefaultSRCommand::onSetDefaultFailed(const QString& error)
 {
-    if (this->mainWindow())
+    if (MainWindow::instance())
     {
-        QMessageBox::warning(this->mainWindow(), "Set Default Storage Repository Failed",
-                             QString("Failed to set storage repository '%1' as default: %2")
-                                 .arg(m_pendingSrName, error));
-        this->mainWindow()->ShowStatusMessage("Set default SR failed", 5000);
+        QMessageBox::warning(MainWindow::instance(), "Set Default Storage Repository Failed", QString("Failed to set storage repository '%1' as default: %2").arg(m_pendingSrName, error));
+        MainWindow::instance()->ShowStatusMessage("Set default SR failed", 5000);
     }
 
     if (auto* op = qobject_cast<AsyncOperation*>(sender()))

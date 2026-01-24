@@ -31,6 +31,7 @@
 #include <QDialog>
 #include <QStringList>
 #include <QSharedPointer>
+#include <QMap>
 
 namespace Ui
 {

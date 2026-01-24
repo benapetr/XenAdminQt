@@ -94,17 +94,16 @@ void DeleteVirtualDiskCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, [this, vdiName, vdiType, action]() {
+    connect(action, &AsyncOperation::completed, [vdiName, vdiType, action]() 
+    {
+        MainWindow* mainWindow = MainWindow::instance();
         if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
-            mainWindow()->ShowStatusMessage(QString("Successfully deleted %1 '%2'").arg(vdiType, vdiName), 5000);
+            if (mainWindow)
+                mainWindow->ShowStatusMessage(QString("Successfully deleted %1 '%2'").arg(vdiType, vdiName), 5000);
         } else
         {
-            QMessageBox::warning(
-                mainWindow(),
-                QString("Delete %1 Failed").arg(vdiType),
-                QString("Failed to delete %1 '%2'.\n\n%3")
-                    .arg(vdiType, vdiName, action->GetErrorMessage()));
+            QMessageBox::warning(mainWindow, QString("Delete %1 Failed").arg(vdiType), QString("Failed to delete %1 '%2'.\n\n%3").arg(vdiType, vdiName, action->GetErrorMessage()));
         }
         // Auto-delete when complete
         action->deleteLater();

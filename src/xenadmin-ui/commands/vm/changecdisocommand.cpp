@@ -79,10 +79,11 @@ void ChangeCDISOCommand::run()
     OperationManager::instance()->registerOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, this, [this, action](bool success) {
+    QString isoRef = this->m_isoRef;
+    connect(action, &AsyncOperation::completed, [isoRef, action](bool success) {
         if (success)
         {
-            if (this->m_isoRef.isEmpty())
+            if (isoRef.isEmpty())
             {
                 QMessageBox::information(nullptr, "Success", "ISO image ejected successfully");
             } else

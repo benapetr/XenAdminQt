@@ -74,8 +74,7 @@ void PowerOnHostCommand::Run()
         // Check if power_on_mode is set (matches C# GetCantRunReasonCore logic)
         if (powerOnMode.isEmpty())
         {
-            QMessageBox::warning(this->mainWindow(), "Cannot Power On Host",
-                                 QString("Cannot power on host '%1' because its power-on mode is not set.\n\n"
+            QMessageBox::warning(MainWindow::instance(), "Cannot Power On Host", QString("Cannot power on host '%1' because its power-on mode is not set.\n\n"
                                          "Configure the host's management interface in the host properties.")
                                      .arg(hostName));
             continue;
@@ -83,7 +82,7 @@ void PowerOnHostCommand::Run()
 
         if (!host->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected", QString("Not connected to XenServer for host '%1'.").arg(hostName));
+            QMessageBox::warning(MainWindow::instance(), "Not Connected", QString("Not connected to XenServer for host '%1'.").arg(hostName));
             continue;
         }
 
@@ -91,10 +90,9 @@ void PowerOnHostCommand::Run()
 
         OperationManager::instance()->RegisterOperation(action);
 
-        QPointer<MainWindow> mainWindow = this->mainWindow();
-        connect(action, &AsyncOperation::completed, mainWindow, [mainWindow, hostName, action]()
+        connect(action, &AsyncOperation::completed, MainWindow::instance(), [hostName, action]()
         {
-            if (!mainWindow)
+            if (!MainWindow::instance())
             {
                 action->deleteLater();
                 return;
@@ -102,12 +100,11 @@ void PowerOnHostCommand::Run()
 
             if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
-                mainWindow->ShowStatusMessage(QString("Host '%1' power on initiated successfully").arg(hostName), 5000);
+                MainWindow::instance()->ShowStatusMessage(QString("Host '%1' power on initiated successfully").arg(hostName), 5000);
             } else
             {
-                QMessageBox::warning(mainWindow, "Power On Host Failed",
-                                     QString("Failed to power on host '%1'. Check the error log for details.").arg(hostName));
-                mainWindow->ShowStatusMessage("Host power on failed", 5000);
+                QMessageBox::warning(MainWindow::instance(), "Power On Host Failed", QString("Failed to power on host '%1'. Check the error log for details.").arg(hostName));
+                MainWindow::instance()->ShowStatusMessage("Host power on failed", 5000);
             }
             action->deleteLater();
         });

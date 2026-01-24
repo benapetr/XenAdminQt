@@ -81,7 +81,7 @@ QTreeWidgetItem* Command::getSelectedItem() const
         return nullptr;
 
     // Get the server tree widget from main window
-    QTreeWidget* treeWidget = this->mainWindow()->GetServerTreeWidget();
+    QTreeWidget* treeWidget = MainWindow::instance()->GetServerTreeWidget();
     if (!treeWidget)
         return nullptr;
 

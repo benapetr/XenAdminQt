@@ -109,15 +109,18 @@ void CloneVMCommand::Run()
         OperationManager::instance()->RegisterOperation(action);
 
         // Connect completion signal for cleanup and status update
-        connect(action, &AsyncOperation::completed, this->mainWindow(), [this, vmName, cloneName, action]()
+        connect(action, &AsyncOperation::completed, [vmName, cloneName, action]()
         {
+            MainWindow* mainWindow = MainWindow::instance();
             if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
-                this->mainWindow()->ShowStatusMessage(QString("VM '%1' cloned successfully as '%2'").arg(vmName, cloneName), 5000);
+                if (mainWindow)
+                    mainWindow->ShowStatusMessage(QString("VM '%1' cloned successfully as '%2'").arg(vmName, cloneName), 5000);
                 // Cache will be automatically refreshed via event polling
             } else
             {
-                this->mainWindow()->ShowStatusMessage(QString("Failed to clone VM '%1'").arg(vmName), 5000);
+                if (mainWindow)
+                    mainWindow->ShowStatusMessage(QString("Failed to clone VM '%1'").arg(vmName), 5000);
             }
             // Auto-delete when complete (matches C# GC behavior)
             action->deleteLater();

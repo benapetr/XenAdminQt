@@ -76,7 +76,7 @@ void HostMaintenanceModeCommand::Run()
 
     QString hostName = this->getSelectedObjectName();
 
-    MainWindow* mw = this->mainWindow();
+    MainWindow* mw = MainWindow::instance();
     if (!mw)
         return;
 
@@ -111,7 +111,7 @@ void HostMaintenanceModeCommand::Run()
                                          .arg(current)
                                          .arg(target);
 
-                return QMessageBox::question(this->mainWindow(),
+                return QMessageBox::question(MainWindow::instance(),
                                              "Adjust HA Failures to Tolerate",
                                              text,
                                              QMessageBox::Yes | QMessageBox::No,
@@ -153,7 +153,7 @@ void HostMaintenanceModeCommand::Run()
                 return;
             }
 
-            auto ntolIncreasePrompt = [this](QSharedPointer<Pool> pool, QSharedPointer<Host> targetHost,
+            auto ntolIncreasePrompt = [](QSharedPointer<Pool> pool, QSharedPointer<Host> targetHost,
                                              qint64 current, qint64 target) {
                 const QString poolName = pool ? pool->GetName() : QString();
                 const QString hostNameLocal = targetHost ? targetHost->GetName() : QString();
@@ -168,7 +168,7 @@ void HostMaintenanceModeCommand::Run()
                                          .arg(current)
                                          .arg(target);
 
-                return QMessageBox::question(this->mainWindow(),
+                return QMessageBox::question(MainWindow::instance(),
                                              "Increase HA Failures to Tolerate",
                                              text,
                                              QMessageBox::Yes | QMessageBox::No,
@@ -179,16 +179,19 @@ void HostMaintenanceModeCommand::Run()
 
             OperationManager::instance()->RegisterOperation(action);
 
-            connect(action, &AsyncOperation::completed, mw, [mw, hostName, action]()
+            connect(action, &AsyncOperation::completed, MainWindow::instance(), [hostName, action]()
             {
+                if (!MainWindow::instance())
+                    return;
+
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {
-                    mw->ShowStatusMessage(QString("Host '%1' exited maintenance mode successfully").arg(hostName), 5000);
-                    QTimer::singleShot(2000, mw, &MainWindow::RefreshServerTree);
+                    MainWindow::instance()->ShowStatusMessage(QString("Host '%1' exited maintenance mode successfully").arg(hostName), 5000);
+                    QTimer::singleShot(2000, MainWindow::instance(), &MainWindow::RefreshServerTree);
                 } else
                 {
-                    QMessageBox::warning(mw, "Exit Maintenance Mode Failed", QString("Failed to exit maintenance mode for host '%1'. Check the error log for details.").arg(hostName));
-                    mw->ShowStatusMessage("Exit maintenance mode failed", 5000);
+                    QMessageBox::warning(MainWindow::instance(), "Exit Maintenance Mode Failed", QString("Failed to exit maintenance mode for host '%1'. Check the error log for details.").arg(hostName));
+                    MainWindow::instance()->ShowStatusMessage("Exit maintenance mode failed", 5000);
                 }
                 action->deleteLater();
             });

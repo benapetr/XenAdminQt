@@ -73,24 +73,23 @@ void RestartToolstackCommand::Run()
         : "Are you sure you want to restart the toolstack on the selected hosts?\n\n"
           "The management interface will restart. This may take a minute.";
 
-    int ret = QMessageBox::warning(this->mainWindow(), confirmTitle, confirmText,
-                                   QMessageBox::Yes | QMessageBox::No);
+    int ret = QMessageBox::warning(MainWindow::instance(), confirmTitle, confirmText, QMessageBox::Yes | QMessageBox::No);
 
     if (ret == QMessageBox::Yes)
     {
         if (count == 1)
         {
-            this->mainWindow()->ShowStatusMessage(QString("Restarting toolstack on '%1'...").arg(runnable.first()->GetName()));
+            MainWindow::instance()->ShowStatusMessage(QString("Restarting toolstack on '%1'...").arg(runnable.first()->GetName()));
         } else
         {
-            this->mainWindow()->ShowStatusMessage(QString("Restarting toolstack on %1 hosts...").arg(count));
+            MainWindow::instance()->ShowStatusMessage(QString("Restarting toolstack on %1 hosts...").arg(count));
         }
 
         for (const QSharedPointer<Host>& host : runnable)
         {
             if (!host->IsConnected())
             {
-                QMessageBox::warning(this->mainWindow(), "Not Connected", QString("Not connected to XenServer for host '%1'.").arg(host->GetName()));
+                QMessageBox::warning(MainWindow::instance(), "Not Connected", QString("Not connected to XenServer for host '%1'.").arg(host->GetName()));
                 continue;
             }
 
@@ -98,16 +97,20 @@ void RestartToolstackCommand::Run()
             RestartToolstackAction* action = new RestartToolstackAction(host, nullptr);
             OperationManager::instance()->RegisterOperation(action);
 
-            connect(action, &AsyncOperation::completed, this->mainWindow(), [this, hostName, action]()
+            connect(action, &AsyncOperation::completed, MainWindow::instance(), [hostName, action]()
             {
+                if (!MainWindow::instance())
+                {
+                    action->deleteLater();
+                    return;
+                }
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {
-                    this->mainWindow()->ShowStatusMessage(QString("Toolstack restarted on '%1'").arg(hostName), 5000);
+                    MainWindow::instance()->ShowStatusMessage(QString("Toolstack restarted on '%1'").arg(hostName), 5000);
                 } else
                 {
-                    QMessageBox::warning(this->mainWindow(), "Restart Toolstack Failed",
-                                         QString("Failed to restart toolstack on '%1'. Check the error log for details.").arg(hostName));
-                    this->mainWindow()->ShowStatusMessage("Toolstack restart failed", 5000);
+                    QMessageBox::warning(MainWindow::instance(), "Restart Toolstack Failed", QString("Failed to restart toolstack on '%1'. Check the error log for details.").arg(hostName));
+                    MainWindow::instance()->ShowStatusMessage("Toolstack restart failed", 5000);
                 }
                 action->deleteLater();
             });

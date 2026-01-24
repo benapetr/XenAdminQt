@@ -86,17 +86,20 @@ void ConvertVMToTemplateCommand::Run()
         OperationManager::instance()->RegisterOperation(action);
 
         // Connect completion signal for cleanup and status update
-        connect(action, &AsyncOperation::completed, this->mainWindow(), [this, vmName, action]()
+        connect(action, &AsyncOperation::completed, [vmName, action]()
         {
+            MainWindow* mainWindow = MainWindow::instance();
             if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
             {
-                this->mainWindow()->ShowStatusMessage(QString("VM '%1' converted to template successfully").arg(vmName), 5000);
-                QMessageBox::information(this->mainWindow(), tr("Conversion Complete"),
+                if (mainWindow)
+                    mainWindow->ShowStatusMessage(QString("VM '%1' converted to template successfully").arg(vmName), 5000);
+                QMessageBox::information(mainWindow, tr("Conversion Complete"),
                                          tr("VM '%1' has been successfully converted to a template.").arg(vmName));
                 // Cache will be automatically refreshed via event polling
             } else
             {
-                this->mainWindow()->ShowStatusMessage(QString("Failed to convert VM '%1'").arg(vmName), 5000);
+                if (mainWindow)
+                    mainWindow->ShowStatusMessage(QString("Failed to convert VM '%1'").arg(vmName), 5000);
             }
             // Auto-delete when complete (matches C# GC behavior)
             action->deleteLater();

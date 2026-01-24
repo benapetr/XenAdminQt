@@ -217,12 +217,13 @@ void RevertToSnapshotCommand::revertToSnapshot()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, action, [this, action]()
+    QString snapshotUuid = this->m_snapshotUuid;
+    connect(action, &AsyncOperation::completed, action, [snapshotUuid, action]()
     {
         bool success = (action->GetState() == AsyncOperation::Completed && !action->IsFailed());
         if (success)
         {
-            qDebug() << "RevertToSnapshotCommand: VM reverted to snapshot successfully:" << this->m_snapshotUuid;
+            qDebug() << "RevertToSnapshotCommand: VM reverted to snapshot successfully:" << snapshotUuid;
             // Cache will be automatically refreshed via event polling
             // No message box - matches C# behavior (success shown in history/status bar)
         } else

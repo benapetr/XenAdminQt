@@ -86,8 +86,9 @@ void AddSelectedHostToPoolMenu::onAboutToShow()
         QSharedPointer<Pool> poolCopy = pool;
         QList<QSharedPointer<Host>> hostsCopy = selectedHosts;
         
-        connect(action, &QAction::triggered, this, [this, hostsCopy, poolCopy]() {
-            AddHostToPoolCommand* cmd = new AddHostToPoolCommand(this->mainWindow_, hostsCopy, poolCopy, true);
+        connect(action, &QAction::triggered, this, [hostsCopy, poolCopy]()
+        {
+            AddHostToPoolCommand* cmd = new AddHostToPoolCommand(MainWindow::instance(), hostsCopy, poolCopy, true);
             cmd->Run();
             cmd->deleteLater();
         });
@@ -98,8 +99,10 @@ void AddSelectedHostToPoolMenu::onAboutToShow()
         this->addSeparator();
     
     QAction* newPoolAction = this->addAction(tr("New Pool..."));
-    connect(newPoolAction, &QAction::triggered, this, [this, selectedHosts]() {
-        NewPoolCommand* cmd = new NewPoolCommand(this->mainWindow_);
+    connect(newPoolAction, &QAction::triggered, this, [selectedHosts]()
+    {
+        Q_UNUSED(selectedHosts);
+        NewPoolCommand* cmd = new NewPoolCommand(MainWindow::instance());
         cmd->Run();
         cmd->deleteLater();
     });

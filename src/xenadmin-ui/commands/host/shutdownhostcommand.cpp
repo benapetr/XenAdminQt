@@ -89,18 +89,16 @@ void ShutdownHostCommand::Run()
         : "Shutting down these hosts will shut down all VMs running on them.\n\n"
           "Are you sure you want to continue?";
 
-    int ret = QMessageBox::warning(this->mainWindow(), confirmTitle, confirmText,
-                                   QMessageBox::Yes | QMessageBox::No);
+    int ret = QMessageBox::warning(MainWindow::instance(), confirmTitle, confirmText, QMessageBox::Yes | QMessageBox::No);
 
     if (ret == QMessageBox::Yes)
     {
         if (count == 1)
         {
-            this->mainWindow()->ShowStatusMessage(
-                QString("Shutting down host '%1'...").arg(runnable.first()->GetName()));
+            MainWindow::instance()->ShowStatusMessage(QString("Shutting down host '%1'...").arg(runnable.first()->GetName()));
         } else
         {
-            this->mainWindow()->ShowStatusMessage(QString("Shutting down %1 hosts...").arg(count));
+            MainWindow::instance()->ShowStatusMessage(QString("Shutting down %1 hosts...").arg(count));
         }
 
         for (const QSharedPointer<Host>& host : runnable)
@@ -110,7 +108,7 @@ void ShutdownHostCommand::Run()
 
             if (!host->IsConnected())
             {
-                QMessageBox::warning(this->mainWindow(), "Not Connected", QString("Not connected to XenServer for host '%1'.").arg(host->GetName()));
+                QMessageBox::warning(MainWindow::instance(), "Not Connected", QString("Not connected to XenServer for host '%1'.").arg(host->GetName()));
                 continue;
             }
 
@@ -126,7 +124,7 @@ void ShutdownHostCommand::Run()
                                          .arg(current)
                                          .arg(target);
 
-                return QMessageBox::question(this->mainWindow(),
+                return QMessageBox::question(MainWindow::instance(),
                                              "Adjust HA Failures to Tolerate",
                                              text,
                                              QMessageBox::Yes | QMessageBox::No,
@@ -137,16 +135,15 @@ void ShutdownHostCommand::Run()
 
             OperationManager::instance()->RegisterOperation(action);
 
-            connect(action, &AsyncOperation::completed, this->mainWindow(), [this, hostName, action]()
+            connect(action, &AsyncOperation::completed, MainWindow::instance(), [hostName, action]()
             {
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {
-                    this->mainWindow()->ShowStatusMessage(QString("Host '%1' shutdown initiated successfully").arg(hostName), 5000);
+                    MainWindow::instance()->ShowStatusMessage(QString("Host '%1' shutdown initiated successfully").arg(hostName), 5000);
                 } else
                 {
-                    QMessageBox::warning(this->mainWindow(), "Shutdown Host Failed",
-                                         QString("Failed to shutdown host '%1'. Check the error log for details.").arg(hostName));
-                    this->mainWindow()->ShowStatusMessage("Host shutdown failed", 5000);
+                    QMessageBox::warning(MainWindow::instance(), "Shutdown Host Failed", QString("Failed to shutdown host '%1'. Check the error log for details.").arg(hostName));
+                    MainWindow::instance()->ShowStatusMessage("Host shutdown failed", 5000);
                 }
                 action->deleteLater();
             });

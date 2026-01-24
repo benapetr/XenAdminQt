@@ -79,7 +79,7 @@ void ForgetSavedPasswordCommand::Run()
         }
     }
 
-    this->mainWindow()->SaveServerList();
+    MainWindow::instance()->SaveServerList();
 }
 
 QString ForgetSavedPasswordCommand::MenuText() const

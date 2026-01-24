@@ -125,14 +125,17 @@ void ForgetSRCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, [this, srName, action]() {
+    connect(action, &AsyncOperation::completed, [srName, action]()
+    {
+        MainWindow* mainWindow = MainWindow::instance();
         if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
-            this->mainWindow()->ShowStatusMessage(QString("Successfully forgotten SR '%1'").arg(srName), 5000);
+            if (mainWindow)
+                mainWindow->ShowStatusMessage(QString("Successfully forgotten SR '%1'").arg(srName), 5000);
         } else
         {
             QMessageBox::warning(
-                this->mainWindow(),
+                mainWindow,
                 "Forget SR Failed",
                 QString("Failed to forget SR '%1'").arg(srName));
         }

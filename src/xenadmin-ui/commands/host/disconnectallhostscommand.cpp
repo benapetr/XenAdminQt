@@ -43,11 +43,11 @@ bool DisconnectAllHostsCommand::CanRun() const
 void DisconnectAllHostsCommand::Run()
 {
     // Show confirmation dialog
-    int ret = QMessageBox::question(this->mainWindow(), "Disconnect All", "Are you sure you want to disconnect from all servers?", QMessageBox::Yes | QMessageBox::No);
+    int ret = QMessageBox::question(MainWindow::instance(), "Disconnect All", "Are you sure you want to disconnect from all servers?", QMessageBox::Yes | QMessageBox::No);
 
     if (ret == QMessageBox::Yes)
     {
-        this->mainWindow()->ShowStatusMessage("Disconnecting from all servers...");
+        MainWindow::instance()->ShowStatusMessage("Disconnecting from all servers...");
         Xen::ConnectionsManager::instance()->DisconnectAll();
     }
 }

@@ -80,8 +80,7 @@ void CancelHostConnectionCommand::Run()
         if (connection && !connection->IsConnected() && connection->InProgress())
         {
             // Cancel by disconnecting
-            DisconnectCommand* disconnectCmd = new DisconnectCommand(
-                this->mainWindow(), connection, false, this);
+            DisconnectCommand* disconnectCmd = new DisconnectCommand(MainWindow::instance(), connection, false, this);
             disconnectCmd->Run();
             disconnectCmd->deleteLater();
         }

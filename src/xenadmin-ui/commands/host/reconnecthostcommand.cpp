@@ -54,8 +54,8 @@ void ReconnectHostCommand::Run()
         if (!conn || conn->IsConnected())
             continue;
 
-        this->mainWindow()->ShowStatusMessage("Reconnecting...");
-        XenConnectionUI::BeginConnect(conn, true, this->mainWindow(), false);
+        MainWindow::instance()->ShowStatusMessage("Reconnecting...");
+        XenConnectionUI::BeginConnect(conn, true, MainWindow::instance(), false);
     }
 }
 

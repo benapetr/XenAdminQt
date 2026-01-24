@@ -87,8 +87,7 @@ void ShutdownCommand::Run()
         }
     }
 
-    QMessageBox::warning(this->mainWindow(), "Cannot Shutdown",
-                         "The selected object cannot be shut down.");
+    QMessageBox::warning(this->mainWindow(), "Cannot Shutdown", "The selected object cannot be shut down.");
 }
 
 QString ShutdownCommand::MenuText() const

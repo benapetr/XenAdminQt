@@ -97,20 +97,15 @@ void EjectHostFromPoolCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signals
-    connect(action, &AsyncOperation::completed, [this, hostName, action]()
+    connect(action, &AsyncOperation::completed, [hostName, action]()
     {
-        QMessageBox::information(this->mainWindow(), "Eject Host",
-                                 QString("Successfully ejected '%1' from the pool.\n"
-                                         "The host will now be rebooted.")
-                                     .arg(hostName));
+        QMessageBox::information(MainWindow::instance(), "Eject Host", QString("Successfully ejected '%1' from the pool.\nThe host will now be rebooted.").arg(hostName));
         action->deleteLater();
     });
 
-    connect(action, &AsyncOperation::failed, [this, hostName, action](const QString& error)
+    connect(action, &AsyncOperation::failed, [hostName, action](const QString& error)
     {
-        QMessageBox::critical(this->mainWindow(), "Eject Host",
-                              QString("Failed to eject '%1' from the pool:\n%2")
-                                  .arg(hostName, error));
+        QMessageBox::critical(MainWindow::instance(), "Eject Host", QString("Failed to eject '%1' from the pool:\n%2").arg(hostName, error));
         action->deleteLater();
     });
 

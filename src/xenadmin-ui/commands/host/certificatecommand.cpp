@@ -137,11 +137,7 @@ void InstallCertificateCommand::Run()
     QSharedPointer<Pool> pool = host->GetPool();
     if (pool && pool->IsValid() && pool->HAEnabled())
     {
-        QMessageBox::warning(
-            this->mainWindow(),
-            "Cannot Install Certificate",
-            "HA is enabled on this pool. Disable HA before installing certificates."
-        );
+        QMessageBox::warning(MainWindow::instance(), "Cannot Install Certificate", "HA is enabled on this pool. Disable HA before installing certificates.");
         return;
     }
     
@@ -150,19 +146,14 @@ void InstallCertificateCommand::Run()
     // dialog->exec();
     // dialog->deleteLater();
     
-    QMessageBox::information(
-        this->mainWindow(),
-        "Install Certificate",
-        "TODO: Show InstallCertificateDialog (not yet ported)"
-    );
+    QMessageBox::information(MainWindow::instance(), "Install Certificate", "TODO: Show InstallCertificateDialog (not yet ported)");
 }
 
 // =============================================================================
 // ResetCertificateCommand
 // =============================================================================
 
-ResetCertificateCommand::ResetCertificateCommand(MainWindow* mainWindow, QObject* parent)
-    : CertificateCommand(mainWindow, parent)
+ResetCertificateCommand::ResetCertificateCommand(MainWindow* mainWindow, QObject* parent) : CertificateCommand(mainWindow, parent)
 {
 }
 
@@ -198,18 +189,14 @@ void ResetCertificateCommand::Run()
     QSharedPointer<Pool> pool = host->GetPool();
     if (pool && pool->IsValid() && pool->HAEnabled())
     {
-        QMessageBox::warning(
-            this->mainWindow(),
-            "Cannot Reset Certificate",
-            "HA is enabled on this pool. Disable HA before resetting certificates."
-        );
+        QMessageBox::warning(MainWindow::instance(), "Cannot Reset Certificate", "HA is enabled on this pool. Disable HA before resetting certificates.");
         return;
     }
     
     // Show warning dialog
     // TODO: Use WarningDialog when ported
     QMessageBox::StandardButton result = QMessageBox::warning(
-        this->mainWindow(),
+        MainWindow::instance(),
         "Reset Server Certificate",
         QString("Are you sure you want to reset the server certificate on %1 to a self-signed certificate?\n\n"
                 "This will restart the toolstack and may disrupt connections.").arg(host->GetName()),
@@ -222,11 +209,7 @@ void ResetCertificateCommand::Run()
     
     // TODO: Create and run DelegatedAsyncAction for Host::reset_server_certificate
     // For now, show placeholder
-    QMessageBox::information(
-        this->mainWindow(),
-        "Reset Certificate",
-        "TODO: Run Host.reset_server_certificate async action (not yet implemented)"
-    );
+    QMessageBox::information(MainWindow::instance(), "Reset Certificate", "TODO: Run Host.reset_server_certificate async action (not yet implemented)");
 }
 
 bool ResetCertificateCommand::isResetVersionSupported(XenConnection* connection) const

@@ -380,6 +380,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
 MainWindow::~MainWindow()
 {
+    MainWindow::g_instance = nullptr;
+
     // Cleanup debug handler
     DebugWindow::uninstallDebugHandler();
 

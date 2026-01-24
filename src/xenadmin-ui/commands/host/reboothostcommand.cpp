@@ -81,7 +81,7 @@ void RebootHostCommand::Run()
         CommandErrorDialog::DialogMode mode =
             runnable.isEmpty() ? CommandErrorDialog::DialogMode::Close
                                : CommandErrorDialog::DialogMode::OKCancel;
-        CommandErrorDialog dialog("Reboot Host", "Some hosts cannot be rebooted.", cantRunReasons, mode, this->mainWindow());
+        CommandErrorDialog dialog("Reboot Host", "Some hosts cannot be rebooted.", cantRunReasons, mode, MainWindow::instance());
         if (dialog.exec() != QDialog::Accepted || runnable.isEmpty())
             return;
     }
@@ -113,7 +113,7 @@ void RebootHostCommand::Run()
                       : "Rebooting these hosts will restart them.\n\n"
                         "Are you sure you want to continue?");
 
-    QMessageBox msgBox(this->mainWindow());
+    QMessageBox msgBox(MainWindow::instance());
     msgBox.setWindowTitle(confirmTitle);
     msgBox.setText(confirmText);
     msgBox.setIcon(QMessageBox::Warning);
@@ -125,11 +125,11 @@ void RebootHostCommand::Run()
     {
         if (count == 1)
         {
-            this->mainWindow()->ShowStatusMessage(QString("Rebooting host '%1'...").arg(runnable.first()->GetName()));
+            MainWindow::instance()->ShowStatusMessage(QString("Rebooting host '%1'...").arg(runnable.first()->GetName()));
         }
         else
         {
-            this->mainWindow()->ShowStatusMessage(QString("Rebooting %1 hosts...").arg(count));
+            MainWindow::instance()->ShowStatusMessage(QString("Rebooting %1 hosts...").arg(count));
         }
 
         for (const QSharedPointer<Host>& host : runnable)
@@ -139,12 +139,12 @@ void RebootHostCommand::Run()
 
             if (!host->IsConnected())
             {
-                QMessageBox::warning(this->mainWindow(), "Not Connected", QString("Not connected to XenServer for host '%1'.").arg(host->GetName()));
+                QMessageBox::warning(MainWindow::instance(), "Not Connected", QString("Not connected to XenServer for host '%1'.").arg(host->GetName()));
                 continue;
             }
 
             const QString hostName = host->GetName();
-            auto ntolPrompt = [this](QSharedPointer<Pool> pool, qint64 current, qint64 target) {
+            auto ntolPrompt = [](QSharedPointer<Pool> pool, qint64 current, qint64 target) {
                 const QString poolName = pool ? pool->GetName() : QString();
                 const QString poolLabel = poolName.isEmpty() ? "pool" : QString("pool '%1'").arg(poolName);
                 const QString text = QString("HA is enabled for %1.\n\n"
@@ -155,7 +155,7 @@ void RebootHostCommand::Run()
                                          .arg(current)
                                          .arg(target);
 
-                return QMessageBox::question(this->mainWindow(),
+                return QMessageBox::question(MainWindow::instance(),
                                              "Adjust HA Failures to Tolerate",
                                              text,
                                              QMessageBox::Yes | QMessageBox::No,
@@ -166,10 +166,9 @@ void RebootHostCommand::Run()
 
             OperationManager::instance()->RegisterOperation(action);
 
-            QPointer<MainWindow> mainWindow = this->mainWindow();
-            connect(action, &AsyncOperation::completed, mainWindow, [mainWindow, hostName, action]()
+            connect(action, &AsyncOperation::completed, MainWindow::instance(), [hostName, action]()
             {
-                if (!mainWindow)
+                if (!MainWindow::instance())
                 {
                     action->deleteLater();
                     return;
@@ -177,13 +176,12 @@ void RebootHostCommand::Run()
 
                 if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
                 {
-                    mainWindow->ShowStatusMessage(QString("Host '%1' reboot initiated successfully").arg(hostName), 5000);
+                    MainWindow::instance()->ShowStatusMessage(QString("Host '%1' reboot initiated successfully").arg(hostName), 5000);
                 } else
                 {
                     // TODO: Add detailed error dialog and cant-run reason handling like C#.
-                    QMessageBox::warning(mainWindow, "Reboot Host Failed",
-                                         QString("Failed to reboot host '%1'. Check the error log for details.").arg(hostName));
-                    mainWindow->ShowStatusMessage("Host reboot failed", 5000);
+                    QMessageBox::warning(MainWindow::instance(), "Reboot Host Failed", QString("Failed to reboot host '%1'. Check the error log for details.").arg(hostName));
+                    MainWindow::instance()->ShowStatusMessage("Host reboot failed", 5000);
                 }
                 action->deleteLater();
             });

@@ -111,7 +111,7 @@ void DestroyBondCommand::Run()
     }
 
     // Show confirmation dialog
-    QMessageBox msgBox(this->mainWindow());
+    QMessageBox msgBox(MainWindow::instance());
     msgBox.setWindowTitle("Delete Bond");
     msgBox.setText(message);
     msgBox.setIcon(affectsPrimary ? QMessageBox::Critical : QMessageBox::Warning);
@@ -136,18 +136,14 @@ void DestroyBondCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, [this, bondName, action]()
+    connect(action, &AsyncOperation::completed, [bondName, action]()
     {
         if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
-            this->mainWindow()->ShowStatusMessage(QString("Successfully deleted bond '%1'").arg(bondName), 5000);
+            MainWindow::instance()->ShowStatusMessage(QString("Successfully deleted bond '%1'").arg(bondName), 5000);
         } else
         {
-            QMessageBox::warning(
-                this->mainWindow(),
-                "Delete Bond Failed",
-                QString("Failed to delete bond '%1'.\n\n%2")
-                    .arg(bondName, action->GetErrorMessage()));
+            QMessageBox::warning(MainWindow::instance(), "Delete Bond Failed", QString("Failed to delete bond '%1'.\n\n%2").arg(bondName, action->GetErrorMessage()));
         }
         // Auto-delete when complete
         action->deleteLater();
