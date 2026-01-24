@@ -30,9 +30,13 @@
 
 #include <QDialog>
 #include <QVariantMap>
+#include <QSharedPointer>
 #include <QString>
 
 class XenConnection;
+class VM;
+class VIF;
+class Network;
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -62,20 +66,26 @@ class VIFDialog : public QDialog
     public:
         /**
          * @brief Constructor for creating a new VIF
-         * @param xenLib XenLib instance
-         * @param vmRef VM opaque reference
+         * @param vm VM object
          * @param deviceId Device ID for the new VIF
          * @param parent Parent widget
          */
-        explicit VIFDialog(XenConnection* connection, const QString& vmRef, int deviceId, QWidget* parent = nullptr);
+        explicit VIFDialog(QSharedPointer<VM> vm, int deviceId, QWidget* parent = nullptr);
+
+        /**
+         * @brief Constructor for creating a new VIF without VM context (wizard usage)
+         * @param connection XenConnection instance
+         * @param deviceId Device ID for the new VIF
+         * @param parent Parent widget
+         */
+        explicit VIFDialog(XenConnection* connection, int deviceId, QWidget* parent = nullptr);
 
         /**
          * @brief Constructor for editing an existing VIF
-         * @param xenLib XenLib instance
-         * @param vifRef VIF opaque reference to edit
+         * @param vif VIF object to edit
          * @param parent Parent widget
          */
-        explicit VIFDialog(XenConnection* connection, const QString& vifRef, QWidget* parent = nullptr);
+        explicit VIFDialog(QSharedPointer<VIF> vif, QWidget* parent = nullptr);
 
         /**
          * @brief Constructor for editing a pending VIF settings map (wizard usage)
@@ -126,8 +136,9 @@ class VIFDialog : public QDialog
 
         Ui::VIFDialog* ui;
         XenConnection* m_connection;
-        QString m_vmRef;           // VM reference (for new VIFs)
-        QString m_vifRef;          // VIF reference (for editing)
+        QSharedPointer<VM> m_vm;   // VM (for new VIFs)
+        QSharedPointer<VIF> m_vif; // VIF (for editing)
+        QString m_vmRef;           // VM reference (for wizard VIFs)
         int m_deviceId;            // Device ID for new VIF
         QVariantMap m_existingVif; // Original VIF data (for editing)
         bool m_isEditMode;         // true if editing existing VIF

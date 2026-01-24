@@ -38,17 +38,13 @@
 #include <QFontMetrics>
 #include <QResizeEvent>
 
-ConfirmVMDeleteDialog::ConfirmVMDeleteDialog(const QList<QSharedPointer<VM>> &vms, QWidget* parent)
-    : QDialog(parent), ui(new Ui::ConfirmVMDeleteDialog), deleteButton_(nullptr)
+ConfirmVMDeleteDialog::ConfirmVMDeleteDialog(const QList<QSharedPointer<VM>> &vms, QWidget* parent) : QDialog(parent), ui(new Ui::ConfirmVMDeleteDialog), deleteButton_(nullptr)
 {
     this->ui->setupUi(this);
     this->initialize(vms);
 }
 
-ConfirmVMDeleteDialog::ConfirmVMDeleteDialog(QSharedPointer<VM> vm, QWidget* parent)
-    : QDialog(parent)
-    , ui(new Ui::ConfirmVMDeleteDialog)
-    , deleteButton_(nullptr)
+ConfirmVMDeleteDialog::ConfirmVMDeleteDialog(QSharedPointer<VM> vm, QWidget* parent) : QDialog(parent), ui(new Ui::ConfirmVMDeleteDialog), deleteButton_(nullptr)
 {
     QList<QSharedPointer<VM>> vms;
     vms << vm;

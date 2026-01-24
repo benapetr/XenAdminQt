@@ -33,6 +33,7 @@
 #include "xen/network/connection.h"
 #include "xen/vm.h"
 #include "xen/vbd.h"
+#include "xen/vdi.h"
 #include "xen/xenapi/xenapi_VBD.h"
 #include "xen/xenapi/xenapi_VDI.h"
 #include "xen/xenapi/xenapi_VM.h"
@@ -1602,7 +1603,7 @@ void VMStorageTabPage::onAttachButtonClicked()
         return;
 
     // Open Attach Virtual Disk Dialog
-    AttachVirtualDiskDialog dialog(this->m_connection, this->m_objectRef, this);
+    AttachVirtualDiskDialog dialog(this->m_vm, this);
     if (dialog.exec() != QDialog::Accepted)
         return;
 
@@ -1695,7 +1696,19 @@ void VMStorageTabPage::onMoveButtonClicked()
         return;
     }
 
-    MoveVirtualDiskDialog dialog(this->m_connection, vdiRefs, this);
+    QList<QSharedPointer<VDI>> vdis;
+    vdis.reserve(vdiRefs.size());
+    for (const QString& vdiRef : vdiRefs)
+    {
+        QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+        if (vdi && vdi->IsValid())
+            vdis.append(vdi);
+    }
+
+    if (vdis.isEmpty())
+        return;
+
+    MoveVirtualDiskDialog dialog(vdis, this);
     if (dialog.exec() == QDialog::Accepted)
     {
         refreshVmRecord(this->m_connection, this->m_objectRef);
@@ -1724,8 +1737,12 @@ void VMStorageTabPage::onEditButtonClicked()
     if (!connection || !connection->GetSession())
         return;
 
+    QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+    if (!vdi || !vdi->IsValid())
+        return;
+
     // Open VDI Properties Dialog
-    VdiPropertiesDialog dialog(this->m_connection, vdiRef, this);
+    VdiPropertiesDialog dialog(vdi, this);
     if (dialog.exec() != QDialog::Accepted)
         return;
 
@@ -1741,8 +1758,7 @@ void VMStorageTabPage::onEditButtonClicked()
 
     // Update name if changed
     QString newName = dialog.getVdiName();
-    QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
-    QString oldName = vdiData.value("name_label", "").toString();
+    QString oldName = vdi->GetName();
 
     if (newName != oldName)
     {
@@ -1760,7 +1776,7 @@ void VMStorageTabPage::onEditButtonClicked()
 
     // Update description if changed
     QString newDescription = dialog.getVdiDescription();
-    QString oldDescription = vdiData.value("name_description", "").toString();
+    QString oldDescription = vdi->GetDescription();
 
     if (newDescription != oldDescription)
     {
@@ -1778,7 +1794,7 @@ void VMStorageTabPage::onEditButtonClicked()
 
     // Update size if changed (and increase only)
     qint64 newSize = dialog.getNewSize();
-    qint64 oldSize = vdiData.value("virtual_size", 0).toLongLong();
+    qint64 oldSize = vdi->VirtualSize();
     qint64 sizeDiff = newSize - oldSize;
 
     if (sizeDiff > (10 * 1024 * 1024)) // More than 10 MB increase

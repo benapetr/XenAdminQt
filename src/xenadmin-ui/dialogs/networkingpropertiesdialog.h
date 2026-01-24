@@ -29,21 +29,22 @@
 #define NETWORKINGPROPERTIESDIALOG_H
 
 #include <QDialog>
-#include <QVariantMap>
+#include <QSharedPointer>
 
 namespace Ui
 {
     class NetworkingPropertiesDialog;
 }
 
-class XenConnection;
+class PIF;
+class Network;
 
 class NetworkingPropertiesDialog : public QDialog
 {
     Q_OBJECT
 
     public:
-        explicit NetworkingPropertiesDialog(XenConnection* connection, const QString& pifRef, QWidget* parent = nullptr);
+        explicit NetworkingPropertiesDialog(QSharedPointer<PIF> pif, QWidget* parent = nullptr);
         ~NetworkingPropertiesDialog();
 
         void accept() override;
@@ -60,9 +61,7 @@ class NetworkingPropertiesDialog : public QDialog
         void applyChanges();
 
         Ui::NetworkingPropertiesDialog* ui;
-        XenConnection* m_connection;
-        QString m_pifRef;
-        QVariantMap m_pifData;
+        QSharedPointer<PIF> m_pif;
 };
 
 #endif // NETWORKINGPROPERTIESDIALOG_H

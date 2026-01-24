@@ -426,4 +426,3 @@ bool XenRpcAPI::EventUnregister(const QStringList& classes)
 
     return !response.isEmpty();
 }
-

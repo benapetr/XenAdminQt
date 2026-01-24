@@ -29,23 +29,23 @@
 #include "../operations/operationmanager.h"
 #include "../dialogs/operationprogressdialog.h"
 #include "xenlib/xen/pool.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/pbd.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 #include "xenlib/xen/actions/pool/enablehaaction.h"
-#include "xenlib/xen/xenapi/xenapi_Pool.h"
-#include "xenlib/xen/xenapi/xenapi_SR.h"
-#include "xenlib/xen/xenapi/xenapi_VM.h"
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QIcon>
 #include <QTimer>
 #include <QApplication>
 
-HAWizard::HAWizard(XenConnection* connection, const QString& poolRef, QWidget* parent)
+HAWizard::HAWizard(QSharedPointer<Pool> pool, QWidget* parent)
     : QWizard(parent),
-      m_connection(connection),
-      m_poolRef(poolRef),
+      m_pool(pool),
       m_ntol(1),
       m_maxNtol(0)
 {
@@ -54,9 +54,7 @@ HAWizard::HAWizard(XenConnection* connection, const QString& poolRef, QWidget* p
     setMinimumSize(700, 500);
 
     // Get pool name for display
-    XenCache* cache = this->cache();
-    QVariantMap poolData = cache ? cache->ResolveObjectData("pool", this->m_poolRef) : QVariantMap();
-    this->m_poolName = poolData.value("name_label", "Pool").toString();
+    this->m_poolName = this->m_pool ? this->m_pool->GetName() : QString("Pool");
 
     // Create wizard pages
     addPage(createIntroPage());
@@ -373,8 +371,7 @@ void HAWizard::accept()
     }
 
     // Resolve Pool object from cache
-    QSharedPointer<Pool> pool = this->m_connection->GetCache()->ResolveObject<Pool>("pool", this->m_poolRef);
-    if (!pool || !pool->IsValid())
+    if (!this->m_pool || !this->m_pool->IsValid())
     {
         QMessageBox::critical(this, tr("Error"), tr("Failed to resolve pool object"));
         return;
@@ -382,7 +379,7 @@ void HAWizard::accept()
 
     // Create and run EnableHAAction
     EnableHAAction* action = new EnableHAAction(
-        pool,
+        this->m_pool,
         QStringList{this->m_selectedHeartbeatSR},
         this->m_ntol,
         this->m_vmStartupOptions,
@@ -429,7 +426,8 @@ void HAWizard::scanForHeartbeatSRs()
 
     try
     {
-        XenAPI::Session* session = m_connection ? m_connection->GetSession() : nullptr;
+        XenConnection* connection = this->m_pool ? this->m_pool->GetConnection() : nullptr;
+        XenAPI::Session* session = connection ? connection->GetSession() : nullptr;
         if (!session || !session->IsLoggedIn())
         {
             throw std::runtime_error("Not connected");
@@ -440,41 +438,41 @@ void HAWizard::scanForHeartbeatSRs()
         if (!cache)
             throw std::runtime_error("Cache not available");
 
-        QStringList srRefs = cache->GetAllRefs("sr");
+        QList<QSharedPointer<SR>> srs = cache->GetAll<SR>("sr");
 
-        for (const QString& srRef : srRefs)
+        for (const QSharedPointer<SR>& sr : srs)
         {
-            QVariantMap srData = cache->ResolveObjectData("sr", srRef);
-
             // Check if SR is suitable for heartbeat:
             // - Must be shared
             // - Must have at least one connected PBD
             // - Not a tools SR
             // - Not broken
+            if (!sr || !sr->IsValid())
+                continue;
 
-            bool isShared = srData.value("shared", false).toBool();
-            QString srType = srData.value("type", "").toString();
+            bool isShared = sr->IsShared();
+            QString srType = sr->GetType();
 
             // Skip non-shared SRs
             if (!isShared)
                 continue;
 
             // Skip tools SRs
-            if (srType == "xs-tools" || srType == "iso")
+            if (sr->IsToolsSR() || srType == "iso")
                 continue;
 
             // Skip udev/local SRs
             if (srType == "udev" || srType == "local")
                 continue;
 
+            if (sr->IsBroken())
+                continue;
+
             // Check if SR has working PBDs
-            QVariantList pbds = srData.value("PBDs", QVariantList()).toList();
             bool hasConnectedPBD = false;
-            for (const QVariant& pbdVar : pbds)
+            for (const QSharedPointer<PBD>& pbd : sr->GetPBDs())
             {
-                QString pbdRef = pbdVar.toString();
-                QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
-                if (pbdData.value("currently_attached", false).toBool())
+                if (pbd && pbd->IsCurrentlyAttached())
                 {
                     hasConnectedPBD = true;
                     break;
@@ -484,20 +482,20 @@ void HAWizard::scanForHeartbeatSRs()
             if (!hasConnectedPBD)
                 continue;
 
-            QString srName = srData.value("name_label", "Unknown").toString();
-            QString srDesc = srData.value("name_description", "").toString();
+            QString srName = sr->GetName();
+            QString srDesc = sr->GetDescription();
 
             // For now, all shared SRs with connected PBDs are considered suitable
             // TODO: Add XenAPI::SR::assert_can_host_ha_statefile check when implemented
             QString status = tr("Available");
 
-            this->m_heartbeatSRs.append({srRef, srName});
+            this->m_heartbeatSRs.append({sr->OpaqueRef(), srName});
 
             int row = this->m_srTable->rowCount();
             this->m_srTable->insertRow(row);
 
             QTableWidgetItem* nameItem = new QTableWidgetItem(srName);
-            nameItem->setData(Qt::UserRole, srRef);
+            nameItem->setData(Qt::UserRole, sr->OpaqueRef());
             this->m_srTable->setItem(row, 0, nameItem);
 
             this->m_srTable->setItem(row, 1, new QTableWidgetItem(srDesc));
@@ -583,38 +581,36 @@ void HAWizard::populateVMTable()
     if (!cache)
         return;
 
-    QStringList vmRefs = cache->GetAllRefs("vm");
+    QList<QSharedPointer<VM>> vms = cache->GetAll<VM>("vm");
 
-    for (const QString& vmRef : vmRefs)
+    for (const QSharedPointer<VM>& vm : vms)
     {
-        QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
+        if (!vm || !vm->IsValid())
+            continue;
 
         // Skip templates
-        bool isTemplate = vmData.value("is_a_template", false).toBool();
-        if (isTemplate)
+        if (vm->IsTemplate())
             continue;
 
         // Skip control domains
-        bool isControlDomain = vmData.value("is_control_domain", false).toBool();
-        if (isControlDomain)
+        if (vm->IsControlDomain())
             continue;
 
         // Skip snapshots
-        bool isSnapshot = vmData.value("is_a_snapshot", false).toBool();
-        if (isSnapshot)
+        if (vm->IsSnapshot())
             continue;
 
-        QString vmName = vmData.value("name_label", "Unknown").toString();
-        QString currentPriority = vmData.value("ha_restart_priority", "").toString();
-        qint64 order = vmData.value("order", 0).toLongLong();
-        qint64 startDelay = vmData.value("start_delay", 0).toLongLong();
+        QString vmName = vm->GetName();
+        QString currentPriority = vm->HARestartPriority();
+        qint64 order = vm->Order();
+        qint64 startDelay = vm->StartDelay();
 
         int row = this->m_vmTable->rowCount();
         this->m_vmTable->insertRow(row);
 
         // VM name
         QTableWidgetItem* nameItem = new QTableWidgetItem(vmName);
-        nameItem->setData(Qt::UserRole, vmRef);
+        nameItem->setData(Qt::UserRole, vm->OpaqueRef());
         nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);
         this->m_vmTable->setItem(row, 0, nameItem);
 
@@ -676,12 +672,10 @@ void HAWizard::updateNtolCalculation()
     this->m_ntol = this->m_ntolSpinBox->value();
 
     // Count hosts in pool
-    XenCache* cache = this->cache();
-    if (!cache)
+    if (!this->m_pool)
         return;
 
-    QStringList hostRefs = cache->GetAllRefs("host");
-    int hostCount = hostRefs.size();
+    int hostCount = this->m_pool->GetHosts().size();
 
     // Maximum NTOL is number of hosts - 1
     this->m_maxNtol = qMax(0, hostCount - 1);
@@ -775,7 +769,7 @@ void HAWizard::updateFinishPage()
 
 XenCache* HAWizard::cache() const
 {
-    return m_connection ? m_connection->GetCache() : nullptr;
+    return this->m_pool ? this->m_pool->GetCache() : nullptr;
 }
 
 QString HAWizard::priorityToString(HaRestartPriority priority) const

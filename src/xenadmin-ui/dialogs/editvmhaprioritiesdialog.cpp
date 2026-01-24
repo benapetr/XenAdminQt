@@ -29,36 +29,33 @@
 #include "../operations/operationmanager.h"
 #include "../dialogs/operationprogressdialog.h"
 #include "xenlib/xen/pool.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
-#include "xenlib/xen/network/connection.h"
-#include "xenlib/xen/session.h"
 #include "xenlib/xen/actions/pool/sethaprioritiesaction.h"
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QDialogButtonBox>
 
-EditVmHaPrioritiesDialog::EditVmHaPrioritiesDialog(XenConnection* connection, const QString& poolRef, QWidget* parent)
+EditVmHaPrioritiesDialog::EditVmHaPrioritiesDialog(QSharedPointer<Pool> pool, QWidget* parent)
     : QDialog(parent),
-      m_connection(connection),
-      m_poolRef(poolRef),
+      m_pool(pool),
       m_ntol(0),
       m_maxNtol(0)
 {
     // Get pool data
-    XenCache* cache = this->cache();
-    QVariantMap poolData = cache ? cache->ResolveObjectData("pool", m_poolRef) : QVariantMap();
-    m_poolName = poolData.value("name_label", "Pool").toString();
-    m_originalNtol = poolData.value("ha_host_failures_to_tolerate", 0).toLongLong();
-    m_ntol = m_originalNtol;
+    this->m_poolName = this->m_pool ? this->m_pool->GetName() : QString("Pool");
+    this->m_originalNtol = this->m_pool ? this->m_pool->HAHostFailuresToTolerate() : 0;
+    this->m_ntol = this->m_originalNtol;
 
-    setWindowTitle(tr("Edit VM HA Priorities - '%1'").arg(m_poolName));
-    setMinimumSize(650, 500);
-    resize(700, 550);
+    this->setWindowTitle(tr("Edit VM HA Priorities - '%1'").arg(this->m_poolName));
+    this->setMinimumSize(650, 500);
+    this->resize(700, 550);
 
-    setupUi();
-    populateVMTable();
-    updateNtolCalculation();
-    updateOkButtonState();
+    this->setupUi();
+    this->populateVMTable();
+    this->updateNtolCalculation();
+    this->updateOkButtonState();
 }
 
 void EditVmHaPrioritiesDialog::setupUi()
@@ -67,93 +64,88 @@ void EditVmHaPrioritiesDialog::setupUi()
 
     // Warning area for dead hosts
     QHBoxLayout* warningLayout = new QHBoxLayout();
-    m_warningIcon = new QLabel(this);
-    m_warningIcon->setPixmap(QIcon::fromTheme("dialog-warning").pixmap(24, 24));
-    m_warningIcon->setVisible(false);
-    warningLayout->addWidget(m_warningIcon);
+    this->m_warningIcon = new QLabel(this);
+    this->m_warningIcon->setPixmap(QIcon::fromTheme("dialog-warning").pixmap(24, 24));
+    this->m_warningIcon->setVisible(false);
+    warningLayout->addWidget(this->m_warningIcon);
 
-    m_warningLabel = new QLabel(this);
-    m_warningLabel->setWordWrap(true);
-    m_warningLabel->setStyleSheet("color: #b8860b;");
-    m_warningLabel->setVisible(false);
-    warningLayout->addWidget(m_warningLabel, 1);
+    this->m_warningLabel = new QLabel(this);
+    this->m_warningLabel->setWordWrap(true);
+    this->m_warningLabel->setStyleSheet("color: #b8860b;");
+    this->m_warningLabel->setVisible(false);
+    warningLayout->addWidget(this->m_warningLabel, 1);
     mainLayout->addLayout(warningLayout);
 
     // NTOL configuration group
-    m_ntolGroup = new QGroupBox(tr("Host Failure Tolerance"), this);
-    QVBoxLayout* ntolLayout = new QVBoxLayout(m_ntolGroup);
+    this->m_ntolGroup = new QGroupBox(tr("Host Failure Tolerance"), this);
+    QVBoxLayout* ntolLayout = new QVBoxLayout(this->m_ntolGroup);
 
     QHBoxLayout* ntolSpinLayout = new QHBoxLayout();
-    QLabel* ntolLabel = new QLabel(tr("Number of host failures to tolerate:"), m_ntolGroup);
-    m_ntolSpinBox = new QSpinBox(m_ntolGroup);
-    m_ntolSpinBox->setRange(0, 10);
-    m_ntolSpinBox->setValue(m_ntol);
-    connect(m_ntolSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
+    QLabel* ntolLabel = new QLabel(tr("Number of host failures to tolerate:"), this->m_ntolGroup);
+    this->m_ntolSpinBox = new QSpinBox(this->m_ntolGroup);
+    this->m_ntolSpinBox->setRange(0, 10);
+    this->m_ntolSpinBox->setValue(this->m_ntol);
+    connect(this->m_ntolSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &EditVmHaPrioritiesDialog::onNtolChanged);
     ntolSpinLayout->addWidget(ntolLabel);
-    ntolSpinLayout->addWidget(m_ntolSpinBox);
+    ntolSpinLayout->addWidget(this->m_ntolSpinBox);
     ntolSpinLayout->addStretch();
     ntolLayout->addLayout(ntolSpinLayout);
 
-    m_maxNtolLabel = new QLabel(m_ntolGroup);
-    m_maxNtolLabel->setStyleSheet("color: gray;");
-    ntolLayout->addWidget(m_maxNtolLabel);
+    this->m_maxNtolLabel = new QLabel(this->m_ntolGroup);
+    this->m_maxNtolLabel->setStyleSheet("color: gray;");
+    ntolLayout->addWidget(this->m_maxNtolLabel);
 
-    m_ntolStatusLabel = new QLabel(m_ntolGroup);
-    ntolLayout->addWidget(m_ntolStatusLabel);
+    this->m_ntolStatusLabel = new QLabel(this->m_ntolGroup);
+    ntolLayout->addWidget(this->m_ntolStatusLabel);
 
-    mainLayout->addWidget(m_ntolGroup);
+    mainLayout->addWidget(this->m_ntolGroup);
 
     // VM priorities table
     QLabel* vmLabel = new QLabel(tr("VM Restart Priorities:"), this);
     mainLayout->addWidget(vmLabel);
 
-    m_vmTable = new QTableWidget(this);
-    m_vmTable->setColumnCount(4);
-    m_vmTable->setHorizontalHeaderLabels({tr("VM"), tr("Restart Priority"), tr("Start Order"), tr("Start Delay (s)")});
-    m_vmTable->horizontalHeader()->setStretchLastSection(true);
-    m_vmTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    m_vmTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    m_vmTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-    m_vmTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
-    m_vmTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_vmTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    m_vmTable->verticalHeader()->setVisible(false);
-    mainLayout->addWidget(m_vmTable, 1);
+    this->m_vmTable = new QTableWidget(this);
+    this->m_vmTable->setColumnCount(4);
+    this->m_vmTable->setHorizontalHeaderLabels({tr("VM"), tr("Restart Priority"), tr("Start Order"), tr("Start Delay (s)")});
+    this->m_vmTable->horizontalHeader()->setStretchLastSection(true);
+    this->m_vmTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    this->m_vmTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    this->m_vmTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    this->m_vmTable->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+    this->m_vmTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    this->m_vmTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    this->m_vmTable->verticalHeader()->setVisible(false);
+    mainLayout->addWidget(this->m_vmTable, 1);
 
     // Button box
     QDialogButtonBox* buttonBox = new QDialogButtonBox(this);
-    m_okButton = buttonBox->addButton(QDialogButtonBox::Ok);
-    m_cancelButton = buttonBox->addButton(QDialogButtonBox::Cancel);
-    m_okButton->setText(tr("OK"));
-    m_cancelButton->setText(tr("Cancel"));
+    this->m_okButton = buttonBox->addButton(QDialogButtonBox::Ok);
+    this->m_cancelButton = buttonBox->addButton(QDialogButtonBox::Cancel);
+    this->m_okButton->setText(tr("OK"));
+    this->m_cancelButton->setText(tr("Cancel"));
 
-    connect(m_okButton, &QPushButton::clicked, this, &EditVmHaPrioritiesDialog::accept);
-    connect(m_cancelButton, &QPushButton::clicked, this, &QDialog::reject);
+    connect(this->m_okButton, &QPushButton::clicked, this, &EditVmHaPrioritiesDialog::accept);
+    connect(this->m_cancelButton, &QPushButton::clicked, this, &QDialog::reject);
 
     mainLayout->addWidget(buttonBox);
 }
 
 void EditVmHaPrioritiesDialog::populateVMTable()
 {
-    m_vmTable->blockSignals(true);
-    m_vmTable->setRowCount(0);
-    m_originalSettings.clear();
+    this->m_vmTable->blockSignals(true);
+    this->m_vmTable->setRowCount(0);
+    this->m_originalSettings.clear();
 
-    // Check for dead hosts
-    XenCache* cache = this->cache();
-    if (!cache)
+    if (!this->m_pool)
         return;
 
-    QStringList hostRefs = cache->GetAllRefs("host");
+    // Check for dead hosts
     bool hasDeadHosts = false;
-    for (const QString& hostRef : hostRefs)
+    QList<QSharedPointer<Host>> hosts = this->m_pool->GetCache()->GetAll<Host>("host");
+    for (const QSharedPointer<Host>& host : hosts)
     {
-        QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
-        QVariantMap metrics = cache->ResolveObjectData("host_metrics",
-                                                            hostData.value("metrics", "").toString());
-        bool isLive = metrics.value("live", true).toBool();
-        if (!isLive)
+        if (host && !host->IsLive())
         {
             hasDeadHosts = true;
             break;
@@ -162,58 +154,55 @@ void EditVmHaPrioritiesDialog::populateVMTable()
 
     if (hasDeadHosts)
     {
-        m_warningIcon->setVisible(true);
-        m_warningLabel->setVisible(true);
-        m_warningLabel->setText(tr("Cannot edit HA priorities while hosts are offline. "
+        this->m_warningIcon->setVisible(true);
+        this->m_warningLabel->setVisible(true);
+        this->m_warningLabel->setText(tr("Cannot edit HA priorities while hosts are offline. "
                                    "Ensure all hosts in the pool are online before modifying settings."));
-        m_vmTable->setEnabled(false);
-        m_ntolGroup->setEnabled(false);
-        m_okButton->setEnabled(false);
+        this->m_vmTable->setEnabled(false);
+        this->m_ntolGroup->setEnabled(false);
+        this->m_okButton->setEnabled(false);
         return;
     }
 
     // Get all VMs from cache
-    QStringList vmRefs = cache->GetAllRefs("vm");
-
-    for (const QString& vmRef : vmRefs)
+    QList<QSharedPointer<VM>> vms = this->m_pool->GetCache()->GetAll<VM>("vm");
+    for (const QSharedPointer<VM>& vm : vms)
     {
-        QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
+        if (!vm || !vm->IsValid())
+            continue;
 
         // Skip templates
-        bool isTemplate = vmData.value("is_a_template", false).toBool();
-        if (isTemplate)
+        if (vm->IsTemplate())
             continue;
 
         // Skip control domains
-        bool isControlDomain = vmData.value("is_control_domain", false).toBool();
-        if (isControlDomain)
+        if (vm->IsControlDomain())
             continue;
 
         // Skip snapshots
-        bool isSnapshot = vmData.value("is_a_snapshot", false).toBool();
-        if (isSnapshot)
+        if (vm->IsSnapshot())
             continue;
 
-        QString vmName = vmData.value("name_label", "Unknown").toString();
-        QString currentPriority = vmData.value("ha_restart_priority", "").toString();
-        qint64 order = vmData.value("order", 0).toLongLong();
-        qint64 startDelay = vmData.value("start_delay", 0).toLongLong();
+        QString vmName = vm->GetName();
+        QString currentPriority = vm->HARestartPriority();
+        qint64 order = vm->Order();
+        qint64 startDelay = vm->StartDelay();
 
         // Store original settings for change detection
         QVariantMap originalSetting;
         originalSetting["ha_restart_priority"] = currentPriority;
         originalSetting["order"] = order;
         originalSetting["start_delay"] = startDelay;
-        m_originalSettings[vmRef] = originalSetting;
+        this->m_originalSettings[vm->OpaqueRef()] = originalSetting;
 
-        int row = m_vmTable->rowCount();
-        m_vmTable->insertRow(row);
+        int row = this->m_vmTable->rowCount();
+        this->m_vmTable->insertRow(row);
 
         // VM name
         QTableWidgetItem* nameItem = new QTableWidgetItem(vmName);
-        nameItem->setData(Qt::UserRole, vmRef);
+        nameItem->setData(Qt::UserRole, vm->OpaqueRef());
         nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);
-        m_vmTable->setItem(row, 0, nameItem);
+        this->m_vmTable->setItem(row, 0, nameItem);
 
         // Priority combo box
         QComboBox* priorityCombo = new QComboBox();
@@ -239,7 +228,7 @@ void EditVmHaPrioritiesDialog::populateVMTable()
                     updateNtolCalculation();
                     updateOkButtonState();
                 });
-        m_vmTable->setCellWidget(row, 1, priorityCombo);
+        this->m_vmTable->setCellWidget(row, 1, priorityCombo);
 
         // Start order spinbox
         QSpinBox* orderSpin = new QSpinBox();
@@ -247,7 +236,7 @@ void EditVmHaPrioritiesDialog::populateVMTable()
         orderSpin->setValue(order);
         connect(orderSpin, QOverload<int>::of(&QSpinBox::valueChanged),
                 this, &EditVmHaPrioritiesDialog::updateOkButtonState);
-        m_vmTable->setCellWidget(row, 2, orderSpin);
+        this->m_vmTable->setCellWidget(row, 2, orderSpin);
 
         // Start delay spinbox
         QSpinBox* delaySpin = new QSpinBox();
@@ -256,42 +245,41 @@ void EditVmHaPrioritiesDialog::populateVMTable()
         delaySpin->setSuffix(tr(" sec"));
         connect(delaySpin, QOverload<int>::of(&QSpinBox::valueChanged),
                 this, &EditVmHaPrioritiesDialog::updateOkButtonState);
-        m_vmTable->setCellWidget(row, 3, delaySpin);
+        this->m_vmTable->setCellWidget(row, 3, delaySpin);
     }
 
-    m_vmTable->blockSignals(false);
+    this->m_vmTable->blockSignals(false);
 }
 
 void EditVmHaPrioritiesDialog::onNtolChanged(int value)
 {
-    m_ntol = value;
-    updateNtolCalculation();
-    updateOkButtonState();
+    this->m_ntol = value;
+    this->updateNtolCalculation();
+    this->updateOkButtonState();
 }
 
 void EditVmHaPrioritiesDialog::updateNtolCalculation()
 {
-    m_ntol = m_ntolSpinBox->value();
+    this->m_ntol = this->m_ntolSpinBox->value();
 
-    // Count hosts in pool
-    XenCache* cache = this->cache();
-    if (!cache)
+    if (!this->m_pool)
         return;
 
-    QStringList hostRefs = cache->GetAllRefs("host");
-    int hostCount = hostRefs.size();
+    // Count hosts in pool
+    QList<QSharedPointer<Host>> hosts = this->m_pool->GetCache()->GetAll<Host>("host");
+    int hostCount = hosts.size();
 
     // Maximum NTOL is number of hosts - 1
-    m_maxNtol = qMax(0, hostCount - 1);
-    m_ntolSpinBox->setMaximum(m_maxNtol);
+    this->m_maxNtol = qMax(0, hostCount - 1);
+    this->m_ntolSpinBox->setMaximum(this->m_maxNtol);
 
-    m_maxNtolLabel->setText(tr("Maximum: %1 (pool has %2 hosts)").arg(m_maxNtol).arg(hostCount));
+    this->m_maxNtolLabel->setText(tr("Maximum: %1 (pool has %2 hosts)").arg(this->m_maxNtol).arg(hostCount));
 
     // Count protected VMs
     int protectedVMs = 0;
-    for (int row = 0; row < m_vmTable->rowCount(); ++row)
+    for (int row = 0; row < this->m_vmTable->rowCount(); ++row)
     {
-        QComboBox* combo = qobject_cast<QComboBox*>(m_vmTable->cellWidget(row, 1));
+        QComboBox* combo = qobject_cast<QComboBox*>(this->m_vmTable->cellWidget(row, 1));
         if (combo)
         {
             QString priority = combo->currentData().toString();
@@ -302,51 +290,51 @@ void EditVmHaPrioritiesDialog::updateNtolCalculation()
         }
     }
 
-    if (m_ntol > 0 && protectedVMs > 0)
+    if (this->m_ntol > 0 && protectedVMs > 0)
     {
-        m_ntolStatusLabel->setStyleSheet("color: green;");
-        m_ntolStatusLabel->setText(tr("✓ Pool can tolerate %1 host failure(s) with %2 protected VM(s)")
-                                       .arg(m_ntol)
+        this->m_ntolStatusLabel->setStyleSheet("color: green;");
+        this->m_ntolStatusLabel->setText(tr("✓ Pool can tolerate %1 host failure(s) with %2 protected VM(s)")
+                                       .arg(this->m_ntol)
                                        .arg(protectedVMs));
-    } else if (m_ntol == 0)
+    } else if (this->m_ntol == 0)
     {
-        m_ntolStatusLabel->setStyleSheet("color: #b8860b;");
-        m_ntolStatusLabel->setText(tr("⚠ NTOL is 0 - HA will not automatically restart VMs on host failure"));
+        this->m_ntolStatusLabel->setStyleSheet("color: #b8860b;");
+        this->m_ntolStatusLabel->setText(tr("⚠ NTOL is 0 - HA will not automatically restart VMs on host failure"));
     } else
     {
-        m_ntolStatusLabel->setStyleSheet("color: #b8860b;");
-        m_ntolStatusLabel->setText(tr("⚠ No VMs set to 'Restart' priority"));
+        this->m_ntolStatusLabel->setStyleSheet("color: #b8860b;");
+        this->m_ntolStatusLabel->setText(tr("⚠ No VMs set to 'Restart' priority"));
     }
 }
 
 void EditVmHaPrioritiesDialog::updateOkButtonState()
 {
     // Enable OK if changes were made
-    m_okButton->setEnabled(hasChanges());
+    this->m_okButton->setEnabled(this->hasChanges());
 }
 
 bool EditVmHaPrioritiesDialog::hasChanges() const
 {
     // Check NTOL change
-    if (m_ntolSpinBox->value() != m_originalNtol)
+    if (this->m_ntolSpinBox->value() != this->m_originalNtol)
         return true;
 
     // Check VM settings changes
-    for (int row = 0; row < m_vmTable->rowCount(); ++row)
+    for (int row = 0; row < this->m_vmTable->rowCount(); ++row)
     {
-        QTableWidgetItem* vmItem = m_vmTable->item(row, 0);
+        QTableWidgetItem* vmItem = this->m_vmTable->item(row, 0);
         if (!vmItem)
             continue;
 
         QString vmRef = vmItem->data(Qt::UserRole).toString();
-        if (!m_originalSettings.contains(vmRef))
+        if (!this->m_originalSettings.contains(vmRef))
             continue;
 
-        const QVariantMap& original = m_originalSettings[vmRef];
+        const QVariantMap& original = this->m_originalSettings[vmRef];
 
-        QComboBox* priorityCombo = qobject_cast<QComboBox*>(m_vmTable->cellWidget(row, 1));
-        QSpinBox* orderSpin = qobject_cast<QSpinBox*>(m_vmTable->cellWidget(row, 2));
-        QSpinBox* delaySpin = qobject_cast<QSpinBox*>(m_vmTable->cellWidget(row, 3));
+        QComboBox* priorityCombo = qobject_cast<QComboBox*>(this->m_vmTable->cellWidget(row, 1));
+        QSpinBox* orderSpin = qobject_cast<QSpinBox*>(this->m_vmTable->cellWidget(row, 2));
+        QSpinBox* delaySpin = qobject_cast<QSpinBox*>(this->m_vmTable->cellWidget(row, 3));
 
         if (priorityCombo)
         {
@@ -384,17 +372,17 @@ QMap<QString, QVariantMap> EditVmHaPrioritiesDialog::buildVmStartupOptions() con
 {
     QMap<QString, QVariantMap> options;
 
-    for (int row = 0; row < m_vmTable->rowCount(); ++row)
+    for (int row = 0; row < this->m_vmTable->rowCount(); ++row)
     {
-        QTableWidgetItem* vmItem = m_vmTable->item(row, 0);
+        QTableWidgetItem* vmItem = this->m_vmTable->item(row, 0);
         if (!vmItem)
             continue;
 
         QString vmRef = vmItem->data(Qt::UserRole).toString();
 
-        QComboBox* priorityCombo = qobject_cast<QComboBox*>(m_vmTable->cellWidget(row, 1));
-        QSpinBox* orderSpin = qobject_cast<QSpinBox*>(m_vmTable->cellWidget(row, 2));
-        QSpinBox* delaySpin = qobject_cast<QSpinBox*>(m_vmTable->cellWidget(row, 3));
+        QComboBox* priorityCombo = qobject_cast<QComboBox*>(this->m_vmTable->cellWidget(row, 1));
+        QSpinBox* orderSpin = qobject_cast<QSpinBox*>(this->m_vmTable->cellWidget(row, 2));
+        QSpinBox* delaySpin = qobject_cast<QSpinBox*>(this->m_vmTable->cellWidget(row, 3));
 
         QVariantMap vmOptions;
         vmOptions["ha_restart_priority"] = priorityCombo ? priorityCombo->currentData().toString() : "";
@@ -409,10 +397,10 @@ QMap<QString, QVariantMap> EditVmHaPrioritiesDialog::buildVmStartupOptions() con
 
 void EditVmHaPrioritiesDialog::accept()
 {
-    qint64 newNtol = m_ntolSpinBox->value();
+    qint64 newNtol = this->m_ntolSpinBox->value();
 
     // Warn if NTOL is being set to 0
-    if (newNtol == 0 && m_originalNtol != 0)
+    if (newNtol == 0 && this->m_originalNtol != 0)
     {
         QMessageBox::StandardButton result = QMessageBox::warning(
             this, tr("NTOL is Zero"),
@@ -426,18 +414,17 @@ void EditVmHaPrioritiesDialog::accept()
     }
 
     // Resolve Pool object from cache
-    QSharedPointer<Pool> pool = this->m_connection->GetCache()->ResolveObject<Pool>("pool", this->m_poolRef);
-    if (!pool || !pool->IsValid())
+    if (!this->m_pool || !this->m_pool->IsValid())
     {
         QMessageBox::critical(this, tr("Error"), tr("Failed to resolve pool object"));
         return;
     }
 
     // Build startup options
-    QMap<QString, QVariantMap> vmOptions = buildVmStartupOptions();
+    QMap<QString, QVariantMap> vmOptions = this->buildVmStartupOptions();
 
     // Create and run SetHaPrioritiesAction
-    SetHaPrioritiesAction* action = new SetHaPrioritiesAction(pool, vmOptions, newNtol, this);
+    SetHaPrioritiesAction* action = new SetHaPrioritiesAction(this->m_pool, vmOptions, newNtol, this);
 
     // Register with OperationManager
     OperationManager::instance()->RegisterOperation(action);
@@ -460,9 +447,4 @@ void EditVmHaPrioritiesDialog::accept()
 
     action->RunAsync();
     progressDialog->exec();
-}
-
-XenCache* EditVmHaPrioritiesDialog::cache() const
-{
-    return m_connection ? m_connection->GetCache() : nullptr;
 }

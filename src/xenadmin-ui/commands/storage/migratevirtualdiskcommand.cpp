@@ -43,7 +43,8 @@ bool MigrateVirtualDiskCommand::CanRun() const
     if (!vdi || !vdi->IsValid())
         return false;
 
-    return this->canBeMigrated(vdi);
+    QString reason;
+    return this->canBeMigrated(vdi, reason);
 }
 
 void MigrateVirtualDiskCommand::Run()
@@ -53,51 +54,15 @@ void MigrateVirtualDiskCommand::Run()
         return;
 
     // Double-check migration eligibility with detailed error messages
-    if (!this->canBeMigrated(vdi))
+    QString reason;
+    if (!this->canBeMigrated(vdi, reason))
     {
-        QString reason;
-
-        if (vdi->IsSnapshot())
-            reason = tr("Cannot migrate: VDI is a snapshot.");
-        else if (vdi->IsLocked())
-            reason = tr("Cannot migrate: VDI is locked (in use).");
-        else if (this->isHAType(vdi))
-            reason = tr("Cannot migrate: VDI is an HA type (statefile or redo log).");
-        else if (vdi->IsCBTEnabled())
-            reason = tr("Cannot migrate: VDI has changed block tracking (CBT) enabled.");
-        else if (this->isMetadataForDR(vdi))
-            reason = tr("Cannot migrate: VDI is metadata for disaster recovery.");
-        else
-        {
-            // Check VBD count
-            if (vdi->GetVBDs().isEmpty())
-            {
-                reason = tr("Cannot migrate: VDI has no VBDs attached.");
-            } else
-            {
-                // Check SR
-                QSharedPointer<SR> sr = vdi->GetSR();
-                if (!sr)
-                {
-                    reason = tr("Cannot migrate: VDI has no SR reference.");
-                } else
-                {
-                    if (this->isHBALunPerVDI(sr))
-                        reason = tr("Cannot migrate: Unsupported SR type (HBA LUN-per-VDI).");
-                    else if (!this->supportsStorageMigration(sr))
-                        reason = tr("Cannot migrate: SR does not support storage migration.");
-                    else
-                        reason = tr("Cannot migrate: Unknown reason.");
-                }
-            }
-        }
-
         QMessageBox::information(this->mainWindow(), tr("Cannot Migrate"), reason);
         return;
     }
 
     // Open migrate dialog
-    MigrateVirtualDiskDialog* dialog = new MigrateVirtualDiskDialog(vdi->GetConnection(), vdi->OpaqueRef(), this->mainWindow());
+    MigrateVirtualDiskDialog* dialog = new MigrateVirtualDiskDialog(vdi, this->mainWindow());
 
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
@@ -108,42 +73,73 @@ QString MigrateVirtualDiskCommand::MenuText() const
     return tr("&Migrate Virtual Disk...");
 }
 
-bool MigrateVirtualDiskCommand::canBeMigrated(const QSharedPointer<VDI> &vdi) const
+bool MigrateVirtualDiskCommand::canBeMigrated(const QSharedPointer<VDI>& vdi, QString& reason) const
 {
     // Check basic VDI properties
     if (!vdi || !vdi->IsValid())
+    {
+        reason = tr("Cannot migrate: VDI is missing or invalid.");
         return false;
+    }
 
     if (vdi->IsSnapshot())
+    {
+        reason = tr("Cannot migrate: VDI is a snapshot.");
         return false;
+    }
 
     if (vdi->IsLocked())
+    {
+        reason = tr("Cannot migrate: VDI is locked (in use).");
         return false;
+    }
 
     if (this->isHAType(vdi))
+    {
+        reason = tr("Cannot migrate: VDI is an HA type (statefile or redo log).");
         return false;
+    }
 
     if (vdi->IsCBTEnabled())
+    {
+        reason = tr("Cannot migrate: VDI has changed block tracking (CBT) enabled.");
         return false;
+    }
 
     if (this->isMetadataForDR(vdi))
+    {
+        reason = tr("Cannot migrate: VDI is metadata for disaster recovery.");
         return false;
+    }
 
     // Check that VDI has at least one VBD
     if (vdi->GetVBDs().isEmpty())
+    {
+        reason = tr("Cannot migrate: VDI has no VBDs attached.");
         return false;
+    }
 
     // Check SR properties
     QSharedPointer<SR> sr = vdi->GetSR();
     if (!sr)
+    {
+        reason = tr("Cannot migrate: VDI has no SR reference.");
         return false;
+    }
 
     if (this->isHBALunPerVDI(sr))
+    {
+        reason = tr("Cannot migrate: Unsupported SR type (HBA LUN-per-VDI).");
         return false;
+    }
 
     if (!this->supportsStorageMigration(sr))
+    {
+        reason = tr("Cannot migrate: SR does not support storage migration.");
         return false;
+    }
 
+    reason.clear();
     return true;
 }
 
@@ -193,11 +189,8 @@ bool MigrateVirtualDiskCommand::supportsStorageMigration(const QSharedPointer<SR
     if (!sr)
         return false;
 
-    // Check SR capabilities for storage migration support
-    QStringList capabilities = sr->GetCapabilities();
-
     // Look for "VDI_MIRROR" capability which indicates migration support
-    if (capabilities.contains("VDI_MIRROR"))
+    if (sr->GetCapabilities().contains("VDI_MIRROR"))
         return true;
 
     // Also check if SR type is known to support migration

@@ -765,8 +765,14 @@ void NetworkTabPage::onConfigureClicked()
         return;
     }
 
+    QSharedPointer<PIF> pif = this->m_connection && this->m_connection->GetCache()
+        ? this->m_connection->GetCache()->ResolveObject<PIF>("pif", selectedPifRef)
+        : QSharedPointer<PIF>();
+    if (!pif || !pif->IsValid())
+        return;
+
     // Open NetworkingProperties dialog with selected PIF
-    NetworkingPropertiesDialog dialog(this->m_connection, selectedPifRef, this);
+    NetworkingPropertiesDialog dialog(pif, this);
     if (dialog.exec() == QDialog::Accepted)
     {
         // Refresh the IP configuration display after changes
@@ -1038,8 +1044,14 @@ void NetworkTabPage::onAddNetwork()
         while (usedDevices.contains(deviceId))
             deviceId++;
 
+        QSharedPointer<VM> vm = this->m_connection && this->m_connection->GetCache()
+            ? this->m_connection->GetCache()->ResolveObject<VM>("vm", this->m_objectRef)
+            : QSharedPointer<VM>();
+        if (!vm || !vm->IsValid())
+            return;
+
         // Show VIFDialog
-        VIFDialog dialog(this->m_connection, this->m_objectRef, deviceId, this);
+        VIFDialog dialog(vm, deviceId, this);
         if (dialog.exec() == QDialog::Accepted)
         {
             QVariantMap vifSettings = dialog.getVifSettings();
@@ -1231,8 +1243,14 @@ void NetworkTabPage::onEditNetwork()
         if (vifRef.isEmpty())
             return;
 
+        QSharedPointer<VIF> vif = this->m_connection && this->m_connection->GetCache()
+            ? this->m_connection->GetCache()->ResolveObject<VIF>("VIF", vifRef)
+            : QSharedPointer<VIF>();
+        if (!vif || !vif->IsValid())
+            return;
+
         // Show VIFDialog for editing
-        VIFDialog dialog(this->m_connection, vifRef, this);
+        VIFDialog dialog(vif, this);
         if (dialog.exec() == QDialog::Accepted && dialog.hasChanges())
         {
             QVariantMap newSettings = dialog.getVifSettings();

@@ -29,6 +29,7 @@
 #include "ui_srstoragetabpage.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
+#include "xen/vdi.h"
 #include "xen/xenapi/xenapi_VDI.h"
 #include "dialogs/movevirtualdiskdialog.h"
 #include "dialogs/vdipropertiesdialog.h"
@@ -272,7 +273,11 @@ void SrStorageTabPage::onMoveButtonClicked()
         return;
     }
 
-    MoveVirtualDiskDialog dialog(this->m_connection, vdiRef, this);
+    QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+    if (!vdi || !vdi->IsValid())
+        return;
+
+    MoveVirtualDiskDialog dialog(vdi, this);
     if (dialog.exec() == QDialog::Accepted)
     {
         this->requestSrRefresh(1000);
@@ -341,7 +346,11 @@ void SrStorageTabPage::onEditButtonClicked()
         return;
     }
 
-    VdiPropertiesDialog dialog(this->m_connection, vdiRef, this);
+    QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+    if (!vdi || !vdi->IsValid())
+        return;
+
+    VdiPropertiesDialog dialog(vdi, this);
     if (dialog.exec() != QDialog::Accepted || !dialog.hasChanges())
     {
         return;
@@ -351,10 +360,8 @@ void SrStorageTabPage::onEditButtonClicked()
         return;
 
     bool hasErrors = false;
-    QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
-
     QString newName = dialog.getVdiName();
-    QString oldName = vdiData.value("name_label", "").toString();
+    QString oldName = vdi->GetName();
     if (newName != oldName)
     {
         try
@@ -369,7 +376,7 @@ void SrStorageTabPage::onEditButtonClicked()
     }
 
     QString newDescription = dialog.getVdiDescription();
-    QString oldDescription = vdiData.value("name_description", "").toString();
+    QString oldDescription = vdi->GetDescription();
     if (newDescription != oldDescription)
     {
         try
@@ -384,7 +391,7 @@ void SrStorageTabPage::onEditButtonClicked()
     }
 
     qint64 newSize = dialog.getNewSize();
-    qint64 oldSize = vdiData.value("virtual_size", 0).toLongLong();
+    qint64 oldSize = vdi->VirtualSize();
     if (newSize > oldSize + (10 * 1024 * 1024))
     {
         try

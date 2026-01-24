@@ -29,6 +29,10 @@
 #define MIGRATEVIRTUALDISKDIALOG_H
 
 #include "movevirtualdiskdialog.h"
+#include <QSharedPointer>
+#include <QList>
+
+class VDI;
 
 /**
  * @brief Dialog for migrating (live-moving) VDIs to a different SR
@@ -59,19 +63,17 @@ class MigrateVirtualDiskDialog : public MoveVirtualDiskDialog
     public:
         /**
          * @brief Constructor for single VDI migration
-         * @param xenLib XenLib instance
-         * @param vdiRef VDI reference to migrate
+         * @param vdi VDI to migrate
          * @param parent Parent widget
          */
-        explicit MigrateVirtualDiskDialog(XenConnection* conn, const QString& vdiRef, QWidget* parent = nullptr);
+        explicit MigrateVirtualDiskDialog(QSharedPointer<VDI> vdi, QWidget* parent = nullptr);
 
         /**
          * @brief Constructor for multiple VDI migration
-         * @param xenLib XenLib instance
-         * @param vdiRefs List of VDI references to migrate
+         * @param vdis List of VDIs to migrate
          * @param parent Parent widget
          */
-        explicit MigrateVirtualDiskDialog(XenConnection* conn, const QStringList& vdiRefs, QWidget* parent = nullptr);
+        explicit MigrateVirtualDiskDialog(const QList<QSharedPointer<VDI>>& vdis, QWidget* parent = nullptr);
 
     protected:
         /**

@@ -308,7 +308,10 @@ void NICsTabPage::onCreateBondClicked()
     }
 
     // Open bond creation dialog
-    BondPropertiesDialog dialog(this->m_connection, this->m_objectRef, networkRef, this);
+    XenCache* cache = this->m_connection->GetCache();
+    QSharedPointer<Host> host = cache->ResolveObject<Host>("host", this->m_objectRef);
+    QSharedPointer<Network> network = cache->ResolveObject<Network>("network", networkRef);
+    BondPropertiesDialog dialog(host, network, this);
     if (dialog.exec() == QDialog::Accepted)
     {
         QString bondMode = dialog.getBondMode();

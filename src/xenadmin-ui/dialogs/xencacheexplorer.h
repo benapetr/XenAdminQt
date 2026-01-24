@@ -51,6 +51,8 @@ class XenCacheExplorer : public QDialog
     private slots:
         void onTreeItemSelectionChanged();
         void onRefreshClicked();
+        void onExportCacheClicked();
+        void onCacheTreeContextMenu(const QPoint& pos);
         void onPropertiesTreeContextMenu(const QPoint& pos);
         void onCopySelectedValue();
         void onCopySelectedRows();

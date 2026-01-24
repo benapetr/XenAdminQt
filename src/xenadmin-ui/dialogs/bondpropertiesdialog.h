@@ -30,21 +30,22 @@
 
 #include <QDialog>
 #include <QStringList>
-#include <QVariantMap>
+#include <QSharedPointer>
 
 namespace Ui
 {
     class BondPropertiesDialog;
 }
 
-class XenConnection;
+class Host;
+class Network;
 
 class BondPropertiesDialog : public QDialog
 {
     Q_OBJECT
 
     public:
-        explicit BondPropertiesDialog(XenConnection* connection, const QString& hostRef, const QString& networkRef, QWidget* parent = nullptr);
+        explicit BondPropertiesDialog(QSharedPointer<Host> host, QSharedPointer<Network> network, QWidget* parent = nullptr);
         ~BondPropertiesDialog();
 
         QString getBondMode() const;
@@ -59,9 +60,8 @@ class BondPropertiesDialog : public QDialog
         void updateOkButtonState();
 
         Ui::BondPropertiesDialog* ui;
-        XenConnection* m_connection;
-        QString m_hostRef;
-        QString m_networkRef;
+        QSharedPointer<Host> m_host;
+        QSharedPointer<Network> m_network;
         QMap<int, QString> m_rowToPIFRef;
 };
 

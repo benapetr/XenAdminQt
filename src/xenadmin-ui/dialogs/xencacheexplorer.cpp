@@ -37,6 +37,8 @@
 #include <QMenu>
 #include <QClipboard>
 #include <QApplication>
+#include <QFileDialog>
+#include <QJsonDocument>
 
 XenCacheExplorer::XenCacheExplorer(QWidget* parent) : QDialog(parent), ui(new Ui::XenCacheExplorer)
 {
@@ -63,6 +65,10 @@ XenCacheExplorer::XenCacheExplorer(QWidget* parent) : QDialog(parent), ui(new Ui
     this->ui->propertiesTree->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this->ui->propertiesTree, &QTreeWidget::customContextMenuRequested,
             this, &XenCacheExplorer::onPropertiesTreeContextMenu);
+
+    this->ui->cacheTree->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(this->ui->cacheTree, &QTreeWidget::customContextMenuRequested,
+            this, &XenCacheExplorer::onCacheTreeContextMenu);
 
     // Set splitter proportions (30% tree, 70% properties)
     this->ui->splitter->setStretchFactor(0, 3);
@@ -463,6 +469,105 @@ QString XenCacheExplorer::getVariantTypeName(const QVariant& value) const
 void XenCacheExplorer::onRefreshClicked()
 {
     this->populateTree();
+}
+
+void XenCacheExplorer::onCacheTreeContextMenu(const QPoint& pos)
+{
+    QMenu contextMenu(this);
+    QAction* exportAction = contextMenu.addAction(tr("Export Cache as JSON"));
+
+    connect(exportAction, &QAction::triggered, this, &XenCacheExplorer::onExportCacheClicked);
+
+    contextMenu.exec(this->ui->cacheTree->mapToGlobal(pos));
+}
+
+void XenCacheExplorer::onExportCacheClicked()
+{
+    QList<XenConnection*> connectionsToExport;
+    QList<QTreeWidgetItem*> selectedItems = this->ui->cacheTree->selectedItems();
+    if (!selectedItems.isEmpty())
+    {
+        XenConnection* connection = this->m_itemToConnection.value(selectedItems.first());
+        if (connection)
+            connectionsToExport.append(connection);
+    }
+
+    if (connectionsToExport.isEmpty())
+    {
+        const QList<XenConnection*> connections = Xen::ConnectionsManager::instance()->GetAllConnections();
+        for (XenConnection* connection : connections)
+        {
+            if (connection)
+                connectionsToExport.append(connection);
+        }
+    }
+
+    if (connectionsToExport.isEmpty())
+        return;
+
+    QString fileName = QFileDialog::getSaveFileName(
+        this,
+        tr("Export XenCache"),
+        QString(),
+        tr("JSON Files (*.json);;All Files (*)"));
+
+    if (fileName.isEmpty())
+        return;
+
+    QVariantList connectionList;
+    for (XenConnection* connection : connectionsToExport)
+    {
+        XenCache* cache = connection ? connection->GetCache() : nullptr;
+        if (!cache)
+            continue;
+
+        QVariantMap connectionMap;
+        connectionMap.insert("hostname", connection->GetHostname());
+        connectionMap.insert("connected", connection->IsConnected());
+
+        QVariantMap typesMap;
+        const QStringList types = cache->GetKnownTypes();
+        for (const QString& type : types)
+        {
+            const QList<QVariantMap> objects = cache->GetAllData(type);
+            if (objects.isEmpty())
+                continue;
+
+            QVariantMap objectMap;
+            for (const QVariantMap& obj : objects)
+            {
+                QString ref = obj.value("ref").toString();
+                if (ref.isEmpty())
+                    ref = obj.value("opaque_ref").toString();
+                if (ref.isEmpty())
+                    continue;
+
+                objectMap.insert(ref, obj);
+            }
+
+            if (!objectMap.isEmpty())
+                typesMap.insert(type, objectMap);
+        }
+
+        connectionMap.insert("types", typesMap);
+        connectionList.append(connectionMap);
+    }
+
+    QVariantMap root;
+    root.insert("connections", connectionList);
+
+    QJsonDocument doc = QJsonDocument::fromVariant(root);
+    QByteArray json = doc.toJson(QJsonDocument::Indented);
+
+    QFile outFile(fileName);
+    if (!outFile.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        qWarning() << "XenCacheExplorer: Failed to write export file:" << fileName;
+        return;
+    }
+
+    outFile.write(json);
+    outFile.close();
 }
 
 void XenCacheExplorer::onPropertiesTreeContextMenu(const QPoint& pos)

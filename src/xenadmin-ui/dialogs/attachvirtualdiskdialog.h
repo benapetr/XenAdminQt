@@ -30,21 +30,21 @@
 
 #include <QDialog>
 #include <QString>
-#include <QVariantMap>
+#include <QSharedPointer>
 
 namespace Ui
 {
     class AttachVirtualDiskDialog;
 }
 
-class XenConnection;
+class VM;
 
 class AttachVirtualDiskDialog : public QDialog
 {
     Q_OBJECT
 
     public:
-        explicit AttachVirtualDiskDialog(XenConnection* connection, const QString& vmRef, QWidget* parent = nullptr);
+        explicit AttachVirtualDiskDialog(QSharedPointer<VM> vm, QWidget* parent = nullptr);
         ~AttachVirtualDiskDialog();
 
         QString getSelectedVDIRef() const;
@@ -62,9 +62,7 @@ class AttachVirtualDiskDialog : public QDialog
         int findNextAvailableDevice();
 
         Ui::AttachVirtualDiskDialog* ui;
-        XenConnection* m_connection;
-        QString m_vmRef;
-        QVariantMap m_vmData;
+        QSharedPointer<VM> m_vm;
 };
 
 #endif // ATTACHVIRTUALDISKDIALOG_H

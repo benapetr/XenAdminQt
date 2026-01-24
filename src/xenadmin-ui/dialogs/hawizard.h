@@ -44,9 +44,10 @@
 #include <QMap>
 #include <QVariantMap>
 #include <QStringList>
+#include <QSharedPointer>
 
-class XenConnection;
 class XenCache;
+class Pool;
 
 /**
  * @brief The HAWizard class provides a wizard for enabling High Availability on a pool.
@@ -64,7 +65,7 @@ class HAWizard : public QWizard
     Q_OBJECT
 
     public:
-        explicit HAWizard(XenConnection* connection, const QString& poolRef, QWidget* parent = nullptr);
+        explicit HAWizard(QSharedPointer<Pool> pool, QWidget* parent = nullptr);
 
         // Page IDs
         enum PageIds
@@ -127,8 +128,7 @@ class HAWizard : public QWizard
         HaRestartPriority stringToPriority(const QString& str) const;
         int countVMsByPriority(HaRestartPriority priority) const;
 
-        XenConnection* m_connection;
-        QString m_poolRef;
+        QSharedPointer<Pool> m_pool;
         QString m_poolName;
 
         // ChooseSR page widgets

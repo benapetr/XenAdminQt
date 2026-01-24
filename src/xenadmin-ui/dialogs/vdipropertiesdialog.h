@@ -30,21 +30,22 @@
 
 #include <QDialog>
 #include <QString>
-#include <QVariantMap>
+#include <QSharedPointer>
 
 namespace Ui
 {
     class VdiPropertiesDialog;
 }
 
-class XenConnection;
+class VDI;
+class SR;
 
 class VdiPropertiesDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit VdiPropertiesDialog(XenConnection* conn, const QString& vdiRef, QWidget* parent = nullptr);
+    explicit VdiPropertiesDialog(QSharedPointer<VDI> vdi, QWidget* parent = nullptr);
     ~VdiPropertiesDialog();
 
     QString getVdiName() const;
@@ -61,9 +62,10 @@ private:
     void validateResize();
 
     Ui::VdiPropertiesDialog* ui;
-    XenConnection* m_connection;
-    QString m_vdiRef;
-    QVariantMap m_vdiData;
+    QSharedPointer<VDI> m_vdi;
+    QSharedPointer<SR> m_sr;
+    QString m_originalName;
+    QString m_originalDescription;
     qint64 m_originalSize;
     bool m_canResize;
 };

@@ -1418,7 +1418,7 @@ void NewVMWizard::onAddNetworkClicked()
             nextDeviceId = deviceId + 1;
     }
 
-    VIFDialog dialog(this->m_connection, QString(), nextDeviceId, this);
+    VIFDialog dialog(this->m_connection, nextDeviceId, this);
     if (dialog.exec() != QDialog::Accepted)
         return;
 

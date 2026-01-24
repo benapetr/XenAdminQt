@@ -679,23 +679,23 @@ void VMHAEditPage::onLinkActivated(const QString& link)
     if (!this->connection() || !this->connection()->GetCache())
         return;
 
-    QVariantMap poolData = this->getPoolData();
-    if (poolData.isEmpty())
+    QSharedPointer<Pool> pool = this->connection()->GetCache()->ResolveObject<Pool>("pool", this->m_poolRef);
+    if (!pool || !pool->IsValid())
         return;
 
-    bool haEnabled = poolData.value("ha_enabled", false).toBool();
+    bool haEnabled = pool->HAEnabled();
     MainWindow* mainWindow = qobject_cast<MainWindow*>(this->window());
     if (!mainWindow)
         return;
 
     if (haEnabled)
     {
-        EditVmHaPrioritiesDialog dialog(this->connection(), this->m_poolRef, mainWindow);
+        EditVmHaPrioritiesDialog dialog(pool, mainWindow);
         dialog.exec();
     }
     else
     {
-        HAWizard wizard(this->connection(), this->m_poolRef, mainWindow);
+        HAWizard wizard(pool, mainWindow);
         wizard.exec();
     }
 }

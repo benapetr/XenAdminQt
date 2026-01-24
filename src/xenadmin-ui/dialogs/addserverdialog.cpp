@@ -28,7 +28,7 @@
 #include "addserverdialog.h"
 #include "ui_addserverdialog.h"
 #include "../settingsmanager.h"
-#include "../../xenlib/xen/network/connection.h"
+#include "xenlib/xen/network/connection.h"
 #include <QtWidgets/QStyle>
 
 namespace

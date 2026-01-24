@@ -27,21 +27,19 @@
 
 #include "attachvirtualdiskdialog.h"
 #include "ui_attachvirtualdiskdialog.h"
-#include "xen/network/connection.h"
+#include "xen/vm.h"
+#include "xen/sr.h"
+#include "xen/vdi.h"
+#include "xen/vbd.h"
 #include "xencache.h"
 #include <QTableWidgetItem>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QDebug>
 
-AttachVirtualDiskDialog::AttachVirtualDiskDialog(XenConnection* connection, const QString& vmRef, QWidget* parent)
-    : QDialog(parent), ui(new Ui::AttachVirtualDiskDialog), m_connection(connection), m_vmRef(vmRef)
+AttachVirtualDiskDialog::AttachVirtualDiskDialog(QSharedPointer<VM> vm, QWidget* parent) : QDialog(parent), ui(new Ui::AttachVirtualDiskDialog), m_vm(vm)
 {
     this->ui->setupUi(this);
-
-    // Get VM data
-    if (this->m_connection && this->m_connection->GetCache())
-        this->m_vmData = this->m_connection->GetCache()->ResolveObjectData("vm", this->m_vmRef);
 
     // Set table properties
     this->ui->vdiTable->horizontalHeader()->setStretchLastSection(true);
@@ -75,18 +73,21 @@ void AttachVirtualDiskDialog::populateSRFilter()
     // Add "All Storage Repositories" option
     this->ui->srComboBox->addItem("All Storage Repositories", QString());
 
-    if (!this->m_connection || !this->m_connection->GetCache())
+    if (!this->m_vm || !this->m_vm->GetConnection() || !this->m_vm->GetCache())
         return;
 
     // Get all SRs
-    QList<QVariantMap> allSRs = this->m_connection->GetCache()->GetAllData("sr");
+    QList<QSharedPointer<SR>> allSRs = this->m_vm->GetCache()->GetAll<SR>("sr");
 
-    for (const QVariantMap& srData : allSRs)
+    for (const QSharedPointer<SR>& sr : allSRs)
     {
-        QString srRef = srData.value("ref", "").toString();
-        QString srName = srData.value("name_label", "Unknown").toString();
-        QString srType = srData.value("type", "").toString();
-        QString contentType = srData.value("content_type", "").toString();
+        if (!sr || !sr->IsValid())
+            continue;
+
+        QString srRef = sr->OpaqueRef();
+        QString srName = sr->GetName();
+        QString srType = sr->GetType();
+        QString contentType = sr->ContentType();
 
         // Skip ISO SRs
         if (srType == "iso" || contentType == "iso")
@@ -102,32 +103,37 @@ void AttachVirtualDiskDialog::populateVDITable()
 {
     this->ui->vdiTable->setRowCount(0);
 
-    if (!this->m_connection || !this->m_connection->GetCache())
+    if (!this->m_vm || !this->m_vm->GetConnection() || !this->m_vm->GetCache())
         return;
 
     QString selectedSR = this->ui->srComboBox->currentData().toString();
+    XenCache* cache = this->m_vm->GetCache();
 
     // Get all VDIs from cache
-    QList<QVariantMap> allVDIs = this->m_connection->GetCache()->GetAllData("vdi");
+    QList<QSharedPointer<VDI>> allVDIs = cache->GetAll<VDI>("vdi");
 
     // Get VBDs already attached to this VM to filter them out
     QStringList attachedVDIs;
-    QVariantList vbdRefs = this->m_vmData.value("VBDs", QVariantList()).toList();
-    for (const QVariant& vbdRefVar : vbdRefs)
+    QList<QSharedPointer<VBD>> vbds = this->m_vm->GetVBDs();
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
-        QString vdiRef = vbdData.value("VDI", "").toString();
+        if (!vbd || !vbd->IsValid())
+            continue;
+
+        QString vdiRef = vbd->GetVDIRef();
         if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
         {
             attachedVDIs.append(vdiRef);
         }
     }
 
-    for (const QVariantMap& vdiData : allVDIs)
+    for (const QSharedPointer<VDI>& vdi : allVDIs)
     {
-        QString vdiRef = vdiData.value("ref", "").toString();
-        QString srRef = vdiData.value("SR", "").toString();
+        if (!vdi || !vdi->IsValid())
+            continue;
+
+        QString vdiRef = vdi->OpaqueRef();
+        QString srRef = vdi->SRRef();
 
         // Skip if already attached to this VM
         if (attachedVDIs.contains(vdiRef))
@@ -142,10 +148,13 @@ void AttachVirtualDiskDialog::populateVDITable()
         }
 
         // Get SR data
-        QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
-        QString srName = srData.value("name_label", "Unknown").toString();
-        QString srType = srData.value("type", "").toString();
-        QString contentType = srData.value("content_type", "").toString();
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", srRef);
+        if (!sr || !sr->IsValid())
+            continue;
+
+        QString srName = sr->GetName();
+        QString srType = sr->GetType();
+        QString contentType = sr->ContentType();
 
         // Skip ISOs and tools disks
         if (srType == "iso" || contentType == "iso")
@@ -153,21 +162,22 @@ void AttachVirtualDiskDialog::populateVDITable()
             continue;
         }
 
-        QString vdiType = vdiData.value("type", "").toString();
+        QString vdiType = vdi->GetType();
         if (vdiType == "user" && srType == "iso")
         {
             continue; // Skip ISOs
         }
 
         // Check if VDI is in use by other VMs
-        QVariantList vbdRefs = vdiData.value("VBDs", QVariantList()).toList();
+        QList<QSharedPointer<VBD>> vdiVbds = vdi->GetVBDs();
         bool inUseByOthers = false;
-        for (const QVariant& vbdVar : vbdRefs)
+        for (const QSharedPointer<VBD>& vbd : vdiVbds)
         {
-            QString vbdRef = vbdVar.toString();
-            QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
-            QString vmRef = vbdData.value("VM", "").toString();
-            if (vmRef != this->m_vmRef)
+            if (!vbd || !vbd->IsValid())
+                continue;
+
+            QString vmRef = vbd->GetVMRef();
+            if (vmRef != this->m_vm->OpaqueRef())
             {
                 inUseByOthers = true;
                 break;
@@ -181,9 +191,9 @@ void AttachVirtualDiskDialog::populateVDITable()
         }
 
         // Add to table
-        QString name = vdiData.value("name_label", "Unnamed").toString();
-        QString description = vdiData.value("name_description", "").toString();
-        qint64 virtualSize = vdiData.value("virtual_size", 0).toLongLong();
+        QString name = vdi->GetName().isEmpty() ? "Unnamed" : vdi->GetName();
+        QString description = vdi->GetDescription();
+        qint64 virtualSize = vdi->VirtualSize();
 
         QString size = "N/A";
         if (virtualSize > 0)
@@ -213,19 +223,19 @@ void AttachVirtualDiskDialog::populateVDITable()
 
 int AttachVirtualDiskDialog::findNextAvailableDevice()
 {
-    if (!this->m_connection || !this->m_connection->GetCache())
+    if (!this->m_vm || !this->m_vm->GetConnection() || !this->m_vm->GetCache())
         return 0;
 
     // Find highest device number in use
     int maxDevice = -1;
 
-    QVariantList vbdRefs = this->m_vmData.value("VBDs", QVariantList()).toList();
-    for (const QVariant& vbdRefVar : vbdRefs)
+    QList<QSharedPointer<VBD>> vbds = this->m_vm->GetVBDs();
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
+        if (!vbd || !vbd->IsValid())
+            continue;
 
-        QString userdevice = vbdData.value("userdevice", "").toString();
+        QString userdevice = vbd->GetUserdevice();
         bool ok;
         int deviceNum = userdevice.toInt(&ok);
         if (ok && deviceNum > maxDevice)

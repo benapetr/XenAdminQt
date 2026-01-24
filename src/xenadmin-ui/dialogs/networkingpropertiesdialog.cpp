@@ -28,39 +28,42 @@
 #include "networkingpropertiesdialog.h"
 #include "ui_networkingpropertiesdialog.h"
 #include "xen/network/connection.h"
+#include "xen/pif.h"
+#include "xen/network.h"
 #include "xen/session.h"
 #include "xen/xenapi/xenapi_PIF.h"
-#include "xencache.h"
 #include <QMessageBox>
 #include <QPushButton>
 #include <QDebug>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
 
-NetworkingPropertiesDialog::NetworkingPropertiesDialog(XenConnection* connection, const QString& pifRef, QWidget* parent)
-    : QDialog(parent), ui(new Ui::NetworkingPropertiesDialog), m_connection(connection), m_pifRef(pifRef)
+NetworkingPropertiesDialog::NetworkingPropertiesDialog(QSharedPointer<PIF> pif, QWidget* parent)
+    : QDialog(parent),
+      ui(new Ui::NetworkingPropertiesDialog),
+      m_pif(pif)
 {
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
     // Set up IP address validators
     QRegularExpression ipRegex("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
     QRegularExpressionValidator* ipValidator = new QRegularExpressionValidator(ipRegex, this);
 
-    ui->lineEditIPAddress->setValidator(ipValidator);
-    ui->lineEditSubnetMask->setValidator(ipValidator);
-    ui->lineEditGateway->setValidator(ipValidator);
-    ui->lineEditPrimaryDNS->setValidator(ipValidator);
-    ui->lineEditSecondaryDNS->setValidator(ipValidator);
+    this->ui->lineEditIPAddress->setValidator(ipValidator);
+    this->ui->lineEditSubnetMask->setValidator(ipValidator);
+    this->ui->lineEditGateway->setValidator(ipValidator);
+    this->ui->lineEditPrimaryDNS->setValidator(ipValidator);
+    this->ui->lineEditSecondaryDNS->setValidator(ipValidator);
 
     // Connect signals
-    connect(ui->radioButtonDHCP, &QRadioButton::toggled, this, &NetworkingPropertiesDialog::onIPModeChanged);
-    connect(ui->radioButtonStatic, &QRadioButton::toggled, this, &NetworkingPropertiesDialog::onIPModeChanged);
+    connect(this->ui->radioButtonDHCP, &QRadioButton::toggled, this, &NetworkingPropertiesDialog::onIPModeChanged);
+    connect(this->ui->radioButtonStatic, &QRadioButton::toggled, this, &NetworkingPropertiesDialog::onIPModeChanged);
 
-    connect(ui->lineEditIPAddress, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
-    connect(ui->lineEditSubnetMask, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
-    connect(ui->lineEditGateway, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
-    connect(ui->lineEditPrimaryDNS, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
-    connect(ui->lineEditSecondaryDNS, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
+    connect(this->ui->lineEditIPAddress, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
+    connect(this->ui->lineEditSubnetMask, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
+    connect(this->ui->lineEditGateway, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
+    connect(this->ui->lineEditPrimaryDNS, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
+    connect(this->ui->lineEditSecondaryDNS, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
 
     // Load PIF data
     loadPIFData();
@@ -76,101 +79,82 @@ NetworkingPropertiesDialog::~NetworkingPropertiesDialog()
 
 void NetworkingPropertiesDialog::loadPIFData()
 {
-    if (!this->m_connection || !this->m_connection->GetCache())
+    if (!this->m_pif || !this->m_pif->IsValid())
         return;
-
-    // Get PIF data from cache
-    QVariant pifDataVar = this->m_connection->GetCache()->ResolveObjectData("pif", this->m_pifRef);
-    if (pifDataVar.isNull())
-    {
-        QMessageBox::warning(this, "Error", "Failed to load network interface data.");
-        return;
-    }
-
-    this->m_pifData = pifDataVar.value<QVariantMap>();
 
     // Display interface information
-    QString device = this->m_pifData.value("device").toString();
-    QString mac = this->m_pifData.value("MAC").toString();
-    QString networkRef = this->m_pifData.value("network").toString();
+    QString device = this->m_pif->GetDevice();
+    QString mac = this->m_pif->GetMAC();
 
-    ui->labelDeviceValue->setText(device);
-    ui->labelMACValue->setText(mac);
+    this->ui->labelDeviceValue->setText(device);
+    this->ui->labelMACValue->setText(mac);
 
     // Get network name
-    QVariant networkDataVar = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
-    if (!networkDataVar.isNull())
-    {
-        QVariantMap networkData = networkDataVar.value<QVariantMap>();
-        QString networkName = networkData.value("name_label").toString();
-        ui->labelNetworkValue->setText(networkName);
-    }
+    QSharedPointer<Network> network = this->m_pif->GetNetwork();
+    if (network && network->IsValid())
+        this->ui->labelNetworkValue->setText(network->GetName());
 
     // Load IP configuration
-    QString ipConfigMode = this->m_pifData.value("ip_configuration_mode").toString();
+    QString ipConfigMode = this->m_pif->IpConfigurationMode();
     bool isDHCP = (ipConfigMode == "DHCP" || ipConfigMode == "dhcp");
 
     if (isDHCP)
     {
-        ui->radioButtonDHCP->setChecked(true);
+        this->ui->radioButtonDHCP->setChecked(true);
     } else
     {
-        ui->radioButtonStatic->setChecked(true);
+        this->ui->radioButtonStatic->setChecked(true);
 
         // Load static IP settings
-        QString ip = this->m_pifData.value("IP").toString();
-        QString netmask = this->m_pifData.value("netmask").toString();
-        QString gateway = this->m_pifData.value("gateway").toString();
-
-        ui->lineEditIPAddress->setText(ip);
-        ui->lineEditSubnetMask->setText(netmask);
-        ui->lineEditGateway->setText(gateway);
+        this->ui->lineEditIPAddress->setText(this->m_pif->IP());
+        this->ui->lineEditSubnetMask->setText(this->m_pif->Netmask());
+        this->ui->lineEditGateway->setText(this->m_pif->Gateway());
     }
 
     // Load DNS settings
-    QString dnsString = this->m_pifData.value("DNS").toString();
+    QString dnsString = this->m_pif->DNS();
     QStringList dnsList = dnsString.split(',', Qt::SkipEmptyParts);
 
     if (dnsList.size() > 0)
-        ui->lineEditPrimaryDNS->setText(dnsList[0].trimmed());
+        this->ui->lineEditPrimaryDNS->setText(dnsList[0].trimmed());
     if (dnsList.size() > 1)
-        ui->lineEditSecondaryDNS->setText(dnsList[1].trimmed());
+        this->ui->lineEditSecondaryDNS->setText(dnsList[1].trimmed());
 }
 
 void NetworkingPropertiesDialog::onIPModeChanged()
 {
-    bool staticMode = ui->radioButtonStatic->isChecked();
-    ui->widgetStaticSettings->setEnabled(staticMode);
-    validateAndUpdateUI();
+    bool staticMode = this->ui->radioButtonStatic->isChecked();
+    this->ui->widgetStaticSettings->setEnabled(staticMode);
+    this->validateAndUpdateUI();
 }
 
 void NetworkingPropertiesDialog::onInputChanged()
 {
-    validateAndUpdateUI();
+    this->validateAndUpdateUI();
 }
 
 void NetworkingPropertiesDialog::validateAndUpdateUI()
 {
     bool isValid = true;
 
-    if (ui->radioButtonStatic->isChecked())
+    if (this->ui->radioButtonStatic->isChecked())
     {
         // Validate IP address (required)
-        QString ip = ui->lineEditIPAddress->text();
+        QString ip = this->ui->lineEditIPAddress->text();
         if (!validateIP(ip, false))
         {
             isValid = false;
         }
 
         // Validate subnet mask (required)
-        QString mask = ui->lineEditSubnetMask->text();
+        QString mask = this->ui->lineEditSubnetMask->text();
         if (!validateSubnetMask(mask))
         {
             isValid = false;
         }
 
         // Validate gateway (optional)
-        QString gateway = ui->lineEditGateway->text();
+        QString gateway = this->ui->lineEditGateway->text();
         if (!gateway.isEmpty() && !validateIP(gateway, true))
         {
             isValid = false;
@@ -178,20 +162,20 @@ void NetworkingPropertiesDialog::validateAndUpdateUI()
     }
 
     // Validate DNS (optional)
-    QString primaryDNS = ui->lineEditPrimaryDNS->text();
+    QString primaryDNS = this->ui->lineEditPrimaryDNS->text();
     if (!primaryDNS.isEmpty() && !validateIP(primaryDNS, true))
     {
         isValid = false;
     }
 
-    QString secondaryDNS = ui->lineEditSecondaryDNS->text();
+    QString secondaryDNS = this->ui->lineEditSecondaryDNS->text();
     if (!secondaryDNS.isEmpty() && !validateIP(secondaryDNS, true))
     {
         isValid = false;
     }
 
     // Enable/disable OK button
-    ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(isValid);
+    this->ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(isValid);
 }
 
 bool NetworkingPropertiesDialog::validateIP(const QString& ip, bool allowEmpty)
@@ -231,10 +215,11 @@ bool NetworkingPropertiesDialog::validateSubnetMask(const QString& mask)
 
 void NetworkingPropertiesDialog::applyChanges()
 {
-    if (!this->m_connection)
+    if (!this->m_pif)
         return;
 
-    XenAPI::Session* session = this->m_connection->GetSession();
+    XenConnection* connection = this->m_pif->GetConnection();
+    XenAPI::Session* session = connection ? connection->GetSession() : nullptr;
     if (!session || !session->IsLoggedIn())
     {
         QMessageBox::critical(this, "Error",
@@ -244,12 +229,12 @@ void NetworkingPropertiesDialog::applyChanges()
 
     bool success = false;
 
-    if (ui->radioButtonDHCP->isChecked())
+    if (this->ui->radioButtonDHCP->isChecked())
     {
         // Configure for DHCP
         try
         {
-            XenAPI::PIF::reconfigure_ip(session, this->m_pifRef, "DHCP", "", "", "", "");
+            XenAPI::PIF::reconfigure_ip(session, this->m_pif->OpaqueRef(), "DHCP", "", "", "", "");
             success = true;
         }
         catch (const std::exception& ex)
@@ -259,14 +244,14 @@ void NetworkingPropertiesDialog::applyChanges()
     } else
     {
         // Configure for static IP
-        QString ip = ui->lineEditIPAddress->text();
-        QString netmask = ui->lineEditSubnetMask->text();
-        QString gateway = ui->lineEditGateway->text();
+        QString ip = this->ui->lineEditIPAddress->text();
+        QString netmask = this->ui->lineEditSubnetMask->text();
+        QString gateway = this->ui->lineEditGateway->text();
 
         // Combine DNS servers
         QStringList dnsList;
-        QString primaryDNS = ui->lineEditPrimaryDNS->text();
-        QString secondaryDNS = ui->lineEditSecondaryDNS->text();
+        QString primaryDNS = this->ui->lineEditPrimaryDNS->text();
+        QString secondaryDNS = this->ui->lineEditSecondaryDNS->text();
 
         if (!primaryDNS.isEmpty())
             dnsList.append(primaryDNS);
@@ -277,7 +262,7 @@ void NetworkingPropertiesDialog::applyChanges()
 
         try
         {
-            XenAPI::PIF::reconfigure_ip(session, this->m_pifRef, "Static", ip, netmask, gateway, dns);
+            XenAPI::PIF::reconfigure_ip(session, this->m_pif->OpaqueRef(), "Static", ip, netmask, gateway, dns);
             success = true;
         }
         catch (const std::exception& ex)

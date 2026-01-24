@@ -28,10 +28,10 @@
 #include "movevirtualdiskcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/movevirtualdiskdialog.h"
-#include "xen/vdi.h"
-#include "xen/vbd.h"
-#include "xen/vm.h"
-#include "xen/sr.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/xen/vbd.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/sr.h"
 #include <QMessageBox>
 
 MoveVirtualDiskCommand::MoveVirtualDiskCommand(MainWindow* mainWindow, QObject* parent) : VDICommand(mainWindow, parent)
@@ -54,7 +54,7 @@ void MoveVirtualDiskCommand::Run()
         return;
 
     // Open the move virtual disk dialog
-    MoveVirtualDiskDialog* dialog = new MoveVirtualDiskDialog(vdi->GetConnection(), vdi->OpaqueRef(), this->mainWindow());
+    MoveVirtualDiskDialog* dialog = new MoveVirtualDiskDialog(vdi, this->mainWindow());
 
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();

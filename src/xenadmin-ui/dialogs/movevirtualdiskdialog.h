@@ -31,7 +31,8 @@
 #include <QDialog>
 #include <QString>
 #include <QStringList>
-#include <QVariantMap>
+#include <QSharedPointer>
+#include <QList>
 #include "../controls/srpicker.h"
 
 namespace Ui
@@ -40,6 +41,7 @@ namespace Ui
 }
 
 class XenConnection;
+class VDI;
 
 /**
  * @brief Dialog for moving one or more VDIs to a different SR
@@ -66,19 +68,17 @@ class MoveVirtualDiskDialog : public QDialog
     public:
         /**
          * @brief Constructor for single VDI move
-         * @param xenLib XenLib instance
-         * @param vdiRef VDI reference to move
+         * @param vdi VDI to move
          * @param parent Parent widget
          */
-        explicit MoveVirtualDiskDialog(XenConnection* conn, const QString& vdiRef, QWidget* parent = nullptr);
+        explicit MoveVirtualDiskDialog(QSharedPointer<VDI> vdi, QWidget* parent = nullptr);
 
         /**
          * @brief Constructor for multiple VDI move
-         * @param xenLib XenLib instance
-         * @param vdiRefs List of VDI references to move
+         * @param vdis List of VDIs to move
          * @param parent Parent widget
          */
-        explicit MoveVirtualDiskDialog(XenConnection* conn, const QStringList& vdiRefs, QWidget* parent = nullptr);
+        explicit MoveVirtualDiskDialog(const QList<QSharedPointer<VDI>>& vdis, QWidget* parent = nullptr);
 
         ~MoveVirtualDiskDialog();
 
@@ -107,6 +107,7 @@ class MoveVirtualDiskDialog : public QDialog
     protected:
         Ui::MoveVirtualDiskDialog* ui;
         XenConnection* m_connection;
+        QList<QSharedPointer<VDI>> m_vdis;
         QStringList m_vdiRefs;   // VDI(s) to move
 };
 

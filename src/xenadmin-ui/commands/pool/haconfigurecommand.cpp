@@ -57,12 +57,8 @@ void HAConfigureCommand::Run()
     if (!pool || !pool->IsValid())
         return;
 
-    QString poolRef = pool->OpaqueRef();
-    
     // Check if HA is already enabled
-    bool haEnabled = pool->HAEnabled();
-
-    if (haEnabled)
+    if (pool->HAEnabled())
     {
         // HA is already enabled - show edit dialog to modify priorities
         EditVmHaPrioritiesDialog dialog(pool, this->mainWindow());
@@ -71,11 +67,7 @@ void HAConfigureCommand::Run()
     }
 
     // Launch HA wizard to enable HA
-    XenConnection* connection = pool->GetConnection();
-    if (!connection)
-        return;
-
-    HAWizard wizard(connection, poolRef, this->mainWindow());
+    HAWizard wizard(pool, this->mainWindow());
     wizard.exec();
 }
 

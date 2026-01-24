@@ -86,7 +86,7 @@ class MigrateVirtualDiskCommand : public VDICommand
          * - SR is not HBA LUN-per-VDI
          * - SR supports storage migration
          */
-        bool canBeMigrated(const QSharedPointer<VDI> &vdi) const;
+        bool canBeMigrated(const QSharedPointer<VDI>& vdi, QString& reason) const;
 
         /**
          * @brief Check if VDI is HA type (statefile or redo log)

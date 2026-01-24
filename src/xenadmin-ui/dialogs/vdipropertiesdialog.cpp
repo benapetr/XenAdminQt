@@ -27,13 +27,13 @@
 
 #include "vdipropertiesdialog.h"
 #include "ui_vdipropertiesdialog.h"
-#include "xencache.h"
+#include "xen/vdi.h"
+#include "xen/sr.h"
 #include <QMessageBox>
 #include <QPushButton>
 #include <QDebug>
 
-VdiPropertiesDialog::VdiPropertiesDialog(XenConnection *conn, const QString& vdiRef, QWidget* parent)
-    : QDialog(parent), ui(new Ui::VdiPropertiesDialog), m_connection(conn), m_vdiRef(vdiRef), m_originalSize(0), m_canResize(false)
+VdiPropertiesDialog::VdiPropertiesDialog(QSharedPointer<VDI> vdi, QWidget* parent) : QDialog(parent), ui(new Ui::VdiPropertiesDialog), m_vdi(vdi), m_originalSize(0), m_canResize(false)
 {
     this->ui->setupUi(this);
 
@@ -54,50 +54,38 @@ VdiPropertiesDialog::~VdiPropertiesDialog()
 
 void VdiPropertiesDialog::populateDialog()
 {
-    if (!this->m_connection || this->m_vdiRef.isEmpty())
+    if (!this->m_vdi || !this->m_vdi->IsValid())
     {
-        qWarning() << "VdiPropertiesDialog: Invalid Connection or VDI ref";
-        return;
-    }
-
-    // Get VDI data from cache
-    this->m_vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", this->m_vdiRef);
-
-    if (this->m_vdiData.isEmpty())
-    {
-        qWarning() << "VdiPropertiesDialog: VDI not found in cache:" << this->m_vdiRef;
-        QMessageBox::warning(this, "Error", "Virtual disk not found.");
-        reject();
+        qWarning() << "VdiPropertiesDialog: Invalid VDI";
         return;
     }
 
     // Populate name and description
-    QString name = this->m_vdiData.value("name_label", "").toString();
-    QString description = this->m_vdiData.value("name_description", "").toString();
+    QString name = this->m_vdi->GetName();
+    QString description = this->m_vdi->GetDescription();
+    this->m_originalName = name;
+    this->m_originalDescription = description;
 
     this->ui->nameLineEdit->setText(name);
     this->ui->descriptionTextEdit->setPlainText(description);
 
     // Get SR information
-    QString srRef = this->m_vdiData.value("SR", "").toString();
-    QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
-    QString srName = srData.value("name_label", "Unknown").toString();
-    this->ui->srValueLabel->setText(srName);
+    this->m_sr = this->m_vdi->GetSR();
+    this->ui->srValueLabel->setText(this->m_sr ? this->m_sr->GetName() : tr("Unknown"));
 
     // Get size information
-    this->m_originalSize = this->m_vdiData.value("virtual_size", 0).toLongLong();
+    this->m_originalSize = this->m_vdi->VirtualSize();
     double sizeGB = this->m_originalSize / (1024.0 * 1024.0 * 1024.0);
 
     this->ui->currentSizeValueLabel->setText(QString::number(sizeGB, 'f', 2) + " GB");
     this->ui->sizeSpinBox->setValue(sizeGB);
 
     // Check if resize is allowed
-    QVariantList allowedOps = this->m_vdiData.value("allowed_operations", QVariantList()).toList();
+    QStringList allowedOps = this->m_vdi->AllowedOperations();
     this->m_canResize = false;
 
-    for (const QVariant& op : allowedOps)
+    for (const QString& opStr : allowedOps)
     {
-        QString opStr = op.toString();
         if (opStr == "resize" || opStr == "resize_online")
         {
             this->m_canResize = true;
@@ -139,8 +127,8 @@ qint64 VdiPropertiesDialog::getNewSize() const
 
 bool VdiPropertiesDialog::hasChanges() const
 {
-    QString currentName = this->m_vdiData.value("name_label", "").toString();
-    QString currentDesc = this->m_vdiData.value("name_description", "").toString();
+    QString currentName = this->m_originalName;
+    QString currentDesc = this->m_originalDescription;
 
     bool nameChanged = (this->getVdiName() != currentName);
     bool descChanged = (this->getVdiDescription() != currentDesc);
@@ -188,13 +176,10 @@ void VdiPropertiesDialog::validateResize()
     }
 
     // Get SR to check free space
-    QString srRef = this->m_vdiData.value("SR", "").toString();
-    QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
-
-    if (!srData.isEmpty())
+    if (this->m_sr)
     {
-        qint64 physicalSize = srData.value("physical_size", 0).toLongLong();
-        qint64 physicalUtilisation = srData.value("physical_utilisation", 0).toLongLong();
+        qint64 physicalSize = this->m_sr->PhysicalSize();
+        qint64 physicalUtilisation = this->m_sr->PhysicalUtilisation();
         qint64 freeSpace = physicalSize - physicalUtilisation;
 
         // Check if SR has enough free space (for non-thin-provisioned SRs)

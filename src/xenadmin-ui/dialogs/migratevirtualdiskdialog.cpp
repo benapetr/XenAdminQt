@@ -27,17 +27,21 @@
 
 #include "migratevirtualdiskdialog.h"
 #include "xencache.h"
+#include "xen/vdi.h"
+#include "xen/sr.h"
 #include "xen/actions/vdi/migratevirtualdiskaction.h"
 #include "../operations/operationmanager.h"
 #include "../controls/srpicker.h"
 
-MigrateVirtualDiskDialog::MigrateVirtualDiskDialog(XenConnection* conn, const QString& vdiRef, QWidget* parent) : MoveVirtualDiskDialog(conn, vdiRef, parent)
+MigrateVirtualDiskDialog::MigrateVirtualDiskDialog(QSharedPointer<VDI> vdi, QWidget* parent)
+    : MoveVirtualDiskDialog(vdi, parent)
 {
     // Update window title to reflect migration
     this->setWindowTitle(tr("Migrate Virtual Disk"));
 }
 
-MigrateVirtualDiskDialog::MigrateVirtualDiskDialog(XenConnection* conn, const QStringList& vdiRefs, QWidget* parent) : MoveVirtualDiskDialog(conn, vdiRefs, parent)
+MigrateVirtualDiskDialog::MigrateVirtualDiskDialog(const QList<QSharedPointer<VDI>>& vdis, QWidget* parent)
+    : MoveVirtualDiskDialog(vdis, parent)
 {
     // Update window title to reflect migration
     this->setWindowTitle(tr("Migrate Virtual Disks"));
@@ -51,6 +55,11 @@ SrPicker::SRPickerType MigrateVirtualDiskDialog::srPickerType() const
 
 void MigrateVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, const QString& targetSRName)
 {
+    QSharedPointer<SR> targetSR = this->m_connection && this->m_connection->GetCache()
+        ? this->m_connection->GetCache()->ResolveObject<SR>("sr", targetSRRef)
+        : QSharedPointer<SR>();
+    QString resolvedTargetName = targetSR ? targetSR->GetName() : targetSRName;
+
     // Create migrate operations using MigrateVirtualDiskAction
     // This uses VDI.async_pool_migrate instead of copy+delete
     OperationManager* opManager = OperationManager::instance();
@@ -58,12 +67,14 @@ void MigrateVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, c
     if (this->m_vdiRefs.count() == 1)
     {
         // Single VDI migration
-        QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", this->m_vdiRefs.first());
-        QString vdiName = vdiData.value("name_label", "Virtual Disk").toString();
+        QSharedPointer<VDI> vdi = this->m_connection && this->m_connection->GetCache()
+            ? this->m_connection->GetCache()->ResolveObject<VDI>("vdi", this->m_vdiRefs.first())
+            : QSharedPointer<VDI>();
+        QString vdiName = vdi ? vdi->GetName() : QString("Virtual Disk");
 
         MigrateVirtualDiskAction* action = new MigrateVirtualDiskAction(this->m_connection, this->m_vdiRefs.first(), targetSRRef);
 
-        action->SetTitle(QString("Migrating virtual disk '%1' to '%2'") .arg(vdiName) .arg(targetSRName));
+        action->SetTitle(QString("Migrating virtual disk '%1' to '%2'") .arg(vdiName) .arg(resolvedTargetName));
         action->SetDescription(QString("Migrating '%1'...").arg(vdiName));
 
         opManager->RegisterOperation(action);
@@ -74,12 +85,14 @@ void MigrateVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, c
         // C# uses ParallelAction with BATCH_SIZE=3
         for (const QString& vdiRef : this->m_vdiRefs)
         {
-            QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
-            QString vdiName = vdiData.value("name_label", "Virtual Disk").toString();
+            QSharedPointer<VDI> vdi = this->m_connection && this->m_connection->GetCache()
+                ? this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef)
+                : QSharedPointer<VDI>();
+            QString vdiName = vdi ? vdi->GetName() : QString("Virtual Disk");
 
             MigrateVirtualDiskAction* action = new MigrateVirtualDiskAction(this->m_connection, vdiRef, targetSRRef);
 
-            action->SetTitle(QString("Migrating virtual disk '%1' to '%2'").arg(vdiName).arg(targetSRName));
+            action->SetTitle(QString("Migrating virtual disk '%1' to '%2'").arg(vdiName).arg(resolvedTargetName));
             action->SetDescription(QString("Migrating '%1'...").arg(vdiName));
 
             opManager->RegisterOperation(action);

@@ -28,17 +28,21 @@
 #include "vifdialog.h"
 #include "ui_vifdialog.h"
 #include "xen/network/connection.h"
+#include "xen/vm.h"
+#include "xen/vif.h"
+#include "xen/network.h"
 #include "xencache.h"
 #include <QMessageBox>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QDebug>
 
-VIFDialog::VIFDialog(XenConnection* connection, const QString& vmRef, int deviceId, QWidget* parent)
+VIFDialog::VIFDialog(QSharedPointer<VM> vm, int deviceId, QWidget* parent)
     : QDialog(parent),
       ui(new Ui::VIFDialog),
-      m_connection(connection),
-      m_vmRef(vmRef),
+      m_connection(vm ? vm->GetConnection() : nullptr),
+      m_vm(vm),
+      m_vmRef(vm ? vm->OpaqueRef() : QString()),
       m_deviceId(deviceId),
       m_isEditMode(false)
 {
@@ -54,11 +58,31 @@ VIFDialog::VIFDialog(XenConnection* connection, const QString& vmRef, int device
     connect(this->ui->spinBoxQoS, QOverload<int>::of(&QSpinBox::valueChanged), this, &VIFDialog::onQoSValueChanged);
 }
 
-VIFDialog::VIFDialog(XenConnection* connection, const QString& vifRef, QWidget* parent)
+VIFDialog::VIFDialog(XenConnection* connection, int deviceId, QWidget* parent)
     : QDialog(parent),
       ui(new Ui::VIFDialog),
       m_connection(connection),
-      m_vifRef(vifRef),
+      m_deviceId(deviceId),
+      m_isEditMode(false)
+{
+    this->ui->setupUi(this);
+    this->setWindowTitle(this->tr("Add Network Interface"));
+
+    // Connect signals
+    connect(this->ui->comboBoxNetwork, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &VIFDialog::onNetworkChanged);
+    connect(this->ui->radioButtonAutogenerate, &QRadioButton::toggled, this, &VIFDialog::onMACRadioChanged);
+    connect(this->ui->radioButtonManual, &QRadioButton::toggled, this, &VIFDialog::onMACRadioChanged);
+    connect(this->ui->lineEditMAC, &QLineEdit::textChanged, this, &VIFDialog::onMACTextChanged);
+    connect(this->ui->checkBoxQoS, &QCheckBox::toggled, this, &VIFDialog::onQoSCheckboxChanged);
+    connect(this->ui->spinBoxQoS, QOverload<int>::of(&QSpinBox::valueChanged), this, &VIFDialog::onQoSValueChanged);
+}
+
+VIFDialog::VIFDialog(QSharedPointer<VIF> vif, QWidget* parent)
+    : QDialog(parent),
+      ui(new Ui::VIFDialog),
+      m_connection(vif ? vif->GetConnection() : nullptr),
+      m_vif(vif),
+      m_vm(vif ? vif->GetVM() : QSharedPointer<VM>()),
       m_deviceId(0),
       m_isEditMode(true)
 {
@@ -66,11 +90,16 @@ VIFDialog::VIFDialog(XenConnection* connection, const QString& vifRef, QWidget* 
     this->setWindowTitle(tr("Virtual Interface Properties"));
 
     // Get existing VIF data
-    if (this->m_connection && this->m_connection->GetCache() && !this->m_vifRef.isEmpty())
+    if (this->m_vif && this->m_vif->IsValid())
     {
-        this->m_existingVif = this->m_connection->GetCache()->ResolveObjectData("VIF", this->m_vifRef);
-        this->m_vmRef = this->m_existingVif.value("VM").toString();
-        this->m_deviceId = this->m_existingVif.value("device").toInt();
+        this->m_existingVif["network"] = this->m_vif->GetNetworkRef();
+        this->m_existingVif["MAC"] = this->m_vif->GetMAC();
+        this->m_existingVif["device"] = this->m_vif->GetDevice();
+        this->m_existingVif["qos_algorithm_type"] = this->m_vif->QosAlgorithmType();
+        this->m_existingVif["qos_algorithm_params"] = this->m_vif->QosAlgorithmParams();
+        this->m_existingVif["VM"] = this->m_vif->GetVMRef();
+        this->m_vmRef = this->m_vif->GetVMRef();
+        this->m_deviceId = this->m_vif->GetDevice().toInt();
     }
 
     // Connect signals
@@ -126,29 +155,18 @@ void VIFDialog::loadNetworks()
     if (!this->m_connection || !this->m_connection->GetCache())
         return;
 
-    QStringList networkRefs = this->m_connection->GetCache()->GetAllRefs("network");
     QList<QPair<QString, QString>> networks; // <ref, name>
-
-    for (const QString& networkRef : networkRefs)
+    QList<QSharedPointer<Network>> allNetworks = this->m_connection->GetCache()->GetAll<Network>("network");
+    for (const QSharedPointer<Network>& network : allNetworks)
     {
-        QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
-
-        // C#: if (!network.Show(Properties.Settings.Default.ShowHiddenVMs) || network.IsMember() || (network.IsSriov() && !allowSriov))
-        //     continue;
-
-        // Check if network should be shown
-        QString nameLabel = networkData.value("name_label").toString();
-        QString nameDescription = networkData.value("name_description").toString();
-
-        // Skip hidden networks (guest installer network - HIMN)
-        if (nameLabel.contains("Host internal management network", Qt::CaseInsensitive) ||
-            nameDescription.contains("Host internal management network", Qt::CaseInsensitive))
+        if (!network || !network->IsValid())
             continue;
 
-        // Skip if it's a network bond member (has PIFs but they're all bond members)
-        // For now, we'll show all networks - C# IsMember() is complex
+        // Skip hidden networks (guest installer network - HIMN)
+        if (network->IsGuestInstallerNetwork())
+            continue;
 
-        networks.append(qMakePair(networkRef, nameLabel));
+        networks.append(qMakePair(network->OpaqueRef(), network->GetName()));
     }
 
     // Sort by name
@@ -236,21 +254,15 @@ QVariantMap VIFDialog::getVifSettings() const
     vif["network"] = this->getSelectedNetworkRef();
     vif["MAC"] = this->getSelectedMAC();
     vif["device"] = QString::number(this->m_deviceId);
-    vif["VM"] = this->m_vmRef;
+    vif["VM"] = this->m_vm ? this->m_vm->OpaqueRef() : this->m_vmRef;
 
     // Set MTU from the network (XenServer requires this field)
     // C# Network class has default MTU of 1500 (Network.cs line 875)
     QString networkRef = this->getSelectedNetworkRef();
     if (!networkRef.isEmpty() && this->m_connection && this->m_connection->GetCache())
     {
-        QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", networkRef);
-        if (!networkData.isEmpty())
-        {
-            vif["MTU"] = networkData.value("MTU", 1500).toLongLong();
-        } else
-        {
-            vif["MTU"] = 1500; // Default MTU (standard Ethernet)
-        }
+        QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>("network", networkRef);
+        vif["MTU"] = network ? network->GetMTU() : 1500;
     } else
     {
         vif["MTU"] = 1500; // Default MTU
@@ -432,22 +444,19 @@ bool VIFDialog::isDuplicateMAC(const QString& mac) const
     for (const QString& vifRef : vifRefs)
     {
         // Skip the VIF we're editing
-        if (this->m_isEditMode && vifRef == this->m_vifRef)
+        QString currentVifRef = this->m_vif ? this->m_vif->OpaqueRef() : QString();
+        if (this->m_isEditMode && !currentVifRef.isEmpty() && vifRef == currentVifRef)
             continue;
 
-        QVariantMap vifData = this->m_connection->GetCache()->ResolveObjectData("VIF", vifRef);
-        QString existingMAC = vifData.value("MAC").toString();
+        QSharedPointer<VIF> vif = this->m_connection->GetCache()->ResolveObject<VIF>("VIF", vifRef);
+        QString existingMAC = vif ? vif->GetMAC() : QString();
         QString normalizedExisting = existingMAC.toLower().remove(':').remove('-');
 
         if (normalizedMAC == normalizedExisting)
         {
             // Check if the VM is a real VM (not a template)
-            QString vmRef = vifData.value("VM").toString();
-            QVariantMap vmData = this->m_connection->GetCache()->ResolveObjectData("vm", vmRef);
-            bool isTemplate = vmData.value("is_a_template", false).toBool();
-            bool isSnapshot = vmData.value("is_a_snapshot", false).toBool();
-
-            if (!isTemplate && !isSnapshot)
+            QSharedPointer<VM> vm = vif ? vif->GetVM() : QSharedPointer<VM>();
+            if (vm && !vm->IsTemplate() && !vm->IsSnapshot())
                 return true;
         }
     }

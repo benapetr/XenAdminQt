@@ -26,9 +26,9 @@
  */
 
 #include "aboutdialog.h"
-#include "xen/network/connectionsmanager.h"
-#include "xen/network/connection.h"
-#include "xencache.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xencache.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QApplication>

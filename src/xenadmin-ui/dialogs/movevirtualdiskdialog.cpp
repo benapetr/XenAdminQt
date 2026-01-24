@@ -27,20 +27,43 @@
 
 #include "movevirtualdiskdialog.h"
 #include "ui_movevirtualdiskdialog.h"
-#include "xencache.h"
 #include "xen/network/connection.h"
+#include "xen/vdi.h"
+#include "xen/sr.h"
+#include "xencache.h"
 #include "xen/actions/vdi/movevirtualdiskaction.h"
 #include "../operations/operationmanager.h"
 #include "../controls/srpicker.h"
 #include <QMessageBox>
 
-MoveVirtualDiskDialog::MoveVirtualDiskDialog(XenConnection* conn, const QString& vdiRef, QWidget* parent) : QDialog(parent), ui(new Ui::MoveVirtualDiskDialog), m_connection(conn)
+static QStringList buildVdiRefs(const QList<QSharedPointer<VDI>>& vdis)
 {
-    this->m_vdiRefs << vdiRef;
+    QStringList refs;
+    refs.reserve(vdis.size());
+    for (const QSharedPointer<VDI>& vdi : vdis)
+    {
+        if (vdi && vdi->IsValid())
+            refs.append(vdi->OpaqueRef());
+    }
+    return refs;
+}
+
+MoveVirtualDiskDialog::MoveVirtualDiskDialog(QSharedPointer<VDI> vdi, QWidget* parent) : QDialog(parent), ui(new Ui::MoveVirtualDiskDialog), m_connection(vdi ? vdi->GetConnection() : nullptr)
+{
+    if (vdi && vdi->IsValid())
+    {
+        this->m_vdis.append(vdi);
+        this->m_vdiRefs << vdi->OpaqueRef();
+    }
     this->setupUI();
 }
 
-MoveVirtualDiskDialog::MoveVirtualDiskDialog(XenConnection* conn, const QStringList& vdiRefs, QWidget* parent) : QDialog(parent), ui(new Ui::MoveVirtualDiskDialog), m_connection(conn), m_vdiRefs(vdiRefs)
+MoveVirtualDiskDialog::MoveVirtualDiskDialog(const QList<QSharedPointer<VDI>>& vdis, QWidget* parent)
+    : QDialog(parent),
+      ui(new Ui::MoveVirtualDiskDialog),
+      m_connection(vdis.isEmpty() || !vdis.first() ? nullptr : vdis.first()->GetConnection()),
+      m_vdis(vdis),
+      m_vdiRefs(buildVdiRefs(vdis))
 {
     this->setupUI();
 }
@@ -122,8 +145,10 @@ void MoveVirtualDiskDialog::onMoveButtonClicked()
         return;
 
     // Get target SR name
-    QVariantMap targetSRData = this->m_connection->GetCache()->ResolveObjectData("sr", targetSRRef);
-    QString targetSRName = targetSRData.value("name_label", "").toString();
+    QSharedPointer<SR> targetSR = this->m_connection && this->m_connection->GetCache()
+        ? this->m_connection->GetCache()->ResolveObject<SR>("sr", targetSRRef)
+        : QSharedPointer<SR>();
+    QString targetSRName = targetSR ? targetSR->GetName() : QString();
 
     // Close dialog
     this->accept();
@@ -140,8 +165,12 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
     if (this->m_vdiRefs.count() == 1)
     {
         // Single VDI move
-        QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", this->m_vdiRefs.first());
-        QString vdiName = vdiData.value("name_label", "Virtual Disk").toString();
+        QSharedPointer<VDI> vdi = !this->m_vdis.isEmpty() && this->m_vdis.first() && this->m_vdis.first()->IsValid()
+            ? this->m_vdis.first()
+            : (this->m_connection && this->m_connection->GetCache()
+                ? this->m_connection->GetCache()->ResolveObject<VDI>("vdi", this->m_vdiRefs.first())
+                : QSharedPointer<VDI>());
+        QString vdiName = vdi ? vdi->GetName() : QString("Virtual Disk");
 
         MoveVirtualDiskAction* action = new MoveVirtualDiskAction(this->m_connection, this->m_vdiRefs.first(), targetSRRef);
 
@@ -156,8 +185,10 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
         // C# uses ParallelAction with BATCH_SIZE=3
         for (const QString& vdiRef : this->m_vdiRefs)
         {
-            QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
-            QString vdiName = vdiData.value("name_label", "Virtual Disk").toString();
+            QSharedPointer<VDI> vdi = this->m_connection && this->m_connection->GetCache()
+                ? this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef)
+                : QSharedPointer<VDI>();
+            QString vdiName = vdi ? vdi->GetName() : QString("Virtual Disk");
 
             MoveVirtualDiskAction* action = new MoveVirtualDiskAction(this->m_connection, vdiRef, targetSRRef);
 
