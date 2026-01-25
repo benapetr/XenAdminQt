@@ -38,6 +38,7 @@ If `qt6-charts-dev` is still unavailable on Ubuntu 22.04, build with Qt5
     mesa-libGL-devel mesa-libGLU-devel mesa-libEGL-devel libxkbcommon-devel
   ```
   - Alma/Rocky/RHEL 8: use Qt5 (`qt5-qtbase-devel` + `qt5-qtcharts-devel`)
+  - Alma/Rocky/RHEL 9: Qt5 Charts may require CRB/EPEL
   - FreeRDP/WinPR support is optional (`freerdp-devel` + `winpr-devel`)
 
 ### macOS (.dmg) (includes `sips` and `iconutil` for icon conversion)

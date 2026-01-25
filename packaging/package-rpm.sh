@@ -54,6 +54,43 @@ echo "CPUs: $NCPUS"
 echo "Version: $APP_VERSION-$RELEASE"
 echo ""
 
+# Helper to check package availability in repos (best-effort)
+pkg_available() {
+    local pkg="$1"
+    if command -v dnf >/dev/null 2>&1; then
+        dnf -q list --available "$pkg" >/dev/null 2>&1
+        return $?
+    fi
+    if command -v yum >/dev/null 2>&1; then
+        yum -q list available "$pkg" >/dev/null 2>&1
+        return $?
+    fi
+    return 1
+}
+
+# Decide Qt major version (prefer Qt6 when available)
+QT_MAJOR=0
+if [ -n "$QT_BIN_PATH" ]; then
+    if command -v qmake6 >/dev/null 2>&1; then
+        QT_MAJOR=6
+    elif command -v qmake-qt5 >/dev/null 2>&1; then
+        QT_MAJOR=5
+    fi
+else
+    if command -v qmake6 >/dev/null 2>&1; then
+        QT_MAJOR=6
+    elif command -v qmake-qt5 >/dev/null 2>&1; then
+        QT_MAJOR=5
+    fi
+fi
+if [ "$QT_MAJOR" -eq 0 ]; then
+    if pkg_available qt6-qtbase-devel; then
+        QT_MAJOR=6
+    elif pkg_available qt5-qtbase-devel; then
+        QT_MAJOR=5
+    fi
+fi
+
 # Preflight dependency check (prints install command but does not install)
 if command -v rpm >/dev/null 2>&1; then
     missing=()
@@ -100,20 +137,16 @@ if command -v rpm >/dev/null 2>&1; then
     require_pkg rpm-build
     require_pkg rpmdevtools
     require_pkg rsync
+    require_pkg git
     require_pkg pkgconf-pkg-config
     require_pkg mesa-libGL-devel
     require_pkg mesa-libGLU-devel
     require_pkg mesa-libEGL-devel
     require_pkg libxkbcommon-devel
 
-    if [ "$DISTRO_ID" = "rhel" ] || [ "$DISTRO_ID" = "almalinux" ] || [ "$DISTRO_ID" = "rocky" ]; then
-        if [ -n "$DISTRO_VERSION" ] && [ "${DISTRO_VERSION%%.*}" -lt 9 ]; then
-            require_pkg qt5-qtbase-devel
-            require_pkg qt5-qtcharts-devel
-        else
-            require_pkg qt6-qtbase-devel
-            require_pkg qt6-qtcharts-devel
-        fi
+    if [ "$QT_MAJOR" -eq 5 ]; then
+        require_pkg qt5-qtbase-devel
+        require_pkg qt5-qtcharts-devel
     else
         require_pkg qt6-qtbase-devel
         require_pkg qt6-qtcharts-devel
@@ -164,6 +197,18 @@ if command -v rpm >/dev/null 2>&1; then
                 echo "  - one of: $group"
             done
         fi
+        if [ "$QT_MAJOR" -eq 5 ] && printf '%s\n' "${missing[@]}" | grep -q '^qt5-qtcharts-devel$'; then
+            echo ""
+            if [ "$DISTRO_ID" = "rhel" ]; then
+                echo "Hint: qt5-qtcharts-devel is in CodeReady Builder."
+                echo "  sudo subscription-manager repos --enable codeready-builder-for-rhel-9-$(arch)-rpms"
+            elif [ "$DISTRO_ID" = "almalinux" ] || [ "$DISTRO_ID" = "rocky" ]; then
+                echo "Hint: qt5-qtcharts-devel is typically in CRB/EPEL."
+                echo "  sudo dnf install -y dnf-plugins-core"
+                echo "  sudo dnf config-manager --set-enabled crb"
+                echo "  sudo dnf install epel-release"
+            fi
+        fi
         echo ""
         exit 1
     fi
@@ -208,6 +253,11 @@ fi
 QMAKE_PATH="$(command -v "$QMAKE_CMD")"
 
 echo "Qt command: $QMAKE_CMD ($(dirname "$QMAKE_PATH"))"
+if [ "$QT_MAJOR" -eq 5 ]; then
+    echo "Qt major: 5"
+elif [ "$QT_MAJOR" -eq 6 ]; then
+    echo "Qt major: 6"
+fi
 echo ""
 
 # Get project root directory (parent of packaging/)
@@ -235,18 +285,19 @@ SOURCE_DIR_NAME="${APP_NAME}-${APP_VERSION}"
 SOURCE_ROOT="$SOURCE_STAGE_DIR/$SOURCE_DIR_NAME"
 mkdir -p "$SOURCE_ROOT"
 
-rsync -a \
-    --exclude ".git" \
-    --exclude "packaging/output" \
-    --exclude "packaging/output/*" \
-    "$PROJECT_ROOT/" "$SOURCE_ROOT/"
-
-# Ensure we have a clean release directory for out-of-source builds
-rm -rf "$SOURCE_ROOT/release"
-mkdir -p "$SOURCE_ROOT/release"
-
 SOURCE_TARBALL="$RPM_BUILD_ROOT/SOURCES/$SOURCE_DIR_NAME.tar.gz"
-tar -C "$SOURCE_STAGE_DIR" -czf "$SOURCE_TARBALL" "$SOURCE_DIR_NAME"
+
+if ! command -v git >/dev/null 2>&1; then
+    echo "Error: git not found."
+    echo "Please install git (e.g., sudo dnf install git) and re-run."
+    exit 1
+fi
+if ! git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "Error: $PROJECT_ROOT is not a git repository."
+    exit 1
+fi
+
+git -C "$PROJECT_ROOT" archive --format=tar --prefix "$SOURCE_DIR_NAME/" HEAD | gzip -n > "$SOURCE_TARBALL"
 
 echo ""
 echo "Step 2: Creating RPM spec file..."
@@ -265,7 +316,7 @@ License:        GPLv2+
 URL:            https://github.com/xenadmin/xenadmin-qt
 Source0:        %{name}-%{version}.tar.gz
 
-%if 0%{?rhel} && 0%{?rhel} < 9
+%if 0%{?qt_major} == 5
 BuildRequires:  qt5-qtbase-devel
 BuildRequires:  qt5-qtcharts-devel
 %else
@@ -336,6 +387,7 @@ echo ""
 echo "Step 3: Building RPM and SRPM..."
 
 rpmbuild --define "_topdir $RPM_BUILD_ROOT" \
+         --define "qt_major $QT_MAJOR" \
          -ba "$SPEC_PATH"
 
 # Move packages to project packaging directory
