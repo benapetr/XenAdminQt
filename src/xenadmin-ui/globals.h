@@ -28,7 +28,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#define XENADMIN_VERSION "0.0.3"
+#define XENADMIN_VERSION "0.0.4"
 
 #define XENADMIN_BRANDING_NAME "XenAdmin"
 

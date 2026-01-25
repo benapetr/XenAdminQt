@@ -1,3 +1,15 @@
+xenadmin-qt (0.0.4) unstable; urgency=medium
+
+  * Refine networking and storage command handling.
+
+ -- Petr Bena <petr@bena.rocks>  Sun, 25 Jan 2026 11:49:40 +0100
+
+xenadmin-qt (0.0.3) unstable; urgency=medium
+
+  * Align infrastructure view grouping with upstream behavior.
+
+ -- Petr Bena <petr@bena.rocks>  Sun, 25 Jan 2026 11:49:40 +0100
+
 xenadmin-qt (0.0.2) unstable; urgency=medium
 
   * Initial debhelper-based packaging.
