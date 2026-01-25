@@ -98,6 +98,7 @@ if command -v rpm >/dev/null 2>&1; then
     }
 
     require_pkg rpm-build
+    require_pkg rpmdevtools
     require_pkg rsync
     require_pkg pkgconf-pkg-config
     require_pkg mesa-libGL-devel
@@ -213,14 +214,20 @@ echo ""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Create temp directory for packaging
-TEMP_DIR=$(mktemp -d -t xenadmin-rpm-XXXXXX)
+# Always use ~/rpmbuild (containers typically have /tmp on small tmpfs)
+RPM_TOPDIR="$HOME/rpmbuild"
+if command -v rpmdev-setuptree >/dev/null 2>&1; then
+    rpmdev-setuptree >/dev/null 2>&1 || true
+else
+    mkdir -p "$RPM_TOPDIR"
+fi
+TEMP_DIR=$(mktemp -d -p "$RPM_TOPDIR" xenadmin-rpm-XXXXXX)
 trap "rm -rf $TEMP_DIR" EXIT
 
 echo "Step 1: Preparing source archive..."
 
 # Create RPM build directories
-RPM_BUILD_ROOT="$TEMP_DIR/rpmbuild"
+RPM_BUILD_ROOT="$RPM_TOPDIR"
 mkdir -p "$RPM_BUILD_ROOT"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
 SOURCE_STAGE_DIR="$TEMP_DIR/source"
