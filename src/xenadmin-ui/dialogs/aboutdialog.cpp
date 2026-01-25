@@ -25,16 +25,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "aboutdialog.h"
-#include "xenlib/xen/network/connectionsmanager.h"
-#include "xenlib/xen/network/connection.h"
-#include "xenlib/xencache.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QApplication>
 #include <QSysInfo>
 #include <QDateTime>
 #include "globals.h"
+#include "aboutdialog.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xencache.h"
 
 AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent)
 {
@@ -77,7 +77,7 @@ void AboutDialog::setupUI()
                            "<h3>License Information</h3>"
                            "%3"
                            "<h3>Copyright</h3>"
-                           "<p>Copyright © 2024-2025 XenAdmin Qt Project Contributors</p>"
+                           "<p>Copyright © 2025-2026 XenAdmin Qt Project Contributors</p>"
                            "<p>Based on XenCenter/XenAdmin by Cloud Software Group, Inc.</p>"
                            "<h3>License</h3>"
                            "<p>This software is open source and distributed under the BSD license.</p>")
