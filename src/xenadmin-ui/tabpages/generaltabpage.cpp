@@ -123,7 +123,7 @@ bool GeneralTabPage::IsApplicableForObjectType(const QString& objectType) const
 
 void GeneralTabPage::refreshContent()
 {
-    if (this->m_objectData.isEmpty())
+    if (!this->m_object)
     {
         this->clearProperties();
         return;
@@ -131,6 +131,8 @@ void GeneralTabPage::refreshContent()
 
     // Clear previous properties
     this->clearProperties();
+
+    QString object_type = this->m_object->GetObjectType();
 
     QList<QAction*> propertiesMenu;
     propertiesMenu.append(this->propertiesAction_);
@@ -141,18 +143,17 @@ void GeneralTabPage::refreshContent()
     this->addPropertyByKey(this->ui->pdSectionGeneral, "host.name_description",
                            this->m_objectData.value("name_description", "N/A").toString(),
                            propertiesMenu);
-    if (this->m_object)
-    {
-        QStringList tags = this->m_object->GetTags();
-        QString tagsValue = tags.isEmpty() ? tr("None") : tags.join(", ");
-        this->addProperty(this->ui->pdSectionGeneral, tr("Tags"), tagsValue);
 
-        QString folderValue = this->m_object->GetFolderPath();
-        if (folderValue.isEmpty())
-            folderValue = tr("None");
-        this->addProperty(this->ui->pdSectionGeneral, tr("Folder"), folderValue);
-        // TODO: Add "View tag" and "View folder" context menu actions once search helpers are ported.
-    }
+    QStringList tags = this->m_object->GetTags();
+    QString tagsValue = tags.isEmpty() ? tr("None") : tags.join(", ");
+    this->addProperty(this->ui->pdSectionGeneral, tr("Tags"), tagsValue);
+
+    QString folderValue = this->m_object->GetFolderPath();
+    if (folderValue.isEmpty())
+        folderValue = tr("None");
+    this->addProperty(this->ui->pdSectionGeneral, tr("Folder"), folderValue);
+
+    // TODO: Add "View tag" and "View folder" context menu actions once search helpers are ported.
     this->addPropertyByKey(this->ui->pdSectionGeneral, "host.uuid",
                            this->m_objectData.value("uuid", "N/A").toString());
 
@@ -160,22 +161,22 @@ void GeneralTabPage::refreshContent()
 
     // TODO refactor to enum switch
     // Add type-specific properties
-    if (this->m_objectType == "vm")
+    if (object_type == "vm")
     {
         this->populateVMProperties();
-    } else if (this->m_objectType == "host")
+    } else if (object_type == "host")
     {
         this->populateHostProperties();
-    } else if (this->m_objectType == "pool")
+    } else if (object_type == "pool")
     {
         this->populatePoolProperties();
-    } else if (this->m_objectType == "sr")
+    } else if (object_type == "sr")
     {
         this->populateSRProperties();
-    } else if (this->m_objectType == "network")
+    } else if (object_type == "network")
     {
         this->populateNetworkProperties();
-    } else if (this->m_objectType == "dockercontainer")
+    } else if (object_type == "dockercontainer")
     {
         this->populateDockerInfoSection();
     }
@@ -238,8 +239,7 @@ void GeneralTabPage::clearProperties()
     this->ui->pdSectionDeviceSecurity->setVisible(false);
 }
 
-void GeneralTabPage::addProperty(PDSection* section, const QString& label, const QString& value,
-                                 const QList<QAction*>& contextMenuItems)
+void GeneralTabPage::addProperty(PDSection* section, const QString& label, const QString& value, const QList<QAction*>& contextMenuItems)
 {
     if (!section)
         return;
@@ -247,8 +247,7 @@ void GeneralTabPage::addProperty(PDSection* section, const QString& label, const
     section->AddEntry(label, value, contextMenuItems);
 }
 
-void GeneralTabPage::addPropertyByKey(PDSection* section, const QString& key, const QString& value,
-                                      const QList<QAction*>& contextMenuItems)
+void GeneralTabPage::addPropertyByKey(PDSection* section, const QString& key, const QString& value, const QList<QAction*>& contextMenuItems)
 {
     this->addProperty(section, this->friendlyName(key), value, contextMenuItems);
 }
@@ -339,35 +338,37 @@ void GeneralTabPage::openPropertiesDialog()
     if (!this->m_object)
         return;
 
-    if (this->m_objectType == "vm")
+    QString object_type = this->m_object->GetObjectType();
+
+    if (object_type == "vm")
     {
         QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
         if (!vm)
             return;
         VMPropertiesDialog dialog(vm, this);
         dialog.exec();
-    } else if (this->m_objectType == "host")
+    } else if (object_type == "host")
     {
         QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
         if (!host)
             return;
         HostPropertiesDialog dialog(host, this);
         dialog.exec();
-    } else if (this->m_objectType == "pool")
+    } else if (object_type == "pool")
     {
         QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(this->m_object);
         if (!pool)
             return;
         PoolPropertiesDialog dialog(pool, this);
         dialog.exec();
-    } else if (this->m_objectType == "sr")
+    } else if (object_type == "sr")
     {
         QSharedPointer<SR> sr = qSharedPointerCast<SR>(this->m_object);
         if (!sr)
             return;
         StoragePropertiesDialog dialog(sr, this);
         dialog.exec();
-    } else if (this->m_objectType == "network")
+    } else if (object_type == "network")
     {
         QSharedPointer<Network> network = qSharedPointerCast<Network>(this->m_object);
         if (!network)
@@ -453,7 +454,10 @@ void GeneralTabPage::onSectionExpandedChanged(PDSection* section)
 {
     Q_UNUSED(section);
 
-    const QString key = this->m_objectType;
+    if (!this->m_object)
+        return;
+
+    const QString key = this->m_object->GetObjectType();
     if (!key.isEmpty())
     {
         QList<PDSection*> expanded;
@@ -1063,7 +1067,7 @@ void GeneralTabPage::populateGeneralSection()
                     qint64 uptimeSeconds = startTime.secsTo(QDateTime::currentDateTimeUtc());
                     if (uptimeSeconds > 0)
                     {
-                        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.uptime", formatUptime(uptimeSeconds));
+                        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.uptime", Misc::FormatUptime(uptimeSeconds));
                     }
                 }
             }
@@ -1085,7 +1089,7 @@ void GeneralTabPage::populateGeneralSection()
                 qint64 uptimeSeconds = startTime.secsTo(QDateTime::currentDateTimeUtc());
                 if (uptimeSeconds > 0)
                 {
-                    this->addPropertyByKey(this->ui->pdSectionGeneral, "host.agentUptime", formatUptime(uptimeSeconds));
+                    this->addPropertyByKey(this->ui->pdSectionGeneral, "host.agentUptime", Misc::FormatUptime(uptimeSeconds));
                 }
             }
         }
@@ -1353,32 +1357,6 @@ void GeneralTabPage::populateVersionSection()
     this->showSectionIfNotEmpty(this->ui->pdSectionVersion);
 }
 
-// Helper method to format uptime in human-readable format
-// C# Reference: XenCenterLib/PrettyTimeSpan.cs
-QString GeneralTabPage::formatUptime(qint64 seconds) const
-{
-    if (seconds < 0)
-        return QString();
-
-    qint64 days = seconds / 86400;
-    qint64 hours = (seconds % 86400) / 3600;
-    qint64 minutes = (seconds % 3600) / 60;
-    qint64 secs = seconds % 60;
-
-    QStringList parts;
-
-    if (days > 0)
-        parts << QString("%1 day%2").arg(days).arg(days > 1 ? "s" : "");
-    if (hours > 0)
-        parts << QString("%1 hour%2").arg(hours).arg(hours > 1 ? "s" : "");
-    if (minutes > 0)
-        parts << QString("%1 minute%2").arg(minutes).arg(minutes > 1 ? "s" : "");
-    if (secs > 0 || parts.isEmpty())
-        parts << QString("%1 second%2").arg(secs).arg(secs != 1 ? "s" : "");
-
-    return parts.join(", ");
-}
-
 // ============================================================================
 // SR Section Population Methods (Status and Multipathing)
 // C# Reference: GeneralTabPage.cs GenerateStatusBox() and GenerateMultipathBox()
@@ -1543,8 +1521,7 @@ void GeneralTabPage::populateMultipathingSection()
     QString multipathable = smConfig.value("multipathable", "false").toString();
     bool isMultipathCapable = (multipathable == "true");
 
-    this->addPropertyByKey(this->ui->pdSectionMultipathing, "multipath.capable",
-                           isMultipathCapable ? tr("Yes") : tr("No"));
+    this->addPropertyByKey(this->ui->pdSectionMultipathing, "multipath.capable", isMultipathCapable ? tr("Yes") : tr("No"));
 
     if (!isMultipathCapable)
     {

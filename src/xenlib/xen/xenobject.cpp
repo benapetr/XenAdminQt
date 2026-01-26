@@ -32,7 +32,7 @@
 
 bool XenObject::ValueIsNULL(const QString &value)
 {
-    return value.isEmpty() || value == "OpaqueRef:NULL";
+    return value.isEmpty() || value == XENOBJECT_NULL;
 }
 
 XenObject::XenObject(XenConnection* connection, const QString& opaqueRef, QObject* parent) : QObject(parent), m_connection(connection), m_opaqueRef(opaqueRef)

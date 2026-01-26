@@ -30,6 +30,10 @@
 #include "xencache.h"
 #include "xen/network/connection.h"
 #include "xen/actions/sr/srrefreshaction.h"
+#include "xen/pbd.h"
+#include "xen/pool.h"
+#include "xen/sr.h"
+#include "xen/vdi.h"
 #include <QHeaderView>
 #include <QTableWidgetItem>
 
@@ -90,11 +94,9 @@ void SrPicker::Populate(SRPickerType usage, XenConnection* connection, const QSt
 
     // Get pool default SR
     this->m_defaultSRRef.clear();
-    QList<QVariantMap> pools = this->m_connection->GetCache()->GetAllData("pool");
-    if (!pools.isEmpty())
-    {
-        this->m_defaultSRRef = pools.first().value("default_SR").toString();
-    }
+    QSharedPointer<Pool> pool = this->m_connection->GetCache()->GetPool();
+    if (pool)
+        this->m_defaultSRRef = pool->GetDefaultSRRef();
 
     // Listen for cache updates
     XenCache* cache = this->m_connection->GetCache();
@@ -113,14 +115,12 @@ void SrPicker::populateSRList()
     if (!this->m_connection)
         return;
 
-    QList<QVariantMap> allSRs = this->m_connection->GetCache()->GetAllData("sr");
-
-    for (const QVariantMap& srData : allSRs)
+    QList<QSharedPointer<SR>> allSRs = this->m_connection->GetCache()->GetAll<SR>("sr");
+    for (const QSharedPointer<SR>& sr : allSRs)
     {
-        QString srRef = srData.value("ref").toString();
-        if (!srRef.isEmpty() && this->isValidSR(srData))
+        if (sr && sr->IsValid() && this->isValidSR(sr))
         {
-            this->addSR(srRef);
+            this->addSR(sr);
         }
     }
 
@@ -129,27 +129,23 @@ void SrPicker::populateSRList()
     this->onCanBeScannedChanged();
 }
 
-void SrPicker::addSR(const QString& srRef)
+void SrPicker::addSR(const QSharedPointer<SR>& sr)
 {
-    if (!this->m_connection)
-        return;
-
-    QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
-    if (srData.isEmpty())
+    if (!sr)
         return;
 
     SRItem item;
-    item.ref = srRef;
-    item.name = srData.value("name_label", "").toString();
-    item.description = srData.value("name_description", "").toString();
-    item.type = srData.value("type", "").toString();
-    item.physicalSize = srData.value("physical_size", 0).toLongLong();
-    item.freeSpace = this->calculateFreeSpace(srData);
-    item.shared = srData.value("shared", false).toBool();
+    item.ref = sr->OpaqueRef();
+    item.name = sr->GetName();
+    item.description = sr->GetDescription();
+    item.type = sr->GetType();
+    item.physicalSize = sr->PhysicalSize();
+    item.freeSpace = this->calculateFreeSpace(sr);
+    item.shared = sr->IsShared();
     item.scanning = false;
 
     QString disableReason;
-    item.enabled = this->canBeEnabled(srRef, srData, disableReason);
+    item.enabled = this->canBeEnabled(sr, disableReason);
     item.disableReason = disableReason;
 
     this->m_srItems.append(item);
@@ -160,7 +156,7 @@ void SrPicker::addSR(const QString& srRef)
 
     // Column 0: Name
     QTableWidgetItem* nameItem = new QTableWidgetItem(item.name);
-    nameItem->setData(Qt::UserRole, srRef);
+    nameItem->setData(Qt::UserRole, sr->OpaqueRef());
     if (!item.enabled)
     {
         nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEnabled);
@@ -196,19 +192,19 @@ void SrPicker::updateSRItem(const QString& srRef)
     if (itemIndex == -1)
         return;
 
-    QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
-    if (srData.isEmpty())
+    QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+    if (!sr)
         return;
 
     SRItem& item = this->m_srItems[itemIndex];
-    item.name = srData.value("name_label", "").toString();
-    item.description = srData.value("name_description", "").toString();
-    item.physicalSize = srData.value("physical_size", 0).toLongLong();
-    item.freeSpace = this->calculateFreeSpace(srData);
-    item.shared = srData.value("shared", false).toBool();
+    item.name = sr->GetName();
+    item.description = sr->GetDescription();
+    item.physicalSize = sr->PhysicalSize();
+    item.freeSpace = this->calculateFreeSpace(sr);
+    item.shared = sr->IsShared();
 
     QString disableReason;
-    item.enabled = this->canBeEnabled(srRef, srData, disableReason);
+    item.enabled = this->canBeEnabled(sr, disableReason);
     item.disableReason = disableReason;
 
     // Update table row
@@ -280,8 +276,8 @@ void SrPicker::ScanSRs()
         if (item.scanning)
             continue;
 
-        QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", item.ref);
-        if (this->isDetached(item.ref, srData))
+        QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", item.ref);
+        if (!sr || this->isDetached(sr))
             continue;
 
         bool alreadyQueued = false;
@@ -339,8 +335,8 @@ bool SrPicker::CanBeScanned() const
     {
         if (!item.scanning)
         {
-            QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", item.ref);
-            if (!this->isDetached(item.ref, srData))
+            QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", item.ref);
+            if (sr && !this->isDetached(sr))
                 return true;
         }
     }
@@ -367,8 +363,7 @@ void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, co
 
     if (type == "sr")
     {
-        // Get the updated SR data
-        QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", ref);
+        QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", ref);
 
         // Check if this SR is already in our list
         bool found = false;
@@ -381,7 +376,7 @@ void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, co
             }
         }
 
-        if (srData.isEmpty())
+        if (!sr || !sr->IsValid())
         {
             // SR was deleted - remove it if we have it
             if (found)
@@ -398,9 +393,9 @@ void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, co
         else
         {
             // SR is new and valid - add it
-            if (this->isValidSR(srData))
+            if (this->isValidSR(sr))
             {
-                this->addSR(ref);
+                this->addSR(sr);
                 this->selectDefaultSR(); // Re-check default selection in case this is the default SR
                 this->onCanBeScannedChanged();
             }
@@ -410,8 +405,8 @@ void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, co
 
     if (type == "pbd")
     {
-        QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", ref);
-        QString srRef = pbdData.value("SR").toString();
+        QSharedPointer<PBD> pbd = this->m_connection->GetCache()->ResolveObject<PBD>("pbd", ref);
+        QString srRef = pbd ? pbd->GetSRRef() : QString();
         if (!srRef.isEmpty())
         {
             this->updateSRItem(srRef);
@@ -422,10 +417,10 @@ void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, co
 
     if (type == "pool")
     {
-        QVariantMap poolData = this->m_connection->GetCache()->ResolveObjectData("pool", ref);
-        if (!poolData.isEmpty())
+        QSharedPointer<Pool> pool = this->m_connection->GetCache()->ResolveObject<Pool>("pool", ref);
+        if (pool)
         {
-            this->m_defaultSRRef = poolData.value("default_SR").toString();
+            this->m_defaultSRRef = pool->GetDefaultSRRef();
             this->selectDefaultSR();
         }
         return;
@@ -522,26 +517,31 @@ void SrPicker::startNextScan()
     }
 }
 
-bool SrPicker::isValidSR(const QVariantMap& srData) const
+bool SrPicker::isValidSR(const QSharedPointer<SR>& sr) const
 {
     // Don't show ISO SRs
-    QString contentType = srData.value("content_type", "").toString();
-    if (contentType == "iso")
+    if (!sr || sr->ContentType() == "iso")
         return false;
 
     // Basic filtering - individual items handle enable/disable logic
     return true;
 }
 
-bool SrPicker::canBeEnabled(const QString& srRef, const QVariantMap& srData, QString& reason) const
+bool SrPicker::canBeEnabled(const QSharedPointer<SR>& sr, QString& reason) const
 {
     // C# SrPickerItem::CanBeEnabled() logic - varies by picker type
+    if (!sr)
+    {
+        reason = "SR is unavailable";
+        return false;
+    }
+    const QString srRef = sr->OpaqueRef();
 
     switch (this->m_usage)
     {
         case Move:
             // SrPickerMoveItem: !IsDetached && !IsCurrentLocation && SupportsVdiCreate && CanFitDisks
-            if (this->isDetached(srRef, srData))
+            if (this->isDetached(sr))
             {
                 reason = "SR is detached";
                 return false;
@@ -551,12 +551,12 @@ bool SrPicker::canBeEnabled(const QString& srRef, const QVariantMap& srData, QSt
                 reason = "Current location";
                 return false;
             }
-            if (!this->supportsVdiCreate(srData))
+            if (!this->supportsVdiCreate(sr))
             {
                 reason = "Storage is read-only";
                 return false;
             }
-            if (!this->canFitDisks(srData))
+            if (!this->canFitDisks(sr))
             {
                 reason = "Insufficient free space";
                 return false;
@@ -570,22 +570,22 @@ bool SrPicker::canBeEnabled(const QString& srRef, const QVariantMap& srData, QSt
                 reason = "Current location";
                 return false;
             }
-            if (!this->supportsStorageMigration(srData))
+            if (!this->supportsStorageMigration(sr))
             {
                 reason = "Unsupported SR type";
                 return false;
             }
-            if (!this->supportsVdiCreate(srData))
+            if (!this->supportsVdiCreate(sr))
             {
                 reason = "Storage is read-only";
                 return false;
             }
-            if (this->isDetached(srRef, srData))
+            if (this->isDetached(sr))
             {
                 reason = "SR is detached";
                 return false;
             }
-            if (!this->canFitDisks(srData))
+            if (!this->canFitDisks(sr))
             {
                 reason = "Insufficient free space";
                 return false;
@@ -594,17 +594,17 @@ bool SrPicker::canBeEnabled(const QString& srRef, const QVariantMap& srData, QSt
 
         case Copy:
             // SrPickerCopyItem: !IsDetached && SupportsVdiCreate && CanFitDisks
-            if (this->isDetached(srRef, srData))
+            if (this->isDetached(sr))
             {
                 reason = "SR is detached";
                 return false;
             }
-            if (!this->supportsVdiCreate(srData))
+            if (!this->supportsVdiCreate(sr))
             {
                 reason = "Storage is read-only";
                 return false;
             }
-            if (!this->canFitDisks(srData))
+            if (!this->canFitDisks(sr))
             {
                 reason = "Insufficient free space";
                 return false;
@@ -613,17 +613,17 @@ bool SrPicker::canBeEnabled(const QString& srRef, const QVariantMap& srData, QSt
 
         case InstallFromTemplate:
             // SrPickerInstallFromTemplateItem: SupportsVdiCreate && !IsDetached && CanFitDisks
-            if (!this->supportsVdiCreate(srData))
+            if (!this->supportsVdiCreate(sr))
             {
                 reason = "Storage is read-only";
                 return false;
             }
-            if (this->isDetached(srRef, srData))
+            if (this->isDetached(sr))
             {
                 reason = "SR is detached";
                 return false;
             }
-            if (!this->canFitDisks(srData))
+            if (!this->canFitDisks(sr))
             {
                 reason = "Insufficient free space";
                 return false;
@@ -633,22 +633,22 @@ bool SrPicker::canBeEnabled(const QString& srRef, const QVariantMap& srData, QSt
         case VM:
         case LunPerVDI:
             // SrPickerVmItem: CanBeSeenFromAffinity && SupportsVdiCreate && !IsBroken && CanFitDisks
-            if (!this->canBeSeenFromAffinity(srRef, srData))
+            if (!this->canBeSeenFromAffinity(sr))
             {
                 reason = "SR cannot be seen from affinity host";
                 return false;
             }
-            if (!this->supportsVdiCreate(srData))
+            if (!this->supportsVdiCreate(sr))
             {
                 reason = "Storage is read-only";
                 return false;
             }
-            if (this->isBroken(srRef, srData))
+            if (this->isBroken(sr))
             {
                 reason = "SR is broken";
                 return false;
             }
-            if (!this->canFitDisks(srData))
+            if (!this->canFitDisks(sr))
             {
                 reason = "Insufficient free space";
                 return false;
@@ -659,10 +659,12 @@ bool SrPicker::canBeEnabled(const QString& srRef, const QVariantMap& srData, QSt
     return true;
 }
 
-qint64 SrPicker::calculateFreeSpace(const QVariantMap& srData) const
+qint64 SrPicker::calculateFreeSpace(const QSharedPointer<SR>& sr) const
 {
-    qint64 physicalSize = srData.value("physical_size", 0).toLongLong();
-    qint64 utilisation = srData.value("physical_utilisation", 0).toLongLong();
+    if (!sr)
+        return 0;
+    qint64 physicalSize = sr->PhysicalSize();
+    qint64 utilisation = sr->PhysicalUtilisation();
     return physicalSize - utilisation;
 }
 
@@ -756,107 +758,97 @@ bool SrPicker::isCurrentLocation(const QString& srRef) const
     // Check if all existing VDIs are in this SR
     for (const QString& vdiRef : this->m_existingVDIRefs)
     {
-        QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
-        QString vdiSR = vdiData.value("SR").toString();
-        if (vdiSR != srRef)
+        QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+        QSharedPointer<SR> vdiSr = vdi ? vdi->GetSR() : QSharedPointer<SR>();
+        if (!vdiSr || vdiSr->OpaqueRef() != srRef)
             return false;
     }
 
     return true;
 }
 
-bool SrPicker::isBroken(const QString& srRef, const QVariantMap& srData) const
+bool SrPicker::isBroken(const QSharedPointer<SR>& sr) const
 {
-    Q_UNUSED(srRef);
-
     // C# SR.IsBroken() checks if SR is unavailable/broken
     // For now, check if all PBDs are detached
-    QVariantList pbdRefs = srData.value("PBDs").toList();
-    if (pbdRefs.isEmpty())
+    if (!sr)
+        return true;
+
+    const QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
+    if (pbds.isEmpty())
         return true;
 
     // If at least one PBD is attached, SR is not broken
-    for (const QVariant& pbdRefVar : pbdRefs)
+    for (const QSharedPointer<PBD>& pbd : pbds)
     {
-        QString pbdRef = pbdRefVar.toString();
-        QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
-        if (pbdData.value("currently_attached", false).toBool())
+        if (pbd && pbd->IsCurrentlyAttached())
             return false;
     }
 
     return true;
 }
 
-bool SrPicker::isDetached(const QString& srRef, const QVariantMap& srData) const
+bool SrPicker::isDetached(const QSharedPointer<SR>& sr) const
 {
-    Q_UNUSED(srRef);
-
     // C# SR.IsDetached() checks if SR is detached
-    QVariantList pbdRefs = srData.value("PBDs").toList();
-    if (pbdRefs.isEmpty())
+    if (!sr)
+        return true;
+
+    const QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
+    if (pbds.isEmpty())
         return true;
 
     // If at least one PBD is attached, SR is not detached
-    for (const QVariant& pbdRefVar : pbdRefs)
+    for (const QSharedPointer<PBD>& pbd : pbds)
     {
-        QString pbdRef = pbdRefVar.toString();
-        QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
-        if (pbdData.value("currently_attached", false).toBool())
+        if (pbd && pbd->IsCurrentlyAttached())
             return false;
     }
 
     return true;
 }
 
-bool SrPicker::supportsVdiCreate(const QVariantMap& srData) const
+bool SrPicker::supportsVdiCreate(const QSharedPointer<SR>& sr) const
 {
     // Check allowed_operations for "vdi_create"
-    QVariantList allowedOps = srData.value("allowed_operations").toList();
-    for (const QVariant& opVar : allowedOps)
-    {
-        if (opVar.toString() == "vdi_create")
-            return true;
-    }
-    return false;
+    return sr && sr->AllowedOperations().contains("vdi_create");
 }
 
-bool SrPicker::supportsStorageMigration(const QVariantMap& srData) const
+bool SrPicker::supportsStorageMigration(const QSharedPointer<SR>& sr) const
 {
-    Q_UNUSED(srData);
-    // C# SR.SupportsStorageMigration() - most SR types support it
-    // For simplification, return true (this would need more complex logic for specific SR types)
-    return true;
+    return sr ? sr->SupportsStorageMigration() : false;
 }
 
-bool SrPicker::canBeSeenFromAffinity(const QString& srRef, const QVariantMap& srData) const
+bool SrPicker::canBeSeenFromAffinity(const QSharedPointer<SR>& sr) const
 {
-    Q_UNUSED(srRef);
-
     if (this->m_affinityRef.isEmpty())
     {
         // No affinity - SR must be shared
-        return srData.value("shared", false).toBool();
+        return sr && sr->IsShared();
     }
 
     // Check if SR has a PBD on the affinity host
-    QVariantList pbdRefs = srData.value("PBDs").toList();
-    for (const QVariant& pbdRefVar : pbdRefs)
+    if (!sr)
+        return false;
+
+    const QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
+    for (const QSharedPointer<PBD>& pbd : pbds)
     {
-        QString pbdRef = pbdRefVar.toString();
-        QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
-        QString hostRef = pbdData.value("host").toString();
+        if (!pbd)
+            continue;
+        QString hostRef = pbd->GetHostRef();
 
         if (hostRef == this->m_affinityRef)
         {
             // Found matching PBD - check if attached
-            return pbdData.value("currently_attached", false).toBool();
+            return pbd->IsCurrentlyAttached();
         }
     }
 
     return false;
 }
 
-bool SrPicker::canFitDisks(const QVariantMap& srData) const
+bool SrPicker::canFitDisks(const QSharedPointer<SR>& sr) const
 {
     if (this->m_existingVDIRefs.isEmpty())
         return true;
@@ -864,10 +856,11 @@ bool SrPicker::canFitDisks(const QVariantMap& srData) const
     qint64 requiredSpace = 0;
     for (const QString& vdiRef : this->m_existingVDIRefs)
     {
-        QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
-        requiredSpace += vdiData.value("virtual_size", 0).toLongLong();
+        QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+        if (vdi)
+            requiredSpace += vdi->VirtualSize();
     }
 
-    qint64 freeSpace = this->calculateFreeSpace(srData);
+    qint64 freeSpace = this->calculateFreeSpace(sr);
     return freeSpace >= requiredSpace;
 }

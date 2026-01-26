@@ -25,19 +25,24 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "physicalstoragetabpage.h"
-#include "ui_physicalstoragetabpage.h"
-#include "xencache.h"
-#include "../mainwindow.h"
-#include "../commands/storage/newsrcommand.h"
-#include "../commands/storage/trimsrcommand.h"
-#include "../commands/storage/detachsrcommand.h"
-#include "../commands/storage/storagepropertiescommand.h"
 #include <QTableWidgetItem>
 #include <QMenu>
 #include <QDebug>
 #include <QMessageBox>
 #include <algorithm>
+#include "physicalstoragetabpage.h"
+#include "ui_physicalstoragetabpage.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/pbd.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/utils/misc.h"
+#include "../mainwindow.h"
+#include "../commands/storage/newsrcommand.h"
+#include "../commands/storage/trimsrcommand.h"
+#include "../commands/storage/detachsrcommand.h"
+#include "../commands/storage/storagepropertiescommand.h"
 
 PhysicalStorageTabPage::PhysicalStorageTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::PhysicalStorageTabPage)
 {
@@ -89,8 +94,7 @@ void PhysicalStorageTabPage::refreshContent()
     if (this->m_objectType == "host")
     {
         this->populateHostStorage();
-    }
-    else if (this->m_objectType == "pool")
+    } else if (this->m_objectType == "pool")
     {
         this->populatePoolStorage();
     }
@@ -110,54 +114,39 @@ void PhysicalStorageTabPage::populateHostStorage()
         return;
     }
 
-    // Get host record to find PBDs
-    QVariantMap hostData = this->m_connection->GetCache()->ResolveObjectData("host", this->m_objectRef);
-    QVariantList pbdRefs = hostData.value("PBDs", QVariantList()).toList();
-
-    if (pbdRefs.isEmpty())
-    {
+    QSharedPointer<Host> host = this->m_connection->GetCache()->ResolveObject<Host>("host", this->m_objectRef);
+    if (!host || !host->IsValid())
         return;
-    }
 
     // Build list of SRs from PBDs
     // C# uses host.PBDs to find connected SRs (lines 230-250)
     QList<QString> srRefsList;
     QHash<QString, bool> srPluggedStatus;
 
-    for (const QVariant& pbdVar : pbdRefs)
+    const QList<QSharedPointer<PBD>> pbds = host->GetPBDs();
+    for (const QSharedPointer<PBD>& pbd : pbds)
     {
-        QString pbdRef = pbdVar.toString();
-        QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
-
-        if (pbdData.isEmpty())
+        if (!pbd || !pbd->IsValid())
             continue;
 
-        QString srRef = pbdData.value("SR").toString();
-        QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
-
-        if (srData.isEmpty())
+        QSharedPointer<SR> sr = pbd->GetSR();
+        if (!sr || !sr->IsValid())
             continue;
 
         // Filter out Tools SR and hidden SRs
         // C# checks: sr.IsToolsSR() || !sr.Show(Settings.ShowHiddenVMs) (line 242)
-        QString srType = srData.value("type", "").toString();
-        bool isToolsSR = (srType == "udev"); // Tools SR has type "udev"
-
-        // Check if SR is marked as hidden in other_config
-        QVariantMap otherConfig = srData.value("other_config").toMap();
-        bool isHidden = otherConfig.value("XenCenter.CustomFields.hidden", false).toBool();
-
-        if (isToolsSR || isHidden)
+        if (sr->IsToolsSR() || sr->IsHidden())
             continue;
 
         // Don't add duplicates (C# line 246: if (index >= 0) continue;)
+        QString srRef = sr->OpaqueRef();
         if (srRefsList.contains(srRef))
             continue;
 
         srRefsList.append(srRef);
 
         // Track if this PBD is plugged (currently_attached)
-        bool isPlugged = pbdData.value("currently_attached", false).toBool();
+        bool isPlugged = pbd->IsCurrentlyAttached();
         srPluggedStatus[srRef] = isPlugged;
     }
 
@@ -167,47 +156,34 @@ void PhysicalStorageTabPage::populateHostStorage()
     // Now add rows for each SR
     for (const QString& srRef : srRefsList)
     {
-        QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
-
-        if (srData.isEmpty())
+        QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+        if (!sr || !sr->IsValid())
             continue;
 
-        QString name = srData.value("name_label", "Unknown").toString();
-        QString description = srData.value("name_description", "").toString();
-        QString type = srData.value("type", "").toString();
+        QString name = sr->GetName();
+        QString description = sr->GetDescription();
+        QString type = sr->GetType();
 
         // Shared: check if SR is shared across multiple hosts
         // C# checks sr.shared (line in SRRow.UpdateDetails)
-        bool shared = srData.value("shared", false).toBool();
+        bool shared = sr->IsShared();
         QString sharedText = shared ? "Yes" : "No";
 
         // Calculate usage, size, and virtual allocation
         // C# uses sr.PhysicalSize, sr.PhysicalUtilisation, sr.VirtualAllocation
-        qint64 physicalSize = srData.value("physical_size", 0).toLongLong();
-        qint64 physicalUtilisation = srData.value("physical_utilisation", 0).toLongLong();
+        qint64 physicalSize = sr->PhysicalSize();
+        qint64 physicalUtilisation = sr->PhysicalUtilisation();
 
         // Calculate virtual allocation (sum of all VDI virtual_size in this SR)
         qint64 virtualAllocation = 0;
-        QVariantList vdiRefs = srData.value("VDIs", QVariantList()).toList();
-        for (const QVariant& vdiVar : vdiRefs)
+        const QList<QSharedPointer<VDI>> vdis = sr->GetVDIs();
+        for (const QSharedPointer<VDI>& vdi : vdis)
         {
-            QString vdiRef = vdiVar.toString();
-            QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
-            if (!vdiData.isEmpty())
-            {
-                virtualAllocation += vdiData.value("virtual_size", 0).toLongLong();
-            }
+            if (vdi && vdi->IsValid())
+                virtualAllocation += vdi->VirtualSize();
         }
 
-        // Format sizes in human-readable format
-        auto formatSize = [](qint64 bytes) -> QString {
-            if (bytes <= 0)
-                return "N/A";
-            double gb = bytes / (1024.0 * 1024.0 * 1024.0);
-            return QString::number(gb, 'f', 2) + " GB";
-        };
-
-        QString sizeText = formatSize(physicalSize);
+        QString sizeText = Misc::FormatMemorySize(physicalSize);
         QString usageText = "N/A";
         if (physicalSize > 0)
         {
@@ -216,7 +192,7 @@ void PhysicalStorageTabPage::populateHostStorage()
             usageText = QString::number(usedGB, 'f', 2) + " GB (" +
                         QString::number(percent, 'f', 1) + "%)";
         }
-        QString virtAllocText = formatSize(virtualAllocation);
+        QString virtAllocText = Misc::FormatMemorySize(virtualAllocation);
 
         // Add row to table
         int row = this->ui->storageTable->rowCount();
@@ -270,27 +246,21 @@ void PhysicalStorageTabPage::populatePoolStorage()
 
     // For pools, show all SRs in the pool
     // C#: List<PBD> pbds = host != null ? connection.ResolveAll(host.PBDs) : connection.Cache.PBDs (line 230)
-    QList<QVariantMap> allSRs = this->m_connection->GetCache()->GetAllData("sr");
+    QList<QSharedPointer<SR>> allSRs = this->m_connection->GetCache()->GetAll<SR>("sr");
 
     QList<QString> srRefsList;
 
-    for (const QVariantMap& srData : allSRs)
+    for (const QSharedPointer<SR>& sr : allSRs)
     {
-        QString srRef = srData.value("ref", "").toString();
+        if (!sr || !sr->IsValid())
+            continue;
 
         // Filter out Tools SR and hidden SRs
         // C# checks: sr.IsToolsSR() || !sr.Show(Settings.ShowHiddenVMs) (line 242)
-        QString srType = srData.value("type", "").toString();
-        bool isToolsSR = (srType == "udev"); // Tools SR has type "udev"
-
-        // Check if SR is marked as hidden in other_config
-        QVariantMap otherConfig = srData.value("other_config").toMap();
-        bool isHidden = otherConfig.value("XenCenter.CustomFields.hidden", false).toBool();
-
-        if (isToolsSR || isHidden)
+        if (sr->IsToolsSR() || sr->IsHidden())
             continue;
 
-        srRefsList.append(srRef);
+        srRefsList.append(sr->OpaqueRef());
     }
 
     // Sort SR list (C# inserts in sorted order using BinarySearch)
@@ -299,34 +269,29 @@ void PhysicalStorageTabPage::populatePoolStorage()
     // Now add rows for each SR
     for (const QString& srRef : srRefsList)
     {
-        QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
-
-        if (srData.isEmpty())
+        QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+        if (!sr || !sr->IsValid())
             continue;
 
-        QString name = srData.value("name_label", "Unknown").toString();
-        QString description = srData.value("name_description", "").toString();
-        QString type = srData.value("type", "").toString();
+        QString name = sr->GetName();
+        QString description = sr->GetDescription();
+        QString type = sr->GetType();
 
         // Shared: check if SR is shared across multiple hosts
-        bool shared = srData.value("shared", false).toBool();
+        bool shared = sr->IsShared();
         QString sharedText = shared ? "Yes" : "No";
 
         // Calculate usage, size, and virtual allocation
-        qint64 physicalSize = srData.value("physical_size", 0).toLongLong();
-        qint64 physicalUtilisation = srData.value("physical_utilisation", 0).toLongLong();
+        qint64 physicalSize = sr->PhysicalSize();
+        qint64 physicalUtilisation = sr->PhysicalUtilisation();
 
         // Calculate virtual allocation (sum of all VDI virtual_size in this SR)
         qint64 virtualAllocation = 0;
-        QVariantList vdiRefs = srData.value("VDIs", QVariantList()).toList();
-        for (const QVariant& vdiVar : vdiRefs)
+        const QList<QSharedPointer<VDI>> vdis = sr->GetVDIs();
+        for (const QSharedPointer<VDI>& vdi : vdis)
         {
-            QString vdiRef = vdiVar.toString();
-            QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
-            if (!vdiData.isEmpty())
-            {
-                virtualAllocation += vdiData.value("virtual_size", 0).toLongLong();
-            }
+            if (vdi && vdi->IsValid())
+                virtualAllocation += vdi->VirtualSize();
         }
 
         // Format sizes in human-readable format
@@ -448,8 +413,7 @@ void PhysicalStorageTabPage::onNewSRButtonClicked()
     NewSRCommand command(mainWindow);
     if (!command.CanRun())
     {
-        QMessageBox::warning(this, tr("Cannot Create Storage Repository"),
-                             tr("Storage repository creation is not available right now."));
+        QMessageBox::warning(this, tr("Cannot Create Storage Repository"), tr("Storage repository creation is not available right now."));
         return;
     }
 
@@ -471,8 +435,7 @@ void PhysicalStorageTabPage::onTrimButtonClicked()
 
     if (!command.CanRun())
     {
-        QMessageBox::warning(this, tr("Cannot Trim Storage Repository"),
-                             tr("The selected storage repository cannot be trimmed at this time."));
+        QMessageBox::warning(this, tr("Cannot Trim Storage Repository"), tr("The selected storage repository cannot be trimmed at this time."));
         return;
     }
 
@@ -517,7 +480,8 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
     NewSRCommand newCmd(mainWindow);
     QAction* newAction = menu.addAction(tr("New Storage Repository..."));
     newAction->setEnabled(newCmd.CanRun());
-    connect(newAction, &QAction::triggered, this, [mainWindow]() {
+    connect(newAction, &QAction::triggered, this, [mainWindow]()
+    {
         NewSRCommand cmd(mainWindow);
         if (cmd.CanRun())
             cmd.Run();
@@ -529,7 +493,8 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
         trimCmd.setTargetSR(srRef);
         QAction* trimAction = menu.addAction(tr("Reclaim Freed Space..."));
         trimAction->setEnabled(trimCmd.CanRun());
-        connect(trimAction, &QAction::triggered, this, [mainWindow, srRef]() {
+        connect(trimAction, &QAction::triggered, this, [mainWindow, srRef]()
+        {
             TrimSRCommand cmd(mainWindow);
             cmd.setTargetSR(srRef);
             if (cmd.CanRun())
@@ -540,7 +505,8 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
         detachCmd.setTargetSR(srRef);
         QAction* detachAction = menu.addAction(tr("Detach Storage Repository"));
         detachAction->setEnabled(detachCmd.CanRun());
-        connect(detachAction, &QAction::triggered, this, [mainWindow, srRef]() {
+        connect(detachAction, &QAction::triggered, this, [mainWindow, srRef]()
+        {
             DetachSRCommand cmd(mainWindow);
             cmd.setTargetSR(srRef);
             if (cmd.CanRun())
@@ -552,7 +518,8 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
         QAction* propsAction = menu.addAction(tr("Properties..."));
         propsAction->setEnabled(propsCmd.CanRun());
         XenConnection *cn = this->m_connection;
-        connect(propsAction, &QAction::triggered, this, [mainWindow, srRef, cn]() {
+        connect(propsAction, &QAction::triggered, this, [mainWindow, srRef, cn]()
+        {
             StoragePropertiesCommand cmd(mainWindow);
             cmd.setTargetSR(srRef, cn);
             if (cmd.CanRun())

@@ -30,8 +30,7 @@
 #include <QStyleOption>
 #include <QStyle>
 
-DecentGroupBox::DecentGroupBox(QWidget* parent)
-    : QGroupBox(parent)
+DecentGroupBox::DecentGroupBox(QWidget* parent) : QGroupBox(parent)
 {
     // Set default styling to match C# DecentGroupBox
     // Using stylesheet for consistent cross-platform appearance
@@ -52,8 +51,7 @@ DecentGroupBox::DecentGroupBox(QWidget* parent)
     );
 }
 
-DecentGroupBox::DecentGroupBox(const QString& title, QWidget* parent)
-    : DecentGroupBox(parent)
+DecentGroupBox::DecentGroupBox(const QString& title, QWidget* parent) : DecentGroupBox(parent)
 {
     this->setTitle(title);
 }

@@ -32,6 +32,8 @@
 #include <QSet>
 
 class VM;
+class VBD;
+class VDI;
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -113,12 +115,8 @@ class VMStorageTabPage : public BaseTabPage
         QStringList getSelectedVBDRefs() const;
         QStringList getSelectedVDIRefs() const;
 
-        bool canActivateVBD(const QVariantMap& vbdData,
-                            const QVariantMap& vdiData,
-                            const QVariantMap& vmData) const;
-        bool canDeactivateVBD(const QVariantMap& vbdData,
-                              const QVariantMap& vdiData,
-                              const QVariantMap& vmData) const;
+        bool canActivateVBD(const QSharedPointer<VBD>& vbd, const QSharedPointer<VDI>& vdi, const QSharedPointer<VM>& vm) const;
+        bool canDeactivateVBD(const QSharedPointer<VBD>& vbd, const QSharedPointer<VDI>& vdi, const QSharedPointer<VM>& vm) const;
         void runVbdPlugOperations(const QStringList& vbdRefs, bool plug);
         void runDetachOperations(const QStringList& vdiRefs);
         void runDeleteOperations(const QStringList& vdiRefs);

@@ -25,24 +25,27 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "srstoragetabpage.h"
-#include "ui_srstoragetabpage.h"
-#include "xencache.h"
-#include "xen/network/connection.h"
-#include "xen/vdi.h"
-#include "xen/xenapi/xenapi_VDI.h"
-#include "dialogs/movevirtualdiskdialog.h"
-#include "dialogs/vdipropertiesdialog.h"
-#include "dialogs/operationprogressdialog.h"
-#include "xen/actions/sr/srrefreshaction.h"
-#include "xen/actions/vdi/destroydiskaction.h"
-#include "xen/sr.h"
-#include "../operations/operationmanager.h"
 #include <QTableWidgetItem>
 #include <QHeaderView>
 #include <QMenu>
 #include <QMessageBox>
 #include <QTimer>
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/pbd.h"
+#include "xenlib/xen/vbd.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/xenapi/xenapi_VDI.h"
+#include "xenlib/xen/actions/sr/srrefreshaction.h"
+#include "xenlib/xen/actions/vdi/destroydiskaction.h"
+#include "xenlib/xen/sr.h"
+#include "srstoragetabpage.h"
+#include "ui_srstoragetabpage.h"
+#include "dialogs/movevirtualdiskdialog.h"
+#include "dialogs/vdipropertiesdialog.h"
+#include "dialogs/operationprogressdialog.h"
+#include "../operations/operationmanager.h"
 
 SrStorageTabPage::SrStorageTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::SrStorageTabPage)
 {
@@ -87,7 +90,7 @@ void SrStorageTabPage::refreshContent()
 {
     this->ui->storageTable->setRowCount(0);
 
-    if (this->m_objectType != "sr" || this->m_objectData.isEmpty())
+    if (!this->GetSR())
     {
         this->updateButtonStates();
         return;
@@ -101,36 +104,32 @@ void SrStorageTabPage::populateSRStorage()
 {
     this->ui->titleLabel->setText("Virtual Disks");
 
-    if (!this->m_connection)
+    QSharedPointer<SR> sr = this->GetSR();
+    if (!sr)
         return;
 
-    QVariantList vdiRefs = this->m_objectData.value("VDIs").toList();
+    const QList<QSharedPointer<VDI>> vdis = sr->GetVDIs();
 
     this->ui->storageTable->setColumnCount(5);
     this->ui->storageTable->setHorizontalHeaderLabels(
         QStringList() << "Name" << "Description" << "Size" << "VM" << "CBT");
 
-    for (const QVariant& vdiVar : vdiRefs)
+    for (const QSharedPointer<VDI>& vdi : vdis)
     {
-        QString vdiRef = vdiVar.toString();
-        QVariantMap vdiRecord = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
-
-        if (vdiRecord.isEmpty())
-        {
+        if (!vdi || !vdi->IsValid())
             continue;
-        }
 
-        bool isSnapshot = vdiRecord.value("is_a_snapshot", false).toBool();
-        QVariantMap smConfig = vdiRecord.value("sm_config").toMap();
+        bool isSnapshot = vdi->IsSnapshot();
+        QVariantMap smConfig = vdi->SMConfig();
         if (isSnapshot || smConfig.contains("base_mirror"))
         {
             continue;
         }
 
-        QString vdiName = vdiRecord.value("name_label", "").toString();
-        QString vdiDescription = vdiRecord.value("name_description", "").toString();
+        QString vdiName = vdi->GetName();
+        QString vdiDescription = vdi->GetDescription();
 
-        qint64 virtualSize = vdiRecord.value("virtual_size", 0).toLongLong();
+        qint64 virtualSize = vdi->VirtualSize();
         QString sizeText = "N/A";
         if (virtualSize > 0)
         {
@@ -139,21 +138,16 @@ void SrStorageTabPage::populateSRStorage()
         }
 
         QStringList vmNames;
-        QVariantList vbdRefs = vdiRecord.value("VBDs").toList();
-        for (const QVariant& vbdVar : vbdRefs)
+        const QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();
+        for (const QSharedPointer<VBD>& vbd : vbds)
         {
-            QString vbdRef = vbdVar.toString();
-            QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
-            if (vbdData.isEmpty())
-            {
+            if (!vbd)
                 continue;
-            }
 
-            QString vmRef = vbdData.value("VM").toString();
-            QVariantMap vmData = this->m_connection->GetCache()->ResolveObjectData("vm", vmRef);
-            if (!vmData.isEmpty())
+            QSharedPointer<VM> vm = vbd->GetVM();
+            if (vm && vm->IsValid())
             {
-                QString vmName = vmData.value("name_label", "Unknown").toString();
+                QString vmName = vm->GetName();
                 if (!vmNames.contains(vmName))
                 {
                     vmNames.append(vmName);
@@ -163,14 +157,14 @@ void SrStorageTabPage::populateSRStorage()
 
         QString vmString = vmNames.isEmpty() ? "-" : vmNames.join(", ");
 
-        bool cbtEnabled = vdiRecord.value("cbt_enabled", false).toBool();
+        bool cbtEnabled = vdi->IsCBTEnabled();
         QString cbtStatus = cbtEnabled ? "Enabled" : "-";
 
         int row = this->ui->storageTable->rowCount();
         this->ui->storageTable->insertRow(row);
 
         QTableWidgetItem* nameItem = new QTableWidgetItem(vdiName);
-        nameItem->setData(Qt::UserRole, vdiRef);
+        nameItem->setData(Qt::UserRole, vdi->OpaqueRef());
         this->ui->storageTable->setItem(row, 0, nameItem);
         this->ui->storageTable->setItem(row, 1, new QTableWidgetItem(vdiDescription));
         this->ui->storageTable->setItem(row, 2, new QTableWidgetItem(sizeText));
@@ -188,37 +182,45 @@ QString SrStorageTabPage::getSelectedVDIRef() const
 {
     QList<QTableWidgetItem*> selectedItems = this->ui->storageTable->selectedItems();
     if (selectedItems.isEmpty())
-    {
         return QString();
-    }
 
     int row = selectedItems.first()->row();
+
     QTableWidgetItem* item = this->ui->storageTable->item(row, 0);
     if (!item)
-    {
         return QString();
-    }
 
     return item->data(Qt::UserRole).toString();
 }
 
+QSharedPointer<VDI> SrStorageTabPage::getSelectedVDI() const
+{
+    if (!this->m_connection)
+        return QSharedPointer<VDI>();
+
+    const QString vdiRef = this->getSelectedVDIRef();
+    if (vdiRef.isEmpty())
+        return QSharedPointer<VDI>();
+
+    return this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+}
+
 void SrStorageTabPage::updateButtonStates()
 {
+    QSharedPointer<SR> sr = this->GetSR();
     bool hasSelection = !this->getSelectedVDIRef().isEmpty();
-    bool srAvailable = !this->m_objectData.isEmpty();
+    bool srAvailable = sr && sr->IsValid();
 
-    QVariantList srAllowedOps = this->m_objectData.value("allowed_operations", QVariantList()).toList();
+    const QStringList srAllowedOps = sr ? sr->AllowedOperations() : QStringList();
     bool srLocked = srAllowedOps.isEmpty();
 
     bool srDetached = true;
-    QVariantList pbdRefs = this->m_objectData.value("PBDs", QVariantList()).toList();
-    if (this->m_connection)
+    if (sr)
     {
-        for (const QVariant& pbdVar : pbdRefs)
+        const QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
+        for (const QSharedPointer<PBD>& pbd : pbds)
         {
-            QString pbdRef = pbdVar.toString();
-            QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
-            if (pbdData.value("currently_attached", false).toBool())
+            if (pbd && pbd->IsCurrentlyAttached())
             {
                 srDetached = false;
                 break;
@@ -232,14 +234,13 @@ void SrStorageTabPage::updateButtonStates()
 
     if (hasSelection && this->m_connection)
     {
-        QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", this->getSelectedVDIRef());
-        bool isSnapshot = vdiData.value("is_a_snapshot", false).toBool();
-        QVariantList vdiAllowed = vdiData.value("allowed_operations", QVariantList()).toList();
+        QSharedPointer<VDI> vdi = this->getSelectedVDI();
+        bool isSnapshot = vdi && vdi->IsSnapshot();
+        QStringList vdiAllowed = vdi ? vdi->AllowedOperations() : QStringList();
         bool vdiLocked = vdiAllowed.isEmpty();
         this->ui->editButton->setEnabled(!isSnapshot && !vdiLocked && !srLocked);
         this->ui->deleteButton->setEnabled(!srLocked);
-    }
-    else
+    } else
     {
         this->ui->editButton->setEnabled(false);
         this->ui->deleteButton->setEnabled(false);
@@ -249,9 +250,7 @@ void SrStorageTabPage::updateButtonStates()
 void SrStorageTabPage::onRescanButtonClicked()
 {
     if (!this->m_connection || this->m_objectRef.isEmpty())
-    {
         return;
-    }
 
     SrRefreshAction* action = new SrRefreshAction(this->m_connection, this->m_objectRef);
     OperationManager::instance()->RegisterOperation(action);
@@ -267,13 +266,7 @@ void SrStorageTabPage::onAddButtonClicked()
 
 void SrStorageTabPage::onMoveButtonClicked()
 {
-    QString vdiRef = this->getSelectedVDIRef();
-    if (vdiRef.isEmpty() || !this->m_connection)
-    {
-        return;
-    }
-
-    QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+    QSharedPointer<VDI> vdi = this->getSelectedVDI();
     if (!vdi || !vdi->IsValid())
         return;
 
@@ -286,14 +279,13 @@ void SrStorageTabPage::onMoveButtonClicked()
 
 void SrStorageTabPage::onDeleteButtonClicked()
 {
-    QString vdiRef = this->getSelectedVDIRef();
-    if (vdiRef.isEmpty() || !this->m_connection)
-    {
+    QSharedPointer<VDI> vdi = this->getSelectedVDI();
+    if (!vdi)
         return;
-    }
 
-    QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
-    QString vdiName = vdiData.value("name_label", tr("Virtual Disk")).toString();
+    QString vdiName = vdi->GetName();
+    if (vdiName.isEmpty())
+        vdiName = tr("Virtual Disk");
 
     QMessageBox::StandardButton confirm = QMessageBox::question(
         this,
@@ -307,12 +299,13 @@ void SrStorageTabPage::onDeleteButtonClicked()
     }
 
     bool allowRunningDelete = false;
-    QVariantList vbdRefs = vdiData.value("VBDs").toList();
-    for (const QVariant& vbdVar : vbdRefs)
+    const QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        QString vbdRef = vbdVar.toString();
-        QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
-        if (vbdData.value("currently_attached", false).toBool())
+        if (!vbd)
+            continue;
+
+        if (vbd->CurrentlyAttached())
         {
             QMessageBox::StandardButton attachedConfirm = QMessageBox::question(
                 this,
@@ -330,7 +323,7 @@ void SrStorageTabPage::onDeleteButtonClicked()
         }
     }
 
-    DestroyDiskAction* action = new DestroyDiskAction(vdiRef, this->m_connection, allowRunningDelete, this);
+    DestroyDiskAction* action = new DestroyDiskAction(vdi->OpaqueRef(), vdi->GetConnection(), allowRunningDelete, this);
     OperationProgressDialog* dialog = new OperationProgressDialog(action, this);
     dialog->exec();
     delete dialog;
@@ -340,21 +333,13 @@ void SrStorageTabPage::onDeleteButtonClicked()
 
 void SrStorageTabPage::onEditButtonClicked()
 {
-    QString vdiRef = this->getSelectedVDIRef();
-    if (vdiRef.isEmpty() || !this->m_connection)
-    {
-        return;
-    }
-
-    QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+    QSharedPointer<VDI> vdi = this->getSelectedVDI();
     if (!vdi || !vdi->IsValid())
         return;
 
     VdiPropertiesDialog dialog(vdi, this);
     if (dialog.exec() != QDialog::Accepted || !dialog.hasChanges())
-    {
         return;
-    }
 
     if (!this->m_connection->GetSession())
         return;
@@ -366,9 +351,8 @@ void SrStorageTabPage::onEditButtonClicked()
     {
         try
         {
-            XenAPI::VDI::set_name_label(this->m_connection->GetSession(), vdiRef, newName);
-        }
-        catch (const std::exception&)
+            XenAPI::VDI::set_name_label(this->m_connection->GetSession(), vdi->OpaqueRef(), newName);
+        } catch (const std::exception&)
         {
             QMessageBox::warning(this, tr("Warning"), tr("Failed to update virtual disk name."));
             hasErrors = true;
@@ -381,9 +365,8 @@ void SrStorageTabPage::onEditButtonClicked()
     {
         try
         {
-            XenAPI::VDI::set_name_description(this->m_connection->GetSession(), vdiRef, newDescription);
-        }
-        catch (const std::exception&)
+            XenAPI::VDI::set_name_description(this->m_connection->GetSession(), vdi->OpaqueRef(), newDescription);
+        } catch (const std::exception&)
         {
             QMessageBox::warning(this, tr("Warning"), tr("Failed to update virtual disk description."));
             hasErrors = true;
@@ -396,9 +379,8 @@ void SrStorageTabPage::onEditButtonClicked()
     {
         try
         {
-            XenAPI::VDI::resize(this->m_connection->GetSession(), vdiRef, newSize);
-        }
-        catch (const std::exception&)
+            XenAPI::VDI::resize(this->m_connection->GetSession(), vdi->OpaqueRef(), newSize);
+        } catch (const std::exception&)
         {
             QMessageBox::warning(this, tr("Warning"), tr("Failed to resize virtual disk."));
             hasErrors = true;
@@ -460,22 +442,17 @@ void SrStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& po
 void SrStorageTabPage::requestSrRefresh(int delayMs)
 {
     if (!this->m_connection || this->m_objectRef.isEmpty())
-    {
         return;
-    }
 
-    auto request = [this]() {
+    auto request = [this]()
+    {
         SrRefreshAction* action = new SrRefreshAction(this->m_connection, this->m_objectRef);
         OperationManager::instance()->RegisterOperation(action);
         action->RunAsync();
     };
 
     if (delayMs <= 0)
-    {
         request();
-    }
     else
-    {
         QTimer::singleShot(delayMs, this, request);
-    }
 }

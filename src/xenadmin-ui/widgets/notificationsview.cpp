@@ -28,8 +28,7 @@
 #include "notificationsview.h"
 #include "ui_notificationsview.h"
 
-NotificationsView::NotificationsView(QWidget* parent)
-    : QWidget(parent), ui(new Ui::NotificationsView), m_alertsCount(0), m_eventsCount(0), m_alertsItem(nullptr), m_eventsItem(nullptr)
+NotificationsView::NotificationsView(QWidget* parent) : QWidget(parent), ui(new Ui::NotificationsView), m_alertsCount(0), m_eventsCount(0), m_alertsItem(nullptr), m_eventsItem(nullptr)
 {
     ui->setupUi(this);
 
@@ -96,12 +95,12 @@ QListWidgetItem* NotificationsView::getItemForSubMode(NavigationPane::Notificati
 {
     switch (subMode)
     {
-    case NavigationPane::Alerts:
-        return m_alertsItem;
-    case NavigationPane::Events:
-        return m_eventsItem;
-    default:
-        return nullptr;
+        case NavigationPane::Alerts:
+            return m_alertsItem;
+        case NavigationPane::Events:
+            return m_eventsItem;
+        default:
+            return nullptr;
     }
 }
 

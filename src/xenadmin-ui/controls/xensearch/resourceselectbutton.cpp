@@ -42,7 +42,7 @@ ResourceSelectButton::ResourceSelectButton(QWidget* parent)
 {
     // Create menu for dropdown
     QMenu* menu = new QMenu(this);
-    this->setMenu(menu);
+    this->SetMenu(menu);
     
     // Connect menu actions
     connect(menu, &QMenu::triggered, this, &ResourceSelectButton::onActionTriggered);
@@ -51,8 +51,8 @@ ResourceSelectButton::ResourceSelectButton(QWidget* parent)
 void ResourceSelectButton::Populate(Search* search)
 {
     // Clear existing items
-    if (this->menu())
-        this->menu()->clear();
+    if (this->GetMenu())
+        this->GetMenu()->clear();
     
     this->scope_ = (search && search->GetQuery()) ? search->GetQuery()->getQueryScope() : nullptr;
     
@@ -80,10 +80,10 @@ void ResourceSelectButton::setSelectedRef(const QString& ref)
     this->selectedRef_ = ref;
     
     // Find action with matching ref
-    if (!this->menu())
+    if (!this->GetMenu())
         return;
     
-    for (QAction* action : this->menu()->actions())
+    for (QAction* action : this->GetMenu()->actions())
     {
         QString actionRef = action->data().toString();
         if (actionRef == ref)
@@ -103,7 +103,7 @@ IAcceptGroups* ResourceSelectButton::Add(Grouping* grouping, const QVariant& gro
 {
     Q_UNUSED(grouping);
     
-    if (!this->menu())
+    if (!this->GetMenu())
         return nullptr;
     
     // Extract object ref from group variant
@@ -123,7 +123,7 @@ IAcceptGroups* ResourceSelectButton::Add(Grouping* grouping, const QVariant& gro
     text += name;
     
     // Create action
-    QAction* action = new QAction(text, this->menu());
+    QAction* action = new QAction(text, this->GetMenu());
     action->setData(objectRef);  // Store ref for selection
     
     // Set icon based on object type
@@ -140,7 +140,7 @@ IAcceptGroups* ResourceSelectButton::Add(Grouping* grouping, const QVariant& gro
         // so we just disable the item
     }
     
-    this->menu()->addAction(action);
+    this->GetMenu()->addAction(action);
     
     // Return nullptr - we don't support nested groups
     return nullptr;

@@ -236,8 +236,7 @@ void CopyVMDialog::enableMoveButton()
 
 void CopyVMDialog::enableRescanButton()
 {
-    this->ui->buttonRescan->setEnabled(this->ui->srPickerPanel->isEnabled() && 
-                                       this->ui->srPicker->CanBeScanned());
+    this->ui->buttonRescan->setEnabled(this->ui->srPickerPanel->isEnabled() && this->ui->srPicker->CanBeScanned());
 }
 
 QString CopyVMDialog::getDefaultCopyName(QSharedPointer<VM> vmToCopy)
@@ -246,15 +245,10 @@ QString CopyVMDialog::getDefaultCopyName(QSharedPointer<VM> vmToCopy)
         return QString();
 
     QStringList takenNames;
-    QStringList vmRefs = this->m_connection->GetCache()->GetAllRefs("vm");
-    
-    for (const QString& vmRef : vmRefs)
+    QList<QSharedPointer<VM>> vms = this->m_connection->GetCache()->GetAll<VM>("vm");
+    foreach (const QSharedPointer<VM>& vm, vms)
     {
-        QSharedPointer<VM> vm = this->m_connection->GetCache()->ResolveObject<VM>("vm", vmRef);
-        if (vm)
-        {
-            takenNames.append(vm->GetName());
-        }
+        takenNames.append(vm->GetName());
     }
 
     QString baseName = tr("Copy of %1").arg(vmToCopy->GetName());
@@ -343,8 +337,7 @@ void CopyVMDialog::accept()
     QString srRef = this->getSelectedSR();
     if (srRef.isEmpty())
     {
-        QMessageBox::warning(this, tr("No Storage Repository Selected"), 
-                           tr("Please select a Storage Repository for the copied disks."));
+        QMessageBox::warning(this, tr("No Storage Repository Selected"), tr("Please select a Storage Repository for the copied disks."));
         return;
     }
 

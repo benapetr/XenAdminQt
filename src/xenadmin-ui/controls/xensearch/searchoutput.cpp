@@ -160,5 +160,5 @@ void SearchOutput::onColumnsButtonClicked()
     }
     
     // Button will show the menu when clicked
-    this->columnsButton_->setMenu(columnsMenu);
+    this->columnsButton_->SetMenu(columnsMenu);
 }

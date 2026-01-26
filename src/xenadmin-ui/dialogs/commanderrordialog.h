@@ -72,11 +72,7 @@ class CommandErrorDialog : public QDialog
          * \param mode Whether the dialog should show a Close button, or OK and Cancel buttons
          * \param parent Parent widget
          */
-        explicit CommandErrorDialog(const QString& title,
-                                    const QString& text,
-                                    const QMap<QString, QString>& cantRunReasons,
-                                    DialogMode mode = DialogMode::Close,
-                                    QWidget* parent = nullptr);
+        explicit CommandErrorDialog(const QString& title, const QString& text, const QMap<QString, QString>& cantRunReasons, DialogMode mode = DialogMode::Close, QWidget* parent = nullptr);
 
         /*!
          * \brief Construct CommandErrorDialog with icon data
@@ -86,11 +82,7 @@ class CommandErrorDialog : public QDialog
          * \param mode Whether the dialog should show a Close button, or OK and Cancel buttons
          * \param parent Parent widget
          */
-        explicit CommandErrorDialog(const QString& title,
-                                    const QString& text,
-                                    const QMap<QString, QPair<QString, QString>>& cantRunReasons,
-                                    DialogMode mode = DialogMode::Close,
-                                    QWidget* parent = nullptr);
+        explicit CommandErrorDialog(const QString& title, const QString& text, const QMap<QString, QPair<QString, QString>>& cantRunReasons, DialogMode mode = DialogMode::Close, QWidget* parent = nullptr);
 
         /*!
          * \brief Construct CommandErrorDialog with XenObject pointers (matches C# version)
@@ -100,11 +92,7 @@ class CommandErrorDialog : public QDialog
          * \param mode Whether the dialog should show a Close button, or OK and Cancel buttons
          * \param parent Parent widget
          */
-        explicit CommandErrorDialog(const QString& title,
-                                    const QString& text,
-                                    const QHash<QSharedPointer<XenObject>, QString>& cantRunReasons,
-                                    DialogMode mode = DialogMode::Close,
-                                    QWidget* parent = nullptr);
+        explicit CommandErrorDialog(const QString& title, const QString& text, const QHash<QSharedPointer<XenObject>, QString>& cantRunReasons, DialogMode mode = DialogMode::Close, QWidget* parent = nullptr);
 
         ~CommandErrorDialog();
 

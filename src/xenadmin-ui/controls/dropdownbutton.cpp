@@ -30,10 +30,7 @@
 #include <QStyleOption>
 #include <QMouseEvent>
 
-DropDownButton::DropDownButton(const QString& text, QWidget* parent)
-    : QPushButton(text, parent),
-      menu_(nullptr),
-      ignoreNextClick_(false)
+DropDownButton::DropDownButton(const QString& text, QWidget* parent) : QPushButton(text, parent), m_menu(nullptr), m_ignoreNextClick(false)
 {
     // C# equivalent: DropDownButton() constructor (DropDownButton.cs line 42)
     // C# code:
@@ -49,43 +46,42 @@ DropDownButton::DropDownButton(const QString& text, QWidget* parent)
     this->setStyleSheet(this->styleSheet() + " padding-right: 20px;");
 }
 
-DropDownButton::DropDownButton(QWidget* parent)
-    : DropDownButton(QString(), parent)
+DropDownButton::DropDownButton(QWidget* parent) : DropDownButton(QString(), parent)
 {
 }
 
 DropDownButton::~DropDownButton()
 {
     // Menu is owned by this button if set via setMenu
-    if (this->menu_ && this->menu_->parent() == this)
+    if (this->m_menu && this->m_menu->parent() == this)
     {
-        delete this->menu_;
+        delete this->m_menu;
     }
 }
 
-void DropDownButton::setMenu(QMenu* menu)
+void DropDownButton::SetMenu(QMenu* menu)
 {
     // C# equivalent: ContextMenuStrip property setter
     // (implicitly through OnContextMenuStripChanged, DropDownButton.cs lines 52-74)
     
     // Disconnect old menu
-    if (this->menu_)
+    if (this->m_menu)
     {
-        disconnect(this->menu_, &QMenu::aboutToHide, this, &DropDownButton::onMenuAboutToHide);
+        disconnect(this->m_menu, &QMenu::aboutToHide, this, &DropDownButton::onMenuAboutToHide);
         
         // Delete old menu if we own it
-        if (this->menu_->parent() == this)
+        if (this->m_menu->parent() == this)
         {
-            delete this->menu_;
+            delete this->m_menu;
         }
     }
     
-    this->menu_ = menu;
+    this->m_menu = menu;
     
     // Connect new menu
-    if (this->menu_)
+    if (this->m_menu)
     {
-        connect(this->menu_, &QMenu::aboutToHide, this, &DropDownButton::onMenuAboutToHide);
+        connect(this->m_menu, &QMenu::aboutToHide, this, &DropDownButton::onMenuAboutToHide);
         
         // C# adds a dummy item if menu is empty so it can still open
         // Qt doesn't need this workaround
@@ -108,14 +104,14 @@ void DropDownButton::mousePressEvent(QMouseEvent* event)
     
     QPushButton::mousePressEvent(event);
     
-    if (this->menu_ && !this->ignoreNextClick_ && event->button() == Qt::LeftButton)
+    if (this->m_menu && !this->m_ignoreNextClick && event->button() == Qt::LeftButton)
     {
         // Show menu below the button
         QPoint menuPos = this->mapToGlobal(QPoint(0, this->height()));
-        this->menu_->exec(menuPos);
+        this->m_menu->exec(menuPos);
     }
     
-    this->ignoreNextClick_ = false;
+    this->m_ignoreNextClick = false;
 }
 
 void DropDownButton::onMenuAboutToHide()
@@ -132,7 +128,7 @@ void DropDownButton::onMenuAboutToHide()
     
     // Check if cursor is still over the button
     QPoint cursorPos = this->mapFromGlobal(QCursor::pos());
-    this->ignoreNextClick_ = this->rect().contains(cursorPos);
+    this->m_ignoreNextClick = this->rect().contains(cursorPos);
 }
 
 void DropDownButton::paintEvent(QPaintEvent* event)

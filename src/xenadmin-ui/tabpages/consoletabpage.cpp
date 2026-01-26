@@ -34,12 +34,11 @@
  * @brief Constructor
  * Reference: MainWindow.cs InitializeComponent - console tab setup
  */
-ConsoleTabPage::ConsoleTabPage(QWidget* parent)
-    : BaseTabPage(parent), ui(new Ui::ConsoleTabPage), m_consolePanel(nullptr)
+ConsoleTabPage::ConsoleTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::ConsoleTabPage), m_consolePanel(nullptr)
 {
     qDebug() << "ConsoleTabPage: Constructor";
 
-    ui->setupUi(this);
+    this->ui->setupUi(this);
 
     qDebug() << "ConsoleTabPage: Constructor complete";
 }
@@ -53,7 +52,7 @@ ConsoleTabPage::~ConsoleTabPage()
 
     // ConsolePanel is owned by MainWindow, don't delete it here
 
-    delete ui;
+    delete this->ui;
 }
 
 /**
@@ -74,21 +73,21 @@ void ConsoleTabPage::SetConsolePanel(ConsolePanel* consolePanel)
 {
     qDebug() << "ConsoleTabPage: setConsolePanel()";
 
-    if (m_consolePanel == consolePanel)
+    if (this->m_consolePanel == consolePanel)
         return;
 
     // Remove old panel if any
-    if (m_consolePanel)
+    if (this->m_consolePanel)
     {
-        ui->consolePanelLayout->removeWidget(m_consolePanel);
+        this->ui->consolePanelLayout->removeWidget(this->m_consolePanel);
     }
 
-    m_consolePanel = consolePanel;
+    this->m_consolePanel = consolePanel;
 
     // Add new panel to layout
-    if (m_consolePanel)
+    if (this->m_consolePanel)
     {
-        ui->consolePanelLayout->addWidget(m_consolePanel);
+        this->ui->consolePanelLayout->addWidget(this->m_consolePanel);
     }
 }
 

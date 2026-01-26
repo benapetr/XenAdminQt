@@ -25,22 +25,18 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <QTimer>
+#include <QDebug>
 #include "cdchanger.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/vbd.h"
-#include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/actions/vm/changevmisoaction.h"
 #include "xenlib/xen/asyncoperation.h"
-#include <QTimer>
-#include <QDebug>
 
-CDChanger::CDChanger(QWidget* parent)
-    : IsoDropDownBox(parent)
-    , changing_(false)
+CDChanger::CDChanger(QWidget* parent) : IsoDropDownBox(parent), changing_(false)
 {
-    connect(this, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &CDChanger::onCurrentIndexChanged);
+    connect(this, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &CDChanger::onCurrentIndexChanged);
 }
 
 CDChanger::~CDChanger()
@@ -76,8 +72,7 @@ void CDChanger::connectVbdSignals()
         return;
 
     // Monitor VBD property changes to update UI when CD is changed externally
-    connect(this->cdrom_.data(), &XenObject::dataChanged, 
-            this, &CDChanger::onVbdPropertyChanged);
+    connect(this->cdrom_.data(), &XenObject::dataChanged, this, &CDChanger::onVbdPropertyChanged);
 }
 
 void CDChanger::disconnectVbdSignals()
@@ -85,8 +80,7 @@ void CDChanger::disconnectVbdSignals()
     if (!this->cdrom_)
         return;
         
-    disconnect(this->cdrom_.data(), &XenObject::dataChanged,
-               this, &CDChanger::onVbdPropertyChanged);
+    disconnect(this->cdrom_.data(), &XenObject::dataChanged, this, &CDChanger::onVbdPropertyChanged);
 }
 
 void CDChanger::updateSelectedCd()

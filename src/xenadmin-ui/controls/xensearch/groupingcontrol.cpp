@@ -51,7 +51,7 @@ GroupingControl::GroupingControl(QWidget* parent)
     this->addGroupButton_->setFixedHeight(23);
     
     QMenu* addGroupMenu = new QMenu(this);
-    this->addGroupButton_->setMenu(addGroupMenu);
+    this->addGroupButton_->SetMenu(addGroupMenu);
     
     connect(this->addGroupButton_, &QPushButton::clicked, 
             this, &GroupingControl::onAddGroupButtonClicked);
@@ -211,7 +211,7 @@ DropDownButton* GroupingControl::newGroupButton(GroupingType* groupType)
     button->setProperty("groupingType", QVariant::fromValue(groupType));
 
     QMenu* menu = new QMenu(this);
-    button->setMenu(menu);
+    button->SetMenu(menu);
 
     connect(button, &QPushButton::clicked, 
             this, &GroupingControl::onGroupButtonClicked);
@@ -225,7 +225,7 @@ void GroupingControl::onGroupButtonClicked()
     if (!button)
         return;
 
-    QMenu* menu = button->menu();
+    QMenu* menu = button->GetMenu();
     if (!menu)
         return;
 
@@ -236,7 +236,7 @@ void GroupingControl::onGroupButtonClicked()
 
 void GroupingControl::onAddGroupButtonClicked()
 {
-    QMenu* menu = this->addGroupButton_->menu();
+    QMenu* menu = this->addGroupButton_->GetMenu();
     if (!menu)
         return;
 

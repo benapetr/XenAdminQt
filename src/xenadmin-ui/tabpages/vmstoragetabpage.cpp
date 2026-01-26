@@ -34,6 +34,7 @@
 #include "xen/vm.h"
 #include "xen/vbd.h"
 #include "xen/vdi.h"
+#include "xen/sr.h"
 #include "xen/xenapi/xenapi_VBD.h"
 #include "xen/xenapi/xenapi_VDI.h"
 #include "xen/xenapi/xenapi_VM.h"
@@ -182,7 +183,7 @@ void VMStorageTabPage::SetObject(QSharedPointer<XenObject> object)
 void VMStorageTabPage::onObjectDataReceived(QString type, QString ref, QVariantMap data)
 {
     // Check if this update is for our VM
-    if (type == "vm" && ref == this->m_objectRef)
+    if (type == "vm" && ref == this->m_object->OpaqueRef())
     {
         // Update our object data
         this->m_objectData = data;
@@ -225,7 +226,7 @@ void VMStorageTabPage::refreshContent()
 {
     this->ui->storageTable->setRowCount(0);
 
-    if (this->m_objectData.isEmpty() || this->m_objectType != "vm")
+    if (!this->m_object || this->m_object->GetObjectType() != "vm")
     {
         this->ui->cdDvdGroupBox->setVisible(false);
         this->updateStorageButtons();
@@ -251,8 +252,7 @@ bool VMStorageTabPage::eventFilter(QObject* watched, QEvent* event)
             if (selectedItems.isEmpty())
             {
                 pos = QPoint(3, this->ui->storageTable->horizontalHeader()->height() + 3);
-            }
-            else
+            } else
             {
                 int row = selectedItems.first()->row();
                 pos = QPoint(3, this->ui->storageTable->rowViewportPosition(row) + this->ui->storageTable->rowHeight(row) / 2);
@@ -271,9 +271,7 @@ void VMStorageTabPage::populateVMStorage()
     this->ui->titleLabel->setText("Virtual Disks");
 
     if (!this->m_connection || !this->m_connection->GetCache() || this->m_objectRef.isEmpty())
-    {
         return;
-    }
 
     const int kColumnPosition = 0;
     const int kColumnName = 1;
@@ -286,7 +284,7 @@ void VMStorageTabPage::populateVMStorage()
     const int kColumnActive = 8;
     const int kColumnDevicePath = 9;
 
-    QStringList selectedVbdRefs = getSelectedVBDRefs();
+    QStringList selectedVbdRefs = this->getSelectedVBDRefs();
     QSet<QString> selectedVbdSet;
     for (const QString& ref : selectedVbdRefs)
     {
@@ -300,21 +298,13 @@ void VMStorageTabPage::populateVMStorage()
 
     bool showHidden = SettingsManager::instance().getShowHiddenObjects();
     bool storageLinkColumnVisible = false;
-
-    // Get VBDs for this VM from cache (already populated by connection)
-    QVariantList vbdRefs = this->m_objectData.value("VBDs").toList();
-
-    for (const QVariant& vbdVar : vbdRefs)
+    const QList<QSharedPointer<VBD>> vbds = this->m_vm->GetVBDs();
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        QString vbdRef = vbdVar.toString();
-        QVariantMap vbdRecord = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
-
-        if (vbdRecord.isEmpty())
-        {
+        if (!vbd || !vbd->IsValid())
             continue;
-        }
 
-        QString type = vbdRecord.value("type", "").toString();
+        QString type = vbd->GetType();
 
         // Skip CD/DVD and Floppy drives - they're shown in the CD/DVD section
         if (type == "CD" || type == "Floppy")
@@ -322,51 +312,30 @@ void VMStorageTabPage::populateVMStorage()
             continue;
         }
 
-        // Get VDI information
-        QString vdiRef = vbdRecord.value("VDI", "").toString();
-
-        // Skip if no VDI attached (empty VBD)
-        if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
-        {
+        QSharedPointer<VDI> vdi = vbd->GetVDI();
+        if (!vdi || !vdi->IsValid())
             continue;
-        }
 
-        QVariantMap vdiRecord = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
-
-        if (vdiRecord.isEmpty())
-        {
+        if (!showHidden && vdi->IsHidden())
             continue;
-        }
 
-        QVariantMap vdiOtherConfig = vdiRecord.value("other_config").toMap();
-        bool isHidden = vdiOtherConfig.value("XenCenter.CustomFields.hidden", false).toBool();
-        if (!showHidden && isHidden)
-        {
+        QSharedPointer<SR> sr = vdi->GetSR();
+        if (!sr || !sr->IsValid())
             continue;
-        }
-
-        // Get SR information
-        QString srRef = vdiRecord.value("SR", "").toString();
-        QVariantMap srRecord = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
-
-        if (srRecord.isEmpty())
-        {
-            continue;
-        }
 
         // Skip tools SRs
-        QString srType = srRecord.value("type", "").toString();
+        QString srType = sr->GetType();
         if (srType == "udev")
         {
             continue;
         }
 
         // Build row data matching C# VBDRow
-        QString position = vbdRecord.value("userdevice", "").toString();
-        QString vdiName = vdiRecord.value("name_label", "").toString();
-        QString vdiDescription = vdiRecord.value("name_description", "").toString();
-        QString srName = srRecord.value("name_label", "Unknown").toString();
-        QVariantMap smConfig = vdiRecord.value("sm_config").toMap();
+        QString position = vbd->GetUserdevice();
+        QString vdiName = vdi->GetName();
+        QString vdiDescription = vdi->GetDescription();
+        QString srName = sr->GetName();
+        QVariantMap smConfig = vdi->SMConfig();
         QString srVolume = smConfig.value("displayname", "").toString();
         if (smConfig.contains("SVID"))
         {
@@ -374,7 +343,7 @@ void VMStorageTabPage::populateVMStorage()
         }
 
         // Get size in human-readable format
-        qint64 virtualSize = vdiRecord.value("virtual_size", 0).toLongLong();
+        qint64 virtualSize = vdi->VirtualSize();
         QString size = "N/A";
         if (virtualSize > 0)
         {
@@ -383,12 +352,10 @@ void VMStorageTabPage::populateVMStorage()
         }
 
         // Check if read-only
-        QString mode = vbdRecord.value("mode", "").toString();
-        QString readOnly = (mode == "RO") ? "Yes" : "No";
+        QString readOnly = vbd->IsReadOnly() ? "Yes" : "No";
 
         // Get QoS priority (IO nice value)
-        QVariantMap qosAlgorithmParams = vbdRecord.value("qos_algorithm_params").toMap();
-        int ioPriority = qosAlgorithmParams.value("class", 4).toInt();
+        int ioPriority = vbd->GetIoNice();
         QString priority;
         if (ioPriority == 0)
         {
@@ -402,11 +369,11 @@ void VMStorageTabPage::populateVMStorage()
         }
 
         // Check if currently attached
-        bool currentlyAttached = vbdRecord.value("currently_attached", false).toBool();
+        bool currentlyAttached = vbd->CurrentlyAttached();
         QString active = currentlyAttached ? "Yes" : "No";
 
         // Get device path
-        QString device = vbdRecord.value("device", "").toString();
+        QString device = vbd->GetDevice();
         QString devicePath = device.isEmpty() ? "Unknown" : QString("/dev/%1").arg(device);
 
         // Add row to table
@@ -415,8 +382,8 @@ void VMStorageTabPage::populateVMStorage()
 
         // Store VBD and VDI refs for context menu
         QTableWidgetItem* positionItem = new DevicePositionItem(position);
-        positionItem->setData(Qt::UserRole, vbdRef);
-        positionItem->setData(Qt::UserRole + 1, vdiRef);
+        positionItem->setData(Qt::UserRole, vbd->OpaqueRef());
+        positionItem->setData(Qt::UserRole + 1, vdi->OpaqueRef());
         this->ui->storageTable->setItem(row, kColumnPosition, positionItem);
 
         this->ui->storageTable->setItem(row, kColumnName, new QTableWidgetItem(vdiName));
@@ -429,8 +396,8 @@ void VMStorageTabPage::populateVMStorage()
         this->ui->storageTable->setItem(row, kColumnActive, new QTableWidgetItem(active));
         this->ui->storageTable->setItem(row, kColumnDevicePath, new QTableWidgetItem(devicePath));
 
-        this->m_storageVbdRefs.insert(vbdRef);
-        this->m_storageVdiRefs.insert(vdiRef);
+        this->m_storageVbdRefs.insert(vbd->OpaqueRef());
+        this->m_storageVdiRefs.insert(vdi->OpaqueRef());
     }
 
     this->ui->storageTable->setColumnHidden(kColumnSrVolume, !storageLinkColumnVisible);
@@ -453,8 +420,7 @@ void VMStorageTabPage::populateVMStorage()
             QTableWidgetItem* item = this->ui->storageTable->item(row, kColumnPosition);
             if (item && selectedVbdSet.contains(item->data(Qt::UserRole).toString()))
             {
-                selectionModel->select(this->ui->storageTable->model()->index(row, kColumnPosition),
-                                       QItemSelectionModel::Select | QItemSelectionModel::Rows);
+                selectionModel->select(this->ui->storageTable->model()->index(row, kColumnPosition), QItemSelectionModel::Select | QItemSelectionModel::Rows);
             }
         }
     }
@@ -467,7 +433,7 @@ void VMStorageTabPage::refreshCDDVDDrives()
     this->ui->driveComboBox->clear();
 
     // Only show for VMs (not control domain)
-    bool isControlDomain = this->m_objectData.value("is_control_domain", false).toBool();
+    bool isControlDomain = this->m_vm && this->m_vm->IsControlDomain();
     if (isControlDomain)
     {
         this->ui->cdDvdGroupBox->setVisible(false);
@@ -477,35 +443,26 @@ void VMStorageTabPage::refreshCDDVDDrives()
     this->ui->cdDvdGroupBox->setVisible(true);
 
     // Get VBDs from VM object data
-    QVariantList vbdRefs = this->m_objectData.value("VBDs").toList();
-
     int dvdCount = 0;
     int floppyCount = 0;
 
     // Iterate through VBDs and find CD/DVD drives
-    for (const QVariant& vbdRefVar : vbdRefs)
+    const QList<QSharedPointer<VBD>> vbds = this->m_vm ? this->m_vm->GetVBDs() : QList<QSharedPointer<VBD>>();
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        QString vbdRef = vbdRefVar.toString();
-
-        // Get VBD record from cache
-        QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
-
-        if (vbdData.isEmpty())
+        if (!vbd || !vbd->IsValid())
             continue;
 
-        QString type = vbdData.value("type").toString();
-
-        // Check if this is a CD or Floppy drive
-        if (type == "CD")
+        if (vbd->IsCD())
         {
             dvdCount++;
-            this->m_vbdRefs.append(vbdRef);
-            this->ui->driveComboBox->addItem(QString("DVD Drive %1").arg(dvdCount), vbdRef);
-        } else if (type == "Floppy")
+            this->m_vbdRefs.append(vbd->OpaqueRef());
+            this->ui->driveComboBox->addItem(QString("DVD Drive %1").arg(dvdCount), vbd->OpaqueRef());
+        } else if (vbd->IsFloppyDrive())
         {
             floppyCount++;
-            this->m_vbdRefs.append(vbdRef);
-            this->ui->driveComboBox->addItem(QString("Floppy Drive %1").arg(floppyCount), vbdRef);
+            this->m_vbdRefs.append(vbd->OpaqueRef());
+            this->ui->driveComboBox->addItem(QString("Floppy Drive %1").arg(floppyCount), vbd->OpaqueRef());
         }
     }
 
@@ -557,27 +514,19 @@ void VMStorageTabPage::refreshISOList()
     isoBox->SetVMRef(this->m_objectRef);
     isoBox->Refresh();
 
-    // Get current VBD data to see what's mounted
-    QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", this->m_currentVBDRef);
-
-    QString currentVdiRef;
-    bool empty = true;
-
-    if (!vbdData.isEmpty())
-    {
-        currentVdiRef = vbdData.value("VDI").toString();
-        empty = vbdData.value("empty").toBool();
-    }
+    QSharedPointer<VBD> vbd = this->m_connection->GetCache()->ResolveObject<VBD>("vbd", this->m_currentVBDRef);
+    QString currentVdiRef = vbd ? vbd->GetVDIRef() : QString();
+    bool empty = vbd ? vbd->Empty() : true;
 
     if (!empty && !currentVdiRef.isEmpty())
     {
         isoBox->SetSelectedVdiRef(currentVdiRef);
         if (isoBox->SelectedVdiRef() != currentVdiRef)
         {
-            QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", currentVdiRef);
-            if (!vdiData.isEmpty())
+            QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", currentVdiRef);
+            if (vdi && vdi->IsValid())
             {
-                QString isoName = vdiData.value("name_label").toString();
+                QString isoName = vdi->GetName();
                 this->ui->isoComboBox->addItem(isoName + " (mounted)", currentVdiRef);
                 this->ui->isoComboBox->setCurrentIndex(this->ui->isoComboBox->count() - 1);
             }
@@ -610,9 +559,12 @@ void VMStorageTabPage::onIsoComboBoxChanged(int index)
     if (this->m_currentVBDRef.isEmpty())
         return;
 
-    QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", this->m_currentVBDRef);
-    QString currentVdiRef = vbdData.value("VDI").toString();
-    bool empty = vbdData.value("empty", true).toBool();
+    QSharedPointer<VBD> vbd = this->m_connection->GetCache()->ResolveObject<VBD>("vbd", this->m_currentVBDRef);
+    if (!vbd || !vbd->IsValid())
+        return;
+
+    QString currentVdiRef = vbd->GetVDIRef();
+    bool empty = vbd->Empty();
 
     if ((vdiRef.isEmpty() && empty) || (!vdiRef.isEmpty() && vdiRef == currentVdiRef && !empty))
     {
@@ -660,7 +612,8 @@ void VMStorageTabPage::onIsoComboBoxChanged(int index)
         action->deleteLater();
     });
 
-    connect(action, &AsyncOperation::failed, this, [this, action](QString error) {
+    connect(action, &AsyncOperation::failed, this, [this, action](QString error)
+    {
         // Re-enable UI
         this->ui->isoComboBox->setEnabled(true);
         this->ui->ejectButton->setEnabled(true);
@@ -698,23 +651,19 @@ void VMStorageTabPage::onNewCDDriveLinkClicked(const QString& link)
     this->ui->noDrivesLabel->setEnabled(false);
 
     // Find next available device position
-    QVariantList vbdRefs = this->m_objectData.value("VBDs").toList();
     int maxDeviceNum = -1;
 
-    for (const QVariant& vbdRefVar : vbdRefs)
+    const QList<QSharedPointer<VBD>> vbds = this->m_vm ? this->m_vm->GetVBDs() : QList<QSharedPointer<VBD>>();
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
+        if (!vbd || !vbd->IsValid())
+            continue;
 
-        if (!vbdData.isEmpty())
+        bool ok = false;
+        int deviceNum = vbd->GetUserdevice().toInt(&ok);
+        if (ok && deviceNum > maxDeviceNum)
         {
-            QString userdevice = vbdData.value("userdevice").toString();
-            bool ok;
-            int deviceNum = userdevice.toInt(&ok);
-            if (ok && deviceNum > maxDeviceNum)
-            {
-                maxDeviceNum = deviceNum;
-            }
+            maxDeviceNum = deviceNum;
         }
     }
 
@@ -780,7 +729,10 @@ void VMStorageTabPage::updateStorageButtons()
     // Different button visibility for VM vs SR view
     // C# Reference: SrStoragePage.cs RefreshButtons() lines 400-445
 
-    if (this->m_objectType == "vm")
+    if (!this->m_object)
+        return;
+
+    if (this->m_object->GetObjectType() == "vm")
     {
         // VM View: Show VM-specific buttons
         // Hide SR-specific buttons: Rescan, Move
@@ -802,13 +754,7 @@ void VMStorageTabPage::updateStorageButtons()
         bool hasSelection = !vbdRefs.isEmpty();
         bool hasVDI = !vdiRefs.isEmpty();
 
-        // Check VM power state
-        bool vmRunning = false;
-        if (!this->m_objectData.isEmpty())
-        {
-            QString powerState = this->m_objectData.value("power_state", "").toString();
-            vmRunning = (powerState == "Running");
-        }
+        bool vmRunning = this->m_vm && this->m_vm->GetPowerState() == "Running";
 
         bool anyAttached = false;
         bool anyDetached = false;
@@ -819,51 +765,37 @@ void VMStorageTabPage::updateStorageButtons()
         bool anyDeleteEligible = false;
         bool anyMoveEligible = false;
 
-        if (hasSelection && this->m_connection && this->m_connection->GetCache() && !this->m_objectData.isEmpty())
+        if (hasSelection && this->m_connection && this->m_connection->GetCache() && this->m_vm)
         {
             for (const QString& vbdRef : vbdRefs)
             {
-                QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
-                if (vbdData.isEmpty())
-                {
+                QSharedPointer<VBD> vbd = this->m_connection->GetCache()->ResolveObject<VBD>("vbd", vbdRef);
+                if (!vbd || !vbd->IsValid())
                     continue;
-                }
 
-                QString vdiRef = vbdData.value("VDI", "").toString();
-                QVariantMap vdiData;
-                if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
-                {
-                    vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
-                }
+                QSharedPointer<VDI> vdi = vbd->GetVDI();
 
-                bool currentlyAttached = vbdData.value("currently_attached", false).toBool();
+                bool currentlyAttached = vbd->CurrentlyAttached();
                 anyAttached = anyAttached || currentlyAttached;
                 anyDetached = anyDetached || !currentlyAttached;
 
-                QVariantList vbdAllowedOps = vbdData.value("allowed_operations", QVariantList()).toList();
-                bool vbdLocked = vbdData.value("Locked", false).toBool() || vbdAllowedOps.isEmpty();
-
-                bool vdiLocked = false;
-                if (!vdiData.isEmpty())
-                {
-                    QVariantList vdiAllowedOps = vdiData.value("allowed_operations", QVariantList()).toList();
-                    vdiLocked = vdiData.value("Locked", false).toBool() || vdiAllowedOps.isEmpty();
-                }
+                bool vbdLocked = vbd->IsLocked() || vbd->AllowedOperations().isEmpty();
+                bool vdiLocked = vdi ? (vdi->IsLocked() || vdi->AllowedOperations().isEmpty()) : true;
 
                 bool isLocked = vbdLocked || vdiLocked;
                 anyLocked = anyLocked || isLocked;
 
-                if (this->canActivateVBD(vbdData, vdiData, this->m_objectData))
+                if (this->canActivateVBD(vbd, vdi, this->m_vm))
                 {
                     anyActivateEligible = true;
                 }
 
-                if (this->canDeactivateVBD(vbdData, vdiData, this->m_objectData))
+                if (this->canDeactivateVBD(vbd, vdi, this->m_vm))
                 {
                     anyDeactivateEligible = true;
                 }
 
-                if (!vdiData.isEmpty() && !isLocked)
+                if (vdi && vdi->IsValid() && !isLocked)
                 {
                     anyDetachEligible = true;
                     anyDeleteEligible = true;
@@ -904,16 +836,13 @@ void VMStorageTabPage::updateStorageButtons()
         if (singleSelection && this->m_connection && this->m_connection->GetCache())
         {
             QString vbdRef = vbdRefs.first();
-            QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
-            QString vdiRef = vbdData.value("VDI", "").toString();
-            QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
+            QSharedPointer<VBD> vbd = this->m_connection->GetCache()->ResolveObject<VBD>("vbd", vbdRef);
+            QSharedPointer<VDI> vdi = vbd ? vbd->GetVDI() : QSharedPointer<VDI>();
 
-            QVariantList vbdAllowedOps = vbdData.value("allowed_operations", QVariantList()).toList();
-            QVariantList vdiAllowedOps = vdiData.value("allowed_operations", QVariantList()).toList();
-            bool vbdLocked = vbdData.value("Locked", false).toBool() || vbdAllowedOps.isEmpty();
-            bool vdiLocked = vdiData.value("Locked", false).toBool() || vdiAllowedOps.isEmpty();
+            bool vbdLocked = !vbd || vbd->IsLocked() || vbd->AllowedOperations().isEmpty();
+            bool vdiLocked = !vdi || vdi->IsLocked() || vdi->AllowedOperations().isEmpty();
 
-            canEdit = !vdiData.isEmpty() && !vbdLocked && !vdiLocked;
+            canEdit = vdi && vdi->IsValid() && !vbdLocked && !vdiLocked;
         }
 
         this->ui->editButton->setEnabled(singleSelection && canEdit);
@@ -934,13 +863,13 @@ void VMStorageTabPage::updateStorageButtons()
 
 QString VMStorageTabPage::getSelectedVBDRef() const
 {
-    QStringList refs = getSelectedVBDRefs();
+    QStringList refs = this->getSelectedVBDRefs();
     return refs.isEmpty() ? QString() : refs.first();
 }
 
 QString VMStorageTabPage::getSelectedVDIRef() const
 {
-    QStringList refs = getSelectedVDIRefs();
+    QStringList refs = this->getSelectedVDIRefs();
     return refs.isEmpty() ? QString() : refs.first();
 }
 
@@ -1004,87 +933,52 @@ QStringList VMStorageTabPage::getSelectedVDIRefs() const
     return refs;
 }
 
-bool VMStorageTabPage::canActivateVBD(const QVariantMap& vbdData,
-                                      const QVariantMap& vdiData,
-                                      const QVariantMap& vmData) const
+bool VMStorageTabPage::canActivateVBD(const QSharedPointer<VBD>& vbd, const QSharedPointer<VDI>& vdi, const QSharedPointer<VM>& vm) const
 {
-    if (vbdData.isEmpty() || vdiData.isEmpty() || vmData.isEmpty())
-    {
+    if (!vbd || !vdi || !vm || !vbd->IsValid() || !vdi->IsValid() || !vm->IsValid())
         return false;
-    }
 
-    if (vmData.value("is_a_template", false).toBool())
-    {
+    if (vm->IsTemplate())
         return false;
-    }
 
-    QString powerState = vmData.value("power_state", "").toString();
-    if (powerState != "Running")
-    {
+    if (vm->GetPowerState() != "Running")
         return false;
-    }
 
-    QString vdiType = vdiData.value("type", "").toString();
-    if (vdiType == "system")
-    {
+    if (vdi->GetType() == "system")
         return false;
-    }
 
-    if (vbdData.value("currently_attached", false).toBool())
-    {
+    if (vbd->CurrentlyAttached())
         return false;
-    }
 
-    QVariantList allowedOps = vbdData.value("allowed_operations", QVariantList()).toList();
-    if (!allowedOps.contains("plug"))
-    {
+    if (!vbd->AllowedOperations().contains("plug"))
         return false;
-    }
 
     return true;
 }
 
-bool VMStorageTabPage::canDeactivateVBD(const QVariantMap& vbdData,
-                                        const QVariantMap& vdiData,
-                                        const QVariantMap& vmData) const
+bool VMStorageTabPage::canDeactivateVBD(const QSharedPointer<VBD>& vbd, const QSharedPointer<VDI>& vdi, const QSharedPointer<VM>& vm) const
 {
-    if (vbdData.isEmpty() || vdiData.isEmpty() || vmData.isEmpty())
-    {
+    if (!vbd || !vdi || !vm || !vbd->IsValid() || !vdi->IsValid() || !vm->IsValid())
         return false;
-    }
 
-    if (vmData.value("is_a_template", false).toBool())
-    {
+    if (vm->IsTemplate())
         return false;
-    }
 
-    QString powerState = vmData.value("power_state", "").toString();
-    if (powerState != "Running")
-    {
+    if (vm->GetPowerState() != "Running")
         return false;
-    }
 
-    QString vdiType = vdiData.value("type", "").toString();
-    if (vdiType == "system")
+    if (vdi->GetType() == "system")
     {
-        bool isOwner = vbdData.value("device", "").toString() == "0" ||
-                       vbdData.value("bootable", false).toBool();
+        bool isOwner = vbd->IsOwner() || vbd->GetUserdevice() == "0" || vbd->IsBootable();
         if (isOwner)
-        {
             return false;
-        }
     }
 
-    if (!vbdData.value("currently_attached", false).toBool())
-    {
+    if (!vbd->CurrentlyAttached())
         return false;
-    }
 
-    QVariantList allowedOps = vbdData.value("allowed_operations", QVariantList()).toList();
-    if (!allowedOps.contains("unplug"))
-    {
+    if (!vbd->AllowedOperations().contains("unplug"))
         return false;
-    }
 
     return true;
 }
@@ -1092,9 +986,7 @@ bool VMStorageTabPage::canDeactivateVBD(const QVariantMap& vbdData,
 void VMStorageTabPage::runVbdPlugOperations(const QStringList& vbdRefs, bool plug)
 {
     if (vbdRefs.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
-    {
         return;
-    }
 
     XenConnection* connection = this->m_connection;
     if (!connection || !connection->GetSession())
@@ -1116,19 +1008,16 @@ void VMStorageTabPage::runVbdPlugOperations(const QStringList& vbdRefs, bool plu
         QString vdiName = tr("Virtual Disk");
         QString vmName = tr("VM");
 
-        if (cache)
+        QSharedPointer<VBD> vbd = cache ? cache->ResolveObject<VBD>("vbd", vbdRef) : QSharedPointer<VBD>();
+        if (vbd && vbd->IsValid())
         {
-            QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-            QString vdiRef = vbdData.value("VDI").toString();
-            if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
-            {
-                QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-                vdiName = vdiData.value("name_label", vdiName).toString();
-            }
-
-            QVariantMap vmData = cache->ResolveObjectData("vm", this->m_objectRef);
-            vmName = vmData.value("name_label", vmName).toString();
+            QSharedPointer<VDI> vdi = vbd->GetVDI();
+            if (vdi && vdi->IsValid())
+                vdiName = vdi->GetName();
         }
+
+        if (this->m_vm && this->m_vm->IsValid())
+            vmName = this->m_vm->GetName();
 
         QString opTitle = plug
                               ? tr("Activating disk '%1' on '%2'").arg(vdiName, vmName)
@@ -1182,8 +1071,7 @@ void VMStorageTabPage::runVbdPlugOperations(const QStringList& vbdRefs, bool plu
     if (result == QDialog::Accepted)
     {
         // C# shows no success dialog here; status updates are handled elsewhere.
-    }
-    else
+    } else
     {
         QString failText = plug ? tr("Failed to activate virtual disk(s).")
                                 : tr("Failed to deactivate virtual disk(s).");
@@ -1203,27 +1091,23 @@ void VMStorageTabPage::runDetachOperations(const QStringList& vdiRefs)
     QString confirmText;
     if (vdiRefs.size() == 1)
     {
-        QVariantMap vdiData = this->m_vm->GetCache()->ResolveObjectData("vdi", vdiRefs.first());
-        QString vdiName = vdiData.value("name_label", tr("this virtual disk")).toString();
+        QSharedPointer<VDI> vdi = this->m_vm->GetCache()->ResolveObject<VDI>("vdi", vdiRefs.first());
+        QString vdiName = vdi ? vdi->GetName() : tr("this virtual disk");
         confirmText = tr("Are you sure you want to detach '%1' from this VM?\n\n"
                          "The disk will not be deleted and can be attached again later.")
                           .arg(vdiName);
-    }
-    else
+    } else
     {
         confirmText = tr("Are you sure you want to detach the selected virtual disks from this VM?\n\n"
                          "The disks will not be deleted and can be attached again later.");
     }
 
-    if (QMessageBox::question(this, tr("Detach Virtual Disk"), confirmText,
-                              QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+    if (QMessageBox::question(this, tr("Detach Virtual Disk"), confirmText, QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
     {
         return;
     }
 
     QList<AsyncOperation*> operations;
-    // TODO refactor to shared pointers
-    VM* vm = new VM(this->m_vm->GetConnection(), this->m_objectRef, this);
 
     for (const QString& vdiRef : vdiRefs)
     {
@@ -1231,8 +1115,7 @@ void VMStorageTabPage::runDetachOperations(const QStringList& vdiRefs)
         {
             continue;
         }
-
-        operations.append(new DetachVirtualDiskAction(vdiRef, vm, this));
+        operations.append(new DetachVirtualDiskAction(vdiRef, this->m_vm.data(), this));
     }
 
     if (operations.isEmpty())
@@ -1255,7 +1138,7 @@ void VMStorageTabPage::runDetachOperations(const QStringList& vdiRefs)
     dialog->exec();
     delete dialog;
 
-    refreshVmRecord(this->m_vm->GetConnection(), this->m_objectRef);
+    refreshVmRecord(this->m_vm->GetConnection(), this->m_vm->OpaqueRef());
 
     delete multi;
 }
@@ -1268,33 +1151,28 @@ void VMStorageTabPage::runDeleteOperations(const QStringList& vdiRefs)
     QString confirmText;
     if (vdiRefs.size() == 1)
     {
-        QVariantMap vdiData = this->m_vm->GetCache()->ResolveObjectData("vdi", vdiRefs.first());
-        QString vdiName = vdiData.value("name_label", tr("this virtual disk")).toString();
-        confirmText = tr("Are you sure you want to permanently delete '%1'?\n\n"
-                         "This operation cannot be undone.")
-                          .arg(vdiName);
-    }
-    else
+        QSharedPointer<VDI> vdi = this->m_vm->GetCache()->ResolveObject<VDI>("vdi", vdiRefs.first());
+        QString vdiName = vdi ? vdi->GetName() : tr("this virtual disk");
+        confirmText = tr("Are you sure you want to permanently delete '%1'?\n\nThis operation cannot be undone.").arg(vdiName);
+    } else
     {
-        confirmText = tr("Are you sure you want to permanently delete the selected virtual disks?\n\n"
-                         "This operation cannot be undone.");
+        confirmText = tr("Are you sure you want to permanently delete the selected virtual disks?\n\nThis operation cannot be undone.");
     }
 
-    if (QMessageBox::question(this, tr("Delete Virtual Disk"), confirmText,
-                              QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
-    {
+    if (QMessageBox::question(this, tr("Delete Virtual Disk"), confirmText, QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
         return;
-    }
 
     bool allowRunningVMDelete = false;
     for (const QString& vdiRef : vdiRefs)
     {
-        QVariantMap vdiData = this->m_vm->GetCache()->ResolveObjectData("vdi", vdiRef);
-        QVariantList vbdRefs = vdiData.value("VBDs").toList();
-        for (const QVariant& vbdVar : vbdRefs)
+        QSharedPointer<VDI> vdi = this->m_vm->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+        if (!vdi || !vdi->IsValid())
+            continue;
+
+        const QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();
+        for (const QSharedPointer<VBD>& vbd : vbds)
         {
-            QVariantMap vbdData = this->m_vm->GetCache()->ResolveObjectData("vbd", vbdVar.toString());
-            if (vbdData.value("currently_attached", false).toBool())
+            if (vbd && vbd->CurrentlyAttached())
             {
                 allowRunningVMDelete = true;
                 break;
@@ -1310,8 +1188,7 @@ void VMStorageTabPage::runDeleteOperations(const QStringList& vdiRefs)
     {
         QString attachedText = tr("One or more disks are currently attached to a running VM.\n\n"
                                   "Do you want to detach and delete them anyway?");
-        if (QMessageBox::question(this, tr("Disk Currently Attached"), attachedText,
-                                  QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+        if (QMessageBox::question(this, tr("Disk Currently Attached"), attachedText, QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
         {
             return;
         }
@@ -1384,8 +1261,7 @@ void VMStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& po
                                        QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
             }
         }
-    }
-    else
+    } else
     {
         this->ui->storageTable->clearSelection();
     }
@@ -1395,7 +1271,7 @@ void VMStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& po
     // Build context menu based on object type and button visibility
     // C# Reference: SrStoragePage.cs contextMenuStrip_Opening() lines 379-399
 
-    if (this->m_objectType == "vm")
+    if (this->m_object && this->m_object->GetObjectType() == "vm")
     {
         // VM View: Add, Attach, Activate/Deactivate, Detach, Delete, Properties
         bool hasVisibleAction = false;
@@ -1562,7 +1438,7 @@ void VMStorageTabPage::onAddButtonClicked()
     // Create VBD and attach to VM using VbdCreateAndPlugAction
 
     QVariantMap vbdRecord;
-    vbdRecord["VM"] = this->m_objectRef;
+    vbdRecord["VM"] = this->m_vm->OpaqueRef();
     vbdRecord["VDI"] = vdiRef;
     vbdRecord["userdevice"] = devicePosition;
     vbdRecord["bootable"] = bootable;
@@ -1579,9 +1455,7 @@ void VMStorageTabPage::onAddButtonClicked()
     OperationProgressDialog* attachDialog = new OperationProgressDialog(attachAction, this);
     if (attachDialog->exec() != QDialog::Accepted)
     {
-        QMessageBox::warning(this, "Warning",
-                             "Virtual disk created but failed to attach to VM.\n"
-                             "You can attach it manually from the Attach menu.");
+        QMessageBox::warning(this, "Warning", "Virtual disk created but failed to attach to VM.\nYou can attach it manually from the Attach menu.");
         delete attachDialog;
         // VDI was created, so refresh anyway
         refreshVmRecord(this->m_connection, this->m_objectRef);
@@ -1645,11 +1519,9 @@ void VMStorageTabPage::onAttachButtonClicked()
 
     // Get VDI name for display
     QString vdiName = "Virtual Disk";
-    QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
-    if (vdiData.contains("name_label"))
-    {
-        vdiName = vdiData["name_label"].toString();
-    }
+    QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+    if (vdi && vdi->IsValid())
+        vdiName = vdi->GetName();
 
     VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(this->m_vm, vbdRecord, vdiName, false, this);
     OperationProgressDialog* attachDialog = new OperationProgressDialog(attachAction, this);
@@ -1766,8 +1638,7 @@ void VMStorageTabPage::onEditButtonClicked()
         try
         {
             XenAPI::VDI::set_name_label(connection->GetSession(), vdiRef, newName);
-        }
-        catch (const std::exception&)
+        } catch (const std::exception&)
         {
             QMessageBox::warning(this, "Warning", "Failed to update virtual disk name.");
             hasErrors = true;
@@ -1784,8 +1655,7 @@ void VMStorageTabPage::onEditButtonClicked()
         try
         {
             XenAPI::VDI::set_name_description(connection->GetSession(), vdiRef, newDescription);
-        }
-        catch (const std::exception&)
+        } catch (const std::exception&)
         {
             QMessageBox::warning(this, "Warning", "Failed to update virtual disk description.");
             hasErrors = true;
@@ -1803,8 +1673,7 @@ void VMStorageTabPage::onEditButtonClicked()
         try
         {
             XenAPI::VDI::resize(connection->GetSession(), vdiRef, newSize);
-        }
-        catch (const std::exception&)
+        } catch (const std::exception&)
         {
             QMessageBox::warning(this, "Warning", "Failed to resize virtual disk.");
             hasErrors = true;

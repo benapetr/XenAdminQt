@@ -25,17 +25,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "attachvirtualdiskdialog.h"
-#include "ui_attachvirtualdiskdialog.h"
-#include "xen/vm.h"
-#include "xen/sr.h"
-#include "xen/vdi.h"
-#include "xen/vbd.h"
-#include "xencache.h"
 #include <QTableWidgetItem>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QDebug>
+#include "attachvirtualdiskdialog.h"
+#include "ui_attachvirtualdiskdialog.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/xen/vbd.h"
+#include "xenlib/xencache.h"
 
 AttachVirtualDiskDialog::AttachVirtualDiskDialog(QSharedPointer<VM> vm, QWidget* parent) : QDialog(parent), ui(new Ui::AttachVirtualDiskDialog), m_vm(vm)
 {
@@ -73,7 +73,7 @@ void AttachVirtualDiskDialog::populateSRFilter()
     // Add "All Storage Repositories" option
     this->ui->srComboBox->addItem("All Storage Repositories", QString());
 
-    if (!this->m_vm || !this->m_vm->GetConnection() || !this->m_vm->GetCache())
+    if (!this->m_vm)
         return;
 
     // Get all SRs
@@ -103,7 +103,7 @@ void AttachVirtualDiskDialog::populateVDITable()
 {
     this->ui->vdiTable->setRowCount(0);
 
-    if (!this->m_vm || !this->m_vm->GetConnection() || !this->m_vm->GetCache())
+    if (!this->m_vm)
         return;
 
     QString selectedSR = this->ui->srComboBox->currentData().toString();
@@ -223,7 +223,7 @@ void AttachVirtualDiskDialog::populateVDITable()
 
 int AttachVirtualDiskDialog::findNextAvailableDevice()
 {
-    if (!this->m_vm || !this->m_vm->GetConnection() || !this->m_vm->GetCache())
+    if (!this->m_vm)
         return 0;
 
     // Find highest device number in use

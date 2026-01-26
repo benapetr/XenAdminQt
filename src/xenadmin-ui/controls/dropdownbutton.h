@@ -86,13 +86,13 @@ class DropDownButton : public QPushButton
          * The button takes ownership of the menu and will show it
          * below the button when clicked.
          */
-        void setMenu(QMenu* menu);
+        void SetMenu(QMenu* menu);
 
         /*!
-         * \brief Get the dropdown menu
-         * \return Current menu or nullptr
+         * \brief Get the dropdown GetMenu
+         * \return Current GetMenu or nullptr
          */
-        QMenu* menu() const { return this->menu_; }
+        QMenu* GetMenu() const { return this->m_menu; }
 
     protected:
         /*!
@@ -123,8 +123,8 @@ class DropDownButton : public QPushButton
         void onMenuAboutToHide();
 
     private:
-        QMenu* menu_;              ///< Dropdown menu
-        bool ignoreNextClick_;     ///< Flag to prevent menu re-opening
+        QMenu* m_menu;              ///< Dropdown menu
+        bool m_ignoreNextClick;     ///< Flag to prevent menu re-opening
 };
 
 #endif // DROPDOWNBUTTON_H

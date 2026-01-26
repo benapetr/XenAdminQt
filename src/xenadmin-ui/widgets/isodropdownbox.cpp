@@ -33,7 +33,9 @@
 #include "xenlib/xen/session.h"
 #include "xenlib/xen/apiversion.h"
 #include "xenlib/xen/sr.h"
+#include "xenlib/xen/vm.h"
 #include "xenlib/xen/vdi.h"
+#include "xenlib/xen/pbd.h"
 #include "xenlib/utils/misc.h"
 #include <QStandardItemModel>
 #include <QSignalBlocker>
@@ -41,33 +43,20 @@
 
 namespace
 {
-bool isToolsSr(XenCache* cache, const QVariantMap& srData)
-{
-    if (srData.value("is_tools_sr", false).toBool())
-        return true;
-
-    const QString srRef = srData.value("ref").toString();
-    QSharedPointer<SR> sr = cache ? cache->ResolveObject<SR>("sr", srRef) : QSharedPointer<SR>();
-    return sr && sr->IsToolsSR();
-}
-
-bool isSrVisibleToHost(const QVariantMap& srData, XenCache* cache, const QString& hostRef)
+bool isSrVisibleToHost(const QSharedPointer<SR>& sr, const QString& hostRef)
 {
     if (hostRef.isEmpty())
         return true;
+    if (!sr)
+        return false;
 
-    if (srData.value("shared").toBool())
+    if (sr->IsShared())
         return true;
 
-    const QVariantList pbds = srData.value("PBDs").toList();
-    for (const QVariant& pbdRefVar : pbds)
+    const QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
+    for (const QSharedPointer<PBD>& pbd : pbds)
     {
-        const QString pbdRef = pbdRefVar.toString();
-        if (pbdRef.isEmpty() || pbdRef == "OpaqueRef:NULL")
-            continue;
-
-        const QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
-        if (pbdData.value("host").toString() == hostRef)
+        if (pbd && pbd->GetHostRef() == hostRef)
             return true;
     }
 
@@ -106,17 +95,17 @@ void IsoDropDownBox::Refresh()
     bool showHidden = SettingsManager::instance().getShowHiddenObjects();
 
     QString hostRef;
-    QVariantMap vmData;
+    QSharedPointer<VM> vm;
     if (!this->m_vmRef.isEmpty())
     {
-        vmData = cache->ResolveObjectData("vm", this->m_vmRef);
-        QString powerState = vmData.value("power_state").toString();
-        if (powerState == "Running")
+        vm = cache->ResolveObject<VM>("vm", this->m_vmRef);
+        if (vm && vm->GetPowerState() == "Running")
         {
-            hostRef = vmData.value("resident_on").toString();
-        } else
+            hostRef = vm->GetResidentOnRef();
+        }
+        else if (vm)
         {
-            hostRef = VMHelpers::getVMStorageHost(this->m_connection, vmData, true);
+            hostRef = VMHelpers::getVMStorageHost(this->m_connection, vm->GetData(), true);
         }
     }
 
@@ -129,20 +118,24 @@ void IsoDropDownBox::Refresh()
     struct SrEntry
     {
         QString name;
-        QVariantMap data;
+        QSharedPointer<SR> sr;
     };
 
     QList<SrEntry> srEntries;
-    const QList<QVariantMap> allSrs = cache->GetAllData("sr");
-    for (const QVariantMap& srData : allSrs)
+    const QStringList srRefs = cache->GetAllRefs("sr");
+    for (const QString& srRef : srRefs)
     {
-        if (srData.value("content_type").toString() != "iso")
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", srRef);
+        if (!sr || !sr->IsValid())
             continue;
 
-        if (srData.value("is_broken", false).toBool() && this->m_vmRef.isEmpty())
+        if (!sr->IsISOLibrary())
             continue;
 
-        if (!isSrVisibleToHost(srData, cache, hostRef))
+        if (sr->IsBroken() && this->m_vmRef.isEmpty())
+            continue;
+
+        if (!isSrVisibleToHost(sr, hostRef))
             continue;
 
         // NOTE: C# hides Tools SRs on Stockholm+ (Citrix Xen 8.0+) in the ISO picker.
@@ -156,11 +149,11 @@ void IsoDropDownBox::Refresh()
         //if (toolsSr && stockholmOrGreater)
         //    continue;
 
-        QString name = srData.value("name_label").toString();
+        QString name = sr->GetName();
         if (name.isEmpty())
             name = tr("ISO SR");
 
-        srEntries.append({name, srData});
+        srEntries.append({name, sr});
     }
 
     std::sort(srEntries.begin(), srEntries.end(),
@@ -173,11 +166,11 @@ void IsoDropDownBox::Refresh()
     for (const SrEntry& srEntry : srEntries)
     {
         QList<QPair<QString, QString>> vdiEntries;
-        const QVariantList vdiRefs = srEntry.data.value("VDIs").toList();
-        bool toolsSr = isToolsSr(cache, srEntry.data);
+        const QList<QSharedPointer<VDI>> vdis = srEntry.sr->GetVDIs();
+        bool toolsSr = srEntry.sr->IsToolsSR();
         bool toolsIsoOnly = toolsSr && !stockholmOrGreater;
 
-        if (vdiRefs.isEmpty())
+        if (vdis.isEmpty())
             continue;
 
         this->addItem(srEntry.name, QString());
@@ -188,34 +181,28 @@ void IsoDropDownBox::Refresh()
                 item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
         }
 
-        for (const QVariant& vdiRefVar : vdiRefs)
+        for (const QSharedPointer<VDI>& vdi : vdis)
         {
-            const QString vdiRef = vdiRefVar.toString();
-            if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
+            if (!vdi || !vdi->IsValid())
                 continue;
 
-            const QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-            if (vdiData.isEmpty())
+            if (!showHidden && vdi->GetData().value("is_hidden", false).toBool())
                 continue;
 
-            if (!showHidden && vdiData.value("is_hidden", false).toBool())
+            if (vdi->IsSnapshot())
                 continue;
 
-            if (vdiData.value("is_a_snapshot", false).toBool())
-                continue;
-
-            const QString name = vdiData.value("name_label").toString();
+            const QString name = vdi->GetName();
             if (name.isEmpty())
                 continue;
 
             if (toolsIsoOnly)
             {
-                QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>("vdi", vdiRef);
-                if (!vdi || !vdi->IsToolsIso())
+                if (!vdi->IsToolsIso())
                     continue;
             }
 
-            vdiEntries.append({name, vdiRef});
+            vdiEntries.append({name, vdi->OpaqueRef()});
         }
 
         std::sort(vdiEntries.begin(), vdiEntries.end(),

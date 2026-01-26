@@ -42,6 +42,9 @@ namespace Ui
 
 class XenConnection;
 class SrRefreshAction;
+class SR;
+class VDI;
+class PBD;
 
 /**
  * @brief SR picker control for selecting storage repositories
@@ -158,12 +161,12 @@ class SrPicker : public QWidget
         };
 
         void populateSRList();
-        void addSR(const QString& srRef);
+        void addSR(const QSharedPointer<SR>& sr);
         void updateSRItem(const QString& srRef);
         void removeSR(const QString& srRef);
-        bool isValidSR(const QVariantMap& srData) const;
-        bool canBeEnabled(const QString& srRef, const QVariantMap& srData, QString& reason) const;
-        qint64 calculateFreeSpace(const QVariantMap& srData) const;
+        bool isValidSR(const QSharedPointer<SR>& sr) const;
+        bool canBeEnabled(const QSharedPointer<SR>& sr, QString& reason) const;
+        qint64 calculateFreeSpace(const QSharedPointer<SR>& sr) const;
         QString formatSize(qint64 bytes) const;
         void selectDefaultSR();
         void onCanBeScannedChanged();
@@ -171,12 +174,12 @@ class SrPicker : public QWidget
 
         // Validation methods (match C# SrPickerItem logic)
         bool isCurrentLocation(const QString& srRef) const;
-        bool isBroken(const QString& srRef, const QVariantMap& srData) const;
-        bool isDetached(const QString& srRef, const QVariantMap& srData) const;
-        bool supportsVdiCreate(const QVariantMap& srData) const;
-        bool supportsStorageMigration(const QVariantMap& srData) const;
-        bool canBeSeenFromAffinity(const QString& srRef, const QVariantMap& srData) const;
-        bool canFitDisks(const QVariantMap& srData) const;
+        bool isBroken(const QSharedPointer<SR>& sr) const;
+        bool isDetached(const QSharedPointer<SR>& sr) const;
+        bool supportsVdiCreate(const QSharedPointer<SR>& sr) const;
+        bool supportsStorageMigration(const QSharedPointer<SR>& sr) const;
+        bool canBeSeenFromAffinity(const QSharedPointer<SR>& sr) const;
+        bool canFitDisks(const QSharedPointer<SR>& sr) const;
 
         Ui::SrPicker* ui;
         XenConnection* m_connection;

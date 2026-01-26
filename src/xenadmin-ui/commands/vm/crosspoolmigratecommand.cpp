@@ -28,16 +28,13 @@
 #include "crosspoolmigratecommand.h"
 #include "../../dialogs/crosspoolmigratewizard.h"
 #include "xenlib/xen/sr.h"
+#include "xenlib/xen/vbd.h"
+#include "xenlib/xen/vdi.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
 
-CrossPoolMigrateCommand::CrossPoolMigrateCommand(MainWindow* mainWindow,
-                                                 CrossPoolMigrateWizard::WizardMode mode,
-                                                 bool resumeAfterMigrate,
-                                                 QObject* parent)
-    : VMCommand(mainWindow, parent),
-      m_mode(mode),
-      m_resumeAfterMigrate(resumeAfterMigrate)
+CrossPoolMigrateCommand::CrossPoolMigrateCommand(MainWindow* mainWindow, CrossPoolMigrateWizard::WizardMode mode, bool resumeAfterMigrate, QObject* parent)
+    : VMCommand(mainWindow, parent), m_mode(mode), m_resumeAfterMigrate(resumeAfterMigrate)
 {
 }
 
@@ -84,20 +81,17 @@ bool CrossPoolMigrateCommand::CanRun() const
         if (!vmItem->GetAllowedOperations().contains("migrate_send"))
             return false;
 
-        QStringList vbdRefs = vmItem->GetVBDRefs();
-        for (const QString& vbdRef : vbdRefs)
+        const QList<QSharedPointer<VBD>> vbds = vmItem->GetVBDs();
+        for (const QSharedPointer<VBD>& vbd : vbds)
         {
-            QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
-            QString vdiRef = vbdData.value("VDI").toString();
-            if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
+            if (!vbd)
                 continue;
 
-            QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-            QString srRef = vdiData.value("SR").toString();
-            if (srRef.isEmpty() || srRef == "OpaqueRef:NULL")
+            QSharedPointer<VDI> vdi = vbd->GetVDI();
+            if (!vdi)
                 continue;
 
-            QSharedPointer<SR> srObj = cache->ResolveObject<SR>("sr", srRef);
+            QSharedPointer<SR> srObj = vdi->GetSR();
             if (srObj && srObj->HBALunPerVDI())
                 return false;
         }

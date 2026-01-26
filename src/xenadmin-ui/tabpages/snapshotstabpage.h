@@ -89,21 +89,21 @@ class SnapshotsTabPage : public BaseTabPage
         void setViewMode(SnapshotsView view);
         SnapshotsView currentViewMode() const;
         void refreshVmssPanel();
-        bool shouldShowSnapshot(const QVariantMap& snapshot) const;
-        bool isScheduledSnapshot(const QVariantMap& snapshot) const;
+        bool shouldShowSnapshot(const QSharedPointer<VM>& snapshot) const;
+        bool isScheduledSnapshot(const QSharedPointer<VM>& snapshot) const;
         void buildSnapshotTree(const QString& snapshotRef,
                                SnapshotIcon* parentIcon,
-                               const QHash<QString, QVariantMap>& snapshots,
+                               const QHash<QString, QSharedPointer<VM>>& snapshots,
                                const QMultiHash<QString, QString>& childrenByParent);
         void updateDetailsPanel(bool force = false);
         void showDisabledDetails();
-        void showDetailsForSnapshot(const QVariantMap& snapshot, bool force);
-        void showDetailsForMultiple(const QList<QVariantMap>& snapshots);
+        void showDetailsForSnapshot(const QSharedPointer<VM>& snapshot, bool force);
+        void showDetailsForMultiple(const QList<QSharedPointer<VM>>& snapshots);
         QList<QString> selectedSnapshotRefs() const;
         bool canDeleteSnapshots(const QList<QString>& snapshotRefs) const;
         void updateSpinningIcon();
         bool isSpinningActionForCurrentVm(AsyncOperation* operation, QString* message) const;
-        qint64 snapshotSizeBytes(const QVariantMap& snapshot) const;
+        qint64 snapshotSizeBytes(const QSharedPointer<VM>& snapshot) const;
         QString formatSize(qint64 bytes) const;
         QPixmap noScreenshotPixmap() const;
 

@@ -25,23 +25,23 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "nicstabpage.h"
-#include "ui_nicstabpage.h"
-#include "xencache.h"
-#include "xen/network/connection.h"
-#include "xen/host.h"
-#include "xen/network.h"
-#include "xen/pif.h"
-#include "xen/pifmetrics.h"
-#include "xen/network_sriov.h"
-#include "xen/bond.h"
-#include "xen/actions/network/createbondaction.h"
-#include "xen/actions/network/destroybondaction.h"
-#include "operations/operationmanager.h"
-#include "../dialogs/bondpropertiesdialog.h"
 #include <QTableWidgetItem>
 #include <QMessageBox>
 #include <QDebug>
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/network.h"
+#include "xenlib/xen/pif.h"
+#include "xenlib/xen/pifmetrics.h"
+#include "xenlib/xen/network_sriov.h"
+#include "xenlib/xen/bond.h"
+#include "xenlib/xen/actions/network/createbondaction.h"
+#include "xenlib/xen/actions/network/destroybondaction.h"
+#include "nicstabpage.h"
+#include "ui_nicstabpage.h"
+#include "operations/operationmanager.h"
+#include "../dialogs/bondpropertiesdialog.h"
 
 NICsTabPage::NICsTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::NICsTabPage)
 {
@@ -302,8 +302,7 @@ void NICsTabPage::onCreateBondClicked()
         networkRef = network ? network->OpaqueRef() : QString();
     } else
     {
-        QMessageBox::warning(this, "Create Bond",
-                             "No networks available. Please create a network first.");
+        QMessageBox::warning(this, "Create Bond", "No networks available. Please create a network first.");
         return;
     }
 
@@ -319,16 +318,14 @@ void NICsTabPage::onCreateBondClicked()
 
         if (pifRefs.size() < 2)
         {
-            QMessageBox::warning(this, "Create Bond",
-                                 "At least 2 network interfaces are required to create a bond.");
+            QMessageBox::warning(this, "Create Bond", "At least 2 network interfaces are required to create a bond.");
             return;
         }
 
         XenConnection* connection = this->m_connection;
         if (!connection)
         {
-            QMessageBox::critical(this, "Error",
-                                  "No active connection.");
+            QMessageBox::critical(this, "Error", "No active connection.");
             return;
         }
 
@@ -355,16 +352,16 @@ void NICsTabPage::onCreateBondClicked()
 
         OperationManager::instance()->RegisterOperation(action);
 
-        connect(action, &AsyncOperation::completed, [this, bondMode, action]() {
+        connect(action, &AsyncOperation::completed, [this, bondMode, action]()
+        {
             this->refreshContent();
-            QMessageBox::information(this, "Bond Created",
-                                     QString("Bond created successfully with mode: %1").arg(bondMode));
+            QMessageBox::information(this, "Bond Created", QString("Bond created successfully with mode: %1").arg(bondMode));
             action->deleteLater();
         });
 
-        connect(action, &AsyncOperation::failed, [this, action](const QString& error) {
-            QMessageBox::critical(this, "Error",
-                                  QString("Failed to create bond: %1").arg(error));
+        connect(action, &AsyncOperation::failed, [this, action](const QString& error)
+        {
+            QMessageBox::critical(this, "Error", QString("Failed to create bond: %1").arg(error));
             action->deleteLater();
         });
 
@@ -377,8 +374,7 @@ void NICsTabPage::onDeleteBondClicked()
     QList<QTableWidgetItem*> selectedItems = this->ui->nicsTable->selectedItems();
     if (selectedItems.isEmpty())
     {
-        QMessageBox::information(this, "Delete Bond",
-                                 "Please select a bonded interface to delete.");
+        QMessageBox::information(this, "Delete Bond", "Please select a bonded interface to delete.");
         return;
     }
 
@@ -399,8 +395,7 @@ void NICsTabPage::onDeleteBondClicked()
     QStringList bondRefs = pif->BondMasterOfRefs();
     if (bondRefs.isEmpty())
     {
-        QMessageBox::information(this, "Delete Bond",
-                                 "Selected interface is not a bonded interface.");
+        QMessageBox::information(this, "Delete Bond", "Selected interface is not a bonded interface.");
         return;
     }
 
@@ -416,24 +411,23 @@ void NICsTabPage::onDeleteBondClicked()
         XenConnection* connection = this->m_connection;
         if (!connection)
         {
-            QMessageBox::critical(this, "Error",
-                                  "No active connection.");
+            QMessageBox::critical(this, "Error", "No active connection.");
             return;
         }
 
         DestroyBondAction* action = new DestroyBondAction(connection, bondRefs.first(), this);
         OperationManager::instance()->RegisterOperation(action);
 
-        connect(action, &AsyncOperation::completed, [this, action]() {
+        connect(action, &AsyncOperation::completed, [this, action]()
+        {
             this->refreshContent();
-            QMessageBox::information(this, "Bond Deleted",
-                                     "Bond deleted successfully.");
+            QMessageBox::information(this, "Bond Deleted", "Bond deleted successfully.");
             action->deleteLater();
         });
 
-        connect(action, &AsyncOperation::failed, [this, action](const QString& error) {
-            QMessageBox::critical(this, "Error",
-                                  QString("Failed to delete bond: %1").arg(error));
+        connect(action, &AsyncOperation::failed, [this, action](const QString& error)
+        {
+            QMessageBox::critical(this, "Error", QString("Failed to delete bond: %1").arg(error));
             action->deleteLater();
         });
 
@@ -447,7 +441,6 @@ void NICsTabPage::onRescanClicked()
     if (this->m_connection)
     {
         this->refreshContent();
-        QMessageBox::information(this, "Rescan",
-                                 "Network interfaces rescanned.");
+        QMessageBox::information(this, "Rescan", "Network interfaces rescanned.");
     }
 }

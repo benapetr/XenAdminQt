@@ -36,6 +36,7 @@
 #include "../settingspanels/homeservereditpage.h"
 #include "../settingspanels/vmadvancededitpage.h"
 #include "../settingspanels/vmenlightenmenteditpage.h"
+#include "xen/pool.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
@@ -84,16 +85,9 @@ void VMPropertiesDialog::build()
 
     // Tab 7: Home Server (only if WLB not enabled/configured)
     bool wlbEnabled = false;
-    if (this->m_vm)
-    {
-        QStringList poolRefs = this->m_vm->GetCache()->GetAllRefs("pool");
-        if (!poolRefs.isEmpty())
-        {
-            QVariantMap poolData = this->m_vm->GetCache()->ResolveObjectData("pool", poolRefs.first());
-            QString wlbUrl = poolData.value("wlb_url").toString();
-            wlbEnabled = poolData.value("wlb_enabled").toBool() && !wlbUrl.isEmpty();
-        }
-    }
+    QSharedPointer<Pool> pool = this->m_vm->GetPool();
+    if (pool)
+        wlbEnabled = pool->IsWLBEnabled() && !pool->WLBUrl().isEmpty();
 
     if (!wlbEnabled)
     {

@@ -78,10 +78,8 @@ class GeneralTabPage : public BaseTabPage
         QAction* propertiesAction_;
 
         void clearProperties();
-        void addProperty(PDSection* section, const QString& label, const QString& value,
-                         const QList<QAction*>& contextMenuItems = QList<QAction*>());
-        void addPropertyByKey(PDSection* section, const QString& key, const QString& value,
-                              const QList<QAction*>& contextMenuItems = QList<QAction*>());
+        void addProperty(PDSection* section, const QString& label, const QString& value, const QList<QAction*>& contextMenuItems = QList<QAction*>());
+        void addPropertyByKey(PDSection* section, const QString& key, const QString& value, const QList<QAction*>& contextMenuItems = QList<QAction*>());
         void showSectionIfNotEmpty(PDSection* section);
         void updateExpandCollapseButtons();
         void toggleExpandedState(bool expandAll);
@@ -114,9 +112,6 @@ class GeneralTabPage : public BaseTabPage
         // SR section population methods (C# GenerateStatusBox, GenerateMultipathBox)
         void populateStatusSection();
         void populateMultipathingSection();
-
-        // Helper methods for formatting (matches C# PrettyTimeSpan)
-        QString formatUptime(qint64 seconds) const;
 
     private slots:
         void onExpandAllClicked();

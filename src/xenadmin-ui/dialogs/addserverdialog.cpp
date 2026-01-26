@@ -171,8 +171,7 @@ void AddServerDialog::UpdateButtons()
 
 bool AddServerDialog::OKButtonEnabled() const
 {
-    return !this->ui->ServerNameComboBox->currentText().trimmed().isEmpty() &&
-           !this->ui->UsernameTextBox->text().trimmed().isEmpty();
+    return !this->ui->ServerNameComboBox->currentText().trimmed().isEmpty() && !this->ui->UsernameTextBox->text().trimmed().isEmpty();
 }
 
 void AddServerDialog::labelError_TextChanged()

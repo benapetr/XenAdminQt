@@ -111,8 +111,7 @@ void BootOptionsTab::createUI()
     pvWidgetLayout->addWidget(this->m_pvInfoLabel);
 
     this->m_pvBootDeviceCombo = new QComboBox(this);
-    connect(this->m_pvBootDeviceCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &BootOptionsTab::onPVBootDeviceChanged);
+    connect(this->m_pvBootDeviceCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &BootOptionsTab::onPVBootDeviceChanged);
     pvWidgetLayout->addWidget(this->m_pvBootDeviceCombo);
 
     QLabel* osParamsLabel = new QLabel("OS Boot Parameters:", this);

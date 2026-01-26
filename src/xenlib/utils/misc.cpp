@@ -139,3 +139,29 @@ QString Misc::FormatMemorySize(qint64 bytes)
 
     return QString::number(bytes) + " B";
 }
+
+// Helper method to format uptime in human-readable format
+// C# Reference: XenCenterLib/PrettyTimeSpan.cs
+QString Misc::FormatUptime(qint64 seconds)
+{
+    if (seconds < 0)
+        return QString();
+
+    qint64 days = seconds / 86400;
+    qint64 hours = (seconds % 86400) / 3600;
+    qint64 minutes = (seconds % 3600) / 60;
+    qint64 secs = seconds % 60;
+
+    QStringList parts;
+
+    if (days > 0)
+        parts << QString("%1 day%2").arg(days).arg(days > 1 ? "s" : "");
+    if (hours > 0)
+        parts << QString("%1 hour%2").arg(hours).arg(hours > 1 ? "s" : "");
+    if (minutes > 0)
+        parts << QString("%1 minute%2").arg(minutes).arg(minutes > 1 ? "s" : "");
+    if (secs > 0 || parts.isEmpty())
+        parts << QString("%1 second%2").arg(secs).arg(secs != 1 ? "s" : "");
+
+    return parts.join(", ");
+}

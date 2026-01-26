@@ -38,6 +38,7 @@ namespace Ui
 QT_END_NAMESPACE
 
 class SR;
+class VDI;
 
 class SrStorageTabPage : public BaseTabPage
 {
@@ -81,6 +82,7 @@ class SrStorageTabPage : public BaseTabPage
     private:
         void populateSRStorage();
         QString getSelectedVDIRef() const;
+        QSharedPointer<VDI> getSelectedVDI() const;
         void updateButtonStates();
         void requestSrRefresh(int delayMs = 0);
 

@@ -47,8 +47,7 @@
 // - Fill: Blue gradient (#3A7CA8 top to #5BA3D0 bottom)
 // - Text: White when over filled area, black when over empty area
 
-ProgressBarDelegate::ProgressBarDelegate(QObject* parent)
-    : QStyledItemDelegate(parent)
+ProgressBarDelegate::ProgressBarDelegate(QObject* parent) : QStyledItemDelegate(parent)
 {
 }
 

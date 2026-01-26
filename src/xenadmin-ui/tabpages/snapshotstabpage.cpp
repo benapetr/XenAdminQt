@@ -25,6 +25,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <QDateTime>
+#include <QDebug>
+#include <QMessageBox>
+#include <QTimer>
+#include <QMenu>
+#include <QActionGroup>
+#include <QHeaderView>
+#include <QSet>
+#include <QPainter>
 #include "snapshotstabpage.h"
 #include "ui_snapshotstabpage.h"
 #include "../mainwindow.h"
@@ -44,16 +53,9 @@
 #include "xenlib/xen/actions/vm/vmsnapshotcreateaction.h"
 #include "xenlib/xen/xenapi/xenapi_Blob.h"
 #include "xenlib/xen/xenapi/xenapi_VM.h"
+#include "xenlib/xen/vbd.h"
+#include "xenlib/xen/vdi.h"
 #include "xenlib/xen/vm.h"
-#include <QDateTime>
-#include <QDebug>
-#include <QMessageBox>
-#include <QTimer>
-#include <QMenu>
-#include <QActionGroup>
-#include <QHeaderView>
-#include <QSet>
-#include <QPainter>
 
 QHash<QString, SnapshotsTabPage::SnapshotsView> SnapshotsTabPage::s_viewByVmRef;
 
@@ -202,13 +204,13 @@ void SnapshotsTabPage::populateSnapshotTree()
     tree->Clear();
     this->ui->snapshotTable->setRowCount(0);
 
-    if (!this->m_objectData.contains("snapshots") || !this->m_connection || !this->m_connection->GetCache())
+    if (!this->m_vm || !this->m_connection || !this->m_connection->GetCache())
     {
         tree->setUpdatesEnabled(true);
         return;
     }
 
-    QVariantList snapshotRefs = this->m_objectData.value("snapshots").toList();
+    const QStringList snapshotRefs = this->m_vm->GetSnapshotRefs();
     if (snapshotRefs.isEmpty())
     {
         tree->setUpdatesEnabled(true);
@@ -216,17 +218,16 @@ void SnapshotsTabPage::populateSnapshotTree()
     }
 
     XenCache* cache = this->m_connection->GetCache();
-    QHash<QString, QVariantMap> snapshots;
+    QHash<QString, QSharedPointer<VM>> snapshots;
     QSet<QString> snapshotRefSet;
 
-    for (const QVariant& refVariant : snapshotRefs)
+    for (const QString& snapshotRef : snapshotRefs)
     {
-        QString snapshotRef = refVariant.toString();
         if (snapshotRef.isEmpty())
             continue;
 
-        QVariantMap snapshot = cache->ResolveObjectData("vm", snapshotRef);
-        if (snapshot.isEmpty() || !snapshot.value("is_a_snapshot").toBool())
+        QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", snapshotRef);
+        if (!snapshot || !snapshot->IsSnapshot())
             continue;
 
         snapshots.insert(snapshotRef, snapshot);
@@ -243,30 +244,29 @@ void SnapshotsTabPage::populateSnapshotTree()
     for (auto it = snapshots.constBegin(); it != snapshots.constEnd(); ++it)
     {
         const QString snapshotRef = it.key();
-        const QVariantMap snapshot = it.value();
+        const QSharedPointer<VM>& snapshot = it.value();
         if (!this->shouldShowSnapshot(snapshot))
             continue;
 
-        const QString powerState = snapshot.value("power_state").toString();
+        const QString powerState = snapshot ? snapshot->GetPowerState() : QString();
         const bool isSuspended = powerState == "Suspended";
         const QString typeText = isSuspended ? tr("Disk and memory") : tr("Disks only");
 
         QString createdText;
-        const QString timestamp = snapshot.value("snapshot_time").toString();
-        if (!timestamp.isEmpty())
+        const QDateTime snapshotTime = snapshot ? snapshot->SnapshotTime() : QDateTime();
+        if (snapshotTime.isValid())
         {
-            QDateTime dt = QDateTime::fromString(timestamp, Qt::ISODate);
-            if (dt.isValid())
-            {
-                dt = dt.toLocalTime().addSecs(this->m_connection->GetServerTimeOffsetSeconds());
-                createdText = dt.toString("yyyy-MM-dd HH:mm:ss");
-            } else
-            {
+            QDateTime dt = snapshotTime.toLocalTime().addSecs(this->m_connection->GetServerTimeOffsetSeconds());
+            createdText = dt.toString("yyyy-MM-dd HH:mm:ss");
+        }
+        else if (snapshot)
+        {
+            const QString timestamp = snapshot->GetData().value("snapshot_time").toString();
+            if (!timestamp.isEmpty())
                 createdText = timestamp;
-            }
         }
 
-        QString nameText = snapshot.value("name_label").toString();
+        QString nameText = snapshot ? snapshot->GetName() : QString();
         if (nameText.isEmpty())
             nameText = tr("Unnamed Snapshot");
 
@@ -276,14 +276,7 @@ void SnapshotsTabPage::populateSnapshotTree()
         QTableWidgetItem* createdItem = new QTableWidgetItem(createdText);
         QTableWidgetItem* sizeItem = new QTableWidgetItem(QString());
 
-        QStringList tags;
-        const QVariantList tagList = snapshot.value("tags").toList();
-        for (const QVariant& tagVar : tagList)
-        {
-            const QString tag = tagVar.toString();
-            if (!tag.isEmpty())
-                tags.append(tag);
-        }
+        const QStringList tags = snapshot ? snapshot->GetTags() : QStringList();
         QTableWidgetItem* tagsItem = new QTableWidgetItem(tags.join(", "));
 
         typeItem->setData(Qt::UserRole, snapshotRef);
@@ -305,10 +298,10 @@ void SnapshotsTabPage::populateSnapshotTree()
     for (auto it = snapshots.constBegin(); it != snapshots.constEnd(); ++it)
     {
         const QString parentRef = it.key();
-        QVariantList children = it.value().value("children").toList();
-        for (const QVariant& childVar : children)
+        const QSharedPointer<VM>& snapshot = it.value();
+        const QStringList children = snapshot ? snapshot->ChildrenRefs() : QStringList();
+        for (const QString& childRef : children)
         {
-            const QString childRef = childVar.toString();
             if (!snapshotRefSet.contains(childRef))
                 continue;
 
@@ -324,17 +317,15 @@ void SnapshotsTabPage::populateSnapshotTree()
             roots.append(snapshotRef);
     }
 
-    const QString vmName = this->m_objectData.value("name_label").toString();
-    SnapshotIcon* rootIcon = new SnapshotIcon(vmName.isEmpty() ? tr("VM") : vmName,
-                                              tr("Base"), nullptr, tree, SnapshotIcon::Template);
+    const QString vmName = this->m_vm ? this->m_vm->GetName() : QString();
+    SnapshotIcon* rootIcon = new SnapshotIcon(vmName.isEmpty() ? tr("VM") : vmName, tr("Base"), nullptr, tree, SnapshotIcon::Template);
     tree->AddSnapshot(rootIcon);
 
     bool parentIsSnapshot = false;
-    const QString parentRef = this->m_objectData.value("parent").toString();
-    if (!parentRef.isEmpty())
+    if (this->m_vm)
     {
-        QVariantMap parentData = cache->ResolveObjectData("vm", parentRef);
-        parentIsSnapshot = parentData.value("is_a_snapshot").toBool();
+        QSharedPointer<VM> parent = this->m_vm->GetParent();
+        parentIsSnapshot = parent && parent->IsSnapshot();
     }
 
     if (!parentIsSnapshot)
@@ -620,11 +611,11 @@ void SnapshotsTabPage::updateDetailsPanel(bool force)
         return;
     }
 
-    QList<QVariantMap> snapshots;
+    QList<QSharedPointer<VM>> snapshots;
     for (const QString& ref : refs)
     {
-        QVariantMap snapshot = cache->ResolveObjectData("vm", ref);
-        if (!snapshot.isEmpty() && snapshot.value("is_a_snapshot").toBool())
+        QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", ref);
+        if (snapshot && snapshot->IsSnapshot())
             snapshots.append(snapshot);
     }
 
@@ -660,56 +651,53 @@ void SnapshotsTabPage::showDisabledDetails()
     this->ui->screenshotLabel->setPixmap(this->noScreenshotPixmap());
 }
 
-void SnapshotsTabPage::showDetailsForSnapshot(const QVariantMap& snapshot, bool force)
+void SnapshotsTabPage::showDetailsForSnapshot(const QSharedPointer<VM>& snapshot, bool force)
 {
     (void) force;
+    if (!snapshot)
+    {
+        this->showDisabledDetails();
+        return;
+    }
     this->ui->detailsGroupBox->setEnabled(true);
 
     QString createdText;
-    const QString timestamp = snapshot.value("snapshot_time").toString();
-    if (!timestamp.isEmpty())
+    const QDateTime snapshotTime = snapshot->SnapshotTime();
+    if (snapshotTime.isValid())
     {
-        QDateTime dt = QDateTime::fromString(timestamp, Qt::ISODate);
-        if (dt.isValid())
-        {
-            dt = dt.toLocalTime().addSecs(this->m_connection->GetServerTimeOffsetSeconds());
-            createdText = dt.toString("yyyy-MM-dd HH:mm:ss");
-        } else
-        {
+        QDateTime dt = snapshotTime.toLocalTime().addSecs(this->m_connection->GetServerTimeOffsetSeconds());
+        createdText = dt.toString("yyyy-MM-dd HH:mm:ss");
+    }
+    else
+    {
+        const QString timestamp = snapshot->GetData().value("snapshot_time").toString();
+        if (!timestamp.isEmpty())
             createdText = timestamp;
-        }
     }
     this->ui->detailsGroupBox->setTitle(tr("Snapshot created on %1").arg(createdText));
 
-    QString nameText = snapshot.value("name_label").toString();
+    QString nameText = snapshot->GetName();
     if (nameText.isEmpty())
         nameText = tr("Snapshot");
     this->ui->snapshotNameLabel->setText(nameText);
 
-    const QString powerState = snapshot.value("power_state").toString();
+    const QString powerState = snapshot->GetPowerState();
     const bool isSuspended = powerState == "Suspended";
     this->ui->modeValueLabel->setText(isSuspended ? tr("Disks and memory") : tr("Disks only"));
 
-    const QString description = snapshot.value("name_description").toString();
+    const QString description = snapshot->GetDescription();
     this->ui->descriptionValueLabel->setText(description.isEmpty() ? tr("<None>") : description);
 
     const qint64 sizeBytes = this->snapshotSizeBytes(snapshot);
     this->ui->sizeValueLabel->setText(sizeBytes > 0 ? this->formatSize(sizeBytes) : tr("<None>"));
 
-    QStringList tags;
-    const QVariantList tagList = snapshot.value("tags").toList();
-    for (const QVariant& tagVar : tagList)
-    {
-        const QString tag = tagVar.toString();
-        if (!tag.isEmpty())
-            tags.append(tag);
-    }
+    const QStringList tags = snapshot->GetTags();
     this->ui->tagsValueLabel->setText(tags.isEmpty() ? tr("<None>") : tags.join(", "));
 
-    const QVariantMap otherConfig = snapshot.value("other_config").toMap();
-    const QString folderPath = otherConfig.value("folder").toString();
+    const QString folderPath = snapshot->GetFolderPath();
     this->ui->folderValueLabel->setText(folderPath.isEmpty() ? tr("<None>") : folderPath);
 
+    const QVariantMap otherConfig = snapshot->GetOtherConfig();
     QList<QPair<QString, QString>> customFields;
     for (auto it = otherConfig.constBegin(); it != otherConfig.constEnd(); ++it)
     {
@@ -740,7 +728,7 @@ void SnapshotsTabPage::showDetailsForSnapshot(const QVariantMap& snapshot, bool 
     }
 
     QPixmap screenshot = this->noScreenshotPixmap();
-    const QVariantMap blobs = snapshot.value("blobs").toMap();
+    const QVariantMap blobs = snapshot->Blobs();
     const QString blobRef = blobs.value(VMSnapshotCreateAction::VNC_SNAPSHOT_NAME).toString();
     if (!blobRef.isEmpty() && this->m_connection)
     {
@@ -764,7 +752,7 @@ void SnapshotsTabPage::showDetailsForSnapshot(const QVariantMap& snapshot, bool 
     this->ui->propertiesButton->setEnabled(true);
 }
 
-void SnapshotsTabPage::showDetailsForMultiple(const QList<QVariantMap>& snapshots)
+void SnapshotsTabPage::showDetailsForMultiple(const QList<QSharedPointer<VM>>& snapshots)
 {
     if (snapshots.isEmpty())
     {
@@ -780,20 +768,19 @@ void SnapshotsTabPage::showDetailsForMultiple(const QList<QVariantMap>& snapshot
     QDateTime earliest = QDateTime::currentDateTime();
     QDateTime latest = QDateTime::fromSecsSinceEpoch(0);
 
-    for (const QVariantMap& snapshot : snapshots)
+    for (const QSharedPointer<VM>& snapshot : snapshots)
     {
+        if (!snapshot)
+            continue;
         totalSize += this->snapshotSizeBytes(snapshot);
 
-        const QVariantList tagList = snapshot.value("tags").toList();
-        for (const QVariant& tagVar : tagList)
+        for (const QString& tag : snapshot->GetTags())
         {
-            const QString tag = tagVar.toString();
             if (!tag.isEmpty() && !tags.contains(tag))
                 tags.append(tag);
         }
 
-        const QString timestamp = snapshot.value("snapshot_time").toString();
-        QDateTime dt = QDateTime::fromString(timestamp, Qt::ISODate);
+        QDateTime dt = snapshot->SnapshotTime();
         if (dt.isValid())
         {
             dt = dt.toLocalTime().addSecs(this->m_connection->GetServerTimeOffsetSeconds());
@@ -859,14 +846,14 @@ bool SnapshotsTabPage::canDeleteSnapshots(const QList<QString>& snapshotRefs) co
 
     for (const QString& ref : snapshotRefs)
     {
-        QVariantMap snapshotData = cache->ResolveObjectData("vm", ref);
-        if (snapshotData.isEmpty())
+        QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", ref);
+        if (!snapshot)
             return false;
-        if (!snapshotData.value("is_a_snapshot").toBool())
+        if (!snapshot->IsSnapshot())
             return false;
-        if (!snapshotData.value("current_operations").toList().isEmpty())
+        if (!snapshot->CurrentOperations().isEmpty())
             return false;
-        if (!snapshotData.value("allowed_operations").toList().contains("destroy"))
+        if (!snapshot->GetAllowedOperations().contains("destroy"))
             return false;
     }
 
@@ -934,50 +921,39 @@ bool SnapshotsTabPage::isSpinningActionForCurrentVm(AsyncOperation* operation, Q
     return false;
 }
 
-qint64 SnapshotsTabPage::snapshotSizeBytes(const QVariantMap& snapshot) const
+qint64 SnapshotsTabPage::snapshotSizeBytes(const QSharedPointer<VM>& snapshot) const
 {
-    if (!this->m_connection || !this->m_connection->GetCache())
+    if (!this->m_connection || !this->m_connection->GetCache() || !snapshot)
         return 0;
 
-    XenCache* cache = this->m_connection->GetCache();
     qint64 total = 0;
 
-    const QVariantList vbdRefs = snapshot.value("VBDs").toList();
-    for (const QVariant& vbdVar : vbdRefs)
+    const QList<QSharedPointer<VBD>> vbds = snapshot->GetVBDs();
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        const QString vbdRef = vbdVar.toString();
-        if (vbdRef.isEmpty())
+        if (!vbd)
             continue;
 
-        QVariantMap vbd = cache->ResolveObjectData("vbd", vbdRef);
-        if (vbd.isEmpty())
+        if (vbd->GetType() != "Disk")
             continue;
 
-        if (vbd.value("type").toString() != "Disk")
+        QSharedPointer<VDI> vdi = vbd->GetVDI();
+        if (!vdi)
             continue;
 
-        const QString vdiRef = vbd.value("VDI").toString();
-        if (vdiRef.isEmpty())
-            continue;
-
-        QVariantMap vdi = cache->ResolveObjectData("vdi", vdiRef);
-        if (vdi.isEmpty())
-            continue;
-
-        qint64 utilisation = vdi.value("physical_utilisation").toLongLong();
+        qint64 utilisation = vdi->PhysicalUtilisation();
         if (utilisation <= 0)
-            utilisation = vdi.value("physical_utilization").toLongLong();
+            utilisation = vdi->GetData().value("physical_utilization").toLongLong();
         if (utilisation > 0)
             total += utilisation;
     }
 
-    const QString suspendVdiRef = snapshot.value("suspend_VDI").toString();
-    if (!suspendVdiRef.isEmpty())
+    QSharedPointer<VDI> suspendVdi = snapshot->GetSuspendVDI();
+    if (suspendVdi)
     {
-        QVariantMap vdi = cache->ResolveObjectData("vdi", suspendVdiRef);
-        qint64 utilisation = vdi.value("physical_utilisation").toLongLong();
+        qint64 utilisation = suspendVdi->PhysicalUtilisation();
         if (utilisation <= 0)
-            utilisation = vdi.value("physical_utilization").toLongLong();
+            utilisation = suspendVdi->GetData().value("physical_utilization").toLongLong();
         if (utilisation > 0)
             total += utilisation;
     }
@@ -1242,29 +1218,30 @@ void SnapshotsTabPage::onVmssLinkClicked()
                              tr("VM snapshot schedules are not available yet in this version."));
 }
 
-bool SnapshotsTabPage::isScheduledSnapshot(const QVariantMap& snapshot) const
+bool SnapshotsTabPage::isScheduledSnapshot(const QSharedPointer<VM>& snapshot) const
 {
-    return snapshot.value("is_snapshot_from_vmpp").toBool()
-        || snapshot.value("is_vmss_snapshot").toBool();
+    return snapshot && (snapshot->IsSnapshotFromVMPP() || snapshot->IsVMSSSnapshot());
 }
 
-bool SnapshotsTabPage::shouldShowSnapshot(const QVariantMap& snapshot) const
+bool SnapshotsTabPage::shouldShowSnapshot(const QSharedPointer<VM>& snapshot) const
 {
     return this->m_showScheduledSnapshots || !this->isScheduledSnapshot(snapshot);
 }
 
 void SnapshotsTabPage::buildSnapshotTree(const QString& snapshotRef,
                                          SnapshotIcon* parentIcon,
-                                         const QHash<QString, QVariantMap>& snapshots,
+                                         const QHash<QString, QSharedPointer<VM>>& snapshots,
                                          const QMultiHash<QString, QString>& childrenByParent)
 {
-    const QVariantMap snapshot = snapshots.value(snapshotRef);
+    const QSharedPointer<VM> snapshot = snapshots.value(snapshotRef);
+    if (!snapshot)
+        return;
     const bool showSnapshot = this->shouldShowSnapshot(snapshot);
     SnapshotIcon* currentIcon = parentIcon;
 
     if (showSnapshot)
     {
-        const QString powerState = snapshot.value("power_state").toString();
+        const QString powerState = snapshot->GetPowerState();
         const bool isSuspended = powerState == "Suspended";
         const bool isScheduled = this->isScheduledSnapshot(snapshot);
         const int iconIndex = isScheduled
@@ -1272,21 +1249,20 @@ void SnapshotsTabPage::buildSnapshotTree(const QString& snapshotRef,
             : (isSuspended ? SnapshotIcon::DiskAndMemorySnapshot : SnapshotIcon::DiskSnapshot);
 
         QString labelTime;
-        const QString timestamp = snapshot.value("snapshot_time").toString();
-        if (!timestamp.isEmpty())
+        const QDateTime snapshotTime = snapshot->SnapshotTime();
+        if (snapshotTime.isValid())
         {
-            QDateTime dt = QDateTime::fromString(timestamp, Qt::ISODate);
-            if (dt.isValid())
-            {
-                dt = dt.toLocalTime().addSecs(this->m_connection->GetServerTimeOffsetSeconds());
-                labelTime = dt.toString("yyyy-MM-dd HH:mm:ss");
-            } else
-            {
+            QDateTime dt = snapshotTime.toLocalTime().addSecs(this->m_connection->GetServerTimeOffsetSeconds());
+            labelTime = dt.toString("yyyy-MM-dd HH:mm:ss");
+        }
+        else
+        {
+            const QString timestamp = snapshot->GetData().value("snapshot_time").toString();
+            if (!timestamp.isEmpty())
                 labelTime = timestamp;
-            }
         }
 
-        QString labelName = snapshot.value("name_label").toString();
+        QString labelName = snapshot->GetName();
         if (labelName.isEmpty())
             labelName = tr("Unnamed Snapshot");
 
