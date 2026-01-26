@@ -131,6 +131,12 @@ With custom version:
 ./package-dmg.sh --version 0.2.0
 ```
 
+If using Homebrew's Qt binaries, you'll need to specify which architecture you're building on, as Homebrew does not supply multiarchitecture binaries:
+```bash
+./package-dmg.sh --archs arm64
+./package-dmg.sh --archs x86_64
+```
+
 **Output:** `packaging/output/XenAdmin-Qt-0.1.0.dmg`
 
 **Installation:**
