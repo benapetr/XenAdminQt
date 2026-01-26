@@ -169,15 +169,15 @@ void VMStorageTabPage::SetObject(QSharedPointer<XenObject> object)
         disconnect(this->m_connection->GetCache(), &XenCache::objectChanged, this, &VMStorageTabPage::onCacheObjectChanged);
     }
 
-    // Call base implementation
-    BaseTabPage::SetObject(object);
-
     // Connect to object updates for real-time CD/DVD changes
-    if (this->m_connection && object->GetObjectType() == "vm")
+    if (object->GetObjectType() == "vm")
     {
         this->m_vm = qSharedPointerCast<VM>(object);
-        connect(this->m_connection->GetCache(), &XenCache::objectChanged, this, &VMStorageTabPage::onCacheObjectChanged, Qt::UniqueConnection);
+        connect(object->GetCache(), &XenCache::objectChanged, this, &VMStorageTabPage::onCacheObjectChanged, Qt::UniqueConnection);
     }
+
+    // Call base implementation
+    BaseTabPage::SetObject(object);
 }
 
 void VMStorageTabPage::onObjectDataReceived(QString type, QString ref, QVariantMap data)
@@ -270,7 +270,7 @@ void VMStorageTabPage::populateVMStorage()
 {
     this->ui->titleLabel->setText("Virtual Disks");
 
-    if (!this->m_connection || !this->m_connection->GetCache() || this->m_objectRef.isEmpty())
+    if (!this->m_vm)
         return;
 
     const int kColumnPosition = 0;

@@ -29,6 +29,7 @@
 #include "ui_memorytabpage.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/hostmetrics.h"
+#include "xenlib/xen/pool.h"
 #include "xenlib/xen/vmmetrics.h"
 #include "xenlib/xencache.h"
 #include "xenlib/utils/misc.h"
@@ -53,8 +54,8 @@ MemoryTabPage::~MemoryTabPage()
 
 bool MemoryTabPage::IsApplicableForObjectType(const QString& objectType) const
 {
-    // Memory tab is applicable to VMs and Hosts
-    return objectType == "vm" || objectType == "host";
+    // Memory tab is applicable to VMs, Hosts, and Pools
+    return objectType == "vm" || objectType == "host" || objectType == "pool";
 }
 
 QSharedPointer<VM> MemoryTabPage::GetVM()
@@ -88,6 +89,19 @@ void MemoryTabPage::refreshContent()
         this->ui->verticalSpacer->changeSize(0, 0, QSizePolicy::Minimum, QSizePolicy::Minimum);
         this->ui->verticalLayout->invalidate();
         this->populateHostMemory();
+    } else if (this->m_object->GetObjectType() == "pool")
+    {
+        this->ui->editButton->setVisible(false);
+        this->ui->horizontalSpacer->changeSize(0, 0, QSizePolicy::Minimum, QSizePolicy::Minimum);
+        this->ui->verticalSpacer->changeSize(0, 0, QSizePolicy::Minimum, QSizePolicy::Minimum);
+        this->ui->verticalLayout->invalidate();
+        this->populatePoolMemory();
+    } else
+    {
+        this->ui->memoryBar->ClearSegments();
+        this->ui->memoryBar->SetTotalMemory(0);
+        this->ui->memoryStatsGroup->setVisible(false);
+        this->ui->vmListScrollArea->setVisible(false);
     }
 }
 
@@ -220,16 +234,7 @@ void MemoryTabPage::populateHostMemory()
     // Show VM list for host view
     this->ui->vmListScrollArea->setVisible(true);
 
-    // Clear previous VM list
-    QLayoutItem* item;
-    while ((item = this->ui->vmListLayout->takeAt(0)) != nullptr)
-    {
-        if (item->widget())
-        {
-            delete item->widget();
-        }
-        delete item;
-    }
+    this->clearVmListLayout();
 
     QSharedPointer<HostMetrics> metrics = host->GetMetrics();
     if (metrics && metrics->IsLive())
@@ -344,6 +349,52 @@ void MemoryTabPage::populateHostMemory()
     }
 
     this->ui->vmListLayout->addStretch();
+}
+
+void MemoryTabPage::populatePoolMemory()
+{
+    QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(this->m_object);
+    if (!pool || !pool->GetConnection())
+        return;
+
+    this->ui->memoryBar->setVisible(false);
+    this->ui->memoryStatsGroup->setVisible(false);
+    this->ui->editButton->setVisible(false);
+    this->ui->vmListScrollArea->setVisible(true);
+
+    this->clearVmListLayout();
+
+    XenCache* cache = pool->GetCache();
+    QList<QSharedPointer<Host>> hosts = cache ? cache->GetAll<Host>("host") : QList<QSharedPointer<Host>>();
+    std::sort(hosts.begin(), hosts.end(), [](const QSharedPointer<Host>& left, const QSharedPointer<Host>& right) {
+        QString leftName = left ? left->GetName() : QString();
+        QString rightName = right ? right->GetName() : QString();
+        return QString::compare(leftName, rightName, Qt::CaseInsensitive) < 0;
+    });
+
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (!host)
+            continue;
+        QSharedPointer<HostMetrics> metrics = host->GetMetrics();
+        if (!metrics || !metrics->IsLive())
+            continue;
+        HostMemoryRow* hostRow = new HostMemoryRow(host, this);
+        this->ui->vmListLayout->addWidget(hostRow);
+    }
+
+    this->ui->vmListLayout->addStretch();
+}
+
+void MemoryTabPage::clearVmListLayout()
+{
+    QLayoutItem* item;
+    while ((item = this->ui->vmListLayout->takeAt(0)) != nullptr)
+    {
+        if (item->widget())
+            delete item->widget();
+        delete item;
+    }
 }
 
 void MemoryTabPage::onEditButtonClicked()

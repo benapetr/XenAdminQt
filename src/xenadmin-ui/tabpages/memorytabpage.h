@@ -32,6 +32,7 @@
 #include <QSharedPointer>
 
 class VM;
+class Pool;
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -82,6 +83,8 @@ class MemoryTabPage : public BaseTabPage
 
         void populateVMMemory();
         void populateHostMemory();
+        void populatePoolMemory();
+        void clearVmListLayout();
 };
 
 #endif // MEMORYTABPAGE_H

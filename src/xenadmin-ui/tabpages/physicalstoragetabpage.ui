@@ -44,7 +44,7 @@
      </property>
      <column>
       <property name="text">
-       <string>Icon</string>
+       <string/>
       </property>
      </column>
      <column>

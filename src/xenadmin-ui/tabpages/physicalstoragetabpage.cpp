@@ -38,6 +38,7 @@
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/vdi.h"
 #include "xenlib/utils/misc.h"
+#include "../iconmanager.h"
 #include "../mainwindow.h"
 #include "../commands/storage/newsrcommand.h"
 #include "../commands/storage/trimsrcommand.h"
@@ -48,6 +49,8 @@ PhysicalStorageTabPage::PhysicalStorageTabPage(QWidget* parent) : BaseTabPage(pa
 {
     this->ui->setupUi(this);
     this->ui->storageTable->horizontalHeader()->setStretchLastSection(true);
+    this->ui->storageTable->setIconSize(QSize(16, 16));
+    this->ui->storageTable->setColumnWidth(0, 24);
 
     // Make table read-only (C# PhysicalStoragePage has ReadOnly = true)
     this->ui->storageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -198,8 +201,9 @@ void PhysicalStorageTabPage::populateHostStorage()
         int row = this->ui->storageTable->rowCount();
         this->ui->storageTable->insertRow(row);
 
-        // Column 0: Icon (placeholder for now - C# uses SR icon based on type)
+        // Column 0: Icon (C# uses SR icon based on type/state)
         QTableWidgetItem* iconItem = new QTableWidgetItem();
+        iconItem->setIcon(IconManager::instance().GetIconForSR(sr->GetData(), this->m_connection));
         iconItem->setData(Qt::UserRole, srRef); // Store SR ref for context menu
         this->ui->storageTable->setItem(row, 0, iconItem);
 
@@ -317,8 +321,9 @@ void PhysicalStorageTabPage::populatePoolStorage()
         int row = this->ui->storageTable->rowCount();
         this->ui->storageTable->insertRow(row);
 
-        // Column 0: Icon (placeholder for now - C# uses SR icon based on type)
+        // Column 0: Icon (C# uses SR icon based on type/state)
         QTableWidgetItem* iconItem = new QTableWidgetItem();
+        iconItem->setIcon(IconManager::instance().GetIconForSR(sr->GetData(), this->m_connection));
         iconItem->setData(Qt::UserRole, srRef); // Store SR ref for context menu
         this->ui->storageTable->setItem(row, 0, iconItem);
 

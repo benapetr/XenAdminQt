@@ -37,7 +37,6 @@
 #include "../settingspanels/vmadvancededitpage.h"
 #include "../settingspanels/vmenlightenmenteditpage.h"
 #include "xen/pool.h"
-#include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
 
