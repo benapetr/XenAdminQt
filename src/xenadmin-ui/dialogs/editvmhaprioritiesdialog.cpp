@@ -27,7 +27,7 @@
 
 #include "editvmhaprioritiesdialog.h"
 #include "../operations/operationmanager.h"
-#include "../dialogs/operationprogressdialog.h"
+#include "../dialogs/actionprogressdialog.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/vm.h"
@@ -430,7 +430,7 @@ void EditVmHaPrioritiesDialog::accept()
     OperationManager::instance()->RegisterOperation(action);
 
     // Show progress dialog
-    OperationProgressDialog* progressDialog = new OperationProgressDialog(action, this);
+    ActionProgressDialog* progressDialog = new ActionProgressDialog(action, this);
 
     connect(action, &AsyncOperation::completed, [this, progressDialog]()
     {

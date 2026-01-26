@@ -25,8 +25,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef OPERATIONLAUNCHER_H
-#define OPERATIONLAUNCHER_H
+#ifndef MULTIPLEACTIONLAUNCHER_H
+#define MULTIPLEACTIONLAUNCHER_H
 
 #include "../xen/asyncoperation.h"
 #include <QObject>
@@ -48,11 +48,11 @@
  *
  * Usage:
  *   QList<AsyncOperation*> ops = { op1, op2, op3, ... };
- *   OperationLauncher launcher(ops, "Bulk Operation", "Starting...",
+ *   MultipleActionLauncher launcher(ops, "Bulk Operation", "Starting...",
  *                              "Complete", true);
  *   launcher.run();
  */
-class OperationLauncher : public QObject
+class MultipleActionLauncher : public QObject
 {
     Q_OBJECT
 
@@ -66,7 +66,7 @@ class OperationLauncher : public QObject
          * @param runInParallel If true, use ParallelOperation; otherwise MultipleOperation
          * @param parent Parent QObject
          */
-        explicit OperationLauncher(const QList<AsyncOperation*>& operations,
+        explicit MultipleActionLauncher(const QList<AsyncOperation*>& operations,
                                    const QString& title,
                                    const QString& startDescription,
                                    const QString& endDescription,
@@ -77,11 +77,11 @@ class OperationLauncher : public QObject
          * @brief Launch all operations with automatic grouping
          *
          * Operations are grouped by connection and launched appropriately:
-         * - Single ops run directly via runAsync()
+         * - Single ops Run directly via runAsync()
          * - Multiple ops per connection use MultipleOperation or ParallelOperation
          * - Cross-connection ops are properly synchronized
          */
-        void run();
+        void Run();
 
     private:
         QList<AsyncOperation*> m_operations;
@@ -91,4 +91,4 @@ class OperationLauncher : public QObject
         bool m_runInParallel;
 };
 
-#endif // OPERATIONLAUNCHER_H
+#endif // MULTIPLEACTIONLAUNCHER_H

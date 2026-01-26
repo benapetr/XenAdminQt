@@ -29,7 +29,7 @@
 #include "xenlib/xen/actions/vdi/vdidisablecbtaction.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xencache.h"
-#include "xenlib/operations/paralleloperation.h"
+#include "xenlib/operations/parallelaction.h"
 #include "xenlib/xen/vm.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
@@ -152,8 +152,8 @@ void DisableChangedBlockTrackingCommand::Run()
         actions.first()->RunAsync();
     } else
     {
-        // Multiple actions - use ParallelOperation
-        ParallelOperation* parallelOp = new ParallelOperation(
+        // Multiple actions - use ParallelAction
+        ParallelAction* parallelOp = new ParallelAction(
             "Disable changed block tracking",
             "Disabling changed block tracking",
             "Disabled changed block tracking",

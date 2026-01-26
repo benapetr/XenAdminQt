@@ -37,6 +37,7 @@
 class XenObject;
 class XenConnection;
 class Host;
+class PIF;
 
 /**
  * @brief Manages icons for different object types and states
@@ -58,6 +59,7 @@ class IconManager
         QIcon GetIconForSR(const QVariantMap& srData) const;
         QIcon GetIconForSR(const QVariantMap& srData, XenConnection* connection) const;
         QIcon GetIconForNetwork(const QVariantMap& networkData) const;
+        QIcon GetIconForPIF(const PIF* pif);
 
         // Static icon getters
         QIcon GetConnectedIcon() const;

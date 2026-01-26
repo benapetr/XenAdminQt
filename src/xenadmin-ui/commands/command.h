@@ -37,6 +37,7 @@
 
 class MainWindow;
 class XenObject;
+class AsyncOperation;
 
 /**
  * @brief Base class for all XenAdmin commands
@@ -141,6 +142,15 @@ class Command : public QObject
          * @brief Get selected objects (override or SelectionManager)
          */
         QList<QSharedPointer<XenObject>> getSelectedObjects() const;
+
+        /**
+         * @brief Run multiple actions similar to C# RunMultipleActions
+         */
+        void RunMultipleActions(const QList<AsyncOperation*>& actions,
+                                const QString& title,
+                                const QString& startDescription,
+                                const QString& endDescription,
+                                bool runActionsInParallel);
 
     private:
         MainWindow* m_mainWindow;

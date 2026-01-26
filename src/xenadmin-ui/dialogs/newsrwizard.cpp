@@ -37,7 +37,7 @@
 #include "../../xenlib/xen/host.h"
 #include "../../xenlib/xen/sr.h"
 #include "../../xenlib/xen/xenapi/xenapi_SR.h"
-#include "operationprogressdialog.h"
+#include "actionprogressdialog.h"
 
 #include <QButtonGroup>
 #include <QDateTime>
@@ -1265,7 +1265,7 @@ void NewSRWizard::accept()
             this);
     }
 
-    OperationProgressDialog* progressDialog = new OperationProgressDialog(srAction, this);
+    ActionProgressDialog* progressDialog = new ActionProgressDialog(srAction, this);
     progressDialog->setWindowTitle(this->m_selectedSRUuid.isEmpty() ? tr("Creating Storage Repository") : tr("Reattaching Storage Repository"));
 
     this->connect(srAction, &AsyncOperation::completed, this, [this, srAction, progressDialog]()

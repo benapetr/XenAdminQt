@@ -32,7 +32,7 @@
 #include "xen/pbd.h"
 #include "xen/xenobject.h"
 #include "xen/actions/sr/srrepairaction.h"
-#include "operations/multipleoperation.h"
+#include "operations/multipleaction.h"
 #include "xencache.h"
 #include <QFont>
 #include <QBrush>
@@ -308,7 +308,7 @@ void RepairSRDialog::onRepairButtonClicked()
             }
         }
         
-        this->repairAction = new MultipleOperation(
+        this->repairAction = new MultipleAction(
             nullptr,
             "Repair Storage Repositories",
             "Repairing storage repositories...",
@@ -395,7 +395,7 @@ void RepairSRDialog::onActionCompleted()
     }
     
     // Rebuild tree for MultipleOperation case
-    if (qobject_cast<MultipleOperation*>(this->repairAction))
+    if (qobject_cast<MultipleAction*>(this->repairAction))
     {
         this->buildTree();
     }

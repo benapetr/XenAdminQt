@@ -30,13 +30,17 @@
 #include <QDebug>
 #include <QMessageBox>
 #include <algorithm>
+#include <QSet>
+#include <QItemSelectionModel>
 #include "physicalstoragetabpage.h"
+#include "dialogs/actionprogressdialog.h"
 #include "ui_physicalstoragetabpage.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pbd.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/vdi.h"
+#include "xenlib/xen/actions/sr/srtrimaction.h"
 #include "xenlib/utils/misc.h"
 #include "../iconmanager.h"
 #include "../mainwindow.h"
@@ -44,6 +48,8 @@
 #include "../commands/storage/trimsrcommand.h"
 #include "../commands/storage/detachsrcommand.h"
 #include "../commands/storage/storagepropertiescommand.h"
+#include "../operations/operationmanager.h"
+#include "xenlib/operations/parallelaction.h"
 
 PhysicalStorageTabPage::PhysicalStorageTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::PhysicalStorageTabPage)
 {
@@ -360,7 +366,8 @@ void PhysicalStorageTabPage::populatePoolStorage()
 void PhysicalStorageTabPage::updateButtonStates()
 {
     MainWindow* mainWindow = this->getMainWindow();
-    QString selectedSrRef = this->getSelectedSRRef();
+    const QStringList selectedSrRefs = this->getSelectedSRRefs();
+    const int selectionCount = selectedSrRefs.size();
 
     if (mainWindow)
     {
@@ -374,15 +381,32 @@ void PhysicalStorageTabPage::updateButtonStates()
     bool canTrim = false;
     bool canShowProperties = false;
 
-    if (mainWindow && !selectedSrRef.isEmpty())
+    if (mainWindow && selectionCount == 1)
     {
+        const QString selectedSrRef = selectedSrRefs.first();
         TrimSRCommand trimCmd(mainWindow);
-        trimCmd.setTargetSR(selectedSrRef);
+        trimCmd.setTargetSR(selectedSrRef, this->m_connection);
         canTrim = trimCmd.CanRun();
 
         StoragePropertiesCommand propsCmd(mainWindow);
         propsCmd.setTargetSR(selectedSrRef, this->m_connection);
         canShowProperties = propsCmd.CanRun();
+    }
+    else if (mainWindow && selectionCount > 1 && this->m_connection)
+    {
+        // Enable trim if at least one selected SR supports it and is attached.
+        for (const QString& srRef : selectedSrRefs)
+        {
+            QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+            if (!sr || !sr->IsValid())
+                continue;
+            if (sr->SupportsTrim() && !sr->IsDetached())
+            {
+                canTrim = true;
+                break;
+            }
+        }
+        canShowProperties = false;
     }
 
     this->ui->trimButton->setEnabled(canTrim);
@@ -391,17 +415,32 @@ void PhysicalStorageTabPage::updateButtonStates()
 
 QString PhysicalStorageTabPage::getSelectedSRRef() const
 {
+    const QStringList refs = this->getSelectedSRRefs();
+    return refs.isEmpty() ? QString() : refs.first();
+}
+
+QStringList PhysicalStorageTabPage::getSelectedSRRefs() const
+{
+    QStringList refs;
     QList<QTableWidgetItem*> selectedItems = this->ui->storageTable->selectedItems();
     if (selectedItems.isEmpty())
-        return QString();
+        return refs;
 
-    // Get the first item in the selected row (Icon column stores SR ref)
-    int row = selectedItems.first()->row();
-    QTableWidgetItem* iconItem = this->ui->storageTable->item(row, 0);
-    if (!iconItem)
-        return QString();
+    QSet<int> rows;
+    for (QTableWidgetItem* item : selectedItems)
+        rows.insert(item->row());
 
-    return iconItem->data(Qt::UserRole).toString();
+    for (int row : rows)
+    {
+        QTableWidgetItem* iconItem = this->ui->storageTable->item(row, 0);
+        if (!iconItem)
+            continue;
+        const QString srRef = iconItem->data(Qt::UserRole).toString();
+        if (!srRef.isEmpty())
+            refs.append(srRef);
+    }
+
+    return refs;
 }
 
 MainWindow* PhysicalStorageTabPage::getMainWindow() const
@@ -427,24 +466,94 @@ void PhysicalStorageTabPage::onNewSRButtonClicked()
 
 void PhysicalStorageTabPage::onTrimButtonClicked()
 {
-    QString srRef = this->getSelectedSRRef();
-    if (srRef.isEmpty())
+    const QStringList selectedSrRefs = this->getSelectedSRRefs();
+    if (selectedSrRefs.isEmpty())
         return;
 
     MainWindow* mainWindow = this->getMainWindow();
     if (!mainWindow)
         return;
 
-    TrimSRCommand command(mainWindow);
-    command.setTargetSR(srRef);
+    QList<QSharedPointer<SR>> eligibleSrs;
+    if (this->m_connection)
+    {
+        for (const QString& srRef : selectedSrRefs)
+        {
+            QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+            if (!sr || !sr->IsValid())
+                continue;
+            if (sr->SupportsTrim() && !sr->IsDetached())
+                eligibleSrs.append(sr);
+        }
+    }
 
-    if (!command.CanRun())
+    if (eligibleSrs.isEmpty())
     {
         QMessageBox::warning(this, tr("Cannot Trim Storage Repository"), tr("The selected storage repository cannot be trimmed at this time."));
         return;
     }
 
-    command.Run();
+    QString confirmationText;
+    if (eligibleSrs.size() == 1)
+    {
+        confirmationText = tr("Are you sure you want to trim storage repository '%1'?")
+                               .arg(eligibleSrs.first()->GetName());
+    }
+    else
+    {
+        confirmationText = tr("Are you sure you want to trim the selected storage repositories?");
+    }
+
+    QMessageBox confirm(this);
+    confirm.setWindowTitle(tr("Trim Storage Repository"));
+    confirm.setText(confirmationText);
+    confirm.setInformativeText(tr("Trimming will reclaim freed space from the storage repository.\n\n"
+                                  "This operation may take some time depending on the amount of space to reclaim.\n\n"
+                                  "Do you want to continue?"));
+    confirm.setIcon(QMessageBox::Question);
+    confirm.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    confirm.setDefaultButton(QMessageBox::Yes);
+
+    if (confirm.exec() != QMessageBox::Yes)
+        return;
+
+    QList<AsyncOperation*> actions;
+    for (const QSharedPointer<SR>& sr : eligibleSrs)
+    {
+        XenConnection* conn = sr ? sr->GetConnection() : nullptr;
+        if (!conn || !conn->IsConnected())
+            continue;
+
+        SrTrimAction* action = new SrTrimAction(conn, sr, nullptr);
+        OperationManager::instance()->RegisterOperation(action);
+        actions.append(action);
+    }
+
+    if (actions.isEmpty())
+        return;
+
+    AsyncOperation* groupedAction = nullptr;
+    if (actions.size() == 1)
+    {
+        groupedAction = actions.first();
+    }
+    else
+    {
+        groupedAction = new ParallelAction(
+            QString(),
+            tr("Reclaiming freed space..."),
+            tr("Reclaim freed space completed"),
+            actions,
+            nullptr,
+            false,
+            false,
+            ParallelAction::DEFAULT_MAX_PARALLEL_OPERATIONS,
+            this);
+        OperationManager::instance()->RegisterOperation(groupedAction);
+    }
+
+    ActionProgressDialog dialog(groupedAction, this);
+    dialog.exec();
 }
 
 void PhysicalStorageTabPage::onPropertiesButtonClicked()
@@ -475,10 +584,19 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
     int row = this->ui->storageTable->rowAt(pos.y());
     if (row >= 0)
     {
-        this->ui->storageTable->setCurrentCell(row, 0);
+        QItemSelectionModel* selectionModel = this->ui->storageTable->selectionModel();
+        const bool rowSelected = selectionModel && selectionModel->isRowSelected(row, QModelIndex());
+        if (rowSelected)
+        {
+            this->ui->storageTable->setCurrentCell(row, 0, QItemSelectionModel::NoUpdate);
+        } else
+        {
+            this->ui->storageTable->setCurrentCell(row, 0, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        }
     }
 
-    QString srRef = this->getSelectedSRRef();
+    const QStringList selectedSrRefs = this->getSelectedSRRefs();
+    const int selectionCount = selectedSrRefs.size();
 
     QMenu menu(this);
 
@@ -492,44 +610,57 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
             cmd.Run();
     });
 
-    if (!srRef.isEmpty())
+    if (selectionCount >= 1)
     {
-        TrimSRCommand trimCmd(mainWindow);
-        trimCmd.setTargetSR(srRef);
+        bool canTrim = false;
+        if (this->m_connection)
+        {
+            for (const QString& srRef : selectedSrRefs)
+            {
+                QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+                if (!sr || !sr->IsValid())
+                    continue;
+                if (sr->SupportsTrim() && !sr->IsDetached())
+                {
+                    canTrim = true;
+                    break;
+                }
+            }
+        }
+
         QAction* trimAction = menu.addAction(tr("Reclaim Freed Space..."));
-        trimAction->setEnabled(trimCmd.CanRun());
-        connect(trimAction, &QAction::triggered, this, [mainWindow, srRef]()
-        {
-            TrimSRCommand cmd(mainWindow);
-            cmd.setTargetSR(srRef);
-            if (cmd.CanRun())
-                cmd.Run();
-        });
+        trimAction->setEnabled(canTrim);
+        connect(trimAction, &QAction::triggered, this, &PhysicalStorageTabPage::onTrimButtonClicked);
 
-        DetachSRCommand detachCmd(mainWindow);
-        detachCmd.setTargetSR(srRef);
-        QAction* detachAction = menu.addAction(tr("Detach Storage Repository"));
-        detachAction->setEnabled(detachCmd.CanRun());
-        connect(detachAction, &QAction::triggered, this, [mainWindow, srRef]()
+        if (selectionCount == 1)
         {
-            DetachSRCommand cmd(mainWindow);
-            cmd.setTargetSR(srRef);
-            if (cmd.CanRun())
-                cmd.Run();
-        });
+            const QString srRef = selectedSrRefs.first();
 
-        StoragePropertiesCommand propsCmd(mainWindow);
-        propsCmd.setTargetSR(srRef, this->m_connection);
-        QAction* propsAction = menu.addAction(tr("Properties..."));
-        propsAction->setEnabled(propsCmd.CanRun());
-        XenConnection *cn = this->m_connection;
-        connect(propsAction, &QAction::triggered, this, [mainWindow, srRef, cn]()
-        {
-            StoragePropertiesCommand cmd(mainWindow);
-            cmd.setTargetSR(srRef, cn);
-            if (cmd.CanRun())
-                cmd.Run();
-        });
+            DetachSRCommand detachCmd(mainWindow);
+            detachCmd.setTargetSR(srRef);
+            QAction* detachAction = menu.addAction(tr("Detach Storage Repository"));
+            detachAction->setEnabled(detachCmd.CanRun());
+            connect(detachAction, &QAction::triggered, this, [mainWindow, srRef]()
+            {
+                DetachSRCommand cmd(mainWindow);
+                cmd.setTargetSR(srRef);
+                if (cmd.CanRun())
+                    cmd.Run();
+            });
+
+            StoragePropertiesCommand propsCmd(mainWindow);
+            propsCmd.setTargetSR(srRef, this->m_connection);
+            QAction* propsAction = menu.addAction(tr("Properties..."));
+            propsAction->setEnabled(propsCmd.CanRun());
+            XenConnection *cn = this->m_connection;
+            connect(propsAction, &QAction::triggered, this, [mainWindow, srRef, cn]()
+            {
+                StoragePropertiesCommand cmd(mainWindow);
+                cmd.setTargetSR(srRef, cn);
+                if (cmd.CanRun())
+                    cmd.Run();
+            });
+        }
     }
 
     menu.exec(this->ui->storageTable->mapToGlobal(pos));

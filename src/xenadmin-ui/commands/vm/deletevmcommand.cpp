@@ -31,7 +31,7 @@
 #include "../../dialogs/confirmvmdeletedialog.h"
 #include "../../dialogs/commanderrordialog.h"
 #include "xencache.h"
-#include "xenlib/operations/multipleoperation.h"
+#include "xenlib/operations/multipleaction.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/vbd.h"
@@ -269,7 +269,7 @@ void DeleteVMCommand::runDeleteFlow(const QList<QSharedPointer<VM>>& selected,
     } else
     {
         XenConnection* connection = deletableVms.first() ? deletableVms.first()->GetConnection() : nullptr;
-        MultipleOperation* multi = new MultipleOperation(
+        MultipleAction* multi = new MultipleAction(
             connection,
             tr("Deleting VMs"),
             tr("Deleting selected VMs..."),

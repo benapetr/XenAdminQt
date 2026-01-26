@@ -28,7 +28,7 @@
 // verticallytabbeddialog.cpp - Base class for properties dialogs with vertical tabs
 #include "verticallytabbeddialog.h"
 #include "ui_verticallytabbeddialog.h"
-#include "operationprogressdialog.h"
+#include "actionprogressdialog.h"
 #include "../mainwindow.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
@@ -38,7 +38,7 @@
 #include "xenlib/xen/xenapi/xenapi_SR.h"
 #include "xenlib/xen/xenapi/xenapi_Network.h"
 #include <QtGlobal>
-#include "xenlib/operations/multipleoperation.h"
+#include "xenlib/operations/multipleaction.h"
 #include "xenlib/xen/asyncoperation.h"
 #include "xenlib/xen/xenobject.h"
 #include <QMessageBox>
@@ -249,9 +249,9 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
     // Create progress dialog - it will own the MultipleOperation and all sub-actions
     QString objName = this->m_object->GetName();
     
-    // Now create the MultipleOperation with progressDialog as parent
+    // Now create the MultipleAction with progressDialog as parent
     // This ensures proper ownership: dialog owns operation, operation owns sub-actions
-    MultipleOperation* multiOp = new MultipleOperation(
+    MultipleAction* multiOp = new MultipleAction(
         this->m_object->GetConnection(),
         tr("Update Properties - %1").arg(objName),
         tr("Updating properties..."),
@@ -262,7 +262,7 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
         false, // stopOnFirstException
         nullptr); // Progress dialog will own the operation
 
-    OperationProgressDialog* progressDialog = new OperationProgressDialog(multiOp, this);
+    ActionProgressDialog* progressDialog = new ActionProgressDialog(multiOp, this);
     progressDialog->setWindowTitle(tr("Update Properties - %1").arg(objName));
     
     // Re-parent the operation to the progress dialog for proper cleanup
@@ -270,7 +270,7 @@ bool VerticallyTabbedDialog::performSave(bool closeOnSuccess)
 
     // Connect completion handler
     bool saveSucceeded = false;
-    connect(multiOp, &MultipleOperation::completed, this, [this, multiOp, progressDialog, closeOnSuccess, &saveSucceeded]()
+    connect(multiOp, &MultipleAction::completed, this, [this, multiOp, progressDialog, closeOnSuccess, &saveSucceeded]()
     {
         if (multiOp->IsCompleted() && !multiOp->HasError())
         {

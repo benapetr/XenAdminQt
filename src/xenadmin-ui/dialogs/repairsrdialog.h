@@ -37,7 +37,7 @@ class SR;
 class Host;
 class PBD;
 class AsyncOperation;
-class MultipleOperation;
+class MultipleAction;
 class XenConnection;
 
 namespace Ui

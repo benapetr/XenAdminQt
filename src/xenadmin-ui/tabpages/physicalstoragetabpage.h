@@ -94,6 +94,7 @@ class PhysicalStorageTabPage : public BaseTabPage
         void populatePoolStorage();
         void updateButtonStates();
         QString getSelectedSRRef() const;
+        QStringList getSelectedSRRefs() const;
         MainWindow* getMainWindow() const;
 };
 

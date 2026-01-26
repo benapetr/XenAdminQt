@@ -30,8 +30,8 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/sr.h"
-#include "xenlib/xen/hostmetrics.h"
-#include "xencache.h"
+#include "xenlib/xen/pif.h"
+#include "xenlib/xencache.h"
 #include <QPainter>
 #include <QDebug>
 
@@ -300,16 +300,13 @@ QIcon IconManager::GetIconForSR(const QVariantMap& srData, XenConnection* connec
     if (!hasPbds || isHidden)
     {
         icon = QIcon(":/tree-icons/storage_disabled.png");
-    }
-    else if (isBroken)
+    } else if (isBroken)
     {
         icon = QIcon(":/tree-icons/storage_broken.png");
-    }
-    else if (isDefault)
+    } else if (isDefault)
     {
         icon = QIcon(":/tree-icons/storage_default.png");
-    }
-    else
+    } else
     {
         icon = QIcon(":/tree-icons/storage.png");
     }
@@ -329,11 +326,30 @@ QIcon IconManager::GetIconForNetwork(const QVariantMap& networkData) const
         return m_iconCache.value(cacheKey);
     }
 
-    QIcon icon = QIcon(":/images/000_Network_h32bit_16.png");
+    QIcon icon = QIcon(":/icons/network-16.png");
     if (icon.isNull())
     {
         icon = createTextIcon("N", QColor(50, 100, 200)); // Blue for network
     }
+
+    m_iconCache.insert(cacheKey, icon);
+    return icon;
+}
+
+QIcon IconManager::GetIconForPIF(const PIF* pif)
+{
+    if (!pif)
+        return QIcon();
+
+    bool isPrimary = pif->IsPrimaryManagementInterface();
+    QString cacheKey = isPrimary ? "pif_primary" : "pif_secondary";
+
+    if (m_iconCache.contains(cacheKey))
+        return m_iconCache.value(cacheKey);
+
+    QIcon icon = QIcon(":/icons/management-interface-16.png");
+    if (icon.isNull())
+        icon = createTextIcon("M", QColor(70, 110, 160));
 
     m_iconCache.insert(cacheKey, icon);
     return icon;

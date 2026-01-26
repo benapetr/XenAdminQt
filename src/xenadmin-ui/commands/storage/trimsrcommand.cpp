@@ -39,14 +39,24 @@ TrimSRCommand::TrimSRCommand(MainWindow* mainWindow, QObject* parent) : SRComman
 {
 }
 
-void TrimSRCommand::setTargetSR(const QString& srRef)
+void TrimSRCommand::setTargetSR(const QString& srRef, XenConnection* connection)
 {
     this->m_overrideSRRef = srRef;
+    this->m_overrideConnection = connection;
+}
+
+static QSharedPointer<SR> resolveOverrideSR(const QString& srRef, XenConnection* connection)
+{
+    if (srRef.isEmpty() || !connection || !connection->GetCache())
+        return QSharedPointer<SR>();
+    return connection->GetCache()->ResolveObject<SR>("sr", srRef);
 }
 
 bool TrimSRCommand::CanRun() const
 {
-    QSharedPointer<SR> sr = this->getSR();
+    QSharedPointer<SR> sr = this->m_overrideSRRef.isEmpty()
+        ? this->getSR()
+        : resolveOverrideSR(this->m_overrideSRRef, this->m_overrideConnection);
     if (!sr)
         return false;
 
@@ -56,7 +66,9 @@ bool TrimSRCommand::CanRun() const
 
 void TrimSRCommand::Run()
 {
-    QSharedPointer<SR> sr = this->getSR();
+    QSharedPointer<SR> sr = this->m_overrideSRRef.isEmpty()
+        ? this->getSR()
+        : resolveOverrideSR(this->m_overrideSRRef, this->m_overrideConnection);
     if (!sr)
         return;
 
@@ -128,43 +140,7 @@ QString TrimSRCommand::MenuText() const
 
 bool TrimSRCommand::supportsTrim(const QSharedPointer<SR> &sr) const
 {
-    if (!sr)
-        return false;
-
-    // Check if SR supports trim operation
-    // From C# SR.SupportsTrim():
-    // Trim is supported for thin-provisioned SRs
-    // Check sm_config for "use_vhd" = "true" or SR type supports it
-
-    QVariantMap smConfig = sr->GetData().value("sm_config", QVariantMap()).toMap();
-
-    // Check if this is a VHD-based SR (thin-provisioned)
-    bool useVhd = smConfig.value("use_vhd", false).toBool();
-    if (useVhd)
-        return true;
-
-    // Check SR type - certain types support trim
-    QString srType = sr->GetType();
-
-    // Types that typically support trim:
-    // - lvm over iSCSI with thin provisioning
-    // - local ext/xfs
-    // Note: This is a simplified check - the actual support depends on backend
-    QStringList trimSupportedTypes = {"ext", "nfs", "lvmoiscsi", "smb", "cifs"};
-
-    if (trimSupportedTypes.contains(srType))
-    {
-        // For NFS and similar, check if it's actually thin-provisioned
-        // by checking sm_config
-        if (srType == "nfs" || srType == "smb" || srType == "cifs")
-        {
-            // NFS SRs with VHD support trim
-            return useVhd;
-        }
-        return true;
-    }
-
-    return false;
+    return sr && sr->SupportsTrim();
 }
 
 bool TrimSRCommand::isAttachedToHost(const QSharedPointer<SR> &sr) const

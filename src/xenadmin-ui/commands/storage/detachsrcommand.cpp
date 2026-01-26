@@ -33,7 +33,7 @@
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include "../../dialogs/commanderrordialog.h"
-#include "xenlib/operations/multipleoperation.h"
+#include "xenlib/operations/multipleaction.h"
 #include <QMessageBox>
 #include <QDebug>
 
@@ -233,7 +233,7 @@ void DetachSRCommand::Run()
         actions.append(action);
     }
 
-    MultipleOperation* multi = new MultipleOperation(
+    MultipleAction* multi = new MultipleAction(
         nullptr,
         "Detach Storage Repositories",
         "Detaching storage repositories...",

@@ -25,10 +25,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PARALLELOPERATION_H
-#define PARALLELOPERATION_H
+#ifndef PARALLELACTION_H
+#define PARALLELACTION_H
 
-#include "multipleoperation.h"
+#include "multipleaction.h"
 #include "producerconsumerqueue.h"
 #include <QHash>
 #include <QMutex>
@@ -46,11 +46,11 @@ class XenConnection;
  *
  * Usage:
  *   QList<AsyncOperation*> ops = { op1, op2, op3, ... };
- *   auto parallel = new ParallelOperation("Bulk Operation",
+ *   auto parallel = new ParallelAction("Bulk Operation",
  *                                         "Starting...", "Complete", ops);
  *   parallel->execute();
  */
-class ParallelOperation : public MultipleOperation
+class ParallelAction : public MultipleAction
 {
     Q_OBJECT
 
@@ -72,7 +72,7 @@ class ParallelOperation : public MultipleOperation
          * @param maxParallelOperations Max concurrent operations per connection (default 25)
          * @param parent Parent QObject
          */
-        explicit ParallelOperation(const QString& title,
+        explicit ParallelAction(const QString& title,
                                    const QString& startDescription,
                                    const QString& endDescription,
                                    const QList<AsyncOperation*>& subOperations,
@@ -85,7 +85,7 @@ class ParallelOperation : public MultipleOperation
         /**
          * @brief Destructor
          */
-        ~ParallelOperation() override;
+        ~ParallelAction() override;
 
     protected:
         /**
@@ -139,4 +139,4 @@ class ParallelOperation : public MultipleOperation
         int m_completedOperationsCount;
 };
 
-#endif // PARALLELOPERATION_H
+#endif // PARALLELACTION_H

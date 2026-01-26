@@ -29,7 +29,7 @@
 #include <QDebug>
 #include "../../mainwindow.h"
 #include "../../dialogs/newvirtualdiskdialog.h"
-#include "../../dialogs/operationprogressdialog.h"
+#include "../../dialogs/actionprogressdialog.h"
 #include "xencache.h"
 #include "xen/network/connection.h"
 #include "xen/vm.h"
@@ -119,7 +119,7 @@ void AddVirtualDiskCommand::Run()
         qDebug() << "[AddVirtualDiskCommand] Creating VDI with CreateDiskAction...";
         CreateDiskAction* createAction = new CreateDiskAction(vdiRecord, vm->GetConnection(), this);
 
-        OperationProgressDialog* createDialog = new OperationProgressDialog(createAction, mainWindow());
+        ActionProgressDialog* createDialog = new ActionProgressDialog(createAction, mainWindow());
         qDebug() << "[AddVirtualDiskCommand] Executing create dialog...";
         int createResult = createDialog->exec();
         qDebug() << "[AddVirtualDiskCommand] Create dialog result:" << createResult
@@ -163,7 +163,7 @@ void AddVirtualDiskCommand::Run()
         qDebug() << "[AddVirtualDiskCommand] Creating VbdCreateAndPlugAction to attach VDI to VM...";
         VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(vm, vbdRecord, name, false, this);
 
-        OperationProgressDialog* attachDialog = new OperationProgressDialog(attachAction, mainWindow());
+        ActionProgressDialog* attachDialog = new ActionProgressDialog(attachAction, mainWindow());
         qDebug() << "[AddVirtualDiskCommand] Executing attach dialog...";
         int attachResult = attachDialog->exec();
         qDebug() << "[AddVirtualDiskCommand] Attach dialog result:" << attachResult

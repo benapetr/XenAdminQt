@@ -25,6 +25,7 @@
         <file alias="storage-16.png">images/000_NewStorage_h32bit_16.png</file>
         <file alias="storage-32.png">images/000_NewStorage_h32bit_32.png</file>
         <file alias="network-16.png">images/000_Network_h32bit_16.png</file>
+        <file alias="management-interface-16.png">images/000_ManagementInterface_h32bit_16.png</file>
         <file alias="network-32.png">images/000_NewNetwork_h32bit_32.png</file>
         <file alias="vm-create-32.png">images/000_CreateVM_h32bit_32.png</file>
         <file alias="vm-import-32.png">images/000_ImportVM_h32bit_32.png</file>

@@ -27,7 +27,7 @@
 
 #include "newpooldialog.h"
 #include "ui_newpooldialog.h"
-#include "operationprogressdialog.h"
+#include "actionprogressdialog.h"
 #include "../mainwindow.h"
 
 #include <xen/network/connection.h>
@@ -356,7 +356,7 @@ void NewPoolDialog::createPool()
         this);
 
     // Show progress dialog and run the action
-    OperationProgressDialog progressDialog(action, this);
+    ActionProgressDialog progressDialog(action, this);
     progressDialog.setWindowTitle(tr("Creating Pool"));
 
     // Connect completion signals

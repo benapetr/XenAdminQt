@@ -57,6 +57,7 @@ class PIF : public XenObject
         QString GetDevice() const;
         QString GetNetworkRef() const;
         QSharedPointer<Network> GetNetwork();
+        QSharedPointer<Network> GetNetwork() const;
         QString GetHostRef() const;
         QSharedPointer<Host> GetHost();
         QString GetMAC() const;
@@ -108,6 +109,8 @@ class PIF : public XenObject
 
         // Helper methods
         bool IsManagementInterface() const;
+        bool IsPrimaryManagementInterface() const;
+        bool IsSecondaryManagementInterface(bool showHiddenObjects) const;
         bool IsVLAN() const;
         bool IsBondSlave() const;
         bool IsBondMaster() const;

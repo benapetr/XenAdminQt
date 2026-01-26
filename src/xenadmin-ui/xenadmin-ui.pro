@@ -11,6 +11,7 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 SOURCES += \
     commands/host/hostcommand.cpp \
     commands/vm/vmcommand.cpp \
+    dialogs/actionprogressdialog.cpp \
     main.cpp \
     mainwindow.cpp \
     mainwindowtreebuilder.cpp \
@@ -49,7 +50,6 @@ SOURCES += \
     dialogs/bondpropertiesdialog.cpp \
     dialogs/networkingpropertiesdialog.cpp \
     dialogs/vifdialog.cpp \
-    dialogs/operationprogressdialog.cpp \
     dialogs/vmsnapshotdialog.cpp \
     dialogs/vdipropertiesdialog.cpp \
     dialogs/repairsrdialog.cpp \
@@ -264,6 +264,7 @@ SOURCES += \
 HEADERS += \
     commands/host/hostcommand.h \
     commands/vm/vmcommand.h \
+    dialogs/actionprogressdialog.h \
     globals.h \
     mainwindow.h \
     mainwindowtreebuilder.h \
@@ -302,7 +303,6 @@ HEADERS += \
     dialogs/bondpropertiesdialog.h \
     dialogs/networkingpropertiesdialog.h \
     dialogs/vifdialog.h \
-    dialogs/operationprogressdialog.h \
     dialogs/vmsnapshotdialog.h \
     dialogs/vdipropertiesdialog.h \
     dialogs/repairsrdialog.h \

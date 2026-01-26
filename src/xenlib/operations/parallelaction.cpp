@@ -25,12 +25,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "paralleloperation.h"
+#include "parallelaction.h"
 #include "../xen/network/connection.h"
 #include <QDebug>
 #include <algorithm>
 
-ParallelOperation::ParallelOperation(const QString& title,
+ParallelAction::ParallelAction(const QString& title,
                                      const QString& startDescription,
                                      const QString& endDescription,
                                      const QList<AsyncOperation*>& subOperations,
@@ -39,7 +39,7 @@ ParallelOperation::ParallelOperation(const QString& title,
                                      bool showSubOperationDetails,
                                      int maxParallelOperations,
                                      QObject* parent)
-    : MultipleOperation(connection, title, startDescription, endDescription,
+    : MultipleAction(connection, title, startDescription, endDescription,
                         subOperations, suppressHistory, showSubOperationDetails,
                         false, parent) // stopOnFirstException = false for parallel
       ,
@@ -73,7 +73,7 @@ ParallelOperation::ParallelOperation(const QString& title,
     }
 }
 
-ParallelOperation::~ParallelOperation()
+ParallelAction::~ParallelAction()
 {
     // Clean up queues
     for (ProducerConsumerQueue* queue : m_queuesByConnection.values())
@@ -89,7 +89,7 @@ ParallelOperation::~ParallelOperation()
     }
 }
 
-void ParallelOperation::runSubOperations(QStringList& exceptions)
+void ParallelAction::runSubOperations(QStringList& exceptions)
 {
     if (m_totalOperationsCount == 0)
     {
@@ -137,13 +137,13 @@ void ParallelOperation::runSubOperations(QStringList& exceptions)
     }
 }
 
-void ParallelOperation::enqueueOperation(AsyncOperation* operation,
+void ParallelAction::enqueueOperation(AsyncOperation* operation,
                                          ProducerConsumerQueue* queue,
                                          QStringList& exceptions)
 {
     // Connect completion signal
     connect(operation, &AsyncOperation::completed,
-            this, &ParallelOperation::onOperationCompleted);
+            this, &ParallelAction::onOperationCompleted);
 
     // Enqueue the operation
     queue->EnqueueTask([this, operation, &exceptions]() {
@@ -182,13 +182,13 @@ void ParallelOperation::enqueueOperation(AsyncOperation* operation,
     });
 }
 
-void ParallelOperation::onOperationCompleted()
+void ParallelAction::onOperationCompleted()
 {
     AsyncOperation* operation = qobject_cast<AsyncOperation*>(sender());
     if (operation)
     {
         disconnect(operation, &AsyncOperation::completed,
-                   this, &ParallelOperation::onOperationCompleted);
+                   this, &ParallelAction::onOperationCompleted);
     }
 
     QMutexLocker locker(&m_completionMutex);
@@ -201,7 +201,7 @@ void ParallelOperation::onOperationCompleted()
     }
 }
 
-void ParallelOperation::recalculatePercentComplete()
+void ParallelAction::recalculatePercentComplete()
 {
     if (m_totalOperationsCount == 0)
     {
@@ -229,10 +229,10 @@ void ParallelOperation::recalculatePercentComplete()
     SetPercentComplete(avgProgress);
 }
 
-void ParallelOperation::onMultipleOperationCompleted()
+void ParallelAction::onMultipleOperationCompleted()
 {
     // Call base class implementation first
-    MultipleOperation::onMultipleOperationCompleted();
+    MultipleAction::onMultipleOperationCompleted();
 
     // Stop all worker queues
     for (ProducerConsumerQueue* queue : m_queuesByConnection.values())

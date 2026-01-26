@@ -33,7 +33,7 @@
 #include "xen/vm.h"
 #include "xen/vmmetrics.h"
 #include "xencache.h"
-#include "operationprogressdialog.h"
+#include "actionprogressdialog.h"
 #include "xen/actions/vm/changememorysettingsaction.h"
 #include <QMessageBox>
 #include <QDebug>
@@ -717,7 +717,7 @@ bool BallooningDialog::applyMemoryChanges()
         this);
 
     // Show progress dialog with the action
-    OperationProgressDialog progressDialog(action, this);
+    ActionProgressDialog progressDialog(action, this);
     progressDialog.setWindowTitle(tr("Changing Memory Settings"));
 
     // Start the operation asynchronously

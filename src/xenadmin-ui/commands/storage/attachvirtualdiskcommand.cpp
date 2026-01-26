@@ -32,7 +32,7 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/actions/vbd/vbdcreateandplugaction.h"
 #include "../../dialogs/attachvirtualdiskdialog.h"
-#include "../../dialogs/operationprogressdialog.h"
+#include "../../dialogs/actionprogressdialog.h"
 #include <QMessageBox>
 
 AttachVirtualDiskCommand::AttachVirtualDiskCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
@@ -172,7 +172,7 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
 
     // Show progress dialog
     qDebug() << "[AttachVirtualDiskCommand] Creating OperationProgressDialog";
-    OperationProgressDialog* progressDialog = new OperationProgressDialog(action, mainWindow());
+    ActionProgressDialog* progressDialog = new ActionProgressDialog(action, mainWindow());
     progressDialog->setAttribute(Qt::WA_DeleteOnClose);
 
     qDebug() << "[AttachVirtualDiskCommand] Executing progress dialog...";

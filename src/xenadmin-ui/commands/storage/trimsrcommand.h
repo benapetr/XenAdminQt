@@ -30,6 +30,8 @@
 
 #include "srcommand.h"
 
+class XenConnection;
+
 /**
  * @brief TrimSRCommand - Trim (reclaim freed space) from storage repository
  *
@@ -63,7 +65,7 @@ class TrimSRCommand : public SRCommand
          * @brief Explicitly set the SR this command should operate on
          * @param srRef SR opaque reference
          */
-        void setTargetSR(const QString& srRef);
+        void setTargetSR(const QString& srRef, XenConnection* connection = nullptr);
 
     private:
         /**
@@ -81,6 +83,7 @@ class TrimSRCommand : public SRCommand
         bool isAttachedToHost(const QSharedPointer<SR> &sr) const;
 
         QString m_overrideSRRef;
+        XenConnection* m_overrideConnection = nullptr;
 };
 
 #endif // TRIMSRCOMMAND_H

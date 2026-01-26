@@ -28,6 +28,9 @@ HEADERS += \
     alerts/alarmmessagealert.h \
     alerts/policyalert.h \
     alerts/certificatealert.h \
+    operations/multipleaction.h \
+    operations/multipleactionlauncher.h \
+    operations/parallelaction.h \
     utils/misc.h \
     xen/actions/vm/vmstartaction.h \
     xen/xenapi/xenapi_Blob.h \
@@ -209,9 +212,6 @@ HEADERS += \
     collections/observablelist.h \
     xen/network/connectionsmanager.h \
     operations/producerconsumerqueue.h \
-    operations/multipleoperation.h \
-    operations/paralleloperation.h \
-    operations/operationlauncher.h \
     customfields/customfielddefinition.h \
     customfields/customfieldsmanager.h \
     xen/dockercontainer.h \
@@ -248,6 +248,9 @@ SOURCES += \
     alerts/alarmmessagealert.cpp \
     alerts/policyalert.cpp \
     alerts/certificatealert.cpp \
+    operations/multipleaction.cpp \
+    operations/multipleactionlauncher.cpp \
+    operations/parallelaction.cpp \
     utils/misc.cpp \
     vmhelpers.cpp \
     xen/actions/vm/vmstartaction.cpp \
@@ -423,9 +426,6 @@ SOURCES += \
     network/comparableaddress.cpp \
     xen/network/connectionsmanager.cpp \
     operations/producerconsumerqueue.cpp \
-    operations/multipleoperation.cpp \
-    operations/paralleloperation.cpp \
-    operations/operationlauncher.cpp \
     customfields/customfielddefinition.cpp \
     customfields/customfieldsmanager.cpp \
     xen/dockercontainer.cpp \

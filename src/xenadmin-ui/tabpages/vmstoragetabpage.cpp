@@ -48,11 +48,11 @@
 #include "dialogs/attachvirtualdiskdialog.h"
 #include "dialogs/movevirtualdiskdialog.h"
 #include "dialogs/vdipropertiesdialog.h"
-#include "dialogs/operationprogressdialog.h"
+#include "dialogs/actionprogressdialog.h"
 #include "settingsmanager.h"
 #include "../widgets/isodropdownbox.h"
 #include "../operations/operationmanager.h"
-#include "operations/multipleoperation.h"
+#include "operations/multipleaction.h"
 #include <QTableWidgetItem>
 #include <QSignalBlocker>
 #include <QDebug>
@@ -695,7 +695,7 @@ void VMStorageTabPage::onNewCDDriveLinkClicked(const QString& link)
 
     VbdCreateAndPlugAction* createAction = new VbdCreateAndPlugAction(vm, vbdRecord, tr("CD/DVD Drive"), false, this);
 
-    OperationProgressDialog* dialog = new OperationProgressDialog(createAction, this);
+    ActionProgressDialog* dialog = new ActionProgressDialog(createAction, this);
     if (dialog->exec() != QDialog::Accepted)
     {
         QMessageBox::warning(this, tr("Failed"), tr("Failed to create CD/DVD drive."));
@@ -1053,7 +1053,7 @@ void VMStorageTabPage::runVbdPlugOperations(const QStringList& vbdRefs, bool plu
     QString startDesc = plug ? tr("Activating disks...") : tr("Deactivating disks...");
     QString endDesc = tr("Completed");
 
-    MultipleOperation* multi = new MultipleOperation(
+    MultipleAction* multi = new MultipleAction(
         connection,
         title,
         startDesc,
@@ -1064,7 +1064,7 @@ void VMStorageTabPage::runVbdPlugOperations(const QStringList& vbdRefs, bool plu
         false,
         this);
 
-    OperationProgressDialog* dialog = new OperationProgressDialog(multi, this);
+    ActionProgressDialog* dialog = new ActionProgressDialog(multi, this);
     int result = dialog->exec();
     delete dialog;
 
@@ -1123,7 +1123,7 @@ void VMStorageTabPage::runDetachOperations(const QStringList& vdiRefs)
         return;
     }
 
-    MultipleOperation* multi = new MultipleOperation(
+    MultipleAction* multi = new MultipleAction(
         this->m_vm->GetConnection(),
         tr("Detaching Virtual Disks"),
         tr("Detaching disks..."),
@@ -1134,7 +1134,7 @@ void VMStorageTabPage::runDetachOperations(const QStringList& vdiRefs)
         false,
         this);
 
-    OperationProgressDialog* dialog = new OperationProgressDialog(multi, this);
+    ActionProgressDialog* dialog = new ActionProgressDialog(multi, this);
     dialog->exec();
     delete dialog;
 
@@ -1210,7 +1210,7 @@ void VMStorageTabPage::runDeleteOperations(const QStringList& vdiRefs)
         return;
     }
 
-    MultipleOperation* multi = new MultipleOperation(
+    MultipleAction* multi = new MultipleAction(
         this->m_vm->GetConnection(),
         tr("Deleting Virtual Disks"),
         tr("Deleting disks..."),
@@ -1221,7 +1221,7 @@ void VMStorageTabPage::runDeleteOperations(const QStringList& vdiRefs)
         false,
         this);
 
-    OperationProgressDialog* dialog = new OperationProgressDialog(multi, this);
+    ActionProgressDialog* dialog = new ActionProgressDialog(multi, this);
     dialog->exec();
     delete dialog;
 
@@ -1407,7 +1407,7 @@ void VMStorageTabPage::onAddButtonClicked()
 
     CreateDiskAction* createAction = new CreateDiskAction(vdiRecord, this->m_vm->GetConnection(), this);
 
-    OperationProgressDialog* createDialog = new OperationProgressDialog(createAction, this);
+    ActionProgressDialog* createDialog = new ActionProgressDialog(createAction, this);
     qDebug() << "[StorageTabPage] Executing create dialog for VDI...";
     int dialogResult = createDialog->exec();
     qDebug() << "[StorageTabPage] Create dialog exec() returned:" << dialogResult
@@ -1452,7 +1452,7 @@ void VMStorageTabPage::onAddButtonClicked()
 
     VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(this->m_vm, vbdRecord, name, false, this);
 
-    OperationProgressDialog* attachDialog = new OperationProgressDialog(attachAction, this);
+    ActionProgressDialog* attachDialog = new ActionProgressDialog(attachAction, this);
     if (attachDialog->exec() != QDialog::Accepted)
     {
         QMessageBox::warning(this, "Warning", "Virtual disk created but failed to attach to VM.\nYou can attach it manually from the Attach menu.");
@@ -1524,7 +1524,7 @@ void VMStorageTabPage::onAttachButtonClicked()
         vdiName = vdi->GetName();
 
     VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(this->m_vm, vbdRecord, vdiName, false, this);
-    OperationProgressDialog* attachDialog = new OperationProgressDialog(attachAction, this);
+    ActionProgressDialog* attachDialog = new ActionProgressDialog(attachAction, this);
 
     if (attachDialog->exec() != QDialog::Accepted)
     {

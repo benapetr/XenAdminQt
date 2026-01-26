@@ -142,7 +142,7 @@ These are the primary candidates to swap over to ported actions once available.
 - [ ] `src/xenadmin-ui/commands/network/newnetworkcommand.cpp` – Capture wizard selections and queue `CreateNetworkAction`/`ChangeNetworkingAction` via `runAction`, replacing the current placeholder warning dialog.
 
 ### Action helpers & operation feed
-- [ ] `src/xenadmin-ui/commands/command.{h,cpp}` – Add `runAction`/`runMultipleActions` helpers that duplicate C#’s `RunAsyncAction`/`RunMultipleActions`: auto-register operations, hook completion, and optionally launch `OperationProgressDialog` so every command stops duplicating boilerplate.
+- [x] `src/xenadmin-ui/commands/command.{h,cpp}` – Add `runAction`/`runMultipleActions` helpers that duplicate C#’s `RunAsyncAction`/`RunMultipleActions`: auto-register operations, hook completion, and optionally launch `OperationProgressDialog` so every command stops duplicating boilerplate.
 - [ ] `src/xenadmin-ui/tabpages/basetabpage.{h,cpp}` – Expose the same helper (plus accessors for `MainWindow`/`XenLib`) so tab pages and dialogs can queue AsyncOperations without manually touching `OperationManager`.
 - [ ] `src/xenadmin-ui/mainwindow.{h,cpp}` – Provide `showOperationProgress`/status-bar plumbing that the helpers can call, and teach the status area to juggle multiple concurrent actions (match C# `statusBarAction` behavior with a queue).
 - [ ] `src/xenadmin-ui/dialogs/operationprogressdialog.{h,cpp}` – Extend the dialog so it can be driven by `runAction`/`runMultipleActions` (modal or modeless, grouped operations) and display aggregated descriptions just like XenCenter’s progress UI.

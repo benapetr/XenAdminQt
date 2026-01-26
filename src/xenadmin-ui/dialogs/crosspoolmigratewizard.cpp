@@ -47,7 +47,7 @@
 #include "xen/actions/vm/vmcopyaction.h"
 #include "xen/actions/vm/vmcloneaction.h"
 #include "xen/actions/vm/resumeandstartvmsaction.h"
-#include "xenlib/operations/multipleoperation.h"
+#include "xenlib/operations/multipleaction.h"
 #include "../controls/srpicker.h"
 #include "xen/network/connectionsmanager.h"
 #include "xen/xenapi/xenapi_Host.h"
@@ -919,7 +919,7 @@ void CrossPoolMigrateWizard::accept()
                 actions.append(migrateAction);
                 actions.append(resumeAction);
 
-                MultipleOperation* multi = new MultipleOperation(
+                MultipleAction* multi = new MultipleAction(
                     vm->GetConnection(),
                     migrateAction->GetTitle(),
                     tr("Migrating VM..."),

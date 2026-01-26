@@ -30,6 +30,7 @@
 #include "host.h"
 #include "../xencache.h"
 #include "pbd.h"
+#include "sm.h"
 #include "vdi.h"
 #include "blob.h"
 
@@ -199,9 +200,30 @@ QVariantMap SR::CurrentOperations() const
 
 bool SR::SupportsTrim() const
 {
-    // Check sm_config for trim support
-    QVariantMap sm = this->SMConfig();
-    return sm.value("supports_trim", false).toBool();
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return false;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return false;
+
+    const QString srType = this->GetType();
+    if (srType.isEmpty())
+        return false;
+
+    const QList<QSharedPointer<SM>> sms = cache->GetAll<SM>("SM");
+    for (const QSharedPointer<SM>& sm : sms)
+    {
+        if (!sm || !sm->IsValid())
+            continue;
+        if (sm->Type() != srType)
+            continue;
+
+        return sm->Features().contains("SR_TRIM");
+    }
+
+    return false;
 }
 
 QVariantMap SR::Blobs() const

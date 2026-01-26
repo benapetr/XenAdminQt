@@ -140,6 +140,11 @@ QSharedPointer<Network> PIF::GetNetwork()
     return this->GetCache()->ResolveObject<Network>("network", this->GetNetworkRef());
 }
 
+QSharedPointer<Network> PIF::GetNetwork() const
+{
+    return const_cast<PIF*>(this)->GetNetwork();
+}
+
 QString PIF::GetHostRef() const
 {
     return this->stringProperty("host");
@@ -381,7 +386,29 @@ QString PIF::IgmpSnoopingStatus() const
 // Helper methods
 bool PIF::IsManagementInterface() const
 {
-    return this->Management();
+    return this->IsPrimaryManagementInterface() || this->IsSecondaryManagementInterface(true);
+}
+
+bool PIF::IsPrimaryManagementInterface() const
+{
+    if (!this->Management())
+        return false;
+
+    QSharedPointer<Network> network = this->GetNetwork();
+    return network && !network->IsGuestInstallerNetwork();
+}
+
+bool PIF::IsSecondaryManagementInterface(bool showHiddenObjects) const
+{
+    if (this->Management())
+        return false;
+
+    const QString mode = this->IpConfigurationMode().trimmed().toLower();
+    if (mode.isEmpty() || mode == "none" || mode == "unknown")
+        return false;
+
+    QSharedPointer<Network> network = this->GetNetwork();
+    return network && network->Show(showHiddenObjects);
 }
 
 bool PIF::IsVLAN() const

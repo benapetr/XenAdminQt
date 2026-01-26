@@ -25,10 +25,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "multipleoperation.h"
+#include "multipleaction.h"
 #include <QDebug>
 
-MultipleOperation::MultipleOperation(XenConnection* connection,
+MultipleAction::MultipleAction(XenConnection* connection,
                                      const QString& title,
                                      const QString& startDescription,
                                      const QString& endDescription,
@@ -53,10 +53,10 @@ MultipleOperation::MultipleOperation(XenConnection* connection,
     }
     
     this->registerEvents();
-    connect(this, &AsyncOperation::completed, this, &MultipleOperation::onCompleted);
+    connect(this, &AsyncOperation::completed, this, &MultipleAction::onCompleted);
 }
 
-MultipleOperation::~MultipleOperation()
+MultipleAction::~MultipleAction()
 {
     // Qt automatically disconnects signals when objects are destroyed
     // No need to manually deregister - in fact, doing so can cause crashes
@@ -64,18 +64,18 @@ MultipleOperation::~MultipleOperation()
     // deregisterEvents();
 }
 
-void MultipleOperation::registerEvents()
+void MultipleAction::registerEvents()
 {
     for (AsyncOperation* subOp : m_subOperations)
     {
         connect(subOp, &AsyncOperation::progressChanged,
-                this, &MultipleOperation::onSubOperationChanged);
+                this, &MultipleAction::onSubOperationChanged);
         connect(subOp, &AsyncOperation::descriptionChanged,
-                this, &MultipleOperation::onSubOperationChanged);
+                this, &MultipleAction::onSubOperationChanged);
     }
 }
 
-void MultipleOperation::deregisterEvents()
+void MultipleAction::deregisterEvents()
 {
     // Qt automatically disconnects signals when sender or receiver is destroyed
     // We only need to explicitly disconnect if objects are still alive
@@ -90,7 +90,7 @@ void MultipleOperation::deregisterEvents()
     }
 }
 
-void MultipleOperation::onSubOperationChanged()
+void MultipleAction::onSubOperationChanged()
 {
     AsyncOperation* subOp = qobject_cast<AsyncOperation*>(sender());
     if (subOp)
@@ -102,7 +102,7 @@ void MultipleOperation::onSubOperationChanged()
     }
 }
 
-void MultipleOperation::run()
+void MultipleAction::run()
 {
     this->SetPercentComplete(0);
     QStringList exceptions;
@@ -131,7 +131,7 @@ void MultipleOperation::run()
     }
 }
 
-void MultipleOperation::runSubOperations(QStringList& exceptions)
+void MultipleAction::runSubOperations(QStringList& exceptions)
 {
     for (AsyncOperation* subOp : m_subOperations)
     {
@@ -200,7 +200,7 @@ void MultipleOperation::runSubOperations(QStringList& exceptions)
     }
 }
 
-void MultipleOperation::recalculatePercentComplete()
+void MultipleAction::recalculatePercentComplete()
 {
     if (m_subOperations.isEmpty())
     {
@@ -217,7 +217,7 @@ void MultipleOperation::recalculatePercentComplete()
     SetPercentComplete(avgProgress);
 }
 
-void MultipleOperation::onCancel()
+void MultipleAction::onCancel()
 {
     // Cancel all incomplete sub-operations
     for (AsyncOperation* subOp : m_subOperations)
@@ -229,12 +229,12 @@ void MultipleOperation::onCancel()
     }
 }
 
-void MultipleOperation::onCompleted()
+void MultipleAction::onCompleted()
 {
     onMultipleOperationCompleted();
 }
 
-void MultipleOperation::onMultipleOperationCompleted()
+void MultipleAction::onMultipleOperationCompleted()
 {
     // Cancel any incomplete sub-operations
     // (in case MultipleOperation completed prematurely)

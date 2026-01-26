@@ -30,7 +30,7 @@
 #include "xencache.h"
 #include "xen/network/connection.h"
 #include "xen/xenapi/xenapi_VM.h"
-#include "operationprogressdialog.h"
+#include "actionprogressdialog.h"
 #include "xen/actions/vm/createvmaction.h"
 #include "xen/host.h"
 #include "xen/vm.h"
@@ -1122,7 +1122,7 @@ void NewVMWizard::createVirtualMachine()
         this->m_assignVtpm,
         this);
 
-    OperationProgressDialog* progressDialog = new OperationProgressDialog(action, this);
+    ActionProgressDialog* progressDialog = new ActionProgressDialog(action, this);
     progressDialog->setAttribute(Qt::WA_DeleteOnClose);
 
     int result = progressDialog->exec();

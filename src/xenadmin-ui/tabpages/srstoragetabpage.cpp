@@ -44,7 +44,7 @@
 #include "ui_srstoragetabpage.h"
 #include "dialogs/movevirtualdiskdialog.h"
 #include "dialogs/vdipropertiesdialog.h"
-#include "dialogs/operationprogressdialog.h"
+#include "dialogs/actionprogressdialog.h"
 #include "../operations/operationmanager.h"
 
 SrStorageTabPage::SrStorageTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::SrStorageTabPage)
@@ -324,7 +324,7 @@ void SrStorageTabPage::onDeleteButtonClicked()
     }
 
     DestroyDiskAction* action = new DestroyDiskAction(vdi->OpaqueRef(), vdi->GetConnection(), allowRunningDelete, this);
-    OperationProgressDialog* dialog = new OperationProgressDialog(action, this);
+    ActionProgressDialog* dialog = new ActionProgressDialog(action, this);
     dialog->exec();
     delete dialog;
 

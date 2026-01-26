@@ -25,13 +25,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "operationlauncher.h"
-#include "multipleoperation.h"
-#include "paralleloperation.h"
+#include "multipleactionlauncher.h"
+#include "multipleaction.h"
+#include "parallelaction.h"
 #include "../xen/network/connection.h"
 #include <QHash>
 
-OperationLauncher::OperationLauncher(const QList<AsyncOperation*>& operations,
+MultipleActionLauncher::MultipleActionLauncher(const QList<AsyncOperation*>& operations,
                                      const QString& title,
                                      const QString& startDescription,
                                      const QString& endDescription,
@@ -41,7 +41,7 @@ OperationLauncher::OperationLauncher(const QList<AsyncOperation*>& operations,
 {
 }
 
-void OperationLauncher::run()
+void MultipleActionLauncher::Run()
 {
     // Group operations by connection
     QHash<XenConnection*, QList<AsyncOperation*>> operationsByConnection;
@@ -79,7 +79,7 @@ void OperationLauncher::run()
             // Multiple operations - use MultipleOperation or ParallelOperation
             if (m_runInParallel)
             {
-                ParallelOperation* parallel = new ParallelOperation(
+                ParallelAction* parallel = new ParallelAction(
                     m_title,
                     m_startDescription,
                     m_endDescription,
@@ -87,12 +87,12 @@ void OperationLauncher::run()
                     connection,
                     false, // suppressHistory
                     false, // showSubOperationDetails
-                    ParallelOperation::DEFAULT_MAX_PARALLEL_OPERATIONS,
+                    ParallelAction::DEFAULT_MAX_PARALLEL_OPERATIONS,
                     this);
                 parallel->RunAsync();
             } else
             {
-                MultipleOperation* multiple = new MultipleOperation(
+                MultipleAction* multiple = new MultipleAction(
                     connection,
                     m_title,
                     m_startDescription,
@@ -117,7 +117,7 @@ void OperationLauncher::run()
         // Multiple operations - use MultipleOperation or ParallelOperation
         if (m_runInParallel)
         {
-            ParallelOperation* parallel = new ParallelOperation(
+            ParallelAction* parallel = new ParallelAction(
                 m_title,
                 m_startDescription,
                 m_endDescription,
@@ -125,12 +125,12 @@ void OperationLauncher::run()
                 nullptr, // connection
                 false,   // suppressHistory
                 false,   // showSubOperationDetails
-                ParallelOperation::DEFAULT_MAX_PARALLEL_OPERATIONS,
+                ParallelAction::DEFAULT_MAX_PARALLEL_OPERATIONS,
                 this);
             parallel->RunAsync();
         } else
         {
-            MultipleOperation* multiple = new MultipleOperation(
+            MultipleAction* multiple = new MultipleAction(
                 nullptr, // connection
                 m_title,
                 m_startDescription,

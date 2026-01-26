@@ -28,8 +28,10 @@
 #include "command.h"
 #include "../mainwindow.h"
 #include "../selectionmanager.h"
+#include "operations/multipleactionlauncher.h"
 #include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/network/connection.h"
+#include "xen/asyncoperation.h"
 #include <QTreeWidget>
 #include <QList>
 
@@ -204,4 +206,14 @@ QList<QSharedPointer<XenObject>> Command::getSelectedObjects() const
         return { obj };
 
     return {};
+}
+
+void Command::RunMultipleActions(const QList<AsyncOperation*>& actions,
+                                 const QString& title,
+                                 const QString& startDescription,
+                                 const QString& endDescription,
+                                 bool runActionsInParallel)
+{
+    MultipleActionLauncher launcher(actions, title, startDescription, endDescription, runActionsInParallel, this);
+    launcher.Run();
 }

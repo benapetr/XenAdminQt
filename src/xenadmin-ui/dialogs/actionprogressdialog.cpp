@@ -25,14 +25,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "operationprogressdialog.h"
+#include "actionprogressdialog.h"
+#include "operations/multipleaction.h"
 #include <QDebug>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QStyle>
 #include <QApplication>
 
-OperationProgressDialog::OperationProgressDialog(const QString& text, QWidget* parent)
+ActionProgressDialog::ActionProgressDialog(const QString& text, QWidget* parent)
     : QDialog(parent), m_operation(nullptr), m_showTryAgainMessage(true), m_showException(true), m_staticMode(true)
 {
     this->setupUi();
@@ -48,18 +49,18 @@ OperationProgressDialog::OperationProgressDialog(const QString& text, QWidget* p
     this->setWindowTitle(qApp->applicationName());
 }
 
-OperationProgressDialog::OperationProgressDialog(AsyncOperation* operation, QWidget* parent)
+ActionProgressDialog::ActionProgressDialog(AsyncOperation* operation, QWidget* parent)
     : QDialog(parent), m_operation(operation), m_showTryAgainMessage(true), m_showException(true), m_staticMode(false)
 {
     this->setupUi();
 
     // Connect operation signals
-    connect(this->m_operation, &AsyncOperation::completed, this, &OperationProgressDialog::onOperationCompleted);
-    connect(this->m_operation, &AsyncOperation::failed, this, &OperationProgressDialog::onOperationCompleted);
-    connect(this->m_operation, &AsyncOperation::cancelled, this, &OperationProgressDialog::onOperationCompleted);
-    connect(this->m_operation, &AsyncOperation::progressChanged, this, &OperationProgressDialog::onOperationChanged);
-    connect(this->m_operation, &AsyncOperation::descriptionChanged, this, &OperationProgressDialog::onOperationChanged);
-    connect(this->m_operation, &AsyncOperation::titleChanged, this, &OperationProgressDialog::onOperationChanged);
+    connect(this->m_operation, &AsyncOperation::completed, this, &ActionProgressDialog::onOperationCompleted);
+    connect(this->m_operation, &AsyncOperation::failed, this, &ActionProgressDialog::onOperationCompleted);
+    connect(this->m_operation, &AsyncOperation::cancelled, this, &ActionProgressDialog::onOperationCompleted);
+    connect(this->m_operation, &AsyncOperation::progressChanged, this, &ActionProgressDialog::onOperationChanged);
+    connect(this->m_operation, &AsyncOperation::descriptionChanged, this, &ActionProgressDialog::onOperationChanged);
+    connect(this->m_operation, &AsyncOperation::titleChanged, this, &ActionProgressDialog::onOperationChanged);
 
     // Set initial state
     this->m_progressBar->setMinimum(0);
@@ -71,7 +72,7 @@ OperationProgressDialog::OperationProgressDialog(AsyncOperation* operation, QWid
     this->setWindowTitle(qApp->applicationName());
 }
 
-OperationProgressDialog::~OperationProgressDialog()
+ActionProgressDialog::~ActionProgressDialog()
 {
     if (this->m_operation)
     {
@@ -79,7 +80,7 @@ OperationProgressDialog::~OperationProgressDialog()
     }
 }
 
-void OperationProgressDialog::setupUi()
+void ActionProgressDialog::setupUi()
 {
     setModal(true);
     setMinimumWidth(450);
@@ -137,25 +138,25 @@ void OperationProgressDialog::setupUi()
     this->m_cancelButton = new QPushButton(tr("Cancel"), this);
     this->m_cancelButton->setVisible(false);
     connect(this->m_cancelButton, &QPushButton::clicked,
-            this, &OperationProgressDialog::onCancelClicked);
+            this, &ActionProgressDialog::onCancelClicked);
     this->m_buttonLayout->addWidget(this->m_cancelButton);
 
     // Close button (hidden by default, shown on error)
     this->m_closeButton = new QPushButton(tr("Close"), this);
     this->m_closeButton->setVisible(false);
     connect(this->m_closeButton, &QPushButton::clicked,
-            this, &OperationProgressDialog::onCloseClicked);
+            this, &ActionProgressDialog::onCloseClicked);
     this->m_buttonLayout->addWidget(this->m_closeButton);
 
     this->m_mainLayout->addLayout(this->m_buttonLayout);
 }
 
-void OperationProgressDialog::setShowCancel(bool show)
+void ActionProgressDialog::setShowCancel(bool show)
 {
     this->m_cancelButton->setVisible(show);
 }
 
-void OperationProgressDialog::showEvent(QShowEvent* event)
+void ActionProgressDialog::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
 
@@ -166,7 +167,7 @@ void OperationProgressDialog::showEvent(QShowEvent* event)
     }
 }
 
-void OperationProgressDialog::onOperationChanged()
+void ActionProgressDialog::onOperationChanged()
 {
     if (!this->m_operation)
         return;
@@ -181,7 +182,7 @@ void OperationProgressDialog::onOperationChanged()
     this->m_cancelButton->setEnabled(this->m_operation->CanCancel());
 }
 
-void OperationProgressDialog::onOperationCompleted()
+void ActionProgressDialog::onOperationCompleted()
 {
     if (!this->m_operation)
     {
@@ -211,7 +212,7 @@ void OperationProgressDialog::onOperationCompleted()
     this->switchToErrorState();
 }
 
-void OperationProgressDialog::onCancelClicked()
+void ActionProgressDialog::onCancelClicked()
 {
     this->m_cancelButton->setEnabled(false);
 
@@ -223,12 +224,12 @@ void OperationProgressDialog::onCancelClicked()
     }
 }
 
-void OperationProgressDialog::onCloseClicked()
+void ActionProgressDialog::onCloseClicked()
 {
     this->reject();
 }
 
-void OperationProgressDialog::updateStatusLabel()
+void ActionProgressDialog::updateStatusLabel()
 {
     if (!this->m_operation)
         return;
@@ -243,13 +244,13 @@ void OperationProgressDialog::updateStatusLabel()
     this->updateSubOperationStatusLabel();
 }
 
-void OperationProgressDialog::updateSubOperationStatusLabel()
+void ActionProgressDialog::updateSubOperationStatusLabel()
 {
     if (!this->m_operation)
         return;
 
-    // Check if this is a MultipleOperation with sub-operation details
-    MultipleOperation* multiOp = qobject_cast<MultipleOperation*>(m_operation);
+    // Check if this is a MultipleAction with sub-operation details
+    MultipleAction* multiOp = qobject_cast<MultipleAction*>(m_operation);
 
     if (multiOp && multiOp->showSubOperationDetails())
     {
@@ -269,7 +270,7 @@ void OperationProgressDialog::updateSubOperationStatusLabel()
     this->m_subStatusLabel->setVisible(false);
 }
 
-void OperationProgressDialog::switchToErrorState()
+void ActionProgressDialog::switchToErrorState()
 {
     // Hide progress bar
     this->m_progressBar->setVisible(false);
@@ -319,7 +320,7 @@ void OperationProgressDialog::switchToErrorState()
     adjustSize();
 }
 
-void OperationProgressDialog::hideTitleBarIcons()
+void ActionProgressDialog::hideTitleBarIcons()
 {
     setWindowFlags(Qt::Dialog | Qt::CustomizeWindowHint | Qt::WindowTitleHint);
 }

@@ -43,7 +43,8 @@
 #include "../dialogs/networkpropertiesdialog.h"
 #include "../dialogs/networkingpropertiesdialog.h"
 #include "../dialogs/vifdialog.h"
-#include "../dialogs/operationprogressdialog.h"
+#include "../dialogs/actionprogressdialog.h"
+#include "../iconmanager.h"
 #include "xenlib/xen/actions/vif/deletevifaction.h"
 #include "xenlib/xen/actions/vif/plugvifaction.h"
 #include "xenlib/xen/actions/vif/unplugvifaction.h"
@@ -64,6 +65,8 @@ NetworkTabPage::NetworkTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui
     // Set up table properties
     this->ui->networksTable->horizontalHeader()->setStretchLastSection(true);
     this->ui->ipConfigTable->horizontalHeader()->setStretchLastSection(true);
+    this->ui->networksTable->setIconSize(QSize(16, 16));
+    this->ui->ipConfigTable->setIconSize(QSize(16, 16));
 
     // Disable editing
     this->ui->networksTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -71,6 +74,7 @@ NetworkTabPage::NetworkTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui
 
     // Set icon column width to minimum
     this->ui->ipConfigTable->setColumnWidth(1, 20);
+    this->ui->networksTable->setColumnWidth(0, 24);
 
     // Enable context menus
     this->ui->networksTable->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -165,23 +169,24 @@ void NetworkTabPage::setupVifColumns()
     // Set up columns for VM VIFs (Virtual Interfaces)
     // Matches C# NetworkList.AddVifColumns()
     this->ui->networksTable->clear();
-    this->ui->networksTable->setColumnCount(6);
+    this->ui->networksTable->setColumnCount(7);
 
     QStringList headers;
-    headers << "Device" << "MAC" << "Limit" << "Network" << "IP Address" << "Active";
+    headers << "" << "Device" << "MAC" << "Limit" << "Network" << "IP Address" << "Active";
     this->ui->networksTable->setHorizontalHeaderLabels(headers);
 
     // Set column widths
-    this->ui->networksTable->setColumnWidth(0, 80);  // Device
-    this->ui->networksTable->setColumnWidth(1, 140); // MAC
-    this->ui->networksTable->setColumnWidth(2, 100); // Limit
-    this->ui->networksTable->setColumnWidth(3, 150); // Network
-    this->ui->networksTable->setColumnWidth(4, 150); // IP Address
-    this->ui->networksTable->setColumnWidth(5, 80);  // Active
+    this->ui->networksTable->setColumnWidth(0, 24);  // Icon
+    this->ui->networksTable->setColumnWidth(1, 80);  // Device
+    this->ui->networksTable->setColumnWidth(2, 140); // MAC
+    this->ui->networksTable->setColumnWidth(3, 100); // Limit
+    this->ui->networksTable->setColumnWidth(4, 150); // Network
+    this->ui->networksTable->setColumnWidth(5, 150); // IP Address
+    this->ui->networksTable->setColumnWidth(6, 80);  // Active
 
     // Last column should stretch
     this->ui->networksTable->horizontalHeader()->setStretchLastSection(false);
-    this->ui->networksTable->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Stretch);
+    this->ui->networksTable->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
 }
 
 void NetworkTabPage::setupNetworkColumns()
@@ -189,26 +194,27 @@ void NetworkTabPage::setupNetworkColumns()
     // Set up columns for Host/Pool networks
     // Matches C# NetworkList.AddNetworkColumns()
     this->ui->networksTable->clear();
-    this->ui->networksTable->setColumnCount(9);
+    this->ui->networksTable->setColumnCount(10);
 
     QStringList headers;
-    headers << "Name" << "Description" << "NIC" << "VLAN" << "Auto"
+    headers << "" << "Name" << "Description" << "NIC" << "VLAN" << "Auto"
             << "Link Status" << "MAC" << "MTU" << "SR-IOV";
     this->ui->networksTable->setHorizontalHeaderLabels(headers);
 
     // Set column widths
-    this->ui->networksTable->setColumnWidth(0, 150); // Name
-    this->ui->networksTable->setColumnWidth(2, 80);  // NIC
-    this->ui->networksTable->setColumnWidth(3, 60);  // VLAN
-    this->ui->networksTable->setColumnWidth(4, 60);  // Auto
-    this->ui->networksTable->setColumnWidth(5, 100); // Link Status
-    this->ui->networksTable->setColumnWidth(6, 140); // MAC
-    this->ui->networksTable->setColumnWidth(7, 60);  // MTU
-    this->ui->networksTable->setColumnWidth(8, 80);  // SR-IOV
+    this->ui->networksTable->setColumnWidth(0, 24);  // Icon
+    this->ui->networksTable->setColumnWidth(1, 150); // Name
+    this->ui->networksTable->setColumnWidth(3, 80);  // NIC
+    this->ui->networksTable->setColumnWidth(4, 60);  // VLAN
+    this->ui->networksTable->setColumnWidth(5, 60);  // Auto
+    this->ui->networksTable->setColumnWidth(6, 100); // Link Status
+    this->ui->networksTable->setColumnWidth(7, 140); // MAC
+    this->ui->networksTable->setColumnWidth(8, 60);  // MTU
+    this->ui->networksTable->setColumnWidth(9, 80);  // SR-IOV
 
     // Description column should stretch
     this->ui->networksTable->horizontalHeader()->setStretchLastSection(false);
-    this->ui->networksTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    this->ui->networksTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
 }
 
 void NetworkTabPage::populateVIFsForVM()
@@ -302,14 +308,23 @@ void NetworkTabPage::populateVIFsForVM()
         // Store VIF ref for later retrieval (used by getSelectedVifRef)
         QString vifRef = vif->OpaqueRef();
 
-        // Column 0: GetDevice (e.g., "0", "1", "2")
+        // Column 0: Icon
+        QSharedPointer<Network> iconNetwork = vif->GetNetwork();
+        QTableWidgetItem* iconItem = new QTableWidgetItem();
+        if (iconNetwork && iconNetwork->IsValid())
+            iconItem->setIcon(IconManager::instance().GetIconForNetwork(iconNetwork->GetData()));
+        else
+            iconItem->setIcon(IconManager::instance().GetIconForNetwork(QVariantMap()));
+        iconItem->setData(Qt::UserRole, vifRef); // Store ref as hidden data
+        this->ui->networksTable->setItem(row, 0, iconItem);
+
+        // Column 1: GetDevice (e.g., "0", "1", "2")
         // C#: DeviceCell.Value = Vif.device;
         QString device = vif->GetDevice();
         QTableWidgetItem* deviceItem = new QTableWidgetItem(device);
-        deviceItem->setData(Qt::UserRole, vifRef); // Store ref as hidden data
-        this->ui->networksTable->setItem(row, 0, deviceItem);
+        this->ui->networksTable->setItem(row, 1, deviceItem);
 
-        // Column 1: MAC address
+        // Column 2: MAC address
         // C#: MacCell.Value = Helpers.GetMacString(Vif.MAC);
         QString mac = vif->GetMAC();
         // Format MAC address like C# Helpers.GetMacString() - insert colons
@@ -324,9 +339,9 @@ void NetworkTabPage::populateVIFsForVM()
             }
             mac = formattedMac;
         }
-        this->ui->networksTable->setItem(row, 1, new QTableWidgetItem(mac));
+        this->ui->networksTable->setItem(row, 2, new QTableWidgetItem(mac));
 
-        // Column 2: Limit (QoS bandwidth limit)
+        // Column 3: Limit (QoS bandwidth limit)
         // C#: LimitCell.Value = Vif.qos_algorithm_type != "" ? Vif.LimitString() : "";
         QString limit;
         QString qosAlgorithm = vif->QosAlgorithmType();
@@ -340,17 +355,17 @@ void NetworkTabPage::populateVIFsForVM()
                 limit = kbps + " kbps";
             }
         }
-        this->ui->networksTable->setItem(row, 2, new QTableWidgetItem(limit));
+        this->ui->networksTable->setItem(row, 3, new QTableWidgetItem(limit));
 
-        // Column 3: Network name
+        // Column 4: Network name
         // C#: NetworkCell.Value = Vif.NetworkName();
         QString networkName = "-";
         QSharedPointer<Network> network = vif->GetNetwork();
         if (network && network->IsValid())
             networkName = network->GetName();
-        this->ui->networksTable->setItem(row, 3, new QTableWidgetItem(networkName));
+        this->ui->networksTable->setItem(row, 4, new QTableWidgetItem(networkName));
 
-        // Column 4: IP Address(es) from guest_metrics
+        // Column 5: IP Address(es) from guest_metrics
         // C#: IpCell.Value = Vif.IPAddressesAsString();
         QString ipAddress;
         if (!networks.isEmpty())
@@ -376,13 +391,13 @@ void NetworkTabPage::populateVIFsForVM()
                 ipAddress = ipAddresses.join(", ");
             }
         }
-        this->ui->networksTable->setItem(row, 4, new QTableWidgetItem(ipAddress));
+        this->ui->networksTable->setItem(row, 5, new QTableWidgetItem(ipAddress));
 
-        // Column 5: Active status (currently_attached)
+        // Column 6: Active status (currently_attached)
         // C#: AttachedCell.Value = Vif.currently_attached ? Messages.YES : Messages.NO;
         bool attached = vif->CurrentlyAttached();
         QString activeText = attached ? tr("Yes") : tr("No");
-        this->ui->networksTable->setItem(row, 5, new QTableWidgetItem(activeText));
+        this->ui->networksTable->setItem(row, 6, new QTableWidgetItem(activeText));
     }
 
     // Update button states after populating (matches C# UpdateEnablement call)
@@ -573,19 +588,23 @@ void NetworkTabPage::addNetworkRow(QSharedPointer<Network> network)
         }
     }
 
-    // Create items and store network ref in first column as user data
-    QTableWidgetItem* nameItem = new QTableWidgetItem(name);
-    nameItem->setData(Qt::UserRole, network->OpaqueRef()); // Store network ref for later use
+    // Column 0: Icon
+    QTableWidgetItem* iconItem = new QTableWidgetItem();
+    iconItem->setIcon(IconManager::instance().GetIconForNetwork(network->GetData()));
+    iconItem->setData(Qt::UserRole, network->OpaqueRef()); // Store network ref for later use
+    this->ui->networksTable->setItem(row, 0, iconItem);
 
-    this->ui->networksTable->setItem(row, 0, nameItem);
-    this->ui->networksTable->setItem(row, 1, new QTableWidgetItem(description));
-    this->ui->networksTable->setItem(row, 2, new QTableWidgetItem(nicInfo));
-    this->ui->networksTable->setItem(row, 3, new QTableWidgetItem(vlanInfo));
-    this->ui->networksTable->setItem(row, 4, new QTableWidgetItem(autoInfo));
-    this->ui->networksTable->setItem(row, 5, new QTableWidgetItem(linkStatus));
-    this->ui->networksTable->setItem(row, 6, new QTableWidgetItem(macInfo));
-    this->ui->networksTable->setItem(row, 7, new QTableWidgetItem(mtuInfo));
-    this->ui->networksTable->setItem(row, 8, new QTableWidgetItem(sriovInfo));
+    // Column 1: Name
+    QTableWidgetItem* nameItem = new QTableWidgetItem(name);
+    this->ui->networksTable->setItem(row, 1, nameItem);
+    this->ui->networksTable->setItem(row, 2, new QTableWidgetItem(description));
+    this->ui->networksTable->setItem(row, 3, new QTableWidgetItem(nicInfo));
+    this->ui->networksTable->setItem(row, 4, new QTableWidgetItem(vlanInfo));
+    this->ui->networksTable->setItem(row, 5, new QTableWidgetItem(autoInfo));
+    this->ui->networksTable->setItem(row, 6, new QTableWidgetItem(linkStatus));
+    this->ui->networksTable->setItem(row, 7, new QTableWidgetItem(macInfo));
+    this->ui->networksTable->setItem(row, 8, new QTableWidgetItem(mtuInfo));
+    this->ui->networksTable->setItem(row, 9, new QTableWidgetItem(sriovInfo));
 }
 
 void NetworkTabPage::populateIPConfigForHost()
@@ -742,7 +761,10 @@ void NetworkTabPage::addIPConfigRow(const QSharedPointer<PIF>& pif, const QShare
     hostNameItem->setData(Qt::UserRole, pifRef); // Store PIF ref for later use
 
     this->ui->ipConfigTable->setItem(row, 0, hostNameItem);
-    // Column 1 is icon - skip for now
+    // Column 1: Icon (C# uses Images.GetImage16For(pif))
+    QTableWidgetItem* iconItem = new QTableWidgetItem();
+    iconItem->setIcon(IconManager::instance().GetIconForPIF(pif.data()));
+    this->ui->ipConfigTable->setItem(row, 1, iconItem);
     this->ui->ipConfigTable->setItem(row, 2, new QTableWidgetItem(interfaceType));
     this->ui->ipConfigTable->setItem(row, 3, new QTableWidgetItem(networkName));
     this->ui->ipConfigTable->setItem(row, 4, new QTableWidgetItem(nicName));
@@ -1088,7 +1110,7 @@ void NetworkTabPage::onAddNetwork()
             });
 
             // Show progress dialog
-            OperationProgressDialog* progressDialog = new OperationProgressDialog(action, this);
+            ActionProgressDialog* progressDialog = new ActionProgressDialog(action, this);
             progressDialog->setAttribute(Qt::WA_DeleteOnClose);
             progressDialog->show();
 
@@ -1279,7 +1301,7 @@ void NetworkTabPage::onEditNetwork()
             });
 
             // Show progress dialog
-            OperationProgressDialog* progressDialog = new OperationProgressDialog(action, this);
+            ActionProgressDialog* progressDialog = new ActionProgressDialog(action, this);
             progressDialog->setAttribute(Qt::WA_DeleteOnClose);
             progressDialog->show();
 
@@ -1359,7 +1381,7 @@ void NetworkTabPage::onRemoveNetwork()
             });
 
             // Show progress dialog
-            OperationProgressDialog* progressDialog = new OperationProgressDialog(action, this);
+            ActionProgressDialog* progressDialog = new ActionProgressDialog(action, this);
             progressDialog->setAttribute(Qt::WA_DeleteOnClose);
             progressDialog->show();
 
@@ -1431,7 +1453,7 @@ void NetworkTabPage::onActivateToggle()
         });
 
         // Show progress dialog
-        OperationProgressDialog* progressDialog = new OperationProgressDialog(action, this);
+        ActionProgressDialog* progressDialog = new ActionProgressDialog(action, this);
         progressDialog->setAttribute(Qt::WA_DeleteOnClose);
         progressDialog->show();
 
@@ -1459,7 +1481,7 @@ void NetworkTabPage::onActivateToggle()
         });
 
         // Show progress dialog
-        OperationProgressDialog* progressDialog = new OperationProgressDialog(action, this);
+        ActionProgressDialog* progressDialog = new ActionProgressDialog(action, this);
         progressDialog->setAttribute(Qt::WA_DeleteOnClose);
         progressDialog->show();
 

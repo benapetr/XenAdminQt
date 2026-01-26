@@ -44,7 +44,7 @@ namespace Ui
 class XenConnection;
 class AsyncOperation;
 class XenObject;
-class MultipleOperation;
+class MultipleAction;
 
 /**
  * @brief VerticallyTabbedDialog - Base class for property editor dialogs
