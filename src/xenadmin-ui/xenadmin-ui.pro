@@ -110,6 +110,10 @@ SOURCES += \
     dialogs/optionspages/consolesoptionspage.cpp \
     dialogs/optionspages/saveandrestoreoptionspage.cpp \
     dialogs/optionspages/connectionoptionspage.cpp \
+    dialogs/restoresession/saveandrestoredialog.cpp \
+    dialogs/restoresession/changemainpassworddialog.cpp \
+    dialogs/restoresession/entermainpassworddialog.cpp \
+    dialogs/restoresession/setmainpassworddialog.cpp \
     operations/operationmanager.cpp \
     selectionmanager.cpp \
     actions/meddlingaction.cpp \
@@ -368,6 +372,10 @@ HEADERS += \
     dialogs/optionspages/consolesoptionspage.h \
     dialogs/optionspages/saveandrestoreoptionspage.h \
     dialogs/optionspages/connectionoptionspage.h \
+    dialogs/restoresession/saveandrestoredialog.h \
+    dialogs/restoresession/changemainpassworddialog.h \
+    dialogs/restoresession/entermainpassworddialog.h \
+    dialogs/restoresession/setmainpassworddialog.h \
     operations/operationmanager.h \
     actions/meddlingaction.h \
     actions/meddlingactionmanager.h \
@@ -574,6 +582,10 @@ FORMS += \
     dialogs/optionspages/consolesoptionspage.ui \
     dialogs/optionspages/saveandrestoreoptionspage.ui \
     dialogs/optionspages/connectionoptionspage.ui \
+    dialogs/restoresession/saveandrestoredialog.ui \
+    dialogs/restoresession/changemainpassworddialog.ui \
+    dialogs/restoresession/entermainpassworddialog.ui \
+    dialogs/restoresession/setmainpassworddialog.ui \
     tabpages/generaltabpage.ui \
     tabpages/physicalstoragetabpage.ui \
     tabpages/srstoragetabpage.ui \

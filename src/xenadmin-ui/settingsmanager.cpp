@@ -608,3 +608,54 @@ void SettingsManager::addToRecentList(const QString& settingsKey, const QString&
     this->m_settings->setValue(settingsKey, recent);
     emit settingsChanged(settingsKey);
 }
+
+// Static MainPassword storage (matches C# Program.MainPassword)
+static QByteArray g_mainPassword;
+
+QByteArray SettingsManager::GetMainPassword()
+{
+    return g_mainPassword;
+}
+
+void SettingsManager::SetMainPassword(const QByteArray& password)
+{
+    g_mainPassword = password;
+}
+
+bool SettingsManager::AllowCredentialSave()
+{
+    // In C# this checks Windows registry for enterprise policy.
+    // For Qt, we default to true (allow credential save).
+    // Could be extended to read from system registry or config file.
+    return true;
+}
+
+bool SettingsManager::GetSaveSession() const
+{
+    return this->m_settings->value("Session/SaveSession", false).toBool();
+}
+
+void SettingsManager::SetSaveSession(bool save)
+{
+    this->m_settings->setValue("Session/SaveSession", save);
+    emit settingsChanged("Session/SaveSession");
+}
+
+bool SettingsManager::GetRequirePass() const
+{
+    return this->m_settings->value("Session/RequirePass", false).toBool();
+}
+
+void SettingsManager::SetRequirePass(bool require)
+{
+    this->m_settings->setValue("Session/RequirePass", require);
+    emit settingsChanged("Session/RequirePass");
+}
+
+void SettingsManager::SaveServerList()
+{
+    // Matches C# Settings.SaveServerList()
+    // This triggers saving all connection data to persistent storage.
+    // In Qt, QSettings auto-saves, but we force sync here.
+    instance().Sync();
+}
