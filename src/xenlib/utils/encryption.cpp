@@ -198,3 +198,43 @@ QString EncryptionUtils::HashPasswordWithSalt(const QString& password, const QSt
     QByteArray hash = QCryptographicHash::hash(data, QCryptographicHash::Sha256);
     return hash.toHex();
 }
+
+QByteArray EncryptionUtils::ComputeHash(const QString& input)
+{
+    if (input.isEmpty())
+    {
+        return QByteArray();
+    }
+
+    // Use UTF-16 encoding to match C# UnicodeEncoding
+    QByteArray data;
+    const ushort* unicode = input.utf16();
+    int length = input.length();
+
+    data.reserve(length * 2);
+    for (int i = 0; i < length; ++i)
+    {
+        data.append(unicode[i] & 0xFF);
+        data.append((unicode[i] >> 8) & 0xFF);
+    }
+
+    return QCryptographicHash::hash(data, QCryptographicHash::Sha256);
+}
+
+bool EncryptionUtils::ArrayElementsEqual(const QByteArray& a, const QByteArray& b)
+{
+    if (a.size() != b.size())
+    {
+        return false;
+    }
+
+    for (int i = 0; i < a.size(); ++i)
+    {
+        if (a[i] != b[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}

@@ -48,6 +48,25 @@ class XENLIB_EXPORT EncryptionUtils
         static QString GenerateSalt(int length = 32);
         static QString HashPasswordWithSalt(const QString& password, const QString& salt);
 
+        /**
+         * @brief Returns a secure hash of the given input string.
+         * 
+         * Matches C# EncryptionUtils.ComputeHash()
+         * @param input The string to hash
+         * @return The secure hash as byte array
+         */
+        static QByteArray ComputeHash(const QString& input);
+
+        /**
+         * @brief Compare two byte arrays for equality.
+         * 
+         * Matches C# Helpers.ArrayElementsEqual()
+         * @param a First byte array
+         * @param b Second byte array
+         * @return True if arrays are equal, false otherwise
+         */
+        static bool ArrayElementsEqual(const QByteArray& a, const QByteArray& b);
+
     private:
         EncryptionUtils() = delete;
 };
