@@ -693,6 +693,27 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
             if (orderA != orderB)
                 return orderA < orderB;
         }
+
+        const QVariant valueA = groupValueLookup.value(a);
+        const QVariant valueB = groupValueLookup.value(b);
+
+        if (!groupObjectType.isEmpty())
+        {
+            QVariantMap dataA = conn->GetCache()->ResolveObjectData(groupObjectType, valueA.toString());
+            QVariantMap dataB = conn->GetCache()->ResolveObjectData(groupObjectType, valueB.toString());
+            QString nameA = dataA.value("name_label").toString();
+            QString nameB = dataB.value("name_label").toString();
+
+            if (!nameA.isEmpty() || !nameB.isEmpty())
+            {
+                if (nameA.isEmpty())
+                    return false;
+                if (nameB.isEmpty())
+                    return true;
+                return Misc::NaturalCompare(nameA, nameB) < 0;
+            }
+        }
+
         return Misc::NaturalCompare(a, b) < 0;
     });
 
@@ -737,6 +758,25 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
         else
         {
             // Leaf level - add objects directly
+            std::sort(groupObjects.begin(), groupObjects.end(), [&](const QPair<QString, QString>& a,
+                                                                   const QPair<QString, QString>& b) {
+                QVariantMap dataA = conn->GetCache()->ResolveObjectData(a.first, a.second);
+                QVariantMap dataB = conn->GetCache()->ResolveObjectData(b.first, b.second);
+                QString nameA = dataA.value("name_label").toString();
+                QString nameB = dataB.value("name_label").toString();
+
+                if (!nameA.isEmpty() || !nameB.isEmpty())
+                {
+                    if (nameA.isEmpty())
+                        return false;
+                    if (nameB.isEmpty())
+                        return true;
+                    return Misc::NaturalCompare(nameA, nameB) < 0;
+                }
+
+                return Misc::NaturalCompare(a.second, b.second) < 0;
+            });
+
             for (const auto& objPair : groupObjects)
             {
                 QString objType = objPair.first;
