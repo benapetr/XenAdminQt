@@ -30,6 +30,9 @@
 #include <QtCore/QSettings>
 #include <QtCore/QUuid>
 #include <QtCore/QRandomGenerator>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+#include <openssl/err.h>
 
 namespace
 {
@@ -237,4 +240,197 @@ bool EncryptionUtils::ArrayElementsEqual(const QByteArray& a, const QByteArray& 
     }
 
     return true;
+}
+
+QString EncryptionUtils::EncryptStringWithKey(const QString& clearString, const QByteArray& keyBytes)
+{
+    // Matches C# EncryptionUtils.EncryptString()
+    // Uses AES-256-CBC with PKCS7 padding
+    
+    if (clearString.isEmpty() || keyBytes.size() != 32)
+    {
+        return QString();
+    }
+
+    // Generate random 16-byte salt/IV
+    unsigned char saltBytes[16];
+    if (RAND_bytes(saltBytes, 16) != 1)
+    {
+        return QString();
+    }
+
+    // Convert QString to UTF-16 bytes (matches C# Encoding.Unicode)
+    QByteArray clearBytes;
+    const ushort* unicode = clearString.utf16();
+    int length = clearString.length();
+    clearBytes.reserve(length * 2);
+    for (int i = 0; i < length; ++i)
+    {
+        clearBytes.append(unicode[i] & 0xFF);
+        clearBytes.append((unicode[i] >> 8) & 0xFF);
+    }
+
+    // Create cipher context
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (!ctx)
+    {
+        return QString();
+    }
+
+    // Initialize encryption
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, 
+                           reinterpret_cast<const unsigned char*>(keyBytes.constData()), 
+                           saltBytes) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return QString();
+    }
+
+    // Allocate output buffer (input size + block size for padding)
+    int maxOutLen = clearBytes.size() + EVP_CIPHER_block_size(EVP_aes_256_cbc());
+    QByteArray cipherBytes(maxOutLen, '\0');
+    int outLen = 0;
+
+    // Encrypt
+    if (EVP_EncryptUpdate(ctx, reinterpret_cast<unsigned char*>(cipherBytes.data()), 
+                          &outLen, 
+                          reinterpret_cast<const unsigned char*>(clearBytes.constData()), 
+                          clearBytes.size()) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return QString();
+    }
+
+    int finalLen = 0;
+    if (EVP_EncryptFinal_ex(ctx, reinterpret_cast<unsigned char*>(cipherBytes.data()) + outLen, 
+                            &finalLen) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return QString();
+    }
+
+    EVP_CIPHER_CTX_free(ctx);
+
+    // Resize to actual encrypted size
+    cipherBytes.resize(outLen + finalLen);
+
+    // Format: "base64_cipher,base64_salt" (matches C#)
+    QString result = QString::fromLatin1(cipherBytes.toBase64()) + "," + 
+                     QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(saltBytes), 16).toBase64());
+    
+    return result;
+}
+
+QString EncryptionUtils::DecryptStringWithKey(const QString& cipherText64, const QByteArray& keyBytes)
+{
+    // Matches C# EncryptionUtils.DecryptString()
+    // Uses AES-256-CBC with PKCS7 padding
+    
+    if (cipherText64.isEmpty() || keyBytes.size() != 32)
+    {
+        return QString();
+    }
+
+    // Parse "cipher,salt" format
+    QStringList parts = cipherText64.split(',');
+    if (parts.size() != 2)
+    {
+        // Try legacy format without salt (backwards compatibility)
+        parts.clear();
+        parts << cipherText64 << QString();
+    }
+
+    // Decode base64 cipher and salt
+    QByteArray cipherBytes = QByteArray::fromBase64(parts[0].toLatin1());
+    QByteArray saltBytes;
+    
+    if (parts[1].isEmpty())
+    {
+        // Legacy: use default salt "XenRocks" encoded as UTF-16
+        QString defaultSalt = "XenRocks";
+        const ushort* unicode = defaultSalt.utf16();
+        int length = defaultSalt.length();
+        saltBytes.reserve(length * 2);
+        for (int i = 0; i < length; ++i)
+        {
+            saltBytes.append(unicode[i] & 0xFF);
+            saltBytes.append((unicode[i] >> 8) & 0xFF);
+        }
+        // Truncate or pad to 16 bytes
+        if (saltBytes.size() > 16)
+            saltBytes = saltBytes.left(16);
+        else if (saltBytes.size() < 16)
+            saltBytes.append(QByteArray(16 - saltBytes.size(), '\0'));
+    } else
+    {
+        saltBytes = QByteArray::fromBase64(parts[1].toLatin1());
+    }
+
+    if (cipherBytes.isEmpty() || saltBytes.size() != 16)
+    {
+        return QString();
+    }
+
+    // Create cipher context
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (!ctx)
+    {
+        return QString();
+    }
+
+    // Initialize decryption
+    if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr,
+                           reinterpret_cast<const unsigned char*>(keyBytes.constData()),
+                           reinterpret_cast<const unsigned char*>(saltBytes.constData())) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return QString();
+    }
+
+    // Allocate output buffer
+    QByteArray clearBytes(cipherBytes.size() + EVP_CIPHER_block_size(EVP_aes_256_cbc()), '\0');
+    int outLen = 0;
+
+    // Decrypt
+    if (EVP_DecryptUpdate(ctx, reinterpret_cast<unsigned char*>(clearBytes.data()),
+                          &outLen,
+                          reinterpret_cast<const unsigned char*>(cipherBytes.constData()),
+                          cipherBytes.size()) != 1)
+    {
+        EVP_CIPHER_CTX_free(ctx);
+        return QString();
+    }
+
+    int finalLen = 0;
+    if (EVP_DecryptFinal_ex(ctx, reinterpret_cast<unsigned char*>(clearBytes.data()) + outLen,
+                            &finalLen) != 1)
+    {
+        // Decryption failed - wrong key or corrupted data
+        EVP_CIPHER_CTX_free(ctx);
+        return QString();
+    }
+
+    EVP_CIPHER_CTX_free(ctx);
+
+    // Resize to actual decrypted size
+    clearBytes.resize(outLen + finalLen);
+
+    // Convert UTF-16 bytes back to QString
+    QString result;
+    if (clearBytes.size() % 2 != 0)
+    {
+        // Invalid UTF-16 data
+        return QString();
+    }
+
+    result.reserve(clearBytes.size() / 2);
+    for (int i = 0; i < clearBytes.size(); i += 2)
+    {
+        unsigned char low = clearBytes[i];
+        unsigned char high = clearBytes[i + 1];
+        ushort code = (high << 8) | low;
+        result.append(QChar(code));
+    }
+
+    return result;
 }
