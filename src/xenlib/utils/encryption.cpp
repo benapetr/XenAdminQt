@@ -30,9 +30,21 @@
 #include <QtCore/QSettings>
 #include <QtCore/QUuid>
 #include <QtCore/QRandomGenerator>
-#include <openssl/evp.h>
-#include <openssl/rand.h>
-#include <openssl/err.h>
+
+// Platform-specific crypto headers
+#ifdef Q_OS_WIN
+    #include <windows.h>
+    #include <bcrypt.h>
+    #pragma comment(lib, "bcrypt.lib")
+#elif defined(Q_OS_MACOS)
+    #include <CommonCrypto/CommonCryptor.h>
+    #include <CommonCrypto/CommonRandom.h>
+#else
+    // Linux/Unix: OpenSSL
+    #include <openssl/evp.h>
+    #include <openssl/rand.h>
+    #include <openssl/err.h>
+#endif
 
 namespace
 {
@@ -252,13 +264,6 @@ QString EncryptionUtils::EncryptStringWithKey(const QString& clearString, const 
         return QString();
     }
 
-    // Generate random 16-byte salt/IV
-    unsigned char saltBytes[16];
-    if (RAND_bytes(saltBytes, 16) != 1)
-    {
-        return QString();
-    }
-
     // Convert QString to UTF-16 bytes (matches C# Encoding.Unicode)
     QByteArray clearBytes;
     const ushort* unicode = clearString.utf16();
@@ -270,14 +275,94 @@ QString EncryptionUtils::EncryptStringWithKey(const QString& clearString, const 
         clearBytes.append((unicode[i] >> 8) & 0xFF);
     }
 
-    // Create cipher context
-    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
-    if (!ctx)
+#ifdef Q_OS_WIN
+    // Windows: BCrypt API
+    unsigned char saltBytes[16];
+    BCryptGenRandom(nullptr, saltBytes, 16, BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+    
+    BCRYPT_ALG_HANDLE hAlg = nullptr;
+    BCRYPT_KEY_HANDLE hKey = nullptr;
+    NTSTATUS status;
+    
+    status = BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_AES_ALGORITHM, nullptr, 0);
+    if (!BCRYPT_SUCCESS(status))
+        return QString();
+    
+    status = BCryptSetProperty(hAlg, BCRYPT_CHAINING_MODE, 
+                               (PUCHAR)BCRYPT_CHAIN_MODE_CBC, 
+                               sizeof(BCRYPT_CHAIN_MODE_CBC), 0);
+    if (!BCRYPT_SUCCESS(status))
     {
+        BCryptCloseAlgorithmProvider(hAlg, 0);
         return QString();
     }
-
-    // Initialize encryption
+    
+    status = BCryptGenerateSymmetricKey(hAlg, &hKey, nullptr, 0,
+                                        (PUCHAR)keyBytes.constData(), 32, 0);
+    if (!BCRYPT_SUCCESS(status))
+    {
+        BCryptCloseAlgorithmProvider(hAlg, 0);
+        return QString();
+    }
+    
+    DWORD cbCipherText = 0;
+    status = BCryptEncrypt(hKey, (PUCHAR)clearBytes.constData(), clearBytes.size(),
+                          nullptr, saltBytes, 16, nullptr, 0, &cbCipherText, BCRYPT_BLOCK_PADDING);
+    if (!BCRYPT_SUCCESS(status))
+    {
+        BCryptDestroyKey(hKey);
+        BCryptCloseAlgorithmProvider(hAlg, 0);
+        return QString();
+    }
+    
+    QByteArray cipherBytes(cbCipherText, '\0');
+    status = BCryptEncrypt(hKey, (PUCHAR)clearBytes.constData(), clearBytes.size(),
+                          nullptr, saltBytes, 16, (PUCHAR)cipherBytes.data(), 
+                          cbCipherText, &cbCipherText, BCRYPT_BLOCK_PADDING);
+    
+    BCryptDestroyKey(hKey);
+    BCryptCloseAlgorithmProvider(hAlg, 0);
+    
+    if (!BCRYPT_SUCCESS(status))
+        return QString();
+    
+    cipherBytes.resize(cbCipherText);
+    QString result = QString::fromLatin1(cipherBytes.toBase64()) + "," + 
+                     QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(saltBytes), 16).toBase64());
+    return result;
+    
+#elif defined(Q_OS_MACOS)
+    // macOS: CommonCrypto
+    unsigned char saltBytes[16];
+    CCRandomGenerateBytes(saltBytes, 16);
+    
+    size_t dataOutMoved = 0;
+    size_t maxOutLen = clearBytes.size() + kCCBlockSizeAES128;
+    QByteArray cipherBytes(maxOutLen, '\0');
+    
+    CCCryptorStatus status = CCCrypt(kCCEncrypt, kCCAlgorithmAES, kCCOptionPKCS7Padding,
+                                     keyBytes.constData(), 32, saltBytes,
+                                     clearBytes.constData(), clearBytes.size(),
+                                     cipherBytes.data(), maxOutLen, &dataOutMoved);
+    
+    if (status != kCCSuccess)
+        return QString();
+    
+    cipherBytes.resize(dataOutMoved);
+    QString result = QString::fromLatin1(cipherBytes.toBase64()) + "," + 
+                     QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(saltBytes), 16).toBase64());
+    return result;
+    
+#else
+    // Linux/Unix: OpenSSL
+    unsigned char saltBytes[16];
+    if (RAND_bytes(saltBytes, 16) != 1)
+        return QString();
+    
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (!ctx)
+        return QString();
+    
     if (EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, 
                            reinterpret_cast<const unsigned char*>(keyBytes.constData()), 
                            saltBytes) != 1)
@@ -285,13 +370,11 @@ QString EncryptionUtils::EncryptStringWithKey(const QString& clearString, const 
         EVP_CIPHER_CTX_free(ctx);
         return QString();
     }
-
-    // Allocate output buffer (input size + block size for padding)
+    
     int maxOutLen = clearBytes.size() + EVP_CIPHER_block_size(EVP_aes_256_cbc());
     QByteArray cipherBytes(maxOutLen, '\0');
     int outLen = 0;
-
-    // Encrypt
+    
     if (EVP_EncryptUpdate(ctx, reinterpret_cast<unsigned char*>(cipherBytes.data()), 
                           &outLen, 
                           reinterpret_cast<const unsigned char*>(clearBytes.constData()), 
@@ -300,7 +383,7 @@ QString EncryptionUtils::EncryptStringWithKey(const QString& clearString, const 
         EVP_CIPHER_CTX_free(ctx);
         return QString();
     }
-
+    
     int finalLen = 0;
     if (EVP_EncryptFinal_ex(ctx, reinterpret_cast<unsigned char*>(cipherBytes.data()) + outLen, 
                             &finalLen) != 1)
@@ -308,17 +391,14 @@ QString EncryptionUtils::EncryptStringWithKey(const QString& clearString, const 
         EVP_CIPHER_CTX_free(ctx);
         return QString();
     }
-
+    
     EVP_CIPHER_CTX_free(ctx);
-
-    // Resize to actual encrypted size
     cipherBytes.resize(outLen + finalLen);
-
-    // Format: "base64_cipher,base64_salt" (matches C#)
+    
     QString result = QString::fromLatin1(cipherBytes.toBase64()) + "," + 
                      QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(saltBytes), 16).toBase64());
-    
     return result;
+#endif
 }
 
 QString EncryptionUtils::DecryptStringWithKey(const QString& cipherText64, const QByteArray& keyBytes)
@@ -371,14 +451,82 @@ QString EncryptionUtils::DecryptStringWithKey(const QString& cipherText64, const
         return QString();
     }
 
-    // Create cipher context
+#ifdef Q_OS_WIN
+    // Windows: BCrypt API
+    BCRYPT_ALG_HANDLE hAlg = nullptr;
+    BCRYPT_KEY_HANDLE hKey = nullptr;
+    NTSTATUS status;
+    
+    status = BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_AES_ALGORITHM, nullptr, 0);
+    if (!BCRYPT_SUCCESS(status))
+        return QString();
+    
+    status = BCryptSetProperty(hAlg, BCRYPT_CHAINING_MODE,
+                               (PUCHAR)BCRYPT_CHAIN_MODE_CBC,
+                               sizeof(BCRYPT_CHAIN_MODE_CBC), 0);
+    if (!BCRYPT_SUCCESS(status))
+    {
+        BCryptCloseAlgorithmProvider(hAlg, 0);
+        return QString();
+    }
+    
+    status = BCryptGenerateSymmetricKey(hAlg, &hKey, nullptr, 0,
+                                        (PUCHAR)keyBytes.constData(), 32, 0);
+    if (!BCRYPT_SUCCESS(status))
+    {
+        BCryptCloseAlgorithmProvider(hAlg, 0);
+        return QString();
+    }
+    
+    DWORD cbPlainText = 0;
+    status = BCryptDecrypt(hKey, (PUCHAR)cipherBytes.constData(), cipherBytes.size(),
+                          nullptr, (PUCHAR)saltBytes.constData(), 16, 
+                          nullptr, 0, &cbPlainText, BCRYPT_BLOCK_PADDING);
+    if (!BCRYPT_SUCCESS(status))
+    {
+        BCryptDestroyKey(hKey);
+        BCryptCloseAlgorithmProvider(hAlg, 0);
+        return QString();
+    }
+    
+    QByteArray clearBytes(cbPlainText, '\0');
+    status = BCryptDecrypt(hKey, (PUCHAR)cipherBytes.constData(), cipherBytes.size(),
+                          nullptr, (PUCHAR)saltBytes.constData(), 16,
+                          (PUCHAR)clearBytes.data(), cbPlainText, &cbPlainText, 
+                          BCRYPT_BLOCK_PADDING);
+    
+    BCryptDestroyKey(hKey);
+    BCryptCloseAlgorithmProvider(hAlg, 0);
+    
+    if (!BCRYPT_SUCCESS(status))
+        return QString();
+    
+    clearBytes.resize(cbPlainText);
+    
+#elif defined(Q_OS_MACOS)
+    // macOS: CommonCrypto
+    size_t dataOutMoved = 0;
+    QByteArray clearBytes(cipherBytes.size() + kCCBlockSizeAES128, '\0');
+    
+    CCCryptorStatus status = CCCrypt(kCCDecrypt, kCCAlgorithmAES, kCCOptionPKCS7Padding,
+                                     keyBytes.constData(), 32, 
+                                     saltBytes.constData(),
+                                     cipherBytes.constData(), cipherBytes.size(),
+                                     clearBytes.data(), clearBytes.size(), &dataOutMoved);
+    
+    if (status != kCCSuccess)
+        return QString();
+    
+    clearBytes.resize(dataOutMoved);
+    
+#else
+    // Linux/Unix: OpenSSL
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     if (!ctx)
     {
         return QString();
     }
 
-    // Initialize decryption
     if (EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr,
                            reinterpret_cast<const unsigned char*>(keyBytes.constData()),
                            reinterpret_cast<const unsigned char*>(saltBytes.constData())) != 1)
@@ -387,11 +535,9 @@ QString EncryptionUtils::DecryptStringWithKey(const QString& cipherText64, const
         return QString();
     }
 
-    // Allocate output buffer
     QByteArray clearBytes(cipherBytes.size() + EVP_CIPHER_block_size(EVP_aes_256_cbc()), '\0');
     int outLen = 0;
 
-    // Decrypt
     if (EVP_DecryptUpdate(ctx, reinterpret_cast<unsigned char*>(clearBytes.data()),
                           &outLen,
                           reinterpret_cast<const unsigned char*>(cipherBytes.constData()),
@@ -405,15 +551,13 @@ QString EncryptionUtils::DecryptStringWithKey(const QString& cipherText64, const
     if (EVP_DecryptFinal_ex(ctx, reinterpret_cast<unsigned char*>(clearBytes.data()) + outLen,
                             &finalLen) != 1)
     {
-        // Decryption failed - wrong key or corrupted data
         EVP_CIPHER_CTX_free(ctx);
         return QString();
     }
 
     EVP_CIPHER_CTX_free(ctx);
-
-    // Resize to actual decrypted size
     clearBytes.resize(outLen + finalLen);
+#endif
 
     // Convert UTF-16 bytes back to QString
     QString result;

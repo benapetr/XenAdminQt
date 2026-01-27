@@ -637,8 +637,14 @@ win32 {
     # On Unix-like platforms keep existing behavior
     LIBS += -L../xenlib -lxenlib
     
-    # Link OpenSSL for AES encryption (required by xenlib)
-    LIBS += -lssl -lcrypto
+    # Platform-specific crypto libraries (matching xenlib)
+    unix:!macx {
+        # Linux: OpenSSL for AES encryption
+        LIBS += -lssl -lcrypto
+    }
+    macx {
+        # macOS: CommonCrypto framework (built-in, no linking needed)
+    }
 }
 
 # RDP support configuration (platform-specific)
