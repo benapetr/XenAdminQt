@@ -636,6 +636,9 @@ win32 {
 } else {
     # On Unix-like platforms keep existing behavior
     LIBS += -L../xenlib -lxenlib
+    
+    # Link OpenSSL for AES encryption (required by xenlib)
+    LIBS += -lssl -lcrypto
 }
 
 # RDP support configuration (platform-specific)

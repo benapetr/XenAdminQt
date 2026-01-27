@@ -4,6 +4,9 @@ QT += core network xml
 TARGET = xenlib
 DEFINES += XENLIB_LIBRARY
 
+# Link OpenSSL for AES encryption
+LIBS += -lssl -lcrypto
+
 # This allows us to use absolute include path instead of hard-to-read relative paths
 INCLUDEPATH += ..
 

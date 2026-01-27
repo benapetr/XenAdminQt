@@ -67,6 +67,26 @@ class XENLIB_EXPORT EncryptionUtils
          */
         static bool ArrayElementsEqual(const QByteArray& a, const QByteArray& b);
 
+        /**
+         * @brief Encrypt a string using AES-256-CBC with a key.
+         * 
+         * Matches C# EncryptionUtils.EncryptString()
+         * @param clearString The string to encrypt
+         * @param keyBytes The encryption key (should be 32 bytes for AES-256)
+         * @return Base64 encoded cipher text with format "cipher,salt"
+         */
+        static QString EncryptStringWithKey(const QString& clearString, const QByteArray& keyBytes);
+
+        /**
+         * @brief Decrypt a string that was encrypted with EncryptStringWithKey.
+         * 
+         * Matches C# EncryptionUtils.DecryptString()
+         * @param cipherText64 The base64 encoded cipher text (format "cipher,salt")
+         * @param keyBytes The decryption key (should be 32 bytes for AES-256)
+         * @return The decrypted string
+         */
+        static QString DecryptStringWithKey(const QString& cipherText64, const QByteArray& keyBytes);
+
     private:
         EncryptionUtils() = delete;
 };

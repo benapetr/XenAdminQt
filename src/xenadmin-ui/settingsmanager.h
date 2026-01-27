@@ -179,6 +179,10 @@ class SettingsManager : public QObject
 
         // Registry settings (matches C# Registry class)
         static bool AllowCredentialSave();
+        
+        // Session save control (matches C# Program.SkipSessionSave)
+        static bool GetSkipSessionSave();
+        static void SetSkipSessionSave(bool skip);
 
         // Save and restore settings (matches C# Properties.Settings.Default)
         bool GetSaveSession() const;
