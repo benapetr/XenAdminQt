@@ -32,6 +32,7 @@
 #include "sr.h"
 #include "vm.h"
 #include "vdi.h"
+#include "pif.h"
 
 Pool::Pool(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
@@ -206,6 +207,48 @@ bool Pool::WLBVerifyCert() const
 QString Pool::VswitchController() const
 {
     return stringProperty("vswitch_controller");
+}
+
+bool Pool::vSwitchController() const
+{
+    if (this->VswitchController().isEmpty())
+        return false;
+
+    XenConnection* connection = this->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
+    const QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (!host || !host->IsValid())
+            continue;
+        if (host->RestrictVSwitchController())
+            return false;
+        if (!host->vSwitchNetworkBackend())
+            return false;
+    }
+
+    return true;
+}
+
+bool Pool::HasSriovNic() const
+{
+    XenConnection* connection = this->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
+    const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>("pif");
+    for (const QSharedPointer<PIF>& pif : pifs)
+    {
+        if (!pif || !pif->IsValid())
+            continue;
+        if (pif->SriovCapable())
+            return true;
+    }
+    return false;
 }
 
 QVariantMap Pool::Restrictions() const

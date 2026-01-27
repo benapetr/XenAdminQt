@@ -1119,138 +1119,20 @@ void NetworkTabPage::onAddNetwork()
         }
     } else
     {
-        // C#: For hosts/pools, show NewNetworkWizard
-        // Launch New Network Wizard
-        NewNetworkWizard wizard(this);
-
-        // Set connection context
-        wizard.setWindowTitle(tr("New Network"));
-
-        if (wizard.exec() == QDialog::Accepted)
+        QSharedPointer<Pool> pool;
+        QSharedPointer<Host> host;
+        if (this->m_objectType == "pool")
         {
-            // Get network configuration from wizard
-            QString networkName = wizard.networkName();
-            QString networkDescription = wizard.networkDescription();
-            NewNetworkWizard::NetworkType networkType = wizard.networkType();
-            int vlanId = wizard.vlanId();
-            int mtu = wizard.mtu();
-            bool autoAddToVMs = wizard.autoAddToVMs();
-            bool autoPlug = wizard.autoPlug();
-
-            qDebug() << "Creating new network:" << networkName << "type:" << static_cast<int>(networkType);
-
-            // Build other_config based on wizard settings
-            QVariantMap otherConfig;
-
-            // Add network type information
-            if (networkType == NewNetworkWizard::NetworkType::External)
-            {
-                otherConfig["network_type"] = "external";
-            } else if (networkType == NewNetworkWizard::NetworkType::Internal)
-            {
-                otherConfig["network_type"] = "internal";
-            } else if (networkType == NewNetworkWizard::NetworkType::Bonded)
-            {
-                otherConfig["network_type"] = "bonded";
-            } else if (networkType == NewNetworkWizard::NetworkType::CrossHost)
-            {
-                otherConfig["network_type"] = "crosshost";
-            } else if (networkType == NewNetworkWizard::NetworkType::SRIOV)
-            {
-                otherConfig["network_type"] = "sriov";
-            }
-
-            // Add VLAN tag if specified
-            if (vlanId > 0)
-            {
-                otherConfig["vlan"] = vlanId;
-            }
-
-            // Add auto-configuration settings
-            if (autoAddToVMs)
-            {
-                otherConfig["automatic"] = "true";
-            }
-
-            if (autoPlug)
-            {
-                otherConfig["auto_plug"] = "true";
-            }
-
-            // Create network using XenAPI
-            XenAPI::Session* session = this->m_connection ? this->m_connection->GetSession() : nullptr;
-            if (!session || !session->IsLoggedIn())
-            {
-                QMessageBox::critical(this, tr("Failed to Create Network"),
-                                      tr("No active session to create network."));
-                return;
-            }
-
-            QVariantMap networkRecord;
-            networkRecord["name_label"] = networkName;
-            networkRecord["name_description"] = networkDescription;
-            networkRecord["other_config"] = otherConfig;
-            networkRecord["MTU"] = 1500;
-            networkRecord["tags"] = QVariantList();
-
-            QString networkRef;
-            try
-            {
-                networkRef = XenAPI::Network::create(session, networkRecord);
-            }
-            catch (const std::exception& ex)
-            {
-                QMessageBox::critical(this, tr("Failed to Create Network"),
-                                      tr("Failed to create network '%1'.\n\nError: %2")
-                                          .arg(networkName)
-                                          .arg(ex.what()));
-                return;
-            }
-
-            if (!networkRef.isEmpty())
-            {
-                qDebug() << "Network created successfully:" << networkRef;
-
-                // Set MTU if specified
-                if (mtu > 0 && mtu != 1500) // 1500 is the default
-                {
-                    try
-                    {
-                        XenAPI::Network::set_MTU(session, networkRef, mtu);
-                    }
-                    catch (const std::exception& ex)
-                    {
-                        qWarning() << "NetworkTabPage::onAddNetwork - Failed to set MTU:" << ex.what();
-                    }
-                }
-
-                // Refresh network cache after creation
-                try
-                {
-                    QVariantMap allRecords;
-                    QVariantList refs = XenAPI::Network::get_all(session);
-                    for (const QVariant& refVar : refs)
-                    {
-                        QString ref = refVar.toString();
-                        if (ref.isEmpty())
-                            continue;
-                        QVariantMap record = XenAPI::Network::get_record(session, ref);
-                        record["ref"] = ref;
-                        allRecords[ref] = record;
-                    }
-                    if (this->m_connection && this->m_connection->GetCache())
-                        this->m_connection->GetCache()->UpdateBulk("network", allRecords);
-                }
-                catch (const std::exception& ex)
-                {
-                    qWarning() << "NetworkTabPage::onAddNetwork - Failed to refresh networks:" << ex.what();
-                }
-            } else
-            {
-                // Show error message
-                QMessageBox::critical(this, tr("Failed to Create Network"), tr("Failed to create network '%1'.").arg(networkName));
-            }
+            pool = qSharedPointerCast<Pool>(this->m_object);
+            host = pool ? pool->GetMasterHost() : QSharedPointer<Host>();
+        } else if (this->m_objectType == "host")
+        {
+            host = qSharedPointerCast<Host>(this->m_object);
         }
+
+        NewNetworkWizard wizard(this->m_connection, pool, host, this);
+        if (wizard.exec() == QDialog::Accepted)
+            this->refreshContent();
     }
 }
 

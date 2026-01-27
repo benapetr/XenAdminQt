@@ -90,6 +90,10 @@ class XENLIB_EXPORT Host : public XenObject
          * C# equivalent: Host.RestrictIntraPoolMigrate (BoolKey on license_params)
          */
         bool RestrictIntraPoolMigrate() const;
+        bool RestrictVSwitchController() const;
+        bool RestrictSriovNetwork() const;
+        bool SriovNetworkDisabled() const;
+        bool vSwitchNetworkBackend() const;
 
         //! Get list of VMs resident on this host (list of VM opaque references)
         QStringList GetResidentVMRefs() const;

@@ -29,6 +29,8 @@
 #include <QDebug>
 #include "../../mainwindow.h"
 #include "../../dialogs/newnetworkwizard.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/host.h"
 #include <QtWidgets>
 
 NewNetworkCommand::NewNetworkCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
@@ -68,7 +70,32 @@ void NewNetworkCommand::showNewNetworkWizard()
 {
     qDebug() << "NewNetworkCommand: Opening New Network Wizard";
 
-    NewNetworkWizard wizard(this->mainWindow());
+    QSharedPointer<XenObject> selected = this->GetObject();
+    XenConnection* connection = selected ? selected->GetConnection() : nullptr;
+    QSharedPointer<Pool> pool;
+    QSharedPointer<Host> host;
+
+    if (selected && selected->GetObjectType() == "pool")
+    {
+        pool = qSharedPointerCast<Pool>(selected);
+        host = pool ? pool->GetMasterHost() : QSharedPointer<Host>();
+    }
+    else if (selected && selected->GetObjectType() == "host")
+    {
+        host = qSharedPointerCast<Host>(selected);
+    }
+
+    if (!connection && this->mainWindow() && this->mainWindow()->GetSelectionManager())
+    {
+        const QList<XenConnection*> connections = this->mainWindow()->GetSelectionManager()->SelectedConnections();
+        if (!connections.isEmpty())
+            connection = connections.first();
+    }
+
+    if (!connection)
+        return;
+
+    NewNetworkWizard wizard(connection, pool, host, this->mainWindow());
 
     if (wizard.exec() == QDialog::Accepted)
     {

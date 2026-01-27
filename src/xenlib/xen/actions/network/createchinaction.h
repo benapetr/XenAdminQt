@@ -25,49 +25,39 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CREATESRIOVACTION_H
-#define CREATESRIOVACTION_H
+#ifndef CREATECHINACTION_H
+#define CREATECHINACTION_H
 
 #include "../../asyncoperation.h"
+#include <QString>
 #include <QStringList>
+#include <QSharedPointer>
+
+class Network;
+class PIF;
 
 /**
- * @brief CreateSriovAction - Creates SR-IOV network
+ * @brief CreateChinAction - Creates a CHIN (cross-host internal) network.
  *
- * Qt port of C# XenAdmin.Actions.CreateSriovAction.
- * Creates an SR-IOV enabled network on selected PIFs.
- *
- * C# path: XenModel/Actions/Network/CreateSriovAction.cs
+ * Qt port of C# XenAdmin.Actions.CreateChinAction.
+ * Creates the network and builds tunnels on management interfaces.
  */
-class CreateSriovAction : public AsyncOperation
+class CreateChinAction : public AsyncOperation
 {
     Q_OBJECT
 
-    public:
-        /**
-         * @brief Constructor
-         * @param connection XenConnection
-         * @param networkName Name for the new SR-IOV network
-         * @param networkDescription Description for the new SR-IOV network
-         * @param pifRefs List of PIF references to enable SR-IOV on
-         * @param autoplug Whether to mark network as AutoPlug
-         * @param parent Parent QObject
-         */
-        CreateSriovAction(XenConnection* connection,
-                          const QString& networkName,
-                          const QString& networkDescription,
-                          const QStringList& pifRefs,
-                          bool autoplug,
-                          QObject* parent = nullptr);
+public:
+    CreateChinAction(XenConnection* connection,
+                     const QSharedPointer<Network>& newNetwork,
+                     const QSharedPointer<Network>& transportNetwork,
+                     QObject* parent = nullptr);
 
-    protected:
-        void run() override;
+protected:
+    void run() override;
 
-    private:
-        QString m_networkName;
-        QString m_networkDescription;
-        QStringList m_pifRefs;
-        bool m_autoplug = true;
+private:
+    QSharedPointer<Network> m_newNetwork;
+    QSharedPointer<Network> m_transportNetwork;
 };
 
-#endif // CREATESRIOVACTION_H
+#endif // CREATECHINACTION_H

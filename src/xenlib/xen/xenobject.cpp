@@ -151,10 +151,18 @@ QString XenObject::GetObjectType() const
 
 QVariantMap XenObject::GetData() const
 {
-    if (!this->m_cache || this->m_opaqueRef.isEmpty())
+    if (this->m_opaqueRef.isEmpty())
+        return this->m_localData;
+
+    if (!this->m_cache)
         return QVariantMap();
 
     return this->m_cache->ResolveObjectData(this->GetObjectType(), this->m_opaqueRef);
+}
+
+void XenObject::SetLocalData(const QVariantMap& data)
+{
+    this->m_localData = data;
 }
 
 void XenObject::Refresh()

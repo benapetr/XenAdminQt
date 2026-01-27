@@ -32,6 +32,34 @@
 
 namespace XenAPI
 {
+    QString Tunnel::create(Session* session, const QString& access_pif, const QString& transport_network)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << access_pif << transport_network;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("tunnel.create", params);
+        QByteArray response = session->SendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString();
+    }
+
+    QString Tunnel::async_create(Session* session, const QString& access_pif, const QString& transport_network)
+    {
+        if (!session || !session->IsLoggedIn())
+            throw std::runtime_error("Not connected to XenServer");
+
+        QVariantList params;
+        params << session->GetSessionID() << access_pif << transport_network;
+
+        XenRpcAPI api(session);
+        QByteArray request = api.BuildJsonRpcCall("Async.tunnel.create", params);
+        QByteArray response = session->SendApiRequest(request);
+        return api.ParseJsonRpcResponse(response).toString();
+    }
+
     void Tunnel::destroy(Session* session, const QString& tunnel)
     {
         if (!session || !session->IsLoggedIn())

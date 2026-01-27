@@ -27,6 +27,7 @@
 
 #include "pif.h"
 #include <QSharedPointer>
+#include "clusterhost.h"
 #include "network/connection.h"
 #include "host.h"
 #include "network.h"
@@ -431,6 +432,11 @@ bool PIF::IsBondMember() const
     return this->IsBondSlave();
 }
 
+bool PIF::IsBondNIC() const
+{
+    return this->IsBondMaster();
+}
+
 bool PIF::IsTunnelAccessPIF() const
 {
     return !this->TunnelAccessPIFOfRefs().isEmpty();
@@ -449,6 +455,32 @@ bool PIF::IsSriovPhysicalPIF() const
 bool PIF::IsSriovLogicalPIF() const
 {
     return !this->SriovLogicalPIFOfRefs().isEmpty();
+}
+
+bool PIF::IsUsedByClustering() const
+{
+    XenConnection* connection = this->GetConnection();
+    if (!connection)
+        return false;
+
+    XenCache* cache = connection->GetCache();
+    if (!cache)
+        return false;
+
+    const QList<QSharedPointer<ClusterHost>> clusterHosts = cache->GetAll<ClusterHost>("cluster_host");
+    for (const QSharedPointer<ClusterHost>& clusterHost : clusterHosts)
+    {
+        if (!clusterHost || !clusterHost->IsValid())
+            continue;
+        if (clusterHost->GetPIFRef() == this->OpaqueRef())
+            return true;
+    }
+    return false;
+}
+
+bool PIF::SriovCapable() const
+{
+    return this->Capabilities().contains("sriov");
 }
 
 bool PIF::Show(bool showHiddenObjects) const

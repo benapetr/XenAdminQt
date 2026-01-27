@@ -165,6 +165,8 @@ class XENLIB_EXPORT Pool : public XenObject
 
         //! Get vSwitch controller address (vSwitch controller address or empty string, deprecated)
         QString VswitchController() const;
+        bool vSwitchController() const;
+        bool HasSriovNic() const;
 
         //! Get license restrictions (Map of license restriction keys and values)
         QVariantMap Restrictions() const;

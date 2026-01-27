@@ -539,6 +539,7 @@ FORMS += \
     dialogs/newvirtualdiskdialog.ui \
     dialogs/movevirtualdiskdialog.ui \
     dialogs/optionsdialog.ui \
+    dialogs/newnetworkwizard.ui \
     dialogs/newvmwizard.ui \
     dialogs/newsrwizard.ui \
     dialogs/crosspoolmigratewizard.ui \

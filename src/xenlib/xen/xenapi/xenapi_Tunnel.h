@@ -51,6 +51,28 @@ namespace XenAPI
 
         public:
             /**
+             * @brief Create a tunnel
+             * @param session Active XenSession
+             * @param access_pif Access PIF opaque reference
+             * @param transport_network Transport network opaque reference
+             * @return Tunnel reference
+             *
+             * First published in XenServer 5.6 FP1.
+             */
+            static QString create(Session* session, const QString& access_pif, const QString& transport_network);
+
+            /**
+             * @brief Create a tunnel (async)
+             * @param session Active XenSession
+             * @param access_pif Access PIF opaque reference
+             * @param transport_network Transport network opaque reference
+             * @return Task reference
+             *
+             * First published in XenServer 5.6 FP1.
+             */
+            static QString async_create(Session* session, const QString& access_pif, const QString& transport_network);
+
+            /**
              * @brief Destroy a tunnel
              * @param session Active XenSession
              * @param tunnel Tunnel opaque reference

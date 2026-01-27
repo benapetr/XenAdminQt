@@ -1,0 +1,614 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>NewNetworkWizard</class>
+ <widget class="QWizard" name="NewNetworkWizard">
+  <property name="windowTitle">
+   <string>New Network Wizard</string>
+  </property>
+  <property name="wizardStyle">
+   <enum>QWizard::ModernStyle</enum>
+  </property>
+  <property name="options">
+   <set>QWizard::HaveHelpButton|QWizard::HelpButtonOnRight</set>
+  </property>
+  <widget class="QWizardPage" name="pageTypeSelect">
+   <property name="title">
+    <string>Network Type</string>
+   </property>
+   <property name="subTitle">
+    <string>Select the type of network to create.</string>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayoutType">
+    <item>
+     <widget class="QRadioButton" name="radioExternal">
+      <property name="text">
+       <string>&amp;External network</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="labelExternalDesc">
+      <property name="text">
+       <string>Network connected to a physical network interface.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QRadioButton" name="radioInternal">
+      <property name="text">
+       <string>&amp;Internal network</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="labelInternalDesc">
+      <property name="text">
+       <string>Private network isolated to this host.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QRadioButton" name="radioBonded">
+      <property name="text">
+       <string>&amp;Bonded network</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="labelBondedDesc">
+      <property name="text">
+       <string>Combine multiple network interfaces for redundancy.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QRadioButton" name="radioChin">
+      <property name="text">
+       <string>&amp;Cross-host internal network</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="labelChinDesc">
+      <property name="text">
+       <string>Private network spanning multiple hosts.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QFrame" name="chinWarningFrame">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QHBoxLayout" name="chinWarningLayout">
+       <item>
+        <widget class="QLabel" name="chinWarningIcon">
+         <property name="text">
+          <string>!</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignTop|Qt::AlignHCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="chinWarningText">
+         <property name="text">
+          <string>CHIN requires the vSwitch controller to be configured.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QRadioButton" name="radioSriov">
+      <property name="text">
+       <string>&amp;SR-IOV network</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="labelSriovDesc">
+      <property name="text">
+       <string>High-performance network using SR-IOV technology.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QFrame" name="sriovWarningFrame">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QHBoxLayout" name="sriovWarningLayout">
+       <item>
+        <widget class="QLabel" name="sriovWarningIcon">
+         <property name="text">
+          <string>!</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignTop|Qt::AlignHCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="sriovWarningText">
+         <property name="text">
+          <string>SR-IOV requires a compatible NIC and host support.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <spacer name="typeSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageName">
+   <property name="title">
+    <string>Network Name</string>
+   </property>
+   <property name="subTitle">
+    <string>Enter a name and description for the new network.</string>
+   </property>
+   <layout class="QFormLayout" name="formLayoutName">
+    <item row="0" column="0">
+     <widget class="QLabel" name="labelName">
+      <property name="text">
+       <string>&amp;Name:</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QLineEdit" name="nameEdit"/>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="labelDescription">
+      <property name="text">
+       <string>&amp;Description:</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QTextEdit" name="descriptionEdit">
+      <property name="maximumHeight">
+       <number>90</number>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageDetails">
+   <property name="title">
+    <string>Network Details</string>
+   </property>
+   <property name="subTitle">
+    <string>Configure network settings.</string>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayoutDetails">
+    <item>
+     <layout class="QFormLayout" name="formLayoutDetails">
+      <item row="0" column="0">
+       <widget class="QLabel" name="labelNic">
+        <property name="text">
+         <string>Network Interface:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="nicCombo"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="labelVlan">
+        <property name="text">
+         <string>VLAN ID:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QSpinBox" name="vlanSpin">
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>4094</number>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="labelMtu">
+        <property name="text">
+         <string>MTU:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QSpinBox" name="mtuSpin">
+        <property name="minimum">
+         <number>68</number>
+        </property>
+        <property name="maximum">
+         <number>9000</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QFrame" name="vlanInfoFrame">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <layout class="QHBoxLayout" name="vlanInfoLayout">
+       <item>
+        <widget class="QLabel" name="vlanInfoIcon">
+         <property name="text">
+          <string>!</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignTop|Qt::AlignHCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="vlanInfoText">
+         <property name="text">
+          <string>VLAN validation message</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QFrame" name="mtuInfoFrame">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <layout class="QHBoxLayout" name="mtuInfoLayout">
+       <item>
+        <widget class="QLabel" name="mtuInfoIcon">
+         <property name="text">
+          <string>!</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignTop|Qt::AlignHCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="mtuInfoText">
+         <property name="text">
+          <string>MTU validation message</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="autoAddCheck">
+      <property name="text">
+       <string>Automatically add network interface to new VMs</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="createSriovVlanCheck">
+      <property name="text">
+       <string>Create VLAN on SR-IOV network</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <spacer name="detailsSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageBondDetails">
+   <property name="title">
+    <string>Bond Details</string>
+   </property>
+   <property name="subTitle">
+    <string>Configure the bond and select interfaces.</string>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayoutBond">
+    <item>
+     <widget class="QLabel" name="bondDescriptionLabel">
+      <property name="text">
+       <string>A bond combines multiple network interfaces into a single logical interface for redundancy and increased throughput.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="bondSettingsGroup">
+      <property name="title">
+       <string>Bond Settings</string>
+      </property>
+      <layout class="QFormLayout" name="bondSettingsLayout">
+       <item row="0" column="0">
+        <widget class="QLabel" name="bondModeLabel">
+         <property name="text">
+          <string>Bond Mode:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <layout class="QHBoxLayout" name="bondModeLayout">
+         <item>
+          <widget class="QRadioButton" name="bondModeActiveBackup">
+           <property name="text">
+            <string>Active-Backup</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="bondModeSlb">
+           <property name="text">
+            <string>SLB</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="bondModeLacp">
+           <property name="text">
+            <string>LACP</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="bondHashLabel">
+         <property name="text">
+          <string>LACP hashing:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <layout class="QHBoxLayout" name="bondHashLayout">
+         <item>
+          <widget class="QRadioButton" name="bondHashSrcMac">
+           <property name="text">
+            <string>Source MAC</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="bondHashTcpUdp">
+           <property name="text">
+            <string>TCP/UDP ports</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="bondMtuLabel">
+         <property name="text">
+          <string>MTU:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QSpinBox" name="bondMtuSpin">
+         <property name="minimum">
+          <number>68</number>
+         </property>
+         <property name="maximum">
+          <number>9000</number>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="2">
+        <widget class="QLabel" name="bondMtuInfoLabel">
+         <property name="text">
+          <string>Allowed MTU range</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" colspan="2">
+        <widget class="QCheckBox" name="bondAutoPlugCheck">
+         <property name="text">
+          <string>Automatically add network interface to new VMs</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="bondNicsGroup">
+      <property name="title">
+       <string>Network Interfaces (select at least 2)</string>
+      </property>
+      <layout class="QVBoxLayout" name="bondNicsLayout">
+       <item>
+        <widget class="QTableWidget" name="bondNicsTable">
+         <property name="selectionMode">
+          <enum>QAbstractItemView::MultiSelection</enum>
+         </property>
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectRows</enum>
+         </property>
+         <column>
+          <property name="text">
+           <string>Use</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>NIC</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>MAC</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Link</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Speed</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Duplex</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Vendor</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Device</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>PCI</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="bondWarningLabel">
+      <property name="text">
+       <string>Note: Creating a bond will briefly interrupt network connectivity.</string>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageChinDetails">
+   <property name="title">
+    <string>CHIN Details</string>
+   </property>
+   <property name="subTitle">
+    <string>Select a management network to use for the tunnel.</string>
+   </property>
+   <layout class="QFormLayout" name="formLayoutChin">
+    <item row="0" column="0">
+     <widget class="QLabel" name="chinInterfaceLabel">
+      <property name="text">
+       <string>Management interface:</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QComboBox" name="chinInterfaceCombo"/>
+    </item>
+    <item row="1" column="0" colspan="2">
+     <widget class="QCheckBox" name="chinAutoAddCheck">
+      <property name="text">
+       <string>Automatically add network interface to new VMs</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWizardPage" name="pageSriovDetails">
+   <property name="title">
+    <string>SR-IOV Details</string>
+   </property>
+   <property name="subTitle">
+    <string>Select a host NIC for SR-IOV.</string>
+   </property>
+   <layout class="QFormLayout" name="formLayoutSriov">
+    <item row="0" column="0">
+     <widget class="QLabel" name="sriovNicLabel">
+      <property name="text">
+       <string>Host NIC:</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QComboBox" name="sriovNicCombo"/>
+    </item>
+    <item row="1" column="0" colspan="2">
+     <widget class="QCheckBox" name="sriovAutoAddCheck">
+      <property name="text">
+       <string>Automatically add network interface to new VMs</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
