@@ -31,12 +31,18 @@
 
 #include "ioptionspage.h"
 #include "ui_saveandrestoreoptionspage.h"
+#include <QtCore/QByteArray>
 
 namespace Ui
 {
     class SaveAndRestoreOptionsPage;
 }
 
+/**
+ * @brief Options page for save and restore settings including main password management.
+ * 
+ * Matches C# XenAdmin.Dialogs.OptionsPages.SaveAndRestoreOptionsPage
+ */
 class SaveAndRestoreOptionsPage : public IOptionsPage
 {
     Q_OBJECT
@@ -55,8 +61,25 @@ class SaveAndRestoreOptionsPage : public IOptionsPage
         void HideValidationMessages() override;
         void Save() override;
 
+        /**
+         * @brief Set whether to save the server list on OK.
+         * 
+         * Matches C# SaveAndRestoreOptionsPage.SaveAllAfter
+         * @param saveAllAfter True to save server list, false otherwise
+         */
+        void SetSaveAllAfter(bool saveAllAfter);
+
+    private slots:
+        void changeMainPasswordButton_Click();
+        void requireMainPasswordCheckBox_Click();
+        void saveStateCheckBox_Click();
+
     private:
+        void SaveEverything();
+
         Ui::SaveAndRestoreOptionsPage* ui;
+        QByteArray mainPassword_;
+        bool saveAllAfter_;
 };
 
 #endif // SAVEANDRESTOREOPTIONSPAGE_H

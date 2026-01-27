@@ -173,6 +173,27 @@ class SettingsManager : public QObject
         void Sync();  // Force write to disk
         void Clear(); // Clear all settings
 
+        // Main password (matches C# Program.MainPassword)
+        static QByteArray GetMainPassword();
+        static void SetMainPassword(const QByteArray& password);
+
+        // Registry settings (matches C# Registry class)
+        static bool AllowCredentialSave();
+        
+        // Session save control (matches C# Program.SkipSessionSave)
+        static bool GetSkipSessionSave();
+        static void SetSkipSessionSave(bool skip);
+
+        // Save and restore settings (matches C# Properties.Settings.Default)
+        bool GetSaveSession() const;
+        void SetSaveSession(bool save);
+        
+        bool GetRequirePass() const;
+        void SetRequirePass(bool require);
+
+        // Server list management
+        static void SaveServerList();
+
     signals:
         void settingsChanged(const QString& key);
 

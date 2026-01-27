@@ -27,6 +27,8 @@
 
 #include "settingsmanager.h"
 #include "connectionprofile.h"
+#include "dialogs/restoresession/saveandrestoredialog.h"
+#include "mainwindow.h"
 #include "xenlib/utils/encryption.h"
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -565,18 +567,49 @@ void SettingsManager::Clear()
 // Helper methods
 QString SettingsManager::encryptPassword(const QString& password) const
 {
+    // Matches C# Settings.EncryptCredentials() logic at line 560:
+    // Uses AES encryption with master password if RequirePass is enabled,
+    // otherwise uses local machine protection
+    
+    if (GetRequirePass() && !GetMainPassword().isEmpty())
+    {
+        // Encrypt using master password as key (AES-256-CBC)
+        return EncryptionUtils::EncryptStringWithKey(password, GetMainPassword());
+    }
+    
+    // Default: use local machine protection (XOR with random key)
     return EncryptionUtils::ProtectString(password);
 }
 
 QString SettingsManager::decryptPassword(const QString& encrypted) const
 {
+    // Matches C# Settings.DecryptCredentials() logic
+    
+    if (encrypted.isEmpty())
+    {
+        return QString();
+    }
+    
+    // Check if encrypted with master password (AES format: "base64,base64")
+    if (GetRequirePass() && !GetMainPassword().isEmpty() && encrypted.contains(','))
+    {
+        // Try decrypting with master password (AES-256-CBC)
+        QString decrypted = EncryptionUtils::DecryptStringWithKey(encrypted, GetMainPassword());
+        if (!decrypted.isEmpty())
+        {
+            return decrypted;
+        }
+        // Fall through to other methods if AES decryption fails
+    }
+    
+    // Check if using local machine protection (format: "enc:...")
     if (encrypted.startsWith("enc:"))
     {
         return EncryptionUtils::UnprotectString(encrypted);
     }
 
-    // TODO in few versions later we can safely remove this (introduced in 0.0.3)
-    // Legacy XOR-based obfuscation fallback for older stored passwords.
+    // Legacy XOR-based obfuscation fallback for older stored passwords
+    // TODO: Remove in future versions (introduced in 0.0.3)
     QByteArray data = QByteArray::fromBase64(encrypted.toUtf8());
     QByteArray key = "XenAdminQtKey2024";
 
@@ -607,4 +640,76 @@ void SettingsManager::addToRecentList(const QString& settingsKey, const QString&
 
     this->m_settings->setValue(settingsKey, recent);
     emit settingsChanged(settingsKey);
+}
+
+// Static MainPassword storage (matches C# Program.MainPassword)
+static QByteArray g_mainPassword;
+
+// Static SkipSessionSave flag (matches C# Program.SkipSessionSave)
+static bool g_skipSessionSave = false;
+
+QByteArray SettingsManager::GetMainPassword()
+{
+    return g_mainPassword;
+}
+
+void SettingsManager::SetMainPassword(const QByteArray& password)
+{
+    g_mainPassword = password;
+}
+
+bool SettingsManager::GetSkipSessionSave()
+{
+    return g_skipSessionSave;
+}
+
+void SettingsManager::SetSkipSessionSave(bool skip)
+{
+    g_skipSessionSave = skip;
+}
+
+bool SettingsManager::AllowCredentialSave()
+{
+    // In C# this checks Windows registry for enterprise policy.
+    // For Qt, we default to true (allow credential save).
+    // Could be extended to read from system registry or config file.
+    return true;
+}
+
+bool SettingsManager::GetSaveSession() const
+{
+    return this->m_settings->value("Session/SaveSession", false).toBool();
+}
+
+void SettingsManager::SetSaveSession(bool save)
+{
+    this->m_settings->setValue("Session/SaveSession", save);
+    emit settingsChanged("Session/SaveSession");
+}
+
+bool SettingsManager::GetRequirePass() const
+{
+    return this->m_settings->value("Session/RequirePass", false).toBool();
+}
+
+void SettingsManager::SetRequirePass(bool require)
+{
+    this->m_settings->setValue("Session/RequirePass", require);
+    emit settingsChanged("Session/RequirePass");
+}
+
+void SettingsManager::SaveServerList()
+{
+    // Matches C# Settings.SaveServerList() at line 433
+    
+    // Show SaveAndRestoreDialog if not skipped and credentials allowed
+    if (!GetSkipSessionSave() && AllowCredentialSave())
+    {
+        SaveAndRestoreDialog dialog(MainWindow::instance());
+        dialog.exec();
+        SetSkipSessionSave(true);
+    }
+    
+    // Force sync to disk
+    instance().Sync();
 }
