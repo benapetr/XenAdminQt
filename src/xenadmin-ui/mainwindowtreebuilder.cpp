@@ -59,8 +59,7 @@ class OrganizationViewVapps { public: QTreeWidgetItem* rootNode() { return nullp
 // MainWindowTreeBuilder Implementation
 //==============================================================================
 
-MainWindowTreeBuilder::MainWindowTreeBuilder(QTreeWidget* treeView, QObject* parent)
-    : QObject(parent),
+MainWindowTreeBuilder::MainWindowTreeBuilder(QTreeWidget* treeView, QObject* parent) : QObject(parent),
       treeView_(treeView),
       lastSearchMode_(NavigationMode::Infrastructure),
       rootExpanded_(true),

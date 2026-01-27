@@ -40,7 +40,11 @@ QSharedPointer<Host> HostCommand::getSelectedHost() const
     if (!hosts.isEmpty())
         return hosts.first();
 
-    return qSharedPointerCast<Host>(this->GetObject());
+    QSharedPointer<XenObject> xo = this->GetObject();
+    if (!xo || xo->GetObjectType() != "host")
+        return QSharedPointer<Host>();
+
+    return qSharedPointerCast<Host>(xo);
 }
 
 QString HostCommand::getSelectedHostRef() const
@@ -72,7 +76,11 @@ QList<QSharedPointer<Host>> HostCommand::getHosts() const
     if (!hosts.isEmpty())
         return hosts;
 
-    QSharedPointer<Host> host = qSharedPointerCast<Host>(this->GetObject());
+    QSharedPointer<XenObject> xo = this->GetObject();
+    if (!xo || xo->GetObjectType() != "host")
+        return {};
+
+    QSharedPointer<Host> host = qSharedPointerCast<Host>(xo);
     if (host)
         return { host };
 

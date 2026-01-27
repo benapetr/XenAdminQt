@@ -34,7 +34,11 @@ SRCommand::SRCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWind
 
 QSharedPointer<SR> SRCommand::getSR() const
 {
-    return qSharedPointerCast<SR>(this->GetObject());
+    QSharedPointer<XenObject> xo = this->GetObject();
+    if (!xo || xo->GetObjectType() != "sr")
+        return QSharedPointer<SR>();
+
+    return qSharedPointerCast<SR>(xo);
 }
 
 QString SRCommand::getSelectedSRRef() const

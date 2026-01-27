@@ -34,7 +34,11 @@ VBDCommand::VBDCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWi
 
 QSharedPointer<VBD> VBDCommand::getVBD() const
 {
-    return qSharedPointerCast<VBD>(this->GetObject());
+    QSharedPointer<XenObject> xo = this->GetObject();
+    if (!xo || xo->GetObjectType() != "vbd")
+        return QSharedPointer<VBD>();
+
+    return qSharedPointerCast<VBD>(xo);
 }
 
 QString VBDCommand::getSelectedVBDRef() const

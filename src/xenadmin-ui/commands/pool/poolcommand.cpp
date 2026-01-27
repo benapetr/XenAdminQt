@@ -34,6 +34,10 @@ PoolCommand::PoolCommand(MainWindow* mainWindow, QObject* parent) : Command(main
 
 QSharedPointer<Pool> PoolCommand::getPool() const
 {
+    QSharedPointer<XenObject> xo = this->GetObject();
+    if (!xo || xo->GetObjectType() != "pool")
+        return QSharedPointer<Pool>();
+
     return qSharedPointerCast<Pool>(this->GetObject());
 }
 
