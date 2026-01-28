@@ -267,7 +267,11 @@ void NetworkAction::run()
                 // Destroy the network
                 if (this->m_network && this->m_network->IsValid())
                 {
-                    XenAPI::Network::destroy(this->GetSession(), this->m_network->OpaqueRef());
+                    const QString ref = this->m_network->OpaqueRef();
+                    XenAPI::Network::destroy(this->GetSession(), ref);
+                    XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+                    if (cache)
+                        cache->Remove("network", ref);
                 }
 
                 this->SetDescription(QString("Network '%1' removed").arg(this->m_network->GetName()));

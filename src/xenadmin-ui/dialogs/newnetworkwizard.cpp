@@ -26,11 +26,8 @@
  */
 
 #include "newnetworkwizard.h"
-#include <QHeaderView>
 #include <QMessageBox>
 #include <QSet>
-#include <QTimer>
-#include <algorithm>
 #include <QSignalBlocker>
 #include "xen/session.h"
 #include "xenlib/xencache.h"
@@ -39,7 +36,6 @@
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pif.h"
-#include "xenlib/xen/pifmetrics.h"
 #include "xenlib/xen/network.h"
 #include "xenlib/xen/network_sriov.h"
 #include "xenlib/xen/actions/network/networkaction.h"
@@ -51,41 +47,6 @@
 #include "../widgets/wizardnavigationpane.h"
 #include "../settingsmanager.h"
 #include "../mainwindow.h"
-#include "xenlib/utils/misc.h"
-
-namespace
-{
-    QString formatMac(const QString& mac)
-    {
-        QString result = mac;
-        if (result.length() == 12 && !result.contains(":"))
-        {
-            QString formatted;
-            for (int i = 0; i < result.length(); i += 2)
-            {
-                if (i > 0)
-                    formatted += ":";
-                formatted += result.mid(i, 2);
-            }
-            result = formatted;
-        }
-        return result;
-    }
-
-    QString nicSpeedText(qint64 speed, bool carrier)
-    {
-        if (!carrier || speed <= 0)
-            return QStringLiteral("-");
-        return QString("%1 Mbps").arg(speed);
-    }
-
-    QString nicDuplexText(bool duplex, bool carrier)
-    {
-        if (!carrier)
-            return QStringLiteral("-");
-        return duplex ? QStringLiteral("Full") : QStringLiteral("Half");
-    }
-}
 
 NewNetworkWizard::NewNetworkWizard(XenConnection* connection,
                                    const QSharedPointer<Pool>& pool,
@@ -109,6 +70,7 @@ NewNetworkWizard::NewNetworkWizard(XenConnection* connection,
 
     connect(this, &QWizard::currentIdChanged, this, [this](int) {
         this->applyNetworkTypeFlow();
+        this->updateNavigationSelection();
     });
 
     connect(this->ui.radioExternal, &QRadioButton::toggled, this, &NewNetworkWizard::onNetworkTypeChanged);
@@ -125,15 +87,6 @@ NewNetworkWizard::NewNetworkWizard(XenConnection* connection,
     connect(this->ui.mtuSpin, qOverload<int>(&QSpinBox::valueChanged), this, &NewNetworkWizard::onDetailsInputsChanged);
     connect(this->ui.autoAddCheck, &QCheckBox::toggled, this, &NewNetworkWizard::onDetailsInputsChanged);
     connect(this->ui.createSriovVlanCheck, &QCheckBox::toggled, this, &NewNetworkWizard::onDetailsInputsChanged);
-
-    connect(this->ui.bondModeActiveBackup, &QRadioButton::toggled, this, &NewNetworkWizard::onBondInputsChanged);
-    connect(this->ui.bondModeSlb, &QRadioButton::toggled, this, &NewNetworkWizard::onBondInputsChanged);
-    connect(this->ui.bondModeLacp, &QRadioButton::toggled, this, &NewNetworkWizard::onBondInputsChanged);
-    connect(this->ui.bondHashSrcMac, &QRadioButton::toggled, this, &NewNetworkWizard::onBondInputsChanged);
-    connect(this->ui.bondHashTcpUdp, &QRadioButton::toggled, this, &NewNetworkWizard::onBondInputsChanged);
-    connect(this->ui.bondMtuSpin, qOverload<int>(&QSpinBox::valueChanged), this, &NewNetworkWizard::onBondInputsChanged);
-    connect(this->ui.bondAutoPlugCheck, &QCheckBox::toggled, this, &NewNetworkWizard::onBondInputsChanged);
-    connect(this->ui.bondNicsTable, &QTableWidget::itemChanged, this, &NewNetworkWizard::onBondInputsChanged);
 
     connect(this->ui.chinInterfaceCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, &NewNetworkWizard::onChinSelectionChanged);
     connect(this->ui.chinAutoAddCheck, &QCheckBox::toggled, this, &NewNetworkWizard::onChinSelectionChanged);
@@ -157,18 +110,8 @@ void NewNetworkWizard::setupWizardUi()
     this->ui.chinWarningFrame->setVisible(false);
     this->ui.sriovWarningFrame->setVisible(false);
 
-    if (this->ui.bondNicsTable->horizontalHeader())
-    {
-        this->ui.bondNicsTable->horizontalHeader()->setStretchLastSection(true);
-        this->ui.bondNicsTable->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    }
-
-    this->ui.bondModeActiveBackup->setChecked(true);
-    this->ui.bondHashSrcMac->setChecked(true);
-
     this->ui.autoAddCheck->setChecked(true);
     this->ui.createSriovVlanCheck->setChecked(false);
-    this->ui.bondAutoPlugCheck->setChecked(true);
     this->ui.chinAutoAddCheck->setChecked(true);
     this->ui.sriovAutoAddCheck->setChecked(true);
 
@@ -176,9 +119,6 @@ void NewNetworkWizard::setupWizardUi()
     this->ui.mtuSpin->setValue(1500);
     this->ui.vlanSpin->setRange(0, 4094);
     this->ui.vlanSpin->setSpecialValueText(tr("None"));
-
-    this->ui.bondMtuSpin->setRange(68, 9000);
-    this->ui.bondMtuSpin->setValue(1500);
 
     this->m_navigationPane = new WizardNavigationPane(this);
     this->setSideWidget(this->m_navigationPane);
@@ -202,24 +142,19 @@ void NewNetworkWizard::initializePage(int id)
     if (id == Page_TypeSelect)
     {
         this->updateTypePage();
-    }
-    else if (id == Page_Name)
+    } else if (id == Page_Name)
     {
         this->updateNamePage();
-    }
-    else if (id == Page_Details)
+    } else if (id == Page_Details)
     {
         this->updateDetailsPage();
-    }
-    else if (id == Page_BondDetails)
+    } else if (id == Page_BondDetails)
     {
         this->updateBondDetailsPage();
-    }
-    else if (id == Page_ChinDetails)
+    } else if (id == Page_ChinDetails)
     {
         this->updateChinDetailsPage();
-    }
-    else if (id == Page_SriovDetails)
+    } else if (id == Page_SriovDetails)
     {
         this->updateSriovDetailsPage();
     }
@@ -235,33 +170,6 @@ void NewNetworkWizard::applyNetworkTypeFlow()
 
     m_cachedType = type;
 
-    this->removePage(Page_Name);
-    this->removePage(Page_Details);
-    this->removePage(Page_BondDetails);
-    this->removePage(Page_ChinDetails);
-    this->removePage(Page_SriovDetails);
-
-    if (type == NetworkType::Bonded)
-    {
-        this->setPage(Page_BondDetails, this->ui.pageBondDetails);
-    }
-    else
-    {
-        this->setPage(Page_Name, this->ui.pageName);
-        if (type == NetworkType::CHIN)
-        {
-            this->setPage(Page_ChinDetails, this->ui.pageChinDetails);
-        }
-        else if (type == NetworkType::SRIOV)
-        {
-            this->setPage(Page_SriovDetails, this->ui.pageSriovDetails);
-        }
-        else
-        {
-            this->setPage(Page_Details, this->ui.pageDetails);
-        }
-    }
-
     this->updateNavigationSteps();
 }
 
@@ -274,8 +182,7 @@ void NewNetworkWizard::updateNavigationSteps()
     if (type == NetworkType::Bonded)
     {
         steps.append({tr("Bond Details"), QIcon()});
-    }
-    else
+    } else
     {
         steps.append({tr("Name"), QIcon()});
         if (type == NetworkType::CHIN)
@@ -288,6 +195,39 @@ void NewNetworkWizard::updateNavigationSteps()
 
     if (this->m_navigationPane)
         this->m_navigationPane->setSteps(steps);
+
+    this->updateNavigationSelection();
+}
+
+void NewNetworkWizard::updateNavigationSelection()
+{
+    if (!this->m_navigationPane)
+        return;
+
+    const NetworkType type = this->selectedNetworkType();
+    int stepIndex = 0;
+    switch (this->currentId())
+    {
+        case Page_TypeSelect:
+            stepIndex = 0;
+            break;
+        case Page_BondDetails:
+            stepIndex = 1;
+            break;
+        case Page_Name:
+            stepIndex = 1;
+            break;
+        case Page_ChinDetails:
+        case Page_SriovDetails:
+        case Page_Details:
+            stepIndex = (type == NetworkType::Bonded) ? 1 : 2;
+            break;
+        default:
+            stepIndex = 0;
+            break;
+    }
+
+    this->m_navigationPane->setCurrentStep(stepIndex);
 }
 
 NewNetworkWizard::NetworkType NewNetworkWizard::selectedNetworkType() const
@@ -381,8 +321,9 @@ void NewNetworkWizard::updateTypePage()
 
         bool hasSriovNic = false;
         if (pool)
+        {
             hasSriovNic = pool->HasSriovNic();
-        else if (this->m_host && this->m_host->IsValid())
+        } else if (this->m_host && this->m_host->IsValid())
         {
             XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
             if (cache)
@@ -402,6 +343,7 @@ void NewNetworkWizard::updateTypePage()
                 }
             }
         }
+
         bool hasNicCanEnableSriov = false;
         if (this->m_connection && this->m_connection->GetCache())
         {
@@ -522,10 +464,15 @@ void NewNetworkWizard::updateDetailsPage()
 
 void NewNetworkWizard::updateBondDetailsPage()
 {
-    this->populateBondNics();
-    this->updateBondMtuBounds();
-    this->updateBondLacpVisibility();
-    this->refreshBondSelectionState();
+    if (this->ui.bondDetailsWidget)
+    {
+        if (this->m_pool && this->m_pool->IsValid())
+            this->ui.bondDetailsWidget->SetPool(this->m_pool);
+        else if (this->m_host && this->m_host->IsValid())
+            this->ui.bondDetailsWidget->SetHost(this->m_host);
+        else
+            this->ui.bondDetailsWidget->Refresh();
+    }
 }
 
 void NewNetworkWizard::updateChinDetailsPage()
@@ -553,6 +500,30 @@ bool NewNetworkWizard::validateCurrentPage()
         return this->validateSriovDetailsPage();
 
     return QWizard::validateCurrentPage();
+}
+
+int NewNetworkWizard::nextId() const
+{
+    const NetworkType type = this->selectedNetworkType();
+    switch (this->currentId())
+    {
+        case Page_TypeSelect:
+            return type == NetworkType::Bonded ? Page_BondDetails : Page_Name;
+        case Page_Name:
+            if (type == NetworkType::CHIN)
+                return Page_ChinDetails;
+            if (type == NetworkType::SRIOV)
+                return Page_SriovDetails;
+            if (type == NetworkType::Bonded)
+                return Page_BondDetails;
+            return Page_Details;
+        case Page_Details:
+        case Page_BondDetails:
+        case Page_ChinDetails:
+        case Page_SriovDetails:
+        default:
+            return -1;
+    }
 }
 
 bool NewNetworkWizard::validateNamePage()
@@ -587,84 +558,7 @@ bool NewNetworkWizard::validateDetailsPage()
 
 bool NewNetworkWizard::validateBondDetailsPage()
 {
-    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
-    if (!cache)
-        return false;
-
-    QList<QSharedPointer<PIF>> selectedPifs;
-    for (int row = 0; row < this->ui.bondNicsTable->rowCount(); ++row)
-    {
-        QTableWidgetItem* item = this->ui.bondNicsTable->item(row, 0);
-        if (!item || item->checkState() != Qt::Checked)
-            continue;
-        const QString pifRef = item->data(Qt::UserRole).toString();
-        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
-        if (pif && pif->IsValid())
-            selectedPifs.append(pif);
-    }
-
-    const QSharedPointer<Host> host = this->coordinatorHost();
-    const int bondSizeLimit = (host && host->vSwitchNetworkBackend()) ? 4 : 2;
-
-    if (selectedPifs.count() < 2 || selectedPifs.count() > bondSizeLimit)
-    {
-        QMessageBox::warning(this, tr("Bond Details"),
-                             tr("Please select between 2 and %1 interfaces for the bond.").arg(bondSizeLimit));
-        return false;
-    }
-
-    bool hasPrimary = false;
-    bool hasSecondary = false;
-    bool hasClustering = false;
-    for (const QSharedPointer<PIF>& pif : selectedPifs)
-    {
-        hasPrimary = hasPrimary || pif->IsPrimaryManagementInterface();
-        hasSecondary = hasSecondary || pif->IsSecondaryManagementInterface(true);
-        hasClustering = hasClustering || pif->IsUsedByClustering();
-    }
-
-    if (hasPrimary && hasSecondary)
-    {
-        QMessageBox::critical(this, tr("Bond Details"),
-                              tr("Cannot create a bond that includes both the primary and secondary management interfaces."));
-        return false;
-    }
-
-    if (hasPrimary)
-    {
-        QSharedPointer<Pool> pool = this->poolObject();
-        if (pool && pool->HAEnabled())
-        {
-            QMessageBox::critical(this, tr("Bond Details"),
-                                  tr("Cannot create a bond that includes the primary management interface while HA is enabled."));
-            return false;
-        }
-
-        QMessageBox warning(this);
-        warning.setIcon(QMessageBox::Warning);
-        warning.setWindowTitle(tr("Bond Details"));
-        warning.setText(tr("This bond includes the primary management interface and will disrupt management connectivity briefly."));
-        warning.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-        warning.setDefaultButton(QMessageBox::Cancel);
-        if (warning.exec() != QMessageBox::Ok)
-            return false;
-    }
-
-    if (hasSecondary)
-    {
-        QMessageBox warning(this);
-        warning.setIcon(QMessageBox::Warning);
-        warning.setWindowTitle(tr("Bond Details"));
-        warning.setText(hasClustering
-                            ? tr("This bond includes a clustering interface. Do you want to continue?")
-                            : tr("This bond includes a secondary management interface. Do you want to continue?"));
-        warning.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-        warning.setDefaultButton(QMessageBox::Cancel);
-        if (warning.exec() != QMessageBox::Ok)
-            return false;
-    }
-
-    return true;
+    return this->ui.bondDetailsWidget ? this->ui.bondDetailsWidget->CanCreateBond(this) : false;
 }
 
 bool NewNetworkWizard::validateChinDetailsPage()
@@ -704,56 +598,28 @@ void NewNetworkWizard::accept()
 
     if (type == NetworkType::Bonded)
     {
-        QStringList selectedPifRefs;
-        QStringList deviceNumbers;
-
-        for (int row = 0; row < this->ui.bondNicsTable->rowCount(); ++row)
-        {
-            QTableWidgetItem* item = this->ui.bondNicsTable->item(row, 0);
-            if (!item || item->checkState() != Qt::Checked)
-                continue;
-
-            const QString pifRef = item->data(Qt::UserRole).toString();
-            if (pifRef.isEmpty())
-                continue;
-            selectedPifRefs.append(pifRef);
-
-            if (cache)
-            {
-                QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
-                if (pif && pif->IsValid())
-                {
-                    QString number = pif->GetDevice();
-                    number.remove("eth");
-                    if (!number.isEmpty())
-                        deviceNumbers.append(number);
-                }
-            }
-        }
-
-        deviceNumbers.sort();
-        name = tr("Bond %1").arg(deviceNumbers.join("+"));
-
-        const QString bondMode = this->ui.bondModeActiveBackup->isChecked()
-            ? QStringLiteral("active-backup")
-            : this->ui.bondModeSlb->isChecked()
-                ? QStringLiteral("balance-slb")
-                : QStringLiteral("lacp");
-
-        const QString hashing = this->ui.bondHashTcpUdp->isChecked()
-            ? QStringLiteral("tcpudp_ports")
-            : QStringLiteral("src_mac");
+        QStringList selectedPifRefs = this->ui.bondDetailsWidget
+            ? this->ui.bondDetailsWidget->SelectedPifRefs()
+            : QStringList();
+        const QString bondMode = this->ui.bondDetailsWidget
+            ? this->ui.bondDetailsWidget->BondMode()
+            : QString();
+        const QString hashing = this->ui.bondDetailsWidget
+            ? this->ui.bondDetailsWidget->HashingAlgorithm()
+            : QString();
+        name = this->ui.bondDetailsWidget
+            ? this->ui.bondDetailsWidget->BondName()
+            : name;
 
         action = new CreateBondAction(this->m_connection,
                                       name,
                                       selectedPifRefs,
-                                      this->ui.bondAutoPlugCheck->isChecked(),
-                                      this->ui.bondMtuSpin->value(),
+                                      this->ui.bondDetailsWidget ? this->ui.bondDetailsWidget->AutoPlug() : true,
+                                      this->ui.bondDetailsWidget ? this->ui.bondDetailsWidget->MTU() : 1500,
                                       bondMode,
                                       hashing,
-                                      this);
-    }
-    else if (type == NetworkType::CHIN)
+                                      nullptr);
+    } else if (type == NetworkType::CHIN)
     {
         if (!cache)
             return;
@@ -777,9 +643,8 @@ void NewNetworkWizard::accept()
         QSharedPointer<Network> network(new Network(this->m_connection, QString()));
         network->SetLocalData(data);
 
-        action = new CreateChinAction(this->m_connection, network, transport, this);
-    }
-    else if (type == NetworkType::SRIOV)
+        action = new CreateChinAction(this->m_connection, network, transport, nullptr);
+    } else if (type == NetworkType::SRIOV)
     {
         if (!cache)
             return;
@@ -813,9 +678,8 @@ void NewNetworkWizard::accept()
                                        description,
                                        sriovPifRefs,
                                        this->ui.sriovAutoAddCheck->isChecked(),
-                                       this);
-    }
-    else
+                                       nullptr);
+    } else
     {
         QVariantMap data;
         QVariantMap otherConfig;
@@ -864,9 +728,8 @@ void NewNetworkWizard::accept()
                 }
             }
 
-            action = new NetworkAction(network, basePif, this->ui.vlanSpin->value(), this);
-        }
-        else
+            action = new NetworkAction(network, basePif, this->ui.vlanSpin->value(), nullptr);
+        } else
         {
             action = new NetworkAction(network, true, this);
         }
@@ -878,7 +741,7 @@ void NewNetworkWizard::accept()
     ActionProgressDialog* progress = new ActionProgressDialog(action, this);
     progress->setAttribute(Qt::WA_DeleteOnClose);
     progress->show();
-    action->RunAsync();
+    action->RunAsync(true);
 
     QWizard::accept();
 }
@@ -954,15 +817,6 @@ void NewNetworkWizard::onDetailsInputsChanged()
     }
     this->updateVlanValidation();
     this->updateMtuValidation();
-}
-
-void NewNetworkWizard::onBondInputsChanged()
-{
-    if (this->m_populatingBond)
-        return;
-    this->refreshBondSelectionState();
-    this->updateBondMtuBounds();
-    this->updateBondLacpVisibility();
 }
 
 void NewNetworkWizard::onChinSelectionChanged()
@@ -1070,90 +924,6 @@ void NewNetworkWizard::populateExternalNics()
     this->m_populatingNics = false;
 }
 
-void NewNetworkWizard::populateBondNics()
-{
-    if (this->m_populatingBond)
-        return;
-
-    this->m_populatingBond = true;
-    this->ui.bondNicsTable->setRowCount(0);
-
-    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
-    if (!cache)
-    {
-        this->m_populatingBond = false;
-        return;
-    }
-
-    QSharedPointer<Pool> pool = this->poolObject();
-    QSharedPointer<Host> host = pool ? QSharedPointer<Host>() : this->m_host;
-    const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>("pif");
-    const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
-    QSet<QString> seenDevices;
-
-    for (const QSharedPointer<PIF>& pif : pifs)
-    {
-        if (!pif || !pif->IsValid())
-            continue;
-        if (host && pif->GetHostRef() != host->OpaqueRef())
-            continue;
-        if (pool && !host && !pool->GetHostRefs().contains(pif->GetHostRef()))
-            continue;
-        if (!pif->IsPhysical())
-            continue;
-        if (pif->IsBondNIC())
-            continue;
-        if (!pif->Show(showHidden))
-            continue;
-
-        const QString deviceName = pif->GetDevice();
-        if (pool && seenDevices.contains(deviceName))
-            continue;
-        seenDevices.insert(deviceName);
-
-        int row = this->ui.bondNicsTable->rowCount();
-        this->ui.bondNicsTable->insertRow(row);
-
-        QTableWidgetItem* useItem = new QTableWidgetItem();
-        useItem->setCheckState(Qt::Unchecked);
-        useItem->setData(Qt::UserRole, pif->OpaqueRef());
-        useItem->setData(Qt::UserRole + 1, pif->IsBondMember());
-        this->ui.bondNicsTable->setItem(row, 0, useItem);
-
-        QString nicLabel = pif->GetName();
-        if (pif->IsBondMember())
-            nicLabel = tr("%1 (already in bond)").arg(nicLabel);
-        this->ui.bondNicsTable->setItem(row, 1, new QTableWidgetItem(nicLabel));
-        this->ui.bondNicsTable->setItem(row, 2, new QTableWidgetItem(formatMac(pif->GetMAC())));
-
-        QString linkStatus = pif->GetLinkStatusString();
-        this->ui.bondNicsTable->setItem(row, 3, new QTableWidgetItem(linkStatus));
-
-        QSharedPointer<PIFMetrics> metrics;
-        if (cache)
-        {
-            QString metricsRef = pif->MetricsRef();
-            if (!metricsRef.isEmpty() && metricsRef != XENOBJECT_NULL)
-                metrics = cache->ResolveObject<PIFMetrics>("pif_metrics", metricsRef);
-        }
-
-        const bool carrier = metrics ? metrics->Carrier() : false;
-        const qint64 speed = metrics ? metrics->Speed() : 0;
-        const bool duplex = metrics ? metrics->Duplex() : false;
-        const QString vendor = metrics ? metrics->VendorName() : QString();
-        const QString metricsDevice = metrics ? metrics->DeviceName() : QString();
-        const QString pci = metrics ? metrics->PciBusPath() : QString();
-
-        this->ui.bondNicsTable->setItem(row, 4, new QTableWidgetItem(nicSpeedText(speed, carrier)));
-        this->ui.bondNicsTable->setItem(row, 5, new QTableWidgetItem(nicDuplexText(duplex, carrier)));
-        this->ui.bondNicsTable->setItem(row, 6, new QTableWidgetItem(vendor));
-        this->ui.bondNicsTable->setItem(row, 7, new QTableWidgetItem(metricsDevice));
-        this->ui.bondNicsTable->setItem(row, 8, new QTableWidgetItem(pci));
-    }
-
-    this->m_populatingBond = false;
-}
-
 void NewNetworkWizard::populateChinInterfaces()
 {
     this->ui.chinInterfaceCombo->clear();
@@ -1228,100 +998,6 @@ void NewNetworkWizard::populateSriovNics()
         this->ui.sriovNicCombo->setCurrentIndex(0);
 }
 
-void NewNetworkWizard::refreshBondSelectionState()
-{
-    QSignalBlocker blocker(this->ui.bondNicsTable);
-    int selectedCount = 0;
-    const QSharedPointer<Host> host = this->coordinatorHost();
-    const int bondSizeLimit = (host && host->vSwitchNetworkBackend()) ? 4 : 2;
-    for (int row = 0; row < this->ui.bondNicsTable->rowCount(); ++row)
-    {
-        QTableWidgetItem* item = this->ui.bondNicsTable->item(row, 0);
-        if (item && item->checkState() == Qt::Checked)
-            selectedCount++;
-    }
-
-    const bool valid = selectedCount >= 2 && selectedCount <= bondSizeLimit;
-    this->ui.bondNicsGroup->setTitle(tr("Network Interfaces (select at least 2, up to %1)").arg(bondSizeLimit));
-    this->ui.bondWarningLabel->setVisible(true);
-
-    for (int row = 0; row < this->ui.bondNicsTable->rowCount(); ++row)
-    {
-        QTableWidgetItem* item = this->ui.bondNicsTable->item(row, 0);
-        if (!item)
-            continue;
-
-        const bool alreadyInBond = item->data(Qt::UserRole + 1).toBool();
-        const bool checked = item->checkState() == Qt::Checked;
-        const bool canSelectMore = selectedCount < bondSizeLimit;
-
-        Qt::ItemFlags flags = item->flags();
-        if (alreadyInBond || (!checked && !canSelectMore))
-            flags &= ~Qt::ItemIsEnabled;
-        else
-            flags |= Qt::ItemIsEnabled;
-        item->setFlags(flags);
-    }
-
-    Q_UNUSED(valid);
-}
-
-void NewNetworkWizard::updateBondMtuBounds()
-{
-    int minMtu = 68;
-    int maxMtu = 9000;
-
-    XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
-    if (cache)
-    {
-        QList<qint64> mtus;
-        for (int row = 0; row < this->ui.bondNicsTable->rowCount(); ++row)
-        {
-            QTableWidgetItem* item = this->ui.bondNicsTable->item(row, 0);
-            if (!item || item->checkState() != Qt::Checked)
-                continue;
-            const QString pifRef = item->data(Qt::UserRole).toString();
-            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
-            if (pif && pif->IsValid())
-                mtus.append(pif->GetMTU());
-        }
-
-        if (!mtus.isEmpty())
-            maxMtu = std::min(maxMtu, static_cast<int>(*std::min_element(mtus.begin(), mtus.end())));
-    }
-
-    this->ui.bondMtuSpin->setMinimum(minMtu);
-    this->ui.bondMtuSpin->setMaximum(maxMtu);
-    if (this->ui.bondMtuSpin->value() < minMtu || this->ui.bondMtuSpin->value() > maxMtu)
-        this->ui.bondMtuSpin->setValue(minMtu);
-
-    if (minMtu == maxMtu)
-    {
-        this->ui.bondMtuSpin->setEnabled(false);
-        this->ui.bondMtuInfoLabel->setText(tr("Allowed MTU value: %1").arg(minMtu));
-    }
-    else
-    {
-        this->ui.bondMtuSpin->setEnabled(true);
-        this->ui.bondMtuInfoLabel->setText(tr("Allowed MTU range: %1-%2").arg(minMtu).arg(maxMtu));
-    }
-}
-
-void NewNetworkWizard::updateBondLacpVisibility()
-{
-    const QSharedPointer<Host> host = this->coordinatorHost();
-    const bool supportsLacp = host && host->vSwitchNetworkBackend();
-
-    this->ui.bondModeLacp->setVisible(supportsLacp);
-    if (!supportsLacp && this->ui.bondModeLacp->isChecked())
-        this->ui.bondModeActiveBackup->setChecked(true);
-
-    const bool lacp = supportsLacp && this->ui.bondModeLacp->isChecked();
-    this->ui.bondHashLabel->setVisible(lacp);
-    this->ui.bondHashSrcMac->setVisible(lacp);
-    this->ui.bondHashTcpUdp->setVisible(lacp);
-}
-
 void NewNetworkWizard::updateVlanValidation()
 {
     if (this->selectedNetworkType() != NetworkType::External)
@@ -1341,8 +1017,7 @@ void NewNetworkWizard::updateVlanValidation()
     {
         this->ui.vlanInfoText->setText(warning);
         this->ui.vlanInfoFrame->setVisible(true);
-    }
-    else
+    } else
     {
         this->ui.vlanInfoFrame->setVisible(false);
     }
@@ -1367,8 +1042,7 @@ void NewNetworkWizard::updateMtuValidation()
     {
         this->ui.mtuInfoText->setText(warning);
         this->ui.mtuInfoFrame->setVisible(true);
-    }
-    else
+    } else
     {
         this->ui.mtuInfoFrame->setVisible(false);
     }
@@ -1472,13 +1146,9 @@ QSharedPointer<Host> NewNetworkWizard::coordinatorHost() const
 
     if (this->m_connection && this->m_connection->GetCache())
     {
-        QStringList poolRefs = this->m_connection->GetCache()->GetAllRefs("pool");
-        if (!poolRefs.isEmpty())
-        {
-            QSharedPointer<Pool> pool = this->m_connection->GetCache()->ResolveObject<Pool>("pool", poolRefs.first());
-            if (pool && pool->IsValid())
-                return pool->GetMasterHost();
-        }
+        QSharedPointer<Pool> pool = this->m_connection->GetCache()->GetPool();
+        if (pool && pool->IsValid())
+            return pool->GetMasterHost();
     }
 
     return QSharedPointer<Host>();
@@ -1491,9 +1161,7 @@ QSharedPointer<Pool> NewNetworkWizard::poolObject() const
 
     if (this->m_connection && this->m_connection->GetCache())
     {
-        QStringList poolRefs = this->m_connection->GetCache()->GetAllRefs("pool");
-        if (!poolRefs.isEmpty())
-            return this->m_connection->GetCache()->ResolveObject<Pool>("pool", poolRefs.first());
+        return this->m_connection->GetCache()->GetPool();
     }
 
     return QSharedPointer<Pool>();

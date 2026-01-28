@@ -314,6 +314,8 @@ void NICsTabPage::onCreateBondClicked()
     if (dialog.exec() == QDialog::Accepted)
     {
         QString bondMode = dialog.getBondMode();
+        if (bondMode.isEmpty())
+            bondMode = "active-backup";
         QStringList pifRefs = dialog.getSelectedPIFRefs();
 
         if (pifRefs.size() < 2)
@@ -330,21 +332,22 @@ void NICsTabPage::onCreateBondClicked()
         }
 
         QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>("network", networkRef);
-        QString networkName = network ? network->GetName() : QString();
-        if (networkName.isEmpty())
-            networkName = "Bond Network";
+        QString bondName = dialog.getBondName();
+        if (bondName.isEmpty())
+            bondName = "Bond";
 
-        qint64 mtu = network ? network->GetMTU() : 0;
+        qint64 mtu = dialog.getMTU();
         if (mtu <= 0)
             mtu = 1500;
 
-        QString hashingAlgorithm = (bondMode == "lacp") ? "src_mac" : QString();
+        const bool autoPlug = dialog.getAutoPlug();
+        const QString hashingAlgorithm = dialog.getHashingAlgorithm();
 
         CreateBondAction* action = new CreateBondAction(
             connection,
-            networkName,
+            bondName,
             pifRefs,
-            true,
+            autoPlug,
             mtu,
             bondMode,
             hashingAlgorithm,

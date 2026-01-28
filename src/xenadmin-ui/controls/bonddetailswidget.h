@@ -25,46 +25,59 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BONDPROPERTIESDIALOG_H
-#define BONDPROPERTIESDIALOG_H
+#ifndef BONDDETAILSWIDGET_H
+#define BONDDETAILSWIDGET_H
 
-#include <QDialog>
-#include <QStringList>
+#include <QWidget>
 #include <QSharedPointer>
-
-namespace Ui
-{
-    class BondPropertiesDialog;
-}
+#include <QStringList>
+#include "ui_bonddetailswidget.h"
 
 class Host;
-class Network;
+class Pool;
+class PIF;
 
-class BondPropertiesDialog : public QDialog
+class BondDetailsWidget : public QWidget
 {
     Q_OBJECT
 
-    public:
-        explicit BondPropertiesDialog(QSharedPointer<Host> host, QSharedPointer<Network> network, QWidget* parent = nullptr);
-        ~BondPropertiesDialog();
+public:
+    explicit BondDetailsWidget(QWidget* parent = nullptr);
 
-        QString getBondName() const;
-        QString getBondMode() const;
-        QString getHashingAlgorithm() const;
-        qint64 getMTU() const;
-        bool getAutoPlug() const;
-        QStringList getSelectedPIFRefs() const;
-        bool canCreateBond(QWidget* parent);
+    void SetHost(const QSharedPointer<Host>& host);
+    void SetPool(const QSharedPointer<Pool>& pool);
+    void Refresh();
 
-    protected:
-        void accept() override;
+    bool IsValid() const;
+    bool CanCreateBond(QWidget* parent);
 
-    private:
-        void updateOkButtonState();
+    QString BondName() const;
+    QString BondMode() const;
+    QString HashingAlgorithm() const;
+    qint64 MTU() const;
+    bool AutoPlug() const;
+    QStringList SelectedPifRefs() const;
 
-        Ui::BondPropertiesDialog* ui;
-        QSharedPointer<Host> m_host;
-        QSharedPointer<Network> m_network;
+signals:
+    void ValidChanged(bool valid);
+
+private slots:
+    void onInputsChanged();
+
+private:
+    void populateBondNics();
+    void refreshSelectionState();
+    void updateMtuBounds();
+    void updateLacpVisibility();
+    int bondSizeLimit() const;
+
+    QSharedPointer<Host> coordinatorHost() const;
+
+    Ui::BondDetailsWidget ui;
+    QSharedPointer<Host> m_host;
+    QSharedPointer<Pool> m_pool;
+    bool m_populatingBond = false;
+    bool m_valid = false;
 };
 
-#endif // BONDPROPERTIESDIALOG_H
+#endif // BONDDETAILSWIDGET_H

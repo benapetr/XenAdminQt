@@ -29,9 +29,11 @@
 #include "networkingactionhelpers.h"
 #include "../../network/connection.h"
 #include "../../session.h"
+#include "../../bond.h"
+#include "../../network.h"
+#include "../../pif.h"
 #include "../../xenapi/xenapi_Network.h"
 #include "../../xenapi/xenapi_Bond.h"
-#include "../../xenapi/xenapi_PIF.h"
 #include "../../../xencache.h"
 #include <QDebug>
 
@@ -82,6 +84,12 @@ void CreateBondAction::run()
         pollToCompletion(taskRef, 0, 10);
         m_networkRef = GetResult();
 
+        QSharedPointer<Network> network = GetConnection()->WaitForCacheObject<Network>(
+            "network", m_networkRef);
+        if (!network)
+            throw std::runtime_error("Network not found in cache after creation");
+        Q_UNUSED(network);
+
         // Remove create_in_progress flag
         XenAPI::Network::remove_from_other_config(GetSession(), m_networkRef, "create_in_progress");
 
@@ -131,9 +139,17 @@ void CreateBondAction::run()
 
                 qDebug() << "Created bond on" << hostName << ":" << bondRef;
 
-                // Get bond interface PIF
-                QVariantMap bondData = GetConnection()->GetCache()->ResolveObjectData("bond", bondRef);
-                QString bondInterfaceRef = bondData.value("master").toString();
+                QSharedPointer<Bond> bond = GetConnection()->WaitForCacheObject<Bond>("bond", bondRef);
+                if (!bond)
+                    throw std::runtime_error("Bond not found in cache after creation");
+
+                QString bondInterfaceRef = bond->MasterRef();
+                if (bondInterfaceRef.isEmpty() || bondInterfaceRef == "OpaqueRef:NULL")
+                    throw std::runtime_error("Bond master interface not found in cache after creation");
+                QSharedPointer<PIF> bondInterface = GetConnection()->GetCache()->ResolveObject<PIF>(
+                    "pif", bondInterfaceRef);
+                if (!bondInterface)
+                    throw std::runtime_error("Bond master interface not found in cache after creation");
 
                 // Store bond info for management interface reconfiguration
                 NewBond newBond;

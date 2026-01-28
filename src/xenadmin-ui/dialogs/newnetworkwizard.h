@@ -75,12 +75,12 @@ protected:
     void initializePage(int id) override;
     bool validateCurrentPage() override;
     void accept() override;
+    int nextId() const override;
 
 private slots:
     void onNetworkTypeChanged();
     void onNameChanged();
     void onDetailsInputsChanged();
-    void onBondInputsChanged();
     void onChinSelectionChanged();
     void onSriovSelectionChanged();
 
@@ -88,6 +88,7 @@ private:
     void setupWizardUi();
     void configurePages();
     void updateNavigationSteps();
+    void updateNavigationSelection();
     void applyNetworkTypeFlow();
     void updateTypePage();
     void updateNamePage();
@@ -108,13 +109,9 @@ private:
     QString makeUniqueName(const QString& base, const QStringList& existing) const;
 
     void populateExternalNics();
-    void populateBondNics();
     void populateChinInterfaces();
     void populateSriovNics();
 
-    void refreshBondSelectionState();
-    void updateBondMtuBounds();
-    void updateBondLacpVisibility();
     void updateVlanValidation();
     void updateMtuValidation();
 
@@ -136,7 +133,6 @@ private:
     bool m_vlanError = false;
     bool m_mtuError = false;
     bool m_populatingNics = false;
-    bool m_populatingBond = false;
 };
 
 #endif // NEWNETWORKWIZARD_H

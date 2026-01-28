@@ -45,11 +45,14 @@
 #include "../dialogs/vifdialog.h"
 #include "../dialogs/actionprogressdialog.h"
 #include "../iconmanager.h"
+#include "../mainwindow.h"
 #include "xenlib/xen/actions/vif/deletevifaction.h"
 #include "xenlib/xen/actions/vif/plugvifaction.h"
 #include "xenlib/xen/actions/vif/unplugvifaction.h"
 #include "xenlib/xen/actions/vif/createvifaction.h"
 #include "xenlib/xen/actions/vif/updatevifaction.h"
+#include "xenlib/xen/actions/network/networkaction.h"
+#include "commands/network/destroybondcommand.h"
 #include "xen/pif.h"
 #include <QTableWidgetItem>
 #include <QMessageBox>
@@ -156,12 +159,16 @@ void NetworkTabPage::removeObject()
 
     XenCache* cache = this->m_connection->GetCache();
     disconnect(cache, &XenCache::objectChanged, this, &NetworkTabPage::onCacheObjectChanged);
+    disconnect(cache, &XenCache::objectRemoved, this, &NetworkTabPage::onCacheObjectRemoved);
+    disconnect(cache, &XenCache::bulkUpdateComplete, this, &NetworkTabPage::onCacheBulkUpdateComplete);
 }
 
 void NetworkTabPage::updateObject()
 {
     XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
     connect(cache, &XenCache::objectChanged, this, &NetworkTabPage::onCacheObjectChanged, Qt::UniqueConnection);
+    connect(cache, &XenCache::objectRemoved, this, &NetworkTabPage::onCacheObjectRemoved, Qt::UniqueConnection);
+    connect(cache, &XenCache::bulkUpdateComplete, this, &NetworkTabPage::onCacheBulkUpdateComplete, Qt::UniqueConnection);
 }
 
 void NetworkTabPage::setupVifColumns()
@@ -436,29 +443,7 @@ void NetworkTabPage::populateNetworksForHost()
 
 bool NetworkTabPage::shouldShowNetwork(QSharedPointer<Network> network)
 {
-    // Matching C# Network.Show() logic
-
-    QVariantMap otherConfig = network->GetOtherConfig();
-
-    // 1. Check IsGuestInstallerNetwork - don't show guest installer networks
-    if (otherConfig.value("is_guest_installer_network", "false").toString() == "true")
-    {
-        return false;
-    }
-
-    // 2. Check IsHidden - don't show if HideFromXenCenter is set
-    if (otherConfig.value("HideFromXenCenter", "false").toString() == "true")
-    {
-        return false;
-    }
-
-    // 3. Check if network has name - networks without names are usually internal
-    QString name = network->GetName();
-    if (name.isEmpty())
-    {
-        return false;
-    }
-
+    // Match C# Network.Show() behavior
     const bool showHiddenObjects = SettingsManager::instance().getShowHiddenObjects();
     return network->Show(showHiddenObjects);
 }
@@ -782,8 +767,7 @@ void NetworkTabPage::onConfigureClicked()
 
     if (selectedPifRef.isEmpty())
     {
-        QMessageBox::information(this, tr("Configure IP Addresses"),
-                                 tr("Please select a management interface to configure."));
+        QMessageBox::information(this, tr("Configure IP Addresses"), tr("Please select a management interface to configure."));
         return;
     }
 
@@ -866,7 +850,7 @@ void NetworkTabPage::showNetworksContextMenu(const QPoint& pos)
     QAction* copyAction = nullptr;
     if (item && !item->text().isEmpty())
     {
-        copyAction = contextMenu.addAction(tr("&Copy"));
+        copyAction = contextMenu.addAction(tr("Copy"));
     }
 
     // Add separator
@@ -882,18 +866,18 @@ void NetworkTabPage::showNetworksContextMenu(const QPoint& pos)
     if (this->m_objectType == "vm")
     {
         // VM-specific actions (VIF management)
-        addAction = contextMenu.addAction(tr("Add &Interface..."));
+        addAction = contextMenu.addAction(tr("Add Interface..."));
 
         // Only enable edit/remove if an interface is selected
         if (item)
         {
-            propertiesAction = contextMenu.addAction(tr("&Properties..."));
-            removeAction = contextMenu.addAction(tr("&Remove Interface"));
+            propertiesAction = contextMenu.addAction(tr("Properties..."));
+            removeAction = contextMenu.addAction(tr("Remove Interface"));
         }
     } else if (this->m_objectType == "host" || this->m_objectType == "pool")
     {
         // Host/Pool-specific actions (Network management)
-        addAction = contextMenu.addAction(tr("&Add Network..."));
+        addAction = contextMenu.addAction(tr("Add Network..."));
 
         QString selectedNetworkRef = this->getSelectedNetworkRef();
         if (!selectedNetworkRef.isEmpty() && this->m_connection && this->m_connection->GetCache())
@@ -907,8 +891,8 @@ void NetworkTabPage::showNetworksContextMenu(const QPoint& pos)
 
             if (!isGuestInstaller)
             {
-                propertiesAction = contextMenu.addAction(tr("&Properties..."));
-                removeAction = contextMenu.addAction(tr("&Remove Network"));
+                propertiesAction = contextMenu.addAction(tr("Properties..."));
+                removeAction = contextMenu.addAction(tr("Remove Network"));
             }
         }
     }
@@ -947,7 +931,7 @@ void NetworkTabPage::showIPConfigContextMenu(const QPoint& pos)
     QAction* copyAction = nullptr;
     if (item && !item->text().isEmpty())
     {
-        copyAction = contextMenu.addAction(tr("&Copy"));
+        copyAction = contextMenu.addAction(tr("Copy"));
     }
 
     // Add separator
@@ -955,7 +939,7 @@ void NetworkTabPage::showIPConfigContextMenu(const QPoint& pos)
         contextMenu.addSeparator();
 
     // Add "Configure" action
-    QAction* configureAction = contextMenu.addAction(tr("C&onfigure..."));
+    QAction* configureAction = contextMenu.addAction(tr("Configure..."));
 
     QString selectedPifRef = this->getSelectedPifRef();
     if (selectedPifRef.isEmpty())
@@ -1030,8 +1014,7 @@ void NetworkTabPage::onAddNetwork()
 
     if (!this->m_connection || !this->m_connection->IsConnected())
     {
-        QMessageBox::warning(this, tr("Not Connected"),
-                             tr("Not connected to XenServer."));
+        QMessageBox::warning(this, tr("Not Connected"), tr("Not connected to XenServer."));
         return;
     }
 
@@ -1044,9 +1027,7 @@ void NetworkTabPage::onAddNetwork()
 
         if (currentVifCount >= maxVifs)
         {
-            QMessageBox::critical(this, tr("Maximum VIFs Reached"),
-                                  tr("The maximum number of network interfaces (%1) has been reached for this VM.")
-                                      .arg(maxVifs));
+            QMessageBox::critical(this, tr("Maximum VIFs Reached"), tr("The maximum number of network interfaces (%1) has been reached for this VM.").arg(maxVifs));
             return;
         }
 
@@ -1257,8 +1238,7 @@ void NetworkTabPage::onRemoveNetwork()
             });
 
             connect(action, &DeleteVIFAction::failed, this, [this, action](const QString& error) {
-                QMessageBox::critical(this, tr("Delete VIF Failed"),
-                                      tr("Failed to delete network interface.\n\nError: %1").arg(error));
+                QMessageBox::critical(this, tr("Delete VIF Failed"), tr("Failed to delete network interface. Error: %1").arg(error));
                 action->deleteLater();
             });
 
@@ -1272,29 +1252,47 @@ void NetworkTabPage::onRemoveNetwork()
         }
     } else
     {
-        // C#: Use NetworkAction for hosts/pools
+        // C#: Use NetworkAction for hosts/pools, and DestroyBondCommand for bond networks
         QString selectedNetworkRef = this->getSelectedNetworkRef();
         if (selectedNetworkRef.isEmpty() || !this->m_connection || !this->m_connection->GetCache())
-        {
             return;
-        }
 
         QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>("network", selectedNetworkRef);
-        QString networkName = network ? network->GetName() : tr("Unknown");
+        if (!network || !network->IsValid())
+            return;
+
+        if (network->IsBond())
+        {
+            auto* destroyBondCommand = new DestroyBondCommand(MainWindow::instance(), network, this);
+            destroyBondCommand->Run();
+            return;
+        }
 
         // Confirm removal
         QMessageBox::StandardButton reply = QMessageBox::question(
             this,
             tr("Remove Network"),
-            tr("Are you sure you want to remove the network '%1'?\n\n"
-               "This action cannot be undone.")
-                .arg(networkName),
+            tr("Are you sure you want to remove the network '%1'? This action cannot be undone.")
+                .arg(network->GetName()),
             QMessageBox::Yes | QMessageBox::No);
 
         if (reply == QMessageBox::Yes)
         {
-            // Remove the network using XenAPI
-            this->removeNetwork(selectedNetworkRef);
+            NetworkAction* action = new NetworkAction(network, false, this);
+            connect(action, &NetworkAction::completed, this, [this, action]() {
+                if (action->GetState() == AsyncOperation::OperationState::Completed)
+                    this->refreshContent();
+                action->deleteLater();
+            });
+            connect(action, &NetworkAction::failed, this, [this, action](const QString& error) {
+                QMessageBox::critical(this, tr("Remove Network"), tr("Failed to remove network. Error: %1").arg(error));
+                action->deleteLater();
+            });
+
+            ActionProgressDialog* progressDialog = new ActionProgressDialog(action, this);
+            progressDialog->setAttribute(Qt::WA_DeleteOnClose);
+            progressDialog->show();
+            action->RunAsync();
         }
     }
 }
@@ -1318,7 +1316,8 @@ void NetworkTabPage::onActivateToggle()
         // C#: Use UnplugVIFAction to deactivate (unplug) VIF
         UnplugVIFAction* action = new UnplugVIFAction(this->m_connection, vifRef, this);
 
-        connect(action, &UnplugVIFAction::completed, this, [this, action]() {
+        connect(action, &UnplugVIFAction::completed, this, [this, action]()
+        {
             if (action->GetState() == AsyncOperation::OperationState::Completed)
             {
                 qDebug() << "VIF unplugged successfully";
@@ -1328,9 +1327,9 @@ void NetworkTabPage::onActivateToggle()
             action->deleteLater();
         });
 
-        connect(action, &UnplugVIFAction::failed, this, [this, action](const QString& error) {
-            QMessageBox::critical(this, tr("Unplug VIF Failed"),
-                                  tr("Failed to deactivate network interface.\n\nError: %1").arg(error));
+        connect(action, &UnplugVIFAction::failed, this, [this, action](const QString& error)
+        {
+            QMessageBox::critical(this, tr("Unplug VIF Failed"), tr("Failed to deactivate network interface.\n\nError: %1").arg(error));
             action->deleteLater();
         });
 
@@ -1346,7 +1345,8 @@ void NetworkTabPage::onActivateToggle()
         // C#: Use PlugVIFAction to activate (plug) VIF
         PlugVIFAction* action = new PlugVIFAction(this->m_connection, vifRef, this);
 
-        connect(action, &PlugVIFAction::completed, this, [this, action]() {
+        connect(action, &PlugVIFAction::completed, this, [this, action]()
+        {
             if (action->GetState() == AsyncOperation::OperationState::Completed)
             {
                 qDebug() << "VIF plugged successfully";
@@ -1372,82 +1372,6 @@ void NetworkTabPage::onActivateToggle()
     }
 }
 
-void NetworkTabPage::removeNetwork(const QString& networkRef)
-{
-    if (!this->m_connection || !this->m_connection->GetCache())
-    {
-        qWarning() << "NetworkTabPage::removeNetwork - No connection/cache available";
-        return;
-    }
-
-    QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>("network", networkRef);
-    if (!network || !network->IsValid())
-        return;
-
-    QString networkName = network->GetName();
-
-    qDebug() << "Removing network:" << networkName << "ref:" << networkRef;
-
-    // Check if network has any PIFs attached
-    QList<QSharedPointer<PIF>> pifs = network->GetPIFs();
-
-    if (!pifs.isEmpty())
-    {
-        // Network has PIFs - warn user
-        QMessageBox::StandardButton reply = QMessageBox::warning(
-            this,
-            tr("Network In Use"),
-            tr("Network '%1' has %2 network interface(s) attached.\n\n"
-               "Removing this network will disconnect these interfaces.\n\n"
-               "Continue?")
-                .arg(networkName)
-                .arg(pifs.count()),
-            QMessageBox::Yes | QMessageBox::No);
-
-        if (reply != QMessageBox::Yes)
-        {
-            return;
-        }
-    }
-
-    // Remove network using XenAPI
-    XenAPI::Session* session = this->m_connection->GetSession();
-    if (!session || !session->IsLoggedIn())
-    {
-        QMessageBox::critical(this, tr("Failed to Remove Network"),
-                              tr("No active session to remove network '%1'.").arg(networkName));
-        return;
-    }
-
-    try
-    {
-        XenAPI::Network::destroy(session, networkRef);
-        qDebug() << "Network removed successfully:" << networkRef;
-
-        QVariantMap allRecords;
-        QVariantList refs = XenAPI::Network::get_all(session);
-        for (const QVariant& refVar : refs)
-        {
-            QString ref = refVar.toString();
-            if (ref.isEmpty())
-                continue;
-            QVariantMap record = XenAPI::Network::get_record(session, ref);
-            record["ref"] = ref;
-            allRecords[ref] = record;
-        }
-        if (this->m_connection->GetCache())
-            this->m_connection->GetCache()->UpdateBulk("network", allRecords);
-    }
-    catch (const std::exception& ex)
-    {
-        // Show error message
-        QMessageBox::critical(this, tr("Failed to Remove Network"),
-                              tr("Failed to remove network '%1'.\n\nError: %2")
-                                  .arg(networkName)
-                                  .arg(ex.what()));
-    }
-}
-
 void NetworkTabPage::onNetworksDataUpdated(const QVariantList& networks)
 {
     Q_UNUSED(networks);
@@ -1465,6 +1389,33 @@ void NetworkTabPage::onCacheObjectChanged(XenConnection* connection, const QStri
         return;
 
     Q_UNUSED(ref);
+
+    if (type == "network" || type == "pif" || type == "vif" || type == "bond" ||
+        type == "network_sriov" || type == "pif_metrics")
+    {
+        this->refreshContent();
+    }
+}
+
+void NetworkTabPage::onCacheObjectRemoved(XenConnection* connection, const QString& type, const QString& ref)
+{
+    Q_ASSERT(this->m_connection == connection);
+
+    if (this->m_connection != connection)
+        return;
+
+    Q_UNUSED(ref);
+
+    if (type == "network" || type == "pif" || type == "vif" || type == "bond" ||
+        type == "network_sriov" || type == "pif_metrics")
+    {
+        this->refreshContent();
+    }
+}
+
+void NetworkTabPage::onCacheBulkUpdateComplete(const QString& type, int count)
+{
+    Q_UNUSED(count);
 
     if (type == "network" || type == "pif" || type == "vif" || type == "bond" ||
         type == "network_sriov" || type == "pif_metrics")
