@@ -29,6 +29,7 @@
 #include "network/connection.h"
 #include "network/comparableaddress.h"
 #include "hostmetrics.h"
+#include "feature.h"
 #include "vmmetrics.h"
 #include "../xencache.h"
 #include "vm.h"
@@ -97,6 +98,45 @@ bool Host::RestrictVtpm() const
 bool Host::RestrictIntraPoolMigrate() const
 {
     return boolKey(LicenseParams(), "restrict_xen_motion");
+}
+
+bool Host::RestrictVSwitchController() const
+{
+    return boolKeyPreferTrue(LicenseParams(), "restrict_vswitch_controller");
+}
+
+bool Host::RestrictSriovNetwork() const
+{
+    return boolKeyPreferTrue(LicenseParams(), "restrict_network_sriov");
+}
+
+bool Host::SriovNetworkDisabled() const
+{
+    if (!this->RestrictSriovNetwork())
+        return false;
+
+    XenConnection* connection = this->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
+    const QStringList featureRefs = this->FeatureRefs();
+    for (const QString& ref : featureRefs)
+    {
+        QSharedPointer<Feature> feature = cache->ResolveObject<Feature>("feature", ref);
+        if (!feature || !feature->IsValid())
+            continue;
+        if (feature->GetName().compare("network_sriov", Qt::CaseInsensitive) == 0)
+            return !feature->IsEnabled();
+    }
+
+    return false;
+}
+
+bool Host::vSwitchNetworkBackend() const
+{
+    const QVariantMap version = this->SoftwareVersion();
+    return version.value("network_backend").toString() == "openvswitch";
 }
 
 QStringList Host::GetResidentVMRefs() const

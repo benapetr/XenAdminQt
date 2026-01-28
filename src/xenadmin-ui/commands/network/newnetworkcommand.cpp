@@ -29,6 +29,8 @@
 #include <QDebug>
 #include "../../mainwindow.h"
 #include "../../dialogs/newnetworkwizard.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/host.h"
 #include <QtWidgets>
 
 NewNetworkCommand::NewNetworkCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
@@ -45,7 +47,7 @@ void NewNetworkCommand::Run()
         qWarning() << "NewNetworkCommand: Cannot execute - requirements not met";
         QMessageBox::warning(nullptr, tr("Cannot Create Network"),
                              tr("Network creation is not available at this time.\n"
-                                "Please ensure you have an active connection to a XenServer."));
+                                "Please select a host or pool, and ensure you have an active connection."));
         return;
     }
 
@@ -54,9 +56,15 @@ void NewNetworkCommand::Run()
 
 bool NewNetworkCommand::CanRun() const
 {
-    // For now, always allow network creation
-    // TODO: Check if we have proper XenAPI connection and permissions
-    return true;
+    QSharedPointer<XenObject> selected = this->GetObject();
+    if (!selected)
+        return false;
+
+    const QString type = selected->GetObjectType();
+    if (type != "pool" && type != "host")
+        return false;
+
+    return selected->GetConnection() != nullptr;
 }
 
 QString NewNetworkCommand::MenuText() const
@@ -68,7 +76,31 @@ void NewNetworkCommand::showNewNetworkWizard()
 {
     qDebug() << "NewNetworkCommand: Opening New Network Wizard";
 
-    NewNetworkWizard wizard(this->mainWindow());
+    QSharedPointer<XenObject> selected = this->GetObject();
+    XenConnection* connection = selected ? selected->GetConnection() : nullptr;
+    QSharedPointer<Pool> pool;
+    QSharedPointer<Host> host;
+
+    if (selected && selected->GetObjectType() == "pool")
+    {
+        pool = qSharedPointerCast<Pool>(selected);
+        host = pool ? pool->GetMasterHost() : QSharedPointer<Host>();
+    } else if (selected && selected->GetObjectType() == "host")
+    {
+        host = qSharedPointerCast<Host>(selected);
+    }
+
+    if (!connection && this->mainWindow() && this->mainWindow()->GetSelectionManager())
+    {
+        const QList<XenConnection*> connections = this->mainWindow()->GetSelectionManager()->SelectedConnections();
+        if (!connections.isEmpty())
+            connection = connections.first();
+    }
+
+    if (!connection)
+        return;
+
+    NewNetworkWizard wizard(connection, pool, host, this->mainWindow());
 
     if (wizard.exec() == QDialog::Accepted)
     {

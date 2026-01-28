@@ -73,6 +73,7 @@ SOURCES += \
     controls/snapshottreeview.cpp \
     controls/multipledvdisolist.cpp \
     controls/vmoperationmenu.cpp \
+    controls/bonddetailswidget.cpp \
     controls/pdsection.cpp \
     controls/xensearch/querypanel.cpp \
     controls/xensearch/searchoutput.cpp \
@@ -327,6 +328,7 @@ HEADERS += \
     controls/decentgroupbox.h \
     controls/dropdownbutton.h \
     controls/vmoperationmenu.h \
+    controls/bonddetailswidget.h \
     controls/snapshottreeview.h \
     controls/multipledvdisolist.h \
     controls/pdsection.h \
@@ -539,6 +541,7 @@ FORMS += \
     dialogs/newvirtualdiskdialog.ui \
     dialogs/movevirtualdiskdialog.ui \
     dialogs/optionsdialog.ui \
+    dialogs/newnetworkwizard.ui \
     dialogs/newvmwizard.ui \
     dialogs/newsrwizard.ui \
     dialogs/crosspoolmigratewizard.ui \
@@ -549,6 +552,7 @@ FORMS += \
     dialogs/warningdialogs/closexencenterwarningdialog.ui \
     controls/affinitypicker.ui \
     controls/srpicker.ui \
+    controls/bonddetailswidget.ui \
     controls/multipledvdisolist.ui \
     settingspanels/generaleditpage.ui \
     settingspanels/hostautostarteditpage.ui \

@@ -29,130 +29,110 @@
 #define NEWNETWORKWIZARD_H
 
 #include <QWizard>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QFormLayout>
-#include <QLabel>
-#include <QLineEdit>
-#include <QTextEdit>
-#include <QPushButton>
-#include <QComboBox>
-#include <QCheckBox>
-#include <QListWidget>
-#include <QRadioButton>
-#include <QSpinBox>
-#include <QGroupBox>
-#include <QButtonGroup>
+#include <QPointer>
+#include <QSet>
+#include <QSharedPointer>
+#include "ui_newnetworkwizard.h"
+
+class XenConnection;
+class Host;
+class Pool;
+class Network;
+class PIF;
+class WizardNavigationPane;
 
 class NewNetworkWizard : public QWizard
 {
     Q_OBJECT
 
 public:
-    explicit NewNetworkWizard(QWidget* parent = nullptr);
-
-    // Network Types
-    enum NetworkType
+    enum class NetworkType
     {
-        External = 0,
-        Internal = 1,
-        Bonded = 2,
-        CrossHost = 3,
-        SRIOV = 4
+        Internal,
+        CHIN,
+        External,
+        Bonded,
+        SRIOV
     };
 
-    // Page IDs
-    enum
+    enum PageId
     {
-        Page_NetworkType = 0,
+        Page_TypeSelect = 0,
         Page_Name = 1,
         Page_Details = 2,
-        Page_Finish = 3
+        Page_BondDetails = 3,
+        Page_ChinDetails = 4,
+        Page_SriovDetails = 5
     };
 
-    // Getters for configured network properties
-    QString networkName() const
-    {
-        return m_networkName;
-    }
-    QString networkDescription() const
-    {
-        return m_networkDescription;
-    }
-    NetworkType networkType() const
-    {
-        return m_selectedNetworkType;
-    }
-    int vlanId() const
-    {
-        return m_vlanId;
-    }
-    int mtu() const
-    {
-        return m_mtu;
-    }
-    bool autoAddToVMs() const
-    {
-        return m_autoAddToVMs;
-    }
-    bool autoPlug() const
-    {
-        return m_autoPlug;
-    }
+    explicit NewNetworkWizard(XenConnection* connection,
+                              const QSharedPointer<Pool>& pool,
+                              const QSharedPointer<Host>& host,
+                              QWidget* parent = nullptr);
+    ~NewNetworkWizard() override;
 
 protected:
     void initializePage(int id) override;
     bool validateCurrentPage() override;
     void accept() override;
+    int nextId() const override;
 
 private slots:
     void onNetworkTypeChanged();
+    void onNameChanged();
+    void onDetailsInputsChanged();
+    void onChinSelectionChanged();
+    void onSriovSelectionChanged();
 
 private:
-    QWizardPage* createNetworkTypePage();
-    QWizardPage* createNamePage();
-    QWizardPage* createDetailsPage();
-    QWizardPage* createFinishPage();
-
+    void setupWizardUi();
+    void configurePages();
+    void updateNavigationSteps();
+    void updateNavigationSelection();
+    void applyNetworkTypeFlow();
+    void updateTypePage();
+    void updateNamePage();
     void updateDetailsPage();
-    void updateSummary();
+    void updateBondDetailsPage();
+    void updateChinDetailsPage();
+    void updateSriovDetailsPage();
 
-    // Network type selection
-    QRadioButton* m_externalRadio;
-    QRadioButton* m_internalRadio;
-    QRadioButton* m_bondedRadio;
-    QRadioButton* m_crossHostRadio;
-    QRadioButton* m_sriovRadio;
-    QButtonGroup* m_networkTypeGroup;
+    bool validateNamePage();
+    bool validateDetailsPage();
+    bool validateBondDetailsPage();
+    bool validateChinDetailsPage();
+    bool validateSriovDetailsPage();
 
-    // Name and description
-    QLineEdit* m_nameLineEdit;
-    QTextEdit* m_descriptionTextEdit;
+    NetworkType selectedNetworkType() const;
+    QString defaultNetworkName(NetworkType type) const;
+    QStringList existingNetworkNames() const;
+    QString makeUniqueName(const QString& base, const QStringList& existing) const;
 
-    // Details page widgets
-    QComboBox* m_nicComboBox;
-    QSpinBox* m_vlanSpinBox;
-    QSpinBox* m_mtuSpinBox;
-    QCheckBox* m_autoAddNicCheckBox;
-    QCheckBox* m_autoPlugCheckBox;
+    void populateExternalNics();
+    void populateChinInterfaces();
+    void populateSriovNics();
 
-    // Bonding specific
-    QLabel* m_bondInterfacesLabel;
-    QListWidget* m_bondInterfacesList;
-    QLabel* m_bondModeLabel;
-    QComboBox* m_bondModeComboBox;
+    void updateVlanValidation();
+    void updateMtuValidation();
 
-    // Finish page
-    QTextEdit* m_summaryTextEdit;
+    bool vlanValueIsValid(QString* warningText, bool* isError) const;
+    bool mtuValueIsValid(QString* warningText, bool* isError) const;
 
-    // Data storage
-    NetworkType m_selectedNetworkType;
-    QString m_networkName;
-    QString m_networkDescription;
-    int m_vlanId;
-    int m_mtu;
-    bool m_autoAddToVMs;
-    bool m_autoPlug;
+    QSharedPointer<Host> coordinatorHost() const;
+    QSharedPointer<Pool> poolObject() const;
+
+    Ui::NewNetworkWizard ui;
+    WizardNavigationPane* m_navigationPane = nullptr;
+
+    XenConnection* m_connection = nullptr;
+    QSharedPointer<Pool> m_pool;
+    QSharedPointer<Host> m_host;
+
+    QSet<QString> m_existingNetworkNames;
+    NetworkType m_cachedType = NetworkType::External;
+    bool m_vlanError = false;
+    bool m_mtuError = false;
+    bool m_populatingNics = false;
 };
 
 #endif // NEWNETWORKWIZARD_H

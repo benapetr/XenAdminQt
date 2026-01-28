@@ -48,12 +48,16 @@ class CreateSriovAction : public AsyncOperation
          * @brief Constructor
          * @param connection XenConnection
          * @param networkName Name for the new SR-IOV network
+         * @param networkDescription Description for the new SR-IOV network
          * @param pifRefs List of PIF references to enable SR-IOV on
+         * @param autoplug Whether to mark network as AutoPlug
          * @param parent Parent QObject
          */
         CreateSriovAction(XenConnection* connection,
                           const QString& networkName,
+                          const QString& networkDescription,
                           const QStringList& pifRefs,
+                          bool autoplug,
                           QObject* parent = nullptr);
 
     protected:
@@ -61,7 +65,9 @@ class CreateSriovAction : public AsyncOperation
 
     private:
         QString m_networkName;
+        QString m_networkDescription;
         QStringList m_pifRefs;
+        bool m_autoplug = true;
 };
 
 #endif // CREATESRIOVACTION_H

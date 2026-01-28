@@ -115,10 +115,13 @@ class PIF : public XenObject
         bool IsBondSlave() const;
         bool IsBondMaster() const;
         bool IsBondMember() const;
+        bool IsBondNIC() const;
         bool IsTunnelAccessPIF() const;
         bool IsTunnelTransportPIF() const;
         bool IsSriovPhysicalPIF() const;
         bool IsSriovLogicalPIF() const;
+        bool IsUsedByClustering() const;
+        bool SriovCapable() const;
         bool Show(bool showHiddenObjects) const;
         QString GetLinkStatusString() const;
 };

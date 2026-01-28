@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>BondDetailsWidget</class>
+ <widget class="QWidget" name="BondDetailsWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>700</width>
+    <height>560</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="bondDetailsLayout">
+   <item>
+    <widget class="QGroupBox" name="bondNicsGroup">
+     <property name="title">
+      <string>Network Interfaces (select at least 2)</string>
+     </property>
+     <layout class="QVBoxLayout" name="bondNicsLayout">
+      <item>
+       <widget class="QTableWidget" name="bondNicsTable">
+        <property name="selectionMode">
+         <enum>QAbstractItemView::MultiSelection</enum>
+        </property>
+        <property name="selectionBehavior">
+         <enum>QAbstractItemView::SelectRows</enum>
+        </property>
+        <column>
+         <property name="text">
+          <string></string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>NIC</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>MAC</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Link Status</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Speed</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Duplex</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Vendor</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Device</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>PCI</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="bondSettingsGroup">
+     <property name="title">
+      <string>Bond mode</string>
+     </property>
+     <layout class="QVBoxLayout" name="bondSettingsLayout">
+      <item>
+       <widget class="QRadioButton" name="bondModeSlb">
+        <property name="text">
+         <string>Active-active</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="bondModeActiveBackup">
+        <property name="text">
+         <string>Active-passive</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="bondModeLacp">
+        <property name="text">
+         <string>LACP</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QFrame" name="bondLacpWarningFrame">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <layout class="QHBoxLayout" name="bondLacpWarningLayout">
+         <item>
+          <widget class="QLabel" name="bondLacpWarningIcon">
+           <property name="text">
+            <string>!</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignTop|Qt::AlignHCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="bondLacpWarningText">
+           <property name="text">
+            <string>LACP bonds require the switch to be configured for link aggregation.</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="bondHashLabel">
+        <property name="text">
+         <string>LACP hashing:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="bondHashSrcMac">
+        <property name="text">
+         <string>Source MAC</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="bondHashTcpUdp">
+        <property name="text">
+         <string>TCP/UDP ports</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="bondMtuLayout">
+     <item>
+      <widget class="QLabel" name="bondMtuLabel">
+       <property name="text">
+        <string>MTU:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="bondMtuSpin">
+       <property name="minimum">
+        <number>68</number>
+       </property>
+       <property name="maximum">
+        <number>9000</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="bondMtuInfoLabel">
+       <property name="text">
+        <string>Allowed MTU range</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="bondAutoPlugCheck">
+     <property name="text">
+      <string>Automatically add this network to new virtual machines</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="bondWarningLabel">
+     <property name="text">
+      <string>Note: Creating a bond will briefly interrupt network connectivity.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

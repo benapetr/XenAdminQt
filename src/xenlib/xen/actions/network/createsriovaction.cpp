@@ -36,14 +36,18 @@
 
 CreateSriovAction::CreateSriovAction(XenConnection* connection,
                                      const QString& networkName,
+                                     const QString& networkDescription,
                                      const QStringList& pifRefs,
+                                     bool autoplug,
                                      QObject* parent)
     : AsyncOperation(connection,
                      "Creating SR-IOV Network",
                      QString("Creating SR-IOV network '%1'").arg(networkName),
                      parent),
       m_networkName(networkName),
-      m_pifRefs(pifRefs)
+      m_networkDescription(networkDescription),
+      m_pifRefs(pifRefs),
+      m_autoplug(autoplug)
 {
     if (m_pifRefs.isEmpty())
         throw std::invalid_argument("PIF list cannot be empty");
@@ -51,6 +55,20 @@ CreateSriovAction::CreateSriovAction(XenConnection* connection,
 
 void CreateSriovAction::run()
 {
+    struct DisruptionGuard
+    {
+        XenConnection* connection;
+        ~DisruptionGuard()
+        {
+            if (connection)
+                connection->SetExpectDisruption(false);
+        }
+    };
+
+    if (GetConnection())
+        GetConnection()->SetExpectDisruption(true);
+    DisruptionGuard guard{GetConnection()};
+
     try
     {
         if (m_pifRefs.isEmpty())
@@ -97,13 +115,15 @@ void CreateSriovAction::run()
         // Create the network
         QVariantMap networkRecord;
         networkRecord["name_label"] = m_networkName;
-        networkRecord["name_description"] = "SR-IOV Network";
+        networkRecord["name_description"] = m_networkDescription;
         networkRecord["managed"] = true;
 
+        QVariantMap otherConfig;
+        otherConfig["automatic"] = m_autoplug ? "true" : "false";
+        networkRecord["other_config"] = otherConfig;
+
         SetDescription(QString("Creating network '%1'").arg(m_networkName));
-        QString networkRef = XenAPI::Network::async_create(GetSession(), networkRecord);
-        pollToCompletion(networkRef, 0, 10);
-        networkRef = GetResult();
+        QString networkRef = XenAPI::Network::create(GetSession(), networkRecord);
 
         SetDescription("Enabling SR-IOV on network interfaces");
 

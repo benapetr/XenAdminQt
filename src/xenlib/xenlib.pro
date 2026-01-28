@@ -195,6 +195,7 @@ HEADERS += \
     xen/actions/pool/setssllegacyaction.h \
     xen/actions/network/changenetworkingaction.h \
     xen/actions/network/createbondaction.h \
+    xen/actions/network/createchinaction.h \
     xen/actions/network/destroybondaction.h \
     xen/actions/network/createsriovaction.h \
     xen/actions/network/networkaction.h \
@@ -411,6 +412,7 @@ SOURCES += \
     xen/actions/pool/setssllegacyaction.cpp \
     xen/actions/network/changenetworkingaction.cpp \
     xen/actions/network/createbondaction.cpp \
+    xen/actions/network/createchinaction.cpp \
     xen/actions/network/destroybondaction.cpp \
     xen/actions/network/createsriovaction.cpp \
     xen/actions/network/networkaction.cpp \

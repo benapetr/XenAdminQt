@@ -52,6 +52,7 @@ class DestroyBondCommand : public Command
 
     public:
         explicit DestroyBondCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit DestroyBondCommand(MainWindow* mainWindow, const QSharedPointer<Network>& network, QObject* parent = nullptr);
 
         bool CanRun() const override;
         void Run() override;

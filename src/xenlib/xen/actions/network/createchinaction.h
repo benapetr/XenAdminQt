@@ -25,46 +25,39 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BONDPROPERTIESDIALOG_H
-#define BONDPROPERTIESDIALOG_H
+#ifndef CREATECHINACTION_H
+#define CREATECHINACTION_H
 
-#include <QDialog>
+#include "../../asyncoperation.h"
+#include <QString>
 #include <QStringList>
 #include <QSharedPointer>
 
-namespace Ui
-{
-    class BondPropertiesDialog;
-}
-
-class Host;
 class Network;
+class PIF;
 
-class BondPropertiesDialog : public QDialog
+/**
+ * @brief CreateChinAction - Creates a CHIN (cross-host internal) network.
+ *
+ * Qt port of C# XenAdmin.Actions.CreateChinAction.
+ * Creates the network and builds tunnels on management interfaces.
+ */
+class CreateChinAction : public AsyncOperation
 {
     Q_OBJECT
 
-    public:
-        explicit BondPropertiesDialog(QSharedPointer<Host> host, QSharedPointer<Network> network, QWidget* parent = nullptr);
-        ~BondPropertiesDialog();
+public:
+    CreateChinAction(XenConnection* connection,
+                     const QSharedPointer<Network>& newNetwork,
+                     const QSharedPointer<Network>& transportNetwork,
+                     QObject* parent = nullptr);
 
-        QString getBondName() const;
-        QString getBondMode() const;
-        QString getHashingAlgorithm() const;
-        qint64 getMTU() const;
-        bool getAutoPlug() const;
-        QStringList getSelectedPIFRefs() const;
-        bool canCreateBond(QWidget* parent);
+protected:
+    void run() override;
 
-    protected:
-        void accept() override;
-
-    private:
-        void updateOkButtonState();
-
-        Ui::BondPropertiesDialog* ui;
-        QSharedPointer<Host> m_host;
-        QSharedPointer<Network> m_network;
+private:
+    QSharedPointer<Network> m_newNetwork;
+    QSharedPointer<Network> m_transportNetwork;
 };
 
-#endif // BONDPROPERTIESDIALOG_H
+#endif // CREATECHINACTION_H

@@ -27,33 +27,25 @@
 
 #include "bondpropertiesdialog.h"
 #include "ui_bondpropertiesdialog.h"
+#include "controls/bonddetailswidget.h"
 #include "xen/host.h"
 #include "xen/network.h"
-#include "xen/pif.h"
-#include "xencache.h"
-#include <QMessageBox>
-#include <QTableWidgetItem>
 #include <QPushButton>
 
-BondPropertiesDialog::BondPropertiesDialog(QSharedPointer<Host> host, QSharedPointer<Network> network, QWidget* parent) : QDialog(parent), ui(new Ui::BondPropertiesDialog), m_host(host), m_network(network)
+BondPropertiesDialog::BondPropertiesDialog(QSharedPointer<Host> host, QSharedPointer<Network> network, QWidget* parent)
+    : QDialog(parent), ui(new Ui::BondPropertiesDialog), m_host(host), m_network(network)
 {
     this->ui->setupUi(this);
 
-    // Set up table
-    this->ui->tableWidgetNICs->setSelectionMode(QAbstractItemView::MultiSelection);
-    this->ui->tableWidgetNICs->setSelectionBehavior(QAbstractItemView::SelectRows);
-    this->ui->tableWidgetNICs->horizontalHeader()->setStretchLastSection(true);
+    if (this->ui->bondDetailsWidget)
+    {
+        if (this->m_host)
+            this->ui->bondDetailsWidget->SetHost(this->m_host);
+        connect(this->ui->bondDetailsWidget, &BondDetailsWidget::ValidChanged, this, [this](bool) {
+            this->updateOkButtonState();
+        });
+    }
 
-    // Set default bond mode to Active-Backup (safest option)
-    this->ui->comboBoxBondMode->setCurrentIndex(0);
-
-    // Connect signals
-    connect(this->ui->tableWidgetNICs, &QTableWidget::itemSelectionChanged, this, &BondPropertiesDialog::onSelectionChanged);
-
-    // Load available PIFs
-    this->loadAvailablePIFs();
-
-    // Update OK button state
     this->updateOkButtonState();
 }
 
@@ -62,145 +54,50 @@ BondPropertiesDialog::~BondPropertiesDialog()
     delete this->ui;
 }
 
-QString BondPropertiesDialog::getBondMode() const
+QString BondPropertiesDialog::getBondName() const
 {
-    int index = this->ui->comboBoxBondMode->currentIndex();
-    switch (index)
-    {
-        case 0:
-            return "active-backup";
-        case 1:
-            return "balance-slb";
-        case 2:
-            return "lacp";
-        default:
-            return "active-backup";
-    }
+    return this->ui->bondDetailsWidget ? this->ui->bondDetailsWidget->BondName() : QString();
 }
 
-QString BondPropertiesDialog::getMACAddress() const
+QString BondPropertiesDialog::getBondMode() const
 {
-    return this->ui->lineEditMAC->text().trimmed();
+    return this->ui->bondDetailsWidget ? this->ui->bondDetailsWidget->BondMode() : QString();
+}
+
+QString BondPropertiesDialog::getHashingAlgorithm() const
+{
+    return this->ui->bondDetailsWidget ? this->ui->bondDetailsWidget->HashingAlgorithm() : QString();
+}
+
+qint64 BondPropertiesDialog::getMTU() const
+{
+    return this->ui->bondDetailsWidget ? this->ui->bondDetailsWidget->MTU() : 0;
+}
+
+bool BondPropertiesDialog::getAutoPlug() const
+{
+    return this->ui->bondDetailsWidget ? this->ui->bondDetailsWidget->AutoPlug() : true;
 }
 
 QStringList BondPropertiesDialog::getSelectedPIFRefs() const
 {
-    QStringList pifRefs;
-    QList<QTableWidgetItem*> selectedItems = this->ui->tableWidgetNICs->selectedItems();
-    QSet<int> selectedRows;
-
-    // Get unique rows
-    for (QTableWidgetItem* item : selectedItems)
-    {
-        selectedRows.insert(item->row());
-    }
-
-    // Get PIF refs for selected rows
-    for (int row : selectedRows)
-    {
-        if (this->m_rowToPIFRef.contains(row))
-        {
-            pifRefs.append(this->m_rowToPIFRef[row]);
-        }
-    }
-
-    return pifRefs;
+    return this->ui->bondDetailsWidget ? this->ui->bondDetailsWidget->SelectedPifRefs() : QStringList();
 }
 
-void BondPropertiesDialog::loadAvailablePIFs()
+bool BondPropertiesDialog::canCreateBond(QWidget* parent)
 {
-    if (!this->m_host || !this->m_host->GetCache())
-        return;
-
-    // Get all PIFs from cache
-    QList<QSharedPointer<PIF>> allPIFs = this->m_host->GetCache()->GetAll<PIF>("pif");
-
-    // Filter PIFs that belong to this host and are physical (not VLANs or bonds)
-    QList<QSharedPointer<PIF>> availablePIFs;
-    for (const QSharedPointer<PIF>& pif : allPIFs)
-    {
-        if (!pif || !pif->IsValid())
-            continue;
-
-        QString pifHost = pif->GetHostRef();
-        bool isPhysical = pif->IsPhysical();
-        bool isBondMaster = !pif->BondMasterOfRefs().isEmpty();
-        //bool currentlyAttached = pifData.value("currently_attached").toBool();
-
-        // Only show physical PIFs on this host that aren't already in a bond
-        if (pifHost == this->m_host->OpaqueRef() && isPhysical && !isBondMaster)
-        {
-            availablePIFs.append(pif);
-        }
-    }
-
-    // Populate table
-    this->ui->tableWidgetNICs->setRowCount(availablePIFs.size());
-    this->m_rowToPIFRef.clear();
-
-    for (int i = 0; i < availablePIFs.size(); ++i)
-    {
-        QSharedPointer<PIF> pif = availablePIFs[i];
-        QString pifRef = pif ? pif->OpaqueRef() : QString();
-        this->m_rowToPIFRef[i] = pifRef;
-
-        // Device name
-        QString device = pif ? pif->GetDevice() : QString();
-        QTableWidgetItem* deviceItem = new QTableWidgetItem(device);
-        deviceItem->setFlags(deviceItem->flags() & ~Qt::ItemIsEditable);
-        this->ui->tableWidgetNICs->setItem(i, 0, deviceItem);
-
-        // MAC address
-        QString mac = pif ? pif->GetMAC() : QString();
-        QTableWidgetItem* macItem = new QTableWidgetItem(mac);
-        macItem->setFlags(macItem->flags() & ~Qt::ItemIsEditable);
-        this->ui->tableWidgetNICs->setItem(i, 1, macItem);
-
-        // Speed
-        qint64 speed = 0;
-        if (pif)
-            speed = pif->GetData().value("speed").toLongLong();
-        QString speedStr = speed > 0 ? QString("%1 Mbps").arg(speed) : "Unknown";
-        QTableWidgetItem* speedItem = new QTableWidgetItem(speedStr);
-        speedItem->setFlags(speedItem->flags() & ~Qt::ItemIsEditable);
-        this->ui->tableWidgetNICs->setItem(i, 2, speedItem);
-
-        // Link status
-        bool currentlyAttached = pif && pif->IsCurrentlyAttached();
-        QString status = currentlyAttached ? "Connected" : "Disconnected";
-        QTableWidgetItem* statusItem = new QTableWidgetItem(status);
-        statusItem->setFlags(statusItem->flags() & ~Qt::ItemIsEditable);
-        if (currentlyAttached)
-        {
-            statusItem->setForeground(QColor(0, 128, 0)); // Green
-        } else
-        {
-            statusItem->setForeground(QColor(128, 0, 0)); // Red
-        }
-        this->ui->tableWidgetNICs->setItem(i, 3, statusItem);
-    }
-
-    // Resize columns to content
-    this->ui->tableWidgetNICs->resizeColumnsToContents();
-}
-
-void BondPropertiesDialog::onSelectionChanged()
-{
-    this->updateOkButtonState();
+    return this->ui->bondDetailsWidget ? this->ui->bondDetailsWidget->CanCreateBond(parent) : false;
 }
 
 void BondPropertiesDialog::updateOkButtonState()
 {
-    // Bond requires at least 2 PIFs
-    int selectedCount = this->getSelectedPIFRefs().size();
-    this->ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(selectedCount >= 2);
+    const bool valid = this->ui->bondDetailsWidget && this->ui->bondDetailsWidget->IsValid();
+    this->ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(valid);
+}
 
-    // Update label to show selection count
-    if (selectedCount < 2)
-    {
-        this->ui->groupBoxNICs->setTitle(QString("Network Interfaces (Select at least 2) - %1 selected").arg(selectedCount));
-    } else
-    {
-        this->ui->groupBoxNICs->setTitle(QString("Network Interfaces - %1 selected").arg(selectedCount));
-    }
+void BondPropertiesDialog::accept()
+{
+    if (!this->canCreateBond(this))
+        return;
+    QDialog::accept();
 }

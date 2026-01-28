@@ -38,6 +38,13 @@ DestroyBondCommand::DestroyBondCommand(MainWindow* mainWindow, QObject* parent) 
 {
 }
 
+DestroyBondCommand::DestroyBondCommand(MainWindow* mainWindow, const QSharedPointer<Network>& network, QObject* parent)
+    : Command(mainWindow, parent)
+{
+    if (network)
+        this->SetSelectionOverride(QList<QSharedPointer<XenObject>>{network});
+}
+
 bool DestroyBondCommand::CanRun() const
 {
     QSharedPointer<Network> network = qSharedPointerCast<Network>(this->GetObject());

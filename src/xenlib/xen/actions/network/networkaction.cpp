@@ -267,7 +267,11 @@ void NetworkAction::run()
                 // Destroy the network
                 if (this->m_network && this->m_network->IsValid())
                 {
-                    XenAPI::Network::destroy(this->GetSession(), this->m_network->OpaqueRef());
+                    const QString ref = this->m_network->OpaqueRef();
+                    XenAPI::Network::destroy(this->GetSession(), ref);
+                    XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+                    if (cache)
+                        cache->Remove("network", ref);
                 }
 
                 this->SetDescription(QString("Network '%1' removed").arg(this->m_network->GetName()));
@@ -325,6 +329,11 @@ void NetworkAction::run()
                 networkRecord["name_description"] = this->m_network->GetDescription();
                 networkRecord["other_config"] = this->m_network->GetOtherConfig();
                 networkRecord["tags"] = this->m_network->GetTags();
+                QVariantMap networkData = this->m_network->GetData();
+                if (networkData.contains("MTU"))
+                    networkRecord["MTU"] = networkData.value("MTU");
+                if (networkData.contains("managed"))
+                    networkRecord["managed"] = networkData.value("managed");
 
                 // Create the network
                 QString networkRef = XenAPI::Network::create(this->GetSession(), networkRecord);

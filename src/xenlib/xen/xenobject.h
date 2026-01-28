@@ -145,6 +145,7 @@ class XENLIB_EXPORT XenObject : public QObject
          * @return QVariantMap with all XenAPI properties
          */
         QVariantMap GetData() const;
+        void SetLocalData(const QVariantMap& data);
 
         /**
          * @brief Get other_config dictionary
@@ -224,6 +225,7 @@ class XENLIB_EXPORT XenObject : public QObject
         // So that we don't need to call GetConnection() so much
         XenCache *m_cache;
         bool m_locked = false;
+        QVariantMap m_localData;
 };
 
 Q_DECLARE_METATYPE(QSharedPointer<XenObject>)
