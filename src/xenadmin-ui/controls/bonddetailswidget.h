@@ -41,43 +41,43 @@ class BondDetailsWidget : public QWidget
 {
     Q_OBJECT
 
-public:
-    explicit BondDetailsWidget(QWidget* parent = nullptr);
+    public:
+        explicit BondDetailsWidget(QWidget* parent = nullptr);
 
-    void SetHost(const QSharedPointer<Host>& host);
-    void SetPool(const QSharedPointer<Pool>& pool);
-    void Refresh();
+        void SetHost(const QSharedPointer<Host>& host);
+        void SetPool(const QSharedPointer<Pool>& pool);
+        void Refresh();
 
-    bool IsValid() const;
-    bool CanCreateBond(QWidget* parent);
+        bool IsValid() const;
+        bool CanCreateBond(QWidget* parent);
 
-    QString BondName() const;
-    QString BondMode() const;
-    QString HashingAlgorithm() const;
-    qint64 MTU() const;
-    bool AutoPlug() const;
-    QStringList SelectedPifRefs() const;
+        QString BondName() const;
+        QString BondMode() const;
+        QString HashingAlgorithm() const;
+        qint64 MTU() const;
+        bool AutoPlug() const;
+        QStringList SelectedPifRefs() const;
 
-signals:
-    void ValidChanged(bool valid);
+    signals:
+        void ValidChanged(bool valid);
 
-private slots:
-    void onInputsChanged();
+    private slots:
+        void onInputsChanged();
 
-private:
-    void populateBondNics();
-    void refreshSelectionState();
-    void updateMtuBounds();
-    void updateLacpVisibility();
-    int bondSizeLimit() const;
+    private:
+        void populateBondNics();
+        void refreshSelectionState();
+        void updateMtuBounds();
+        void updateLacpVisibility();
+        int bondSizeLimit() const;
 
-    QSharedPointer<Host> coordinatorHost() const;
+        QSharedPointer<Host> coordinatorHost() const;
 
-    Ui::BondDetailsWidget ui;
-    QSharedPointer<Host> m_host;
-    QSharedPointer<Pool> m_pool;
-    bool m_populatingBond = false;
-    bool m_valid = false;
+        Ui::BondDetailsWidget ui;
+        QSharedPointer<Host> m_host;
+        QSharedPointer<Pool> m_pool;
+        bool m_populatingBond = false;
+        bool m_valid = false;
 };
 
 #endif // BONDDETAILSWIDGET_H

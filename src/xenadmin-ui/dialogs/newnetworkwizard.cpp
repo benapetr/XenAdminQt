@@ -48,10 +48,7 @@
 #include "../settingsmanager.h"
 #include "../mainwindow.h"
 
-NewNetworkWizard::NewNetworkWizard(XenConnection* connection,
-                                   const QSharedPointer<Pool>& pool,
-                                   const QSharedPointer<Host>& host,
-                                   QWidget* parent)
+NewNetworkWizard::NewNetworkWizard(XenConnection* connection, const QSharedPointer<Pool>& pool, const QSharedPointer<Host>& host, QWidget* parent)
     : QWizard(parent), m_connection(connection), m_pool(pool), m_host(host)
 {
     this->ui.setupUi(this);
@@ -265,8 +262,7 @@ void NewNetworkWizard::updateTypePage()
         this->ui.radioChin->setVisible(false);
         this->ui.labelChinDesc->setVisible(false);
         this->ui.chinWarningFrame->setVisible(false);
-    }
-    else
+    } else
     {
         bool canChin = true;
         QString chinWarning;
@@ -285,8 +281,7 @@ void NewNetworkWizard::updateTypePage()
         {
             canChin = false;
             chinWarning = tr("CHIN is disabled by licensing or feature restrictions.");
-        }
-        else if (!pool || !pool->vSwitchController())
+        } else if (!pool || !pool->vSwitchController())
         {
             canChin = false;
             chinWarning = tr("CHIN requires the vSwitch controller to be configured.");
@@ -306,8 +301,7 @@ void NewNetworkWizard::updateTypePage()
         this->ui.radioSriov->setVisible(false);
         this->ui.labelSriovDesc->setVisible(false);
         this->ui.sriovWarningFrame->setVisible(false);
-    }
-    else
+    } else
     {
         bool sriovFeatureForbidden = false;
         bool sriovDisabled = false;
@@ -452,8 +446,7 @@ void NewNetworkWizard::updateDetailsPage()
             if (this->ui.mtuSpin->value() < minMtu || this->ui.mtuSpin->value() > maxMtu)
                 this->ui.mtuSpin->setValue(minMtu);
         }
-    }
-    else
+    } else
     {
         this->ui.createSriovVlanCheck->setVisible(false);
     }
@@ -731,7 +724,7 @@ void NewNetworkWizard::accept()
             action = new NetworkAction(network, basePif, this->ui.vlanSpin->value(), nullptr);
         } else
         {
-            action = new NetworkAction(network, true, this);
+            action = new NetworkAction(network, true, nullptr);
         }
     }
 

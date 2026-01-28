@@ -72,8 +72,7 @@ namespace
     }
 }
 
-BondDetailsWidget::BondDetailsWidget(QWidget* parent)
-    : QWidget(parent)
+BondDetailsWidget::BondDetailsWidget(QWidget* parent) : QWidget(parent)
 {
     this->ui.setupUi(this);
 
@@ -140,6 +139,7 @@ bool BondDetailsWidget::CanCreateBond(QWidget* parent)
         QTableWidgetItem* item = this->ui.bondNicsTable->item(row, 0);
         if (!item || item->checkState() != Qt::Checked)
             continue;
+
         const QString pifRef = item->data(Qt::UserRole).toString();
         QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
         if (pif && pif->IsValid())
@@ -149,8 +149,7 @@ bool BondDetailsWidget::CanCreateBond(QWidget* parent)
     const int limit = this->bondSizeLimit();
     if (selectedPifs.count() < 2 || selectedPifs.count() > limit)
     {
-        QMessageBox::warning(parent, tr("Bond Details"),
-                             tr("Please select between 2 and %1 interfaces for the bond.").arg(limit));
+        QMessageBox::warning(parent, tr("Bond Details"), tr("Please select between 2 and %1 interfaces for the bond.").arg(limit));
         return false;
     }
 
@@ -166,8 +165,7 @@ bool BondDetailsWidget::CanCreateBond(QWidget* parent)
 
     if (hasPrimary && hasSecondary)
     {
-        QMessageBox::critical(parent, tr("Bond Details"),
-                              tr("Cannot create a bond that includes both the primary and secondary management interfaces."));
+        QMessageBox::critical(parent, tr("Bond Details"), tr("Cannot create a bond that includes both the primary and secondary management interfaces."));
         return false;
     }
 
@@ -178,8 +176,7 @@ bool BondDetailsWidget::CanCreateBond(QWidget* parent)
             pool = this->m_host->GetPool();
         if (pool && pool->HAEnabled())
         {
-            QMessageBox::critical(parent, tr("Bond Details"),
-                                  tr("Cannot create a bond that includes the primary management interface while HA is enabled."));
+            QMessageBox::critical(parent, tr("Bond Details"), tr("Cannot create a bond that includes the primary management interface while HA is enabled."));
             return false;
         }
 

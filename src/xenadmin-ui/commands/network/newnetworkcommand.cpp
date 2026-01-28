@@ -47,7 +47,7 @@ void NewNetworkCommand::Run()
         qWarning() << "NewNetworkCommand: Cannot execute - requirements not met";
         QMessageBox::warning(nullptr, tr("Cannot Create Network"),
                              tr("Network creation is not available at this time.\n"
-                                "Please ensure you have an active connection to a XenServer."));
+                                "Please select a host or pool, and ensure you have an active connection."));
         return;
     }
 
@@ -56,9 +56,15 @@ void NewNetworkCommand::Run()
 
 bool NewNetworkCommand::CanRun() const
 {
-    // For now, always allow network creation
-    // TODO: Check if we have proper XenAPI connection and permissions
-    return true;
+    QSharedPointer<XenObject> selected = this->GetObject();
+    if (!selected)
+        return false;
+
+    const QString type = selected->GetObjectType();
+    if (type != "pool" && type != "host")
+        return false;
+
+    return selected->GetConnection() != nullptr;
 }
 
 QString NewNetworkCommand::MenuText() const
@@ -79,8 +85,7 @@ void NewNetworkCommand::showNewNetworkWizard()
     {
         pool = qSharedPointerCast<Pool>(selected);
         host = pool ? pool->GetMasterHost() : QSharedPointer<Host>();
-    }
-    else if (selected && selected->GetObjectType() == "host")
+    } else if (selected && selected->GetObjectType() == "host")
     {
         host = qSharedPointerCast<Host>(selected);
     }
