@@ -30,38 +30,71 @@
 
 #include <QDialog>
 #include <QSharedPointer>
+#include <QList>
+#include <QMap>
+
+class PIF;
+class Host;
+class Pool;
+class Network;
+class NetworkingPropertiesPage;
 
 namespace Ui
 {
     class NetworkingPropertiesDialog;
 }
 
-class PIF;
-class Network;
-
 class NetworkingPropertiesDialog : public QDialog
 {
     Q_OBJECT
 
     public:
-        explicit NetworkingPropertiesDialog(QSharedPointer<PIF> pif, QWidget* parent = nullptr);
+        explicit NetworkingPropertiesDialog(QSharedPointer<Host> host,
+                                            QSharedPointer<Pool> pool,
+                                            QSharedPointer<PIF> selectedPif,
+                                            QWidget* parent = nullptr);
         ~NetworkingPropertiesDialog();
 
         void accept() override;
 
     private slots:
-        void onIPModeChanged();
-        void onInputChanged();
-        void validateAndUpdateUI();
+        void onAddClicked();
+        void onPageValidChanged();
+        void onPageDeleteClicked();
+        void onNetworkComboChanged();
+        void onVerticalTabChanged(int index);
 
     private:
-        void loadPIFData();
-        bool validateIP(const QString& ip, bool allowEmpty = false);
-        bool validateSubnetMask(const QString& mask);
-        void applyChanges();
+        void configure();
+        void refreshButtons();
+        void addTabContents(NetworkingPropertiesPage* page);
+        void removePage(NetworkingPropertiesPage* page);
+        void refreshNetworkComboBoxes();
+        QMap<QString, QList<NetworkingPropertiesPage*>> makeProposedInUseMap() const;
+        QList<QSharedPointer<PIF>> getKnownPifs(bool includeInvisible);
+        QSharedPointer<PIF> findPifForHost(const QSharedPointer<Network>& network) const;
+        QString managementNetworkRef() const;
+        QString purposeForPif(const QSharedPointer<PIF>& pif) const;
+        QString makeAuxTabName() const;
+        void collateChanges(NetworkingPropertiesPage* page,
+                            const QSharedPointer<PIF>& oldPif,
+                            QList<QPair<QSharedPointer<PIF>, bool>>& newPifs,
+                            QList<QPair<QSharedPointer<PIF>, bool>>& newNamePifs,
+                            QMap<QString, QVariantMap>& updatedPifs);
+        bool ipAddressSettingsChanged(const QSharedPointer<PIF>& pif1, const QSharedPointer<PIF>& pif2) const;
+        bool managementInterfaceIpChanged(const QSharedPointer<PIF>& oldManagement,
+                                          const QSharedPointer<PIF>& newManagement) const;
 
         Ui::NetworkingPropertiesDialog* ui;
-        QSharedPointer<PIF> m_pif;
+        QSharedPointer<Host> m_host;
+        QSharedPointer<Pool> m_pool;
+        QSharedPointer<PIF> m_selectedPif;
+        QList<NetworkingPropertiesPage*> m_pages;
+        QList<QSharedPointer<PIF>> m_shownPifs;
+        QList<QSharedPointer<PIF>> m_allPifs;
+        QList<QSharedPointer<Network>> m_networks;
+        QMap<QString, QList<NetworkingPropertiesPage*>> m_inUseMap;
+        bool m_allowManagementOnVlan = true;
 };
 
 #endif // NETWORKINGPROPERTIESDIALOG_H

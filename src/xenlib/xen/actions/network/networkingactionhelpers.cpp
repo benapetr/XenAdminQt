@@ -28,11 +28,12 @@
 #include "networkingactionhelpers.h"
 #include "../../asyncoperation.h"
 #include "../../xenapi/xenapi_PIF.h"
-#include "../../xenapi/xenapi_Network.h"
 #include "../../xenapi/xenapi_Host.h"
 #include "../../xenapi/xenapi_Pool.h"
 #include "../../network/connection.h"
 #include "../../session.h"
+#include "../../network.h"
+#include "../../pif.h"
 #include "../../../xencache.h"
 #include <QThread>
 #include <QDebug>
@@ -40,14 +41,20 @@
 // Helper to get PIF record from cache
 static QVariantMap getPIFRecord(AsyncOperation* action, const QString& pifRef)
 {
+    if (!action || !action->GetConnection() || !action->GetConnection()->GetCache())
+        return QVariantMap();
+
+    QVariantMap record = action->GetConnection()->GetCache()->ResolveObjectData("pif", pifRef);
+    if (!record.isEmpty())
+        return record;
+
     QList<QVariantMap> pifs = action->GetConnection()->GetCache()->GetAllData("pif");
     for (const QVariantMap& pif : pifs)
     {
         if (pif.value("_ref").toString() == pifRef)
-        {
             return pif;
-        }
     }
+
     return QVariantMap();
 }
 
@@ -96,9 +103,7 @@ static QString getCoordinatorRef(XenConnection* connection)
     return QString();
 }
 
-void NetworkingActionHelpers::moveManagementInterfaceName(AsyncOperation* action,
-                                                          const QString& fromPifRef,
-                                                          const QString& toPifRef)
+void NetworkingActionHelpers::moveManagementInterfaceName(AsyncOperation* action, const QString& fromPifRef, const QString& toPifRef)
 {
     QVariantMap fromPif = getPIFRecord(action, fromPifRef);
     QString managementPurpose = getManagementPurpose(fromPif);
@@ -444,39 +449,36 @@ void NetworkingActionHelpers::forSomeHosts(AsyncOperation* action,
                                            int hi,
                                            PIFMethod pifMethod)
 {
-    QVariantMap pifRecord = getPIFRecord(action, pifRef);
-    if (pifRecord.isEmpty())
+    if (!action || !action->GetConnection() || !action->GetConnection()->GetCache())
+        return;
+
+    XenCache* cache = action->GetConnection()->GetCache();
+    QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+    if (!pif || !pif->IsValid())
     {
         qWarning() << "PIF" << pifRef << "not found";
         return;
     }
 
-    QString networkRef = getNetworkFromPIF(pifRecord);
-    QString pifHostRef = getHostFromPIF(pifRecord);
-    QString coordinatorRef = getCoordinatorRef(action->GetConnection());
+    QSharedPointer<Network> network = pif->GetNetwork();
+    if (!network || !network->IsValid())
+    {
+        qWarning() << "Network has gone away";
+        return;
+    }
 
     // Find all PIFs in the same network
-    QList<QVariantMap> allPifs = action->GetConnection()->GetCache()->GetAllData("pif");
-    QList<QString> pifsToReconfigure;
-
-    for (const QVariantMap& pif : allPifs)
+    QList<QSharedPointer<PIF>> pifsToReconfigure;
+    const QString pifHostRef = pif->GetHostRef();
+    const QList<QSharedPointer<PIF>> networkPifs = network->GetPIFs();
+    for (const QSharedPointer<PIF>& candidate : networkPifs)
     {
-        if (pif.value("network").toString() != networkRef)
-        {
+        if (!candidate || !candidate->IsValid())
             continue;
-        }
 
-        QString hostRef = pif.value("host").toString();
-        bool isCoordinator = (hostRef == coordinatorRef);
-
-        // Filter by thisHost parameter
-        if (thisHost && isCoordinator && hostRef == pifHostRef)
-        {
-            pifsToReconfigure.append(pif.value("_ref").toString());
-        } else if (!thisHost && !isCoordinator)
-        {
-            pifsToReconfigure.append(pif.value("_ref").toString());
-        }
+        const bool sameHost = candidate->GetHostRef() == pifHostRef;
+        if (thisHost == sameHost)
+            pifsToReconfigure.append(candidate);
     }
 
     if (pifsToReconfigure.isEmpty())
@@ -489,21 +491,27 @@ void NetworkingActionHelpers::forSomeHosts(AsyncOperation* action,
     int lo = action->GetPercentComplete();
     int inc = (hi - lo) / pifsToReconfigure.count();
 
-    for (const QString& pRef : pifsToReconfigure)
+    for (const QSharedPointer<PIF>& candidate : pifsToReconfigure)
     {
-        // Note: lockPif parameter not yet implemented (requires PIF.Locked property)
+        if (!candidate)
+            continue;
         try
         {
             lo += inc;
-            pifMethod(action, pRef, lo);
+            if (lockPif)
+                candidate->Lock();
+            pifMethod(action, candidate->OpaqueRef(), lo);
         } catch (const std::exception& e)
         {
-            qWarning() << "Error processing PIF" << pRef << ":" << e.what();
+            qWarning() << "Error processing PIF" << (candidate ? candidate->OpaqueRef() : QString()) << ":" << e.what();
+            if (lockPif && candidate)
+                candidate->Unlock();
             throw;
         }
+        if (lockPif && candidate)
+            candidate->Unlock();
     }
 }
-
 void NetworkingActionHelpers::reconfigureSinglePrimaryManagement(AsyncOperation* action,
                                                                  const QString& srcPifRef,
                                                                  const QString& destPifRef,

@@ -31,6 +31,7 @@
 #include "network/connection.h"
 #include "host.h"
 #include "network.h"
+#include "bond.h"
 #include "pifmetrics.h"
 #include "tunnel.h"
 #include "vlan.h"
@@ -430,6 +431,35 @@ bool PIF::IsBondMaster() const
 bool PIF::IsBondMember() const
 {
     return this->IsBondSlave();
+}
+
+bool PIF::IsInUseBondMember() const
+{
+    if (!this->IsBondMember())
+        return false;
+
+    XenConnection* connection = this->GetConnection();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        return false;
+
+    const QString bondRef = this->BondSlaveOfRef();
+    if (bondRef.isEmpty() || bondRef == "OpaqueRef:NULL")
+        return false;
+
+    QSharedPointer<Bond> bond = cache->ResolveObject<Bond>("bond", bondRef);
+    if (!bond || !bond->IsValid())
+        return false;
+
+    const QString masterRef = bond->MasterRef();
+    if (masterRef.isEmpty())
+        return false;
+
+    QSharedPointer<PIF> bondInterface = cache->ResolveObject<PIF>("pif", masterRef);
+    if (!bondInterface || !bondInterface->IsValid())
+        return false;
+
+    return bondInterface->IsCurrentlyAttached();
 }
 
 bool PIF::IsBondNIC() const

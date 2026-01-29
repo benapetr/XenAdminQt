@@ -27,259 +27,772 @@
 
 #include "networkingpropertiesdialog.h"
 #include "ui_networkingpropertiesdialog.h"
-#include "xen/network/connection.h"
-#include "xen/pif.h"
-#include "xen/network.h"
-#include "xen/session.h"
-#include "xen/xenapi/xenapi_PIF.h"
+#include "networkingpropertiespage.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/pif.h"
+#include "xenlib/xen/network.h"
+#include "xenlib/xen/actions/network/changenetworkingaction.h"
+#include "xenlib/xen/actions/network/setsecondarymanagementpurposeaction.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xencache.h"
+#include "../settingsmanager.h"
 #include <QMessageBox>
-#include <QPushButton>
-#include <QDebug>
-#include <QRegularExpression>
-#include <QRegularExpressionValidator>
+#include <QDialogButtonBox>
+#include <QComboBox>
+#include <algorithm>
+#include <QSet>
+#include <stdexcept>
 
-NetworkingPropertiesDialog::NetworkingPropertiesDialog(QSharedPointer<PIF> pif, QWidget* parent)
-    : QDialog(parent),
-      ui(new Ui::NetworkingPropertiesDialog),
-      m_pif(pif)
+NetworkingPropertiesDialog::NetworkingPropertiesDialog(QSharedPointer<Host> host, QSharedPointer<Pool> pool, QSharedPointer<PIF> selectedPif, QWidget* parent)
+    : QDialog(parent), ui(new Ui::NetworkingPropertiesDialog), m_host(host), m_pool(pool), m_selectedPif(selectedPif)
 {
     this->ui->setupUi(this);
 
-    // Set up IP address validators
-    QRegularExpression ipRegex("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
-    QRegularExpressionValidator* ipValidator = new QRegularExpressionValidator(ipRegex, this);
+    if (!this->m_host && this->m_pool)
+        this->m_host = this->m_pool->GetMasterHost();
 
-    this->ui->lineEditIPAddress->setValidator(ipValidator);
-    this->ui->lineEditSubnetMask->setValidator(ipValidator);
-    this->ui->lineEditGateway->setValidator(ipValidator);
-    this->ui->lineEditPrimaryDNS->setValidator(ipValidator);
-    this->ui->lineEditSecondaryDNS->setValidator(ipValidator);
+    connect(this->ui->addButton, &QPushButton::clicked, this, &NetworkingPropertiesDialog::onAddClicked);
+    connect(this->ui->verticalTabs, &VerticalTabWidget::currentRowChanged, this, &NetworkingPropertiesDialog::onVerticalTabChanged);
 
-    // Connect signals
-    connect(this->ui->radioButtonDHCP, &QRadioButton::toggled, this, &NetworkingPropertiesDialog::onIPModeChanged);
-    connect(this->ui->radioButtonStatic, &QRadioButton::toggled, this, &NetworkingPropertiesDialog::onIPModeChanged);
-
-    connect(this->ui->lineEditIPAddress, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
-    connect(this->ui->lineEditSubnetMask, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
-    connect(this->ui->lineEditGateway, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
-    connect(this->ui->lineEditPrimaryDNS, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
-    connect(this->ui->lineEditSecondaryDNS, &QLineEdit::textChanged, this, &NetworkingPropertiesDialog::onInputChanged);
-
-    // Load PIF data
-    loadPIFData();
-
-    // Initial validation
-    validateAndUpdateUI();
+    this->configure();
 }
 
 NetworkingPropertiesDialog::~NetworkingPropertiesDialog()
 {
-    delete ui;
+    delete this->ui;
 }
 
-void NetworkingPropertiesDialog::loadPIFData()
+void NetworkingPropertiesDialog::configure()
 {
-    if (!this->m_pif || !this->m_pif->IsValid())
+    if (!this->m_host || !this->m_host->IsValid())
         return;
 
-    // Display interface information
-    QString device = this->m_pif->GetDevice();
-    QString mac = this->m_pif->GetMAC();
-
-    this->ui->labelDeviceValue->setText(device);
-    this->ui->labelMACValue->setText(mac);
-
-    // Get network name
-    QSharedPointer<Network> network = this->m_pif->GetNetwork();
-    if (network && network->IsValid())
-        this->ui->labelNetworkValue->setText(network->GetName());
-
-    // Load IP configuration
-    QString ipConfigMode = this->m_pif->IpConfigurationMode();
-    bool isDHCP = (ipConfigMode == "DHCP" || ipConfigMode == "dhcp");
-
-    if (isDHCP)
+    bool restrictManagementOnVlan = false;
+    const QList<QSharedPointer<Host>> hosts = this->m_host->GetCache()->GetAll<Host>("host");
+    for (const QSharedPointer<Host>& host : hosts)
     {
-        this->ui->radioButtonDHCP->setChecked(true);
-    } else
-    {
-        this->ui->radioButtonStatic->setChecked(true);
-
-        // Load static IP settings
-        this->ui->lineEditIPAddress->setText(this->m_pif->IP());
-        this->ui->lineEditSubnetMask->setText(this->m_pif->Netmask());
-        this->ui->lineEditGateway->setText(this->m_pif->Gateway());
+        if (host && host->RestrictManagementOnVLAN())
+        {
+            restrictManagementOnVlan = true;
+            break;
+        }
     }
+    this->m_allowManagementOnVlan = !restrictManagementOnVlan;
 
-    // Load DNS settings
-    QString dnsString = this->m_pif->DNS();
-    QStringList dnsList = dnsString.split(',', Qt::SkipEmptyParts);
+    const QString objectName = this->m_pool ? this->m_pool->GetName() : this->m_host->GetName();
+    this->ui->blurbLabel->setText(this->m_pool
+                                ? tr("Configure the IP addresses for pool %1.").arg(objectName)
+                                : tr("Configure the IP addresses for host %1.").arg(objectName));
 
-    if (dnsList.size() > 0)
-        this->ui->lineEditPrimaryDNS->setText(dnsList[0].trimmed());
-    if (dnsList.size() > 1)
-        this->ui->lineEditSecondaryDNS->setText(dnsList[1].trimmed());
-}
+    this->m_shownPifs = this->getKnownPifs(false);
+    this->m_allPifs = this->getKnownPifs(true);
 
-void NetworkingPropertiesDialog::onIPModeChanged()
-{
-    bool staticMode = this->ui->radioButtonStatic->isChecked();
-    this->ui->widgetStaticSettings->setEnabled(staticMode);
-    this->validateAndUpdateUI();
-}
-
-void NetworkingPropertiesDialog::onInputChanged()
-{
-    this->validateAndUpdateUI();
-}
-
-void NetworkingPropertiesDialog::validateAndUpdateUI()
-{
-    bool isValid = true;
-
-    if (this->ui->radioButtonStatic->isChecked())
+    QSharedPointer<PIF> managementPif;
+    for (const QSharedPointer<PIF>& pif : this->m_allPifs)
     {
-        // Validate IP address (required)
-        QString ip = this->ui->lineEditIPAddress->text();
-        if (!validateIP(ip, false))
+        if (pif && pif->IsPrimaryManagementInterface())
         {
-            isValid = false;
-        }
-
-        // Validate subnet mask (required)
-        QString mask = this->ui->lineEditSubnetMask->text();
-        if (!validateSubnetMask(mask))
-        {
-            isValid = false;
-        }
-
-        // Validate gateway (optional)
-        QString gateway = this->ui->lineEditGateway->text();
-        if (!gateway.isEmpty() && !validateIP(gateway, true))
-        {
-            isValid = false;
+            managementPif = pif;
+            break;
         }
     }
 
-    // Validate DNS (optional)
-    QString primaryDNS = this->ui->lineEditPrimaryDNS->text();
-    if (!primaryDNS.isEmpty() && !validateIP(primaryDNS, true))
-    {
-        isValid = false;
-    }
-
-    QString secondaryDNS = this->ui->lineEditSecondaryDNS->text();
-    if (!secondaryDNS.isEmpty() && !validateIP(secondaryDNS, true))
-    {
-        isValid = false;
-    }
-
-    // Enable/disable OK button
-    this->ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(isValid);
-}
-
-bool NetworkingPropertiesDialog::validateIP(const QString& ip, bool allowEmpty)
-{
-    if (ip.isEmpty())
-        return allowEmpty;
-
-    // IP address regex: 0-255.0-255.0-255.0-255
-    QRegularExpression ipRegex("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
-    return ipRegex.match(ip).hasMatch();
-}
-
-bool NetworkingPropertiesDialog::validateSubnetMask(const QString& mask)
-{
-    if (mask.isEmpty())
-        return false;
-
-    if (!validateIP(mask, false))
-        return false;
-
-    // Check if it's a valid subnet mask (must be contiguous 1s followed by 0s)
-    QStringList octets = mask.split('.');
-    if (octets.size() != 4)
-        return false;
-
-    quint32 maskValue = 0;
-    for (const QString& octet : octets)
-    {
-        maskValue = (maskValue << 8) | octet.toUInt();
-    }
-
-    // Check if mask is contiguous (no 0s between 1s)
-    // Valid masks: ~maskValue + 1 should be a power of 2
-    quint32 inverted = ~maskValue;
-    return (inverted & (inverted + 1)) == 0;
-}
-
-void NetworkingPropertiesDialog::applyChanges()
-{
-    if (!this->m_pif)
+    if (!managementPif)
         return;
 
-    XenConnection* connection = this->m_pif->GetConnection();
-    XenAPI::Session* session = connection ? connection->GetSession() : nullptr;
-    if (!session || !session->IsLoggedIn())
+    const bool haEnabled = this->m_pool && this->m_pool->GetData().value("ha_enabled", false).toBool();
+    auto* managementPage = new NetworkingPropertiesPage(haEnabled ? NetworkingPropertiesPage::PageType::PrimaryWithHA : NetworkingPropertiesPage::PageType::Primary);
+    managementPage->SetPool(this->m_pool != nullptr);
+    managementPage->SetHostCount(this->m_pool ? this->m_pool->GetHosts().count() : 1);
+    managementPage->SetPurpose(tr("Management"));
+    managementPage->SetPif(managementPif);
+    managementPage->LoadFromPif(managementPif);
+    this->addTabContents(managementPage);
+    managementPage->setProperty("pifRef", managementPif->OpaqueRef());
+
+    for (const QSharedPointer<PIF>& pif : this->m_shownPifs)
     {
-        QMessageBox::critical(this, "Error",
-                              "No active session. Please reconnect and try again.");
-        return;
+        if (!pif || !pif->IsValid())
+            continue;
+        if (pif->OpaqueRef() == managementPif->OpaqueRef())
+            continue;
+        if (!pif->IsSecondaryManagementInterface(true))
+            continue;
+
+        auto* secondaryPage = new NetworkingPropertiesPage(NetworkingPropertiesPage::PageType::Secondary);
+        secondaryPage->SetPool(this->m_pool != nullptr);
+        secondaryPage->SetHostCount(this->m_pool ? this->m_pool->GetHosts().count() : 1);
+        secondaryPage->SetPurpose(this->purposeForPif(pif));
+        secondaryPage->SetPif(pif);
+        secondaryPage->LoadFromPif(pif);
+        this->addTabContents(secondaryPage);
+        secondaryPage->setProperty("pifRef", pif->OpaqueRef());
     }
 
-    bool success = false;
+    this->m_inUseMap = this->makeProposedInUseMap();
+    this->refreshNetworkComboBoxes();
 
-    if (this->ui->radioButtonDHCP->isChecked())
+    for (NetworkingPropertiesPage* page : this->m_pages)
     {
-        // Configure for DHCP
-        try
+        QSharedPointer<PIF> pif = page->Pif();
+        if (pif)
         {
-            XenAPI::PIF::reconfigure_ip(session, this->m_pif->OpaqueRef(), "DHCP", "", "", "", "");
-            success = true;
+            QSharedPointer<Network> network = pif->GetNetwork();
+            if (network)
+            {
+                page->SetSelectedNetworkRef(network->OpaqueRef());
+            }
+        } else
+        {
+            page->SelectFirstUnusedNetwork(this->m_networks, this->m_inUseMap);
         }
-        catch (const std::exception& ex)
+    }
+
+    if (this->m_selectedPif)
+    {
+        for (int i = 0; i < this->m_pages.size(); ++i)
         {
-            qWarning() << "Failed to configure PIF DHCP:" << ex.what();
+            NetworkingPropertiesPage* page = this->m_pages[i];
+            if (page && page->Pif() && page->Pif()->OpaqueRef() == this->m_selectedPif->OpaqueRef())
+            {
+                this->ui->verticalTabs->setCurrentRow(i);
+                this->ui->contentPanel->setCurrentWidget(page);
+                break;
+            }
         }
     } else
     {
-        // Configure for static IP
-        QString ip = this->ui->lineEditIPAddress->text();
-        QString netmask = this->ui->lineEditSubnetMask->text();
-        QString gateway = this->ui->lineEditGateway->text();
+        this->ui->verticalTabs->setCurrentRow(0);
+        if (!this->m_pages.isEmpty())
+            this->ui->contentPanel->setCurrentWidget(this->m_pages.first());
+    }
 
-        // Combine DNS servers
-        QStringList dnsList;
-        QString primaryDNS = this->ui->lineEditPrimaryDNS->text();
-        QString secondaryDNS = this->ui->lineEditSecondaryDNS->text();
+    this->refreshButtons();
+}
 
-        if (!primaryDNS.isEmpty())
-            dnsList.append(primaryDNS);
-        if (!secondaryDNS.isEmpty())
-            dnsList.append(secondaryDNS);
+void NetworkingPropertiesDialog::refreshButtons()
+{
+    bool allValid = true;
+    bool allNamesValid = true;
+    for (NetworkingPropertiesPage* page : this->m_pages)
+    {
+        if (!page)
+            continue;
+        allValid = allValid && page->IsValid();
+        allNamesValid = allNamesValid && page->NameValid();
+    }
+    this->ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(allValid && allNamesValid);
+    this->ui->addButton->setEnabled(this->m_shownPifs.count() > this->m_pages.count());
+}
 
-        QString dns = dnsList.join(",");
+void NetworkingPropertiesDialog::addTabContents(NetworkingPropertiesPage* page)
+{
+    if (!page)
+        return;
 
-        try
+    this->m_pages.append(page);
+    this->ui->verticalTabs->AddTab(page->TabIcon(), page->TabText(), page->SubText(), page);
+    this->ui->contentPanel->addWidget(page);
+
+    connect(page, &NetworkingPropertiesPage::ValidChanged, this, &NetworkingPropertiesDialog::onPageValidChanged);
+    connect(page, &NetworkingPropertiesPage::DeleteButtonClicked, this, &NetworkingPropertiesDialog::onPageDeleteClicked);
+    connect(page, &NetworkingPropertiesPage::NetworkComboBoxChanged, this, &NetworkingPropertiesDialog::onNetworkComboChanged);
+}
+
+void NetworkingPropertiesDialog::removePage(NetworkingPropertiesPage* page)
+{
+    if (!page)
+        return;
+
+    int index = this->m_pages.indexOf(page);
+    if (index < 0)
+        return;
+
+    this->m_pages.removeAt(index);
+    this->ui->contentPanel->removeWidget(page);
+    delete page;
+
+    this->ui->verticalTabs->ClearTabs();
+    for (NetworkingPropertiesPage* remaining : this->m_pages)
+    {
+        this->ui->verticalTabs->AddTab(remaining->TabIcon(), remaining->TabText(), remaining->SubText(), remaining);
+    }
+
+    const int lastIndex = this->m_pages.isEmpty() ? -1 : static_cast<int>(this->m_pages.size()) - 1;
+    const int newIndex = lastIndex < 0 ? -1 : std::min(index, lastIndex);
+    this->ui->verticalTabs->setCurrentRow(newIndex);
+    if (newIndex >= 0 && newIndex < this->m_pages.size())
+        this->ui->contentPanel->setCurrentWidget(this->m_pages[newIndex]);
+    this->refreshNetworkComboBoxes();
+    this->refreshButtons();
+}
+
+void NetworkingPropertiesDialog::refreshNetworkComboBoxes()
+{
+    this->m_inUseMap = this->makeProposedInUseMap();
+    const QString managementRef = this->managementNetworkRef();
+
+    for (NetworkingPropertiesPage* page : this->m_pages)
+    {
+        if (!page)
+            continue;
+        page->RefreshNetworkComboBox(this->m_inUseMap, managementRef, this->m_allowManagementOnVlan, this->m_networks);
+        this->ui->verticalTabs->UpdateTabText(page, page->TabText());
+        this->ui->verticalTabs->UpdateTabSubText(page, page->SubText());
+    }
+}
+
+QMap<QString, QList<NetworkingPropertiesPage*>> NetworkingPropertiesDialog::makeProposedInUseMap() const
+{
+    QMap<QString, QList<NetworkingPropertiesPage*>> map;
+
+    for (const QSharedPointer<Network>& network : this->m_networks)
+    {
+        if (!network)
+            continue;
+        bool nonTunnelFound = false;
+        for (const QSharedPointer<PIF>& pif : network->GetPIFs())
         {
-            XenAPI::PIF::reconfigure_ip(session, this->m_pif->OpaqueRef(), "Static", ip, netmask, gateway, dns);
-            success = true;
+            if (pif && !pif->IsTunnelAccessPIF())
+            {
+                nonTunnelFound = true;
+                break;
+            }
         }
-        catch (const std::exception& ex)
+        if (!nonTunnelFound)
+            continue;
+        QSharedPointer<PIF> pif = this->findPifForHost(network);
+        if (pif && pif->IsInUseBondMember())
+            continue;
+        map[network->OpaqueRef()] = {};
+    }
+
+    for (NetworkingPropertiesPage* page : this->m_pages)
+    {
+        if (!page)
+            continue;
+        QString ref = page->SelectedNetworkRef();
+        if (ref.isEmpty())
         {
-            qWarning() << "Failed to configure PIF static IP:" << ex.what();
+            QSharedPointer<PIF> pif = page->Pif();
+            if (pif)
+                ref = pif->GetNetworkRef();
+        }
+        if (!ref.isEmpty())
+            map[ref].append(page);
+    }
+    return map;
+}
+
+QList<QSharedPointer<PIF>> NetworkingPropertiesDialog::getKnownPifs(bool includeInvisible)
+{
+    QList<QSharedPointer<PIF>> result;
+    XenConnection* connection = this->m_host ? this->m_host->GetConnection() : nullptr;
+    if (!connection || !connection->GetCache())
+        return result;
+
+    const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
+    QList<QSharedPointer<Network>> networks = connection->GetCache()->GetAll<Network>("network");
+    QList<QSharedPointer<Network>> filtered;
+    for (const QSharedPointer<Network>& network : networks)
+    {
+        if (!network || !network->Show(includeInvisible || showHidden))
+            continue;
+        filtered.append(network);
+    }
+    if (this->m_networks.isEmpty())
+        this->m_networks = filtered;
+
+    for (const QSharedPointer<Network>& network : filtered)
+    {
+        QSharedPointer<PIF> pif = this->findPifForHost(network);
+        if (pif && pif->IsInUseBondMember())
+            continue;
+        if (pif)
+            result.append(pif);
+    }
+    return result;
+}
+
+QSharedPointer<PIF> NetworkingPropertiesDialog::findPifForHost(const QSharedPointer<Network>& network) const
+{
+    if (!network || !this->m_host)
+        return QSharedPointer<PIF>();
+
+    for (const QSharedPointer<PIF>& pif : network->GetPIFs())
+    {
+        if (!pif || !pif->IsValid())
+            continue;
+        QSharedPointer<Host> host = pif->GetHost();
+        if (host && host->IsValid() && host->OpaqueRef() == this->m_host->OpaqueRef())
+            return pif;
+    }
+    return QSharedPointer<PIF>();
+}
+
+QString NetworkingPropertiesDialog::managementNetworkRef() const
+{
+    if (this->m_pages.isEmpty())
+        return QString();
+    NetworkingPropertiesPage* page = this->m_pages.first();
+    return page ? page->SelectedNetworkRef() : QString();
+}
+
+QString NetworkingPropertiesDialog::purposeForPif(const QSharedPointer<PIF>& pif) const
+{
+    if (!pif)
+        return tr("Unknown");
+    const QVariantMap otherConfig = pif->GetOtherConfig();
+    const QString purpose = otherConfig.value("management_purpose").toString();
+    return purpose.isEmpty() ? tr("Unknown") : purpose;
+}
+
+QString NetworkingPropertiesDialog::makeAuxTabName() const
+{
+    int index = 1;
+    QSet<QString> existing;
+    for (NetworkingPropertiesPage* page : this->m_pages)
+    {
+        if (page)
+            existing.insert(page->TabText());
+    }
+
+    QString candidate;
+    do
+    {
+        candidate = tr("Auxiliary %1").arg(index);
+        ++index;
+    } while (existing.contains(candidate));
+
+    return candidate;
+}
+
+void NetworkingPropertiesDialog::onAddClicked()
+{
+    auto* page = new NetworkingPropertiesPage(NetworkingPropertiesPage::PageType::Secondary);
+    page->SetPool(this->m_pool != nullptr);
+    page->SetHostCount(this->m_pool ? this->m_pool->GetHosts().count() : 1);
+    page->SetPurpose(this->makeAuxTabName());
+    this->addTabContents(page);
+    this->refreshNetworkComboBoxes();
+    page->SelectFirstUnusedNetwork(this->m_networks, this->m_inUseMap);
+    page->SetDefaultsForNew();
+    page->SelectName();
+    this->ui->verticalTabs->setCurrentRow(this->m_pages.size() - 1);
+    this->ui->contentPanel->setCurrentWidget(page);
+}
+
+void NetworkingPropertiesDialog::onPageValidChanged()
+{
+    if (auto* page = qobject_cast<NetworkingPropertiesPage*>(sender()))
+    {
+        this->ui->verticalTabs->UpdateTabText(page, page->TabText());
+        this->ui->verticalTabs->UpdateTabSubText(page, page->SubText());
+    }
+    this->refreshButtons();
+}
+
+void NetworkingPropertiesDialog::onPageDeleteClicked()
+{
+    NetworkingPropertiesPage* page = qobject_cast<NetworkingPropertiesPage*>(sender());
+    if (!page)
+        return;
+    this->removePage(page);
+}
+
+void NetworkingPropertiesDialog::onNetworkComboChanged()
+{
+    this->refreshNetworkComboBoxes();
+    this->refreshButtons();
+}
+
+void NetworkingPropertiesDialog::onVerticalTabChanged(int index)
+{
+    if (index < 0 || index >= this->m_pages.size())
+        return;
+    this->ui->contentPanel->setCurrentWidget(this->m_pages[index]);
+}
+
+bool NetworkingPropertiesDialog::ipAddressSettingsChanged(const QSharedPointer<PIF>& pif1,
+                                                          const QSharedPointer<PIF>& pif2) const
+{
+    if (!pif1 || !pif2)
+        return false;
+    return pif1->IP() != pif2->IP() ||
+           pif1->Netmask() != pif2->Netmask() ||
+           pif1->Gateway() != pif2->Gateway();
+}
+
+bool NetworkingPropertiesDialog::managementInterfaceIpChanged(const QSharedPointer<PIF>& oldManagement,
+                                                              const QSharedPointer<PIF>& newManagement) const
+{
+    if (!oldManagement || !newManagement)
+        return false;
+
+    const QString oldMode = oldManagement->IpConfigurationMode();
+    const QString newMode = newManagement->IpConfigurationMode();
+
+    if (oldMode.compare("DHCP", Qt::CaseInsensitive) == 0)
+    {
+        if (newMode.compare("DHCP", Qt::CaseInsensitive) == 0)
+            return oldManagement->GetData() != newManagement->GetData();
+        if (newMode.compare("Static", Qt::CaseInsensitive) == 0)
+            return ipAddressSettingsChanged(oldManagement, newManagement);
+    }
+    else if (oldMode.compare("Static", Qt::CaseInsensitive) == 0)
+    {
+        if (newMode.compare("Static", Qt::CaseInsensitive) == 0)
+            return ipAddressSettingsChanged(oldManagement, newManagement);
+        if (newMode.compare("DHCP", Qt::CaseInsensitive) == 0)
+            return true;
+    }
+
+    return false;
+}
+
+void NetworkingPropertiesDialog::collateChanges(NetworkingPropertiesPage* page,
+                                                const QSharedPointer<PIF>& oldPif,
+                                                QList<QPair<QSharedPointer<PIF>, bool>>& newPifs,
+                                                QList<QPair<QSharedPointer<PIF>, bool>>& newNamePifs,
+                                                QMap<QString, QVariantMap>& updatedPifs)
+{
+    QSharedPointer<PIF> pif = oldPif;
+    bool changed = false;
+    bool changedName = false;
+
+    if (!pif)
+    {
+        QSharedPointer<Network> network;
+        const QString ref = page->SelectedNetworkRef();
+        for (const QSharedPointer<Network>& net : this->m_networks)
+        {
+            if (net && net->OpaqueRef() == ref)
+            {
+                network = net;
+                break;
+            }
+        }
+        pif = network ? this->findPifForHost(network) : QSharedPointer<PIF>();
+        if (!pif)
+            throw std::runtime_error("Network has gone away");
+        changed = true;
+    }
+    else
+    {
+        QSharedPointer<Network> network = pif->GetNetwork();
+        if (!network || page->SelectedNetworkRef() != network->OpaqueRef())
+        {
+            QSharedPointer<Network> newNetwork;
+            const QString ref = page->SelectedNetworkRef();
+            for (const QSharedPointer<Network>& net : this->m_networks)
+            {
+                if (net && net->OpaqueRef() == ref)
+                {
+                    newNetwork = net;
+                    break;
+                }
+            }
+            pif = newNetwork ? this->findPifForHost(newNetwork) : QSharedPointer<PIF>();
+            if (!pif)
+                throw std::runtime_error("Network has gone away");
+            changed = true;
         }
     }
 
-    if (!success)
+    QVariantMap newData = pif->GetData();
+    QVariantMap newNameData = pif->GetData();
+
+    if (page->IsDhcp())
     {
-        QMessageBox::critical(this, "Error",
-                              "Failed to configure network interface. Please check the server logs.");
+        newData["ip_configuration_mode"] = "DHCP";
+    }
+    else
+    {
+        newData["ip_configuration_mode"] = "Static";
+        newData["IP"] = page->IPAddress();
+        newData["netmask"] = page->Netmask();
+        newData["gateway"] = page->Gateway();
+
+        QStringList dns;
+        if (!page->PreferredDNS().isEmpty())
+            dns.append(page->PreferredDNS());
+        if (!page->AlternateDNS1().isEmpty())
+            dns.append(page->AlternateDNS1());
+        if (!page->AlternateDNS2().isEmpty())
+            dns.append(page->AlternateDNS2());
+        newData["DNS"] = dns.join(",");
+    }
+
+    newData["management"] = (page->Type() != NetworkingPropertiesPage::PageType::Secondary);
+
+    if (!changed)
+    {
+        const QVariantMap oldData = pif->GetData();
+        auto differs = [&](const QString& key) {
+            return oldData.value(key) != newData.value(key);
+        };
+        if (differs("ip_configuration_mode") ||
+            differs("IP") ||
+            differs("netmask") ||
+            differs("gateway") ||
+            differs("DNS") ||
+            differs("management"))
+        {
+            changed = true;
+        }
+    }
+
+    if (page->Type() == NetworkingPropertiesPage::PageType::Secondary)
+    {
+        QVariantMap otherConfig = pif->GetOtherConfig();
+        const QString newPurpose = page->Purpose();
+        if (otherConfig.value("management_purpose").toString() != newPurpose)
+        {
+            otherConfig["management_purpose"] = newPurpose;
+            if (changed)
+                newData["other_config"] = otherConfig;
+            else
+                newNameData["other_config"] = otherConfig;
+            if (changed)
+                changed = true;
+            else
+                changedName = true;
+        }
+    }
+
+    if (changed)
+    {
+        updatedPifs.insert(pif->OpaqueRef(), newData);
+        newPifs.append({pif, true});
+    }
+    else
+    {
+        newPifs.append({pif, false});
+    }
+
+    if (changedName)
+    {
+        updatedPifs.insert(pif->OpaqueRef(), newNameData);
+        newNamePifs.append({pif, true});
+    }
+    else
+    {
+        newNamePifs.append({pif, false});
     }
 }
 
 void NetworkingPropertiesDialog::accept()
 {
-    applyChanges();
+    QList<QPair<QSharedPointer<PIF>, bool>> newPifs;
+    QList<QPair<QSharedPointer<PIF>, bool>> newNamePifs;
+    QList<QSharedPointer<PIF>> downPifs;
+    QMap<QString, QVariantMap> updatedPifs;
+    QList<QSharedPointer<PIF>> updatedPurposePifs;
+
+    for (const QSharedPointer<PIF>& pif : this->m_allPifs)
+    {
+        if (pif && pif->IsManagementInterface())
+            downPifs.append(pif);
+    }
+
+    try
+    {
+        for (NetworkingPropertiesPage* page : this->m_pages)
+        {
+            QSharedPointer<PIF> oldPif = page->Pif();
+            this->collateChanges(page, oldPif, newPifs, newNamePifs, updatedPifs);
+        }
+    } catch (const std::exception&)
+    {
+        QMessageBox::warning(this, tr("Network reconfiguration"), tr("The network configuration could not be applied."));
+        QDialog::reject();
+        return;
+    }
+
+    QSharedPointer<PIF> downManagement;
+    for (const QSharedPointer<PIF>& pif : downPifs)
+    {
+        if (pif && pif->Management())
+        {
+            downManagement = pif;
+            break;
+        }
+    }
+
+    QSharedPointer<PIF> newManagement;
+    for (const auto& pair : newPifs)
+    {
+        if (pair.first && pair.first->Management())
+        {
+            newManagement = pair.first;
+            break;
+        }
+    }
+
+    auto getPifData = [&updatedPifs](const QSharedPointer<PIF>& pif)
+    {
+        if (!pif)
+            return QVariantMap();
+
+        const QString ref = pif->OpaqueRef();
+
+        if (updatedPifs.contains(ref))
+            return updatedPifs.value(ref);
+
+        return pif->GetData();
+    };
+
+    bool managementIpChanged = false;
+    bool displayWarning = false;
+    if (downManagement)
+    {
+        if (!newManagement)
+            throw std::runtime_error("Missing new management interface");
+
+        QVariantMap oldData = getPifData(downManagement);
+        QVariantMap newData = getPifData(newManagement);
+        const QString oldMode = oldData.value("ip_configuration_mode").toString();
+        const QString newMode = newData.value("ip_configuration_mode").toString();
+        auto settingsChanged = [&oldData, &newData]()
+        {
+            return oldData.value("IP") != newData.value("IP") ||
+                   oldData.value("netmask") != newData.value("netmask") ||
+                   oldData.value("gateway") != newData.value("gateway");
+        };
+
+        if (oldMode.compare("DHCP", Qt::CaseInsensitive) == 0)
+        {
+            if (newMode.compare("DHCP", Qt::CaseInsensitive) == 0)
+                managementIpChanged = oldData != newData;
+            else if (newMode.compare("Static", Qt::CaseInsensitive) == 0)
+                managementIpChanged = settingsChanged();
+        } else if (oldMode.compare("Static", Qt::CaseInsensitive) == 0)
+        {
+            if (newMode.compare("Static", Qt::CaseInsensitive) == 0)
+                managementIpChanged = settingsChanged();
+            else if (newMode.compare("DHCP", Qt::CaseInsensitive) == 0)
+                managementIpChanged = true;
+        }
+        displayWarning = managementIpChanged ||
+                         downManagement->OpaqueRef() != newManagement->OpaqueRef() ||
+                         downManagement->IpConfigurationMode() != newManagement->IpConfigurationMode();
+
+        if (downManagement->OpaqueRef() == newManagement->OpaqueRef())
+            downManagement.reset();
+    }
+
+    downPifs.erase(std::remove_if(downPifs.begin(), downPifs.end(), [&](const QSharedPointer<PIF>& pif)
+    {
+        for (const auto& np : newPifs)
+        {
+            if (np.first && pif && np.first->GetUUID() == pif->GetUUID())
+                return true;
+        }
+        return false;
+    }), downPifs.end());
+
+    newPifs.erase(std::remove_if(newPifs.begin(), newPifs.end(), [](const QPair<QSharedPointer<PIF>, bool>& p) {
+        return !p.second;
+    }), newPifs.end());
+
+    newNamePifs.erase(std::remove_if(newNamePifs.begin(), newNamePifs.end(), [](const QPair<QSharedPointer<PIF>, bool>& p) {
+        return !p.second;
+    }), newNamePifs.end());
+
+    if (!newNamePifs.isEmpty())
+    {
+        for (const auto& pair : newNamePifs)
+        {
+            if (pair.first)
+                updatedPurposePifs.append(pair.first);
+        }
+    }
+
+    if (!updatedPurposePifs.isEmpty())
+    {
+        if (XenConnection* connection = this->m_host ? this->m_host->GetConnection() : nullptr)
+        {
+            auto* purposeAction = new SetSecondaryManagementPurposeAction(connection, this->m_pool, updatedPurposePifs, nullptr);
+            purposeAction->RunAsync(true);
+        }
+    }
+
+    if (!newPifs.isEmpty() || !downPifs.isEmpty())
+    {
+        if (displayWarning)
+        {
+            const QString title = this->m_pool
+                ? tr("Changing the management interface on a pool may interrupt connectivity.")
+                : tr("Changing the management interface on a host may interrupt connectivity.");
+            if (QMessageBox::warning(this, tr("Warning"), title,
+                                     QMessageBox::Ok | QMessageBox::Cancel) != QMessageBox::Ok)
+            {
+                return;
+            }
+        }
+
+        if (!downManagement)
+        {
+            newManagement.reset();
+        } else
+        {
+            downPifs.removeAll(downManagement);
+        }
+
+        // Match C# order: do management-related PIFs last to reduce risk of breaking connectivity.
+        std::reverse(newPifs.begin(), newPifs.end());
+        std::reverse(downPifs.begin(), downPifs.end());
+
+        QStringList reconfigureRefs;
+        for (const auto& pair : newPifs)
+        {
+            if (pair.first)
+                reconfigureRefs.append(pair.first->OpaqueRef());
+        }
+
+        QStringList disableRefs;
+        for (const QSharedPointer<PIF>& pif : downPifs)
+        {
+            if (pif)
+                disableRefs.append(pif->OpaqueRef());
+        }
+
+        QString newManagementRef;
+        QString oldManagementRef;
+        if (!downManagement)
+        {
+            newManagement.reset();
+        } else
+        {
+            newManagementRef = newManagement ? newManagement->OpaqueRef() : QString();
+            oldManagementRef = downManagement->OpaqueRef();
+        }
+
+        if (XenConnection* connection = this->m_host ? this->m_host->GetConnection() : nullptr)
+        {
+            if (connection->GetCache())
+            {
+                for (auto it = updatedPifs.constBegin(); it != updatedPifs.constEnd(); ++it)
+                {
+                    QVariantMap updated = it.value();
+                    updated["ref"] = it.key();
+                    connection->GetCache()->Update("pif", it.key(), updated);
+                }
+            }
+            ChangeNetworkingAction* action = new ChangeNetworkingAction(connection,
+                                                                        this->m_pool,
+                                                                        this->m_host,
+                                                                        reconfigureRefs,
+                                                                        disableRefs,
+                                                                        newManagementRef,
+                                                                        oldManagementRef,
+                                                                        managementIpChanged,
+                                                                        nullptr);
+            action->RunAsync(true);
+        }
+    }
+
     QDialog::accept();
 }

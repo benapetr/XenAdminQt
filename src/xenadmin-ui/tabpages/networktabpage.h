@@ -101,6 +101,7 @@ class NetworkTabPage : public BaseTabPage
         void populateIPConfigForHost();
         void populateIPConfigForPool();
         void addIPConfigRow(const QSharedPointer<PIF>& pif, const QSharedPointer<Host>& host = QSharedPointer<Host>());
+        void addIPConfigRowsForHost(const QSharedPointer<Host>& host);
 
         // Helper methods
         QString getSelectedNetworkRef() const;

@@ -31,6 +31,12 @@
 #include "../../asyncoperation.h"
 #include <QStringList>
 #include <QVariantMap>
+#include <QSharedPointer>
+
+class Host;
+class Pool;
+class PIF;
+class PBD;
 
 /**
  * @brief ChangeNetworkingAction - Reconfigures host networking
@@ -70,10 +76,13 @@ class ChangeNetworkingAction : public AsyncOperation
          * @param parent Parent QObject
          */
         ChangeNetworkingAction(XenConnection* connection,
+                               const QSharedPointer<Pool>& pool,
+                               const QSharedPointer<Host>& host,
                                const QStringList& pifRefsToReconfigure,
                                const QStringList& pifRefsToDisable,
                                const QString& newManagementPifRef,
                                const QString& oldManagementPifRef,
+                               bool managementIpChanged,
                                QObject* parent = nullptr);
 
     protected:
@@ -96,11 +105,18 @@ class ChangeNetworkingAction : public AsyncOperation
          * @param hi Target progress percentage
          */
         void bringUp(const QString& newPifRef, const QString& existingPifRef, int hi);
+        QString getIPInRange(const QString& rangeStart, const QString& existingPifRef) const;
+        void disableClustering(const QString& pifRef, QList<QSharedPointer<PBD>>& gfs2Pbds);
+        void enableClustering(const QString& pifRef, const QList<QSharedPointer<PBD>>& gfs2Pbds);
 
+        QSharedPointer<Pool> m_pool;
+        QSharedPointer<Host> m_host;
         QStringList m_pifRefsToReconfigure;
         QStringList m_pifRefsToDisable;
         QString m_newManagementPifRef;
         QString m_oldManagementPifRef;
+        bool m_managementIpChanged = false;
+        QList<QSharedPointer<Host>> m_hosts;
 };
 
 #endif // CHANGENETWORKINGACTION_H

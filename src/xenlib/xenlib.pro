@@ -35,6 +35,7 @@ HEADERS += \
     xen/actions/vm/vmstartaction.h \
     xen/xenapi/xenapi_Blob.h \
     xen/xenapi/xenapi_Bond.h \
+    xen/xenapi/xenapi_Cluster_host.h \
     xen/xenapi/xenapi_Network.h \
     xen/xenapi/xenapi_VLAN.h \
     xen/xenapi/xenapi_Tunnel.h \
@@ -199,6 +200,7 @@ HEADERS += \
     xen/actions/network/destroybondaction.h \
     xen/actions/network/createsriovaction.h \
     xen/actions/network/networkaction.h \
+    xen/actions/network/setsecondarymanagementpurposeaction.h \
     xen/actions/network/networkingactionhelpers.h \
     xen/actions/network/rescanpifsaction.h \
     xen/actions/vif/createvifaction.h \
@@ -260,6 +262,7 @@ SOURCES += \
     xen/actions/wlb/wlbrecommendations.cpp \
     xen/xenapi/xenapi_Blob.cpp \
     xen/xenapi/xenapi_Bond.cpp \
+    xen/xenapi/xenapi_Cluster_host.cpp \
     xen/xenapi/xenapi_Network.cpp \
     xen/xenapi/xenapi_VLAN.cpp \
     xen/xenapi/xenapi_Tunnel.cpp \
@@ -416,6 +419,7 @@ SOURCES += \
     xen/actions/network/destroybondaction.cpp \
     xen/actions/network/createsriovaction.cpp \
     xen/actions/network/networkaction.cpp \
+    xen/actions/network/setsecondarymanagementpurposeaction.cpp \
     xen/actions/network/networkingactionhelpers.cpp \
     xen/actions/network/rescanpifsaction.cpp \
     xen/actions/vif/createvifaction.cpp \

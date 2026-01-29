@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>NetworkingPropertiesPage</class>
+ <widget class="QWidget" name="NetworkingPropertiesPage">
+  <property name="windowTitle">
+   <string>Networking Properties Page</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QGridLayout" name="bodyLayout">
+     <item row="0" column="0" colspan="3">
+      <widget class="QFrame" name="panelHaWarning">
+       <property name="frameShape">
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <layout class="QHBoxLayout" name="haWarningLayout">
+        <item>
+         <widget class="QLabel" name="haWarningIcon">
+          <property name="pixmap">
+           <pixmap resource="../resources.qrc">:/icons/alert_16.png</pixmap>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="haWarningText">
+          <property name="text">
+           <string>HA is enabled. IP configuration is disabled.</string>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="purposeLabel">
+       <property name="text">
+        <string>Purpose:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1" colspan="2">
+      <widget class="QLineEdit" name="purposeTextBox"/>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="networkLabel">
+       <property name="text">
+        <string>Network:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1" colspan="2">
+      <widget class="QComboBox" name="networkComboBox"/>
+     </item>
+     <item row="3" column="0" colspan="3">
+      <widget class="QFrame" name="panelInUseWarning">
+       <property name="frameShape">
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <layout class="QHBoxLayout" name="inUseWarningLayout">
+        <item>
+         <widget class="QLabel" name="inUseWarningIcon">
+          <property name="pixmap">
+           <pixmap resource="../resources.qrc">:/icons/alert_16.png</pixmap>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="inUseWarningText">
+          <property name="text">
+           <string>In use warning</string>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="4" column="0" colspan="3">
+      <widget class="QLabel" name="ipSettingsLabel">
+       <property name="text">
+        <string>IP and DNS settings</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0" colspan="3">
+      <widget class="QRadioButton" name="dhcpRadioButton">
+       <property name="text">
+        <string>Obtain an IP address automatically (DHCP)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0" colspan="3">
+      <widget class="QRadioButton" name="staticRadioButton">
+       <property name="text">
+        <string>Use the following IP address</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="0" colspan="3">
+      <widget class="QWidget" name="staticSettingsWidget" native="true">
+       <layout class="QGridLayout" name="staticSettingsLayout">
+        <item row="0" column="0">
+         <widget class="QLabel" name="ipAddressLabel">
+          <property name="text">
+           <string>IP address:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="ipAddressTextBox"/>
+        </item>
+        <item row="0" column="2">
+         <widget class="QLabel" name="rangeEndLabel">
+          <property name="text">
+           <string>to 0.0.0.0</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="subnetLabel">
+          <property name="text">
+           <string>Subnet mask:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1" colspan="2">
+         <widget class="QLineEdit" name="subnetTextBox"/>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="gatewayLabel">
+          <property name="text">
+           <string>Gateway:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1" colspan="2">
+         <widget class="QLineEdit" name="gatewayTextBox"/>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="preferredDnsLabel">
+          <property name="text">
+           <string>Preferred DNS:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1" colspan="2">
+         <widget class="QLineEdit" name="preferredDnsTextBox"/>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="alternateDns1Label">
+          <property name="text">
+           <string>Alternate DNS 1:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1" colspan="2">
+         <widget class="QLineEdit" name="alternateDns1TextBox"/>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="alternateDns2Label">
+          <property name="text">
+           <string>Alternate DNS 2:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1" colspan="2">
+         <widget class="QLineEdit" name="alternateDns2TextBox"/>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="8" column="0" colspan="3">
+      <widget class="QFrame" name="infoPanel">
+       <property name="frameShape">
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <layout class="QHBoxLayout" name="infoLayout">
+        <item>
+         <widget class="QLabel" name="infoIcon">
+          <property name="pixmap">
+           <pixmap resource="../resources.qrc">:/icons/alert_16.png</pixmap>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="infoLabel">
+          <property name="text">
+           <string>Information</string>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="9" column="2">
+      <widget class="QPushButton" name="deleteButton">
+       <property name="text">
+        <string>Remove IP address</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="../resources.qrc"/>
+ </resources>
+ <connections/>
+</ui>

@@ -33,11 +33,8 @@
 #include "xenlib/xen/network.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
-#include "xenlib/xen/pifmetrics.h"
-#include "xenlib/xen/tunnel.h"
 #include "xenlib/xen/vlan.h"
 #include "xenlib/xencache.h"
-#include "xenlib/xen/xenapi/xenapi_Network.h"
 #include "../settingsmanager.h"
 #include "../dialogs/newnetworkwizard.h"
 #include "../dialogs/networkpropertiesdialog.h"
@@ -112,14 +109,16 @@ bool NetworkTabPage::IsApplicableForObjectType(const QString& objectType) const
 
 void NetworkTabPage::refreshContent()
 {
-    if (this->m_objectData.isEmpty())
+    if (!this->m_object)
     {
         this->ui->networksTable->setRowCount(0);
         this->ui->ipConfigTable->setRowCount(0);
         return;
     }
 
-    if (this->m_objectType == "vm")
+    QString object_type = this->m_object->GetObjectType();
+
+    if (object_type == "vm")
     {
         // Show only networks section for VMs (VIFs)
         // Hide IP configuration (that's for hosts/pools)
@@ -129,7 +128,7 @@ void NetworkTabPage::refreshContent()
         // Set up VIF columns for VMs
         this->setupVifColumns();
         this->populateVIFsForVM();
-    } else if (this->m_objectType == "host")
+    } else if (object_type == "host")
     {
         // Show both sections for hosts
         this->ui->networksGroup->setVisible(true);
@@ -139,7 +138,7 @@ void NetworkTabPage::refreshContent()
         this->setupNetworkColumns();
         this->populateNetworksForHost();
         this->populateIPConfigForHost();
-    } else if (this->m_objectType == "pool")
+    } else if (object_type == "pool")
     {
         // Show both sections for pools
         this->ui->networksGroup->setVisible(true);
@@ -229,7 +228,7 @@ void NetworkTabPage::populateVIFsForVM()
     // Clear the table
     this->ui->networksTable->setRowCount(0);
 
-    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+    QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(this->m_object);
 
     if (!vm)
     {
@@ -413,16 +412,12 @@ void NetworkTabPage::populateVIFsForVM()
 
 void NetworkTabPage::populateNetworksForHost()
 {
+    if (!this->m_object)
+        return;
+
     this->ui->networksTable->setRowCount(0);
 
-    if (!this->m_connection || !this->m_connection->GetCache())
-    {
-        qDebug() << "NetworkTabPage::populateNetworksForHost - No connection/cache";
-        return;
-    }
-
-    XenCache* cache = this->m_connection->GetCache();
-    QList<QSharedPointer<Network>> networks = cache->GetAll<Network>("network");
+    QList<QSharedPointer<Network>> networks = this->m_object->GetCache()->GetAll<Network>("network");
 
     for (const QSharedPointer<Network>& network : networks)
     {
@@ -472,12 +467,9 @@ void NetworkTabPage::addNetworkRow(QSharedPointer<Network> network)
     QSharedPointer<PIF> pif;
     QList<QSharedPointer<PIF>> pifs = network->GetPIFs();
 
-    if (this->m_objectType == "host")
+    if (this->m_object->GetObjectType() == "host")
     {
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
-        if (!host && this->m_connection)
-            host = this->m_connection->GetCache()->ResolveObject<Host>("host", this->m_objectRef);
-
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
         QString hostRef = host ? host->OpaqueRef() : QString();
         for (const QSharedPointer<PIF>& currentPif : pifs)
         {
@@ -489,7 +481,7 @@ void NetworkTabPage::addNetworkRow(QSharedPointer<Network> network)
                 break;
             }
         }
-    } else if (this->m_objectType == "pool" && !pifs.isEmpty())
+    } else if (this->m_object->GetObjectType() == "pool" && !pifs.isEmpty())
     {
         pif = pifs.first();
     }
@@ -597,10 +589,33 @@ void NetworkTabPage::populateIPConfigForHost()
     this->ui->ipConfigTable->setRowCount(0);
 
     QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
-    if (!this->m_connection || !this->m_connection->GetCache() || !host)
+    if (!host)
         return;
 
-    // Get all PIFs for this host
+    this->addIPConfigRowsForHost(host);
+}
+
+void NetworkTabPage::populateIPConfigForPool()
+{
+    this->ui->ipConfigTable->setRowCount(0);
+
+    QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(this->m_object);
+    if (!pool)
+        return;
+
+    // For pools, show management interfaces from all hosts
+    QList<QSharedPointer<Host>> hosts = pool->GetHosts();
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        this->addIPConfigRowsForHost(host);
+    }
+}
+
+void NetworkTabPage::addIPConfigRowsForHost(const QSharedPointer<Host>& host)
+{
+    if (!host || !host->IsValid())
+        return;
+
     QList<QSharedPointer<PIF>> pifs = host->GetPIFs();
     QList<QSharedPointer<PIF>> managementPIFs;
 
@@ -609,67 +624,26 @@ void NetworkTabPage::populateIPConfigForHost()
         if (!pif || !pif->IsValid())
             continue;
 
-        // Only show management interfaces
-        bool isManagement = pif->Management();
-
-        // Also check other_config for secondary management interfaces
-        QVariantMap otherConfig = pif->GetOtherConfig();
-        bool hasManagementPurpose = otherConfig.contains("management_purpose");
+        const bool isManagement = pif->Management();
+        const QVariantMap otherConfig = pif->GetOtherConfig();
+        const bool hasManagementPurpose = otherConfig.contains("management_purpose");
 
         if (isManagement || hasManagementPurpose)
-        {
             managementPIFs.append(pif);
-        }
     }
 
-    // Sort PIFs - primary management first
     std::sort(managementPIFs.begin(), managementPIFs.end(),
-              [](const QSharedPointer<PIF>& a, const QSharedPointer<PIF>& b) {
-                  bool aIsPrimary = a->Management();
-                  bool bIsPrimary = b->Management();
+              [](const QSharedPointer<PIF>& a, const QSharedPointer<PIF>& b)
+              {
+                  const bool aIsPrimary = a->Management();
+                  const bool bIsPrimary = b->Management();
                   if (aIsPrimary != bIsPrimary)
                       return aIsPrimary;
                   return a->GetDevice() < b->GetDevice();
               });
 
     for (const QSharedPointer<PIF>& pif : managementPIFs)
-    {
         this->addIPConfigRow(pif, host);
-    }
-}
-
-void NetworkTabPage::populateIPConfigForPool()
-{
-    this->ui->ipConfigTable->setRowCount(0);
-
-    QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(this->m_object);
-    if (!this->m_connection || !this->m_connection->GetCache() || !pool)
-        return;
-
-    // For pools, show management interfaces from all hosts
-    QList<QSharedPointer<Host>> hosts = pool->GetHosts();
-    for (const QSharedPointer<Host>& host : hosts)
-    {
-        if (!host || !host->IsValid())
-            continue;
-
-        QList<QSharedPointer<PIF>> pifs = host->GetPIFs();
-        for (const QSharedPointer<PIF>& pif : pifs)
-        {
-            if (!pif || !pif->IsValid())
-                continue;
-
-            // Only show management interfaces
-            bool isManagement = pif->Management();
-            QVariantMap otherConfig = pif->GetOtherConfig();
-            bool hasManagementPurpose = otherConfig.contains("management_purpose");
-
-            if (isManagement || hasManagementPurpose)
-            {
-                this->addIPConfigRow(pif, host);
-            }
-        }
-    }
 }
 
 void NetworkTabPage::addIPConfigRow(const QSharedPointer<PIF>& pif, const QSharedPointer<Host>& host)
@@ -688,15 +662,14 @@ void NetworkTabPage::addIPConfigRow(const QSharedPointer<PIF>& pif, const QShare
     // Server name
     QString hostName = "Unknown";
     if (host && host->IsValid())
+    {
         hostName = host->GetName();
-    else
+    } else
     {
         QSharedPointer<Host> resolvedHost = pif->GetHost();
         if (resolvedHost && resolvedHost->IsValid())
             hostName = resolvedHost->GetName();
     }
-
-    // Icon column - TODO: Add proper icon
 
     // Interface (Management or other purpose)
     QString interfaceType;
@@ -762,6 +735,9 @@ void NetworkTabPage::addIPConfigRow(const QSharedPointer<PIF>& pif, const QShare
 
 void NetworkTabPage::onConfigureClicked()
 {
+    if (!this->m_object)
+        return;
+
     // Get selected PIF from IP Config table
     QString selectedPifRef = this->getSelectedPifRef();
 
@@ -771,18 +747,26 @@ void NetworkTabPage::onConfigureClicked()
         return;
     }
 
-    QSharedPointer<PIF> pif = this->m_connection && this->m_connection->GetCache()
-        ? this->m_connection->GetCache()->ResolveObject<PIF>("pif", selectedPifRef)
-        : QSharedPointer<PIF>();
+    QSharedPointer<PIF> pif = this->m_object->GetCache()->ResolveObject<PIF>("pif", selectedPifRef);
     if (!pif || !pif->IsValid())
         return;
 
+    QSharedPointer<Pool> pool = qSharedPointerDynamicCast<Pool>(this->m_object);
+    QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
+    if (!host && pool)
+        host = pool->GetMasterHost();
+    if (!host)
+        host = pif->GetHost();
+
     // Open NetworkingProperties dialog with selected PIF
-    NetworkingPropertiesDialog dialog(pif, this);
+    NetworkingPropertiesDialog dialog(host, pool, pif, this);
     if (dialog.exec() == QDialog::Accepted)
     {
         // Refresh the IP configuration display after changes
-        this->populateIPConfigForHost();
+        if (this->m_object->GetObjectType() == "pool")
+            this->populateIPConfigForPool();
+        else
+            this->populateIPConfigForHost();
     }
 }
 

@@ -110,6 +110,11 @@ bool Host::RestrictSriovNetwork() const
     return boolKeyPreferTrue(LicenseParams(), "restrict_network_sriov");
 }
 
+bool Host::RestrictManagementOnVLAN() const
+{
+    return boolKeyPreferTrue(LicenseParams(), "restrict_management_on_vlan");
+}
+
 bool Host::SriovNetworkDisabled() const
 {
     if (!this->RestrictSriovNetwork())

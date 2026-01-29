@@ -92,6 +92,7 @@ class XENLIB_EXPORT Host : public XenObject
         bool RestrictIntraPoolMigrate() const;
         bool RestrictVSwitchController() const;
         bool RestrictSriovNetwork() const;
+        bool RestrictManagementOnVLAN() const;
         bool SriovNetworkDisabled() const;
         bool vSwitchNetworkBackend() const;
 

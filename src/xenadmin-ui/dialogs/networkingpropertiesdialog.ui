@@ -2,22 +2,14 @@
 <ui version="4.0">
  <class>NetworkingPropertiesDialog</class>
  <widget class="QDialog" name="NetworkingPropertiesDialog">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>550</width>
-    <height>500</height>
-   </rect>
-  </property>
   <property name="windowTitle">
-   <string>Network Interface Properties</string>
+   <string>Configure IP Addresses</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QLabel" name="labelTitle">
+    <widget class="QLabel" name="blurbLabel">
      <property name="text">
-      <string>Configure IP settings for network interface</string>
+      <string>Configure IP addresses for this host or pool.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -25,198 +17,42 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBoxInterface">
-     <property name="title">
-      <string>Interface Information</string>
-     </property>
-     <layout class="QFormLayout" name="formLayout">
-      <item row="0" column="0">
-       <widget class="QLabel" name="labelDevice">
-        <property name="text">
-         <string>Device:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QLabel" name="labelDeviceValue">
-        <property name="text">
-         <string>eth0</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="labelMAC">
-        <property name="text">
-         <string>MAC Address:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLabel" name="labelMACValue">
-        <property name="text">
-         <string>00:00:00:00:00:00</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="labelNetwork">
-        <property name="text">
-         <string>Network:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QLabel" name="labelNetworkValue">
-        <property name="text">
-         <string>Network Name</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="groupBoxIPConfig">
-     <property name="title">
-      <string>IP Address Configuration</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <item>
-       <widget class="QRadioButton" name="radioButtonDHCP">
-        <property name="text">
-         <string>Automatic (DHCP)</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QRadioButton" name="radioButtonStatic">
-        <property name="text">
-         <string>Static IP Configuration</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QWidget" name="widgetStaticSettings" native="true">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <layout class="QFormLayout" name="formLayoutStatic">
-         <item row="0" column="0">
-          <widget class="QLabel" name="labelIPAddress">
-           <property name="text">
-            <string>IP Address:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QLineEdit" name="lineEditIPAddress">
-           <property name="placeholderText">
-            <string>e.g. 192.168.1.100</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="labelSubnetMask">
-           <property name="text">
-            <string>Subnet Mask:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QLineEdit" name="lineEditSubnetMask">
-           <property name="placeholderText">
-            <string>e.g. 255.255.255.0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="labelGateway">
-           <property name="text">
-            <string>Gateway:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QLineEdit" name="lineEditGateway">
-           <property name="placeholderText">
-            <string>e.g. 192.168.1.1 (optional)</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="groupBoxDNS">
-     <property name="title">
-      <string>DNS Configuration</string>
-     </property>
-     <layout class="QFormLayout" name="formLayoutDNS">
-      <item row="0" column="0">
-       <widget class="QLabel" name="labelPrimaryDNS">
-        <property name="text">
-         <string>Primary DNS:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QLineEdit" name="lineEditPrimaryDNS">
-        <property name="placeholderText">
-         <string>e.g. 8.8.8.8 (optional)</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="labelSecondaryDNS">
-        <property name="text">
-         <string>Secondary DNS:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="lineEditSecondaryDNS">
-        <property name="placeholderText">
-         <string>e.g. 8.8.4.4 (optional)</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLabel" name="labelWarning">
+    <widget class="QLabel" name="tellMeMoreLabel">
      <property name="text">
-      <string>&lt;b&gt;Warning:&lt;/b&gt; Changing network settings may temporarily interrupt connectivity.</string>
+      <string>Tell me more...</string>
      </property>
-     <property name="wordWrap">
-      <bool>true</bool>
+     <property name="textFormat">
+      <enum>Qt::RichText</enum>
+     </property>
+     <property name="openExternalLinks">
+      <bool>false</bool>
      </property>
     </widget>
    </item>
    <item>
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item>
-    <widget class="QDialogButtonBox" name="buttonBox">
+    <widget class="QSplitter" name="splitter">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
+     <widget class="QWidget" name="leftPanel">
+      <layout class="QVBoxLayout" name="leftLayout">
+       <item>
+        <widget class="VerticalTabWidget" name="verticalTabs"/>
+       </item>
+       <item>
+        <widget class="QPushButton" name="addButton">
+         <property name="text">
+          <string>Add IP address</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QStackedWidget" name="contentPanel"/>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
@@ -224,6 +60,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VerticalTabWidget</class>
+   <extends>QListWidget</extends>
+   <header>widgets/verticaltabwidget.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections>
   <connection>
@@ -231,32 +74,12 @@
    <signal>accepted()</signal>
    <receiver>NetworkingPropertiesDialog</receiver>
    <slot>accept()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>157</x>
-     <y>274</y>
-    </hint>
-   </hints>
   </connection>
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
    <receiver>NetworkingPropertiesDialog</receiver>
    <slot>reject()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>286</x>
-     <y>274</y>
-    </hint>
-   </hints>
   </connection>
  </connections>
 </ui>

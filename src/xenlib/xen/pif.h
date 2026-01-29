@@ -115,6 +115,7 @@ class PIF : public XenObject
         bool IsBondSlave() const;
         bool IsBondMaster() const;
         bool IsBondMember() const;
+        bool IsInUseBondMember() const;
         bool IsBondNIC() const;
         bool IsTunnelAccessPIF() const;
         bool IsTunnelTransportPIF() const;

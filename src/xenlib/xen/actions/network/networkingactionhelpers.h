@@ -75,9 +75,7 @@ class NetworkingActionHelpers
          * @param fromPifRef Source PIF opaque reference
          * @param toPifRef Destination PIF opaque reference
          */
-        static void moveManagementInterfaceName(AsyncOperation* action,
-                                                const QString& fromPifRef,
-                                                const QString& toPifRef);
+        static void moveManagementInterfaceName(AsyncOperation* action, const QString& fromPifRef, const QString& toPifRef);
 
         /**
          * @brief Reconfigure management interface on hosts
@@ -95,13 +93,7 @@ class NetworkingActionHelpers
          * @param hi Progress percentage target (0-100)
          * @param bringDownDownPif If true, depurpose and clear IP on down_pif
          */
-        static void reconfigureManagement(AsyncOperation* action,
-                                          const QString& downPifRef,
-                                          const QString& upPifRef,
-                                          bool thisHost,
-                                          bool lockPif,
-                                          int hi,
-                                          bool bringDownDownPif);
+        static void reconfigureManagement(AsyncOperation* action, const QString& downPifRef, const QString& upPifRef, bool thisHost, bool lockPif, int hi, bool bringDownDownPif);
 
         /**
          * @brief Pool-wide management interface reconfiguration
@@ -116,11 +108,7 @@ class NetworkingActionHelpers
          * @param downPifRef Current management PIF reference (on coordinator)
          * @param hi Progress percentage target (0-100)
          */
-        static void poolReconfigureManagement(AsyncOperation* action,
-                                              const QString& poolRef,
-                                              const QString& upPifRef,
-                                              const QString& downPifRef,
-                                              int hi);
+        static void poolReconfigureManagement(AsyncOperation* action, const QString& poolRef, const QString& upPifRef, const QString& downPifRef, int hi);
 
         /**
          * @brief Bring up a PIF with IP configuration
@@ -135,11 +123,7 @@ class NetworkingActionHelpers
          * @param existingPifRef PIF to configure and bring up
          * @param hi Progress percentage target (0-100)
          */
-        static void bringUp(AsyncOperation* action,
-                            const QString& newPifRef,
-                            const QString& newIp,
-                            const QString& existingPifRef,
-                            int hi);
+        static void bringUp(AsyncOperation* action, const QString& newPifRef, const QString& newIp, const QString& existingPifRef, int hi);
 
         /**
          * @brief Bring up a PIF (uses newPif's IP address)
@@ -151,10 +135,7 @@ class NetworkingActionHelpers
          * @param existingPifRef PIF to configure and bring up
          * @param hi Progress percentage target (0-100)
          */
-        static void bringUp(AsyncOperation* action,
-                            const QString& newPifRef,
-                            const QString& existingPifRef,
-                            int hi);
+        static void bringUp(AsyncOperation* action, const QString& newPifRef, const QString& existingPifRef, int hi);
 
         /**
          * @brief Bring down a PIF
@@ -166,9 +147,7 @@ class NetworkingActionHelpers
          * @param pifRef PIF to bring down
          * @param hi Progress percentage target (0-100)
          */
-        static void bringDown(AsyncOperation* action,
-                              const QString& pifRef,
-                              int hi);
+        static void bringDown(AsyncOperation* action, const QString& pifRef, int hi);
 
         /**
          * @brief Execute a PIF method on hosts in a network
@@ -183,12 +162,7 @@ class NetworkingActionHelpers
          * @param hi Progress percentage target (0-100)
          * @param pifMethod Callback to execute for each matching PIF
          */
-        static void forSomeHosts(AsyncOperation* action,
-                                 const QString& pifRef,
-                                 bool thisHost,
-                                 bool lockPif,
-                                 int hi,
-                                 PIFMethod pifMethod);
+        static void forSomeHosts(AsyncOperation* action, const QString& pifRef, bool thisHost, bool lockPif, int hi, PIFMethod pifMethod);
 
         /**
          * @brief Reconfigure single primary management interface
@@ -201,10 +175,7 @@ class NetworkingActionHelpers
          * @param destPifRef Destination PIF
          * @param hi Progress percentage target (0-100)
          */
-        static void reconfigureSinglePrimaryManagement(AsyncOperation* action,
-                                                       const QString& srcPifRef,
-                                                       const QString& destPifRef,
-                                                       int hi);
+        static void reconfigureSinglePrimaryManagement(AsyncOperation* action, const QString& srcPifRef, const QString& destPifRef, int hi);
 
         /**
          * @brief Reconfigure primary management across pool
@@ -218,10 +189,7 @@ class NetworkingActionHelpers
          * @param destPifRef Destination PIF
          * @param hi Progress percentage target (0-100)
          */
-        static void reconfigurePrimaryManagement(AsyncOperation* action,
-                                                 const QString& srcPifRef,
-                                                 const QString& destPifRef,
-                                                 int hi);
+        static void reconfigurePrimaryManagement(AsyncOperation* action, const QString& srcPifRef, const QString& destPifRef, int hi);
 
         /**
          * @brief Reconfigure IP address on a PIF
@@ -234,11 +202,7 @@ class NetworkingActionHelpers
          * @param ip IP address to assign
          * @param hi Progress percentage target (0-100)
          */
-        static void reconfigureIP(AsyncOperation* action,
-                                  const QString& newPifRef,
-                                  const QString& existingPifRef,
-                                  const QString& ip,
-                                  int hi);
+        static void reconfigureIP(AsyncOperation* action, const QString& newPifRef, const QString& existingPifRef, const QString& ip, int hi);
 
         /**
          * @brief Plug a PIF if not currently attached
@@ -249,16 +213,11 @@ class NetworkingActionHelpers
          * @param pifRef PIF to plug
          * @param hi Progress percentage target (0-100)
          */
-        static void plug(AsyncOperation* action,
-                         const QString& pifRef,
-                         int hi);
+        static void plug(AsyncOperation* action, const QString& pifRef, int hi);
 
         // Private overloads for forSomeHosts with different signatures
     private:
-        static void bringUp(AsyncOperation* action,
-                            const QString& newPifRef,
-                            bool thisHost,
-                            int hi);
+        static void bringUp(AsyncOperation* action, const QString& newPifRef, bool thisHost, int hi);
 };
 
 #endif // NETWORKINGACTIONHELPERS_H

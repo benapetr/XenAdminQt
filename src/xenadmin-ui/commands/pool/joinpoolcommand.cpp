@@ -152,5 +152,5 @@ QString JoinPoolCommand::MenuText() const
 
 QSharedPointer<Host> JoinPoolCommand::getSelectedHost() const
 {
-    return qSharedPointerCast<Host>(this->GetObject());
+    return qSharedPointerDynamicCast<Host>(this->GetObject());
 }

@@ -160,7 +160,7 @@ void VerticalTabWidget::AddTab(const QIcon& icon, const QString& text, const QSt
     this->m_tabs.append(data);
 
     // Add item to list
-    QListWidgetItem* item = new QListWidgetItem(this);
+    QListWidgetItem* item = new QListWidgetItem();
     item->setSizeHint(QSize(180, 40));              // Match C# ItemHeight
     item->setData(Qt::UserRole, this->m_tabs.size() - 1); // Store index for page lookup
     item->setData(Qt::DisplayRole, text);           // Main text
@@ -173,6 +173,29 @@ void VerticalTabWidget::AddTab(const QIcon& icon, const QString& text, const QSt
     if (page)
     {
         page->hide();
+    }
+}
+
+void VerticalTabWidget::UpdateTabText(QWidget* page, const QString& text)
+{
+    if (!page)
+        return;
+
+    for (int i = 0; i < this->m_tabs.size(); ++i)
+    {
+        if (this->m_tabs[i].page != page)
+            continue;
+
+        if (this->m_tabs[i].text == text)
+            return;
+
+        this->m_tabs[i].text = text;
+        QListWidgetItem* item = this->item(i);
+        if (item)
+            item->setData(Qt::DisplayRole, text);
+
+        this->viewport()->update();
+        return;
     }
 }
 
@@ -197,6 +220,12 @@ void VerticalTabWidget::UpdateTabSubText(QWidget* page, const QString& subText)
         this->viewport()->update();
         return;
     }
+}
+
+void VerticalTabWidget::ClearTabs()
+{
+    this->m_tabs.clear();
+    this->clear();
 }
 
 QWidget* VerticalTabWidget::GetCurrentPage() const

@@ -47,8 +47,9 @@ SOURCES += \
     dialogs/snapshotpropertiesdialog.cpp \
     dialogs/storagepropertiesdialog.cpp \
     dialogs/networkpropertiesdialog.cpp \
-    dialogs/bondpropertiesdialog.cpp \
     dialogs/networkingpropertiesdialog.cpp \
+    dialogs/networkingpropertiespage.cpp \
+    dialogs/bondpropertiesdialog.cpp \
     dialogs/vifdialog.cpp \
     dialogs/vmsnapshotdialog.cpp \
     dialogs/vdipropertiesdialog.cpp \
@@ -301,8 +302,9 @@ HEADERS += \
     dialogs/snapshotpropertiesdialog.h \
     dialogs/storagepropertiesdialog.h \
     dialogs/networkpropertiesdialog.h \
-    dialogs/bondpropertiesdialog.h \
     dialogs/networkingpropertiesdialog.h \
+    dialogs/networkingpropertiespage.h \
+    dialogs/bondpropertiesdialog.h \
     dialogs/vifdialog.h \
     dialogs/vmsnapshotdialog.h \
     dialogs/vdipropertiesdialog.h \
@@ -533,7 +535,6 @@ FORMS += \
     dialogs/newpooldialog.ui \
     dialogs/bondpropertiesdialog.ui \
     dialogs/repairsrdialog.ui \
-    dialogs/networkingpropertiesdialog.ui \
     dialogs/vifdialog.ui \
     dialogs/vmsnapshotdialog.ui \
     dialogs/vdipropertiesdialog.ui \
@@ -542,6 +543,8 @@ FORMS += \
     dialogs/movevirtualdiskdialog.ui \
     dialogs/optionsdialog.ui \
     dialogs/newnetworkwizard.ui \
+    dialogs/networkingpropertiesdialog.ui \
+    dialogs/networkingpropertiespage.ui \
     dialogs/newvmwizard.ui \
     dialogs/newsrwizard.ui \
     dialogs/crosspoolmigratewizard.ui \

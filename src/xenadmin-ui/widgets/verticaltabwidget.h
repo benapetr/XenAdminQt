@@ -59,8 +59,14 @@ class VerticalTabWidget : public QListWidget
         // Add a tab with icon, main text, and subtext
         void AddTab(const QIcon& icon, const QString& text, const QString& subText, QWidget* page);
 
+        // Update main text for an existing tab
+        void UpdateTabText(QWidget* page, const QString& text);
+
         // Update subtext for an existing tab
         void UpdateTabSubText(QWidget* page, const QString& subText);
+
+        // Clear all tabs and associated metadata
+        void ClearTabs();
 
         // Get the widget associated with the selected tab
         QWidget* GetCurrentPage() const;
