@@ -47,11 +47,30 @@
 #include "dialogs/actionprogressdialog.h"
 #include "../operations/operationmanager.h"
 
+namespace
+{
+class SizeTableWidgetItem : public QTableWidgetItem
+{
+    public:
+        explicit SizeTableWidgetItem(const QString& text, qint64 sizeBytes) : QTableWidgetItem(text)
+        {
+            this->setData(Qt::UserRole, sizeBytes);
+        }
+
+        bool operator<(const QTableWidgetItem& other) const override
+        {
+            return this->data(Qt::UserRole).toLongLong() < other.data(Qt::UserRole).toLongLong();
+        }
+    };
+}
+
 SrStorageTabPage::SrStorageTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::SrStorageTabPage)
 {
     this->ui->setupUi(this);
     this->ui->storageTable->horizontalHeader()->setStretchLastSection(true);
     this->ui->storageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    this->ui->storageTable->setSortingEnabled(true);
+    this->ui->storageTable->horizontalHeader()->setSortIndicatorShown(true);
 
     connect(this->ui->storageTable, &QTableWidget::customContextMenuRequested, this, &SrStorageTabPage::onStorageTableCustomContextMenuRequested);
     connect(this->ui->storageTable, &QTableWidget::itemSelectionChanged, this, &SrStorageTabPage::onStorageTableSelectionChanged);
@@ -111,8 +130,8 @@ void SrStorageTabPage::populateSRStorage()
     const QList<QSharedPointer<VDI>> vdis = sr->GetVDIs();
 
     this->ui->storageTable->setColumnCount(5);
-    this->ui->storageTable->setHorizontalHeaderLabels(
-        QStringList() << "Name" << "Description" << "Size" << "VM" << "CBT");
+    this->ui->storageTable->setHorizontalHeaderLabels(QStringList() << "Name" << "Description" << "Size" << "VM" << "CBT");
+    this->ui->storageTable->setSortingEnabled(false);
 
     for (const QSharedPointer<VDI>& vdi : vdis)
     {
@@ -167,10 +186,12 @@ void SrStorageTabPage::populateSRStorage()
         nameItem->setData(Qt::UserRole, vdi->OpaqueRef());
         this->ui->storageTable->setItem(row, 0, nameItem);
         this->ui->storageTable->setItem(row, 1, new QTableWidgetItem(vdiDescription));
-        this->ui->storageTable->setItem(row, 2, new QTableWidgetItem(sizeText));
+        this->ui->storageTable->setItem(row, 2, new SizeTableWidgetItem(sizeText, virtualSize));
         this->ui->storageTable->setItem(row, 3, new QTableWidgetItem(vmString));
         this->ui->storageTable->setItem(row, 4, new QTableWidgetItem(cbtStatus));
     }
+
+    this->ui->storageTable->setSortingEnabled(true);
 
     for (int i = 0; i < this->ui->storageTable->columnCount(); ++i)
     {
