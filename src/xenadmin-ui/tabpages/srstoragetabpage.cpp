@@ -31,6 +31,7 @@
 #include <QMessageBox>
 #include <QTimer>
 #include "xenlib/xencache.h"
+#include "xenlib/utils/misc.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/pbd.h"
 #include "xenlib/xen/vbd.h"
@@ -149,12 +150,7 @@ void SrStorageTabPage::populateSRStorage()
         QString vdiDescription = vdi->GetDescription();
 
         qint64 virtualSize = vdi->VirtualSize();
-        QString sizeText = "N/A";
-        if (virtualSize > 0)
-        {
-            double sizeGB = virtualSize / (1024.0 * 1024.0 * 1024.0);
-            sizeText = QString::number(sizeGB, 'f', 2) + " GB";
-        }
+        QString sizeText = Misc::FormatSize(virtualSize);
 
         QStringList vmNames;
         const QList<QSharedPointer<VBD>> vbds = vdi->GetVBDs();

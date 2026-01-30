@@ -146,14 +146,14 @@ void MemoryTabPage::populateVMMemory()
         vmColor = QColor(169, 169, 169); // DarkGray
     }
 
-    QString tooltip = vmName + "\n" + QString("Current memory usage: %1").arg(Misc::FormatMemorySize(memoryActual));
+    QString tooltip = vmName + "\n" + QString("Current memory usage: %1").arg(Misc::FormatSize(memoryActual));
     bool hasBallooning = vm->SupportsBallooning();
     if (hasBallooning)
     {
-        tooltip += QString("\nDynamic Min: %1").arg(Misc::FormatMemorySize(memoryDynamicMin));
-        tooltip += QString("\nDynamic Max: %1").arg(Misc::FormatMemorySize(memoryDynamicMax));
+        tooltip += QString("\nDynamic Min: %1").arg(Misc::FormatSize(memoryDynamicMin));
+        tooltip += QString("\nDynamic Max: %1").arg(Misc::FormatSize(memoryDynamicMax));
         if (memoryDynamicMax != memoryStaticMax)
-            tooltip += QString("\nStatic Max: %1").arg(Misc::FormatMemorySize(memoryStaticMax));
+            tooltip += QString("\nStatic Max: %1").arg(Misc::FormatSize(memoryStaticMax));
     }
 
     // For VMs, show current usage against static max
@@ -171,10 +171,10 @@ void MemoryTabPage::populateVMMemory()
     this->ui->totalMaxMemoryLabel->setVisible(false);
     this->ui->totalMaxMemoryValue->setVisible(false);
 
-    this->ui->staticMinValue->setText(Misc::FormatMemorySize(memoryStaticMin));
-    this->ui->staticMaxValue->setText(Misc::FormatMemorySize(memoryStaticMax));
-    this->ui->dynamicMinValue->setText(Misc::FormatMemorySize(memoryDynamicMin));
-    this->ui->dynamicMaxValue->setText(Misc::FormatMemorySize(memoryDynamicMax));
+    this->ui->staticMinValue->setText(Misc::FormatSize(memoryStaticMin));
+    this->ui->staticMaxValue->setText(Misc::FormatSize(memoryStaticMax));
+    this->ui->dynamicMinValue->setText(Misc::FormatSize(memoryDynamicMin));
+    this->ui->dynamicMaxValue->setText(Misc::FormatSize(memoryDynamicMax));
 
     // Show/hide dynamic memory based on ballooning support
     this->ui->dynamicMinLabel->setVisible(hasBallooning);
@@ -189,7 +189,7 @@ void MemoryTabPage::populateVMMemory()
     if (!hasBallooning)
     {
         this->ui->dynamicMinLabel->setText(tr("Memory:"));
-        this->ui->dynamicMinValue->setText(Misc::FormatMemorySize(memoryStaticMax));
+        this->ui->dynamicMinValue->setText(Misc::FormatSize(memoryStaticMax));
         this->ui->dynamicMinLabel->setVisible(true);
         this->ui->dynamicMinValue->setVisible(true);
         this->ui->staticMinLabel->setVisible(false);

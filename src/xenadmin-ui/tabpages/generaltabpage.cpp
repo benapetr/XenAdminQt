@@ -616,7 +616,7 @@ void GeneralTabPage::populateVMProperties()
     qint64 memoryBytes = vm->GetMemoryDynamicMax();
     if (memoryBytes > 0)
     {
-        QString memoryStr = Misc::FormatMemorySize(memoryBytes);
+        QString memoryStr = Misc::FormatSize(memoryBytes);
         this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.memory", memoryStr);
     }
 
@@ -681,14 +681,14 @@ void GeneralTabPage::populateSRProperties()
     qint64 sizeBytes = sr->PhysicalSize();
     if (sizeBytes > 0)
     {
-        QString sizeValue = Misc::FormatMemorySize(sizeBytes);
+        QString sizeValue = Misc::FormatSize(sizeBytes);
         this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.size", sizeValue);
     }
 
     qint64 usedBytes = sr->PhysicalUtilisation();
     if (usedBytes > 0)
     {
-        QString usedValue = Misc::FormatMemorySize(usedBytes);
+        QString usedValue = Misc::FormatSize(usedBytes);
         this->addPropertyByKey(this->ui->pdSectionGeneral, "SR.utilisation", usedValue);
     }
 

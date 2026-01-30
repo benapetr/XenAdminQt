@@ -142,12 +142,12 @@ void HostMemoryRow::Refresh()
         : 0;
     
     // Set the text values
-    this->ui->valueTotal->setText(Misc::FormatMemorySize(total));
-    this->ui->valueUsed->setText(Misc::FormatMemorySize(used));
-    this->ui->valueAvailable->setText(Misc::FormatMemorySize(avail));
-    this->ui->valueTotDynMax->setText(Misc::FormatMemorySize(totDynMax));
+    this->ui->valueTotal->setText(Misc::FormatSize(total));
+    this->ui->valueUsed->setText(Misc::FormatSize(used));
+    this->ui->valueAvailable->setText(Misc::FormatSize(avail));
+    this->ui->valueTotDynMax->setText(Misc::FormatSize(totDynMax));
     this->ui->labelOvercommitValue->setText(QString("%1%").arg(overcommit));
-    this->ui->valueControlDomain->setText(Misc::FormatMemorySize(dom0));
+    this->ui->valueControlDomain->setText(Misc::FormatSize(dom0));
     
     // Initialize the shiny bar
     this->ui->hostShinyBar->Initialize(this->host_, xenOverhead, dom0);

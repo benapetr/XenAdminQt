@@ -27,8 +27,9 @@
 
 #include "vdipropertiesdialog.h"
 #include "ui_vdipropertiesdialog.h"
-#include "xen/vdi.h"
-#include "xen/sr.h"
+#include "xenlib/utils/misc.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/xen/sr.h"
 #include <QMessageBox>
 #include <QPushButton>
 #include <QDebug>
@@ -77,7 +78,7 @@ void VdiPropertiesDialog::populateDialog()
     this->m_originalSize = this->m_vdi->VirtualSize();
     double sizeGB = this->m_originalSize / (1024.0 * 1024.0 * 1024.0);
 
-    this->ui->currentSizeValueLabel->setText(QString::number(sizeGB, 'f', 2) + " GB");
+    this->ui->currentSizeValueLabel->setText(Misc::FormatSize(this->m_originalSize));
     this->ui->sizeSpinBox->setValue(sizeGB);
 
     // Check if resize is allowed
@@ -162,8 +163,7 @@ void VdiPropertiesDialog::validateResize()
     // Check if size is decreasing
     if (newSize < this->m_originalSize)
     {
-        this->ui->resizeWarningLabel->setText(
-            "Error: Cannot decrease virtual disk size. Only increases are supported.");
+        this->ui->resizeWarningLabel->setText("Error: Cannot decrease virtual disk size. Only increases are supported.");
         this->ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(false);
         return;
     }
@@ -171,8 +171,7 @@ void VdiPropertiesDialog::validateResize()
     // Check if size change is too small (< 10MB)
     if (sizeDiff > 0 && sizeDiff < (10 * 1024 * 1024))
     {
-        this->ui->resizeWarningLabel->setText(
-            "Warning: Size increase is less than 10 MB. This may not be detected.");
+        this->ui->resizeWarningLabel->setText("Warning: Size increase is less than 10 MB. This may not be detected.");
     }
 
     // Get SR to check free space
@@ -197,8 +196,7 @@ void VdiPropertiesDialog::validateResize()
         const qint64 MAX_VDI_SIZE = 2LL * 1024 * 1024 * 1024 * 1024; // 2TB
         if (newSize > MAX_VDI_SIZE)
         {
-            this->ui->resizeWarningLabel->setText(
-                "Error: Maximum virtual disk size is 2 TB for most storage types.");
+            this->ui->resizeWarningLabel->setText("Error: Maximum virtual disk size is 2 TB for most storage types.");
             this->ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(false);
             return;
         }
@@ -211,8 +209,7 @@ void VdiPropertiesDialog::validateAndAccept()
     QString name = this->getVdiName();
     if (name.isEmpty())
     {
-        QMessageBox::warning(this, "Validation Error",
-                             "Virtual disk name cannot be empty.");
+        QMessageBox::warning(this, "Validation Error", "Virtual disk name cannot be empty.");
         this->ui->nameLineEdit->setFocus();
         return;
     }
@@ -223,8 +220,7 @@ void VdiPropertiesDialog::validateAndAccept()
         qint64 newSize = this->getNewSize();
         if (newSize < this->m_originalSize)
         {
-            QMessageBox::warning(this, "Validation Error",
-                                 "Cannot decrease virtual disk size. Only increases are supported.");
+            QMessageBox::warning(this, "Validation Error", "Cannot decrease virtual disk size. Only increases are supported.");
             return;
         }
     }

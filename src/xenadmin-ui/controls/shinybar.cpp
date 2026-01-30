@@ -172,7 +172,7 @@ void ShinyBar::DrawRuler(QPainter& painter, const QRect& barArea, qint64 totalVa
     QFontMetrics fm(font);
 
     // Find the size of the longest label
-    QString maxLabel = Misc::FormatMemorySize(totalValue);
+    QString maxLabel = Misc::FormatSize(totalValue);
     int longest = fm.horizontalAdvance(maxLabel);
 
     // Calculate a suitable increment
@@ -200,7 +200,7 @@ void ShinyBar::DrawRuler(QPainter& painter, const QRect& barArea, qint64 totalVa
         // Draw label
         if (withLabel)
         {
-            QString label = Misc::FormatMemorySize(static_cast<qint64>(x));
+            QString label = Misc::FormatSize(static_cast<qint64>(x));
             int textWidth = fm.horizontalAdvance(label);
             int textLeft = px - textWidth / 2;
             QRect textRect(textLeft, textTop, textWidth, fm.height());

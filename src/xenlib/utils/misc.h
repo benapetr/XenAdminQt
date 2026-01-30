@@ -49,7 +49,7 @@ class Misc
          */
         static int NaturalCompare(const QString& s1, const QString& s2);
 
-        static QString FormatMemorySize(qint64 bytes);
+        static QString FormatSize(qint64 bytes);
 
         static QString FormatUptime(qint64 seconds);
 };

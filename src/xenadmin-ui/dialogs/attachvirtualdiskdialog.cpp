@@ -31,6 +31,7 @@
 #include <QDebug>
 #include "attachvirtualdiskdialog.h"
 #include "ui_attachvirtualdiskdialog.h"
+#include "xenlib/utils/misc.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/vdi.h"
@@ -194,13 +195,7 @@ void AttachVirtualDiskDialog::populateVDITable()
         QString name = vdi->GetName().isEmpty() ? "Unnamed" : vdi->GetName();
         QString description = vdi->GetDescription();
         qint64 virtualSize = vdi->VirtualSize();
-
-        QString size = "N/A";
-        if (virtualSize > 0)
-        {
-            double sizeGB = virtualSize / (1024.0 * 1024.0 * 1024.0);
-            size = QString::number(sizeGB, 'f', 2) + " GB";
-        }
+        QString size = Misc::FormatSize(virtualSize);
 
         int row = this->ui->vdiTable->rowCount();
         this->ui->vdiTable->insertRow(row);

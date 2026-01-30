@@ -109,7 +109,7 @@ int Misc::NaturalCompare(const QString& s1, const QString& s2)
     return len1 - len2;
 }
 
-QString Misc::FormatMemorySize(qint64 bytes)
+QString Misc::FormatSize(qint64 bytes)
 {
     const qint64 KB = 1024;
     const qint64 MB = KB * 1024;

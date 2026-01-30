@@ -290,7 +290,7 @@ void VMShinyBar::paintEvent(QPaintEvent* event)
         leftWidth = barArea.width();
     
     QRect usedRect(barArea.left(), barArea.top(), leftWidth, barArea.height());
-    QString bytesString = Misc::FormatMemorySize(this->memoryUsed_);
+    QString bytesString = Misc::FormatSize(this->memoryUsed_);
     QString toolTip = this->multiple_ ?
         QString("Current memory usage (average): %1").arg(bytesString) :
         QString("Current memory usage: %1").arg(bytesString);
@@ -494,7 +494,7 @@ void VMShinyBar::DrawGrid(QPainter& painter, const QRect& barArea, double bytesP
         // Label
         if (withLabel)
         {
-            label = Misc::FormatMemorySize(static_cast<qint64>(x));
+            label = Misc::FormatSize(static_cast<qint64>(x));
             QSize size = fm.size(Qt::TextSingleLine, label);
             QRect textRect(QPoint(pos - size.width() / 2, textTop), size);
             

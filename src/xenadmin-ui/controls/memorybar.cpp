@@ -99,7 +99,7 @@ void MemoryBar::paintEvent(QPaintEvent* event)
                           static_cast<int>(left + width) - static_cast<int>(left),
                           barArea.height());
 
-        QString text = segment.name + "\n" + Misc::FormatMemorySize(segment.bytes);
+        QString text = segment.name + "\n" + Misc::FormatSize(segment.bytes);
         drawSegment(painter, barArea, segmentRect, segment.color, text);
 
         left += width;
@@ -203,7 +203,7 @@ void MemoryBar::drawRuler(QPainter& painter, const QRect& barArea)
     painter.setFont(font);
     QFontMetrics fm(font);
 
-    QString maxLabel = Misc::FormatMemorySize(m_totalMemory);
+    QString maxLabel = Misc::FormatSize(m_totalMemory);
     int longest = fm.horizontalAdvance(maxLabel);
 
     double bytesPerPixel = static_cast<double>(m_totalMemory) / static_cast<double>(barArea.width());
@@ -226,7 +226,7 @@ void MemoryBar::drawRuler(QPainter& painter, const QRect& barArea)
         {
             if (m_totalMemory <= BINARY_GIGA || static_cast<qint64>(x) % (BINARY_GIGA / 2) == 0)
             {
-                QString label = Misc::FormatMemorySize(static_cast<qint64>(x));
+                QString label = Misc::FormatSize(static_cast<qint64>(x));
                 QSize size = fm.size(Qt::TextSingleLine, label);
                 QRect textRect(QPoint(pos - size.width() / 2, textTop), size);
                 painter.drawText(textRect, Qt::AlignCenter, label);
@@ -262,7 +262,7 @@ void MemoryBar::mouseMoveEvent(QMouseEvent* event)
         if (segmentRect.contains(event->pos()))
         {
             QString tooltip = segment.tooltip.isEmpty()
-                                  ? (segment.name + "\n" + Misc::FormatMemorySize(segment.bytes))
+                                  ? (segment.name + "\n" + Misc::FormatSize(segment.bytes))
                                   : segment.tooltip;
             // Qt5 compatibility: use globalPos() instead of globalPosition()
             QToolTip::showText(event->globalPos(), tooltip, this);

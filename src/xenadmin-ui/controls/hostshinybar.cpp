@@ -203,15 +203,15 @@ void HostShinyBar::DrawHostSegment(QPainter& painter, qint64 mem, double bytesPe
     }
     
     // Format memory size
-    QString memText = Misc::FormatMemorySize(mem);
+    QString memText = Misc::FormatSize(mem);
     QString displayText = QString("%1 %2").arg(name, memText);
     
     // Draw the segment using base class method
     ShinyBar::DrawSegmentFill(painter, barArea, segmentBounds, color, displayText);
 
     QString tooltip = name.isEmpty()
-        ? Misc::FormatMemorySize(mem)
-        : QString("%1\n%2").arg(name, Misc::FormatMemorySize(mem));
+        ? Misc::FormatSize(mem)
+        : QString("%1\n%2").arg(name, Misc::FormatSize(mem));
     SegmentInfo info;
     info.rect = segmentBounds;
     info.tooltip = tooltip;

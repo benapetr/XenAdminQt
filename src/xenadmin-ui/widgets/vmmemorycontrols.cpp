@@ -154,8 +154,8 @@ void VMMemoryControls::Refresh()
         qint64 dynMax = vm0->GetMemoryDynamicMax();
         qint64 statMax = vm0->GetMemoryStaticMax();
         
-        this->valueDynMin_->setText(Misc::FormatMemorySize(dynMin));
-        this->valueDynMax_->setText(Misc::FormatMemorySize(dynMax));
+        this->valueDynMin_->setText(Misc::FormatSize(dynMin));
+        this->valueDynMax_->setText(Misc::FormatSize(dynMax));
         
         // Hide static max if it's the same as dynamic max
         if (dynMax == statMax)
@@ -167,7 +167,7 @@ void VMMemoryControls::Refresh()
         {
             this->labelStatMax_->setVisible(true);
             this->valueStatMax_->setVisible(true);
-            this->valueStatMax_->setText(Misc::FormatMemorySize(statMax));
+            this->valueStatMax_->setText(Misc::FormatSize(statMax));
         }
         
         this->labelDynMin_->setText(tr("Dynamic Minimum:"));
@@ -178,7 +178,7 @@ void VMMemoryControls::Refresh()
     {
         // For VMs without ballooning, just show static memory as "Memory"
         qint64 statMax = vm0->GetMemoryStaticMax();
-        this->valueDynMin_->setText(Misc::FormatMemorySize(statMax));
+        this->valueDynMin_->setText(Misc::FormatSize(statMax));
         this->labelDynMin_->setText(tr("Memory:"));
         
         // Hide dynamic max and static max rows

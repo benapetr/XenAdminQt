@@ -192,16 +192,14 @@ void PhysicalStorageTabPage::populateHostStorage()
                 virtualAllocation += vdi->VirtualSize();
         }
 
-        QString sizeText = Misc::FormatMemorySize(physicalSize);
+        QString sizeText = Misc::FormatSize(physicalSize);
         QString usageText = "N/A";
         if (physicalSize > 0)
         {
-            double usedGB = physicalUtilisation / (1024.0 * 1024.0 * 1024.0);
             double percent = (double)physicalUtilisation / (double)physicalSize * 100.0;
-            usageText = QString::number(usedGB, 'f', 2) + " GB (" +
-                        QString::number(percent, 'f', 1) + "%)";
+            usageText = Misc::FormatSize(physicalUtilisation) + " (" + QString::number(percent, 'f', 1) + "%)";
         }
-        QString virtAllocText = Misc::FormatMemorySize(virtualAllocation);
+        QString virtAllocText = Misc::FormatSize(virtualAllocation);
 
         // Add row to table
         int row = this->ui->storageTable->rowCount();
@@ -304,24 +302,14 @@ void PhysicalStorageTabPage::populatePoolStorage()
                 virtualAllocation += vdi->VirtualSize();
         }
 
-        // Format sizes in human-readable format
-        auto formatSize = [](qint64 bytes) -> QString {
-            if (bytes <= 0)
-                return "N/A";
-            double gb = bytes / (1024.0 * 1024.0 * 1024.0);
-            return QString::number(gb, 'f', 2) + " GB";
-        };
-
-        QString sizeText = formatSize(physicalSize);
+        QString sizeText = Misc::FormatSize(physicalSize);
         QString usageText = "N/A";
         if (physicalSize > 0)
         {
-            double usedGB = physicalUtilisation / (1024.0 * 1024.0 * 1024.0);
             double percent = (double)physicalUtilisation / (double)physicalSize * 100.0;
-            usageText = QString::number(usedGB, 'f', 2) + " GB (" +
-                        QString::number(percent, 'f', 1) + "%)";
+            usageText = Misc::FormatSize(physicalUtilisation) + " (" + QString::number(percent, 'f', 1) + "%)";
         }
-        QString virtAllocText = formatSize(virtualAllocation);
+        QString virtAllocText = Misc::FormatSize(virtualAllocation);
 
         // Add row to table
         int row = this->ui->storageTable->rowCount();
