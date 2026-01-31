@@ -28,6 +28,9 @@
 #include "detachsraction.h"
 #include "../../../xencache.h"
 #include "../../network/connection.h"
+#include "../../pbd.h"
+#include "../../pool.h"
+#include "../../sr.h"
 #include "../../xenapi/xenapi_PBD.h"
 #include <QDebug>
 
@@ -38,11 +41,8 @@ QString getCoordinatorRef(XenConnection* connection)
     if (!connection || !connection->GetCache())
         return QString();
 
-    QList<QVariantMap> pools = connection->GetCache()->GetAllData("pool");
-    if (pools.isEmpty())
-        return QString();
-
-    return pools.first().value("master").toString();
+    QSharedPointer<Pool> pool = connection->GetCache()->GetPool();
+    return pool ? pool->GetMasterHostRef() : QString();
 }
 }
 
@@ -57,8 +57,8 @@ DetachSrAction::DetachSrAction(XenConnection* connection,
                      parent),
       m_srRef(srRef), m_srName(srName), m_destroyPbds(destroyPbds), m_currentPbdIndex(0)
 {
-    AddApiMethodToRoleCheck("Async.PBD.unplug");
-    if (m_destroyPbds)
+    this->AddApiMethodToRoleCheck("Async.PBD.unplug");
+    if (this->m_destroyPbds)
     {
         AddApiMethodToRoleCheck("Async.PBD.destroy");
     }
@@ -69,33 +69,35 @@ void DetachSrAction::run()
     try
     {
         // Get SR data to find PBDs
-        XenCache* cache = GetConnection()->GetCache();
-        QVariantMap srData = cache->ResolveObjectData("sr", m_srRef);
-        if (srData.isEmpty())
+        XenCache* cache = this->GetConnection()->GetCache();
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>(m_srRef);
+        if (!sr || !sr->IsValid())
         {
-            setError(QString("SR '%1' not found in cache").arg(m_srRef));
+            this->setError(QString("SR '%1' not found in cache").arg(this->m_srRef));
             return;
         }
 
-        QVariantList pbds = srData.value("PBDs").toList();
+        const QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
         if (pbds.isEmpty())
         {
-            setState(Completed);
-            SetDescription(QString("SR '%1' has no PBDs to detach").arg(m_srName));
+            this->setState(Completed);
+            this->SetDescription(QString("SR '%1' has no PBDs to detach").arg(this->m_srName));
             return;
         }
 
         // CA-176935, CA-173497 - Unplug coordinator PBD last for safety
-        m_pbdRefs.clear();
+        this->m_pbdRefs.clear();
         QStringList coordinatorPbds;
         QStringList supporterPbds;
-        const QString coordinatorRef = getCoordinatorRef(GetConnection());
+        const QString coordinatorRef = getCoordinatorRef(this->GetConnection());
 
-        for (const QVariant& pbdVar : pbds)
+        for (const QSharedPointer<PBD>& pbd : pbds)
         {
-            const QString pbdRef = pbdVar.toString();
-            QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
-            const QString hostRef = pbdData.value("host").toString();
+            if (!pbd || !pbd->IsValid())
+                continue;
+
+            const QString pbdRef = pbd->OpaqueRef();
+            const QString hostRef = pbd->GetHostRef();
 
             if (!coordinatorRef.isEmpty() && hostRef == coordinatorRef)
                 coordinatorPbds.append(pbdRef);
@@ -103,75 +105,75 @@ void DetachSrAction::run()
                 supporterPbds.append(pbdRef);
         }
 
-        m_pbdRefs = supporterPbds;
-        m_pbdRefs.append(coordinatorPbds);
+        this->m_pbdRefs = supporterPbds;
+        this->m_pbdRefs.append(coordinatorPbds);
 
-        qDebug() << "DetachSrAction: Will detach" << m_pbdRefs.count()
-                 << "PBDs for SR" << m_srName
+        qDebug() << "DetachSrAction: Will detach" << this->m_pbdRefs.count()
+                 << "PBDs for SR" << this->m_srName
                  << "(coordinator last)";
 
         // Unplug all PBDs
-        unplugPBDs();
+        this->unplugPBDs();
 
         // Destroy PBDs if requested
-        if (m_destroyPbds && GetState() != Failed)
+        if (this->m_destroyPbds && this->GetState() != Failed)
         {
-            destroyPBDs();
+            this->destroyPBDs();
         }
 
-        if (GetState() != Failed)
+        if (this->GetState() != Failed)
         {
-            setState(Completed);
-            SetDescription(QString("Successfully detached SR '%1'").arg(m_srName));
+            this->setState(Completed);
+            this->SetDescription(QString("Successfully detached SR '%1'").arg(this->m_srName));
         }
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to detach SR: %1").arg(e.what()));
+        this->setError(QString("Failed to detach SR: %1").arg(e.what()));
     }
 }
 
 void DetachSrAction::unplugPBDs()
 {
-    if (m_pbdRefs.isEmpty())
+    if (this->m_pbdRefs.isEmpty())
     {
         return;
     }
 
-    int basePercent = GetPercentComplete();
-    int inc = 50 / m_pbdRefs.count(); // First 50% for unplugging
+    int basePercent = this->GetPercentComplete();
+    int inc = 50 / this->m_pbdRefs.count(); // First 50% for unplugging
 
-    for (int i = 0; i < m_pbdRefs.count(); ++i)
+    for (int i = 0; i < this->m_pbdRefs.count(); ++i)
     {
-        const QString& pbdRef = m_pbdRefs[i];
+        const QString& pbdRef = this->m_pbdRefs[i];
 
         try
         {
             qDebug() << "DetachSrAction: Unplugging PBD" << pbdRef
-                     << "(" << (i + 1) << "of" << m_pbdRefs.count() << ")";
-            SetDescription(QString("Unplugging PBD %1 of %2...")
+                     << "(" << (i + 1) << "of" << this->m_pbdRefs.count() << ")";
+            this->SetDescription(QString("Unplugging PBD %1 of %2...")
                                .arg(i + 1)
-                               .arg(m_pbdRefs.count()));
+                               .arg(this->m_pbdRefs.count()));
 
-            QString taskRef = XenAPI::PBD::async_unplug(GetSession(), pbdRef);
+            QString taskRef = XenAPI::PBD::async_unplug(this->GetSession(), pbdRef);
             qDebug() << "DetachSrAction: async_unplug task" << taskRef;
             if (taskRef.isEmpty())
             {
-                setError("PBD async_unplug failed (empty task reference)");
+                this->setError("PBD async_unplug failed (empty task reference)");
                 return;
             }
-            pollToCompletion(taskRef, basePercent + (i * inc), basePercent + ((i + 1) * inc));
+            this->pollToCompletion(taskRef, basePercent + (i * inc), basePercent + ((i + 1) * inc));
             qDebug() << "DetachSrAction: Unplug completed for" << pbdRef
-                     << "state" << GetState() << "error" << GetErrorMessage();
+                     << "state" << this->GetState() << "error" << this->GetErrorMessage();
 
-            if (GetState() == Failed)
+            if (this->GetState() == Failed)
             {
                 return;
             }
 
         } catch (const std::exception& e)
         {
-            setError(QString("Failed to unplug PBD: %1").arg(e.what()));
+            this->setError(QString("Failed to unplug PBD: %1").arg(e.what()));
             return;
         }
     }
@@ -179,35 +181,35 @@ void DetachSrAction::unplugPBDs()
 
 void DetachSrAction::destroyPBDs()
 {
-    if (m_pbdRefs.isEmpty())
+    if (this->m_pbdRefs.isEmpty())
     {
         return;
     }
 
     int basePercent = 50;             // Start from 50% (after unplugging)
-    int inc = 50 / m_pbdRefs.count(); // Second 50% for destroying
+    int inc = 50 / this->m_pbdRefs.count(); // Second 50% for destroying
 
-    for (int i = 0; i < m_pbdRefs.count(); ++i)
+    for (int i = 0; i < this->m_pbdRefs.count(); ++i)
     {
-        const QString& pbdRef = m_pbdRefs[i];
+        const QString& pbdRef = this->m_pbdRefs[i];
 
         try
         {
-            SetDescription(QString("Destroying PBD %1 of %2...")
+            this->SetDescription(QString("Destroying PBD %1 of %2...")
                                .arg(i + 1)
-                               .arg(m_pbdRefs.count()));
+                               .arg(this->m_pbdRefs.count()));
 
-            QString taskRef = XenAPI::PBD::async_destroy(GetSession(), pbdRef);
-            pollToCompletion(taskRef, basePercent + (i * inc), basePercent + ((i + 1) * inc));
+            QString taskRef = XenAPI::PBD::async_destroy(this->GetSession(), pbdRef);
+            this->pollToCompletion(taskRef, basePercent + (i * inc), basePercent + ((i + 1) * inc));
 
-            if (GetState() == Failed)
+            if (this->GetState() == Failed)
             {
                 return;
             }
 
         } catch (const std::exception& e)
         {
-            setError(QString("Failed to destroy PBD: %1").arg(e.what()));
+            this->setError(QString("Failed to destroy PBD: %1").arg(e.what()));
             return;
         }
     }

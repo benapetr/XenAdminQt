@@ -49,11 +49,11 @@ VbdEditAction::VbdEditAction(const QString& vbdRef,
     , devicePosition_(devicePosition)
 {
     // Register API methods for RBAC checks
-    AddApiMethodToRoleCheck("VBD.set_mode");
-    AddApiMethodToRoleCheck("VBD.set_qos_algorithm_params");
-    AddApiMethodToRoleCheck("VBD.set_userdevice");
-    AddApiMethodToRoleCheck("VBD.plug");
-    AddApiMethodToRoleCheck("VBD.unplug");
+    this->AddApiMethodToRoleCheck("VBD.set_mode");
+    this->AddApiMethodToRoleCheck("VBD.set_qos_algorithm_params");
+    this->AddApiMethodToRoleCheck("VBD.set_userdevice");
+    this->AddApiMethodToRoleCheck("VBD.plug");
+    this->AddApiMethodToRoleCheck("VBD.unplug");
 }
 
 void VbdEditAction::run()

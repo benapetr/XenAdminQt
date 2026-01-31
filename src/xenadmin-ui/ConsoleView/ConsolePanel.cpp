@@ -232,7 +232,7 @@ void ConsolePanel::SetCurrentSource(QSharedPointer<XenObject> xen_obj)
     {
         qDebug() << "ConsolePanel: Creating new VNCView for VM:" << vmRef;
 
-        QSharedPointer<VM> vm = qSharedPointerCast<VM>(xen_obj);
+        QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(xen_obj);
 
         if (!vm)
         {
@@ -308,7 +308,7 @@ void ConsolePanel::SetCurrentSourceHost(QSharedPointer<XenObject> xen_obj)
     {
         qDebug() << "ConsolePanel: No connection available";
 
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(xen_obj);
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(xen_obj);
 
         if (!host)
         {

@@ -84,7 +84,7 @@ QString ExportTemplateCommand::getSelectedTemplateRef() const
     if (objectType != XenObjectType::VM)
         return QString();
 
-    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->GetObject());
+    QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(this->GetObject());
     if (!vm || !vm->IsTemplate())
         return QString();
 
@@ -101,7 +101,7 @@ QString ExportTemplateCommand::getSelectedTemplateName() const
     if (objectType != XenObjectType::VM)
         return QString();
 
-    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->GetObject());
+    QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(this->GetObject());
     if (!vm || !vm->IsTemplate())
         return QString();
 

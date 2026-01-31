@@ -416,7 +416,7 @@ bool MainWindow::mixedVmTemplateSelection() const
         if (!obj || obj->GetObjectType() != XenObjectType::VM)
             continue;
 
-        QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
+        QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(obj);
         if (!vm)
             continue;
 
@@ -1046,7 +1046,7 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
         // C# Reference: xenadmin/XenAdmin/MainWindow.cs line 1376
         if (cvmConsoleTab)
         {
-            QSharedPointer<SR> srObj = qSharedPointerCast<SR>(xen_obj);
+            QSharedPointer<SR> srObj = qSharedPointerDynamicCast<SR>(xen_obj);
             if (srObj && srObj->HasDriverDomain())
                 newTabs.append(cvmConsoleTab);
         }

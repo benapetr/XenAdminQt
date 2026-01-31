@@ -64,27 +64,27 @@ void DetachVirtualDiskAction::run()
         throw std::runtime_error("Not connected to XenServer");
     }
 
-    if (!m_vm)
+    if (!this->m_vm)
     {
         throw std::runtime_error("VM object is null");
     }
 
     // Find the VBD that connects this VDI to the VM
-    SetPercentComplete(0);
-    SetDescription(tr("Finding VBD..."));
+    this->SetPercentComplete(0);
+    this->SetDescription(tr("Finding VBD..."));
 
     QString vbdRef;
-    QStringList vbdRefs = m_vm->GetVBDRefs();
+    QStringList vbdRefs = this->m_vm->GetVBDRefs();
 
     for (const QString& ref : vbdRefs)
     {
         QVariantMap vbdRecord = XenAPI::VBD::get_record(session, ref);
         QString vdiRefFromVBD = vbdRecord.value("VDI").toString();
 
-        if (vdiRefFromVBD == m_vdiRef)
+        if (vdiRefFromVBD == this->m_vdiRef)
         {
             vbdRef = ref;
-            m_vbdRef = ref;
+            this->m_vbdRef = ref;
             break;
         }
     }
@@ -101,8 +101,8 @@ void DetachVirtualDiskAction::run()
     // Step 1: Unplug VBD if currently attached
     if (currentlyAttached)
     {
-        SetPercentComplete(10);
-        SetDescription(tr("Checking if VBD can be unplugged..."));
+        this->SetPercentComplete(10);
+        this->SetDescription(tr("Checking if VBD can be unplugged..."));
 
         // Check if unplug is allowed
         QVariant allowedOpsVar = XenAPI::VBD::get_allowed_operations(session, vbdRef);
@@ -121,21 +121,21 @@ void DetachVirtualDiskAction::run()
 
         if (allowedOps.contains("unplug"))
         {
-            SetPercentComplete(20);
-            SetDescription(tr("Unplugging VBD..."));
+            this->SetPercentComplete(20);
+            this->SetDescription(tr("Unplugging VBD..."));
 
             QString taskRef = XenAPI::VBD::async_unplug(session, vbdRef);
-            pollToCompletion(taskRef, 20, 50);
+            this->pollToCompletion(taskRef, 20, 50);
         }
     }
 
     // Step 2: Destroy VBD
-    SetPercentComplete(50);
-    SetDescription(tr("Destroying VBD..."));
+    this->SetPercentComplete(50);
+    this->SetDescription(tr("Destroying VBD..."));
 
     QString taskRef = XenAPI::VBD::async_destroy(session, vbdRef);
-    pollToCompletion(taskRef, 50, 100);
+    this->pollToCompletion(taskRef, 50, 100);
 
-    SetPercentComplete(100);
-    SetDescription(tr("Virtual disk detached"));
+    this->SetPercentComplete(100);
+    this->SetDescription(tr("Virtual disk detached"));
 }

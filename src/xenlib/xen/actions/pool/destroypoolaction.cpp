@@ -51,37 +51,37 @@ void DestroyPoolAction::run()
 {
     try
     {
-        SetPercentComplete(0);
-        SetDescription("Checking pool state...");
+        this->SetPercentComplete(0);
+        this->SetDescription("Checking pool state...");
 
         // Check that pool has only one host
-        QStringList hostRefs = GetConnection()->GetCache()->GetAllRefs(XenObjectType::Host);
+        QStringList hostRefs = this->GetConnection()->GetCache()->GetAllRefs(XenObjectType::Host);
         if (hostRefs.size() > 1)
         {
             throw std::runtime_error("Cannot destroy pool with multiple hosts. Remove all hosts except coordinator first.");
         }
 
-        SetPercentComplete(20);
-        SetDescription("Destroying pool...");
+        this->SetPercentComplete(20);
+        this->SetDescription("Destroying pool...");
 
         // Clear pool name and description to "destroy" it
         // This effectively converts the pool back to a standalone host
-        XenAPI::Pool::set_name_label(GetSession(), this->m_pool->OpaqueRef(), "");
+        XenAPI::Pool::set_name_label(this->GetSession(), this->m_pool->OpaqueRef(), "");
 
-        SetPercentComplete(70);
-        XenAPI::Pool::set_name_description(GetSession(), this->m_pool->OpaqueRef(), "");
+        this->SetPercentComplete(70);
+        XenAPI::Pool::set_name_description(this->GetSession(), this->m_pool->OpaqueRef(), "");
 
-        SetPercentComplete(100);
-        SetDescription("Pool destroyed successfully");
+        this->SetPercentComplete(100);
+        this->SetDescription("Pool destroyed successfully");
 
     } catch (const std::exception& e)
     {
-        if (IsCancelled())
+        if (this->IsCancelled())
         {
-            SetDescription("Destroy cancelled");
+            this->SetDescription("Destroy cancelled");
         } else
         {
-            setError(QString("Failed to destroy pool: %1").arg(e.what()));
+            this->setError(QString("Failed to destroy pool: %1").arg(e.what()));
         }
     }
 }

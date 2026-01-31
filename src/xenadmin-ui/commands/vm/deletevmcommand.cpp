@@ -124,7 +124,7 @@ QList<QSharedPointer<VM>> DeleteVMCommand::collectSelectedVMs(bool includeTempla
         if (type != XenObjectType::VM)
             continue;
 
-        QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
+        QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(obj);
         if (!vm)
             continue;
         if (!includeTemplates && vm->IsTemplate())
@@ -135,7 +135,7 @@ QList<QSharedPointer<VM>> DeleteVMCommand::collectSelectedVMs(bool includeTempla
     if (!vms.isEmpty())
         return vms;
 
-    QSharedPointer<VM> singleVm = qSharedPointerCast<VM>(this->GetObject());
+    QSharedPointer<VM> singleVm = qSharedPointerDynamicCast<VM>(this->GetObject());
     if (singleVm)
     {
         if (!singleVm->IsTemplate() || includeTemplates)

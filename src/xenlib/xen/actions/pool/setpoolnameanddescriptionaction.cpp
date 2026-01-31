@@ -42,34 +42,34 @@ void SetPoolNameAndDescriptionAction::run()
 {
     try
     {
-        if (!GetSession())
+        if (!this->GetSession())
         {
             throw std::runtime_error("Not connected to XenServer");
         }
 
-        SetPercentComplete(0);
+        this->SetPercentComplete(0);
 
         // Set pool name if provided
         if (!this->m_name.isNull())
         {
-            SetDescription(QString("Setting pool name to '%1'...").arg(this->m_name));
-            XenAPI::Pool::set_name_label(GetSession(), this->m_pool->OpaqueRef(), this->m_name);
-            SetPercentComplete(50);
+            this->SetDescription(QString("Setting pool name to '%1'...").arg(this->m_name));
+            XenAPI::Pool::set_name_label(this->GetSession(), this->m_pool->OpaqueRef(), this->m_name);
+            this->SetPercentComplete(50);
         }
 
         // Set pool description if provided
         if (!this->m_description.isNull())
         {
-            SetDescription(QString("Setting pool description..."));
-            XenAPI::Pool::set_name_description(GetSession(), this->m_pool->OpaqueRef(), this->m_description);
-            SetPercentComplete(100);
+            this->SetDescription(QString("Setting pool description..."));
+            XenAPI::Pool::set_name_description(this->GetSession(), this->m_pool->OpaqueRef(), this->m_description);
+            this->SetPercentComplete(100);
         }
 
-        SetDescription("Pool properties updated successfully");
+        this->SetDescription("Pool properties updated successfully");
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to set pool properties: %1").arg(e.what()));
+        this->setError(QString("Failed to set pool properties: %1").arg(e.what()));
         throw;
     }
 }

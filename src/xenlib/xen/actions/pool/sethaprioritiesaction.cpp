@@ -58,15 +58,15 @@ void SetHaPrioritiesAction::run()
 {
     try
     {
-        SetPercentComplete(0);
-        SetDescription("Configuring HA priorities...");
+        this->SetPercentComplete(0);
+        this->SetDescription("Configuring HA priorities...");
 
-        int totalVMs = m_vmStartupOptions.size();
+        int totalVMs = this->m_vmStartupOptions.size();
         int processedVMs = 0;
 
         // First pass: Move VMs from protected -> unprotected
         // This prevents overcommitment during transition
-        QMapIterator<QString, QVariantMap> it1(m_vmStartupOptions);
+        QMapIterator<QString, QVariantMap> it1(this->m_vmStartupOptions);
         while (it1.hasNext())
         {
             it1.next();
@@ -76,13 +76,13 @@ void SetHaPrioritiesAction::run()
             QString priority = options.value("ha_restart_priority", "").toString();
 
             // Skip VMs that are being set to restart priority (handle in second pass)
-            if (isRestartPriority(priority))
+            if (this->isRestartPriority(priority))
                 continue;
 
-            SetDescription(QString("Setting priority for VM..."));
+            this->SetDescription(QString("Setting priority for VM..."));
 
             // Set HA restart priority
-            XenAPI::VM::set_ha_restart_priority(GetSession(), vmRef, priority);
+            XenAPI::VM::set_ha_restart_priority(this->GetSession(), vmRef, priority);
 
             // Set start order
             if (options.contains("order"))

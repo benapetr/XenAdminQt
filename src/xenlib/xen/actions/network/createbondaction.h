@@ -30,7 +30,9 @@
 
 #include "../../asyncoperation.h"
 #include <QStringList>
-#include <QVariantMap>
+#include <QSharedPointer>
+
+class Host;
 
 /**
  * @brief CreateBondAction - Creates a network bond
@@ -90,7 +92,7 @@ class CreateBondAction : public AsyncOperation
          * @brief Get hosts ordered with coordinator last
          * @return List of host records
          */
-        QList<QVariantMap> getHostsCoordinatorLast() const;
+        QList<QSharedPointer<Host>> getHostsCoordinatorLast() const;
 
         /**
          * @brief Find PIFs on a host matching coordinator PIF device names

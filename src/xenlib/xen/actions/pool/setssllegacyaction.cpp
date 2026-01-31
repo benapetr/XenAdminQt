@@ -66,6 +66,6 @@ void SetSslLegacyAction::run()
     }
     catch (const std::exception& e)
     {
-        setError(QString("Failed to set SSL legacy mode: %1").arg(e.what()));
+        this->setError(QString("Failed to set SSL legacy mode: %1").arg(e.what()));
     }
 }

@@ -27,13 +27,15 @@
 
 #include "attachvirtualdiskcommand.h"
 #include <QDebug>
+#include <QMessageBox>
 #include "../../mainwindow.h"
-#include "xenlib/xencache.h"
-#include "xenlib/xen/vm.h"
-#include "xenlib/xen/actions/vbd/vbdcreateandplugaction.h"
 #include "../../dialogs/attachvirtualdiskdialog.h"
 #include "../../dialogs/actionprogressdialog.h"
-#include <QMessageBox>
+#include "xenlib/xencache.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/vbd.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/xen/actions/vbd/vbdcreateandplugaction.h"
 
 AttachVirtualDiskCommand::AttachVirtualDiskCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
@@ -45,7 +47,7 @@ bool AttachVirtualDiskCommand::CanRun() const
     if (!this->isVMSelected())
         return false;
 
-    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->GetObject());
+    QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(this->GetObject());
 
     if (!vm)
         return false;
@@ -62,19 +64,14 @@ void AttachVirtualDiskCommand::Run()
     if (!this->isVMSelected())
         return;
 
-    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->GetObject());
+    QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(this->GetObject());
 
     if (!vm)
         return;
 
-    QString vmRef = vm->OpaqueRef();
-
-    XenCache* cache = vm->GetCache();
-
     // Check VBD limit
-    QVariantMap vmData = vm->GetData();
-    int maxVBDs = this->getMaxVBDsAllowed(vmData);
-    int currentVBDs = this->getCurrentVBDCount(vmRef, cache);
+    int maxVBDs = this->getMaxVBDsAllowed(vm);
+    int currentVBDs = this->getCurrentVBDCount(vm);
 
     if (currentVBDs >= maxVBDs)
     {
@@ -126,11 +123,11 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     qDebug() << "[AttachVirtualDiskCommand] Device position:" << devicePosition
              << "Mode:" << mode << "Bootable:" << bootable;
 
-    XenCache* cache = vm->GetCache();
-
     // Get VDI name for UI feedback
-    QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
-    QString vdiName = vdiData.value("name_label", "Virtual Disk").toString();
+    QSharedPointer<VDI> vdi = vm->GetCache()->ResolveObject<VDI>(vdiRef);
+    QString vdiName = vdi ? vdi->GetName() : QString();
+    if (vdiName.isEmpty())
+        vdiName = "Virtual Disk";
     qDebug() << "[AttachVirtualDiskCommand] VDI name:" << vdiName;
 
     // Build VBD record (matches C# AttachDiskDialog.cs lines 206-216)
@@ -146,11 +143,11 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     vbdRecord["unpluggable"] = true;
 
     // Check if this is the first VBD for this VDI (owner flag)
-    QList<QVariantMap> allVbds = cache->GetAllData(XenObjectType::VBD);
+    QList<QSharedPointer<VBD>> allVbds = vm->GetCache()->GetAll<VBD>();
     bool isOwner = true;
-    for (const QVariantMap& vbd : allVbds)
+    for (const QSharedPointer<VBD>& vbd : allVbds)
     {
-        if (vbd.value("VDI").toString() == vdiRef)
+        if (vbd && vbd->GetVDIRef() == vdiRef)
         {
             isOwner = false;
             break;
@@ -220,10 +217,13 @@ QString AttachVirtualDiskCommand::getSelectedVMRef() const
     return this->getSelectedObjectRef();
 }
 
-int AttachVirtualDiskCommand::getMaxVBDsAllowed(const QVariantMap& vmData) const
+int AttachVirtualDiskCommand::getMaxVBDsAllowed(const QSharedPointer<VM>& vm) const
 {
+    if (!vm)
+        return 0;
+
     // Check allowed_VBD_devices property
-    QVariantList allowedDevices = vmData.value("allowed_VBD_devices").toList();
+    QVariantList allowedDevices = vm->GetData().value("allowed_VBD_devices").toList();
     if (!allowedDevices.isEmpty())
         return allowedDevices.size();
 
@@ -231,17 +231,10 @@ int AttachVirtualDiskCommand::getMaxVBDsAllowed(const QVariantMap& vmData) const
     return 16;
 }
 
-int AttachVirtualDiskCommand::getCurrentVBDCount(const QString& vmRef, XenCache* cache) const
+int AttachVirtualDiskCommand::getCurrentVBDCount(const QSharedPointer<VM>& vm) const
 {
-    // Get all VBDs and count those belonging to this VM
-    QList<QVariantMap> vbds = cache->GetAllData(XenObjectType::VBD);
-    int count = 0;
+    if (!vm)
+        return 0;
 
-    for (const QVariantMap& vbd : vbds)
-    {
-        if (vbd.value("VM").toString() == vmRef)
-            count++;
-    }
-
-    return count;
+    return vm->GetVBDs().size();
 }

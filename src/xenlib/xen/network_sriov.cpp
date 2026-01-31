@@ -29,8 +29,7 @@
 #include "pif.h"
 #include "../xencache.h"
 
-NetworkSriov::NetworkSriov(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+NetworkSriov::NetworkSriov(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 

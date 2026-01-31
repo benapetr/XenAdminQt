@@ -172,7 +172,7 @@ void VMStorageTabPage::SetObject(QSharedPointer<XenObject> object)
     // Connect to object updates for real-time CD/DVD changes
     if (object->GetObjectType() == XenObjectType::VM)
     {
-        this->m_vm = qSharedPointerCast<VM>(object);
+        this->m_vm = qSharedPointerDynamicCast<VM>(object);
         connect(object->GetCache(), &XenCache::objectChanged, this, &VMStorageTabPage::onCacheObjectChanged, Qt::UniqueConnection);
     }
 

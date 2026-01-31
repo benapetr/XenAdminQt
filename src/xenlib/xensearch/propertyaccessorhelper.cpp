@@ -180,7 +180,7 @@ QString PropertyAccessorHelper::vmNetworkUsageString(VM* vm)
     
     for (const QString& vifRef : vifRefs)
     {
-        QVariantMap vifData = cache->ResolveObjectData("VIF", vifRef);
+        QVariantMap vifData = cache->ResolveObjectData(XenObjectType::VIF, vifRef);
         QString device = vifData.value("device").toString();
         if (device.isEmpty())
             continue;
@@ -234,7 +234,7 @@ QString PropertyAccessorHelper::vmDiskUsageString(VM* vm)
     
     for (const QString& vbdRef : vbdRefs)
     {
-        QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+        QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
         QString device = vbdData.value("device").toString();
         if (device.isEmpty())
             continue;
@@ -408,7 +408,7 @@ QString PropertyAccessorHelper::hostNetworkUsageString(Host* host)
     
     for (const QString& pifRef : pifRefs)
     {
-        QVariantMap pifData = cache->ResolveObjectData("PIF", pifRef);
+        QVariantMap pifData = cache->ResolveObjectData(XenObjectType::PIF, pifRef);
         bool physical = pifData.value("physical").toBool();
         if (!physical)
             continue;
@@ -495,7 +495,7 @@ QString PropertyAccessorHelper::GetSRHAStatus(SR* sr)
     if (poolRefs.isEmpty())
         return QString();
     
-    QVariantMap poolData = cache->ResolveObjectData("pool", poolRefs.first());
+    QVariantMap poolData = cache->ResolveObjectData(XenObjectType::Pool, poolRefs.first());
     QStringList haStatefiles = poolData.value("ha_statefiles").toStringList();
     
     if (haStatefiles.isEmpty())

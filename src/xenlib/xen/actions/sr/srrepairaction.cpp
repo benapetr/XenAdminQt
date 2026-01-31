@@ -47,33 +47,33 @@ SrRepairAction::SrRepairAction(QSharedPointer<SR> sr,
 {
     if (sr)
     {
-        setAppliesToFromObject(sr);
+        this->setAppliesToFromObject(sr);
     }
 
     // RBAC dependencies
-    AddApiMethodToRoleCheck("PBD.plug");
-    AddApiMethodToRoleCheck("PBD.create");
+    this->AddApiMethodToRoleCheck("PBD.plug");
+    this->AddApiMethodToRoleCheck("PBD.create");
 }
 
 void SrRepairAction::run()
 {
-    if (!m_sr)
+    if (!this->m_sr)
     {
-        setError("No SR specified for repair");
+        this->setError("No SR specified for repair");
         return;
     }
 
     XenAPI::Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
-        setError("Not connected to XenServer");
+        this->setError("Not connected to XenServer");
         return;
     }
 
-    qDebug() << "SrRepairAction: Repairing SR" << m_sr->GetName();
+    qDebug() << "SrRepairAction: Repairing SR" << this->m_sr->GetName();
 
-    QString srRef = m_sr->OpaqueRef();
-    bool srShared = m_sr->IsShared();
+    QString srRef = this->m_sr->OpaqueRef();
+    bool srShared = this->m_sr->IsShared();
 
     // Get all PBDs for this SR
     QVariant pbdsVar = XenAPI::SR::get_PBDs(session, srRef);
@@ -114,7 +114,7 @@ void SrRepairAction::run()
         hostsVar = XenAPI::Host::get_all(session);
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to get host list: %1").arg(e.what()));
+        this->setError(QString("Failed to get host list: %1").arg(e.what()));
         return;
     }
 
@@ -132,7 +132,7 @@ void SrRepairAction::run()
 
     if (hostRefs.isEmpty())
     {
-        setError("No hosts found in pool");
+        this->setError("No hosts found in pool");
         return;
     }
 
@@ -174,7 +174,7 @@ void SrRepairAction::run()
         if (!hasPbd && srShared && !templateDeviceConfig.isEmpty())
         {
             qDebug() << "SrRepairAction: Creating PBD for host" << hostRef;
-            SetDescription("Creating storage connection for host...");
+            this->SetDescription("Creating storage connection for host...");
 
             QVariantMap newPbdRecord;
             newPbdRecord["SR"] = srRef;
@@ -187,9 +187,9 @@ void SrRepairAction::run()
                 QString taskRef = XenAPI::PBD::async_create(session, newPbdRecord);
                 int progressStart = (current * 100) / max;
                 int progressEnd = ((current + 1) * 100) / max;
-                pollToCompletion(taskRef, progressStart, progressEnd);
+                this->pollToCompletion(taskRef, progressStart, progressEnd);
 
-                existingPbdRef = GetResult();
+                existingPbdRef = this->GetResult();
                 hasPbd = true;
                 pbdAttached = false;
 
@@ -211,14 +211,14 @@ void SrRepairAction::run()
         if (hasPbd && !pbdAttached && !existingPbdRef.isEmpty())
         {
             qDebug() << "SrRepairAction: Plugging PBD" << existingPbdRef;
-            SetDescription("Plugging storage on host...");
+            this->SetDescription("Plugging storage on host...");
 
             try
             {
                 QString taskRef = XenAPI::PBD::async_plug(session, existingPbdRef);
                 int progressStart = (current * 100) / max;
                 int progressEnd = ((current + 1) * 100) / max;
-                pollToCompletion(taskRef, progressStart, progressEnd);
+                this->pollToCompletion(taskRef, progressStart, progressEnd);
 
                 current++;
             } catch (const std::exception& e)
@@ -238,16 +238,16 @@ void SrRepairAction::run()
     // Report last error if any occurred
     if (!lastError.isEmpty())
     {
-        SetDescription(lastErrorDescription);
+        this->SetDescription(lastErrorDescription);
         throw std::runtime_error(lastError.toStdString());
     }
 
     // Success
-    SetPercentComplete(100);
-    if (m_isSharedAction)
-        SetDescription(QString("SR '%1' shared successfully").arg(m_sr->GetName()));
+    this->SetPercentComplete(100);
+    if (this->m_isSharedAction)
+        this->SetDescription(QString("SR '%1' shared successfully").arg(this->m_sr->GetName()));
     else
-        SetDescription(QString("SR '%1' repaired successfully").arg(m_sr->GetName()));
+        this->SetDescription(QString("SR '%1' repaired successfully").arg(this->m_sr->GetName()));
 
     qDebug() << "SrRepairAction: Repair complete";
 }

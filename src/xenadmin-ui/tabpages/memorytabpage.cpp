@@ -60,7 +60,7 @@ bool MemoryTabPage::IsApplicableForObjectType(const QString& objectType) const
 
 QSharedPointer<VM> MemoryTabPage::GetVM()
 {
-    return qSharedPointerCast<VM>(this->m_object);
+    return qSharedPointerDynamicCast<VM>(this->m_object);
 }
 
 void MemoryTabPage::refreshContent()
@@ -221,7 +221,7 @@ void MemoryTabPage::populateVMMemory()
 
 void MemoryTabPage::populateHostMemory()
 {
-    QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
+    QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
     if (!host || !host->GetConnection())
         return;
 
@@ -353,7 +353,7 @@ void MemoryTabPage::populateHostMemory()
 
 void MemoryTabPage::populatePoolMemory()
 {
-    QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(this->m_object);
+    QSharedPointer<Pool> pool = qSharedPointerDynamicCast<Pool>(this->m_object);
     if (!pool || !pool->GetConnection())
         return;
 

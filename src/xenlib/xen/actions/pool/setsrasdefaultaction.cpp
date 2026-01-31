@@ -49,20 +49,20 @@ void SetSrAsDefaultAction::run()
 {
     if (!this->m_pool || !this->m_pool->IsValid())
     {
-        setError("Invalid pool object");
+        this->setError("Invalid pool object");
         return;
     }
 
-    if (!GetConnection() || this->m_srRef.isEmpty())
+    if (!this->GetConnection() || this->m_srRef.isEmpty())
     {
-        setError("Invalid connection or SR reference");
+        this->setError("Invalid connection or SR reference");
         return;
     }
 
-    XenAPI::Session* session = GetConnection()->GetSession();
+    XenAPI::Session* session = this->GetConnection()->GetSession();
     if (!session || !session->IsLoggedIn())
     {
-        setError("No valid session");
+        this->setError("No valid session");
         return;
     }
 
@@ -72,11 +72,11 @@ void SetSrAsDefaultAction::run()
         XenAPI::Pool::set_default_SR(session, poolRef, this->m_srRef);
         XenAPI::Pool::set_suspend_image_SR(session, poolRef, this->m_srRef);
         XenAPI::Pool::set_crash_dump_SR(session, poolRef, this->m_srRef);
-        SetDescription("Completed");
+        this->SetDescription("Completed");
     }
     catch (const std::exception& e)
     {
-        setError(QString("Failed to set default SR: %1").arg(e.what()));
+        this->setError(QString("Failed to set default SR: %1").arg(e.what()));
         throw;
     }
 }

@@ -138,7 +138,7 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
     bool isDisconnectedHost = (objectType == XenObjectType::DisconnectedHost || itemType == "disconnected_host");
     if (!isDisconnectedHost && obj && objectType == XenObjectType::Host)
     {
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(obj);
         if (host)
             isDisconnectedHost = !host->IsConnected();
     }
@@ -157,7 +157,7 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
     {
         case XenObjectType::VM:
         {
-            QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
+            QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(obj);
             if (!vm)
                 break;
             if (vm->IsSnapshot())
@@ -170,25 +170,25 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
         }
         case XenObjectType::Host:
         {
-            QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
+            QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(obj);
             this->buildHostContextMenu(menu, host);
             break;
         }
         case XenObjectType::SR:
         {
-            QSharedPointer<SR> sr = qSharedPointerCast<SR>(obj);
+            QSharedPointer<SR> sr = qSharedPointerDynamicCast<SR>(obj);
             this->buildSRContextMenu(menu, sr);
             break;
         }
         case XenObjectType::Pool:
         {
-            QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(obj);
+            QSharedPointer<Pool> pool = qSharedPointerDynamicCast<Pool>(obj);
             this->buildPoolContextMenu(menu, pool);
             break;
         }
         case XenObjectType::Network:
         {
-            QSharedPointer<Network> network = qSharedPointerCast<Network>(obj);
+            QSharedPointer<Network> network = qSharedPointerDynamicCast<Network>(obj);
             this->buildNetworkContextMenu(menu, network);
             break;
         }
@@ -216,7 +216,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
             if (!obj || obj->GetObjectType() != XenObjectType::VM)
                 continue;
 
-            QSharedPointer<VM> selectedVm = qSharedPointerCast<VM>(obj);
+            QSharedPointer<VM> selectedVm = qSharedPointerDynamicCast<VM>(obj);
             if (!selectedVm)
                 continue;
 
@@ -280,7 +280,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
                     QSharedPointer<XenObject> parentObj = parentData.value<QSharedPointer<XenObject>>();
                     if (parentObj && parentObj->GetObjectType() == XenObjectType::Host)
                     {
-                        hostAncestor = qSharedPointerCast<Host>(parentObj);
+                        hostAncestor = qSharedPointerDynamicCast<Host>(parentObj);
                         break;
                     }
                 }
@@ -544,7 +544,7 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM
             if (!obj || obj->GetObjectType() != XenObjectType::VM)
                 continue;
 
-            QSharedPointer<VM> selectedVm = qSharedPointerCast<VM>(obj);
+            QSharedPointer<VM> selectedVm = qSharedPointerDynamicCast<VM>(obj);
             if (!selectedVm)
                 continue;
 

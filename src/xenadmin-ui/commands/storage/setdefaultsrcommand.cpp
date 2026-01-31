@@ -34,8 +34,7 @@
 #include "xencache.h"
 #include <QMessageBox>
 
-SetDefaultSRCommand::SetDefaultSRCommand(MainWindow* mainWindow, QObject* parent)
-    : SRCommand(mainWindow, parent)
+SetDefaultSRCommand::SetDefaultSRCommand(MainWindow* mainWindow, QObject* parent) : SRCommand(mainWindow, parent)
 {
 }
 
@@ -52,13 +51,9 @@ bool SetDefaultSRCommand::CanRun() const
         return false;
 
     // C# SR.IsDefaultSr(sr)
-    QStringList poolRefs = cache ? cache->GetAllRefs(XenObjectType::Pool) : QStringList();
-    if (!poolRefs.isEmpty())
-    {
-        QSharedPointer<Pool> pool = cache->ResolveObject<Pool>(XenObjectType::Pool, poolRefs.first());
-        if (pool && pool->GetDefaultSRRef() == sr->OpaqueRef())
-            return false;
-    }
+    QSharedPointer<Pool> pool = cache->GetPool();
+    if (pool && pool->GetDefaultSRRef() == sr->OpaqueRef())
+        return false;
 
     // C# SR.SupportsVdiCreate() (ISO SRs disallowed)
     if (sr->ContentType() == "iso")

@@ -162,7 +162,7 @@ void SnapshotsTabPage::removeObject()
 
 void SnapshotsTabPage::updateObject()
 {
-    this->m_vm = qSharedPointerCast<VM>(this->m_object);
+    this->m_vm = qSharedPointerDynamicCast<VM>(this->m_object);
     if (!this->m_vm)
         return;
     XenCache* cache = this->m_vm->GetCache();

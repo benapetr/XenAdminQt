@@ -62,16 +62,16 @@ void EnableHAAction::run()
 {
     try
     {
-        SetPercentComplete(0);
-        SetDescription("Configuring HA settings...");
+        this->SetPercentComplete(0);
+        this->SetDescription("Configuring HA settings...");
 
         // Step 1: Set VM restart priorities if provided (matches C# pattern)
-        if (!m_vmStartupOptions.isEmpty())
+        if (!this->m_vmStartupOptions.isEmpty())
         {
-            double increment = 10.0 / qMax(m_vmStartupOptions.size(), 1);
+            double increment = 10.0 / qMax(this->m_vmStartupOptions.size(), 1);
             int i = 0;
 
-            QMapIterator<QString, QVariantMap> it(m_vmStartupOptions);
+            QMapIterator<QString, QVariantMap> it(this->m_vmStartupOptions);
             while (it.hasNext())
             {
                 it.next();
@@ -82,21 +82,21 @@ void EnableHAAction::run()
                 if (options.contains("ha_restart_priority"))
                 {
                     QString priority = options["ha_restart_priority"].toString();
-                    XenAPI::VM::set_ha_restart_priority(GetSession(), vmRef, priority);
+                    XenAPI::VM::set_ha_restart_priority(this->GetSession(), vmRef, priority);
                 }
 
                 // Set start order
                 if (options.contains("order"))
                 {
                     qint64 order = options["order"].toLongLong();
-                    XenAPI::VM::set_order(GetSession(), vmRef, order);
+                    XenAPI::VM::set_order(this->GetSession(), vmRef, order);
                 }
 
                 // Set start delay
                 if (options.contains("start_delay"))
                 {
                     qint64 delay = options["start_delay"].toLongLong();
-                    XenAPI::VM::set_start_delay(GetSession(), vmRef, delay);
+                    XenAPI::VM::set_start_delay(this->GetSession(), vmRef, delay);
                 }
 
                 SetPercentComplete(static_cast<int>(++i * increment));

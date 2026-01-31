@@ -49,7 +49,7 @@ namespace
             return dynamicMin != staticMax;
 
         QString guestMetricsRef = vmData.value("guest_metrics").toString();
-        if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL" || !cache)
+        if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL || !cache)
             return false;
 
         QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);

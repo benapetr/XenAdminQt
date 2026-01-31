@@ -30,8 +30,10 @@
 #include "../../network/connection.h"
 #include "../../session.h"
 #include "../../bond.h"
+#include "../../host.h"
 #include "../../network.h"
 #include "../../pif.h"
+#include "../../pool.h"
 #include "../../xenapi/xenapi_Network.h"
 #include "../../xenapi/xenapi_Bond.h"
 #include "../../../xencache.h"
@@ -98,18 +100,21 @@ void CreateBondAction::run()
         try
         {
             // Get all hosts in pool
-            QList<QVariantMap> hosts = this->GetConnection()->GetCache()->GetAllData("host");
+            QList<QSharedPointer<Host>> hosts = this->GetConnection()->GetCache()->GetAll<Host>();
 
             int inc = hosts.count() > 0 ? 90 / (hosts.count() * 2) : 90;
             int progress = 10;
 
             // Create bond on each host (coordinator last for stability)
-            QList<QVariantMap> orderedHosts = this->getHostsCoordinatorLast();
+            QList<QSharedPointer<Host>> orderedHosts = this->getHostsCoordinatorLast();
 
-            for (const QVariantMap& hostData : orderedHosts)
+            for (const QSharedPointer<Host>& host : orderedHosts)
             {
-                QString hostRef = hostData.value("_ref").toString();
-                QString hostName = hostData.value("name_label").toString();
+                if (!host || !host->IsValid())
+                    continue;
+
+                QString hostRef = host->OpaqueRef();
+                QString hostName = host->GetName();
 
                 // Find physical PIFs on this host corresponding to the coordinator PIFs
                 QStringList hostPifRefs = this->findMatchingPIFsOnHost(hostRef);
@@ -209,8 +214,8 @@ void CreateBondAction::cleanupOnError()
             try
             {
                 // Get bond data to find primary slave
-                QVariantMap bondData = this->GetConnection()->GetCache()->ResolveObjectData("bond", newBond.bondRef);
-                QString primarySlaveRef = bondData.value("primary_slave").toString();
+                QSharedPointer<Bond> bond = this->GetConnection()->GetCache()->ResolveObject<Bond>(newBond.bondRef);
+                QString primarySlaveRef = bond ? bond->PrimarySlaveRef() : QString();
 
                 if (!primarySlaveRef.isEmpty())
                 {
@@ -259,32 +264,34 @@ void CreateBondAction::cleanupOnError()
     this->GetConnection()->SetExpectDisruption(false);
 }
 
-QList<QVariantMap> CreateBondAction::getHostsCoordinatorLast() const
+QList<QSharedPointer<Host>> CreateBondAction::getHostsCoordinatorLast() const
 {
-    QList<QVariantMap> hosts = this->GetConnection()->GetCache()->GetAllData("host");
+    QList<QSharedPointer<Host>> hosts = this->GetConnection()->GetCache()->GetAll<Host>();
     if (hosts.isEmpty())
     {
         return hosts;
     }
 
     // Get the pool to find the coordinator
-    QList<QVariantMap> pools = this->GetConnection()->GetCache()->GetAllData("pool");
-    if (pools.isEmpty())
+    QSharedPointer<Pool> pool = this->GetConnection()->GetCache()->GetPool();
+    if (!pool || !pool->IsValid())
     {
         return hosts; // Not a pool, return as-is
     }
 
-    QVariantMap pool = pools.first();
-    QString coordinatorRef = pool.value("master").toString();
+    QString coordinatorRef = pool->GetMasterHostRef();
 
     // Separate coordinator from other hosts
-    QList<QVariantMap> supporters;
-    QVariantMap coordinatorHost;
+    QList<QSharedPointer<Host>> supporters;
+    QSharedPointer<Host> coordinatorHost;
     bool foundCoordinator = false;
 
-    for (const QVariantMap& host : hosts)
+    for (const QSharedPointer<Host>& host : hosts)
     {
-        if (host.value("_ref").toString() == coordinatorRef)
+        if (!host || !host->IsValid())
+            continue;
+
+        if (host->OpaqueRef() == coordinatorRef)
         {
             coordinatorHost = host;
             foundCoordinator = true;
@@ -309,8 +316,8 @@ QStringList CreateBondAction::findMatchingPIFsOnHost(const QString& hostRef) con
     QStringList deviceNames;
     for (const QString& pifRef : this->m_pifRefs)
     {
-        QVariantMap pifData = this->GetConnection()->GetCache()->ResolveObjectData("pif", pifRef);
-        QString device = pifData.value("device").toString();
+        QSharedPointer<PIF> pif = this->GetConnection()->GetCache()->ResolveObject<PIF>(pifRef);
+        QString device = pif ? pif->GetDevice() : QString();
         if (!device.isEmpty() && !deviceNames.contains(device))
         {
             deviceNames.append(device);
@@ -319,23 +326,24 @@ QStringList CreateBondAction::findMatchingPIFsOnHost(const QString& hostRef) con
 
     // Find PIFs on the target host with matching device names
     QStringList result;
-    QList<QVariantMap> allPifs = this->GetConnection()->GetCache()->GetAllData("pif");
+    QList<QSharedPointer<PIF>> allPifs = this->GetConnection()->GetCache()->GetAll<PIF>();
 
-    for (const QVariantMap& pif : allPifs)
+    for (const QSharedPointer<PIF>& pif : allPifs)
     {
-        if (pif.value("host").toString() != hostRef)
+        if (!pif || !pif->IsValid())
+            continue;
+        if (pif->GetHostRef() != hostRef)
         {
             continue;
         }
 
-        QString device = pif.value("device").toString();
+        QString device = pif->GetDevice();
         if (deviceNames.contains(device))
         {
             // Only include physical PIFs (not VLAN or bond interfaces)
-            bool physical = pif.value("physical", false).toBool();
-            if (physical)
+            if (pif->IsPhysical())
             {
-                result.append(pif.value("_ref").toString());
+                result.append(pif->OpaqueRef());
             }
         }
     }

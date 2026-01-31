@@ -60,7 +60,7 @@ bool VappStartCommand::CanRun() const
             const XenObjectType type = obj->GetObjectType();
             if (type == XenObjectType::VMAppliance)
             {
-                QSharedPointer<VMAppliance> appliance = qSharedPointerCast<VMAppliance>(obj);
+                QSharedPointer<VMAppliance> appliance = qSharedPointerDynamicCast<VMAppliance>(obj);
                 if (appliance)
                     appliances.append(appliance);
                 else
@@ -184,7 +184,7 @@ void VappStartCommand::Run()
                 const XenObjectType type = obj->GetObjectType();
                 if (type == XenObjectType::VMAppliance)
                 {
-                    QSharedPointer<VMAppliance> appliance = qSharedPointerCast<VMAppliance>(obj);
+                    QSharedPointer<VMAppliance> appliance = qSharedPointerDynamicCast<VMAppliance>(obj);
                     if (appliance)
                         appliances.append(appliance);
                     else
@@ -331,8 +331,7 @@ void VappStartCommand::Run()
     // Validate before starting
     if (!this->canStartAppliance(appliance))
     {
-        QMessageBox::warning(this->mainWindow(), tr("Cannot Start vApp"),
-                             tr("VM appliance '%1' cannot be started").arg(appName));
+        QMessageBox::warning(this->mainWindow(), tr("Cannot Start vApp"), tr("VM appliance '%1' cannot be started").arg(appName));
         return;
     }
 
@@ -404,7 +403,7 @@ QString VappStartCommand::getApplianceRefFromVM(const QString& vmRef) const
     QString applianceRef = vmData.value("appliance").toString();
 
     // Check if it's a valid non-null reference
-    if (applianceRef.isEmpty() || applianceRef == "OpaqueRef:NULL")
+    if (applianceRef.isEmpty() || applianceRef == XENOBJECT_NULL)
     {
         return QString();
     }

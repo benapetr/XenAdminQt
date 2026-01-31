@@ -48,26 +48,26 @@ void SyncDatabaseAction::run()
             throw std::runtime_error("Invalid pool object");
         }
 
-        if (!GetSession())
+        if (!this->GetSession())
         {
             throw std::runtime_error("Not connected to XenServer");
         }
 
-        SetPercentComplete(0);
-        SetDescription("Synchronizing database across pool members...");
+        this->SetPercentComplete(0);
+        this->SetDescription("Synchronizing database across pool members...");
 
         // Kick off async database synchronization task
-        QString taskRef = XenAPI::Pool::async_sync_database(GetSession());
+        QString taskRef = XenAPI::Pool::async_sync_database(this->GetSession());
 
         // Poll the task from 0% to 100%
-        pollToCompletion(taskRef, 0, 100);
+        this->pollToCompletion(taskRef, 0, 100);
 
-        SetPercentComplete(100);
-        SetDescription("Database synchronized successfully");
+        this->SetPercentComplete(100);
+        this->SetDescription("Database synchronized successfully");
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to synchronize database: %1").arg(e.what()));
+        this->setError(QString("Failed to synchronize database: %1").arg(e.what()));
         throw;
     }
 }

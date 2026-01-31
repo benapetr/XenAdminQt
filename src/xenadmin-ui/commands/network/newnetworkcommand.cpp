@@ -83,11 +83,11 @@ void NewNetworkCommand::showNewNetworkWizard()
 
     if (selected && selected->GetObjectType() == XenObjectType::Pool)
     {
-        pool = qSharedPointerCast<Pool>(selected);
+        pool = qSharedPointerDynamicCast<Pool>(selected);
         host = pool ? pool->GetMasterHost() : QSharedPointer<Host>();
     } else if (selected && selected->GetObjectType() == XenObjectType::Host)
     {
-        host = qSharedPointerCast<Host>(selected);
+        host = qSharedPointerDynamicCast<Host>(selected);
     }
 
     if (!connection && this->mainWindow() && this->mainWindow()->GetSelectionManager())

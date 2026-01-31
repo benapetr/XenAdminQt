@@ -28,6 +28,7 @@
 #include "forgetsraction.h"
 #include "../../../xencache.h"
 #include "../../network/connection.h"
+#include "../../sr.h"
 #include "../../xenapi/xenapi_SR.h"
 
 ForgetSrAction::ForgetSrAction(XenConnection* connection,
@@ -40,53 +41,45 @@ ForgetSrAction::ForgetSrAction(XenConnection* connection,
                      parent),
       m_srRef(srRef), m_srName(srName)
 {
-    AddApiMethodToRoleCheck("SR.async_forget");
+    this->AddApiMethodToRoleCheck("SR.async_forget");
 }
 
 void ForgetSrAction::run()
 {
     try
     {
-        SetDescription(QString("Forgetting SR '%1'...").arg(m_srName));
+        this->SetDescription(QString("Forgetting SR '%1'...").arg(this->m_srName));
 
         // Check if SR allows forget operation
-        XenCache* cache = GetConnection()->GetCache();
-        QVariantMap srData = cache->ResolveObjectData("sr", m_srRef);
-        if (srData.isEmpty())
+        XenCache* cache = this->GetConnection()->GetCache();
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>(this->m_srRef);
+        if (!sr || !sr->IsValid())
         {
-            setError(QString("SR '%1' not found in cache").arg(m_srRef));
+            this->setError(QString("SR '%1' not found in cache").arg(this->m_srRef));
             return;
         }
 
-        QVariantList allowedOps = srData.value("allowed_operations").toList();
-        bool canForget = false;
-        for (const QVariant& op : allowedOps)
-        {
-            if (op.toString() == "forget")
-            {
-                canForget = true;
-                break;
-            }
-        }
+        const QStringList allowedOps = sr->AllowedOperations();
+        bool canForget = allowedOps.contains("forget");
 
         if (!canForget)
         {
-            setError("SR does not allow 'forget' operation");
+            this->setError("SR does not allow 'forget' operation");
             return;
         }
 
         // Forget SR
-        QString taskRef = XenAPI::SR::async_forget(GetSession(), m_srRef);
-        pollToCompletion(taskRef);
+        QString taskRef = XenAPI::SR::async_forget(this->GetSession(), this->m_srRef);
+        this->pollToCompletion(taskRef);
 
-        if (GetState() != Failed)
+        if (this->GetState() != Failed)
         {
-            setState(Completed);
-            SetDescription(QString("Successfully forgotten SR '%1'").arg(m_srName));
+            this->setState(Completed);
+            this->SetDescription(QString("Successfully forgotten SR '%1'").arg(this->m_srName));
         }
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to forget SR: %1").arg(e.what()));
+        this->setError(QString("Failed to forget SR: %1").arg(e.what()));
     }
 }

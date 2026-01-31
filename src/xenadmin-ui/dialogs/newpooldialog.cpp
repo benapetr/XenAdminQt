@@ -33,6 +33,7 @@
 #include <xen/network/connection.h>
 #include <xen/session.h>
 #include <xen/host.h>
+#include <xen/pool.h>
 #include <xen/actions/pool/createpoolaction.h>
 #include <xen/network/connectionsmanager.h>
 #include <xencache.h>
@@ -118,15 +119,9 @@ void NewPoolDialog::populateConnections()
 
         // Try to get host name from cache
         XenCache* cache = conn->GetCache();
-        QList<QVariantMap> hosts = cache->GetAllData("host");
-        if (!hosts.isEmpty())
-        {
-            QString hostName = hosts.first().value("name_label").toString();
-            if (!hostName.isEmpty())
-            {
-                displayName = hostName;
-            }
-        }
+        QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
+        if (!hosts.isEmpty() && hosts.first() && !hosts.first()->GetName().isEmpty())
+            displayName = hosts.first()->GetName();
 
         this->ui->comboBoxCoordinator->addItem(displayName, QVariant::fromValue(reinterpret_cast<quintptr>(conn)));
     }
@@ -161,15 +156,9 @@ void NewPoolDialog::updateServerList()
         XenCache* cache = conn->GetCache();
         if (cache)
         {
-            QList<QVariantMap> hosts = cache->GetAllData("host");
-            if (!hosts.isEmpty())
-            {
-                QString hostName = hosts.first().value("name_label").toString();
-                if (!hostName.isEmpty())
-                {
-                    displayName = hostName;
-                }
-            }
+            QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
+            if (!hosts.isEmpty() && hosts.first() && !hosts.first()->GetName().isEmpty())
+                displayName = hosts.first()->GetName();
         }
 
         QListWidgetItem* item = new QListWidgetItem(displayName);
@@ -198,14 +187,17 @@ bool NewPoolDialog::isStandaloneConnection(XenConnection* connection) const
     XenCache* cache = connection->GetCache();
 
     // Check if pool has only one host
-    QList<QVariantMap> hosts = cache->GetAllData("host");
+    QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
     if (hosts.size() != 1)
     {
         return false; // Multi-host pool - not standalone
     }
 
-    // It's a standalone server with one host
-    return true;
+    QSharedPointer<Pool> pool = cache->GetPool();
+    if (!pool || !pool->IsValid() || !hosts.first())
+        return false;
+
+    return pool->GetMasterHostRef() == hosts.first()->OpaqueRef();
 }
 
 XenConnection* NewPoolDialog::getCoordinatorConnection() const

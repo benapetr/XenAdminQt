@@ -91,7 +91,7 @@ QList<QSharedPointer<Host>> CertificateCommand::getHosts() const
         if (!obj || obj->GetObjectType() != XenObjectType::Host)
             continue;
 
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(obj);
         if (host && host->IsValid())
             hosts.append(host);
     }

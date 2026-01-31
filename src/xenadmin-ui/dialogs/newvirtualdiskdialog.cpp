@@ -29,6 +29,8 @@
 #include "ui_newvirtualdiskdialog.h"
 #include "xen/network/connection.h"
 #include "xen/vm.h"
+#include "xen/vbd.h"
+#include "xen/sr.h"
 #include "xencache.h"
 #include "controls/srpicker.h"
 #include <QMessageBox>
@@ -78,15 +80,18 @@ void NewVirtualDiskDialog::init()
     connect(this->ui->rescanButton, &QPushButton::clicked, this, &NewVirtualDiskDialog::onRescanClicked);
     connect(this->ui->addButton, &QPushButton::clicked, this, &NewVirtualDiskDialog::validateAndAccept);
 
-    if (!this->m_vmData.isEmpty())
+    if (!this->m_vm.isNull())
     {
-        this->m_vmNameOverride = this->m_vmData.value("name_label", "VM").toString();
-        QVariantList vbdRefs = this->m_vmData.value("VBDs", QVariantList()).toList();
-        for (const QVariant& vbdRefVar : vbdRefs)
+        this->m_vmNameOverride = this->m_vm->GetName();
+        if (this->m_vmNameOverride.isEmpty())
+            this->m_vmNameOverride = "VM";
+
+        QList<QSharedPointer<VBD>> vbds = this->m_vm->GetVBDs();
+        for (const QSharedPointer<VBD>& vbd : vbds)
         {
-            QString vbdRef = vbdRefVar.toString();
-            QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
-            QString userdevice = vbdData.value("userdevice", "").toString();
+            if (!vbd || !vbd->IsValid())
+                continue;
+            QString userdevice = vbd->GetUserdevice();
             if (!userdevice.isEmpty())
                 this->m_usedDevices.append(userdevice);
         }
@@ -138,18 +143,19 @@ int NewVirtualDiskDialog::findNextAvailableDevice() const
     // Find highest device number in use
     int maxDevice = -1;
 
-    QVariantList vbdRefs = this->m_vmData.value("VBDs", QVariantList()).toList();
-    for (const QVariant& vbdRefVar : vbdRefs)
+    if (!this->m_vm.isNull())
     {
-        QString vbdRef = vbdRefVar.toString();
-        QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
-
-        QString userdevice = vbdData.value("userdevice", "").toString();
-        bool ok;
-        int deviceNum = userdevice.toInt(&ok);
-        if (ok && deviceNum > maxDevice)
+        QList<QSharedPointer<VBD>> vbds = this->m_vm->GetVBDs();
+        for (const QSharedPointer<VBD>& vbd : vbds)
         {
-            maxDevice = deviceNum;
+            if (!vbd || !vbd->IsValid())
+                continue;
+
+            QString userdevice = vbd->GetUserdevice();
+            bool ok;
+            int deviceNum = userdevice.toInt(&ok);
+            if (ok && deviceNum > maxDevice)
+                maxDevice = deviceNum;
         }
     }
 
@@ -193,9 +199,8 @@ void NewVirtualDiskDialog::validateInput()
     }
 
     QString srRef = this->ui->srPicker->GetSelectedSR();
-    QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
-
-    if (srData.isEmpty())
+    QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>(srRef);
+    if (!sr || !sr->IsValid())
     {
         this->ui->warningLabel->setText("Error: Selected storage repository not found.");
         this->ui->addButton->setEnabled(false);
@@ -232,8 +237,8 @@ void NewVirtualDiskDialog::validateInput()
     }
 
     // Check SR free space
-    qint64 physicalSize = srData.value("physical_size", 0).toLongLong();
-    qint64 physicalUtilisation = srData.value("physical_utilisation", 0).toLongLong();
+    qint64 physicalSize = sr->PhysicalSize();
+    qint64 physicalUtilisation = sr->PhysicalUtilisation();
     qint64 freeSpace = physicalSize - physicalUtilisation;
 
     if (physicalSize > 0 && requestedSize > freeSpace)

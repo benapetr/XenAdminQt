@@ -28,6 +28,8 @@
 #include "vmsnapshotdeleteaction.h"
 #include "../../../xen/network/connection.h"
 #include "../../../xencache.h"
+#include "../../vbd.h"
+#include "../../vdi.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../xenapi/xenapi_VBD.h"
 #include "../../xenapi/xenapi_VDI.h"
@@ -52,18 +54,13 @@ VMSnapshotDeleteAction::VMSnapshotDeleteAction(QSharedPointer<VM> snapshot,
     SetTitle(QString("Delete snapshot '%1'").arg(m_snapshot->GetName()));
 
     // Get VBDs to destroy (only owned disks)
-    QStringList vbdRefs = m_snapshot->GetVBDRefs();
-    for (const QString& vbdRef : vbdRefs)
+    const QList<QSharedPointer<VBD>> vbds = m_snapshot->GetVBDs();
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        QVariantMap vbdData = m_snapshot->GetConnection()->GetCache()->ResolveObjectData("vbd", vbdRef);
-
         // Check if VBD is owned by this snapshot
         // In XenAPI, VBD.other_config["owner"] == "true" indicates ownership
-        QVariantMap otherConfig = vbdData.value("other_config").toMap();
-        if (otherConfig.value("owner").toString() == "true")
-        {
-            this->m_vbdsToDestroy_.append(vbdRef);
-        }
+        if (vbd && vbd->IsOwner())
+            this->m_vbdsToDestroy_.append(vbd->OpaqueRef());
     }
 }
 
@@ -100,8 +97,8 @@ void VMSnapshotDeleteAction::run()
             {
                 try
                 {
-                    QVariantMap vbdData = GetConnection()->GetCache()->ResolveObjectData("vbd", vbdRef);
-                    QString vdiRef = vbdData.value("VDI").toString();
+                    QSharedPointer<VBD> vbd = GetConnection()->GetCache()->ResolveObject<VBD>(vbdRef);
+                    QString vdiRef = vbd ? vbd->GetVDIRef() : QString();
 
                     if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
                     {

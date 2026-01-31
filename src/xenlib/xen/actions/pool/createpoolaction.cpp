@@ -58,41 +58,41 @@ void CreatePoolAction::run()
 {
     try
     {
-        SetPercentComplete(0);
-        SetDescription("Creating pool...");
+        this->SetPercentComplete(0);
+        this->SetDescription("Creating pool...");
 
         // Get pool reference from cache
         // There should be one pool reference for a standalone coordinator
-        QStringList poolRefs = m_coordinatorConnection->GetCache()->GetAllRefs(XenObjectType::Pool);
+        QStringList poolRefs = this->m_coordinatorConnection->GetCache()->GetAllRefs(XenObjectType::Pool);
         if (poolRefs.isEmpty())
         {
             throw std::runtime_error("No pool found on coordinator");
         }
         QString poolRef = poolRefs.first();
 
-        SetPercentComplete(10);
-        SetDescription("Setting pool name and description...");
+        this->SetPercentComplete(10);
+        this->SetDescription("Setting pool name and description...");
 
         // Set pool name and description on the coordinator
-        XenAPI::Pool::set_name_label(GetSession(), poolRef, m_name);
-        XenAPI::Pool::set_name_description(GetSession(), poolRef, m_description);
+        XenAPI::Pool::set_name_label(this->GetSession(), poolRef, this->m_name);
+        XenAPI::Pool::set_name_description(this->GetSession(), poolRef, this->m_description);
 
-        SetPercentComplete(20);
+        this->SetPercentComplete(20);
 
         // If no members to add, we're done
-        if (m_members.isEmpty())
+        if (this->m_members.isEmpty())
         {
-            SetDescription("Pool created successfully");
+            this->SetDescription("Pool created successfully");
             return;
         }
 
         // Add each member sequentially
         // Progress: 20% done, 80% remaining for members
-        double progressPerMember = 80.0 / m_members.size();
+        double progressPerMember = 80.0 / this->m_members.size();
 
-        for (int i = 0; i < m_members.size(); ++i)
+        for (int i = 0; i < this->m_members.size(); ++i)
         {
-            XenConnection* memberConnection = m_memberConnections.at(i);
+            XenConnection* memberConnection = this->m_memberConnections.at(i);
             // Note: Host* not used in simplified version
 
             int progressStart = 20 + static_cast<int>(i * progressPerMember);

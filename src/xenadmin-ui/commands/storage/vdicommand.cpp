@@ -35,7 +35,7 @@ VDICommand::VDICommand(MainWindow* mainWindow, QObject* parent)
 
 QSharedPointer<VDI> VDICommand::getVDI() const
 {
-    return qSharedPointerCast<VDI>(this->GetObject());
+    return qSharedPointerDynamicCast<VDI>(this->GetObject());
 }
 
 QString VDICommand::getSelectedVDIRef() const

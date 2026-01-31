@@ -28,9 +28,9 @@
 #include "reattachsrcommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/newsrwizard.h"
-#include "xen/sr.h"
-#include "xen/network/connection.h"
-#include "xencache.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
 #include <QDebug>
 

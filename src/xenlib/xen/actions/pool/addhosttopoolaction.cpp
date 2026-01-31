@@ -52,15 +52,15 @@ void AddHostToPoolAction::run()
 {
     try
     {
-        SetPercentComplete(0);
-        SetDescription("Preparing to join pool...");
+        this->SetPercentComplete(0);
+        this->SetDescription("Preparing to join pool...");
 
         // Get pool coordinator address and credentials from pool's session
         // In C# they get Pool.Connection.Hostname and Pool.Connection.Username/Password
-        QString coordinatorAddress = m_poolConnection->GetHostname();
+        QString coordinatorAddress = this->m_poolConnection->GetHostname();
 
         // Get credentials from the pool's session
-        XenAPI::Session* poolSession = m_poolConnection->GetSession();
+        XenAPI::Session* poolSession = this->m_poolConnection->GetSession();
         if (!poolSession)
         {
             throw std::runtime_error("Pool connection has no session");
@@ -73,19 +73,19 @@ void AddHostToPoolAction::run()
             throw std::runtime_error("Missing pool connection credentials");
         }
 
-        SetPercentComplete(5);
-        SetDescription("Joining pool...");
+        this->SetPercentComplete(5);
+        this->SetDescription("Joining pool...");
 
         // Call Pool.async_join from the JOINING HOST's GetSession (matches C# pattern where
         // the action's primary connection is the joining host)
         // This is critical - Pool.async_join must be called from the host being joined, not the pool
-        QString taskRef = XenAPI::Pool::async_join(GetSession(), coordinatorAddress, username, password);
+        QString taskRef = XenAPI::Pool::async_join(this->GetSession(), coordinatorAddress, username, password);
 
         // Poll to completion using host's session (already our primary session)
-        pollToCompletion(taskRef, 5, 90);
+        this->pollToCompletion(taskRef, 5, 90);
 
-        SetPercentComplete(90);
-        SetDescription("Join complete");
+        this->SetPercentComplete(90);
+        this->SetDescription("Join complete");
 
         // TODO: In full implementation:
         // 1. Create new session to coordinator and clear non-shared SRs on the joined host
@@ -93,11 +93,11 @@ void AddHostToPoolAction::run()
         // 3. Synchronize AD configuration (FixAd)
         // 4. Remove the host's connection from ConnectionsManager
 
-        SetDescription("Host added to pool successfully");
+        this->SetDescription("Host added to pool successfully");
 
     } catch (const std::exception& e)
     {
-        if (IsCancelled())
+        if (this->IsCancelled())
         {
             SetDescription("Join cancelled");
         } else

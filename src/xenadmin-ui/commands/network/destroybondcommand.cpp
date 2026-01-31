@@ -31,6 +31,9 @@
 #include "xenlib/xencache.h"
 #include "xenlib/xen/actions/network/destroybondaction.h"
 #include "xenlib/xen/network.h"
+#include "xenlib/xen/pif.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
 #include <QMessageBox>
 #include <QDebug>
 
@@ -47,7 +50,7 @@ DestroyBondCommand::DestroyBondCommand(MainWindow* mainWindow, const QSharedPoin
 
 bool DestroyBondCommand::CanRun() const
 {
-    QSharedPointer<Network> network = qSharedPointerCast<Network>(this->GetObject());
+    QSharedPointer<Network> network = qSharedPointerDynamicCast<Network>(this->GetObject());
     if (!network)
         return false;
 
@@ -57,22 +60,20 @@ bool DestroyBondCommand::CanRun() const
 
 void DestroyBondCommand::Run()
 {
-    QSharedPointer<Network> network = qSharedPointerCast<Network>(this->GetObject());
+    QSharedPointer<Network> network = qSharedPointerDynamicCast<Network>(this->GetObject());
 
     if (!network)
         return;
-
-    QVariantMap networkData = network->GetData();
 
     QString bondRef = this->getBondRefFromNetwork(network);
     if (bondRef.isEmpty())
         return;
 
-    QString bondName = this->getBondName(networkData);
+    QString bondName = this->getBondName(network);
 
     bool affectsPrimary = false;
     bool affectsSecondary = false;
-    this->checkManagementImpact(networkData, affectsPrimary, affectsSecondary);
+    this->checkManagementImpact(network, affectsPrimary, affectsSecondary);
 
     // Check if HA is enabled and primary management will be affected
     if (affectsPrimary && this->isHAEnabled())
@@ -167,25 +168,17 @@ QString DestroyBondCommand::MenuText() const
 
 bool DestroyBondCommand::isNetworkABond(QSharedPointer<Network> network) const
 {
-    QVariantMap networkData = network->GetData();
-
-    if (networkData.isEmpty())
-        return false;
-
-    // Check if network has any PIFs
-    QVariantList pifs = networkData.value("PIFs", QVariantList()).toList();
+    QList<QSharedPointer<PIF>> pifs = network->GetPIFs();
     if (pifs.isEmpty())
         return false;
 
     // Check if any PIF is a bond interface
-    for (const QVariant& pifRefVar : pifs)
+    for (const QSharedPointer<PIF>& pif : pifs)
     {
-        QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = network->GetCache()->ResolveObjectData("pif", pifRef);
+        if (!pif || !pif->IsValid())
+            continue;
 
-        // Check if PIF has a bond_master_of field (is a bond interface)
-        QVariantList bondMasterOf = pifData.value("bond_master_of", QVariantList()).toList();
-        if (!bondMasterOf.isEmpty())
+        if (!pif->BondMasterOfRefs().isEmpty())
         {
             // This PIF is a bond interface
             return true;
@@ -197,65 +190,56 @@ bool DestroyBondCommand::isNetworkABond(QSharedPointer<Network> network) const
 
 QString DestroyBondCommand::getBondRefFromNetwork(QSharedPointer<Network> network) const
 {
-    QVariantMap networkData = network->GetData();
-
-    if (networkData.isEmpty())
-        return QString();
-
-    QVariantList pifs = networkData.value("PIFs", QVariantList()).toList();
+    QList<QSharedPointer<PIF>> pifs = network->GetPIFs();
     if (pifs.isEmpty())
         return QString();
 
     // Find the first PIF that is a bond interface
-    for (const QVariant& pifRefVar : pifs)
+    for (const QSharedPointer<PIF>& pif : pifs)
     {
-        QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = network->GetCache()->ResolveObjectData("pif", pifRef);
+        if (!pif || !pif->IsValid())
+            continue;
 
-        QVariantList bondMasterOf = pifData.value("bond_master_of", QVariantList()).toList();
+        const QStringList bondMasterOf = pif->BondMasterOfRefs();
         if (!bondMasterOf.isEmpty())
         {
             // Return first bond reference
-            return bondMasterOf.first().toString();
+            return bondMasterOf.first();
         }
     }
 
     return QString();
 }
 
-void DestroyBondCommand::checkManagementImpact(const QVariantMap& networkData, bool& affectsPrimary, bool& affectsSecondary) const
+void DestroyBondCommand::checkManagementImpact(const QSharedPointer<Network>& network,
+                                               bool& affectsPrimary,
+                                               bool& affectsSecondary) const
 {
     affectsPrimary = false;
     affectsSecondary = false;
 
-    if (networkData.isEmpty())
+    if (!network)
         return;
 
-    QVariantList pifs = networkData.value("PIFs", QVariantList()).toList();
+    QList<QSharedPointer<PIF>> pifs = network->GetPIFs();
     if (pifs.isEmpty())
         return;
 
     if (!this->GetObject() || !this->GetObject()->GetConnection())
         return;
 
-    XenCache* cache = this->GetObject()->GetConnection()->GetCache();
-    if (!cache)
-        return;
-
     // Check each PIF to see if it's a management interface
-    for (const QVariant& pifRefVar : pifs)
+    for (const QSharedPointer<PIF>& pif : pifs)
     {
-        QString pifRef = pifRefVar.toString();
-        QVariantMap pifData = cache->ResolveObjectData("pif", pifRef);
+        if (!pif || !pif->IsValid())
+            continue;
 
-        bool isManagement = pifData.value("management", false).toBool();
-        if (isManagement)
+        if (pif->Management())
         {
             // Check if this is the primary management interface (host.address matches PIF.IP)
-            QString hostRef = pifData.value("host").toString();
-            QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
-            QString hostAddress = hostData.value("address").toString();
-            QString pifIP = pifData.value("IP").toString();
+            QSharedPointer<Host> host = pif->GetHost();
+            const QString hostAddress = host ? host->GetAddress() : QString();
+            const QString pifIP = pif->IP();
 
             if (hostAddress == pifIP)
             {
@@ -277,39 +261,26 @@ bool DestroyBondCommand::isHAEnabled() const
     if (!cache)
         return false;
 
-    // Get all objects and check pools
-    QList<QPair<QString, QString>> allObjects = cache->GetXenSearchableObjects();
-    for (const auto& obj : allObjects)
-    {
-        if (obj.first == "pool")
-        {
-            QVariantMap poolData = cache->ResolveObjectData("pool", obj.second);
-            bool haEnabled = poolData.value("ha_enabled", false).toBool();
-            if (haEnabled)
-                return true;
-        }
-    }
-
-    return false;
+    QSharedPointer<Pool> pool = cache->GetPool();
+    return pool && pool->HAEnabled();
 }
 
-QString DestroyBondCommand::getBondName(const QVariantMap& networkData) const
+QString DestroyBondCommand::getBondName(const QSharedPointer<Network>& network) const
 {
-    if (networkData.isEmpty())
+    if (!network)
         return "Bond";
 
     // Try to get the network name first
-    QString networkName = networkData.value("name_label", "").toString();
+    QString networkName = network->GetName();
     if (!networkName.isEmpty())
         return networkName;
 
     // Otherwise try to get the PIF device name
-    QVariantList pifs = networkData.value("PIFs", QVariantList()).toList();
-    if (!pifs.isEmpty() && this->GetObject() && this->GetObject()->GetConnection())
+    QList<QSharedPointer<PIF>> pifs = network->GetPIFs();
+    if (!pifs.isEmpty())
     {
-        QString pifRef = pifs.first().toString();
-        QVariantMap pifData = this->GetObject()->GetCache()->ResolveObjectData("pif", pifRef);
-        QString device = pifData.value("device", "").toString();
+        QSharedPointer<PIF> pif = pifs.first();
+        QString device = pif ? pif->GetDevice() : QString();
         if (!device.isEmpty())
             return device;
     }

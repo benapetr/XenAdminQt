@@ -92,7 +92,7 @@ void SetPoolPropertyAction::run()
         }
         else
         {
-            setError(tr("Unknown pool property: %1").arg(this->m_propertyName));
+            this->setError(tr("Unknown pool property: %1").arg(this->m_propertyName));
             return;
         }
 

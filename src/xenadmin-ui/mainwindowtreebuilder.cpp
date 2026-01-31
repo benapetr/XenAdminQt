@@ -361,7 +361,7 @@ IAcceptGroups* MainWindowTreeNodeGroupAcceptor::Add(Grouping* grouping,
             if (!node)
             {
                 const QString name = obj->GetName().isEmpty() ? obj->GetUUID() : obj->GetName();
-                QIcon icon = IconManager::instance().GetIconForObject(obj.data());
+                QIcon icon = IconManager::instance().GetIconForObject(obj);
                 node = this->addNode(name, icon, false, QVariant::fromValue<QSharedPointer<XenObject>>(obj));
             }
         }

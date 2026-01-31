@@ -28,6 +28,9 @@
 #include "updatevifaction.h"
 #include "../../network/connection.h"
 #include "../../session.h"
+#include "../../network.h"
+#include "../../vif.h"
+#include "../../vm.h"
 #include "../../xenapi/xenapi_VIF.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../../xencache.h"
@@ -53,13 +56,13 @@ UpdateVIFAction::UpdateVIFAction(XenConnection* connection,
         throw std::invalid_argument("Old VIF reference cannot be empty");
 
     // Get VM and network names for display
-    QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", m_vmRef);
-    m_vmName = vmData.value("name_label").toString();
+    QSharedPointer<VM> vm = connection->GetCache()->ResolveObject<VM>(m_vmRef);
+    m_vmName = vm ? vm->GetName() : QString();
 
-    QVariantMap oldVifData = connection->GetCache()->ResolveObjectData("vif", m_oldVifRef);
-    QString networkRef = oldVifData.value("network").toString();
-    QVariantMap networkData = connection->GetCache()->ResolveObjectData("network", networkRef);
-    m_networkName = networkData.value("name_label").toString();
+    QSharedPointer<VIF> oldVif = connection->GetCache()->ResolveObject<VIF>(m_oldVifRef);
+    QString networkRef = oldVif ? oldVif->GetNetworkRef() : QString();
+    QSharedPointer<Network> network = connection->GetCache()->ResolveObject<Network>(networkRef);
+    m_networkName = network ? network->GetName() : QString();
 
     SetTitle(QString("Updating VIF for %1").arg(m_vmName));
     SetDescription(QString("Updating %1 on %2").arg(m_networkName, m_vmName));
@@ -74,8 +77,8 @@ void UpdateVIFAction::run()
         // Step 1: Delete the old VIF (includes unplugging if needed)
         SetDescription("Removing old VIF configuration...");
 
-        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
-        QString powerState = vmData.value("power_state").toString();
+        QSharedPointer<VM> vm = GetConnection()->GetCache()->ResolveObject<VM>(m_vmRef);
+        QString powerState = vm ? vm->GetPowerState() : QString();
 
         if (powerState == "Running")
         {
@@ -124,8 +127,8 @@ void UpdateVIFAction::run()
 
         // Step 3: Attempt to hot-plug if VM is running
         // Refresh VM power state in case it changed
-        vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
-        powerState = vmData.value("power_state").toString();
+        vm = GetConnection()->GetCache()->ResolveObject<VM>(m_vmRef);
+        powerState = vm ? vm->GetPowerState() : QString();
 
         if (powerState == "Running")
         {

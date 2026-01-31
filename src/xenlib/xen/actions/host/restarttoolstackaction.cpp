@@ -63,7 +63,7 @@ void RestartToolstackAction::run()
             this->GetConnection()->Interrupt();
         }
 
-        this->SetDescription(QString("Toolstack restarted on '%1'.").arg(m_host->GetName()));
+        this->SetDescription(QString("Toolstack restarted on '%1'.").arg(this->m_host->GetName()));
 
     } catch (const std::exception& e)
     {

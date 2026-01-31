@@ -81,21 +81,21 @@ class AddSelectedHostToPoolCommand : public Command
 {
     Q_OBJECT
 
-public:
-    explicit AddSelectedHostToPoolCommand(MainWindow* mainWindow);
+    public:
+        explicit AddSelectedHostToPoolCommand(MainWindow* mainWindow);
 
-    bool CanRun() const override;
-    void Run() override { /* Not called - menu items call their own commands */ }
-    
-    QString MenuText() const override;
+        bool CanRun() const override;
+        void Run() override { /* Not called - menu items call their own commands */ }
+        
+        QString MenuText() const override;
 
-private:
-    /**
-     * @brief Check if a single host can be added to a pool
-     * @param host Host to check
-     * @return true if host is standalone and not restricted
-     */
-    bool canRunOnHost(QSharedPointer<Host> host) const;
+    private:
+        /**
+        * @brief Check if a single host can be added to a pool
+        * @param host Host to check
+        * @return true if host is standalone and not restricted
+        */
+        bool canRunOnHost(QSharedPointer<Host> host) const;
 };
 
 #endif // ADDSELECTEDHOSTTOPOOLMENU_H

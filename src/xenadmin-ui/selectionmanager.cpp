@@ -192,7 +192,7 @@ QList<QSharedPointer<VM>> SelectionManager::SelectedVMs() const
         if (!obj || obj->GetObjectType() != XenObjectType::VM)
             continue;
 
-        QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
+        QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(obj);
         if (vm)
             vms.append(vm);
     }
@@ -218,7 +218,7 @@ QList<QSharedPointer<Host>> SelectionManager::SelectedHosts() const
         if (!obj || obj->GetObjectType() != XenObjectType::Host)
             continue;
 
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(obj);
         if (host)
             hosts.append(host);
     }

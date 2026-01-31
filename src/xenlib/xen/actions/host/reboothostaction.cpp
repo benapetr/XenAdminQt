@@ -118,7 +118,7 @@ void RebootHostAction::run()
             XenConnection* connection = this->GetConnection();
             if (connection && connection->GetCache())
             {
-                QSharedPointer<VM> vm = connection->GetCache()->ResolveObject<VM>(XenObjectType::VM, vmRef);
+                QSharedPointer<VM> vm = connection->GetCache()->ResolveObject<VM>(vmRef);
                 if (vm)
                     vmName = vm->GetName();
             }
@@ -173,26 +173,18 @@ void RebootHostAction::shutdownVMs(bool isForReboot)
         this->SetPercentComplete(1);
 
         // Step 2: Get all resident VMs
-        QStringList residentVMs = this->m_host->GetResidentVMRefs();
+        const QList<QSharedPointer<VM>> residentVMs = this->m_host->GetResidentVMs();
 
         // Count VMs that need shutdown (running, non-control-domain)
-        QList<VM*> toShutdown;
-        XenCache* cache = this->GetConnection()->GetCache();
+        QList<QSharedPointer<VM>> toShutdown;
 
-        for (const QString& vmRef : residentVMs)
+        for (const QSharedPointer<VM>& vm : residentVMs)
         {
-            QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
-            if (vmData.isEmpty())
+            if (!vm || !vm->IsValid())
                 continue;
 
-            QString powerState = vmData.value("power_state").toString();
-            bool isControlDomain = vmData.value("is_control_domain", false).toBool();
-
-            if (powerState == "Running" && !isControlDomain)
-            {
-                VM* vm = new VM(this->GetConnection(), vmRef, this);
+            if (vm->IsRunning() && !vm->IsControlDomain())
                 toShutdown.append(vm);
-            }
         }
 
         int n = toShutdown.count();
@@ -206,7 +198,7 @@ void RebootHostAction::shutdownVMs(bool isForReboot)
 
         for (int i = 0; i < n; ++i)
         {
-            VM* vm = toShutdown[i];
+            const QSharedPointer<VM>& vm = toShutdown[i];
 
             this->SetDescription(QString(isForReboot
                                        ? "Rebooting: Shutting down VM %1 (%2/%3)"
@@ -231,9 +223,6 @@ void RebootHostAction::shutdownVMs(bool isForReboot)
             int progressStart = this->GetPercentComplete();
             this->pollToCompletion(taskRef, progressStart, progressStart + step);
         }
-
-        // Clean up VM objects
-        qDeleteAll(toShutdown);
 
     } catch (const std::exception& e)
     {
@@ -279,23 +268,23 @@ void RebootHostAction::maybeReduceNtolBeforeOp()
         return;
 
     QVariantMap configuration;
-    const QList<QVariantMap> vms = connection->GetCache()->GetAllData("vm");
-    for (const QVariantMap& vmData : vms)
+    const QList<QSharedPointer<VM>> vms = connection->GetCache()->GetAll<VM>();
+    for (const QSharedPointer<VM>& vm : vms)
     {
-        if (vmData.value("is_control_domain").toBool())
+        if (!vm || !vm->IsValid())
             continue;
-        if (vmData.value("is_a_template").toBool())
+        if (vm->IsControlDomain())
             continue;
-        if (vmData.value("is_a_snapshot").toBool())
+        if (vm->IsTemplate())
+            continue;
+        if (vm->IsSnapshot())
             continue;
 
-        const QString priority = vmData.value("ha_restart_priority").toString();
+        const QString priority = vm->HARestartPriority();
         if (priority.isEmpty() || priority == "best-effort" || priority == "best_effort")
             continue;
 
-        const QString ref = vmData.value("ref").toString();
-        if (!ref.isEmpty())
-            configuration.insert(ref, priority);
+        configuration.insert(vm->OpaqueRef(), priority);
     }
 
     const qint64 maxFailures =

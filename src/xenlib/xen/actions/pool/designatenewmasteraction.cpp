@@ -50,44 +50,44 @@ void DesignateNewMasterAction::run()
 {
     try
     {
-        SetPercentComplete(0);
-        SetDescription("Preparing to designate new coordinator...");
+        this->SetPercentComplete(0);
+        this->SetDescription("Preparing to designate new coordinator...");
 
         // Signal to the connection that the coordinator is going to change
         // This matches C# pattern: Connection.CoordinatorMayChange = true;
-        GetConnection()->SetCoordinatorMayChange(true);
+        this->GetConnection()->SetCoordinatorMayChange(true);
 
-        SetPercentComplete(10);
-        SetDescription("Designating new pool coordinator...");
+        this->SetPercentComplete(10);
+        this->SetDescription("Designating new pool coordinator...");
 
         try
         {
             // Call Pool.async_designate_new_master
-            QString taskRef = XenAPI::Pool::async_designate_new_master(GetSession(), m_newMasterRef);
+            QString taskRef = XenAPI::Pool::async_designate_new_master(this->GetSession(), this->m_newMasterRef);
 
             // Poll to completion
-            pollToCompletion(taskRef, 10, 100);
+            this->pollToCompletion(taskRef, 10, 100);
 
         } catch (...)
         {
             // If there's an error during designate, clear flag to prevent leak
-            GetConnection()->SetCoordinatorMayChange(false);
+            this->GetConnection()->SetCoordinatorMayChange(false);
             throw;
         }
 
-        SetDescription("New coordinator designated successfully");
+        this->SetDescription("New coordinator designated successfully");
 
         // Note: The connection will automatically detect and reconnect to the new coordinator
         // via the failover mechanism in ConnectionWorker
 
     } catch (const std::exception& e)
     {
-        if (IsCancelled())
+        if (this->IsCancelled())
         {
-            SetDescription("Designate new coordinator cancelled");
+            this->SetDescription("Designate new coordinator cancelled");
         } else
         {
-            setError(QString("Failed to designate new coordinator: %1").arg(e.what()));
+            this->setError(QString("Failed to designate new coordinator: %1").arg(e.what()));
         }
     }
 }

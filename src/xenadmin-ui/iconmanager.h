@@ -55,6 +55,7 @@ class IconManager
         QIcon GetIconForObject(const QString& objectType, const QVariantMap& objectData) const;
         QIcon GetIconForObject(XenObjectType objectType, const QVariantMap& objectData) const;
         QIcon GetIconForObject(const XenObject* object) const;
+        QIcon GetIconForObject(QSharedPointer<XenObject> object) const;
         QIcon GetIconForVM(const QVariantMap& vmData) const;
         QIcon GetIconForHost(const Host *host) const;
         QIcon GetIconForPool(const QVariantMap& poolData) const;

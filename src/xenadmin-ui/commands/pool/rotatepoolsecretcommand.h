@@ -33,6 +33,8 @@
 #include <QVariantMap>
 
 class MainWindow;
+class Pool;
+class Host;
 
 /**
  * @brief Command to rotate the pool secret (shared authentication secret)
@@ -79,20 +81,20 @@ class RotatePoolSecretCommand : public PoolCommand
          * @param poolRef Pool reference
          * @return true if any host is restricted
          */
-        bool hasRotationRestriction(const QString& poolRef, XenCache *cache) const;
+        bool hasRotationRestriction(const QSharedPointer<Pool>& pool) const;
 
         /**
          * @brief Check if pool meets requirements for secret rotation
          * @param poolData Pool data record
          * @return true if rotation is allowed
          */
-        bool canRotateSecret(const QVariantMap& poolData, XenCache *cache) const;
+        bool canRotateSecret(const QSharedPointer<Pool>& pool) const;
 
         /**
          * @brief Check if XenServer version supports secret rotation
          * @return true if Stockholm or greater (8.0+)
          */
-        bool isStockholmOrGreater(XenCache *cache) const;
+        bool isStockholmOrGreater(const QSharedPointer<Pool>& pool) const;
 };
 
 #endif // ROTATEPOOLSECRETCOMMAND_H

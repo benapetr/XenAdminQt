@@ -69,32 +69,32 @@ SrProbeAction::SrProbeAction(XenConnection* connection,
         target = "server";
     }
 
-    SetDescription(QString("Scanning %1 storage on %2").arg(srType).arg(target));
+    this->SetDescription(QString("Scanning %1 storage on %2").arg(srType).arg(target));
 
     // Won't appear in history (matches C# SuppressHistory = true)
-    SetSuppressHistory(true);
+    this->SetSuppressHistory(true);
 }
 
 void SrProbeAction::run()
 {
-    if (!m_host)
+    if (!this->m_host)
     {
-        setError("No host specified for SR probe");
+        this->setError("No host specified for SR probe");
         return;
     }
 
     try
     {
-        if (m_srType == "gfs2")
+        if (this->m_srType == "gfs2")
         {
             // GFS2 uses probe_ext (synchronous, returns structured data)
             try
             {
-                m_discoveredSRs = XenAPI::SR::probe_ext(GetSession(),
-                                                        m_host->OpaqueRef(),
-                                                        m_deviceConfig,
-                                                        m_srType,
-                                                        m_smConfig);
+                this->m_discoveredSRs = XenAPI::SR::probe_ext(this->GetSession(),
+                                                        this->m_host->OpaqueRef(),
+                                                        this->m_deviceConfig,
+                                                        this->m_srType,
+                                                        this->m_smConfig);
             } catch (const std::exception& e)
             {
                 QString error = e.what();
@@ -102,11 +102,11 @@ void SrProbeAction::run()
                 // Ignore expected gfs2 failures (CA-335356, CA-337280)
                 if (error.contains("DeviceNotFoundException") ||
                     (error.contains("ISCSILogin") &&
-                     m_deviceConfig.contains("chapuser") &&
-                     m_deviceConfig.contains("chappassword")))
+                     this->m_deviceConfig.contains("chapuser") &&
+                     this->m_deviceConfig.contains("chappassword")))
                 {
                     // Expected failure - return empty list
-                    m_discoveredSRs = QVariantList();
+                    this->m_discoveredSRs = QVariantList();
                 } else
                 {
                     throw; // Re-throw unexpected errors
@@ -115,25 +115,25 @@ void SrProbeAction::run()
         } else
         {
             // Other SR types use async_probe (returns XML)
-            QString taskRef = XenAPI::SR::async_probe(GetSession(),
-                                                      m_host->OpaqueRef(),
-                                                      m_deviceConfig,
-                                                      m_srType,
-                                                      m_smConfig);
+            QString taskRef = XenAPI::SR::async_probe(this->GetSession(),
+                                                      this->m_host->OpaqueRef(),
+                                                      this->m_deviceConfig,
+                                                      this->m_srType,
+                                                      this->m_smConfig);
 
             // Poll task to completion
-            pollToCompletion(taskRef, 0, 100);
+            this->pollToCompletion(taskRef, 0, 100);
 
             // Parse XML GetResult
-            QString xmlResult = GetResult();
-            m_discoveredSRs = parseSRListXML(xmlResult);
+            QString xmlResult = this->GetResult();
+            this->m_discoveredSRs = this->parseSRListXML(xmlResult);
         }
 
-        SetDescription("SR scan successful");
+        this->SetDescription("SR scan successful");
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to probe for SRs: %1").arg(e.what()));
+        this->setError(QString("Failed to probe for SRs: %1").arg(e.what()));
     }
 }
 

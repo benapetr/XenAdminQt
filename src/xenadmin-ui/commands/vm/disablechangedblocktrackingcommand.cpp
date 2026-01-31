@@ -31,6 +31,8 @@
 #include "xenlib/xencache.h"
 #include "xenlib/operations/parallelaction.h"
 #include "xenlib/xen/vm.h"
+#include "xenlib/xen/vbd.h"
+#include "xenlib/xen/vdi.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
 #include <QMessageBox>
@@ -49,10 +51,8 @@ bool DisableChangedBlockTrackingCommand::CanRun() const
     if (vm->IsTemplate())
         return false;
 
-    QString connRef = vm->GetData().value("$connection").toString();
-
     // Check if CBT is licensed
-    if (!this->isCbtLicensed(connRef))
+    if (!this->isCbtLicensed(QString()))
         return false;
 
     // VM must have a VDI with CBT enabled
@@ -93,46 +93,25 @@ void DisableChangedBlockTrackingCommand::Run()
         return;
     }
 
-    // Get VM GetData for VBD access
-    QVariantMap vmData = vm->GetData();
-
     // Collect all actions for VDIs with CBT enabled
     QList<AsyncOperation*> actions;
 
-    // Get cache from connection
-    XenCache* cache = conn->GetCache();
-
     // Get all VBDs for this VM
-    QVariantList vbds = vmData.value("VBDs").toList();
-
-    for (const QVariant& vbdRefVariant : vbds)
+    const QList<QSharedPointer<VBD>> vbds = vm->GetVBDs();
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        QString vbdRef = vbdRefVariant.toString();
-        QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
-        if (vbdData.isEmpty())
-        {
+        if (!vbd || !vbd->IsValid())
             continue;
-        }
 
-        // Get VDI from VBD
-        QString vdiRef = vbdData.value("VDI").toString();
-        if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
-        {
+        QSharedPointer<VDI> vdi = vbd->GetVDI();
+        if (!vdi || !vdi->IsValid())
             continue;
-        }
-
-        QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
-        if (vdiData.isEmpty())
-        {
-            continue;
-        }
 
         // Check if CBT is enabled on this VDI
-        bool cbtEnabled = vdiData.value("cbt_enabled", false).toBool();
-        if (cbtEnabled)
+        if (vdi->IsCBTEnabled())
         {
             // Create action to disable CBT
-            VDIDisableCbtAction* action = new VDIDisableCbtAction(conn, vmName, vdiRef, nullptr);
+            VDIDisableCbtAction* action = new VDIDisableCbtAction(conn, vmName, vdi->OpaqueRef(), nullptr);
             actions.append(action);
         }
     }
@@ -187,33 +166,19 @@ bool DisableChangedBlockTrackingCommand::hasVdiWithCbtEnabled() const
     if (!vm)
         return false;
 
-    QVariantMap vmData = vm->GetData();
-    if (vmData.isEmpty())
-        return false;
-
     // Get all VBDs for this VM
-    QVariantList vbds = vmData.value("VBDs").toList();
-
-    XenCache* cache = vm->GetConnection()->GetCache();
-
-    for (const QVariant& vbdRefVariant : vbds)
+    const QList<QSharedPointer<VBD>> vbds = vm->GetVBDs();
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        QString vbdRef = vbdRefVariant.toString();
-        QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
-        if (vbdData.isEmpty())
+        if (!vbd || !vbd->IsValid())
             continue;
 
-        // Get VDI from VBD
-        QString vdiRef = vbdData.value("VDI").toString();
-        if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
-            continue;
-
-        QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
-        if (vdiData.isEmpty())
+        QSharedPointer<VDI> vdi = vbd->GetVDI();
+        if (!vdi || !vdi->IsValid())
             continue;
 
         // Check if CBT is enabled
-        if (vdiData.value("cbt_enabled", false).toBool())
+        if (vdi->IsCBTEnabled())
             return true;
     }
 

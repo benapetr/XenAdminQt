@@ -31,9 +31,11 @@
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/vif.h"
 #include "xenlib/xen/network.h"
+#include "xenlib/xen/network_sriov.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/vlan.h"
+#include "xenlib/xen/vmguestmetrics.h"
 #include "xenlib/xencache.h"
 #include "../settingsmanager.h"
 #include "../dialogs/newnetworkwizard.h"
@@ -254,7 +256,7 @@ void NetworkTabPage::populateVIFsForVM()
     // Get guest_metrics reference for IP addresses
     // C#: VM_guest_metrics vmGuestMetrics = vm.Connection.Resolve(vm.guest_metrics);
     QString guestMetricsRef = vm->GetGuestMetricsRef();
-    QVariantMap guestMetrics;
+    QSharedPointer<VMGuestMetrics> guestMetrics;
     QVariantMap networks;
 
     XenCache* cache = vm->GetCache();
@@ -262,10 +264,10 @@ void NetworkTabPage::populateVIFsForVM()
     if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
     {
         // Resolve guest_metrics from cache to get network info (IP addresses)
-        guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
-        if (!guestMetrics.isEmpty())
+        guestMetrics = cache->ResolveObject<VMGuestMetrics>(guestMetricsRef);
+        if (guestMetrics && guestMetrics->IsValid())
         {
-            networks = guestMetrics.value("networks").toMap();
+            networks = guestMetrics->GetNetworks();
             //qDebug() << "NetworkTabPage::populateVIFsForVM - Guest metrics networks:" << networks.keys();
         }
     }
@@ -550,8 +552,8 @@ void NetworkTabPage::addNetworkRow(QSharedPointer<Network> network)
         QString networkSriovRef = this->getPifNetworkSriov(pif);
         if (!networkSriovRef.isEmpty())
         {
-            QVariantMap sriovData = cache->ResolveObjectData("network_sriov", networkSriovRef);
-            bool requiresReboot = sriovData.value("requires_reboot", false).toBool();
+            QSharedPointer<NetworkSriov> sriov = cache->ResolveObject<NetworkSriov>(networkSriovRef);
+            bool requiresReboot = sriov && sriov->RequiresReboot();
             if (requiresReboot)
             {
                 sriovInfo = "Reboot Required";
@@ -588,7 +590,7 @@ void NetworkTabPage::populateIPConfigForHost()
 {
     this->ui->ipConfigTable->setRowCount(0);
 
-    QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
+    QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
     if (!host)
         return;
 
@@ -599,7 +601,7 @@ void NetworkTabPage::populateIPConfigForPool()
 {
     this->ui->ipConfigTable->setRowCount(0);
 
-    QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(this->m_object);
+    QSharedPointer<Pool> pool = qSharedPointerDynamicCast<Pool>(this->m_object);
     if (!pool)
         return;
 
@@ -866,12 +868,11 @@ void NetworkTabPage::showNetworksContextMenu(const QPoint& pos)
         QString selectedNetworkRef = this->getSelectedNetworkRef();
         if (!selectedNetworkRef.isEmpty() && this->m_connection && this->m_connection->GetCache())
         {
-            QVariantMap networkData = this->m_connection->GetCache()->ResolveObjectData("network", selectedNetworkRef);
+            QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>(selectedNetworkRef);
+            if (!network || !network->IsValid())
+                return;
 
-            // Enable Properties and Remove for editable networks
-            // Check if network is not a bond member, not guest installer, etc.
-            QVariantMap otherConfig = networkData.value("other_config", QVariantMap()).toMap();
-            bool isGuestInstaller = otherConfig.value("is_guest_installer_network", "false").toString() == "true";
+            bool isGuestInstaller = network->IsGuestInstallerNetwork();
 
             if (!isGuestInstaller)
             {
@@ -1087,11 +1088,11 @@ void NetworkTabPage::onAddNetwork()
         QSharedPointer<Host> host;
         if (this->m_objectType == XenObjectType::Pool)
         {
-            pool = qSharedPointerCast<Pool>(this->m_object);
+            pool = qSharedPointerDynamicCast<Pool>(this->m_object);
             host = pool ? pool->GetMasterHost() : QSharedPointer<Host>();
         } else if (this->m_objectType == XenObjectType::Host)
         {
-            host = qSharedPointerCast<Host>(this->m_object);
+            host = qSharedPointerDynamicCast<Host>(this->m_object);
         }
 
         NewNetworkWizard wizard(this->m_connection, pool, host, this);

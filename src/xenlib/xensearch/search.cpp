@@ -457,7 +457,7 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
             record["address"] = hostname;
             record["enabled"] = false;
 
-            const QVariantMap existing = cache->ResolveObjectData("host", hostRef);
+            const QVariantMap existing = cache->ResolveObjectData(XenObjectType::Host, hostRef);
             if (existing.isEmpty() || existing != record)
                 cache->Update(XenObjectType::Host, hostRef, record);
 

@@ -31,8 +31,7 @@
 #include "xen/sr.h"
 #include <QMessageBox>
 
-RepairSRCommand::RepairSRCommand(MainWindow* mainWindow, QObject* parent)
-    : SRCommand(mainWindow, parent)
+RepairSRCommand::RepairSRCommand(MainWindow* mainWindow, QObject* parent) : SRCommand(mainWindow, parent)
 {
 }
 

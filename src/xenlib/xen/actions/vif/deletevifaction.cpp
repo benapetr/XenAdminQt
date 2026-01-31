@@ -28,6 +28,9 @@
 #include "deletevifaction.h"
 #include "../../network/connection.h"
 #include "../../session.h"
+#include "../../network.h"
+#include "../../vif.h"
+#include "../../vm.h"
 #include "../../xenapi/xenapi_VIF.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../../xencache.h"
@@ -46,15 +49,15 @@ DeleteVIFAction::DeleteVIFAction(XenConnection* connection,
         throw std::invalid_argument("VIF reference cannot be empty");
 
     // Get VIF details for display
-    QVariantMap vifData = connection->GetCache()->ResolveObjectData("vif", m_vifRef);
-    m_vmRef = vifData.value("VM").toString();
-    QString networkRef = vifData.value("network").toString();
+    QSharedPointer<VIF> vif = connection->GetCache()->ResolveObject<VIF>(m_vifRef);
+    m_vmRef = vif ? vif->GetVMRef() : QString();
+    QString networkRef = vif ? vif->GetNetworkRef() : QString();
 
-    QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", m_vmRef);
-    m_vmName = vmData.value("name_label").toString();
+    QSharedPointer<VM> vm = connection->GetCache()->ResolveObject<VM>(m_vmRef);
+    m_vmName = vm ? vm->GetName() : QString();
 
-    QVariantMap networkData = connection->GetCache()->ResolveObjectData("network", networkRef);
-    m_networkName = networkData.value("name_label").toString();
+    QSharedPointer<Network> network = connection->GetCache()->ResolveObject<Network>(networkRef);
+    m_networkName = network ? network->GetName() : QString();
 
     SetTitle(QString("Deleting VIF for %1").arg(m_vmName));
     SetDescription(QString("Deleting %1 from %2").arg(m_networkName, m_vmName));
@@ -67,8 +70,8 @@ void DeleteVIFAction::run()
         SetDescription("Deleting VIF...");
 
         // Check if VM is running and if we need to unplug first
-        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
-        QString powerState = vmData.value("power_state").toString();
+        QSharedPointer<VM> vm = GetConnection()->GetCache()->ResolveObject<VM>(m_vmRef);
+        QString powerState = vm ? vm->GetPowerState() : QString();
 
         if (powerState == "Running")
         {

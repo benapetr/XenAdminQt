@@ -64,7 +64,7 @@ void HostAutostartEditPage::SetXenObjects(const QString& objectRef, const QStrin
     Q_UNUSED(objectDataBefore);
     Q_UNUSED(objectDataCopy);
 
-    this->m_host = qSharedPointerCast<Host>(this->m_object);
+    this->m_host = qSharedPointerDynamicCast<Host>(this->m_object);
 
     // m_connection is set by VerticallyTabbedDialog before calling this
 

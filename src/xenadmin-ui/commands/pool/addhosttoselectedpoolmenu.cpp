@@ -138,7 +138,7 @@ QList<QSharedPointer<Host>> AddHostToSelectedPoolMenu::getSortedStandaloneHosts(
             continue;
         
         // Get the standalone host - for standalone servers, there's exactly one host
-        QList<QSharedPointer<Host>> allHosts = conn->GetCache()->GetAll<Host>(XenObjectType::Host);
+        QList<QSharedPointer<Host>> allHosts = conn->GetCache()->GetAll<Host>();
         if (!allHosts.isEmpty())
         {
             // Use the first (and only) host
@@ -164,8 +164,7 @@ QSharedPointer<Pool> AddHostToSelectedPoolMenu::getSelectedPool() const
 
 // AddHostToSelectedPoolCommand implementation
 
-AddHostToSelectedPoolCommand::AddHostToSelectedPoolCommand(MainWindow* mainWindow)
-    : Command(mainWindow)
+AddHostToSelectedPoolCommand::AddHostToSelectedPoolCommand(MainWindow* mainWindow) : Command(mainWindow)
 {
 }
 

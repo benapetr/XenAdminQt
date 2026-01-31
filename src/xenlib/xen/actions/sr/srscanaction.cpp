@@ -49,7 +49,7 @@ SrScanAction::SrScanAction(XenConnection* connection,
       m_password(password)
 {
     // Won't appear in history (matches C# SuppressHistory = true)
-    SetSuppressHistory(true);
+    this->SetSuppressHistory(true);
 }
 
 void SrScanAction::run()
@@ -58,51 +58,50 @@ void SrScanAction::run()
     {
         // Build device config
         QVariantMap dconf;
-        dconf["target"] = m_hostname;
-        dconf["username"] = m_username;
-        dconf["password"] = m_password;
+        dconf["target"] = this->m_hostname;
+        dconf["username"] = this->m_username;
+        dconf["password"] = this->m_password;
 
-        qDebug() << "SrScanAction: Attempting to find SRs on" << m_type << "filer" << m_hostname;
+        qDebug() << "SrScanAction: Attempting to find SRs on" << this->m_type << "filer" << this->m_hostname;
 
         // Step 1: Probe for existing SRs
         // Get coordinator host
-        QVariantList hosts = XenAPI::Host::get_all(GetSession());
+        QVariantList hosts = XenAPI::Host::get_all(this->GetSession());
         if (hosts.isEmpty())
         {
-            setError("No hosts available for scanning");
+            this->setError("No hosts available for scanning");
             return;
         }
         QString hostRef = hosts.first().toString();
 
-        QString probeTaskRef = XenAPI::SR::async_probe(GetSession(), hostRef,
-                                                       dconf, m_type, QVariantMap());
-        pollToCompletion(probeTaskRef, 0, 50);
+        QString probeTaskRef = XenAPI::SR::async_probe(this->GetSession(), hostRef, dconf, this->m_type, QVariantMap());
+        this->pollToCompletion(probeTaskRef, 0, 50);
 
-        QString xmlResult = GetResult();
-        m_srs = parseSRListXML(xmlResult);
+        QString xmlResult = this->GetResult();
+        this->m_srs = this->parseSRListXML(xmlResult);
 
-        qDebug() << "SrScanAction: Attempting to find aggregates on" << m_type << "filer" << m_hostname;
+        qDebug() << "SrScanAction: Attempting to find aggregates on" << this->m_type << "filer" << this->m_hostname;
 
         // Step 2: Attempt to create SR (expected to fail with aggregate/pool info)
         try
         {
             QString createTaskRef = XenAPI::SR::async_create(
-                GetSession(),
+                this->GetSession(),
                 hostRef,
                 dconf,
                 0,                    // physical_size
                 "TEMP_OBJECT_PREFIX", // Helpers.GuiTempObjectPrefix
                 "",                   // description
-                m_type,
+                this->m_type,
                 "",           // content_type
                 true,         // shared
                 QVariantMap() // sm_config
             );
 
-            pollToCompletion(createTaskRef, 50, 100);
+            this->pollToCompletion(createTaskRef, 50, 100);
 
             // If we got here without exception, that's unexpected
-            setError(QString("Unexpected response from %1").arg(m_hostname));
+            this->setError(QString("Unexpected response from %1").arg(this->m_hostname));
 
         } catch (const std::exception& e)
         {
@@ -122,7 +121,7 @@ void SrScanAction::run()
                 if (xmlStart >= 0)
                 {
                     QString xml = error.mid(xmlStart);
-                    m_aggregates = parseAggregateXML(xml);
+                    this->m_aggregates = this->parseAggregateXML(xml);
                 }
 
             } else if (error.contains("SR_BACKEND_FAILURE_163"))
@@ -134,7 +133,7 @@ void SrScanAction::run()
                 if (xmlStart >= 0)
                 {
                     QString xml = error.mid(xmlStart);
-                    m_storagePools = parseDellStoragePoolsXML(xml);
+                    this->m_storagePools = this->parseDellStoragePoolsXML(xml);
                 }
 
             } else
@@ -145,17 +144,17 @@ void SrScanAction::run()
         }
 
         // Check if we found anything
-        if (m_srs.isEmpty() && m_aggregates.isEmpty() && m_storagePools.isEmpty())
+        if (this->m_srs.isEmpty() && this->m_aggregates.isEmpty() && this->m_storagePools.isEmpty())
         {
-            setError(QString("No existing SRs found and nowhere to create new storage on %1").arg(m_hostname));
+            this->setError(QString("No existing SRs found and nowhere to create new storage on %1").arg(this->m_hostname));
             return;
         }
 
-        SetDescription(QString("Scan of %1 completed").arg(m_hostname));
+        this->SetDescription(QString("Scan of %1 completed").arg(this->m_hostname));
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to scan storage: %1").arg(e.what()));
+        this->setError(QString("Failed to scan storage: %1").arg(e.what()));
     }
 }
 
@@ -229,7 +228,7 @@ QList<NetAppAggregate> SrScanAction::parseAggregateXML(const QString& xml)
     {
         qWarning() << "SrScanAction: XML parse error:" << reader.errorString();
         throw std::runtime_error(QString("Failed to parse aggregate XML from %1")
-                                     .arg(m_hostname)
+                                     .arg(this->m_hostname)
                                      .toStdString());
     }
 
@@ -313,7 +312,7 @@ QList<DellStoragePool> SrScanAction::parseDellStoragePoolsXML(const QString& xml
     {
         qWarning() << "SrScanAction: XML parse error:" << reader.errorString();
         throw std::runtime_error(QString("Failed to parse storage pool XML from %1")
-                                     .arg(m_hostname)
+                                     .arg(this->m_hostname)
                                      .toStdString());
     }
 

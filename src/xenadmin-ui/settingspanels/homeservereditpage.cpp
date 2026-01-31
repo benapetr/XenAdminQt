@@ -33,6 +33,8 @@
 #include "xenlib/xen/xenapi/xenapi_VM.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/actions/delegatedasyncoperation.h"
+#include "xenlib/xen/host.h"
+#include "iconmanager.h"
 #include <QTableWidgetItem>
 
 HomeServerEditPage::HomeServerEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::HomeServerEditPage)
@@ -63,8 +65,8 @@ QString HomeServerEditPage::GetSubText() const
 
     if (connection())
     {
-        QVariantMap hostData = connection()->GetCache()->ResolveObjectData("host", hostRef);
-        QString name = hostData.value("name_label").toString();
+        QSharedPointer<Host> host = connection()->GetCache()->ResolveObject<Host>(hostRef);
+        QString name = host ? host->GetName() : QString();
         if (!name.isEmpty())
             return name;
     }
@@ -74,7 +76,18 @@ QString HomeServerEditPage::GetSubText() const
 
 QIcon HomeServerEditPage::GetImage() const
 {
-    return QIcon(":/icons/server_home_16.png");
+    if (connection())
+    {
+        QString hostRef = ui->picker->selectedAffinityRef();
+        if (!hostRef.isEmpty())
+        {
+            QSharedPointer<Host> host = connection()->GetCache()->ResolveObject<Host>(hostRef);
+            if (host)
+                return IconManager::instance().GetIconForHost(host.data());
+        }
+    }
+
+    return IconManager::instance().GetConnectedIcon();
 }
 
 void HomeServerEditPage::SetXenObjects(const QString& objectRef,

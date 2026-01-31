@@ -28,6 +28,8 @@
 #include "plugvifaction.h"
 #include "../../network/connection.h"
 #include "../../session.h"
+#include "../../vif.h"
+#include "../../vm.h"
 #include "../../xenapi/xenapi_VIF.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../../xencache.h"
@@ -46,11 +48,11 @@ PlugVIFAction::PlugVIFAction(XenConnection* connection,
         throw std::invalid_argument("VIF reference cannot be empty");
 
     // Get VIF details for display
-    QVariantMap vifData = connection->GetCache()->ResolveObjectData("vif", m_vifRef);
-    m_vmRef = vifData.value("VM").toString();
+    QSharedPointer<VIF> vif = connection->GetCache()->ResolveObject<VIF>(m_vifRef);
+    m_vmRef = vif ? vif->GetVMRef() : QString();
 
-    QVariantMap vmData = connection->GetCache()->ResolveObjectData("vm", m_vmRef);
-    m_vmName = vmData.value("name_label").toString();
+    QSharedPointer<VM> vm = connection->GetCache()->ResolveObject<VM>(m_vmRef);
+    m_vmName = vm ? vm->GetName() : QString();
 
     SetTitle(QString("Plugging VIF on %1").arg(m_vmName));
     SetDescription(QString("Plugging virtual network interface on %1").arg(m_vmName));
@@ -61,8 +63,8 @@ void PlugVIFAction::run()
     try
     {
         // Check if VM is running
-        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", m_vmRef);
-        QString powerState = vmData.value("power_state").toString();
+        QSharedPointer<VM> vm = GetConnection()->GetCache()->ResolveObject<VM>(m_vmRef);
+        QString powerState = vm ? vm->GetPowerState() : QString();
 
         if (powerState != "Running")
         {

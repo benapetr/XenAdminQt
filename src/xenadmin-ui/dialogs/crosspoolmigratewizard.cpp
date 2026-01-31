@@ -53,9 +53,12 @@
 #include "../widgets/wizardnavigationpane.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/network.h"
+#include "xenlib/xen/pif.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/sr.h"
+#include "xenlib/xen/vbd.h"
 #include "xenlib/xen/vdi.h"
+#include "xenlib/xen/vif.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/friendlyerrornames.h"
 #include "xenlib/xen/failure.h"
@@ -110,11 +113,7 @@ namespace
         if (!cache)
             return QString();
 
-        QList<QVariantMap> pools = cache->GetAllData(XenObjectType::Pool);
-        if (pools.isEmpty())
-            return QString();
-
-        return pools.first().value("opaque_ref").toString();
+        return cache->GetPoolRef();
     }
 
     QString poolMasterRefForConnection(XenCache* cache)
@@ -122,11 +121,8 @@ namespace
         if (!cache)
             return QString();
 
-        QList<QVariantMap> pools = cache->GetAllData(XenObjectType::Pool);
-        if (pools.isEmpty())
-            return QString();
-
-        return pools.first().value("master").toString();
+        QSharedPointer<Pool> pool = cache->GetPool();
+        return pool ? pool->GetMasterHostRef() : QString();
     }
 
     bool hostCanSeeNetwork(XenCache* cache, const QString& hostRef, const QString& networkRef)
@@ -134,12 +130,14 @@ namespace
         if (!cache || hostRef.isEmpty() || networkRef.isEmpty())
             return false;
 
-        QList<QVariantMap> pifs = cache->GetAllData(XenObjectType::PIF);
-        for (const QVariantMap& pifData : pifs)
+        QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>();
+        for (const QSharedPointer<PIF>& pif : pifs)
         {
-            if (pifData.value("host").toString() != hostRef)
+            if (!pif || !pif->IsValid())
                 continue;
-            if (pifData.value("network").toString() != networkRef)
+            if (pif->GetHostRef() != hostRef)
+                continue;
+            if (pif->GetNetworkRef() != networkRef)
                 continue;
             return true;
         }
@@ -152,13 +150,15 @@ namespace
         if (!cache || hostRef.isEmpty())
             return QString();
 
-        QList<QVariantMap> pifs = cache->GetAllData(XenObjectType::PIF);
-        for (const QVariantMap& pifData : pifs)
+        QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>();
+        for (const QSharedPointer<PIF>& pif : pifs)
         {
-            if (pifData.value("host").toString() != hostRef)
+            if (!pif || !pif->IsValid())
+                continue;
+            if (pif->GetHostRef() != hostRef)
                 continue;
 
-            QString networkRef = pifData.value("network").toString();
+            QString networkRef = pif->GetNetworkRef();
             if (!networkRef.isEmpty())
                 return networkRef;
         }
@@ -773,7 +773,7 @@ void CrossPoolMigrateWizard::accept()
             else
             {
                 XenCache* cache = this->m_sourceConnection->GetCache();
-                QSharedPointer<SR> sr = cache ? cache->ResolveObject<SR>(XenObjectType::SR, this->copyTargetSrRef()) : QSharedPointer<SR>();
+                QSharedPointer<SR> sr = cache ? cache->ResolveObject<SR>(this->copyTargetSrRef()) : QSharedPointer<SR>();
                 if (sr && sr->IsValid())
                 {
                     VMCopyAction* action = new VMCopyAction(vmItem, QSharedPointer<Host>(), sr, this->copyName(), this->copyDescription(), nullptr);
@@ -799,8 +799,8 @@ void CrossPoolMigrateWizard::accept()
         XenCache* targetCache = this->m_targetConnection->GetCache();
         if (targetCache)
         {
-            QVariantMap poolData = targetCache->ResolveObjectData(XenObjectType::Pool, this->m_targetPoolRef);
-            this->m_targetHostRef = poolData.value("master").toString();
+            QSharedPointer<Pool> pool = targetCache->ResolveObject<Pool>(this->m_targetPoolRef);
+            this->m_targetHostRef = pool ? pool->GetMasterHostRef() : QString();
         }
     }
 
@@ -825,8 +825,8 @@ void CrossPoolMigrateWizard::accept()
             if (vdiRef.isEmpty() || targetSrRef.isEmpty())
                 continue;
 
-            QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
-            QString currentSrRef = vdiData.value("SR").toString();
+            QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>(vdiRef);
+            QString currentSrRef = vdi ? vdi->SRRef() : QString();
             if (!currentSrRef.isEmpty() && currentSrRef != targetSrRef)
                 return true;
         }
@@ -858,12 +858,12 @@ void CrossPoolMigrateWizard::accept()
                     if (vdiRef.isEmpty() || srRef.isEmpty())
                         continue;
 
-                    QSharedPointer<SR> srObj = sourceCache->ResolveObject<SR>(XenObjectType::SR, srRef);
+                    QSharedPointer<SR> srObj = sourceCache->ResolveObject<SR>(srRef);
                     if (srObj && srObj->IsValid())
                         storageMap.insert(vdiRef, srObj);
                 }
 
-                QSharedPointer<Host> hostObj = sourceCache->ResolveObject<Host>(XenObjectType::Host, this->m_targetHostRef);
+                QSharedPointer<Host> hostObj = sourceCache->ResolveObject<Host>(this->m_targetHostRef);
 
                 VMMoveAction* action = new VMMoveAction(vm, storageMap, hostObj, nullptr);
                 OperationManager::instance()->RegisterOperation(action);
@@ -968,16 +968,16 @@ void CrossPoolMigrateWizard::populateDestinationPools()
         if (!cache)
             continue;
 
-        QStringList poolRefs = cache->GetAllRefs(XenObjectType::Pool);
+        QStringList poolRefs = cache->GetAllRefs<Pool>();
         if (!poolRefs.isEmpty())
         {
             QString poolRef = poolRefs.first();
-            QVariantMap poolData = cache->ResolveObjectData(XenObjectType::Pool, poolRef);
-            QString poolName = poolData.value("name_label", tr("Pool")).toString();
+            QSharedPointer<Pool> pool = cache->ResolveObject<Pool>(poolRef);
+            QString poolName = pool && !pool->GetName().isEmpty() ? pool->GetName() : tr("Pool");
 
             QString failureReason;
             bool eligible = false;
-            QStringList hostRefs = cache->GetAllRefs(XenObjectType::Host);
+            QStringList hostRefs = cache->GetAllRefs<Host>();
             for (const QString& hostRef : hostRefs)
             {
                 bool hostEligible = true;
@@ -1017,11 +1017,11 @@ void CrossPoolMigrateWizard::populateDestinationPools()
             }
         } else
         {
-            QStringList hostRefs = cache->GetAllRefs(XenObjectType::Host);
+            QStringList hostRefs = cache->GetAllRefs<Host>();
             for (const QString& hostRef : hostRefs)
             {
-                QVariantMap hostData = cache->ResolveObjectData(XenObjectType::Host, hostRef);
-                QString hostName = hostData.value("name_label", tr("Host")).toString();
+                QSharedPointer<Host> host = cache->ResolveObject<Host>(hostRef);
+                QString hostName = host && !host->GetName().isEmpty() ? host->GetName() : tr("Host");
 
                 QString failureReason;
                 bool eligible = true;
@@ -1099,14 +1099,14 @@ void CrossPoolMigrateWizard::populateHostsForPool(const QString& poolRef, XenCon
     }
     else
     {
-        hostRefs = cache->GetAllRefs(XenObjectType::Host);
+        hostRefs = cache->GetAllRefs<Host>();
         this->m_hostCombo->setEnabled(true);
     }
 
     for (const QString& hostRef : hostRefs)
     {
-        QVariantMap hostData = cache->ResolveObjectData(XenObjectType::Host, hostRef);
-        QString hostName = hostData.value("name_label", tr("Host")).toString();
+        QSharedPointer<Host> host = cache->ResolveObject<Host>(hostRef);
+        QString hostName = host && !host->GetName().isEmpty() ? host->GetName() : tr("Host");
 
         QString failureReason;
         bool eligible = true;
@@ -1250,16 +1250,16 @@ void CrossPoolMigrateWizard::populateStorageMappings()
 
     this->m_storageTable->setRowCount(0);
 
-    XenCache* sourceCache = this->m_sourceConnection->GetCache();
     XenCache* targetCache = this->m_targetConnection ? this->m_targetConnection->GetCache() : nullptr;
-    if (!sourceCache || !targetCache)
+    if (!targetCache)
         return;
 
-    QStringList srRefs = targetCache->GetAllRefs(XenObjectType::SR);
     QString defaultSrRef;
-    QList<QVariantMap> pools = targetCache->GetAllData(XenObjectType::Pool);
-    if (!pools.isEmpty())
-        defaultSrRef = pools.first().value("default_SR").toString();
+    QSharedPointer<Pool> targetPool = targetCache->GetPool();
+    if (targetPool)
+        defaultSrRef = targetPool->GetDefaultSRRef();
+
+    QList<QSharedPointer<SR>> targetSrs = targetCache->GetAll<SR>();
 
     int row = 0;
     for (const QSharedPointer<VM>& vmItem : this->m_vms)
@@ -1267,17 +1267,18 @@ void CrossPoolMigrateWizard::populateStorageMappings()
         if (!vmItem)
             continue;
 
-        QStringList vbdRefs = vmItem->GetVBDRefs();
-        for (const QString& vbdRef : vbdRefs)
+        QList<QSharedPointer<VBD>> vbds = vmItem->GetVBDs();
+        for (const QSharedPointer<VBD>& vbd : vbds)
         {
-            QVariantMap vbdData = sourceCache->ResolveObjectData(XenObjectType::VBD, vbdRef);
-            QString vdiRef = vbdData.value("VDI").toString();
-            if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
+            if (!vbd || !vbd->IsValid())
                 continue;
 
-            QVariantMap vdiData = sourceCache->ResolveObjectData(XenObjectType::VDI, vdiRef);
-            QString vdiName = vdiData.value("name_label", "VDI").toString();
-            QString vdiType = vdiData.value("type").toString();
+            QSharedPointer<VDI> vdi = vbd->GetVDI();
+            if (!vdi || !vdi->IsValid())
+                continue;
+
+            QString vdiName = vdi->GetName();
+            QString vdiType = vdi->GetType();
             if (vdiType == "iso")
                 continue;
 
@@ -1288,15 +1289,15 @@ void CrossPoolMigrateWizard::populateStorageMappings()
             this->m_storageTable->setItem(row, 0, vmNameItem);
 
             QTableWidgetItem* vdiItem = new QTableWidgetItem(vdiName);
-            vdiItem->setData(Qt::UserRole, vdiRef);
+            vdiItem->setData(Qt::UserRole, vdi->OpaqueRef());
             this->m_storageTable->setItem(row, 1, vdiItem);
 
             QComboBox* srCombo = new QComboBox(this->m_storageTable);
-            for (const QString& srRef : srRefs)
+            for (const QSharedPointer<SR>& sr : targetSrs)
             {
-                QVariantMap srData = targetCache->ResolveObjectData(XenObjectType::SR, srRef);
-                QString srName = srData.value("name_label", "SR").toString();
-                srCombo->addItem(srName, srRef);
+                if (!sr || !sr->IsValid())
+                    continue;
+                srCombo->addItem(sr->GetName(), sr->OpaqueRef());
             }
 
             if (!defaultSrRef.isEmpty())
@@ -1326,22 +1327,55 @@ void CrossPoolMigrateWizard::populateNetworkMappings()
     if (!sourceCache || !targetCache)
         return;
 
-    QStringList networkRefs = targetCache->GetAllRefs(XenObjectType::Network);
+    QList<QSharedPointer<Network>> targetNetworks = targetCache->GetAll<Network>();
     int row = 0;
     for (const QSharedPointer<VM>& vmItem : this->m_vms)
     {
         if (!vmItem)
             continue;
 
-        QStringList vifRefs = vmItem->GetVIFRefs();
+        QList<QSharedPointer<VIF>> vifs = vmItem->GetVIFs();
         QStringList snapVifRefs = this->collectSnapshotVifRefs(vmItem);
-        for (const QString& vifRef : vifRefs + snapVifRefs)
+        for (const QSharedPointer<VIF>& vif : vifs)
         {
-            bool isSnapshotVif = !vifRefs.contains(vifRef);
-            QVariantMap vifData = sourceCache->ResolveObjectData(XenObjectType::VIF, vifRef);
-            QString mac = vifData.value("MAC", "VIF").toString();
-            if (isSnapshotVif)
-                mac = QString("%1 (%2)").arg(mac, tr("snapshot"));
+            if (!vif || !vif->IsValid())
+                continue;
+
+            QString mac = vif->GetMAC();
+            if (mac.isEmpty())
+                mac = "VIF";
+
+            this->m_networkTable->insertRow(row);
+            QTableWidgetItem* vmNameItem = new QTableWidgetItem(vmItem->GetName());
+            vmNameItem->setData(Qt::UserRole, vmItem->OpaqueRef());
+            this->m_networkTable->setItem(row, 0, vmNameItem);
+
+            QTableWidgetItem* vifItem = new QTableWidgetItem(mac);
+            vifItem->setData(Qt::UserRole, vif->OpaqueRef());
+            this->m_networkTable->setItem(row, 1, vifItem);
+
+            QComboBox* netCombo = new QComboBox(this->m_networkTable);
+            for (const QSharedPointer<Network>& net : targetNetworks)
+            {
+                if (!net || !net->IsValid())
+                    continue;
+                netCombo->addItem(net->GetName(), net->OpaqueRef());
+            }
+
+            this->m_networkTable->setCellWidget(row, 2, netCombo);
+            row++;
+        }
+
+        for (const QString& vifRef : snapVifRefs)
+        {
+            QSharedPointer<VIF> snapVif = sourceCache->ResolveObject<VIF>(vifRef);
+            if (!snapVif || !snapVif->IsValid())
+                continue;
+
+            QString mac = snapVif->GetMAC();
+            if (mac.isEmpty())
+                mac = "VIF";
+            mac = QString("%1 (%2)").arg(mac, tr("snapshot"));
 
             this->m_networkTable->insertRow(row);
             QTableWidgetItem* vmNameItem = new QTableWidgetItem(vmItem->GetName());
@@ -1353,11 +1387,11 @@ void CrossPoolMigrateWizard::populateNetworkMappings()
             this->m_networkTable->setItem(row, 1, vifItem);
 
             QComboBox* netCombo = new QComboBox(this->m_networkTable);
-            for (const QString& netRef : networkRefs)
+            for (const QSharedPointer<Network>& net : targetNetworks)
             {
-                QVariantMap netData = targetCache->ResolveObjectData(XenObjectType::Network, netRef);
-                QString netName = netData.value("name_label", "Network").toString();
-                netCombo->addItem(netName, netRef);
+                if (!net || !net->IsValid())
+                    continue;
+                netCombo->addItem(net->GetName(), net->OpaqueRef());
             }
 
             this->m_networkTable->setCellWidget(row, 2, netCombo);
@@ -1379,12 +1413,12 @@ void CrossPoolMigrateWizard::populateTransferNetworks()
     if (!targetCache)
         return;
 
-    QStringList networkRefs = targetCache->GetAllRefs(XenObjectType::Network);
-    for (const QString& netRef : networkRefs)
+    QList<QSharedPointer<Network>> networks = targetCache->GetAll<Network>();
+    for (const QSharedPointer<Network>& network : networks)
     {
-        QVariantMap netData = targetCache->ResolveObjectData(XenObjectType::Network, netRef);
-        QString netName = netData.value("name_label", "Network").toString();
-        this->m_transferNetworkCombo->addItem(netName, netRef);
+        if (!network || !network->IsValid())
+            continue;
+        this->m_transferNetworkCombo->addItem(network->GetName(), network->OpaqueRef());
     }
 
     if (this->m_transferNetworkCombo->count() > 0)
@@ -1711,8 +1745,9 @@ bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm, Xe
         return false;
     }
 
-    QVariantMap hostData = targetCache->ResolveObjectData(XenObjectType::Host, hostRef);
-    QString targetVersion = hostData.value("software_version").toMap().value("product_version").toString();
+    QSharedPointer<Host> targetHost = targetCache->ResolveObject<Host>(hostRef);
+    QVariantMap targetSwVersion = targetHost ? targetHost->SoftwareVersion() : QVariantMap();
+    QString targetVersion = targetSwVersion.value("product_version").toString();
 
     QString sourceHostRef = homeRef;
     if (sourceHostRef.isEmpty())
@@ -1725,8 +1760,9 @@ bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm, Xe
     }
     if (!sourceHostRef.isEmpty())
     {
-        QVariantMap sourceHostData = sourceCache->ResolveObjectData(XenObjectType::Host, sourceHostRef);
-        QString sourceVersion = sourceHostData.value("software_version").toMap().value("product_version").toString();
+        QSharedPointer<Host> sourceHost = sourceCache->ResolveObject<Host>(sourceHostRef);
+        QVariantMap sourceSwVersion = sourceHost ? sourceHost->SoftwareVersion() : QVariantMap();
+        QString sourceVersion = sourceSwVersion.value("product_version").toString();
         if (!targetVersion.isEmpty() && !sourceVersion.isEmpty() &&
             compareVersions(targetVersion, sourceVersion) < 0)
         {
@@ -1736,7 +1772,7 @@ bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm, Xe
         }
     }
 
-    bool restrictDmc = hostData.value("restrict_dmc", false).toBool();
+    bool restrictDmc = targetHost ? targetHost->GetData().value("restrict_dmc", false).toBool() : false;
     QString powerState = vm->GetPowerState();
     if (restrictDmc &&
         (powerState == "Running" || powerState == "Paused" || powerState == "Suspended"))
@@ -1781,14 +1817,16 @@ bool CrossPoolMigrateWizard::canDoStorageMigration(const QSharedPointer<VM>& vm,
 
     // Find management network for target host
     QString managementNetworkRef;
-    QList<QVariantMap> pifs = targetCache->GetAllData(XenObjectType::PIF);
-    for (const QVariantMap& pifData : pifs)
+    QList<QSharedPointer<PIF>> pifs = targetCache->GetAll<PIF>();
+    for (const QSharedPointer<PIF>& pif : pifs)
     {
-        if (!pifData.value("management", false).toBool())
+        if (!pif || !pif->IsValid())
             continue;
-        if (pifData.value("host").toString() != hostRef)
+        if (!pif->Management())
             continue;
-        managementNetworkRef = pifData.value("network").toString();
+        if (pif->GetHostRef() != hostRef)
+            continue;
+        managementNetworkRef = pif->GetNetworkRef();
         if (!managementNetworkRef.isEmpty())
             break;
     }
@@ -1816,27 +1854,28 @@ bool CrossPoolMigrateWizard::canDoStorageMigration(const QSharedPointer<VM>& vm,
     // Build VDI map
     QVariantMap vdiMap;
     QStringList targetSrRefs;
-    QStringList allTargetSrRefs = targetCache->GetAllRefs(XenObjectType::SR);
-    for (const QString& targetSrRef : allTargetSrRefs)
+    QList<QSharedPointer<SR>> allTargetSrs = targetCache->GetAll<SR>();
+    for (const QSharedPointer<SR>& targetSr : allTargetSrs)
     {
-        QSharedPointer<SR> targetSr = targetCache->ResolveObject<SR>(XenObjectType::SR, targetSrRef);
         if (targetSr && targetSr->SupportsStorageMigration())
-            targetSrRefs.append(targetSrRef);
+            targetSrRefs.append(targetSr->OpaqueRef());
     }
-    QStringList vbdRefs = vm->GetVBDRefs();
-    for (const QString& vbdRef : vbdRefs)
+    QList<QSharedPointer<VBD>> vbds = vm->GetVBDs();
+    for (const QSharedPointer<VBD>& vbd : vbds)
     {
-        QVariantMap vbdData = sourceCache->ResolveObjectData(XenObjectType::VBD, vbdRef);
-        QString vdiRef = vbdData.value("VDI").toString();
-        if (vdiRef.isEmpty() || vdiRef == XENOBJECT_NULL)
+        if (!vbd || !vbd->IsValid())
             continue;
 
-        QVariantMap vdiData = sourceCache->ResolveObjectData(XenObjectType::VDI, vdiRef);
-        QString srRef = vdiData.value("SR").toString();
+        QSharedPointer<VDI> vdi = vbd->GetVDI();
+        if (!vdi || !vdi->IsValid())
+            continue;
+
+        QString vdiRef = vdi->OpaqueRef();
+        QString srRef = vdi->SRRef();
         if (srRef.isEmpty())
             continue;
 
-        QSharedPointer<SR> srObj = sourceCache->ResolveObject<SR>(XenObjectType::SR, srRef);
+        QSharedPointer<SR> srObj = sourceCache->ResolveObject<SR>(srRef);
         if (srObj && srObj->ContentType() == "iso")
             continue;
 
@@ -1853,12 +1892,14 @@ bool CrossPoolMigrateWizard::canDoStorageMigration(const QSharedPointer<VM>& vm,
     // Build VIF map
     QVariantMap vifMap;
     QString targetNetworkRef;
-    QStringList targetNetworks = targetCache->GetAllRefs(XenObjectType::Network);
-    for (const QString& networkRef : targetNetworks)
+    QList<QSharedPointer<Network>> targetNetworks = targetCache->GetAll<Network>();
+    for (const QSharedPointer<Network>& network : targetNetworks)
     {
-        if (hostCanSeeNetwork(targetCache, hostRef, networkRef))
+        if (!network || !network->IsValid())
+            continue;
+        if (hostCanSeeNetwork(targetCache, hostRef, network->OpaqueRef()))
         {
-            targetNetworkRef = networkRef;
+            targetNetworkRef = network->OpaqueRef();
             break;
         }
     }
@@ -1870,9 +1911,13 @@ bool CrossPoolMigrateWizard::canDoStorageMigration(const QSharedPointer<VM>& vm,
     }
     if (!targetNetworkRef.isEmpty())
     {
-        QStringList vifRefs = vm->GetVIFRefs();
-        for (const QString& vifRef : vifRefs)
-            vifMap.insert(vifRef, targetNetworkRef);
+        QList<QSharedPointer<VIF>> vifs = vm->GetVIFs();
+        for (const QSharedPointer<VIF>& vif : vifs)
+        {
+            if (!vif || !vif->IsValid())
+                continue;
+            vifMap.insert(vif->OpaqueRef(), targetNetworkRef);
+        }
     }
 
     try
@@ -1939,14 +1984,10 @@ QStringList CrossPoolMigrateWizard::collectSnapshotVifRefs(const QSharedPointer<
     QStringList snapshots = vm->GetSnapshotRefs();
     for (const QString& snapRef : snapshots)
     {
-        QVariantMap snapData = cache->ResolveObjectData(XenObjectType::VM, snapRef);
-        QVariantList vifList = snapData.value("VIFs").toList();
-        for (const QVariant& vifVar : vifList)
-        {
-            QString vifRef = vifVar.toString();
-            if (!vifRef.isEmpty())
-                result.append(vifRef);
-        }
+        QSharedPointer<VM> snapshotVm = cache->ResolveObject<VM>(snapRef);
+        if (!snapshotVm || !snapshotVm->IsValid())
+            continue;
+        result.append(snapshotVm->GetVIFRefs());
     }
 
     return result;

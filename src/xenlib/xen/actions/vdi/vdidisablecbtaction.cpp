@@ -47,37 +47,37 @@ VDIDisableCbtAction::VDIDisableCbtAction(XenConnection* connection,
 
 void VDIDisableCbtAction::run()
 {
-    if (!GetConnection() || !GetSession())
+    if (!this->GetConnection() || !this->GetSession())
     {
-        setError("Connection lost");
+        this->setError("Connection lost");
         return;
     }
 
-    XenAPI::Session* xenSession = GetSession();
+    XenAPI::Session* xenSession = this->GetSession();
 
     try
     {
         // Update description
-        SetDescription(QString("Disabling changed block tracking for %1").arg(m_vmName));
+        this->SetDescription(QString("Disabling changed block tracking for %1").arg(this->m_vmName));
 
         // Call VDI.async_disable_cbt
-        QString taskRef = XenAPI::VDI::async_disable_cbt(xenSession, m_vdiRef);
+        QString taskRef = XenAPI::VDI::async_disable_cbt(xenSession, this->m_vdiRef);
 
         // Poll task to completion
-        pollToCompletion(taskRef);
+        this->pollToCompletion(taskRef);
 
         // Check if successful
-        if (GetState() == Failed)
+        if (this->GetState() == Failed)
         {
             return;
         }
 
         // Success
-        SetDescription("Disabled");
-        setState(Completed);
+        this->SetDescription("Disabled");
+        this->setState(Completed);
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to disable CBT: %1").arg(e.what()));
+        this->setError(QString("Failed to disable CBT: %1").arg(e.what()));
     }
 }

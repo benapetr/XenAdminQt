@@ -61,7 +61,7 @@ bool VappShutDownCommand::CanRun() const
             const XenObjectType type = obj->GetObjectType();
             if (type == XenObjectType::VMAppliance)
             {
-                QSharedPointer<VMAppliance> appliance = qSharedPointerCast<VMAppliance>(obj);
+                QSharedPointer<VMAppliance> appliance = qSharedPointerDynamicCast<VMAppliance>(obj);
                 if (appliance)
                     appliances.append(appliance);
                 else
@@ -185,7 +185,7 @@ void VappShutDownCommand::Run()
                 const XenObjectType type = obj->GetObjectType();
                 if (type == XenObjectType::VMAppliance)
                 {
-                    QSharedPointer<VMAppliance> appliance = qSharedPointerCast<VMAppliance>(obj);
+                    QSharedPointer<VMAppliance> appliance = qSharedPointerDynamicCast<VMAppliance>(obj);
                     if (appliance)
                         appliances.append(appliance);
                     else
@@ -444,7 +444,7 @@ QString VappShutDownCommand::getApplianceRefFromVM(const QString& vmRef) const
     QString applianceRef = vmData.value("appliance").toString();
 
     // Check if it's a valid non-null reference
-    if (applianceRef.isEmpty() || applianceRef == "OpaqueRef:NULL")
+    if (applianceRef.isEmpty() || applianceRef == XENOBJECT_NULL)
     {
         return QString();
     }

@@ -75,7 +75,7 @@ void EditMultipathAction::run()
     try
     {
         // Get all PBDs for this host
-        QVariantMap hostRecord = m_host->GetData();
+        QVariantMap hostRecord = this->m_host->GetData();
         QVariantList pbdRefs = hostRecord.value("PBDs").toList();
 
         // Step 1: Unplug all currently attached PBDs
@@ -95,7 +95,7 @@ void EditMultipathAction::run()
         }
 
         // Step 2: Set multipath configuration
-        SetDescription("Configuring multipath setting...");
+        this->SetDescription("Configuring multipath setting...");
         
         // Use other_config method (works on all XenServer versions)
         // TODO: For XenServer 6.0+ (Kolkata), use Host.set_multipathing() instead

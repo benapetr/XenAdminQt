@@ -38,7 +38,7 @@ QSharedPointer<Pool> PoolCommand::getPool() const
     if (!xo || xo->GetObjectType() != XenObjectType::Pool)
         return QSharedPointer<Pool>();
 
-    return qSharedPointerCast<Pool>(this->GetObject());
+    return qSharedPointerDynamicCast<Pool>(this->GetObject());
 }
 
 QString PoolCommand::getSelectedPoolRef() const

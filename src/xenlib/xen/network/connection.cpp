@@ -900,7 +900,7 @@ void XenConnection::updatePoolMembersFromCache(QString* poolName,
     QString resolvedCoordinator;
     if (!masterRef.isEmpty())
     {
-        const QVariantMap hostData = this->d->cache->ResolveObjectData("host", masterRef);
+        const QVariantMap hostData = this->d->cache->ResolveObjectData(XenObjectType::Host, masterRef);
         resolvedCoordinator = hostData.value("address").toString();
     }
 

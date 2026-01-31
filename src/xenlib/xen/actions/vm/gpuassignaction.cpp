@@ -61,18 +61,10 @@ void GpuAssignAction::run()
         }
 
         // Get current VGPUs for the VM
-        QVariantList currentVGPUrefs = QVariantList();
-        QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", this->m_vm->OpaqueRef());
-        if (!vmData.isEmpty())
-        {
-            currentVGPUrefs = vmData.value("VGPUs").toList();
-        }
         QSet<QString> vgpusToRemove;
-
-        for (const QVariant& ref : currentVGPUrefs)
-        {
-            vgpusToRemove.insert(ref.toString());
-        }
+        const QStringList currentVGPUrefs = this->m_vm->VGPURefs();
+        for (const QString& ref : currentVGPUrefs)
+            vgpusToRemove.insert(ref);
 
         // Identify VGPUs to keep (those with existing opaque_ref)
         QSet<QString> vgpusToKeep;

@@ -145,7 +145,7 @@ QList<QSharedPointer<VM>> VMLifeCycleCommand::getSelectedVMs() const
     QSharedPointer<XenObject> obj = this->GetObject();
     if (obj && obj->GetObjectType() == XenObjectType::VM)
     {
-        QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
+        QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(obj);
         if (vm)
             return { vm };
     }

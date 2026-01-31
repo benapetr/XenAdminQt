@@ -52,7 +52,7 @@ QString VMHelpers::getVMHome(XenConnection* conn, const QVariantMap& vmRecord)
     if (isSnapshot)
     {
         QString snapshotOf = vmRecord.value("snapshot_of").toString();
-        if (!snapshotOf.isEmpty() && snapshotOf != "OpaqueRef:NULL")
+        if (!snapshotOf.isEmpty() && snapshotOf != XENOBJECT_NULL)
         {
             QVariantMap parentVM = cache->ResolveObjectData(XenObjectType::VM, snapshotOf);
             if (!parentVM.isEmpty())
@@ -75,7 +75,7 @@ QString VMHelpers::getVMHome(XenConnection* conn, const QVariantMap& vmRecord)
     if (powerState == "Running" || powerState == "Paused")
     {
         QString residentOn = vmRecord.value("resident_on").toString();
-        if (!residentOn.isEmpty() && residentOn != "OpaqueRef:NULL")
+        if (!residentOn.isEmpty() && residentOn != XENOBJECT_NULL)
         {
             return residentOn;
         }
@@ -90,7 +90,7 @@ QString VMHelpers::getVMHome(XenConnection* conn, const QVariantMap& vmRecord)
 
     // 5. Check affinity host (if set and live)
     QString affinity = vmRecord.value("affinity").toString();
-    if (!affinity.isEmpty() && affinity != "OpaqueRef:NULL")
+    if (!affinity.isEmpty() && affinity != XENOBJECT_NULL)
     {
         QVariantMap affinityHost = cache->ResolveObjectData(XenObjectType::Host, affinity);
         if (!affinityHost.isEmpty())
@@ -131,7 +131,7 @@ QString VMHelpers::getVMStorageHost(XenConnection *conn, const QVariantMap& vmRe
     for (const QVariant& vbdRefVariant : vbds)
     {
         QString vbdRef = vbdRefVariant.toString();
-        if (vbdRef.isEmpty() || vbdRef == "OpaqueRef:NULL")
+        if (vbdRef.isEmpty() || vbdRef == XENOBJECT_NULL)
         {
             continue;
         }
@@ -155,7 +155,7 @@ QString VMHelpers::getVMStorageHost(XenConnection *conn, const QVariantMap& vmRe
 
         // Get VDI from VBD
         QString vdiRef = vbd.value("VDI").toString();
-        if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
+        if (vdiRef.isEmpty() || vdiRef == XENOBJECT_NULL)
         {
             continue;
         }
@@ -171,7 +171,7 @@ QString VMHelpers::getVMStorageHost(XenConnection *conn, const QVariantMap& vmRe
 
         // Get SR from VDI
         QString srRef = vdi.value("SR").toString();
-        if (srRef.isEmpty() || srRef == "OpaqueRef:NULL")
+        if (srRef.isEmpty() || srRef == XENOBJECT_NULL)
         {
             continue;
         }
@@ -197,7 +197,7 @@ QString VMHelpers::getVMStorageHost(XenConnection *conn, const QVariantMap& vmRe
         }
 
         QString pbdRef = pbds.first().toString();
-        if (pbdRef.isEmpty() || pbdRef == "OpaqueRef:NULL")
+        if (pbdRef.isEmpty() || pbdRef == XENOBJECT_NULL)
         {
             continue;
         }
@@ -209,7 +209,7 @@ QString VMHelpers::getVMStorageHost(XenConnection *conn, const QVariantMap& vmRe
         }
 
         QString hostRef = pbd.value("host").toString();
-        if (!hostRef.isEmpty() && hostRef != "OpaqueRef:NULL")
+        if (!hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
         {
             return hostRef; // Found storage host!
         }

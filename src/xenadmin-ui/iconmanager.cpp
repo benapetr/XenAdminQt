@@ -31,6 +31,7 @@
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/pif.h"
+#include "xenlib/xen/pool.h"
 #include "xenlib/xencache.h"
 #include <QPainter>
 #include <QDebug>
@@ -113,6 +114,11 @@ QIcon IconManager::GetIconForObject(const XenObject* object) const
         return this->GetIconForSR(objectData, object->GetConnection());
 
     return this->GetIconForObject(objectType, objectData);
+}
+
+QIcon IconManager::GetIconForObject(QSharedPointer<XenObject> object) const
+{
+    return this->GetIconForObject(object.data());
 }
 
 QIcon IconManager::GetIconForVM(const QVariantMap& vmData) const
@@ -271,40 +277,41 @@ QIcon IconManager::GetIconForSR(const QVariantMap& srData) const
 
 QIcon IconManager::GetIconForSR(const QVariantMap& srData, XenConnection* connection) const
 {
-    QString type = srData.value("type", "unknown").toString();
-    bool shared = srData.value("shared", false).toBool();
-
     QString ref = srData.value("ref").toString();
     if (ref.isEmpty())
         ref = srData.value("opaqueRef").toString();
     if (ref.isEmpty())
         ref = srData.value("_ref").toString();
 
-    bool isDefault = false;
-    bool hasPbds = !srData.value("PBDs").toList().isEmpty();
-    bool isHidden = false;
-    bool isBroken = false;
-    if (connection && connection->GetCache())
-    {
-        QSharedPointer<SR> srObj = connection->GetCache()->ResolveObject<SR>(ref);
-        if (srObj)
-        {
-            hasPbds = srObj->HasPBDs();
-            isBroken = srObj->IsDetached() || srObj->IsBroken() || !srObj->MultipathAOK();
-        }
+    QSharedPointer<SR> srObj;
+    if (connection && connection->GetCache() && !ref.isEmpty())
+        srObj = connection->GetCache()->ResolveObject<SR>(ref);
 
+    const QString type = srObj ? srObj->GetType() : srData.value("type", "unknown").toString();
+    const bool shared = srObj ? srObj->IsShared() : srData.value("shared", false).toBool();
+
+    bool isDefault = false;
+    bool hasPbds = srObj ? srObj->HasPBDs() : !srData.value("PBDs").toList().isEmpty();
+    bool isHidden = false;
+    bool isBroken = srObj ? (srObj->IsDetached() || srObj->IsBroken() || !srObj->MultipathAOK()) : false;
+
+    if (srObj)
+    {
+        const QVariantMap otherConfig = srObj->GetOtherConfig();
+        const QString hiddenFlag = otherConfig.value("hide_from_xencenter").toString().toLower();
+        isHidden = hiddenFlag == "true";
+    } else
+    {
         const QVariantMap otherConfig = srData.value("other_config").toMap();
         const QString hiddenFlag = otherConfig.value("hide_from_xencenter").toString().toLower();
         isHidden = hiddenFlag == "true";
+    }
 
-        QStringList poolRefs = connection->GetCache()->GetAllRefs(XenObjectType::Pool);
-        if (!poolRefs.isEmpty())
-        {
-            QVariantMap poolData = connection->GetCache()->ResolveObjectData("pool", poolRefs.first());
-            QString defaultRef = poolData.value("default_SR").toString();
-            if (!defaultRef.isEmpty() && defaultRef == ref)
-                isDefault = true;
-        }
+    if (connection && connection->GetCache())
+    {
+        QSharedPointer<Pool> pool = connection->GetCache()->GetPool();
+        if (pool && !pool->GetDefaultSRRef().isEmpty() && pool->GetDefaultSRRef() == ref)
+            isDefault = true;
     }
 
     QString cacheKey = QString("sr_%1_%2_%3_%4_%5")

@@ -27,6 +27,7 @@
 
 #include "customfieldsmanager.h"
 #include "../xen/network/connection.h"
+#include "../xen/pool.h"
 #include "../xencache.h"
 #include <QXmlStreamReader>
 #include <QMutexLocker>
@@ -149,14 +150,14 @@ QList<CustomFieldDefinition> CustomFieldsManager::getCustomFieldsFromGuiConfig(X
 
     // Get pool (always first pool in cache)
     // C# uses Helpers.GetPoolOfOne(connection) which gets the first pool
-    QVariantMap poolData = cache->ResolveObjectData("pool", QString());
-    if (poolData.isEmpty())
+    QSharedPointer<Pool> pool = cache->GetPool();
+    if (!pool || !pool->IsValid())
     {
         return QList<CustomFieldDefinition>();
     }
 
     // Get gui_config from pool
-    QVariantMap guiConfig = poolData.value("gui_config").toMap();
+    QVariantMap guiConfig = pool->GUIConfig();
     if (!guiConfig.contains(CUSTOM_FIELD_BASE_KEY))
     {
         return QList<CustomFieldDefinition>();

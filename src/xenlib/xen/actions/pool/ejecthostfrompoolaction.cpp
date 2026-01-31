@@ -44,33 +44,33 @@ EjectHostFromPoolAction::EjectHostFromPoolAction(QSharedPointer<Pool> pool,
                      parent),
       m_pool(pool), m_hostToEject(hostToEject)
 {
-    if (!m_pool)
+    if (!this->m_pool)
         throw std::invalid_argument("Pool cannot be null");
-    if (!m_hostToEject)
+    if (!this->m_hostToEject)
         throw std::invalid_argument("Host to eject cannot be null");
 
     this->m_connection = pool->GetConnection();
 
-    SetPool(m_pool);
-    SetHost(m_hostToEject);
+    this->SetPool(this->m_pool);
+    this->SetHost(this->m_hostToEject);
 }
 
 void EjectHostFromPoolAction::run()
 {
     try
     {
-        SetDescription("Removing host from pool...");
+        this->SetDescription("Removing host from pool...");
 
-        qDebug() << "EjectHostFromPoolAction: Ejecting" << m_hostToEject->GetName()
-                 << "from pool" << m_pool->GetName();
+        qDebug() << "EjectHostFromPoolAction: Ejecting" << this->m_hostToEject->GetName()
+                 << "from pool" << this->m_pool->GetName();
 
         // Call Pool.eject to remove the host
-        XenAPI::Pool::eject(GetSession(), m_hostToEject->OpaqueRef());
+        XenAPI::Pool::eject(this->GetSession(), this->m_hostToEject->OpaqueRef());
 
-        SetDescription("Host removed from pool");
+        this->SetDescription("Host removed from pool");
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to eject host from pool: %1").arg(e.what()));
+        this->setError(QString("Failed to eject host from pool: %1").arg(e.what()));
     }
 }

@@ -54,7 +54,9 @@ void NetworkPropertiesCommand::Run()
     if (networkUuid.isEmpty())
         return;
 
-    QSharedPointer<Network> network = qSharedPointerCast<Network>(this->GetObject());
+    QSharedPointer<Network> network = qSharedPointerDynamicCast<Network>(this->GetObject());
+    if (!network)
+        return;
     NetworkPropertiesDialog dialog(network, this->mainWindow());
     dialog.exec();
 }

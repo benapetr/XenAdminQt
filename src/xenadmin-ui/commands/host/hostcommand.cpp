@@ -44,7 +44,7 @@ QSharedPointer<Host> HostCommand::getSelectedHost() const
     if (!xo || xo->GetObjectType() != XenObjectType::Host)
         return QSharedPointer<Host>();
 
-    return qSharedPointerCast<Host>(xo);
+    return qSharedPointerDynamicCast<Host>(xo);
 }
 
 QString HostCommand::getSelectedHostRef() const
@@ -68,7 +68,7 @@ QList<QSharedPointer<Host>> HostCommand::getHosts() const
         if (!obj || obj->GetObjectType() != XenObjectType::Host)
             continue;
 
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(obj);
         if (host)
             hosts.append(host);
     }
@@ -80,7 +80,7 @@ QList<QSharedPointer<Host>> HostCommand::getHosts() const
     if (!xo || xo->GetObjectType() != XenObjectType::Host)
         return {};
 
-    QSharedPointer<Host> host = qSharedPointerCast<Host>(xo);
+    QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(xo);
     if (host)
         return { host };
 

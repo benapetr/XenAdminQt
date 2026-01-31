@@ -37,6 +37,14 @@
 #include "xen/network/connection.h"
 #include "xencache.h"
 #include "xen/xenobject.h"
+#include "xen/host.h"
+#include "xen/vm.h"
+#include "xen/vbd.h"
+#include "xen/vif.h"
+#include "xen/pif.h"
+#include "xen/hostmetrics.h"
+#include "xen/vmmetrics.h"
+#include "xen/vmguestmetrics.h"
 #include "iconmanager.h"
 #include "../../widgets/progressbardelegate.h"
 #include "xenlib/metricupdater.h"
@@ -381,34 +389,32 @@ QString QueryPanel::formatCpuUsage(XenObject* xenObject, int* percentOut) const
     if (!xenObject)
         return QString("--");
 
-    const QString objectType = xenObject->GetObjectTypeName();
-    const QVariantMap objectData = xenObject->GetData();
+    const XenObjectType objectType = xenObject->GetObjectType();
     XenConnection* connection = xenObject->GetConnection();
     if (!connection)
         return QString("--");
 
     MetricUpdater* metrics = connection->GetMetricUpdater();
-    XenCache* cache = connection->GetCache();
 
-    if (objectType == "vm")
+    if (objectType == XenObjectType::VM)
     {
-        QString powerState = objectData.value("power_state", "").toString();
+        VM* vm = dynamic_cast<VM*>(xenObject);
+        if (!vm)
+            return "-";
+
+        QString powerState = vm->GetPowerState();
         if (powerState != "Running")
             return "";
 
-        QString metricsRef = objectData.value("metrics", "").toString();
-        if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL" || !cache)
+        QSharedPointer<VMMetrics> vmMetrics = vm->GetMetrics();
+        if (!vmMetrics || !vmMetrics->IsValid())
             return "-";
 
-        QVariantMap vmMetrics = cache->ResolveObjectData("vm_metrics", metricsRef);
-        if (vmMetrics.isEmpty())
-            return "-";
-
-        int vcpuCount = vmMetrics.value("VCPUs_number", 0).toInt();
+        int vcpuCount = vmMetrics->GetVCPUsNumber();
         if (vcpuCount == 0)
             return "-";
 
-        QString uuid = objectData.value("uuid", "").toString();
+        QString uuid = vm->GetUUID();
         if (uuid.isEmpty())
             return "-";
 
@@ -442,13 +448,17 @@ QString QueryPanel::formatCpuUsage(XenObject* xenObject, int* percentOut) const
         return QString("%1% of %2 CPUs").arg(rounded).arg(vcpuCount);
     }
 
-    if (objectType == "host")
+    if (objectType == XenObjectType::Host)
     {
-        int cpuCount = objectData.value("cpu_count", 0).toInt();
+        Host* host = dynamic_cast<Host*>(xenObject);
+        if (!host)
+            return "-";
+
+        int cpuCount = host->GetData().value("cpu_count", 0).toInt();
         if (cpuCount == 0)
             return "-";
 
-        QString uuid = objectData.value("uuid", "").toString();
+        QString uuid = host->GetUUID();
         if (uuid.isEmpty())
             return "-";
 
@@ -493,28 +503,30 @@ QString QueryPanel::formatMemoryUsage(XenObject* xenObject, int* percentOut) con
     if (!xenObject)
         return QString("--");
 
-    const QString objectType = xenObject->GetObjectTypeName();
-    const QVariantMap objectData = xenObject->GetData();
+    XenObjectType objectType = xenObject->GetObjectType();
     XenConnection* connection = xenObject->GetConnection();
     if (!connection)
         return QString("--");
 
     MetricUpdater* metrics = connection->GetMetricUpdater();
-    XenCache* cache = connection->GetCache();
 
-    if (objectType == "vm")
+    if (objectType == XenObjectType::VM)
     {
-        QString powerState = objectData.value("power_state", "").toString();
+        VM* vm = dynamic_cast<VM*>(xenObject);
+        if (!vm)
+            return "-";
+
+        QString powerState = vm->GetPowerState();
         if (powerState != "Running")
             return "";
 
-        QString uuid = objectData.value("uuid", "").toString();
+        QString uuid = vm->GetUUID();
         if (uuid.isEmpty())
             return "-";
 
         if (!metrics || !metrics->hasMetrics("vm", uuid))
         {
-            qulonglong memoryBytes = objectData.value("memory_static_max", 0).toULongLong();
+            qulonglong memoryBytes = static_cast<qulonglong>(vm->GetMemoryStaticMax());
             if (memoryBytes == 0)
                 return "-";
 
@@ -530,7 +542,7 @@ QString QueryPanel::formatMemoryUsage(XenObject* xenObject, int* percentOut) con
 
         if (memoryBytes == 0.0)
         {
-            memoryBytes = objectData.value("memory_static_max", 0).toULongLong();
+            memoryBytes = static_cast<double>(vm->GetMemoryStaticMax());
             if (memoryBytes == 0)
                 return "-";
         }
@@ -553,20 +565,23 @@ QString QueryPanel::formatMemoryUsage(XenObject* xenObject, int* percentOut) con
             .arg(totalGB, 0, 'f', 1);
     }
 
-    if (objectType == "host")
+    if (objectType == XenObjectType::Host)
     {
-        QString uuid = objectData.value("uuid", "").toString();
+        Host* host = dynamic_cast<Host*>(xenObject);
+        if (!host)
+            return "-";
+
+        QString uuid = host->GetUUID();
         if (uuid.isEmpty())
             return "-";
 
         if (!metrics || !metrics->hasMetrics("host", uuid))
         {
-            QString metricsRef = objectData.value("metrics", "").toString();
-            if (!metricsRef.isEmpty() && metricsRef != "OpaqueRef:NULL" && cache)
+            QSharedPointer<HostMetrics> hostMetrics = host->GetMetrics();
+            if (hostMetrics && hostMetrics->IsValid())
             {
-                QVariantMap hostMetrics = cache->ResolveObjectData("host_metrics", metricsRef);
-                qulonglong memoryTotal = hostMetrics.value("memory_total", 0).toULongLong();
-                qulonglong memoryFree = hostMetrics.value("memory_free", 0).toULongLong();
+                qulonglong memoryTotal = static_cast<qulonglong>(hostMetrics->GetMemoryTotal());
+                qulonglong memoryFree = static_cast<qulonglong>(hostMetrics->GetMemoryFree());
                 if (memoryTotal > 0 && memoryFree > 0 && memoryFree <= memoryTotal)
                 {
                     qulonglong usedBytes = memoryTotal - memoryFree;
@@ -622,29 +637,31 @@ QString QueryPanel::formatDiskIO(XenObject* xenObject) const
     if (!xenObject)
         return QString("--");
 
-    const QString objectType = xenObject->GetObjectTypeName();
-    const QVariantMap objectData = xenObject->GetData();
+    XenObjectType objectType = xenObject->GetObjectType();
     XenConnection* connection = xenObject->GetConnection();
     if (!connection)
         return QString("--");
 
     MetricUpdater* metrics = connection->GetMetricUpdater();
-    XenCache* cache = connection->GetCache();
 
-    if (objectType == "vm")
+    if (objectType == XenObjectType::VM)
     {
-        QString powerState = objectData.value("power_state", "").toString();
+        VM* vm = dynamic_cast<VM*>(xenObject);
+        if (!vm)
+            return "-";
+
+        QString powerState = vm->GetPowerState();
         if (powerState != "Running")
             return "";
 
-        QString uuid = objectData.value("uuid", "").toString();
+        QString uuid = vm->GetUUID();
         if (uuid.isEmpty())
             return "-";
 
         if (!metrics || !metrics->hasMetrics("vm", uuid))
             return "-";
 
-        QVariantList vbds = objectData.value("VBDs", QVariantList()).toList();
+        QList<QSharedPointer<VBD>> vbds = vm->GetVBDs();
         if (vbds.isEmpty())
             return "-";
 
@@ -652,16 +669,12 @@ QString QueryPanel::formatDiskIO(XenObject* xenObject) const
         double totalWrite = 0.0;
         int vbdCount = 0;
 
-        for (const QVariant& vbdRef : vbds)
+        for (const QSharedPointer<VBD>& vbd : vbds)
         {
-            if (!cache)
+            if (!vbd || !vbd->IsValid())
                 continue;
 
-            QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef.toString());
-            if (vbdData.isEmpty())
-                continue;
-
-            QString device = vbdData.value("device", "").toString();
+            QString device = vbd->GetDevice();
             if (device.isEmpty())
                 continue;
 
@@ -695,29 +708,31 @@ QString QueryPanel::formatNetworkIO(XenObject* xenObject) const
     if (!xenObject)
         return QString("--");
 
-    const QString objectType = xenObject->GetObjectTypeName();
-    const QVariantMap objectData = xenObject->GetData();
+    XenObjectType objectType = xenObject->GetObjectType();
     XenConnection* connection = xenObject->GetConnection();
     if (!connection)
         return QString("--");
 
     MetricUpdater* metrics = connection->GetMetricUpdater();
-    XenCache* cache = connection->GetCache();
 
-    if (objectType == "vm")
+    if (objectType == XenObjectType::VM)
     {
-        QString powerState = objectData.value("power_state", "").toString();
+        VM* vm = dynamic_cast<VM*>(xenObject);
+        if (!vm)
+            return "-";
+
+        QString powerState = vm->GetPowerState();
         if (powerState != "Running")
             return "";
 
-        QString uuid = objectData.value("uuid", "").toString();
+        QString uuid = vm->GetUUID();
         if (uuid.isEmpty())
             return "-";
 
         if (!metrics || !metrics->hasMetrics("vm", uuid))
             return "-";
 
-        QVariantList vifs = objectData.value("VIFs", QVariantList()).toList();
+        QList<QSharedPointer<VIF>> vifs = vm->GetVIFs();
         if (vifs.isEmpty())
             return "-";
 
@@ -725,16 +740,12 @@ QString QueryPanel::formatNetworkIO(XenObject* xenObject) const
         double totalTx = 0.0;
         int vifCount = 0;
 
-        for (const QVariant& vifRef : vifs)
+        for (const QSharedPointer<VIF>& vif : vifs)
         {
-            if (!cache)
+            if (!vif || !vif->IsValid())
                 continue;
 
-            QVariantMap vifData = cache->ResolveObjectData("vif", vifRef.toString());
-            if (vifData.isEmpty())
-                continue;
-
-            QString device = vifData.value("device", "").toString();
+            QString device = vif->GetDevice();
             if (device.isEmpty())
                 continue;
 
@@ -760,16 +771,20 @@ QString QueryPanel::formatNetworkIO(XenObject* xenObject) const
             .arg(qRound(txKBps));
     }
 
-    if (objectType == "host")
+    if (objectType == XenObjectType::Host)
     {
-        QString uuid = objectData.value("uuid", "").toString();
+        Host* host = dynamic_cast<Host*>(xenObject);
+        if (!host)
+            return "-";
+
+        QString uuid = host->GetUUID();
         if (uuid.isEmpty())
             return "-";
 
         if (!metrics || !metrics->hasMetrics("host", uuid))
             return "-";
 
-        QVariantList pifs = objectData.value("PIFs", QVariantList()).toList();
+        QList<QSharedPointer<PIF>> pifs = host->GetPIFs();
         if (pifs.isEmpty())
             return "-";
 
@@ -777,16 +792,12 @@ QString QueryPanel::formatNetworkIO(XenObject* xenObject) const
         double totalTx = 0.0;
         int pifCount = 0;
 
-        for (const QVariant& pifRef : pifs)
+        for (const QSharedPointer<PIF>& pif : pifs)
         {
-            if (!cache)
+            if (!pif || !pif->IsValid())
                 continue;
 
-            QVariantMap pifData = cache->ResolveObjectData("pif", pifRef.toString());
-            if (pifData.isEmpty())
-                continue;
-
-            QString device = pifData.value("device", "").toString();
+            QString device = pif->GetDevice();
             if (device.isEmpty())
                 continue;
 
@@ -820,25 +831,28 @@ QString QueryPanel::formatIpAddress(XenObject* xenObject) const
     if (!xenObject)
         return QString();
 
-    const QString objectType = xenObject->GetObjectTypeName();
-    const QVariantMap objectData = xenObject->GetData();
+    XenObjectType objectType = xenObject->GetObjectType();
     XenConnection* connection = xenObject->GetConnection();
     if (!connection)
         return QString();
 
     XenCache* cache = connection->GetCache();
 
-    if (objectType == "vm")
+    if (objectType == XenObjectType::VM)
     {
-        QString guestMetricsRef = objectData.value("guest_metrics", "").toString();
-        if (guestMetricsRef.isEmpty() || guestMetricsRef == "OpaqueRef:NULL" || !cache)
+        VM* vm = dynamic_cast<VM*>(xenObject);
+        if (!vm)
             return "";
 
-        QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
-        if (guestMetrics.isEmpty())
+        const QString guestMetricsRef = vm->GetGuestMetricsRef();
+        if (guestMetricsRef.isEmpty() || guestMetricsRef == XENOBJECT_NULL || !cache)
             return "";
 
-        QVariantMap networks = guestMetrics.value("networks", QVariantMap()).toMap();
+        QSharedPointer<VMGuestMetrics> guestMetrics = cache->ResolveObject<VMGuestMetrics>(guestMetricsRef);
+        if (!guestMetrics || !guestMetrics->IsValid())
+            return "";
+
+        QVariantMap networks = guestMetrics->GetNetworks();
         QStringList ipAddresses;
 
         for (auto it = networks.constBegin(); it != networks.constEnd(); ++it)
@@ -857,10 +871,10 @@ QString QueryPanel::formatIpAddress(XenObject* xenObject) const
         return "";
     }
 
-    if (objectType == "host")
+    if (objectType == XenObjectType::Host)
     {
-        QString address = objectData.value("address", "").toString();
-        return address;
+        Host* host = dynamic_cast<Host*>(xenObject);
+        return host ? host->GetAddress() : QString();
     }
 
     return QString();
@@ -871,33 +885,26 @@ QString QueryPanel::formatUptime(XenObject* xenObject) const
     if (!xenObject)
         return QString();
 
-    const QString objectType = xenObject->GetObjectTypeName();
-    const QVariantMap objectData = xenObject->GetData();
+    XenObjectType objectType = xenObject->GetObjectType();
     XenConnection* connection = xenObject->GetConnection();
     if (!connection)
         return QString();
 
-    XenCache* cache = connection->GetCache();
-
-    if (objectType == "vm")
+    if (objectType == XenObjectType::VM)
     {
-        QString powerState = objectData.value("power_state", "").toString();
+        VM* vm = dynamic_cast<VM*>(xenObject);
+        if (!vm)
+            return "";
+
+        QString powerState = vm->GetPowerState();
         if (powerState != "Running" && powerState != "Paused" && powerState != "Suspended")
             return "";
 
-        QString metricsRef = objectData.value("metrics", "").toString();
-        if (metricsRef.isEmpty() || metricsRef == "OpaqueRef:NULL" || !cache)
+        QSharedPointer<VMMetrics> vmMetrics = vm->GetMetrics();
+        if (!vmMetrics || !vmMetrics->IsValid())
             return "";
 
-        QVariantMap vmMetrics = cache->ResolveObjectData("vm_metrics", metricsRef);
-        if (vmMetrics.isEmpty())
-            return "";
-
-        QString startTimeStr = vmMetrics.value("start_time", "").toString();
-        if (startTimeStr.isEmpty())
-            return "";
-
-        QDateTime startTime = QDateTime::fromString(startTimeStr, Qt::ISODate);
+        QDateTime startTime = vmMetrics->GetStartTime();
         if (!startTime.isValid())
             return "";
 
@@ -921,7 +928,7 @@ QString QueryPanel::formatUptime(XenObject* xenObject) const
         return parts.join(" ");
     }
 
-    if (objectType == "host")
+    if (objectType == XenObjectType::Host)
     {
         return "-";
     }

@@ -60,29 +60,29 @@ SrIntroduceAction::SrIntroduceAction(XenConnection* connection,
 
 void SrIntroduceAction::run()
 {
-    qDebug() << "SrIntroduceAction: Introducing SR" << m_srUuid
-             << "name:" << m_srName
-             << "type:" << m_srType;
+    qDebug() << "SrIntroduceAction: Introducing SR" << this->m_srUuid
+             << "name:" << this->m_srName
+             << "type:" << this->m_srType;
 
     Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
-        setError("Not connected to XenServer");
+        this->setError("Not connected to XenServer");
         return;
     }
 
     // Step 1: Preemptive SR.forget() in case SR is in broken state
     qDebug() << "SrIntroduceAction: Performing preemptive SR.forget";
-    SetDescription("Checking existing SR state...");
+    this->SetDescription("Checking existing SR state...");
 
     try
     {
-        QString existingRef = XenAPI::SR::get_by_uuid(session, m_srUuid);
+        QString existingRef = XenAPI::SR::get_by_uuid(session, this->m_srUuid);
         if (!existingRef.isEmpty())
         {
             qDebug() << "SrIntroduceAction: Found existing SR, forgetting it";
             QString taskRef = XenAPI::SR::async_forget(session, existingRef);
-            pollToCompletion(taskRef, 0, 5);
+            this->pollToCompletion(taskRef, 0, 5);
         }
     } catch (const std::exception& e)
     {
@@ -92,22 +92,22 @@ void SrIntroduceAction::run()
 
     // Step 2: Introduce the SR
     qDebug() << "SrIntroduceAction: Introducing SR";
-    SetDescription("Introducing storage repository...");
+    this->SetDescription("Introducing storage repository...");
 
     QString srRef;
     try
     {
         QString taskRef = XenAPI::SR::async_introduce(session,
-                                                      m_srUuid,
-                                                      m_srName,
-                                                      m_srDescription,
-                                                      m_srType,
-                                                      m_srContentType,
-                                                      m_srIsShared,
+                                                      this->m_srUuid,
+                                                      this->m_srName,
+                                                      this->m_srDescription,
+                                                      this->m_srType,
+                                                      this->m_srContentType,
+                                                      this->m_srIsShared,
                                                       QVariantMap()); // Empty smconfig
 
-        pollToCompletion(taskRef, 5, 10);
-        srRef = GetResult();
+        this->pollToCompletion(taskRef, 5, 10);
+        srRef = this->GetResult();
 
         if (srRef.isEmpty())
         {
@@ -115,16 +115,16 @@ void SrIntroduceAction::run()
         }
 
         // Cache the result for later
-        SetResult(srRef);
+        this->SetResult(srRef);
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to introduce SR: %1").arg(e.what()));
+        this->setError(QString("Failed to introduce SR: %1").arg(e.what()));
         return;
     }
 
     // Step 3: Create and plug PBDs for each host
     qDebug() << "SrIntroduceAction: Creating PBDs for all hosts";
-    SetDescription("Creating storage connections...");
+    this->SetDescription("Creating storage connections...");
 
     // Get host list from XenAPI (simple approach - just get all hosts)
     QVariant hostsVar;
@@ -133,7 +133,7 @@ void SrIntroduceAction::run()
         hostsVar = XenAPI::Host::get_all(session);
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to get host list: %1").arg(e.what()));
+        this->setError(QString("Failed to get host list: %1").arg(e.what()));
         return;
     }
 
@@ -151,7 +151,7 @@ void SrIntroduceAction::run()
 
     if (hostRefs.isEmpty())
     {
-        setError("No hosts found in pool");
+        this->setError("No hosts found in pool");
         return;
     }
 
@@ -162,47 +162,47 @@ void SrIntroduceAction::run()
     {
         // Create PBD
         qDebug() << "SrIntroduceAction: Creating PBD for host" << hostRef;
-        SetDescription(QString("Creating storage connection for host..."));
+        this->SetDescription(QString("Creating storage connection for host..."));
 
         QVariantMap pbdRecord;
         pbdRecord["SR"] = srRef;
         pbdRecord["host"] = hostRef;
-        pbdRecord["device_config"] = m_deviceConfig;
+        pbdRecord["device_config"] = this->m_deviceConfig;
         pbdRecord["currently_attached"] = false;
 
         QString pbdRef;
         try
         {
             QString taskRef = XenAPI::PBD::async_create(session, pbdRecord);
-            pollToCompletion(taskRef, currentProgress, currentProgress + progressPerHost);
-            pbdRef = GetResult();
+            this->pollToCompletion(taskRef, currentProgress, currentProgress + progressPerHost);
+            pbdRef = this->GetResult();
             currentProgress += progressPerHost;
         } catch (const std::exception& e)
         {
-            setError(QString("Failed to create PBD for host: %1")
+            this->setError(QString("Failed to create PBD for host: %1")
                          .arg(e.what()));
             return;
         }
 
         // Plug PBD
         qDebug() << "SrIntroduceAction: Plugging PBD";
-        SetDescription("Plugging storage on host...");
+        this->SetDescription("Plugging storage on host...");
 
         try
         {
             QString taskRef = XenAPI::PBD::async_plug(session, pbdRef);
-            pollToCompletion(taskRef, currentProgress, currentProgress + progressPerHost);
+            this->pollToCompletion(taskRef, currentProgress, currentProgress + progressPerHost);
             currentProgress += progressPerHost;
         } catch (const std::exception& e)
         {
-            setError(QString("Failed to plug PBD: %1")
+            this->setError(QString("Failed to plug PBD: %1")
                          .arg(e.what()));
             return;
         }
     }
 
     // Set as default SR if this is the first shared non-ISO SR
-    if (isFirstSharedNonISOSR())
+    if (this->isFirstSharedNonISOSR())
     {
         qDebug() << "SrIntroduceAction: This is first shared non-ISO SR, setting as default";
 
@@ -236,20 +236,20 @@ void SrIntroduceAction::run()
         }
     }
 
-    SetPercentComplete(100);
-    SetDescription("Storage repository introduced successfully");
+    this->SetPercentComplete(100);
+    this->SetDescription("Storage repository introduced successfully");
 }
 
 bool SrIntroduceAction::isFirstSharedNonISOSR() const
 {
     // Only applies to shared non-ISO SRs
-    if (m_srContentType == "iso" || !m_srIsShared)
+    if (this->m_srContentType == "iso" || !this->m_srIsShared)
     {
         return false;
     }
 
     // Check cache for existing shared non-ISO SRs
-    XenCache* cache = GetConnection()->GetCache();
+    XenCache* cache = this->GetConnection()->GetCache();
     if (!cache)
     {
         return false;
@@ -261,7 +261,7 @@ bool SrIntroduceAction::isFirstSharedNonISOSR() const
         QString srRef = srData.value("ref").toString();
 
         // Skip the SR we just introduced (result() contains the new SR ref)
-        if (srRef == GetResult())
+        if (srRef == this->GetResult())
         {
             continue;
         }

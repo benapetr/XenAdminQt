@@ -38,7 +38,7 @@ QSharedPointer<VBD> VBDCommand::getVBD() const
     if (!xo || xo->GetObjectType() != XenObjectType::VBD)
         return QSharedPointer<VBD>();
 
-    return qSharedPointerCast<VBD>(xo);
+    return qSharedPointerDynamicCast<VBD>(xo);
 }
 
 QString VBDCommand::getSelectedVBDRef() const

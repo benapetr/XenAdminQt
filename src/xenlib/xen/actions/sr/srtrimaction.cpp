@@ -44,28 +44,28 @@ SrTrimAction::SrTrimAction(XenConnection* connection,
                      parent),
       m_sr(sr)
 {
-    setAppliesToFromObject(sr);
+    this->setAppliesToFromObject(sr);
 }
 
 void SrTrimAction::run()
 {
-    qDebug() << "SrTrimAction: Trimming SR" << m_sr->GetUUID();
+    qDebug() << "SrTrimAction: Trimming SR" << this->m_sr->GetUUID();
 
     XenAPI::Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
-        setError("Not connected to XenServer");
+        this->setError("Not connected to XenServer");
         return;
     }
 
-    SetDescription("Reclaiming freed space from storage...");
+    this->SetDescription("Reclaiming freed space from storage...");
 
     // Find first attached storage host
-    Host* host = m_sr->GetFirstAttachedStorageHost();
+    Host* host = this->m_sr->GetFirstAttachedStorageHost();
     if (!host)
     {
         qWarning() << "SrTrimAction: Cannot reclaim freed space - SR is detached";
-        setError("Cannot reclaim freed space, because the SR is detached");
+        this->setError("Cannot reclaim freed space, because the SR is detached");
         return;
     }
 
@@ -75,7 +75,7 @@ void SrTrimAction::run()
     try
     {
         QVariantMap args;
-        args["sr_uuid"] = m_sr->GetUUID();
+        args["sr_uuid"] = this->m_sr->GetUUID();
 
         QString result = XenAPI::Host::call_plugin(session,
                                                    host->OpaqueRef(),
@@ -83,7 +83,7 @@ void SrTrimAction::run()
                                                    "do_trim",
                                                    args);
 
-        SetResult(result);
+        this->SetResult(result);
 
         // Check result
         bool success = (result.toLower() == "true");
@@ -91,22 +91,22 @@ void SrTrimAction::run()
         if (success)
         {
             qDebug() << "SrTrimAction: Trim successful";
-            SetDescription("Freed space reclaimed successfully");
-            SetPercentComplete(100);
+            this->SetDescription("Freed space reclaimed successfully");
+            this->SetPercentComplete(100);
         } else
         {
             qWarning() << "SrTrimAction: Trim failed with result:" << result;
-            QString error = getTrimError(result);
+            QString error = this->getTrimError(result);
             if (error.isEmpty())
             {
                 error = "Unknown error occurred during trim operation";
             }
-            setError(error);
+            this->setError(error);
         }
     } catch (const std::exception& e)
     {
         qWarning() << "SrTrimAction: Plugin call failed:" << e.what();
-        setError(QString("Failed to reclaim freed space: %1").arg(e.what()));
+        this->setError(QString("Failed to reclaim freed space: %1").arg(e.what()));
     }
 }
 

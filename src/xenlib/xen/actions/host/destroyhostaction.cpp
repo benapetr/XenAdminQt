@@ -28,6 +28,8 @@
 #include "destroyhostaction.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
+#include "xenlib/xen/pbd.h"
+#include "xenlib/xen/sr.h"
 #include "xenlib/xen/xenapi/xenapi_Host.h"
 #include "xenlib/xen/xenapi/xenapi_SR.h"
 #include "xenlib/xencache.h"
@@ -54,32 +56,34 @@ void DestroyHostAction::run()
 {
     try
     {
-        SetDescription("Removing host from pool");
+        this->SetDescription("Removing host from pool");
 
         // Get all local SRs belonging to this host
-        QList<QVariantMap> allSRs = this->m_host->GetCache()->GetAllData("sr");
+        QList<QSharedPointer<SR>> allSRs = this->m_host->GetCache()->GetAll<SR>();
         QStringList localSRRefs;
 
-        for (const QVariantMap& srData : allSRs)
+        for (const QSharedPointer<SR>& sr : allSRs)
         {
-            QString srRef = srData.value("_ref").toString();
+            if (!sr || !sr->IsValid())
+                continue;
+
+            QString srRef = sr->OpaqueRef();
 
             // Check if SR is local and belongs to this host
             // C# checks: sr.GetStorageHost() == host && sr.IsLocalSR()
-            bool isLocal = srData.value("shared", false).toBool() == false;
-            QString srType = srData.value("type").toString();
-
+            bool isLocal = sr->IsLocal();
             // Check if SR's PBDs are only connected to this host
-            QVariantList pbdRefs = srData.value("PBDs").toList();
+            QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
             bool belongsToThisHost = false;
 
-            for (const QVariant& pbdVar : pbdRefs)
+            for (const QSharedPointer<PBD>& pbd : pbds)
             {
-                QString pbdRef = pbdVar.toString();
-                QVariantMap pbdData = GetConnection()->GetCache()->ResolveObjectData("pbd", pbdRef);
-                QString pbdHost = pbdData.value("host").toString();
+                if (!pbd || !pbd->IsValid())
+                    continue;
 
-                if (pbdHost == m_host->OpaqueRef())
+                QString pbdHost = pbd->GetHostRef();
+
+                if (pbdHost == this->m_host->OpaqueRef())
                 {
                     belongsToThisHost = true;
                     break;
@@ -140,21 +144,22 @@ bool DestroyHostAction::isSRDetached(const QString& srRef)
 
     for (int i = 0; i < maxSeconds; i++)
     {
-        QVariantMap srData = GetConnection()->GetCache()->ResolveObjectData("sr", srRef);
-        QVariantList pbdRefs = srData.value("PBDs").toList();
+        QSharedPointer<SR> sr = GetConnection()->GetCache()->ResolveObject<SR>(srRef);
+        QList<QSharedPointer<PBD>> pbds = sr ? sr->GetPBDs() : QList<QSharedPointer<PBD>>();
 
-        if (pbdRefs.isEmpty())
+        if (pbds.isEmpty())
         {
             return true; // All PBDs detached
         }
 
         // Check if any PBDs are still attached
         bool anyAttached = false;
-        for (const QVariant& pbdVar : pbdRefs)
+        for (const QSharedPointer<PBD>& pbd : pbds)
         {
-            QString pbdRef = pbdVar.toString();
-            QVariantMap pbdData = GetConnection()->GetCache()->ResolveObjectData("pbd", pbdRef);
-            bool currentlyAttached = pbdData.value("currently_attached", false).toBool();
+            if (!pbd || !pbd->IsValid())
+                continue;
+
+            bool currentlyAttached = pbd->IsCurrentlyAttached();
 
             if (currentlyAttached)
             {
@@ -173,7 +178,7 @@ bool DestroyHostAction::isSRDetached(const QString& srRef)
     }
 
     // Timeout - check one last time
-    QVariantMap srData = GetConnection()->GetCache()->ResolveObjectData("sr", srRef);
-    QVariantList pbdRefs = srData.value("PBDs").toList();
-    return pbdRefs.isEmpty();
+    QSharedPointer<SR> sr = GetConnection()->GetCache()->ResolveObject<SR>(srRef);
+    QList<QSharedPointer<PBD>> pbds = sr ? sr->GetPBDs() : QList<QSharedPointer<PBD>>();
+    return pbds.isEmpty();
 }

@@ -92,7 +92,7 @@ void NICsTabPage::populateNICs()
         return;
     }
 
-    QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
+    QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
     if (!host)
     {
         qDebug() << "NICsTabPage::populateNICs - Host object missing";

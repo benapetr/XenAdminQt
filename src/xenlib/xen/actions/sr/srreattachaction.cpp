@@ -49,32 +49,32 @@ SrReattachAction::SrReattachAction(QSharedPointer<SR> sr,
 {
     if (sr)
     {
-        setAppliesToFromObject(sr);
+        this->setAppliesToFromObject(sr);
     }
 }
 
 void SrReattachAction::run()
 {
-    if (!m_sr)
+    if (!this->m_sr)
     {
-        setError("No SR specified for reattachment");
+        this->setError("No SR specified for reattachment");
         return;
     }
 
-    qDebug() << "SrReattachAction: Reattaching SR" << m_sr->GetUUID()
-             << "name:" << m_name
-             << "description:" << m_description;
+    qDebug() << "SrReattachAction: Reattaching SR" << this->m_sr->GetUUID()
+             << "name:" << this->m_name
+             << "description:" << this->m_description;
 
     XenAPI::Session* session = this->GetSession();
     if (!session || !session->IsLoggedIn())
     {
-        setError("Not connected to XenServer");
+        this->setError("Not connected to XenServer");
         return;
     }
 
-    SetDescription("Reattaching storage repository...");
+    this->SetDescription("Reattaching storage repository...");
 
-    QString srRef = m_sr->OpaqueRef();
+    QString srRef = this->m_sr->OpaqueRef();
 
     // Get all hosts in the pool using XenAPI
     QVariant hostsVar;
@@ -83,7 +83,7 @@ void SrReattachAction::run()
         hostsVar = XenAPI::Host::get_all(session);
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to get host list: %1").arg(e.what()));
+        this->setError(QString("Failed to get host list: %1").arg(e.what()));
         return;
     }
 
@@ -101,7 +101,7 @@ void SrReattachAction::run()
 
     if (hostRefs.isEmpty())
     {
-        setError("No hosts found in pool");
+        this->setError("No hosts found in pool");
         return;
     }
 
@@ -113,40 +113,40 @@ void SrReattachAction::run()
     {
         // Create PBD
         qDebug() << "SrReattachAction: Creating PBD for host" << hostRef;
-        SetDescription("Creating storage connection for host...");
+        this->SetDescription("Creating storage connection for host...");
 
         QVariantMap pbdRecord;
         pbdRecord["SR"] = srRef;
         pbdRecord["host"] = hostRef;
-        pbdRecord["device_config"] = m_deviceConfig;
+        pbdRecord["device_config"] = this->m_deviceConfig;
         pbdRecord["currently_attached"] = false;
 
         QString pbdRef;
         try
         {
             QString taskRef = XenAPI::PBD::async_create(session, pbdRecord);
-            pollToCompletion(taskRef, currentProgress, currentProgress + progressPerHost);
-            pbdRef = GetResult();
+            this->pollToCompletion(taskRef, currentProgress, currentProgress + progressPerHost);
+            pbdRef = this->GetResult();
             currentProgress += progressPerHost;
         } catch (const std::exception& e)
         {
-            setError(QString("Failed to create PBD for host: %1")
+            this->setError(QString("Failed to create PBD for host: %1")
                          .arg(e.what()));
             return;
         }
 
         // Plug PBD
         qDebug() << "SrReattachAction: Plugging PBD";
-        SetDescription("Plugging storage on host...");
+        this->SetDescription("Plugging storage on host...");
 
         try
         {
             QString taskRef = XenAPI::PBD::async_plug(session, pbdRef);
-            pollToCompletion(taskRef, currentProgress, currentProgress + progressPerHost);
+            this->pollToCompletion(taskRef, currentProgress, currentProgress + progressPerHost);
             currentProgress += progressPerHost;
         } catch (const std::exception& e)
         {
-            setError(QString("Failed to plug PBD: %1")
+            this->setError(QString("Failed to plug PBD: %1")
                          .arg(e.what()));
             return;
         }
@@ -154,18 +154,18 @@ void SrReattachAction::run()
 
     // Update SR name and description
     qDebug() << "SrReattachAction: Updating SR metadata";
-    SetDescription("Updating storage repository properties...");
+    this->SetDescription("Updating storage repository properties...");
 
     try
     {
-        XenAPI::SR::set_name_label(session, srRef, m_name);
-        XenAPI::SR::set_name_description(session, srRef, m_description);
+        XenAPI::SR::set_name_label(session, srRef, this->m_name);
+        XenAPI::SR::set_name_description(session, srRef, this->m_description);
     } catch (const std::exception& e)
     {
         qWarning() << "SrReattachAction: Failed to update SR metadata:" << e.what();
         // Non-fatal - SR is already reattached
     }
 
-    SetDescription("Storage repository attached successfully");
-    SetPercentComplete(100);
+    this->SetDescription("Storage repository attached successfully");
+    this->SetPercentComplete(100);
 }

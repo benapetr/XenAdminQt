@@ -47,12 +47,12 @@ void DisableHostAction::run()
         try
         {
             // Disable the host (this will evacuate VMs)
-            QString taskRef = XenAPI::Host::async_disable(GetSession(), this->m_host->OpaqueRef());
+            QString taskRef = XenAPI::Host::async_disable(this->GetSession(), this->m_host->OpaqueRef());
             this->pollToCompletion(taskRef, 0, 100);
         } catch (...)
         {
             // On error, remove MAINTENANCE_MODE flag
-            XenAPI::Host::remove_from_other_config(GetSession(), this->m_host->OpaqueRef(), "MAINTENANCE_MODE");
+            XenAPI::Host::remove_from_other_config(this->GetSession(), this->m_host->OpaqueRef(), "MAINTENANCE_MODE");
             throw;
         }
 

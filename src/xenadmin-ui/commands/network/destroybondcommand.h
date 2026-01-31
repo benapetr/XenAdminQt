@@ -75,11 +75,11 @@ class DestroyBondCommand : public Command
 
         /**
          * @brief Check if bond affects management interfaces
-         * @param networkData Network data from cache
+         * @param network Network object
          * @param affectsPrimary Output: true if affects primary management
          * @param affectsSecondary Output: true if affects secondary management
          */
-        void checkManagementImpact(const QVariantMap& networkData,
+        void checkManagementImpact(const QSharedPointer<Network>& network,
                                    bool& affectsPrimary,
                                    bool& affectsSecondary) const;
 
@@ -91,10 +91,10 @@ class DestroyBondCommand : public Command
 
         /**
          * @brief Get bond name for display
-         * @param networkData Network data from cache
+         * @param network Network object
          * @return Bond name (typically PIF device name)
          */
-        QString getBondName(const QVariantMap& networkData) const;
+        QString getBondName(const QSharedPointer<Network>& network) const;
 };
 
 #endif // DESTROYBONDCOMMAND_H

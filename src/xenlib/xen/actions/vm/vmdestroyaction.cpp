@@ -28,9 +28,10 @@
 #include "vmdestroyaction.h"
 #include "../../network/connection.h"
 #include "../../session.h"
+#include "../../vbd.h"
+#include "../../vdi.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../xenapi/xenapi_VDI.h"
-#include "../../xenapi/xenapi_VBD.h"
 #include "../../../xencache.h"
 #include <QDebug>
 
@@ -66,17 +67,12 @@ VMDestroyAction::VMDestroyAction(QSharedPointer<VM> vm,
     // If deleteAllOwnerDisks is true, find all VBDs marked as owner
     if (deleteAllOwnerDisks)
     {
-        QStringList vbdRefs = m_vm->GetVBDRefs();
-        for (const QString& vbdRef : vbdRefs)
+        const QList<QSharedPointer<VBD>> vbds = m_vm->GetVBDs();
+        for (const QSharedPointer<VBD>& vbd : vbds)
         {
-            QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
-
             // Check if this VBD owns its VDI
-            bool isOwner = vbdData.value("owner", false).toBool();
-            if (isOwner)
-            {
-                m_vbdsToDelete.append(vbdRef);
-            }
+            if (vbd && vbd->IsOwner())
+                m_vbdsToDelete.append(vbd->OpaqueRef());
         }
     }
 }
@@ -105,8 +101,8 @@ void VMDestroyAction::destroyVM(const QString& vmRef,
     {
         try
         {
-            QVariantMap snapshotData = GetConnection()->GetCache()->ResolveObjectData("vm", snapshotRef);
-            QString powerState = snapshotData.value("power_state").toString();
+            QSharedPointer<VM> snapshot = GetConnection()->GetCache()->ResolveObject<VM>(snapshotRef);
+            QString powerState = snapshot ? snapshot->GetPowerState() : QString();
 
             // If snapshot is suspended, hard shutdown first
             if (powerState == "Suspended")
@@ -130,19 +126,19 @@ void VMDestroyAction::destroyVM(const QString& vmRef,
     // Add VDIs from specified VBDs
     for (const QString& vbdRef : vbdRefsToDelete)
     {
-        QVariantMap vbdData = GetConnection()->GetCache()->ResolveObjectData("vbd", vbdRef);
-        QString vdiRef = vbdData.value("VDI").toString();
+        QSharedPointer<VBD> vbd = GetConnection()->GetCache()->ResolveObject<VBD>(vbdRef);
+        QString vdiRef = vbd ? vbd->GetVDIRef() : QString();
 
-        if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
+        if (!vdiRef.isEmpty() && vdiRef != XENOBJECT_NULL)
         {
             vdiRefsToDelete.append(vdiRef);
         }
     }
 
     // Add suspend VDI if present
-    QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
-    QString suspendVdiRef = vmData.value("suspend_VDI").toString();
-    if (!suspendVdiRef.isEmpty() && suspendVdiRef != "OpaqueRef:NULL")
+    QSharedPointer<VM> vm = GetConnection()->GetCache()->ResolveObject<VM>(vmRef);
+    QString suspendVdiRef = vm ? vm->GetSuspendVDIRef() : QString();
+    if (!suspendVdiRef.isEmpty() && suspendVdiRef != XENOBJECT_NULL)
     {
         vdiRefsToDelete.append(suspendVdiRef);
     }

@@ -48,13 +48,13 @@ VbdCreateAndPlugAction::VbdCreateAndPlugAction(QSharedPointer<VM> vm, const QVar
 
 void VbdCreateAndPlugAction::run()
 {
-    qDebug() << "[VbdCreateAndPlugAction] Starting VBD creation and plug for" << m_vdiName;
-    qDebug() << "[VbdCreateAndPlugAction] VM ref:" << m_vm->OpaqueRef();
-    qDebug() << "[VbdCreateAndPlugAction] VBD record:" << m_vbdRecord;
+    qDebug() << "[VbdCreateAndPlugAction] Starting VBD creation and plug for" << this->m_vdiName;
+    qDebug() << "[VbdCreateAndPlugAction] VM ref:" << this->m_vm->OpaqueRef();
+    qDebug() << "[VbdCreateAndPlugAction] VBD record:" << this->m_vbdRecord;
 
     try
     {
-        XenAPI::Session* session = m_vm->GetConnection()->GetSession();
+        XenAPI::Session* session = this->m_vm->GetConnection()->GetSession();
         if (!session)
         {
             qCritical() << "[VbdCreateAndPlugAction] No valid session!";
@@ -64,11 +64,11 @@ void VbdCreateAndPlugAction::run()
         qDebug() << "[VbdCreateAndPlugAction] Session valid, proceeding with VBD creation";
 
         // Step 1: Create the VBD record
-        SetDescription(QString("Creating VBD for '%1'...").arg(m_vdiName));
-        SetPercentComplete(10);
+        this->SetDescription(QString("Creating VBD for '%1'...").arg(this->m_vdiName));
+        this->SetPercentComplete(10);
 
         qDebug() << "[VbdCreateAndPlugAction] Calling XenAPI::VBD::create...";
-        QString vbdRef = XenAPI::VBD::create(session, m_vbdRecord);
+        QString vbdRef = XenAPI::VBD::create(session, this->m_vbdRecord);
         if (vbdRef.isEmpty())
         {
             qCritical() << "[VbdCreateAndPlugAction] VBD::create returned empty ref!";
@@ -76,22 +76,22 @@ void VbdCreateAndPlugAction::run()
         }
 
         qDebug() << "[VbdCreateAndPlugAction] VBD created successfully:" << vbdRef;
-        SetResult(vbdRef);
-        SetPercentComplete(40);
+        this->SetResult(vbdRef);
+        this->SetPercentComplete(40);
 
         // Step 2: For PV VMs with empty VBDs (CD drives), we're done
-        if (!isVMHVM() && isVBDEmpty())
+        if (!this->isVMHVM() && this->isVBDEmpty())
         {
             qDebug() << "[VbdCreateAndPlugAction] PV VM with empty VBD - no plug required";
-            SetDescription(QString("'%1' attached successfully").arg(m_vdiName));
-            SetPercentComplete(100);
+            this->SetDescription(QString("'%1' attached successfully").arg(this->m_vdiName));
+            this->SetPercentComplete(100);
             qDebug() << "[VbdCreateAndPlugAction] Operation completed successfully (no plug needed)";
             return;
         }
 
         // Step 3: Check if we can hot-plug the VBD
-        SetDescription(QString("Checking if hot-plug is possible..."));
-        SetPercentComplete(50);
+        this->SetDescription(QString("Checking if hot-plug is possible..."));
+        this->SetPercentComplete(50);
 
         qDebug() << "[VbdCreateAndPlugAction] Checking allowed operations for VBD...";
         QVariantList allowedOps = XenAPI::VBD::get_allowed_operations(session, vbdRef);
@@ -113,8 +113,8 @@ void VbdCreateAndPlugAction::run()
         {
             // Hot-plug the VBD
             qDebug() << "[VbdCreateAndPlugAction] Attempting to hot-plug VBD:" << vbdRef;
-            SetDescription(QString("Hot-plugging '%1'...").arg(m_vdiName));
-            SetPercentComplete(60);
+            this->SetDescription(QString("Hot-plugging '%1'...").arg(this->m_vdiName));
+            this->SetPercentComplete(60);
 
             QString taskRef = XenAPI::VBD::async_plug(session, vbdRef);
             if (taskRef.isEmpty())
@@ -127,17 +127,17 @@ void VbdCreateAndPlugAction::run()
             qDebug() << "[VbdCreateAndPlugAction] Polling task to completion...";
 
             // Poll the task to completion
-            pollToCompletion(taskRef, 60, 100);
+            this->pollToCompletion(taskRef, 60, 100);
 
             qDebug() << "[VbdCreateAndPlugAction] Task polling completed";
-            SetDescription(QString("'%1' attached and plugged successfully").arg(m_vdiName));
-            SetPercentComplete(100);
+            this->SetDescription(QString("'%1' attached and plugged successfully").arg(this->m_vdiName));
+            this->SetPercentComplete(100);
             qDebug() << "[VbdCreateAndPlugAction] Operation completed successfully (hot-plugged)";
         } else
         {
             // Can't hot-plug - check if VM is running and inform user
             qDebug() << "[VbdCreateAndPlugAction] Hot-plug not available, checking VM power state...";
-            QString vmRef = m_vm->OpaqueRef();
+            QString vmRef = this->m_vm->OpaqueRef();
             QVariantMap vmRecord = XenAPI::VM::get_record(session, vmRef);
             QString powerState = vmRecord.value("power_state").toString();
 
@@ -146,7 +146,7 @@ void VbdCreateAndPlugAction::run()
             if (powerState != "Halted")
             {
                 // Determine message based on VBD type
-                QString vbdType = m_vbdRecord.value("type").toString();
+                QString vbdType = this->m_vbdRecord.value("type").toString();
                 QString instruction;
 
                 if (vbdType == "CD")
@@ -161,8 +161,8 @@ void VbdCreateAndPlugAction::run()
                 emit showUserInstruction(instruction);
             }
 
-            SetDescription(QString("'%1' attached (reboot required)").arg(m_vdiName));
-            SetPercentComplete(100);
+            this->SetDescription(QString("'%1' attached (reboot required)").arg(this->m_vdiName));
+            this->SetPercentComplete(100);
             qDebug() << "[VbdCreateAndPlugAction] Operation completed successfully (reboot required)";
         }
 
@@ -177,10 +177,10 @@ void VbdCreateAndPlugAction::run()
 
 bool VbdCreateAndPlugAction::isVMHVM() const
 {
-    return m_vm && m_vm->IsHVM();
+    return this->m_vm && this->m_vm->IsHVM();
 }
 
 bool VbdCreateAndPlugAction::isVBDEmpty() const
 {
-    return m_vbdRecord.value("empty", false).toBool();
+    return this->m_vbdRecord.value("empty", false).toBool();
 }

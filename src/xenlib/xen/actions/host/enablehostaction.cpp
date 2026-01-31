@@ -29,6 +29,7 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/session.h"
 #include "xenlib/xen/pool.h"
+#include "xenlib/xen/vm.h"
 #include "xenlib/xen/xenapi/xenapi_Host.h"
 #include "xenlib/xen/xenapi/xenapi_Pool.h"
 #include "xenlib/xen/xenapi/xenapi_VM.h"
@@ -93,8 +94,10 @@ void EnableHostAction::run()
                 // Migrate VMs back to this host
                 for (const QString& vmRef : migratedVMRefs)
                 {
-                    QVariantMap vmData = this->GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
-                    QString vmName = vmData.value("name_label").toString();
+                    QSharedPointer<VM> vm = this->GetConnection()->GetCache()->ResolveObject<VM>(vmRef);
+                    if (!vm || !vm->IsValid())
+                        continue;
+                    QString vmName = vm->GetName();
 
                     qDebug() << "EnableHostAction: Migrating VM" << vmName << "back to host";
 
@@ -102,7 +105,7 @@ void EnableHostAction::run()
                     QVariantMap options;
                     options["live"] = true;
 
-                    QString taskRef = XenAPI::VM::async_pool_migrate(this->GetSession(), vmRef,
+                    QString taskRef = XenAPI::VM::async_pool_migrate(this->GetSession(), vm->OpaqueRef(),
                                                                      this->m_host->OpaqueRef(),
                                                                      options);
                     this->pollToCompletion(taskRef, start, start + each);
@@ -112,12 +115,14 @@ void EnableHostAction::run()
                 // Start halted VMs on this host
                 for (const QString& vmRef : haltedVMRefs)
                 {
-                    QVariantMap vmData = this->GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
-                    QString vmName = vmData.value("name_label").toString();
+                    QSharedPointer<VM> vm = this->GetConnection()->GetCache()->ResolveObject<VM>(vmRef);
+                    if (!vm || !vm->IsValid())
+                        continue;
+                    QString vmName = vm->GetName();
 
                     qDebug() << "EnableHostAction: Starting VM" << vmName << "on host";
 
-                    QString taskRef = XenAPI::VM::async_start_on(this->GetSession(), vmRef,
+                    QString taskRef = XenAPI::VM::async_start_on(this->GetSession(), vm->OpaqueRef(),
                                                                  this->m_host->OpaqueRef(),
                                                                  false, false);
                     this->pollToCompletion(taskRef, start, start + each);
@@ -127,12 +132,14 @@ void EnableHostAction::run()
                 // Resume suspended VMs on this host
                 for (const QString& vmRef : suspendedVMRefs)
                 {
-                    QVariantMap vmData = this->GetConnection()->GetCache()->ResolveObjectData("vm", vmRef);
-                    QString vmName = vmData.value("name_label").toString();
+                    QSharedPointer<VM> vm = this->GetConnection()->GetCache()->ResolveObject<VM>(vmRef);
+                    if (!vm || !vm->IsValid())
+                        continue;
+                    QString vmName = vm->GetName();
 
                     qDebug() << "EnableHostAction: Resuming VM" << vmName << "on host";
 
-                    QString taskRef = XenAPI::VM::async_resume_on(this->GetSession(), vmRef,
+                    QString taskRef = XenAPI::VM::async_resume_on(this->GetSession(), vm->OpaqueRef(),
                                                                   this->m_host->OpaqueRef(),
                                                                   false, false);
                     this->pollToCompletion(taskRef, start, start + each);

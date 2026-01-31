@@ -67,7 +67,7 @@ ChangeNetworkingAction::ChangeNetworkingAction(XenConnection* connection,
     {
         this->m_hosts = this->m_pool->GetHosts();
         if (this->m_hosts.isEmpty() && connection && connection->GetCache())
-            this->m_hosts = connection->GetCache()->GetAll<Host>(XenObjectType::Host);
+            this->m_hosts = connection->GetCache()->GetAll<Host>();
         this->m_hosts.erase(std::remove_if(this->m_hosts.begin(), this->m_hosts.end(),
                                      [](const QSharedPointer<Host>& h) { return !h || !h->IsValid(); }),
                       this->m_hosts.end());
@@ -132,15 +132,17 @@ void ChangeNetworkingAction::run()
         // Phase 2: Reconfigure management interface if requested
         if (!this->m_newManagementPifRef.isEmpty() && !this->m_oldManagementPifRef.isEmpty())
         {
-            QVariantMap newPifData = this->GetConnection()->GetCache()->ResolveObjectData("pif", this->m_newManagementPifRef);
-            QVariantMap oldPifData = this->GetConnection()->GetCache()->ResolveObjectData("pif", this->m_oldManagementPifRef);
+            QSharedPointer<PIF> newPif = this->GetConnection()->GetCache()->ResolveObject<PIF>(this->m_newManagementPifRef);
+            QSharedPointer<PIF> oldPif = this->GetConnection()->GetCache()->ResolveObject<PIF>(this->m_oldManagementPifRef);
 
             // Check if we should clear the old management IP
             bool clearDownManagementIP = true;
             for (const QString& pifRef : this->m_pifRefsToReconfigure)
             {
-                QVariantMap pifData = this->GetConnection()->GetCache()->ResolveObjectData("pif", pifRef);
-                if (pifData.value("uuid").toString() == oldPifData.value("uuid").toString())
+                QSharedPointer<PIF> pif = this->GetConnection()->GetCache()->ResolveObject<PIF>(pifRef);
+                if (!pif || !pif->IsValid() || !oldPif || !oldPif->IsValid())
+                    continue;
+                if (pif->GetUUID() == oldPif->GetUUID())
                 {
                     clearDownManagementIP = false;
                     break;
@@ -155,9 +157,7 @@ void ChangeNetworkingAction::run()
                     QString poolRef = this->m_pool ? this->m_pool->OpaqueRef() : QString();
                     if (poolRef.isEmpty())
                     {
-                        QList<QVariantMap> pools = this->GetConnection()->GetCache()->GetAllData("pool");
-                        if (!pools.isEmpty())
-                            poolRef = pools.first().value("_ref").toString();
+                        poolRef = this->GetConnection()->GetCache()->GetPoolRef();
                     }
                     try
                     {
@@ -247,9 +247,12 @@ void ChangeNetworkingAction::reconfigure(const QString& pifRef, bool up, bool th
 
 void ChangeNetworkingAction::bringUp(const QString& newPifRef, const QString& existingPifRef, int hi)
 {
-    QVariantMap newPifData = this->GetConnection()->GetCache()->ResolveObjectData("pif", newPifRef);
-    QString ipMode = newPifData.value("ip_configuration_mode").toString();
-    QString ip = newPifData.value("IP").toString();
+    QSharedPointer<PIF> newPif = this->GetConnection()->GetCache()->ResolveObject<PIF>(newPifRef);
+    if (!newPif || !newPif->IsValid())
+        return;
+
+    QString ipMode = newPif->IpConfigurationMode();
+    QString ip = newPif->IP();
 
     // For static IP in pool environments, calculate IP from range
     if (this->m_pool && ipMode.compare("Static", Qt::CaseInsensitive) == 0)
@@ -263,8 +266,8 @@ QString ChangeNetworkingAction::getIPInRange(const QString& rangeStart, const QS
     if (this->m_hosts.isEmpty())
         return rangeStart;
 
-    QVariantMap existingPifData = this->GetConnection()->GetCache()->ResolveObjectData("pif", existingPifRef);
-    QString hostRef = existingPifData.value("host").toString();
+    QSharedPointer<PIF> existingPif = this->GetConnection()->GetCache()->ResolveObject<PIF>(existingPifRef);
+    QString hostRef = existingPif ? existingPif->GetHostRef() : QString();
     if (hostRef.isEmpty())
         throw std::runtime_error("PIF host reference not found");
 
@@ -306,7 +309,7 @@ void ChangeNetworkingAction::disableClustering(const QString& pifRef, QList<QSha
         return;
 
     QSharedPointer<ClusterHost> clusterHost;
-    const QList<QSharedPointer<ClusterHost>> clusterHosts = this->GetConnection()->GetCache()->GetAll<ClusterHost>(XenObjectType::ClusterHost);
+    const QList<QSharedPointer<ClusterHost>> clusterHosts = this->GetConnection()->GetCache()->GetAll<ClusterHost>();
     for (const QSharedPointer<ClusterHost>& ch : clusterHosts)
     {
         if (ch && ch->IsValid() && ch->GetHostRef() == host->OpaqueRef())
@@ -353,7 +356,7 @@ void ChangeNetworkingAction::enableClustering(const QString& pifRef, const QList
         return;
 
     QSharedPointer<ClusterHost> clusterHost;
-    const QList<QSharedPointer<ClusterHost>> clusterHosts = this->GetConnection()->GetCache()->GetAll<ClusterHost>(XenObjectType::ClusterHost);
+    const QList<QSharedPointer<ClusterHost>> clusterHosts = this->GetConnection()->GetCache()->GetAll<ClusterHost>();
     for (const QSharedPointer<ClusterHost>& ch : clusterHosts)
     {
         if (ch && ch->IsValid() && ch->GetHostRef() == host->OpaqueRef())

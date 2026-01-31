@@ -58,10 +58,10 @@ void DestroyDiskAction::run()
     }
 
     // Get VDI record
-    SetPercentComplete(0);
-    SetDescription(tr("Getting VDI information..."));
+    this->SetPercentComplete(0);
+    this->SetDescription(tr("Getting VDI information..."));
 
-    QVariantMap vdiRecord = XenAPI::VDI::get_record(session, m_vdiRef);
+    QVariantMap vdiRecord = XenAPI::VDI::get_record(session, this->m_vdiRef);
     QString vdiName = vdiRecord.value("name_label").toString();
 
     // Get list of VBDs attached to this VDI
@@ -82,8 +82,8 @@ void DestroyDiskAction::run()
     // Detach from all VMs
     if (!vbdRefs.isEmpty())
     {
-        SetPercentComplete(10);
-        SetDescription(tr("Detaching disk from VMs..."));
+        this->SetPercentComplete(10);
+        this->SetDescription(tr("Detaching disk from VMs..."));
 
         int vbdIndex = 0;
         int totalVBDs = vbdRefs.size();
@@ -105,7 +105,7 @@ void DestroyDiskAction::run()
             bool currentlyAttached = vbdRecord.value("currently_attached").toBool();
 
             // Check if VBD is attached to running VM
-            if (currentlyAttached && !m_allowRunningVMDelete)
+            if (currentlyAttached && !this->m_allowRunningVMDelete)
             {
                 throw std::runtime_error(
                     QString("Cannot delete VDI - it is active on VM '%1'")
@@ -116,8 +116,8 @@ void DestroyDiskAction::run()
             // Detach the VBD directly (we're already in an async context, so don't nest actions)
             int startPercent = 10 + (vbdIndex * 70 / totalVBDs);
 
-            SetPercentComplete(startPercent);
-            SetDescription(tr("Detaching from VM '%1'...").arg(vmName));
+            this->SetPercentComplete(startPercent);
+            this->SetDescription(tr("Detaching from VM '%1'...").arg(vmName));
 
             // Unplug if currently attached
             if (currentlyAttached)
@@ -138,7 +138,7 @@ void DestroyDiskAction::run()
                 {
                     // Hot-unplug
                     QString taskRef = XenAPI::VBD::async_unplug(session, vbdRef);
-                    pollToCompletion(taskRef, startPercent, startPercent + 30);
+                    this->pollToCompletion(taskRef, startPercent, startPercent + 30);
                 } else
                 {
                     throw std::runtime_error(
@@ -156,12 +156,12 @@ void DestroyDiskAction::run()
     }
 
     // Destroy the VDI
-    SetPercentComplete(80);
-    SetDescription(tr("Destroying VDI..."));
+    this->SetPercentComplete(80);
+    this->SetDescription(tr("Destroying VDI..."));
 
-    QString taskRef = XenAPI::VDI::async_destroy(session, m_vdiRef);
-    pollToCompletion(taskRef, 80, 100);
+    QString taskRef = XenAPI::VDI::async_destroy(session, this->m_vdiRef);
+    this->pollToCompletion(taskRef, 80, 100);
 
-    SetPercentComplete(100);
-    SetDescription(tr("Virtual disk deleted"));
+    this->SetPercentComplete(100);
+    this->SetDescription(tr("Virtual disk deleted"));
 }

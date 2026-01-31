@@ -52,7 +52,7 @@ VMSnapshotRevertAction::VMSnapshotRevertAction(QSharedPointer<VM> snapshot, QObj
     QString vmRef = m_snapshot->SnapshotOfRef();
     if (!vmRef.isEmpty() && vmRef != "OpaqueRef:NULL")
     {
-        m_vm = m_snapshot->GetConnection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, vmRef);
+        m_vm = m_snapshot->GetConnection()->GetCache()->ResolveObject<VM>(vmRef);
         if (m_vm && m_vm->IsValid())
         {
             // Get the host the VM was running on
@@ -119,8 +119,11 @@ void VMSnapshotRevertAction::run()
 void VMSnapshotRevertAction::revertPowerState(const QString& vmRef)
 {
     // Get current VM state
-    QVariantMap vmData = GetConnection()->GetCache()->ResolveObjectData(XenObjectType::VM, vmRef);
-    QString powerState = vmData.value("power_state").toString();
+    QSharedPointer<VM> vm = GetConnection()->GetCache()->ResolveObject<VM>(vmRef);
+    if (!vm || !vm->IsValid())
+        return;
+
+    QString powerState = vm->GetPowerState();
 
     QString taskRef;
 

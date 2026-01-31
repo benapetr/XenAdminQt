@@ -28,6 +28,8 @@
 #include "createsriovaction.h"
 #include "../../network/connection.h"
 #include "../../session.h"
+#include "../../host.h"
+#include "../../pif.h"
 #include "../../xenapi/xenapi_Network.h"
 #include "../../xenapi/xenapi_Network_sriov.h"
 #include "../../xenapi/xenapi_PIF.h"
@@ -81,23 +83,15 @@ void CreateSriovAction::run()
         QString coordinatorPifRef;
         for (const QString& pifRef : this->m_pifRefs)
         {
-            QVariantMap pifData = this->GetConnection()->GetCache()->ResolveObjectData("pif", pifRef);
-            QString hostRef = pifData.value("host").toString();
-            QVariantMap hostData = this->GetConnection()->GetCache()->ResolveObjectData("host", hostRef);
+            QSharedPointer<PIF> pif = this->GetConnection()->GetCache()->ResolveObject<PIF>(pifRef);
+            if (!pif || !pif->IsValid())
+                continue;
 
-            // Check if this host is the pool coordinator
-            // In C# this is done via host.IsCoordinator()
-            // We can check if this host is the master in the pool
-            QList<QVariantMap> pools = this->GetConnection()->GetCache()->GetAllData("pool");
-            if (!pools.isEmpty())
+            QSharedPointer<Host> host = pif->GetHost();
+            if (host && host->IsMaster())
             {
-                QString masterRef = pools.first().value("master").toString();
-
-                if (hostRef == masterRef)
-                {
-                    coordinatorPifRef = pifRef;
-                    break;
-                }
+                coordinatorPifRef = pifRef;
+                break;
             }
         }
 
@@ -132,10 +126,9 @@ void CreateSriovAction::run()
         {
             const QString& pifRef = orderedPifs[i];
 
-            QVariantMap pifData = this->GetConnection()->GetCache()->ResolveObjectData("pif", pifRef);
-            QString hostRef = pifData.value("host").toString();
-            QVariantMap hostData = this->GetConnection()->GetCache()->ResolveObjectData("host", hostRef);
-            QString hostName = hostData.value("name_label").toString();
+            QSharedPointer<PIF> pif = this->GetConnection()->GetCache()->ResolveObject<PIF>(pifRef);
+            QSharedPointer<Host> host = pif ? pif->GetHost() : QSharedPointer<Host>();
+            QString hostName = host ? host->GetName() : QString();
 
             this->SetDescription(QString("Enabling SR-IOV on %1").arg(hostName));
 

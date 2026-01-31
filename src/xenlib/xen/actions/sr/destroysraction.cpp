@@ -38,26 +38,26 @@ DestroySrAction::DestroySrAction(XenConnection* connection,
                      parent),
       m_srRef(srRef), m_srName(srName)
 {
-    AddApiMethodToRoleCheck("SR.async_destroy");
+    this->AddApiMethodToRoleCheck("SR.async_destroy");
 }
 
 void DestroySrAction::run()
 {
     try
     {
-        SetDescription(QString("Destroying SR '%1'...").arg(m_srName));
+        this->SetDescription(QString("Destroying SR '%1'...").arg(this->m_srName));
 
-        QString taskRef = XenAPI::SR::async_destroy(GetSession(), m_srRef);
-        pollToCompletion(taskRef, 50, 100);
+        QString taskRef = XenAPI::SR::async_destroy(this->GetSession(), this->m_srRef);
+        this->pollToCompletion(taskRef, 50, 100);
 
-        if (GetState() != Failed)
+        if (this->GetState() != Failed)
         {
-            setState(Completed);
-            SetDescription(QString("Successfully destroyed SR '%1'").arg(m_srName));
+            this->setState(Completed);
+            this->SetDescription(QString("Successfully destroyed SR '%1'").arg(this->m_srName));
         }
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to destroy SR: %1").arg(e.what()));
+        this->setError(QString("Failed to destroy SR: %1").arg(e.what()));
     }
 }

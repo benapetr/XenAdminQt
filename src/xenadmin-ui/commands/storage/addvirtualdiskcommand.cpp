@@ -45,13 +45,13 @@ AddVirtualDiskCommand::AddVirtualDiskCommand(MainWindow* mainWindow, QObject* pa
 bool AddVirtualDiskCommand::CanRun() const
 {
     // Can add virtual disk if SR or VM is selected
-    return (isSRSelected() || isVMSelected()) && canAddDisk();
+    return (this->isSRSelected() || this->isVMSelected()) && this->canAddDisk();
 }
 
 void AddVirtualDiskCommand::Run()
 {
-    XenObjectType objectType = getSelectedObjectType();
-    QString objectRef = getSelectedRef();
+    XenObjectType objectType = this->getSelectedObjectType();
+    QString objectRef = this->getSelectedRef();
     QSharedPointer<XenObject> object = this->GetObject();
     if (!object || !object->GetConnection())
         return;
@@ -59,7 +59,7 @@ void AddVirtualDiskCommand::Run()
 
     if (objectType == XenObjectType::VM)
     {
-        QSharedPointer<VM> vm = qSharedPointerCast<VM>(object);
+        QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(object);
 
         if (!vm)
             return;
@@ -72,7 +72,7 @@ void AddVirtualDiskCommand::Run()
         if (currentVBDs >= maxVBDs)
         {
             QMessageBox::warning(
-                mainWindow(),
+                this->mainWindow(),
                 tr("Cannot Add Disk"),
                 tr("The maximum number of virtual disks (%1) has been reached for this VM.").arg(maxVBDs));
             return;
@@ -80,7 +80,7 @@ void AddVirtualDiskCommand::Run()
 
         // Open NewVirtualDiskDialog for VM (modal)
         qDebug() << "[AddVirtualDiskCommand] Opening NewVirtualDiskDialog for VM:" << objectRef;
-        NewVirtualDiskDialog dialog(vm, mainWindow());
+        NewVirtualDiskDialog dialog(vm, this->mainWindow());
         if (dialog.exec() != QDialog::Accepted)
         {
             qDebug() << "[AddVirtualDiskCommand] Dialog cancelled by user";
@@ -119,7 +119,7 @@ void AddVirtualDiskCommand::Run()
         qDebug() << "[AddVirtualDiskCommand] Creating VDI with CreateDiskAction...";
         CreateDiskAction* createAction = new CreateDiskAction(vdiRecord, vm->GetConnection(), this);
 
-        ActionProgressDialog* createDialog = new ActionProgressDialog(createAction, mainWindow());
+        ActionProgressDialog* createDialog = new ActionProgressDialog(createAction, this->mainWindow());
         qDebug() << "[AddVirtualDiskCommand] Executing create dialog...";
         int createResult = createDialog->exec();
         qDebug() << "[AddVirtualDiskCommand] Create dialog result:" << createResult
@@ -131,7 +131,7 @@ void AddVirtualDiskCommand::Run()
         if (createResult != QDialog::Accepted)
         {
             qWarning() << "[AddVirtualDiskCommand] VDI creation failed or cancelled";
-            QMessageBox::warning(mainWindow(), tr("Failed"), tr("Failed to create virtual disk."));
+            QMessageBox::warning(this->mainWindow(), tr("Failed"), tr("Failed to create virtual disk."));
             delete createDialog;
             return;
         }
@@ -143,7 +143,7 @@ void AddVirtualDiskCommand::Run()
         if (vdiRef.isEmpty())
         {
             qWarning() << "[AddVirtualDiskCommand] VDI ref is empty despite success";
-            QMessageBox::warning(mainWindow(), tr("Failed"), tr("Failed to create virtual disk."));
+            QMessageBox::warning(this->mainWindow(), tr("Failed"), tr("Failed to create virtual disk."));
             return;
         }
 
@@ -163,7 +163,7 @@ void AddVirtualDiskCommand::Run()
         qDebug() << "[AddVirtualDiskCommand] Creating VbdCreateAndPlugAction to attach VDI to VM...";
         VbdCreateAndPlugAction* attachAction = new VbdCreateAndPlugAction(vm, vbdRecord, name, false, this);
 
-        ActionProgressDialog* attachDialog = new ActionProgressDialog(attachAction, mainWindow());
+        ActionProgressDialog* attachDialog = new ActionProgressDialog(attachAction, this->mainWindow());
         qDebug() << "[AddVirtualDiskCommand] Executing attach dialog...";
         int attachResult = attachDialog->exec();
         qDebug() << "[AddVirtualDiskCommand] Attach dialog result:" << attachResult
@@ -176,7 +176,7 @@ void AddVirtualDiskCommand::Run()
         if (attachResult != QDialog::Accepted)
         {
             qWarning() << "[AddVirtualDiskCommand] VBD attachment failed or cancelled";
-            QMessageBox::warning(mainWindow(), tr("Warning"),
+            QMessageBox::warning(this->mainWindow(), tr("Warning"),
                                  tr("Virtual disk created but failed to attach to VM.\n"
                                     "You can attach it manually from the Attach menu."));
             delete attachDialog;
@@ -186,12 +186,12 @@ void AddVirtualDiskCommand::Run()
         qDebug() << "[AddVirtualDiskCommand] VBD attached successfully";
         delete attachDialog;
 
-        mainWindow()->ShowStatusMessage(tr("Virtual disk created and attached successfully"), 5000);
+        this->mainWindow()->ShowStatusMessage(tr("Virtual disk created and attached successfully"), 5000);
     } else if (objectType == XenObjectType::SR)
     {
         // For SR, we need to create a disk without a specific VM
         // This is typically not used in the Qt version, but we show a message
-        QMessageBox::information(mainWindow(), tr("Add Virtual Disk"), tr("To add a virtual disk, please select a VM first."));
+        QMessageBox::information(this->mainWindow(), tr("Add Virtual Disk"), tr("To add a virtual disk, please select a VM first."));
     }
 }
 
@@ -202,23 +202,23 @@ QString AddVirtualDiskCommand::MenuText() const
 
 bool AddVirtualDiskCommand::isSRSelected() const
 {
-    return getSelectedObjectType() == XenObjectType::SR;
+    return this->getSelectedObjectType() == XenObjectType::SR;
 }
 
 bool AddVirtualDiskCommand::isVMSelected() const
 {
-    return getSelectedObjectType() == XenObjectType::VM;
+    return this->getSelectedObjectType() == XenObjectType::VM;
 }
 
 QString AddVirtualDiskCommand::getSelectedRef() const
 {
-    return getSelectedObjectRef();
+    return this->getSelectedObjectRef();
 }
 
 bool AddVirtualDiskCommand::canAddDisk() const
 {
-    XenObjectType objectType = getSelectedObjectType();
-    QString objectRef = getSelectedRef();
+    XenObjectType objectType = this->getSelectedObjectType();
+    QString objectRef = this->getSelectedRef();
     QSharedPointer<XenObject> object = this->GetObject();
     if (!object || !object->GetConnection() || !object->GetConnection()->GetCache())
         return false;

@@ -41,12 +41,12 @@ MoveVirtualDiskAction::MoveVirtualDiskAction(XenConnection* connection,
                                              QObject* parent)
     : AsyncOperation(connection, QString("Moving Virtual Disk"), QString(), parent), m_vdiRef(vdiRef), m_srRef(srRef)
 {
-    QString vdiName = getVDIName();
-    QString oldSR = getSRName(QString()); // Get current SR from VDI
-    QString newSR = getSRName(srRef);
+    QString vdiName = this->getVDIName();
+    QString oldSR = this->getSRName(QString()); // Get current SR from VDI
+    QString newSR = this->getSRName(srRef);
 
-    SetTitle(QString("Moving Virtual Disk"));
-    SetDescription(QString("Moving '%1' from '%2' to '%3'...")
+    this->SetTitle(QString("Moving Virtual Disk"));
+    this->SetDescription(QString("Moving '%1' from '%2' to '%3'...")
                        .arg(vdiName)
                        .arg(oldSR)
                        .arg(newSR));
@@ -56,34 +56,34 @@ void MoveVirtualDiskAction::run()
 {
     try
     {
-        Session* session = GetConnection()->GetSession();
+        Session* session = this->GetConnection()->GetSession();
         if (!session)
         {
             throw std::runtime_error("No valid session");
         }
 
         // Get VDI information
-        QVariantMap vdiRecord = XenAPI::VDI::get_record(session, m_vdiRef);
+        QVariantMap vdiRecord = XenAPI::VDI::get_record(session, this->m_vdiRef);
         QString vdiType = vdiRecord.value("type").toString();
         QString vdiUuid = vdiRecord.value("uuid").toString();
         QVariantList vbdRefs = vdiRecord.value("VBDs").toList();
 
-        SetPercentComplete(10);
-        qDebug() << "Moving VDI" << m_vdiRef << "to SR" << m_srRef;
+        this->SetPercentComplete(10);
+        qDebug() << "Moving VDI" << this->m_vdiRef << "to SR" << this->m_srRef;
 
         // Step 1: Copy VDI to target SR
-        SetDescription(QString("Copying '%1' to new storage...").arg(getVDIName()));
-        QString taskRef = XenAPI::VDI::async_copy(session, m_vdiRef, m_srRef);
+        this->SetDescription(QString("Copying '%1' to new storage...").arg(this->getVDIName()));
+        QString taskRef = XenAPI::VDI::async_copy(session, this->m_vdiRef, this->m_srRef);
         if (taskRef.isEmpty())
         {
             throw std::runtime_error("Failed to start VDI copy task");
         }
 
         // Poll copy task to completion (10% to 60%)
-        pollToCompletion(taskRef, 10, 60);
+        this->pollToCompletion(taskRef, 10, 60);
 
         // Get the new VDI reference from task GetResult
-        QString newVdiRef = GetResult();
+        QString newVdiRef = this->GetResult();
         if (newVdiRef.isEmpty())
         {
             throw std::runtime_error("Failed to get new VDI reference from task");
@@ -94,7 +94,7 @@ void MoveVirtualDiskAction::run()
         // Step 2: If this is a suspend VDI, update the VM's suspend_VDI reference
         if (vdiType == "suspend")
         {
-            SetDescription(QString("Updating suspend VDI reference..."));
+            this->SetDescription(QString("Updating suspend VDI reference..."));
 
             // Get all VMs and find the one with this VDI as suspend_VDI
             QVariantMap allVms = XenAPI::VM::get_all_records(session);
@@ -105,7 +105,7 @@ void MoveVirtualDiskAction::run()
                 QVariantMap vmData = it.value().toMap();
                 QString suspendVdiRef = vmData.value("suspend_VDI").toString();
 
-                if (!suspendVdiRef.isEmpty() && suspendVdiRef == m_vdiRef)
+                if (!suspendVdiRef.isEmpty() && suspendVdiRef == this->m_vdiRef)
                 {
                     XenAPI::VM::set_suspend_VDI(session, vmRef, newVdiRef);
                     qDebug() << "Updated suspend_VDI for VM" << vmRef;
@@ -114,10 +114,10 @@ void MoveVirtualDiskAction::run()
             }
         }
 
-        SetPercentComplete(60);
+        this->SetPercentComplete(60);
 
         // Step 3: Recreate all VBDs pointing to the new VDI
-        SetDescription(QString("Updating disk attachments..."));
+        this->SetDescription(QString("Updating disk attachments..."));
         QList<QVariantMap> newVbds;
 
         for (const QVariant& vbdRefVar : vbdRefs)
@@ -186,15 +186,15 @@ void MoveVirtualDiskAction::run()
             }
         }
 
-        SetPercentComplete(80);
+        this->SetPercentComplete(80);
 
         // Step 4: Destroy original VDI
-        SetDescription(QString("Removing old disk..."));
-        XenAPI::VDI::destroy(session, m_vdiRef);
-        qDebug() << "Original VDI destroyed:" << m_vdiRef;
+        this->SetDescription(QString("Removing old disk..."));
+        XenAPI::VDI::destroy(session, this->m_vdiRef);
+        qDebug() << "Original VDI destroyed:" << this->m_vdiRef;
 
         // Step 5: Create new VBDs
-        SetDescription(QString("Creating new disk attachments..."));
+        this->SetDescription(QString("Creating new disk attachments..."));
         for (const QVariantMap& newVbd : newVbds)
         {
             QString createdVbdRef = XenAPI::VBD::create(session, newVbd);
@@ -207,8 +207,8 @@ void MoveVirtualDiskAction::run()
             }
         }
 
-        SetDescription(QString("'%1' moved successfully").arg(getVDIName()));
-        SetPercentComplete(100);
+        this->SetDescription(QString("'%1' moved successfully").arg(this->getVDIName()));
+        this->SetPercentComplete(100);
 
         qDebug() << "VDI moved successfully";
 
@@ -223,12 +223,12 @@ QString MoveVirtualDiskAction::getVDIName() const
 {
     try
     {
-        Session* session = GetConnection()->GetSession();
-        QString name = XenAPI::VDI::get_name_label(session, m_vdiRef);
-        return name.isEmpty() ? m_vdiRef : name;
+        Session* session = this->GetConnection()->GetSession();
+        QString name = XenAPI::VDI::get_name_label(session, this->m_vdiRef);
+        return name.isEmpty() ? this->m_vdiRef : name;
     } catch (...)
     {
-        return m_vdiRef;
+        return this->m_vdiRef;
     }
 }
 
@@ -236,13 +236,13 @@ QString MoveVirtualDiskAction::getSRName(const QString& srRef) const
 {
     try
     {
-        Session* session = GetConnection()->GetSession();
+        Session* session = this->GetConnection()->GetSession();
         QString actualSrRef = srRef;
 
         // If no SR ref provided, get it from the VDI
         if (actualSrRef.isEmpty())
         {
-            actualSrRef = XenAPI::VDI::get_SR(session, m_vdiRef);
+            actualSrRef = XenAPI::VDI::get_SR(session, this->m_vdiRef);
         }
 
         QString name = XenAPI::SR::get_name_label(session, actualSrRef);

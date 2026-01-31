@@ -49,23 +49,23 @@ void RotatePoolSecretAction::run()
 {
     try
     {
-        SetPercentComplete(0);
-        SetDescription("Rotating pool secret...");
+        this->SetPercentComplete(0);
+        this->SetDescription("Rotating pool secret...");
 
         // Call Pool.rotate_secret API
-        XenAPI::Pool::rotate_secret(GetSession(), this->m_pool->OpaqueRef());
+        XenAPI::Pool::rotate_secret(this->GetSession(), this->m_pool->OpaqueRef());
 
-        SetPercentComplete(100);
-        SetDescription("Pool secret rotated successfully");
+        this->SetPercentComplete(100);
+        this->SetDescription("Pool secret rotated successfully");
 
     } catch (const std::exception& e)
     {
-        if (IsCancelled())
+        if (this->IsCancelled())
         {
-            SetDescription("Rotation cancelled");
+            this->SetDescription("Rotation cancelled");
         } else
         {
-            setError(QString("Failed to rotate pool secret: %1").arg(e.what()));
+            this->setError(QString("Failed to rotate pool secret: %1").arg(e.what()));
         }
     }
 }

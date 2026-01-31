@@ -74,13 +74,13 @@ void CreateDiskAction::run()
         throw std::runtime_error("Not connected to XenServer");
     }
 
-    if (!m_attachToVM)
+    if (!this->m_attachToVM)
     {
         // Simple VDI creation without VM attachment
-        SetPercentComplete(0);
-        SetDescription(tr("Creating VDI..."));
+        this->SetPercentComplete(0);
+        this->SetDescription(tr("Creating VDI..."));
 
-        QString vdiRef = XenAPI::VDI::create(session, m_vdiRecord);
+        QString vdiRef = XenAPI::VDI::create(session, this->m_vdiRecord);
 
         if (vdiRef.isEmpty())
         {
@@ -88,24 +88,24 @@ void CreateDiskAction::run()
         }
 
         // Store the result so caller can get it via result()
-        SetResult(vdiRef);
+        this->SetResult(vdiRef);
 
-        SetPercentComplete(100);
-        SetDescription(tr("Virtual disk created"));
+        this->SetPercentComplete(100);
+        this->SetDescription(tr("Virtual disk created"));
 
     } else
     {
         // Create VDI and attach to VM
-        if (!m_vm)
+        if (!this->m_vm)
         {
             throw std::runtime_error("VM object is null");
         }
 
         // Step 1: Get allowed VBD device numbers
-        SetPercentComplete(10);
-        SetDescription(tr("Getting available device numbers..."));
+        this->SetPercentComplete(10);
+        this->SetDescription(tr("Getting available device numbers..."));
 
-        QVariant allowedDevicesVar = XenAPI::VM::get_allowed_VBD_devices(session, m_vm->OpaqueRef());
+        QVariant allowedDevicesVar = XenAPI::VM::get_allowed_VBD_devices(session, this->m_vm->OpaqueRef());
         QStringList allowedDevices;
 
         if (allowedDevicesVar.canConvert<QStringList>())
@@ -127,10 +127,10 @@ void CreateDiskAction::run()
         QString userdevice = allowedDevices.first();
 
         // Step 2: Create VDI
-        SetPercentComplete(30);
-        SetDescription(tr("Creating VDI..."));
+        this->SetPercentComplete(30);
+        this->SetDescription(tr("Creating VDI..."));
 
-        QString vdiRef = XenAPI::VDI::create(session, m_vdiRecord);
+        QString vdiRef = XenAPI::VDI::create(session, this->m_vdiRecord);
 
         if (vdiRef.isEmpty())
         {
@@ -138,22 +138,22 @@ void CreateDiskAction::run()
         }
 
         // Store the result so caller can get it via result()
-        SetResult(vdiRef);
+        this->SetResult(vdiRef);
 
         // Step 3: Check if VM already has bootable disk
-        SetPercentComplete(50);
-        SetDescription(tr("Checking VM disk configuration..."));
+        this->SetPercentComplete(50);
+        this->SetDescription(tr("Checking VM disk configuration..."));
 
-        bool alreadyHasBootableDisk = hasBootableDisk();
+        bool alreadyHasBootableDisk = this->hasBootableDisk();
         bool shouldBeBootable = (userdevice == "0") && !alreadyHasBootableDisk;
 
         // Step 4: Create VBD record
-        SetPercentComplete(60);
-        SetDescription(tr("Creating VBD..."));
+        this->SetPercentComplete(60);
+        this->SetDescription(tr("Creating VBD..."));
 
-        QVariantMap vbdRecord = m_vbdRecord;
+        QVariantMap vbdRecord = this->m_vbdRecord;
         vbdRecord["VDI"] = vdiRef;
-        vbdRecord["VM"] = m_vm->OpaqueRef();
+        vbdRecord["VM"] = this->m_vm->OpaqueRef();
         vbdRecord["userdevice"] = userdevice;
         vbdRecord["bootable"] = shouldBeBootable;
 
@@ -185,13 +185,13 @@ void CreateDiskAction::run()
 
         QString vbdRef = XenAPI::VBD::create(session, vbdRecord);
 
-        SetPercentComplete(100);
-        SetDescription(tr("Virtual disk created and attached to VM"));
+        this->SetPercentComplete(100);
+        this->SetDescription(tr("Virtual disk created and attached to VM"));
     }
 }
 bool CreateDiskAction::hasBootableDisk()
 {
-    if (!m_vm)
+    if (!this->m_vm)
     {
         return false;
     }
@@ -205,7 +205,7 @@ bool CreateDiskAction::hasBootableDisk()
         }
 
         // Get all VBDs for this VM
-        QStringList vbdRefs = m_vm->GetVBDRefs();
+        QStringList vbdRefs = this->m_vm->GetVBDRefs();
 
         for (const QString& vbdRef : vbdRefs)
         {

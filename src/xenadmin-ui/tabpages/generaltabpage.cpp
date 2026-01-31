@@ -31,6 +31,7 @@
 #include "xenlib/xencache.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/hostmetrics.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/sr.h"
 #include "xenlib/xen/network.h"
@@ -137,11 +138,13 @@ void GeneralTabPage::refreshContent()
     QList<QAction*> propertiesMenu;
     propertiesMenu.append(this->propertiesAction_);
 
+    const QString objectName = this->m_object->GetName().isEmpty() ? "N/A" : this->m_object->GetName();
+    const QString objectDescription = this->m_object->GetDescription().isEmpty() ? "N/A" : this->m_object->GetDescription();
     this->addPropertyByKey(this->ui->pdSectionGeneral, "host.name_label",
-                           this->m_objectData.value("name_label", "N/A").toString(),
+                           objectName,
                            propertiesMenu);
     this->addPropertyByKey(this->ui->pdSectionGeneral, "host.name_description",
-                           this->m_objectData.value("name_description", "N/A").toString(),
+                           objectDescription,
                            propertiesMenu);
 
     QStringList tags = this->m_object->GetTags();
@@ -155,7 +158,7 @@ void GeneralTabPage::refreshContent()
 
     // TODO: Add "View tag" and "View folder" context menu actions once search helpers are ported.
     this->addPropertyByKey(this->ui->pdSectionGeneral, "host.uuid",
-                           this->m_objectData.value("uuid", "N/A").toString());
+                           this->m_object->GetUUID().isEmpty() ? "N/A" : this->m_object->GetUUID());
 
     this->populateCustomFieldsSection();
 
@@ -341,35 +344,35 @@ void GeneralTabPage::openPropertiesDialog()
 
     if (object_type == XenObjectType::VM)
     {
-        QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+        QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(this->m_object);
         if (!vm)
             return;
         VMPropertiesDialog dialog(vm, this);
         dialog.exec();
     } else if (object_type == XenObjectType::Host)
     {
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
         if (!host)
             return;
         HostPropertiesDialog dialog(host, this);
         dialog.exec();
     } else if (object_type == XenObjectType::Pool)
     {
-        QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(this->m_object);
+        QSharedPointer<Pool> pool = qSharedPointerDynamicCast<Pool>(this->m_object);
         if (!pool)
             return;
         PoolPropertiesDialog dialog(pool, this);
         dialog.exec();
     } else if (object_type == XenObjectType::SR)
     {
-        QSharedPointer<SR> sr = qSharedPointerCast<SR>(this->m_object);
+        QSharedPointer<SR> sr = qSharedPointerDynamicCast<SR>(this->m_object);
         if (!sr)
             return;
         StoragePropertiesDialog dialog(sr, this);
         dialog.exec();
     } else if (object_type == XenObjectType::Network)
     {
-        QSharedPointer<Network> network = qSharedPointerCast<Network>(this->m_object);
+        QSharedPointer<Network> network = qSharedPointerDynamicCast<Network>(this->m_object);
         if (!network)
             return;
         NetworkPropertiesDialog dialog(network, this);
@@ -480,7 +483,7 @@ void GeneralTabPage::populateVMProperties()
     if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::VM)
         return;
 
-    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+    QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(this->m_object);
     if (!vm)
         return;
 
@@ -644,21 +647,20 @@ void GeneralTabPage::populateHostProperties()
 void GeneralTabPage::populatePoolProperties()
 {
     // Pool-specific properties
-    if (this->m_objectData.contains("master"))
-    {
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.master", this->m_objectData.value("master").toString());
-    }
+    QSharedPointer<Pool> pool = qSharedPointerDynamicCast<Pool>(this->m_object);
+    if (!pool)
+        return;
 
-    if (this->m_objectData.contains("default_SR"))
-    {
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.default_SR", this->m_objectData.value("default_SR").toString());
-    }
+    const QString masterRef = pool->GetMasterHostRef();
+    if (!masterRef.isEmpty())
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.master", masterRef);
 
-    if (this->m_objectData.contains("ha_enabled"))
-    {
-        bool haEnabled = this->m_objectData.value("ha_enabled").toBool();
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.ha_enabled", haEnabled ? tr("Yes") : tr("No"));
-    }
+    const QString defaultSrRef = pool->GetDefaultSRRef();
+    if (!defaultSrRef.isEmpty())
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.default_SR", defaultSrRef);
+
+    this->addPropertyByKey(this->ui->pdSectionGeneral, "pool.ha_enabled",
+                           pool->HAEnabled() ? tr("Yes") : tr("No"));
 }
 
 void GeneralTabPage::populateSRProperties()
@@ -670,7 +672,7 @@ void GeneralTabPage::populateSRProperties()
     if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::SR)
         return;
 
-    QSharedPointer<SR> sr = qSharedPointerCast<SR>(this->m_object);
+    QSharedPointer<SR> sr = qSharedPointerDynamicCast<SR>(this->m_object);
     if (!sr)
         return;
 
@@ -702,30 +704,28 @@ void GeneralTabPage::populateSRProperties()
 void GeneralTabPage::populateNetworkProperties()
 {
     // Network-specific properties
-    if (this->m_objectData.contains("bridge"))
-    {
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "network.bridge", this->m_objectData.value("bridge").toString());
-    }
+    QSharedPointer<Network> network = qSharedPointerDynamicCast<Network>(this->m_object);
+    if (!network)
+        return;
 
-    if (this->m_objectData.contains("MTU"))
-    {
-        int mtu = this->m_objectData.value("MTU").toInt();
+    const QString bridge = network->GetBridge();
+    if (!bridge.isEmpty())
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "network.bridge", bridge);
+
+    qint64 mtu = network->GetMTU();
+    if (mtu > 0)
         this->addPropertyByKey(this->ui->pdSectionGeneral, "network.MTU", QString::number(mtu));
-    }
 
-    if (this->m_objectData.contains("managed"))
-    {
-        bool managed = this->m_objectData.value("managed").toBool();
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "network.managed", managed ? tr("Yes") : tr("No"));
-    }
+    this->addPropertyByKey(this->ui->pdSectionGeneral, "network.managed",
+                           network->IsManaged() ? tr("Yes") : tr("No"));
 }
 
 void GeneralTabPage::populateCustomFieldsSection()
 {
-    if (this->m_objectData.isEmpty())
+    if (!this->m_object)
         return;
 
-    QVariantMap otherConfig = this->m_objectData.value("other_config").toMap();
+    QVariantMap otherConfig = this->m_object->GetOtherConfig();
     if (otherConfig.isEmpty())
         return;
 
@@ -753,15 +753,19 @@ void GeneralTabPage::populateBootOptionsSection()
     if (this->m_objectType != XenObjectType::VM)
         return;
 
+    QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(this->m_object);
+    if (!vm)
+        return;
+
     // TODO: Add Boot Mode/UEFI/Secure Boot display once VM helpers are ported.
-    QVariantMap otherConfig = this->m_objectData.value("other_config").toMap();
+    QVariantMap otherConfig = vm->GetOtherConfig();
     bool autoPowerOn = (otherConfig.value("auto_poweron", "false").toString() == "true");
     this->addPropertyByKey(this->ui->pdSectionBootOptions, "VM.auto_boot", autoPowerOn ? tr("Yes") : tr("No"));
 
-    bool isHvm = !this->m_objectData.value("HVM_boot_policy").toString().isEmpty();
+    bool isHvm = !vm->HVMBootPolicy().isEmpty();
     if (isHvm)
     {
-        QVariantMap bootParams = this->m_objectData.value("HVM_boot_params").toMap();
+        QVariantMap bootParams = vm->HVMBootParams();
         QString order = bootParams.value("order", "cd").toString().toUpper();
 
         QStringList devices;
@@ -780,7 +784,7 @@ void GeneralTabPage::populateBootOptionsSection()
         this->addPropertyByKey(this->ui->pdSectionBootOptions, "VM.BootOrder", orderDisplay);
     } else
     {
-        QString pvArgs = this->m_objectData.value("PV_args").toString();
+        QString pvArgs = vm->PVArgs();
         if (pvArgs.isEmpty())
             pvArgs = tr("None");
         this->addPropertyByKey(this->ui->pdSectionBootOptions, "VM.PV_args", pvArgs);
@@ -792,21 +796,17 @@ void GeneralTabPage::populateHighAvailabilitySection()
     if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::VM)
         return;
 
-    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+    QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(this->m_object);
     if (!vm)
         return;
 
     XenCache* cache = vm->GetCache();
 
-    QStringList poolRefs = cache->GetAllRefs(XenObjectType::Pool);
-    if (poolRefs.isEmpty())
+    QSharedPointer<Pool> pool = cache->GetPool();
+    if (!pool || !pool->HAEnabled())
         return;
 
-    QVariantMap poolData = cache->ResolveObjectData(XenObjectType::Pool, poolRefs.first());
-    if (poolData.isEmpty() || !poolData.value("ha_enabled", false).toBool())
-        return;
-
-    QString restartPriority = this->m_objectData.value("ha_restart_priority").toString();
+    QString restartPriority = vm->HARestartPriority();
     if (restartPriority.isEmpty())
         return;
 
@@ -828,17 +828,12 @@ void GeneralTabPage::populateVcpusSection()
     if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::VM)
         return;
 
-    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+    QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(this->m_object);
     if (!vm)
         return;
 
-    QVariantMap object_data = vm->GetData();
-
-    if (!object_data.contains("VCPUs_at_startup"))
-        return;
-
-    int vcpusAtStartup = object_data.value("VCPUs_at_startup").toInt();
-    qint64 vcpusMax = object_data.value("VCPUs_max", vcpusAtStartup).toLongLong();
+    int vcpusAtStartup = vm->VCPUsAtStartup();
+    qint64 vcpusMax = vm->VCPUsMax();
 
     this->addPropertyByKey(this->ui->pdSectionVcpus, "VM.VCPUs", QString::number(vcpusAtStartup));
 
@@ -846,7 +841,7 @@ void GeneralTabPage::populateVcpusSection()
         this->addPropertyByKey(this->ui->pdSectionVcpus, "VM.MaxVCPUs", QString::number(vcpusMax));
 
     qint64 coresPerSocket = 1;
-    QVariantMap platform = object_data.value("platform").toMap();
+    QVariantMap platform = vm->Platform();
     if (platform.contains("cores-per-socket"))
     {
         bool ok = false;
@@ -867,11 +862,11 @@ void GeneralTabPage::populateDockerInfoSection()
     if (this->m_objectType != XenObjectType::DockerContainer)
         return;
 
-    QSharedPointer<DockerContainer> container = qSharedPointerCast<DockerContainer>(this->m_object);
+    QSharedPointer<DockerContainer> container = qSharedPointerDynamicCast<DockerContainer>(this->m_object);
     if (!container)
         return;
 
-    QString name = this->m_objectData.value("name_label").toString();
+    QString name = container->GetName();
     if (name.isEmpty())
         name = tr("None");
     this->addProperty(this->ui->pdSectionDockerInfo, tr("Name"), name);
@@ -912,7 +907,7 @@ void GeneralTabPage::populateDockerInfoSection()
     }
     this->addProperty(this->ui->pdSectionDockerInfo, tr("Ports"), ports.isEmpty() ? tr("None") : ports);
 
-    QString uuid = this->m_objectData.value("uuid").toString();
+    QString uuid = container->GetUUID();
     this->addProperty(this->ui->pdSectionDockerInfo, tr("UUID"), uuid.isEmpty() ? tr("None") : uuid);
 }
 
@@ -921,7 +916,7 @@ void GeneralTabPage::populateReadCachingSection()
     if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::VM)
         return;
 
-    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+    QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(this->m_object);
     if (!vm)
         return;
 
@@ -939,7 +934,7 @@ void GeneralTabPage::populateDeviceSecuritySection()
     if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::VM)
         return;
 
-    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
+    QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(this->m_object);
     if (!vm)
         return;
 
@@ -961,15 +956,17 @@ void GeneralTabPage::populateGeneralSection()
     // General Section: Address, Hostname, Pool Coordinator, Enabled, iSCSI IQN, Uptime
     // C# Reference: GenerateGeneralBox lines 953-1032
 
-    if (this->m_objectData.contains("address"))
-    {
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.address", this->m_objectData.value("address").toString());
-    }
+    QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
+    if (!host)
+        return;
 
-    if (this->m_objectData.contains("hostname"))
-    {
-        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.hostname", this->m_objectData.value("hostname").toString());
-    }
+    QString address = host->GetAddress();
+    if (!address.isEmpty())
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.address", address);
+
+    QString hostname = host->GetHostname();
+    if (!hostname.isEmpty())
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.hostname", hostname);
 
     // Pool master status (shown as "Pool Coordinator" in C# but displays as "Pool master: Yes/No" in UI)
     // C# Reference: line 956-958 - only shown if not standalone host
@@ -977,41 +974,26 @@ void GeneralTabPage::populateGeneralSection()
     // GetPool returns null if Pool.IsVisible() is false
     // Pool.IsVisible() returns false when name_label == "" AND HostCount <= 1
     // So we show "Pool master" if the pool has a name OR has multiple hosts
-    if (this->m_objectData.contains("pool") && this->m_connection && this->m_objectData.contains("is_pool_coordinator"))
+    if (this->m_connection)
     {
-        QString poolRef = this->m_objectData.value("pool").toString();
-        if (!poolRef.isEmpty())
+        QSharedPointer<Pool> pool = host->GetPool();
+        if (pool && pool->IsValid())
         {
-            QVariantMap pool = this->m_connection->GetCache()->ResolveObjectData("pool", poolRef);
-            if (!pool.isEmpty())
-            {
-                // Check if pool is "visible" (not a standalone host pool)
-                QString poolName = pool.value("name_label").toString();
-                bool hasPoolName = !poolName.isEmpty();
+            const QString poolName = pool->GetName();
+            const bool hasPoolName = !poolName.isEmpty();
+            const int hostCount = pool->GetHosts().size();
+            const bool hasMultipleHosts = hostCount > 1;
 
-                // Count hosts in pool (check if there are multiple hosts)
-                bool hasMultipleHosts = false;
-                if (pool.contains("HostCount"))
-                {
-                    int hostCount = pool.value("HostCount").toInt();
-                    hasMultipleHosts = (hostCount > 1);
-                }
-
-                // Show "Pool master" if pool is visible (has name or multiple hosts)
-                if (hasPoolName || hasMultipleHosts)
-                {
-                    bool isCoordinator = this->m_objectData.value("is_pool_coordinator").toBool();
-                    this->addPropertyByKey(this->ui->pdSectionGeneral, "host.pool_master", isCoordinator ? tr("Yes") : tr("No"));
-                }
-            }
+            if (hasPoolName || hasMultipleHosts)
+                this->addPropertyByKey(this->ui->pdSectionGeneral, "host.pool_master",
+                                       host->IsMaster() ? tr("Yes") : tr("No"));
         }
     }
 
     // Enabled status with maintenance mode detection
-    if (this->m_objectData.contains("enabled"))
     {
-        bool enabled = this->m_objectData.value("enabled").toBool();
-        bool isLive = this->m_objectData.value("is_live", true).toBool();
+        bool enabled = host->IsEnabled();
+        bool isLive = host->IsLive();
 
         QString enabledStr;
         if (!isLive)
@@ -1026,9 +1008,8 @@ void GeneralTabPage::populateGeneralSection()
 
     // Autoboot of VMs enabled
     // C# Reference: line 980 - host.GetVmAutostartEnabled()
-    if (this->m_objectData.contains("other_config"))
     {
-        QVariantMap otherConfig = this->m_objectData.value("other_config").toMap();
+        QVariantMap otherConfig = host->GetOtherConfig();
         // GetVmAutostartEnabled checks other_config["auto_poweron"] == "true"
         bool autoPowerOn = (otherConfig.value("auto_poweron").toString() == "true");
         this->addPropertyByKey(this->ui->pdSectionGeneral, "host.auto_poweron", autoPowerOn ? tr("Yes") : tr("No"));
@@ -1036,9 +1017,8 @@ void GeneralTabPage::populateGeneralSection()
 
     // Log destination
     // C# Reference: lines 1011-1017 - host.GetSysLogDestination() from logging["syslog_destination"]
-    if (this->m_objectData.contains("logging"))
     {
-        QVariantMap logging = this->m_objectData.value("logging").toMap();
+        QVariantMap logging = host->Logging();
         QString syslogDest = logging.value("syslog_destination").toString();
 
         QString logDisplay;
@@ -1052,33 +1032,22 @@ void GeneralTabPage::populateGeneralSection()
 
     // Server Uptime (calculated from boot time in host_metrics)
     // C# Reference: Host.Uptime() lines 853-859
-    if (this->m_objectData.contains("metrics") && this->m_connection)
+    if (this->m_connection)
     {
-        QString metricsRef = this->m_objectData.value("metrics").toString();
-        if (!metricsRef.isEmpty())
+        double bootTime = host->BootTime();
+        if (bootTime > 0)
         {
-            QVariantMap metrics = this->m_connection->GetCache()->ResolveObjectData("host_metrics", metricsRef);
-            if (!metrics.isEmpty() && metrics.contains("start_time"))
-            {
-                QString startTimeStr = metrics.value("start_time").toString();
-                QDateTime startTime = QDateTime::fromString(startTimeStr, Qt::ISODate);
-                if (startTime.isValid())
-                {
-                    qint64 uptimeSeconds = startTime.secsTo(QDateTime::currentDateTimeUtc());
-                    if (uptimeSeconds > 0)
-                    {
-                        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.uptime", Misc::FormatUptime(uptimeSeconds));
-                    }
-                }
-            }
+            QDateTime startTime = QDateTime::fromSecsSinceEpoch(static_cast<qint64>(bootTime), Qt::UTC);
+            qint64 uptimeSeconds = startTime.secsTo(QDateTime::currentDateTimeUtc());
+            if (uptimeSeconds > 0)
+                this->addPropertyByKey(this->ui->pdSectionGeneral, "host.uptime", Misc::FormatUptime(uptimeSeconds));
         }
     }
 
     // Toolstack Uptime (xapi agent uptime from other_config.agent_start_time)
     // C# Reference: Host.AgentUptime() lines 885-891
-    if (this->m_objectData.contains("other_config"))
     {
-        QVariantMap otherConfig = this->m_objectData.value("other_config").toMap();
+        QVariantMap otherConfig = host->GetOtherConfig();
         if (otherConfig.contains("agent_start_time"))
         {
             bool ok = false;
@@ -1088,20 +1057,15 @@ void GeneralTabPage::populateGeneralSection()
                 QDateTime startTime = QDateTime::fromSecsSinceEpoch(static_cast<qint64>(agentStartTime), Qt::UTC);
                 qint64 uptimeSeconds = startTime.secsTo(QDateTime::currentDateTimeUtc());
                 if (uptimeSeconds > 0)
-                {
                     this->addPropertyByKey(this->ui->pdSectionGeneral, "host.agentUptime", Misc::FormatUptime(uptimeSeconds));
-                }
             }
         }
     }
 
     // iSCSI IQN
-    if (this->m_objectData.contains("iscsi_iqn"))
-    {
-        QString iscsiIqn = this->m_objectData.value("iscsi_iqn").toString();
-        if (!iscsiIqn.isEmpty())
-            this->addPropertyByKey(this->ui->pdSectionGeneral, "host.iscsi_iqn", iscsiIqn);
-    }
+    QString iscsiIqn = host->IscsiIQN();
+    if (!iscsiIqn.isEmpty())
+        this->addPropertyByKey(this->ui->pdSectionGeneral, "host.iscsi_iqn", iscsiIqn);
 
     // Show section if it has content
     this->showSectionIfNotEmpty(this->ui->pdSectionGeneral);
@@ -1112,10 +1076,13 @@ void GeneralTabPage::populateBIOSSection()
     // BIOS Information Section
     // C# Reference: bios_strings field
 
-    if (!this->m_objectData.contains("bios_strings"))
+    QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
+    if (!host)
         return;
 
-    QVariantMap biosStrings = this->m_objectData.value("bios_strings").toMap();
+    QVariantMap biosStrings = host->BIOSStrings();
+    if (biosStrings.isEmpty())
+        return;
 
     if (biosStrings.contains("bios-vendor"))
     {
@@ -1166,16 +1133,9 @@ void GeneralTabPage::populateManagementInterfacesSection()
         if (!host)
             return;
 
-        QVariantMap hostData = host->GetData();
-        QVariantList pifRefs = hostData.value("PIFs").toList();
-
-        for (const QVariant& pifRefVar : pifRefs)
+        QList<QSharedPointer<PIF>> pifs = host->GetPIFs();
+        for (const QSharedPointer<PIF>& pif : pifs)
         {
-            QString pifRef = pifRefVar.toString();
-            if (pifRef.isEmpty())
-                continue;
-
-            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
             if (!pif || !pif->IsValid())
                 continue;
 
@@ -1200,11 +1160,11 @@ void GeneralTabPage::populateManagementInterfacesSection()
 
     if (this->m_objectType == XenObjectType::Host)
     {
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
         addInterfacesForHost(host, false);
     } else if (this->m_objectType == XenObjectType::Pool)
     {
-        QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(this->m_object);
+        QSharedPointer<Pool> pool = qSharedPointerDynamicCast<Pool>(this->m_object);
         if (!pool)
             return;
 
@@ -1226,18 +1186,16 @@ void GeneralTabPage::populateMemorySection()
 
     // Server Memory: Shows "X GB free of Y GB total"
     // C# Reference: Host.HostMemoryString() lines 1269-1281
-    if (this->m_objectData.contains("memory_total") && this->m_connection)
+    QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
+    if (host && this->m_connection)
     {
-        qint64 memTotal = this->m_objectData.value("memory_total").toLongLong();
-
-        // Try to get memory_free from host_metrics
-        QString metricsRef = this->m_objectData.value("metrics").toString();
-        if (!metricsRef.isEmpty())
+        QSharedPointer<HostMetrics> metrics = host->GetMetrics();
+        if (metrics && metrics->IsValid())
         {
-            QVariantMap metrics = this->m_connection->GetCache()->ResolveObjectData("host_metrics", metricsRef);
-            if (!metrics.isEmpty() && metrics.contains("memory_free"))
+            qint64 memTotal = metrics->GetMemoryTotal();
+            qint64 memFree = metrics->GetMemoryFree();
+            if (memTotal > 0)
             {
-                qint64 memFree = metrics.value("memory_free").toLongLong();
                 double memFreeGB = memFree / (1024.0 * 1024.0 * 1024.0);
                 double memTotalGB = memTotal / (1024.0 * 1024.0 * 1024.0);
 
@@ -1252,23 +1210,33 @@ void GeneralTabPage::populateMemorySection()
     // VMs: Shows memory used by VMs
     // C# Reference: Host.ResidentVMMemoryUsageString() shows each VM's memory on separate line
     // Simplified version: Just show total VM memory used
-    if (this->m_objectData.contains("memory_free"))
+    if (host)
     {
-        qint64 memTotal = this->m_objectData.value("memory_total", 0).toLongLong();
-        qint64 memFree = this->m_objectData.value("memory_free").toLongLong();
-        qint64 memUsed = memTotal - memFree;
-        double memUsedGB = memUsed / (1024.0 * 1024.0 * 1024.0);
-        this->addPropertyByKey(this->ui->pdSectionMemory, "host.VMMemory", QString("%1 GB").arg(memUsedGB, 0, 'f', 2));
+        QSharedPointer<HostMetrics> metrics = host->GetMetrics();
+        if (metrics && metrics->IsValid())
+        {
+            qint64 memTotal = metrics->GetMemoryTotal();
+            qint64 memFree = metrics->GetMemoryFree();
+            if (memTotal > 0)
+            {
+                qint64 memUsed = memTotal - memFree;
+                double memUsedGB = memUsed / (1024.0 * 1024.0 * 1024.0);
+                this->addPropertyByKey(this->ui->pdSectionMemory, "host.VMMemory", QString("%1 GB").arg(memUsedGB, 0, 'f', 2));
+            }
+        }
     }
 
     // XCP-ng/Xen Memory overhead
     // C# Reference: Host.XenMemoryString() lines 1286-1294
-    if (this->m_objectData.contains("memory_overhead"))
+    if (host)
     {
-        qint64 memOverhead = this->m_objectData.value("memory_overhead").toLongLong();
-        double memOverheadMB = memOverhead / (1024.0 * 1024.0);
-        // Use "XCP-ng" as label (C# uses product brand name)
-        this->addPropertyByKey(this->ui->pdSectionMemory, "host.XenMemory", QString("%1 MB").arg(memOverheadMB, 0, 'f', 0));
+        qint64 memOverhead = host->MemoryOverhead();
+        if (memOverhead > 0)
+        {
+            double memOverheadMB = memOverhead / (1024.0 * 1024.0);
+            // Use "XCP-ng" as label (C# uses product brand name)
+            this->addPropertyByKey(this->ui->pdSectionMemory, "host.XenMemory", QString("%1 MB").arg(memOverheadMB, 0, 'f', 0));
+        }
     }
 
     // Show section if it has content
@@ -1280,10 +1248,13 @@ void GeneralTabPage::populateCPUSection()
     // CPU Section: CPU Count, Model, Speed, Vendor
     // C# Reference: GenerateCPUBox lines 826-857
 
-    if (!this->m_objectData.contains("cpu_info"))
+    QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
+    if (!host)
         return;
 
-    QVariantMap cpuInfo = this->m_objectData.value("cpu_info").toMap();
+    QVariantMap cpuInfo = host->GetCPUInfo();
+    if (cpuInfo.isEmpty())
+        return;
 
     if (cpuInfo.contains("cpu_count"))
     {
@@ -1321,10 +1292,13 @@ void GeneralTabPage::populateVersionSection()
     // Software Version Section: Product Version, Build Date, Build Number, DBV
     // C# Reference: GenerateVersionBox lines 784-825
 
-    if (!this->m_objectData.contains("software_version"))
+    QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
+    if (!host)
         return;
 
-    QVariantMap swVersion = this->m_objectData.value("software_version").toMap();
+    QVariantMap swVersion = host->SoftwareVersion();
+    if (swVersion.isEmpty())
+        return;
 
     // Product version (most important)
     if (swVersion.contains("product_version"))
@@ -1371,7 +1345,7 @@ void GeneralTabPage::populateStatusSection()
     if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::SR)
         return;
 
-    QSharedPointer<SR> sr = qSharedPointerCast<SR>(this->m_object);
+    QSharedPointer<SR> sr = qSharedPointerDynamicCast<SR>(this->m_object);
     if (!sr)
         return;
 
@@ -1412,7 +1386,7 @@ void GeneralTabPage::populateStatusSection()
         if (isShared)
         {
             // For shared SR, should have PBD for each host in pool
-            QList<QVariantMap> allHosts = this->m_connection->GetCache()->GetAllData("host");
+            QList<QSharedPointer<Host>> allHosts = this->m_connection->GetCache()->GetAll<Host>();
             expectedPBDCount = allHosts.size();
         }
 
@@ -1445,12 +1419,15 @@ void GeneralTabPage::populateStatusSection()
     // C# iterates through all hosts and shows their PBD connection status
     bool isShared = sr->IsShared();
 
-    QList<QVariantMap> allHosts = this->m_connection->GetCache()->GetAllData("host");
+    QList<QSharedPointer<Host>> allHosts = this->m_connection->GetCache()->GetAll<Host>();
 
-    for (const QVariantMap& hostData : allHosts)
+    for (const QSharedPointer<Host>& host : allHosts)
     {
-        QString hostRef = hostData.value("ref").toString();
-        QString hostName = hostData.value("name_label", "Unknown").toString();
+        if (!host || !host->IsValid())
+            continue;
+
+        QString hostRef = host->OpaqueRef();
+        QString hostName = host->GetName().isEmpty() ? "Unknown" : host->GetName();
 
         // Find PBD for this host
         QString pbdStatus = "Connected";
@@ -1511,7 +1488,7 @@ void GeneralTabPage::populateMultipathingSection()
     if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::SR)
         return;
 
-    QSharedPointer<SR> sr = qSharedPointerCast<SR>(this->m_object);
+    QSharedPointer<SR> sr = qSharedPointerDynamicCast<SR>(this->m_object);
     if (!sr)
         return;
 

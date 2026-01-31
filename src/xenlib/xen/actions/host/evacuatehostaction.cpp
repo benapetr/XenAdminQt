@@ -96,7 +96,7 @@ EvacuateHostAction::EvacuateHostAction(QSharedPointer<Host> host,
       m_acceptNtolChanges(std::move(acceptNtolChanges)),
       m_acceptNtolChangesOnEnable(std::move(acceptNtolChangesOnEnable))
 {
-    if (!m_host)
+    if (!this->m_host)
         throw std::invalid_argument("Host cannot be null");
     this->AddApiMethodToRoleCheck("host.disable");
     this->AddApiMethodToRoleCheck("host.evacuate");

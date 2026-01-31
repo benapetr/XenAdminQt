@@ -50,8 +50,8 @@ class AttachVirtualDiskCommand : public Command
     private:
         bool isVMSelected() const;
         QString getSelectedVMRef() const;
-        int getMaxVBDsAllowed(const QVariantMap& vmData) const;
-        int getCurrentVBDCount(const QString& vmRef, XenCache *cache) const;
+        int getMaxVBDsAllowed(const QSharedPointer<VM>& vm) const;
+        int getCurrentVBDCount(const QSharedPointer<VM>& vm) const;
 
         void performAttachment(AttachVirtualDiskDialog* dialog, QSharedPointer<VM> vm);
 };

@@ -1119,13 +1119,13 @@ void AsyncOperation::setAppliesToFromObject(QSharedPointer<XenObject> xenObject)
         return;
 
     // Check object type and call appropriate setter
-    if (QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(xenObject))
+    if (QSharedPointer<Pool> pool = qSharedPointerDynamicCast<Pool>(xenObject))
     {
         SetPool(pool);
-    } else if (QSharedPointer<Host> host = qSharedPointerCast<Host>(xenObject))
+    } else if (QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(xenObject))
     {
         SetHost(host);
-    } else if (QSharedPointer<VM> vm = qSharedPointerCast<VM>(xenObject))
+    } else if (QSharedPointer<VM> vm = qSharedPointerDynamicCast<VM>(xenObject))
     {
         // Check if it's a template
         if (vm->IsTemplate())
@@ -1135,7 +1135,7 @@ void AsyncOperation::setAppliesToFromObject(QSharedPointer<XenObject> xenObject)
         {
             SetVM(vm);
         }
-    } else if (QSharedPointer<SR> sr = qSharedPointerCast<SR>(xenObject))
+    } else if (QSharedPointer<SR> sr = qSharedPointerDynamicCast<SR>(xenObject))
     {
         SetSR(sr);
     } else

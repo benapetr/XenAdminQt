@@ -243,7 +243,7 @@ bool Host::IsMaster() const
     if (!conn)
         return false;
 
-    QVariantMap poolData = conn->GetCache()->ResolveObjectData("pool", this->GetPoolRef());
+    QVariantMap poolData = conn->GetCache()->ResolveObjectData(XenObjectType::Pool, this->GetPoolRef());
     
     // Compare pool's master reference with this host's opaque reference
     QString masterRef = poolData.value("master", "").toString();
@@ -654,7 +654,7 @@ QList<ComparableAddress> Host::GetIPAddresses() const
     // Iterate through all PIFs and collect IP addresses
     for (const QString& pifRef : pifRefs)
     {
-        QVariantMap pifData = cache->ResolveObjectData("pif", pifRef);
+        QVariantMap pifData = cache->ResolveObjectData(XenObjectType::PIF, pifRef);
         if (pifData.isEmpty())
             continue;
         

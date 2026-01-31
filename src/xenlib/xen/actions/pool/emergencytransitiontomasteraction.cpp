@@ -44,27 +44,27 @@ void EmergencyTransitionToMasterAction::run()
 {
     try
     {
-        SetPercentComplete(0);
-        SetDescription("Performing emergency transition to master...");
+        this->SetPercentComplete(0);
+        this->SetDescription("Performing emergency transition to master...");
 
         // This is a synchronous operation - no task polling
         // The slave host will transition to become the new pool coordinator
-        XenAPI::Pool::emergency_transition_to_master(GetSession());
+        XenAPI::Pool::emergency_transition_to_master(this->GetSession());
 
-        SetPercentComplete(100);
-        SetDescription("Emergency transition to master completed");
+        this->SetPercentComplete(100);
+        this->SetDescription("Emergency transition to master completed");
 
         // Note: The connection state will change after this operation
         // The host is now the pool coordinator
 
     } catch (const std::exception& e)
     {
-        if (IsCancelled())
+        if (this->IsCancelled())
         {
-            SetDescription("Emergency transition cancelled");
+            this->SetDescription("Emergency transition cancelled");
         } else
         {
-            setError(QString("Failed to transition to master: %1").arg(e.what()));
+            this->setError(QString("Failed to transition to master: %1").arg(e.what()));
         }
     }
 }

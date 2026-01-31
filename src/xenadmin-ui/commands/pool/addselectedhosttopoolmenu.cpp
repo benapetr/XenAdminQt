@@ -133,7 +133,7 @@ QList<QSharedPointer<Host>> AddSelectedHostToPoolMenu::getSelectedHosts() const
         if (!obj || obj->GetObjectType() != XenObjectType::Host)
             continue;
 
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(obj);
         if (host)
             hosts.append(host);
     }
@@ -174,7 +174,7 @@ bool AddSelectedHostToPoolCommand::CanRun() const
         if (!obj || obj->GetObjectType() != XenObjectType::Host)
             return false;
 
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(obj);
         if (!this->canRunOnHost(host))
             return false;
     }

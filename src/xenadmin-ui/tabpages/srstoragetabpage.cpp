@@ -103,7 +103,7 @@ void SrStorageTabPage::SetObject(QSharedPointer<XenObject> object)
 
 QSharedPointer<SR> SrStorageTabPage::GetSR()
 {
-    return qSharedPointerCast<SR>(this->m_object);
+    return qSharedPointerDynamicCast<SR>(this->m_object);
 }
 
 void SrStorageTabPage::refreshContent()

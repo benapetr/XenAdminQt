@@ -84,7 +84,7 @@ bool InstallToolsCommand::canInstallTools() const
 
     // Check guest metrics for tools version
     QString guestMetricsRef = vmData.value("guest_metrics", "").toString();
-    if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
+    if (!guestMetricsRef.isEmpty() && guestMetricsRef != XENOBJECT_NULL)
     {
         XenCache* cache = vm->GetConnection()->GetCache();
         QVariantMap guestMetrics = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, guestMetricsRef);

@@ -38,7 +38,7 @@ QSharedPointer<SR> SRCommand::getSR() const
     if (!xo || xo->GetObjectType() != XenObjectType::SR)
         return QSharedPointer<SR>();
 
-    return qSharedPointerCast<SR>(xo);
+    return qSharedPointerDynamicCast<SR>(xo);
 }
 
 QString SRCommand::getSelectedSRRef() const

@@ -34,6 +34,9 @@
 #include "aboutdialog.h"
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/vm.h"
 #include "xenlib/xencache.h"
 
 AboutDialog::AboutDialog(QWidget* parent) : QDialog(parent)
@@ -139,20 +142,19 @@ QString AboutDialog::getConnectionInfo() const
             continue;
 
         // Get pool information
-        QList<QVariantMap> pools = cache->GetAllData("pool");
-        if (!pools.isEmpty())
+        QSharedPointer<Pool> pool = cache->GetPool();
+        if (pool && pool->IsValid())
         {
-            QVariantMap pool = pools.first();
-            QString poolName = pool.value("name_label", "Unnamed Pool").toString();
+            QString poolName = pool->GetName().isEmpty() ? "Unnamed Pool" : pool->GetName();
             info += QString("<p><b>Pool:</b> %1</p>").arg(poolName);
         }
 
         // Count hosts
-        QList<QVariantMap> hosts = cache->GetAllData("host");
+        QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
         totalHosts += hosts.size();
 
         // Count VMs
-        QList<QVariantMap> vms = cache->GetAllData("vm");
+        QList<QSharedPointer<VM>> vms = cache->GetAll<VM>();
         totalVMs += vms.size();
     }
 
@@ -186,10 +188,13 @@ QString AboutDialog::getLicenseDetails() const
         if (!cache)
             continue;
 
-        QList<QVariantMap> hosts = cache->GetAllData("host");
-        for (const QVariantMap& hostData : hosts)
+        QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
+        for (const QSharedPointer<Host>& host : hosts)
         {
-            QVariantMap licenseParams = hostData.value("license_params").toMap();
+            if (!host || !host->IsValid())
+                continue;
+
+            QVariantMap licenseParams = host->LicenseParams();
             if (licenseParams.contains("company"))
             {
                 QString company = licenseParams.value("company").toString();
