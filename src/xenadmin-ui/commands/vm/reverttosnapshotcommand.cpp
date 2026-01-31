@@ -90,7 +90,7 @@ bool RevertToSnapshotCommand::canRevertToSnapshot() const
     if (!this->mainWindow() || this->m_snapshotUuid.isEmpty())
         return false;
 
-    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>("vm", this->m_snapshotUuid);
+    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>(XenObjectType::VM, this->m_snapshotUuid);
 
     if (!snapshot)
     {
@@ -149,7 +149,7 @@ bool RevertToSnapshotCommand::showConfirmationDialog()
     QString snapshotName = this->m_snapshotUuid;
     QString snapshotTime;
 
-    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>("vm", this->m_snapshotUuid);
+    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>(XenObjectType::VM, this->m_snapshotUuid);
 
     if (!snapshot)
         return false;
@@ -191,7 +191,7 @@ void RevertToSnapshotCommand::revertToSnapshot()
         return;
     }
 
-    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>("vm", this->m_snapshotUuid);
+    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>(XenObjectType::VM, this->m_snapshotUuid);
 
     XenConnection* conn = snapshot->GetConnection();
     if (!conn || !conn->IsConnected())

@@ -36,6 +36,7 @@
 #include "xenlib/xen/vif.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/actions/network/networkaction.h"
+#include "iconmanager.h"
 #include <QMessageBox>
 
 NetworkGeneralEditPage::NetworkGeneralEditPage(QWidget* parent) : IEditPage(parent), ui(new Ui::NetworkGeneralEditPage), m_runningVMsWithoutTools_(false)
@@ -82,7 +83,7 @@ QString NetworkGeneralEditPage::GetSubText() const
 
 QIcon NetworkGeneralEditPage::GetImage() const
 {
-    return QIcon(":/icons/network_16.png");
+    return IconManager::instance().GetIconForNetwork(this->m_objectDataCopy_);
 }
 
 void NetworkGeneralEditPage::SetXenObjects(const QString& objectRef,
@@ -119,7 +120,7 @@ void NetworkGeneralEditPage::SetXenObjects(const QString& objectRef,
         for (const QVariant& pifRefVar : pifRefs)
         {
             QString pifRef = pifRefVar.toString();
-            QSharedPointer<PIF> pif = conn->GetCache()->ResolveObject<PIF>("pif", pifRef);
+            QSharedPointer<PIF> pif = conn->GetCache()->ResolveObject<PIF>(XenObjectType::PIF, pifRef);
             if (!pif || !pif->IsValid())
                 continue;
 
@@ -135,7 +136,7 @@ void NetworkGeneralEditPage::SetXenObjects(const QString& objectRef,
     if (this->m_hostRef_.isEmpty())
     {
         // Standalone host
-        QList<QSharedPointer<Host>> hosts = conn->GetCache()->GetAll<Host>("host");
+        QList<QSharedPointer<Host>> hosts = conn->GetCache()->GetAll<Host>(XenObjectType::Host);
         if (!hosts.isEmpty() && hosts.first())
             this->m_hostRef_ = hosts.first()->OpaqueRef();
     }
@@ -163,12 +164,12 @@ void NetworkGeneralEditPage::SetXenObjects(const QString& objectRef,
     for (const QVariant& vifRefVariant : vifRefs)
     {
         QString vifRef = vifRefVariant.toString();
-        QSharedPointer<VIF> vif = conn->GetCache()->ResolveObject<VIF>("vif", vifRef);
+        QSharedPointer<VIF> vif = conn->GetCache()->ResolveObject<VIF>(XenObjectType::VIF, vifRef);
         if (!vif || !vif->IsValid())
             continue;
 
         QString vmRef = vif->GetData().value("VM").toString();
-        QSharedPointer<VM> vm = conn->GetCache()->ResolveObject<VM>("vm", vmRef);
+        QSharedPointer<VM> vm = conn->GetCache()->ResolveObject<VM>(XenObjectType::VM, vmRef);
         if (!vm || !vm->IsValid())
             continue;
 
@@ -203,7 +204,7 @@ void NetworkGeneralEditPage::populateNicList()
     if (this->m_hostRef_.isEmpty())
         return;
 
-    QList<QSharedPointer<PIF>> allPifs = cache->GetAll<PIF>("pif");
+    QList<QSharedPointer<PIF>> allPifs = cache->GetAll<PIF>(XenObjectType::PIF);
     for (const QSharedPointer<PIF>& pif : allPifs)
     {
         if (!pif || !pif->IsValid())
@@ -243,7 +244,7 @@ void NetworkGeneralEditPage::populateNicList()
         QString networkPifRef = this->getNetworkPifRef();
         if (!networkPifRef.isEmpty())
         {
-            QSharedPointer<PIF> networkPif = cache->ResolveObject<PIF>("pif", networkPifRef);
+            QSharedPointer<PIF> networkPif = cache->ResolveObject<PIF>(XenObjectType::PIF, networkPifRef);
             if (networkPif && networkPif->IsValid())
             {
                 QVariantMap pifData = networkPif->GetData();
@@ -254,7 +255,7 @@ void NetworkGeneralEditPage::populateNicList()
                 QString physicalPifRef = this->getPhysicalPifRef();
                 if (!physicalPifRef.isEmpty())
                 {
-                    QSharedPointer<PIF> physPif = cache->ResolveObject<PIF>("pif", physicalPifRef);
+                    QSharedPointer<PIF> physPif = cache->ResolveObject<PIF>(XenObjectType::PIF, physicalPifRef);
                     if (physPif && physPif->IsValid())
                     {
                         int index = this->ui->nicComboBox->findData(physicalPifRef);
@@ -289,7 +290,7 @@ void NetworkGeneralEditPage::updateBondModeVisibility()
         for (const QVariant& pifRefVar : pifRefs)
         {
             QString pifRef = pifRefVar.toString();
-            QSharedPointer<PIF> pif = this->connection()->GetCache()->ResolveObject<PIF>("pif", pifRef);
+            QSharedPointer<PIF> pif = this->connection()->GetCache()->ResolveObject<PIF>(XenObjectType::PIF, pifRef);
             if (!pif || !pif->IsValid())
                 continue;
 
@@ -309,7 +310,7 @@ void NetworkGeneralEditPage::updateBondModeVisibility()
     {
         // Get bond mode from first bond
         QString bondRef = bondRefs.first().toString();
-        QSharedPointer<Bond> bond = this->connection()->GetCache()->ResolveObject<Bond>("bond", bondRef);
+        QSharedPointer<Bond> bond = this->connection()->GetCache()->ResolveObject<Bond>(XenObjectType::Bond, bondRef);
         if (bond && bond->IsValid())
         {
             QString mode = bond->Mode();
@@ -366,7 +367,7 @@ void NetworkGeneralEditPage::updateMtuEnablement()
     QString pifRef = this->getNetworkPifRef();
     if (!pifRef.isEmpty())
     {
-        QSharedPointer<PIF> pif = this->connection()->GetCache()->ResolveObject<PIF>("pif", pifRef);
+        QSharedPointer<PIF> pif = this->connection()->GetCache()->ResolveObject<PIF>(XenObjectType::PIF, pifRef);
         if (pif && pif->IsValid())
         {
             bool isManagement = pif->GetData().value("management").toBool();
@@ -401,7 +402,7 @@ void NetworkGeneralEditPage::updateControlsEnablement()
     for (const QVariant& vifRefVar : vifRefs)
     {
         QString vifRef = vifRefVar.toString();
-        QSharedPointer<VIF> vif = this->connection()->GetCache()->ResolveObject<VIF>("vif", vifRef);
+        QSharedPointer<VIF> vif = this->connection()->GetCache()->ResolveObject<VIF>(XenObjectType::VIF, vifRef);
         if (!vif || !vif->IsValid())
             continue;
 
@@ -418,7 +419,7 @@ void NetworkGeneralEditPage::updateControlsEnablement()
     QString pifRef = this->getNetworkPifRef();
     if (!pifRef.isEmpty())
     {
-        QSharedPointer<PIF> pif = this->connection()->GetCache()->ResolveObject<PIF>("pif", pifRef);
+        QSharedPointer<PIF> pif = this->connection()->GetCache()->ResolveObject<PIF>(XenObjectType::PIF, pifRef);
         if (pif && pif->IsValid())
             isManagement = pif->GetData().value("management").toBool();
     }
@@ -488,7 +489,7 @@ QString NetworkGeneralEditPage::getNetworkPifRef() const
     for (const QVariant& pifRefVar : pifRefs)
     {
         QString pifRef = pifRefVar.toString();
-        QSharedPointer<PIF> pif = this->connection()->GetCache()->ResolveObject<PIF>("pif", pifRef);
+        QSharedPointer<PIF> pif = this->connection()->GetCache()->ResolveObject<PIF>(XenObjectType::PIF, pifRef);
         if (!pif || !pif->IsValid())
             continue;
 
@@ -506,7 +507,7 @@ QString NetworkGeneralEditPage::getPhysicalPifRef() const
     if (networkPifRef.isEmpty())
         return QString();
 
-    QSharedPointer<PIF> networkPif = this->connection()->GetCache()->ResolveObject<PIF>("pif", networkPifRef);
+    QSharedPointer<PIF> networkPif = this->connection()->GetCache()->ResolveObject<PIF>(XenObjectType::PIF, networkPifRef);
     if (!networkPif || !networkPif->IsValid())
         return QString();
 
@@ -520,7 +521,7 @@ QString NetworkGeneralEditPage::getPhysicalPifRef() const
     QString device = pifData.value("device").toString();
     QString host = pifData.value("host").toString();
 
-    QList<QSharedPointer<PIF>> allPifs = this->connection()->GetCache()->GetAll<PIF>("pif");
+    QList<QSharedPointer<PIF>> allPifs = this->connection()->GetCache()->GetAll<PIF>(XenObjectType::PIF);
     for (const QSharedPointer<PIF>& pif : allPifs)
     {
         if (!pif || !pif->IsValid())
@@ -547,7 +548,7 @@ AsyncOperation* NetworkGeneralEditPage::SaveSettings()
     if (!conn || !conn->GetCache())
         return nullptr;
 
-    QSharedPointer<Network> network = conn->GetCache()->ResolveObject<Network>("network", this->m_networkRef_);
+    QSharedPointer<Network> network = conn->GetCache()->ResolveObject<Network>(this->m_networkRef_);
     if (!network || !network->IsValid())
         return nullptr;
 
@@ -584,7 +585,7 @@ AsyncOperation* NetworkGeneralEditPage::SaveSettings()
     {
         // External -> External: changing NIC or VLAN
         QString selectedPifRef = this->ui->nicComboBox->currentData().toString();
-        QSharedPointer<PIF> basePif = conn->GetCache()->ResolveObject<PIF>("pif", selectedPifRef);
+        QSharedPointer<PIF> basePif = conn->GetCache()->ResolveObject<PIF>(XenObjectType::PIF, selectedPifRef);
         if (!basePif || !basePif->IsValid())
             return nullptr;
 
@@ -600,7 +601,7 @@ AsyncOperation* NetworkGeneralEditPage::SaveSettings()
     {
         // Internal -> External: create VLAN
         QString selectedPifRef = this->ui->nicComboBox->currentData().toString();
-        QSharedPointer<PIF> basePif = conn->GetCache()->ResolveObject<PIF>("pif", selectedPifRef);
+        QSharedPointer<PIF> basePif = conn->GetCache()->ResolveObject<PIF>(XenObjectType::PIF, selectedPifRef);
         if (!basePif || !basePif->IsValid())
             return nullptr;
 
@@ -742,7 +743,7 @@ bool NetworkGeneralEditPage::nicOrVlanHasChanged() const
     if (originalPifRef.isEmpty())
         return false;
 
-    QSharedPointer<PIF> originalPif = this->connection()->GetCache()->ResolveObject<PIF>("pif", originalPifRef);
+    QSharedPointer<PIF> originalPif = this->connection()->GetCache()->ResolveObject<PIF>(originalPifRef);
     if (!originalPif || !originalPif->IsValid())
         return false;
 
@@ -766,7 +767,7 @@ bool NetworkGeneralEditPage::isNicVlanEditable() const
     if (networkPifRef.isEmpty())
         return true;
 
-    QSharedPointer<PIF> networkPif = this->connection()->GetCache()->ResolveObject<PIF>("pif", networkPifRef);
+    QSharedPointer<PIF> networkPif = this->connection()->GetCache()->ResolveObject<PIF>(networkPifRef);
     if (!networkPif || !networkPif->IsValid())
         return false;
 

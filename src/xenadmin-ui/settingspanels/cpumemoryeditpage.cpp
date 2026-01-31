@@ -125,7 +125,7 @@ void CpuMemoryEditPage::SetXenObjects(const QString& objectRef,
 
     if (this->connection() && objectType.toLower() == "vm")
     {
-        this->m_vm = this->connection()->GetCache()->ResolveObject<VM>("vm", objectRef);
+        this->m_vm = this->connection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, objectRef);
     } else
     {
         this->m_vm.reset();
@@ -242,11 +242,7 @@ void CpuMemoryEditPage::initializeVCpuControls()
     this->ui->lblPriority->setEnabled(this->m_vm->IsHalted());
 }
 
-void CpuMemoryEditPage::populateVCpuComboBox(QComboBox* comboBox,
-                                             qint64 min,
-                                             qint64 max,
-                                             qint64 currentValue,
-                                             const std::function<bool(qint64)>& isValid) const
+void CpuMemoryEditPage::populateVCpuComboBox(QComboBox* comboBox, qint64 min, qint64 max, qint64 currentValue, const std::function<bool(qint64)>& isValid) const
 {
     comboBox->clear();
     for (qint64 i = min; i <= max; ++i)
@@ -348,20 +344,19 @@ void CpuMemoryEditPage::validateVcpuSettings()
     if (!cache)
         return;
 
-    QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+    QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>(XenObjectType::Host);
     int maxPhysicalCpus = 0;
     for (const QSharedPointer<Host>& host : hosts)
         maxPhysicalCpus = qMax(maxPhysicalCpus, host ? host->GetHostCpuCount() : 0);
 
-    QSharedPointer<Host> homeHost = cache->ResolveObject<Host>("host", this->m_vm->GetHomeRef());
+    QSharedPointer<Host> homeHost = cache->ResolveObject<Host>(XenObjectType::Host, this->m_vm->GetHomeRef());
     int homeHostPhysicalCpus = homeHost ? homeHost->GetHostCpuCount() : 0;
 
     QStringList warnings;
 
     if (this->ui->comboBoxVCPUs->currentIndex() >= 0 && maxPhysicalCpus < this->selectedVcpusMax())
     {
-        if (homeHost && homeHostPhysicalCpus < this->selectedVcpusMax() &&
-            maxPhysicalCpus >= this->selectedVcpusMax())
+        if (homeHost && homeHostPhysicalCpus < this->selectedVcpusMax() && maxPhysicalCpus >= this->selectedVcpusMax())
         {
             warnings.append(tr("The VM's home server does not have enough physical CPUs to start the VM. The VM will start on another server."));
         }
@@ -484,7 +479,7 @@ QString CpuMemoryEditPage::productBrand() const
         return tr("XenServer");
 
     XenCache* cache = this->connection()->GetCache();
-    QList<QVariantMap> pools = cache->GetAllData("pool");
+    QList<QVariantMap> pools = cache->GetAllData(XenObjectType::Pool);
     if (!pools.isEmpty())
     {
         QVariantMap swVersion = pools.first().value("software_version").toMap();
@@ -493,7 +488,7 @@ QString CpuMemoryEditPage::productBrand() const
             return brand;
     }
 
-    QList<QVariantMap> hosts = cache->GetAllData("host");
+    QList<QVariantMap> hosts = cache->GetAllData(XenObjectType::Host);
     if (!hosts.isEmpty())
     {
         QVariantMap swVersion = hosts.first().value("software_version").toMap();
@@ -520,13 +515,10 @@ AsyncOperation* CpuMemoryEditPage::SaveSettings()
     if (this->m_origVcpus != this->selectedVcpusMax() ||
         (this->m_isVcpuHotplugSupported && this->m_origVCPUsAtStartup != this->selectedVcpusAtStartup()))
     {
-        QSharedPointer<VM> vm = this->connection()->GetCache()->ResolveObject<VM>("vm", this->m_vmRef);
+        QSharedPointer<VM> vm = this->connection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, this->m_vmRef);
         if (vm && vm->IsValid())
         {
-            actions.append(new ChangeVCPUSettingsAction(vm,
-                                                        this->selectedVcpusMax(),
-                                                        this->selectedVcpusAtStartup(),
-                                                        nullptr));
+            actions.append(new ChangeVCPUSettingsAction(vm, this->selectedVcpusMax(), this->selectedVcpusAtStartup(), nullptr));
         }
     }
 
@@ -543,12 +535,7 @@ AsyncOperation* CpuMemoryEditPage::SaveSettings()
     if (actions.size() == 1)
         return actions.first();
 
-    return new MultipleAction(this->connection(),
-                                 QString(),
-                                 QString(),
-                                 QString(),
-                                 actions,
-                                 true);
+    return new MultipleAction(this->connection(), QString(), QString(), QString(), actions, true);
 }
 
 bool CpuMemoryEditPage::IsValidToSave() const
@@ -571,8 +558,7 @@ void CpuMemoryEditPage::Cleanup()
 bool CpuMemoryEditPage::HasChanged() const
 {
     bool vcpuChanged = this->m_origVcpus != this->selectedVcpusMax();
-    bool vcpuAtStartupChanged = this->m_isVcpuHotplugSupported &&
-                                this->m_origVCPUsAtStartup != this->selectedVcpusAtStartup();
+    bool vcpuAtStartupChanged = this->m_isVcpuHotplugSupported && this->m_origVCPUsAtStartup != this->selectedVcpusAtStartup();
     bool topologyChanged = this->m_origCoresPerSocket != this->selectedCoresPerSocket();
     bool weightChanged = this->m_origVcpuWeight != this->m_currentVcpuWeight;
     return vcpuChanged || vcpuAtStartupChanged || topologyChanged || weightChanged;

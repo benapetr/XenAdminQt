@@ -28,17 +28,19 @@
 #ifndef XENOBJECT_H
 #define XENOBJECT_H
 
-#include "../xenlib_global.h"
 #include <QObject>
 #include <QString>
 #include <QSharedPointer>
 #include <QVariantMap>
 #include <QPointer>
+#include "../xenlib_global.h"
+#include "xenobjecttype.h"
 #include "network/connection.h"
 
 #define XENOBJECT_NULL "OpaqueRef:NULL"
 
 class XenCache;
+class XenConnection;
 
 /**
  * @brief Base class for all XenAPI objects (Pool, Host, VM, SR, etc.)
@@ -60,6 +62,8 @@ class XENLIB_EXPORT XenObject : public QObject
 
     public:
         static bool ValueIsNULL(const QString &value);
+        //! @brief Convert object type to canonical type string for cache lookups
+        static QString TypeToString(XenObjectType type);
 
         explicit XenObject(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         virtual ~XenObject();
@@ -78,6 +82,23 @@ class XENLIB_EXPORT XenObject : public QObject
          * @return UUID string
          */
         virtual QString GetUUID() const;
+
+        /**
+         * @brief Get GetConnection this object belongs to
+         * @return XenConnection pointer (may be null if disconnected)
+         */
+        XenConnection* GetConnection() const;
+
+        //! Checks if underlying connection is existing and connected
+        bool IsConnected() const;
+
+        /**
+         * @brief Get the object type string for cache lookups
+         */
+        QString GetObjectTypeName() const;
+
+               //! @brief Get the object type
+        virtual XenObjectType GetObjectType() const;
 
         /**
          * @brief Get the object's human-readable name
@@ -120,25 +141,6 @@ class XENLIB_EXPORT XenObject : public QObject
         virtual bool IsLocked() const;
         void Lock();
         void Unlock();
-
-        /**
-         * @brief Get GetConnection this object belongs to
-         * @return XenConnection pointer (may be null if disconnected)
-         */
-        XenConnection* GetConnection() const
-        {
-            return this->m_connection;
-        }
-
-        bool IsConnected() const;
-
-        /**
-         * @brief Get the object type string for cache lookups
-         *
-         * Must be overridden by derived classes to return the XenAPI type
-         * (e.g., "vm", "host", "sr", "pool", "network")
-         */
-        virtual QString GetObjectType() const;
 
         /**
          * @brief Get all cached GetData for this object

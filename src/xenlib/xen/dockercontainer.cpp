@@ -51,10 +51,6 @@ DockerContainer::DockerContainer(XenConnection* connection, const QString& opaqu
 {
 }
 
-QString DockerContainer::GetObjectType() const
-{
-    return "dockercontainer";
-}
 
 QString DockerContainer::ParentRef() const
 {
@@ -75,7 +71,7 @@ QSharedPointer<VM> DockerContainer::GetParent() const
     if (parentRef.isEmpty())
         return QSharedPointer<VM>();
 
-    return cache->ResolveObject<VM>("vm", parentRef);
+    return cache->ResolveObject<VM>(XenObjectType::VM, parentRef);
 }
 
 QString DockerContainer::Status() const

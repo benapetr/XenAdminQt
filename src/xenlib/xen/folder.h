@@ -55,7 +55,7 @@ class XENLIB_EXPORT Folder : public XenObject
         static Folder* Create(XenConnection* connection, const QString& name, Folder* parent = nullptr);
 
         // XenObject overrides
-        QString GetObjectType() const override { return "folder"; }
+        XenObjectType GetObjectType() const override { return XenObjectType::Folder; }
 
         // Folder-specific properties
         Folder* GetParent() const;

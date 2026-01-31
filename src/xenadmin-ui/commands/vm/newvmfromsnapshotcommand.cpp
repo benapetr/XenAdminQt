@@ -46,8 +46,8 @@ NewVMFromSnapshotCommand::NewVMFromSnapshotCommand(const QString& snapshotRef, X
 bool NewVMFromSnapshotCommand::CanRun() const
 {
     QString snapshotRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
-    QString type = !this->m_snapshotRef.isEmpty() ? "vm" : this->getSelectedObjectType();
-    if (snapshotRef.isEmpty() || type != "vm")
+    XenObjectType type = !this->m_snapshotRef.isEmpty() ? XenObjectType::VM : this->getSelectedObjectType();
+    if (snapshotRef.isEmpty() || type != XenObjectType::VM)
         return false;
 
     XenConnection* connection = this->m_connection;
@@ -61,7 +61,7 @@ bool NewVMFromSnapshotCommand::CanRun() const
     if (!cache)
         return false;
 
-    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", snapshotRef);
+    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, snapshotRef);
     return snapshot && snapshot->IsSnapshot();
 }
 
@@ -71,8 +71,8 @@ void NewVMFromSnapshotCommand::Run()
         return;
 
     QString snapshotRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
-    QString type = !this->m_snapshotRef.isEmpty() ? "vm" : this->getSelectedObjectType();
-    if (snapshotRef.isEmpty() || type != "vm")
+    XenObjectType type = !this->m_snapshotRef.isEmpty() ? XenObjectType::VM : this->getSelectedObjectType();
+    if (snapshotRef.isEmpty() || type != XenObjectType::VM)
         return;
 
     XenConnection* connection = this->m_connection;
@@ -86,7 +86,7 @@ void NewVMFromSnapshotCommand::Run()
     if (!cache)
         return;
 
-    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", snapshotRef);
+    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, snapshotRef);
     if (!snapshot || !snapshot->IsSnapshot())
     {
         QMessageBox::warning(this->mainWindow(), tr("Not a Snapshot"), tr("Selected item is not a VM snapshot"));

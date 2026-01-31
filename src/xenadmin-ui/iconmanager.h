@@ -33,6 +33,7 @@
 #include <QString>
 #include <QVariantMap>
 #include <QMap>
+#include "xenlib/xen/xenobjecttype.h"
 
 class XenObject;
 class XenConnection;
@@ -52,6 +53,7 @@ class IconManager
 
         // Icon retrieval methods
         QIcon GetIconForObject(const QString& objectType, const QVariantMap& objectData) const;
+        QIcon GetIconForObject(XenObjectType objectType, const QVariantMap& objectData) const;
         QIcon GetIconForObject(const XenObject* object) const;
         QIcon GetIconForVM(const QVariantMap& vmData) const;
         QIcon GetIconForHost(const Host *host) const;

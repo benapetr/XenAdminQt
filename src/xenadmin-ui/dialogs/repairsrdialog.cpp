@@ -175,7 +175,7 @@ void RepairSRDialog::buildTree()
         
         this->treeNodes.append(srNode);
         
-        QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+        QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>(XenObjectType::Host);
         std::sort(hosts.begin(), hosts.end(), [](const QSharedPointer<Host>& a, const QSharedPointer<Host>& b) {
             return a->GetName().toLower() < b->GetName().toLower();
         });

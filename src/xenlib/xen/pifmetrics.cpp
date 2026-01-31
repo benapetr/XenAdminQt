@@ -32,10 +32,6 @@ PIFMetrics::PIFMetrics(XenConnection* connection, const QString& opaqueRef, QObj
 {
 }
 
-QString PIFMetrics::GetObjectType() const
-{
-    return "pif_metrics";
-}
 
 double PIFMetrics::IoReadKbs() const
 {

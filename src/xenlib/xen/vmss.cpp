@@ -33,10 +33,6 @@ VMSS::VMSS(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString VMSS::GetObjectType() const
-{
-    return "vmss";
-}
 
 bool VMSS::Enabled() const
 {

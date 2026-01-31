@@ -34,10 +34,6 @@ Bond::Bond(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString Bond::GetObjectType() const
-{
-    return "bond";
-}
 
 QString Bond::MasterRef() const
 {

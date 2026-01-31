@@ -162,7 +162,7 @@ class XENLIB_EXPORT VBD : public XenObject
         int GetIoNice() const;
 
     protected:
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::VBD; }
 };
 
 #endif // VBD_H

@@ -216,13 +216,12 @@ void MultipleDvdIsoList::refreshDrives()
             this->cacheConnection_ = connect(connection, &XenConnection::CachePopulated,
                                              this, &MultipleDvdIsoList::onCachePopulated);
         }
-        qDebug() << "MultipleDvdIsoList::refreshDrives VM" << this->m_vm->OpaqueRef()
-                 << "VBDs" << vbdRefs.count();
+        qDebug() << "MultipleDvdIsoList::refreshDrives VM" << this->m_vm->OpaqueRef() << "VBDs" << vbdRefs.count();
 
         QList<QSharedPointer<VBD>> vbds;
         for (const QString& vbdRef : vbdRefs)
         {
-            QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+            QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>(vbdRef);
             if (vbd && vbd->IsValid())
             {
                 // Check if it's a CD-ROM or floppy drive, matching C# logic

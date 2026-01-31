@@ -97,7 +97,7 @@ bool DeleteSnapshotCommand::canDeleteSnapshot() const
     // Get snapshot data from cache
     XenCache* cache = selectedObject->GetCache();
 
-    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", this->m_snapshotUuid);
+    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, this->m_snapshotUuid);
     if (!snapshot)
     {
         qDebug() << "DeleteSnapshotCommand: Snapshot not found in cache:" << this->m_snapshotUuid;
@@ -134,8 +134,8 @@ bool DeleteSnapshotCommand::showConfirmationDialog()
     QString snapshotName = this->m_snapshotUuid;
 
     // Try to get snapshot name from cache
-    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>("vm", this->m_snapshotUuid);
-    if (!snapshot)
+    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>(XenObjectType::VM, this->m_snapshotUuid);
+    if (snapshot)
     {
         snapshotName = snapshot->GetName();
         if (snapshotName.isEmpty())
@@ -165,7 +165,7 @@ void DeleteSnapshotCommand::deleteSnapshot()
         return;
     }
 
-    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>("vm", this->m_snapshotUuid);
+    QSharedPointer<VM> snapshot = this->GetObject()->GetCache()->ResolveObject<VM>(XenObjectType::VM, this->m_snapshotUuid);
     if (!snapshot || !snapshot->IsValid())
     {
         qWarning() << "DeleteSnapshotCommand: Failed to resolve snapshot VM";

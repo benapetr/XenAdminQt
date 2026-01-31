@@ -31,10 +31,6 @@ HostMetrics::HostMetrics(XenConnection* connection, const QString& opaqueRef, QO
 {
 }
 
-QString HostMetrics::GetObjectType() const
-{
-    return QStringLiteral("host_metrics");
-}
 
 bool HostMetrics::IsLive() const
 {

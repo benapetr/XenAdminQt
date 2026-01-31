@@ -33,10 +33,6 @@ Blob::Blob(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString Blob::GetObjectType() const
-{
-    return "blob";
-}
 
 qint64 Blob::Size() const
 {

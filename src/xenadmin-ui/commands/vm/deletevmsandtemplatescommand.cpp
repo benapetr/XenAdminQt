@@ -60,7 +60,7 @@ bool DeleteVMsAndTemplatesCommand::canRunForVM(const QString& vmRef) const
     if (!ob)
         return false;
 
-    QSharedPointer<VM> vm = ob->GetConnection()->GetCache()->ResolveObject<VM>("vm", vmRef);
+    QSharedPointer<VM> vm = ob->GetConnection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, vmRef);
     if (!vm)
         return false;
 

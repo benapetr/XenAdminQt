@@ -381,7 +381,7 @@ QString QueryPanel::formatCpuUsage(XenObject* xenObject, int* percentOut) const
     if (!xenObject)
         return QString("--");
 
-    const QString objectType = xenObject->GetObjectType();
+    const QString objectType = xenObject->GetObjectTypeName();
     const QVariantMap objectData = xenObject->GetData();
     XenConnection* connection = xenObject->GetConnection();
     if (!connection)
@@ -493,7 +493,7 @@ QString QueryPanel::formatMemoryUsage(XenObject* xenObject, int* percentOut) con
     if (!xenObject)
         return QString("--");
 
-    const QString objectType = xenObject->GetObjectType();
+    const QString objectType = xenObject->GetObjectTypeName();
     const QVariantMap objectData = xenObject->GetData();
     XenConnection* connection = xenObject->GetConnection();
     if (!connection)
@@ -622,7 +622,7 @@ QString QueryPanel::formatDiskIO(XenObject* xenObject) const
     if (!xenObject)
         return QString("--");
 
-    const QString objectType = xenObject->GetObjectType();
+    const QString objectType = xenObject->GetObjectTypeName();
     const QVariantMap objectData = xenObject->GetData();
     XenConnection* connection = xenObject->GetConnection();
     if (!connection)
@@ -695,7 +695,7 @@ QString QueryPanel::formatNetworkIO(XenObject* xenObject) const
     if (!xenObject)
         return QString("--");
 
-    const QString objectType = xenObject->GetObjectType();
+    const QString objectType = xenObject->GetObjectTypeName();
     const QVariantMap objectData = xenObject->GetData();
     XenConnection* connection = xenObject->GetConnection();
     if (!connection)
@@ -820,7 +820,7 @@ QString QueryPanel::formatIpAddress(XenObject* xenObject) const
     if (!xenObject)
         return QString();
 
-    const QString objectType = xenObject->GetObjectType();
+    const QString objectType = xenObject->GetObjectTypeName();
     const QVariantMap objectData = xenObject->GetData();
     XenConnection* connection = xenObject->GetConnection();
     if (!connection)
@@ -871,7 +871,7 @@ QString QueryPanel::formatUptime(XenObject* xenObject) const
     if (!xenObject)
         return QString();
 
-    const QString objectType = xenObject->GetObjectType();
+    const QString objectType = xenObject->GetObjectTypeName();
     const QVariantMap objectData = xenObject->GetData();
     XenConnection* connection = xenObject->GetConnection();
     if (!connection)

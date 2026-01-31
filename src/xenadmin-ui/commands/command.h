@@ -34,6 +34,7 @@
 #include <QTreeWidgetItem>
 #include <QIcon>
 #include <QSharedPointer>
+#include "xenlib/xen/xenobjecttype.h"
 
 class MainWindow;
 class XenObject;
@@ -125,7 +126,7 @@ class Command : public QObject
         /**
          * @brief Get the object type from selection
          */
-        QString getSelectedObjectType() const;
+        XenObjectType getSelectedObjectType() const;
 
         /**
          * @brief Get the selected XenObject

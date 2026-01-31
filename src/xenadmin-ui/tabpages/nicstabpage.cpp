@@ -75,7 +75,7 @@ void NICsTabPage::refreshContent()
 {
     this->ui->nicsTable->setRowCount(0);
 
-    if (this->m_objectData.isEmpty() || this->m_objectType != "host")
+    if (this->m_objectData.isEmpty() || this->m_objectType != XenObjectType::Host)
     {
         return;
     }
@@ -158,7 +158,7 @@ void NICsTabPage::addNICRow(const QSharedPointer<PIF>& pif)
     
     if (linkStatus == "Connected")
     {
-        QSharedPointer<PIFMetrics> metrics = this->m_connection->GetCache()->ResolveObject<PIFMetrics>("pif_metrics", pif->MetricsRef());
+        QSharedPointer<PIFMetrics> metrics = this->m_connection->GetCache()->ResolveObject<PIFMetrics>(pif->MetricsRef());
         if (metrics && metrics->IsValid())
         {
             qint64 speedValue = metrics->Speed();
@@ -173,7 +173,7 @@ void NICsTabPage::addNICRow(const QSharedPointer<PIF>& pif)
     QString vendor = "-";
     QString device = "-";
     QString busPath = "-";
-    QSharedPointer<PIFMetrics> metrics = this->m_connection->GetCache()->ResolveObject<PIFMetrics>("pif_metrics", pif->MetricsRef());
+    QSharedPointer<PIFMetrics> metrics = this->m_connection->GetCache()->ResolveObject<PIFMetrics>(pif->MetricsRef());
     if (metrics && metrics->IsValid())
     {
         vendor = metrics->VendorName();
@@ -194,7 +194,7 @@ void NICsTabPage::addNICRow(const QSharedPointer<PIF>& pif)
     {
         // This PIF has SR-IOV capability
         QString networkSriovRef = sriovPhysicalPIFOf.first();
-        QSharedPointer<NetworkSriov> networkSriov = this->m_connection->GetCache()->ResolveObject<NetworkSriov>("network_sriov", networkSriovRef);
+        QSharedPointer<NetworkSriov> networkSriov = this->m_connection->GetCache()->ResolveObject<NetworkSriov>(networkSriovRef);
 
         if (networkSriov && networkSriov->IsValid())
         {
@@ -261,7 +261,7 @@ void NICsTabPage::updateButtonStates()
         return;
     }
 
-    QSharedPointer<PIF> pif = this->m_connection->GetCache()->ResolveObject<PIF>("pif", pifRef);
+    QSharedPointer<PIF> pif = this->m_connection->GetCache()->ResolveObject<PIF>(pifRef);
     if (!pif || !pif->IsValid())
     {
         this->ui->deleteBondButton->setEnabled(false);
@@ -275,7 +275,7 @@ void NICsTabPage::updateButtonStates()
         return;
     }
 
-    QSharedPointer<Bond> bond = this->m_connection->GetCache()->ResolveObject<Bond>("bond", bondRefs.first());
+    QSharedPointer<Bond> bond = this->m_connection->GetCache()->ResolveObject<Bond>(bondRefs.first());
     bool bondLocked = bond && bond->IsLocked();
     this->ui->deleteBondButton->setEnabled(!bondLocked);
 }
@@ -287,14 +287,14 @@ void NICsTabPage::onSelectionChanged()
 
 void NICsTabPage::onCreateBondClicked()
 {
-    if (!this->m_connection || !this->m_connection->GetCache() || this->m_objectType != "host")
+    if (!this->m_connection || !this->m_connection->GetCache() || this->m_objectType != XenObjectType::Host)
     {
         return;
     }
 
     // Get the network ref - use the first available network or create a bond network
     QString networkRef;
-    QList<QSharedPointer<Network>> networks = this->m_connection->GetCache()->GetAll<Network>("network");
+    QList<QSharedPointer<Network>> networks = this->m_connection->GetCache()->GetAll<Network>();
     if (!networks.isEmpty())
     {
         // Use the first network (typically the management network)
@@ -308,8 +308,8 @@ void NICsTabPage::onCreateBondClicked()
 
     // Open bond creation dialog
     XenCache* cache = this->m_connection->GetCache();
-    QSharedPointer<Host> host = cache->ResolveObject<Host>("host", this->m_objectRef);
-    QSharedPointer<Network> network = cache->ResolveObject<Network>("network", networkRef);
+    QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, this->m_objectRef);
+    QSharedPointer<Network> network = cache->ResolveObject<Network>(XenObjectType::Network, networkRef);
     BondPropertiesDialog dialog(host, network, this);
     if (dialog.exec() == QDialog::Accepted)
     {
@@ -331,7 +331,7 @@ void NICsTabPage::onCreateBondClicked()
             return;
         }
 
-        QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>("network", networkRef);
+        QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>(networkRef);
         QString bondName = dialog.getBondName();
         if (bondName.isEmpty())
             bondName = "Bond";
@@ -391,7 +391,7 @@ void NICsTabPage::onDeleteBondClicked()
         return;
 
     // Get PIF data to check if it's a bond
-    QSharedPointer<PIF> pif = this->m_connection->GetCache()->ResolveObject<PIF>("pif", pifRef);
+    QSharedPointer<PIF> pif = this->m_connection->GetCache()->ResolveObject<PIF>(pifRef);
     if (!pif || !pif->IsValid())
         return;
 

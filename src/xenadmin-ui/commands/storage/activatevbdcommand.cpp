@@ -151,15 +151,9 @@ void ActivateVBDCommand::Run()
     {
         XenAPI::VBD::plug(vbd->GetConnection()->GetSession(), vbd->OpaqueRef());
 
-        this->mainWindow()->ShowStatusMessage(
-            QString("Successfully activated virtual disk '%1' on VM '%2'").arg(vdiName, vmName),
-            5000);
+        this->mainWindow()->ShowStatusMessage(QString("Successfully activated virtual disk '%1' on VM '%2'").arg(vdiName, vmName), 5000);
     } catch (const std::exception& e)
     {
-        QMessageBox::warning(
-            this->mainWindow(),
-            "Activate Virtual Disk Failed",
-            QString("Failed to activate virtual disk '%1' on VM '%2': %3")
-                .arg(vdiName, vmName, e.what()));
+        QMessageBox::warning(this->mainWindow(), "Activate Virtual Disk Failed", QString("Failed to activate virtual disk '%1' on VM '%2': %3").arg(vdiName, vmName, e.what()));
     }
 }

@@ -100,10 +100,10 @@ void PhysicalStorageTabPage::refreshContent()
         return;
     }
 
-    if (this->m_objectType == "host")
+    if (this->m_objectType == XenObjectType::Host)
     {
         this->populateHostStorage();
-    } else if (this->m_objectType == "pool")
+    } else if (this->m_objectType == XenObjectType::Pool)
     {
         this->populatePoolStorage();
     }
@@ -123,7 +123,7 @@ void PhysicalStorageTabPage::populateHostStorage()
         return;
     }
 
-    QSharedPointer<Host> host = this->m_connection->GetCache()->ResolveObject<Host>("host", this->m_objectRef);
+    QSharedPointer<Host> host = this->m_connection->GetCache()->ResolveObject<Host>(XenObjectType::Host, this->m_objectRef);
     if (!host || !host->IsValid())
         return;
 
@@ -165,7 +165,7 @@ void PhysicalStorageTabPage::populateHostStorage()
     // Now add rows for each SR
     for (const QString& srRef : srRefsList)
     {
-        QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+        QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>(srRef);
         if (!sr || !sr->IsValid())
             continue;
 
@@ -254,7 +254,7 @@ void PhysicalStorageTabPage::populatePoolStorage()
 
     // For pools, show all SRs in the pool
     // C#: List<PBD> pbds = host != null ? connection.ResolveAll(host.PBDs) : connection.Cache.PBDs (line 230)
-    QList<QSharedPointer<SR>> allSRs = this->m_connection->GetCache()->GetAll<SR>("sr");
+    QList<QSharedPointer<SR>> allSRs = this->m_connection->GetCache()->GetAll<SR>();
 
     QList<QString> srRefsList;
 
@@ -277,7 +277,7 @@ void PhysicalStorageTabPage::populatePoolStorage()
     // Now add rows for each SR
     for (const QString& srRef : srRefsList)
     {
-        QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+        QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>(srRef);
         if (!sr || !sr->IsValid())
             continue;
 
@@ -385,7 +385,7 @@ void PhysicalStorageTabPage::updateButtonStates()
         // Enable trim if at least one selected SR supports it and is attached.
         for (const QString& srRef : selectedSrRefs)
         {
-            QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+            QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>(srRef);
             if (!sr || !sr->IsValid())
                 continue;
             if (sr->SupportsTrim() && !sr->IsDetached())
@@ -467,7 +467,7 @@ void PhysicalStorageTabPage::onTrimButtonClicked()
     {
         for (const QString& srRef : selectedSrRefs)
         {
-            QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+            QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>(srRef);
             if (!sr || !sr->IsValid())
                 continue;
             if (sr->SupportsTrim() && !sr->IsDetached())
@@ -605,7 +605,7 @@ void PhysicalStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoi
         {
             for (const QString& srRef : selectedSrRefs)
             {
-                QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+                QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>(srRef);
                 if (!sr || !sr->IsValid())
                     continue;
                 if (sr->SupportsTrim() && !sr->IsDetached())

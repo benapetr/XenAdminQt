@@ -159,7 +159,7 @@ class XENLIB_EXPORT VDI : public XenObject
         QString NameWithLocation() const override;
 
     protected:
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::VDI; }
 };
 
 #endif // VDI_H

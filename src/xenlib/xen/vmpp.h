@@ -24,7 +24,7 @@ class XENLIB_EXPORT VMPP : public XenObject
     public:
         explicit VMPP(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::VMPP; }
 
         // Basic properties
         bool IsPolicyEnabled() const;

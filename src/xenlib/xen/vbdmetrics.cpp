@@ -31,10 +31,6 @@ VBDMetrics::VBDMetrics(XenConnection* connection, const QString& opaqueRef, QObj
 {
 }
 
-QString VBDMetrics::GetObjectType() const
-{
-    return "vbd_metrics";
-}
 
 double VBDMetrics::IoReadKbs() const
 {

@@ -28,21 +28,20 @@
 #include "newvmfromtemplatecommand.h"
 #include "../../mainwindow.h"
 #include "../../dialogs/newvmwizard.h"
-#include "../../../xenlib/xencache.h"
-#include "../../../xenlib/xen/network/connection.h"
-#include "../../../xenlib/xen/xenobject.h"
-#include "../../../xenlib/xen/vm.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/vm.h"
 #include <QMessageBox>
 
-NewVMFromTemplateCommand::NewVMFromTemplateCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+NewVMFromTemplateCommand::NewVMFromTemplateCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
 bool NewVMFromTemplateCommand::CanRun() const
 {
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
+    XenObjectType objectType = this->getSelectedObjectType();
+    if (objectType != XenObjectType::VM)
         return false;
 
     QString templateRef = this->getSelectedObjectRef();
@@ -58,7 +57,7 @@ bool NewVMFromTemplateCommand::CanRun() const
     if (!cache)
         return false;
 
-    QSharedPointer<VM> templateVm = cache->ResolveObject<VM>("vm", templateRef);
+    QSharedPointer<VM> templateVm = cache->ResolveObject<VM>(XenObjectType::VM, templateRef);
     return this->canRunTemplate(templateVm);
 }
 
@@ -72,24 +71,18 @@ void NewVMFromTemplateCommand::Run()
     if (!selectedObject)
         return;
 
-    XenConnection* connection = selectedObject->GetConnection();
-    XenCache* cache = connection ? connection->GetCache() : nullptr;
-    if (!cache)
-        return;
-
-    QSharedPointer<VM> templateVm = cache->ResolveObject<VM>("vm", templateRef);
+    QSharedPointer<VM> templateVm = selectedObject->GetCache()->ResolveObject<VM>(XenObjectType::VM, templateRef);
     if (!this->canRunTemplate(templateVm))
     {
-        QMessageBox::warning(this->mainWindow(), "Cannot Create VM",
-                             "The selected template cannot be used to create a VM.");
+        QMessageBox::warning(this->mainWindow(), "Cannot Create VM", "The selected template cannot be used to create a VM.");
         return;
     }
 
     // Launch New VM wizard with template as source
-    if (!connection)
+    if (!selectedObject->GetConnection())
         return;
 
-    NewVMWizard* wizard = new NewVMWizard(connection, this->mainWindow());
+    NewVMWizard* wizard = new NewVMWizard(selectedObject->GetConnection(), this->mainWindow());
     // TODO: Set template as wizard source
     // wizard->setSourceTemplate(templateRef);
     wizard->show();
@@ -102,8 +95,7 @@ QString NewVMFromTemplateCommand::MenuText() const
 
 QString NewVMFromTemplateCommand::getSelectedTemplateRef() const
 {
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
+    if (this->getSelectedObjectType() != XenObjectType::VM)
         return QString();
 
     return this->getSelectedObjectRef();

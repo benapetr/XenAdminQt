@@ -55,7 +55,7 @@ namespace
 
         XenCache* cache = connection->GetCache();
 
-        QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+        QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
         for (const QSharedPointer<Host>& host : hosts)
         {
             if (host && host->RestrictIntraPoolMigrate())
@@ -344,7 +344,7 @@ void VMOperationMenu::populate()
     }
 
     // Add host menu items (will be populated in updateHostList)
-    QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+    QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
     std::sort(hosts.begin(), hosts.end(), [](const QSharedPointer<Host>& a, const QSharedPointer<Host>& b) {
         return a->GetName() < b->GetName();
     });

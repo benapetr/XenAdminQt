@@ -35,7 +35,7 @@ SRCommand::SRCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWind
 QSharedPointer<SR> SRCommand::getSR() const
 {
     QSharedPointer<XenObject> xo = this->GetObject();
-    if (!xo || xo->GetObjectType() != "sr")
+    if (!xo || xo->GetObjectType() != XenObjectType::SR)
         return QSharedPointer<SR>();
 
     return qSharedPointerCast<SR>(xo);
@@ -47,8 +47,7 @@ QString SRCommand::getSelectedSRRef() const
     if (!item)
         return QString();
 
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "sr")
+    if (this->getSelectedObjectType() != XenObjectType::SR)
         return QString();
 
     return this->getSelectedObjectRef();
@@ -60,8 +59,7 @@ QString SRCommand::getSelectedSRName() const
     if (!item)
         return QString();
 
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "sr")
+    if (this->getSelectedObjectType() != XenObjectType::SR)
         return QString();
 
     QSharedPointer<SR> sr = this->getSR();

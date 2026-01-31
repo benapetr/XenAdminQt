@@ -58,8 +58,8 @@ bool VappShutDownCommand::CanRun() const
         {
             if (!obj)
                 return false;
-            const QString type = obj->GetObjectType();
-            if (type == "vm_appliance" || type == "appliance")
+            const XenObjectType type = obj->GetObjectType();
+            if (type == XenObjectType::VMAppliance)
             {
                 QSharedPointer<VMAppliance> appliance = qSharedPointerCast<VMAppliance>(obj);
                 if (appliance)
@@ -85,7 +85,7 @@ bool VappShutDownCommand::CanRun() const
         bool allVms = true;
         for (const QSharedPointer<XenObject>& obj : objects)
         {
-            if (!obj || obj->GetObjectType() != "vm")
+            if (!obj || obj->GetObjectType() != XenObjectType::VM)
             {
                 allVms = false;
                 break;
@@ -113,13 +113,13 @@ bool VappShutDownCommand::CanRun() const
             if (!cache)
                 return false;
 
-            QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+            QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>(XenObjectType::VMAppliance, applianceRef);
             return this->canShutDownAppliance(appliance);
         }
     }
 
     QString objRef = this->getSelectedObjectRef();
-    QString type = this->getSelectedObjectType();
+    XenObjectType type = this->getSelectedObjectType();
 
     if (objRef.isEmpty())
     {
@@ -127,7 +127,7 @@ bool VappShutDownCommand::CanRun() const
     }
 
     // Case 1: VM_appliance directly selected
-    if (type == "vm_appliance" || type == "appliance")
+    if (type == XenObjectType::VMAppliance)
     {
         QSharedPointer<XenObject> selectedObject = this->GetObject();
         if (!selectedObject)
@@ -143,7 +143,7 @@ bool VappShutDownCommand::CanRun() const
     }
 
     // Case 2: VM selected - check if it belongs to an appliance
-    if (type == "vm")
+    if (type == XenObjectType::VM)
     {
         QString applianceRef = this->getApplianceRefFromVM(objRef);
         if (applianceRef.isEmpty())
@@ -160,7 +160,7 @@ bool VappShutDownCommand::CanRun() const
         if (!cache)
             return false;
 
-        QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+        QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>(XenObjectType::VMAppliance, applianceRef);
         return this->canShutDownAppliance(appliance);
     }
 
@@ -182,8 +182,8 @@ void VappShutDownCommand::Run()
             {
                 if (!obj)
                     return;
-                const QString type = obj->GetObjectType();
-                if (type == "vm_appliance" || type == "appliance")
+                const XenObjectType type = obj->GetObjectType();
+                if (type == XenObjectType::VMAppliance)
                 {
                     QSharedPointer<VMAppliance> appliance = qSharedPointerCast<VMAppliance>(obj);
                     if (appliance)
@@ -232,9 +232,7 @@ void VappShutDownCommand::Run()
                                 tr("vApp '%1' shut down successfully").arg(appliance->GetName()), 5000);
                         } else if (action->GetState() == AsyncOperation::Failed)
                         {
-                            QMessageBox::critical(this->mainWindow(), tr("Error"),
-                                                  tr("Failed to shut down vApp '%1':\n%2")
-                                                      .arg(appliance->GetName(), action->GetErrorMessage()));
+                            QMessageBox::critical(this->mainWindow(), tr("Error"), tr("Failed to shut down vApp '%1':\n%2").arg(appliance->GetName(), action->GetErrorMessage()));
                         }
 
                         action->deleteLater();
@@ -247,7 +245,7 @@ void VappShutDownCommand::Run()
             bool allVms = true;
             for (const QSharedPointer<XenObject>& obj : objects)
             {
-                if (!obj || obj->GetObjectType() != "vm")
+                if (!obj || obj->GetObjectType() != XenObjectType::VM)
                 {
                     allVms = false;
                     break;
@@ -275,7 +273,7 @@ void VappShutDownCommand::Run()
                 if (!cache)
                     return;
 
-                QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+                QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>(applianceRef);
                 if (!appliance || !this->canShutDownAppliance(appliance))
                     return;
 
@@ -314,13 +312,13 @@ void VappShutDownCommand::Run()
     }
 
     QString objRef = this->getSelectedObjectRef();
-    QString type = this->getSelectedObjectType();
+    XenObjectType type = this->getSelectedObjectType();
     QString applianceRef;
 
-    if (type == "vm_appliance" || type == "appliance")
+    if (type == XenObjectType::VMAppliance)
     {
         applianceRef = objRef;
-    } else if (type == "vm")
+    } else if (type == XenObjectType::VM)
     {
         applianceRef = this->getApplianceRefFromVM(objRef);
         if (applianceRef.isEmpty())
@@ -346,7 +344,7 @@ void VappShutDownCommand::Run()
 
     XenCache* cache = connection->GetCache();
 
-    QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+    QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>(XenObjectType::VMAppliance, applianceRef);
     if (!appliance)
         return;
 
@@ -360,8 +358,7 @@ void VappShutDownCommand::Run()
     // Validate before shutting down
     if (!this->canShutDownAppliance(appliance))
     {
-        QMessageBox::warning(this->mainWindow(), tr("Cannot Shut Down vApp"),
-                             tr("VM appliance '%1' cannot be shut down").arg(appName));
+        QMessageBox::warning(this->mainWindow(), tr("Cannot Shut Down vApp"), tr("VM appliance '%1' cannot be shut down").arg(appName));
         return;
     }
 
@@ -382,8 +379,7 @@ void VappShutDownCommand::Run()
     // Get connection
     if (!connection->IsConnected())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
-                             tr("Not connected to XenServer"));
+        QMessageBox::warning(this->mainWindow(), tr("Not Connected"), tr("Not connected to XenServer"));
         return;
     }
 
@@ -438,7 +434,7 @@ QString VappShutDownCommand::getApplianceRefFromVM(const QString& vmRef) const
     if (!cache)
         return QString();
 
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData(XenObjectType::VM, vmRef);
     if (vmData.isEmpty())
     {
         return QString();

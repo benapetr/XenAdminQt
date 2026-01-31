@@ -47,7 +47,7 @@ class XENLIB_EXPORT PoolUpdate : public XenObject
         explicit PoolUpdate(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         virtual ~PoolUpdate();
 
-        QString GetObjectType() const override { return "pool_update"; }
+        XenObjectType GetObjectType() const override { return XenObjectType::PoolUpdate; }
 
         // Property accessors
         QString Version() const;

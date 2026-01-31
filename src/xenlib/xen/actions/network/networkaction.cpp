@@ -86,7 +86,7 @@ NetworkAction::NetworkAction(QSharedPointer<Network> network,
         QStringList pifRefs = network->GetPIFRefs();
         for (const QString& pifRef : pifRefs)
         {
-            QSharedPointer<PIF> pif = network->GetConnection()->GetCache()->ResolveObject<PIF>("pif", pifRef);
+            QSharedPointer<PIF> pif = network->GetConnection()->GetCache()->ResolveObject<PIF>(pifRef);
             if (pif && pif->IsValid())
                 this->m_pifs.append(pif);
         }
@@ -124,7 +124,7 @@ NetworkAction::NetworkAction(QSharedPointer<Network> network,
         QStringList pifRefs = network->GetPIFRefs();
         for (const QString& pifRef : pifRefs)
         {
-            QSharedPointer<PIF> pif = network->GetConnection()->GetCache()->ResolveObject<PIF>("pif", pifRef);
+            QSharedPointer<PIF> pif = network->GetConnection()->GetCache()->ResolveObject<PIF>(pifRef);
             if (pif && pif->IsValid())
                 this->m_pifs.append(pif);
         }
@@ -221,7 +221,7 @@ void NetworkAction::createVLAN(const QString& networkRef)
 
     // Get the pool coordinator
     XenCache* cache = this->GetConnection()->GetCache();
-    QList<QSharedPointer<Pool>> pools = cache->GetAll<Pool>("pool");
+    QList<QSharedPointer<Pool>> pools = cache->GetAll<Pool>(XenObjectType::Pool);
 
     if (pools.isEmpty())
     {
@@ -231,7 +231,7 @@ void NetworkAction::createVLAN(const QString& networkRef)
     QSharedPointer<Pool> pool = pools.first();
     QString masterRef = pool->GetMasterHostRef();
 
-    QSharedPointer<Host> coordinator = cache->ResolveObject<Host>("host", masterRef);
+    QSharedPointer<Host> coordinator = cache->ResolveObject<Host>(XenObjectType::Host, masterRef);
     if (!coordinator || !coordinator->IsValid())
     {
         throw std::runtime_error("Pool coordinator not found");
@@ -271,7 +271,7 @@ void NetworkAction::run()
                     XenAPI::Network::destroy(this->GetSession(), ref);
                     XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
                     if (cache)
-                        cache->Remove("network", ref);
+                        cache->Remove(XenObjectType::Network, ref);
                 }
 
                 this->SetDescription(QString("Network '%1' removed").arg(this->m_network->GetName()));
@@ -287,7 +287,7 @@ void NetworkAction::run()
                     if (this->m_external)
                     {
                         // Check if VLAN tag already exists on this device
-                        QList<QSharedPointer<PIF>> allPifs = this->GetConnection()->GetCache()->GetAll<PIF>("pif");
+                        QList<QSharedPointer<PIF>> allPifs = this->GetConnection()->GetCache()->GetAll<PIF>(XenObjectType::PIF);
                         for (const QSharedPointer<PIF>& pif : allPifs)
                         {
                             if (pif && pif->IsValid() &&

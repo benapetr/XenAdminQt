@@ -108,7 +108,7 @@ void DisableChangedBlockTrackingCommand::Run()
     for (const QVariant& vbdRefVariant : vbds)
     {
         QString vbdRef = vbdRefVariant.toString();
-        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
+        QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
         if (vbdData.isEmpty())
         {
             continue;
@@ -121,7 +121,7 @@ void DisableChangedBlockTrackingCommand::Run()
             continue;
         }
 
-        QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
+        QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
         if (vdiData.isEmpty())
         {
             continue;
@@ -139,8 +139,7 @@ void DisableChangedBlockTrackingCommand::Run()
 
     if (actions.isEmpty())
     {
-        QMessageBox::information(this->mainWindow(), tr("No CBT Enabled"),
-                                 tr("The selected VM does not have Changed Block Tracking enabled."));
+        QMessageBox::information(this->mainWindow(), tr("No CBT Enabled"), tr("The selected VM does not have Changed Block Tracking enabled."));
         return;
     }
 
@@ -200,7 +199,7 @@ bool DisableChangedBlockTrackingCommand::hasVdiWithCbtEnabled() const
     for (const QVariant& vbdRefVariant : vbds)
     {
         QString vbdRef = vbdRefVariant.toString();
-        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef);
+        QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
         if (vbdData.isEmpty())
             continue;
 
@@ -209,7 +208,7 @@ bool DisableChangedBlockTrackingCommand::hasVdiWithCbtEnabled() const
         if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
             continue;
 
-        QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
+        QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
         if (vdiData.isEmpty())
             continue;
 

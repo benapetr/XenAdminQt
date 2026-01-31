@@ -315,7 +315,7 @@ void ConsolePanel::SetCurrentSourceHost(QSharedPointer<XenObject> xen_obj)
             qWarning() << "ConsolePanel: Failed to lookup host from ref: " << hostRef;
         } else
         {
-            dom0 = host->GetCache()->ResolveObject<XenObject>("vm", host->ControlDomainRef());
+            dom0 = host->GetCache()->ResolveObject(XenObjectType::VM, host->ControlDomainRef());
         }
     }
 
@@ -572,7 +572,7 @@ void CvmConsolePanel::SetCurrentSourceHost(QSharedPointer<XenObject> xen_obj)
     this->_connection = xen_obj->GetConnection();
 
     // Find CVM (other control domain) for this host
-    QSharedPointer<XenObject> cvm_obj = xen_obj->GetCache()->ResolveObject<XenObject>("vm", getOtherControlDomainForHost(hostRef));
+    QSharedPointer<XenObject> cvm_obj = xen_obj->GetCache()->ResolveObject(XenObjectType::VM, getOtherControlDomainForHost(hostRef));
 
     if (!cvm_obj)
     {

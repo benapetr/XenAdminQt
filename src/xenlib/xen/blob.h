@@ -53,7 +53,7 @@ class XENLIB_EXPORT Blob : public XenObject
         explicit Blob(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Blob() override = default;
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::Blob; }
 
         // Property accessors (read from cache)
         qint64 Size() const;

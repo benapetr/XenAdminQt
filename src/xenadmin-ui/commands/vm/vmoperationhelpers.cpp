@@ -113,7 +113,7 @@ void VMOperationHelpers::StartDiagnosisForm(XenConnection* connection, const QSt
                        .arg(vmName, isStart ? "started" : "resumed");
 
     QMap<QString, QPair<QString, QString>> reasons;
-    QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+    QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>(XenObjectType::Host);
     
     if (hosts.isEmpty())
     {
@@ -270,7 +270,7 @@ bool VMOperationHelpers::VMCanBootOnHost(XenConnection* connection, const QShare
         return false;
     }
 
-    QSharedPointer<Host> host = cache->ResolveObject<Host>("host", hostRef);
+    QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, hostRef);
     if (!host)
     {
         if (cannotBootReason)
@@ -290,7 +290,7 @@ bool VMOperationHelpers::VMCanBootOnHost(XenConnection* connection, const QShare
                 return false;
             }
 
-            QSharedPointer<Host> residentHost = cache->ResolveObject<Host>("host", residentRef);
+            QSharedPointer<Host> residentHost = cache->ResolveObject<Host>(XenObjectType::Host, residentRef);
             if (residentHost)
             {
                 QString targetVersion = host->SoftwareVersion().value("product_version").toString();
@@ -336,7 +336,7 @@ bool VMOperationHelpers::VMCanBootOnHost(XenConnection* connection, const QShare
         if (params.size() > 2 && params[0] == Failure::VM_REQUIRES_SR)
         {
             QString srRef = params[2];
-            QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", srRef);
+            QSharedPointer<SR> sr = cache->ResolveObject<SR>(XenObjectType::SR, srRef);
             if (sr && sr->ContentType() == "iso")
             {
                 if (cannotBootReason)

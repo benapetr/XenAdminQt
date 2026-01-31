@@ -66,7 +66,7 @@ QList<QSharedPointer<SR>> DetachSRCommand::selectedSRs() const
 
     for (const QString& ref : selection)
     {
-        QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", ref);
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>(XenObjectType::SR, ref);
         if (sr)
             srs.append(sr);
     }
@@ -256,7 +256,7 @@ QString DetachSRCommand::currentSR() const
         return this->m_overrideSRRef;
     }
 
-    if (this->getSelectedObjectType() != "sr")
+    if (this->getSelectedObjectType() != XenObjectType::SR)
     {
         return QString();
     }

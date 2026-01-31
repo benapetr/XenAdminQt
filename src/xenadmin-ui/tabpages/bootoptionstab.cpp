@@ -133,7 +133,7 @@ void BootOptionsTab::SetObject(QSharedPointer<XenObject> object)
 {
     BaseTabPage::SetObject(object);
 
-    if (!object || object->GetObjectType() != "vm")
+    if (!object || object->GetObjectType() != XenObjectType::VM)
     {
         this->setEnabled(false);
         return;

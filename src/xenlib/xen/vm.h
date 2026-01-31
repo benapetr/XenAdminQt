@@ -562,7 +562,7 @@ class XENLIB_EXPORT VM : public XenObject
         qint64 GetStartTime() const;
 
     protected:
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::VM; }
 };
 
 #endif // VM_H

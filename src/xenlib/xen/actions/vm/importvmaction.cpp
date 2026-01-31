@@ -45,11 +45,7 @@
 
 const QString ImportVmAction::IMPORT_TASK = "import_task";
 
-ImportVmAction::ImportVmAction(XenConnection* connection,
-                               const QString& hostRef,
-                               const QString& filename,
-                               const QString& srRef,
-                               QObject* parent)
+ImportVmAction::ImportVmAction(XenConnection* connection, const QString& hostRef, const QString& filename, const QString& srRef, QObject* parent)
     : AsyncOperation(connection, tr("Importing VM"), tr("Preparing import..."), parent)
     , hostRef_(hostRef)
     , filename_(filename)
@@ -94,7 +90,7 @@ int ImportVmAction::vmsWithName(const QString& name)
         return 0;
 
     int count = 0;
-    QList<QSharedPointer<XenObject>> allVMs = this->GetConnection()->GetCache()->GetAll("vm");
+    QList<QSharedPointer<XenObject>> allVMs = this->GetConnection()->GetCache()->GetAll(XenObjectType::VM);
     
     for (const QSharedPointer<XenObject>& obj : allVMs)
     {
@@ -138,7 +134,7 @@ QString ImportVmAction::uploadFile()
     QString targetHost;
     if (!this->hostRef_.isEmpty())
     {
-        QSharedPointer<Host> host = this->GetConnection()->GetCache()->ResolveObject<Host>("host", this->hostRef_);
+        QSharedPointer<Host> host = this->GetConnection()->GetCache()->ResolveObject<Host>(XenObjectType::Host, this->hostRef_);
         if (host && host->IsValid())
             targetHost = host->GetAddress();
     }
@@ -146,7 +142,7 @@ QString ImportVmAction::uploadFile()
     if (targetHost.isEmpty())
     {
         // Use SR's storage host or pool master
-        QSharedPointer<SR> sr = this->GetConnection()->GetCache()->ResolveObject<SR>("sr", this->srRef_);
+        QSharedPointer<SR> sr = this->GetConnection()->GetCache()->ResolveObject<SR>(this->srRef_);
         if (sr && sr->IsValid())
         {
             // Try to get SR's preferred host
@@ -264,7 +260,7 @@ void ImportVmAction::run()
     int attempts = 0;
     while (attempts < 100 && !this->IsCancelled())
     {
-        QSharedPointer<VM> vm = this->GetConnection()->GetCache()->ResolveObject<VM>("vm", vmRef);
+        QSharedPointer<VM> vm = this->GetConnection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, vmRef);
         if (vm && vm->IsValid())
         {
             this->vmRef_ = vmRef;

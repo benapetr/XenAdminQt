@@ -52,11 +52,11 @@ void SetSecondaryManagementPurposeAction::run()
 {
     try
     {
-        XenAPI::Session* session = GetSession();
+        XenAPI::Session* session = this->GetSession();
         if (!session || !session->IsLoggedIn())
             throw std::runtime_error("No active session");
 
-        for (const QSharedPointer<PIF>& pif : m_pifs)
+        for (const QSharedPointer<PIF>& pif : this->m_pifs)
         {
             if (!pif || !pif->IsValid())
                 continue;
@@ -70,7 +70,7 @@ void SetSecondaryManagementPurposeAction::run()
 
             QList<QSharedPointer<PIF>> allPifs = network->GetPIFs();
             QList<QSharedPointer<PIF>> targets;
-            if (m_pool)
+            if (this->m_pool)
             {
                 targets = allPifs;
             }
@@ -104,10 +104,10 @@ void SetSecondaryManagementPurposeAction::run()
             }
         }
 
-        SetDescription("Secondary management purpose updated");
+        this->SetDescription("Secondary management purpose updated");
     }
     catch (const std::exception& e)
     {
-        setError(QString("Failed to update management purpose: %1").arg(e.what()));
+        this->setError(QString("Failed to update management purpose: %1").arg(e.what()));
     }
 }

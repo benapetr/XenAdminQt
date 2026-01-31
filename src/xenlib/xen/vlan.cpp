@@ -66,7 +66,7 @@ QSharedPointer<PIF> VLAN::GetTaggedPIF() const
     if (ref.isEmpty() || ref == "OpaqueRef:NULL")
         return QSharedPointer<PIF>();
     
-    return cache->ResolveObject<PIF>("pif", ref);
+    return cache->ResolveObject<PIF>(ref);
 }
 
 QSharedPointer<PIF> VLAN::GetUntaggedPIF() const
@@ -83,10 +83,6 @@ QSharedPointer<PIF> VLAN::GetUntaggedPIF() const
     if (ref.isEmpty() || ref == "OpaqueRef:NULL")
         return QSharedPointer<PIF>();
     
-    return cache->ResolveObject<PIF>("pif", ref);
+    return cache->ResolveObject<PIF>(ref);
 }
 
-QString VLAN::GetObjectType() const
-{
-    return "vlan";
-}

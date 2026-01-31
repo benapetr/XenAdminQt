@@ -77,7 +77,7 @@ void LivePatchingEditPage::SetXenObjects(const QString& objectRef,
         XenCache* cache = conn ? conn->GetCache() : nullptr;
         if (cache)
         {
-            QList<QSharedPointer<Pool>> pools = cache->GetAll<Pool>("pool");
+            QList<QSharedPointer<Pool>> pools = cache->GetAll<Pool>();
             if (!pools.isEmpty() && pools.first())
             {
                 QSharedPointer<Pool> pool = pools.first();
@@ -116,7 +116,7 @@ AsyncOperation* LivePatchingEditPage::SaveSettings()
         ? tr("Disabling live patching") 
         : tr("Enabling live patching");
     
-    QSharedPointer<Pool> pool = this->connection()->GetCache()->ResolveObject<Pool>("pool", this->m_poolRef_);
+    QSharedPointer<Pool> pool = this->connection()->GetCache()->ResolveObject<Pool>(this->m_poolRef_);
     if (!pool || !pool->IsValid())
     {
         qWarning() << "LivePatchingEditPage::SaveSettings: Invalid pool" << this->m_poolRef_;

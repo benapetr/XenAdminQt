@@ -246,7 +246,7 @@ void PerformanceTabPage::fetchMetrics()
     }
 
     // For VMs
-    if (this->m_objectType == "vm")
+    if (this->m_objectType == XenObjectType::VM)
     {
         // Query CPU usage data source
         double cpuUsage = XenAPI::VM::query_data_source(session, objRef, "cpu");
@@ -308,7 +308,7 @@ void PerformanceTabPage::fetchMetrics()
         }
     }
     // For Hosts
-    else if (this->m_objectType == "host")
+    else if (this->m_objectType == XenObjectType::Host)
     {
         // Query host CPU usage
         double cpuUsage = XenAPI::Host::query_data_source(session, objRef, "cpu_avg");

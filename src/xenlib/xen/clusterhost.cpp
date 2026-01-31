@@ -20,7 +20,7 @@ QSharedPointer<Cluster> ClusterHost::GetCluster() const
     if (clusterRef.isEmpty() || clusterRef == "OpaqueRef:NULL")
         return QSharedPointer<Cluster>();
     
-    return cache->ResolveObject<Cluster>("cluster", clusterRef);
+    return cache->ResolveObject<Cluster>(clusterRef);
 }
 
 QSharedPointer<Host> ClusterHost::GetHost() const
@@ -35,7 +35,7 @@ QSharedPointer<Host> ClusterHost::GetHost() const
     if (hostRef.isEmpty() || hostRef == "OpaqueRef:NULL")
         return QSharedPointer<Host>();
     
-    return cache->ResolveObject<Host>("host", hostRef);
+    return cache->ResolveObject<Host>(XenObjectType::Host, hostRef);
 }
 
 QSharedPointer<PIF> ClusterHost::GetPIF() const
@@ -50,5 +50,5 @@ QSharedPointer<PIF> ClusterHost::GetPIF() const
     if (pifRef.isEmpty() || pifRef == "OpaqueRef:NULL")
         return QSharedPointer<PIF>();
     
-    return cache->ResolveObject<PIF>("pif", pifRef);
+    return cache->ResolveObject<PIF>(pifRef);
 }

@@ -109,7 +109,7 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
         return nullptr;
 
     QVariant data = item->data(0, Qt::UserRole);
-    QString objectType;
+    XenObjectType objectType = XenObjectType::Null;
     QString objectRef;
     
     // Extract type and ref from QSharedPointer<XenObject>
@@ -122,21 +122,21 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
         objectRef = obj->OpaqueRef();
     } else if (data.canConvert<XenConnection*>())
     {
-        objectType = "disconnected_host";
+        objectType = XenObjectType::DisconnectedHost;
         objectRef = QString();
     }
-    
-    if (objectType.isEmpty())
+
+    if (objectType == XenObjectType::Null)
         return nullptr;
 
     QString itemName = item->text(0);
-    qDebug() << "ContextMenuBuilder: Building context menu for" << objectType << "item:" << itemName;
+    qDebug() << "ContextMenuBuilder: Building context menu for" << XenObject::TypeToString(objectType) << "item:" << itemName;
 
     QMenu* menu = new QMenu(parent);
 
     const QString itemType = item->data(0, Qt::UserRole + 1).toString();
-    bool isDisconnectedHost = (objectType == "disconnected_host" || itemType == "disconnected_host");
-    if (!isDisconnectedHost && obj && objectType == "host")
+    bool isDisconnectedHost = (objectType == XenObjectType::DisconnectedHost || itemType == "disconnected_host");
+    if (!isDisconnectedHost && obj && objectType == XenObjectType::Host)
     {
         QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
         if (host)
@@ -153,35 +153,47 @@ QMenu* ContextMenuBuilder::BuildContextMenu(QTreeWidgetItem* item, QWidget* pare
     if (!obj)
         return menu;
 
-    // TODO replace this with some enum switch
-    if (objectType == "vm")
+    switch (objectType)
     {
-        QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
-
-        if (vm->IsSnapshot())
-            this->buildSnapshotContextMenu(menu, vm);
-        else
-            this->buildVMContextMenu(menu, vm);
-    } else if (objectType == "template")
-    {
-        QSharedPointer<VM> templateVM = qSharedPointerCast<VM>(obj);
-        this->buildTemplateContextMenu(menu, templateVM);
-    } else if (objectType == "host")
-    {
-        QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
-        this->buildHostContextMenu(menu, host);
-    } else if (objectType == "sr")
-    {
-        QSharedPointer<SR> sr = qSharedPointerCast<SR>(obj);
-        this->buildSRContextMenu(menu, sr);
-    } else if (objectType == "pool")
-    {
-        QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(obj);
-        this->buildPoolContextMenu(menu, pool);
-    } else if (objectType == "network")
-    {
-        QSharedPointer<Network> network = qSharedPointerCast<Network>(obj);
-        this->buildNetworkContextMenu(menu, network);
+        case XenObjectType::VM:
+        {
+            QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
+            if (!vm)
+                break;
+            if (vm->IsSnapshot())
+                this->buildSnapshotContextMenu(menu, vm);
+            else if (vm->IsTemplate())
+                this->buildTemplateContextMenu(menu, vm);
+            else
+                this->buildVMContextMenu(menu, vm);
+            break;
+        }
+        case XenObjectType::Host:
+        {
+            QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
+            this->buildHostContextMenu(menu, host);
+            break;
+        }
+        case XenObjectType::SR:
+        {
+            QSharedPointer<SR> sr = qSharedPointerCast<SR>(obj);
+            this->buildSRContextMenu(menu, sr);
+            break;
+        }
+        case XenObjectType::Pool:
+        {
+            QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(obj);
+            this->buildPoolContextMenu(menu, pool);
+            break;
+        }
+        case XenObjectType::Network:
+        {
+            QSharedPointer<Network> network = qSharedPointerCast<Network>(obj);
+            this->buildNetworkContextMenu(menu, network);
+            break;
+        }
+        default:
+            break;
     }
 
     return menu;
@@ -196,8 +208,27 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
     bool mixedVmTemplateSelection = false;
     if (this->m_mainWindow && this->m_mainWindow->GetSelectionManager())
     {
-        const QStringList types = this->m_mainWindow->GetSelectionManager()->SelectedTypes();
-        mixedVmTemplateSelection = types.contains("vm") && types.contains("template");
+        bool hasTemplate = false;
+        bool hasVm = false;
+        const QList<QSharedPointer<XenObject>> objects = this->m_mainWindow->GetSelectionManager()->SelectedObjects();
+        for (const QSharedPointer<XenObject>& obj : objects)
+        {
+            if (!obj || obj->GetObjectType() != XenObjectType::VM)
+                continue;
+
+            QSharedPointer<VM> selectedVm = qSharedPointerCast<VM>(obj);
+            if (!selectedVm)
+                continue;
+
+            if (selectedVm->IsTemplate())
+                hasTemplate = true;
+            else
+                hasVm = true;
+
+            if (hasTemplate && hasVm)
+                break;
+        }
+        mixedVmTemplateSelection = hasTemplate && hasVm;
     }
     QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
     QList<QSharedPointer<VM>> filteredVms;
@@ -233,7 +264,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
                 continue;
 
             QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-            if (!obj || obj->GetObjectType() != "vm")
+            if (!obj || obj->GetObjectType() != XenObjectType::VM)
                 continue;
 
             if (!selectedRefs.contains(obj->OpaqueRef()))
@@ -247,7 +278,7 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
                 if (parentData.canConvert<QSharedPointer<XenObject>>())
                 {
                     QSharedPointer<XenObject> parentObj = parentData.value<QSharedPointer<XenObject>>();
-                    if (parentObj && parentObj->GetObjectType() == "host")
+                    if (parentObj && parentObj->GetObjectType() == XenObjectType::Host)
                     {
                         hostAncestor = qSharedPointerCast<Host>(parentObj);
                         break;
@@ -261,7 +292,8 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
         }
     }
 
-    auto selectionConnection = [&selectedVms]() -> XenConnection* {
+    auto selectionConnection = [&selectedVms]() -> XenConnection*
+    {
         if (selectedVms.isEmpty())
             return nullptr;
         XenConnection* connection = selectedVms.first()->GetConnection();
@@ -273,16 +305,18 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
         return connection;
     };
 
-    auto hostCount = [](XenConnection* connection) -> int {
+    auto hostCount = [](XenConnection* connection) -> int
+    {
         if (!connection || !connection->GetCache())
             return 0;
-        return connection->GetCache()->GetAllRefs("host").size();
+        return connection->GetCache()->GetAllRefs(XenObjectType::Host).size();
     };
 
-    auto anyEnabledHost = [](XenConnection* connection) -> bool {
+    auto anyEnabledHost = [](XenConnection* connection) -> bool
+    {
         if (!connection || !connection->GetCache())
             return false;
-        const QList<QSharedPointer<Host>> hosts = connection->GetCache()->GetAll<Host>("host");
+        const QList<QSharedPointer<Host>> hosts = connection->GetCache()->GetAll<Host>(XenObjectType::Host);
         for (const QSharedPointer<Host>& host : hosts)
         {
             if (host && host->IsEnabled())
@@ -291,7 +325,8 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
         return false;
     };
 
-    auto enabledTargetExists = [&](const QSharedPointer<VM>& item, XenConnection* connection) -> bool {
+    auto enabledTargetExists = [&](const QSharedPointer<VM>& item, XenConnection* connection) -> bool
+    {
         QSharedPointer<Host> hostAncestor = vmHostAncestors.value(item->OpaqueRef());
         if (hostAncestor)
             return hostAncestor->IsEnabled();
@@ -299,7 +334,8 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
         return anyEnabledHost(connection);
     };
 
-    auto canShowStartOn = [&]() -> bool {
+    auto canShowStartOn = [&]() -> bool
+    {
         XenConnection* connection = selectionConnection();
         if (!connection || hostCount(connection) <= 1)
             return false;
@@ -315,7 +351,8 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
         return false;
     };
 
-    auto canShowResumeOn = [&]() -> bool {
+    auto canShowResumeOn = [&]() -> bool
+    {
         XenConnection* connection = selectionConnection();
         if (!connection || hostCount(connection) <= 1)
             return false;
@@ -335,14 +372,15 @@ void ContextMenuBuilder::buildVMContextMenu(QMenu* menu, QSharedPointer<VM> vm)
         return atLeastOne;
     };
 
-    auto canShowMigrate = [&]() -> bool {
+    auto canShowMigrate = [&]() -> bool
+    {
         XenConnection* connection = selectionConnection();
         if (!connection)
             return false;
 
         XenCache* cache = connection->GetCache();
 
-        const QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+        const QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>(XenObjectType::Host);
         for (const QSharedPointer<Host>& host : hosts)
         {
             if (host->RestrictIntraPoolMigrate())
@@ -498,8 +536,27 @@ void ContextMenuBuilder::buildTemplateContextMenu(QMenu* menu, QSharedPointer<VM
     bool mixedVmTemplateSelection = false;
     if (this->m_mainWindow && this->m_mainWindow->GetSelectionManager())
     {
-        const QStringList types = this->m_mainWindow->GetSelectionManager()->SelectedTypes();
-        mixedVmTemplateSelection = types.contains("vm") && types.contains("template");
+        bool hasTemplate = false;
+        bool hasVm = false;
+        const QList<QSharedPointer<XenObject>> objects = this->m_mainWindow->GetSelectionManager()->SelectedObjects();
+        for (const QSharedPointer<XenObject>& obj : objects)
+        {
+            if (!obj || obj->GetObjectType() != XenObjectType::VM)
+                continue;
+
+            QSharedPointer<VM> selectedVm = qSharedPointerCast<VM>(obj);
+            if (!selectedVm)
+                continue;
+
+            if (selectedVm->IsTemplate())
+                hasTemplate = true;
+            else
+                hasVm = true;
+
+            if (hasTemplate && hasVm)
+                break;
+        }
+        mixedVmTemplateSelection = hasTemplate && hasVm;
     }
 
     // VM Creation from template

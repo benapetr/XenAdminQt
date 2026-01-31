@@ -98,7 +98,7 @@ void IsoDropDownBox::Refresh()
     QSharedPointer<VM> vm;
     if (!this->m_vmRef.isEmpty())
     {
-        vm = cache->ResolveObject<VM>("vm", this->m_vmRef);
+        vm = cache->ResolveObject<VM>(XenObjectType::VM, this->m_vmRef);
         if (vm && vm->GetPowerState() == "Running")
         {
             hostRef = vm->GetResidentOnRef();
@@ -122,10 +122,10 @@ void IsoDropDownBox::Refresh()
     };
 
     QList<SrEntry> srEntries;
-    const QStringList srRefs = cache->GetAllRefs("sr");
+    const QStringList srRefs = cache->GetAllRefs(XenObjectType::SR);
     for (const QString& srRef : srRefs)
     {
-        QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", srRef);
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>(XenObjectType::SR, srRef);
         if (!sr || !sr->IsValid())
             continue;
 

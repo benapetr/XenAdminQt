@@ -54,7 +54,7 @@ namespace
         if (!connection || !connection->GetCache())
             return QSharedPointer<Host>();
 
-        const QList<QSharedPointer<Host>> hosts = connection->GetCache()->GetAll<Host>("host");
+        const QList<QSharedPointer<Host>> hosts = connection->GetCache()->GetAll<Host>(XenObjectType::Host);
         for (const QSharedPointer<Host>& host : hosts)
         {
             if (host && host->GetUUID() == uuid)
@@ -151,7 +151,7 @@ void EvacuateHostAction::run()
                     if (rec.size() <= kRecToHost)
                         continue;
 
-                    QSharedPointer<VM> vm = this->GetConnection()->GetCache()->ResolveObject<VM>("vm", vmRef);
+                    QSharedPointer<VM> vm = this->GetConnection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, vmRef);
                     if (!vm)
                         continue;
 
@@ -250,8 +250,7 @@ void EvacuateHostAction::run()
 
             try
             {
-                QString taskRef = XenAPI::Pool::async_designate_new_master(this->GetSession(),
-                                                                           this->m_newCoordinator->OpaqueRef());
+                QString taskRef = XenAPI::Pool::async_designate_new_master(this->GetSession(), this->m_newCoordinator->OpaqueRef());
                 this->pollToCompletion(taskRef, 80, 90);
             } catch (...)
             {
@@ -260,8 +259,7 @@ void EvacuateHostAction::run()
                 throw;
             }
 
-            this->SetDescription(QString("Transitioned to new coordinator '%1'")
-                               .arg(this->m_newCoordinator->GetName()));
+            this->SetDescription(QString("Transitioned to new coordinator '%1'").arg(this->m_newCoordinator->GetName()));
         }
 
         this->SetPercentComplete(100);

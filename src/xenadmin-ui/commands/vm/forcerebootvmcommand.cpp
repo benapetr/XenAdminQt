@@ -50,7 +50,7 @@ namespace
             return host->IsEnabled();
 
         XenCache* cache = vm->GetConnection()->GetCache();
-        QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+        QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>(XenObjectType::Host);
         foreach (QSharedPointer host, hosts)
         {
             if (host->IsEnabled())

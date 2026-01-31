@@ -46,7 +46,7 @@ class XENLIB_EXPORT Role : public XenObject
         explicit Role(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         virtual ~Role();
 
-        QString GetObjectType() const override { return "role"; }
+        XenObjectType GetObjectType() const override { return XenObjectType::Role; }
 
         // Property accessors
         QStringList SubroleRefs() const;

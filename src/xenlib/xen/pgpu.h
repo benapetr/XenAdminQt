@@ -53,7 +53,7 @@ class PGPU : public XenObject
     public:
         explicit PGPU(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::PGPU; }
 
         // Basic properties
         QString GetPCIRef() const;

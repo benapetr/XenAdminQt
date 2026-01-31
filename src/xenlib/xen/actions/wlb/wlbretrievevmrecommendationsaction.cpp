@@ -98,7 +98,7 @@ void WlbRetrieveVmRecommendationsAction::run()
             while (it.hasNext())
             {
                 it.next();
-                QSharedPointer<Host> host = GetConnection()->GetCache()->ResolveObject<Host>("host", it.key());
+                QSharedPointer<Host> host = GetConnection()->GetCache()->ResolveObject<Host>(XenObjectType::Host, it.key());
                 if (host && host->IsValid())
                 {
                     recommendations[host] = it.value();

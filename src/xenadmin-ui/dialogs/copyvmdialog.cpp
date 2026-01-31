@@ -245,7 +245,7 @@ QString CopyVMDialog::getDefaultCopyName(QSharedPointer<VM> vmToCopy)
         return QString();
 
     QStringList takenNames;
-    QList<QSharedPointer<VM>> vms = this->m_connection->GetCache()->GetAll<VM>("vm");
+    QList<QSharedPointer<VM>> vms = this->m_connection->GetCache()->GetAll<VM>(XenObjectType::VM);
     foreach (const QSharedPointer<VM>& vm, vms)
     {
         takenNames.append(vm->GetName());
@@ -346,10 +346,10 @@ void CopyVMDialog::accept()
     QSharedPointer<Host> host;
     if (!hostRef.isEmpty())
     {
-        host = this->m_connection->GetCache()->ResolveObject<Host>("host", hostRef);
+        host = this->m_connection->GetCache()->ResolveObject<Host>(XenObjectType::Host, hostRef);
     }
     
-    QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+    QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>(srRef);
     
     VMCopyAction* action = new VMCopyAction(this->m_vm, host, sr, name, description, this);
     connect(action, &AsyncOperation::completed, this, &QDialog::accept);

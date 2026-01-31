@@ -77,7 +77,7 @@ namespace
         {
             QVariantMap record = XenAPI::VM::get_record(session, vmRef);
             record["ref"] = vmRef;
-            connection->GetCache()->Update("vm", vmRef, record);
+            connection->GetCache()->Update(XenObjectType::VM, vmRef, record);
         }
         catch (const std::exception& ex)
         {
@@ -170,7 +170,7 @@ void VMStorageTabPage::SetObject(QSharedPointer<XenObject> object)
     }
 
     // Connect to object updates for real-time CD/DVD changes
-    if (object->GetObjectType() == "vm")
+    if (object->GetObjectType() == XenObjectType::VM)
     {
         this->m_vm = qSharedPointerCast<VM>(object);
         connect(object->GetCache(), &XenCache::objectChanged, this, &VMStorageTabPage::onCacheObjectChanged, Qt::UniqueConnection);
@@ -226,7 +226,7 @@ void VMStorageTabPage::refreshContent()
 {
     this->ui->storageTable->setRowCount(0);
 
-    if (!this->m_object || this->m_object->GetObjectType() != "vm")
+    if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::VM)
     {
         this->ui->cdDvdGroupBox->setVisible(false);
         this->updateStorageButtons();
@@ -514,7 +514,7 @@ void VMStorageTabPage::refreshISOList()
     isoBox->SetVMRef(this->m_objectRef);
     isoBox->Refresh();
 
-    QSharedPointer<VBD> vbd = this->m_connection->GetCache()->ResolveObject<VBD>("vbd", this->m_currentVBDRef);
+    QSharedPointer<VBD> vbd = this->m_connection->GetCache()->ResolveObject<VBD>(this->m_currentVBDRef);
     QString currentVdiRef = vbd ? vbd->GetVDIRef() : QString();
     bool empty = vbd ? vbd->Empty() : true;
 
@@ -523,7 +523,7 @@ void VMStorageTabPage::refreshISOList()
         isoBox->SetSelectedVdiRef(currentVdiRef);
         if (isoBox->SelectedVdiRef() != currentVdiRef)
         {
-            QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", currentVdiRef);
+            QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>(currentVdiRef);
             if (vdi && vdi->IsValid())
             {
                 QString isoName = vdi->GetName();
@@ -559,7 +559,7 @@ void VMStorageTabPage::onIsoComboBoxChanged(int index)
     if (this->m_currentVBDRef.isEmpty())
         return;
 
-    QSharedPointer<VBD> vbd = this->m_connection->GetCache()->ResolveObject<VBD>("vbd", this->m_currentVBDRef);
+    QSharedPointer<VBD> vbd = this->m_connection->GetCache()->ResolveObject<VBD>(this->m_currentVBDRef);
     if (!vbd || !vbd->IsValid())
         return;
 
@@ -582,7 +582,7 @@ void VMStorageTabPage::onIsoComboBoxChanged(int index)
     this->ui->ejectButton->setEnabled(false);
 
     // Get VM object from cache
-    QSharedPointer<VM> vm = conn->GetCache()->ResolveObject<VM>("vm", this->m_objectRef);
+    QSharedPointer<VM> vm = conn->GetCache()->ResolveObject<VM>(XenObjectType::VM, this->m_objectRef);
     if (!vm || !vm->IsValid())
     {
         this->ui->isoComboBox->setEnabled(true);
@@ -732,7 +732,7 @@ void VMStorageTabPage::updateStorageButtons()
     if (!this->m_object)
         return;
 
-    if (this->m_object->GetObjectType() == "vm")
+    if (this->m_object->GetObjectType() == XenObjectType::VM)
     {
         // VM View: Show VM-specific buttons
         // Hide SR-specific buttons: Rescan, Move
@@ -769,7 +769,7 @@ void VMStorageTabPage::updateStorageButtons()
         {
             for (const QString& vbdRef : vbdRefs)
             {
-                QSharedPointer<VBD> vbd = this->m_connection->GetCache()->ResolveObject<VBD>("vbd", vbdRef);
+                QSharedPointer<VBD> vbd = this->m_connection->GetCache()->ResolveObject<VBD>(vbdRef);
                 if (!vbd || !vbd->IsValid())
                     continue;
 
@@ -836,7 +836,7 @@ void VMStorageTabPage::updateStorageButtons()
         if (singleSelection && this->m_connection && this->m_connection->GetCache())
         {
             QString vbdRef = vbdRefs.first();
-            QSharedPointer<VBD> vbd = this->m_connection->GetCache()->ResolveObject<VBD>("vbd", vbdRef);
+            QSharedPointer<VBD> vbd = this->m_connection->GetCache()->ResolveObject<VBD>(vbdRef);
             QSharedPointer<VDI> vdi = vbd ? vbd->GetVDI() : QSharedPointer<VDI>();
 
             bool vbdLocked = !vbd || vbd->IsLocked() || vbd->AllowedOperations().isEmpty();
@@ -1008,7 +1008,7 @@ void VMStorageTabPage::runVbdPlugOperations(const QStringList& vbdRefs, bool plu
         QString vdiName = tr("Virtual Disk");
         QString vmName = tr("VM");
 
-        QSharedPointer<VBD> vbd = cache ? cache->ResolveObject<VBD>("vbd", vbdRef) : QSharedPointer<VBD>();
+        QSharedPointer<VBD> vbd = cache ? cache->ResolveObject<VBD>(vbdRef) : QSharedPointer<VBD>();
         if (vbd && vbd->IsValid())
         {
             QSharedPointer<VDI> vdi = vbd->GetVDI();
@@ -1091,7 +1091,7 @@ void VMStorageTabPage::runDetachOperations(const QStringList& vdiRefs)
     QString confirmText;
     if (vdiRefs.size() == 1)
     {
-        QSharedPointer<VDI> vdi = this->m_vm->GetCache()->ResolveObject<VDI>("vdi", vdiRefs.first());
+        QSharedPointer<VDI> vdi = this->m_vm->GetCache()->ResolveObject<VDI>(vdiRefs.first());
         QString vdiName = vdi ? vdi->GetName() : tr("this virtual disk");
         confirmText = tr("Are you sure you want to detach '%1' from this VM?\n\n"
                          "The disk will not be deleted and can be attached again later.")
@@ -1151,7 +1151,7 @@ void VMStorageTabPage::runDeleteOperations(const QStringList& vdiRefs)
     QString confirmText;
     if (vdiRefs.size() == 1)
     {
-        QSharedPointer<VDI> vdi = this->m_vm->GetCache()->ResolveObject<VDI>("vdi", vdiRefs.first());
+        QSharedPointer<VDI> vdi = this->m_vm->GetCache()->ResolveObject<VDI>(vdiRefs.first());
         QString vdiName = vdi ? vdi->GetName() : tr("this virtual disk");
         confirmText = tr("Are you sure you want to permanently delete '%1'?\n\nThis operation cannot be undone.").arg(vdiName);
     } else
@@ -1165,7 +1165,7 @@ void VMStorageTabPage::runDeleteOperations(const QStringList& vdiRefs)
     bool allowRunningVMDelete = false;
     for (const QString& vdiRef : vdiRefs)
     {
-        QSharedPointer<VDI> vdi = this->m_vm->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+        QSharedPointer<VDI> vdi = this->m_vm->GetCache()->ResolveObject<VDI>(vdiRef);
         if (!vdi || !vdi->IsValid())
             continue;
 
@@ -1271,7 +1271,7 @@ void VMStorageTabPage::onStorageTableCustomContextMenuRequested(const QPoint& po
     // Build context menu based on object type and button visibility
     // C# Reference: SrStoragePage.cs contextMenuStrip_Opening() lines 379-399
 
-    if (this->m_object && this->m_object->GetObjectType() == "vm")
+    if (this->m_object && this->m_object->GetObjectType() == XenObjectType::VM)
     {
         // VM View: Add, Attach, Activate/Deactivate, Detach, Delete, Properties
         bool hasVisibleAction = false;
@@ -1519,7 +1519,7 @@ void VMStorageTabPage::onAttachButtonClicked()
 
     // Get VDI name for display
     QString vdiName = "Virtual Disk";
-    QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+    QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>(vdiRef);
     if (vdi && vdi->IsValid())
         vdiName = vdi->GetName();
 
@@ -1572,7 +1572,7 @@ void VMStorageTabPage::onMoveButtonClicked()
     vdis.reserve(vdiRefs.size());
     for (const QString& vdiRef : vdiRefs)
     {
-        QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+        QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>(vdiRef);
         if (vdi && vdi->IsValid())
             vdis.append(vdi);
     }
@@ -1609,7 +1609,7 @@ void VMStorageTabPage::onEditButtonClicked()
     if (!connection || !connection->GetSession())
         return;
 
-    QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+    QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>(vdiRef);
     if (!vdi || !vdi->IsValid())
         return;
 

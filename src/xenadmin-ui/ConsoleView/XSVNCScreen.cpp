@@ -37,15 +37,15 @@
 #include <QPalette>
 #include <QApplication>
 #include <QVBoxLayout>
-#include "xen/console.h"
-#include "xen/network/connection.h"
-#include "xen/pif.h"
-#include "xen/session.h"
-#include "xen/vif.h"
-#include "xencache.h"
-#include "xen/vm.h"
-#include "xen/host.h"
-#include "xen/network.h"
+#include "xenlib/xen/console.h"
+#include "xenlib/xen/network/connection.h"
+#include "xenlib/xen/pif.h"
+#include "xenlib/xen/session.h"
+#include "xenlib/xen/vif.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/network.h"
 #include "network/httpconnect.h"
 
 // TODO: Forward declare VNCTabView and RdpClient when they exist
@@ -58,11 +58,9 @@ class RdpClient;
  *
  * Reference: XenAdmin/ConsoleView/XSVNCScreen.cs lines 147-177
  */
-XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenConnection *connection,
-                         const QString& elevatedUsername, const QString& elevatedPassword)
+XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenConnection *connection, const QString& elevatedUsername, const QString& elevatedPassword)
     : QWidget(nullptr), _sourceRef(sourceRef), _sourceIsPv(false), _connection(connection), _parentVNCTabView(parent) // TODO: Get from parent when VNCTabView exists
-      ,
-      _elevatedUsername(elevatedUsername), _elevatedPassword(elevatedPassword), _focusColor(QApplication::palette().color(QPalette::Highlight))
+      , _elevatedUsername(elevatedUsername), _elevatedPassword(elevatedPassword), _focusColor(QApplication::palette().color(QPalette::Highlight))
 {
     qDebug() << "XSVNCScreen: Constructor for source:" << this->_sourceRef;
 
@@ -80,7 +78,7 @@ XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenConnec
     if (!this->_sourceRef.isEmpty() && this->_connection)
     {
         XenCache* cache = this->_connection->GetCache();
-        QSharedPointer<VM> vm = cache ? cache->ResolveObject<VM>("vm", this->_sourceRef) : QSharedPointer<VM>();
+        QSharedPointer<VM> vm = cache ? cache->ResolveObject<VM>(XenObjectType::VM, this->_sourceRef) : QSharedPointer<VM>();
         if (vm && vm->IsValid())
         {
             this->_sourceIsPv = !vm->IsHVM();
@@ -105,7 +103,7 @@ XSVNCScreen::XSVNCScreen(const QString& sourceRef, VNCTabView* parent, XenConnec
         if (this->_connection)
         {
             XenCache* cache = this->_connection->GetCache();
-            QSharedPointer<VM> vm = cache ? cache->ResolveObject<VM>("vm", this->_sourceRef) : QSharedPointer<VM>();
+            QSharedPointer<VM> vm = cache ? cache->ResolveObject<VM>(XenObjectType::VM, this->_sourceRef) : QSharedPointer<VM>();
             QString guestMetricsRef = vm ? vm->GetGuestMetricsRef() : QString();
 
             if (!guestMetricsRef.isEmpty() && guestMetricsRef != "OpaqueRef:NULL")
@@ -683,7 +681,7 @@ void XSVNCScreen::onCacheObjectChanged(XenConnection* connection, const QString&
 
     if (objectType == "vm" && objectRef == this->_sourceRef)
     {
-        QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", objectRef);
+        QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, objectRef);
         if (!vm || !vm->IsValid())
             return;
 
@@ -805,7 +803,7 @@ QSharedPointer<VM> XSVNCScreen::resolveVM(const QString& vmRef) const
     if (!cache || vmRef.isEmpty())
         return QSharedPointer<VM>();
 
-    return cache->ResolveObject<VM>("vm", vmRef);
+    return cache->ResolveObject<VM>(XenObjectType::VM, vmRef);
 }
 
 QSharedPointer<Host> XSVNCScreen::resolveHost(const QString& hostRef) const
@@ -814,7 +812,7 @@ QSharedPointer<Host> XSVNCScreen::resolveHost(const QString& hostRef) const
     if (!cache || hostRef.isEmpty())
         return QSharedPointer<Host>();
 
-    return cache->ResolveObject<Host>("host", hostRef);
+    return cache->ResolveObject<Host>(XenObjectType::Host, hostRef);
 }
 
 bool XSVNCScreen::isControlDomainZero(const QString& vmRef, QString* outHostRef) const
@@ -1172,7 +1170,7 @@ QString XSVNCScreen::pollPort(int port, bool vnc)
         if (!cache)
             return QString();
 
-        QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", this->_sourceRef);
+        QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, this->_sourceRef);
         if (!vm || !vm->IsValid())
             return QString();
 
@@ -1520,7 +1518,7 @@ void XSVNCScreen::connectNewHostedConsole()
             return;
         }
 
-        QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", this->_sourceRef);
+        QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, this->_sourceRef);
         if (!vm || !vm->IsValid())
         {
             qWarning() << "XSVNCScreen: Cannot resolve VM record";
@@ -1640,22 +1638,21 @@ bool XSVNCScreen::connectHostedConsole(VNCGraphicsClient* vncClient, const QStri
         qDebug() << "XSVNCScreen: Console location:" << location;
 
         // Get VM record to check resident_on (host where VM is running)
-        QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", this->_sourceRef);
+        QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, this->_sourceRef);
         QString residentOnRef = vm ? vm->GetResidentOnRef() : QString();
 
-        if (residentOnRef.isEmpty() || residentOnRef == "OpaqueRef:NULL")
+        if (residentOnRef.isEmpty() || residentOnRef == XENOBJECT_NULL)
         {
             throw std::runtime_error("VM is not running on any host");
         }
 
         // Verify host exists
-        QSharedPointer<Host> host = cache->ResolveObject<Host>("host", residentOnRef);
+        QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, residentOnRef);
         if (!host || !host->IsValid())
         {
             throw std::runtime_error("Cannot resolve host where VM is running");
         }
-        qDebug() << "XSVNCScreen: Resident host:" << residentOnRef
-                 << "name:" << host->GetName();
+        qDebug() << "XSVNCScreen: Resident host:" << residentOnRef << "name:" << host->GetName();
 
         // Get current session ID
         // C#: Uses elevated credentials if available (CA-91132), otherwise duplicates session
@@ -1779,7 +1776,7 @@ bool XSVNCScreen::shouldRetryConnection() const
         return false;
 
     // Check if source is a VM (hosts don't have power_state in the same way)
-    QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", this->_sourceRef);
+    QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, this->_sourceRef);
     if (vm && vm->IsValid())
     {
         QString powerState = vm->GetPowerState();
@@ -1787,7 +1784,7 @@ bool XSVNCScreen::shouldRetryConnection() const
     }
 
     // For hosts, check if the host is enabled/connected
-    QSharedPointer<Host> host = cache->ResolveObject<Host>("host", this->_sourceRef);
+    QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, this->_sourceRef);
     if (host && host->IsValid())
     {
         return host->IsEnabled();

@@ -43,14 +43,14 @@ QSharedPointer<VM> VBD::GetVM()
 {
     if (!this->GetCache())
         return QSharedPointer<VM>();
-    return this->GetCache()->ResolveObject<VM>("vm", this->GetVMRef());
+    return this->GetCache()->ResolveObject<VM>(XenObjectType::VM, this->GetVMRef());
 }
 
 QSharedPointer<VDI> VBD::GetVDI()
 {
     if (!this->GetCache())
         return QSharedPointer<VDI>();
-    return this->GetCache()->ResolveObject<VDI>("vdi", this->GetVDIRef());
+    return this->GetCache()->ResolveObject<VDI>(this->GetVDIRef());
 }
 
 bool VBD::IsOwner() const
@@ -212,7 +212,3 @@ int VBD::GetIoNice() const
     return 0;
 }
 
-QString VBD::GetObjectType() const
-{
-    return "vbd";
-}

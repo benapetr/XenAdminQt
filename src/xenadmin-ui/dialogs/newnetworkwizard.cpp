@@ -322,7 +322,7 @@ void NewNetworkWizard::updateTypePage()
             XenCache* cache = this->m_connection ? this->m_connection->GetCache() : nullptr;
             if (cache)
             {
-                const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>("pif");
+                const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>();
                 for (const QSharedPointer<PIF>& pif : pifs)
                 {
                     if (!pif || !pif->IsValid())
@@ -349,7 +349,7 @@ void NewNetworkWizard::updateTypePage()
                 hostRefs.insert(host->OpaqueRef());
             }
 
-            const QList<QSharedPointer<PIF>> pifs = this->m_connection->GetCache()->GetAll<PIF>("pif");
+            const QList<QSharedPointer<PIF>> pifs = this->m_connection->GetCache()->GetAll<PIF>();
             for (const QSharedPointer<PIF>& pif : pifs)
             {
                 if (!pif || !pif->IsValid())
@@ -433,7 +433,7 @@ void NewNetworkWizard::updateDetailsPage()
 
         QString pifRef = this->ui.nicCombo->currentData().toString();
         QSharedPointer<PIF> pif = (this->m_connection && this->m_connection->GetCache())
-            ? this->m_connection->GetCache()->ResolveObject<PIF>("pif", pifRef)
+            ? this->m_connection->GetCache()->ResolveObject<PIF>(pifRef)
             : QSharedPointer<PIF>();
         this->ui.createSriovVlanCheck->setVisible(pif && pif->IsSriovPhysicalPIF());
         if (pif && pif->IsValid())
@@ -618,7 +618,7 @@ void NewNetworkWizard::accept()
             return;
 
         const QString transportRef = this->ui.chinInterfaceCombo->currentData().toString();
-        QSharedPointer<Network> transport = cache->ResolveObject<Network>("network", transportRef);
+        QSharedPointer<Network> transport = cache->ResolveObject<Network>(transportRef);
         if (!transport || !transport->IsValid())
             return;
 
@@ -643,13 +643,13 @@ void NewNetworkWizard::accept()
             return;
 
         const QString hostPifRef = this->ui.sriovNicCombo->currentData().toString();
-        QSharedPointer<PIF> selectedPif = cache->ResolveObject<PIF>("pif", hostPifRef);
+        QSharedPointer<PIF> selectedPif = cache->ResolveObject<PIF>(hostPifRef);
         if (!selectedPif || !selectedPif->IsValid())
             return;
 
         QStringList sriovPifRefs;
         const QString device = selectedPif->GetDevice();
-        const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>("pif");
+        const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>(XenObjectType::PIF);
         for (const QSharedPointer<PIF>& pif : pifs)
         {
             if (!pif || !pif->IsValid())
@@ -699,7 +699,7 @@ void NewNetworkWizard::accept()
                 return;
 
             const QString pifRef = this->ui.nicCombo->currentData().toString();
-            QSharedPointer<PIF> basePif = cache->ResolveObject<PIF>("pif", pifRef);
+            QSharedPointer<PIF> basePif = cache->ResolveObject<PIF>(pifRef);
             if (!basePif || !basePif->IsValid())
                 return;
 
@@ -708,7 +708,7 @@ void NewNetworkWizard::accept()
                 QStringList sriovRefs = basePif->SriovPhysicalPIFOfRefs();
                 if (!sriovRefs.isEmpty())
                 {
-                    QSharedPointer<NetworkSriov> sriov = cache->ResolveObject<NetworkSriov>("network_sriov", sriovRefs.first());
+                    QSharedPointer<NetworkSriov> sriov = cache->ResolveObject<NetworkSriov>(sriovRefs.first());
                     QSharedPointer<PIF> logical = sriov ? sriov->GetLogicalPIF() : QSharedPointer<PIF>();
                     if (logical && logical->IsValid())
                         basePif = logical;
@@ -758,7 +758,7 @@ void NewNetworkWizard::onDetailsInputsChanged()
     {
         const QString pifRef = this->ui.nicCombo->currentData().toString();
         QSharedPointer<PIF> pif = (this->m_connection && this->m_connection->GetCache())
-            ? this->m_connection->GetCache()->ResolveObject<PIF>("pif", pifRef)
+            ? this->m_connection->GetCache()->ResolveObject<PIF>(pifRef)
             : QSharedPointer<PIF>();
         this->ui.createSriovVlanCheck->setVisible(pif && pif->IsSriovPhysicalPIF());
         if (pif && pif->IsValid())
@@ -778,7 +778,7 @@ void NewNetworkWizard::onDetailsInputsChanged()
             const bool wantSriov = this->ui.createSriovVlanCheck->isVisible() && this->ui.createSriovVlanCheck->isChecked();
             QList<int> vlansInUse;
             const QString device = pif->GetDevice();
-            const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>("pif");
+            const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>(XenObjectType::PIF);
             for (const QSharedPointer<PIF>& other : pifs)
             {
                 if (!other || !other->IsValid())
@@ -845,7 +845,7 @@ QStringList NewNetworkWizard::existingNetworkNames() const
     if (!this->m_connection || !this->m_connection->GetCache())
         return names;
 
-    const QList<QSharedPointer<Network>> networks = this->m_connection->GetCache()->GetAll<Network>("network");
+    const QList<QSharedPointer<Network>> networks = this->m_connection->GetCache()->GetAll<Network>();
     for (const QSharedPointer<Network>& network : networks)
     {
         if (network && network->IsValid())
@@ -893,7 +893,7 @@ void NewNetworkWizard::populateExternalNics()
     }
 
     const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
-    const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>("pif");
+    const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>(XenObjectType::PIF);
     for (const QSharedPointer<PIF>& pif : pifs)
     {
         if (!pif || !pif->IsValid())
@@ -927,7 +927,7 @@ void NewNetworkWizard::populateChinInterfaces()
 
     const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
     QSet<QString> addedNetworks;
-    QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>("pif");
+    QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>(XenObjectType::PIF);
 
     QSharedPointer<Pool> pool = this->poolObject();
     QSharedPointer<Host> host = pool ? QSharedPointer<Host>() : this->m_host;
@@ -968,7 +968,7 @@ void NewNetworkWizard::populateSriovNics()
     if (!host)
         return;
 
-    QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>("pif");
+    QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>(XenObjectType::PIF);
     for (const QSharedPointer<PIF>& pif : pifs)
     {
         if (!pif || !pif->IsValid())
@@ -1064,7 +1064,7 @@ bool NewNetworkWizard::vlanValueIsValid(QString* warningText, bool* isError) con
     if (cache)
     {
         const QString pifRef = this->ui.nicCombo->currentData().toString();
-        QSharedPointer<PIF> selectedPif = cache->ResolveObject<PIF>("pif", pifRef);
+        QSharedPointer<PIF> selectedPif = cache->ResolveObject<PIF>(pifRef);
         if (!selectedPif || !selectedPif->IsValid())
         {
             if (warningText)
@@ -1077,7 +1077,7 @@ bool NewNetworkWizard::vlanValueIsValid(QString* warningText, bool* isError) con
         {
             const QString device = selectedPif->GetDevice();
             const bool wantSriov = this->ui.createSriovVlanCheck->isVisible() && this->ui.createSriovVlanCheck->isChecked();
-            const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>("pif");
+            const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>(XenObjectType::PIF);
             for (const QSharedPointer<PIF>& pif : pifs)
             {
                 if (!pif || !pif->IsValid())

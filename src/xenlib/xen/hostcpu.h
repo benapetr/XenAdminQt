@@ -49,7 +49,7 @@ class XENLIB_EXPORT HostCPU : public XenObject
         explicit HostCPU(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         virtual ~HostCPU();
 
-        QString GetObjectType() const override { return "host_cpu"; }
+        XenObjectType GetObjectType() const override { return XenObjectType::HostCPU; }
 
         // Property accessors
         QString GetHostRef() const;

@@ -58,7 +58,7 @@ class XENLIB_EXPORT PBD : public XenObject
         ~PBD() override = default;
 
         // XenObject interface
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::PBD; }
 
         //! @brief Get reference to the host this PBD is on
         //! @return Host opaque reference

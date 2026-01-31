@@ -41,10 +41,6 @@ PIF::PIF(XenConnection* connection, const QString& opaqueRef, QObject* parent) :
 {
 }
 
-QString PIF::GetObjectType() const
-{
-    return "pif";
-}
 
 QString PIF::GetName() const
 {
@@ -61,9 +57,9 @@ QString PIF::GetName() const
     if (!tunnelAccessPifOf.isEmpty())
     {
         QString tunnelRef = tunnelAccessPifOf.first().toString();
-        QVariantMap tunnelData = cache->ResolveObjectData("tunnel", tunnelRef);
+        QVariantMap tunnelData = cache->ResolveObjectData(XenObjectType::Tunnel, tunnelRef);
         QString transportPifRef = tunnelData.value("transport_PIF", "").toString();
-        QSharedPointer<PIF> transportPif = cache->ResolveObject<PIF>("pif", transportPifRef);
+        QSharedPointer<PIF> transportPif = cache->ResolveObject<PIF>(XenObjectType::PIF, transportPifRef);
         if (transportPif && transportPif->IsValid())
             return transportPif->GetName();
         return pifData.value("device", "").toString();
@@ -74,9 +70,9 @@ QString PIF::GetName() const
     if (!sriovLogicalPifOf.isEmpty())
     {
         QString sriovRef = sriovLogicalPifOf.first().toString();
-        QVariantMap sriovData = cache->ResolveObjectData("network_sriov", sriovRef);
+        QVariantMap sriovData = cache->ResolveObjectData(XenObjectType::NetworkSriov, sriovRef);
         QString physicalPifRef = sriovData.value("physical_PIF", "").toString();
-        QSharedPointer<PIF> physicalPif = cache->ResolveObject<PIF>("pif", physicalPifRef);
+        QSharedPointer<PIF> physicalPif = cache->ResolveObject<PIF>(XenObjectType::PIF, physicalPifRef);
         if (physicalPif && physicalPif->IsValid())
             return physicalPif->GetName();
         return pifData.value("device", "").toString();
@@ -87,9 +83,9 @@ QString PIF::GetName() const
     if (vlan != -1)
     {
         QString vlanMasterOf = pifData.value("VLAN_master_of").toString();
-        QVariantMap vlanData = cache->ResolveObjectData("VLAN", vlanMasterOf);
+        QVariantMap vlanData = cache->ResolveObjectData(XenObjectType::VLAN, vlanMasterOf);
         QString taggedPifRef = vlanData.value("tagged_PIF", "").toString();
-        QSharedPointer<PIF> taggedPif = cache->ResolveObject<PIF>("pif", taggedPifRef);
+        QSharedPointer<PIF> taggedPif = cache->ResolveObject<PIF>(XenObjectType::PIF, taggedPifRef);
         if (taggedPif && taggedPif->IsValid())
             return taggedPif->GetName();
         return pifData.value("device", "").toString();
@@ -105,14 +101,14 @@ QString PIF::GetName() const
     }
 
     QString bondRef = bondMasterOfRefs.first().toString();
-    QVariantMap bondData = cache->ResolveObjectData("bond", bondRef);
+    QVariantMap bondData = cache->ResolveObjectData(XenObjectType::Bond, bondRef);
     QVariantList slaveRefs = bondData.value("slaves", QVariantList()).toList();
 
     QStringList slaveNumbers;
     for (const QVariant& slaveRefVar : slaveRefs)
     {
         QString slaveRef = slaveRefVar.toString();
-        QVariantMap slavePif = cache->ResolveObjectData("pif", slaveRef);
+        QVariantMap slavePif = cache->ResolveObjectData(XenObjectType::PIF, slaveRef);
         QString slaveDevice = slavePif.value("device", "").toString();
         QString number = slaveDevice;
         number.remove("eth");
@@ -139,7 +135,7 @@ QSharedPointer<Network> PIF::GetNetwork()
 {
     if (!this->GetCache())
         return QSharedPointer<Network>();
-    return this->GetCache()->ResolveObject<Network>("network", this->GetNetworkRef());
+    return this->GetCache()->ResolveObject<Network>(XenObjectType::Network, this->GetNetworkRef());
 }
 
 QSharedPointer<Network> PIF::GetNetwork() const
@@ -156,7 +152,7 @@ QSharedPointer<Host> PIF::GetHost()
 {
     if (!this->GetCache())
         return QSharedPointer<Host>();
-    return this->GetCache()->ResolveObject<Host>("host", this->GetHostRef());
+    return this->GetCache()->ResolveObject<Host>(XenObjectType::Host, this->GetHostRef());
 }
 
 QString PIF::GetMAC() const
@@ -228,7 +224,7 @@ QString PIF::GetLinkStatusString() const
     QStringList tunnelAccessRefs = this->TunnelAccessPIFOfRefs();
     if (!tunnelAccessRefs.isEmpty())
     {
-        QSharedPointer<Tunnel> tunnel = cache->ResolveObject<Tunnel>("tunnel", tunnelAccessRefs.first());
+        QSharedPointer<Tunnel> tunnel = cache->ResolveObject<Tunnel>(XenObjectType::Tunnel, tunnelAccessRefs.first());
         QVariantMap status = tunnel ? tunnel->GetStatus() : QVariantMap();
         bool active = status.value("active", "false").toString() == "true";
         return active ? "Connected" : "Disconnected";
@@ -238,7 +234,7 @@ QString PIF::GetLinkStatusString() const
     if (metricsRef.isEmpty() || metricsRef == XENOBJECT_NULL)
         return "Unknown";
 
-    QSharedPointer<PIFMetrics> metrics = cache->ResolveObject<PIFMetrics>("pif_metrics", metricsRef);
+    QSharedPointer<PIFMetrics> metrics = cache->ResolveObject<PIFMetrics>(XenObjectType::PIFMetrics, metricsRef);
     if (!metrics || !metrics->IsValid())
         return "Unknown";
 
@@ -258,7 +254,7 @@ QString PIF::GetLinkStatusString() const
             QString vlanRef = this->VLANMasterOfRef();
             if (!vlanRef.isEmpty())
             {
-                QSharedPointer<VLAN> vlan = cache->ResolveObject<VLAN>("vlan", vlanRef);
+                QSharedPointer<VLAN> vlan = cache->ResolveObject<VLAN>(XenObjectType::VLAN, vlanRef);
                 QSharedPointer<PIF> taggedPif = vlan ? vlan->GetTaggedPIF() : QSharedPointer<PIF>();
                 if (taggedPif && taggedPif->IsValid())
                 {
@@ -271,7 +267,7 @@ QString PIF::GetLinkStatusString() const
 
         if (!networkSriovRef.isEmpty())
         {
-            QVariantMap sriovData = cache->ResolveObjectData("network_sriov", networkSriovRef);
+            QVariantMap sriovData = cache->ResolveObjectData(XenObjectType::NetworkSriov, networkSriovRef);
             QString configMode = sriovData.value("configuration_mode", "unknown").toString();
             bool requiresReboot = sriovData.value("requires_reboot", false).toBool();
 
@@ -420,7 +416,7 @@ bool PIF::IsVLAN() const
 
 bool PIF::IsBondSlave() const
 {
-    return !this->BondSlaveOfRef().isEmpty() && this->BondSlaveOfRef() != "OpaqueRef:NULL";
+    return !this->BondSlaveOfRef().isEmpty() && this->BondSlaveOfRef() != XENOBJECT_NULL;
 }
 
 bool PIF::IsBondMaster() const
@@ -444,10 +440,10 @@ bool PIF::IsInUseBondMember() const
         return false;
 
     const QString bondRef = this->BondSlaveOfRef();
-    if (bondRef.isEmpty() || bondRef == "OpaqueRef:NULL")
+    if (bondRef.isEmpty() || bondRef == XENOBJECT_NULL)
         return false;
 
-    QSharedPointer<Bond> bond = cache->ResolveObject<Bond>("bond", bondRef);
+    QSharedPointer<Bond> bond = cache->ResolveObject<Bond>(XenObjectType::Bond, bondRef);
     if (!bond || !bond->IsValid())
         return false;
 
@@ -455,7 +451,7 @@ bool PIF::IsInUseBondMember() const
     if (masterRef.isEmpty())
         return false;
 
-    QSharedPointer<PIF> bondInterface = cache->ResolveObject<PIF>("pif", masterRef);
+    QSharedPointer<PIF> bondInterface = cache->ResolveObject<PIF>(XenObjectType::PIF, masterRef);
     if (!bondInterface || !bondInterface->IsValid())
         return false;
 
@@ -497,7 +493,7 @@ bool PIF::IsUsedByClustering() const
     if (!cache)
         return false;
 
-    const QList<QSharedPointer<ClusterHost>> clusterHosts = cache->GetAll<ClusterHost>("cluster_host");
+    const QList<QSharedPointer<ClusterHost>> clusterHosts = cache->GetAll<ClusterHost>(XenObjectType::ClusterHost);
     for (const QSharedPointer<ClusterHost>& clusterHost : clusterHosts)
     {
         if (!clusterHost || !clusterHost->IsValid())

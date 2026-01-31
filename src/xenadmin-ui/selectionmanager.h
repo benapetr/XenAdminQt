@@ -31,6 +31,7 @@
 #include <QObject>
 #include <QSharedPointer>
 #include <QList>
+#include "xenlib/xen/xenobjecttype.h"
 
 class MainWindow;
 class QTreeWidget;
@@ -58,11 +59,11 @@ class SelectionManager : public QObject
         QList<QTreeWidgetItem*> SelectedItems() const;
 
         QSharedPointer<XenObject> PrimaryObject() const;
-        QString PrimaryType() const;
-        QString SelectionType() const;
+        XenObjectType PrimaryType() const;
+        XenObjectType SelectionType() const;
         QList<QSharedPointer<XenObject>> SelectedObjects() const;
-        QList<QSharedPointer<XenObject>> SelectedObjectsByType(const QString& objectType) const;
-        QStringList SelectedTypes() const;
+        QList<QSharedPointer<XenObject>> SelectedObjectsByType(XenObjectType objectType) const;
+        QList<XenObjectType> SelectedTypes() const;
         SelectionKind SelectionKindValue() const;
         bool HasSelection() const;
         bool HasMultipleSelection() const;

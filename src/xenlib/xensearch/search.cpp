@@ -427,20 +427,20 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
             ? hostname
             : QString("%1:%2").arg(hostname).arg(connection->GetPort());
 
-        if (connection->IsConnected() && cache && cache->Count("host") > 0)
+        if (connection->IsConnected() && cache && cache->Count(XenObjectType::Host) > 0)
         {
-            QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+            QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>(XenObjectType::Host);
             foreach (QSharedPointer<Host> host, hosts)
             {
                 const bool isOpaqueRef = host->OpaqueRef().startsWith("OpaqueRef:");
                 const bool isDisconnected = !host->IsConnected();
 
                 if (!isOpaqueRef || isDisconnected)
-                    cache->Remove("host", host->OpaqueRef());
+                    cache->Remove(XenObjectType::Host, host->OpaqueRef());
             }
         }
 
-        if (connection->IsConnected() && cache && cache->Count("pool") > 0)
+        if (connection->IsConnected() && cache && cache->Count(XenObjectType::Pool) > 0)
         {
             matchedObjects = this->getMatchedObjects(connection);
         } else
@@ -459,7 +459,7 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
 
             const QVariantMap existing = cache->ResolveObjectData("host", hostRef);
             if (existing.isEmpty() || existing != record)
-                cache->Update("host", hostRef, record);
+                cache->Update(XenObjectType::Host, hostRef, record);
 
             if (!this->m_query || this->m_query->match(record, "host", connection))
                 matchedObjects.append(qMakePair(QString("host"), hostRef));

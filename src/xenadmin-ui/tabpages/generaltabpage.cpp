@@ -132,7 +132,7 @@ void GeneralTabPage::refreshContent()
     // Clear previous properties
     this->clearProperties();
 
-    QString object_type = this->m_object->GetObjectType();
+    XenObjectType object_type = this->m_object->GetObjectType();
 
     QList<QAction*> propertiesMenu;
     propertiesMenu.append(this->propertiesAction_);
@@ -159,24 +159,23 @@ void GeneralTabPage::refreshContent()
 
     this->populateCustomFieldsSection();
 
-    // TODO refactor to enum switch
     // Add type-specific properties
-    if (object_type == "vm")
+    if (object_type == XenObjectType::VM)
     {
         this->populateVMProperties();
-    } else if (object_type == "host")
+    } else if (object_type == XenObjectType::Host)
     {
         this->populateHostProperties();
-    } else if (object_type == "pool")
+    } else if (object_type == XenObjectType::Pool)
     {
         this->populatePoolProperties();
-    } else if (object_type == "sr")
+    } else if (object_type == XenObjectType::SR)
     {
         this->populateSRProperties();
-    } else if (object_type == "network")
+    } else if (object_type == XenObjectType::Network)
     {
         this->populateNetworkProperties();
-    } else if (object_type == "dockercontainer")
+    } else if (object_type == XenObjectType::DockerContainer)
     {
         this->populateDockerInfoSection();
     }
@@ -338,37 +337,37 @@ void GeneralTabPage::openPropertiesDialog()
     if (!this->m_object)
         return;
 
-    QString object_type = this->m_object->GetObjectType();
+    XenObjectType object_type = this->m_object->GetObjectType();
 
-    if (object_type == "vm")
+    if (object_type == XenObjectType::VM)
     {
         QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
         if (!vm)
             return;
         VMPropertiesDialog dialog(vm, this);
         dialog.exec();
-    } else if (object_type == "host")
+    } else if (object_type == XenObjectType::Host)
     {
         QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
         if (!host)
             return;
         HostPropertiesDialog dialog(host, this);
         dialog.exec();
-    } else if (object_type == "pool")
+    } else if (object_type == XenObjectType::Pool)
     {
         QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(this->m_object);
         if (!pool)
             return;
         PoolPropertiesDialog dialog(pool, this);
         dialog.exec();
-    } else if (object_type == "sr")
+    } else if (object_type == XenObjectType::SR)
     {
         QSharedPointer<SR> sr = qSharedPointerCast<SR>(this->m_object);
         if (!sr)
             return;
         StoragePropertiesDialog dialog(sr, this);
         dialog.exec();
-    } else if (object_type == "network")
+    } else if (object_type == XenObjectType::Network)
     {
         QSharedPointer<Network> network = qSharedPointerCast<Network>(this->m_object);
         if (!network)
@@ -416,7 +415,8 @@ void GeneralTabPage::toggleExpandedState(bool expandAll)
 
 void GeneralTabPage::applyExpandedState()
 {
-    const QString key = this->m_objectType;
+    //TODO inspect this probably can be changed to proper type
+    const QString key = XenObject::TypeToString(this->m_objectType);
     if (key.isEmpty())
         return;
 
@@ -457,7 +457,7 @@ void GeneralTabPage::onSectionExpandedChanged(PDSection* section)
     if (!this->m_object)
         return;
 
-    const QString key = this->m_object->GetObjectType();
+    const QString key = XenObject::TypeToString(this->m_objectType);
     if (!key.isEmpty())
     {
         QList<PDSection*> expanded;
@@ -477,7 +477,7 @@ void GeneralTabPage::populateVMProperties()
     // VM-specific properties - comprehensive implementation matching C# GenerateGeneralBox
     // C# Reference: xenadmin/XenAdmin/TabPages/GeneralTabPage.cs lines 943-1095
 
-    if (!this->m_object || this->m_object->GetObjectType() != "vm")
+    if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::VM)
         return;
 
     QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
@@ -511,7 +511,7 @@ void GeneralTabPage::populateVMProperties()
         QString applianceRef = vm->ApplianceRef();
         if (!applianceRef.isEmpty() && applianceRef != XENOBJECT_NULL)
         {
-            QSharedPointer<VMAppliance> appliance = this->m_connection->GetCache()->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+            QSharedPointer<VMAppliance> appliance = this->m_connection->GetCache()->ResolveObject<VMAppliance>(XenObjectType::VMAppliance, applianceRef);
             QString applianceName = appliance ? appliance->GetName() : "Unknown";
             this->addPropertyByKey(this->ui->pdSectionGeneral, "VM.Appliance", applianceName);
         }
@@ -667,7 +667,7 @@ void GeneralTabPage::populateSRProperties()
     // C# Reference: GeneralTabPage.cs lines 360-390
     // Calls GenerateStatusBox() and GenerateMultipathBox() for SR
 
-    if (!this->m_object || this->m_object->GetObjectType() != "sr")
+    if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::SR)
         return;
 
     QSharedPointer<SR> sr = qSharedPointerCast<SR>(this->m_object);
@@ -750,7 +750,7 @@ void GeneralTabPage::populateCustomFieldsSection()
 
 void GeneralTabPage::populateBootOptionsSection()
 {
-    if (this->m_objectType != "vm")
+    if (this->m_objectType != XenObjectType::VM)
         return;
 
     // TODO: Add Boot Mode/UEFI/Secure Boot display once VM helpers are ported.
@@ -789,7 +789,7 @@ void GeneralTabPage::populateBootOptionsSection()
 
 void GeneralTabPage::populateHighAvailabilitySection()
 {
-    if (!this->m_object || this->m_object->GetObjectType() != "vm")
+    if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::VM)
         return;
 
     QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
@@ -798,11 +798,11 @@ void GeneralTabPage::populateHighAvailabilitySection()
 
     XenCache* cache = vm->GetCache();
 
-    QStringList poolRefs = cache->GetAllRefs("pool");
+    QStringList poolRefs = cache->GetAllRefs(XenObjectType::Pool);
     if (poolRefs.isEmpty())
         return;
 
-    QVariantMap poolData = cache->ResolveObjectData("pool", poolRefs.first());
+    QVariantMap poolData = cache->ResolveObjectData(XenObjectType::Pool, poolRefs.first());
     if (poolData.isEmpty() || !poolData.value("ha_enabled", false).toBool())
         return;
 
@@ -816,7 +816,7 @@ void GeneralTabPage::populateHighAvailabilitySection()
 
 void GeneralTabPage::populateMultipathBootSection()
 {
-    if (this->m_objectType != "host")
+    if (this->m_objectType != XenObjectType::Host)
         return;
 
     // Boot path counts are not currently exposed in the Qt port.
@@ -825,7 +825,7 @@ void GeneralTabPage::populateMultipathBootSection()
 
 void GeneralTabPage::populateVcpusSection()
 {
-    if (!this->m_object || this->m_object->GetObjectType() != "vm")
+    if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::VM)
         return;
 
     QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
@@ -864,7 +864,7 @@ void GeneralTabPage::populateVcpusSection()
 
 void GeneralTabPage::populateDockerInfoSection()
 {
-    if (this->m_objectType != "dockercontainer")
+    if (this->m_objectType != XenObjectType::DockerContainer)
         return;
 
     QSharedPointer<DockerContainer> container = qSharedPointerCast<DockerContainer>(this->m_object);
@@ -918,7 +918,7 @@ void GeneralTabPage::populateDockerInfoSection()
 
 void GeneralTabPage::populateReadCachingSection()
 {
-    if (!this->m_object || this->m_object->GetObjectType() != "vm")
+    if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::VM)
         return;
 
     QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
@@ -936,7 +936,7 @@ void GeneralTabPage::populateReadCachingSection()
 
 void GeneralTabPage::populateDeviceSecuritySection()
 {
-    if (!this->m_object || this->m_object->GetObjectType() != "vm")
+    if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::VM)
         return;
 
     QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->m_object);
@@ -1175,7 +1175,7 @@ void GeneralTabPage::populateManagementInterfacesSection()
             if (pifRef.isEmpty())
                 continue;
 
-            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
             if (!pif || !pif->IsValid())
                 continue;
 
@@ -1198,11 +1198,11 @@ void GeneralTabPage::populateManagementInterfacesSection()
         }
     };
 
-    if (this->m_objectType == "host")
+    if (this->m_objectType == XenObjectType::Host)
     {
         QSharedPointer<Host> host = qSharedPointerCast<Host>(this->m_object);
         addInterfacesForHost(host, false);
-    } else if (this->m_objectType == "pool")
+    } else if (this->m_objectType == XenObjectType::Pool)
     {
         QSharedPointer<Pool> pool = qSharedPointerCast<Pool>(this->m_object);
         if (!pool)
@@ -1368,7 +1368,7 @@ void GeneralTabPage::populateStatusSection()
     // SR Status Section
     // C# Reference: GeneralTabPage.cs GenerateStatusBox() lines 505-588
 
-    if (!this->m_object || this->m_object->GetObjectType() != "sr")
+    if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::SR)
         return;
 
     QSharedPointer<SR> sr = qSharedPointerCast<SR>(this->m_object);
@@ -1508,7 +1508,7 @@ void GeneralTabPage::populateMultipathingSection()
     // SR Multipathing Section
     // C# Reference: GeneralTabPage.cs GenerateMultipathBox() lines 589-717
 
-    if (!this->m_object || this->m_object->GetObjectType() != "sr")
+    if (!this->m_object || this->m_object->GetObjectType() != XenObjectType::SR)
         return;
 
     QSharedPointer<SR> sr = qSharedPointerCast<SR>(this->m_object);
@@ -1533,7 +1533,7 @@ void GeneralTabPage::populateMultipathingSection()
         return;
 
     QList<QSharedPointer<PBD>> pbds = sr->GetPBDs();
-    QList<QSharedPointer<Host>> allHosts = this->m_connection->GetCache()->GetAll<Host>("host");
+    QList<QSharedPointer<Host>> allHosts = this->m_connection->GetCache()->GetAll<Host>();
 
     for (const QSharedPointer<Host>& host : allHosts)
     {

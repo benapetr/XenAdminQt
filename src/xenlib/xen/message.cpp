@@ -32,10 +32,6 @@ Message::Message(XenConnection* connection, const QString& opaqueRef, QObject* p
 {
 }
 
-QString Message::GetObjectType() const
-{
-    return "message";
-}
 
 QString Message::Name() const
 {

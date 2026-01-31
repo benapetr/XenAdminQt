@@ -47,7 +47,7 @@ public:
     explicit HostCrashdump(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
     virtual ~HostCrashdump();
 
-    QString GetObjectType() const override { return "host_crashdump"; }
+    XenObjectType GetObjectType() const override { return XenObjectType::HostCrashdump; }
 
     // Property accessors
     QString HostRef() const;

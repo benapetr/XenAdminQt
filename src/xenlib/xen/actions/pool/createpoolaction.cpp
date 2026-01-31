@@ -63,7 +63,7 @@ void CreatePoolAction::run()
 
         // Get pool reference from cache
         // There should be one pool reference for a standalone coordinator
-        QStringList poolRefs = m_coordinatorConnection->GetCache()->GetAllRefs("pool");
+        QStringList poolRefs = m_coordinatorConnection->GetCache()->GetAllRefs(XenObjectType::Pool);
         if (poolRefs.isEmpty())
         {
             throw std::runtime_error("No pool found on coordinator");

@@ -50,7 +50,7 @@ class PIF : public XenObject
     public:
         explicit PIF(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::PIF; }
         QString GetName() const override;
 
         // Basic properties

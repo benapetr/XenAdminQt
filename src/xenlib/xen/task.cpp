@@ -33,10 +33,6 @@ Task::Task(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString Task::GetObjectType() const
-{
-    return "task";
-}
 
 QString Task::GetStatus() const
 {

@@ -115,7 +115,7 @@ void SrPicker::populateSRList()
     if (!this->m_connection)
         return;
 
-    QList<QSharedPointer<SR>> allSRs = this->m_connection->GetCache()->GetAll<SR>("sr");
+    QList<QSharedPointer<SR>> allSRs = this->m_connection->GetCache()->GetAll<SR>();
     for (const QSharedPointer<SR>& sr : allSRs)
     {
         if (sr && sr->IsValid() && this->isValidSR(sr))
@@ -192,7 +192,7 @@ void SrPicker::updateSRItem(const QString& srRef)
     if (itemIndex == -1)
         return;
 
-    QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+    QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>(srRef);
     if (!sr)
         return;
 
@@ -276,7 +276,7 @@ void SrPicker::ScanSRs()
         if (item.scanning)
             continue;
 
-        QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", item.ref);
+        QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>(item.ref);
         if (!sr || this->isDetached(sr))
             continue;
 
@@ -335,7 +335,7 @@ bool SrPicker::CanBeScanned() const
     {
         if (!item.scanning)
         {
-            QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", item.ref);
+            QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>(item.ref);
             if (sr && !this->isDetached(sr))
                 return true;
         }
@@ -363,7 +363,7 @@ void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, co
 
     if (type == "sr")
     {
-        QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", ref);
+        QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>(ref);
 
         // Check if this SR is already in our list
         bool found = false;
@@ -405,7 +405,7 @@ void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, co
 
     if (type == "pbd")
     {
-        QSharedPointer<PBD> pbd = this->m_connection->GetCache()->ResolveObject<PBD>("pbd", ref);
+        QSharedPointer<PBD> pbd = this->m_connection->GetCache()->ResolveObject<PBD>(ref);
         QString srRef = pbd ? pbd->GetSRRef() : QString();
         if (!srRef.isEmpty())
         {
@@ -417,7 +417,7 @@ void SrPicker::onCacheUpdated(XenConnection* connection, const QString& type, co
 
     if (type == "pool")
     {
-        QSharedPointer<Pool> pool = this->m_connection->GetCache()->ResolveObject<Pool>("pool", ref);
+        QSharedPointer<Pool> pool = this->m_connection->GetCache()->ResolveObject<Pool>(ref);
         if (pool)
         {
             this->m_defaultSRRef = pool->GetDefaultSRRef();
@@ -758,7 +758,7 @@ bool SrPicker::isCurrentLocation(const QString& srRef) const
     // Check if all existing VDIs are in this SR
     for (const QString& vdiRef : this->m_existingVDIRefs)
     {
-        QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+        QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>(vdiRef);
         QSharedPointer<SR> vdiSr = vdi ? vdi->GetSR() : QSharedPointer<SR>();
         if (!vdiSr || vdiSr->OpaqueRef() != srRef)
             return false;
@@ -856,7 +856,7 @@ bool SrPicker::canFitDisks(const QSharedPointer<SR>& sr) const
     qint64 requiredSpace = 0;
     for (const QString& vdiRef : this->m_existingVDIRefs)
     {
-        QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+        QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>(vdiRef);
         if (vdi)
             requiredSpace += vdi->VirtualSize();
     }

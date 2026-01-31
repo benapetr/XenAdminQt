@@ -88,7 +88,7 @@ QList<QSharedPointer<Host>> CertificateCommand::getHosts() const
     const QList<QSharedPointer<XenObject>> objects = this->getSelectedObjects();
     for (const QSharedPointer<XenObject>& obj : objects)
     {
-        if (!obj || obj->GetObjectType() != "host")
+        if (!obj || obj->GetObjectType() != XenObjectType::Host)
             continue;
 
         QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);

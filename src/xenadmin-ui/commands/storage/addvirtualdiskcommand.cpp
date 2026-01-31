@@ -50,14 +50,14 @@ bool AddVirtualDiskCommand::CanRun() const
 
 void AddVirtualDiskCommand::Run()
 {
-    QString objectType = getSelectedObjectType();
+    XenObjectType objectType = getSelectedObjectType();
     QString objectRef = getSelectedRef();
     QSharedPointer<XenObject> object = this->GetObject();
     if (!object || !object->GetConnection())
         return;
     XenCache *cache = object->GetCache();
 
-    if (objectType == "vm")
+    if (objectType == XenObjectType::VM)
     {
         QSharedPointer<VM> vm = qSharedPointerCast<VM>(object);
 
@@ -187,7 +187,7 @@ void AddVirtualDiskCommand::Run()
         delete attachDialog;
 
         mainWindow()->ShowStatusMessage(tr("Virtual disk created and attached successfully"), 5000);
-    } else if (objectType == "sr")
+    } else if (objectType == XenObjectType::SR)
     {
         // For SR, we need to create a disk without a specific VM
         // This is typically not used in the Qt version, but we show a message
@@ -202,12 +202,12 @@ QString AddVirtualDiskCommand::MenuText() const
 
 bool AddVirtualDiskCommand::isSRSelected() const
 {
-    return getSelectedObjectType() == "sr";
+    return getSelectedObjectType() == XenObjectType::SR;
 }
 
 bool AddVirtualDiskCommand::isVMSelected() const
 {
-    return getSelectedObjectType() == "vm";
+    return getSelectedObjectType() == XenObjectType::VM;
 }
 
 QString AddVirtualDiskCommand::getSelectedRef() const
@@ -217,7 +217,7 @@ QString AddVirtualDiskCommand::getSelectedRef() const
 
 bool AddVirtualDiskCommand::canAddDisk() const
 {
-    QString objectType = getSelectedObjectType();
+    XenObjectType objectType = getSelectedObjectType();
     QString objectRef = getSelectedRef();
     QSharedPointer<XenObject> object = this->GetObject();
     if (!object || !object->GetConnection() || !object->GetConnection()->GetCache())
@@ -225,17 +225,17 @@ bool AddVirtualDiskCommand::canAddDisk() const
 
     XenCache* cache = object->GetConnection()->GetCache();
 
-    if (objectType == "sr")
+    if (objectType == XenObjectType::SR)
     {
-        QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", objectRef);
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>(XenObjectType::SR, objectRef);
         if (!sr)
             return false;
 
         // Check if SR is locked
         return sr->CurrentOperations().isEmpty();
-    } else if (objectType == "vm")
+    } else if (objectType == XenObjectType::VM)
     {
-        QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", objectRef);
+        QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, objectRef);
         if (!vm)
             return false;
 
@@ -273,7 +273,7 @@ int AddVirtualDiskCommand::getCurrentVBDCount(XenCache* cache, const QString& vm
         return 0;
 
     // Get all VBDs and count those attached to this VM
-    QList<QVariantMap> allVBDs = cache->GetAllData("vbd");
+    QList<QVariantMap> allVBDs = cache->GetAllData(XenObjectType::VBD);
 
     int count = 0;
     for (const QVariantMap& vbdData : allVBDs)

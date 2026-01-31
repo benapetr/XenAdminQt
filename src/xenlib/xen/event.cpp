@@ -33,10 +33,6 @@ Event::Event(XenConnection* connection, const QString& opaqueRef, QObject* paren
 {
 }
 
-QString Event::GetObjectType() const
-{
-    return "event";
-}
 
 qint64 Event::EventId() const
 {

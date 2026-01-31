@@ -47,7 +47,7 @@ class XENLIB_EXPORT VTPM : public XenObject
     public:
         explicit VTPM(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::VTPM; }
 
         // Basic properties
         QStringList AllowedOperations() const;

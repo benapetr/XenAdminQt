@@ -49,10 +49,6 @@ VM::VM(XenConnection* connection, const QString& opaqueRef, QObject* parent) : X
 {
 }
 
-QString VM::GetObjectType() const
-{
-    return "vm";
-}
 
 QString VM::GetPowerState() const
 {
@@ -161,18 +157,18 @@ QSharedPointer<Host> VM::GetResidentOnHost()
     XenCache* cache = connection->GetCache();
 
     QString residentOn = this->GetResidentOnRef();
-    if (residentOn != "OpaqueRef:NULL")
+    if (residentOn != XENOBJECT_NULL)
     {
-        QSharedPointer<Host> host = cache->ResolveObject<Host>("host", residentOn);
+        QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, residentOn);
         if (host)
             return host;
     }
 
     // Fallback to pool coordinator if VM is not currently resident
-    const QVariantMap poolData = cache->ResolveObjectData("pool", QString());
+    const QVariantMap poolData = cache->ResolveObjectData(XenObjectType::Pool, QString());
     const QString masterRef = poolData.value("master").toString();
-    if (!masterRef.isEmpty() && masterRef != "OpaqueRef:NULL")
-        return cache->ResolveObject<Host>("host", masterRef);
+    if (!masterRef.isEmpty() && masterRef != XENOBJECT_NULL)
+        return cache->ResolveObject<Host>(XenObjectType::Host, masterRef);
 
     return QSharedPointer<Host>();
 }
@@ -207,7 +203,7 @@ QSharedPointer<VBD> VM::FindVMCDROM() const
     const QStringList vbdRefs = this->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
-        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>(XenObjectType::VBD, vbdRef);
         if (vbd && vbd->IsValid() && vbd->IsCD())
             cdroms.append(vbd);
     }
@@ -237,7 +233,7 @@ QList<QSharedPointer<VBD>> VM::GetVBDs() const
     const QStringList vbdRefs = this->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
-        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>(XenObjectType::VBD, vbdRef);
         if (vbd && vbd->IsValid())
             vbds.append(vbd);
     }
@@ -263,7 +259,7 @@ QList<QSharedPointer<VIF>> VM::GetVIFs() const
     const QStringList vifRefs = this->GetVIFRefs();
     for (const QString& vifRef : vifRefs)
     {
-        QSharedPointer<VIF> vif = cache->ResolveObject<VIF>("vif", vifRef);
+        QSharedPointer<VIF> vif = cache->ResolveObject<VIF>(XenObjectType::VIF, vifRef);
         if (vif && vif->IsValid())
             vifs.append(vif);
     }
@@ -293,7 +289,7 @@ QSharedPointer<Host> VM::GetAffinityHost() const
     if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<Host>();
     
-    return cache->ResolveObject<Host>("host", ref);
+    return cache->ResolveObject<Host>(XenObjectType::Host, ref);
 }
 
 QList<QSharedPointer<Console>> VM::GetConsoles() const
@@ -310,7 +306,7 @@ QList<QSharedPointer<Console>> VM::GetConsoles() const
     {
         if (!ref.isEmpty() && ref != XENOBJECT_NULL)
         {
-            QSharedPointer<Console> obj = cache->ResolveObject<Console>("console", ref);
+            QSharedPointer<Console> obj = cache->ResolveObject<Console>(ref);
             if (obj)
                 result.append(obj);
         }
@@ -330,7 +326,7 @@ QSharedPointer<VDI> VM::GetSuspendVDI() const
     if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<VDI>();
     
-    return cache->ResolveObject<VDI>("vdi", ref);
+    return cache->ResolveObject<VDI>(ref);
 }
 
 QSharedPointer<Host> VM::GetHome() const
@@ -345,7 +341,7 @@ QSharedPointer<Host> VM::GetHome() const
     if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<Host>();
     
-    return cache->ResolveObject<Host>("host", ref);
+    return cache->ResolveObject<Host>(XenObjectType::Host, ref);
 }
 
 QList<QSharedPointer<VUSB>> VM::GetVUSBs() const
@@ -362,7 +358,7 @@ QList<QSharedPointer<VUSB>> VM::GetVUSBs() const
     {
         if (ref.isEmpty() || ref == XENOBJECT_NULL)
             continue;
-        QSharedPointer<VUSB> obj = cache->ResolveObject<VUSB>("vusb", ref);
+        QSharedPointer<VUSB> obj = cache->ResolveObject<VUSB>(ref);
         if (obj)
             result.append(obj);
     }
@@ -383,7 +379,7 @@ QList<QSharedPointer<VTPM>> VM::GetVTPMs() const
     {
         if (ref.isEmpty() || ref == XENOBJECT_NULL)
             continue;
-        QSharedPointer<VTPM> obj = cache->ResolveObject<VTPM>("vtpm", ref);
+        QSharedPointer<VTPM> obj = cache->ResolveObject<VTPM>(ref);
         if (obj)
             result.append(obj);
     }
@@ -405,7 +401,7 @@ QList<QSharedPointer<Blob>> VM::GetBlobs() const
         QString ref = it.value().toString();
         if (ref.isEmpty() || ref == XENOBJECT_NULL)
             continue;
-        QSharedPointer<Blob> obj = cache->ResolveObject<Blob>("blob", ref);
+        QSharedPointer<Blob> obj = cache->ResolveObject<Blob>(ref);
         if (obj)
             result.append(obj);
     }
@@ -424,7 +420,7 @@ QSharedPointer<VM> VM::GetParent() const
     if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<VM>();
     
-    return cache->ResolveObject<VM>("vm", ref);
+    return cache->ResolveObject<VM>(XenObjectType::VM, ref);
 }
 
 QList<QSharedPointer<PCI>> VM::GetAttachedPCIDevices() const
@@ -441,7 +437,7 @@ QList<QSharedPointer<PCI>> VM::GetAttachedPCIDevices() const
     {
         if (ref.isEmpty() || ref == XENOBJECT_NULL)
             continue;
-        QSharedPointer<PCI> obj = cache->ResolveObject<PCI>("pci", ref);
+        QSharedPointer<PCI> obj = cache->ResolveObject<PCI>(ref);
         if (obj)
             result.append(obj);
     }
@@ -460,7 +456,7 @@ QSharedPointer<SR> VM::GetSuspendSR()
     if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<SR>();
     
-    return cache->ResolveObject<SR>("sr", ref);
+    return cache->ResolveObject<SR>(ref);
 }
 
 QString VM::SnapshotOfRef() const
@@ -473,7 +469,7 @@ QSharedPointer<VM> VM::SnapshotOf() const
     QString snapshot_of_ref = this->SnapshotOfRef();
     if (snapshot_of_ref.isEmpty())
         return QSharedPointer<VM>();
-    return this->GetCache()->ResolveObject<VM>("vm", snapshot_of_ref);
+    return this->GetCache()->ResolveObject<VM>(XenObjectType::VM, snapshot_of_ref);
 }
 
 QStringList VM::GetSnapshotRefs() const
@@ -526,7 +522,7 @@ bool VM::SupportsBallooning() const
     if (!cache)
         return false;
 
-    QVariantMap guestMetricsData = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+    QVariantMap guestMetricsData = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, guestMetricsRef);
     if (guestMetricsData.isEmpty())
         return false;
 
@@ -563,7 +559,7 @@ bool VM::IsWindows() const
         XenCache* cache = GetConnection() ? GetConnection()->GetCache() : nullptr;
         if (cache)
         {
-            QVariantMap metricsData = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+            QVariantMap metricsData = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, guestMetricsRef);
             if (!metricsData.isEmpty())
             {
                 QVariantMap osVersion = metricsData.value("os_version").toMap();
@@ -675,7 +671,7 @@ namespace
         if (referenceLabel.isEmpty())
             return false;
 
-        QList<QVariantMap> vms = cache->GetAllData("vm");
+        QList<QVariantMap> vms = cache->GetAllData(XenObjectType::VM);
         for (const QVariantMap& candidate : vms)
         {
             if (!candidate.value("is_a_template").toBool())
@@ -699,7 +695,7 @@ namespace
         if (!cache)
             return values;
 
-        QList<QVariantMap> vms = cache->GetAllData("vm");
+        QList<QVariantMap> vms = cache->GetAllData(XenObjectType::VM);
         for (const QVariantMap& candidate : vms)
         {
             if (!candidate.value("is_a_template").toBool())
@@ -792,15 +788,15 @@ long VM::MaxCoresPerSocket() const
         return 0;
 
     QString home = this->GetHomeRef();
-    if (!home.isEmpty() && home != "OpaqueRef:NULL")
+    if (!home.isEmpty() && home != XENOBJECT_NULL)
     {
-        QSharedPointer<Host> host = cache->ResolveObject<Host>("host", home);
+        QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, home);
         if (host)
             return host->GetCoresPerSocket();
     }
 
     long maxCores = 0;
-    QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>("host");
+    QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>(XenObjectType::Host);
     for (const QSharedPointer<Host>& host : hosts)
     {
         if (!host)
@@ -931,7 +927,7 @@ bool VM::CanBeMoved() const
     QStringList vbdRefs = this->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
-        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>(vbdRef);
         if (!vbd || !vbd->IsValid())
             continue;
 
@@ -943,7 +939,7 @@ bool VM::CanBeMoved() const
         if (vdiRef.isEmpty())
             continue;
 
-        QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>("vdi", vdiRef);
+        QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>(vdiRef);
         if (!vdi || !vdi->IsValid())
             continue;
 
@@ -951,7 +947,7 @@ bool VM::CanBeMoved() const
         if (srRef.isEmpty())
             continue;
 
-        QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", srRef);
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>(srRef);
         if (sr && sr->IsValid() && sr->HBALunPerVDI())
             return false;
     }
@@ -980,14 +976,14 @@ bool VM::AnyDiskFastClonable() const
     if (!cache)
         return false;
 
-    QList<QVariantMap> smRecords = cache->GetAllData("sm");
+    QList<QVariantMap> smRecords = cache->GetAllData(XenObjectType::SM);
     if (smRecords.isEmpty())
         return false;
 
     QStringList vbdRefs = this->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
-        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>(vbdRef);
         if (!vbd || !vbd->IsValid())
             continue;
 
@@ -999,7 +995,7 @@ bool VM::AnyDiskFastClonable() const
         if (vdiRef.isEmpty())
             continue;
 
-        QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>("vdi", vdiRef);
+        QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>(vdiRef);
         if (!vdi || !vdi->IsValid())
             continue;
 
@@ -1007,7 +1003,7 @@ bool VM::AnyDiskFastClonable() const
         if (srRef.isEmpty())
             continue;
 
-        QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", srRef);
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>(srRef);
         if (!sr || !sr->IsValid())
             continue;
 
@@ -1046,7 +1042,7 @@ bool VM::HasAtLeastOneDisk() const
     QStringList vbdRefs = this->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
-        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>(vbdRef);
         if (!vbd || !vbd->IsValid())
             continue;
 
@@ -1204,7 +1200,7 @@ QSharedPointer<VMMetrics> VM::GetMetrics()
     if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<VMMetrics>();
 
-    return cache->ResolveObject<VMMetrics>("vm_metrics", ref);
+    return cache->ResolveObject<VMMetrics>(ref);
 }
 
 QString VM::GetGuestMetricsRef() const
@@ -1389,7 +1385,7 @@ bool VM::ReadCachingEnabled() const
     QStringList vbdRefs = this->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
-        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>(vbdRef);
         if (!vbd || !vbd->IsValid())
             continue;
         
@@ -1403,7 +1399,7 @@ bool VM::ReadCachingEnabled() const
         if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
             continue;
         
-        QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>("vdi", vdiRef);
+        QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>(vdiRef);
         if (!vdi || !vdi->IsValid())
             continue;
         
@@ -1413,7 +1409,7 @@ bool VM::ReadCachingEnabled() const
         if (srRef.isEmpty())
             continue;
         
-        QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", srRef);
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>(srRef);
         if (!sr || !sr->IsValid())
             continue;
         
@@ -1483,7 +1479,7 @@ QString VM::GetOSName() const
     if (!cache)
         return QString();
     
-    QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+    QVariantMap guestMetrics = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, guestMetricsRef);
     if (guestMetrics.isEmpty())
         return QString();
     
@@ -1517,7 +1513,7 @@ int VM::GetVirtualizationStatus() const
     if (!cache)
         return 0;
     
-    QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+    QVariantMap guestMetrics = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, guestMetricsRef);
     if (guestMetrics.isEmpty())
         return 0; // NotInstalled
     
@@ -1576,7 +1572,7 @@ QList<ComparableAddress> VM::GetIPAddresses() const
     if (!cache)
         return addresses;
     
-    QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+    QVariantMap guestMetrics = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, guestMetricsRef);
     if (guestMetrics.isEmpty())
         return addresses;
     
@@ -1618,7 +1614,7 @@ qint64 VM::GetStartTime() const
             XenCache* cache = conn->GetCache();
             if (cache)
             {
-                QVariantMap guestMetrics = cache->ResolveObjectData("vm_guest_metrics", guestMetricsRef);
+                QVariantMap guestMetrics = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, guestMetricsRef);
                 if (!guestMetrics.isEmpty())
                 {
                     // Check if start_time exists

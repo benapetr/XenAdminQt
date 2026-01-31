@@ -84,7 +84,7 @@ void SearchTabPage::SetObject(QSharedPointer<XenObject> object)
     if (!object.isNull() && !object->OpaqueRef().isEmpty())
     {
         refs.append(object->OpaqueRef());
-        types.append(object->GetObjectType());
+        types.append(object->GetObjectTypeName());
     }
 
     Search* search = Search::SearchFor(refs, types, this->m_connection);
@@ -175,7 +175,7 @@ void SearchTabPage::onItemDoubleClicked(QTreeWidgetItem* item, int column)
     if (!xenObj)
         return;
 
-    emit objectSelected(xenObj->GetObjectType(), xenObj->OpaqueRef());
+    emit objectSelected(xenObj->GetObjectTypeName(), xenObj->OpaqueRef());
 }
 
 void SearchTabPage::onSaveRequested()

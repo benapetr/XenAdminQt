@@ -56,7 +56,7 @@ class XENLIB_EXPORT Certificate : public XenObject
                            QObject* parent = nullptr);
         ~Certificate() override = default;
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::Certificate; }
 
         // Property accessors (read from cache)
         QString Name() const;

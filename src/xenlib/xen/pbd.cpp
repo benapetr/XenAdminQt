@@ -35,10 +35,6 @@ PBD::PBD(XenConnection* connection, const QString& opaqueRef, QObject* parent) :
 {
 }
 
-QString PBD::GetObjectType() const
-{
-    return "pbd";
-}
 
 QString PBD::GetHostRef() const
 {
@@ -51,7 +47,7 @@ QSharedPointer<Host> PBD::GetHost()
     if (!this->GetConnection() || host_ref.isEmpty() || host_ref == XENOBJECT_NULL)
         return QSharedPointer<Host>();
 
-    return this->GetCache()->ResolveObject<Host>("host", host_ref);
+    return this->GetCache()->ResolveObject<Host>(XenObjectType::Host, host_ref);
 }
 
 QString PBD::GetSRRef() const
@@ -65,7 +61,7 @@ QSharedPointer<SR> PBD::GetSR()
     if (!this->GetConnection() || sr_ref.isEmpty() || sr_ref == XENOBJECT_NULL)
         return QSharedPointer<SR>();
 
-    return this->GetCache()->ResolveObject<SR>("sr", sr_ref);
+    return this->GetCache()->ResolveObject<SR>(sr_ref);
 }
 
 QVariantMap PBD::DeviceConfig() const

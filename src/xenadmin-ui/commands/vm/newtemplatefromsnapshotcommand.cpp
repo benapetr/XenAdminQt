@@ -47,9 +47,9 @@ NewTemplateFromSnapshotCommand::NewTemplateFromSnapshotCommand(const QString& sn
 bool NewTemplateFromSnapshotCommand::CanRun() const
 {
     QString vmRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
-    QString type = !this->m_snapshotRef.isEmpty() ? "vm" : this->getSelectedObjectType();
+    XenObjectType type = !this->m_snapshotRef.isEmpty() ? XenObjectType::VM : this->getSelectedObjectType();
 
-    if (vmRef.isEmpty() || type != "vm")
+    if (vmRef.isEmpty() || type != XenObjectType::VM)
     {
         return false;
     }
@@ -64,7 +64,7 @@ bool NewTemplateFromSnapshotCommand::CanRun() const
     if (!cache)
         return false;
 
-    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", vmRef);
+    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, vmRef);
     if (!snapshot)
         return false;
 
@@ -74,9 +74,9 @@ bool NewTemplateFromSnapshotCommand::CanRun() const
 void NewTemplateFromSnapshotCommand::Run()
 {
     QString vmRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
-    QString type = !this->m_snapshotRef.isEmpty() ? "vm" : this->getSelectedObjectType();
+    XenObjectType type = !this->m_snapshotRef.isEmpty() ? XenObjectType::VM : this->getSelectedObjectType();
 
-    if (vmRef.isEmpty() || type != "vm")
+    if (vmRef.isEmpty() || type != XenObjectType::VM)
         return;
 
     XenConnection* conn = this->m_connection;
@@ -93,7 +93,7 @@ void NewTemplateFromSnapshotCommand::Run()
     }
 
     // Create VM object for the snapshot
-    QSharedPointer<VM> snapshot = conn->GetCache()->ResolveObject<VM>("vm", vmRef);
+    QSharedPointer<VM> snapshot = conn->GetCache()->ResolveObject<VM>(XenObjectType::VM, vmRef);
 
     if (!snapshot)
     {

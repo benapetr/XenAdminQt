@@ -408,8 +408,28 @@ bool MainWindow::mixedVmTemplateSelection() const
     if (!this->m_selectionManager)
         return false;
 
-    const QStringList types = this->m_selectionManager->SelectedTypes();
-    return types.contains("vm") && types.contains("template");
+    bool hasTemplate = false;
+    bool hasVm = false;
+    const QList<QSharedPointer<XenObject>> objects = this->m_selectionManager->SelectedObjects();
+    for (const QSharedPointer<XenObject>& obj : objects)
+    {
+        if (!obj || obj->GetObjectType() != XenObjectType::VM)
+            continue;
+
+        QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
+        if (!vm)
+            continue;
+
+        if (vm->IsTemplate())
+            hasTemplate = true;
+        else
+            hasVm = true;
+
+        if (hasTemplate && hasVm)
+            return true;
+    }
+
+    return false;
 }
 
 void MainWindow::connectToServer()
@@ -576,10 +596,10 @@ void MainWindow::onCachePopulated()
     qDebug() << "MainWindow: Cache populated, refreshing tree view";
     XenCache* cache = connection->GetCache();
     qDebug() << "MainWindow: Cache counts"
-             << "hosts=" << cache->Count("host")
-             << "pools=" << cache->Count("pool")
-             << "vms=" << cache->Count("vm")
-             << "srs=" << cache->Count("sr");
+             << "hosts=" << cache->Count(XenObjectType::Host)
+             << "pools=" << cache->Count(XenObjectType::Pool)
+             << "vms=" << cache->Count(XenObjectType::VM)
+             << "srs=" << cache->Count(XenObjectType::SR);
 
     this->updateConnectionProfileFromCache(connection, cache);
 
@@ -680,7 +700,7 @@ void MainWindow::onTreeItemSelected()
     this->m_currentObject = itemData.value<QSharedPointer<XenObject>>();
     if (this->m_currentObject)
     {
-        objectType = this->m_currentObject->GetObjectType();
+        objectType = this->m_currentObject->GetObjectTypeName();
         objectRef = this->m_currentObject->OpaqueRef();
         connection = this->m_currentObject->GetConnection();
     } else if (itemData.canConvert<XenConnection*>())
@@ -829,7 +849,7 @@ void MainWindow::onSearchTabPageObjectSelected(const QString& objectType, const 
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
         if (obj)
         {
-            itemType = obj->GetObjectType();
+            itemType = obj->GetObjectTypeName();
             itemRef = obj->OpaqueRef();
         }
 
@@ -887,7 +907,7 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
 {
     QList<BaseTabPage*> newTabs;
 
-    QString objectType = xen_obj->GetObjectType();
+    QString objectType = xen_obj->GetObjectTypeName();
 
     bool isHost = (objectType == "host");
     bool isVM = (objectType == "vm");
@@ -1060,7 +1080,7 @@ QList<BaseTabPage*> MainWindow::getNewTabPages(QSharedPointer<XenObject> xen_obj
 
 void MainWindow::updateTabPages(QSharedPointer<XenObject> xen_obj)
 {
-    QString objectType = xen_obj->GetObjectType();
+    QString objectType = xen_obj->GetObjectTypeName();
 
     // Get the correct tabs in order for this object type
     // C# Reference: xenadmin/XenAdmin/MainWindow.cs line 1432 (ChangeToNewTabs)
@@ -1254,7 +1274,7 @@ void MainWindow::onTabChanged(int index)
     if (!this->m_currentObject.isNull())
     {
         current_ref = this->m_currentObject->OpaqueRef();
-        current_type = this->m_currentObject->GetObjectType();
+        current_type = this->m_currentObject->GetObjectTypeName();
     }
 
     // Notify the new tab that it's being shown
@@ -1819,7 +1839,7 @@ bool MainWindow::itemMatchesSearch(QTreeWidgetItem* item, const QString& searchT
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
         if (obj)
         {
-            QString objectType = obj->GetObjectType().toLower();
+            QString objectType = obj->GetObjectTypeName().toLower();
             QString uuid = obj->GetUUID().toLower();
             if (objectType.contains(search) || uuid.contains(search))
                 return true;
@@ -2031,7 +2051,7 @@ void MainWindow::onCacheObjectChanged(XenConnection* connection, const QString& 
         return;
 
     // If the changed object is the currently displayed one, refresh the tabs
-    if (!this->m_currentObject.isNull() && objectType == this->m_currentObject->GetObjectType() && objectRef == this->m_currentObject->OpaqueRef())
+    if (!this->m_currentObject.isNull() && objectType == this->m_currentObject->GetObjectTypeName() && objectRef == this->m_currentObject->OpaqueRef())
     {
         // Update tab pages with new data
         for (int i = 0; i < this->ui->mainTabWidget->count(); ++i)
@@ -2271,7 +2291,7 @@ void MainWindow::updateToolbarsAndMenus()
             QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
             if (obj)
             {
-                objectType = obj->GetObjectType();
+                objectType = obj->GetObjectTypeName();
                 objectRef = obj->OpaqueRef();
                 connection = obj->GetConnection();
             }
@@ -2544,7 +2564,7 @@ void MainWindow::SelectObjectInTree(const QString& objectRef, const QString& obj
         QVariant data = item->data(0, Qt::UserRole);
         
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (obj && obj->OpaqueRef() == objectRef && obj->GetObjectType() == objectType)
+        if (obj && obj->OpaqueRef() == objectRef && obj->GetObjectTypeName() == objectType)
         {
             // Found the item - select it
             this->GetServerTreeWidget()->setCurrentItem(item);

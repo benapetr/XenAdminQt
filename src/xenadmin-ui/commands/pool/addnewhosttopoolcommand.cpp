@@ -62,7 +62,7 @@ void AddNewHostToPoolCommand::onCachePopulated(XenConnection* connection)
         return;
     
     // Get the standalone host - for standalone servers, there's exactly one host
-    QList<QSharedPointer<Host>> allHosts = connection->GetCache()->GetAll<Host>("host");
+    QList<QSharedPointer<Host>> allHosts = connection->GetCache()->GetAll<Host>();
     if (allHosts.isEmpty())
     {
         qDebug() << "No hosts found in newly connected server";

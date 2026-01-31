@@ -111,7 +111,7 @@ class XENLIB_EXPORT Network : public XenObject
         bool CanUseJumboFrames() const;
 
         // XenObject interface
-        QString GetObjectType() const override { return "network"; }
+        XenObjectType GetObjectType() const override { return XenObjectType::Network; }
 };
 
 #endif // NETWORK_H

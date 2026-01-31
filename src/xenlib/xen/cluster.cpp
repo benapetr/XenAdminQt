@@ -36,10 +36,6 @@ Cluster::Cluster(XenConnection* connection, const QString& opaqueRef, QObject* p
 {
 }
 
-QString Cluster::GetObjectType() const
-{
-    return "cluster";
-}
 
 QStringList Cluster::GetClusterHostRefs() const
 {
@@ -112,7 +108,7 @@ QList<QSharedPointer<ClusterHost>> Cluster::GetClusterHosts() const
     const QStringList hostRefs = this->GetClusterHostRefs();
     for (const QString& hostRef : hostRefs)
     {
-        QSharedPointer<ClusterHost> clusterHost = cache->ResolveObject<ClusterHost>("cluster_host", hostRef);
+        QSharedPointer<ClusterHost> clusterHost = cache->ResolveObject<ClusterHost>(hostRef);
         if (clusterHost && clusterHost->IsValid())
             clusterHosts.append(clusterHost);
     }

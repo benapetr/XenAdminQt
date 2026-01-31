@@ -41,7 +41,7 @@ namespace HostHaHelpers
         if (!connection || !connection->GetCache())
             return configuration;
 
-        const QList<QSharedPointer<VM>> vms = connection->GetCache()->GetAll<VM>("vm");
+        const QList<QSharedPointer<VM>> vms = connection->GetCache()->GetAll<VM>(XenObjectType::VM);
         for (const QSharedPointer<VM>& vm : vms)
         {
             if (!vm || vm->IsControlDomain() || vm->IsTemplate() || vm->IsSnapshot())

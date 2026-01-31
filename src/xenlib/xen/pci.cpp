@@ -34,10 +34,6 @@ PCI::PCI(XenConnection* connection, const QString& opaqueRef, QObject* parent) :
 {
 }
 
-QString PCI::GetObjectType() const
-{
-    return "pci";
-}
 
 QString PCI::ClassName() const
 {
@@ -119,5 +115,5 @@ QSharedPointer<Host> PCI::GetHost() const
     if (ref.isEmpty() || ref == "OpaqueRef:NULL")
         return QSharedPointer<Host>();
     
-    return cache->ResolveObject<Host>("host", ref);
+    return cache->ResolveObject<Host>(XenObjectType::Host, ref);
 }

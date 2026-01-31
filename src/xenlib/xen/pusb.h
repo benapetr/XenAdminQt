@@ -50,7 +50,7 @@ class XENLIB_EXPORT PUSB : public XenObject
         explicit PUSB(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         virtual ~PUSB();
 
-        QString GetObjectType() const override { return "PUSB"; }
+        XenObjectType GetObjectType() const override { return XenObjectType::PUSB; }
 
         // Property accessors
         QString GetUSBGroupRef() const;

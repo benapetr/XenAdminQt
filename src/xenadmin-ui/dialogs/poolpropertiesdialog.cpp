@@ -165,7 +165,7 @@ void PoolPropertiesDialog::build()
 
     QSharedPointer<Host> coordinator;
     if (this->m_pool && cache)
-        coordinator = cache->ResolveObject<Host>("host", this->m_pool->GetMasterHostRef());
+        coordinator = cache->ResolveObject<Host>(XenObjectType::Host, this->m_pool->GetMasterHostRef());
 
     if (cloudOrGreater(coordinator) && xapiEqualOrGreater(coordinator, "22.33.0"))
         this->showTab(new PoolAdvancedEditPage());

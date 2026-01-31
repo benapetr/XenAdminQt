@@ -146,7 +146,7 @@ void MoveVirtualDiskDialog::onMoveButtonClicked()
 
     // Get target SR name
     QSharedPointer<SR> targetSR = this->m_connection && this->m_connection->GetCache()
-        ? this->m_connection->GetCache()->ResolveObject<SR>("sr", targetSRRef)
+        ? this->m_connection->GetCache()->ResolveObject<SR>(targetSRRef)
         : QSharedPointer<SR>();
     QString targetSRName = targetSR ? targetSR->GetName() : QString();
 
@@ -168,7 +168,7 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
         QSharedPointer<VDI> vdi = !this->m_vdis.isEmpty() && this->m_vdis.first() && this->m_vdis.first()->IsValid()
             ? this->m_vdis.first()
             : (this->m_connection && this->m_connection->GetCache()
-                ? this->m_connection->GetCache()->ResolveObject<VDI>("vdi", this->m_vdiRefs.first())
+                ? this->m_connection->GetCache()->ResolveObject<VDI>(this->m_vdiRefs.first())
                 : QSharedPointer<VDI>());
         QString vdiName = vdi ? vdi->GetName() : QString("Virtual Disk");
 
@@ -186,7 +186,7 @@ void MoveVirtualDiskDialog::createAndRunActions(const QString& targetSRRef, cons
         for (const QString& vdiRef : this->m_vdiRefs)
         {
             QSharedPointer<VDI> vdi = this->m_connection && this->m_connection->GetCache()
-                ? this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef)
+                ? this->m_connection->GetCache()->ResolveObject<VDI>(vdiRef)
                 : QSharedPointer<VDI>();
             QString vdiName = vdi ? vdi->GetName() : QString("Virtual Disk");
 

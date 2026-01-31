@@ -75,10 +75,10 @@ void AffinityPicker::setAffinity(XenConnection* connection, const QString& affin
     bool wlbEnabled = false;
     if (this->m_connection && this->m_connection->GetCache())
     {
-        QStringList poolRefs = this->m_connection->GetCache()->GetAllRefs("pool");
+        QStringList poolRefs = this->m_connection->GetCache()->GetAllRefs(XenObjectType::Pool);
         if (!poolRefs.isEmpty())
         {
-            QSharedPointer<Pool> pool = this->m_connection->GetCache()->ResolveObject<Pool>("pool", poolRefs.first());
+            QSharedPointer<Pool> pool = this->m_connection->GetCache()->ResolveObject<Pool>(poolRefs.first());
             if (pool)
                 wlbEnabled = pool->IsWLBEnabled() && !pool->WLBUrl().isEmpty();
         }
@@ -153,7 +153,7 @@ void AffinityPicker::loadServers()
     if (!this->m_connection || !this->m_connection->GetCache())
         return;
 
-    QList<QSharedPointer<Host>> hosts = this->m_connection->GetCache()->GetAll<Host>("host");
+    QList<QSharedPointer<Host>> hosts = this->m_connection->GetCache()->GetAll<Host>();
 
     std::sort(hosts.begin(), hosts.end(), [](const QSharedPointer<Host>& a, const QSharedPointer<Host>& b) {
         return a->GetName().toLower() < b->GetName().toLower();
@@ -270,7 +270,7 @@ bool AffinityPicker::hasFullyConnectedSharedStorage() const
     if (!this->m_connection || !this->m_connection->GetCache())
         return false;
 
-    QList<QSharedPointer<Host>> hosts = this->m_connection->GetCache()->GetAll<Host>("host");
+    QList<QSharedPointer<Host>> hosts = this->m_connection->GetCache()->GetAll<Host>();
     if (hosts.isEmpty())
         return false;
 
@@ -287,7 +287,7 @@ bool AffinityPicker::hasFullyConnectedSharedStorage() const
     if (hostRefSet.size() <= 1)
         return true;
 
-    QList<QSharedPointer<SR>> srs = this->m_connection->GetCache()->GetAll<SR>("sr");
+    QList<QSharedPointer<SR>> srs = this->m_connection->GetCache()->GetAll<SR>();
     for (const QSharedPointer<SR>& sr : srs)
     {
         if (!sr || !sr->IsValid())

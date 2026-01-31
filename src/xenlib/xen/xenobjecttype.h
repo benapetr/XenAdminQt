@@ -25,30 +25,62 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "feature.h"
-#include "network/connection.h"
+#ifndef XENOBJECTTYPE_H
+#define XENOBJECTTYPE_H
 
-Feature::Feature(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
+enum class XenObjectType
 {
-}
+    Null,
+    Blob,
+    Bond,
+    Certificate,
+    Cluster,
+    ClusterHost,
+    Console,
+    DockerContainer,
+    Event,
+    Feature,
+    Folder,
+    GPUGroup,
+    Host,
+    DisconnectedHost, // This is a special case needed by commands system
+    HostCPU,
+    HostCrashdump,
+    HostMetrics,
+    HostPatch,
+    Message,
+    Network,
+    NetworkSriov,
+    PBD,
+    PCI,
+    PIF,
+    PIFMetrics,
+    PGPU,
+    Pool,
+    PoolPatch,
+    PoolUpdate,
+    Role,
+    SM,
+    SR,
+    Task,
+    Tunnel,
+    USBGroup,
+    User,
+    VBD,
+    VBDMetrics,
+    VDI,
+    VGPU,
+    VIF,
+    VLAN,
+    VM,
+    VMAppliance,
+    VMGuestMetrics,
+    VMMetrics,
+    VMPP,
+    VMSS,
+    VTPM,
+    VUSB,
+    PUSB
+};
 
-
-bool Feature::IsEnabled() const
-{
-    return this->boolProperty("enabled", false);
-}
-
-bool Feature::IsExperimental() const
-{
-    return this->boolProperty("experimental", false);
-}
-
-QString Feature::Version() const
-{
-    return this->stringProperty("version");
-}
-
-QString Feature::HostRef() const
-{
-    return this->stringProperty("host");
-}
+#endif // XENOBJECTTYPE_H

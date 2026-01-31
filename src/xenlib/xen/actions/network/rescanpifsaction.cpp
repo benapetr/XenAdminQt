@@ -40,31 +40,31 @@ RescanPIFsAction::RescanPIFsAction(XenConnection* connection,
                      parent),
       m_hostRef(hostRef)
 {
-    if (m_hostRef.isEmpty())
+    if (this->m_hostRef.isEmpty())
         throw std::invalid_argument("Host reference cannot be empty");
 
     // Get host name for display
-    QVariantMap hostData = connection->GetCache()->ResolveObjectData("host", m_hostRef);
-    m_hostName = hostData.value("name_label").toString();
+    QVariantMap hostData = connection->GetCache()->ResolveObjectData("host", this->m_hostRef);
+    this->m_hostName = hostData.value("name_label").toString();
 
-    SetTitle(QString("Scanning for NICs on %1").arg(m_hostName));
-    SetDescription(QString("Scanning for physical network interfaces on %1").arg(m_hostName));
+    this->SetTitle(QString("Scanning for NICs on %1").arg(this->m_hostName));
+    this->SetDescription(QString("Scanning for physical network interfaces on %1").arg(this->m_hostName));
 }
 
 void RescanPIFsAction::run()
 {
     try
     {
-        SetPercentComplete(40);
-        SetDescription(QString("Scanning for NICs on %1...").arg(m_hostName));
+        this->SetPercentComplete(40);
+        this->SetDescription(QString("Scanning for NICs on %1...").arg(this->m_hostName));
 
-        XenAPI::PIF::scan(GetSession(), m_hostRef);
+        XenAPI::PIF::scan(this->GetSession(), this->m_hostRef);
 
-        SetPercentComplete(100);
-        SetDescription(QString("Scan complete on %1").arg(m_hostName));
+        this->SetPercentComplete(100);
+        this->SetDescription(QString("Scan complete on %1").arg(this->m_hostName));
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to scan NICs: %1").arg(e.what()));
+        this->setError(QString("Failed to scan NICs: %1").arg(e.what()));
     }
 }

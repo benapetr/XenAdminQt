@@ -65,7 +65,7 @@ Search* TreeSearch::SearchFor(XenObject* value)
     refs.append(value->OpaqueRef());
 
     QStringList types;
-    types.append(value->GetObjectType());
+    types.append(value->GetObjectTypeName());
 
     return Search::SearchFor(refs, types, value->GetConnection(), scope);
 }

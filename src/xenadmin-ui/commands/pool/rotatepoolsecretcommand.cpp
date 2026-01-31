@@ -47,22 +47,22 @@ RotatePoolSecretCommand::RotatePoolSecretCommand(MainWindow* mainWindow, QObject
 
 bool RotatePoolSecretCommand::CanRun() const
 {
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "pool" && objectType != "host")
+    XenObjectType objectType = this->getSelectedObjectType();
+    if (objectType != XenObjectType::Pool && objectType != XenObjectType::Host)
         return false;
 
     // Get pool reference
     QString poolRef;
     XenCache* cache = nullptr;
     
-    if (objectType == "pool")
+    if (objectType == XenObjectType::Pool)
     {
         QSharedPointer<Pool> pool = this->getPool();
         if (!pool || !pool->GetConnection() || !pool->IsValid())
             return false;
         poolRef = pool->OpaqueRef();
         cache = pool->GetConnection()->GetCache();
-    } else if (objectType == "host")
+    } else if (objectType == XenObjectType::Host)
     {
         QSharedPointer<Host> host = qSharedPointerCast<Host>(this->GetObject());
         if (!host || !host->GetConnection() || !host->IsValid())
@@ -111,14 +111,14 @@ bool RotatePoolSecretCommand::canRotateSecret(const QVariantMap& poolData, XenCa
 
 void RotatePoolSecretCommand::Run()
 {
-    QString objectType = this->getSelectedObjectType();
+    XenObjectType objectType = this->getSelectedObjectType();
 
     // Get pool reference and cache
     QString poolRef;
     XenCache* cache = nullptr;
     XenConnection *connection = nullptr;
     
-    if (objectType == "pool")
+    if (objectType == XenObjectType::Pool)
     {
         QSharedPointer<Pool> pool = this->getPool();
         if (!pool || !pool->GetConnection() || !pool->IsValid())
@@ -127,7 +127,7 @@ void RotatePoolSecretCommand::Run()
         poolRef = pool->OpaqueRef();
         connection = pool->GetConnection();
         cache = pool->GetConnection()->GetCache();
-    } else if (objectType == "host")
+    } else if (objectType == XenObjectType::Host)
     {
         QSharedPointer<Host> host = qSharedPointerCast<Host>(this->GetObject());
         if (!host || !host->GetConnection() || !host->IsValid())
@@ -147,8 +147,7 @@ void RotatePoolSecretCommand::Run()
     QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
     if (poolData.isEmpty())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Error"),
-                             tr("Unable to retrieve pool information."));
+        QMessageBox::warning(this->mainWindow(), tr("Error"), tr("Unable to retrieve pool information."));
         return;
     }
 
@@ -198,7 +197,7 @@ void RotatePoolSecretCommand::Run()
     }
 
     // Resolve Pool object from cache
-    QSharedPointer<Pool> pool = connection->GetCache()->ResolveObject<Pool>("pool", poolRef);
+    QSharedPointer<Pool> pool = connection->GetCache()->ResolveObject<Pool>(poolRef);
     if (!pool || !pool->IsValid())
     {
         qWarning() << "RotatePoolSecretCommand: Failed to resolve pool" << poolRef;
@@ -228,12 +227,12 @@ QString RotatePoolSecretCommand::MenuText() const
 
 QString RotatePoolSecretCommand::GetCantRunReason() const
 {
-    QString objectType = this->getSelectedObjectType();
+    XenObjectType objectType = this->getSelectedObjectType();
     XenCache* cache = nullptr;
 
     // Get pool reference
     QString poolRef;
-    if (objectType == "pool")
+    if (objectType == XenObjectType::Pool)
     {
         QSharedPointer<Pool> pool = this->getPool();
         if (!pool || !pool->GetConnection() || !pool->IsValid())
@@ -241,7 +240,7 @@ QString RotatePoolSecretCommand::GetCantRunReason() const
 
         cache = pool->GetConnection()->GetCache();
         poolRef = this->getSelectedObjectRef();
-    } else if (objectType == "host")
+    } else if (objectType == XenObjectType::Host)
     {
         QSharedPointer<Host> host = qSharedPointerCast<Host>(this->GetObject());
         if (!host || !host->GetConnection() || !host->IsValid())

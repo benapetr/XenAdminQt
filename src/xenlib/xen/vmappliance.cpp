@@ -32,15 +32,10 @@
 #include "../xencache.h"
 #include <QSet>
 
-VMAppliance::VMAppliance(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+VMAppliance::VMAppliance(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
-QString VMAppliance::GetObjectType() const
-{
-    return "VM_appliance";
-}
 
 QStringList VMAppliance::VMRefs() const
 {
@@ -62,13 +57,13 @@ QStringList VMAppliance::GetFateSharingVMs() const
         return QStringList();
     
     // Get all VMs not in this appliance
-    QStringList allVmRefs = cache->GetAllRefs("VM");
+    QStringList allVmRefs = cache->GetAllRefs(XenObjectType::VM);
     QStringList thisApplianceVmRefs = this->VMRefs();
     QSet<QString> vmsNotInCurApp;
     
     for (const QString& vmRef : allVmRefs)
     {
-        QVariantMap vmData = cache->ResolveObjectData("VM", vmRef);
+        QVariantMap vmData = cache->ResolveObjectData(XenObjectType::VM, vmRef);
         QString vmApplianceRef = vmData.value("appliance").toString();
         
         if (vmApplianceRef != this->OpaqueRef())
@@ -82,7 +77,7 @@ QStringList VMAppliance::GetFateSharingVMs() const
     // For each VM in this appliance, find VMs outside the appliance that share storage
     for (const QString& thisVmRef : thisApplianceVmRefs)
     {
-        QVariantMap thisVmData = cache->ResolveObjectData("VM", thisVmRef);
+        QVariantMap thisVmData = cache->ResolveObjectData(XenObjectType::VM, thisVmRef);
         if (thisVmData.isEmpty())
             continue;
         
@@ -92,12 +87,12 @@ QStringList VMAppliance::GetFateSharingVMs() const
         for (const QVariant& vbdRefVar : vbdRefs)
         {
             QString vbdRef = vbdRefVar.toString();
-            QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+            QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
             QString vdiRef = vbdData.value("VDI").toString();
             
             if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
             {
-                QVariantMap vdiData = cache->ResolveObjectData("VDI", vdiRef);
+                QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
                 QString srRef = vdiData.value("SR").toString();
                 if (!srRef.isEmpty())
                 {
@@ -112,7 +107,7 @@ QStringList VMAppliance::GetFateSharingVMs() const
             if (fateSharingVms.contains(otherVmRef))
                 continue;
             
-            QVariantMap otherVmData = cache->ResolveObjectData("VM", otherVmRef);
+            QVariantMap otherVmData = cache->ResolveObjectData(XenObjectType::VM, otherVmRef);
             if (otherVmData.isEmpty())
                 continue;
             
@@ -130,12 +125,12 @@ QStringList VMAppliance::GetFateSharingVMs() const
             for (const QVariant& vbdRefVar : otherVbdRefs)
             {
                 QString vbdRef = vbdRefVar.toString();
-                QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+                QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
                 QString vdiRef = vbdData.value("VDI").toString();
                 
                 if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
                 {
-                    QVariantMap vdiData = cache->ResolveObjectData("VDI", vdiRef);
+                    QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
                     QString srRef = vdiData.value("SR").toString();
                     if (!srRef.isEmpty())
                     {
@@ -168,7 +163,7 @@ bool VMAppliance::IsRunning() const
     
     for (const QString& vmRef : vmRefs)
     {
-        QVariantMap vmData = cache->ResolveObjectData("VM", vmRef);
+        QVariantMap vmData = cache->ResolveObjectData(XenObjectType::VM, vmRef);
         if (vmData.isEmpty())
             continue;
         

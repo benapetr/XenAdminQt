@@ -167,7 +167,7 @@ void PropertyAccessors::Initialize()
             return QVariant();
         
         // Get pool from cache - there's exactly one pool per connection
-        QStringList poolRefs = cache->GetAllRefs("pool");
+        QStringList poolRefs = cache->GetAllRefs(XenObjectType::Pool);
         if (poolRefs.isEmpty())
             return QVariant();
         
@@ -211,7 +211,7 @@ void PropertyAccessors::Initialize()
                     QString metricsRef = vm->MetricsRef();
                     if (!metricsRef.isEmpty() && metricsRef != "OpaqueRef:NULL")
                     {
-                        QVariantMap metrics = cache->ResolveObjectData("vm_metrics", metricsRef);
+                        QVariantMap metrics = cache->ResolveObjectData(XenObjectType::VMMetrics, metricsRef);
                         if (!metrics.isEmpty())
                         {
                             qint64 memoryActual = metrics.value("memory_actual").toLongLong();
@@ -303,14 +303,14 @@ void PropertyAccessors::Initialize()
                 return QVariant();
             
             // Check if all hosts in pool have same product version
-            QStringList hostRefs = cache->GetAllRefs("host");
+            QStringList hostRefs = cache->GetAllRefs(XenObjectType::Host);
             if (hostRefs.isEmpty())
                 return false;
             
             QString firstVersion;
             for (const QString& hostRef : hostRefs)
             {
-                QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
+                QVariantMap hostData = cache->ResolveObjectData(XenObjectType::Host, hostRef);
                 QVariantMap softwareVersion = hostData.value("software_version").toMap();
                 QString version = softwareVersion.value("product_version").toString();
                 
@@ -736,7 +736,7 @@ QVariant PropertyAccessors::SharedProperty(XenObject* o)
         int vmCount = 0;
         for (const QString& vbdRef : vbdRefs)
         {
-            QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+            QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
             QString vmRef = vbdData.value("VM").toString();
             if (!vmRef.isEmpty())
             {
@@ -816,7 +816,7 @@ QVariant PropertyAccessors::NetworksProperty(XenObject* o)
             QStringList vifRefs = vm->GetVIFRefs();
             for (const QString& vifRef : vifRefs)
             {
-                QVariantMap vifData = cache->ResolveObjectData("VIF", vifRef);
+                QVariantMap vifData = cache->ResolveObjectData(XenObjectType::VIF, vifRef);
                 QString networkRef = vifData.value("network").toString();
                 if (!networkRef.isEmpty() && !networkRefs.contains(networkRef))
                     networkRefs.append(networkRef);
@@ -844,7 +844,7 @@ QVariant PropertyAccessors::VMProperty(XenObject* o)
     Pool* pool = qobject_cast<Pool*>(o);
     if (pool)
     {
-        vmRefs = cache->GetAllRefs("VM");
+        vmRefs = cache->GetAllRefs(XenObjectType::VM);
     }
     else if (Host* host = qobject_cast<Host*>(o))
     {
@@ -856,12 +856,12 @@ QVariant PropertyAccessors::VMProperty(XenObject* o)
         QStringList vdiRefs = sr->GetVDIRefs();
         for (const QString& vdiRef : vdiRefs)
         {
-            QVariantMap vdiData = cache->ResolveObjectData("VDI", vdiRef);
+            QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
             QVariantList vbdRefs = vdiData.value("VBDs").toList();
             for (const QVariant& vbdRefVar : vbdRefs)
             {
                 QString vbdRef = vbdRefVar.toString();
-                QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+                QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
                 QString vmRef = vbdData.value("VM").toString();
                 if (!vmRef.isEmpty() && !vmRefs.contains(vmRef))
                     vmRefs.append(vmRef);
@@ -873,7 +873,7 @@ QVariant PropertyAccessors::VMProperty(XenObject* o)
         QStringList vifRefs = network->GetVIFRefs();
         for (const QString& vifRef : vifRefs)
         {
-            QVariantMap vifData = cache->ResolveObjectData("VIF", vifRef);
+            QVariantMap vifData = cache->ResolveObjectData(XenObjectType::VIF, vifRef);
             QString vmRef = vifData.value("VM").toString();
             if (!vmRef.isEmpty() && !vmRefs.contains(vmRef))
                 vmRefs.append(vmRef);
@@ -884,7 +884,7 @@ QVariant PropertyAccessors::VMProperty(XenObject* o)
         QStringList vbdRefs = vdi->GetVBDRefs();
         for (const QString& vbdRef : vbdRefs)
         {
-            QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+            QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
             QString vmRef = vbdData.value("VM").toString();
             if (!vmRef.isEmpty() && !vmRefs.contains(vmRef))
                 vmRefs.append(vmRef);
@@ -908,7 +908,7 @@ QVariant PropertyAccessors::VMProperty(XenObject* o)
     QStringList realVMs;
     for (const QString& vmRef : vmRefs)
     {
-        QVariantMap vmData = cache->ResolveObjectData("VM", vmRef);
+        QVariantMap vmData = cache->ResolveObjectData(XenObjectType::VM, vmRef);
         bool isTemplate = vmData.value("is_a_template").toBool();
         bool isSnapshot = vmData.value("is_a_snapshot").toBool();
         bool isControlDomain = vmData.value("is_control_domain").toBool();
@@ -931,13 +931,13 @@ QVariant PropertyAccessors::HostProperty(XenObject* o)
         return QVariant();
     
     // Get pool to check if we're in a pool
-    QStringList poolRefs = cache->GetAllRefs("pool");
+    QStringList poolRefs = cache->GetAllRefs(XenObjectType::Pool);
     bool inPool = !poolRefs.isEmpty();
     
     if (!inPool)
     {
         // Not in a pool - group everything under same host
-        hostRefs = cache->GetAllRefs("host");
+        hostRefs = cache->GetAllRefs(XenObjectType::Host);
     }
     else if (VM* vm = qobject_cast<VM*>(o))
     {
@@ -955,7 +955,7 @@ QVariant PropertyAccessors::HostProperty(XenObject* o)
     {
         QStringList pifRefs = network->GetPIFRefs();
         if (pifRefs.isEmpty())
-            hostRefs = cache->GetAllRefs("host");
+            hostRefs = cache->GetAllRefs(XenObjectType::Host);
     }
     else if (Host* host = qobject_cast<Host*>(o))
     {
@@ -966,7 +966,7 @@ QVariant PropertyAccessors::HostProperty(XenObject* o)
         QString srRef = vdi->SRRef();
         if (!srRef.isEmpty())
         {
-            QVariantMap srData = cache->ResolveObjectData("SR", srRef);
+            QVariantMap srData = cache->ResolveObjectData(XenObjectType::SR, srRef);
             // Get SR.Home() - the host reference for storage repository
             QString homeRef = srData.value("home").toString();
             if (!homeRef.isEmpty() && homeRef != "OpaqueRef:NULL")
@@ -994,11 +994,11 @@ QVariant PropertyAccessors::StorageProperty(XenObject* o)
         QStringList vbdRefs = vm->GetVBDRefs();
         for (const QString& vbdRef : vbdRefs)
         {
-            QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+            QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
             QString vdiRef = vbdData.value("VDI").toString();
             if (!vdiRef.isEmpty() && vdiRef != "OpaqueRef:NULL")
             {
-                QVariantMap vdiData = cache->ResolveObjectData("VDI", vdiRef);
+                QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
                 QString srRef = vdiData.value("SR").toString();
                 if (!srRef.isEmpty() && !srRefs.contains(srRef))
                     srRefs.append(srRef);
@@ -1040,7 +1040,7 @@ QVariant PropertyAccessors::DisksProperty(XenObject* o)
             QStringList vbdRefs = vm->GetVBDRefs();
             for (const QString& vbdRef : vbdRefs)
             {
-                QVariantMap vbdData = cache->ResolveObjectData("VBD", vbdRef);
+                QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
                 QString vdiRef = vbdData.value("VDI").toString();
                 if (!vdiRef.isEmpty() && !vdiRefs.contains(vdiRef))
                     vdiRefs.append(vdiRef);
@@ -1068,13 +1068,13 @@ QVariant PropertyAccessors::IPAddressProperty(XenObject* o)
         if (guestMetricsRef.isEmpty())
             return QVariant();
         
-        QVariantMap metricsData = cache->ResolveObjectData("VM_guest_metrics", guestMetricsRef);
+        QVariantMap metricsData = cache->ResolveObjectData(XenObjectType::VMGuestMetrics, guestMetricsRef);
         QVariantMap networks = metricsData.value("networks").toMap();
         
         QStringList vifRefs = vm->GetVIFRefs();
         for (const QString& vifRef : vifRefs)
         {
-            QVariantMap vifData = cache->ResolveObjectData("VIF", vifRef);
+            QVariantMap vifData = cache->ResolveObjectData(XenObjectType::VIF, vifRef);
             QString device = vifData.value("device").toString();
             
             // Look for IP addresses in guest metrics for this device
@@ -1094,7 +1094,7 @@ QVariant PropertyAccessors::IPAddressProperty(XenObject* o)
         QStringList pifRefs = host->GetPIFRefs();
         for (const QString& pifRef : pifRefs)
         {
-            QVariantMap pifData = cache->ResolveObjectData("PIF", pifRef);
+            QVariantMap pifData = cache->ResolveObjectData(XenObjectType::PIF, pifRef);
             QString ipAddr = pifData.value("IP").toString();
             if (!ipAddr.isEmpty() && !addresses.contains(ipAddr))
                 addresses.append(ipAddr);
@@ -1119,7 +1119,7 @@ QVariant PropertyAccessors::IPAddressProperty(XenObject* o)
                 
                 for (const QString& pbdRef : pbdRefs)
                 {
-                    QVariantMap pbdData = cache->ResolveObjectData("pbd", pbdRef);
+                    QVariantMap pbdData = cache->ResolveObjectData(XenObjectType::PBD, pbdRef);
                     if (pbdData.isEmpty())
                         continue;
                     

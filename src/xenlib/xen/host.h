@@ -390,7 +390,7 @@ class XENLIB_EXPORT Host : public XenObject
         QSharedPointer<VM> ControlDomainZero() const;
 
     protected:
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::Host; }
 };
 
 #endif // HOST_H

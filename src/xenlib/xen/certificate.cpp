@@ -34,10 +34,6 @@ Certificate::Certificate(XenConnection* connection, const QString& opaqueRef, QO
 {
 }
 
-QString Certificate::GetObjectType() const
-{
-    return "certificate";
-}
 
 QString Certificate::Name() const
 {

@@ -225,7 +225,7 @@ QString PoolGrouping::getGroupName(const QVariant& group) const
         return "Unknown Pool";
 
     QString poolRef = group.toString();
-    QVariantMap poolData = this->m_connection->GetCache()->ResolveObjectData("pool", poolRef);
+    QVariantMap poolData = this->m_connection->GetCache()->ResolveObjectData(XenObjectType::Pool, poolRef);
 
     if (poolData.isEmpty())
         return "Unknown Pool";
@@ -260,7 +260,7 @@ QVariant PoolGrouping::getGroup(const QVariantMap& objectData, const QString& ob
     if (!this->m_connection || !this->m_connection->GetCache())
         return QVariant();
 
-    const QStringList poolRefs = this->m_connection->GetCache()->GetAllRefs("pool");
+    const QStringList poolRefs = this->m_connection->GetCache()->GetAllRefs(XenObjectType::Pool);
     if (poolRefs.isEmpty())
         return QVariant();
 
@@ -301,7 +301,7 @@ QString HostGrouping::getGroupName(const QVariant& group) const
         return "Unknown Server";
 
     QString hostRef = group.toString();
-    QVariantMap hostData = this->m_connection->GetCache()->ResolveObjectData("host", hostRef);
+    QVariantMap hostData = this->m_connection->GetCache()->ResolveObjectData(XenObjectType::Host, hostRef);
 
     if (hostData.isEmpty())
         return "Unknown Server";
@@ -338,7 +338,7 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
             const QString snapshotOf = objectData.value("snapshot_of").toString();
             if (!snapshotOf.isEmpty() && snapshotOf != "OpaqueRef:NULL" && this->m_connection)
             {
-                QSharedPointer<VM> vm = this->m_connection->GetCache()->ResolveObject<VM>("vm", snapshotOf);
+                QSharedPointer<VM> vm = this->m_connection->GetCache()->ResolveObject<VM>(XenObjectType::VM, snapshotOf);
                 if (vm)
                 {
                     const QString home = vm->GetHomeRef();
@@ -368,7 +368,7 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
                 if (vbdRef.isEmpty() || vbdRef == "OpaqueRef:NULL")
                     continue;
 
-                const QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData("vbd", vbdRef);
+                const QVariantMap vbdData = this->m_connection->GetCache()->ResolveObjectData(XenObjectType::VBD, vbdRef);
                 if (vbdData.isEmpty())
                     continue;
 
@@ -379,7 +379,7 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
                 if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
                     continue;
 
-                const QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData("vdi", vdiRef);
+                const QVariantMap vdiData = this->m_connection->GetCache()->ResolveObjectData(XenObjectType::VDI, vdiRef);
                 if (vdiData.isEmpty())
                     continue;
 
@@ -387,7 +387,7 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
                 if (srRef.isEmpty() || srRef == "OpaqueRef:NULL")
                     continue;
 
-                const QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData("sr", srRef);
+                const QVariantMap srData = this->m_connection->GetCache()->ResolveObjectData(XenObjectType::SR, srRef);
                 if (srData.isEmpty())
                     continue;
 
@@ -402,7 +402,7 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
                     if (pbdRef.isEmpty() || pbdRef == "OpaqueRef:NULL")
                         continue;
 
-                    const QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData("pbd", pbdRef);
+                    const QVariantMap pbdData = this->m_connection->GetCache()->ResolveObjectData(XenObjectType::PBD, pbdRef);
                     const QString hostRef = pbdData.value("host").toString();
                     if (!hostRef.isEmpty() && hostRef != "OpaqueRef:NULL")
                         return hostRef;
@@ -411,7 +411,7 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
         }
 
         QString affinity = objectData.value("affinity", QString()).toString();
-        if (!affinity.isEmpty() && affinity != "OpaqueRef:NULL")
+        if (!affinity.isEmpty() && affinity != XENOBJECT_NULL)
             return affinity;
 
         return QVariant();
@@ -425,12 +425,12 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
         if (srRef.isEmpty())
             return QVariant();
 
-        QSharedPointer<SR> srObj = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+        QSharedPointer<SR> srObj = this->m_connection->GetCache()->ResolveObject<SR>(XenObjectType::SR, srRef);
         if (!srObj)
             return QVariant();
 
         QString homeRef = srObj->HomeRef();
-        if (!homeRef.isEmpty() && homeRef != "OpaqueRef:NULL")
+        if (!homeRef.isEmpty() && homeRef != XENOBJECT_NULL)
             return homeRef;
 
         return QVariant();
@@ -443,7 +443,7 @@ QVariant HostGrouping::getGroup(const QVariantMap& objectData, const QString& ob
         if (pifRefs.isEmpty())
         {
             QVariantList hosts;
-            const QStringList hostRefs = this->m_connection->GetCache()->GetAllRefs("host");
+            const QStringList hostRefs = this->m_connection->GetCache()->GetAllRefs(XenObjectType::Host);
             for (const QString& hostRef : hostRefs)
                 hosts.append(hostRef);
             return hosts;

@@ -52,7 +52,7 @@ class XENLIB_EXPORT Event : public XenObject
         explicit Event(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Event() override = default;
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::Event; }
 
         // Property accessors (read from cache)
         qint64 EventId() const;

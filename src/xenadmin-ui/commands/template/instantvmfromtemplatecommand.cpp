@@ -28,7 +28,7 @@
 #include "instantvmfromtemplatecommand.h"
 #include "../../mainwindow.h"
 #include "xenlib/xen/vm.h"
-#include "xencache.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
 
 InstantVMFromTemplateCommand::InstantVMFromTemplateCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
@@ -41,15 +41,15 @@ bool InstantVMFromTemplateCommand::CanRun() const
     if (!object || !object->GetConnection())
         return false;
 
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
+    XenObjectType objectType = this->getSelectedObjectType();
+    if (objectType != XenObjectType::VM)
         return false;
 
     QString templateRef = this->getSelectedObjectRef();
     if (templateRef.isEmpty())
         return false;
 
-    QSharedPointer<VM> templateVm = object->GetConnection()->GetCache()->ResolveObject<VM>("vm", templateRef);
+    QSharedPointer<VM> templateVm = object->GetConnection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, templateRef);
     return this->canRunTemplate(templateVm);
 }
 
@@ -63,7 +63,7 @@ void InstantVMFromTemplateCommand::Run()
     if (templateRef.isEmpty())
         return;
 
-    QSharedPointer<VM> templateVm = object->GetConnection()->GetCache()->ResolveObject<VM>("vm", templateRef);
+    QSharedPointer<VM> templateVm = object->GetConnection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, templateRef);
     if (!this->canRunTemplate(templateVm))
     {
         QMessageBox::warning(this->mainWindow(), "Cannot Create VM",
@@ -92,8 +92,8 @@ QString InstantVMFromTemplateCommand::MenuText() const
 
 QString InstantVMFromTemplateCommand::getSelectedTemplateRef() const
 {
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
+    XenObjectType objectType = this->getSelectedObjectType();
+    if (objectType != XenObjectType::VM)
         return QString();
 
     return this->getSelectedObjectRef();

@@ -31,5 +31,5 @@
 void IEditPage::SetXenObject(QSharedPointer<XenObject> object, const QVariantMap &objectDataBefore, const QVariantMap &objectDataCopy)
 {
     this->m_object = object;
-    this->SetXenObjects(object->OpaqueRef(), object->GetObjectType(), objectDataBefore, objectDataCopy);
+    this->SetXenObjects(object->OpaqueRef(), object->GetObjectTypeName(), objectDataBefore, objectDataCopy);
 }

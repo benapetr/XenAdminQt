@@ -47,7 +47,7 @@ class XENLIB_EXPORT PoolPatch : public XenObject
         explicit PoolPatch(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         virtual ~PoolPatch();
 
-        QString GetObjectType() const override { return "pool_patch"; }
+        XenObjectType GetObjectType() const override { return XenObjectType::PoolPatch; }
 
         // Property accessors
         QString Version() const;

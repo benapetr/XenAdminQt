@@ -45,24 +45,24 @@ CreateChinAction::CreateChinAction(XenConnection* connection,
       m_newNetwork(newNetwork),
       m_transportNetwork(transportNetwork)
 {
-    if (!m_newNetwork)
+    if (!this->m_newNetwork)
         throw std::invalid_argument("New network cannot be null");
-    if (!m_transportNetwork)
+    if (!this->m_transportNetwork)
         throw std::invalid_argument("Transport network cannot be null");
 }
 
 void CreateChinAction::run()
 {
-    if (!m_newNetwork || !m_transportNetwork)
+    if (!this->m_newNetwork || !this->m_transportNetwork)
         throw std::runtime_error("Network parameters are missing");
 
     // Create the network
     QVariantMap networkRecord;
-    networkRecord["name_label"] = m_newNetwork->GetName();
-    networkRecord["name_description"] = m_newNetwork->GetDescription();
-    networkRecord["other_config"] = m_newNetwork->GetOtherConfig();
-    networkRecord["tags"] = m_newNetwork->GetTags();
-    QVariantMap data = m_newNetwork->GetData();
+    networkRecord["name_label"] = this->m_newNetwork->GetName();
+    networkRecord["name_description"] = this->m_newNetwork->GetDescription();
+    networkRecord["other_config"] = this->m_newNetwork->GetOtherConfig();
+    networkRecord["tags"] = this->m_newNetwork->GetTags();
+    QVariantMap data = this->m_newNetwork->GetData();
     networkRecord["managed"] = data.contains("managed") ? data.value("managed") : true;
     if (data.contains("MTU"))
         networkRecord["MTU"] = data.value("MTU");
@@ -74,10 +74,10 @@ void CreateChinAction::run()
     if (!cache)
         return;
 
-    const QStringList pifRefs = m_transportNetwork->GetPIFRefs();
+    const QStringList pifRefs = this->m_transportNetwork->GetPIFRefs();
     for (const QString& pifRef : pifRefs)
     {
-        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
         if (!pif || !pif->IsValid())
             continue;
         if (!pif->IsManagementInterface())

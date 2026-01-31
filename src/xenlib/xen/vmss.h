@@ -48,7 +48,7 @@ class XENLIB_EXPORT VMSS : public XenObject
     public:
         explicit VMSS(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::VMSS; }
 
         // Basic properties
         bool Enabled() const;

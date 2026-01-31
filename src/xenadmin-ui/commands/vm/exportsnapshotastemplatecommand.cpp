@@ -46,12 +46,10 @@ ExportSnapshotAsTemplateCommand::ExportSnapshotAsTemplateCommand(const QString& 
 bool ExportSnapshotAsTemplateCommand::CanRun() const
 {
     QString vmRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
-    QString type = !this->m_snapshotRef.isEmpty() ? "vm" : this->getSelectedObjectType();
+    XenObjectType type = !this->m_snapshotRef.isEmpty() ? XenObjectType::VM : this->getSelectedObjectType();
 
-    if (vmRef.isEmpty() || type != "vm")
-    {
+    if (vmRef.isEmpty() || type != XenObjectType::VM)
         return false;
-    }
 
     XenConnection* connection = this->m_connection;
     if (!connection)
@@ -63,7 +61,7 @@ bool ExportSnapshotAsTemplateCommand::CanRun() const
     if (!cache)
         return false;
 
-    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", vmRef);
+    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, vmRef);
     if (!snapshot)
         return false;
 
@@ -73,12 +71,10 @@ bool ExportSnapshotAsTemplateCommand::CanRun() const
 void ExportSnapshotAsTemplateCommand::Run()
 {
     QString vmRef = !this->m_snapshotRef.isEmpty() ? this->m_snapshotRef : this->getSelectedObjectRef();
-    QString type = !this->m_snapshotRef.isEmpty() ? "vm" : this->getSelectedObjectType();
+    XenObjectType type = !this->m_snapshotRef.isEmpty() ? XenObjectType::VM : this->getSelectedObjectType();
 
-    if (vmRef.isEmpty() || type != "vm")
-    {
+    if (vmRef.isEmpty() || type != XenObjectType::VM)
         return;
-    }
 
     XenConnection* connection = this->m_connection;
     if (!connection)
@@ -90,14 +86,13 @@ void ExportSnapshotAsTemplateCommand::Run()
     if (!cache)
         return;
 
-    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", vmRef);
+    QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, vmRef);
     if (!snapshot)
         return;
 
     if (!snapshot->IsSnapshot())
     {
-        QMessageBox::warning(this->mainWindow(), tr("Not a Snapshot"),
-                             tr("Selected item is not a VM snapshot"));
+        QMessageBox::warning(this->mainWindow(), tr("Not a Snapshot"), tr("Selected item is not a VM snapshot"));
         return;
     }
 

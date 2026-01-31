@@ -51,7 +51,7 @@ bool VMLifeCycleCommand::CanRun() const
 
         for (const QSharedPointer<XenObject>& obj : objects)
         {
-            if (!obj || obj->GetObjectType() != "vm")
+            if (!obj || obj->GetObjectType() != XenObjectType::VM)
                 return false;
         }
     }
@@ -143,7 +143,7 @@ QList<QSharedPointer<VM>> VMLifeCycleCommand::getSelectedVMs() const
     }
 
     QSharedPointer<XenObject> obj = this->GetObject();
-    if (obj && obj->GetObjectType() == "vm")
+    if (obj && obj->GetObjectType() == XenObjectType::VM)
     {
         QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
         if (vm)

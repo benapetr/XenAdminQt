@@ -35,6 +35,7 @@
 #include <QList>
 #include <QSharedPointer>
 #include "xen/xenobject.h"
+#include "xen/xenobjecttraits.h"
 
 class Pool;
 class XenConnection;
@@ -87,6 +88,7 @@ class XenCache : public QObject
          * @return QVariantMap containing object data, or empty map if not found
          */
         QVariantMap ResolveObjectData(const QString& type, const QString& ref) const;
+        QVariantMap ResolveObjectData(XenObjectType type, const QString& ref) const;
 
         /**
          * @brief Resolve object as a typed XenObject instance
@@ -95,15 +97,24 @@ class XenCache : public QObject
          * @return Shared pointer to cached object, or null if not found/unsupported
          */
         QSharedPointer<XenObject> ResolveObject(const QString& type, const QString& ref);
+        QSharedPointer<XenObject> ResolveObject(XenObjectType type, const QString& ref);
 
         /**
          * @brief Resolve object and cast to the requested type
          */
         template <typename T>
-        QSharedPointer<T> ResolveObject(const QString& type, const QString& ref)
+        QSharedPointer<T> ResolveObject(XenObjectType type, const QString& ref)
         {
             QSharedPointer<XenObject> base = this->ResolveObject(type, ref);
             return qSharedPointerDynamicCast<T>(base);
+        }
+
+        template <typename T>
+        QSharedPointer<T> ResolveObject(const QString& ref)
+        {
+            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null,
+                          "XenObjectTraits<T> specialization is missing");
+            return this->ResolveObject<T>(XenObjectTraits<T>::kType, ref);
         }
 
         /**
@@ -112,6 +123,8 @@ class XenCache : public QObject
          * @return Lowercase canonical form used internally (e.g. "VMs" -> "vm")
          */
         QString CanonicalType(const QString& type) const;
+        static XenObjectType TypeFromString(const QString& type);
+        static QString TypeToCacheString(XenObjectType type);
 
         /**
          * @brief Check if cache has an object
@@ -119,7 +132,15 @@ class XenCache : public QObject
          * @param ref Object reference
          * @return true if object exists in cache
          */
-        bool Contains(const QString& type, const QString& ref) const;
+        bool Contains(XenObjectType type, const QString& ref) const;
+
+        template <typename T>
+        bool Contains(const QString& ref) const
+        {
+            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null,
+                          "XenObjectTraits<T> specialization is missing");
+            return this->Contains(XenObjectTraits<T>::kType, ref);
+        }
 
         /**
          * @brief Get all objects of a specific type
@@ -127,6 +148,15 @@ class XenCache : public QObject
          * @return List of all objects of that type
          */
         QList<QVariantMap> GetAllData(const QString& type) const;
+        QList<QVariantMap> GetAllData(XenObjectType type) const;
+
+        template <typename T>
+        QList<QVariantMap> GetAllData() const
+        {
+            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null,
+                          "XenObjectTraits<T> specialization is missing");
+            return this->GetAllData(XenObjectTraits<T>::kType);
+        }
 
         /**
          * @brief Get all objects of a specific type as shared pointers
@@ -134,6 +164,7 @@ class XenCache : public QObject
          * @return List of cached XenObject instances for that type
          */
         QList<QSharedPointer<XenObject>> GetAll(const QString& type);
+        QList<QSharedPointer<XenObject>> GetAll(XenObjectType type);
 
         /**
          * @brief Get all objects of a specific type as typed shared pointers
@@ -155,12 +186,43 @@ class XenCache : public QObject
             return typedList;
         }
 
+        template <typename T>
+        QList<QSharedPointer<T>> GetAll()
+        {
+            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null,
+                          "XenObjectTraits<T> specialization is missing");
+            return this->GetAll<T>(XenObjectTraits<T>::kType);
+        }
+
+        template <typename T>
+        QList<QSharedPointer<T>> GetAll(XenObjectType type)
+        {
+            QList<QSharedPointer<XenObject>> baseList = this->GetAll(type);
+            QList<QSharedPointer<T>> typedList;
+            typedList.reserve(baseList.size());
+            for (const QSharedPointer<XenObject>& item : baseList)
+            {
+                QSharedPointer<T> casted = qSharedPointerDynamicCast<T>(item);
+                if (casted && casted->IsValid())
+                    typedList.append(casted);
+            }
+            return typedList;
+        }
+
         /**
          * @brief Get all object refs of a specific type
          * @param type Object type
          * @return List of all refs for that type
          */
-        QStringList GetAllRefs(const QString& type) const;
+        QStringList GetAllRefs(XenObjectType type) const;
+
+        template <typename T>
+        QStringList GetAllRefs() const
+        {
+            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null,
+                          "XenObjectTraits<T> specialization is missing");
+            return this->GetAllRefs(XenObjectTraits<T>::kType);
+        }
 
         /**
          * @brief Get all objects across all types (for iteration/filtering)
@@ -199,27 +261,27 @@ class XenCache : public QObject
          * @param ref Object reference
          * @param data Object data
          */
-        void Update(const QString& type, const QString& ref, const QVariantMap& data);
+        void Update(XenObjectType type, const QString& ref, const QVariantMap& data);
 
         /**
          * @brief Update cache from bulk records (all_records response)
          * @param type Object type
          * @param allRecords Map of ref -> object data
          */
-        void UpdateBulk(const QString& type, const QVariantMap& allRecords);
+        void UpdateBulk(XenObjectType type, const QVariantMap& allRecords);
 
         /**
          * @brief Remove object from cache
          * @param type Object type
          * @param ref Object reference
          */
-        void Remove(const QString& type, const QString& ref);
+        void Remove(XenObjectType type, const QString& ref);
 
         /**
          * @brief Clear all objects of a specific type from cache
          * @param type Object type to clear
          */
-        void ClearType(const QString& type);
+        void ClearType(XenObjectType type);
 
         /**
          * @brief Clear entire cache
@@ -231,7 +293,7 @@ class XenCache : public QObject
          * @param type Object type
          * @return Count of objects
          */
-        int Count(const QString& type) const;
+        int Count(XenObjectType type) const;
 
         /**
          * @brief Check if cache is empty
@@ -251,6 +313,7 @@ class XenCache : public QObject
          * @param type Object type
          * @param ref Object reference
          */
+        //void objectChanged(XenConnection *connection, XenObjectType type, const QString& ref);
         void objectChanged(XenConnection *connection, const QString& type, const QString& ref);
 
         /**
@@ -258,6 +321,7 @@ class XenCache : public QObject
          * @param type Object type
          * @param ref Object reference
          */
+        //void objectRemoved(XenConnection* connection, XenObjectType type, const QString& ref);
         void objectRemoved(XenConnection* connection, const QString& type, const QString& ref);
 
         /**
@@ -271,20 +335,22 @@ class XenCache : public QObject
          * @param count Number of objects updated
          */
         void bulkUpdateComplete(const QString& type, int count);
+        //void bulkUpdateComplete(XenObjectType type, int count);
 
     private:
         static XenCache *dummyCache;
 
         // Type -> (Ref -> ObjectData)
         mutable QMutex m_mutex;
-        QMap<QString, QMap<QString, QVariantMap>> m_cache;
-        QMap<QString, QMap<QString, QSharedPointer<XenObject>>> m_objects;
+        QMap<XenObjectType, QMap<QString, QVariantMap>> m_cache;
+        QMap<XenObjectType, QMap<QString, QSharedPointer<XenObject>>> m_objects;
         QPointer<XenConnection> m_connection;
 
-        QString normalizeType(const QString& type) const;
-        QSharedPointer<XenObject> createObjectForType(const QString& type, const QString& ref);
-        void refreshObject(const QString& type, const QString& ref);
-        void evictObject(const QString& type, const QString& ref);
+        XenObjectType normalizeType(const QString& type) const;
+        QString typeToCacheString(XenObjectType type) const;
+        QSharedPointer<XenObject> createObjectForType(XenObjectType type, const QString& ref);
+        void refreshObject(XenObjectType type, const QString& ref);
+        void evictObject(XenObjectType type, const QString& ref);
 };
 
 #endif // XENCACHE_H

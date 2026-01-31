@@ -177,7 +177,7 @@ class XENLIB_EXPORT VMMetrics : public XenObject
         QString GetCurrentDomainType() const;
 
     protected:
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::VMMetrics; }
 
     private:
         QDateTime parseDateTime(const QString& dateStr) const;

@@ -50,7 +50,7 @@ class XENLIB_EXPORT VGPU : public XenObject
     public:
         explicit VGPU(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::VGPU; }
 
         // Basic properties
         QString GetVMRef() const;

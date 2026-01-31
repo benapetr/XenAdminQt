@@ -50,7 +50,7 @@ class PCI : public XenObject
     public:
         explicit PCI(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::PCI; }
 
         // Basic properties
         QString ClassName() const;

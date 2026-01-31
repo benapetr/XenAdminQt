@@ -142,7 +142,7 @@ void EditVmHaPrioritiesDialog::populateVMTable()
 
     // Check for dead hosts
     bool hasDeadHosts = false;
-    QList<QSharedPointer<Host>> hosts = this->m_pool->GetCache()->GetAll<Host>("host");
+    QList<QSharedPointer<Host>> hosts = this->m_pool->GetCache()->GetAll<Host>(XenObjectType::Host);
     for (const QSharedPointer<Host>& host : hosts)
     {
         if (host && !host->IsLive())
@@ -165,7 +165,7 @@ void EditVmHaPrioritiesDialog::populateVMTable()
     }
 
     // Get all VMs from cache
-    QList<QSharedPointer<VM>> vms = this->m_pool->GetCache()->GetAll<VM>("vm");
+    QList<QSharedPointer<VM>> vms = this->m_pool->GetCache()->GetAll<VM>(XenObjectType::VM);
     for (const QSharedPointer<VM>& vm : vms)
     {
         if (!vm || !vm->IsValid())
@@ -266,7 +266,7 @@ void EditVmHaPrioritiesDialog::updateNtolCalculation()
         return;
 
     // Count hosts in pool
-    QList<QSharedPointer<Host>> hosts = this->m_pool->GetCache()->GetAll<Host>("host");
+    QList<QSharedPointer<Host>> hosts = this->m_pool->GetCache()->GetAll<Host>(XenObjectType::Host);
     int hostCount = hosts.size();
 
     // Maximum NTOL is number of hosts - 1

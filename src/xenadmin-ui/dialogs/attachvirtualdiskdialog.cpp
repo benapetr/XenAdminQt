@@ -78,7 +78,7 @@ void AttachVirtualDiskDialog::populateSRFilter()
         return;
 
     // Get all SRs
-    QList<QSharedPointer<SR>> allSRs = this->m_vm->GetCache()->GetAll<SR>("sr");
+    QList<QSharedPointer<SR>> allSRs = this->m_vm->GetCache()->GetAll<SR>(XenObjectType::SR);
 
     for (const QSharedPointer<SR>& sr : allSRs)
     {
@@ -111,7 +111,7 @@ void AttachVirtualDiskDialog::populateVDITable()
     XenCache* cache = this->m_vm->GetCache();
 
     // Get all VDIs from cache
-    QList<QSharedPointer<VDI>> allVDIs = cache->GetAll<VDI>("vdi");
+    QList<QSharedPointer<VDI>> allVDIs = cache->GetAll<VDI>();
 
     // Get VBDs already attached to this VM to filter them out
     QStringList attachedVDIs;
@@ -149,7 +149,7 @@ void AttachVirtualDiskDialog::populateVDITable()
         }
 
         // Get SR data
-        QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", srRef);
+        QSharedPointer<SR> sr = cache->ResolveObject<SR>(srRef);
         if (!sr || !sr->IsValid())
             continue;
 

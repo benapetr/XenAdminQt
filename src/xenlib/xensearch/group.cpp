@@ -113,7 +113,7 @@ namespace XenSearch
 
                 // Process all objects in cache
                 // VMs
-                QList<QSharedPointer<XenObject>> vmObjects = cache->GetAll("vm");
+                QList<QSharedPointer<XenObject>> vmObjects = cache->GetAll(XenObjectType::VM);
                 foreach (const QSharedPointer<XenObject>& vmObj, vmObjects)
                 {
                     if (!vmObj)
@@ -126,7 +126,7 @@ namespace XenSearch
                 }
 
                 // Hosts
-                QList<QSharedPointer<XenObject>> hostObjects = cache->GetAll("host");
+                QList<QSharedPointer<XenObject>> hostObjects = cache->GetAll(XenObjectType::Host);
                 foreach (const QSharedPointer<XenObject>& hostObj, hostObjects)
                 {
                     if (!hostObj)
@@ -139,7 +139,7 @@ namespace XenSearch
                 }
 
                 // SRs
-                QList<QSharedPointer<XenObject>> srObjects = cache->GetAll("sr");
+                QList<QSharedPointer<XenObject>> srObjects = cache->GetAll(XenObjectType::SR);
                 foreach (const QSharedPointer<XenObject>& srObj, srObjects)
                 {
                     if (!srObj)
@@ -152,7 +152,7 @@ namespace XenSearch
                 }
 
                 // Networks
-                QList<QSharedPointer<XenObject>> networkObjects = cache->GetAll("network");
+                QList<QSharedPointer<XenObject>> networkObjects = cache->GetAll(XenObjectType::Network);
                 foreach (const QSharedPointer<XenObject>& networkObj, networkObjects)
                 {
                     if (!networkObj)
@@ -165,7 +165,7 @@ namespace XenSearch
                 }
 
                 // Pools
-                QList<QSharedPointer<XenObject>> poolObjects = cache->GetAll("pool");
+                QList<QSharedPointer<XenObject>> poolObjects = cache->GetAll(XenObjectType::Pool);
                 foreach (const QSharedPointer<XenObject>& poolObj, poolObjects)
                 {
                     if (!poolObj)
@@ -230,7 +230,7 @@ namespace XenSearch
             QString residentOnRef = objectData.value("resident_on").toString();
             if (!residentOnRef.isEmpty() && residentOnRef != "OpaqueRef:NULL")
             {
-                QSharedPointer<Host> host = cache->ResolveObject<Host>("host", residentOnRef);
+                QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, residentOnRef);
                 if (host && !host->IsLive())
                     return true;
             }
@@ -238,7 +238,7 @@ namespace XenSearch
         else if (objectType == "sr")
         {
             // Check if SR is tools SR
-            QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", objectRef);
+            QSharedPointer<SR> sr = cache->ResolveObject<SR>(XenObjectType::SR, objectRef);
             if (sr)
             {
                 if (sr->IsToolsSR())
@@ -264,7 +264,7 @@ namespace XenSearch
                 if (hostRef.isEmpty())
                     continue;
 
-                QSharedPointer<Host> host = cache->ResolveObject<Host>("host", hostRef);
+                QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, hostRef);
                 if (host && host->IsLive())
                 {
                     hasLiveHost = true;
@@ -285,7 +285,7 @@ namespace XenSearch
         else if (objectType == "host")
         {
             // Hide offline hosts (TODO: make this configurable)
-            QSharedPointer<Host> host = cache->ResolveObject<Host>("host", objectRef);
+            QSharedPointer<Host> host = cache->ResolveObject<Host>(XenObjectType::Host, objectRef);
             if (host && !host->IsLive())
                 return false; // Don't hide offline hosts by default - let them show
         }

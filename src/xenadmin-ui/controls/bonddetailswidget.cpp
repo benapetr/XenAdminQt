@@ -141,7 +141,7 @@ bool BondDetailsWidget::CanCreateBond(QWidget* parent)
             continue;
 
         const QString pifRef = item->data(Qt::UserRole).toString();
-        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
         if (pif && pif->IsValid())
             selectedPifs.append(pif);
     }
@@ -220,7 +220,7 @@ QString BondDetailsWidget::BondName() const
         if (!item || item->checkState() != Qt::Checked)
             continue;
         const QString pifRef = item->data(Qt::UserRole).toString();
-        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
         if (!pif || !pif->IsValid())
             continue;
         QString number = pif->GetDevice();
@@ -305,7 +305,7 @@ void BondDetailsWidget::populateBondNics()
 
     QSharedPointer<Pool> pool = this->m_pool;
     QSharedPointer<Host> host = pool ? QSharedPointer<Host>() : this->m_host;
-    const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>("pif");
+    const QList<QSharedPointer<PIF>> pifs = cache->GetAll<PIF>();
     const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
     QSet<QString> seenDevices;
 
@@ -350,7 +350,7 @@ void BondDetailsWidget::populateBondNics()
         QSharedPointer<PIFMetrics> metrics;
         QString metricsRef = pif->MetricsRef();
         if (!metricsRef.isEmpty() && metricsRef != XENOBJECT_NULL)
-            metrics = cache->ResolveObject<PIFMetrics>("pif_metrics", metricsRef);
+            metrics = cache->ResolveObject<PIFMetrics>(metricsRef);
 
         const bool carrier = metrics ? metrics->Carrier() : false;
         const qint64 speed = metrics ? metrics->Speed() : 0;
@@ -429,7 +429,7 @@ void BondDetailsWidget::updateMtuBounds()
             if (!item || item->checkState() != Qt::Checked)
                 continue;
             const QString pifRef = item->data(Qt::UserRole).toString();
-            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
             if (pif && pif->IsValid())
                 mtus.append(pif->GetMTU());
         }

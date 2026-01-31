@@ -49,7 +49,7 @@ CreateSriovAction::CreateSriovAction(XenConnection* connection,
       m_pifRefs(pifRefs),
       m_autoplug(autoplug)
 {
-    if (m_pifRefs.isEmpty())
+    if (this->m_pifRefs.isEmpty())
         throw std::invalid_argument("PIF list cannot be empty");
 }
 
@@ -65,30 +65,30 @@ void CreateSriovAction::run()
         }
     };
 
-    if (GetConnection())
-        GetConnection()->SetExpectDisruption(true);
-    DisruptionGuard guard{GetConnection()};
+    if (this->GetConnection())
+        this->GetConnection()->SetExpectDisruption(true);
+    DisruptionGuard guard{this->GetConnection()};
 
     try
     {
-        if (m_pifRefs.isEmpty())
+        if (this->m_pifRefs.isEmpty())
         {
-            setError("No PIFs selected for SR-IOV");
+            this->setError("No PIFs selected for SR-IOV");
             return;
         }
 
         // Find coordinator PIF and put it first (if present)
         QString coordinatorPifRef;
-        for (const QString& pifRef : m_pifRefs)
+        for (const QString& pifRef : this->m_pifRefs)
         {
-            QVariantMap pifData = GetConnection()->GetCache()->ResolveObjectData("pif", pifRef);
+            QVariantMap pifData = this->GetConnection()->GetCache()->ResolveObjectData("pif", pifRef);
             QString hostRef = pifData.value("host").toString();
-            QVariantMap hostData = GetConnection()->GetCache()->ResolveObjectData("host", hostRef);
+            QVariantMap hostData = this->GetConnection()->GetCache()->ResolveObjectData("host", hostRef);
 
             // Check if this host is the pool coordinator
             // In C# this is done via host.IsCoordinator()
             // We can check if this host is the master in the pool
-            QList<QVariantMap> pools = GetConnection()->GetCache()->GetAllData("pool");
+            QList<QVariantMap> pools = this->GetConnection()->GetCache()->GetAllData("pool");
             if (!pools.isEmpty())
             {
                 QString masterRef = pools.first().value("master").toString();
@@ -102,7 +102,7 @@ void CreateSriovAction::run()
         }
 
         // Reorder PIFs to enable coordinator first
-        QStringList orderedPifs = m_pifRefs;
+        QStringList orderedPifs = this->m_pifRefs;
         if (!coordinatorPifRef.isEmpty())
         {
             orderedPifs.removeOne(coordinatorPifRef);
@@ -114,35 +114,35 @@ void CreateSriovAction::run()
 
         // Create the network
         QVariantMap networkRecord;
-        networkRecord["name_label"] = m_networkName;
-        networkRecord["name_description"] = m_networkDescription;
+        networkRecord["name_label"] = this->m_networkName;
+        networkRecord["name_description"] = this->m_networkDescription;
         networkRecord["managed"] = true;
 
         QVariantMap otherConfig;
-        otherConfig["automatic"] = m_autoplug ? "true" : "false";
+        otherConfig["automatic"] = this->m_autoplug ? "true" : "false";
         networkRecord["other_config"] = otherConfig;
 
-        SetDescription(QString("Creating network '%1'").arg(m_networkName));
-        QString networkRef = XenAPI::Network::create(GetSession(), networkRecord);
+        this->SetDescription(QString("Creating network '%1'").arg(this->m_networkName));
+        QString networkRef = XenAPI::Network::create(this->GetSession(), networkRecord);
 
-        SetDescription("Enabling SR-IOV on network interfaces");
+        this->SetDescription("Enabling SR-IOV on network interfaces");
 
         // Enable SR-IOV on each PIF
         for (int i = 0; i < orderedPifs.count(); ++i)
         {
             const QString& pifRef = orderedPifs[i];
 
-            QVariantMap pifData = GetConnection()->GetCache()->ResolveObjectData("pif", pifRef);
+            QVariantMap pifData = this->GetConnection()->GetCache()->ResolveObjectData("pif", pifRef);
             QString hostRef = pifData.value("host").toString();
-            QVariantMap hostData = GetConnection()->GetCache()->ResolveObjectData("host", hostRef);
+            QVariantMap hostData = this->GetConnection()->GetCache()->ResolveObjectData("host", hostRef);
             QString hostName = hostData.value("name_label").toString();
 
-            SetDescription(QString("Enabling SR-IOV on %1").arg(hostName));
+            this->SetDescription(QString("Enabling SR-IOV on %1").arg(hostName));
 
             try
             {
-                QString taskRef = XenAPI::Network_sriov::async_create(GetSession(), pifRef, networkRef);
-                pollToCompletion(taskRef, 10 + progress, 10 + progress + inc);
+                QString taskRef = XenAPI::Network_sriov::async_create(this->GetSession(), pifRef, networkRef);
+                this->pollToCompletion(taskRef, 10 + progress, 10 + progress + inc);
                 progress += inc;
 
             } catch (const std::exception& e)
@@ -153,7 +153,7 @@ void CreateSriovAction::run()
                     qWarning() << "Failed to enable SR-IOV on coordinator, destroying network:" << e.what();
                     try
                     {
-                        XenAPI::Network::destroy(GetSession(), networkRef);
+                        XenAPI::Network::destroy(this->GetSession(), networkRef);
                     } catch (...)
                     {
                         // Ignore cleanup errors
@@ -165,10 +165,10 @@ void CreateSriovAction::run()
             }
         }
 
-        SetDescription(QString("SR-IOV network '%1' created").arg(m_networkName));
+        this->SetDescription(QString("SR-IOV network '%1' created").arg(this->m_networkName));
 
     } catch (const std::exception& e)
     {
-        setError(QString("Failed to create SR-IOV network: %1").arg(e.what()));
+        this->setError(QString("Failed to create SR-IOV network: %1").arg(e.what()));
     }
 }

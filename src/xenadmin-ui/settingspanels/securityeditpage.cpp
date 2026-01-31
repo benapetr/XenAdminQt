@@ -103,7 +103,7 @@ AsyncOperation* SecurityEditPage::SaveSettings()
 {
     bool enableSslLegacy = this->ui->radioButtonSSL->isChecked();
     
-    QSharedPointer<Pool> pool = this->connection()->GetCache()->ResolveObject<Pool>("pool", this->m_poolRef_);
+    QSharedPointer<Pool> pool = this->connection()->GetCache()->ResolveObject<Pool>(this->m_poolRef_);
     if (!pool || !pool->IsValid())
     {
         qWarning() << "SecurityEditPage::SaveSettings: Invalid pool" << this->m_poolRef_;

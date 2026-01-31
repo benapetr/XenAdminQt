@@ -52,10 +52,10 @@ bool SetDefaultSRCommand::CanRun() const
         return false;
 
     // C# SR.IsDefaultSr(sr)
-    QStringList poolRefs = cache ? cache->GetAllRefs("pool") : QStringList();
+    QStringList poolRefs = cache ? cache->GetAllRefs(XenObjectType::Pool) : QStringList();
     if (!poolRefs.isEmpty())
     {
-        QSharedPointer<Pool> pool = cache->ResolveObject<Pool>("pool", poolRefs.first());
+        QSharedPointer<Pool> pool = cache->ResolveObject<Pool>(XenObjectType::Pool, poolRefs.first());
         if (pool && pool->GetDefaultSRRef() == sr->OpaqueRef())
             return false;
     }
@@ -67,7 +67,7 @@ bool SetDefaultSRCommand::CanRun() const
         return false;
 
     // C# (sr.shared || HostCount <= 1)
-    int hostCount = cache->GetAllRefs("host").size();
+    int hostCount = cache->GetAllRefs(XenObjectType::Host).size();
     if (!sr->IsShared() && hostCount > 1)
         return false;
 

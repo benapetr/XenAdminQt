@@ -139,7 +139,7 @@ class XENLIB_EXPORT VIF : public XenObject
         QSharedPointer<VM> GetVM() const;
 
         // XenObject interface
-        QString GetObjectType() const override { return "vif"; }
+        XenObjectType GetObjectType() const override { return XenObjectType::VIF; }
 };
 
 #endif // VIF_H

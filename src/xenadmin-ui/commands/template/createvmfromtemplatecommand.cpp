@@ -28,7 +28,7 @@
 #include "createvmfromtemplatecommand.h"
 #include "../../mainwindow.h"
 #include "xenlib/xen/vm.h"
-#include "xencache.h"
+#include "xenlib/xencache.h"
 
 CreateVMFromTemplateCommand::CreateVMFromTemplateCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
@@ -56,15 +56,15 @@ QString CreateVMFromTemplateCommand::getSelectedTemplateRef() const
     if (!object || !object->GetConnection())
         return QString();
 
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
+    XenObjectType objectType = this->getSelectedObjectType();
+    if (objectType != XenObjectType::VM)
         return QString();
 
     QString vmRef = this->getSelectedObjectRef();
     if (vmRef.isEmpty())
         return QString();
 
-    QSharedPointer<VM> vm = object->GetConnection()->GetCache()->ResolveObject<VM>("vm", vmRef);
+    QSharedPointer<VM> vm = object->GetConnection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, vmRef);
     if (!vm)
         return QString();
 

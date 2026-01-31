@@ -57,7 +57,7 @@ class XENLIB_EXPORT Bond : public XenObject
         explicit Bond(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Bond() override = default;
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::Bond; }
 
         // Property accessors (read from cache)
         QString MasterRef() const;

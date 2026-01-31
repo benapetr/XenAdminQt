@@ -66,7 +66,7 @@ class XENLIB_EXPORT Tunnel : public XenObject
         QString GetProtocol() const;
 
         // XenObject interface
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::Tunnel; }
 };
 
 #endif // TUNNEL_H

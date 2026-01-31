@@ -171,7 +171,7 @@ void IntraPoolCopyPage::populatePage()
             {
                 if (!conn || !conn->GetCache())
                     continue;
-                QSharedPointer<VM> vm = conn->GetCache()->ResolveObject<VM>("vm", vmsFromSelection_.first());
+                QSharedPointer<VM> vm = conn->GetCache()->ResolveObject<VM>(XenObjectType::VM, vmsFromSelection_.first());
                 if (vm)
                 {
                     this->m_vm = vm;
@@ -193,10 +193,10 @@ void IntraPoolCopyPage::populatePage()
     XenCache* cache = this->m_vm->GetConnection() ? this->m_vm->GetConnection()->GetCache() : nullptr;
     if (cache)
     {
-        QStringList vmRefs = cache->GetAllRefs("vm");
+        QStringList vmRefs = cache->GetAllRefs(XenObjectType::VM);
         for (const QString& vmRef : vmRefs)
         {
-            QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", vmRef);
+            QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, vmRef);
             if (vm)
                 takenNames.append(vm->GetName());
         }
@@ -283,7 +283,7 @@ void IntraPoolCopyPage::updateSrPicker()
         QStringList vbdRefs = this->m_vm->GetVBDRefs();
         for (const QString& vbdRef : vbdRefs)
         {
-            QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+            QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>(vbdRef);
             if (!vbd || !vbd->IsValid())
                 continue;
             if (vbd->GetType().compare("Disk", Qt::CaseInsensitive) != 0)

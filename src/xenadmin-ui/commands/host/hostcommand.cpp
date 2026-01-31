@@ -41,7 +41,7 @@ QSharedPointer<Host> HostCommand::getSelectedHost() const
         return hosts.first();
 
     QSharedPointer<XenObject> xo = this->GetObject();
-    if (!xo || xo->GetObjectType() != "host")
+    if (!xo || xo->GetObjectType() != XenObjectType::Host)
         return QSharedPointer<Host>();
 
     return qSharedPointerCast<Host>(xo);
@@ -65,7 +65,7 @@ QList<QSharedPointer<Host>> HostCommand::getHosts() const
     const QList<QSharedPointer<XenObject>> objects = this->getSelectedObjects();
     for (const QSharedPointer<XenObject>& obj : objects)
     {
-        if (!obj || obj->GetObjectType() != "host")
+        if (!obj || obj->GetObjectType() != XenObjectType::Host)
             continue;
 
         QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);
@@ -77,7 +77,7 @@ QList<QSharedPointer<Host>> HostCommand::getHosts() const
         return hosts;
 
     QSharedPointer<XenObject> xo = this->GetObject();
-    if (!xo || xo->GetObjectType() != "host")
+    if (!xo || xo->GetObjectType() != XenObjectType::Host)
         return {};
 
     QSharedPointer<Host> host = qSharedPointerCast<Host>(xo);

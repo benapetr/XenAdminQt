@@ -39,7 +39,7 @@ QSharedPointer<VM> VMCommand::getVM() const
         return vms.first();
 
     QSharedPointer<XenObject> xo = this->GetObject();
-    if (!xo || xo->GetObjectType() != "vm")
+    if (!xo || xo->GetObjectType() != XenObjectType::VM)
         return QSharedPointer<VM>();
 
     return qSharedPointerCast<VM>(this->GetObject());
@@ -54,7 +54,7 @@ QList<QSharedPointer<VM>> VMCommand::getVMs() const
     const QList<QSharedPointer<XenObject>> objects = this->getSelectedObjects();
     for (const QSharedPointer<XenObject>& obj : objects)
     {
-        if (!obj || obj->GetObjectType() != "vm")
+        if (!obj || obj->GetObjectType() != XenObjectType::VM)
             continue;
 
         QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
@@ -66,7 +66,7 @@ QList<QSharedPointer<VM>> VMCommand::getVMs() const
         return vms;
 
     QSharedPointer<XenObject> xo = this->GetObject();
-    if (!xo || xo->GetObjectType() != "vm")
+    if (!xo || xo->GetObjectType() != XenObjectType::VM)
         return {};
 
     QSharedPointer<VM> vm = qSharedPointerCast<VM>(xo);

@@ -37,6 +37,8 @@
 #include "metricupdater.h"
 #include <QtCore/QMutex>
 #include <QtCore/QMutexLocker>
+
+ 
 #include <QtCore/QQueue>
 #include <QtCore/QPointer>
 #include <QtCore/QDebug>
@@ -569,6 +571,7 @@ void XenConnection::onCacheUpdateTimer()
             continue;
 
         QString cacheType = eventClass.toLower();
+        XenObjectType cacheTypeEnum = XenCache::TypeFromString(cacheType);
 
         if (cacheType == "message")
         {
@@ -589,8 +592,8 @@ void XenConnection::onCacheUpdateTimer()
 
         if (operation == "del")
         {
-            if (this->d->cache)
-                this->d->cache->Remove(cacheType, ref);
+            if (this->d->cache && cacheTypeEnum != XenObjectType::Null)
+                this->d->cache->Remove(cacheTypeEnum, ref);
         } else if (operation == "add" || operation == "mod")
         {
             QVariantMap snapshot = eventData.value("snapshot").toMap();
@@ -598,8 +601,8 @@ void XenConnection::onCacheUpdateTimer()
             {
                 snapshot["ref"] = ref;
                 snapshot["opaqueRef"] = ref;
-                if (this->d->cache)
-                    this->d->cache->Update(cacheType, ref, snapshot);
+                if (this->d->cache && cacheTypeEnum != XenObjectType::Null)
+                    this->d->cache->Update(cacheTypeEnum, ref, snapshot);
             } else
             {
                 QVariantMap record = this->fetchObjectRecord(cacheType, ref);
@@ -607,8 +610,8 @@ void XenConnection::onCacheUpdateTimer()
                 {
                     record["ref"] = ref;
                     record["opaqueRef"] = ref;
-                    if (this->d->cache)
-                        this->d->cache->Update(cacheType, ref, record);
+                    if (this->d->cache && cacheTypeEnum != XenObjectType::Null)
+                        this->d->cache->Update(cacheTypeEnum, ref, record);
                 }
             }
         }
@@ -990,7 +993,7 @@ void XenConnection::connectWorkerThread()
                     roleRecord["ref"] = roleRef;
                     roleRecord["opaqueRef"] = roleRef;
                     if (this->d->cache)
-                        this->d->cache->Update("role", roleRef, roleRecord);
+                        this->d->cache->Update(XenObjectType::Role, roleRef, roleRecord);
                 }
             }
         }
@@ -1029,8 +1032,9 @@ void XenConnection::connectWorkerThread()
             QVariantMap objectData = snapshot.toMap();
             objectData["ref"] = objectRef;
             objectData["opaqueRef"] = objectRef;
-            if (this->d->cache)
-                this->d->cache->Update(objectClass.toLower(), objectRef, objectData);
+            XenObjectType objectType = XenCache::TypeFromString(objectClass);
+            if (this->d->cache && objectType != XenObjectType::Null)
+                this->d->cache->Update(objectType, objectRef, objectData);
         }
     }
 
@@ -1064,7 +1068,7 @@ void XenConnection::connectWorkerThread()
                     consoleData["ref"] = consoleRef;
                     consoleData["opaqueRef"] = consoleRef;
                     if (this->d->cache)
-                        this->d->cache->Update("console", consoleRef, consoleData);
+                        this->d->cache->Update(XenObjectType::Console, consoleRef, consoleData);
                 }
             }
         }

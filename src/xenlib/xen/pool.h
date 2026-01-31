@@ -259,7 +259,7 @@ class XENLIB_EXPORT Pool : public XenObject
         bool IsNotFullyUpgraded() const;
 
     protected:
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::Pool; }
 };
 
 #endif // POOL_H

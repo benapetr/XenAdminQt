@@ -156,7 +156,7 @@ void VIFDialog::loadNetworks()
         return;
 
     QList<QPair<QString, QString>> networks; // <ref, name>
-    QList<QSharedPointer<Network>> allNetworks = this->m_connection->GetCache()->GetAll<Network>("network");
+    QList<QSharedPointer<Network>> allNetworks = this->m_connection->GetCache()->GetAll<Network>();
     for (const QSharedPointer<Network>& network : allNetworks)
     {
         if (!network || !network->IsValid())
@@ -261,7 +261,7 @@ QVariantMap VIFDialog::getVifSettings() const
     QString networkRef = this->getSelectedNetworkRef();
     if (!networkRef.isEmpty() && this->m_connection && this->m_connection->GetCache())
     {
-        QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>("network", networkRef);
+        QSharedPointer<Network> network = this->m_connection->GetCache()->ResolveObject<Network>(networkRef);
         vif["MTU"] = network ? network->GetMTU() : 1500;
     } else
     {
@@ -440,7 +440,7 @@ bool VIFDialog::isDuplicateMAC(const QString& mac) const
     QString normalizedMAC = mac.toLower().remove(':').remove('-');
 
     // Check all VIFs in the cache
-    QStringList vifRefs = this->m_connection->GetCache()->GetAllRefs("VIF");
+    QStringList vifRefs = this->m_connection->GetCache()->GetAllRefs(XenObjectType::VIF);
     for (const QString& vifRef : vifRefs)
     {
         // Skip the VIF we're editing
@@ -448,7 +448,7 @@ bool VIFDialog::isDuplicateMAC(const QString& mac) const
         if (this->m_isEditMode && !currentVifRef.isEmpty() && vifRef == currentVifRef)
             continue;
 
-        QSharedPointer<VIF> vif = this->m_connection->GetCache()->ResolveObject<VIF>("VIF", vifRef);
+        QSharedPointer<VIF> vif = this->m_connection->GetCache()->ResolveObject<VIF>(vifRef);
         QString existingMAC = vif ? vif->GetMAC() : QString();
         QString normalizedExisting = existingMAC.toLower().remove(':').remove('-');
 

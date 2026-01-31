@@ -62,7 +62,7 @@ class XENLIB_EXPORT Cluster : public XenObject
         explicit Cluster(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Cluster() override = default;
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::Cluster; }
 
         // Property accessors (read from cache)
         QStringList GetClusterHostRefs() const;

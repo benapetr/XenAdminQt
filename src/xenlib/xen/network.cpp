@@ -59,7 +59,7 @@ bool Network::IsBond() const
     const QStringList pifRefs = this->GetPIFRefs();
     for (const QString& pifRef : pifRefs)
     {
-        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
         if (pif && pif->IsValid() && pif->IsBondMaster())
             return true;
     }
@@ -76,7 +76,7 @@ bool Network::IsMember() const
     const QStringList pifRefs = this->GetPIFRefs();
     for (const QString& pifRef : pifRefs)
     {
-        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
         if (pif && pif->IsValid() && pif->IsBondMember())
             return true;
     }
@@ -102,7 +102,7 @@ bool Network::Show(bool showHiddenObjects) const
         const QStringList pifRefs = this->GetPIFRefs();
         for (const QString& pifRef : pifRefs)
         {
-            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
             if (pif && pif->IsValid() && !pif->Show(showHiddenObjects))
                 return false;
         }
@@ -256,7 +256,7 @@ QList<QSharedPointer<PIF>> Network::GetPIFs() const
     const QStringList pifRefs = this->GetPIFRefs();
     for (const QString& pifRef : pifRefs)
     {
-        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
         if (pif && pif->IsValid())
             pifs.append(pif);
     }
@@ -275,7 +275,7 @@ QList<QSharedPointer<VIF>> Network::GetVIFs() const
     const QStringList vifRefs = this->GetVIFRefs();
     for (const QString& vifRef : vifRefs)
     {
-        QSharedPointer<VIF> vif = cache->ResolveObject<VIF>("vif", vifRef);
+        QSharedPointer<VIF> vif = cache->ResolveObject<VIF>(vifRef);
         if (vif && vif->IsValid())
             vifs.append(vif);
     }

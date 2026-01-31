@@ -54,7 +54,7 @@ class XENLIB_EXPORT Message : public XenObject
         explicit Message(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Message() override = default;
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::Message; }
 
         //! Get the name of the message
         QString Name() const;

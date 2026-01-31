@@ -80,8 +80,12 @@ QString ExportTemplateCommand::getSelectedTemplateRef() const
     if (!item)
         return QString();
 
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "template")
+    XenObjectType objectType = this->getSelectedObjectType();
+    if (objectType != XenObjectType::VM)
+        return QString();
+
+    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->GetObject());
+    if (!vm || !vm->IsTemplate())
         return QString();
 
     return this->getSelectedObjectRef();
@@ -93,8 +97,12 @@ QString ExportTemplateCommand::getSelectedTemplateName() const
     if (!item)
         return QString();
 
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "template")
+    XenObjectType objectType = this->getSelectedObjectType();
+    if (objectType != XenObjectType::VM)
+        return QString();
+
+    QSharedPointer<VM> vm = qSharedPointerCast<VM>(this->GetObject());
+    if (!vm || !vm->IsTemplate())
         return QString();
 
     return item->text(0);
@@ -106,7 +114,7 @@ bool ExportTemplateCommand::canExportTemplate(const QString& templateRef) const
     if (!object || !object->GetConnection())
         return false;
 
-    QSharedPointer<VM> vm = object->GetConnection()->GetCache()->ResolveObject<VM>("vm", templateRef);
+    QSharedPointer<VM> vm = object->GetConnection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, templateRef);
     if (!vm)
         return false;
 

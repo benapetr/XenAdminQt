@@ -25,82 +25,79 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "vmmetrics.h"
+#include "vmguestmetrics.h"
 
-VMMetrics::VMMetrics(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
+VMGuestMetrics::VMGuestMetrics(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
-
-qint64 VMMetrics::GetMemoryActual() const
+QVariantMap VMGuestMetrics::GetOSVersion() const
 {
-    return this->longProperty("memory_actual", 0);
+    return this->property("os_version").toMap();
 }
 
-qint64 VMMetrics::GetVCPUsNumber() const
+QVariantMap VMGuestMetrics::GetPVDriversVersion() const
 {
-    return this->longProperty("VCPUs_number", 0);
+    return this->property("PV_drivers_version").toMap();
 }
 
-QVariantMap VMMetrics::GetVCPUsCPU() const
+bool VMGuestMetrics::GetPVDriversUpToDate() const
 {
-    return this->property("VCPUs_CPU").toMap();
+    return this->boolProperty("PV_drivers_up_to_date", false);
 }
 
-QVariantMap VMMetrics::GetVCPUsParams() const
+QVariantMap VMGuestMetrics::GetMemory() const
 {
-    return this->property("VCPUs_params").toMap();
+    return this->property("memory").toMap();
 }
 
-QVariantMap VMMetrics::GetVCPUsFlags() const
+QVariantMap VMGuestMetrics::GetDisks() const
 {
-    return this->property("VCPUs_flags").toMap();
+    return this->property("disks").toMap();
 }
 
-QStringList VMMetrics::GetState() const
+QVariantMap VMGuestMetrics::GetNetworks() const
 {
-    return this->stringListProperty("state");
+    return this->property("networks").toMap();
 }
 
-QDateTime VMMetrics::GetStartTime() const
+QVariantMap VMGuestMetrics::GetOther() const
 {
-    QString dateStr = this->stringProperty("start_time");
-    return parseDateTime(dateStr);
+    return this->property("other").toMap();
 }
 
-QDateTime VMMetrics::GetInstallTime() const
-{
-    QString dateStr = this->stringProperty("install_time");
-    return parseDateTime(dateStr);
-}
-
-QDateTime VMMetrics::GetLastUpdated() const
+QDateTime VMGuestMetrics::GetLastUpdated() const
 {
     QString dateStr = this->stringProperty("last_updated");
-    return parseDateTime(dateStr);
+    return this->parseDateTime(dateStr);
 }
 
-bool VMMetrics::IsHVM() const
+QVariantMap VMGuestMetrics::GetOtherConfig() const
 {
-    return this->boolProperty("hvm", false);
+    return this->property("other_config").toMap();
 }
 
-bool VMMetrics::SupportsNestedVirt() const
+bool VMGuestMetrics::IsLive() const
 {
-    return this->boolProperty("nested_virt", false);
+    return this->boolProperty("live", false);
 }
 
-bool VMMetrics::IsNoMigrate() const
+QString VMGuestMetrics::GetCanUseHotplugVBD() const
 {
-    return this->boolProperty("nomigrate", false);
+    return this->stringProperty("can_use_hotplug_vbd", "unspecified");
 }
 
-QString VMMetrics::GetCurrentDomainType() const
+QString VMGuestMetrics::GetCanUseHotplugVIF() const
 {
-    return this->stringProperty("current_domain_type", "unspecified");
+    return this->stringProperty("can_use_hotplug_vif", "unspecified");
 }
 
-QDateTime VMMetrics::parseDateTime(const QString& dateStr) const
+bool VMGuestMetrics::GetPVDriversDetected() const
+{
+    return this->boolProperty("PV_drivers_detected", false);
+}
+
+QDateTime VMGuestMetrics::parseDateTime(const QString& dateStr) const
 {
     if (dateStr.isEmpty())
         return QDateTime();

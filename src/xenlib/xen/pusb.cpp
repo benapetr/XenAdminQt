@@ -112,10 +112,10 @@ QSharedPointer<USBGroup> PUSB::GetUSBGroup() const
         return QSharedPointer<USBGroup>();
     
     QString ref = this->GetUSBGroupRef();
-    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<USBGroup>();
     
-    return cache->ResolveObject<USBGroup>("usb_group", ref);
+    return cache->ResolveObject<USBGroup>(XenObjectType::USBGroup, ref);
 }
 
 QSharedPointer<Host> PUSB::GetHost() const
@@ -132,5 +132,5 @@ QSharedPointer<Host> PUSB::GetHost() const
     if (ref.isEmpty() || ref == "OpaqueRef:NULL")
         return QSharedPointer<Host>();
     
-    return cache->ResolveObject<Host>("host", ref);
+    return cache->ResolveObject<Host>(XenObjectType::Host, ref);
 }

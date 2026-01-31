@@ -36,10 +36,6 @@ Console::Console(XenConnection* connection, const QString& opaqueRef, QObject* p
 {
 }
 
-QString Console::GetObjectType() const
-{
-    return "console";
-}
 
 QString Console::GetProtocol() const
 {
@@ -70,5 +66,5 @@ QSharedPointer<VM> Console::GetVM() const
     if (vmRef.isEmpty() || vmRef == "OpaqueRef:NULL")
         return QSharedPointer<VM>();
 
-    return cache->ResolveObject<VM>("vm", vmRef);
+    return cache->ResolveObject<VM>(XenObjectType::VM, vmRef);
 }

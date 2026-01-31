@@ -40,10 +40,6 @@ Host::Host(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString Host::GetObjectType() const
-{
-    return "host";
-}
 
 QString Host::GetHostname() const
 {
@@ -74,7 +70,7 @@ bool Host::IsLive() const
     if (metricsRef.isEmpty())
         return false;
 
-    QSharedPointer<HostMetrics> metrics = cache->ResolveObject<HostMetrics>("host_metrics", metricsRef);
+    QSharedPointer<HostMetrics> metrics = cache->ResolveObject<HostMetrics>(metricsRef);
     return metrics && metrics->IsLive();
 }
 
@@ -128,7 +124,7 @@ bool Host::SriovNetworkDisabled() const
     const QStringList featureRefs = this->FeatureRefs();
     for (const QString& ref : featureRefs)
     {
-        QSharedPointer<Feature> feature = cache->ResolveObject<Feature>("feature", ref);
+        QSharedPointer<Feature> feature = cache->ResolveObject<Feature>(ref);
         if (!feature || !feature->IsValid())
             continue;
         if (feature->GetName().compare("network_sriov", Qt::CaseInsensitive) == 0)
@@ -352,7 +348,7 @@ QSharedPointer<HostMetrics> Host::GetMetrics() const
     if (metricsRef.isEmpty())
         return QSharedPointer<HostMetrics>();
 
-    return cache->ResolveObject<HostMetrics>("host_metrics", metricsRef);
+    return cache->ResolveObject<HostMetrics>(metricsRef);
 }
 
 QStringList Host::HAStatefiles() const
@@ -563,7 +559,7 @@ QList<QSharedPointer<VM>> Host::GetResidentVMs() const
     {
         if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
         {
-            QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", ref);
+            QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, ref);
             if (vm)
                 result.append(vm);
         }
@@ -601,7 +597,7 @@ QList<QSharedPointer<PBD>> Host::GetPBDs() const
     {
         if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
         {
-            QSharedPointer<PBD> pbd = cache->ResolveObject<PBD>("pbd", ref);
+            QSharedPointer<PBD> pbd = cache->ResolveObject<PBD>(ref);
             if (pbd)
                 result.append(pbd);
         }
@@ -627,7 +623,7 @@ QList<QSharedPointer<PIF>> Host::GetPIFs() const
     {
         if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
         {
-            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", ref);
+            QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(ref);
             if (pif)
                 result.append(pif);
         }

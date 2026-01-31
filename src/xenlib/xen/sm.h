@@ -47,7 +47,7 @@ class XENLIB_EXPORT SM : public XenObject
         explicit SM(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         virtual ~SM();
 
-        QString GetObjectType() const override { return "SM"; }
+        XenObjectType GetObjectType() const override { return XenObjectType::SM; }
 
         // Property accessors
         QString Type() const;

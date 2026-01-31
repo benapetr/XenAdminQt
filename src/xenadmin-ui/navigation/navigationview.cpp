@@ -79,7 +79,7 @@ QSharedPointer<Host> buildDisconnectedHostObject(XenConnection* connection, XenC
     record["enabled"] = false;
 
     if (cache)
-        cache->Update("host", ref, record);
+        cache->Update(XenObjectType::Host, ref, record);
 
     return QSharedPointer<Host>(new Host(connection, ref));
 }
@@ -505,7 +505,7 @@ QString NavigationView::getItemPath(QTreeWidgetItem* item) const
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
         if (obj)
         {
-            type = obj->GetObjectType();
+            type = obj->GetObjectTypeName();
             ref = obj->OpaqueRef();
         }
 
@@ -567,7 +567,7 @@ QTreeWidgetItem* NavigationView::findItemByTypeAndRef(const QString& type, const
         if (data.canConvert<QSharedPointer<XenObject>>())
         {
             QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-            if (obj && obj->GetObjectType() == type && obj->OpaqueRef() == ref)
+            if (obj && obj->GetObjectTypeName() == type && obj->OpaqueRef() == ref)
             {
                 return child;
             }
@@ -598,7 +598,7 @@ void NavigationView::persistSelectionAndExpansion()
             QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
             if (obj)
             {
-                this->m_savedSelectionType = obj->GetObjectType();
+                this->m_savedSelectionType = obj->GetObjectTypeName();
                 this->m_savedSelectionRef = obj->OpaqueRef();
             } else
             {
@@ -675,7 +675,7 @@ void NavigationView::restoreSelectionAndExpansion()
                         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
                         if (obj)
                         {
-                            itemType = obj->GetObjectType();
+                            itemType = obj->GetObjectTypeName();
                             itemRef = obj->OpaqueRef();
                         }
 
@@ -704,7 +704,7 @@ void NavigationView::restoreSelectionAndExpansion()
                         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
                         if (obj)
                         {
-                            itemType = obj->GetObjectType();
+                            itemType = obj->GetObjectTypeName();
                             itemRef = obj->OpaqueRef();
                         }
 
@@ -788,7 +788,7 @@ void NavigationView::restoreSelectionAndExpansion()
                 QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
                 if (obj)
                 {
-                    rootType = obj->GetObjectType();
+                    rootType = obj->GetObjectTypeName();
                     rootRef = obj->OpaqueRef();
                 }
                 

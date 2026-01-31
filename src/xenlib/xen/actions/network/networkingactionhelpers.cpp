@@ -34,78 +34,39 @@
 #include "../../session.h"
 #include "../../network.h"
 #include "../../pif.h"
+#include "../../host.h"
+#include "../../pool.h"
 #include "../../../xencache.h"
 #include <QThread>
 #include <QDebug>
 
-// Helper to get PIF record from cache
-static QVariantMap getPIFRecord(AsyncOperation* action, const QString& pifRef)
+static QSharedPointer<PIF> resolvePif(AsyncOperation* action, const QString& pifRef)
 {
-    if (!action || !action->GetConnection() || !action->GetConnection()->GetCache())
-        return QVariantMap();
+    if (!action || !action->GetConnection())
+        return QSharedPointer<PIF>();
 
-    QVariantMap record = action->GetConnection()->GetCache()->ResolveObjectData("pif", pifRef);
-    if (!record.isEmpty())
-        return record;
+    XenCache* cache = action->GetConnection()->GetCache();
+    if (!cache)
+        return QSharedPointer<PIF>();
 
-    QList<QVariantMap> pifs = action->GetConnection()->GetCache()->GetAllData("pif");
-    for (const QVariantMap& pif : pifs)
-    {
-        if (pif.value("_ref").toString() == pifRef)
-            return pif;
-    }
+    QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
+    if (pif && pif->IsValid())
+        return pif;
 
-    return QVariantMap();
+    return QSharedPointer<PIF>();
 }
 
-// Helper to get network from PIF
-static QString getNetworkFromPIF(const QVariantMap& pifRecord)
+static QString getManagementPurpose(const QSharedPointer<PIF>& pif)
 {
-    return pifRecord.value("network").toString();
-}
+    if (!pif)
+        return QString();
 
-// Helper to get host from PIF
-static QString getHostFromPIF(const QVariantMap& pifRecord)
-{
-    return pifRecord.value("host").toString();
-}
-
-// Helper to get management_purpose from PIF other_config
-static QString getManagementPurpose(const QVariantMap& pifRecord)
-{
-    QVariantMap otherConfig = pifRecord.value("other_config").toMap();
-    return otherConfig.value("management_purpose").toString();
-}
-
-// Helper to check if PIF is used by clustering
-static bool isUsedByClustering(XenConnection* connection, const QString& pifRef)
-{
-    // Check if any cluster_host references this PIF
-    QList<QVariantMap> clusterHosts = connection->GetCache()->GetAllData("cluster_host");
-    for (const QVariantMap& ch : clusterHosts)
-    {
-        if (ch.value("PIF").toString() == pifRef)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-// Helper to get coordinator host ref
-static QString getCoordinatorRef(XenConnection* connection)
-{
-    QList<QVariantMap> pools = connection->GetCache()->GetAllData("pool");
-    if (!pools.isEmpty())
-    {
-        return pools.first().value("master").toString();
-    }
-    return QString();
+    return pif->GetOtherConfig().value("management_purpose").toString();
 }
 
 void NetworkingActionHelpers::moveManagementInterfaceName(AsyncOperation* action, const QString& fromPifRef, const QString& toPifRef)
 {
-    QVariantMap fromPif = getPIFRecord(action, fromPifRef);
+    QSharedPointer<PIF> fromPif = resolvePif(action, fromPifRef);
     QString managementPurpose = getManagementPurpose(fromPif);
 
     if (managementPurpose.isEmpty())
@@ -128,8 +89,14 @@ void NetworkingActionHelpers::moveManagementInterfaceName(AsyncOperation* action
 
 void NetworkingActionHelpers::depurpose(AsyncOperation* action, const QString& pifRef, int hi)
 {
-    QVariantMap pifRecord = getPIFRecord(action, pifRef);
-    QString pifName = pifRecord.value("device").toString();
+    QSharedPointer<PIF> pif = resolvePif(action, pifRef);
+    if (!pif)
+    {
+        action->SetPercentComplete(hi);
+        return;
+    }
+
+    QString pifName = pif->GetDevice();
 
     qDebug() << "Depurposing PIF" << pifName << pifRef;
     action->SetDescription(QString("Depurposing interface %1...").arg(pifName));
@@ -138,7 +105,7 @@ void NetworkingActionHelpers::depurpose(AsyncOperation* action, const QString& p
     XenAPI::PIF::set_disallow_unplug(action->GetSession(), pifRef, false);
 
     // Remove management_purpose if it exists
-    QVariantMap otherConfig = pifRecord.value("other_config").toMap();
+    QVariantMap otherConfig = pif->GetOtherConfig();
     if (otherConfig.contains("management_purpose"))
     {
         XenAPI::PIF::remove_from_other_config(action->GetSession(), pifRef, "management_purpose");
@@ -152,8 +119,14 @@ void NetworkingActionHelpers::depurpose(AsyncOperation* action, const QString& p
 
 void NetworkingActionHelpers::reconfigureManagement_(AsyncOperation* action, const QString& pifRef, int hi)
 {
-    QVariantMap pifRecord = getPIFRecord(action, pifRef);
-    QString pifName = pifRecord.value("device").toString();
+    QSharedPointer<PIF> pif = resolvePif(action, pifRef);
+    if (!pif)
+    {
+        action->SetPercentComplete(hi);
+        return;
+    }
+
+    QString pifName = pif->GetDevice();
 
     qDebug() << "Switching to PIF" << pifName << pifRef << "for management";
     action->SetDescription(QString("Reconfiguring management to interface %1...").arg(pifName));
@@ -163,7 +136,7 @@ void NetworkingActionHelpers::reconfigureManagement_(AsyncOperation* action, con
 
     // First depurpose the PIF (clear disallow_unplug and management_purpose)
     XenAPI::PIF::set_disallow_unplug(action->GetSession(), pifRef, false);
-    QVariantMap otherConfig = pifRecord.value("other_config").toMap();
+    QVariantMap otherConfig = pif->GetOtherConfig();
     if (otherConfig.contains("management_purpose"))
     {
         XenAPI::PIF::remove_from_other_config(action->GetSession(), pifRef, "management_purpose");
@@ -181,9 +154,15 @@ void NetworkingActionHelpers::reconfigureManagement_(AsyncOperation* action, con
 
 void NetworkingActionHelpers::poolManagementReconfigure_(AsyncOperation* action, const QString& pifRef, int hi)
 {
-    QVariantMap pifRecord = getPIFRecord(action, pifRef);
-    QString pifName = pifRecord.value("device").toString();
-    QString networkRef = getNetworkFromPIF(pifRecord);
+    QSharedPointer<PIF> pif = resolvePif(action, pifRef);
+    if (!pif)
+    {
+        action->SetPercentComplete(hi);
+        return;
+    }
+
+    QString pifName = pif->GetDevice();
+    QString networkRef = pif->GetNetworkRef();
 
     qDebug() << "Pool-wide switching to PIF" << pifName << pifRef << "for management";
     action->SetDescription(QString("Reconfiguring pool management to interface %1...").arg(pifName));
@@ -197,22 +176,27 @@ void NetworkingActionHelpers::poolManagementReconfigure_(AsyncOperation* action,
 
 void NetworkingActionHelpers::clearIP(AsyncOperation* action, const QString& pifRef, int hi)
 {
+    QSharedPointer<PIF> pif = resolvePif(action, pifRef);
+    if (!pif)
+    {
+        action->SetPercentComplete(hi);
+        return;
+    }
+
     // Don't clear IP if PIF is used by clustering
-    if (isUsedByClustering(action->GetConnection(), pifRef))
+    if (pif->IsUsedByClustering())
     {
         qDebug() << "Skipping IP clear for clustering PIF" << pifRef;
         action->SetPercentComplete(hi);
         return;
     }
 
-    QVariantMap pifRecord = getPIFRecord(action, pifRef);
-    QString pifName = pifRecord.value("device").toString();
+    QString pifName = pif->GetDevice();
 
     qDebug() << "Removing IP address from" << pifName << pifRef;
     action->SetDescription(QString("Bringing down interface %1...").arg(pifName));
 
-    QString taskRef = XenAPI::PIF::async_reconfigure_ip(action->GetSession(), pifRef,
-                                                        "None", "", "", "", "");
+    QString taskRef = XenAPI::PIF::async_reconfigure_ip(action->GetSession(), pifRef, "None", "", "", "", "");
     action->pollToCompletion(taskRef, action->GetPercentComplete(), hi);
 
     qDebug() << "Removed IP address from" << pifName << pifRef;
@@ -221,38 +205,46 @@ void NetworkingActionHelpers::clearIP(AsyncOperation* action, const QString& pif
 
 void NetworkingActionHelpers::waitForMembersToRecover(XenConnection* connection, const QString& poolRef)
 {
+    Q_UNUSED(poolRef)
     const int retryLimit = 60;
     int retryAttempt = 0;
 
     QList<QString> deadHosts;
 
-    QList<QVariantMap> hosts = connection->GetCache()->GetAllData("host");
-    QString coordinatorRef = getCoordinatorRef(connection);
+    if (!connection || !connection->GetCache())
+        return;
+
+    QSharedPointer<Pool> pool = connection->GetCache()->GetPool();
+    const QString coordinatorRef = pool ? pool->GetMasterHostRef() : QString();
 
     int totalHosts = 0;
-    for (const QVariantMap& host : hosts)
+    QList<QSharedPointer<Host>> hosts = connection->GetCache()->GetAll<Host>(XenObjectType::Host);
+    for (const QSharedPointer<Host>& host : hosts)
     {
-        if (host.value("_ref").toString() != coordinatorRef)
-        {
+        if (!host || !host->IsValid())
+            continue;
+        if (host->OpaqueRef() != coordinatorRef)
             totalHosts++;
-        }
     }
 
     // Wait for supporters to go offline
     while (deadHosts.count() < totalHosts && retryAttempt <= retryLimit)
     {
-        hosts = connection->GetCache()->GetAllData("host");
-        for (const QVariantMap& host : hosts)
+        hosts = connection->GetCache()->GetAll<Host>(XenObjectType::Host);
+        for (const QSharedPointer<Host>& host : hosts)
         {
-            QString hostRef = host.value("_ref").toString();
-            QString hostUuid = host.value("uuid").toString();
+            if (!host || !host->IsValid())
+                continue;
+
+            QString hostRef = host->OpaqueRef();
+            QString hostUuid = host->GetUUID();
 
             if (hostRef == coordinatorRef)
             {
                 continue;
             }
 
-            bool isLive = host.value("live", true).toBool();
+            bool isLive = host->IsLive();
             if (!isLive && !deadHosts.contains(hostUuid))
             {
                 deadHosts.append(hostUuid);
@@ -266,18 +258,21 @@ void NetworkingActionHelpers::waitForMembersToRecover(XenConnection* connection,
     retryAttempt = 0;
     while (!deadHosts.isEmpty() && retryAttempt <= retryLimit)
     {
-        hosts = connection->GetCache()->GetAllData("host");
-        for (const QVariantMap& host : hosts)
+        hosts = connection->GetCache()->GetAll<Host>(XenObjectType::Host);
+        for (const QSharedPointer<Host>& host : hosts)
         {
-            QString hostRef = host.value("_ref").toString();
-            QString hostUuid = host.value("uuid").toString();
+            if (!host || !host->IsValid())
+                continue;
+
+            QString hostRef = host->OpaqueRef();
+            QString hostUuid = host->GetUUID();
 
             if (hostRef == coordinatorRef)
             {
                 continue;
             }
 
-            bool isLive = host.value("live", true).toBool();
+            bool isLive = host->IsLive();
             if (isLive && deadHosts.contains(hostUuid))
             {
                 deadHosts.removeAll(hostUuid);
@@ -290,19 +285,13 @@ void NetworkingActionHelpers::waitForMembersToRecover(XenConnection* connection,
     qDebug() << "Pool members recovered";
 }
 
-void NetworkingActionHelpers::reconfigureManagement(AsyncOperation* action,
-                                                    const QString& downPifRef,
-                                                    const QString& upPifRef,
-                                                    bool thisHost,
-                                                    bool lockPif,
-                                                    int hi,
-                                                    bool bringDownDownPif)
+void NetworkingActionHelpers::reconfigureManagement(AsyncOperation* action, const QString& downPifRef, const QString& upPifRef, bool thisHost, bool lockPif, int hi, bool bringDownDownPif)
 {
-    QVariantMap downPif = getPIFRecord(action, downPifRef);
-    QVariantMap upPif = getPIFRecord(action, upPifRef);
+    QSharedPointer<PIF> downPif = resolvePif(action, downPifRef);
+    QSharedPointer<PIF> upPif = resolvePif(action, upPifRef);
 
     // Verify both PIFs are on same host
-    if (getHostFromPIF(downPif) != getHostFromPIF(upPif))
+    if (!downPif || !upPif || downPif->GetHostRef() != upPif->GetHostRef())
     {
         throw std::runtime_error("PIFs must be on same host for management reconfiguration");
     }
@@ -332,17 +321,13 @@ void NetworkingActionHelpers::reconfigureManagement(AsyncOperation* action,
     }
 }
 
-void NetworkingActionHelpers::poolReconfigureManagement(AsyncOperation* action,
-                                                        const QString& poolRef,
-                                                        const QString& upPifRef,
-                                                        const QString& downPifRef,
-                                                        int hi)
+void NetworkingActionHelpers::poolReconfigureManagement(AsyncOperation* action, const QString& poolRef, const QString& upPifRef, const QString& downPifRef, int hi)
 {
-    QVariantMap downPif = getPIFRecord(action, downPifRef);
-    QVariantMap upPif = getPIFRecord(action, upPifRef);
+    QSharedPointer<PIF> downPif = resolvePif(action, downPifRef);
+    QSharedPointer<PIF> upPif = resolvePif(action, upPifRef);
 
     // Verify both PIFs are on same host
-    if (getHostFromPIF(downPif) != getHostFromPIF(upPif))
+    if (!downPif || !upPif || downPif->GetHostRef() != upPif->GetHostRef())
     {
         throw std::runtime_error("PIFs must be on same host for management reconfiguration");
     }
@@ -362,16 +347,17 @@ void NetworkingActionHelpers::poolReconfigureManagement(AsyncOperation* action,
     forSomeHosts(action, downPifRef, true, true, hi, clearIP);
 }
 
-void NetworkingActionHelpers::bringUp(AsyncOperation* action,
-                                      const QString& newPifRef,
-                                      const QString& newIp,
-                                      const QString& existingPifRef,
-                                      int hi)
+void NetworkingActionHelpers::bringUp(AsyncOperation* action, const QString& newPifRef, const QString& newIp, const QString& existingPifRef, int hi)
 {
-    QVariantMap newPif = getPIFRecord(action, newPifRef);
-    QVariantMap existingPif = getPIFRecord(action, existingPifRef);
+    QSharedPointer<PIF> newPif = resolvePif(action, newPifRef);
+    QSharedPointer<PIF> existingPif = resolvePif(action, existingPifRef);
+    if (!newPif || !existingPif)
+    {
+        action->SetPercentComplete(hi);
+        return;
+    }
 
-    QString pifName = existingPif.value("device").toString();
+    QString pifName = existingPif->GetDevice();
     QString managementPurpose = getManagementPurpose(newPif);
     bool isPrimary = managementPurpose.isEmpty();
 
@@ -379,8 +365,8 @@ void NetworkingActionHelpers::bringUp(AsyncOperation* action,
     int inc = (hi - lo) / (isPrimary ? 2 : 3);
 
     qDebug() << "Bringing PIF" << pifName << existingPifRef << "up as"
-             << newIp << "/" << newPif.value("netmask").toString()
-             << newPif.value("gateway").toString() << newPif.value("DNS").toString();
+             << newIp << "/" << newPif->Netmask()
+             << newPif->Gateway() << newPif->DNS();
     action->SetDescription(QString("Bringing up interface %1...").arg(pifName));
 
     // Set disallow_unplug and management_purpose
@@ -410,20 +396,19 @@ void NetworkingActionHelpers::bringUp(AsyncOperation* action,
     action->SetDescription(QString("Brought up interface %1").arg(pifName));
 }
 
-void NetworkingActionHelpers::bringUp(AsyncOperation* action,
-                                      const QString& newPifRef,
-                                      const QString& existingPifRef,
-                                      int hi)
+void NetworkingActionHelpers::bringUp(AsyncOperation* action, const QString& newPifRef, const QString& existingPifRef, int hi)
 {
-    QVariantMap newPif = getPIFRecord(action, newPifRef);
-    QString newIp = newPif.value("IP").toString();
+    QSharedPointer<PIF> newPif = resolvePif(action, newPifRef);
+    if (!newPif)
+    {
+        action->SetPercentComplete(hi);
+        return;
+    }
+    QString newIp = newPif->IP();
     bringUp(action, newPifRef, newIp, existingPifRef, hi);
 }
 
-void NetworkingActionHelpers::bringUp(AsyncOperation* action,
-                                      const QString& newPifRef,
-                                      bool thisHost,
-                                      int hi)
+void NetworkingActionHelpers::bringUp(AsyncOperation* action, const QString& newPifRef, bool thisHost, int hi)
 {
     forSomeHosts(action, newPifRef, thisHost, false, hi,
                  [](AsyncOperation* a, const QString& pifRef, int h) {
@@ -431,9 +416,7 @@ void NetworkingActionHelpers::bringUp(AsyncOperation* action,
                  });
 }
 
-void NetworkingActionHelpers::bringDown(AsyncOperation* action,
-                                        const QString& pifRef,
-                                        int hi)
+void NetworkingActionHelpers::bringDown(AsyncOperation* action, const QString& pifRef, int hi)
 {
     int lo = action->GetPercentComplete();
     int mid = (lo + hi) / 2;
@@ -442,18 +425,13 @@ void NetworkingActionHelpers::bringDown(AsyncOperation* action,
     clearIP(action, pifRef, hi);
 }
 
-void NetworkingActionHelpers::forSomeHosts(AsyncOperation* action,
-                                           const QString& pifRef,
-                                           bool thisHost,
-                                           bool lockPif,
-                                           int hi,
-                                           PIFMethod pifMethod)
+void NetworkingActionHelpers::forSomeHosts(AsyncOperation* action, const QString& pifRef, bool thisHost, bool lockPif, int hi, PIFMethod pifMethod)
 {
     if (!action || !action->GetConnection() || !action->GetConnection()->GetCache())
         return;
 
     XenCache* cache = action->GetConnection()->GetCache();
-    QSharedPointer<PIF> pif = cache->ResolveObject<PIF>("pif", pifRef);
+    QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(XenObjectType::PIF, pifRef);
     if (!pif || !pif->IsValid())
     {
         qWarning() << "PIF" << pifRef << "not found";
@@ -512,29 +490,28 @@ void NetworkingActionHelpers::forSomeHosts(AsyncOperation* action,
             candidate->Unlock();
     }
 }
-void NetworkingActionHelpers::reconfigureSinglePrimaryManagement(AsyncOperation* action,
-                                                                 const QString& srcPifRef,
-                                                                 const QString& destPifRef,
-                                                                 int hi)
+void NetworkingActionHelpers::reconfigureSinglePrimaryManagement(AsyncOperation* action, const QString& srcPifRef, const QString& destPifRef, int hi)
 {
     // Copy IP config from src to dest (conceptually - we'll use src's values for dest)
-    QVariantMap srcPif = getPIFRecord(action, srcPifRef);
+    QSharedPointer<PIF> srcPif = resolvePif(action, srcPifRef);
+    if (!srcPif)
+    {
+        action->SetPercentComplete(hi);
+        return;
+    }
 
     int lo = action->GetPercentComplete();
     int mid = (lo + hi) / 2;
 
     // Bring up destination with source's IP config
-    QString srcIp = srcPif.value("IP").toString();
+    QString srcIp = srcPif->IP();
     bringUp(action, srcPifRef, srcIp, destPifRef, mid);
 
     // Reconfigure management
     reconfigureManagement(action, srcPifRef, destPifRef, true, false, hi, true);
 }
 
-void NetworkingActionHelpers::reconfigurePrimaryManagement(AsyncOperation* action,
-                                                           const QString& srcPifRef,
-                                                           const QString& destPifRef,
-                                                           int hi)
+void NetworkingActionHelpers::reconfigurePrimaryManagement(AsyncOperation* action, const QString& srcPifRef, const QString& destPifRef, int hi)
 {
     int lo = action->GetPercentComplete();
     int inc = (hi - lo) / 4;
@@ -552,25 +529,25 @@ void NetworkingActionHelpers::reconfigurePrimaryManagement(AsyncOperation* actio
     reconfigureManagement(action, srcPifRef, destPifRef, true, false, hi, true);
 }
 
-void NetworkingActionHelpers::reconfigureIP(AsyncOperation* action,
-                                            const QString& newPifRef,
-                                            const QString& existingPifRef,
-                                            const QString& ip,
-                                            int hi)
+void NetworkingActionHelpers::reconfigureIP(AsyncOperation* action, const QString& newPifRef, const QString& existingPifRef, const QString& ip, int hi)
 {
-    QVariantMap newPif = getPIFRecord(action, newPifRef);
-    QVariantMap existingPif = getPIFRecord(action, existingPifRef);
+    QSharedPointer<PIF> newPif = resolvePif(action, newPifRef);
+    QSharedPointer<PIF> existingPif = resolvePif(action, existingPifRef);
+    if (!newPif || !existingPif)
+    {
+        action->SetPercentComplete(hi);
+        return;
+    }
 
-    QString pifName = existingPif.value("device").toString();
+    QString pifName = existingPif->GetDevice();
     qDebug() << "Reconfiguring IP on" << pifName << existingPifRef;
 
-    QString mode = newPif.value("ip_configuration_mode").toString();
-    QString netmask = newPif.value("netmask").toString();
-    QString gateway = newPif.value("gateway").toString();
-    QString dns = newPif.value("DNS").toString();
+    QString mode = newPif->IpConfigurationMode();
+    QString netmask = newPif->Netmask();
+    QString gateway = newPif->Gateway();
+    QString dns = newPif->DNS();
 
-    QString taskRef = XenAPI::PIF::async_reconfigure_ip(action->GetSession(), existingPifRef,
-                                                        mode, ip, netmask, gateway, dns);
+    QString taskRef = XenAPI::PIF::async_reconfigure_ip(action->GetSession(), existingPifRef, mode, ip, netmask, gateway, dns);
     action->pollToCompletion(taskRef, action->GetPercentComplete(), hi);
 
     qDebug() << "Reconfigured IP on" << pifName << existingPifRef;
@@ -580,12 +557,18 @@ void NetworkingActionHelpers::plug(AsyncOperation* action,
                                    const QString& pifRef,
                                    int hi)
 {
-    QVariantMap pifRecord = getPIFRecord(action, pifRef);
-    bool currentlyAttached = pifRecord.value("currently_attached", false).toBool();
+    QSharedPointer<PIF> pif = resolvePif(action, pifRef);
+    if (!pif)
+    {
+        action->SetPercentComplete(hi);
+        return;
+    }
+
+    bool currentlyAttached = pif->IsCurrentlyAttached();
 
     if (!currentlyAttached)
     {
-        QString pifName = pifRecord.value("device").toString();
+        QString pifName = pif->GetDevice();
         qDebug() << "Plugging" << pifName << pifRef;
 
         QString taskRef = XenAPI::PIF::async_plug(action->GetSession(), pifRef);

@@ -178,7 +178,7 @@ QIcon ResourceSelectButton::getObjectIcon(QSharedPointer<XenObject> object) cons
     // C# uses Images.GetImage16For(IXenObject)
     // For now, return null icon - icons will be added when we implement Images helper
     
-    QString objectType = object->GetObjectType();
+    //QString objectType = object->GetObjectTypeName();
     // Placeholder - would map to actual icons:
     // if (objectType == "vm") return QIcon(":/icons/vm_16.png");
     // if (objectType == "host") return QIcon(":/icons/host_16.png");

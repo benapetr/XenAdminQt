@@ -62,7 +62,7 @@ class XENLIB_EXPORT DockerContainer : public XenObject
                                 QObject* parent = nullptr);
 
         // XenObject overrides
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::DockerContainer; }
 
         //! @brief Get parent VM reference
         //! @return VM opaque reference that hosts this container

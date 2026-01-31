@@ -75,8 +75,7 @@ QString ReattachSRCommand::MenuText() const
 
 QString ReattachSRCommand::getSelectedSRRef() const
 {
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "sr")
+    if (this->getSelectedObjectType() != XenObjectType::SR)
         return QString();
 
     return this->getSelectedObjectRef();
@@ -112,7 +111,7 @@ bool ReattachSRCommand::canSRBeReattached(const QSharedPointer<SR>& sr) const
     // TODO: Feature check for cslg (C# uses Helpers.FeatureForbidden)
 
     // Check if SM backend exists for this SR type (C#: SM.GetByType)
-    const QList<QVariantMap> smRecords = cache->GetAllData("SM");
+    const QList<QVariantMap> smRecords = cache->GetAllData(XenObjectType::SM);
     bool smFound = false;
     for (const QVariantMap& smData : smRecords)
     {

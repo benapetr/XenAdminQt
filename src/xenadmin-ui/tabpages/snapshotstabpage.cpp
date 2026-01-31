@@ -79,7 +79,7 @@ SnapshotsTabPage::SnapshotsTabPage(QWidget* parent) : BaseTabPage(parent), ui(ne
         QString snapshotRef = this->selectedSnapshotRef();
         if (snapshotRef.isEmpty() || !this->m_connection)
             return;
-        QSharedPointer<VM> snapshot = this->m_connection->GetCache()->ResolveObject<VM>("vm", snapshotRef);
+        QSharedPointer<VM> snapshot = this->m_connection->GetCache()->ResolveObject<VM>(XenObjectType::VM, snapshotRef);
         SnapshotPropertiesDialog dialog(snapshot, this);
         dialog.exec();
     });
@@ -179,7 +179,7 @@ bool SnapshotsTabPage::IsApplicableForObjectType(const QString& objectType) cons
 
 void SnapshotsTabPage::refreshContent()
 {
-    if (this->m_objectData.isEmpty() || this->m_objectType != "vm")
+    if (this->m_objectData.isEmpty() || this->m_objectType != XenObjectType::VM)
     {
         this->ui->snapshotTree->Clear();
         this->ui->snapshotTable->setRowCount(0);
@@ -226,7 +226,7 @@ void SnapshotsTabPage::populateSnapshotTree()
         if (snapshotRef.isEmpty())
             continue;
 
-        QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", snapshotRef);
+        QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, snapshotRef);
         if (!snapshot || !snapshot->IsSnapshot())
             continue;
 
@@ -415,7 +415,7 @@ void SnapshotsTabPage::onDeleteSnapshot()
 
     for (const QString& ref : snapshotRefs)
     {
-        QSharedPointer<VM> snapshot = this->m_connection->GetCache()->ResolveObject<VM>("vm", ref);
+        QSharedPointer<VM> snapshot = this->m_connection->GetCache()->ResolveObject<VM>(XenObjectType::VM, ref);
         if (!snapshot || !snapshot->IsValid())
         {
             qWarning() << "SnapshotsTabPage: Failed to resolve snapshot VM:" << ref;
@@ -500,7 +500,7 @@ void SnapshotsTabPage::refreshSnapshotList()
     try
     {
         QVariantMap records = XenAPI::VM::get_all_records(session);
-        this->m_connection->GetCache()->UpdateBulk("vm", records);
+        this->m_connection->GetCache()->UpdateBulk(XenObjectType::VM, records);
     }
     catch (const std::exception& ex)
     {
@@ -511,7 +511,7 @@ void SnapshotsTabPage::refreshSnapshotList()
 void SnapshotsTabPage::onVirtualMachinesDataUpdated(QVariantList vms)
 {
     // Check if the updated VMs include our current VM
-    if (this->m_objectRef.isEmpty() || this->m_objectType != "vm")
+    if (this->m_objectRef.isEmpty() || this->m_objectType != XenObjectType::VM)
     {
         return;
     }
@@ -542,7 +542,7 @@ void SnapshotsTabPage::onCacheObjectChanged(XenConnection* connection, const QSt
     (void) connection;
     (void) ref;
 
-    if (this->m_objectType == "vm" && (type == "vm" || type == "vdi" || type == "vbd"))
+    if (this->m_objectType == XenObjectType::VM && (type == "vm" || type == "vdi" || type == "vbd"))
     {
         this->populateSnapshotTree();
         this->updateButtonStates();
@@ -550,7 +550,7 @@ void SnapshotsTabPage::onCacheObjectChanged(XenConnection* connection, const QSt
         this->updateSpinningIcon();
     }
 
-    if (this->m_objectType == "vm" && (type == "vm" || type == "vmss"))
+    if (this->m_objectType == XenObjectType::VM && (type == "vm" || type == "vmss"))
         this->refreshVmssPanel();
 }
 
@@ -614,7 +614,7 @@ void SnapshotsTabPage::updateDetailsPanel(bool force)
     QList<QSharedPointer<VM>> snapshots;
     for (const QString& ref : refs)
     {
-        QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", ref);
+        QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, ref);
         if (snapshot && snapshot->IsSnapshot())
             snapshots.append(snapshot);
     }
@@ -846,7 +846,7 @@ bool SnapshotsTabPage::canDeleteSnapshots(const QList<QString>& snapshotRefs) co
 
     for (const QString& ref : snapshotRefs)
     {
-        QSharedPointer<VM> snapshot = cache->ResolveObject<VM>("vm", ref);
+        QSharedPointer<VM> snapshot = cache->ResolveObject<VM>(XenObjectType::VM, ref);
         if (!snapshot)
             return false;
         if (!snapshot->IsSnapshot())
@@ -897,7 +897,7 @@ void SnapshotsTabPage::updateSpinningIcon()
 
 bool SnapshotsTabPage::isSpinningActionForCurrentVm(AsyncOperation* operation, QString* message) const
 {
-    if (!operation || this->m_objectRef.isEmpty() || this->m_objectType != "vm")
+    if (!operation || this->m_objectRef.isEmpty() || this->m_objectType != XenObjectType::VM)
         return false;
 
     if (auto* createAction = qobject_cast<VMSnapshotCreateAction*>(operation))
@@ -1081,7 +1081,7 @@ void SnapshotsTabPage::onSnapshotContextMenu(const QPoint& pos)
             snapshotRef = item->data(Qt::UserRole).toString();
         }
     }
-    QSharedPointer<VM> snapshot = this->m_vm->GetCache()->ResolveObject<VM>("vm", snapshotRef);
+    QSharedPointer<VM> snapshot = this->m_vm->GetCache()->ResolveObject<VM>(XenObjectType::VM, snapshotRef);
 
     QMenu menu(this);
     QAction* takeSnapshotAction = menu.addAction(tr("Take Snapshot..."));
@@ -1286,7 +1286,7 @@ void SnapshotsTabPage::refreshVmssPanel()
         return;
     }
 
-    const bool hasVmssSupport = !this->m_vm->GetCache()->GetAllData("vmss").isEmpty() || this->m_objectData.contains("snapshot_schedule");
+    const bool hasVmssSupport = !this->m_vm->GetCache()->GetAllData(XenObjectType::VMSS).isEmpty() || this->m_objectData.contains("snapshot_schedule");
 
     if (this->m_scheduledSnapshotsAction)
         this->m_scheduledSnapshotsAction->setVisible(hasVmssSupport);

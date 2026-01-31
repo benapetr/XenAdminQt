@@ -219,7 +219,7 @@ QSharedPointer<VDI> SrStorageTabPage::getSelectedVDI() const
     if (vdiRef.isEmpty())
         return QSharedPointer<VDI>();
 
-    return this->m_connection->GetCache()->ResolveObject<VDI>("vdi", vdiRef);
+    return this->m_connection->GetCache()->ResolveObject<VDI>(vdiRef);
 }
 
 void SrStorageTabPage::updateButtonStates()

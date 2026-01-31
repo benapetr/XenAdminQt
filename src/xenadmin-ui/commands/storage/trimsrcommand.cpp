@@ -49,7 +49,7 @@ static QSharedPointer<SR> resolveOverrideSR(const QString& srRef, XenConnection*
 {
     if (srRef.isEmpty() || !connection || !connection->GetCache())
         return QSharedPointer<SR>();
-    return connection->GetCache()->ResolveObject<SR>("sr", srRef);
+    return connection->GetCache()->ResolveObject<SR>(XenObjectType::SR, srRef);
 }
 
 bool TrimSRCommand::CanRun() const

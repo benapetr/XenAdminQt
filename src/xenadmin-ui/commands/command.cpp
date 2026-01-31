@@ -136,21 +136,19 @@ QString Command::getSelectedObjectName() const
     return item->text(0);
 }
 
-QString Command::getSelectedObjectType() const
+XenObjectType Command::getSelectedObjectType() const
 {
     if (!this->m_selectionOverride.isEmpty())
     {
-        QSharedPointer<XenObject> obj = this->m_selectionOverride.first();
-        return obj ? obj->GetObjectType() : QString();
+        return this->m_selectionOverride.first()->GetObjectType();
     }
-
     SelectionManager* selection = this->GetSelectionManager();
     if (selection)
         return selection->SelectionType();
 
     QTreeWidgetItem* item = this->getSelectedItem();
     if (!item)
-        return QString();
+        return XenObjectType::Null;
 
     QVariant data = item->data(0, Qt::UserRole);
     if (data.canConvert<QSharedPointer<XenObject>>())
@@ -158,13 +156,12 @@ QString Command::getSelectedObjectType() const
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
         if (obj)
             return obj->GetObjectType();
-    }
-    else if (data.canConvert<XenConnection*>())
+    } else if (data.canConvert<XenConnection*>())
     {
-        return "disconnected_host";
+        return XenObjectType::DisconnectedHost;
     }
 
-    return QString();
+    return XenObjectType::Null;
 }
 
 QSharedPointer<XenObject> Command::getSelectedObject() const

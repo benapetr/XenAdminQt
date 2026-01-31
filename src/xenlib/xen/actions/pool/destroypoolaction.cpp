@@ -55,7 +55,7 @@ void DestroyPoolAction::run()
         SetDescription("Checking pool state...");
 
         // Check that pool has only one host
-        QStringList hostRefs = GetConnection()->GetCache()->GetAllRefs("host");
+        QStringList hostRefs = GetConnection()->GetCache()->GetAllRefs(XenObjectType::Host);
         if (hostRefs.size() > 1)
         {
             throw std::runtime_error("Cannot destroy pool with multiple hosts. Remove all hosts except coordinator first.");

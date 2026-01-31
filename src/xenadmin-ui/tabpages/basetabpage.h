@@ -31,6 +31,7 @@
 #include <QWidget>
 #include <QVariantMap>
 #include <QSharedPointer>
+#include "xenlib/xen/xenobjecttype.h"
 
 class XenConnection;
 class XenRpcAPI;
@@ -109,7 +110,7 @@ class BaseTabPage : public QWidget
         virtual bool IsApplicableForObjectType(const QString& objectType) const = 0;
 
     protected:
-        QString m_objectType;
+        XenObjectType m_objectType = XenObjectType::Null;
         QString m_objectRef;
         QSharedPointer<XenObject> m_object;
         QVariantMap m_objectData;

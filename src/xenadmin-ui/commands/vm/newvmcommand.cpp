@@ -167,7 +167,7 @@ bool NewVMCommand::hasEnabledHost() const
     if (!connection || !connection->GetCache())
         return false;
 
-    QList<QVariantMap> hosts = connection->GetCache()->GetAllData("host");
+    QList<QVariantMap> hosts = connection->GetCache()->GetAllData(XenObjectType::Host);
     for (const QVariantMap& host : hosts)
     {
         if (host.value("enabled").toBool())

@@ -28,17 +28,16 @@
 #include "changecdisocommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xen/api.h"
-#include "xen/connection.h"
-#include "xen/xenobject.h"
-#include "xen/actions/vm/changevmisoaction.h"
+#include "xenlib/xen/api.h"
+#include "xenlib/xen/connection.h"
+#include "xenlib/xen/xenobject.h"
+#include "xenlib/xen/actions/vm/changevmisoaction.h"
 #include <QMessageBox>
 #include <QVariantMap>
 #include <QVariantList>
 #include <QDebug>
 
-ChangeCDISOCommand::ChangeCDISOCommand(MainWindow* mainWindow, const QString& isoRef, QObject* parent)
-    : VMCommand(mainWindow, parent), m_isoRef(isoRef)
+ChangeCDISOCommand::ChangeCDISOCommand(MainWindow* mainWindow, const QString& isoRef, QObject* parent) : VMCommand(mainWindow, parent), m_isoRef(isoRef)
 {
 }
 
@@ -139,7 +138,7 @@ QString ChangeCDISOCommand::getVMCDROM() const
     // Find the CD/DVD drive
     for (const QVariant& vbdRef : vbds)
     {
-        QVariantMap vbdData = cache->ResolveObjectData("vbd", vbdRef.toString());
+        QVariantMap vbdData = cache->ResolveObjectData(XenObjectType::VBD, vbdRef.toString());
         QString type = vbdData.value("type").toString();
         if (type == "CD")
             return vbdRef.toString();

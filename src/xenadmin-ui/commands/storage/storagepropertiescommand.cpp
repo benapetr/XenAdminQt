@@ -62,7 +62,7 @@ void StoragePropertiesCommand::Run()
     if (!this->m_overrideConn)
         sr = this->getSR();
     else
-        sr = this->m_overrideConn->GetCache()->ResolveObject<SR>("sr", this->m_overrideSRRef);
+        sr = this->m_overrideConn->GetCache()->ResolveObject<SR>(XenObjectType::SR, this->m_overrideSRRef);
 
     if (!sr || !sr->IsValid())
         return;

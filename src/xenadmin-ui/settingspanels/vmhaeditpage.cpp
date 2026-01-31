@@ -103,10 +103,7 @@ QIcon VMHAEditPage::GetImage() const
     return QIcon(":/icons/reboot_vm_16.png");
 }
 
-void VMHAEditPage::SetXenObjects(const QString& objectRef,
-                                 const QString& objectType,
-                                 const QVariantMap& objectDataBefore,
-                                 const QVariantMap& objectDataCopy)
+void VMHAEditPage::SetXenObjects(const QString& objectRef, const QString& objectType, const QVariantMap& objectDataBefore, const QVariantMap& objectDataCopy)
 {
     Q_UNUSED(objectType);
 
@@ -125,11 +122,11 @@ void VMHAEditPage::SetXenObjects(const QString& objectRef,
     this->m_origNtol = 0;
     if (this->connection() && this->connection()->GetCache())
     {
-        QStringList poolRefs = this->connection()->GetCache()->GetAllRefs("pool");
+        QStringList poolRefs = this->connection()->GetCache()->GetAllRefs(XenObjectType::Pool);
         if (!poolRefs.isEmpty())
         {
             this->m_poolRef = poolRefs.first();
-            QVariantMap poolData = this->connection()->GetCache()->ResolveObjectData("pool", this->m_poolRef);
+            QVariantMap poolData = this->connection()->GetCache()->ResolveObjectData(XenObjectType::Pool, this->m_poolRef);
             this->m_origNtol = poolData.value("ha_host_failures_to_tolerate", 0).toLongLong();
         }
 
@@ -158,7 +155,7 @@ AsyncOperation* VMHAEditPage::SaveSettings()
 
     if (haChanges && this->poolHasHAEnabled())
     {
-        QSharedPointer<Pool> pool = this->m_connection->GetCache()->ResolveObject<Pool>("pool", this->m_poolRef);
+        QSharedPointer<Pool> pool = this->m_connection->GetCache()->ResolveObject<Pool>(this->m_poolRef);
         if (!pool || !pool->IsValid())
         {
             qWarning() << "VMHAEditPage: Failed to resolve pool" << this->m_poolRef;
@@ -315,13 +312,13 @@ QVariantMap VMHAEditPage::getPoolData() const
         return QVariantMap();
 
     if (!this->m_poolRef.isEmpty())
-        return this->connection()->GetCache()->ResolveObjectData("pool", this->m_poolRef);
+        return this->connection()->GetCache()->ResolveObjectData(XenObjectType::Pool, this->m_poolRef);
 
-    QStringList poolRefs = this->connection()->GetCache()->GetAllRefs("pool");
+    QStringList poolRefs = this->connection()->GetCache()->GetAllRefs(XenObjectType::Pool);
     if (poolRefs.isEmpty())
         return QVariantMap();
 
-    return this->connection()->GetCache()->ResolveObjectData("pool", poolRefs.first());
+    return this->connection()->GetCache()->ResolveObjectData(XenObjectType::Pool, poolRefs.first());
 }
 
 void VMHAEditPage::refillPrioritiesComboBox()
@@ -378,7 +375,7 @@ void VMHAEditPage::updateEnablement()
     QString masterRef = poolData.value("master").toString();
     if (!masterRef.isEmpty() && this->connection() && this->connection()->GetCache())
     {
-        QVariantMap hostData = this->connection()->GetCache()->ResolveObjectData("host", masterRef);
+        QVariantMap hostData = this->connection()->GetCache()->ResolveObjectData(XenObjectType::Host, masterRef);
         QVariantMap licenseParams = hostData.value("license_params").toMap();
         bool enableHa = licenseParams.value("enable_xha", true).toBool();
         if (!enableHa)
@@ -410,12 +407,12 @@ void VMHAEditPage::updateEnablement()
     QStringList deadHosts;
     if (this->connection() && this->connection()->GetCache())
     {
-        QStringList hostRefs = this->connection()->GetCache()->GetAllRefs("host");
+        QStringList hostRefs = this->connection()->GetCache()->GetAllRefs(XenObjectType::Host);
         for (const QString& hostRef : hostRefs)
         {
-            QVariantMap hostData = this->connection()->GetCache()->ResolveObjectData("host", hostRef);
+            QVariantMap hostData = this->connection()->GetCache()->ResolveObjectData(XenObjectType::Host, hostRef);
             QString metricsRef = hostData.value("metrics").toString();
-            QVariantMap metricsData = this->connection()->GetCache()->ResolveObjectData("host_metrics", metricsRef);
+            QVariantMap metricsData = this->connection()->GetCache()->ResolveObjectData(XenObjectType::HostMetrics, metricsRef);
             bool isLive = metricsData.value("live", true).toBool();
             if (!isLive)
                 deadHosts << this->ellipsiseName(hostData.value("name_label").toString(), 30);
@@ -598,7 +595,7 @@ void VMHAEditPage::startNtolUpdate()
             }
 
             self->m_ntolMax = ntolMax;
-            QVariantMap poolData = self->connection()->GetCache()->ResolveObjectData("pool", poolRef);
+            QVariantMap poolData = self->connection()->GetCache()->ResolveObjectData(XenObjectType::Pool, poolRef);
             if (poolData.value("ha_enabled", false).toBool())
                 self->m_ntol = poolData.value("ha_host_failures_to_tolerate", 0).toLongLong();
             else
@@ -634,7 +631,7 @@ QVariantMap VMHAEditPage::buildNtolConfig() const
     if (!this->connection() || !this->connection()->GetCache())
         return config;
 
-    QList<QVariantMap> vms = this->connection()->GetCache()->GetAllData("vm");
+    QList<QVariantMap> vms = this->connection()->GetCache()->GetAllData(XenObjectType::VM);
     for (const QVariantMap& vmData : vms)
     {
         bool isTemplate = vmData.value("is_a_template", false).toBool();
@@ -679,7 +676,7 @@ void VMHAEditPage::onLinkActivated(const QString& link)
     if (!this->connection() || !this->connection()->GetCache())
         return;
 
-    QSharedPointer<Pool> pool = this->connection()->GetCache()->ResolveObject<Pool>("pool", this->m_poolRef);
+    QSharedPointer<Pool> pool = this->connection()->GetCache()->ResolveObject<Pool>(this->m_poolRef);
     if (!pool || !pool->IsValid())
         return;
 

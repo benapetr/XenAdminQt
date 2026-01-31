@@ -187,7 +187,7 @@ void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const Pow
 
     if (modeString.isEmpty() && conn->GetCache())
     {
-        QSharedPointer<::Host> host = conn->GetCache()->ResolveObject<::Host>("host", hostRef);
+        QSharedPointer<::Host> host = conn->GetCache()->ResolveObject<::Host>(hostRef);
         QSharedPointer<::Pool> pool = host ? host->GetPool() : QSharedPointer<::Pool>();
         if (host && isWlbEnabled(pool))
         {

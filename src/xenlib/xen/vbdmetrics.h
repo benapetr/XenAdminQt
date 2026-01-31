@@ -53,7 +53,7 @@ class XENLIB_EXPORT VBDMetrics : public XenObject
         explicit VBDMetrics(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~VBDMetrics() override = default;
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::VBDMetrics; }
 
         //! Get read bandwidth (KiB/s)
         double IoReadKbs() const;

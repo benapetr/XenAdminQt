@@ -67,7 +67,7 @@ class XENLIB_EXPORT HostMetrics : public XenObject
         QDateTime LastUpdated() const;
 
     protected:
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::HostMetrics; }
 };
 
 #endif // HOSTMETRICS_H

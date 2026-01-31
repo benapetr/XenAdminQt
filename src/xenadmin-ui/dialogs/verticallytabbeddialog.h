@@ -35,6 +35,7 @@
 #include <QString>
 #include <QVariantMap>
 #include "../settingspanels/ieditpage.h"
+#include "xenlib/xen/xenobjecttype.h"
 
 namespace Ui
 {
@@ -149,7 +150,7 @@ class VerticallyTabbedDialog : public QDialog
 
         QSharedPointer<XenObject> m_object;
         QString m_objectRef;
-        QString m_objectType;
+        XenObjectType m_objectType{XenObjectType::Null};
         QVariantMap m_objectDataBefore; // Original data (read-only)
         QVariantMap m_objectDataCopy;   // Clone being edited
 };

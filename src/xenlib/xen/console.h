@@ -54,7 +54,7 @@ class XENLIB_EXPORT Console : public XenObject
         explicit Console(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Console() override = default;
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::Console; }
 
         // Property accessors (read from cache)
         QString GetProtocol() const;

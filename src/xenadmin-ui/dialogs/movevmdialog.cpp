@@ -162,8 +162,7 @@ void MoveVMDialog::accept()
     QString srRef = this->getSelectedSR();
     if (srRef.isEmpty())
     {
-        QMessageBox::warning(this, tr("No Storage Repository Selected"),
-                           tr("Please select a Storage Repository to move the VM's disks to."));
+        QMessageBox::warning(this, tr("No Storage Repository Selected"), tr("Please select a Storage Repository to move the VM's disks to."));
         return;
     }
 
@@ -172,10 +171,10 @@ void MoveVMDialog::accept()
     QSharedPointer<Host> host;
     if (!hostRef.isEmpty())
     {
-        host = this->m_connection->GetCache()->ResolveObject<Host>("host", hostRef);
+        host = this->m_connection->GetCache()->ResolveObject<Host>(XenObjectType::Host, hostRef);
     }
 
-    QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>("sr", srRef);
+    QSharedPointer<SR> sr = this->m_connection->GetCache()->ResolveObject<SR>(XenObjectType::SR, srRef);
 
     // Create and run the move action
     VMMoveAction* action = new VMMoveAction(this->m_vm, sr, host, this);

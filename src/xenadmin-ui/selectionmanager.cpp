@@ -78,31 +78,31 @@ QSharedPointer<XenObject> SelectionManager::PrimaryObject() const
     return data.value<QSharedPointer<XenObject>>();
 }
 
-QString SelectionManager::PrimaryType() const
+XenObjectType SelectionManager::PrimaryType() const
 {
     QTreeWidgetItem* item = this->PrimaryItem();
     if (!item)
-        return QString();
+        return XenObjectType::Null;
 
     QVariant data = item->data(0, Qt::UserRole);
     if (data.canConvert<QSharedPointer<XenObject>>())
     {
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        return obj ? obj->GetObjectType() : QString();
+        return obj ? obj->GetObjectType() : XenObjectType::Null;
     }
 
     if (data.canConvert<XenConnection*>())
-        return "disconnected_host";
+        return XenObjectType::DisconnectedHost;
 
-    return QString();
+    return XenObjectType::Null;
 }
 
-QString SelectionManager::SelectionType() const
+XenObjectType SelectionManager::SelectionType() const
 {
-    const QStringList types = this->SelectedTypes();
+    const QList<XenObjectType> types = this->SelectedTypes();
     if (types.size() == 1)
         return types.first();
-    return QString();
+    return XenObjectType::Null;
 }
 
 QList<QSharedPointer<XenObject>> SelectionManager::SelectedObjects() const
@@ -127,7 +127,7 @@ QList<QSharedPointer<XenObject>> SelectionManager::SelectedObjects() const
     return objects;
 }
 
-QList<QSharedPointer<XenObject>> SelectionManager::SelectedObjectsByType(const QString& objectType) const
+QList<QSharedPointer<XenObject>> SelectionManager::SelectedObjectsByType(XenObjectType objectType) const
 {
     QList<QSharedPointer<XenObject>> objects;
     const QList<QSharedPointer<XenObject>> allObjects = this->SelectedObjects();
@@ -141,9 +141,9 @@ QList<QSharedPointer<XenObject>> SelectionManager::SelectedObjectsByType(const Q
     return objects;
 }
 
-QStringList SelectionManager::SelectedTypes() const
+QList<XenObjectType> SelectionManager::SelectedTypes() const
 {
-    QSet<QString> types;
+    QSet<XenObjectType> types;
     const QList<QSharedPointer<XenObject>> objects = this->SelectedObjects();
     for (const QSharedPointer<XenObject>& obj : objects)
     {
@@ -189,7 +189,7 @@ QList<QSharedPointer<VM>> SelectionManager::SelectedVMs() const
             continue;
 
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (!obj || obj->GetObjectType() != "vm")
+        if (!obj || obj->GetObjectType() != XenObjectType::VM)
             continue;
 
         QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
@@ -215,7 +215,7 @@ QList<QSharedPointer<Host>> SelectionManager::SelectedHosts() const
             continue;
 
         QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
-        if (!obj || obj->GetObjectType() != "host")
+        if (!obj || obj->GetObjectType() != XenObjectType::Host)
             continue;
 
         QSharedPointer<Host> host = qSharedPointerCast<Host>(obj);

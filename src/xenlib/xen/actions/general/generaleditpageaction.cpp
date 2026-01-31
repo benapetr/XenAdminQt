@@ -70,14 +70,14 @@ void GeneralEditPageAction::run()
                 // Move to new folder
                 // C# equivalent: Folders.Move(Session, xenObjectOrig, newFolder);
                 this->setFolderPath(this->m_newFolder);
-                qDebug() << "GeneralEditPageAction: Moved" << this->m_object->GetObjectType() << this->m_object->OpaqueRef()
+                qDebug() << "GeneralEditPageAction: Moved" << this->m_object->GetObjectTypeName() << this->m_object->OpaqueRef()
                          << "from folder" << this->m_oldFolder << "to" << this->m_newFolder;
             } else
             {
                 // Unfolder (remove from folder)
                 // C# equivalent: Folders.Unfolder(Session, xenObjectOrig);
                 this->setFolderPath(QString()); // Empty string = remove folder key
-                qDebug() << "GeneralEditPageAction: Unfoldered" << this->m_object->GetObjectType() << this->m_object->OpaqueRef();
+                qDebug() << "GeneralEditPageAction: Unfoldered" << this->m_object->GetObjectTypeName() << this->m_object->OpaqueRef();
             }
         }
 
@@ -121,7 +121,7 @@ void GeneralEditPageAction::run()
 
                 this->removeTag(tag);
                 qDebug() << "GeneralEditPageAction: Removed tag" << tag
-                         << "from" << this->m_object->GetObjectType() << this->m_object->OpaqueRef();
+                         << "from" << this->m_object->GetObjectTypeName() << this->m_object->OpaqueRef();
 
                 currentTagOp++;
             }
@@ -144,7 +144,7 @@ void GeneralEditPageAction::run()
 
                 this->addTag(tag);
                 qDebug() << "GeneralEditPageAction: Added tag" << tag
-                         << "to" << this->m_object->GetObjectType() << this->m_object->OpaqueRef();
+                         << "to" << this->m_object->GetObjectTypeName() << this->m_object->OpaqueRef();
 
                 currentTagOp++;
             }
@@ -180,11 +180,11 @@ void GeneralEditPageAction::setFolderPath(const QString& folderPath)
     if (folderPath.isEmpty())
     {
         // Remove folder key (unfolder)
-        method = QString("%1.remove_from_other_config").arg(this->m_object->GetObjectType());
+        method = QString("%1.remove_from_other_config").arg(this->m_object->GetObjectTypeName());
     } else
     {
         // Set folder key (move to folder)
-        method = QString("%1.add_to_other_config").arg(this->m_object->GetObjectType());
+        method = QString("%1.add_to_other_config").arg(this->m_object->GetObjectTypeName());
     }
 
     QVariantList params;
@@ -215,7 +215,7 @@ void GeneralEditPageAction::removeTag(const QString& tag)
         throw std::runtime_error("Not connected to XenServer");
     }
 
-    QString method = QString("%1.remove_tags").arg(this->m_object->GetObjectType());
+    QString method = QString("%1.remove_tags").arg(this->m_object->GetObjectTypeName());
 
     QVariantList params;
     params << sess->GetSessionID() << this->m_object->OpaqueRef() << tag;
@@ -239,7 +239,7 @@ void GeneralEditPageAction::addTag(const QString& tag)
         throw std::runtime_error("Not connected to XenServer");
     }
 
-    QString method = QString("%1.add_tags").arg(this->m_object->GetObjectType());
+    QString method = QString("%1.add_tags").arg(this->m_object->GetObjectTypeName());
 
     QVariantList params;
     params << sess->GetSessionID() << this->m_object->OpaqueRef() << tag;

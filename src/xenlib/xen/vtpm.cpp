@@ -33,10 +33,6 @@ VTPM::VTPM(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString VTPM::GetObjectType() const
-{
-    return "vtpm";
-}
 
 QStringList VTPM::AllowedOperations() const
 {

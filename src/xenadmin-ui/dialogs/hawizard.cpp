@@ -438,7 +438,7 @@ void HAWizard::scanForHeartbeatSRs()
         if (!cache)
             throw std::runtime_error("Cache not available");
 
-        QList<QSharedPointer<SR>> srs = cache->GetAll<SR>("sr");
+        QList<QSharedPointer<SR>> srs = cache->GetAll<SR>(XenObjectType::SR);
 
         for (const QSharedPointer<SR>& sr : srs)
         {
@@ -581,7 +581,7 @@ void HAWizard::populateVMTable()
     if (!cache)
         return;
 
-    QList<QSharedPointer<VM>> vms = cache->GetAll<VM>("vm");
+    QList<QSharedPointer<VM>> vms = cache->GetAll<VM>(XenObjectType::VM);
 
     for (const QSharedPointer<VM>& vm : vms)
     {

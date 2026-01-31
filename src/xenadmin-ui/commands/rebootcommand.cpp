@@ -43,14 +43,14 @@ bool RebootCommand::CanRun() const
     if (!selection)
         return false;
 
-    const QString selectionType = selection->SelectionType();
-    if (selectionType == "host")
+    const XenObjectType selectionType = selection->SelectionType();
+    if (selectionType == XenObjectType::Host)
     {
         RebootHostCommand hostCmd(this->mainWindow(), nullptr);
         return hostCmd.CanRun();
     }
 
-    if (selectionType == "vm")
+    if (selectionType == XenObjectType::VM)
     {
         RestartVMCommand vmCmd(this->mainWindow(), nullptr);
         return vmCmd.CanRun();
@@ -65,8 +65,8 @@ void RebootCommand::Run()
     if (!selection)
         return;
 
-    const QString selectionType = selection->SelectionType();
-    if (selectionType == "host")
+    const XenObjectType selectionType = selection->SelectionType();
+    if (selectionType == XenObjectType::Host)
     {
         RebootHostCommand hostCmd(this->mainWindow(), this);
         if (hostCmd.CanRun())
@@ -76,7 +76,7 @@ void RebootCommand::Run()
         }
     }
 
-    if (selectionType == "vm")
+    if (selectionType == XenObjectType::VM)
     {
         RestartVMCommand vmCmd(this->mainWindow(), this);
         if (vmCmd.CanRun())

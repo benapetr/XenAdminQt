@@ -25,36 +25,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "crosspoolmigratewizard.h"
-#include "crosspoolmigratewizardpages.h"
-#include "crosspoolmigratewizard_copymodepage.h"
-#include "crosspoolmigratewizard_intrapoolcopypage.h"
-#include "ui_crosspoolmigratewizard.h"
-#include "../mainwindow.h"
-#include "../operations/operationmanager.h"
-#include "../commands/vm/vmoperationhelpers.h"
-#include "xen/host.h"
-#include "xen/network.h"
-#include "xen/pool.h"
-#include "xen/sr.h"
-#include "xen/vdi.h"
-#include "xen/vm.h"
-#include "xen/friendlyerrornames.h"
-#include "xen/failure.h"
-#include "xen/actions/vm/vmcrosspoolmigrateaction.h"
-#include "xen/actions/vm/vmmigrateaction.h"
-#include "xen/actions/vm/vmmoveaction.h"
-#include "xen/actions/vm/vmcopyaction.h"
-#include "xen/actions/vm/vmcloneaction.h"
-#include "xen/actions/vm/resumeandstartvmsaction.h"
-#include "xenlib/operations/multipleaction.h"
-#include "../controls/srpicker.h"
-#include "xen/network/connectionsmanager.h"
-#include "xen/xenapi/xenapi_Host.h"
-#include "xen/xenapi/xenapi_VM.h"
-#include "xenlib/xencache.h"
-#include "xen/session.h"
-#include "../widgets/wizardnavigationpane.h"
 #include <QComboBox>
 #include <QCheckBox>
 #include <QFormLayout>
@@ -71,6 +41,36 @@
 #include <QStandardItemModel>
 #include <QRegularExpression>
 #include <QVector>
+#include "crosspoolmigratewizard.h"
+#include "crosspoolmigratewizardpages.h"
+#include "crosspoolmigratewizard_copymodepage.h"
+#include "crosspoolmigratewizard_intrapoolcopypage.h"
+#include "ui_crosspoolmigratewizard.h"
+#include "../mainwindow.h"
+#include "../operations/operationmanager.h"
+#include "../commands/vm/vmoperationhelpers.h"
+#include "../controls/srpicker.h"
+#include "../widgets/wizardnavigationpane.h"
+#include "xenlib/xen/host.h"
+#include "xenlib/xen/network.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/friendlyerrornames.h"
+#include "xenlib/xen/failure.h"
+#include "xenlib/xen/actions/vm/vmcrosspoolmigrateaction.h"
+#include "xenlib/xen/actions/vm/vmmigrateaction.h"
+#include "xenlib/xen/actions/vm/vmmoveaction.h"
+#include "xenlib/xen/actions/vm/vmcopyaction.h"
+#include "xenlib/xen/actions/vm/vmcloneaction.h"
+#include "xenlib/xen/actions/vm/resumeandstartvmsaction.h"
+#include "xenlib/operations/multipleaction.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/xen/xenapi/xenapi_Host.h"
+#include "xenlib/xen/xenapi/xenapi_VM.h"
+#include "xenlib/xencache.h"
+#include "xenlib/xen/session.h"
 
 namespace
 {
@@ -110,7 +110,7 @@ namespace
         if (!cache)
             return QString();
 
-        QList<QVariantMap> pools = cache->GetAllData("pool");
+        QList<QVariantMap> pools = cache->GetAllData(XenObjectType::Pool);
         if (pools.isEmpty())
             return QString();
 
@@ -122,7 +122,7 @@ namespace
         if (!cache)
             return QString();
 
-        QList<QVariantMap> pools = cache->GetAllData("pool");
+        QList<QVariantMap> pools = cache->GetAllData(XenObjectType::Pool);
         if (pools.isEmpty())
             return QString();
 
@@ -134,7 +134,7 @@ namespace
         if (!cache || hostRef.isEmpty() || networkRef.isEmpty())
             return false;
 
-        QList<QVariantMap> pifs = cache->GetAllData("pif");
+        QList<QVariantMap> pifs = cache->GetAllData(XenObjectType::PIF);
         for (const QVariantMap& pifData : pifs)
         {
             if (pifData.value("host").toString() != hostRef)
@@ -152,7 +152,7 @@ namespace
         if (!cache || hostRef.isEmpty())
             return QString();
 
-        QList<QVariantMap> pifs = cache->GetAllData("pif");
+        QList<QVariantMap> pifs = cache->GetAllData(XenObjectType::PIF);
         for (const QVariantMap& pifData : pifs)
         {
             if (pifData.value("host").toString() != hostRef)
@@ -167,11 +167,7 @@ namespace
     }
 }
 
-CrossPoolMigrateWizard::CrossPoolMigrateWizard(MainWindow* mainWindow,
-                                               const QSharedPointer<VM>& vm,
-                                               WizardMode mode,
-                                               bool resumeAfterMigrate,
-                                               QWidget* parent)
+CrossPoolMigrateWizard::CrossPoolMigrateWizard(MainWindow* mainWindow, const QSharedPointer<VM>& vm, WizardMode mode, bool resumeAfterMigrate, QWidget* parent)
     : CrossPoolMigrateWizard(mainWindow,
                              vm ? QList<QSharedPointer<VM>>{vm} : QList<QSharedPointer<VM>>(),
                              mode,
@@ -180,11 +176,7 @@ CrossPoolMigrateWizard::CrossPoolMigrateWizard(MainWindow* mainWindow,
 {
 }
 
-CrossPoolMigrateWizard::CrossPoolMigrateWizard(MainWindow* mainWindow,
-                                               const QList<QSharedPointer<VM>>& vms,
-                                               WizardMode mode,
-                                               bool resumeAfterMigrate,
-                                               QWidget* parent)
+CrossPoolMigrateWizard::CrossPoolMigrateWizard(MainWindow* mainWindow, const QList<QSharedPointer<VM>>& vms, WizardMode mode, bool resumeAfterMigrate, QWidget* parent)
     : QWizard(parent),
       ui(new Ui::CrossPoolMigrateWizard),
       m_mainWindow(mainWindow),
@@ -678,8 +670,7 @@ bool CrossPoolMigrateWizard::validateCurrentPage()
 {
     if (!this->allVMsAvailable())
     {
-        QMessageBox::warning(this, tr("Cross Pool Migrate"),
-                             tr("One or more selected VMs are no longer available."));
+        QMessageBox::warning(this, tr("Cross Pool Migrate"), tr("One or more selected VMs are no longer available."));
         return false;
     }
 
@@ -717,8 +708,7 @@ bool CrossPoolMigrateWizard::validateCurrentPage()
             QStandardItem* item = poolModel->item(this->m_poolCombo->currentIndex());
             if (item && !item->isEnabled())
             {
-                QMessageBox::warning(this, tr("Cross Pool Migrate"),
-                                     tr("Selected host is not eligible for migration."));
+                QMessageBox::warning(this, tr("Cross Pool Migrate"), tr("Selected host is not eligible for migration."));
                 return false;
             }
         }
@@ -731,8 +721,7 @@ bool CrossPoolMigrateWizard::validateCurrentPage()
                 QStandardItem* item = hostModel->item(this->m_hostCombo->currentIndex());
                 if (item && !item->isEnabled())
                 {
-                    QMessageBox::warning(this, tr("Cross Pool Migrate"),
-                                         tr("Selected host is not eligible for migration."));
+                    QMessageBox::warning(this, tr("Cross Pool Migrate"), tr("Selected host is not eligible for migration."));
                     return false;
                 }
             }
@@ -784,7 +773,7 @@ void CrossPoolMigrateWizard::accept()
             else
             {
                 XenCache* cache = this->m_sourceConnection->GetCache();
-                QSharedPointer<SR> sr = cache ? cache->ResolveObject<SR>("sr", this->copyTargetSrRef()) : QSharedPointer<SR>();
+                QSharedPointer<SR> sr = cache ? cache->ResolveObject<SR>(XenObjectType::SR, this->copyTargetSrRef()) : QSharedPointer<SR>();
                 if (sr && sr->IsValid())
                 {
                     VMCopyAction* action = new VMCopyAction(vmItem, QSharedPointer<Host>(), sr, this->copyName(), this->copyDescription(), nullptr);
@@ -810,7 +799,7 @@ void CrossPoolMigrateWizard::accept()
         XenCache* targetCache = this->m_targetConnection->GetCache();
         if (targetCache)
         {
-            QVariantMap poolData = targetCache->ResolveObjectData("pool", this->m_targetPoolRef);
+            QVariantMap poolData = targetCache->ResolveObjectData(XenObjectType::Pool, this->m_targetPoolRef);
             this->m_targetHostRef = poolData.value("master").toString();
         }
     }
@@ -836,7 +825,7 @@ void CrossPoolMigrateWizard::accept()
             if (vdiRef.isEmpty() || targetSrRef.isEmpty())
                 continue;
 
-            QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
+            QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
             QString currentSrRef = vdiData.value("SR").toString();
             if (!currentSrRef.isEmpty() && currentSrRef != targetSrRef)
                 return true;
@@ -869,12 +858,12 @@ void CrossPoolMigrateWizard::accept()
                     if (vdiRef.isEmpty() || srRef.isEmpty())
                         continue;
 
-                    QSharedPointer<SR> srObj = sourceCache->ResolveObject<SR>("sr", srRef);
+                    QSharedPointer<SR> srObj = sourceCache->ResolveObject<SR>(XenObjectType::SR, srRef);
                     if (srObj && srObj->IsValid())
                         storageMap.insert(vdiRef, srObj);
                 }
 
-                QSharedPointer<Host> hostObj = sourceCache->ResolveObject<Host>("host", this->m_targetHostRef);
+                QSharedPointer<Host> hostObj = sourceCache->ResolveObject<Host>(XenObjectType::Host, this->m_targetHostRef);
 
                 VMMoveAction* action = new VMMoveAction(vm, storageMap, hostObj, nullptr);
                 OperationManager::instance()->RegisterOperation(action);
@@ -897,13 +886,13 @@ void CrossPoolMigrateWizard::accept()
                     nullptr);
             } else
             {
-                QSharedPointer<Host> host = vm->GetCache()->ResolveObject<Host>("host", this->m_targetHostRef);
+                QSharedPointer<Host> host = vm->GetCache()->ResolveObject<Host>(XenObjectType::Host, this->m_targetHostRef);
                 migrateAction = new VMMigrateAction(vm, host, nullptr);
             }
 
             if (this->m_resumeAfterMigrate && this->m_mode == WizardMode::Migrate && migrateAction)
             {
-                QSharedPointer<Host> host = vm->GetCache()->ResolveObject<Host>("host", this->m_targetHostRef);
+                QSharedPointer<Host> host = vm->GetCache()->ResolveObject<Host>(XenObjectType::Host, this->m_targetHostRef);
                 QList<QSharedPointer<VM>> resumeList;
                 resumeList.append(vm);
                 ResumeAndStartVMsAction* resumeAction = new ResumeAndStartVMsAction(
@@ -979,16 +968,16 @@ void CrossPoolMigrateWizard::populateDestinationPools()
         if (!cache)
             continue;
 
-        QStringList poolRefs = cache->GetAllRefs("pool");
+        QStringList poolRefs = cache->GetAllRefs(XenObjectType::Pool);
         if (!poolRefs.isEmpty())
         {
             QString poolRef = poolRefs.first();
-            QVariantMap poolData = cache->ResolveObjectData("pool", poolRef);
+            QVariantMap poolData = cache->ResolveObjectData(XenObjectType::Pool, poolRef);
             QString poolName = poolData.value("name_label", tr("Pool")).toString();
 
             QString failureReason;
             bool eligible = false;
-            QStringList hostRefs = cache->GetAllRefs("host");
+            QStringList hostRefs = cache->GetAllRefs(XenObjectType::Host);
             for (const QString& hostRef : hostRefs)
             {
                 bool hostEligible = true;
@@ -1028,10 +1017,10 @@ void CrossPoolMigrateWizard::populateDestinationPools()
             }
         } else
         {
-            QStringList hostRefs = cache->GetAllRefs("host");
+            QStringList hostRefs = cache->GetAllRefs(XenObjectType::Host);
             for (const QString& hostRef : hostRefs)
             {
-                QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
+                QVariantMap hostData = cache->ResolveObjectData(XenObjectType::Host, hostRef);
                 QString hostName = hostData.value("name_label", tr("Host")).toString();
 
                 QString failureReason;
@@ -1110,13 +1099,13 @@ void CrossPoolMigrateWizard::populateHostsForPool(const QString& poolRef, XenCon
     }
     else
     {
-        hostRefs = cache->GetAllRefs("host");
+        hostRefs = cache->GetAllRefs(XenObjectType::Host);
         this->m_hostCombo->setEnabled(true);
     }
 
     for (const QString& hostRef : hostRefs)
     {
-        QVariantMap hostData = cache->ResolveObjectData("host", hostRef);
+        QVariantMap hostData = cache->ResolveObjectData(XenObjectType::Host, hostRef);
         QString hostName = hostData.value("name_label", tr("Host")).toString();
 
         QString failureReason;
@@ -1266,9 +1255,9 @@ void CrossPoolMigrateWizard::populateStorageMappings()
     if (!sourceCache || !targetCache)
         return;
 
-    QStringList srRefs = targetCache->GetAllRefs("sr");
+    QStringList srRefs = targetCache->GetAllRefs(XenObjectType::SR);
     QString defaultSrRef;
-    QList<QVariantMap> pools = targetCache->GetAllData("pool");
+    QList<QVariantMap> pools = targetCache->GetAllData(XenObjectType::Pool);
     if (!pools.isEmpty())
         defaultSrRef = pools.first().value("default_SR").toString();
 
@@ -1281,12 +1270,12 @@ void CrossPoolMigrateWizard::populateStorageMappings()
         QStringList vbdRefs = vmItem->GetVBDRefs();
         for (const QString& vbdRef : vbdRefs)
         {
-            QVariantMap vbdData = sourceCache->ResolveObjectData("vbd", vbdRef);
+            QVariantMap vbdData = sourceCache->ResolveObjectData(XenObjectType::VBD, vbdRef);
             QString vdiRef = vbdData.value("VDI").toString();
             if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
                 continue;
 
-            QVariantMap vdiData = sourceCache->ResolveObjectData("vdi", vdiRef);
+            QVariantMap vdiData = sourceCache->ResolveObjectData(XenObjectType::VDI, vdiRef);
             QString vdiName = vdiData.value("name_label", "VDI").toString();
             QString vdiType = vdiData.value("type").toString();
             if (vdiType == "iso")
@@ -1305,7 +1294,7 @@ void CrossPoolMigrateWizard::populateStorageMappings()
             QComboBox* srCombo = new QComboBox(this->m_storageTable);
             for (const QString& srRef : srRefs)
             {
-                QVariantMap srData = targetCache->ResolveObjectData("sr", srRef);
+                QVariantMap srData = targetCache->ResolveObjectData(XenObjectType::SR, srRef);
                 QString srName = srData.value("name_label", "SR").toString();
                 srCombo->addItem(srName, srRef);
             }
@@ -1337,7 +1326,7 @@ void CrossPoolMigrateWizard::populateNetworkMappings()
     if (!sourceCache || !targetCache)
         return;
 
-    QStringList networkRefs = targetCache->GetAllRefs("network");
+    QStringList networkRefs = targetCache->GetAllRefs(XenObjectType::Network);
     int row = 0;
     for (const QSharedPointer<VM>& vmItem : this->m_vms)
     {
@@ -1349,7 +1338,7 @@ void CrossPoolMigrateWizard::populateNetworkMappings()
         for (const QString& vifRef : vifRefs + snapVifRefs)
         {
             bool isSnapshotVif = !vifRefs.contains(vifRef);
-            QVariantMap vifData = sourceCache->ResolveObjectData("vif", vifRef);
+            QVariantMap vifData = sourceCache->ResolveObjectData(XenObjectType::VIF, vifRef);
             QString mac = vifData.value("MAC", "VIF").toString();
             if (isSnapshotVif)
                 mac = QString("%1 (%2)").arg(mac, tr("snapshot"));
@@ -1366,7 +1355,7 @@ void CrossPoolMigrateWizard::populateNetworkMappings()
             QComboBox* netCombo = new QComboBox(this->m_networkTable);
             for (const QString& netRef : networkRefs)
             {
-                QVariantMap netData = targetCache->ResolveObjectData("network", netRef);
+                QVariantMap netData = targetCache->ResolveObjectData(XenObjectType::Network, netRef);
                 QString netName = netData.value("name_label", "Network").toString();
                 netCombo->addItem(netName, netRef);
             }
@@ -1390,10 +1379,10 @@ void CrossPoolMigrateWizard::populateTransferNetworks()
     if (!targetCache)
         return;
 
-    QStringList networkRefs = targetCache->GetAllRefs("network");
+    QStringList networkRefs = targetCache->GetAllRefs(XenObjectType::Network);
     for (const QString& netRef : networkRefs)
     {
-        QVariantMap netData = targetCache->ResolveObjectData("network", netRef);
+        QVariantMap netData = targetCache->ResolveObjectData(XenObjectType::Network, netRef);
         QString netName = netData.value("name_label", "Network").toString();
         this->m_transferNetworkCombo->addItem(netName, netRef);
     }
@@ -1562,7 +1551,7 @@ bool CrossPoolMigrateWizard::allVMsAvailable() const
     {
         if (!vmItem)
             return false;
-        if (!cache->ResolveObject<VM>("vm", vmItem->OpaqueRef()))
+        if (!cache->ResolveObject<VM>(XenObjectType::VM, vmItem->OpaqueRef()))
             return false;
     }
 
@@ -1696,10 +1685,7 @@ void CrossPoolMigrateWizard::ensureMappingForVm(const QSharedPointer<VM>& vm)
     this->m_vmMappings.insert(vm->OpaqueRef(), mapping);
 }
 
-bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm,
-                                                XenConnection* targetConnection,
-                                                const QString& hostRef,
-                                                QString* reason) const
+bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm, XenConnection* targetConnection, const QString& hostRef, QString* reason) const
 {
     if (!vm || !targetConnection)
         return false;
@@ -1725,7 +1711,7 @@ bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm,
         return false;
     }
 
-    QVariantMap hostData = targetCache->ResolveObjectData("host", hostRef);
+    QVariantMap hostData = targetCache->ResolveObjectData(XenObjectType::Host, hostRef);
     QString targetVersion = hostData.value("software_version").toMap().value("product_version").toString();
 
     QString sourceHostRef = homeRef;
@@ -1739,7 +1725,7 @@ bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm,
     }
     if (!sourceHostRef.isEmpty())
     {
-        QVariantMap sourceHostData = sourceCache->ResolveObjectData("host", sourceHostRef);
+        QVariantMap sourceHostData = sourceCache->ResolveObjectData(XenObjectType::Host, sourceHostRef);
         QString sourceVersion = sourceHostData.value("software_version").toMap().value("product_version").toString();
         if (!targetVersion.isEmpty() && !sourceVersion.isEmpty() &&
             compareVersions(targetVersion, sourceVersion) < 0)
@@ -1782,10 +1768,7 @@ bool CrossPoolMigrateWizard::canMigrateVmToHost(const QSharedPointer<VM>& vm,
     return false;
 }
 
-bool CrossPoolMigrateWizard::canDoStorageMigration(const QSharedPointer<VM>& vm,
-                                                   XenConnection* targetConnection,
-                                                   const QString& hostRef,
-                                                   QString* reason) const
+bool CrossPoolMigrateWizard::canDoStorageMigration(const QSharedPointer<VM>& vm, XenConnection* targetConnection, const QString& hostRef, QString* reason) const
 {
     if (!vm || !targetConnection)
         return false;
@@ -1798,7 +1781,7 @@ bool CrossPoolMigrateWizard::canDoStorageMigration(const QSharedPointer<VM>& vm,
 
     // Find management network for target host
     QString managementNetworkRef;
-    QList<QVariantMap> pifs = targetCache->GetAllData("pif");
+    QList<QVariantMap> pifs = targetCache->GetAllData(XenObjectType::PIF);
     for (const QVariantMap& pifData : pifs)
     {
         if (!pifData.value("management", false).toBool())
@@ -1833,27 +1816,27 @@ bool CrossPoolMigrateWizard::canDoStorageMigration(const QSharedPointer<VM>& vm,
     // Build VDI map
     QVariantMap vdiMap;
     QStringList targetSrRefs;
-    QStringList allTargetSrRefs = targetCache->GetAllRefs("sr");
+    QStringList allTargetSrRefs = targetCache->GetAllRefs(XenObjectType::SR);
     for (const QString& targetSrRef : allTargetSrRefs)
     {
-        QSharedPointer<SR> targetSr = targetCache->ResolveObject<SR>("sr", targetSrRef);
+        QSharedPointer<SR> targetSr = targetCache->ResolveObject<SR>(XenObjectType::SR, targetSrRef);
         if (targetSr && targetSr->SupportsStorageMigration())
             targetSrRefs.append(targetSrRef);
     }
     QStringList vbdRefs = vm->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
-        QVariantMap vbdData = sourceCache->ResolveObjectData("vbd", vbdRef);
+        QVariantMap vbdData = sourceCache->ResolveObjectData(XenObjectType::VBD, vbdRef);
         QString vdiRef = vbdData.value("VDI").toString();
-        if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
+        if (vdiRef.isEmpty() || vdiRef == XENOBJECT_NULL)
             continue;
 
-        QVariantMap vdiData = sourceCache->ResolveObjectData("vdi", vdiRef);
+        QVariantMap vdiData = sourceCache->ResolveObjectData(XenObjectType::VDI, vdiRef);
         QString srRef = vdiData.value("SR").toString();
         if (srRef.isEmpty())
             continue;
 
-        QSharedPointer<SR> srObj = sourceCache->ResolveObject<SR>("sr", srRef);
+        QSharedPointer<SR> srObj = sourceCache->ResolveObject<SR>(XenObjectType::SR, srRef);
         if (srObj && srObj->ContentType() == "iso")
             continue;
 
@@ -1870,7 +1853,7 @@ bool CrossPoolMigrateWizard::canDoStorageMigration(const QSharedPointer<VM>& vm,
     // Build VIF map
     QVariantMap vifMap;
     QString targetNetworkRef;
-    QStringList targetNetworks = targetCache->GetAllRefs("network");
+    QStringList targetNetworks = targetCache->GetAllRefs(XenObjectType::Network);
     for (const QString& networkRef : targetNetworks)
     {
         if (hostCanSeeNetwork(targetCache, hostRef, networkRef))
@@ -1956,7 +1939,7 @@ QStringList CrossPoolMigrateWizard::collectSnapshotVifRefs(const QSharedPointer<
     QStringList snapshots = vm->GetSnapshotRefs();
     for (const QString& snapRef : snapshots)
     {
-        QVariantMap snapData = cache->ResolveObjectData("vm", snapRef);
+        QVariantMap snapData = cache->ResolveObjectData(XenObjectType::VM, snapRef);
         QVariantList vifList = snapData.value("VIFs").toList();
         for (const QVariant& vifVar : vifList)
         {
@@ -1985,7 +1968,7 @@ XenConnection* CrossPoolMigrateWizard::resolveTargetConnection(const QString& ta
         if (!cache)
             continue;
 
-        if (cache->Contains("host", targetRef) || cache->Contains("pool", targetRef))
+        if (cache->Contains(XenObjectType::Host, targetRef) || cache->Contains(XenObjectType::Pool, targetRef))
             return conn;
     }
 

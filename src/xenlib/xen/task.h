@@ -53,7 +53,7 @@ class XENLIB_EXPORT Task : public XenObject
         explicit Task(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~Task() override = default;
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::Task; }
 
         //! Get task status (Status string: "pending", "success", "failure", "cancelling", "cancelled")
         QString GetStatus() const;

@@ -34,10 +34,6 @@ VMPP::VMPP(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString VMPP::GetObjectType() const
-{
-    return "vmpp";
-}
 
 bool VMPP::IsPolicyEnabled() const
 {
@@ -188,7 +184,7 @@ QList<QSharedPointer<VM>> VMPP::GetVMs() const
     {
         if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
         {
-            QSharedPointer<VM> obj = cache->ResolveObject<VM>("vm", ref);
+            QSharedPointer<VM> obj = cache->ResolveObject<VM>(XenObjectType::VM, ref);
             if (obj)
                 result.append(obj);
         }

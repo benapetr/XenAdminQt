@@ -48,6 +48,7 @@ HEADERS += \
     xen/xenapi/xenapi_VDI.h \
     xen/xenapi/xenapi_VGPU.h \
     xen/xenapi/xenapi_VIF.h \
+    xen/xenobjecttype.h \
     xenlib_global.h \
     xencache.h \
     metricupdater.h \
@@ -84,6 +85,7 @@ HEADERS += \
     xen/vm.h \
     xen/mappings/vmmapping.h \
     xen/sr.h \
+    xen/vmguestmetrics.h \
     xen/vmmetrics.h \
     xen/vdi.h \
     xen/vbd.h \
@@ -458,6 +460,7 @@ SOURCES += \
     xen/role.cpp \
     xen/user.cpp \
     xen/vbdmetrics.cpp \
+    xen/vmguestmetrics.cpp \
     xen/vmmetrics.cpp \
     otherconfig/otherconfigandtagswatcher.cpp
 

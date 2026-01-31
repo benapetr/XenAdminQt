@@ -51,7 +51,7 @@ public:
     explicit GPUGroup(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
     virtual ~GPUGroup();
 
-    QString GetObjectType() const override { return "GPU_group"; }
+    XenObjectType GetObjectType() const override { return XenObjectType::GPUGroup; }
 
     // Property accessors
     QStringList GetPGPURefs() const;

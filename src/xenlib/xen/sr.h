@@ -237,7 +237,7 @@ class XENLIB_EXPORT SR : public XenObject
         bool HasRunningVMs() const;
 
     protected:
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::SR; }
 };
 
 #endif // SR_H

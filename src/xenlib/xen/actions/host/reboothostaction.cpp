@@ -118,7 +118,7 @@ void RebootHostAction::run()
             XenConnection* connection = this->GetConnection();
             if (connection && connection->GetCache())
             {
-                QSharedPointer<VM> vm = connection->GetCache()->ResolveObject<VM>("vm", vmRef);
+                QSharedPointer<VM> vm = connection->GetCache()->ResolveObject<VM>(XenObjectType::VM, vmRef);
                 if (vm)
                     vmName = vm->GetName();
             }

@@ -31,8 +31,7 @@
 #include "network.h"
 #include "vm.h"
 
-VIF::VIF(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+VIF::VIF(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 
@@ -175,7 +174,7 @@ QSharedPointer<Network> VIF::GetNetwork() const
     if (ref.isEmpty() || ref == "OpaqueRef:NULL")
         return QSharedPointer<Network>();
     
-    return cache->ResolveObject<Network>("network", ref);
+    return cache->ResolveObject<Network>(ref);
 }
 
 QSharedPointer<VM> VIF::GetVM() const
@@ -191,6 +190,6 @@ QSharedPointer<VM> VIF::GetVM() const
     QString ref = this->GetVMRef();
     if (ref.isEmpty() || ref == "OpaqueRef:NULL")
         return QSharedPointer<VM>();
-    
-    return cache->ResolveObject<VM>("vm", ref);
+
+    return cache->ResolveObject<VM>(XenObjectType::VM, ref);
 }

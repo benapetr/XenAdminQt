@@ -56,7 +56,7 @@ class XENLIB_EXPORT NetworkSriov : public XenObject
     public:
         explicit NetworkSriov(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::NetworkSriov; }
 
         /*!
          * \brief Get the PIF reference that has SR-IOV enabled

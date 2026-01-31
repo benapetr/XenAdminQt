@@ -61,7 +61,7 @@ class XENLIB_EXPORT PIFMetrics : public XenObject
         explicit PIFMetrics(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         ~PIFMetrics() override = default;
 
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::PIFMetrics; }
 
         //! Get read bandwidth (KiB/s)
         double IoReadKbs() const;

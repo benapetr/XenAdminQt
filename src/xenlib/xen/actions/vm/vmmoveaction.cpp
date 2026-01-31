@@ -99,7 +99,7 @@ QMap<QString, QSharedPointer<SR>> VMMoveAction::getStorageMapping(QSharedPointer
     QStringList vbdRefs = vm->GetVBDRefs();
     for (const QString& vbdRef : vbdRefs)
     {
-        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+        QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>(vbdRef);
         if (!vbd || !vbd->IsValid())
             continue;
 
@@ -148,7 +148,7 @@ void VMMoveAction::run()
             return;
         }
 
-        QSharedPointer<VBD> oldVBD = cache->ResolveObject<VBD>("vbd", vbdRef);
+        QSharedPointer<VBD> oldVBD = cache->ResolveObject<VBD>(vbdRef);
         if (!oldVBD || !oldVBD->IsValid())
             continue;
 
@@ -167,7 +167,7 @@ void VMMoveAction::run()
         if (!targetSR)
             continue;
 
-        QSharedPointer<VDI> curVdi = cache->ResolveObject<VDI>("vdi", vdiRef);
+        QSharedPointer<VDI> curVdi = cache->ResolveObject<VDI>(vdiRef);
         if (!curVdi || !curVdi->IsValid())
             continue;
 
@@ -177,7 +177,7 @@ void VMMoveAction::run()
             continue;
 
         // Get SR names for user feedback
-        QSharedPointer<SR> currentSR = cache->ResolveObject<SR>("sr", currentSRRef);
+        QSharedPointer<SR> currentSR = cache->ResolveObject<SR>(currentSRRef);
         QString currentSRName = currentSR && currentSR->IsValid() ? currentSR->GetName() : "Unknown";
         QString targetSRName = targetSR->GetName();
         QString vdiName = curVdi->GetName();
@@ -207,7 +207,7 @@ void VMMoveAction::run()
         }
 
         // Get the new VDI from cache (it should be updated after task completes)
-        QSharedPointer<VDI> newVDI = cache->ResolveObject<VDI>("vdi", newVDIRef);
+        QSharedPointer<VDI> newVDI = cache->ResolveObject<VDI>(newVDIRef);
         if (!newVDI || !newVDI->IsValid())
         {
             this->setError("Failed to retrieve new VDI from cache");

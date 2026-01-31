@@ -70,7 +70,7 @@ void NetworkingPropertiesDialog::configure()
         return;
 
     bool restrictManagementOnVlan = false;
-    const QList<QSharedPointer<Host>> hosts = this->m_host->GetCache()->GetAll<Host>("host");
+    const QList<QSharedPointer<Host>> hosts = this->m_host->GetCache()->GetAll<Host>();
     for (const QSharedPointer<Host>& host : hosts)
     {
         if (host && host->RestrictManagementOnVLAN())
@@ -294,7 +294,7 @@ QList<QSharedPointer<PIF>> NetworkingPropertiesDialog::getKnownPifs(bool include
         return result;
 
     const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
-    QList<QSharedPointer<Network>> networks = connection->GetCache()->GetAll<Network>("network");
+    QList<QSharedPointer<Network>> networks = connection->GetCache()->GetAll<Network>();
     QList<QSharedPointer<Network>> filtered;
     for (const QSharedPointer<Network>& network : networks)
     {
@@ -778,7 +778,7 @@ void NetworkingPropertiesDialog::accept()
                 {
                     QVariantMap updated = it.value();
                     updated["ref"] = it.key();
-                    connection->GetCache()->Update("pif", it.key(), updated);
+                    connection->GetCache()->Update(XenObjectType::PIF, it.key(), updated);
                 }
             }
             ChangeNetworkingAction* action = new ChangeNetworkingAction(connection,

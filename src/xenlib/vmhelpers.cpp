@@ -54,7 +54,7 @@ QString VMHelpers::getVMHome(XenConnection* conn, const QVariantMap& vmRecord)
         QString snapshotOf = vmRecord.value("snapshot_of").toString();
         if (!snapshotOf.isEmpty() && snapshotOf != "OpaqueRef:NULL")
         {
-            QVariantMap parentVM = cache->ResolveObjectData("vm", snapshotOf);
+            QVariantMap parentVM = cache->ResolveObjectData(XenObjectType::VM, snapshotOf);
             if (!parentVM.isEmpty())
             {
                 return getVMHome(conn, parentVM); // Recursive call
@@ -92,7 +92,7 @@ QString VMHelpers::getVMHome(XenConnection* conn, const QVariantMap& vmRecord)
     QString affinity = vmRecord.value("affinity").toString();
     if (!affinity.isEmpty() && affinity != "OpaqueRef:NULL")
     {
-        QVariantMap affinityHost = cache->ResolveObjectData("host", affinity);
+        QVariantMap affinityHost = cache->ResolveObjectData(XenObjectType::Host, affinity);
         if (!affinityHost.isEmpty())
         {
             // Check if host is live (enabled field in host record)
@@ -137,7 +137,7 @@ QString VMHelpers::getVMStorageHost(XenConnection *conn, const QVariantMap& vmRe
         }
 
         // Resolve VBD
-        QVariantMap vbd = cache->ResolveObjectData("vbd", vbdRef);
+        QVariantMap vbd = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
         if (vbd.isEmpty())
         {
             continue;
@@ -160,7 +160,7 @@ QString VMHelpers::getVMStorageHost(XenConnection *conn, const QVariantMap& vmRe
             continue;
         }
 
-        QVariantMap vdi = cache->ResolveObjectData("vdi", vdiRef);
+        QVariantMap vdi = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
         if (vdi.isEmpty())
         {
             continue;
@@ -176,7 +176,7 @@ QString VMHelpers::getVMStorageHost(XenConnection *conn, const QVariantMap& vmRe
             continue;
         }
 
-        QVariantMap sr = cache->ResolveObjectData("sr", srRef);
+        QVariantMap sr = cache->ResolveObjectData(XenObjectType::SR, srRef);
         if (sr.isEmpty())
         {
             continue;
@@ -202,7 +202,7 @@ QString VMHelpers::getVMStorageHost(XenConnection *conn, const QVariantMap& vmRe
             continue;
         }
 
-        QVariantMap pbd = cache->ResolveObjectData("pbd", pbdRef);
+        QVariantMap pbd = cache->ResolveObjectData(XenObjectType::PBD, pbdRef);
         if (pbd.isEmpty())
         {
             continue;

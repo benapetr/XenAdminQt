@@ -60,8 +60,8 @@ bool NewNetworkCommand::CanRun() const
     if (!selected)
         return false;
 
-    const QString type = selected->GetObjectType();
-    if (type != "pool" && type != "host")
+    const XenObjectType type = selected->GetObjectType();
+    if (type != XenObjectType::Pool && type != XenObjectType::Host)
         return false;
 
     return selected->GetConnection() != nullptr;
@@ -81,11 +81,11 @@ void NewNetworkCommand::showNewNetworkWizard()
     QSharedPointer<Pool> pool;
     QSharedPointer<Host> host;
 
-    if (selected && selected->GetObjectType() == "pool")
+    if (selected && selected->GetObjectType() == XenObjectType::Pool)
     {
         pool = qSharedPointerCast<Pool>(selected);
         host = pool ? pool->GetMasterHost() : QSharedPointer<Host>();
-    } else if (selected && selected->GetObjectType() == "host")
+    } else if (selected && selected->GetObjectType() == XenObjectType::Host)
     {
         host = qSharedPointerCast<Host>(selected);
     }

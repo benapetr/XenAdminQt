@@ -43,22 +43,21 @@ bool CrossPoolMigrateCommand::CanRun() const
     QList<QSharedPointer<VM>> vms;
     QStringList selection = this->GetSelection();
     QSharedPointer<VM> baseVm = this->getVM();
+
+    if (!baseVm)
+        return false;
+
     if (selection.isEmpty())
     {
         if (baseVm)
             vms.append(baseVm);
     } else
     {
-        XenConnection* conn = baseVm ? baseVm->GetConnection() : nullptr;
-        XenCache* cache = conn ? conn->GetCache() : nullptr;
-        if (cache)
+        for (const QString& ref : selection)
         {
-            for (const QString& ref : selection)
-            {
-                QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", ref);
-                if (vm)
-                    vms.append(vm);
-            }
+            QSharedPointer<VM> vm = baseVm->GetCache()->ResolveObject<VM>(XenObjectType::VM, ref);
+            if (vm)
+                vms.append(vm);
         }
     }
 
@@ -67,10 +66,6 @@ bool CrossPoolMigrateCommand::CanRun() const
 
     XenConnection* connection = vms.first()->GetConnection();
     if (!connection || !connection->IsConnected())
-        return false;
-
-    XenCache* cache = connection->GetCache();
-    if (!cache)
         return false;
 
     for (const QSharedPointer<VM>& vmItem : vms)
@@ -105,23 +100,21 @@ void CrossPoolMigrateCommand::Run()
     QList<QSharedPointer<VM>> vms;
     QStringList selection = this->GetSelection();
     QSharedPointer<VM> baseVm = this->getVM();
+
+    if (!baseVm)
+        return;
+
     if (selection.isEmpty())
     {
         if (baseVm)
             vms.append(baseVm);
-    }
-    else
+    } else
     {
-        XenConnection* conn = baseVm ? baseVm->GetConnection() : nullptr;
-        XenCache* cache = conn ? conn->GetCache() : nullptr;
-        if (cache)
+        for (const QString& ref : selection)
         {
-            for (const QString& ref : selection)
-            {
-                QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", ref);
-                if (vm)
-                    vms.append(vm);
-            }
+            QSharedPointer<VM> vm = baseVm->GetCache()->ResolveObject<VM>(XenObjectType::VM, ref);
+            if (vm)
+                vms.append(vm);
         }
     }
 

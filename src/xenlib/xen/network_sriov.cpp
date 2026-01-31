@@ -34,10 +34,6 @@ NetworkSriov::NetworkSriov(XenConnection* connection, const QString& opaqueRef, 
 {
 }
 
-QString NetworkSriov::GetObjectType() const
-{
-    return "network_sriov";
-}
 
 QString NetworkSriov::GetPhysicalPIFRef() const
 {
@@ -48,7 +44,7 @@ QSharedPointer<PIF> NetworkSriov::GetPhysicalPIF()
 {
     if (!this->GetCache())
         return QSharedPointer<PIF>();
-    return this->GetCache()->ResolveObject<PIF>("pif", this->GetPhysicalPIFRef());
+    return this->GetCache()->ResolveObject<PIF>(this->GetPhysicalPIFRef());
 }
 
 QString NetworkSriov::GetLogicalPIFRef() const
@@ -60,7 +56,7 @@ QSharedPointer<PIF> NetworkSriov::GetLogicalPIF()
 {
     if (!this->GetCache())
         return QSharedPointer<PIF>();
-    return this->GetCache()->ResolveObject<PIF>("pif", this->GetLogicalPIFRef());
+    return this->GetCache()->ResolveObject<PIF>(this->GetLogicalPIFRef());
 }
 
 bool NetworkSriov::RequiresReboot() const

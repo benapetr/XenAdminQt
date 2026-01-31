@@ -491,7 +491,7 @@ QString PropertyAccessorHelper::GetSRHAStatus(SR* sr)
         return QString();
     
     // Get pool
-    QStringList poolRefs = cache->GetAllRefs("pool");
+    QStringList poolRefs = cache->GetAllRefs(XenObjectType::Pool);
     if (poolRefs.isEmpty())
         return QString();
     

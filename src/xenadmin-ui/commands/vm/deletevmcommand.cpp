@@ -49,7 +49,7 @@ namespace
         const QString vmRef = vm->OpaqueRef();
         for (const QString& vbdRef : selectedVbds)
         {
-            QSharedPointer<VBD> vbd = vm->GetCache()->ResolveObject<VBD>("vbd", vbdRef);
+            QSharedPointer<VBD> vbd = vm->GetCache()->ResolveObject<VBD>(XenObjectType::VBD, vbdRef);
             if (vbd && vbd->GetVMRef() == vmRef)
                 filtered.append(vbdRef);
         }
@@ -66,7 +66,7 @@ namespace
         const QString vmRef = vm->OpaqueRef();
         for (const QString& snapshotRef : selectedSnapshots)
         {
-            QVariantMap snapshotData = vm->GetCache()->ResolveObjectData("vm", snapshotRef);
+            QVariantMap snapshotData = vm->GetCache()->ResolveObjectData(XenObjectType::VM, snapshotRef);
             if (snapshotData.value("snapshot_of").toString() == vmRef)
                 filtered.append(snapshotRef);
         }
@@ -120,13 +120,16 @@ QList<QSharedPointer<VM>> DeleteVMCommand::collectSelectedVMs(bool includeTempla
         if (!obj)
             continue;
 
-        const QString type = obj->GetObjectType();
-        if (type != "vm" && !(includeTemplates && type == "template"))
+        const XenObjectType type = obj->GetObjectType();
+        if (type != XenObjectType::VM)
             continue;
 
         QSharedPointer<VM> vm = qSharedPointerCast<VM>(obj);
-        if (vm)
-            vms.append(vm);
+        if (!vm)
+            continue;
+        if (!includeTemplates && vm->IsTemplate())
+            continue;
+        vms.append(vm);
     }
 
     if (!vms.isEmpty())
@@ -198,10 +201,7 @@ bool DeleteVMCommand::canDeleteVm(const QSharedPointer<VM>& vm, bool allowTempla
     return true;
 }
 
-void DeleteVMCommand::runDeleteFlow(const QList<QSharedPointer<VM>>& selected,
-                                   bool allowTemplates,
-                                   const QString& errorDialogTitle,
-                                   const QString& errorDialogText)
+void DeleteVMCommand::runDeleteFlow(const QList<QSharedPointer<VM>>& selected, bool allowTemplates, const QString& errorDialogTitle, const QString& errorDialogText)
 {
     if (selected.isEmpty())
         return;

@@ -114,7 +114,7 @@ void ConfirmVMDeleteDialog::initialize(const QList<QSharedPointer<VM>> &vms)
         // Process VBDs (Virtual Block Devices - disks)
         for (QString vbdRef : vbdRefs)
         {
-            QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>("vbd", vbdRef);
+            QSharedPointer<VBD> vbd = cache->ResolveObject<VBD>(vbdRef);
             
             if (!vbd)
                 continue;
@@ -127,7 +127,7 @@ void ConfirmVMDeleteDialog::initialize(const QList<QSharedPointer<VM>> &vms)
             if (vdiRef.isEmpty() || vdiRef == "OpaqueRef:NULL")
                 continue;
 
-            QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>("vdi", vdiRef);
+            QSharedPointer<VDI> vdi = cache->ResolveObject<VDI>(vdiRef);
             if (!vdi)
                 continue;
 
@@ -141,7 +141,7 @@ void ConfirmVMDeleteDialog::initialize(const QList<QSharedPointer<VM>> &vms)
                 bool allVMsBeingDeleted = true;
                 for (QString otherVbdRef : vdiVBDs)
                 {
-                    QSharedPointer<VBD> other_vbd = cache->ResolveObject<VBD>("vbd", otherVbdRef);
+                    QSharedPointer<VBD> other_vbd = cache->ResolveObject<VBD>(otherVbdRef);
                     if (!other_vbd)
                         continue;
 
@@ -248,7 +248,7 @@ void ConfirmVMDeleteDialog::initialize(const QList<QSharedPointer<VM>> &vms)
         for (QString vbdRef : vbdRefs)
         {
             vbdRefsList << vbdRef;
-            QSharedPointer<VBD> vbd = vdi->GetCache()->ResolveObject<VBD>("vbd", vbdRef);
+            QSharedPointer<VBD> vbd = vdi->GetCache()->ResolveObject<VBD>(vbdRef);
             if (!vbd)
                 continue;
             QSharedPointer<VM> vm = vbd->GetVM();

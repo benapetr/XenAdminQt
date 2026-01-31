@@ -36,10 +36,6 @@ VGPU::VGPU(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString VGPU::GetObjectType() const
-{
-    return "vgpu";
-}
 
 QString VGPU::GetVMRef() const
 {
@@ -124,7 +120,7 @@ QSharedPointer<VM> VGPU::GetVM() const
     if (vmRef.isEmpty() || vmRef == "OpaqueRef:NULL")
         return QSharedPointer<VM>();
 
-    return cache->ResolveObject<VM>("vm", vmRef);
+    return cache->ResolveObject<VM>(XenObjectType::VM, vmRef);
 }
 
 QSharedPointer<GPUGroup> VGPU::GetGPUGroup() const
@@ -141,7 +137,7 @@ QSharedPointer<GPUGroup> VGPU::GetGPUGroup() const
     if (ref.isEmpty() || ref == "OpaqueRef:NULL")
         return QSharedPointer<GPUGroup>();
 
-    return cache->ResolveObject<GPUGroup>("gpu_group", ref);
+    return cache->ResolveObject<GPUGroup>(ref);
 }
 
 QSharedPointer<PCI> VGPU::GetPCI() const
@@ -158,5 +154,5 @@ QSharedPointer<PCI> VGPU::GetPCI() const
     if (pciRef.isEmpty() || pciRef == "OpaqueRef:NULL")
         return QSharedPointer<PCI>();
 
-    return cache->ResolveObject<PCI>("pci", pciRef);
+    return cache->ResolveObject<PCI>(pciRef);
 }

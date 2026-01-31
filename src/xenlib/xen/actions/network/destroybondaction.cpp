@@ -44,36 +44,36 @@ DestroyBondAction::DestroyBondAction(XenConnection* connection,
                      parent),
       m_bondRef(bondRef)
 {
-    if (m_bondRef.isEmpty())
+    if (this->m_bondRef.isEmpty())
         throw std::invalid_argument("Bond reference cannot be empty");
 
     // Get bond name for display
-    QVariantMap bondData = connection->GetCache()->ResolveObjectData("bond", m_bondRef);
+    QVariantMap bondData = connection->GetCache()->ResolveObjectData("bond", this->m_bondRef);
     QVariantMap masterPifData = connection->GetCache()->ResolveObjectData("pif",
                                                                 bondData.value("master").toString());
-    m_bondName = masterPifData.value("device").toString();
+    this->m_bondName = masterPifData.value("device").toString();
 
-    SetTitle(QString("Destroying bond %1").arg(m_bondName));
-    SetDescription(QString("Destroying bond %1").arg(m_bondName));
+    this->SetTitle(QString("Destroying bond %1").arg(this->m_bondName));
+    this->SetDescription(QString("Destroying bond %1").arg(this->m_bondName));
 }
 
 void DestroyBondAction::run()
 {
     try
     {
-        GetConnection()->SetExpectDisruption(true);
+        this->GetConnection()->SetExpectDisruption(true);
 
         // Find all equivalent bonds across all hosts in the pool
-        QList<BondInfo> bondsToDestroy = findAllEquivalentBonds();
+        QList<BondInfo> bondsToDestroy = this->findAllEquivalentBonds();
 
         if (bondsToDestroy.isEmpty())
         {
-            setError("No bonds found to destroy");
-            GetConnection()->SetExpectDisruption(false);
+            this->setError("No bonds found to destroy");
+            this->GetConnection()->SetExpectDisruption(false);
             return;
         }
 
-        SetPercentComplete(0);
+        this->SetPercentComplete(0);
 
         // Step 1: Move management interface names from bonds to primary members
         // This is done first to preserve management connectivity
@@ -86,14 +86,14 @@ void DestroyBondAction::run()
             {
                 if (!bondInfo.primarySlaveRef.isEmpty())
                 {
-                    SetDescription(QString("Preparing to destroy bond on %1")
+                    this->SetDescription(QString("Preparing to destroy bond on %1")
                                        .arg(bondInfo.hostName));
 
                     NetworkingActionHelpers::moveManagementInterfaceName(
                         this, bondInfo.bondInterfaceRef, bondInfo.primarySlaveRef);
 
                     progress += incr;
-                    SetPercentComplete(progress);
+                    this->SetPercentComplete(progress);
                 }
             }
         } catch (const std::exception& e)
@@ -107,7 +107,7 @@ void DestroyBondAction::run()
             }
         }
 
-        SetPercentComplete(50);
+        this->SetPercentComplete(50);
 
         // Step 2: Destroy all bonds
         incr = bondsToDestroy.count() > 0 ? 40 / bondsToDestroy.count() : 0;
@@ -119,10 +119,10 @@ void DestroyBondAction::run()
         {
             try
             {
-                SetDescription(QString("Destroying bond on %1").arg(bondInfo.hostName));
+                this->SetDescription(QString("Destroying bond on %1").arg(bondInfo.hostName));
 
-                QString taskRef = XenAPI::Bond::async_destroy(GetSession(), bondInfo.bondRef);
-                pollToCompletion(taskRef, progress, progress + incr);
+                QString taskRef = XenAPI::Bond::async_destroy(this->GetSession(), bondInfo.bondRef);
+                this->pollToCompletion(taskRef, progress, progress + incr);
 
                 progress += incr;
 
@@ -138,7 +138,7 @@ void DestroyBondAction::run()
             }
         }
 
-        SetPercentComplete(90);
+        this->SetPercentComplete(90);
 
         // Step 3: Destroy the network (if it exists and is not used elsewhere)
         if (!bondsToDestroy.isEmpty())
@@ -149,8 +149,8 @@ void DestroyBondAction::run()
             {
                 try
                 {
-                    SetDescription("Destroying network");
-                    XenAPI::Network::destroy(GetSession(), networkRef);
+                    this->SetDescription("Destroying network");
+                    XenAPI::Network::destroy(this->GetSession(), networkRef);
 
                 } catch (const std::exception& e)
                 {
@@ -164,22 +164,22 @@ void DestroyBondAction::run()
             }
         }
 
-        SetPercentComplete(100);
+        this->SetPercentComplete(100);
 
-        GetConnection()->SetExpectDisruption(false);
+        this->GetConnection()->SetExpectDisruption(false);
 
         if (!errors.isEmpty())
         {
-            setError(QString("Bond destroyed with warnings: %1").arg(errors.join(", ")));
+            this->setError(QString("Bond destroyed with warnings: %1").arg(errors.join(", ")));
         } else
         {
-            SetDescription(QString("Bond '%1' destroyed").arg(m_bondName));
+            this->SetDescription(QString("Bond '%1' destroyed").arg(this->m_bondName));
         }
 
     } catch (const std::exception& e)
     {
-        GetConnection()->SetExpectDisruption(false);
-        setError(QString("Failed to destroy bond: %1").arg(e.what()));
+        this->GetConnection()->SetExpectDisruption(false);
+        this->setError(QString("Failed to destroy bond: %1").arg(e.what()));
     }
 }
 
@@ -188,13 +188,13 @@ QList<DestroyBondAction::BondInfo> DestroyBondAction::findAllEquivalentBonds() c
     QList<BondInfo> result;
 
     // Get the coordinator bond data to use as reference
-    QVariantMap refBondData = GetConnection()->GetCache()->ResolveObjectData("bond", m_bondRef);
+    QVariantMap refBondData = this->GetConnection()->GetCache()->ResolveObjectData("bond", this->m_bondRef);
     QString refMasterPifRef = refBondData.value("master").toString();
-    QVariantMap refMasterPifData = GetConnection()->GetCache()->ResolveObjectData("pif", refMasterPifRef);
+    QVariantMap refMasterPifData = this->GetConnection()->GetCache()->ResolveObjectData("pif", refMasterPifRef);
     QString refDevice = refMasterPifData.value("device").toString();
 
     // Get all hosts in the pool
-    QList<QVariantMap> hosts = GetConnection()->GetCache()->GetAllData("host");
+    QList<QVariantMap> hosts = this->GetConnection()->GetCache()->GetAllData("host");
 
     for (const QVariantMap& host : hosts)
     {
@@ -202,14 +202,14 @@ QList<DestroyBondAction::BondInfo> DestroyBondAction::findAllEquivalentBonds() c
         QString hostName = host.value("name_label").toString();
 
         // Find bond on this host with matching device name
-        QList<QVariantMap> allBonds = GetConnection()->GetCache()->GetAllData("bond");
+        QList<QVariantMap> allBonds = this->GetConnection()->GetCache()->GetAllData("bond");
         for (const QVariantMap& bond : allBonds)
         {
             QString bondRef = bond.value("_ref").toString();
             QString masterPifRef = bond.value("master").toString();
             QString primarySlaveRef = bond.value("primary_slave").toString();
 
-            QVariantMap masterPifData = GetConnection()->GetCache()->ResolveObjectData("pif", masterPifRef);
+            QVariantMap masterPifData = this->GetConnection()->GetCache()->ResolveObjectData("pif", masterPifRef);
             QString device = masterPifData.value("device").toString();
             QString bondHost = masterPifData.value("host").toString();
             QString networkRef = masterPifData.value("network").toString();

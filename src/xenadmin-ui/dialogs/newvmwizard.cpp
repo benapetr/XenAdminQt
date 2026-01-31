@@ -188,7 +188,7 @@ void NewVMWizard::loadTemplates()
 
     const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
     bool restrictVtpm = false;
-    const QList<QSharedPointer<Host>> allHosts = cache->GetAll<Host>("host");
+    const QList<QSharedPointer<Host>> allHosts = cache->GetAll<Host>(XenObjectType::Host);
     for (const QSharedPointer<Host>& host : allHosts)
     {
         if (host && host->RestrictVtpm())
@@ -198,7 +198,7 @@ void NewVMWizard::loadTemplates()
         }
     }
 
-    const QList<QSharedPointer<VM>> allVMs = cache->GetAll<VM>("vm");
+    const QList<QSharedPointer<VM>> allVMs = cache->GetAll<VM>(XenObjectType::VM);
     for (const QSharedPointer<VM>& vm : allVMs)
     {
         if (!vm || !vm->IsValid())
@@ -285,7 +285,7 @@ void NewVMWizard::handleTemplateSelectionChanged()
     }
 
     XenCache* cache = this->cache();
-    this->m_selectedTemplateRecord = cache ? cache->ResolveObjectData("vm", ref) : QVariantMap();
+    this->m_selectedTemplateRecord = cache ? cache->ResolveObjectData(XenObjectType::VM, ref) : QVariantMap();
     if (!this->m_selectedTemplateRecord.isEmpty())
     {
         long vcpusMax = this->m_selectedTemplateRecord.value("VCPUs_max", 1).toLongLong();
@@ -361,7 +361,7 @@ void NewVMWizard::loadTemplateDevices()
     }
 
     // Get template record from cache
-    QVariantMap templateRecord = cache->ResolveObjectData("vm", this->m_selectedTemplate);
+    QVariantMap templateRecord = cache->ResolveObjectData(XenObjectType::VM, this->m_selectedTemplate);
     if (templateRecord.value("provision_xml").toString().isEmpty() && this->m_connection && this->m_connection->GetSession())
     {
         try
@@ -383,7 +383,7 @@ void NewVMWizard::loadTemplateDevices()
     QDomElement provisionRoot;
     if (cache)
     {
-        QSharedPointer<VM> templateVm = cache->ResolveObject<VM>("vm", this->m_selectedTemplate);
+        QSharedPointer<VM> templateVm = cache->ResolveObject<VM>(XenObjectType::VM, this->m_selectedTemplate);
         if (templateVm)
             provisionRoot = templateVm->ProvisionXml();
     }
@@ -431,7 +431,7 @@ void NewVMWizard::loadTemplateDevices()
             QString srUuid = diskEl.attribute("sr");
             if (!srUuid.isEmpty())
             {
-                QList<QVariantMap> srs = cache->GetAllData("sr");
+                QList<QVariantMap> srs = cache->GetAllData(XenObjectType::SR);
                 for (const QVariantMap& sr : srs)
                 {
                     if (sr.value("uuid").toString() == srUuid)
@@ -455,14 +455,14 @@ void NewVMWizard::loadTemplateDevices()
         for (const QVariant& vbdRefVar : vbdRefs)
         {
             QString vbdRef = vbdRefVar.toString();
-            QVariantMap vbd = cache->ResolveObjectData("vbd", vbdRef);
+            QVariantMap vbd = cache->ResolveObjectData(XenObjectType::VBD, vbdRef);
 
             QString vbdType = vbd.value("type").toString();
             if (vbdType != "Disk")
                 continue;
 
             QString vdiRef = vbd.value("VDI").toString();
-            QVariantMap vdiData = cache->ResolveObjectData("vdi", vdiRef);
+            QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, vdiRef);
 
             DiskConfig disk;
             disk.vdiRef = vdiRef;
@@ -486,7 +486,7 @@ void NewVMWizard::loadTemplateDevices()
     bool isDefaultTemplate = false;
     if (cache)
     {
-        QSharedPointer<VM> templateVm = cache->ResolveObject<VM>("vm", this->m_selectedTemplate);
+        QSharedPointer<VM> templateVm = cache->ResolveObject<VM>(XenObjectType::VM, this->m_selectedTemplate);
         if (templateVm)
             isDefaultTemplate = templateVm->DefaultTemplate();
     }
@@ -494,12 +494,12 @@ void NewVMWizard::loadTemplateDevices()
     if (isDefaultTemplate)
     {
         const bool showHidden = SettingsManager::instance().getShowHiddenObjects();
-        QStringList networkRefs = cache->GetAllRefs("network");
+        QStringList networkRefs = cache->GetAllRefs(XenObjectType::Network);
         int deviceIndex = 0;
 
         for (const QString& networkRef : networkRefs)
         {
-            QVariantMap networkData = cache->ResolveObjectData("network", networkRef);
+            QVariantMap networkData = cache->ResolveObjectData(XenObjectType::Network, networkRef);
             QVariantMap otherConfig = networkData.value("other_config", QVariantMap()).toMap();
             const QString nameLabel = networkData.value("name_label").toString();
 
@@ -528,7 +528,7 @@ void NewVMWizard::loadTemplateDevices()
         for (const QVariant& vifRefVar : vifRefs)
         {
             QString vifRef = vifRefVar.toString();
-            QVariantMap vif = cache->ResolveObjectData("vif", vifRef);
+            QVariantMap vif = cache->ResolveObjectData(XenObjectType::VIF, vifRef);
             
             NetworkConfig network;
             network.networkRef = vif.value("network").toString();
@@ -551,7 +551,7 @@ void NewVMWizard::loadHosts()
     this->ui->homeServerList->clear();
     this->m_hosts.clear();
 
-    QList<QVariantMap> hosts = cache->GetAllData("host");
+    QList<QVariantMap> hosts = cache->GetAllData(XenObjectType::Host);
     for (const QVariantMap& host : hosts)
     {
         HostInfo info;
@@ -575,7 +575,7 @@ void NewVMWizard::loadStorageRepositories()
     this->ui->defaultSrCombo->clear();
     this->m_storageRepositories.clear();
 
-    QList<QVariantMap> srs = cache->GetAllData("sr");
+    QList<QVariantMap> srs = cache->GetAllData(XenObjectType::SR);
     for (const QVariantMap& sr : srs)
     {
         StorageRepositoryInfo info;
@@ -602,7 +602,7 @@ void NewVMWizard::loadNetworks()
 
     this->m_availableNetworks.clear();
 
-    QList<QVariantMap> nets = cache->GetAllData("network");
+    QList<QVariantMap> nets = cache->GetAllData(XenObjectType::Network);
     for (const QVariantMap& net : nets)
     {
         NetworkInfo info;
@@ -621,7 +621,7 @@ void NewVMWizard::updateDiskTable()
     for (const DiskConfig& disk : this->m_disks)
     {
         XenCache* cache = this->cache();
-        QVariantMap srRecord = cache ? cache->ResolveObjectData("sr", disk.srRef) : QVariantMap();
+        QVariantMap srRecord = cache ? cache->ResolveObjectData(XenObjectType::SR, disk.srRef) : QVariantMap();
         QString srName = srRecord.value("name_label").toString();
         QString sizeGB = QString::number(double(disk.sizeBytes) / (1024.0 * 1024.0 * 1024.0), 'f', 1);
 
@@ -653,7 +653,7 @@ void NewVMWizard::updateNetworkTable()
     for (const NetworkConfig& network : this->m_networks)
     {
         XenCache* cache = this->cache();
-        QVariantMap networkRecord = cache ? cache->ResolveObjectData("network", network.networkRef) : QVariantMap();
+        QVariantMap networkRecord = cache ? cache->ResolveObjectData(XenObjectType::Network, network.networkRef) : QVariantMap();
         QString networkName = networkRecord.value("name_label").toString();
 
         auto deviceItem = new QTableWidgetItem(network.device);
@@ -687,9 +687,9 @@ void NewVMWizard::updateHomeServerPage()
         }
         else
         {
-            QVariantMap vdiData = cache->ResolveObjectData("vdi", isoVdiRef);
+            QVariantMap vdiData = cache->ResolveObjectData(XenObjectType::VDI, isoVdiRef);
             QString srRef = vdiData.value("SR").toString();
-            QSharedPointer<SR> sr = cache->ResolveObject<SR>("sr", srRef);
+            QSharedPointer<SR> sr = cache->ResolveObject<SR>(XenObjectType::SR, srRef);
             Host* host = sr ? sr->GetFirstAttachedStorageHost() : nullptr;
             if (host)
                 suggestedHost = host->OpaqueRef();
@@ -774,7 +774,7 @@ void NewVMWizard::updateVcpuControls()
     if (!cache || this->m_selectedTemplate.isEmpty())
         return;
 
-    QSharedPointer<VM> templateVm = cache->ResolveObject<VM>("vm", this->m_selectedTemplate);
+    QSharedPointer<VM> templateVm = cache->ResolveObject<VM>(XenObjectType::VM, this->m_selectedTemplate);
     if (!templateVm)
         return;
 
@@ -823,8 +823,7 @@ void NewVMWizard::enforceVcpuTopology()
         this->ui->vcpusStartupSpin->setMaximum(this->ui->vcpusMaxSpin->value());
         if (this->ui->vcpusStartupSpin->value() > this->ui->vcpusMaxSpin->value())
             this->ui->vcpusStartupSpin->setValue(this->ui->vcpusMaxSpin->value());
-    }
-    else
+    } else
     {
         this->ui->vcpusStartupSpin->setValue(this->ui->vcpusMaxSpin->value());
     }
@@ -1147,11 +1146,11 @@ void NewVMWizard::createVirtualMachine()
     XenCache* cache = this->cache();
     if (cache && connection->GetSession())
     {
-        cache->ClearType("vm");
+        cache->ClearType(XenObjectType::VM);
         try
         {
             QVariantMap records = XenAPI::VM::get_all_records(connection->GetSession());
-            cache->UpdateBulk("vm", records);
+            cache->UpdateBulk(XenObjectType::VM, records);
         } catch (const std::exception& exn)
         {
             qWarning() << "NewVMWizard: Failed to refresh VM records:" << exn.what();

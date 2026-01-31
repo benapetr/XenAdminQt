@@ -35,10 +35,6 @@ VUSB::VUSB(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString VUSB::GetObjectType() const
-{
-    return "vusb";
-}
 
 QStringList VUSB::AllowedOperations() const
 {
@@ -85,7 +81,7 @@ QSharedPointer<VM> VUSB::GetVM() const
     if (ref.isEmpty() || ref == "OpaqueRef:NULL")
         return QSharedPointer<VM>();
     
-    return cache->ResolveObject<VM>("vm", ref);
+    return cache->ResolveObject<VM>(XenObjectType::VM, ref);
 }
 
 QSharedPointer<USBGroup> VUSB::GetUSBGroup() const
@@ -102,5 +98,5 @@ QSharedPointer<USBGroup> VUSB::GetUSBGroup() const
     if (ref.isEmpty() || ref == "OpaqueRef:NULL")
         return QSharedPointer<USBGroup>();
     
-    return cache->ResolveObject<USBGroup>("usb_group", ref);
+    return cache->ResolveObject<USBGroup>(ref);
 }

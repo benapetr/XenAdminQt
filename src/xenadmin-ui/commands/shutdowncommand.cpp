@@ -32,8 +32,7 @@
 #include "vm/stopvmcommand.h"
 #include <QMessageBox>
 
-ShutdownCommand::ShutdownCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+ShutdownCommand::ShutdownCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
@@ -44,14 +43,14 @@ bool ShutdownCommand::CanRun() const
     if (!selection)
         return false;
 
-    const QString selectionType = selection->SelectionType();
-    if (selectionType == "host")
+    const XenObjectType selectionType = selection->SelectionType();
+    if (selectionType == XenObjectType::Host)
     {
         ShutdownHostCommand hostCmd(this->mainWindow(), nullptr);
         return hostCmd.CanRun();
     }
 
-    if (selectionType == "vm")
+    if (selectionType == XenObjectType::VM)
     {
         StopVMCommand vmCmd(this->mainWindow(), nullptr);
         return vmCmd.CanRun();
@@ -66,8 +65,8 @@ void ShutdownCommand::Run()
     if (!selection)
         return;
 
-    const QString selectionType = selection->SelectionType();
-    if (selectionType == "host")
+    const XenObjectType selectionType = selection->SelectionType();
+    if (selectionType == XenObjectType::Host)
     {
         ShutdownHostCommand hostCmd(this->mainWindow(), this);
         if (hostCmd.CanRun())
@@ -77,7 +76,7 @@ void ShutdownCommand::Run()
         }
     }
 
-    if (selectionType == "vm")
+    if (selectionType == XenObjectType::VM)
     {
         StopVMCommand vmCmd(this->mainWindow(), this);
         if (vmCmd.CanRun())

@@ -226,10 +226,6 @@ bool VDI::IsCBTEnabled() const
     return this->boolProperty("cbt_enabled", false);
 }
 
-QString VDI::GetObjectType() const
-{
-    return "vdi";
-}
 
 QSharedPointer<SR> VDI::GetSR() const
 {
@@ -245,7 +241,7 @@ QSharedPointer<SR> VDI::GetSR() const
     if (ref.isEmpty() || ref == "OpaqueRef:NULL")
         return QSharedPointer<SR>();
     
-    return cache->ResolveObject<SR>("sr", ref);
+    return cache->ResolveObject<SR>(ref);
 }
 
 QString VDI::NameWithLocation() const
@@ -279,7 +275,7 @@ QList<QSharedPointer<VBD>> VDI::GetVBDs() const
     {
         if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
         {
-            QSharedPointer<VBD> obj = cache->ResolveObject<VBD>("vbd", ref);
+            QSharedPointer<VBD> obj = cache->ResolveObject<VBD>(ref);
             if (obj)
                 result.append(obj);
         }

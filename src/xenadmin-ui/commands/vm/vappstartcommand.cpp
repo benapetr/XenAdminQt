@@ -37,8 +37,7 @@
 #include "../../selectionmanager.h"
 #include <QMessageBox>
 
-VappStartCommand::VappStartCommand(MainWindow* mainWindow, QObject* parent)
-    : Command(mainWindow, parent)
+VappStartCommand::VappStartCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
 {
 }
 
@@ -58,8 +57,8 @@ bool VappStartCommand::CanRun() const
         {
             if (!obj)
                 return false;
-            const QString type = obj->GetObjectType();
-            if (type == "vm_appliance" || type == "appliance")
+            const XenObjectType type = obj->GetObjectType();
+            if (type == XenObjectType::VMAppliance)
             {
                 QSharedPointer<VMAppliance> appliance = qSharedPointerCast<VMAppliance>(obj);
                 if (appliance)
@@ -85,7 +84,7 @@ bool VappStartCommand::CanRun() const
         bool allVms = true;
         for (const QSharedPointer<XenObject>& obj : objects)
         {
-            if (!obj || obj->GetObjectType() != "vm")
+            if (!obj || obj->GetObjectType() != XenObjectType::VM)
             {
                 allVms = false;
                 break;
@@ -113,13 +112,13 @@ bool VappStartCommand::CanRun() const
             if (!cache)
                 return false;
 
-            QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+            QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>(XenObjectType::VMAppliance, applianceRef);
             return this->canStartAppliance(appliance);
         }
     }
 
     QString objRef = this->getSelectedObjectRef();
-    QString type = this->getSelectedObjectType();
+    XenObjectType type = this->getSelectedObjectType();
 
     if (objRef.isEmpty())
     {
@@ -127,7 +126,7 @@ bool VappStartCommand::CanRun() const
     }
 
     // Case 1: VM_appliance directly selected
-    if (type == "vm_appliance" || type == "appliance")
+    if (type == XenObjectType::VMAppliance)
     {
         QSharedPointer<XenObject> selectedObject = this->GetObject();
         if (!selectedObject)
@@ -138,12 +137,12 @@ bool VappStartCommand::CanRun() const
         if (!cache)
             return false;
 
-        QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>(type, objRef);
+        QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>(objRef);
         return this->canStartAppliance(appliance);
     }
 
     // Case 2: VM selected - check if it belongs to an appliance
-    if (type == "vm")
+    if (type == XenObjectType::VM)
     {
         QString applianceRef = this->getApplianceRefFromVM(objRef);
         if (applianceRef.isEmpty())
@@ -160,7 +159,7 @@ bool VappStartCommand::CanRun() const
         if (!cache)
             return false;
 
-        QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+        QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>(applianceRef);
         return this->canStartAppliance(appliance);
     }
 
@@ -182,8 +181,8 @@ void VappStartCommand::Run()
             {
                 if (!obj)
                     return;
-                const QString type = obj->GetObjectType();
-                if (type == "vm_appliance" || type == "appliance")
+                const XenObjectType type = obj->GetObjectType();
+                if (type == XenObjectType::VMAppliance)
                 {
                     QSharedPointer<VMAppliance> appliance = qSharedPointerCast<VMAppliance>(obj);
                     if (appliance)
@@ -232,7 +231,7 @@ void VappStartCommand::Run()
             bool allVms = true;
             for (const QSharedPointer<XenObject>& obj : objects)
             {
-                if (!obj || obj->GetObjectType() != "vm")
+                if (!obj || obj->GetObjectType() != XenObjectType::VM)
                 {
                     allVms = false;
                     break;
@@ -246,7 +245,7 @@ void VappStartCommand::Run()
                     return;
 
                 QString applianceRef = vms.first()->ApplianceRef();
-                if (applianceRef.isEmpty() || applianceRef == "OpaqueRef:NULL")
+                if (applianceRef.isEmpty() || applianceRef == XENOBJECT_NULL)
                     return;
 
                 for (const QSharedPointer<VM>& vm : vms)
@@ -260,7 +259,7 @@ void VappStartCommand::Run()
                 if (!cache)
                     return;
 
-                QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+                QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>(applianceRef);
                 if (!appliance || !this->canStartAppliance(appliance))
                     return;
 
@@ -288,13 +287,13 @@ void VappStartCommand::Run()
     }
 
     QString objRef = this->getSelectedObjectRef();
-    QString type = this->getSelectedObjectType();
+    XenObjectType type = this->getSelectedObjectType();
     QString applianceRef;
 
-    if (type == "vm_appliance" || type == "appliance")
+    if (type == XenObjectType::VMAppliance)
     {
         applianceRef = objRef;
-    } else if (type == "vm")
+    } else if (type == XenObjectType::VM)
     {
         applianceRef = this->getApplianceRefFromVM(objRef);
         if (applianceRef.isEmpty())
@@ -318,7 +317,7 @@ void VappStartCommand::Run()
     if (!cache)
         return;
 
-    QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>("vm_appliance", applianceRef);
+    QSharedPointer<VMAppliance> appliance = cache->ResolveObject<VMAppliance>(XenObjectType::VMAppliance, applianceRef);
     if (!appliance)
         return;
 
@@ -395,7 +394,7 @@ QString VappStartCommand::getApplianceRefFromVM(const QString& vmRef) const
     if (!cache)
         return QString();
 
-    QVariantMap vmData = cache->ResolveObjectData("vm", vmRef);
+    QVariantMap vmData = cache->ResolveObjectData(XenObjectType::VM, vmRef);
     if (vmData.isEmpty())
     {
         return QString();

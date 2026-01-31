@@ -40,7 +40,7 @@ NewVirtualDiskDialog::NewVirtualDiskDialog(XenConnection* connection, const QStr
     // Get VM data
     if (this->m_connection && this->m_connection->GetCache())
     {
-        this->m_vm = this->m_connection->GetCache()->ResolveObject<VM>("vm", this->m_vmRef);
+        this->m_vm = this->m_connection->GetCache()->ResolveObject<VM>(XenObjectType::VM, this->m_vmRef);
         if (!this->m_vm.isNull())
             this->m_vmData = this->m_vm->GetData();
     }

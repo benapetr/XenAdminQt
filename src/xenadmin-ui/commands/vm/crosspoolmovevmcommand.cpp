@@ -71,7 +71,7 @@ void CrossPoolMoveVMCommand::Run()
         {
             for (const QString& ref : selection)
             {
-                QSharedPointer<VM> vm = cache->ResolveObject<VM>("vm", ref);
+                QSharedPointer<VM> vm = cache->ResolveObject<VM>(XenObjectType::VM, ref);
                 if (vm)
                     vms.append(vm);
             }

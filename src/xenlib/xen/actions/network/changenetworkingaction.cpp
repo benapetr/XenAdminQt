@@ -67,7 +67,7 @@ ChangeNetworkingAction::ChangeNetworkingAction(XenConnection* connection,
     {
         this->m_hosts = this->m_pool->GetHosts();
         if (this->m_hosts.isEmpty() && connection && connection->GetCache())
-            this->m_hosts = connection->GetCache()->GetAll<Host>("host");
+            this->m_hosts = connection->GetCache()->GetAll<Host>(XenObjectType::Host);
         this->m_hosts.erase(std::remove_if(this->m_hosts.begin(), this->m_hosts.end(),
                                      [](const QSharedPointer<Host>& h) { return !h || !h->IsValid(); }),
                       this->m_hosts.end());
@@ -294,7 +294,7 @@ QString ChangeNetworkingAction::getIPInRange(const QString& rangeStart, const QS
 
 void ChangeNetworkingAction::disableClustering(const QString& pifRef, QList<QSharedPointer<PBD>>& gfs2Pbds)
 {
-    QSharedPointer<PIF> pif = this->GetConnection()->GetCache()->ResolveObject<PIF>("pif", pifRef);
+    QSharedPointer<PIF> pif = this->GetConnection()->GetCache()->ResolveObject<PIF>(pifRef);
     if (!pif || !pif->IsValid())
         return;
 
@@ -306,7 +306,7 @@ void ChangeNetworkingAction::disableClustering(const QString& pifRef, QList<QSha
         return;
 
     QSharedPointer<ClusterHost> clusterHost;
-    const QList<QSharedPointer<ClusterHost>> clusterHosts = this->GetConnection()->GetCache()->GetAll<ClusterHost>("cluster_host");
+    const QList<QSharedPointer<ClusterHost>> clusterHosts = this->GetConnection()->GetCache()->GetAll<ClusterHost>(XenObjectType::ClusterHost);
     for (const QSharedPointer<ClusterHost>& ch : clusterHosts)
     {
         if (ch && ch->IsValid() && ch->GetHostRef() == host->OpaqueRef())
@@ -341,7 +341,7 @@ void ChangeNetworkingAction::disableClustering(const QString& pifRef, QList<QSha
 
 void ChangeNetworkingAction::enableClustering(const QString& pifRef, const QList<QSharedPointer<PBD>>& gfs2Pbds)
 {
-    QSharedPointer<PIF> pif = this->GetConnection()->GetCache()->ResolveObject<PIF>("pif", pifRef);
+    QSharedPointer<PIF> pif = this->GetConnection()->GetCache()->ResolveObject<PIF>(pifRef);
     if (!pif || !pif->IsValid())
         return;
 
@@ -353,7 +353,7 @@ void ChangeNetworkingAction::enableClustering(const QString& pifRef, const QList
         return;
 
     QSharedPointer<ClusterHost> clusterHost;
-    const QList<QSharedPointer<ClusterHost>> clusterHosts = this->GetConnection()->GetCache()->GetAll<ClusterHost>("cluster_host");
+    const QList<QSharedPointer<ClusterHost>> clusterHosts = this->GetConnection()->GetCache()->GetAll<ClusterHost>(XenObjectType::ClusterHost);
     for (const QSharedPointer<ClusterHost>& ch : clusterHosts)
     {
         if (ch && ch->IsValid() && ch->GetHostRef() == host->OpaqueRef())

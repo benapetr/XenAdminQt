@@ -98,7 +98,8 @@ void VerticallyTabbedDialog::loadObjectData()
     
     if (objectData.isEmpty())
     {
-        qWarning() << "VerticallyTabbedDialog: Failed to load data for" << this->m_objectType << this->m_objectRef;
+        qWarning() << "VerticallyTabbedDialog: Failed to load data for"
+                   << XenObject::TypeToString(this->m_objectType) << this->m_objectRef;
         this->m_objectDataBefore = QVariantMap();
         this->m_objectDataCopy = QVariantMap();
         return;
@@ -110,7 +111,8 @@ void VerticallyTabbedDialog::loadObjectData()
     this->m_objectDataBefore = objectData;  // Immutable reference copy
     this->m_objectDataCopy = objectData;    // Working copy for editing
     
-    qDebug() << "VerticallyTabbedDialog: Loaded data for" << this->m_objectType << this->m_objectRef
+    qDebug() << "VerticallyTabbedDialog: Loaded data for"
+             << XenObject::TypeToString(this->m_objectType) << this->m_objectRef
              << "- name_label:" << objectData.value("name_label").toString();
 }
 
@@ -449,7 +451,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
         qDebug() << "VerticallyTabbedDialog: Applying name_label change:" << oldName << "->" << newName;
         
         bool success = false;
-        if (this->m_objectType == "vm")
+        if (this->m_objectType == XenObjectType::VM)
         {
             try
             {
@@ -461,7 +463,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
                 qWarning() << "Failed to set VM name_label:" << ex.what();
             }
         }
-        else if (this->m_objectType == "host")
+        else if (this->m_objectType == XenObjectType::Host)
         {
             try
             {
@@ -473,7 +475,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
                 qWarning() << "Failed to set Host name_label:" << ex.what();
             }
         }
-        else if (this->m_objectType == "pool")
+        else if (this->m_objectType == XenObjectType::Pool)
         {
             try
             {
@@ -485,7 +487,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
                 qWarning() << "Failed to set Pool name_label:" << ex.what();
             }
         }
-        else if (this->m_objectType == "sr")
+        else if (this->m_objectType == XenObjectType::SR)
         {
             try
             {
@@ -497,7 +499,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
                 qWarning() << "Failed to set SR name_label:" << ex.what();
             }
         }
-        else if (this->m_objectType == "network")
+        else if (this->m_objectType == XenObjectType::Network)
         {
             try
             {
@@ -516,7 +518,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
         }
         else
         {
-            qWarning() << "Failed to set name_label for" << this->m_objectType;
+            qWarning() << "Failed to set name_label for" << XenObject::TypeToString(this->m_objectType);
         }
     }
     
@@ -528,7 +530,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
         qDebug() << "VerticallyTabbedDialog: Applying name_description change";
         
         bool success = false;
-        if (this->m_objectType == "vm")
+        if (this->m_objectType == XenObjectType::VM)
         {
             try
             {
@@ -540,7 +542,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
                 qWarning() << "Failed to set VM name_description:" << ex.what();
             }
         }
-        else if (this->m_objectType == "host")
+        else if (this->m_objectType == XenObjectType::Host)
         {
             try
             {
@@ -552,7 +554,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
                 qWarning() << "Failed to set Host name_description:" << ex.what();
             }
         }
-        else if (this->m_objectType == "pool")
+        else if (this->m_objectType == XenObjectType::Pool)
         {
             try
             {
@@ -564,7 +566,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
                 qWarning() << "Failed to set Pool name_description:" << ex.what();
             }
         }
-        else if (this->m_objectType == "sr")
+        else if (this->m_objectType == XenObjectType::SR)
         {
             try
             {
@@ -576,7 +578,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
                 qWarning() << "Failed to set SR name_description:" << ex.what();
             }
         }
-        else if (this->m_objectType == "network")
+        else if (this->m_objectType == XenObjectType::Network)
         {
             try
             {
@@ -595,7 +597,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
         }
         else
         {
-            qWarning() << "Failed to set name_description for" << this->m_objectType;
+            qWarning() << "Failed to set name_description for" << XenObject::TypeToString(this->m_objectType);
         }
     }
     
@@ -603,7 +605,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
     QVariantMap oldOtherConfig = this->m_objectDataBefore.value("other_config").toMap();
     QVariantMap newOtherConfig = this->m_objectDataCopy.value("other_config").toMap();
 
-    if (this->m_objectType == "vm")
+    if (this->m_objectType == XenObjectType::VM)
     {
         if (oldOtherConfig != newOtherConfig)
         {
@@ -651,7 +653,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             }
         }
     }
-    else if (this->m_objectType == "network")
+    else if (this->m_objectType == XenObjectType::Network)
     {
         if (oldOtherConfig != newOtherConfig)
         {
@@ -669,7 +671,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
     }
 
     // 4. Check if HVM_shadow_multiplier changed (VM only)
-    if (this->m_objectType == "vm" && this->m_objectDataCopy.contains("HVM_shadow_multiplier"))
+    if (this->m_objectType == XenObjectType::VM && this->m_objectDataCopy.contains("HVM_shadow_multiplier"))
     {
         double oldMultiplier = this->m_objectDataBefore.value("HVM_shadow_multiplier").toDouble();
         double newMultiplier = this->m_objectDataCopy.value("HVM_shadow_multiplier").toDouble();
@@ -718,7 +720,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
                 else
                 {
                     // Add or update the key
-                    if (this->m_objectType == "host")
+                    if (this->m_objectType == XenObjectType::Host)
                     {
                         QVariantMap hostData = this->m_objectDataCopy;
                         QVariantMap otherConfig = hostData.value("other_config").toMap();
@@ -740,7 +742,8 @@ void VerticallyTabbedDialog::applySimpleChanges()
                     // Pool, SR, Network also have other_config but we haven't implemented helpers yet
                     else
                     {
-                        qWarning() << "other_config updates not implemented for" << this->m_objectType;
+                        qWarning() << "other_config updates not implemented for"
+                                   << XenObject::TypeToString(this->m_objectType);
                     }
 
                     if (success)

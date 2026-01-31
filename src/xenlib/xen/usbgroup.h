@@ -51,7 +51,7 @@ class XENLIB_EXPORT USBGroup : public XenObject
         explicit USBGroup(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         virtual ~USBGroup();
 
-        QString GetObjectType() const override { return "USB_group"; }
+        XenObjectType GetObjectType() const override { return XenObjectType::USBGroup; }
 
         // Property accessors
         QString GetUuid() const;

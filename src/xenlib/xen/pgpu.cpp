@@ -37,10 +37,6 @@ PGPU::PGPU(XenConnection* connection, const QString& opaqueRef, QObject* parent)
 {
 }
 
-QString PGPU::GetObjectType() const
-{
-    return "pgpu";
-}
 
 QString PGPU::GetPCIRef() const
 {
@@ -127,10 +123,10 @@ QSharedPointer<PCI> PGPU::GetPCI() const
         return QSharedPointer<PCI>();
     
     QString ref = this->GetPCIRef();
-    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<PCI>();
     
-    return cache->ResolveObject<PCI>("pci", ref);
+    return cache->ResolveObject<PCI>(XenObjectType::PCI, ref);
 }
 
 QSharedPointer<GPUGroup> PGPU::GetGPUGroup() const
@@ -144,10 +140,10 @@ QSharedPointer<GPUGroup> PGPU::GetGPUGroup() const
         return QSharedPointer<GPUGroup>();
     
     QString ref = this->GetGPUGroupRef();
-    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<GPUGroup>();
     
-    return cache->ResolveObject<GPUGroup>("gpu_group", ref);
+    return cache->ResolveObject<GPUGroup>(XenObjectType::GPUGroup, ref);
 }
 
 QSharedPointer<Host> PGPU::GetHost() const
@@ -161,10 +157,10 @@ QSharedPointer<Host> PGPU::GetHost() const
         return QSharedPointer<Host>();
     
     QString ref = this->GetHostRef();
-    if (ref.isEmpty() || ref == "OpaqueRef:NULL")
+    if (ref.isEmpty() || ref == XENOBJECT_NULL)
         return QSharedPointer<Host>();
     
-    return cache->ResolveObject<Host>("host", ref);
+    return cache->ResolveObject<Host>(XenObjectType::Host, ref);
 }
 
 QList<QSharedPointer<VGPU>> PGPU::GetResidentVGPUs() const
@@ -181,9 +177,9 @@ QList<QSharedPointer<VGPU>> PGPU::GetResidentVGPUs() const
     QStringList refs = this->ResidentVGPURefs();
     for (const QString& ref : refs)
     {
-        if (!ref.isEmpty() && ref != "OpaqueRef:NULL")
+        if (!ref.isEmpty() && ref != XENOBJECT_NULL)
         {
-            QSharedPointer<VGPU> obj = cache->ResolveObject<VGPU>("vgpu", ref);
+            QSharedPointer<VGPU> obj = cache->ResolveObject<VGPU>(XenObjectType::VGPU, ref);
             if (obj)
                 result.append(obj);
         }

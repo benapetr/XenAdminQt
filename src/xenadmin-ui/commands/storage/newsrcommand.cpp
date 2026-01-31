@@ -66,10 +66,10 @@ bool NewSRCommand::CanRun() const
     if (!mainWindow() || !ob || !ob->GetConnection()->IsConnected())
         return false;
 
-    QString objectType = getSelectedObjectType();
+    XenObjectType objectType = getSelectedObjectType();
 
     // Can run if host or pool is selected
-    if (objectType == "host" || objectType == "pool")
+    if (objectType == XenObjectType::Host || objectType == XenObjectType::Pool)
         return true;
 
     // Can run if any object under a pool/host is selected (SR, VM, etc.)

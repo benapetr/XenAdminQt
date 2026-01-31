@@ -146,7 +146,7 @@ void AttachVirtualDiskCommand::performAttachment(AttachVirtualDiskDialog* dialog
     vbdRecord["unpluggable"] = true;
 
     // Check if this is the first VBD for this VDI (owner flag)
-    QList<QVariantMap> allVbds = cache->GetAllData("vbd");
+    QList<QVariantMap> allVbds = cache->GetAllData(XenObjectType::VBD);
     bool isOwner = true;
     for (const QVariantMap& vbd : allVbds)
     {
@@ -210,7 +210,7 @@ QString AttachVirtualDiskCommand::MenuText() const
 
 bool AttachVirtualDiskCommand::isVMSelected() const
 {
-    return this->getSelectedObjectType() == "vm";
+    return this->getSelectedObjectType() == XenObjectType::VM;
 }
 
 QString AttachVirtualDiskCommand::getSelectedVMRef() const
@@ -234,7 +234,7 @@ int AttachVirtualDiskCommand::getMaxVBDsAllowed(const QVariantMap& vmData) const
 int AttachVirtualDiskCommand::getCurrentVBDCount(const QString& vmRef, XenCache* cache) const
 {
     // Get all VBDs and count those belonging to this VM
-    QList<QVariantMap> vbds = cache->GetAllData("vbd");
+    QList<QVariantMap> vbds = cache->GetAllData(XenObjectType::VBD);
     int count = 0;
 
     for (const QVariantMap& vbd : vbds)

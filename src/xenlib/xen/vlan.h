@@ -69,7 +69,7 @@ class XENLIB_EXPORT VLAN : public XenObject
         QSharedPointer<PIF> GetUntaggedPIF() const;
 
         // XenObject interface
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::VLAN; }
 };
 
 #endif // VLAN_H

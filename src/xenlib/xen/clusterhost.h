@@ -36,6 +36,8 @@ class ClusterHost : public XenObject
         QSharedPointer<Cluster> GetCluster() const;
         QSharedPointer<Host> GetHost() const;
         QSharedPointer<PIF> GetPIF() const;
+
+        XenObjectType GetObjectType() const override { return XenObjectType::ClusterHost; }
 };
 
 #endif // CLUSTERHOST_H

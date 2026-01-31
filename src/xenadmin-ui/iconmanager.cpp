@@ -49,24 +49,47 @@ IconManager& IconManager::instance()
     return instance;
 }
 
+namespace
+{
+    XenObjectType iconTypeFromString(const QString& objectType)
+    {
+        const QString normalized = objectType.toLower();
+        if (normalized == "vm" || normalized == "vms")
+            return XenObjectType::VM;
+        if (normalized == "host" || normalized == "hosts")
+            return XenObjectType::Host;
+        if (normalized == "pool" || normalized == "pools")
+            return XenObjectType::Pool;
+        if (normalized == "sr" || normalized == "srs")
+            return XenObjectType::SR;
+        if (normalized == "network" || normalized == "networks")
+            return XenObjectType::Network;
+        return XenObjectType::Null;
+    }
+}
+
 QIcon IconManager::GetIconForObject(const QString& objectType, const QVariantMap& objectData) const
 {
-    if (objectType == "vm")
+    return this->GetIconForObject(iconTypeFromString(objectType), objectData);
+}
+
+QIcon IconManager::GetIconForObject(XenObjectType objectType, const QVariantMap& objectData) const
+{
+    switch (objectType)
     {
-        return this->GetIconForVM(objectData);
-    } else if (objectType == "host")
-    {
-        return QIcon();
-        //return this->GetIconForHost(objectData);
-    } else if (objectType == "pool")
-    {
-        return this->GetIconForPool(objectData);
-    } else if (objectType == "sr")
-    {
-        return this->GetIconForSR(objectData);
-    } else if (objectType == "network")
-    {
-        return this->GetIconForNetwork(objectData);
+        case XenObjectType::VM:
+            return this->GetIconForVM(objectData);
+        case XenObjectType::Host:
+            return QIcon();
+            //return this->GetIconForHost(objectData);
+        case XenObjectType::Pool:
+            return this->GetIconForPool(objectData);
+        case XenObjectType::SR:
+            return this->GetIconForSR(objectData);
+        case XenObjectType::Network:
+            return this->GetIconForNetwork(objectData);
+        default:
+            break;
     }
 
     return QIcon(); // Empty icon for unknown types
@@ -77,16 +100,16 @@ QIcon IconManager::GetIconForObject(const XenObject* object) const
     if (!object)
         return QIcon();
 
-    const QString objectType = object->GetObjectType();
+    XenObjectType objectType = object->GetObjectType();
     QVariantMap objectData = object->GetData();
 
-    if (objectType == "host")
+    if (objectType == XenObjectType::Host)
     {
         const Host *host = dynamic_cast<const Host*>(object);
         return this->GetIconForHost(host);
     }
 
-    if (objectType == "sr")
+    if (objectType == XenObjectType::SR)
         return this->GetIconForSR(objectData, object->GetConnection());
 
     return this->GetIconForObject(objectType, objectData);
@@ -263,7 +286,7 @@ QIcon IconManager::GetIconForSR(const QVariantMap& srData, XenConnection* connec
     bool isBroken = false;
     if (connection && connection->GetCache())
     {
-        QSharedPointer<SR> srObj = connection->GetCache()->ResolveObject<SR>("sr", ref);
+        QSharedPointer<SR> srObj = connection->GetCache()->ResolveObject<SR>(ref);
         if (srObj)
         {
             hasPbds = srObj->HasPBDs();
@@ -274,7 +297,7 @@ QIcon IconManager::GetIconForSR(const QVariantMap& srData, XenConnection* connec
         const QString hiddenFlag = otherConfig.value("hide_from_xencenter").toString().toLower();
         isHidden = hiddenFlag == "true";
 
-        QStringList poolRefs = connection->GetCache()->GetAllRefs("pool");
+        QStringList poolRefs = connection->GetCache()->GetAllRefs(XenObjectType::Pool);
         if (!poolRefs.isEmpty())
         {
             QVariantMap poolData = connection->GetCache()->ResolveObjectData("pool", poolRefs.first());

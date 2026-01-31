@@ -54,7 +54,3 @@ QString Tunnel::GetProtocol() const
     return this->stringProperty("protocol");
 }
 
-QString Tunnel::GetObjectType() const
-{
-    return "tunnel";
-}

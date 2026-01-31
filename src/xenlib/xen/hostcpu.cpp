@@ -109,5 +109,5 @@ QSharedPointer<Host> HostCPU::GetHost() const
     if (ref.isEmpty() || ref == "OpaqueRef:NULL")
         return QSharedPointer<Host>();
     
-    return cache->ResolveObject<Host>("host", ref);
+    return cache->ResolveObject<Host>(XenObjectType::Host, ref);
 }

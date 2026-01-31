@@ -52,7 +52,7 @@ class XENLIB_EXPORT VMAppliance : public XenObject
         ~VMAppliance() override = default;
 
         // XenObject overrides
-        QString GetObjectType() const override;
+        XenObjectType GetObjectType() const override { return XenObjectType::VMAppliance; }
 
         // Core properties
         QStringList VMRefs() const;

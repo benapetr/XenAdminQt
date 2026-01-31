@@ -46,7 +46,7 @@ class XENLIB_EXPORT User : public XenObject
         explicit User(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         virtual ~User();
 
-        QString GetObjectType() const override { return "user"; }
+        XenObjectType GetObjectType() const override { return XenObjectType::User; }
 
         // Property accessors
         QString ShortName() const;

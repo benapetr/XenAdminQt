@@ -48,7 +48,7 @@ class XENLIB_EXPORT HostPatch : public XenObject
         explicit HostPatch(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         virtual ~HostPatch();
 
-        QString GetObjectType() const override { return "host_patch"; }
+        XenObjectType GetObjectType() const override { return XenObjectType::HostPatch; }
 
         // Property accessors
         QString Version() const;

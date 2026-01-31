@@ -75,21 +75,21 @@ void MemoryTabPage::refreshContent()
 
     this->ui->memoryStatsGroup->setVisible(true);
 
-    if (this->m_object->GetObjectType() == "vm")
+    if (this->m_object->GetObjectType() == XenObjectType::VM)
     {
         this->ui->horizontalSpacer->changeSize(0, 0, QSizePolicy::Expanding, QSizePolicy::Minimum);
         this->ui->editButton->setVisible(true);
         this->ui->verticalSpacer->changeSize(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
         this->ui->verticalLayout->invalidate();
         this->populateVMMemory();
-    } else if (this->m_object->GetObjectType() == "host")
+    } else if (this->m_object->GetObjectType() == XenObjectType::Host)
     {
         this->ui->editButton->setVisible(false);
         this->ui->horizontalSpacer->changeSize(0, 0, QSizePolicy::Minimum, QSizePolicy::Minimum);
         this->ui->verticalSpacer->changeSize(0, 0, QSizePolicy::Minimum, QSizePolicy::Minimum);
         this->ui->verticalLayout->invalidate();
         this->populateHostMemory();
-    } else if (this->m_object->GetObjectType() == "pool")
+    } else if (this->m_object->GetObjectType() == XenObjectType::Pool)
     {
         this->ui->editButton->setVisible(false);
         this->ui->horizontalSpacer->changeSize(0, 0, QSizePolicy::Minimum, QSizePolicy::Minimum);
@@ -263,7 +263,7 @@ void MemoryTabPage::populateHostMemory()
     };
 
     XenCache* cache = host->GetCache();
-    QList<QSharedPointer<VM>> vmList = cache ? cache->GetAll<VM>("vm") : QList<QSharedPointer<VM>>();
+    QList<QSharedPointer<VM>> vmList = cache ? cache->GetAll<VM>(XenObjectType::VM) : QList<QSharedPointer<VM>>();
     QList<QSharedPointer<VM>> hostVms;
     QString hostRef = host->OpaqueRef();
 
@@ -365,7 +365,7 @@ void MemoryTabPage::populatePoolMemory()
     this->clearVmListLayout();
 
     XenCache* cache = pool->GetCache();
-    QList<QSharedPointer<Host>> hosts = cache ? cache->GetAll<Host>("host") : QList<QSharedPointer<Host>>();
+    QList<QSharedPointer<Host>> hosts = cache ? cache->GetAll<Host>(XenObjectType::Host) : QList<QSharedPointer<Host>>();
     std::sort(hosts.begin(), hosts.end(), [](const QSharedPointer<Host>& left, const QSharedPointer<Host>& right) {
         QString leftName = left ? left->GetName() : QString();
         QString rightName = right ? right->GetName() : QString();

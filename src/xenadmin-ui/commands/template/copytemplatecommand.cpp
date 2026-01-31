@@ -27,9 +27,9 @@
 
 #include "copytemplatecommand.h"
 #include "../../mainwindow.h"
-#include "xen/xenobject.h"
+#include "xenlib/xen/xenobject.h"
 #include "xenlib/xen/vm.h"
-#include "xencache.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
 
 CopyTemplateCommand::CopyTemplateCommand(MainWindow* mainWindow, QObject* parent) : Command(mainWindow, parent)
@@ -42,15 +42,15 @@ bool CopyTemplateCommand::CanRun() const
     if (!object || !object->GetConnection())
         return false;
 
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
+    XenObjectType objectType = this->getSelectedObjectType();
+    if (objectType != XenObjectType::VM)
         return false;
 
     QString templateRef = this->getSelectedObjectRef();
     if (templateRef.isEmpty())
         return false;
 
-    QSharedPointer<VM> templateVm = object->GetConnection()->GetCache()->ResolveObject<VM>("vm", templateRef);
+    QSharedPointer<VM> templateVm = object->GetConnection()->GetCache()->ResolveObject<VM>(XenObjectType::VM, templateRef);
     return this->canRunTemplate(templateVm);
 }
 
@@ -68,7 +68,7 @@ void CopyTemplateCommand::Run()
     if (!cache)
         return;
 
-    QSharedPointer<VM> templateVm = cache->ResolveObject<VM>("vm", templateRef);
+    QSharedPointer<VM> templateVm = cache->ResolveObject<VM>(XenObjectType::VM, templateRef);
     if (!this->canRunTemplate(templateVm))
     {
         QMessageBox::warning(this->mainWindow(), "Cannot Copy Template",
@@ -94,8 +94,8 @@ QString CopyTemplateCommand::MenuText() const
 
 QString CopyTemplateCommand::getSelectedTemplateRef() const
 {
-    QString objectType = this->getSelectedObjectType();
-    if (objectType != "vm")
+    XenObjectType objectType = this->getSelectedObjectType();
+    if (objectType != XenObjectType::VM)
         return QString();
 
     return this->getSelectedObjectRef();
