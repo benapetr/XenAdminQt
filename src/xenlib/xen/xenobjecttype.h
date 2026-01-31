@@ -28,6 +28,8 @@
 #ifndef XENOBJECTTYPE_H
 #define XENOBJECTTYPE_H
 
+#include <QtGlobal>
+
 enum class XenObjectType
 {
     Null,
@@ -82,5 +84,11 @@ enum class XenObjectType
     VUSB,
     PUSB
 };
+
+// Hash function for XenObjectType to support QSet/QHash in both Qt5 and Qt6
+inline uint qHash(XenObjectType key, uint seed = 0) noexcept
+{
+    return ::qHash(static_cast<int>(key), seed);
+}
 
 #endif // XENOBJECTTYPE_H
