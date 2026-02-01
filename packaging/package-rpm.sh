@@ -139,6 +139,7 @@ if command -v rpm >/dev/null 2>&1; then
     require_pkg rsync
     require_pkg git
     require_pkg pkgconf-pkg-config
+    require_pkg openssl-devel
     require_pkg mesa-libGL-devel
     require_pkg mesa-libGLU-devel
     require_pkg mesa-libEGL-devel

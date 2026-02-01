@@ -15,7 +15,7 @@ This directory contains scripts to build native packages for different platforms
   sudo apt-get install build-essential debhelper dpkg-dev pkg-config \
     qtbase5-dev qt6-base-dev libqt5charts5-dev qt6-charts-dev \
     libfreerdp2-dev libfreerdp-dev libwinpr2-dev libwinpr-dev \
-    libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev
+    libglu1-mesa-dev libegl1-mesa-dev libxkbcommon-dev libssl-dev
   ```
 
 ### Ubuntu Notes
@@ -35,7 +35,7 @@ If `qt6-charts-dev` is still unavailable on Ubuntu 22.04, build with Qt5
   ```bash
   sudo dnf install rpm-build rsync pkgconf-pkg-config \
     qt6-qtbase-devel qt6-qtcharts-devel \
-    mesa-libGL-devel mesa-libGLU-devel mesa-libEGL-devel libxkbcommon-devel
+    mesa-libGL-devel mesa-libGLU-devel mesa-libEGL-devel libxkbcommon-devel openssl-devel
   ```
   - Alma/Rocky/RHEL 8: use Qt5 (`qt5-qtbase-devel` + `qt5-qtcharts-devel`)
   - Alma/Rocky/RHEL 9: Qt5 Charts may require CRB/EPEL
