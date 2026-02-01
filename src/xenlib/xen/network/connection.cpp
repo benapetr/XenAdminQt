@@ -1099,11 +1099,7 @@ void XenConnection::connectWorkerThread()
         connect(this->d->eventPoller, &EventPoller::taskDeleted, this, &XenConnection::TaskDeleted);
     }
 
-    const QStringList classes = {
-                                 "vm", "host", "pool", "sr", "vbd", "vdi", "vif",
-                                 "network", "pbd", "pif", "task", "message", "console",
-                                 "vm_guest_metrics", "host_metrics", "vm_metrics"
-                                };
+    const QStringList classes = { "*" };
 
     QMetaObject::invokeMethod(this->d->eventPoller, [this, session, classes, token]()
     {
