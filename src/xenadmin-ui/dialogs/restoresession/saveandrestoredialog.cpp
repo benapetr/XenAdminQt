@@ -31,8 +31,7 @@
 #include "../../settingsmanager.h"
 #include <QtWidgets/QVBoxLayout>
 
-SaveAndRestoreDialog::SaveAndRestoreDialog(QWidget* parent)
-    : QDialog(parent), ui(new Ui::SaveAndRestoreDialog)
+SaveAndRestoreDialog::SaveAndRestoreDialog(QWidget* parent) : QDialog(parent), ui(new Ui::SaveAndRestoreDialog)
 {
     this->ui->setupUi(this);
 
@@ -43,9 +42,6 @@ SaveAndRestoreDialog::SaveAndRestoreDialog(QWidget* parent)
     QVBoxLayout* layout = new QVBoxLayout(this->ui->saveAndRestoreOptionsPage);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(this->saveAndRestoreOptionsPage_);
-
-    // Matches C# SaveAndRestoreDialog: do not call SaveServerlist on OK
-    this->saveAndRestoreOptionsPage_->SetSaveAllAfter(false);
 
     // Build the options page with current settings
     this->saveAndRestoreOptionsPage_->Build();

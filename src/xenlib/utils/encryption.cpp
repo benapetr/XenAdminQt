@@ -27,9 +27,9 @@
 
 #include "encryption.h"
 #include <QtCore/QCryptographicHash>
-#include <QtCore/QSettings>
 #include <QtCore/QUuid>
 #include <QtCore/QRandomGenerator>
+#include <QDebug>
 
 // Platform-specific crypto headers
 #ifdef Q_OS_WIN
@@ -39,6 +39,7 @@
 #elif defined(Q_OS_MACOS)
     #include <CommonCrypto/CommonCryptor.h>
     #include <CommonCrypto/CommonRandom.h>
+    #include <CommonCrypto/CommonKeyDerivation.h>
 #else
     // Linux/Unix: OpenSSL
     #include <openssl/evp.h>
@@ -49,22 +50,7 @@
 namespace
 {
     const QString kProtectedPrefix = QStringLiteral("enc:");
-
-    QString getOrCreateLocalKey()
-    {
-        QSettings settings;
-        const QString keyName = QStringLiteral("Security/LocalKey");
-        QString key = settings.value(keyName).toString();
-
-        if (key.isEmpty())
-        {
-            key = EncryptionUtils::GenerateSessionKey();
-            settings.setValue(keyName, key);
-            settings.sync();
-        }
-
-        return key;
-    }
+    QString s_localKey;
 }
 
 QString EncryptionUtils::HashPassword(const QString& password)
@@ -156,12 +142,12 @@ QString EncryptionUtils::ProtectString(const QString& text)
         return QString();
     }
 
-#ifdef _WIN32
-    // TODO: replace with DPAPI-backed protect/unprotect.
-#elif defined(Q_OS_MACOS)
-    // TODO: replace with Keychain-backed protect/unprotect.
-#endif
-    const QString key = getOrCreateLocalKey();
+    const QString key = s_localKey;
+    if (key.isEmpty())
+    {
+        qWarning() << "EncryptionUtils: local key not set; cannot protect string";
+        return QString();
+    }
     return kProtectedPrefix + EncryptString(text, key);
 }
 
@@ -177,12 +163,12 @@ QString EncryptionUtils::UnprotectString(const QString& protectedText)
         return protectedText;
     }
 
-#ifdef _WIN32
-    // TODO: replace with DPAPI-backed protect/unprotect.
-#elif defined(Q_OS_MACOS)
-    // TODO: replace with Keychain-backed protect/unprotect.
-#endif
-    const QString key = getOrCreateLocalKey();
+    const QString key = s_localKey;
+    if (key.isEmpty())
+    {
+        qWarning() << "EncryptionUtils: local key not set; cannot unprotect string";
+        return QString();
+    }
     QString decrypted = DecryptString(protectedText.mid(kProtectedPrefix.size()), key);
     if (decrypted.isEmpty())
     {
@@ -190,6 +176,16 @@ QString EncryptionUtils::UnprotectString(const QString& protectedText)
     }
 
     return decrypted;
+}
+
+void EncryptionUtils::SetLocalKey(const QString& key)
+{
+    s_localKey = key;
+}
+
+QString EncryptionUtils::GetLocalKey()
+{
+    return s_localKey;
 }
 
 QString EncryptionUtils::GenerateSalt(int length)
@@ -212,6 +208,149 @@ QString EncryptionUtils::HashPasswordWithSalt(const QString& password, const QSt
     QByteArray data = saltedPassword.toUtf8();
     QByteArray hash = QCryptographicHash::hash(data, QCryptographicHash::Sha256);
     return hash.toHex();
+}
+
+bool EncryptionUtils::EncryptionAvailable()
+{
+    return true;
+}
+
+QByteArray EncryptionUtils::GenerateSaltBytes(int length)
+{
+    QByteArray salt(length, '\0');
+
+#ifdef Q_OS_WIN
+    if (BCryptGenRandom(nullptr, reinterpret_cast<PUCHAR>(salt.data()), static_cast<ULONG>(salt.size()),
+                        BCRYPT_USE_SYSTEM_PREFERRED_RNG) == 0)
+    {
+        return salt;
+    }
+#elif defined(Q_OS_MACOS)
+    if (CCRandomGenerateBytes(salt.data(), salt.size()) == kCCSuccess)
+    {
+        return salt;
+    }
+#else
+    if (RAND_bytes(reinterpret_cast<unsigned char*>(salt.data()), salt.size()) == 1)
+    {
+        return salt;
+    }
+#endif
+
+    for (int i = 0; i < salt.size(); ++i)
+    {
+        salt[i] = static_cast<char>(QRandomGenerator::global()->bounded(256));
+    }
+    return salt;
+}
+
+QByteArray EncryptionUtils::DeriveKeyPBKDF2(const QByteArray& passwordBytes, const QByteArray& saltBytes, int iterations, int keyLen)
+{
+    if (passwordBytes.isEmpty() || saltBytes.isEmpty() || iterations <= 0 || keyLen <= 0)
+    {
+        return QByteArray();
+    }
+
+    QByteArray key(keyLen, '\0');
+
+#ifdef Q_OS_WIN
+    NTSTATUS status = BCryptDeriveKeyPBKDF2(BCRYPT_SHA256_ALGORITHM,
+                                            reinterpret_cast<PUCHAR>(const_cast<char*>(passwordBytes.constData())),
+                                            static_cast<ULONG>(passwordBytes.size()),
+                                            reinterpret_cast<PUCHAR>(const_cast<char*>(saltBytes.constData())),
+                                            static_cast<ULONG>(saltBytes.size()),
+                                            static_cast<ULONG>(iterations),
+                                            reinterpret_cast<PUCHAR>(key.data()),
+                                            static_cast<ULONG>(key.size()),
+                                            0);
+    if (!BCRYPT_SUCCESS(status))
+    {
+        return QByteArray();
+    }
+#elif defined(Q_OS_MACOS)
+    int status = CCKeyDerivationPBKDF(kCCPBKDF2,
+                                      passwordBytes.constData(),
+                                      passwordBytes.size(),
+                                      reinterpret_cast<const uint8_t*>(saltBytes.constData()),
+                                      saltBytes.size(),
+                                      kCCPRFHmacAlgSHA256,
+                                      static_cast<uint>(iterations),
+                                      reinterpret_cast<uint8_t*>(key.data()),
+                                      key.size());
+    if (status != kCCSuccess)
+    {
+        return QByteArray();
+    }
+#else
+    if (PKCS5_PBKDF2_HMAC(passwordBytes.constData(), passwordBytes.size(),
+                          reinterpret_cast<const unsigned char*>(saltBytes.constData()),
+                          saltBytes.size(),
+                          iterations,
+                          EVP_sha256(),
+                          key.size(),
+                          reinterpret_cast<unsigned char*>(key.data())) != 1)
+    {
+        return QByteArray();
+    }
+#endif
+
+    return key;
+}
+
+QByteArray EncryptionUtils::DeriveKeyPBKDF2(const QString& password, const QByteArray& saltBytes, int iterations, int keyLen)
+{
+    return DeriveKeyPBKDF2(password.toUtf8(), saltBytes, iterations, keyLen);
+}
+
+QByteArray EncryptionUtils::ComputePasswordHashPBKDF2(const QString& password, const QByteArray& saltBytes, int iterations, int hashLen)
+{
+    return DeriveKeyPBKDF2(password, saltBytes, iterations, hashLen);
+}
+
+bool EncryptionUtils::VerifyPasswordPBKDF2(const QString& password, const QByteArray& expectedHash, const QByteArray& saltBytes, int iterations)
+{
+    if (expectedHash.isEmpty())
+        return false;
+
+    QByteArray computed = ComputePasswordHashPBKDF2(password, saltBytes, iterations, expectedHash.size());
+    return ArrayElementsEqual(computed, expectedHash);
+}
+
+bool EncryptionUtils::DerivePasswordSecrets(const QString& password, int iterations,
+                                            QByteArray& outKey, QByteArray& outKeySalt,
+                                            QByteArray& outVerifyHash, QByteArray& outVerifySalt)
+{
+    if (password.isEmpty() || iterations <= 0)
+        return false;
+
+    outKeySalt = GenerateSaltBytes(16);
+    outVerifySalt = GenerateSaltBytes(16);
+
+    outKey = DeriveKeyPBKDF2(password, outKeySalt, iterations, 32);
+    outVerifyHash = ComputePasswordHashPBKDF2(password, outVerifySalt, iterations, 32);
+
+    if (outKey.isEmpty() || outVerifyHash.isEmpty())
+    {
+        outKey.clear();
+        outKeySalt.clear();
+        outVerifyHash.clear();
+        outVerifySalt.clear();
+        return false;
+    }
+
+    return true;
+}
+
+bool EncryptionUtils::VerifyPasswordAndDeriveKey(const QString& password,
+                                                 const QByteArray& expectedHash, const QByteArray& verifySalt,
+                                                 const QByteArray& keySalt, int iterations,
+                                                 QByteArray& outKey)
+{
+    if (!VerifyPasswordPBKDF2(password, expectedHash, verifySalt, iterations))
+        return false;
+
+    outKey = DeriveKeyPBKDF2(password, keySalt, iterations, 32);
+    return !outKey.isEmpty();
 }
 
 QByteArray EncryptionUtils::ComputeHash(const QString& input)

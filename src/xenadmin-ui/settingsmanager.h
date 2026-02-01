@@ -50,6 +50,9 @@ class SettingsManager : public QObject
     public:
         static SettingsManager& instance();
 
+        void Load();
+        void Save();
+
         // Window state
         void saveMainWindowGeometry(const QByteArray& geometry);
         QByteArray loadMainWindowGeometry() const;
@@ -88,12 +91,8 @@ class SettingsManager : public QObject
         ConnectionProfile getLastConnectionProfile() const;
         void setLastConnectionProfile(const QString& name);
 
-        // Application preferences
-        bool getSaveSession() const;
-        void setSaveSession(bool save);
-
-        bool getAutoConnect() const;
-        void setAutoConnect(bool autoConnect);
+        bool GetAutoReconnect() const;
+        void SetAutoReconnect(bool autoReconnect);
 
         bool getCheckForUpdates() const;
         void setCheckForUpdates(bool check);
@@ -172,27 +171,30 @@ class SettingsManager : public QObject
 
         void Sync();  // Force write to disk
         void Clear(); // Clear all settings
-
-        // Main password (matches C# Program.MainPassword)
-        static QByteArray GetMainPassword();
-        static void SetMainPassword(const QByteArray& password);
-
-        // Registry settings (matches C# Registry class)
-        static bool AllowCredentialSave();
         
-        // Session save control (matches C# Program.SkipSessionSave)
-        static bool GetSkipSessionSave();
-        static void SetSkipSessionSave(bool skip);
+        QString GetFileName() const; // Get the settings file path
+
+        // Main password derived key + verification data
+        QByteArray GetMainKey() const;
+        void SetMainKey(const QByteArray& key);
+        QByteArray GetMainPasswordHash() const;
+        void SetMainPasswordHash(const QByteArray& passwordHash);
+        QByteArray GetMainPasswordHashSalt() const;
+        void SetMainPasswordHashSalt(const QByteArray& salt);
+        QByteArray GetMainKeySalt() const;
+        void SetMainKeySalt(const QByteArray& salt);
+        int GetMainKdfIterations() const;
+        void SetMainKdfIterations(int iterations);
 
         // Save and restore settings (matches C# Properties.Settings.Default)
         bool GetSaveSession() const;
         void SetSaveSession(bool save);
+
+        bool GetSavePasswords() const;
+        void SetSavePasswords(bool save);
         
         bool GetRequirePass() const;
         void SetRequirePass(bool require);
-
-        // Server list management
-        static void SaveServerList();
 
     signals:
         void settingsChanged(const QString& key);
@@ -204,6 +206,40 @@ class SettingsManager : public QObject
         SettingsManager& operator=(const SettingsManager&) = delete;
 
         QSettings* m_settings;
+        QByteArray m_mainKey;
+
+        // Cached simple settings (loaded from QSettings on startup)
+        bool m_autoReconnect;
+        bool m_checkForUpdates;
+        QString m_defaultExportPath;
+        QString m_defaultImportPath;
+        bool m_confirmOnExit;
+        bool m_showHiddenObjects;
+        bool m_defaultTemplatesVisible;
+        bool m_userTemplatesVisible;
+        bool m_localSRsVisible;
+        int m_consoleRefreshInterval;
+        int m_graphUpdateInterval;
+        TreeViewMode m_treeViewMode;
+        QStringList m_expandedTreeItems;
+        bool m_debugConsoleVisible;
+        int m_logLevel;
+        QString m_proxyServer;
+        int m_proxyPort;
+        bool m_useProxy;
+        QString m_proxyUsername;
+        QStringList m_recentExportPaths;
+        QStringList m_recentImportPaths;
+        QString m_lastConnectedServer;
+        QStringList m_serverHistory;
+        bool m_saveSession;
+        bool m_savePasswords;
+        bool m_requirePass;
+        QByteArray m_mainPasswordHash;
+        QByteArray m_mainPasswordHashSalt;
+        QByteArray m_mainKeySalt;
+        int m_mainKdfIterations;
+        QString m_localKey;
 
         // Helper methods
         QString encryptPassword(const QString& password) const;

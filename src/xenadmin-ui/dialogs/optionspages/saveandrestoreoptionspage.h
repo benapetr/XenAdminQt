@@ -39,9 +39,24 @@ namespace Ui
 }
 
 /**
- * @brief Options page for save and restore settings including main password management.
+ * @brief Options page for save and restore settings including master password management.
  * 
  * Matches C# XenAdmin.Dialogs.OptionsPages.SaveAndRestoreOptionsPage
+ *
+ * Security model (master password protection):
+ * - The master password itself is NEVER persisted to disk.
+ * - We store ONLY verification data on disk:
+ *     - verifyHash = PBKDF2(password, verifySalt, iterations)
+ *     - verifySalt, keySalt, iterations
+ * - We store ONLY a derived AES key in memory:
+ *     - derivedKey = PBKDF2(password, keySalt, iterations)
+ * - Connection passwords are encrypted/decrypted with the derived key (AES-256-CBC).
+ * - On unlock/startup, user enters plaintext password:
+ *     - verify password by recomputing verifyHash with verifySalt
+ *     - if valid, derive derivedKey using keySalt and keep derived encryption key
+ *       in memory, the password is never kept in memory
+ * - This prevents recovering the encryption key from on-disk data alone; an attacker
+ *   must guess the password to derive the key. No plaintext is stored.
  */
 class SaveAndRestoreOptionsPage : public IOptionsPage
 {
@@ -61,25 +76,22 @@ class SaveAndRestoreOptionsPage : public IOptionsPage
         void HideValidationMessages() override;
         void Save() override;
 
-        /**
-         * @brief Set whether to save the server list on OK.
-         * 
-         * Matches C# SaveAndRestoreOptionsPage.SaveAllAfter
-         * @param saveAllAfter True to save server list, false otherwise
-         */
-        void SetSaveAllAfter(bool saveAllAfter);
-
     private slots:
         void changeMainPasswordButton_Click();
         void requireMainPasswordCheckBox_Click();
         void saveStateCheckBox_Click();
+        void savePasswordsCheckBox_Click();
 
     private:
+        void UpdateControlStates();
         void SaveEverything();
 
         Ui::SaveAndRestoreOptionsPage* ui;
-        QByteArray mainPassword_;
-        bool saveAllAfter_;
+        QByteArray m_mainKey;
+        QByteArray m_mainPasswordHash;
+        QByteArray m_mainPasswordHashSalt;
+        QByteArray m_mainKeySalt;
+        int m_mainKdfIterations;
 };
 
 #endif // SAVEANDRESTOREOPTIONSPAGE_H

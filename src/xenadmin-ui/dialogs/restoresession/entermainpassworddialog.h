@@ -46,8 +46,12 @@ class EnterMainPasswordDialog : public QDialog
     Q_OBJECT
 
     public:
-        explicit EnterMainPasswordDialog(const QByteArray& temporaryMainPassword, QWidget* parent = nullptr);
+        explicit EnterMainPasswordDialog(const QByteArray& passwordHash, const QByteArray& hashSalt,
+                                         const QByteArray& keySalt, int kdfIterations,
+                                         QWidget* parent = nullptr);
         ~EnterMainPasswordDialog() override;
+
+        QByteArray GetDerivedKey() const;
 
     private slots:
         void okButton_Click();
@@ -55,7 +59,11 @@ class EnterMainPasswordDialog : public QDialog
 
     private:
         Ui::EnterMainPasswordDialog* ui;
-        QByteArray temporaryMainPassword_;
+        QByteArray passwordHash_;
+        QByteArray hashSalt_;
+        QByteArray keySalt_;
+        int iterations_;
+        QByteArray derivedKey_;
 };
 
 #endif // ENTERMAINPASSWORDDIALOG_H

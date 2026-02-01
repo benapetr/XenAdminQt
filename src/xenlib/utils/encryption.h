@@ -45,8 +45,23 @@ class XENLIB_EXPORT EncryptionUtils
         static QString DecryptString(const QString& encryptedText, const QString& key);
         static QString ProtectString(const QString& text);
         static QString UnprotectString(const QString& protectedText);
+        static void SetLocalKey(const QString& key);
+        static QString GetLocalKey();
         static QString GenerateSalt(int length = 32);
         static QString HashPasswordWithSalt(const QString& password, const QString& salt);
+        static bool EncryptionAvailable();
+        static QByteArray GenerateSaltBytes(int length = 16);
+        static QByteArray DeriveKeyPBKDF2(const QByteArray& passwordBytes, const QByteArray& saltBytes, int iterations, int keyLen = 32);
+        static QByteArray DeriveKeyPBKDF2(const QString& password, const QByteArray& saltBytes, int iterations, int keyLen = 32);
+        static QByteArray ComputePasswordHashPBKDF2(const QString& password, const QByteArray& saltBytes, int iterations, int hashLen = 32);
+        static bool VerifyPasswordPBKDF2(const QString& password, const QByteArray& expectedHash, const QByteArray& saltBytes, int iterations);
+        static bool DerivePasswordSecrets(const QString& password, int iterations,
+                                          QByteArray& outKey, QByteArray& outKeySalt,
+                                          QByteArray& outVerifyHash, QByteArray& outVerifySalt);
+        static bool VerifyPasswordAndDeriveKey(const QString& password,
+                                               const QByteArray& expectedHash, const QByteArray& verifySalt,
+                                               const QByteArray& keySalt, int iterations,
+                                               QByteArray& outKey);
 
         /**
          * @brief Returns a secure hash of the given input string.

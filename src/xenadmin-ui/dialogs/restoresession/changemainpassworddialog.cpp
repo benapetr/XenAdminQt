@@ -29,8 +29,13 @@
 #include "ui_changemainpassworddialog.h"
 #include "utils/encryption.h"
 
-ChangeMainPasswordDialog::ChangeMainPasswordDialog(const QByteArray& currentPasswordHash, QWidget* parent)
-    : QDialog(parent), ui(new Ui::ChangeMainPasswordDialog), currentPasswordHash_(currentPasswordHash)
+ChangeMainPasswordDialog::ChangeMainPasswordDialog(const QByteArray& currentPasswordHash, const QByteArray& currentSalt,
+                                                   int kdfIterations, QWidget* parent)
+    : QDialog(parent),
+      ui(new Ui::ChangeMainPasswordDialog),
+      m_currentPasswordHash(currentPasswordHash),
+      m_currentSalt(currentSalt),
+      m_iterations(kdfIterations)
 {
     this->ui->setupUi(this);
     this->ui->currentPasswordError->setVisible(false);
@@ -48,24 +53,50 @@ ChangeMainPasswordDialog::~ChangeMainPasswordDialog()
     delete this->ui;
 }
 
-QByteArray ChangeMainPasswordDialog::GetNewPassword() const
+QByteArray ChangeMainPasswordDialog::GetDerivedKey() const
 {
-    return this->newPassword_;
+    return this->m_derivedKey;
+}
+
+QByteArray ChangeMainPasswordDialog::GetKeySalt() const
+{
+    return this->m_keySalt;
+}
+
+QByteArray ChangeMainPasswordDialog::GetVerifyHash() const
+{
+    return this->m_verifyHash;
+}
+
+QByteArray ChangeMainPasswordDialog::GetVerifySalt() const
+{
+    return this->m_verifySalt;
+}
+
+int ChangeMainPasswordDialog::GetIterations() const
+{
+    return this->m_iterations;
 }
 
 void ChangeMainPasswordDialog::okButton_Click()
 {
     // Matches C# ChangeMainPasswordDialog.okButton_Click()
     bool currentPasswordCorrect = !this->ui->currentTextBox->text().isEmpty() &&
-                                  EncryptionUtils::ArrayElementsEqual(
-                                      EncryptionUtils::ComputeHash(this->ui->currentTextBox->text()),
-                                      this->currentPasswordHash_);
+        EncryptionUtils::VerifyPasswordPBKDF2(this->ui->currentTextBox->text(), this->m_currentPasswordHash,
+                                              this->m_currentSalt, this->m_iterations);
 
-    if (currentPasswordCorrect && !this->ui->mainTextBox->text().isEmpty() &&
-        this->ui->mainTextBox->text() == this->ui->reEnterMainTextBox->text())
+    if (currentPasswordCorrect && !this->ui->mainTextBox->text().isEmpty() && this->ui->mainTextBox->text() == this->ui->reEnterMainTextBox->text())
     {
-        this->newPassword_ = EncryptionUtils::ComputeHash(this->ui->mainTextBox->text());
-        this->accept();
+        if (EncryptionUtils::DerivePasswordSecrets(this->ui->mainTextBox->text(), this->m_iterations,
+                                                   this->m_derivedKey, this->m_keySalt,
+                                                   this->m_verifyHash, this->m_verifySalt))
+        {
+            this->accept();
+            return;
+        }
+
+        this->ui->newPasswordError->setText(tr("Failed to derive key"));
+        this->ui->newPasswordError->setVisible(true);
         return;
     }
 

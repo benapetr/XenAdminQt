@@ -46,10 +46,15 @@ class ChangeMainPasswordDialog : public QDialog
     Q_OBJECT
 
     public:
-        explicit ChangeMainPasswordDialog(const QByteArray& currentPasswordHash, QWidget* parent = nullptr);
+        explicit ChangeMainPasswordDialog(const QByteArray& currentPasswordHash, const QByteArray& currentSalt,
+                                          int kdfIterations, QWidget* parent = nullptr);
         ~ChangeMainPasswordDialog() override;
 
-        QByteArray GetNewPassword() const;
+        QByteArray GetDerivedKey() const;
+        QByteArray GetKeySalt() const;
+        QByteArray GetVerifyHash() const;
+        QByteArray GetVerifySalt() const;
+        int GetIterations() const;
 
     private slots:
         void okButton_Click();
@@ -59,8 +64,13 @@ class ChangeMainPasswordDialog : public QDialog
 
     private:
         Ui::ChangeMainPasswordDialog* ui;
-        QByteArray currentPasswordHash_;
-        QByteArray newPassword_;
+        QByteArray m_currentPasswordHash;
+        QByteArray m_currentSalt;
+        int m_iterations;
+        QByteArray m_derivedKey;
+        QByteArray m_keySalt;
+        QByteArray m_verifyHash;
+        QByteArray m_verifySalt;
 };
 
 #endif // CHANGEMAINPASSWORDDIALOG_H

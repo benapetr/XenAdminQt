@@ -30,6 +30,12 @@
 
 #define XENADMIN_VERSION "0.0.4"
 
+// Shown on places like tree view root
 #define XENADMIN_BRANDING_NAME "XenAdmin"
+
+// For about and settings mostly
+#define XENADMIN_BRANDING_APP_NAME   "XenAdminQt"
+#define XENADMIN_BRANDING_ORG_NAME   "XenAdmin"
+#define XENADMIN_BRANDING_ORG_DOMAIN "xenadminqt.org"
 
 #endif // GLOBALS_H

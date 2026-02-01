@@ -29,8 +29,8 @@
 #include "ui_setmainpassworddialog.h"
 #include "utils/encryption.h"
 
-SetMainPasswordDialog::SetMainPasswordDialog(QWidget* parent)
-    : QDialog(parent), ui(new Ui::SetMainPasswordDialog)
+SetMainPasswordDialog::SetMainPasswordDialog(int kdfIterations, QWidget* parent)
+    : QDialog(parent), ui(new Ui::SetMainPasswordDialog), m_iterations(kdfIterations)
 {
     this->ui->setupUi(this);
     this->ui->newPasswordError->setVisible(false);
@@ -46,9 +46,29 @@ SetMainPasswordDialog::~SetMainPasswordDialog()
     delete this->ui;
 }
 
-QByteArray SetMainPasswordDialog::GetNewPassword() const
+QByteArray SetMainPasswordDialog::GetDerivedKey() const
 {
-    return this->newPassword_;
+    return this->m_derivedKey;
+}
+
+QByteArray SetMainPasswordDialog::GetKeySalt() const
+{
+    return this->m_keySalt;
+}
+
+QByteArray SetMainPasswordDialog::GetVerifyHash() const
+{
+    return this->m_verifyHash;
+}
+
+QByteArray SetMainPasswordDialog::GetVerifySalt() const
+{
+    return this->m_verifySalt;
+}
+
+int SetMainPasswordDialog::GetIterations() const
+{
+    return this->m_iterations;
 }
 
 void SetMainPasswordDialog::okButton_Click()
@@ -57,8 +77,16 @@ void SetMainPasswordDialog::okButton_Click()
     if (!this->ui->mainTextBox->text().isEmpty() &&
         this->ui->mainTextBox->text() == this->ui->reEnterMainTextBox->text())
     {
-        this->newPassword_ = EncryptionUtils::ComputeHash(this->ui->mainTextBox->text());
-        this->accept();
+        if (EncryptionUtils::DerivePasswordSecrets(this->ui->mainTextBox->text(), this->m_iterations,
+                                                   this->m_derivedKey, this->m_keySalt,
+                                                   this->m_verifyHash, this->m_verifySalt))
+        {
+            this->accept();
+            return;
+        }
+
+        this->ui->newPasswordError->setText(tr("Failed to derive key"));
+        this->ui->newPasswordError->setVisible(true);
         return;
     }
 

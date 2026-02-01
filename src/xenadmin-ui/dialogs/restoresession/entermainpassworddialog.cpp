@@ -30,8 +30,15 @@
 #include "utils/encryption.h"
 #include <QtWidgets/QPushButton>
 
-EnterMainPasswordDialog::EnterMainPasswordDialog(const QByteArray& temporaryMainPassword, QWidget* parent)
-    : QDialog(parent), ui(new Ui::EnterMainPasswordDialog), temporaryMainPassword_(temporaryMainPassword)
+EnterMainPasswordDialog::EnterMainPasswordDialog(const QByteArray& passwordHash, const QByteArray& hashSalt,
+                                                 const QByteArray& keySalt, int kdfIterations,
+                                                 QWidget* parent)
+    : QDialog(parent),
+      ui(new Ui::EnterMainPasswordDialog),
+      passwordHash_(passwordHash),
+      hashSalt_(hashSalt),
+      keySalt_(keySalt),
+      iterations_(kdfIterations)
 {
     this->ui->setupUi(this);
     this->ui->passwordError->setVisible(false);
@@ -49,12 +56,19 @@ EnterMainPasswordDialog::~EnterMainPasswordDialog()
     delete this->ui;
 }
 
+QByteArray EnterMainPasswordDialog::GetDerivedKey() const
+{
+    return this->derivedKey_;
+}
+
 void EnterMainPasswordDialog::okButton_Click()
 {
     // Matches C# EnterMainPasswordDialog.okButton_Click()
     if (!this->ui->mainTextBox->text().isEmpty() &&
-        EncryptionUtils::ArrayElementsEqual(EncryptionUtils::ComputeHash(this->ui->mainTextBox->text()),
-                                            this->temporaryMainPassword_))
+        EncryptionUtils::VerifyPasswordAndDeriveKey(this->ui->mainTextBox->text(),
+                                                    this->passwordHash_, this->hashSalt_,
+                                                    this->keySalt_, this->iterations_,
+                                                    this->derivedKey_))
     {
         this->accept();
     } else

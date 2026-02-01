@@ -32,8 +32,7 @@
 #include "../restoresession/entermainpassworddialog.h"
 #include "../restoresession/setmainpassworddialog.h"
 
-SaveAndRestoreOptionsPage::SaveAndRestoreOptionsPage(QWidget* parent)
-    : IOptionsPage(parent), ui(new Ui::SaveAndRestoreOptionsPage), saveAllAfter_(true)
+SaveAndRestoreOptionsPage::SaveAndRestoreOptionsPage(QWidget* parent) : IOptionsPage(parent), ui(new Ui::SaveAndRestoreOptionsPage)
 {
     this->ui->setupUi(this);
 
@@ -41,6 +40,7 @@ SaveAndRestoreOptionsPage::SaveAndRestoreOptionsPage(QWidget* parent)
     connect(this->ui->changeMainPasswordButton, &QPushButton::clicked, this, &SaveAndRestoreOptionsPage::changeMainPasswordButton_Click);
     connect(this->ui->requireMainPasswordCheckBox, &QCheckBox::clicked, this, &SaveAndRestoreOptionsPage::requireMainPasswordCheckBox_Click);
     connect(this->ui->saveStateCheckBox, &QCheckBox::clicked, this, &SaveAndRestoreOptionsPage::saveStateCheckBox_Click);
+    connect(this->ui->savePasswordsCheckBox, &QCheckBox::clicked, this, &SaveAndRestoreOptionsPage::savePasswordsCheckBox_Click);
 
     // Disable auto-check behavior (we handle it manually in click handlers)
     this->ui->requireMainPasswordCheckBox->setAutoExclusive(false);
@@ -75,20 +75,38 @@ void SaveAndRestoreOptionsPage::Build()
     // Matches C# SaveAndRestoreOptionsPage.Build()
     SettingsManager& settings = SettingsManager::instance();
 
-    bool allowCredSave = SettingsManager::AllowCredentialSave();
     bool saveSession = settings.GetSaveSession();
+    bool savePasswords = settings.GetSavePasswords();
+    bool autoReconnect = settings.GetAutoReconnect();
     bool reqPass = settings.GetRequirePass();
 
-    this->ui->saveStateLabel->setEnabled(allowCredSave);
-    this->ui->saveStateCheckBox->setEnabled(allowCredSave);
+    if (!saveSession)
+    {
+        savePasswords = false;
+        autoReconnect = false;
+        reqPass = false;
+    }
 
-    this->ui->saveStateCheckBox->setChecked(saveSession && allowCredSave);
-    this->ui->mainPasswordGroupBox->setEnabled(saveSession && allowCredSave);
+    if (!savePasswords)
+    {
+        autoReconnect = false;
+        reqPass = false;
+    }
 
-    this->mainPassword_ = SettingsManager::GetMainPassword();
+    this->ui->saveStateCheckBox->setChecked(saveSession);
+    this->ui->savePasswordsCheckBox->setChecked(savePasswords);
+    this->ui->autoReconnectCheckBox->setChecked(autoReconnect);
 
-    this->ui->requireMainPasswordCheckBox->setChecked(reqPass && !this->mainPassword_.isEmpty() && allowCredSave);
-    this->ui->changeMainPasswordButton->setEnabled(reqPass && !this->mainPassword_.isEmpty() && allowCredSave);
+    this->m_mainKey.clear();
+    this->m_mainPasswordHash = settings.GetMainPasswordHash();
+    this->m_mainPasswordHashSalt = settings.GetMainPasswordHashSalt();
+    this->m_mainKeySalt = settings.GetMainKeySalt();
+    this->m_mainKdfIterations = settings.GetMainKdfIterations();
+    if (this->m_mainKdfIterations <= 0)
+        this->m_mainKdfIterations = 150000;
+
+    this->ui->requireMainPasswordCheckBox->setChecked(reqPass && !this->m_mainPasswordHash.isEmpty());
+    this->UpdateControlStates();
 }
 
 bool SaveAndRestoreOptionsPage::IsValidToSave(QWidget** control, QString& invalidReason)
@@ -114,44 +132,61 @@ void SaveAndRestoreOptionsPage::HideValidationMessages()
 void SaveAndRestoreOptionsPage::Save()
 {
     // Matches C# SaveAndRestoreOptionsPage.Save()
-    SaveEverything();
-}
-
-void SaveAndRestoreOptionsPage::SetSaveAllAfter(bool saveAllAfter)
-{
-    this->saveAllAfter_ = saveAllAfter;
+    this->SaveEverything();
 }
 
 void SaveAndRestoreOptionsPage::SaveEverything()
 {
-    // Matches C# SaveAndRestoreOptionsPage.SaveEverything()
-    if (!SettingsManager::AllowCredentialSave())
-    {
-        return;
-    }
-
     SettingsManager& settings = SettingsManager::instance();
 
-    if (!this->ui->saveStateCheckBox->isChecked())
+    bool saveSession = this->ui->saveStateCheckBox->isChecked();
+    bool savePasswords = this->ui->savePasswordsCheckBox->isChecked();
+    bool autoReconnect = this->ui->autoReconnectCheckBox->isChecked();
+
+    if (!saveSession)
     {
-        settings.SetSaveSession(false);
-        settings.SetRequirePass(false);
-        SettingsManager::SetMainPassword(QByteArray());
-    } else if (!this->ui->requireMainPasswordCheckBox->isChecked())
+        savePasswords = false;
+        autoReconnect = false;
+    }
+    else if (!savePasswords)
     {
-        settings.SetSaveSession(true);
-        settings.SetRequirePass(false);
-        SettingsManager::SetMainPassword(QByteArray());
-    } else
-    {
-        settings.SetSaveSession(true);
-        settings.SetRequirePass(true);
-        SettingsManager::SetMainPassword(this->mainPassword_);
+        autoReconnect = false;
     }
 
-    if (this->saveAllAfter_)
+    settings.SetSaveSession(saveSession);
+    settings.SetSavePasswords(savePasswords);
+    settings.SetAutoReconnect(autoReconnect);
+
+    if (!saveSession || !savePasswords)
     {
-        SettingsManager::SaveServerList();
+        settings.SetRequirePass(false);
+        settings.SetMainKey(QByteArray());
+        settings.SetMainPasswordHash(QByteArray());
+        settings.SetMainPasswordHashSalt(QByteArray());
+        settings.SetMainKeySalt(QByteArray());
+    } else
+    {
+        if (!this->ui->requireMainPasswordCheckBox->isChecked())
+        {
+            settings.SetRequirePass(false);
+            settings.SetMainKey(QByteArray());
+            settings.SetMainPasswordHash(QByteArray());
+            settings.SetMainPasswordHashSalt(QByteArray());
+            settings.SetMainKeySalt(QByteArray());
+        } else
+        {
+            settings.SetRequirePass(true);
+            if (!this->m_mainKey.isEmpty())
+                settings.SetMainKey(this->m_mainKey);
+            if (!this->m_mainPasswordHash.isEmpty())
+                settings.SetMainPasswordHash(this->m_mainPasswordHash);
+            if (!this->m_mainPasswordHashSalt.isEmpty())
+                settings.SetMainPasswordHashSalt(this->m_mainPasswordHashSalt);
+            if (!this->m_mainKeySalt.isEmpty())
+                settings.SetMainKeySalt(this->m_mainKeySalt);
+            if (this->m_mainKdfIterations > 0)
+                settings.SetMainKdfIterations(this->m_mainKdfIterations);
+        }
     }
 
     settings.Sync();
@@ -160,10 +195,15 @@ void SaveAndRestoreOptionsPage::SaveEverything()
 void SaveAndRestoreOptionsPage::changeMainPasswordButton_Click()
 {
     // Matches C# SaveAndRestoreOptionsPage.changeMainPasswordButton_Click()
-    ChangeMainPasswordDialog dialog(this->mainPassword_, this);
+    ChangeMainPasswordDialog dialog(this->m_mainPasswordHash, this->m_mainPasswordHashSalt,
+                                   this->m_mainKdfIterations, this);
     if (dialog.exec() == QDialog::Accepted)
     {
-        this->mainPassword_ = dialog.GetNewPassword();
+        this->m_mainKey = dialog.GetDerivedKey();
+        this->m_mainKeySalt = dialog.GetKeySalt();
+        this->m_mainPasswordHash = dialog.GetVerifyHash();
+        this->m_mainPasswordHashSalt = dialog.GetVerifySalt();
+        this->m_mainKdfIterations = dialog.GetIterations();
     }
 }
 
@@ -171,42 +211,59 @@ void SaveAndRestoreOptionsPage::requireMainPasswordCheckBox_Click()
 {
     // Matches C# SaveAndRestoreOptionsPage.requireMainPasswordCheckBox_Click()
     
-    // requireMainPasswordCheckBox.Checked was the state before the click
-    // if previously checked, the user is trying to clear it => request authorization
-    // if previously unchecked, the user is trying to set a password
-
+    // checked() is the state after the click
     if (this->ui->requireMainPasswordCheckBox->isChecked())
     {
-        // User is trying to disable password protection
-        EnterMainPasswordDialog enterPassword(this->mainPassword_, this);
-        if (enterPassword.exec() == QDialog::Accepted)
-        {
-            this->mainPassword_.clear();
-            this->ui->requireMainPasswordCheckBox->setChecked(false);
-            this->ui->changeMainPasswordButton->setEnabled(false);
-        }
-    } else
-    {
         // User is trying to enable password protection
-        Q_ASSERT(this->mainPassword_.isEmpty() && "Main password is set, but not reflected on GUI");
+        Q_ASSERT(this->m_mainPasswordHash.isEmpty() && "Main password is set, but not reflected on GUI");
 
-        if (this->mainPassword_.isEmpty())
+        if (this->m_mainPasswordHash.isEmpty())
         {
             // No previous password existed => set a new one
-            SetMainPasswordDialog setPassword(this);
+            SetMainPasswordDialog setPassword(this->m_mainKdfIterations, this);
             if (setPassword.exec() == QDialog::Accepted)
             {
-                this->mainPassword_ = setPassword.GetNewPassword();
+                this->m_mainKey = setPassword.GetDerivedKey();
+                this->m_mainKeySalt = setPassword.GetKeySalt();
+                this->m_mainPasswordHash = setPassword.GetVerifyHash();
+                this->m_mainPasswordHashSalt = setPassword.GetVerifySalt();
+                this->m_mainKdfIterations = setPassword.GetIterations();
                 this->ui->requireMainPasswordCheckBox->setChecked(true);
                 this->ui->changeMainPasswordButton->setEnabled(true);
             }
-        } else
+            else
+            {
+                this->ui->requireMainPasswordCheckBox->setChecked(false);
+            }
+        }
+        else
         {
             // A previous password existed (should never get here but just in case)
             this->ui->requireMainPasswordCheckBox->setChecked(true);
             this->ui->changeMainPasswordButton->setEnabled(true);
         }
     }
+    else
+    {
+        // User is trying to disable password protection
+        EnterMainPasswordDialog enterPassword(this->m_mainPasswordHash, this->m_mainPasswordHashSalt,
+                                             this->m_mainKeySalt, this->m_mainKdfIterations, this);
+        if (enterPassword.exec() == QDialog::Accepted)
+        {
+            this->m_mainKey.clear();
+            this->m_mainPasswordHash.clear();
+            this->m_mainPasswordHashSalt.clear();
+            this->m_mainKeySalt.clear();
+            this->ui->requireMainPasswordCheckBox->setChecked(false);
+            this->ui->changeMainPasswordButton->setEnabled(false);
+        }
+        else
+        {
+            this->ui->requireMainPasswordCheckBox->setChecked(true);
+        }
+    }
+
+    this->UpdateControlStates();
 }
 
 void SaveAndRestoreOptionsPage::saveStateCheckBox_Click()
@@ -220,19 +277,71 @@ void SaveAndRestoreOptionsPage::saveStateCheckBox_Click()
     if (this->ui->saveStateCheckBox->isChecked() && this->ui->requireMainPasswordCheckBox->isChecked())
     {
         // Require password authorization to disable
-        EnterMainPasswordDialog enterPassword(this->mainPassword_, this);
+        EnterMainPasswordDialog enterPassword(this->m_mainPasswordHash, this->m_mainPasswordHashSalt,
+                                             this->m_mainKeySalt, this->m_mainKdfIterations, this);
         if (enterPassword.exec() == QDialog::Accepted)
         {
-            this->mainPassword_.clear();
-            this->ui->saveStateCheckBox->setChecked(false);
+            this->m_mainKey.clear();
+            this->m_mainPasswordHash.clear();
+            this->m_mainPasswordHashSalt.clear();
+            this->m_mainKeySalt.clear();
             this->ui->requireMainPasswordCheckBox->setChecked(false);
-            this->ui->mainPasswordGroupBox->setEnabled(false);
         }
     } else
     {
-        // Toggle the checkbox state and enable/disable group box
-        this->ui->saveStateCheckBox->setChecked(!this->ui->saveStateCheckBox->isChecked());
-        this->ui->mainPasswordGroupBox->setEnabled(this->ui->saveStateCheckBox->isChecked());
-        this->ui->changeMainPasswordButton->setEnabled(this->ui->requireMainPasswordCheckBox->isChecked());
+        // No special handling needed
+    }
+
+    this->UpdateControlStates();
+}
+
+void SaveAndRestoreOptionsPage::savePasswordsCheckBox_Click()
+{
+    if (!this->ui->savePasswordsCheckBox->isChecked())
+    {
+        this->ui->autoReconnectCheckBox->setChecked(false);
+        if (this->ui->requireMainPasswordCheckBox->isChecked())
+        {
+            EnterMainPasswordDialog enterPassword(this->m_mainPasswordHash, this->m_mainPasswordHashSalt,
+                                                 this->m_mainKeySalt, this->m_mainKdfIterations, this);
+            if (enterPassword.exec() == QDialog::Accepted)
+            {
+                this->m_mainKey.clear();
+                this->m_mainPasswordHash.clear();
+                this->m_mainPasswordHashSalt.clear();
+                this->m_mainKeySalt.clear();
+                this->ui->requireMainPasswordCheckBox->setChecked(false);
+            }
+            else
+            {
+                this->ui->savePasswordsCheckBox->setChecked(true);
+            }
+        }
+    }
+
+    this->UpdateControlStates();
+}
+
+void SaveAndRestoreOptionsPage::UpdateControlStates()
+{
+    bool saveSession = this->ui->saveStateCheckBox->isChecked();
+    bool savePasswords = this->ui->savePasswordsCheckBox->isChecked();
+
+    this->ui->savePasswordsCheckBox->setEnabled(saveSession);
+    this->ui->autoReconnectCheckBox->setEnabled(saveSession && savePasswords);
+    this->ui->mainPasswordGroupBox->setEnabled(saveSession && savePasswords);
+    this->ui->requireMainPasswordCheckBox->setEnabled(saveSession && savePasswords);
+    this->ui->changeMainPasswordButton->setEnabled(saveSession && savePasswords && this->ui->requireMainPasswordCheckBox->isChecked());
+
+    if (!saveSession)
+    {
+        this->ui->savePasswordsCheckBox->setChecked(false);
+        this->ui->autoReconnectCheckBox->setChecked(false);
+        this->ui->requireMainPasswordCheckBox->setChecked(false);
+    }
+    else if (!savePasswords)
+    {
+        this->ui->autoReconnectCheckBox->setChecked(false);
+        this->ui->requireMainPasswordCheckBox->setChecked(false);
     }
 }
