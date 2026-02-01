@@ -32,6 +32,7 @@
 #include "dialogs/xencacheexplorer.h"
 #include "dialogs/aboutdialog.h"
 #include "dialogs/optionsdialog.h"
+#include "dialogs/restoresession/entermainpassworddialog.h"
 #include "dialogs/warningdialogs/closexencenterwarningdialog.h"
 #include "tabpages/generaltabpage.h"
 #include "tabpages/vmstoragetabpage.h"
@@ -370,6 +371,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     // Show placeholder initially since we have no tabs yet
     this->updatePlaceholderVisibility();
+
+    qDebug() << "Preferences stored at:" << SettingsManager::instance().GetFileName();
 
     // Load saved settings
     this->loadSettings();
@@ -1548,7 +1551,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
     this->saveSettings();
 
     // Save current connections
-    SaveServerList();
+    this->SaveServerList();
 
     // Clean up operation UUIDs before exit (matches C# MainWindow.OnClosing)
     OperationManager::instance()->PrepareAllOperationsForRestart();
@@ -1854,7 +1857,43 @@ void MainWindow::restoreConnections()
     qDebug() << "XenAdmin Qt: Restoring saved connections...";
 
     // Always restore profiles into the ConnectionsManager; only auto-connect if enabled.
-    bool autoConnect = SettingsManager::instance().getAutoConnect();
+    bool saveSession = SettingsManager::instance().GetSaveSession();
+    bool savePasswords = SettingsManager::instance().GetSavePasswords();
+    bool autoReconnect = SettingsManager::instance().GetAutoReconnect();
+
+    if (!saveSession)
+    {
+        qDebug() << "XenAdmin Qt: Session saving is disabled; skipping restore";
+        return;
+    }
+
+    if (savePasswords && SettingsManager::instance().GetRequirePass() && SettingsManager::instance().GetMainKey().isEmpty())
+    {
+        QByteArray storedHash = SettingsManager::instance().GetMainPasswordHash();
+        QByteArray hashSalt = SettingsManager::instance().GetMainPasswordHashSalt();
+        QByteArray keySalt = SettingsManager::instance().GetMainKeySalt();
+        int iterations = SettingsManager::instance().GetMainKdfIterations();
+        if (storedHash.isEmpty())
+        {
+            qWarning() << "XenAdmin Qt: Main password required but no stored hash found; skipping restore";
+            return;
+        }
+
+        if (hashSalt.isEmpty() || keySalt.isEmpty() || iterations <= 0)
+        {
+            qWarning() << "XenAdmin Qt: Main password salts missing; skipping restore";
+            return;
+        }
+
+        EnterMainPasswordDialog enterPassword(storedHash, hashSalt, keySalt, iterations, this);
+        if (enterPassword.exec() != QDialog::Accepted)
+        {
+            qDebug() << "XenAdmin Qt: Main password entry canceled; skipping restore";
+            return;
+        }
+
+        SettingsManager::instance().SetMainKey(enterPassword.GetDerivedKey());
+    }
 
     // Load all saved connection profiles
     QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
@@ -1877,27 +1916,32 @@ void MainWindow::restoreConnections()
     // Restore connections that have autoConnect enabled or were previously connected
     for (const ConnectionProfile& profile : profiles)
     {
-        // Only auto-connect if the profile has GetAutoConnect enabled
-        // or if save session is enabled and the connection wasn't explicitly disconnected
-        bool shouldConnect = autoConnect && (profile.GetAutoConnect() || (SettingsManager::instance().getSaveSession() && !profile.SaveDisconnected()));
+        ConnectionProfile effectiveProfile = profile;
+        if (!savePasswords)
+        {
+            effectiveProfile.SetRememberPassword(false);
+            effectiveProfile.SetPassword(QString());
+        }
+
+        // Only auto-connect when allowed and passwords are saved
+        bool shouldConnect = autoReconnect && savePasswords && (effectiveProfile.GetAutoConnect() || !effectiveProfile.SaveDisconnected());
 
         if (shouldConnect)
         {
-            qDebug() << "XenAdmin Qt: Restoring connection to" << profile.DisplayName();
-        }
-        else
+            qDebug() << "XenAdmin Qt: Restoring connection to" << effectiveProfile.DisplayName();
+        } else
         {
-            qDebug() << "XenAdmin Qt: Adding disconnected profile" << profile.DisplayName();
+            qDebug() << "XenAdmin Qt: Adding disconnected profile" << effectiveProfile.DisplayName();
         }
 
         XenConnection* connection = new XenConnection(nullptr);
-        connection->SetHostname(profile.GetHostname());
-        connection->SetPort(profile.GetPort());
-        connection->SetUsername(profile.GetUsername());
-        connection->SetPassword(profile.GetPassword());
-        connection->SetSaveDisconnected(profile.SaveDisconnected());
-        connection->SetPoolMembers(profile.GetPoolMembers());
-        connection->SetExpectPasswordIsCorrect(!profile.GetPassword().isEmpty());
+        connection->SetHostname(effectiveProfile.GetHostname());
+        connection->SetPort(effectiveProfile.GetPort());
+        connection->SetUsername(effectiveProfile.GetUsername());
+        connection->SetPassword(effectiveProfile.GetPassword());
+        connection->SetSaveDisconnected(effectiveProfile.SaveDisconnected());
+        connection->SetPoolMembers(effectiveProfile.GetPoolMembers());
+        connection->SetExpectPasswordIsCorrect(!effectiveProfile.GetPassword().isEmpty());
         connection->SetFromDialog(false);
 
         connMgr->AddConnection(connection);
@@ -1911,6 +1955,12 @@ void MainWindow::SaveServerList()
 {
     qDebug() << "XenAdmin Qt: Saving server list...";
 
+    bool reqpass = SettingsManager::instance().GetRequirePass();
+    if (!reqpass)
+    {
+        qDebug() << "reqpass false";
+    }
+
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     if (!connMgr)
     {
@@ -1918,7 +1968,20 @@ void MainWindow::SaveServerList()
         return;
     }
 
-    const bool saveSession = SettingsManager::instance().getSaveSession();
+    const bool saveSession = SettingsManager::instance().GetSaveSession();
+    const bool savePasswords = SettingsManager::instance().GetSavePasswords();
+
+    if (!saveSession)
+    {
+        QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
+        for (const ConnectionProfile& profile : profiles)
+        {
+            SettingsManager::instance().removeConnectionProfile(profile.GetName());
+        }
+        SettingsManager::instance().Sync();
+        qDebug() << "XenAdmin Qt: Session saving disabled; cleared stored profiles";
+        return;
+    }
 
     QList<ConnectionProfile> profiles = SettingsManager::instance().loadConnectionProfiles();
     QMap<QString, ConnectionProfile> existing;
@@ -1953,7 +2016,7 @@ void MainWindow::SaveServerList()
         profile.SetSaveDisconnected(!connection->IsConnected());
         profile.SetPoolMembers(connection->GetPoolMembers());
 
-        const bool rememberPassword = saveSession && !connection->GetPassword().isEmpty();
+        const bool rememberPassword = savePasswords && !connection->GetPassword().isEmpty();
         profile.SetRememberPassword(rememberPassword);
         if (rememberPassword)
             profile.SetPassword(connection->GetPassword());
@@ -1988,7 +2051,7 @@ void MainWindow::updateConnectionProfileFromCache(XenConnection* connection, Xen
     if (!connection || !cache)
         return;
 
-    if (!SettingsManager::instance().getSaveSession())
+    if (!SettingsManager::instance().GetSaveSession())
         return;
 
     const QString hostname = connection->GetHostname();
@@ -2013,8 +2076,7 @@ void MainWindow::updateConnectionProfileFromCache(XenConnection* connection, Xen
 
     if (!found)
     {
-        targetProfile = ConnectionProfile(profileName, hostname, port, connection->GetUsername(),
-                                          !connection->GetPassword().isEmpty());
+        targetProfile = ConnectionProfile(profileName, hostname, port, connection->GetUsername(), !connection->GetPassword().isEmpty());
     }
 
     targetProfile.SetName(profileName);
@@ -2023,10 +2085,13 @@ void MainWindow::updateConnectionProfileFromCache(XenConnection* connection, Xen
     targetProfile.SetUsername(connection->GetUsername());
     targetProfile.SetSaveDisconnected(false);
 
-    const bool rememberPassword = !connection->GetPassword().isEmpty();
+    const bool savePasswords = SettingsManager::instance().GetSavePasswords();
+    const bool rememberPassword = savePasswords && !connection->GetPassword().isEmpty();
     targetProfile.SetRememberPassword(rememberPassword);
     if (rememberPassword)
         targetProfile.SetPassword(connection->GetPassword());
+    else
+        targetProfile.SetPassword(QString());
 
     QString poolName;
     const QList<QVariantMap> pools = cache->GetAllData("pool");

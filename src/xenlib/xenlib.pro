@@ -4,6 +4,20 @@ QT += core network xml
 TARGET = xenlib
 DEFINES += XENLIB_LIBRARY
 
+# Platform-specific crypto libraries
+unix:!macx {
+    # Linux: OpenSSL for AES encryption
+    LIBS += -lssl -lcrypto
+}
+macx {
+    # macOS: CommonCrypto framework (built-in, no linking needed)
+    # Framework is automatically available via system headers
+}
+win32 {
+    # Windows: BCrypt library (built-in)
+    LIBS += -lbcrypt
+}
+
 # This allows us to use absolute include path instead of hard-to-read relative paths
 INCLUDEPATH += ..
 

@@ -27,6 +27,8 @@
 
 #include "settingsmanager.h"
 #include "connectionprofile.h"
+#include "mainwindow.h"
+#include "globals.h"
 #include "xenlib/utils/encryption.h"
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -37,20 +39,23 @@
 SettingsManager::SettingsManager(QObject* parent) : QObject(parent), m_settings(nullptr)
 {
     // Set application details for QSettings
-    QCoreApplication::setOrganizationName("XenAdmin");
-    QCoreApplication::setOrganizationDomain("xenadmin.org");
-    QCoreApplication::setApplicationName("XenAdmin Qt");
+    QCoreApplication::setOrganizationName(XENADMIN_BRANDING_ORG_NAME);
+    //QCoreApplication::setOrganizationDomain(XENADMIN_BRANDING_ORG_DOMAIN);
+    QCoreApplication::setApplicationName(XENADMIN_BRANDING_APP_NAME);
 
     // Create settings object (uses platform-specific location)
-    this->m_settings = new QSettings(QSettings::IniFormat, QSettings::UserScope, "XenAdmin", "XenAdminQt", this);
+    this->m_settings = new QSettings(QSettings::IniFormat, QSettings::UserScope, XENADMIN_BRANDING_ORG_NAME, XENADMIN_BRANDING_APP_NAME, this);
 
     qDebug() << "Settings file location:" << this->m_settings->fileName();
+
+    this->Load();
 }
 
 SettingsManager::~SettingsManager()
 {
     if (this->m_settings)
     {
+        this->Save();
         this->m_settings->sync();
     }
 }
@@ -59,6 +64,97 @@ SettingsManager& SettingsManager::instance()
 {
     static SettingsManager instance;
     return instance;
+}
+
+void SettingsManager::Load()
+{
+    QString defaultPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+
+    this->m_autoReconnect = this->m_settings->value("Session/AutoReconnect", true).toBool();
+    this->m_checkForUpdates = this->m_settings->value("General/checkForUpdates", true).toBool();
+    this->m_defaultExportPath = this->m_settings->value("Paths/defaultExport", defaultPath).toString();
+    this->m_defaultImportPath = this->m_settings->value("Paths/defaultImport", defaultPath).toString();
+    this->m_confirmOnExit = this->m_settings->value("General/confirmOnExit", true).toBool();
+    this->m_showHiddenObjects = this->m_settings->value("View/showHiddenObjects", false).toBool();
+    this->m_defaultTemplatesVisible = this->m_settings->value("View/defaultTemplatesVisible", false).toBool();
+    this->m_userTemplatesVisible = this->m_settings->value("View/userTemplatesVisible", true).toBool();
+    this->m_localSRsVisible = this->m_settings->value("View/localSRsVisible", true).toBool();
+    this->m_consoleRefreshInterval = this->m_settings->value("Console/refreshInterval", 5).toInt();
+    this->m_graphUpdateInterval = this->m_settings->value("Performance/graphUpdateInterval", 1).toInt();
+    this->m_treeViewMode = static_cast<TreeViewMode>(this->m_settings->value("TreeView/mode", Infrastructure).toInt());
+    this->m_expandedTreeItems = this->m_settings->value("TreeView/expandedItems").toStringList();
+    this->m_debugConsoleVisible = this->m_settings->value("Debug/consoleVisible", false).toBool();
+    this->m_logLevel = this->m_settings->value("Debug/logLevel", 2).toInt();
+    this->m_proxyServer = this->m_settings->value("Network/proxyServer").toString();
+    this->m_proxyPort = this->m_settings->value("Network/proxyPort", 8080).toInt();
+    this->m_useProxy = this->m_settings->value("Network/useProxy", false).toBool();
+    this->m_proxyUsername = this->m_settings->value("Network/proxyUsername").toString();
+    this->m_recentExportPaths = this->m_settings->value("Recent/exportPaths").toStringList();
+    this->m_recentImportPaths = this->m_settings->value("Recent/importPaths").toStringList();
+    this->m_lastConnectedServer = this->m_settings->value("General/lastConnectedServer").toString();
+    this->m_serverHistory = this->m_settings->value("General/serverHistory").toStringList();
+    this->m_saveSession = this->m_settings->value("Session/SaveSession", true).toBool();
+    this->m_savePasswords = this->m_settings->value("Session/SavePasswords", true).toBool();
+    this->m_requirePass = this->m_settings->value("Session/RequirePass", false).toBool();
+    this->m_mainPasswordHash = this->m_settings->value("Session/MainPasswordHash").toByteArray();
+    this->m_mainPasswordHashSalt = this->m_settings->value("Session/MainPasswordHashSalt").toByteArray();
+    this->m_mainKeySalt = this->m_settings->value("Session/MainKeySalt").toByteArray();
+    this->m_mainKdfIterations = this->m_settings->value("Session/MainKdfIterations", 150000).toInt();
+    this->m_localKey = this->m_settings->value("Security/LocalKey").toString();
+    if (this->m_localKey.isEmpty())
+    {
+        this->m_localKey = EncryptionUtils::GenerateSessionKey();
+        this->m_settings->setValue("Security/LocalKey", this->m_localKey);
+    }
+    EncryptionUtils::SetLocalKey(this->m_localKey);
+}
+
+void SettingsManager::Save()
+{
+    this->m_settings->setValue("Session/AutoReconnect", this->m_autoReconnect);
+    this->m_settings->setValue("General/checkForUpdates", this->m_checkForUpdates);
+    this->m_settings->setValue("Paths/defaultExport", this->m_defaultExportPath);
+    this->m_settings->setValue("Paths/defaultImport", this->m_defaultImportPath);
+    this->m_settings->setValue("General/confirmOnExit", this->m_confirmOnExit);
+    this->m_settings->setValue("View/showHiddenObjects", this->m_showHiddenObjects);
+    this->m_settings->setValue("View/defaultTemplatesVisible", this->m_defaultTemplatesVisible);
+    this->m_settings->setValue("View/userTemplatesVisible", this->m_userTemplatesVisible);
+    this->m_settings->setValue("View/localSRsVisible", this->m_localSRsVisible);
+    this->m_settings->setValue("Console/refreshInterval", this->m_consoleRefreshInterval);
+    this->m_settings->setValue("Performance/graphUpdateInterval", this->m_graphUpdateInterval);
+    this->m_settings->setValue("TreeView/mode", static_cast<int>(this->m_treeViewMode));
+    this->m_settings->setValue("TreeView/expandedItems", this->m_expandedTreeItems);
+    this->m_settings->setValue("Debug/consoleVisible", this->m_debugConsoleVisible);
+    this->m_settings->setValue("Debug/logLevel", this->m_logLevel);
+    this->m_settings->setValue("Network/proxyServer", this->m_proxyServer);
+    this->m_settings->setValue("Network/proxyPort", this->m_proxyPort);
+    this->m_settings->setValue("Network/useProxy", this->m_useProxy);
+    this->m_settings->setValue("Network/proxyUsername", this->m_proxyUsername);
+    this->m_settings->setValue("Recent/exportPaths", this->m_recentExportPaths);
+    this->m_settings->setValue("Recent/importPaths", this->m_recentImportPaths);
+    this->m_settings->setValue("General/lastConnectedServer", this->m_lastConnectedServer);
+    this->m_settings->setValue("General/serverHistory", this->m_serverHistory);
+    this->m_settings->setValue("Session/SaveSession", this->m_saveSession);
+    this->m_settings->setValue("Session/SavePasswords", this->m_savePasswords);
+    this->m_settings->setValue("Session/RequirePass", this->m_requirePass);
+
+    if (this->m_mainPasswordHash.isEmpty())
+        this->m_settings->remove("Session/MainPasswordHash");
+    else
+        this->m_settings->setValue("Session/MainPasswordHash", this->m_mainPasswordHash);
+
+    if (this->m_mainPasswordHashSalt.isEmpty())
+        this->m_settings->remove("Session/MainPasswordHashSalt");
+    else
+        this->m_settings->setValue("Session/MainPasswordHashSalt", this->m_mainPasswordHashSalt);
+
+    if (this->m_mainKeySalt.isEmpty())
+        this->m_settings->remove("Session/MainKeySalt");
+    else
+        this->m_settings->setValue("Session/MainKeySalt", this->m_mainKeySalt);
+
+    this->m_settings->setValue("Session/MainKdfIterations", this->m_mainKdfIterations);
+    this->m_settings->setValue("Security/LocalKey", this->m_localKey);
 }
 
 // Window state management
@@ -105,8 +201,17 @@ void SettingsManager::saveConnection(const QString& id, const ConnectionInfo& in
 
     if (info.savePassword && !info.passwordHash.isEmpty())
     {
-        this->m_settings->setValue("password", this->encryptPassword(info.passwordHash));
-    } else
+        QString encryptedPassword = this->encryptPassword(info.passwordHash);
+        if (encryptedPassword.isEmpty())
+        {
+            qWarning() << "SettingsManager: Failed to encrypt password for connection" << id << "- keeping existing value";
+        }
+        else
+        {
+            this->m_settings->setValue("password", encryptedPassword);
+        }
+    }
+    else
     {
         this->m_settings->remove("password");
     }
@@ -163,18 +268,18 @@ void SettingsManager::removeConnection(const QString& id)
 
 QString SettingsManager::getLastConnectedServer() const
 {
-    return this->m_settings->value("General/lastConnectedServer").toString();
+    return this->m_lastConnectedServer;
 }
 
 void SettingsManager::setLastConnectedServer(const QString& id)
 {
-    this->m_settings->setValue("General/lastConnectedServer", id);
+    this->m_lastConnectedServer = id;
     emit settingsChanged("General/lastConnectedServer");
 }
 
 QStringList SettingsManager::getServerHistory() const
 {
-    return this->m_settings->value("General/serverHistory").toStringList();
+    return this->m_serverHistory;
 }
 
 void SettingsManager::updateServerHistory(const QString& hostnameWithPort)
@@ -188,7 +293,7 @@ void SettingsManager::updateServerHistory(const QString& hostnameWithPort)
         while (history.size() >= 20)
             history.removeFirst();
         history.append(hostnameWithPort);
-        this->m_settings->setValue("General/serverHistory", history);
+        this->m_serverHistory = history;
         emit settingsChanged("General/serverHistory");
         this->Sync();
     }
@@ -213,8 +318,17 @@ void SettingsManager::saveConnectionProfile(const ConnectionProfile& profile)
     if (profile.RememberPassword() && !profile.GetPassword().isEmpty())
     {
         QString encryptedPassword = this->encryptPassword(profile.GetPassword());
-        this->m_settings->setValue("password", encryptedPassword);
-    } else
+        if (encryptedPassword.isEmpty())
+        {
+            qWarning() << "SettingsManager: Failed to encrypt password for profile" << profile.GetName()
+                       << "- keeping existing value";
+        }
+        else
+        {
+            this->m_settings->setValue("password", encryptedPassword);
+        }
+    }
+    else
     {
         this->m_settings->remove("password");
     }
@@ -292,251 +406,237 @@ void SettingsManager::setLastConnectionProfile(const QString& name)
 }
 
 // Application preferences
-bool SettingsManager::getSaveSession() const
+bool SettingsManager::GetAutoReconnect() const
 {
-    return this->m_settings->value("General/saveSession", true).toBool();
+    return this->m_autoReconnect;
 }
 
-void SettingsManager::setSaveSession(bool save)
+void SettingsManager::SetAutoReconnect(bool autoReconnect)
 {
-    this->m_settings->setValue("General/saveSession", save);
-    emit settingsChanged("General/saveSession");
-}
-
-bool SettingsManager::getAutoConnect() const
-{
-    return this->m_settings->value("General/autoConnect", true).toBool();
-}
-
-void SettingsManager::setAutoConnect(bool autoConnect)
-{
-    this->m_settings->setValue("General/autoConnect", autoConnect);
-    emit settingsChanged("General/autoConnect");
+    this->m_autoReconnect = autoReconnect;
+    emit settingsChanged("Session/AutoReconnect");
 }
 
 bool SettingsManager::getCheckForUpdates() const
 {
-    return this->m_settings->value("General/checkForUpdates", true).toBool();
+    return this->m_checkForUpdates;
 }
 
 void SettingsManager::setCheckForUpdates(bool check)
 {
-    this->m_settings->setValue("General/checkForUpdates", check);
+    this->m_checkForUpdates = check;
     emit settingsChanged("General/checkForUpdates");
 }
 
 QString SettingsManager::getDefaultExportPath() const
 {
-    QString defaultPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    return this->m_settings->value("Paths/defaultExport", defaultPath).toString();
+    return this->m_defaultExportPath;
 }
 
 void SettingsManager::setDefaultExportPath(const QString& path)
 {
-    this->m_settings->setValue("Paths/defaultExport", path);
+    this->m_defaultExportPath = path;
     emit settingsChanged("Paths/defaultExport");
 }
 
 QString SettingsManager::getDefaultImportPath() const
 {
-    QString defaultPath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    return this->m_settings->value("Paths/defaultImport", defaultPath).toString();
+    return this->m_defaultImportPath;
 }
 
 void SettingsManager::setDefaultImportPath(const QString& path)
 {
-    this->m_settings->setValue("Paths/defaultImport", path);
+    this->m_defaultImportPath = path;
     emit settingsChanged("Paths/defaultImport");
 }
 
 bool SettingsManager::getConfirmOnExit() const
 {
-    return this->m_settings->value("General/confirmOnExit", true).toBool();
+    return this->m_confirmOnExit;
 }
 
 void SettingsManager::setConfirmOnExit(bool confirm)
 {
-    this->m_settings->setValue("General/confirmOnExit", confirm);
+    this->m_confirmOnExit = confirm;
     emit settingsChanged("General/confirmOnExit");
 }
 
 bool SettingsManager::getShowHiddenObjects() const
 {
-    return this->m_settings->value("View/showHiddenObjects", false).toBool();
+    return this->m_showHiddenObjects;
 }
 
 void SettingsManager::setShowHiddenObjects(bool show)
 {
-    this->m_settings->setValue("View/showHiddenObjects", show);
+    this->m_showHiddenObjects = show;
     emit settingsChanged("View/showHiddenObjects");
 }
 
 bool SettingsManager::getDefaultTemplatesVisible() const
 {
-    return this->m_settings->value("View/defaultTemplatesVisible", false).toBool();
+    return this->m_defaultTemplatesVisible;
 }
 
 void SettingsManager::setDefaultTemplatesVisible(bool visible)
 {
-    this->m_settings->setValue("View/defaultTemplatesVisible", visible);
+    this->m_defaultTemplatesVisible = visible;
     emit settingsChanged("View/defaultTemplatesVisible");
 }
 
 bool SettingsManager::getUserTemplatesVisible() const
 {
-    return this->m_settings->value("View/userTemplatesVisible", true).toBool();
+    return this->m_userTemplatesVisible;
 }
 
 void SettingsManager::setUserTemplatesVisible(bool visible)
 {
-    this->m_settings->setValue("View/userTemplatesVisible", visible);
+    this->m_userTemplatesVisible = visible;
     emit settingsChanged("View/userTemplatesVisible");
 }
 
 bool SettingsManager::getLocalSRsVisible() const
 {
-    return this->m_settings->value("View/localSRsVisible", true).toBool();
+    return this->m_localSRsVisible;
 }
 
 void SettingsManager::setLocalSRsVisible(bool visible)
 {
-    this->m_settings->setValue("View/localSRsVisible", visible);
+    this->m_localSRsVisible = visible;
     emit settingsChanged("View/localSRsVisible");
 }
 
 int SettingsManager::getConsoleRefreshInterval() const
 {
-    return this->m_settings->value("Console/refreshInterval", 5).toInt();
+    return this->m_consoleRefreshInterval;
 }
 
 void SettingsManager::setConsoleRefreshInterval(int seconds)
 {
-    this->m_settings->setValue("Console/refreshInterval", seconds);
+    this->m_consoleRefreshInterval = seconds;
     emit settingsChanged("Console/refreshInterval");
 }
 
 int SettingsManager::getGraphUpdateInterval() const
 {
-    return this->m_settings->value("Performance/graphUpdateInterval", 1).toInt();
+    return this->m_graphUpdateInterval;
 }
 
 void SettingsManager::setGraphUpdateInterval(int seconds)
 {
-    this->m_settings->setValue("Performance/graphUpdateInterval", seconds);
+    this->m_graphUpdateInterval = seconds;
     emit settingsChanged("Performance/graphUpdateInterval");
 }
 
 // Tree view settings
 SettingsManager::TreeViewMode SettingsManager::getTreeViewMode() const
 {
-    int mode = this->m_settings->value("TreeView/mode", Infrastructure).toInt();
-    return static_cast<TreeViewMode>(mode);
+    return this->m_treeViewMode;
 }
 
 void SettingsManager::setTreeViewMode(TreeViewMode mode)
 {
-    this->m_settings->setValue("TreeView/mode", static_cast<int>(mode));
+    this->m_treeViewMode = mode;
     emit settingsChanged("TreeView/mode");
 }
 
 QStringList SettingsManager::getExpandedTreeItems() const
 {
-    return this->m_settings->value("TreeView/expandedItems").toStringList();
+    return this->m_expandedTreeItems;
 }
 
 void SettingsManager::setExpandedTreeItems(const QStringList& items)
 {
-    this->m_settings->setValue("TreeView/expandedItems", items);
+    this->m_expandedTreeItems = items;
     emit settingsChanged("TreeView/expandedItems");
 }
 
 // Debug settings
 bool SettingsManager::getDebugConsoleVisible() const
 {
-    return this->m_settings->value("Debug/consoleVisible", false).toBool();
+    return this->m_debugConsoleVisible;
 }
 
 void SettingsManager::setDebugConsoleVisible(bool visible)
 {
-    this->m_settings->setValue("Debug/consoleVisible", visible);
+    this->m_debugConsoleVisible = visible;
     emit settingsChanged("Debug/consoleVisible");
 }
 
 int SettingsManager::getLogLevel() const
 {
-    return this->m_settings->value("Debug/logLevel", 2).toInt(); // 2 = Info
+    return this->m_logLevel;
 }
 
 void SettingsManager::setLogLevel(int level)
 {
-    this->m_settings->setValue("Debug/logLevel", level);
+    this->m_logLevel = level;
     emit settingsChanged("Debug/logLevel");
 }
 
 // Network settings
 QString SettingsManager::getProxyServer() const
 {
-    return this->m_settings->value("Network/proxyServer").toString();
+    return this->m_proxyServer;
 }
 
 void SettingsManager::setProxyServer(const QString& server)
 {
-    this->m_settings->setValue("Network/proxyServer", server);
+    this->m_proxyServer = server;
     emit settingsChanged("Network/proxyServer");
 }
 
 int SettingsManager::getProxyPort() const
 {
-    return this->m_settings->value("Network/proxyPort", 8080).toInt();
+    return this->m_proxyPort;
 }
 
 void SettingsManager::setProxyPort(int port)
 {
-    this->m_settings->setValue("Network/proxyPort", port);
+    this->m_proxyPort = port;
     emit settingsChanged("Network/proxyPort");
 }
 
 bool SettingsManager::getUseProxy() const
 {
-    return this->m_settings->value("Network/useProxy", false).toBool();
+    return this->m_useProxy;
 }
 
 void SettingsManager::setUseProxy(bool use)
 {
-    this->m_settings->setValue("Network/useProxy", use);
+    this->m_useProxy = use;
     emit settingsChanged("Network/useProxy");
 }
 
 QString SettingsManager::getProxyUsername() const
 {
-    return this->m_settings->value("Network/proxyUsername").toString();
+    return this->m_proxyUsername;
 }
 
 void SettingsManager::setProxyUsername(const QString& username)
 {
-    this->m_settings->setValue("Network/proxyUsername", username);
+    this->m_proxyUsername = username;
     emit settingsChanged("Network/proxyUsername");
 }
 
 // Recent files/paths
 QStringList SettingsManager::getRecentExportPaths() const
 {
-    return this->m_settings->value("Recent/exportPaths").toStringList();
+    return this->m_recentExportPaths;
 }
 
 void SettingsManager::addRecentExportPath(const QString& path)
 {
-    addToRecentList("Recent/exportPaths", path);
+    this->addToRecentList("Recent/exportPaths", path);
 }
 
 QStringList SettingsManager::getRecentImportPaths() const
 {
-    return this->m_settings->value("Recent/importPaths").toStringList();
+    return this->m_recentImportPaths;
 }
 
 void SettingsManager::addRecentImportPath(const QString& path)
 {
-    addToRecentList("Recent/importPaths", path);
+    this->addToRecentList("Recent/importPaths", path);
 }
 
 // Miscellaneous
@@ -553,58 +653,178 @@ void SettingsManager::SetValue(const QString& key, const QVariant& value)
 
 void SettingsManager::Sync()
 {
+    this->Save();
     this->m_settings->sync();
 }
 
 void SettingsManager::Clear()
 {
     this->m_settings->clear();
+    this->Load();
     emit settingsChanged("*");
+}
+
+QString SettingsManager::GetFileName() const
+{
+    return this->m_settings->fileName();
 }
 
 // Helper methods
 QString SettingsManager::encryptPassword(const QString& password) const
 {
+    // Matches C# Settings.EncryptCredentials() logic at line 560:
+    // Uses AES encryption with master password if RequirePass is enabled,
+    // otherwise uses local machine protection
+
+    if (!this->GetRequirePass())
+    {
+        qDebug() << "reqpass false";
+    }
+
+    if (this->GetRequirePass() && !this->GetMainKey().isEmpty())
+    {
+        // Encrypt using master password as key (AES-256-CBC)
+        return EncryptionUtils::EncryptStringWithKey(password, this->GetMainKey());
+    }
+    
+    // Default: use local machine protection (XOR with random key)
     return EncryptionUtils::ProtectString(password);
 }
 
 QString SettingsManager::decryptPassword(const QString& encrypted) const
 {
+    // Matches C# Settings.DecryptCredentials() logic
+    
+    if (encrypted.isEmpty())
+    {
+        return QString();
+    }
+
+    // Check if using local machine protection (format: "enc:...")
+    // This has to take precedence in order to convert from settings created before master password
     if (encrypted.startsWith("enc:"))
-    {
         return EncryptionUtils::UnprotectString(encrypted);
-    }
-
-    // TODO in few versions later we can safely remove this (introduced in 0.0.3)
-    // Legacy XOR-based obfuscation fallback for older stored passwords.
-    QByteArray data = QByteArray::fromBase64(encrypted.toUtf8());
-    QByteArray key = "XenAdminQtKey2024";
-
-    QByteArray result;
-    for (int i = 0; i < data.size(); ++i)
+    
+    // Check if encrypted with master password (AES format: "base64,base64")
+    if (this->GetRequirePass() && !this->GetMainKey().isEmpty() && encrypted.contains(','))
     {
-        result.append(data[i] ^ key[i % key.size()]);
+        // Try decrypting with master password (AES-256-CBC)
+        QString decrypted = EncryptionUtils::DecryptStringWithKey(encrypted, this->GetMainKey());
+        if (!decrypted.isEmpty())
+        {
+            return decrypted;
+        }
+        // Fall through to other methods if AES decryption fails
     }
 
-    return QString::fromUtf8(result);
+    return encrypted;
 }
 
 void SettingsManager::addToRecentList(const QString& settingsKey, const QString& path, int maxItems)
 {
-    QStringList recent = this->m_settings->value(settingsKey).toStringList();
+    QStringList* recent = nullptr;
+    if (settingsKey == "Recent/exportPaths")
+        recent = &this->m_recentExportPaths;
+    else if (settingsKey == "Recent/importPaths")
+        recent = &this->m_recentImportPaths;
+
+    if (!recent)
+        return;
 
     // Remove if already exists
-    recent.removeAll(path);
+    recent->removeAll(path);
 
     // Add to front
-    recent.prepend(path);
+    recent->prepend(path);
 
     // Limit to maxItems
-    while (recent.size() > maxItems)
+    while (recent->size() > maxItems)
     {
-        recent.removeLast();
+        recent->removeLast();
     }
 
-    this->m_settings->setValue(settingsKey, recent);
     emit settingsChanged(settingsKey);
+}
+
+QByteArray SettingsManager::GetMainKey() const
+{
+    return this->m_mainKey;
+}
+
+void SettingsManager::SetMainKey(const QByteArray& key)
+{
+    this->m_mainKey = key;
+}
+
+QByteArray SettingsManager::GetMainPasswordHash() const
+{
+    return this->m_mainPasswordHash;
+}
+
+void SettingsManager::SetMainPasswordHash(const QByteArray& passwordHash)
+{
+    this->m_mainPasswordHash = passwordHash;
+}
+
+QByteArray SettingsManager::GetMainPasswordHashSalt() const
+{
+    return this->m_mainPasswordHashSalt;
+}
+
+void SettingsManager::SetMainPasswordHashSalt(const QByteArray& salt)
+{
+    this->m_mainPasswordHashSalt = salt;
+}
+
+QByteArray SettingsManager::GetMainKeySalt() const
+{
+    return this->m_mainKeySalt;
+}
+
+void SettingsManager::SetMainKeySalt(const QByteArray& salt)
+{
+    this->m_mainKeySalt = salt;
+}
+
+int SettingsManager::GetMainKdfIterations() const
+{
+    return this->m_mainKdfIterations;
+}
+
+void SettingsManager::SetMainKdfIterations(int iterations)
+{
+    this->m_mainKdfIterations = iterations;
+}
+
+bool SettingsManager::GetSaveSession() const
+{
+    return this->m_saveSession;
+}
+
+void SettingsManager::SetSaveSession(bool save)
+{
+    this->m_saveSession = save;
+    emit settingsChanged("Session/SaveSession");
+}
+
+bool SettingsManager::GetSavePasswords() const
+{
+    return this->m_savePasswords;
+}
+
+void SettingsManager::SetSavePasswords(bool save)
+{
+    this->m_savePasswords = save;
+    emit settingsChanged("Session/SavePasswords");
+}
+
+bool SettingsManager::GetRequirePass() const
+{
+    return this->m_requirePass;
+}
+
+void SettingsManager::SetRequirePass(bool require)
+{
+    this->m_requirePass = require;
+    emit settingsChanged("Session/RequirePass");
 }

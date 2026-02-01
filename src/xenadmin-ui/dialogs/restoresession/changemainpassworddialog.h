@@ -25,17 +25,52 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GLOBALS_H
-#define GLOBALS_H
+#ifndef CHANGEMAINPASSWORDDIALOG_H
+#define CHANGEMAINPASSWORDDIALOG_H
 
-#define XENADMIN_VERSION "0.0.4"
+#include <QtWidgets/QDialog>
+#include <QtCore/QByteArray>
 
-// Shown on places like tree view root
-#define XENADMIN_BRANDING_NAME "XenAdmin"
+namespace Ui
+{
+    class ChangeMainPasswordDialog;
+}
 
-// For about and settings mostly
-#define XENADMIN_BRANDING_APP_NAME   "XenAdminQt"
-#define XENADMIN_BRANDING_ORG_NAME   "XenAdmin"
-#define XENADMIN_BRANDING_ORG_DOMAIN "xenadminqt.org"
+/**
+ * @brief Dialog for changing the main password.
+ * 
+ * Matches C# XenAdmin.Dialogs.RestoreSession.ChangeMainPasswordDialog
+ */
+class ChangeMainPasswordDialog : public QDialog
+{
+    Q_OBJECT
 
-#endif // GLOBALS_H
+    public:
+        explicit ChangeMainPasswordDialog(const QByteArray& currentPasswordHash, const QByteArray& currentSalt,
+                                          int kdfIterations, QWidget* parent = nullptr);
+        ~ChangeMainPasswordDialog() override;
+
+        QByteArray GetDerivedKey() const;
+        QByteArray GetKeySalt() const;
+        QByteArray GetVerifyHash() const;
+        QByteArray GetVerifySalt() const;
+        int GetIterations() const;
+
+    private slots:
+        void okButton_Click();
+        void currentTextBox_TextChanged();
+        void mainTextBox_TextChanged();
+        void reEnterMainTextBox_TextChanged();
+
+    private:
+        Ui::ChangeMainPasswordDialog* ui;
+        QByteArray m_currentPasswordHash;
+        QByteArray m_currentSalt;
+        int m_iterations;
+        QByteArray m_derivedKey;
+        QByteArray m_keySalt;
+        QByteArray m_verifyHash;
+        QByteArray m_verifySalt;
+};
+
+#endif // CHANGEMAINPASSWORDDIALOG_H

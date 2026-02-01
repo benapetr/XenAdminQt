@@ -25,17 +25,48 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GLOBALS_H
-#define GLOBALS_H
+#ifndef SETMAINPASSWORDDIALOG_H
+#define SETMAINPASSWORDDIALOG_H
 
-#define XENADMIN_VERSION "0.0.4"
+#include <QtWidgets/QDialog>
+#include <QtCore/QByteArray>
 
-// Shown on places like tree view root
-#define XENADMIN_BRANDING_NAME "XenAdmin"
+namespace Ui
+{
+    class SetMainPasswordDialog;
+}
 
-// For about and settings mostly
-#define XENADMIN_BRANDING_APP_NAME   "XenAdminQt"
-#define XENADMIN_BRANDING_ORG_NAME   "XenAdmin"
-#define XENADMIN_BRANDING_ORG_DOMAIN "xenadminqt.org"
+/**
+ * @brief Dialog for setting a new main password.
+ * 
+ * Matches C# XenAdmin.Dialogs.RestoreSession.SetMainPasswordDialog
+ */
+class SetMainPasswordDialog : public QDialog
+{
+    Q_OBJECT
 
-#endif // GLOBALS_H
+    public:
+        explicit SetMainPasswordDialog(int kdfIterations, QWidget* parent = nullptr);
+        ~SetMainPasswordDialog() override;
+
+        QByteArray GetDerivedKey() const;
+        QByteArray GetKeySalt() const;
+        QByteArray GetVerifyHash() const;
+        QByteArray GetVerifySalt() const;
+        int GetIterations() const;
+
+    private slots:
+        void okButton_Click();
+        void mainTextBox_TextChanged();
+        void reEnterMainTextBox_TextChanged();
+
+    private:
+        Ui::SetMainPasswordDialog* ui;
+        int m_iterations;
+        QByteArray m_derivedKey;
+        QByteArray m_keySalt;
+        QByteArray m_verifyHash;
+        QByteArray m_verifySalt;
+};
+
+#endif // SETMAINPASSWORDDIALOG_H

@@ -25,17 +25,45 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GLOBALS_H
-#define GLOBALS_H
+#ifndef ENTERMAINPASSWORDDIALOG_H
+#define ENTERMAINPASSWORDDIALOG_H
 
-#define XENADMIN_VERSION "0.0.4"
+#include <QtWidgets/QDialog>
+#include <QtCore/QByteArray>
 
-// Shown on places like tree view root
-#define XENADMIN_BRANDING_NAME "XenAdmin"
+namespace Ui
+{
+    class EnterMainPasswordDialog;
+}
 
-// For about and settings mostly
-#define XENADMIN_BRANDING_APP_NAME   "XenAdminQt"
-#define XENADMIN_BRANDING_ORG_NAME   "XenAdmin"
-#define XENADMIN_BRANDING_ORG_DOMAIN "xenadminqt.org"
+/**
+ * @brief Dialog for entering the main password to authorize an action.
+ * 
+ * Matches C# XenAdmin.Dialogs.RestoreSession.EnterMainPasswordDialog
+ */
+class EnterMainPasswordDialog : public QDialog
+{
+    Q_OBJECT
 
-#endif // GLOBALS_H
+    public:
+        explicit EnterMainPasswordDialog(const QByteArray& passwordHash, const QByteArray& hashSalt,
+                                         const QByteArray& keySalt, int kdfIterations,
+                                         QWidget* parent = nullptr);
+        ~EnterMainPasswordDialog() override;
+
+        QByteArray GetDerivedKey() const;
+
+    private slots:
+        void okButton_Click();
+        void mainTextBox_TextChanged(const QString& text);
+
+    private:
+        Ui::EnterMainPasswordDialog* ui;
+        QByteArray passwordHash_;
+        QByteArray hashSalt_;
+        QByteArray keySalt_;
+        int iterations_;
+        QByteArray derivedKey_;
+};
+
+#endif // ENTERMAINPASSWORDDIALOG_H

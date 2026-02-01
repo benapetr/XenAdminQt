@@ -45,8 +45,62 @@ class XENLIB_EXPORT EncryptionUtils
         static QString DecryptString(const QString& encryptedText, const QString& key);
         static QString ProtectString(const QString& text);
         static QString UnprotectString(const QString& protectedText);
+        static void SetLocalKey(const QString& key);
+        static QString GetLocalKey();
         static QString GenerateSalt(int length = 32);
         static QString HashPasswordWithSalt(const QString& password, const QString& salt);
+        static bool EncryptionAvailable();
+        static QByteArray GenerateSaltBytes(int length = 16);
+        static QByteArray DeriveKeyPBKDF2(const QByteArray& passwordBytes, const QByteArray& saltBytes, int iterations, int keyLen = 32);
+        static QByteArray DeriveKeyPBKDF2(const QString& password, const QByteArray& saltBytes, int iterations, int keyLen = 32);
+        static QByteArray ComputePasswordHashPBKDF2(const QString& password, const QByteArray& saltBytes, int iterations, int hashLen = 32);
+        static bool VerifyPasswordPBKDF2(const QString& password, const QByteArray& expectedHash, const QByteArray& saltBytes, int iterations);
+        static bool DerivePasswordSecrets(const QString& password, int iterations,
+                                          QByteArray& outKey, QByteArray& outKeySalt,
+                                          QByteArray& outVerifyHash, QByteArray& outVerifySalt);
+        static bool VerifyPasswordAndDeriveKey(const QString& password,
+                                               const QByteArray& expectedHash, const QByteArray& verifySalt,
+                                               const QByteArray& keySalt, int iterations,
+                                               QByteArray& outKey);
+
+        /**
+         * @brief Returns a secure hash of the given input string.
+         * 
+         * Matches C# EncryptionUtils.ComputeHash()
+         * @param input The string to hash
+         * @return The secure hash as byte array
+         */
+        static QByteArray ComputeHash(const QString& input);
+
+        /**
+         * @brief Compare two byte arrays for equality.
+         * 
+         * Matches C# Helpers.ArrayElementsEqual()
+         * @param a First byte array
+         * @param b Second byte array
+         * @return True if arrays are equal, false otherwise
+         */
+        static bool ArrayElementsEqual(const QByteArray& a, const QByteArray& b);
+
+        /**
+         * @brief Encrypt a string using AES-256-CBC with a key.
+         * 
+         * Matches C# EncryptionUtils.EncryptString()
+         * @param clearString The string to encrypt
+         * @param keyBytes The encryption key (should be 32 bytes for AES-256)
+         * @return Base64 encoded cipher text with format "cipher,salt"
+         */
+        static QString EncryptStringWithKey(const QString& clearString, const QByteArray& keyBytes);
+
+        /**
+         * @brief Decrypt a string that was encrypted with EncryptStringWithKey.
+         * 
+         * Matches C# EncryptionUtils.DecryptString()
+         * @param cipherText64 The base64 encoded cipher text (format "cipher,salt")
+         * @param keyBytes The decryption key (should be 32 bytes for AES-256)
+         * @return The decrypted string
+         */
+        static QString DecryptStringWithKey(const QString& cipherText64, const QByteArray& keyBytes);
 
     private:
         EncryptionUtils() = delete;

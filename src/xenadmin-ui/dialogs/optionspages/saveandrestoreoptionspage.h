@@ -31,12 +31,33 @@
 
 #include "ioptionspage.h"
 #include "ui_saveandrestoreoptionspage.h"
+#include <QtCore/QByteArray>
 
 namespace Ui
 {
     class SaveAndRestoreOptionsPage;
 }
 
+/**
+ * @brief Options page for save and restore settings including master password management.
+ * 
+ * Matches C# XenAdmin.Dialogs.OptionsPages.SaveAndRestoreOptionsPage
+ *
+ * Security model (master password protection):
+ * - The master password itself is NEVER persisted to disk.
+ * - We store ONLY verification data on disk:
+ *     - verifyHash = PBKDF2(password, verifySalt, iterations)
+ *     - verifySalt, keySalt, iterations
+ * - We store ONLY a derived AES key in memory:
+ *     - derivedKey = PBKDF2(password, keySalt, iterations)
+ * - Connection passwords are encrypted/decrypted with the derived key (AES-256-CBC).
+ * - On unlock/startup, user enters plaintext password:
+ *     - verify password by recomputing verifyHash with verifySalt
+ *     - if valid, derive derivedKey using keySalt and keep derived encryption key
+ *       in memory, the password is never kept in memory
+ * - This prevents recovering the encryption key from on-disk data alone; an attacker
+ *   must guess the password to derive the key. No plaintext is stored.
+ */
 class SaveAndRestoreOptionsPage : public IOptionsPage
 {
     Q_OBJECT
@@ -55,8 +76,22 @@ class SaveAndRestoreOptionsPage : public IOptionsPage
         void HideValidationMessages() override;
         void Save() override;
 
+    private slots:
+        void changeMainPasswordButton_Click();
+        void requireMainPasswordCheckBox_Click();
+        void saveStateCheckBox_Click();
+        void savePasswordsCheckBox_Click();
+
     private:
+        void UpdateControlStates();
+        void SaveEverything();
+
         Ui::SaveAndRestoreOptionsPage* ui;
+        QByteArray m_mainKey;
+        QByteArray m_mainPasswordHash;
+        QByteArray m_mainPasswordHashSalt;
+        QByteArray m_mainKeySalt;
+        int m_mainKdfIterations;
 };
 
 #endif // SAVEANDRESTOREOPTIONSPAGE_H

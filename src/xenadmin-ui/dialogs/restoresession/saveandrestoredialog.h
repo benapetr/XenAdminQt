@@ -25,17 +25,40 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GLOBALS_H
-#define GLOBALS_H
+#ifndef SAVEANDRESTOREDIALOG_H
+#define SAVEANDRESTOREDIALOG_H
 
-#define XENADMIN_VERSION "0.0.4"
+#include <QtWidgets/QDialog>
 
-// Shown on places like tree view root
-#define XENADMIN_BRANDING_NAME "XenAdmin"
+namespace Ui
+{
+    class SaveAndRestoreDialog;
+}
 
-// For about and settings mostly
-#define XENADMIN_BRANDING_APP_NAME   "XenAdminQt"
-#define XENADMIN_BRANDING_ORG_NAME   "XenAdmin"
-#define XENADMIN_BRANDING_ORG_DOMAIN "xenadminqt.org"
+class SaveAndRestoreOptionsPage;
 
-#endif // GLOBALS_H
+/**
+ * @brief Dialog for save and restore settings.
+ * 
+ * Matches C# XenAdmin.Dialogs.RestoreSession.SaveAndRestoreDialog
+ */
+class SaveAndRestoreDialog : public QDialog
+{
+    Q_OBJECT
+
+    public:
+        explicit SaveAndRestoreDialog(QWidget* parent = nullptr);
+        ~SaveAndRestoreDialog() override;
+
+    private slots:
+        void okButton_Click();
+        void cancelButton_Click();
+
+    private:
+        void SaveEverything();
+
+        Ui::SaveAndRestoreDialog* ui;
+        SaveAndRestoreOptionsPage* saveAndRestoreOptionsPage_;
+};
+
+#endif // SAVEANDRESTOREDIALOG_H
