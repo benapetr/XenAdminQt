@@ -32,6 +32,14 @@ cd packaging
 ./package-dmg.sh --qt ~/Qt/6.7.2/macos/bin/
 ```
 
+### Optional: build without crypto support
+
+If you need to compile without OpenSSL/CommonCrypto/BCrypt (master password feature will be disabled), use this flag:
+
+```
+qmake CONFIG+=no_crypto
+```
+
 ## Linux dependencies:
 
 ```
@@ -41,4 +49,3 @@ sudo dnf install qt6-qtbase-devel rpm-build qt6-qtbase-devel freerdp2-devel libw
 # Debian based:
 sudo apt-get install qt6-base-dev build-essential freerdp2-dev libwinpr2-dev mesa-common-dev libglu1-mesa-dev libegl1 libxkbcommon0
 ```
-

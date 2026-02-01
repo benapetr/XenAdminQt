@@ -31,20 +31,22 @@
 #include <QtCore/QRandomGenerator>
 #include <QDebug>
 
-// Platform-specific crypto headers
-#ifdef Q_OS_WIN
-    #include <windows.h>
-    #include <bcrypt.h>
-    #pragma comment(lib, "bcrypt.lib")
-#elif defined(Q_OS_MACOS)
-    #include <CommonCrypto/CommonCryptor.h>
-    #include <CommonCrypto/CommonRandom.h>
-    #include <CommonCrypto/CommonKeyDerivation.h>
-#else
-    // Linux/Unix: OpenSSL
-    #include <openssl/evp.h>
-    #include <openssl/rand.h>
-    #include <openssl/err.h>
+#ifndef XENADMIN_NO_CRYPTO
+    // Platform-specific crypto headers
+    #ifdef Q_OS_WIN
+        #include <windows.h>
+        #include <bcrypt.h>
+        #pragma comment(lib, "bcrypt.lib")
+    #elif defined(Q_OS_MACOS)
+        #include <CommonCrypto/CommonCryptor.h>
+        #include <CommonCrypto/CommonRandom.h>
+        #include <CommonCrypto/CommonKeyDerivation.h>
+    #else
+        // Linux/Unix: OpenSSL
+        #include <openssl/evp.h>
+        #include <openssl/rand.h>
+        #include <openssl/err.h>
+    #endif
 #endif
 
 namespace
@@ -212,13 +214,24 @@ QString EncryptionUtils::HashPasswordWithSalt(const QString& password, const QSt
 
 bool EncryptionUtils::EncryptionAvailable()
 {
+#ifdef XENADMIN_NO_CRYPTO
+    return false;
+#else
     return true;
+#endif
 }
 
 QByteArray EncryptionUtils::GenerateSaltBytes(int length)
 {
     QByteArray salt(length, '\0');
 
+#ifdef XENADMIN_NO_CRYPTO
+    for (int i = 0; i < salt.size(); ++i)
+    {
+        salt[i] = static_cast<char>(QRandomGenerator::global()->bounded(256));
+    }
+    return salt;
+#else
 #ifdef Q_OS_WIN
     if (BCryptGenRandom(nullptr, reinterpret_cast<PUCHAR>(salt.data()), static_cast<ULONG>(salt.size()),
                         BCRYPT_USE_SYSTEM_PREFERRED_RNG) == 0)
@@ -242,10 +255,18 @@ QByteArray EncryptionUtils::GenerateSaltBytes(int length)
         salt[i] = static_cast<char>(QRandomGenerator::global()->bounded(256));
     }
     return salt;
+#endif
 }
 
 QByteArray EncryptionUtils::DeriveKeyPBKDF2(const QByteArray& passwordBytes, const QByteArray& saltBytes, int iterations, int keyLen)
 {
+#ifdef XENADMIN_NO_CRYPTO
+    Q_UNUSED(passwordBytes);
+    Q_UNUSED(saltBytes);
+    Q_UNUSED(iterations);
+    Q_UNUSED(keyLen);
+    return QByteArray();
+#else
     if (passwordBytes.isEmpty() || saltBytes.isEmpty() || iterations <= 0 || keyLen <= 0)
     {
         return QByteArray();
@@ -295,6 +316,7 @@ QByteArray EncryptionUtils::DeriveKeyPBKDF2(const QByteArray& passwordBytes, con
 #endif
 
     return key;
+#endif
 }
 
 QByteArray EncryptionUtils::DeriveKeyPBKDF2(const QString& password, const QByteArray& saltBytes, int iterations, int keyLen)
@@ -309,17 +331,34 @@ QByteArray EncryptionUtils::ComputePasswordHashPBKDF2(const QString& password, c
 
 bool EncryptionUtils::VerifyPasswordPBKDF2(const QString& password, const QByteArray& expectedHash, const QByteArray& saltBytes, int iterations)
 {
+#ifdef XENADMIN_NO_CRYPTO
+    Q_UNUSED(password);
+    Q_UNUSED(expectedHash);
+    Q_UNUSED(saltBytes);
+    Q_UNUSED(iterations);
+    return false;
+#else
     if (expectedHash.isEmpty())
         return false;
 
     QByteArray computed = ComputePasswordHashPBKDF2(password, saltBytes, iterations, expectedHash.size());
     return ArrayElementsEqual(computed, expectedHash);
+#endif
 }
 
 bool EncryptionUtils::DerivePasswordSecrets(const QString& password, int iterations,
                                             QByteArray& outKey, QByteArray& outKeySalt,
                                             QByteArray& outVerifyHash, QByteArray& outVerifySalt)
 {
+#ifdef XENADMIN_NO_CRYPTO
+    Q_UNUSED(password);
+    Q_UNUSED(iterations);
+    outKey.clear();
+    outKeySalt.clear();
+    outVerifyHash.clear();
+    outVerifySalt.clear();
+    return false;
+#else
     if (password.isEmpty() || iterations <= 0)
         return false;
 
@@ -339,6 +378,7 @@ bool EncryptionUtils::DerivePasswordSecrets(const QString& password, int iterati
     }
 
     return true;
+#endif
 }
 
 bool EncryptionUtils::VerifyPasswordAndDeriveKey(const QString& password,
@@ -346,11 +386,21 @@ bool EncryptionUtils::VerifyPasswordAndDeriveKey(const QString& password,
                                                  const QByteArray& keySalt, int iterations,
                                                  QByteArray& outKey)
 {
+#ifdef XENADMIN_NO_CRYPTO
+    Q_UNUSED(password);
+    Q_UNUSED(expectedHash);
+    Q_UNUSED(verifySalt);
+    Q_UNUSED(keySalt);
+    Q_UNUSED(iterations);
+    outKey.clear();
+    return false;
+#else
     if (!VerifyPasswordPBKDF2(password, expectedHash, verifySalt, iterations))
         return false;
 
     outKey = DeriveKeyPBKDF2(password, keySalt, iterations, 32);
     return !outKey.isEmpty();
+#endif
 }
 
 QByteArray EncryptionUtils::ComputeHash(const QString& input)
@@ -398,6 +448,11 @@ QString EncryptionUtils::EncryptStringWithKey(const QString& clearString, const 
     // Matches C# EncryptionUtils.EncryptString()
     // Uses AES-256-CBC with PKCS7 padding
     
+#ifdef XENADMIN_NO_CRYPTO
+    Q_UNUSED(clearString);
+    Q_UNUSED(keyBytes);
+    return QString();
+#else
     if (clearString.isEmpty() || keyBytes.size() != 32)
     {
         return QString();
@@ -538,6 +593,7 @@ QString EncryptionUtils::EncryptStringWithKey(const QString& clearString, const 
                      QString::fromLatin1(QByteArray(reinterpret_cast<const char*>(saltBytes), 16).toBase64());
     return result;
 #endif
+#endif
 }
 
 QString EncryptionUtils::DecryptStringWithKey(const QString& cipherText64, const QByteArray& keyBytes)
@@ -545,6 +601,11 @@ QString EncryptionUtils::DecryptStringWithKey(const QString& cipherText64, const
     // Matches C# EncryptionUtils.DecryptString()
     // Uses AES-256-CBC with PKCS7 padding
     
+#ifdef XENADMIN_NO_CRYPTO
+    Q_UNUSED(cipherText64);
+    Q_UNUSED(keyBytes);
+    return QString();
+#else
     if (cipherText64.isEmpty() || keyBytes.size() != 32)
     {
         return QString();
@@ -716,4 +777,5 @@ QString EncryptionUtils::DecryptStringWithKey(const QString& cipherText64, const
     }
 
     return result;
+#endif
 }

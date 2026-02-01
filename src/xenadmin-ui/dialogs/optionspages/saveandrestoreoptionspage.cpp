@@ -28,6 +28,7 @@
 // saveandrestoreoptionspage.cpp - Save and restore settings options page
 #include "saveandrestoreoptionspage.h"
 #include "../../settingsmanager.h"
+#include "xenlib/utils/encryption.h"
 #include "../restoresession/changemainpassworddialog.h"
 #include "../restoresession/entermainpassworddialog.h"
 #include "../restoresession/setmainpassworddialog.h"
@@ -105,7 +106,10 @@ void SaveAndRestoreOptionsPage::Build()
     if (this->m_mainKdfIterations <= 0)
         this->m_mainKdfIterations = 150000;
 
-    this->ui->requireMainPasswordCheckBox->setChecked(reqPass && !this->m_mainPasswordHash.isEmpty());
+    bool cryptoAvailable = EncryptionUtils::EncryptionAvailable();
+    this->ui->requireMainPasswordCheckBox->setChecked(cryptoAvailable && reqPass && !this->m_mainPasswordHash.isEmpty());
+    if (!cryptoAvailable)
+        this->ui->requireMainPasswordCheckBox->setChecked(false);
     this->UpdateControlStates();
 }
 
@@ -157,6 +161,10 @@ void SaveAndRestoreOptionsPage::SaveEverything()
     settings.SetSavePasswords(savePasswords);
     settings.SetAutoReconnect(autoReconnect);
 
+    bool cryptoAvailable = EncryptionUtils::EncryptionAvailable();
+    if (!cryptoAvailable)
+        this->ui->requireMainPasswordCheckBox->setChecked(false);
+
     if (!saveSession || !savePasswords)
     {
         settings.SetRequirePass(false);
@@ -170,9 +178,12 @@ void SaveAndRestoreOptionsPage::SaveEverything()
         {
             settings.SetRequirePass(false);
             settings.SetMainKey(QByteArray());
-            settings.SetMainPasswordHash(QByteArray());
-            settings.SetMainPasswordHashSalt(QByteArray());
-            settings.SetMainKeySalt(QByteArray());
+            if (cryptoAvailable)
+            {
+                settings.SetMainPasswordHash(QByteArray());
+                settings.SetMainPasswordHashSalt(QByteArray());
+                settings.SetMainKeySalt(QByteArray());
+            }
         } else
         {
             settings.SetRequirePass(true);
@@ -326,12 +337,14 @@ void SaveAndRestoreOptionsPage::UpdateControlStates()
 {
     bool saveSession = this->ui->saveStateCheckBox->isChecked();
     bool savePasswords = this->ui->savePasswordsCheckBox->isChecked();
+    bool cryptoAvailable = EncryptionUtils::EncryptionAvailable();
 
     this->ui->savePasswordsCheckBox->setEnabled(saveSession);
     this->ui->autoReconnectCheckBox->setEnabled(saveSession && savePasswords);
     this->ui->mainPasswordGroupBox->setEnabled(saveSession && savePasswords);
-    this->ui->requireMainPasswordCheckBox->setEnabled(saveSession && savePasswords);
-    this->ui->changeMainPasswordButton->setEnabled(saveSession && savePasswords && this->ui->requireMainPasswordCheckBox->isChecked());
+    this->ui->requireMainPasswordCheckBox->setEnabled(saveSession && savePasswords && cryptoAvailable);
+    this->ui->changeMainPasswordButton->setEnabled(saveSession && savePasswords && this->ui->requireMainPasswordCheckBox->isChecked() && cryptoAvailable);
+    this->ui->cryptoUnavailableLabel->setVisible(saveSession && savePasswords && !cryptoAvailable);
 
     if (!saveSession)
     {
@@ -342,6 +355,10 @@ void SaveAndRestoreOptionsPage::UpdateControlStates()
     else if (!savePasswords)
     {
         this->ui->autoReconnectCheckBox->setChecked(false);
+        this->ui->requireMainPasswordCheckBox->setChecked(false);
+    }
+    else if (!cryptoAvailable)
+    {
         this->ui->requireMainPasswordCheckBox->setChecked(false);
     }
 }

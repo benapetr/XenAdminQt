@@ -89,6 +89,19 @@
         </item>
        </layout>
       </item>
+      <item>
+       <widget class="QLabel" name="cryptoUnavailableLabel">
+        <property name="text">
+         <string>This feature is not available because the app was compiled without crypto support.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
