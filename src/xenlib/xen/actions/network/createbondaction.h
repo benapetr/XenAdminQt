@@ -29,6 +29,7 @@
 #define CREATEBONDACTION_H
 
 #include "../../asyncoperation.h"
+#include <QHash>
 #include <QStringList>
 #include <QSharedPointer>
 
@@ -95,16 +96,22 @@ class CreateBondAction : public AsyncOperation
         QList<QSharedPointer<Host>> getHostsCoordinatorLast() const;
 
         /**
-         * @brief Find PIFs on a host matching coordinator PIF device names
-         * @param hostRef Host opaque reference
-         * @return List of matching PIF references
+         * @brief Build PIF mapping for all hosts based on coordinator device names
+         * @param hosts Pool hosts
+         * @return Map of host ref -> matching PIF refs (by device)
          */
-        QStringList findMatchingPIFsOnHost(const QString& hostRef) const;
+        QHash<QString, QStringList> getPifsOnAllHosts(const QList<QSharedPointer<Host>>& hosts) const;
+
+        /**
+         * @brief Device names from the coordinator-selected PIFs
+         */
+        QStringList coordinatorDeviceNames() const;
 
         /**
          * @brief Cleanup on error: revert management, destroy bonds, destroy network
          */
         void cleanupOnError();
+        void unlockAllLockedObjects();
 
         QString m_networkName;
         QStringList m_pifRefs;
@@ -114,6 +121,10 @@ class CreateBondAction : public AsyncOperation
         QString m_hashingAlgorithm;
         QString m_networkRef;
         QList<NewBond> m_newBonds;
+        QSet<QString> m_lockedPifRefs;
+        QSet<QString> m_lockedBondRefs;
+        QSet<QString> m_lockedBondInterfaceRefs;
+        QString m_lockedNetworkRef;
 };
 
 #endif // CREATEBONDACTION_H

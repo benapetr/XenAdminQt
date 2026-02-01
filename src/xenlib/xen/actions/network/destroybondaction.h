@@ -30,6 +30,7 @@
 
 #include "../../asyncoperation.h"
 #include <QStringList>
+#include <QSet>
 
 /**
  * @brief DestroyBondAction - Destroys a network bond
@@ -47,8 +48,6 @@
  * - Destroys bonds on all hosts
  * - Destroys network (if not used elsewhere)
  *
- * TODO:
- * - Implement lock management (Bond.Locked, PIF.Locked, Network.Locked)
  */
 class DestroyBondAction : public AsyncOperation
 {
@@ -74,6 +73,7 @@ class DestroyBondAction : public AsyncOperation
             QString bondRef;
             QString bondInterfaceRef;
             QString primarySlaveRef;
+            QStringList slaveRefs;
             QString networkRef;
             QString hostRef;
             QString hostName;
@@ -84,9 +84,14 @@ class DestroyBondAction : public AsyncOperation
          * @return List of bond information for all hosts
          */
         QList<BondInfo> findAllEquivalentBonds() const;
+        void lockObjectsForBonds(const QList<BondInfo>& bonds);
+        void unlockAllLockedObjects();
 
         QString m_bondRef;
         QString m_bondName;
+        QSet<QString> m_lockedBondRefs;
+        QSet<QString> m_lockedPifRefs;
+        QString m_lockedNetworkRef;
 };
 
 #endif // DESTROYBONDACTION_H

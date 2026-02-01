@@ -693,14 +693,18 @@ void AsyncOperation::setError(const QString& message, const QStringList& details
     if (resolvedMessage.isEmpty())
         resolvedMessage = message;
 
-    QMutexLocker locker(&this->m_mutex);
-    this->m_errorMessage = resolvedMessage;
-    this->m_shortErrorMessage = resolvedShort;
-    this->m_errorDetails = details;
+    bool shouldFail = false;
+    {
+        QMutexLocker locker(&this->m_mutex);
+        this->m_errorMessage = resolvedMessage;
+        this->m_shortErrorMessage = resolvedShort;
+        this->m_errorDetails = details;
+        shouldFail = (this->m_state == Running);
+    }
 
     // Mark the action as failed when an error is set
     // This matches C# behavior where Exception property determines success/failure
-    if (this->m_state == Running)
+    if (shouldFail)
     {
         this->setState(Failed);
     }

@@ -36,6 +36,7 @@
 #include "../../pool.h"
 #include "../../xenapi/xenapi_Network.h"
 #include "../../xenapi/xenapi_Bond.h"
+#include "../../failure.h"
 #include "../../../xencache.h"
 #include <QDebug>
 
@@ -65,9 +66,42 @@ CreateBondAction::CreateBondAction(XenConnection* connection,
 
 void CreateBondAction::run()
 {
+    bool completed = false;
     try
     {
         this->GetConnection()->SetExpectDisruption(true);
+
+        QSharedPointer<Pool> pool = this->GetConnection()->GetCache()->GetPool();
+        if (!pool || !pool->IsValid())
+            throw Failure(Failure::INTERNAL_ERROR, "Pool not found for bond creation");
+
+        QSharedPointer<Host> coordinator = pool->GetMasterHost();
+        if (!coordinator || !coordinator->IsValid())
+            throw Failure(Failure::INTERNAL_ERROR, "Pool coordinator not found for bond creation");
+
+        const QList<QSharedPointer<Host>> poolHosts = pool->GetHosts();
+        if (poolHosts.isEmpty())
+            throw Failure(Failure::INTERNAL_ERROR, "No hosts available for bond creation");
+
+        QHash<QString, QStringList> pifsByHost = this->getPifsOnAllHosts(poolHosts);
+        XenCache* cache = this->GetConnection()->GetCache();
+        if (!cache)
+            throw Failure(Failure::INTERNAL_ERROR, "Cache unavailable for bond creation");
+
+        for (auto it = pifsByHost.constBegin(); it != pifsByHost.constEnd(); ++it)
+        {
+            for (const QString& pifRef : it.value())
+            {
+                if (pifRef.isEmpty())
+                    continue;
+                QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
+                if (pif && pif->IsValid())
+                {
+                    pif->Lock();
+                    this->m_lockedPifRefs.insert(pifRef);
+                }
+            }
+        }
 
         // Create the network first
         QVariantMap networkRecord;
@@ -90,7 +124,8 @@ void CreateBondAction::run()
             "network", this->m_networkRef);
         if (!network)
             throw std::runtime_error("Network not found in cache after creation");
-        Q_UNUSED(network);
+        network->Lock();
+        this->m_lockedNetworkRef = this->m_networkRef;
 
         // Remove create_in_progress flag
         XenAPI::Network::remove_from_other_config(this->GetSession(), this->m_networkRef, "create_in_progress");
@@ -99,10 +134,7 @@ void CreateBondAction::run()
 
         try
         {
-            // Get all hosts in pool
-            QList<QSharedPointer<Host>> hosts = this->GetConnection()->GetCache()->GetAll<Host>();
-
-            int inc = hosts.count() > 0 ? 90 / (hosts.count() * 2) : 90;
+            int inc = poolHosts.count() > 0 ? 90 / (poolHosts.count() * 2) : 90;
             int progress = 10;
 
             // Create bond on each host (coordinator last for stability)
@@ -116,8 +148,8 @@ void CreateBondAction::run()
                 QString hostRef = host->OpaqueRef();
                 QString hostName = host->GetName();
 
-                // Find physical PIFs on this host corresponding to the coordinator PIFs
-                QStringList hostPifRefs = this->findMatchingPIFsOnHost(hostRef);
+                // Find PIFs on this host corresponding to the coordinator PIFs
+                QStringList hostPifRefs = pifsByHost.value(hostRef);
 
                 if (hostPifRefs.isEmpty())
                 {
@@ -135,8 +167,17 @@ void CreateBondAction::run()
                     bondProperties["hashing_algorithm"] = this->m_hashingAlgorithm;
                 }
 
+                // Filter to physical PIFs (matches C# behavior)
+                QStringList physicalPifRefs;
+                for (const QString& pifRef : hostPifRefs)
+                {
+                    QSharedPointer<PIF> pif = this->GetConnection()->GetCache()->ResolveObject<PIF>(pifRef);
+                    if (pif && pif->IsValid() && pif->IsPhysical())
+                        physicalPifRefs.append(pifRef);
+                }
+
                 QString bondTaskRef = XenAPI::Bond::async_create(this->GetSession(), this->m_networkRef,
-                                                                 hostPifRefs, "", this->m_bondMode,
+                                                                 physicalPifRefs, "", this->m_bondMode,
                                                                  bondProperties);
 
                 this->pollToCompletion(bondTaskRef, progress, progress + inc);
@@ -154,6 +195,11 @@ void CreateBondAction::run()
                 QSharedPointer<PIF> bondInterface = this->GetConnection()->GetCache()->ResolveObject<PIF>(bondInterfaceRef);
                 if (!bondInterface)
                     throw std::runtime_error("Bond master interface not found in cache after creation");
+
+                bond->Lock();
+                bondInterface->Lock();
+                this->m_lockedBondRefs.insert(bondRef);
+                this->m_lockedBondInterfaceRefs.insert(bondInterfaceRef);
 
                 // Store bond info for management interface reconfiguration
                 NewBond newBond;
@@ -184,6 +230,7 @@ void CreateBondAction::run()
 
             this->SetDescription(QString("Bond '%1' created successfully").arg(this->m_networkName));
             this->GetConnection()->SetExpectDisruption(false);
+            completed = true;
 
         } catch (const std::exception& e)
         {
@@ -197,6 +244,10 @@ void CreateBondAction::run()
         this->GetConnection()->SetExpectDisruption(false);
         this->setError(QString("Failed to create bond: %1").arg(e.what()));
     }
+
+    if (!completed)
+        this->GetConnection()->SetExpectDisruption(false);
+    this->unlockAllLockedObjects();
 }
 
 void CreateBondAction::cleanupOnError()
@@ -264,19 +315,51 @@ void CreateBondAction::cleanupOnError()
     this->GetConnection()->SetExpectDisruption(false);
 }
 
+void CreateBondAction::unlockAllLockedObjects()
+{
+    XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+    if (!cache)
+        return;
+
+    for (const QString& pifRef : this->m_lockedPifRefs)
+    {
+        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
+        if (pif && pif->IsValid())
+            pif->Unlock();
+    }
+
+    for (const QString& bondRef : this->m_lockedBondRefs)
+    {
+        QSharedPointer<Bond> bond = cache->ResolveObject<Bond>(bondRef);
+        if (bond && bond->IsValid())
+            bond->Unlock();
+    }
+
+    for (const QString& pifRef : this->m_lockedBondInterfaceRefs)
+    {
+        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
+        if (pif && pif->IsValid())
+            pif->Unlock();
+    }
+
+    if (!this->m_lockedNetworkRef.isEmpty())
+    {
+        QSharedPointer<Network> network = cache->ResolveObject<Network>(this->m_lockedNetworkRef);
+        if (network && network->IsValid())
+            network->Unlock();
+    }
+}
+
 QList<QSharedPointer<Host>> CreateBondAction::getHostsCoordinatorLast() const
 {
-    QList<QSharedPointer<Host>> hosts = this->GetConnection()->GetCache()->GetAll<Host>();
+    QSharedPointer<Pool> pool = this->GetConnection()->GetCache()->GetPool();
+    if (!pool || !pool->IsValid())
+        return QList<QSharedPointer<Host>>();
+
+    QList<QSharedPointer<Host>> hosts = pool->GetHosts();
     if (hosts.isEmpty())
     {
         return hosts;
-    }
-
-    // Get the pool to find the coordinator
-    QSharedPointer<Pool> pool = this->GetConnection()->GetCache()->GetPool();
-    if (!pool || !pool->IsValid())
-    {
-        return hosts; // Not a pool, return as-is
     }
 
     QString coordinatorRef = pool->GetMasterHostRef();
@@ -310,42 +393,44 @@ QList<QSharedPointer<Host>> CreateBondAction::getHostsCoordinatorLast() const
     return supporters;
 }
 
-QStringList CreateBondAction::findMatchingPIFsOnHost(const QString& hostRef) const
+QStringList CreateBondAction::coordinatorDeviceNames() const
 {
-    // Get device names from coordinator PIFs
     QStringList deviceNames;
     for (const QString& pifRef : this->m_pifRefs)
     {
         QSharedPointer<PIF> pif = this->GetConnection()->GetCache()->ResolveObject<PIF>(pifRef);
-        QString device = pif ? pif->GetDevice() : QString();
-        if (!device.isEmpty() && !deviceNames.contains(device))
-        {
-            deviceNames.append(device);
-        }
-    }
-
-    // Find PIFs on the target host with matching device names
-    QStringList result;
-    QList<QSharedPointer<PIF>> allPifs = this->GetConnection()->GetCache()->GetAll<PIF>();
-
-    for (const QSharedPointer<PIF>& pif : allPifs)
-    {
         if (!pif || !pif->IsValid())
             continue;
-        if (pif->GetHostRef() != hostRef)
-        {
+        const QString device = pif->GetDevice();
+        if (!device.isEmpty() && !deviceNames.contains(device))
+            deviceNames.append(device);
+    }
+    return deviceNames;
+}
+
+QHash<QString, QStringList> CreateBondAction::getPifsOnAllHosts(const QList<QSharedPointer<Host>>& hosts) const
+{
+    QHash<QString, QStringList> result;
+    const QStringList devices = this->coordinatorDeviceNames();
+    if (devices.isEmpty())
+        return result;
+
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (!host || !host->IsValid())
             continue;
+
+        QStringList pifRefs;
+        QList<QSharedPointer<PIF>> pifs = host->GetPIFs();
+        for (const QSharedPointer<PIF>& pif : pifs)
+        {
+            if (!pif || !pif->IsValid())
+                continue;
+            if (devices.contains(pif->GetDevice()))
+                pifRefs.append(pif->OpaqueRef());
         }
 
-        QString device = pif->GetDevice();
-        if (deviceNames.contains(device))
-        {
-            // Only include physical PIFs (not VLAN or bond interfaces)
-            if (pif->IsPhysical())
-            {
-                result.append(pif->OpaqueRef());
-            }
-        }
+        result.insert(host->OpaqueRef(), pifRefs);
     }
 
     return result;

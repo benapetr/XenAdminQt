@@ -27,31 +27,34 @@
 
 #include "destroybondaction.h"
 #include "networkingactionhelpers.h"
+#include "../../bond.h"
+#include "../../host.h"
+#include "../../network.h"
 #include "../../network/connection.h"
+#include "../../pif.h"
+#include "../../pool.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_Bond.h"
 #include "../../xenapi/xenapi_Network.h"
-#include "../../xenapi/xenapi_PIF.h"
 #include "../../../xencache.h"
 #include <QDebug>
 
-DestroyBondAction::DestroyBondAction(XenConnection* connection,
-                                     const QString& bondRef,
-                                     QObject* parent)
-    : AsyncOperation(connection,
-                     "Destroying Bond",
-                     "Destroying network bond",
-                     parent),
-      m_bondRef(bondRef)
+DestroyBondAction::DestroyBondAction(XenConnection* connection, const QString& bondRef, QObject* parent)
+    : AsyncOperation(connection, "Destroying Bond", "Destroying network bond", parent), m_bondRef(bondRef)
 {
     if (this->m_bondRef.isEmpty())
         throw std::invalid_argument("Bond reference cannot be empty");
 
-    // Get bond name for display
-    QVariantMap bondData = connection->GetCache()->ResolveObjectData("bond", this->m_bondRef);
-    QVariantMap masterPifData = connection->GetCache()->ResolveObjectData("pif",
-                                                                bondData.value("master").toString());
-    this->m_bondName = masterPifData.value("device").toString();
+    XenCache* cache = connection ? connection->GetCache() : nullptr;
+    if (!cache)
+        throw std::runtime_error("Cache is unavailable");
+
+    QSharedPointer<Bond> bond = cache->ResolveObject<Bond>(this->m_bondRef);
+    if (!bond || !bond->IsValid())
+        throw std::runtime_error("Bond not found");
+
+    QSharedPointer<PIF> masterPif = cache->ResolveObject<PIF>(bond->MasterRef());
+    this->m_bondName = masterPif && masterPif->IsValid() ? masterPif->GetName() : QString();
 
     this->SetTitle(QString("Destroying bond %1").arg(this->m_bondName));
     this->SetDescription(QString("Destroying bond %1").arg(this->m_bondName));
@@ -73,6 +76,7 @@ void DestroyBondAction::run()
             return;
         }
 
+        this->lockObjectsForBonds(bondsToDestroy);
         this->SetPercentComplete(0);
 
         // Step 1: Move management interface names from bonds to primary members
@@ -167,6 +171,7 @@ void DestroyBondAction::run()
         this->SetPercentComplete(100);
 
         this->GetConnection()->SetExpectDisruption(false);
+        this->unlockAllLockedObjects();
 
         if (!errors.isEmpty())
         {
@@ -179,57 +184,191 @@ void DestroyBondAction::run()
     } catch (const std::exception& e)
     {
         this->GetConnection()->SetExpectDisruption(false);
+        this->unlockAllLockedObjects();
         this->setError(QString("Failed to destroy bond: %1").arg(e.what()));
     }
+}
+
+static QStringList bondSlaveDevices(XenCache* cache, const QStringList& slaveRefs)
+{
+    QStringList devices;
+    if (!cache)
+        return devices;
+
+    devices.reserve(slaveRefs.size());
+    for (const QString& slaveRef : slaveRefs)
+    {
+        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(slaveRef);
+        if (!pif || !pif->IsValid())
+            continue;
+        const QString device = pif->GetDevice();
+        if (!device.isEmpty())
+            devices.append(device);
+    }
+
+    devices.sort();
+    return devices;
 }
 
 QList<DestroyBondAction::BondInfo> DestroyBondAction::findAllEquivalentBonds() const
 {
     QList<BondInfo> result;
 
-    // Get the coordinator bond data to use as reference
-    QVariantMap refBondData = this->GetConnection()->GetCache()->ResolveObjectData("bond", this->m_bondRef);
-    QString refMasterPifRef = refBondData.value("master").toString();
-    QVariantMap refMasterPifData = this->GetConnection()->GetCache()->ResolveObjectData("pif", refMasterPifRef);
-    QString refDevice = refMasterPifData.value("device").toString();
+    XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+    if (!cache)
+        return result;
 
-    // Get all hosts in the pool
-    QList<QVariantMap> hosts = this->GetConnection()->GetCache()->GetAllData("host");
+    QSharedPointer<Bond> refBond = cache->ResolveObject<Bond>(this->m_bondRef);
+    if (!refBond || !refBond->IsValid())
+        return result;
 
-    for (const QVariantMap& host : hosts)
+    QSharedPointer<PIF> refMasterPif = cache->ResolveObject<PIF>(refBond->MasterRef());
+    if (!refMasterPif || !refMasterPif->IsValid())
+        return result;
+
+    const QStringList refDevices = bondSlaveDevices(cache, refBond->SlaveRefs());
+    const QString refHostRef = refMasterPif->GetHostRef();
+
+    QList<QSharedPointer<Host>> hosts;
+    QSharedPointer<Pool> pool = cache->GetPool();
+    if (pool && pool->IsValid())
+        hosts = pool->GetHosts();
+    else
+        hosts = QList<QSharedPointer<Host>> { refMasterPif->GetHost() };
+
+    if (hosts.isEmpty())
+        return result;
+
+    QList<QSharedPointer<Bond>> allBonds = cache->GetAll<Bond>();
+
+    for (const QSharedPointer<Host>& host : hosts)
     {
-        QString hostRef = host.value("_ref").toString();
-        QString hostName = host.value("name_label").toString();
+        if (!host || !host->IsValid())
+            continue;
 
-        // Find bond on this host with matching device name
-        QList<QVariantMap> allBonds = this->GetConnection()->GetCache()->GetAllData("bond");
-        for (const QVariantMap& bond : allBonds)
+        const QString hostRef = host->OpaqueRef();
+
+        for (const QSharedPointer<Bond>& bond : allBonds)
         {
-            QString bondRef = bond.value("_ref").toString();
-            QString masterPifRef = bond.value("master").toString();
-            QString primarySlaveRef = bond.value("primary_slave").toString();
+            if (!bond || !bond->IsValid())
+                continue;
 
-            QVariantMap masterPifData = this->GetConnection()->GetCache()->ResolveObjectData("pif", masterPifRef);
-            QString device = masterPifData.value("device").toString();
-            QString bondHost = masterPifData.value("host").toString();
-            QString networkRef = masterPifData.value("network").toString();
+            QSharedPointer<PIF> masterPif = cache->ResolveObject<PIF>(bond->MasterRef());
+            if (!masterPif || !masterPif->IsValid())
+                continue;
 
-            // Match by device name and host
-            if (device == refDevice && bondHost == hostRef)
-            {
-                BondInfo info;
-                info.bondRef = bondRef;
-                info.bondInterfaceRef = masterPifRef;
-                info.primarySlaveRef = primarySlaveRef;
-                info.networkRef = networkRef;
-                info.hostRef = hostRef;
-                info.hostName = hostName;
+            if (masterPif->GetHostRef() != hostRef)
+                continue;
 
-                result.append(info);
-                break; // Only one bond per host with this device name
-            }
+            const QStringList bondDevices = bondSlaveDevices(cache, bond->SlaveRefs());
+            if (bondDevices != refDevices)
+                continue;
+
+            BondInfo info;
+            info.bondRef = bond->OpaqueRef();
+            info.bondInterfaceRef = bond->MasterRef();
+            info.primarySlaveRef = bond->PrimarySlaveRef();
+            info.slaveRefs = bond->SlaveRefs();
+            info.networkRef = masterPif->GetNetworkRef();
+            info.hostRef = hostRef;
+            info.hostName = host->GetName();
+
+            result.append(info);
+            break;
         }
     }
 
+    if (result.isEmpty() && refBond && refBond->IsValid())
+    {
+        BondInfo info;
+        info.bondRef = refBond->OpaqueRef();
+        info.bondInterfaceRef = refBond->MasterRef();
+        info.primarySlaveRef = refBond->PrimarySlaveRef();
+        info.slaveRefs = refBond->SlaveRefs();
+        info.networkRef = refMasterPif->GetNetworkRef();
+        info.hostRef = refHostRef;
+        info.hostName = refMasterPif->GetHost() ? refMasterPif->GetHost()->GetName() : QString();
+        result.append(info);
+    }
+
     return result;
+}
+
+void DestroyBondAction::lockObjectsForBonds(const QList<BondInfo>& bonds)
+{
+    XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+    if (!cache)
+        return;
+
+    for (const BondInfo& bondInfo : bonds)
+    {
+        QSharedPointer<Bond> bond = cache->ResolveObject<Bond>(bondInfo.bondRef);
+        if (bond && bond->IsValid())
+        {
+            bond->Lock();
+            this->m_lockedBondRefs.insert(bondInfo.bondRef);
+        }
+
+        if (!bondInfo.bondInterfaceRef.isEmpty())
+        {
+            QSharedPointer<PIF> masterPif = cache->ResolveObject<PIF>(bondInfo.bondInterfaceRef);
+            if (masterPif && masterPif->IsValid())
+            {
+                masterPif->Lock();
+                this->m_lockedPifRefs.insert(bondInfo.bondInterfaceRef);
+            }
+        }
+
+        for (const QString& slaveRef : bondInfo.slaveRefs)
+        {
+            QSharedPointer<PIF> slavePif = cache->ResolveObject<PIF>(slaveRef);
+            if (slavePif && slavePif->IsValid())
+            {
+                slavePif->Lock();
+                this->m_lockedPifRefs.insert(slaveRef);
+            }
+        }
+
+        if (this->m_lockedNetworkRef.isEmpty())
+            this->m_lockedNetworkRef = bondInfo.networkRef;
+    }
+
+    if (!this->m_lockedNetworkRef.isEmpty())
+    {
+        QSharedPointer<Network> network = cache->ResolveObject<Network>(this->m_lockedNetworkRef);
+        if (network && network->IsValid())
+            network->Lock();
+    }
+}
+
+void DestroyBondAction::unlockAllLockedObjects()
+{
+    XenCache* cache = this->GetConnection() ? this->GetConnection()->GetCache() : nullptr;
+    if (!cache)
+        return;
+
+    for (const QString& pifRef : this->m_lockedPifRefs)
+    {
+        QSharedPointer<PIF> pif = cache->ResolveObject<PIF>(pifRef);
+        if (pif && pif->IsValid())
+            pif->Unlock();
+    }
+
+    for (const QString& bondRef : this->m_lockedBondRefs)
+    {
+        QSharedPointer<Bond> bond = cache->ResolveObject<Bond>(bondRef);
+        if (bond && bond->IsValid())
+            bond->Unlock();
+    }
+
+    if (!this->m_lockedNetworkRef.isEmpty())
+    {
+        QSharedPointer<Network> network = cache->ResolveObject<Network>(this->m_lockedNetworkRef);
+        if (network && network->IsValid())
+            network->Unlock();
+    }
+
+    this->m_lockedPifRefs.clear();
+    this->m_lockedBondRefs.clear();
+    this->m_lockedNetworkRef.clear();
 }

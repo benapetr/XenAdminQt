@@ -46,7 +46,9 @@ namespace XenAPI
         }
 
         QVariantList params;
-        params << session->GetSessionID() << network << memberRefs << mac << mode << properties;
+        params << session->GetSessionID() << network;
+        params << QVariant(memberRefs);
+        params << mac << mode << properties;
 
         XenRpcAPI api(session);
         QByteArray request = api.BuildJsonRpcCall("Async.Bond.create", params);

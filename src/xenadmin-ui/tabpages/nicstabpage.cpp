@@ -28,6 +28,7 @@
 #include <QTableWidgetItem>
 #include <QMessageBox>
 #include <QDebug>
+#include "mainwindow.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/host.h"
@@ -41,6 +42,7 @@
 #include "nicstabpage.h"
 #include "ui_nicstabpage.h"
 #include "operations/operationmanager.h"
+#include "commands/host/rescanpifscommand.h"
 #include "../dialogs/bondpropertiesdialog.h"
 
 NICsTabPage::NICsTabPage(QWidget* parent) : BaseTabPage(parent), ui(new Ui::NICsTabPage)
@@ -268,7 +270,13 @@ void NICsTabPage::updateButtonStates()
         return;
     }
 
-    QStringList bondRefs = pif->BondMasterOfRefs();
+    if (!pif->IsBondMaster())
+    {
+        this->ui->deleteBondButton->setEnabled(false);
+        return;
+    }
+
+    const QStringList bondRefs = pif->BondMasterOfRefs();
     if (bondRefs.isEmpty())
     {
         this->ui->deleteBondButton->setEnabled(false);
@@ -355,18 +363,18 @@ void NICsTabPage::onCreateBondClicked()
 
         OperationManager::instance()->RegisterOperation(action);
 
-        connect(action, &AsyncOperation::completed, [this, bondMode, action]()
+        connect(action, &AsyncOperation::completed, this, [this, bondMode, action]()
         {
             this->refreshContent();
             QMessageBox::information(this, "Bond Created", QString("Bond created successfully with mode: %1").arg(bondMode));
             action->deleteLater();
-        });
+        }, Qt::QueuedConnection);
 
-        connect(action, &AsyncOperation::failed, [this, action](const QString& error)
+        connect(action, &AsyncOperation::failed, this, [this, action](const QString& error)
         {
             QMessageBox::critical(this, "Error", QString("Failed to create bond: %1").arg(error));
             action->deleteLater();
-        });
+        }, Qt::QueuedConnection);
 
         action->RunAsync();
     }
@@ -395,12 +403,20 @@ void NICsTabPage::onDeleteBondClicked()
     if (!pif || !pif->IsValid())
         return;
 
-    QStringList bondRefs = pif->BondMasterOfRefs();
-    if (bondRefs.isEmpty())
+    if (!pif->IsBondMaster())
     {
-        QMessageBox::information(this, "Delete Bond", "Selected interface is not a bonded interface.");
+        QMessageBox::information(this, "Delete Bond", "Please select a bonded interface to delete.");
         return;
     }
+
+    const QStringList bondRefs = pif->BondMasterOfRefs();
+    if (bondRefs.isEmpty())
+    {
+        QMessageBox::information(this, "Delete Bond", "No bond found for the selected interface.");
+        return;
+    }
+
+    const QString bondRef = bondRefs.first();
 
     // Confirm deletion
     QString device = pif->GetDevice();
@@ -418,32 +434,41 @@ void NICsTabPage::onDeleteBondClicked()
             return;
         }
 
-        DestroyBondAction* action = new DestroyBondAction(connection, bondRefs.first(), this);
-        OperationManager::instance()->RegisterOperation(action);
-
-        connect(action, &AsyncOperation::completed, [this, action]()
+        try
         {
-            this->refreshContent();
-            QMessageBox::information(this, "Bond Deleted", "Bond deleted successfully.");
-            action->deleteLater();
-        });
+            DestroyBondAction* action = new DestroyBondAction(connection, bondRef, this);
+            OperationManager::instance()->RegisterOperation(action);
 
-        connect(action, &AsyncOperation::failed, [this, action](const QString& error)
+            connect(action, &AsyncOperation::completed, this, [this, action]()
+            {
+                this->refreshContent();
+                action->deleteLater();
+            }, Qt::QueuedConnection);
+
+            connect(action, &AsyncOperation::failed, this, [this, action](const QString& error)
+            {
+                QMessageBox::critical(this, "Error", QString("Failed to delete bond: %1").arg(error));
+                action->deleteLater();
+            }, Qt::QueuedConnection);
+
+            action->RunAsync();
+        } catch (const std::exception& e)
         {
-            QMessageBox::critical(this, "Error", QString("Failed to delete bond: %1").arg(error));
-            action->deleteLater();
-        });
-
-        action->RunAsync();
+            QMessageBox::critical(this, "Error", QString("Failed to delete bond: %1").arg(e.what()));
+        } catch (...)
+        {
+            QMessageBox::critical(this, "Error", "Failed to delete bond.");
+        }
     }
 }
 
 void NICsTabPage::onRescanClicked()
 {
-    // Refresh the PIF data
-    if (this->m_connection)
-    {
-        this->refreshContent();
-        QMessageBox::information(this, "Rescan", "Network interfaces rescanned.");
-    }
+    QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->m_object);
+    if (!host || !host->IsValid())
+        return;
+
+    RescanPIFsCommand cmd(MainWindow::instance(), this);
+    if (cmd.CanRun())
+        cmd.Run();
 }
