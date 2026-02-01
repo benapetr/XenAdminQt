@@ -49,6 +49,7 @@ class SettingsManager : public QObject
 
     public:
         static SettingsManager& instance();
+        static void SetConfigDir(const QString& path);
 
         void Load();
         void Save();
@@ -205,6 +206,7 @@ class SettingsManager : public QObject
         SettingsManager(const SettingsManager&) = delete;
         SettingsManager& operator=(const SettingsManager&) = delete;
 
+        static QString s_configDir;
         QSettings* m_settings;
         QByteArray m_mainKey;
 

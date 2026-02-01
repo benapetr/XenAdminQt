@@ -36,6 +36,8 @@
 #include <QDir>
 #include <QStandardPaths>
 
+QString SettingsManager::s_configDir;
+
 SettingsManager::SettingsManager(QObject* parent) : QObject(parent), m_settings(nullptr)
 {
     // Set application details for QSettings
@@ -44,7 +46,17 @@ SettingsManager::SettingsManager(QObject* parent) : QObject(parent), m_settings(
     QCoreApplication::setApplicationName(XENADMIN_BRANDING_APP_NAME);
 
     // Create settings object (uses platform-specific location)
-    this->m_settings = new QSettings(QSettings::IniFormat, QSettings::UserScope, XENADMIN_BRANDING_ORG_NAME, XENADMIN_BRANDING_APP_NAME, this);
+    if (!SettingsManager::s_configDir.isEmpty())
+    {
+        QDir configDir(SettingsManager::s_configDir);
+        if (!configDir.exists())
+            configDir.mkpath(".");
+        this->m_settings = new QSettings(configDir.filePath("XenAdminQt.ini"), QSettings::IniFormat, this);
+    }
+    else
+    {
+        this->m_settings = new QSettings(QSettings::IniFormat, QSettings::UserScope, XENADMIN_BRANDING_ORG_NAME, XENADMIN_BRANDING_APP_NAME, this);
+    }
 
     qDebug() << "Settings file location:" << this->m_settings->fileName();
 
@@ -64,6 +76,11 @@ SettingsManager& SettingsManager::instance()
 {
     static SettingsManager instance;
     return instance;
+}
+
+void SettingsManager::SetConfigDir(const QString& path)
+{
+    SettingsManager::s_configDir = path;
 }
 
 void SettingsManager::Load()

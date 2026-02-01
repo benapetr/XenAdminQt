@@ -26,20 +26,51 @@
  */
 
 #include <QApplication>
-#include <QDir>
-#include <QStandardPaths>
+#include <QCommandLineParser>
+#include <QCoreApplication>
+#include <QTextStream>
 #include <QTimer>
 #include "globals.h"
 #include "mainwindow.h"
+#include "settingsmanager.h"
 
 int main(int argc, char* argv[])
 {
+    {
+        QCoreApplication coreApp(argc, argv);
+        QCoreApplication::setApplicationName(XENADMIN_BRANDING_APP_NAME);
+        QCoreApplication::setApplicationVersion(XENADMIN_VERSION);
+        QCoreApplication::setOrganizationName(XENADMIN_BRANDING_ORG_NAME);
+
+        QCommandLineParser parser;
+        parser.setApplicationDescription("XenAdmin Qt");
+
+        QCommandLineOption confOption(QStringList() << "c" << "conf", "Use alternative configuration directory path.", "path");
+        QCommandLineOption versionOption(QStringList() << "V" << "version", "Print version and exit.");
+        parser.addOption(confOption);
+        parser.addOption(versionOption);
+        parser.addHelpOption();
+
+        parser.process(coreApp);
+
+        if (parser.isSet(versionOption))
+        {
+            QTextStream(stdout) << coreApp.applicationName() << " " << coreApp.applicationVersion() << "\n";
+            return 0;
+        }
+
+        if (parser.isSet(confOption))
+        {
+            SettingsManager::SetConfigDir(parser.value(confOption));
+        }
+    }
+
     QApplication app(argc, argv);
 
     // Set application properties
-    app.setApplicationName("XenAdmin Qt");
+    app.setApplicationName(XENADMIN_BRANDING_APP_NAME);
     app.setApplicationVersion(XENADMIN_VERSION);
-    app.setOrganizationName("XenAdmin Qt Project");
+    app.setOrganizationName(XENADMIN_BRANDING_ORG_NAME);
 
     MainWindow w;
     w.show();
