@@ -275,15 +275,23 @@ QByteArray EncryptionUtils::DeriveKeyPBKDF2(const QByteArray& passwordBytes, con
     QByteArray key(keyLen, '\0');
 
 #ifdef Q_OS_WIN
-    NTSTATUS status = BCryptDeriveKeyPBKDF2(BCRYPT_SHA256_ALGORITHM,
-                                            reinterpret_cast<PUCHAR>(const_cast<char*>(passwordBytes.constData())),
-                                            static_cast<ULONG>(passwordBytes.size()),
-                                            reinterpret_cast<PUCHAR>(const_cast<char*>(saltBytes.constData())),
-                                            static_cast<ULONG>(saltBytes.size()),
-                                            static_cast<ULONG>(iterations),
-                                            reinterpret_cast<PUCHAR>(key.data()),
-                                            static_cast<ULONG>(key.size()),
-                                            0);
+    BCRYPT_ALG_HANDLE hAlg = nullptr;
+    NTSTATUS status = BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_SHA256_ALGORITHM, nullptr, 0);
+    if (!BCRYPT_SUCCESS(status))
+    {
+        return QByteArray();
+    }
+
+    status = BCryptDeriveKeyPBKDF2(hAlg,
+                                   reinterpret_cast<PUCHAR>(const_cast<char*>(passwordBytes.constData())),
+                                   static_cast<ULONG>(passwordBytes.size()),
+                                   reinterpret_cast<PUCHAR>(const_cast<char*>(saltBytes.constData())),
+                                   static_cast<ULONG>(saltBytes.size()),
+                                   static_cast<ULONG>(iterations),
+                                   reinterpret_cast<PUCHAR>(key.data()),
+                                   static_cast<ULONG>(key.size()),
+                                   0);
+    BCryptCloseAlgorithmProvider(hAlg, 0);
     if (!BCRYPT_SUCCESS(status))
     {
         return QByteArray();
