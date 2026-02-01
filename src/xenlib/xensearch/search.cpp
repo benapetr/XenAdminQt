@@ -36,6 +36,10 @@
 #include "../network/comparableaddress.h"
 #include "../utils/misc.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/vm.h"
+#include "xenlib/xen/xenobject.h"
 #include <QDebug>
 #include <QMetaType>
 
@@ -256,12 +260,6 @@ Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& obje
         QString objRef = objectRefs.first();
         QString objType = objectTypes.isEmpty() ? QString() : objectTypes.first();
 
-        QVariantMap objectData;
-        if (!objType.isEmpty() && conn)
-        {
-            objectData = conn->GetCache()->ResolveObjectData(objType, objRef);
-        }
-
         if (objType == "host")
         {
             Grouping* hostGrouping = new HostGrouping(nullptr);
@@ -269,7 +267,14 @@ Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& obje
             QueryFilter* hostQuery = uuidQuery; // TODO: Implement RecursiveXMOListPropertyQuery
 
             Query* query = new Query(scope, hostQuery);
-            QString name = QString("Host: %1").arg(objectData.value("name_label").toString());
+            QString nameLabel;
+            if (conn && conn->GetCache())
+            {
+                QSharedPointer<Host> host = conn->GetCache()->ResolveObject<Host>(objRef);
+                if (host && host->IsValid())
+                    nameLabel = host->GetName();
+            }
+            QString name = QString("Host: %1").arg(nameLabel);
             return new Search(query, hostGrouping, name, "", false);
         } else if (objType == "pool")
         {
@@ -280,7 +285,14 @@ Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& obje
             QueryFilter* poolQuery = uuidQuery; // TODO: Implement RecursiveXMOPropertyQuery
 
             Query* query = new Query(scope, poolQuery);
-            QString name = QString("Pool: %1").arg(objectData.value("name_label").toString());
+            QString nameLabel;
+            if (conn && conn->GetCache())
+            {
+                QSharedPointer<Pool> pool = conn->GetCache()->GetPool();
+                if (pool && pool->IsValid())
+                    nameLabel = pool->GetName();
+            }
+            QString name = QString("Pool: %1").arg(nameLabel);
             return new Search(query, poolGrouping, name, "", false);
         } else
         {
@@ -420,7 +432,7 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
         if (!connection)
             continue;
 
-        QList<QPair<QString, QString>> matchedObjects;
+        QList<QPair<XenObjectType, QString>> matchedObjects;
         XenCache* cache = connection->GetCache();
         const QString hostname = connection->GetHostname();
         const QString hostRef = (hostname.isEmpty() || connection->GetPort() == 443)
@@ -462,7 +474,7 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
                 cache->Update(XenObjectType::Host, hostRef, record);
 
             if (!this->m_query || this->m_query->match(record, "host", connection))
-                matchedObjects.append(qMakePair(QString("host"), hostRef));
+                matchedObjects.append(qMakePair(XenObjectType::Host, hostRef));
         }
 
         if (matchedObjects.isEmpty())
@@ -477,11 +489,12 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
             {
                 for (const auto& objPair : matchedObjects)
                 {
-                    QString objType = objPair.first;
+                    XenObjectType objType = objPair.first;
                     QString objRef = objPair.second;
-                    QVariantMap objectData = connection->GetCache()->ResolveObjectData(objType, objRef);
+                    const QString objTypeName = XenObject::TypeToString(objType);
+                    QVariantMap objectData = connection->GetCache()->ResolveObjectData(objTypeName, objRef);
 
-                    IAcceptGroups* child = adapter->Add(nullptr, objRef, objType, objectData, 0, connection);
+                    IAcceptGroups* child = adapter->Add(nullptr, objRef, objTypeName, objectData, 0, connection);
                     if (child)
                     {
                         child->FinishedInThisGroup(false);
@@ -504,10 +517,10 @@ bool Search::PopulateAdapters(XenConnection* conn, const QList<IAcceptGroups*>& 
     return addedAny;
 }
 
-QList<QPair<QString, QString>> Search::getMatchedObjects(XenConnection* connection) const
+QList<QPair<XenObjectType, QString>> Search::getMatchedObjects(XenConnection* connection) const
 {
     // Get all objects from cache that match the query scope and filter
-    QList<QPair<QString, QString>> matchedObjects;
+    QList<QPair<XenObjectType, QString>> matchedObjects;
 
     //if (!connection || !connection->GetCache())
     //    return matchedObjects;
@@ -517,41 +530,63 @@ QList<QPair<QString, QString>> Search::getMatchedObjects(XenConnection* connecti
     ObjectTypes types = scope->GetObjectTypes();
 
     // Get all objects from cache
-    QList<QPair<QString, QString>> allCached = connection->GetCache()->GetXenSearchableObjects();
+    QList<QPair<XenObjectType, QString>> allCached = connection->GetCache()->GetXenSearchableObjects();
 
     for (const auto& pair : allCached)
     {
-        QString objType = pair.first;
+        XenObjectType objType = pair.first;
         QString objRef = pair.second;
 
         // Check if object type is in scope
         bool typeMatches = false;
-        if (objType == "pool" && (types & ObjectTypes::Pool) != ObjectTypes::None)
+        if (objType == XenObjectType::Pool && (types & ObjectTypes::Pool) != ObjectTypes::None)
         {
             typeMatches = true;
-        } else if (objType == "host" && (types & ObjectTypes::Server) != ObjectTypes::None)
+        } else if (objType == XenObjectType::Host && (types & ObjectTypes::Server) != ObjectTypes::None)
         {
             typeMatches = true;
-        } else if (objType == "vm")
+        } else if (objType == XenObjectType::VM)
         {
-            QVariantMap vmData = connection->GetCache()->ResolveObjectData(objType, objRef);
-            bool isTemplate = vmData.value("is_a_template").toBool();
-            bool isSnapshot = vmData.value("is_a_snapshot").toBool();
-            bool isControlDomain = vmData.value("is_control_domain").toBool();
-
-            if (isControlDomain)
+            QSharedPointer<VM> vm = connection->GetCache()->ResolveObject<VM>(objRef);
+            if (!vm || !vm->IsValid())
                 continue;
+
+            if (vm->IsControlDomain())
+                continue;
+
+            bool isTemplate = vm->IsTemplate();
+            bool isSnapshot = vm->IsSnapshot();
+            bool isDefaultTemplate = vm->DefaultTemplate();
 
             if (!isTemplate && !isSnapshot && (types & ObjectTypes::VM) != ObjectTypes::None)
                 typeMatches = true;
-            else if (isTemplate && (types & ObjectTypes::UserTemplate) != ObjectTypes::None)
-                typeMatches = true;
+            else if (isTemplate)
+            {
+                if (isDefaultTemplate && (types & ObjectTypes::DefaultTemplate) != ObjectTypes::None)
+                    typeMatches = true;
+                else if (!isDefaultTemplate && (types & ObjectTypes::UserTemplate) != ObjectTypes::None)
+                    typeMatches = true;
+            }
             else if (isSnapshot && (types & ObjectTypes::Snapshot) != ObjectTypes::None)
+            {
                 typeMatches = true;
-        } else if (objType == "sr" && ((types & ObjectTypes::RemoteSR) != ObjectTypes::None || (types & ObjectTypes::LocalSR) != ObjectTypes::None))
+            }
+        } else if (objType == XenObjectType::SR)
         {
-            typeMatches = true;
-        } else if (objType == "network" && (types & ObjectTypes::Network) != ObjectTypes::None)
+            if ((types & ObjectTypes::RemoteSR) != ObjectTypes::None || (types & ObjectTypes::LocalSR) != ObjectTypes::None)
+            {
+                QSharedPointer<SR> sr = connection->GetCache()->ResolveObject<SR>(objRef);
+                if (!sr || !sr->IsValid())
+                    continue;
+
+                const QString srType = sr->GetType();
+                const bool isLocal = !sr->IsShared() || srType == "lvm" || srType == "udev" || srType == "iso";
+                if (isLocal && (types & ObjectTypes::LocalSR) != ObjectTypes::None)
+                    typeMatches = true;
+                else if (!isLocal && (types & ObjectTypes::RemoteSR) != ObjectTypes::None)
+                    typeMatches = true;
+            }
+        } else if (objType == XenObjectType::Network && (types & ObjectTypes::Network) != ObjectTypes::None)
         {
             typeMatches = true;
         }
@@ -562,8 +597,9 @@ QList<QPair<QString, QString>> Search::getMatchedObjects(XenConnection* connecti
         // Apply query filter
         if (filter)
         {
-            QVariantMap objectData = connection->GetCache()->ResolveObjectData(objType, objRef);
-            QVariant matchResult = filter->Match(objectData, objType, connection);
+            const QString objTypeName = XenObject::TypeToString(objType);
+            QVariantMap objectData = connection->GetCache()->ResolveObjectData(objTypeName, objRef);
+            QVariant matchResult = filter->Match(objectData, objTypeName, connection);
             if (!matchResult.toBool())
                 continue;
         }
@@ -575,7 +611,7 @@ QList<QPair<QString, QString>> Search::getMatchedObjects(XenConnection* connecti
 }
 
 bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping, 
-                                    const QList<QPair<QString, QString>>& objects,
+                                    const QList<QPair<XenObjectType, QString>>& objects,
                                     int indent, XenConnection* conn)
 {
     // Group objects by the grouping algorithm
@@ -585,18 +621,19 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
         return false;
 
     // Organize objects by group value (use string keys for QHash)
-    QHash<QString, QList<QPair<QString, QString>>> groupedObjects;
+    QHash<QString, QList<QPair<XenObjectType, QString>>> groupedObjects;
     QHash<QString, QVariant> groupValueLookup; // Map string key back to original group value
-    QList<QPair<QString, QString>> ungroupedObjects;
+    QList<QPair<XenObjectType, QString>> ungroupedObjects;
 
     for (const auto& objPair : objects)
     {
-        QString objType = objPair.first;
+        XenObjectType objType = objPair.first;
         QString objRef = objPair.second;
-        QVariantMap objectData = conn->GetCache()->ResolveObjectData(objType, objRef);
+        const QString objTypeName = XenObject::TypeToString(objType);
+        QVariantMap objectData = conn->GetCache()->ResolveObjectData(objTypeName, objRef);
 
         // Get group value for this object
-        QVariant groupValue = grouping->getGroup(objectData, objType);
+        QVariant groupValue = grouping->getGroup(objectData, objTypeName);
 
         if (!groupValue.isValid())
         {
@@ -655,11 +692,11 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
     //         << "groups=" << groupedObjects.size()
     //         << "ungrouped=" << ungroupedObjects.size();
 
-    QString groupObjectType;
+    XenObjectType groupObjectType = XenObjectType::Null;
     if (dynamic_cast<PoolGrouping*>(grouping))
-        groupObjectType = "pool";
+        groupObjectType = XenObjectType::Pool;
     else if (dynamic_cast<HostGrouping*>(grouping))
-        groupObjectType = "host";
+        groupObjectType = XenObjectType::Host;
 
     auto groupSortKey = [&](const QString& key) -> int {
         if (dynamic_cast<TypeGrouping*>(grouping))
@@ -697,12 +734,12 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
         const QVariant valueA = groupValueLookup.value(a);
         const QVariant valueB = groupValueLookup.value(b);
 
-        if (!groupObjectType.isEmpty())
+        if (groupObjectType != XenObjectType::Null)
         {
-            QVariantMap dataA = conn->GetCache()->ResolveObjectData(groupObjectType, valueA.toString());
-            QVariantMap dataB = conn->GetCache()->ResolveObjectData(groupObjectType, valueB.toString());
-            QString nameA = dataA.value("name_label").toString();
-            QString nameB = dataB.value("name_label").toString();
+            QSharedPointer<XenObject> objA = conn->GetCache()->ResolveObject(groupObjectType, valueA.toString());
+            QSharedPointer<XenObject> objB = conn->GetCache()->ResolveObject(groupObjectType, valueB.toString());
+            QString nameA = objA ? objA->GetName() : QString();
+            QString nameB = objB ? objB->GetName() : QString();
 
             if (!nameA.isEmpty() || !nameB.isEmpty())
             {
@@ -720,17 +757,18 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
     for (const QString& groupKey : groupKeys)
     {
         QVariant groupValue = groupValueLookup.value(groupKey); // Retrieve original group value
-        QList<QPair<QString, QString>> groupObjects = groupedObjects.value(groupKey);
+        QList<QPair<XenObjectType, QString>> groupObjects = groupedObjects.value(groupKey);
 
         IAcceptGroups* childAdapter = nullptr;
-        if (!groupObjectType.isEmpty())
+        if (groupObjectType != XenObjectType::Null)
         {
-            QVariantMap groupObjectData = conn->GetCache()->ResolveObjectData(groupObjectType, groupValue.toString());
-            if (!groupObjectData.isEmpty() && grouping->belongsAsGroupNotMember(groupObjectData, groupObjectType))
+            const QString groupObjectTypeName = XenObject::TypeToString(groupObjectType);
+            QVariantMap groupObjectData = conn->GetCache()->ResolveObjectData(groupObjectTypeName, groupValue.toString());
+            if (!groupObjectData.isEmpty() && grouping->belongsAsGroupNotMember(groupObjectData, groupObjectTypeName))
             {
-                childAdapter = adapter->Add(grouping, groupValue, groupObjectType, groupObjectData, indent, conn);
+                childAdapter = adapter->Add(grouping, groupValue, groupObjectTypeName, groupObjectData, indent, conn);
                 groupObjects.erase(std::remove_if(groupObjects.begin(), groupObjects.end(),
-                    [&](const QPair<QString, QString>& objPair) {
+                    [&](const QPair<XenObjectType, QString>& objPair) {
                         return objPair.first == groupObjectType && objPair.second == groupValue.toString();
                     }), groupObjects.end());
             }
@@ -758,12 +796,12 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
         else
         {
             // Leaf level - add objects directly
-            std::sort(groupObjects.begin(), groupObjects.end(), [&](const QPair<QString, QString>& a,
-                                                                   const QPair<QString, QString>& b) {
-                QVariantMap dataA = conn->GetCache()->ResolveObjectData(a.first, a.second);
-                QVariantMap dataB = conn->GetCache()->ResolveObjectData(b.first, b.second);
-                QString nameA = dataA.value("name_label").toString();
-                QString nameB = dataB.value("name_label").toString();
+            std::sort(groupObjects.begin(), groupObjects.end(), [&](const QPair<XenObjectType, QString>& a,
+                                                                   const QPair<XenObjectType, QString>& b) {
+                QSharedPointer<XenObject> objA = conn->GetCache()->ResolveObject(a.first, a.second);
+                QSharedPointer<XenObject> objB = conn->GetCache()->ResolveObject(b.first, b.second);
+                QString nameA = objA ? objA->GetName() : QString();
+                QString nameB = objB ? objB->GetName() : QString();
 
                 if (!nameA.isEmpty() || !nameB.isEmpty())
                 {
@@ -779,11 +817,12 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
 
             for (const auto& objPair : groupObjects)
             {
-                QString objType = objPair.first;
+                XenObjectType objType = objPair.first;
                 QString objRef = objPair.second;
-                QVariantMap objectData = conn->GetCache()->ResolveObjectData(objType, objRef);
+                const QString objTypeName = XenObject::TypeToString(objType);
+                QVariantMap objectData = conn->GetCache()->ResolveObjectData(objTypeName, objRef);
 
-                IAcceptGroups* objAdapter = childAdapter->Add(nullptr, objRef, objType, objectData, indent + 1, conn);
+                IAcceptGroups* objAdapter = childAdapter->Add(nullptr, objRef, objTypeName, objectData, indent + 1, conn);
                 if (objAdapter)
                     objAdapter->FinishedInThisGroup(false);
             }
@@ -805,11 +844,12 @@ bool Search::populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping,
         {
             for (const auto& objPair : ungroupedObjects)
             {
-                QString objType = objPair.first;
+                XenObjectType objType = objPair.first;
                 QString objRef = objPair.second;
-                QVariantMap objectData = conn->GetCache()->ResolveObjectData(objType, objRef);
+                const QString objTypeName = XenObject::TypeToString(objType);
+                QVariantMap objectData = conn->GetCache()->ResolveObjectData(objTypeName, objRef);
 
-                IAcceptGroups* objAdapter = adapter->Add(nullptr, objRef, objType, objectData, indent, conn);
+                IAcceptGroups* objAdapter = adapter->Add(nullptr, objRef, objTypeName, objectData, indent, conn);
                 if (objAdapter)
                     objAdapter->FinishedInThisGroup(false);
             }

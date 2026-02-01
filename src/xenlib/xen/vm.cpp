@@ -106,11 +106,6 @@ bool VM::IsLocked() const
     return this->boolProperty("locked", false);
 }
 
-bool VM::IsDefaultTemplate() const
-{
-    return this->DefaultTemplate();
-}
-
 bool VM::DefaultTemplate() const
 {
     const QVariantMap otherConfig = this->GetOtherConfig();

@@ -49,8 +49,6 @@ QString PIF::GetName() const
         return XenObject::GetName();
 
     XenCache* cache = this->GetCache();
-    if (!cache)
-        return pifData.value("device", "").toString();
 
     // Tunnel access PIFs: show the transport PIF's NIC name.
     QVariantList tunnelAccessPifOf = pifData.value("tunnel_access_PIF_of", QVariantList()).toList();
@@ -213,13 +211,10 @@ QString PIF::DNS() const
 
 QString PIF::GetLinkStatusString() const
 {
-    XenConnection* connection = this->GetConnection();
-    if (!connection)
+    if (!this->IsConnected())
         return "Unknown";
 
-    XenCache* cache = connection->GetCache();
-    if (!cache)
-        return "Unknown";
+    XenCache* cache = this->GetCache();
 
     QStringList tunnelAccessRefs = this->TunnelAccessPIFOfRefs();
     if (!tunnelAccessRefs.isEmpty())

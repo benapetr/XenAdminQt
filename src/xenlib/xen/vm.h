@@ -82,9 +82,6 @@ class XENLIB_EXPORT VM : public XenObject
 
         bool IsLocked() const override;
 
-        //! Check if this is a default template
-        bool IsDefaultTemplate() const;
-
         //! Check if this is a default template (C# DefaultTemplate)
         bool DefaultTemplate() const;
 

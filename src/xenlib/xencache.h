@@ -112,8 +112,7 @@ class XenCache : public QObject
         template <typename T>
         QSharedPointer<T> ResolveObject(const QString& ref)
         {
-            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null,
-                          "XenObjectTraits<T> specialization is missing");
+            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null, "XenObjectTraits<T> specialization is missing");
             return this->ResolveObject<T>(XenObjectTraits<T>::kType, ref);
         }
 
@@ -137,8 +136,7 @@ class XenCache : public QObject
         template <typename T>
         bool Contains(const QString& ref) const
         {
-            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null,
-                          "XenObjectTraits<T> specialization is missing");
+            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null, "XenObjectTraits<T> specialization is missing");
             return this->Contains(XenObjectTraits<T>::kType, ref);
         }
 
@@ -153,8 +151,7 @@ class XenCache : public QObject
         template <typename T>
         QList<QVariantMap> GetAllData() const
         {
-            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null,
-                          "XenObjectTraits<T> specialization is missing");
+            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null, "XenObjectTraits<T> specialization is missing");
             return this->GetAllData(XenObjectTraits<T>::kType);
         }
 
@@ -189,8 +186,7 @@ class XenCache : public QObject
         template <typename T>
         QList<QSharedPointer<T>> GetAll()
         {
-            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null,
-                          "XenObjectTraits<T> specialization is missing");
+            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null, "XenObjectTraits<T> specialization is missing");
             return this->GetAll<T>(XenObjectTraits<T>::kType);
         }
 
@@ -219,8 +215,7 @@ class XenCache : public QObject
         template <typename T>
         QStringList GetAllRefs() const
         {
-            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null,
-                          "XenObjectTraits<T> specialization is missing");
+            static_assert(XenObjectTraits<T>::kType != XenObjectType::Null, "XenObjectTraits<T> specialization is missing");
             return this->GetAllRefs(XenObjectTraits<T>::kType);
         }
 
@@ -232,7 +227,7 @@ class XenCache : public QObject
          * all cached objects so they can be filtered by Query.Match().
          * Used by SearchTabPage to iterate all objects and let Query do filtering.
          */
-        QList<QPair<QString, QString>> GetXenSearchableObjects() const;
+        QList<QPair<XenObjectType, QString>> GetXenSearchableObjects() const;
 
         /**
          * @brief Get the pool reference for this connection
@@ -248,12 +243,6 @@ class XenCache : public QObject
          * @return Pool object, or null if no pool cached
          */
         QSharedPointer<Pool> GetPool();
-
-        /**
-         * @brief Get all cached objects as shared pointers
-         * @return List of cached XenObject instances
-         */
-        QList<QSharedPointer<XenObject>> GetAllObjects();
 
         /**
          * @brief Update or add object to cache

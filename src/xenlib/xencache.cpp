@@ -392,11 +392,11 @@ QStringList XenCache::GetAllRefs(XenObjectType type) const
 // CRITICAL: Only returns object types that should appear in searches/trees.
 // Does NOT return internal objects like: console, host_cpu, host_metrics,
 // message, pbd, pif, vbd, vif, bond, vgpu, etc.
-QList<QPair<QString, QString>> XenCache::GetXenSearchableObjects() const
+QList<QPair<XenObjectType, QString>> XenCache::GetXenSearchableObjects() const
 {
     QMutexLocker locker(&this->m_mutex);
 
-    QList<QPair<QString, QString>> allObjects;
+    QList<QPair<XenObjectType, QString>> allObjects;
 
     // C# XenSearchableObjects returns (in order):
     // 1. VMs (includes templates and snapshots)
@@ -428,33 +428,16 @@ QList<QPair<QString, QString>> XenCache::GetXenSearchableObjects() const
             continue;
 
         const QMap<QString, QVariantMap>& objectsOfType = this->m_cache[type];
-        const QString typeName = this->typeToCacheString(type);
 
         // Iterate all objects of this type
         for (auto refIt = objectsOfType.constBegin(); refIt != objectsOfType.constEnd(); ++refIt)
         {
             const QString& ref = refIt.key();
-            allObjects.append(qMakePair(typeName, ref));
+            allObjects.append(qMakePair(type, ref));
         }
     }
 
     return allObjects;
-}
-
-QList<QSharedPointer<XenObject>> XenCache::GetAllObjects()
-{
-    QList<QPair<QString, QString>> refs = this->GetXenSearchableObjects();
-    QList<QSharedPointer<XenObject>> objects;
-    objects.reserve(refs.size());
-
-    for (const auto& entry : refs)
-    {
-        QSharedPointer<XenObject> obj = this->ResolveObject(entry.first, entry.second);
-        if (obj)
-            objects.append(obj);
-    }
-
-    return objects;
 }
 
 void XenCache::Update(XenObjectType type, const QString &ref, const QVariantMap &data)

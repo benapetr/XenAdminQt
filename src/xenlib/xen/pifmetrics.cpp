@@ -27,8 +27,7 @@
 
 #include "pifmetrics.h"
 
-PIFMetrics::PIFMetrics(XenConnection* connection, const QString& opaqueRef, QObject* parent)
-    : XenObject(connection, opaqueRef, parent)
+PIFMetrics::PIFMetrics(XenConnection* connection, const QString& opaqueRef, QObject* parent) : XenObject(connection, opaqueRef, parent)
 {
 }
 

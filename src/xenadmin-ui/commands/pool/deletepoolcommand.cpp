@@ -28,7 +28,6 @@
 #include "deletepoolcommand.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xencache.h"
 #include "xenlib/xen/actions/pool/destroypoolaction.h"
@@ -111,8 +110,7 @@ void DeletePoolCommand::Run()
     QMessageBox msgBox(this->mainWindow());
     msgBox.setWindowTitle("Delete Pool");
     msgBox.setText(QString("Are you sure you want to delete pool '%1'?").arg(poolName));
-    msgBox.setInformativeText("This will convert the pool back to a standalone server. "
-                              "The server configuration will remain unchanged.");
+    msgBox.setInformativeText("This will convert the pool back to a standalone server. The server configuration will remain unchanged.");
     msgBox.setIcon(QMessageBox::Question);
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgBox.setDefaultButton(QMessageBox::No);
@@ -131,7 +129,8 @@ void DeletePoolCommand::Run()
     OperationManager::instance()->RegisterOperation(action);
 
     // Connect completion signal for cleanup and status update
-    connect(action, &AsyncOperation::completed, [poolName, action]() {
+    connect(action, &AsyncOperation::completed, [poolName, action]()
+    {
         if (action->GetState() == AsyncOperation::Completed && !action->IsFailed())
         {
             MainWindow::instance()->ShowStatusMessage(QString("Successfully deleted pool '%1'").arg(poolName), 5000);
@@ -154,19 +153,9 @@ QString DeletePoolCommand::MenuText() const
 
 bool DeletePoolCommand::hasMultipleHosts(QSharedPointer<Pool> pool) const
 {
-    if (!pool || !pool->GetConnection())
+    if (!pool)
         return false;
 
-    XenCache* cache = pool->GetConnection()->GetCache();
-
-    // Get all hosts
-    QList<QPair<QString, QString>> allObjects = cache->GetXenSearchableObjects();
-    int hostCount = 0;
-    for (const auto& obj : allObjects)
-    {
-        if (obj.first == "host")
-            hostCount++;
-    }
-
-    return hostCount > 1;
+    QStringList hosts = pool->GetHostRefs();;
+    return hosts.count() > 1;
 }

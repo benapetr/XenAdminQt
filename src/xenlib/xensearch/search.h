@@ -35,6 +35,7 @@
 #include "sort.h"
 #include "queryscope.h"
 #include "iacceptgroups.h"
+#include "xen/xenobjecttype.h"
 #include <QString>
 #include <QList>
 #include <QPair>
@@ -380,7 +381,7 @@ class Search
          * @param connection XenConnection instance to query cache
          * @return List of (type, ref) pairs for matched objects
          */
-        QList<QPair<QString, QString>> getMatchedObjects(XenConnection *connection) const;
+        QList<QPair<XenObjectType, QString>> getMatchedObjects(XenConnection *connection) const;
 
         /**
          * @brief Recursively populate grouped objects into adapter
@@ -391,7 +392,7 @@ class Search
          * @param conn XenConnection instance for resolving data
          * @return true if any objects were added
          */
-        bool populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping, const QList<QPair<QString, QString>>& objects, int indent, XenConnection *conn);
+        bool populateGroupedObjects(IAcceptGroups* adapter, Grouping* grouping, const QList<QPair<XenObjectType, QString>>& objects, int indent, XenConnection *conn);
 
         Query* m_query;              // The query (what to match)
         Grouping* m_grouping;        // The grouping (how to organize)
