@@ -205,12 +205,8 @@ QList<QSharedPointer<XenObject>> Command::getSelectedObjects() const
     return {};
 }
 
-void Command::RunMultipleActions(const QList<AsyncOperation*>& actions,
-                                 const QString& title,
-                                 const QString& startDescription,
-                                 const QString& endDescription,
-                                 bool runActionsInParallel)
+void Command::RunMultipleActions(const QList<AsyncOperation*>& actions, const QString& title, const QString& startDescription, const QString& endDescription, bool runActionsInParallel)
 {
-    MultipleActionLauncher launcher(actions, title, startDescription, endDescription, runActionsInParallel, this);
+    MultipleActionLauncher launcher(actions, title, startDescription, endDescription, runActionsInParallel, nullptr);
     launcher.Run();
 }

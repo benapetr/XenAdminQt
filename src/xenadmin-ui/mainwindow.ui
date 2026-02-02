@@ -132,25 +132,39 @@
     <addaction name="separator"/>
     <addaction name="ServerPropertiesToolStripMenuItem"/>
    </widget>
-   <widget class="QMenu" name="menuVM">
-    <property name="title">
-     <string>&amp;VM</string>
-    </property>
-    <addaction name="newVmAction"/>
-    <addaction name="startShutdownToolStripMenuItem"/>
-    <addaction name="separator"/>
-    <addaction name="copyVMtoSharedStorageMenuItem"/>
-    <addaction name="MoveVMToolStripMenuItem"/>
-    <addaction name="snapshotToolStripMenuItem"/>
-    <addaction name="convertToTemplateToolStripMenuItem"/>
-    <addaction name="exportToolStripMenuItem"/>
-    <addaction name="separator"/>
-    <addaction name="installToolsToolStripMenuItem"/>
-    <addaction name="separator"/>
-    <addaction name="uninstallToolStripMenuItem"/>
-    <addaction name="separator"/>
-    <addaction name="VMPropertiesToolStripMenuItem"/>
-   </widget>
+  <widget class="QMenu" name="menuVM">
+   <property name="title">
+    <string>&amp;VM</string>
+   </property>
+   <addaction name="newVmAction"/>
+   <addaction name="startShutdownToolStripMenuItem"/>
+   <addaction name="resumeOnToolStripMenuItem"/>
+   <addaction name="relocateToolStripMenuItem"/>
+   <addaction name="startOnHostToolStripMenuItem"/>
+   <addaction name="separator"/>
+   <addaction name="assignSnapshotScheduleToolStripMenuItem"/>
+   <addaction name="assignToVappToolStripMenuItem"/>
+   <addaction name="separator"/>
+   <addaction name="copyVMtoSharedStorageMenuItem"/>
+   <addaction name="MoveVMToolStripMenuItem"/>
+   <addaction name="snapshotToolStripMenuItem"/>
+   <addaction name="convertToTemplateToolStripMenuItem"/>
+   <addaction name="exportToolStripMenuItem"/>
+   <addaction name="separator"/>
+   <addaction name="vtpmManagerToolStripMenuItem"/>
+   <addaction name="disableCbtToolStripMenuItem"/>
+   <addaction name="enablePvsReadCachingToolStripMenuItem"/>
+   <addaction name="disablePvsReadCachingToolStripMenuItem"/>
+   <addaction name="separator"/>
+   <addaction name="installToolsToolStripMenuItem"/>
+   <addaction name="sendCtrlAltDelToolStripMenuItem"/>
+   <addaction name="separator"/>
+   <addaction name="uninstallToolStripMenuItem"/>
+   <addaction name="separator"/>
+   <addaction name="deleteVmToolStripMenuItem"/>
+   <addaction name="separator"/>
+   <addaction name="VMPropertiesToolStripMenuItem"/>
+  </widget>
    <widget class="QMenu" name="menuStorage">
     <property name="title">
      <string>&amp;Storage</string>
@@ -782,13 +796,98 @@
      <normaloff>:/icons/start_vm.png</normaloff>:/icons/start_vm.png</iconset>
    </property>
    <property name="text">
-    <string>S&amp;tart</string>
+    <string>&amp;Start/Shut down</string>
    </property>
    <property name="statusTip">
     <string>Start, shut down, resume, or pause VM</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+B</string>
+  </action>
+  <action name="resumeOnToolStripMenuItem">
+   <property name="text">
+    <string>Res&amp;ume on Server</string>
+   </property>
+   <property name="statusTip">
+    <string>Resume VM on a specific server</string>
+   </property>
+  </action>
+  <action name="relocateToolStripMenuItem">
+   <property name="text">
+    <string>M&amp;igrate to Server</string>
+   </property>
+   <property name="statusTip">
+    <string>Migrate VM to another server</string>
+   </property>
+  </action>
+  <action name="startOnHostToolStripMenuItem">
+   <property name="text">
+    <string>Start &amp;on Server</string>
+   </property>
+   <property name="statusTip">
+    <string>Start VM on a specific server</string>
+   </property>
+  </action>
+  <action name="assignSnapshotScheduleToolStripMenuItem">
+   <property name="text">
+    <string>Assign to Snaps&amp;hot Schedule...</string>
+   </property>
+   <property name="statusTip">
+    <string>Assign VM to a snapshot schedule</string>
+   </property>
+  </action>
+  <action name="assignToVappToolStripMenuItem">
+   <property name="text">
+    <string>Assign to &amp;vApp</string>
+   </property>
+   <property name="statusTip">
+    <string>Assign VM to a vApp</string>
+   </property>
+  </action>
+  <action name="vtpmManagerToolStripMenuItem">
+   <property name="text">
+    <string>Trusted Plat&amp;form Module Manager...</string>
+   </property>
+   <property name="statusTip">
+    <string>Configure virtual TPM for this VM</string>
+   </property>
+  </action>
+  <action name="disableCbtToolStripMenuItem">
+   <property name="text">
+    <string>D&amp;isable Changed Block Tracking</string>
+   </property>
+   <property name="statusTip">
+    <string>Disable Changed Block Tracking for this VM</string>
+   </property>
+  </action>
+  <action name="enablePvsReadCachingToolStripMenuItem">
+   <property name="text">
+    <string>Enable PVS-&amp;Accelerator...</string>
+   </property>
+   <property name="statusTip">
+    <string>Enable PVS-Accelerator for this VM</string>
+   </property>
+  </action>
+  <action name="disablePvsReadCachingToolStripMenuItem">
+   <property name="text">
+    <string>Disable PVS-Accelerator</string>
+   </property>
+   <property name="statusTip">
+    <string>Disable PVS-Accelerator for this VM</string>
+   </property>
+  </action>
+  <action name="sendCtrlAltDelToolStripMenuItem">
+   <property name="text">
+    <string>Send Ctrl+&amp;Alt+Del</string>
+   </property>
+   <property name="statusTip">
+    <string>Send Ctrl+Alt+Delete to the VM console</string>
+   </property>
+  </action>
+  <action name="deleteVmToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Delete...</string>
+   </property>
+   <property name="statusTip">
+    <string>Delete this VM</string>
    </property>
   </action>
   <action name="copyVMtoSharedStorageMenuItem">

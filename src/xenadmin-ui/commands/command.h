@@ -147,11 +147,7 @@ class Command : public QObject
         /**
          * @brief Run multiple actions similar to C# RunMultipleActions
          */
-        void RunMultipleActions(const QList<AsyncOperation*>& actions,
-                                const QString& title,
-                                const QString& startDescription,
-                                const QString& endDescription,
-                                bool runActionsInParallel);
+        void RunMultipleActions(const QList<AsyncOperation*>& actions, const QString& title, const QString& startDescription, const QString& endDescription, bool runActionsInParallel);
 
     private:
         MainWindow* m_mainWindow;

@@ -113,6 +113,10 @@
 #include "commands/vm/unpausevmcommand.h"
 #include "commands/vm/forceshutdownvmcommand.h"
 #include "commands/vm/forcerebootvmcommand.h"
+#include "commands/vm/disablechangedblocktrackingcommand.h"
+#include "commands/vm/vmrecoverymodecommand.h"
+#include "commands/vm/vappstartcommand.h"
+#include "commands/vm/vappshutdowncommand.h"
 #include "commands/vm/clonevmcommand.h"
 #include "commands/vm/vmlifecyclecommand.h"
 #include "commands/vm/copyvmcommand.h"
@@ -153,6 +157,7 @@
 #include "commands/network/newnetworkcommand.h"
 #include "commands/network/networkpropertiescommand.h"
 
+#include "controls/vmoperationmenu.h"
 #include "actions/meddlingactionmanager.h"
 #include <QApplication>
 #include <QMessageBox>
@@ -178,6 +183,26 @@
 #include <QDockWidget>
 #include <QCursor>
 #include "titlebar.h"
+
+namespace
+{
+    template <typename T>
+    QAction* addVmCommandAction(QMenu* menu, MainWindow* mainWindow)
+    {
+        T cmd(mainWindow);
+        QAction* action = menu->addAction(cmd.MenuText());
+        const QIcon icon = cmd.GetIcon();
+        if (!icon.isNull())
+            action->setIcon(icon);
+        action->setEnabled(cmd.CanRun());
+        QObject::connect(action, &QAction::triggered, mainWindow, [mainWindow]() {
+            T runCmd(mainWindow);
+            if (runCmd.CanRun())
+                runCmd.Run();
+        });
+        return action;
+    }
+}
 
 MainWindow *MainWindow::g_instance = nullptr;
 
@@ -2432,26 +2457,26 @@ void MainWindow::updateToolbarsAndMenus()
     // VM menu
     this->ui->newVmAction->setEnabled(this->m_commands["NewVM"]->CanRun());
     this->ui->startShutdownToolStripMenuItem->setEnabled(this->m_commands["VMLifeCycle"]->CanRun());
+    this->ui->resumeOnToolStripMenuItem->setEnabled(!this->getSelectedVMs().isEmpty());
+    this->ui->relocateToolStripMenuItem->setEnabled(!this->getSelectedVMs().isEmpty());
+    this->ui->startOnHostToolStripMenuItem->setEnabled(!this->getSelectedVMs().isEmpty());
     this->ui->copyVMtoSharedStorageMenuItem->setEnabled(this->m_commands["CopyVM"]->CanRun());
     this->ui->MoveVMToolStripMenuItem->setEnabled(this->m_commands["MoveVM"]->CanRun());
     this->ui->MoveVMToolStripMenuItem->setText(this->m_commands["MoveVM"]->MenuText());
     this->ui->installToolsToolStripMenuItem->setEnabled(this->m_commands["InstallTools"]->CanRun());
+    this->ui->disableCbtToolStripMenuItem->setEnabled(this->m_commands["DisableChangedBlockTracking"]->CanRun());
+    this->ui->sendCtrlAltDelToolStripMenuItem->setEnabled(this->m_consolePanel != nullptr);
     this->ui->uninstallToolStripMenuItem->setEnabled(this->m_commands["UninstallVM"]->CanRun());
+    this->ui->deleteVmToolStripMenuItem->setEnabled(this->m_commands["DeleteVM"]->CanRun());
     this->ui->VMPropertiesToolStripMenuItem->setEnabled(this->m_commands["VMProperties"]->CanRun());
     this->ui->snapshotToolStripMenuItem->setEnabled(this->m_commands["TakeSnapshot"]->CanRun());
     this->ui->convertToTemplateToolStripMenuItem->setEnabled(this->m_commands["ConvertVMToTemplate"]->CanRun());
     this->ui->exportToolStripMenuItem->setEnabled(this->m_commands["ExportVM"]->CanRun());
-
-    QString lifecycleText = this->m_commands["VMLifeCycle"]->MenuText();
-    this->ui->startShutdownToolStripMenuItem->setText(lifecycleText);
-    QIcon lifecycleIcon = this->ui->startVMAction->icon();
-    if (lifecycleText == "Shut Down")
-        lifecycleIcon = this->ui->shutDownAction->icon();
-    else if (lifecycleText == "Resume")
-        lifecycleIcon = this->ui->resumeAction->icon();
-    else if (lifecycleText == "Unpause")
-        lifecycleIcon = this->ui->unpauseAction->icon();
-    this->ui->startShutdownToolStripMenuItem->setIcon(lifecycleIcon);
+    this->ui->assignSnapshotScheduleToolStripMenuItem->setEnabled(false);
+    this->ui->assignToVappToolStripMenuItem->setEnabled(false);
+    this->ui->vtpmManagerToolStripMenuItem->setEnabled(false);
+    this->ui->enablePvsReadCachingToolStripMenuItem->setEnabled(false);
+    this->ui->disablePvsReadCachingToolStripMenuItem->setEnabled(false);
 
     // Template menu
     this->ui->CreateVmFromTemplateToolStripMenuItem->setEnabled(this->m_commands["CreateVMFromTemplate"]->CanRun());
@@ -2588,6 +2613,17 @@ void MainWindow::disableAllOperationMenus()
     this->ui->rebootAction->setEnabled(false);
     this->ui->powerOnHostAction->setEnabled(false);
     this->ui->startShutdownToolStripMenuItem->setEnabled(false);
+    this->ui->resumeOnToolStripMenuItem->setEnabled(false);
+    this->ui->relocateToolStripMenuItem->setEnabled(false);
+    this->ui->startOnHostToolStripMenuItem->setEnabled(false);
+    this->ui->assignSnapshotScheduleToolStripMenuItem->setEnabled(false);
+    this->ui->assignToVappToolStripMenuItem->setEnabled(false);
+    this->ui->vtpmManagerToolStripMenuItem->setEnabled(false);
+    this->ui->disableCbtToolStripMenuItem->setEnabled(false);
+    this->ui->enablePvsReadCachingToolStripMenuItem->setEnabled(false);
+    this->ui->disablePvsReadCachingToolStripMenuItem->setEnabled(false);
+    this->ui->sendCtrlAltDelToolStripMenuItem->setEnabled(false);
+    this->ui->deleteVmToolStripMenuItem->setEnabled(false);
     // Add more as needed
 }
 
@@ -2928,6 +2964,18 @@ void MainWindow::onMoveVM()
         this->m_commands["MoveVM"]->Run();
 }
 
+void MainWindow::onDeleteVM()
+{
+    if (this->m_commands.contains("DeleteVM"))
+        this->m_commands["DeleteVM"]->Run();
+}
+
+void MainWindow::onDisableChangedBlockTracking()
+{
+    if (this->m_commands.contains("DisableChangedBlockTracking"))
+        this->m_commands["DisableChangedBlockTracking"]->Run();
+}
+
 void MainWindow::onInstallTools()
 {
     if (this->m_commands.contains("InstallTools"))
@@ -3155,6 +3203,10 @@ void MainWindow::initializeCommands()
     this->m_commands["UnpauseVM"] = new UnpauseVMCommand(this, this);
     this->m_commands["ForceShutdownVM"] = new ForceShutdownVMCommand(this, this);
     this->m_commands["ForceRebootVM"] = new ForceRebootVMCommand(this, this);
+    this->m_commands["VMRecoveryMode"] = new VMRecoveryModeCommand(this, this);
+    this->m_commands["DisableChangedBlockTracking"] = new DisableChangedBlockTrackingCommand(this, this);
+    this->m_commands["VappStart"] = new VappStartCommand(this, this);
+    this->m_commands["VappShutDown"] = new VappShutDownCommand(this, this);
     this->m_commands["CloneVM"] = new CloneVMCommand(this, this);
     this->m_commands["VMLifeCycle"] = new VMLifeCycleCommand(this, this);
     this->m_commands["CopyVM"] = new CopyVMCommand(this, this);
@@ -3240,10 +3292,19 @@ void MainWindow::connectMenuActions()
 
     // VM menu actions
     // Note: newVmAction is connected in initializeToolbar() (toolbar and menu share the same QAction)
-    connect(this->ui->startShutdownToolStripMenuItem, &QAction::triggered, this, &MainWindow::onStartShutdownVM);
+    if (!this->m_vmLifeCycleMenu)
+    {
+        this->m_vmLifeCycleMenu = new QMenu(this);
+        connect(this->m_vmLifeCycleMenu, &QMenu::aboutToShow, this, &MainWindow::refreshVmMenu);
+        this->ui->startShutdownToolStripMenuItem->setMenu(this->m_vmLifeCycleMenu);
+    }
+    connect(this->ui->menuVM, &QMenu::aboutToShow, this, &MainWindow::refreshVmMenu);
     connect(this->ui->copyVMtoSharedStorageMenuItem, &QAction::triggered, this, &MainWindow::onCopyVM);
     connect(this->ui->MoveVMToolStripMenuItem, &QAction::triggered, this, &MainWindow::onMoveVM);
+    connect(this->ui->deleteVmToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDeleteVM);
+    connect(this->ui->disableCbtToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDisableChangedBlockTracking);
     connect(this->ui->installToolsToolStripMenuItem, &QAction::triggered, this, &MainWindow::onInstallTools);
+    connect(this->ui->sendCtrlAltDelToolStripMenuItem, &QAction::triggered, this, &MainWindow::sendCADToConsole);
     connect(this->ui->uninstallToolStripMenuItem, &QAction::triggered, this, &MainWindow::onUninstallVM);
     connect(this->ui->VMPropertiesToolStripMenuItem, &QAction::triggered, this, &MainWindow::onVMProperties);
     connect(this->ui->snapshotToolStripMenuItem, &QAction::triggered, this, &MainWindow::onTakeSnapshot);
@@ -3314,17 +3375,25 @@ void MainWindow::updateMenuItems()
     // VM menu
     this->ui->newVmAction->setEnabled(this->m_commands["NewVM"]->CanRun());
     this->ui->startShutdownToolStripMenuItem->setEnabled(this->m_commands["VMLifeCycle"]->CanRun());
+    this->ui->resumeOnToolStripMenuItem->setEnabled(!this->getSelectedVMs().isEmpty());
+    this->ui->relocateToolStripMenuItem->setEnabled(!this->getSelectedVMs().isEmpty());
+    this->ui->startOnHostToolStripMenuItem->setEnabled(!this->getSelectedVMs().isEmpty());
     this->ui->copyVMtoSharedStorageMenuItem->setEnabled(this->m_commands["CopyVM"]->CanRun());
     this->ui->MoveVMToolStripMenuItem->setEnabled(this->m_commands["MoveVM"]->CanRun());
     this->ui->installToolsToolStripMenuItem->setEnabled(this->m_commands["InstallTools"]->CanRun());
+    this->ui->disableCbtToolStripMenuItem->setEnabled(this->m_commands["DisableChangedBlockTracking"]->CanRun());
+    this->ui->sendCtrlAltDelToolStripMenuItem->setEnabled(this->m_consolePanel != nullptr);
     this->ui->uninstallToolStripMenuItem->setEnabled(this->m_commands["UninstallVM"]->CanRun());
+    this->ui->deleteVmToolStripMenuItem->setEnabled(this->m_commands["DeleteVM"]->CanRun());
     this->ui->VMPropertiesToolStripMenuItem->setEnabled(this->m_commands["VMProperties"]->CanRun());
     this->ui->snapshotToolStripMenuItem->setEnabled(this->m_commands["TakeSnapshot"]->CanRun());
     this->ui->convertToTemplateToolStripMenuItem->setEnabled(this->m_commands["ConvertVMToTemplate"]->CanRun());
     this->ui->exportToolStripMenuItem->setEnabled(this->m_commands["ExportVM"]->CanRun());
-
-    // Update dynamic menu text for VMLifeCycle command
-    this->ui->startShutdownToolStripMenuItem->setText(this->m_commands["VMLifeCycle"]->MenuText());
+    this->ui->assignSnapshotScheduleToolStripMenuItem->setEnabled(false);
+    this->ui->assignToVappToolStripMenuItem->setEnabled(false);
+    this->ui->vtpmManagerToolStripMenuItem->setEnabled(false);
+    this->ui->enablePvsReadCachingToolStripMenuItem->setEnabled(false);
+    this->ui->disablePvsReadCachingToolStripMenuItem->setEnabled(false);
 
     // Template menu
     this->ui->newVMFromTemplateToolStripMenuItem->setEnabled(this->m_commands["NewVMFromTemplate"]->CanRun());
@@ -3352,4 +3421,60 @@ void MainWindow::updateMenuItems()
     // Network menu
     this->ui->newNetworkAction->setEnabled(this->m_commands["NewNetwork"]->CanRun());
     // Note: NetworkProperties will be added when action exists
+}
+
+void MainWindow::refreshVmMenu()
+{
+    if (this->m_vmLifeCycleMenu)
+    {
+        this->m_vmLifeCycleMenu->clear();
+
+        StopVMCommand shutdownCmd(this);
+        if (shutdownCmd.CanRun())
+            addVmCommandAction<StopVMCommand>(this->m_vmLifeCycleMenu, this);
+        else
+            addVmCommandAction<StartVMCommand>(this->m_vmLifeCycleMenu, this);
+
+        ResumeVMCommand resumeCmd(this);
+        if (resumeCmd.CanRun())
+            addVmCommandAction<ResumeVMCommand>(this->m_vmLifeCycleMenu, this);
+        else
+            addVmCommandAction<SuspendVMCommand>(this->m_vmLifeCycleMenu, this);
+
+        addVmCommandAction<RestartVMCommand>(this->m_vmLifeCycleMenu, this);
+        addVmCommandAction<VMRecoveryModeCommand>(this->m_vmLifeCycleMenu, this);
+        this->m_vmLifeCycleMenu->addSeparator();
+        addVmCommandAction<ForceShutdownVMCommand>(this->m_vmLifeCycleMenu, this);
+        addVmCommandAction<ForceRebootVMCommand>(this->m_vmLifeCycleMenu, this);
+        this->m_vmLifeCycleMenu->addSeparator();
+        addVmCommandAction<VappStartCommand>(this->m_vmLifeCycleMenu, this);
+        addVmCommandAction<VappShutDownCommand>(this->m_vmLifeCycleMenu, this);
+    }
+
+    auto rebuildOperationMenu = [this](QAction* action, QMenu*& menu, VMOperationMenu::Operation operation) {
+        if (!action)
+            return;
+
+        if (menu)
+        {
+            delete menu;
+            menu = nullptr;
+        }
+
+        const QList<QSharedPointer<VM>> selectedVms = this->getSelectedVMs();
+        if (selectedVms.isEmpty())
+        {
+            action->setMenu(nullptr);
+            action->setEnabled(false);
+            return;
+        }
+
+        menu = new VMOperationMenu(this, selectedVms, operation, this);
+        action->setMenu(menu);
+        action->setEnabled(true);
+    };
+
+    rebuildOperationMenu(this->ui->resumeOnToolStripMenuItem, this->m_resumeOnServerMenu, VMOperationMenu::Operation::ResumeOn);
+    rebuildOperationMenu(this->ui->relocateToolStripMenuItem, this->m_migrateToServerMenu, VMOperationMenu::Operation::Migrate);
+    rebuildOperationMenu(this->ui->startOnHostToolStripMenuItem, this->m_startOnServerMenu, VMOperationMenu::Operation::StartOn);
 }

@@ -28,30 +28,140 @@
 #include "startvmcommand.h"
 #include "vmoperationhelpers.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
+#include "xenlib/vmhelpers.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
+#include "xenlib/xen/vbd.h"
+#include "xenlib/xen/vdi.h"
+#include "xenlib/xen/sr.h"
+#include "xenlib/xen/host.h"
 #include "xenlib/xen/actions/vm/vmstartaction.h"
+#include "xenlib/xen/actions/vm/changevmisoaction.h"
 #include "xenlib/xen/failure.h"
+#include "xenlib/operations/multipleaction.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
 #include <QTimer>
 #include <QMetaObject>
 #include <QPointer>
+#include <QHash>
+#include <QPushButton>
 
 namespace
 {
+    bool enabledTargetExists(const QSharedPointer<Host>& host, XenConnection* connection)
+    {
+        if (host)
+            return host->IsEnabled();
+
+        if (!connection)
+            return false;
+
+        XenCache* cache = connection->GetCache();
+        if (!cache)
+            return false;
+
+        const QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
+        for (const QSharedPointer<Host>& item : hosts)
+        {
+            if (item && item->IsEnabled())
+                return true;
+        }
+        return false;
+    }
+
+    bool enabledTargetExistsForVm(const QSharedPointer<VM>& vm)
+    {
+        if (!vm)
+            return false;
+
+        XenConnection* connection = vm->GetConnection();
+        if (!connection)
+            return false;
+
+        QSharedPointer<Host> host;
+        if (vm->GetPowerState() == "Running")
+        {
+            host = vm->GetResidentOnHost();
+        }
+        else
+        {
+            QString hostRef = VMHelpers::getVMStorageHost(connection, vm->GetData(), false);
+            if (!hostRef.isEmpty() && hostRef != XENOBJECT_NULL)
+                host = connection->GetCache()->ResolveObject<Host>(hostRef);
+        }
+
+        return enabledTargetExists(host, connection);
+    }
+
     bool canStartVm(const QSharedPointer<VM>& vm)
     {
         if (!vm)
             return false;
 
-        // Check VM is not running (Halted or Suspended) AND start is allowed (matches C# StartVMCommand.CanRun)
-        QString powerState = vm->GetPowerState();
-
-        if (powerState == "Running")
+        if (vm->IsTemplate() || vm->IsSnapshot() || vm->IsLocked())
             return false;
 
-        return vm->GetAllowedOperations().contains("start");
+        if (vm->GetPowerState() != "Halted")
+            return false;
+
+        if (!vm->GetAllowedOperations().contains("start"))
+            return false;
+
+        return enabledTargetExistsForVm(vm);
+    }
+
+    bool hasBrokenCd(const QSharedPointer<VM>& vm, QList<QSharedPointer<VBD>>& brokenCdVbds)
+    {
+        if (!vm)
+            return false;
+
+        const QList<QSharedPointer<VBD>> vbds = vm->GetVBDs();
+        for (const QSharedPointer<VBD>& vbd : vbds)
+        {
+            if (!vbd || !vbd->IsValid())
+                continue;
+            if (!vbd->IsCD() || vbd->Empty())
+                continue;
+
+            QSharedPointer<VDI> vdi = vbd->GetVDI();
+            if (!vdi || !vdi->IsValid())
+            {
+                brokenCdVbds.append(vbd);
+                continue;
+            }
+
+            QSharedPointer<SR> sr = vdi->GetSR();
+            if (!sr || sr->IsBroken() || sr->IsDetached())
+            {
+                brokenCdVbds.append(vbd);
+            }
+        }
+
+        return !brokenCdVbds.isEmpty();
+    }
+
+    VMStartAction* createStartAction(MainWindow* mainWindow, const QSharedPointer<VM>& vm)
+    {
+        XenConnection* conn = vm ? vm->GetConnection() : nullptr;
+        const QString displayName = vm ? vm->GetName() : QString();
+        QPointer<MainWindow> windowPtr = mainWindow;
+
+        return new VMStartAction(
+            vm,
+            nullptr,
+            [conn, displayName, windowPtr, vm](VMStartAbstractAction* abstractAction, const Failure& failure) {
+                Q_UNUSED(abstractAction)
+                if (!windowPtr)
+                    return;
+                Failure failureCopy = failure;
+                QMetaObject::invokeMethod(windowPtr, [windowPtr, conn, vm, displayName, failureCopy]() {
+                    if (!windowPtr)
+                        return;
+                    VMOperationHelpers::StartDiagnosisForm(conn, vm->OpaqueRef(), displayName, true, failureCopy, windowPtr);
+                }, Qt::QueuedConnection);
+            },
+            mainWindow);
     }
 } // namespace
 
@@ -77,70 +187,152 @@ bool StartVMCommand::CanRun() const
 
 void StartVMCommand::Run()
 {
-    const QList<QSharedPointer<VM>> vms = this->getVMs();
-    if (!vms.isEmpty())
+    QList<QSharedPointer<VM>> vms = this->getVMs();
+    if (vms.isEmpty())
     {
-        for (const QSharedPointer<VM>& vm : vms)
-        {
-            if (canStartVm(vm))
-                this->RunForVm(vm);
-        }
+        QSharedPointer<VM> vm = this->getVM();
+        if (vm)
+            vms.append(vm);
+    }
+
+    QList<QSharedPointer<VM>> runnable;
+    for (const QSharedPointer<VM>& vm : vms)
+    {
+        if (canStartVm(vm))
+            runnable.append(vm);
+    }
+
+    if (runnable.isEmpty())
+        return;
+
+    QHash<QSharedPointer<VM>, QList<QSharedPointer<VBD>>> brokenCds;
+    for (const QSharedPointer<VM>& vm : runnable)
+    {
+        QList<QSharedPointer<VBD>> vbds;
+        if (hasBrokenCd(vm, vbds))
+            brokenCds.insert(vm, vbds);
+    }
+
+    if (runnable.size() == 1 && brokenCds.isEmpty())
+    {
+        VMStartAction* action = createStartAction(this->mainWindow(), runnable.first());
+        action->RunAsync(true);
         return;
     }
 
-    QSharedPointer<VM> vm = this->getVM();
-    if (!vm)
-        return;
+    if (!brokenCds.isEmpty())
+    {
+        QMessageBox prompt(this->mainWindow());
+        prompt.setWindowTitle(runnable.size() > 1 ? tr("Starting VMs") : tr("Starting VM"));
+        prompt.setText(tr("It may not be possible to start the selected VMs as they are using ISOs from an SR which is unavailable.\n\n"
+                          "Would you like to eject these ISOs before continuing?"));
+        QPushButton* ejectButton = prompt.addButton(tr("&Eject"), QMessageBox::AcceptRole);
+        QPushButton* ignoreButton = prompt.addButton(tr("&Ignore"), QMessageBox::DestructiveRole);
+        prompt.addButton(QMessageBox::Cancel);
+        prompt.exec();
 
-    this->RunForVm(vm);
+        if (prompt.clickedButton() == ignoreButton)
+        {
+            brokenCds.clear();
+        }
+        else if (prompt.clickedButton() != ejectButton)
+        {
+            return;
+        }
+    }
+
+    QList<AsyncOperation*> actions;
+    for (const QSharedPointer<VM>& vm : runnable)
+    {
+        if (!brokenCds.contains(vm))
+        {
+            actions.append(createStartAction(this->mainWindow(), vm));
+            continue;
+        }
+
+        QList<AsyncOperation*> subActions;
+        const QList<QSharedPointer<VBD>>& vbds = brokenCds[vm];
+        for (const QSharedPointer<VBD>& vbd : vbds)
+        {
+            subActions.append(new ChangeVMISOAction(vm, QString(), vbd->OpaqueRef(), this->mainWindow()));
+        }
+        subActions.append(createStartAction(this->mainWindow(), vm));
+
+        XenConnection* conn = vm->GetConnection();
+        MultipleAction* multi = new MultipleAction(
+            conn,
+            tr("Starting VMs"),
+            tr("Starting VMs"),
+            tr("Started"),
+            subActions,
+            false,
+            false,
+            false,
+            this->mainWindow());
+        actions.append(multi);
+    }
+
+    this->RunMultipleActions(actions, tr("Starting VMs"), tr("Starting VMs"), tr("Started"), true);
 }
 
 bool StartVMCommand::RunForVm(QSharedPointer<VM> vm)
 {
-    // Get XenConnection from VM
-    XenConnection* conn = vm->GetConnection();
-    if (!conn || !conn->IsConnected())
-    {
-        QMessageBox::warning(this->mainWindow(), "Not Connected",  "Not connected to XenServer");
+    if (!vm || !canStartVm(vm))
         return false;
+
+    QList<QSharedPointer<VBD>> brokenVbds;
+    if (hasBrokenCd(vm, brokenVbds))
+    {
+        QMessageBox prompt(this->mainWindow());
+        prompt.setWindowTitle(tr("Starting VM"));
+        prompt.setText(tr("It may not be possible to start the selected VMs as they are using ISOs from an SR which is unavailable.\n\n"
+                          "Would you like to eject these ISOs before continuing?"));
+        QPushButton* ejectButton = prompt.addButton(tr("&Eject"), QMessageBox::AcceptRole);
+        QPushButton* ignoreButton = prompt.addButton(tr("&Ignore"), QMessageBox::DestructiveRole);
+        prompt.addButton(QMessageBox::Cancel);
+        prompt.exec();
+
+        if (prompt.clickedButton() == ignoreButton)
+        {
+            brokenVbds.clear();
+        }
+        else if (prompt.clickedButton() != ejectButton)
+        {
+            return false;
+        }
     }
 
-    // Determine name if not provided
-    QString displayName = vm->GetName();
+    if (!brokenVbds.isEmpty())
+    {
+        QList<AsyncOperation*> subActions;
+        for (const QSharedPointer<VBD>& vbd : brokenVbds)
+        {
+            subActions.append(new ChangeVMISOAction(vm, QString(), vbd->OpaqueRef(), this->mainWindow()));
+        }
+        subActions.append(createStartAction(this->mainWindow(), vm));
 
-    // Create VMStartAction with diagnosis callbacks (matches C# pattern)
-    // NOTE: The callbacks are called by the action when failures occur
-    QPointer<MainWindow> mainWindow = this->mainWindow();
+        MultipleAction* multi = new MultipleAction(
+            vm->GetConnection(),
+            tr("Starting VMs"),
+            tr("Starting VMs"),
+            tr("Started"),
+            subActions,
+            false,
+            false,
+            false,
+            this->mainWindow());
+        multi->RunAsync();
+        return true;
+    }
 
-    VMStartAction* action = new VMStartAction(
-        vm,
-        nullptr,  // WarningDialogHAInvalidConfig callback (TODO: implement if needed)
-        [conn, displayName, mainWindow, vm](VMStartAbstractAction* abstractAction, const Failure& failure) {
-            Q_UNUSED(abstractAction)
-            if (!mainWindow)
-                return;
-
-            Failure failureCopy = failure;
-            QMetaObject::invokeMethod(mainWindow, [mainWindow, conn, vm, displayName, failureCopy]() {
-                if (!mainWindow)
-                    return;
-                VMOperationHelpers::StartDiagnosisForm(conn, vm->OpaqueRef(), displayName, true, failureCopy, mainWindow);
-            }, Qt::QueuedConnection);
-        },
-        this->mainWindow());
-
-    // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-    OperationManager::instance()->RegisterOperation(action);
-
-    // Run action asynchronously (matches C# pattern - no modal dialog)
-    // Progress shown in status bar via OperationManager signals
+    VMStartAction* action = createStartAction(this->mainWindow(), vm);
     action->RunAsync(true);
     return true;
 }
 
 QString StartVMCommand::MenuText() const
 {
-    return "Start VM";
+    return tr("Start");
 }
 
 QIcon StartVMCommand::GetIcon() const

@@ -27,24 +27,54 @@
 
 #include "restartvmcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
+#include "xenlib/xen/host.h"
 #include "xenlib/xen/actions/vm/vmrebootaction.h"
+#include "xenlib/xencache.h"
 #include <QMessageBox>
 #include <QTimer>
 
 namespace
 {
+    bool enabledTargetExists(const QSharedPointer<Host>& host, XenConnection* connection)
+    {
+        if (host)
+            return host->IsEnabled();
+
+        if (!connection)
+            return false;
+
+        XenCache* cache = connection->GetCache();
+        if (!cache)
+            return false;
+
+        const QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
+        for (const QSharedPointer<Host>& item : hosts)
+        {
+            if (item && item->IsEnabled())
+                return true;
+        }
+
+        return false;
+    }
+
     bool canRestartVm(const QSharedPointer<VM>& vm)
     {
         if (!vm)
             return false;
 
-        if (vm->GetPowerState() != "Running")
+        if (vm->IsTemplate() || vm->IsSnapshot() || vm->IsLocked())
             return false;
 
-        return vm->GetAllowedOperations().contains("clean_reboot");
+        if (!vm->GetAllowedOperations().contains("clean_reboot"))
+            return false;
+
+        XenConnection* connection = vm->GetConnection();
+        if (!connection)
+            return false;
+
+        return enabledTargetExists(vm->GetResidentOnHost(), connection);
     }
 } // namespace
 
@@ -85,38 +115,48 @@ void RestartVMCommand::Run()
         // Create VMCleanReboot action (parent is MainWindow to prevent premature deletion)
         VMCleanReboot* action = new VMCleanReboot(vm, this->mainWindow());
 
-        // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-        OperationManager::instance()->RegisterOperation(action);
-
         // Run action asynchronously (matches C# pattern - no modal dialog)
         // Progress shown in status bar via OperationManager signals
         action->RunAsync(true);
     };
 
-    const QList<QSharedPointer<VM>> vms = this->getVMs();
-    if (vms.size() > 1)
+    QList<QSharedPointer<VM>> vms = this->getVMs();
+    if (vms.isEmpty())
     {
-        int ret = QMessageBox::question(this->mainWindow(), "Restart VMs", "Are you sure you want to restart the selected VMs?", QMessageBox::Yes | QMessageBox::No);
+        QSharedPointer<VM> vm = this->getVM();
+        if (vm)
+            vms.append(vm);
+    }
+
+    QList<QSharedPointer<VM>> runnable;
+    for (const QSharedPointer<VM>& vm : vms)
+    {
+        if (canRestartVm(vm))
+            runnable.append(vm);
+    }
+
+    if (runnable.size() > 1)
+    {
+        int ret = QMessageBox::question(this->mainWindow(), tr("Reboot Multiple VMs"),
+                                        tr("Are you sure you want to reboot the selected VMs?"),
+                                        QMessageBox::Yes | QMessageBox::No);
         if (ret != QMessageBox::Yes)
             return;
 
-        for (const QSharedPointer<VM>& vm : vms)
-        {
-            if (canRestartVm(vm))
-                runForVm(vm);
-        }
+        QList<AsyncOperation*> actions;
+        for (const QSharedPointer<VM>& vm : runnable)
+            actions.append(new VMCleanReboot(vm, this->mainWindow()));
+
+        this->RunMultipleActions(actions, tr("Rebooting VMs"), tr("Rebooting VMs"), tr("Rebooted"), true);
         return;
     }
-    QSharedPointer<VM> vm = vms.size() == 1 ? vms.first() : this->getVM();
+
+    QSharedPointer<VM> vm = runnable.size() == 1 ? runnable.first() : QSharedPointer<VM>();
     if (!vm || !canRestartVm(vm))
         return;
 
-    QString vmName = vm->GetName();
-    if (vmName.isEmpty())
-        return;
-
-    int ret = QMessageBox::question(this->mainWindow(), "Restart VM",
-                                    QString("Are you sure you want to restart VM '%1'?").arg(vmName),
+    int ret = QMessageBox::question(this->mainWindow(), tr("Reboot VM"),
+                                    tr("Are you sure you want to reboot the selected VM?"),
                                     QMessageBox::Yes | QMessageBox::No);
 
     if (ret != QMessageBox::Yes)

@@ -31,12 +31,7 @@
 #include "../xen/network/connection.h"
 #include <QHash>
 
-MultipleActionLauncher::MultipleActionLauncher(const QList<AsyncOperation*>& operations,
-                                     const QString& title,
-                                     const QString& startDescription,
-                                     const QString& endDescription,
-                                     bool runInParallel,
-                                     QObject* parent)
+MultipleActionLauncher::MultipleActionLauncher(const QList<AsyncOperation*>& operations, const QString& title, const QString& startDescription, const QString& endDescription, bool runInParallel, QObject* parent)
     : QObject(parent), m_operations(operations), m_title(title), m_startDescription(startDescription), m_endDescription(endDescription), m_runInParallel(runInParallel)
 {
 }
@@ -88,7 +83,7 @@ void MultipleActionLauncher::Run()
                     false, // suppressHistory
                     false, // showSubOperationDetails
                     ParallelAction::DEFAULT_MAX_PARALLEL_OPERATIONS,
-                    this);
+                    this->parent());
                 parallel->RunAsync();
             } else
             {
@@ -101,7 +96,7 @@ void MultipleActionLauncher::Run()
                     false, // suppressHistory
                     false, // showSubOperationDetails
                     false, // stopOnFirstException
-                    this);
+                    this->parent());
                 multiple->RunAsync();
             }
         }
@@ -126,7 +121,7 @@ void MultipleActionLauncher::Run()
                 false,   // suppressHistory
                 false,   // showSubOperationDetails
                 ParallelAction::DEFAULT_MAX_PARALLEL_OPERATIONS,
-                this);
+                this->parent());
             parallel->RunAsync();
         } else
         {
@@ -139,7 +134,7 @@ void MultipleActionLauncher::Run()
                 false, // suppressHistory
                 false, // showSubOperationDetails
                 false, // stopOnFirstException
-                this);
+                this->parent());
             multiple->RunAsync();
         }
     }

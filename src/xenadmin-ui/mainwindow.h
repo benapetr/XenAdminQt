@@ -210,12 +210,15 @@ class MainWindow : public QMainWindow
         void onStartShutdownVM();
         void onCopyVM();
         void onMoveVM();
+        void onDeleteVM();
+        void onDisableChangedBlockTracking();
         void onInstallTools();
         void onUninstallVM();
         void onVMProperties();
         void onTakeSnapshot();
         void onConvertToTemplate();
         void onExportVM();
+        void refreshVmMenu();
 
         // Menu action slots (Template menu)
         void onNewVMFromTemplate();
@@ -327,6 +330,10 @@ class MainWindow : public QMainWindow
         QToolButton* m_backButton = nullptr;    // QToolButton for dropdown menu support
         QToolButton* m_forwardButton = nullptr; // QToolButton for dropdown menu support
         QMenu* m_createVmFromTemplateMenu = nullptr;
+        QMenu* m_vmLifeCycleMenu = nullptr;
+        QMenu* m_resumeOnServerMenu = nullptr;
+        QMenu* m_migrateToServerMenu = nullptr;
+        QMenu* m_startOnServerMenu = nullptr;
 
         SelectionManager* m_selectionManager = nullptr;
 

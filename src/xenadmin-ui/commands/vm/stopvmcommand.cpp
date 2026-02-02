@@ -27,9 +27,9 @@
 
 #include "stopvmcommand.h"
 #include "../../mainwindow.h"
-#include "../../operations/operationmanager.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
+#include "xenlib/xen/pool.h"
 #include "xenlib/xen/actions/vm/vmshutdownaction.h"
 #include <QMessageBox>
 #include <QTimer>
@@ -41,10 +41,22 @@ namespace
         if (!vm)
             return false;
 
-        if (vm->GetPowerState() != "Running")
+        if (vm->IsTemplate() || vm->IsSnapshot() || vm->IsLocked())
             return false;
 
         return vm->GetAllowedOperations().contains("clean_shutdown");
+    }
+
+    bool isHaProtected(const QSharedPointer<VM>& vm)
+    {
+        if (!vm)
+            return false;
+
+        QSharedPointer<Pool> pool = vm->GetPool();
+        if (!pool)
+            return false;
+
+        return pool->HAEnabled() && vm->HARestartPriority() != "do_not_restart";
     }
 } // namespace
 
@@ -86,40 +98,52 @@ void StopVMCommand::Run()
         // Create VMCleanShutdown action (parent is MainWindow to prevent premature deletion)
         VMCleanShutdown* action = new VMCleanShutdown(vm, this->mainWindow());
 
-        // Register with OperationManager for history tracking (matches C# ConnectionsManager.History.Add)
-        OperationManager::instance()->RegisterOperation(action);
-
         // Run action asynchronously (matches C# pattern - no modal dialog)
         // Progress shown in status bar via OperationManager signals
         action->RunAsync(true);
     };
 
-    const QList<QSharedPointer<VM>> vms = this->getVMs();
-    if (vms.size() > 1)
+    QList<QSharedPointer<VM>> vms = this->getVMs();
+    if (vms.isEmpty())
     {
-        int ret = QMessageBox::question(this->mainWindow(), "Shutdown VMs",
-                                        "Are you sure you want to shutdown the selected VMs?",
+        QSharedPointer<VM> vm = this->getVM();
+        if (vm)
+            vms.append(vm);
+    }
+
+    QList<QSharedPointer<VM>> runnable;
+    for (const QSharedPointer<VM>& vm : vms)
+    {
+        if (canShutdownVm(vm))
+            runnable.append(vm);
+    }
+
+    if (runnable.size() > 1)
+    {
+        int ret = QMessageBox::question(this->mainWindow(), tr("Shut Down Multiple VMs"),
+                                        tr("Are you sure you want to shut down the selected VMs?"),
                                         QMessageBox::Yes | QMessageBox::No);
         if (ret != QMessageBox::Yes)
             return;
 
-        for (const QSharedPointer<VM>& vm : vms)
-        {
-            if (canShutdownVm(vm))
-                runForVm(vm);
-        }
+        QList<AsyncOperation*> actions;
+        for (const QSharedPointer<VM>& vm : runnable)
+            actions.append(new VMCleanShutdown(vm, this->mainWindow()));
+
+        RunMultipleActions(actions, tr("Shutting Down VMs"), tr("Shutting Down VMs"), tr("Shut down"), true);
         return;
     }
-    QSharedPointer<VM> vm = vms.size() == 1 ? vms.first() : this->getVM();
+
+    QSharedPointer<VM> vm = runnable.size() == 1 ? runnable.first() : QSharedPointer<VM>();
     if (!vm || !canShutdownVm(vm))
         return;
 
-    QString vmName = vm->GetName();
-    if (vmName.isEmpty())
-        return;
+    const QString text = isHaProtected(vm)
+        ? tr("The selected VM is currently protected by HA. Are you sure you want to shut it down?")
+        : tr("Are you sure you want to shut down the selected VM?");
 
-    int ret = QMessageBox::question(this->mainWindow(), "Shutdown VM",
-                                    QString("Are you sure you want to shutdown VM '%1'?").arg(vmName),
+    int ret = QMessageBox::question(this->mainWindow(), tr("Shut Down VM"),
+                                    text,
                                     QMessageBox::Yes | QMessageBox::No);
 
     if (ret != QMessageBox::Yes)
@@ -130,7 +154,7 @@ void StopVMCommand::Run()
 
 QString StopVMCommand::MenuText() const
 {
-    return "Shutdown VM";
+    return tr("Shut Down");
 }
 
 QIcon StopVMCommand::GetIcon() const

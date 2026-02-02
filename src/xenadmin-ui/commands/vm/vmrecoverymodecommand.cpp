@@ -31,7 +31,6 @@
 #include "xenlib/xen/vm.h"
 #include "../../mainwindow.h"
 #include "../../operations/operationmanager.h"
-#include <QMessageBox>
 
 VMRecoveryModeCommand::VMRecoveryModeCommand(MainWindow* mainWindow, QObject* parent)
     : VMCommand(mainWindow, parent)
@@ -44,21 +43,12 @@ bool VMRecoveryModeCommand::CanRun() const
     if (!vm)
         return false;
 
-    // VM must be halted
-    if (vm->GetPowerState() != "Halted")
-        return false;
-
     // Check if is_a_template is false (templates can't be started)
     if (vm->IsTemplate())
         return false;
 
-    // Check if VM is HVM (has HVM_boot_policy)
-    QString bootPolicy = vm->GetData().value("HVM_boot_policy").toString();
-    // Empty boot policy means PV VM (paravirtualized), which doesn't support HVM boot
-    if (bootPolicy.isEmpty())
-        return false;
-
-    return true;
+    // C# allows recovery mode when start is allowed
+    return vm->GetAllowedOperations().contains("start");
 }
 
 void VMRecoveryModeCommand::Run()
@@ -67,54 +57,11 @@ void VMRecoveryModeCommand::Run()
     if (!vm)
         return;
 
-    QString vmRef = vm->OpaqueRef();
-    QString vmName = vm->GetName();
-
-    // Confirm action with user
-    QMessageBox::StandardButton reply = QMessageBox::question(
-        this->mainWindow(),
-        tr("Boot in Recovery Mode"),
-        tr("This will boot '%1' with temporary boot settings (DVD drive, then Network).\n\n"
-           "The original boot settings will be restored after the VM starts.\n\n"
-           "Do you want to continue?")
-            .arg(vmName),
-        QMessageBox::Yes | QMessageBox::No);
-
-    if (reply != QMessageBox::Yes)
-    {
-        return;
-    }
-
-    // Get XenConnection
-    XenConnection* conn = vm->GetConnection();
-    if (!conn || !conn->IsConnected())
-    {
-        QMessageBox::warning(this->mainWindow(), tr("Not Connected"),
-                             tr("Not connected to XenServer"));
-        return;
-    }
-
     // Create HVMBootAction
     HVMBootAction* action = new HVMBootAction(vm, this->mainWindow());
 
     // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);
-
-    // Connect completion signal for cleanup and user feedback
-    connect(action, &AsyncOperation::completed, this->mainWindow(), [=]()
-    {
-        if (action->GetState() == AsyncOperation::Completed)
-        {
-            this->mainWindow()->ShowStatusMessage(
-                tr("VM '%1' has been started in recovery mode").arg(vmName), 5000);
-        } else if (action->GetState() == AsyncOperation::Failed)
-        {
-            QMessageBox::critical(this->mainWindow(), tr("Error"), tr("Failed to boot VM in recovery mode:\n%1").arg(action->GetErrorMessage()));
-        }
-
-        // Auto-delete when complete
-        action->deleteLater();
-    });
 
     // Run action asynchronously
     action->RunAsync();
