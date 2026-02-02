@@ -41,19 +41,15 @@ VMAdvancedEditPage::VMAdvancedEditPage(QWidget* parent)
 {
     this->ui->setupUi(this);
 
-    connect(this->ui->GeneralOptimizationRadioButton, &QRadioButton::toggled,
-            this, &VMAdvancedEditPage::onGeneralRadioToggled);
-    connect(this->ui->CPSOptimizationRadioButton, &QRadioButton::toggled,
-            this, &VMAdvancedEditPage::onCitrixRadioToggled);
-    connect(this->ui->ManualOptimizationRadioButton, &QRadioButton::toggled,
-            this, &VMAdvancedEditPage::onManualRadioToggled);
-    connect(this->ui->ShadowMultiplierTextBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &VMAdvancedEditPage::onShadowMultiplierChanged);
+    connect(this->ui->GeneralOptimizationRadioButton, &QRadioButton::toggled, this, &VMAdvancedEditPage::onGeneralRadioToggled);
+    connect(this->ui->CPSOptimizationRadioButton, &QRadioButton::toggled, this, &VMAdvancedEditPage::onCitrixRadioToggled);
+    connect(this->ui->ManualOptimizationRadioButton, &QRadioButton::toggled, this, &VMAdvancedEditPage::onManualRadioToggled);
+    connect(this->ui->ShadowMultiplierTextBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &VMAdvancedEditPage::onShadowMultiplierChanged);
 }
 
 VMAdvancedEditPage::~VMAdvancedEditPage()
 {
-    delete ui;
+    delete this->ui;
 }
 
 QString VMAdvancedEditPage::GetText() const

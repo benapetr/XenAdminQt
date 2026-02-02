@@ -34,6 +34,7 @@ class Host;
 class VDI;
 class PBD;
 class Blob;
+class SM;
 
 /**
  * @brief SR - A storage repository
@@ -86,8 +87,16 @@ class XENLIB_EXPORT SR : public XenObject
         //! Get content type ("user", "iso", "system", etc.)
         QString ContentType() const;
 
+        //! Get storage manager plugin for this SR type
+        QSharedPointer<SM> GetSM() const;
+
+        //! Get SR name without host suffix (C# NameWithoutHost)
+        QString NameWithoutHost() const;
+
         //! Get SM (storage manager) config (map of SM configuration)
         QVariantMap SMConfig() const;
+
+        static constexpr qint64 DISK_MAX_SIZE = 2LL * 1024 * 1024 * 1024 * 1024; // 2 TiB
 
         //! Get allowed operations (list of allowed operation strings)
         QStringList AllowedOperations() const;

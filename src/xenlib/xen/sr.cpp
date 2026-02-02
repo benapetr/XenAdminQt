@@ -174,6 +174,29 @@ QString SR::ContentType() const
     return stringProperty("content_type", "user");
 }
 
+QSharedPointer<SM> SR::GetSM() const
+{
+    XenCache* cache = this->GetCache();
+    if (!cache)
+        return QSharedPointer<SM>();
+
+    const QList<QSharedPointer<SM>> sms = cache->GetAll<SM>(XenObjectType::SM);
+    const QString srType = this->GetType().toLower();
+    for (const QSharedPointer<SM>& sm : sms)
+    {
+        if (!sm || !sm->IsValid())
+            continue;
+        if (sm->Type().toLower() == srType)
+            return sm;
+    }
+    return QSharedPointer<SM>();
+}
+
+QString SR::NameWithoutHost() const
+{
+    return this->GetName();
+}
+
 QVariantMap SR::SMConfig() const
 {
     return property("sm_config").toMap();

@@ -1605,10 +1605,6 @@ void VMStorageTabPage::onEditButtonClicked()
     if (vdiRef.isEmpty() || !this->m_connection)
         return;
 
-    XenConnection* connection = this->m_connection;
-    if (!connection || !connection->GetSession())
-        return;
-
     QSharedPointer<VDI> vdi = this->m_connection->GetCache()->ResolveObject<VDI>(vdiRef);
     if (!vdi || !vdi->IsValid())
         return;
@@ -1617,73 +1613,6 @@ void VMStorageTabPage::onEditButtonClicked()
     VdiPropertiesDialog dialog(vdi, this);
     if (dialog.exec() != QDialog::Accepted)
         return;
-
-    // Check if there are any changes
-    if (!dialog.hasChanges())
-    {
-        qDebug() << "No changes to VDI properties";
-        return;
-    }
-
-    // Apply changes
-    bool hasErrors = false;
-
-    // Update name if changed
-    QString newName = dialog.getVdiName();
-    QString oldName = vdi->GetName();
-
-    if (newName != oldName)
-    {
-        qDebug() << "Updating VDI name:" << oldName << "->" << newName;
-        try
-        {
-            XenAPI::VDI::set_name_label(connection->GetSession(), vdiRef, newName);
-        } catch (const std::exception&)
-        {
-            QMessageBox::warning(this, "Warning", "Failed to update virtual disk name.");
-            hasErrors = true;
-        }
-    }
-
-    // Update description if changed
-    QString newDescription = dialog.getVdiDescription();
-    QString oldDescription = vdi->GetDescription();
-
-    if (newDescription != oldDescription)
-    {
-        qDebug() << "Updating VDI description";
-        try
-        {
-            XenAPI::VDI::set_name_description(connection->GetSession(), vdiRef, newDescription);
-        } catch (const std::exception&)
-        {
-            QMessageBox::warning(this, "Warning", "Failed to update virtual disk description.");
-            hasErrors = true;
-        }
-    }
-
-    // Update size if changed (and increase only)
-    qint64 newSize = dialog.getNewSize();
-    qint64 oldSize = vdi->VirtualSize();
-    qint64 sizeDiff = newSize - oldSize;
-
-    if (sizeDiff > (10 * 1024 * 1024)) // More than 10 MB increase
-    {
-        qDebug() << "Resizing VDI from" << oldSize << "to" << newSize << "bytes";
-        try
-        {
-            XenAPI::VDI::resize(connection->GetSession(), vdiRef, newSize);
-        } catch (const std::exception&)
-        {
-            QMessageBox::warning(this, "Warning", "Failed to resize virtual disk.");
-            hasErrors = true;
-        }
-    }
-
-    if (!hasErrors)
-    {
-        QMessageBox::information(this, "Success", "Virtual disk properties updated successfully.");
-    }
 
     // Refresh to show updated properties
     refreshVmRecord(this->m_connection, this->m_objectRef);

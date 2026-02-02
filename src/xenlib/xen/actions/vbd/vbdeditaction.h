@@ -61,6 +61,7 @@ class XENLIB_EXPORT VbdEditAction : public AsyncOperation
          * @param changeDevicePosition Whether to change device position
          * @param otherVbdRef VBD to swap positions with (empty if no swap)
          * @param devicePosition New device position (userdevice)
+         * @param suppressHistory Whether to suppress history tracking
          * @param parent Parent object
          *
          * C# equivalent: VbdEditAction(VBD, vbd_mode, int, bool, VBD, string, bool)
@@ -71,6 +72,7 @@ class XENLIB_EXPORT VbdEditAction : public AsyncOperation
                       bool changeDevicePosition,
                       const QString& otherVbdRef,
                       const QString& devicePosition,
+                      bool suppressHistory = true,
                       QObject* parent = nullptr);
 
         ~VbdEditAction() override = default;

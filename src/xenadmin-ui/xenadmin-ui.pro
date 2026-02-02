@@ -66,6 +66,7 @@ SOURCES += \
     dialogs/crosspoolmigratewizard_copymodepage.cpp \
     dialogs/crosspoolmigratewizard_intrapoolcopypage.cpp \
     dialogs/warningdialogs/closexencenterwarningdialog.cpp \
+    dialogs/warningdialogs/warningdialog.cpp \
     controls/affinitypicker.cpp \
     controls/srpicker.cpp \
     controls/tooltipcontainer.cpp \
@@ -106,6 +107,8 @@ SOURCES += \
     settingspanels/livepatchingeditpage.cpp \
     settingspanels/networkoptionseditpage.cpp \
     settingspanels/networkgeneraleditpage.cpp \
+    settingspanels/vdisizelocationpage.cpp \
+    settingspanels/vbdeditpage.cpp \
     dialogs/optionspages/securityoptionspage.cpp \
     dialogs/optionspages/displayoptionspage.cpp \
     dialogs/optionspages/confirmationoptionspage.cpp \
@@ -327,6 +330,7 @@ HEADERS += \
     dialogs/crosspoolmigratewizard_copymodepage.h \
     dialogs/crosspoolmigratewizard_intrapoolcopypage.h \
     dialogs/warningdialogs/closexencenterwarningdialog.h \
+    dialogs/warningdialogs/warningdialog.h \
     network/xenconnectionui.h \
     controls/affinitypicker.h \
     controls/srpicker.h \
@@ -369,6 +373,8 @@ HEADERS += \
     settingspanels/livepatchingeditpage.h \
     settingspanels/networkoptionseditpage.h \
     settingspanels/networkgeneraleditpage.h \
+    settingspanels/vdisizelocationpage.h \
+    settingspanels/vbdeditpage.h \
     dialogs/optionspages/ioptionspage.h \
     dialogs/optionspages/securityoptionspage.h \
     dialogs/optionspages/displayoptionspage.h \
@@ -583,6 +589,8 @@ FORMS += \
     settingspanels/livepatchingeditpage.ui \
     settingspanels/networkoptionseditpage.ui \
     settingspanels/networkgeneraleditpage.ui \
+    settingspanels/vdisizelocationpage.ui \
+    settingspanels/vbdeditpage.ui \
     dialogs/optionspages/securityoptionspage.ui \
     dialogs/optionspages/displayoptionspage.ui \
     dialogs/optionspages/confirmationoptionspage.ui \

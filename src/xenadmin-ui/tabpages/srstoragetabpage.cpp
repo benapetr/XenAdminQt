@@ -355,59 +355,8 @@ void SrStorageTabPage::onEditButtonClicked()
         return;
 
     VdiPropertiesDialog dialog(vdi, this);
-    if (dialog.exec() != QDialog::Accepted || !dialog.hasChanges())
+    if (dialog.exec() != QDialog::Accepted)
         return;
-
-    if (!this->m_connection->GetSession())
-        return;
-
-    bool hasErrors = false;
-    QString newName = dialog.getVdiName();
-    QString oldName = vdi->GetName();
-    if (newName != oldName)
-    {
-        try
-        {
-            XenAPI::VDI::set_name_label(this->m_connection->GetSession(), vdi->OpaqueRef(), newName);
-        } catch (const std::exception&)
-        {
-            QMessageBox::warning(this, tr("Warning"), tr("Failed to update virtual disk name."));
-            hasErrors = true;
-        }
-    }
-
-    QString newDescription = dialog.getVdiDescription();
-    QString oldDescription = vdi->GetDescription();
-    if (newDescription != oldDescription)
-    {
-        try
-        {
-            XenAPI::VDI::set_name_description(this->m_connection->GetSession(), vdi->OpaqueRef(), newDescription);
-        } catch (const std::exception&)
-        {
-            QMessageBox::warning(this, tr("Warning"), tr("Failed to update virtual disk description."));
-            hasErrors = true;
-        }
-    }
-
-    qint64 newSize = dialog.getNewSize();
-    qint64 oldSize = vdi->VirtualSize();
-    if (newSize > oldSize + (10 * 1024 * 1024))
-    {
-        try
-        {
-            XenAPI::VDI::resize(this->m_connection->GetSession(), vdi->OpaqueRef(), newSize);
-        } catch (const std::exception&)
-        {
-            QMessageBox::warning(this, tr("Warning"), tr("Failed to resize virtual disk."));
-            hasErrors = true;
-        }
-    }
-
-    if (!hasErrors)
-    {
-        QMessageBox::information(this, tr("Success"), tr("Virtual disk properties updated successfully."));
-    }
 
     this->requestSrRefresh();
 }

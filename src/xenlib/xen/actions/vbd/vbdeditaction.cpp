@@ -37,6 +37,7 @@ VbdEditAction::VbdEditAction(const QString& vbdRef,
                              bool changeDevicePosition,
                              const QString& otherVbdRef,
                              const QString& devicePosition,
+                             bool suppressHistory,
                              QObject* parent)
     : AsyncOperation(tr("Edit VBD"),
                      tr("Editing virtual block device settings..."),
@@ -48,6 +49,8 @@ VbdEditAction::VbdEditAction(const QString& vbdRef,
     , otherVbdRef_(otherVbdRef)
     , devicePosition_(devicePosition)
 {
+    this->SetSuppressHistory(suppressHistory);
+
     // Register API methods for RBAC checks
     this->AddApiMethodToRoleCheck("VBD.set_mode");
     this->AddApiMethodToRoleCheck("VBD.set_qos_algorithm_params");

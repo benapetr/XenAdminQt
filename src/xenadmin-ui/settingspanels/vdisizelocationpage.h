@@ -25,29 +25,60 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VDIPROPERTIESDIALOG_H
-#define VDIPROPERTIESDIALOG_H
+#ifndef VDISIZELOCATIONPAGE_H
+#define VDISIZELOCATIONPAGE_H
 
-#include "verticallytabbeddialog.h"
+#include "ieditpage.h"
 #include <QSharedPointer>
 
-class VDI;
-class VBDEditPage;
+namespace Ui
+{
+    class VdiSizeLocationPage;
+}
 
-class VdiPropertiesDialog : public VerticallyTabbedDialog
+class VDI;
+class SR;
+
+class VdiSizeLocationPage : public IEditPage
 {
     Q_OBJECT
 
-public:
-    explicit VdiPropertiesDialog(QSharedPointer<VDI> vdi, QWidget* parent = nullptr);
+    public:
+        explicit VdiSizeLocationPage(QWidget* parent = nullptr);
+        ~VdiSizeLocationPage() override;
 
-protected:
-    void build() override;
+        QString GetText() const override;
+        QString GetSubText() const override;
+        QIcon GetImage() const override;
 
-private:
-    void updateDevicePositions(const QList<VBDEditPage*>& pages);
+        void SetXenObjects(const QString& objectRef,
+                           const QString& objectType,
+                           const QVariantMap& objectDataBefore,
+                           const QVariantMap& objectDataCopy) override;
 
-    QSharedPointer<VDI> m_vdi;
+        AsyncOperation* SaveSettings() override;
+        bool IsValidToSave() const override;
+        void ShowLocalValidationMessages() override;
+        void HideLocalValidationMessages() override;
+        void Cleanup() override;
+        bool HasChanged() const override;
+
+    private slots:
+        void onSizeChanged(double value);
+
+    private:
+        void repopulate();
+        void validateSize();
+        void updateSubText();
+        qint64 selectedSizeBytes() const;
+
+        Ui::VdiSizeLocationPage* ui;
+        QSharedPointer<VDI> m_vdi;
+        QSharedPointer<SR> m_sr;
+        qint64 m_originalSize;
+        bool m_canResize;
+        bool m_validToSave;
+        QString m_subText;
 };
 
-#endif // VDIPROPERTIESDIALOG_H
+#endif // VDISIZELOCATIONPAGE_H
