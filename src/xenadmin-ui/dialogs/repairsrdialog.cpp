@@ -401,6 +401,9 @@ void RepairSRDialog::onActionCompleted()
     }
     
     this->finalizeProgressControls();
+
+    this->repairAction->deleteLater();
+    this->repairAction = nullptr;
 }
 
 void RepairSRDialog::shrink()
@@ -478,11 +481,9 @@ void RepairSRDialog::finalizeProgressControls()
     if (!success)
     {
         QString error = this->repairAction->GetErrorMessage();
-        QMessageBox::warning(this, "Repair Failed", 
-                           QString("Failed to repair storage repository: %1").arg(error));
+        QMessageBox::warning(this, "Repair Failed",  QString("Failed to repair storage repository: %1").arg(error));
     } else if (this->succeededWithWarning)
     {
-        QMessageBox::warning(this, "Repair Completed with Warnings",
-                           this->succeededWithWarningDescription);
+        QMessageBox::warning(this, "Repair Completed with Warnings", this->succeededWithWarningDescription);
     }
 }
