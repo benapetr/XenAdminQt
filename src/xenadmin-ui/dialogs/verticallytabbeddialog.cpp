@@ -38,6 +38,7 @@
 #include "xenlib/xen/xenapi/xenapi_SR.h"
 #include "xenlib/xen/xenapi/xenapi_Network.h"
 #include "xenlib/xen/xenapi/xenapi_VDI.h"
+#include "xenlib/xen/jsonrpcclient.h"
 #include <QtGlobal>
 #include "xenlib/operations/multipleaction.h"
 #include "xenlib/xen/asyncoperation.h"
@@ -443,6 +444,17 @@ void VerticallyTabbedDialog::applySimpleChanges()
     }
 
     bool hasChanges = false;
+    auto reportJsonError = [](const QString& context) -> bool
+    {
+        const QString error = Xen::JsonRpcClient::lastError();
+        if (error.isEmpty())
+            return true;
+
+        qWarning() << "VerticallyTabbedDialog::applySimpleChanges:" << context << "failed:" << error;
+        if (MainWindow::instance())
+            MainWindow::instance()->ShowStatusMessage(error, 5000);
+        return false;
+    };
     
     // 1. Check if name_label changed
     QString oldName = this->m_objectDataBefore.value("name_label").toString();
@@ -457,7 +469,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             try
             {
                 XenAPI::VM::set_name_label(session, this->m_objectRef, newName);
-                success = true;
+                success = reportJsonError("VM.set_name_label");
             } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set VM name_label:" << ex.what();
@@ -467,7 +479,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             try
             {
                 XenAPI::Host::set_name_label(session, this->m_objectRef, newName);
-                success = true;
+                success = reportJsonError("Host.set_name_label");
             } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set Host name_label:" << ex.what();
@@ -477,7 +489,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             try
             {
                 XenAPI::Pool::set_name_label(session, this->m_objectRef, newName);
-                success = true;
+                success = reportJsonError("Pool.set_name_label");
             }
             catch (const std::exception& ex)
             {
@@ -488,7 +500,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             try
             {
                 XenAPI::SR::set_name_label(session, this->m_objectRef, newName);
-                success = true;
+                success = reportJsonError("SR.set_name_label");
             } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set SR name_label:" << ex.what();
@@ -498,7 +510,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             try
             {
                 XenAPI::Network::set_name_label(session, this->m_objectRef, newName);
-                success = true;
+                success = reportJsonError("Network.set_name_label");
             } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set Network name_label:" << ex.what();
@@ -508,7 +520,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             try
             {
                 XenAPI::VDI::set_name_label(session, this->m_objectRef, newName);
-                success = true;
+                success = reportJsonError("VDI.set_name_label");
             } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set VDI name_label:" << ex.what();
@@ -534,7 +546,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             try
             {
                 XenAPI::VM::set_name_description(session, this->m_objectRef, newDesc);
-                success = true;
+                success = reportJsonError("VM.set_name_description");
             } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set VM name_description:" << ex.what();
@@ -544,7 +556,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             try
             {
                 XenAPI::Host::set_name_description(session, this->m_objectRef, newDesc);
-                success = true;
+                success = reportJsonError("Host.set_name_description");
             } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set Host name_description:" << ex.what();
@@ -554,7 +566,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             try
             {
                 XenAPI::Pool::set_name_description(session, this->m_objectRef, newDesc);
-                success = true;
+                success = reportJsonError("Pool.set_name_description");
             } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set Pool name_description:" << ex.what();
@@ -564,7 +576,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             try
             {
                 XenAPI::SR::set_name_description(session, this->m_objectRef, newDesc);
-                success = true;
+                success = reportJsonError("SR.set_name_description");
             } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set SR name_description:" << ex.what();
@@ -574,7 +586,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             try
             {
                 XenAPI::Network::set_name_description(session, this->m_objectRef, newDesc);
-                success = true;
+                success = reportJsonError("Network.set_name_description");
             } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set Network name_description:" << ex.what();
@@ -584,7 +596,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             try
             {
                 XenAPI::VDI::set_name_description(session, this->m_objectRef, newDesc);
-                success = true;
+                success = reportJsonError("VDI.set_name_description");
             } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set VDI name_description:" << ex.what();

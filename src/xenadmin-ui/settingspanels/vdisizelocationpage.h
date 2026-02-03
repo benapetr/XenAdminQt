@@ -76,6 +76,7 @@ class VdiSizeLocationPage : public IEditPage
         QSharedPointer<VDI> m_vdi;
         QSharedPointer<SR> m_sr;
         qint64 m_originalSize;
+        double m_originalSizeGb;
         bool m_canResize;
         bool m_validToSave;
         QString m_subText;

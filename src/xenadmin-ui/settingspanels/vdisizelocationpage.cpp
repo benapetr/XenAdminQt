@@ -46,6 +46,7 @@ VdiSizeLocationPage::VdiSizeLocationPage(QWidget* parent)
     : IEditPage(parent)
     , ui(new Ui::VdiSizeLocationPage)
     , m_originalSize(0)
+    , m_originalSizeGb(0.0)
     , m_canResize(false)
     , m_validToSave(true)
 {
@@ -142,7 +143,8 @@ bool VdiSizeLocationPage::HasChanged() const
     if (!this->m_canResize)
         return false;
 
-    return (this->selectedSizeBytes() - this->m_originalSize) > kSizeDeltaThreshold;
+    const double deltaGb = this->ui->sizeSpinBox->value() - this->m_originalSizeGb;
+    return (deltaGb * 1024.0 * 1024.0 * 1024.0) > kSizeDeltaThreshold;
 }
 
 void VdiSizeLocationPage::onSizeChanged(double value)
@@ -162,6 +164,7 @@ void VdiSizeLocationPage::repopulate()
 
     this->ui->currentSizeValueLabel->setText(Misc::FormatSize(this->m_originalSize));
     this->ui->sizeSpinBox->setValue(sizeGb);
+    this->m_originalSizeGb = this->ui->sizeSpinBox->value();
 
     const QString location = this->m_sr ? this->m_sr->NameWithoutHost() : tr("Unknown");
     this->ui->locationValueLabel->setText(QString("'%1'").arg(location));
