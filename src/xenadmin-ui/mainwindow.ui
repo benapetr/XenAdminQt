@@ -136,6 +136,23 @@
    <property name="title">
     <string>&amp;VM</string>
    </property>
+   <widget class="QMenu" name="startShutdownToolStripMenuItem">
+    <property name="title">
+     <string>&amp;Start/Shut down</string>
+    </property>
+    <addaction name="startVMAction"/>
+    <addaction name="shutDownAction"/>
+    <addaction name="resumeAction"/>
+    <addaction name="suspendAction"/>
+    <addaction name="rebootAction"/>
+    <addaction name="vmRecoveryModeAction"/>
+    <addaction name="separator"/>
+    <addaction name="forceShutdownAction"/>
+    <addaction name="forceRebootAction"/>
+    <addaction name="separator"/>
+    <addaction name="vappStartAction"/>
+    <addaction name="vappShutdownAction"/>
+   </widget>
    <addaction name="newVmAction"/>
    <addaction name="startShutdownToolStripMenuItem"/>
    <addaction name="resumeOnToolStripMenuItem"/>
@@ -434,6 +451,30 @@
    </property>
    <property name="toolTip">
     <string>Force Reboot</string>
+   </property>
+  </action>
+  <action name="vmRecoveryModeAction">
+   <property name="text">
+    <string>Start in Recovery Mode</string>
+   </property>
+   <property name="statusTip">
+    <string>Boot the VM with temporary recovery boot settings</string>
+   </property>
+  </action>
+  <action name="vappStartAction">
+   <property name="text">
+    <string>Start vApp</string>
+   </property>
+   <property name="statusTip">
+    <string>Start the selected vApp</string>
+   </property>
+  </action>
+  <action name="vappShutdownAction">
+   <property name="text">
+    <string>Shut Down vApp</string>
+   </property>
+   <property name="statusTip">
+    <string>Shut down the selected vApp</string>
    </property>
   </action>
   <action name="connectAction">
@@ -788,18 +829,6 @@
    </property>
    <property name="shortcut">
     <string>Alt+Return</string>
-   </property>
-  </action>
-  <action name="startShutdownToolStripMenuItem">
-   <property name="icon">
-    <iconset resource="resources.qrc">
-     <normaloff>:/icons/start_vm.png</normaloff>:/icons/start_vm.png</iconset>
-   </property>
-   <property name="text">
-    <string>&amp;Start/Shut down</string>
-   </property>
-   <property name="statusTip">
-    <string>Start, shut down, resume, or pause VM</string>
    </property>
   </action>
   <action name="resumeOnToolStripMenuItem">

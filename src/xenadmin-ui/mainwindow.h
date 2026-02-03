@@ -330,7 +330,6 @@ class MainWindow : public QMainWindow
         QToolButton* m_backButton = nullptr;    // QToolButton for dropdown menu support
         QToolButton* m_forwardButton = nullptr; // QToolButton for dropdown menu support
         QMenu* m_createVmFromTemplateMenu = nullptr;
-        QMenu* m_vmLifeCycleMenu = nullptr;
         QMenu* m_resumeOnServerMenu = nullptr;
         QMenu* m_migrateToServerMenu = nullptr;
         QMenu* m_startOnServerMenu = nullptr;

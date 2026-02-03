@@ -184,26 +184,6 @@
 #include <QCursor>
 #include "titlebar.h"
 
-namespace
-{
-    template <typename T>
-    QAction* addVmCommandAction(QMenu* menu, MainWindow* mainWindow)
-    {
-        T cmd(mainWindow);
-        QAction* action = menu->addAction(cmd.MenuText());
-        const QIcon icon = cmd.GetIcon();
-        if (!icon.isNull())
-            action->setIcon(icon);
-        action->setEnabled(cmd.CanRun());
-        QObject::connect(action, &QAction::triggered, mainWindow, [mainWindow]() {
-            T runCmd(mainWindow);
-            if (runCmd.CanRun())
-                runCmd.Run();
-        });
-        return action;
-    }
-}
-
 MainWindow *MainWindow::g_instance = nullptr;
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWindow)
@@ -3292,12 +3272,6 @@ void MainWindow::connectMenuActions()
 
     // VM menu actions
     // Note: newVmAction is connected in initializeToolbar() (toolbar and menu share the same QAction)
-    if (!this->m_vmLifeCycleMenu)
-    {
-        this->m_vmLifeCycleMenu = new QMenu(this);
-        connect(this->m_vmLifeCycleMenu, &QMenu::aboutToShow, this, &MainWindow::refreshVmMenu);
-        this->ui->startShutdownToolStripMenuItem->setMenu(this->m_vmLifeCycleMenu);
-    }
     connect(this->ui->menuVM, &QMenu::aboutToShow, this, &MainWindow::refreshVmMenu);
     connect(this->ui->copyVMtoSharedStorageMenuItem, &QAction::triggered, this, &MainWindow::onCopyVM);
     connect(this->ui->MoveVMToolStripMenuItem, &QAction::triggered, this, &MainWindow::onMoveVM);
@@ -3310,6 +3284,21 @@ void MainWindow::connectMenuActions()
     connect(this->ui->snapshotToolStripMenuItem, &QAction::triggered, this, &MainWindow::onTakeSnapshot);
     connect(this->ui->convertToTemplateToolStripMenuItem, &QAction::triggered, this, &MainWindow::onConvertToTemplate);
     connect(this->ui->exportToolStripMenuItem, &QAction::triggered, this, &MainWindow::onExportVM);
+    connect(this->ui->vmRecoveryModeAction, &QAction::triggered, this, [this]() {
+        VMRecoveryModeCommand cmd(this);
+        if (cmd.CanRun())
+            cmd.Run();
+    });
+    connect(this->ui->vappStartAction, &QAction::triggered, this, [this]() {
+        VappStartCommand cmd(this);
+        if (cmd.CanRun())
+            cmd.Run();
+    });
+    connect(this->ui->vappShutdownAction, &QAction::triggered, this, [this]() {
+        VappShutDownCommand cmd(this);
+        if (cmd.CanRun())
+            cmd.Run();
+    });
 
     // Template menu actions
     connect(this->ui->newVMFromTemplateToolStripMenuItem, &QAction::triggered, this, &MainWindow::onNewVMFromTemplate);
@@ -3425,31 +3414,27 @@ void MainWindow::updateMenuItems()
 
 void MainWindow::refreshVmMenu()
 {
-    if (this->m_vmLifeCycleMenu)
-    {
-        this->m_vmLifeCycleMenu->clear();
+    StartVMCommand startCmd(this);
+    StopVMCommand stopCmd(this);
+    ResumeVMCommand resumeCmd(this);
+    SuspendVMCommand suspendCmd(this);
+    RestartVMCommand rebootCmd(this);
+    VMRecoveryModeCommand recoveryCmd(this);
+    ForceShutdownVMCommand forceShutdownCmd(this);
+    ForceRebootVMCommand forceRebootCmd(this);
+    VappStartCommand vappStartCmd(this);
+    VappShutDownCommand vappShutdownCmd(this);
 
-        StopVMCommand shutdownCmd(this);
-        if (shutdownCmd.CanRun())
-            addVmCommandAction<StopVMCommand>(this->m_vmLifeCycleMenu, this);
-        else
-            addVmCommandAction<StartVMCommand>(this->m_vmLifeCycleMenu, this);
-
-        ResumeVMCommand resumeCmd(this);
-        if (resumeCmd.CanRun())
-            addVmCommandAction<ResumeVMCommand>(this->m_vmLifeCycleMenu, this);
-        else
-            addVmCommandAction<SuspendVMCommand>(this->m_vmLifeCycleMenu, this);
-
-        addVmCommandAction<RestartVMCommand>(this->m_vmLifeCycleMenu, this);
-        addVmCommandAction<VMRecoveryModeCommand>(this->m_vmLifeCycleMenu, this);
-        this->m_vmLifeCycleMenu->addSeparator();
-        addVmCommandAction<ForceShutdownVMCommand>(this->m_vmLifeCycleMenu, this);
-        addVmCommandAction<ForceRebootVMCommand>(this->m_vmLifeCycleMenu, this);
-        this->m_vmLifeCycleMenu->addSeparator();
-        addVmCommandAction<VappStartCommand>(this->m_vmLifeCycleMenu, this);
-        addVmCommandAction<VappShutDownCommand>(this->m_vmLifeCycleMenu, this);
-    }
+    this->ui->startVMAction->setEnabled(startCmd.CanRun());
+    this->ui->shutDownAction->setEnabled(stopCmd.CanRun());
+    this->ui->resumeAction->setEnabled(resumeCmd.CanRun());
+    this->ui->suspendAction->setEnabled(suspendCmd.CanRun());
+    this->ui->rebootAction->setEnabled(rebootCmd.CanRun());
+    this->ui->vmRecoveryModeAction->setEnabled(recoveryCmd.CanRun());
+    this->ui->forceShutdownAction->setEnabled(forceShutdownCmd.CanRun());
+    this->ui->forceRebootAction->setEnabled(forceRebootCmd.CanRun());
+    this->ui->vappStartAction->setEnabled(vappStartCmd.CanRun());
+    this->ui->vappShutdownAction->setEnabled(vappShutdownCmd.CanRun());
 
     auto rebuildOperationMenu = [this](QAction* action, QMenu*& menu, VMOperationMenu::Operation operation) {
         if (!action)
