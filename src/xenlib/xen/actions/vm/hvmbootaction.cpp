@@ -30,6 +30,7 @@
 #include "../../session.h"
 #include "../../xenapi/xenapi_VM.h"
 #include "../../vm.h"
+#include "../../jsonrpcclient.h"
 #include <QDebug>
 #include <stdexcept>
 
@@ -79,17 +80,13 @@ void HVMBootAction::run()
         setBootOrder(recoveryBootParams, "DN");
         XenAPI::VM::set_HVM_boot_params(session, this->m_vm->OpaqueRef(), recoveryBootParams);
 
-        // Step 3: Start the VM
+        // Step 3: Start the VM (sync, matches C#)
         SetPercentComplete(50);
-
-        QString taskRef = XenAPI::VM::async_start(session, this->m_vm->OpaqueRef(), false, false);
-        pollToCompletion(taskRef); // Wait for VM to start
-
-        if (GetState() == Failed)
+        XenAPI::VM::start(session, this->m_vm->OpaqueRef(), false, false);
+        const QString startError = Xen::JsonRpcClient::lastError();
+        if (!startError.isEmpty())
         {
-            // If start failed, restore boot settings before returning
-            restoreBootSettings(session);
-            return;
+            throw std::runtime_error(startError.toStdString());
         }
 
         // Step 4: Restore original boot policy and order
@@ -114,7 +111,10 @@ void HVMBootAction::run()
 
 QString HVMBootAction::getBootOrder(const QVariantMap& bootParams) const
 {
-    return bootParams.value("order").toString();
+    if (bootParams.contains("order"))
+        return bootParams.value("order").toString().toUpper();
+
+    return "CD";
 }
 
 void HVMBootAction::setBootOrder(QVariantMap& bootParams, const QString& order)
@@ -124,7 +124,7 @@ void HVMBootAction::setBootOrder(QVariantMap& bootParams, const QString& order)
         bootParams.remove("order");
     } else
     {
-        bootParams["order"] = order;
+        bootParams["order"] = order.toLower();
     }
 }
 
