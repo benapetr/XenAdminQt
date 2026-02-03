@@ -37,6 +37,7 @@
 #include "xenlib/xen/xenapi/xenapi_Pool.h"
 #include "xenlib/xen/xenapi/xenapi_SR.h"
 #include "xenlib/xen/xenapi/xenapi_Network.h"
+#include "xenlib/xen/xenapi/xenapi_VDI.h"
 #include <QtGlobal>
 #include "xenlib/operations/multipleaction.h"
 #include "xenlib/xen/asyncoperation.h"
@@ -457,25 +458,21 @@ void VerticallyTabbedDialog::applySimpleChanges()
             {
                 XenAPI::VM::set_name_label(session, this->m_objectRef, newName);
                 success = true;
-            }
-            catch (const std::exception& ex)
+            } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set VM name_label:" << ex.what();
             }
-        }
-        else if (this->m_objectType == XenObjectType::Host)
+        } else if (this->m_objectType == XenObjectType::Host)
         {
             try
             {
                 XenAPI::Host::set_name_label(session, this->m_objectRef, newName);
                 success = true;
-            }
-            catch (const std::exception& ex)
+            } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set Host name_label:" << ex.what();
             }
-        }
-        else if (this->m_objectType == XenObjectType::Pool)
+        } else if (this->m_objectType == XenObjectType::Pool)
         {
             try
             {
@@ -486,40 +483,42 @@ void VerticallyTabbedDialog::applySimpleChanges()
             {
                 qWarning() << "Failed to set Pool name_label:" << ex.what();
             }
-        }
-        else if (this->m_objectType == XenObjectType::SR)
+        } else if (this->m_objectType == XenObjectType::SR)
         {
             try
             {
                 XenAPI::SR::set_name_label(session, this->m_objectRef, newName);
                 success = true;
-            }
-            catch (const std::exception& ex)
+            } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set SR name_label:" << ex.what();
             }
-        }
-        else if (this->m_objectType == XenObjectType::Network)
+        } else if (this->m_objectType == XenObjectType::Network)
         {
             try
             {
                 XenAPI::Network::set_name_label(session, this->m_objectRef, newName);
                 success = true;
-            }
-            catch (const std::exception& ex)
+            } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set Network name_label:" << ex.what();
+            }
+        } else if (this->m_objectType == XenObjectType::VDI)
+        {
+            try
+            {
+                XenAPI::VDI::set_name_label(session, this->m_objectRef, newName);
+                success = true;
+            } catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set VDI name_label:" << ex.what();
             }
         }
         
         if (success)
-        {
             hasChanges = true;
-        }
         else
-        {
             qWarning() << "Failed to set name_label for" << XenObject::TypeToString(this->m_objectType);
-        }
     }
     
     // 2. Check if name_description changed
@@ -536,66 +535,66 @@ void VerticallyTabbedDialog::applySimpleChanges()
             {
                 XenAPI::VM::set_name_description(session, this->m_objectRef, newDesc);
                 success = true;
-            }
-            catch (const std::exception& ex)
+            } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set VM name_description:" << ex.what();
             }
-        }
-        else if (this->m_objectType == XenObjectType::Host)
+        } else if (this->m_objectType == XenObjectType::Host)
         {
             try
             {
                 XenAPI::Host::set_name_description(session, this->m_objectRef, newDesc);
                 success = true;
-            }
-            catch (const std::exception& ex)
+            } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set Host name_description:" << ex.what();
             }
-        }
-        else if (this->m_objectType == XenObjectType::Pool)
+        } else if (this->m_objectType == XenObjectType::Pool)
         {
             try
             {
                 XenAPI::Pool::set_name_description(session, this->m_objectRef, newDesc);
                 success = true;
-            }
-            catch (const std::exception& ex)
+            } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set Pool name_description:" << ex.what();
             }
-        }
-        else if (this->m_objectType == XenObjectType::SR)
+        } else if (this->m_objectType == XenObjectType::SR)
         {
             try
             {
                 XenAPI::SR::set_name_description(session, this->m_objectRef, newDesc);
                 success = true;
-            }
-            catch (const std::exception& ex)
+            } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set SR name_description:" << ex.what();
             }
-        }
-        else if (this->m_objectType == XenObjectType::Network)
+        } else if (this->m_objectType == XenObjectType::Network)
         {
             try
             {
                 XenAPI::Network::set_name_description(session, this->m_objectRef, newDesc);
                 success = true;
-            }
-            catch (const std::exception& ex)
+            } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set Network name_description:" << ex.what();
+            }
+        } else if (this->m_objectType == XenObjectType::VDI)
+        {
+            try
+            {
+                XenAPI::VDI::set_name_description(session, this->m_objectRef, newDesc);
+                success = true;
+            } catch (const std::exception& ex)
+            {
+                qWarning() << "Failed to set VDI name_description:" << ex.what();
             }
         }
         
         if (success)
         {
             hasChanges = true;
-        }
-        else
+        } else
         {
             qWarning() << "Failed to set name_description for" << XenObject::TypeToString(this->m_objectType);
         }
@@ -614,8 +613,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             {
                 XenAPI::VM::set_other_config(session, this->m_objectRef, newOtherConfig);
                 hasChanges = true;
-            }
-            catch (const std::exception& ex)
+            } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set VM other_config:" << ex.what();
             }
@@ -630,8 +628,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             {
                 XenAPI::VM::set_VCPUs_params(session, this->m_objectRef, newVcpusParams);
                 hasChanges = true;
-            }
-            catch (const std::exception& ex)
+            } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set VM VCPUs_params:" << ex.what();
             }
@@ -646,14 +643,12 @@ void VerticallyTabbedDialog::applySimpleChanges()
             {
                 XenAPI::VM::set_platform(session, this->m_objectRef, newPlatform);
                 hasChanges = true;
-            }
-            catch (const std::exception& ex)
+            } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set VM platform:" << ex.what();
             }
         }
-    }
-    else if (this->m_objectType == XenObjectType::Network)
+    } else if (this->m_objectType == XenObjectType::Network)
     {
         if (oldOtherConfig != newOtherConfig)
         {
@@ -662,8 +657,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             {
                 XenAPI::Network::set_other_config(session, this->m_objectRef, newOtherConfig);
                 hasChanges = true;
-            }
-            catch (const std::exception& ex)
+            } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set Network other_config:" << ex.what();
             }
@@ -683,8 +677,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
             {
                 XenAPI::VM::set_HVM_shadow_multiplier(session, this->m_objectRef, newMultiplier);
                 hasChanges = true;
-            }
-            catch (const std::exception& ex)
+            } catch (const std::exception& ex)
             {
                 qWarning() << "Failed to set HVM_shadow_multiplier:" << ex.what();
             }
@@ -716,8 +709,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
                     // For now, just skip removal (set to empty string instead)
                     qWarning() << "Skipping removal of other_config key" << key
                                << "(remove_from_other_config not implemented)";
-                }
-                else
+                } else
                 {
                     // Add or update the key
                     if (this->m_objectType == XenObjectType::Host)
@@ -733,8 +725,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
                         {
                             XenAPI::Host::set_other_config(session, this->m_objectRef, otherConfig);
                             success = true;
-                        }
-                        catch (const std::exception& ex)
+                        } catch (const std::exception& ex)
                         {
                             qWarning() << "Failed to set Host other_config:" << ex.what();
                         }
@@ -758,8 +749,7 @@ void VerticallyTabbedDialog::applySimpleChanges()
     if (hasChanges)
     {
         qDebug() << "VerticallyTabbedDialog::applySimpleChanges: Changes applied successfully";
-    }
-    else
+    } else
     {
         qDebug() << "VerticallyTabbedDialog::applySimpleChanges: No simple changes detected";
     }
