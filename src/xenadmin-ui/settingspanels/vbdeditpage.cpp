@@ -61,8 +61,8 @@ VBDEditPage::VBDEditPage(QSharedPointer<VBD> vbd, QWidget* parent)
     this->ui->prioritySlider->setMinimum(kPriorityMin);
     this->ui->prioritySlider->setMaximum(kPriorityMax);
 
-    connect(this->ui->modeComboBox, &QComboBox::currentIndexChanged, this, &VBDEditPage::onInputsChanged);
-    connect(this->ui->positionComboBox, &QComboBox::currentIndexChanged, this, &VBDEditPage::onInputsChanged);
+    connect(this->ui->modeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &VBDEditPage::onInputsChanged);
+    connect(this->ui->positionComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &VBDEditPage::onInputsChanged);
     connect(this->ui->prioritySlider, &QSlider::valueChanged, this, &VBDEditPage::onInputsChanged);
 
     if (this->m_vbd && this->m_vbd->IsValid())
@@ -168,14 +168,7 @@ AsyncOperation* VBDEditPage::SaveSettings()
     if (this->ui->priorityGroup->isVisible())
         priority = this->ui->prioritySlider->value();
 
-    return new VbdEditAction(this->m_vbd->OpaqueRef(),
-                             vbdMode,
-                             priority,
-                             changeDevicePosition,
-                             otherVbdRef,
-                             devicePosition,
-                             true,
-                             this);
+    return new VbdEditAction(this->m_vbd->OpaqueRef(), vbdMode, priority, changeDevicePosition, otherVbdRef, devicePosition, true, this);
 }
 
 bool VBDEditPage::IsValidToSave() const
@@ -382,7 +375,5 @@ void VBDEditPage::warnSwapRequiresRestart(const QSharedPointer<VBD>& other) cons
     const bool otherAttached = other->CurrentlyAttached() && !other->CanUnplug();
 
     if (thisAttached || otherAttached)
-        QMessageBox::information(nullptr,
-                                 tr("Restart required"),
-                                 tr("You will have to restart the VM for changes in device position to take effect."));
+        QMessageBox::information(nullptr, tr("Restart required"), tr("You will have to restart the VM for changes in device position to take effect."));
 }

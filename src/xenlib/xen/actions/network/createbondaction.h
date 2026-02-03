@@ -30,6 +30,7 @@
 
 #include "../../asyncoperation.h"
 #include <QHash>
+#include <QSet>
 #include <QStringList>
 #include <QSharedPointer>
 
