@@ -34,6 +34,7 @@
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "xenlib/xencache.h"
+#include "xenadmin-ui/iconmanager.h"
 #include <QAction>
 #include <algorithm>
 
@@ -86,7 +87,7 @@ void AddHostToSelectedPoolMenu::onAboutToShow()
         // Replace & with && to escape ampersands in menu text
         hostName.replace("&", "&&");
         
-        QAction* action = this->addAction(hostName);
+        QAction* action = this->addAction(IconManager::instance().GetIconForHost(host.data()), hostName);
         
         // Capture host and pool for the lambda
         QSharedPointer<Host> hostCopy = host;
@@ -156,10 +157,35 @@ QList<QSharedPointer<Host>> AddHostToSelectedPoolMenu::getSortedStandaloneHosts(
 
 QSharedPointer<Pool> AddHostToSelectedPoolMenu::getSelectedPool() const
 {
-    // TODO: Get selected pool from main window selection
-    // For now, return nullptr
-    
-    return nullptr;
+    if (!this->mainWindow_)
+        return QSharedPointer<Pool>();
+
+    QTreeWidget* tree = this->mainWindow_->GetServerTreeWidget();
+    if (!tree)
+        return QSharedPointer<Pool>();
+
+    QTreeWidgetItem* item = tree->currentItem();
+    if (!item)
+        return QSharedPointer<Pool>();
+
+    QVariant data = item->data(0, Qt::UserRole);
+    if (!data.canConvert<QSharedPointer<XenObject>>())
+        return QSharedPointer<Pool>();
+
+    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+    if (!obj || !obj->IsValid())
+        return QSharedPointer<Pool>();
+
+    if (obj->GetObjectType() == XenObjectType::Pool)
+        return qSharedPointerDynamicCast<Pool>(obj);
+
+    if (obj->GetObjectType() == XenObjectType::Host)
+    {
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(obj);
+        return host ? host->GetPool() : QSharedPointer<Pool>();
+    }
+
+    return QSharedPointer<Pool>();
 }
 
 // AddHostToSelectedPoolCommand implementation
@@ -170,22 +196,34 @@ AddHostToSelectedPoolCommand::AddHostToSelectedPoolCommand(MainWindow* mainWindo
 
 bool AddHostToSelectedPoolCommand::CanRun() const
 {
-    // TODO: Get selection from main window
-    // Need exactly one item selected and it must be in a pool
-    
-    // For now, check if we have at least one pool
-    QList<XenConnection*> connections = Xen::ConnectionsManager::instance()->GetAllConnections();
-    
-    for (XenConnection* conn : connections)
+    if (!this->mainWindow())
+        return false;
+
+    QTreeWidget* tree = this->mainWindow()->GetServerTreeWidget();
+    if (!tree)
+        return false;
+
+    QTreeWidgetItem* item = tree->currentItem();
+    if (!item)
+        return false;
+
+    QVariant data = item->data(0, Qt::UserRole);
+    if (!data.canConvert<QSharedPointer<XenObject>>())
+        return false;
+
+    QSharedPointer<XenObject> obj = data.value<QSharedPointer<XenObject>>();
+    if (!obj || !obj->IsValid())
+        return false;
+
+    if (obj->GetObjectType() == XenObjectType::Pool)
+        return true;
+
+    if (obj->GetObjectType() == XenObjectType::Host)
     {
-        if (!conn || !conn->IsConnected())
-            continue;
-        
-        QSharedPointer<Pool> pool = conn->GetCache()->GetPool();
-        if (pool)
-            return true; // Found at least one pool
+        QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(obj);
+        return host && host->GetPool();
     }
-    
+
     return false;
 }
 

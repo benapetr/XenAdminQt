@@ -32,6 +32,7 @@
 #include "network/comparableaddress.h"
 
 class Pool;
+class PoolUpdate;
 class SR;
 class VM;
 class PBD;
@@ -93,6 +94,8 @@ class XENLIB_EXPORT Host : public XenObject
         bool RestrictVSwitchController() const;
         bool RestrictSriovNetwork() const;
         bool RestrictManagementOnVLAN() const;
+        bool RestrictPooling() const;
+        bool RestrictPoolSize() const;
         bool SriovNetworkDisabled() const;
         bool vSwitchNetworkBackend() const;
 
@@ -234,6 +237,12 @@ class XENLIB_EXPORT Host : public XenObject
         //! Get external authentication configuration (map of authentication configuration parameters)
         QVariantMap ExternalAuthConfiguration() const;
 
+        //! Check if host license is a free/express/trial edition
+        bool IsFreeLicense() const;
+
+        //! Check if Linux pack is present (software_version contains xs:linux)
+        bool LinuxPackPresent() const;
+
         //! Get power-on mode (e.g., "wake-on-lan", "iLO", "DRAC")
         QString PowerOnMode() const;
 
@@ -320,6 +329,37 @@ class XENLIB_EXPORT Host : public XenObject
 
         //! Get license server configuration (map of license server address and port)
         QVariantMap LicenseServer() const;
+
+        //! Get raw build number from software_version (may be empty)
+        QString BuildNumberRaw() const;
+
+        //! Get platform version string from software_version
+        QString PlatformVersion() const;
+
+        //! Get product brand string from software_version
+        QString ProductBrand() const;
+
+        //! Get database schema string from software_version
+        QString GetDatabaseSchema() const;
+
+        //! Get list of applied pool updates (Pool_update objects)
+        QList<QSharedPointer<PoolUpdate>> AppliedUpdates() const;
+
+        struct SuppPack
+        {
+            QString Originator;
+            QString Name;
+            QString Description;
+            QString Version;
+            QString Build;
+            bool Homogeneous = false;
+            bool IsValid = false;
+
+            QString OriginatorAndName() const { return Originator + ":" + Name; }
+        };
+
+        //! Get supplemental packs parsed from software_version
+        QList<SuppPack> SuppPacks() const;
 
         // Property getters for search/query functionality
         // C# equivalent: PropertyAccessors dictionary in Common.cs

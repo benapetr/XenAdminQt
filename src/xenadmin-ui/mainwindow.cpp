@@ -96,10 +96,13 @@
 #include "commands/pool/deletepoolcommand.h"
 #include "commands/pool/haconfigurecommand.h"
 #include "commands/pool/hadisablecommand.h"
+#include "commands/pool/disconnectpoolcommand.h"
 #include "commands/pool/poolpropertiescommand.h"
 #include "commands/pool/joinpoolcommand.h"
 #include "commands/pool/ejecthostfrompoolcommand.h"
 #include "commands/pool/addhosttoselectedpoolmenu.h"
+#include "commands/pool/poolremoveservermenu.h"
+#include "commands/pool/rotatepoolsecretcommand.h"
 
 // VM commands
 #include "commands/vm/importvmcommand.h"
@@ -2344,7 +2347,7 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->addServerAction->setEnabled(true); // Always enabled
     Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
     const bool anyConnected = connMgr && !connMgr->GetConnectedConnections().isEmpty();
-    this->ui->addPoolAction->setEnabled(anyConnected);
+    this->ui->addPoolAction->setEnabled(this->m_commands["NewPool"]->CanRun());
     this->ui->newStorageAction->setEnabled(anyConnected);
     this->ui->newVmAction->setEnabled(anyConnected);
 
@@ -2425,11 +2428,28 @@ void MainWindow::updateToolbarsAndMenus()
     // Pool menu
     AddHostToSelectedPoolCommand addHostToPoolCmd(this);
     this->ui->AddPoolToolStripMenuItem->setEnabled(this->m_commands["NewPool"]->CanRun());
-    this->ui->addServerToolStripMenuItem->setEnabled(addHostToPoolCmd.CanRun());
-    this->ui->removeServerToolStripMenuItem->setEnabled(this->m_commands["EjectHostFromPool"]->CanRun());
+    if (auto* addServerMenu = qobject_cast<AddHostToSelectedPoolMenu*>(this->m_addServerToPoolMenu))
+        this->ui->addServerToolStripMenuItem->setEnabled(addServerMenu->CanRun());
+    else
+        this->ui->addServerToolStripMenuItem->setEnabled(addHostToPoolCmd.CanRun());
+
+    if (auto* removeServerMenu = qobject_cast<PoolRemoveServerMenu*>(this->m_removeServerFromPoolMenu))
+        this->ui->removeServerToolStripMenuItem->setEnabled(removeServerMenu->CanRun());
+    else
+        this->ui->removeServerToolStripMenuItem->setEnabled(this->m_commands["EjectHostFromPool"]->CanRun());
     this->ui->deleteToolStripMenuItem->setEnabled(this->m_commands["DeletePool"]->CanRun());
-    this->ui->toolStripMenuItemHaConfigure->setEnabled(this->m_commands["HAConfigure"]->CanRun());
-    this->ui->toolStripMenuItemHaDisable->setEnabled(this->m_commands["HADisable"]->CanRun());
+    this->ui->poolReconnectAsToolStripMenuItem->setEnabled(this->m_commands["HostReconnectAs"]->CanRun());
+    this->ui->poolDisconnectToolStripMenuItem->setEnabled(this->m_commands["DisconnectPool"]->CanRun());
+    this->ui->manageVappsToolStripMenuItem->setEnabled(false);
+    this->ui->toolStripMenuItemHaConfigure->setEnabled(false);
+    this->ui->toolStripMenuItemHaDisable->setEnabled(false);
+    this->ui->menuDisasterRecovery->setEnabled(false);
+    this->ui->vmSnapshotSchedulesToolStripMenuItem->setEnabled(false);
+    this->ui->exportResourceDataToolStripMenuItem->setEnabled(false);
+    this->ui->menuWorkloadBalancing->setEnabled(false);
+    this->ui->makeStandaloneServerToolStripMenuItem->setEnabled(false);
+    this->ui->changePoolPasswordToolStripMenuItem->setEnabled(false);
+    this->ui->rotatePoolSecretToolStripMenuItem->setEnabled(this->m_commands["RotatePoolSecret"]->CanRun());
     this->ui->PoolPropertiesToolStripMenuItem->setEnabled(this->m_commands["PoolProperties"]->CanRun());
     this->ui->addServerToPoolMenuItem->setEnabled(this->m_commands["JoinPool"]->CanRun());
     this->ui->menuItemRemoveFromPool->setEnabled(this->m_commands["EjectHostFromPool"]->CanRun());
@@ -2892,10 +2912,22 @@ void MainWindow::onHADisable()
         this->m_commands["HADisable"]->Run();
 }
 
+void MainWindow::onDisconnectPool()
+{
+    if (this->m_commands.contains("DisconnectPool"))
+        this->m_commands["DisconnectPool"]->Run();
+}
+
 void MainWindow::onPoolProperties()
 {
     if (this->m_commands.contains("PoolProperties"))
         this->m_commands["PoolProperties"]->Run();
+}
+
+void MainWindow::onRotatePoolSecret()
+{
+    if (this->m_commands.contains("RotatePoolSecret"))
+        this->m_commands["RotatePoolSecret"]->Run();
 }
 
 void MainWindow::onJoinPool()
@@ -3169,6 +3201,8 @@ void MainWindow::initializeCommands()
     this->m_commands["DeletePool"] = new DeletePoolCommand(this, this);
     this->m_commands["HAConfigure"] = new HAConfigureCommand(this, this);
     this->m_commands["HADisable"] = new HADisableCommand(this, this);
+    this->m_commands["DisconnectPool"] = new DisconnectPoolCommand(this, this);
+    this->m_commands["RotatePoolSecret"] = new RotatePoolSecretCommand(this, this);
     this->m_commands["PoolProperties"] = new PoolPropertiesCommand(this, this);
     this->m_commands["JoinPool"] = new JoinPoolCommand(this, this);
     this->m_commands["EjectHostFromPool"] = new EjectHostFromPoolCommand(this, this);
@@ -3247,6 +3281,18 @@ void MainWindow::connectMenuActions()
         this->ui->menuTemplates->removeAction(this->ui->InstantVmToolStripMenuItem);
     }
 
+    if (!this->m_addServerToPoolMenu)
+    {
+        this->m_addServerToPoolMenu = new AddHostToSelectedPoolMenu(this, this);
+        this->ui->addServerToolStripMenuItem->setMenu(this->m_addServerToPoolMenu);
+    }
+
+    if (!this->m_removeServerFromPoolMenu)
+    {
+        this->m_removeServerFromPoolMenu = new PoolRemoveServerMenu(this, this);
+        this->ui->removeServerToolStripMenuItem->setMenu(this->m_removeServerFromPoolMenu);
+    }
+
     // Server menu actions
     connect(this->ui->ReconnectToolStripMenuItem1, &QAction::triggered, this, &MainWindow::onReconnectHost);
     connect(this->ui->DisconnectToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDisconnectHost);
@@ -3261,11 +3307,13 @@ void MainWindow::connectMenuActions()
 
     // Pool menu actions
     connect(this->ui->AddPoolToolStripMenuItem, &QAction::triggered, this, &MainWindow::onNewPool);
-    connect(this->ui->addServerToolStripMenuItem, &QAction::triggered, this, &MainWindow::onAddServerToPool);
-    connect(this->ui->removeServerToolStripMenuItem, &QAction::triggered, this, &MainWindow::onEjectFromPool);
+    connect(this->ui->addPoolAction, &QAction::triggered, this, &MainWindow::onNewPool);
+    connect(this->ui->poolReconnectAsToolStripMenuItem, &QAction::triggered, this, &MainWindow::onReconnectAs);
+    connect(this->ui->poolDisconnectToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDisconnectPool);
     connect(this->ui->deleteToolStripMenuItem, &QAction::triggered, this, &MainWindow::onDeletePool);
     connect(this->ui->toolStripMenuItemHaConfigure, &QAction::triggered, this, &MainWindow::onHAConfigure);
     connect(this->ui->toolStripMenuItemHaDisable, &QAction::triggered, this, &MainWindow::onHADisable);
+    connect(this->ui->rotatePoolSecretToolStripMenuItem, &QAction::triggered, this, &MainWindow::onRotatePoolSecret);
     connect(this->ui->PoolPropertiesToolStripMenuItem, &QAction::triggered, this, &MainWindow::onPoolProperties);
     connect(this->ui->addServerToPoolMenuItem, &QAction::triggered, this, &MainWindow::onJoinPool);
     connect(this->ui->menuItemRemoveFromPool, &QAction::triggered, this, &MainWindow::onEjectFromPool);
@@ -3354,9 +3402,31 @@ void MainWindow::updateMenuItems()
 
     // Pool menu
     this->ui->AddPoolToolStripMenuItem->setEnabled(this->m_commands["NewPool"]->CanRun());
+    if (auto* addServerMenu = qobject_cast<AddHostToSelectedPoolMenu*>(this->m_addServerToPoolMenu))
+        this->ui->addServerToolStripMenuItem->setEnabled(addServerMenu->CanRun());
+    else
+    {
+        AddHostToSelectedPoolCommand addHostToPoolCmd(this);
+        this->ui->addServerToolStripMenuItem->setEnabled(addHostToPoolCmd.CanRun());
+    }
+
+    if (auto* removeServerMenu = qobject_cast<PoolRemoveServerMenu*>(this->m_removeServerFromPoolMenu))
+        this->ui->removeServerToolStripMenuItem->setEnabled(removeServerMenu->CanRun());
+    else
+        this->ui->removeServerToolStripMenuItem->setEnabled(this->m_commands["EjectHostFromPool"]->CanRun());
     this->ui->deleteToolStripMenuItem->setEnabled(this->m_commands["DeletePool"]->CanRun());
-    this->ui->toolStripMenuItemHaConfigure->setEnabled(this->m_commands["HAConfigure"]->CanRun());
-    this->ui->toolStripMenuItemHaDisable->setEnabled(this->m_commands["HADisable"]->CanRun());
+    this->ui->poolReconnectAsToolStripMenuItem->setEnabled(this->m_commands["HostReconnectAs"]->CanRun());
+    this->ui->poolDisconnectToolStripMenuItem->setEnabled(this->m_commands["DisconnectPool"]->CanRun());
+    this->ui->manageVappsToolStripMenuItem->setEnabled(false);
+    this->ui->toolStripMenuItemHaConfigure->setEnabled(false);
+    this->ui->toolStripMenuItemHaDisable->setEnabled(false);
+    this->ui->menuDisasterRecovery->setEnabled(false);
+    this->ui->vmSnapshotSchedulesToolStripMenuItem->setEnabled(false);
+    this->ui->exportResourceDataToolStripMenuItem->setEnabled(false);
+    this->ui->menuWorkloadBalancing->setEnabled(false);
+    this->ui->makeStandaloneServerToolStripMenuItem->setEnabled(false);
+    this->ui->changePoolPasswordToolStripMenuItem->setEnabled(false);
+    this->ui->rotatePoolSecretToolStripMenuItem->setEnabled(this->m_commands["RotatePoolSecret"]->CanRun());
     this->ui->PoolPropertiesToolStripMenuItem->setEnabled(this->m_commands["PoolProperties"]->CanRun());
     this->ui->addServerToPoolMenuItem->setEnabled(this->m_commands["JoinPool"]->CanRun());
     this->ui->menuItemRemoveFromPool->setEnabled(this->m_commands["EjectHostFromPool"]->CanRun());

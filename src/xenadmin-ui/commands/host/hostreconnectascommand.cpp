@@ -32,6 +32,7 @@
 #include "../../network/xenconnectionui.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/pool.h"
 #include <QtCore/QTimer>
 
 HostReconnectAsCommand::HostReconnectAsCommand(MainWindow* mainWindow, QObject* parent) : HostCommand(mainWindow, parent)
@@ -44,7 +45,7 @@ bool HostReconnectAsCommand::CanRun() const
     // 1. Connection is connected AND selected object is pool coordinator
     // 2. OR connection is in progress (to change credentials during connection)
 
-    QSharedPointer<Host> host = this->getSelectedHost();
+    QSharedPointer<Host> host = this->getReconnectHost();
     if (!host)
         return false;
 
@@ -65,7 +66,7 @@ bool HostReconnectAsCommand::CanRun() const
 
 void HostReconnectAsCommand::Run()
 {
-    QSharedPointer<Host> host = this->getSelectedHost();
+    QSharedPointer<Host> host = this->getReconnectHost();
     if (!host)
         return;
 
@@ -101,6 +102,24 @@ void HostReconnectAsCommand::Run()
 QString HostReconnectAsCommand::MenuText() const
 {
     return "Reconnect As...";
+}
+
+QSharedPointer<Host> HostReconnectAsCommand::getReconnectHost() const
+{
+    QSharedPointer<Host> host = this->getSelectedHost();
+    if (host)
+        return host;
+
+    QSharedPointer<XenObject> obj = this->GetObject();
+    if (!obj || obj->GetObjectType() != XenObjectType::Pool)
+        return QSharedPointer<Host>();
+
+    QSharedPointer<Pool> pool = qSharedPointerDynamicCast<Pool>(obj);
+    if (!pool)
+        return QSharedPointer<Host>();
+
+    QSharedPointer<Host> coordinator = pool->GetMasterHost();
+    return (coordinator && coordinator->IsValid()) ? coordinator : QSharedPointer<Host>();
 }
 
 void HostReconnectAsCommand::onReconnectConnectionStateChanged()

@@ -34,12 +34,15 @@ class EjectHostFromPoolCommand : public HostCommand
 {
     Q_OBJECT
 
-    public:
+public:
         explicit EjectHostFromPoolCommand(MainWindow* mainWindow, QObject* parent = nullptr);
 
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
+
+        static bool CanRunForHost(const QSharedPointer<Host>& host);
+        static void RunForHost(MainWindow* mainWindow, const QSharedPointer<Host>& host);
 };
 
 #endif // EJECTHOSTFROMPOOLCOMMAND_H

@@ -76,6 +76,9 @@ SOURCES += \
     controls/multipledvdisolist.cpp \
     controls/vmoperationmenu.cpp \
     controls/bonddetailswidget.cpp \
+    controls/customtreenode.cpp \
+    controls/customtreeview.cpp \
+    controls/connectionwrapperwithmorestuff.cpp \
     controls/pdsection.cpp \
     controls/xensearch/querypanel.cpp \
     controls/xensearch/searchoutput.cpp \
@@ -212,6 +215,7 @@ SOURCES += \
     commands/pool/addnewhosttopoolcommand.cpp \
     commands/pool/addhosttoselectedpoolmenu.cpp \
     commands/pool/addselectedhosttopoolmenu.cpp \
+    commands/pool/poolremoveservermenu.cpp \
     commands/pool/poolcommand.cpp \
     commands/pool/poolpropertiescommand.cpp \
     commands/pool/joinpoolcommand.cpp \
@@ -339,6 +343,9 @@ HEADERS += \
     controls/dropdownbutton.h \
     controls/vmoperationmenu.h \
     controls/bonddetailswidget.h \
+    controls/customtreenode.h \
+    controls/customtreeview.h \
+    controls/connectionwrapperwithmorestuff.h \
     controls/snapshottreeview.h \
     controls/multipledvdisolist.h \
     controls/pdsection.h \
@@ -478,6 +485,7 @@ HEADERS += \
     commands/pool/addnewhosttopoolcommand.h \
     commands/pool/addhosttoselectedpoolmenu.h \
     commands/pool/addselectedhosttopoolmenu.h \
+    commands/pool/poolremoveservermenu.h \
     commands/pool/poolcommand.h \
     commands/pool/poolpropertiescommand.h \
     commands/pool/joinpoolcommand.h \

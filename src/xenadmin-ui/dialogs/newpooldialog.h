@@ -29,10 +29,14 @@
 #define NEWPOOLDIALOG_H
 
 #include <QDialog>
-#include <QListWidgetItem>
+#include <QList>
 
 class XenConnection;
 class Session;
+class CustomTreeNode;
+class ConnectionWrapperWithMoreStuff;
+class Host;
+class Pool;
 
 namespace Ui
 {
@@ -55,28 +59,35 @@ class NewPoolDialog : public QDialog
 {
     Q_OBJECT
 
-public:
-    explicit NewPoolDialog(QWidget* parent = nullptr);
-    ~NewPoolDialog();
+    public:
+        explicit NewPoolDialog(QWidget* parent = nullptr);
+        ~NewPoolDialog();
 
-private slots:
-    void onCoordinatorChanged(int index);
-    void onServerItemChanged(QListWidgetItem* item);
-    void onPoolNameChanged(const QString& text);
-    void onAddServerClicked();
-    void onCreateClicked();
+    private slots:
+        void onCoordinatorChanged(int index);
+        void onPoolNameChanged(const QString& text);
+        void onAddServerClicked();
+        void onCreateClicked();
+        void onConnectionsChanged();
+        void onConnectionCachePopulated();
+        void onConnectionStateChanged();
+        void onTreeItemCheckChanged(CustomTreeNode* node);
 
-private:
-    void populateConnections();
-    void updateServerList();
-    void updateCreateButton();
-    bool isStandaloneConnection(XenConnection* connection) const;
-    XenConnection* getCoordinatorConnection() const;
-    QList<XenConnection*> getSupporterConnections() const;
-    void createPool();
+    private:
+        void getAllCurrentConnections();
+        void addConnectionsToComboBox();
+        void addConnectionsToListBox();
+        void updateButtons();
+        void setAsCoordinator(ConnectionWrapperWithMoreStuff* coordinator);
+        void selectCoordinator(const QSharedPointer<Host>& host);
+        void selectSupporters(const QList<QSharedPointer<Host>>& hosts);
+        QSharedPointer<Host> getCoordinator() const;
+        QList<QSharedPointer<Host>> getSupporters() const;
+        void createPool();
 
-    Ui::NewPoolDialog* ui;
-    QList<XenConnection*> m_connections;
-};
+        Ui::NewPoolDialog* ui;
+        QList<ConnectionWrapperWithMoreStuff*> m_connections;
+        QList<XenConnection*> m_newConnections;
+    };
 
 #endif // NEWPOOLDIALOG_H

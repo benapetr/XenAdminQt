@@ -255,6 +255,7 @@ HEADERS += \
     xen/pifmetrics.h \
     xen/poolpatch.h \
     xen/poolupdate.h \
+    xen/pooljoinrules.h \
     xen/pusb.h \
     xen/usbgroup.h \
     xen/sm.h \
@@ -472,6 +473,7 @@ SOURCES += \
     xen/pifmetrics.cpp \
     xen/poolpatch.cpp \
     xen/poolupdate.cpp \
+    xen/pooljoinrules.cpp \
     xen/pusb.cpp \
     xen/usbgroup.cpp \
     xen/sm.cpp \

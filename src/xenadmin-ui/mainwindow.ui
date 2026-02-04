@@ -91,12 +91,38 @@
      <addaction name="toolStripMenuItemHaConfigure"/>
      <addaction name="toolStripMenuItemHaDisable"/>
     </widget>
+    <widget class="QMenu" name="menuDisasterRecovery">
+     <property name="title">
+      <string>Disaster Recovery</string>
+     </property>
+     <addaction name="drConfigureToolStripMenuItem"/>
+     <addaction name="drWizardToolStripMenuItem"/>
+    </widget>
+    <widget class="QMenu" name="menuWorkloadBalancing">
+     <property name="title">
+      <string>Workload Balancing</string>
+     </property>
+     <addaction name="wlbReportsToolStripMenuItem"/>
+     <addaction name="wlbDisconnectToolStripMenuItem"/>
+    </widget>
     <addaction name="AddPoolToolStripMenuItem"/>
     <addaction name="separator"/>
     <addaction name="addServerToolStripMenuItem"/>
     <addaction name="removeServerToolStripMenuItem"/>
+    <addaction name="poolReconnectAsToolStripMenuItem"/>
+    <addaction name="poolDisconnectToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="manageVappsToolStripMenuItem"/>
     <addaction name="separator"/>
     <addaction name="menuHighAvailability"/>
+    <addaction name="menuDisasterRecovery"/>
+    <addaction name="vmSnapshotSchedulesToolStripMenuItem"/>
+    <addaction name="exportResourceDataToolStripMenuItem"/>
+    <addaction name="menuWorkloadBalancing"/>
+    <addaction name="makeStandaloneServerToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="changePoolPasswordToolStripMenuItem"/>
+    <addaction name="rotatePoolSecretToolStripMenuItem"/>
     <addaction name="separator"/>
     <addaction name="deleteToolStripMenuItem"/>
     <addaction name="separator"/>
@@ -785,6 +811,106 @@
    </property>
    <property name="statusTip">
     <string>Remove a server from this pool</string>
+   </property>
+  </action>
+  <action name="poolReconnectAsToolStripMenuItem">
+   <property name="text">
+    <string>Reconnect &amp;As...</string>
+   </property>
+   <property name="statusTip">
+    <string>Reconnect to this pool using different credentials</string>
+   </property>
+  </action>
+  <action name="poolDisconnectToolStripMenuItem">
+   <property name="icon">
+    <iconset>
+     <normaloff>:/icons/disconnect-16.png</normaloff>:/icons/disconnect-16.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Disconnect</string>
+   </property>
+   <property name="statusTip">
+    <string>Disconnect from this pool</string>
+   </property>
+  </action>
+  <action name="manageVappsToolStripMenuItem">
+   <property name="text">
+    <string>Manage vApps...</string>
+   </property>
+   <property name="statusTip">
+    <string>Manage VM appliances (vApps)</string>
+   </property>
+  </action>
+  <action name="drConfigureToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Configure...</string>
+   </property>
+   <property name="statusTip">
+    <string>Configure disaster recovery</string>
+   </property>
+  </action>
+  <action name="drWizardToolStripMenuItem">
+   <property name="text">
+    <string>&amp;Disaster Recovery Wizard...</string>
+   </property>
+   <property name="statusTip">
+    <string>Launch the Disaster Recovery wizard</string>
+   </property>
+  </action>
+  <action name="vmSnapshotSchedulesToolStripMenuItem">
+   <property name="text">
+    <string>VM Snapshot Schedules...</string>
+   </property>
+   <property name="statusTip">
+    <string>Manage VM snapshot schedules</string>
+   </property>
+  </action>
+  <action name="exportResourceDataToolStripMenuItem">
+   <property name="text">
+    <string>Export Resource Data...</string>
+   </property>
+   <property name="statusTip">
+    <string>Export resource data for this pool</string>
+   </property>
+  </action>
+  <action name="wlbReportsToolStripMenuItem">
+   <property name="text">
+    <string>WLB Reports...</string>
+   </property>
+   <property name="statusTip">
+    <string>View Workload Balancing reports</string>
+   </property>
+  </action>
+  <action name="wlbDisconnectToolStripMenuItem">
+   <property name="text">
+    <string>Disconnect from WLB</string>
+   </property>
+   <property name="statusTip">
+    <string>Disconnect from the Workload Balancing server</string>
+   </property>
+  </action>
+  <action name="makeStandaloneServerToolStripMenuItem">
+   <property name="text">
+    <string>Make into standalone server</string>
+   </property>
+   <property name="statusTip">
+    <string>Convert this pool into a standalone server</string>
+   </property>
+  </action>
+  <action name="changePoolPasswordToolStripMenuItem">
+   <property name="text">
+    <string>Change Server Password...</string>
+   </property>
+   <property name="statusTip">
+    <string>Change the server root password</string>
+   </property>
+  </action>
+  <action name="rotatePoolSecretToolStripMenuItem">
+   <property name="text">
+    <string>Rotate Pool Secret</string>
+   </property>
+   <property name="statusTip">
+    <string>Rotate the pool secret</string>
    </property>
   </action>
   <action name="highAvailabilityToolStripMenuItem">

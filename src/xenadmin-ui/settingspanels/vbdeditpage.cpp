@@ -38,6 +38,7 @@
 #include "../dialogs/warningdialogs/warningdialog.h"
 #include <QIcon>
 #include <QMessageBox>
+#include <QOverload>
 #include <QMetaObject>
 #include <QDebug>
 

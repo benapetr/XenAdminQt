@@ -27,36 +27,88 @@
 
 #include "newpooldialog.h"
 #include "ui_newpooldialog.h"
-#include "actionprogressdialog.h"
+
+#include "warningdialogs/warningdialog.h"
+#include "addserverdialog.h"
+
 #include "../mainwindow.h"
+#include "../controls/customtreeview.h"
+#include "../controls/connectionwrapperwithmorestuff.h"
+#include "../network/xenconnectionui.h"
 
 #include <xen/network/connection.h>
+#include <xen/network/connectionsmanager.h>
 #include <xen/session.h>
 #include <xen/host.h>
 #include <xen/pool.h>
 #include <xen/actions/pool/createpoolaction.h>
-#include <xen/network/connectionsmanager.h>
+#include <xen/pooljoinrules.h>
 #include <xencache.h>
-#include <xen/xenapi/xenapi_Pool.h>
 
 #include <QMessageBox>
 #include <QPushButton>
 #include <QTimer>
-#include <QDebug>
 
-/**
- * @brief NewPoolDialog constructor
- *
- * Port of C# NewPoolDialog constructor
- * - Populates coordinator combobox with standalone servers
- * - Populates supporter list with checkboxes
- * - Sets up validation logic
- */
+namespace
+{
+    bool getPermissionForCpuFeatureLevelling(const QList<QSharedPointer<Host>>& hosts, const QSharedPointer<Pool>& pool, QWidget* owner)
+    {
+        if (hosts.isEmpty() || !pool)
+            return true;
+
+        QList<QSharedPointer<Host>> hostsWithFewerFeatures;
+        QList<QSharedPointer<Host>> hostsWithMoreFeatures;
+
+        for (const QSharedPointer<Host>& host : hosts)
+        {
+            if (!host || !host->IsValid())
+                continue;
+            if (PoolJoinRules::HostHasFewerFeatures(host, pool))
+                hostsWithFewerFeatures.append(host);
+            if (PoolJoinRules::HostHasMoreFeatures(host, pool))
+                hostsWithMoreFeatures.append(host);
+        }
+
+        auto listNames = [](const QList<QSharedPointer<Host>>& list) {
+            QStringList names;
+            for (const QSharedPointer<Host>& host : list)
+                if (host && host->IsValid())
+                    names.append(host->GetName());
+            return names.join("\n");
+        };
+
+        if (!hostsWithFewerFeatures.isEmpty() && !hostsWithMoreFeatures.isEmpty())
+        {
+            const QString msg = QObject::tr("CPU feature levelling will down-level both pool and host CPUs for:\n%1")
+                .arg(listNames(hostsWithFewerFeatures + hostsWithMoreFeatures));
+            const auto result = WarningDialog::ShowYesNo(msg, QObject::tr("CPU Feature Levelling"), owner);
+            return result == WarningDialog::Result::Yes;
+        }
+
+        if (!hostsWithFewerFeatures.isEmpty())
+        {
+            const QString msg = QObject::tr("CPU feature levelling will down-level the pool CPUs for:\n%1")
+                .arg(listNames(hostsWithFewerFeatures));
+            const auto result = WarningDialog::ShowYesNo(msg, QObject::tr("CPU Feature Levelling"), owner);
+            return result == WarningDialog::Result::Yes;
+        }
+
+        if (!hostsWithMoreFeatures.isEmpty())
+        {
+            const QString msg = QObject::tr("CPU feature levelling will down-level host CPUs for:\n%1")
+                .arg(listNames(hostsWithMoreFeatures));
+            const auto result = WarningDialog::ShowYesNo(msg, QObject::tr("CPU Feature Levelling"), owner);
+            return result == WarningDialog::Result::Yes;
+        }
+
+        return true;
+    }
+}
+
 NewPoolDialog::NewPoolDialog(QWidget* parent) : QDialog(parent), ui(new Ui::NewPoolDialog)
 {
     this->ui->setupUi(this);
 
-    // Set Create button text
     QPushButton* createBtn = this->ui->buttonBox->button(QDialogButtonBox::Ok);
     if (createBtn)
     {
@@ -64,168 +116,329 @@ NewPoolDialog::NewPoolDialog(QWidget* parent) : QDialog(parent), ui(new Ui::NewP
         createBtn->setEnabled(false);
     }
 
-    // Connect signals
-    this->connect(this->ui->comboBoxCoordinator, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NewPoolDialog::onCoordinatorChanged);
-    this->connect(this->ui->listWidgetServers, &QListWidget::itemChanged, this, &NewPoolDialog::onServerItemChanged);
-    this->connect(this->ui->lineEditName, &QLineEdit::textChanged, this, &NewPoolDialog::onPoolNameChanged);
-    this->connect(this->ui->buttonAddServer, &QPushButton::clicked, this, &NewPoolDialog::onAddServerClicked);
-    this->connect(this->ui->buttonBox->button(QDialogButtonBox::Ok), &QPushButton::clicked, this, &NewPoolDialog::onCreateClicked);
+    this->ui->customTreeViewServers->SetNodeIndent(3);
+    this->ui->customTreeViewServers->SetShowCheckboxes(true);
+    this->ui->customTreeViewServers->SetShowDescription(true);
+    this->ui->customTreeViewServers->SetShowImages(false);
 
-    // Populate connections from ConnectionsManager
-    this->populateConnections();
-    this->updateCreateButton();
+    connect(this->ui->comboBoxCoordinator, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NewPoolDialog::onCoordinatorChanged);
+    connect(this->ui->lineEditName, &QLineEdit::textChanged, this, &NewPoolDialog::onPoolNameChanged);
+    connect(this->ui->buttonAddServer, &QPushButton::clicked, this, &NewPoolDialog::onAddServerClicked);
+    connect(this->ui->buttonBox->button(QDialogButtonBox::Ok), &QPushButton::clicked, this, &NewPoolDialog::onCreateClicked);
+    connect(this->ui->customTreeViewServers, &CustomTreeView::ItemCheckChanged, this, &NewPoolDialog::onTreeItemCheckChanged);
+
+    if (auto* manager = Xen::ConnectionsManager::instance())
+    {
+        connect(manager, &Xen::ConnectionsManager::connectionAdded, this, &NewPoolDialog::onConnectionsChanged);
+        connect(manager, &Xen::ConnectionsManager::connectionRemoved, this, &NewPoolDialog::onConnectionsChanged);
+        connect(manager, &Xen::ConnectionsManager::connectionStateChanged, this, &NewPoolDialog::onConnectionsChanged);
+    }
+
+    this->getAllCurrentConnections();
+    this->updateButtons();
 }
 
 NewPoolDialog::~NewPoolDialog()
 {
+    for (ConnectionWrapperWithMoreStuff* wrapper : this->m_connections)
+    {
+        if (wrapper)
+            delete wrapper;
+    }
+    this->m_connections.clear();
     delete this->ui;
 }
 
-/**
- * @brief Populate coordinator combobox and server list with connected standalone servers
- *
- * Port of C# getAllCurrentConnections() and addConnectionsToComboBox()
- * Only includes connections that:
- * - Are connected
- * - Are standalone (not already part of a pool)
- */
-void NewPoolDialog::populateConnections()
+void NewPoolDialog::onCoordinatorChanged(int index)
 {
-    Xen::ConnectionsManager* connMgr = Xen::ConnectionsManager::instance();
-    if (!connMgr)
-    {
-        qWarning() << "NewPoolDialog: No ConnectionsManager available";
+    Q_UNUSED(index);
+    if (this->ui->comboBoxCoordinator->count() == 0)
         return;
-    }
 
-    // Get all connected connections
-    QList<XenConnection*> allConnections = connMgr->GetConnectedConnections();
+    ConnectionWrapperWithMoreStuff* coordinator =
+        this->ui->comboBoxCoordinator->currentData(Qt::UserRole).value<ConnectionWrapperWithMoreStuff*>();
+    this->setAsCoordinator(coordinator);
+}
 
-    // Filter to standalone servers only
-    this->m_connections.clear();
-    for (XenConnection* conn : allConnections)
+void NewPoolDialog::onPoolNameChanged(const QString& text)
+{
+    Q_UNUSED(text);
+    this->updateButtons();
+}
+
+void NewPoolDialog::onAddServerClicked()
+{
+    AddServerDialog dialog(nullptr, false, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    QString serverInput = dialog.serverInput();
+    QString hostname = serverInput;
+    int port = 443;
+    const int lastColon = serverInput.lastIndexOf(':');
+    if (lastColon > 0 && lastColon < serverInput.size() - 1)
     {
-        if (conn && this->isStandaloneConnection(conn))
+        bool ok = false;
+        const int parsedPort = serverInput.mid(lastColon + 1).toInt(&ok);
+        if (ok)
         {
-            this->m_connections.append(conn);
+            hostname = serverInput.left(lastColon).trimmed();
+            port = parsedPort;
         }
     }
 
-    // Populate coordinator combobox
-    this->ui->comboBoxCoordinator->clear();
-    for (XenConnection* conn : this->m_connections)
-    {
-        QString displayName = conn->GetHostname();
+    XenConnection* connection = new XenConnection(nullptr);
+    Xen::ConnectionsManager::instance()->AddConnection(connection);
 
-        // Try to get host name from cache
-        XenCache* cache = conn->GetCache();
-        QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
-        if (!hosts.isEmpty() && hosts.first() && !hosts.first()->GetName().isEmpty())
-            displayName = hosts.first()->GetName();
+    connection->SetHostname(hostname);
+    connection->SetPort(port);
+    connection->SetUsername(dialog.username());
+    connection->SetPassword(dialog.password());
+    connection->SetExpectPasswordIsCorrect(false);
+    connection->SetFromDialog(true);
 
-        this->ui->comboBoxCoordinator->addItem(displayName, QVariant::fromValue(reinterpret_cast<quintptr>(conn)));
-    }
-
-    this->updateServerList();
+    this->m_newConnections.append(connection);
+    XenConnectionUI::BeginConnect(connection, true, this, false);
 }
 
-/**
- * @brief Update server list based on selected coordinator
- *
- * Port of C# addConnectionsToListBox()
- * Shows checkboxes for servers that can be supporters
- * Excludes the currently selected coordinator
- */
-void NewPoolDialog::updateServerList()
+void NewPoolDialog::onCreateClicked()
 {
-    this->ui->listWidgetServers->clear();
+    this->createPool();
+    close();
+}
 
-    XenConnection* coordinator = this->getCoordinatorConnection();
+void NewPoolDialog::onConnectionsChanged()
+{
+    this->getAllCurrentConnections();
+}
 
-    for (XenConnection* conn : this->m_connections)
+void NewPoolDialog::onConnectionCachePopulated()
+{
+    this->addConnectionsToComboBox();
+}
+
+void NewPoolDialog::onConnectionStateChanged()
+{
+    this->addConnectionsToComboBox();
+}
+
+void NewPoolDialog::onTreeItemCheckChanged(CustomTreeNode* node)
+{
+    Q_UNUSED(node);
+    this->updateButtons();
+}
+
+void NewPoolDialog::getAllCurrentConnections()
+{
+    Xen::ConnectionsManager* manager = Xen::ConnectionsManager::instance();
+    if (!manager)
+        return;
+
+    const QList<XenConnection*> allConnections = manager->GetAllConnections();
+
+    QList<XenConnection*> toRemove;
+
+    for (XenConnection* connection : allConnections)
     {
-        // Don't show coordinator in supporter list
-        if (conn == coordinator)
+        if (!connection || !connection->IsConnected())
+            continue;
+
+        bool contains = false;
+        for (ConnectionWrapperWithMoreStuff* wrapper : this->m_connections)
         {
+            if (wrapper && wrapper->Connection() == connection)
+            {
+                contains = true;
+                break;
+            }
+        }
+
+        if (!contains)
+        {
+            auto* wrapper = new ConnectionWrapperWithMoreStuff(connection);
+            this->m_connections.append(wrapper);
+
+            connect(connection, &XenConnection::CachePopulated, this, &NewPoolDialog::onConnectionCachePopulated, Qt::UniqueConnection);
+            connect(connection, &XenConnection::ConnectionStateChanged, this, &NewPoolDialog::onConnectionStateChanged, Qt::UniqueConnection);
+
+            if (this->m_newConnections.contains(connection))
+            {
+                wrapper->SetState(Qt::Checked);
+                toRemove.append(connection);
+            }
+        }
+    }
+
+    for (XenConnection* connection : toRemove)
+        this->m_newConnections.removeAll(connection);
+
+    for (int i = this->m_connections.size() - 1; i >= 0; --i)
+    {
+        ConnectionWrapperWithMoreStuff* wrapper = this->m_connections.at(i);
+        if (!wrapper)
+        {
+            this->m_connections.removeAt(i);
             continue;
         }
 
-        QString displayName = conn->GetHostname();
-
-        // Try to get host name from cache
-        XenCache* cache = conn->GetCache();
-        if (cache)
+        if (!allConnections.contains(wrapper->Connection()))
         {
-            QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
-            if (!hosts.isEmpty() && hosts.first() && !hosts.first()->GetName().isEmpty())
-                displayName = hosts.first()->GetName();
+            this->m_connections.removeAt(i);
+            delete wrapper;
         }
-
-        QListWidgetItem* item = new QListWidgetItem(displayName);
-        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(Qt::Unchecked);
-        item->setData(Qt::UserRole, QVariant::fromValue(reinterpret_cast<quintptr>(conn)));
-        this->ui->listWidgetServers->addItem(item);
     }
+
+    this->addConnectionsToComboBox();
 }
 
-/**
- * @brief Check if a connection is to a standalone server (not in a pool)
- *
- * Port of C# CanBeCoordinator property from ConnectionWrapperWithMoreStuff
- * A server is standalone if:
- * - The pool has only one host (the coordinator)
- * - Pool.master == the only host in the pool
- */
-bool NewPoolDialog::isStandaloneConnection(XenConnection* connection) const
+void NewPoolDialog::addConnectionsToComboBox()
 {
-    if (!connection || !connection->IsConnected())
+    this->ui->comboBoxCoordinator->clear();
+
+    ConnectionWrapperWithMoreStuff* coordinator = nullptr;
+
+    for (ConnectionWrapperWithMoreStuff* wrapper : this->m_connections)
     {
-        return false;
-    }
-
-    XenCache* cache = connection->GetCache();
-
-    // Check if pool has only one host
-    QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>();
-    if (hosts.size() != 1)
-    {
-        return false; // Multi-host pool - not standalone
-    }
-
-    QSharedPointer<Pool> pool = cache->GetPool();
-    if (!pool || !pool->IsValid() || !hosts.first())
-        return false;
-
-    return pool->GetMasterHostRef() == hosts.first()->OpaqueRef();
-}
-
-XenConnection* NewPoolDialog::getCoordinatorConnection() const
-{
-    int index = this->ui->comboBoxCoordinator->currentIndex();
-    if (index < 0)
-    {
-        return nullptr;
-    }
-
-    quintptr ptr = this->ui->comboBoxCoordinator->itemData(index).value<quintptr>();
-    return reinterpret_cast<XenConnection*>(ptr);
-}
-
-QList<XenConnection*> NewPoolDialog::getSupporterConnections() const
-{
-    QList<XenConnection*> supporters;
-
-    for (int i = 0; i < this->ui->listWidgetServers->count(); ++i)
-    {
-        QListWidgetItem* item = this->ui->listWidgetServers->item(i);
-        if (item && item->checkState() == Qt::Checked)
+        if (!wrapper)
+            continue;
+        wrapper->Refresh();
+        if (wrapper->CanBeCoordinator())
         {
-            quintptr ptr = item->data(Qt::UserRole).value<quintptr>();
-            XenConnection* conn = reinterpret_cast<XenConnection*>(ptr);
-            if (conn)
+            this->ui->comboBoxCoordinator->addItem(wrapper->ToString(), QVariant::fromValue(wrapper));
+            if (wrapper->WillBeCoordinator())
+                coordinator = wrapper;
+        }
+    }
+
+    if (coordinator)
+    {
+        this->ui->comboBoxCoordinator->setCurrentIndex(this->ui->comboBoxCoordinator->findData(QVariant::fromValue(coordinator)));
+    } else if (this->ui->comboBoxCoordinator->count() > 0)
+    {
+        coordinator = this->ui->comboBoxCoordinator->itemData(0).value<ConnectionWrapperWithMoreStuff*>();
+        this->setAsCoordinator(coordinator);
+        this->ui->comboBoxCoordinator->setCurrentIndex(0);
+    }
+
+    this->addConnectionsToListBox();
+    this->updateButtons();
+}
+
+void NewPoolDialog::addConnectionsToListBox()
+{
+    ConnectionWrapperWithMoreStuff* coordinator =
+        this->ui->comboBoxCoordinator->currentData(Qt::UserRole).value<ConnectionWrapperWithMoreStuff*>();
+
+    for (ConnectionWrapperWithMoreStuff* wrapper : this->m_connections)
+    {
+        if (!wrapper)
+            continue;
+        wrapper->SetCoordinator(coordinator);
+        wrapper->Refresh();
+    }
+
+    this->ui->customTreeViewServers->BeginUpdate();
+    this->ui->customTreeViewServers->ClearAllNodes();
+    for (ConnectionWrapperWithMoreStuff* wrapper : this->m_connections)
+    {
+        if (!wrapper)
+            continue;
+        this->ui->customTreeViewServers->AddNode(wrapper);
+    }
+    this->ui->customTreeViewServers->Resort();
+    this->ui->customTreeViewServers->EndUpdate();
+}
+
+void NewPoolDialog::setAsCoordinator(ConnectionWrapperWithMoreStuff* coordinator)
+{
+    for (ConnectionWrapperWithMoreStuff* wrapper : this->m_connections)
+    {
+        if (!wrapper)
+            continue;
+        wrapper->SetCoordinator(coordinator);
+    }
+
+    this->addConnectionsToListBox();
+}
+
+void NewPoolDialog::selectCoordinator(const QSharedPointer<Host>& host)
+{
+    if (!host || host->GetPool())
+        return;
+
+    for (ConnectionWrapperWithMoreStuff* wrapper : this->m_connections)
+        if (wrapper && wrapper->WillBeCoordinator())
+            wrapper->SetState(Qt::Unchecked);
+
+    for (ConnectionWrapperWithMoreStuff* wrapper : this->m_connections)
+    {
+        if (!wrapper)
+            continue;
+        if (wrapper->Connection() == host->GetConnection())
+        {
+            if (wrapper->CanBeCoordinator())
+                this->setAsCoordinator(wrapper);
+            return;
+        }
+    }
+}
+
+void NewPoolDialog::selectSupporters(const QList<QSharedPointer<Host>>& hosts)
+{
+    for (ConnectionWrapperWithMoreStuff* wrapper : this->m_connections)
+    {
+        if (!wrapper || !wrapper->AllowedAsSupporter())
+            continue;
+
+        for (const QSharedPointer<Host>& host : hosts)
+        {
+            if (host && wrapper->Connection() == host->GetConnection())
+                wrapper->SetState(Qt::Checked);
+        }
+    }
+}
+
+QSharedPointer<Host> NewPoolDialog::getCoordinator() const
+{
+    for (ConnectionWrapperWithMoreStuff* wrapper : this->m_connections)
+    {
+        if (!wrapper)
+            continue;
+        if (wrapper->WillBeCoordinator())
+        {
+            XenConnection* conn = wrapper->Connection();
+            if (conn && conn->GetCache())
             {
-                supporters.append(conn);
+                QSharedPointer<Pool> pool = conn->GetCache()->GetPool();
+                if (pool && pool->IsValid())
+                    return pool->GetMasterHost();
+
+                QList<QSharedPointer<Host>> hosts = conn->GetCache()->GetAll<Host>(XenObjectType::Host);
+                if (!hosts.isEmpty())
+                    return hosts.first();
+            }
+        }
+    }
+
+    return QSharedPointer<Host>();
+}
+
+QList<QSharedPointer<Host>> NewPoolDialog::getSupporters() const
+{
+    QList<QSharedPointer<Host>> supporters;
+
+    for (ConnectionWrapperWithMoreStuff* wrapper : this->m_connections)
+    {
+        if (!wrapper)
+            continue;
+        if (wrapper->State() == Qt::Checked && !wrapper->WillBeCoordinator() && wrapper->AllowedAsSupporter())
+        {
+            XenConnection* conn = wrapper->Connection();
+            if (conn && conn->GetCache())
+            {
+                QSharedPointer<Pool> pool = conn->GetCache()->GetPool();
+                if (pool && pool->GetMasterHost())
+                    supporters.append(pool->GetMasterHost());
             }
         }
     }
@@ -233,55 +446,14 @@ QList<XenConnection*> NewPoolDialog::getSupporterConnections() const
     return supporters;
 }
 
-void NewPoolDialog::onCoordinatorChanged(int index)
-{
-    Q_UNUSED(index);
-    this->updateServerList();
-    this->updateCreateButton();
-}
-
-void NewPoolDialog::onServerItemChanged(QListWidgetItem* item)
-{
-    Q_UNUSED(item);
-    this->updateCreateButton();
-}
-
-void NewPoolDialog::onPoolNameChanged(const QString& text)
-{
-    Q_UNUSED(text);
-    this->updateCreateButton();
-}
-
-void NewPoolDialog::onAddServerClicked()
-{
-    // Open connect dialog to add new server
-    /*ConnectDialog dialog(this);
-    if (dialog.exec() == QDialog::Accepted)
-    {
-        // After successful connection, refresh the list
-        // The new connection will be added through ConnectionsManager signals
-        // For now, we just repopulate after a short delay
-        QTimer::singleShot(1000, this, &NewPoolDialog::populateConnections);
-    }*/
-}
-
-/**
- * @brief Update Create button enabled state based on validation
- *
- * Port of C# updateButtons() and validToClose property
- * Create is enabled when:
- * - Pool name is not empty
- * - A coordinator is selected
- * - (Optional: supporters selected, but not required)
- */
-void NewPoolDialog::updateCreateButton()
+void NewPoolDialog::updateButtons()
 {
     QPushButton* createBtn = this->ui->buttonBox->button(QDialogButtonBox::Ok);
     if (!createBtn)
         return;
 
-    QString poolName = this->ui->lineEditName->text().trimmed();
-    XenConnection* coordinator = this->getCoordinatorConnection();
+    const QString poolName = this->ui->lineEditName->text().trimmed();
+    const QSharedPointer<Host> coordinator = this->getCoordinator();
 
     QString statusText;
     bool canCreate = true;
@@ -294,75 +466,117 @@ void NewPoolDialog::updateCreateButton()
     {
         statusText = tr("Please select a coordinator server.");
         canCreate = false;
+    } else
+    {
+        const QList<QSharedPointer<Host>> supporters = this->getSupporters();
+        if (PoolJoinRules::WillExceedPoolMaxSize(coordinator->GetConnection(), supporters.size()))
+        {
+            statusText = tr("The pool would exceed the maximum size.");
+            canCreate = false;
+        }
     }
 
     this->ui->labelStatus->setText(statusText);
+    createBtn->setToolTip(statusText);
     createBtn->setEnabled(canCreate);
 }
 
-void NewPoolDialog::onCreateClicked()
-{
-    this->createPool();
-}
-
-/**
- * @brief Create the pool with selected coordinator and supporters
- *
- * Port of C# createPool() from NewPoolDialog.cs
- * Uses CreatePoolAction to handle the async pool creation with progress tracking.
- */
 void NewPoolDialog::createPool()
 {
-    QString poolName = this->ui->lineEditName->text().trimmed();
-    QString poolDescription = this->ui->lineEditDescription->text().trimmed();
-    XenConnection* coordinatorConn = this->getCoordinatorConnection();
-    QList<XenConnection*> supporterConns = this->getSupporterConnections();
-
-    if (!coordinatorConn)
-    {
-        QMessageBox::warning(this, tr("Error"), tr("No coordinator selected."));
+    const QString poolName = this->ui->lineEditName->text().trimmed();
+    const QString poolDescription = this->ui->lineEditDescription->text().trimmed();
+    const QSharedPointer<Host> coordinator = this->getCoordinator();
+    if (!coordinator)
         return;
+
+    const QList<QSharedPointer<Host>> supporters = this->getSupporters();
+
+    const QList<QString> badSuppPacks = PoolJoinRules::HomogeneousSuppPacksDiffering(supporters, coordinator);
+    if (!badSuppPacks.isEmpty())
+    {
+        const QString msg = tr("Some supplemental packs differ across hosts:\n%1").arg(badSuppPacks.join("\n"));
+        WarningDialog dialog(msg, tr("Supplemental Packs"),
+                             { {tr("Proceed"), WarningDialog::Result::Yes},
+                               {tr("Cancel"), WarningDialog::Result::Cancel} },
+                             this);
+        dialog.exec();
+        if (dialog.GetResult() != WarningDialog::Result::Yes)
+            return;
     }
 
-    XenAPI::Session* coordinatorSession = coordinatorConn->GetSession();
-    if (!coordinatorSession || !coordinatorSession->IsLoggedIn())
+    QList<QSharedPointer<Host>> hostsWithLicenseIssues;
+    for (const QSharedPointer<Host>& host : supporters)
+        if (PoolJoinRules::FreeHostPaidCoordinator(host, coordinator, false))
+            hostsWithLicenseIssues.append(host);
+
+    if (!hostsWithLicenseIssues.isEmpty())
     {
-        QMessageBox::warning(this, tr("Error"), tr("Coordinator is not connected."));
-        return;
+        QStringList hostNames;
+        for (const QSharedPointer<Host>& host : hostsWithLicenseIssues)
+            if (host)
+                hostNames.append(host->GetName());
+
+        const QString msg = tr("The following hosts will be relicensed to match the coordinator:\n%1").arg(hostNames.join("\n"));
+        const auto result = WarningDialog::ShowYesNo(msg, tr("License Warning"), this);
+        if (result != WarningDialog::Result::Yes)
+            return;
     }
 
-    qDebug() << "Creating pool:" << poolName << "with coordinator:" << coordinatorConn->GetHostname();
-    qDebug() << "Supporters:" << supporterConns.size();
+    QList<QSharedPointer<Host>> hostsWithCpuMismatch;
+    for (const QSharedPointer<Host>& host : supporters)
+        if (!PoolJoinRules::CompatibleCPUs(host, coordinator))
+            hostsWithCpuMismatch.append(host);
 
-    // Create the action using the existing CreatePoolAction class
-    // Note: Host* parameters are nullptr - the action doesn't use them in current implementation
-    QList<Host*> emptyHostList; // Placeholder - action uses connections directly
+    if (!hostsWithCpuMismatch.isEmpty())
+    {
+        QStringList hostNames;
+        for (const QSharedPointer<Host>& host : hostsWithCpuMismatch)
+            if (host)
+                hostNames.append(host->GetName());
+
+        const QString msg = tr("CPU masking will be required for:\n%1").arg(hostNames.join("\n"));
+        const auto result = WarningDialog::ShowYesNo(msg, tr("CPU Masking"), this);
+        if (result != WarningDialog::Result::Yes)
+            return;
+    }
+
+    QList<QSharedPointer<Host>> hostsWithAdMismatch;
+    for (const QSharedPointer<Host>& host : supporters)
+        if (!PoolJoinRules::CompatibleAdConfig(host, coordinator, false))
+            hostsWithAdMismatch.append(host);
+
+    if (!hostsWithAdMismatch.isEmpty())
+    {
+        QStringList hostNames;
+        for (const QSharedPointer<Host>& host : hostsWithAdMismatch)
+            if (host)
+                hostNames.append(host->GetName());
+
+        const QString msg = tr("Active Directory configuration will be updated for:\n%1").arg(hostNames.join("\n"));
+        const auto result = WarningDialog::ShowYesNo(msg, tr("Active Directory"), this);
+        if (result != WarningDialog::Result::Yes)
+            return;
+    }
+
+    if (!getPermissionForCpuFeatureLevelling(supporters, coordinator->GetPool(), this))
+        return;
+
+    QList<XenConnection*> memberConnections;
+    QList<Host*> memberHosts;
+    for (const QSharedPointer<Host>& host : supporters)
+    {
+        memberConnections.append(host->GetConnection());
+        memberHosts.append(host.data());
+    }
 
     CreatePoolAction* action = new CreatePoolAction(
-        coordinatorConn,
-        nullptr, // coordinator Host* - not used in current implementation
-        supporterConns,
-        emptyHostList, // member Host* list - not used in current implementation
+        coordinator->GetConnection(),
+        coordinator.data(),
+        memberConnections,
+        memberHosts,
         poolName,
         poolDescription,
-        this);
+        nullptr);
 
-    // Show progress dialog and run the action
-    ActionProgressDialog progressDialog(action, this);
-    progressDialog.setWindowTitle(tr("Creating Pool"));
-
-    // Connect completion signals
-    this->connect(action, &CreatePoolAction::completed, this, [this, poolName]()
-    {
-        QMessageBox::information(this, tr("Success"), tr("Pool '%1' created successfully.").arg(poolName));
-        this->accept();
-    });
-
-    this->connect(action, &CreatePoolAction::failed, this, [this](const QString& error) {
-        QMessageBox::critical(this, tr("Error"), tr("Failed to create pool: %1").arg(error));
-    });
-
-    // Start the action - progress dialog handles display
-    action->RunAsync();
-    progressDialog.exec();
+    action->RunAsync(true);
 }

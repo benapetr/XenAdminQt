@@ -41,38 +41,50 @@ EjectHostFromPoolCommand::EjectHostFromPoolCommand(MainWindow* mainWindow, QObje
 bool EjectHostFromPoolCommand::CanRun() const
 {
     QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host)
+    return EjectHostFromPoolCommand::CanRunForHost(host);
+}
+
+void EjectHostFromPoolCommand::Run()
+{
+    QSharedPointer<Host> host = this->getSelectedHost();
+    EjectHostFromPoolCommand::RunForHost(this->mainWindow(), host);
+}
+
+QString EjectHostFromPoolCommand::MenuText() const
+{
+    return "Eject from Pool...";
+}
+
+bool EjectHostFromPoolCommand::CanRunForHost(const QSharedPointer<Host>& host)
+{
+    if (!host || !host->IsValid())
         return false;
 
-    // Can't eject if this is the pool master
     if (host->IsMaster())
         return false;
 
-    // Check if host is in a pool
     if (host->GetPoolRef().isEmpty())
         return false;
 
     return true;
 }
 
-void EjectHostFromPoolCommand::Run()
+void EjectHostFromPoolCommand::RunForHost(MainWindow* mainWindow, const QSharedPointer<Host>& host)
 {
-    QSharedPointer<Host> host = this->getSelectedHost();
-    if (!host || !host->IsValid())
+    if (!mainWindow || !host || !host->IsValid())
         return;
 
     QString hostName = host->GetName();
 
     if (host->IsMaster())
     {
-        QMessageBox::warning(this->mainWindow(), "Eject Host",
+        QMessageBox::warning(mainWindow, "Eject Host",
                              "Cannot eject the pool master.\n"
                              "Please designate a new master first.");
         return;
     }
 
-    // Confirm the operation
-    int result = QMessageBox::question(this->mainWindow(), "Eject Host from Pool",
+    int result = QMessageBox::question(mainWindow, "Eject Host from Pool",
                                        QString("Are you sure you want to eject '%1' from the pool?\n\n"
                                                "The host will become a standalone server and will need to be rebooted.\n"
                                                "All running VMs on this host will be shut down.")
@@ -82,39 +94,30 @@ void EjectHostFromPoolCommand::Run()
     if (result != QMessageBox::Yes)
         return;
 
-    // Get pool and GetConnection for the action
     XenConnection* connection = host->GetConnection();
     if (!connection)
     {
-        QMessageBox::critical(this->mainWindow(), "Eject Host", "No active connection.");
+        QMessageBox::critical(mainWindow, "Eject Host", "No active connection.");
         return;
     }
 
-    // Create and run the EjectHostFromPoolAction
     EjectHostFromPoolAction* action = new EjectHostFromPoolAction(host->GetPool(), host, nullptr);
-
-    // Register with OperationManager for history tracking
     OperationManager::instance()->RegisterOperation(action);
 
-    // Connect completion signals
     connect(action, &AsyncOperation::completed, [hostName, action]()
     {
-        QMessageBox::information(MainWindow::instance(), "Eject Host", QString("Successfully ejected '%1' from the pool.\nThe host will now be rebooted.").arg(hostName));
+        QMessageBox::information(MainWindow::instance(), "Eject Host",
+                                 QString("Successfully ejected '%1' from the pool.\nThe host will now be rebooted.").arg(hostName));
         action->deleteLater();
     });
 
     connect(action, &AsyncOperation::failed, [hostName, action](const QString& error)
     {
-        QMessageBox::critical(MainWindow::instance(), "Eject Host", QString("Failed to eject '%1' from the pool:\n%2").arg(hostName, error));
+        QMessageBox::critical(MainWindow::instance(), "Eject Host",
+                              QString("Failed to eject '%1' from the pool:\n%2").arg(hostName, error));
         action->deleteLater();
     });
 
-    // Run action asynchronously
     action->RunAsync();
-    this->mainWindow()->ShowStatusMessage(QString("Ejecting '%1' from pool...").arg(hostName), 0);
-}
-
-QString EjectHostFromPoolCommand::MenuText() const
-{
-    return "Eject from Pool...";
+    mainWindow->ShowStatusMessage(QString("Ejecting '%1' from pool...").arg(hostName), 0);
 }

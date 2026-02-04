@@ -29,6 +29,7 @@
 #include "network/connection.h"
 #include "network/comparableaddress.h"
 #include "hostmetrics.h"
+#include "poolupdate.h"
 #include "feature.h"
 #include "vmmetrics.h"
 #include "../xencache.h"
@@ -109,6 +110,16 @@ bool Host::RestrictSriovNetwork() const
 bool Host::RestrictManagementOnVLAN() const
 {
     return boolKeyPreferTrue(LicenseParams(), "restrict_management_on_vlan");
+}
+
+bool Host::RestrictPooling() const
+{
+    return boolKeyPreferTrue(LicenseParams(), "restrict_pooling");
+}
+
+bool Host::RestrictPoolSize() const
+{
+    return boolKey(LicenseParams(), "restrict_pool_size");
 }
 
 bool Host::SriovNetworkDisabled() const
@@ -386,6 +397,17 @@ QVariantMap Host::ExternalAuthConfiguration() const
     return this->property("external_auth_configuration").toMap();
 }
 
+bool Host::IsFreeLicense() const
+{
+    const QString edition = this->Edition().toLower();
+    return edition == "free" || edition == "express" || edition == "trial";
+}
+
+bool Host::LinuxPackPresent() const
+{
+    return this->SoftwareVersion().contains("xs:linux");
+}
+
 QString Host::PowerOnMode() const
 {
     return this->stringProperty("power_on_mode");
@@ -538,6 +560,104 @@ QString Host::Edition() const
 QVariantMap Host::LicenseServer() const
 {
     return this->property("license_server").toMap();
+}
+
+QString Host::BuildNumberRaw() const
+{
+    return this->SoftwareVersion().value("build_number").toString();
+}
+
+QString Host::PlatformVersion() const
+{
+    return this->SoftwareVersion().value("platform_version").toString();
+}
+
+QString Host::ProductBrand() const
+{
+    return this->SoftwareVersion().value("product_brand").toString();
+}
+
+QString Host::GetDatabaseSchema() const
+{
+    const QVariantMap softwareVersion = this->SoftwareVersion();
+    const QString dbSchema = softwareVersion.value("db_schema").toString();
+    if (!dbSchema.isEmpty())
+        return dbSchema;
+
+    return softwareVersion.value("database_schema").toString();
+}
+
+QList<QSharedPointer<PoolUpdate>> Host::AppliedUpdates() const
+{
+    QList<QSharedPointer<PoolUpdate>> updates;
+
+    XenConnection* connection = this->GetConnection();
+    if (!connection || !connection->GetCache())
+        return updates;
+
+    const QStringList updateRefs = this->UpdateRefs();
+    for (const QString& ref : updateRefs)
+    {
+        QSharedPointer<PoolUpdate> update = connection->GetCache()->ResolveObject<PoolUpdate>(XenObjectType::PoolUpdate, ref);
+        if (update && update->IsValid())
+            updates.append(update);
+    }
+
+    return updates;
+}
+
+QList<Host::SuppPack> Host::SuppPacks() const
+{
+    QList<SuppPack> packs;
+    const QVariantMap softwareVersion = this->SoftwareVersion();
+    if (softwareVersion.isEmpty())
+        return packs;
+
+    for (auto it = softwareVersion.constBegin(); it != softwareVersion.constEnd(); ++it)
+    {
+        const QString key = it.key();
+        const QString value = it.value().toString();
+
+        SuppPack pack;
+
+        const QStringList keyParts = key.split(':');
+        if (keyParts.size() != 2)
+            continue;
+
+        pack.Originator = keyParts.at(0);
+        pack.Name = keyParts.at(1);
+
+        const int versionIndex = value.lastIndexOf(", version ");
+        if (versionIndex <= 0)
+            continue;
+
+        pack.Description = value.left(versionIndex);
+        QString remainder = value.mid(versionIndex + 10);
+        const QStringList parts = remainder.split(", ");
+        if (parts.isEmpty() || parts.size() > 3)
+            continue;
+
+        pack.Version = parts.at(0);
+
+        if (parts.size() >= 2)
+        {
+            if (!parts.at(1).startsWith("build "))
+                continue;
+            pack.Build = parts.at(1).mid(6);
+        }
+
+        if (parts.size() >= 3)
+        {
+            if (parts.at(2) != "homogeneous")
+                continue;
+            pack.Homogeneous = true;
+        }
+
+        pack.IsValid = true;
+        packs.append(pack);
+    }
+
+    return packs;
 }
 
 // Property getters for search/query functionality

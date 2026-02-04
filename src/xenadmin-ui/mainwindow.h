@@ -200,7 +200,9 @@ class MainWindow : public QMainWindow
         void onDeletePool();
         void onHAConfigure();
         void onHADisable();
+        void onDisconnectPool();
         void onPoolProperties();
+        void onRotatePoolSecret();
         void onJoinPool();
         void onEjectFromPool();
         void onAddServerToPool();
@@ -333,6 +335,8 @@ class MainWindow : public QMainWindow
         QMenu* m_resumeOnServerMenu = nullptr;
         QMenu* m_migrateToServerMenu = nullptr;
         QMenu* m_startOnServerMenu = nullptr;
+        QMenu* m_addServerToPoolMenu = nullptr;
+        QMenu* m_removeServerFromPoolMenu = nullptr;
 
         SelectionManager* m_selectionManager = nullptr;
 

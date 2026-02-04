@@ -25,35 +25,32 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HOSTRECONNECTASCOMMAND_H
-#define HOSTRECONNECTASCOMMAND_H
+#ifndef XENADMIN_UI_COMMANDS_POOL_POOLREMOVESERVERMENU_H
+#define XENADMIN_UI_COMMANDS_POOL_POOLREMOVESERVERMENU_H
 
-#include "hostcommand.h"
-#include <QtCore/QPointer>
-#include <QtCore/QMetaObject>
+#include <QMenu>
+#include <QSharedPointer>
 
-class XenConnection;
+class MainWindow;
+class Pool;
+class Host;
 
-class HostReconnectAsCommand : public HostCommand
+class PoolRemoveServerMenu : public QMenu
 {
     Q_OBJECT
 
-    public:
-        explicit HostReconnectAsCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+public:
+    explicit PoolRemoveServerMenu(MainWindow* mainWindow, QWidget* parent = nullptr);
 
-        // Inherited from Command
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
+    bool CanRun() const;
 
-    private slots:
-        void onReconnectConnectionStateChanged();
-        void startReconnect();
+private slots:
+    void onAboutToShow();
 
-    private:
-        QSharedPointer<Host> getReconnectHost() const;
-        QPointer<XenConnection> m_reconnectConnection;
-        QMetaObject::Connection m_disconnectHandler;
+private:
+    QSharedPointer<Pool> getSelectedPool() const;
+
+    MainWindow* mainWindow_ = nullptr;
 };
 
-#endif // HOSTRECONNECTASCOMMAND_H
+#endif // XENADMIN_UI_COMMANDS_POOL_POOLREMOVESERVERMENU_H

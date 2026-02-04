@@ -28,6 +28,7 @@
 #include "operationmanager.h"
 #include <QDebug>
 #include "../actions/meddlingactionmanager.h"
+#include "../mainwindow.h"
 #include "../actions/meddlingaction.h"
 #include <QDebug>
 #include <QDebug>
@@ -175,6 +176,15 @@ void OperationManager::updateRecordError(OperationRecord* record, const QString&
         record->shortErrorMessage = record->operation->GetShortErrorMessage();
     else
         record->shortErrorMessage.clear();
+
+    const QString displayError = record->shortErrorMessage.isEmpty() ? record->errorMessage : record->shortErrorMessage;
+    if (!displayError.isEmpty())
+    {
+        MainWindow* mainWindow = MainWindow::instance();
+        if (mainWindow)
+            mainWindow->ShowStatusMessage(QString("%1 failed: %2").arg(record->title, displayError), 10000);
+    }
+
     emit this->recordUpdated(record);
 }
 

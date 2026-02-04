@@ -174,7 +174,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QListWidget" name="listWidgetServers">
+       <widget class="CustomTreeView" name="customTreeViewServers">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -188,7 +188,7 @@
          </size>
         </property>
         <property name="selectionMode">
-         <enum>QAbstractItemView::NoSelection</enum>
+         <enum>QAbstractItemView::SingleSelection</enum>
         </property>
        </widget>
       </item>
@@ -231,6 +231,13 @@
  <resources>
   <include location="../resources.qrc"/>
  </resources>
+ <customwidgets>
+  <customwidget>
+   <class>CustomTreeView</class>
+   <extends>QTreeWidget</extends>
+   <header>controls/customtreeview.h</header>
+  </customwidget>
+ </customwidgets>
  <connections>
   <connection>
    <sender>buttonBox</sender>

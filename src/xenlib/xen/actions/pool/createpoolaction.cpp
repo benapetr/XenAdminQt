@@ -29,8 +29,12 @@
 #include "../../network/connection.h"
 #include "../../session.h"
 #include "../../xenapi/xenapi_Pool.h"
+#include "../../xenapi/xenapi_Task.h"
+#include "../../api.h"
 #include "../../../xencache.h"
 #include <stdexcept>
+#include <QDateTime>
+#include <QThread>
 
 CreatePoolAction::CreatePoolAction(XenConnection* coordinatorConnection,
                                    Host* coordinator,
@@ -90,6 +94,83 @@ void CreatePoolAction::run()
         // Progress: 20% done, 80% remaining for members
         double progressPerMember = 80.0 / this->m_members.size();
 
+        auto pollTaskWithSession = [this](XenAPI::Session* session,
+                                          const QString& taskRef,
+                                          double start,
+                                          double finish) -> bool
+        {
+            if (!session || taskRef.isEmpty())
+                return false;
+
+            XenRpcAPI api(session);
+            QDateTime startTime = QDateTime::currentDateTime();
+            int lastDebug = 0;
+            qInfo() << "Started polling task" << taskRef;
+
+            constexpr int kTaskPollIntervalMs = 900;
+            while (!QThread::currentThread()->isInterruptionRequested())
+            {
+                qint64 elapsedSecs = startTime.secsTo(QDateTime::currentDateTime());
+                int currDebug = static_cast<int>(elapsedSecs / 30);
+                if (currDebug > lastDebug)
+                {
+                    lastDebug = currDebug;
+                    qDebug() << "Polling for action:" << GetDescription();
+                }
+
+                QVariantMap taskRecord;
+                try
+                {
+                    QVariant recordVariant = api.GetTaskRecord(taskRef);
+                    taskRecord = recordVariant.toMap();
+                }
+                catch (...)
+                {
+                    qWarning() << "Invalid task handle" << taskRef << "- task is finished";
+                    SetPercentComplete(static_cast<int>(finish));
+                    return true;
+                }
+
+                if (taskRecord.isEmpty())
+                {
+                    qDebug() << "CreatePoolAction: Task" << taskRef << "not found (might be complete)";
+                    SetPercentComplete(static_cast<int>(finish));
+                    return true;
+                }
+
+                const double taskProgress = taskRecord.value("progress", 0.0).toDouble();
+                const QString status = taskRecord.value("status", "pending").toString();
+                const int currentPercent = static_cast<int>(start + taskProgress * (finish - start));
+                SetPercentComplete(currentPercent);
+
+                if (status == "success")
+                {
+                    SetPercentComplete(static_cast<int>(finish));
+                    return true;
+                }
+                if (status == "failure")
+                {
+                    QStringList errorInfo;
+                    const QVariantList errorList = taskRecord.value("error_info").toList();
+                    for (const QVariant& error : errorList)
+                        errorInfo.append(error.toString());
+
+                    const QString errorMsg = errorInfo.isEmpty() ? "Unknown error" : errorInfo.first();
+                    setError(errorMsg, errorInfo);
+                    return false;
+                }
+                if (status == "cancelled")
+                {
+                    setState(Cancelled);
+                    return false;
+                }
+
+                QThread::msleep(kTaskPollIntervalMs);
+            }
+
+            return false;
+        };
+
         for (int i = 0; i < this->m_members.size(); ++i)
         {
             XenConnection* memberConnection = this->m_memberConnections.at(i);
@@ -111,19 +192,40 @@ void CreatePoolAction::run()
             QString username = coordinatorSession->GetUsername();
             QString password = coordinatorSession->GetPassword();
 
-            // Call Pool.async_join from the member's session
-            // We need to use member's GetConnection temporarily to poll correctly
-            XenConnection* oldConnection = GetConnection();
-            SetConnection(memberConnection);
+            // Call Pool.async_join from the member's session (matches C# NewSession)
+            if (!memberConnection)
+                throw std::runtime_error("Member connection is null");
 
-            QString taskRef = XenAPI::Pool::async_join(GetSession(),
-                                                       coordinatorAddress, username, password);
+            XenAPI::Session* baseMemberSession = memberConnection->GetSession();
+            if (!baseMemberSession || !baseMemberSession->IsLoggedIn())
+                throw std::runtime_error("Member connection has no active session");
 
-            // Poll using member's session
-            pollToCompletion(taskRef, progressStart, progressEnd);
+            XenAPI::Session* memberSession = XenAPI::Session::DuplicateSession(baseMemberSession, nullptr);
+            if (!memberSession)
+                throw std::runtime_error("Failed to create member session");
 
-            // Restore original connection
-            SetConnection(oldConnection);
+            QString taskRef;
+            try
+            {
+                taskRef = XenAPI::Pool::async_join(memberSession,
+                                                   coordinatorAddress, username, password);
+
+                if (!pollTaskWithSession(memberSession, taskRef, progressStart, progressEnd))
+                    throw std::runtime_error("Pool join task failed");
+            }
+            catch (...)
+            {
+                if (!taskRef.isEmpty())
+                    XenAPI::Task::Destroy(memberSession, taskRef);
+                memberSession->Logout();
+                memberSession->deleteLater();
+                throw;
+            }
+
+            if (!taskRef.isEmpty())
+                XenAPI::Task::Destroy(memberSession, taskRef);
+            memberSession->Logout();
+            memberSession->deleteLater();
 
             SetDescription(QString("Member %1 of %2 joined successfully").arg(i + 1).arg(m_members.size()));
 

@@ -25,35 +25,44 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HOSTRECONNECTASCOMMAND_H
-#define HOSTRECONNECTASCOMMAND_H
+#ifndef CONNECTIONWRAPPERWITHMORESTUFF_H
+#define CONNECTIONWRAPPERWITHMORESTUFF_H
 
-#include "hostcommand.h"
-#include <QtCore/QPointer>
-#include <QtCore/QMetaObject>
+// Qt port of XenAdmin's ConnectionWrapperWithMoreStuff (XenAdmin/Controls).
+// Used by New Pool dialog to wrap connections with UI metadata (status text,
+// eligibility, and coordinator selection) for display in CustomTreeView.
+
+#include "customtreenode.h"
+#include "xenlib/xen/pooljoinrules.h"
 
 class XenConnection;
 
-class HostReconnectAsCommand : public HostCommand
+class ConnectionWrapperWithMoreStuff : public CustomTreeNode
 {
-    Q_OBJECT
-
     public:
-        explicit HostReconnectAsCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        explicit ConnectionWrapperWithMoreStuff(XenConnection* connection);
 
-        // Inherited from Command
-        bool CanRun() const override;
-        void Run() override;
-        QString MenuText() const override;
+        XenConnection* Connection() const { return m_connection; }
 
-    private slots:
-        void onReconnectConnectionStateChanged();
-        void startReconnect();
+        void SetCoordinator(ConnectionWrapperWithMoreStuff* coordinator);
+
+        bool WillBeCoordinator() const { return m_reason == PoolJoinRules::Reason::WillBeCoordinator; }
+        bool CanBeCoordinator() const;
+        bool AllowedAsSupporter() const { return m_reason == PoolJoinRules::Reason::Allowed; }
+
+        void Refresh();
+
+        QString ToString() const override;
+
+    protected:
+        int SameLevelSortOrder(const CustomTreeNode* other) const override;
 
     private:
-        QSharedPointer<Host> getReconnectHost() const;
-        QPointer<XenConnection> m_reconnectConnection;
-        QMetaObject::Connection m_disconnectHandler;
+        XenConnection* m_connection = nullptr;
+        XenConnection* m_coordinatorConnection = nullptr;
+        PoolJoinRules::Reason m_reason = PoolJoinRules::Reason::NotConnected;
 };
 
-#endif // HOSTRECONNECTASCOMMAND_H
+Q_DECLARE_METATYPE(ConnectionWrapperWithMoreStuff*)
+
+#endif // CONNECTIONWRAPPERWITHMORESTUFF_H
