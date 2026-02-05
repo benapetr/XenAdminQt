@@ -47,11 +47,14 @@
 const int AsyncOperation::TASK_POLL_INTERVAL_MS;
 const int AsyncOperation::DEFAULT_TIMEOUT_MS;
 
+int AsyncOperation::totalActions = 0;
+
 // AsyncOperation Implementation
 
 AsyncOperation::AsyncOperation(XenConnection* connection, const QString& title, const QString& description, QObject* parent)
-    : QObject(parent), m_connection(connection), m_title(title), m_description(description), m_session(nullptr), m_percentComplete(0), m_state(NotStarted), m_canCancel(true), m_suppressHistory(false), m_safeToExit(true), m_pool(nullptr), m_host(nullptr), m_vm(nullptr), m_sr(nullptr), m_vmTemplate(nullptr), m_syncExecution(false), m_ownsSession(false)
+    : QObject(parent), m_connection(connection), m_title(title), m_description(description), m_session(nullptr), m_state(NotStarted), m_safeToExit(true)
 {
+    AsyncOperation::totalActions++;
 }
 
 AsyncOperation::AsyncOperation(const QString& title, const QString& description, QObject* parent)
@@ -62,7 +65,8 @@ AsyncOperation::AsyncOperation(const QString& title, const QString& description,
 AsyncOperation::~AsyncOperation()
 {
     // Clean up session if we own it
-    destroySession();
+    this->destroySession();
+    AsyncOperation::totalActions--;
 }
 
 // Property getters
@@ -658,20 +662,20 @@ void AsyncOperation::setState(OperationState newState)
 
         switch (newState)
         {
-        case Running:
-            emit this->started();
-            break;
-        case Completed:
-            emit this->completed();
-            break;
-        case Cancelled:
-            emit this->cancelled();
-            break;
-        case Failed:
-            emit this->failed(this->m_errorMessage);
-            break;
-        default:
-            break;
+            case Running:
+                emit this->started();
+                break;
+            case Completed:
+                emit this->completed();
+                break;
+            case Cancelled:
+                emit this->cancelled();
+                break;
+            case Failed:
+                emit this->failed(this->m_errorMessage);
+                break;
+            default:
+                break;
         }
     }
 }

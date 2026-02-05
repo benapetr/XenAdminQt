@@ -31,6 +31,7 @@
 #include "../../mainwindow.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
+#include "xenlib/xen/pooljoinrules.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/network/connectionsmanager.h"
 #include "xenlib/xencache.h"
@@ -73,12 +74,8 @@ void AddHostToSelectedPoolMenu::onAboutToShow()
         
         QString hostName = host->GetName();
         
-        // TODO: Check Host::RestrictPooling when ported
-        // If restricted, show different text format
-        // if (Host::RestrictPooling(host))
-        // {
-        //     hostName = tr("Add Server %1").arg(hostName);
-        // }
+        if (host->RestrictPooling())
+            hostName = tr("Add Server %1").arg(hostName);
         
         // Truncate long names
         if (hostName.length() > 50)
@@ -139,12 +136,9 @@ QList<QSharedPointer<Host>> AddHostToSelectedPoolMenu::getSortedStandaloneHosts(
             continue;
         
         // Get the standalone host - for standalone servers, there's exactly one host
-        QList<QSharedPointer<Host>> allHosts = conn->GetCache()->GetAll<Host>();
-        if (!allHosts.isEmpty())
-        {
-            // Use the first (and only) host
-            hosts.append(allHosts.first());
-        }
+        QSharedPointer<Host> coordinator = PoolJoinRules::GetCoordinator(conn);
+        if (coordinator)
+            hosts.append(coordinator);
     }
     
     // Sort hosts by name
@@ -164,10 +158,11 @@ QSharedPointer<Pool> AddHostToSelectedPoolMenu::getSelectedPool() const
     if (!tree)
         return QSharedPointer<Pool>();
 
-    QTreeWidgetItem* item = tree->currentItem();
-    if (!item)
+    QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
+    if (selectedItems.size() != 1)
         return QSharedPointer<Pool>();
 
+    QTreeWidgetItem* item = selectedItems.first();
     QVariant data = item->data(0, Qt::UserRole);
     if (!data.canConvert<QSharedPointer<XenObject>>())
         return QSharedPointer<Pool>();
@@ -203,10 +198,11 @@ bool AddHostToSelectedPoolCommand::CanRun() const
     if (!tree)
         return false;
 
-    QTreeWidgetItem* item = tree->currentItem();
-    if (!item)
+    QList<QTreeWidgetItem*> selectedItems = tree->selectedItems();
+    if (selectedItems.size() != 1)
         return false;
 
+    QTreeWidgetItem* item = selectedItems.first();
     QVariant data = item->data(0, Qt::UserRole);
     if (!data.canConvert<QSharedPointer<XenObject>>())
         return false;

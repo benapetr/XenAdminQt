@@ -25,16 +25,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "operationmanager.h"
-#include <QDebug>
-#include "../actions/meddlingactionmanager.h"
-#include "../mainwindow.h"
-#include "../actions/meddlingaction.h"
 #include <QDebug>
 #include <QDebug>
 #include <QCoreApplication>
 #include <QUuid>
+#include <QDebug>
 #include <utility>
+#include "operationmanager.h"
+#include "actions/meddlingaction.h"
+#include "../actions/meddlingactionmanager.h"
+#include "../mainwindow.h"
+
 
 OperationManager* OperationManager::s_instance = nullptr;
 
@@ -88,7 +89,7 @@ void OperationManager::RegisterOperation(AsyncOperation* operation)
         operation->SetOperationUUID(uuid);
     }
 
-    auto* record = new OperationRecord();
+    OperationRecord* record = new OperationRecord();
     record->operation = operation;
     record->title = operation->GetTitle();
     record->description = operation->GetDescription();
@@ -99,7 +100,7 @@ void OperationManager::RegisterOperation(AsyncOperation* operation)
     this->m_records.append(record);
     this->m_lookup.insert(operation, record);
 
-    connectOperationSignals(operation, record);
+    this->connectOperationSignals(operation, record);
 
     // Emit new operation signal (C# ActionBase.NewAction equivalent)
     emit newOperation(operation);
@@ -115,9 +116,9 @@ void OperationManager::connectOperationSignals(AsyncOperation* operation, Operat
     connect(operation, &AsyncOperation::failed, this, [this, record](const QString& error) { updateRecordError(record, error); });
     connect(operation, &QObject::destroyed, this, [this, record](QObject* obj)
     {
-        auto* asyncOp = qobject_cast<AsyncOperation*>(obj);
+        AsyncOperation* asyncOp = qobject_cast<AsyncOperation*>(obj);
         if (asyncOp)
-            m_lookup.remove(asyncOp);
+            this->m_lookup.remove(asyncOp);
         record->operation = nullptr;
         emit recordUpdated(record);
     });

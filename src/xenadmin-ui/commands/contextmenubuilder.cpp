@@ -44,7 +44,7 @@
 #include "connection/forgetsavedpasswordcommand.h"
 #include "../selectionmanager.h"
 #include "pool/joinpoolcommand.h"
-#include "pool/ejecthostfrompoolcommand.h"
+#include "pool/removehostfrompoolcommand.h"
 #include "pool/disconnectpoolcommand.h"
 #include "pool/poolpropertiescommand.h"
 #include "pool/addselectedhosttopoolmenu.h"
@@ -730,8 +730,8 @@ void ContextMenuBuilder::buildHostContextMenu(QMenu* menu, QSharedPointer<Host> 
 
     if (inPool)
     {
-        EjectHostFromPoolCommand* ejectCmd = new EjectHostFromPoolCommand(this->m_mainWindow, this);
-        this->addCommand(menu, ejectCmd);
+        RemoveHostFromPoolCommand* removeCmd = new RemoveHostFromPoolCommand(this->m_mainWindow, this);
+        this->addCommand(menu, removeCmd);
     } else
     {
         DisconnectHostCommand* disconnectCmd = new DisconnectHostCommand(this->m_mainWindow, this);

@@ -52,7 +52,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>37</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -77,7 +77,6 @@
     <addaction name="separator"/>
     <addaction name="viewShowHiddenObjectsAction"/>
     <addaction name="separator"/>
-    <addaction name="debugWindowAction"/>
     <addaction name="xenCacheExplorerAction"/>
    </widget>
    <widget class="QMenu" name="menuPool">
@@ -158,56 +157,56 @@
     <addaction name="separator"/>
     <addaction name="ServerPropertiesToolStripMenuItem"/>
    </widget>
-  <widget class="QMenu" name="menuVM">
-   <property name="title">
-    <string>&amp;VM</string>
-   </property>
-   <widget class="QMenu" name="startShutdownToolStripMenuItem">
+   <widget class="QMenu" name="menuVM">
     <property name="title">
-     <string>&amp;Start/Shut down</string>
+     <string>&amp;VM</string>
     </property>
-    <addaction name="startVMAction"/>
-    <addaction name="shutDownAction"/>
-    <addaction name="resumeAction"/>
-    <addaction name="suspendAction"/>
-    <addaction name="rebootAction"/>
-    <addaction name="vmRecoveryModeAction"/>
+    <widget class="QMenu" name="startShutdownToolStripMenuItem">
+     <property name="title">
+      <string>&amp;Start/Shut down</string>
+     </property>
+     <addaction name="startVMAction"/>
+     <addaction name="shutDownAction"/>
+     <addaction name="resumeAction"/>
+     <addaction name="suspendAction"/>
+     <addaction name="rebootAction"/>
+     <addaction name="vmRecoveryModeAction"/>
+     <addaction name="separator"/>
+     <addaction name="forceShutdownAction"/>
+     <addaction name="forceRebootAction"/>
+     <addaction name="separator"/>
+     <addaction name="vappStartAction"/>
+     <addaction name="vappShutdownAction"/>
+    </widget>
+    <addaction name="newVmAction"/>
+    <addaction name="startShutdownToolStripMenuItem"/>
+    <addaction name="resumeOnToolStripMenuItem"/>
+    <addaction name="relocateToolStripMenuItem"/>
+    <addaction name="startOnHostToolStripMenuItem"/>
     <addaction name="separator"/>
-    <addaction name="forceShutdownAction"/>
-    <addaction name="forceRebootAction"/>
+    <addaction name="assignSnapshotScheduleToolStripMenuItem"/>
+    <addaction name="assignToVappToolStripMenuItem"/>
     <addaction name="separator"/>
-    <addaction name="vappStartAction"/>
-    <addaction name="vappShutdownAction"/>
+    <addaction name="copyVMtoSharedStorageMenuItem"/>
+    <addaction name="MoveVMToolStripMenuItem"/>
+    <addaction name="snapshotToolStripMenuItem"/>
+    <addaction name="convertToTemplateToolStripMenuItem"/>
+    <addaction name="exportToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="vtpmManagerToolStripMenuItem"/>
+    <addaction name="disableCbtToolStripMenuItem"/>
+    <addaction name="enablePvsReadCachingToolStripMenuItem"/>
+    <addaction name="disablePvsReadCachingToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="installToolsToolStripMenuItem"/>
+    <addaction name="sendCtrlAltDelToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="uninstallToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="deleteVmToolStripMenuItem"/>
+    <addaction name="separator"/>
+    <addaction name="VMPropertiesToolStripMenuItem"/>
    </widget>
-   <addaction name="newVmAction"/>
-   <addaction name="startShutdownToolStripMenuItem"/>
-   <addaction name="resumeOnToolStripMenuItem"/>
-   <addaction name="relocateToolStripMenuItem"/>
-   <addaction name="startOnHostToolStripMenuItem"/>
-   <addaction name="separator"/>
-   <addaction name="assignSnapshotScheduleToolStripMenuItem"/>
-   <addaction name="assignToVappToolStripMenuItem"/>
-   <addaction name="separator"/>
-   <addaction name="copyVMtoSharedStorageMenuItem"/>
-   <addaction name="MoveVMToolStripMenuItem"/>
-   <addaction name="snapshotToolStripMenuItem"/>
-   <addaction name="convertToTemplateToolStripMenuItem"/>
-   <addaction name="exportToolStripMenuItem"/>
-   <addaction name="separator"/>
-   <addaction name="vtpmManagerToolStripMenuItem"/>
-   <addaction name="disableCbtToolStripMenuItem"/>
-   <addaction name="enablePvsReadCachingToolStripMenuItem"/>
-   <addaction name="disablePvsReadCachingToolStripMenuItem"/>
-   <addaction name="separator"/>
-   <addaction name="installToolsToolStripMenuItem"/>
-   <addaction name="sendCtrlAltDelToolStripMenuItem"/>
-   <addaction name="separator"/>
-   <addaction name="uninstallToolStripMenuItem"/>
-   <addaction name="separator"/>
-   <addaction name="deleteVmToolStripMenuItem"/>
-   <addaction name="separator"/>
-   <addaction name="VMPropertiesToolStripMenuItem"/>
-  </widget>
    <widget class="QMenu" name="menuStorage">
     <property name="title">
      <string>&amp;Storage</string>
@@ -261,6 +260,13 @@
     </property>
     <addaction name="optionsAction"/>
    </widget>
+   <widget class="QMenu" name="menuDebug">
+    <property name="title">
+     <string>Debug</string>
+    </property>
+    <addaction name="debugWindowAction"/>
+    <addaction name="actionCheck_for_leaks"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
    <addaction name="menuPool"/>
@@ -270,6 +276,7 @@
    <addaction name="menuTemplates"/>
    <addaction name="menuTools"/>
    <addaction name="menuHelp"/>
+   <addaction name="menuDebug"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="mainToolBar">
@@ -823,7 +830,7 @@
   </action>
   <action name="poolDisconnectToolStripMenuItem">
    <property name="icon">
-    <iconset>
+    <iconset resource="resources.qrc">
      <normaloff>:/icons/disconnect-16.png</normaloff>:/icons/disconnect-16.png</iconset>
    </property>
    <property name="text">
@@ -1287,6 +1294,11 @@
    </property>
    <property name="shortcut">
     <string>Alt+Return</string>
+   </property>
+  </action>
+  <action name="actionCheck_for_leaks">
+   <property name="text">
+    <string>Check for leaks</string>
    </property>
   </action>
  </widget>

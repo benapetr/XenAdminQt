@@ -99,7 +99,7 @@
 #include "commands/pool/disconnectpoolcommand.h"
 #include "commands/pool/poolpropertiescommand.h"
 #include "commands/pool/joinpoolcommand.h"
-#include "commands/pool/ejecthostfrompoolcommand.h"
+#include "commands/pool/removehostfrompoolcommand.h"
 #include "commands/pool/addhosttoselectedpoolmenu.h"
 #include "commands/pool/poolremoveservermenu.h"
 #include "commands/pool/rotatepoolsecretcommand.h"
@@ -2436,7 +2436,7 @@ void MainWindow::updateToolbarsAndMenus()
     if (auto* removeServerMenu = qobject_cast<PoolRemoveServerMenu*>(this->m_removeServerFromPoolMenu))
         this->ui->removeServerToolStripMenuItem->setEnabled(removeServerMenu->CanRun());
     else
-        this->ui->removeServerToolStripMenuItem->setEnabled(this->m_commands["EjectHostFromPool"]->CanRun());
+        this->ui->removeServerToolStripMenuItem->setEnabled(this->m_commands["RemoveHostFromPool"]->CanRun());
     this->ui->deleteToolStripMenuItem->setEnabled(this->m_commands["DeletePool"]->CanRun());
     this->ui->poolReconnectAsToolStripMenuItem->setEnabled(this->m_commands["HostReconnectAs"]->CanRun());
     this->ui->poolDisconnectToolStripMenuItem->setEnabled(this->m_commands["DisconnectPool"]->CanRun());
@@ -2452,7 +2452,7 @@ void MainWindow::updateToolbarsAndMenus()
     this->ui->rotatePoolSecretToolStripMenuItem->setEnabled(this->m_commands["RotatePoolSecret"]->CanRun());
     this->ui->PoolPropertiesToolStripMenuItem->setEnabled(this->m_commands["PoolProperties"]->CanRun());
     this->ui->addServerToPoolMenuItem->setEnabled(this->m_commands["JoinPool"]->CanRun());
-    this->ui->menuItemRemoveFromPool->setEnabled(this->m_commands["EjectHostFromPool"]->CanRun());
+    this->ui->menuItemRemoveFromPool->setEnabled(this->m_commands["RemoveHostFromPool"]->CanRun());
 
     // VM menu
     this->ui->newVmAction->setEnabled(this->m_commands["NewVM"]->CanRun());
@@ -2938,8 +2938,8 @@ void MainWindow::onJoinPool()
 
 void MainWindow::onEjectFromPool()
 {
-    if (this->m_commands.contains("EjectHostFromPool"))
-        this->m_commands["EjectHostFromPool"]->Run();
+    if (this->m_commands.contains("RemoveHostFromPool"))
+        this->m_commands["RemoveHostFromPool"]->Run();
 }
 
 void MainWindow::onAddServerToPool()
@@ -3205,7 +3205,7 @@ void MainWindow::initializeCommands()
     this->m_commands["RotatePoolSecret"] = new RotatePoolSecretCommand(this, this);
     this->m_commands["PoolProperties"] = new PoolPropertiesCommand(this, this);
     this->m_commands["JoinPool"] = new JoinPoolCommand(this, this);
-    this->m_commands["EjectHostFromPool"] = new EjectHostFromPoolCommand(this, this);
+    this->m_commands["RemoveHostFromPool"] = new RemoveHostFromPoolCommand(this, this);
 
     // VM commands
     this->m_commands["StartVM"] = new StartVMCommand(this, this);
@@ -3413,7 +3413,7 @@ void MainWindow::updateMenuItems()
     if (auto* removeServerMenu = qobject_cast<PoolRemoveServerMenu*>(this->m_removeServerFromPoolMenu))
         this->ui->removeServerToolStripMenuItem->setEnabled(removeServerMenu->CanRun());
     else
-        this->ui->removeServerToolStripMenuItem->setEnabled(this->m_commands["EjectHostFromPool"]->CanRun());
+        this->ui->removeServerToolStripMenuItem->setEnabled(this->m_commands["RemoveHostFromPool"]->CanRun());
     this->ui->deleteToolStripMenuItem->setEnabled(this->m_commands["DeletePool"]->CanRun());
     this->ui->poolReconnectAsToolStripMenuItem->setEnabled(this->m_commands["HostReconnectAs"]->CanRun());
     this->ui->poolDisconnectToolStripMenuItem->setEnabled(this->m_commands["DisconnectPool"]->CanRun());
@@ -3429,7 +3429,7 @@ void MainWindow::updateMenuItems()
     this->ui->rotatePoolSecretToolStripMenuItem->setEnabled(this->m_commands["RotatePoolSecret"]->CanRun());
     this->ui->PoolPropertiesToolStripMenuItem->setEnabled(this->m_commands["PoolProperties"]->CanRun());
     this->ui->addServerToPoolMenuItem->setEnabled(this->m_commands["JoinPool"]->CanRun());
-    this->ui->menuItemRemoveFromPool->setEnabled(this->m_commands["EjectHostFromPool"]->CanRun());
+    this->ui->menuItemRemoveFromPool->setEnabled(this->m_commands["RemoveHostFromPool"]->CanRun());
 
     // VM menu
     this->ui->newVmAction->setEnabled(this->m_commands["NewVM"]->CanRun());
@@ -3533,3 +3533,9 @@ void MainWindow::refreshVmMenu()
     rebuildOperationMenu(this->ui->relocateToolStripMenuItem, this->m_migrateToServerMenu, VMOperationMenu::Operation::Migrate);
     rebuildOperationMenu(this->ui->startOnHostToolStripMenuItem, this->m_startOnServerMenu, VMOperationMenu::Operation::StartOn);
 }
+
+void MainWindow::on_actionCheck_for_leaks_triggered()
+{
+    QMessageBox::information(this, "Leaks", "Total actions: " + QString::number(AsyncOperation::GetTotalActionsCount()));
+}
+

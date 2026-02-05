@@ -26,7 +26,7 @@
  */
 
 #include "poolremoveservermenu.h"
-#include "ejecthostfrompoolcommand.h"
+#include "removehostfrompoolcommand.h"
 #include "../../mainwindow.h"
 #include "xenadmin-ui/iconmanager.h"
 #include "xenlib/xen/host.h"
@@ -35,9 +35,7 @@
 #include <QTreeWidget>
 #include <algorithm>
 
-PoolRemoveServerMenu::PoolRemoveServerMenu(MainWindow* mainWindow, QWidget* parent)
-    : QMenu(parent)
-    , mainWindow_(mainWindow)
+PoolRemoveServerMenu::PoolRemoveServerMenu(MainWindow* mainWindow, QWidget* parent) : QMenu(parent), mainWindow_(mainWindow)
 {
     this->setTitle(tr("Remove Server"));
     connect(this, &QMenu::aboutToShow, this, &PoolRemoveServerMenu::onAboutToShow);
@@ -45,7 +43,18 @@ PoolRemoveServerMenu::PoolRemoveServerMenu(MainWindow* mainWindow, QWidget* pare
 
 bool PoolRemoveServerMenu::CanRun() const
 {
-    return this->getSelectedPool() != nullptr;
+    QSharedPointer<Pool> pool = this->getSelectedPool();
+    if (!pool)
+        return false;
+
+    QList<QSharedPointer<Host>> hosts = pool->GetHosts();
+    for (const QSharedPointer<Host>& host : hosts)
+    {
+        if (RemoveHostFromPoolCommand::CanRunForHost(host))
+            return true;
+    }
+
+    return false;
 }
 
 void PoolRemoveServerMenu::onAboutToShow()
@@ -72,11 +81,12 @@ void PoolRemoveServerMenu::onAboutToShow()
         hostName.replace("&", "&&");
 
         QAction* action = this->addAction(IconManager::instance().GetIconForHost(host.data()), hostName);
-        action->setEnabled(EjectHostFromPoolCommand::CanRunForHost(host));
+        action->setEnabled(RemoveHostFromPoolCommand::CanRunForHost(host));
 
         QSharedPointer<Host> hostCopy = host;
         connect(action, &QAction::triggered, this, [hostCopy]() {
-            EjectHostFromPoolCommand::RunForHost(MainWindow::instance(), hostCopy);
+            RemoveHostFromPoolCommand cmd(MainWindow::instance(), hostCopy);
+            cmd.Run();
         });
     }
 }

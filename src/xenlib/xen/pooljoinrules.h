@@ -111,9 +111,9 @@ class PoolJoinRules
         static bool HasIpForClusterNetwork(XenConnection* coordinatorConnection,
                                            const QSharedPointer<Host>& supporterHost,
                                            bool* clusterHostInBond);
+        static QSharedPointer<Host> GetCoordinator(XenConnection* connection);
 
     private:
-        static QSharedPointer<Host> GetCoordinator(XenConnection* connection);
         static QSharedPointer<Pool> GetPoolOfOne(XenConnection* connection);
         static bool IsAPool(XenConnection* connection);
         static bool LicenseRestriction(const QSharedPointer<Host>& host);

@@ -216,10 +216,10 @@ SOURCES += \
     commands/pool/addhosttoselectedpoolmenu.cpp \
     commands/pool/addselectedhosttopoolmenu.cpp \
     commands/pool/poolremoveservermenu.cpp \
+    commands/pool/removehostfrompoolcommand.cpp \
     commands/pool/poolcommand.cpp \
     commands/pool/poolpropertiescommand.cpp \
     commands/pool/joinpoolcommand.cpp \
-    commands/pool/ejecthostfrompoolcommand.cpp \
     commands/pool/newpoolcommand.cpp \
     commands/pool/deletepoolcommand.cpp \
     commands/pool/rotatepoolsecretcommand.cpp \
@@ -486,10 +486,10 @@ HEADERS += \
     commands/pool/addhosttoselectedpoolmenu.h \
     commands/pool/addselectedhosttopoolmenu.h \
     commands/pool/poolremoveservermenu.h \
+    commands/pool/removehostfrompoolcommand.h \
     commands/pool/poolcommand.h \
     commands/pool/poolpropertiescommand.h \
     commands/pool/joinpoolcommand.h \
-    commands/pool/ejecthostfrompoolcommand.h \
     commands/pool/newpoolcommand.h \
     commands/pool/deletepoolcommand.h \
     commands/pool/rotatepoolsecretcommand.h \

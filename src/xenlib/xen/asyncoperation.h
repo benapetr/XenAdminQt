@@ -68,6 +68,8 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         };
         Q_ENUM(OperationState)
 
+        static int GetTotalActionsCount() { return AsyncOperation::totalActions; }
+
         explicit AsyncOperation(XenConnection* connection, const QString& title, const QString& description = QString(), QObject* parent = nullptr);
         explicit AsyncOperation(const QString& title, const QString& description = QString(), QObject* parent = nullptr);
         virtual ~AsyncOperation();
@@ -221,6 +223,10 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         QPointer<XenConnection> m_connection;
 
     private:
+        static const int TASK_POLL_INTERVAL_MS = 900;
+        static const int DEFAULT_TIMEOUT_MS = 300000; // 5 minutes
+        static int totalActions;
+
         // Worker thread management
         void runOnWorkerThread();
 
@@ -228,19 +234,19 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         QString m_title;
         QString m_description;
         QPointer<XenAPI::Session> m_session;
-        int m_percentComplete;
+        int m_percentComplete = 0;
         OperationState m_state;
         QString m_errorMessage;
         QString m_shortErrorMessage;
         QStringList m_errorDetails;
-        bool m_canCancel;
+        bool m_canCancel = true;
         QString m_result;
         QDateTime m_startTime;
         QDateTime m_endTime;
         QStringList m_apiMethodsToRoleCheck;
         QString m_relatedTaskRef;
         QString m_operationUuid; ///< UUID for task rehydration (XenAdminQtUUID)
-        bool m_suppressHistory;
+        bool m_suppressHistory = false;
         bool m_safeToExit;
 
         // Object context (C# ActionBase equivalents)
@@ -255,10 +261,10 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         // Thread management
         mutable QRecursiveMutex m_mutex;
         QWaitCondition m_waitCondition;
-        bool m_syncExecution;
+        bool m_syncExecution = false;
 
         // Session ownership
-        bool m_ownsSession;
+        bool m_ownsSession = false;
 
         // Most of async ops are actions that are run by commands async which makes them hard to manage from memory perspective
         // parenting them to command leads to segfaults because command is usually deleted earlier than async op it launched
@@ -266,9 +272,6 @@ class XENLIB_EXPORT AsyncOperation : public QObject
         // parenting them to anything persistent leads to memory leaks, so we can run these with auto delete which means the op
         // will delete itself once it's finished
         bool m_autoDelete = false;
-
-        static const int TASK_POLL_INTERVAL_MS = 900;
-        static const int DEFAULT_TIMEOUT_MS = 300000; // 5 minutes
 };
 
 #endif // ASYNCOPERATION_H

@@ -25,24 +25,32 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef EJECTHOSTFROMPOOLCOMMAND_H
-#define EJECTHOSTFROMPOOLCOMMAND_H
+#ifndef REMOVEHOSTFROMPOOLCOMMAND_H
+#define REMOVEHOSTFROMPOOLCOMMAND_H
 
-#include "../host/hostcommand.h"
+#include "../command.h"
 
-class EjectHostFromPoolCommand : public HostCommand
+class Host;
+class XenConnection;
+
+class RemoveHostFromPoolCommand : public Command
 {
     Q_OBJECT
 
-public:
-        explicit EjectHostFromPoolCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+    public:
+        explicit RemoveHostFromPoolCommand(MainWindow* mainWindow, QObject* parent = nullptr);
+        RemoveHostFromPoolCommand(MainWindow* mainWindow, const QSharedPointer<Host>& host, QObject* parent = nullptr);
+        RemoveHostFromPoolCommand(MainWindow* mainWindow, const QList<QSharedPointer<Host>>& hosts, QObject* parent = nullptr);
 
         bool CanRun() const override;
         void Run() override;
         QString MenuText() const override;
 
         static bool CanRunForHost(const QSharedPointer<Host>& host);
-        static void RunForHost(MainWindow* mainWindow, const QSharedPointer<Host>& host);
+
+    private:
+        QList<QSharedPointer<Host>> selectedHosts() const;
+        static void scheduleReconnect(MainWindow* mainWindow, XenConnection* connection, const QString& hostname, int port);
 };
 
-#endif // EJECTHOSTFROMPOOLCOMMAND_H
+#endif // REMOVEHOSTFROMPOOLCOMMAND_H

@@ -245,6 +245,7 @@ class MainWindow : public QMainWindow
 
         // Menu action slots (Network menu)
         void onNewNetwork();
+        void on_actionCheck_for_leaks_triggered();
 
     private:
         static MainWindow *g_instance;

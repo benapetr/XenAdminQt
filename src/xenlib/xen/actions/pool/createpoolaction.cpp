@@ -34,6 +34,7 @@
 #include "../../../xencache.h"
 #include <stdexcept>
 #include <QDateTime>
+#include <QDebug>
 #include <QThread>
 
 CreatePoolAction::CreatePoolAction(XenConnection* coordinatorConnection,

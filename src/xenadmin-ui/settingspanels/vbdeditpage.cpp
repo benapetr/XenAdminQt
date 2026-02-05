@@ -38,7 +38,6 @@
 #include "../dialogs/warningdialogs/warningdialog.h"
 #include <QIcon>
 #include <QMessageBox>
-#include <QOverload>
 #include <QMetaObject>
 #include <QDebug>
 
@@ -62,8 +61,8 @@ VBDEditPage::VBDEditPage(QSharedPointer<VBD> vbd, QWidget* parent)
     this->ui->prioritySlider->setMinimum(kPriorityMin);
     this->ui->prioritySlider->setMaximum(kPriorityMax);
 
-    connect(this->ui->modeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &VBDEditPage::onInputsChanged);
-    connect(this->ui->positionComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &VBDEditPage::onInputsChanged);
+    connect(this->ui->modeComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &VBDEditPage::onInputsChanged);
+    connect(this->ui->positionComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &VBDEditPage::onInputsChanged);
     connect(this->ui->prioritySlider, &QSlider::valueChanged, this, &VBDEditPage::onInputsChanged);
 
     if (this->m_vbd && this->m_vbd->IsValid())
