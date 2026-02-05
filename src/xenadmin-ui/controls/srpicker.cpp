@@ -94,7 +94,7 @@ void SrPicker::Populate(SRPickerType usage, XenConnection* connection, const QSt
 
     // Get pool default SR
     this->m_defaultSRRef.clear();
-    QSharedPointer<Pool> pool = this->m_connection->GetCache()->GetPool();
+    QSharedPointer<Pool> pool = this->m_connection->GetCache()->GetPoolOfOne();
     if (pool)
         this->m_defaultSRRef = pool->GetDefaultSRRef();
 

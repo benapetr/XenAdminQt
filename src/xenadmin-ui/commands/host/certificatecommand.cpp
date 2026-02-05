@@ -70,7 +70,7 @@ bool CertificateCommand::CanRun() const
     //     return false;
     
     // Host must be standalone or pool coordinator
-    QSharedPointer<Pool> pool = host->GetPool();
+    QSharedPointer<Pool> pool = host->GetPoolOfOne();
     if (pool && pool->IsValid())
     {
         // If in a pool, must be the coordinator (master)
@@ -134,7 +134,7 @@ void InstallCertificateCommand::Run()
         return;
     
     // Check if HA is enabled
-    QSharedPointer<Pool> pool = host->GetPool();
+    QSharedPointer<Pool> pool = host->GetPoolOfOne();
     if (pool && pool->IsValid() && pool->HAEnabled())
     {
         QMessageBox::warning(MainWindow::instance(), "Cannot Install Certificate", "HA is enabled on this pool. Disable HA before installing certificates.");
@@ -186,7 +186,7 @@ void ResetCertificateCommand::Run()
         return;
     
     // Check if HA is enabled
-    QSharedPointer<Pool> pool = host->GetPool();
+    QSharedPointer<Pool> pool = host->GetPoolOfOne();
     if (pool && pool->IsValid() && pool->HAEnabled())
     {
         QMessageBox::warning(MainWindow::instance(), "Cannot Reset Certificate", "HA is enabled on this pool. Disable HA before resetting certificates.");

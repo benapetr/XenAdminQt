@@ -214,7 +214,7 @@ void NetworkingActionHelpers::waitForMembersToRecover(XenConnection* connection,
     if (!connection || !connection->GetCache())
         return;
 
-    QSharedPointer<Pool> pool = connection->GetCache()->GetPool();
+    QSharedPointer<Pool> pool = connection->GetCache()->GetPoolOfOne();
     const QString coordinatorRef = pool ? pool->GetMasterHostRef() : QString();
 
     int totalHosts = 0;

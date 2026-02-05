@@ -93,7 +93,7 @@ void HostPowerOnAction::run()
         this->setError(QString("Failed to power on host: %1").arg(e.what()));
     }
 
-    QSharedPointer<Pool> pool = this->m_host->GetPool();
+    QSharedPointer<Pool> pool = this->m_host->GetPoolOfOne();
     if (isWlbEnabled(pool))
     {
         const QVariantMap config = buildWlbHostConfig(this->m_host->GetUUID(), succeeded, !succeeded);

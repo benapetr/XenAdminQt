@@ -57,7 +57,7 @@ bool RotatePoolSecretCommand::CanRun() const
     else if (objectType == XenObjectType::Host)
     {
         QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->GetObject());
-        pool = host ? host->GetPool() : QSharedPointer<Pool>();
+        pool = host ? host->GetPoolOfOne() : QSharedPointer<Pool>();
     }
 
     if (!pool || !pool->GetConnection() || !pool->IsValid())
@@ -108,7 +108,7 @@ void RotatePoolSecretCommand::Run()
         QSharedPointer<Host> host = qSharedPointerDynamicCast<Host>(this->GetObject());
         if (!host || !host->GetConnection() || !host->IsValid())
             return;
-        pool = host->GetPool();
+        pool = host->GetPoolOfOne();
     }
 
     if (!pool || !pool->IsValid())
@@ -196,7 +196,7 @@ QString RotatePoolSecretCommand::GetCantRunReason() const
         if (!host || !host->GetConnection() || !host->IsValid())
             return tr("No pool selected.");
 
-        pool = host->GetPool();
+        pool = host->GetPoolOfOne();
     }
 
     if (!pool)

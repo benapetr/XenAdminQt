@@ -109,7 +109,7 @@ void NetworkGeneralEditPage::SetXenObjects(const QString& objectRef,
         return;
 
     // Get coordinator host for this network (matches C# Helpers.GetCoordinator)
-    QSharedPointer<Pool> pool = conn->GetCache()->GetPool();
+    QSharedPointer<Pool> pool = conn->GetCache()->GetPoolOfOne();
     if (!pool.isNull())
         this->m_hostRef_ = pool->GetMasterHostRef();
 

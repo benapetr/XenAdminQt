@@ -88,7 +88,7 @@ QString VM::LocationString() const
     XenCache* cache = connection->GetCache();
     if (cache)
     {
-        QSharedPointer<Pool> pool = cache->GetPool();
+        QSharedPointer<Pool> pool = cache->GetPoolOfOne();
         if (pool && !pool->GetName().isEmpty())
             return QString("in '%1'").arg(pool->GetName());
     }

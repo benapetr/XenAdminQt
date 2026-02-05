@@ -30,6 +30,7 @@
 #include "xenlib/xencache.h"
 #include "xenlib/xen/host.h"
 #include "xenlib/xen/pool.h"
+#include "xenlib/xen/pooljoinrules.h"
 
 ConnectionWrapperWithMoreStuff::ConnectionWrapperWithMoreStuff(XenConnection* connection) : m_connection(connection)
 {
@@ -65,21 +66,9 @@ QString ConnectionWrapperWithMoreStuff::ToString() const
     if (!this->m_connection)
         return QString();
 
-    XenCache* cache = this->m_connection->GetCache();
-    if (cache)
-    {
-        QSharedPointer<Pool> pool = cache->GetPool();
-        if (pool && pool->IsValid())
-        {
-            QSharedPointer<Host> master = pool->GetMasterHost();
-            if (master && master->IsValid() && !master->GetName().isEmpty())
-                return master->GetName();
-        }
-
-        QList<QSharedPointer<Host>> hosts = cache->GetAll<Host>(XenObjectType::Host);
-        if (!hosts.isEmpty() && hosts.first() && !hosts.first()->GetName().isEmpty())
-            return hosts.first()->GetName();
-    }
+    QSharedPointer<Host> coordinator = PoolJoinRules::GetCoordinator(this->m_connection);
+    if (coordinator && !coordinator->GetName().isEmpty())
+        return coordinator->GetName();
 
     return this->m_connection->GetHostname();
 }

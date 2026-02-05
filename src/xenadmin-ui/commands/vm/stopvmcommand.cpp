@@ -27,6 +27,7 @@
 
 #include "stopvmcommand.h"
 #include "../../mainwindow.h"
+#include "xencache.h"
 #include "xenlib/xen/network/connection.h"
 #include "xenlib/xen/vm.h"
 #include "xenlib/xen/pool.h"
@@ -52,7 +53,7 @@ namespace
         if (!vm)
             return false;
 
-        QSharedPointer<Pool> pool = vm->GetPool();
+        QSharedPointer<Pool> pool = vm->GetCache()->GetPoolOfOne();
         if (!pool)
             return false;
 
@@ -90,8 +91,7 @@ void StopVMCommand::Run()
         XenConnection* conn = vm->GetConnection();
         if (!conn || !conn->IsConnected())
         {
-            QMessageBox::warning(this->mainWindow(), "Not Connected",
-                                 "Not connected to XenServer");
+            QMessageBox::warning(this->mainWindow(), "Not Connected", "Not connected to XenServer");
             return;
         }
 
@@ -142,9 +142,7 @@ void StopVMCommand::Run()
         ? tr("The selected VM is currently protected by HA. Are you sure you want to shut it down?")
         : tr("Are you sure you want to shut down the selected VM?");
 
-    int ret = QMessageBox::question(this->mainWindow(), tr("Shut Down VM"),
-                                    text,
-                                    QMessageBox::Yes | QMessageBox::No);
+    int ret = QMessageBox::question(this->mainWindow(), tr("Shut Down VM"), text, QMessageBox::Yes | QMessageBox::No);
 
     if (ret != QMessageBox::Yes)
         return;

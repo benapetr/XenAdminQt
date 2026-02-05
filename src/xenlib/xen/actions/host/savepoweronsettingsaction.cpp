@@ -188,7 +188,7 @@ void SavePowerOnSettingsAction::saveHostConfig(const QString& hostRef, const Pow
     if (modeString.isEmpty() && conn->GetCache())
     {
         QSharedPointer<::Host> host = conn->GetCache()->ResolveObject<::Host>(hostRef);
-        QSharedPointer<::Pool> pool = host ? host->GetPool() : QSharedPointer<::Pool>();
+        QSharedPointer<::Pool> pool = host ? host->GetPoolOfOne() : QSharedPointer<::Pool>();
         if (host && isWlbEnabled(pool))
         {
             QVariantMap config = buildWlbHostPowerManagementConfig(host->GetUUID(), false);

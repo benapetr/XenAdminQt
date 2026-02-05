@@ -672,7 +672,7 @@ QSharedPointer<Pool> PoolJoinRules::GetPoolOfOne(XenConnection* connection)
     if (!connection || !connection->GetCache())
         return QSharedPointer<Pool>();
 
-    return connection->GetCache()->GetPool();
+    return connection->GetCache()->GetPoolOfOne();
 }
 
 bool PoolJoinRules::IsAPool(XenConnection* connection)
@@ -680,8 +680,7 @@ bool PoolJoinRules::IsAPool(XenConnection* connection)
     if (!connection || !connection->GetCache())
         return false;
 
-    const QList<QSharedPointer<Host>> hosts = connection->GetCache()->GetAll<Host>(XenObjectType::Host);
-    return hosts.size() > 1;
+    return connection->GetCache()->GetPool() != nullptr;
 }
 
 bool PoolJoinRules::LicenseRestriction(const QSharedPointer<Host>& host)
@@ -768,6 +767,9 @@ bool PoolJoinRules::DifferentHomogeneousUpdates(const QSharedPointer<Host>& supp
                                                 const QSharedPointer<Host>& coordinator)
 {
     if (!supporter || !coordinator)
+        return false;
+
+    if (!elyOrGreater(supporter) || !elyOrGreater(coordinator))
         return false;
 
     const QList<QSharedPointer<PoolUpdate>> coordinatorUpdates = coordinator->AppliedUpdates();

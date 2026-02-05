@@ -84,7 +84,9 @@ void VMPropertiesDialog::build()
 
     // Tab 7: Home Server (only if WLB not enabled/configured)
     bool wlbEnabled = false;
-    QSharedPointer<Pool> pool = this->m_vm->GetPool();
+    QSharedPointer<Pool> pool = this->m_vm && this->m_vm->GetConnection()
+        ? this->m_vm->GetConnection()->GetCache()->GetPoolOfOne()
+        : QSharedPointer<Pool>();
     if (pool)
         wlbEnabled = pool->IsWLBEnabled() && !pool->WLBUrl().isEmpty();
 

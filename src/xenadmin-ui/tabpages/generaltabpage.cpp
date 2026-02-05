@@ -802,7 +802,7 @@ void GeneralTabPage::populateHighAvailabilitySection()
 
     XenCache* cache = vm->GetCache();
 
-    QSharedPointer<Pool> pool = cache->GetPool();
+    QSharedPointer<Pool> pool = cache->GetPoolOfOne();
     if (!pool || !pool->HAEnabled())
         return;
 

@@ -259,7 +259,7 @@ void RebootHostAction::maybeReduceNtolBeforeOp()
      * This is a placeholder that can be expanded later.
      */
 
-    QSharedPointer<Pool> pool = this->m_host ? this->m_host->GetPool() : QSharedPointer<Pool>();
+    QSharedPointer<Pool> pool = this->m_host ? this->m_host->GetPoolOfOne() : QSharedPointer<Pool>();
     if (!pool || !pool->HAEnabled())
         return;
 

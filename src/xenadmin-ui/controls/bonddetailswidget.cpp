@@ -173,7 +173,7 @@ bool BondDetailsWidget::CanCreateBond(QWidget* parent)
     {
         QSharedPointer<Pool> pool = this->m_pool;
         if (!pool && this->m_host)
-            pool = this->m_host->GetPool();
+            pool = this->m_host->GetPoolOfOne();
         if (pool && pool->HAEnabled())
         {
             QMessageBox::critical(parent, tr("Bond Details"), tr("Cannot create a bond that includes the primary management interface while HA is enabled."));

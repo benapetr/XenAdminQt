@@ -51,7 +51,7 @@ VMPauseAction::VMPauseAction(QSharedPointer<VM> vm, const QString& title, QObjec
         XenConnection* conn = vm->GetConnection();
         if (conn)
         {
-            this->SetPool(conn->GetCache()->GetPool());
+            this->SetPool(conn->GetCache()->GetPoolOfOne());
         }
     }
 }

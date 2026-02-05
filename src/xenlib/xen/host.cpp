@@ -280,6 +280,14 @@ QSharedPointer<Pool> Host::GetPool()
     return this->GetConnection()->GetCache()->GetPool();
 }
 
+QSharedPointer<Pool> Host::GetPoolOfOne()
+{
+    if (!this->GetConnection())
+        return QSharedPointer<Pool>();
+
+    return this->GetConnection()->GetCache()->GetPoolOfOne();
+}
+
 qint64 Host::MemoryOverhead() const
 {
     return intProperty("memory_overhead", 0);

@@ -261,7 +261,7 @@ bool DestroyBondCommand::isHAEnabled() const
     if (!cache)
         return false;
 
-    QSharedPointer<Pool> pool = cache->GetPool();
+    QSharedPointer<Pool> pool = cache->GetPoolOfOne();
     return pool && pool->HAEnabled();
 }
 

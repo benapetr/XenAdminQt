@@ -63,7 +63,7 @@ void WlbRetrieveVmRecommendationsAction::run()
     bool wlbEnabled = false;
     
     // Get pool to check WLB configuration
-    QSharedPointer<Pool> pool = GetConnection()->GetCache()->GetPool();
+    QSharedPointer<Pool> pool = GetConnection()->GetCache()->GetPoolOfOne();
     if (pool && pool->IsValid())
     {
         QString wlbUrl = pool->WLBUrl();

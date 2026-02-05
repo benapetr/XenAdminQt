@@ -51,7 +51,7 @@ bool SetDefaultSRCommand::CanRun() const
         return false;
 
     // C# SR.IsDefaultSr(sr)
-    QSharedPointer<Pool> pool = cache->GetPool();
+    QSharedPointer<Pool> pool = cache->GetPoolOfOne();
     if (pool && pool->GetDefaultSRRef() == sr->OpaqueRef())
         return false;
 
@@ -101,7 +101,7 @@ void SetDefaultSRCommand::Run()
             return;
         }
 
-        QSharedPointer<Pool> pool = sr->GetCache()->GetPool();
+        QSharedPointer<Pool> pool = sr->GetCache()->GetPoolOfOne();
         if (!pool || !pool->IsValid())
         {
             QMessageBox::warning(MainWindow::instance(), "Set Default Storage Repository Failed", "Invalid pool object.");

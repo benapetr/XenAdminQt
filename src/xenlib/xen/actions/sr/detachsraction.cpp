@@ -41,7 +41,7 @@ QString getCoordinatorRef(XenConnection* connection)
     if (!connection || !connection->GetCache())
         return QString();
 
-    QSharedPointer<Pool> pool = connection->GetCache()->GetPool();
+    QSharedPointer<Pool> pool = connection->GetCache()->GetPoolOfOne();
     return pool ? pool->GetMasterHostRef() : QString();
 }
 }

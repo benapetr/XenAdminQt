@@ -1139,7 +1139,7 @@ QSharedPointer<Host> NewNetworkWizard::coordinatorHost() const
 
     if (this->m_connection && this->m_connection->GetCache())
     {
-        QSharedPointer<Pool> pool = this->m_connection->GetCache()->GetPool();
+        QSharedPointer<Pool> pool = this->m_connection->GetCache()->GetPoolOfOne();
         if (pool && pool->IsValid())
             return pool->GetMasterHost();
     }
@@ -1154,7 +1154,7 @@ QSharedPointer<Pool> NewNetworkWizard::poolObject() const
 
     if (this->m_connection && this->m_connection->GetCache())
     {
-        return this->m_connection->GetCache()->GetPool();
+        return this->m_connection->GetCache()->GetPoolOfOne();
     }
 
     return QSharedPointer<Pool>();

@@ -85,6 +85,15 @@ bool Pool::IsPoolOfOne() const
     return GetHostRefs().count() == 1;
 }
 
+bool Pool::IsVisible() const
+{
+    if (!this->GetConnection() || !this->GetCache())
+        return false;
+
+    const int hostCount = this->GetCache()->GetAllRefs(XenObjectType::Host).size();
+    return !this->GetName().isEmpty() || hostCount > 1;
+}
+
 bool Pool::IsWLBEnabled() const
 {
     return boolProperty("wlb_enabled", false);

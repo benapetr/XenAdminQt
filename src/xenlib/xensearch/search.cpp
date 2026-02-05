@@ -288,7 +288,7 @@ Search* Search::SearchFor(const QStringList& objectRefs, const QStringList& obje
             QString nameLabel;
             if (conn && conn->GetCache())
             {
-                QSharedPointer<Pool> pool = conn->GetCache()->GetPool();
+                QSharedPointer<Pool> pool = conn->GetCache()->GetPoolOfOne();
                 if (pool && pool->IsValid())
                     nameLabel = pool->GetName();
             }

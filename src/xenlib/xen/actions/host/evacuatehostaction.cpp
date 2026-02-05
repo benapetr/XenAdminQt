@@ -120,7 +120,7 @@ void EvacuateHostAction::run()
         this->disable(0, 20);
 
         bool tryAgain = false;
-        const QSharedPointer<Pool> pool = this->m_host->GetPool();
+        const QSharedPointer<Pool> pool = this->m_host->GetPoolOfOne();
 
         if (isWlbEnabled(pool))
         {
@@ -283,7 +283,7 @@ void EvacuateHostAction::run()
 
 void EvacuateHostAction::disable(int start, int finish)
 {
-    QSharedPointer<Pool> pool = this->m_host ? this->m_host->GetPool() : QSharedPointer<Pool>();
+    QSharedPointer<Pool> pool = this->m_host ? this->m_host->GetPoolOfOne() : QSharedPointer<Pool>();
     if (pool && pool->HAEnabled())
     {
         const QVariantMap configuration = HostHaHelpers::BuildHaConfiguration(this->GetConnection());
@@ -329,7 +329,7 @@ void EvacuateHostAction::enable(int start, int finish, bool queryNtolIncrease)
 
     if (queryNtolIncrease)
     {
-        QSharedPointer<Pool> pool = this->m_host ? this->m_host->GetPool() : QSharedPointer<Pool>();
+        QSharedPointer<Pool> pool = this->m_host ? this->m_host->GetPoolOfOne() : QSharedPointer<Pool>();
         if (pool && pool->HAEnabled() && this->m_acceptNtolChangesOnEnable)
         {
             const QVariantMap configuration = HostHaHelpers::BuildHaConfiguration(this->GetConnection());

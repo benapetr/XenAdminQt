@@ -409,7 +409,7 @@ QSharedPointer<Host> NewPoolDialog::getCoordinator() const
             XenConnection* conn = wrapper->Connection();
             if (conn && conn->GetCache())
             {
-                QSharedPointer<Pool> pool = conn->GetCache()->GetPool();
+                QSharedPointer<Pool> pool = conn->GetCache()->GetPoolOfOne();
                 if (pool && pool->IsValid())
                     return pool->GetMasterHost();
 
@@ -436,7 +436,7 @@ QList<QSharedPointer<Host>> NewPoolDialog::getSupporters() const
             XenConnection* conn = wrapper->Connection();
             if (conn && conn->GetCache())
             {
-                QSharedPointer<Pool> pool = conn->GetCache()->GetPool();
+                QSharedPointer<Pool> pool = conn->GetCache()->GetPoolOfOne();
                 if (pool && pool->GetMasterHost())
                     supporters.append(pool->GetMasterHost());
             }
@@ -558,7 +558,7 @@ void NewPoolDialog::createPool()
             return;
     }
 
-    if (!getPermissionForCpuFeatureLevelling(supporters, coordinator->GetPool(), this))
+    if (!getPermissionForCpuFeatureLevelling(supporters, coordinator->GetPoolOfOne(), this))
         return;
 
     QList<XenConnection*> memberConnections;

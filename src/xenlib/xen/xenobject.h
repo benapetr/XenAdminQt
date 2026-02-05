@@ -64,6 +64,7 @@ class XENLIB_EXPORT XenObject : public QObject
         static bool ValueIsNULL(const QString &value);
         //! @brief Convert object type to canonical type string for cache lookups
         static QString TypeToString(XenObjectType type);
+        static int GetTotalObjectsCount() { return XenObject::totalObjects; }
 
         explicit XenObject(XenConnection* connection, const QString& opaqueRef, QObject* parent = nullptr);
         virtual ~XenObject();
@@ -228,6 +229,8 @@ class XENLIB_EXPORT XenObject : public QObject
         XenCache *m_cache;
         bool m_locked = false;
         QVariantMap m_localData;
+
+        static int totalObjects;
 };
 
 Q_DECLARE_METATYPE(QSharedPointer<XenObject>)

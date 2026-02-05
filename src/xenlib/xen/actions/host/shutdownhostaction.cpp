@@ -83,7 +83,7 @@ void ShutdownHostAction::run()
         QString taskRef = XenAPI::Host::async_shutdown(this->GetSession(), this->m_host->OpaqueRef());
 
         // WLB task metadata (C# adds this when available)
-        QSharedPointer<Pool> pool = this->m_host->GetPool();
+        QSharedPointer<Pool> pool = this->m_host->GetPoolOfOne();
         if (pool && pool->IsWLBEnabled() && !pool->WLBUrl().isEmpty())
         {
             QVariantMap otherConfig = this->m_host->GetOtherConfig();
@@ -241,7 +241,7 @@ void ShutdownHostAction::maybeReduceNtolBeforeOp()
      * This is a placeholder that can be expanded later.
      */
 
-    QSharedPointer<Pool> pool = this->m_host ? this->m_host->GetPool() : QSharedPointer<Pool>();
+    QSharedPointer<Pool> pool = this->m_host ? this->m_host->GetPoolOfOne() : QSharedPointer<Pool>();
     if (!pool || !pool->HAEnabled())
         return;
 

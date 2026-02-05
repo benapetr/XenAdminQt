@@ -318,7 +318,7 @@ void VMOperationMenu::populate()
 
     // Check for WLB (Workload Balancing) support
     bool wlbEnabled = false;
-    QSharedPointer<Pool> pool = cache->GetPool();
+    QSharedPointer<Pool> pool = cache->GetPoolOfOne();
     if (pool && pool->IsValid())
     {
         QString wlbUrl = pool->WLBUrl();
@@ -409,7 +409,7 @@ void VMOperationMenu::updateHostList()
 
     // Check for WLB and call enableAppropriateHostsWlb() if enabled
     bool wlbEnabled = false;
-    QSharedPointer<Pool> pool = connection->GetCache()->GetPool();
+    QSharedPointer<Pool> pool = connection->GetCache()->GetPoolOfOne();
     if (pool && pool->IsValid())
     {
         QString wlbUrl = pool->WLBUrl();

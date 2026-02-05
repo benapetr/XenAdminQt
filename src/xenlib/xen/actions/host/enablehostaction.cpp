@@ -167,7 +167,7 @@ void EnableHostAction::enable(int start, int finish, bool queryNtolIncrease)
 
     if (queryNtolIncrease)
     {
-        QSharedPointer<Pool> pool = this->m_host ? this->m_host->GetPool() : QSharedPointer<Pool>();
+        QSharedPointer<Pool> pool = this->m_host ? this->m_host->GetPoolOfOne() : QSharedPointer<Pool>();
         if (pool && pool->HAEnabled() && this->m_acceptNtolChangesOnEnable)
         {
             const QVariantMap configuration = HostHaHelpers::BuildHaConfiguration(this->GetConnection());

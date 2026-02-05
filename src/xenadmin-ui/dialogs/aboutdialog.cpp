@@ -142,7 +142,7 @@ QString AboutDialog::getConnectionInfo() const
             continue;
 
         // Get pool information
-        QSharedPointer<Pool> pool = cache->GetPool();
+        QSharedPointer<Pool> pool = cache->GetPoolOfOne();
         if (pool && pool->IsValid())
         {
             QString poolName = pool->GetName().isEmpty() ? "Unnamed Pool" : pool->GetName();

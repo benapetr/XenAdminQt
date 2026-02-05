@@ -121,7 +121,7 @@ namespace
         if (!cache)
             return QString();
 
-        QSharedPointer<Pool> pool = cache->GetPool();
+        QSharedPointer<Pool> pool = cache->GetPoolOfOne();
         return pool ? pool->GetMasterHostRef() : QString();
     }
 
@@ -1255,7 +1255,7 @@ void CrossPoolMigrateWizard::populateStorageMappings()
         return;
 
     QString defaultSrRef;
-    QSharedPointer<Pool> targetPool = targetCache->GetPool();
+    QSharedPointer<Pool> targetPool = targetCache->GetPoolOfOne();
     if (targetPool)
         defaultSrRef = targetPool->GetDefaultSRRef();
 

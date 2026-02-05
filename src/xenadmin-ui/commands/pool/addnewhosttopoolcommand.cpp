@@ -28,9 +28,15 @@
 #include "addnewhosttopoolcommand.h"
 #include "addhosttopoolcommand.h"
 #include "../../mainwindow.h"
+#include "xenadmin-ui/dialogs/addserverdialog.h"
+#include "xenadmin-ui/network/xenconnectionui.h"
 #include "xenlib/xen/pool.h"
 #include "xenlib/xen/host.h"
+#include "xenlib/xen/pooljoinrules.h"
+#include "xenlib/xen/network/connectionsmanager.h"
+#include "xenlib/xen/network/connection.h"
 #include "xenlib/xencache.h"
+#include <QDebug>
 #include <QMessageBox>
 
 AddNewHostToPoolCommand::AddNewHostToPoolCommand(MainWindow* mainWindow,  QSharedPointer<Pool> pool) : Command(mainWindow), pool_(pool)
@@ -39,40 +45,54 @@ AddNewHostToPoolCommand::AddNewHostToPoolCommand(MainWindow* mainWindow,  QShare
 
 void AddNewHostToPoolCommand::Run()
 {
-    // TODO: Show AddServerDialog when ported
-    // For now, show placeholder message
-    QMessageBox::information(this->mainWindow(), 
-                           tr("Add New Server"), 
-                           tr("Add Server dialog will be shown here.\n\n"
-                              "After connecting to the new server, it will be added to pool '%1'.\n\n"
-                              "TODO: Implement AddServerDialog")
-                           .arg(this->pool_ ? this->pool_->GetName() : tr("Unknown Pool")));
-    
-    // TODO: When AddServerDialog is implemented:
-    // 1. Show the dialog
-    // 2. Connect to the dialog's cachePopulated signal
-    // 3. In the slot, get the coordinator of the new connection
-    // 4. Check if the new host is already in a pool
-    // 5. If not, create and run AddHostToPoolCommand with confirm=false
+    AddServerDialog dialog(nullptr, false, this->mainWindow());
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    QString serverInput = dialog.serverInput();
+    QString hostname = serverInput;
+    int port = 443;
+
+    const int lastColon = serverInput.lastIndexOf(':');
+    if (lastColon > 0 && lastColon < serverInput.size() - 1)
+    {
+        bool ok = false;
+        const int parsedPort = serverInput.mid(lastColon + 1).toInt(&ok);
+        if (ok)
+        {
+            hostname = serverInput.left(lastColon).trimmed();
+            port = parsedPort;
+        }
+    }
+
+    XenConnection* connection = new XenConnection(nullptr);
+    Xen::ConnectionsManager::instance()->AddConnection(connection);
+
+    connection->SetHostname(hostname);
+    connection->SetPort(port);
+    connection->SetUsername(dialog.username());
+    connection->SetPassword(dialog.password());
+    connection->SetExpectPasswordIsCorrect(false);
+    connection->SetFromDialog(true);
+
+    connect(connection, &XenConnection::CachePopulated, this, [this, connection]() {
+        this->onCachePopulated(connection);
+    }, Qt::UniqueConnection);
+
+    XenConnectionUI::BeginConnect(connection, true, this->mainWindow(), false);
 }
 
 void AddNewHostToPoolCommand::onCachePopulated(XenConnection* connection)
 {
     if (!connection)
         return;
+
+    disconnect(connection, &XenConnection::CachePopulated, this, nullptr);
     
-    // Get the standalone host - for standalone servers, there's exactly one host
-    QList<QSharedPointer<Host>> allHosts = connection->GetCache()->GetAll<Host>();
-    if (allHosts.isEmpty())
-    {
-        qDebug() << "No hosts found in newly connected server";
-        return;
-    }
-    
-    QSharedPointer<Host> hostToAdd = allHosts.first();
+    QSharedPointer<Host> hostToAdd = PoolJoinRules::GetCoordinator(connection);
     if (!hostToAdd)
     {
-        qDebug() << "hostToAdd is null while joining host to pool in AddNewHostToPoolCommand";
+        qDebug() << "No hosts found in newly connected server";
         return;
     }
     

@@ -243,6 +243,7 @@ class XenCache : public QObject
          * @return Pool object, or null if no pool cached
          */
         QSharedPointer<Pool> GetPool();
+        QSharedPointer<Pool> GetPoolOfOne();
 
         /**
          * @brief Update or add object to cache

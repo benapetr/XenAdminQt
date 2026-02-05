@@ -230,7 +230,7 @@ QList<DestroyBondAction::BondInfo> DestroyBondAction::findAllEquivalentBonds() c
     const QString refHostRef = refMasterPif->GetHostRef();
 
     QList<QSharedPointer<Host>> hosts;
-    QSharedPointer<Pool> pool = cache->GetPool();
+    QSharedPointer<Pool> pool = cache->GetPoolOfOne();
     if (pool && pool->IsValid())
         hosts = pool->GetHosts();
     else

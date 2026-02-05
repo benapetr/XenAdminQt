@@ -71,7 +71,7 @@ void CreateBondAction::run()
     {
         this->GetConnection()->SetExpectDisruption(true);
 
-        QSharedPointer<Pool> pool = this->GetConnection()->GetCache()->GetPool();
+        QSharedPointer<Pool> pool = this->GetConnection()->GetCache()->GetPoolOfOne();
         if (!pool || !pool->IsValid())
             throw Failure(Failure::INTERNAL_ERROR, "Pool not found for bond creation");
 
@@ -352,7 +352,7 @@ void CreateBondAction::unlockAllLockedObjects()
 
 QList<QSharedPointer<Host>> CreateBondAction::getHostsCoordinatorLast() const
 {
-    QSharedPointer<Pool> pool = this->GetConnection()->GetCache()->GetPool();
+    QSharedPointer<Pool> pool = this->GetConnection()->GetCache()->GetPoolOfOne();
     if (!pool || !pool->IsValid())
         return QList<QSharedPointer<Host>>();
 

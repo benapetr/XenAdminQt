@@ -150,7 +150,7 @@ QList<CustomFieldDefinition> CustomFieldsManager::getCustomFieldsFromGuiConfig(X
 
     // Get pool (always first pool in cache)
     // C# uses Helpers.GetPoolOfOne(connection) which gets the first pool
-    QSharedPointer<Pool> pool = cache->GetPool();
+    QSharedPointer<Pool> pool = cache->GetPoolOfOne();
     if (!pool || !pool->IsValid())
     {
         return QList<CustomFieldDefinition>();

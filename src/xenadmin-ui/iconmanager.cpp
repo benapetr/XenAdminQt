@@ -309,7 +309,7 @@ QIcon IconManager::GetIconForSR(const QVariantMap& srData, XenConnection* connec
 
     if (connection && connection->GetCache())
     {
-        QSharedPointer<Pool> pool = connection->GetCache()->GetPool();
+        QSharedPointer<Pool> pool = connection->GetCache()->GetPoolOfOne();
         if (pool && !pool->GetDefaultSRRef().isEmpty() && pool->GetDefaultSRRef() == ref)
             isDefault = true;
     }

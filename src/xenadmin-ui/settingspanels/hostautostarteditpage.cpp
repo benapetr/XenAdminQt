@@ -83,7 +83,7 @@ void HostAutostartEditPage::repopulate()
     this->m_originalAutostartEnabled = false; // Default to false
     
     // Get the pool for this host
-    QSharedPointer<Pool> pool = this->m_host->GetPool();
+    QSharedPointer<Pool> pool = this->m_host->GetPoolOfOne();
 
     if (!pool.isNull())
     {

@@ -258,12 +258,8 @@ class MainWindow : public QMainWindow
         void initializeToolbar();                                        // Initialize toolbar buttons matching C# MainWindow.Designer.cs
         void updateToolbarsAndMenus();                                   // Update both toolbar buttons and menu items from Commands (matches C# UpdateToolbars pattern)
         void disableAllOperationButtons();                               // Disable all VM/Host/Container operation buttons
-        void disableAllOperationMenus();                                 // Disable all VM/Host operation menu items
-        void updateContainerToolbarButtons(const QString& containerRef); // Enable/disable Container buttons
 
         // Helper methods for toolbar button handlers
-        QString getSelectedObjectRef() const;
-        QString getSelectedObjectName() const;
         QList<QSharedPointer<class VM>> getSelectedVMs() const;
         QList<QSharedPointer<class Host>> getSelectedHosts() const;
 
@@ -326,7 +322,6 @@ class MainWindow : public QMainWindow
         QMap<QString, class Command*> m_commands;
         void initializeCommands();
         void connectMenuActions();
-        void updateMenuItems();
 
         // Toolbar (matches C# ToolStrip)
         QToolBar* m_toolBar = nullptr;

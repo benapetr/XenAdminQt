@@ -76,6 +76,9 @@ class XENLIB_EXPORT Pool : public XenObject
         //! Check if this is a pool-of-one (true if pool has only one host)
         bool IsPoolOfOne() const;
 
+        //! Check if this pool is visible (not a pool-of-one unless named)
+        bool IsVisible() const;
+
         //! Get WLB (Workload Balancing) enabled status (true if WLB is enabled)
         bool IsWLBEnabled() const;
 

@@ -61,7 +61,7 @@ ImportVmAction::ImportVmAction(XenConnection* connection, const QString& hostRef
     
     if (this->GetConnection())
     {
-        QSharedPointer<Pool> pool = this->GetConnection()->GetCache()->GetPool();
+        QSharedPointer<Pool> pool = this->GetConnection()->GetCache()->GetPoolOfOne();
         if (pool && pool->IsValid())
             poolName = pool->GetName();
     }

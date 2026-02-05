@@ -30,6 +30,8 @@
 #include "pool.h"
 #include "../xencache.h"
 
+int XenObject::totalObjects = 0;
+
 bool XenObject::ValueIsNULL(const QString &value)
 {
     return value.isEmpty() || value == XENOBJECT_NULL;
@@ -37,6 +39,7 @@ bool XenObject::ValueIsNULL(const QString &value)
 
 XenObject::XenObject(XenConnection* connection, const QString& opaqueRef, QObject* parent) : QObject(parent), m_connection(connection), m_opaqueRef(opaqueRef)
 {
+    XenObject::totalObjects++;
     if (connection)
         this->m_cache = connection->GetCache();
     else
@@ -45,6 +48,7 @@ XenObject::XenObject(XenConnection* connection, const QString& opaqueRef, QObjec
 
 XenObject::~XenObject()
 {
+    XenObject::totalObjects--;
 }
 
 QString XenObject::GetUUID() const
@@ -78,7 +82,7 @@ QString XenObject::LocationString() const
     XenCache* cache = this->m_connection->GetCache();
     if (cache)
     {
-        QSharedPointer<Pool> pool = cache->GetPool();
+        QSharedPointer<Pool> pool = cache->GetPoolOfOne();
         if (pool && !pool->GetName().isEmpty())
             return QString("in '%1'").arg(pool->GetName());
     }

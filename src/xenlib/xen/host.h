@@ -173,6 +173,7 @@ class XENLIB_EXPORT Host : public XenObject
         QString GetPoolRef() const;
 
         QSharedPointer<Pool> GetPool();
+        QSharedPointer<Pool> GetPoolOfOne();
 
         //! Get memory overhead required by host in bytes
         qint64 MemoryOverhead() const;
